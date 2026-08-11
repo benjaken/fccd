@@ -529,13 +529,17 @@ export function Dashboard() {
           <p>{t("dashboard.description")}</p>
         </div>
         <div className="heading-actions">
-          <Button variant="outline">
-            <FileText />
-            {t("dashboard.export")}
+          <Button variant="outline" asChild>
+            <Link to="/reports/daily">
+              <FileText />
+              {t("dashboard.export")}
+            </Link>
           </Button>
-          <Button>
-            <span className="plus">+</span>
-            {t("dashboard.newOrder")}
+          <Button asChild>
+            <Link to="/orders/new">
+              <span className="plus">+</span>
+              {t("dashboard.newOrder")}
+            </Link>
           </Button>
         </div>
       </section>
@@ -619,6 +623,7 @@ export function Dashboard() {
           title={t("dashboard.productionTitle")}
           description={t("dashboard.productionDescription")}
           action={t("common.viewAll")}
+          actionTo="/kitchen"
         />
         <div className="table-wrap">
           <table>
@@ -672,10 +677,12 @@ function PanelHeader({
   title,
   description,
   action,
+  actionTo,
 }: {
   title: string;
   description: string;
   action?: string;
+  actionTo?: string;
 }) {
   return (
     <header className="panel-header">
@@ -683,10 +690,12 @@ function PanelHeader({
         <h2>{title}</h2>
         <p>{description}</p>
       </div>
-      {action && (
-        <Button variant="ghost">
-          {action}
-          <ChevronRight />
+      {action && actionTo && (
+        <Button variant="ghost" asChild>
+          <Link to={actionTo}>
+            {action}
+            <ChevronRight />
+          </Link>
         </Button>
       )}
     </header>

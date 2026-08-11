@@ -31,6 +31,9 @@ describe("Dashboard navigation", () => {
   });
 
   it.each([
+    ["匯出今日清單", "/reports/daily"],
+    ["建立新訂單", "/orders/new"],
+    ["查看全部", "/kitchen"],
     ["今日訂單", "/orders"],
     ["今日營業額", "/reports?view=revenue"],
     ["待配送", "/delivery"],
