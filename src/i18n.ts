@@ -124,13 +124,13 @@ const resources = {
       },
       migration: {
         eyebrow: "Bubble → Supabase",
-        title: "資料遷移控制台",
+        title: "資料遷移盤點控制台",
         description:
-          "盤點 Bubble 核心與支援實體，並以可續跑分頁遷移到 Supabase 研究暫存區。",
-        productionTitle: "研究環境資料遷移",
+          "盤點 Bubble 核心與支援實體、來源記錄數量及環境差異。",
+        productionTitle: "研究環境資料盤點",
         productionDescription:
-          "掃描為唯讀；遷移會先清空 Supabase migration_* 研究資料，再重新匯入。Auth 及其他業務表不受影響。",
-        researchMode: "研究模式",
+          "目前只執行唯讀掃描，不會建立、清空或寫入任何 Supabase 資料表。",
+        researchMode: "唯讀",
         scanAll: "掃描全部資料表",
         scanning: "掃描中…",
         totalObjects: "資料表",
@@ -144,27 +144,11 @@ const resources = {
         baseUrl: "Base URL",
         urlPreview: "拼接預覽",
         invalidBaseUrl: "請輸入有效的 Base URL",
-        migrateTitle: "清空並遷移研究資料",
-        migrateDescription:
-          "保留 Bubble _id 及完整原始 JSON；每頁最多 100 筆，可追蹤進度及重新執行。",
-        confirmationLabel: "破壞性操作確認句",
-        confirmationHelp: "請完整輸入：{{sentence}}",
-        clearAndMigrate: "清空並開始遷移",
-        migrating: "正在遷移…",
-        migrateError: "無法完成 Bubble 資料遷移。",
-        importSummary:
-          "已完成 {{completed}} 類，{{failed}} 類失敗，共匯入 {{records}} 筆",
-        runId: "執行 ID",
         core: "核心實體",
         supporting: "其他實體",
-        importStatuses: {
-          running: "遷移中 · {{count}} 筆",
-          success: "已遷移 · {{count}} 筆",
-          error: "遷移失敗 · {{count}} 筆",
-        },
         executionLog: "執行日誌",
         clearLog: "清除日誌",
-        emptyLog: "尚未執行掃描或遷移操作。",
+        emptyLog: "尚未執行掃描操作。",
         log: {
           scanAllStart: "正在掃描所有 Bubble 資料表的記錄數量…",
           scanBatch: "掃描批次 {{current}}／{{total}} 完成",
@@ -172,13 +156,6 @@ const resources = {
           scanOneStart: "正在掃描 {{objectType}}…",
           scanOneSuccess: "{{objectType}} 掃描完成，共 {{count}} 筆",
           scanOneError: "{{objectType}} 掃描失敗：{{message}}",
-          migrationReset: "正在清空 Supabase 研究暫存資料…",
-          migrationStarted:
-            "遷移已開始（{{count}} 類），執行 ID：{{runId}}",
-          entityComplete: "{{objectType}} 遷移完成，共 {{count}} 筆",
-          entityError: "{{objectType}} 遷移失敗：{{message}}",
-          migrationComplete: "遷移程序完成，共處理 {{completed}} 類",
-          migrationError: "遷移程序中止：{{message}}",
         },
         groups: {
           customerCrm: "客戶、CRM、渠道與提醒",
@@ -338,13 +315,13 @@ const resources = {
       },
       migration: {
         eyebrow: "Bubble → Supabase",
-        title: "Data Migration Console",
+        title: "Data Migration Inventory",
         description:
-          "Inventory core and supporting Bubble entities, then migrate them into the Supabase research staging area with resumable pages.",
-        productionTitle: "Research data migration",
+          "Inventory core and supporting Bubble entities, source record counts, and environment differences.",
+        productionTitle: "Research data inventory",
         productionDescription:
-          "Scans are read-only. Migration clears only Supabase migration_* research data before importing; Auth and other business tables are untouched.",
-        researchMode: "Research mode",
+          "This page is read-only. It does not create, clear, or write any Supabase tables.",
+        researchMode: "Read only",
         scanAll: "Scan all objects",
         scanning: "Scanning…",
         totalObjects: "Objects",
@@ -358,27 +335,11 @@ const resources = {
         baseUrl: "Base URL",
         urlPreview: "URL preview",
         invalidBaseUrl: "Enter a valid base URL",
-        migrateTitle: "Clear and migrate research data",
-        migrateDescription:
-          "Preserves each Bubble _id and full source JSON. Pages contain at most 100 records and can be tracked or rerun.",
-        confirmationLabel: "Destructive action confirmation",
-        confirmationHelp: "Type the full sentence: {{sentence}}",
-        clearAndMigrate: "Clear and start migration",
-        migrating: "Migrating…",
-        migrateError: "Could not complete the Bubble data migration.",
-        importSummary:
-          "{{completed}} types completed, {{failed}} failed, {{records}} records imported",
-        runId: "Run ID",
         core: "Core entity",
         supporting: "Other entity",
-        importStatuses: {
-          running: "Migrating · {{count}} records",
-          success: "Migrated · {{count}} records",
-          error: "Failed · {{count}} records",
-        },
         executionLog: "Execution log",
         clearLog: "Clear log",
-        emptyLog: "No scan or migration operation has run yet.",
+        emptyLog: "No scan operation has run yet.",
         log: {
           scanAllStart: "Scanning record counts for all Bubble objects…",
           scanBatch: "Scan batch {{current}} of {{total}} completed",
@@ -387,15 +348,6 @@ const resources = {
           scanOneSuccess:
             "{{objectType}} scan completed with {{count}} records",
           scanOneError: "{{objectType}} scan failed: {{message}}",
-          migrationReset: "Clearing Supabase research staging data…",
-          migrationStarted:
-            "Migration started for {{count}} types; run ID: {{runId}}",
-          entityComplete:
-            "{{objectType}} migration completed with {{count}} records",
-          entityError: "{{objectType}} migration failed: {{message}}",
-          migrationComplete:
-            "Migration process completed for {{completed}} types",
-          migrationError: "Migration process stopped: {{message}}",
         },
         groups: {
           customerCrm: "Customers, CRM, channels & reminders",

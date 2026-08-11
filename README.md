@@ -37,11 +37,6 @@ Function. Bubble credentials are never accepted by or exposed to the browser.
 The proxy only accepts the FCCD production and version-test Bubble Data API
 hosts and only returns record counts.
 
-Research imports use the `bubble-migrate` Edge Function and the RLS-protected
-`migration_*` staging tables. The destructive reset is limited to staged
-Bubble records; it does not clear Supabase Auth or operational tables. See
-[the entity inventory and migration design](docs/BUBBLE_ENTITY_MIGRATION.md).
-
 ## Development workflow
 
 All new development must branch from the latest `main` and return through a
