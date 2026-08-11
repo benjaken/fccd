@@ -1,3 +1,6 @@
 [functions.bubble-scan]
 verify_jwt = false
 
+[functions.bubble-migrate]
+verify_jwt = false
+

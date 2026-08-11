@@ -106,3 +106,58 @@ export const BUBBLE_OBJECT_TYPES = [
 
 export type BubbleObjectType = (typeof BUBBLE_OBJECT_TYPES)[number];
 
+export const CORE_BUBBLE_OBJECT_TYPES = [
+  "A_Customers",
+  "M_customer",
+  "A_Order",
+  "S_Order",
+  "S_comment",
+  "A_Packages",
+  "A_Products",
+  "S_Packages_Product",
+  "S_Packages_ChoiceSet",
+  "DS_Ingredients",
+  "S_Ingredients_Product",
+  "B_Product_Ingredients",
+  "DS_Packing",
+  "B_delivery schedule",
+  "B_delivery schedule_surcharge",
+  "DS_Super_Motorcade",
+  "DS_Super_Motorcade_subDriver",
+  "S_Payment",
+  "S_Payment Report",
+  "B_cost monthly",
+  "B_supplierPurchase",
+  "B_ads cost weekly",
+  "DS__ingredient_Supplier",
+  "M_rawMeat",
+  "M_raw_stock",
+  "M_doneMeat",
+  "M_doneMeat_stock",
+  "M_outDone_order",
+  "M_outDone_doneMeat",
+  "M_seasoning",
+  "M_MeatSeasoning_cost",
+  "M_Monthly_MeatPrice",
+  "S_ingredient_stocktake",
+  "S_Packing_Stocktake",
+  "SHOP_dailySales",
+  "SHOP_DS cost",
+  "SHOP_DS_new_product",
+  "SHOP DS Restro",
+  "SHOP_DS_restro_depart",
+  "SHOP_DS_staff_list",
+  "SHOP_Ingredients",
+  "SHOP_monthly_cost",
+  "SHOP_roster",
+  "SHOP_StockTake",
+  "SHOP_supplier_purchase",
+  "User",
+] as const satisfies readonly BubbleObjectType[];
+
+const coreObjectTypeSet = new Set<string>(CORE_BUBBLE_OBJECT_TYPES);
+
+export function isCoreBubbleObjectType(objectType: BubbleObjectType) {
+  return coreObjectTypeSet.has(objectType);
+}
+
