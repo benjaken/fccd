@@ -6,9 +6,14 @@ const defaultSupabaseUrl = "https://vignxasvlxqnyvuhtjlu.supabase.co";
 const defaultSupabasePublishableKey =
   "sb_publishable_qeDZR6JWuYQaWSasETsOUg_vSJ07x4X";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || defaultSupabaseUrl;
+const supabaseUrl =
+  import.meta.env.VITE_SUPABASE_URL ||
+  import.meta.env.NEXT_PUBLIC_SUPABASE_URL ||
+  defaultSupabaseUrl;
 const supabasePublishableKey =
   import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+  import.meta.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+  import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
   defaultSupabasePublishableKey;
 
 export const isSupabaseConfigured = Boolean(

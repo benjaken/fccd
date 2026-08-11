@@ -14,6 +14,11 @@ Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` in `.env.local`.
 Only use a publishable key in the browser; never expose a Supabase secret or
 `service_role` key.
 
+Vercel preview deployments also accept the Supabase integration's
+`NEXT_PUBLIC_SUPABASE_URL` plus `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (or the
+legacy `NEXT_PUBLIC_SUPABASE_ANON_KEY`). This allows a Git `develop` deployment
+to follow the matching Supabase `develop` preview branch automatically.
+
 ## Checks
 
 ```bash
