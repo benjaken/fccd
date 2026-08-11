@@ -8,7 +8,7 @@
 | 文件日期 | 2026-08-11 |
 | 舊系統 | Bubble `fc-order-system` |
 | API 來源 | `https://cs.foodchannels-catering.com/version-test/api/1.1/meta/swagger.json` |
-| 規格版本 | Swagger 2.0 |
+| 規格版本 | 宣告為 Swagger 2.0 |
 | 分析環境 | Bubble `version-test` |
 | 目標技術棧 | React、Vite、Tailwind CSS、shadcn/ui、Supabase、Recharts、Lucide React、TanStack Query |
 
@@ -36,6 +36,8 @@
 | Data API paths | 202 |
 | Data types | 101 |
 | Definitions | 245 |
+
+規格內使用 `type: "option set"` 等 Bubble 自訂型別，並非標準 Swagger 2.0 schema。使用 code generator 或 validator 前，必須先正規化為 string／enum 並補齊合法值。
 
 所有 101 種 Data API 類型均提供：
 
@@ -82,7 +84,7 @@ api_token=<token>
 1. 在新技術棧重建舊系統可辨識的訂單、商品、套餐、付款、配送、庫存、店舖、排班與通知能力。
 2. 保留 Bubble legacy ID 對照，使歷史資料、關聯與稽核可追溯。
 3. 將 Bubble Privacy Rules 轉為 Supabase RLS 與後端權限檢查。
-4. 將多資料表 workflow 改寫為具驗證、冪等、稽核與錯誤處理的 Edge Functions。
+4. 將多資料表 workflow 改寫為具驗證、冪等、稽核與錯誤處理的 Edge Functions，原子寫入則由單一 PostgreSQL function／RPC transaction 完成。
 5. 讓所有關鍵財務、庫存與配送結果可回讀、可對帳、可重跑。
 
 ### 3.2 成功標準
@@ -124,6 +126,7 @@ Swagger 不提供 Role 與 `available_pages` 的合法值，也不提供其優�
 | AUTH-08 | 付款、成本、角色管理及資料匯出只開放指定權限。 |
 | AUTH-09 | 所有 exposed tables 啟用 RLS；授權不可依賴可由使用者修改的 `user_metadata`。 |
 | AUTH-10 | 不遷移、不回傳、不記錄 `user.pw`；舊使用者以邀請或強制重設密碼啟用。 |
+| AUTH-11 | 停權、角色降級或移除 tenant 時撤銷既有 session；敏感操作即時檢查帳號狀態與權限，不只依賴尚未到期的 JWT claim。 |
 
 ## 5. 功能範圍
 
@@ -343,7 +346,7 @@ Swagger 不提供 Role 與 `available_pages` 的合法值，也不提供其優�
 |---|---|
 | WF-01 | 每個 workflow 必須定義 request schema、required、enum、範圍與關聯存在性。 |
 | WF-02 | 成功回應包含 operation ID、異動 ID／筆數及業務結果，不只回傳空 object。 |
-| WF-03 | 多資料表異動使用資料庫 transaction 或可補償流程。 |
+| WF-03 | 訂單、付款、庫存等一致性寫入使用單一 PostgreSQL function／RPC transaction；只有無法納入同一資料庫交易的外部操作才設計補償流程。 |
 | WF-04 | 所有可重試操作支援 idempotency key。 |
 | WF-05 | 外部呼叫使用 timeout、退避重試、outbox 與 dead-letter 機制。 |
 | WF-06 | 排程明確定義時區、頻率、取消條件及重疊執行策略。 |
@@ -453,7 +456,8 @@ flowchart LR
 - Supabase Auth：使用者與 session
 - PostgreSQL：交易與主資料
 - RLS：customer、restro、department、driver 與角色隔離
-- Edge Functions：多表交易、第三方 API、webhook 與敏感操作
+- Edge Functions：驗證、流程編排、第三方 API、webhook 與敏感操作；不可假設多次 Data API 呼叫屬同一 transaction
+- PostgreSQL functions／RPC：在單一資料庫 transaction 內完成訂單、付款、庫存等原子多表寫入
 - Storage：報價、商品及配送檔案
 - Cron + job/outbox tables：排程、提醒與可靠重試
 
@@ -463,6 +467,9 @@ flowchart LR
 
 - 所有 PII、付款、成本與員工資料遵守最小權限。
 - 一般使用者不能修改自己的 role、permission 或 tenant ownership。
+- 一般使用者請求 Edge Function 時必須驗證 JWT，並以使用者身分執行受 RLS 保護的資料操作。
+- 只有經簽章驗證的 webhook、排程及明確的系統工作可使用 `service_role`；使用時仍須在函式內檢查 tenant、角色與資源範圍。
+- 停用帳號、角色降級及 tenant 移除必須撤銷 session；高敏感操作須即時查驗帳號狀態。
 - Views 使用 `security_invoker`；特權函式不得放在 exposed schema。
 - 高風險操作保存 actor、時間、舊值、新值、來源及 request ID。
 - Log、URL、analytics 與 error tracking 不得包含 secret、PII 或支付識別碼。
@@ -503,6 +510,7 @@ flowchart LR
 10. 同一員工重疊時段排班會被拒絕或要求具權限覆核。
 11. 跨店舖使用者不能讀取其他店舖的 roster、銷售、成本及庫存。
 12. 匿名使用者不能執行舊規格中 25 個具副作用的公開 workflow。
+13. 使用者停權、角色降級或移除店舖／客戶關聯後，既有 session 不能繼續執行受限操作。
 
 ### 11.2 資料遷移驗收
 
