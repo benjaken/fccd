@@ -103,7 +103,6 @@ const relationships = entities.flatMap((entity) =>
 );
 
 const output = {
-  generatedAt: new Date().toISOString(),
   source: SWAGGER_URL,
   entityCount: entities.length,
   fieldCount: entities.reduce((total, entity) => total + entity.fieldCount, 0),
