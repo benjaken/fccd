@@ -1,3 +1,8 @@
 [functions.bubble-scan]
 verify_jwt = false
 
+# Deliberately retained as a 410 Gone tombstone so preview branches cannot
+# continue running an older destructive migration implementation.
+[functions.bubble-migrate]
+verify_jwt = false
+
