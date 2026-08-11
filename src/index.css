@@ -1192,7 +1192,7 @@ td:last-child {
 
 .migration-source h2,
 .migration-action h2,
-.migration-table h2 {
+.migration-table-controls h2 {
   margin: 0;
   font-size: 15px;
 }
@@ -1381,7 +1381,7 @@ td:last-child {
   width: 14px;
 }
 
-.migration-table {
+.migration-table-controls {
   overflow: hidden;
 }
 
@@ -1415,6 +1415,135 @@ td:last-child {
   background: transparent;
   color: var(--foreground);
   font-size: 13px;
+}
+
+.migration-groups {
+  display: grid;
+  gap: 13px;
+}
+
+.migration-group {
+  --group-tone: oklch(0.62 0.18 255);
+  overflow: hidden;
+}
+
+.migration-group.tone-2 {
+  --group-tone: oklch(0.68 0.17 75);
+}
+
+.migration-group.tone-3 {
+  --group-tone: oklch(0.62 0.17 148);
+}
+
+.migration-group.tone-4 {
+  --group-tone: oklch(0.63 0.19 325);
+}
+
+.migration-group.tone-5 {
+  --group-tone: oklch(0.62 0.16 200);
+}
+
+.migration-group-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  width: 100%;
+  min-height: 68px;
+  padding: 11px 16px;
+  border: 0;
+  background: var(--card);
+  color: var(--foreground);
+  text-align: left;
+}
+
+.migration-group-toggle:hover {
+  background: color-mix(in oklch, var(--group-tone) 4%, var(--card));
+}
+
+.migration-group-toggle > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.migration-group-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  border-radius: 9px;
+  background: color-mix(in oklch, var(--group-tone) 12%, var(--card));
+  color: var(--group-tone);
+}
+
+.migration-group-icon svg {
+  width: 17px;
+}
+
+.migration-group-toggle > div > span:last-child {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.migration-group-toggle strong {
+  font-size: 14px;
+  font-weight: 770;
+}
+
+.migration-group-toggle small {
+  overflow: hidden;
+  color: var(--muted-foreground);
+  font-size: 11px;
+  font-weight: 620;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.migration-group-percentage {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.migration-group-percentage strong {
+  font-size: 13px;
+}
+
+.migration-group-percentage svg {
+  width: 15px;
+  color: var(--muted-foreground);
+  transition: transform 160ms ease;
+}
+
+.migration-group-toggle[aria-expanded="true"]
+  .migration-group-percentage
+  svg {
+  transform: rotate(180deg);
+}
+
+.migration-group-progress {
+  height: 5px;
+  margin: 0 14px 9px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: var(--secondary);
+}
+
+.migration-group-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--group-tone);
+  transition: width 200ms ease;
+}
+
+.migration-group .migration-object-list {
+  border-top: 1px solid var(--border);
 }
 
 .migration-object-list {
@@ -2326,6 +2455,25 @@ td:last-child {
 
   .migration-search {
     width: 100%;
+  }
+
+  .migration-group-toggle {
+    align-items: flex-start;
+    min-height: 76px;
+    padding: 12px;
+  }
+
+  .migration-group-toggle small {
+    display: -webkit-box;
+    overflow: hidden;
+    line-height: 1.4;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .migration-group-icon {
+    display: none;
   }
 
   .migration-list-head {

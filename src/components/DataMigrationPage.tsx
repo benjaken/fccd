@@ -1,8 +1,10 @@
 import {
   AlertTriangle,
   Check,
+  ChevronDown,
   CircleAlert,
   Database,
+  Folder,
   LoaderCircle,
   LockKeyhole,
   RefreshCw,
@@ -15,6 +17,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
+import { BUBBLE_ENTITY_GROUPS } from "@/data/bubble-entity-groups";
 import {
   BUBBLE_OBJECT_TYPES,
   CORE_BUBBLE_OBJECT_TYPES,
@@ -82,6 +85,9 @@ export function DataMigrationPage() {
   const [migrationRunId, setMigrationRunId] = useState<string | null>(null);
   const [migrationError, setMigrationError] = useState<string | null>(null);
   const [executionLog, setExecutionLog] = useState<ExecutionLogEntry[]>([]);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
+    () => new Set(["customerCrm", "ordersQuotes"]),
+  );
   const logIdRef = useRef(0);
   const controllerRef = useRef<AbortController | null>(null);
 
@@ -124,6 +130,16 @@ export function DataMigrationPage() {
       objectType.toLocaleLowerCase().includes(query),
     );
   }, [search]);
+
+  const filteredGroups = useMemo(() => {
+    const visibleTypes = new Set<string>(filteredObjectTypes);
+    return BUBBLE_ENTITY_GROUPS.map((group) => ({
+      ...group,
+      objectTypes: group.objectTypes.filter((objectType) =>
+        visibleTypes.has(objectType),
+      ),
+    })).filter((group) => group.objectTypes.length > 0);
+  }, [filteredObjectTypes]);
 
   const summary = useMemo(() => {
     const values = Object.values(results);
@@ -398,6 +414,81 @@ export function DataMigrationPage() {
     }
   };
 
+  const toggleGroup = (groupKey: string) => {
+    setExpandedGroups((current) => {
+      const next = new Set(current);
+      if (next.has(groupKey)) {
+        next.delete(groupKey);
+      } else {
+        next.add(groupKey);
+      }
+      return next;
+    });
+  };
+
+  const renderObjectRow = (objectType: BubbleObjectType) => {
+    const result = results[objectType];
+    const importResult = importResults[objectType];
+
+    return (
+      <div className="migration-object-row" key={objectType}>
+        <div>
+          <strong>{objectType}</strong>
+          <code>{encodeURIComponent(objectType)}</code>
+          <span className="migration-entity-meta">
+            <span
+              className={cn(
+                "migration-entity-role",
+                isCoreBubbleObjectType(objectType) && "core",
+              )}
+            >
+              {isCoreBubbleObjectType(objectType)
+                ? t("migration.core")
+                : t("migration.supporting")}
+            </span>
+            {importResult.status !== "idle" && (
+              <span
+                className={cn(
+                  "migration-import-state",
+                  importResult.status,
+                )}
+              >
+                {t(`migration.importStatuses.${importResult.status}`, {
+                  count: importResult.imported.toLocaleString(),
+                })}
+              </span>
+            )}
+          </span>
+        </div>
+        <span className="migration-record-count">
+          {result.status === "success"
+            ? result.count === 0
+              ? t("migration.zeroOk")
+              : result.count.toLocaleString()
+            : "—"}
+        </span>
+        <span
+          className={cn("migration-status", result.status)}
+          title={result.status === "error" ? result.message : undefined}
+        >
+          {result.status === "loading" && <LoaderCircle className="spin" />}
+          {result.status === "success" && <Check />}
+          {result.status === "error" && <CircleAlert />}
+          {t(`migration.statuses.${result.status}`)}
+        </span>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => void scanOne(objectType)}
+          disabled={result.status === "loading"}
+        >
+          <RefreshCw />
+          {t("migration.fetchOne")}
+        </Button>
+      </div>
+    );
+  };
+
   return (
     <div className="migration-page">
       <section className="migration-warning">
@@ -566,7 +657,7 @@ export function DataMigrationPage() {
         )}
       </section>
 
-      <section className="migration-table panel">
+      <section className="migration-table-controls panel">
         <header className="migration-table-header">
           <div>
             <h2>{t("migration.objectList")}</h2>
@@ -587,78 +678,88 @@ export function DataMigrationPage() {
             />
           </label>
         </header>
+      </section>
 
-        <div className="migration-object-list">
-          <div className="migration-list-head" aria-hidden="true">
-            <span>{t("migration.objectName")}</span>
-            <span>{t("migration.records")}</span>
-            <span>{t("migration.status")}</span>
-            <span />
-          </div>
-          {filteredObjectTypes.map((objectType) => {
-            const result = results[objectType];
-            const importResult = importResults[objectType];
-            return (
-              <div className="migration-object-row" key={objectType}>
+      <div className="migration-groups">
+        {filteredGroups.map((group, groupIndex) => {
+          const isExpanded =
+            Boolean(search.trim()) || expandedGroups.has(group.key);
+          const groupResults = group.objectTypes.map(
+            (objectType) => results[objectType],
+          );
+          const successful = groupResults.filter(
+            (result) => result.status === "success",
+          ).length;
+          const failed = groupResults.filter(
+            (result) => result.status === "error",
+          ).length;
+          const completedCount = successful + failed;
+          const percentage = Math.round(
+            (completedCount / group.objectTypes.length) * 100,
+          );
+          const coreCount = group.objectTypes.filter((objectType) =>
+            isCoreBubbleObjectType(objectType),
+          ).length;
+
+          return (
+            <section
+              className={cn(
+                "migration-group panel",
+                `tone-${(groupIndex % 5) + 1}`,
+              )}
+              key={group.key}
+            >
+              <button
+                className="migration-group-toggle"
+                type="button"
+                onClick={() => toggleGroup(group.key)}
+                aria-expanded={isExpanded}
+              >
                 <div>
-                  <strong>{objectType}</strong>
-                  <code>{encodeURIComponent(objectType)}</code>
-                  <span className="migration-entity-meta">
-                    <span
-                      className={cn(
-                        "migration-entity-role",
-                        isCoreBubbleObjectType(objectType) && "core",
-                      )}
-                    >
-                      {isCoreBubbleObjectType(objectType)
-                        ? t("migration.core")
-                        : t("migration.supporting")}
-                    </span>
-                    {importResult.status !== "idle" && (
-                      <span
-                        className={cn(
-                          "migration-import-state",
-                          importResult.status,
-                        )}
-                      >
-                        {t(
-                          `migration.importStatuses.${importResult.status}`,
-                          { count: importResult.imported.toLocaleString() },
-                        )}
-                      </span>
-                    )}
+                  <span className="migration-group-icon">
+                    <Folder />
+                  </span>
+                  <span>
+                    <strong>
+                      {t(`migration.groups.${group.key}`)}
+                    </strong>
+                    <small>
+                      {t("migration.groupSummary", {
+                        total: group.objectTypes.length,
+                        core: coreCount,
+                        supporting: group.objectTypes.length - coreCount,
+                        success: successful,
+                        failed,
+                      })}
+                    </small>
                   </span>
                 </div>
-                <span className="migration-record-count">
-                  {result.status === "success"
-                    ? result.count === 0
-                      ? t("migration.zeroOk")
-                      : result.count.toLocaleString()
-                    : "—"}
+                <span className="migration-group-percentage">
+                  <strong>{percentage}%</strong>
+                  <ChevronDown />
                 </span>
-                <span
-                  className={cn("migration-status", result.status)}
-                  title={result.status === "error" ? result.message : undefined}
-                >
-                  {result.status === "loading" && <LoaderCircle className="spin" />}
-                  {result.status === "success" && <Check />}
-                  {result.status === "error" && <CircleAlert />}
-                  {t(`migration.statuses.${result.status}`)}
-                </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => void scanOne(objectType)}
-                  disabled={result.status === "loading"}
-                >
-                  <RefreshCw />
-                  {t("migration.fetchOne")}
-                </Button>
+              </button>
+              <div className="migration-group-progress">
+                <span style={{ width: `${percentage}%` }} />
               </div>
-            );
-          })}
-        </div>
-      </section>
+
+              {isExpanded && (
+                <div className="migration-object-list">
+                  <div className="migration-list-head" aria-hidden="true">
+                    <span>{t("migration.objectName")}</span>
+                    <span>{t("migration.records")}</span>
+                    <span>{t("migration.status")}</span>
+                    <span />
+                  </div>
+                  {group.objectTypes.map((objectType) =>
+                    renderObjectRow(objectType),
+                  )}
+                </div>
+              )}
+            </section>
+          );
+        })}
+      </div>
 
       <section className="migration-execution-log">
         <header>
