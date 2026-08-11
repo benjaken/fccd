@@ -1192,7 +1192,7 @@ td:last-child {
 
 .migration-source-fields {
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(260px, 0.75fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
   margin-top: 14px;
 }

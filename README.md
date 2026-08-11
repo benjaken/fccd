@@ -25,6 +25,13 @@ The initial layout includes Food Channel Catering branding, responsive navigatio
 Traditional Chinese and English localization, dark mode, and reduced-motion
 support.
 
+## Bubble migration scanner
+
+The `/migration` page invokes the authenticated `bubble-scan` Supabase Edge
+Function. Bubble credentials are never accepted by or exposed to the browser.
+If the Bubble Data API becomes private, configure `BUBBLE_API_TOKEN` as a
+Supabase Edge Function secret before deploying the function.
+
 ## Development workflow
 
 All new development must branch from the latest `main` and return through a

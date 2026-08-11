@@ -139,10 +139,8 @@ const resources = {
         progress: "整體掃描進度",
         sourceTitle: "Bubble 來源設定",
         sourceDescription:
-          "系統會把資料表名稱安全編碼後，拼接到 Base URL。",
+          "系統會透過受登入保護的伺服器代理，安全讀取 Bubble 資料。",
         baseUrl: "Base URL",
-        apiToken: "API Token（選填）",
-        apiTokenPlaceholder: "公開 API 可留空；Token 不會被儲存",
         urlPreview: "拼接預覽",
         invalidBaseUrl: "請輸入有效的 Base URL",
         objectList: "Bubble 資料表",
@@ -305,10 +303,8 @@ const resources = {
         progress: "Overall scan progress",
         sourceTitle: "Bubble source settings",
         sourceDescription:
-          "Object names are safely encoded before being appended to the base URL.",
+          "A signed-in, server-side proxy safely reads the Bubble source.",
         baseUrl: "Base URL",
-        apiToken: "API token (optional)",
-        apiTokenPlaceholder: "Leave blank for a public API; token is not stored",
         urlPreview: "URL preview",
         invalidBaseUrl: "Enter a valid base URL",
         objectList: "Bubble objects",

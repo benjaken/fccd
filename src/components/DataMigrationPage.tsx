@@ -3,7 +3,6 @@ import {
   Check,
   CircleAlert,
   Database,
-  KeyRound,
   LoaderCircle,
   RefreshCw,
   Search,
@@ -39,7 +38,6 @@ const initialResults = Object.fromEntries(
 export function DataMigrationPage() {
   const { t } = useTranslation();
   const [baseUrl, setBaseUrl] = useState(DEFAULT_BUBBLE_BASE_URL);
-  const [apiToken, setApiToken] = useState("");
   const [search, setSearch] = useState("");
   const [results, setResults] =
     useState<Record<BubbleObjectType, ScanResult>>(initialResults);
@@ -98,9 +96,8 @@ export function DataMigrationPage() {
       const result = await fetchBubbleObjectSummary(
         baseUrl,
         objectType,
-        apiToken,
-        controller.signal,
       );
+      if (controller.signal.aborted) return;
       setResults((current) => ({
         ...current,
         [objectType]: { status: "success", ...result },
@@ -223,19 +220,6 @@ export function DataMigrationPage() {
               value={baseUrl}
               onChange={(event) => setBaseUrl(event.target.value)}
               spellCheck={false}
-            />
-          </label>
-          <label>
-            <span>
-              <KeyRound />
-              {t("migration.apiToken")}
-            </span>
-            <input
-              type="password"
-              value={apiToken}
-              onChange={(event) => setApiToken(event.target.value)}
-              placeholder={t("migration.apiTokenPlaceholder")}
-              autoComplete="off"
             />
           </label>
         </div>
