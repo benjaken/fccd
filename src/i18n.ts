@@ -197,6 +197,9 @@ const resources = {
           references: "樣本引用",
           orphans: "孤兒",
           targetMapping: "建議 Supabase 欄位",
+          uuidForeignKey: "UUID foreign key",
+          junctionMapping: "UUID junction table",
+          legacySource: "Bubble 原始引用（text）",
           referenceSummary: "{{sampled}} 個值／{{verified}} 個已驗證",
           privacyNote:
             "孤兒數只代表本次抽樣及最多 10 個引用驗證；完整遷移前仍需執行全量對帳。原始資料不會傳回瀏覽器。",
@@ -438,6 +441,9 @@ const resources = {
           references: "Sample references",
           orphans: "Orphans",
           targetMapping: "Suggested Supabase field",
+          uuidForeignKey: "UUID foreign key",
+          junctionMapping: "UUID junction table",
+          legacySource: "Original Bubble reference (text)",
           referenceSummary: "{{sampled}} values / {{verified}} verified",
           privacyNote:
             "Orphan totals cover this sample and at most 10 verified IDs per field. A full reconciliation is still required before migration. Raw records never reach the browser.",

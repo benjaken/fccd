@@ -42,6 +42,7 @@ type RelationshipResult = {
   sourceField: string;
   targetSchemaType: string;
   targetField: string;
+  legacySourceField: string;
   isArray: boolean;
   direction: "outgoing" | "incoming";
   cardinality:
@@ -220,7 +221,10 @@ Deno.serve(async (request) => {
             sourceField,
             targetSchemaType,
             targetField: isArray
-              ? `${sqlName(sourceField)}_relationships`
+              ? `${sqlName(sourceField)}_junction`
+              : `${sqlName(sourceField)}_id`,
+            legacySourceField: isArray
+              ? `${sqlName(sourceField)}_legacy_ids`
               : `${sqlName(sourceField)}_legacy_id`,
             isArray,
             direction: "outgoing",
@@ -267,7 +271,10 @@ Deno.serve(async (request) => {
                 sourceField: `${childSchemaType}.${childField}`,
                 targetSchemaType: childSchemaType,
                 targetField: isArray
-                  ? `${sqlName(childField)}_relationships`
+                  ? `${sqlName(childField)}_junction`
+                  : `${sqlName(childField)}_id`,
+                legacySourceField: isArray
+                  ? `${sqlName(childField)}_legacy_ids`
                   : `${sqlName(childField)}_legacy_id`,
                 isArray,
                 direction: "incoming" as const,

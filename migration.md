@@ -92,7 +92,17 @@
 
 - 不可把所有 Bubble 类型机械复制为同名业务表。
 - 必须先确认核心实体、其他实体、关联及最终 Supabase schema。
-- Bubble `_id` 必须保存为 `legacy_id`，且保持唯一。
+- Bubble `_id` 不是标准 UUID，不能直接 cast 成 PostgreSQL `uuid`。
+- 每个目标实体使用新的 `id uuid primary key default gen_random_uuid()`。
+- 同一笔资料保留 `legacy_id text unique not null`，绑定原 Bubble `_id`。
+- Bubble 单值引用先保存为 `xxx_legacy_id text`，再通过目标表
+  `legacy_id` 查出 UUID，写入 `xxx_id uuid` foreign key。
+- Bubble 数组引用转换为 junction table；junction 两端使用 UUID foreign key，
+  并在迁移对账期间保留原始 Bubble ID。
+- 所有 UUID 外键建立前必须完成 legacy ID crosswalk、孤儿引用报告及目标唯一性检查。
+- 示例：`a_order.A_customer` 的原始值先放入
+  `orders.customer_legacy_id`，解析后写入
+  `orders.customer_id uuid references customers(id)`。
 - 金额使用 PostgreSQL `numeric`，日期时间保留时区。
 - 订单客户、价格、地址及条款需要保留交易快照。
 - 关系字段完成资料分析后再建立 PostgreSQL foreign key。

@@ -751,7 +751,20 @@ export function DataMigrationPage() {
                             </span>
                           </td>
                           <td>
-                            <code>{relationship.targetField}</code>
+                            <span className="relationship-field-mapping">
+                              <code>{relationship.targetField}</code>
+                              <small>
+                                {relationship.isArray
+                                  ? t(
+                                      "migration.relationships.junctionMapping",
+                                    )
+                                  : t("migration.relationships.uuidForeignKey")}
+                              </small>
+                              <code>{relationship.legacySourceField}</code>
+                              <small>
+                                {t("migration.relationships.legacySource")}
+                              </small>
+                            </span>
                           </td>
                         </tr>
                       ))}

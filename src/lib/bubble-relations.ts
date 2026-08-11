@@ -7,6 +7,7 @@ export type BubbleRelationship = {
   sourceField: string;
   targetSchemaType: string;
   targetField: string;
+  legacySourceField: string;
   isArray: boolean;
   direction: "outgoing" | "incoming";
   cardinality:

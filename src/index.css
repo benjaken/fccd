@@ -1860,6 +1860,21 @@ td:last-child {
   font-size: 10px;
 }
 
+.relationship-field-mapping {
+  display: grid;
+  gap: 2px;
+}
+
+.relationship-field-mapping code + small {
+  margin-bottom: 4px;
+}
+
+.relationship-field-mapping small {
+  color: var(--muted-foreground);
+  font-size: 8px;
+  font-weight: 650;
+}
+
 .relationship-cardinality {
   display: inline-flex;
   padding: 4px 7px;
