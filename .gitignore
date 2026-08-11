@@ -1,0 +1,6 @@
+.migration-data/
+*.env
+.env*
+!.env.example
+__pycache__/
+*.pyc
