@@ -8,6 +8,7 @@ import {
   RefreshCw,
   Search,
   Server,
+  Terminal,
   Trash2,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -47,6 +48,13 @@ type ImportResult =
     }
   | { status: "error"; imported: number; message: string };
 
+type ExecutionLogEntry = {
+  id: number;
+  time: string;
+  message: string;
+  tone: "info" | "success" | "error";
+};
+
 const initialResults = Object.fromEntries(
   BUBBLE_OBJECT_TYPES.map((objectType) => [
     objectType,
@@ -73,7 +81,34 @@ export function DataMigrationPage() {
   const [migrationRunning, setMigrationRunning] = useState(false);
   const [migrationRunId, setMigrationRunId] = useState<string | null>(null);
   const [migrationError, setMigrationError] = useState<string | null>(null);
+  const [executionLog, setExecutionLog] = useState<ExecutionLogEntry[]>([]);
+  const logIdRef = useRef(0);
   const controllerRef = useRef<AbortController | null>(null);
+
+  const appendLog = (
+    message: string,
+    tone: ExecutionLogEntry["tone"] = "info",
+  ) => {
+    const time = new Intl.DateTimeFormat("en-GB", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+      timeZone: "Asia/Hong_Kong",
+    }).format(new Date());
+
+    setExecutionLog((current) =>
+      [
+        {
+          id: ++logIdRef.current,
+          time,
+          message,
+          tone,
+        },
+        ...current,
+      ].slice(0, 500),
+    );
+  };
 
   useEffect(
     () => () => {
@@ -131,7 +166,11 @@ export function DataMigrationPage() {
   const fetchObject = async (
     objectType: BubbleObjectType,
     controller: AbortController,
+    logResult = false,
   ) => {
+    if (logResult) {
+      appendLog(t("migration.log.scanOneStart", { objectType }));
+    }
     setResults((current) => ({
       ...current,
       [objectType]: { status: "loading" },
@@ -147,16 +186,32 @@ export function DataMigrationPage() {
         ...current,
         [objectType]: { status: "success", ...result },
       }));
+      if (logResult) {
+        appendLog(
+          t("migration.log.scanOneSuccess", {
+            objectType,
+            count: result.count.toLocaleString(),
+          }),
+          "success",
+        );
+      }
     } catch (error) {
       if (controller.signal.aborted) return;
+      const message =
+        error instanceof Error ? error.message : t("migration.fetchError");
       setResults((current) => ({
         ...current,
         [objectType]: {
           status: "error",
-          message:
-            error instanceof Error ? error.message : t("migration.fetchError"),
+          message,
         },
       }));
+      if (logResult) {
+        appendLog(
+          t("migration.log.scanOneError", { objectType, message }),
+          "error",
+        );
+      }
     }
   };
 
@@ -164,6 +219,7 @@ export function DataMigrationPage() {
     controllerRef.current?.abort();
     const controller = new AbortController();
     controllerRef.current = controller;
+    appendLog(t("migration.log.scanAllStart"));
 
     setResults(
       Object.fromEntries(
@@ -181,14 +237,21 @@ export function DataMigrationPage() {
       await Promise.all(
         batch.map((objectType) => fetchObject(objectType, controller)),
       );
+      appendLog(
+        t("migration.log.scanBatch", {
+          current: Math.ceil((index + batch.length) / batchSize),
+          total: Math.ceil(BUBBLE_OBJECT_TYPES.length / batchSize),
+        }),
+      );
     }
+    appendLog(t("migration.log.scanAllComplete"), "success");
   };
 
   const scanOne = async (objectType: BubbleObjectType) => {
     controllerRef.current?.abort();
     const controller = new AbortController();
     controllerRef.current = controller;
-    await fetchObject(objectType, controller);
+    await fetchObject(objectType, controller, true);
   };
 
   const runMigration = async () => {
@@ -203,6 +266,7 @@ export function DataMigrationPage() {
     setMigrationError(null);
     setMigrationRunId(null);
     setImportResults(initialImportResults);
+    appendLog(t("migration.log.migrationReset"));
 
     try {
       const { run, sourceTypes } = await resetResearchMigration(
@@ -210,6 +274,13 @@ export function DataMigrationPage() {
         confirmation.trim(),
       );
       setMigrationRunId(run.id);
+      appendLog(
+        t("migration.log.migrationStarted", {
+          runId: run.id,
+          count: sourceTypes.length,
+        }),
+        "success",
+      );
 
       const allowedTypes = new Set<string>(BUBBLE_OBJECT_TYPES);
       const migrationTypes = sourceTypes.filter(
@@ -278,27 +349,49 @@ export function DataMigrationPage() {
                 },
               }));
             }
+            appendLog(
+              t("migration.log.entityComplete", {
+                objectType,
+                count: imported.toLocaleString(),
+              }),
+              "success",
+            );
           } catch (error) {
+            const message =
+              error instanceof Error
+                ? error.message
+                : t("migration.migrateError");
             setImportResults((current) => ({
               ...current,
               [objectType]: {
                 status: "error",
                 imported,
-                message:
-                  error instanceof Error
-                    ? error.message
-                    : t("migration.migrateError"),
+                message,
               },
             }));
+            appendLog(
+              t("migration.log.entityError", { objectType, message }),
+              "error",
+            );
           }
         }
       };
 
       await Promise.all(Array.from({ length: 4 }, () => worker()));
       await completeResearchMigration(run.id);
+      appendLog(
+        t("migration.log.migrationComplete", {
+          completed: migrationTypes.length,
+        }),
+        "success",
+      );
     } catch (error) {
-      setMigrationError(
-        error instanceof Error ? error.message : t("migration.migrateError"),
+      const message =
+        error instanceof Error ? error.message : t("migration.migrateError");
+      setMigrationError(message);
+      appendLog(
+        t("migration.log.migrationError", { message }),
+        "error",
       );
     } finally {
       setMigrationRunning(false);
@@ -564,6 +657,34 @@ export function DataMigrationPage() {
               </div>
             );
           })}
+        </div>
+      </section>
+
+      <section className="migration-execution-log">
+        <header>
+          <h2>
+            <Terminal />
+            {t("migration.executionLog")}
+          </h2>
+          <button
+            type="button"
+            onClick={() => setExecutionLog([])}
+            disabled={executionLog.length === 0}
+          >
+            {t("migration.clearLog")}
+          </button>
+        </header>
+        <div className="migration-log-content" role="log" aria-live="polite">
+          {executionLog.length === 0 ? (
+            <p>{t("migration.emptyLog")}</p>
+          ) : (
+            executionLog.map((entry) => (
+              <p className={entry.tone} key={entry.id}>
+                <time>[{entry.time}]</time>
+                <span>{entry.message}</span>
+              </p>
+            ))
+          )}
         </div>
       </section>
     </div>

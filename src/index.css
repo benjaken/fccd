@@ -1542,6 +1542,93 @@ td:last-child {
   color: var(--destructive);
 }
 
+.migration-execution-log {
+  overflow: hidden;
+  border: 1px solid oklch(0.28 0.03 260);
+  border-radius: 14px;
+  background: oklch(0.18 0.025 260);
+  box-shadow: 0 8px 28px rgb(15 23 42 / 14%);
+  color: oklch(0.91 0.015 255);
+}
+
+.migration-execution-log > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 48px;
+  padding: 0 17px;
+  border-bottom: 1px solid rgb(255 255 255 / 8%);
+}
+
+.migration-execution-log h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 760;
+}
+
+.migration-execution-log h2 svg {
+  width: 16px;
+  color: oklch(0.72 0.13 250);
+}
+
+.migration-execution-log header button {
+  padding: 5px 7px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: oklch(0.7 0.02 255);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.migration-execution-log header button:hover:not(:disabled) {
+  background: rgb(255 255 255 / 7%);
+  color: white;
+}
+
+.migration-execution-log header button:disabled {
+  opacity: 0.4;
+}
+
+.migration-log-content {
+  min-height: 170px;
+  max-height: 330px;
+  padding: 14px 17px 18px;
+  overflow-y: auto;
+  scrollbar-color: oklch(0.7 0.02 255) transparent;
+}
+
+.migration-log-content p {
+  display: flex;
+  gap: 9px;
+  margin: 0 0 7px;
+  color: oklch(0.78 0.025 255);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.migration-log-content p:last-child {
+  margin-bottom: 0;
+}
+
+.migration-log-content time {
+  flex: 0 0 auto;
+  color: oklch(0.7 0.05 250);
+}
+
+.migration-log-content p.success span {
+  color: oklch(0.76 0.13 152);
+}
+
+.migration-log-content p.error span {
+  color: oklch(0.73 0.16 25);
+}
+
 .spin {
   animation: migration-spin 0.8s linear infinite;
 }
