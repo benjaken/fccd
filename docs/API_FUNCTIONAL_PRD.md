@@ -667,6 +667,13 @@ Swagger 不提供 Role 與 `available_pages` 的合法值，也不提供其優�
 | UX-06 | 桌面後台與司機手機工作台使用不同 responsive 版型；不可把桌面表格直接縮小到手機。 |
 | UX-07 | 支援鍵盤操作、可見 focus、表單錯誤摘要及符合 WCAG AA 的文字對比。 |
 | UX-08 | 參考舊介面截圖只為確認資訊與操作，不直接複製造成慢速、細字、橫向拖動及過度跳頁的版型。 |
+| UX-09 | 整體 Layout 參考提供的 ONE TEAM CONNECT 截圖：左上品牌 Logo、頂部一級導航、左側二級導航、右上工具區及最大化主內容區。 |
+| UX-10 | 品牌 Logo 使用 Food Channel 官方版本；主題色改為品牌紅色，並以 design tokens 管理 primary、hover、active、focus、success、warning 及 danger。 |
+| UX-11 | 提供 Light／Dark mode 切換；所有頁面、表格、圖表、Dialog、Toast、狀態色及 Logo 版本均須支援兩種模式。 |
+| UX-12 | 提供繁體中文／English 切換，預設繁體中文；使用者選擇須跨 session 保存。 |
+| UX-13 | 所有介面文字、導航、表單、驗證、通知及空狀態使用 i18n key，不得在元件內散落硬編碼文案。 |
+| UX-14 | 日期、時間、數字及貨幣按 locale 格式化；香港業務時間預設使用 `Asia/Hong_Kong`，貨幣預設顯示 HKD。 |
+| UX-15 | 頁面及工作區切換提供短暫、非阻塞的動態效果；不得延遲資料操作，並遵守 `prefers-reduced-motion`。 |
 
 第一階段先確保所有舊任務可完成且結果等價；除安全、可用性及新技術框架所必需的調整外，UX 流程重設與步驟精簡在等價驗收後進入第二階段。
 
@@ -683,6 +690,39 @@ Swagger 不提供 Role 與 `available_pages` 的合法值，也不提供其優�
 | MOB-05 | 弱網時只快取完成工作所需的最少資料；恢復連線後防重補送並顯示衝突。 |
 | MOB-06 | 敏感資料不得長期明文保存於裝置；支援遠端 session 撤銷、裝置登出及本機資料清除。 |
 | MOB-07 | 站內／推送通知遵守角色與資源範圍，通知內容不得在鎖定畫面暴露不必要 PII。 |
+
+### 9.4 Layout、主題與國際化規格
+
+#### 桌面 Layout
+
+- 頂部左側顯示 Food Channel Logo 及當前工作區。
+- 頂部中間顯示具權限的一級導航；當寬度不足時收納至可存取的 overflow menu。
+- 左側欄顯示當前一級頁面的二級導航、active state 及可選的收合控制。
+- 右上工具區包含語言、Light／Dark mode、通知及使用者選單。
+- 主內容區使用一致的 page header、breadcrumb／context、主要操作、篩選及內容容器。
+- 手機版改為符合角色任務的 header、bottom navigation 或 drawer，不保留縮小版桌面側欄。
+
+#### 主題
+
+- 品牌紅色只用於主要操作、active state 及重點提示，不以大面積高飽和紅色降低閱讀性。
+- Light／Dark mode 均使用語意化色彩 token，禁止元件自行寫死背景及文字色。
+- 切換主題不重新載入頁面、不遺失表單內容，並保存至使用者 profile；未登入時可保存於本機。
+- 首次使用的預設主題跟隨裝置設定；使用者手動選擇後優先使用其保存值。
+
+#### i18n
+
+- 支援 locale：`zh-HK`（預設繁體中文）與 `en`（English）。
+- Translation namespace 至少按 `common`、`navigation`、`auth`、`orders`、`quotes`、`inventory`、`delivery`、`restaurant`、`reports`、`validation` 分拆。
+- 缺少 English 文案時 fallback 至 `zh-HK`，同時在非正式環境記錄 missing key；正式畫面不得直接顯示 translation key。
+- API／資料庫保存穩定 code，不保存翻譯後狀態文字；顯示時由前端按 locale 翻譯。
+- 使用者輸入的客戶名稱、地址、產品內容及備註不自動翻譯。
+
+#### 動態效果
+
+- Page／workspace transition 只使用 opacity、transform 或 View Transition 類的輕量效果。
+- Loading、資料重新查詢與 transition 狀態分開；動畫結束不能作為資料完成條件。
+- 使用者啟用 reduced motion 時關閉非必要動畫，只保留即時狀態回饋。
+- 動態效果不得造成 layout shift、重複提交、focus 遺失或瀏覽器返回行為失效。
 
 ## 10. 第二階段改進與新增能力
 
@@ -823,6 +863,11 @@ flowchart LR
 31. 若後期啟用積分換購，重複請求不能重複扣分或領取禮品，退款與到期流水可完整追溯。
 32. 正式環境不存在可寫「測試」導航、route 或匿名批次入口。
 33. 第一階段功能對照表中的每個現行功能均有舊／新操作錄影或測試證據、輸入輸出比對、權限結果及產品負責人簽核；未簽核項目不得宣稱 100% 完成。
+34. 首次進入系統預設顯示繁體中文；切換 English 後所有導航、表單、驗證及通知即時更新，重新登入仍保留選擇。
+35. Light／Dark mode 切換不重新整理頁面或清空表單，兩種模式下文字、狀態及圖表均符合對比要求。
+36. 桌面版呈現頂部一級導航、左側二級導航、Food Channel Logo 及右上工具區；手機版不出現縮小且難操作的桌面側欄。
+37. 頁面切換動態效果不阻塞操作；啟用 reduced motion 後非必要 transition 關閉。
+38. i18n 自動檢查不得發現使用者可見的遺漏 key；狀態 code、日期、時間及 HKD 顯示在中英文 locale 下正確。
 
 ### 13.2 資料遷移驗收
 
@@ -922,10 +967,17 @@ flowchart LR
 5. 積分由哪個法律實體發行、是否跨品牌、由誰承擔負債及禮品成本。
 6. 手機介面第一階段採 responsive PWA，還是需要 App Store／Play Store 原生應用。
 
+### 15.7 品牌與介面資產
+
+1. Food Channel 官方 Logo 的 SVG／深色版／淺色版資產及安全留白規則。
+2. 品牌紅色的正式色值與可接受的輔助色。
+3. 首次使用的主題是否維持跟隨裝置，或固定預設 Light mode。
+4. English 文案由誰審核，以及品牌名、菜名和專有詞的翻譯字典。
+
 ## 16. 實作階段
 
 1. **等價基線凍結**：取得 Bubble Editor、所有頁面、Privacy Rules、option sets、workflow、排程、Shopify／WATI／PayPal／Asana／Zapier 設定、公式、匯入匯出及各角色測試帳號；建立逐功能對照表。
-2. **第一階段基礎框架**：建立 Auth、角色與資料範圍、系統設定、Layout、migration、RLS 測試及舊 ID mapping。
+2. **第一階段基礎框架**：建立 Auth、角色與資料範圍、系統設定、參考 Layout、Food Channel 主題、Light／Dark mode、繁中／英文 i18n、頁面 transition、migration、RLS 測試及舊 ID mapping。
 3. **第一階段主資料與到會**：等價實現品牌、Store、客戶、商品、套餐、報價、訂單、付款、最低額、Shopify、扣料及附加服務。
 4. **第一階段中央廚房與凍肉**：等價實現生產、領料、出貨、批次、投入、產量、收成率、香料、庫存及成本。
 5. **第一階段配送與手機**：等價實現派單、接拒、狀態、照片、餐具、收款及現行手機操作。
