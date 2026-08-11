@@ -10,6 +10,7 @@ import {
   CircleDollarSign,
   ClipboardCheck,
   ClipboardList,
+  DatabaseZap,
   FileText,
   HandCoins,
   LayoutDashboard,
@@ -32,6 +33,7 @@ import {
 import { Link, NavLink, Route, Routes, useLocation } from "react-router-dom";
 
 import { AuthProvider, useAuth } from "@/auth/AuthProvider";
+import { DataMigrationPage } from "@/components/DataMigrationPage";
 import { LoginPage } from "@/components/LoginPage";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/lib/use-theme";
@@ -54,6 +56,7 @@ const primaryNav: NavItem[] = [
   { key: "delivery", to: "/delivery", icon: Truck },
   { key: "restaurant", to: "/restaurant", icon: Store },
   { key: "reports", to: "/reports", icon: ChartNoAxesCombined },
+  { key: "migration", to: "/migration", icon: DatabaseZap },
 ];
 
 const secondaryNav: Record<string, NavItem[]> = {
@@ -103,6 +106,10 @@ const secondaryNav: Record<string, NavItem[]> = {
   reports: [
     { key: "reports", to: "/reports", icon: ChartNoAxesCombined },
     { key: "finance", to: "/finance", icon: CircleDollarSign },
+  ],
+  migration: [
+    { key: "migration", to: "/migration", icon: DatabaseZap },
+    { key: "overview", to: "/", icon: LayoutDashboard },
   ],
 };
 
@@ -341,6 +348,7 @@ function OperationsShell() {
           <div className="page-transition" key={pageKey}>
             <Routes>
               <Route path="/" element={<Dashboard />} />
+              <Route path="/migration" element={<DataMigrationPage />} />
               <Route path="*" element={<ModulePlaceholder section={section} />} />
             </Routes>
           </div>
