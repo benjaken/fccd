@@ -1,5 +1,8 @@
 import { supabase } from "@/lib/supabase";
 
+const mainRelationshipFunctionUrl =
+  "https://vignxasvlxqnyvuhtjlu.supabase.co/functions/v1/bubble-relations";
+
 export type BubbleRelationship = {
   sourceField: string;
   targetSchemaType: string;
@@ -40,7 +43,20 @@ export async function analyzeBubbleRelationships(sourceType: string) {
   });
 
   if (error) {
-    throw new Error(error.message || "Relationship analysis failed.");
+    const fallbackResponse = await fetch(mainRelationshipFunctionUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sourceType }),
+    });
+    const fallbackData = await fallbackResponse.json().catch(() => null);
+    if (!fallbackResponse.ok) {
+      throw new Error(
+        typeof fallbackData?.error === "string"
+          ? fallbackData.error
+          : error.message || "Relationship analysis failed.",
+      );
+    }
+    return fallbackData as BubbleRelationshipReport;
   }
   if (!data || !Array.isArray(data.relationships)) {
     throw new Error(

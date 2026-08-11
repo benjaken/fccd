@@ -80,6 +80,9 @@
 - 浏览器只能使用 publishable key，不得使用 secret 或
   `service_role` key。
 - 目前只保留唯读 `bubble-scan` Edge Function。
+- `bubble-relations` 是无状态唯读分析函数；Supabase preview branch 尚未部署时，
+  前端可回退到 main Function。该函数不查询 main 数据库，只读取 production
+  Bubble 并返回聚合关系结果。
 - 已取消的 `bubble-migrate` endpoint 只保留 HTTP 410 tombstone，
   防止旧部署继续执行错误任务。
 
