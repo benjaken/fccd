@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { fileURLToPath, URL } from "node:url";
+import path from "node:path";
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 
@@ -25,7 +25,7 @@ describe("Header display requirements", () => {
 
   it("keeps every explicit pixel font size at 14px or larger", () => {
     const stylesheet = readFileSync(
-      fileURLToPath(new URL("../src/index.css", import.meta.url)),
+      path.resolve(process.cwd(), "src/index.css"),
       "utf8",
     );
     const sizes = [...stylesheet.matchAll(/font-size:\s*(\d+)px/g)].map(
@@ -38,7 +38,7 @@ describe("Header display requirements", () => {
 
   it("right-aligns workspace soft links in the top header", () => {
     const stylesheet = readFileSync(
-      fileURLToPath(new URL("../src/index.css", import.meta.url)),
+      path.resolve(process.cwd(), "src/index.css"),
       "utf8",
     );
     const workspaceRule = stylesheet.match(/\.workspace-links\s*\{([^}]+)\}/);
