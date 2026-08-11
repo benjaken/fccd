@@ -98,6 +98,19 @@ function parseDate(value: unknown) {
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
+function errorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error) return error.message;
+  if (
+    error &&
+    typeof error === "object" &&
+    "message" in error &&
+    typeof error.message === "string"
+  ) {
+    return error.message;
+  }
+  return fallback;
+}
+
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -335,6 +348,18 @@ Deno.serve(async (request) => {
       const failed = progress?.filter(({ status }) => status === "failed") ?? [];
       const completed =
         progress?.filter(({ status }) => status === "completed") ?? [];
+      const unfinished =
+        progress?.filter(
+          ({ status }) => status === "pending" || status === "running",
+        ) ?? [];
+      if (unfinished.length) {
+        return jsonResponse(
+          {
+            error: `${unfinished.length} migration entities are still unfinished.`,
+          },
+          409,
+        );
+      }
       const status = failed.length ? "completed_with_errors" : "completed";
       const { data: run, error: completeError } = await supabase
         .from("migration_runs")
@@ -357,8 +382,7 @@ Deno.serve(async (request) => {
   } catch (error) {
     return jsonResponse(
       {
-        error:
-          error instanceof Error ? error.message : "Migration request failed.",
+        error: errorMessage(error, "Migration request failed."),
       },
       400,
     );
