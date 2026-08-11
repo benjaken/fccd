@@ -1,15 +1,23 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabasePublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+// These FCCD values are browser-safe public identifiers, not secret credentials.
+// Environment variables can override them for preview or deployment environments.
+const defaultSupabaseUrl = "https://vignxasvlxqnyvuhtjlu.supabase.co";
+const defaultSupabasePublishableKey =
+  "sb_publishable_qeDZR6JWuYQaWSasETsOUg_vSJ07x4X";
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || defaultSupabaseUrl;
+const supabasePublishableKey =
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+  defaultSupabasePublishableKey;
 
 export const isSupabaseConfigured = Boolean(
   supabaseUrl && supabasePublishableKey,
 );
 
 export const supabase = createClient(
-  supabaseUrl || "https://configuration-required.invalid",
-  supabasePublishableKey || "configuration-required",
+  supabaseUrl,
+  supabasePublishableKey,
   {
     auth: {
       persistSession: true,
