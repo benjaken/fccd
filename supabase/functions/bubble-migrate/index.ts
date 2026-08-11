@@ -218,14 +218,18 @@ Deno.serve(async (request) => {
         throw new Error("Migration run is not active.");
       }
 
+      const progressUpdate: Record<string, unknown> = {
+        status: "running",
+        error_message: null,
+        updated_at: new Date().toISOString(),
+      };
+      if (cursor === 0) {
+        progressUpdate.started_at = new Date().toISOString();
+      }
+
       await supabase
         .from("migration_progress")
-        .update({
-          status: "running",
-          started_at: cursor === 0 ? new Date().toISOString() : undefined,
-          error_message: null,
-          updated_at: new Date().toISOString(),
-        })
+        .update(progressUpdate)
         .eq("run_id", runId)
         .eq("source_type", entity.source_type);
 
