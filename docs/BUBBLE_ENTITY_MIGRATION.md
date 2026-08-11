@@ -6,6 +6,9 @@ This inventory combines:
 - the data requirements in `API_FUNCTIONAL_PRD.md` section 8;
 - a production Data API count probe performed on 2026-08-11.
 
+The migration page defaults to the `version-test` Data API during research.
+Production remains an explicitly selectable Base URL for reconciliation.
+
 The classification is intentionally provisional. The PRD still requires
 Bubble Editor, Privacy Rules, workflow and business-owner verification before
 the raw records are transformed into the final operational schema.

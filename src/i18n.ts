@@ -127,7 +127,7 @@ const resources = {
         title: "資料遷移控制台",
         description:
           "盤點 Bubble 核心與支援實體，並以可續跑分頁遷移到 Supabase 研究暫存區。",
-        productionTitle: "生產環境資料庫",
+        productionTitle: "研究環境資料遷移",
         productionDescription:
           "掃描為唯讀；遷移會先清空 Supabase migration_* 研究資料，再重新匯入。Auth 及其他業務表不受影響。",
         researchMode: "研究模式",
@@ -310,7 +310,7 @@ const resources = {
         title: "Data Migration Console",
         description:
           "Inventory core and supporting Bubble entities, then migrate them into the Supabase research staging area with resumable pages.",
-        productionTitle: "Production database",
+        productionTitle: "Research data migration",
         productionDescription:
           "Scans are read-only. Migration clears only Supabase migration_* research data before importing; Auth and other business tables are untouched.",
         researchMode: "Research mode",
