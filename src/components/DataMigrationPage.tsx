@@ -156,8 +156,9 @@ export function DataMigrationPage() {
     };
   }, [results]);
 
-  const completed = summary.success + summary.error;
-  const progress = Math.round((completed / BUBBLE_OBJECT_TYPES.length) * 100);
+  const progress = Math.round(
+    (summary.success / BUBBLE_OBJECT_TYPES.length) * 100,
+  );
 
   const previewUrl = useMemo(() => {
     try {
@@ -516,9 +517,8 @@ export function DataMigrationPage() {
           const failed = groupResults.filter(
             (result) => result.status === "error",
           ).length;
-          const completedCount = successful + failed;
           const percentage = Math.round(
-            (completedCount / group.objectTypes.length) * 100,
+            (successful / group.objectTypes.length) * 100,
           );
           const coreCount = group.objectTypes.filter((objectType) =>
             isCoreBubbleObjectType(objectType),

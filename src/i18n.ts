@@ -137,7 +137,7 @@ const resources = {
         coreObjects: "核心實體",
         fetched: "成功獲取",
         failed: "獲取失敗",
-        progress: "整體掃描進度",
+        progress: "整體掃描成功率",
         sourceTitle: "Bubble 來源設定",
         sourceDescription:
           "系統會透過唯讀伺服器代理，安全讀取 Bubble 資料。",
@@ -375,7 +375,7 @@ const resources = {
         coreObjects: "Core entities",
         fetched: "Fetched",
         failed: "Failed",
-        progress: "Overall scan progress",
+        progress: "Overall scan success rate",
         sourceTitle: "Bubble source settings",
         sourceDescription:
           "A read-only server-side proxy safely reads the Bubble source.",
