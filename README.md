@@ -14,6 +14,9 @@ python3 scripts/export_bubble.py discover
 # Export every exposed type
 python3 scripts/export_bubble.py export
 
+# Continue an interrupted export without downloading completed types again
+python3 scripts/export_bubble.py export --resume
+
 # Export selected types
 python3 scripts/export_bubble.py export \
   --type A_Order \
