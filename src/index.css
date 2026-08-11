@@ -1061,20 +1061,20 @@ td:last-child {
 }
 
 .migration-warning strong {
-  font-size: 13px;
+  font-size: 15px;
 }
 
 .migration-warning p {
   margin: 2px 0 0;
   color: rgb(255 255 255 / 78%);
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .migration-warning > span {
   padding: 5px 10px;
   border: 1px solid rgb(255 255 255 / 35%);
   border-radius: 99px;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -1134,7 +1134,7 @@ td:last-child {
 
 .migration-metrics span {
   color: var(--muted-foreground);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
 }
 
@@ -1152,7 +1152,7 @@ td:last-child {
   display: flex;
   justify-content: space-between;
   color: var(--muted-foreground);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
 }
 
@@ -1194,7 +1194,7 @@ td:last-child {
 .migration-action h2,
 .migration-table h2 {
   margin: 0;
-  font-size: 13px;
+  font-size: 15px;
 }
 
 .migration-source header p,
@@ -1202,7 +1202,7 @@ td:last-child {
 .migration-table-header p {
   margin: 3px 0 0;
   color: var(--muted-foreground);
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .migration-source-fields {
@@ -1222,7 +1222,7 @@ td:last-child {
   align-items: center;
   gap: 5px;
   color: var(--muted-foreground);
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 750;
   text-transform: uppercase;
 }
@@ -1244,7 +1244,7 @@ td:last-child {
   padding: 0 11px;
   outline: 0;
   color: var(--foreground);
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .migration-source-fields input:focus,
@@ -1259,7 +1259,7 @@ td:last-child {
   min-width: 0;
   margin: 10px 0 0;
   color: var(--muted-foreground);
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .migration-url-preview span {
@@ -1308,7 +1308,7 @@ td:last-child {
   align-items: center;
   gap: 5px;
   color: var(--muted-foreground);
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 750;
   text-transform: uppercase;
 }
@@ -1326,7 +1326,7 @@ td:last-child {
   outline: 0;
   background: var(--background);
   color: var(--foreground);
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .migration-confirmation input:focus {
@@ -1338,7 +1338,7 @@ td:last-child {
 .migration-confirmation-note {
   margin: 8px 0 0;
   color: var(--muted-foreground);
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .migration-run-progress {
@@ -1352,7 +1352,7 @@ td:last-child {
   justify-content: space-between;
   gap: 12px;
   color: var(--muted-foreground);
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .migration-run-progress > div:first-child strong {
@@ -1361,7 +1361,7 @@ td:last-child {
 
 .migration-run-progress code {
   color: var(--muted-foreground);
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .migration-action-error {
@@ -1373,7 +1373,7 @@ td:last-child {
   border-radius: 8px;
   background: color-mix(in oklch, var(--destructive) 8%, var(--card));
   color: var(--destructive);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 650;
 }
 
@@ -1414,7 +1414,7 @@ td:last-child {
   outline: 0;
   background: transparent;
   color: var(--foreground);
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .migration-object-list {
@@ -1439,14 +1439,14 @@ td:last-child {
   border-bottom: 1px solid var(--border);
   background: color-mix(in oklch, var(--background) 80%, var(--card));
   color: var(--muted-foreground);
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 750;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
 .migration-object-row {
-  min-height: 54px;
+  min-height: 68px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -1462,7 +1462,7 @@ td:last-child {
 
 .migration-object-row strong {
   overflow: hidden;
-  font-size: 11px;
+  font-size: 13px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1470,7 +1470,7 @@ td:last-child {
 .migration-object-row code {
   overflow: hidden;
   color: var(--muted-foreground);
-  font-size: 9px;
+  font-size: 11px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1490,7 +1490,7 @@ td:last-child {
   border-radius: 99px;
   background: var(--secondary);
   color: var(--muted-foreground);
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 750;
 }
 
@@ -1517,7 +1517,7 @@ td:last-child {
 }
 
 .migration-record-count {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 750;
 }
 
@@ -1526,7 +1526,7 @@ td:last-child {
   align-items: center;
   gap: 5px;
   color: var(--muted-foreground);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
 }
 

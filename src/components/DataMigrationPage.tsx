@@ -537,7 +537,11 @@ export function DataMigrationPage() {
                   </span>
                 </div>
                 <span className="migration-record-count">
-                  {result.status === "success" ? result.count : "—"}
+                  {result.status === "success"
+                    ? result.count === 0
+                      ? t("migration.zeroOk")
+                      : result.count.toLocaleString()
+                    : "—"}
                 </span>
                 <span
                   className={cn("migration-status", result.status)}
