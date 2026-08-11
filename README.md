@@ -18,8 +18,12 @@ Only use a publishable key in the browser; never expose a Supabase secret or
 
 ```bash
 npm run lint
+npm run test
 npm run build
 ```
+
+UI test cases are stored in [`test/`](test/). The production build runs the
+full test suite automatically.
 
 The initial layout includes Food Channel Catering branding, responsive navigation,
 Traditional Chinese and English localization, dark mode, and reduced-motion
