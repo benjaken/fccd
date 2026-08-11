@@ -13,7 +13,7 @@ import time
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode
+from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
 
 
@@ -127,7 +127,8 @@ def export_collection(
     with temporary.open("w", encoding="utf-8") as stream:
         while True:
             query = urlencode({"limit": page_size, "cursor": cursor})
-            payload = request_json(f"{base_url.rstrip('/')}{path}?{query}", token)
+            encoded_path = quote(path, safe="/")
+            payload = request_json(f"{base_url.rstrip('/')}{encoded_path}?{query}", token)
             response = payload.get("response", {})
             results = response.get("results", [])
             if not isinstance(results, list):
@@ -168,17 +169,38 @@ def export_all(args: argparse.Namespace) -> int:
         raise RuntimeError(f"Unknown Data API type(s): {', '.join(sorted(missing))}")
 
     write_json(args.output / "schema-inventory.json", build_inventory(swagger, available))
-    manifest: dict[str, Any] = {
-        "baseUrl": args.base_url,
-        "authenticated": bool(args.token),
-        "exports": [],
-        "errors": [],
-    }
+    manifest_path = args.output / "export-manifest.json"
+    if args.resume and manifest_path.exists():
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        if (
+            manifest.get("baseUrl") != args.base_url
+            or manifest.get("authenticated") != bool(args.token)
+        ):
+            raise RuntimeError("Existing manifest does not match this API URL/auth mode")
+    else:
+        manifest = {
+            "baseUrl": args.base_url,
+            "authenticated": bool(args.token),
+            "exports": [],
+            "errors": [],
+        }
 
     for index, path in enumerate(selected, start=1):
         name = endpoint_name(path)
         filename = output_name(path)
+        previous = next(
+            (item for item in manifest["exports"] if item.get("path") == path), None
+        )
+        if args.resume and previous and (args.output / "objects" / filename).exists():
+            print(f"[{index}/{len(selected)}] Skipping {name} (already exported).")
+            continue
         print(f"[{index}/{len(selected)}] Exporting {name}...", flush=True)
+        manifest["exports"] = [
+            item for item in manifest["exports"] if item.get("path") != path
+        ]
+        manifest["errors"] = [
+            item for item in manifest["errors"] if item.get("path") != path
+        ]
         try:
             count = export_collection(
                 args.base_url,
@@ -194,7 +216,7 @@ def export_all(args: argparse.Namespace) -> int:
         except RuntimeError as error:
             manifest["errors"].append({"type": name, "path": path, "error": str(error)})
             print(f"  ERROR: {error}", file=sys.stderr)
-        write_json(args.output / "export-manifest.json", manifest)
+        write_json(manifest_path, manifest)
         time.sleep(args.delay)
 
     exported = sum(item["records"] for item in manifest["exports"])
@@ -237,6 +259,11 @@ def parser() -> argparse.ArgumentParser:
     export_parser.add_argument("--page-size", type=int, choices=range(1, 101), default=100)
     export_parser.add_argument(
         "--delay", type=float, default=0.15, help="delay between API requests in seconds"
+    )
+    export_parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="keep completed exports from the existing manifest",
     )
     export_parser.set_defaults(handler=export_all)
     return result
