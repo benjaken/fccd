@@ -621,14 +621,14 @@ Swagger 不提供 Role 與 `available_pages` 的合法值，也不提供其優�
 
 ### 9.1 整體導覽
 
-右上角提供有權限控制的工作區切換器：
+頂部第一列以不展開下拉選單的 soft links 提供有權限控制的工作區入口：
 
 - **到會／中央廚房**：訂單、生產、領料、執貨及出貨。
 - **司機送貨**：司機手機工作台或後台調度。
 - **餐廳營運**：報數、訂貨、收貨、盤點及 P&L。
 - **客戶自助**：後期啟用；未完成前不在正式環境顯示。
 
-工作區切換只改變導覽及預設篩選，不能繞過 legal entity、品牌、據點、部門及資源範圍的後端授權。
+工作區 soft links 只改變導覽及預設篩選，不能繞過 legal entity、品牌、據點、部門及資源範圍的後端授權。
 
 | 一級頁面 | 頂部二級頁面／Saved Views | 主要功能 |
 |---|---|---|
@@ -667,7 +667,7 @@ Swagger 不提供 Role 與 `available_pages` 的合法值，也不提供其優�
 | UX-06 | 桌面後台與司機手機工作台使用不同 responsive 版型；不可把桌面表格直接縮小到手機。 |
 | UX-07 | 支援鍵盤操作、可見 focus、表單錯誤摘要及符合 WCAG AA 的文字對比。 |
 | UX-08 | 參考舊介面截圖只為確認資訊與操作，不直接複製造成慢速、細字、橫向拖動及過度跳頁的版型。 |
-| UX-09 | 整體 Layout 參考提供的 ONE TEAM CONNECT 截圖：左上品牌 Logo、頂部一級導航、左側二級導航、右上工具區及最大化主內容區。 |
+| UX-09 | 整體 Layout 參考提供的 ONE TEAM CONNECT 截圖：左上品牌 Logo 保持固定位置，第一列顯示工作區 soft links 與右上工具區，第二列顯示一級導航，左側顯示二級導航，主內容區最大化。 |
 | UX-10 | 品牌 Logo 使用 Food Channel Catering 官方版本；主題色改為品牌紅色，並以 design tokens 管理 primary、hover、active、focus、success、warning 及 danger。 |
 | UX-11 | 提供 Light／Dark mode 切換；所有頁面、表格、圖表、Dialog、Toast、狀態色及 Logo 版本均須支援兩種模式。 |
 | UX-12 | 提供繁體中文／English 切換，預設繁體中文；使用者選擇須跨 session 保存。 |
@@ -695,8 +695,9 @@ Swagger 不提供 Role 與 `available_pages` 的合法值，也不提供其優�
 
 #### 桌面 Layout
 
-- 頂部左側顯示 Food Channel Catering Logo 及當前工作區。
-- 頂部中間顯示具權限的一級導航；當寬度不足時收納至可存取的 overflow menu。
+- 頂部左側固定顯示 Food Channel Catering Logo，不因導覽切換或側欄收合移動。
+- 頂部第一列中間直接顯示具權限的工作區 soft links，不使用 dropdown。
+- 一級導航下移至 Logo 下方的第二列；當寬度不足時改由可存取的手機 drawer 提供。
 - 左側欄顯示當前一級頁面的二級導航、active state 及可選的收合控制。
 - 右上工具區包含語言、Light／Dark mode、通知及使用者選單。
 - 主內容區使用一致的 page header、breadcrumb／context、主要操作、篩選及內容容器。
@@ -865,7 +866,7 @@ flowchart LR
 33. 第一階段功能對照表中的每個現行功能均有舊／新操作錄影或測試證據、輸入輸出比對、權限結果及產品負責人簽核；未簽核項目不得宣稱 100% 完成。
 34. 首次進入系統預設顯示繁體中文；切換 English 後所有導航、表單、驗證及通知即時更新，重新登入仍保留選擇。
 35. Light／Dark mode 切換不重新整理頁面或清空表單，兩種模式下文字、狀態及圖表均符合對比要求。
-36. 桌面版呈現頂部一級導航、左側二級導航、Food Channel Catering Logo 及右上工具區；手機版不出現縮小且難操作的桌面側欄。
+36. 桌面版呈現固定 Food Channel Catering Logo、第一列工作區 soft links、第二列一級導航、左側二級導航及右上工具區；手機版不出現縮小且難操作的桌面側欄。
 37. 頁面切換動態效果不阻塞操作；啟用 reduced motion 後非必要 transition 關閉。
 38. i18n 自動檢查不得發現使用者可見的遺漏 key；狀態 code、日期、時間及 HKD 顯示在中英文 locale 下正確。
 

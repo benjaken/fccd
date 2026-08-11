@@ -7,7 +7,6 @@ import {
   ChartNoAxesCombined,
   ChevronDown,
   ChevronRight,
-  ChevronsUpDown,
   CircleDollarSign,
   ClipboardCheck,
   ClipboardList,
@@ -107,11 +106,16 @@ const secondaryNav: Record<string, NavItem[]> = {
   ],
 };
 
-const workspaces: Array<{ key: string; icon: Icon; disabled?: boolean }> = [
-  { key: "catering", icon: Utensils },
-  { key: "delivery", icon: Truck },
-  { key: "restaurant", icon: Store },
-  { key: "customer", icon: Users, disabled: true },
+const workspaceLinks: Array<{
+  key: string;
+  to: string;
+  icon: Icon;
+  disabled?: boolean;
+}> = [
+  { key: "catering", to: "/", icon: Utensils },
+  { key: "delivery", to: "/delivery", icon: Truck },
+  { key: "restaurant", to: "/restaurant", icon: Store },
+  { key: "customer", to: "/customer", icon: Users, disabled: true },
 ];
 
 function sectionFromPath(pathname: string) {
@@ -144,11 +148,15 @@ function OperationsShell() {
   const { dark, toggleTheme } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [workspaceOpen, setWorkspaceOpen] = useState(false);
-  const [currentWorkspace, setCurrentWorkspace] = useState("catering");
 
   const section = sectionFromPath(location.pathname);
   const sideItems = secondaryNav[section] ?? secondaryNav.overview;
+  const activeWorkspace =
+    section === "delivery"
+      ? "delivery"
+      : section === "restaurant"
+        ? "restaurant"
+        : "catering";
 
   useEffect(() => {
     setMobileMenuOpen(false);
@@ -178,20 +186,32 @@ function OperationsShell() {
           <Brand />
         </div>
 
-        <nav className="primary-nav" aria-label="Primary">
-          {primaryNav.map(({ key, to, icon: NavIcon }) => (
-            <NavLink
-              key={key}
-              to={to}
-              end={to === "/"}
-              className={({ isActive }) =>
-                cn("primary-nav-link", isActive && "active")
-              }
-            >
-              <NavIcon />
-              <span>{t(`navigation.${key}`)}</span>
-            </NavLink>
-          ))}
+        <nav className="workspace-links" aria-label="Workspaces">
+          {workspaceLinks.map(
+            ({ key, to, icon: WorkspaceIcon, disabled }) =>
+              disabled ? (
+                <span
+                  key={key}
+                  className="workspace-soft-link disabled"
+                  aria-disabled="true"
+                >
+                  <WorkspaceIcon />
+                  <span>{t(`workspace.${key}`)}</span>
+                </span>
+              ) : (
+                <Link
+                  key={key}
+                  to={to}
+                  className={cn(
+                    "workspace-soft-link",
+                    activeWorkspace === key && "active",
+                  )}
+                >
+                  <WorkspaceIcon />
+                  <span>{t(`workspace.${key}`)}</span>
+                </Link>
+              ),
+          )}
         </nav>
 
         <div className="topbar-actions">
@@ -250,36 +270,22 @@ function OperationsShell() {
       </header>
 
       <div className="workspace-bar">
-        <div className="workspace-picker-wrap">
-          <button
-            className="workspace-picker"
-            type="button"
-            onClick={() => setWorkspaceOpen((value) => !value)}
-            aria-expanded={workspaceOpen}
-          >
-            <span>{t(`workspace.${currentWorkspace}`)}</span>
-            <ChevronsUpDown />
-          </button>
-          {workspaceOpen && (
-            <div className="workspace-menu">
-              {workspaces.map(({ key, icon: WorkspaceIcon, disabled }) => (
-                <button
-                  key={key}
-                  type="button"
-                  disabled={disabled}
-                  onClick={() => {
-                    setCurrentWorkspace(key);
-                    setWorkspaceOpen(false);
-                  }}
-                >
-                  <WorkspaceIcon />
-                  <span>{t(`workspace.${key}`)}</span>
-                  {currentWorkspace === key && <span className="check">✓</span>}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        <div className="nav-row-spacer" aria-hidden="true" />
+        <nav className="primary-nav lowered-nav" aria-label="Primary">
+          {primaryNav.map(({ key, to, icon: NavIcon }) => (
+            <NavLink
+              key={key}
+              to={to}
+              end={to === "/"}
+              className={({ isActive }) =>
+                cn("primary-nav-link", isActive && "active")
+              }
+            >
+              <NavIcon />
+              <span>{t(`navigation.${key}`)}</span>
+            </NavLink>
+          ))}
+        </nav>
         <div className="workspace-context">
           <span className="status-pulse" />
           <span>{t("common.today")}</span>
