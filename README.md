@@ -43,6 +43,18 @@ Regenerate the checked-in production Swagger inventory with
 returns aggregate cardinality, confidence, and sampled orphan-reference data
 without exposing raw Bubble records to the browser.
 
+The unified develop branch also retains the resumable production export CLI
+from the legacy migration branch:
+
+```bash
+python3 scripts/export_bubble.py discover
+python3 scripts/export_bubble.py export --resume
+```
+
+Exports are written to the Git-ignored `.migration-data/` directory and may
+contain sensitive raw records. If authentication becomes necessary, provide
+`BUBBLE_API_TOKEN` through the environment; never pass it in chat or commit it.
+
 ## Development workflow
 
 All new development must branch from the latest `main` and return through a
