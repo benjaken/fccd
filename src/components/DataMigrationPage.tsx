@@ -46,6 +46,11 @@ type GeneratedSchemaInventory = {
     fieldCount: number;
     fields: Array<{ targetSourceType: string | null; isMetadata: boolean }>;
   }>;
+  relationships: Array<{
+    sourceSchemaType: string;
+    targetSchemaType: string;
+    isMetadata: boolean;
+  }>;
 };
 
 const generatedSchema = bubbleSchema as GeneratedSchemaInventory;
@@ -311,6 +316,13 @@ export function DataMigrationPage() {
       schemaEntity?.fields.filter(
         (field) => field.targetSourceType && !field.isMetadata,
       ).length ?? 0;
+    const incomingRelationships = schemaEntity
+      ? generatedSchema.relationships.filter(
+          (relationship) =>
+            relationship.targetSchemaType === schemaEntity.schemaType &&
+            !relationship.isMetadata,
+        ).length
+      : 0;
 
     return (
       <div className="migration-object-row" key={objectType}>
@@ -331,7 +343,7 @@ export function DataMigrationPage() {
             <span className="migration-schema-relations">
               <Network />
               {t("migration.relationships.candidateCount", {
-                count: candidateRelationships,
+                count: candidateRelationships + incomingRelationships,
               })}
             </span>
           </span>

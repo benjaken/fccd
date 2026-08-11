@@ -209,7 +209,9 @@ const resources = {
           sourceRecords: "來源 · {{count}} 筆",
           scalarReference: "單值 Unique ID",
           arrayReference: "陣列型關聯",
+          incomingReference: "主表至明細",
           cardinalities: {
+            "one-to-many": "一對多",
             "many-to-one": "多對一",
             "one-to-one-candidate": "候選一對一",
             "many-to-many-candidate": "候選多對多",
@@ -448,7 +450,9 @@ const resources = {
           sourceRecords: "source · {{count}} records",
           scalarReference: "Scalar Unique ID",
           arrayReference: "Array reference",
+          incomingReference: "Parent to detail",
           cardinalities: {
+            "one-to-many": "One to many",
             "many-to-one": "Many to one",
             "one-to-one-candidate": "One-to-one candidate",
             "many-to-many-candidate": "Many-to-many candidate",

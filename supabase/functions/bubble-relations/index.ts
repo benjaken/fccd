@@ -43,8 +43,13 @@ type RelationshipResult = {
   targetSchemaType: string;
   targetField: string;
   isArray: boolean;
-  cardinality: "many-to-one" | "one-to-one-candidate" | "many-to-many-candidate";
-  role: "detail-to-master" | "reference";
+  direction: "outgoing" | "incoming";
+  cardinality:
+    | "one-to-many"
+    | "many-to-one"
+    | "one-to-one-candidate"
+    | "many-to-many-candidate";
+  role: "master-to-detail" | "detail-to-master" | "reference";
   confidence: number;
   sampledRecords: number;
   populatedRecords: number;
@@ -207,7 +212,9 @@ Deno.serve(async (request) => {
           const values = valuesByRecord.flat();
           const uniqueValues = [...new Set(values)];
           const allScalarValuesUnique =
-            !isArray && values.length > 0 && uniqueValues.length === values.length;
+            !isArray &&
+            values.length >= 10 &&
+            uniqueValues.length === values.length;
 
           return {
             sourceField,
@@ -216,6 +223,7 @@ Deno.serve(async (request) => {
               ? `${sqlName(sourceField)}_relationships`
               : `${sqlName(sourceField)}_legacy_id`,
             isArray,
+            direction: "outgoing",
             cardinality: isArray
               ? "many-to-many-candidate"
               : allScalarValuesUnique
@@ -239,6 +247,51 @@ Deno.serve(async (request) => {
         },
       );
 
+    const incomingRelationships: RelationshipResult[] = collectionTypes.flatMap(
+      (childSchemaType) => {
+        const childProperties =
+          swagger.definitions?.[childSchemaType]?.properties ?? {};
+        return Object.entries(childProperties).flatMap(
+          ([childField, property]) => {
+            const referencedType = explicitReference(property);
+            if (
+              !referencedType ||
+              childField === "Created By" ||
+              normalizedType(referencedType) !== normalizedType(sourceSchemaType)
+            ) {
+              return [];
+            }
+            const isArray = property.type === "array";
+            return [
+              {
+                sourceField: `${childSchemaType}.${childField}`,
+                targetSchemaType: childSchemaType,
+                targetField: isArray
+                  ? `${sqlName(childField)}_relationships`
+                  : `${sqlName(childField)}_legacy_id`,
+                isArray,
+                direction: "incoming" as const,
+                cardinality: isArray
+                  ? ("many-to-many-candidate" as const)
+                  : ("one-to-many" as const),
+                role: "master-to-detail" as const,
+                confidence: 84,
+                sampledRecords: 0,
+                populatedRecords: 0,
+                sampledReferences: 0,
+                uniqueReferences: 0,
+                verifiedReferences: 0,
+                orphanReferences: 0,
+                unverifiedReferences: 0,
+                orphanSample: [],
+              },
+            ];
+          },
+        );
+      },
+    );
+    relationshipResults.push(...incomingRelationships);
+
     const verificationJobs: Array<{
       relationshipIndex: number;
       targetSchemaType: string;
@@ -246,6 +299,7 @@ Deno.serve(async (request) => {
     }> = [];
     let remainingBudget = MAX_VERIFY_TOTAL;
     relationshipResults.forEach((result, relationshipIndex) => {
+      if (result.direction === "incoming") return;
       const sourceValues = records.flatMap((record) => {
         const raw = record[result.sourceField];
         if (result.isArray) {

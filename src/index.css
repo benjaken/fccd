@@ -1772,6 +1772,10 @@ td:last-child {
   stroke-dasharray: 6 4;
 }
 
+.relationship-graph line.incoming {
+  stroke: oklch(0.61 0.16 148);
+}
+
 .relationship-graph marker path {
   fill: oklch(0.62 0.16 250);
 }
@@ -1837,6 +1841,10 @@ td:last-child {
     oklch(0.64 0.17 325) 0 5px,
     transparent 5px 8px
   );
+}
+
+.relationship-graph-legend i.incoming {
+  background: oklch(0.61 0.16 148);
 }
 
 .relationship-table-wrap {

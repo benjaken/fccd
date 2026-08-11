@@ -5,11 +5,13 @@ export type BubbleRelationship = {
   targetSchemaType: string;
   targetField: string;
   isArray: boolean;
+  direction: "outgoing" | "incoming";
   cardinality:
+    | "one-to-many"
     | "many-to-one"
     | "one-to-one-candidate"
     | "many-to-many-candidate";
-  role: "detail-to-master" | "reference";
+  role: "master-to-detail" | "detail-to-master" | "reference";
   confidence: number;
   sampledRecords: number;
   populatedRecords: number;

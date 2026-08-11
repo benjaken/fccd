@@ -45,10 +45,15 @@ export function BubbleRelationshipGraph({
             (item) => item.targetSchemaType === node.target,
           );
           const isArray = relationships.some((item) => item.isArray);
+          const isIncoming = relationships.some(
+            (item) => item.direction === "incoming",
+          );
           return (
             <g key={`edge-${node.target}`}>
               <line
-                className={isArray ? "array" : undefined}
+                className={
+                  isArray ? "array" : isIncoming ? "incoming" : undefined
+                }
                 x1="400"
                 y1="180"
                 x2={node.x}
@@ -114,6 +119,10 @@ export function BubbleRelationshipGraph({
         <span>
           <i className="array" />
           {t("migration.relationships.arrayReference")}
+        </span>
+        <span>
+          <i className="incoming" />
+          {t("migration.relationships.incomingReference")}
         </span>
       </div>
     </div>
