@@ -32,7 +32,10 @@ import {
 } from "lucide-react";
 import { Link, NavLink, Route, Routes, useLocation } from "react-router-dom";
 
+import { AuthProvider, useAuth } from "@/auth/AuthProvider";
+import { LoginPage } from "@/components/LoginPage";
 import { Button } from "@/components/ui/button";
+import { useTheme } from "@/lib/use-theme";
 import { cn } from "@/lib/utils";
 
 type Icon = ComponentType<{ className?: string; strokeWidth?: number }>;
@@ -118,21 +121,6 @@ function sectionFromPath(pathname: string) {
   return secondaryNav[segment] ? segment : "overview";
 }
 
-function useTheme() {
-  const [dark, setDark] = useState(() => {
-    const saved = localStorage.getItem("food-channel-theme");
-    if (saved) return saved === "dark";
-    return window.matchMedia("(prefers-color-scheme: dark)").matches;
-  });
-
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", dark);
-    localStorage.setItem("food-channel-theme", dark ? "dark" : "light");
-  }, [dark]);
-
-  return { dark, toggleTheme: () => setDark((current) => !current) };
-}
-
 function Brand() {
   const { t } = useTranslation();
 
@@ -149,8 +137,9 @@ function Brand() {
   );
 }
 
-function App() {
+function OperationsShell() {
   const { t, i18n } = useTranslation();
+  const { user, signOut } = useAuth();
   const location = useLocation();
   const { dark, toggleTheme } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -240,10 +229,17 @@ function App() {
             <Bell />
             <span className="notification-dot" />
           </Button>
-          <button className="user-menu" type="button">
-            <span className="avatar">FC</span>
+          <button
+            className="user-menu"
+            type="button"
+            onClick={() => void signOut()}
+            title={t("common.signOut")}
+          >
+            <span className="avatar">
+              {(user?.email?.slice(0, 2) || "FC").toUpperCase()}
+            </span>
             <span className="user-copy">
-              <strong>Nicole</strong>
+              <strong>{user?.email?.split("@")[0] || "Food Channel"}</strong>
               <small>{t("user.role")}</small>
             </span>
             <ChevronDown />
@@ -642,6 +638,33 @@ function ModulePlaceholder({ section }: { section: string }) {
         <Link to="/">{t("navigation.overview")}</Link>
       </Button>
     </section>
+  );
+}
+
+function AuthGate() {
+  const { session, loading } = useAuth();
+  const { t } = useTranslation();
+
+  if (loading) {
+    return (
+      <main className="auth-loading">
+        <span className="auth-loading-mark">FC</span>
+        <div className="auth-loading-bar">
+          <span />
+        </div>
+        <p>{t("auth.loading")}</p>
+      </main>
+    );
+  }
+
+  return session ? <OperationsShell /> : <LoginPage />;
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AuthGate />
+    </AuthProvider>
   );
 }
 

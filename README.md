@@ -6,8 +6,13 @@ React/Vite operations interface for Food Channel Catering.
 
 ```bash
 npm install
+cp .env.example .env.local
 npm run dev
 ```
+
+Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` in `.env.local`.
+Only use a publishable key in the browser; never expose a Supabase secret or
+`service_role` key.
 
 ## Checks
 
