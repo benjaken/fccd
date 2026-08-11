@@ -141,6 +141,47 @@ function Brand() {
   );
 }
 
+export function CurrentDateTime({
+  initialNow,
+  live = true,
+}: {
+  initialNow?: Date;
+  live?: boolean;
+}) {
+  const { t, i18n } = useTranslation();
+  const [now, setNow] = useState(initialNow ?? new Date());
+
+  useEffect(() => {
+    if (!live) return;
+
+    const timer = window.setInterval(() => setNow(new Date()), 1_000);
+    return () => window.clearInterval(timer);
+  }, [live]);
+
+  const date = new Intl.DateTimeFormat(i18n.language, {
+    month: "short",
+    day: "numeric",
+    weekday: "short",
+    timeZone: "Asia/Hong_Kong",
+  }).format(now);
+  const time = new Intl.DateTimeFormat(i18n.language, {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+    timeZone: "Asia/Hong_Kong",
+  }).format(now);
+
+  return (
+    <div className="workspace-context">
+      <span className="status-pulse" />
+      <span>{t("common.today")}</span>
+      <strong>{date}</strong>
+      <time dateTime={now.toISOString()}>{time}</time>
+    </div>
+  );
+}
+
 function OperationsShell() {
   const { t, i18n } = useTranslation();
   const { user, signOut } = useAuth();
@@ -286,18 +327,7 @@ function OperationsShell() {
             </NavLink>
           ))}
         </nav>
-        <div className="workspace-context">
-          <span className="status-pulse" />
-          <span>{t("common.today")}</span>
-          <strong>
-            {new Intl.DateTimeFormat(i18n.language, {
-              month: "short",
-              day: "numeric",
-              weekday: "short",
-              timeZone: "Asia/Hong_Kong",
-            }).format(new Date())}
-          </strong>
-        </div>
+        <CurrentDateTime />
       </div>
 
       <div

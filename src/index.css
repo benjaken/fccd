@@ -197,7 +197,7 @@ a {
 .brand-mark span {
   position: relative;
   z-index: 1;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 900;
   letter-spacing: -0.04em;
   transform: rotate(4deg);
@@ -223,7 +223,7 @@ a {
 .brand-copy small {
   overflow: hidden;
   color: var(--muted-foreground);
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.04em;
   line-height: 1.3;
@@ -235,7 +235,7 @@ a {
 .workspace-links {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: flex-end;
   gap: 4px;
   min-width: 0;
   height: 100%;
@@ -250,7 +250,7 @@ a {
   padding: 0 10px;
   border-radius: 8px;
   color: var(--muted-foreground);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 680;
   transition:
     color 150ms ease,
@@ -301,7 +301,7 @@ a {
   height: 100%;
   padding: 0 11px;
   color: var(--muted-foreground);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 650;
   transition:
     color 160ms ease,
@@ -385,7 +385,7 @@ a {
   outline: 0;
   background: transparent;
   color: var(--foreground);
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .search-box input::placeholder {
@@ -393,7 +393,7 @@ a {
 }
 
 .language-label {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 800;
   letter-spacing: 0.02em;
 }
@@ -446,7 +446,7 @@ a {
   border-radius: 10px;
   background: var(--primary);
   color: var(--primary-foreground);
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 800;
 }
 
@@ -458,13 +458,13 @@ a {
 }
 
 .user-copy strong {
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.25;
 }
 
 .user-copy small {
   color: var(--muted-foreground);
-  font-size: 10px;
+  font-size: 14px;
   line-height: 1.25;
 }
 
@@ -498,12 +498,19 @@ a {
   align-items: center;
   gap: 7px;
   color: var(--muted-foreground);
-  font-size: 11px;
+  font-size: 14px;
 }
 
 .workspace-context strong {
   color: var(--foreground);
   font-weight: 700;
+}
+
+.workspace-context time {
+  min-width: 68px;
+  color: var(--primary);
+  font-variant-numeric: tabular-nums;
+  font-weight: 750;
 }
 
 .status-pulse {
@@ -554,7 +561,7 @@ a {
   overflow: hidden;
   border-radius: 9px;
   color: var(--muted-foreground);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 650;
   transition:
     color 150ms ease,
@@ -606,7 +613,7 @@ a {
   border-radius: 9px;
   background: transparent;
   color: var(--muted-foreground);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 650;
   white-space: nowrap;
 }
@@ -658,7 +665,7 @@ a {
   display: block;
   margin-bottom: 6px;
   color: var(--primary);
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -678,7 +685,7 @@ a {
 .placeholder-page p {
   margin: 7px 0 0;
   color: var(--muted-foreground);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .heading-actions {
@@ -808,7 +815,7 @@ a {
   margin: 0 0 5px;
   overflow: hidden;
   color: var(--muted-foreground);
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 650;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -825,7 +832,7 @@ a {
 .metric-card small {
   margin-top: 4px;
   color: var(--muted-foreground);
-  font-size: 10px;
+  font-size: 14px;
 }
 
 .dashboard-grid {
@@ -862,7 +869,7 @@ a {
 .panel-header p {
   margin: 4px 0 0;
   color: var(--muted-foreground);
-  font-size: 11px;
+  font-size: 14px;
 }
 
 .queue-list {
@@ -899,7 +906,7 @@ a {
 
 .queue-item span:nth-child(2) {
   overflow: hidden;
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 650;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -959,7 +966,7 @@ a {
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 7px;
-  font-size: 11px;
+  font-size: 14px;
 }
 
 .progress-row span {
@@ -968,7 +975,7 @@ a {
 }
 
 .progress-row strong {
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .progress-track {
@@ -996,7 +1003,7 @@ a {
 table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 th {
@@ -1004,7 +1011,7 @@ th {
   border-bottom: 1px solid var(--border);
   background: color-mix(in oklch, var(--background) 65%, var(--card));
   color: var(--muted-foreground);
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 750;
   letter-spacing: 0.045em;
   text-align: left;
@@ -1058,7 +1065,7 @@ td:last-child {
   min-height: 25px;
   padding: 0 9px;
   border-radius: 99px;
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 720;
 }
 
@@ -1194,7 +1201,7 @@ td:last-child {
   border-radius: 13px 6px 13px 6px;
   background: rgb(255 255 255 / 13%);
   box-shadow: inset 0 1px rgb(255 255 255 / 18%);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 900;
   letter-spacing: -0.04em;
   backdrop-filter: blur(10px);
@@ -1212,7 +1219,7 @@ td:last-child {
 
 .login-brand small {
   color: rgb(255 255 255 / 62%);
-  font-size: 9px;
+  font-size: 14px;
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -1230,7 +1237,7 @@ td:last-child {
   gap: 8px;
   margin-bottom: 22px;
   color: rgb(255 255 255 / 72%);
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 750;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -1262,7 +1269,7 @@ td:last-child {
   flex-wrap: wrap;
   gap: 10px 20px;
   color: rgb(255 255 255 / 68%);
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 650;
 }
 
@@ -1309,7 +1316,7 @@ td:last-child {
 .login-card > p {
   margin: 13px 0 0;
   color: var(--muted-foreground);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.7;
 }
 
@@ -1328,7 +1335,7 @@ td:last-child {
 
 .form-field > span:first-child {
   color: var(--foreground);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 720;
 }
 
@@ -1405,7 +1412,7 @@ td:last-child {
   padding: 11px 12px;
   border: 1px solid;
   border-radius: 9px;
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 620;
   line-height: 1.5;
 }
@@ -1454,7 +1461,7 @@ td:last-child {
   border: 0;
   background: transparent;
   color: var(--primary);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
 }
 
@@ -1478,7 +1485,7 @@ td:last-child {
   gap: 7px;
   margin: 0;
   color: var(--muted-foreground);
-  font-size: 10px;
+  font-size: 14px;
   text-align: center;
 }
 
@@ -1530,7 +1537,7 @@ td:last-child {
 
 .auth-loading p {
   margin: 0;
-  font-size: 11px;
+  font-size: 14px;
 }
 
 .mobile-only,
