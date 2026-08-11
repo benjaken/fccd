@@ -3,6 +3,13 @@
 本文件記錄目前已確認的 Bubble 資料盤點與後續遷移規則。未經重新確認，
 不得擴大頁面功能或啟動寫入任務。
 
+核心 Catering schema 评审草案：
+
+- `docs/MIGRATION_SCHEMA_DRAFT.md`
+- `docs/sql/001_core_catering_schema.draft.sql`
+
+以上文件不在 `supabase/migrations/`，不会自动执行。
+
 ## 1. 目前範圍
 
 - `/migration` 是獨立頁面，不加入營運系統選單。
