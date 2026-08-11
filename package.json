@@ -1,0 +1,37 @@
+{
+  "name": "fccd-migration-console",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Food Channel Catering system migration.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/chifung-BWSolution/FCCD.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/chifung-BWSolution/FCCD/issues"
+  },
+  "homepage": "https://github.com/chifung-BWSolution/FCCD#readme",
+  "dependencies": {
+    "next": "^16.3.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.3.0",
+    "typescript": "^6.0.3"
+  }
+}

@@ -2,6 +2,27 @@
 
 Food Channel Catering system migration.
 
+## Migration console
+
+The Next.js console scans record and field counts for the 101 configured Bubble
+Data API types. It defaults to the production API and also accepts the FCCD
+`version-test` URL. Type suffixes are URL-encoded by the server.
+
+```bash
+npm install
+npm run dev
+```
+
+Open `http://localhost:3000`. A Bubble admin token can be entered for the
+current browser session or configured server-side:
+
+```bash
+BUBBLE_API_TOKEN='...' npm run dev
+```
+
+The scan endpoint validates the Bubble host and API path and never returns
+record contents to the browser.
+
 ## Bubble Data API export
 
 The migration utility discovers all exposed Bubble Data API types from the
