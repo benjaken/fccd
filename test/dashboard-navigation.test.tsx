@@ -67,7 +67,7 @@ describe("Dashboard navigation", () => {
     renderDashboard();
 
     await user.click(
-      screen.getByRole("link", { name: /已確認 18/ }),
+      screen.getByRole("link", { name: /已確認\s*18/ }),
     );
 
     expect(screen.getByTestId("location")).toHaveTextContent(
