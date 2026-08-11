@@ -1,7 +1,7 @@
 # Bubble → Supabase Schema 草案
 
-> 状态：仅供评审，不执行数据库变更。  
-> 数据来源：Food Channels Catering production Bubble Data API。  
+> 状态：仅供评审，不执行数据库变更。
+> 数据来源：Food Channels Catering production Bubble Data API。
 > SQL 草案：`docs/sql/001_core_catering_schema.draft.sql`
 
 ## 1. 范围
@@ -304,4 +304,3 @@ department、driver、customer account 及角色范围确认。
 - Payment refund、void、overpayment 的处理方式。
 - 历史订单的客户／价格／地址／条款快照完整性。
 - Bubble Privacy Rules 到 Supabase RLS 的映射。
-

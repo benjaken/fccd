@@ -339,4 +339,3 @@ alter table public.deliveries enable row level security;
 -- No policies are intentionally defined in this draft.
 -- No NOT NULL constraints are applied to resolved UUID foreign keys yet.
 -- Resolve and reconcile legacy references before tightening constraints.
-
