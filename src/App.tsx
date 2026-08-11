@@ -10,7 +10,6 @@ import {
   CircleDollarSign,
   ClipboardCheck,
   ClipboardList,
-  DatabaseZap,
   FileText,
   HandCoins,
   LayoutDashboard,
@@ -56,7 +55,6 @@ const primaryNav: NavItem[] = [
   { key: "delivery", to: "/delivery", icon: Truck },
   { key: "restaurant", to: "/restaurant", icon: Store },
   { key: "reports", to: "/reports", icon: ChartNoAxesCombined },
-  { key: "migration", to: "/migration", icon: DatabaseZap },
 ];
 
 const secondaryNav: Record<string, NavItem[]> = {
@@ -106,10 +104,6 @@ const secondaryNav: Record<string, NavItem[]> = {
   reports: [
     { key: "reports", to: "/reports", icon: ChartNoAxesCombined },
     { key: "finance", to: "/finance", icon: CircleDollarSign },
-  ],
-  migration: [
-    { key: "migration", to: "/migration", icon: DatabaseZap },
-    { key: "overview", to: "/", icon: LayoutDashboard },
   ],
 };
 
@@ -348,7 +342,6 @@ function OperationsShell() {
           <div className="page-transition" key={pageKey}>
             <Routes>
               <Route path="/" element={<Dashboard />} />
-              <Route path="/migration" element={<DataMigrationPage />} />
               <Route path="*" element={<ModulePlaceholder section={section} />} />
             </Routes>
           </div>

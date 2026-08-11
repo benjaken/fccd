@@ -78,7 +78,6 @@ const resources = {
         productionCalendar: "出產日曆",
         payments: "收款到賬",
         assignDriver: "安排司機",
-        migration: "資料遷移",
       },
       dashboard: {
         eyebrow: "營運總覽",
@@ -240,7 +239,6 @@ const resources = {
         productionCalendar: "Production Calendar",
         payments: "Payment Records",
         assignDriver: "Assign Driver",
-        migration: "Data Migration",
       },
       dashboard: {
         eyebrow: "Operations Overview",
