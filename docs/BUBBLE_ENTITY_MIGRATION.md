@@ -87,6 +87,8 @@ foreign keys or business calculations:
 All staging tables have RLS enabled and grant no browser roles direct access.
 The Edge Function writes with a server credential and returns progress only.
 No raw customer, payment, employee or order payload is returned to the page.
+The importer removes `user.pw` before persistence even when that field appears
+inside the Bubble source JSON.
 
 The reset action deletes only `migration_bubble_records` and cancels an
 unfinished migration run. It never truncates Supabase Auth or unrelated

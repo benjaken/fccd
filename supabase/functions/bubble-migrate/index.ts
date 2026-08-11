@@ -111,6 +111,17 @@ function errorMessage(error: unknown, fallback: string) {
   return fallback;
 }
 
+function sanitizePayload(
+  sourceType: string,
+  record: Record<string, unknown>,
+) {
+  if (sourceType !== "User") return record;
+
+  const sanitized = { ...record };
+  delete sanitized.pw;
+  return sanitized;
+}
+
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -282,16 +293,19 @@ Deno.serve(async (request) => {
       const results = payload.response.results;
       const records = results
         .filter((record) => typeof record._id === "string" && record._id)
-        .map((record) => ({
-          source_type: entity.source_type,
-          legacy_id: record._id as string,
-          payload: record,
-          source_created_at: parseDate(record["Created Date"]),
-          source_modified_at: parseDate(record["Modified Date"]),
-          source_slug: typeof record.Slug === "string" ? record.Slug : null,
-          run_id: runId,
-          migrated_at: new Date().toISOString(),
-        }));
+        .map((record) => {
+          const payload = sanitizePayload(entity.source_type, record);
+          return {
+            source_type: entity.source_type,
+            legacy_id: record._id as string,
+            payload,
+            source_created_at: parseDate(record["Created Date"]),
+            source_modified_at: parseDate(record["Modified Date"]),
+            source_slug: typeof record.Slug === "string" ? record.Slug : null,
+            run_id: runId,
+            migrated_at: new Date().toISOString(),
+          };
+        });
 
       if (records.length) {
         const { error: upsertError } = await supabase
