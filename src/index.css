@@ -1032,6 +1032,19 @@ td:last-child {
   gap: 16px;
 }
 
+.public-migration-shell {
+  min-height: 100vh;
+  padding: 28px clamp(18px, 2.4vw, 38px) 48px;
+  overflow: hidden;
+  background: var(--background);
+}
+
+.public-migration-shell .migration-page {
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
 .migration-warning {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
@@ -1939,6 +1952,10 @@ td:last-child {
   }
 
   .main-content {
+    padding: 22px 14px 40px;
+  }
+
+  .public-migration-shell {
     padding: 22px 14px 40px;
   }
 

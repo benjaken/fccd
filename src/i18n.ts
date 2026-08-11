@@ -139,7 +139,7 @@ const resources = {
         progress: "整體掃描進度",
         sourceTitle: "Bubble 來源設定",
         sourceDescription:
-          "系統會透過受登入保護的伺服器代理，安全讀取 Bubble 資料。",
+          "系統會透過唯讀伺服器代理，安全讀取 Bubble 資料。",
         baseUrl: "Base URL",
         urlPreview: "拼接預覽",
         invalidBaseUrl: "請輸入有效的 Base URL",
@@ -303,7 +303,7 @@ const resources = {
         progress: "Overall scan progress",
         sourceTitle: "Bubble source settings",
         sourceDescription:
-          "A signed-in, server-side proxy safely reads the Bubble source.",
+          "A read-only server-side proxy safely reads the Bubble source.",
         baseUrl: "Base URL",
         urlPreview: "URL preview",
         invalidBaseUrl: "Enter a valid base URL",

@@ -676,11 +676,27 @@ function AuthGate() {
   return session ? <OperationsShell /> : <LoginPage />;
 }
 
+function PublicMigrationPage() {
+  return (
+    <main className="public-migration-shell">
+      <DataMigrationPage />
+    </main>
+  );
+}
+
 function App() {
   return (
-    <AuthProvider>
-      <AuthGate />
-    </AuthProvider>
+    <Routes>
+      <Route path="/migration" element={<PublicMigrationPage />} />
+      <Route
+        path="*"
+        element={
+          <AuthProvider>
+            <AuthGate />
+          </AuthProvider>
+        }
+      />
+    </Routes>
   );
 }
 

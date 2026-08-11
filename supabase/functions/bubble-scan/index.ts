@@ -81,10 +81,6 @@ Deno.serve(async (request) => {
     return jsonResponse({ error: "Method not allowed." }, 405);
   }
 
-  if (!request.headers.get("Authorization")?.startsWith("Bearer ")) {
-    return jsonResponse({ error: "Authentication required." }, 401);
-  }
-
   try {
     const body = (await request.json()) as ScanRequest;
     const baseUrl = validateBaseUrl(body.baseUrl);

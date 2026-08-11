@@ -27,10 +27,10 @@ support.
 
 ## Bubble migration scanner
 
-The `/migration` page invokes the authenticated `bubble-scan` Supabase Edge
+The public `/migration` page invokes the read-only `bubble-scan` Supabase Edge
 Function. Bubble credentials are never accepted by or exposed to the browser.
-If the Bubble Data API becomes private, configure `BUBBLE_API_TOKEN` as a
-Supabase Edge Function secret before deploying the function.
+The proxy only accepts the FCCD production and version-test Bubble Data API
+hosts and only returns record counts.
 
 ## Development workflow
 
