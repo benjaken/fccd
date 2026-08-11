@@ -701,6 +701,7 @@ a {
 }
 
 .metric-card {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 14px;
@@ -710,6 +711,24 @@ a {
   border-radius: 14px;
   background: var(--card);
   box-shadow: 0 5px 22px color-mix(in oklch, var(--foreground) 3%, transparent);
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    transform 150ms ease;
+}
+
+.metric-card:hover {
+  border-color: color-mix(in oklch, var(--primary) 32%, var(--border));
+  box-shadow: 0 8px 26px color-mix(in oklch, var(--foreground) 6%, transparent);
+  transform: translateY(-2px);
+}
+
+.metric-card:focus-visible,
+.queue-item:focus-visible,
+.progress-row:focus-visible,
+.order-link:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
 }
 
 .metric-icon {
@@ -760,9 +779,29 @@ a {
   color: oklch(0.79 0.12 78);
 }
 
-.metric-card > div:last-child {
+.metric-card > div:nth-child(2) {
   display: grid;
   min-width: 0;
+}
+
+.metric-chevron {
+  position: absolute;
+  top: 14px;
+  right: 12px;
+  width: 16px;
+  height: 16px;
+  color: var(--muted-foreground);
+  opacity: 0;
+  transform: translateX(-4px);
+  transition:
+    opacity 150ms ease,
+    transform 150ms ease;
+}
+
+.metric-card:hover .metric-chevron,
+.metric-card:focus-visible .metric-chevron {
+  opacity: 1;
+  transform: translateX(0);
 }
 
 .metric-card p {
@@ -905,6 +944,16 @@ a {
   padding: 18px 20px 20px;
 }
 
+.progress-row {
+  display: block;
+  padding: 2px;
+  border-radius: 7px;
+}
+
+.progress-row:hover > div:first-child span {
+  color: var(--primary);
+}
+
 .progress-row > div:first-child {
   display: flex;
   justify-content: space-between;
@@ -985,6 +1034,17 @@ tbody tr:hover {
 td strong {
   color: var(--foreground);
   font-weight: 720;
+}
+
+.order-link {
+  color: var(--foreground);
+  font-weight: 720;
+}
+
+.order-link:hover {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 td:last-child {

@@ -395,15 +395,17 @@ function MetricCard({
   detail,
   icon: MetricIcon,
   tone,
+  to,
 }: {
   label: string;
   value: string;
   detail: string;
   icon: Icon;
   tone: "red" | "blue" | "green" | "amber";
+  to: string;
 }) {
   return (
-    <article className="metric-card">
+    <Link className="metric-card" to={to}>
       <div className={cn("metric-icon", tone)}>
         <MetricIcon />
       </div>
@@ -412,11 +414,12 @@ function MetricCard({
         <strong>{value}</strong>
         <small>{detail}</small>
       </div>
-    </article>
+      <ChevronRight className="metric-chevron" />
+    </Link>
   );
 }
 
-function Dashboard() {
+export function Dashboard() {
   const { t, i18n } = useTranslation();
   const currency = new Intl.NumberFormat(i18n.language, {
     style: "currency",
@@ -425,19 +428,69 @@ function Dashboard() {
   });
 
   const queues = [
-    { label: t("dashboard.highChanceQuotes"), count: 8, tone: "red" },
-    { label: t("dashboard.largeQuotes"), count: 3, tone: "amber" },
-    { label: t("dashboard.unpaidOrders"), count: 12, tone: "blue" },
-    { label: t("dashboard.unassignedDrivers"), count: 5, tone: "purple" },
-    { label: t("dashboard.deliveredUnpaid"), count: 4, tone: "green" },
+    {
+      label: t("dashboard.highChanceQuotes"),
+      count: 8,
+      tone: "red",
+      to: "/quotes/high-chance",
+    },
+    {
+      label: t("dashboard.largeQuotes"),
+      count: 3,
+      tone: "amber",
+      to: "/quotes/large",
+    },
+    {
+      label: t("dashboard.unpaidOrders"),
+      count: 12,
+      tone: "blue",
+      to: "/orders/unpaid",
+    },
+    {
+      label: t("dashboard.unassignedDrivers"),
+      count: 5,
+      tone: "purple",
+      to: "/delivery/unassigned",
+    },
+    {
+      label: t("dashboard.deliveredUnpaid"),
+      count: 4,
+      tone: "green",
+      to: "/orders/delivered-unpaid",
+    },
   ];
 
   const progress = [
-    { label: t("dashboard.confirmed"), count: 18, width: "82%" },
-    { label: t("dashboard.preparing"), count: 12, width: "64%" },
-    { label: t("dashboard.ready"), count: 7, width: "43%" },
-    { label: t("dashboard.shipping"), count: 5, width: "31%" },
-    { label: t("dashboard.completed"), count: 9, width: "52%" },
+    {
+      label: t("dashboard.confirmed"),
+      count: 18,
+      width: "82%",
+      to: "/orders?status=confirmed",
+    },
+    {
+      label: t("dashboard.preparing"),
+      count: 12,
+      width: "64%",
+      to: "/kitchen?status=preparing",
+    },
+    {
+      label: t("dashboard.ready"),
+      count: 7,
+      width: "43%",
+      to: "/kitchen?status=ready",
+    },
+    {
+      label: t("dashboard.shipping"),
+      count: 5,
+      width: "31%",
+      to: "/delivery?status=shipping",
+    },
+    {
+      label: t("dashboard.completed"),
+      count: 9,
+      width: "52%",
+      to: "/orders?status=completed",
+    },
   ];
 
   const jobs = [
@@ -494,6 +547,7 @@ function Dashboard() {
           detail={`+12% ${t("dashboard.versusYesterday")}`}
           icon={ClipboardList}
           tone="red"
+          to="/orders"
         />
         <MetricCard
           label={t("dashboard.revenueToday")}
@@ -501,6 +555,7 @@ function Dashboard() {
           detail={`+8.6% ${t("dashboard.versusYesterday")}`}
           icon={CircleDollarSign}
           tone="green"
+          to="/reports?view=revenue"
         />
         <MetricCard
           label={t("dashboard.deliveries")}
@@ -508,6 +563,7 @@ function Dashboard() {
           detail={`5 ${t("common.pending")}`}
           icon={Truck}
           tone="blue"
+          to="/delivery"
         />
         <MetricCard
           label={t("dashboard.lowStock")}
@@ -515,6 +571,7 @@ function Dashboard() {
           detail={t("dashboard.urgent")}
           icon={Boxes}
           tone="amber"
+          to="/inventory/low-stock"
         />
       </section>
 
@@ -526,12 +583,12 @@ function Dashboard() {
           />
           <div className="queue-list">
             {queues.map((item) => (
-              <button key={item.label} type="button" className="queue-item">
+              <Link key={item.label} to={item.to} className="queue-item">
                 <span className={cn("queue-dot", item.tone)} />
                 <span>{item.label}</span>
                 <strong>{item.count}</strong>
                 <ChevronRight />
-              </button>
+              </Link>
             ))}
           </div>
         </article>
@@ -543,7 +600,7 @@ function Dashboard() {
           />
           <div className="progress-list">
             {progress.map((item) => (
-              <div className="progress-row" key={item.label}>
+              <Link className="progress-row" key={item.label} to={item.to}>
                 <div>
                   <span>{item.label}</span>
                   <strong>{item.count}</strong>
@@ -551,7 +608,7 @@ function Dashboard() {
                 <div className="progress-track">
                   <span style={{ width: item.width }} />
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </article>
@@ -579,7 +636,9 @@ function Dashboard() {
               {jobs.map((job) => (
                 <tr key={job.no}>
                   <td>
-                    <strong>{job.no}</strong>
+                    <Link className="order-link" to={`/orders/${job.no}`}>
+                      {job.no}
+                    </Link>
                   </td>
                   <td>{job.customer}</td>
                   <td>{job.time}</td>
@@ -590,8 +649,13 @@ function Dashboard() {
                   </td>
                   <td>{job.amount}</td>
                   <td>
-                    <Button variant="ghost" size="icon">
-                      <ChevronRight />
+                    <Button variant="ghost" size="icon" asChild>
+                      <Link
+                        to={`/orders/${job.no}`}
+                        aria-label={`${t("dashboard.no")} ${job.no}`}
+                      >
+                        <ChevronRight />
+                      </Link>
                     </Button>
                   </td>
                 </tr>
