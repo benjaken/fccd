@@ -108,10 +108,14 @@ export function LoginPage() {
         <div className="login-brand-glow login-brand-glow-one" />
         <div className="login-brand-glow login-brand-glow-two" />
         <div className="login-brand-content">
-          <a className="login-brand" href="/" aria-label="Food Channel">
+          <a
+            className="login-brand"
+            href="/"
+            aria-label="Food Channel Catering"
+          >
             <span className="login-brand-mark">FC</span>
             <span>
-              <strong>Food Channel</strong>
+              <strong>Food Channel Catering</strong>
               <small>Operations</small>
             </span>
           </a>

@@ -5,7 +5,7 @@ const resources = {
   "zh-HK": {
     translation: {
       brand: {
-        name: "Food Channel",
+        name: "Food Channel Catering",
         system: "營運管理系統",
       },
       common: {
@@ -24,7 +24,7 @@ const resources = {
       auth: {
         eyebrow: "營運管理平台",
         title: "歡迎回來",
-        description: "登入 Food Channel 系統，繼續處理今日營運工作。",
+        description: "登入 Food Channel Catering 系統，繼續處理今日營運工作。",
         email: "電郵地址",
         emailPlaceholder: "name@foodchannels.com",
         password: "密碼",
@@ -127,7 +127,7 @@ const resources = {
   en: {
     translation: {
       brand: {
-        name: "Food Channel",
+        name: "Food Channel Catering",
         system: "Operations",
       },
       common: {
@@ -147,7 +147,7 @@ const resources = {
         eyebrow: "Operations platform",
         title: "Welcome back",
         description:
-          "Sign in to Food Channel and continue today's operations.",
+          "Sign in to Food Channel Catering and continue today's operations.",
         email: "Email address",
         emailPlaceholder: "name@foodchannels.com",
         password: "Password",

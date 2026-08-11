@@ -1,4 +1,4 @@
-# Food Channel Operations
+# Food Channel Catering
 
 React/Vite operations interface for Food Channel Catering.
 
@@ -21,6 +21,6 @@ npm run lint
 npm run build
 ```
 
-The initial layout includes Food Channel branding, responsive navigation,
+The initial layout includes Food Channel Catering branding, responsive navigation,
 Traditional Chinese and English localization, dark mode, and reduced-motion
 support.

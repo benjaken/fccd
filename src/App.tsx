@@ -239,7 +239,9 @@ function OperationsShell() {
               {(user?.email?.slice(0, 2) || "FC").toUpperCase()}
             </span>
             <span className="user-copy">
-              <strong>{user?.email?.split("@")[0] || "Food Channel"}</strong>
+              <strong>
+                {user?.email?.split("@")[0] || "Food Channel Catering"}
+              </strong>
               <small>{t("user.role")}</small>
             </span>
             <ChevronDown />
