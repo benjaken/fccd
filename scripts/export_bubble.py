@@ -152,13 +152,18 @@ def export_collection(
 def export_all(args: argparse.Namespace) -> int:
     swagger = load_swagger(args.base_url, args.output, args.token)
     available = collection_paths(swagger)
-    selected_names = set(args.type or [])
-    selected = (
-        [path for path in available if endpoint_name(path) in selected_names]
-        if selected_names
-        else available
-    )
-    missing = selected_names - {endpoint_name(path) for path in selected}
+    requested_names = args.type or []
+    available_by_name = {endpoint_name(path).casefold(): path for path in available}
+    selected = []
+    missing = []
+    for requested_name in requested_names:
+        path = available_by_name.get(requested_name.casefold())
+        if path is None:
+            missing.append(requested_name)
+        elif path not in selected:
+            selected.append(path)
+    if not requested_names:
+        selected = available
     if missing:
         raise RuntimeError(f"Unknown Data API type(s): {', '.join(sorted(missing))}")
 
@@ -227,7 +232,7 @@ def parser() -> argparse.ArgumentParser:
     export_parser.add_argument(
         "--type",
         action="append",
-        help="export an exact API type name; repeat for multiple types",
+        help="export an API type name (case-insensitive); repeat for multiple types",
     )
     export_parser.add_argument("--page-size", type=int, choices=range(1, 101), default=100)
     export_parser.add_argument(
