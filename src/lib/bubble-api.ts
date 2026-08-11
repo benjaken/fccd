@@ -1,7 +1,7 @@
 import { supabase } from "@/lib/supabase";
 
 export const DEFAULT_BUBBLE_BASE_URL =
-  "https://cs.foodchannels-catering.com/version-test/api/1.1/obj";
+  "https://cs.foodchannels-catering.com/api/1.1/obj";
 
 export type BubbleObjectSummary = {
   count: number;

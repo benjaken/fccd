@@ -1,8 +1,5 @@
 const ALLOWED_HOST = "cs.foodchannels-catering.com";
-const ALLOWED_PATHS = new Set([
-  "/api/1.1/obj",
-  "/version-test/api/1.1/obj",
-]);
+const ALLOWED_PATH = "/api/1.1/obj";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -44,7 +41,7 @@ function validateBaseUrl(value: unknown) {
   if (
     url.protocol !== "https:" ||
     url.hostname !== ALLOWED_HOST ||
-    !ALLOWED_PATHS.has(pathname) ||
+    pathname !== ALLOWED_PATH ||
     url.port ||
     url.username ||
     url.password ||
@@ -52,7 +49,7 @@ function validateBaseUrl(value: unknown) {
     url.hash
   ) {
     throw new Error(
-      "Only the FCCD production or version-test Bubble Data API is allowed.",
+      "Only the FCCD production Bubble Data API is allowed.",
     );
   }
 

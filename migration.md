@@ -1,0 +1,80 @@
+# 資料遷移頁面注意事項
+
+本文件記錄目前已確認的 Bubble 資料盤點與後續遷移規則。未經重新確認，
+不得擴大頁面功能或啟動寫入任務。
+
+## 1. 目前範圍
+
+- `/migration` 是獨立頁面，不加入營運系統選單。
+- 頁面不需要 Supabase Auth 登入。
+- 目前只做 Bubble 資料盤點及記錄數量掃描。
+- 不建立、清空或寫入任何 Supabase 資料表。
+- 先前的 `migration_*` staging 方式並非正確遷移方案，已取消。
+- 真正遷移前必須重新確認目標資料模型、關聯、轉換及驗收方式。
+
+## 2. Bubble 資料來源
+
+- 只使用 production Data API：
+  `https://cs.foodchannels-catering.com/api/1.1/obj`
+- 不使用 `version-test` 作為資料來源。
+- 資料類型名稱拼接到 Base URL 時必須使用 `encodeURIComponent`。
+- 空格必須編碼為 `%20`，例如：
+  `https://cs.foodchannels-catering.com/api/1.1/obj/B_delivery%20schedule`
+- 目前盤點的 103 個資料類型以
+  `src/data/bubble-object-types.ts` 為唯一前端清單。
+
+## 3. 扫描结果判定
+
+- HTTP/API 请求成功且记录数为 `0`，属于成功结果。
+- 成功的空资料表显示为 `0 · 正常`／`0 · OK`。
+- 只有网络错误、非 2xx API 响应或响应格式错误才显示失败。
+- production 不存在的类型应如实显示接口失败，不能当作空资料表。
+- 扫描只请求计数所需的最少资料，不在浏览器显示原始记录内容。
+
+## 4. 实体分类与页面展示
+
+- 实体分为「核心实体」及「其他实体」。
+- 103 个实体按九个业务领域分组：
+  1. 客户、CRM、渠道与提醒
+  2. 报价、订单与备注
+  3. 商品、套餐、菜单与标签
+  4. 食材、包装与生产计算
+  5. 配送与车队
+  6. 付款、成本与采购
+  7. 肉类加工与库存
+  8. 店铺营运、销售、库存与排班
+  9. 日历、状态、用户与系统
+- 每组显示资料表总数、核心／其他数量、成功／失败数量及完成百分比。
+- 分组可展开或收起；搜索时自动展开有匹配项目的分组。
+- 资料表辅助文字、状态和日志必须保持清晰可读，不使用过小字体。
+
+## 5. 执行日志
+
+- 页面底部保留执行日志面板。
+- 日志记录扫描开始、批次完成、单表成功及接口失败。
+- 时间使用香港时区 `Asia/Hong_Kong`。
+- 日志区支持滚动及手动清除。
+- 最新日志显示在最上方。
+
+## 6. Supabase 与部署
+
+- 开发部署使用 Git `develop` 分支。
+- 前端通过 Vercel/Supabase 分支环境变量连接对应的 Supabase
+  `develop` preview branch。
+- 浏览器只能使用 publishable key，不得使用 secret 或
+  `service_role` key。
+- 目前只保留唯读 `bubble-scan` Edge Function。
+- 已取消的 `bubble-migrate` endpoint 只保留 HTTP 410 tombstone，
+  防止旧部署继续执行错误任务。
+
+## 7. 后续真实迁移的前置条件
+
+- 不可把所有 Bubble 类型机械复制为同名业务表。
+- 必须先确认核心实体、其他实体、关联及最终 Supabase schema。
+- Bubble `_id` 必须保存为 `legacy_id`，且保持唯一。
+- 金额使用 PostgreSQL `numeric`，日期时间保留时区。
+- 订单客户、价格、地址及条款需要保留交易快照。
+- 关系字段完成资料分析后再建立 PostgreSQL foreign key。
+- `user.pw` 不得写入数据库、日志、备份或导出。
+- 正式迁移必须具备来源数量、成功、跳过、失败及关系孤儿对账。
+

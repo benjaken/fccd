@@ -34,8 +34,9 @@ support.
 
 The public `/migration` page invokes the read-only `bubble-scan` Supabase Edge
 Function. Bubble credentials are never accepted by or exposed to the browser.
-The proxy only accepts the FCCD production and version-test Bubble Data API
-hosts and only returns record counts.
+The proxy only accepts the FCCD production Bubble Data API and only returns
+record counts. See [migration.md](migration.md) for the confirmed inventory
+page rules and migration constraints.
 
 ## Development workflow
 
