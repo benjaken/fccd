@@ -104,12 +104,12 @@ const secondaryNav: Record<string, NavItem[]> = {
   ],
 };
 
-const workspaces = [
+const workspaces: Array<{ key: string; icon: Icon; disabled?: boolean }> = [
   { key: "catering", icon: Utensils },
   { key: "delivery", icon: Truck },
   { key: "restaurant", icon: Store },
   { key: "customer", icon: Users, disabled: true },
-] as const;
+];
 
 function sectionFromPath(pathname: string) {
   const segment = pathname.split("/")[1];
