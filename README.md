@@ -24,3 +24,8 @@ npm run build
 The initial layout includes Food Channel Catering branding, responsive navigation,
 Traditional Chinese and English localization, dark mode, and reduced-motion
 support.
+
+## Development workflow
+
+All new development must branch from the latest `main` and return through a
+reviewed integration. See [CONTRIBUTING.md](CONTRIBUTING.md).
