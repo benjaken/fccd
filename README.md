@@ -38,6 +38,11 @@ The proxy only accepts the FCCD production Bubble Data API and only returns
 record counts. See [migration.md](migration.md) for the confirmed inventory
 page rules and migration constraints.
 
+Regenerate the checked-in production Swagger inventory with
+`npm run generate:bubble-schema`. Relationship validation runs server-side and
+returns aggregate cardinality, confidence, and sampled orphan-reference data
+without exposing raw Bubble records to the browser.
+
 ## Development workflow
 
 All new development must branch from the latest `main` and return through a

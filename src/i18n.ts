@@ -156,6 +156,10 @@ const resources = {
           scanOneStart: "正在掃描 {{objectType}}…",
           scanOneSuccess: "{{objectType}} 掃描完成，共 {{count}} 筆",
           scanOneError: "{{objectType}} 掃描失敗：{{message}}",
+          relationshipStart: "正在分析 {{objectType}} 的欄位關係…",
+          relationshipSuccess:
+            "{{objectType}} 關係分析完成，找到 {{count}} 個候選關係",
+          relationshipError: "{{objectType}} 關係分析失敗：{{message}}",
         },
         groups: {
           customerCrm: "客戶、CRM、渠道與提醒",
@@ -170,6 +174,47 @@ const resources = {
         },
         groupSummary:
           "{{total}} 個資料表 · {{core}} 核心 · {{supporting}} 其他 · {{success}} 成功 · {{failed}} 失敗",
+        relationships: {
+          title: "關係推斷與資料驗證",
+          description:
+            "Production Swagger 已保存 {{entities}} 個實體、{{fields}} 個欄位及 {{relationships}} 個顯式 Unique ID 關係；點擊資料表的「分析關係」以實際資料抽樣驗證。",
+          candidateCount: "{{count}} 個候選關係",
+          analyze: "分析關係",
+          analyzing: "正在取得 {{objectType}} 的資料樣本並驗證引用…",
+          analysisError: "無法完成關係分析。",
+          emptyTitle: "選擇一個資料表開始驗證",
+          emptyDescription:
+            "系統只在伺服器端讀取最多 100 筆樣本，頁面只接收關係統計，不會顯示原始客戶或訂單資料。",
+          selectedEntity: "目前分析實體",
+          sourceRecordCount: "來源記錄",
+          sampledRecords: "抽樣記錄",
+          relationshipsFound: "候選關係",
+          sampledOrphans: "抽樣孤兒引用",
+          sourceField: "Bubble 欄位",
+          targetEntity: "目標實體",
+          cardinality: "推斷基數",
+          confidence: "置信度",
+          references: "樣本引用",
+          orphans: "孤兒",
+          targetMapping: "建議 Supabase 欄位",
+          referenceSummary: "{{sampled}} 個值／{{verified}} 個已驗證",
+          privacyNote:
+            "孤兒數只代表本次抽樣及最多 10 個引用驗證；完整遷移前仍需執行全量對帳。原始資料不會傳回瀏覽器。",
+          noRelations: "未找到顯式 Unique ID 關係",
+          noRelationsDescription:
+            "此實體可能是獨立設定表，或關係隱藏在未標註的字串／陣列欄位中。",
+          graphLabel: "{{sourceType}} 關係圖",
+          fieldCount: "{{count}} 個欄位",
+          target: "目標",
+          sourceRecords: "來源 · {{count}} 筆",
+          scalarReference: "單值 Unique ID",
+          arrayReference: "陣列型關聯",
+          cardinalities: {
+            "many-to-one": "多對一",
+            "one-to-one-candidate": "候選一對一",
+            "many-to-many-candidate": "候選多對多",
+          },
+        },
         objectList: "Bubble 資料表",
         objectCount: "顯示 {{visible}}／{{total}} 個資料表",
         searchObjects: "搜尋資料表",
@@ -348,6 +393,11 @@ const resources = {
           scanOneSuccess:
             "{{objectType}} scan completed with {{count}} records",
           scanOneError: "{{objectType}} scan failed: {{message}}",
+          relationshipStart: "Analyzing relationship fields for {{objectType}}…",
+          relationshipSuccess:
+            "{{objectType}} relationship analysis found {{count}} candidates",
+          relationshipError:
+            "{{objectType}} relationship analysis failed: {{message}}",
         },
         groups: {
           customerCrm: "Customers, CRM, channels & reminders",
@@ -362,6 +412,48 @@ const resources = {
         },
         groupSummary:
           "{{total}} tables · {{core}} core · {{supporting}} other · {{success}} succeeded · {{failed}} failed",
+        relationships: {
+          title: "Relationship inference & data validation",
+          description:
+            "The saved production Swagger contains {{entities}} entities, {{fields}} fields and {{relationships}} explicit Unique ID relationships. Select Analyze relationships to validate one entity against sampled data.",
+          candidateCount: "{{count}} candidate relationships",
+          analyze: "Analyze relationships",
+          analyzing:
+            "Fetching a {{objectType}} sample and validating references…",
+          analysisError: "Could not complete relationship analysis.",
+          emptyTitle: "Select an entity to begin validation",
+          emptyDescription:
+            "The server reads at most 100 sampled records. Only aggregate relationship metadata reaches this page; raw customer and order records are not displayed.",
+          selectedEntity: "Selected entity",
+          sourceRecordCount: "Source records",
+          sampledRecords: "Sampled records",
+          relationshipsFound: "Candidate relationships",
+          sampledOrphans: "Sampled orphan references",
+          sourceField: "Bubble field",
+          targetEntity: "Target entity",
+          cardinality: "Inferred cardinality",
+          confidence: "Confidence",
+          references: "Sample references",
+          orphans: "Orphans",
+          targetMapping: "Suggested Supabase field",
+          referenceSummary: "{{sampled}} values / {{verified}} verified",
+          privacyNote:
+            "Orphan totals cover this sample and at most 10 verified IDs per field. A full reconciliation is still required before migration. Raw records never reach the browser.",
+          noRelations: "No explicit Unique ID relationships found",
+          noRelationsDescription:
+            "This may be a standalone configuration entity, or its relationships may be hidden in unannotated string or array fields.",
+          graphLabel: "{{sourceType}} relationship graph",
+          fieldCount: "{{count}} fields",
+          target: "target",
+          sourceRecords: "source · {{count}} records",
+          scalarReference: "Scalar Unique ID",
+          arrayReference: "Array reference",
+          cardinalities: {
+            "many-to-one": "Many to one",
+            "one-to-one-candidate": "One-to-one candidate",
+            "many-to-many-candidate": "Many-to-many candidate",
+          },
+        },
         objectList: "Bubble objects",
         objectCount: "Showing {{visible}} of {{total}} objects",
         searchObjects: "Search objects",

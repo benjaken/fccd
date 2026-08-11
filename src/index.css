@@ -1445,7 +1445,7 @@ td:last-child {
 .migration-list-head,
 .migration-object-row {
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) 120px 150px 92px;
+  grid-template-columns: minmax(260px, 1fr) 120px 150px 230px;
   align-items: center;
   gap: 12px;
   padding: 0 18px;
@@ -1518,6 +1518,19 @@ td:last-child {
   color: oklch(0.49 0.15 250);
 }
 
+.migration-schema-relations {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted-foreground);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.migration-schema-relations svg {
+  width: 11px;
+}
+
 .dark .migration-entity-role.core {
   background: oklch(0.29 0.06 250);
   color: oklch(0.75 0.11 250);
@@ -1547,6 +1560,364 @@ td:last-child {
 
 .migration-status.error {
   color: var(--destructive);
+}
+
+.migration-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.relationship-analysis {
+  overflow: hidden;
+}
+
+.relationship-analysis-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 17px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.relationship-analysis-header > div {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.relationship-analysis-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  border-radius: 9px;
+  background: oklch(0.92 0.04 250);
+  color: oklch(0.53 0.17 250);
+}
+
+.dark .relationship-analysis-icon {
+  background: oklch(0.29 0.065 250);
+  color: oklch(0.75 0.11 250);
+}
+
+.relationship-analysis-icon svg {
+  width: 17px;
+}
+
+.relationship-analysis-header h2 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.relationship-analysis-header p {
+  max-width: 850px;
+  margin: 4px 0 0;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.relationship-analyzed-at {
+  flex: 0 0 auto;
+  color: var(--muted-foreground);
+  font-size: 10px;
+}
+
+.relationship-analysis-loading,
+.relationship-analysis-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 180px;
+  padding: 24px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.relationship-analysis-loading svg,
+.relationship-analysis-error svg {
+  width: 18px;
+}
+
+.relationship-analysis-error {
+  color: var(--destructive);
+}
+
+.relationship-analysis-empty {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 215px;
+  padding: 30px 20px;
+  text-align: center;
+}
+
+.relationship-analysis-empty.compact {
+  min-height: 170px;
+  border-top: 1px solid var(--border);
+}
+
+.relationship-analysis-empty > svg {
+  width: 30px;
+  height: 30px;
+  margin-bottom: 10px;
+  color: var(--muted-foreground);
+  opacity: 0.65;
+}
+
+.relationship-analysis-empty h3 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.relationship-analysis-empty p {
+  max-width: 620px;
+  margin: 7px 0 0;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.relationship-report-title {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px 10px;
+}
+
+.relationship-report-title span {
+  color: var(--muted-foreground);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.relationship-report-title h3 {
+  margin: 3px 0 0;
+  font-size: 19px;
+}
+
+.relationship-report-title code {
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+
+.relationship-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 9px;
+  padding: 0 18px 16px;
+}
+
+.relationship-metrics article {
+  display: grid;
+  gap: 3px;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--background);
+}
+
+.relationship-metrics span {
+  color: var(--muted-foreground);
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.relationship-metrics strong {
+  font-size: 18px;
+}
+
+.relationship-metrics article.danger strong {
+  color: var(--destructive);
+}
+
+.relationship-graph-wrap {
+  margin: 0 18px 16px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background:
+    radial-gradient(
+      circle at center,
+      color-mix(in oklch, var(--primary) 4%, transparent),
+      transparent 52%
+    ),
+    var(--background);
+}
+
+.relationship-graph {
+  display: block;
+  width: 100%;
+  min-width: 680px;
+  height: auto;
+}
+
+.relationship-graph line {
+  stroke: oklch(0.62 0.16 250);
+  stroke-width: 1.6;
+  opacity: 0.68;
+}
+
+.relationship-graph line.array {
+  stroke: oklch(0.64 0.17 325);
+  stroke-dasharray: 6 4;
+}
+
+.relationship-graph marker path {
+  fill: oklch(0.62 0.16 250);
+}
+
+.relationship-edge-label {
+  paint-order: stroke;
+  stroke: var(--background);
+  stroke-width: 4px;
+  fill: var(--muted-foreground);
+  font-size: 9px;
+}
+
+.relationship-node rect {
+  stroke: var(--border);
+  stroke-width: 1.2;
+  fill: var(--card);
+}
+
+.relationship-node text {
+  fill: var(--foreground);
+  font-size: 10px;
+  font-weight: 720;
+}
+
+.relationship-node .relationship-node-type {
+  fill: var(--muted-foreground);
+  font-size: 8px;
+  font-weight: 600;
+}
+
+.relationship-source-node rect {
+  stroke: color-mix(in oklch, var(--primary) 45%, var(--border));
+  fill: color-mix(in oklch, var(--primary) 7%, var(--card));
+}
+
+.relationship-graph-legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+  padding: 9px 14px;
+  border-top: 1px solid var(--border);
+  color: var(--muted-foreground);
+  font-size: 10px;
+}
+
+.relationship-graph-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.relationship-graph-legend i {
+  width: 22px;
+  height: 2px;
+  background: oklch(0.62 0.16 250);
+}
+
+.relationship-graph-legend i.array {
+  background: repeating-linear-gradient(
+    90deg,
+    oklch(0.64 0.17 325) 0 5px,
+    transparent 5px 8px
+  );
+}
+
+.relationship-table-wrap {
+  overflow-x: auto;
+  border-top: 1px solid var(--border);
+}
+
+.relationship-table {
+  min-width: 980px;
+}
+
+.relationship-table code {
+  font-size: 10px;
+}
+
+.relationship-cardinality {
+  display: inline-flex;
+  padding: 4px 7px;
+  border-radius: 99px;
+  background: oklch(0.92 0.04 250);
+  color: oklch(0.5 0.15 250);
+  font-size: 9px;
+  font-weight: 720;
+}
+
+.relationship-cardinality.array {
+  background: oklch(0.93 0.04 325);
+  color: oklch(0.52 0.16 325);
+}
+
+.dark .relationship-cardinality {
+  background: oklch(0.29 0.065 250);
+  color: oklch(0.75 0.11 250);
+}
+
+.dark .relationship-cardinality.array {
+  background: oklch(0.29 0.06 325);
+  color: oklch(0.76 0.1 325);
+}
+
+.relationship-confidence {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 82px;
+  height: 20px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: var(--secondary);
+}
+
+.relationship-confidence i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: oklch(0.72 0.11 148);
+}
+
+.relationship-confidence strong {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  color: var(--foreground);
+  font-size: 9px;
+  text-align: center;
+}
+
+.relationship-orphan-count {
+  font-weight: 750;
+}
+
+.relationship-orphan-count.danger {
+  color: var(--destructive);
+}
+
+.relationship-privacy-note {
+  margin: 0;
+  padding: 11px 18px 14px;
+  border-top: 1px solid var(--border);
+  color: var(--muted-foreground);
+  font-size: 10px;
+  line-height: 1.5;
 }
 
 .migration-execution-log {
@@ -2366,9 +2737,26 @@ td:last-child {
     grid-row: 2;
   }
 
-  .migration-object-row > button {
-    grid-column: 2;
-    grid-row: 2;
+  .migration-row-actions {
+    grid-column: 1 / 3;
+    grid-row: 3;
+    justify-content: stretch;
+  }
+
+  .migration-row-actions button {
+    flex: 1;
+  }
+
+  .relationship-analysis-header {
+    flex-direction: column;
+  }
+
+  .relationship-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .relationship-graph-wrap {
+    overflow-x: auto;
   }
 
   .heading-actions {

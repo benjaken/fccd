@@ -56,7 +56,23 @@
 - 日志区支持滚动及手动清除。
 - 最新日志显示在最上方。
 
-## 6. Supabase 与部署
+## 6. 关系推断与验证
+
+- Production Swagger 提炼后的实体、字段及显式 Unique ID 关系必须保存在项目中。
+- 使用 `npm run generate:bubble-schema` 重新生成
+  `src/data/bubble-schema.generated.json`。
+- 页面可针对单一资料表执行关系分析，但实际记录只允许在 Edge Function
+  内读取。
+- 公开页面只显示聚合结果：来源字段、目标实体、候选基数、置信度、验证数量、
+  孤儿引用数量及建议 Supabase 字段。
+- 不向浏览器传回客户、订单、付款、员工等原始 JSON。
+- 单次关系验证最多读取 100 笔来源样本，每个字段最多验证 10 个目标 ID。
+- 抽样结果只能用于确认候选关系，不能代替正式迁移前的全量孤儿数据及财务对账。
+- 数组型 Unique ID 先标记为候选多对多；单值 Unique ID 依重复情况推断为
+  多对一或候选一对一。
+- 关系图用于人工检查方向与基数，不自动建立 Supabase foreign key。
+
+## 7. Supabase 与部署
 
 - 开发部署使用 Git `develop` 分支。
 - 前端通过 Vercel/Supabase 分支环境变量连接对应的 Supabase
@@ -67,7 +83,7 @@
 - 已取消的 `bubble-migrate` endpoint 只保留 HTTP 410 tombstone，
   防止旧部署继续执行错误任务。
 
-## 7. 后续真实迁移的前置条件
+## 8. 后续真实迁移的前置条件
 
 - 不可把所有 Bubble 类型机械复制为同名业务表。
 - 必须先确认核心实体、其他实体、关联及最终 Supabase schema。

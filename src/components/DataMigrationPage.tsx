@@ -5,6 +5,7 @@ import {
   CircleAlert,
   Database,
   Folder,
+  Network,
   LoaderCircle,
   RefreshCw,
   Search,
@@ -15,6 +16,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
+import { BubbleRelationshipGraph } from "@/components/BubbleRelationshipGraph";
 import { BUBBLE_ENTITY_GROUPS } from "@/data/bubble-entity-groups";
 import {
   BUBBLE_OBJECT_TYPES,
@@ -22,12 +24,34 @@ import {
   isCoreBubbleObjectType,
   type BubbleObjectType,
 } from "@/data/bubble-object-types";
+import bubbleSchema from "@/data/bubble-schema.generated.json";
 import {
   buildBubbleObjectUrl,
   DEFAULT_BUBBLE_BASE_URL,
   fetchBubbleObjectSummary,
 } from "@/lib/bubble-api";
+import {
+  analyzeBubbleRelationships,
+  type BubbleRelationshipReport,
+} from "@/lib/bubble-relations";
 import { cn } from "@/lib/utils";
+
+type GeneratedSchemaInventory = {
+  entityCount: number;
+  fieldCount: number;
+  relationshipCount: number;
+  entities: Array<{
+    sourceType: string;
+    schemaType: string;
+    fieldCount: number;
+    fields: Array<{ targetSourceType: string | null; isMetadata: boolean }>;
+  }>;
+};
+
+const generatedSchema = bubbleSchema as GeneratedSchemaInventory;
+const generatedEntityByType = new Map(
+  generatedSchema.entities.map((entity) => [entity.sourceType, entity]),
+);
 
 type ScanResult =
   | { status: "idle" | "loading" }
@@ -55,6 +79,13 @@ export function DataMigrationPage() {
   const [results, setResults] =
     useState<Record<BubbleObjectType, ScanResult>>(initialResults);
   const [executionLog, setExecutionLog] = useState<ExecutionLogEntry[]>([]);
+  const [relationshipReport, setRelationshipReport] =
+    useState<BubbleRelationshipReport | null>(null);
+  const [analyzingType, setAnalyzingType] =
+    useState<BubbleObjectType | null>(null);
+  const [relationshipError, setRelationshipError] = useState<string | null>(
+    null,
+  );
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
     () => new Set(["customerCrm", "ordersQuotes"]),
   );
@@ -227,6 +258,40 @@ export function DataMigrationPage() {
     await fetchObject(objectType, controller, true);
   };
 
+  const analyzeRelationships = async (objectType: BubbleObjectType) => {
+    setAnalyzingType(objectType);
+    setRelationshipError(null);
+    appendLog(t("migration.log.relationshipStart", { objectType }));
+
+    try {
+      const report = await analyzeBubbleRelationships(objectType);
+      setRelationshipReport(report);
+      appendLog(
+        t("migration.log.relationshipSuccess", {
+          objectType,
+          count: report.relationshipCount,
+        }),
+        "success",
+      );
+      document
+        .getElementById("relationship-analysis")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : t("migration.relationships.analysisError");
+      setRelationshipReport(null);
+      setRelationshipError(message);
+      appendLog(
+        t("migration.log.relationshipError", { objectType, message }),
+        "error",
+      );
+    } finally {
+      setAnalyzingType(null);
+    }
+  };
+
   const toggleGroup = (groupKey: string) => {
     setExpandedGroups((current) => {
       const next = new Set(current);
@@ -241,6 +306,11 @@ export function DataMigrationPage() {
 
   const renderObjectRow = (objectType: BubbleObjectType) => {
     const result = results[objectType];
+    const schemaEntity = generatedEntityByType.get(objectType);
+    const candidateRelationships =
+      schemaEntity?.fields.filter(
+        (field) => field.targetSourceType && !field.isMetadata,
+      ).length ?? 0;
 
     return (
       <div className="migration-object-row" key={objectType}>
@@ -257,6 +327,12 @@ export function DataMigrationPage() {
               {isCoreBubbleObjectType(objectType)
                 ? t("migration.core")
                 : t("migration.supporting")}
+            </span>
+            <span className="migration-schema-relations">
+              <Network />
+              {t("migration.relationships.candidateCount", {
+                count: candidateRelationships,
+              })}
             </span>
           </span>
         </div>
@@ -276,15 +352,30 @@ export function DataMigrationPage() {
           {result.status === "error" && <CircleAlert />}
           {t(`migration.statuses.${result.status}`)}
         </span>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => void scanOne(objectType)}
-          disabled={result.status === "loading"}
-        >
-          <RefreshCw />
-          {t("migration.fetchOne")}
-        </Button>
+        <div className="migration-row-actions">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => void scanOne(objectType)}
+            disabled={result.status === "loading"}
+          >
+            <RefreshCw />
+            {t("migration.fetchOne")}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void analyzeRelationships(objectType)}
+            disabled={analyzingType !== null}
+          >
+            {analyzingType === objectType ? (
+              <LoaderCircle className="spin" />
+            ) : (
+              <Network />
+            )}
+            {t("migration.relationships.analyze")}
+          </Button>
+        </div>
       </div>
     );
   };
@@ -480,6 +571,195 @@ export function DataMigrationPage() {
           );
         })}
       </div>
+
+      <section
+        className="relationship-analysis panel"
+        id="relationship-analysis"
+      >
+        <header className="relationship-analysis-header">
+          <div>
+            <span className="relationship-analysis-icon">
+              <Network />
+            </span>
+            <div>
+              <h2>{t("migration.relationships.title")}</h2>
+              <p>
+                {t("migration.relationships.description", {
+                  entities: generatedSchema.entityCount,
+                  fields: generatedSchema.fieldCount.toLocaleString(),
+                  relationships:
+                    generatedSchema.relationshipCount.toLocaleString(),
+                })}
+              </p>
+            </div>
+          </div>
+          {relationshipReport && (
+            <span className="relationship-analyzed-at">
+              {new Intl.DateTimeFormat(undefined, {
+                dateStyle: "medium",
+                timeStyle: "short",
+                timeZone: "Asia/Hong_Kong",
+              }).format(new Date(relationshipReport.analyzedAt))}
+            </span>
+          )}
+        </header>
+
+        {analyzingType && (
+          <div className="relationship-analysis-loading">
+            <LoaderCircle className="spin" />
+            <span>
+              {t("migration.relationships.analyzing", {
+                objectType: analyzingType,
+              })}
+            </span>
+          </div>
+        )}
+
+        {relationshipError && !analyzingType && (
+          <div className="relationship-analysis-error" role="alert">
+            <CircleAlert />
+            <span>{relationshipError}</span>
+          </div>
+        )}
+
+        {!relationshipReport && !analyzingType && !relationshipError && (
+          <div className="relationship-analysis-empty">
+            <Network />
+            <h3>{t("migration.relationships.emptyTitle")}</h3>
+            <p>{t("migration.relationships.emptyDescription")}</p>
+          </div>
+        )}
+
+        {relationshipReport && !analyzingType && (
+          <div className="relationship-report">
+            <div className="relationship-report-title">
+              <div>
+                <span>{t("migration.relationships.selectedEntity")}</span>
+                <h3>{relationshipReport.sourceType}</h3>
+              </div>
+              <code>{relationshipReport.sourceSchemaType}</code>
+            </div>
+
+            <div className="relationship-metrics">
+              <article>
+                <span>{t("migration.relationships.sourceRecordCount")}</span>
+                <strong>
+                  {relationshipReport.sourceCount.toLocaleString()}
+                </strong>
+              </article>
+              <article>
+                <span>{t("migration.relationships.sampledRecords")}</span>
+                <strong>{relationshipReport.sampleSize}</strong>
+              </article>
+              <article>
+                <span>{t("migration.relationships.relationshipsFound")}</span>
+                <strong>{relationshipReport.relationshipCount}</strong>
+              </article>
+              <article
+                className={cn(
+                  relationshipReport.relationships.some(
+                    (item) => item.orphanReferences > 0,
+                  ) && "danger",
+                )}
+              >
+                <span>{t("migration.relationships.sampledOrphans")}</span>
+                <strong>
+                  {relationshipReport.relationships.reduce(
+                    (total, item) => total + item.orphanReferences,
+                    0,
+                  )}
+                </strong>
+              </article>
+            </div>
+
+            {relationshipReport.relationships.length > 0 ? (
+              <>
+                <BubbleRelationshipGraph report={relationshipReport} />
+                <div className="relationship-table-wrap">
+                  <table className="relationship-table">
+                    <thead>
+                      <tr>
+                        <th>{t("migration.relationships.sourceField")}</th>
+                        <th>{t("migration.relationships.targetEntity")}</th>
+                        <th>{t("migration.relationships.cardinality")}</th>
+                        <th>{t("migration.relationships.confidence")}</th>
+                        <th>{t("migration.relationships.references")}</th>
+                        <th>{t("migration.relationships.orphans")}</th>
+                        <th>{t("migration.relationships.targetMapping")}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {relationshipReport.relationships.map((relationship) => (
+                        <tr
+                          key={`${relationship.sourceField}-${relationship.targetSchemaType}`}
+                        >
+                          <td>
+                            <strong>{relationship.sourceField}</strong>
+                          </td>
+                          <td>
+                            <code>{relationship.targetSchemaType}</code>
+                          </td>
+                          <td>
+                            <span
+                              className={cn(
+                                "relationship-cardinality",
+                                relationship.isArray && "array",
+                              )}
+                            >
+                              {t(
+                                `migration.relationships.cardinalities.${relationship.cardinality}`,
+                              )}
+                            </span>
+                          </td>
+                          <td>
+                            <span className="relationship-confidence">
+                              <i
+                                style={{
+                                  width: `${relationship.confidence}%`,
+                                }}
+                              />
+                              <strong>{relationship.confidence}%</strong>
+                            </span>
+                          </td>
+                          <td>
+                            {t("migration.relationships.referenceSummary", {
+                              sampled: relationship.sampledReferences,
+                              verified: relationship.verifiedReferences,
+                            })}
+                          </td>
+                          <td>
+                            <span
+                              className={cn(
+                                "relationship-orphan-count",
+                                relationship.orphanReferences > 0 && "danger",
+                              )}
+                              title={relationship.orphanSample.join(", ")}
+                            >
+                              {relationship.orphanReferences}
+                            </span>
+                          </td>
+                          <td>
+                            <code>{relationship.targetField}</code>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="relationship-privacy-note">
+                  {t("migration.relationships.privacyNote")}
+                </p>
+              </>
+            ) : (
+              <div className="relationship-analysis-empty compact">
+                <Network />
+                <h3>{t("migration.relationships.noRelations")}</h3>
+                <p>{t("migration.relationships.noRelationsDescription")}</p>
+              </div>
+            )}
+          </div>
+        )}
+      </section>
 
       <section className="migration-execution-log">
         <header>
