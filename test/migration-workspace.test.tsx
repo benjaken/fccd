@@ -109,7 +109,7 @@ describe("Migration workspace", () => {
       }),
     ).toBeInTheDocument();
     expect(screen.getByText("37.8%")).toBeInTheDocument();
-    expect(screen.getByText("55.0%")).toBeInTheDocument();
+    expect(screen.getByText("55%")).toBeInTheDocument();
     expect(screen.getByText("169,626")).toBeInTheDocument();
     expect(screen.getByText("order_bom_requirements")).toBeInTheDocument();
     expect(screen.getByText("Complete with issues")).toBeInTheDocument();
