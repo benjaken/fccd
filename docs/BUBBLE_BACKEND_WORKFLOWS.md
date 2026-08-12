@@ -125,6 +125,8 @@ row creation itself should remain atomic rather than recursively scheduled.
 ## Outstanding Evidence
 
 - All callers of `add_print_label` in pages, reusable elements, and workflows.
+  Product owner confirmed on 2026-08-12 that caller evidence will be supplied
+  when each page is developed.
 - Whether `RemarkA`/`RemarkB` changing after the first label is intentional.
 - Expected behavior for zero, negative, fractional, or very large `Print_num`.
 - Existing duplicate-prevention or cancellation behavior outside the captured
