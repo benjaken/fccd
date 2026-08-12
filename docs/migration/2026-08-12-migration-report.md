@@ -54,7 +54,8 @@ Remaining records: 0
 - Primitive type drift: 0
 - Phase C financial incremental reconciliation: pending
 - File metadata: 722 / 722; file bytes and checksum reconciliation are pending
-- Auth migration: manually created users are present; Bubble `user.pw` is excluded
+- Auth/User decision: approved adoption of existing 24 `auth.users` +
+  `user_profiles`; no new User table; Bubble `user.pw` is excluded
 - Singular `migration` table rows: 0; `migration_*` tables: 0
 
 ### D2 reconciliation

@@ -77,7 +77,7 @@ legacy_id text not null unique
 
 | 来源 | 目标 |
 |---|---|
-| Bubble `user`（production 未开放） | `auth.users` + `profiles` |
+| Bubble `user`（production 未开放） | 已核准采用现有 `auth.users` + `user_profiles` |
 | `shopdsrestro` | `restaurants` |
 | `shop_ds_restro_depart` | `restaurant_departments` |
 | `ds_channel` | `channels`／后续映射 brand/store |
@@ -86,9 +86,11 @@ legacy_id text not null unique
 审批事项：
 
 - `User.Email` 建立 Supabase Auth 用户。
-- `profiles.id = auth.users.id`。
+- `user_profiles.id = auth.users.id`。
 - `Role` 转为 role grant，不复制 Bubble 密码。
 - `shop restro` 解析为 `restaurant_id uuid`。
+- 当前 24 个手动建立的 Auth／Profile 记录直接采用，不建立新 User 表。
+- Bubble `pw` 不获取、不对比、不迁移。
 
 ### 4.2 客户与 CRM
 
@@ -349,8 +351,8 @@ final reconciliation
 - [ ] 空表签核排除。
 - [ ] 18 个孤儿必须修复后才导入。
 - [ ] 孤儿允许 nullable UUID FK + issue 记录。
-- [ ] User 从 Bubble 受控获取。
-- [ ] User 只根据 Email 重建，不获取旧记录。
+- [x] User 采用现有 Supabase Auth + `user_profiles`，不建立新表。
+- [x] User 不从 Bubble 获取 `pw`；现有 24 个 Profile 直接采用。
 - [ ] 同意按 Phase A → F 在 Supabase develop 试导入。
 
 ## 9. 当前建议

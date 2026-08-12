@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import statusData from "@/data/migration-entity-status.generated.json";
+import { MIGRATION_STATUS } from "@/data/migration-status";
 import { cn } from "@/lib/utils";
 
 type Filter = "all" | "migrated" | "pending" | "issues";
@@ -136,6 +137,31 @@ export function MigrationEntityMatrix() {
             ))}
           </tbody>
         </table>
+      </div>
+      <div className="editor-only-mappings">
+        <header>
+          <h3>{t("migrationMatrix.editorOnlyTitle")}</h3>
+          <p>{t("migrationMatrix.editorOnlyDescription")}</p>
+        </header>
+        <div>
+          {MIGRATION_STATUS.editorOnlyMappings.map((mapping) => (
+            <article key={mapping.sourceType}>
+              <code>{mapping.sourceType}</code>
+              <span>→</span>
+              <code>{mapping.targetTable}</code>
+              <strong className={cn("editor-mapping-status", mapping.status)}>
+                {t(`migrationMatrix.editorStatuses.${mapping.status}`)}
+              </strong>
+              <small>
+                {mapping.status === "approved"
+                  ? t("migrationMatrix.adoptedRows", {
+                      count: mapping.targetRows,
+                    })
+                  : t(`migrationMatrix.editorNotes.${mapping.note}`)}
+              </small>
+            </article>
+          ))}
+        </div>
       </div>
     </section>
   );

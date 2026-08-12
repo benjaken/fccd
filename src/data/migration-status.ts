@@ -121,6 +121,48 @@ export const MIGRATION_STATUS = {
     "authFiles",
     "backendHandlers",
   ],
+  editorOnlyMappings: [
+    {
+      sourceType: "User",
+      targetTable: "auth.users + user_profiles",
+      strategy: "adopt_existing",
+      status: "approved",
+      targetRows: 24,
+      note: "password_excluded",
+    },
+    {
+      sourceType: "Announcement",
+      targetTable: "announcements",
+      strategy: "pending_design",
+      status: "pending",
+      targetRows: 0,
+      note: "production_api_unavailable",
+    },
+    {
+      sourceType: "MM_Products",
+      targetTable: "products / legacy archive",
+      strategy: "pending_decision",
+      status: "pending",
+      targetRows: 0,
+      note: "production_api_unavailable",
+    },
+    {
+      sourceType: "DS_driver Assign Remind",
+      targetTable: "driver_reminder_settings",
+      strategy: "pending_design",
+      status: "pending",
+      targetRows: 0,
+      note: "production_api_unavailable",
+    },
+    {
+      sourceType: "Font",
+      targetTable: "private Storage + font_assets",
+      strategy: "pending_design",
+      status: "pending",
+      targetRows: 0,
+      note: "production_api_unavailable",
+    },
+  ],
 } as const;
 
 export const totalImported = MIGRATION_STATUS.phases.reduce(

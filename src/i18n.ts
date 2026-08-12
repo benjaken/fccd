@@ -279,6 +279,18 @@ const resources = {
           reconciliation_required: "已遷移／待對帳",
           not_started: "未開始",
         },
+        editorOnlyTitle: "Bubble Editor-only 類型",
+        editorOnlyDescription:
+          "以下 5 個類型不在 production Swagger 98 類型內，獨立顯示決策，不影響 Production API 遷移率。",
+        editorStatuses: {
+          approved: "已核准",
+          pending: "待決定",
+        },
+        adoptedRows: "採用現有 {{count}} 筆 Profile",
+        editorNotes: {
+          production_api_unavailable: "Production API 未開放",
+          password_excluded: "不遷移 pw",
+        },
       },
       quotes: {
         eyebrow: "報價管理",
@@ -733,6 +745,18 @@ const resources = {
           complete_with_issues: "Complete with issues",
           reconciliation_required: "Migrated; reconcile",
           not_started: "Not started",
+        },
+        editorOnlyTitle: "Bubble Editor-only types",
+        editorOnlyDescription:
+          "These five types are outside the 98 production Swagger types. Their decisions are shown separately and do not alter the Production API migration rate.",
+        editorStatuses: {
+          approved: "Approved",
+          pending: "Pending",
+        },
+        adoptedRows: "Adopt existing {{count}} profiles",
+        editorNotes: {
+          production_api_unavailable: "Not exposed by Production API",
+          password_excluded: "Password excluded",
         },
       },
       quotes: {

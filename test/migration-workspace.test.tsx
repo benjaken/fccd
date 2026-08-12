@@ -119,6 +119,8 @@ describe("Migration workspace", () => {
     expect(screen.getByText("377,116 / 377,116")).toBeInTheDocument();
     expect(screen.getByText("order_bom_requirements")).toBeInTheDocument();
     expect(screen.getAllByText("Complete with issues")).toHaveLength(3);
+    expect(screen.getByText("auth.users + user_profiles")).toBeInTheDocument();
+    expect(screen.getByText("Adopt existing 24 profiles")).toBeInTheDocument();
   });
 
   it("shows database-verified FK aggregates separately from inferred mappings", () => {

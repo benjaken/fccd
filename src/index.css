@@ -2874,6 +2874,60 @@ td:last-child {
   color: var(--muted-foreground);
 }
 
+.editor-only-mappings {
+  padding: 16px 18px 18px;
+  border-top: 1px solid var(--border);
+}
+
+.editor-only-mappings h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.editor-only-mappings header p {
+  margin: 5px 0 14px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+
+.editor-only-mappings > div {
+  display: grid;
+  gap: 7px;
+}
+
+.editor-only-mappings article {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.8fr) auto minmax(220px, 1.2fr) auto minmax(180px, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--background);
+}
+
+.editor-only-mappings article code,
+.editor-only-mappings article small {
+  font-size: 14px;
+}
+
+.editor-only-mappings article small {
+  color: var(--muted-foreground);
+}
+
+.editor-mapping-status {
+  font-size: 14px;
+}
+
+.editor-mapping-status.approved {
+  color: oklch(0.52 0.15 148);
+}
+
+.editor-mapping-status.pending {
+  color: oklch(0.57 0.14 65);
+}
+
 .migration-execution-log {
   overflow: hidden;
   border: 1px solid oklch(0.28 0.03 260);
@@ -4091,6 +4145,20 @@ td:last-child {
 
   .entity-matrix-toolbar > label {
     width: 100%;
+  }
+
+  .editor-only-mappings {
+    padding: 12px;
+  }
+
+  .editor-only-mappings article {
+    grid-template-columns: 1fr auto;
+  }
+
+  .editor-only-mappings article > span,
+  .editor-only-mappings article > code:nth-of-type(2),
+  .editor-only-mappings article > small {
+    grid-column: 1 / 3;
   }
 }
 
