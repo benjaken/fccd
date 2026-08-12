@@ -141,7 +141,7 @@ export async function fetchOrders({
   if (error) throw error;
 
   return {
-    items: ((data ?? []) as OrderRow[]).map((row) => ({
+    items: ((data ?? []) as unknown as OrderRow[]).map((row) => ({
       id: row.id,
       orderNumber: row.order_number,
       customerName: row.customer_name_snapshot,
