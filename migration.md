@@ -145,7 +145,7 @@
   `app_metadata.role === "Super Admin"`；不得使用 `user_metadata` 或 profile
   display role 作授權。
 - 前端角色鎖不是最終授權。未來 handler 必須在受信任 server/worker 再驗證
-  JWT，並以 service role 存取 default-deny registry tables。
+  JWT，並以 service role 寫入唯一的 `migration` 執行記錄表。
 - 在 durable queue/worker、server handlers 及完整 mappings 尚未完成時，所有
   寫入控制保持 disabled，並顯示明確原因，不在前端模擬成功。
 - Full Migration 額外要求 schema 及所有 domain readiness gates 完成。
@@ -155,10 +155,11 @@
   - orphan disposition 完成；
   - Auth、files 及 checksum reconciliation 完成；
   - durable backend handlers 完成。
-- Review-only migration `migration_control_registry` 定義 entities、jobs、
-  per-entity checkpoints/tasks、FK mapping/issues 及 singleton data source。
-  所有表 RLS default-deny，只授權 `service_role`；在 worker security review 前
-  不可套用到遠端。
+- 98 類型 mapping、FK 狀態、readiness、blockers 及 data source 均固定在前端
+  generated JSON，不寫入 Supabase。
+- Supabase 只保留一張 `migration` 表，用於未來記錄 mode、status、
+  snapshot/checkpoint、開始／完成時間、處理數量及錯誤數。
+- `migration` 表 RLS default-deny，只授權 `service_role`；目前不插入資料。
 
 ## 8. 后续真实迁移的前置条件
 
