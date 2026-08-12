@@ -134,11 +134,17 @@ async function idMap(
   client: ReturnType<typeof createClient>,
   table: string,
 ) {
-  const { data, error } = await client.from(table).select("id, legacy_id");
-  if (error) throw error;
-  return new Map(
-    data.map((row) => [row.legacy_id as string, row.id as string]),
-  );
+  const rows: Array<{ id: string; legacy_id: string }> = [];
+  for (let start = 0; ; start += 1_000) {
+    const { data, error } = await client
+      .from(table)
+      .select("id, legacy_id")
+      .range(start, start + 999);
+    if (error) throw error;
+    rows.push(...(data as Array<{ id: string; legacy_id: string }>));
+    if (data.length < 1_000) break;
+  }
+  return new Map(rows.map((row) => [row.legacy_id, row.id]));
 }
 
 Deno.serve(async (request) => {
