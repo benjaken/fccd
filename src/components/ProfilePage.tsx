@@ -3,8 +3,6 @@ import { useTranslation } from "react-i18next";
 import {
   BellRing,
   CalendarClock,
-  Hash,
-  IdCard,
   Mail,
   RefreshCw,
   ShieldCheck,
@@ -58,11 +56,6 @@ export function ProfilePage() {
   const displayName =
     profile?.user_name || user?.email?.split("@")[0] || notSet;
   const avatar = displayName.slice(0, 2).toUpperCase();
-  const socialNetworks =
-    profile?.social_networks &&
-    Object.keys(profile.social_networks).length > 0
-      ? JSON.stringify(profile.social_networks, null, 2)
-      : notSet;
 
   return (
     <section className="profile-page">
@@ -166,32 +159,6 @@ export function ProfilePage() {
             </div>
           </article>
 
-          <article className="profile-card profile-card-wide">
-            <header>
-              <IdCard />
-              <h2>{t("profile.legacy")}</h2>
-            </header>
-            <div className="profile-fields profile-fields-wide">
-              <ProfileField icon={<Hash />} label={t("profile.authId")}>
-                {profile.id}
-              </ProfileField>
-              <ProfileField icon={<Hash />} label={t("profile.legacyId")}>
-                {profile.legacy_id || notSet}
-              </ProfileField>
-              <ProfileField icon={<Hash />} label={t("profile.slug")}>
-                {profile.slug || notSet}
-              </ProfileField>
-              <ProfileField icon={<CalendarClock />} label={t("profile.createdAt")}>
-                {formatDate(profile.created_at)}
-              </ProfileField>
-              <ProfileField icon={<CalendarClock />} label={t("profile.updatedAt")}>
-                {formatDate(profile.updated_at)}
-              </ProfileField>
-              <ProfileField icon={<IdCard />} label={t("profile.socialNetworks")}>
-                <code>{socialNetworks}</code>
-              </ProfileField>
-            </div>
-          </article>
         </div>
       )}
     </section>
