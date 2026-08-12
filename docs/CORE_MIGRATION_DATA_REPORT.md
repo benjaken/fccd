@@ -6,9 +6,9 @@
 ## 1. 执行摘要
 
 - 分析类型：12
-- 导出记录：76,266
+- 导出记录：87,322
 - 当前来源记录：87,322
-- 尚未导出记录：11,056
+- 尚未导出记录：0
 - Manifest 错误：0
 - 重复 Bubble `_id`：0
 - 显式关系字段：42
@@ -27,15 +27,13 @@
 | `ds_deliverydistrict` | 314 | 314 | 314 | 100.0% | 8 | 7 | 0 |
 | `ds_paymentmethod` | 17 | 17 | 17 | 100.0% | 8 | 7 | 0 |
 | `ds_shippingmethod` | 6 | 6 | 6 | 100.0% | 13 | 12 | 0 |
-| `s_order` | 61,056 | 50,000 | 50,000 | 81.9% | 25 | 23 | 0 |
+| `s_order` | 61,056 | 61,056 | 61,056 | 100.0% | 25 | 23 | 0 |
 | `s_packages_product` | 3,764 | 3,764 | 3,764 | 100.0% | 11 | 9 | 0 |
 | `s_payment` | 4,710 | 4,710 | 4,710 | 100.0% | 14 | 12 | 0 |
 
 ### 不完整导出
 
-| 类型 | 当前来源 | 已导出 | 尚缺 | 原因／处理 |
-|---|---:|---:|---:|---|
-| `s_order` | 61,056 | 50,000 | 11,056 | Bubble cursor 50,000 边界；需要按日期或 ID 分区导出 |
+- 所有选择类型均已完整导出。
 
 ## 3. 关系完整性
 
@@ -74,9 +72,9 @@
 | `b_deliveryschedule` | `DS_motorcade` | `ds_super_motorcade` | 多对一 | 3037 | 3037 | 5 | 目标未导出 | — | 中 |
 | `b_deliveryschedule` | `DS_Super_Motorcade_supDriver` | `ds_super_motorcade_subdriver` | 多对一 | 1307 | 1307 | 30 | 目标未导出 | — | 中 |
 | `ds_deliverydistrict` | `Driver team` | `ds_super_motorcade` | 多对一 | 299 | 299 | 3 | 目标未导出 | — | 中 |
-| `s_order` | `Order` | `a_order` | 多对一 | 49973 | 49973 | 4639 | 4639 | 0 | 高 |
-| `s_order` | `Package` | `a_packages` | 多对一 | 18317 | 18317 | 117 | 117 | 0 | 高 |
-| `s_order` | `Product` | `a_products` | 多对一 | 48469 | 48469 | 5290 | 5290 | 0 | 高 |
+| `s_order` | `Order` | `a_order` | 多对一 | 61029 | 61029 | 5801 | 5801 | 0 | 高 |
+| `s_order` | `Package` | `a_packages` | 多对一 | 21048 | 21048 | 125 | 125 | 0 | 高 |
+| `s_order` | `Product` | `a_products` | 多对一 | 59263 | 59263 | 6686 | 6686 | 0 | 高 |
 | `s_packages_product` | `Package_ChoiceSet` | `s_packages_choiceset` | 多对一 | 2387 | 2387 | 629 | 目标未导出 | — | 中 |
 | `s_packages_product` | `Package` | `a_packages` | 多对一 | 3755 | 3755 | 168 | 168 | 0 | 高 |
 | `s_packages_product` | `Product` | `a_products` | 多对一 | 3764 | 3764 | 545 | 545 | 0 | 高 |
@@ -95,11 +93,11 @@
 - `a_order` ORDER_折扣(-) 合计：HK$1,117,334.90
 - `a_order` ORDER_運費(+) 合计：HK$637,376.00
 - `s_payment` Amount 合计：HK$13,969,838.62
-- `s_order` Void 明细：318 / 50,000
+- `s_order` Void 明细：349 / 61,056
 
 以上金额只是来源字段直接加总，不代表已完成业务对账；退款、Void、
-Payout、Cashdollar 与历史公式仍需业务规则确认。不完整导出的类型不会
-代表全量金额或明细结果。
+Payout、Cashdollar 与历史公式仍需业务规则确认。
+本次选择的 12 个类型已完整导出；以上为完整来源字段加总。
 
 ## 5. Swagger 与实际类型差异
 
@@ -108,7 +106,7 @@ Payout、Cashdollar 与历史公式仍需业务规则确认。不完整导出的
 ## 6. 导入前结论
 
 - 当前报告只验证已导出的 12 个核心／基础类型。
-- 关系与金额统计只覆盖本地已导出记录；不完整类型必须分区补齐后重算。
+- 12 个选择类型的来源数量与本地导出数量一致。
 - 目标未导出的关系只能标记为 Schema 推断，不能判断孤儿。
 - Bubble ID 必须先保存为 `legacy_id text`，再解析为 Supabase UUID FK。
 - 所有孤儿、重复 ID、金额差异及字段类型差异处理完成后，才能写入 develop。

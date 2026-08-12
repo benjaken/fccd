@@ -297,8 +297,10 @@ lines.push(
   `- \`s_order\` Void 明细：${voidLines.length.toLocaleString()} / ${orderLines.length.toLocaleString()}`,
   "",
   "以上金额只是来源字段直接加总，不代表已完成业务对账；退款、Void、",
-  "Payout、Cashdollar 与历史公式仍需业务规则确认。不完整导出的类型不会",
-  "代表全量金额或明细结果。",
+  "Payout、Cashdollar 与历史公式仍需业务规则确认。",
+  incompleteRows.length
+    ? "存在不完整导出类型，因此相关金额或明细仍不代表全量结果。"
+    : "本次选择的 12 个类型已完整导出；以上为完整来源字段加总。",
   "",
   "## 5. Swagger 与实际类型差异",
   "",
@@ -322,7 +324,9 @@ lines.push(
   "## 6. 导入前结论",
   "",
   "- 当前报告只验证已导出的 12 个核心／基础类型。",
-  "- 关系与金额统计只覆盖本地已导出记录；不完整类型必须分区补齐后重算。",
+  incompleteRows.length
+    ? "- 关系与金额统计只覆盖本地已导出记录；不完整类型必须分区补齐后重算。"
+    : "- 12 个选择类型的来源数量与本地导出数量一致。",
   "- 目标未导出的关系只能标记为 Schema 推断，不能判断孤儿。",
   "- Bubble ID 必须先保存为 `legacy_id text`，再解析为 Supabase UUID FK。",
   "- 所有孤儿、重复 ID、金额差异及字段类型差异处理完成后，才能写入 develop。",
