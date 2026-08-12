@@ -1,4 +1,0 @@
--- Historical migration placeholder.
---
--- The related experimental staging schema was intentionally removed. This
--- no-op file preserves parity with the migration version recorded on main.
