@@ -80,6 +80,9 @@
 - Data API 类型超过 50,000 笔时，导出工具必须按 `Created Date` 分区；
   `remaining > 0` 但结果为空时必须报错，不能标记为完成。
 - 每个分区完成后检查预期数量，并以 Bubble `_id` 做跨分区去重。
+- 全量报告必须固定一个 UTC `snapshot_at`，所有类型统一加入
+  `Created Date < snapshot_at` 条件；快照后的新增记录进入后续增量同步，
+  不能在全量导出期间不断改变预期数量。
 - 数组型 Unique ID 先标记为候选多对多；单值 Unique ID 依重复情况推断为
   多对一或候选一对一。
 - 关系图用于人工检查方向与基数，不自动建立 Supabase foreign key。

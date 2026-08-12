@@ -62,6 +62,15 @@ Collections above Bubble's 50,000-cursor boundary are automatically partitioned
 by `Created Date`. Use `--force <type>` together with `--resume` to rebuild one
 previously completed export.
 
+For a stable full-system report, use one fixed UTC snapshot across all types:
+
+```bash
+python3 scripts/export_bubble.py \
+  --output .migration-data/full-snapshot \
+  --snapshot-at 2026-08-12T02:39:34.000Z \
+  export --resume
+```
+
 ## Development workflow
 
 All new development must branch from the latest `main` and return through a

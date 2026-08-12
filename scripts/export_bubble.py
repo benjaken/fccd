@@ -120,6 +120,7 @@ def export_collection(
     token: str | None,
     page_size: int,
     delay: float,
+    snapshot_at: str | None,
 ) -> int:
     def request_page(
         cursor: int,
@@ -168,10 +169,27 @@ def export_collection(
     def partition_count(constraints: list[dict[str, Any]] | None) -> int:
         return response_total(request_page(0, 1, constraints))
 
-    first_response = request_page(0, 1)
+    snapshot_datetime = (
+        datetime.fromisoformat(snapshot_at.replace("Z", "+00:00"))
+        if snapshot_at
+        else None
+    )
+    snapshot_constraints = (
+        [
+            {
+                "key": "Created Date",
+                "constraint_type": "less than",
+                "value": snapshot_at,
+            }
+        ]
+        if snapshot_at
+        else None
+    )
+
+    first_response = request_page(0, 1, snapshot_constraints)
     expected_total = response_total(first_response)
-    partitions: list[tuple[str, list[dict[str, Any]] | None, int]] = [
-        ("all", None, expected_total)
+    partitions: list[tuple[str, list[dict[str, Any]] | None, int, bool]] = [
+        ("all", snapshot_constraints, expected_total, False)
     ]
 
     if expected_total > MAX_BUBBLE_CURSOR:
@@ -190,18 +208,26 @@ def export_collection(
         first_year = datetime.fromisoformat(
             first_created_at.replace("Z", "+00:00")
         ).year
-        current_year = datetime.now(timezone.utc).year
+        current_year = (
+            snapshot_datetime.year
+            if snapshot_datetime
+            else datetime.now(timezone.utc).year
+        )
         partitions = []
 
         for year in range(first_year, current_year + 1):
             year_start = datetime(year, 1, 1, tzinfo=timezone.utc)
             year_end = datetime(year + 1, 1, 1, tzinfo=timezone.utc)
+            if snapshot_datetime and year_end > snapshot_datetime:
+                year_end = snapshot_datetime
+            if year_end <= year_start:
+                continue
             year_constraints = bounded_constraints(year_start, year_end)
             year_count = partition_count(year_constraints)
             if year_count == 0:
                 continue
             if year_count <= MAX_BUBBLE_CURSOR:
-                partitions.append((str(year), year_constraints, year_count))
+                partitions.append((str(year), year_constraints, year_count, False))
                 continue
 
             for month in range(1, 13):
@@ -211,6 +237,10 @@ def export_collection(
                     if month == 12
                     else datetime(year, month + 1, 1, tzinfo=timezone.utc)
                 )
+                if snapshot_datetime and month_end > snapshot_datetime:
+                    month_end = snapshot_datetime
+                if month_end <= month_start:
+                    continue
                 month_constraints = bounded_constraints(month_start, month_end)
                 month_count = partition_count(month_constraints)
                 if month_count > MAX_BUBBLE_CURSOR:
@@ -224,18 +254,28 @@ def export_collection(
                             f"{year}-{month:02d}",
                             month_constraints,
                             month_count,
+                            False,
                         )
                     )
 
-        partition_total = sum(count for _, _, count in partitions)
-        if partition_total != expected_total:
+        partition_total = sum(count for _, _, count, _ in partitions)
+        if partition_total > expected_total:
             raise RuntimeError(
                 f"{path} partition counts total {partition_total}, expected "
                 f"{expected_total}"
             )
+        if partition_total < expected_total:
+            partitions.append(
+                (
+                    "unpartitioned-fallback",
+                    snapshot_constraints,
+                    expected_total - partition_total,
+                    True,
+                )
+            )
         print(
             f"  Partitioning {expected_total} records into "
-            f"{len(partitions)} Created Date ranges."
+            f"{len(partitions)} ranges."
         )
 
     total = 0
@@ -244,7 +284,7 @@ def export_collection(
     temporary.parent.mkdir(parents=True, exist_ok=True)
 
     with temporary.open("w", encoding="utf-8") as stream:
-        for label, constraints, partition_expected in partitions:
+        for label, constraints, partition_expected, allow_seen in partitions:
             cursor = 0
             partition_exported = 0
             while True:
@@ -258,6 +298,8 @@ def export_collection(
                     if not isinstance(legacy_id, str):
                         raise RuntimeError(f"{path} returned a record without _id")
                     if legacy_id in seen_ids:
+                        if allow_seen:
+                            continue
                         raise RuntimeError(
                             f"{path} returned duplicate _id {legacy_id} "
                             f"across partitions"
@@ -276,6 +318,8 @@ def export_collection(
                 total += count
                 partition_exported += count
                 remaining = int(response.get("remaining") or 0)
+                if allow_seen and total == expected_total:
+                    break
                 if remaining == 0:
                     break
                 if count == 0:
@@ -320,6 +364,7 @@ def export_all(args: argparse.Namespace) -> int:
 
     write_json(args.output / "schema-inventory.json", build_inventory(swagger, available))
     manifest_path = args.output / "export-manifest.json"
+    requested_snapshot = args.snapshot_at
     if args.resume and manifest_path.exists():
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         if (
@@ -327,10 +372,18 @@ def export_all(args: argparse.Namespace) -> int:
             or manifest.get("authenticated") != bool(args.token)
         ):
             raise RuntimeError("Existing manifest does not match this API URL/auth mode")
+        existing_snapshot = manifest.get("snapshotAt")
+        if requested_snapshot and existing_snapshot != requested_snapshot:
+            raise RuntimeError(
+                "Existing manifest does not match the requested snapshot time"
+            )
+        snapshot_at = existing_snapshot or requested_snapshot
     else:
+        snapshot_at = requested_snapshot
         manifest = {
             "baseUrl": args.base_url,
             "authenticated": bool(args.token),
+            "snapshotAt": snapshot_at,
             "exports": [],
             "errors": [],
         }
@@ -364,6 +417,7 @@ def export_all(args: argparse.Namespace) -> int:
                 args.token,
                 args.page_size,
                 args.delay,
+                snapshot_at,
             )
             manifest["exports"].append(
                 {"type": name, "path": path, "file": filename, "records": count}
@@ -399,6 +453,14 @@ def parser() -> argparse.ArgumentParser:
         "--token",
         default=os.environ.get("BUBBLE_API_TOKEN"),
         help="Bubble API token (prefer BUBBLE_API_TOKEN)",
+    )
+    result.add_argument(
+        "--snapshot-at",
+        default=os.environ.get("BUBBLE_SNAPSHOT_AT"),
+        help=(
+            "only export records created before this ISO timestamp; use one "
+            "fixed value for a consistent multi-type snapshot"
+        ),
     )
     subparsers = result.add_subparsers(dest="command", required=True)
 
