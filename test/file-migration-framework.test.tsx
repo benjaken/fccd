@@ -63,6 +63,88 @@ describe("Bubble file migration framework", () => {
     }
   });
 
+  it("resets a newer Modified Date entry without deleting its prior object", () => {
+    const root = mkdtempSync(join(tmpdir(), "bubble-files-incremental-"));
+    const workDir = join(root, "work");
+    const snapshotDir = join(root, "snapshot");
+    const objectsDir = join(snapshotDir, "objects");
+    mkdirSync(objectsDir, { recursive: true });
+    writeFileSync(
+      join(snapshotDir, "export-manifest.json"),
+      JSON.stringify({
+        snapshotAt: "2026-08-12T00:00:00.000Z",
+        exports: [{ type: "quote_file", file: "quote-file.jsonl" }],
+      }),
+    );
+    const objectPath = join(objectsDir, "quote-file.jsonl");
+    writeFileSync(
+      objectPath,
+      `${JSON.stringify({
+        _id: "local-test-id",
+        "Modified Date": "2026-08-12T00:00:00.000Z",
+        file: "//example.invalid/private-test.pdf",
+      })}\n`,
+    );
+    const runDiscover = (extra: string[] = []) =>
+      execFileSync(
+        process.execPath,
+        [
+          resolve("scripts/migrate-bubble-files.mjs"),
+          "discover",
+          "--snapshot-dir",
+          snapshotDir,
+          ...extra,
+        ],
+        {
+          cwd: resolve("."),
+          env: {
+            ...process.env,
+            BUBBLE_FILE_MIGRATION_WORK_DIR: workDir,
+          },
+          stdio: "pipe",
+          timeout: 10_000,
+        },
+      );
+
+    try {
+      runDiscover();
+      const manifestPath = join(workDir, "manifest.json");
+      const baseline = JSON.parse(readFileSync(manifestPath, "utf8"));
+      baseline.entries[0] = {
+        ...baseline.entries[0],
+        migrationStatus: "verified",
+        sha256: "a".repeat(64),
+        objectPath: "retained/prior/object.pdf",
+      };
+      writeFileSync(manifestPath, JSON.stringify(baseline));
+      writeFileSync(
+        objectPath,
+        `${JSON.stringify({
+          _id: "local-test-id",
+          "Modified Date": "2026-08-12T01:00:00.000Z",
+          file: "//example.invalid/private-test.pdf",
+        })}\n`,
+      );
+
+      runDiscover([
+        "--mode",
+        "incremental",
+        "--modified-after",
+        "2026-08-12T00:00:00.000Z",
+      ]);
+      const incremental = JSON.parse(readFileSync(manifestPath, "utf8"));
+      expect(incremental.entries[0]).toMatchObject({
+        migrationMode: "incremental",
+        migrationStatus: "discovered",
+        objectPath: null,
+        sha256: null,
+        sourceModifiedAt: "2026-08-12T01:00:00.000Z",
+      });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("commits only safe aggregate file status without URLs, IDs, or filenames", () => {
     const generated = readFileSync(
       resolve("src/data/file-migration-status.generated.json"),

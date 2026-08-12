@@ -251,7 +251,19 @@ async function discover(options) {
   );
   for (const entry of entries) {
     const existing = merged.get(entry.deterministicKey);
-    merged.set(entry.deterministicKey, existing ? { ...entry, ...existing } : entry);
+    const changedIncremental =
+      mode === "incremental" &&
+      entry.sourceModifiedAt &&
+      (!existing?.sourceModifiedAt ||
+        entry.sourceModifiedAt > existing.sourceModifiedAt);
+    if (changedIncremental) {
+      merged.set(entry.deterministicKey, { ...existing, ...entry });
+    } else {
+      merged.set(
+        entry.deterministicKey,
+        existing ? { ...entry, ...existing } : entry,
+      );
+    }
   }
 
   await saveManifest({
@@ -398,7 +410,7 @@ async function enrich(options) {
       const response = await fetchWithRetry(entry.sourceUrl, { method: "HEAD" });
       entry.sizeBytes = numericHeader(response.headers.get("content-length"));
       entry.mimeType = response.headers.get("content-type")?.split(";")[0] ?? null;
-      entry.objectPath = objectPath(entry);
+      entry.objectPath = null;
       entry.migrationStatus = "enriched";
       entry.lastErrorCode = null;
     } catch (error) {
@@ -413,7 +425,8 @@ async function enrich(options) {
 
 function objectPath(entry) {
   const extension = extensionFor(entry.sourceUrl, entry.mimeType);
-  return `${safeSegment(entry.sourceType)}/${entry.sourceUrlHash.slice(0, 2)}/${entry.sourceUrlHash}${extension}`;
+  if (!entry.sha256) throw new Error("CHECKSUM_REQUIRED_FOR_OBJECT_PATH");
+  return `${safeSegment(entry.sourceType)}/${entry.sourceUrlHash.slice(0, 2)}/${entry.sourceUrlHash}/${entry.sha256}${extension}`;
 }
 
 function numericHeader(value) {
@@ -444,7 +457,7 @@ async function upload(options) {
       const info = await stat(cachePath);
       entry.sizeBytes = info.size;
       entry.sha256 = await hashFile(cachePath);
-      entry.objectPath ||= objectPath(entry);
+      entry.objectPath = objectPath(entry);
 
       const duplicate = manifest.entries.find(
         (candidate) =>

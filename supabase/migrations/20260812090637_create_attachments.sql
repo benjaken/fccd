@@ -60,6 +60,9 @@ create index attachments_status_idx
 create index attachments_content_dedupe_idx
   on public.attachments (sha256, size_bytes)
   where sha256 is not null;
+create unique index attachments_source_object_checksum_key
+  on public.attachments (source_url_hash, object_path, sha256)
+  where object_path is not null and sha256 is not null;
 
 alter table public.attachments enable row level security;
 revoke all on table public.attachments from anon, authenticated;
