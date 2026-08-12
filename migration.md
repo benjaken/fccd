@@ -15,9 +15,13 @@
 
 ## 1. 目前範圍
 
-- `/migration` 是獨立頁面，不加入營運系統選單。
+- `/migration` 是獨立工作區，不加入營運系統選單；入口會 redirect 到
+  `/migration/control`。
+- 工作區包含兩個可直接路由的頁面：
+  - `/migration/control`：Migration Control；
+  - `/migration/fk`：FK Mapping、Bubble 實體掃描及關係圖。
 - 頁面不需要 Supabase Auth 登入。
-- 目前只做 Bubble 資料盤點及記錄數量掃描。
+- 公開使用者可查看所有靜態狀態及執行唯讀 Bubble 掃描。
 - 不建立、清空或寫入任何 Supabase 資料表。
 - 先前的 `migration_*` staging 方式並非正確遷移方案，已取消。
 - 真正遷移前必須重新確認目標資料模型、關聯、轉換及驗收方式。
@@ -110,6 +114,47 @@
   Bubble 并返回聚合关系结果。
 - 已取消的 `bubble-migrate` endpoint 只保留 HTTP 410 tombstone，
   防止旧部署继续执行错误任务。
+
+### 7.1 Migration Control dashboard
+
+- Dashboard 的階段數量、UUID FK 狀態、快照及 blockers 是
+  `docs/SUPABASE_MAIN_MIGRATION_STATUS.md` 的靜態核實聚合資料；不是即時
+  database health check。
+- 固定 historical cutoff 為 `2021-08-12 00:00:00 +08:00`。Historical
+  baseline 只執行一次；active dataset 以
+  `Modified Date > lastSuccessfulCheckpoint` 增量。
+- Phase A/B/C/D1 顯示已導入數量。Phase C 在完成 Modified Date 增量及財務
+  對帳前標記為「待增量對帳」。
+- FK Mapping 必須清楚區分：
+  - `database verified`：Supabase main 已完成 UUID FK、constraint 或 aggregate
+    對帳；
+  - `inferred / sample verified`：Swagger 推斷及 Bubble 抽樣，只作候選 mapping。
+- 已遷移範圍的 aggregate unresolved UUID FK 為 0；D1 仍有一個缺失
+  `S_order` issue，影響 5 筆 nullable `order_line_id`。尚未遷移範圍另有
+  18 個已知 orphan references，不得混稱為已解決。
+
+### 7.2 寫入操作及切換閘門
+
+- Full Migration、Incremental Sync、Resume 及 Switch to Supabase 只顯示預定
+  control surface，不代表已有執行能力。
+- 所有寫入操作需要目前 Supabase session 的可信
+  `app_metadata.role === "Super Admin"`；不得使用 `user_metadata` 或 profile
+  display role 作授權。
+- 前端角色鎖不是最終授權。未來 handler 必須在受信任 server/worker 再驗證
+  JWT，並以 service role 存取 default-deny registry tables。
+- 在 durable queue/worker、server handlers 及完整 mappings 尚未完成時，所有
+  寫入控制保持 disabled，並顯示明確原因，不在前端模擬成功。
+- Full Migration 額外要求 schema 及所有 domain readiness gates 完成。
+- Switch to Supabase 額外要求：
+  - 所有 domain 及 schema 已核准並完成；
+  - Modified Date incremental 與財務 reconciliation 完成；
+  - orphan disposition 完成；
+  - Auth、files 及 checksum reconciliation 完成；
+  - durable backend handlers 完成。
+- Review-only migration `migration_control_registry` 定義 entities、jobs、
+  per-entity checkpoints/tasks、FK mapping/issues 及 singleton data source。
+  所有表 RLS default-deny，只授權 `service_role`；在 worker security review 前
+  不可套用到遠端。
 
 ## 8. 后续真实迁移的前置条件
 

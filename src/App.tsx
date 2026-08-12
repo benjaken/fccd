@@ -40,8 +40,8 @@ import {
 import { Link, NavLink, Route, Routes, useLocation } from "react-router-dom";
 
 import { AuthProvider, useAuth } from "@/auth/AuthProvider";
-import { DataMigrationPage } from "@/components/DataMigrationPage";
 import { LoginPage } from "@/components/LoginPage";
+import { MigrationWorkspace } from "@/components/MigrationWorkspace";
 import { ProfilePage } from "@/components/ProfilePage";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/lib/use-theme";
@@ -853,18 +853,17 @@ function AuthGate() {
   return session ? <OperationsShell /> : <LoginPage />;
 }
 
-function PublicMigrationPage() {
-  return (
-    <main className="public-migration-shell">
-      <DataMigrationPage />
-    </main>
-  );
-}
-
 function App() {
   return (
     <Routes>
-      <Route path="/migration" element={<PublicMigrationPage />} />
+      <Route
+        path="/migration/*"
+        element={
+          <AuthProvider>
+            <MigrationWorkspace />
+          </AuthProvider>
+        }
+      />
       <Route
         path="*"
         element={
