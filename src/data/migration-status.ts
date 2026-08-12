@@ -91,6 +91,7 @@ export const MIGRATION_STATUS = {
   fk: {
     migratedUnresolved: 0,
     databaseVerifiedReferenceRows: 950_149,
+    databaseVerifiedFkColumns: 139,
     currentOpenIssues: 0,
     currentAffectedRows: 0,
     acceptedIssues: 19,

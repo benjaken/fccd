@@ -110,6 +110,12 @@
   - Files metadata 已迁移，binary 与 checksum 尚未完成。
 - Option Sets 与 Files 不计入 Production Data API 记录迁移率，但未完成时继续
   阻止数据源切换。
+- `/migration/fk` 只显示已经写入 Supabase 并通过数据库对账的 UUID FK；
+  Swagger 推断与 Bubble 抽样关系移到 `/migration/inventory`。
+- `/migration/files` 独立显示文件发现、metadata、binary、checksum、错误及
+  Modified Date 增量 checkpoint。
+- 文件 baseline 完成后，只处理 `Modified Date > lastSuccessfulCheckpoint`；
+  每批 100 个，可续跑，并以 source URL + target path + checksum 去重。
 - Option Sets 使用 `system_config_sets`、`system_config_options`、
   `system_config_attribute_definitions` 及 `system_config_option_attributes`
   作为 System Settings 常规配置 Schema；当前先建表，不写入 35 个配置集。

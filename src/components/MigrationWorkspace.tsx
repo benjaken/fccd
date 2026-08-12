@@ -1,10 +1,12 @@
-import { Database, Languages, Network } from "lucide-react";
+import { Database, FileArchive, Languages, Network, TableProperties } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
 
 import { useAuth } from "@/auth/AuthProvider";
 import { DataMigrationPage } from "@/components/DataMigrationPage";
+import { FileMigrationPage } from "@/components/FileMigrationPage";
 import { MigrationControlPage } from "@/components/MigrationControlPage";
+import { MigratedFkPage } from "@/components/MigratedFkPage";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -55,6 +57,15 @@ export function MigrationWorkspace() {
             {t("migrationWorkspace.controlTab")}
           </NavLink>
           <NavLink
+            to="/migration/inventory"
+            className={({ isActive }) =>
+              cn("migration-tab", isActive && "active")
+            }
+          >
+            <TableProperties />
+            {t("migrationWorkspace.inventoryTab")}
+          </NavLink>
+          <NavLink
             to="/migration/fk"
             className={({ isActive }) =>
               cn("migration-tab", isActive && "active")
@@ -62,6 +73,15 @@ export function MigrationWorkspace() {
           >
             <Network />
             {t("migrationWorkspace.fkTab")}
+          </NavLink>
+          <NavLink
+            to="/migration/files"
+            className={({ isActive }) =>
+              cn("migration-tab", isActive && "active")
+            }
+          >
+            <FileArchive />
+            {t("migrationWorkspace.filesTab")}
           </NavLink>
         </nav>
 
@@ -71,7 +91,9 @@ export function MigrationWorkspace() {
             path="control"
             element={<MigrationControlPage isSuperAdmin={isSuperAdmin} />}
           />
-          <Route path="fk" element={<DataMigrationPage />} />
+          <Route path="inventory" element={<DataMigrationPage />} />
+          <Route path="fk" element={<MigratedFkPage />} />
+          <Route path="files" element={<FileMigrationPage />} />
           <Route path="*" element={<Navigate to="control" replace />} />
         </Routes>
       </div>

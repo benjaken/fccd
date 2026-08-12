@@ -1,0 +1,40 @@
+{
+  "snapshotAt": "2026-08-12T02:39:34.000Z",
+  "sourceTypes": 98,
+  "references": 2711,
+  "uniqueFiles": 2711,
+  "metadataMigrated": 2711,
+  "binaryMigrated": 0,
+  "checksumVerified": 0,
+  "failed": 0,
+  "ownerEstimatedMinimum": 5000,
+  "discoveryGapMinimum": 2289,
+  "incrementalPolicy": {
+    "filter": "Modified Date > lastSuccessfulCheckpoint",
+    "dedupeKey": "source URL + target object path + checksum",
+    "batchSize": 100,
+    "resumable": true
+  },
+  "byField": [
+    {
+      "field": "shop_dailysales.POS sheet",
+      "count": 1770
+    },
+    {
+      "field": "quote_file.file",
+      "count": 722
+    },
+    {
+      "field": "b_deliveryschedule.image",
+      "count": 203
+    },
+    {
+      "field": "ds_channel.Logo_SVG",
+      "count": 8
+    },
+    {
+      "field": "ds_channel.Logo_png",
+      "count": 8
+    }
+  ]
+}

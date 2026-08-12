@@ -10,7 +10,6 @@ import {
   RefreshCw,
   Search,
   Server,
-  ShieldCheck,
   Terminal,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -19,7 +18,6 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { BubbleRelationshipGraph } from "@/components/BubbleRelationshipGraph";
 import { BUBBLE_ENTITY_GROUPS } from "@/data/bubble-entity-groups";
-import { MIGRATION_STATUS } from "@/data/migration-status";
 import {
   BUBBLE_OBJECT_TYPES,
   CORE_BUBBLE_OBJECT_TYPES,
@@ -422,77 +420,6 @@ export function DataMigrationPage() {
             ? t("migration.scanning")
             : t("migration.scanAll")}
         </Button>
-      </section>
-
-      <section className="fk-verification-summary panel">
-        <header>
-          <div>
-            <ShieldCheck />
-            <div>
-              <h2>{t("migration.fkSummary.title")}</h2>
-              <p>{t("migration.fkSummary.description")}</p>
-            </div>
-          </div>
-          <span className="evidence-badge verified">
-            {t("migration.fkSummary.databaseVerified")}
-          </span>
-        </header>
-        <div className="fk-summary-metrics">
-          <article className="success">
-            <span>{t("migration.fkSummary.migratedUnresolved")}</span>
-            <strong>{MIGRATION_STATUS.fk.migratedUnresolved}</strong>
-          </article>
-          <article>
-            <span>{t("migration.fkSummary.verifiedRows")}</span>
-            <strong>
-              {MIGRATION_STATUS.fk.databaseVerifiedReferenceRows.toLocaleString()}
-            </strong>
-          </article>
-          <article className="warning">
-            <span>{t("migration.fkSummary.currentIssue")}</span>
-            <strong>{MIGRATION_STATUS.fk.currentOpenIssues}</strong>
-            <small>
-              {t("migration.fkSummary.affectedRows", {
-                count: MIGRATION_STATUS.fk.currentAffectedRows,
-              })}
-            </small>
-          </article>
-          <article>
-            <span>{t("migration.fkSummary.acceptedIssues")}</span>
-            <strong>{MIGRATION_STATUS.fk.acceptedIssues}</strong>
-            <small>
-              {t("migration.fkSummary.affectedRows", {
-                count: MIGRATION_STATUS.fk.acceptedAffectedRows,
-              })}
-            </small>
-          </article>
-          <article className="danger">
-            <span>{t("migration.fkSummary.futureOrphans")}</span>
-            <strong>{MIGRATION_STATUS.fk.knownFutureOrphanReferences}</strong>
-          </article>
-        </div>
-        <div className="fk-verified-mappings">
-          {MIGRATION_STATUS.fk.mappings.map((mapping) => (
-            <div key={mapping.source}>
-              <span>
-                <code>{mapping.source}</code>
-                <small>→</small>
-                <code>{mapping.target}</code>
-              </span>
-              <strong>
-                {mapping.resolved.toLocaleString()} /{" "}
-                {mapping.total.toLocaleString()}
-              </strong>
-              <span className="evidence-badge verified">
-                {t("migration.fkSummary.databaseVerified")}
-              </span>
-            </div>
-          ))}
-        </div>
-        <p className="fk-summary-note">
-          <AlertTriangle />
-          {t("migration.fkSummary.orphanNote")}
-        </p>
       </section>
 
       <section className="migration-metrics">

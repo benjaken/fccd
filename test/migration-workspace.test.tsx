@@ -50,8 +50,18 @@ describe("Migration workspace", () => {
       ),
     );
 
-    await user.click(screen.getByRole("link", { name: "FK Mapping" }));
+    await user.click(screen.getByRole("link", { name: "Inventory / Inference" }));
+    expect(screen.getByTestId("location")).toHaveTextContent(
+      "/migration/inventory",
+    );
+
+    await user.click(screen.getByRole("link", { name: "Migrated UUID FKs" }));
     expect(screen.getByTestId("location")).toHaveTextContent("/migration/fk");
+
+    await user.click(screen.getByRole("link", { name: "File Migration" }));
+    expect(screen.getByTestId("location")).toHaveTextContent(
+      "/migration/files",
+    );
 
     await user.click(screen.getByRole("link", { name: "Migration Control" }));
     expect(screen.getByTestId("location")).toHaveTextContent(
@@ -139,27 +149,31 @@ describe("Migration workspace", () => {
     expect(screen.getAllByText("Approved")).toHaveLength(5);
   });
 
-  it("shows database-verified FK aggregates separately from inferred mappings", () => {
+  it("shows database-verified FK aggregates on a dedicated page", () => {
     renderWorkspace("/migration/fk");
 
     expect(
-      screen.getByRole("heading", { name: "Migrated UUID FK status" }),
+      screen.getByRole("heading", { name: "Migrated UUID foreign keys" }),
     ).toBeInTheDocument();
     expect(screen.getByText("950,149")).toBeInTheDocument();
+    expect(screen.getByText("139")).toBeInTheDocument();
+    expect(screen.getByText("19")).toBeInTheDocument();
+    expect(screen.getAllByText("Database verified").length).toBeGreaterThan(1);
+  });
+
+  it("shows incremental file migration progress on a dedicated page", () => {
+    renderWorkspace("/migration/files");
+
     expect(
-      within(screen.getByText("Current open issue").closest("article")!)
-        .getByText("0"),
+      screen.getByRole("heading", { name: "File migration progress" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("5,000+")).toBeInTheDocument();
+    expect(screen.getByText("2,711")).toBeInTheDocument();
+    expect(
+      screen.getByText("Modified Date > lastSuccessfulCheckpoint"),
     ).toBeInTheDocument();
     expect(
-      within(screen.getByText("Accepted issues").closest("article")!)
-        .getByText("19"),
-    ).toBeInTheDocument();
-    expect(
-      within(
-        screen.getByText("Known future orphan references").closest("article")!,
-      ).getByText("0"),
-    ).toBeInTheDocument();
-    expect(screen.getAllByText("Database verified")).toHaveLength(18);
-    expect(screen.getByText("Inferred / sample verified")).toBeInTheDocument();
+      screen.getByRole("button", { name: "Start file migration" }),
+    ).toBeDisabled();
   });
 });
