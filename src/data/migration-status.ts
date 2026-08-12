@@ -47,6 +47,7 @@ export const MIGRATION_STATUS = {
     optionSets: {
       databaseImported: 0,
       total: 35,
+      backendSchemaReady: true,
       staticInventoryReady: 35,
       staticOptionValues: 183,
     },
@@ -54,6 +55,7 @@ export const MIGRATION_STATUS = {
       metadataMigrated: true,
       binaryMigrated: false,
       checksumComplete: false,
+      targetPhase: "final",
     },
   },
   phases: [

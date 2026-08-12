@@ -90,7 +90,9 @@ describe("Migration workspace", () => {
     expect(screen.getAllByText("98 / 98").length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText("0 / 35")).toBeInTheDocument();
     expect(screen.getByText("Metadata migrated")).toBeInTheDocument();
-    expect(screen.getByText("Binary / checksum pending")).toBeInTheDocument();
+    expect(
+      screen.getByText("Binary / checksum scheduled for final phase"),
+    ).toBeInTheDocument();
     expect(
       screen.getByText(/Frontend static inventory 35 \/ 35, 183 values/),
     ).toBeInTheDocument();

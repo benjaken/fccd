@@ -110,6 +110,13 @@
   - Files metadata 已迁移，binary 与 checksum 尚未完成。
 - Option Sets 与 Files 不计入 Production Data API 记录迁移率，但未完成时继续
   阻止数据源切换。
+- Option Sets 使用 `system_config_sets`、`system_config_options`、
+  `system_config_attribute_definitions` 及 `system_config_option_attributes`
+  作为 System Settings 常规配置 Schema；当前先建表，不写入 35 个配置集。
+- Attachments 的 Binary 下载、private Storage 上传、size/checksum 及 Storage
+  RLS 固定为最终迁移阶段。
+- 业务表 RLS scope policy 在对应系统模块开发时单独审批；不得因为数据迁移
+  完成而自动开放读取或写入。
 
 ## 7. Supabase 与部署
 
