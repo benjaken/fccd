@@ -201,7 +201,9 @@ export async function fetchDashboardData(
       .select("id", { count: "exact", head: true })
       .eq("document_type", "quote")
       .gte("grand_total", LARGE_QUOTE_THRESHOLD)
-      .not("quote_status", "in", '("Done Deal","Case Closed")')
+      .or(
+        'quote_status.is.null,quote_status.not.in.("Done Deal","Case Closed")',
+      )
       .is("archived_at", null),
     supabase
       .from("orders")
