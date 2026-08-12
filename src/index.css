@@ -1231,20 +1231,24 @@ td:last-child {
   color: oklch(0.75 0.11 250);
 }
 
-.quotes-page {
+.quotes-page,
+.orders-page {
   display: grid;
   gap: 20px;
 }
 
-.quotes-heading {
+.quotes-heading,
+.orders-heading {
   align-items: flex-end;
 }
 
-.quotes-panel {
+.quotes-panel,
+.orders-panel {
   overflow: hidden;
 }
 
-.quotes-toolbar {
+.quotes-toolbar,
+.orders-toolbar {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
@@ -1253,21 +1257,25 @@ td:last-child {
   border-bottom: 1px solid var(--border);
 }
 
-.quotes-search {
+.quotes-search,
+.orders-search {
   display: flex;
   align-items: center;
   gap: 8px;
   width: min(620px, 100%);
 }
 
-.quotes-search > svg {
+.quotes-search > svg,
+.orders-search > svg {
   width: 18px;
   flex: 0 0 auto;
   color: var(--muted-foreground);
 }
 
 .quotes-search input,
-.quotes-status-filter select {
+.quotes-status-filter select,
+.orders-search input,
+.orders-status-filter select {
   height: 40px;
   border: 1px solid var(--border);
   border-radius: 9px;
@@ -1277,19 +1285,23 @@ td:last-child {
   font-size: 14px;
 }
 
-.quotes-search input {
+.quotes-search input,
+.orders-search input {
   width: 100%;
   min-width: 180px;
   padding: 0 12px;
 }
 
 .quotes-search input:focus,
-.quotes-status-filter select:focus {
+.quotes-status-filter select:focus,
+.orders-search input:focus,
+.orders-status-filter select:focus {
   border-color: var(--ring);
   box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 13%, transparent);
 }
 
-.quotes-status-filter {
+.quotes-status-filter,
+.orders-status-filter {
   display: grid;
   gap: 6px;
   min-width: 180px;
@@ -1298,33 +1310,44 @@ td:last-child {
   font-weight: 700;
 }
 
-.quotes-status-filter select {
+.quotes-status-filter select,
+.orders-status-filter select {
   padding: 0 34px 0 11px;
 }
 
-.quotes-table-wrap {
+.quotes-table-wrap,
+.orders-table-wrap {
   min-height: 220px;
 }
 
-.quote-company {
+.quote-company,
+.order-customer-name {
   display: block;
   margin-top: 3px;
   color: var(--muted-foreground);
   font-size: 14px;
 }
 
-.quote-date {
+.quote-date,
+.order-date {
   display: inline-flex;
   align-items: center;
   gap: 7px;
 }
 
-.quote-date svg {
+.quote-date svg,
+.order-date svg {
   width: 16px;
   color: var(--muted-foreground);
 }
 
-.quotes-state {
+.order-outstanding {
+  color: var(--destructive);
+  font-weight: 750;
+}
+
+.quotes-state,
+.orders-state {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1335,31 +1358,37 @@ td:last-child {
   text-align: left;
 }
 
-.quotes-state > svg {
+.quotes-state > svg,
+.orders-state > svg {
   width: 30px;
   height: 30px;
   color: var(--primary);
 }
 
-.quotes-state > div {
+.quotes-state > div,
+.orders-state > div {
   display: grid;
   gap: 4px;
 }
 
-.quotes-state strong {
+.quotes-state strong,
+.orders-state strong {
   color: var(--foreground);
   font-size: 16px;
 }
 
-.quotes-state span {
+.quotes-state span,
+.orders-state span {
   font-size: 14px;
 }
 
-.quotes-state-error {
+.quotes-state-error,
+.orders-state-error {
   background: color-mix(in oklch, var(--destructive) 4%, transparent);
 }
 
-.quotes-state-error > svg {
+.quotes-state-error > svg,
+.orders-state-error > svg {
   color: var(--destructive);
 }
 
@@ -1367,7 +1396,8 @@ td:last-child {
   margin-left: 10px;
 }
 
-.quotes-pagination {
+.quotes-pagination,
+.orders-pagination {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1379,34 +1409,41 @@ td:last-child {
   font-size: 14px;
 }
 
-.quotes-pagination > div {
+.quotes-pagination > div,
+.orders-pagination > div {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.quotes-pagination strong {
+.quotes-pagination strong,
+.orders-pagination strong {
   min-width: 74px;
   color: var(--foreground);
   text-align: center;
 }
 
 @media (max-width: 760px) {
-  .quotes-heading {
+  .quotes-heading,
+  .orders-heading {
     align-items: stretch;
   }
 
   .quotes-toolbar,
-  .quotes-search {
+  .quotes-search,
+  .orders-toolbar,
+  .orders-search {
     align-items: stretch;
     flex-direction: column;
   }
 
-  .quotes-status-filter {
+  .quotes-status-filter,
+  .orders-status-filter {
     width: 100%;
   }
 
-  .quotes-pagination {
+  .quotes-pagination,
+  .orders-pagination {
     align-items: flex-start;
     flex-direction: column;
   }
