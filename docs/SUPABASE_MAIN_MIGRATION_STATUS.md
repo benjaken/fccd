@@ -97,6 +97,18 @@ Counts and UUID relationships reconcile, but production records were modified
 after the report export. A Modified Date incremental pass is required before
 financial sign-off.
 
+## Delivery team UUID resolution
+
+- Imported 5 `DS_Super_Motorcade` records into `delivery_teams`.
+- Resolved 299 / 299 `delivery_districts.driver_team_legacy_id` values to
+  `driver_team_id` UUID foreign keys.
+- Resolved 3,037 / 3,037 `deliveries.motorcade_legacy_id` values to
+  `motorcade_id` UUID foreign keys.
+- Added database FK constraints and covering indexes for both relationships.
+- Bubble `Login_code` was intentionally not imported; `delivery_teams` has no
+  login-code column.
+- The one-time importer was disabled with HTTP 410.
+
 ## Security notes
 
 - The RLS advisor reports `rls_enabled_no_policy` informational notices. This
