@@ -53,7 +53,10 @@ Remaining records: 0
 - Duplicate Bubble `_id`: 0
 - Primitive type drift: 0
 - Phase C financial incremental reconciliation: pending
-- File metadata: 722 / 722; file bytes and checksum reconciliation are pending
+- Option Sets: backend System Settings schema ready; Supabase data 0 / 35;
+  frontend static inventory 35 / 35 with 183 values
+- File metadata: 722 / 722; binary transfer and checksum reconciliation are
+  explicitly scheduled for the final migration phase
 - Auth/User decision: approved adoption of existing 24 `auth.users` +
   `user_profiles`; no new User table; Bubble `user.pw` is excluded
 - Singular `migration` table rows: 0; `migration_*` tables: 0
