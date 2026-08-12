@@ -94,7 +94,7 @@ describe("Migration workspace", () => {
       screen.getByText("Binary / checksum scheduled for final phase"),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/Frontend static inventory 35 \/ 35, 183 values/),
+      screen.getByText(/static inventory 35 \/ 35, 183 values/i),
     ).toBeInTheDocument();
   });
 
