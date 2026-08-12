@@ -105,7 +105,7 @@ async function page(type: string, cursor: number) {
         value: SNAPSHOT,
       }]),
     });
-    const response = await fetch(`${BASE}/${type}?${query}`);
+    const response = await fetch(`${BASE}/${encodeURIComponent(type)}?${query}`);
     const payload = await response.json();
     const rows = payload.response?.results;
     if (!response.ok || !Array.isArray(rows)) {
