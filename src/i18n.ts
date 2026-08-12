@@ -287,6 +287,7 @@ const resources = {
           pending: "待決定",
         },
         adoptedRows: "採用現有 {{count}} 筆 Profile",
+        historicalArchive: "已簽核歷史歸檔，不建立目前業務表",
         editorNotes: {
           production_api_unavailable: "Production API 未開放",
           password_excluded: "不遷移 pw",
@@ -430,12 +431,13 @@ const resources = {
           inferredSample: "推斷／抽樣驗證",
           inferred: "推斷映射",
           migratedUnresolved: "報告所列未解析 master FK",
-          verifiedRows: "已驗證配送團隊引用",
+          verifiedRows: "資料庫已驗證 UUID 引用",
           currentIssue: "目前未結問題",
+          acceptedIssues: "已接受問題",
           affectedRows: "影響 {{count}} 筆來源記錄",
           futureOrphans: "已知未來孤兒引用",
           orphanNote:
-            "目前 1 個問題來自缺失的 S_order，5 筆 BOM 記錄保留 nullable FK；另有 18 個尚未遷移領域的已知孤兒引用。",
+            "19 個問題已核准保留 legacy ID 及 nullable UUID，影響 24 筆記錄；目前未結及未來孤兒均為 0。",
         },
         objectList: "Bubble 資料表",
         objectCount: "顯示 {{visible}}／{{total}} 個資料表",
@@ -754,6 +756,8 @@ const resources = {
           pending: "Pending",
         },
         adoptedRows: "Adopt existing {{count}} profiles",
+        historicalArchive:
+          "Approved historical archive; no current business table",
         editorNotes: {
           production_api_unavailable: "Not exposed by Production API",
           password_excluded: "Password excluded",
@@ -900,12 +904,13 @@ const resources = {
           inferredSample: "Inferred / sample verified",
           inferred: "Inferred mapping",
           migratedUnresolved: "Reported unresolved master FKs",
-          verifiedRows: "Verified delivery-team references",
+          verifiedRows: "Database-verified UUID references",
           currentIssue: "Current open issue",
+          acceptedIssues: "Accepted issues",
           affectedRows: "Affects {{count}} source rows",
           futureOrphans: "Known future orphan references",
           orphanNote:
-            "The current issue is one missing S_order target affecting 5 BOM rows with nullable FKs; 18 additional known orphans belong to domains not yet migrated.",
+            "All 19 issues are approved to retain legacy IDs with nullable UUIDs, affecting 24 rows. Open and future orphan counts are now zero.",
         },
         objectList: "Bubble objects",
         objectCount: "Showing {{visible}} of {{total}} objects",

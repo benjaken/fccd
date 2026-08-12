@@ -228,6 +228,14 @@ BOM 必须有版本或订单快照，历史订单不可随当前商品配方改�
 - 由 Supabase 新系统重建；或
 - 签核排除。
 
+审批结果（2026-08-12）：
+
+- `User`：采用现有 `auth.users` + `user_profiles`。
+- `Announcement`、`MM_Products`、`DS_driver Assign Remind`、`Font`：
+  签核为历史归档，当前不建立业务表。
+- 所有孤儿引用：保留 legacy ID、UUID FK 允许 null，并保留
+  `data_quality_issues` 记录；不得伪造 UUID。
+
 ## 6. 已确认孤儿引用
 
 | 来源字段 | 目标 | 孤儿数 | 建议处理 |
@@ -353,6 +361,8 @@ final reconciliation
 - [ ] 孤儿允许 nullable UUID FK + issue 记录。
 - [x] User 采用现有 Supabase Auth + `user_profiles`，不建立新表。
 - [x] User 不从 Bubble 获取 `pw`；现有 24 个 Profile 直接采用。
+- [x] 其余四个 Editor-only 类型签核为历史归档。
+- [x] 孤儿采用 legacy ID + nullable UUID + accepted issue。
 - [ ] 同意按 Phase A → F 在 Supabase develop 试导入。
 
 ## 9. 当前建议

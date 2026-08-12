@@ -457,6 +457,15 @@ export function DataMigrationPage() {
               })}
             </small>
           </article>
+          <article>
+            <span>{t("migration.fkSummary.acceptedIssues")}</span>
+            <strong>{MIGRATION_STATUS.fk.acceptedIssues}</strong>
+            <small>
+              {t("migration.fkSummary.affectedRows", {
+                count: MIGRATION_STATUS.fk.acceptedAffectedRows,
+              })}
+            </small>
+          </article>
           <article className="danger">
             <span>{t("migration.fkSummary.futureOrphans")}</span>
             <strong>{MIGRATION_STATUS.fk.knownFutureOrphanReferences}</strong>

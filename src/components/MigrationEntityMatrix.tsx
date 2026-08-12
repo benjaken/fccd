@@ -153,7 +153,9 @@ export function MigrationEntityMatrix() {
                 {t(`migrationMatrix.editorStatuses.${mapping.status}`)}
               </strong>
               <small>
-                {mapping.status === "approved"
+                {mapping.strategy === "historical_archive"
+                  ? t("migrationMatrix.historicalArchive")
+                  : mapping.status === "approved"
                   ? t("migrationMatrix.adoptedRows", {
                       count: mapping.targetRows,
                     })

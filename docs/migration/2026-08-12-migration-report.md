@@ -40,7 +40,7 @@ Remaining records: 0
 - Unresolved UUID references in migrated master/transaction rows: 0
 - Delivery District → Delivery Team: 299 / 299
 - Delivery → Motorcade: 3,037 / 3,037
-- Current issues: 19 open issues affecting 24 rows; 0 resolved/future issues
+- Issues: 19 accepted dispositions affecting 24 rows; 0 open/future issues
 - D2 required UUID relationships unresolved: 0
 - Phase E required UUID relationships unresolved: 0
 - Meat raw-stock source junctions: 1,263; nullable orphan links: 18
