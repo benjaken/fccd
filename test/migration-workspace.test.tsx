@@ -168,7 +168,7 @@ describe("Migration workspace", () => {
       screen.getByRole("heading", { name: "File migration progress" }),
     ).toBeInTheDocument();
     expect(screen.getByText("5,000+")).toBeInTheDocument();
-    expect(screen.getByText("2,711")).toBeInTheDocument();
+    expect(screen.getAllByText("2,711").length).toBeGreaterThanOrEqual(2);
     expect(
       screen.getByText("Modified Date > lastSuccessfulCheckpoint"),
     ).toBeInTheDocument();
