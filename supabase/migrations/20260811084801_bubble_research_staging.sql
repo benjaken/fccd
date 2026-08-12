@@ -1,0 +1,5 @@
+-- Historical migration placeholder.
+--
+-- This version exists in Supabase main migration history, but the experimental
+-- migration_* staging tables were intentionally removed during research.
+-- Keep this no-op file so local and remote migration histories remain aligned.
