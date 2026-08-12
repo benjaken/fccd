@@ -87,7 +87,7 @@ describe("Migration workspace", () => {
   it("shows independent editor, option-set, and file coverage", () => {
     renderWorkspace("/migration/control");
 
-    expect(screen.getByText("98 / 98")).toBeInTheDocument();
+    expect(screen.getAllByText("98 / 98").length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText("0 / 35")).toBeInTheDocument();
     expect(screen.getByText("Metadata migrated")).toBeInTheDocument();
     expect(screen.getByText("Binary / checksum pending")).toBeInTheDocument();
