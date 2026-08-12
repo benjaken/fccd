@@ -36,7 +36,7 @@ Provide all of the following to the migration operator:
    `SUPABASE_SERVICE_ROLE_KEY` or `SUPABASE_SECRET_KEY`.
 4. The `20260812090637_create_attachments` migration reviewed and applied to
    the intended Supabase project, creating the private
-   `bubble-attachments-private` bucket. This repository does not apply it
+   `attachments` bucket. This repository does not apply it
    remotely.
 5. A written reconciliation confirming that the combined, deduplicated
    discovery count is 4,198 and explaining any duplicate File Manager entries.
