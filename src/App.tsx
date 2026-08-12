@@ -44,6 +44,7 @@ import { Link, NavLink, Route, Routes, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/auth/AuthProvider";
 import { LoginPage } from "@/components/LoginPage";
 import { MigrationWorkspace } from "@/components/MigrationWorkspace";
+import { OrdersListPage } from "@/components/OrdersListPage";
 import { ProfilePage } from "@/components/ProfilePage";
 import { QuotesListPage } from "@/components/QuotesListPage";
 import { Button } from "@/components/ui/button";
@@ -219,6 +220,9 @@ function OperationsShell() {
       : section === "restaurant"
         ? "restaurant"
         : "catering";
+  const canViewFinance = ["Super Admin", "Admin", "Accounting"].includes(
+    profile?.role ?? "",
+  );
 
   useEffect(() => {
     setMobileMenuOpen(false);
@@ -448,6 +452,37 @@ function OperationsShell() {
             <Routes>
               <Route path="/" element={<Dashboard role={profile?.role} />} />
               <Route path="/profile" element={<ProfilePage />} />
+              <Route
+                path="/orders"
+                element={<OrdersListPage canViewFinance={canViewFinance} />}
+              />
+              <Route
+                path="/orders/pending"
+                element={
+                  <OrdersListPage
+                    preset="pending"
+                    canViewFinance={canViewFinance}
+                  />
+                }
+              />
+              <Route
+                path="/orders/unpaid"
+                element={
+                  <OrdersListPage
+                    preset="unpaid"
+                    canViewFinance={canViewFinance}
+                  />
+                }
+              />
+              <Route
+                path="/orders/delivered-unpaid"
+                element={
+                  <OrdersListPage
+                    preset="delivered-unpaid"
+                    canViewFinance={canViewFinance}
+                  />
+                }
+              />
               <Route path="/quotes" element={<QuotesListPage />} />
               <Route path="*" element={<ModulePlaceholder section={section} />} />
             </Routes>
