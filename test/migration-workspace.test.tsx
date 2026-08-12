@@ -108,9 +108,9 @@ describe("Migration workspace", () => {
         name: "Bubble entity → Supabase target",
       }),
     ).toBeInTheDocument();
-    expect(screen.getByText("37.8%")).toBeInTheDocument();
-    expect(screen.getByText("55%")).toBeInTheDocument();
-    expect(screen.getByText("169,626")).toBeInTheDocument();
+    expect(screen.getByText("54.1%")).toBeInTheDocument();
+    expect(screen.getByText("88.9%")).toBeInTheDocument();
+    expect(screen.getByText("41,867")).toBeInTheDocument();
     expect(screen.getByText("order_bom_requirements")).toBeInTheDocument();
     expect(screen.getAllByText("Complete with issues")).toHaveLength(2);
   });
