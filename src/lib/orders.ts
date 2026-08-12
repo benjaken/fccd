@@ -108,13 +108,12 @@ export async function fetchOrders({
 }: OrderListFilters): Promise<OrderListResult> {
   const start = (page - 1) * ORDERS_PAGE_SIZE;
   const end = start + ORDERS_PAGE_SIZE - 1;
-  const financialFields = canViewFinance ? ",grand_total,outstanding" : "";
+  const selectedFields = canViewFinance
+    ? "id,order_number,customer_name_snapshot,company_name_snapshot,delivery_at,ship_out_time,delivery_status,is_sent_to_factory,currency,updated_at,grand_total,outstanding"
+    : "id,order_number,customer_name_snapshot,company_name_snapshot,delivery_at,ship_out_time,delivery_status,is_sent_to_factory,currency,updated_at";
   let query = supabase
     .from("orders")
-    .select(
-      `id,order_number,customer_name_snapshot,company_name_snapshot,delivery_at,ship_out_time,delivery_status,is_sent_to_factory,currency,updated_at${financialFields}`,
-      { count: "exact" },
-    )
+    .select(selectedFields, { count: "exact" })
     .eq("document_type", preset === "pending" ? "unconfirmed" : "order")
     .is("archived_at", null)
     .order("delivery_at", { ascending: false, nullsFirst: false })
