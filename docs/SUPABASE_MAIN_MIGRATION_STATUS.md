@@ -46,6 +46,32 @@ display names rather than Bubble IDs. Both were resolved by exact
 The one-time `bubble-import-phase-a` endpoint was disabled immediately after
 the successful run and now returns HTTP 410.
 
+## Role policies
+
+- Authenticated users can read non-sensitive lookup and catalog tables.
+- Super Admin and Admin can write core tables.
+- Accounting can read suppliers, customers, orders, order lines, payments and
+  deliveries.
+- Factory can read orders, order lines and deliveries.
+- Supplier/customer reads remain unavailable to Factory and Shop manager.
+- Role checks use trusted Auth `app_metadata.role`, not user-editable metadata.
+
+## Phase B import
+
+| Target table | Imported | Unique legacy IDs | Unique UUIDs | Unresolved UUID FKs |
+|---|---:|---:|---:|---:|
+| `products` | 8,302 | 8,302 | 8,302 | 0 |
+| `packages` | 175 | 175 | 175 | 0 |
+| `package_products` | 3,764 | 3,764 | 3,764 | 0 |
+| `customers` | 0 | 0 | 0 | 0 |
+| **Total** | **12,241** | **12,241** | **12,241** | **0** |
+
+The first Phase B attempt stopped before writing package-product rows because
+the UUID-map query used Supabase's default 1,000-row response limit. Products
+and packages were already idempotently upserted. The query was changed to
+1,000-row pagination, the import resumed successfully, and the one-time
+endpoint was then disabled with HTTP 410.
+
 ## Security notes
 
 - The RLS advisor reports `rls_enabled_no_policy` informational notices. This
@@ -58,7 +84,6 @@ the successful run and now returns HTTP 410.
 
 ## Not yet imported
 
-- `products`, `packages`, `package_products`
 - `orders`, `order_lines`, `payments`, `deliveries`
 - meat, inventory, restaurant facts, files and Auth migration
 - the 18 known orphan references
