@@ -420,7 +420,7 @@ const resources = {
           migratedUnresolved: "報告所列未解析 master FK",
           verifiedRows: "已驗證配送團隊引用",
           currentIssue: "目前未結問題",
-          affectedRows: "影響 {{count}} 筆 BOM 記錄",
+          affectedRows: "影響 {{count}} 筆來源記錄",
           futureOrphans: "已知未來孤兒引用",
           orphanNote:
             "目前 1 個問題來自缺失的 S_order，5 筆 BOM 記錄保留 nullable FK；另有 18 個尚未遷移領域的已知孤兒引用。",
@@ -878,7 +878,7 @@ const resources = {
           migratedUnresolved: "Reported unresolved master FKs",
           verifiedRows: "Verified delivery-team references",
           currentIssue: "Current open issue",
-          affectedRows: "Affects {{count}} BOM rows",
+          affectedRows: "Affects {{count}} source rows",
           futureOrphans: "Known future orphan references",
           orphanNote:
             "The current issue is one missing S_order target affecting 5 BOM rows with nullable FKs; 18 additional known orphans belong to domains not yet migrated.",

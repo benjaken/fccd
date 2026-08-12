@@ -129,7 +129,7 @@ describe("Migration workspace", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("950,149")).toBeInTheDocument();
     expect(
-      within(screen.getByText("Current open issues").closest("article")!)
+      within(screen.getByText("Current open issue").closest("article")!)
         .getByText("19"),
     ).toBeInTheDocument();
     expect(
