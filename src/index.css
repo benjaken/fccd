@@ -2742,7 +2742,7 @@ td:last-child {
 .entity-matrix-metrics span,
 .entity-matrix-metrics small {
   color: var(--muted-foreground);
-  font-size: 11px;
+  font-size: 14px;
 }
 
 .entity-matrix-metrics strong {
@@ -2773,7 +2773,7 @@ td:last-child {
   border-radius: 99px;
   background: var(--card);
   color: var(--muted-foreground);
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 700;
 }
 
@@ -2806,7 +2806,7 @@ td:last-child {
   outline: 0;
   background: transparent;
   color: var(--foreground);
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .entity-matrix-table-wrap {
@@ -2830,7 +2830,7 @@ td:last-child {
   display: inline-flex;
   align-items: center;
   width: 78px;
-  height: 20px;
+  height: 24px;
   overflow: hidden;
   border-radius: 99px;
   background: var(--secondary);
@@ -2845,7 +2845,7 @@ td:last-child {
 .entity-rate strong {
   position: relative;
   width: 100%;
-  font-size: 9px;
+  font-size: 14px;
   text-align: center;
 }
 
@@ -2853,7 +2853,7 @@ td:last-child {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 700;
 }
 
