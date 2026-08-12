@@ -116,6 +116,9 @@
   Modified Date 增量 checkpoint。
 - 文件 baseline 完成后，只处理 `Modified Date > lastSuccessfulCheckpoint`；
   每批 100 个，可续跑，并以 source URL + target path + checksum 去重。
+- `/migration/control` 必须直接显示每个迁移错误的来源字段、目标 UUID 字段、
+  issue 数、受影响记录、处理状态，以及财务／增量／文件差异；不能只显示总数。
+- `accepted` 只表示允许 nullable UUID 继续迁移，不代表错误已修复。
 - Option Sets 使用 `system_config_sets`、`system_config_options`、
   `system_config_attribute_definitions` 及 `system_config_option_attributes`
   作为 System Settings 常规配置 Schema；当前先建表，不写入 35 个配置集。

@@ -149,6 +149,21 @@ describe("Migration workspace", () => {
     expect(screen.getAllByText("Approved")).toHaveLength(5);
   });
 
+  it("shows migration errors and reconciliation differences", () => {
+    renderWorkspace("/migration/control");
+
+    expect(
+      screen.getByRole("heading", {
+        name: "Migration errors & reconciliation",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("b_product_ingredients.S_order"))
+      .toBeInTheDocument();
+    expect(screen.getByText("HKD 1,556.00")).toBeInTheDocument();
+    expect(screen.getByText("2,289+")).toBeInTheDocument();
+    expect(screen.getAllByText(/UUID remains null/)).toHaveLength(3);
+  });
+
   it("shows database-verified FK aggregates on a dedicated page", () => {
     renderWorkspace("/migration/fk");
 
