@@ -3075,7 +3075,7 @@ td:last-child {
 
 .file-manager-heading code {
   color: var(--muted-foreground);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .file-manager-toolbar {
@@ -3090,7 +3090,7 @@ td:last-child {
   display: grid;
   gap: 6px;
   color: var(--muted-foreground);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
 }
 
