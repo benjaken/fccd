@@ -85,6 +85,13 @@
 - 全量报告必须固定一个 UTC `snapshot_at`，所有类型统一加入
   `Created Date < snapshot_at` 条件；快照后的新增记录进入后续增量同步，
   不能在全量导出期间不断改变预期数量。
+- 五年历史固定点为香港时间 `2021-08-12 00:00:00 +08:00`
+  （UTC `2021-08-11T16:00:00.000Z`），记录在
+  `config/migration-policy.json`，后续不得随执行日期滚动。
+- `Created Date < historicalCutoffUtc` 属于 historical baseline，只处理一次；
+  baseline 成功后保存 checkpoint，后续自动跳过。
+- `Created Date >= historicalCutoffUtc` 属于 active dataset；首次完整导入后，
+  后续只处理 `Modified Date > lastSuccessfulCheckpoint` 的增量。
 - 数组型 Unique ID 先标记为候选多对多；单值 Unique ID 依重复情况推断为
   多对一或候选一对一。
 - 关系图用于人工检查方向与基数，不自动建立 Supabase foreign key。

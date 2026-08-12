@@ -71,6 +71,11 @@ python3 scripts/export_bubble.py \
   export --resume
 ```
 
+The fixed five-year migration policy is stored in
+`config/migration-policy.json`. Export the historical baseline once with
+`--window historical`; use `--window active` for the initial active set and
+`--modified-after <last-checkpoint>` for later deltas.
+
 ## Development workflow
 
 All new development must branch from the latest `main` and return through a

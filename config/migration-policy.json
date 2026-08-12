@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "businessTimeZone": "Asia/Hong_Kong",
+  "historicalCutoffLocal": "2021-08-12T00:00:00+08:00",
+  "historicalCutoffUtc": "2021-08-11T16:00:00.000Z",
+  "historicalPolicy": {
+    "mode": "import_once",
+    "repeatOnIncrementalRuns": false,
+    "allowAutomaticUpdatesAfterImport": false
+  },
+  "activePolicy": {
+    "initialFilter": "Created Date >= historicalCutoffUtc",
+    "incrementalFilter": "Modified Date > lastSuccessfulCheckpoint"
+  }
+}

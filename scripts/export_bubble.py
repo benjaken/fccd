@@ -21,6 +21,51 @@ from urllib.request import Request, urlopen
 DEFAULT_BASE_URL = "https://cs.foodchannels-catering.com/api/1.1"
 DEFAULT_OUTPUT = Path(".migration-data")
 MAX_BUBBLE_CURSOR = 50_000
+POLICY_FILE = Path(__file__).resolve().parents[1] / "config/migration-policy.json"
+
+
+def previous_millisecond(value: str) -> str:
+    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    return datetime.fromtimestamp(
+        parsed.timestamp() - 0.001, timezone.utc
+    ).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+
+
+def migration_window(
+    window: str,
+    modified_after: str | None,
+) -> tuple[list[dict[str, Any]], str]:
+    policy = json.loads(POLICY_FILE.read_text(encoding="utf-8"))
+    cutoff = policy["historicalCutoffUtc"]
+    constraints: list[dict[str, Any]] = []
+
+    if window == "historical":
+        constraints.append(
+            {
+                "key": "Created Date",
+                "constraint_type": "less than",
+                "value": cutoff,
+            }
+        )
+    elif window == "active":
+        constraints.append(
+            {
+                "key": "Created Date",
+                "constraint_type": "greater than",
+                "value": previous_millisecond(cutoff),
+            }
+        )
+
+    if modified_after:
+        constraints.append(
+            {
+                "key": "Modified Date",
+                "constraint_type": "greater than",
+                "value": modified_after,
+            }
+        )
+
+    return constraints, cutoff
 
 
 def request_json(url: str, token: str | None, retries: int = 4) -> dict[str, Any]:
@@ -121,6 +166,7 @@ def export_collection(
     page_size: int,
     delay: float,
     snapshot_at: str | None,
+    window_constraints: list[dict[str, Any]],
 ) -> int:
     def request_page(
         cursor: int,
@@ -185,11 +231,15 @@ def export_collection(
         if snapshot_at
         else None
     )
+    base_constraints = [
+        *window_constraints,
+        *(snapshot_constraints or []),
+    ] or None
 
-    first_response = request_page(0, 1, snapshot_constraints)
+    first_response = request_page(0, 1, base_constraints)
     expected_total = response_total(first_response)
     partitions: list[tuple[str, list[dict[str, Any]] | None, int, bool]] = [
-        ("all", snapshot_constraints, expected_total, False)
+        ("all", base_constraints, expected_total, False)
     ]
 
     if expected_total > MAX_BUBBLE_CURSOR:
@@ -222,7 +272,10 @@ def export_collection(
                 year_end = snapshot_datetime
             if year_end <= year_start:
                 continue
-            year_constraints = bounded_constraints(year_start, year_end)
+            year_constraints = [
+                *bounded_constraints(year_start, year_end),
+                *window_constraints,
+            ]
             year_count = partition_count(year_constraints)
             if year_count == 0:
                 continue
@@ -241,7 +294,10 @@ def export_collection(
                     month_end = snapshot_datetime
                 if month_end <= month_start:
                     continue
-                month_constraints = bounded_constraints(month_start, month_end)
+                month_constraints = [
+                    *bounded_constraints(month_start, month_end),
+                    *window_constraints,
+                ]
                 month_count = partition_count(month_constraints)
                 if month_count > MAX_BUBBLE_CURSOR:
                     raise RuntimeError(
@@ -268,7 +324,7 @@ def export_collection(
             partitions.append(
                 (
                     "unpartitioned-fallback",
-                    snapshot_constraints,
+                    base_constraints,
                     expected_total - partition_total,
                     True,
                 )
@@ -346,6 +402,10 @@ def export_collection(
 def export_all(args: argparse.Namespace) -> int:
     swagger = load_swagger(args.base_url, args.output, args.token)
     available = collection_paths(swagger)
+    window_constraints, historical_cutoff = migration_window(
+        args.window,
+        args.modified_after,
+    )
     requested_names = args.type or []
     forced_names = {name.casefold() for name in (args.force or [])}
     available_by_name = {endpoint_name(path).casefold(): path for path in available}
@@ -372,6 +432,10 @@ def export_all(args: argparse.Namespace) -> int:
             or manifest.get("authenticated") != bool(args.token)
         ):
             raise RuntimeError("Existing manifest does not match this API URL/auth mode")
+        if manifest.get("window", "all") != args.window:
+            raise RuntimeError("Existing manifest does not match migration window")
+        if manifest.get("modifiedAfter") != args.modified_after:
+            raise RuntimeError("Existing manifest does not match incremental checkpoint")
         existing_snapshot = manifest.get("snapshotAt")
         if requested_snapshot and existing_snapshot != requested_snapshot:
             raise RuntimeError(
@@ -384,6 +448,9 @@ def export_all(args: argparse.Namespace) -> int:
             "baseUrl": args.base_url,
             "authenticated": bool(args.token),
             "snapshotAt": snapshot_at,
+            "window": args.window,
+            "historicalCutoffAt": historical_cutoff,
+            "modifiedAfter": args.modified_after,
             "exports": [],
             "errors": [],
         }
@@ -418,6 +485,7 @@ def export_all(args: argparse.Namespace) -> int:
                 args.page_size,
                 args.delay,
                 snapshot_at,
+                window_constraints,
             )
             manifest["exports"].append(
                 {"type": name, "path": path, "file": filename, "records": count}
@@ -460,6 +528,22 @@ def parser() -> argparse.ArgumentParser:
         help=(
             "only export records created before this ISO timestamp; use one "
             "fixed value for a consistent multi-type snapshot"
+        ),
+    )
+    result.add_argument(
+        "--window",
+        choices=("all", "historical", "active"),
+        default="all",
+        help=(
+            "all records, one-time historical records before the fixed cutoff, "
+            "or active records on/after the cutoff"
+        ),
+    )
+    result.add_argument(
+        "--modified-after",
+        help=(
+            "only export records modified after this ISO checkpoint; intended "
+            "for active-window incremental runs"
         ),
     )
     subparsers = result.add_subparsers(dest="command", required=True)

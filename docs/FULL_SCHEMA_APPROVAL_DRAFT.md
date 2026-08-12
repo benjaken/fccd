@@ -245,6 +245,28 @@ legacy reference 保留
 
 ## 7. 分阶段建表与试导入
 
+### 固定五年历史点
+
+```text
+香港时间：2021-08-12 00:00:00 +08:00
+UTC：2021-08-11T16:00:00.000Z
+```
+
+当前快照统计：
+
+```text
+固定点以前：0
+固定点以后：377,116
+缺少 Created Date：0
+```
+
+因此当前数据全部属于 active dataset，但规则仍固定：
+
+- cutoff 以前的 historical baseline 只导入一次；
+- 完成后保存不可重复执行的 checkpoint；
+- cutoff 以后的 active dataset 首次全量导入；
+- 后续只按 `Modified Date > lastSuccessfulCheckpoint` 增量处理。
+
 ### Phase A：Lookup / Master
 
 ```text
