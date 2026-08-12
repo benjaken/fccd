@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useState, type ComponentType } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentType,
+} from "react";
 import { useTranslation } from "react-i18next";
 import {
   Bell,
@@ -13,6 +19,7 @@ import {
   FileText,
   HandCoins,
   LayoutDashboard,
+  LogOut,
   Menu,
   Moon,
   PackageCheck,
@@ -24,6 +31,7 @@ import {
   Store,
   Sun,
   Truck,
+  UserRound,
   Users,
   Utensils,
   Warehouse,
@@ -34,6 +42,7 @@ import { Link, NavLink, Route, Routes, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/auth/AuthProvider";
 import { DataMigrationPage } from "@/components/DataMigrationPage";
 import { LoginPage } from "@/components/LoginPage";
+import { ProfilePage } from "@/components/ProfilePage";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/lib/use-theme";
 import { cn } from "@/lib/utils";
@@ -185,11 +194,13 @@ export function CurrentDateTime({
 
 function OperationsShell() {
   const { t, i18n } = useTranslation();
-  const { user, signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const location = useLocation();
   const { dark, toggleTheme } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   const section = sectionFromPath(location.pathname);
   const sideItems = secondaryNav[section] ?? secondaryNav.overview;
@@ -202,7 +213,28 @@ function OperationsShell() {
 
   useEffect(() => {
     setMobileMenuOpen(false);
+    setUserMenuOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (!userMenuOpen) return;
+
+    const closeMenu = (event: PointerEvent) => {
+      if (!userMenuRef.current?.contains(event.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setUserMenuOpen(false);
+    };
+
+    document.addEventListener("pointerdown", closeMenu);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeMenu);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [userMenuOpen]);
 
   const pageKey = useMemo(() => location.pathname.replaceAll("/", "-"), [
     location.pathname,
@@ -291,23 +323,57 @@ function OperationsShell() {
             <Bell />
             <span className="notification-dot" />
           </Button>
-          <button
-            className="user-menu"
-            type="button"
-            onClick={() => void signOut()}
-            title={t("common.signOut")}
-          >
-            <span className="avatar">
-              {(user?.email?.slice(0, 2) || "FC").toUpperCase()}
-            </span>
-            <span className="user-copy">
-              <strong>
-                {user?.email?.split("@")[0] || "Food Channel Catering"}
-              </strong>
-              <small>{t("user.role")}</small>
-            </span>
-            <ChevronDown />
-          </button>
+          <div className="user-menu-wrap" ref={userMenuRef}>
+            <button
+              className="user-menu"
+              type="button"
+              onClick={() => setUserMenuOpen((current) => !current)}
+              aria-haspopup="menu"
+              aria-expanded={userMenuOpen}
+            >
+              <span className="avatar">
+                {(
+                  profile?.user_name?.slice(0, 2) ||
+                  user?.email?.slice(0, 2) ||
+                  "FC"
+                ).toUpperCase()}
+              </span>
+              <span className="user-copy">
+                <strong>
+                  {profile?.user_name ||
+                    user?.email?.split("@")[0] ||
+                    "Food Channel Catering"}
+                </strong>
+                <small>{profile?.role || t("common.notSet")}</small>
+              </span>
+              <ChevronDown />
+            </button>
+            {userMenuOpen && (
+              <div className="user-dropdown" role="menu">
+                <div className="user-dropdown-identity">
+                  <strong>
+                    {profile?.user_name ||
+                      user?.email?.split("@")[0] ||
+                      t("common.notSet")}
+                  </strong>
+                  <span>{profile?.email || user?.email}</span>
+                </div>
+                <Link className="user-dropdown-item" to="/profile" role="menuitem">
+                  <UserRound />
+                  <span>{t("user.personalProfile")}</span>
+                </Link>
+                <button
+                  className="user-dropdown-item danger"
+                  type="button"
+                  role="menuitem"
+                  onClick={() => void signOut()}
+                >
+                  <LogOut />
+                  <span>{t("common.signOut")}</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
@@ -372,6 +438,7 @@ function OperationsShell() {
           <div className="page-transition" key={pageKey}>
             <Routes>
               <Route path="/" element={<Dashboard />} />
+              <Route path="/profile" element={<ProfilePage />} />
               <Route path="*" element={<ModulePlaceholder section={section} />} />
             </Routes>
           </div>
@@ -413,6 +480,20 @@ function OperationsShell() {
                 </NavLink>
               ))}
             </nav>
+            <div className="mobile-account-actions">
+              <Link className="sidebar-link" to="/profile">
+                <UserRound />
+                <span>{t("user.personalProfile")}</span>
+              </Link>
+              <button
+                className="sidebar-link danger"
+                type="button"
+                onClick={() => void signOut()}
+              >
+                <LogOut />
+                <span>{t("common.signOut")}</span>
+              </button>
+            </div>
           </aside>
         </div>
       )}
@@ -754,10 +835,10 @@ function ModulePlaceholder({ section }: { section: string }) {
 }
 
 function AuthGate() {
-  const { session, loading } = useAuth();
+  const { session, loading, profileLoading } = useAuth();
   const { t } = useTranslation();
 
-  if (loading) {
+  if (loading || (session && profileLoading)) {
     return (
       <main className="auth-loading">
         <span className="auth-loading-mark">FC</span>

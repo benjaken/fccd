@@ -10,14 +10,36 @@ import type { Session, User } from "@supabase/supabase-js";
 
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
+export type UserProfile = {
+  id: string;
+  email: string | null;
+  email_noti: boolean;
+  factory_panel_date: string | null;
+  role: string | null;
+  shop_restro_legacy_id: string | null;
+  user_name: string | null;
+  week: string | null;
+  week_plus_1: string | null;
+  week_plus_2: string | null;
+  created_at: string;
+  updated_at: string;
+  slug: string | null;
+  social_networks: Record<string, unknown> | unknown[];
+  legacy_id: string | null;
+};
+
 type AuthContextValue = {
   session: Session | null;
   user: User | null;
+  profile: UserProfile | null;
   loading: boolean;
+  profileLoading: boolean;
+  profileError: string | null;
   configured: boolean;
   signIn: (email: string, password: string) => Promise<string | null>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<string | null>;
+  refreshProfile: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -25,6 +47,9 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isSupabaseConfigured) {
@@ -54,11 +79,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  const loadProfile = async (userId: string) => {
+    setProfileLoading(true);
+    setProfileError(null);
+
+    const { data, error } = await supabase
+      .from("user_profiles")
+      .select(
+        "id,email,email_noti,factory_panel_date,role,shop_restro_legacy_id,user_name,week,week_plus_1,week_plus_2,created_at,updated_at,slug,social_networks,legacy_id",
+      )
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (error) {
+      setProfile(null);
+      setProfileError(error.code || "profile_load_failed");
+    } else {
+      setProfile((data as UserProfile | null) ?? null);
+      setProfileError(data ? null : "profile_not_found");
+    }
+
+    setProfileLoading(false);
+  };
+
+  useEffect(() => {
+    const userId = session?.user.id;
+    if (!userId) {
+      setProfile(null);
+      setProfileError(null);
+      setProfileLoading(false);
+      return;
+    }
+
+    void loadProfile(userId);
+  }, [session?.user.id]);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       session,
       user: session?.user ?? null,
+      profile,
       loading,
+      profileLoading,
+      profileError,
       configured: isSupabaseConfigured,
       signIn: async (email, password) => {
         if (!isSupabaseConfigured) return "configuration";
@@ -73,6 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signOut: async () => {
         const { error } = await supabase.auth.signOut({ scope: "global" });
         if (error) throw error;
+        setProfile(null);
       },
       resetPassword: async (email) => {
         if (!isSupabaseConfigured) return "configuration";
@@ -83,8 +147,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         return error ? error.code || "reset_failed" : null;
       },
+      refreshProfile: async () => {
+        if (!session?.user.id) return;
+        await loadProfile(session.user.id);
+      },
     }),
-    [session, loading],
+    [session, profile, loading, profileLoading, profileError],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
