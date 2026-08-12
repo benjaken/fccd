@@ -12,6 +12,7 @@ import {
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
+import { MigrationEntityMatrix } from "@/components/MigrationEntityMatrix";
 import {
   allReadinessGatesComplete,
   MIGRATION_STATUS,
@@ -165,6 +166,8 @@ export function MigrationControlPage({
           ))}
         </div>
       </section>
+
+      <MigrationEntityMatrix />
 
       <div className="control-two-column">
         <section className="panel control-section">

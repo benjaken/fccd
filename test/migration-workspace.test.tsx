@@ -100,6 +100,21 @@ describe("Migration workspace", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows all entity mappings and real migration totals", () => {
+    renderWorkspace("/migration/control");
+
+    expect(
+      screen.getByRole("heading", {
+        name: "Bubble entity → Supabase target",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("22.4%")).toBeInTheDocument();
+    expect(screen.getByText("44.9%")).toBeInTheDocument();
+    expect(screen.getByText("207,685")).toBeInTheDocument();
+    expect(screen.getByText("order_bom_requirements")).toBeInTheDocument();
+    expect(screen.getByText("Complete with issues")).toBeInTheDocument();
+  });
+
   it("shows database-verified FK aggregates separately from inferred mappings", () => {
     renderWorkspace("/migration/fk");
 

@@ -15,6 +15,7 @@
     "generate:bubble-schema": "node scripts/generate-bubble-schema.mjs",
     "generate:migration-report": "node scripts/generate-core-migration-report.mjs",
     "generate:full-migration-report": "node scripts/generate-full-migration-report.mjs",
+    "generate:migration-status": "node scripts/generate-migration-entity-status.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },
