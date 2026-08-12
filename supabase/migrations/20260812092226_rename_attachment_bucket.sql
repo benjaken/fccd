@@ -10,11 +10,3 @@ alter table public.attachments
 update public.attachments
 set bucket_id = 'attachments'
 where bucket_id = 'bubble-attachments-private';
-
-delete from storage.buckets as bucket
-where bucket.id = 'bubble-attachments-private'
-  and not exists (
-    select 1
-    from storage.objects as object
-    where object.bucket_id = bucket.id
-  );
