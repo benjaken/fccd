@@ -1,16 +1,16 @@
 {
   "snapshotAt": "2026-08-12T02:39:34.000Z",
-  "generatedFrom": "Supabase main verified phases A-D1",
+  "generatedFrom": "Supabase main verified phases A-D2",
   "totals": {
     "entities": 98,
-    "mappedEntities": 22,
+    "mappedEntities": 37,
     "sourceRecords": 377116,
-    "migratedRecords": 169431,
-    "remainingRecords": 207685,
-    "issueCount": 1,
-    "affectedRows": 5,
-    "tableRate": 0.22448979591836735,
-    "recordRate": 0.44928085787927324
+    "migratedRecords": 207490,
+    "remainingRecords": 169626,
+    "issueCount": 18,
+    "affectedRows": 23,
+    "tableRate": 0.37755102040816324,
+    "recordRate": 0.5502020598436556
   },
   "entities": [
     {
@@ -604,158 +604,158 @@
     {
       "sourceType": "m_cal_to_kg",
       "sourceCount": 4,
-      "targetTable": "pending_m_cal_to_kg",
-      "strategy": "transaction",
-      "status": "not_started",
-      "migratedCount": 0,
-      "remainingCount": 4,
+      "targetTable": "meat_unit_conversions",
+      "strategy": "lookup",
+      "status": "complete",
+      "migratedCount": 4,
+      "remainingCount": 0,
       "issueCount": 0,
       "affectedRows": 0,
-      "rate": 0
+      "rate": 1
     },
     {
       "sourceType": "m_calculation%",
       "sourceCount": 1,
-      "targetTable": "pending_m_calculationpercent",
-      "strategy": "transaction",
-      "status": "not_started",
-      "migratedCount": 0,
-      "remainingCount": 1,
+      "targetTable": "meat_calculation_settings",
+      "strategy": "lookup",
+      "status": "complete",
+      "migratedCount": 1,
+      "remainingCount": 0,
       "issueCount": 0,
       "affectedRows": 0,
-      "rate": 0
+      "rate": 1
     },
     {
       "sourceType": "m_customer",
       "sourceCount": 4,
       "targetTable": "meat_customers",
-      "strategy": "transaction",
-      "status": "not_started",
-      "migratedCount": 0,
-      "remainingCount": 4,
+      "strategy": "master",
+      "status": "complete",
+      "migratedCount": 4,
+      "remainingCount": 0,
       "issueCount": 0,
       "affectedRows": 0,
-      "rate": 0
+      "rate": 1
     },
     {
       "sourceType": "m_donemeat",
       "sourceCount": 29,
       "targetTable": "prepared_meat_items",
-      "strategy": "transaction",
-      "status": "not_started",
-      "migratedCount": 0,
-      "remainingCount": 29,
+      "strategy": "master",
+      "status": "complete",
+      "migratedCount": 29,
+      "remainingCount": 0,
       "issueCount": 0,
       "affectedRows": 0,
-      "rate": 0
+      "rate": 1
     },
     {
       "sourceType": "m_donemeat_stock",
       "sourceCount": 11263,
       "targetTable": "prepared_meat_stock_movements",
       "strategy": "transaction",
-      "status": "not_started",
-      "migratedCount": 0,
-      "remainingCount": 11263,
-      "issueCount": 0,
-      "affectedRows": 0,
-      "rate": 0
+      "status": "complete_with_issues",
+      "migratedCount": 11263,
+      "remainingCount": 0,
+      "issueCount": 17,
+      "affectedRows": 18,
+      "rate": 1
     },
     {
       "sourceType": "m_meatseasoning_cost",
       "sourceCount": 645,
       "targetTable": "meat_seasoning_cost_versions",
       "strategy": "transaction",
-      "status": "not_started",
-      "migratedCount": 0,
-      "remainingCount": 645,
+      "status": "complete",
+      "migratedCount": 645,
+      "remainingCount": 0,
       "issueCount": 0,
       "affectedRows": 0,
-      "rate": 0
+      "rate": 1
     },
     {
       "sourceType": "m_monthly_meatprice",
       "sourceCount": 646,
       "targetTable": "meat_price_versions",
       "strategy": "transaction",
-      "status": "not_started",
-      "migratedCount": 0,
-      "remainingCount": 646,
+      "status": "complete",
+      "migratedCount": 646,
+      "remainingCount": 0,
       "issueCount": 0,
       "affectedRows": 0,
-      "rate": 0
+      "rate": 1
     },
     {
       "sourceType": "m_outdone_donemeat",
       "sourceCount": 9823,
       "targetTable": "meat_order_lines",
-      "strategy": "transaction",
-      "status": "not_started",
-      "migratedCount": 0,
-      "remainingCount": 9823,
+      "strategy": "detail",
+      "status": "complete",
+      "migratedCount": 9823,
+      "remainingCount": 0,
       "issueCount": 0,
       "affectedRows": 0,
-      "rate": 0
+      "rate": 1
     },
     {
       "sourceType": "m_outdone_order",
       "sourceCount": 1169,
       "targetTable": "meat_orders",
       "strategy": "transaction",
-      "status": "not_started",
-      "migratedCount": 0,
-      "remainingCount": 1169,
+      "status": "complete",
+      "migratedCount": 1169,
+      "remainingCount": 0,
       "issueCount": 0,
       "affectedRows": 0,
-      "rate": 0
+      "rate": 1
     },
     {
       "sourceType": "m_raw_stock",
       "sourceCount": 2430,
       "targetTable": "raw_meat_stock_movements",
       "strategy": "transaction",
-      "status": "not_started",
-      "migratedCount": 0,
-      "remainingCount": 2430,
+      "status": "complete",
+      "migratedCount": 2430,
+      "remainingCount": 0,
       "issueCount": 0,
       "affectedRows": 0,
-      "rate": 0
+      "rate": 1
     },
     {
       "sourceType": "m_rawmeat",
       "sourceCount": 15,
       "targetTable": "raw_meat_items",
-      "strategy": "transaction",
-      "status": "not_started",
-      "migratedCount": 0,
-      "remainingCount": 15,
+      "strategy": "master",
+      "status": "complete",
+      "migratedCount": 15,
+      "remainingCount": 0,
       "issueCount": 0,
       "affectedRows": 0,
-      "rate": 0
+      "rate": 1
     },
     {
       "sourceType": "m_seasoning",
       "sourceCount": 83,
       "targetTable": "seasonings",
-      "strategy": "transaction",
-      "status": "not_started",
-      "migratedCount": 0,
-      "remainingCount": 83,
+      "strategy": "master",
+      "status": "complete",
+      "migratedCount": 83,
+      "remainingCount": 0,
       "issueCount": 0,
       "affectedRows": 0,
-      "rate": 0
+      "rate": 1
     },
     {
       "sourceType": "m_shippingmethod",
       "sourceCount": 1,
-      "targetTable": "pending_m_shippingmethod",
-      "strategy": "transaction",
-      "status": "not_started",
-      "migratedCount": 0,
-      "remainingCount": 1,
+      "targetTable": "meat_shipping_methods",
+      "strategy": "lookup",
+      "status": "complete",
+      "migratedCount": 1,
+      "remainingCount": 0,
       "issueCount": 0,
       "affectedRows": 0,
-      "rate": 0
+      "rate": 1
     },
     {
       "sourceType": "nos_ordertag",
@@ -882,12 +882,12 @@
       "sourceCount": 8745,
       "targetTable": "ingredient_stocktake_events",
       "strategy": "detail",
-      "status": "not_started",
-      "migratedCount": 0,
-      "remainingCount": 8745,
+      "status": "complete",
+      "migratedCount": 8745,
+      "remainingCount": 0,
       "issueCount": 0,
       "affectedRows": 0,
-      "rate": 0
+      "rate": 1
     },
     {
       "sourceType": "s_ingredients_product",
@@ -942,12 +942,12 @@
       "sourceCount": 3201,
       "targetTable": "packing_stocktake_events",
       "strategy": "detail",
-      "status": "not_started",
-      "migratedCount": 0,
-      "remainingCount": 3201,
+      "status": "complete",
+      "migratedCount": 3201,
+      "remainingCount": 0,
       "issueCount": 0,
       "affectedRows": 0,
-      "rate": 0
+      "rate": 1
     },
     {
       "sourceType": "s_payment",

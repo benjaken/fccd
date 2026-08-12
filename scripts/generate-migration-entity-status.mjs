@@ -23,13 +23,33 @@ const completed = {
   ds_shippingmethod: ["shipping_methods", "lookup"],
   ds_status: ["order_statuses", "lookup"],
   ds_super_motorcade: ["delivery_teams", "master"],
+  m_cal_to_kg: ["meat_unit_conversions", "lookup"],
+  "m_calculation%": ["meat_calculation_settings", "lookup"],
+  m_customer: ["meat_customers", "master"],
+  m_donemeat: ["prepared_meat_items", "master"],
+  m_donemeat_stock: ["prepared_meat_stock_movements", "transaction"],
+  m_meatseasoning_cost: ["meat_seasoning_cost_versions", "transaction"],
+  m_monthly_meatprice: ["meat_price_versions", "transaction"],
+  m_outdone_donemeat: ["meat_order_lines", "detail"],
+  m_outdone_order: ["meat_orders", "transaction"],
+  m_raw_stock: ["raw_meat_stock_movements", "transaction"],
+  m_rawmeat: ["raw_meat_items", "master"],
+  m_seasoning: ["seasonings", "master"],
+  m_shippingmethod: ["meat_shipping_methods", "lookup"],
   nos_ordertag: ["order_tags", "lookup"],
+  s_ingredient_stocktake: ["ingredient_stocktake_events", "detail"],
   s_ingredients_product: ["product_ingredients", "junction"],
   s_order: ["order_lines", "detail"],
   s_packages_product: ["package_products", "junction"],
+  s_packing_stocktake: ["packing_stocktake_events", "detail"],
   s_payment: ["payments", "transaction"],
   shop_ds_restro_depart: ["restaurant_departments", "lookup"],
   shopdsrestro: ["restaurants", "master"],
+};
+
+const issueSummary = {
+  b_product_ingredients: { issueCount: 1, affectedRows: 5 },
+  m_donemeat_stock: { issueCount: 17, affectedRows: 18 },
 };
 
 const targetSuggestions = {
@@ -86,10 +106,11 @@ function suggestedStrategy(type) {
 const entities = manifest.exports
   .map((item) => {
     const mapping = completed[item.type];
+    const issues = issueSummary[item.type];
     const status =
       item.type === "a_order"
         ? "reconciliation_required"
-        : item.type === "b_product_ingredients"
+        : issues
           ? "complete_with_issues"
           : mapping
             ? "complete"
@@ -103,8 +124,8 @@ const entities = manifest.exports
       status,
       migratedCount: migrated,
       remainingCount: item.records - migrated,
-      issueCount: item.type === "b_product_ingredients" ? 1 : 0,
-      affectedRows: item.type === "b_product_ingredients" ? 5 : 0,
+      issueCount: issues?.issueCount ?? 0,
+      affectedRows: issues?.affectedRows ?? 0,
       rate: item.records === 0 ? (mapping ? 100 : 0) : migrated / item.records,
     };
   })
@@ -136,7 +157,7 @@ await writeFile(
   `${JSON.stringify(
     {
       snapshotAt: manifest.snapshotAt,
-      generatedFrom: "Supabase main verified phases A-D1",
+      generatedFrom: "Supabase main verified phases A-D2",
       totals: {
         ...totals,
         tableRate: totals.mappedEntities / totals.entities,

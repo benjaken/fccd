@@ -17,16 +17,17 @@
 | B | Products / Packages / Package Products | 12,241 | 0 |
 | C | Orders / Order Lines / Payments / Deliveries | 74,754 | 0 |
 | D1 | Ingredients / Product Ingredients / Order BOM | 81,972 | 1 issue |
-| **Total** | | **169,431** | **1 issue / 5 rows** |
+| D2 | Meat / Inventory / Stocktakes | 38,059 | 17 issues |
+| **Total** | | **207,490** | **18 issues / 23 rows** |
 
 ## Progress
 
 ```text
-Mapped source types: 22 / 98
-Table migration rate: 22.4%
-Migrated records: 169,431 / 377,116
-Record migration rate: 44.9%
-Remaining records: 207,685
+Mapped source types: 37 / 98
+Table migration rate: 37.8%
+Migrated records: 207,490 / 377,116
+Record migration rate: 55.0%
+Remaining records: 169,626
 ```
 
 ## Verified UUID references
@@ -36,7 +37,9 @@ Remaining records: 207,685
 - Delivery District → Delivery Team: 299 / 299
 - Delivery → Motorcade: 3,037 / 3,037
 - Current open issue: one missing `S_Order` target affecting five BOM rows
-- Known future Meat/Inventory orphan references: 17
+- D2 required UUID relationships unresolved: 0
+- Meat raw-stock source junctions: 1,263; nullable orphan links: 18
+- Known Meat/Inventory orphan IDs: 17, represented by 17 aggregate issues
 
 ## Reconciliation
 
@@ -46,6 +49,24 @@ Remaining records: 207,685
 - Phase C financial incremental reconciliation: pending
 - Files and checksum reconciliation: pending
 - Auth migration: manually created users are present; Bubble `user.pw` is excluded
+
+### D2 reconciliation
+
+- Migration: `20260812065417_create_meat_inventory`
+- Source rows: 38,059; target rows: 38,059
+- Every source table has matching row, distinct legacy-ID, and distinct UUID
+  counts.
+- Required D2 UUID foreign keys unresolved: 0
+- Junctions: 24 raw-meat suppliers, 1,229 raw-stock allocations, and 1,263
+  prepared-to-raw stock sources.
+- The 1,263 prepared-to-raw links contain 18 nullable UUID references for 17
+  distinct known orphan Bubble IDs. Legacy IDs are retained and 17 aggregate
+  `data_quality_issues` account for all 18 affected links.
+- Key target totals: raw inbound HKD 5,539,519.99; raw inbound
+  146,896.935 kg; raw outbound 146,737.092 kg; seasoning cost 21,819.2841;
+  shop price versions 22,583.0209; room price versions 19,642.9378.
+- The one-time `bubble-import-phase-d2` endpoint was tombstoned immediately
+  after import and returns HTTP 410.
 
 ## Security
 
@@ -57,13 +78,12 @@ Remaining records: 207,685
 
 ## Remaining migration order
 
-1. D2 Meat / Inventory
-2. E Restaurant / Shop
-3. Quote children / Cost / Purchasing
-4. Remaining lookup and junction types
-5. Modified Date incremental catch-up
-6. Final count, FK, finance, file and Auth reconciliation
-7. Gated source switch
+1. E Restaurant / Shop
+2. Quote children / Cost / Purchasing
+3. Remaining lookup and junction types
+4. Modified Date incremental catch-up
+5. Final count, FK, finance, file and Auth reconciliation
+6. Gated source switch
 
 ## Data-source switch
 

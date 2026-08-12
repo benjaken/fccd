@@ -15,6 +15,8 @@ Created normalized tables:
   `restaurants`, `restaurant_departments`
 - Commercial master: `customers`, `products`, `packages`, `package_products`
 - Transactions: `orders`, `order_lines`, `payments`, `deliveries`
+- D2 Meat / Inventory: normalized meat master, order, movement, cost,
+  stock-source junction, and stocktake tables
 
 All new tables:
 
@@ -126,6 +128,50 @@ HTTP 410.
   login-code column.
 - The one-time importer was disabled with HTTP 410.
 
+## Phase D2 Meat / Inventory import
+
+Applied migration: `20260812065417_create_meat_inventory`.
+
+| Source type | Target table | Imported | Unresolved required UUID FKs |
+|---|---|---:|---:|
+| `m_cal_to_kg` | `meat_unit_conversions` | 4 | 0 |
+| `m_calculation%` | `meat_calculation_settings` | 1 | 0 |
+| `m_customer` | `meat_customers` | 4 | 0 |
+| `m_rawmeat` | `raw_meat_items` | 15 | 0 |
+| `m_donemeat` | `prepared_meat_items` | 29 | 0 |
+| `m_seasoning` | `seasonings` | 83 | 0 |
+| `m_shippingmethod` | `meat_shipping_methods` | 1 | 0 |
+| `m_outdone_order` | `meat_orders` | 1,169 | 0 |
+| `m_outdone_donemeat` | `meat_order_lines` | 9,823 | 0 |
+| `m_raw_stock` | `raw_meat_stock_movements` | 2,430 | 0 |
+| `m_donemeat_stock` | `prepared_meat_stock_movements` | 11,263 | 0 |
+| `m_meatseasoning_cost` | `meat_seasoning_cost_versions` | 645 | 0 |
+| `m_monthly_meatprice` | `meat_price_versions` | 646 | 0 |
+| `s_ingredient_stocktake` | `ingredient_stocktake_events` | 8,745 | 0 |
+| `s_packing_stocktake` | `packing_stocktake_events` | 3,201 | 0 |
+| **Total** | | **38,059** | **0** |
+
+Each target count equals both its distinct `legacy_id` and distinct UUID count.
+The import also created 24 raw-meat supplier links and 1,229 raw-stock
+allocation links.
+
+`m_donemeat_stock.from_rawStock_list` produced 1,263 junction rows. Eighteen
+references point to 17 distinct known orphan IDs. Those rows retain the Bubble
+ID and a nullable UUID FK; no UUID was fabricated. Seventeen aggregate
+data-quality issues account for all 18 affected links.
+
+Verified amount and quantity totals are:
+
+- raw inbound amount: HKD 5,539,519.99
+- raw inbound quantity: 146,896.935 kg
+- raw outbound quantity: 146,737.092 kg
+- seasoning version total cost: 21,819.2841
+- meat price version shop / room totals: 22,583.0209 / 19,642.9378
+
+The one-time D2 importer was disabled immediately after completion and now
+returns HTTP 410. No credential, password, login-code, or `Created By` value
+was imported.
+
 ## Security notes
 
 - The RLS advisor reports `rls_enabled_no_policy` informational notices. This
@@ -138,8 +184,11 @@ HTTP 410.
 
 ## Not yet imported
 
-- meat, inventory, restaurant facts, files and Auth migration
-- the 18 known orphan references
+- restaurant facts; quote/cost/purchasing/lookup/junction types; files; and
+  final Auth/incremental reconciliation
+- 169,626 source records across 61 source types remain `not_started`
+- the 17 distinct D2 orphan IDs remain open for business disposition, while
+  their 18 source references are safely preserved
 
 No further phase should run until Phase A mappings and the full Schema approval
 draft are reviewed.
