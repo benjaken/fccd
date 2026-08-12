@@ -18,16 +18,17 @@
 | C | Orders / Order Lines / Payments / Deliveries | 74,754 | 0 |
 | D1 | Ingredients / Product Ingredients / Order BOM | 81,972 | 1 issue |
 | D2 | Meat / Inventory / Stocktakes | 38,059 | 17 issues |
-| **Total** | | **207,490** | **18 issues / 23 rows** |
+| E | Restaurant / Shop | 127,759 | 0 |
+| **Total** | | **335,249** | **18 issues / 23 rows** |
 
 ## Progress
 
 ```text
-Mapped source types: 37 / 98
-Table migration rate: 37.8%
-Migrated records: 207,490 / 377,116
-Record migration rate: 55.0%
-Remaining records: 169,626
+Mapped source types: 53 / 98
+Table migration rate: 54.1%
+Migrated records: 335,249 / 377,116
+Record migration rate: 88.9%
+Remaining records: 41,867
 ```
 
 ## Verified UUID references
@@ -38,6 +39,7 @@ Remaining records: 169,626
 - Delivery → Motorcade: 3,037 / 3,037
 - Current open issue: one missing `S_Order` target affecting five BOM rows
 - D2 required UUID relationships unresolved: 0
+- Phase E required UUID relationships unresolved: 0
 - Meat raw-stock source junctions: 1,263; nullable orphan links: 18
 - Known Meat/Inventory orphan IDs: 17, represented by 17 aggregate issues
 
@@ -68,6 +70,23 @@ Remaining records: 169,626
 - The one-time `bubble-import-phase-d2` endpoint was tombstoned immediately
   after import and returns HTTP 410.
 
+### Phase E reconciliation
+
+- Migration: `20260812070844_create_restaurant_operations`
+- Source rows: 127,759; target rows: 127,759 across all 16 source types.
+- Every source table, including the four zero-row schema types, has matching
+  source, target, distinct legacy-ID, and distinct UUID counts.
+- Required restaurant, department, supplier, payment-method, service-period,
+  delivery-platform, product, cost, cost-type, ingredient, and purchase-type
+  UUID relationships unresolved: 0.
+- Restaurant ingredient department option values are preserved in 460
+  normalized junction rows rather than coerced to fabricated UUIDs.
+- Phase E created no data-quality issues and used no placeholder UUIDs.
+- `shop_dailysales` was imported in Created Date year partitions; all imports
+  were paged and idempotently upserted by `legacy_id`.
+- The one-time `bubble-import-phase-e` endpoint was tombstoned immediately
+  after verification and returns HTTP 410.
+
 ## Security
 
 - Core tables use RLS.
@@ -78,12 +97,11 @@ Remaining records: 169,626
 
 ## Remaining migration order
 
-1. E Restaurant / Shop
-2. Quote children / Cost / Purchasing
-3. Remaining lookup and junction types
-4. Modified Date incremental catch-up
-5. Final count, FK, finance, file and Auth reconciliation
-6. Gated source switch
+1. Quote children / Cost / Purchasing
+2. Remaining lookup and junction types
+3. Modified Date incremental catch-up
+4. Final count, FK, finance, file and Auth reconciliation
+5. Gated source switch
 
 ## Data-source switch
 

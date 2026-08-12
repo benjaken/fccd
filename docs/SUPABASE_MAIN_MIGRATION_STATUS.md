@@ -17,6 +17,9 @@ Created normalized tables:
 - Transactions: `orders`, `order_lines`, `payments`, `deliveries`
 - D2 Meat / Inventory: normalized meat master, order, movement, cost,
   stock-source junction, and stocktake tables
+- Phase E Restaurant / Shop: normalized payment, period, platform, product,
+  cost, purchase, ingredient, sales, stocktake, supplier-purchase, and roster
+  tables
 
 All new tables:
 
@@ -172,6 +175,41 @@ The one-time D2 importer was disabled immediately after completion and now
 returns HTTP 410. No credential, password, login-code, or `Created By` value
 was imported.
 
+## Phase E Restaurant / Shop import
+
+Applied migration: `20260812070844_create_restaurant_operations`.
+
+| Source type | Target table | Imported | Unresolved required UUID FKs |
+|---|---|---:|---:|
+| `shop_ds_new_product` | `restaurant_new_products` | 106 | 0 |
+| `shop_dscost_type` | `restaurant_cost_types` | 9 | 0 |
+| `shop_dscost` | `restaurant_costs` | 26 | 0 |
+| `shop_dspaymentmethod` | `restaurant_payment_methods` | 13 | 0 |
+| `shop_dsrestro_period` | `restaurant_service_periods` | 5 | 0 |
+| `shop_food_deli_platform` | `restaurant_delivery_platforms` | 5 | 0 |
+| `shopds_purchasetype` | `restaurant_purchase_types` | 3 | 0 |
+| `shop_ingredients` | `restaurant_ingredients` | 457 | 0 |
+| `shop_dailysales` | `restaurant_daily_sales` | 77,947 | 0 |
+| `shop_monthly_cost` | `restaurant_monthly_costs` | 1,508 | 0 |
+| `shop_stocktake` | `restaurant_stocktake_events` | 23,053 | 0 |
+| `shop_supplier_purchase` | `restaurant_supplier_purchases` | 24,627 | 0 |
+| `shop_ds_holiday` | `restaurant_holidays` | 0 | 0 |
+| `shop_ds_staff_list` | `restaurant_staff` | 0 | 0 |
+| `shop_ds_time_slot` | `restaurant_time_slots` | 0 | 0 |
+| `shop_roster` | `restaurant_rosters` | 0 | 0 |
+| **Total** | | **127,759** | **0** |
+
+Each target count equals both its distinct `legacy_id` and distinct UUID count.
+All existing restaurant, department, and supplier references and all new
+dimension references resolved to UUIDs. The 460 ingredient-department option
+values are safely retained in `restaurant_ingredient_departments`; no option
+value was converted into a fabricated UUID. Phase E produced no
+`data_quality_issues`.
+
+The large fact types were imported with paging and Created Date year
+partitions, using idempotent `legacy_id` upserts. The one-time Phase E importer
+was disabled immediately after verification and now returns HTTP 410.
+
 ## Security notes
 
 - The RLS advisor reports `rls_enabled_no_policy` informational notices. This
@@ -184,9 +222,9 @@ was imported.
 
 ## Not yet imported
 
-- restaurant facts; quote/cost/purchasing/lookup/junction types; files; and
-  final Auth/incremental reconciliation
-- 169,626 source records across 61 source types remain `not_started`
+- quote/cost/purchasing/lookup/junction types; files; and final
+  Auth/incremental reconciliation
+- 41,867 source records across 45 source types remain `not_started`
 - the 17 distinct D2 orphan IDs remain open for business disposition, while
   their 18 source references are safely preserved
 

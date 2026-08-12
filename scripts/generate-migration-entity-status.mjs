@@ -43,7 +43,23 @@ const completed = {
   s_packages_product: ["package_products", "junction"],
   s_packing_stocktake: ["packing_stocktake_events", "detail"],
   s_payment: ["payments", "transaction"],
+  shop_dailysales: ["restaurant_daily_sales", "transaction"],
+  shop_ds_holiday: ["restaurant_holidays", "lookup"],
+  shop_ds_new_product: ["restaurant_new_products", "master"],
   shop_ds_restro_depart: ["restaurant_departments", "lookup"],
+  shop_ds_staff_list: ["restaurant_staff", "master"],
+  shop_ds_time_slot: ["restaurant_time_slots", "lookup"],
+  shop_dscost: ["restaurant_costs", "master"],
+  shop_dscost_type: ["restaurant_cost_types", "lookup"],
+  shop_dspaymentmethod: ["restaurant_payment_methods", "lookup"],
+  shop_dsrestro_period: ["restaurant_service_periods", "lookup"],
+  shop_food_deli_platform: ["restaurant_delivery_platforms", "lookup"],
+  shop_ingredients: ["restaurant_ingredients", "master"],
+  shop_monthly_cost: ["restaurant_monthly_costs", "transaction"],
+  shop_roster: ["restaurant_rosters", "transaction"],
+  shop_stocktake: ["restaurant_stocktake_events", "transaction"],
+  shop_supplier_purchase: ["restaurant_supplier_purchases", "transaction"],
+  shopds_purchasetype: ["restaurant_purchase_types", "lookup"],
   shopdsrestro: ["restaurants", "master"],
 };
 
@@ -157,7 +173,7 @@ await writeFile(
   `${JSON.stringify(
     {
       snapshotAt: manifest.snapshotAt,
-      generatedFrom: "Supabase main verified phases A-D2",
+      generatedFrom: "Supabase main verified phases A-E",
       totals: {
         ...totals,
         tableRate: totals.mappedEntities / totals.entities,
