@@ -253,6 +253,14 @@ and calculations, bento quote children, payment and terms snapshots, comments,
 customer-tag assignments, and 722 file-metadata rows. File bytes were not
 copied, and query strings/fragments were removed from source file references.
 
+The private binary migration remains blocked. The fixed snapshot exposes
+exactly 2,711 valid file references, while the Bubble File Manager screenshot
+reports 4,198 total files. The missing 1,487-item inventory and a server-only
+Supabase secret are unavailable. A normalized, service-role-only `attachments`
+schema and private bucket migration are committed but have not been remotely
+applied; no attachment rows or objects were created. See
+`docs/migration/BUBBLE_FILE_MIGRATION_RUNBOOK.md`.
+
 All S3 target, distinct legacy-ID, and UUID counts match their sources. One
 customer-tag assignment has no matching customer row; its `customer_id`
 remains null and one open `data_quality_issues` row records the missing target.
@@ -276,7 +284,8 @@ tombstoned immediately after verification and returns HTTP 410.
 
 - Modified Date incremental and financial reconciliation
 - disposition of 19 open issues affecting 24 rows
-- Auth and file-byte migration decisions
+- complete 4,198-item File Manager export, server secret, and verified private
+  file-byte migration
 - durable worker-handler approval and gated source switch
 
 The singular `migration` table remains empty. No `migration_*` tables exist.

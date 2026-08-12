@@ -53,7 +53,7 @@ export const MIGRATION_RECONCILIATION_WARNINGS = [
   {
     key: "fileDiscovery",
     severity: "blocking",
-    value: "2,289+",
+    value: "1,487",
     status: "final_phase_pending",
   },
 ] as const;

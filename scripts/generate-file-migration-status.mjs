@@ -17,7 +17,7 @@ function collect(value, groupKey) {
     value.forEach((entry) => collect(entry, groupKey));
     return;
   }
-  if (typeof value !== "string" || !value.trim()) return;
+  if (typeof value !== "string" || !value.trim().startsWith("//")) return;
   references += 1;
   uniqueReferences.add(value.trim());
   groups.set(groupKey, (groups.get(groupKey) ?? 0) + 1);
@@ -50,24 +50,45 @@ const output = {
   sourceTypes: manifest.exports.length,
   references,
   uniqueFiles: uniqueReferences.size,
-  metadataMigrated: references,
+  expectedFiles: 4198,
+  inventoryComplete: false,
+  attachmentRows: 0,
   binaryMigrated: 0,
   checksumVerified: 0,
   failed: 0,
-  ownerEstimatedMinimum: 5000,
-  discoveryGapMinimum: Math.max(0, 5000 - uniqueReferences.size),
+  discoveryGap: Math.max(0, 4198 - uniqueReferences.size),
+  pageSize: 50,
   incrementalPolicy: {
     filter: "Modified Date > lastSuccessfulCheckpoint",
-    dedupeKey: "source URL + target object path + checksum",
-    batchSize: 100,
+    dedupeKey: "source URL hash + private object path + checksum",
+    concurrency: "4–8",
     resumable: true,
+    automaticDeletes: false,
   },
   byField,
+  safeSamples: byField.map(({ field, count }, index) => ({
+    sampleId: `aggregate-${index + 1}`,
+    fileName: `Redacted ${field.split(".").at(-1)} aggregate`,
+    size: null,
+    type: /(logo|image|png|svg)/i.test(field) ? "Image" : "Document",
+    uploadDate: null,
+    userId: "••••••••",
+    attachedTo: field.split(".")[0],
+    status: `Discovered only · ${count.toLocaleString()} references`,
+    private: true,
+  })),
 };
+
+const serialized = `${JSON.stringify(output, null, 2)}\n`;
+if (/https?:|\/\/[^*]|(?:^|["\s])\d{10,}x\d{10,}(?:["\s]|$)/m.test(serialized)) {
+  throw new Error(
+    "Refusing to emit a generated frontend file containing URLs or full Bubble IDs",
+  );
+}
 
 await writeFile(
   "src/data/file-migration-status.generated.json",
-  `${JSON.stringify(output, null, 2)}\n`,
+  serialized,
 );
 console.log(
   `Generated ${output.uniqueFiles} unique files from ${output.references} references.`,

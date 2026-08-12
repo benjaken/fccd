@@ -3073,77 +3073,167 @@ td:last-child {
   color: oklch(0.54 0.15 148);
 }
 
-.file-incremental-policy {
-  padding-bottom: 16px;
-}
-
-.file-incremental-policy dl {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  padding: 16px 18px;
-  margin: 0;
-}
-
-.file-incremental-policy dl > div {
-  display: grid;
-  gap: 4px;
-}
-
-.file-incremental-policy dt {
-  color: var(--muted-foreground);
-  font-size: 14px;
-}
-
-.file-incremental-policy dd {
-  margin: 0;
-  font-size: 14px;
-}
-
-.file-incremental-policy > button,
-.file-incremental-policy > p {
-  margin-left: 18px;
-}
-
-.file-incremental-policy > p {
+.file-inventory-gate {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 12px;
+  padding: 15px 16px;
+  border: 1px solid color-mix(in oklch, var(--destructive) 30%, var(--border));
+  border-radius: 12px;
+  background: color-mix(in oklch, var(--destructive) 5%, var(--card));
+}
+
+.file-inventory-gate > svg {
+  width: 20px;
+  flex: 0 0 auto;
+  color: var(--destructive);
+}
+
+.file-inventory-gate > div {
+  flex: 1;
+}
+
+.file-inventory-gate strong {
+  color: var(--foreground);
+}
+
+.file-inventory-gate p {
+  margin: 4px 0 0;
   color: var(--muted-foreground);
   font-size: 14px;
 }
 
-.file-incremental-policy > p svg {
-  width: 16px;
-  color: oklch(0.58 0.15 65);
+.file-manager-panel {
+  overflow: hidden;
 }
 
-.file-field-breakdown > div {
-  max-height: 420px;
-  overflow: auto;
-}
-
-.file-field-breakdown article {
+.file-manager-heading {
   display: flex;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 20px;
-  padding: 11px 18px;
+  gap: 16px;
+  padding: 17px 18px;
   border-bottom: 1px solid var(--border);
 }
 
-.file-discovery-warning {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 14px 16px;
-  border: 1px solid color-mix(in oklch, var(--destructive) 25%, var(--border));
-  border-radius: 10px;
-  color: var(--destructive);
+.file-manager-heading h2,
+.file-manager-heading p {
+  margin: 0;
+}
+
+.file-manager-heading h2 {
+  font-size: 16px;
+}
+
+.file-manager-heading p {
+  margin-top: 4px;
+  color: var(--muted-foreground);
   font-size: 14px;
 }
 
-.file-discovery-warning svg {
-  width: 18px;
+.file-manager-heading code {
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+
+.file-manager-toolbar {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.file-manager-toolbar > label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.file-manager-search {
+  width: min(520px, 100%);
+}
+
+.file-manager-search > div {
+  position: relative;
+}
+
+.file-manager-search svg {
+  position: absolute;
+  top: 11px;
+  left: 11px;
+  width: 17px;
+  pointer-events: none;
+}
+
+.file-manager-toolbar input[type="text"],
+.file-manager-toolbar input:not([type]),
+.file-manager-toolbar select {
+  height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  outline: 0;
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.file-manager-search input {
+  width: 100%;
+  padding: 0 12px 0 36px;
+}
+
+.file-manager-toolbar select {
+  min-width: 150px;
+  padding: 0 32px 0 11px;
+}
+
+.file-manager-toolbar .file-private-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 4px;
+  color: var(--foreground);
+  font-size: 14px;
+}
+
+.file-manager-panel table {
+  min-width: 1020px;
+}
+
+.file-manager-empty {
+  height: 100px;
+  text-align: center;
+}
+
+.file-manager-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 62px;
+  padding: 10px 18px;
+  border-top: 1px solid var(--border);
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+
+.file-manager-pagination > div {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.file-manager-pagination svg {
+  width: 17px;
+}
+
+.file-manager-pagination strong {
+  min-width: 60px;
+  color: var(--foreground);
+  text-align: center;
 }
 
 .migration-issue-table-wrap {
