@@ -4,6 +4,7 @@ import {
   useRef,
   useState,
   type ComponentType,
+  type ReactNode,
 } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -25,6 +26,7 @@ import {
   PackageCheck,
   PanelLeftClose,
   PanelLeftOpen,
+  RefreshCw,
   Search,
   Settings,
   ShoppingBasket,
@@ -45,7 +47,13 @@ import { MigrationWorkspace } from "@/components/MigrationWorkspace";
 import { ProfilePage } from "@/components/ProfilePage";
 import { QuotesListPage } from "@/components/QuotesListPage";
 import { Button } from "@/components/ui/button";
+import {
+  fetchDashboardData,
+  type DashboardData,
+  type DashboardJob,
+} from "@/lib/dashboard";
 import { useTheme } from "@/lib/use-theme";
+import { useAnimatedNumber } from "@/lib/use-animated-number";
 import { cn } from "@/lib/utils";
 
 type Icon = ComponentType<{ className?: string; strokeWidth?: number }>;
@@ -438,7 +446,7 @@ function OperationsShell() {
         <main className="main-content">
           <div className="page-transition" key={pageKey}>
             <Routes>
-              <Route path="/" element={<Dashboard />} />
+              <Route path="/" element={<Dashboard role={profile?.role} />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/quotes" element={<QuotesListPage />} />
               <Route path="*" element={<ModulePlaceholder section={section} />} />
@@ -512,8 +520,8 @@ function MetricCard({
   to,
 }: {
   label: string;
-  value: string;
-  detail: string;
+  value: ReactNode;
+  detail: ReactNode;
   icon: Icon;
   tone: "red" | "blue" | "green" | "amber";
   to: string;
@@ -533,106 +541,236 @@ function MetricCard({
   );
 }
 
-export function Dashboard() {
+const EMPTY_DASHBOARD: DashboardData = {
+  metrics: {
+    ordersToday: 0,
+    ordersChange: null,
+    revenueToday: 0,
+    revenueChange: null,
+    pendingDeliveries: 0,
+    lowStock: 0,
+  },
+  queues: {
+    highChanceQuotes: 0,
+    largeQuotes: 0,
+    unpaidOrders: 0,
+    unassignedDrivers: 0,
+    deliveredUnpaid: 0,
+  },
+  progress: {
+    confirmed: 0,
+    preparing: 0,
+    ready: 0,
+    shipping: 0,
+    completed: 0,
+  },
+  jobs: [],
+};
+
+type DashboardLoader = (role?: string | null) => Promise<DashboardData>;
+
+const defaultDashboardLoader: DashboardLoader = (role) =>
+  fetchDashboardData(new Date(), role);
+
+function AnimatedValue({
+  value,
+  format = (number) => Math.round(number).toLocaleString(),
+}: {
+  value: number;
+  format?: (value: number) => string;
+}) {
+  const animated = useAnimatedNumber(value);
+  return <span className="animated-number">{format(animated)}</span>;
+}
+
+function AnimatedChange({
+  value,
+  unavailable,
+  versusYesterday,
+}: {
+  value: number | null;
+  unavailable: string;
+  versusYesterday: string;
+}) {
+  const animated = useAnimatedNumber(value ?? 0);
+  if (value === null) return <>{unavailable}</>;
+  const sign = animated >= 0 ? "+" : "";
+  return (
+    <>
+      {sign}
+      {animated.toFixed(1)}% {versusYesterday}
+    </>
+  );
+}
+
+function jobStatus(
+  job: DashboardJob,
+  labels: {
+    completed: string;
+    shipping: string;
+    ready: string;
+    awaitingDriver: string;
+    preparing: string;
+    confirmed: string;
+  },
+) {
+  if (job.deliveryStatus === "己送達" || job.deliveryStatus === "已送達") {
+    return { label: labels.completed, tone: "green" };
+  }
+  if (job.deliveryStatus === "送貨途中") {
+    return { label: labels.shipping, tone: "blue" };
+  }
+  if (job.deliveryStatus === "待取貨") {
+    return { label: labels.ready, tone: "green" };
+  }
+  if (
+    job.deliveryStatus === "待接單" ||
+    job.deliveryStatus === "未派車隊"
+  ) {
+    return { label: labels.awaitingDriver, tone: "red" };
+  }
+  if (job.isSentToFactory) {
+    return { label: labels.preparing, tone: "amber" };
+  }
+  return { label: labels.confirmed, tone: "blue" };
+}
+
+export function Dashboard({
+  loadDashboard = defaultDashboardLoader,
+  role,
+}: {
+  loadDashboard?: DashboardLoader;
+  role?: string | null;
+}) {
   const { t, i18n } = useTranslation();
+  const [data, setData] = useState<DashboardData>(EMPTY_DASHBOARD);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const currency = new Intl.NumberFormat(i18n.language, {
     style: "currency",
     currency: "HKD",
     maximumFractionDigits: 0,
   });
+  const time = new Intl.DateTimeFormat(i18n.language, {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "Asia/Hong_Kong",
+  });
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setError(null);
+
+    void loadDashboard(role)
+      .then((result) => {
+        if (active) setData(result);
+      })
+      .catch((loadError: unknown) => {
+        if (!active) return;
+        const code =
+          typeof loadError === "object" &&
+          loadError &&
+          "code" in loadError &&
+          typeof loadError.code === "string"
+            ? loadError.code
+            : "dashboard_load_failed";
+        setError(code);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [loadDashboard, reloadKey, role]);
 
   const queues = [
     {
       label: t("dashboard.highChanceQuotes"),
-      count: 8,
+      count: data.queues.highChanceQuotes,
       tone: "red",
       to: "/quotes/high-chance",
     },
     {
       label: t("dashboard.largeQuotes"),
-      count: 3,
+      count: data.queues.largeQuotes,
       tone: "amber",
       to: "/quotes/large",
     },
     {
       label: t("dashboard.unpaidOrders"),
-      count: 12,
+      count: data.queues.unpaidOrders,
       tone: "blue",
       to: "/orders/unpaid",
     },
     {
       label: t("dashboard.unassignedDrivers"),
-      count: 5,
+      count: data.queues.unassignedDrivers,
       tone: "purple",
       to: "/delivery/unassigned",
     },
     {
       label: t("dashboard.deliveredUnpaid"),
-      count: 4,
+      count: data.queues.deliveredUnpaid,
       tone: "green",
       to: "/orders/delivered-unpaid",
     },
   ];
 
+  const progressTotal = Object.values(data.progress).reduce(
+    (total, count) => total + count,
+    0,
+  );
+  const progressWidth = (count: number) =>
+    `${progressTotal === 0 ? 0 : Math.max(2, (count / progressTotal) * 100)}%`;
   const progress = [
     {
       label: t("dashboard.confirmed"),
-      count: 18,
-      width: "82%",
+      count: data.progress.confirmed,
       to: "/orders?status=confirmed",
     },
     {
       label: t("dashboard.preparing"),
-      count: 12,
-      width: "64%",
+      count: data.progress.preparing,
       to: "/kitchen?status=preparing",
     },
     {
       label: t("dashboard.ready"),
-      count: 7,
-      width: "43%",
+      count: data.progress.ready,
       to: "/kitchen?status=ready",
     },
     {
       label: t("dashboard.shipping"),
-      count: 5,
-      width: "31%",
+      count: data.progress.shipping,
       to: "/delivery?status=shipping",
     },
     {
       label: t("dashboard.completed"),
-      count: 9,
-      width: "52%",
+      count: data.progress.completed,
       to: "/orders?status=completed",
     },
-  ];
+  ].map((item) => ({ ...item, width: progressWidth(item.count) }));
 
-  const jobs = [
-    {
-      no: "FC-260811-018",
-      customer: "One Harbour Square",
-      time: "11:30",
-      status: t("dashboard.preparingStatus"),
-      amount: currency.format(12680),
-      tone: "amber",
-    },
-    {
-      no: "FC-260811-021",
-      customer: "香港科技園",
-      time: "12:15",
-      status: t("dashboard.readyStatus"),
-      amount: currency.format(8960),
-      tone: "green",
-    },
-    {
-      no: "FC-260811-024",
-      customer: "Central Plaza",
-      time: "13:00",
-      status: t("dashboard.driverStatus"),
-      amount: currency.format(15420),
-      tone: "red",
-    },
-  ];
+  const statusLabels = {
+    completed: t("dashboard.completedStatus"),
+    shipping: t("dashboard.shippingStatus"),
+    ready: t("dashboard.readyStatus"),
+    awaitingDriver: t("dashboard.driverStatus"),
+    preparing: t("dashboard.preparingStatus"),
+    confirmed: t("dashboard.confirmedStatus"),
+  };
+  const jobTime = (job: DashboardJob) => {
+    if (job.shipOutTime?.trim()) return job.shipOutTime;
+    if (!job.deliveryAt) return t("common.notSet");
+    const formatted = time.format(new Date(job.deliveryAt));
+    return formatted === "24:00" || formatted === "00:00"
+      ? t("common.notSet")
+      : formatted;
+  };
 
   return (
     <>
@@ -643,6 +781,14 @@ export function Dashboard() {
           <p>{t("dashboard.description")}</p>
         </div>
         <div className="heading-actions">
+          <Button
+            variant="outline"
+            onClick={() => setReloadKey((key) => key + 1)}
+            disabled={loading}
+          >
+            <RefreshCw className={loading ? "spin" : undefined} />
+            {t("dashboard.refresh")}
+          </Button>
           <Button variant="outline" asChild>
             <Link to="/reports/daily">
               <FileText />
@@ -658,35 +804,103 @@ export function Dashboard() {
         </div>
       </section>
 
+      {error && (
+        <div className="dashboard-state dashboard-state-error" role="alert">
+          <div>
+            <strong>{t("dashboard.loadError")}</strong>
+            <span>{t("dashboard.loadErrorDescription")}</span>
+          </div>
+          <Button variant="outline" onClick={() => setReloadKey((key) => key + 1)}>
+            <RefreshCw />
+            {t("dashboard.retry")}
+          </Button>
+        </div>
+      )}
+
+      {loading && (
+        <div className="dashboard-loading" role="status">
+          <RefreshCw className="spin" />
+          {t("dashboard.loading")}
+        </div>
+      )}
+
       <section className="metrics-grid">
         <MetricCard
           label={t("dashboard.ordersToday")}
-          value={`42 ${t("dashboard.orderUnit")}`}
-          detail={`+12% ${t("dashboard.versusYesterday")}`}
+          value={
+            <>
+              <AnimatedValue value={data.metrics.ordersToday} />{" "}
+              {t("dashboard.orderUnit")}
+            </>
+          }
+          detail={
+            <AnimatedChange
+              value={data.metrics.ordersChange}
+              unavailable={t("dashboard.noComparison")}
+              versusYesterday={t("dashboard.versusYesterday")}
+            />
+          }
           icon={ClipboardList}
           tone="red"
           to="/orders"
         />
         <MetricCard
           label={t("dashboard.revenueToday")}
-          value={currency.format(128450)}
-          detail={`+8.6% ${t("dashboard.versusYesterday")}`}
+          value={
+            data.metrics.revenueToday === null ? (
+              t("dashboard.unavailable")
+            ) : (
+              <AnimatedValue
+                value={data.metrics.revenueToday}
+                format={(value) => currency.format(value)}
+              />
+            )
+          }
+          detail={
+            data.metrics.revenueToday === null ? (
+              t("dashboard.noFinanceAccess")
+            ) : (
+              <AnimatedChange
+                value={data.metrics.revenueChange}
+                unavailable={t("dashboard.noComparison")}
+                versusYesterday={t("dashboard.versusYesterday")}
+              />
+            )
+          }
           icon={CircleDollarSign}
           tone="green"
           to="/reports?view=revenue"
         />
         <MetricCard
           label={t("dashboard.deliveries")}
-          value={`9 ${t("dashboard.orderUnit")}`}
-          detail={`5 ${t("common.pending")}`}
+          value={
+            <>
+              <AnimatedValue value={data.metrics.pendingDeliveries} />{" "}
+              {t("dashboard.orderUnit")}
+            </>
+          }
+          detail={`${data.metrics.ordersToday} ${t("dashboard.ordersTodayTotal")}`}
           icon={Truck}
           tone="blue"
           to="/delivery"
         />
         <MetricCard
           label={t("dashboard.lowStock")}
-          value={`16 ${t("dashboard.itemUnit")}`}
-          detail={t("dashboard.urgent")}
+          value={
+            data.metrics.lowStock === null ? (
+              t("dashboard.unavailable")
+            ) : (
+              <>
+                <AnimatedValue value={data.metrics.lowStock} />{" "}
+                {t("dashboard.itemUnit")}
+              </>
+            )
+          }
+          detail={
+            data.metrics.lowStock === null
+              ? t("dashboard.noInventoryAccess")
+              : t("dashboard.lowStockDefinition")
+          }
           icon={Boxes}
           tone="amber"
           to="/inventory/low-stock"
@@ -704,7 +918,9 @@ export function Dashboard() {
               <Link key={item.label} to={item.to} className="queue-item">
                 <span className={cn("queue-dot", item.tone)} />
                 <span>{item.label}</span>
-                <strong>{item.count}</strong>
+                <strong>
+                  <AnimatedValue value={item.count} />
+                </strong>
                 <ChevronRight />
               </Link>
             ))}
@@ -721,7 +937,9 @@ export function Dashboard() {
               <Link className="progress-row" key={item.label} to={item.to}>
                 <div>
                   <span>{item.label}</span>
-                  <strong>{item.count}</strong>
+                  <strong>
+                    <AnimatedValue value={item.count} />
+                  </strong>
                 </div>
                 <div className="progress-track">
                   <span style={{ width: item.width }} />
@@ -752,33 +970,58 @@ export function Dashboard() {
               </tr>
             </thead>
             <tbody>
-              {jobs.map((job) => (
-                <tr key={job.no}>
+              {data.jobs.map((job) => {
+                const status = jobStatus(job, statusLabels);
+                return (
+                <tr key={job.id}>
                   <td>
-                    <Link className="order-link" to={`/orders/${job.no}`}>
-                      {job.no}
+                    <Link className="order-link" to={`/orders/${job.id}`}>
+                      {job.orderNumber || t("common.notSet")}
                     </Link>
                   </td>
-                  <td>{job.customer}</td>
-                  <td>{job.time}</td>
+                  <td>{job.customerName || t("common.notSet")}</td>
+                  <td>{jobTime(job)}</td>
                   <td>
-                    <span className={cn("status-badge", job.tone)}>
-                      {job.status}
+                    <span className={cn("status-badge", status.tone)}>
+                      {status.label}
                     </span>
                   </td>
-                  <td>{job.amount}</td>
+                  <td>
+                    {job.amount === null ? (
+                      t("common.notSet")
+                    ) : (
+                      <AnimatedValue
+                        value={job.amount}
+                        format={(value) =>
+                          job.currency === "HKD"
+                            ? currency.format(value)
+                            : `${job.currency} ${Math.round(value).toLocaleString()}`
+                        }
+                      />
+                    )}
+                  </td>
                   <td>
                     <Button variant="ghost" size="icon" asChild>
                       <Link
-                        to={`/orders/${job.no}`}
-                        aria-label={`${t("dashboard.no")} ${job.no}`}
+                        to={`/orders/${job.id}`}
+                        aria-label={`${t("dashboard.no")} ${
+                          job.orderNumber || job.id
+                        }`}
                       >
                         <ChevronRight />
                       </Link>
                     </Button>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
+              {!loading && data.jobs.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="dashboard-empty-row">
+                    {t("dashboard.emptyJobs")}
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

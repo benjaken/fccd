@@ -914,6 +914,53 @@ a {
   font-size: 14px;
 }
 
+.animated-number {
+  font-variant-numeric: tabular-nums;
+}
+
+.dashboard-loading,
+.dashboard-state {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: -10px 0 14px;
+  padding: 11px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+
+.dashboard-loading svg,
+.dashboard-state svg {
+  width: 17px;
+}
+
+.dashboard-state {
+  justify-content: space-between;
+}
+
+.dashboard-state > div {
+  display: grid;
+  gap: 2px;
+}
+
+.dashboard-state strong {
+  color: var(--foreground);
+}
+
+.dashboard-state-error {
+  border-color: color-mix(in oklch, var(--destructive) 25%, var(--border));
+  background: color-mix(in oklch, var(--destructive) 4%, var(--card));
+}
+
+.dashboard-empty-row {
+  height: 92px;
+  color: var(--muted-foreground);
+  text-align: center;
+}
+
 .dashboard-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
@@ -1073,6 +1120,7 @@ a {
     color-mix(in oklch, var(--primary) 74%, white),
     var(--primary)
   );
+  transition: width 700ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .table-wrap {
@@ -1163,6 +1211,11 @@ td:last-child {
   color: var(--primary);
 }
 
+.status-badge.blue {
+  background: oklch(0.93 0.04 250);
+  color: oklch(0.48 0.15 250);
+}
+
 .dark .status-badge.amber {
   background: oklch(0.31 0.06 70);
   color: oklch(0.8 0.11 80);
@@ -1171,6 +1224,11 @@ td:last-child {
 .dark .status-badge.green {
   background: oklch(0.29 0.06 148);
   color: oklch(0.75 0.11 148);
+}
+
+.dark .status-badge.blue {
+  background: oklch(0.29 0.06 250);
+  color: oklch(0.75 0.11 250);
 }
 
 .quotes-page {
