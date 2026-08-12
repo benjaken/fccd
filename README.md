@@ -54,6 +54,9 @@ python3 scripts/export_bubble.py export --resume
 Exports are written to the Git-ignored `.migration-data/` directory and may
 contain sensitive raw records. If authentication becomes necessary, provide
 `BUBBLE_API_TOKEN` through the environment; never pass it in chat or commit it.
+Collections above Bubble's 50,000-cursor boundary are automatically partitioned
+by `Created Date`. Use `--force <type>` together with `--resume` to rebuild one
+previously completed export.
 
 ## Development workflow
 

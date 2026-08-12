@@ -10,6 +10,7 @@ import os
 import re
 import sys
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -19,6 +20,7 @@ from urllib.request import Request, urlopen
 
 DEFAULT_BASE_URL = "https://cs.foodchannels-catering.com/api/1.1"
 DEFAULT_OUTPUT = Path(".migration-data")
+MAX_BUBBLE_CURSOR = 50_000
 
 
 def request_json(url: str, token: str | None, retries: int = 4) -> dict[str, Any]:
@@ -119,32 +121,179 @@ def export_collection(
     page_size: int,
     delay: float,
 ) -> int:
-    cursor = 0
+    def request_page(
+        cursor: int,
+        limit: int,
+        constraints: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
+        query_values: dict[str, Any] = {"limit": limit, "cursor": cursor}
+        if constraints:
+            query_values["constraints"] = json.dumps(
+                constraints, separators=(",", ":")
+            )
+        query = urlencode(query_values)
+        encoded_path = quote(path, safe="/")
+        return request_json(
+            f"{base_url.rstrip('/')}{encoded_path}?{query}", token
+        ).get("response", {})
+
+    def response_total(response: dict[str, Any]) -> int:
+        results = response.get("results", [])
+        count = response.get("count")
+        if not isinstance(count, int):
+            count = len(results) if isinstance(results, list) else 0
+        return int(response.get("cursor") or 0) + count + int(
+            response.get("remaining") or 0
+        )
+
+    def bounded_constraints(start: datetime, end: datetime) -> list[dict[str, Any]]:
+        previous_millisecond = start.timestamp() - 0.001
+        lower_bound = datetime.fromtimestamp(
+            previous_millisecond, timezone.utc
+        ).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+        upper_bound = end.isoformat(timespec="milliseconds").replace("+00:00", "Z")
+        return [
+            {
+                "key": "Created Date",
+                "constraint_type": "greater than",
+                "value": lower_bound,
+            },
+            {
+                "key": "Created Date",
+                "constraint_type": "less than",
+                "value": upper_bound,
+            },
+        ]
+
+    def partition_count(constraints: list[dict[str, Any]] | None) -> int:
+        return response_total(request_page(0, 1, constraints))
+
+    first_response = request_page(0, 1)
+    expected_total = response_total(first_response)
+    partitions: list[tuple[str, list[dict[str, Any]] | None, int]] = [
+        ("all", None, expected_total)
+    ]
+
+    if expected_total > MAX_BUBBLE_CURSOR:
+        first_results = first_response.get("results", [])
+        first_created_at = (
+            first_results[0].get("Created Date")
+            if first_results and isinstance(first_results[0], dict)
+            else None
+        )
+        if not isinstance(first_created_at, str):
+            raise RuntimeError(
+                f"{path} exceeds {MAX_BUBBLE_CURSOR} records but has no "
+                "Created Date for automatic partitioning"
+            )
+
+        first_year = datetime.fromisoformat(
+            first_created_at.replace("Z", "+00:00")
+        ).year
+        current_year = datetime.now(timezone.utc).year
+        partitions = []
+
+        for year in range(first_year, current_year + 1):
+            year_start = datetime(year, 1, 1, tzinfo=timezone.utc)
+            year_end = datetime(year + 1, 1, 1, tzinfo=timezone.utc)
+            year_constraints = bounded_constraints(year_start, year_end)
+            year_count = partition_count(year_constraints)
+            if year_count == 0:
+                continue
+            if year_count <= MAX_BUBBLE_CURSOR:
+                partitions.append((str(year), year_constraints, year_count))
+                continue
+
+            for month in range(1, 13):
+                month_start = datetime(year, month, 1, tzinfo=timezone.utc)
+                month_end = (
+                    datetime(year + 1, 1, 1, tzinfo=timezone.utc)
+                    if month == 12
+                    else datetime(year, month + 1, 1, tzinfo=timezone.utc)
+                )
+                month_constraints = bounded_constraints(month_start, month_end)
+                month_count = partition_count(month_constraints)
+                if month_count > MAX_BUBBLE_CURSOR:
+                    raise RuntimeError(
+                        f"{path} partition {year}-{month:02d} still exceeds "
+                        f"{MAX_BUBBLE_CURSOR}; a smaller partition is required"
+                    )
+                if month_count:
+                    partitions.append(
+                        (
+                            f"{year}-{month:02d}",
+                            month_constraints,
+                            month_count,
+                        )
+                    )
+
+        partition_total = sum(count for _, _, count in partitions)
+        if partition_total != expected_total:
+            raise RuntimeError(
+                f"{path} partition counts total {partition_total}, expected "
+                f"{expected_total}"
+            )
+        print(
+            f"  Partitioning {expected_total} records into "
+            f"{len(partitions)} Created Date ranges."
+        )
+
     total = 0
+    seen_ids: set[str] = set()
     temporary = destination.with_suffix(f"{destination.suffix}.tmp")
     temporary.parent.mkdir(parents=True, exist_ok=True)
 
     with temporary.open("w", encoding="utf-8") as stream:
-        while True:
-            query = urlencode({"limit": page_size, "cursor": cursor})
-            encoded_path = quote(path, safe="/")
-            payload = request_json(f"{base_url.rstrip('/')}{encoded_path}?{query}", token)
-            response = payload.get("response", {})
-            results = response.get("results", [])
-            if not isinstance(results, list):
-                raise RuntimeError(f"{path} returned an invalid results payload")
+        for label, constraints, partition_expected in partitions:
+            cursor = 0
+            partition_exported = 0
+            while True:
+                response = request_page(cursor, page_size, constraints)
+                results = response.get("results", [])
+                if not isinstance(results, list):
+                    raise RuntimeError(f"{path} returned an invalid results payload")
 
-            for record in results:
-                stream.write(json.dumps(record, ensure_ascii=False, separators=(",", ":")))
-                stream.write("\n")
+                for record in results:
+                    legacy_id = record.get("_id") if isinstance(record, dict) else None
+                    if not isinstance(legacy_id, str):
+                        raise RuntimeError(f"{path} returned a record without _id")
+                    if legacy_id in seen_ids:
+                        raise RuntimeError(
+                            f"{path} returned duplicate _id {legacy_id} "
+                            f"across partitions"
+                        )
+                    seen_ids.add(legacy_id)
+                    stream.write(
+                        json.dumps(
+                            record,
+                            ensure_ascii=False,
+                            separators=(",", ":"),
+                        )
+                    )
+                    stream.write("\n")
 
-            count = len(results)
-            total += count
-            remaining = response.get("remaining")
-            if count == 0 or remaining == 0:
-                break
-            cursor += count
-            time.sleep(delay)
+                count = len(results)
+                total += count
+                partition_exported += count
+                remaining = int(response.get("remaining") or 0)
+                if remaining == 0:
+                    break
+                if count == 0:
+                    raise RuntimeError(
+                        f"{path} partition {label} stopped at cursor {cursor} "
+                        f"with {remaining} records remaining"
+                    )
+                cursor += count
+                time.sleep(delay)
+
+            if partition_exported != partition_expected:
+                raise RuntimeError(
+                    f"{path} partition {label} exported {partition_exported}, "
+                    f"expected {partition_expected}"
+                )
+
+    if total != expected_total:
+        raise RuntimeError(f"{path} exported {total}, expected {expected_total}")
 
     temporary.replace(destination)
     return total
@@ -154,6 +303,7 @@ def export_all(args: argparse.Namespace) -> int:
     swagger = load_swagger(args.base_url, args.output, args.token)
     available = collection_paths(swagger)
     requested_names = args.type or []
+    forced_names = {name.casefold() for name in (args.force or [])}
     available_by_name = {endpoint_name(path).casefold(): path for path in available}
     selected = []
     missing = []
@@ -191,7 +341,12 @@ def export_all(args: argparse.Namespace) -> int:
         previous = next(
             (item for item in manifest["exports"] if item.get("path") == path), None
         )
-        if args.resume and previous and (args.output / "objects" / filename).exists():
+        if (
+            args.resume
+            and name.casefold() not in forced_names
+            and previous
+            and (args.output / "objects" / filename).exists()
+        ):
             print(f"[{index}/{len(selected)}] Skipping {name} (already exported).")
             continue
         print(f"[{index}/{len(selected)}] Exporting {name}...", flush=True)
@@ -264,6 +419,11 @@ def parser() -> argparse.ArgumentParser:
         "--resume",
         action="store_true",
         help="keep completed exports from the existing manifest",
+    )
+    export_parser.add_argument(
+        "--force",
+        action="append",
+        help="re-export this API type even when --resume has a completed file",
     )
     export_parser.set_defaults(handler=export_all)
     return result
