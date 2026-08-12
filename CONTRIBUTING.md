@@ -35,12 +35,44 @@ Before coding, verify that the branch merge base is the current remote
 git merge-base --is-ancestor origin/main HEAD
 ```
 
+## UI test case policy
+
+Every UI-related change must include automated test cases in the repository
+root [`test/`](test/) directory before the work is considered complete.
+
+This applies to new or changed:
+
+- components, layouts, navigation, and responsive behavior;
+- forms, validation, loading, empty, error, and success states;
+- authentication and permission-dependent UI;
+- language, theme, accessibility, and user interactions;
+- any user-visible regression fix.
+
+When an existing feature's approved behavior changes, update its corresponding
+test case in the same commit. When implementation changes without an approved
+behavior change, the existing test must continue to pass. Do not remove,
+weaken, skip, or rewrite a test merely to hide a regression.
+
+Test files must:
+
+- live under `test/`;
+- use the `<feature>.test.tsx` naming convention;
+- assert observable user behavior rather than private implementation details;
+- cover the relevant success, validation, and failure states;
+- remain deterministic and must not call production services or mutate
+  production data.
+
+`main` builds must run the complete automated suite. The project enforces this
+through `npm run build`, which executes `npm run test` before TypeScript and
+the production bundle build. A failed test blocks the build and integration.
+
 ## Completing work
 
 Run checks appropriate to the changed scope. For the frontend baseline:
 
 ```bash
 npm run lint
+npm run test
 npm run build
 ```
 

@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useState, type ComponentType } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentType,
+} from "react";
 import { useTranslation } from "react-i18next";
 import {
   Bell,
@@ -13,6 +19,7 @@ import {
   FileText,
   HandCoins,
   LayoutDashboard,
+  LogOut,
   Menu,
   Moon,
   PackageCheck,
@@ -24,6 +31,7 @@ import {
   Store,
   Sun,
   Truck,
+  UserRound,
   Users,
   Utensils,
   Warehouse,
@@ -34,6 +42,7 @@ import { Link, NavLink, Route, Routes, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/auth/AuthProvider";
 import { DataMigrationPage } from "@/components/DataMigrationPage";
 import { LoginPage } from "@/components/LoginPage";
+import { ProfilePage } from "@/components/ProfilePage";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/lib/use-theme";
 import { cn } from "@/lib/utils";
@@ -142,13 +151,56 @@ function Brand() {
   );
 }
 
+export function CurrentDateTime({
+  initialNow,
+  live = true,
+}: {
+  initialNow?: Date;
+  live?: boolean;
+}) {
+  const { t, i18n } = useTranslation();
+  const [now, setNow] = useState(initialNow ?? new Date());
+
+  useEffect(() => {
+    if (!live) return;
+
+    const timer = window.setInterval(() => setNow(new Date()), 1_000);
+    return () => window.clearInterval(timer);
+  }, [live]);
+
+  const date = new Intl.DateTimeFormat(i18n.language, {
+    month: "short",
+    day: "numeric",
+    weekday: "short",
+    timeZone: "Asia/Hong_Kong",
+  }).format(now);
+  const time = new Intl.DateTimeFormat(i18n.language, {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+    timeZone: "Asia/Hong_Kong",
+  }).format(now);
+
+  return (
+    <div className="workspace-context">
+      <span className="status-pulse" />
+      <span>{t("common.today")}</span>
+      <strong>{date}</strong>
+      <time dateTime={now.toISOString()}>{time}</time>
+    </div>
+  );
+}
+
 function OperationsShell() {
   const { t, i18n } = useTranslation();
-  const { user, signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const location = useLocation();
   const { dark, toggleTheme } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   const section = sectionFromPath(location.pathname);
   const sideItems = secondaryNav[section] ?? secondaryNav.overview;
@@ -161,7 +213,28 @@ function OperationsShell() {
 
   useEffect(() => {
     setMobileMenuOpen(false);
+    setUserMenuOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (!userMenuOpen) return;
+
+    const closeMenu = (event: PointerEvent) => {
+      if (!userMenuRef.current?.contains(event.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setUserMenuOpen(false);
+    };
+
+    document.addEventListener("pointerdown", closeMenu);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeMenu);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [userMenuOpen]);
 
   const pageKey = useMemo(() => location.pathname.replaceAll("/", "-"), [
     location.pathname,
@@ -250,23 +323,57 @@ function OperationsShell() {
             <Bell />
             <span className="notification-dot" />
           </Button>
-          <button
-            className="user-menu"
-            type="button"
-            onClick={() => void signOut()}
-            title={t("common.signOut")}
-          >
-            <span className="avatar">
-              {(user?.email?.slice(0, 2) || "FC").toUpperCase()}
-            </span>
-            <span className="user-copy">
-              <strong>
-                {user?.email?.split("@")[0] || "Food Channel Catering"}
-              </strong>
-              <small>{t("user.role")}</small>
-            </span>
-            <ChevronDown />
-          </button>
+          <div className="user-menu-wrap" ref={userMenuRef}>
+            <button
+              className="user-menu"
+              type="button"
+              onClick={() => setUserMenuOpen((current) => !current)}
+              aria-haspopup="menu"
+              aria-expanded={userMenuOpen}
+            >
+              <span className="avatar">
+                {(
+                  profile?.user_name?.slice(0, 2) ||
+                  user?.email?.slice(0, 2) ||
+                  "FC"
+                ).toUpperCase()}
+              </span>
+              <span className="user-copy">
+                <strong>
+                  {profile?.user_name ||
+                    user?.email?.split("@")[0] ||
+                    "Food Channel Catering"}
+                </strong>
+                <small>{profile?.role || t("common.notSet")}</small>
+              </span>
+              <ChevronDown />
+            </button>
+            {userMenuOpen && (
+              <div className="user-dropdown" role="menu">
+                <div className="user-dropdown-identity">
+                  <strong>
+                    {profile?.user_name ||
+                      user?.email?.split("@")[0] ||
+                      t("common.notSet")}
+                  </strong>
+                  <span>{profile?.email || user?.email}</span>
+                </div>
+                <Link className="user-dropdown-item" to="/profile" role="menuitem">
+                  <UserRound />
+                  <span>{t("user.personalProfile")}</span>
+                </Link>
+                <button
+                  className="user-dropdown-item danger"
+                  type="button"
+                  role="menuitem"
+                  onClick={() => void signOut()}
+                >
+                  <LogOut />
+                  <span>{t("common.signOut")}</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
@@ -287,18 +394,7 @@ function OperationsShell() {
             </NavLink>
           ))}
         </nav>
-        <div className="workspace-context">
-          <span className="status-pulse" />
-          <span>{t("common.today")}</span>
-          <strong>
-            {new Intl.DateTimeFormat(i18n.language, {
-              month: "short",
-              day: "numeric",
-              weekday: "short",
-              timeZone: "Asia/Hong_Kong",
-            }).format(new Date())}
-          </strong>
-        </div>
+        <CurrentDateTime />
       </div>
 
       <div
@@ -342,6 +438,7 @@ function OperationsShell() {
           <div className="page-transition" key={pageKey}>
             <Routes>
               <Route path="/" element={<Dashboard />} />
+              <Route path="/profile" element={<ProfilePage />} />
               <Route path="*" element={<ModulePlaceholder section={section} />} />
             </Routes>
           </div>
@@ -383,6 +480,20 @@ function OperationsShell() {
                 </NavLink>
               ))}
             </nav>
+            <div className="mobile-account-actions">
+              <Link className="sidebar-link" to="/profile">
+                <UserRound />
+                <span>{t("user.personalProfile")}</span>
+              </Link>
+              <button
+                className="sidebar-link danger"
+                type="button"
+                onClick={() => void signOut()}
+              >
+                <LogOut />
+                <span>{t("common.signOut")}</span>
+              </button>
+            </div>
           </aside>
         </div>
       )}
@@ -396,15 +507,17 @@ function MetricCard({
   detail,
   icon: MetricIcon,
   tone,
+  to,
 }: {
   label: string;
   value: string;
   detail: string;
   icon: Icon;
   tone: "red" | "blue" | "green" | "amber";
+  to: string;
 }) {
   return (
-    <article className="metric-card">
+    <Link className="metric-card" to={to}>
       <div className={cn("metric-icon", tone)}>
         <MetricIcon />
       </div>
@@ -413,11 +526,12 @@ function MetricCard({
         <strong>{value}</strong>
         <small>{detail}</small>
       </div>
-    </article>
+      <ChevronRight className="metric-chevron" />
+    </Link>
   );
 }
 
-function Dashboard() {
+export function Dashboard() {
   const { t, i18n } = useTranslation();
   const currency = new Intl.NumberFormat(i18n.language, {
     style: "currency",
@@ -426,19 +540,69 @@ function Dashboard() {
   });
 
   const queues = [
-    { label: t("dashboard.highChanceQuotes"), count: 8, tone: "red" },
-    { label: t("dashboard.largeQuotes"), count: 3, tone: "amber" },
-    { label: t("dashboard.unpaidOrders"), count: 12, tone: "blue" },
-    { label: t("dashboard.unassignedDrivers"), count: 5, tone: "purple" },
-    { label: t("dashboard.deliveredUnpaid"), count: 4, tone: "green" },
+    {
+      label: t("dashboard.highChanceQuotes"),
+      count: 8,
+      tone: "red",
+      to: "/quotes/high-chance",
+    },
+    {
+      label: t("dashboard.largeQuotes"),
+      count: 3,
+      tone: "amber",
+      to: "/quotes/large",
+    },
+    {
+      label: t("dashboard.unpaidOrders"),
+      count: 12,
+      tone: "blue",
+      to: "/orders/unpaid",
+    },
+    {
+      label: t("dashboard.unassignedDrivers"),
+      count: 5,
+      tone: "purple",
+      to: "/delivery/unassigned",
+    },
+    {
+      label: t("dashboard.deliveredUnpaid"),
+      count: 4,
+      tone: "green",
+      to: "/orders/delivered-unpaid",
+    },
   ];
 
   const progress = [
-    { label: t("dashboard.confirmed"), count: 18, width: "82%" },
-    { label: t("dashboard.preparing"), count: 12, width: "64%" },
-    { label: t("dashboard.ready"), count: 7, width: "43%" },
-    { label: t("dashboard.shipping"), count: 5, width: "31%" },
-    { label: t("dashboard.completed"), count: 9, width: "52%" },
+    {
+      label: t("dashboard.confirmed"),
+      count: 18,
+      width: "82%",
+      to: "/orders?status=confirmed",
+    },
+    {
+      label: t("dashboard.preparing"),
+      count: 12,
+      width: "64%",
+      to: "/kitchen?status=preparing",
+    },
+    {
+      label: t("dashboard.ready"),
+      count: 7,
+      width: "43%",
+      to: "/kitchen?status=ready",
+    },
+    {
+      label: t("dashboard.shipping"),
+      count: 5,
+      width: "31%",
+      to: "/delivery?status=shipping",
+    },
+    {
+      label: t("dashboard.completed"),
+      count: 9,
+      width: "52%",
+      to: "/orders?status=completed",
+    },
   ];
 
   const jobs = [
@@ -477,13 +641,17 @@ function Dashboard() {
           <p>{t("dashboard.description")}</p>
         </div>
         <div className="heading-actions">
-          <Button variant="outline">
-            <FileText />
-            {t("dashboard.export")}
+          <Button variant="outline" asChild>
+            <Link to="/reports/daily">
+              <FileText />
+              {t("dashboard.export")}
+            </Link>
           </Button>
-          <Button>
-            <span className="plus">+</span>
-            {t("dashboard.newOrder")}
+          <Button asChild>
+            <Link to="/orders/new">
+              <span className="plus">+</span>
+              {t("dashboard.newOrder")}
+            </Link>
           </Button>
         </div>
       </section>
@@ -495,6 +663,7 @@ function Dashboard() {
           detail={`+12% ${t("dashboard.versusYesterday")}`}
           icon={ClipboardList}
           tone="red"
+          to="/orders"
         />
         <MetricCard
           label={t("dashboard.revenueToday")}
@@ -502,6 +671,7 @@ function Dashboard() {
           detail={`+8.6% ${t("dashboard.versusYesterday")}`}
           icon={CircleDollarSign}
           tone="green"
+          to="/reports?view=revenue"
         />
         <MetricCard
           label={t("dashboard.deliveries")}
@@ -509,6 +679,7 @@ function Dashboard() {
           detail={`5 ${t("common.pending")}`}
           icon={Truck}
           tone="blue"
+          to="/delivery"
         />
         <MetricCard
           label={t("dashboard.lowStock")}
@@ -516,6 +687,7 @@ function Dashboard() {
           detail={t("dashboard.urgent")}
           icon={Boxes}
           tone="amber"
+          to="/inventory/low-stock"
         />
       </section>
 
@@ -527,12 +699,12 @@ function Dashboard() {
           />
           <div className="queue-list">
             {queues.map((item) => (
-              <button key={item.label} type="button" className="queue-item">
+              <Link key={item.label} to={item.to} className="queue-item">
                 <span className={cn("queue-dot", item.tone)} />
                 <span>{item.label}</span>
                 <strong>{item.count}</strong>
                 <ChevronRight />
-              </button>
+              </Link>
             ))}
           </div>
         </article>
@@ -544,7 +716,7 @@ function Dashboard() {
           />
           <div className="progress-list">
             {progress.map((item) => (
-              <div className="progress-row" key={item.label}>
+              <Link className="progress-row" key={item.label} to={item.to}>
                 <div>
                   <span>{item.label}</span>
                   <strong>{item.count}</strong>
@@ -552,7 +724,7 @@ function Dashboard() {
                 <div className="progress-track">
                   <span style={{ width: item.width }} />
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </article>
@@ -563,6 +735,7 @@ function Dashboard() {
           title={t("dashboard.productionTitle")}
           description={t("dashboard.productionDescription")}
           action={t("common.viewAll")}
+          actionTo="/kitchen"
         />
         <div className="table-wrap">
           <table>
@@ -580,7 +753,9 @@ function Dashboard() {
               {jobs.map((job) => (
                 <tr key={job.no}>
                   <td>
-                    <strong>{job.no}</strong>
+                    <Link className="order-link" to={`/orders/${job.no}`}>
+                      {job.no}
+                    </Link>
                   </td>
                   <td>{job.customer}</td>
                   <td>{job.time}</td>
@@ -591,8 +766,13 @@ function Dashboard() {
                   </td>
                   <td>{job.amount}</td>
                   <td>
-                    <Button variant="ghost" size="icon">
-                      <ChevronRight />
+                    <Button variant="ghost" size="icon" asChild>
+                      <Link
+                        to={`/orders/${job.no}`}
+                        aria-label={`${t("dashboard.no")} ${job.no}`}
+                      >
+                        <ChevronRight />
+                      </Link>
                     </Button>
                   </td>
                 </tr>
@@ -609,10 +789,12 @@ function PanelHeader({
   title,
   description,
   action,
+  actionTo,
 }: {
   title: string;
   description: string;
   action?: string;
+  actionTo?: string;
 }) {
   return (
     <header className="panel-header">
@@ -620,10 +802,12 @@ function PanelHeader({
         <h2>{title}</h2>
         <p>{description}</p>
       </div>
-      {action && (
-        <Button variant="ghost">
-          {action}
-          <ChevronRight />
+      {action && actionTo && (
+        <Button variant="ghost" asChild>
+          <Link to={actionTo}>
+            {action}
+            <ChevronRight />
+          </Link>
         </Button>
       )}
     </header>
@@ -651,10 +835,10 @@ function ModulePlaceholder({ section }: { section: string }) {
 }
 
 function AuthGate() {
-  const { session, loading } = useAuth();
+  const { session, loading, profileLoading } = useAuth();
   const { t } = useTranslation();
 
-  if (loading) {
+  if (loading || (session && profileLoading)) {
     return (
       <main className="auth-loading">
         <span className="auth-loading-mark">FC</span>
