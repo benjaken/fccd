@@ -72,6 +72,31 @@ and packages were already idempotently upserted. The query was changed to
 1,000-row pagination, the import resumed successfully, and the one-time
 endpoint was then disabled with HTTP 410.
 
+## Phase C import
+
+| Target table | Imported | Unresolved UUID FKs |
+|---|---:|---:|
+| `orders` | 5,922 | 0 |
+| `order_lines` | 61,073 | 0 |
+| `payments` | 4,711 | 0 |
+| `deliveries` | 3,048 | 0 |
+| **Total** | **74,754** | **0** |
+
+`s_order` was imported in four Created Date partitions to avoid Bubble's
+50,000-cursor boundary. The one-time importer was disabled with HTTP 410 after
+completion.
+
+The imported financial sums differ from the earlier report snapshot:
+
+- `orders.grand_total`: HKD 26,384,837.10
+- report snapshot: HKD 26,383,281.10
+- difference: HKD 1,556.00
+- `orders.shipping_fee` difference: HKD 50.00
+
+Counts and UUID relationships reconcile, but production records were modified
+after the report export. A Modified Date incremental pass is required before
+financial sign-off.
+
 ## Security notes
 
 - The RLS advisor reports `rls_enabled_no_policy` informational notices. This
@@ -84,7 +109,6 @@ endpoint was then disabled with HTTP 410.
 
 ## Not yet imported
 
-- `orders`, `order_lines`, `payments`, `deliveries`
 - meat, inventory, restaurant facts, files and Auth migration
 - the 18 known orphan references
 
