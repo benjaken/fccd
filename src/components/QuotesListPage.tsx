@@ -101,10 +101,12 @@ export function QuotesListPage({
 
   const availableStatuses = useMemo(
     () =>
-      [...new Set(items.map((quote) => quote.quoteStatus).filter(Boolean))].sort(
-        (left, right) => String(left).localeCompare(String(right)),
-      ) as string[],
-    [items],
+      [
+        ...new Set(
+          [status, ...items.map((quote) => quote.quoteStatus)].filter(Boolean),
+        ),
+      ].sort((left, right) => String(left).localeCompare(String(right))) as string[],
+    [items, status],
   );
 
   const submitSearch = (event: FormEvent<HTMLFormElement>) => {

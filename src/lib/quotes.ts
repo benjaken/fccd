@@ -38,7 +38,10 @@ type QuoteRow = {
 };
 
 function safeSearchTerm(value: string) {
-  return value.replace(/[(),.%_*]/g, " ").replace(/\s+/g, " ").trim();
+  return value
+    .replace(/[^\p{L}\p{N}\s@+\-]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 export async function fetchQuotes({
