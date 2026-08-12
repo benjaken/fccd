@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -80,7 +80,8 @@ describe("Live dashboard data", () => {
     expect(screen.getByRole("link", { name: /低庫存項目\s*9 項/ }))
       .toBeInTheDocument();
     expect(screen.getByText("香港女童軍總會")).toBeInTheDocument();
-    expect(screen.getByText("待出貨")).toBeInTheDocument();
+    expect(within(screen.getByRole("table")).getByText("待出貨"))
+      .toBeInTheDocument();
     expect(loadDashboard).toHaveBeenCalledWith("Super Admin");
   });
 

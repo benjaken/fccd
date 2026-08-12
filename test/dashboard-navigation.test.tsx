@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, useLocation } from "react-router-dom";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { Dashboard } from "@/App";
 import i18n from "@/i18n";
@@ -69,6 +69,16 @@ function renderDashboard() {
 describe("Dashboard navigation", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("zh-HK");
+    vi.mocked(window.matchMedia).mockImplementation((query) => ({
+      matches: query.includes("prefers-reduced-motion"),
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
   });
 
   it.each([
@@ -87,10 +97,9 @@ describe("Dashboard navigation", () => {
   ])("links %s to %s", (name, target) => {
     renderDashboard();
 
-    expect(screen.getByRole("link", { name: new RegExp(name) })).toHaveAttribute(
-      "href",
-      target,
-    );
+    expect(
+      screen.getByRole("link", { name: new RegExp(`^${name}`) }),
+    ).toHaveAttribute("href", target);
   });
 
   it("opens the selected order detail page", async () => {
