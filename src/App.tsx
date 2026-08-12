@@ -43,6 +43,7 @@ import { AuthProvider, useAuth } from "@/auth/AuthProvider";
 import { LoginPage } from "@/components/LoginPage";
 import { MigrationWorkspace } from "@/components/MigrationWorkspace";
 import { ProfilePage } from "@/components/ProfilePage";
+import { QuotesListPage } from "@/components/QuotesListPage";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/lib/use-theme";
 import { cn } from "@/lib/utils";
@@ -88,7 +89,7 @@ const secondaryNav: Record<string, NavItem[]> = {
     { key: "assignDriver", to: "/orders/drivers", icon: Truck },
   ],
   quotes: [
-    { key: "quotes", to: "/quotes", icon: FileText },
+    { key: "cateringQuotes", to: "/quotes", icon: FileText },
     { key: "customers", to: "/quotes/customers", icon: Users },
     { key: "followUp", to: "/quotes/follow-up", icon: ClipboardCheck },
   ],
@@ -439,6 +440,7 @@ function OperationsShell() {
             <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/quotes" element={<QuotesListPage />} />
               <Route path="*" element={<ModulePlaceholder section={section} />} />
             </Routes>
           </div>
