@@ -160,7 +160,7 @@ describe("Migration workspace", () => {
     expect(screen.getByText("b_product_ingredients.S_order"))
       .toBeInTheDocument();
     expect(screen.getByText("HKD 1,556.00")).toBeInTheDocument();
-    expect(screen.getByText("2,289+")).toBeInTheDocument();
+    expect(screen.getByText("1,487")).toBeInTheDocument();
     expect(screen.getAllByText(/UUID remains null/)).toHaveLength(3);
   });
 
@@ -176,19 +176,20 @@ describe("Migration workspace", () => {
     expect(screen.getAllByText("Database verified").length).toBeGreaterThan(1);
   });
 
-  it("shows incremental file migration progress on a dedicated page", () => {
+  it("shows the exact file inventory gate on a dedicated page", () => {
     renderWorkspace("/migration/files");
 
     expect(
-      screen.getByRole("heading", { name: "File migration progress" }),
+      screen.getByRole("heading", { name: "File Manager" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("5,000+")).toBeInTheDocument();
-    expect(screen.getAllByText("2,711").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText("4,198")).toBeInTheDocument();
+    expect(screen.getByText("2,711")).toBeInTheDocument();
+    expect(screen.getByText("1,487")).toBeInTheDocument();
     expect(
       screen.getByText("Modified Date > lastSuccessfulCheckpoint"),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Start file migration" }),
+      screen.getByRole("button", { name: "Run incremental migration" }),
     ).toBeDisabled();
   });
 });

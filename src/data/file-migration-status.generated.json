@@ -3,17 +3,20 @@
   "sourceTypes": 98,
   "references": 2711,
   "uniqueFiles": 2711,
-  "metadataMigrated": 2711,
+  "expectedFiles": 4198,
+  "inventoryComplete": false,
+  "attachmentRows": 0,
   "binaryMigrated": 0,
   "checksumVerified": 0,
   "failed": 0,
-  "ownerEstimatedMinimum": 5000,
-  "discoveryGapMinimum": 2289,
+  "discoveryGap": 1487,
+  "pageSize": 50,
   "incrementalPolicy": {
     "filter": "Modified Date > lastSuccessfulCheckpoint",
-    "dedupeKey": "source URL + target object path + checksum",
-    "batchSize": 100,
-    "resumable": true
+    "dedupeKey": "source URL hash + private object path + checksum",
+    "concurrency": "4–8",
+    "resumable": true,
+    "automaticDeletes": false
   },
   "byField": [
     {
@@ -35,6 +38,63 @@
     {
       "field": "ds_channel.Logo_png",
       "count": 8
+    }
+  ],
+  "safeSamples": [
+    {
+      "sampleId": "aggregate-1",
+      "fileName": "Redacted POS sheet aggregate",
+      "size": null,
+      "type": "Document",
+      "uploadDate": null,
+      "userId": "••••••••",
+      "attachedTo": "shop_dailysales",
+      "status": "Discovered only · 1,770 references",
+      "private": true
+    },
+    {
+      "sampleId": "aggregate-2",
+      "fileName": "Redacted file aggregate",
+      "size": null,
+      "type": "Document",
+      "uploadDate": null,
+      "userId": "••••••••",
+      "attachedTo": "quote_file",
+      "status": "Discovered only · 722 references",
+      "private": true
+    },
+    {
+      "sampleId": "aggregate-3",
+      "fileName": "Redacted image aggregate",
+      "size": null,
+      "type": "Image",
+      "uploadDate": null,
+      "userId": "••••••••",
+      "attachedTo": "b_deliveryschedule",
+      "status": "Discovered only · 203 references",
+      "private": true
+    },
+    {
+      "sampleId": "aggregate-4",
+      "fileName": "Redacted Logo_SVG aggregate",
+      "size": null,
+      "type": "Image",
+      "uploadDate": null,
+      "userId": "••••••••",
+      "attachedTo": "ds_channel",
+      "status": "Discovered only · 8 references",
+      "private": true
+    },
+    {
+      "sampleId": "aggregate-5",
+      "fileName": "Redacted Logo_png aggregate",
+      "size": null,
+      "type": "Image",
+      "uploadDate": null,
+      "userId": "••••••••",
+      "attachedTo": "ds_channel",
+      "status": "Discovered only · 8 references",
+      "private": true
     }
   ]
 }

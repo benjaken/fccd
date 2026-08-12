@@ -55,8 +55,14 @@ Remaining records: 0
 - Phase C financial incremental reconciliation: pending
 - Option Sets: backend System Settings schema ready; Supabase data 0 / 35;
   frontend static inventory 35 / 35 with 183 values
-- File metadata: 722 / 722; binary transfer and checksum reconciliation are
-  explicitly scheduled for the final migration phase
+- Quote-file metadata: 722 / 722. No binary transfer or checksum verification
+  has run.
+- Fixed snapshot file discovery: exactly 2,711 protocol-relative references
+  (1,770 `shop_dailysales.POS sheet`, 722 `quote_file.file`, 203
+  `b_deliveryschedule.image`, 8 `ds_channel.Logo_SVG`, and 8
+  `ds_channel.Logo_png`).
+- Bubble File Manager screenshot total: 4,198. The 1,487 unattached,
+  API-unexposed, or otherwise missing items block the baseline.
 - Auth/User decision: approved adoption of existing 24 `auth.users` +
   `user_profiles`; no new User table; Bubble `user.pw` is excluded
 - Singular `migration` table rows: 0; `migration_*` tables: 0
@@ -131,15 +137,28 @@ Remaining records: 0
 
 - Core tables use RLS.
 - Role checks use trusted Auth `app_metadata.role`.
+- The new normalized `attachments` migration is committed but not remotely
+  applied. It stores a source URL SHA-256 digest rather than the raw URL,
+  targets a private bucket, and defaults to service-role-only access.
 - One-time import endpoints are HTTP 410 tombstones after completion.
 - `Login_code` and Bubble `user.pw` were not imported.
 - Supabase leaked-password protection remains plan-dependent.
+
+## File migration blocker and runbook
+
+No file upload was run. The full 4,198-item File Manager CSV/JSON inventory and
+a server-only Supabase secret are unavailable. Safe execution additionally
+requires review and remote application of
+`20260812090637_create_attachments.sql`. The exact inputs, baseline commands,
+verification gate, and Modified Date incremental process are documented in
+[`BUBBLE_FILE_MIGRATION_RUNBOOK.md`](./BUBBLE_FILE_MIGRATION_RUNBOOK.md).
 
 ## Remaining launch order
 
 1. Modified Date incremental catch-up and financial reconciliation
 2. Orphan/customer-target business disposition
-3. File-byte and Auth decisions
+3. Obtain the complete 4,198-file inventory and execute verified private
+   attachment migration
 4. Durable worker-handler approval
 5. Gated source switch
 
