@@ -25,6 +25,9 @@ verify_jwt = false
 [functions.bubble-import-phase-e]
 verify_jwt = false
 
+[functions.bubble-import-remaining]
+verify_jwt = false
+
 # Deliberately retained as a 410 Gone tombstone so preview branches cannot
 # continue running an older destructive migration implementation.
 [functions.bubble-migrate]
