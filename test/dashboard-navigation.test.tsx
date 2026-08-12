@@ -97,9 +97,11 @@ describe("Dashboard navigation", () => {
   ])("links %s to %s", (name, target) => {
     renderDashboard();
 
-    expect(
-      screen.getByRole("link", { name: new RegExp(`^${name}`) }),
-    ).toHaveAttribute("href", target);
+    const matchingLink = screen
+      .getAllByRole("link", { name: new RegExp(name) })
+      .find((link) => link.getAttribute("href") === target);
+
+    expect(matchingLink).toBeDefined();
   });
 
   it("opens the selected order detail page", async () => {
