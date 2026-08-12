@@ -1213,14 +1213,14 @@ td:last-child {
 .migration-warning p {
   margin: 2px 0 0;
   color: rgb(255 255 255 / 78%);
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .migration-warning > span {
   padding: 5px 10px;
   border: 1px solid rgb(255 255 255 / 35%);
   border-radius: 99px;
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -1244,7 +1244,7 @@ td:last-child {
 .migration-hero p {
   margin: 7px 0 0;
   color: var(--muted-foreground);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .migration-metrics {
@@ -1280,7 +1280,7 @@ td:last-child {
 
 .migration-metrics span {
   color: var(--muted-foreground);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
 }
 
@@ -1298,7 +1298,7 @@ td:last-child {
   display: flex;
   justify-content: space-between;
   color: var(--muted-foreground);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
 }
 
@@ -1346,7 +1346,7 @@ td:last-child {
 .migration-table-header p {
   margin: 3px 0 0;
   color: var(--muted-foreground);
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .migration-source-fields {
@@ -1366,7 +1366,7 @@ td:last-child {
   align-items: center;
   gap: 5px;
   color: var(--muted-foreground);
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 750;
   text-transform: uppercase;
 }
@@ -1388,7 +1388,7 @@ td:last-child {
   padding: 0 11px;
   outline: 0;
   color: var(--foreground);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .migration-source-fields input:focus,
@@ -1403,7 +1403,7 @@ td:last-child {
   min-width: 0;
   margin: 10px 0 0;
   color: var(--muted-foreground);
-  font-size: 11px;
+  font-size: 14px;
 }
 
 .migration-url-preview span {
@@ -1451,7 +1451,7 @@ td:last-child {
   outline: 0;
   background: transparent;
   color: var(--foreground);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .migration-groups {
@@ -1534,7 +1534,7 @@ td:last-child {
 .migration-group-toggle small {
   overflow: hidden;
   color: var(--muted-foreground);
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 620;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1548,7 +1548,7 @@ td:last-child {
 }
 
 .migration-group-percentage strong {
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .migration-group-percentage svg {
@@ -1605,7 +1605,7 @@ td:last-child {
   border-bottom: 1px solid var(--border);
   background: color-mix(in oklch, var(--background) 80%, var(--card));
   color: var(--muted-foreground);
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 750;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -1628,7 +1628,7 @@ td:last-child {
 
 .migration-object-row strong {
   overflow: hidden;
-  font-size: 13px;
+  font-size: 14px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1636,7 +1636,7 @@ td:last-child {
 .migration-object-row code {
   overflow: hidden;
   color: var(--muted-foreground);
-  font-size: 11px;
+  font-size: 14px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1655,7 +1655,7 @@ td:last-child {
   border-radius: 99px;
   background: var(--secondary);
   color: var(--muted-foreground);
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 750;
 }
 
@@ -1669,7 +1669,7 @@ td:last-child {
   align-items: center;
   gap: 4px;
   color: var(--muted-foreground);
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 700;
 }
 
@@ -1683,7 +1683,7 @@ td:last-child {
 }
 
 .migration-record-count {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 750;
 }
 
@@ -1692,7 +1692,7 @@ td:last-child {
   align-items: center;
   gap: 5px;
   color: var(--muted-foreground);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
 }
 
@@ -1763,14 +1763,14 @@ td:last-child {
   max-width: 850px;
   margin: 4px 0 0;
   color: var(--muted-foreground);
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.55;
 }
 
 .relationship-analyzed-at {
   flex: 0 0 auto;
   color: var(--muted-foreground);
-  font-size: 10px;
+  font-size: 14px;
 }
 
 .relationship-analysis-loading,
@@ -1782,7 +1782,7 @@ td:last-child {
   min-height: 180px;
   padding: 24px;
   color: var(--muted-foreground);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 650;
 }
 
@@ -1827,7 +1827,7 @@ td:last-child {
   max-width: 620px;
   margin: 7px 0 0;
   color: var(--muted-foreground);
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.55;
 }
 
@@ -1841,7 +1841,7 @@ td:last-child {
 
 .relationship-report-title span {
   color: var(--muted-foreground);
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -1853,7 +1853,7 @@ td:last-child {
 
 .relationship-report-title code {
   color: var(--muted-foreground);
-  font-size: 11px;
+  font-size: 14px;
 }
 
 .relationship-metrics {
@@ -1874,7 +1874,7 @@ td:last-child {
 
 .relationship-metrics span {
   color: var(--muted-foreground);
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 650;
 }
 
@@ -1931,7 +1931,7 @@ td:last-child {
   stroke: var(--background);
   stroke-width: 4px;
   fill: var(--muted-foreground);
-  font-size: 9px;
+  font-size: 14px;
 }
 
 .relationship-node rect {
@@ -1942,13 +1942,13 @@ td:last-child {
 
 .relationship-node text {
   fill: var(--foreground);
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 720;
 }
 
 .relationship-node .relationship-node-type {
   fill: var(--muted-foreground);
-  font-size: 8px;
+  font-size: 14px;
   font-weight: 600;
 }
 
@@ -1966,7 +1966,7 @@ td:last-child {
   padding: 9px 14px;
   border-top: 1px solid var(--border);
   color: var(--muted-foreground);
-  font-size: 10px;
+  font-size: 14px;
 }
 
 .relationship-graph-legend span {
@@ -2003,7 +2003,7 @@ td:last-child {
 }
 
 .relationship-table code {
-  font-size: 10px;
+  font-size: 14px;
 }
 
 .relationship-field-mapping {
@@ -2017,7 +2017,7 @@ td:last-child {
 
 .relationship-field-mapping small {
   color: var(--muted-foreground);
-  font-size: 8px;
+  font-size: 14px;
   font-weight: 650;
 }
 
@@ -2027,7 +2027,7 @@ td:last-child {
   border-radius: 99px;
   background: oklch(0.92 0.04 250);
   color: oklch(0.5 0.15 250);
-  font-size: 9px;
+  font-size: 14px;
   font-weight: 720;
 }
 
@@ -2068,7 +2068,7 @@ td:last-child {
   z-index: 1;
   width: 100%;
   color: var(--foreground);
-  font-size: 9px;
+  font-size: 14px;
   text-align: center;
 }
 
@@ -2085,7 +2085,7 @@ td:last-child {
   padding: 11px 18px 14px;
   border-top: 1px solid var(--border);
   color: var(--muted-foreground);
-  font-size: 10px;
+  font-size: 14px;
   line-height: 1.5;
 }
 
@@ -2128,7 +2128,7 @@ td:last-child {
   border-radius: 6px;
   background: transparent;
   color: oklch(0.7 0.02 255);
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 650;
 }
 
@@ -2155,7 +2155,7 @@ td:last-child {
   margin: 0 0 7px;
   color: oklch(0.78 0.025 255);
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.55;
 }
 
