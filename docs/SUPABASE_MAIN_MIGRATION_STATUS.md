@@ -97,6 +97,23 @@ Counts and UUID relationships reconcile, but production records were modified
 after the report export. A Modified Date incremental pass is required before
 financial sign-off.
 
+## Phase D1 Ingredients/BOM import
+
+| Target table | Imported | Unresolved master UUID FKs |
+|---|---:|---:|
+| `ingredients` | 317 | 0 |
+| `product_ingredients` | 1,747 | 0 |
+| `order_bom_requirements` | 79,908 | 0 |
+| `packing_materials` | 0 | 0 |
+| **Total** | **81,972** | **0** |
+
+The BOM source was imported in four Created Date year partitions (2023–2026)
+to remain below Bubble's 50,000-cursor boundary. One orphan `S_order` target
+affects 5 BOM rows; those rows retain nullable `order_line_id` values, use no
+placeholder UUID, and are represented by 1 open data-quality issue. The
+one-time importer was disabled immediately after completion and now returns
+HTTP 410.
+
 ## Delivery team UUID resolution
 
 - Imported 5 `DS_Super_Motorcade` records into `delivery_teams`.
