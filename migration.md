@@ -7,6 +7,8 @@
 
 - `docs/MIGRATION_SCHEMA_DRAFT.md`
 - `docs/sql/001_core_catering_schema.draft.sql`
+- `docs/FULL_MIGRATION_DATA_REPORT.md`
+- `docs/FULL_SCHEMA_APPROVAL_DRAFT.md`
 
 以上文件不在 `supabase/migrations/`，不会自动执行。
 
