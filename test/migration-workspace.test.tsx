@@ -112,7 +112,7 @@ describe("Migration workspace", () => {
     expect(screen.getByText("55%")).toBeInTheDocument();
     expect(screen.getByText("169,626")).toBeInTheDocument();
     expect(screen.getByText("order_bom_requirements")).toBeInTheDocument();
-    expect(screen.getByText("Complete with issues")).toBeInTheDocument();
+    expect(screen.getAllByText("Complete with issues")).toHaveLength(2);
   });
 
   it("shows database-verified FK aggregates separately from inferred mappings", () => {
