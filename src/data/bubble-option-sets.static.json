@@ -1,0 +1,458 @@
+{
+  "source": "docs/BUBBLE_OPTION_SETS_INVENTORY.md",
+  "total": 35,
+  "storage": "frontend_static",
+  "optionSets": [
+    {
+      "name": "OS Acc_paymentReport",
+      "options": [
+        "輸入銀行到帳日",
+        "Masoft發票及收款"
+      ],
+      "customAttributes": []
+    },
+    {
+      "name": "OS bento_Spicy",
+      "options": [
+        "辣",
+        "不辣"
+      ],
+      "customAttributes": []
+    },
+    {
+      "name": "OS Catering_Menu",
+      "options": [
+        "主頁",
+        "到會報價單",
+        "到會訂單",
+        "待處理訂單",
+        "出餐日曆",
+        "客戶紀錄",
+        "供應商紀錄",
+        "食材/包裝用品",
+        "單點食物",
+        "套餐",
+        "庫存盤點",
+        "資料輸入進度",
+        "費用輸入",
+        "收款對帳",
+        "材料用量",
+        "報告",
+        "客戶自助",
+        "司機分配",
+        "送貨清單",
+        "用戶管理",
+        "設定",
+        "登出"
+      ],
+      "customAttributes": [
+        {
+          "name": "page_name",
+          "type": "List of texts"
+        }
+      ]
+    },
+    {
+      "name": "OS Catering_mobile_page",
+      "options": [
+        "報價",
+        "新訂單",
+        "所有訂單",
+        "待處理訂單",
+        "客戶自助",
+        "出貨日程",
+        "司機版面"
+      ],
+      "customAttributes": [
+        {
+          "name": "page name",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "name": "OS catering_stockTake_type",
+      "options": [
+        "食材盤點",
+        "包裝盤點"
+      ],
+      "customAttributes": []
+    },
+    {
+      "name": "OS Chef_panel",
+      "options": [
+        "廚師版面"
+      ],
+      "customAttributes": [
+        {
+          "name": "Page_name",
+          "type": "List of texts"
+        }
+      ]
+    },
+    {
+      "name": "OS comment_type",
+      "options": [
+        "customer note",
+        "orderlike",
+        "orderdislike"
+      ],
+      "customAttributes": []
+    },
+    {
+      "name": "OS cost input tab",
+      "options": [
+        "每週廣告費",
+        "每月營運費用 (非節日)",
+        "每月營運費用(節日)",
+        "月結供應商紀錄"
+      ],
+      "customAttributes": []
+    },
+    {
+      "name": "OS Customer Type",
+      "options": [
+        "B2C",
+        "B2B"
+      ],
+      "customAttributes": []
+    },
+    {
+      "name": "OS dashboard_version",
+      "options": [
+        "到會",
+        "凍肉",
+        "餐廳"
+      ],
+      "customAttributes": []
+    },
+    {
+      "name": "OS datepick",
+      "options": [
+        "單日",
+        "多日"
+      ],
+      "customAttributes": []
+    },
+    {
+      "name": "OS Delivery Status",
+      "options": [
+        "未派車隊",
+        "待接單",
+        "待取貨",
+        "送貨途中",
+        "已送達"
+      ],
+      "customAttributes": []
+    },
+    {
+      "name": "OS Driver App page",
+      "options": [
+        "可接訂單",
+        "已接訂單",
+        "車隊訂單",
+        "合共收入",
+        "分區運費",
+        "設定",
+        "常見問題"
+      ],
+      "customAttributes": []
+    },
+    {
+      "name": "OS driver confirmation",
+      "options": [
+        "接受",
+        "拒絕"
+      ],
+      "customAttributes": []
+    },
+    {
+      "name": "OS driver delivery status",
+      "options": [
+        "待取貨",
+        "已取",
+        "已送達"
+      ],
+      "customAttributes": []
+    },
+    {
+      "name": "OS Meat_Panel",
+      "options": [
+        "凍肉版面"
+      ],
+      "customAttributes": [
+        {
+          "name": "Page_name",
+          "type": "List of texts"
+        }
+      ]
+    },
+    {
+      "name": "OS Meat_report",
+      "options": [
+        "店舖訂貨數量",
+        "產品供店舖平均售價",
+        "產品製作成本及工場用貨售價",
+        "生肉平均來貨價/KG",
+        "製成品存貨",
+        "生肉存貨",
+        "供應商入貨報表"
+      ],
+      "customAttributes": []
+    },
+    {
+      "name": "OS MeatMenu",
+      "options": [
+        "報表",
+        "生肉存貨計算",
+        "製成品存貨計算",
+        "售價成本計算",
+        "固定香料成本",
+        "香料用量",
+        "設定",
+        "返回主版面"
+      ],
+      "customAttributes": []
+    },
+    {
+      "name": "OS meatSetting",
+      "options": [
+        "香料成本",
+        "計算設定",
+        "客戶"
+      ],
+      "customAttributes": []
+    },
+    {
+      "name": "OS Month",
+      "options": [
+        "1月",
+        "2月",
+        "3月",
+        "4月",
+        "5月",
+        "6月",
+        "7月",
+        "8月",
+        "9月",
+        "10月",
+        "11月",
+        "12月"
+      ],
+      "customAttributes": [
+        {
+          "name": "Month",
+          "type": "date"
+        },
+        {
+          "name": "quarter",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "name": "OS payout date",
+      "options": [
+        "自訂日期",
+        "付款日期"
+      ],
+      "customAttributes": []
+    },
+    {
+      "name": "OS Quote Status",
+      "options": [
+        "Low Chance",
+        "High Chance",
+        "Done Deal",
+        "Case Closed"
+      ],
+      "customAttributes": [
+        {
+          "name": "default display",
+          "type": "yes / no"
+        }
+      ]
+    },
+    {
+      "name": "OS report_date_filter",
+      "options": [
+        "每日",
+        "每星期",
+        "每月"
+      ],
+      "customAttributes": []
+    },
+    {
+      "name": "OS Season",
+      "options": [
+        "Non-peak",
+        "Festival"
+      ],
+      "customAttributes": []
+    },
+    {
+      "name": "OS roster hr",
+      "options": [
+        "1",
+        "0.5"
+      ],
+      "customAttributes": []
+    },
+    {
+      "name": "OS Setting catagory",
+      "options": [
+        "Sales Partner",
+        "訂單狀態",
+        "檔位類別",
+        "訂單標籤",
+        "送貨方式",
+        "付款方式",
+        "費用選項",
+        "供應商支出",
+        "工場公告",
+        "送貨車隊",
+        "車隊地區運費",
+        "送貨附加費",
+        "報價渠道",
+        "溝通渠道",
+        "節日選項",
+        "報價單 - 運費",
+        "報價單 - T&C",
+        "報價單 - 付款方式",
+        "電郵通知",
+        "入單第一通知人",
+        "入單第二通知人",
+        "指派司機提示",
+        "加單設定",
+        "加單block-date",
+        "客戶標籤"
+      ],
+      "customAttributes": []
+    },
+    {
+      "name": "OS shop manhr depart",
+      "options": [
+        "樓面",
+        "廚房",
+        "水吧"
+      ],
+      "customAttributes": [
+        {
+          "name": "relate to daily sales depart",
+          "type": "List of texts"
+        },
+        {
+          "name": "sort",
+          "type": "number"
+        }
+      ]
+    },
+    {
+      "name": "OS shop_depart_stocktake",
+      "options": [
+        "廚房",
+        "水吧"
+      ],
+      "customAttributes": []
+    },
+    {
+      "name": "OS shop_full/part_time",
+      "options": [
+        "全職",
+        "兼職"
+      ],
+      "customAttributes": []
+    },
+    {
+      "name": "OS shop_menu",
+      "options": [
+        "主頁",
+        "每日銷售輸入",
+        "每月費用輸入",
+        "每日採購單輸入",
+        "每月庫存盤點",
+        "銷售報告",
+        "銷售及工時報告",
+        "銷售及薪金報告",
+        "銷售成本報告",
+        "P&L 報告",
+        "新品管理及報告",
+        "餐廳員工名單",
+        "設定",
+        "返回主版面"
+      ],
+      "customAttributes": [
+        {
+          "name": "pageName",
+          "type": "List of texts"
+        }
+      ]
+    },
+    {
+      "name": "OS shop_new_poduct Tab",
+      "options": [
+        "設定",
+        "報告"
+      ],
+      "customAttributes": []
+    },
+    {
+      "name": "OS shop_report_type",
+      "options": [
+        "外賣平台",
+        "部門",
+        "時段"
+      ],
+      "customAttributes": []
+    },
+    {
+      "name": "OS SHOPSetting",
+      "options": [
+        "供應商設定",
+        "供應商費用類別",
+        "每月P&L費用類別",
+        "庫存項目設定",
+        "餐廳設定",
+        "餐廳部門設定",
+        "餐廳銷售時段設定",
+        "餐廳付款方式設定",
+        "餐廳外賣平台設定",
+        "餐廳員工假期",
+        "餐廳更表時間"
+      ],
+      "customAttributes": []
+    },
+    {
+      "name": "OS Status",
+      "options": [
+        "Active",
+        "Inactive",
+        "Need Update"
+      ],
+      "customAttributes": [
+        {
+          "name": "color",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "name": "OS User Role",
+      "options": [
+        "Super Admin",
+        "Admin",
+        "Accounting",
+        "Factory",
+        "Shop manager",
+        "Customer_Main",
+        "Customer_Sub"
+      ],
+      "customAttributes": [
+        {
+          "name": "Office Staff",
+          "type": "yes / no"
+        }
+      ]
+    }
+  ]
+}

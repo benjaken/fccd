@@ -135,6 +135,51 @@ export function MigrationControlPage({
         </article>
       </section>
 
+      <section className="coverage-grid">
+        <article className="panel coverage-card success">
+          <Database />
+          <div>
+            <span>{t("migrationControl.coverage.editorTypes")}</span>
+            <strong>
+              {MIGRATION_STATUS.coverage.editorDataTypes.completed} /{" "}
+              {MIGRATION_STATUS.coverage.editorDataTypes.total}
+            </strong>
+            <small>
+              {t("migrationControl.coverage.editorOnlyHandled", {
+                count:
+                  MIGRATION_STATUS.coverage.editorDataTypes.editorOnlyHandled,
+              })}
+            </small>
+          </div>
+        </article>
+        <article className="panel coverage-card warning">
+          <AlertTriangle />
+          <div>
+            <span>{t("migrationControl.coverage.optionSets")}</span>
+            <strong>
+              {MIGRATION_STATUS.coverage.optionSets.databaseImported} /{" "}
+              {MIGRATION_STATUS.coverage.optionSets.total}
+            </strong>
+            <small>
+              {t("migrationControl.coverage.staticReady", {
+                sets:
+                  MIGRATION_STATUS.coverage.optionSets.staticInventoryReady,
+                values:
+                  MIGRATION_STATUS.coverage.optionSets.staticOptionValues,
+              })}
+            </small>
+          </div>
+        </article>
+        <article className="panel coverage-card warning">
+          <Server />
+          <div>
+            <span>{t("migrationControl.coverage.files")}</span>
+            <strong>{t("migrationControl.coverage.metadataComplete")}</strong>
+            <small>{t("migrationControl.coverage.binaryPending")}</small>
+          </div>
+        </article>
+      </section>
+
       <section className="panel control-section">
         <header>
           <div>

@@ -13,6 +13,7 @@
     "lint": "tsc -b --pretty false",
     "preview": "vite preview",
     "generate:bubble-schema": "node scripts/generate-bubble-schema.mjs",
+    "generate:bubble-option-sets": "node scripts/generate-bubble-option-sets.mjs",
     "generate:migration-report": "node scripts/generate-core-migration-report.mjs",
     "generate:full-migration-report": "node scripts/generate-full-migration-report.mjs",
     "generate:migration-status": "node scripts/generate-migration-entity-status.mjs",

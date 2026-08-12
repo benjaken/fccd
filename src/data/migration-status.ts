@@ -38,6 +38,24 @@ export const MIGRATION_STATUS = {
     historicalMode: "import_once",
     activeIncrementalFilter: "Modified Date > lastSuccessfulCheckpoint",
   },
+  coverage: {
+    editorDataTypes: {
+      completed: 98,
+      total: 98,
+      editorOnlyHandled: 5,
+    },
+    optionSets: {
+      databaseImported: 0,
+      total: 35,
+      staticInventoryReady: 35,
+      staticOptionValues: 183,
+    },
+    files: {
+      metadataMigrated: true,
+      binaryMigrated: false,
+      checksumComplete: false,
+    },
+  },
   phases: [
     { key: "a", imported: 464, unresolvedUuidForeignKeys: 0, status: "complete" },
     { key: "b", imported: 12_241, unresolvedUuidForeignKeys: 0, status: "complete" },
@@ -114,11 +132,13 @@ export const MIGRATION_STATUS = {
     incrementalReconciliationComplete: false,
     orphanDispositionComplete: true,
     authAndFilesComplete: false,
+    optionSetsComplete: false,
     durableBackendHandlersComplete: false,
   },
   blockers: [
     "incrementalReconciliation",
     "authFiles",
+    "optionSets",
     "backendHandlers",
   ],
   editorOnlyMappings: [

@@ -178,6 +178,15 @@ const resources = {
         modifiedCheckpoint: "Modified Date checkpoint",
         latestSnapshot: "最新核實快照",
         importedTotal: "A/B/C/D1 共匯入 {{count}} 筆",
+        coverage: {
+          editorTypes: "Editor Data Types",
+          editorOnlyHandled: "額外 {{count}} 個 Editor-only 類型已分別處理",
+          optionSets: "Option Sets 資料導入",
+          staticReady: "前端靜態清單 {{sets}} / {{sets}}，共 {{values}} 個選項",
+          files: "Files 遷移",
+          metadataComplete: "Metadata 已遷移",
+          binaryPending: "Binary／Checksum 尚未完成",
+        },
         phaseTitle: "目前遷移階段",
         phaseDescription: "靜態狀態來自 Supabase main 遷移報告。",
         phases: {
@@ -221,6 +230,7 @@ const resources = {
           orphanDisposition: "18 個未來孤兒引用仍待處置",
           authFiles: "Auth、檔案及 checksum 遷移尚未完成",
           backendHandlers: "耐久後端 worker、handlers 及完整 mappings 尚未完成",
+          optionSets: "35 個 Option Sets 尚未導入 Supabase，前端靜態清單已就緒",
         },
         actionsTitle: "受保護操作",
         actionsDescription:
@@ -639,6 +649,15 @@ const resources = {
         modifiedCheckpoint: "Modified Date checkpoint",
         latestSnapshot: "Latest verified snapshot",
         importedTotal: "{{count}} records imported across A/B/C/D1",
+        coverage: {
+          editorTypes: "Editor Data Types",
+          editorOnlyHandled: "{{count}} extra Editor-only types handled separately",
+          optionSets: "Option Set data import",
+          staticReady: "Frontend static inventory {{sets}} / {{sets}}, {{values}} values",
+          files: "File migration",
+          metadataComplete: "Metadata migrated",
+          binaryPending: "Binary / checksum pending",
+        },
         phaseTitle: "Current migration phases",
         phaseDescription: "Static status from the Supabase main migration report.",
         phases: {
@@ -687,6 +706,8 @@ const resources = {
           authFiles: "Auth, file, and checksum migration is incomplete",
           backendHandlers:
             "Durable backend workers, handlers, and full mappings are incomplete",
+          optionSets:
+            "35 Option Sets are not imported to Supabase; frontend static inventory is ready",
         },
         actionsTitle: "Protected actions",
         actionsDescription:

@@ -104,6 +104,12 @@
   迁移策略、来源数量、已迁移、剩余、错误和完成率。
 - 资料表迁移率与记录迁移率分开计算；导出完成不能当作已迁移。
 - 当前错误分为已导入数据问题、待对账及未开始，不能全部合并为失败。
+- 迁移页独立显示：
+  - Editor Data Types `98 / 98`，额外 5 个 Editor-only 类型已分别处理；
+  - Option Sets Supabase 导入 `0 / 35`，前端静态 inventory `35 / 35`；
+  - Files metadata 已迁移，binary 与 checksum 尚未完成。
+- Option Sets 与 Files 不计入 Production Data API 记录迁移率，但未完成时继续
+  阻止数据源切换。
 
 ## 7. Supabase 与部署
 

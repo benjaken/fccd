@@ -84,6 +84,18 @@ describe("Migration workspace", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows independent editor, option-set, and file coverage", () => {
+    renderWorkspace("/migration/control");
+
+    expect(screen.getByText("98 / 98")).toBeInTheDocument();
+    expect(screen.getByText("0 / 35")).toBeInTheDocument();
+    expect(screen.getByText("Metadata migrated")).toBeInTheDocument();
+    expect(screen.getByText("Binary / checksum pending")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Frontend static inventory 35 \/ 35, 183 values/),
+    ).toBeInTheDocument();
+  });
+
   it("keeps source switching disabled when reconciliation gates are incomplete", () => {
     auth.session = {
       user: { app_metadata: { role: "Super Admin" } },
