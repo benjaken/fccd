@@ -188,7 +188,7 @@ const entities = manifest.exports
       remainingCount: item.records - migrated,
       issueCount: issues?.issueCount ?? 0,
       affectedRows: issues?.affectedRows ?? 0,
-      rate: item.records === 0 ? (mapping ? 100 : 0) : migrated / item.records,
+      rate: item.records === 0 ? (mapping ? 1 : 0) : migrated / item.records,
     };
   })
   .sort((a, b) => a.sourceType.localeCompare(b.sourceType));
