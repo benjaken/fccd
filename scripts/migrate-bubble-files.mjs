@@ -99,9 +99,24 @@ function sha256(value) {
 
 function canonicalSourceUrl(value) {
   const trimmed = String(value ?? "").trim();
-  if (trimmed.startsWith("//")) return `https:${trimmed}`;
-  if (/^https:\/\//i.test(trimmed)) return trimmed;
-  throw new Error("Only HTTPS or protocol-relative source file URLs are accepted");
+  const absolute = trimmed.startsWith("//") ? `https:${trimmed}` : trimmed;
+  if (!/^https:\/\//i.test(absolute)) {
+    throw new Error("Only HTTPS or protocol-relative source file URLs are accepted");
+  }
+  const parsed = new URL(absolute);
+  parsed.hash = "";
+  for (const key of [...parsed.searchParams.keys()]) {
+    if (
+      key === "_gl" ||
+      key === "_gcl_au" ||
+      key === "_ga" ||
+      key.startsWith("_ga_") ||
+      key.startsWith("utm_")
+    ) {
+      parsed.searchParams.delete(key);
+    }
+  }
+  return parsed.toString();
 }
 
 function safeSegment(value) {

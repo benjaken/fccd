@@ -145,6 +145,67 @@ describe("Bubble file migration framework", () => {
     }
   });
 
+  it("strips Bubble analytics parameters before file deduplication", () => {
+    const root = mkdtempSync(join(tmpdir(), "bubble-files-canonical-"));
+    const workDir = join(root, "work");
+    const snapshotDir = join(root, "snapshot");
+    const objectsDir = join(snapshotDir, "objects");
+    mkdirSync(objectsDir, { recursive: true });
+    writeFileSync(
+      join(snapshotDir, "export-manifest.json"),
+      JSON.stringify({
+        snapshotAt: "2026-08-12T00:00:00.000Z",
+        exports: [{ type: "quote_file", file: "quote-file.jsonl" }],
+      }),
+    );
+    const base =
+      "//a112cb5fe9cbba3717fadc05fb8851f0.cdn.bubble.io/f1786493312607x692656199919109200/DeliveryOrderDelete.pdf";
+    writeFileSync(
+      join(objectsDir, "quote-file.jsonl"),
+      [
+        {
+          _id: "row-one",
+          "Modified Date": "2026-08-12T00:00:00.000Z",
+          file: `${base}?_gl=first&_ga=one`,
+        },
+        {
+          _id: "row-one",
+          "Modified Date": "2026-08-12T00:00:00.000Z",
+          file: `${base}?_gl=second&_ga_BFPVR2DEE2=two`,
+        },
+      ].map(JSON.stringify).join("\n"),
+    );
+
+    try {
+      execFileSync(
+        process.execPath,
+        [
+          resolve("scripts/migrate-bubble-files.mjs"),
+          "discover",
+          "--snapshot-dir",
+          snapshotDir,
+        ],
+        {
+          cwd: resolve("."),
+          env: {
+            ...process.env,
+            BUBBLE_FILE_MIGRATION_WORK_DIR: workDir,
+          },
+          stdio: "pipe",
+        },
+      );
+      const manifest = JSON.parse(
+        readFileSync(join(workDir, "manifest.json"), "utf8"),
+      );
+      expect(manifest.entries).toHaveLength(1);
+      expect(manifest.entries[0].sourceUrl).toBe(
+        `https:${base}`,
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("commits only safe aggregate file status without URLs, IDs, or filenames", () => {
     const generated = readFileSync(
       resolve("src/data/file-migration-status.generated.json"),

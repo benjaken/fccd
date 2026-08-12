@@ -44,6 +44,11 @@ Provide all of the following to the migration operator:
 Never commit the export, manifests, cache, secrets, raw URLs, IDs, or file
 names. `.migration-data/` and `.env*` are ignored.
 
+Bubble File Manager links may include Google Analytics parameters such as
+`_gl`, `_gcl_au`, `_ga`, and `_ga_*`. The CLI strips these parameters before
+hashing or deduplication. The stable CDN path identifies the source object;
+downloaded SHA-256 identifies the content version.
+
 ## Baseline
 
 Run from a trusted server shell:
