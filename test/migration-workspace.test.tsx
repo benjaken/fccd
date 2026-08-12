@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { MemoryRouter, useLocation } from "react-router-dom";
@@ -108,7 +108,14 @@ describe("Migration workspace", () => {
         name: "Bubble entity → Supabase target",
       }),
     ).toBeInTheDocument();
-    expect(screen.getAllByText("100%")).toHaveLength(2);
+    expect(
+      within(screen.getByText("Table migration rate").closest("article")!)
+        .getByText("100%"),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByText("Record migration rate").closest("article")!)
+        .getByText("100%"),
+    ).toBeInTheDocument();
     expect(screen.getByText("377,116 / 377,116")).toBeInTheDocument();
     expect(screen.getByText("order_bom_requirements")).toBeInTheDocument();
     expect(screen.getAllByText("Complete with issues")).toHaveLength(3);
@@ -121,7 +128,15 @@ describe("Migration workspace", () => {
       screen.getByRole("heading", { name: "Migrated UUID FK status" }),
     ).toBeInTheDocument();
     expect(screen.getByText("950,149")).toBeInTheDocument();
-    expect(screen.getByText("17")).toBeInTheDocument();
+    expect(
+      within(screen.getByText("Current open issues").closest("article")!)
+        .getByText("19"),
+    ).toBeInTheDocument();
+    expect(
+      within(
+        screen.getByText("Known future orphan references").closest("article")!,
+      ).getByText("0"),
+    ).toBeInTheDocument();
     expect(screen.getAllByText("Database verified")).toHaveLength(18);
     expect(screen.getByText("Inferred / sample verified")).toBeInTheDocument();
   });
