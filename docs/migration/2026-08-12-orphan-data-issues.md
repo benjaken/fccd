@@ -158,4 +158,3 @@ When a missing target is repaired:
 6. Add resolution evidence and `resolved_at`.
 
 No issue should be deleted from the audit history.
-
