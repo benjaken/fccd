@@ -185,6 +185,11 @@ const resources = {
           b: "Phase B · Commercial Master",
           c: "Phase C · Catering Transactions",
           d1: "Phase D1 · Ingredients / BOM",
+          d2: "Phase D2 · Meat / Inventory",
+          e: "Phase E · Restaurant / Shop",
+          s1: "Phase S1 · Remaining Lookups",
+          s2: "Phase S2 · Finance / Settlements",
+          s3: "Phase S3 · Quote / Package Metadata",
         },
         phaseStatuses: {
           complete: "已完成",
@@ -627,6 +632,11 @@ const resources = {
           b: "Phase B · Commercial Master",
           c: "Phase C · Catering Transactions",
           d1: "Phase D1 · Ingredients / BOM",
+          d2: "Phase D2 · Meat / Inventory",
+          e: "Phase E · Restaurant / Shop",
+          s1: "Phase S1 · Remaining Lookups",
+          s2: "Phase S2 · Finance / Settlements",
+          s3: "Phase S3 · Quote / Package Metadata",
         },
         phaseStatuses: {
           complete: "Complete",

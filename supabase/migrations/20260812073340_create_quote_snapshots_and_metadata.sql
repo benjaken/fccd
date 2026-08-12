@@ -103,7 +103,7 @@ create table public.order_payment_method_snapshots (
   legacy_id text not null unique,
   order_id uuid references public.orders(id),
   order_legacy_id text,
-  content text not null,
+  content text,
   bubble_created_at timestamptz,
   bubble_modified_at timestamptz,
   created_at timestamptz not null default now()
@@ -116,7 +116,7 @@ create table public.order_terms_snapshots (
   legacy_id text not null unique,
   order_id uuid references public.orders(id),
   order_legacy_id text,
-  content text not null,
+  content text,
   bubble_created_at timestamptz,
   bubble_modified_at timestamptz,
   created_at timestamptz not null default now()

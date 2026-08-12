@@ -199,16 +199,68 @@ Applied migration: `20260812070844_create_restaurant_operations`.
 | `shop_roster` | `restaurant_rosters` | 0 | 0 |
 | **Total** | | **127,759** | **0** |
 
-Each target count equals both its distinct `legacy_id` and distinct UUID count.
-All existing restaurant, department, and supplier references and all new
-dimension references resolved to UUIDs. The 460 ingredient-department option
-values are safely retained in `restaurant_ingredient_departments`; no option
-value was converted into a fabricated UUID. Phase E produced no
-`data_quality_issues`.
+Every fixed Phase E source ID is represented. The live target currently has 12
+additional `restaurant_daily_sales` rows from the prior live importer
+(77,959 target versus 77,947 fixed-snapshot rows); they were preserved for
+incremental reconciliation. All existing restaurant, department, and supplier
+references and all new dimension references resolved to UUIDs. The 460
+ingredient-department option values are safely retained in
+`restaurant_ingredient_departments`; no option value was converted into a
+fabricated UUID. Phase E produced no `data_quality_issues`.
 
 The large fact types were imported with paging and Created Date year
 partitions, using idempotent `legacy_id` upserts. The one-time Phase E importer
 was disabled immediately after verification and now returns HTTP 410.
+
+## Phase S1 Remaining lookups and backfills
+
+Applied migration: `20260812073258_create_remaining_lookups`.
+
+- Imported 7,536 rows across 30 source types, including 7,252 product labels.
+- Created explicit zero-row schemas for `ds_tags`, `osdriver_menu`, and
+  `print_label`; each is complete at 0 / 0.
+- Backfilled all 8,302 products and 5,922 orders from the same fixed snapshot.
+- Created 1,280 product-collection, 108 main-ingredient, 583 special-request,
+  and 0 product-tag links.
+- Every source target count equals its distinct `legacy_id` and UUID count.
+- All populated S1 legacy references resolved to UUIDs.
+
+## Phase S2 Finance and settlements
+
+Applied migration: `20260812073316_create_finance_and_settlements`.
+
+| Source type | Target table | Imported | Unresolved UUID FKs |
+|---|---|---:|---:|
+| `b_adscostweekly` | `advertising_costs` | 1,265 | 0 |
+| `b_costmonthly` | `monthly_costs` | 1,408 | 0 |
+| `b_supplierpurchase` | `supplier_purchases` | 9,988 | 0 |
+| `b_deliveryschedule_surcharge` | `delivery_surcharges` | 1,560 | 0 |
+| `s_paymentreport` | `payment_settlements` | 2,147 | 0 |
+| **Total** | | **16,368** | **0** |
+
+The normalized children contain 4,104 monthly-cost channel links and 4,642
+settlement-payment links. All counts, distinct legacy IDs, and UUIDs match.
+
+## Phase S3 Package and quote snapshots
+
+Applied migrations:
+
+- `20260812073340_create_quote_snapshots_and_metadata`
+- `20260812073848_allow_empty_quote_snapshot_content`
+
+Imported 17,963 rows across 10 source types. This includes package choice sets
+and calculations, bento quote children, payment and terms snapshots, comments,
+customer-tag assignments, and 722 file-metadata rows. File bytes were not
+copied, and query strings/fragments were removed from source file references.
+
+All S3 target, distinct legacy-ID, and UUID counts match their sources. One
+customer-tag assignment has no matching customer row; its `customer_id`
+remains null and one open `data_quality_issues` row records the missing target.
+No placeholder UUID was created.
+
+The fixed snapshot is now complete: 98 / 98 source types and 377,116 / 377,116
+records, with 0 remaining. The one-time `bubble-import-remaining` endpoint was
+tombstoned immediately after verification and returns HTTP 410.
 
 ## Security notes
 
@@ -220,13 +272,11 @@ was disabled immediately after verification and now returns HTTP 410.
 - Unused-index notices are expected before application queries and later data
   phases begin.
 
-## Not yet imported
+## Remaining launch gates
 
-- quote/cost/purchasing/lookup/junction types; files; and final
-  Auth/incremental reconciliation
-- 41,867 source records across 45 source types remain `not_started`
-- the 17 distinct D2 orphan IDs remain open for business disposition, while
-  their 18 source references are safely preserved
+- Modified Date incremental and financial reconciliation
+- disposition of 19 open issues affecting 24 rows
+- Auth and file-byte migration decisions
+- durable worker-handler approval and gated source switch
 
-No further phase should run until Phase A mappings and the full Schema approval
-draft are reviewed.
+The singular `migration` table remains empty. No `migration_*` tables exist.

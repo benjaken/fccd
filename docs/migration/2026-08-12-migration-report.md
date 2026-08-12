@@ -19,29 +19,33 @@
 | D1 | Ingredients / Product Ingredients / Order BOM | 81,972 | 1 issue |
 | D2 | Meat / Inventory / Stocktakes | 38,059 | 17 issues |
 | E | Restaurant / Shop | 127,759 | 0 |
-| **Total** | | **335,249** | **18 issues / 23 rows** |
+| S1 | Remaining Lookups / Product and Order Backfills | 7,536 | 0 |
+| S2 | Costs / Purchases / Surcharges / Settlements | 16,368 | 0 |
+| S3 | Package / Quote / Comments / Tags / File Metadata | 17,963 | 1 issue |
+| **Total** | | **377,116** | **19 issues / 24 rows** |
 
 ## Progress
 
 ```text
-Mapped source types: 53 / 98
-Table migration rate: 54.1%
-Migrated records: 335,249 / 377,116
-Record migration rate: 88.9%
-Remaining records: 41,867
+Mapped source types: 98 / 98
+Table migration rate: 100.0%
+Migrated records: 377,116 / 377,116
+Record migration rate: 100.0%
+Remaining records: 0
 ```
 
 ## Verified UUID references
 
-- Database-verified migrated references: 179,836
+- Populated, database-constrained UUID references: 950,149 across 139 FK columns
 - Unresolved UUID references in migrated master/transaction rows: 0
 - Delivery District → Delivery Team: 299 / 299
 - Delivery → Motorcade: 3,037 / 3,037
-- Current open issue: one missing `S_Order` target affecting five BOM rows
+- Current issues: 19 open issues affecting 24 rows; 0 resolved/future issues
 - D2 required UUID relationships unresolved: 0
 - Phase E required UUID relationships unresolved: 0
 - Meat raw-stock source junctions: 1,263; nullable orphan links: 18
 - Known Meat/Inventory orphan IDs: 17, represented by 17 aggregate issues
+- S3 missing customer targets: 1 assignment; nullable UUID and one issue
 
 ## Reconciliation
 
@@ -49,8 +53,9 @@ Remaining records: 41,867
 - Duplicate Bubble `_id`: 0
 - Primitive type drift: 0
 - Phase C financial incremental reconciliation: pending
-- Files and checksum reconciliation: pending
+- File metadata: 722 / 722; file bytes and checksum reconciliation are pending
 - Auth migration: manually created users are present; Bubble `user.pw` is excluded
+- Singular `migration` table rows: 0; `migration_*` tables: 0
 
 ### D2 reconciliation
 
@@ -73,9 +78,11 @@ Remaining records: 41,867
 ### Phase E reconciliation
 
 - Migration: `20260812070844_create_restaurant_operations`
-- Source rows: 127,759; target rows: 127,759 across all 16 source types.
-- Every source table, including the four zero-row schema types, has matching
-  source, target, distinct legacy-ID, and distinct UUID counts.
+- Fixed source rows: 127,759 across all 16 source types. The live target has
+  12 additional `restaurant_daily_sales` rows created by the prior live
+  importer; they were preserved and require incremental reconciliation.
+- Every other Phase E source table, including the four zero-row schema types,
+  has matching source, target, distinct legacy-ID, and distinct UUID counts.
 - Required restaurant, department, supplier, payment-method, service-period,
   delivery-platform, product, cost, cost-type, ingredient, and purchase-type
   UUID relationships unresolved: 0.
@@ -87,6 +94,35 @@ Remaining records: 41,867
 - The one-time `bubble-import-phase-e` endpoint was tombstoned immediately
   after verification and returns HTTP 410.
 
+### S1 reconciliation
+
+- Migration: `20260812073258_create_remaining_lookups`
+- Source/target rows: 7,536 / 7,536 across 30 source types.
+- Zero-row complete: `ds_tags`, `osdriver_menu`, and `print_label`.
+- Product/order backfills: 8,302 / 8,302 and 5,922 / 5,922.
+- Product links: 1,280 collections, 108 main ingredients, 583 special
+  requests, and 0 tags.
+- Required S1 UUID relationships unresolved: 0.
+
+### S2 reconciliation
+
+- Migration: `20260812073316_create_finance_and_settlements`
+- Source/target rows: 16,368 / 16,368 across five source types.
+- Junctions: 4,104 monthly-cost channels and 4,642 settlement payments.
+- Required S2 UUID relationships unresolved: 0.
+
+### S3 reconciliation
+
+- Migrations: `20260812073340_create_quote_snapshots_and_metadata` and
+  `20260812073848_allow_empty_quote_snapshot_content`
+- Source/target rows: 17,963 / 17,963 across ten source types.
+- Every source target has matching row, distinct legacy-ID, and UUID counts.
+- One customer-tag assignment has no customer target. The source reference is
+  retained, `customer_id` is null, and one issue records the missing target.
+- File metadata: 722 / 722. No file bytes were copied and no source file
+  reference contains a query string or fragment.
+- The one-time `bubble-import-remaining` endpoint is an HTTP 410 tombstone.
+
 ## Security
 
 - Core tables use RLS.
@@ -95,19 +131,18 @@ Remaining records: 41,867
 - `Login_code` and Bubble `user.pw` were not imported.
 - Supabase leaked-password protection remains plan-dependent.
 
-## Remaining migration order
+## Remaining launch order
 
-1. Quote children / Cost / Purchasing
-2. Remaining lookup and junction types
-3. Modified Date incremental catch-up
-4. Final count, FK, finance, file and Auth reconciliation
+1. Modified Date incremental catch-up and financial reconciliation
+2. Orphan/customer-target business disposition
+3. File-byte and Auth decisions
+4. Durable worker-handler approval
 5. Gated source switch
 
 ## Data-source switch
 
 The active source remains Bubble. Switching to Supabase is blocked until:
 
-- all required domains are migrated;
 - incremental reconciliation passes;
 - orphan dispositions are approved;
 - Auth and files are complete;

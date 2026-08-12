@@ -3,7 +3,7 @@ export type ReadinessStatus = "ready" | "partial" | "blocked";
 export type MappingEvidence = "database_verified" | "inferred";
 
 export type MigrationPhase = {
-  key: "a" | "b" | "c" | "d1";
+  key: "a" | "b" | "c" | "d1" | "d2" | "e" | "s1" | "s2" | "s3";
   imported: number;
   unresolvedUuidForeignKeys: number;
   status: MigrationPhaseStatus;
@@ -53,6 +53,11 @@ export const MIGRATION_STATUS = {
       unresolvedUuidForeignKeys: 0,
       status: "complete",
     },
+    { key: "d2", imported: 38_059, unresolvedUuidForeignKeys: 0, status: "complete" },
+    { key: "e", imported: 127_759, unresolvedUuidForeignKeys: 0, status: "complete" },
+    { key: "s1", imported: 7_536, unresolvedUuidForeignKeys: 0, status: "complete" },
+    { key: "s2", imported: 16_368, unresolvedUuidForeignKeys: 0, status: "complete" },
+    { key: "s3", imported: 17_963, unresolvedUuidForeignKeys: 1, status: "complete" },
   ] satisfies MigrationPhase[],
   readiness: [
     { key: "lookup", status: "ready" },
@@ -65,10 +70,10 @@ export const MIGRATION_STATUS = {
   ] satisfies DomainReadiness[],
   fk: {
     migratedUnresolved: 0,
-    databaseVerifiedReferenceRows: 179_836,
-    currentOpenIssues: 1,
-    currentAffectedRows: 5,
-    knownFutureOrphanReferences: 17,
+    databaseVerifiedReferenceRows: 950_149,
+    currentOpenIssues: 19,
+    currentAffectedRows: 24,
+    knownFutureOrphanReferences: 0,
     mappings: [
       { source: "user_profiles.shop_restro_legacy_id", target: "user_profiles.shop_restro_id", resolved: 2, total: 2, evidence: "database_verified" },
       {
@@ -103,7 +108,7 @@ export const MIGRATION_STATUS = {
   },
   gates: {
     schemaApprovalComplete: false,
-    remainingDomainsComplete: false,
+    remainingDomainsComplete: true,
     incrementalReconciliationComplete: false,
     orphanDispositionComplete: false,
     authAndFilesComplete: false,
@@ -112,7 +117,6 @@ export const MIGRATION_STATUS = {
   blockers: [
     "schemaApproval",
     "incrementalReconciliation",
-    "remainingDomains",
     "orphanDisposition",
     "authFiles",
     "backendHandlers",

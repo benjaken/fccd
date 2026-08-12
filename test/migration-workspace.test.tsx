@@ -108,11 +108,10 @@ describe("Migration workspace", () => {
         name: "Bubble entity → Supabase target",
       }),
     ).toBeInTheDocument();
-    expect(screen.getByText("54.1%")).toBeInTheDocument();
-    expect(screen.getByText("88.9%")).toBeInTheDocument();
-    expect(screen.getByText("41,867")).toBeInTheDocument();
+    expect(screen.getAllByText("100%")).toHaveLength(2);
+    expect(screen.getByText("377,116 / 377,116")).toBeInTheDocument();
     expect(screen.getByText("order_bom_requirements")).toBeInTheDocument();
-    expect(screen.getAllByText("Complete with issues")).toHaveLength(2);
+    expect(screen.getAllByText("Complete with issues")).toHaveLength(3);
   });
 
   it("shows database-verified FK aggregates separately from inferred mappings", () => {
@@ -121,7 +120,7 @@ describe("Migration workspace", () => {
     expect(
       screen.getByRole("heading", { name: "Migrated UUID FK status" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("179,836")).toBeInTheDocument();
+    expect(screen.getByText("950,149")).toBeInTheDocument();
     expect(screen.getByText("17")).toBeInTheDocument();
     expect(screen.getAllByText("Database verified")).toHaveLength(18);
     expect(screen.getByText("Inferred / sample verified")).toBeInTheDocument();
