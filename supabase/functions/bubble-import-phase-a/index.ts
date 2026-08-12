@@ -18,4 +18,3 @@ Deno.serve((request) => {
     },
   );
 });
-

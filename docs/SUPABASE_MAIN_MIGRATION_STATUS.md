@@ -39,6 +39,10 @@ All new tables:
 | `restaurant_departments` | 4 | 4 | 4 |
 | **Total** | **459** | **459** | **459** |
 
+Two existing `user_profiles.shop_restro_legacy_id` values contained restaurant
+display names rather than Bubble IDs. Both were resolved by exact
+`restaurants.name` matching and written to `shop_restro_id` UUID foreign keys.
+
 The one-time `bubble-import-phase-a` endpoint was disabled immediately after
 the successful run and now returns HTTP 410.
 
@@ -61,4 +65,3 @@ the successful run and now returns HTTP 410.
 
 No further phase should run until Phase A mappings and the full Schema approval
 draft are reviewed.
-
