@@ -52,6 +52,16 @@ function secretKey() {
   throw new Error("Supabase server secret is not configured.");
 }
 
+function createAdminClient() {
+  return createClient<any>(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    secretKey(),
+    { auth: { persistSession: false, autoRefreshToken: false } },
+  );
+}
+
+type AdminClient = ReturnType<typeof createAdminClient>;
+
 function validateRecord(value: unknown): UploadedFileRecord {
   if (!value || typeof value !== "object") {
     throw new Error("Attachment record must be an object.");
@@ -131,7 +141,7 @@ async function recordIdentity(record: UploadedFileRecord) {
   };
 }
 
-async function requireSuperAdmin(request: Request, admin: ReturnType<typeof createClient>) {
+async function requireSuperAdmin(request: Request, admin: AdminClient) {
   const authorization = request.headers.get("Authorization");
   if (!authorization?.startsWith("Bearer ")) {
     throw new Response("Missing authorization.", { status: 401 });
@@ -150,7 +160,7 @@ async function requireSuperAdmin(request: Request, admin: ReturnType<typeof crea
 }
 
 async function analyze(
-  admin: ReturnType<typeof createClient>,
+  admin: AdminClient,
   values: unknown,
 ) {
   if (!Array.isArray(values) || values.length > MAX_ANALYZE_RECORDS) {
@@ -219,7 +229,7 @@ async function analyze(
 }
 
 async function upsertFailure(
-  admin: ReturnType<typeof createClient>,
+  admin: AdminClient,
   record: UploadedFileRecord,
   deterministicKey: string,
   sourceUrlHash: string,
@@ -255,7 +265,7 @@ async function upsertFailure(
 }
 
 async function migrate(
-  admin: ReturnType<typeof createClient>,
+  admin: AdminClient,
   value: unknown,
 ) {
   const record = validateRecord(value);
@@ -384,11 +394,7 @@ Deno.serve(async (request) => {
     return jsonResponse({ error: "Method not allowed." }, 405);
   }
   try {
-    const admin = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      secretKey(),
-      { auth: { persistSession: false, autoRefreshToken: false } },
-    );
+    const admin = createAdminClient();
     await requireSuperAdmin(request, admin);
     const body = (await request.json()) as {
       action?: unknown;
