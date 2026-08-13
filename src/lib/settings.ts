@@ -14,7 +14,7 @@ export const SYSTEM_ROLES = [
 
 export type SystemRole = (typeof SYSTEM_ROLES)[number];
 
-export type PageKind = "page" | "subpage" | "tab";
+export type PageKind = "page" | "subpage" | "tab" | "action";
 
 export type UserListItem = {
   id: string;
@@ -181,6 +181,21 @@ export type CreateUserInput = {
   shopRestroLegacyId?: string;
 };
 
+export type UpdateUserProfileInput = {
+  userId: string;
+  userName: string;
+  role: SystemRole;
+  phone?: string;
+  shopRestroLegacyId?: string;
+};
+
+/** Action-level permission keys under the users settings page. */
+export const USER_ACTION_PERMISSION_KEYS = {
+  create: "settings.users.create",
+  edit: "settings.users.edit",
+  changePassword: "settings.users.change_password",
+} as const;
+
 async function invokeAdminUsers<T>(body: Record<string, unknown>) {
   const {
     data: { session },
@@ -258,6 +273,32 @@ export async function updateManagedUserPassword(
   });
 }
 
+export async function updateManagedUserProfile(input: UpdateUserProfileInput) {
+  const userName = input.userName.trim();
+  const phone = normalizePhoneInput(input.phone ?? "");
+  if (!input.userId) throw new Error("invalid_user_id");
+  if (!userName) throw new Error("invalid_user_name");
+  if (!isValidPhone(phone)) throw new Error("invalid_phone");
+
+  const result = await invokeAdminUsers<{
+    user: {
+      id: string;
+      userName: string;
+      role: SystemRole;
+      phone: string | null;
+      shopRestroLegacyId: string | null;
+    };
+  }>({
+    action: "updateProfile",
+    userId: input.userId,
+    userName,
+    role: input.role,
+    phone: phone || null,
+    shopRestroLegacyId: input.shopRestroLegacyId?.trim() || null,
+  });
+  return result.user;
+}
+
 function isReservedPageKey(pageKey: string) {
   return (
     pageKey === "settings" ||
@@ -267,7 +308,7 @@ function isReservedPageKey(pageKey: string) {
 }
 
 function normalizePageKind(value: string | null | undefined): PageKind {
-  if (value === "subpage" || value === "tab") return value;
+  if (value === "subpage" || value === "tab" || value === "action") return value;
   return "page";
 }
 

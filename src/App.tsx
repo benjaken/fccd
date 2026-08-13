@@ -316,6 +316,9 @@ const SECTION_CHILD_KEYS: Record<string, string[]> = {
   ],
   settings: [
     "settings.users",
+    "settings.users.create",
+    "settings.users.edit",
+    "settings.users.change_password",
     "settings.roles",
     "settings.login_logs",
     "settings.attachments",

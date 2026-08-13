@@ -35,7 +35,16 @@ type UpdatePasswordPayload = {
   password: string;
 };
 
-type Payload = CreatePayload | UpdatePasswordPayload;
+type UpdateProfilePayload = {
+  action: "updateProfile";
+  userId: string;
+  userName: string;
+  role: SystemRole;
+  phone?: string | null;
+  shopRestroLegacyId?: string | null;
+};
+
+type Payload = CreatePayload | UpdatePasswordPayload | UpdateProfilePayload;
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -137,6 +146,21 @@ function parsePayload(value: unknown): Payload {
       password: typeof body.password === "string" ? body.password : "",
     };
   }
+  if (body.action === "updateProfile") {
+    return {
+      action: "updateProfile",
+      userId: typeof body.userId === "string" ? body.userId.trim() : "",
+      userName: typeof body.userName === "string" ? body.userName.trim() : "",
+      role: typeof body.role === "string" ? (body.role as SystemRole) : "Admin",
+      phone: normalizePhone(
+        typeof body.phone === "string" ? body.phone : null,
+      ),
+      shopRestroLegacyId:
+        typeof body.shopRestroLegacyId === "string"
+          ? body.shopRestroLegacyId.trim() || null
+          : null,
+    };
+  }
   throw jsonResponse({ error: "unsupported_action" }, 400);
 }
 
@@ -227,6 +251,62 @@ async function updatePassword(
   return { id: data.user.id };
 }
 
+async function updateProfile(
+  admin: AdminClient,
+  payload: UpdateProfilePayload,
+) {
+  if (!payload.userId) {
+    throw jsonResponse({ error: "invalid_user_id" }, 400);
+  }
+  if (!payload.userName) {
+    throw jsonResponse({ error: "invalid_user_name" }, 400);
+  }
+  if (!isSystemRole(payload.role)) {
+    throw jsonResponse({ error: "invalid_role" }, 400);
+  }
+  if (!isPhoneValid(payload.phone ?? null)) {
+    throw jsonResponse({ error: "invalid_phone" }, 400);
+  }
+
+  const { data, error } = await admin.auth.admin.updateUserById(payload.userId, {
+    app_metadata: { role: payload.role },
+    user_metadata: {
+      user_name: payload.userName,
+      phone: payload.phone ?? null,
+    },
+  });
+  if (error || !data.user) {
+    throw jsonResponse(
+      { error: "profile_update_failed", detail: error?.message ?? null },
+      500,
+    );
+  }
+
+  const { error: profileError } = await admin
+    .from("user_profiles")
+    .update({
+      user_name: payload.userName,
+      role: payload.role,
+      phone: payload.phone ?? null,
+      shop_restro_legacy_id: payload.shopRestroLegacyId ?? null,
+    })
+    .eq("id", payload.userId);
+  if (profileError) {
+    throw jsonResponse(
+      { error: "profile_update_failed", detail: profileError.message },
+      500,
+    );
+  }
+
+  return {
+    id: payload.userId,
+    userName: payload.userName,
+    role: payload.role,
+    phone: payload.phone ?? null,
+    shopRestroLegacyId: payload.shopRestroLegacyId ?? null,
+  };
+}
+
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -241,6 +321,9 @@ Deno.serve(async (request) => {
     const payload = parsePayload(await request.json());
     if (payload.action === "create") {
       return jsonResponse({ user: await createUser(admin, payload) }, 201);
+    }
+    if (payload.action === "updateProfile") {
+      return jsonResponse({ user: await updateProfile(admin, payload) });
     }
     return jsonResponse({ user: await updatePassword(admin, payload) });
   } catch (error) {

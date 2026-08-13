@@ -20,6 +20,30 @@ import {
   type UserListItem,
 } from "@/lib/settings";
 
+vi.mock("@/auth/AuthProvider", () => ({
+  useAuth: () => ({
+    user: { app_metadata: { role: "Super Admin" } },
+    profile: { role: "Super Admin" },
+  }),
+}));
+
+vi.mock("@/auth/use-page-access", async () => {
+  const actual = await vi.importActual<typeof import("@/auth/use-page-access")>(
+    "@/auth/use-page-access",
+  );
+  return {
+    ...actual,
+    usePageAccess: () => ({
+      isSuperAdmin: true,
+      loading: false,
+      error: null,
+      canAccess: () => true,
+      canManage: () => true,
+      canAccessSection: () => true,
+    }),
+  };
+});
+
 const userItem: UserListItem = {
   id: "user-1",
   email: "admin@example.com",
@@ -233,6 +257,27 @@ describe("Super Admin system settings", () => {
     ).toBeInTheDocument();
   });
 
+  it("opens edit-user side panel for username and role", async () => {
+    const user = userEvent.setup();
+    const loadUsers = vi
+      .fn()
+      .mockResolvedValue({ items: [userItem], total: 1 });
+
+    render(
+      <MemoryRouter>
+        <UsersListPage loadUsers={loadUsers} />
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: "編輯" }));
+    expect(
+      await screen.findByRole("heading", { name: "編輯使用者" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("修改 admin@example.com 的名稱與角色。"),
+    ).toBeInTheDocument();
+  });
+
   it("opens a verified private attachment through a signed URL", async () => {
     const user = userEvent.setup();
     const loadAttachments = vi
@@ -434,5 +479,16 @@ describe("Super Admin system settings", () => {
     expect(loginLogs).toContain("create table public.login_logs");
     expect(loginLogs).toContain("settings.login_logs");
     expect(loginLogs).toContain("Super Admin reads login logs");
+
+    const userActions = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260813090000_user_management_action_permissions.sql",
+      ),
+      "utf8",
+    );
+    expect(userActions).toContain("settings.users.create");
+    expect(userActions).toContain("settings.users.edit");
+    expect(userActions).toContain("settings.users.change_password");
   });
 });

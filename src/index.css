@@ -1624,6 +1624,12 @@ td:last-child {
   font-weight: 600;
 }
 
+.settings-user-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 @keyframes settings-side-panel-in {
   from {
     transform: translateX(18px);
