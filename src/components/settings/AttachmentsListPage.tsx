@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 import {
   ATTACHMENT_FILE_TYPES,
   attachmentFileType,
@@ -219,31 +220,23 @@ export function AttachmentsListPage({
               </select>
             </label>
 
-            <label className="orders-status-filter">
-              <span>{t("settings.attachments.startDate")}</span>
-              <input
-                type="date"
-                value={startDate}
-                max={endDate || undefined}
-                onChange={(event) => {
-                  setPage(1);
-                  setStartDate(event.target.value);
-                }}
-              />
-            </label>
-
-            <label className="orders-status-filter">
-              <span>{t("settings.attachments.endDate")}</span>
-              <input
-                type="date"
-                value={endDate}
-                min={startDate || undefined}
-                onChange={(event) => {
-                  setPage(1);
-                  setEndDate(event.target.value);
-                }}
-              />
-            </label>
+            <DateRangePicker
+              startId="settings-attachments-start-date"
+              endId="settings-attachments-end-date"
+              startValue={startDate}
+              endValue={endDate}
+              onStartChange={(value) => {
+                setPage(1);
+                setStartDate(value);
+              }}
+              onEndChange={(value) => {
+                setPage(1);
+                setEndDate(value);
+              }}
+              startLabel={t("settings.attachments.startDate")}
+              endLabel={t("settings.attachments.endDate")}
+              legend={t("settings.attachments.dateRange")}
+            />
           </div>
         </header>
 
