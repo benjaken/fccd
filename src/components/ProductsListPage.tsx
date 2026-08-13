@@ -5,13 +5,19 @@ import {
   Search,
   ShoppingBasket,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
+import {
+  RelatedEntityLink,
+  catalogChannelPath,
+  catalogProductTypePath,
+} from "@/components/ui/related-entity-link";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { TableSkeletonRows } from "@/components/ui/table-skeleton";
 import {
   fetchProductChannels,
+  fetchProductTypes,
   fetchProducts,
   PRODUCTS_PAGE_SIZE,
   type CatalogOption,
@@ -34,24 +40,33 @@ const PRODUCT_SKELETON_COLUMNS = [
 ];
 
 type ProductsLoader = (filters: ProductListFilters) => Promise<ProductListResult>;
-type ChannelsLoader = () => Promise<CatalogOption[]>;
+type OptionsLoader = () => Promise<CatalogOption[]>;
 
 export function ProductsListPage({
   preset = "all",
   loadProducts = fetchProducts,
   loadChannels = fetchProductChannels,
+  loadProductTypes = fetchProductTypes,
 }: {
   preset?: ProductPreset;
   loadProducts?: ProductsLoader;
-  loadChannels?: ChannelsLoader;
+  loadChannels?: OptionsLoader;
+  loadProductTypes?: OptionsLoader;
 }) {
   const { t, i18n } = useTranslation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [draftSearch, setDraftSearch] = useState("");
   const [search, setSearch] = useState("");
-  const [channelId, setChannelId] = useState("");
+  const [channelId, setChannelId] = useState(
+    () => searchParams.get("channel") ?? "",
+  );
+  const [productTypeId, setProductTypeId] = useState(
+    () => searchParams.get("type") ?? "",
+  );
   const [status, setStatus] = useState<ProductStatusFilter>("");
   const [priceRange, setPriceRange] = useState<ProductPriceRange>("");
   const [channels, setChannels] = useState<CatalogOption[]>([]);
+  const [productTypes, setProductTypes] = useState<CatalogOption[]>([]);
   const [page, setPage] = useState(1);
   const [items, setItems] = useState<ProductListItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -85,21 +100,44 @@ export function ProductsListPage({
 
   useEffect(() => {
     let active = true;
-    void loadChannels()
-      .then((options) => {
-        if (active) setChannels(options);
+    void Promise.all([loadChannels(), loadProductTypes()])
+      .then(([channelOptions, typeOptions]) => {
+        if (!active) return;
+        setChannels(channelOptions);
+        setProductTypes(typeOptions);
       })
       .catch(() => {
-        if (active) setChannels([]);
+        if (!active) return;
+        setChannels([]);
+        setProductTypes([]);
       });
     return () => {
       active = false;
     };
-  }, [loadChannels]);
+  }, [loadChannels, loadProductTypes]);
+
+  useEffect(() => {
+    const nextChannel = searchParams.get("channel") ?? "";
+    const nextType = searchParams.get("type") ?? "";
+    setChannelId((current) => (current === nextChannel ? current : nextChannel));
+    setProductTypeId((current) => (current === nextType ? current : nextType));
+  }, [searchParams]);
+
+  useEffect(() => {
+    const next = new URLSearchParams();
+    if (channelId) next.set("channel", channelId);
+    if (productTypeId) next.set("type", productTypeId);
+    const current = searchParams.toString();
+    const upcoming = next.toString();
+    if (current !== upcoming) {
+      setSearchParams(next, { replace: true });
+    }
+  }, [channelId, productTypeId, searchParams, setSearchParams]);
 
   useEffect(() => {
     setPage(1);
     setChannelId("");
+    setProductTypeId("");
     setStatus("");
     setPriceRange("");
   }, [preset]);
@@ -112,6 +150,7 @@ export function ProductsListPage({
         page,
         search,
         channelId,
+        productTypeId,
         status,
         priceRange,
         preset,
@@ -132,7 +171,17 @@ export function ProductsListPage({
     } finally {
       setLoading(false);
     }
-  }, [channelId, loadProducts, page, preset, priceRange, reloadKey, search, status]);
+  }, [
+    channelId,
+    loadProducts,
+    page,
+    preset,
+    priceRange,
+    productTypeId,
+    reloadKey,
+    search,
+    status,
+  ]);
 
   useEffect(() => {
     void loadPage();
@@ -239,6 +288,24 @@ export function ProductsListPage({
             </label>
 
             <label className="products-status-filter">
+              <span>{t("products.typeFilter")}</span>
+              <select
+                value={productTypeId}
+                onChange={(event) => {
+                  setPage(1);
+                  setProductTypeId(event.target.value);
+                }}
+              >
+                <option value="">{t("products.allTypes")}</option>
+                {productTypes.map((productType) => (
+                  <option key={productType.id} value={productType.id}>
+                    {productType.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="products-status-filter">
               <span>{t("products.statusFilter")}</span>
               <select
                 value={status}
@@ -326,8 +393,28 @@ export function ProductsListPage({
                             </small>
                           )}
                       </td>
-                      <td>{product.channelName || t("common.notSet")}</td>
-                      <td>{product.productTypeName || t("common.notSet")}</td>
+                      <td>
+                        <RelatedEntityLink
+                          to={
+                            product.channelId
+                              ? catalogChannelPath(product.channelId, "products")
+                              : null
+                          }
+                        >
+                          {product.channelName || t("common.notSet")}
+                        </RelatedEntityLink>
+                      </td>
+                      <td>
+                        <RelatedEntityLink
+                          to={
+                            product.productTypeId
+                              ? catalogProductTypePath(product.productTypeId)
+                              : null
+                          }
+                        >
+                          {product.productTypeName || t("common.notSet")}
+                        </RelatedEntityLink>
+                      </td>
                       <td>
                         <strong>{formatPrice(product)}</strong>
                       </td>
