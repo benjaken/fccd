@@ -605,7 +605,16 @@ describe("Super Admin system settings", () => {
         path.resolve(process.cwd(), "supabase/functions/login-log/index.ts"),
         "utf8",
       ),
-    ).toContain('latest?.event_type === "login_success"');
+    ).toContain('rpc("record_login_log"');
+    expect(
+      readFileSync(
+        path.resolve(
+          process.cwd(),
+          "supabase/migrations/20260813110000_merge_duplicate_login_success.sql",
+        ),
+        "utf8",
+      ),
+    ).toContain("create or replace function public.record_login_log");
     expect(
       readFileSync(
         path.resolve(process.cwd(), "supabase/functions/admin-users/index.ts"),
