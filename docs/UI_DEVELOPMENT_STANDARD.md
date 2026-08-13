@@ -141,6 +141,7 @@ the same input / search / skeleton / pagination markup across list pages.
 | Paginated operational table + loading rows | `ListTable` → `TableSkeletonRows` |
 | Permission / bootstrap page loading | `PageSkeleton` |
 | Order / quote / product / package detail loading | `DetailPageSkeleton` |
+| Dashboard / queue / profile / report / analysis loading | Components in `content-skeletons.tsx` |
 | List pagination footer | `TablePagination` |
 | Panel empty / error / permission | Prefer `OperationalListState` |
 
@@ -150,6 +151,8 @@ Rules:
   extract it before merging — do not leave divergent copies.
 - Page files own data fetching and filter state; shared components own the
   repeated chrome and interaction shell.
+- Page-level loading must preserve layout with a skeleton. Do not show visible
+  spinner or plain “loading” text; keep the label as an sr-only status.
 - Paginated operational list pages must use `ListTable`; do not hand-write a
   separate `<table>` and full-panel loading-spinner branch.
 - Prefer extending an existing ui component (props / variants) over a one-off

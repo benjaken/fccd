@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { ChevronRight, ClipboardCheck, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
 
+import { QueuePageSkeleton } from "@/components/ui/content-skeletons";
 import { OperationalListState } from "@/components/ui/operational-list-state";
 import { fetchDashboardData, type DashboardData } from "@/lib/dashboard";
 import { usePageAccess } from "@/auth/use-page-access";
@@ -47,7 +48,7 @@ export function FollowUpPage({ role }: { role: string | null }) {
   ].filter(Boolean) as { label: string; count: number; to: string; tone: string }[];
 
   if (loading) {
-    return <OperationalListState icon={ClipboardCheck} title={t("followUp.loading")} loading />;
+    return <QueuePageSkeleton label={t("followUp.loading")} />;
   }
   if (error) {
     return <OperationalListState icon={ClipboardCheck} title={t("followUp.loadError")} description={t("followUp.loadErrorDescription")} retryLabel={t("followUp.retry")} onRetry={() => setReloadKey((key) => key + 1)} />;

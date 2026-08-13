@@ -74,6 +74,7 @@ import { RolePermissionsPage } from "@/components/settings/RolePermissionsPage";
 import { SettingsAccessDenied } from "@/components/settings/SettingsAccessDenied";
 import { UsersListPage } from "@/components/settings/UsersListPage";
 import { Button } from "@/components/ui/button";
+import { DashboardSkeleton } from "@/components/ui/content-skeletons";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import {
   fetchDashboardData,
@@ -1175,6 +1176,10 @@ export function Dashboard({
       : formatted;
   };
 
+  if (loading) {
+    return <DashboardSkeleton label={t("dashboard.loading")} />;
+  }
+
   return (
     <>
       <section className="page-heading">
@@ -1188,7 +1193,7 @@ export function Dashboard({
             onClick={() => setReloadKey((key) => key + 1)}
             disabled={loading}
           >
-            <RefreshCw className={loading ? "spin" : undefined} />
+            <RefreshCw />
             {t("dashboard.refresh")}
           </Button>
           <Button variant="outline" asChild>
@@ -1216,13 +1221,6 @@ export function Dashboard({
             <RefreshCw />
             {t("dashboard.retry")}
           </Button>
-        </div>
-      )}
-
-      {loading && (
-        <div className="dashboard-loading" role="status">
-          <RefreshCw className="spin" />
-          {t("dashboard.loading")}
         </div>
       )}
 

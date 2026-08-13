@@ -12,6 +12,7 @@ import {
 
 import { useAuth } from "@/auth/AuthProvider";
 import { Button } from "@/components/ui/button";
+import { ProfileSkeleton } from "@/components/ui/content-skeletons";
 
 function ProfileField({
   icon,
@@ -53,6 +54,10 @@ export function ProfilePage() {
     }).format(new Date(value));
   };
 
+  if (profileLoading && !profile) {
+    return <ProfileSkeleton label={t("profile.loading")} />;
+  }
+
   const displayName =
     profile?.user_name || user?.email?.split("@")[0] || notSet;
   const avatar = displayName.slice(0, 2).toUpperCase();
@@ -69,7 +74,7 @@ export function ProfilePage() {
           onClick={() => void refreshProfile()}
           disabled={profileLoading}
         >
-          <RefreshCw className={profileLoading ? "spin" : undefined} />
+          <RefreshCw />
           {t("profile.refresh")}
         </Button>
       </header>
@@ -85,13 +90,6 @@ export function ProfilePage() {
           {profile?.role || notSet}
         </span>
       </article>
-
-      {profileLoading && !profile && (
-        <div className="profile-state" role="status">
-          <RefreshCw className="spin" />
-          <span>{t("profile.loading")}</span>
-        </div>
-      )}
 
       {profileError && !profileLoading && (
         <div className="profile-state profile-state-error" role="alert">

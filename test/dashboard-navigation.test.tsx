@@ -96,11 +96,12 @@ describe("Dashboard navigation", () => {
     ["未付款訂單", "/orders/unpaid"],
     ["未安排司機", "/delivery/unassigned"],
     ["已送貨未付款", "/orders/delivered-unpaid"],
-  ])("links %s to %s", (name, target) => {
+  ])("links %s to %s", async (name, target) => {
     renderDashboard();
 
-    const matchingLink = screen
-      .getAllByRole("link", { name: new RegExp(name) })
+    const matchingLink = (await screen.findAllByRole("link", {
+      name: new RegExp(name),
+    }))
       .find((link) => link.getAttribute("href") === target);
 
     expect(matchingLink).toBeDefined();
