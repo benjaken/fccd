@@ -39,6 +39,11 @@ full-width rule.
 - `--primary-foreground` is **white / near-white** in both light and dark mode.
   Filled primary buttons (for example「建立新訂單」) must show white label and
   icon text — never dark body text on the blue fill.
+- Active navigation (sidebar, workspace soft links, tabs) uses a **pale blue**
+  wash + blue label — never a residual pink/red tint from the old brand red.
+- Classes named `red` (`.status-badge.red`, `.metric-icon.red`) map to
+  `--destructive` only. Do not reuse them as a stand-in for the old brand
+  primary; use `blue` (or another semantic tone) for brand emphasis.
 - Keep chroma in a readable mid range (roughly `0.12`–`0.16`). Avoid returning
   to high-chroma red, and avoid overly desaturated “muddy” primaries.
 - Manage color through semantic tokens (`--primary`, `--accent`, `--ring`,

@@ -50,7 +50,7 @@ function displayStatus(
     return { label: labels.ready, tone: "green" };
   }
   if (order.deliveryStatus === "待接單" || order.deliveryStatus === "未派車隊") {
-    return { label: labels.awaitingDriver, tone: "red" };
+    return { label: labels.awaitingDriver, tone: "amber" };
   }
   if (order.isSentToFactory) return { label: labels.preparing, tone: "amber" };
   return { label: labels.confirmed, tone: "blue" };

@@ -37,7 +37,7 @@ export function FollowUpPage({ role }: { role: string | null }) {
   useEffect(() => void load(), [load]);
 
   const queues = [
-    access.canAccess("quotes") && { label: t("dashboard.highChanceQuotes"), count: data.queues.highChanceQuotes, to: "/quotes/high-chance", tone: "red" },
+    access.canAccess("quotes") && { label: t("dashboard.highChanceQuotes"), count: data.queues.highChanceQuotes, to: "/quotes/high-chance", tone: "amber" },
     access.canAccess("quotes") && { label: t("dashboard.largeQuotes"), count: data.queues.largeQuotes, to: "/quotes/large", tone: "amber" },
     { label: t("followUp.pendingOrders"), count: data.progress.confirmed, to: "/orders/pending", tone: "blue" },
     access.canAccess("finance") && { label: t("dashboard.unpaidOrders"), count: data.queues.unpaidOrders, to: "/orders/unpaid", tone: "blue" },

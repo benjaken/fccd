@@ -277,8 +277,13 @@ button.bg-primary:focus-visible {
 }
 
 .workspace-soft-link.active {
-  background: color-mix(in oklch, var(--primary) 9%, var(--card));
-  color: var(--primary);
+  background: oklch(0.94 0.04 250);
+  color: oklch(0.42 0.14 250);
+}
+
+.dark .workspace-soft-link.active {
+  background: oklch(0.27 0.055 250);
+  color: oklch(0.82 0.1 250);
 }
 
 .workspace-soft-link.disabled {
@@ -667,8 +672,13 @@ button.bg-primary:focus-visible {
 }
 
 .sidebar-link.active {
-  background: color-mix(in oklch, var(--primary) 10%, var(--card));
-  color: var(--primary);
+  background: oklch(0.94 0.04 250);
+  color: oklch(0.42 0.14 250);
+}
+
+.dark .sidebar-link.active {
+  background: oklch(0.27 0.055 250);
+  color: oklch(0.82 0.1 250);
 }
 
 .sidebar-link > svg {
@@ -843,8 +853,13 @@ button.bg-primary:focus-visible {
 }
 
 .metric-icon.red {
-  background: color-mix(in oklch, var(--primary) 12%, var(--card));
-  color: var(--primary);
+  background: color-mix(in oklch, var(--destructive) 12%, var(--card));
+  color: var(--destructive);
+}
+
+.dark .metric-icon.red {
+  background: color-mix(in oklch, var(--destructive) 18%, var(--card));
+  color: oklch(0.78 0.12 25);
 }
 
 .metric-icon.green {
@@ -1294,8 +1309,13 @@ td:last-child {
 }
 
 .status-badge.red {
-  background: color-mix(in oklch, var(--primary) 12%, var(--card));
-  color: var(--primary);
+  background: color-mix(in oklch, var(--destructive) 12%, var(--card));
+  color: var(--destructive);
+}
+
+.dark .status-badge.red {
+  background: color-mix(in oklch, var(--destructive) 18%, var(--card));
+  color: oklch(0.78 0.12 25);
 }
 
 .status-badge.blue {
@@ -2169,8 +2189,13 @@ td:last-child {
 }
 
 .migration-tab.active {
-  background: color-mix(in oklch, var(--primary) 10%, var(--card));
-  color: var(--primary);
+  background: oklch(0.94 0.04 250);
+  color: oklch(0.42 0.14 250);
+}
+
+.dark .migration-tab.active {
+  background: oklch(0.27 0.055 250);
+  color: oklch(0.82 0.1 250);
 }
 
 .migration-tab svg,
