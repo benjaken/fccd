@@ -6,6 +6,7 @@ import { ReportsPage } from "@/components/ReportsPage";
 import i18n from "@/i18n";
 
 const reports = vi.hoisted(() => ({
+  fetchMonthlyPreparedMeatStock: vi.fn(),
   fetchMonthlyPreparedMeatPrices: vi.fn(),
   fetchMonthlyRawMeatAveragePrices: vi.fn(),
   fetchReportShops: vi.fn(),
@@ -13,6 +14,7 @@ const reports = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/reports", () => ({
+  fetchMonthlyPreparedMeatStock: reports.fetchMonthlyPreparedMeatStock,
   fetchMonthlyPreparedMeatPrices: reports.fetchMonthlyPreparedMeatPrices,
   fetchMonthlyRawMeatAveragePrices:
     reports.fetchMonthlyRawMeatAveragePrices,
@@ -110,6 +112,44 @@ describe("Shop order quantity report", () => {
         averagePricePerKg: 18.73,
         totalQuantityKg: 200,
         receiptCount: 4,
+      },
+    ]);
+    reports.fetchMonthlyPreparedMeatStock.mockResolvedValue([
+      {
+        preparedMeatItemId: "prepared-stock-1",
+        preparedMeatName: "熟滷水牛展片",
+        productUnit: "包",
+        sortOrder: 1,
+        monthNumber: 1,
+        monthEndPackages: 35,
+        monthlyNetPackages: -3,
+      },
+      {
+        preparedMeatItemId: "prepared-stock-1",
+        preparedMeatName: "熟滷水牛展片",
+        productUnit: "包",
+        sortOrder: 1,
+        monthNumber: 2,
+        monthEndPackages: 68,
+        monthlyNetPackages: 33,
+      },
+      {
+        preparedMeatItemId: "prepared-stock-2",
+        preparedMeatName: "燜羊腩",
+        productUnit: "包",
+        sortOrder: 2,
+        monthNumber: 1,
+        monthEndPackages: -19,
+        monthlyNetPackages: -5,
+      },
+      {
+        preparedMeatItemId: "prepared-stock-2",
+        preparedMeatName: "燜羊腩",
+        productUnit: "包",
+        sortOrder: 2,
+        monthNumber: 2,
+        monthEndPackages: -23,
+        monthlyNetPackages: -4,
       },
     ]);
   });
@@ -236,6 +276,50 @@ describe("Shop order quantity report", () => {
       screen.getByRole("img", {
         name: i18n.t("reports.rawMeatProductPriceTrend", {
           product: "雞扒",
+        }),
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("renders cumulative month-end prepared-meat stock", async () => {
+    const user = userEvent.setup();
+    const tabLabel = i18n.t("reports.tabs.preparedMeatStock");
+    render(<ReportsPage />);
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: tabLabel,
+      }),
+    );
+
+    expect(
+      await screen.findByRole("heading", {
+        name: tabLabel,
+      }),
+    ).toBeInTheDocument();
+    expect(reports.fetchMonthlyPreparedMeatStock).toHaveBeenLastCalledWith(
+      new Date().getFullYear(),
+    );
+    expect(screen.getAllByText("熟滷水牛展片").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText("燜羊腩").length).toBeGreaterThanOrEqual(2);
+    expect(
+      screen.getByRole("img", {
+        name: i18n.t("reports.preparedProductStockTrend", {
+          product: "熟滷水牛展片",
+        }),
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen
+        .getByText(i18n.t("reports.expandMonthlyMatrix"))
+        .closest("details"),
+    ).toHaveAttribute("open");
+
+    await user.click(screen.getByRole("button", { name: /燜羊腩/ }));
+    expect(
+      screen.getByRole("img", {
+        name: i18n.t("reports.preparedProductStockTrend", {
+          product: "燜羊腩",
         }),
       }),
     ).toBeInTheDocument();

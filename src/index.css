@@ -4811,6 +4811,14 @@ td:last-child {
   color: oklch(0.52 0.14 150) !important;
 }
 
+.stock-negative {
+  color: oklch(0.56 0.18 28) !important;
+}
+
+.stock-positive {
+  color: oklch(0.52 0.14 150) !important;
+}
+
 .meat-price-trend {
   position: sticky;
   top: 12px;
