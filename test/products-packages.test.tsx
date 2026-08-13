@@ -22,9 +22,11 @@ const productResult: ProductListResult = {
       name: "Roast Chicken",
       chineseName: "燒雞",
       price: 188,
-      status: "active",
+      status: "Active",
       isActive: true,
+      channelId: "channel-1",
       channelName: "Catering",
+      productTypeId: "type-1",
       productTypeName: "西式熱盤",
       updatedAt: "2026-08-12T01:00:00.000Z",
     },
@@ -41,15 +43,25 @@ const productDetail: ProductDetail = {
   price: 188,
   priceMin: 168,
   priceMax: 208,
-  status: "active",
+  status: "Active",
   isActive: true,
   isBentoRecommended: false,
+  channelId: "channel-1",
   channelName: "Catering",
+  productTypeId: "type-1",
   productTypeName: "西式熱盤",
   cookTypeName: "焗",
   bentoMainTypeName: null,
   bentoColumnTypeName: null,
   collections: ["西式熱盤"],
+  packages: [
+    {
+      id: "package-1",
+      sku: "CCFA0406",
+      name: "Family Feast",
+      chineseName: "精緻家庭美宴 (4-6人)",
+    },
+  ],
   updatedAt: "2026-08-12T01:00:00.000Z",
 };
 
@@ -62,8 +74,9 @@ const packageResult: PackageListResult = {
       name: "Family Feast",
       chineseName: "精緻家庭美宴 (4-6人)",
       price: 1280,
-      status: "active",
+      status: "Active",
       isActive: true,
+      channelId: "channel-1",
       channelName: "Catering",
       memberCount: 9,
       updatedAt: "2026-08-12T01:00:00.000Z",
@@ -78,8 +91,9 @@ const packageDetail: PackageDetail = {
   chineseName: "精緻家庭美宴 (4-6人)",
   description: "適合家庭聚會",
   price: 1280,
-  status: "active",
+  status: "Active",
   isActive: true,
+  channelId: "channel-1",
   channelName: "Catering",
   updatedAt: "2026-08-12T01:00:00.000Z",
   members: [
@@ -131,7 +145,12 @@ describe("Products catalog pages", () => {
       await screen.findByRole("link", { name: "燒雞" }),
     ).toHaveAttribute("href", "/products/product-1");
     expect(screen.getByText("CC-001")).toBeInTheDocument();
-    expect(within(screen.getByRole("table")).getByText("Catering")).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("table")).getByRole("link", { name: "Catering" }),
+    ).toHaveAttribute("href", "/products?channel=channel-1");
+    expect(
+      within(screen.getByRole("table")).getByRole("link", { name: "西式熱盤" }),
+    ).toHaveAttribute("href", "/products?type=type-1");
     expect(screen.getByText("HK$188")).toBeInTheDocument();
   });
 
@@ -212,6 +231,7 @@ describe("Products catalog pages", () => {
         page: 1,
         search: "燒雞",
         channelId: "",
+        productTypeId: "",
         status: "",
         priceRange: "",
         preset: "all",
@@ -287,6 +307,13 @@ describe("Products catalog pages", () => {
     expect(screen.getByText("經典到會燒雞")).toBeInTheDocument();
     expect(screen.getAllByText("西式熱盤").length).toBeGreaterThan(0);
     expect(screen.getByText("焗")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Catering" })).toHaveAttribute(
+      "href",
+      "/products?channel=channel-1",
+    );
+    expect(
+      screen.getByRole("link", { name: "精緻家庭美宴 (4-6人)" }),
+    ).toHaveAttribute("href", "/products/packages/package-1");
   });
 });
 
@@ -317,6 +344,9 @@ describe("Packages catalog pages", () => {
       await screen.findByRole("link", { name: "精緻家庭美宴 (4-6人)" }),
     ).toHaveAttribute("href", "/products/packages/package-1");
     expect(screen.getByText("CCFA0406")).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("table")).getByRole("link", { name: "Catering" }),
+    ).toHaveAttribute("href", "/products/packages?channel=channel-1");
     expect(screen.getByText("9")).toBeInTheDocument();
     expect(screen.getByText("HK$1,280")).toBeInTheDocument();
   });
@@ -339,10 +369,14 @@ describe("Packages catalog pages", () => {
       await screen.findByRole("heading", { name: "精緻家庭美宴 (4-6人)" }),
     ).toBeInTheDocument();
     expect(screen.getByText("中式小菜")).toBeInTheDocument();
-    expect(screen.getByText("燒雞")).toBeInTheDocument();
-    expect(screen.getByText("CC-001")).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "燒雞" })).toHaveAttribute(
       "href",
       "/products/product-1",
     );
+    expect(screen.getByRole("link", { name: "Catering" })).toHaveAttribute(
+      "href",
+      "/products/packages?channel=channel-1",
+    );
+    expect(screen.getByText("CC-001")).toBeInTheDocument();
   });
 });

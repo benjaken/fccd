@@ -884,6 +884,10 @@ const resources = {
         bentoRecommended: "便當推薦",
         collections: "Collection",
         updated: "最後更新",
+        relatedPackages: "包含此商品的套餐",
+        noRelatedPackages: "目前沒有套餐使用此商品。",
+        relatedPackageSku: "套餐 SKU",
+        relatedPackageName: "套餐名稱",
       },
       packages: {
         eyebrow: "套餐目錄",
@@ -2056,6 +2060,10 @@ const resources = {
         bentoRecommended: "Bento recommended",
         collections: "Collections",
         updated: "Last updated",
+        relatedPackages: "Packages using this product",
+        noRelatedPackages: "No packages currently include this product.",
+        relatedPackageSku: "Package SKU",
+        relatedPackageName: "Package name",
       },
       packages: {
         eyebrow: "Package catalog",

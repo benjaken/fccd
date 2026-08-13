@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 import { useTranslation } from "react-i18next";
 import {
   ChevronLeft,
+  Package,
   RefreshCw,
   ShoppingBasket,
   Tags,
@@ -9,6 +10,12 @@ import {
 import { Link, useParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
+import {
+  RelatedEntityLink,
+  catalogChannelPath,
+  catalogPackagePath,
+  catalogProductTypePath,
+} from "@/components/ui/related-entity-link";
 import { fetchProductDetail, type ProductDetail } from "@/lib/products";
 import { cn } from "@/lib/utils";
 
@@ -113,6 +120,18 @@ export function ProductDetailPage({
   const money = (value: number | null) =>
     value === null ? t("common.notSet") : currency.format(value);
   const displayName = product.chineseName || product.name;
+  const statusLabel =
+    product.status === "Active"
+      ? t("products.statusActive")
+      : product.status === "Inactive"
+        ? t("products.statusInactive")
+        : product.status || t("products.statusUnset");
+  const statusTone =
+    product.status === "Active"
+      ? "green"
+      : product.status === "Inactive"
+        ? "amber"
+        : "blue";
 
   return (
     <section className="detail-page">
@@ -126,13 +145,7 @@ export function ProductDetailPage({
           <h1>{displayName}</h1>
           <p>{product.sku || t("common.notSet")}</p>
         </div>
-        <span
-          className={cn("status-badge", product.isActive ? "green" : "amber")}
-        >
-          {product.isActive
-            ? t("products.active")
-            : product.status || t("products.inactive")}
-        </span>
+        <span className={cn("status-badge", statusTone)}>{statusLabel}</span>
       </header>
 
       <section className="detail-grid detail-grid-two">
@@ -152,10 +165,26 @@ export function ProductDetailPage({
               {product.sku || t("common.notSet")}
             </DetailField>
             <DetailField label={t("productDetail.channel")}>
-              {product.channelName || t("common.notSet")}
+              <RelatedEntityLink
+                to={
+                  product.channelId
+                    ? catalogChannelPath(product.channelId, "products")
+                    : null
+                }
+              >
+                {product.channelName || t("common.notSet")}
+              </RelatedEntityLink>
             </DetailField>
             <DetailField label={t("productDetail.type")}>
-              {product.productTypeName || t("common.notSet")}
+              <RelatedEntityLink
+                to={
+                  product.productTypeId
+                    ? catalogProductTypePath(product.productTypeId)
+                    : null
+                }
+              >
+                {product.productTypeName || t("common.notSet")}
+              </RelatedEntityLink>
             </DetailField>
             <DetailField label={t("productDetail.cookType")}>
               {product.cookTypeName || t("common.notSet")}
@@ -200,6 +229,41 @@ export function ProductDetailPage({
           </div>
         </article>
       </section>
+
+      <article className="panel detail-card">
+        <header>
+          <Package />
+          <h2>{t("productDetail.relatedPackages")}</h2>
+        </header>
+        {product.packages.length === 0 ? (
+          <p className="detail-description">
+            {t("productDetail.noRelatedPackages")}
+          </p>
+        ) : (
+          <div className="table-wrap detail-inline-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>{t("productDetail.relatedPackageSku")}</th>
+                  <th>{t("productDetail.relatedPackageName")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {product.packages.map((pkg) => (
+                  <tr key={pkg.id}>
+                    <td>{pkg.sku || t("common.notSet")}</td>
+                    <td>
+                      <RelatedEntityLink to={catalogPackagePath(pkg.id)}>
+                        {pkg.chineseName || pkg.name}
+                      </RelatedEntityLink>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </article>
 
       <article className="panel detail-card">
         <header>

@@ -10,6 +10,7 @@ export type PackageListItem = {
   price: number | null;
   status: string | null;
   isActive: boolean;
+  channelId: string | null;
   channelName: string | null;
   memberCount: number;
   updatedAt: string;
@@ -54,11 +55,14 @@ export type PackageDetail = {
   price: number | null;
   status: string | null;
   isActive: boolean;
+  channelId: string | null;
   channelName: string | null;
   updatedAt: string;
   members: PackageMember[];
   choiceSets: PackageChoiceSet[];
 };
+
+type RelatedRecord = { id: string; name: string };
 
 type PackageListRow = {
   id: string;
@@ -69,7 +73,7 @@ type PackageListRow = {
   status: string | null;
   is_active: boolean;
   updated_at: string;
-  channels: { name: string } | { name: string }[] | null;
+  channels: RelatedRecord | RelatedRecord[] | null;
   package_products: { id: string }[] | null;
 };
 
@@ -83,7 +87,7 @@ type PackageDetailRow = {
   status: string | null;
   is_active: boolean;
   updated_at: string;
-  channels: { name: string } | { name: string }[] | null;
+  channels: RelatedRecord | RelatedRecord[] | null;
 };
 
 type PackageMemberRow = {
@@ -117,12 +121,11 @@ function safeSearchTerm(value: string) {
     .trim();
 }
 
-function relatedName(
-  value: { name: string } | { name: string }[] | null | undefined,
-) {
+function relatedRecord(
+  value: RelatedRecord | RelatedRecord[] | null | undefined,
+): RelatedRecord | null {
   if (!value) return null;
-  if (Array.isArray(value)) return value[0]?.name ?? null;
-  return value.name ?? null;
+  return Array.isArray(value) ? (value[0] ?? null) : value;
 }
 
 function toNumber(value: number | string | null | undefined) {
@@ -148,7 +151,7 @@ export async function fetchPackages({
   let query = supabase
     .from("packages")
     .select(
-      "id,sku,name,chinese_name,price,status,is_active,updated_at,channels(name),package_products(id)",
+      "id,sku,name,chinese_name,price,status,is_active,updated_at,channels(id,name),package_products(id)",
       { count: "exact" },
     )
     .is("archived_at", null)
@@ -174,18 +177,22 @@ export async function fetchPackages({
   if (error) throw error;
 
   return {
-    items: ((data ?? []) as PackageListRow[]).map((row) => ({
-      id: row.id,
-      sku: row.sku,
-      name: row.name,
-      chineseName: row.chinese_name,
-      price: toNumber(row.price),
-      status: row.status,
-      isActive: row.is_active,
-      channelName: relatedName(row.channels),
-      memberCount: row.package_products?.length ?? 0,
-      updatedAt: row.updated_at,
-    })),
+    items: ((data ?? []) as PackageListRow[]).map((row) => {
+      const channel = relatedRecord(row.channels);
+      return {
+        id: row.id,
+        sku: row.sku,
+        name: row.name,
+        chineseName: row.chinese_name,
+        price: toNumber(row.price),
+        status: row.status,
+        isActive: row.is_active,
+        channelId: channel?.id ?? null,
+        channelName: channel?.name ?? null,
+        memberCount: row.package_products?.length ?? 0,
+        updatedAt: row.updated_at,
+      };
+    }),
     total: count ?? 0,
   };
 }
@@ -196,7 +203,7 @@ export async function fetchPackageDetail(
   const { data, error } = await supabase
     .from("packages")
     .select(
-      "id,sku,name,chinese_name,description,price,status,is_active,updated_at,channels(name)",
+      "id,sku,name,chinese_name,description,price,status,is_active,updated_at,channels(id,name)",
     )
     .eq("id", id)
     .is("archived_at", null)
@@ -206,6 +213,7 @@ export async function fetchPackageDetail(
   if (!data) return null;
 
   const row = data as PackageDetailRow;
+  const channel = relatedRecord(row.channels);
 
   const [{ data: memberRows, error: memberError }, { data: choiceRows, error: choiceError }] =
     await Promise.all([
@@ -235,7 +243,8 @@ export async function fetchPackageDetail(
     price: toNumber(row.price),
     status: row.status,
     isActive: row.is_active,
-    channelName: relatedName(row.channels),
+    channelId: channel?.id ?? null,
+    channelName: channel?.name ?? null,
     updatedAt: row.updated_at,
     members: ((memberRows ?? []) as PackageMemberRow[]).map((member) => {
       const product = relatedProduct(member.products);
