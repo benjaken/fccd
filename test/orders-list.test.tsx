@@ -138,18 +138,28 @@ describe("Orders list", () => {
       path.resolve(process.cwd(), "src/index.css"),
       "utf8",
     );
-    const panelRule = stylesheet.match(/\.orders-panel\s*\{([^}]+)\}/);
-    const tableRule = stylesheet.match(/\.orders-table-wrap\s*\{([^}]+)\}/);
-    const paginationRule = stylesheet.match(
-      /\.orders-pagination\s*\{([^}]+)\}/,
-    );
+    const panelRules = [
+      ...stylesheet.matchAll(/\.orders-panel\s*\{([^}]+)\}/g),
+    ]
+      .map((match) => match[1])
+      .join("\n");
+    const tableRules = [
+      ...stylesheet.matchAll(/\.orders-table-wrap\s*\{([^}]+)\}/g),
+    ]
+      .map((match) => match[1])
+      .join("\n");
+    const paginationRules = [
+      ...stylesheet.matchAll(/\.orders-pagination\s*\{([^}]+)\}/g),
+    ]
+      .map((match) => match[1])
+      .join("\n");
 
-    expect(panelRule?.[1]).toContain(
+    expect(panelRules).toContain(
       "grid-template-rows: auto minmax(0, 1fr) auto",
     );
-    expect(tableRule?.[1]).toContain("overflow: auto");
-    expect(paginationRule?.[1]).toContain("position: sticky");
-    expect(paginationRule?.[1]).toContain("bottom: 0");
+    expect(tableRules).toContain("overflow: auto");
+    expect(paginationRules).toContain("position: sticky");
+    expect(paginationRules).toContain("bottom: 0");
   });
 
   it("blocks finance presets for roles without finance access", async () => {
