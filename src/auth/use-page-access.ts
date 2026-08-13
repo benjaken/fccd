@@ -7,18 +7,85 @@ type PermissionValue = {
   canManage: boolean;
 };
 
-export function pageAccessKey(pathname: string) {
-  if (pathname === "/" || pathname.startsWith("/follow-up")) return "overview";
-  if (pathname.startsWith("/profile")) return "profile";
-  if (pathname.startsWith("/settings/users")) return "settings.users";
-  if (pathname.startsWith("/settings/roles")) return "settings.roles";
-  if (pathname.startsWith("/settings/attachments")) {
-    return "settings.attachments";
-  }
-  if (pathname.startsWith("/finance")) return "finance";
-  if (pathname.startsWith("/inventory")) return "inventory";
+const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
+  { prefix: "/settings/users", pageKey: "settings.users" },
+  { prefix: "/settings/roles", pageKey: "settings.roles" },
+  { prefix: "/settings/attachments", pageKey: "settings.attachments" },
+  { prefix: "/settings", pageKey: "settings" },
+  { prefix: "/orders/pending", pageKey: "orders.pending" },
+  { prefix: "/orders/production", pageKey: "orders.production" },
+  { prefix: "/orders/payments", pageKey: "orders.payments" },
+  { prefix: "/orders/drivers", pageKey: "orders.drivers" },
+  { prefix: "/orders/unpaid", pageKey: "orders.unpaid" },
+  { prefix: "/orders/delivered-unpaid", pageKey: "orders.delivered_unpaid" },
+  { prefix: "/orders/new", pageKey: "orders.new" },
+  { prefix: "/quotes/customers", pageKey: "quotes.customers" },
+  { prefix: "/quotes/follow-up", pageKey: "quotes.follow_up" },
+  { prefix: "/kitchen/calendar", pageKey: "kitchen.calendar" },
+  { prefix: "/kitchen/inventory", pageKey: "kitchen.inventory" },
+  { prefix: "/delivery/assign", pageKey: "delivery.assign" },
+  { prefix: "/restaurant/inventory", pageKey: "restaurant.inventory" },
+  { prefix: "/restaurant/reports", pageKey: "restaurant.reports" },
+  {
+    prefix: "/reports/tabs/shop-order-quantities",
+    pageKey: "reports.shop_order_quantities",
+  },
+  {
+    prefix: "/reports/tabs/average-supply-price",
+    pageKey: "reports.average_supply_price",
+  },
+  {
+    prefix: "/reports/tabs/production-cost-price",
+    pageKey: "reports.production_cost_price",
+  },
+  {
+    prefix: "/reports/tabs/raw-meat-average-price",
+    pageKey: "reports.raw_meat_average_price",
+  },
+  {
+    prefix: "/reports/tabs/prepared-meat-stock",
+    pageKey: "reports.prepared_meat_stock",
+  },
+  {
+    prefix: "/reports/tabs/raw-meat-stock",
+    pageKey: "reports.raw_meat_stock",
+  },
+  {
+    prefix: "/reports/tabs/supplier-purchase",
+    pageKey: "reports.supplier_purchase",
+  },
+  { prefix: "/follow-up", pageKey: "overview.follow_up" },
+  { prefix: "/finance", pageKey: "finance" },
+  { prefix: "/inventory", pageKey: "inventory" },
+  { prefix: "/profile", pageKey: "profile" },
+];
 
-  const segment = pathname.split("/")[1];
+export const REPORT_TAB_PERMISSION_KEYS = {
+  shopOrderQuantities: "reports.shop_order_quantities",
+  averageSupplyPrice: "reports.average_supply_price",
+  productionCostPrice: "reports.production_cost_price",
+  rawMeatAveragePrice: "reports.raw_meat_average_price",
+  preparedMeatStock: "reports.prepared_meat_stock",
+  rawMeatStock: "reports.raw_meat_stock",
+  supplierPurchase: "reports.supplier_purchase",
+} as const;
+
+export type ReportTabKey = keyof typeof REPORT_TAB_PERMISSION_KEYS;
+
+export function pageAccessKey(pathname: string) {
+  if (pathname === "/" || pathname === "") return "overview";
+
+  for (const entry of EXACT_PAGE_KEYS) {
+    if (
+      pathname === entry.prefix ||
+      pathname.startsWith(`${entry.prefix}/`) ||
+      pathname.startsWith(`${entry.prefix}?`)
+    ) {
+      return entry.pageKey;
+    }
+  }
+
+  const segment = pathname.split("/").filter(Boolean)[0];
   return segment || "overview";
 }
 
@@ -87,6 +154,14 @@ export function usePageAccess(role: string | null | undefined) {
         permissions.get(pageKey)?.canAccess === true,
       canManage: (pageKey: string) =>
         isSuperAdmin || permissions.get(pageKey)?.canManage === true,
+      /** Section nav: visible if the section itself or any of its children is allowed. */
+      canAccessSection: (pageKey: string, childKeys: string[] = []) => {
+        if (pageKey === "profile" || isSuperAdmin) return true;
+        if (permissions.get(pageKey)?.canAccess === true) return true;
+        return childKeys.some(
+          (child) => permissions.get(child)?.canAccess === true,
+        );
+      },
     }),
     [error, isSuperAdmin, loading, permissions],
   );

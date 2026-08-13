@@ -236,18 +236,26 @@ const resources = {
         },
         roles: {
           title: "角色與頁面權限",
-          description: "配置各角色的頁面存取及管理權限；保留頁面只限 Super Admin。",
+          description:
+            "配置各角色的頁面、子頁面及分頁存取／管理權限；保留頁面只限 Super Admin。",
           role: "角色",
           loading: "正在載入角色權限…",
           error: "無法載入或保存角色權限",
           errorDescription: "請重試；權限變更只允許 Super Admin。",
           superAdminNotice: "Super Admin 固定可存取及管理所有頁面。",
           restrictedNotice: "使用者、角色、附件及遷移頁固定只限 Super Admin。",
+          cascadeNotice: "勾選父層權限時，會自動全選並開啟其下所有子頁面與分頁。",
           highRisk: "高風險",
           standard: "一般",
+          kinds: {
+            page: "頁面",
+            subpage: "子頁面",
+            tab: "分頁",
+          },
           columns: {
             page: "頁面",
             route: "路由",
+            kind: "層級",
             risk: "風險",
             access: "可存取",
             manage: "可管理",
@@ -990,7 +998,7 @@ const resources = {
         roles: {
           title: "Roles & Page Permissions",
           description:
-            "Configure page access and management rights. Reserved pages remain Super Admin only.",
+            "Configure access and management for pages, sub-pages, and tabs. Reserved pages remain Super Admin only.",
           role: "Role",
           loading: "Loading role permissions…",
           error: "Role permissions could not be loaded or saved",
@@ -999,11 +1007,19 @@ const resources = {
             "Super Admin always has access and management rights for every page.",
           restrictedNotice:
             "Users, roles, attachments, and migration remain Super Admin only.",
+          cascadeNotice:
+            "Selecting a parent permission automatically selects and enables all of its sub-pages and tabs.",
           highRisk: "High risk",
           standard: "Standard",
+          kinds: {
+            page: "Page",
+            subpage: "Sub-page",
+            tab: "Tab",
+          },
           columns: {
             page: "Page",
             route: "Route",
+            kind: "Level",
             risk: "Risk",
             access: "Access",
             manage: "Manage",

@@ -14,6 +14,8 @@ export const SYSTEM_ROLES = [
 
 export type SystemRole = (typeof SYSTEM_ROLES)[number];
 
+export type PageKind = "page" | "subpage" | "tab";
+
 export type UserListItem = {
   id: string;
   email: string | null;
@@ -44,12 +46,15 @@ export type AttachmentListItem = {
 export type RolePagePermission = {
   role: SystemRole;
   pageKey: string;
+  parentPageKey: string | null;
+  pageKind: PageKind;
   displayName: string;
   route: string;
   sortOrder: number;
   isHighRisk: boolean;
   canAccess: boolean;
   canManage: boolean;
+  depth: number;
 };
 
 type UserRow = {
@@ -90,12 +95,16 @@ type PermissionRow = {
         route: string;
         sort_order: number;
         is_high_risk: boolean;
+        parent_page_key: string | null;
+        page_kind: PageKind | null;
       }
     | {
         display_name: string;
         route: string;
         sort_order: number;
         is_high_risk: boolean;
+        parent_page_key: string | null;
+        page_kind: PageKind | null;
       }[];
 };
 
@@ -104,6 +113,86 @@ function safeSearchTerm(value: string) {
     .replace(/[^\p{L}\p{N}\s@._+\-]/gu, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function isReservedPageKey(pageKey: string) {
+  return (
+    pageKey === "settings" ||
+    pageKey.startsWith("settings.") ||
+    pageKey === "migration"
+  );
+}
+
+function normalizePageKind(value: string | null | undefined): PageKind {
+  if (value === "subpage" || value === "tab") return value;
+  return "page";
+}
+
+function permissionDepth(
+  pageKey: string,
+  parentByKey: Map<string, string | null>,
+) {
+  let depth = 0;
+  let current = parentByKey.get(pageKey) ?? null;
+  const seen = new Set<string>();
+  while (current && !seen.has(current)) {
+    seen.add(current);
+    depth += 1;
+    current = parentByKey.get(current) ?? null;
+  }
+  return depth;
+}
+
+/** Collect pageKey plus every descendant key from a flat permission list. */
+export function collectDescendantPageKeys(
+  pageKey: string,
+  permissions: Array<Pick<RolePagePermission, "pageKey" | "parentPageKey">>,
+) {
+  const childrenByParent = new Map<string, string[]>();
+  for (const item of permissions) {
+    if (!item.parentPageKey) continue;
+    const list = childrenByParent.get(item.parentPageKey) ?? [];
+    list.push(item.pageKey);
+    childrenByParent.set(item.parentPageKey, list);
+  }
+
+  const keys = new Set<string>([pageKey]);
+  const queue = [pageKey];
+  while (queue.length) {
+    const current = queue.shift()!;
+    for (const child of childrenByParent.get(current) ?? []) {
+      if (keys.has(child)) continue;
+      keys.add(child);
+      queue.push(child);
+    }
+  }
+  return [...keys];
+}
+
+/** When enabling a child, also enable every ancestor. */
+export function collectAncestorPageKeys(
+  pageKey: string,
+  permissions: Array<Pick<RolePagePermission, "pageKey" | "parentPageKey">>,
+) {
+  const parentByKey = new Map(
+    permissions.map((item) => [item.pageKey, item.parentPageKey]),
+  );
+  const keys: string[] = [];
+  let current = parentByKey.get(pageKey) ?? null;
+  const seen = new Set<string>();
+  while (current && !seen.has(current)) {
+    seen.add(current);
+    keys.push(current);
+    current = parentByKey.get(current) ?? null;
+  }
+  return keys;
+}
+
+export function isPagePermissionLocked(
+  role: SystemRole,
+  pageKey: string,
+) {
+  return role === "Super Admin" || isReservedPageKey(pageKey);
 }
 
 export async function fetchUsers({
@@ -216,30 +305,46 @@ export async function fetchRolePagePermissions() {
   const { data, error } = await supabase
     .from("role_page_permissions")
     .select(
-      "role,page_key,can_access,can_manage,app_pages!inner(display_name,route,sort_order,is_high_risk)",
+      "role,page_key,can_access,can_manage,app_pages!inner(display_name,route,sort_order,is_high_risk,parent_page_key,page_kind)",
     );
   if (error) throw error;
 
-  return ((data ?? []) as unknown as PermissionRow[])
-    .map((row) => {
-      const page = Array.isArray(row.app_pages)
-        ? row.app_pages[0]
-        : row.app_pages;
-      return {
-        role: row.role,
-        pageKey: row.page_key,
-        displayName: page.display_name,
-        route: page.route,
-        sortOrder: page.sort_order,
-        isHighRisk: page.is_high_risk,
-        canAccess: row.can_access,
-        canManage: row.can_manage,
-      } satisfies RolePagePermission;
-    })
+  const mapped = ((data ?? []) as unknown as PermissionRow[]).map((row) => {
+    const page = Array.isArray(row.app_pages)
+      ? row.app_pages[0]
+      : row.app_pages;
+    return {
+      role: row.role,
+      pageKey: row.page_key,
+      parentPageKey: page.parent_page_key ?? null,
+      pageKind: normalizePageKind(page.page_kind),
+      displayName: page.display_name,
+      route: page.route,
+      sortOrder: page.sort_order,
+      isHighRisk: page.is_high_risk,
+      canAccess: row.can_access,
+      canManage: row.can_manage,
+      depth: 0,
+    } satisfies RolePagePermission;
+  });
+
+  const parentByKey = new Map(
+    mapped.map((item) => [item.pageKey, item.parentPageKey]),
+  );
+
+  return mapped
+    .map((item) => ({
+      ...item,
+      depth: permissionDepth(item.pageKey, parentByKey),
+    }))
     .sort((left, right) => {
       const roleOrder =
         SYSTEM_ROLES.indexOf(left.role) - SYSTEM_ROLES.indexOf(right.role);
-      return roleOrder || left.sortOrder - right.sortOrder;
+      if (roleOrder) return roleOrder;
+      if (left.sortOrder !== right.sortOrder) {
+        return left.sortOrder - right.sortOrder;
+      }
+      return left.pageKey.localeCompare(right.pageKey);
     });
 }
 
@@ -257,4 +362,81 @@ export async function updateRolePagePermission(
     .eq("role", role)
     .eq("page_key", pageKey);
   if (error) throw error;
+}
+
+/**
+ * Update a permission row and cascade:
+ * - parent access ON → all descendants access ON (children fully opened)
+ * - parent access OFF → descendants access+manage OFF
+ * - parent manage ON/OFF → descendants manage matches (access forced ON when manage ON)
+ * - child access/manage ON → ancestors access ON (manage cascades up only for manage)
+ */
+export async function updateRolePagePermissionCascade(
+  role: SystemRole,
+  pageKey: string,
+  field: "canAccess" | "canManage",
+  checked: boolean,
+  permissions: RolePagePermission[],
+  savePermission: typeof updateRolePagePermission = updateRolePagePermission,
+) {
+  const rolePermissions = permissions.filter((item) => item.role === role);
+  const current = rolePermissions.find((item) => item.pageKey === pageKey);
+  if (!current) throw new Error("permission_not_found");
+
+  const descendantKeys = collectDescendantPageKeys(pageKey, rolePermissions);
+  const ancestorKeys = collectAncestorPageKeys(pageKey, rolePermissions);
+  const updates = new Map<string, { canAccess: boolean; canManage: boolean }>();
+
+  for (const key of descendantKeys) {
+    const row = rolePermissions.find((item) => item.pageKey === key);
+    const isRoot = key === pageKey;
+    if (field === "canAccess") {
+      updates.set(key, {
+        canAccess: checked,
+        canManage: isRoot
+          ? checked
+            ? Boolean(row?.canManage)
+            : false
+          : // Children fully open when parent access is selected.
+            checked,
+      });
+    } else {
+      updates.set(key, {
+        canAccess: checked ? true : Boolean(row?.canAccess),
+        canManage: checked,
+      });
+    }
+  }
+
+  if (checked) {
+    for (const key of ancestorKeys) {
+      const row = rolePermissions.find((item) => item.pageKey === key);
+      updates.set(key, {
+        canAccess: true,
+        canManage:
+          field === "canManage" ? true : Boolean(row?.canManage),
+      });
+    }
+  }
+
+  for (const [key, value] of [...updates.entries()]) {
+    if (role === "Super Admin") {
+      updates.set(key, { canAccess: true, canManage: true });
+    } else if (isPagePermissionLocked(role, key)) {
+      updates.set(key, { canAccess: false, canManage: false });
+    } else {
+      updates.set(key, {
+        canAccess: value.canAccess,
+        canManage: value.canAccess && value.canManage,
+      });
+    }
+  }
+
+  await Promise.all(
+    [...updates.entries()].map(([key, value]) =>
+      savePermission(role, key, value),
+    ),
+  );
+
+  return updates;
 }

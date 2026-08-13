@@ -5,8 +5,10 @@ import { RefreshCw, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   fetchRolePagePermissions,
+  isPagePermissionLocked,
   SYSTEM_ROLES,
   updateRolePagePermission,
+  updateRolePagePermissionCascade,
   type RolePagePermission,
   type SystemRole,
 } from "@/lib/settings";
@@ -59,27 +61,24 @@ export function RolePermissionsPage({
     field: "canAccess" | "canManage",
     checked: boolean,
   ) => {
-    const next = {
-      canAccess:
-        field === "canAccess" ? checked : permission.canAccess || checked,
-      canManage:
-        field === "canManage"
-          ? checked
-          : checked
-            ? permission.canManage
-            : false,
-    };
     const key = `${permission.role}:${permission.pageKey}`;
     setSavingKey(key);
     setError(null);
     try {
-      await savePermission(permission.role, permission.pageKey, next);
+      const updates = await updateRolePagePermissionCascade(
+        permission.role,
+        permission.pageKey,
+        field,
+        checked,
+        permissions,
+        savePermission,
+      );
       setPermissions((current) =>
-        current.map((item) =>
-          item.role === permission.role && item.pageKey === permission.pageKey
-            ? { ...item, ...next }
-            : item,
-        ),
+        current.map((item) => {
+          if (item.role !== permission.role) return item;
+          const next = updates.get(item.pageKey);
+          return next ? { ...item, ...next } : item;
+        }),
       );
     } catch (saveError) {
       const code =
@@ -150,6 +149,7 @@ export function RolePermissionsPage({
                     ? t("settings.roles.superAdminNotice")
                     : t("settings.roles.restrictedNotice")}
                 </span>
+                <span>{t("settings.roles.cascadeNotice")}</span>
               </div>
             </header>
             <div className="table-wrap settings-permissions-table">
@@ -158,6 +158,7 @@ export function RolePermissionsPage({
                   <tr>
                     <th>{t("settings.roles.columns.page")}</th>
                     <th>{t("settings.roles.columns.route")}</th>
+                    <th>{t("settings.roles.columns.kind")}</th>
                     <th>{t("settings.roles.columns.risk")}</th>
                     <th>{t("settings.roles.columns.access")}</th>
                     <th>{t("settings.roles.columns.manage")}</th>
@@ -165,19 +166,44 @@ export function RolePermissionsPage({
                 </thead>
                 <tbody>
                   {visiblePermissions.map((permission) => {
-                    const reserved =
-                      permission.pageKey.startsWith("settings.") ||
-                      permission.pageKey === "migration";
-                    const locked = selectedRole === "Super Admin" || reserved;
+                    const locked = isPagePermissionLocked(
+                      selectedRole,
+                      permission.pageKey,
+                    );
                     const rowKey = `${permission.role}:${permission.pageKey}`;
+                    const kindLabel = t(
+                      `settings.roles.kinds.${permission.pageKind}`,
+                    );
                     return (
-                      <tr key={permission.pageKey}>
+                      <tr
+                        key={permission.pageKey}
+                        className={
+                          permission.depth > 0
+                            ? "settings-permission-child"
+                            : "settings-permission-parent"
+                        }
+                        data-depth={permission.depth}
+                        data-page-kind={permission.pageKind}
+                      >
                         <td>
-                          <strong>{permission.displayName}</strong>
+                          <div
+                            className="settings-permission-label"
+                            style={{
+                              paddingInlineStart: `${permission.depth * 20}px`,
+                            }}
+                          >
+                            {permission.depth > 0 && (
+                              <span className="settings-permission-branch" aria-hidden="true">
+                                └
+                              </span>
+                            )}
+                            <strong>{permission.displayName}</strong>
+                          </div>
                         </td>
                         <td>
                           <code>{permission.route}</code>
                         </td>
+                        <td>{kindLabel}</td>
                         <td>
                           {permission.isHighRisk
                             ? t("settings.roles.highRisk")

@@ -15,6 +15,30 @@ vi.mock("@/lib/reports", () => ({
   fetchShopOrderQuantities: reports.fetchShopOrderQuantities,
 }));
 
+vi.mock("@/auth/AuthProvider", () => ({
+  useAuth: () => ({
+    user: { app_metadata: { role: "Super Admin" } },
+    profile: { role: "Super Admin" },
+  }),
+}));
+
+vi.mock("@/auth/use-page-access", async () => {
+  const actual = await vi.importActual<typeof import("@/auth/use-page-access")>(
+    "@/auth/use-page-access",
+  );
+  return {
+    ...actual,
+    usePageAccess: () => ({
+      isSuperAdmin: true,
+      loading: false,
+      error: null,
+      canAccess: () => true,
+      canManage: () => true,
+      canAccessSection: () => true,
+    }),
+  };
+});
+
 describe("Shop order quantity report", () => {
   beforeEach(async () => {
     vi.clearAllMocks();

@@ -1478,6 +1478,26 @@ td:last-child {
   accent-color: var(--primary);
 }
 
+.settings-permission-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.settings-permission-branch {
+  color: var(--muted-foreground);
+  font-weight: 500;
+}
+
+.settings-permission-child td:first-child strong {
+  font-weight: 600;
+}
+
+.settings-permission-parent td:first-child strong {
+  font-weight: 750;
+}
+
 .quotes-state,
 .orders-state {
   display: flex;

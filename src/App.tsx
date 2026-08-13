@@ -97,57 +97,168 @@ const primaryNav: NavItem[] = [
     key: "settings",
     to: "/settings/users",
     icon: Settings,
-    permissionKey: "settings.users",
+    permissionKey: "settings",
   },
 ];
 
 const secondaryNav: Record<string, NavItem[]> = {
   overview: [
-    { key: "overview", to: "/", icon: LayoutDashboard },
-    { key: "followUp", to: "/follow-up", icon: ClipboardCheck },
-    { key: "orders", to: "/orders", icon: ClipboardList },
-    { key: "quotes", to: "/quotes", icon: FileText },
-    { key: "inventory", to: "/inventory", icon: Warehouse },
-    { key: "delivery", to: "/delivery", icon: Truck },
+    { key: "overview", to: "/", icon: LayoutDashboard, permissionKey: "overview" },
+    {
+      key: "followUp",
+      to: "/follow-up",
+      icon: ClipboardCheck,
+      permissionKey: "overview.follow_up",
+    },
+    { key: "orders", to: "/orders", icon: ClipboardList, permissionKey: "orders" },
+    { key: "quotes", to: "/quotes", icon: FileText, permissionKey: "quotes" },
+    {
+      key: "inventory",
+      to: "/inventory",
+      icon: Warehouse,
+      permissionKey: "inventory",
+    },
+    {
+      key: "delivery",
+      to: "/delivery",
+      icon: Truck,
+      permissionKey: "delivery",
+    },
   ],
   orders: [
-    { key: "allOrders", to: "/orders", icon: ClipboardList },
-    { key: "newOrder", to: "/orders/new", icon: FileText },
-    { key: "pendingOrders", to: "/orders/pending", icon: ClipboardCheck },
+    {
+      key: "allOrders",
+      to: "/orders",
+      icon: ClipboardList,
+      permissionKey: "orders",
+    },
+    {
+      key: "newOrder",
+      to: "/orders/new",
+      icon: FileText,
+      permissionKey: "orders.new",
+    },
+    {
+      key: "pendingOrders",
+      to: "/orders/pending",
+      icon: ClipboardCheck,
+      permissionKey: "orders.pending",
+    },
     {
       key: "productionCalendar",
       to: "/orders/production",
       icon: CalendarDays,
+      permissionKey: "orders.production",
     },
-    { key: "payments", to: "/orders/payments", icon: HandCoins },
-    { key: "assignDriver", to: "/orders/drivers", icon: Truck },
+    {
+      key: "payments",
+      to: "/orders/payments",
+      icon: HandCoins,
+      permissionKey: "orders.payments",
+    },
+    {
+      key: "assignDriver",
+      to: "/orders/drivers",
+      icon: Truck,
+      permissionKey: "orders.drivers",
+    },
   ],
   quotes: [
-    { key: "cateringQuotes", to: "/quotes", icon: FileText },
-    { key: "customers", to: "/quotes/customers", icon: Users },
-    { key: "followUp", to: "/quotes/follow-up", icon: ClipboardCheck },
+    {
+      key: "cateringQuotes",
+      to: "/quotes",
+      icon: FileText,
+      permissionKey: "quotes",
+    },
+    {
+      key: "customers",
+      to: "/quotes/customers",
+      icon: Users,
+      permissionKey: "quotes.customers",
+    },
+    {
+      key: "followUp",
+      to: "/quotes/follow-up",
+      icon: ClipboardCheck,
+      permissionKey: "quotes.follow_up",
+    },
   ],
   products: [
-    { key: "products", to: "/products", icon: ShoppingBasket },
-    { key: "inventory", to: "/inventory", icon: Boxes },
+    {
+      key: "products",
+      to: "/products",
+      icon: ShoppingBasket,
+      permissionKey: "products",
+    },
+    {
+      key: "inventory",
+      to: "/inventory",
+      icon: Boxes,
+      permissionKey: "inventory",
+    },
   ],
   kitchen: [
-    { key: "kitchen", to: "/kitchen", icon: Utensils },
-    { key: "productionCalendar", to: "/kitchen/calendar", icon: CalendarDays },
-    { key: "inventory", to: "/kitchen/inventory", icon: Warehouse },
+    { key: "kitchen", to: "/kitchen", icon: Utensils, permissionKey: "kitchen" },
+    {
+      key: "productionCalendar",
+      to: "/kitchen/calendar",
+      icon: CalendarDays,
+      permissionKey: "kitchen.calendar",
+    },
+    {
+      key: "inventory",
+      to: "/kitchen/inventory",
+      icon: Warehouse,
+      permissionKey: "kitchen.inventory",
+    },
   ],
   delivery: [
-    { key: "delivery", to: "/delivery", icon: Truck },
-    { key: "assignDriver", to: "/delivery/assign", icon: PackageCheck },
+    {
+      key: "delivery",
+      to: "/delivery",
+      icon: Truck,
+      permissionKey: "delivery",
+    },
+    {
+      key: "assignDriver",
+      to: "/delivery/assign",
+      icon: PackageCheck,
+      permissionKey: "delivery.assign",
+    },
   ],
   restaurant: [
-    { key: "restaurant", to: "/restaurant", icon: Store },
-    { key: "inventory", to: "/restaurant/inventory", icon: Warehouse },
-    { key: "reports", to: "/restaurant/reports", icon: ChartNoAxesCombined },
+    {
+      key: "restaurant",
+      to: "/restaurant",
+      icon: Store,
+      permissionKey: "restaurant",
+    },
+    {
+      key: "inventory",
+      to: "/restaurant/inventory",
+      icon: Warehouse,
+      permissionKey: "restaurant.inventory",
+    },
+    {
+      key: "reports",
+      to: "/restaurant/reports",
+      icon: ChartNoAxesCombined,
+      permissionKey: "restaurant.reports",
+    },
   ],
   reports: [
-    { key: "reports", to: "/reports", icon: ChartNoAxesCombined },
-    { key: "finance", to: "/finance", icon: CircleDollarSign },
+    {
+      key: "reports",
+      to: "/reports",
+      icon: ChartNoAxesCombined,
+      permissionKey: "reports",
+    },
+    {
+      key: "finance",
+      to: "/finance",
+      icon: CircleDollarSign,
+      permissionKey: "finance",
+    },
   ],
   settings: [
     {
@@ -169,6 +280,33 @@ const secondaryNav: Record<string, NavItem[]> = {
       permissionKey: "settings.attachments",
     },
   ],
+};
+
+const SECTION_CHILD_KEYS: Record<string, string[]> = {
+  overview: ["overview.follow_up"],
+  orders: [
+    "orders.new",
+    "orders.pending",
+    "orders.production",
+    "orders.payments",
+    "orders.drivers",
+    "orders.unpaid",
+    "orders.delivered_unpaid",
+  ],
+  quotes: ["quotes.customers", "quotes.follow_up"],
+  kitchen: ["kitchen.calendar", "kitchen.inventory"],
+  delivery: ["delivery.assign"],
+  restaurant: ["restaurant.inventory", "restaurant.reports"],
+  reports: [
+    "reports.shop_order_quantities",
+    "reports.average_supply_price",
+    "reports.production_cost_price",
+    "reports.raw_meat_average_price",
+    "reports.prepared_meat_stock",
+    "reports.raw_meat_stock",
+    "reports.supplier_purchase",
+  ],
+  settings: ["settings.users", "settings.roles", "settings.attachments"],
 };
 
 const workspaceLinks: Array<{
@@ -265,9 +403,10 @@ function OperationsShell() {
   const pageAccess = usePageAccess(authorizationRole);
   const isSuperAdmin = pageAccess.isSuperAdmin;
   const currentPageKey = pageAccessKey(location.pathname);
-  const visiblePrimaryNav = primaryNav.filter((item) =>
-    pageAccess.canAccess(item.permissionKey ?? item.key),
-  );
+  const visiblePrimaryNav = primaryNav.filter((item) => {
+    const key = item.permissionKey ?? item.key;
+    return pageAccess.canAccessSection(key, SECTION_CHILD_KEYS[key] ?? []);
+  });
   const sideItems = (secondaryNav[section] ?? secondaryNav.overview).filter(
     (item) => pageAccess.canAccess(item.permissionKey ?? pageAccessKey(item.to)),
   );
