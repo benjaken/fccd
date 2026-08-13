@@ -17,7 +17,7 @@ import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { BubbleRelationshipGraph } from "@/components/BubbleRelationshipGraph";
-import { AnalysisPanelSkeleton } from "@/components/ui/content-skeletons";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { BUBBLE_ENTITY_GROUPS } from "@/data/bubble-entity-groups";
 import {
   BUBBLE_OBJECT_TYPES,
@@ -621,10 +621,12 @@ export function DataMigrationPage() {
         </header>
 
         {analyzingType && (
-          <AnalysisPanelSkeleton
+          <PageSkeleton
+            compact
             label={t("migration.relationships.analyzing", {
               objectType: analyzingType,
             })}
+            variant="analysis"
           />
         )}
 

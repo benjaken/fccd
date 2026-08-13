@@ -74,7 +74,6 @@ import { RolePermissionsPage } from "@/components/settings/RolePermissionsPage";
 import { SettingsAccessDenied } from "@/components/settings/SettingsAccessDenied";
 import { UsersListPage } from "@/components/settings/UsersListPage";
 import { Button } from "@/components/ui/button";
-import { DashboardSkeleton } from "@/components/ui/content-skeletons";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import {
   fetchDashboardData,
@@ -1177,7 +1176,7 @@ export function Dashboard({
   };
 
   if (loading) {
-    return <DashboardSkeleton label={t("dashboard.loading")} />;
+    return <PageSkeleton label={t("dashboard.loading")} variant="dashboard" />;
   }
 
   return (

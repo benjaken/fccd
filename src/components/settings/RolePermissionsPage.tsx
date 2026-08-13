@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { ChevronDown, RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { TablePanelSkeleton } from "@/components/ui/content-skeletons";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { Switch } from "@/components/ui/switch";
 import {
   fetchRolePagePermissions,
@@ -119,7 +119,11 @@ export function RolePermissionsPage({
 
       <article className="panel settings-permissions-panel">
         {loading ? (
-          <TablePanelSkeleton label={t("settings.roles.loading")} />
+          <PageSkeleton
+            compact
+            label={t("settings.roles.loading")}
+            variant="table"
+          />
         ) : (
           <>
             <header className="settings-permissions-toolbar">
