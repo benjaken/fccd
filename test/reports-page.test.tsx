@@ -146,6 +146,9 @@ describe("Shop order quantity report", () => {
     expect(
       screen.getByRole("img", { name: "香菇滷肉 price trend" }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByText("Expand monthly matrix").closest("details"),
+    ).toHaveAttribute("open");
     expect(screen.getAllByText("$21.40").length).toBeGreaterThanOrEqual(2);
 
     await user.click(screen.getByRole("button", { name: "Per package" }));

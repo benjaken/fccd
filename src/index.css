@@ -4450,11 +4450,12 @@ td:last-child {
 .meat-price-analysis-grid {
   display: grid;
   grid-template-columns: minmax(330px, 0.82fr) minmax(480px, 1.18fr);
-  align-items: start;
+  align-items: stretch;
   gap: 14px;
 }
 
 .meat-price-product-browser {
+  height: 470px;
   overflow: hidden;
 }
 
@@ -4490,7 +4491,7 @@ td:last-child {
 
 .meat-price-product-list {
   display: grid;
-  max-height: 405px;
+  height: 405px;
   overflow: auto;
 }
 
@@ -4548,6 +4549,9 @@ td:last-child {
 .meat-price-trend {
   position: sticky;
   top: 12px;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  height: 470px;
   overflow: hidden;
 }
 
@@ -4573,6 +4577,8 @@ td:last-child {
 }
 
 .meat-price-chart {
+  display: flex;
+  align-items: center;
   padding: 0 12px 8px;
 }
 
@@ -5658,6 +5664,16 @@ td:last-child {
 
   .meat-price-analysis-grid {
     grid-template-columns: 1fr;
+  }
+
+  .meat-price-product-browser,
+  .meat-price-trend {
+    height: auto;
+  }
+
+  .meat-price-product-list {
+    height: auto;
+    max-height: 405px;
   }
 
   .meat-price-trend {

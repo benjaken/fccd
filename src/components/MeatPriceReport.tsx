@@ -371,7 +371,7 @@ export function MeatPriceReport({ mode }: { mode: MeatPriceMode }) {
               </div>
             </section>
           </section>
-          <details className="panel meat-price-detail">
+          <details className="panel meat-price-detail" open>
             <summary>
               <div>
                 <h2>
