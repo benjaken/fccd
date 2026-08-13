@@ -659,7 +659,10 @@ async function handleRequest(request: Request): Promise<Response> {
         error: "source_type_not_mapped_in_phase",
       },
     }).eq("id", runId);
-    return jsonResponse({ error: "Source type is not mapped in phase.", runId }, 400);
+    return jsonResponse(
+      { error: "Source type is not mapped in phase.", runId },
+      400,
+    );
   }
   const unsupported = phases.flatMap((phase) =>
     unsupportedMappings[phase].map((mapping) => ({ phase, mapping }))
