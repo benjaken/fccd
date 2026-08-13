@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
+import { TableSkeletonRows } from "@/components/ui/table-skeleton";
 import {
   ATTACHMENT_FILE_TYPES,
   attachmentFileType,
@@ -27,6 +28,13 @@ import {
 } from "@/lib/settings";
 
 type AttachmentsLoader = typeof fetchAttachments;
+
+const ATTACHMENT_SKELETON_COLUMNS = [
+  { width: "72%" },
+  { width: "5.5rem" },
+  { width: "4.5rem" },
+  { width: "7rem" },
+];
 
 function attachmentFileIcon(attachment: AttachmentListItem) {
   const mime = (attachment.mimeType ?? "").toLowerCase();
@@ -228,12 +236,7 @@ export function AttachmentsListPage({
           </div>
         </header>
 
-        {loading ? (
-          <div className="orders-state" role="status">
-            <RefreshCw className="spin" />
-            <span>{t("settings.attachments.loading")}</span>
-          </div>
-        ) : error ? (
+        {error ? (
           <div className="orders-state orders-state-error" role="alert">
             <FileArchive />
             <div>
@@ -248,7 +251,7 @@ export function AttachmentsListPage({
               {t("settings.retry")}
             </Button>
           </div>
-        ) : items.length === 0 ? (
+        ) : !loading && items.length === 0 ? (
           <div className="orders-state">
             <FileArchive />
             <div>
@@ -257,7 +260,15 @@ export function AttachmentsListPage({
             </div>
           </div>
         ) : (
-          <div className="table-wrap orders-table-wrap">
+          <div
+            className="table-wrap orders-table-wrap"
+            aria-busy={loading || undefined}
+          >
+            {loading ? (
+              <span className="sr-only" role="status">
+                {t("settings.attachments.loading")}
+              </span>
+            ) : null}
             <table>
               <thead>
                 <tr>
@@ -268,55 +279,62 @@ export function AttachmentsListPage({
                 </tr>
               </thead>
               <tbody>
-                {items.map((attachment) => {
-                  const Icon = attachmentFileIcon(attachment);
-                  const label =
-                    attachment.originalFilename || t("common.notSet");
-                  const canOpen = Boolean(attachment.objectPath);
-                  const type = attachmentFileType(attachment);
-                  return (
-                    <tr key={attachment.id}>
-                      <td>
-                        <div className="settings-attachment-file">
-                          <span
-                            className="settings-attachment-file-icon"
-                            aria-hidden="true"
-                          >
-                            {openingId === attachment.id ? (
-                              <RefreshCw className="spin" />
-                            ) : (
-                              <Icon />
-                            )}
-                          </span>
-                          {canOpen ? (
-                            <button
-                              type="button"
-                              className="settings-attachment-file-link"
-                              onClick={() => void openAttachment(attachment)}
-                              disabled={openingId === attachment.id}
+                {loading ? (
+                  <TableSkeletonRows
+                    rows={SETTINGS_PAGE_SIZE}
+                    columns={ATTACHMENT_SKELETON_COLUMNS}
+                  />
+                ) : (
+                  items.map((attachment) => {
+                    const Icon = attachmentFileIcon(attachment);
+                    const label =
+                      attachment.originalFilename || t("common.notSet");
+                    const canOpen = Boolean(attachment.objectPath);
+                    const type = attachmentFileType(attachment);
+                    return (
+                      <tr key={attachment.id}>
+                        <td>
+                          <div className="settings-attachment-file">
+                            <span
+                              className="settings-attachment-file-icon"
+                              aria-hidden="true"
                             >
-                              {label}
-                            </button>
-                          ) : (
-                            <span className="settings-attachment-file-muted">
-                              {label}
+                              {openingId === attachment.id ? (
+                                <RefreshCw className="spin" />
+                              ) : (
+                                <Icon />
+                              )}
                             </span>
+                            {canOpen ? (
+                              <button
+                                type="button"
+                                className="settings-attachment-file-link"
+                                onClick={() => void openAttachment(attachment)}
+                                disabled={openingId === attachment.id}
+                              >
+                                {label}
+                              </button>
+                            ) : (
+                              <span className="settings-attachment-file-muted">
+                                {label}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td>{t(attachmentFileTypeLabelKey(type))}</td>
+                        <td>{formatSize(attachment.sizeBytes)}</td>
+                        <td>
+                          {date.format(
+                            new Date(
+                              attachment.sourceModifiedAt ||
+                                attachment.updatedAt,
+                            ),
                           )}
-                        </div>
-                      </td>
-                      <td>{t(attachmentFileTypeLabelKey(type))}</td>
-                      <td>{formatSize(attachment.sizeBytes)}</td>
-                      <td>
-                        {date.format(
-                          new Date(
-                            attachment.sourceModifiedAt ||
-                              attachment.updatedAt,
-                          ),
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>

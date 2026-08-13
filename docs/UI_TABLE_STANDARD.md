@@ -74,5 +74,6 @@ lists.
 - Users list: icon-only horizontal actions in the last column (edit / change
   password).
 - Products / packages lists: table-body skeleton while loading.
+- Attachments list: table-body skeleton while loading.
 - Orders, quotes, payments, products, packages, users, login logs, attachments:
   toolbar search via `ListSearchBar`.
