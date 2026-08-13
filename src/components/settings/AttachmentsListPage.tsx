@@ -261,7 +261,7 @@ export function AttachmentsListPage({
           </div>
         ) : (
           <div
-            className="table-wrap orders-table-wrap"
+            className="table-wrap orders-table-wrap settings-attachments-table"
             aria-busy={loading || undefined}
           >
             {loading ? (
