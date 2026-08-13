@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { RefreshCw, ShieldCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import {
   fetchRolePagePermissions,
   isPagePermissionLocked,
@@ -56,9 +57,8 @@ export function RolePermissionsPage({
     [permissions, selectedRole],
   );
 
-  const updatePermission = async (
+  const updateAccess = async (
     permission: RolePagePermission,
-    field: "canAccess" | "canManage",
     checked: boolean,
   ) => {
     const key = `${permission.role}:${permission.pageKey}`;
@@ -68,7 +68,7 @@ export function RolePermissionsPage({
       const updates = await updateRolePagePermissionCascade(
         permission.role,
         permission.pageKey,
-        field,
+        "canAccess",
         checked,
         permissions,
         savePermission,
@@ -160,7 +160,6 @@ export function RolePermissionsPage({
                     <th>{t("settings.roles.columns.kind")}</th>
                     <th>{t("settings.roles.columns.risk")}</th>
                     <th>{t("settings.roles.columns.access")}</th>
-                    <th>{t("settings.roles.columns.manage")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -192,7 +191,10 @@ export function RolePermissionsPage({
                             }}
                           >
                             {permission.depth > 0 && (
-                              <span className="settings-permission-branch" aria-hidden="true">
+                              <span
+                                className="settings-permission-branch"
+                                aria-hidden="true"
+                              >
                                 └
                               </span>
                             )}
@@ -209,40 +211,14 @@ export function RolePermissionsPage({
                             : t("settings.roles.standard")}
                         </td>
                         <td>
-                          <input
-                            type="checkbox"
+                          <Switch
                             checked={permission.canAccess}
                             disabled={locked || savingKey === rowKey}
-                            onChange={(event) =>
-                              void updatePermission(
-                                permission,
-                                "canAccess",
-                                event.target.checked,
-                              )
+                            onCheckedChange={(checked) =>
+                              void updateAccess(permission, checked)
                             }
                             aria-label={`${permission.displayName} ${t(
                               "settings.roles.columns.access",
-                            )}`}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="checkbox"
-                            checked={permission.canManage}
-                            disabled={
-                              locked ||
-                              !permission.canAccess ||
-                              savingKey === rowKey
-                            }
-                            onChange={(event) =>
-                              void updatePermission(
-                                permission,
-                                "canManage",
-                                event.target.checked,
-                              )
-                            }
-                            aria-label={`${permission.displayName} ${t(
-                              "settings.roles.columns.manage",
                             )}`}
                           />
                         </td>

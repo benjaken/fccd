@@ -1759,10 +1759,52 @@ td:last-child {
   top: 0;
 }
 
-.settings-permissions-table input[type="checkbox"] {
+.ui-switch {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  width: 40px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--muted-foreground) 28%, var(--muted));
+  cursor: pointer;
+  transition: background-color 160ms ease;
+}
+
+.ui-switch:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--ring);
+}
+
+.ui-switch:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.ui-switch-checked {
+  background: var(--primary);
+}
+
+.ui-switch-thumb {
+  display: block;
   width: 18px;
   height: 18px;
-  accent-color: var(--primary);
+  margin-inline-start: 3px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 18%);
+  transition: transform 160ms ease;
+}
+
+.ui-switch-checked .ui-switch-thumb {
+  transform: translateX(16px);
+}
+
+.settings-permissions-table .ui-switch {
+  vertical-align: middle;
 }
 
 .settings-permission-label {
