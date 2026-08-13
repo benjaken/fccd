@@ -3,24 +3,71 @@ import { useTranslation } from "react-i18next";
 
 import {
   fetchMonthlyPreparedMeatStock,
+  fetchMonthlyRawMeatStock,
   type MonthlyPreparedMeatStockRow,
+  type MonthlyRawMeatStockRow,
 } from "@/lib/reports";
 
-type PreparedStockItem = {
+type StockKind = "prepared" | "raw";
+
+type MonthlyStockRow = {
+  itemId: string;
+  itemName: string;
+  productUnit: string | null;
+  monthNumber: number;
+  monthEndStock: number;
+  monthlyNetStock: number;
+};
+
+type StockItem = {
   id: string;
   name: string;
   unit: string | null;
-  months: Map<number, MonthlyPreparedMeatStockRow>;
+  months: Map<number, MonthlyStockRow>;
 };
 
 const MONTHS = Array.from({ length: 12 }, (_, index) => index + 1);
 const FIRST_DATA_YEAR = 2023;
 
-export function PreparedMeatStockReport() {
+function normalizePreparedStock(
+  row: MonthlyPreparedMeatStockRow,
+): MonthlyStockRow {
+  return {
+    itemId: row.preparedMeatItemId,
+    itemName: row.preparedMeatName,
+    productUnit: row.productUnit,
+    monthNumber: row.monthNumber,
+    monthEndStock: row.monthEndPackages,
+    monthlyNetStock: row.monthlyNetPackages,
+  };
+}
+
+function normalizeRawStock(row: MonthlyRawMeatStockRow): MonthlyStockRow {
+  return {
+    itemId: row.rawMeatItemId,
+    itemName: row.rawMeatName,
+    productUnit: row.productUnit,
+    monthNumber: row.monthNumber,
+    monthEndStock: row.monthEndKg,
+    monthlyNetStock: row.monthlyNetKg,
+  };
+}
+
+async function fetchMonthlyStock(kind: StockKind, year: number) {
+  if (kind === "raw") {
+    return (await fetchMonthlyRawMeatStock(year)).map(normalizeRawStock);
+  }
+  return (await fetchMonthlyPreparedMeatStock(year)).map(
+    normalizePreparedStock,
+  );
+}
+
+function MeatStockReport({ kind }: { kind: StockKind }) {
   const { t, i18n } = useTranslation();
+  const isRaw = kind === "raw";
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear);
-  const [rows, setRows] = useState<MonthlyPreparedMeatStockRow[]>([]);
+  const [rows, setRows] = useState<MonthlyStockRow[]>([]);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -36,16 +83,16 @@ export function PreparedMeatStockReport() {
     [i18n.language],
   );
   const items = useMemo(() => {
-    const grouped = new Map<string, PreparedStockItem>();
+    const grouped = new Map<string, StockItem>();
     for (const row of rows) {
-      const item = grouped.get(row.preparedMeatItemId) ?? {
-        id: row.preparedMeatItemId,
-        name: row.preparedMeatName,
+      const item = grouped.get(row.itemId) ?? {
+        id: row.itemId,
+        name: row.itemName,
         unit: row.productUnit,
         months: new Map(),
       };
       item.months.set(row.monthNumber, row);
-      grouped.set(row.preparedMeatItemId, item);
+      grouped.set(row.itemId, item);
     }
     return [...grouped.values()];
   }, [rows]);
@@ -57,14 +104,14 @@ export function PreparedMeatStockReport() {
   );
   const latestRows = rows.filter((row) => row.monthNumber === latestMonth);
   const totalStock = latestRows.reduce(
-    (total, row) => total + row.monthEndPackages,
+    (total, row) => total + row.monthEndStock,
     0,
   );
   const negativeStockItems = latestRows.filter(
-    (row) => row.monthEndPackages < 0,
+    (row) => row.monthEndStock < 0,
   ).length;
   const zeroStockItems = latestRows.filter(
-    (row) => row.monthEndPackages === 0,
+    (row) => row.monthEndStock === 0,
   ).length;
   const itemSnapshots = useMemo(
     () =>
@@ -79,7 +126,7 @@ export function PreparedMeatStockReport() {
     return MONTHS.flatMap((month) => {
       const stock = selectedItem.months.get(month);
       return stock
-        ? [{ month, value: stock.monthEndPackages }]
+        ? [{ month, value: stock.monthEndStock }]
         : [];
     });
   }, [selectedItem]);
@@ -113,7 +160,7 @@ export function PreparedMeatStockReport() {
     let active = true;
     setLoading(true);
     setError(null);
-    void fetchMonthlyPreparedMeatStock(year)
+    void fetchMonthlyStock(kind, year)
       .then((data) => {
         if (active) setRows(data);
       })
@@ -131,7 +178,7 @@ export function PreparedMeatStockReport() {
     return () => {
       active = false;
     };
-  }, [t, year]);
+  }, [kind, t, year]);
 
   return (
     <>
@@ -164,13 +211,23 @@ export function PreparedMeatStockReport() {
         </section>
       ) : !items.length ? (
         <section className="panel">
-          <div className="report-state">{t("reports.preparedStockEmpty")}</div>
+          <div className="report-state">
+            {t(
+              isRaw
+                ? "reports.rawStockEmpty"
+                : "reports.preparedStockEmpty",
+            )}
+          </div>
         </section>
       ) : (
         <>
           <section
             className="raw-meat-price-summary"
-            aria-label={t("reports.preparedStockSummary")}
+            aria-label={t(
+              isRaw
+                ? "reports.rawStockSummary"
+                : "reports.preparedStockSummary",
+            )}
           >
             <article className="panel">
               <span>{t("reports.latestMonth")}</span>
@@ -178,14 +235,38 @@ export function PreparedMeatStockReport() {
               <small>{year}</small>
             </article>
             <article className="panel">
-              <span>{t("reports.preparedProductTypes")}</span>
+              <span>
+                {t(
+                  isRaw
+                    ? "reports.rawMeatTypes"
+                    : "reports.preparedProductTypes",
+                )}
+              </span>
               <strong>{items.length}</strong>
-              <small>{t("reports.trackedProducts")}</small>
+              <small>
+                {t(
+                  isRaw
+                    ? "reports.trackedRawMeat"
+                    : "reports.trackedProducts",
+                )}
+              </small>
             </article>
             <article className="panel">
-              <span>{t("reports.totalMonthEndStock")}</span>
+              <span>
+                {t(
+                  isRaw
+                    ? "reports.totalMonthEndRawStock"
+                    : "reports.totalMonthEndStock",
+                )}
+              </span>
               <strong>{number.format(totalStock)}</strong>
-              <small>{t("reports.allPreparedProducts")}</small>
+              <small>
+                {t(
+                  isRaw
+                    ? "reports.allRawMeatCombined"
+                    : "reports.allPreparedProducts",
+                )}
+              </small>
             </article>
             <article className="panel">
               <span>{t("reports.stockExceptions")}</span>
@@ -204,8 +285,20 @@ export function PreparedMeatStockReport() {
             <section className="panel meat-price-product-browser">
               <header>
                 <div>
-                  <span>{t("reports.preparedProductList")}</span>
-                  <h2>{t("reports.selectPreparedProduct")}</h2>
+                  <span>
+                    {t(
+                      isRaw
+                        ? "reports.rawMeatList"
+                        : "reports.preparedProductList",
+                    )}
+                  </span>
+                  <h2>
+                    {t(
+                      isRaw
+                        ? "reports.selectRawMeatStock"
+                        : "reports.selectPreparedProduct",
+                    )}
+                  </h2>
                 </div>
                 <strong>{items.length}</strong>
               </header>
@@ -230,27 +323,27 @@ export function PreparedMeatStockReport() {
                     <span>
                       <strong
                         className={
-                          latest && latest.monthEndPackages < 0
+                          latest && latest.monthEndStock < 0
                             ? "stock-negative"
                             : undefined
                         }
                       >
                         {latest
-                          ? `${number.format(latest.monthEndPackages)} ${item.unit ?? t("reports.package")}`
+                          ? `${number.format(latest.monthEndStock)} ${item.unit ?? t(isRaw ? "reports.kg" : "reports.package")}`
                           : "—"}
                       </strong>
                       {latest && (
                         <small
                           className={
-                            latest.monthlyNetPackages > 0
+                            latest.monthlyNetStock > 0
                               ? "stock-positive"
-                              : latest.monthlyNetPackages < 0
+                              : latest.monthlyNetStock < 0
                                 ? "stock-negative"
                                 : undefined
                           }
                         >
-                          {latest.monthlyNetPackages > 0 ? "↑ +" : latest.monthlyNetPackages < 0 ? "↓ " : "— "}
-                          {number.format(latest.monthlyNetPackages)}
+                          {latest.monthlyNetStock > 0 ? "↑ +" : latest.monthlyNetStock < 0 ? "↓ " : "— "}
+                          {number.format(latest.monthlyNetStock)}
                         </small>
                       )}
                     </span>
@@ -261,16 +354,28 @@ export function PreparedMeatStockReport() {
             <section className="panel meat-price-trend">
               <header>
                 <div>
-                  <span>{t("reports.preparedStockTrend")}</span>
+                  <span>
+                    {t(
+                      isRaw
+                        ? "reports.rawStockTrend"
+                        : "reports.preparedStockTrend",
+                    )}
+                  </span>
                   <h2>{selectedItem?.name}</h2>
                 </div>
-                <strong>{selectedItem?.unit ?? t("reports.package")}</strong>
+                <strong>
+                  {selectedItem?.unit ??
+                    t(isRaw ? "reports.kg" : "reports.package")}
+                </strong>
               </header>
               <div className="meat-price-chart">
                 <svg
-                  aria-label={t("reports.preparedProductStockTrend", {
-                    product: selectedItem?.name,
-                  })}
+                  aria-label={t(
+                    isRaw
+                      ? "reports.rawMeatStockTrend"
+                      : "reports.preparedProductStockTrend",
+                    { product: selectedItem?.name },
+                  )}
                   role="img"
                   viewBox="0 0 740 210"
                 >
@@ -317,8 +422,21 @@ export function PreparedMeatStockReport() {
           <details className="panel meat-price-detail" open>
             <summary>
               <div>
-                <h2>{t("reports.tabs.preparedMeatStock")}</h2>
-                <p>{t("reports.preparedStockDescription", { year })}</p>
+                <h2>
+                  {t(
+                    isRaw
+                      ? "reports.tabs.rawMeatStock"
+                      : "reports.tabs.preparedMeatStock",
+                  )}
+                </h2>
+                <p>
+                  {t(
+                    isRaw
+                      ? "reports.rawStockDescription"
+                      : "reports.preparedStockDescription",
+                    { year },
+                  )}
+                </p>
               </div>
               <span>{t("reports.expandMonthlyMatrix")}</span>
             </summary>
@@ -343,16 +461,21 @@ export function PreparedMeatStockReport() {
                             {stock ? (
                               <span
                                 className={
-                                  stock.monthEndPackages < 0
+                                  stock.monthEndStock < 0
                                     ? "stock-negative"
                                     : undefined
                                 }
                                 title={t("reports.stockMovementDetail", {
-                                  net: number.format(stock.monthlyNetPackages),
+                                  net: number.format(stock.monthlyNetStock),
                                 })}
                               >
-                                {number.format(stock.monthEndPackages)}
-                                {item.unit ?? t("reports.package")}
+                                {number.format(stock.monthEndStock)}
+                                {item.unit ??
+                                  t(
+                                    isRaw
+                                      ? "reports.kg"
+                                      : "reports.package",
+                                  )}
                               </span>
                             ) : (
                               <span className="price-missing">—</span>
@@ -370,4 +493,12 @@ export function PreparedMeatStockReport() {
       )}
     </>
   );
+}
+
+export function PreparedMeatStockReport() {
+  return <MeatStockReport kind="prepared" />;
+}
+
+export function RawMeatStockReport() {
+  return <MeatStockReport kind="raw" />;
 }

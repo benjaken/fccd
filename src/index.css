@@ -4441,6 +4441,57 @@ td:last-child {
   background: var(--secondary);
 }
 
+.supplier-purchase-report {
+  overflow: hidden;
+}
+
+.supplier-purchase-report > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.supplier-purchase-report header span {
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.supplier-purchase-report h2 {
+  margin: 3px 0 0;
+  font-size: 18px;
+}
+
+.supplier-purchase-report header p {
+  margin: 4px 0 0;
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+
+.supplier-purchase-table {
+  min-width: 760px !important;
+}
+
+.supplier-purchase-table th:first-child {
+  text-align: left;
+}
+
+.supplier-purchase-table td:not(:first-child),
+.supplier-purchase-table th:not(:first-child) {
+  text-align: right;
+}
+
+.supplier-purchase-table tfoot th,
+.supplier-purchase-table tfoot td {
+  border-top: 2px solid var(--border);
+  background: var(--secondary);
+  color: var(--foreground);
+  font-weight: 800;
+}
+
 .report-table-wrap {
   max-height: 680px;
   overflow: auto;
@@ -6461,6 +6512,10 @@ td:last-child {
 
   .shop-order-report > header {
     align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .supplier-purchase-report > header {
     flex-direction: column;
   }
 

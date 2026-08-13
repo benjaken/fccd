@@ -9,8 +9,11 @@ const reports = vi.hoisted(() => ({
   fetchMonthlyPreparedMeatStock: vi.fn(),
   fetchMonthlyPreparedMeatPrices: vi.fn(),
   fetchMonthlyRawMeatAveragePrices: vi.fn(),
+  fetchMonthlyRawMeatStock: vi.fn(),
   fetchReportShops: vi.fn(),
+  fetchReportSuppliers: vi.fn(),
   fetchShopOrderQuantities: vi.fn(),
+  fetchSupplierPurchases: vi.fn(),
 }));
 
 vi.mock("@/lib/reports", () => ({
@@ -18,8 +21,11 @@ vi.mock("@/lib/reports", () => ({
   fetchMonthlyPreparedMeatPrices: reports.fetchMonthlyPreparedMeatPrices,
   fetchMonthlyRawMeatAveragePrices:
     reports.fetchMonthlyRawMeatAveragePrices,
+  fetchMonthlyRawMeatStock: reports.fetchMonthlyRawMeatStock,
   fetchReportShops: reports.fetchReportShops,
+  fetchReportSuppliers: reports.fetchReportSuppliers,
   fetchShopOrderQuantities: reports.fetchShopOrderQuantities,
+  fetchSupplierPurchases: reports.fetchSupplierPurchases,
 }));
 
 vi.mock("@/auth/AuthProvider", () => ({
@@ -150,6 +156,68 @@ describe("Shop order quantity report", () => {
         monthNumber: 2,
         monthEndPackages: -23,
         monthlyNetPackages: -4,
+      },
+    ]);
+    reports.fetchMonthlyRawMeatStock.mockResolvedValue([
+      {
+        rawMeatItemId: "raw-stock-1",
+        rawMeatName: "豬肉粒",
+        productUnit: "kg",
+        sortOrder: 1,
+        monthNumber: 1,
+        monthEndKg: 0,
+        monthlyNetKg: 0,
+      },
+      {
+        rawMeatItemId: "raw-stock-1",
+        rawMeatName: "豬肉粒",
+        productUnit: "kg",
+        sortOrder: 1,
+        monthNumber: 2,
+        monthEndKg: 30.248,
+        monthlyNetKg: 30.248,
+      },
+      {
+        rawMeatItemId: "raw-stock-2",
+        rawMeatName: "雞扒",
+        productUnit: "kg",
+        sortOrder: 2,
+        monthNumber: 1,
+        monthEndKg: 0,
+        monthlyNetKg: -180.218,
+      },
+      {
+        rawMeatItemId: "raw-stock-2",
+        rawMeatName: "雞扒",
+        productUnit: "kg",
+        sortOrder: 2,
+        monthNumber: 2,
+        monthEndKg: 179.673,
+        monthlyNetKg: 179.673,
+      },
+    ]);
+    reports.fetchReportSuppliers.mockResolvedValue([
+      { id: "sffm", name: "新豐凍肉 (SFFM)" },
+      { id: "kc", name: "琪昌 (KC)" },
+    ]);
+    reports.fetchSupplierPurchases.mockResolvedValue([
+      {
+        supplierId: "sffm",
+        supplierName: "新豐凍肉 (SFFM)",
+        rawMeatItemId: "raw-beef-tendon",
+        rawMeatName: "牛筋",
+        quantityKg: 150.18,
+        purchaseAmount: 4468.5,
+        averagePricePerKg: 29.75,
+      },
+      {
+        supplierId: "sffm",
+        supplierName: "新豐凍肉 (SFFM)",
+        rawMeatItemId: "raw-pork-chop",
+        rawMeatName: "帶骨豬扒",
+        quantityKg: 240.11,
+        purchaseAmount: 5556.6,
+        averagePricePerKg: 23.14,
       },
     ]);
   });
@@ -329,5 +397,71 @@ describe("Shop order quantity report", () => {
         }),
       }),
     ).toBeInTheDocument();
+  });
+
+  it("renders cumulative raw-meat stock in KG", async () => {
+    const user = userEvent.setup();
+    const tabLabel = i18n.t("reports.tabs.rawMeatStock");
+    render(<ReportsPage />);
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: tabLabel,
+      }),
+    );
+
+    expect(
+      await screen.findByRole("heading", {
+        name: tabLabel,
+      }),
+    ).toBeInTheDocument();
+    expect(reports.fetchMonthlyRawMeatStock).toHaveBeenLastCalledWith(
+      new Date().getFullYear(),
+    );
+    expect(screen.getAllByText("豬肉粒").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText("雞扒").length).toBeGreaterThanOrEqual(2);
+    expect(
+      screen.getByRole("img", {
+        name: i18n.t("reports.rawMeatStockTrend", {
+          product: "豬肉粒",
+        }),
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByText("Data updated through month 2").length,
+    ).toBeGreaterThanOrEqual(2);
+  });
+
+  it("renders supplier purchase totals for the selected date range", async () => {
+    const user = userEvent.setup();
+    const tabLabel = i18n.t("reports.tabs.supplierPurchase");
+    render(<ReportsPage />);
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: tabLabel,
+      }),
+    );
+
+    expect(
+      await screen.findByRole("heading", {
+        name: tabLabel,
+      }),
+    ).toBeInTheDocument();
+    expect(await screen.findByText("牛筋")).toBeInTheDocument();
+    expect(screen.getByText("帶骨豬扒")).toBeInTheDocument();
+    expect(screen.getAllByText("150.18 KG").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("$10,025.10").length).toBeGreaterThanOrEqual(1);
+    expect(reports.fetchReportSuppliers).toHaveBeenCalledOnce();
+    expect(reports.fetchSupplierPurchases).toHaveBeenCalledWith(
+      expect.objectContaining({ supplierIds: ["sffm"] }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "琪昌 (KC)" }));
+    await waitFor(() =>
+      expect(reports.fetchSupplierPurchases).toHaveBeenLastCalledWith(
+        expect.objectContaining({ supplierIds: ["kc"] }),
+      ),
+    );
   });
 });

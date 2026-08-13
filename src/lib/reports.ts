@@ -5,6 +5,11 @@ export type ReportShop = {
   name: string;
 };
 
+export type ReportSupplier = {
+  id: string;
+  name: string;
+};
+
 export type ShopOrderQuantityRow = {
   orderDate: string;
   shopId: string;
@@ -47,6 +52,26 @@ export type MonthlyPreparedMeatStockRow = {
   monthlyNetPackages: number;
 };
 
+export type MonthlyRawMeatStockRow = {
+  rawMeatItemId: string;
+  rawMeatName: string;
+  productUnit: string | null;
+  sortOrder: number | null;
+  monthNumber: number;
+  monthEndKg: number;
+  monthlyNetKg: number;
+};
+
+export type SupplierPurchaseRow = {
+  supplierId: string;
+  supplierName: string;
+  rawMeatItemId: string;
+  rawMeatName: string;
+  quantityKg: number;
+  purchaseAmount: number;
+  averagePricePerKg: number;
+};
+
 type ShopOrderQuantityDbRow = {
   order_date: string;
   shop_id: string;
@@ -55,6 +80,11 @@ type ShopOrderQuantityDbRow = {
   product_name: string;
   unit: string | null;
   total_quantity: number | string;
+};
+
+type ReportSupplierDbRow = {
+  supplier_id: string;
+  supplier_name: string;
 };
 
 type MonthlyPreparedMeatPriceDbRow = {
@@ -87,6 +117,26 @@ type MonthlyPreparedMeatStockDbRow = {
   monthly_net_packages: number | string;
 };
 
+type MonthlyRawMeatStockDbRow = {
+  raw_meat_item_id: string;
+  raw_meat_name: string;
+  product_unit: string | null;
+  sort_order: number | string | null;
+  month_number: number;
+  month_end_kg: number | string;
+  monthly_net_kg: number | string;
+};
+
+type SupplierPurchaseDbRow = {
+  supplier_id: string;
+  supplier_name: string;
+  raw_meat_item_id: string;
+  raw_meat_name: string;
+  quantity_kg: number | string;
+  purchase_amount: number | string;
+  average_price_per_kg: number | string;
+};
+
 export async function fetchReportShops(): Promise<ReportShop[]> {
   const { data, error } = await supabase
     .from("meat_customers")
@@ -95,6 +145,15 @@ export async function fetchReportShops(): Promise<ReportShop[]> {
     .order("name");
   if (error) throw error;
   return (data ?? []) as ReportShop[];
+}
+
+export async function fetchReportSuppliers(): Promise<ReportSupplier[]> {
+  const { data, error } = await supabase.rpc("report_raw_meat_suppliers");
+  if (error) throw error;
+  return ((data ?? []) as ReportSupplierDbRow[]).map((supplier) => ({
+    id: supplier.supplier_id,
+    name: supplier.supplier_name,
+  }));
 }
 
 export async function fetchShopOrderQuantities({
@@ -187,5 +246,53 @@ export async function fetchMonthlyPreparedMeatStock(
     monthNumber: Number(row.month_number),
     monthEndPackages: Number(row.month_end_packages),
     monthlyNetPackages: Number(row.monthly_net_packages),
+  }));
+}
+
+export async function fetchMonthlyRawMeatStock(
+  year: number,
+): Promise<MonthlyRawMeatStockRow[]> {
+  const { data, error } = await supabase.rpc(
+    "report_monthly_raw_meat_stock",
+    { report_year: year },
+  );
+  if (error) throw error;
+  return ((data ?? []) as MonthlyRawMeatStockDbRow[]).map((row) => ({
+    rawMeatItemId: row.raw_meat_item_id,
+    rawMeatName: row.raw_meat_name,
+    productUnit: row.product_unit,
+    sortOrder: row.sort_order === null ? null : Number(row.sort_order),
+    monthNumber: Number(row.month_number),
+    monthEndKg: Number(row.month_end_kg),
+    monthlyNetKg: Number(row.monthly_net_kg),
+  }));
+}
+
+export async function fetchSupplierPurchases({
+  startDate,
+  endDate,
+  supplierIds,
+}: {
+  startDate: string;
+  endDate: string;
+  supplierIds: string[];
+}): Promise<SupplierPurchaseRow[]> {
+  const { data, error } = await supabase.rpc(
+    "report_supplier_raw_meat_purchases",
+    {
+      start_date: startDate,
+      end_date: endDate,
+      supplier_ids: supplierIds.length ? supplierIds : null,
+    },
+  );
+  if (error) throw error;
+  return ((data ?? []) as SupplierPurchaseDbRow[]).map((row) => ({
+    supplierId: row.supplier_id,
+    supplierName: row.supplier_name,
+    rawMeatItemId: row.raw_meat_item_id,
+    rawMeatName: row.raw_meat_name,
+    quantityKg: Number(row.quantity_kg),
+    purchaseAmount: Number(row.purchase_amount),
+    averagePricePerKg: Number(row.average_price_per_kg),
   }));
 }
