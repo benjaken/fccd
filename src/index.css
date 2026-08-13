@@ -63,8 +63,8 @@
   --card-foreground: oklch(0.94 0.012 250);
   --popover: oklch(0.205 0.022 250);
   --popover-foreground: oklch(0.94 0.012 250);
-  --primary: oklch(0.72 0.13 250);
-  --primary-foreground: oklch(0.2 0.04 250);
+  --primary: oklch(0.58 0.14 250);
+  --primary-foreground: oklch(0.99 0.005 250);
   --secondary: oklch(0.245 0.025 250);
   --secondary-foreground: oklch(0.94 0.012 250);
   --muted: oklch(0.235 0.022 250);
@@ -120,6 +120,18 @@ button:disabled {
 a {
   color: inherit;
   text-decoration: none;
+}
+
+/* Primary filled actions must keep light label/icon text on the blue fill.
+   Unlayered `a { color: inherit }` otherwise wins over Tailwind utilities on
+   Button asChild <Link> buttons such as「建立新訂單」. */
+a.bg-primary,
+button.bg-primary,
+a.bg-primary:hover,
+button.bg-primary:hover,
+a.bg-primary:focus-visible,
+button.bg-primary:focus-visible {
+  color: var(--primary-foreground);
 }
 
 .sr-only {
@@ -265,8 +277,13 @@ a {
 }
 
 .workspace-soft-link.active {
-  background: color-mix(in oklch, var(--primary) 9%, var(--card));
-  color: var(--primary);
+  background: oklch(0.94 0.04 250);
+  color: oklch(0.42 0.14 250);
+}
+
+.dark .workspace-soft-link.active {
+  background: oklch(0.27 0.055 250);
+  color: oklch(0.82 0.1 250);
 }
 
 .workspace-soft-link.disabled {
@@ -655,8 +672,13 @@ a {
 }
 
 .sidebar-link.active {
-  background: color-mix(in oklch, var(--primary) 10%, var(--card));
-  color: var(--primary);
+  background: oklch(0.94 0.04 250);
+  color: oklch(0.42 0.14 250);
+}
+
+.dark .sidebar-link.active {
+  background: oklch(0.27 0.055 250);
+  color: oklch(0.82 0.1 250);
 }
 
 .sidebar-link > svg {
@@ -831,8 +853,13 @@ a {
 }
 
 .metric-icon.red {
-  background: color-mix(in oklch, var(--primary) 12%, var(--card));
-  color: var(--primary);
+  background: color-mix(in oklch, var(--destructive) 12%, var(--card));
+  color: var(--destructive);
+}
+
+.dark .metric-icon.red {
+  background: color-mix(in oklch, var(--destructive) 18%, var(--card));
+  color: oklch(0.78 0.12 25);
 }
 
 .metric-icon.green {
@@ -1282,8 +1309,13 @@ td:last-child {
 }
 
 .status-badge.red {
-  background: color-mix(in oklch, var(--primary) 12%, var(--card));
-  color: var(--primary);
+  background: color-mix(in oklch, var(--destructive) 12%, var(--card));
+  color: var(--destructive);
+}
+
+.dark .status-badge.red {
+  background: color-mix(in oklch, var(--destructive) 18%, var(--card));
+  color: oklch(0.78 0.12 25);
 }
 
 .status-badge.blue {
@@ -1464,6 +1496,57 @@ td:last-child {
   color: var(--muted-foreground);
   font-size: 14px;
   text-overflow: ellipsis;
+}
+
+.settings-attachment-file {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.settings-attachment-file-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  color: var(--muted-foreground);
+}
+
+.settings-attachment-file-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.settings-attachment-file-link {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--primary);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.settings-attachment-file-link:hover:not(:disabled) {
+  color: color-mix(in oklab, var(--primary) 80%, black);
+}
+
+.settings-attachment-file-link:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.settings-attachment-file-muted {
+  min-width: 0;
+  color: var(--foreground);
+  font-weight: 700;
 }
 
 .detail-page,
@@ -1828,10 +1911,26 @@ td:last-child {
   font-weight: 600;
 }
 
-.settings-user-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+.settings-user-actions,
+.table-row-actions {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.table-actions-cell {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+  vertical-align: middle;
+}
+
+.table-row-actions .button,
+.table-row-actions button {
+  flex: 0 0 auto;
 }
 
 @keyframes settings-side-panel-in {
@@ -2090,8 +2189,13 @@ td:last-child {
 }
 
 .migration-tab.active {
-  background: color-mix(in oklch, var(--primary) 10%, var(--card));
-  color: var(--primary);
+  background: oklch(0.94 0.04 250);
+  color: oklch(0.42 0.14 250);
+}
+
+.dark .migration-tab.active {
+  background: oklch(0.27 0.055 250);
+  color: oklch(0.82 0.1 250);
 }
 
 .migration-tab svg,

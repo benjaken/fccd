@@ -27,6 +27,12 @@ export type UserListItem = {
   updatedAt: string;
 };
 
+export type RestaurantOption = {
+  legacyId: string;
+  name: string;
+  isActive: boolean;
+};
+
 export type AttachmentListItem = {
   id: string;
   originalFilename: string | null;
@@ -380,6 +386,30 @@ export function isPagePermissionLocked(
 ) {
   // Super Admin grants are always on (DB enforced). Migration stays reserved.
   return role === "Super Admin" || isReservedPageKey(pageKey);
+}
+
+export async function fetchRestaurantOptions() {
+  const { data, error } = await supabase
+    .from("restaurants")
+    .select("legacy_id,name,is_active")
+    .is("archived_at", null)
+    .order("name", { ascending: true });
+  if (error) throw error;
+
+  return ((data ?? []) as Array<{
+    legacy_id: string;
+    name: string;
+    is_active: boolean;
+  }>)
+    .filter((row) => row.is_active)
+    .map(
+      (row) =>
+        ({
+          legacyId: row.legacy_id,
+          name: row.name,
+          isActive: row.is_active,
+        }) satisfies RestaurantOption,
+    );
 }
 
 export async function fetchUsers({

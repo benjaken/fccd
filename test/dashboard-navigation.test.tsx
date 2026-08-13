@@ -143,4 +143,15 @@ describe("Dashboard navigation", () => {
       "tone-green",
     );
   });
+
+  it("keeps white label classes on the primary create-order action", async () => {
+    renderDashboard();
+
+    const createOrder = await screen.findByRole("link", {
+      name: /建立新訂單/,
+    });
+
+    expect(createOrder).toHaveClass("bg-primary");
+    expect(createOrder).toHaveClass("text-primary-foreground");
+  });
 });

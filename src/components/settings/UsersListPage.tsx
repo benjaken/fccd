@@ -17,11 +17,14 @@ import { Button } from "@/components/ui/button";
 import { ChangePasswordSidePanel } from "@/components/settings/ChangePasswordSidePanel";
 import { CreateUserSidePanel } from "@/components/settings/CreateUserSidePanel";
 import { EditUserSidePanel } from "@/components/settings/EditUserSidePanel";
+import { restaurantLabel } from "@/components/settings/RestaurantSelect";
 import {
+  fetchRestaurantOptions,
   fetchUsers,
   SETTINGS_PAGE_SIZE,
   SYSTEM_ROLES,
   USER_ACTION_PERMISSION_KEYS,
+  type RestaurantOption,
   type UserListItem,
 } from "@/lib/settings";
 
@@ -29,11 +32,13 @@ type UsersLoader = typeof fetchUsers;
 
 export function UsersListPage({
   loadUsers = fetchUsers,
+  loadRestaurants = fetchRestaurantOptions,
   createUser,
   updatePassword,
   updateProfile,
 }: {
   loadUsers?: UsersLoader;
+  loadRestaurants?: typeof fetchRestaurantOptions;
   createUser?: typeof import("@/lib/settings").createManagedUser;
   updatePassword?: typeof import("@/lib/settings").updateManagedUserPassword;
   updateProfile?: typeof import("@/lib/settings").updateManagedUserProfile;
@@ -57,6 +62,7 @@ export function UsersListPage({
   const [role, setRole] = useState("");
   const [page, setPage] = useState(1);
   const [items, setItems] = useState<UserListItem[]>([]);
+  const [restaurants, setRestaurants] = useState<RestaurantOption[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -99,6 +105,20 @@ export function UsersListPage({
   useEffect(() => {
     void loadPage();
   }, [loadPage]);
+
+  useEffect(() => {
+    let active = true;
+    void loadRestaurants()
+      .then((options) => {
+        if (active) setRestaurants(options);
+      })
+      .catch(() => {
+        if (active) setRestaurants([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [loadRestaurants]);
 
   const submitSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -216,32 +236,40 @@ export function UsersListPage({
                         {listUser.role || t("common.notSet")}
                       </span>
                     </td>
-                    <td>{listUser.shopRestroLegacyId || t("common.notSet")}</td>
+                    <td>
+                      {restaurantLabel(
+                        listUser.shopRestroLegacyId,
+                        restaurants,
+                        t("common.notSet"),
+                      )}
+                    </td>
                     <td>{date.format(new Date(listUser.createdAt))}</td>
                     <td>{date.format(new Date(listUser.updatedAt))}</td>
                     {showActions ? (
-                      <td>
-                        <div className="settings-user-actions">
+                      <td className="table-actions-cell">
+                        <div className="table-row-actions">
                           {canEdit ? (
                             <Button
                               type="button"
                               variant="outline"
-                              size="sm"
+                              size="icon"
                               onClick={() => setEditUser(listUser)}
+                              aria-label={t("settings.users.editAction")}
+                              title={t("settings.users.editAction")}
                             >
                               <Pencil />
-                              {t("settings.users.editAction")}
                             </Button>
                           ) : null}
                           {canChangePassword ? (
                             <Button
                               type="button"
                               variant="outline"
-                              size="sm"
+                              size="icon"
                               onClick={() => setPasswordUser(listUser)}
+                              aria-label={t("settings.users.changePassword")}
+                              title={t("settings.users.changePassword")}
                             >
                               <KeyRound />
-                              {t("settings.users.changePassword")}
                             </Button>
                           ) : null}
                         </div>
@@ -297,6 +325,7 @@ export function UsersListPage({
             setReloadKey((key) => key + 1);
           }}
           createUser={createUser}
+          loadRestaurants={loadRestaurants}
         />
       ) : null}
       {canEdit ? (
@@ -306,6 +335,7 @@ export function UsersListPage({
           onClose={() => setEditUser(null)}
           onUpdated={() => setReloadKey((key) => key + 1)}
           updateProfile={updateProfile}
+          loadRestaurants={loadRestaurants}
         />
       ) : null}
       {canChangePassword ? (

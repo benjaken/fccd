@@ -47,7 +47,7 @@ function orderStatus(
     order.deliveryStatus === "待接單" ||
     order.deliveryStatus === "未派車隊"
   ) {
-    return { label: labels.confirmed, tone: "red" };
+    return { label: labels.confirmed, tone: "blue" };
   }
   if (order.isSentToFactory) {
     return { label: labels.preparing, tone: "amber" };

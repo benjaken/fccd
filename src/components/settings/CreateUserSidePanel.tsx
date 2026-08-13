@@ -2,9 +2,11 @@ import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
+import { RestaurantSelect } from "@/components/settings/RestaurantSelect";
 import { SettingsSidePanel } from "@/components/settings/SettingsSidePanel";
 import {
   createManagedUser,
+  fetchRestaurantOptions,
   isValidEmail,
   isValidPassword,
   isValidPhone,
@@ -28,11 +30,13 @@ export function CreateUserSidePanel({
   onClose,
   onCreated,
   createUser = createManagedUser,
+  loadRestaurants = fetchRestaurantOptions,
 }: {
   open: boolean;
   onClose: () => void;
   onCreated: () => void;
   createUser?: typeof createManagedUser;
+  loadRestaurants?: typeof fetchRestaurantOptions;
 }) {
   const { t } = useTranslation();
   const [form, setForm] = useState(initialForm);
@@ -170,18 +174,14 @@ export function CreateUserSidePanel({
             ))}
           </select>
         </label>
-        <label>
-          <span>{t("settings.users.fields.restaurant")}</span>
-          <input
-            value={form.shopRestroLegacyId}
-            onChange={(event) =>
-              setForm((current) => ({
-                ...current,
-                shopRestroLegacyId: event.target.value,
-              }))
-            }
-          />
-        </label>
+        <RestaurantSelect
+          value={form.shopRestroLegacyId}
+          onChange={(shopRestroLegacyId) =>
+            setForm((current) => ({ ...current, shopRestroLegacyId }))
+          }
+          loadRestaurants={loadRestaurants}
+          disabled={submitting}
+        />
         <label>
           <span>{t("settings.users.fields.password")}</span>
           <input

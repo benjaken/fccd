@@ -2,8 +2,10 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
+import { RestaurantSelect } from "@/components/settings/RestaurantSelect";
 import { SettingsSidePanel } from "@/components/settings/SettingsSidePanel";
 import {
+  fetchRestaurantOptions,
   isValidPhone,
   SYSTEM_ROLES,
   updateManagedUserProfile,
@@ -17,12 +19,14 @@ export function EditUserSidePanel({
   onClose,
   onUpdated,
   updateProfile = updateManagedUserProfile,
+  loadRestaurants = fetchRestaurantOptions,
 }: {
   user: UserListItem | null;
   open: boolean;
   onClose: () => void;
   onUpdated?: () => void;
   updateProfile?: typeof updateManagedUserProfile;
+  loadRestaurants?: typeof fetchRestaurantOptions;
 }) {
   const { t } = useTranslation();
   const [userName, setUserName] = useState("");
@@ -147,13 +151,12 @@ export function EditUserSidePanel({
           />
           {fieldErrors.phone ? <em>{fieldErrors.phone}</em> : null}
         </label>
-        <label>
-          <span>{t("settings.users.fields.restaurant")}</span>
-          <input
-            value={shopRestroLegacyId}
-            onChange={(event) => setShopRestroLegacyId(event.target.value)}
-          />
-        </label>
+        <RestaurantSelect
+          value={shopRestroLegacyId}
+          onChange={setShopRestroLegacyId}
+          loadRestaurants={loadRestaurants}
+          disabled={submitting}
+        />
         {error ? (
           <div className="settings-side-form-error" role="alert">
             {t(`settings.users.errors.${error}`, {

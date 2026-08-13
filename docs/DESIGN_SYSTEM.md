@@ -1,0 +1,327 @@
+# Food Channel Catering Design System
+
+FCCD 自有設計規範：以 **shadcn/ui（New York + CSS variables + CVA）** 為元件與 token 基礎，
+吸收 **Ant Design** 的企業後台密度、操作層級、回饋與資料展示節奏，再疊加本專案已拍板的
+品牌與營運規則。
+
+配套文件：
+
+- 實作細節／已拍板規則：[`UI_DEVELOPMENT_STANDARD.md`](UI_DEVELOPMENT_STANDARD.md)
+- 營運列表表格：[`UI_TABLE_STANDARD.md`](UI_TABLE_STANDARD.md)
+- 產品需求對照：[`API_FUNCTIONAL_PRD.md`](API_FUNCTIONAL_PRD.md) §9
+
+---
+
+## 0. 設計來源對照
+
+| 來源 | 採用什麼 | 不直接照搬什麼 |
+|---|---|---|
+| **shadcn/ui** | 語意化 CSS variables、`Button` variants（CVA）、Radix Slot／可及性、Lucide 圖示、可擁有原始碼的元件 | 預設 zinc／中性主題色、行銷向大留白、把 shadcn 當黑盒依賴 |
+| **Ant Design** | 8px 節奏、控制尺寸（sm／md／lg）、主／次／危險操作層級、表格密度、明確 loading／empty／error、表單標籤與校驗回饋 | 引入整個 `antd` 套件、Ant 預設藍 `#1677ff` 色票、過度依賴 Modal 堆疊 |
+| **FCCD** | 藍色品牌主色、主按鈕白字、全寬內容區、訂單進度多色、繁中優先 i18n、Light／Dark | 品牌紅主色、頁面 `max-width: 1600px`、預覽一鍵登入用於 Production |
+
+**一句話定位：** 企業營運後台要「看得清、點得準、回饋夠」，元件要「可擁有、可組合、可主題化」。
+
+---
+
+## 1. 設計原則
+
+1. **Operational clarity（營運清晰）**  
+   先讓廚師、文員、司機、財務看懂狀態與下一步，再談裝飾。借 Ant Design 的「確定／清晰」。
+
+2. **Own the primitives（擁有元件）**  
+   元件原始碼在 `src/components/ui/`（shadcn 模式）。需要行為時改源碼或加 CVA variant，不要包一層難維護的第三方主題黑盒。
+
+3. **Semantic tokens first（語意 token 優先）**  
+   使用 `--primary`、`--destructive`、`--muted-foreground` 等語意色，禁止在業務頁面散落硬編碼色值（狀態多色圖表除外，見 §3.3）。
+
+4. **Hierarchy of action（操作層級）**  
+   同一視窗通常只有 **一個** 實心主按鈕（Primary）。其餘用 Outline／Secondary／Ghost／文字按鈕。借 Ant Design 的主次分明。
+
+5. **Feedback is a state, not a surprise（回饋是狀態）**  
+   Loading、Empty、Error、Success、Permission denied 必須可預期，並留在同一面板／頁面骨架內（見表格標準）。
+
+6. **Dense but breathable（密而不擠）**  
+   營運列表採 Ant Design 式資訊密度；頁面外圈維持統一 `28px` 邊距（FCCD），避免 shadcn 展示站那種過大行銷留白。
+
+7. **Accessible by default（預設可及）**  
+   可見 focus ring、鍵盤可操作、對比符合 WCAG AA；主色按鈕必須白字。尊重 `prefers-reduced-motion`。
+
+---
+
+## 2. 基礎（Foundations）
+
+### 2.1 色彩 Color
+
+來源：`src/index.css` 的 `:root` / `.dark`。
+
+| Token | 用途 | 規則 |
+|---|---|---|
+| `--primary` | 主操作、品牌強調、focus 相關 | 中等飽和藍；約 `oklch(0.52 0.145 250)`（light） |
+| `--primary-foreground` | 主色實心底上的文字／圖示 | **必須近白**；禁止深色內文壓在藍底上 |
+| `--secondary` / `--muted` | 次要底、軌道、弱資訊 | 低彩度中性 |
+| `--accent` | 輕量強調底 | 與 primary 同色相、低彩度 |
+| `--destructive` | 刪除、失敗、危險 | **保持紅色**，不跟品牌藍混用 |
+| `--border` / `--input` / `--ring` | 邊框、表單框、focus | ring 跟隨藍系 |
+| `--background` / `--card` / `--foreground` | 頁面／卡片／內文 | Light／Dark 皆需可讀 |
+
+**借 Ant Design 的功能色分工（映射到本系統）：**
+
+| 語意 | FCCD 做法 |
+|---|---|
+| Primary | `--primary` 藍 |
+| Success | 綠系 tone／badge（如 `tone-green`、status green） |
+| Warning | 琥珀／琥珀 badge（`tone-amber`） |
+| Error | `--destructive` |
+| Info | 青／靛（`tone-cyan` / `tone-indigo`） |
+
+Active 導航（側欄、工作區 soft link、tab）必須是**淡藍底 + 藍字**，禁止粉紅／舊品牌紅殘留。  
+`.status-badge.red`／`.metric-icon.red` 只代表危險／失敗（`--destructive`），不可再當舊品牌主色；品牌強調改用 `blue`。
+
+**多狀態進度條**不可全部使用品牌藍，必須用可區分色相（見
+[`UI_DEVELOPMENT_STANDARD.md`](UI_DEVELOPMENT_STANDARD.md) §3）：
+
+`indigo` → `amber` → `violet` → `cyan` → `green`。
+
+### 2.2 字體 Typography
+
+| 層級 | 建議 | 說明 |
+|---|---|---|
+| Page title (`h1`) | `clamp(25px, 2.3vw, 34px)`、重字重 | 對應 Ant Design 頁標題；一頁一個主標題 |
+| Section / panel title | 約 16–18px、偏重 | 面板標題，短句 |
+| Body | 14px | 營運後台預設閱讀尺寸（Ant 中密度） |
+| Meta / helper | 12–14px、`--muted-foreground` | 說明、時間、次要欄位 |
+| Eyebrow | 小寫距大寫／品牌色 | 區塊眉題，不壓過品牌 |
+
+字型堆疊維持現有：`Inter, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui`。  
+文案一律走 `src/i18n.ts`，預設 `zh-HK`。
+
+### 2.3 間距 Spacing
+
+採 **8px 節奏**（Ant Design），並固定 FCCD 頁面邊距：
+
+| Token 概念 | 值 | 用途 |
+|---|---|---|
+| Space XS | 4px | 圖示與文字微距 |
+| Space SM | 8px | 緊湊堆疊 |
+| Space MD | 16px | 預設區塊內距 |
+| Space LG | 24px | 區塊之間 |
+| **Page gutter** | **28px** | `.main-content` 四周（FCCD 拍板） |
+| Panel padding | 18–20px | 卡片／面板內容 |
+
+禁止再加頁面級 `max-width: 1600px`；內容全寬，邊距靠 gutter。
+
+### 2.4 圓角、邊框、陰影 Radius / Border / Elevation
+
+借 shadcn radius token + Ant Design 克制陰影：
+
+| 元素 | 規則 |
+|---|---|
+| 控制項（按鈕、輸入） | 約 `rounded-lg`／11px，一致 |
+| 面板／卡片 | 約 14–16px |
+| 進度條／pill | 全圓角 |
+| 陰影 | 輕量、低對比；主按鈕可用淡藍陰影，避免多層霓虹 glow |
+| 邊框 | 優先 `1px solid var(--border)`，靠層級而非重陰影區分 |
+
+### 2.5 尺寸 Size（控制高度）
+
+對齊 Ant Design 的 sm／middle／large，映射 shadcn `Button` size：
+
+| 尺寸 | 高度 | 使用場景 |
+|---|---|---|
+| `sm` | 36px（`h-9`） | 工具列次要操作、表格列內 |
+| `default`（middle） | 40px（`h-10`） | **預設**頁面操作 |
+| 表單強調／登入 | 46–48px | 登入提交等少數場景 |
+| `icon` | 40×40 | 僅圖示按鈕 |
+
+同一工具列內尺寸必須一致。
+
+### 2.6 動效 Motion
+
+借 shadcn 克制過渡 + PRD 要求：
+
+- 頁面切換：短促 opacity／transform（現有 `page-enter`）
+- 進度條寬度：可動畫；不阻擋操作
+- `prefers-reduced-motion`：關閉非必要動畫
+- 動畫結束 **不是** 資料完成條件
+
+---
+
+## 3. 佈局 Layout
+
+### 3.1 App shell（已定）
+
+- 頂欄：品牌、工作區 soft links、語言／主題／使用者
+- 側欄：二級導航，可收合
+- 主區：全寬 + `28px` gutter + page header（eyebrow／標題／主操作）
+
+參考 PRD UX-09～UX-15；細節以現有 `app-shell`／`topbar`／`sidebar`／`main-content` 為準。
+
+### 3.2 頁面結構（借 Ant Design Pro 資訊架構）
+
+每個營運頁建議順序：
+
+1. **Page header**：眉題 + 標題 + 描述（可選）+ 主操作（右側）
+2. **Toolbar**：搜尋、篩選、次要操作
+3. **Content**：面板／表格／表單
+4. **Footer area**（列表）：分頁固定在面板底部
+
+一屏一個主任務；不要把儀表板小卡塞進列表頁第一視窗。
+
+### 3.3 響應式
+
+- 桌面：側欄 + 高密度表
+- 窄螢幕：drawer／堆疊工具列；**不要**把桌面表硬縮成不可用寬度（PRD UX-06）
+- 觸控目標至少約 40px 高
+
+---
+
+## 4. 元件規範 Components
+
+元件優先放在 `src/components/ui/`，以 shadcn 方式擴充（CVA + `cn` + Slot）。
+
+### 4.1 Button 按鈕
+
+**Variants（現有 + Ant 語意對照）：**
+
+| FCCD / shadcn | Ant Design 對照 | 何時用 |
+|---|---|---|
+| `default`（Primary） | primary | 頁面唯一主行動：建立、儲存、送出 |
+| `outline` | default | 次要行動：匯出、重新整理 |
+| `secondary` | default（弱） | 工具列弱操作 |
+| `ghost` | text | 工具列圖示、低強調 |
+| `destructive` | danger | 刪除、不可逆 |
+
+**硬規則：**
+
+- Primary 實心＝藍底 **白字／白圖示**（含 `Button asChild` + `<Link>`）
+- 同一 header 只放一個 Primary
+- 主按鈕文案用動詞：建立、儲存、送出；避免「確定」過於空洞（Ant 文案建議）
+- 禁用态用 `disabled` + 降低透明度，並保持可讀原因（tooltip／helper）
+
+### 4.2 表單 Form
+
+借 Ant Design 表單節奏 + shadcn 輸入外觀：
+
+- 標籤在欄位上方（營運後台預設），文案走 i18n
+- 校驗錯誤：欄位旁／下方短訊 + 必要時頂部摘要（PRD UX-07）
+- 必填在標籤標示；送出中按鈕進入 loading／disabled，防重複提交
+- 輸入高度與 middle 按鈕對齊；focus 使用 `--ring`
+- 密碼、電郵等使用正確 `autoComplete`／`inputMode`
+
+### 4.3 資料展示 Data display
+
+| 模式 | 規範 |
+|---|---|
+| 營運表 | 遵守 [`UI_TABLE_STANDARD.md`](UI_TABLE_STANDARD.md)：15 筆／頁、sticky header、面板內捲動、底部分頁 |
+| 列操作（最後一欄） | **橫向單行**；常用動作（編輯、改密碼等）用 **icon-only** + `aria-label`；禁止 icon+文字按鈕垂直堆疊把列高撐高 |
+| 狀態徽章 | 語意色短標籤；成功綠、警告琥珀、危險紅、資訊藍／青 |
+| 描述列表 | 標籤弱色、值主色；適合詳情頁 |
+| 空狀態 | 說明「為什麼空」+ 一個主行動（若有權限） |
+| 數字／貨幣 | locale 格式化；HKD、`Asia/Hong_Kong` |
+
+### 4.4 回饋 Feedback
+
+借 Ant Design 的 Message／Notification／Modal 分層，映射到 FCCD：
+
+| 層級 | 用途 | 做法 |
+|---|---|---|
+| Inline | 表單欄位、面板內錯誤 | `role="alert"`、面板內 retry |
+| Toast／輕提示 | 短成功、非阻斷 | 若新增，需支援 Dark／i18n／reduced motion |
+| Dialog／Modal | 確認刪除、不可逆 | 危險操作用 destructive；焦點陷阱與 Esc |
+| Result／整頁 | 無權限、致命錯誤 | 清楚說明 + 返回／申請權限 |
+
+**列表頁**的 loading／empty／error／retry／permission 必須留在同一固定面板內，不要整頁跳走。
+
+### 4.5 導航 Navigation
+
+- 工作區 soft links、側欄 active state 明確
+- 麵包屑／上下文只在有層級時出現
+- 連結繼承色時，不可破壞 Primary 按鈕白字（見 `a.bg-primary` 覆蓋規則）
+
+### 4.6 圖示 Icons
+
+- 統一 **Lucide**（`components.json` `iconLibrary`）
+- 按鈕內圖示與文字間距一致（現有 `gap-2`）
+- 裝飾圖示 `aria-hidden`；純圖示按鈕必須有 `aria-label`
+
+---
+
+## 5. 模式 Patterns
+
+### 5.1 頁首主操作
+
+```
+[eyebrow]
+[標題]                         [次要 Outline] [主按鈕 Primary 白字]
+[一行說明]
+```
+
+### 5.2 可篩選列表
+
+```
+[搜尋] [狀態篩選] ...
+[表頭 sticky]
+[表身 scroll · 15 rows]
+[顯示 1-15，共 N]     [上一頁] [頁碼] [下一頁]
+```
+
+### 5.3 儀表板進度
+
+- 每列獨立 hue（非單一藍系）
+- 數值顏色跟隨 `--progress-tone`
+- 列可點進對應篩選列表
+
+### 5.4 預覽登入（僅非 Production）
+
+見 [`UI_DEVELOPMENT_STANDARD.md`](UI_DEVELOPMENT_STANDARD.md) §4；不得寫入正式環境。
+
+---
+
+## 6. 實作對照 Implementation map
+
+| 規範概念 | 程式位置 |
+|---|---|
+| shadcn 設定 | `components.json`（style: `new-york`，cssVariables: true） |
+| Design tokens | `src/index.css` `:root` / `.dark` |
+| Button CVA | `src/components/ui/button.tsx` |
+| Primary 白字覆蓋 | `src/index.css` `a.bg-primary, button.bg-primary` |
+| 列表分頁／狀態 | `src/components/ui/table-pagination.tsx`、`operational-list-state.tsx` |
+| 進度多色 | `.progress-row.tone-*` + Dashboard progress `tone` |
+| 文案 | `src/i18n.ts` |
+| 工具函式 | `src/lib/utils.ts`（`cn`） |
+
+**新增元件 checklist**
+
+1. 能否用既有 token／variant 表達？  
+2. 是否需要 CVA variant 而不是頁面特例 CSS？  
+3. Light／Dark、zh-HK／en、鍵盤與 focus 是否都過？  
+4. Primary 實心是否白字？  
+5. 若改了約定，是否同步更新本文件與 `UI_DEVELOPMENT_STANDARD.md`？  
+6. UI 變更是否補上 `test/*.test.tsx`？
+
+---
+
+## 7. 明確禁止 Anti-patterns
+
+- 引入完整 `antd`／另一套主題引擎與現有 token 雙軌並行
+- 品牌主色改回高飽和紅，或 Primary 按鈕用深色字
+- 頁面再套居中 `max-width: 1600px` 造成左右過寬
+- 訂單進度五條全用藍色系
+- 業務元件內硬編碼大段顏色／文案
+- 用動畫或 toast 掩蓋未處理的錯誤狀態
+- 表格操作欄把「編輯／修改密碼」等常用按鈕做成 icon+文字並垂直堆疊
+- 在 Production 開啟 `VITE_ENABLE_QUICK_LOGIN`
+- 為了過測而刪改或弱化既有 UI 測試
+
+---
+
+## 8. 版本與變更
+
+本設計系統隨產品演進。任何已拍板的視覺／互動變更，必須在同一變更集更新：
+
+1. 本文件 `docs/DESIGN_SYSTEM.md`
+2. [`UI_DEVELOPMENT_STANDARD.md`](UI_DEVELOPMENT_STANDARD.md)（若屬已列硬規則）
+3. 相關測試與實作
+
+審核時以「是否符合本設計系統 + 表格標準 + PRD UX」為準。

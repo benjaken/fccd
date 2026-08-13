@@ -967,7 +967,7 @@ function jobStatus(
     job.deliveryStatus === "待接單" ||
     job.deliveryStatus === "未派車隊"
   ) {
-    return { label: labels.awaitingDriver, tone: "red" };
+    return { label: labels.awaitingDriver, tone: "amber" };
   }
   if (job.isSentToFactory) {
     return { label: labels.preparing, tone: "amber" };
@@ -1032,7 +1032,7 @@ export function Dashboard({
     {
       label: t("dashboard.highChanceQuotes"),
       count: data.queues.highChanceQuotes,
-      tone: "red",
+      tone: "amber",
       to: "/quotes/high-chance",
     },
     {
@@ -1185,7 +1185,7 @@ export function Dashboard({
             />
           }
           icon={ClipboardList}
-          tone="red"
+          tone="blue"
           to="/orders"
         />
         <MetricCard
