@@ -3,8 +3,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 const APP_NAME = "fc-order-system";
 const APP_VERSION = "live";
 const BUCKET = "attachments";
-const SOURCE_ROOT =
-  "https://a112cb5fe9cbba3717fadc05fb8851f0.cdn.bubble.io/";
+const SOURCE_ROOT = "https://a112cb5fe9cbba3717fadc05fb8851f0.cdn.bubble.io/";
 const MAX_ANALYZE_RECORDS = 500;
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
 
@@ -132,8 +131,9 @@ function sourceUrl(record: UploadedFileRecord) {
 }
 
 async function sha256(value: string | ArrayBuffer) {
-  const input =
-    typeof value === "string" ? new TextEncoder().encode(value) : value;
+  const input = typeof value === "string"
+    ? new TextEncoder().encode(value)
+    : value;
   const digest = await crypto.subtle.digest("SHA-256", input);
   return [...new Uint8Array(digest)]
     .map((byte) => byte.toString(16).padStart(2, "0"))
@@ -241,11 +241,11 @@ async function analyze(
   const keys = identities.map((item) => item.deterministicKey);
   const { data, error } = keys.length
     ? await admin
-        .from("attachments")
-        .select(
-          "deterministic_key,source_url_hash,size_bytes,migration_status,last_error_code",
-        )
-        .in("deterministic_key", keys)
+      .from("attachments")
+      .select(
+        "deterministic_key,source_url_hash,size_bytes,migration_status,last_error_code",
+      )
+      .in("deterministic_key", keys)
     : { data: [], error: null };
   if (error) throw error;
   const existing = new Map(
@@ -384,8 +384,8 @@ async function migrate(
     .limit(1)
     .maybeSingle();
   if (duplicateError) throw duplicateError;
-  const objectPath =
-    duplicate?.object_path ?? `sha256/${checksum.slice(0, 2)}/${checksum}`;
+  const objectPath = duplicate?.object_path ??
+    `sha256/${checksum.slice(0, 2)}/${checksum}`;
   let uploaded = false;
   if (!duplicate?.object_path) {
     const contentType =
@@ -424,9 +424,7 @@ async function migrate(
       source_modified_at: record["Modified Date"],
       migration_mode: "incremental",
       migration_status: "verified",
-      last_error_code: sourceSizeCorrected
-        ? "source_size_corrected"
-        : null,
+      last_error_code: sourceSizeCorrected ? "source_size_corrected" : null,
       uploaded_at: uploaded ? now : null,
       verified_at: now,
       updated_at: now,
@@ -469,10 +467,9 @@ Deno.serve(async (request) => {
     );
     return jsonResponse(
       {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Attachment migration failed.",
+        error: error instanceof Error
+          ? error.message
+          : "Attachment migration failed.",
       },
       500,
     );
