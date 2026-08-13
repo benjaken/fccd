@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -161,6 +163,27 @@ describe("Products catalog pages", () => {
     resolveProducts(productResult);
     expect(await screen.findByText("CC-001")).toBeInTheDocument();
     expect(document.querySelectorAll(".table-skeleton-row")).toHaveLength(0);
+  });
+
+  it("keeps table skeleton bones light and order links on primary", () => {
+    const stylesheet = readFileSync(
+      path.resolve(process.cwd(), "src/index.css"),
+      "utf8",
+    );
+    const skeletonRules = [
+      ...stylesheet.matchAll(/\.table-skeleton-bone\s*\{([^}]+)\}/g),
+    ]
+      .map((match) => match[1])
+      .join("\n");
+    const linkRules = [
+      ...stylesheet.matchAll(/\.order-link\s*\{([^}]+)\}/g),
+    ]
+      .map((match) => match[1])
+      .join("\n");
+
+    expect(skeletonRules).toContain("var(--card)");
+    expect(skeletonRules).not.toContain("var(--foreground)");
+    expect(linkRules).toContain("color: var(--primary)");
   });
 
   it("submits a server-side product search and resets to the first page", async () => {
