@@ -300,9 +300,10 @@ describe("Super Admin system settings", () => {
     expect(await screen.findByText("quote.pdf")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "附件列表" })).toBeInTheDocument();
     expect(screen.getByText(/4200/)).toBeInTheDocument();
-    await user.click(
-      screen.getByRole("button", { name: "開啟附件 quote.pdf" }),
-    );
+    expect(screen.queryByText("遷移狀態")).not.toBeInTheDocument();
+    expect(screen.queryByText("來源")).not.toBeInTheDocument();
+    expect(screen.queryByText("所屬資料")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "quote.pdf" }));
 
     await waitFor(() =>
       expect(open).toHaveBeenCalledWith(

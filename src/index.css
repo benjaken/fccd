@@ -1466,6 +1466,57 @@ td:last-child {
   text-overflow: ellipsis;
 }
 
+.settings-attachment-file {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.settings-attachment-file-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  color: var(--muted-foreground);
+}
+
+.settings-attachment-file-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.settings-attachment-file-link {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--primary);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.settings-attachment-file-link:hover:not(:disabled) {
+  color: color-mix(in oklab, var(--primary) 80%, black);
+}
+
+.settings-attachment-file-link:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.settings-attachment-file-muted {
+  min-width: 0;
+  color: var(--foreground);
+  font-weight: 700;
+}
+
 .detail-page,
 .follow-up-page {
   display: grid;
