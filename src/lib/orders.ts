@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 
-export const ORDERS_PAGE_SIZE = 10;
+export const ORDERS_PAGE_SIZE = 15;
 
 export type OrderPreset =
   | "all"

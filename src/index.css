@@ -1232,6 +1232,7 @@ td:last-child {
 }
 
 .quotes-page,
+.quotes-page,
 .orders-page {
   display: grid;
   gap: 20px;
@@ -1246,6 +1247,7 @@ td:last-child {
   overflow: hidden;
 }
 
+.quotes-page .page-heading,
 .orders-page .page-heading {
   margin-bottom: 0;
 }
@@ -1255,6 +1257,7 @@ td:last-child {
   align-items: flex-end;
 }
 
+.quotes-panel,
 .quotes-panel,
 .orders-panel {
   overflow: hidden;
@@ -1335,6 +1338,7 @@ td:last-child {
 }
 
 .quotes-table-wrap,
+.quotes-table-wrap,
 .orders-table-wrap {
   min-height: 220px;
 }
@@ -1344,6 +1348,7 @@ td:last-child {
   overflow: auto;
 }
 
+.quotes-table-wrap th,
 .orders-table-wrap th {
   position: sticky;
   z-index: 1;
@@ -1427,6 +1432,7 @@ td:last-child {
 }
 
 .quotes-pagination,
+.quotes-pagination,
 .orders-pagination {
   display: flex;
   align-items: center;
@@ -1461,6 +1467,7 @@ td:last-child {
 }
 
 @media (max-width: 760px) {
+  .quotes-page,
   .orders-page {
     height: calc(100dvh - var(--topbar-height) - 62px);
     min-height: 520px;

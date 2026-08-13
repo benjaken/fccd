@@ -111,11 +111,11 @@ describe("Orders list", () => {
     );
   });
 
-  it("paginates orders in groups of ten", async () => {
+  it("paginates orders in groups of fifteen", async () => {
     const user = userEvent.setup();
     const loadOrders = vi
       .fn()
-      .mockResolvedValue({ ...orderResult, total: 21 });
+      .mockResolvedValue({ ...orderResult, total: 31 });
 
     render(
       <MemoryRouter>
