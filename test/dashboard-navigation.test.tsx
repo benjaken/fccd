@@ -123,4 +123,24 @@ describe("Dashboard navigation", () => {
       "/orders?status=confirmed",
     );
   });
+
+  it("colors each order-progress status distinctly", async () => {
+    renderDashboard();
+
+    expect(
+      await screen.findByRole("link", { name: /已確認\s*18/ }),
+    ).toHaveClass("tone-indigo");
+    expect(screen.getByRole("link", { name: /製作中\s*12/ })).toHaveClass(
+      "tone-amber",
+    );
+    expect(screen.getByRole("link", { name: /待出貨\s*7/ })).toHaveClass(
+      "tone-violet",
+    );
+    expect(screen.getByRole("link", { name: /配送中\s*5/ })).toHaveClass(
+      "tone-cyan",
+    );
+    expect(screen.getByRole("link", { name: /已完成\s*9/ })).toHaveClass(
+      "tone-green",
+    );
+  });
 });

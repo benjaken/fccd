@@ -1072,7 +1072,7 @@ export function Dashboard({
       label: t("dashboard.confirmed"),
       count: data.progress.confirmed,
       to: "/orders?status=confirmed",
-      tone: "blue",
+      tone: "indigo",
     },
     {
       label: t("dashboard.preparing"),
@@ -1084,13 +1084,13 @@ export function Dashboard({
       label: t("dashboard.ready"),
       count: data.progress.ready,
       to: "/kitchen?status=ready",
-      tone: "teal",
+      tone: "violet",
     },
     {
       label: t("dashboard.shipping"),
       count: data.progress.shipping,
       to: "/delivery?status=shipping",
-      tone: "sky",
+      tone: "cyan",
     },
     {
       label: t("dashboard.completed"),

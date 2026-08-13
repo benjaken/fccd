@@ -1084,12 +1084,28 @@ a {
   border-radius: 7px;
 }
 
-.progress-row.tone-blue {
-  --progress-tone: oklch(0.52 0.145 250);
+.progress-row.tone-indigo {
+  --progress-tone: oklch(0.5 0.16 275);
 }
 
 .progress-row.tone-amber {
-  --progress-tone: oklch(0.68 0.14 70);
+  --progress-tone: oklch(0.68 0.16 65);
+}
+
+.progress-row.tone-violet {
+  --progress-tone: oklch(0.55 0.16 310);
+}
+
+.progress-row.tone-cyan {
+  --progress-tone: oklch(0.58 0.12 200);
+}
+
+.progress-row.tone-green {
+  --progress-tone: oklch(0.56 0.15 145);
+}
+
+.progress-row.tone-blue {
+  --progress-tone: oklch(0.52 0.145 250);
 }
 
 .progress-row.tone-teal {
@@ -1100,16 +1116,32 @@ a {
   --progress-tone: oklch(0.6 0.12 230);
 }
 
-.progress-row.tone-green {
-  --progress-tone: oklch(0.58 0.13 150);
+.progress-row.tone-rose {
+  --progress-tone: oklch(0.6 0.15 15);
+}
+
+.dark .progress-row.tone-indigo {
+  --progress-tone: oklch(0.72 0.13 275);
+}
+
+.dark .progress-row.tone-amber {
+  --progress-tone: oklch(0.8 0.13 70);
+}
+
+.dark .progress-row.tone-violet {
+  --progress-tone: oklch(0.76 0.12 310);
+}
+
+.dark .progress-row.tone-cyan {
+  --progress-tone: oklch(0.76 0.1 200);
+}
+
+.dark .progress-row.tone-green {
+  --progress-tone: oklch(0.76 0.12 145);
 }
 
 .dark .progress-row.tone-blue {
   --progress-tone: oklch(0.72 0.13 250);
-}
-
-.dark .progress-row.tone-amber {
-  --progress-tone: oklch(0.78 0.12 75);
 }
 
 .dark .progress-row.tone-teal {
@@ -1120,8 +1152,8 @@ a {
   --progress-tone: oklch(0.74 0.11 230);
 }
 
-.dark .progress-row.tone-green {
-  --progress-tone: oklch(0.74 0.12 150);
+.dark .progress-row.tone-rose {
+  --progress-tone: oklch(0.76 0.12 15);
 }
 
 .progress-row:hover > div:first-child span {
@@ -1142,14 +1174,16 @@ a {
 }
 
 .progress-row strong {
+  color: var(--progress-tone);
   font-size: 14px;
+  font-variant-numeric: tabular-nums;
 }
 
 .progress-track {
-  height: 6px;
+  height: 8px;
   overflow: hidden;
   border-radius: 99px;
-  background: var(--secondary);
+  background: color-mix(in oklch, var(--progress-tone) 12%, var(--secondary));
 }
 
 .progress-track span {
