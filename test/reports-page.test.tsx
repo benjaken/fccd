@@ -7,12 +7,15 @@ import i18n from "@/i18n";
 
 const reports = vi.hoisted(() => ({
   fetchMonthlyPreparedMeatPrices: vi.fn(),
+  fetchMonthlyRawMeatAveragePrices: vi.fn(),
   fetchReportShops: vi.fn(),
   fetchShopOrderQuantities: vi.fn(),
 }));
 
 vi.mock("@/lib/reports", () => ({
   fetchMonthlyPreparedMeatPrices: reports.fetchMonthlyPreparedMeatPrices,
+  fetchMonthlyRawMeatAveragePrices:
+    reports.fetchMonthlyRawMeatAveragePrices,
   fetchReportShops: reports.fetchReportShops,
   fetchShopOrderQuantities: reports.fetchShopOrderQuantities,
 }));
@@ -87,6 +90,26 @@ describe("Shop order quantity report", () => {
         monthNumber: 2,
         pricePerKg: 21.4,
         pricePerPackage: 42.8,
+      },
+    ]);
+    reports.fetchMonthlyRawMeatAveragePrices.mockResolvedValue([
+      {
+        rawMeatItemId: "raw-1",
+        rawMeatName: "豬肉碎(扁食用) (生)",
+        sortOrder: 1,
+        monthNumber: 1,
+        averagePricePerKg: 33.06,
+        totalQuantityKg: 100,
+        receiptCount: 2,
+      },
+      {
+        rawMeatItemId: "raw-2",
+        rawMeatName: "雞扒",
+        sortOrder: 2,
+        monthNumber: 1,
+        averagePricePerKg: 18.73,
+        totalQuantityKg: 200,
+        receiptCount: 4,
       },
     ]);
   });
@@ -165,5 +188,30 @@ describe("Shop order quantity report", () => {
         mode: "factory",
       }),
     );
+  });
+
+  it("renders weighted monthly raw-meat purchase prices", async () => {
+    const user = userEvent.setup();
+    render(<ReportsPage />);
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Average raw-meat purchase price / KG",
+      }),
+    );
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Average raw-meat purchase price / KG",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      reports.fetchMonthlyRawMeatAveragePrices,
+    ).toHaveBeenLastCalledWith(new Date().getFullYear());
+    expect(screen.getByText("豬肉碎(扁食用) (生)")).toBeInTheDocument();
+    expect(screen.getByText("雞扒")).toBeInTheDocument();
+    expect(screen.getByText("$33.06")).toBeInTheDocument();
+    expect(screen.getByText("$18.73")).toBeInTheDocument();
+    expect(screen.getByText("Raw-meat types")).toBeInTheDocument();
   });
 });

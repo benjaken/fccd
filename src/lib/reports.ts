@@ -27,6 +27,16 @@ export type MonthlyPreparedMeatPriceRow = {
   pricePerPackage: number;
 };
 
+export type MonthlyRawMeatAveragePriceRow = {
+  rawMeatItemId: string;
+  rawMeatName: string;
+  sortOrder: number | null;
+  monthNumber: number;
+  averagePricePerKg: number;
+  totalQuantityKg: number;
+  receiptCount: number;
+};
+
 type ShopOrderQuantityDbRow = {
   order_date: string;
   shop_id: string;
@@ -45,6 +55,16 @@ type MonthlyPreparedMeatPriceDbRow = {
   month_number: number;
   price_per_kg: number | string;
   price_per_package: number | string;
+};
+
+type MonthlyRawMeatAveragePriceDbRow = {
+  raw_meat_item_id: string;
+  raw_meat_name: string;
+  sort_order: number | string | null;
+  month_number: number;
+  average_price_per_kg: number | string;
+  total_quantity_kg: number | string;
+  receipt_count: number | string;
 };
 
 export async function fetchReportShops(): Promise<ReportShop[]> {
@@ -109,5 +129,24 @@ export async function fetchMonthlyPreparedMeatPrices({
     monthNumber: Number(row.month_number),
     pricePerKg: Number(row.price_per_kg),
     pricePerPackage: Number(row.price_per_package),
+  }));
+}
+
+export async function fetchMonthlyRawMeatAveragePrices(
+  year: number,
+): Promise<MonthlyRawMeatAveragePriceRow[]> {
+  const { data, error } = await supabase.rpc(
+    "report_monthly_raw_meat_average_prices",
+    { report_year: year },
+  );
+  if (error) throw error;
+  return ((data ?? []) as MonthlyRawMeatAveragePriceDbRow[]).map((row) => ({
+    rawMeatItemId: row.raw_meat_item_id,
+    rawMeatName: row.raw_meat_name,
+    sortOrder: row.sort_order === null ? null : Number(row.sort_order),
+    monthNumber: Number(row.month_number),
+    averagePricePerKg: Number(row.average_price_per_kg),
+    totalQuantityKg: Number(row.total_quantity_kg),
+    receiptCount: Number(row.receipt_count),
   }));
 }

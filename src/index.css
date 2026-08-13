@@ -4522,6 +4522,32 @@ td:last-child {
   font-size: 14px;
 }
 
+.raw-meat-price-filter {
+  display: flex;
+  justify-content: flex-end;
+  padding: 12px 18px;
+}
+
+.raw-meat-price-filter label {
+  display: grid;
+  grid-template-columns: auto 110px;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.raw-meat-price-filter select {
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 14px;
+}
+
 .meat-price-summary {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -4549,6 +4575,99 @@ td:last-child {
 .meat-price-summary article > small {
   color: var(--muted-foreground);
   font-size: 14px;
+}
+
+.raw-meat-price-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.raw-meat-price-summary article {
+  display: grid;
+  gap: 4px;
+  padding: 16px 18px;
+}
+
+.raw-meat-price-summary article > span {
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.raw-meat-price-summary article > strong {
+  overflow: hidden;
+  font-size: 23px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.raw-meat-price-summary article > small {
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+
+.raw-meat-price-report {
+  overflow: hidden;
+}
+
+.raw-meat-price-report > header {
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.raw-meat-price-report h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.raw-meat-price-report header p {
+  margin: 4px 0 0;
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+
+.raw-meat-price-table-wrap {
+  max-height: 720px;
+}
+
+.raw-meat-price-table {
+  min-width: 1500px !important;
+  table-layout: fixed;
+}
+
+.raw-meat-price-table th:first-child {
+  position: sticky;
+  z-index: 1;
+  left: 0;
+  width: 210px;
+  min-width: 210px;
+  background: var(--card);
+  text-align: left;
+}
+
+.raw-meat-price-table thead th:first-child {
+  z-index: 3;
+}
+
+.raw-meat-price-table thead th:not(:first-child) {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  text-align: center;
+}
+
+.raw-meat-price-table td {
+  min-width: 104px;
+  height: 48px;
+  padding: 8px 10px;
+  text-align: center !important;
+  vertical-align: middle;
+}
+
+.raw-meat-price-table tbody tr:hover td,
+.raw-meat-price-table tbody tr:hover th {
+  background: color-mix(in oklch, var(--primary) 6%, var(--card));
 }
 
 .meat-price-analysis-grid {
@@ -5758,6 +5877,10 @@ td:last-child {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .raw-meat-price-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .shop-order-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -5951,6 +6074,15 @@ td:last-child {
   .meat-price-filter {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .raw-meat-price-filter {
+    justify-content: stretch;
+  }
+
+  .raw-meat-price-filter label {
+    grid-template-columns: 1fr 110px;
+    width: 100%;
   }
 
   .meat-price-unit-toggle {

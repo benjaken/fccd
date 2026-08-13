@@ -9,6 +9,7 @@ import {
   type ReportTabKey,
 } from "@/auth/use-page-access";
 import { MeatPriceReport } from "@/components/MeatPriceReport";
+import { RawMeatAveragePriceReport } from "@/components/RawMeatAveragePriceReport";
 import { Button } from "@/components/ui/button";
 import {
   fetchReportShops,
@@ -31,6 +32,7 @@ const reportTabs = [
   "shopOrderQuantities",
   "averageSupplyPrice",
   "productionCostPrice",
+  "rawMeatAveragePrice",
   "rawMeatAveragePrice",
   "preparedMeatStock",
   "rawMeatStock",
@@ -363,6 +365,8 @@ export function ReportsPage() {
             </>
           )}
         </>
+      ) : activeTab === "rawMeatAveragePrice" ? (
+        <RawMeatAveragePriceReport />
       ) : (
         <MeatPriceReport
           mode={activeTab === "averageSupplyPrice" ? "shop" : "factory"}
