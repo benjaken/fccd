@@ -14,11 +14,8 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-<<<<<<< HEAD
-import { ListSearchBar } from "@/components/ui/list-search-bar";
-=======
 import { DateRangePicker } from "@/components/ui/date-range-picker";
->>>>>>> origin/cursor/date-range-picker-d351
+import { ListSearchBar } from "@/components/ui/list-search-bar";
 import {
   ATTACHMENT_FILE_TYPES,
   attachmentFileType,
