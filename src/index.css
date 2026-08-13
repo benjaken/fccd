@@ -3224,7 +3224,7 @@ td:last-child {
 
 .attachment-analysis-grid span {
   color: var(--muted-foreground);
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .attachment-analysis-grid strong {
@@ -3240,7 +3240,7 @@ td:last-child {
   border: 1px solid color-mix(in oklch, var(--destructive) 28%, var(--border));
   border-radius: 9px;
   background: color-mix(in oklch, var(--destructive) 5%, var(--card));
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .attachment-migration-error svg {
@@ -3257,7 +3257,7 @@ td:last-child {
   display: flex;
   justify-content: space-between;
   color: var(--muted-foreground);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .attachment-progress-track {
@@ -3280,7 +3280,7 @@ td:last-child {
   align-items: center;
   gap: 6px;
   color: var(--muted-foreground);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .attachment-progress p svg {
