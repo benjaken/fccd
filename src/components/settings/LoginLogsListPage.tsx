@@ -181,6 +181,7 @@ export function LoginLogsListPage({
                           item.eventType === "logout" && "blue",
                           item.eventType === "password_reset_request" &&
                             "amber",
+                          item.eventType === "password_change" && "amber",
                         )}
                       >
                         {t(`settings.loginLogs.events.${item.eventType}`)}

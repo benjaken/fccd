@@ -296,6 +296,7 @@ async function createUser(admin: AdminClient, payload: CreatePayload) {
 
 async function updatePassword(
   admin: AdminClient,
+  request: Request,
   payload: UpdatePasswordPayload,
 ) {
   if (!payload.userId) {
@@ -314,6 +315,37 @@ async function updatePassword(
       500,
     );
   }
+
+  const { data: profile } = await admin
+    .from("user_profiles")
+    .select("email,user_name,role")
+    .eq("id", payload.userId)
+    .maybeSingle();
+
+  const forwarded = request.headers.get("x-forwarded-for");
+  const ipAddress = forwarded
+    ? forwarded.split(",")[0]?.trim().slice(0, 128) || null
+    : request.headers.get("cf-connecting-ip") ||
+      request.headers.get("x-real-ip") ||
+      null;
+
+  const { error: logError } = await admin.from("login_logs").insert({
+    event_type: "password_change",
+    email: profile?.email ?? data.user.email ?? null,
+    user_id: payload.userId,
+    user_name: profile?.user_name ?? null,
+    role: profile?.role ?? null,
+    ip_address: ipAddress,
+    user_agent: request.headers.get("user-agent")?.slice(0, 512) ?? null,
+    error_code: null,
+  });
+  if (logError) {
+    throw jsonResponse(
+      { error: "password_change_log_failed", detail: logError.message },
+      500,
+    );
+  }
+
   return { id: data.user.id };
 }
 
@@ -403,7 +435,7 @@ Deno.serve(async (request) => {
     if (payload.action === "updateProfile") {
       return jsonResponse({ user: await updateProfile(admin, payload) });
     }
-    return jsonResponse({ user: await updatePassword(admin, payload) });
+    return jsonResponse({ user: await updatePassword(admin, request, payload) });
   } catch (error) {
     if (error instanceof Response) return error;
     return jsonResponse(
