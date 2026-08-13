@@ -192,39 +192,50 @@ describe("Shop order quantity report", () => {
 
   it("renders weighted monthly raw-meat purchase prices", async () => {
     const user = userEvent.setup();
+    const tabLabel = i18n.t("reports.tabs.rawMeatAveragePrice");
     render(<ReportsPage />);
 
     await user.click(
-      screen.getByRole("button", {
-        name: "Average raw-meat purchase price / KG",
+      await screen.findByRole("button", {
+        name: tabLabel,
       }),
     );
 
     expect(
       await screen.findByRole("heading", {
-        name: "Average raw-meat purchase price / KG",
+        name: tabLabel,
       }),
     ).toBeInTheDocument();
-    expect(
-      reports.fetchMonthlyRawMeatAveragePrices,
-    ).toHaveBeenLastCalledWith(new Date().getFullYear());
+    await waitFor(() =>
+      expect(
+        reports.fetchMonthlyRawMeatAveragePrices,
+      ).toHaveBeenLastCalledWith(new Date().getFullYear()),
+    );
     expect(screen.getByText("豬肉碎(扁食用) (生)")).toBeInTheDocument();
     expect(screen.getByText("雞扒")).toBeInTheDocument();
     expect(screen.getByText("$33.06")).toBeInTheDocument();
     expect(screen.getByText("$18.73")).toBeInTheDocument();
-    expect(screen.getByText("Raw-meat types")).toBeInTheDocument();
+    expect(screen.getByText(i18n.t("reports.rawMeatTypes"))).toBeInTheDocument();
     expect(
       screen.getByRole("img", {
-        name: "豬肉碎(扁食用) (生) purchase price trend",
+        name: i18n.t("reports.rawMeatProductPriceTrend", {
+          product: "豬肉碎(扁食用) (生)",
+        }),
       }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Expand monthly matrix").closest("details"),
+      screen
+        .getByText(i18n.t("reports.expandMonthlyMatrix"))
+        .closest("details"),
     ).toHaveAttribute("open");
 
     await user.click(screen.getByRole("button", { name: /雞扒/ }));
     expect(
-      screen.getByRole("img", { name: "雞扒 purchase price trend" }),
+      screen.getByRole("img", {
+        name: i18n.t("reports.rawMeatProductPriceTrend", {
+          product: "雞扒",
+        }),
+      }),
     ).toBeInTheDocument();
   });
 });

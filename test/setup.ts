@@ -18,9 +18,9 @@ Object.defineProperty(window, "matchMedia", {
   })),
 });
 
-afterEach(() => {
+afterEach(async () => {
   cleanup();
   localStorage.clear();
   document.documentElement.classList.remove("dark");
-  void i18n.changeLanguage("zh-HK");
+  await i18n.changeLanguage("zh-HK");
 });
