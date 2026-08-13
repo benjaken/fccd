@@ -1,12 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { RefreshCw, ShieldCheck } from "lucide-react";
+import { ChevronDown, RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { Switch } from "@/components/ui/switch";
 import {
   fetchRolePagePermissions,
+  isPagePermissionLocked,
   SYSTEM_ROLES,
   updateRolePagePermission,
+  updateRolePagePermissionCascade,
   type RolePagePermission,
   type SystemRole,
 } from "@/lib/settings";
@@ -54,32 +58,28 @@ export function RolePermissionsPage({
     [permissions, selectedRole],
   );
 
-  const updatePermission = async (
+  const updateAccess = async (
     permission: RolePagePermission,
-    field: "canAccess" | "canManage",
     checked: boolean,
   ) => {
-    const next = {
-      canAccess:
-        field === "canAccess" ? checked : permission.canAccess || checked,
-      canManage:
-        field === "canManage"
-          ? checked
-          : checked
-            ? permission.canManage
-            : false,
-    };
     const key = `${permission.role}:${permission.pageKey}`;
     setSavingKey(key);
     setError(null);
     try {
-      await savePermission(permission.role, permission.pageKey, next);
+      const updates = await updateRolePagePermissionCascade(
+        permission.role,
+        permission.pageKey,
+        "canAccess",
+        checked,
+        permissions,
+        savePermission,
+      );
       setPermissions((current) =>
-        current.map((item) =>
-          item.role === permission.role && item.pageKey === permission.pageKey
-            ? { ...item, ...next }
-            : item,
-        ),
+        current.map((item) => {
+          if (item.role !== permission.role) return item;
+          const next = updates.get(item.pageKey);
+          return next ? { ...item, ...next } : item;
+        }),
       );
     } catch (saveError) {
       const code =
@@ -101,23 +101,7 @@ export function RolePermissionsPage({
         <div>
           <span className="eyebrow">{t("settings.eyebrow")}</span>
           <h1>{t("settings.roles.title")}</h1>
-          <p>{t("settings.roles.description")}</p>
         </div>
-        <label className="settings-role-picker">
-          <span>{t("settings.roles.role")}</span>
-          <select
-            value={selectedRole}
-            onChange={(event) =>
-              setSelectedRole(event.target.value as SystemRole)
-            }
-          >
-            {SYSTEM_ROLES.map((role) => (
-              <option key={role} value={role}>
-                {role}
-              </option>
-            ))}
-          </select>
-        </label>
       </header>
 
       {error && (
@@ -135,22 +119,33 @@ export function RolePermissionsPage({
 
       <article className="panel settings-permissions-panel">
         {loading ? (
-          <div className="orders-state" role="status">
-            <RefreshCw className="spin" />
-            <span>{t("settings.roles.loading")}</span>
-          </div>
+          <PageSkeleton
+            compact
+            label={t("settings.roles.loading")}
+            variant="table"
+          />
         ) : (
           <>
-            <header className="settings-permissions-summary">
-              <ShieldCheck />
-              <div>
-                <strong>{selectedRole}</strong>
-                <span>
-                  {selectedRole === "Super Admin"
-                    ? t("settings.roles.superAdminNotice")
-                    : t("settings.roles.restrictedNotice")}
+            <header className="settings-permissions-toolbar">
+              <label className="settings-role-select">
+                <span className="settings-role-select-hint">
+                  {t("settings.roles.viewingRole")}
                 </span>
-              </div>
+                <select
+                  value={selectedRole}
+                  aria-label={t("settings.roles.viewingRole")}
+                  onChange={(event) =>
+                    setSelectedRole(event.target.value as SystemRole)
+                  }
+                >
+                  {SYSTEM_ROLES.map((role) => (
+                    <option key={role} value={role}>
+                      {role}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown aria-hidden="true" />
+              </label>
             </header>
             <div className="table-wrap settings-permissions-table">
               <table>
@@ -158,66 +153,68 @@ export function RolePermissionsPage({
                   <tr>
                     <th>{t("settings.roles.columns.page")}</th>
                     <th>{t("settings.roles.columns.route")}</th>
+                    <th>{t("settings.roles.columns.kind")}</th>
                     <th>{t("settings.roles.columns.risk")}</th>
                     <th>{t("settings.roles.columns.access")}</th>
-                    <th>{t("settings.roles.columns.manage")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {visiblePermissions.map((permission) => {
-                    const reserved =
-                      permission.pageKey.startsWith("settings.") ||
-                      permission.pageKey === "migration";
-                    const locked = selectedRole === "Super Admin" || reserved;
+                    const locked = isPagePermissionLocked(
+                      selectedRole,
+                      permission.pageKey,
+                    );
                     const rowKey = `${permission.role}:${permission.pageKey}`;
+                    const kindLabel = t(
+                      `settings.roles.kinds.${permission.pageKind}`,
+                    );
                     return (
-                      <tr key={permission.pageKey}>
+                      <tr
+                        key={permission.pageKey}
+                        className={
+                          permission.depth > 0
+                            ? "settings-permission-child"
+                            : "settings-permission-parent"
+                        }
+                        data-depth={permission.depth}
+                        data-page-kind={permission.pageKind}
+                      >
                         <td>
-                          <strong>{permission.displayName}</strong>
+                          <div
+                            className="settings-permission-label"
+                            style={{
+                              paddingInlineStart: `${permission.depth * 20}px`,
+                            }}
+                          >
+                            {permission.depth > 0 && (
+                              <span
+                                className="settings-permission-branch"
+                                aria-hidden="true"
+                              >
+                                └
+                              </span>
+                            )}
+                            <strong>{permission.displayName}</strong>
+                          </div>
                         </td>
                         <td>
                           <code>{permission.route}</code>
                         </td>
+                        <td>{kindLabel}</td>
                         <td>
                           {permission.isHighRisk
                             ? t("settings.roles.highRisk")
                             : t("settings.roles.standard")}
                         </td>
                         <td>
-                          <input
-                            type="checkbox"
+                          <Switch
                             checked={permission.canAccess}
                             disabled={locked || savingKey === rowKey}
-                            onChange={(event) =>
-                              void updatePermission(
-                                permission,
-                                "canAccess",
-                                event.target.checked,
-                              )
+                            onCheckedChange={(checked) =>
+                              void updateAccess(permission, checked)
                             }
                             aria-label={`${permission.displayName} ${t(
                               "settings.roles.columns.access",
-                            )}`}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="checkbox"
-                            checked={permission.canManage}
-                            disabled={
-                              locked ||
-                              !permission.canAccess ||
-                              savingKey === rowKey
-                            }
-                            onChange={(event) =>
-                              void updatePermission(
-                                permission,
-                                "canManage",
-                                event.target.checked,
-                              )
-                            }
-                            aria-label={`${permission.displayName} ${t(
-                              "settings.roles.columns.manage",
                             )}`}
                           />
                         </td>

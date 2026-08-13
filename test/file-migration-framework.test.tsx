@@ -3,27 +3,71 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { FileMigrationPage } from "@/components/FileMigrationPage";
 import i18n from "@/i18n";
 
+const invokeMock = vi.hoisted(() => vi.fn());
+
+vi.mock("@/lib/supabase", () => ({
+  supabase: { functions: { invoke: invokeMock } },
+}));
+
 describe("Bubble file migration framework", () => {
   beforeEach(async () => {
+    invokeMock.mockReset();
+    invokeMock.mockImplementation(
+      async (_name: string, options: { body?: { action?: string } }) => {
+        if (options.body?.action === "status") {
+          return {
+            data: {
+              total: 4201,
+              verified: 4094,
+              failed: 107,
+              excluded: 0,
+              uniqueContent: 3988,
+              uniqueBytes: 6959019911,
+              generatedAt: "2026-08-13T05:00:00.000Z",
+            },
+            error: null,
+          };
+        }
+        if (options.body?.action === "analyze") {
+          return {
+            data: {
+              records: 1,
+              uniqueIds: 1,
+              duplicateIds: 0,
+              verified: 1,
+              failed: 0,
+              changed: 0,
+              missing: 0,
+              actionableIds: [],
+            },
+            error: null,
+          };
+        }
+        return { data: null, error: null };
+      },
+    );
     await i18n.changeLanguage("en");
   });
 
   it("provides list search, type, private, and 50-row pagination controls", async () => {
     const user = userEvent.setup();
-    render(<FileMigrationPage />);
+    render(<FileMigrationPage isSuperAdmin={false} />);
 
     const table = screen.getByRole("table");
     expect(within(table).getByText("Redacted POS sheet aggregate")).toBeInTheDocument();
     expect(screen.getByText("50 rows per page · 5 safe samples")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Previous page" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Next page" })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Upload and compare" }),
+    ).toBeDisabled();
 
     await user.selectOptions(screen.getByLabelText("File type"), "image");
     expect(within(table).queryByText("Redacted POS sheet aggregate")).not.toBeInTheDocument();
@@ -35,6 +79,51 @@ describe("Bubble file migration framework", () => {
     await user.type(screen.getByLabelText("Search files"), "SVG");
     expect(within(table).getByText("Redacted Logo_SVG aggregate")).toBeInTheDocument();
     expect(within(table).queryByText("Redacted Logo_png aggregate")).not.toBeInTheDocument();
+  });
+
+  it("uploads and compares a valid JSON inventory for a Super Admin", async () => {
+    const user = userEvent.setup();
+    render(<FileMigrationPage isSuperAdmin />);
+    const inventory = {
+      response: {
+        results: [
+          {
+            _id: "bubble-file-id",
+            app_version_text: "live",
+            appname_text: "fc-order-system",
+            content_type_text: "application/pdf",
+            filename_text: "sample.pdf",
+            s3_key_text: "f123/sample.pdf",
+            size_number: 123,
+            "Created Date": "2026-08-13T00:00:00.000Z",
+            "Modified Date": "2026-08-13T00:00:00.000Z",
+            user_id_text: "bubble-user-id",
+          },
+        ],
+      },
+    };
+    const file = new File([JSON.stringify(inventory)], "uploaded-files.json", {
+      type: "application/json",
+    });
+
+    await user.upload(
+      screen.getByLabelText(/Choose uploaded-files JSON/),
+      file,
+    );
+    await user.click(screen.getByRole("button", { name: "Upload and compare" }));
+
+    await waitFor(() =>
+      expect(invokeMock).toHaveBeenCalledWith(
+        "attachment-incremental",
+        expect.objectContaining({
+          body: expect.objectContaining({ action: "analyze" }),
+        }),
+      )
+    );
+    expect(screen.getByText("uploaded-files.json")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Run incremental migration" }),
+    ).toBeDisabled();
   });
 
   it("keeps incremental execution locked while another run holds the lock", () => {

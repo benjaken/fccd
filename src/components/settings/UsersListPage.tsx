@@ -1,38 +1,86 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ChevronLeft,
   ChevronRight,
+  KeyRound,
+  Pencil,
+  Plus,
   RefreshCw,
-  Search,
   Users,
 } from "lucide-react";
 
+import { useAuth } from "@/auth/AuthProvider";
+import { usePageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
+import { ListSearchBar } from "@/components/ui/list-search-bar";
+import { ListTable } from "@/components/ui/list-table";
+import { ChangePasswordSidePanel } from "@/components/settings/ChangePasswordSidePanel";
+import { CreateUserSidePanel } from "@/components/settings/CreateUserSidePanel";
+import { EditUserSidePanel } from "@/components/settings/EditUserSidePanel";
+import { restaurantLabel } from "@/components/settings/RestaurantSelect";
 import {
+  fetchRestaurantOptions,
   fetchUsers,
   SETTINGS_PAGE_SIZE,
   SYSTEM_ROLES,
+  USER_ACTION_PERMISSION_KEYS,
+  type RestaurantOption,
   type UserListItem,
 } from "@/lib/settings";
 
 type UsersLoader = typeof fetchUsers;
 
+const USER_SKELETON_COLUMNS = [
+  { width: "65%" },
+  { width: "72%" },
+  { width: "6rem" },
+  { width: "5rem", variant: "badge" as const },
+  { width: "60%" },
+  { width: "7rem" },
+  { width: "7rem" },
+];
+
 export function UsersListPage({
   loadUsers = fetchUsers,
+  loadRestaurants = fetchRestaurantOptions,
+  createUser,
+  updatePassword,
+  updateProfile,
 }: {
   loadUsers?: UsersLoader;
+  loadRestaurants?: typeof fetchRestaurantOptions;
+  createUser?: typeof import("@/lib/settings").createManagedUser;
+  updatePassword?: typeof import("@/lib/settings").updateManagedUserPassword;
+  updateProfile?: typeof import("@/lib/settings").updateManagedUserProfile;
 }) {
   const { t, i18n } = useTranslation();
+  const { user, profile } = useAuth();
+  const authorizationRole =
+    typeof user?.app_metadata?.role === "string"
+      ? user.app_metadata.role
+      : profile?.role;
+  const pageAccess = usePageAccess(authorizationRole);
+  const canCreate = pageAccess.canAccess(USER_ACTION_PERMISSION_KEYS.create);
+  const canEdit = pageAccess.canAccess(USER_ACTION_PERMISSION_KEYS.edit);
+  const canChangePassword = pageAccess.canAccess(
+    USER_ACTION_PERMISSION_KEYS.changePassword,
+  );
+  const showActions = canEdit || canChangePassword;
+
   const [draftSearch, setDraftSearch] = useState("");
   const [search, setSearch] = useState("");
   const [role, setRole] = useState("");
   const [page, setPage] = useState(1);
   const [items, setItems] = useState<UserListItem[]>([]);
+  const [restaurants, setRestaurants] = useState<RestaurantOption[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [passwordUser, setPasswordUser] = useState<UserListItem | null>(null);
+  const [editUser, setEditUser] = useState<UserListItem | null>(null);
 
   const totalPages = Math.max(1, Math.ceil(total / SETTINGS_PAGE_SIZE));
   const visibleFrom = total === 0 ? 0 : (page - 1) * SETTINGS_PAGE_SIZE + 1;
@@ -69,8 +117,21 @@ export function UsersListPage({
     void loadPage();
   }, [loadPage]);
 
-  const submitSearch = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  useEffect(() => {
+    let active = true;
+    void loadRestaurants()
+      .then((options) => {
+        if (active) setRestaurants(options);
+      })
+      .catch(() => {
+        if (active) setRestaurants([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [loadRestaurants]);
+
+  const submitSearch = () => {
     setPage(1);
     setSearch(draftSearch.trim());
   };
@@ -81,27 +142,26 @@ export function UsersListPage({
         <div>
           <span className="eyebrow">{t("settings.eyebrow")}</span>
           <h1>{t("settings.users.title")}</h1>
-          <p>{t("settings.users.description")}</p>
         </div>
+        {canCreate ? (
+          <Button type="button" onClick={() => setCreateOpen(true)}>
+            <Plus />
+            {t("settings.users.createAction")}
+          </Button>
+        ) : null}
       </header>
 
       <article className="panel orders-panel">
         <header className="orders-toolbar">
-          <form className="orders-search" onSubmit={submitSearch}>
-            <Search aria-hidden="true" />
-            <label className="sr-only" htmlFor="settings-users-search">
-              {t("settings.users.search")}
-            </label>
-            <input
-              id="settings-users-search"
-              value={draftSearch}
-              onChange={(event) => setDraftSearch(event.target.value)}
-              placeholder={t("settings.users.searchPlaceholder")}
-            />
-            <Button type="submit" variant="outline">
-              {t("settings.users.searchAction")}
-            </Button>
-          </form>
+          <ListSearchBar
+            id="settings-users-search"
+            value={draftSearch}
+            onChange={setDraftSearch}
+            onSubmit={submitSearch}
+            label={t("settings.users.search")}
+            placeholder={t("settings.users.searchPlaceholder")}
+            submitLabel={t("settings.users.searchAction")}
+          />
 
           <label className="orders-status-filter">
             <span>{t("settings.users.roleFilter")}</span>
@@ -122,12 +182,7 @@ export function UsersListPage({
           </label>
         </header>
 
-        {loading ? (
-          <div className="orders-state" role="status">
-            <RefreshCw className="spin" />
-            <span>{t("settings.users.loading")}</span>
-          </div>
-        ) : error ? (
+        {error ? (
           <div className="orders-state orders-state-error" role="alert">
             <Users />
             <div>
@@ -142,7 +197,7 @@ export function UsersListPage({
               {t("settings.retry")}
             </Button>
           </div>
-        ) : items.length === 0 ? (
+        ) : !loading && items.length === 0 ? (
           <div className="orders-state">
             <Users />
             <div>
@@ -151,38 +206,88 @@ export function UsersListPage({
             </div>
           </div>
         ) : (
-          <div className="table-wrap orders-table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>{t("settings.users.columns.name")}</th>
-                  <th>{t("settings.users.columns.email")}</th>
-                  <th>{t("settings.users.columns.role")}</th>
-                  <th>{t("settings.users.columns.restaurant")}</th>
-                  <th>{t("settings.users.columns.created")}</th>
-                  <th>{t("settings.users.columns.updated")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((user) => (
-                  <tr key={user.id}>
-                    <td>
-                      <strong>{user.userName || t("common.notSet")}</strong>
-                    </td>
-                    <td>{user.email || t("common.notSet")}</td>
-                    <td>
-                      <span className="status-badge blue">
-                        {user.role || t("common.notSet")}
-                      </span>
-                    </td>
-                    <td>{user.shopRestroLegacyId || t("common.notSet")}</td>
-                    <td>{date.format(new Date(user.createdAt))}</td>
-                    <td>{date.format(new Date(user.updatedAt))}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ListTable
+            className="orders-table-wrap"
+            loading={loading}
+            loadingLabel={t("settings.users.loading")}
+            skeletonRows={SETTINGS_PAGE_SIZE}
+            skeletonColumns={
+              showActions
+                ? [
+                    ...USER_SKELETON_COLUMNS,
+                    { width: "4rem", variant: "action" as const },
+                  ]
+                : USER_SKELETON_COLUMNS
+            }
+            header={
+              <tr>
+                <th>{t("settings.users.columns.name")}</th>
+                <th>{t("settings.users.columns.email")}</th>
+                <th>{t("settings.users.columns.phone")}</th>
+                <th>{t("settings.users.columns.role")}</th>
+                <th>{t("settings.users.columns.restaurant")}</th>
+                <th>{t("settings.users.columns.created")}</th>
+                <th>{t("settings.users.columns.updated")}</th>
+                {showActions ? (
+                  <th>{t("settings.users.columns.actions")}</th>
+                ) : null}
+              </tr>
+            }
+          >
+            {items.map((listUser) => (
+              <tr key={listUser.id}>
+                <td>
+                  <strong>{listUser.userName || t("common.notSet")}</strong>
+                </td>
+                <td>{listUser.email || t("common.notSet")}</td>
+                <td>{listUser.phone || t("common.notSet")}</td>
+                <td>
+                  <span className="status-badge blue">
+                    {listUser.role || t("common.notSet")}
+                  </span>
+                </td>
+                <td>
+                  {restaurantLabel(
+                    listUser.shopRestroLegacyId,
+                    restaurants,
+                    t("common.notSet"),
+                  )}
+                </td>
+                <td>{date.format(new Date(listUser.createdAt))}</td>
+                <td>{date.format(new Date(listUser.updatedAt))}</td>
+                {showActions ? (
+                  <td className="table-actions-cell">
+                    <div className="table-row-actions">
+                      {canEdit ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={() => setEditUser(listUser)}
+                          aria-label={t("settings.users.editAction")}
+                          title={t("settings.users.editAction")}
+                        >
+                          <Pencil />
+                        </Button>
+                      ) : null}
+                      {canChangePassword ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={() => setPasswordUser(listUser)}
+                          aria-label={t("settings.users.changePassword")}
+                          title={t("settings.users.changePassword")}
+                        >
+                          <KeyRound />
+                        </Button>
+                      ) : null}
+                    </div>
+                  </td>
+                ) : null}
+              </tr>
+            ))}
+          </ListTable>
         )}
 
         <footer className="orders-pagination">
@@ -218,6 +323,37 @@ export function UsersListPage({
           </div>
         </footer>
       </article>
+
+      {canCreate ? (
+        <CreateUserSidePanel
+          open={createOpen}
+          onClose={() => setCreateOpen(false)}
+          onCreated={() => {
+            setPage(1);
+            setReloadKey((key) => key + 1);
+          }}
+          createUser={createUser}
+          loadRestaurants={loadRestaurants}
+        />
+      ) : null}
+      {canEdit ? (
+        <EditUserSidePanel
+          user={editUser}
+          open={Boolean(editUser)}
+          onClose={() => setEditUser(null)}
+          onUpdated={() => setReloadKey((key) => key + 1)}
+          updateProfile={updateProfile}
+          loadRestaurants={loadRestaurants}
+        />
+      ) : null}
+      {canChangePassword ? (
+        <ChangePasswordSidePanel
+          user={passwordUser}
+          open={Boolean(passwordUser)}
+          onClose={() => setPasswordUser(null)}
+          updatePassword={updatePassword}
+        />
+      ) : null}
     </section>
   );
 }

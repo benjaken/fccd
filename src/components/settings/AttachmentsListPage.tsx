@@ -1,32 +1,81 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ChevronLeft,
   ChevronRight,
-  ExternalLink,
+  File,
   FileArchive,
+  FileAudio,
+  FileImage,
+  FileSpreadsheet,
+  FileText,
+  FileVideo,
   RefreshCw,
-  Search,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { ListSearchBar } from "@/components/ui/list-search-bar";
+import { ListTable } from "@/components/ui/list-table";
 import {
+  ATTACHMENT_FILE_TYPES,
+  attachmentFileType,
+  attachmentFileTypeLabelKey,
   createAttachmentUrl,
   fetchAttachments,
   SETTINGS_PAGE_SIZE,
   type AttachmentListItem,
 } from "@/lib/settings";
-import { cn } from "@/lib/utils";
 
 type AttachmentsLoader = typeof fetchAttachments;
 
-const ATTACHMENT_STATUSES = [
-  "discovered",
-  "enriched",
-  "uploaded",
-  "verified",
-  "failed",
-] as const;
+const ATTACHMENT_SKELETON_COLUMNS = [
+  { width: "72%" },
+  { width: "5.5rem" },
+  { width: "4.5rem" },
+  { width: "7rem" },
+];
+
+function attachmentFileIcon(attachment: AttachmentListItem) {
+  const mime = (attachment.mimeType ?? "").toLowerCase();
+  const name = (attachment.originalFilename ?? "").toLowerCase();
+
+  if (mime.startsWith("image/") || /\.(png|jpe?g|gif|webp|svg|bmp)$/.test(name)) {
+    return FileImage;
+  }
+  if (mime.startsWith("video/") || /\.(mp4|mov|webm|avi|mkv)$/.test(name)) {
+    return FileVideo;
+  }
+  if (mime.startsWith("audio/") || /\.(mp3|wav|aac|m4a|ogg)$/.test(name)) {
+    return FileAudio;
+  }
+  if (
+    mime.includes("spreadsheet") ||
+    mime.includes("excel") ||
+    mime === "text/csv" ||
+    /\.(xlsx?|csv|ods)$/.test(name)
+  ) {
+    return FileSpreadsheet;
+  }
+  if (
+    mime.includes("zip") ||
+    mime.includes("compressed") ||
+    mime.includes("rar") ||
+    /\.(zip|rar|7z|tar|gz)$/.test(name)
+  ) {
+    return FileArchive;
+  }
+  if (
+    mime.includes("pdf") ||
+    mime.startsWith("text/") ||
+    mime.includes("word") ||
+    mime.includes("document") ||
+    /\.(pdf|docx?|txt|rtf|md)$/.test(name)
+  ) {
+    return FileText;
+  }
+  return File;
+}
 
 export function AttachmentsListPage({
   loadAttachments = fetchAttachments,
@@ -38,7 +87,9 @@ export function AttachmentsListPage({
   const { t, i18n } = useTranslation();
   const [draftSearch, setDraftSearch] = useState("");
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("");
+  const [fileType, setFileType] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [page, setPage] = useState(1);
   const [items, setItems] = useState<AttachmentListItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -60,7 +111,14 @@ export function AttachmentsListPage({
     setLoading(true);
     setError(null);
     try {
-      const result = await loadAttachments({ page, search, status });
+      const result = await loadAttachments({
+        page,
+        search,
+        status: "",
+        fileType,
+        startDate,
+        endDate,
+      });
       setItems(result.items);
       setTotal(result.total);
     } catch (loadError) {
@@ -77,14 +135,13 @@ export function AttachmentsListPage({
     } finally {
       setLoading(false);
     }
-  }, [loadAttachments, page, reloadKey, search, status]);
+  }, [endDate, fileType, loadAttachments, page, reloadKey, search, startDate]);
 
   useEffect(() => {
     void loadPage();
   }, [loadPage]);
 
-  const submitSearch = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const submitSearch = () => {
     setPage(1);
     setSearch(draftSearch.trim());
   };
@@ -97,6 +154,7 @@ export function AttachmentsListPage({
   };
 
   const openAttachment = async (attachment: AttachmentListItem) => {
+    if (!attachment.objectPath || openingId === attachment.id) return;
     setOpeningId(attachment.id);
     setError(null);
     try {
@@ -122,53 +180,63 @@ export function AttachmentsListPage({
         <div>
           <span className="eyebrow">{t("settings.eyebrow")}</span>
           <h1>{t("settings.attachments.title")}</h1>
-          <p>{t("settings.attachments.description", { total })}</p>
         </div>
       </header>
 
       <article className="panel orders-panel">
-        <header className="orders-toolbar">
-          <form className="orders-search" onSubmit={submitSearch}>
-            <Search aria-hidden="true" />
-            <label className="sr-only" htmlFor="settings-attachments-search">
-              {t("settings.attachments.search")}
-            </label>
-            <input
-              id="settings-attachments-search"
-              value={draftSearch}
-              onChange={(event) => setDraftSearch(event.target.value)}
-              placeholder={t("settings.attachments.searchPlaceholder")}
-            />
-            <Button type="submit" variant="outline">
-              {t("settings.attachments.searchAction")}
-            </Button>
-          </form>
+        <header className="orders-toolbar settings-attachments-toolbar">
+          <ListSearchBar
+            id="settings-attachments-search"
+            value={draftSearch}
+            onChange={setDraftSearch}
+            onSubmit={submitSearch}
+            label={t("settings.attachments.search")}
+            placeholder={t("settings.attachments.searchPlaceholder")}
+            submitLabel={t("settings.attachments.searchAction")}
+          />
 
-          <label className="orders-status-filter">
-            <span>{t("settings.attachments.statusFilter")}</span>
-            <select
-              value={status}
-              onChange={(event) => {
-                setPage(1);
-                setStatus(event.target.value);
-              }}
-            >
-              <option value="">{t("settings.attachments.allStatuses")}</option>
-              {ATTACHMENT_STATUSES.map((value) => (
-                <option key={value} value={value}>
-                  {t(`settings.attachments.statuses.${value}`)}
+          <div className="settings-attachments-filters">
+            <label className="orders-status-filter">
+              <span>{t("settings.attachments.fileTypeFilter")}</span>
+              <select
+                value={fileType}
+                onChange={(event) => {
+                  setPage(1);
+                  setFileType(event.target.value);
+                }}
+              >
+                <option value="">
+                  {t("settings.attachments.allFileTypes")}
                 </option>
-              ))}
-            </select>
-          </label>
+                {ATTACHMENT_FILE_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {t(attachmentFileTypeLabelKey(type))}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <DateRangePicker
+              startId="settings-attachments-start-date"
+              endId="settings-attachments-end-date"
+              startValue={startDate}
+              endValue={endDate}
+              onStartChange={(value) => {
+                setPage(1);
+                setStartDate(value);
+              }}
+              onEndChange={(value) => {
+                setPage(1);
+                setEndDate(value);
+              }}
+              startLabel={t("settings.attachments.startDate")}
+              endLabel={t("settings.attachments.endDate")}
+              legend={t("settings.attachments.dateRange")}
+            />
+          </div>
         </header>
 
-        {loading ? (
-          <div className="orders-state" role="status">
-            <RefreshCw className="spin" />
-            <span>{t("settings.attachments.loading")}</span>
-          </div>
-        ) : error ? (
+        {error ? (
           <div className="orders-state orders-state-error" role="alert">
             <FileArchive />
             <div>
@@ -183,7 +251,7 @@ export function AttachmentsListPage({
               {t("settings.retry")}
             </Button>
           </div>
-        ) : items.length === 0 ? (
+        ) : !loading && items.length === 0 ? (
           <div className="orders-state">
             <FileArchive />
             <div>
@@ -192,84 +260,70 @@ export function AttachmentsListPage({
             </div>
           </div>
         ) : (
-          <div className="table-wrap orders-table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>{t("settings.attachments.columns.file")}</th>
-                  <th>{t("settings.attachments.columns.source")}</th>
-                  <th>{t("settings.attachments.columns.owner")}</th>
-                  <th>{t("settings.attachments.columns.type")}</th>
-                  <th>{t("settings.attachments.columns.size")}</th>
-                  <th>{t("settings.attachments.columns.status")}</th>
-                  <th>{t("settings.attachments.columns.updated")}</th>
-                  <th aria-label={t("settings.attachments.columns.actions")} />
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((attachment) => (
-                  <tr key={attachment.id}>
-                    <td>
-                      <strong>
-                        {attachment.originalFilename || t("common.notSet")}
-                      </strong>
-                    </td>
-                    <td>
-                      {attachment.sourceType}
-                      <small className="settings-cell-detail">
-                        {attachment.sourceField}
-                      </small>
-                    </td>
-                    <td>
-                      {attachment.ownerType || t("common.notSet")}
-                      <small className="settings-cell-detail">
-                        {attachment.ownerLegacyId || t("common.notSet")}
-                      </small>
-                    </td>
-                    <td>{attachment.mimeType || t("common.notSet")}</td>
-                    <td>{formatSize(attachment.sizeBytes)}</td>
-                    <td>
+          <ListTable
+            className="orders-table-wrap settings-attachments-table"
+            loading={loading}
+            loadingLabel={t("settings.attachments.loading")}
+            skeletonRows={SETTINGS_PAGE_SIZE}
+            skeletonColumns={ATTACHMENT_SKELETON_COLUMNS}
+            header={
+              <tr>
+                <th>{t("settings.attachments.columns.file")}</th>
+                <th>{t("settings.attachments.columns.type")}</th>
+                <th>{t("settings.attachments.columns.size")}</th>
+                <th>{t("settings.attachments.columns.updated")}</th>
+              </tr>
+            }
+          >
+            {items.map((attachment) => {
+              const Icon = attachmentFileIcon(attachment);
+              const label =
+                attachment.originalFilename || t("common.notSet");
+              const canOpen = Boolean(attachment.objectPath);
+              const type = attachmentFileType(attachment);
+              return (
+                <tr key={attachment.id}>
+                  <td>
+                    <div className="settings-attachment-file">
                       <span
-                        className={cn(
-                          "status-badge",
-                          attachment.migrationStatus === "failed"
-                            ? "red"
-                            : attachment.migrationStatus === "verified"
-                              ? "green"
-                              : "blue",
-                        )}
-                      >
-                        {t(
-                          `settings.attachments.statuses.${attachment.migrationStatus}`,
-                        )}
-                      </span>
-                    </td>
-                    <td>{date.format(new Date(attachment.updatedAt))}</td>
-                    <td>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        disabled={
-                          !attachment.objectPath ||
-                          openingId === attachment.id
-                        }
-                        onClick={() => void openAttachment(attachment)}
-                        aria-label={`${t("settings.attachments.open")} ${
-                          attachment.originalFilename || attachment.id
-                        }`}
+                        className="settings-attachment-file-icon"
+                        aria-hidden="true"
                       >
                         {openingId === attachment.id ? (
                           <RefreshCw className="spin" />
                         ) : (
-                          <ExternalLink />
+                          <Icon />
                         )}
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      </span>
+                      {canOpen ? (
+                        <button
+                          type="button"
+                          className="settings-attachment-file-link"
+                          onClick={() => void openAttachment(attachment)}
+                          disabled={openingId === attachment.id}
+                        >
+                          {label}
+                        </button>
+                      ) : (
+                        <span className="settings-attachment-file-muted">
+                          {label}
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td>{t(attachmentFileTypeLabelKey(type))}</td>
+                  <td>{formatSize(attachment.sizeBytes)}</td>
+                  <td>
+                    {date.format(
+                      new Date(
+                        attachment.sourceModifiedAt || attachment.updatedAt,
+                      ),
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </ListTable>
         )}
 
         <footer className="orders-pagination">

@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, useLocation } from "react-router-dom";
@@ -94,11 +96,12 @@ describe("Dashboard navigation", () => {
     ["未付款訂單", "/orders/unpaid"],
     ["未安排司機", "/delivery/unassigned"],
     ["已送貨未付款", "/orders/delivered-unpaid"],
-  ])("links %s to %s", (name, target) => {
+  ])("links %s to %s", async (name, target) => {
     renderDashboard();
 
-    const matchingLink = screen
-      .getAllByRole("link", { name: new RegExp(name) })
+    const matchingLink = (await screen.findAllByRole("link", {
+      name: new RegExp(name),
+    }))
       .find((link) => link.getAttribute("href") === target);
 
     expect(matchingLink).toBeDefined();
@@ -121,6 +124,75 @@ describe("Dashboard navigation", () => {
 
     expect(screen.getByTestId("location")).toHaveTextContent(
       "/orders?status=confirmed",
+    );
+  });
+
+  it("colors each order-progress status distinctly", async () => {
+    renderDashboard();
+
+    expect(
+      await screen.findByRole("link", { name: /已確認\s*18/ }),
+    ).toHaveClass("tone-indigo");
+    expect(screen.getByRole("link", { name: /製作中\s*12/ })).toHaveClass(
+      "tone-amber",
+    );
+    expect(screen.getByRole("link", { name: /待出貨\s*7/ })).toHaveClass(
+      "tone-violet",
+    );
+    expect(screen.getByRole("link", { name: /配送中\s*5/ })).toHaveClass(
+      "tone-cyan",
+    );
+    expect(screen.getByRole("link", { name: /已完成\s*9/ })).toHaveClass(
+      "tone-green",
+    );
+  });
+
+  it("keeps white label classes on the primary create-order action", async () => {
+    renderDashboard();
+
+    const createOrder = await screen.findByRole("link", {
+      name: /建立新訂單/,
+    });
+
+    expect(createOrder).toHaveClass("bg-primary");
+    expect(createOrder).toHaveClass("text-primary-foreground");
+  });
+
+  it("uses a green brand primary and explicit green active nav wash", () => {
+    const stylesheet = readFileSync(
+      path.resolve(process.cwd(), "src/index.css"),
+      "utf8",
+    );
+
+    expect(stylesheet).toMatch(/--primary:\s*oklch\(0\.52 0\.14 150\)/);
+    expect(stylesheet).toMatch(/--primary:\s*oklch\(0\.58 0\.13 150\)/);
+    expect(stylesheet).toMatch(/--nav-active-bg:\s*oklch\([^)]*150\)/);
+    expect(stylesheet).toMatch(/--nav-active-fg:\s*oklch\([^)]*150\)/);
+    expect(stylesheet).toMatch(
+      /\.sidebar-link\.active\s*\{[^}]*var\(--nav-active-bg\)/s,
+    );
+    expect(stylesheet).toMatch(
+      /\.workspace-soft-link\.active\s*\{[^}]*var\(--nav-active-bg\)/s,
+    );
+    expect(stylesheet).not.toMatch(/--primary:\s*oklch\([^)]*250\)/);
+  });
+
+  it("uses explicit green selection washes instead of primary color-mix", () => {
+    const stylesheet = readFileSync(
+      path.resolve(process.cwd(), "src/index.css"),
+      "utf8",
+    );
+
+    expect(stylesheet).toMatch(/--selection-bg:\s*oklch\([^)]*150\)/);
+    expect(stylesheet).toMatch(/--selection-bg-strong:\s*oklch\([^)]*150\)/);
+    expect(stylesheet).toMatch(
+      /\.report-tabs button\.active[\s\S]*?background:\s*var\(--selection-bg-strong\)/,
+    );
+    expect(stylesheet).toMatch(
+      /\.meat-price-product-list > button\.selected[\s\S]*?background:\s*var\(--selection-bg\)/,
+    );
+    expect(stylesheet).not.toMatch(
+      /background:\s*color-mix\(in oklch,\s*var\(--primary\)\s+\d+%\,\s*var\(--card\)\)/,
     );
   });
 });

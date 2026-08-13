@@ -4,6 +4,18 @@ verify_jwt = false
 [functions.bubble-relations]
 verify_jwt = false
 
+[functions.attachment-incremental]
+verify_jwt = false
+
+[functions.admin-users]
+verify_jwt = false
+
+[functions.login-log]
+verify_jwt = false
+
+[functions.bubble-daily-incremental]
+verify_jwt = false
+
 [functions.bubble-import-phase-a]
 verify_jwt = false
 

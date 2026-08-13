@@ -106,6 +106,9 @@ describe("Orders list", () => {
     expect(
       await screen.findByRole("heading", { name: "待確定訂單" }),
     ).toBeInTheDocument();
+    const table = within(screen.getByRole("table"));
+    expect(table.getByText("待確定")).toBeInTheDocument();
+    expect(table.queryByText("已確認")).not.toBeInTheDocument();
     expect(loadOrders).toHaveBeenCalledWith(
       expect.objectContaining({ preset: "pending" }),
     );

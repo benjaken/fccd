@@ -20,6 +20,7 @@ import {
   FileArchive,
   FileText,
   HandCoins,
+  History,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -28,7 +29,6 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   RefreshCw,
-  Search,
   Settings,
   ShieldCheck,
   ShoppingBasket,
@@ -57,15 +57,24 @@ import {
 } from "@/auth/use-page-access";
 import { LoginPage } from "@/components/LoginPage";
 import { MigrationWorkspace } from "@/components/MigrationWorkspace";
+import { FollowUpPage } from "@/components/FollowUpPage";
 import { OrdersListPage } from "@/components/OrdersListPage";
+import { OrderDetailPage } from "@/components/OrderDetailPage";
+import { PaymentsListPage } from "@/components/PaymentsListPage";
 import { ProfilePage } from "@/components/ProfilePage";
 import { ReportsPage } from "@/components/ReportsPage";
 import { QuotesListPage } from "@/components/QuotesListPage";
+import { ProductsListPage } from "@/components/ProductsListPage";
+import { ProductDetailPage } from "@/components/ProductDetailPage";
+import { PackagesListPage } from "@/components/PackagesListPage";
+import { PackageDetailPage } from "@/components/PackageDetailPage";
 import { AttachmentsListPage } from "@/components/settings/AttachmentsListPage";
+import { LoginLogsListPage } from "@/components/settings/LoginLogsListPage";
 import { RolePermissionsPage } from "@/components/settings/RolePermissionsPage";
 import { SettingsAccessDenied } from "@/components/settings/SettingsAccessDenied";
 import { UsersListPage } from "@/components/settings/UsersListPage";
 import { Button } from "@/components/ui/button";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 import {
   fetchDashboardData,
   type DashboardData,
@@ -95,59 +104,188 @@ const primaryNav: NavItem[] = [
   { key: "reports", to: "/reports", icon: ChartNoAxesCombined },
   {
     key: "settings",
-    to: "/settings/users",
+    to: "/settings",
     icon: Settings,
-    permissionKey: "settings.users",
+    permissionKey: "settings",
   },
 ];
 
 const secondaryNav: Record<string, NavItem[]> = {
   overview: [
-    { key: "overview", to: "/", icon: LayoutDashboard },
-    { key: "followUp", to: "/follow-up", icon: ClipboardCheck },
-    { key: "orders", to: "/orders", icon: ClipboardList },
-    { key: "quotes", to: "/quotes", icon: FileText },
-    { key: "inventory", to: "/inventory", icon: Warehouse },
-    { key: "delivery", to: "/delivery", icon: Truck },
+    { key: "overview", to: "/", icon: LayoutDashboard, permissionKey: "overview" },
+    {
+      key: "followUp",
+      to: "/follow-up",
+      icon: ClipboardCheck,
+      permissionKey: "overview.follow_up",
+    },
+    { key: "orders", to: "/orders", icon: ClipboardList, permissionKey: "orders" },
+    { key: "quotes", to: "/quotes", icon: FileText, permissionKey: "quotes" },
+    {
+      key: "inventory",
+      to: "/inventory",
+      icon: Warehouse,
+      permissionKey: "inventory",
+    },
+    {
+      key: "delivery",
+      to: "/delivery",
+      icon: Truck,
+      permissionKey: "delivery",
+    },
   ],
   orders: [
-    { key: "allOrders", to: "/orders", icon: ClipboardList },
-    { key: "newOrder", to: "/orders/new", icon: FileText },
-    { key: "pendingOrders", to: "/orders/pending", icon: ClipboardCheck },
+    {
+      key: "allOrders",
+      to: "/orders",
+      icon: ClipboardList,
+      permissionKey: "orders",
+    },
+    {
+      key: "newOrder",
+      to: "/orders/new",
+      icon: FileText,
+      permissionKey: "orders.new",
+    },
+    {
+      key: "pendingOrders",
+      to: "/orders/pending",
+      icon: ClipboardCheck,
+      permissionKey: "orders.pending",
+    },
     {
       key: "productionCalendar",
       to: "/orders/production",
       icon: CalendarDays,
+      permissionKey: "orders.production",
     },
-    { key: "payments", to: "/orders/payments", icon: HandCoins },
-    { key: "assignDriver", to: "/orders/drivers", icon: Truck },
+    {
+      key: "payments",
+      to: "/orders/payments",
+      icon: HandCoins,
+      permissionKey: "orders.payments",
+    },
+    {
+      key: "assignDriver",
+      to: "/orders/drivers",
+      icon: Truck,
+      permissionKey: "orders.drivers",
+    },
   ],
   quotes: [
-    { key: "cateringQuotes", to: "/quotes", icon: FileText },
-    { key: "customers", to: "/quotes/customers", icon: Users },
-    { key: "followUp", to: "/quotes/follow-up", icon: ClipboardCheck },
+    {
+      key: "cateringQuotes",
+      to: "/quotes",
+      icon: FileText,
+      permissionKey: "quotes",
+    },
+    {
+      key: "customers",
+      to: "/quotes/customers",
+      icon: Users,
+      permissionKey: "quotes.customers",
+    },
+    {
+      key: "followUp",
+      to: "/quotes/follow-up",
+      icon: ClipboardCheck,
+      permissionKey: "quotes.follow_up",
+    },
   ],
   products: [
-    { key: "products", to: "/products", icon: ShoppingBasket },
-    { key: "inventory", to: "/inventory", icon: Boxes },
+    {
+      key: "allProducts",
+      to: "/products",
+      icon: ShoppingBasket,
+      permissionKey: "products",
+    },
+    {
+      key: "cateringFood",
+      to: "/products/catering",
+      icon: Utensils,
+      permissionKey: "products.catering",
+    },
+    {
+      key: "lunchBoxes",
+      to: "/products/lunchbox",
+      icon: Boxes,
+      permissionKey: "products.lunchbox",
+    },
+    {
+      key: "alaCarte",
+      to: "/products/ala-carte",
+      icon: ShoppingBasket,
+      permissionKey: "products.ala_carte",
+    },
+    {
+      key: "packages",
+      to: "/products/packages",
+      icon: PackageCheck,
+      permissionKey: "products.packages",
+    },
   ],
   kitchen: [
-    { key: "kitchen", to: "/kitchen", icon: Utensils },
-    { key: "productionCalendar", to: "/kitchen/calendar", icon: CalendarDays },
-    { key: "inventory", to: "/kitchen/inventory", icon: Warehouse },
+    { key: "kitchen", to: "/kitchen", icon: Utensils, permissionKey: "kitchen" },
+    {
+      key: "productionCalendar",
+      to: "/kitchen/calendar",
+      icon: CalendarDays,
+      permissionKey: "kitchen.calendar",
+    },
+    {
+      key: "inventory",
+      to: "/kitchen/inventory",
+      icon: Warehouse,
+      permissionKey: "kitchen.inventory",
+    },
   ],
   delivery: [
-    { key: "delivery", to: "/delivery", icon: Truck },
-    { key: "assignDriver", to: "/delivery/assign", icon: PackageCheck },
+    {
+      key: "delivery",
+      to: "/delivery",
+      icon: Truck,
+      permissionKey: "delivery",
+    },
+    {
+      key: "assignDriver",
+      to: "/delivery/assign",
+      icon: PackageCheck,
+      permissionKey: "delivery.assign",
+    },
   ],
   restaurant: [
-    { key: "restaurant", to: "/restaurant", icon: Store },
-    { key: "inventory", to: "/restaurant/inventory", icon: Warehouse },
-    { key: "reports", to: "/restaurant/reports", icon: ChartNoAxesCombined },
+    {
+      key: "restaurant",
+      to: "/restaurant",
+      icon: Store,
+      permissionKey: "restaurant",
+    },
+    {
+      key: "inventory",
+      to: "/restaurant/inventory",
+      icon: Warehouse,
+      permissionKey: "restaurant.inventory",
+    },
+    {
+      key: "reports",
+      to: "/restaurant/reports",
+      icon: ChartNoAxesCombined,
+      permissionKey: "restaurant.reports",
+    },
   ],
   reports: [
-    { key: "reports", to: "/reports", icon: ChartNoAxesCombined },
-    { key: "finance", to: "/finance", icon: CircleDollarSign },
+    {
+      key: "reports",
+      to: "/reports",
+      icon: ChartNoAxesCombined,
+      permissionKey: "reports",
+    },
+    {
+      key: "finance",
+      to: "/finance",
+      icon: CircleDollarSign,
+      permissionKey: "finance",
+    },
   ],
   settings: [
     {
@@ -163,11 +301,58 @@ const secondaryNav: Record<string, NavItem[]> = {
       permissionKey: "settings.roles",
     },
     {
+      key: "loginLogs",
+      to: "/settings/login-logs",
+      icon: History,
+      permissionKey: "settings.login_logs",
+    },
+    {
       key: "attachments",
       to: "/settings/attachments",
       icon: FileArchive,
       permissionKey: "settings.attachments",
     },
+  ],
+};
+
+const SECTION_CHILD_KEYS: Record<string, string[]> = {
+  overview: ["overview.follow_up"],
+  orders: [
+    "orders.new",
+    "orders.pending",
+    "orders.production",
+    "orders.payments",
+    "orders.drivers",
+    "orders.unpaid",
+    "orders.delivered_unpaid",
+  ],
+  quotes: ["quotes.customers", "quotes.follow_up"],
+  products: [
+    "products.catering",
+    "products.lunchbox",
+    "products.ala_carte",
+    "products.packages",
+  ],
+  kitchen: ["kitchen.calendar", "kitchen.inventory"],
+  delivery: ["delivery.assign"],
+  restaurant: ["restaurant.inventory", "restaurant.reports"],
+  reports: [
+    "reports.shop_order_quantities",
+    "reports.average_supply_price",
+    "reports.production_cost_price",
+    "reports.raw_meat_average_price",
+    "reports.prepared_meat_stock",
+    "reports.raw_meat_stock",
+    "reports.supplier_purchase",
+  ],
+  settings: [
+    "settings.users",
+    "settings.users.create",
+    "settings.users.edit",
+    "settings.users.change_password",
+    "settings.roles",
+    "settings.login_logs",
+    "settings.attachments",
   ],
 };
 
@@ -184,11 +369,21 @@ const workspaceLinks: Array<{
 ];
 
 function sectionFromPath(pathname: string) {
-  const segment = pathname.split("/")[1];
+  const segment = pathname.split("/")[1] ?? "";
   if (segment === "follow-up" || segment === "inventory") return "overview";
   if (segment === "finance") return "reports";
-  return secondaryNav[segment] ? segment : "overview";
+  if (secondaryNav[segment]) return segment;
+  // Exact home only — do not light 主頁 for profile/migration/unknown paths.
+  if (!segment) return "overview";
+  return "";
 }
+
+/** Primary top-nav stays active for the whole section, including child routes. */
+function isPrimaryNavActive(section: string, key: string, isActive: boolean) {
+  return isActive || (section !== "" && section === key);
+}
+
+export { isPrimaryNavActive, sectionFromPath };
 
 function Brand() {
   const { t } = useTranslation();
@@ -263,23 +458,25 @@ function OperationsShell() {
       ? user.app_metadata.role
       : profile?.role;
   const pageAccess = usePageAccess(authorizationRole);
-  const isSuperAdmin = pageAccess.isSuperAdmin;
   const currentPageKey = pageAccessKey(location.pathname);
-  const visiblePrimaryNav = primaryNav.filter((item) =>
-    pageAccess.canAccess(item.permissionKey ?? item.key),
-  );
+  const visiblePrimaryNav = primaryNav.filter((item) => {
+    const key = item.permissionKey ?? item.key;
+    return pageAccess.canAccessSection(key, SECTION_CHILD_KEYS[key] ?? []);
+  });
   const sideItems = (secondaryNav[section] ?? secondaryNav.overview).filter(
     (item) => pageAccess.canAccess(item.permissionKey ?? pageAccessKey(item.to)),
   );
+  const firstSettingsPath =
+    secondaryNav.settings.find((item) =>
+      pageAccess.canAccess(item.permissionKey ?? pageAccessKey(item.to)),
+    )?.to ?? "/settings/users";
   const activeWorkspace =
     section === "delivery"
       ? "delivery"
       : section === "restaurant"
         ? "restaurant"
         : "catering";
-  const canViewFinance = ["Super Admin", "Admin", "Accounting"].includes(
-    profile?.role ?? "",
-  );
+  const canViewFinance = pageAccess.canAccess("finance");
 
   useEffect(() => {
     setMobileMenuOpen(false);
@@ -359,11 +556,6 @@ function OperationsShell() {
         </nav>
 
         <div className="topbar-actions">
-          <label className="search-box">
-            <Search aria-hidden="true" />
-            <span className="sr-only">{t("common.search")}</span>
-            <input placeholder={t("common.search")} />
-          </label>
           <Button
             variant="ghost"
             size="icon"
@@ -412,7 +604,7 @@ function OperationsShell() {
                 <strong>
                   {profile?.user_name ||
                     user?.email?.split("@")[0] ||
-                    "Food Channel Catering"}
+                    t("brand.name")}
                 </strong>
                 <small>{profile?.role || t("common.notSet")}</small>
               </span>
@@ -456,7 +648,10 @@ function OperationsShell() {
               to={to}
               end={to === "/"}
               className={({ isActive }) =>
-                cn("primary-nav-link", isActive && "active")
+                cn(
+                  "primary-nav-link",
+                  isPrimaryNavActive(section, key, isActive) && "active",
+                )
               }
             >
               <NavIcon />
@@ -507,15 +702,16 @@ function OperationsShell() {
         <main className="main-content">
           <div className="page-transition" key={pageKey}>
             {pageAccess.loading ? (
-              <div className="profile-state" role="status">
-                <RefreshCw className="spin" />
-                <span>{t("settings.loadingPermissions")}</span>
-              </div>
+              <PageSkeleton label={t("settings.loadingPermissions")} />
             ) : !pageAccess.canAccess(currentPageKey) ? (
               <SettingsAccessDenied />
             ) : (
               <Routes>
               <Route path="/" element={<Dashboard role={profile?.role} />} />
+              <Route
+                path="/follow-up"
+                element={<FollowUpPage role={profile?.role ?? null} />}
+              />
               <Route path="/profile" element={<ProfilePage />} />
               <Route
                 path="/orders"
@@ -548,23 +744,90 @@ function OperationsShell() {
                   />
                 }
               />
+              <Route
+                path="/orders/payments"
+                element={<PaymentsListPage canViewFinance={canViewFinance} />}
+              />
+              <Route
+                path="/orders/:id"
+                element={
+                  <OrderDetailPage
+                    documentType="order"
+                    canViewFinance={canViewFinance}
+                  />
+                }
+              />
               <Route path="/quotes" element={<QuotesListPage />} />
+              <Route
+                path="/quotes/high-chance"
+                element={<QuotesListPage preset="high-chance" />}
+              />
+              <Route
+                path="/quotes/large"
+                element={<QuotesListPage preset="large" />}
+              />
+              <Route
+                path="/quotes/follow-up"
+                element={<QuotesListPage preset="follow-up" />}
+              />
+              <Route
+                path="/quotes/:id"
+                element={
+                  <OrderDetailPage documentType="quote" canViewFinance={canViewFinance} />
+                }
+              />
+              <Route path="/products" element={<ProductsListPage />} />
+              <Route
+                path="/products/catering"
+                element={<ProductsListPage preset="catering" />}
+              />
+              <Route
+                path="/products/lunchbox"
+                element={<ProductsListPage preset="lunchbox" />}
+              />
+              <Route
+                path="/products/ala-carte"
+                element={<ProductsListPage preset="ala-carte" />}
+              />
+              <Route
+                path="/products/packages"
+                element={<PackagesListPage />}
+              />
+              <Route
+                path="/products/packages/:id"
+                element={<PackageDetailPage />}
+              />
+              <Route path="/products/:id" element={<ProductDetailPage />} />
               <Route path="/reports/*" element={<ReportsPage />} />
               <Route
                 path="/settings"
-                element={<Navigate to="/settings/users" replace />}
+                element={<Navigate to={firstSettingsPath} replace />}
               />
               <Route
                 path="/settings/users"
                 element={
-                  isSuperAdmin ? <UsersListPage /> : <SettingsAccessDenied />
+                  pageAccess.canAccess("settings.users") ? (
+                    <UsersListPage />
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
                 }
               />
               <Route
                 path="/settings/roles"
                 element={
-                  isSuperAdmin ? (
+                  pageAccess.canAccess("settings.roles") ? (
                     <RolePermissionsPage />
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
+                }
+              />
+              <Route
+                path="/settings/login-logs"
+                element={
+                  pageAccess.canAccess("settings.login_logs") ? (
+                    <LoginLogsListPage />
                   ) : (
                     <SettingsAccessDenied />
                   )
@@ -573,7 +836,7 @@ function OperationsShell() {
               <Route
                 path="/settings/attachments"
                 element={
-                  isSuperAdmin ? (
+                  pageAccess.canAccess("settings.attachments") ? (
                     <AttachmentsListPage />
                   ) : (
                     <SettingsAccessDenied />
@@ -614,7 +877,10 @@ function OperationsShell() {
                   to={to}
                   end={to === "/"}
                   className={({ isActive }) =>
-                    cn("sidebar-link", isActive && "active")
+                    cn(
+                      "sidebar-link",
+                      isPrimaryNavActive(section, key, isActive) && "active",
+                    )
                   }
                 >
                   <NavIcon />
@@ -759,7 +1025,7 @@ function jobStatus(
     job.deliveryStatus === "待接單" ||
     job.deliveryStatus === "未派車隊"
   ) {
-    return { label: labels.awaitingDriver, tone: "red" };
+    return { label: labels.awaitingDriver, tone: "amber" };
   }
   if (job.isSentToFactory) {
     return { label: labels.preparing, tone: "amber" };
@@ -824,7 +1090,7 @@ export function Dashboard({
     {
       label: t("dashboard.highChanceQuotes"),
       count: data.queues.highChanceQuotes,
-      tone: "red",
+      tone: "amber",
       to: "/quotes/high-chance",
     },
     {
@@ -864,26 +1130,31 @@ export function Dashboard({
       label: t("dashboard.confirmed"),
       count: data.progress.confirmed,
       to: "/orders?status=confirmed",
+      tone: "indigo",
     },
     {
       label: t("dashboard.preparing"),
       count: data.progress.preparing,
       to: "/kitchen?status=preparing",
+      tone: "amber",
     },
     {
       label: t("dashboard.ready"),
       count: data.progress.ready,
       to: "/kitchen?status=ready",
+      tone: "violet",
     },
     {
       label: t("dashboard.shipping"),
       count: data.progress.shipping,
       to: "/delivery?status=shipping",
+      tone: "cyan",
     },
     {
       label: t("dashboard.completed"),
       count: data.progress.completed,
       to: "/orders?status=completed",
+      tone: "green",
     },
   ].map((item) => ({ ...item, width: progressWidth(item.count) }));
 
@@ -904,13 +1175,16 @@ export function Dashboard({
       : formatted;
   };
 
+  if (loading) {
+    return <PageSkeleton label={t("dashboard.loading")} variant="dashboard" />;
+  }
+
   return (
     <>
       <section className="page-heading">
         <div>
           <span className="eyebrow">{t("dashboard.eyebrow")}</span>
           <h1>{t("dashboard.title")}</h1>
-          <p>{t("dashboard.description")}</p>
         </div>
         <div className="heading-actions">
           <Button
@@ -918,7 +1192,7 @@ export function Dashboard({
             onClick={() => setReloadKey((key) => key + 1)}
             disabled={loading}
           >
-            <RefreshCw className={loading ? "spin" : undefined} />
+            <RefreshCw />
             {t("dashboard.refresh")}
           </Button>
           <Button variant="outline" asChild>
@@ -949,13 +1223,6 @@ export function Dashboard({
         </div>
       )}
 
-      {loading && (
-        <div className="dashboard-loading" role="status">
-          <RefreshCw className="spin" />
-          {t("dashboard.loading")}
-        </div>
-      )}
-
       <section className="metrics-grid">
         <MetricCard
           label={t("dashboard.ordersToday")}
@@ -973,7 +1240,7 @@ export function Dashboard({
             />
           }
           icon={ClipboardList}
-          tone="red"
+          tone="blue"
           to="/orders"
         />
         <MetricCard
@@ -1066,7 +1333,11 @@ export function Dashboard({
           />
           <div className="progress-list">
             {progress.map((item) => (
-              <Link className="progress-row" key={item.label} to={item.to}>
+              <Link
+                className={cn("progress-row", `tone-${item.tone}`)}
+                key={item.label}
+                to={item.to}
+              >
                 <div>
                   <span>{item.label}</span>
                   <strong>

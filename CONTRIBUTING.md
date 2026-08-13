@@ -35,6 +35,23 @@ Before coding, verify that the branch merge base is the current remote
 git merge-base --is-ancestor origin/main HEAD
 ```
 
+## UI standards
+
+The FCCD design system (shadcn/ui + Ant Design practices) lives in
+[`docs/DESIGN_SYSTEM.md`](docs/DESIGN_SYSTEM.md).
+
+Hard rules for layout, theme tokens, status colors, preview sign-in, and
+**shared componentization** (extract multi-page inputs/search/skeletons into
+`src/components/ui/` — do not copy-paste):
+[`docs/UI_DEVELOPMENT_STANDARD.md`](docs/UI_DEVELOPMENT_STANDARD.md).
+
+Paginated operational tables follow
+[`docs/UI_TABLE_STANDARD.md`](docs/UI_TABLE_STANDARD.md).
+
+Update those documents in the same change set when approved visual behavior
+changes. New shared UI used on multiple pages must be packaged as a component
+before merge (see `DESIGN_SYSTEM.md` §4.0).
+
 ## UI test case policy
 
 Every UI-related change must include automated test cases in the repository

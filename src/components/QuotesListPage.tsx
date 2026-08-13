@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   CalendarDays,
@@ -6,11 +6,12 @@ import {
   FileText,
   Plus,
   RefreshCw,
-  Search,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
+import { ListSearchBar } from "@/components/ui/list-search-bar";
+import { ListTable } from "@/components/ui/list-table";
 import { TablePagination } from "@/components/ui/table-pagination";
 import {
   fetchQuotes,
@@ -18,13 +19,26 @@ import {
   type QuoteListFilters,
   type QuoteListItem,
   type QuoteListResult,
+  type QuotePreset,
 } from "@/lib/quotes";
 
 type QuotesLoader = (filters: QuoteListFilters) => Promise<QuoteListResult>;
 
+const QUOTE_SKELETON_COLUMNS = [
+  { width: "6rem" },
+  { width: "72%" },
+  { width: "7rem" },
+  { width: "4.5rem", variant: "badge" as const },
+  { width: "5rem" },
+  { width: "7rem" },
+  { width: "1.75rem", variant: "action" as const },
+];
+
 export function QuotesListPage({
+  preset = "all",
   loadQuotes = fetchQuotes,
 }: {
+  preset?: QuotePreset;
   loadQuotes?: QuotesLoader;
 }) {
   const { t, i18n } = useTranslation();
@@ -76,7 +90,7 @@ export function QuotesListPage({
     setError(null);
 
     try {
-      const result = await loadQuotes({ page, search, status });
+      const result = await loadQuotes({ page, search, status, preset });
       setItems(result.items);
       setTotal(result.total);
     } catch (loadError) {
@@ -93,7 +107,7 @@ export function QuotesListPage({
     } finally {
       setLoading(false);
     }
-  }, [loadQuotes, page, reloadKey, search, status]);
+  }, [loadQuotes, page, preset, reloadKey, search, status]);
 
   useEffect(() => {
     void loadPage();
@@ -109,8 +123,7 @@ export function QuotesListPage({
     [items, status],
   );
 
-  const submitSearch = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const submitSearch = () => {
     setPage(1);
     setSearch(draftSearch.trim());
   };
@@ -120,14 +133,21 @@ export function QuotesListPage({
     if (quote.currency === "HKD") return currencyFormatter.format(quote.grandTotal);
     return `${quote.currency} ${quote.grandTotal.toLocaleString(i18n.language)}`;
   };
+  const titleKey =
+    preset === "high-chance"
+      ? "highChanceTitle"
+      : preset === "large"
+        ? "largeTitle"
+        : preset === "follow-up"
+          ? "followUpTitle"
+          : "title";
 
   return (
     <section className="quotes-page">
       <header className="page-heading quotes-heading">
         <div>
           <span className="eyebrow">{t("quotes.eyebrow")}</span>
-          <h1>{t("quotes.title")}</h1>
-          <p>{t("quotes.description")}</p>
+          <h1>{t(`quotes.${titleKey}`)}</h1>
         </div>
         <Button asChild>
           <Link to="/quotes/new">
@@ -139,21 +159,15 @@ export function QuotesListPage({
 
       <article className="panel quotes-panel">
         <header className="quotes-toolbar">
-          <form className="quotes-search" onSubmit={submitSearch}>
-            <Search aria-hidden="true" />
-            <label className="sr-only" htmlFor="quotes-search">
-              {t("quotes.search")}
-            </label>
-            <input
-              id="quotes-search"
-              value={draftSearch}
-              onChange={(event) => setDraftSearch(event.target.value)}
-              placeholder={t("quotes.searchPlaceholder")}
-            />
-            <Button type="submit" variant="outline">
-              {t("quotes.searchAction")}
-            </Button>
-          </form>
+          <ListSearchBar
+            id="quotes-search"
+            value={draftSearch}
+            onChange={setDraftSearch}
+            onSubmit={submitSearch}
+            label={t("quotes.search")}
+            placeholder={t("quotes.searchPlaceholder")}
+            submitLabel={t("quotes.searchAction")}
+          />
 
           <label className="quotes-status-filter">
             <span>{t("quotes.statusFilter")}</span>
@@ -174,12 +188,7 @@ export function QuotesListPage({
           </label>
         </header>
 
-        {loading ? (
-          <div className="quotes-state" role="status">
-            <RefreshCw className="spin" />
-            <span>{t("quotes.loading")}</span>
-          </div>
-        ) : error ? (
+        {error ? (
           <div className="quotes-state quotes-state-error" role="alert">
             <FileText />
             <div>
@@ -195,7 +204,7 @@ export function QuotesListPage({
               {t("quotes.retry")}
             </Button>
           </div>
-        ) : items.length === 0 ? (
+        ) : !loading && items.length === 0 ? (
           <div className="quotes-state quotes-state-empty">
             <FileText />
             <div>
@@ -204,71 +213,73 @@ export function QuotesListPage({
             </div>
           </div>
         ) : (
-          <div className="table-wrap quotes-table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>{t("quotes.columns.number")}</th>
-                  <th>{t("quotes.columns.customer")}</th>
-                  <th>{t("quotes.columns.delivery")}</th>
-                  <th>{t("quotes.columns.status")}</th>
-                  <th>{t("quotes.columns.amount")}</th>
-                  <th>{t("quotes.columns.updated")}</th>
-                  <th aria-label={t("quotes.columns.actions")} />
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((quote) => (
-                  <tr key={quote.id}>
-                    <td>
-                      <Link className="order-link" to={`/quotes/${quote.id}`}>
-                        {quote.orderNumber || t("common.notSet")}
-                      </Link>
-                    </td>
-                    <td>
-                      <strong>
-                        {quote.customerName ||
-                          quote.companyName ||
-                          t("common.notSet")}
-                      </strong>
-                      {quote.customerName && quote.companyName && (
-                        <small className="quote-company">{quote.companyName}</small>
-                      )}
-                    </td>
-                    <td>
-                      <span className="quote-date">
-                        <CalendarDays />
-                        {quote.deliveryAt
-                          ? dateFormatter.format(new Date(quote.deliveryAt))
-                          : t("common.notSet")}
-                      </span>
-                    </td>
-                    <td>
-                      <span className="status-badge amber">
-                        {quote.quoteStatus || t("quotes.draft")}
-                      </span>
-                    </td>
-                    <td>
-                      <strong>{formatAmount(quote)}</strong>
-                    </td>
-                    <td>{dateTimeFormatter.format(new Date(quote.updatedAt))}</td>
-                    <td>
-                      <Button variant="ghost" size="icon" asChild>
-                        <Link
-                          to={`/quotes/${quote.id}`}
-                          aria-label={`${t("quotes.open")} ${
-                            quote.orderNumber || quote.id
-                          }`}
-                        >
-                          <ChevronRight />
-                        </Link>
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ListTable
+            className="quotes-table-wrap"
+            loading={loading}
+            loadingLabel={t("quotes.loading")}
+            skeletonRows={QUOTES_PAGE_SIZE}
+            skeletonColumns={QUOTE_SKELETON_COLUMNS}
+            header={
+              <tr>
+                <th>{t("quotes.columns.number")}</th>
+                <th>{t("quotes.columns.customer")}</th>
+                <th>{t("quotes.columns.delivery")}</th>
+                <th>{t("quotes.columns.status")}</th>
+                <th>{t("quotes.columns.amount")}</th>
+                <th>{t("quotes.columns.updated")}</th>
+                <th aria-label={t("quotes.columns.actions")} />
+              </tr>
+            }
+          >
+            {items.map((quote) => (
+              <tr key={quote.id}>
+                <td>
+                  <Link className="order-link" to={`/quotes/${quote.id}`}>
+                    {quote.orderNumber || t("common.notSet")}
+                  </Link>
+                </td>
+                <td>
+                  <strong>
+                    {quote.customerName ||
+                      quote.companyName ||
+                      t("common.notSet")}
+                  </strong>
+                  {quote.customerName && quote.companyName && (
+                    <small className="quote-company">{quote.companyName}</small>
+                  )}
+                </td>
+                <td>
+                  <span className="quote-date">
+                    <CalendarDays />
+                    {quote.deliveryAt
+                      ? dateFormatter.format(new Date(quote.deliveryAt))
+                      : t("common.notSet")}
+                  </span>
+                </td>
+                <td>
+                  <span className="status-badge amber">
+                    {quote.quoteStatus || t("quotes.draft")}
+                  </span>
+                </td>
+                <td>
+                  <strong>{formatAmount(quote)}</strong>
+                </td>
+                <td>{dateTimeFormatter.format(new Date(quote.updatedAt))}</td>
+                <td>
+                  <Button variant="ghost" size="icon" asChild>
+                    <Link
+                      to={`/quotes/${quote.id}`}
+                      aria-label={`${t("quotes.open")} ${
+                        quote.orderNumber || quote.id
+                      }`}
+                    >
+                      <ChevronRight />
+                    </Link>
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </ListTable>
         )}
 
         <TablePagination
