@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor, within, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 
@@ -15,6 +15,7 @@ import {
   isValidEmail,
   isValidPassword,
   isValidPhone,
+  attachmentFileType,
   type AttachmentListItem,
   type RolePagePermission,
   type UserListItem,
@@ -352,9 +353,33 @@ describe("Super Admin system settings", () => {
     expect(await screen.findByText("quote.pdf")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "附件列表" })).toBeInTheDocument();
     expect(screen.getByText(/4200/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("columnheader", { name: "文件類型" }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText("PDF").length).toBeGreaterThan(0);
+    expect(screen.getByLabelText("文件類型")).toBeInTheDocument();
+    expect(screen.getByLabelText("開始日期")).toBeInTheDocument();
+    expect(screen.getByLabelText("結束日期")).toBeInTheDocument();
     expect(screen.queryByText("遷移狀態")).not.toBeInTheDocument();
     expect(screen.queryByText("來源")).not.toBeInTheDocument();
     expect(screen.queryByText("所屬資料")).not.toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText("文件類型"), "pdf");
+    await waitFor(() =>
+      expect(loadAttachments).toHaveBeenLastCalledWith(
+        expect.objectContaining({ fileType: "pdf", page: 1 }),
+      ),
+    );
+
+    fireEvent.change(screen.getByLabelText("開始日期"), {
+      target: { value: "2026-08-01" },
+    });
+    await waitFor(() =>
+      expect(loadAttachments).toHaveBeenLastCalledWith(
+        expect.objectContaining({ startDate: "2026-08-01" }),
+      ),
+    );
+
     await user.click(screen.getByRole("button", { name: "quote.pdf" }));
 
     await waitFor(() =>
@@ -463,6 +488,24 @@ describe("Super Admin system settings", () => {
     expect(isValidPhone("+86 138 0000 0000")).toBe(false);
     expect(isValidPassword("Secret123")).toBe(true);
     expect(isValidPassword("short1")).toBe(false);
+    expect(
+      attachmentFileType({
+        mimeType: "application/pdf",
+        originalFilename: "quote.pdf",
+      }),
+    ).toBe("pdf");
+    expect(
+      attachmentFileType({
+        mimeType: "image/jpeg",
+        originalFilename: "photo.jpg",
+      }),
+    ).toBe("image");
+    expect(
+      attachmentFileType({
+        mimeType: "text/csv",
+        originalFilename: "export.csv",
+      }),
+    ).toBe("csv");
   });
 
   it("renders login logs with event badges", async () => {
