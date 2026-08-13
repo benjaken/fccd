@@ -48,10 +48,10 @@ full-width rule.
 - `--primary-foreground` is **white / near-white** in both light and dark mode.
   Filled primary buttons (for example「建立新訂單」) must show white label and
   icon text — never dark body text on the green fill.
-- Active navigation (sidebar, workspace soft links, migration tabs) uses a
-  **pale green** wash + green label derived from `--primary` (`color-mix`) —
-  never a residual pink/red tint from the old brand red, and never the old
-  brand blue.
+- Active navigation (sidebar, workspace soft links, migration tabs) uses
+  **`--nav-active-bg` / `--nav-active-fg`** — an explicit pale green wash +
+  green label (about hue `150`). Do not leave residual pink/red from the old
+  brand, and never the old brand blue.
 - Classes named `red` (`.status-badge.red`, `.metric-icon.red`) map to
   `--destructive` only. Do not reuse them as a stand-in for the old brand
   primary; use `--primary` (green) for brand emphasis. Keep `.status-badge.blue`

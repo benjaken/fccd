@@ -48,6 +48,9 @@
   --border: oklch(0.9 0.015 150);
   --input: oklch(0.9 0.015 150);
   --ring: oklch(0.58 0.12 150);
+  /* Explicit pale-green active nav wash (avoid muddy/pinkish mixes). */
+  --nav-active-bg: oklch(0.94 0.05 150);
+  --nav-active-fg: oklch(0.4 0.12 150);
   --radius: 0.75rem;
   --topbar-height: 68px;
   --workspace-height: 44px;
@@ -75,6 +78,8 @@
   --border: oklch(0.3 0.025 150);
   --input: oklch(0.3 0.025 150);
   --ring: oklch(0.72 0.11 150);
+  --nav-active-bg: oklch(0.28 0.055 150);
+  --nav-active-fg: oklch(0.84 0.09 150);
 }
 
 * {
@@ -277,13 +282,13 @@ button.bg-primary:focus-visible {
 }
 
 .workspace-soft-link.active {
-  background: color-mix(in oklch, var(--primary) 12%, var(--card));
-  color: var(--primary);
+  background: var(--nav-active-bg);
+  color: var(--nav-active-fg);
 }
 
 .dark .workspace-soft-link.active {
-  background: color-mix(in oklch, var(--primary) 22%, var(--card));
-  color: color-mix(in oklch, var(--primary) 72%, white);
+  background: var(--nav-active-bg);
+  color: var(--nav-active-fg);
 }
 
 .workspace-soft-link.disabled {
@@ -672,13 +677,13 @@ button.bg-primary:focus-visible {
 }
 
 .sidebar-link.active {
-  background: color-mix(in oklch, var(--primary) 12%, var(--card));
-  color: var(--primary);
+  background: var(--nav-active-bg);
+  color: var(--nav-active-fg);
 }
 
 .dark .sidebar-link.active {
-  background: color-mix(in oklch, var(--primary) 22%, var(--card));
-  color: color-mix(in oklch, var(--primary) 72%, white);
+  background: var(--nav-active-bg);
+  color: var(--nav-active-fg);
 }
 
 .sidebar-link > svg {
@@ -2518,13 +2523,13 @@ td:last-child {
 }
 
 .migration-tab.active {
-  background: color-mix(in oklch, var(--primary) 12%, var(--card));
-  color: var(--primary);
+  background: var(--nav-active-bg);
+  color: var(--nav-active-fg);
 }
 
 .dark .migration-tab.active {
-  background: color-mix(in oklch, var(--primary) 22%, var(--card));
-  color: color-mix(in oklch, var(--primary) 72%, white);
+  background: var(--nav-active-bg);
+  color: var(--nav-active-fg);
 }
 
 .migration-tab svg,

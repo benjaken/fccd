@@ -75,7 +75,7 @@ FCCD（**Food Channel Catering Discovery**）自有設計規範：以 **shadcn/u
 | Error | `--destructive` |
 | Info | 青／靛／資訊藍（`tone-cyan` / `tone-indigo` / `.status-badge.blue`） |
 
-Active 導航（側欄、工作區 soft link、migration tab）必須是**淡綠底 + 綠字**，並以 `color-mix`／`--primary` 跟隨主題，禁止粉紅／舊品牌紅／舊藍殘留。  
+Active 導航（側欄、工作區 soft link、migration tab）必須是**淡綠底 + 綠字**，使用 `--nav-active-bg` / `--nav-active-fg`（明確綠相，約 hue 150），禁止粉紅／舊品牌紅／舊藍殘留。  
 `.status-badge.red`／`.metric-icon.red` 只代表危險／失敗（`--destructive`），不可再當舊品牌主色；品牌強調改用 `--primary`（綠）。
 
 **多狀態進度條**不可全部使用品牌綠，必須用可區分色相（見
