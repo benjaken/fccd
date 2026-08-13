@@ -3,16 +3,25 @@ import { useTranslation } from "react-i18next";
 import {
   ChevronLeft,
   ChevronRight,
+  KeyRound,
+  Pencil,
+  Plus,
   RefreshCw,
   Search,
   Users,
 } from "lucide-react";
 
+import { useAuth } from "@/auth/AuthProvider";
+import { usePageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
+import { ChangePasswordSidePanel } from "@/components/settings/ChangePasswordSidePanel";
+import { CreateUserSidePanel } from "@/components/settings/CreateUserSidePanel";
+import { EditUserSidePanel } from "@/components/settings/EditUserSidePanel";
 import {
   fetchUsers,
   SETTINGS_PAGE_SIZE,
   SYSTEM_ROLES,
+  USER_ACTION_PERMISSION_KEYS,
   type UserListItem,
 } from "@/lib/settings";
 
@@ -20,10 +29,29 @@ type UsersLoader = typeof fetchUsers;
 
 export function UsersListPage({
   loadUsers = fetchUsers,
+  createUser,
+  updatePassword,
+  updateProfile,
 }: {
   loadUsers?: UsersLoader;
+  createUser?: typeof import("@/lib/settings").createManagedUser;
+  updatePassword?: typeof import("@/lib/settings").updateManagedUserPassword;
+  updateProfile?: typeof import("@/lib/settings").updateManagedUserProfile;
 }) {
   const { t, i18n } = useTranslation();
+  const { user, profile } = useAuth();
+  const authorizationRole =
+    typeof user?.app_metadata?.role === "string"
+      ? user.app_metadata.role
+      : profile?.role;
+  const pageAccess = usePageAccess(authorizationRole);
+  const canCreate = pageAccess.canAccess(USER_ACTION_PERMISSION_KEYS.create);
+  const canEdit = pageAccess.canAccess(USER_ACTION_PERMISSION_KEYS.edit);
+  const canChangePassword = pageAccess.canAccess(
+    USER_ACTION_PERMISSION_KEYS.changePassword,
+  );
+  const showActions = canEdit || canChangePassword;
+
   const [draftSearch, setDraftSearch] = useState("");
   const [search, setSearch] = useState("");
   const [role, setRole] = useState("");
@@ -33,6 +61,9 @@ export function UsersListPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [passwordUser, setPasswordUser] = useState<UserListItem | null>(null);
+  const [editUser, setEditUser] = useState<UserListItem | null>(null);
 
   const totalPages = Math.max(1, Math.ceil(total / SETTINGS_PAGE_SIZE));
   const visibleFrom = total === 0 ? 0 : (page - 1) * SETTINGS_PAGE_SIZE + 1;
@@ -83,6 +114,12 @@ export function UsersListPage({
           <h1>{t("settings.users.title")}</h1>
           <p>{t("settings.users.description")}</p>
         </div>
+        {canCreate ? (
+          <Button type="button" onClick={() => setCreateOpen(true)}>
+            <Plus />
+            {t("settings.users.createAction")}
+          </Button>
+        ) : null}
       </header>
 
       <article className="panel orders-panel">
@@ -157,27 +194,60 @@ export function UsersListPage({
                 <tr>
                   <th>{t("settings.users.columns.name")}</th>
                   <th>{t("settings.users.columns.email")}</th>
+                  <th>{t("settings.users.columns.phone")}</th>
                   <th>{t("settings.users.columns.role")}</th>
                   <th>{t("settings.users.columns.restaurant")}</th>
                   <th>{t("settings.users.columns.created")}</th>
                   <th>{t("settings.users.columns.updated")}</th>
+                  {showActions ? (
+                    <th>{t("settings.users.columns.actions")}</th>
+                  ) : null}
                 </tr>
               </thead>
               <tbody>
-                {items.map((user) => (
-                  <tr key={user.id}>
+                {items.map((listUser) => (
+                  <tr key={listUser.id}>
                     <td>
-                      <strong>{user.userName || t("common.notSet")}</strong>
+                      <strong>{listUser.userName || t("common.notSet")}</strong>
                     </td>
-                    <td>{user.email || t("common.notSet")}</td>
+                    <td>{listUser.email || t("common.notSet")}</td>
+                    <td>{listUser.phone || t("common.notSet")}</td>
                     <td>
                       <span className="status-badge blue">
-                        {user.role || t("common.notSet")}
+                        {listUser.role || t("common.notSet")}
                       </span>
                     </td>
-                    <td>{user.shopRestroLegacyId || t("common.notSet")}</td>
-                    <td>{date.format(new Date(user.createdAt))}</td>
-                    <td>{date.format(new Date(user.updatedAt))}</td>
+                    <td>{listUser.shopRestroLegacyId || t("common.notSet")}</td>
+                    <td>{date.format(new Date(listUser.createdAt))}</td>
+                    <td>{date.format(new Date(listUser.updatedAt))}</td>
+                    {showActions ? (
+                      <td>
+                        <div className="settings-user-actions">
+                          {canEdit ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setEditUser(listUser)}
+                            >
+                              <Pencil />
+                              {t("settings.users.editAction")}
+                            </Button>
+                          ) : null}
+                          {canChangePassword ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setPasswordUser(listUser)}
+                            >
+                              <KeyRound />
+                              {t("settings.users.changePassword")}
+                            </Button>
+                          ) : null}
+                        </div>
+                      </td>
+                    ) : null}
                   </tr>
                 ))}
               </tbody>
@@ -218,6 +288,35 @@ export function UsersListPage({
           </div>
         </footer>
       </article>
+
+      {canCreate ? (
+        <CreateUserSidePanel
+          open={createOpen}
+          onClose={() => setCreateOpen(false)}
+          onCreated={() => {
+            setPage(1);
+            setReloadKey((key) => key + 1);
+          }}
+          createUser={createUser}
+        />
+      ) : null}
+      {canEdit ? (
+        <EditUserSidePanel
+          user={editUser}
+          open={Boolean(editUser)}
+          onClose={() => setEditUser(null)}
+          onUpdated={() => setReloadKey((key) => key + 1)}
+          updateProfile={updateProfile}
+        />
+      ) : null}
+      {canChangePassword ? (
+        <ChangePasswordSidePanel
+          user={passwordUser}
+          open={Boolean(passwordUser)}
+          onClose={() => setPasswordUser(null)}
+          updatePassword={updatePassword}
+        />
+      ) : null}
     </section>
   );
 }

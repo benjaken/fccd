@@ -2,6 +2,12 @@ import { Download } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useAuth } from "@/auth/AuthProvider";
+import {
+  REPORT_TAB_PERMISSION_KEYS,
+  usePageAccess,
+  type ReportTabKey,
+} from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
 import {
   fetchReportShops,
@@ -28,11 +34,28 @@ const reportTabs = [
   "preparedMeatStock",
   "rawMeatStock",
   "supplierPurchase",
-] as const;
+] as const satisfies readonly ReportTabKey[];
+
+const implementedTabs = new Set<ReportTabKey>(["shopOrderQuantities"]);
 
 export function ReportsPage() {
   const { t, i18n } = useTranslation();
+  const { user, profile } = useAuth();
+  const authorizationRole =
+    typeof user?.app_metadata?.role === "string"
+      ? user.app_metadata.role
+      : profile?.role;
+  const pageAccess = usePageAccess(authorizationRole);
+  const visibleTabs = useMemo(
+    () =>
+      reportTabs.filter((tab) =>
+        pageAccess.canAccess(REPORT_TAB_PERMISSION_KEYS[tab]),
+      ),
+    [pageAccess],
+  );
   const range = useMemo(currentMonthRange, []);
+  const [activeTab, setActiveTab] =
+    useState<ReportTabKey>("shopOrderQuantities");
   const [startDate, setStartDate] = useState(range.start);
   const [endDate, setEndDate] = useState(range.end);
   const [shops, setShops] = useState<ReportShop[]>([]);
@@ -40,6 +63,11 @@ export function ReportsPage() {
   const [rows, setRows] = useState<ShopOrderQuantityRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (visibleTabs.includes(activeTab)) return;
+    if (visibleTabs[0]) setActiveTab(visibleTabs[0]);
+  }, [activeTab, visibleTabs]);
   const quantity = new Intl.NumberFormat(i18n.language, {
     maximumFractionDigits: 3,
   });
@@ -153,12 +181,15 @@ export function ReportsPage() {
         </div>
       </section>
       <nav className="report-tabs" aria-label={t("reports.navigation")}>
-        {reportTabs.map((tab, index) => (
+        {visibleTabs.map((tab) => (
           <button
-            className={cn(index === 0 && "active")}
-            disabled={index !== 0}
+            className={cn(activeTab === tab && "active")}
+            disabled={!implementedTabs.has(tab)}
             key={tab}
             type="button"
+            onClick={() => {
+              if (implementedTabs.has(tab)) setActiveTab(tab);
+            }}
           >
             {t(`reports.tabs.${tab}`)}
           </button>
