@@ -563,7 +563,7 @@ async function processType(
   }
 }
 
-Deno.serve(async (request) => {
+async function handleRequest(request: Request): Promise<Response> {
   const invocationStartedAt = new Date().toISOString();
   const watermark = invocationStartedAt;
 
@@ -595,9 +595,20 @@ Deno.serve(async (request) => {
   }
 
   let phases: Phase[];
+  let requestedSourceType: string | null = null;
   try {
     const body = await request.json().catch(() => ({}));
     phases = selectedPhases(body?.phase);
+    if (body?.sourceType != null) {
+      if (
+        typeof body.sourceType !== "string" ||
+        !body.sourceType ||
+        body.sourceType.length > 120
+      ) {
+        throw new Error("sourceType must be a valid Bubble type.");
+      }
+      requestedSourceType = body.sourceType;
+    }
   } catch (error) {
     return jsonResponse({ error: safeError(error) }, 400);
   }
@@ -619,6 +630,7 @@ Deno.serve(async (request) => {
       details: {
         invocation_id: invocationId,
         requested_phases: phases,
+        requested_source_type: requestedSourceType,
         watermark,
       },
     })
@@ -631,8 +643,24 @@ Deno.serve(async (request) => {
 
   const runId = run.id as string;
   const mappings = [...coreMappings, ...remainingMappings].filter((mapping) =>
-    phases.includes(mapping.phase)
+    phases.includes(mapping.phase) &&
+    (!requestedSourceType || mapping.sourceType === requestedSourceType)
   );
+  if (requestedSourceType && mappings.length !== 1) {
+    await client.from("migration").update({
+      status: "failed",
+      records_failed: 1,
+      error_count: 1,
+      completed_at: new Date().toISOString(),
+      details: {
+        invocation_id: invocationId,
+        requested_phases: phases,
+        requested_source_type: requestedSourceType,
+        error: "source_type_not_mapped_in_phase",
+      },
+    }).eq("id", runId);
+    return jsonResponse({ error: "Source type is not mapped in phase.", runId }, 400);
+  }
   const unsupported = phases.flatMap((phase) =>
     unsupportedMappings[phase].map((mapping) => ({ phase, mapping }))
   );
@@ -683,6 +711,7 @@ Deno.serve(async (request) => {
   const details = {
     invocation_id: invocationId,
     requested_phases: phases,
+    requested_source_type: requestedSourceType,
     watermark,
     source_types: results,
     unsupported_mappings: unsupported,
@@ -735,4 +764,16 @@ Deno.serve(async (request) => {
   if (failed.length) return jsonResponse(responseBody, 500);
   if (resumable) return jsonResponse(responseBody, 202);
   return jsonResponse(responseBody);
+}
+
+Deno.serve(async (request) => {
+  try {
+    return await handleRequest(request);
+  } catch (error) {
+    console.error("bubble-daily-incremental unhandled error");
+    return jsonResponse(
+      { error: "Unhandled synchronization error.", detail: safeError(error) },
+      500,
+    );
+  }
 });
