@@ -5,9 +5,14 @@ import {
   Search,
   ShoppingBasket,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
+import {
+  RelatedEntityLink,
+  catalogChannelPath,
+  catalogProductTypePath,
+} from "@/components/ui/related-entity-link";
 import { TablePagination } from "@/components/ui/table-pagination";
 import {
   fetchProductChannels,
@@ -35,9 +40,15 @@ export function ProductsListPage({
   loadChannels?: ChannelsLoader;
 }) {
   const { t, i18n } = useTranslation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [draftSearch, setDraftSearch] = useState("");
   const [search, setSearch] = useState("");
-  const [channelId, setChannelId] = useState("");
+  const [channelId, setChannelId] = useState(
+    () => searchParams.get("channel") ?? "",
+  );
+  const [productTypeId, setProductTypeId] = useState(
+    () => searchParams.get("type") ?? "",
+  );
   const [status, setStatus] = useState<ProductStatusFilter>("");
   const [priceRange, setPriceRange] = useState<ProductPriceRange>("");
   const [channels, setChannels] = useState<CatalogOption[]>([]);
@@ -87,8 +98,27 @@ export function ProductsListPage({
   }, [loadChannels]);
 
   useEffect(() => {
+    const nextChannel = searchParams.get("channel") ?? "";
+    const nextType = searchParams.get("type") ?? "";
+    setChannelId((current) => (current === nextChannel ? current : nextChannel));
+    setProductTypeId((current) => (current === nextType ? current : nextType));
+  }, [searchParams]);
+
+  useEffect(() => {
+    const next = new URLSearchParams();
+    if (channelId) next.set("channel", channelId);
+    if (productTypeId) next.set("type", productTypeId);
+    const current = searchParams.toString();
+    const upcoming = next.toString();
+    if (current !== upcoming) {
+      setSearchParams(next, { replace: true });
+    }
+  }, [channelId, productTypeId, searchParams, setSearchParams]);
+
+  useEffect(() => {
     setPage(1);
     setChannelId("");
+    setProductTypeId("");
     setStatus("");
     setPriceRange("");
   }, [preset]);
@@ -101,6 +131,7 @@ export function ProductsListPage({
         page,
         search,
         channelId,
+        productTypeId,
         status,
         priceRange,
         preset,
@@ -121,7 +152,17 @@ export function ProductsListPage({
     } finally {
       setLoading(false);
     }
-  }, [channelId, loadProducts, page, preset, priceRange, reloadKey, search, status]);
+  }, [
+    channelId,
+    loadProducts,
+    page,
+    preset,
+    priceRange,
+    productTypeId,
+    reloadKey,
+    search,
+    status,
+  ]);
 
   useEffect(() => {
     void loadPage();
@@ -300,8 +341,28 @@ export function ProductsListPage({
                         <small className="quote-company">{product.name}</small>
                       )}
                     </td>
-                    <td>{product.channelName || t("common.notSet")}</td>
-                    <td>{product.productTypeName || t("common.notSet")}</td>
+                    <td>
+                      <RelatedEntityLink
+                        to={
+                          product.channelId
+                            ? catalogChannelPath(product.channelId, "products")
+                            : null
+                        }
+                      >
+                        {product.channelName || t("common.notSet")}
+                      </RelatedEntityLink>
+                    </td>
+                    <td>
+                      <RelatedEntityLink
+                        to={
+                          product.productTypeId
+                            ? catalogProductTypePath(product.productTypeId)
+                            : null
+                        }
+                      >
+                        {product.productTypeName || t("common.notSet")}
+                      </RelatedEntityLink>
+                    </td>
                     <td>
                       <strong>{formatPrice(product)}</strong>
                     </td>

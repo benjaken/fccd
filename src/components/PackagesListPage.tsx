@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Package, RefreshCw, Search } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
+import {
+  RelatedEntityLink,
+  catalogChannelPath,
+} from "@/components/ui/related-entity-link";
 import { TablePagination } from "@/components/ui/table-pagination";
 import {
   fetchPackages,
@@ -28,9 +32,12 @@ export function PackagesListPage({
   loadChannels?: ChannelsLoader;
 }) {
   const { t, i18n } = useTranslation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [draftSearch, setDraftSearch] = useState("");
   const [search, setSearch] = useState("");
-  const [channelId, setChannelId] = useState("");
+  const [channelId, setChannelId] = useState(
+    () => searchParams.get("channel") ?? "",
+  );
   const [activeOnly, setActiveOnly] = useState(true);
   const [channels, setChannels] = useState<CatalogOption[]>([]);
   const [page, setPage] = useState(1);
@@ -77,6 +84,21 @@ export function PackagesListPage({
       active = false;
     };
   }, [loadChannels]);
+
+  useEffect(() => {
+    const nextChannel = searchParams.get("channel") ?? "";
+    setChannelId((current) => (current === nextChannel ? current : nextChannel));
+  }, [searchParams]);
+
+  useEffect(() => {
+    const next = new URLSearchParams();
+    if (channelId) next.set("channel", channelId);
+    const current = searchParams.toString();
+    const upcoming = next.toString();
+    if (current !== upcoming) {
+      setSearchParams(next, { replace: true });
+    }
+  }, [channelId, searchParams, setSearchParams]);
 
   const loadPage = useCallback(async () => {
     setLoading(true);
@@ -242,7 +264,17 @@ export function PackagesListPage({
                         <small className="quote-company">{item.name}</small>
                       )}
                     </td>
-                    <td>{item.channelName || t("common.notSet")}</td>
+                    <td>
+                      <RelatedEntityLink
+                        to={
+                          item.channelId
+                            ? catalogChannelPath(item.channelId, "packages")
+                            : null
+                        }
+                      >
+                        {item.channelName || t("common.notSet")}
+                      </RelatedEntityLink>
+                    </td>
                     <td>{item.memberCount}</td>
                     <td>
                       <strong>{formatPrice(item)}</strong>
