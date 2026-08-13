@@ -37,6 +37,9 @@ The login page then shows **一鍵登入（預覽）**. You can also open
 Do not enable these on Production — the values are embedded in the client
 bundle.
 
+UI layout, theme, and status-color conventions are documented in
+[`docs/UI_DEVELOPMENT_STANDARD.md`](docs/UI_DEVELOPMENT_STANDARD.md).
+
 ## Checks
 
 ```bash

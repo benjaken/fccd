@@ -35,6 +35,16 @@ Before coding, verify that the branch merge base is the current remote
 git merge-base --is-ancestor origin/main HEAD
 ```
 
+## UI standards
+
+UI layout, theme, status colors, and preview sign-in conventions live in
+[`docs/UI_DEVELOPMENT_STANDARD.md`](docs/UI_DEVELOPMENT_STANDARD.md).
+Paginated operational tables follow
+[`docs/UI_TABLE_STANDARD.md`](docs/UI_TABLE_STANDARD.md).
+
+Update those documents in the same change set when approved visual behavior
+changes.
+
 ## UI test case policy
 
 Every UI-related change must include automated test cases in the repository

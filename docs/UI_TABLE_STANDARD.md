@@ -1,6 +1,8 @@
 # Operational Table Presentation Standard
 
-Use this standard for paginated operational lists.
+Use this standard for paginated operational lists. For page width, theme tokens,
+progress status colors, and preview sign-in, see
+[`UI_DEVELOPMENT_STANDARD.md`](UI_DEVELOPMENT_STANDARD.md).
 
 ## Required behavior
 
