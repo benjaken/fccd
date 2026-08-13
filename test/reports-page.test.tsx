@@ -6,11 +6,13 @@ import { ReportsPage } from "@/components/ReportsPage";
 import i18n from "@/i18n";
 
 const reports = vi.hoisted(() => ({
+  fetchMonthlyPreparedMeatPrices: vi.fn(),
   fetchReportShops: vi.fn(),
   fetchShopOrderQuantities: vi.fn(),
 }));
 
 vi.mock("@/lib/reports", () => ({
+  fetchMonthlyPreparedMeatPrices: reports.fetchMonthlyPreparedMeatPrices,
   fetchReportShops: reports.fetchReportShops,
   fetchShopOrderQuantities: reports.fetchShopOrderQuantities,
 }));
@@ -41,6 +43,26 @@ describe("Shop order quantity report", () => {
         productName: "煎釀三寶",
         unit: "包",
         totalQuantity: 18,
+      },
+    ]);
+    reports.fetchMonthlyPreparedMeatPrices.mockResolvedValue([
+      {
+        productId: "prepared-1",
+        productName: "香菇滷肉",
+        productUnit: "包",
+        sortOrder: 1,
+        monthNumber: 1,
+        pricePerKg: 21.4,
+        pricePerPackage: 42.8,
+      },
+      {
+        productId: "prepared-1",
+        productName: "香菇滷肉",
+        productUnit: "包",
+        sortOrder: 1,
+        monthNumber: 2,
+        pricePerKg: 21.4,
+        pricePerPackage: 42.8,
       },
     ]);
   });
@@ -74,6 +96,36 @@ describe("Shop order quantity report", () => {
         startDate: "2026-06-01",
         endDate: "2026-06-30",
         shopIds: ["tko"],
+      }),
+    );
+  });
+
+  it("switches between monthly shop and factory prices", async () => {
+    const user = userEvent.setup();
+    render(<ReportsPage />);
+
+    await user.click(
+      screen.getByRole("button", { name: "Average supply price by shop" }),
+    );
+    expect(await screen.findByText("香菇滷肉")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(reports.fetchMonthlyPreparedMeatPrices).toHaveBeenLastCalledWith({
+        year: new Date().getFullYear(),
+        mode: "shop",
+      }),
+    );
+    expect(screen.getAllByText("$21.40/kg")).toHaveLength(2);
+    expect(screen.getAllByText("$42.80/包")).toHaveLength(2);
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Production cost and factory supply price",
+      }),
+    );
+    await waitFor(() =>
+      expect(reports.fetchMonthlyPreparedMeatPrices).toHaveBeenLastCalledWith({
+        year: new Date().getFullYear(),
+        mode: "factory",
       }),
     );
   });

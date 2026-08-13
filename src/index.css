@@ -3705,6 +3705,99 @@ td:last-child {
   font-size: 14px;
 }
 
+.meat-price-filter {
+  display: flex;
+  justify-content: flex-end;
+  padding: 12px 18px;
+}
+
+.meat-price-filter label {
+  display: grid;
+  grid-template-columns: auto 110px;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.meat-price-filter select {
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 14px;
+}
+
+.meat-price-report {
+  overflow: hidden;
+}
+
+.meat-price-report > header {
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.meat-price-report h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.meat-price-report header p {
+  margin: 4px 0 0;
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+
+.meat-price-table-wrap {
+  max-height: 720px;
+}
+
+.meat-price-table {
+  min-width: 1500px !important;
+  table-layout: fixed;
+}
+
+.meat-price-table th:first-child {
+  position: sticky;
+  z-index: 1;
+  left: 0;
+  width: 190px;
+  min-width: 190px;
+  background: var(--card);
+  text-align: left;
+}
+
+.meat-price-table thead th:first-child {
+  z-index: 3;
+}
+
+.meat-price-table thead th:not(:first-child) {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  text-align: center;
+}
+
+.meat-price-table td {
+  min-width: 108px;
+  height: 60px;
+  padding: 8px 10px;
+  text-align: center !important;
+  vertical-align: top;
+}
+
+.meat-price-table td span {
+  display: block;
+  white-space: nowrap;
+}
+
+.meat-price-table td span + span {
+  margin-top: 4px;
+  color: var(--muted-foreground);
+}
+
 .editor-only-mappings {
   padding: 16px 18px 18px;
   border-top: 1px solid var(--border);

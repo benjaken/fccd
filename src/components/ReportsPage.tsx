@@ -2,6 +2,7 @@ import { Download } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { MeatPriceReport } from "@/components/MeatPriceReport";
 import { Button } from "@/components/ui/button";
 import {
   fetchReportShops,
@@ -38,6 +39,8 @@ export function ReportsPage() {
   const [shops, setShops] = useState<ReportShop[]>([]);
   const [selectedShop, setSelectedShop] = useState("");
   const [rows, setRows] = useState<ShopOrderQuantityRow[]>([]);
+  const [activeReport, setActiveReport] =
+    useState<(typeof reportTabs)[number]>("shopOrderQuantities");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const quantity = new Intl.NumberFormat(i18n.language, {
@@ -155,16 +158,19 @@ export function ReportsPage() {
       <nav className="report-tabs" aria-label={t("reports.navigation")}>
         {reportTabs.map((tab, index) => (
           <button
-            className={cn(index === 0 && "active")}
-            disabled={index !== 0}
+            className={cn(activeReport === tab && "active")}
+            disabled={index > 2}
             key={tab}
             type="button"
+            onClick={() => setActiveReport(tab)}
           >
             {t(`reports.tabs.${tab}`)}
           </button>
         ))}
       </nav>
-      <section className="panel report-filter-panel">
+      {activeReport === "shopOrderQuantities" ? (
+        <>
+          <section className="panel report-filter-panel">
         <div className="report-shop-filter">
           {shops.map((shop) => (
             <button
@@ -207,8 +213,8 @@ export function ReportsPage() {
             {t("reports.export")}
           </Button>
         </div>
-      </section>
-      <section className="panel shop-order-report">
+          </section>
+          <section className="panel shop-order-report">
         <header>
           <div>
             <h2>{t("reports.tabs.shopOrderQuantities")}</h2>
@@ -270,7 +276,13 @@ export function ReportsPage() {
             </table>
           </div>
         )}
-      </section>
+          </section>
+        </>
+      ) : (
+        <MeatPriceReport
+          mode={activeReport === "averageSupplyPrice" ? "shop" : "factory"}
+        />
+      )}
     </div>
   );
 }
