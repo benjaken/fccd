@@ -84,6 +84,7 @@ const attachmentItem: AttachmentListItem = {
   migrationStatus: "verified",
   lastErrorCode: null,
   verifiedAt: "2026-08-13T00:00:00.000Z",
+  sourceModifiedAt: "2026-08-10T00:00:00.000Z",
   updatedAt: "2026-08-13T00:00:00.000Z",
 };
 

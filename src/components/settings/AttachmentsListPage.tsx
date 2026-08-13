@@ -256,7 +256,14 @@ export function AttachmentsListPage({
                         </div>
                       </td>
                       <td>{formatSize(attachment.sizeBytes)}</td>
-                      <td>{date.format(new Date(attachment.updatedAt))}</td>
+                      <td>
+                        {date.format(
+                          new Date(
+                            attachment.sourceModifiedAt ||
+                              attachment.updatedAt,
+                          ),
+                        )}
+                      </td>
                     </tr>
                   );
                 })}
