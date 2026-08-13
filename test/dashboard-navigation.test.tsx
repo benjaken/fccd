@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, useLocation } from "react-router-dom";
@@ -153,5 +155,22 @@ describe("Dashboard navigation", () => {
 
     expect(createOrder).toHaveClass("bg-primary");
     expect(createOrder).toHaveClass("text-primary-foreground");
+  });
+
+  it("uses a green brand primary and primary-tied active nav styles", () => {
+    const stylesheet = readFileSync(
+      path.resolve(process.cwd(), "src/index.css"),
+      "utf8",
+    );
+
+    expect(stylesheet).toMatch(/--primary:\s*oklch\(0\.52 0\.14 150\)/);
+    expect(stylesheet).toMatch(/--primary:\s*oklch\(0\.58 0\.13 150\)/);
+    expect(stylesheet).toMatch(
+      /\.sidebar-link\.active\s*\{[^}]*var\(--primary\)/s,
+    );
+    expect(stylesheet).toMatch(
+      /\.workspace-soft-link\.active\s*\{[^}]*var\(--primary\)/s,
+    );
+    expect(stylesheet).not.toMatch(/--primary:\s*oklch\([^)]*250\)/);
   });
 });

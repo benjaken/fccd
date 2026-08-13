@@ -29,25 +29,25 @@
 
 :root {
   color-scheme: light;
-  --background: oklch(0.975 0.006 250);
-  --foreground: oklch(0.19 0.02 250);
+  --background: oklch(0.975 0.006 150);
+  --foreground: oklch(0.19 0.02 150);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.19 0.02 250);
+  --card-foreground: oklch(0.19 0.02 150);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.19 0.02 250);
-  /* Clear blue primary — easier on the eyes, medium saturation. */
-  --primary: oklch(0.52 0.145 250);
-  --primary-foreground: oklch(0.99 0.005 250);
-  --secondary: oklch(0.955 0.01 250);
-  --secondary-foreground: oklch(0.28 0.025 250);
-  --muted: oklch(0.955 0.01 250);
-  --muted-foreground: oklch(0.5 0.03 250);
-  --accent: oklch(0.95 0.03 250);
-  --accent-foreground: oklch(0.4 0.12 250);
+  --popover-foreground: oklch(0.19 0.02 150);
+  /* Clear green primary — medium saturation, brand + active system. */
+  --primary: oklch(0.52 0.14 150);
+  --primary-foreground: oklch(0.99 0.005 150);
+  --secondary: oklch(0.955 0.012 150);
+  --secondary-foreground: oklch(0.28 0.03 150);
+  --muted: oklch(0.955 0.012 150);
+  --muted-foreground: oklch(0.5 0.03 150);
+  --accent: oklch(0.95 0.035 150);
+  --accent-foreground: oklch(0.38 0.12 150);
   --destructive: oklch(0.55 0.17 25);
-  --border: oklch(0.9 0.015 250);
-  --input: oklch(0.9 0.015 250);
-  --ring: oklch(0.58 0.13 250);
+  --border: oklch(0.9 0.015 150);
+  --input: oklch(0.9 0.015 150);
+  --ring: oklch(0.58 0.12 150);
   --radius: 0.75rem;
   --topbar-height: 68px;
   --workspace-height: 44px;
@@ -57,24 +57,24 @@
 
 .dark {
   color-scheme: dark;
-  --background: oklch(0.155 0.02 250);
-  --foreground: oklch(0.94 0.012 250);
-  --card: oklch(0.195 0.022 250);
-  --card-foreground: oklch(0.94 0.012 250);
-  --popover: oklch(0.205 0.022 250);
-  --popover-foreground: oklch(0.94 0.012 250);
-  --primary: oklch(0.58 0.14 250);
-  --primary-foreground: oklch(0.99 0.005 250);
-  --secondary: oklch(0.245 0.025 250);
-  --secondary-foreground: oklch(0.94 0.012 250);
-  --muted: oklch(0.235 0.022 250);
-  --muted-foreground: oklch(0.7 0.03 250);
-  --accent: oklch(0.28 0.05 250);
-  --accent-foreground: oklch(0.88 0.06 250);
+  --background: oklch(0.155 0.02 150);
+  --foreground: oklch(0.94 0.012 150);
+  --card: oklch(0.195 0.022 150);
+  --card-foreground: oklch(0.94 0.012 150);
+  --popover: oklch(0.205 0.022 150);
+  --popover-foreground: oklch(0.94 0.012 150);
+  --primary: oklch(0.58 0.13 150);
+  --primary-foreground: oklch(0.99 0.005 150);
+  --secondary: oklch(0.245 0.025 150);
+  --secondary-foreground: oklch(0.94 0.012 150);
+  --muted: oklch(0.235 0.022 150);
+  --muted-foreground: oklch(0.7 0.03 150);
+  --accent: oklch(0.28 0.05 150);
+  --accent-foreground: oklch(0.88 0.06 150);
   --destructive: oklch(0.68 0.15 25);
-  --border: oklch(0.3 0.025 250);
-  --input: oklch(0.3 0.025 250);
-  --ring: oklch(0.72 0.12 250);
+  --border: oklch(0.3 0.025 150);
+  --input: oklch(0.3 0.025 150);
+  --ring: oklch(0.72 0.11 150);
 }
 
 * {
@@ -277,13 +277,13 @@ button.bg-primary:focus-visible {
 }
 
 .workspace-soft-link.active {
-  background: oklch(0.94 0.04 250);
-  color: oklch(0.42 0.14 250);
+  background: color-mix(in oklch, var(--primary) 12%, var(--card));
+  color: var(--primary);
 }
 
 .dark .workspace-soft-link.active {
-  background: oklch(0.27 0.055 250);
-  color: oklch(0.82 0.1 250);
+  background: color-mix(in oklch, var(--primary) 22%, var(--card));
+  color: color-mix(in oklch, var(--primary) 72%, white);
 }
 
 .workspace-soft-link.disabled {
@@ -672,13 +672,13 @@ button.bg-primary:focus-visible {
 }
 
 .sidebar-link.active {
-  background: oklch(0.94 0.04 250);
-  color: oklch(0.42 0.14 250);
+  background: color-mix(in oklch, var(--primary) 12%, var(--card));
+  color: var(--primary);
 }
 
 .dark .sidebar-link.active {
-  background: oklch(0.27 0.055 250);
-  color: oklch(0.82 0.1 250);
+  background: color-mix(in oklch, var(--primary) 22%, var(--card));
+  color: color-mix(in oklch, var(--primary) 72%, white);
 }
 
 .sidebar-link > svg {
@@ -2551,13 +2551,13 @@ td:last-child {
 }
 
 .migration-tab.active {
-  background: oklch(0.94 0.04 250);
-  color: oklch(0.42 0.14 250);
+  background: color-mix(in oklch, var(--primary) 12%, var(--card));
+  color: var(--primary);
 }
 
 .dark .migration-tab.active {
-  background: oklch(0.27 0.055 250);
-  color: oklch(0.82 0.1 250);
+  background: color-mix(in oklch, var(--primary) 22%, var(--card));
+  color: color-mix(in oklch, var(--primary) 72%, white);
 }
 
 .migration-tab svg,
@@ -3022,7 +3022,7 @@ td:last-child {
 .migration-metrics svg {
   grid-row: 1 / 3;
   width: 18px;
-  color: oklch(0.61 0.16 250);
+  color: var(--primary);
 }
 
 .migration-metrics .success svg {
@@ -3415,8 +3415,8 @@ td:last-child {
 }
 
 .migration-entity-role.core {
-  background: oklch(0.92 0.04 250);
-  color: oklch(0.49 0.15 250);
+  background: color-mix(in oklch, var(--primary) 12%, var(--card));
+  color: var(--primary);
 }
 
 .migration-schema-relations {
@@ -3433,8 +3433,8 @@ td:last-child {
 }
 
 .dark .migration-entity-role.core {
-  background: oklch(0.29 0.06 250);
-  color: oklch(0.75 0.11 250);
+  background: color-mix(in oklch, var(--primary) 22%, var(--card));
+  color: color-mix(in oklch, var(--primary) 72%, white);
 }
 
 .migration-record-count {
@@ -3496,13 +3496,13 @@ td:last-child {
   height: 34px;
   flex: 0 0 auto;
   border-radius: 9px;
-  background: oklch(0.92 0.04 250);
-  color: oklch(0.53 0.17 250);
+  background: color-mix(in oklch, var(--primary) 12%, var(--card));
+  color: var(--primary);
 }
 
 .dark .relationship-analysis-icon {
-  background: oklch(0.29 0.065 250);
-  color: oklch(0.75 0.11 250);
+  background: color-mix(in oklch, var(--primary) 22%, var(--card));
+  color: color-mix(in oklch, var(--primary) 72%, white);
 }
 
 .relationship-analysis-icon svg {
@@ -3663,7 +3663,7 @@ td:last-child {
 }
 
 .relationship-graph line {
-  stroke: oklch(0.62 0.16 250);
+  stroke: var(--primary);
   stroke-width: 1.6;
   opacity: 0.68;
 }
@@ -3678,7 +3678,7 @@ td:last-child {
 }
 
 .relationship-graph marker path {
-  fill: oklch(0.62 0.16 250);
+  fill: var(--primary);
 }
 
 .relationship-edge-label {
@@ -3733,7 +3733,7 @@ td:last-child {
 .relationship-graph-legend i {
   width: 22px;
   height: 2px;
-  background: oklch(0.62 0.16 250);
+  background: var(--primary);
 }
 
 .relationship-graph-legend i.array {
@@ -3780,8 +3780,8 @@ td:last-child {
   display: inline-flex;
   padding: 4px 7px;
   border-radius: 99px;
-  background: oklch(0.92 0.04 250);
-  color: oklch(0.5 0.15 250);
+  background: color-mix(in oklch, var(--primary) 12%, var(--card));
+  color: var(--primary);
   font-size: 14px;
   font-weight: 720;
 }
@@ -3792,8 +3792,8 @@ td:last-child {
 }
 
 .dark .relationship-cardinality {
-  background: oklch(0.29 0.065 250);
-  color: oklch(0.75 0.11 250);
+  background: color-mix(in oklch, var(--primary) 22%, var(--card));
+  color: color-mix(in oklch, var(--primary) 72%, white);
 }
 
 .dark .relationship-cardinality.array {
@@ -5477,7 +5477,7 @@ td:last-child {
 
 .migration-execution-log h2 svg {
   width: 16px;
-  color: oklch(0.72 0.13 250);
+  color: var(--primary);
 }
 
 .migration-execution-log header button {
@@ -5523,7 +5523,7 @@ td:last-child {
 
 .migration-log-content time {
   flex: 0 0 auto;
-  color: oklch(0.7 0.05 250);
+  color: oklch(0.7 0.04 150);
 }
 
 .migration-log-content p.success span {
@@ -5806,7 +5806,7 @@ td:last-child {
   min-height: 100vh;
   overflow: hidden;
   background:
-    linear-gradient(155deg, oklch(0.4 0.11 250), oklch(0.26 0.08 248));
+    linear-gradient(155deg, oklch(0.4 0.11 150), oklch(0.26 0.08 155));
   color: white;
 }
 
@@ -5833,7 +5833,7 @@ td:last-child {
   left: -18%;
   width: 520px;
   height: 520px;
-  background: oklch(0.68 0.14 250 / 45%);
+  background: oklch(0.68 0.13 150 / 45%);
 }
 
 .login-brand-glow-two {
@@ -5842,7 +5842,7 @@ td:last-child {
   width: 600px;
   height: 600px;
   border: 1px solid rgb(255 255 255 / 13%);
-  background: oklch(0.55 0.12 230 / 30%);
+  background: oklch(0.55 0.11 165 / 30%);
 }
 
 .login-brand-content {

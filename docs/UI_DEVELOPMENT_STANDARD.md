@@ -40,22 +40,26 @@ full-width rule.
 
 ### Primary
 
-- Brand / primary actions use a **clear medium-saturation blue**, not red.
-- Canonical light token: `--primary: oklch(0.52 0.145 250)` in `src/index.css`.
-- Dark mode uses a mid blue primary (not pale) so **white** label text still
-  meets contrast: `--primary: oklch(0.58 0.14 250)`.
+- Brand / primary actions use a **clear medium-saturation green**, not red or
+  blue.
+- Canonical light token: `--primary: oklch(0.52 0.14 150)` in `src/index.css`.
+- Dark mode uses a mid green primary (not pale) so **white** label text still
+  meets contrast: `--primary: oklch(0.58 0.13 150)`.
 - `--primary-foreground` is **white / near-white** in both light and dark mode.
   Filled primary buttons (for example「建立新訂單」) must show white label and
-  icon text — never dark body text on the blue fill.
-- Active navigation (sidebar, workspace soft links, tabs) uses a **pale blue**
-  wash + blue label — never a residual pink/red tint from the old brand red.
+  icon text — never dark body text on the green fill.
+- Active navigation (sidebar, workspace soft links, migration tabs) uses a
+  **pale green** wash + green label derived from `--primary` (`color-mix`) —
+  never a residual pink/red tint from the old brand red, and never the old
+  brand blue.
 - Classes named `red` (`.status-badge.red`, `.metric-icon.red`) map to
   `--destructive` only. Do not reuse them as a stand-in for the old brand
-  primary; use `blue` (or another semantic tone) for brand emphasis.
+  primary; use `--primary` (green) for brand emphasis. Keep `.status-badge.blue`
+  / `.metric-icon.blue` as **informational** blue, not brand color.
 - Keep chroma in a readable mid range (roughly `0.12`–`0.16`). Avoid returning
   to high-chroma red, and avoid overly desaturated “muddy” primaries.
 - Manage color through semantic tokens (`--primary`, `--accent`, `--ring`,
-  `--destructive`, etc.). Do not hard-code brand blues/reds in random
+  `--destructive`, etc.). Do not hard-code brand greens/blues/reds in random
   components when a token already exists.
 - When a primary `Button` uses `asChild` with a `<Link>`, ensure the link keeps
   `bg-primary` + white foreground. Global `a { color: inherit }` must not darken
@@ -65,18 +69,18 @@ full-width rule.
 ### Destructive and alerts
 
 - `--destructive` stays **red** for errors, danger actions, and failure states.
-- Do not repaint destructive UI with the brand blue.
+- Do not repaint destructive UI with the brand green.
 
 ### Surfaces that follow primary
 
-Login brand panel, brand mark, primary buttons, focus rings, and primary links
-must follow the blue tokens (and their dark-mode variants). Primary button
-labels/icons stay white.
+Login brand panel, brand mark, primary buttons, focus rings, active nav, and
+primary links must follow the green tokens (and their dark-mode variants).
+Primary button labels/icons stay white.
 
 ## 3. Multi-status progress colors
 
 Dashboard **訂單進度 / Order progress** rows must use **distinct hues**, not
-five shades of the brand blue.
+five shades of the brand green.
 
 | Status | Tone class | Intent |
 |---|---|---|

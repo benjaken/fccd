@@ -779,7 +779,7 @@ report_exceptions
 | UX-07 | 支援鍵盤操作、可見 focus、表單錯誤摘要及符合 WCAG AA 的文字對比。 |
 | UX-08 | 參考舊介面截圖只為確認資訊與操作，不直接複製造成慢速、細字、橫向拖動及過度跳頁的版型。 |
 | UX-09 | 整體 Layout 參考提供的 ONE TEAM CONNECT 截圖：左上品牌 Logo 保持固定位置，第一列顯示工作區 soft links 與右上工具區，第二列顯示一級導航，左側顯示二級導航，主內容區最大化。 |
-| UX-10 | 品牌顯示名稱為 **FCCD**（全稱 Food Channel Catering Discovery）；主題色採用護眼中等飽和藍色（非紅色），並以 design tokens 管理 primary、hover、active、focus、success、warning 及 danger；細節見 `docs/DESIGN_SYSTEM.md` 與 `docs/UI_DEVELOPMENT_STANDARD.md`。 |
+| UX-10 | 品牌顯示名稱為 **FCCD**（全稱 Food Channel Catering Discovery）；主題色採用護眼中等飽和綠色（非紅色），並以 design tokens 管理 primary、hover、active、focus、success、warning 及 danger；細節見 `docs/DESIGN_SYSTEM.md` 與 `docs/UI_DEVELOPMENT_STANDARD.md`。 |
 | UX-11 | 提供 Light／Dark mode 切換；所有頁面、表格、圖表、Dialog、Toast、狀態色及 Logo 版本均須支援兩種模式。 |
 | UX-12 | 提供繁體中文／English 切換，預設繁體中文；使用者選擇須跨 session 保存。 |
 | UX-13 | 所有介面文字、導航、表單、驗證、通知及空狀態使用 i18n key，不得在元件內散落硬編碼文案。 |
@@ -816,7 +816,7 @@ report_exceptions
 
 #### 主題
 
-- 品牌主色為中等飽和藍色（約 `oklch(0.52 0.145 250)`），用於主要操作、active state、focus ring 及品牌重點；不以高飽和紅色作為品牌主色。
+- 品牌主色為中等飽和綠色（約 `oklch(0.52 0.14 150)`），用於主要操作、active state、focus ring 及品牌重點；不以高飽和紅色或舊品牌藍作為品牌主色。
 - Active／選中導航（側欄、工作區 soft link、tab）必須是淡藍底 + 藍字，禁止殘留舊品牌紅／粉紅底。
 - `.status-badge.red` / `.metric-icon.red` 僅用於真正危險或失敗語意（綁 `--destructive`）；品牌強調改用 blue，不得再把 red class 當舊品牌主色。
 - 實心主色按鈕（例如「建立新訂單」）的文字與圖示必須為白色（`--primary-foreground`），不可沿用深色內文色。
