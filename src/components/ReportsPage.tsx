@@ -16,6 +16,7 @@ import {
 import { RawMeatAveragePriceReport } from "@/components/RawMeatAveragePriceReport";
 import { SupplierPurchaseReport } from "@/components/SupplierPurchaseReport";
 import { Button } from "@/components/ui/button";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 import {
   fetchReportShops,
   fetchShopOrderQuantities,
@@ -246,25 +247,17 @@ export function ReportsPage() {
           ))}
         </div>
         <div className="report-date-controls">
-          <label>
-            <span>{t("reports.startDate")}</span>
-            <input
-              type="date"
-              value={startDate}
-              max={endDate}
-              onChange={(event) => setStartDate(event.target.value)}
-            />
-          </label>
-          <span>—</span>
-          <label>
-            <span>{t("reports.endDate")}</span>
-            <input
-              type="date"
-              value={endDate}
-              min={startDate}
-              onChange={(event) => setEndDate(event.target.value)}
-            />
-          </label>
+          <DateRangePicker
+            startId="shop-order-start-date"
+            endId="shop-order-end-date"
+            startValue={startDate}
+            endValue={endDate}
+            onStartChange={setStartDate}
+            onEndChange={setEndDate}
+            startLabel={t("reports.startDate")}
+            endLabel={t("reports.endDate")}
+            legend={t("reports.dateRange")}
+          />
           <Button
             type="button"
             variant="outline"

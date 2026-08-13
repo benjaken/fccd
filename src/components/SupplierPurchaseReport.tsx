@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 import {
   fetchReportSuppliers,
   fetchSupplierPurchases,
@@ -166,25 +167,17 @@ export function SupplierPurchaseReport() {
           ))}
         </div>
         <div className="report-date-controls">
-          <label>
-            <span>{t("reports.startDate")}</span>
-            <input
-              max={endDate}
-              type="date"
-              value={startDate}
-              onChange={(event) => setStartDate(event.target.value)}
-            />
-          </label>
-          <span>—</span>
-          <label>
-            <span>{t("reports.endDate")}</span>
-            <input
-              min={startDate}
-              type="date"
-              value={endDate}
-              onChange={(event) => setEndDate(event.target.value)}
-            />
-          </label>
+          <DateRangePicker
+            startId="supplier-purchase-start-date"
+            endId="supplier-purchase-end-date"
+            startValue={startDate}
+            endValue={endDate}
+            onStartChange={setStartDate}
+            onEndChange={setEndDate}
+            startLabel={t("reports.startDate")}
+            endLabel={t("reports.endDate")}
+            legend={t("reports.dateRange")}
+          />
           <Button
             disabled={!rows.length}
             type="button"

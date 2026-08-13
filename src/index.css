@@ -4572,25 +4572,63 @@ td:last-child {
   gap: 8px;
 }
 
-.report-date-controls label {
+.report-date-controls .date-range-picker,
+.date-range-picker {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-inline-size: 0;
+}
+
+.date-range-picker-field {
   display: grid;
   gap: 5px;
 }
 
-.report-date-controls label span {
+.date-range-picker-field span {
   color: var(--muted-foreground);
   font-size: 14px;
   font-weight: 700;
 }
 
-.report-date-controls input {
+.date-range-picker-separator {
+  display: inline-flex;
+  align-items: center;
   height: 38px;
+  color: var(--muted-foreground);
+  font-weight: 700;
+}
+
+.report-date-controls .date-range-picker-field input,
+.date-range-picker-field input[type="date"] {
+  height: 38px;
+  min-width: 150px;
   padding: 0 10px;
   border: 1px solid var(--border);
   border-radius: 8px;
+  outline: 0;
   background: var(--background);
   color: var(--foreground);
   font-size: 14px;
+}
+
+.report-date-controls .date-range-picker-field input:focus,
+.date-range-picker-field input[type="date"]:focus {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 13%, transparent);
+}
+
+.settings-attachments-filters .date-range-picker {
+  align-items: flex-end;
+}
+
+.settings-attachments-filters .date-range-picker-field input[type="date"] {
+  height: 40px;
+  border-radius: 9px;
 }
 
 .shop-order-report {
