@@ -104,7 +104,7 @@ const primaryNav: NavItem[] = [
   { key: "reports", to: "/reports", icon: ChartNoAxesCombined },
   {
     key: "settings",
-    to: "/settings/users",
+    to: "/settings",
     icon: Settings,
     permissionKey: "settings",
   },
@@ -375,6 +375,13 @@ function sectionFromPath(pathname: string) {
   return secondaryNav[segment] ? segment : "overview";
 }
 
+/** Primary top-nav stays active for the whole section, including child routes. */
+function isPrimaryNavActive(section: string, key: string, isActive: boolean) {
+  return isActive || section === key;
+}
+
+export { isPrimaryNavActive, sectionFromPath };
+
 function Brand() {
   const { t } = useTranslation();
 
@@ -643,7 +650,10 @@ function OperationsShell() {
               to={to}
               end={to === "/"}
               className={({ isActive }) =>
-                cn("primary-nav-link", isActive && "active")
+                cn(
+                  "primary-nav-link",
+                  isPrimaryNavActive(section, key, isActive) && "active",
+                )
               }
             >
               <NavIcon />
@@ -872,7 +882,10 @@ function OperationsShell() {
                   to={to}
                   end={to === "/"}
                   className={({ isActive }) =>
-                    cn("sidebar-link", isActive && "active")
+                    cn(
+                      "sidebar-link",
+                      isPrimaryNavActive(section, key, isActive) && "active",
+                    )
                   }
                 >
                   <NavIcon />
