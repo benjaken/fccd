@@ -138,7 +138,7 @@ the same input / search / skeleton / pagination markup across list pages.
 | Pattern | Required component |
 |---|---|
 | Toolbar search (icon inside field + submit) | `ListSearchBar` → `SearchField` |
-| Table loading rows | `TableSkeletonRows` |
+| Paginated operational table + loading rows | `ListTable` → `TableSkeletonRows` |
 | List pagination footer | `TablePagination` |
 | Panel empty / error / permission | Prefer `OperationalListState` |
 
@@ -148,6 +148,8 @@ Rules:
   extract it before merging — do not leave divergent copies.
 - Page files own data fetching and filter state; shared components own the
   repeated chrome and interaction shell.
+- Paginated operational list pages must use `ListTable`; do not hand-write a
+  separate `<table>` and full-panel loading-spinner branch.
 - Prefer extending an existing ui component (props / variants) over a one-off
   duplicate in a feature page.
 - When you introduce a new shared control, document it in

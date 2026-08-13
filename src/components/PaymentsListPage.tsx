@@ -1,13 +1,27 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronRight, HandCoins, RefreshCw } from "lucide-react";
+import { ChevronRight, HandCoins } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
+import { ListTable } from "@/components/ui/list-table";
 import { OperationalListState } from "@/components/ui/operational-list-state";
 import { TablePagination } from "@/components/ui/table-pagination";
-import { fetchPayments, PAYMENTS_PAGE_SIZE, type PaymentListItem } from "@/lib/payments";
+import {
+  fetchPayments,
+  PAYMENTS_PAGE_SIZE,
+  type PaymentListItem,
+} from "@/lib/payments";
+
+const PAYMENT_SKELETON_COLUMNS = [
+  { width: "7rem" },
+  { width: "6rem" },
+  { width: "5rem" },
+  { width: "7rem" },
+  { width: "65%" },
+  { width: "1.75rem", variant: "action" as const },
+];
 
 export function PaymentsListPage({
   canViewFinance,
@@ -29,11 +43,20 @@ export function PaymentsListPage({
   const visibleFrom = total ? (page - 1) * PAYMENTS_PAGE_SIZE + 1 : 0;
   const visibleTo = Math.min(page * PAYMENTS_PAGE_SIZE, total);
   const currency = useMemo(
-    () => new Intl.NumberFormat(i18n.language, { style: "currency", currency: "HKD", maximumFractionDigits: 0 }),
+    () =>
+      new Intl.NumberFormat(i18n.language, {
+        style: "currency",
+        currency: "HKD",
+        maximumFractionDigits: 0,
+      }),
     [i18n.language],
   );
   const date = useMemo(
-    () => new Intl.DateTimeFormat(i18n.language, { dateStyle: "medium", timeZone: "Asia/Hong_Kong" }),
+    () =>
+      new Intl.DateTimeFormat(i18n.language, {
+        dateStyle: "medium",
+        timeZone: "Asia/Hong_Kong",
+      }),
     [i18n.language],
   );
 
@@ -96,22 +119,105 @@ export function PaymentsListPage({
             submitLabel={t("payments.searchAction")}
           />
         </header>
-        {loading ? <OperationalListState icon={HandCoins} title={t("payments.loading")} loading /> :
-        error ? <OperationalListState icon={HandCoins} title={t("payments.loadError")} description={t("payments.loadErrorDescription")} retryLabel={t("payments.retry")} onRetry={() => setReloadKey((key) => key + 1)} /> :
-        !items.length ? <OperationalListState icon={HandCoins} title={t("payments.empty")} description={t("payments.emptyDescription")} /> :
-        <div className="table-wrap orders-table-wrap">
-          <table><thead><tr><th>{t("payments.columns.date")}</th><th>{t("payments.columns.order")}</th><th>{t("payments.columns.amount")}</th><th>{t("payments.columns.payout")}</th><th>{t("payments.columns.reference")}</th><th /></tr></thead>
-            <tbody>{items.map((payment) => <tr key={payment.id}>
-              <td>{payment.paymentAt ? date.format(new Date(payment.paymentAt)) : t("common.notSet")}</td>
-              <td>{payment.orderId ? <Link className="order-link" to={`/orders/${payment.orderId}`}>{payment.orderNumber || t("common.notSet")}</Link> : (payment.orderNumber || t("common.notSet"))}</td>
-              <td><strong>{payment.currency === "HKD" ? currency.format(payment.amount) : `${payment.currency} ${payment.amount}`}</strong></td>
-              <td>{payment.payoutAt ? date.format(new Date(payment.payoutAt)) : t("common.notSet")}</td>
-              <td>{payment.reference || t("common.notSet")}</td>
-              <td>{payment.orderId && <Button variant="ghost" size="icon" asChild><Link to={`/orders/${payment.orderId}`} aria-label={`${t("payments.open")} ${payment.orderNumber || payment.id}`}><ChevronRight /></Link></Button>}</td>
-            </tr>)}</tbody>
-          </table>
-        </div>}
-        <TablePagination summary={t("payments.pagination", { from: visibleFrom, to: visibleTo, total })} page={page} totalPages={totalPages} loading={loading} onPrevious={() => setPage((value) => Math.max(1, value - 1))} onNext={() => setPage((value) => value + 1)} onPageChange={setPage} previousLabel={t("payments.previous")} nextLabel={t("payments.next")} pageLabel={t("payments.pageOf")} jumpLabel={t("payments.jumpToPage")} />
+        {error ? (
+          <OperationalListState
+            icon={HandCoins}
+            title={t("payments.loadError")}
+            description={t("payments.loadErrorDescription")}
+            retryLabel={t("payments.retry")}
+            onRetry={() => setReloadKey((key) => key + 1)}
+          />
+        ) : !loading && !items.length ? (
+          <OperationalListState
+            icon={HandCoins}
+            title={t("payments.empty")}
+            description={t("payments.emptyDescription")}
+          />
+        ) : (
+          <ListTable
+            className="orders-table-wrap"
+            loading={loading}
+            loadingLabel={t("payments.loading")}
+            skeletonRows={PAYMENTS_PAGE_SIZE}
+            skeletonColumns={PAYMENT_SKELETON_COLUMNS}
+            header={
+              <tr>
+                <th>{t("payments.columns.date")}</th>
+                <th>{t("payments.columns.order")}</th>
+                <th>{t("payments.columns.amount")}</th>
+                <th>{t("payments.columns.payout")}</th>
+                <th>{t("payments.columns.reference")}</th>
+                <th />
+              </tr>
+            }
+          >
+            {items.map((payment) => (
+              <tr key={payment.id}>
+                <td>
+                  {payment.paymentAt
+                    ? date.format(new Date(payment.paymentAt))
+                    : t("common.notSet")}
+                </td>
+                <td>
+                  {payment.orderId ? (
+                    <Link
+                      className="order-link"
+                      to={`/orders/${payment.orderId}`}
+                    >
+                      {payment.orderNumber || t("common.notSet")}
+                    </Link>
+                  ) : (
+                    payment.orderNumber || t("common.notSet")
+                  )}
+                </td>
+                <td>
+                  <strong>
+                    {payment.currency === "HKD"
+                      ? currency.format(payment.amount)
+                      : `${payment.currency} ${payment.amount}`}
+                  </strong>
+                </td>
+                <td>
+                  {payment.payoutAt
+                    ? date.format(new Date(payment.payoutAt))
+                    : t("common.notSet")}
+                </td>
+                <td>{payment.reference || t("common.notSet")}</td>
+                <td>
+                  {payment.orderId && (
+                    <Button variant="ghost" size="icon" asChild>
+                      <Link
+                        to={`/orders/${payment.orderId}`}
+                        aria-label={`${t("payments.open")} ${
+                          payment.orderNumber || payment.id
+                        }`}
+                      >
+                        <ChevronRight />
+                      </Link>
+                    </Button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </ListTable>
+        )}
+        <TablePagination
+          summary={t("payments.pagination", {
+            from: visibleFrom,
+            to: visibleTo,
+            total,
+          })}
+          page={page}
+          totalPages={totalPages}
+          loading={loading}
+          onPrevious={() => setPage((value) => Math.max(1, value - 1))}
+          onNext={() => setPage((value) => value + 1)}
+          onPageChange={setPage}
+          previousLabel={t("payments.previous")}
+          nextLabel={t("payments.next")}
+          pageLabel={t("payments.pageOf")}
+          jumpLabel={t("payments.jumpToPage")}
+        />
       </article>
     </section>
   );

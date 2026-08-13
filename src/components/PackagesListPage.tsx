@@ -5,8 +5,8 @@ import { Link, useSearchParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
+import { ListTable } from "@/components/ui/list-table";
 import { TablePagination } from "@/components/ui/table-pagination";
-import { TableSkeletonRows } from "@/components/ui/table-skeleton";
 import {
   fetchPackages,
   PACKAGES_PAGE_SIZE,
@@ -232,35 +232,25 @@ export function PackagesListPage({
             </div>
           </div>
         ) : (
-          <div
-            className="table-wrap packages-table-wrap"
-            aria-busy={loading || undefined}
+          <ListTable
+            className="packages-table-wrap"
+            loading={loading}
+            loadingLabel={t("packages.loading")}
+            skeletonRows={PACKAGES_PAGE_SIZE}
+            skeletonColumns={PACKAGE_SKELETON_COLUMNS}
+            header={
+              <tr>
+                <th>{t("packages.columns.sku")}</th>
+                <th>{t("packages.columns.name")}</th>
+                <th>{t("packages.columns.channel")}</th>
+                <th>{t("packages.columns.members")}</th>
+                <th>{t("packages.columns.price")}</th>
+                <th>{t("packages.columns.status")}</th>
+                <th>{t("packages.columns.updated")}</th>
+              </tr>
+            }
           >
-            {loading ? (
-              <span className="sr-only" role="status">
-                {t("packages.loading")}
-              </span>
-            ) : null}
-            <table>
-              <thead>
-                <tr>
-                  <th>{t("packages.columns.sku")}</th>
-                  <th>{t("packages.columns.name")}</th>
-                  <th>{t("packages.columns.channel")}</th>
-                  <th>{t("packages.columns.members")}</th>
-                  <th>{t("packages.columns.price")}</th>
-                  <th>{t("packages.columns.status")}</th>
-                  <th>{t("packages.columns.updated")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <TableSkeletonRows
-                    rows={PACKAGES_PAGE_SIZE}
-                    columns={PACKAGE_SKELETON_COLUMNS}
-                  />
-                ) : (
-                  items.map((item) => (
+            {items.map((item) => (
                     <tr key={item.id}>
                       <td>{item.sku || t("common.notSet")}</td>
                       <td>
@@ -294,11 +284,8 @@ export function PackagesListPage({
                         {dateTimeFormatter.format(new Date(item.updatedAt))}
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+            ))}
+          </ListTable>
         )}
 
         <TablePagination
