@@ -75,6 +75,9 @@ FCCD 自有設計規範：以 **shadcn/ui（New York + CSS variables + CVA）** 
 | Error | `--destructive` |
 | Info | 青／靛（`tone-cyan` / `tone-indigo`） |
 
+Active 導航（側欄、工作區 soft link、tab）必須是**淡藍底 + 藍字**，禁止粉紅／舊品牌紅殘留。  
+`.status-badge.red`／`.metric-icon.red` 只代表危險／失敗（`--destructive`），不可再當舊品牌主色；品牌強調改用 `blue`。
+
 **多狀態進度條**不可全部使用品牌藍，必須用可區分色相（見
 [`UI_DEVELOPMENT_STANDARD.md`](UI_DEVELOPMENT_STANDARD.md) §3）：
 
