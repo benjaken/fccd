@@ -2026,9 +2026,18 @@ td:last-child {
   position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
   max-width: 100%;
   color: var(--foreground);
+}
+
+.settings-role-select-hint {
+  flex: 0 0 auto;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  font-weight: 550;
+  line-height: 1.3;
+  white-space: nowrap;
 }
 
 .settings-role-select select {

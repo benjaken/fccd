@@ -414,7 +414,10 @@ describe("Super Admin system settings", () => {
       screen.queryByText("Super Admin 固定可訪問所有頁面。"),
     ).not.toBeInTheDocument();
 
-    await user.selectOptions(screen.getByLabelText("角色"), "Admin");
+    await user.selectOptions(
+      screen.getByLabelText("當前查看角色"),
+      "Admin",
+    );
     expect(
       screen.getByRole("switch", { name: "財務對帳 可訪問" }),
     ).toBeChecked();
@@ -441,7 +444,10 @@ describe("Super Admin system settings", () => {
       </MemoryRouter>,
     );
 
-    await user.selectOptions(await screen.findByLabelText("角色"), "Admin");
+    await user.selectOptions(
+      await screen.findByLabelText("當前查看角色"),
+      "Admin",
+    );
     await user.click(screen.getByRole("switch", { name: "訂單 可訪問" }));
 
     await waitFor(() => {
@@ -599,7 +605,16 @@ describe("Super Admin system settings", () => {
         path.resolve(process.cwd(), "supabase/functions/login-log/index.ts"),
         "utf8",
       ),
-    ).toContain('latest?.event_type === "login_success"');
+    ).toContain('rpc("record_login_log"');
+    expect(
+      readFileSync(
+        path.resolve(
+          process.cwd(),
+          "supabase/migrations/20260813110000_merge_duplicate_login_success.sql",
+        ),
+        "utf8",
+      ),
+    ).toContain("create or replace function public.record_login_log");
     expect(
       readFileSync(
         path.resolve(process.cwd(), "supabase/functions/admin-users/index.ts"),
