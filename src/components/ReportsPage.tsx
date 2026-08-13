@@ -61,11 +61,32 @@ export function ReportsPage() {
       current.quantity += row.totalQuantity;
       grouped.set(key, current);
     }
-    return [...grouped.values()].sort((left, right) =>
-      left.name.localeCompare(right.name, i18n.language),
+    return [...grouped.values()].sort(
+      (left, right) =>
+        right.quantity - left.quantity ||
+        left.name.localeCompare(right.name, i18n.language),
     );
   }, [rows, i18n.language]);
   const total = products.reduce((sum, product) => sum + product.quantity, 0);
+  const maximumProductQuantity = products.reduce(
+    (maximum, product) => Math.max(maximum, product.quantity),
+    0,
+  );
+  const selectedShopName =
+    shops.find((shop) => shop.id === selectedShop)?.name ??
+    rows[0]?.shopName ??
+    "—";
+  const selectedDays =
+    startDate && endDate
+      ? Math.max(
+          1,
+          Math.round(
+            (Date.parse(`${endDate}T00:00:00Z`) -
+              Date.parse(`${startDate}T00:00:00Z`)) /
+              86_400_000,
+          ) + 1,
+        )
+      : 0;
 
   const loadReport = async (
     nextStart = startDate,
@@ -214,69 +235,102 @@ export function ReportsPage() {
           </Button>
         </div>
           </section>
-          <section className="panel shop-order-report">
-        <header>
-          <div>
-            <h2>{t("reports.tabs.shopOrderQuantities")}</h2>
-            <p>
-              {startDate} — {endDate}
-            </p>
-          </div>
-          <strong>
-            {t("reports.totalQuantity")}: {quantity.format(total)}
-          </strong>
-        </header>
-        {error ? (
-          <div className="report-state error">
-            <p>{t("reports.loadError")}</p>
-            <small>{error}</small>
-          </div>
-        ) : loading ? (
-          <div className="report-state">{t("reports.loading")}</div>
-        ) : !rows.length ? (
-          <div className="report-state">{t("reports.empty")}</div>
-        ) : (
-          <div className="report-table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>{t("reports.date")}</th>
-                  <th>{t("reports.shop")}</th>
-                  <th>{t("reports.product")}</th>
-                  <th>{t("reports.quantity")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>
-                    {startDate === endDate
-                      ? startDate
-                      : `${startDate} — ${endDate}`}
-                  </td>
-                  <td>{rows[0]?.shopName}</td>
-                  <td className="report-product-list">
-                    {products.map((product) => (
-                      <span key={`${product.name}-${product.unit ?? ""}`}>
-                        {product.name}
-                      </span>
-                    ))}
-                    <strong>{t("reports.total")}</strong>
-                  </td>
-                  <td className="report-quantity-list">
-                    {products.map((product) => (
-                      <span key={`${product.name}-${product.unit ?? ""}`}>
-                        {quantity.format(product.quantity)}
-                        {product.unit ? ` ${product.unit}` : ""}
-                      </span>
-                    ))}
-                    <strong>{quantity.format(total)}</strong>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        )}
-          </section>
+          {error ? (
+            <section className="panel">
+              <div className="report-state error">
+                <p>{t("reports.loadError")}</p>
+                <small>{error}</small>
+              </div>
+            </section>
+          ) : loading ? (
+            <section className="panel">
+              <div className="report-state">{t("reports.loading")}</div>
+            </section>
+          ) : !rows.length ? (
+            <section className="panel">
+              <div className="report-state">{t("reports.empty")}</div>
+            </section>
+          ) : (
+            <>
+              <section
+                className="shop-order-summary"
+                aria-label={t("reports.orderSummary")}
+              >
+                <article className="panel">
+                  <span>{t("reports.shop")}</span>
+                  <strong>{selectedShopName}</strong>
+                  <small>{t("reports.consolidatedOrder")}</small>
+                </article>
+                <article className="panel">
+                  <span>{t("reports.selectedPeriod")}</span>
+                  <strong>{selectedDays}</strong>
+                  <small>{t("reports.days")}</small>
+                </article>
+                <article className="panel">
+                  <span>{t("reports.productTypes")}</span>
+                  <strong>{products.length}</strong>
+                  <small>{t("reports.distinctProducts")}</small>
+                </article>
+                <article className="panel">
+                  <span>{t("reports.totalQuantity")}</span>
+                  <strong>{quantity.format(total)}</strong>
+                  <small>{t("reports.allProductsCombined")}</small>
+                </article>
+              </section>
+              <section className="panel shop-order-report">
+                <header>
+                  <div>
+                    <span>{t("reports.quantityRanking")}</span>
+                    <h2>{t("reports.tabs.shopOrderQuantities")}</h2>
+                    <p>
+                      {startDate === endDate
+                        ? startDate
+                        : `${startDate} — ${endDate}`}
+                    </p>
+                  </div>
+                  <strong>{selectedShopName}</strong>
+                </header>
+                <div className="shop-order-product-grid">
+                  {products.map((product) => {
+                    const share = total
+                      ? (product.quantity / total) * 100
+                      : 0;
+                    return (
+                      <article
+                        key={`${product.name}-${product.unit ?? ""}`}
+                      >
+                        <div className="shop-order-product-copy">
+                          <strong>{product.name}</strong>
+                          <small>
+                            {t("reports.quantityShare", {
+                              share: share.toFixed(1),
+                            })}
+                          </small>
+                        </div>
+                        <div className="shop-order-product-bar">
+                          <span
+                            aria-label={`${product.name} ${quantity.format(product.quantity)}`}
+                            role="progressbar"
+                            style={{
+                              width: `${maximumProductQuantity ? (product.quantity / maximumProductQuantity) * 100 : 0}%`,
+                            }}
+                          />
+                        </div>
+                        <strong className="shop-order-product-quantity">
+                          {quantity.format(product.quantity)}
+                          {product.unit ? ` ${product.unit}` : ""}
+                        </strong>
+                      </article>
+                    );
+                  })}
+                </div>
+                <footer>
+                  <span>{t("reports.total")}</span>
+                  <strong>{quantity.format(total)}</strong>
+                </footer>
+              </section>
+            </>
+          )}
         </>
       ) : (
         <MeatPriceReport

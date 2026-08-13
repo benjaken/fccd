@@ -110,6 +110,24 @@ export function MeatPriceReport({ mode }: { mode: MeatPriceMode }) {
       plotted,
     };
   }, [trendPoints]);
+  const productSnapshots = useMemo(
+    () =>
+      products.map((product) => {
+        const available = [...product.prices.values()].sort(
+          (left, right) => right.monthNumber - left.monthNumber,
+        );
+        const latest = available[0];
+        const previous = available[1];
+        const latestValue = latest ? getPrice(latest, unit) : null;
+        const previousValue = previous ? getPrice(previous, unit) : null;
+        const change =
+          latestValue !== null && previousValue
+            ? ((latestValue - previousValue) / previousValue) * 100
+            : null;
+        return { product, latest, latestValue, change };
+      }),
+    [products, unit],
+  );
 
   useEffect(() => {
     if (
@@ -237,67 +255,124 @@ export function MeatPriceReport({ mode }: { mode: MeatPriceMode }) {
               <small>{t("reports.outOfYearCells", { total: products.length * 12 })}</small>
             </article>
           </section>
-          <section className="panel meat-price-trend">
-            <header>
-              <div>
-                <span>{t("reports.priceTrend")}</span>
-                <h2>{selectedProduct?.name}</h2>
+          <section className="meat-price-analysis-grid">
+            <section className="panel meat-price-product-browser">
+              <header>
+                <div>
+                  <span>{t("reports.products")}</span>
+                  <h2>{t("reports.selectProduct")}</h2>
+                </div>
+                <strong>{products.length}</strong>
+              </header>
+              <div className="meat-price-product-list">
+                {productSnapshots.map(
+                  ({ product, latest, latestValue, change }) => (
+                    <button
+                      className={
+                        selectedProduct?.id === product.id
+                          ? "selected"
+                          : undefined
+                      }
+                      key={product.id}
+                      type="button"
+                      onClick={() => setSelectedProductId(product.id)}
+                    >
+                      <span>
+                        <strong>{product.name}</strong>
+                        <small>
+                          {latest
+                            ? t("reports.month", { month: latest.monthNumber })
+                            : "—"}
+                        </small>
+                      </span>
+                      <span>
+                        <strong>
+                          {latestValue === null
+                            ? "—"
+                            : currency.format(latestValue)}
+                        </strong>
+                        {change !== null && (
+                          <small
+                            className={
+                              change > 0
+                                ? "price-up"
+                                : change < 0
+                                  ? "price-down"
+                                  : undefined
+                            }
+                          >
+                            {change > 0 ? "↑" : change < 0 ? "↓" : "—"}{" "}
+                            {Math.abs(change).toFixed(1)}%
+                          </small>
+                        )}
+                      </span>
+                    </button>
+                  ),
+                )}
               </div>
-              <strong>
-                {unit === "kg"
-                  ? t("reports.perKg")
-                  : `${t("reports.perPackage")} · ${selectedProduct?.unit ?? t("reports.package")}`}
-              </strong>
-            </header>
-            <div className="meat-price-chart">
-              <svg
-                aria-label={t("reports.productPriceTrend", {
-                  product: selectedProduct?.name,
-                })}
-                role="img"
-                viewBox="0 0 740 210"
-              >
-                {[24, 92, 160].map((y) => (
-                  <line
-                    className="price-chart-grid"
-                    key={y}
-                    x1="48"
-                    x2="692"
-                    y1={y}
-                    y2={y}
-                  />
-                ))}
-                <polyline className="price-chart-line" points={chart.points} />
-                {chart.plotted.map((point) => (
-                  <g key={point.month}>
-                    <circle
-                      className="price-chart-point"
-                      cx={point.x}
-                      cy={point.y}
-                      r="5"
+            </section>
+            <section className="panel meat-price-trend">
+              <header>
+                <div>
+                  <span>{t("reports.priceTrend")}</span>
+                  <h2>{selectedProduct?.name}</h2>
+                </div>
+                <strong>
+                  {unit === "kg"
+                    ? t("reports.perKg")
+                    : `${t("reports.perPackage")} · ${selectedProduct?.unit ?? t("reports.package")}`}
+                </strong>
+              </header>
+              <div className="meat-price-chart">
+                <svg
+                  aria-label={t("reports.productPriceTrend", {
+                    product: selectedProduct?.name,
+                  })}
+                  role="img"
+                  viewBox="0 0 740 210"
+                >
+                  {[24, 92, 160].map((y) => (
+                    <line
+                      className="price-chart-grid"
+                      key={y}
+                      x1="48"
+                      x2="692"
+                      y1={y}
+                      y2={y}
                     />
-                    <title>
-                      {t("reports.month", { month: point.month })}:{" "}
-                      {currency.format(point.value)}
-                    </title>
-                  </g>
-                ))}
-                {MONTHS.map((month) => (
-                  <text
-                    className="price-chart-month"
-                    key={month}
-                    x={48 + ((month - 1) / 11) * 644}
-                    y="192"
-                    textAnchor="middle"
-                  >
-                    {month}
-                  </text>
-                ))}
-              </svg>
-            </div>
+                  ))}
+                  <polyline className="price-chart-line" points={chart.points} />
+                  {chart.plotted.map((point) => (
+                    <g key={point.month}>
+                      <circle
+                        className="price-chart-point"
+                        cx={point.x}
+                        cy={point.y}
+                        r="5"
+                      />
+                      <title>
+                        {t("reports.month", { month: point.month })}:{" "}
+                        {currency.format(point.value)}
+                      </title>
+                    </g>
+                  ))}
+                  {MONTHS.map((month) => (
+                    <text
+                      className="price-chart-month"
+                      key={month}
+                      x={48 + ((month - 1) / 11) * 644}
+                      y="192"
+                      textAnchor="middle"
+                    >
+                      {month}
+                    </text>
+                  ))}
+                </svg>
+              </div>
+            </section>
           </section>
-          <section className="panel meat-price-report">
-            <header>
+          <details className="panel meat-price-detail">
+            <summary>
               <div>
                 <h2>
                   {mode === "shop"
@@ -306,9 +381,10 @@ export function MeatPriceReport({ mode }: { mode: MeatPriceMode }) {
                 </h2>
                 <p>{t("reports.compactMatrixDescription")}</p>
               </div>
-            </header>
-          <div className="report-table-wrap meat-price-table-wrap">
-            <table className="meat-price-table">
+              <span>{t("reports.expandMonthlyMatrix")}</span>
+            </summary>
+            <div className="report-table-wrap meat-price-table-wrap">
+              <table className="meat-price-table">
               <thead>
                 <tr>
                   <th>{year}</th>
@@ -369,64 +445,9 @@ export function MeatPriceReport({ mode }: { mode: MeatPriceMode }) {
                   </tr>
                 ))}
               </tbody>
-            </table>
-          </div>
-          <div className="meat-price-mobile-list">
-            {products.map((product) => {
-              const available = [...product.prices.values()].sort(
-                (left, right) => right.monthNumber - left.monthNumber,
-              );
-              const latest = available[0];
-              const previous = available[1];
-              const latestValue = latest ? getPrice(latest, unit) : null;
-              const previousValue = previous ? getPrice(previous, unit) : null;
-              const change =
-                latestValue !== null && previousValue
-                  ? ((latestValue - previousValue) / previousValue) * 100
-                  : null;
-              return (
-                <button
-                  className={
-                    selectedProduct?.id === product.id ? "selected" : undefined
-                  }
-                  key={product.id}
-                  type="button"
-                  onClick={() => setSelectedProductId(product.id)}
-                >
-                  <span>
-                    <strong>{product.name}</strong>
-                    <small>
-                      {latest
-                        ? t("reports.month", { month: latest.monthNumber })
-                        : "—"}
-                    </small>
-                  </span>
-                  <span>
-                    <strong>
-                      {latestValue === null
-                        ? "—"
-                        : currency.format(latestValue)}
-                    </strong>
-                    {change !== null && (
-                      <small
-                        className={
-                          change > 0
-                            ? "price-up"
-                            : change < 0
-                              ? "price-down"
-                              : undefined
-                        }
-                      >
-                        {change > 0 ? "↑" : change < 0 ? "↓" : "—"}{" "}
-                        {Math.abs(change).toFixed(1)}%
-                      </small>
-                    )}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-          </section>
+              </table>
+            </div>
+          </details>
         </>
       )}
     </>

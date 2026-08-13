@@ -3635,6 +3635,109 @@ td:last-child {
   font-size: 14px;
 }
 
+.shop-order-summary {
+  display: grid;
+  grid-template-columns: 1.3fr repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.shop-order-summary article {
+  display: grid;
+  gap: 4px;
+  padding: 16px 18px;
+}
+
+.shop-order-summary article > span,
+.shop-order-report header > div > span {
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.shop-order-summary article > strong {
+  overflow: hidden;
+  font-size: 23px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shop-order-summary article > small {
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+
+.shop-order-product-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 22px;
+  padding: 18px;
+}
+
+.shop-order-product-grid article {
+  display: grid;
+  grid-template-columns: minmax(130px, 0.9fr) minmax(100px, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 58px;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: color-mix(in oklch, var(--secondary) 35%, var(--card));
+}
+
+.shop-order-product-copy {
+  display: grid;
+  gap: 3px;
+}
+
+.shop-order-product-copy strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shop-order-product-copy small {
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+
+.shop-order-product-bar {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: var(--secondary);
+}
+
+.shop-order-product-bar span {
+  display: block;
+  height: 100%;
+  min-width: 3px;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklch, var(--primary) 78%, white),
+    var(--primary)
+  );
+}
+
+.shop-order-product-quantity {
+  min-width: 76px;
+  color: var(--primary);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.shop-order-report footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 28px;
+  padding: 13px 18px;
+  border-top: 1px solid var(--border);
+  background: var(--secondary);
+}
+
 .report-table-wrap {
   max-height: 680px;
   overflow: auto;
@@ -3787,6 +3890,96 @@ td:last-child {
   font-size: 14px;
 }
 
+.meat-price-analysis-grid {
+  display: grid;
+  grid-template-columns: minmax(330px, 0.82fr) minmax(480px, 1.18fr);
+  align-items: start;
+  gap: 14px;
+}
+
+.meat-price-product-browser {
+  overflow: hidden;
+}
+
+.meat-price-product-browser > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.meat-price-product-browser header span {
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.meat-price-product-browser h2 {
+  margin: 3px 0 0;
+  font-size: 17px;
+}
+
+.meat-price-product-browser header > strong {
+  display: grid;
+  place-items: center;
+  min-width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--secondary);
+  color: var(--primary);
+}
+
+.meat-price-product-list {
+  display: grid;
+  max-height: 405px;
+  overflow: auto;
+}
+
+.meat-price-product-list > button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  min-height: 61px;
+  padding: 10px 14px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+  color: var(--foreground);
+  text-align: left;
+}
+
+.meat-price-product-list > button:hover,
+.meat-price-product-list > button.selected {
+  background: color-mix(in oklch, var(--primary) 7%, var(--card));
+}
+
+.meat-price-product-list > button.selected {
+  box-shadow: inset 3px 0 var(--primary);
+}
+
+.meat-price-product-list > button:last-child {
+  border-bottom: 0;
+}
+
+.meat-price-product-list > button > span {
+  display: grid;
+  gap: 4px;
+}
+
+.meat-price-product-list > button > span:last-child {
+  justify-items: end;
+  text-align: right;
+}
+
+.meat-price-product-list small {
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+
 .price-up {
   color: oklch(0.56 0.18 28) !important;
 }
@@ -3796,6 +3989,8 @@ td:last-child {
 }
 
 .meat-price-trend {
+  position: sticky;
+  top: 12px;
   overflow: hidden;
 }
 
@@ -3857,6 +4052,45 @@ td:last-child {
 
 .meat-price-report {
   overflow: hidden;
+}
+
+.meat-price-detail {
+  overflow: hidden;
+}
+
+.meat-price-detail > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 15px 18px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.meat-price-detail > summary::-webkit-details-marker {
+  display: none;
+}
+
+.meat-price-detail > summary h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.meat-price-detail > summary p {
+  margin: 4px 0 0;
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+
+.meat-price-detail > summary > span {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  border-radius: 7px;
+  background: var(--secondary);
+  color: var(--primary);
+  font-size: 14px;
+  font-weight: 750;
 }
 
 .meat-price-report > header {
@@ -3950,10 +4184,6 @@ td:last-child {
 
 .price-missing {
   color: color-mix(in oklch, var(--muted-foreground) 50%, transparent);
-}
-
-.meat-price-mobile-list {
-  display: none;
 }
 
 .editor-only-mappings {
@@ -4848,6 +5078,22 @@ td:last-child {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .shop-order-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .shop-order-product-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .meat-price-analysis-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .meat-price-trend {
+    position: static;
+  }
+
   .topbar {
     grid-template-columns: minmax(0, 1fr) auto;
     padding: 0 10px;
@@ -5052,50 +5298,35 @@ td:last-child {
     max-width: none;
   }
 
-  .meat-price-table-wrap {
-    display: none;
+  .shop-order-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .meat-price-mobile-list {
-    display: grid;
+  .shop-order-summary article {
+    padding: 13px 14px;
   }
 
-  .meat-price-mobile-list > button {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    width: 100%;
-    min-height: 64px;
-    padding: 11px 14px;
-    border: 0;
-    border-bottom: 1px solid var(--border);
-    background: var(--card);
-    color: var(--foreground);
-    text-align: left;
+  .shop-order-product-grid {
+    padding: 12px;
   }
 
-  .meat-price-mobile-list > button.selected {
-    background: color-mix(in oklch, var(--primary) 7%, var(--card));
+  .shop-order-product-grid article {
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 
-  .meat-price-mobile-list > button:last-child {
-    border-bottom: 0;
+  .shop-order-product-bar {
+    grid-column: 1 / -1;
+    grid-row: 2;
   }
 
-  .meat-price-mobile-list > button > span {
-    display: grid;
-    gap: 4px;
+  .shop-order-product-quantity {
+    grid-column: 2;
+    grid-row: 1;
   }
 
-  .meat-price-mobile-list > button > span:last-child {
-    justify-items: end;
-    text-align: right;
-  }
-
-  .meat-price-mobile-list small {
-    color: var(--muted-foreground);
-    font-size: 14px;
+  .meat-price-detail > summary {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .migration-warning > span,

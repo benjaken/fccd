@@ -75,6 +75,9 @@ describe("Shop order quantity report", () => {
     ).toBeInTheDocument();
     expect(await screen.findByText("豉油雞中翼")).toBeInTheDocument();
     expect(screen.getByText("煎釀三寶")).toBeInTheDocument();
+    expect(screen.getByText("Product quantity ranking")).toBeInTheDocument();
+    expect(screen.getByText("Product types")).toBeInTheDocument();
+    expect(screen.getAllByRole("progressbar")).toHaveLength(2);
     expect(screen.getAllByText("30").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByRole("button", { name: "Export CSV" })).toBeEnabled();
   });
