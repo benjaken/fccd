@@ -73,6 +73,7 @@ describe("Catering quotes list", () => {
         page: 1,
         search: "陳小姐",
         status: "",
+        preset: "all",
       }),
     );
   });

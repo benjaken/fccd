@@ -193,18 +193,22 @@ export async function fetchDashboardData(
       .is("archived_at", null)
       .gte("delivery_at", yesterdayStart)
       .lt("delivery_at", todayStart),
-    supabase
-      .from("payments")
-      .select("amount")
-      .is("voided_at", null)
-      .gte("payment_at", todayStart)
-      .lt("payment_at", tomorrowStart),
-    supabase
-      .from("payments")
-      .select("amount")
-      .is("voided_at", null)
-      .gte("payment_at", yesterdayStart)
-      .lt("payment_at", todayStart),
+    canViewFinance
+      ? supabase
+          .from("payments")
+          .select("amount")
+          .is("voided_at", null)
+          .gte("payment_at", todayStart)
+          .lt("payment_at", tomorrowStart)
+      : Promise.resolve({ data: [], error: null }),
+    canViewFinance
+      ? supabase
+          .from("payments")
+          .select("amount")
+          .is("voided_at", null)
+          .gte("payment_at", yesterdayStart)
+          .lt("payment_at", todayStart)
+      : Promise.resolve({ data: [], error: null }),
     supabase
       .from("orders")
       .select("id", { count: "exact", head: true })

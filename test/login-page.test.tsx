@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -10,6 +10,11 @@ const auth = vi.hoisted(() => ({
   resetPassword: vi.fn(),
 }));
 
+const quickLogin = vi.hoisted(() => ({
+  credentials: null as null | { email: string; password: string },
+  shouldAutologin: false,
+}));
+
 vi.mock("@/auth/AuthProvider", () => ({
   useAuth: () => ({
     signIn: auth.signIn,
@@ -18,10 +23,18 @@ vi.mock("@/auth/AuthProvider", () => ({
   }),
 }));
 
+vi.mock("@/lib/quick-login", () => ({
+  getQuickLoginCredentials: () => quickLogin.credentials,
+  shouldAutologinFromUrl: () => quickLogin.shouldAutologin,
+  stripAutologinParam: () => "/",
+}));
+
 describe("LoginPage", () => {
   beforeEach(async () => {
     auth.signIn.mockReset();
     auth.resetPassword.mockReset();
+    quickLogin.credentials = null;
+    quickLogin.shouldAutologin = false;
     await i18n.changeLanguage("zh-HK");
   });
 
@@ -82,5 +95,27 @@ describe("LoginPage", () => {
     expect(
       screen.getByRole("heading", { name: "歡迎回來" }),
     ).toBeInTheDocument();
+  });
+
+  it("offers one-click preview sign-in when configured", async () => {
+    const user = userEvent.setup();
+    quickLogin.credentials = {
+      email: "preview@foodchannels.com",
+      password: "preview-secret",
+    };
+    auth.signIn.mockResolvedValue(null);
+
+    render(<LoginPage />);
+
+    await user.click(
+      screen.getByRole("button", { name: "一鍵登入（預覽）" }),
+    );
+
+    await waitFor(() => {
+      expect(auth.signIn).toHaveBeenCalledWith(
+        "preview@foodchannels.com",
+        "preview-secret",
+      );
+    });
   });
 });

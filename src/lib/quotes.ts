@@ -1,6 +1,9 @@
 import { supabase } from "@/lib/supabase";
 
 export const QUOTES_PAGE_SIZE = 15;
+export const LARGE_QUOTE_THRESHOLD = 10_000;
+
+export type QuotePreset = "all" | "high-chance" | "large" | "follow-up";
 
 export type QuoteListItem = {
   id: string;
@@ -23,6 +26,7 @@ export type QuoteListFilters = {
   page: number;
   search: string;
   status: string;
+  preset?: QuotePreset;
 };
 
 type QuoteRow = {
@@ -48,6 +52,7 @@ export async function fetchQuotes({
   page,
   search,
   status,
+  preset = "all",
 }: QuoteListFilters): Promise<QuoteListResult> {
   const start = (page - 1) * QUOTES_PAGE_SIZE;
   const end = start + QUOTES_PAGE_SIZE - 1;
@@ -61,6 +66,18 @@ export async function fetchQuotes({
     .is("archived_at", null)
     .order("updated_at", { ascending: false })
     .range(start, end);
+
+  if (preset === "high-chance") {
+    query = query.eq("quote_status", "High Chance");
+  } else if (preset === "large") {
+    query = query
+      .gte("grand_total", LARGE_QUOTE_THRESHOLD)
+      .or('quote_status.is.null,quote_status.not.in.("Done Deal","Case Closed")');
+  } else if (preset === "follow-up") {
+    query = query.or(
+      'quote_status.is.null,quote_status.not.in.("Done Deal","Case Closed")',
+    );
+  }
 
   const term = safeSearchTerm(search);
   if (term) {

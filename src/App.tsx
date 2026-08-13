@@ -58,7 +58,10 @@ import {
 } from "@/auth/use-page-access";
 import { LoginPage } from "@/components/LoginPage";
 import { MigrationWorkspace } from "@/components/MigrationWorkspace";
+import { FollowUpPage } from "@/components/FollowUpPage";
 import { OrdersListPage } from "@/components/OrdersListPage";
+import { OrderDetailPage } from "@/components/OrderDetailPage";
+import { PaymentsListPage } from "@/components/PaymentsListPage";
 import { ProfilePage } from "@/components/ProfilePage";
 import { ReportsPage } from "@/components/ReportsPage";
 import { QuotesListPage } from "@/components/QuotesListPage";
@@ -672,6 +675,10 @@ function OperationsShell() {
             ) : (
               <Routes>
               <Route path="/" element={<Dashboard role={profile?.role} />} />
+              <Route
+                path="/follow-up"
+                element={<FollowUpPage role={profile?.role ?? null} />}
+              />
               <Route path="/profile" element={<ProfilePage />} />
               <Route
                 path="/orders"
@@ -704,7 +711,38 @@ function OperationsShell() {
                   />
                 }
               />
+              <Route
+                path="/orders/payments"
+                element={<PaymentsListPage canViewFinance={canViewFinance} />}
+              />
+              <Route
+                path="/orders/:id"
+                element={
+                  <OrderDetailPage
+                    documentType="order"
+                    canViewFinance={canViewFinance}
+                  />
+                }
+              />
               <Route path="/quotes" element={<QuotesListPage />} />
+              <Route
+                path="/quotes/high-chance"
+                element={<QuotesListPage preset="high-chance" />}
+              />
+              <Route
+                path="/quotes/large"
+                element={<QuotesListPage preset="large" />}
+              />
+              <Route
+                path="/quotes/follow-up"
+                element={<QuotesListPage preset="follow-up" />}
+              />
+              <Route
+                path="/quotes/:id"
+                element={
+                  <OrderDetailPage documentType="quote" canViewFinance={canViewFinance} />
+                }
+              />
               <Route path="/reports/*" element={<ReportsPage />} />
               <Route
                 path="/settings"

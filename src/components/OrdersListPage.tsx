@@ -303,7 +303,13 @@ export function OrdersListPage({
               </thead>
               <tbody>
                 {items.map((order) => {
-                  const statusView = orderStatus(order, statusLabels);
+                  const statusView =
+                    preset === "pending"
+                      ? {
+                          label: t("orders.statuses.pending"),
+                          tone: "amber",
+                        }
+                      : orderStatus(order, statusLabels);
                   return (
                     <tr key={order.id}>
                       <td>
