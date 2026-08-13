@@ -312,9 +312,9 @@ const resources = {
           loading: "正在載入角色權限…",
           error: "無法載入或保存角色權限",
           errorDescription: "請重試；需要「角色與頁面權限」的管理權限。",
-          superAdminNotice: "Super Admin 固定可存取及管理所有頁面。",
+          superAdminNotice: "Super Admin 固定可訪問所有頁面。",
           restrictedNotice: "可按角色開通系統設定頁與操作；遷移頁仍只限 Super Admin。",
-          cascadeNotice: "勾選父層權限時，會自動全選並開啟其下所有子頁面與分頁。",
+          cascadeNotice: "開啟父層權限時，會自動開啟其下所有子頁面與分頁。",
           highRisk: "高風險",
           standard: "一般",
           kinds: {
