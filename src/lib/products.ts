@@ -22,13 +22,36 @@ export type ProductListResult = {
   total: number;
 };
 
+export type ProductPriceRange =
+  | ""
+  | "under-100"
+  | "100-299"
+  | "300-799"
+  | "800-1999"
+  | "2000-plus";
+
+export type ProductStatusFilter = "" | "Active" | "Inactive" | "unset";
+
 export type ProductListFilters = {
   page: number;
   search: string;
   channelId: string;
-  activeOnly: boolean;
+  status: ProductStatusFilter;
+  priceRange: ProductPriceRange;
   preset?: ProductPreset;
 };
+
+export const PRODUCT_PRICE_RANGES: Array<{
+  value: Exclude<ProductPriceRange, "">;
+  min: number;
+  max: number | null;
+}> = [
+  { value: "under-100", min: 0, max: 100 },
+  { value: "100-299", min: 100, max: 300 },
+  { value: "300-799", min: 300, max: 800 },
+  { value: "800-1999", min: 800, max: 2000 },
+  { value: "2000-plus", min: 2000, max: null },
+];
 
 export type CatalogOption = {
   id: string;
@@ -147,7 +170,8 @@ export async function fetchProducts({
   page,
   search,
   channelId,
-  activeOnly,
+  status,
+  priceRange,
   preset = "all",
 }: ProductListFilters): Promise<ProductListResult> {
   const start = (page - 1) * PRODUCTS_PAGE_SIZE;
@@ -163,8 +187,18 @@ export async function fetchProducts({
     .order("updated_at", { ascending: false })
     .range(start, end);
 
-  if (activeOnly) {
-    query = query.eq("is_active", true);
+  if (status === "unset") {
+    query = query.or("status.is.null,status.eq.");
+  } else if (status) {
+    query = query.eq("status", status);
+  }
+
+  const range = PRODUCT_PRICE_RANGES.find((item) => item.value === priceRange);
+  if (range) {
+    query = query.gte("price", range.min);
+    if (range.max !== null) {
+      query = query.lt("price", range.max);
+    }
   }
 
   if (channelId) {

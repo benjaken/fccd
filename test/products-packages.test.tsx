@@ -160,10 +160,61 @@ describe("Products catalog pages", () => {
         page: 1,
         search: "燒雞",
         channelId: "",
-        activeOnly: true,
+        status: "",
+        priceRange: "",
         preset: "all",
       }),
     );
+  });
+
+  it("filters by price range, channel, and status dropdowns", async () => {
+    const user = userEvent.setup();
+    const loadProducts = vi.fn().mockResolvedValue(productResult);
+    const loadChannels = vi.fn().mockResolvedValue([
+      { id: "channel-1", name: "Catering" },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <ProductsListPage
+          loadProducts={loadProducts}
+          loadChannels={loadChannels}
+        />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(loadProducts).toHaveBeenCalledTimes(1));
+
+    await user.selectOptions(
+      screen.getByLabelText("售價範圍"),
+      "100-299",
+    );
+    await waitFor(() =>
+      expect(loadProducts).toHaveBeenLastCalledWith(
+        expect.objectContaining({ priceRange: "100-299", page: 1 }),
+      ),
+    );
+
+    await user.selectOptions(screen.getByLabelText("渠道"), "channel-1");
+    await waitFor(() =>
+      expect(loadProducts).toHaveBeenLastCalledWith(
+        expect.objectContaining({ channelId: "channel-1", page: 1 }),
+      ),
+    );
+
+    await user.selectOptions(screen.getByLabelText("狀態"), "Active");
+    await waitFor(() =>
+      expect(loadProducts).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          status: "Active",
+          channelId: "channel-1",
+          priceRange: "100-299",
+          page: 1,
+        }),
+      ),
+    );
+
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
   });
 
   it("renders product detail fields", async () => {
