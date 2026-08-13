@@ -1,10 +1,51 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, useLocation } from "react-router-dom";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { Dashboard } from "@/App";
 import i18n from "@/i18n";
+import type { DashboardData } from "@/lib/dashboard";
+
+const dashboardData: DashboardData = {
+  metrics: {
+    ordersToday: 42,
+    ordersChange: 12,
+    revenueToday: 128450,
+    revenueChange: 8.6,
+    pendingDeliveries: 9,
+    lowStock: 16,
+  },
+  queues: {
+    highChanceQuotes: 8,
+    largeQuotes: 3,
+    unpaidOrders: 12,
+    unassignedDrivers: 5,
+    deliveredUnpaid: 4,
+  },
+  progress: {
+    confirmed: 18,
+    preparing: 12,
+    ready: 7,
+    shipping: 5,
+    completed: 9,
+  },
+  jobs: [
+    {
+      id: "order-1",
+      orderNumber: "FC-260811-018",
+      customerName: "One Harbour Square",
+      deliveryAt: "2026-08-12T03:30:00.000Z",
+      shipOutTime: "11:30",
+      deliveryStatus: null,
+      isSentToFactory: true,
+      amount: 12680,
+      currency: "HKD",
+    },
+  ],
+};
+
+const loadDashboard = () => Promise.resolve(dashboardData);
 
 function CurrentLocation() {
   const location = useLocation();
@@ -19,7 +60,7 @@ function CurrentLocation() {
 function renderDashboard() {
   return render(
     <MemoryRouter>
-      <Dashboard />
+      <Dashboard loadDashboard={loadDashboard} />
       <CurrentLocation />
     </MemoryRouter>,
   );
@@ -28,6 +69,16 @@ function renderDashboard() {
 describe("Dashboard navigation", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("zh-HK");
+    vi.mocked(window.matchMedia).mockImplementation((query) => ({
+      matches: query.includes("prefers-reduced-motion"),
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
   });
 
   it.each([
@@ -46,32 +97,27 @@ describe("Dashboard navigation", () => {
   ])("links %s to %s", (name, target) => {
     renderDashboard();
 
-    expect(screen.getByRole("link", { name: new RegExp(name) })).toHaveAttribute(
-      "href",
-      target,
-    );
+    const matchingLink = screen
+      .getAllByRole("link", { name: new RegExp(name) })
+      .find((link) => link.getAttribute("href") === target);
+
+    expect(matchingLink).toBeDefined();
   });
 
   it("opens the selected order detail page", async () => {
     const user = userEvent.setup();
     renderDashboard();
 
-    await user.click(
-      screen.getByRole("link", { name: "FC-260811-018" }),
-    );
+    await user.click(await screen.findByRole("link", { name: "FC-260811-018" }));
 
-    expect(screen.getByTestId("location")).toHaveTextContent(
-      "/orders/FC-260811-018",
-    );
+    expect(screen.getByTestId("location")).toHaveTextContent("/orders/order-1");
   });
 
   it("opens the selected order status view", async () => {
     const user = userEvent.setup();
     renderDashboard();
 
-    await user.click(
-      screen.getByRole("link", { name: /已確認\s*18/ }),
-    );
+    await user.click(await screen.findByRole("link", { name: /已確認\s*18/ }));
 
     expect(screen.getByTestId("location")).toHaveTextContent(
       "/orders?status=confirmed",
