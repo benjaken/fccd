@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { MonthlyTrendChart } from "@/components/reports/MonthlyTrendChart";
+import { ReportItemSelector } from "@/components/reports/ReportItemSelector";
+import { ReportSummaryCards } from "@/components/reports/ReportSummaryCards";
+import { ReportYearFilter } from "@/components/reports/ReportYearFilter";
 import {
   fetchMonthlyPreparedMeatPrices,
   type MeatPriceMode,
@@ -94,22 +98,6 @@ export function MeatPriceReport({ mode }: { mode: MeatPriceMode }) {
       return price ? [{ month, value: getPrice(price, unit) }] : [];
     });
   }, [selectedProduct, unit]);
-  const chart = useMemo(() => {
-    if (!trendPoints.length) return { points: "", plotted: [] };
-    const values = trendPoints.map((point) => point.value);
-    const minimum = Math.min(...values);
-    const maximum = Math.max(...values);
-    const range = maximum - minimum || 1;
-    const plotted = trendPoints.map((point) => ({
-      ...point,
-      x: 48 + ((point.month - 1) / 11) * 644,
-      y: 24 + ((maximum - point.value) / range) * 136,
-    }));
-    return {
-      points: plotted.map((point) => `${point.x},${point.y}`).join(" "),
-      plotted,
-    };
-  }, [trendPoints]);
   const productSnapshots = useMemo(
     () =>
       products.map((product) => {
@@ -164,7 +152,13 @@ export function MeatPriceReport({ mode }: { mode: MeatPriceMode }) {
 
   return (
     <>
-      <section className="panel meat-price-filter">
+      <ReportYearFilter
+        className="meat-price-filter"
+        label={t("reports.year")}
+        year={year}
+        years={years}
+        onYearChange={setYear}
+      >
         <div
           className="meat-price-unit-toggle"
           aria-label={t("reports.priceUnit")}
@@ -185,21 +179,7 @@ export function MeatPriceReport({ mode }: { mode: MeatPriceMode }) {
             {t("reports.perPackage")}
           </button>
         </div>
-        <label>
-          <span>{t("reports.year")}</span>
-          <select
-            aria-label={t("reports.year")}
-            value={year}
-            onChange={(event) => setYear(Number(event.target.value))}
-          >
-            {years.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-        </label>
-      </section>
+      </ReportYearFilter>
       {error ? (
         <section className="panel">
           <div className="report-state error">
@@ -217,161 +197,93 @@ export function MeatPriceReport({ mode }: { mode: MeatPriceMode }) {
         </section>
       ) : (
         <>
-          <section className="meat-price-summary" aria-label={t("reports.summary")}>
-            <article className="panel">
-              <span>{t("reports.latestMonth")}</span>
-              <strong>{t("reports.month", { month: latestMonth })}</strong>
-              <small>{year}</small>
-            </article>
-            <article className="panel">
-              <span>{t("reports.pricedProducts")}</span>
-              <strong>
-                {latestPricedProducts} / {products.length}
-              </strong>
-              <small>{t("reports.latestMonthCoverage")}</small>
-            </article>
-            <article className="panel">
-              <span>{t("reports.averageMonthlyChange")}</span>
-              <strong
-                className={
+          <ReportSummaryCards
+            ariaLabel={t("reports.summary")}
+            className="meat-price-summary"
+            cards={[
+              {
+                label: t("reports.latestMonth"),
+                value: t("reports.month", { month: latestMonth }),
+                caption: year,
+              },
+              {
+                label: t("reports.pricedProducts"),
+                value: `${latestPricedProducts} / ${products.length}`,
+                caption: t("reports.latestMonthCoverage"),
+              },
+              {
+                label: t("reports.averageMonthlyChange"),
+                value:
+                  averageMonthlyChange === null
+                    ? "—"
+                    : `${averageMonthlyChange > 0 ? "↑ " : averageMonthlyChange < 0 ? "↓ " : ""}${Math.abs(averageMonthlyChange).toFixed(1)}%`,
+                valueClassName:
                   averageMonthlyChange === null
                     ? undefined
                     : averageMonthlyChange > 0
                       ? "price-up"
                       : averageMonthlyChange < 0
                         ? "price-down"
-                        : undefined
-                }
-              >
-                {averageMonthlyChange === null
-                  ? "—"
-                  : `${averageMonthlyChange > 0 ? "↑ " : averageMonthlyChange < 0 ? "↓ " : ""}${Math.abs(averageMonthlyChange).toFixed(1)}%`}
-              </strong>
-              <small>{t("reports.comparedWithPreviousMonth")}</small>
-            </article>
-            <article className="panel">
-              <span>{t("reports.missingPrices")}</span>
-              <strong>{missingPrices}</strong>
-              <small>{t("reports.outOfYearCells", { total: products.length * 12 })}</small>
-            </article>
-          </section>
+                        : undefined,
+                caption: t("reports.comparedWithPreviousMonth"),
+              },
+              {
+                label: t("reports.missingPrices"),
+                value: missingPrices,
+                caption: t("reports.outOfYearCells", {
+                  total: products.length * 12,
+                }),
+              },
+            ]}
+          />
           <section className="meat-price-analysis-grid">
-            <section className="panel meat-price-product-browser">
-              <header>
-                <div>
-                  <span>{t("reports.products")}</span>
-                  <h2>{t("reports.selectProduct")}</h2>
-                </div>
-                <strong>{products.length}</strong>
-              </header>
-              <div className="meat-price-product-list">
-                {productSnapshots.map(
-                  ({ product, latest, latestValue, change }) => (
-                    <button
-                      className={
-                        selectedProduct?.id === product.id
-                          ? "selected"
-                          : undefined
-                      }
-                      key={product.id}
-                      type="button"
-                      onClick={() => setSelectedProductId(product.id)}
-                    >
-                      <span>
-                        <strong>{product.name}</strong>
-                        <small>
-                          {latest
-                            ? t("reports.dataUpdatedThrough", {
-                                month: latest.monthNumber,
-                              })
-                            : "—"}
-                        </small>
-                      </span>
-                      <span>
-                        <strong>
-                          {latestValue === null
-                            ? "—"
-                            : currency.format(latestValue)}
-                        </strong>
-                        {change !== null && (
-                          <small
-                            className={
-                              change > 0
-                                ? "price-up"
-                                : change < 0
-                                  ? "price-down"
-                                  : undefined
-                            }
-                          >
-                            {change > 0 ? "↑" : change < 0 ? "↓" : "—"}{" "}
-                            {Math.abs(change).toFixed(1)}%
-                          </small>
-                        )}
-                      </span>
-                    </button>
-                  ),
-                )}
-              </div>
-            </section>
-            <section className="panel meat-price-trend">
-              <header>
-                <div>
-                  <span>{t("reports.priceTrend")}</span>
-                  <h2>{selectedProduct?.name}</h2>
-                </div>
-                <strong>
-                  {unit === "kg"
-                    ? t("reports.perKg")
-                    : `${t("reports.perPackage")} · ${selectedProduct?.unit ?? t("reports.package")}`}
-                </strong>
-              </header>
-              <div className="meat-price-chart">
-                <svg
-                  aria-label={t("reports.productPriceTrend", {
-                    product: selectedProduct?.name,
-                  })}
-                  role="img"
-                  viewBox="0 0 740 210"
-                >
-                  {[24, 92, 160].map((y) => (
-                    <line
-                      className="price-chart-grid"
-                      key={y}
-                      x1="48"
-                      x2="692"
-                      y1={y}
-                      y2={y}
-                    />
-                  ))}
-                  <polyline className="price-chart-line" points={chart.points} />
-                  {chart.plotted.map((point) => (
-                    <g key={point.month}>
-                      <circle
-                        className="price-chart-point"
-                        cx={point.x}
-                        cy={point.y}
-                        r="5"
-                      />
-                      <title>
-                        {t("reports.month", { month: point.month })}:{" "}
-                        {currency.format(point.value)}
-                      </title>
-                    </g>
-                  ))}
-                  {MONTHS.map((month) => (
-                    <text
-                      className="price-chart-month"
-                      key={month}
-                      x={48 + ((month - 1) / 11) * 644}
-                      y="192"
-                      textAnchor="middle"
-                    >
-                      {month}
-                    </text>
-                  ))}
-                </svg>
-              </div>
-            </section>
+            <ReportItemSelector
+              eyebrow={t("reports.products")}
+              title={t("reports.selectProduct")}
+              items={productSnapshots.map(
+                ({ product, latest, latestValue, change }) => ({
+                  id: product.id,
+                  name: product.name,
+                  updateLabel: latest
+                    ? t("reports.dataUpdatedThrough", {
+                        month: latest.monthNumber,
+                      })
+                    : "—",
+                  value:
+                    latestValue === null
+                      ? "—"
+                      : currency.format(latestValue),
+                  status:
+                    change === null
+                      ? undefined
+                      : `${change > 0 ? "↑" : change < 0 ? "↓" : "—"} ${Math.abs(change).toFixed(1)}%`,
+                  statusClassName:
+                    change === null
+                      ? undefined
+                      : change > 0
+                        ? "price-up"
+                        : change < 0
+                          ? "price-down"
+                          : undefined,
+                }),
+              )}
+              selectedId={selectedProduct?.id}
+              onSelect={setSelectedProductId}
+            />
+            <MonthlyTrendChart
+              eyebrow={t("reports.priceTrend")}
+              title={selectedProduct?.name}
+              badge={
+                unit === "kg"
+                  ? t("reports.perKg")
+                  : `${t("reports.perPackage")} · ${selectedProduct?.unit ?? t("reports.package")}`
+              }
+              ariaLabel={t("reports.productPriceTrend", {
+                product: selectedProduct?.name,
+              })}
+              points={trendPoints}
+              formatValue={currency.format}
+            />
           </section>
           <details className="panel meat-price-detail" open>
             <summary>

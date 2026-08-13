@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { MonthlyTrendChart } from "@/components/reports/MonthlyTrendChart";
+import { ReportItemSelector } from "@/components/reports/ReportItemSelector";
+import { ReportSummaryCards } from "@/components/reports/ReportSummaryCards";
+import { ReportYearFilter } from "@/components/reports/ReportYearFilter";
 import {
   fetchMonthlyPreparedMeatStock,
   fetchMonthlyRawMeatStock,
@@ -130,22 +134,6 @@ function MeatStockReport({ kind }: { kind: StockKind }) {
         : [];
     });
   }, [selectedItem]);
-  const chart = useMemo(() => {
-    if (!trendPoints.length) return { points: "", plotted: [] };
-    const values = trendPoints.map((point) => point.value);
-    const minimum = Math.min(...values);
-    const maximum = Math.max(...values);
-    const range = maximum - minimum || 1;
-    const plotted = trendPoints.map((point) => ({
-      ...point,
-      x: 48 + ((point.month - 1) / 11) * 644,
-      y: 24 + ((maximum - point.value) / range) * 136,
-    }));
-    return {
-      points: plotted.map((point) => `${point.x},${point.y}`).join(" "),
-      plotted,
-    };
-  }, [trendPoints]);
 
   useEffect(() => {
     if (
@@ -182,22 +170,12 @@ function MeatStockReport({ kind }: { kind: StockKind }) {
 
   return (
     <>
-      <section className="panel raw-meat-price-filter">
-        <label>
-          <span>{t("reports.year")}</span>
-          <select
-            aria-label={t("reports.year")}
-            value={year}
-            onChange={(event) => setYear(Number(event.target.value))}
-          >
-            {years.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-        </label>
-      </section>
+      <ReportYearFilter
+        label={t("reports.year")}
+        year={year}
+        years={years}
+        onYearChange={setYear}
+      />
       {error ? (
         <section className="panel">
           <div className="report-state error">
@@ -221,203 +199,115 @@ function MeatStockReport({ kind }: { kind: StockKind }) {
         </section>
       ) : (
         <>
-          <section
-            className="raw-meat-price-summary"
-            aria-label={t(
+          <ReportSummaryCards
+            ariaLabel={t(
               isRaw
                 ? "reports.rawStockSummary"
                 : "reports.preparedStockSummary",
             )}
-          >
-            <article className="panel">
-              <span>{t("reports.latestMonth")}</span>
-              <strong>{t("reports.month", { month: latestMonth })}</strong>
-              <small>{year}</small>
-            </article>
-            <article className="panel">
-              <span>
-                {t(
+            cards={[
+              {
+                label: t("reports.latestMonth"),
+                value: t("reports.month", { month: latestMonth }),
+                caption: year,
+              },
+              {
+                label: t(
                   isRaw
                     ? "reports.rawMeatTypes"
                     : "reports.preparedProductTypes",
-                )}
-              </span>
-              <strong>{items.length}</strong>
-              <small>
-                {t(
+                ),
+                value: items.length,
+                caption: t(
                   isRaw
                     ? "reports.trackedRawMeat"
                     : "reports.trackedProducts",
-                )}
-              </small>
-            </article>
-            <article className="panel">
-              <span>
-                {t(
+                ),
+              },
+              {
+                label: t(
                   isRaw
                     ? "reports.totalMonthEndRawStock"
                     : "reports.totalMonthEndStock",
-                )}
-              </span>
-              <strong>{number.format(totalStock)}</strong>
-              <small>
-                {t(
+                ),
+                value: number.format(totalStock),
+                caption: t(
                   isRaw
                     ? "reports.allRawMeatCombined"
                     : "reports.allPreparedProducts",
-                )}
-              </small>
-            </article>
-            <article className="panel">
-              <span>{t("reports.stockExceptions")}</span>
-              <strong className={negativeStockItems ? "stock-negative" : undefined}>
-                {negativeStockItems}
-              </strong>
-              <small>
-                {t("reports.negativeAndZeroStock", {
+                ),
+              },
+              {
+                label: t("reports.stockExceptions"),
+                value: negativeStockItems,
+                valueClassName: negativeStockItems
+                  ? "stock-negative"
+                  : undefined,
+                caption: t("reports.negativeAndZeroStock", {
                   negative: negativeStockItems,
                   zero: zeroStockItems,
-                })}
-              </small>
-            </article>
-          </section>
+                }),
+              },
+            ]}
+          />
           <section className="meat-price-analysis-grid">
-            <section className="panel meat-price-product-browser">
-              <header>
-                <div>
-                  <span>
-                    {t(
-                      isRaw
-                        ? "reports.rawMeatList"
-                        : "reports.preparedProductList",
-                    )}
-                  </span>
-                  <h2>
-                    {t(
-                      isRaw
-                        ? "reports.selectRawMeatStock"
-                        : "reports.selectPreparedProduct",
-                    )}
-                  </h2>
-                </div>
-                <strong>{items.length}</strong>
-              </header>
-              <div className="meat-price-product-list">
-                {itemSnapshots.map(({ item, latest }) => (
-                  <button
-                    className={
-                      selectedItem?.id === item.id ? "selected" : undefined
-                    }
-                    key={item.id}
-                    type="button"
-                    onClick={() => setSelectedItemId(item.id)}
-                  >
-                    <span>
-                      <strong>{item.name}</strong>
-                      <small>
-                        {t("reports.dataUpdatedThrough", {
-                          month: latestMonth,
-                        })}
-                      </small>
-                    </span>
-                    <span>
-                      <strong
-                        className={
-                          latest && latest.monthEndStock < 0
-                            ? "stock-negative"
-                            : undefined
-                        }
-                      >
-                        {latest
-                          ? `${number.format(latest.monthEndStock)} ${item.unit ?? t(isRaw ? "reports.kg" : "reports.package")}`
-                          : "—"}
-                      </strong>
-                      {latest && (
-                        <small
-                          className={
-                            latest.monthlyNetStock > 0
-                              ? "stock-positive"
-                              : latest.monthlyNetStock < 0
-                                ? "stock-negative"
-                                : undefined
-                          }
-                        >
-                          {latest.monthlyNetStock > 0 ? "↑ +" : latest.monthlyNetStock < 0 ? "↓ " : "— "}
-                          {number.format(latest.monthlyNetStock)}
-                        </small>
-                      )}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </section>
-            <section className="panel meat-price-trend">
-              <header>
-                <div>
-                  <span>
-                    {t(
-                      isRaw
-                        ? "reports.rawStockTrend"
-                        : "reports.preparedStockTrend",
-                    )}
-                  </span>
-                  <h2>{selectedItem?.name}</h2>
-                </div>
-                <strong>
-                  {selectedItem?.unit ??
-                    t(isRaw ? "reports.kg" : "reports.package")}
-                </strong>
-              </header>
-              <div className="meat-price-chart">
-                <svg
-                  aria-label={t(
-                    isRaw
-                      ? "reports.rawMeatStockTrend"
-                      : "reports.preparedProductStockTrend",
-                    { product: selectedItem?.name },
-                  )}
-                  role="img"
-                  viewBox="0 0 740 210"
-                >
-                  {[24, 92, 160].map((y) => (
-                    <line
-                      className="price-chart-grid"
-                      key={y}
-                      x1="48"
-                      x2="692"
-                      y1={y}
-                      y2={y}
-                    />
-                  ))}
-                  <polyline className="price-chart-line" points={chart.points} />
-                  {chart.plotted.map((point) => (
-                    <g key={point.month}>
-                      <circle
-                        className="price-chart-point"
-                        cx={point.x}
-                        cy={point.y}
-                        r="5"
-                      />
-                      <title>
-                        {t("reports.month", { month: point.month })}:{" "}
-                        {number.format(point.value)}
-                      </title>
-                    </g>
-                  ))}
-                  {MONTHS.map((month) => (
-                    <text
-                      className="price-chart-month"
-                      key={month}
-                      x={48 + ((month - 1) / 11) * 644}
-                      y="192"
-                      textAnchor="middle"
-                    >
-                      {month}
-                    </text>
-                  ))}
-                </svg>
-              </div>
-            </section>
+            <ReportItemSelector
+              eyebrow={t(
+                isRaw
+                  ? "reports.rawMeatList"
+                  : "reports.preparedProductList",
+              )}
+              title={t(
+                isRaw
+                  ? "reports.selectRawMeatStock"
+                  : "reports.selectPreparedProduct",
+              )}
+              items={itemSnapshots.map(({ item, latest }) => ({
+                id: item.id,
+                name: item.name,
+                updateLabel: t("reports.dataUpdatedThrough", {
+                  month: latestMonth,
+                }),
+                value: latest
+                  ? `${number.format(latest.monthEndStock)} ${item.unit ?? t(isRaw ? "reports.kg" : "reports.package")}`
+                  : "—",
+                valueClassName:
+                  latest && latest.monthEndStock < 0
+                    ? "stock-negative"
+                    : undefined,
+                status: latest
+                  ? `${latest.monthlyNetStock > 0 ? "↑ +" : latest.monthlyNetStock < 0 ? "↓ " : "— "}${number.format(latest.monthlyNetStock)}`
+                  : undefined,
+                statusClassName:
+                  latest && latest.monthlyNetStock > 0
+                    ? "stock-positive"
+                    : latest && latest.monthlyNetStock < 0
+                      ? "stock-negative"
+                      : undefined,
+              }))}
+              selectedId={selectedItem?.id}
+              onSelect={setSelectedItemId}
+            />
+            <MonthlyTrendChart
+              eyebrow={t(
+                isRaw
+                  ? "reports.rawStockTrend"
+                  : "reports.preparedStockTrend",
+              )}
+              title={selectedItem?.name}
+              badge={
+                selectedItem?.unit ??
+                t(isRaw ? "reports.kg" : "reports.package")
+              }
+              ariaLabel={t(
+                isRaw
+                  ? "reports.rawMeatStockTrend"
+                  : "reports.preparedProductStockTrend",
+                { product: selectedItem?.name },
+              )}
+              points={trendPoints}
+              formatValue={number.format}
+            />
           </section>
           <details className="panel meat-price-detail" open>
             <summary>
