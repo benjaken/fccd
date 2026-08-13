@@ -333,9 +333,15 @@ describe("Super Admin system settings", () => {
 
   it("opens a verified private attachment through a signed URL", async () => {
     const user = userEvent.setup();
-    const loadAttachments = vi
-      .fn()
-      .mockResolvedValue({ items: [attachmentItem], total: 4200 });
+    const result = { items: [attachmentItem], total: 4200 };
+    let resolveAttachments: ((value: typeof result) => void) | null = null;
+    const loadAttachments = vi.fn().mockImplementationOnce(
+      () =>
+        new Promise<typeof result>((resolve) => {
+          resolveAttachments = resolve;
+        }),
+    );
+    loadAttachments.mockResolvedValue(result);
     const getAttachmentUrl = vi
       .fn()
       .mockResolvedValue("https://signed.example/quote.pdf");
@@ -350,7 +356,13 @@ describe("Super Admin system settings", () => {
       </MemoryRouter>,
     );
 
+    expect(document.querySelectorAll(".table-skeleton-row")).toHaveLength(15);
+    expect(screen.getByRole("status")).toHaveTextContent("正在載入附件…");
+
+    resolveAttachments?.(result);
+
     expect(await screen.findByText("quote.pdf")).toBeInTheDocument();
+    expect(document.querySelectorAll(".table-skeleton-row")).toHaveLength(0);
     expect(screen.getByRole("heading", { name: "附件列表" })).toBeInTheDocument();
     expect(screen.getByText(/4200/)).toBeInTheDocument();
     expect(
@@ -380,7 +392,7 @@ describe("Super Admin system settings", () => {
       ),
     );
 
-    await user.click(screen.getByRole("button", { name: "quote.pdf" }));
+    await user.click(await screen.findByRole("button", { name: "quote.pdf" }));
 
     await waitFor(() =>
       expect(open).toHaveBeenCalledWith(
