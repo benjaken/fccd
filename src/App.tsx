@@ -29,7 +29,6 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   RefreshCw,
-  Search,
   Settings,
   ShieldCheck,
   ShoppingBasket,
@@ -557,11 +556,6 @@ function OperationsShell() {
         </nav>
 
         <div className="topbar-actions">
-          <label className="search-box">
-            <Search aria-hidden="true" />
-            <span className="sr-only">{t("common.search")}</span>
-            <input placeholder={t("common.search")} />
-          </label>
           <Button
             variant="ghost"
             size="icon"
