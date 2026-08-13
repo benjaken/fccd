@@ -721,13 +721,12 @@ a {
 .main-content {
   width: 100%;
   min-width: 0;
-  padding: 28px clamp(18px, 2.4vw, 38px) 48px;
+  padding: 28px;
   overflow: hidden;
 }
 
 .page-transition {
   width: 100%;
-  max-width: 1600px;
   margin: 0 auto;
   animation: page-enter 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -1391,6 +1390,135 @@ td:last-child {
   text-overflow: ellipsis;
 }
 
+.detail-page,
+.follow-up-page {
+  display: grid;
+  gap: 16px;
+}
+
+.detail-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 10px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.detail-back:hover {
+  color: var(--primary);
+}
+
+.detail-back svg {
+  width: 16px;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.detail-grid-two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.detail-card {
+  padding: 18px;
+}
+
+.detail-card > header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.detail-card > header svg,
+.detail-table-panel h2 svg {
+  width: 18px;
+  color: var(--primary);
+}
+
+.detail-card h2,
+.detail-table-panel h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 16px;
+}
+
+.detail-fields {
+  display: grid;
+  gap: 12px;
+}
+
+.detail-field {
+  display: grid;
+  gap: 3px;
+}
+
+.detail-field > span {
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+
+.detail-field > strong {
+  overflow-wrap: anywhere;
+}
+
+.detail-copy,
+.detail-stack p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.detail-stack {
+  display: grid;
+  gap: 10px;
+}
+
+.detail-table-panel {
+  overflow: hidden;
+}
+
+.detail-restricted {
+  margin: 0;
+  padding: 24px;
+  color: var(--muted-foreground);
+}
+
+.detail-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 260px;
+  color: var(--muted-foreground);
+}
+
+.detail-state-error {
+  flex-wrap: wrap;
+}
+
+.detail-state-error > div {
+  display: grid;
+  gap: 4px;
+}
+
+.detail-state-error strong {
+  color: var(--foreground);
+}
+
+@media (max-width: 900px) {
+  .detail-grid,
+  .detail-grid-two {
+    grid-template-columns: 1fr;
+  }
+}
+
 .settings-permissions-page {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -1644,20 +1772,18 @@ td:last-child {
 
 .public-migration-shell {
   min-height: 100vh;
-  padding: 28px clamp(18px, 2.4vw, 38px) 48px;
+  padding: 28px;
   overflow: hidden;
   background: var(--background);
 }
 
 .public-migration-shell .migration-page {
   width: 100%;
-  max-width: 1600px;
   margin: 0 auto;
 }
 
 .migration-workspace {
   width: 100%;
-  max-width: 1600px;
   margin: 0 auto;
 }
 
@@ -3265,6 +3391,183 @@ td:last-child {
 .migrated-fk-list footer svg {
   width: 17px;
   color: oklch(0.58 0.15 65);
+}
+
+.attachment-incremental-panel {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+}
+
+.attachment-incremental-panel > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.attachment-auth-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.attachment-incremental-panel h2,
+.attachment-incremental-panel p {
+  margin: 0;
+}
+
+.attachment-incremental-panel h2 {
+  margin-top: 4px;
+  font-size: 18px;
+}
+
+.attachment-incremental-panel header p {
+  margin-top: 5px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+
+.attachment-upload-row {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) auto auto;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.attachment-json-input {
+  position: relative;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 13px;
+  border: 1px dashed color-mix(in oklch, var(--primary) 45%, var(--border));
+  border-radius: 10px;
+  background: color-mix(in oklch, var(--primary) 3%, var(--card));
+  cursor: pointer;
+}
+
+.attachment-json-input > svg {
+  width: 19px;
+  flex: 0 0 auto;
+  color: var(--primary);
+}
+
+.attachment-json-input > span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.attachment-json-input strong,
+.attachment-json-input small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attachment-json-input small {
+  color: var(--muted-foreground);
+}
+
+.attachment-json-input input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.attachment-analysis-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.attachment-analysis-grid article {
+  display: grid;
+  gap: 3px;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--muted);
+}
+
+.attachment-analysis-grid span {
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+
+.attachment-analysis-grid strong {
+  font-size: 18px;
+}
+
+.attachment-migration-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  color: var(--destructive);
+  border: 1px solid color-mix(in oklch, var(--destructive) 28%, var(--border));
+  border-radius: 9px;
+  background: color-mix(in oklch, var(--destructive) 5%, var(--card));
+  font-size: 14px;
+}
+
+.attachment-migration-error svg {
+  width: 17px;
+  flex: 0 0 auto;
+}
+
+.attachment-progress {
+  display: grid;
+  gap: 7px;
+}
+
+.attachment-progress > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+
+.attachment-progress-track {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--muted);
+}
+
+.attachment-progress-track span {
+  height: 100%;
+  display: block;
+  border-radius: inherit;
+  background: var(--primary);
+  transition: width 180ms ease;
+}
+
+.attachment-progress p {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+
+.attachment-progress p svg {
+  width: 16px;
+  color: oklch(0.58 0.15 148);
+}
+
+.attachment-live-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: -4px;
+  color: var(--muted-foreground);
+  font-size: 14px;
 }
 
 .file-migration-metrics {
@@ -4910,6 +5213,19 @@ td:last-child {
   box-shadow: 0 10px 24px color-mix(in oklch, var(--primary) 23%, transparent);
 }
 
+.login-quick {
+  width: 100%;
+  height: 46px;
+  border-color: color-mix(in oklch, var(--primary) 35%, var(--border));
+  color: var(--primary);
+  font-weight: 720;
+}
+
+.login-quick:hover {
+  background: color-mix(in oklch, var(--primary) 8%, var(--card));
+  color: var(--primary);
+}
+
 .login-submit svg {
   margin-left: auto;
 }
@@ -5541,6 +5857,28 @@ td:last-child {
 
   .file-migration-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .attachment-upload-row {
+    grid-template-columns: 1fr;
+  }
+
+  .attachment-analysis-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .attachment-incremental-panel > header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .attachment-auth-actions {
+    justify-content: space-between;
+  }
+
+  .attachment-live-status {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .file-incremental-policy dl {

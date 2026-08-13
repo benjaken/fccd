@@ -18,13 +18,16 @@ import {
   type QuoteListFilters,
   type QuoteListItem,
   type QuoteListResult,
+  type QuotePreset,
 } from "@/lib/quotes";
 
 type QuotesLoader = (filters: QuoteListFilters) => Promise<QuoteListResult>;
 
 export function QuotesListPage({
+  preset = "all",
   loadQuotes = fetchQuotes,
 }: {
+  preset?: QuotePreset;
   loadQuotes?: QuotesLoader;
 }) {
   const { t, i18n } = useTranslation();
@@ -76,7 +79,7 @@ export function QuotesListPage({
     setError(null);
 
     try {
-      const result = await loadQuotes({ page, search, status });
+      const result = await loadQuotes({ page, search, status, preset });
       setItems(result.items);
       setTotal(result.total);
     } catch (loadError) {
@@ -93,7 +96,7 @@ export function QuotesListPage({
     } finally {
       setLoading(false);
     }
-  }, [loadQuotes, page, reloadKey, search, status]);
+  }, [loadQuotes, page, preset, reloadKey, search, status]);
 
   useEffect(() => {
     void loadPage();
@@ -120,13 +123,21 @@ export function QuotesListPage({
     if (quote.currency === "HKD") return currencyFormatter.format(quote.grandTotal);
     return `${quote.currency} ${quote.grandTotal.toLocaleString(i18n.language)}`;
   };
+  const titleKey =
+    preset === "high-chance"
+      ? "highChanceTitle"
+      : preset === "large"
+        ? "largeTitle"
+        : preset === "follow-up"
+          ? "followUpTitle"
+          : "title";
 
   return (
     <section className="quotes-page">
       <header className="page-heading quotes-heading">
         <div>
           <span className="eyebrow">{t("quotes.eyebrow")}</span>
-          <h1>{t("quotes.title")}</h1>
+          <h1>{t(`quotes.${titleKey}`)}</h1>
           <p>{t("quotes.description")}</p>
         </div>
         <Button asChild>
