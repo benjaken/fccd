@@ -1237,6 +1237,19 @@ td:last-child {
   gap: 20px;
 }
 
+.orders-page {
+  grid-template-rows: auto minmax(0, 1fr);
+  height: calc(
+    100dvh - var(--topbar-height) - var(--workspace-height) - 76px
+  );
+  min-height: 560px;
+  overflow: hidden;
+}
+
+.orders-page .page-heading {
+  margin-bottom: 0;
+}
+
 .quotes-heading,
 .orders-heading {
   align-items: flex-end;
@@ -1245,6 +1258,12 @@ td:last-child {
 .quotes-panel,
 .orders-panel {
   overflow: hidden;
+}
+
+.orders-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  min-height: 0;
 }
 
 .quotes-toolbar,
@@ -1318,6 +1337,17 @@ td:last-child {
 .quotes-table-wrap,
 .orders-table-wrap {
   min-height: 220px;
+}
+
+.orders-table-wrap {
+  min-height: 0;
+  overflow: auto;
+}
+
+.orders-table-wrap th {
+  position: sticky;
+  z-index: 1;
+  top: 0;
 }
 
 .quote-company,
@@ -1409,6 +1439,13 @@ td:last-child {
   font-size: 14px;
 }
 
+.orders-pagination {
+  position: sticky;
+  z-index: 2;
+  bottom: 0;
+  background: var(--card);
+}
+
 .quotes-pagination > div,
 .orders-pagination > div {
   display: flex;
@@ -1424,6 +1461,11 @@ td:last-child {
 }
 
 @media (max-width: 760px) {
+  .orders-page {
+    height: calc(100dvh - var(--topbar-height) - 62px);
+    min-height: 520px;
+  }
+
   .quotes-heading,
   .orders-heading {
     align-items: stretch;

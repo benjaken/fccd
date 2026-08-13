@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
@@ -107,6 +109,57 @@ describe("Orders list", () => {
     expect(loadOrders).toHaveBeenCalledWith(
       expect.objectContaining({ preset: "pending" }),
     );
+  });
+
+  it("paginates orders in groups of ten", async () => {
+    const user = userEvent.setup();
+    const loadOrders = vi
+      .fn()
+      .mockResolvedValue({ ...orderResult, total: 21 });
+
+    render(
+      <MemoryRouter>
+        <OrdersListPage loadOrders={loadOrders} />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("1 / 3")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "下一頁" }));
+
+    await waitFor(() =>
+      expect(loadOrders).toHaveBeenLastCalledWith(
+        expect.objectContaining({ page: 2 }),
+      ),
+    );
+  });
+
+  it("keeps pagination visible while the order rows scroll", () => {
+    const stylesheet = readFileSync(
+      path.resolve(process.cwd(), "src/index.css"),
+      "utf8",
+    );
+    const panelRules = [
+      ...stylesheet.matchAll(/\.orders-panel\s*\{([^}]+)\}/g),
+    ]
+      .map((match) => match[1])
+      .join("\n");
+    const tableRules = [
+      ...stylesheet.matchAll(/\.orders-table-wrap\s*\{([^}]+)\}/g),
+    ]
+      .map((match) => match[1])
+      .join("\n");
+    const paginationRules = [
+      ...stylesheet.matchAll(/\.orders-pagination\s*\{([^}]+)\}/g),
+    ]
+      .map((match) => match[1])
+      .join("\n");
+
+    expect(panelRules).toContain(
+      "grid-template-rows: auto minmax(0, 1fr) auto",
+    );
+    expect(tableRules).toContain("overflow: auto");
+    expect(paginationRules).toContain("position: sticky");
+    expect(paginationRules).toContain("bottom: 0");
   });
 
   it("blocks finance presets for roles without finance access", async () => {
