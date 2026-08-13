@@ -3773,7 +3773,7 @@ td:last-child {
 .meat-price-summary article > span,
 .meat-price-trend header span {
   color: var(--muted-foreground);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 750;
 }
 
@@ -3784,7 +3784,7 @@ td:last-child {
 
 .meat-price-summary article > small {
   color: var(--muted-foreground);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .price-up {
@@ -3817,7 +3817,7 @@ td:last-child {
   border-radius: 7px;
   background: color-mix(in oklch, var(--primary) 10%, var(--card));
   color: var(--primary);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .meat-price-chart {
@@ -3852,7 +3852,7 @@ td:last-child {
 
 .price-chart-month {
   fill: var(--muted-foreground);
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .meat-price-report {
@@ -3944,7 +3944,7 @@ td:last-child {
 .meat-price-table td small {
   margin-top: 4px;
   color: var(--muted-foreground);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 750;
 }
 
@@ -5095,7 +5095,7 @@ td:last-child {
 
   .meat-price-mobile-list small {
     color: var(--muted-foreground);
-    font-size: 12px;
+    font-size: 14px;
   }
 
   .migration-warning > span,
