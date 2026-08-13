@@ -239,11 +239,14 @@ describe("Products catalog pages", () => {
     );
   });
 
-  it("filters by price range, channel, and status dropdowns", async () => {
+  it("filters by price range, channel, type, and status dropdowns", async () => {
     const user = userEvent.setup();
     const loadProducts = vi.fn().mockResolvedValue(productResult);
     const loadChannels = vi.fn().mockResolvedValue([
       { id: "channel-1", name: "Catering" },
+    ]);
+    const loadProductTypes = vi.fn().mockResolvedValue([
+      { id: "type-1", name: "西式熱盤" },
     ]);
 
     render(
@@ -251,6 +254,7 @@ describe("Products catalog pages", () => {
         <ProductsListPage
           loadProducts={loadProducts}
           loadChannels={loadChannels}
+          loadProductTypes={loadProductTypes}
         />
       </MemoryRouter>,
     );
@@ -274,12 +278,20 @@ describe("Products catalog pages", () => {
       ),
     );
 
+    await user.selectOptions(screen.getByLabelText("分類"), "type-1");
+    await waitFor(() =>
+      expect(loadProducts).toHaveBeenLastCalledWith(
+        expect.objectContaining({ productTypeId: "type-1", page: 1 }),
+      ),
+    );
+
     await user.selectOptions(screen.getByLabelText("狀態"), "Active");
     await waitFor(() =>
       expect(loadProducts).toHaveBeenLastCalledWith(
         expect.objectContaining({
           status: "Active",
           channelId: "channel-1",
+          productTypeId: "type-1",
           priceRange: "100-299",
           page: 1,
         }),
