@@ -331,6 +331,7 @@ const resources = {
           description:
             "配置各角色的頁面、子頁面、分頁及操作權限；遷移頁仍只限 Super Admin。",
           role: "角色",
+          viewingRole: "當前查看角色",
           loading: "正在載入角色權限…",
           error: "無法載入或保存角色權限",
           errorDescription: "請重試；需要「角色與頁面權限」的管理權限。",
@@ -1477,6 +1478,7 @@ const resources = {
           description:
             "Configure access and management for pages, sub-pages, tabs, and actions. Migration remains Super Admin only.",
           role: "Role",
+          viewingRole: "Currently viewing role",
           loading: "Loading role permissions…",
           error: "Role permissions could not be loaded or saved",
           errorDescription:

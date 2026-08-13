@@ -126,10 +126,12 @@ export function RolePermissionsPage({
           <>
             <header className="settings-permissions-toolbar">
               <label className="settings-role-select">
-                <span className="sr-only">{t("settings.roles.role")}</span>
+                <span className="settings-role-select-hint">
+                  {t("settings.roles.viewingRole")}
+                </span>
                 <select
                   value={selectedRole}
-                  aria-label={t("settings.roles.role")}
+                  aria-label={t("settings.roles.viewingRole")}
                   onChange={(event) =>
                     setSelectedRole(event.target.value as SystemRole)
                   }
