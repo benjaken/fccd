@@ -192,6 +192,8 @@ const resources = {
         open: "開啟訂單",
         previous: "上一頁",
         next: "下一頁",
+        pageOf: "/",
+        jumpToPage: "跳至頁碼",
         pagination: "顯示 {{from}}–{{to}}，共 {{total}} 張",
         statuses: {
           confirmed: "已確認",
@@ -456,6 +458,8 @@ const resources = {
         open: "開啟報價單",
         previous: "上一頁",
         next: "下一頁",
+        pageOf: "/",
+        jumpToPage: "跳至頁碼",
         pagination: "顯示 {{from}}–{{to}}，共 {{total}} 張",
         columns: {
           number: "報價編號",
@@ -796,6 +800,8 @@ const resources = {
         open: "Open order",
         previous: "Previous page",
         next: "Next page",
+        pageOf: "of",
+        jumpToPage: "Jump to page",
         pagination: "Showing {{from}}–{{to}} of {{total}}",
         statuses: {
           confirmed: "Confirmed",
@@ -1071,6 +1077,8 @@ const resources = {
         open: "Open quote",
         previous: "Previous page",
         next: "Next page",
+        pageOf: "of",
+        jumpToPage: "Jump to page",
         pagination: "Showing {{from}}–{{to}} of {{total}}",
         columns: {
           number: "Quote no.",

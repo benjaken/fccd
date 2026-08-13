@@ -87,7 +87,9 @@ describe("Catering quotes list", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText("1 / 3")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("spinbutton", { name: "跳至頁碼" }),
+    ).toHaveValue(1);
     await user.click(screen.getByRole("button", { name: "下一頁" }));
 
     await waitFor(() =>

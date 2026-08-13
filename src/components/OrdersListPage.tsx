@@ -1,17 +1,10 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  CalendarDays,
-  ChevronLeft,
-  ChevronRight,
-  ClipboardList,
-  Plus,
-  RefreshCw,
-  Search,
-} from "lucide-react";
+import { CalendarDays, ChevronRight, ClipboardList, Plus, RefreshCw, Search } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
+import { TablePagination } from "@/components/ui/table-pagination";
 import {
   fetchOrders,
   ORDERS_PAGE_SIZE,
@@ -386,38 +379,23 @@ export function OrdersListPage({
           </div>
         )}
 
-        <footer className="orders-pagination">
-          <span>
-            {t("orders.pagination", {
-              from: visibleFrom,
-              to: visibleTo,
-              total,
-            })}
-          </span>
-          <div>
-            <Button
-              variant="outline"
-              size="icon"
-              disabled={loading || page <= 1}
-              onClick={() => setPage((current) => Math.max(1, current - 1))}
-              aria-label={t("orders.previous")}
-            >
-              <ChevronLeft />
-            </Button>
-            <strong>
-              {page} / {totalPages}
-            </strong>
-            <Button
-              variant="outline"
-              size="icon"
-              disabled={loading || page >= totalPages}
-              onClick={() => setPage((current) => current + 1)}
-              aria-label={t("orders.next")}
-            >
-              <ChevronRight />
-            </Button>
-          </div>
-        </footer>
+        <TablePagination
+          summary={t("orders.pagination", {
+            from: visibleFrom,
+            to: visibleTo,
+            total,
+          })}
+          page={page}
+          totalPages={totalPages}
+          loading={loading}
+          onPrevious={() => setPage((current) => Math.max(1, current - 1))}
+          onNext={() => setPage((current) => current + 1)}
+          onPageChange={setPage}
+          previousLabel={t("orders.previous")}
+          nextLabel={t("orders.next")}
+          pageLabel={t("orders.pageOf")}
+          jumpLabel={t("orders.jumpToPage")}
+        />
       </article>
     </section>
   );
