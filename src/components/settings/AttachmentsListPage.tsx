@@ -122,7 +122,6 @@ export function AttachmentsListPage({
         <div>
           <span className="eyebrow">{t("settings.eyebrow")}</span>
           <h1>{t("settings.attachments.title")}</h1>
-          <p>{t("settings.attachments.description", { total })}</p>
         </div>
       </header>
 

@@ -177,7 +177,6 @@ export function ReportsPage() {
         <div>
           <span className="eyebrow">{t("reports.eyebrow")}</span>
           <h1>{t("reports.title")}</h1>
-          <p>{t("reports.description")}</p>
         </div>
       </section>
       <nav className="report-tabs" aria-label={t("reports.navigation")}>

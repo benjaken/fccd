@@ -82,7 +82,6 @@ export function PaymentsListPage({
         <div>
           <span className="eyebrow">{t("payments.eyebrow")}</span>
           <h1>{t("payments.title")}</h1>
-          <p>{t("payments.description")}</p>
         </div>
       </header>
       <article className="panel orders-panel">

@@ -100,7 +100,6 @@ export function RolePermissionsPage({
         <div>
           <span className="eyebrow">{t("settings.eyebrow")}</span>
           <h1>{t("settings.roles.title")}</h1>
-          <p>{t("settings.roles.description")}</p>
         </div>
         <label className="settings-role-picker">
           <span>{t("settings.roles.role")}</span>

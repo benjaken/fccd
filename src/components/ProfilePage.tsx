@@ -63,7 +63,6 @@ export function ProfilePage() {
         <div>
           <span className="eyebrow">{t("profile.eyebrow")}</span>
           <h1>{t("profile.title")}</h1>
-          <p>{t("profile.description")}</p>
         </div>
         <Button
           variant="outline"

@@ -59,7 +59,6 @@ export function FollowUpPage({ role }: { role: string | null }) {
         <div>
           <span className="eyebrow">{t("followUp.eyebrow")}</span>
           <h1>{t("followUp.title")}</h1>
-          <p>{t("followUp.description")}</p>
         </div>
       </header>
       <article className="panel follow-up-panel">

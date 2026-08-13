@@ -1123,7 +1123,6 @@ export function Dashboard({
         <div>
           <span className="eyebrow">{t("dashboard.eyebrow")}</span>
           <h1>{t("dashboard.title")}</h1>
-          <p>{t("dashboard.description")}</p>
         </div>
         <div className="heading-actions">
           <Button

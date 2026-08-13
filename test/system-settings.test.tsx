@@ -298,9 +298,8 @@ describe("Super Admin system settings", () => {
     );
 
     expect(await screen.findByText("quote.pdf")).toBeInTheDocument();
-    expect(
-      screen.getByText("目前附件 registry 共 4200 筆；文件以私人 Storage 保存。"),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "附件列表" })).toBeInTheDocument();
+    expect(screen.getByText(/4200/)).toBeInTheDocument();
     await user.click(
       screen.getByRole("button", { name: "開啟附件 quote.pdf" }),
     );

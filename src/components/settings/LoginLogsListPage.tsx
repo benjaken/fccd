@@ -83,7 +83,6 @@ export function LoginLogsListPage({
         <div>
           <span className="eyebrow">{t("settings.eyebrow")}</span>
           <h1>{t("settings.loginLogs.title")}</h1>
-          <p>{t("settings.loginLogs.description")}</p>
         </div>
       </header>
 

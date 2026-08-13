@@ -112,7 +112,6 @@ export function UsersListPage({
         <div>
           <span className="eyebrow">{t("settings.eyebrow")}</span>
           <h1>{t("settings.users.title")}</h1>
-          <p>{t("settings.users.description")}</p>
         </div>
         {canCreate ? (
           <Button type="button" onClick={() => setCreateOpen(true)}>

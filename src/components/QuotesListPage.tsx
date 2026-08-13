@@ -138,7 +138,6 @@ export function QuotesListPage({
         <div>
           <span className="eyebrow">{t("quotes.eyebrow")}</span>
           <h1>{t(`quotes.${titleKey}`)}</h1>
-          <p>{t("quotes.description")}</p>
         </div>
         <Button asChild>
           <Link to="/quotes/new">

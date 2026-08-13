@@ -198,7 +198,6 @@ export function OrdersListPage({
         <div>
           <span className="eyebrow">{t("orders.eyebrow")}</span>
           <h1>{t(`orders.${titleKey}`)}</h1>
-          <p>{t("orders.description")}</p>
         </div>
         <Button asChild>
           <Link to="/orders/new">
