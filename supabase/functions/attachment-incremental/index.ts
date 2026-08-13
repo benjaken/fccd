@@ -33,6 +33,7 @@ type AttachmentRow = {
   source_url_hash: string;
   size_bytes: number | null;
   migration_status: string;
+  last_error_code: string | null;
 };
 
 function jsonResponse(body: unknown, status = 200) {
@@ -242,7 +243,7 @@ async function analyze(
     ? await admin
         .from("attachments")
         .select(
-          "deterministic_key,source_url_hash,size_bytes,migration_status",
+          "deterministic_key,source_url_hash,size_bytes,migration_status,last_error_code",
         )
         .in("deterministic_key", keys)
     : { data: [], error: null };
@@ -266,7 +267,10 @@ async function analyze(
     } else if (
       row.migration_status === "verified" &&
       row.source_url_hash === item.sourceUrlHash &&
-      row.size_bytes === item.record.size_number
+      (
+        row.size_bytes === item.record.size_number ||
+        row.last_error_code === "source_size_corrected"
+      )
     ) {
       verified += 1;
     } else {
@@ -332,14 +336,19 @@ async function migrate(
     await recordIdentity(record);
   const { data: current, error: currentError } = await admin
     .from("attachments")
-    .select("source_url_hash,size_bytes,migration_status,object_path")
+    .select(
+      "source_url_hash,size_bytes,migration_status,object_path,last_error_code",
+    )
     .eq("deterministic_key", deterministicKey)
     .maybeSingle();
   if (currentError) throw currentError;
   if (
     current?.migration_status === "verified" &&
     current.source_url_hash === sourceUrlHash &&
-    current.size_bytes === record.size_number
+    (
+      current.size_bytes === record.size_number ||
+      current.last_error_code === "source_size_corrected"
+    )
   ) {
     return jsonResponse({ sourceId: record._id, status: "skipped" });
   }
@@ -363,23 +372,7 @@ async function migrate(
     );
   }
   const bytes = await sourceResponse.arrayBuffer();
-  if (bytes.byteLength !== record.size_number) {
-    await upsertFailure(
-      admin,
-      record,
-      deterministicKey,
-      sourceUrlHash,
-      "size_mismatch",
-    );
-    return jsonResponse(
-      {
-        sourceId: record._id,
-        status: "failed",
-        error: "size_mismatch",
-      },
-      422,
-    );
-  }
+  const sourceSizeCorrected = bytes.byteLength !== record.size_number;
 
   const checksum = await sha256(bytes);
   const { data: duplicate, error: duplicateError } = await admin
@@ -426,12 +419,14 @@ async function migrate(
       bucket_id: BUCKET,
       object_path: objectPath,
       mime_type: record.content_type_text,
-      size_bytes: record.size_number,
+      size_bytes: bytes.byteLength,
       sha256: checksum,
       source_modified_at: record["Modified Date"],
       migration_mode: "incremental",
       migration_status: "verified",
-      last_error_code: null,
+      last_error_code: sourceSizeCorrected
+        ? "source_size_corrected"
+        : null,
       uploaded_at: uploaded ? now : null,
       verified_at: now,
       updated_at: now,
