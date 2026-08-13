@@ -1232,12 +1232,12 @@ td:last-child {
 }
 
 .quotes-page,
-.quotes-page,
 .orders-page {
   display: grid;
   gap: 20px;
 }
 
+.quotes-page,
 .orders-page {
   grid-template-rows: auto minmax(0, 1fr);
   height: calc(
@@ -1258,11 +1258,11 @@ td:last-child {
 }
 
 .quotes-panel,
-.quotes-panel,
 .orders-panel {
   overflow: hidden;
 }
 
+.quotes-panel,
 .orders-panel {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
@@ -1338,11 +1338,11 @@ td:last-child {
 }
 
 .quotes-table-wrap,
-.quotes-table-wrap,
 .orders-table-wrap {
   min-height: 220px;
 }
 
+.quotes-table-wrap,
 .orders-table-wrap {
   min-height: 0;
   overflow: auto;
@@ -1542,7 +1542,7 @@ td:last-child {
   font-size: 14px;
 }
 
-.orders-pagination {
+.operational-list-pagination {
   position: sticky;
   z-index: 2;
   bottom: 0;
