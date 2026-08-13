@@ -16,6 +16,7 @@ import {
 import { TablePagination } from "@/components/ui/table-pagination";
 import {
   fetchProductChannels,
+  fetchProductTypes,
   fetchProducts,
   PRODUCTS_PAGE_SIZE,
   type CatalogOption,
@@ -28,16 +29,18 @@ import {
 } from "@/lib/products";
 
 type ProductsLoader = (filters: ProductListFilters) => Promise<ProductListResult>;
-type ChannelsLoader = () => Promise<CatalogOption[]>;
+type OptionsLoader = () => Promise<CatalogOption[]>;
 
 export function ProductsListPage({
   preset = "all",
   loadProducts = fetchProducts,
   loadChannels = fetchProductChannels,
+  loadProductTypes = fetchProductTypes,
 }: {
   preset?: ProductPreset;
   loadProducts?: ProductsLoader;
-  loadChannels?: ChannelsLoader;
+  loadChannels?: OptionsLoader;
+  loadProductTypes?: OptionsLoader;
 }) {
   const { t, i18n } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -52,6 +55,7 @@ export function ProductsListPage({
   const [status, setStatus] = useState<ProductStatusFilter>("");
   const [priceRange, setPriceRange] = useState<ProductPriceRange>("");
   const [channels, setChannels] = useState<CatalogOption[]>([]);
+  const [productTypes, setProductTypes] = useState<CatalogOption[]>([]);
   const [page, setPage] = useState(1);
   const [items, setItems] = useState<ProductListItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -85,17 +89,21 @@ export function ProductsListPage({
 
   useEffect(() => {
     let active = true;
-    void loadChannels()
-      .then((options) => {
-        if (active) setChannels(options);
+    void Promise.all([loadChannels(), loadProductTypes()])
+      .then(([channelOptions, typeOptions]) => {
+        if (!active) return;
+        setChannels(channelOptions);
+        setProductTypes(typeOptions);
       })
       .catch(() => {
-        if (active) setChannels([]);
+        if (!active) return;
+        setChannels([]);
+        setProductTypes([]);
       });
     return () => {
       active = false;
     };
-  }, [loadChannels]);
+  }, [loadChannels, loadProductTypes]);
 
   useEffect(() => {
     const nextChannel = searchParams.get("channel") ?? "";
@@ -263,6 +271,24 @@ export function ProductsListPage({
                 {channels.map((channel) => (
                   <option key={channel.id} value={channel.id}>
                     {channel.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="products-status-filter">
+              <span>{t("products.typeFilter")}</span>
+              <select
+                value={productTypeId}
+                onChange={(event) => {
+                  setPage(1);
+                  setProductTypeId(event.target.value);
+                }}
+              >
+                <option value="">{t("products.allTypes")}</option>
+                {productTypes.map((productType) => (
+                  <option key={productType.id} value={productType.id}>
+                    {productType.name}
                   </option>
                 ))}
               </select>
