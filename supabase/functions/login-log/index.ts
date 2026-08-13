@@ -75,66 +75,34 @@ async function writeLoginLog(
     errorCode: string | null;
   },
 ) {
-  // Continuous logins without logout: keep a single latest success row.
-  if (row.eventType === "login_success" && (row.userId || row.email)) {
-    let latestQuery = admin
-      .from("login_logs")
-      .select("id,event_type")
-      .order("created_at", { ascending: false })
-      .limit(1);
-    if (row.userId) {
-      latestQuery = latestQuery.eq("user_id", row.userId);
-    } else if (row.email) {
-      latestQuery = latestQuery.ilike("email", row.email);
-    }
-    const { data: latest, error: latestError } = await latestQuery.maybeSingle();
-    if (latestError) {
-      throw jsonResponse(
-        { error: "login_log_lookup_failed", detail: latestError.message },
-        500,
-      );
-    }
-    if (latest?.event_type === "login_success") {
-      const { error: updateError } = await admin
-        .from("login_logs")
-        .update({
-          email: row.email,
-          user_id: row.userId,
-          user_name: row.userName,
-          role: row.role,
-          ip_address: row.ipAddress,
-          user_agent: row.userAgent,
-          error_code: row.errorCode,
-          created_at: new Date().toISOString(),
-        })
-        .eq("id", latest.id);
-      if (updateError) {
-        throw jsonResponse(
-          { error: "login_log_write_failed", detail: updateError.message },
-          500,
-        );
-      }
-      return { ok: true, replaced: true };
-    }
-  }
-
-  const { error } = await admin.from("login_logs").insert({
-    event_type: row.eventType,
-    email: row.email,
-    user_id: row.userId,
-    user_name: row.userName,
-    role: row.role,
-    ip_address: row.ipAddress,
-    user_agent: row.userAgent,
-    error_code: row.errorCode,
+  const { data, error } = await admin.rpc("record_login_log", {
+    p_event_type: row.eventType,
+    p_email: row.email,
+    p_user_id: row.userId,
+    p_user_name: row.userName,
+    p_role: row.role,
+    p_ip_address: row.ipAddress,
+    p_user_agent: row.userAgent,
+    p_error_code: row.errorCode,
   });
+
   if (error) {
     throw jsonResponse(
       { error: "login_log_write_failed", detail: error.message },
       500,
     );
   }
-  return { ok: true, replaced: false };
+
+  const payload =
+    data && typeof data === "object"
+      ? (data as { ok?: boolean; replaced?: boolean; id?: string })
+      : {};
+
+  return {
+    ok: payload.ok !== false,
+    replaced: Boolean(payload.replaced),
+    id: typeof payload.id === "string" ? payload.id : null,
+  };
 }
 
 Deno.serve(async (request) => {
