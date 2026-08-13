@@ -1072,26 +1072,31 @@ export function Dashboard({
       label: t("dashboard.confirmed"),
       count: data.progress.confirmed,
       to: "/orders?status=confirmed",
+      tone: "blue",
     },
     {
       label: t("dashboard.preparing"),
       count: data.progress.preparing,
       to: "/kitchen?status=preparing",
+      tone: "amber",
     },
     {
       label: t("dashboard.ready"),
       count: data.progress.ready,
       to: "/kitchen?status=ready",
+      tone: "teal",
     },
     {
       label: t("dashboard.shipping"),
       count: data.progress.shipping,
       to: "/delivery?status=shipping",
+      tone: "sky",
     },
     {
       label: t("dashboard.completed"),
       count: data.progress.completed,
       to: "/orders?status=completed",
+      tone: "green",
     },
   ].map((item) => ({ ...item, width: progressWidth(item.count) }));
 
@@ -1274,7 +1279,11 @@ export function Dashboard({
           />
           <div className="progress-list">
             {progress.map((item) => (
-              <Link className="progress-row" key={item.label} to={item.to}>
+              <Link
+                className={cn("progress-row", `tone-${item.tone}`)}
+                key={item.label}
+                to={item.to}
+              >
                 <div>
                   <span>{item.label}</span>
                   <strong>
