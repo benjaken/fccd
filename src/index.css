@@ -1746,6 +1746,87 @@ td:last-child {
   border-radius: 8px;
 }
 
+.page-skeleton {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 20px;
+  height: calc(
+    100dvh - var(--topbar-height) - var(--workspace-height) - 56px
+  );
+  min-height: 560px;
+  overflow: hidden;
+}
+
+.page-skeleton-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.page-skeleton-heading > div {
+  display: grid;
+  gap: 9px;
+}
+
+.page-skeleton-bone {
+  display: block;
+  border-radius: 999px;
+  background: var(--selection-bg);
+}
+
+.page-skeleton-eyebrow {
+  width: 6rem;
+  height: 12px;
+}
+
+.page-skeleton-title {
+  width: min(18rem, 50vw);
+  height: 32px;
+}
+
+.page-skeleton-action {
+  width: 8.5rem;
+  height: 40px;
+  border-radius: 9px;
+}
+
+.page-skeleton-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.page-skeleton-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.page-skeleton-search {
+  width: min(30rem, 65%);
+  height: 40px;
+  border-radius: 9px;
+}
+
+.page-skeleton-filter {
+  width: 8rem;
+  height: 40px;
+  border-radius: 9px;
+}
+
+.page-skeleton-table {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.page-skeleton-table th {
+  height: 40px;
+}
+
 @keyframes table-skeleton-shimmer {
   0% {
     background-position: 100% 0;
