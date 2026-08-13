@@ -56,6 +56,7 @@ export const LOGIN_LOG_EVENT_TYPES = [
   "login_failure",
   "logout",
   "password_reset_request",
+  "password_change",
 ] as const;
 
 export type LoginLogEventType = (typeof LOGIN_LOG_EVENT_TYPES)[number];

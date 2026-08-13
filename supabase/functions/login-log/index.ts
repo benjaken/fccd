@@ -12,6 +12,7 @@ const EVENT_TYPES = [
   "login_failure",
   "logout",
   "password_reset_request",
+  "password_change",
 ] as const;
 
 type EventType = (typeof EVENT_TYPES)[number];
@@ -42,6 +43,8 @@ function createAdminClient() {
   );
 }
 
+type AdminClient = ReturnType<typeof createAdminClient>;
+
 function clientIp(request: Request) {
   const forwarded = request.headers.get("x-forwarded-for");
   if (forwarded) {
@@ -57,6 +60,81 @@ function clientIp(request: Request) {
 
 function isEventType(value: string): value is EventType {
   return (EVENT_TYPES as readonly string[]).includes(value);
+}
+
+async function writeLoginLog(
+  admin: AdminClient,
+  row: {
+    eventType: EventType;
+    email: string | null;
+    userId: string | null;
+    userName: string | null;
+    role: string | null;
+    ipAddress: string | null;
+    userAgent: string | null;
+    errorCode: string | null;
+  },
+) {
+  // Continuous logins without logout: keep a single latest success row.
+  if (row.eventType === "login_success" && (row.userId || row.email)) {
+    let latestQuery = admin
+      .from("login_logs")
+      .select("id,event_type")
+      .order("created_at", { ascending: false })
+      .limit(1);
+    if (row.userId) {
+      latestQuery = latestQuery.eq("user_id", row.userId);
+    } else if (row.email) {
+      latestQuery = latestQuery.ilike("email", row.email);
+    }
+    const { data: latest, error: latestError } = await latestQuery.maybeSingle();
+    if (latestError) {
+      throw jsonResponse(
+        { error: "login_log_lookup_failed", detail: latestError.message },
+        500,
+      );
+    }
+    if (latest?.event_type === "login_success") {
+      const { error: updateError } = await admin
+        .from("login_logs")
+        .update({
+          email: row.email,
+          user_id: row.userId,
+          user_name: row.userName,
+          role: row.role,
+          ip_address: row.ipAddress,
+          user_agent: row.userAgent,
+          error_code: row.errorCode,
+          created_at: new Date().toISOString(),
+        })
+        .eq("id", latest.id);
+      if (updateError) {
+        throw jsonResponse(
+          { error: "login_log_write_failed", detail: updateError.message },
+          500,
+        );
+      }
+      return { ok: true, replaced: true };
+    }
+  }
+
+  const { error } = await admin.from("login_logs").insert({
+    event_type: row.eventType,
+    email: row.email,
+    user_id: row.userId,
+    user_name: row.userName,
+    role: row.role,
+    ip_address: row.ipAddress,
+    user_agent: row.userAgent,
+    error_code: row.errorCode,
+  });
+  if (error) {
+    throw jsonResponse(
+      { error: "login_log_write_failed", detail: error.message },
+      500,
+    );
+  }
+  return { ok: true, replaced: false };
 }
 
 Deno.serve(async (request) => {
@@ -133,25 +211,20 @@ Deno.serve(async (request) => {
       }
     }
 
-    const { error } = await admin.from("login_logs").insert({
-      event_type: eventType,
+    const result = await writeLoginLog(admin, {
+      eventType,
       email: email || null,
-      user_id: resolvedUserId,
-      user_name: userName,
+      userId: resolvedUserId,
+      userName,
       role,
-      ip_address: clientIp(request),
-      user_agent: request.headers.get("user-agent")?.slice(0, 512) ?? null,
-      error_code: errorCode,
+      ipAddress: clientIp(request),
+      userAgent: request.headers.get("user-agent")?.slice(0, 512) ?? null,
+      errorCode,
     });
-    if (error) {
-      return jsonResponse(
-        { error: "login_log_write_failed", detail: error.message },
-        500,
-      );
-    }
 
-    return jsonResponse({ ok: true }, 201);
+    return jsonResponse(result, result.replaced ? 200 : 201);
   } catch (error) {
+    if (error instanceof Response) return error;
     return jsonResponse(
       {
         error: "login_log_failed",

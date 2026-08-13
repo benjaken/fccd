@@ -261,7 +261,7 @@ const resources = {
         },
         loginLogs: {
           title: "登入紀錄",
-          description: "查看登入成功、失敗、登出及密碼重設請求紀錄。",
+          description: "查看登入成功、失敗、登出、重設密碼請求及修改密碼紀錄。",
           search: "搜尋登入紀錄",
           searchPlaceholder: "搜尋 Email、名稱或 IP",
           searchAction: "搜尋",
@@ -277,6 +277,7 @@ const resources = {
             login_failure: "登入失敗",
             logout: "登出",
             password_reset_request: "重設密碼請求",
+            password_change: "修改密碼",
           },
           columns: {
             time: "時間",
@@ -1222,6 +1223,7 @@ const resources = {
             login_failure: "Login failure",
             logout: "Logout",
             password_reset_request: "Password reset request",
+            password_change: "Password change",
           },
           columns: {
             time: "Time",

@@ -540,6 +540,27 @@ describe("Super Admin system settings", () => {
     expect(loginLogs).toContain("settings.login_logs");
     expect(loginLogs).toContain("Super Admin reads login logs");
 
+    const passwordChangeLog = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260813100000_login_log_password_change.sql",
+      ),
+      "utf8",
+    );
+    expect(passwordChangeLog).toContain("'password_change'");
+    expect(
+      readFileSync(
+        path.resolve(process.cwd(), "supabase/functions/login-log/index.ts"),
+        "utf8",
+      ),
+    ).toContain('latest?.event_type === "login_success"');
+    expect(
+      readFileSync(
+        path.resolve(process.cwd(), "supabase/functions/admin-users/index.ts"),
+        "utf8",
+      ),
+    ).toContain('event_type: "password_change"');
+
     const userActions = readFileSync(
       path.resolve(
         process.cwd(),
