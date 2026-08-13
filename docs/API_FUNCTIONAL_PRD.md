@@ -817,6 +817,7 @@ report_exceptions
 #### 主題
 
 - 品牌主色為中等飽和藍色（約 `oklch(0.52 0.145 250)`），用於主要操作、active state、focus ring 及品牌重點；不以高飽和紅色作為品牌主色。
+- 實心主色按鈕（例如「建立新訂單」）的文字與圖示必須為白色（`--primary-foreground`），不可沿用深色內文色。
 - `--destructive` 等錯誤／危險狀態維持紅色，與品牌藍分開。
 - 儀表板「訂單進度」等多元狀態必須使用可清楚區分的多色（indigo／amber／violet／cyan／green），不得全部使用品牌藍系。
 - Light／Dark mode 均使用語意化色彩 token，禁止元件自行寫死背景及文字色。
