@@ -210,16 +210,16 @@ export function OrdersListPage({
       <article className="panel orders-panel">
         <header className="orders-toolbar">
           <form className="orders-search" onSubmit={submitSearch}>
-            <Search aria-hidden="true" />
-            <label className="sr-only" htmlFor="orders-search">
-              {t("orders.search")}
+            <label className="orders-search-field" htmlFor="orders-search">
+              <Search aria-hidden="true" />
+              <span className="sr-only">{t("orders.search")}</span>
+              <input
+                id="orders-search"
+                value={draftSearch}
+                onChange={(event) => setDraftSearch(event.target.value)}
+                placeholder={t("orders.searchPlaceholder")}
+              />
             </label>
-            <input
-              id="orders-search"
-              value={draftSearch}
-              onChange={(event) => setDraftSearch(event.target.value)}
-              placeholder={t("orders.searchPlaceholder")}
-            />
             <Button type="submit" variant="outline">
               {t("orders.searchAction")}
             </Button>

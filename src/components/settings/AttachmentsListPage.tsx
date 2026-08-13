@@ -165,16 +165,21 @@ export function AttachmentsListPage({
       <article className="panel orders-panel">
         <header className="orders-toolbar">
           <form className="orders-search" onSubmit={submitSearch}>
-            <Search aria-hidden="true" />
-            <label className="sr-only" htmlFor="settings-attachments-search">
-              {t("settings.attachments.search")}
+            <label
+              className="orders-search-field"
+              htmlFor="settings-attachments-search"
+            >
+              <Search aria-hidden="true" />
+              <span className="sr-only">
+                {t("settings.attachments.search")}
+              </span>
+              <input
+                id="settings-attachments-search"
+                value={draftSearch}
+                onChange={(event) => setDraftSearch(event.target.value)}
+                placeholder={t("settings.attachments.searchPlaceholder")}
+              />
             </label>
-            <input
-              id="settings-attachments-search"
-              value={draftSearch}
-              onChange={(event) => setDraftSearch(event.target.value)}
-              placeholder={t("settings.attachments.searchPlaceholder")}
-            />
             <Button type="submit" variant="outline">
               {t("settings.attachments.searchAction")}
             </Button>

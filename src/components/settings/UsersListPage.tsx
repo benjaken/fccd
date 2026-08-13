@@ -144,16 +144,19 @@ export function UsersListPage({
       <article className="panel orders-panel">
         <header className="orders-toolbar">
           <form className="orders-search" onSubmit={submitSearch}>
-            <Search aria-hidden="true" />
-            <label className="sr-only" htmlFor="settings-users-search">
-              {t("settings.users.search")}
+            <label
+              className="orders-search-field"
+              htmlFor="settings-users-search"
+            >
+              <Search aria-hidden="true" />
+              <span className="sr-only">{t("settings.users.search")}</span>
+              <input
+                id="settings-users-search"
+                value={draftSearch}
+                onChange={(event) => setDraftSearch(event.target.value)}
+                placeholder={t("settings.users.searchPlaceholder")}
+              />
             </label>
-            <input
-              id="settings-users-search"
-              value={draftSearch}
-              onChange={(event) => setDraftSearch(event.target.value)}
-              placeholder={t("settings.users.searchPlaceholder")}
-            />
             <Button type="submit" variant="outline">
               {t("settings.users.searchAction")}
             </Button>

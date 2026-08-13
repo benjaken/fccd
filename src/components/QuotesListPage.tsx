@@ -150,16 +150,16 @@ export function QuotesListPage({
       <article className="panel quotes-panel">
         <header className="quotes-toolbar">
           <form className="quotes-search" onSubmit={submitSearch}>
-            <Search aria-hidden="true" />
-            <label className="sr-only" htmlFor="quotes-search">
-              {t("quotes.search")}
+            <label className="quotes-search-field" htmlFor="quotes-search">
+              <Search aria-hidden="true" />
+              <span className="sr-only">{t("quotes.search")}</span>
+              <input
+                id="quotes-search"
+                value={draftSearch}
+                onChange={(event) => setDraftSearch(event.target.value)}
+                placeholder={t("quotes.searchPlaceholder")}
+              />
             </label>
-            <input
-              id="quotes-search"
-              value={draftSearch}
-              onChange={(event) => setDraftSearch(event.target.value)}
-              placeholder={t("quotes.searchPlaceholder")}
-            />
             <Button type="submit" variant="outline">
               {t("quotes.searchAction")}
             </Button>

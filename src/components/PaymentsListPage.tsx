@@ -87,10 +87,19 @@ export function PaymentsListPage({
       <article className="panel orders-panel">
         <header className="orders-toolbar">
           <form className="orders-search" onSubmit={submitSearch}>
-            <Search />
-            <label className="sr-only" htmlFor="payments-search">{t("payments.search")}</label>
-            <input id="payments-search" value={draftSearch} onChange={(event) => setDraftSearch(event.target.value)} placeholder={t("payments.searchPlaceholder")} />
-            <Button type="submit" variant="outline">{t("payments.searchAction")}</Button>
+            <label className="orders-search-field" htmlFor="payments-search">
+              <Search aria-hidden="true" />
+              <span className="sr-only">{t("payments.search")}</span>
+              <input
+                id="payments-search"
+                value={draftSearch}
+                onChange={(event) => setDraftSearch(event.target.value)}
+                placeholder={t("payments.searchPlaceholder")}
+              />
+            </label>
+            <Button type="submit" variant="outline">
+              {t("payments.searchAction")}
+            </Button>
           </form>
         </header>
         {loading ? <OperationalListState icon={HandCoins} title={t("payments.loading")} loading /> :

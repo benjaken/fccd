@@ -31,6 +31,13 @@ The last **操作 / Actions** column must stay compact and single-line:
   menu (⋯) instead of stacking labeled buttons in the cell.
 - Never put a full Primary filled button with long text inside a data row.
 
+## Toolbar search
+
+List toolbars that include search must **not** place a loose magnifying-glass
+icon to the left of the field. Put the icon **inside** the input shell
+(`.orders-search-field` / `.quotes-search-field`), then the optional「搜尋」
+submit button beside it — same pattern as the topbar `.search-box`.
+
 ## Scope
 
 Applies to current and future paginated operational tables, including orders,

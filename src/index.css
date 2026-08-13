@@ -1394,16 +1394,38 @@ td:last-child {
   width: min(620px, 100%);
 }
 
-.quotes-search > svg,
-.orders-search > svg {
-  width: 18px;
-  flex: 0 0 auto;
+.quotes-search-field,
+.orders-search-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 180px;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--background);
   color: var(--muted-foreground);
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
 }
 
-.quotes-search input,
+.quotes-search-field:focus-within,
+.orders-search-field:focus-within {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 13%, transparent);
+}
+
+.quotes-search-field svg,
+.orders-search-field svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
 .quotes-status-filter select,
-.orders-search input,
 .orders-status-filter select {
   height: 40px;
   border: 1px solid var(--border);
@@ -1414,16 +1436,20 @@ td:last-child {
   font-size: 14px;
 }
 
-.quotes-search input,
-.orders-search input {
+.quotes-search-field input,
+.orders-search-field input {
   width: 100%;
-  min-width: 180px;
-  padding: 0 12px;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 14px;
 }
 
-.quotes-search input:focus,
 .quotes-status-filter select:focus,
-.orders-search input:focus,
 .orders-status-filter select:focus {
   border-color: var(--ring);
   box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 13%, transparent);

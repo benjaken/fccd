@@ -89,16 +89,19 @@ export function LoginLogsListPage({
       <article className="panel orders-panel">
         <header className="orders-toolbar">
           <form className="orders-search" onSubmit={submitSearch}>
-            <Search aria-hidden="true" />
-            <label className="sr-only" htmlFor="settings-login-logs-search">
-              {t("settings.loginLogs.search")}
+            <label
+              className="orders-search-field"
+              htmlFor="settings-login-logs-search"
+            >
+              <Search aria-hidden="true" />
+              <span className="sr-only">{t("settings.loginLogs.search")}</span>
+              <input
+                id="settings-login-logs-search"
+                value={draftSearch}
+                onChange={(event) => setDraftSearch(event.target.value)}
+                placeholder={t("settings.loginLogs.searchPlaceholder")}
+              />
             </label>
-            <input
-              id="settings-login-logs-search"
-              value={draftSearch}
-              onChange={(event) => setDraftSearch(event.target.value)}
-              placeholder={t("settings.loginLogs.searchPlaceholder")}
-            />
             <Button type="submit" variant="outline">
               {t("settings.loginLogs.searchAction")}
             </Button>
