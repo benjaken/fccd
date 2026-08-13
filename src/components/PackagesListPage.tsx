@@ -4,10 +4,6 @@ import { Package, RefreshCw, Search } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
-import {
-  RelatedEntityLink,
-  catalogChannelPath,
-} from "@/components/ui/related-entity-link";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { TableSkeletonRows } from "@/components/ui/table-skeleton";
 import {
@@ -284,17 +280,7 @@ export function PackagesListPage({
                           <small className="quote-company">{item.name}</small>
                         )}
                       </td>
-                      <td>
-                        <RelatedEntityLink
-                          to={
-                            item.channelId
-                              ? catalogChannelPath(item.channelId, "packages")
-                              : null
-                          }
-                        >
-                          {item.channelName || t("common.notSet")}
-                        </RelatedEntityLink>
-                      </td>
+                    <td>{item.channelName || t("common.notSet")}</td>
                       <td>{item.memberCount}</td>
                       <td>
                         <strong>{formatPrice(item)}</strong>

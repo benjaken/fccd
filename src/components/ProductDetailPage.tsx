@@ -10,12 +10,6 @@ import {
 import { Link, useParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
-import {
-  RelatedEntityLink,
-  catalogChannelPath,
-  catalogPackagePath,
-  catalogProductTypePath,
-} from "@/components/ui/related-entity-link";
 import { fetchProductDetail, type ProductDetail } from "@/lib/products";
 import { cn } from "@/lib/utils";
 
@@ -165,26 +159,10 @@ export function ProductDetailPage({
               {product.sku || t("common.notSet")}
             </DetailField>
             <DetailField label={t("productDetail.channel")}>
-              <RelatedEntityLink
-                to={
-                  product.channelId
-                    ? catalogChannelPath(product.channelId, "products")
-                    : null
-                }
-              >
-                {product.channelName || t("common.notSet")}
-              </RelatedEntityLink>
+              {product.channelName || t("common.notSet")}
             </DetailField>
             <DetailField label={t("productDetail.type")}>
-              <RelatedEntityLink
-                to={
-                  product.productTypeId
-                    ? catalogProductTypePath(product.productTypeId)
-                    : null
-                }
-              >
-                {product.productTypeName || t("common.notSet")}
-              </RelatedEntityLink>
+              {product.productTypeName || t("common.notSet")}
             </DetailField>
             <DetailField label={t("productDetail.cookType")}>
               {product.cookTypeName || t("common.notSet")}
@@ -253,9 +231,12 @@ export function ProductDetailPage({
                   <tr key={pkg.id}>
                     <td>{pkg.sku || t("common.notSet")}</td>
                     <td>
-                      <RelatedEntityLink to={catalogPackagePath(pkg.id)}>
+                      <Link
+                        className="order-link"
+                        to={`/products/packages/${pkg.id}`}
+                      >
                         {pkg.chineseName || pkg.name}
-                      </RelatedEntityLink>
+                      </Link>
                     </td>
                   </tr>
                 ))}

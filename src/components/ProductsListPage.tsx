@@ -8,11 +8,6 @@ import {
 import { Link, useSearchParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
-import {
-  RelatedEntityLink,
-  catalogChannelPath,
-  catalogProductTypePath,
-} from "@/components/ui/related-entity-link";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { TableSkeletonRows } from "@/components/ui/table-skeleton";
 import {
@@ -393,28 +388,8 @@ export function ProductsListPage({
                             </small>
                           )}
                       </td>
-                      <td>
-                        <RelatedEntityLink
-                          to={
-                            product.channelId
-                              ? catalogChannelPath(product.channelId, "products")
-                              : null
-                          }
-                        >
-                          {product.channelName || t("common.notSet")}
-                        </RelatedEntityLink>
-                      </td>
-                      <td>
-                        <RelatedEntityLink
-                          to={
-                            product.productTypeId
-                              ? catalogProductTypePath(product.productTypeId)
-                              : null
-                          }
-                        >
-                          {product.productTypeName || t("common.notSet")}
-                        </RelatedEntityLink>
-                      </td>
+                    <td>{product.channelName || t("common.notSet")}</td>
+                    <td>{product.productTypeName || t("common.notSet")}</td>
                       <td>
                         <strong>{formatPrice(product)}</strong>
                       </td>

@@ -10,11 +10,6 @@ import {
 import { Link, useParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
-import {
-  RelatedEntityLink,
-  catalogChannelPath,
-  catalogProductPath,
-} from "@/components/ui/related-entity-link";
 import { fetchPackageDetail, type PackageDetail } from "@/lib/packages";
 import { cn } from "@/lib/utils";
 
@@ -156,15 +151,7 @@ export function PackageDetailPage({
               {pkg.sku || t("common.notSet")}
             </DetailField>
             <DetailField label={t("packageDetail.channel")}>
-              <RelatedEntityLink
-                to={
-                  pkg.channelId
-                    ? catalogChannelPath(pkg.channelId, "packages")
-                    : null
-                }
-              >
-                {pkg.channelName || t("common.notSet")}
-              </RelatedEntityLink>
+              {pkg.channelName || t("common.notSet")}
             </DetailField>
             <DetailField label={t("packageDetail.price")}>
               {money(pkg.price)}
@@ -232,17 +219,20 @@ export function PackageDetailPage({
                   <tr key={member.id}>
                     <td>{member.productSku || t("common.notSet")}</td>
                     <td>
-                      <RelatedEntityLink
-                        to={
-                          member.productId
-                            ? catalogProductPath(member.productId)
-                            : null
-                        }
-                      >
-                        {member.productChineseName ||
-                          member.productName ||
-                          t("common.notSet")}
-                      </RelatedEntityLink>
+                      {member.productId ? (
+                        <Link
+                          className="order-link"
+                          to={`/products/${member.productId}`}
+                        >
+                          {member.productChineseName ||
+                            member.productName ||
+                            t("common.notSet")}
+                        </Link>
+                      ) : (
+                        member.productChineseName ||
+                        member.productName ||
+                        t("common.notSet")
+                      )}
                     </td>
                     <td>{member.quantity ?? t("common.notSet")}</td>
                     <td>{money(member.addonPrice)}</td>
