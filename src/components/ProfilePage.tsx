@@ -12,7 +12,7 @@ import {
 
 import { useAuth } from "@/auth/AuthProvider";
 import { Button } from "@/components/ui/button";
-import { ProfileSkeleton } from "@/components/ui/content-skeletons";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 
 function ProfileField({
   icon,
@@ -55,7 +55,7 @@ export function ProfilePage() {
   };
 
   if (profileLoading && !profile) {
-    return <ProfileSkeleton label={t("profile.loading")} />;
+    return <PageSkeleton label={t("profile.loading")} variant="profile" />;
   }
 
   const displayName =

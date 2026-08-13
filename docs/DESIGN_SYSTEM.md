@@ -200,9 +200,7 @@ Active 導航（側欄、工作區 soft link、migration tab）必須是**淡綠
 | `ListSearchBar` | `src/components/ui/list-search-bar.tsx` | 列表工具列：搜尋欄 + 搜尋按鈕 |
 | `ListTable` | `src/components/ui/list-table.tsx` | 分頁營運列表共用表格外殼、表頭與載入骨架 |
 | `TableSkeletonRows` | `src/components/ui/table-skeleton.tsx` | 表格載入骨架列 |
-| `PageSkeleton` | `src/components/ui/page-skeleton.tsx` | 權限／初始化期間保留完整頁面骨架 |
-| `DetailPageSkeleton` | `src/components/ui/detail-page-skeleton.tsx` | 訂單／報價／商品／套餐詳情載入骨架 |
-| Content skeletons | `src/components/ui/content-skeletons.tsx` | Dashboard、卡片頁、權限表、報表及分析區骨架 |
+| `PageSkeleton` | `src/components/ui/page-skeleton.tsx` | 所有頁面級骨架；用 `variant` 配置權限、詳情、Dashboard、卡片、表格、報表及分析佈局 |
 | `TablePagination` | `src/components/ui/table-pagination.tsx` | 底部分頁 |
 | `OperationalListState` | `src/components/ui/operational-list-state.tsx` | 列表空／錯／權限等面板狀態 |
 

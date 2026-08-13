@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
-import { ReportSkeleton } from "@/components/ui/content-skeletons";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import {
   fetchReportSuppliers,
@@ -198,7 +198,11 @@ export function SupplierPurchaseReport() {
           </div>
         </section>
       ) : loading ? (
-        <ReportSkeleton label={t("reports.loading")} />
+        <PageSkeleton
+              compact
+              label={t("reports.loading")}
+              variant="report"
+            />
       ) : !rows.length ? (
         <section className="panel">
           <div className="report-state">{t("reports.supplierPurchaseEmpty")}</div>

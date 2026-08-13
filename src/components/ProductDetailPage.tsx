@@ -10,7 +10,7 @@ import {
 import { Link, useParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
-import { DetailPageSkeleton } from "@/components/ui/detail-page-skeleton";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { fetchProductDetail, type ProductDetail } from "@/lib/products";
 import { cn } from "@/lib/utils";
 
@@ -89,7 +89,11 @@ export function ProductDetailPage({
 
   if (loading) {
     return (
-      <DetailPageSkeleton label={t("productDetail.loading")} cards={2} />
+      <PageSkeleton
+        cards={2}
+        label={t("productDetail.loading")}
+        variant="detail"
+      />
     );
   }
 

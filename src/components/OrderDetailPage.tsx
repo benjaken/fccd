@@ -12,7 +12,7 @@ import {
 import { Link, useParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
-import { DetailPageSkeleton } from "@/components/ui/detail-page-skeleton";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 import {
   fetchOrderDetail,
   type OrderDetailResult,
@@ -118,7 +118,7 @@ export function OrderDetailPage({
   }, [load]);
 
   if (loading) {
-    return <DetailPageSkeleton label={t("details.loading")} />;
+    return <PageSkeleton label={t("details.loading")} variant="detail" />;
   }
 
   if (error || !result?.order) {

@@ -5,7 +5,7 @@ import { MonthlyTrendChart } from "@/components/reports/MonthlyTrendChart";
 import { ReportItemSelector } from "@/components/reports/ReportItemSelector";
 import { ReportSummaryCards } from "@/components/reports/ReportSummaryCards";
 import { ReportYearFilter } from "@/components/reports/ReportYearFilter";
-import { ReportSkeleton } from "@/components/ui/content-skeletons";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 import {
   fetchMonthlyPreparedMeatStock,
   fetchMonthlyRawMeatStock,
@@ -185,7 +185,12 @@ function MeatStockReport({ kind }: { kind: StockKind }) {
           </div>
         </section>
       ) : loading ? (
-        <ReportSkeleton label={t("reports.loading")} analysis />
+        <PageSkeleton
+          analysis
+          compact
+          label={t("reports.loading")}
+          variant="report"
+        />
       ) : !items.length ? (
         <section className="panel">
           <div className="report-state">
