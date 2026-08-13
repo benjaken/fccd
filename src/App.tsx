@@ -65,6 +65,10 @@ import { PaymentsListPage } from "@/components/PaymentsListPage";
 import { ProfilePage } from "@/components/ProfilePage";
 import { ReportsPage } from "@/components/ReportsPage";
 import { QuotesListPage } from "@/components/QuotesListPage";
+import { ProductsListPage } from "@/components/ProductsListPage";
+import { ProductDetailPage } from "@/components/ProductDetailPage";
+import { PackagesListPage } from "@/components/PackagesListPage";
+import { PackageDetailPage } from "@/components/PackageDetailPage";
 import { AttachmentsListPage } from "@/components/settings/AttachmentsListPage";
 import { LoginLogsListPage } from "@/components/settings/LoginLogsListPage";
 import { RolePermissionsPage } from "@/components/settings/RolePermissionsPage";
@@ -190,16 +194,34 @@ const secondaryNav: Record<string, NavItem[]> = {
   ],
   products: [
     {
-      key: "products",
+      key: "allProducts",
       to: "/products",
       icon: ShoppingBasket,
       permissionKey: "products",
     },
     {
-      key: "inventory",
-      to: "/inventory",
+      key: "cateringFood",
+      to: "/products/catering",
+      icon: Utensils,
+      permissionKey: "products.catering",
+    },
+    {
+      key: "lunchBoxes",
+      to: "/products/lunchbox",
       icon: Boxes,
-      permissionKey: "inventory",
+      permissionKey: "products.lunchbox",
+    },
+    {
+      key: "alaCarte",
+      to: "/products/ala-carte",
+      icon: ShoppingBasket,
+      permissionKey: "products.ala_carte",
+    },
+    {
+      key: "packages",
+      to: "/products/packages",
+      icon: PackageCheck,
+      permissionKey: "products.packages",
     },
   ],
   kitchen: [
@@ -305,6 +327,12 @@ const SECTION_CHILD_KEYS: Record<string, string[]> = {
     "orders.delivered_unpaid",
   ],
   quotes: ["quotes.customers", "quotes.follow_up"],
+  products: [
+    "products.catering",
+    "products.lunchbox",
+    "products.ala_carte",
+    "products.packages",
+  ],
   kitchen: ["kitchen.calendar", "kitchen.inventory"],
   delivery: ["delivery.assign"],
   restaurant: ["restaurant.inventory", "restaurant.reports"],
@@ -743,6 +771,28 @@ function OperationsShell() {
                   <OrderDetailPage documentType="quote" canViewFinance={canViewFinance} />
                 }
               />
+              <Route path="/products" element={<ProductsListPage />} />
+              <Route
+                path="/products/catering"
+                element={<ProductsListPage preset="catering" />}
+              />
+              <Route
+                path="/products/lunchbox"
+                element={<ProductsListPage preset="lunchbox" />}
+              />
+              <Route
+                path="/products/ala-carte"
+                element={<ProductsListPage preset="ala-carte" />}
+              />
+              <Route
+                path="/products/packages"
+                element={<PackagesListPage />}
+              />
+              <Route
+                path="/products/packages/:id"
+                element={<PackageDetailPage />}
+              />
+              <Route path="/products/:id" element={<ProductDetailPage />} />
               <Route path="/reports/*" element={<ReportsPage />} />
               <Route
                 path="/settings"
