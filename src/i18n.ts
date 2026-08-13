@@ -174,7 +174,7 @@ const resources = {
         pendingTitle: "待確定訂單",
         unpaidTitle: "未付款訂單",
         deliveredUnpaidTitle: "已送貨未付款",
-        description: "從 Supabase 查看已遷移訂單；建立及修改流程將按原系統 Workflow 後續補充。",
+        description: "集中查看及跟進到會訂單、送貨狀態及付款進度。",
         create: "建立新訂單",
         search: "搜尋訂單",
         searchPlaceholder: "搜尋訂單編號、客戶或公司",
@@ -777,7 +777,7 @@ const resources = {
         unpaidTitle: "Unpaid Orders",
         deliveredUnpaidTitle: "Delivered and Unpaid",
         description:
-          "View migrated orders from Supabase. Create and edit flows will be added after the original workflows are captured.",
+          "Review and follow up on catering orders, delivery status, and payment progress.",
         create: "Create order",
         search: "Search orders",
         searchPlaceholder: "Search order number, customer, or company",
