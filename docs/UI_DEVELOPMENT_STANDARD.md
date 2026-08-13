@@ -140,6 +140,7 @@ the same input / search / skeleton / pagination markup across list pages.
 | Toolbar search (icon inside field + submit) | `ListSearchBar` → `SearchField` |
 | Paginated operational table + loading rows | `ListTable` → `TableSkeletonRows` |
 | Permission / bootstrap page loading | `PageSkeleton` |
+| Order / quote / product / package detail loading | `DetailPageSkeleton` |
 | List pagination footer | `TablePagination` |
 | Panel empty / error / permission | Prefer `OperationalListState` |
 

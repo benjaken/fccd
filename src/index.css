@@ -2006,6 +2006,84 @@ td:last-child {
   overflow-wrap: anywhere;
 }
 
+.detail-page-skeleton {
+  min-height: calc(
+    100dvh - var(--topbar-height) - var(--workspace-height) - 56px
+  );
+}
+
+.detail-skeleton-heading {
+  display: grid;
+  gap: 8px;
+  min-width: min(28rem, 70vw);
+}
+
+.detail-skeleton-back {
+  width: 7rem;
+  height: 12px;
+}
+
+.detail-skeleton-eyebrow {
+  width: 5.5rem;
+  height: 11px;
+}
+
+.detail-skeleton-title {
+  width: min(18rem, 60vw);
+  height: 32px;
+}
+
+.detail-skeleton-subtitle {
+  width: min(14rem, 48vw);
+  height: 13px;
+}
+
+.detail-skeleton-badge {
+  width: 5rem;
+  height: 26px;
+}
+
+.detail-skeleton-card {
+  min-height: 255px;
+}
+
+.detail-skeleton-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+}
+
+.detail-skeleton-card-title {
+  width: 8.5rem;
+  height: 16px;
+}
+
+.detail-skeleton-field {
+  display: grid;
+  gap: 6px;
+}
+
+.detail-skeleton-label {
+  width: 34%;
+  height: 10px;
+}
+
+.detail-skeleton-value {
+  width: 68%;
+  height: 14px;
+}
+
+.detail-skeleton-description {
+  width: 14rem;
+  max-width: 65vw;
+  height: 11px;
+  margin-top: 8px;
+}
+
+.detail-skeleton-table {
+  min-height: 300px;
+}
+
 .detail-copy,
 .detail-stack p {
   margin: 0;

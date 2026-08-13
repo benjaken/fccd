@@ -12,6 +12,7 @@ import {
 import { Link, useParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
+import { DetailPageSkeleton } from "@/components/ui/detail-page-skeleton";
 import {
   fetchOrderDetail,
   type OrderDetailResult,
@@ -117,12 +118,7 @@ export function OrderDetailPage({
   }, [load]);
 
   if (loading) {
-    return (
-      <div className="detail-state" role="status">
-        <RefreshCw className="spin" />
-        <span>{t("details.loading")}</span>
-      </div>
-    );
+    return <DetailPageSkeleton label={t("details.loading")} />;
   }
 
   if (error || !result?.order) {

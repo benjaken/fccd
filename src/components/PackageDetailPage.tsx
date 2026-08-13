@@ -10,6 +10,7 @@ import {
 import { Link, useParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
+import { DetailPageSkeleton } from "@/components/ui/detail-page-skeleton";
 import { fetchPackageDetail, type PackageDetail } from "@/lib/packages";
 import { cn } from "@/lib/utils";
 
@@ -88,10 +89,7 @@ export function PackageDetailPage({
 
   if (loading) {
     return (
-      <div className="detail-state" role="status">
-        <RefreshCw className="spin" />
-        <span>{t("packageDetail.loading")}</span>
-      </div>
+      <DetailPageSkeleton label={t("packageDetail.loading")} cards={2} />
     );
   }
 
