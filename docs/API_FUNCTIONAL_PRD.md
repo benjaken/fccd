@@ -779,7 +779,7 @@ report_exceptions
 | UX-07 | 支援鍵盤操作、可見 focus、表單錯誤摘要及符合 WCAG AA 的文字對比。 |
 | UX-08 | 參考舊介面截圖只為確認資訊與操作，不直接複製造成慢速、細字、橫向拖動及過度跳頁的版型。 |
 | UX-09 | 整體 Layout 參考提供的 ONE TEAM CONNECT 截圖：左上品牌 Logo 保持固定位置，第一列顯示工作區 soft links 與右上工具區，第二列顯示一級導航，左側顯示二級導航，主內容區最大化。 |
-| UX-10 | 品牌 Logo 使用 Food Channel Catering 官方版本；主題色採用護眼中等飽和藍色（非紅色），並以 design tokens 管理 primary、hover、active、focus、success、warning 及 danger；細節見 `docs/UI_DEVELOPMENT_STANDARD.md`。 |
+| UX-10 | 品牌 Logo 使用 Food Channel Catering 官方版本；主題色採用護眼中等飽和藍色（非紅色），並以 design tokens 管理 primary、hover、active、focus、success、warning 及 danger；細節見 `docs/DESIGN_SYSTEM.md` 與 `docs/UI_DEVELOPMENT_STANDARD.md`。 |
 | UX-11 | 提供 Light／Dark mode 切換；所有頁面、表格、圖表、Dialog、Toast、狀態色及 Logo 版本均須支援兩種模式。 |
 | UX-12 | 提供繁體中文／English 切換，預設繁體中文；使用者選擇須跨 session 保存。 |
 | UX-13 | 所有介面文字、導航、表單、驗證、通知及空狀態使用 i18n key，不得在元件內散落硬編碼文案。 |
@@ -823,7 +823,7 @@ report_exceptions
 - Light／Dark mode 均使用語意化色彩 token，禁止元件自行寫死背景及文字色。
 - 切換主題不重新載入頁面、不遺失表單內容，並保存至使用者 profile；未登入時可保存於本機。
 - 首次使用的預設主題跟隨裝置設定；使用者手動選擇後優先使用其保存值。
-- 完整 UI 約定見 `docs/UI_DEVELOPMENT_STANDARD.md`。
+- 完整 UI／設計系統約定見 `docs/DESIGN_SYSTEM.md`；已拍板硬規則見 `docs/UI_DEVELOPMENT_STANDARD.md`。
 
 #### i18n
 

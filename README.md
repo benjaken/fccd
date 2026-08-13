@@ -39,6 +39,8 @@ bundle.
 
 UI layout, theme, and status-color conventions are documented in
 [`docs/UI_DEVELOPMENT_STANDARD.md`](docs/UI_DEVELOPMENT_STANDARD.md).
+The full design system (shadcn + Ant Design → FCCD) is in
+[`docs/DESIGN_SYSTEM.md`](docs/DESIGN_SYSTEM.md).
 
 ## Checks
 

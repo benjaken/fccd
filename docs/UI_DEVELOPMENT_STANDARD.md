@@ -1,8 +1,14 @@
 # UI Development Standard
 
-Approved UI conventions for Food Channel Catering. Follow this document for
-layout, theme, status colors, and preview sign-in. Pair it with
-[`UI_TABLE_STANDARD.md`](UI_TABLE_STANDARD.md) for paginated operational lists.
+Approved UI hard rules for Food Channel Catering (layout, theme, status colors,
+preview sign-in).
+
+**Canonical design system** (shadcn + Ant Design → FCCD):
+[`DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md).
+
+Pair this file with [`UI_TABLE_STANDARD.md`](UI_TABLE_STANDARD.md) for paginated
+operational lists. When a visual rule changes, update `DESIGN_SYSTEM.md` and
+this file in the same change set.
 
 ## 1. Page layout (all authenticated pages)
 
@@ -115,6 +121,7 @@ changes, update this document in the same change set.
 
 ## 6. Related standards
 
+- [`DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md) — FCCD design system (shadcn + Ant Design)
 - [`UI_TABLE_STANDARD.md`](UI_TABLE_STANDARD.md) — paginated operational tables
 - [`RLS_PAGE_COMPLETION_STANDARD.md`](RLS_PAGE_COMPLETION_STANDARD.md) — page
   access / RLS completion
