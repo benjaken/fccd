@@ -1468,6 +1468,192 @@ td:last-child {
   font-weight: 750;
 }
 
+.products-page,
+.packages-page {
+  display: grid;
+  gap: 20px;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: calc(
+    100dvh - var(--topbar-height) - var(--workspace-height) - 76px
+  );
+  min-height: 560px;
+  overflow: hidden;
+}
+
+.products-page .page-heading,
+.packages-page .page-heading {
+  margin-bottom: 0;
+}
+
+.products-heading,
+.packages-heading {
+  align-items: flex-end;
+}
+
+.products-panel,
+.packages-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.products-toolbar,
+.packages-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.products-search,
+.packages-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: min(620px, 100%);
+}
+
+.products-search > svg,
+.packages-search > svg {
+  width: 18px;
+  flex: 0 0 auto;
+  color: var(--muted-foreground);
+}
+
+.products-search input,
+.products-status-filter select,
+.packages-search input,
+.packages-status-filter select {
+  height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  outline: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 14px;
+}
+
+.products-search input,
+.packages-search input {
+  width: 100%;
+  min-width: 180px;
+  padding: 0 12px;
+}
+
+.products-search input:focus,
+.products-status-filter select:focus,
+.packages-search input:focus,
+.packages-status-filter select:focus {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 13%, transparent);
+}
+
+.products-filters,
+.packages-filters {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.products-status-filter,
+.packages-status-filter {
+  display: grid;
+  gap: 6px;
+  min-width: 180px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.products-status-filter select,
+.packages-status-filter select {
+  padding: 0 34px 0 11px;
+}
+
+.products-active-filter,
+.packages-active-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.products-table-wrap,
+.packages-table-wrap,
+.detail-inline-table {
+  min-height: 0;
+  overflow: auto;
+}
+
+.products-table-wrap th,
+.packages-table-wrap th {
+  position: sticky;
+  z-index: 1;
+  top: 0;
+}
+
+.products-state,
+.packages-state {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 12px;
+  min-height: 280px;
+  padding: 28px;
+  text-align: center;
+  color: var(--muted-foreground);
+}
+
+.products-state > svg,
+.packages-state > svg {
+  width: 28px;
+  height: 28px;
+}
+
+.products-state > div,
+.packages-state > div {
+  display: grid;
+  gap: 6px;
+}
+
+.products-state strong,
+.packages-state strong {
+  color: var(--foreground);
+  font-size: 16px;
+}
+
+.products-state-error > svg,
+.packages-state-error > svg {
+  color: var(--destructive);
+}
+
+.detail-description {
+  margin: 0;
+  color: var(--muted-foreground);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.product-detail-image {
+  display: block;
+  width: min(320px, 100%);
+  margin-top: 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  object-fit: cover;
+}
+
+.detail-inline-table {
+  margin-top: 12px;
+}
+
 .settings-cell-detail {
   display: block;
   max-width: 260px;
@@ -2030,7 +2216,9 @@ td:last-child {
 
 @media (max-width: 760px) {
   .quotes-page,
-  .orders-page {
+  .orders-page,
+  .products-page,
+  .packages-page {
     height: calc(100dvh - var(--topbar-height) - 62px);
     min-height: 520px;
   }
@@ -2049,20 +2237,30 @@ td:last-child {
   }
 
   .quotes-heading,
-  .orders-heading {
+  .orders-heading,
+  .products-heading,
+  .packages-heading {
     align-items: stretch;
   }
 
   .quotes-toolbar,
   .quotes-search,
   .orders-toolbar,
-  .orders-search {
+  .orders-search,
+  .products-toolbar,
+  .products-search,
+  .packages-toolbar,
+  .packages-search {
     align-items: stretch;
     flex-direction: column;
   }
 
   .quotes-status-filter,
-  .orders-status-filter {
+  .orders-status-filter,
+  .products-status-filter,
+  .packages-status-filter,
+  .products-filters,
+  .packages-filters {
     width: 100%;
   }
 
