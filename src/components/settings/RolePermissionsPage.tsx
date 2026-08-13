@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { RefreshCw, ShieldCheck } from "lucide-react";
+import { ChevronDown, RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -101,21 +101,6 @@ export function RolePermissionsPage({
           <span className="eyebrow">{t("settings.eyebrow")}</span>
           <h1>{t("settings.roles.title")}</h1>
         </div>
-        <label className="settings-role-picker">
-          <span>{t("settings.roles.role")}</span>
-          <select
-            value={selectedRole}
-            onChange={(event) =>
-              setSelectedRole(event.target.value as SystemRole)
-            }
-          >
-            {SYSTEM_ROLES.map((role) => (
-              <option key={role} value={role}>
-                {role}
-              </option>
-            ))}
-          </select>
-        </label>
       </header>
 
       {error && (
@@ -139,17 +124,24 @@ export function RolePermissionsPage({
           </div>
         ) : (
           <>
-            <header className="settings-permissions-summary">
-              <ShieldCheck />
-              <div>
-                <strong>{selectedRole}</strong>
-                <span>
-                  {selectedRole === "Super Admin"
-                    ? t("settings.roles.superAdminNotice")
-                    : t("settings.roles.restrictedNotice")}
-                </span>
-                <span>{t("settings.roles.cascadeNotice")}</span>
-              </div>
+            <header className="settings-permissions-toolbar">
+              <label className="settings-role-select">
+                <span className="sr-only">{t("settings.roles.role")}</span>
+                <select
+                  value={selectedRole}
+                  aria-label={t("settings.roles.role")}
+                  onChange={(event) =>
+                    setSelectedRole(event.target.value as SystemRole)
+                  }
+                >
+                  {SYSTEM_ROLES.map((role) => (
+                    <option key={role} value={role}>
+                      {role}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown aria-hidden="true" />
+              </label>
             </header>
             <div className="table-wrap settings-permissions-table">
               <table>

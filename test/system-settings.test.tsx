@@ -410,6 +410,9 @@ describe("Super Admin system settings", () => {
     });
     expect(superAdminAccess).toBeChecked();
     expect(superAdminAccess).toBeDisabled();
+    expect(
+      screen.queryByText("Super Admin 固定可訪問所有頁面。"),
+    ).not.toBeInTheDocument();
 
     await user.selectOptions(screen.getByLabelText("角色"), "Admin");
     expect(
