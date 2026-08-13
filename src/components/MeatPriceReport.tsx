@@ -5,6 +5,7 @@ import { MonthlyTrendChart } from "@/components/reports/MonthlyTrendChart";
 import { ReportItemSelector } from "@/components/reports/ReportItemSelector";
 import { ReportSummaryCards } from "@/components/reports/ReportSummaryCards";
 import { ReportYearFilter } from "@/components/reports/ReportYearFilter";
+import { ReportSkeleton } from "@/components/ui/content-skeletons";
 import {
   fetchMonthlyPreparedMeatPrices,
   type MeatPriceMode,
@@ -188,9 +189,7 @@ export function MeatPriceReport({ mode }: { mode: MeatPriceMode }) {
           </div>
         </section>
       ) : loading ? (
-        <section className="panel">
-          <div className="report-state">{t("reports.loading")}</div>
-        </section>
+        <ReportSkeleton label={t("reports.loading")} analysis />
       ) : !products.length ? (
         <section className="panel">
           <div className="report-state">{t("reports.meatPriceEmpty")}</div>

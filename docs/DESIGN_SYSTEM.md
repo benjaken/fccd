@@ -202,6 +202,7 @@ Active 導航（側欄、工作區 soft link、migration tab）必須是**淡綠
 | `TableSkeletonRows` | `src/components/ui/table-skeleton.tsx` | 表格載入骨架列 |
 | `PageSkeleton` | `src/components/ui/page-skeleton.tsx` | 權限／初始化期間保留完整頁面骨架 |
 | `DetailPageSkeleton` | `src/components/ui/detail-page-skeleton.tsx` | 訂單／報價／商品／套餐詳情載入骨架 |
+| Content skeletons | `src/components/ui/content-skeletons.tsx` | Dashboard、卡片頁、權限表、報表及分析區骨架 |
 | `TablePagination` | `src/components/ui/table-pagination.tsx` | 底部分頁 |
 | `OperationalListState` | `src/components/ui/operational-list-state.tsx` | 列表空／錯／權限等面板狀態 |
 

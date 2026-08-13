@@ -16,6 +16,7 @@ import {
 import { RawMeatAveragePriceReport } from "@/components/RawMeatAveragePriceReport";
 import { SupplierPurchaseReport } from "@/components/SupplierPurchaseReport";
 import { Button } from "@/components/ui/button";
+import { ReportSkeleton } from "@/components/ui/content-skeletons";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import {
   fetchReportShops,
@@ -277,9 +278,7 @@ export function ReportsPage() {
               </div>
             </section>
           ) : loading ? (
-            <section className="panel">
-              <div className="report-state">{t("reports.loading")}</div>
-            </section>
+            <ReportSkeleton label={t("reports.loading")} />
           ) : !rows.length ? (
             <section className="panel">
               <div className="report-state">{t("reports.empty")}</div>
