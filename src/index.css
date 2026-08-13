@@ -1992,7 +1992,7 @@ td:last-child {
 .settings-role-select-hint {
   flex: 0 0 auto;
   color: var(--muted-foreground);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 550;
   line-height: 1.3;
   white-space: nowrap;

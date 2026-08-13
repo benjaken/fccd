@@ -12,7 +12,9 @@ export type ProductListItem = {
   price: number | null;
   status: string | null;
   isActive: boolean;
+  channelId: string | null;
   channelName: string | null;
+  productTypeId: string | null;
   productTypeName: string | null;
   updatedAt: string;
 };
@@ -36,6 +38,7 @@ export type ProductListFilters = {
   page: number;
   search: string;
   channelId: string;
+  productTypeId: string;
   status: ProductStatusFilter;
   priceRange: ProductPriceRange;
   preset?: ProductPreset;
@@ -58,6 +61,13 @@ export type CatalogOption = {
   name: string;
 };
 
+export type RelatedPackageSummary = {
+  id: string;
+  sku: string | null;
+  name: string;
+  chineseName: string | null;
+};
+
 export type ProductDetail = {
   id: string;
   sku: string | null;
@@ -71,14 +81,19 @@ export type ProductDetail = {
   status: string | null;
   isActive: boolean;
   isBentoRecommended: boolean;
+  channelId: string | null;
   channelName: string | null;
+  productTypeId: string | null;
   productTypeName: string | null;
   cookTypeName: string | null;
   bentoMainTypeName: string | null;
   bentoColumnTypeName: string | null;
   collections: string[];
+  packages: RelatedPackageSummary[];
   updatedAt: string;
 };
+
+type RelatedRecord = { id: string; name: string };
 
 type ProductListRow = {
   id: string;
@@ -89,8 +104,8 @@ type ProductListRow = {
   status: string | null;
   is_active: boolean;
   updated_at: string;
-  channels: { name: string } | { name: string }[] | null;
-  product_types: { name: string } | { name: string }[] | null;
+  channels: RelatedRecord | RelatedRecord[] | null;
+  product_types: RelatedRecord | RelatedRecord[] | null;
 };
 
 type ProductDetailRow = {
@@ -107,8 +122,8 @@ type ProductDetailRow = {
   is_active: boolean;
   is_bento_recommended: boolean;
   updated_at: string;
-  channels: { name: string } | { name: string }[] | null;
-  product_types: { name: string } | { name: string }[] | null;
+  channels: RelatedRecord | RelatedRecord[] | null;
+  product_types: RelatedRecord | RelatedRecord[] | null;
   cook_types: { name: string } | { name: string }[] | null;
   bento_main_types: { name: string } | { name: string }[] | null;
   bento_column_types: { name: string } | { name: string }[] | null;
@@ -127,6 +142,13 @@ function relatedName(
   if (!value) return null;
   if (Array.isArray(value)) return value[0]?.name ?? null;
   return value.name ?? null;
+}
+
+function relatedRecord(
+  value: RelatedRecord | RelatedRecord[] | null | undefined,
+): RelatedRecord | null {
+  if (!value) return null;
+  return Array.isArray(value) ? (value[0] ?? null) : value;
 }
 
 function toNumber(value: number | string | null | undefined) {
@@ -166,10 +188,24 @@ export async function fetchProductChannels(): Promise<CatalogOption[]> {
   }));
 }
 
+export async function fetchProductTypes(): Promise<CatalogOption[]> {
+  const { data, error } = await supabase
+    .from("product_types")
+    .select("id,name")
+    .order("sort_order", { ascending: true, nullsFirst: false })
+    .order("name", { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map((row) => ({
+    id: row.id as string,
+    name: row.name as string,
+  }));
+}
+
 export async function fetchProducts({
   page,
   search,
   channelId,
+  productTypeId,
   status,
   priceRange,
   preset = "all",
@@ -180,7 +216,7 @@ export async function fetchProducts({
   let query = supabase
     .from("products")
     .select(
-      "id,sku,name,chinese_name,price,status,is_active,updated_at,channels(name),product_types(name)",
+      "id,sku,name,chinese_name,price,status,is_active,updated_at,channels(id,name),product_types(id,name)",
       { count: "exact" },
     )
     .is("archived_at", null)
@@ -199,6 +235,10 @@ export async function fetchProducts({
     if (range.max !== null) {
       query = query.lt("price", range.max);
     }
+  }
+
+  if (productTypeId) {
+    query = query.eq("product_type_id", productTypeId);
   }
 
   if (channelId) {
@@ -228,18 +268,24 @@ export async function fetchProducts({
   if (error) throw error;
 
   return {
-    items: ((data ?? []) as ProductListRow[]).map((row) => ({
-      id: row.id,
-      sku: row.sku,
-      name: row.name,
-      chineseName: row.chinese_name,
-      price: toNumber(row.price),
-      status: row.status,
-      isActive: row.is_active,
-      channelName: relatedName(row.channels),
-      productTypeName: relatedName(row.product_types),
-      updatedAt: row.updated_at,
-    })),
+    items: ((data ?? []) as ProductListRow[]).map((row) => {
+      const channel = relatedRecord(row.channels);
+      const productType = relatedRecord(row.product_types);
+      return {
+        id: row.id,
+        sku: row.sku,
+        name: row.name,
+        chineseName: row.chinese_name,
+        price: toNumber(row.price),
+        status: row.status,
+        isActive: row.is_active,
+        channelId: channel?.id ?? null,
+        channelName: channel?.name ?? null,
+        productTypeId: productType?.id ?? null,
+        productTypeName: productType?.name ?? null,
+        updatedAt: row.updated_at,
+      };
+    }),
     total: count ?? 0,
   };
 }
@@ -250,7 +296,7 @@ export async function fetchProductDetail(
   const { data, error } = await supabase
     .from("products")
     .select(
-      "id,sku,name,chinese_name,description,image_url,price,price_min,price_max,status,is_active,is_bento_recommended,updated_at,channels(name),product_types(name),cook_types(name),bento_main_types(name),bento_column_types(name)",
+      "id,sku,name,chinese_name,description,image_url,price,price_min,price_max,status,is_active,is_bento_recommended,updated_at,channels(id,name),product_types(id,name),cook_types(name),bento_main_types(name),bento_column_types(name)",
     )
     .eq("id", id)
     .is("archived_at", null)
@@ -260,12 +306,20 @@ export async function fetchProductDetail(
   if (!data) return null;
 
   const row = data as ProductDetailRow;
-  const { data: collectionRows, error: collectionError } = await supabase
-    .from("product_collection_links")
-    .select("product_collections(name)")
-    .eq("product_id", id);
+  const [{ data: collectionRows, error: collectionError }, { data: packageRows, error: packageError }] =
+    await Promise.all([
+      supabase
+        .from("product_collection_links")
+        .select("product_collections(name)")
+        .eq("product_id", id),
+      supabase
+        .from("package_products")
+        .select("packages(id,sku,name,chinese_name,archived_at)")
+        .eq("product_id", id),
+    ]);
 
   if (collectionError) throw collectionError;
+  if (packageError) throw packageError;
 
   const collections = (collectionRows ?? [])
     .map((link) => {
@@ -276,6 +330,38 @@ export async function fetchProductDetail(
       return relatedName(related);
     })
     .filter((name): name is string => Boolean(name));
+
+  const packages = (packageRows ?? [])
+    .map((link) => {
+      const related = link.packages as
+        | {
+            id: string;
+            sku: string | null;
+            name: string;
+            chinese_name: string | null;
+            archived_at: string | null;
+          }
+        | {
+            id: string;
+            sku: string | null;
+            name: string;
+            chinese_name: string | null;
+            archived_at: string | null;
+          }[]
+        | null;
+      const pkg = Array.isArray(related) ? related[0] : related;
+      if (!pkg || pkg.archived_at) return null;
+      return {
+        id: pkg.id,
+        sku: pkg.sku,
+        name: pkg.name,
+        chineseName: pkg.chinese_name,
+      } satisfies RelatedPackageSummary;
+    })
+    .filter((item): item is RelatedPackageSummary => Boolean(item));
+
+  const channel = relatedRecord(row.channels);
+  const productType = relatedRecord(row.product_types);
 
   return {
     id: row.id,
@@ -290,12 +376,15 @@ export async function fetchProductDetail(
     status: row.status,
     isActive: row.is_active,
     isBentoRecommended: row.is_bento_recommended,
-    channelName: relatedName(row.channels),
-    productTypeName: relatedName(row.product_types),
+    channelId: channel?.id ?? null,
+    channelName: channel?.name ?? null,
+    productTypeId: productType?.id ?? null,
+    productTypeName: productType?.name ?? null,
     cookTypeName: relatedName(row.cook_types),
     bentoMainTypeName: relatedName(row.bento_main_types),
     bentoColumnTypeName: relatedName(row.bento_column_types),
     collections,
+    packages,
     updatedAt: row.updated_at,
   };
 }

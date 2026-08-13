@@ -10,6 +10,11 @@ import {
 import { Link, useParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
+import {
+  RelatedEntityLink,
+  catalogChannelPath,
+  catalogProductPath,
+} from "@/components/ui/related-entity-link";
 import { fetchPackageDetail, type PackageDetail } from "@/lib/packages";
 import { cn } from "@/lib/utils";
 
@@ -151,7 +156,15 @@ export function PackageDetailPage({
               {pkg.sku || t("common.notSet")}
             </DetailField>
             <DetailField label={t("packageDetail.channel")}>
-              {pkg.channelName || t("common.notSet")}
+              <RelatedEntityLink
+                to={
+                  pkg.channelId
+                    ? catalogChannelPath(pkg.channelId, "packages")
+                    : null
+                }
+              >
+                {pkg.channelName || t("common.notSet")}
+              </RelatedEntityLink>
             </DetailField>
             <DetailField label={t("packageDetail.price")}>
               {money(pkg.price)}
@@ -217,22 +230,19 @@ export function PackageDetailPage({
               <tbody>
                 {pkg.members.map((member) => (
                   <tr key={member.id}>
+                    <td>{member.productSku || t("common.notSet")}</td>
                     <td>
-                      {member.productId ? (
-                        <Link
-                          className="order-link"
-                          to={`/products/${member.productId}`}
-                        >
-                          {member.productSku || t("common.notSet")}
-                        </Link>
-                      ) : (
-                        member.productSku || t("common.notSet")
-                      )}
-                    </td>
-                    <td>
-                      {member.productChineseName ||
-                        member.productName ||
-                        t("common.notSet")}
+                      <RelatedEntityLink
+                        to={
+                          member.productId
+                            ? catalogProductPath(member.productId)
+                            : null
+                        }
+                      >
+                        {member.productChineseName ||
+                          member.productName ||
+                          t("common.notSet")}
+                      </RelatedEntityLink>
                     </td>
                     <td>{member.quantity ?? t("common.notSet")}</td>
                     <td>{money(member.addonPrice)}</td>
