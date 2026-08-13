@@ -107,15 +107,22 @@ describe("Shop order quantity report", () => {
     await user.click(
       screen.getByRole("button", { name: "Average supply price by shop" }),
     );
-    expect(await screen.findByText("香菇滷肉")).toBeInTheDocument();
+    expect((await screen.findAllByText("香菇滷肉")).length).toBeGreaterThan(1);
     await waitFor(() =>
       expect(reports.fetchMonthlyPreparedMeatPrices).toHaveBeenLastCalledWith({
         year: new Date().getFullYear(),
         mode: "shop",
       }),
     );
-    expect(screen.getAllByText("$21.40/kg")).toHaveLength(2);
-    expect(screen.getAllByText("$42.80/包")).toHaveLength(2);
+    expect(screen.getByText("Latest month")).toBeInTheDocument();
+    expect(screen.getByText("Missing prices")).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", { name: "香菇滷肉 price trend" }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText("$21.40").length).toBeGreaterThanOrEqual(2);
+
+    await user.click(screen.getByRole("button", { name: "Per package" }));
+    expect(screen.getAllByText("$42.80").length).toBeGreaterThanOrEqual(2);
 
     await user.click(
       screen.getByRole("button", {
