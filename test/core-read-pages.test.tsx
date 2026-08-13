@@ -1,0 +1,120 @@
+import { render, screen } from "@testing-library/react";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { describe, expect, it } from "vitest";
+
+import { OrderDetailPage } from "@/components/OrderDetailPage";
+import { PaymentsListPage } from "@/components/PaymentsListPage";
+
+const detail = {
+  order: {
+    id: "order-1",
+    documentType: "order" as const,
+    orderNumber: "B-1513",
+    customerName: "陳小姐",
+    companyName: "香港女童軍總會",
+    email: "customer@example.com",
+    contactA: "91234567",
+    contactB: null,
+    address: "香港測試地址",
+    customerNote: null,
+    quoteStatus: null,
+    quoteDescription: null,
+    deliveryTerms: null,
+    deliveryAt: "2026-08-13T02:00:00.000Z",
+    shipOutTime: "10:00",
+    deliveryStatus: "待取貨",
+    isSentToFactory: null,
+    factoryDate: null,
+    factoryPackingNote: null,
+    currency: "HKD",
+    discount: 0,
+    shippingFee: 0,
+    grandTotal: 1610,
+    outstanding: 1610,
+    updatedAt: "2026-08-13T00:00:00.000Z",
+  },
+  lines: [
+    {
+      id: "line-1",
+      sku: "SKU-1",
+      productName: "測試套餐",
+      content: null,
+      quantity: 2,
+      unitPrice: 805,
+      totalPrice: 1610,
+      isAddon: false,
+      remarks: null,
+    },
+  ],
+  deliveries: [],
+  payments: [],
+  timeline: [],
+  terms: [],
+  paymentMethods: [],
+  quoteFiles: [],
+};
+
+describe("Core read pages", () => {
+  it("renders order detail with financial fields for a finance role", async () => {
+    render(
+      <MemoryRouter initialEntries={["/orders/order-1"]}>
+        <Routes>
+          <Route
+            path="/orders/:id"
+            element={
+              <OrderDetailPage
+                documentType="order"
+                canViewFinance
+                loadDetail={async () => detail}
+              />
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "B-1513" }))
+      .toBeInTheDocument();
+    expect(screen.getAllByText("香港女童軍總會")).toHaveLength(2);
+    expect(screen.getByText("測試套餐")).toBeInTheDocument();
+    expect(screen.getAllByText("HK$1,610")).toHaveLength(3);
+  });
+
+  it("hides payment data when finance access is absent", async () => {
+    render(
+      <MemoryRouter initialEntries={["/orders/order-1"]}>
+        <Routes>
+          <Route
+            path="/orders/:id"
+            element={
+              <OrderDetailPage
+                documentType="order"
+                canViewFinance={false}
+                loadDetail={async () => detail}
+              />
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect((await screen.findAllByText("無財務權限")).length).toBeGreaterThan(0);
+  });
+
+  it("blocks payment list data loading without finance access", async () => {
+    const loadPayments = async () => ({
+      total: 1,
+      items: [],
+    });
+
+    render(
+      <MemoryRouter>
+        <PaymentsListPage canViewFinance={false} loadPayments={loadPayments} />
+      </MemoryRouter>,
+    );
+
+    expect(
+      await screen.findByText("此角色無法查看付款紀錄"),
+    ).toBeInTheDocument();
+  });
+});
