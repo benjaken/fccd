@@ -35,7 +35,8 @@ const PRODUCT_SKELETON_COLUMNS = [
 ];
 
 type ProductsLoader = (filters: ProductListFilters) => Promise<ProductListResult>;
-type OptionsLoader = () => Promise<CatalogOption[]>;
+type ChannelsLoader = () => Promise<CatalogOption[]>;
+type ProductTypesLoader = (channelId?: string) => Promise<CatalogOption[]>;
 
 export function ProductsListPage({
   preset = "all",
@@ -45,8 +46,8 @@ export function ProductsListPage({
 }: {
   preset?: ProductPreset;
   loadProducts?: ProductsLoader;
-  loadChannels?: OptionsLoader;
-  loadProductTypes?: OptionsLoader;
+  loadChannels?: ChannelsLoader;
+  loadProductTypes?: ProductTypesLoader;
 }) {
   const { t, i18n } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -55,7 +56,7 @@ export function ProductsListPage({
   const [channelId, setChannelId] = useState(
     () => searchParams.get("channel") ?? "",
   );
-  const [productTypeId, setProductTypeId] = useState(
+  const [productTypeName, setProductTypeName] = useState(
     () => searchParams.get("type") ?? "",
   );
   const [status, setStatus] = useState<ProductStatusFilter>("");
@@ -95,44 +96,62 @@ export function ProductsListPage({
 
   useEffect(() => {
     let active = true;
-    void Promise.all([loadChannels(), loadProductTypes()])
-      .then(([channelOptions, typeOptions]) => {
-        if (!active) return;
-        setChannels(channelOptions);
-        setProductTypes(typeOptions);
+    void loadChannels()
+      .then((channelOptions) => {
+        if (active) setChannels(channelOptions);
       })
       .catch(() => {
-        if (!active) return;
-        setChannels([]);
-        setProductTypes([]);
+        if (active) setChannels([]);
       });
     return () => {
       active = false;
     };
-  }, [loadChannels, loadProductTypes]);
+  }, [loadChannels]);
+
+  useEffect(() => {
+    let active = true;
+    void loadProductTypes(channelId)
+      .then((typeOptions) => {
+        if (!active) return;
+        setProductTypes(typeOptions);
+        setProductTypeName((current) =>
+          current && typeOptions.some((option) => option.name === current)
+            ? current
+            : "",
+        );
+      })
+      .catch(() => {
+        if (!active) return;
+        setProductTypes([]);
+        setProductTypeName("");
+      });
+    return () => {
+      active = false;
+    };
+  }, [channelId, loadProductTypes]);
 
   useEffect(() => {
     const nextChannel = searchParams.get("channel") ?? "";
     const nextType = searchParams.get("type") ?? "";
     setChannelId((current) => (current === nextChannel ? current : nextChannel));
-    setProductTypeId((current) => (current === nextType ? current : nextType));
+    setProductTypeName((current) => (current === nextType ? current : nextType));
   }, [searchParams]);
 
   useEffect(() => {
     const next = new URLSearchParams();
     if (channelId) next.set("channel", channelId);
-    if (productTypeId) next.set("type", productTypeId);
+    if (productTypeName) next.set("type", productTypeName);
     const current = searchParams.toString();
     const upcoming = next.toString();
     if (current !== upcoming) {
       setSearchParams(next, { replace: true });
     }
-  }, [channelId, productTypeId, searchParams, setSearchParams]);
+  }, [channelId, productTypeName, searchParams, setSearchParams]);
 
   useEffect(() => {
     setPage(1);
     setChannelId("");
-    setProductTypeId("");
+    setProductTypeName("");
     setStatus("");
     setPriceRange("");
   }, [preset]);
@@ -145,7 +164,7 @@ export function ProductsListPage({
         page,
         search,
         channelId,
-        productTypeId,
+        productTypeName,
         status,
         priceRange,
         preset,
@@ -172,7 +191,7 @@ export function ProductsListPage({
     page,
     preset,
     priceRange,
-    productTypeId,
+    productTypeName,
     reloadKey,
     search,
     status,
@@ -264,6 +283,7 @@ export function ProductsListPage({
                 onChange={(event) => {
                   setPage(1);
                   setChannelId(event.target.value);
+                  setProductTypeName("");
                 }}
               >
                 <option value="">{t("products.allChannels")}</option>
@@ -278,15 +298,15 @@ export function ProductsListPage({
             <label className="products-status-filter">
               <span>{t("products.typeFilter")}</span>
               <select
-                value={productTypeId}
+                value={productTypeName}
                 onChange={(event) => {
                   setPage(1);
-                  setProductTypeId(event.target.value);
+                  setProductTypeName(event.target.value);
                 }}
               >
                 <option value="">{t("products.allTypes")}</option>
                 {productTypes.map((productType) => (
-                  <option key={productType.id} value={productType.id}>
+                  <option key={productType.name} value={productType.name}>
                     {productType.name}
                   </option>
                 ))}

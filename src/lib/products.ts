@@ -38,7 +38,7 @@ export type ProductListFilters = {
   page: number;
   search: string;
   channelId: string;
-  productTypeId: string;
+  productTypeName: string;
   status: ProductStatusFilter;
   priceRange: ProductPriceRange;
   preset?: ProductPreset;
@@ -188,24 +188,56 @@ export async function fetchProductChannels(): Promise<CatalogOption[]> {
   }));
 }
 
-export async function fetchProductTypes(): Promise<CatalogOption[]> {
-  const { data, error } = await supabase
+export async function fetchProductTypes(
+  channelId = "",
+): Promise<CatalogOption[]> {
+  let query = supabase
     .from("product_types")
     .select("id,name")
     .order("sort_order", { ascending: true, nullsFirst: false })
     .order("name", { ascending: true });
+
+  if (channelId) {
+    query = query.eq("channel_id", channelId);
+  }
+
+  const { data, error } = await query;
   if (error) throw error;
-  return (data ?? []).map((row) => ({
-    id: row.id as string,
-    name: row.name as string,
-  }));
+
+  const unique = new Map<string, string>();
+  for (const row of data ?? []) {
+    const name = String(row.name ?? "").trim();
+    if (!name || unique.has(name)) continue;
+    unique.set(name, name);
+  }
+
+  return [...unique.values()]
+    .sort((left, right) => left.localeCompare(right, "zh-HK"))
+    .map((name) => ({ id: name, name }));
+}
+
+async function productTypeIdsForName(name: string, channelId = "") {
+  const key = name.trim();
+  if (!key) return [] as string[];
+
+  let query = supabase.from("product_types").select("id,name");
+  if (channelId) {
+    query = query.eq("channel_id", channelId);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  return (data ?? [])
+    .filter((row) => String(row.name ?? "").trim() === key)
+    .map((row) => row.id as string);
 }
 
 export async function fetchProducts({
   page,
   search,
   channelId,
-  productTypeId,
+  productTypeName,
   status,
   priceRange,
   preset = "all",
@@ -237,8 +269,12 @@ export async function fetchProducts({
     }
   }
 
-  if (productTypeId) {
-    query = query.eq("product_type_id", productTypeId);
+  if (productTypeName) {
+    const typeIds = await productTypeIdsForName(productTypeName, channelId);
+    if (typeIds.length === 0) {
+      return { items: [], total: 0 };
+    }
+    query = query.in("product_type_id", typeIds);
   }
 
   if (channelId) {

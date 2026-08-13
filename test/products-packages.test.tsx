@@ -227,7 +227,7 @@ describe("Products catalog pages", () => {
         page: 1,
         search: "燒雞",
         channelId: "",
-        productTypeId: "",
+        productTypeName: "",
         status: "",
         priceRange: "",
         preset: "all",
@@ -242,7 +242,7 @@ describe("Products catalog pages", () => {
       { id: "channel-1", name: "Catering" },
     ]);
     const loadProductTypes = vi.fn().mockResolvedValue([
-      { id: "type-1", name: "西式熱盤" },
+      { id: "西式熱盤", name: "西式熱盤" },
     ]);
 
     render(
@@ -274,10 +274,10 @@ describe("Products catalog pages", () => {
       ),
     );
 
-    await user.selectOptions(screen.getByLabelText("分類"), "type-1");
+    await user.selectOptions(screen.getByLabelText("分類"), "西式熱盤");
     await waitFor(() =>
       expect(loadProducts).toHaveBeenLastCalledWith(
-        expect.objectContaining({ productTypeId: "type-1", page: 1 }),
+        expect.objectContaining({ productTypeName: "西式熱盤", page: 1 }),
       ),
     );
 
@@ -287,7 +287,7 @@ describe("Products catalog pages", () => {
         expect.objectContaining({
           status: "Active",
           channelId: "channel-1",
-          productTypeId: "type-1",
+          productTypeName: "西式熱盤",
           priceRange: "100-299",
           page: 1,
         }),
