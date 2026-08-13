@@ -50,6 +50,7 @@ const resources = {
         operationsDescription:
           "到會、中央廚房、配送與餐廳營運，一站掌握今日進度。",
         loading: "正在檢查登入狀態…",
+        quickSignIn: "一鍵登入（預覽）",
       },
       workspace: {
         catering: "到會／中央廚房",
@@ -798,6 +799,7 @@ const resources = {
         operationsDescription:
           "Keep catering, central kitchen, delivery and restaurant work in sync.",
         loading: "Checking your session…",
+        quickSignIn: "One-click sign in (preview)",
       },
       workspace: {
         catering: "Catering / Central Kitchen",

@@ -19,6 +19,24 @@ Vercel preview deployments also accept the Supabase integration's
 legacy `NEXT_PUBLIC_SUPABASE_ANON_KEY`). This allows a Git `develop` deployment
 to follow the matching Supabase `develop` preview branch automatically.
 
+### One-click preview sign-in
+
+Each Vercel preview URL is a new origin, so the browser session does not carry
+over. For preview/local testing only, set these Preview environment variables in
+Vercel (or in `.env.local`):
+
+```bash
+VITE_ENABLE_QUICK_LOGIN=true
+VITE_QUICK_LOGIN_EMAIL=you@example.com
+VITE_QUICK_LOGIN_PASSWORD=your-password
+```
+
+The login page then shows **一鍵登入（預覽）**. You can also open
+`https://your-preview.vercel.app/?autologin=1` for automatic sign-in.
+
+Do not enable these on Production — the values are embedded in the client
+bundle.
+
 ## Checks
 
 ```bash

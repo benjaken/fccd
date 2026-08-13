@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ArrowLeft,
@@ -11,10 +11,16 @@ import {
   Moon,
   ShieldCheck,
   Sun,
+  Zap,
 } from "lucide-react";
 
 import { useAuth } from "@/auth/AuthProvider";
 import { Button } from "@/components/ui/button";
+import {
+  getQuickLoginCredentials,
+  shouldAutologinFromUrl,
+  stripAutologinParam,
+} from "@/lib/quick-login";
 import { useTheme } from "@/lib/use-theme";
 
 type View = "sign-in" | "reset";
@@ -23,8 +29,9 @@ export function LoginPage() {
   const { t, i18n } = useTranslation();
   const { signIn, resetPassword, configured } = useAuth();
   const { dark, toggleTheme } = useTheme();
+  const quickLogin = getQuickLoginCredentials();
   const [view, setView] = useState<View>("sign-in");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(quickLogin?.email ?? "");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -32,6 +39,7 @@ export function LoginPage() {
     configured ? null : t("auth.configuration"),
   );
   const [resetSent, setResetSent] = useState(false);
+  const autologinStarted = useRef(false);
 
   const switchLanguage = () => {
     void i18n.changeLanguage(i18n.language === "en" ? "zh-HK" : "en");
@@ -43,18 +51,20 @@ export function LoginPage() {
     return valid;
   };
 
-  const handleSignIn = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const completeSignIn = async (nextEmail: string, nextPassword: string) => {
     setError(null);
 
-    if (!validateEmail()) return;
-    if (!password) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nextEmail.trim())) {
+      setError(t("auth.emailRequired"));
+      return;
+    }
+    if (!nextPassword) {
       setError(t("auth.passwordRequired"));
       return;
     }
 
     setSubmitting(true);
-    const result = await signIn(email.trim(), password);
+    const result = await signIn(nextEmail.trim(), nextPassword);
     setSubmitting(false);
 
     if (!result) return;
@@ -66,6 +76,36 @@ export function LoginPage() {
           : t("auth.genericError"),
     );
   };
+
+  const handleSignIn = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    await completeSignIn(email, password);
+  };
+
+  const handleQuickLogin = async () => {
+    if (!quickLogin || !configured || submitting) return;
+    setView("sign-in");
+    setEmail(quickLogin.email);
+    setPassword(quickLogin.password);
+    await completeSignIn(quickLogin.email, quickLogin.password);
+  };
+
+  useEffect(() => {
+    if (
+      !quickLogin ||
+      !configured ||
+      autologinStarted.current ||
+      !shouldAutologinFromUrl()
+    ) {
+      return;
+    }
+
+    autologinStarted.current = true;
+    window.history.replaceState({}, "", stripAutologinParam());
+    void handleQuickLogin();
+    // Run once on mount for ?autologin=1 preview links.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [configured, quickLogin?.email]);
 
   const handleReset = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -247,6 +287,21 @@ export function LoginPage() {
                   : t("auth.sendReset")}
               <ArrowRight />
             </Button>
+
+            {view === "sign-in" && quickLogin && (
+              <Button
+                className="login-quick"
+                type="button"
+                variant="outline"
+                disabled={submitting || !configured}
+                onClick={() => {
+                  void handleQuickLogin();
+                }}
+              >
+                <Zap />
+                {submitting ? t("auth.signingIn") : t("auth.quickSignIn")}
+              </Button>
+            )}
 
             {view === "sign-in" ? (
               <button

@@ -4603,6 +4603,19 @@ td:last-child {
   box-shadow: 0 10px 24px color-mix(in oklch, var(--primary) 23%, transparent);
 }
 
+.login-quick {
+  width: 100%;
+  height: 46px;
+  border-color: color-mix(in oklch, var(--primary) 35%, var(--border));
+  color: var(--primary);
+  font-weight: 720;
+}
+
+.login-quick:hover {
+  background: color-mix(in oklch, var(--primary) 8%, var(--card));
+  color: var(--primary);
+}
+
 .login-submit svg {
   margin-left: auto;
 }
