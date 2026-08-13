@@ -3582,7 +3582,7 @@ td:last-child {
   padding: 16px 18px;
 }
 
-.report-filter-panel form {
+.report-date-controls {
   display: flex;
   align-items: flex-end;
   justify-content: flex-end;
@@ -3590,18 +3590,18 @@ td:last-child {
   gap: 8px;
 }
 
-.report-filter-panel label {
+.report-date-controls label {
   display: grid;
   gap: 5px;
 }
 
-.report-filter-panel label span {
+.report-date-controls label span {
   color: var(--muted-foreground);
   font-size: 14px;
   font-weight: 700;
 }
 
-.report-filter-panel input {
+.report-date-controls input {
   height: 38px;
   padding: 0 10px;
   border: 1px solid var(--border);
@@ -3653,6 +3653,28 @@ td:last-child {
 .report-table-wrap td:last-child,
 .report-table-wrap th:last-child {
   text-align: right;
+}
+
+.report-product-list,
+.report-quantity-list {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.report-product-list span,
+.report-quantity-list span,
+.report-product-list strong,
+.report-quantity-list strong {
+  display: block;
+  min-height: 34px;
+  padding: 8px 0;
+  border-bottom: 1px dotted var(--border);
+}
+
+.report-product-list strong,
+.report-quantity-list strong {
+  border-bottom: 0;
+  color: var(--foreground);
 }
 
 .report-table-wrap tfoot td {
@@ -4957,12 +4979,12 @@ td:last-child {
     grid-template-columns: 1fr;
   }
 
-  .report-filter-panel form {
+  .report-date-controls {
     align-items: stretch;
     flex-direction: column;
   }
 
-  .report-filter-panel form > span {
+  .report-date-controls > span {
     display: none;
   }
 

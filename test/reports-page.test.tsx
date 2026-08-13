@@ -57,7 +57,7 @@ describe("Shop order quantity report", () => {
     expect(screen.getByRole("button", { name: "Export CSV" })).toBeEnabled();
   });
 
-  it("passes selected shops and date range to the report query", async () => {
+  it("automatically queries after a single shop or date change", async () => {
     const user = userEvent.setup();
     render(<ReportsPage />);
     await screen.findByText("豉油雞中翼");
@@ -69,8 +69,6 @@ describe("Shop order quantity report", () => {
     await user.type(start, "2026-06-01");
     await user.clear(end);
     await user.type(end, "2026-06-30");
-    await user.click(screen.getByRole("button", { name: "Run report" }));
-
     await waitFor(() =>
       expect(reports.fetchShopOrderQuantities).toHaveBeenLastCalledWith({
         startDate: "2026-06-01",

@@ -1,5 +1,5 @@
-import { CalendarDays, Download, RefreshCw } from "lucide-react";
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { Download } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
@@ -36,19 +36,38 @@ export function ReportsPage() {
   const [startDate, setStartDate] = useState(range.start);
   const [endDate, setEndDate] = useState(range.end);
   const [shops, setShops] = useState<ReportShop[]>([]);
-  const [selectedShops, setSelectedShops] = useState<string[]>([]);
+  const [selectedShop, setSelectedShop] = useState("");
   const [rows, setRows] = useState<ShopOrderQuantityRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const quantity = new Intl.NumberFormat(i18n.language, {
     maximumFractionDigits: 3,
   });
-  const total = rows.reduce((sum, row) => sum + row.totalQuantity, 0);
+  const products = useMemo(() => {
+    const grouped = new Map<
+      string,
+      { name: string; unit: string | null; quantity: number }
+    >();
+    for (const row of rows) {
+      const key = row.productId ?? `${row.productName}\u001f${row.unit ?? ""}`;
+      const current = grouped.get(key) ?? {
+        name: row.productName,
+        unit: row.unit,
+        quantity: 0,
+      };
+      current.quantity += row.totalQuantity;
+      grouped.set(key, current);
+    }
+    return [...grouped.values()].sort((left, right) =>
+      left.name.localeCompare(right.name, i18n.language),
+    );
+  }, [rows, i18n.language]);
+  const total = products.reduce((sum, product) => sum + product.quantity, 0);
 
   const loadReport = async (
     nextStart = startDate,
     nextEnd = endDate,
-    nextShops = selectedShops,
+    nextShop = selectedShop,
   ) => {
     setLoading(true);
     setError(null);
@@ -56,7 +75,7 @@ export function ReportsPage() {
       const data = await fetchShopOrderQuantities({
         startDate: nextStart,
         endDate: nextEnd,
-        shopIds: nextShops,
+        shopIds: nextShop ? [nextShop] : [],
       });
       setRows(data);
     } catch (loadError) {
@@ -74,7 +93,8 @@ export function ReportsPage() {
       .then((data) => {
         if (!active) return;
         setShops(data);
-        return loadReport(range.start, range.end, []);
+        setSelectedShop(data[0]?.id ?? "");
+        if (!data.length) setLoading(false);
       })
       .catch((loadError) => {
         if (!active) return;
@@ -90,18 +110,13 @@ export function ReportsPage() {
     };
   }, []);
 
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
-    void loadReport();
-  };
-
-  const toggleShop = (id: string) => {
-    setSelectedShops((current) =>
-      current.includes(id)
-        ? current.filter((shopId) => shopId !== id)
-        : [...current, id],
-    );
-  };
+  useEffect(() => {
+    if (!selectedShop || !startDate || !endDate || startDate > endDate) return;
+    const timeout = window.setTimeout(() => {
+      void loadReport(startDate, endDate, selectedShop);
+    }, 200);
+    return () => window.clearTimeout(timeout);
+  }, [selectedShop, startDate, endDate]);
 
   const exportCsv = () => {
     const csv = [
@@ -151,25 +166,18 @@ export function ReportsPage() {
       </nav>
       <section className="panel report-filter-panel">
         <div className="report-shop-filter">
-          <button
-            className={cn(!selectedShops.length && "active")}
-            type="button"
-            onClick={() => setSelectedShops([])}
-          >
-            {t("reports.allShops")}
-          </button>
           {shops.map((shop) => (
             <button
-              className={cn(selectedShops.includes(shop.id) && "active")}
+              className={cn(selectedShop === shop.id && "active")}
               key={shop.id}
               type="button"
-              onClick={() => toggleShop(shop.id)}
+              onClick={() => setSelectedShop(shop.id)}
             >
               {shop.name}
             </button>
           ))}
         </div>
-        <form onSubmit={submit}>
+        <div className="report-date-controls">
           <label>
             <span>{t("reports.startDate")}</span>
             <input
@@ -189,10 +197,6 @@ export function ReportsPage() {
               onChange={(event) => setEndDate(event.target.value)}
             />
           </label>
-          <Button type="submit" disabled={loading}>
-            {loading ? <RefreshCw className="spin" /> : <CalendarDays />}
-            {t("reports.query")}
-          </Button>
           <Button
             type="button"
             variant="outline"
@@ -202,7 +206,7 @@ export function ReportsPage() {
             <Download />
             {t("reports.export")}
           </Button>
-        </form>
+        </div>
       </section>
       <section className="panel shop-order-report">
         <header>
@@ -237,26 +241,32 @@ export function ReportsPage() {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row) => (
-                  <tr
-                    key={`${row.orderDate}-${row.shopId}-${row.productId ?? row.productName}`}
-                  >
-                    <td>{row.orderDate}</td>
-                    <td>{row.shopName}</td>
-                    <td>{row.productName}</td>
-                    <td>
-                      <strong>{quantity.format(row.totalQuantity)}</strong>
-                      {row.unit ? ` ${row.unit}` : ""}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
                 <tr>
-                  <td colSpan={3}>{t("reports.total")}</td>
-                  <td>{quantity.format(total)}</td>
+                  <td>
+                    {startDate === endDate
+                      ? startDate
+                      : `${startDate} — ${endDate}`}
+                  </td>
+                  <td>{rows[0]?.shopName}</td>
+                  <td className="report-product-list">
+                    {products.map((product) => (
+                      <span key={`${product.name}-${product.unit ?? ""}`}>
+                        {product.name}
+                      </span>
+                    ))}
+                    <strong>{t("reports.total")}</strong>
+                  </td>
+                  <td className="report-quantity-list">
+                    {products.map((product) => (
+                      <span key={`${product.name}-${product.unit ?? ""}`}>
+                        {quantity.format(product.quantity)}
+                        {product.unit ? ` ${product.unit}` : ""}
+                      </span>
+                    ))}
+                    <strong>{quantity.format(total)}</strong>
+                  </td>
                 </tr>
-              </tfoot>
+              </tbody>
             </table>
           </div>
         )}
