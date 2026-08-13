@@ -379,22 +379,23 @@ describe("Super Admin system settings", () => {
       </MemoryRouter>,
     );
 
-    const superAdminAccess = await screen.findByRole("checkbox", {
-      name: "使用者列表 可存取",
+    const superAdminAccess = await screen.findByRole("switch", {
+      name: "使用者列表 可訪問",
     });
     expect(superAdminAccess).toBeChecked();
     expect(superAdminAccess).toBeDisabled();
 
     await user.selectOptions(screen.getByLabelText("角色"), "Admin");
     expect(
-      screen.getByRole("checkbox", { name: "財務對帳 可存取" }),
+      screen.getByRole("switch", { name: "財務對帳 可訪問" }),
     ).toBeChecked();
-    const adminUsers = screen.getByRole("checkbox", {
-      name: "使用者列表 可存取",
+    const adminUsers = screen.getByRole("switch", {
+      name: "使用者列表 可訪問",
     });
     expect(adminUsers).not.toBeChecked();
     // Settings pages are permission-driven (editable), not hard-locked.
     expect(adminUsers).not.toBeDisabled();
+    expect(screen.queryByText("可管理")).not.toBeInTheDocument();
   });
 
   it("selecting a parent access grant opens every child page and tab", async () => {
@@ -412,7 +413,7 @@ describe("Super Admin system settings", () => {
     );
 
     await user.selectOptions(await screen.findByLabelText("角色"), "Admin");
-    await user.click(screen.getByRole("checkbox", { name: "訂單 可存取" }));
+    await user.click(screen.getByRole("switch", { name: "訂單 可訪問" }));
 
     await waitFor(() => {
       expect(savePermission).toHaveBeenCalledWith("Admin", "orders", {
@@ -430,10 +431,10 @@ describe("Super Admin system settings", () => {
     });
 
     expect(
-      screen.getByRole("checkbox", { name: "待確定訂單 可存取" }),
+      screen.getByRole("switch", { name: "待確定訂單 可訪問" }),
     ).toBeChecked();
     expect(
-      screen.getByRole("checkbox", { name: "建立新單 可存取" }),
+      screen.getByRole("switch", { name: "建立新單 可訪問" }),
     ).toBeChecked();
     expect(screen.getAllByText("子頁面").length).toBeGreaterThan(0);
     expect(screen.getAllByText("分頁").length).toBeGreaterThan(0);
