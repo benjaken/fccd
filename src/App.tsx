@@ -75,6 +75,7 @@ import { RolePermissionsPage } from "@/components/settings/RolePermissionsPage";
 import { SettingsAccessDenied } from "@/components/settings/SettingsAccessDenied";
 import { UsersListPage } from "@/components/settings/UsersListPage";
 import { Button } from "@/components/ui/button";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 import {
   fetchDashboardData,
   type DashboardData,
@@ -707,10 +708,7 @@ function OperationsShell() {
         <main className="main-content">
           <div className="page-transition" key={pageKey}>
             {pageAccess.loading ? (
-              <div className="profile-state" role="status">
-                <RefreshCw className="spin" />
-                <span>{t("settings.loadingPermissions")}</span>
-              </div>
+              <PageSkeleton label={t("settings.loadingPermissions")} />
             ) : !pageAccess.canAccess(currentPageKey) ? (
               <SettingsAccessDenied />
             ) : (
