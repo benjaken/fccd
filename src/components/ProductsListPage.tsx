@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  ChevronRight,
   RefreshCw,
   Search,
   ShoppingBasket,
@@ -287,19 +286,16 @@ export function ProductsListPage({
                   <th>{t("products.columns.price")}</th>
                   <th>{t("products.columns.status")}</th>
                   <th>{t("products.columns.updated")}</th>
-                  <th aria-label={t("products.columns.actions")} />
                 </tr>
               </thead>
               <tbody>
                 {items.map((product) => (
                   <tr key={product.id}>
+                    <td>{product.sku || t("common.notSet")}</td>
                     <td>
                       <Link className="order-link" to={`/products/${product.id}`}>
-                        {product.sku || t("common.notSet")}
+                        <strong>{displayName(product)}</strong>
                       </Link>
-                    </td>
-                    <td>
-                      <strong>{displayName(product)}</strong>
                       {product.chineseName && product.name !== product.chineseName && (
                         <small className="quote-company">{product.name}</small>
                       )}
@@ -316,18 +312,6 @@ export function ProductsListPage({
                     </td>
                     <td>
                       {dateTimeFormatter.format(new Date(product.updatedAt))}
-                    </td>
-                    <td>
-                      <Button variant="ghost" size="icon" asChild>
-                        <Link
-                          to={`/products/${product.id}`}
-                          aria-label={`${t("products.open")} ${
-                            product.sku || product.name
-                          }`}
-                        >
-                          <ChevronRight />
-                        </Link>
-                      </Button>
                     </td>
                   </tr>
                 ))}

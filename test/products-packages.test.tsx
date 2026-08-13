@@ -125,11 +125,10 @@ describe("Products catalog pages", () => {
     expect(
       await screen.findByRole("heading", { name: "全部商品" }),
     ).toBeInTheDocument();
-    expect(await screen.findByText("CC-001")).toHaveAttribute(
-      "href",
-      "/products/product-1",
-    );
-    expect(screen.getByText("燒雞")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("link", { name: "燒雞" }),
+    ).toHaveAttribute("href", "/products/product-1");
+    expect(screen.getByText("CC-001")).toBeInTheDocument();
     expect(within(screen.getByRole("table")).getByText("Catering")).toBeInTheDocument();
     expect(screen.getByText("HK$188")).toBeInTheDocument();
   });
@@ -261,11 +260,10 @@ describe("Packages catalog pages", () => {
     expect(
       await screen.findByRole("heading", { name: "套餐列表" }),
     ).toBeInTheDocument();
-    expect(await screen.findByText("CCFA0406")).toHaveAttribute(
-      "href",
-      "/products/packages/package-1",
-    );
-    expect(screen.getByText("精緻家庭美宴 (4-6人)")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("link", { name: "精緻家庭美宴 (4-6人)" }),
+    ).toHaveAttribute("href", "/products/packages/package-1");
+    expect(screen.getByText("CCFA0406")).toBeInTheDocument();
     expect(screen.getByText("9")).toBeInTheDocument();
     expect(screen.getByText("HK$1,280")).toBeInTheDocument();
   });
