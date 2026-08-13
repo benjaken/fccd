@@ -9,6 +9,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
+import { ListTable } from "@/components/ui/list-table";
 import {
   fetchLoginLogs,
   LOGIN_LOG_EVENT_TYPES,
@@ -18,6 +19,16 @@ import {
 import { cn } from "@/lib/utils";
 
 type LoginLogsLoader = typeof fetchLoginLogs;
+
+const LOGIN_LOG_SKELETON_COLUMNS = [
+  { width: "7rem" },
+  { width: "5.5rem", variant: "badge" as const },
+  { width: "60%" },
+  { width: "72%" },
+  { width: "5rem" },
+  { width: "7rem" },
+  { width: "70%" },
+];
 
 export function LoginLogsListPage({
   loadLogs = fetchLoginLogs,
@@ -116,12 +127,7 @@ export function LoginLogsListPage({
           </label>
         </header>
 
-        {loading ? (
-          <div className="orders-state" role="status">
-            <RefreshCw className="spin" />
-            <span>{t("settings.loginLogs.loading")}</span>
-          </div>
-        ) : error ? (
+        {error ? (
           <div className="orders-state orders-state-error" role="alert">
             <History />
             <div>
@@ -136,7 +142,7 @@ export function LoginLogsListPage({
               {t("settings.retry")}
             </Button>
           </div>
-        ) : items.length === 0 ? (
+        ) : !loading && items.length === 0 ? (
           <div className="orders-state">
             <History />
             <div>
@@ -145,57 +151,58 @@ export function LoginLogsListPage({
             </div>
           </div>
         ) : (
-          <div className="table-wrap orders-table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>{t("settings.loginLogs.columns.time")}</th>
-                  <th>{t("settings.loginLogs.columns.event")}</th>
-                  <th>{t("settings.loginLogs.columns.user")}</th>
-                  <th>{t("settings.loginLogs.columns.email")}</th>
-                  <th>{t("settings.loginLogs.columns.role")}</th>
-                  <th>{t("settings.loginLogs.columns.ip")}</th>
-                  <th>{t("settings.loginLogs.columns.detail")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item) => (
-                  <tr key={item.id}>
-                    <td>{date.format(new Date(item.createdAt))}</td>
-                    <td>
-                      <span
-                        className={cn(
-                          "status-badge",
-                          item.eventType === "login_success" && "green",
-                          item.eventType === "login_failure" && "red",
-                          item.eventType === "logout" && "blue",
-                          item.eventType === "password_reset_request" &&
-                            "amber",
-                          item.eventType === "password_change" && "amber",
-                        )}
-                      >
-                        {t(`settings.loginLogs.events.${item.eventType}`)}
-                      </span>
-                    </td>
-                    <td>
-                      <strong>{item.userName || t("common.notSet")}</strong>
-                    </td>
-                    <td>{item.email || t("common.notSet")}</td>
-                    <td>{item.role || t("common.notSet")}</td>
-                    <td>
-                      <code>{item.ipAddress || t("common.notSet")}</code>
-                    </td>
-                    <td>
-                      {item.errorCode ||
-                        (item.userAgent
-                          ? item.userAgent.slice(0, 48)
-                          : t("common.notSet"))}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ListTable
+            className="orders-table-wrap"
+            loading={loading}
+            loadingLabel={t("settings.loginLogs.loading")}
+            skeletonRows={SETTINGS_PAGE_SIZE}
+            skeletonColumns={LOGIN_LOG_SKELETON_COLUMNS}
+            header={
+              <tr>
+                <th>{t("settings.loginLogs.columns.time")}</th>
+                <th>{t("settings.loginLogs.columns.event")}</th>
+                <th>{t("settings.loginLogs.columns.user")}</th>
+                <th>{t("settings.loginLogs.columns.email")}</th>
+                <th>{t("settings.loginLogs.columns.role")}</th>
+                <th>{t("settings.loginLogs.columns.ip")}</th>
+                <th>{t("settings.loginLogs.columns.detail")}</th>
+              </tr>
+            }
+          >
+            {items.map((item) => (
+              <tr key={item.id}>
+                <td>{date.format(new Date(item.createdAt))}</td>
+                <td>
+                  <span
+                    className={cn(
+                      "status-badge",
+                      item.eventType === "login_success" && "green",
+                      item.eventType === "login_failure" && "red",
+                      item.eventType === "logout" && "blue",
+                      item.eventType === "password_reset_request" && "amber",
+                      item.eventType === "password_change" && "amber",
+                    )}
+                  >
+                    {t(`settings.loginLogs.events.${item.eventType}`)}
+                  </span>
+                </td>
+                <td>
+                  <strong>{item.userName || t("common.notSet")}</strong>
+                </td>
+                <td>{item.email || t("common.notSet")}</td>
+                <td>{item.role || t("common.notSet")}</td>
+                <td>
+                  <code>{item.ipAddress || t("common.notSet")}</code>
+                </td>
+                <td>
+                  {item.errorCode ||
+                    (item.userAgent
+                      ? item.userAgent.slice(0, 48)
+                      : t("common.notSet"))}
+                </td>
+              </tr>
+            ))}
+          </ListTable>
         )}
 
         <footer className="orders-pagination">

@@ -1428,7 +1428,18 @@ td:last-child {
   box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 18%, transparent);
 }
 
-.settings-attachments-table[aria-busy="true"] table {
+.operational-table-wrap {
+  min-height: 0;
+  overflow: auto;
+}
+
+.operational-table-wrap th {
+  position: sticky;
+  z-index: 1;
+  top: 0;
+}
+
+.operational-table-wrap[aria-busy="true"] table {
   height: 100%;
 }
 

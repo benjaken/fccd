@@ -11,6 +11,7 @@ import { Link } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
+import { ListTable } from "@/components/ui/list-table";
 import { TablePagination } from "@/components/ui/table-pagination";
 import {
   fetchQuotes,
@@ -22,6 +23,16 @@ import {
 } from "@/lib/quotes";
 
 type QuotesLoader = (filters: QuoteListFilters) => Promise<QuoteListResult>;
+
+const QUOTE_SKELETON_COLUMNS = [
+  { width: "6rem" },
+  { width: "72%" },
+  { width: "7rem" },
+  { width: "4.5rem", variant: "badge" as const },
+  { width: "5rem" },
+  { width: "7rem" },
+  { width: "1.75rem", variant: "action" as const },
+];
 
 export function QuotesListPage({
   preset = "all",
@@ -177,12 +188,7 @@ export function QuotesListPage({
           </label>
         </header>
 
-        {loading ? (
-          <div className="quotes-state" role="status">
-            <RefreshCw className="spin" />
-            <span>{t("quotes.loading")}</span>
-          </div>
-        ) : error ? (
+        {error ? (
           <div className="quotes-state quotes-state-error" role="alert">
             <FileText />
             <div>
@@ -198,7 +204,7 @@ export function QuotesListPage({
               {t("quotes.retry")}
             </Button>
           </div>
-        ) : items.length === 0 ? (
+        ) : !loading && items.length === 0 ? (
           <div className="quotes-state quotes-state-empty">
             <FileText />
             <div>
@@ -207,71 +213,73 @@ export function QuotesListPage({
             </div>
           </div>
         ) : (
-          <div className="table-wrap quotes-table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>{t("quotes.columns.number")}</th>
-                  <th>{t("quotes.columns.customer")}</th>
-                  <th>{t("quotes.columns.delivery")}</th>
-                  <th>{t("quotes.columns.status")}</th>
-                  <th>{t("quotes.columns.amount")}</th>
-                  <th>{t("quotes.columns.updated")}</th>
-                  <th aria-label={t("quotes.columns.actions")} />
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((quote) => (
-                  <tr key={quote.id}>
-                    <td>
-                      <Link className="order-link" to={`/quotes/${quote.id}`}>
-                        {quote.orderNumber || t("common.notSet")}
-                      </Link>
-                    </td>
-                    <td>
-                      <strong>
-                        {quote.customerName ||
-                          quote.companyName ||
-                          t("common.notSet")}
-                      </strong>
-                      {quote.customerName && quote.companyName && (
-                        <small className="quote-company">{quote.companyName}</small>
-                      )}
-                    </td>
-                    <td>
-                      <span className="quote-date">
-                        <CalendarDays />
-                        {quote.deliveryAt
-                          ? dateFormatter.format(new Date(quote.deliveryAt))
-                          : t("common.notSet")}
-                      </span>
-                    </td>
-                    <td>
-                      <span className="status-badge amber">
-                        {quote.quoteStatus || t("quotes.draft")}
-                      </span>
-                    </td>
-                    <td>
-                      <strong>{formatAmount(quote)}</strong>
-                    </td>
-                    <td>{dateTimeFormatter.format(new Date(quote.updatedAt))}</td>
-                    <td>
-                      <Button variant="ghost" size="icon" asChild>
-                        <Link
-                          to={`/quotes/${quote.id}`}
-                          aria-label={`${t("quotes.open")} ${
-                            quote.orderNumber || quote.id
-                          }`}
-                        >
-                          <ChevronRight />
-                        </Link>
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ListTable
+            className="quotes-table-wrap"
+            loading={loading}
+            loadingLabel={t("quotes.loading")}
+            skeletonRows={QUOTES_PAGE_SIZE}
+            skeletonColumns={QUOTE_SKELETON_COLUMNS}
+            header={
+              <tr>
+                <th>{t("quotes.columns.number")}</th>
+                <th>{t("quotes.columns.customer")}</th>
+                <th>{t("quotes.columns.delivery")}</th>
+                <th>{t("quotes.columns.status")}</th>
+                <th>{t("quotes.columns.amount")}</th>
+                <th>{t("quotes.columns.updated")}</th>
+                <th aria-label={t("quotes.columns.actions")} />
+              </tr>
+            }
+          >
+            {items.map((quote) => (
+              <tr key={quote.id}>
+                <td>
+                  <Link className="order-link" to={`/quotes/${quote.id}`}>
+                    {quote.orderNumber || t("common.notSet")}
+                  </Link>
+                </td>
+                <td>
+                  <strong>
+                    {quote.customerName ||
+                      quote.companyName ||
+                      t("common.notSet")}
+                  </strong>
+                  {quote.customerName && quote.companyName && (
+                    <small className="quote-company">{quote.companyName}</small>
+                  )}
+                </td>
+                <td>
+                  <span className="quote-date">
+                    <CalendarDays />
+                    {quote.deliveryAt
+                      ? dateFormatter.format(new Date(quote.deliveryAt))
+                      : t("common.notSet")}
+                  </span>
+                </td>
+                <td>
+                  <span className="status-badge amber">
+                    {quote.quoteStatus || t("quotes.draft")}
+                  </span>
+                </td>
+                <td>
+                  <strong>{formatAmount(quote)}</strong>
+                </td>
+                <td>{dateTimeFormatter.format(new Date(quote.updatedAt))}</td>
+                <td>
+                  <Button variant="ghost" size="icon" asChild>
+                    <Link
+                      to={`/quotes/${quote.id}`}
+                      aria-label={`${t("quotes.open")} ${
+                        quote.orderNumber || quote.id
+                      }`}
+                    >
+                      <ChevronRight />
+                    </Link>
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </ListTable>
         )}
 
         <TablePagination

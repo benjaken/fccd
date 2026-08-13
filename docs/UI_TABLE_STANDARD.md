@@ -47,7 +47,9 @@ component (`src/components/ui/list-search-bar.tsx`), which wraps **`SearchField`
 
 While list data is loading, keep the **table chrome** (toolbar, sticky header,
 pagination shell) and replace only the **tbody content** with skeleton rows
-(`.table-skeleton-row` / `.table-skeleton-bone` via `TableSkeletonRows`).
+(`.table-skeleton-row` / `.table-skeleton-bone`). Paginated operational lists
+must use `ListTable`, which owns this shell and delegates rows to
+`TableSkeletonRows`.
 
 - Do **not** replace the whole panel with a centered spinner for first load or
   refetch of operational tables.
@@ -73,7 +75,6 @@ lists.
   pagination.
 - Users list: icon-only horizontal actions in the last column (edit / change
   password).
-- Products / packages lists: table-body skeleton while loading.
-- Attachments list: table-body skeleton while loading.
 - Orders, quotes, payments, products, packages, users, login logs, attachments:
-  toolbar search via `ListSearchBar`.
+  shared table shell and table-body skeleton via `ListTable`.
+- The same pages use toolbar search via `ListSearchBar`.

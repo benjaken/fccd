@@ -5,6 +5,7 @@ import { Link, useSearchParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
+import { ListTable } from "@/components/ui/list-table";
 import { TablePagination } from "@/components/ui/table-pagination";
 import {
   fetchOrders,
@@ -26,6 +27,14 @@ const STATUS_FILTERS: OrderStatusFilter[] = [
   "ready",
   "shipping",
   "completed",
+];
+
+const ORDER_SKELETON_COLUMNS = [
+  { width: "6rem" },
+  { width: "72%" },
+  { width: "7rem" },
+  { width: "5rem" },
+  { width: "4.5rem", variant: "badge" as const },
 ];
 
 function orderStatus(
@@ -247,11 +256,6 @@ export function OrdersListPage({
               <span>{t("orders.financeRestrictedDescription")}</span>
             </div>
           </div>
-        ) : loading ? (
-          <div className="orders-state" role="status">
-            <RefreshCw className="spin" />
-            <span>{t("orders.loading")}</span>
-          </div>
         ) : error ? (
           <div className="orders-state orders-state-error" role="alert">
             <ClipboardList />
@@ -267,7 +271,7 @@ export function OrdersListPage({
               {t("orders.retry")}
             </Button>
           </div>
-        ) : items.length === 0 ? (
+        ) : !loading && items.length === 0 ? (
           <div className="orders-state">
             <ClipboardList />
             <div>
@@ -276,106 +280,108 @@ export function OrdersListPage({
             </div>
           </div>
         ) : (
-          <div className="table-wrap orders-table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>{t("orders.columns.number")}</th>
-                  <th>{t("orders.columns.customer")}</th>
-                  <th>{t("orders.columns.delivery")}</th>
-                  <th>{t("orders.columns.shipOut")}</th>
-                  <th>{t("orders.columns.status")}</th>
+          <ListTable
+            className="orders-table-wrap"
+            loading={loading}
+            loadingLabel={t("orders.loading")}
+            skeletonRows={ORDERS_PAGE_SIZE}
+            skeletonColumns={[
+              ...ORDER_SKELETON_COLUMNS,
+              ...(canViewFinance
+                ? [{ width: "5rem" }, { width: "5rem" }]
+                : []),
+              { width: "1.75rem", variant: "action" as const },
+            ]}
+            header={
+              <tr>
+                <th>{t("orders.columns.number")}</th>
+                <th>{t("orders.columns.customer")}</th>
+                <th>{t("orders.columns.delivery")}</th>
+                <th>{t("orders.columns.shipOut")}</th>
+                <th>{t("orders.columns.status")}</th>
+                {canViewFinance && (
+                  <>
+                    <th>{t("orders.columns.amount")}</th>
+                    <th>{t("orders.columns.outstanding")}</th>
+                  </>
+                )}
+                <th aria-label={t("orders.columns.actions")} />
+              </tr>
+            }
+          >
+            {items.map((order) => {
+              const statusView =
+                preset === "pending"
+                  ? {
+                      label: t("orders.statuses.pending"),
+                      tone: "amber",
+                    }
+                  : orderStatus(order, statusLabels);
+              return (
+                <tr key={order.id}>
+                  <td>
+                    <Link className="order-link" to={`/orders/${order.id}`}>
+                      {order.orderNumber || t("common.notSet")}
+                    </Link>
+                  </td>
+                  <td>
+                    <strong>
+                      {order.companyName ||
+                        order.customerName ||
+                        t("common.notSet")}
+                    </strong>
+                    {order.companyName && order.customerName && (
+                      <small className="order-customer-name">
+                        {order.customerName}
+                      </small>
+                    )}
+                  </td>
+                  <td>
+                    <span className="order-date">
+                      <CalendarDays />
+                      {order.deliveryAt
+                        ? date.format(new Date(order.deliveryAt))
+                        : t("common.notSet")}
+                    </span>
+                  </td>
+                  <td>{order.shipOutTime || t("common.notSet")}</td>
+                  <td>
+                    <span className={cn("status-badge", statusView.tone)}>
+                      {statusView.label}
+                    </span>
+                  </td>
                   {canViewFinance && (
                     <>
-                      <th>{t("orders.columns.amount")}</th>
-                      <th>{t("orders.columns.outstanding")}</th>
-                    </>
-                  )}
-                  <th aria-label={t("orders.columns.actions")} />
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((order) => {
-                  const statusView =
-                    preset === "pending"
-                      ? {
-                          label: t("orders.statuses.pending"),
-                          tone: "amber",
-                        }
-                      : orderStatus(order, statusLabels);
-                  return (
-                    <tr key={order.id}>
-                      <td>
-                        <Link className="order-link" to={`/orders/${order.id}`}>
-                          {order.orderNumber || t("common.notSet")}
-                        </Link>
-                      </td>
                       <td>
                         <strong>
-                          {order.companyName ||
-                            order.customerName ||
-                            t("common.notSet")}
+                          {formatAmount(order.grandTotal, order.currency)}
                         </strong>
-                        {order.companyName && order.customerName && (
-                          <small className="order-customer-name">
-                            {order.customerName}
-                          </small>
+                      </td>
+                      <td
+                        className={cn(
+                          (order.outstanding ?? 0) > 0 && "order-outstanding",
                         )}
+                      >
+                        {formatAmount(order.outstanding, order.currency)}
                       </td>
-                      <td>
-                        <span className="order-date">
-                          <CalendarDays />
-                          {order.deliveryAt
-                            ? date.format(new Date(order.deliveryAt))
-                            : t("common.notSet")}
-                        </span>
-                      </td>
-                      <td>{order.shipOutTime || t("common.notSet")}</td>
-                      <td>
-                        <span
-                          className={cn(
-                            "status-badge",
-                            statusView.tone,
-                          )}
-                        >
-                          {statusView.label}
-                        </span>
-                      </td>
-                      {canViewFinance && (
-                        <>
-                          <td>
-                            <strong>
-                              {formatAmount(order.grandTotal, order.currency)}
-                            </strong>
-                          </td>
-                          <td
-                            className={cn(
-                              (order.outstanding ?? 0) > 0 &&
-                                "order-outstanding",
-                            )}
-                          >
-                            {formatAmount(order.outstanding, order.currency)}
-                          </td>
-                        </>
-                      )}
-                      <td>
-                        <Button variant="ghost" size="icon" asChild>
-                          <Link
-                            to={`/orders/${order.id}`}
-                            aria-label={`${t("orders.open")} ${
-                              order.orderNumber || order.id
-                            }`}
-                          >
-                            <ChevronRight />
-                          </Link>
-                        </Button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                    </>
+                  )}
+                  <td>
+                    <Button variant="ghost" size="icon" asChild>
+                      <Link
+                        to={`/orders/${order.id}`}
+                        aria-label={`${t("orders.open")} ${
+                          order.orderNumber || order.id
+                        }`}
+                      >
+                        <ChevronRight />
+                      </Link>
+                    </Button>
+                  </td>
+                </tr>
+              );
+            })}
+          </ListTable>
         )}
 
         <TablePagination

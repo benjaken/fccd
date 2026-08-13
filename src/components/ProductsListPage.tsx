@@ -8,8 +8,8 @@ import { Link, useSearchParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
+import { ListTable } from "@/components/ui/list-table";
 import { TablePagination } from "@/components/ui/table-pagination";
-import { TableSkeletonRows } from "@/components/ui/table-skeleton";
 import {
   fetchProductChannels,
   fetchProductTypes,
@@ -356,35 +356,25 @@ export function ProductsListPage({
             </div>
           </div>
         ) : (
-          <div
-            className="table-wrap products-table-wrap"
-            aria-busy={loading || undefined}
+          <ListTable
+            className="products-table-wrap"
+            loading={loading}
+            loadingLabel={t("products.loading")}
+            skeletonRows={PRODUCTS_PAGE_SIZE}
+            skeletonColumns={PRODUCT_SKELETON_COLUMNS}
+            header={
+              <tr>
+                <th>{t("products.columns.sku")}</th>
+                <th>{t("products.columns.name")}</th>
+                <th>{t("products.columns.channel")}</th>
+                <th>{t("products.columns.type")}</th>
+                <th>{t("products.columns.price")}</th>
+                <th>{t("products.columns.status")}</th>
+                <th>{t("products.columns.updated")}</th>
+              </tr>
+            }
           >
-            {loading ? (
-              <span className="sr-only" role="status">
-                {t("products.loading")}
-              </span>
-            ) : null}
-            <table>
-              <thead>
-                <tr>
-                  <th>{t("products.columns.sku")}</th>
-                  <th>{t("products.columns.name")}</th>
-                  <th>{t("products.columns.channel")}</th>
-                  <th>{t("products.columns.type")}</th>
-                  <th>{t("products.columns.price")}</th>
-                  <th>{t("products.columns.status")}</th>
-                  <th>{t("products.columns.updated")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <TableSkeletonRows
-                    rows={PRODUCTS_PAGE_SIZE}
-                    columns={PRODUCT_SKELETON_COLUMNS}
-                  />
-                ) : (
-                  items.map((product) => (
+            {items.map((product) => (
                     <tr key={product.id}>
                       <td>{product.sku || t("common.notSet")}</td>
                       <td>
@@ -415,11 +405,8 @@ export function ProductsListPage({
                         {dateTimeFormatter.format(new Date(product.updatedAt))}
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+            ))}
+          </ListTable>
         )}
 
         <TablePagination
