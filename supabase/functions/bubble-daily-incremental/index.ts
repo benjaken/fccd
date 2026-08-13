@@ -580,7 +580,10 @@ Deno.serve(async (request) => {
   }
   let bubbleToken: string;
   try {
-    bubbleToken = requiredEnv("BUBBLE_API_TOKEN");
+    bubbleToken = requiredEnv("BUBBLE_API_TOKEN")
+      .replace(/^Bearer\s+/i, "")
+      .trim();
+    if (!bubbleToken) throw new Error("Bubble token is empty.");
   } catch {
     console.error("bubble-daily-incremental Bubble token is not configured");
     return jsonResponse({ error: "Function is not configured." }, 500);
