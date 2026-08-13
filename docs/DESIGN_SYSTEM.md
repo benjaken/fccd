@@ -1,6 +1,6 @@
-# Food Channel Catering Design System
+# FCCD Design System
 
-FCCD 自有設計規範：以 **shadcn/ui（New York + CSS variables + CVA）** 為元件與 token 基礎，
+FCCD（**Food Channel Catering Discovery**）自有設計規範：以 **shadcn/ui（New York + CSS variables + CVA）** 為元件與 token 基礎，
 吸收 **Ant Design** 的企業後台密度、操作層級、回饋與資料展示節奏，再疊加本專案已拍板的
 品牌與營運規則。
 

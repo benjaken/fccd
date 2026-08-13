@@ -571,7 +571,7 @@ function OperationsShell() {
                 <strong>
                   {profile?.user_name ||
                     user?.email?.split("@")[0] ||
-                    "Food Channel Catering"}
+                    t("brand.name")}
                 </strong>
                 <small>{profile?.role || t("common.notSet")}</small>
               </span>

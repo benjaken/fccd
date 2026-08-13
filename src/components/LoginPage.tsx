@@ -151,12 +151,12 @@ export function LoginPage() {
           <a
             className="login-brand"
             href="/"
-            aria-label="Food Channel Catering"
+            aria-label={t("brand.fullName")}
           >
             <span className="login-brand-mark">FC</span>
             <span>
-              <strong>Food Channel Catering</strong>
-              <small>Operations</small>
+              <strong>{t("brand.name")}</strong>
+              <small>{t("brand.system")}</small>
             </span>
           </a>
 

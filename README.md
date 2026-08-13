@@ -1,6 +1,6 @@
-# Food Channel Catering
+# FCCD
 
-React/Vite operations interface for Food Channel Catering.
+React/Vite operations interface for **FCCD** (*Food Channel Catering Discovery*).
 
 ## Development
 
@@ -53,9 +53,9 @@ npm run build
 UI test cases are stored in [`test/`](test/). The production build runs the
 full test suite automatically.
 
-The initial layout includes Food Channel Catering branding, responsive navigation,
-Traditional Chinese and English localization, dark mode, and reduced-motion
-support.
+The initial layout includes FCCD (Food Channel Catering Discovery) branding,
+responsive navigation, Traditional Chinese and English localization, dark mode,
+and reduced-motion support.
 
 ## Bubble migration scanner
 
