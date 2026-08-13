@@ -211,10 +211,12 @@ describe("Shop order quantity report", () => {
         reports.fetchMonthlyRawMeatAveragePrices,
       ).toHaveBeenLastCalledWith(new Date().getFullYear()),
     );
-    expect(screen.getByText("豬肉碎(扁食用) (生)")).toBeInTheDocument();
-    expect(screen.getByText("雞扒")).toBeInTheDocument();
-    expect(screen.getByText("$33.06")).toBeInTheDocument();
-    expect(screen.getByText("$18.73")).toBeInTheDocument();
+    expect(
+      screen.getAllByText("豬肉碎(扁食用) (生)").length,
+    ).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText("雞扒").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText("$33.06").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText("$18.73").length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText(i18n.t("reports.rawMeatTypes"))).toBeInTheDocument();
     expect(
       screen.getByRole("img", {
