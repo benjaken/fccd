@@ -17,6 +17,7 @@ import {
   CircleDollarSign,
   ClipboardCheck,
   ClipboardList,
+  FileArchive,
   FileText,
   HandCoins,
   LayoutDashboard,
@@ -29,6 +30,7 @@ import {
   RefreshCw,
   Search,
   Settings,
+  ShieldCheck,
   ShoppingBasket,
   Store,
   Sun,
@@ -39,14 +41,29 @@ import {
   Warehouse,
   X,
 } from "lucide-react";
-import { Link, NavLink, Route, Routes, useLocation } from "react-router-dom";
+import {
+  Link,
+  Navigate,
+  NavLink,
+  Route,
+  Routes,
+  useLocation,
+} from "react-router-dom";
 
 import { AuthProvider, useAuth } from "@/auth/AuthProvider";
+import {
+  pageAccessKey,
+  usePageAccess,
+} from "@/auth/use-page-access";
 import { LoginPage } from "@/components/LoginPage";
 import { MigrationWorkspace } from "@/components/MigrationWorkspace";
 import { OrdersListPage } from "@/components/OrdersListPage";
 import { ProfilePage } from "@/components/ProfilePage";
 import { QuotesListPage } from "@/components/QuotesListPage";
+import { AttachmentsListPage } from "@/components/settings/AttachmentsListPage";
+import { RolePermissionsPage } from "@/components/settings/RolePermissionsPage";
+import { SettingsAccessDenied } from "@/components/settings/SettingsAccessDenied";
+import { UsersListPage } from "@/components/settings/UsersListPage";
 import { Button } from "@/components/ui/button";
 import {
   fetchDashboardData,
@@ -63,6 +80,7 @@ type NavItem = {
   key: string;
   to: string;
   icon: Icon;
+  permissionKey?: string;
 };
 
 const primaryNav: NavItem[] = [
@@ -74,6 +92,12 @@ const primaryNav: NavItem[] = [
   { key: "delivery", to: "/delivery", icon: Truck },
   { key: "restaurant", to: "/restaurant", icon: Store },
   { key: "reports", to: "/reports", icon: ChartNoAxesCombined },
+  {
+    key: "settings",
+    to: "/settings/users",
+    icon: Settings,
+    permissionKey: "settings.users",
+  },
 ];
 
 const secondaryNav: Record<string, NavItem[]> = {
@@ -123,6 +147,26 @@ const secondaryNav: Record<string, NavItem[]> = {
   reports: [
     { key: "reports", to: "/reports", icon: ChartNoAxesCombined },
     { key: "finance", to: "/finance", icon: CircleDollarSign },
+  ],
+  settings: [
+    {
+      key: "users",
+      to: "/settings/users",
+      icon: Users,
+      permissionKey: "settings.users",
+    },
+    {
+      key: "rolePermissions",
+      to: "/settings/roles",
+      icon: ShieldCheck,
+      permissionKey: "settings.roles",
+    },
+    {
+      key: "attachments",
+      to: "/settings/attachments",
+      icon: FileArchive,
+      permissionKey: "settings.attachments",
+    },
   ],
 };
 
@@ -213,7 +257,19 @@ function OperationsShell() {
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   const section = sectionFromPath(location.pathname);
-  const sideItems = secondaryNav[section] ?? secondaryNav.overview;
+  const authorizationRole =
+    typeof user?.app_metadata?.role === "string"
+      ? user.app_metadata.role
+      : profile?.role;
+  const pageAccess = usePageAccess(authorizationRole);
+  const isSuperAdmin = pageAccess.isSuperAdmin;
+  const currentPageKey = pageAccessKey(location.pathname);
+  const visiblePrimaryNav = primaryNav.filter((item) =>
+    pageAccess.canAccess(item.permissionKey ?? item.key),
+  );
+  const sideItems = (secondaryNav[section] ?? secondaryNav.overview).filter(
+    (item) => pageAccess.canAccess(item.permissionKey ?? pageAccessKey(item.to)),
+  );
   const activeWorkspace =
     section === "delivery"
       ? "delivery"
@@ -393,7 +449,7 @@ function OperationsShell() {
       <div className="workspace-bar">
         <div className="nav-row-spacer" aria-hidden="true" />
         <nav className="primary-nav lowered-nav" aria-label="Primary">
-          {primaryNav.map(({ key, to, icon: NavIcon }) => (
+          {visiblePrimaryNav.map(({ key, to, icon: NavIcon }) => (
             <NavLink
               key={key}
               to={to}
@@ -449,7 +505,15 @@ function OperationsShell() {
 
         <main className="main-content">
           <div className="page-transition" key={pageKey}>
-            <Routes>
+            {pageAccess.loading ? (
+              <div className="profile-state" role="status">
+                <RefreshCw className="spin" />
+                <span>{t("settings.loadingPermissions")}</span>
+              </div>
+            ) : !pageAccess.canAccess(currentPageKey) ? (
+              <SettingsAccessDenied />
+            ) : (
+              <Routes>
               <Route path="/" element={<Dashboard role={profile?.role} />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route
@@ -484,8 +548,39 @@ function OperationsShell() {
                 }
               />
               <Route path="/quotes" element={<QuotesListPage />} />
+              <Route
+                path="/settings"
+                element={<Navigate to="/settings/users" replace />}
+              />
+              <Route
+                path="/settings/users"
+                element={
+                  isSuperAdmin ? <UsersListPage /> : <SettingsAccessDenied />
+                }
+              />
+              <Route
+                path="/settings/roles"
+                element={
+                  isSuperAdmin ? (
+                    <RolePermissionsPage />
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
+                }
+              />
+              <Route
+                path="/settings/attachments"
+                element={
+                  isSuperAdmin ? (
+                    <AttachmentsListPage />
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
+                }
+              />
               <Route path="*" element={<ModulePlaceholder section={section} />} />
-            </Routes>
+              </Routes>
+            )}
           </div>
         </main>
       </div>
@@ -511,7 +606,7 @@ function OperationsShell() {
               </Button>
             </div>
             <nav>
-              {primaryNav.map(({ key, to, icon: NavIcon }) => (
+              {visiblePrimaryNav.map(({ key, to, icon: NavIcon }) => (
                 <NavLink
                   key={key}
                   to={to}

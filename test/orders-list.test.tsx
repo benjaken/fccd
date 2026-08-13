@@ -177,7 +177,9 @@ describe("Orders list", () => {
       .map((match) => match[1])
       .join("\n");
     const paginationRules = [
-      ...stylesheet.matchAll(/\.orders-pagination\s*\{([^}]+)\}/g),
+      ...stylesheet.matchAll(
+        /\.operational-list-pagination\s*\{([^}]+)\}/g,
+      ),
     ]
       .map((match) => match[1])
       .join("\n");
