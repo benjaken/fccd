@@ -4126,12 +4126,20 @@ td:last-child {
 }
 
 .report-filter-panel {
-  display: grid;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
   gap: 15px;
   padding: 16px 18px;
 }
 
+.report-filter-panel .report-shop-filter {
+  flex: 1 1 420px;
+}
+
 .report-date-controls {
+  flex: 0 1 auto;
   display: flex;
   align-items: flex-end;
   justify-content: flex-end;
@@ -6136,6 +6144,11 @@ td:last-child {
   }
 
   .report-date-controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .report-filter-panel {
     align-items: stretch;
     flex-direction: column;
   }
