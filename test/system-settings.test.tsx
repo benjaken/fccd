@@ -357,6 +357,13 @@ describe("Super Admin system settings", () => {
     );
 
     expect(document.querySelectorAll(".table-skeleton-row")).toHaveLength(15);
+    expect(screen.getByRole("table").parentElement).toHaveClass(
+      "settings-attachments-table",
+    );
+    expect(screen.getByRole("table").parentElement).toHaveAttribute(
+      "aria-busy",
+      "true",
+    );
     expect(screen.getByRole("status")).toHaveTextContent("正在載入附件…");
 
     resolveAttachments?.(result);
