@@ -211,6 +211,7 @@ FCCD 自有設計規範：以 **shadcn/ui（New York + CSS variables + CVA）** 
 | 模式 | 規範 |
 |---|---|
 | 營運表 | 遵守 [`UI_TABLE_STANDARD.md`](UI_TABLE_STANDARD.md)：15 筆／頁、sticky header、面板內捲動、底部分頁 |
+| 列操作（最後一欄） | **橫向單行**；常用動作（編輯、改密碼等）用 **icon-only** + `aria-label`；禁止 icon+文字按鈕垂直堆疊把列高撐高 |
 | 狀態徽章 | 語意色短標籤；成功綠、警告琥珀、危險紅、資訊藍／青 |
 | 描述列表 | 標籤弱色、值主色；適合詳情頁 |
 | 空狀態 | 說明「為什麼空」+ 一個主行動（若有權限） |
@@ -306,6 +307,7 @@ FCCD 自有設計規範：以 **shadcn/ui（New York + CSS variables + CVA）** 
 - 訂單進度五條全用藍色系
 - 業務元件內硬編碼大段顏色／文案
 - 用動畫或 toast 掩蓋未處理的錯誤狀態
+- 表格操作欄把「編輯／修改密碼」等常用按鈕做成 icon+文字並垂直堆疊
 - 在 Production 開啟 `VITE_ENABLE_QUICK_LOGIN`
 - 為了過測而刪改或弱化既有 UI 測試
 

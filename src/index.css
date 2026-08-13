@@ -1891,10 +1891,26 @@ td:last-child {
   font-weight: 600;
 }
 
-.settings-user-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+.settings-user-actions,
+.table-row-actions {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.table-actions-cell {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+  vertical-align: middle;
+}
+
+.table-row-actions .button,
+.table-row-actions button {
+  flex: 0 0 auto;
 }
 
 @keyframes settings-side-panel-in {

@@ -113,6 +113,7 @@ Helpers live in `src/lib/quick-login.ts`. See also the README section
 | Theme tokens | `src/index.css` `:root` / `.dark` |
 | Progress tone classes | `src/index.css` `.progress-row.tone-*` |
 | Progress tone assignment | Dashboard progress data in `src/App.tsx` |
+| Table row actions | `.table-actions-cell` + `.table-row-actions`; icon-only common actions |
 | Quick-login gate | `src/lib/quick-login.ts` + env vars |
 | Copy | `src/i18n.ts` |
 

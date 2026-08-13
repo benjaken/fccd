@@ -246,28 +246,30 @@ export function UsersListPage({
                     <td>{date.format(new Date(listUser.createdAt))}</td>
                     <td>{date.format(new Date(listUser.updatedAt))}</td>
                     {showActions ? (
-                      <td>
-                        <div className="settings-user-actions">
+                      <td className="table-actions-cell">
+                        <div className="table-row-actions">
                           {canEdit ? (
                             <Button
                               type="button"
                               variant="outline"
-                              size="sm"
+                              size="icon"
                               onClick={() => setEditUser(listUser)}
+                              aria-label={t("settings.users.editAction")}
+                              title={t("settings.users.editAction")}
                             >
                               <Pencil />
-                              {t("settings.users.editAction")}
                             </Button>
                           ) : null}
                           {canChangePassword ? (
                             <Button
                               type="button"
                               variant="outline"
-                              size="sm"
+                              size="icon"
                               onClick={() => setPasswordUser(listUser)}
+                              aria-label={t("settings.users.changePassword")}
+                              title={t("settings.users.changePassword")}
                             >
                               <KeyRound />
-                              {t("settings.users.changePassword")}
                             </Button>
                           ) : null}
                         </div>

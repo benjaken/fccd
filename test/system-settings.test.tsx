@@ -306,7 +306,15 @@ describe("Super Admin system settings", () => {
       </MemoryRouter>,
     );
 
-    await user.click(await screen.findByRole("button", { name: "編輯" }));
+    const editButton = await screen.findByRole("button", { name: "編輯" });
+    expect(editButton).toHaveClass("size-10");
+    expect(editButton).toHaveAccessibleName("編輯");
+    expect(editButton).not.toHaveTextContent("編輯");
+    expect(
+      screen.getByRole("button", { name: "修改密碼" }),
+    ).not.toHaveTextContent("修改密碼");
+
+    await user.click(editButton);
     expect(
       await screen.findByRole("heading", { name: "編輯使用者" }),
     ).toBeInTheDocument();
