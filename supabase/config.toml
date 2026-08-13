@@ -5,7 +5,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.attachment-incremental]
-verify_jwt = true
+verify_jwt = false
 
 [functions.bubble-daily-incremental]
 verify_jwt = false

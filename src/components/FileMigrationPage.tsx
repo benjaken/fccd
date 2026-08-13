@@ -5,11 +5,13 @@ import {
   CheckCircle2,
   FileArchive,
   LoaderCircle,
+  LogIn,
   Play,
+  RefreshCw,
   Search,
   Upload,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
@@ -46,6 +48,15 @@ type MigrationProgress = {
   uploaded: number;
   deduplicated: number;
   failed: number;
+};
+
+type LiveAttachmentStatus = {
+  total: number;
+  verified: number;
+  failed: number;
+  uniqueContent: number;
+  uniqueBytes: number;
+  generatedAt: string;
 };
 
 const ANALYZE_BATCH_SIZE = 400;
@@ -106,6 +117,9 @@ export function FileMigrationPage({
   const [progress, setProgress] = useState<MigrationProgress>();
   const [busy, setBusy] = useState<"analyze" | "migrate">();
   const [error, setError] = useState<string>();
+  const [liveStatus, setLiveStatus] = useState<LiveAttachmentStatus>();
+  const [statusLoading, setStatusLoading] = useState(true);
+  const [statusError, setStatusError] = useState<string>();
   const rows = useMemo(
     () =>
       fileStatus.safeSamples.filter(
@@ -125,6 +139,27 @@ export function FileMigrationPage({
   function resetPage() {
     setPage(1);
   }
+
+  async function refreshStatus() {
+    setStatusLoading(true);
+    setStatusError(undefined);
+    const { data, error: invokeError } = await supabase.functions.invoke(
+      "attachment-incremental",
+      { body: { action: "status" } },
+    );
+    if (invokeError) {
+      setStatusError(
+        invokeError.message || t("fileMigration.incrementalPanel.statusError"),
+      );
+    } else {
+      setLiveStatus(data as LiveAttachmentStatus);
+    }
+    setStatusLoading(false);
+  }
+
+  useEffect(() => {
+    void refreshStatus();
+  }, []);
 
   async function analyzeInventory() {
     if (!inventoryFile || !isSuperAdmin) return;
@@ -172,6 +207,7 @@ export function FileMigrationPage({
       }
       setInventory(uniqueRecords);
       setAnalysis(combined);
+      await refreshStatus();
     } catch (analysisError) {
       setError(
         analysisError instanceof Error
@@ -231,6 +267,7 @@ export function FileMigrationPage({
           }),
         );
       }
+      await refreshStatus();
     } finally {
       setBusy(undefined);
     }
@@ -255,13 +292,24 @@ export function FileMigrationPage({
             <h2>{t("fileMigration.incrementalPanel.title")}</h2>
             <p>{t("fileMigration.incrementalPanel.description")}</p>
           </div>
-          <span
-            className={`status-badge ${isSuperAdmin ? "green" : "amber"}`}
-          >
-            {isSuperAdmin
-              ? t("fileMigration.incrementalPanel.authorized")
-              : t("fileMigration.incrementalPanel.superAdminRequired")}
-          </span>
+          <div className="attachment-auth-actions">
+            <span
+              className={`status-badge ${isSuperAdmin ? "green" : "amber"}`}
+            >
+              {isSuperAdmin
+                ? t("fileMigration.incrementalPanel.authorized")
+                : t("fileMigration.incrementalPanel.superAdminRequired")}
+            </span>
+            {!isSuperAdmin && (
+              <Button
+                variant="outline"
+                onClick={() => window.location.assign("/")}
+              >
+                <LogIn />
+                {t("fileMigration.incrementalPanel.signIn")}
+              </Button>
+            )}
+          </div>
         </header>
 
         <div className="attachment-upload-row">
@@ -281,7 +329,7 @@ export function FileMigrationPage({
             <input
               type="file"
               accept="application/json,.json"
-              disabled={!isSuperAdmin || Boolean(busy)}
+              disabled={Boolean(busy)}
               onChange={(event) => {
                 setInventoryFile(event.target.files?.[0]);
                 setAnalysis(undefined);
@@ -396,25 +444,58 @@ export function FileMigrationPage({
       <section className="file-migration-metrics">
         <article className="panel">
           <span>{t("fileMigration.expected")}</span>
-          <strong>{fileStatus.expectedFiles.toLocaleString()}</strong>
+          <strong>
+            {(liveStatus?.total ?? fileStatus.expectedFiles).toLocaleString()}
+          </strong>
         </article>
         <article className="panel">
           <span>{t("fileMigration.discovered")}</span>
-          <strong>{fileStatus.uniqueFiles.toLocaleString()}</strong>
+          <strong>
+            {(liveStatus?.uniqueContent ?? fileStatus.uniqueFiles).toLocaleString()}
+          </strong>
         </article>
         <article className="panel warning">
           <span>{t("fileMigration.missing")}</span>
-          <strong>{fileStatus.discoveryGap.toLocaleString()}</strong>
+          <strong>
+            {(liveStatus?.failed ?? fileStatus.discoveryGap).toLocaleString()}
+          </strong>
         </article>
-        <article className="panel warning">
+        <article className="panel">
           <span>{t("fileMigration.binary")}</span>
-          <strong>{fileStatus.binaryMigrated.toLocaleString()}</strong>
+          <strong>
+            {(liveStatus?.uniqueContent ?? fileStatus.binaryMigrated)
+              .toLocaleString()}
+          </strong>
         </article>
-        <article className="panel warning">
+        <article className="panel">
           <span>{t("fileMigration.checksum")}</span>
-          <strong>{fileStatus.checksumVerified.toLocaleString()}</strong>
+          <strong>
+            {(liveStatus?.verified ?? fileStatus.checksumVerified).toLocaleString()}
+          </strong>
         </article>
       </section>
+
+      <div className="attachment-live-status">
+        <span>
+          {statusLoading
+            ? t("fileMigration.incrementalPanel.statusLoading")
+            : statusError ??
+              t("fileMigration.incrementalPanel.statusUpdated", {
+                value: liveStatus?.generatedAt
+                  ? new Date(liveStatus.generatedAt).toLocaleString()
+                  : "—",
+              })}
+        </span>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => void refreshStatus()}
+          disabled={statusLoading}
+        >
+          <RefreshCw className={statusLoading ? "spin" : ""} />
+          {t("fileMigration.incrementalPanel.refresh")}
+        </Button>
+      </div>
 
       <section className="file-inventory-gate" role="alert">
         <AlertTriangle />

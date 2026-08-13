@@ -159,6 +159,58 @@ async function requireSuperAdmin(request: Request, admin: AdminClient) {
   }
 }
 
+async function attachmentStatus(admin: AdminClient) {
+  const base = () =>
+    admin
+      .from("attachments")
+      .select("id", { count: "exact", head: true })
+      .eq("source_type", "bubble_uploaded_file");
+  const [totalResult, verifiedResult, failedResult] = await Promise.all([
+    base(),
+    base().eq("migration_status", "verified"),
+    base().eq("migration_status", "failed"),
+  ]);
+  for (const result of [totalResult, verifiedResult, failedResult]) {
+    if (result.error) throw result.error;
+  }
+
+  const content = new Map<string, number>();
+  let offset = 0;
+  while (true) {
+    const { data, error } = await admin
+      .from("attachments")
+      .select("sha256,size_bytes")
+      .eq("source_type", "bubble_uploaded_file")
+      .eq("migration_status", "verified")
+      .not("sha256", "is", null)
+      .range(offset, offset + 999);
+    if (error) throw error;
+    for (const row of data ?? []) {
+      if (
+        typeof row.sha256 === "string" &&
+        typeof row.size_bytes === "number" &&
+        !content.has(row.sha256)
+      ) {
+        content.set(row.sha256, row.size_bytes);
+      }
+    }
+    if (!data || data.length < 1000) break;
+    offset += data.length;
+  }
+
+  return jsonResponse({
+    total: totalResult.count ?? 0,
+    verified: verifiedResult.count ?? 0,
+    failed: failedResult.count ?? 0,
+    uniqueContent: content.size,
+    uniqueBytes: [...content.values()].reduce(
+      (sum, size) => sum + size,
+      0,
+    ),
+    generatedAt: new Date().toISOString(),
+  });
+}
+
 async function analyze(
   admin: AdminClient,
   values: unknown,
@@ -395,12 +447,13 @@ Deno.serve(async (request) => {
   }
   try {
     const admin = createAdminClient();
-    await requireSuperAdmin(request, admin);
     const body = (await request.json()) as {
       action?: unknown;
       records?: unknown;
       record?: unknown;
     };
+    if (body.action === "status") return await attachmentStatus(admin);
+    await requireSuperAdmin(request, admin);
     if (body.action === "analyze") return await analyze(admin, body.records);
     if (body.action === "migrate") return await migrate(admin, body.record);
     return jsonResponse({ error: "Unknown action." }, 400);
