@@ -15,6 +15,18 @@ export type ShopOrderQuantityRow = {
   totalQuantity: number;
 };
 
+export type MeatPriceMode = "shop" | "factory";
+
+export type MonthlyPreparedMeatPriceRow = {
+  productId: string;
+  productName: string;
+  productUnit: string | null;
+  sortOrder: number | null;
+  monthNumber: number;
+  pricePerKg: number;
+  pricePerPackage: number;
+};
+
 type ShopOrderQuantityDbRow = {
   order_date: string;
   shop_id: string;
@@ -23,6 +35,16 @@ type ShopOrderQuantityDbRow = {
   product_name: string;
   unit: string | null;
   total_quantity: number | string;
+};
+
+type MonthlyPreparedMeatPriceDbRow = {
+  product_id: string;
+  product_name: string;
+  product_unit: string | null;
+  sort_order: number | string | null;
+  month_number: number;
+  price_per_kg: number | string;
+  price_per_package: number | string;
 };
 
 export async function fetchReportShops(): Promise<ReportShop[]> {
@@ -61,5 +83,31 @@ export async function fetchShopOrderQuantities({
     productName: row.product_name,
     unit: row.unit,
     totalQuantity: Number(row.total_quantity),
+  }));
+}
+
+export async function fetchMonthlyPreparedMeatPrices({
+  year,
+  mode,
+}: {
+  year: number;
+  mode: MeatPriceMode;
+}): Promise<MonthlyPreparedMeatPriceRow[]> {
+  const { data, error } = await supabase.rpc(
+    "report_monthly_prepared_meat_prices",
+    {
+      report_year: year,
+      price_mode: mode,
+    },
+  );
+  if (error) throw error;
+  return ((data ?? []) as MonthlyPreparedMeatPriceDbRow[]).map((row) => ({
+    productId: row.product_id,
+    productName: row.product_name,
+    productUnit: row.product_unit,
+    sortOrder: row.sort_order === null ? null : Number(row.sort_order),
+    monthNumber: Number(row.month_number),
+    pricePerKg: Number(row.price_per_kg),
+    pricePerPackage: Number(row.price_per_package),
   }));
 }

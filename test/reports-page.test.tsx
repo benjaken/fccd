@@ -6,11 +6,13 @@ import { ReportsPage } from "@/components/ReportsPage";
 import i18n from "@/i18n";
 
 const reports = vi.hoisted(() => ({
+  fetchMonthlyPreparedMeatPrices: vi.fn(),
   fetchReportShops: vi.fn(),
   fetchShopOrderQuantities: vi.fn(),
 }));
 
 vi.mock("@/lib/reports", () => ({
+  fetchMonthlyPreparedMeatPrices: reports.fetchMonthlyPreparedMeatPrices,
   fetchReportShops: reports.fetchReportShops,
   fetchShopOrderQuantities: reports.fetchShopOrderQuantities,
 }));
@@ -67,6 +69,26 @@ describe("Shop order quantity report", () => {
         totalQuantity: 18,
       },
     ]);
+    reports.fetchMonthlyPreparedMeatPrices.mockResolvedValue([
+      {
+        productId: "prepared-1",
+        productName: "香菇滷肉",
+        productUnit: "包",
+        sortOrder: 1,
+        monthNumber: 1,
+        pricePerKg: 21.4,
+        pricePerPackage: 42.8,
+      },
+      {
+        productId: "prepared-1",
+        productName: "香菇滷肉",
+        productUnit: "包",
+        sortOrder: 1,
+        monthNumber: 2,
+        pricePerKg: 21.4,
+        pricePerPackage: 42.8,
+      },
+    ]);
   });
 
   it("renders migrated quantity rows and total", async () => {
@@ -77,6 +99,9 @@ describe("Shop order quantity report", () => {
     ).toBeInTheDocument();
     expect(await screen.findByText("豉油雞中翼")).toBeInTheDocument();
     expect(screen.getByText("煎釀三寶")).toBeInTheDocument();
+    expect(screen.getByText("Product quantity ranking")).toBeInTheDocument();
+    expect(screen.getByText("Product types")).toBeInTheDocument();
+    expect(screen.getAllByRole("progressbar")).toHaveLength(2);
     expect(screen.getAllByText("30").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByRole("button", { name: "Export CSV" })).toBeEnabled();
   });
@@ -98,6 +123,43 @@ describe("Shop order quantity report", () => {
         startDate: "2026-06-01",
         endDate: "2026-06-30",
         shopIds: ["tko"],
+      }),
+    );
+  });
+
+  it("switches between monthly shop and factory prices", async () => {
+    const user = userEvent.setup();
+    render(<ReportsPage />);
+
+    await user.click(
+      screen.getByRole("button", { name: "Average supply price by shop" }),
+    );
+    expect((await screen.findAllByText("香菇滷肉")).length).toBeGreaterThan(1);
+    await waitFor(() =>
+      expect(reports.fetchMonthlyPreparedMeatPrices).toHaveBeenLastCalledWith({
+        year: new Date().getFullYear(),
+        mode: "shop",
+      }),
+    );
+    expect(screen.getByText("Latest month")).toBeInTheDocument();
+    expect(screen.getByText("Missing prices")).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", { name: "香菇滷肉 price trend" }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText("$21.40").length).toBeGreaterThanOrEqual(2);
+
+    await user.click(screen.getByRole("button", { name: "Per package" }));
+    expect(screen.getAllByText("$42.80").length).toBeGreaterThanOrEqual(2);
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Production cost and factory supply price",
+      }),
+    );
+    await waitFor(() =>
+      expect(reports.fetchMonthlyPreparedMeatPrices).toHaveBeenLastCalledWith({
+        year: new Date().getFullYear(),
+        mode: "factory",
       }),
     );
   });
