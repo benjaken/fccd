@@ -281,7 +281,9 @@ export function MeatPriceReport({ mode }: { mode: MeatPriceMode }) {
                         <strong>{product.name}</strong>
                         <small>
                           {latest
-                            ? t("reports.month", { month: latest.monthNumber })
+                            ? t("reports.dataUpdatedThrough", {
+                                month: latest.monthNumber,
+                              })
                             : "—"}
                         </small>
                       </span>

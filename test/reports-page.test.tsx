@@ -257,6 +257,9 @@ describe("Shop order quantity report", () => {
     expect(screen.getAllByText("雞扒").length).toBeGreaterThanOrEqual(2);
     expect(screen.getAllByText("$33.06").length).toBeGreaterThanOrEqual(2);
     expect(screen.getAllByText("$18.73").length).toBeGreaterThanOrEqual(2);
+    expect(
+      screen.getAllByText("Data updated through month 1").length,
+    ).toBeGreaterThanOrEqual(2);
     expect(screen.getByText(i18n.t("reports.rawMeatTypes"))).toBeInTheDocument();
     expect(
       screen.getByRole("img", {
@@ -302,6 +305,9 @@ describe("Shop order quantity report", () => {
     );
     expect(screen.getAllByText("熟滷水牛展片").length).toBeGreaterThanOrEqual(2);
     expect(screen.getAllByText("燜羊腩").length).toBeGreaterThanOrEqual(2);
+    expect(
+      screen.getAllByText("Data updated through month 2").length,
+    ).toBeGreaterThanOrEqual(2);
     expect(
       screen.getByRole("img", {
         name: i18n.t("reports.preparedProductStockTrend", {

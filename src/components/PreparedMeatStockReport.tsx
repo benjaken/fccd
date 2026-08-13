@@ -221,7 +221,11 @@ export function PreparedMeatStockReport() {
                   >
                     <span>
                       <strong>{item.name}</strong>
-                      <small>{t("reports.month", { month: latestMonth })}</small>
+                      <small>
+                        {t("reports.dataUpdatedThrough", {
+                          month: latestMonth,
+                        })}
+                      </small>
                     </span>
                     <span>
                       <strong

@@ -245,7 +245,9 @@ export function RawMeatAveragePriceReport() {
                       <strong>{item.name}</strong>
                       <small>
                         {latest
-                          ? t("reports.month", { month: latest.monthNumber })
+                          ? t("reports.dataUpdatedThrough", {
+                              month: latest.monthNumber,
+                            })
                           : "—"}
                       </small>
                     </span>
