@@ -10,6 +10,7 @@ type PermissionValue = {
 const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
   { prefix: "/settings/users", pageKey: "settings.users" },
   { prefix: "/settings/roles", pageKey: "settings.roles" },
+  { prefix: "/settings/login-logs", pageKey: "settings.login_logs" },
   { prefix: "/settings/attachments", pageKey: "settings.attachments" },
   { prefix: "/settings", pageKey: "settings" },
   { prefix: "/orders/pending", pageKey: "orders.pending" },

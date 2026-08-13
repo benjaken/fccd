@@ -9,6 +9,7 @@ import {
 import type { Session, User } from "@supabase/supabase-js";
 
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
+import { recordLoginEvent } from "@/lib/settings";
 
 export type UserProfile = {
   id: string;
@@ -126,23 +127,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signIn: async (email, password) => {
         if (!isSupabaseConfigured) return "configuration";
 
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
 
-        return error ? error.code || "invalid_credentials" : null;
+        if (error) {
+          void recordLoginEvent({
+            eventType: "login_failure",
+            email,
+            errorCode: error.code || "invalid_credentials",
+          });
+          return error.code || "invalid_credentials";
+        }
+
+        void recordLoginEvent({
+          eventType: "login_success",
+          email,
+          userId: data.user?.id ?? null,
+        });
+        return null;
       },
       signOut: async () => {
+        const email = session?.user.email ?? null;
+        const userId = session?.user.id ?? null;
         const { error } = await supabase.auth.signOut({ scope: "global" });
         if (error) throw error;
         setProfile(null);
+        void recordLoginEvent({
+          eventType: "logout",
+          email,
+          userId,
+        });
       },
       resetPassword: async (email) => {
         if (!isSupabaseConfigured) return "configuration";
 
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: `${window.location.origin}/`,
+        });
+
+        void recordLoginEvent({
+          eventType: "password_reset_request",
+          email,
+          errorCode: error ? error.code || "reset_failed" : null,
         });
 
         return error ? error.code || "reset_failed" : null;

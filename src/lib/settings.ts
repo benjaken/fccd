@@ -44,6 +44,28 @@ export type AttachmentListItem = {
   updatedAt: string;
 };
 
+export const LOGIN_LOG_EVENT_TYPES = [
+  "login_success",
+  "login_failure",
+  "logout",
+  "password_reset_request",
+] as const;
+
+export type LoginLogEventType = (typeof LOGIN_LOG_EVENT_TYPES)[number];
+
+export type LoginLogItem = {
+  id: string;
+  eventType: LoginLogEventType;
+  email: string | null;
+  userId: string | null;
+  userName: string | null;
+  role: string | null;
+  ipAddress: string | null;
+  userAgent: string | null;
+  errorCode: string | null;
+  createdAt: string;
+};
+
 export type RolePagePermission = {
   role: SystemRole;
   pageKey: string;
@@ -84,6 +106,19 @@ type AttachmentRow = {
   last_error_code: string | null;
   verified_at: string | null;
   updated_at: string;
+};
+
+type LoginLogRow = {
+  id: string;
+  event_type: LoginLogEventType;
+  email: string | null;
+  user_id: string | null;
+  user_name: string | null;
+  role: string | null;
+  ip_address: string | null;
+  user_agent: string | null;
+  error_code: string | null;
+  created_at: string;
 };
 
 type PermissionRow = {
@@ -410,6 +445,80 @@ export async function createAttachmentUrl(attachment: AttachmentListItem) {
     .createSignedUrl(attachment.objectPath, 60);
   if (error) throw error;
   return data.signedUrl;
+}
+
+export async function fetchLoginLogs({
+  page,
+  search,
+  eventType,
+}: {
+  page: number;
+  search: string;
+  eventType: string;
+}) {
+  const start = (page - 1) * SETTINGS_PAGE_SIZE;
+  const end = start + SETTINGS_PAGE_SIZE - 1;
+  let query = supabase
+    .from("login_logs")
+    .select(
+      "id,event_type,email,user_id,user_name,role,ip_address,user_agent,error_code,created_at",
+      { count: "exact" },
+    )
+    .order("created_at", { ascending: false })
+    .range(start, end);
+
+  const term = safeSearchTerm(search);
+  if (term) {
+    query = query.or(
+      `email.ilike.%${term}%,user_name.ilike.%${term}%,ip_address.ilike.%${term}%`,
+    );
+  }
+  if (eventType) query = query.eq("event_type", eventType);
+
+  const { data, count, error } = await query;
+  if (error) throw error;
+
+  return {
+    total: count ?? 0,
+    items: ((data ?? []) as LoginLogRow[]).map((row) => ({
+      id: row.id,
+      eventType: row.event_type,
+      email: row.email,
+      userId: row.user_id,
+      userName: row.user_name,
+      role: row.role,
+      ipAddress: row.ip_address,
+      userAgent: row.user_agent,
+      errorCode: row.error_code,
+      createdAt: row.created_at,
+    })) satisfies LoginLogItem[],
+  };
+}
+
+export async function recordLoginEvent(input: {
+  eventType: LoginLogEventType;
+  email?: string | null;
+  userId?: string | null;
+  errorCode?: string | null;
+}) {
+  try {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    await supabase.functions.invoke("login-log", {
+      body: {
+        eventType: input.eventType,
+        email: input.email ?? null,
+        userId: input.userId ?? null,
+        errorCode: input.errorCode ?? null,
+      },
+      headers: session?.access_token
+        ? { Authorization: `Bearer ${session.access_token}` }
+        : undefined,
+    });
+  } catch {
+    // Login logging must never block authentication UX.
+  }
 }
 
 export async function fetchRolePagePermissions() {

@@ -360,6 +360,43 @@ describe("Super Admin system settings", () => {
     expect(isValidPassword("short1")).toBe(false);
   });
 
+  it("renders login logs with event badges", async () => {
+    const loadLogs = vi.fn().mockResolvedValue({
+      items: [
+        {
+          id: "log-1",
+          eventType: "login_success",
+          email: "admin@example.com",
+          userId: "user-1",
+          userName: "Admin User",
+          role: "Super Admin",
+          ipAddress: "203.0.113.10",
+          userAgent: "Mozilla/5.0",
+          errorCode: null,
+          createdAt: "2026-08-13T00:00:00.000Z",
+        },
+      ],
+      total: 1,
+    });
+
+    const { LoginLogsListPage } = await import(
+      "@/components/settings/LoginLogsListPage"
+    );
+
+    render(
+      <MemoryRouter>
+        <LoginLogsListPage loadLogs={loadLogs} />
+      </MemoryRouter>,
+    );
+
+    expect(
+      await screen.findByRole("heading", { name: "登入紀錄" }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText("登入成功").length).toBeGreaterThan(0);
+    expect(screen.getByText("admin@example.com")).toBeInTheDocument();
+    expect(screen.getByText("203.0.113.10")).toBeInTheDocument();
+  });
+
   it("enforces the approved policy in the database migration", () => {
     const migration = readFileSync(
       path.resolve(
@@ -375,6 +412,13 @@ describe("Super Admin system settings", () => {
       ),
       "utf8",
     );
+    const loginLogs = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260813080000_create_login_logs.sql",
+      ),
+      "utf8",
+    );
 
     expect(migration).toContain("Super Admin reads attachment registry");
     expect(migration).toContain("Super Admin reads private attachment objects");
@@ -387,5 +431,8 @@ describe("Super Admin system settings", () => {
     expect(hierarchy).toContain("page_kind");
     expect(hierarchy).toContain("reports.shop_order_quantities");
     expect(hierarchy).toContain("app_page_descendants");
+    expect(loginLogs).toContain("create table public.login_logs");
+    expect(loginLogs).toContain("settings.login_logs");
+    expect(loginLogs).toContain("Super Admin reads login logs");
   });
 });

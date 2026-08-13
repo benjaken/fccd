@@ -20,6 +20,7 @@ import {
   FileArchive,
   FileText,
   HandCoins,
+  History,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -62,6 +63,7 @@ import { ProfilePage } from "@/components/ProfilePage";
 import { ReportsPage } from "@/components/ReportsPage";
 import { QuotesListPage } from "@/components/QuotesListPage";
 import { AttachmentsListPage } from "@/components/settings/AttachmentsListPage";
+import { LoginLogsListPage } from "@/components/settings/LoginLogsListPage";
 import { RolePermissionsPage } from "@/components/settings/RolePermissionsPage";
 import { SettingsAccessDenied } from "@/components/settings/SettingsAccessDenied";
 import { UsersListPage } from "@/components/settings/UsersListPage";
@@ -274,6 +276,12 @@ const secondaryNav: Record<string, NavItem[]> = {
       permissionKey: "settings.roles",
     },
     {
+      key: "loginLogs",
+      to: "/settings/login-logs",
+      icon: History,
+      permissionKey: "settings.login_logs",
+    },
+    {
       key: "attachments",
       to: "/settings/attachments",
       icon: FileArchive,
@@ -306,7 +314,12 @@ const SECTION_CHILD_KEYS: Record<string, string[]> = {
     "reports.raw_meat_stock",
     "reports.supplier_purchase",
   ],
-  settings: ["settings.users", "settings.roles", "settings.attachments"],
+  settings: [
+    "settings.users",
+    "settings.roles",
+    "settings.login_logs",
+    "settings.attachments",
+  ],
 };
 
 const workspaceLinks: Array<{
@@ -704,6 +717,16 @@ function OperationsShell() {
                 element={
                   isSuperAdmin ? (
                     <RolePermissionsPage />
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
+                }
+              />
+              <Route
+                path="/settings/login-logs"
+                element={
+                  isSuperAdmin ? (
+                    <LoginLogsListPage />
                   ) : (
                     <SettingsAccessDenied />
                   )
