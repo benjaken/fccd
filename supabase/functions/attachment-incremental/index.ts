@@ -173,12 +173,13 @@ async function attachmentStatus(admin: AdminClient) {
       .from("attachments")
       .select("id", { count: "exact", head: true })
       .eq("source_type", "bubble_uploaded_file");
-  const [totalResult, verifiedResult, failedResult, excludedResult] = await Promise.all([
-    base(),
-    base().eq("migration_status", "verified"),
-    base().eq("migration_status", "failed"),
-    base().eq("migration_status", "excluded"),
-  ]);
+  const [totalResult, verifiedResult, failedResult, excludedResult] =
+    await Promise.all([
+      base(),
+      base().eq("migration_status", "verified"),
+      base().eq("migration_status", "failed"),
+      base().eq("migration_status", "excluded"),
+    ]);
   for (
     const result of [
       totalResult,

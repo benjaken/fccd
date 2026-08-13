@@ -37,7 +37,6 @@ type Analysis = {
   duplicateIds: number;
   verified: number;
   failed: number;
-  excluded: number;
   changed: number;
   missing: number;
   actionableIds: string[];
@@ -55,6 +54,7 @@ type LiveAttachmentStatus = {
   total: number;
   verified: number;
   failed: number;
+  excluded: number;
   uniqueContent: number;
   uniqueBytes: number;
   generatedAt: string;
