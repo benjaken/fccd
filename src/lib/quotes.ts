@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 
-export const QUOTES_PAGE_SIZE = 20;
+export const QUOTES_PAGE_SIZE = 15;
 
 export type QuoteListItem = {
   id: string;

@@ -77,6 +77,26 @@ describe("Catering quotes list", () => {
     );
   });
 
+  it("paginates quotes in groups of fifteen", async () => {
+    const user = userEvent.setup();
+    const loadQuotes = vi.fn().mockResolvedValue({ ...quoteResult, total: 31 });
+
+    render(
+      <MemoryRouter>
+        <QuotesListPage loadQuotes={loadQuotes} />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("1 / 3")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "下一頁" }));
+
+    await waitFor(() =>
+      expect(loadQuotes).toHaveBeenLastCalledWith(
+        expect.objectContaining({ page: 2 }),
+      ),
+    );
+  });
+
   it("shows a clear migration state when the orders table is unavailable", async () => {
     const loadQuotes = vi.fn().mockRejectedValue({ code: "42P01" });
 
