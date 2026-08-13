@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
@@ -129,6 +131,25 @@ describe("Orders list", () => {
         expect.objectContaining({ page: 2 }),
       ),
     );
+  });
+
+  it("keeps pagination visible while the order rows scroll", () => {
+    const stylesheet = readFileSync(
+      path.resolve(process.cwd(), "src/index.css"),
+      "utf8",
+    );
+    const panelRule = stylesheet.match(/\.orders-panel\s*\{([^}]+)\}/);
+    const tableRule = stylesheet.match(/\.orders-table-wrap\s*\{([^}]+)\}/);
+    const paginationRule = stylesheet.match(
+      /\.orders-pagination\s*\{([^}]+)\}/,
+    );
+
+    expect(panelRule?.[1]).toContain(
+      "grid-template-rows: auto minmax(0, 1fr) auto",
+    );
+    expect(tableRule?.[1]).toContain("overflow: auto");
+    expect(paginationRule?.[1]).toContain("position: sticky");
+    expect(paginationRule?.[1]).toContain("bottom: 0");
   });
 
   it("blocks finance presets for roles without finance access", async () => {
