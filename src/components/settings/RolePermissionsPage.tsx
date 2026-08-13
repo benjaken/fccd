@@ -168,9 +168,7 @@ export function RolePermissionsPage({
                     const reserved =
                       permission.pageKey.startsWith("settings.") ||
                       permission.pageKey === "migration";
-                    const locked =
-                      selectedRole === "Super Admin" ||
-                      (selectedRole !== "Super Admin" && reserved);
+                    const locked = selectedRole === "Super Admin" || reserved;
                     const rowKey = `${permission.role}:${permission.pageKey}`;
                     return (
                       <tr key={permission.pageKey}>
