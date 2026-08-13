@@ -1693,31 +1693,6 @@ td:last-child {
   margin-bottom: 0;
 }
 
-.settings-role-picker {
-  display: grid;
-  gap: 6px;
-  min-width: 220px;
-  color: var(--muted-foreground);
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.settings-role-picker select {
-  height: 40px;
-  padding: 0 34px 0 11px;
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  outline: 0;
-  background: var(--background);
-  color: var(--foreground);
-  font-size: 14px;
-}
-
-.settings-role-picker select:focus {
-  border-color: var(--ring);
-  box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 13%, transparent);
-}
-
 .settings-permissions-panel {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -1725,27 +1700,49 @@ td:last-child {
   overflow: hidden;
 }
 
-.settings-permissions-summary {
+.settings-permissions-toolbar {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 16px 18px;
+  padding: 14px 18px;
   border-bottom: 1px solid var(--border);
 }
 
-.settings-permissions-summary > svg {
-  width: 24px;
-  color: var(--primary);
+.settings-role-select {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  color: var(--foreground);
 }
 
-.settings-permissions-summary > div {
-  display: grid;
-  gap: 3px;
+.settings-role-select select {
+  appearance: none;
+  max-width: min(100%, 320px);
+  padding: 0 22px 0 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 750;
+  line-height: 1.3;
+  cursor: pointer;
 }
 
-.settings-permissions-summary span {
+.settings-role-select select:focus-visible {
+  border-radius: 4px;
+  box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--ring);
+}
+
+.settings-role-select > svg {
+  position: absolute;
+  right: 0;
+  width: 16px;
+  height: 16px;
   color: var(--muted-foreground);
-  font-size: 14px;
+  pointer-events: none;
 }
 
 .settings-permissions-table {
@@ -2120,10 +2117,6 @@ td:last-child {
 
   .settings-permissions-page .page-heading {
     align-items: stretch;
-  }
-
-  .settings-role-picker {
-    width: 100%;
   }
 
   .quotes-heading,
