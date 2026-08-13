@@ -170,7 +170,7 @@ describe("Super Admin system settings", () => {
     const migration = readFileSync(
       path.resolve(
         process.cwd(),
-        "supabase/migrations/20260813024000_create_role_page_permissions.sql",
+        "supabase/migrations/20260813025844_create_role_page_permissions.sql",
       ),
       "utf8",
     );
