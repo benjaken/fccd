@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ChevronLeft,
@@ -7,13 +7,13 @@ import {
   Pencil,
   Plus,
   RefreshCw,
-  Search,
   Users,
 } from "lucide-react";
 
 import { useAuth } from "@/auth/AuthProvider";
 import { usePageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
+import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ChangePasswordSidePanel } from "@/components/settings/ChangePasswordSidePanel";
 import { CreateUserSidePanel } from "@/components/settings/CreateUserSidePanel";
 import { EditUserSidePanel } from "@/components/settings/EditUserSidePanel";
@@ -120,8 +120,7 @@ export function UsersListPage({
     };
   }, [loadRestaurants]);
 
-  const submitSearch = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const submitSearch = () => {
     setPage(1);
     setSearch(draftSearch.trim());
   };
@@ -143,24 +142,15 @@ export function UsersListPage({
 
       <article className="panel orders-panel">
         <header className="orders-toolbar">
-          <form className="orders-search" onSubmit={submitSearch}>
-            <label
-              className="orders-search-field"
-              htmlFor="settings-users-search"
-            >
-              <Search aria-hidden="true" />
-              <span className="sr-only">{t("settings.users.search")}</span>
-              <input
-                id="settings-users-search"
-                value={draftSearch}
-                onChange={(event) => setDraftSearch(event.target.value)}
-                placeholder={t("settings.users.searchPlaceholder")}
-              />
-            </label>
-            <Button type="submit" variant="outline">
-              {t("settings.users.searchAction")}
-            </Button>
-          </form>
+          <ListSearchBar
+            id="settings-users-search"
+            value={draftSearch}
+            onChange={setDraftSearch}
+            onSubmit={submitSearch}
+            label={t("settings.users.search")}
+            placeholder={t("settings.users.searchPlaceholder")}
+            submitLabel={t("settings.users.searchAction")}
+          />
 
           <label className="orders-status-filter">
             <span>{t("settings.users.roleFilter")}</span>

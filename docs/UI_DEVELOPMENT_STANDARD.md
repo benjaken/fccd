@@ -119,7 +119,34 @@ deployments. Optional preview / local quick login is allowed under these rules:
 Helpers live in `src/lib/quick-login.ts`. See also the README section
 “One-click preview sign-in”.
 
-## 5. Token and CSS ownership
+## 5. Shared UI components (hard rule)
+
+Reusable controls that appear on multiple pages **must** be encapsulated under
+`src/components/ui/` (or a clear shared domain folder). Do **not** copy-paste
+the same input / search / skeleton / pagination markup across list pages.
+
+| Pattern | Required component |
+|---|---|
+| Toolbar search (icon inside field + submit) | `ListSearchBar` → `SearchField` |
+| Table loading rows | `TableSkeletonRows` |
+| List pagination footer | `TablePagination` |
+| Panel empty / error / permission | Prefer `OperationalListState` |
+
+Rules:
+
+- If the same (or functionally similar) UI is used on **two or more pages**,
+  extract it before merging — do not leave divergent copies.
+- Page files own data fetching and filter state; shared components own the
+  repeated chrome and interaction shell.
+- Prefer extending an existing ui component (props / variants) over a one-off
+  duplicate in a feature page.
+- When you introduce a new shared control, document it in
+  [`DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md) §4 and update this table.
+
+Canonical design-system wording (Chinese + checklist): see
+[`DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md) §4.0.
+
+## 6. Token and CSS ownership
 
 | Concern | Source of truth |
 |---|---|
@@ -127,13 +154,14 @@ Helpers live in `src/lib/quick-login.ts`. See also the README section
 | Progress tone classes | `src/index.css` `.progress-row.tone-*` |
 | Progress tone assignment | Dashboard progress data in `src/App.tsx` |
 | Table row actions | `.table-actions-cell` + `.table-row-actions`; icon-only common actions |
+| List search chrome | `SearchField` / `ListSearchBar` + `.search-field` / `.list-search` |
 | Quick-login gate | `src/lib/quick-login.ts` + env vars |
 | Copy | `src/i18n.ts` |
 
-New screens should reuse these tokens and classes. If a visual rule here
-changes, update this document in the same change set.
+New screens should reuse these tokens, classes, **and shared components**. If a
+visual rule here changes, update this document in the same change set.
 
-## 6. Related standards
+## 7. Related standards
 
 - [`DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md) — FCCD design system (shadcn + Ant Design)
 - [`UI_TABLE_STANDARD.md`](UI_TABLE_STANDARD.md) — paginated operational tables
