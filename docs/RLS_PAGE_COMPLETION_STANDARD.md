@@ -1,7 +1,11 @@
 # RLS Verification Standard for Completed Pages
 
-Every page that reads or writes Supabase data must complete RLS verification
-before it is merged into `develop`.
+Every page or feature that introduces or changes a Supabase data call must
+complete RLS verification before it is merged into `develop`.
+
+Pure layout, visual styling, copy, interaction, and client-only component
+changes do not require a new RLS verification when they do not add or alter
+Supabase table, Storage, RPC, Edge Function, or authentication access.
 
 ## Required checks
 
