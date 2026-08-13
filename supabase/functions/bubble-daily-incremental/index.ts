@@ -121,7 +121,12 @@ async function authenticateCron(
 }
 
 function safeError(error: unknown): string {
-  const message = error instanceof Error ? error.message : "Unknown error";
+  const message = error instanceof Error
+    ? error.message
+    : error && typeof error === "object" &&
+        "message" in error && typeof error.message === "string"
+    ? error.message
+    : "Unknown error";
   return message
     .replace(/Bearer\s+\S+/gi, "Bearer [redacted]")
     .replace(/eyJ[A-Za-z0-9._-]+/g, "[redacted]")
@@ -129,7 +134,7 @@ function safeError(error: unknown): string {
 }
 
 function errorCode(error: unknown): string {
-  const message = error instanceof Error ? error.message : "";
+  const message = safeError(error);
   if (message.includes("required") && message.includes("unresolved")) {
     return "unresolved_required_foreign_key";
   }
