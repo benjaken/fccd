@@ -45,4 +45,18 @@ describe("Header display requirements", () => {
 
     expect(workspaceRule?.[1]).toContain("justify-content: flex-end");
   });
+
+  it("does not render or style a global topbar search", () => {
+    const appSource = readFileSync(
+      path.resolve(process.cwd(), "src/App.tsx"),
+      "utf8",
+    );
+    const stylesheet = readFileSync(
+      path.resolve(process.cwd(), "src/index.css"),
+      "utf8",
+    );
+
+    expect(appSource).not.toContain('className="search-box"');
+    expect(stylesheet).not.toContain(".search-box");
+  });
 });

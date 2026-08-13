@@ -377,48 +377,6 @@ button.bg-primary:focus-visible {
   gap: 3px;
 }
 
-.search-box {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: min(230px, 18vw);
-  height: 38px;
-  margin-right: 5px;
-  padding: 0 11px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--background);
-  color: var(--muted-foreground);
-  transition:
-    border-color 160ms ease,
-    box-shadow 160ms ease;
-}
-
-.search-box:focus-within {
-  border-color: var(--ring);
-  box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 15%, transparent);
-}
-
-.search-box svg {
-  width: 17px;
-  height: 17px;
-  flex: 0 0 auto;
-}
-
-.search-box input {
-  width: 100%;
-  min-width: 0;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  color: var(--foreground);
-  font-size: 14px;
-}
-
-.search-box input::placeholder {
-  color: var(--muted-foreground);
-}
-
 .language-label {
   font-size: 14px;
   font-weight: 800;
@@ -6472,10 +6430,6 @@ td:last-child {
     left: 8px;
   }
 
-  .search-box {
-    width: 180px;
-  }
-
   .user-copy {
     display: none;
   }
@@ -6536,7 +6490,6 @@ td:last-child {
 
   .primary-nav,
   .workspace-links,
-  .search-box,
   .user-menu {
     display: none;
   }
