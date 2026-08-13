@@ -194,6 +194,7 @@ const resources = {
         next: "下一頁",
         pagination: "顯示 {{from}}–{{to}}，共 {{total}} 張",
         statuses: {
+          pending: "待確定",
           confirmed: "已確認",
           preparing: "製作中",
           ready: "待取貨",
@@ -798,6 +799,7 @@ const resources = {
         next: "Next page",
         pagination: "Showing {{from}}–{{to}} of {{total}}",
         statuses: {
+          pending: "Pending confirmation",
           confirmed: "Confirmed",
           preparing: "Preparing",
           ready: "Ready for pickup",
