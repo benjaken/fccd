@@ -213,5 +213,18 @@ describe("Shop order quantity report", () => {
     expect(screen.getByText("$33.06")).toBeInTheDocument();
     expect(screen.getByText("$18.73")).toBeInTheDocument();
     expect(screen.getByText("Raw-meat types")).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", {
+        name: "豬肉碎(扁食用) (生) purchase price trend",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Expand monthly matrix").closest("details"),
+    ).toHaveAttribute("open");
+
+    await user.click(screen.getByRole("button", { name: /雞扒/ }));
+    expect(
+      screen.getByRole("img", { name: "雞扒 purchase price trend" }),
+    ).toBeInTheDocument();
   });
 });
