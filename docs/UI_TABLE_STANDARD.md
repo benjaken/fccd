@@ -33,10 +33,15 @@ The last **操作 / Actions** column must stay compact and single-line:
 
 ## Toolbar search
 
-List toolbars that include search must **not** place a loose magnifying-glass
-icon to the left of the field. Put the icon **inside** the input shell
-(`.orders-search-field` / `.quotes-search-field`), then the optional「搜尋」
-submit button beside it — same pattern as the topbar `.search-box`.
+List toolbars that include search must use the shared **`ListSearchBar`**
+component (`src/components/ui/list-search-bar.tsx`), which wraps **`SearchField`**
+(icon **inside** the field) plus the outline「搜尋」submit button.
+
+- Do **not** place a loose magnifying-glass icon outside the field.
+- Do **not** re-implement `.orders-search` / `.orders-search-field` markup in
+  each page — import `ListSearchBar` instead.
+- Prefer the canonical classes `.list-search` / `.search-field` (legacy aliases
+  remain for compatibility).
 
 ## Loading state (skeleton)
 
@@ -69,3 +74,5 @@ lists.
 - Users list: icon-only horizontal actions in the last column (edit / change
   password).
 - Products / packages lists: table-body skeleton while loading.
+- Orders, quotes, payments, products, packages, users, login logs, attachments:
+  toolbar search via `ListSearchBar`.

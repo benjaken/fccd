@@ -1,14 +1,14 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ChevronLeft,
   ChevronRight,
   History,
   RefreshCw,
-  Search,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { ListSearchBar } from "@/components/ui/list-search-bar";
 import {
   fetchLoginLogs,
   LOGIN_LOG_EVENT_TYPES,
@@ -71,8 +71,7 @@ export function LoginLogsListPage({
     void loadPage();
   }, [loadPage]);
 
-  const submitSearch = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const submitSearch = () => {
     setPage(1);
     setSearch(draftSearch.trim());
   };
@@ -88,24 +87,15 @@ export function LoginLogsListPage({
 
       <article className="panel orders-panel">
         <header className="orders-toolbar">
-          <form className="orders-search" onSubmit={submitSearch}>
-            <label
-              className="orders-search-field"
-              htmlFor="settings-login-logs-search"
-            >
-              <Search aria-hidden="true" />
-              <span className="sr-only">{t("settings.loginLogs.search")}</span>
-              <input
-                id="settings-login-logs-search"
-                value={draftSearch}
-                onChange={(event) => setDraftSearch(event.target.value)}
-                placeholder={t("settings.loginLogs.searchPlaceholder")}
-              />
-            </label>
-            <Button type="submit" variant="outline">
-              {t("settings.loginLogs.searchAction")}
-            </Button>
-          </form>
+          <ListSearchBar
+            id="settings-login-logs-search"
+            value={draftSearch}
+            onChange={setDraftSearch}
+            onSubmit={submitSearch}
+            label={t("settings.loginLogs.search")}
+            placeholder={t("settings.loginLogs.searchPlaceholder")}
+            submitLabel={t("settings.loginLogs.searchAction")}
+          />
 
           <label className="orders-status-filter">
             <span>{t("settings.loginLogs.eventFilter")}</span>

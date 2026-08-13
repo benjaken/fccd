@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronRight, HandCoins, RefreshCw, Search } from "lucide-react";
+import { ChevronRight, HandCoins, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
+import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { OperationalListState } from "@/components/ui/operational-list-state";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { fetchPayments, PAYMENTS_PAGE_SIZE, type PaymentListItem } from "@/lib/payments";
@@ -60,8 +61,7 @@ export function PaymentsListPage({
 
   useEffect(() => void load(), [load]);
 
-  const submitSearch = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const submitSearch = () => {
     setPage(1);
     setSearch(draftSearch.trim());
   };
@@ -86,21 +86,15 @@ export function PaymentsListPage({
       </header>
       <article className="panel orders-panel">
         <header className="orders-toolbar">
-          <form className="orders-search" onSubmit={submitSearch}>
-            <label className="orders-search-field" htmlFor="payments-search">
-              <Search aria-hidden="true" />
-              <span className="sr-only">{t("payments.search")}</span>
-              <input
-                id="payments-search"
-                value={draftSearch}
-                onChange={(event) => setDraftSearch(event.target.value)}
-                placeholder={t("payments.searchPlaceholder")}
-              />
-            </label>
-            <Button type="submit" variant="outline">
-              {t("payments.searchAction")}
-            </Button>
-          </form>
+          <ListSearchBar
+            id="payments-search"
+            value={draftSearch}
+            onChange={setDraftSearch}
+            onSubmit={submitSearch}
+            label={t("payments.search")}
+            placeholder={t("payments.searchPlaceholder")}
+            submitLabel={t("payments.searchAction")}
+          />
         </header>
         {loading ? <OperationalListState icon={HandCoins} title={t("payments.loading")} loading /> :
         error ? <OperationalListState icon={HandCoins} title={t("payments.loadError")} description={t("payments.loadErrorDescription")} retryLabel={t("payments.retry")} onRetry={() => setReloadKey((key) => key + 1)} /> :

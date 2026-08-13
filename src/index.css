@@ -1386,16 +1386,22 @@ td:last-child {
   border-bottom: 1px solid var(--border);
 }
 
+.list-search,
 .quotes-search,
-.orders-search {
+.orders-search,
+.products-search,
+.packages-search {
   display: flex;
   align-items: center;
   gap: 8px;
   width: min(620px, 100%);
 }
 
+.search-field,
 .quotes-search-field,
-.orders-search-field {
+.orders-search-field,
+.products-search-field,
+.packages-search-field {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1412,21 +1418,29 @@ td:last-child {
     box-shadow 160ms ease;
 }
 
+.search-field:focus-within,
 .quotes-search-field:focus-within,
-.orders-search-field:focus-within {
+.orders-search-field:focus-within,
+.products-search-field:focus-within,
+.packages-search-field:focus-within {
   border-color: var(--ring);
   box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 13%, transparent);
 }
 
+.search-field svg,
 .quotes-search-field svg,
-.orders-search-field svg {
+.orders-search-field svg,
+.products-search-field svg,
+.packages-search-field svg {
   width: 16px;
   height: 16px;
   flex: 0 0 auto;
 }
 
 .quotes-status-filter select,
-.orders-status-filter select {
+.orders-status-filter select,
+.products-status-filter select,
+.packages-status-filter select {
   height: 40px;
   border: 1px solid var(--border);
   border-radius: 9px;
@@ -1436,8 +1450,11 @@ td:last-child {
   font-size: 14px;
 }
 
+.search-field input,
 .quotes-search-field input,
-.orders-search-field input {
+.orders-search-field input,
+.products-search-field input,
+.packages-search-field input {
   width: 100%;
   min-width: 0;
   height: 100%;
@@ -1450,7 +1467,9 @@ td:last-child {
 }
 
 .quotes-status-filter select:focus,
-.orders-status-filter select:focus {
+.orders-status-filter select:focus,
+.products-status-filter select:focus,
+.packages-status-filter select:focus {
   border-color: var(--ring);
   box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 13%, transparent);
 }
@@ -1552,75 +1571,6 @@ td:last-child {
   gap: 16px;
   padding: 16px 18px;
   border-bottom: 1px solid var(--border);
-}
-
-.products-search,
-.packages-search {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: min(620px, 100%);
-}
-
-.products-search-field,
-.packages-search-field {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1 1 auto;
-  min-width: 180px;
-  height: 40px;
-  padding: 0 12px;
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  background: var(--background);
-  color: var(--muted-foreground);
-  transition:
-    border-color 160ms ease,
-    box-shadow 160ms ease;
-}
-
-.products-search-field:focus-within,
-.packages-search-field:focus-within {
-  border-color: var(--ring);
-  box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 13%, transparent);
-}
-
-.products-search-field svg,
-.packages-search-field svg {
-  width: 16px;
-  height: 16px;
-  flex: 0 0 auto;
-}
-
-.products-status-filter select,
-.packages-status-filter select {
-  height: 40px;
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  outline: 0;
-  background: var(--background);
-  color: var(--foreground);
-  font-size: 14px;
-}
-
-.products-search-field input,
-.packages-search-field input {
-  width: 100%;
-  min-width: 0;
-  height: 100%;
-  padding: 0;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  color: var(--foreground);
-  font-size: 14px;
-}
-
-.products-status-filter select:focus,
-.packages-status-filter select:focus {
-  border-color: var(--ring);
-  box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 13%, transparent);
 }
 
 .products-filters,

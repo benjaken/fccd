@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CalendarDays, ChevronRight, ClipboardList, Plus, RefreshCw, Search } from "lucide-react";
+import { CalendarDays, ChevronRight, ClipboardList, Plus, RefreshCw } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
+import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { TablePagination } from "@/components/ui/table-pagination";
 import {
   fetchOrders,
@@ -163,8 +164,7 @@ export function OrdersListPage({
     void loadPage();
   }, [loadPage]);
 
-  const submitSearch = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const submitSearch = () => {
     setPage(1);
     setSearch(draftSearch.trim());
   };
@@ -209,21 +209,15 @@ export function OrdersListPage({
 
       <article className="panel orders-panel">
         <header className="orders-toolbar">
-          <form className="orders-search" onSubmit={submitSearch}>
-            <label className="orders-search-field" htmlFor="orders-search">
-              <Search aria-hidden="true" />
-              <span className="sr-only">{t("orders.search")}</span>
-              <input
-                id="orders-search"
-                value={draftSearch}
-                onChange={(event) => setDraftSearch(event.target.value)}
-                placeholder={t("orders.searchPlaceholder")}
-              />
-            </label>
-            <Button type="submit" variant="outline">
-              {t("orders.searchAction")}
-            </Button>
-          </form>
+          <ListSearchBar
+            id="orders-search"
+            value={draftSearch}
+            onChange={setDraftSearch}
+            onSubmit={submitSearch}
+            label={t("orders.search")}
+            placeholder={t("orders.searchPlaceholder")}
+            submitLabel={t("orders.searchAction")}
+          />
 
           <label className="orders-status-filter">
             <span>{t("orders.statusFilter")}</span>
