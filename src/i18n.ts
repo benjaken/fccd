@@ -223,13 +223,13 @@ const resources = {
           validation: {
             userNameRequired: "請輸入使用者名稱。",
             emailInvalid: "請輸入有效的 Email 格式。",
-            phoneInvalid: "請輸入有效電話（8–15 位數字，可含國碼）。",
+            phoneInvalid: "請輸入有效香港電話（8 位，可選 +852）。",
             passwordInvalid: "密碼至少 8 位，並需包含字母與數字。",
             passwordMismatch: "兩次輸入的密碼不一致。",
           },
           errors: {
             invalid_email: "Email 格式不正確。",
-            invalid_phone: "電話格式不正確。",
+            invalid_phone: "請輸入有效香港電話號碼。",
             invalid_password: "密碼不符合規則。",
             invalid_user_name: "使用者名稱不能為空。",
             email_already_registered: "此 Email 已註冊。",
@@ -1065,14 +1065,14 @@ const resources = {
             userNameRequired: "Enter a user name.",
             emailInvalid: "Enter a valid email address.",
             phoneInvalid:
-              "Enter a valid phone number (8–15 digits, country code allowed).",
+              "Enter a valid Hong Kong phone number (8 digits, optional +852).",
             passwordInvalid:
               "Password must be at least 8 characters and include letters and numbers.",
             passwordMismatch: "Passwords do not match.",
           },
           errors: {
             invalid_email: "Email format is invalid.",
-            invalid_phone: "Phone format is invalid.",
+            invalid_phone: "Enter a valid Hong Kong phone number.",
             invalid_password: "Password does not meet the rules.",
             invalid_user_name: "User name is required.",
             email_already_registered: "This email is already registered.",

@@ -84,11 +84,15 @@ function normalizePhone(value: string | null | undefined) {
   return trimmed ? trimmed : null;
 }
 
+/** Hong Kong phone: 8 digits (2–9…), optional +852 / 852 country code. */
 function isPhoneValid(value: string | null) {
   if (!value) return true;
   if (!/^[0-9+\-\s()]+$/.test(value)) return false;
-  const digits = value.replace(/\D/g, "");
-  return digits.length >= 8 && digits.length <= 15;
+  let digits = value.replace(/\D/g, "");
+  if (digits.startsWith("852") && digits.length === 11) {
+    digits = digits.slice(3);
+  }
+  return /^[2-9]\d{7}$/.test(digits);
 }
 
 function isPasswordValid(value: string) {

@@ -160,12 +160,16 @@ export function normalizePhoneInput(value: string) {
   return value.trim();
 }
 
+/** Hong Kong phone: 8 digits (2–9…), optional +852 / 852 country code. */
 export function isValidPhone(value: string) {
   const trimmed = normalizePhoneInput(value);
   if (!trimmed) return true;
   if (!/^[0-9+\-\s()]+$/.test(trimmed)) return false;
-  const digits = trimmed.replace(/\D/g, "");
-  return digits.length >= 8 && digits.length <= 15;
+  let digits = trimmed.replace(/\D/g, "");
+  if (digits.startsWith("852") && digits.length === 11) {
+    digits = digits.slice(3);
+  }
+  return /^[2-9]\d{7}$/.test(digits);
 }
 
 export function isValidPassword(value: string) {

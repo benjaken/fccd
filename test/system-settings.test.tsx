@@ -397,11 +397,17 @@ describe("Super Admin system settings", () => {
     ]);
   });
 
-  it("validates email, phone, and password formats", () => {
+  it("validates email, Hong Kong phone, and password formats", () => {
     expect(isValidEmail("admin@example.com")).toBe(true);
     expect(isValidEmail("bad-email")).toBe(false);
     expect(isValidPhone("+852 9123 4567")).toBe(true);
+    expect(isValidPhone("91234567")).toBe(true);
+    expect(isValidPhone("2123 4567")).toBe(true);
+    expect(isValidPhone("852-6123-4567")).toBe(true);
+    expect(isValidPhone("")).toBe(true);
     expect(isValidPhone("123")).toBe(false);
+    expect(isValidPhone("01234567")).toBe(false);
+    expect(isValidPhone("+86 138 0000 0000")).toBe(false);
     expect(isValidPassword("Secret123")).toBe(true);
     expect(isValidPassword("short1")).toBe(false);
   });
