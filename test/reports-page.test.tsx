@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -463,5 +465,24 @@ describe("Shop order quantity report", () => {
         expect.objectContaining({ supplierIds: ["kc"] }),
       ),
     );
+  });
+
+  it("lets shared item selectors scroll through the final row", () => {
+    const stylesheet = readFileSync(
+      path.resolve(process.cwd(), "src/index.css"),
+      "utf8",
+    );
+    const panelRule = stylesheet.match(
+      /\.meat-price-product-browser\s*\{([^}]+)\}/,
+    );
+    const listRule = stylesheet.match(
+      /\.meat-price-product-list\s*\{([^}]+)\}/,
+    );
+
+    expect(panelRule?.[1]).toContain(
+      "grid-template-rows: auto minmax(0, 1fr)",
+    );
+    expect(listRule?.[1]).toContain("min-height: 0");
+    expect(listRule?.[1]).not.toContain("height: 405px");
   });
 });
