@@ -47,6 +47,7 @@ export type AttachmentListItem = {
   migrationStatus: string;
   lastErrorCode: string | null;
   verifiedAt: string | null;
+  sourceModifiedAt: string | null;
   updatedAt: string;
 };
 
@@ -111,6 +112,7 @@ type AttachmentRow = {
   migration_status: string;
   last_error_code: string | null;
   verified_at: string | null;
+  source_modified_at: string | null;
   updated_at: string;
 };
 
@@ -473,10 +475,12 @@ export async function fetchAttachments({
   let query = supabase
     .from("attachments")
     .select(
-      "id,original_filename,source_type,source_field,owner_type,owner_legacy_id,bucket_id,object_path,mime_type,size_bytes,migration_status,last_error_code,verified_at,updated_at",
+      "id,original_filename,source_type,source_field,owner_type,owner_legacy_id,bucket_id,object_path,mime_type,size_bytes,migration_status,last_error_code,verified_at,source_modified_at,updated_at",
       { count: "exact" },
     )
-    .order("updated_at", { ascending: false })
+    // Bubble "Modified Date" — original system time, not migration updated_at.
+    .order("source_modified_at", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false })
     .range(start, end);
 
   const term = safeSearchTerm(search);
@@ -507,6 +511,7 @@ export async function fetchAttachments({
       migrationStatus: row.migration_status,
       lastErrorCode: row.last_error_code,
       verifiedAt: row.verified_at,
+      sourceModifiedAt: row.source_modified_at,
       updatedAt: row.updated_at,
     })) satisfies AttachmentListItem[],
   };

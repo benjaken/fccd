@@ -301,7 +301,7 @@ const resources = {
           columns: {
             file: "檔案",
             size: "大小",
-            updated: "更新日期",
+            updated: "原系統時間",
           },
         },
         roles: {
@@ -312,9 +312,9 @@ const resources = {
           loading: "正在載入角色權限…",
           error: "無法載入或保存角色權限",
           errorDescription: "請重試；需要「角色與頁面權限」的管理權限。",
-          superAdminNotice: "Super Admin 固定可存取及管理所有頁面。",
+          superAdminNotice: "Super Admin 固定可訪問所有頁面。",
           restrictedNotice: "可按角色開通系統設定頁與操作；遷移頁仍只限 Super Admin。",
-          cascadeNotice: "勾選父層權限時，會自動全選並開啟其下所有子頁面與分頁。",
+          cascadeNotice: "開啟父層權限時，會自動開啟其下所有子頁面與分頁。",
           highRisk: "高風險",
           standard: "一般",
           kinds: {
@@ -328,8 +328,7 @@ const resources = {
             route: "路由",
             kind: "層級",
             risk: "風險",
-            access: "可存取",
-            manage: "可管理",
+            access: "可訪問",
           },
         },
       },
@@ -1244,7 +1243,7 @@ const resources = {
           columns: {
             file: "File",
             size: "Size",
-            updated: "Updated",
+            updated: "Original time",
           },
         },
         roles: {
@@ -1257,11 +1256,11 @@ const resources = {
           errorDescription:
             "Retry; managing roles requires the Roles & Page Permissions manage grant.",
           superAdminNotice:
-            "Super Admin always has access and management rights for every page.",
+            "Super Admin always has access to every page.",
           restrictedNotice:
             "System settings pages and actions can be granted per role; migration remains Super Admin only.",
           cascadeNotice:
-            "Selecting a parent permission automatically selects and enables all of its sub-pages and tabs.",
+            "Turning on a parent permission automatically enables all of its sub-pages and tabs.",
           highRisk: "High risk",
           standard: "Standard",
           kinds: {
@@ -1276,7 +1275,6 @@ const resources = {
             kind: "Level",
             risk: "Risk",
             access: "Access",
-            manage: "Manage",
           },
         },
       },
