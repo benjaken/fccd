@@ -4,6 +4,9 @@ verify_jwt = false
 [functions.bubble-relations]
 verify_jwt = false
 
+[functions.attachment-incremental]
+verify_jwt = true
+
 [functions.bubble-import-phase-a]
 verify_jwt = false
 

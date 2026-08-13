@@ -17,13 +17,16 @@ describe("Bubble file migration framework", () => {
 
   it("provides list search, type, private, and 50-row pagination controls", async () => {
     const user = userEvent.setup();
-    render(<FileMigrationPage />);
+    render(<FileMigrationPage isSuperAdmin={false} />);
 
     const table = screen.getByRole("table");
     expect(within(table).getByText("Redacted POS sheet aggregate")).toBeInTheDocument();
     expect(screen.getByText("50 rows per page · 5 safe samples")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Previous page" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Next page" })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Upload and compare" }),
+    ).toBeDisabled();
 
     await user.selectOptions(screen.getByLabelText("File type"), "image");
     expect(within(table).queryByText("Redacted POS sheet aggregate")).not.toBeInTheDocument();

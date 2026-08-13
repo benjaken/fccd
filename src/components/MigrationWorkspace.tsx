@@ -93,7 +93,10 @@ export function MigrationWorkspace() {
           />
           <Route path="inventory" element={<DataMigrationPage />} />
           <Route path="fk" element={<MigratedFkPage />} />
-          <Route path="files" element={<FileMigrationPage />} />
+          <Route
+            path="files"
+            element={<FileMigrationPage isSuperAdmin={isSuperAdmin} />}
+          />
           <Route path="*" element={<Navigate to="control" replace />} />
         </Routes>
       </div>

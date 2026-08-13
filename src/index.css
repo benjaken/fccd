@@ -3128,6 +3128,166 @@ td:last-child {
   color: oklch(0.58 0.15 65);
 }
 
+.attachment-incremental-panel {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+}
+
+.attachment-incremental-panel > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.attachment-incremental-panel h2,
+.attachment-incremental-panel p {
+  margin: 0;
+}
+
+.attachment-incremental-panel h2 {
+  margin-top: 4px;
+  font-size: 18px;
+}
+
+.attachment-incremental-panel header p {
+  margin-top: 5px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+
+.attachment-upload-row {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) auto auto;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.attachment-json-input {
+  position: relative;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 13px;
+  border: 1px dashed color-mix(in oklch, var(--primary) 45%, var(--border));
+  border-radius: 10px;
+  background: color-mix(in oklch, var(--primary) 3%, var(--card));
+  cursor: pointer;
+}
+
+.attachment-json-input > svg {
+  width: 19px;
+  flex: 0 0 auto;
+  color: var(--primary);
+}
+
+.attachment-json-input > span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.attachment-json-input strong,
+.attachment-json-input small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attachment-json-input small {
+  color: var(--muted-foreground);
+}
+
+.attachment-json-input input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.attachment-analysis-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.attachment-analysis-grid article {
+  display: grid;
+  gap: 3px;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--muted);
+}
+
+.attachment-analysis-grid span {
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+
+.attachment-analysis-grid strong {
+  font-size: 18px;
+}
+
+.attachment-migration-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  color: var(--destructive);
+  border: 1px solid color-mix(in oklch, var(--destructive) 28%, var(--border));
+  border-radius: 9px;
+  background: color-mix(in oklch, var(--destructive) 5%, var(--card));
+  font-size: 13px;
+}
+
+.attachment-migration-error svg {
+  width: 17px;
+  flex: 0 0 auto;
+}
+
+.attachment-progress {
+  display: grid;
+  gap: 7px;
+}
+
+.attachment-progress > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+
+.attachment-progress-track {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--muted);
+}
+
+.attachment-progress-track span {
+  height: 100%;
+  display: block;
+  border-radius: inherit;
+  background: var(--primary);
+  transition: width 180ms ease;
+}
+
+.attachment-progress p {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+
+.attachment-progress p svg {
+  width: 16px;
+  color: oklch(0.58 0.15 148);
+}
+
 .file-migration-metrics {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -4667,6 +4827,19 @@ td:last-child {
 
   .file-migration-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .attachment-upload-row {
+    grid-template-columns: 1fr;
+  }
+
+  .attachment-analysis-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .attachment-incremental-panel > header {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .file-incremental-policy dl {

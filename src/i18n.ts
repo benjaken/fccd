@@ -259,6 +259,28 @@ const resources = {
         pagination: "每頁 {{size}} 列 · {{count}} 個安全樣本",
         previous: "上一頁",
         next: "下一頁",
+        incrementalPanel: {
+          eyebrow: "增量附件 · Supabase",
+          title: "上傳及比對 File Manager JSON",
+          description:
+            "已驗證的 Bubble ID 會直接忽略；新文件才會下載，內容 SHA-256 已存在時會共用 Storage 物件。",
+          authorized: "Super Admin 已授權",
+          superAdminRequired: "需要 Super Admin",
+          selectJson: "選擇 uploaded-files JSON",
+          jsonHint: "最多分批比對；原始 JSON 不會寫入資料庫",
+          analyze: "上傳並比對",
+          running: "增量遷移中",
+          records: "JSON 記錄",
+          existing: "已驗證／忽略",
+          new: "新增",
+          retry: "失敗重試",
+          changed: "來源已變更",
+          jsonDuplicates: "JSON 重複 ID",
+          analyzeError: "無法分析附件 JSON。",
+          partialFailure: "{{count}} 個附件處理失敗，可重新上傳 JSON 重試。",
+          result:
+            "新上傳 {{uploaded}} · 內容去重 {{deduplicated}} · 失敗 {{failed}}",
+        },
         columns: {
           name: "文件名稱",
           size: "大小",
@@ -863,6 +885,29 @@ const resources = {
         pagination: "{{size}} rows per page · {{count}} safe samples",
         previous: "Previous page",
         next: "Next page",
+        incrementalPanel: {
+          eyebrow: "Incremental attachments · Supabase",
+          title: "Upload and compare File Manager JSON",
+          description:
+            "Verified Bubble IDs are ignored. Only new files are downloaded, and existing SHA-256 content reuses its Storage object.",
+          authorized: "Super Admin authorized",
+          superAdminRequired: "Super Admin required",
+          selectJson: "Choose uploaded-files JSON",
+          jsonHint: "Compared in batches; raw JSON is not stored in the database",
+          analyze: "Upload and compare",
+          running: "Incremental migration running",
+          records: "JSON records",
+          existing: "Verified / ignored",
+          new: "New",
+          retry: "Failed retry",
+          changed: "Source changed",
+          jsonDuplicates: "Duplicate JSON IDs",
+          analyzeError: "Unable to analyze the attachment JSON.",
+          partialFailure:
+            "{{count}} attachments failed. Upload the JSON again to retry.",
+          result:
+            "Uploaded {{uploaded}} · Deduplicated {{deduplicated}} · Failed {{failed}}",
+        },
         columns: {
           name: "File name",
           size: "Size",
