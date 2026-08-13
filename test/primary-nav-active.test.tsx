@@ -3,18 +3,53 @@ import { describe, expect, it } from "vitest";
 import { isPrimaryNavActive, sectionFromPath } from "@/App";
 
 describe("Primary navigation section matching", () => {
-  it("maps settings child routes to the settings section", () => {
-    expect(sectionFromPath("/settings")).toBe("settings");
-    expect(sectionFromPath("/settings/users")).toBe("settings");
-    expect(sectionFromPath("/settings/roles")).toBe("settings");
-    expect(sectionFromPath("/settings/login-logs")).toBe("settings");
-    expect(sectionFromPath("/settings/attachments")).toBe("settings");
+  it.each([
+    ["/", "overview"],
+    ["/follow-up", "overview"],
+    ["/inventory", "overview"],
+    ["/orders", "orders"],
+    ["/orders/pending", "orders"],
+    ["/orders/order-1", "orders"],
+    ["/quotes", "quotes"],
+    ["/quotes/customers", "quotes"],
+    ["/quotes/quote-1", "quotes"],
+    ["/products", "products"],
+    ["/products/packages", "products"],
+    ["/products/packages/pkg-1", "products"],
+    ["/kitchen", "kitchen"],
+    ["/kitchen/calendar", "kitchen"],
+    ["/delivery", "delivery"],
+    ["/delivery/assign", "delivery"],
+    ["/restaurant", "restaurant"],
+    ["/restaurant/reports", "restaurant"],
+    ["/reports", "reports"],
+    ["/reports/daily", "reports"],
+    ["/finance", "reports"],
+    ["/settings", "settings"],
+    ["/settings/users", "settings"],
+    ["/settings/roles", "settings"],
+    ["/settings/login-logs", "settings"],
+    ["/settings/attachments", "settings"],
+  ] as const)("maps %s to section %s", (pathname, section) => {
+    expect(sectionFromPath(pathname)).toBe(section);
   });
 
-  it("keeps the settings top-nav active on child pages", () => {
+  it("does not treat profile or migration as overview", () => {
+    expect(sectionFromPath("/profile")).toBe("");
+    expect(sectionFromPath("/migration")).toBe("");
+    expect(sectionFromPath("/migration/files")).toBe("");
+    expect(sectionFromPath("/unknown-module")).toBe("");
+  });
+
+  it("keeps each top-nav item active across its child routes", () => {
     expect(isPrimaryNavActive("settings", "settings", false)).toBe(true);
-    expect(isPrimaryNavActive("settings", "orders", false)).toBe(false);
     expect(isPrimaryNavActive("orders", "orders", false)).toBe(true);
+    expect(isPrimaryNavActive("products", "products", false)).toBe(true);
+    expect(isPrimaryNavActive("reports", "reports", false)).toBe(true);
+    expect(isPrimaryNavActive("kitchen", "kitchen", false)).toBe(true);
+    expect(isPrimaryNavActive("overview", "overview", false)).toBe(true);
+    expect(isPrimaryNavActive("orders", "settings", false)).toBe(false);
+    expect(isPrimaryNavActive("", "overview", false)).toBe(false);
     expect(isPrimaryNavActive("overview", "overview", true)).toBe(true);
   });
 });

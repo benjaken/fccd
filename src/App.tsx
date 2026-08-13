@@ -369,15 +369,18 @@ const workspaceLinks: Array<{
 ];
 
 function sectionFromPath(pathname: string) {
-  const segment = pathname.split("/")[1];
+  const segment = pathname.split("/")[1] ?? "";
   if (segment === "follow-up" || segment === "inventory") return "overview";
   if (segment === "finance") return "reports";
-  return secondaryNav[segment] ? segment : "overview";
+  if (secondaryNav[segment]) return segment;
+  // Exact home only — do not light 主頁 for profile/migration/unknown paths.
+  if (!segment) return "overview";
+  return "";
 }
 
 /** Primary top-nav stays active for the whole section, including child routes. */
 function isPrimaryNavActive(section: string, key: string, isActive: boolean) {
-  return isActive || section === key;
+  return isActive || (section !== "" && section === key);
 }
 
 export { isPrimaryNavActive, sectionFromPath };
