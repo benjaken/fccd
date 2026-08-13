@@ -43,6 +43,7 @@ import { AuthProvider, useAuth } from "@/auth/AuthProvider";
 import { LoginPage } from "@/components/LoginPage";
 import { MigrationWorkspace } from "@/components/MigrationWorkspace";
 import { ProfilePage } from "@/components/ProfilePage";
+import { ReportsPage } from "@/components/ReportsPage";
 import { QuotesListPage } from "@/components/QuotesListPage";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/lib/use-theme";
@@ -441,6 +442,7 @@ function OperationsShell() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/quotes" element={<QuotesListPage />} />
+              <Route path="/reports/*" element={<ReportsPage />} />
               <Route path="*" element={<ModulePlaceholder section={section} />} />
             </Routes>
           </div>
