@@ -424,7 +424,7 @@ export function FileMigrationPage({
         </div>
         <Button disabled>
           <FileArchive />
-          {t("fileMigration.incremental")}
+          {t("fileMigration.legacyLocked")}
         </Button>
       </section>
 
