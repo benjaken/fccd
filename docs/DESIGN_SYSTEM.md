@@ -18,7 +18,7 @@ FCCD（**Food Channel Catering Discovery**）自有設計規範：以 **shadcn/u
 |---|---|---|
 | **shadcn/ui** | 語意化 CSS variables、`Button` variants（CVA）、Radix Slot／可及性、Lucide 圖示、可擁有原始碼的元件 | 預設 zinc／中性主題色、行銷向大留白、把 shadcn 當黑盒依賴 |
 | **Ant Design** | 8px 節奏、控制尺寸（sm／md／lg）、主／次／危險操作層級、表格密度、明確 loading／empty／error、表單標籤與校驗回饋 | 引入整個 `antd` 套件、Ant 預設藍 `#1677ff` 色票、過度依賴 Modal 堆疊 |
-| **FCCD** | 藍色品牌主色、主按鈕白字、全寬內容區、訂單進度多色、繁中優先 i18n、Light／Dark | 品牌紅主色、頁面 `max-width: 1600px`、預覽一鍵登入用於 Production |
+| **FCCD** | 綠色品牌主色、主按鈕白字、全寬內容區、訂單進度多色、繁中優先 i18n、Light／Dark | 品牌紅主色、頁面 `max-width: 1600px`、預覽一鍵登入用於 Production |
 
 **一句話定位：** 企業營運後台要「看得清、點得準、回饋夠」，元件要「可擁有、可組合、可主題化」。
 
@@ -57,28 +57,28 @@ FCCD（**Food Channel Catering Discovery**）自有設計規範：以 **shadcn/u
 
 | Token | 用途 | 規則 |
 |---|---|---|
-| `--primary` | 主操作、品牌強調、focus 相關 | 中等飽和藍；約 `oklch(0.52 0.145 250)`（light） |
-| `--primary-foreground` | 主色實心底上的文字／圖示 | **必須近白**；禁止深色內文壓在藍底上 |
-| `--secondary` / `--muted` | 次要底、軌道、弱資訊 | 低彩度中性 |
+| `--primary` | 主操作、品牌強調、focus／active 相關 | 中等飽和綠；約 `oklch(0.52 0.14 150)`（light） |
+| `--primary-foreground` | 主色實心底上的文字／圖示 | **必須近白**；禁止深色內文壓在綠底上 |
+| `--secondary` / `--muted` | 次要底、軌道、弱資訊 | 低彩度、與 primary 同色相的中性 |
 | `--accent` | 輕量強調底 | 與 primary 同色相、低彩度 |
-| `--destructive` | 刪除、失敗、危險 | **保持紅色**，不跟品牌藍混用 |
-| `--border` / `--input` / `--ring` | 邊框、表單框、focus | ring 跟隨藍系 |
+| `--destructive` | 刪除、失敗、危險 | **保持紅色**，不跟品牌綠混用 |
+| `--border` / `--input` / `--ring` | 邊框、表單框、focus | ring 跟隨綠系 |
 | `--background` / `--card` / `--foreground` | 頁面／卡片／內文 | Light／Dark 皆需可讀 |
 
 **借 Ant Design 的功能色分工（映射到本系統）：**
 
 | 語意 | FCCD 做法 |
 |---|---|
-| Primary | `--primary` 藍 |
-| Success | 綠系 tone／badge（如 `tone-green`、status green） |
+| Primary | `--primary` 綠 |
+| Success | 綠系 tone／badge（如 `tone-green`、status green；可與品牌綠接近但進度條仍須多色） |
 | Warning | 琥珀／琥珀 badge（`tone-amber`） |
 | Error | `--destructive` |
-| Info | 青／靛（`tone-cyan` / `tone-indigo`） |
+| Info | 青／靛／資訊藍（`tone-cyan` / `tone-indigo` / `.status-badge.blue`） |
 
-Active 導航（側欄、工作區 soft link、tab）必須是**淡藍底 + 藍字**，禁止粉紅／舊品牌紅殘留。  
-`.status-badge.red`／`.metric-icon.red` 只代表危險／失敗（`--destructive`），不可再當舊品牌主色；品牌強調改用 `blue`。
+Active 導航（側欄、工作區 soft link、migration tab）必須是**淡綠底 + 綠字**，並以 `color-mix`／`--primary` 跟隨主題，禁止粉紅／舊品牌紅／舊藍殘留。  
+`.status-badge.red`／`.metric-icon.red` 只代表危險／失敗（`--destructive`），不可再當舊品牌主色；品牌強調改用 `--primary`（綠）。
 
-**多狀態進度條**不可全部使用品牌藍，必須用可區分色相（見
+**多狀態進度條**不可全部使用品牌綠，必須用可區分色相（見
 [`UI_DEVELOPMENT_STANDARD.md`](UI_DEVELOPMENT_STANDARD.md) §3）：
 
 `indigo` → `amber` → `violet` → `cyan` → `green`。
@@ -120,7 +120,7 @@ Active 導航（側欄、工作區 soft link、tab）必須是**淡藍底 + 藍�
 | 控制項（按鈕、輸入） | 約 `rounded-lg`／11px，一致 |
 | 面板／卡片 | 約 14–16px |
 | 進度條／pill | 全圓角 |
-| 陰影 | 輕量、低對比；主按鈕可用淡藍陰影，避免多層霓虹 glow |
+| 陰影 | 輕量、低對比；主按鈕可用淡綠陰影，避免多層霓虹 glow |
 | 邊框 | 優先 `1px solid var(--border)`，靠層級而非重陰影區分 |
 
 ### 2.5 尺寸 Size（控制高度）
@@ -218,7 +218,7 @@ Active 導航（側欄、工作區 soft link、tab）必須是**淡藍底 + 藍�
 
 **硬規則：**
 
-- Primary 實心＝藍底 **白字／白圖示**（含 `Button asChild` + `<Link>`）
+- Primary 實心＝綠底 **白字／白圖示**（含 `Button asChild` + `<Link>`）
 - 同一 header 只放一個 Primary
 - 主按鈕文案用動詞：建立、儲存、送出；避免「確定」過於空洞（Ant 文案建議）
 - 禁用态用 `disabled` + 降低透明度，並保持可讀原因（tooltip／helper）
@@ -295,7 +295,7 @@ Active 導航（側欄、工作區 soft link、tab）必須是**淡藍底 + 藍�
 
 ### 5.3 儀表板進度
 
-- 每列獨立 hue（非單一藍系）
+- 每列獨立 hue（非單一綠系）
 - 數值顏色跟隨 `--progress-tone`
 - 列可點進對應篩選列表
 
@@ -336,7 +336,8 @@ Active 導航（側欄、工作區 soft link、tab）必須是**淡藍底 + 藍�
 - 引入完整 `antd`／另一套主題引擎與現有 token 雙軌並行
 - 品牌主色改回高飽和紅，或 Primary 按鈕用深色字
 - 頁面再套居中 `max-width: 1600px` 造成左右過寬
-- 訂單進度五條全用藍色系
+- 訂單進度五條全用品牌綠色系
+- Active 導航殘留舊藍／粉紅底而不跟隨 `--primary`
 - 業務元件內硬編碼大段顏色／文案
 - 多頁複製貼上相同搜尋框／骨架／分頁 markup，而不使用 `src/components/ui/` 共用組件
 - 用動畫或 toast 掩蓋未處理的錯誤狀態
