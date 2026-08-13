@@ -5,6 +5,7 @@ import {
   hashBubblePayload,
   partitionConflicts,
   requireLegacyId,
+  sha256Hex,
 } from "./helpers.ts";
 import {
   coreMappings,
@@ -95,6 +96,27 @@ async function constantTimeEqual(
     difference |= leftBytes[index] ^ rightBytes[index];
   }
   return difference === 0;
+}
+
+async function authenticateCron(
+  request: Request,
+  client: AdminClient,
+): Promise<boolean> {
+  const supplied = request.headers.get("x-cron-secret");
+  if (!supplied) return false;
+  const { data, error } = await client
+    .from("bubble_incremental_cron_auth")
+    .select("secret_sha256")
+    .eq("singleton", true)
+    .single();
+  if (error || !data?.secret_sha256) {
+    console.error("bubble-daily-incremental cron auth is not configured");
+    return false;
+  }
+  return constantTimeEqual(
+    await sha256Hex(supplied),
+    String(data.secret_sha256),
+  );
 }
 
 function safeError(error: unknown): string {
@@ -542,20 +564,24 @@ Deno.serve(async (request) => {
     return jsonResponse({ error: "Method not allowed." }, 405);
   }
 
-  let cronSecret: string;
+  let client: AdminClient;
   try {
-    cronSecret = requiredEnv("BUBBLE_CRON_SECRET");
+    client = createClient<any>(requiredEnv("SUPABASE_URL"), serviceKey(), {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
   } catch {
     console.error("bubble-daily-incremental configuration error");
     return jsonResponse({ error: "Function is not configured." }, 500);
   }
-  if (
-    !(await constantTimeEqual(
-      request.headers.get("x-cron-secret"),
-      cronSecret,
-    ))
-  ) {
+  if (!(await authenticateCron(request, client))) {
     return jsonResponse({ error: "Unauthorized." }, 401);
+  }
+  let bubbleToken: string;
+  try {
+    bubbleToken = requiredEnv("BUBBLE_API_TOKEN");
+  } catch {
+    console.error("bubble-daily-incremental Bubble token is not configured");
+    return jsonResponse({ error: "Function is not configured." }, 500);
   }
 
   let phases: Phase[];
@@ -569,18 +595,6 @@ Deno.serve(async (request) => {
   const invocationId = crypto.randomUUID();
   const migrationKey =
     `bubble-incremental-${invocationStartedAt}-${invocationId}`;
-  let client: AdminClient;
-  let bubbleToken: string;
-  try {
-    bubbleToken = requiredEnv("BUBBLE_API_TOKEN");
-    client = createClient<any>(requiredEnv("SUPABASE_URL"), serviceKey(), {
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
-  } catch {
-    console.error("bubble-daily-incremental configuration error");
-    return jsonResponse({ error: "Function is not configured." }, 500);
-  }
-
   const { data: run, error: runError } = await client
     .from("migration")
     .insert({

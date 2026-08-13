@@ -35,6 +35,14 @@ create table public.bubble_incremental_conflicts (
   check (payload_sha256 ~ '^[0-9a-f]{64}$')
 );
 
+create table public.bubble_incremental_cron_auth (
+  singleton boolean primary key default true
+    check (singleton),
+  secret_sha256 text not null
+    check (secret_sha256 ~ '^[0-9a-f]{64}$'),
+  rotated_at timestamptz not null default now()
+);
+
 create index bubble_incremental_conflicts_source_idx
   on public.bubble_incremental_conflicts (
     source_type,
@@ -45,15 +53,21 @@ alter table public.bubble_incremental_checkpoints enable row level security;
 alter table public.bubble_incremental_checkpoints force row level security;
 alter table public.bubble_incremental_conflicts enable row level security;
 alter table public.bubble_incremental_conflicts force row level security;
+alter table public.bubble_incremental_cron_auth enable row level security;
+alter table public.bubble_incremental_cron_auth force row level security;
 
 revoke all on public.bubble_incremental_checkpoints from anon, authenticated;
 revoke all on public.bubble_incremental_conflicts from anon, authenticated;
+revoke all on public.bubble_incremental_cron_auth from anon, authenticated;
 
 grant select, insert, update, delete
   on public.bubble_incremental_checkpoints
   to service_role;
 grant select, insert, update, delete
   on public.bubble_incremental_conflicts
+  to service_role;
+grant select
+  on public.bubble_incremental_cron_auth
   to service_role;
 grant usage, select
   on sequence public.bubble_incremental_conflicts_id_seq
@@ -63,3 +77,41 @@ comment on table public.bubble_incremental_checkpoints is
   'Per-Bubble-type successful checkpoints for append-only daily synchronization.';
 comment on table public.bubble_incremental_conflicts is
   'Existing legacy IDs observed after a checkpoint. Supabase rows are preserved and never overwritten.';
+comment on table public.bubble_incremental_cron_auth is
+  'SHA-256 only. The matching raw Cron credential is stored in Supabase Vault.';
+
+-- Generate the Cron credential entirely inside Postgres so it never appears in
+-- source control, migration logs, agent output, or Edge Function configuration.
+do $$
+declare
+  cron_secret text;
+begin
+  select decrypted_secret
+    into cron_secret
+  from vault.decrypted_secrets
+  where name = 'bubble_daily_cron_secret'
+  order by created_at desc
+  limit 1;
+
+  if cron_secret is null then
+    cron_secret := encode(gen_random_bytes(32), 'hex');
+    perform vault.create_secret(
+      cron_secret,
+      'bubble_daily_cron_secret',
+      'FCCD daily Bubble incremental scheduler credential'
+    );
+  end if;
+
+  insert into public.bubble_incremental_cron_auth (
+    singleton,
+    secret_sha256
+  )
+  values (
+    true,
+    encode(digest(cron_secret, 'sha256'), 'hex')
+  )
+  on conflict (singleton) do update
+    set secret_sha256 = excluded.secret_sha256,
+        rotated_at = now();
+end
+$$;
