@@ -417,7 +417,6 @@ function OperationsShell() {
       ? user.app_metadata.role
       : profile?.role;
   const pageAccess = usePageAccess(authorizationRole);
-  const isSuperAdmin = pageAccess.isSuperAdmin;
   const currentPageKey = pageAccessKey(location.pathname);
   const visiblePrimaryNav = primaryNav.filter((item) => {
     const key = item.permissionKey ?? item.key;
@@ -426,15 +425,17 @@ function OperationsShell() {
   const sideItems = (secondaryNav[section] ?? secondaryNav.overview).filter(
     (item) => pageAccess.canAccess(item.permissionKey ?? pageAccessKey(item.to)),
   );
+  const firstSettingsPath =
+    secondaryNav.settings.find((item) =>
+      pageAccess.canAccess(item.permissionKey ?? pageAccessKey(item.to)),
+    )?.to ?? "/settings/users";
   const activeWorkspace =
     section === "delivery"
       ? "delivery"
       : section === "restaurant"
         ? "restaurant"
         : "catering";
-  const canViewFinance = ["Super Admin", "Admin", "Accounting"].includes(
-    profile?.role ?? "",
-  );
+  const canViewFinance = pageAccess.canAccess("finance");
 
   useEffect(() => {
     setMobileMenuOpen(false);
@@ -707,18 +708,22 @@ function OperationsShell() {
               <Route path="/reports/*" element={<ReportsPage />} />
               <Route
                 path="/settings"
-                element={<Navigate to="/settings/users" replace />}
+                element={<Navigate to={firstSettingsPath} replace />}
               />
               <Route
                 path="/settings/users"
                 element={
-                  isSuperAdmin ? <UsersListPage /> : <SettingsAccessDenied />
+                  pageAccess.canAccess("settings.users") ? (
+                    <UsersListPage />
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
                 }
               />
               <Route
                 path="/settings/roles"
                 element={
-                  isSuperAdmin ? (
+                  pageAccess.canAccess("settings.roles") ? (
                     <RolePermissionsPage />
                   ) : (
                     <SettingsAccessDenied />
@@ -728,7 +733,7 @@ function OperationsShell() {
               <Route
                 path="/settings/login-logs"
                 element={
-                  isSuperAdmin ? (
+                  pageAccess.canAccess("settings.login_logs") ? (
                     <LoginLogsListPage />
                   ) : (
                     <SettingsAccessDenied />
@@ -738,7 +743,7 @@ function OperationsShell() {
               <Route
                 path="/settings/attachments"
                 element={
-                  isSuperAdmin ? (
+                  pageAccess.canAccess("settings.attachments") ? (
                     <AttachmentsListPage />
                   ) : (
                     <SettingsAccessDenied />

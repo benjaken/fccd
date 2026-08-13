@@ -99,7 +99,11 @@ function isSystemRole(value: string): value is SystemRole {
   return (SYSTEM_ROLES as readonly string[]).includes(value);
 }
 
-async function requireSuperAdmin(request: Request, admin: AdminClient) {
+async function requirePageAccess(
+  request: Request,
+  admin: AdminClient,
+  pageKey: string,
+) {
   const authorization = request.headers.get("Authorization");
   if (!authorization?.startsWith("Bearer ")) {
     throw jsonResponse({ error: "missing_authorization" }, 401);
@@ -112,8 +116,31 @@ async function requireSuperAdmin(request: Request, admin: AdminClient) {
   if (error || !user) {
     throw jsonResponse({ error: "invalid_authorization" }, 401);
   }
-  if (user.app_metadata?.role !== "Super Admin") {
-    throw jsonResponse({ error: "super_admin_required" }, 403);
+
+  const role =
+    typeof user.app_metadata?.role === "string"
+      ? user.app_metadata.role
+      : null;
+  if (role === "Super Admin") return user;
+
+  if (!role) {
+    throw jsonResponse({ error: "page_access_required" }, 403);
+  }
+
+  const { data, error: permissionError } = await admin
+    .from("role_page_permissions")
+    .select("can_access")
+    .eq("role", role)
+    .eq("page_key", pageKey)
+    .maybeSingle();
+  if (permissionError) {
+    throw jsonResponse(
+      { error: "permission_check_failed", detail: permissionError.message },
+      500,
+    );
+  }
+  if (!data?.can_access) {
+    throw jsonResponse({ error: "page_access_required" }, 403);
   }
   return user;
 }
@@ -317,8 +344,14 @@ Deno.serve(async (request) => {
 
   try {
     const admin = createAdminClient();
-    await requireSuperAdmin(request, admin);
     const payload = parsePayload(await request.json());
+    const requiredPageKey =
+      payload.action === "create"
+        ? "settings.users.create"
+        : payload.action === "updateProfile"
+          ? "settings.users.edit"
+          : "settings.users.change_password";
+    await requirePageAccess(request, admin, requiredPageKey);
     if (payload.action === "create") {
       return jsonResponse({ user: await createUser(admin, payload) }, 201);
     }

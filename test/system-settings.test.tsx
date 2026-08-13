@@ -314,7 +314,7 @@ describe("Super Admin system settings", () => {
     );
   });
 
-  it("locks Super Admin and reserved setting grants", async () => {
+  it("locks Super Admin grants and keeps migration reserved", async () => {
     const user = userEvent.setup();
     const loadPermissions = vi.fn().mockResolvedValue(permissions);
     const savePermission = vi.fn().mockResolvedValue(undefined);
@@ -342,7 +342,8 @@ describe("Super Admin system settings", () => {
       name: "使用者列表 可存取",
     });
     expect(adminUsers).not.toBeChecked();
-    expect(adminUsers).toBeDisabled();
+    // Settings pages are permission-driven (editable), not hard-locked.
+    expect(adminUsers).not.toBeDisabled();
   });
 
   it("selecting a parent access grant opens every child page and tab", async () => {
@@ -490,5 +491,19 @@ describe("Super Admin system settings", () => {
     expect(userActions).toContain("settings.users.create");
     expect(userActions).toContain("settings.users.edit");
     expect(userActions).toContain("settings.users.change_password");
+
+    const permissionDriven = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260813095000_permission_driven_settings_access.sql",
+      ),
+      "utf8",
+    );
+    expect(permissionDriven).toContain("private.has_page_access");
+    expect(permissionDriven).toContain("private.has_page_manage");
+    expect(permissionDriven).toContain("elsif new.page_key = 'migration' then");
+    expect(permissionDriven).not.toContain(
+      "new.page_key like 'settings.%'",
+    );
   });
 });

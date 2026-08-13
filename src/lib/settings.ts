@@ -300,11 +300,9 @@ export async function updateManagedUserProfile(input: UpdateUserProfileInput) {
 }
 
 function isReservedPageKey(pageKey: string) {
-  return (
-    pageKey === "settings" ||
-    pageKey.startsWith("settings.") ||
-    pageKey === "migration"
-  );
+  // Only migration remains exclusively Super Admin; settings pages are
+  // permission-driven through role_page_permissions.
+  return pageKey === "migration";
 }
 
 function normalizePageKind(value: string | null | undefined): PageKind {
@@ -376,6 +374,7 @@ export function isPagePermissionLocked(
   role: SystemRole,
   pageKey: string,
 ) {
+  // Super Admin grants are always on (DB enforced). Migration stays reserved.
   return role === "Super Admin" || isReservedPageKey(pageKey);
 }
 

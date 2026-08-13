@@ -137,17 +137,32 @@ function requireSuccess(error: { message: string } | null) {
   if (error) throw error;
 }
 
+async function roleHasPageAccess(
+  role: string | null | undefined,
+  pageKey: string,
+) {
+  if (!role) return false;
+  if (role === "Super Admin") return true;
+  const { data, error } = await supabase
+    .from("role_page_permissions")
+    .select("can_access")
+    .eq("role", role)
+    .eq("page_key", pageKey)
+    .maybeSingle();
+  if (error) throw error;
+  return data?.can_access === true;
+}
+
 export async function fetchDashboardData(
   now = new Date(),
   role?: string | null,
 ): Promise<DashboardData> {
   const { todayStart, tomorrowStart, yesterdayStart } = dashboardDayBounds(now);
+  // role === undefined keeps full metrics for callers/tests that omit role.
   const canViewFinance =
-    role === undefined ||
-    ["Super Admin", "Admin", "Accounting"].includes(role ?? "");
+    role === undefined || (await roleHasPageAccess(role, "finance"));
   const canViewInventory =
-    role === undefined ||
-    ["Super Admin", "Admin", "Factory"].includes(role ?? "");
+    role === undefined || (await roleHasPageAccess(role, "inventory"));
   const orderFields =
     "id,order_number,customer_name_snapshot,company_name_snapshot,delivery_at,ship_out_time,delivery_status,is_sent_to_factory,grand_total,currency";
 

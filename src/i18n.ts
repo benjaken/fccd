@@ -191,7 +191,7 @@ const resources = {
           allRoles: "全部角色",
           loading: "正在載入使用者…",
           loadError: "暫時無法載入使用者",
-          loadErrorDescription: "請重新整理，或確認 Super Admin 權限。",
+          loadErrorDescription: "請重新整理，或確認你有使用者管理權限。",
           empty: "未找到使用者",
           emptyDescription: "調整搜尋或角色條件後再試。",
           createAction: "新建使用者",
@@ -236,6 +236,7 @@ const resources = {
             user_create_failed: "建立使用者失敗，請稍後再試。",
             password_update_failed: "修改密碼失敗，請稍後再試。",
             profile_update_failed: "更新使用者資料失敗，請稍後再試。",
+            page_access_required: "沒有執行此操作的權限。",
             missing_authorization: "請重新登入後再試。",
             super_admin_required: "只有 Super Admin 可以執行此操作。",
           },
@@ -260,7 +261,7 @@ const resources = {
           allEvents: "全部事件",
           loading: "正在載入登入紀錄…",
           loadError: "暫時無法載入登入紀錄",
-          loadErrorDescription: "請重新整理，或確認 Super Admin 權限。",
+          loadErrorDescription: "請重新整理，或確認你有使用者管理權限。",
           empty: "未找到登入紀錄",
           emptyDescription: "有登入活動後會顯示在此。",
           events: {
@@ -314,13 +315,13 @@ const resources = {
         roles: {
           title: "角色與頁面權限",
           description:
-            "配置各角色的頁面、子頁面及分頁存取／管理權限；保留頁面只限 Super Admin。",
+            "配置各角色的頁面、子頁面、分頁及操作權限；遷移頁仍只限 Super Admin。",
           role: "角色",
           loading: "正在載入角色權限…",
           error: "無法載入或保存角色權限",
-          errorDescription: "請重試；權限變更只允許 Super Admin。",
+          errorDescription: "請重試；需要「角色與頁面權限」的管理權限。",
           superAdminNotice: "Super Admin 固定可存取及管理所有頁面。",
-          restrictedNotice: "使用者、角色、附件及遷移頁固定只限 Super Admin。",
+          restrictedNotice: "可按角色開通系統設定頁與操作；遷移頁仍只限 Super Admin。",
           cascadeNotice: "勾選父層權限時，會自動全選並開啟其下所有子頁面與分頁。",
           highRisk: "高風險",
           standard: "一般",
@@ -1028,7 +1029,7 @@ const resources = {
           loading: "Loading users…",
           loadError: "Users could not be loaded",
           loadErrorDescription:
-            "Refresh or confirm your Super Admin permissions.",
+            "Refresh or confirm your user management permissions.",
           empty: "No users found",
           emptyDescription: "Adjust the search or role filters and try again.",
           createAction: "Create user",
@@ -1078,6 +1079,7 @@ const resources = {
             user_create_failed: "Could not create the user. Try again.",
             password_update_failed: "Could not update the password. Try again.",
             profile_update_failed: "Could not update the user profile. Try again.",
+            page_access_required: "You do not have permission for this action.",
             missing_authorization: "Sign in again and retry.",
             super_admin_required: "Only Super Admin can perform this action.",
           },
@@ -1104,7 +1106,7 @@ const resources = {
           loading: "Loading login logs…",
           loadError: "Login logs could not be loaded",
           loadErrorDescription:
-            "Refresh or confirm your Super Admin permissions.",
+            "Refresh or confirm your login log permissions.",
           empty: "No login logs found",
           emptyDescription: "Authentication activity will appear here.",
           events: {
@@ -1160,15 +1162,16 @@ const resources = {
         roles: {
           title: "Roles & Page Permissions",
           description:
-            "Configure access and management for pages, sub-pages, and tabs. Reserved pages remain Super Admin only.",
+            "Configure access and management for pages, sub-pages, tabs, and actions. Migration remains Super Admin only.",
           role: "Role",
           loading: "Loading role permissions…",
           error: "Role permissions could not be loaded or saved",
-          errorDescription: "Retry; only Super Admin can change permissions.",
+          errorDescription:
+            "Retry; managing roles requires the Roles & Page Permissions manage grant.",
           superAdminNotice:
             "Super Admin always has access and management rights for every page.",
           restrictedNotice:
-            "Users, roles, attachments, and migration remain Super Admin only.",
+            "System settings pages and actions can be granted per role; migration remains Super Admin only.",
           cascadeNotice:
             "Selecting a parent permission automatically selects and enables all of its sub-pages and tabs.",
           highRisk: "High risk",
