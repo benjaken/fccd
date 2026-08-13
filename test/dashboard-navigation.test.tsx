@@ -157,7 +157,7 @@ describe("Dashboard navigation", () => {
     expect(createOrder).toHaveClass("text-primary-foreground");
   });
 
-  it("uses a green brand primary and primary-tied active nav styles", () => {
+  it("uses a green brand primary and explicit green active nav wash", () => {
     const stylesheet = readFileSync(
       path.resolve(process.cwd(), "src/index.css"),
       "utf8",
@@ -165,12 +165,17 @@ describe("Dashboard navigation", () => {
 
     expect(stylesheet).toMatch(/--primary:\s*oklch\(0\.52 0\.14 150\)/);
     expect(stylesheet).toMatch(/--primary:\s*oklch\(0\.58 0\.13 150\)/);
+    expect(stylesheet).toMatch(/--nav-active-bg:\s*oklch\([^)]*150\)/);
+    expect(stylesheet).toMatch(/--nav-active-fg:\s*oklch\([^)]*150\)/);
     expect(stylesheet).toMatch(
-      /\.sidebar-link\.active\s*\{[^}]*var\(--primary\)/s,
+      /\.sidebar-link\.active\s*\{[^}]*var\(--nav-active-bg\)/s,
     );
     expect(stylesheet).toMatch(
-      /\.workspace-soft-link\.active\s*\{[^}]*var\(--primary\)/s,
+      /\.workspace-soft-link\.active\s*\{[^}]*var\(--nav-active-bg\)/s,
     );
     expect(stylesheet).not.toMatch(/--primary:\s*oklch\([^)]*250\)/);
+    expect(stylesheet).not.toMatch(
+      /\.sidebar-link\.active\s*\{[^}]*oklch\([^)]*\b(1[0-9]|2[0-9]|3[0-5])\b/s,
+    );
   });
 });
