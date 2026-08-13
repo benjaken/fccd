@@ -4449,7 +4449,7 @@ td:last-child {
 
 .meat-price-analysis-grid {
   display: grid;
-  grid-template-columns: minmax(330px, 0.82fr) minmax(480px, 1.18fr);
+  grid-template-columns: minmax(420px, 0.95fr) minmax(480px, 1.05fr);
   align-items: stretch;
   gap: 14px;
 }
