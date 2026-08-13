@@ -19,6 +19,8 @@ import {
   type ProductListItem,
   type ProductListResult,
   type ProductPreset,
+  type ProductPriceRange,
+  type ProductStatusFilter,
 } from "@/lib/products";
 
 type ProductsLoader = (filters: ProductListFilters) => Promise<ProductListResult>;
@@ -37,7 +39,8 @@ export function ProductsListPage({
   const [draftSearch, setDraftSearch] = useState("");
   const [search, setSearch] = useState("");
   const [channelId, setChannelId] = useState("");
-  const [activeOnly, setActiveOnly] = useState(true);
+  const [status, setStatus] = useState<ProductStatusFilter>("");
+  const [priceRange, setPriceRange] = useState<ProductPriceRange>("");
   const [channels, setChannels] = useState<CatalogOption[]>([]);
   const [page, setPage] = useState(1);
   const [items, setItems] = useState<ProductListItem[]>([]);
@@ -87,6 +90,8 @@ export function ProductsListPage({
   useEffect(() => {
     setPage(1);
     setChannelId("");
+    setStatus("");
+    setPriceRange("");
   }, [preset]);
 
   const loadPage = useCallback(async () => {
@@ -97,7 +102,8 @@ export function ProductsListPage({
         page,
         search,
         channelId,
-        activeOnly,
+        status,
+        priceRange,
         preset,
       });
       setItems(result.items);
@@ -116,7 +122,7 @@ export function ProductsListPage({
     } finally {
       setLoading(false);
     }
-  }, [activeOnly, channelId, loadProducts, page, preset, reloadKey, search]);
+  }, [channelId, loadProducts, page, preset, priceRange, reloadKey, search, status]);
 
   useEffect(() => {
     void loadPage();
@@ -144,6 +150,19 @@ export function ProductsListPage({
 
   const displayName = (product: ProductListItem) =>
     product.chineseName || product.name || t("common.notSet");
+
+  const statusLabel = (product: ProductListItem) => {
+    if (product.status === "Active") return t("products.statusActive");
+    if (product.status === "Inactive") return t("products.statusInactive");
+    if (product.status) return product.status;
+    return t("products.statusUnset");
+  };
+
+  const statusTone = (product: ProductListItem) => {
+    if (product.status === "Active") return "green";
+    if (product.status === "Inactive") return "amber";
+    return "blue";
+  };
 
   return (
     <section className="products-page">
@@ -174,6 +193,24 @@ export function ProductsListPage({
 
           <div className="products-filters">
             <label className="products-status-filter">
+              <span>{t("products.priceRangeFilter")}</span>
+              <select
+                value={priceRange}
+                onChange={(event) => {
+                  setPage(1);
+                  setPriceRange(event.target.value as ProductPriceRange);
+                }}
+              >
+                <option value="">{t("products.allPriceRanges")}</option>
+                <option value="under-100">{t("products.priceRanges.under100")}</option>
+                <option value="100-299">{t("products.priceRanges.r100to299")}</option>
+                <option value="300-799">{t("products.priceRanges.r300to799")}</option>
+                <option value="800-1999">{t("products.priceRanges.r800to1999")}</option>
+                <option value="2000-plus">{t("products.priceRanges.r2000Plus")}</option>
+              </select>
+            </label>
+
+            <label className="products-status-filter">
               <span>{t("products.channelFilter")}</span>
               <select
                 value={channelId}
@@ -191,16 +228,20 @@ export function ProductsListPage({
               </select>
             </label>
 
-            <label className="products-active-filter">
-              <input
-                type="checkbox"
-                checked={activeOnly}
+            <label className="products-status-filter">
+              <span>{t("products.statusFilter")}</span>
+              <select
+                value={status}
                 onChange={(event) => {
                   setPage(1);
-                  setActiveOnly(event.target.checked);
+                  setStatus(event.target.value as ProductStatusFilter);
                 }}
-              />
-              <span>{t("products.activeOnly")}</span>
+              >
+                <option value="">{t("products.allStatuses")}</option>
+                <option value="Active">{t("products.statusActive")}</option>
+                <option value="Inactive">{t("products.statusInactive")}</option>
+                <option value="unset">{t("products.statusUnset")}</option>
+              </select>
             </label>
           </div>
         </header>
@@ -269,14 +310,8 @@ export function ProductsListPage({
                       <strong>{formatPrice(product)}</strong>
                     </td>
                     <td>
-                      <span
-                        className={`status-badge ${
-                          product.isActive ? "green" : "amber"
-                        }`}
-                      >
-                        {product.isActive
-                          ? t("products.active")
-                          : product.status || t("products.inactive")}
+                      <span className={`status-badge ${statusTone(product)}`}>
+                        {statusLabel(product)}
                       </span>
                     </td>
                     <td>
