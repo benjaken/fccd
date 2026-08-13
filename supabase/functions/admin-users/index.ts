@@ -103,6 +103,35 @@ function isSystemRole(value: string): value is SystemRole {
   return (SYSTEM_ROLES as readonly string[]).includes(value);
 }
 
+async function resolveRestaurantLink(
+  admin: AdminClient,
+  legacyId: string | null | undefined,
+) {
+  const normalized = legacyId?.trim() || null;
+  if (!normalized) {
+    return { shopRestroLegacyId: null as string | null, shopRestroId: null as string | null };
+  }
+
+  const { data, error } = await admin
+    .from("restaurants")
+    .select("id,legacy_id")
+    .eq("legacy_id", normalized)
+    .maybeSingle();
+  if (error) {
+    throw jsonResponse(
+      { error: "restaurant_lookup_failed", detail: error.message },
+      500,
+    );
+  }
+  if (!data) {
+    throw jsonResponse({ error: "invalid_restaurant" }, 400);
+  }
+  return {
+    shopRestroLegacyId: data.legacy_id as string,
+    shopRestroId: data.id as string,
+  };
+}
+
 async function requirePageAccess(
   request: Request,
   admin: AdminClient,
@@ -212,6 +241,11 @@ async function createUser(admin: AdminClient, payload: CreatePayload) {
     throw jsonResponse({ error: "invalid_role" }, 400);
   }
 
+  const restaurant = await resolveRestaurantLink(
+    admin,
+    payload.shopRestroLegacyId,
+  );
+
   const { data, error } = await admin.auth.admin.createUser({
     email: payload.email,
     password: payload.password,
@@ -239,7 +273,8 @@ async function createUser(admin: AdminClient, payload: CreatePayload) {
       user_name: payload.userName,
       phone: payload.phone,
       role: payload.role,
-      shop_restro_legacy_id: payload.shopRestroLegacyId,
+      shop_restro_legacy_id: restaurant.shopRestroLegacyId,
+      shop_restro_id: restaurant.shopRestroId,
     })
     .eq("id", data.user.id);
   if (profileError) {
@@ -255,7 +290,7 @@ async function createUser(admin: AdminClient, payload: CreatePayload) {
     userName: payload.userName,
     phone: payload.phone,
     role: payload.role,
-    shopRestroLegacyId: payload.shopRestroLegacyId,
+    shopRestroLegacyId: restaurant.shopRestroLegacyId,
   };
 }
 
@@ -299,6 +334,11 @@ async function updateProfile(
     throw jsonResponse({ error: "invalid_phone" }, 400);
   }
 
+  const restaurant = await resolveRestaurantLink(
+    admin,
+    payload.shopRestroLegacyId,
+  );
+
   const { data, error } = await admin.auth.admin.updateUserById(payload.userId, {
     app_metadata: { role: payload.role },
     user_metadata: {
@@ -319,7 +359,8 @@ async function updateProfile(
       user_name: payload.userName,
       role: payload.role,
       phone: payload.phone ?? null,
-      shop_restro_legacy_id: payload.shopRestroLegacyId ?? null,
+      shop_restro_legacy_id: restaurant.shopRestroLegacyId,
+      shop_restro_id: restaurant.shopRestroId,
     })
     .eq("id", payload.userId);
   if (profileError) {
@@ -334,7 +375,7 @@ async function updateProfile(
     userName: payload.userName,
     role: payload.role,
     phone: payload.phone ?? null,
-    shopRestroLegacyId: payload.shopRestroLegacyId ?? null,
+    shopRestroLegacyId: restaurant.shopRestroLegacyId,
   };
 }
 

@@ -50,10 +50,25 @@ const userItem: UserListItem = {
   userName: "Admin User",
   phone: "+852 9123 4567",
   role: "Super Admin",
-  shopRestroLegacyId: null,
+  shopRestroLegacyId: "1706068657987x347172380334358500",
   createdAt: "2026-08-12T00:00:00.000Z",
   updatedAt: "2026-08-13T00:00:00.000Z",
 };
+
+const restaurantOptions = [
+  {
+    legacyId: "1706068657987x347172380334358500",
+    name: "TKO 桂花小幸 將軍澳",
+    isActive: true,
+  },
+  {
+    legacyId: "1706068652648x839138208709345300",
+    name: "YLP 桂花小幸 元朗",
+    isActive: true,
+  },
+];
+
+const loadRestaurants = vi.fn().mockResolvedValue(restaurantOptions);
 
 const attachmentItem: AttachmentListItem = {
   id: "attachment-1",
@@ -184,6 +199,8 @@ const permissions: RolePagePermission[] = [
 describe("Super Admin system settings", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("zh-HK");
+    loadRestaurants.mockClear();
+    loadRestaurants.mockResolvedValue(restaurantOptions);
   });
 
   it("renders the paginated user directory", async () => {
@@ -193,7 +210,10 @@ describe("Super Admin system settings", () => {
 
     render(
       <MemoryRouter>
-        <UsersListPage loadUsers={loadUsers} />
+        <UsersListPage
+          loadUsers={loadUsers}
+          loadRestaurants={loadRestaurants}
+        />
       </MemoryRouter>,
     );
 
@@ -203,6 +223,7 @@ describe("Super Admin system settings", () => {
     expect(screen.getByText("Admin User")).toBeInTheDocument();
     expect(screen.getByText("admin@example.com")).toBeInTheDocument();
     expect(screen.getByText("+852 9123 4567")).toBeInTheDocument();
+    expect(await screen.findByText("TKO 桂花小幸 將軍澳")).toBeInTheDocument();
     expect(screen.getByText("顯示 1–15，共 24 筆")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "新建使用者" }),
@@ -218,7 +239,11 @@ describe("Super Admin system settings", () => {
 
     render(
       <MemoryRouter>
-        <UsersListPage loadUsers={loadUsers} createUser={createUser} />
+        <UsersListPage
+          loadUsers={loadUsers}
+          loadRestaurants={loadRestaurants}
+          createUser={createUser}
+        />
       </MemoryRouter>,
     );
 
@@ -226,6 +251,12 @@ describe("Super Admin system settings", () => {
     const dialog = await screen.findByRole("dialog");
     expect(
       within(dialog).getByRole("heading", { name: "新建使用者" }),
+    ).toBeInTheDocument();
+    expect(
+      await within(dialog).findByRole("combobox", { name: "餐廳識別" }),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("option", { name: "TKO 桂花小幸 將軍澳" }),
     ).toBeInTheDocument();
 
     await user.click(within(dialog).getByRole("button", { name: "新建使用者" }));
@@ -242,7 +273,10 @@ describe("Super Admin system settings", () => {
 
     render(
       <MemoryRouter>
-        <UsersListPage loadUsers={loadUsers} />
+        <UsersListPage
+          loadUsers={loadUsers}
+          loadRestaurants={loadRestaurants}
+        />
       </MemoryRouter>,
     );
 
@@ -265,7 +299,10 @@ describe("Super Admin system settings", () => {
 
     render(
       <MemoryRouter>
-        <UsersListPage loadUsers={loadUsers} />
+        <UsersListPage
+          loadUsers={loadUsers}
+          loadRestaurants={loadRestaurants}
+        />
       </MemoryRouter>,
     );
 
@@ -276,6 +313,12 @@ describe("Super Admin system settings", () => {
     expect(
       screen.getByText("修改 admin@example.com 的名稱與角色。"),
     ).toBeInTheDocument();
+    const restaurantSelect = await screen.findByRole("combobox", {
+      name: "餐廳識別",
+    });
+    expect(restaurantSelect).toHaveValue(
+      "1706068657987x347172380334358500",
+    );
   });
 
   it("opens a verified private attachment through a signed URL", async () => {
