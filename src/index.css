@@ -1273,14 +1273,18 @@ td strong {
 }
 
 .order-link {
-  color: var(--foreground);
+  color: var(--primary);
   font-weight: 720;
 }
 
 .order-link:hover {
-  color: var(--primary);
+  color: color-mix(in oklch, var(--primary) 78%, black);
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+.dark .order-link:hover {
+  color: color-mix(in oklch, var(--primary) 82%, white);
 }
 
 td:last-child {
@@ -1747,9 +1751,9 @@ td:last-child {
   border-radius: 999px;
   background: linear-gradient(
     90deg,
-    color-mix(in oklch, var(--muted) 88%, var(--foreground)) 0%,
-    color-mix(in oklch, var(--muted) 55%, var(--card)) 45%,
-    color-mix(in oklch, var(--muted) 88%, var(--foreground)) 100%
+    color-mix(in oklch, var(--muted) 58%, var(--card)) 0%,
+    color-mix(in oklch, var(--card) 78%, var(--border)) 48%,
+    color-mix(in oklch, var(--muted) 58%, var(--card)) 100%
   );
   background-size: 200% 100%;
   animation: table-skeleton-shimmer 1.35s ease-in-out infinite;
@@ -1850,7 +1854,11 @@ td:last-child {
 }
 
 .settings-attachment-file-link:hover:not(:disabled) {
-  color: color-mix(in oklab, var(--primary) 80%, black);
+  color: color-mix(in oklch, var(--primary) 78%, black);
+}
+
+.dark .settings-attachment-file-link:hover:not(:disabled) {
+  color: color-mix(in oklch, var(--primary) 82%, white);
 }
 
 .settings-attachment-file-link:disabled {
