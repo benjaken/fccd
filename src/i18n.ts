@@ -1245,11 +1245,11 @@ const resources = {
           errorDescription:
             "Retry; managing roles requires the Roles & Page Permissions manage grant.",
           superAdminNotice:
-            "Super Admin always has access and management rights for every page.",
+            "Super Admin always has access to every page.",
           restrictedNotice:
             "System settings pages and actions can be granted per role; migration remains Super Admin only.",
           cascadeNotice:
-            "Selecting a parent permission automatically selects and enables all of its sub-pages and tabs.",
+            "Turning on a parent permission automatically enables all of its sub-pages and tabs.",
           highRisk: "High risk",
           standard: "Standard",
           kinds: {
