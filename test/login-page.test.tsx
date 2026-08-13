@@ -97,6 +97,20 @@ describe("LoginPage", () => {
     ).toBeInTheDocument();
   });
 
+  it("renders the FCCD brand name and full expansion", () => {
+    render(<LoginPage />);
+
+    expect(
+      screen.getByRole("link", {
+        name: "Food Channel Catering Discovery",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText("FCCD").length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText("Food Channel Catering Discovery").length,
+    ).toBeGreaterThan(0);
+  });
+
   it("offers one-click preview sign-in when configured", async () => {
     const user = userEvent.setup();
     quickLogin.credentials = {

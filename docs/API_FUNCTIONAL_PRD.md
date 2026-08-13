@@ -1,4 +1,4 @@
-# Food Channel Catering 新系統功能 PRD
+# FCCD（Food Channel Catering Discovery）新系統功能 PRD
 
 ## 1. 文件資訊
 
@@ -779,7 +779,7 @@ report_exceptions
 | UX-07 | 支援鍵盤操作、可見 focus、表單錯誤摘要及符合 WCAG AA 的文字對比。 |
 | UX-08 | 參考舊介面截圖只為確認資訊與操作，不直接複製造成慢速、細字、橫向拖動及過度跳頁的版型。 |
 | UX-09 | 整體 Layout 參考提供的 ONE TEAM CONNECT 截圖：左上品牌 Logo 保持固定位置，第一列顯示工作區 soft links 與右上工具區，第二列顯示一級導航，左側顯示二級導航，主內容區最大化。 |
-| UX-10 | 品牌 Logo 使用 Food Channel Catering 官方版本；主題色採用護眼中等飽和藍色（非紅色），並以 design tokens 管理 primary、hover、active、focus、success、warning 及 danger；細節見 `docs/DESIGN_SYSTEM.md` 與 `docs/UI_DEVELOPMENT_STANDARD.md`。 |
+| UX-10 | 品牌顯示名稱為 **FCCD**（全稱 Food Channel Catering Discovery）；主題色採用護眼中等飽和藍色（非紅色），並以 design tokens 管理 primary、hover、active、focus、success、warning 及 danger；細節見 `docs/DESIGN_SYSTEM.md` 與 `docs/UI_DEVELOPMENT_STANDARD.md`。 |
 | UX-11 | 提供 Light／Dark mode 切換；所有頁面、表格、圖表、Dialog、Toast、狀態色及 Logo 版本均須支援兩種模式。 |
 | UX-12 | 提供繁體中文／English 切換，預設繁體中文；使用者選擇須跨 session 保存。 |
 | UX-13 | 所有介面文字、導航、表單、驗證、通知及空狀態使用 i18n key，不得在元件內散落硬編碼文案。 |
@@ -806,7 +806,7 @@ report_exceptions
 
 #### 桌面 Layout
 
-- 頂部左側固定顯示 Food Channel Catering Logo，不因導覽切換或側欄收合移動。
+- 頂部左側固定顯示 **FCCD** 品牌（全稱 Food Channel Catering Discovery），不因導覽切換或側欄收合移動。
 - 頂部第一列中間直接顯示具權限的工作區 soft links，不使用 dropdown。
 - 一級導航下移至 Logo 下方的第二列；當寬度不足時改由可存取的手機 drawer 提供。
 - 左側欄顯示當前一級頁面的二級導航、active state 及可選的收合控制。
@@ -983,7 +983,7 @@ flowchart LR
 33. 第一階段功能對照表中的每個現行功能均有舊／新操作錄影或測試證據、輸入輸出比對、權限結果及產品負責人簽核；未簽核項目不得宣稱 100% 完成。
 34. 首次進入系統預設顯示繁體中文；切換 English 後所有導航、表單、驗證及通知即時更新，重新登入仍保留選擇。
 35. Light／Dark mode 切換不重新整理頁面或清空表單，兩種模式下文字、狀態及圖表均符合對比要求。
-36. 桌面版呈現固定 Food Channel Catering Logo、第一列工作區 soft links、第二列一級導航、左側二級導航及右上工具區；手機版不出現縮小且難操作的桌面側欄。
+36. 桌面版呈現固定 FCCD（Food Channel Catering Discovery）品牌、第一列工作區 soft links、第二列一級導航、左側二級導航及右上工具區；手機版不出現縮小且難操作的桌面側欄。
 37. 頁面切換動態效果不阻塞操作；啟用 reduced motion 後非必要 transition 關閉。
 38. i18n 自動檢查不得發現使用者可見的遺漏 key；狀態 code、日期、時間及 HKD 顯示在中英文 locale 下正確。
 
@@ -1087,7 +1087,7 @@ flowchart LR
 
 ### 15.7 品牌與介面資產
 
-1. Food Channel Catering 官方 Logo 的 SVG／深色版／淺色版資產及安全留白規則。
+1. FCCD（Food Channel Catering Discovery）品牌字樣、標誌安全留白，以及深色／淺色版本規則。
 2. 品牌紅色的正式色值與可接受的輔助色。
 3. 首次使用的主題是否維持跟隨裝置，或固定預設 Light mode。
 4. English 文案由誰審核，以及品牌名、菜名和專有詞的翻譯字典。
@@ -1095,7 +1095,7 @@ flowchart LR
 ## 16. 實作階段
 
 1. **等價基線凍結**：取得 Bubble Editor、所有頁面、Privacy Rules、option sets、workflow、排程、Shopify／WATI／PayPal／Asana／Zapier 設定、公式、匯入匯出及各角色測試帳號；建立逐功能對照表。
-2. **第一階段基礎框架**：建立 Auth、角色與資料範圍、系統設定、參考 Layout、Food Channel Catering 主題、Light／Dark mode、繁中／英文 i18n、頁面 transition、migration、RLS 測試及舊 ID mapping。
+2. **第一階段基礎框架**：建立 Auth、角色與資料範圍、系統設定、參考 Layout、FCCD（Food Channel Catering Discovery）主題、Light／Dark mode、繁中／英文 i18n、頁面 transition、migration、RLS 測試及舊 ID mapping。
 3. **第一階段主資料與到會**：等價實現品牌、Store、客戶、商品、套餐、報價、訂單、付款、最低額、Shopify、扣料及附加服務。
 4. **第一階段中央廚房與凍肉**：等價實現生產、領料、出貨、批次、投入、產量、收成率、香料、庫存及成本。
 5. **第一階段配送與手機**：等價實現派單、接拒、狀態、照片、餐具、收款及現行手機操作。

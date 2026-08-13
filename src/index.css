@@ -5509,11 +5509,11 @@ td:last-child {
 }
 
 .login-brand small {
-  color: rgb(255 255 255 / 62%);
+  color: rgb(255 255 255 / 72%);
   font-size: 14px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: none;
 }
 
 .login-message {
