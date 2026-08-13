@@ -109,6 +109,28 @@ describe("Orders list", () => {
     );
   });
 
+  it("paginates orders in groups of ten", async () => {
+    const user = userEvent.setup();
+    const loadOrders = vi
+      .fn()
+      .mockResolvedValue({ ...orderResult, total: 21 });
+
+    render(
+      <MemoryRouter>
+        <OrdersListPage loadOrders={loadOrders} />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("1 / 3")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "下一頁" }));
+
+    await waitFor(() =>
+      expect(loadOrders).toHaveBeenLastCalledWith(
+        expect.objectContaining({ page: 2 }),
+      ),
+    );
+  });
+
   it("blocks finance presets for roles without finance access", async () => {
     const loadOrders = vi.fn().mockResolvedValue(orderResult);
 
