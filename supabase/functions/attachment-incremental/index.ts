@@ -173,12 +173,20 @@ async function attachmentStatus(admin: AdminClient) {
       .from("attachments")
       .select("id", { count: "exact", head: true })
       .eq("source_type", "bubble_uploaded_file");
-  const [totalResult, verifiedResult, failedResult] = await Promise.all([
+  const [totalResult, verifiedResult, failedResult, excludedResult] = await Promise.all([
     base(),
     base().eq("migration_status", "verified"),
     base().eq("migration_status", "failed"),
+    base().eq("migration_status", "excluded"),
   ]);
-  for (const result of [totalResult, verifiedResult, failedResult]) {
+  for (
+    const result of [
+      totalResult,
+      verifiedResult,
+      failedResult,
+      excludedResult,
+    ]
+  ) {
     if (result.error) throw result.error;
   }
 
@@ -210,6 +218,7 @@ async function attachmentStatus(admin: AdminClient) {
     total: totalResult.count ?? 0,
     verified: verifiedResult.count ?? 0,
     failed: failedResult.count ?? 0,
+    excluded: excludedResult.count ?? 0,
     uniqueContent: content.size,
     uniqueBytes: [...content.values()].reduce(
       (sum, size) => sum + size,
@@ -265,9 +274,13 @@ async function analyze(
       missing += 1;
       actionableIds.push(item.record._id);
     } else if (
-      row.migration_status === "verified" &&
+      (
+        row.migration_status === "verified" ||
+        row.migration_status === "excluded"
+      ) &&
       row.source_url_hash === item.sourceUrlHash &&
       (
+        row.migration_status === "excluded" ||
         row.size_bytes === item.record.size_number ||
         row.last_error_code === "source_size_corrected"
       )
@@ -343,9 +356,13 @@ async function migrate(
     .maybeSingle();
   if (currentError) throw currentError;
   if (
-    current?.migration_status === "verified" &&
+    (
+      current?.migration_status === "verified" ||
+      current?.migration_status === "excluded"
+    ) &&
     current.source_url_hash === sourceUrlHash &&
     (
+      current.migration_status === "excluded" ||
       current.size_bytes === record.size_number ||
       current.last_error_code === "source_size_corrected"
     )

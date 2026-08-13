@@ -37,6 +37,7 @@ type Analysis = {
   duplicateIds: number;
   verified: number;
   failed: number;
+  excluded: number;
   changed: number;
   missing: number;
   actionableIds: string[];
@@ -457,7 +458,7 @@ export function FileMigrationPage({
         <article className="panel warning">
           <span>{t("fileMigration.missing")}</span>
           <strong>
-            {(liveStatus?.failed ?? fileStatus.discoveryGap).toLocaleString()}
+            {(liveStatus?.excluded ?? fileStatus.discoveryGap).toLocaleString()}
           </strong>
         </article>
         <article className="panel">

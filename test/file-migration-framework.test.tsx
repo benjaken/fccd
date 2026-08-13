@@ -27,6 +27,7 @@ describe("Bubble file migration framework", () => {
               total: 4201,
               verified: 4094,
               failed: 107,
+              excluded: 0,
               uniqueContent: 3988,
               uniqueBytes: 6959019911,
               generatedAt: "2026-08-13T05:00:00.000Z",
