@@ -33,7 +33,6 @@ const reportTabs = [
   "averageSupplyPrice",
   "productionCostPrice",
   "rawMeatAveragePrice",
-  "rawMeatAveragePrice",
   "preparedMeatStock",
   "rawMeatStock",
   "supplierPurchase",
@@ -43,6 +42,7 @@ const implementedTabs = new Set<ReportTabKey>([
   "shopOrderQuantities",
   "averageSupplyPrice",
   "productionCostPrice",
+  "rawMeatAveragePrice",
 ]);
 
 export function ReportsPage() {
