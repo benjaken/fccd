@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 
@@ -12,6 +12,9 @@ import i18n from "@/i18n";
 import {
   collectAncestorPageKeys,
   collectDescendantPageKeys,
+  isValidEmail,
+  isValidPassword,
+  isValidPhone,
   type AttachmentListItem,
   type RolePagePermission,
   type UserListItem,
@@ -21,6 +24,7 @@ const userItem: UserListItem = {
   id: "user-1",
   email: "admin@example.com",
   userName: "Admin User",
+  phone: "+852 9123 4567",
   role: "Super Admin",
   shopRestroLegacyId: null,
   createdAt: "2026-08-12T00:00:00.000Z",
@@ -174,7 +178,59 @@ describe("Super Admin system settings", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Admin User")).toBeInTheDocument();
     expect(screen.getByText("admin@example.com")).toBeInTheDocument();
+    expect(screen.getByText("+852 9123 4567")).toBeInTheDocument();
     expect(screen.getByText("顯示 1–15，共 24 筆")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "新建使用者" }),
+    ).toBeInTheDocument();
+  });
+
+  it("validates create-user fields in the side panel", async () => {
+    const user = userEvent.setup();
+    const loadUsers = vi
+      .fn()
+      .mockResolvedValue({ items: [userItem], total: 1 });
+    const createUser = vi.fn();
+
+    render(
+      <MemoryRouter>
+        <UsersListPage loadUsers={loadUsers} createUser={createUser} />
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: "新建使用者" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      within(dialog).getByRole("heading", { name: "新建使用者" }),
+    ).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole("button", { name: "新建使用者" }));
+    expect(await screen.findByText("請輸入使用者名稱。")).toBeInTheDocument();
+    expect(screen.getByText("請輸入有效的 Email 格式。")).toBeInTheDocument();
+    expect(createUser).not.toHaveBeenCalled();
+  });
+
+  it("opens change-password side panel for a listed user", async () => {
+    const user = userEvent.setup();
+    const loadUsers = vi
+      .fn()
+      .mockResolvedValue({ items: [userItem], total: 1 });
+
+    render(
+      <MemoryRouter>
+        <UsersListPage loadUsers={loadUsers} />
+      </MemoryRouter>,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: "修改密碼" }),
+    );
+    expect(
+      await screen.findByRole("heading", { name: "修改密碼" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("為 Admin User 設定新密碼，儲存後即可登入。"),
+    ).toBeInTheDocument();
   });
 
   it("opens a verified private attachment through a signed URL", async () => {
@@ -293,6 +349,15 @@ describe("Super Admin system settings", () => {
     expect(collectAncestorPageKeys("orders.pending", permissions)).toEqual([
       "orders",
     ]);
+  });
+
+  it("validates email, phone, and password formats", () => {
+    expect(isValidEmail("admin@example.com")).toBe(true);
+    expect(isValidEmail("bad-email")).toBe(false);
+    expect(isValidPhone("+852 9123 4567")).toBe(true);
+    expect(isValidPhone("123")).toBe(false);
+    expect(isValidPassword("Secret123")).toBe(true);
+    expect(isValidPassword("short1")).toBe(false);
   });
 
   it("enforces the approved policy in the database migration", () => {

@@ -3,12 +3,16 @@ import { useTranslation } from "react-i18next";
 import {
   ChevronLeft,
   ChevronRight,
+  KeyRound,
+  Plus,
   RefreshCw,
   Search,
   Users,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { ChangePasswordSidePanel } from "@/components/settings/ChangePasswordSidePanel";
+import { CreateUserSidePanel } from "@/components/settings/CreateUserSidePanel";
 import {
   fetchUsers,
   SETTINGS_PAGE_SIZE,
@@ -20,8 +24,12 @@ type UsersLoader = typeof fetchUsers;
 
 export function UsersListPage({
   loadUsers = fetchUsers,
+  createUser,
+  updatePassword,
 }: {
   loadUsers?: UsersLoader;
+  createUser?: typeof import("@/lib/settings").createManagedUser;
+  updatePassword?: typeof import("@/lib/settings").updateManagedUserPassword;
 }) {
   const { t, i18n } = useTranslation();
   const [draftSearch, setDraftSearch] = useState("");
@@ -33,6 +41,8 @@ export function UsersListPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [passwordUser, setPasswordUser] = useState<UserListItem | null>(null);
 
   const totalPages = Math.max(1, Math.ceil(total / SETTINGS_PAGE_SIZE));
   const visibleFrom = total === 0 ? 0 : (page - 1) * SETTINGS_PAGE_SIZE + 1;
@@ -83,6 +93,10 @@ export function UsersListPage({
           <h1>{t("settings.users.title")}</h1>
           <p>{t("settings.users.description")}</p>
         </div>
+        <Button type="button" onClick={() => setCreateOpen(true)}>
+          <Plus />
+          {t("settings.users.createAction")}
+        </Button>
       </header>
 
       <article className="panel orders-panel">
@@ -157,10 +171,12 @@ export function UsersListPage({
                 <tr>
                   <th>{t("settings.users.columns.name")}</th>
                   <th>{t("settings.users.columns.email")}</th>
+                  <th>{t("settings.users.columns.phone")}</th>
                   <th>{t("settings.users.columns.role")}</th>
                   <th>{t("settings.users.columns.restaurant")}</th>
                   <th>{t("settings.users.columns.created")}</th>
                   <th>{t("settings.users.columns.updated")}</th>
+                  <th>{t("settings.users.columns.actions")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -170,6 +186,7 @@ export function UsersListPage({
                       <strong>{user.userName || t("common.notSet")}</strong>
                     </td>
                     <td>{user.email || t("common.notSet")}</td>
+                    <td>{user.phone || t("common.notSet")}</td>
                     <td>
                       <span className="status-badge blue">
                         {user.role || t("common.notSet")}
@@ -178,6 +195,17 @@ export function UsersListPage({
                     <td>{user.shopRestroLegacyId || t("common.notSet")}</td>
                     <td>{date.format(new Date(user.createdAt))}</td>
                     <td>{date.format(new Date(user.updatedAt))}</td>
+                    <td>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPasswordUser(user)}
+                      >
+                        <KeyRound />
+                        {t("settings.users.changePassword")}
+                      </Button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -218,6 +246,22 @@ export function UsersListPage({
           </div>
         </footer>
       </article>
+
+      <CreateUserSidePanel
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onCreated={() => {
+          setPage(1);
+          setReloadKey((key) => key + 1);
+        }}
+        createUser={createUser}
+      />
+      <ChangePasswordSidePanel
+        user={passwordUser}
+        open={Boolean(passwordUser)}
+        onClose={() => setPasswordUser(null)}
+        updatePassword={updatePassword}
+      />
     </section>
   );
 }

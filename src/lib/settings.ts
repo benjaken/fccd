@@ -20,6 +20,7 @@ export type UserListItem = {
   id: string;
   email: string | null;
   userName: string | null;
+  phone: string | null;
   role: string | null;
   shopRestroLegacyId: string | null;
   createdAt: string;
@@ -61,6 +62,7 @@ type UserRow = {
   id: string;
   email: string | null;
   user_name: string | null;
+  phone: string | null;
   role: string | null;
   shop_restro_legacy_id: string | null;
   created_at: string;
@@ -113,6 +115,112 @@ function safeSearchTerm(value: string) {
     .replace(/[^\p{L}\p{N}\s@._+\-]/gu, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+export function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
+export function normalizePhoneInput(value: string) {
+  return value.trim();
+}
+
+export function isValidPhone(value: string) {
+  const trimmed = normalizePhoneInput(value);
+  if (!trimmed) return true;
+  if (!/^[0-9+\-\s()]+$/.test(trimmed)) return false;
+  const digits = trimmed.replace(/\D/g, "");
+  return digits.length >= 8 && digits.length <= 15;
+}
+
+export function isValidPassword(value: string) {
+  return value.length >= 8 && /[A-Za-z]/.test(value) && /\d/.test(value);
+}
+
+export type CreateUserInput = {
+  email: string;
+  password: string;
+  userName: string;
+  phone?: string;
+  role: SystemRole;
+  shopRestroLegacyId?: string;
+};
+
+async function invokeAdminUsers<T>(body: Record<string, unknown>) {
+  const {
+    data: { session },
+    error: sessionError,
+  } = await supabase.auth.getSession();
+  if (sessionError) throw sessionError;
+  if (!session?.access_token) throw new Error("missing_authorization");
+
+  const { data, error } = await supabase.functions.invoke("admin-users", {
+    body,
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+    },
+  });
+  if (error) {
+    const context = (error as { context?: Response }).context;
+    if (context) {
+      try {
+        const payload = (await context.json()) as { error?: string };
+        if (payload.error) throw new Error(payload.error);
+      } catch (parseError) {
+        if (parseError instanceof Error && parseError.message !== "Unexpected end of JSON input") {
+          throw parseError;
+        }
+      }
+    }
+    throw error;
+  }
+  if (data && typeof data === "object" && "error" in data) {
+    throw new Error(String((data as { error: string }).error));
+  }
+  return data as T;
+}
+
+export async function createManagedUser(input: CreateUserInput) {
+  const email = input.email.trim();
+  const userName = input.userName.trim();
+  const phone = normalizePhoneInput(input.phone ?? "");
+  if (!isValidEmail(email)) throw new Error("invalid_email");
+  if (!userName) throw new Error("invalid_user_name");
+  if (!isValidPhone(phone)) throw new Error("invalid_phone");
+  if (!isValidPassword(input.password)) throw new Error("invalid_password");
+
+  const result = await invokeAdminUsers<{
+    user: {
+      id: string;
+      email: string;
+      userName: string;
+      phone: string | null;
+      role: SystemRole;
+      shopRestroLegacyId: string | null;
+    };
+  }>({
+    action: "create",
+    email,
+    password: input.password,
+    userName,
+    phone: phone || null,
+    role: input.role,
+    shopRestroLegacyId: input.shopRestroLegacyId?.trim() || null,
+  });
+  return result.user;
+}
+
+export async function updateManagedUserPassword(
+  userId: string,
+  password: string,
+) {
+  if (!userId) throw new Error("invalid_user_id");
+  if (!isValidPassword(password)) throw new Error("invalid_password");
+  await invokeAdminUsers({
+    action: "updatePassword",
+    userId,
+    password,
+  });
 }
 
 function isReservedPageKey(pageKey: string) {
@@ -209,7 +317,7 @@ export async function fetchUsers({
   let query = supabase
     .from("user_profiles")
     .select(
-      "id,email,user_name,role,shop_restro_legacy_id,created_at,updated_at",
+      "id,email,user_name,phone,role,shop_restro_legacy_id,created_at,updated_at",
       { count: "exact" },
     )
     .order("user_name", { ascending: true, nullsFirst: false })
@@ -218,7 +326,9 @@ export async function fetchUsers({
 
   const term = safeSearchTerm(search);
   if (term) {
-    query = query.or(`user_name.ilike.%${term}%,email.ilike.%${term}%`);
+    query = query.or(
+      `user_name.ilike.%${term}%,email.ilike.%${term}%,phone.ilike.%${term}%`,
+    );
   }
   if (role) query = query.eq("role", role);
 
@@ -231,6 +341,7 @@ export async function fetchUsers({
       id: row.id,
       email: row.email,
       userName: row.user_name,
+      phone: row.phone,
       role: row.role,
       shopRestroLegacyId: row.shop_restro_legacy_id,
       createdAt: row.created_at,
