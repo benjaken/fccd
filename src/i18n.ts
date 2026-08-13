@@ -301,7 +301,7 @@ const resources = {
           columns: {
             file: "檔案",
             size: "大小",
-            updated: "更新日期",
+            updated: "原系統時間",
           },
         },
         roles: {
@@ -1233,7 +1233,7 @@ const resources = {
           columns: {
             file: "File",
             size: "Size",
-            updated: "Updated",
+            updated: "Original time",
           },
         },
         roles: {
