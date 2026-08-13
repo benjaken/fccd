@@ -16,6 +16,9 @@ import {
 
 import { Button } from "@/components/ui/button";
 import {
+  ATTACHMENT_FILE_TYPES,
+  attachmentFileType,
+  attachmentFileTypeLabelKey,
   createAttachmentUrl,
   fetchAttachments,
   SETTINGS_PAGE_SIZE,
@@ -75,6 +78,9 @@ export function AttachmentsListPage({
   const { t, i18n } = useTranslation();
   const [draftSearch, setDraftSearch] = useState("");
   const [search, setSearch] = useState("");
+  const [fileType, setFileType] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [page, setPage] = useState(1);
   const [items, setItems] = useState<AttachmentListItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -96,7 +102,14 @@ export function AttachmentsListPage({
     setLoading(true);
     setError(null);
     try {
-      const result = await loadAttachments({ page, search, status: "" });
+      const result = await loadAttachments({
+        page,
+        search,
+        status: "",
+        fileType,
+        startDate,
+        endDate,
+      });
       setItems(result.items);
       setTotal(result.total);
     } catch (loadError) {
@@ -113,7 +126,7 @@ export function AttachmentsListPage({
     } finally {
       setLoading(false);
     }
-  }, [loadAttachments, page, reloadKey, search]);
+  }, [endDate, fileType, loadAttachments, page, reloadKey, search, startDate]);
 
   useEffect(() => {
     void loadPage();
@@ -163,7 +176,7 @@ export function AttachmentsListPage({
       </header>
 
       <article className="panel orders-panel">
-        <header className="orders-toolbar">
+        <header className="orders-toolbar settings-attachments-toolbar">
           <form className="orders-search" onSubmit={submitSearch}>
             <label
               className="orders-search-field"
@@ -184,6 +197,54 @@ export function AttachmentsListPage({
               {t("settings.attachments.searchAction")}
             </Button>
           </form>
+
+          <div className="settings-attachments-filters">
+            <label className="orders-status-filter">
+              <span>{t("settings.attachments.fileTypeFilter")}</span>
+              <select
+                value={fileType}
+                onChange={(event) => {
+                  setPage(1);
+                  setFileType(event.target.value);
+                }}
+              >
+                <option value="">
+                  {t("settings.attachments.allFileTypes")}
+                </option>
+                {ATTACHMENT_FILE_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {t(attachmentFileTypeLabelKey(type))}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="orders-status-filter">
+              <span>{t("settings.attachments.startDate")}</span>
+              <input
+                type="date"
+                value={startDate}
+                max={endDate || undefined}
+                onChange={(event) => {
+                  setPage(1);
+                  setStartDate(event.target.value);
+                }}
+              />
+            </label>
+
+            <label className="orders-status-filter">
+              <span>{t("settings.attachments.endDate")}</span>
+              <input
+                type="date"
+                value={endDate}
+                min={startDate || undefined}
+                onChange={(event) => {
+                  setPage(1);
+                  setEndDate(event.target.value);
+                }}
+              />
+            </label>
+          </div>
         </header>
 
         {loading ? (
@@ -220,6 +281,7 @@ export function AttachmentsListPage({
               <thead>
                 <tr>
                   <th>{t("settings.attachments.columns.file")}</th>
+                  <th>{t("settings.attachments.columns.type")}</th>
                   <th>{t("settings.attachments.columns.size")}</th>
                   <th>{t("settings.attachments.columns.updated")}</th>
                 </tr>
@@ -230,6 +292,7 @@ export function AttachmentsListPage({
                   const label =
                     attachment.originalFilename || t("common.notSet");
                   const canOpen = Boolean(attachment.objectPath);
+                  const type = attachmentFileType(attachment);
                   return (
                     <tr key={attachment.id}>
                       <td>
@@ -260,6 +323,7 @@ export function AttachmentsListPage({
                           )}
                         </div>
                       </td>
+                      <td>{t(attachmentFileTypeLabelKey(type))}</td>
                       <td>{formatSize(attachment.sizeBytes)}</td>
                       <td>
                         {date.format(

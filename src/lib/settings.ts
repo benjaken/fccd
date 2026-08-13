@@ -51,6 +51,66 @@ export type AttachmentListItem = {
   updatedAt: string;
 };
 
+export const ATTACHMENT_FILE_TYPES = [
+  "image",
+  "pdf",
+  "csv",
+  "document",
+  "other",
+] as const;
+
+export type AttachmentFileType = (typeof ATTACHMENT_FILE_TYPES)[number];
+
+export function attachmentFileType(
+  attachment: Pick<AttachmentListItem, "mimeType" | "originalFilename">,
+): AttachmentFileType {
+  const mime = (attachment.mimeType ?? "").toLowerCase();
+  const name = (attachment.originalFilename ?? "").toLowerCase();
+
+  if (mime.startsWith("image/") || /\.(png|jpe?g|gif|webp|svg|bmp)$/.test(name)) {
+    return "image";
+  }
+  if (mime.includes("pdf") || name.endsWith(".pdf")) {
+    return "pdf";
+  }
+  if (
+    mime === "text/csv" ||
+    mime.includes("csv") ||
+    mime.includes("spreadsheet") ||
+    mime.includes("excel") ||
+    /\.(csv|xlsx?|ods)$/.test(name)
+  ) {
+    return "csv";
+  }
+  if (
+    mime.startsWith("text/") ||
+    mime.includes("word") ||
+    mime.includes("document") ||
+    /\.(docx?|txt|rtf|md)$/.test(name)
+  ) {
+    return "document";
+  }
+  return "other";
+}
+
+export function attachmentFileTypeLabelKey(type: AttachmentFileType) {
+  return `settings.attachments.fileTypes.${type}` as const;
+}
+
+function hongKongDayStartIso(date: string) {
+  return `${date}T00:00:00+08:00`;
+}
+
+function hongKongNextDayStartIso(date: string) {
+  const [year, month, day] = date.split("-").map(Number);
+  const next = new Date(Date.UTC(year, month - 1, day));
+  next.setUTCDate(next.getUTCDate() + 1);
+  const yyyy = next.getUTCFullYear();
+  const mm = String(next.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(next.getUTCDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}T00:00:00+08:00`;
+}
+
 export const LOGIN_LOG_EVENT_TYPES = [
   "login_success",
   "login_failure",
@@ -465,10 +525,16 @@ export async function fetchAttachments({
   page,
   search,
   status,
+  fileType = "",
+  startDate = "",
+  endDate = "",
 }: {
   page: number;
   search: string;
   status: string;
+  fileType?: string;
+  startDate?: string;
+  endDate?: string;
 }) {
   const start = (page - 1) * SETTINGS_PAGE_SIZE;
   const end = start + SETTINGS_PAGE_SIZE - 1;
@@ -490,6 +556,34 @@ export async function fetchAttachments({
     );
   }
   if (status) query = query.eq("migration_status", status);
+
+  if (fileType === "image") {
+    query = query.like("mime_type", "image/%");
+  } else if (fileType === "pdf") {
+    query = query.eq("mime_type", "application/pdf");
+  } else if (fileType === "csv") {
+    query = query.or(
+      "mime_type.eq.text/csv,mime_type.ilike.%csv%,mime_type.ilike.%spreadsheet%,mime_type.ilike.%excel%,original_filename.ilike.%.csv,original_filename.ilike.%.xls,original_filename.ilike.%.xlsx",
+    );
+  } else if (fileType === "document") {
+    query = query.or(
+      "mime_type.like.text/%,mime_type.ilike.%word%,mime_type.ilike.%document%,original_filename.ilike.%.doc,original_filename.ilike.%.docx,original_filename.ilike.%.txt,original_filename.ilike.%.rtf,original_filename.ilike.%.md",
+    );
+    query = query.neq("mime_type", "text/csv");
+  } else if (fileType === "other") {
+    query = query
+      .not("mime_type", "like", "image/%")
+      .neq("mime_type", "application/pdf")
+      .neq("mime_type", "text/csv")
+      .not("mime_type", "like", "text/%");
+  }
+
+  if (startDate) {
+    query = query.gte("source_modified_at", hongKongDayStartIso(startDate));
+  }
+  if (endDate) {
+    query = query.lt("source_modified_at", hongKongNextDayStartIso(endDate));
+  }
 
   const { data, count, error } = await query;
   if (error) throw error;
