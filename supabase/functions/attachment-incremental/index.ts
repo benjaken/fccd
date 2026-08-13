@@ -3,7 +3,8 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 const APP_NAME = "fc-order-system";
 const APP_VERSION = "live";
 const BUCKET = "attachments";
-const SOURCE_ROOT = "https://s3.amazonaws.com/appforest_uf/";
+const SOURCE_ROOT =
+  "https://a112cb5fe9cbba3717fadc05fb8851f0.cdn.bubble.io/";
 const MAX_ANALYZE_RECORDS = 500;
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
 
@@ -118,7 +119,13 @@ function sourceUrl(record: UploadedFileRecord) {
     SOURCE_ROOT +
     record.s3_key_text
       .split("/")
-      .map((segment) => encodeURIComponent(segment))
+      .map((segment) => {
+        try {
+          return encodeURIComponent(decodeURIComponent(segment));
+        } catch {
+          throw new Error("Attachment S3 key contains invalid URL encoding.");
+        }
+      })
       .join("/")
   );
 }
