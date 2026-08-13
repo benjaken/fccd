@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronRight, Package, RefreshCw, Search } from "lucide-react";
+import { Package, RefreshCw, Search } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
@@ -26,7 +26,6 @@ const PACKAGE_SKELETON_COLUMNS = [
   { width: "4rem" },
   { width: "3.5rem", variant: "badge" as const },
   { width: "7rem" },
-  { width: "1.75rem", variant: "action" as const },
 ];
 
 type PackagesLoader = (filters: PackageListFilters) => Promise<PackageListResult>;
@@ -240,7 +239,6 @@ export function PackagesListPage({
                   <th>{t("packages.columns.price")}</th>
                   <th>{t("packages.columns.status")}</th>
                   <th>{t("packages.columns.updated")}</th>
-                  <th aria-label={t("packages.columns.actions")} />
                 </tr>
               </thead>
               <tbody>
@@ -252,16 +250,14 @@ export function PackagesListPage({
                 ) : (
                   items.map((item) => (
                     <tr key={item.id}>
+                      <td>{item.sku || t("common.notSet")}</td>
                       <td>
                         <Link
                           className="order-link"
                           to={`/products/packages/${item.id}`}
                         >
-                          {item.sku || t("common.notSet")}
+                          <strong>{displayName(item)}</strong>
                         </Link>
-                      </td>
-                      <td>
-                        <strong>{displayName(item)}</strong>
                         {item.chineseName && item.name !== item.chineseName && (
                           <small className="quote-company">{item.name}</small>
                         )}
@@ -284,18 +280,6 @@ export function PackagesListPage({
                       </td>
                       <td>
                         {dateTimeFormatter.format(new Date(item.updatedAt))}
-                      </td>
-                      <td>
-                        <Button variant="ghost" size="icon" asChild>
-                          <Link
-                            to={`/products/packages/${item.id}`}
-                            aria-label={`${t("packages.open")} ${
-                              item.sku || item.name
-                            }`}
-                          >
-                            <ChevronRight />
-                          </Link>
-                        </Button>
                       </td>
                     </tr>
                   ))
