@@ -213,7 +213,7 @@ Active 導航（側欄、工作區 soft link、tab）必須是**淡藍底 + 藍�
 
 | 模式 | 規範 |
 |---|---|
-| 營運表 | 遵守 [`UI_TABLE_STANDARD.md`](UI_TABLE_STANDARD.md)：15 筆／頁、sticky header、面板內捲動、底部分頁 |
+| 營運表 | 遵守 [`UI_TABLE_STANDARD.md`](UI_TABLE_STANDARD.md)：15 筆／頁、sticky header、面板內捲動、底部分頁；**載入中用表格骨架列**，不用整面 spinner |
 | 列操作（最後一欄） | **橫向單行**；常用動作（編輯、改密碼等）用 **icon-only** + `aria-label`；禁止 icon+文字按鈕垂直堆疊把列高撐高 |
 | 狀態徽章 | 語意色短標籤；成功綠、警告琥珀、危險紅、資訊藍／青 |
 | 描述列表 | 標籤弱色、值主色；適合詳情頁 |

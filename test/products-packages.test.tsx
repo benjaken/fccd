@@ -134,6 +134,36 @@ describe("Products catalog pages", () => {
     expect(screen.getByText("HK$188")).toBeInTheDocument();
   });
 
+  it("shows table skeleton rows while products are loading", async () => {
+    let resolveProducts!: (value: ProductListResult) => void;
+    const loadProducts = vi.fn(
+      () =>
+        new Promise<ProductListResult>((resolve) => {
+          resolveProducts = resolve;
+        }),
+    );
+    const loadChannels = vi.fn().mockResolvedValue([]);
+
+    render(
+      <MemoryRouter>
+        <ProductsListPage
+          loadProducts={loadProducts}
+          loadChannels={loadChannels}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "正在載入商品",
+    );
+    expect(screen.getByRole("columnheader", { name: "SKU" })).toBeInTheDocument();
+    expect(document.querySelectorAll(".table-skeleton-row")).toHaveLength(15);
+
+    resolveProducts(productResult);
+    expect(await screen.findByText("CC-001")).toBeInTheDocument();
+    expect(document.querySelectorAll(".table-skeleton-row")).toHaveLength(0);
+  });
+
   it("submits a server-side product search and resets to the first page", async () => {
     const user = userEvent.setup();
     const loadProducts = vi.fn().mockResolvedValue(productResult);

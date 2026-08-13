@@ -1562,16 +1562,38 @@ td:last-child {
   width: min(620px, 100%);
 }
 
-.products-search > svg,
-.packages-search > svg {
-  width: 18px;
-  flex: 0 0 auto;
+.products-search-field,
+.packages-search-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 180px;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--background);
   color: var(--muted-foreground);
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
 }
 
-.products-search input,
+.products-search-field:focus-within,
+.packages-search-field:focus-within {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 13%, transparent);
+}
+
+.products-search-field svg,
+.packages-search-field svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
 .products-status-filter select,
-.packages-search input,
 .packages-status-filter select {
   height: 40px;
   border: 1px solid var(--border);
@@ -1582,16 +1604,20 @@ td:last-child {
   font-size: 14px;
 }
 
-.products-search input,
-.packages-search input {
+.products-search-field input,
+.packages-search-field input {
   width: 100%;
-  min-width: 180px;
-  padding: 0 12px;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 14px;
 }
 
-.products-search input:focus,
 .products-status-filter select:focus,
-.packages-search input:focus,
 .packages-status-filter select:focus {
   border-color: var(--ring);
   box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 13%, transparent);
@@ -1678,6 +1704,54 @@ td:last-child {
 .products-state-error > svg,
 .packages-state-error > svg {
   color: var(--destructive);
+}
+
+.table-skeleton-row td {
+  vertical-align: middle;
+}
+
+.table-skeleton-bone {
+  display: block;
+  width: 64%;
+  max-width: 100%;
+  height: 12px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklch, var(--muted) 88%, var(--foreground)) 0%,
+    color-mix(in oklch, var(--muted) 55%, var(--card)) 45%,
+    color-mix(in oklch, var(--muted) 88%, var(--foreground)) 100%
+  );
+  background-size: 200% 100%;
+  animation: table-skeleton-shimmer 1.35s ease-in-out infinite;
+}
+
+.table-skeleton-bone-badge {
+  width: 3.4rem;
+  height: 22px;
+  border-radius: 999px;
+}
+
+.table-skeleton-bone-action {
+  width: 1.75rem;
+  height: 1.75rem;
+  margin-left: auto;
+  border-radius: 8px;
+}
+
+@keyframes table-skeleton-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .table-skeleton-bone {
+    animation: none;
+  }
 }
 
 .detail-description {

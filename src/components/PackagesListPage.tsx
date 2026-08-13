@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { TablePagination } from "@/components/ui/table-pagination";
+import { TableSkeletonRows } from "@/components/ui/table-skeleton";
 import {
   fetchPackages,
   PACKAGES_PAGE_SIZE,
@@ -16,6 +17,17 @@ import {
   fetchProductChannels,
   type CatalogOption,
 } from "@/lib/products";
+
+const PACKAGE_SKELETON_COLUMNS = [
+  { width: "5.5rem" },
+  { width: "72%" },
+  { width: "4.5rem" },
+  { width: "3rem" },
+  { width: "4rem" },
+  { width: "3.5rem", variant: "badge" as const },
+  { width: "7rem" },
+  { width: "1.75rem", variant: "action" as const },
+];
 
 type PackagesLoader = (filters: PackageListFilters) => Promise<PackageListResult>;
 type ChannelsLoader = () => Promise<CatalogOption[]>;
@@ -136,16 +148,16 @@ export function PackagesListPage({
       <article className="panel packages-panel">
         <header className="packages-toolbar">
           <form className="packages-search" onSubmit={submitSearch}>
-            <Search aria-hidden="true" />
-            <label className="sr-only" htmlFor="packages-search">
-              {t("packages.search")}
+            <label className="packages-search-field" htmlFor="packages-search">
+              <Search aria-hidden="true" />
+              <span className="sr-only">{t("packages.search")}</span>
+              <input
+                id="packages-search"
+                value={draftSearch}
+                onChange={(event) => setDraftSearch(event.target.value)}
+                placeholder={t("packages.searchPlaceholder")}
+              />
             </label>
-            <input
-              id="packages-search"
-              value={draftSearch}
-              onChange={(event) => setDraftSearch(event.target.value)}
-              placeholder={t("packages.searchPlaceholder")}
-            />
             <Button type="submit" variant="outline">
               {t("packages.searchAction")}
             </Button>
@@ -184,12 +196,7 @@ export function PackagesListPage({
           </div>
         </header>
 
-        {loading ? (
-          <div className="packages-state" role="status">
-            <RefreshCw className="spin" />
-            <span>{t("packages.loading")}</span>
-          </div>
-        ) : error ? (
+        {error ? (
           <div className="packages-state packages-state-error" role="alert">
             <Package />
             <div>
@@ -205,7 +212,7 @@ export function PackagesListPage({
               {t("packages.retry")}
             </Button>
           </div>
-        ) : items.length === 0 ? (
+        ) : !loading && items.length === 0 ? (
           <div className="packages-state packages-state-empty">
             <Package />
             <div>
@@ -214,7 +221,15 @@ export function PackagesListPage({
             </div>
           </div>
         ) : (
-          <div className="table-wrap packages-table-wrap">
+          <div
+            className="table-wrap packages-table-wrap"
+            aria-busy={loading || undefined}
+          >
+            {loading ? (
+              <span className="sr-only" role="status">
+                {t("packages.loading")}
+              </span>
+            ) : null}
             <table>
               <thead>
                 <tr>
@@ -229,55 +244,62 @@ export function PackagesListPage({
                 </tr>
               </thead>
               <tbody>
-                {items.map((item) => (
-                  <tr key={item.id}>
-                    <td>
-                      <Link
-                        className="order-link"
-                        to={`/products/packages/${item.id}`}
-                      >
-                        {item.sku || t("common.notSet")}
-                      </Link>
-                    </td>
-                    <td>
-                      <strong>{displayName(item)}</strong>
-                      {item.chineseName && item.name !== item.chineseName && (
-                        <small className="quote-company">{item.name}</small>
-                      )}
-                    </td>
-                    <td>{item.channelName || t("common.notSet")}</td>
-                    <td>{item.memberCount}</td>
-                    <td>
-                      <strong>{formatPrice(item)}</strong>
-                    </td>
-                    <td>
-                      <span
-                        className={`status-badge ${
-                          item.isActive ? "green" : "amber"
-                        }`}
-                      >
-                        {item.isActive
-                          ? t("packages.active")
-                          : item.status || t("packages.inactive")}
-                      </span>
-                    </td>
-                    <td>
-                      {dateTimeFormatter.format(new Date(item.updatedAt))}
-                    </td>
-                    <td>
-                      <Button variant="ghost" size="icon" asChild>
+                {loading ? (
+                  <TableSkeletonRows
+                    rows={PACKAGES_PAGE_SIZE}
+                    columns={PACKAGE_SKELETON_COLUMNS}
+                  />
+                ) : (
+                  items.map((item) => (
+                    <tr key={item.id}>
+                      <td>
                         <Link
+                          className="order-link"
                           to={`/products/packages/${item.id}`}
-                          aria-label={`${t("packages.open")} ${
-                            item.sku || item.name
+                        >
+                          {item.sku || t("common.notSet")}
+                        </Link>
+                      </td>
+                      <td>
+                        <strong>{displayName(item)}</strong>
+                        {item.chineseName && item.name !== item.chineseName && (
+                          <small className="quote-company">{item.name}</small>
+                        )}
+                      </td>
+                      <td>{item.channelName || t("common.notSet")}</td>
+                      <td>{item.memberCount}</td>
+                      <td>
+                        <strong>{formatPrice(item)}</strong>
+                      </td>
+                      <td>
+                        <span
+                          className={`status-badge ${
+                            item.isActive ? "green" : "amber"
                           }`}
                         >
-                          <ChevronRight />
-                        </Link>
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
+                          {item.isActive
+                            ? t("packages.active")
+                            : item.status || t("packages.inactive")}
+                        </span>
+                      </td>
+                      <td>
+                        {dateTimeFormatter.format(new Date(item.updatedAt))}
+                      </td>
+                      <td>
+                        <Button variant="ghost" size="icon" asChild>
+                          <Link
+                            to={`/products/packages/${item.id}`}
+                            aria-label={`${t("packages.open")} ${
+                              item.sku || item.name
+                            }`}
+                          >
+                            <ChevronRight />
+                          </Link>
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

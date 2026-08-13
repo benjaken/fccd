@@ -38,6 +38,19 @@ icon to the left of the field. Put the icon **inside** the input shell
 (`.orders-search-field` / `.quotes-search-field`), then the optional「搜尋」
 submit button beside it — same pattern as the topbar `.search-box`.
 
+## Loading state (skeleton)
+
+While list data is loading, keep the **table chrome** (toolbar, sticky header,
+pagination shell) and replace only the **tbody content** with skeleton rows
+(`.table-skeleton-row` / `.table-skeleton-bone` via `TableSkeletonRows`).
+
+- Do **not** replace the whole panel with a centered spinner for first load or
+  refetch of operational tables.
+- Match column count and approximate widths (text / badge / action variants).
+- Default to the page size (15) skeleton rows.
+- Expose an accessible status (`role="status"` / `aria-busy`) with sr-only copy.
+- Empty and error states may still use the centered panel message.
+
 ## Scope
 
 Applies to current and future paginated operational tables, including orders,
@@ -55,3 +68,4 @@ lists.
   pagination.
 - Users list: icon-only horizontal actions in the last column (edit / change
   password).
+- Products / packages lists: table-body skeleton while loading.

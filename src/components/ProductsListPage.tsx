@@ -10,6 +10,7 @@ import { Link } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { TablePagination } from "@/components/ui/table-pagination";
+import { TableSkeletonRows } from "@/components/ui/table-skeleton";
 import {
   fetchProductChannels,
   fetchProducts,
@@ -22,6 +23,17 @@ import {
   type ProductPriceRange,
   type ProductStatusFilter,
 } from "@/lib/products";
+
+const PRODUCT_SKELETON_COLUMNS = [
+  { width: "5.5rem" },
+  { width: "72%" },
+  { width: "4.5rem" },
+  { width: "5.5rem" },
+  { width: "4rem" },
+  { width: "3.5rem", variant: "badge" as const },
+  { width: "7rem" },
+  { width: "1.75rem", variant: "action" as const },
+];
 
 type ProductsLoader = (filters: ProductListFilters) => Promise<ProductListResult>;
 type ChannelsLoader = () => Promise<CatalogOption[]>;
@@ -176,16 +188,16 @@ export function ProductsListPage({
       <article className="panel products-panel">
         <header className="products-toolbar">
           <form className="products-search" onSubmit={submitSearch}>
-            <Search aria-hidden="true" />
-            <label className="sr-only" htmlFor="products-search">
-              {t("products.search")}
+            <label className="products-search-field" htmlFor="products-search">
+              <Search aria-hidden="true" />
+              <span className="sr-only">{t("products.search")}</span>
+              <input
+                id="products-search"
+                value={draftSearch}
+                onChange={(event) => setDraftSearch(event.target.value)}
+                placeholder={t("products.searchPlaceholder")}
+              />
             </label>
-            <input
-              id="products-search"
-              value={draftSearch}
-              onChange={(event) => setDraftSearch(event.target.value)}
-              placeholder={t("products.searchPlaceholder")}
-            />
             <Button type="submit" variant="outline">
               {t("products.searchAction")}
             </Button>
@@ -246,12 +258,7 @@ export function ProductsListPage({
           </div>
         </header>
 
-        {loading ? (
-          <div className="products-state" role="status">
-            <RefreshCw className="spin" />
-            <span>{t("products.loading")}</span>
-          </div>
-        ) : error ? (
+        {error ? (
           <div className="products-state products-state-error" role="alert">
             <ShoppingBasket />
             <div>
@@ -267,7 +274,7 @@ export function ProductsListPage({
               {t("products.retry")}
             </Button>
           </div>
-        ) : items.length === 0 ? (
+        ) : !loading && items.length === 0 ? (
           <div className="products-state products-state-empty">
             <ShoppingBasket />
             <div>
@@ -276,7 +283,15 @@ export function ProductsListPage({
             </div>
           </div>
         ) : (
-          <div className="table-wrap products-table-wrap">
+          <div
+            className="table-wrap products-table-wrap"
+            aria-busy={loading || undefined}
+          >
+            {loading ? (
+              <span className="sr-only" role="status">
+                {t("products.loading")}
+              </span>
+            ) : null}
             <table>
               <thead>
                 <tr>
@@ -291,46 +306,59 @@ export function ProductsListPage({
                 </tr>
               </thead>
               <tbody>
-                {items.map((product) => (
-                  <tr key={product.id}>
-                    <td>
-                      <Link className="order-link" to={`/products/${product.id}`}>
-                        {product.sku || t("common.notSet")}
-                      </Link>
-                    </td>
-                    <td>
-                      <strong>{displayName(product)}</strong>
-                      {product.chineseName && product.name !== product.chineseName && (
-                        <small className="quote-company">{product.name}</small>
-                      )}
-                    </td>
-                    <td>{product.channelName || t("common.notSet")}</td>
-                    <td>{product.productTypeName || t("common.notSet")}</td>
-                    <td>
-                      <strong>{formatPrice(product)}</strong>
-                    </td>
-                    <td>
-                      <span className={`status-badge ${statusTone(product)}`}>
-                        {statusLabel(product)}
-                      </span>
-                    </td>
-                    <td>
-                      {dateTimeFormatter.format(new Date(product.updatedAt))}
-                    </td>
-                    <td>
-                      <Button variant="ghost" size="icon" asChild>
+                {loading ? (
+                  <TableSkeletonRows
+                    rows={PRODUCTS_PAGE_SIZE}
+                    columns={PRODUCT_SKELETON_COLUMNS}
+                  />
+                ) : (
+                  items.map((product) => (
+                    <tr key={product.id}>
+                      <td>
                         <Link
+                          className="order-link"
                           to={`/products/${product.id}`}
-                          aria-label={`${t("products.open")} ${
-                            product.sku || product.name
-                          }`}
                         >
-                          <ChevronRight />
+                          {product.sku || t("common.notSet")}
                         </Link>
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td>
+                        <strong>{displayName(product)}</strong>
+                        {product.chineseName &&
+                          product.name !== product.chineseName && (
+                            <small className="quote-company">
+                              {product.name}
+                            </small>
+                          )}
+                      </td>
+                      <td>{product.channelName || t("common.notSet")}</td>
+                      <td>{product.productTypeName || t("common.notSet")}</td>
+                      <td>
+                        <strong>{formatPrice(product)}</strong>
+                      </td>
+                      <td>
+                        <span className={`status-badge ${statusTone(product)}`}>
+                          {statusLabel(product)}
+                        </span>
+                      </td>
+                      <td>
+                        {dateTimeFormatter.format(new Date(product.updatedAt))}
+                      </td>
+                      <td>
+                        <Button variant="ghost" size="icon" asChild>
+                          <Link
+                            to={`/products/${product.id}`}
+                            aria-label={`${t("products.open")} ${
+                              product.sku || product.name
+                            }`}
+                          >
+                            <ChevronRight />
+                          </Link>
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
