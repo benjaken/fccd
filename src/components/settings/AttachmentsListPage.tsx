@@ -3,8 +3,13 @@ import { useTranslation } from "react-i18next";
 import {
   ChevronLeft,
   ChevronRight,
-  ExternalLink,
+  File,
   FileArchive,
+  FileAudio,
+  FileImage,
+  FileSpreadsheet,
+  FileText,
+  FileVideo,
   RefreshCw,
   Search,
 } from "lucide-react";
@@ -16,17 +21,49 @@ import {
   SETTINGS_PAGE_SIZE,
   type AttachmentListItem,
 } from "@/lib/settings";
-import { cn } from "@/lib/utils";
 
 type AttachmentsLoader = typeof fetchAttachments;
 
-const ATTACHMENT_STATUSES = [
-  "discovered",
-  "enriched",
-  "uploaded",
-  "verified",
-  "failed",
-] as const;
+function attachmentFileIcon(attachment: AttachmentListItem) {
+  const mime = (attachment.mimeType ?? "").toLowerCase();
+  const name = (attachment.originalFilename ?? "").toLowerCase();
+
+  if (mime.startsWith("image/") || /\.(png|jpe?g|gif|webp|svg|bmp)$/.test(name)) {
+    return FileImage;
+  }
+  if (mime.startsWith("video/") || /\.(mp4|mov|webm|avi|mkv)$/.test(name)) {
+    return FileVideo;
+  }
+  if (mime.startsWith("audio/") || /\.(mp3|wav|aac|m4a|ogg)$/.test(name)) {
+    return FileAudio;
+  }
+  if (
+    mime.includes("spreadsheet") ||
+    mime.includes("excel") ||
+    mime === "text/csv" ||
+    /\.(xlsx?|csv|ods)$/.test(name)
+  ) {
+    return FileSpreadsheet;
+  }
+  if (
+    mime.includes("zip") ||
+    mime.includes("compressed") ||
+    mime.includes("rar") ||
+    /\.(zip|rar|7z|tar|gz)$/.test(name)
+  ) {
+    return FileArchive;
+  }
+  if (
+    mime.includes("pdf") ||
+    mime.startsWith("text/") ||
+    mime.includes("word") ||
+    mime.includes("document") ||
+    /\.(pdf|docx?|txt|rtf|md)$/.test(name)
+  ) {
+    return FileText;
+  }
+  return File;
+}
 
 export function AttachmentsListPage({
   loadAttachments = fetchAttachments,
@@ -38,7 +75,6 @@ export function AttachmentsListPage({
   const { t, i18n } = useTranslation();
   const [draftSearch, setDraftSearch] = useState("");
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
   const [items, setItems] = useState<AttachmentListItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -60,7 +96,7 @@ export function AttachmentsListPage({
     setLoading(true);
     setError(null);
     try {
-      const result = await loadAttachments({ page, search, status });
+      const result = await loadAttachments({ page, search, status: "" });
       setItems(result.items);
       setTotal(result.total);
     } catch (loadError) {
@@ -77,7 +113,7 @@ export function AttachmentsListPage({
     } finally {
       setLoading(false);
     }
-  }, [loadAttachments, page, reloadKey, search, status]);
+  }, [loadAttachments, page, reloadKey, search]);
 
   useEffect(() => {
     void loadPage();
@@ -97,6 +133,7 @@ export function AttachmentsListPage({
   };
 
   const openAttachment = async (attachment: AttachmentListItem) => {
+    if (!attachment.objectPath || openingId === attachment.id) return;
     setOpeningId(attachment.id);
     setError(null);
     try {
@@ -142,24 +179,6 @@ export function AttachmentsListPage({
               {t("settings.attachments.searchAction")}
             </Button>
           </form>
-
-          <label className="orders-status-filter">
-            <span>{t("settings.attachments.statusFilter")}</span>
-            <select
-              value={status}
-              onChange={(event) => {
-                setPage(1);
-                setStatus(event.target.value);
-              }}
-            >
-              <option value="">{t("settings.attachments.allStatuses")}</option>
-              {ATTACHMENT_STATUSES.map((value) => (
-                <option key={value} value={value}>
-                  {t(`settings.attachments.statuses.${value}`)}
-                </option>
-              ))}
-            </select>
-          </label>
         </header>
 
         {loading ? (
@@ -196,76 +215,51 @@ export function AttachmentsListPage({
               <thead>
                 <tr>
                   <th>{t("settings.attachments.columns.file")}</th>
-                  <th>{t("settings.attachments.columns.source")}</th>
-                  <th>{t("settings.attachments.columns.owner")}</th>
-                  <th>{t("settings.attachments.columns.type")}</th>
                   <th>{t("settings.attachments.columns.size")}</th>
-                  <th>{t("settings.attachments.columns.status")}</th>
                   <th>{t("settings.attachments.columns.updated")}</th>
-                  <th aria-label={t("settings.attachments.columns.actions")} />
                 </tr>
               </thead>
               <tbody>
-                {items.map((attachment) => (
-                  <tr key={attachment.id}>
-                    <td>
-                      <strong>
-                        {attachment.originalFilename || t("common.notSet")}
-                      </strong>
-                    </td>
-                    <td>
-                      {attachment.sourceType}
-                      <small className="settings-cell-detail">
-                        {attachment.sourceField}
-                      </small>
-                    </td>
-                    <td>
-                      {attachment.ownerType || t("common.notSet")}
-                      <small className="settings-cell-detail">
-                        {attachment.ownerLegacyId || t("common.notSet")}
-                      </small>
-                    </td>
-                    <td>{attachment.mimeType || t("common.notSet")}</td>
-                    <td>{formatSize(attachment.sizeBytes)}</td>
-                    <td>
-                      <span
-                        className={cn(
-                          "status-badge",
-                          attachment.migrationStatus === "failed"
-                            ? "red"
-                            : attachment.migrationStatus === "verified"
-                              ? "green"
-                              : "blue",
-                        )}
-                      >
-                        {t(
-                          `settings.attachments.statuses.${attachment.migrationStatus}`,
-                        )}
-                      </span>
-                    </td>
-                    <td>{date.format(new Date(attachment.updatedAt))}</td>
-                    <td>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        disabled={
-                          !attachment.objectPath ||
-                          openingId === attachment.id
-                        }
-                        onClick={() => void openAttachment(attachment)}
-                        aria-label={`${t("settings.attachments.open")} ${
-                          attachment.originalFilename || attachment.id
-                        }`}
-                      >
-                        {openingId === attachment.id ? (
-                          <RefreshCw className="spin" />
-                        ) : (
-                          <ExternalLink />
-                        )}
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
+                {items.map((attachment) => {
+                  const Icon = attachmentFileIcon(attachment);
+                  const label =
+                    attachment.originalFilename || t("common.notSet");
+                  const canOpen = Boolean(attachment.objectPath);
+                  return (
+                    <tr key={attachment.id}>
+                      <td>
+                        <div className="settings-attachment-file">
+                          <span
+                            className="settings-attachment-file-icon"
+                            aria-hidden="true"
+                          >
+                            {openingId === attachment.id ? (
+                              <RefreshCw className="spin" />
+                            ) : (
+                              <Icon />
+                            )}
+                          </span>
+                          {canOpen ? (
+                            <button
+                              type="button"
+                              className="settings-attachment-file-link"
+                              onClick={() => void openAttachment(attachment)}
+                              disabled={openingId === attachment.id}
+                            >
+                              {label}
+                            </button>
+                          ) : (
+                            <span className="settings-attachment-file-muted">
+                              {label}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td>{formatSize(attachment.sizeBytes)}</td>
+                      <td>{date.format(new Date(attachment.updatedAt))}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
