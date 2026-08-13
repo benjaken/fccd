@@ -180,6 +180,30 @@ Active 導航（側欄、工作區 soft link、migration tab）必須是**淡綠
 
 元件優先放在 `src/components/ui/`，以 shadcn 方式擴充（CVA + `cn` + Slot）。
 
+### 4.0 組件化硬規則（必遵）
+
+**多頁共用、或功能相同／高度相似的 UI，必須封裝成共用組件，禁止在各頁面複製貼上同一套 markup／樣式。**
+
+| 規則 | 說明 |
+|---|---|
+| 先找再造 | 新增輸入框、搜尋列、分頁、表格骨架、列表狀態等之前，先查 `src/components/ui/` 與既有列表頁 |
+| 兩處即抽 | 同一視覺／互動模式出現在 **≥2 個頁面**（或明顯將複用）時，必須抽到 `src/components/ui/`（或明確的領域共用目錄），並改為引用組件 |
+| 頁面只組裝 | 列表頁負責資料與篩選狀態；搜尋框圖示位置、提交按鈕、骨架列結構等通用外觀由共用組件負責 |
+| 改一處生效 | 調整通用搜尋／表格行為時改組件與 token／CSS，不要只改單一頁面造成漂移 |
+| 文件同步 | 新增或提升為共用組件時，更新本節「實作對照」與相關標準文件 |
+
+**已封裝、必須優先使用的營運列表組件：**
+
+| 組件 | 路徑 | 用途 |
+|---|---|---|
+| `SearchField` | `src/components/ui/search-field.tsx` | 框內放大鏡的通用搜尋輸入 |
+| `ListSearchBar` | `src/components/ui/list-search-bar.tsx` | 列表工具列：搜尋欄 + 搜尋按鈕 |
+| `TableSkeletonRows` | `src/components/ui/table-skeleton.tsx` | 表格載入骨架列 |
+| `TablePagination` | `src/components/ui/table-pagination.tsx` | 底部分頁 |
+| `OperationalListState` | `src/components/ui/operational-list-state.tsx` | 列表空／錯／權限等面板狀態 |
+
+**禁止：** 在訂單／報價／產品／設定等列表頁各自手寫 `.orders-search` + `Search` 圖示 + `<input>` 組合；應使用 `ListSearchBar`（內部已用 `SearchField`）。
+
 ### 4.1 Button 按鈕
 
 **Variants（現有 + Ant 語意對照）：**
@@ -266,7 +290,8 @@ Active 導航（側欄、工作區 soft link、migration tab）必須是**淡綠
 [顯示 1-15，共 N]     [上一頁] [頁碼] [下一頁]
 ```
 
-搜尋放大鏡放在輸入框 **內部** 左側（`.orders-search-field`），不要放在框外。
+搜尋放大鏡放在輸入框 **內部** 左側；實作必須用 `ListSearchBar`／`SearchField`
+（樣式類名 `.list-search` / `.search-field`，舊別名仍可用）。不要放在框外，也不要在頁面內複製 markup。
 
 ### 5.3 儀表板進度
 
@@ -288,19 +313,21 @@ Active 導航（側欄、工作區 soft link、migration tab）必須是**淡綠
 | Design tokens | `src/index.css` `:root` / `.dark` |
 | Button CVA | `src/components/ui/button.tsx` |
 | Primary 白字覆蓋 | `src/index.css` `a.bg-primary, button.bg-primary` |
-| 列表分頁／狀態 | `src/components/ui/table-pagination.tsx`、`operational-list-state.tsx` |
+| 列表搜尋 | `src/components/ui/search-field.tsx`、`list-search-bar.tsx` |
+| 列表分頁／狀態／骨架 | `table-pagination.tsx`、`operational-list-state.tsx`、`table-skeleton.tsx` |
 | 進度多色 | `.progress-row.tone-*` + Dashboard progress `tone` |
 | 文案 | `src/i18n.ts` |
 | 工具函式 | `src/lib/utils.ts`（`cn`） |
 
 **新增元件 checklist**
 
-1. 能否用既有 token／variant 表達？  
-2. 是否需要 CVA variant 而不是頁面特例 CSS？  
-3. Light／Dark、zh-HK／en、鍵盤與 focus 是否都過？  
-4. Primary 實心是否白字？  
-5. 若改了約定，是否同步更新本文件與 `UI_DEVELOPMENT_STANDARD.md`？  
-6. UI 變更是否補上 `test/*.test.tsx`？
+1. 能否用既有共用組件／token／variant 表達？（先組件化，再寫頁面特例）  
+2. 若 ≥2 頁會用到，是否已抽到 `src/components/ui/`？  
+3. 是否需要 CVA variant 而不是頁面特例 CSS？  
+4. Light／Dark、zh-HK／en、鍵盤與 focus 是否都過？  
+5. Primary 實心是否白字？  
+6. 若改了約定，是否同步更新本文件與 `UI_DEVELOPMENT_STANDARD.md`？  
+7. UI 變更是否補上 `test/*.test.tsx`？
 
 ---
 
@@ -312,6 +339,7 @@ Active 導航（側欄、工作區 soft link、migration tab）必須是**淡綠
 - 訂單進度五條全用品牌綠色系
 - Active 導航殘留舊藍／粉紅底而不跟隨 `--primary`
 - 業務元件內硬編碼大段顏色／文案
+- 多頁複製貼上相同搜尋框／骨架／分頁 markup，而不使用 `src/components/ui/` 共用組件
 - 用動畫或 toast 掩蓋未處理的錯誤狀態
 - 表格操作欄把「編輯／修改密碼」等常用按鈕做成 icon+文字並垂直堆疊
 - 在 Production 開啟 `VITE_ENABLE_QUICK_LOGIN`

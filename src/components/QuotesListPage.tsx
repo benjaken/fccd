@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   CalendarDays,
@@ -6,11 +6,11 @@ import {
   FileText,
   Plus,
   RefreshCw,
-  Search,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
+import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { TablePagination } from "@/components/ui/table-pagination";
 import {
   fetchQuotes,
@@ -112,8 +112,7 @@ export function QuotesListPage({
     [items, status],
   );
 
-  const submitSearch = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const submitSearch = () => {
     setPage(1);
     setSearch(draftSearch.trim());
   };
@@ -149,21 +148,15 @@ export function QuotesListPage({
 
       <article className="panel quotes-panel">
         <header className="quotes-toolbar">
-          <form className="quotes-search" onSubmit={submitSearch}>
-            <label className="quotes-search-field" htmlFor="quotes-search">
-              <Search aria-hidden="true" />
-              <span className="sr-only">{t("quotes.search")}</span>
-              <input
-                id="quotes-search"
-                value={draftSearch}
-                onChange={(event) => setDraftSearch(event.target.value)}
-                placeholder={t("quotes.searchPlaceholder")}
-              />
-            </label>
-            <Button type="submit" variant="outline">
-              {t("quotes.searchAction")}
-            </Button>
-          </form>
+          <ListSearchBar
+            id="quotes-search"
+            value={draftSearch}
+            onChange={setDraftSearch}
+            onSubmit={submitSearch}
+            label={t("quotes.search")}
+            placeholder={t("quotes.searchPlaceholder")}
+            submitLabel={t("quotes.searchAction")}
+          />
 
           <label className="quotes-status-filter">
             <span>{t("quotes.statusFilter")}</span>

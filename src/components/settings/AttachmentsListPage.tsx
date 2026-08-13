@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ChevronLeft,
@@ -11,11 +11,11 @@ import {
   FileText,
   FileVideo,
   RefreshCw,
-  Search,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { ListSearchBar } from "@/components/ui/list-search-bar";
 import {
   ATTACHMENT_FILE_TYPES,
   attachmentFileType,
@@ -133,8 +133,7 @@ export function AttachmentsListPage({
     void loadPage();
   }, [loadPage]);
 
-  const submitSearch = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const submitSearch = () => {
     setPage(1);
     setSearch(draftSearch.trim());
   };
@@ -178,26 +177,15 @@ export function AttachmentsListPage({
 
       <article className="panel orders-panel">
         <header className="orders-toolbar settings-attachments-toolbar">
-          <form className="orders-search" onSubmit={submitSearch}>
-            <label
-              className="orders-search-field"
-              htmlFor="settings-attachments-search"
-            >
-              <Search aria-hidden="true" />
-              <span className="sr-only">
-                {t("settings.attachments.search")}
-              </span>
-              <input
-                id="settings-attachments-search"
-                value={draftSearch}
-                onChange={(event) => setDraftSearch(event.target.value)}
-                placeholder={t("settings.attachments.searchPlaceholder")}
-              />
-            </label>
-            <Button type="submit" variant="outline">
-              {t("settings.attachments.searchAction")}
-            </Button>
-          </form>
+          <ListSearchBar
+            id="settings-attachments-search"
+            value={draftSearch}
+            onChange={setDraftSearch}
+            onSubmit={submitSearch}
+            label={t("settings.attachments.search")}
+            placeholder={t("settings.attachments.searchPlaceholder")}
+            submitLabel={t("settings.attachments.searchAction")}
+          />
 
           <div className="settings-attachments-filters">
             <label className="orders-status-filter">

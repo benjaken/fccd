@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Package, RefreshCw, Search } from "lucide-react";
+import { Package, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
+import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { TableSkeletonRows } from "@/components/ui/table-skeleton";
 import {
@@ -121,8 +122,7 @@ export function PackagesListPage({
     void loadPage();
   }, [loadPage]);
 
-  const submitSearch = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const submitSearch = () => {
     setPage(1);
     setSearch(draftSearch.trim());
   };
@@ -146,21 +146,15 @@ export function PackagesListPage({
 
       <article className="panel packages-panel">
         <header className="packages-toolbar">
-          <form className="packages-search" onSubmit={submitSearch}>
-            <label className="packages-search-field" htmlFor="packages-search">
-              <Search aria-hidden="true" />
-              <span className="sr-only">{t("packages.search")}</span>
-              <input
-                id="packages-search"
-                value={draftSearch}
-                onChange={(event) => setDraftSearch(event.target.value)}
-                placeholder={t("packages.searchPlaceholder")}
-              />
-            </label>
-            <Button type="submit" variant="outline">
-              {t("packages.searchAction")}
-            </Button>
-          </form>
+          <ListSearchBar
+            id="packages-search"
+            value={draftSearch}
+            onChange={setDraftSearch}
+            onSubmit={submitSearch}
+            label={t("packages.search")}
+            placeholder={t("packages.searchPlaceholder")}
+            submitLabel={t("packages.searchAction")}
+          />
 
           <div className="packages-filters">
             <label className="packages-status-filter">

@@ -1,13 +1,13 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   RefreshCw,
-  Search,
   ShoppingBasket,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
+import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { TableSkeletonRows } from "@/components/ui/table-skeleton";
 import {
@@ -138,8 +138,7 @@ export function ProductsListPage({
     void loadPage();
   }, [loadPage]);
 
-  const submitSearch = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const submitSearch = () => {
     setPage(1);
     setSearch(draftSearch.trim());
   };
@@ -185,21 +184,15 @@ export function ProductsListPage({
 
       <article className="panel products-panel">
         <header className="products-toolbar">
-          <form className="products-search" onSubmit={submitSearch}>
-            <label className="products-search-field" htmlFor="products-search">
-              <Search aria-hidden="true" />
-              <span className="sr-only">{t("products.search")}</span>
-              <input
-                id="products-search"
-                value={draftSearch}
-                onChange={(event) => setDraftSearch(event.target.value)}
-                placeholder={t("products.searchPlaceholder")}
-              />
-            </label>
-            <Button type="submit" variant="outline">
-              {t("products.searchAction")}
-            </Button>
-          </form>
+          <ListSearchBar
+            id="products-search"
+            value={draftSearch}
+            onChange={setDraftSearch}
+            onSubmit={submitSearch}
+            label={t("products.search")}
+            placeholder={t("products.searchPlaceholder")}
+            submitLabel={t("products.searchAction")}
+          />
 
           <div className="products-filters">
             <label className="products-status-filter">
