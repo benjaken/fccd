@@ -44,6 +44,7 @@ type TypeResult = {
   pages: number;
   status: "completed" | "failed" | "resumable";
   error?: string;
+  errorDetail?: string;
 };
 
 function jsonResponse(body: unknown, status = 200) {
@@ -549,6 +550,7 @@ async function processType(
   } catch (error) {
     result.status = "failed";
     result.error = errorCode(error);
+    result.errorDetail = safeError(error);
     console.error(
       `bubble-daily-incremental source failed: ${mapping.sourceType} (${result.error})`,
     );
@@ -717,6 +719,7 @@ Deno.serve(async (request) => {
       junctionsInserted: result.junctionsInserted,
       pages: result.pages,
       error: result.error,
+      errorDetail: result.errorDetail,
     })),
     unsupportedMappings: unsupported,
     resumable,
