@@ -51,6 +51,8 @@
   /* Explicit pale-green active nav wash (avoid muddy/pinkish mixes). */
   --nav-active-bg: oklch(0.94 0.05 150);
   --nav-active-fg: oklch(0.4 0.12 150);
+  --selection-bg: oklch(0.955 0.04 150);
+  --selection-bg-strong: oklch(0.94 0.05 150);
   --radius: 0.75rem;
   --topbar-height: 68px;
   --workspace-height: 44px;
@@ -80,6 +82,8 @@
   --ring: oklch(0.72 0.11 150);
   --nav-active-bg: oklch(0.28 0.055 150);
   --nav-active-fg: oklch(0.84 0.09 150);
+  --selection-bg: oklch(0.26 0.045 150);
+  --selection-bg-strong: oklch(0.28 0.055 150);
 }
 
 * {
@@ -3387,7 +3391,7 @@ td:last-child {
 }
 
 .migration-entity-role.core {
-  background: color-mix(in oklch, var(--primary) 12%, var(--card));
+  background: var(--selection-bg-strong);
   color: var(--primary);
 }
 
@@ -3405,7 +3409,7 @@ td:last-child {
 }
 
 .dark .migration-entity-role.core {
-  background: color-mix(in oklch, var(--primary) 22%, var(--card));
+  background: var(--selection-bg-strong);
   color: color-mix(in oklch, var(--primary) 72%, white);
 }
 
@@ -3468,12 +3472,12 @@ td:last-child {
   height: 34px;
   flex: 0 0 auto;
   border-radius: 9px;
-  background: color-mix(in oklch, var(--primary) 12%, var(--card));
+  background: var(--selection-bg-strong);
   color: var(--primary);
 }
 
 .dark .relationship-analysis-icon {
-  background: color-mix(in oklch, var(--primary) 22%, var(--card));
+  background: var(--selection-bg-strong);
   color: color-mix(in oklch, var(--primary) 72%, white);
 }
 
@@ -3752,7 +3756,7 @@ td:last-child {
   display: inline-flex;
   padding: 4px 7px;
   border-radius: 99px;
-  background: color-mix(in oklch, var(--primary) 12%, var(--card));
+  background: var(--selection-bg-strong);
   color: var(--primary);
   font-size: 14px;
   font-weight: 720;
@@ -3764,7 +3768,7 @@ td:last-child {
 }
 
 .dark .relationship-cardinality {
-  background: color-mix(in oklch, var(--primary) 22%, var(--card));
+  background: var(--selection-bg-strong);
   color: color-mix(in oklch, var(--primary) 72%, white);
 }
 
@@ -3872,7 +3876,7 @@ td:last-child {
 
 .entity-filter-buttons button.active {
   border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
-  background: color-mix(in oklch, var(--primary) 9%, var(--card));
+  background: var(--selection-bg-strong);
   color: var(--primary);
 }
 
@@ -4129,7 +4133,7 @@ td:last-child {
   padding: 11px 13px;
   border: 1px dashed color-mix(in oklch, var(--primary) 45%, var(--border));
   border-radius: 10px;
-  background: color-mix(in oklch, var(--primary) 3%, var(--card));
+  background: var(--selection-bg);
   cursor: pointer;
 }
 
@@ -4555,8 +4559,8 @@ td:last-child {
 .report-tabs button.active,
 .report-shop-filter button.active {
   border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
-  background: color-mix(in oklch, var(--primary) 10%, var(--card));
-  color: var(--primary);
+  background: var(--selection-bg-strong);
+  color: var(--nav-active-fg);
 }
 
 .report-tabs button:disabled:not(.active) {
@@ -5090,7 +5094,7 @@ td:last-child {
 
 .raw-meat-price-table tbody tr:hover td,
 .raw-meat-price-table tbody tr:hover th {
-  background: color-mix(in oklch, var(--primary) 6%, var(--card));
+  background: var(--selection-bg);
 }
 
 .meat-price-analysis-grid {
@@ -5158,7 +5162,7 @@ td:last-child {
 
 .meat-price-product-list > button:hover,
 .meat-price-product-list > button.selected {
-  background: color-mix(in oklch, var(--primary) 7%, var(--card));
+  background: var(--selection-bg);
 }
 
 .meat-price-product-list > button.selected {
@@ -5185,6 +5189,7 @@ td:last-child {
 }
 
 .price-up {
+  /* Semantic rise/alert tone — not brand color. Keep distinct from primary green. */
   color: oklch(0.56 0.18 28) !important;
 }
 
@@ -5193,6 +5198,7 @@ td:last-child {
 }
 
 .stock-negative {
+  /* Semantic shortage/alert tone — not brand color. */
   color: oklch(0.56 0.18 28) !important;
 }
 
@@ -5225,7 +5231,7 @@ td:last-child {
 .meat-price-trend header > strong {
   padding: 5px 9px;
   border-radius: 7px;
-  background: color-mix(in oklch, var(--primary) 10%, var(--card));
+  background: var(--selection-bg-strong);
   color: var(--primary);
   font-size: 14px;
 }
@@ -5351,7 +5357,7 @@ td:last-child {
 
 .meat-price-table tbody tr.selected td,
 .meat-price-table tbody tr.selected th {
-  background: color-mix(in oklch, var(--primary) 7%, var(--card));
+  background: var(--selection-bg);
 }
 
 .meat-price-table th:first-child button {
@@ -5575,7 +5581,7 @@ td:last-child {
   height: 64px;
   margin-bottom: 18px;
   border-radius: 18px;
-  background: color-mix(in oklch, var(--primary) 10%, var(--card));
+  background: var(--selection-bg-strong);
   color: var(--primary);
 }
 
@@ -5650,7 +5656,7 @@ td:last-child {
   margin-left: auto;
   padding: 0 10px;
   border-radius: 99px;
-  background: color-mix(in oklch, var(--primary) 10%, var(--card));
+  background: var(--selection-bg-strong);
   color: var(--primary);
   font-size: 14px;
   font-weight: 720;
@@ -5750,7 +5756,7 @@ td:last-child {
   height: 30px;
   flex: 0 0 auto;
   border-radius: 8px;
-  background: color-mix(in oklch, var(--primary) 8%, var(--card));
+  background: var(--selection-bg);
   color: var(--primary);
 }
 
@@ -6136,7 +6142,7 @@ td:last-child {
 }
 
 .login-quick:hover {
-  background: color-mix(in oklch, var(--primary) 8%, var(--card));
+  background: var(--selection-bg);
   color: var(--primary);
 }
 

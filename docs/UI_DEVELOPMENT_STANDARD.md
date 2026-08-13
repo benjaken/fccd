@@ -52,10 +52,16 @@ full-width rule.
   **`--nav-active-bg` / `--nav-active-fg`** — an explicit pale green wash +
   green label (about hue `150`). Do not leave residual pink/red from the old
   brand, and never the old brand blue.
+- Selected / active surfaces outside nav (report tabs, product pickers, filter
+  chips) use **`--selection-bg` / `--selection-bg-strong`** (same green hue).
+  Do **not** use `color-mix(... var(--primary) ..., var(--card))` for these
+  washes — it can read as pink/red on some displays.
 - Classes named `red` (`.status-badge.red`, `.metric-icon.red`) map to
   `--destructive` only. Do not reuse them as a stand-in for the old brand
   primary; use `--primary` (green) for brand emphasis. Keep `.status-badge.blue`
   / `.metric-icon.blue` as **informational** blue, not brand color.
+- `.price-up` / `.stock-negative` stay **semantic red** for rises / shortages;
+  they are not brand chrome.
 - Keep chroma in a readable mid range (roughly `0.12`–`0.16`). Avoid returning
   to high-chroma red, and avoid overly desaturated “muddy” primaries.
 - Manage color through semantic tokens (`--primary`, `--accent`, `--ring`,

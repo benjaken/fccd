@@ -174,8 +174,24 @@ describe("Dashboard navigation", () => {
       /\.workspace-soft-link\.active\s*\{[^}]*var\(--nav-active-bg\)/s,
     );
     expect(stylesheet).not.toMatch(/--primary:\s*oklch\([^)]*250\)/);
+  });
+
+  it("uses explicit green selection washes instead of primary color-mix", () => {
+    const stylesheet = readFileSync(
+      path.resolve(process.cwd(), "src/index.css"),
+      "utf8",
+    );
+
+    expect(stylesheet).toMatch(/--selection-bg:\s*oklch\([^)]*150\)/);
+    expect(stylesheet).toMatch(/--selection-bg-strong:\s*oklch\([^)]*150\)/);
+    expect(stylesheet).toMatch(
+      /\.report-tabs button\.active[\s\S]*?background:\s*var\(--selection-bg-strong\)/,
+    );
+    expect(stylesheet).toMatch(
+      /\.meat-price-product-list > button\.selected[\s\S]*?background:\s*var\(--selection-bg\)/,
+    );
     expect(stylesheet).not.toMatch(
-      /\.sidebar-link\.active\s*\{[^}]*oklch\([^)]*\b(1[0-9]|2[0-9]|3[0-5])\b/s,
+      /background:\s*color-mix\(in oklch,\s*var\(--primary\)\s+\d+%\,\s*var\(--card\)\)/,
     );
   });
 });
