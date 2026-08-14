@@ -73,7 +73,7 @@ describe("Meat customers page", () => {
     expect(screen.queryByLabelText("客人編號")).not.toBeInTheDocument();
 
     await user.type(
-      screen.getByPlaceholderText("搜尋編號、名稱、電話或地址"),
+      screen.getByPlaceholderText("搜尋客人編號、名稱、聯絡人、電話或地址"),
       "C0022",
     );
     await user.click(screen.getByRole("button", { name: "搜尋" }));

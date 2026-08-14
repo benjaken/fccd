@@ -175,7 +175,7 @@ describe("Spice usage page", () => {
     );
 
     await screen.findByText("醃雞扒");
-    await user.type(screen.getByPlaceholderText("搜尋配方"), "扁食");
+    await user.type(screen.getByPlaceholderText("搜尋配方名稱"), "扁食");
     await user.click(screen.getByRole("button", { name: "搜尋" }));
 
     expect(screen.getByText("扁食肉餡 (500克)")).toBeInTheDocument();
