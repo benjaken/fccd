@@ -58,7 +58,7 @@ describe("Calculation settings page", () => {
     expect(screen.getByText("10.00%")).toBeInTheDocument();
     expect(screen.getByText("15.00%")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "新增" }));
+    await user.click(screen.getByRole("button", { name: "新建" }));
     const dialog = await screen.findByRole("dialog", { name: "新增計算設定" });
     await user.type(within(dialog).getByLabelText("收成差異 %"), "12");
     await user.type(within(dialog).getByLabelText("Mark-up %"), "8");

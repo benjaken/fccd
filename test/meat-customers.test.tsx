@@ -110,7 +110,7 @@ describe("Meat customers page", () => {
     );
 
     await screen.findByText("桂花小幸 YLP");
-    await user.click(screen.getByRole("button", { name: "新增" }));
+    await user.click(screen.getByRole("button", { name: "新建" }));
 
     await screen.findByRole("dialog", { name: "新增客戶" });
     await user.type(screen.getByPlaceholderText("例如：C0085"), "C0099");

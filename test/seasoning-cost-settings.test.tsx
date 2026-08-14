@@ -47,7 +47,7 @@ describe("Seasoning cost settings page", () => {
       await screen.findByRole("heading", { name: "香料成本設定" }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("tab")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "新增香料成本" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "新建" })).toBeInTheDocument();
     expect(screen.getByText("幼鹽")).toBeInTheDocument();
     expect(screen.getByText("2.5/600")).toBeInTheDocument();
 
@@ -94,7 +94,7 @@ describe("Seasoning cost settings page", () => {
     );
 
     await screen.findByText("幼鹽");
-    await user.click(screen.getByRole("button", { name: "新增香料成本" }));
+    await user.click(screen.getByRole("button", { name: "新建" }));
 
     const dialog = await screen.findByRole("dialog", { name: "新增香料成本" });
     await user.type(
