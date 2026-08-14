@@ -41,6 +41,8 @@ function parseInteger(value: string) {
 
 export function PreparedMeatInboundDeductModal({
   open,
+  title,
+  initialRawMeatItemId,
   onClose,
   onSaved,
   loadRawChoices = fetchPreparedMeatRawMeatChoices,
@@ -48,8 +50,10 @@ export function PreparedMeatInboundDeductModal({
   createInbound = createPreparedMeatInboundWithRaw,
 }: {
   open: boolean;
+  title?: string;
+  initialRawMeatItemId?: string | null;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (rawMeatItemId?: string) => void;
   loadRawChoices?: RawChoicesLoader;
   loadPreview?: PreviewLoader;
   createInbound?: InboundCreator;
@@ -109,7 +113,7 @@ export function PreparedMeatInboundDeductModal({
 
   useEffect(() => {
     if (!open) return;
-    setRawMeatIds([]);
+    setRawMeatIds(initialRawMeatItemId ? [initialRawMeatItemId] : []);
     setMovementDate(hongKongDateInputValue());
     setOutboundText("");
     setRemarks("");
@@ -117,11 +121,10 @@ export function PreparedMeatInboundDeductModal({
     setPackTexts({});
     setError(null);
     setSubmitting(false);
-    setLoading(true);
+    if (!initialRawMeatItemId) setLoading(true);
     void loadRawChoices()
       .then((rows) => {
         setRawChoices(rows);
-        setError(null);
       })
       .catch((loadError: unknown) => {
         setRawChoices([]);
@@ -131,8 +134,10 @@ export function PreparedMeatInboundDeductModal({
             : t("preparedMeatInventory.inboundDeduct.loadError"),
         );
       })
-      .finally(() => setLoading(false));
-  }, [loadRawChoices, open, t]);
+      .finally(() => {
+        if (!initialRawMeatItemId) setLoading(false);
+      });
+  }, [initialRawMeatItemId, loadRawChoices, open, t]);
 
   useEffect(() => {
     if (!open || !rawMeatId) {
@@ -189,7 +194,7 @@ export function PreparedMeatInboundDeductModal({
           quantity: line.quantity as number,
         })),
       });
-      onSaved();
+      onSaved(rawMeatId);
       onClose();
     } catch (saveError: unknown) {
       setError(
@@ -205,7 +210,7 @@ export function PreparedMeatInboundDeductModal({
   return (
     <SidePanel
       open={open}
-      title={t("preparedMeatInventory.inboundDeduct.title")}
+      title={title ?? t("preparedMeatInventory.inboundDeduct.title")}
       onClose={onClose}
       closeLabel={t("preparedMeatInventory.closeOptions")}
       wide

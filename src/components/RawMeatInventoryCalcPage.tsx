@@ -5,6 +5,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type ComponentProps,
 } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -22,6 +23,7 @@ import {
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
 import { ListTable } from "@/components/ui/list-table";
+import { PreparedMeatInboundDeductModal } from "@/components/PreparedMeatInboundDeductModal";
 import { RawMeatOptionFormModal } from "@/components/RawMeatOptionFormModal";
 import { RawMeatOptionsModal } from "@/components/RawMeatOptionsModal";
 import { RawMeatStockInModal } from "@/components/RawMeatStockInModal";
@@ -76,6 +78,10 @@ type ItemFlagsSaver = (
 type ItemCreator = typeof createRawMeatItem;
 type ItemUpdater = typeof updateRawMeatItem;
 type StockInCreator = typeof createRawMeatStockIn;
+type InboundDeductModalProps = Pick<
+  ComponentProps<typeof PreparedMeatInboundDeductModal>,
+  "loadRawChoices" | "loadPreview" | "createInbound"
+>;
 
 function RemarkEditor({
   value,
@@ -223,6 +229,9 @@ export function RawMeatInventoryCalcPage({
   updateItem = updateRawMeatItem,
   createStockIn = createRawMeatStockIn,
   loadUnitMultipliers = fetchRawMeatUnitMultipliers,
+  loadRawChoices,
+  loadPreview,
+  createInbound,
   canCreate: canCreateProp,
   canEdit: canEditProp,
   canStockIn: canStockInProp,
@@ -239,7 +248,7 @@ export function RawMeatInventoryCalcPage({
   canCreate?: boolean;
   canEdit?: boolean;
   canStockIn?: boolean;
-}) {
+} & InboundDeductModalProps) {
   const { t, i18n } = useTranslation();
   const pageAccess = useCurrentPageAccess();
   const canCreate =
@@ -263,6 +272,7 @@ export function RawMeatInventoryCalcPage({
   const [optionFormOpen, setOptionFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<RawMeatItemOption | null>(null);
   const [stockInOpen, setStockInOpen] = useState(false);
+  const [stockOutOpen, setStockOutOpen] = useState(false);
   const [year, setYear] = useState(() => currentHongKongYear());
   const [monthFilter, setMonthFilter] = useState<string | null>(null);
   const [monthMenuOpen, setMonthMenuOpen] = useState(false);
@@ -603,8 +613,7 @@ export function RawMeatInventoryCalcPage({
           </Button>
           <Button
             type="button"
-            disabled
-            title={t("rawMeatInventory.comingSoon")}
+            onClick={() => setStockOutOpen(true)}
           >
             {t("rawMeatInventory.stockOut")}
           </Button>
@@ -970,6 +979,19 @@ export function RawMeatInventoryCalcPage({
         }}
         createStockIn={createStockIn}
         loadUnitMultipliers={loadUnitMultipliers}
+      />
+      <PreparedMeatInboundDeductModal
+        open={stockOutOpen}
+        title={t("rawMeatInventory.stockOut")}
+        initialRawMeatItemId={selectedItemId}
+        onClose={() => setStockOutOpen(false)}
+        onSaved={(rawMeatItemId) => {
+          if (rawMeatItemId) setSelectedItemId(rawMeatItemId);
+          reload();
+        }}
+        loadRawChoices={loadRawChoices}
+        loadPreview={loadPreview}
+        createInbound={createInbound}
       />
     </section>
   );
