@@ -2240,14 +2240,6 @@ td:last-child {
   width: auto;
 }
 
-.prepared-meat-calc-edit-inbound {
-  color: #0f766e;
-}
-
-.prepared-meat-calc-edit-outbound {
-  color: #c2410c;
-}
-
 .raw-meat-options-panel-error {
   margin: 0 0 12px;
   color: var(--destructive);

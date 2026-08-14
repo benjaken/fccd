@@ -216,7 +216,7 @@ describe("Prepared meat inventory calculation page", () => {
     );
   });
 
-  it("uses different icon-only edit buttons for inbound and outbound rows", async () => {
+  it("uses the same pencil edit icon for inbound and outbound, targeting different forms", async () => {
     const loadItems = vi.fn().mockResolvedValue(items);
     const loadMovements = vi
       .fn()
@@ -234,15 +234,12 @@ describe("Prepared meat inventory calculation page", () => {
     const inboundEdit = await screen.findByRole("button", { name: "入貨編輯" });
     const outboundEdits = screen.getAllByRole("button", { name: "出貨編輯" });
 
-    expect(inboundEdit).toBeInTheDocument();
-    expect(inboundEdit).toHaveClass("prepared-meat-calc-edit-inbound");
+    expect(inboundEdit).toHaveAttribute("data-edit-form", "inbound");
     expect(inboundEdit.textContent).toBe("");
     expect(outboundEdits.length).toBeGreaterThan(0);
-    expect(outboundEdits[0]).toHaveClass("prepared-meat-calc-edit-outbound");
+    expect(outboundEdits[0]).toHaveAttribute("data-edit-form", "outbound");
     expect(outboundEdits[0]?.textContent).toBe("");
-    expect(inboundEdit.querySelector("svg")).not.toBeNull();
-    expect(outboundEdits[0]?.querySelector("svg")).not.toBeNull();
-    expect(inboundEdit.querySelector("svg")?.innerHTML).not.toBe(
+    expect(inboundEdit.querySelector("svg")?.innerHTML).toBe(
       outboundEdits[0]?.querySelector("svg")?.innerHTML,
     );
   });

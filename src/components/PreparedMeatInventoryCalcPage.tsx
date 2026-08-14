@@ -11,8 +11,7 @@ import { useTranslation } from "react-i18next";
 import {
   ChevronDown,
   Package,
-  PackageMinus,
-  PackagePlus,
+  Pencil,
   SlidersHorizontal,
 } from "lucide-react";
 
@@ -633,11 +632,11 @@ export function PreparedMeatInventoryCalcPage({
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="prepared-meat-calc-edit-inbound"
+                          data-edit-form="inbound"
                           aria-label={t("preparedMeatInventory.editInbound")}
                           title={t("preparedMeatInventory.editInbound")}
                         >
-                          <PackagePlus />
+                          <Pencil />
                         </Button>
                       ) : null}
                       {row.kind === "outbound" || row.kind === "both" ? (
@@ -645,11 +644,11 @@ export function PreparedMeatInventoryCalcPage({
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="prepared-meat-calc-edit-outbound"
+                          data-edit-form="outbound"
                           aria-label={t("preparedMeatInventory.editOutbound")}
                           title={t("preparedMeatInventory.editOutbound")}
                         >
-                          <PackageMinus />
+                          <Pencil />
                         </Button>
                       ) : null}
                     </div>
