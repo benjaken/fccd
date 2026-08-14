@@ -92,6 +92,7 @@ import {
   type DashboardData,
   type DashboardJob,
 } from "@/lib/dashboard";
+import { FROZEN_ACTION_PAGE_KEYS } from "@/lib/frozen-action-permissions";
 import { useTheme } from "@/lib/use-theme";
 import { useAnimatedNumber } from "@/lib/use-animated-number";
 import { cn } from "@/lib/utils";
@@ -392,6 +393,7 @@ const SECTION_CHILD_KEYS: Record<string, string[]> = {
     "frozen.calculation_settings",
     "frozen.meat_customers",
     "frozen.spice_usage",
+    ...FROZEN_ACTION_PAGE_KEYS,
   ],
   kitchen: ["kitchen.calendar", "kitchen.inventory"],
   delivery: ["delivery.assign"],

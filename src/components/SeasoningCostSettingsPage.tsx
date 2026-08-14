@@ -2,24 +2,22 @@ import {
   useEffect,
   useEffectEvent,
   useMemo,
-  useRef,
   useState,
   type FormEvent,
-  type ReactNode,
 } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
-  Check,
   Leaf,
+  Pencil,
   Plus,
   RefreshCw,
   Trash2,
-  X,
 } from "lucide-react";
 
+import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
@@ -31,17 +29,16 @@ import {
   fetchSeasoningCosts,
   filterSeasoningCosts,
   SEASONING_COST_PAGE_SIZE,
-  updateSeasoningCalculation,
-  updateSeasoningRemark,
+  updateSeasoningCost,
   type SeasoningCostRow,
 } from "@/lib/seasoning-cost";
+import { FROZEN_ACTION_PERMISSION_KEYS } from "@/lib/frozen-action-permissions";
 import { tryEvaluateSeasoningExpression } from "@/lib/seasoning-expression";
 import { cn } from "@/lib/utils";
 
 type SeasoningsLoader = () => Promise<SeasoningCostRow[]>;
 type SeasoningCreator = typeof createSeasoningCost;
-type CalculationSaver = typeof updateSeasoningCalculation;
-type RemarkSaver = typeof updateSeasoningRemark;
+type SeasoningUpdater = typeof updateSeasoningCost;
 type SeasoningDeleter = typeof archiveSeasoningCost;
 type SortKey = "sortOrder" | "updatedAt";
 type SortDirection = "asc" | "desc";
@@ -53,8 +50,11 @@ const SEASONING_COST_SKELETON_COLUMNS = [
   { width: "6rem" },
   { width: "8rem" },
   { width: "10rem" },
-  { width: "2.5rem", variant: "action" as const },
 ];
+const SEASONING_COST_ACTION_SKELETON = {
+  width: "4.5rem",
+  variant: "action" as const,
+};
 
 function SortHeaderButton({
   label,
@@ -94,164 +94,29 @@ function SortHeaderButton({
   );
 }
 
-function InlineTextEditor({
-  value,
-  disabled,
-  emptyLabel,
-  editLabel,
-  saveLabel,
-  cancelLabel,
-  placeholder,
-  onSave,
-  className,
-  renderPreview,
-}: {
-  value: string | null;
-  disabled?: boolean;
-  emptyLabel: string;
-  editLabel: string;
-  saveLabel: string;
-  cancelLabel: string;
-  placeholder: string;
-  onSave: (next: string) => Promise<void>;
-  className?: string;
-  renderPreview?: (draft: string) => ReactNode;
-}) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(value ?? "");
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (!editing) setDraft(value ?? "");
-  }, [editing, value]);
-
-  useEffect(() => {
-    if (editing) inputRef.current?.focus();
-  }, [editing]);
-
-  const cancel = () => {
-    setDraft(value ?? "");
-    setSaveError(null);
-    setEditing(false);
-  };
-
-  const save = async () => {
-    if (saving) return;
-    const next = draft.trim();
-    const current = (value ?? "").trim();
-    if (next === current) {
-      setEditing(false);
-      setSaveError(null);
-      return;
-    }
-    setSaving(true);
-    setSaveError(null);
-    try {
-      await onSave(draft);
-      setEditing(false);
-    } catch (error) {
-      setSaveError(error instanceof Error ? error.message : "save_failed");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  if (!editing) {
-    return (
-      <button
-        type="button"
-        className={
-          value
-            ? `seasoning-cost-inline-trigger ${className ?? ""}`.trim()
-            : `seasoning-cost-inline-trigger is-empty ${className ?? ""}`.trim()
-        }
-        onClick={() => {
-          if (disabled) return;
-          setEditing(true);
-        }}
-        disabled={disabled}
-        title={value || editLabel}
-        aria-label={editLabel}
-      >
-        {value || emptyLabel}
-      </button>
-    );
-  }
-
-  return (
-    <div className="seasoning-cost-inline-editor">
-      <input
-        ref={inputRef}
-        type="text"
-        value={draft}
-        disabled={saving}
-        placeholder={placeholder}
-        aria-label={editLabel}
-        onChange={(event) => setDraft(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key === "Enter") {
-            event.preventDefault();
-            void save();
-          }
-          if (event.key === "Escape") {
-            event.preventDefault();
-            cancel();
-          }
-        }}
-      />
-      <div className="seasoning-cost-inline-actions">
-        <Button
-          type="button"
-          size="icon"
-          variant="ghost"
-          disabled={saving}
-          aria-label={saveLabel}
-          title={saveLabel}
-          onClick={() => void save()}
-        >
-          <Check />
-        </Button>
-        <Button
-          type="button"
-          size="icon"
-          variant="ghost"
-          disabled={saving}
-          aria-label={cancelLabel}
-          title={cancelLabel}
-          onClick={cancel}
-        >
-          <X />
-        </Button>
-      </div>
-      {renderPreview ? (
-        <div className="seasoning-cost-inline-preview">{renderPreview(draft)}</div>
-      ) : null}
-      {saveError ? (
-        <span className="seasoning-cost-inline-error">{saveError}</span>
-      ) : null}
-    </div>
-  );
-}
-
-function CreateSeasoningCostPanel({
+function SeasoningCostFormPanel({
   open,
+  seasoning,
   onClose,
-  onCreated,
+  onSaved,
   createSeasoning,
+  updateSeasoning,
 }: {
   open: boolean;
+  seasoning: SeasoningCostRow | null;
   onClose: () => void;
-  onCreated: (row: SeasoningCostRow) => void;
+  onSaved: (row: SeasoningCostRow, mode: "create" | "edit") => void;
   createSeasoning: SeasoningCreator;
+  updateSeasoning: SeasoningUpdater;
 }) {
   const { t, i18n } = useTranslation();
   const [name, setName] = useState("");
   const [expression, setExpression] = useState("");
+  const [remark, setRemark] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const editing = Boolean(seasoning);
 
   const costFormatter = useMemo(
     () =>
@@ -264,9 +129,16 @@ function CreateSeasoningCostPanel({
 
   const previewCost = tryEvaluateSeasoningExpression(expression);
 
+  useEffect(() => {
+    if (!open) return;
+    setName(seasoning?.name ?? "");
+    setExpression(seasoning?.calculationExpression ?? "");
+    setRemark(seasoning?.description ?? "");
+    setError(null);
+    setFieldErrors({});
+  }, [open, seasoning]);
+
   const closeAndReset = () => {
-    setName("");
-    setExpression("");
     setError(null);
     setFieldErrors({});
     onClose();
@@ -291,20 +163,24 @@ function CreateSeasoningCostPanel({
     if (!validate()) return;
     setSubmitting(true);
     setError(null);
+    const payload = {
+      name,
+      calculationExpression: expression,
+      description: remark,
+    };
     try {
-      const row = await createSeasoning({
-        name,
-        calculationExpression: expression,
-      });
-      setName("");
-      setExpression("");
-      onCreated(row);
-      onClose();
+      const row = seasoning
+        ? await updateSeasoning(seasoning.id, payload)
+        : await createSeasoning(payload);
+      onSaved(row, seasoning ? "edit" : "create");
+      closeAndReset();
     } catch (saveError) {
       setError(
         saveError instanceof Error
           ? saveError.message
-          : t("seasoningCost.createError"),
+          : t(
+              editing ? "seasoningCost.editError" : "seasoningCost.createError",
+            ),
       );
     } finally {
       setSubmitting(false);
@@ -314,7 +190,9 @@ function CreateSeasoningCostPanel({
   return (
     <SidePanel
       open={open}
-      title={t("seasoningCost.createTitle")}
+      title={t(
+        editing ? "seasoningCost.editTitle" : "seasoningCost.createTitle",
+      )}
       onClose={closeAndReset}
       closeLabel={t("seasoningCost.closePanel")}
       footer={
@@ -324,7 +202,7 @@ function CreateSeasoningCostPanel({
           </Button>
           <Button
             type="submit"
-            form="create-seasoning-cost-form"
+            form="seasoning-cost-form"
             disabled={submitting}
           >
             {submitting
@@ -335,7 +213,7 @@ function CreateSeasoningCostPanel({
       }
     >
       <form
-        id="create-seasoning-cost-form"
+        id="seasoning-cost-form"
         className="seasoning-cost-form"
         onSubmit={(event) => void submit(event)}
       >
@@ -382,6 +260,16 @@ function CreateSeasoningCostPanel({
           />
         </label>
 
+        <label className="seasoning-cost-field">
+          <span>{t("seasoningCost.fields.remark")}</span>
+          <textarea
+            value={remark}
+            onChange={(event) => setRemark(event.target.value)}
+            placeholder={t("seasoningCost.fields.remarkPlaceholder")}
+            rows={3}
+          />
+        </label>
+
         {error ? <p className="seasoning-cost-form-error">{error}</p> : null}
       </form>
     </SidePanel>
@@ -391,22 +279,34 @@ function CreateSeasoningCostPanel({
 export function SeasoningCostSettingsPage({
   loadSeasonings = fetchSeasoningCosts,
   createSeasoning = createSeasoningCost,
-  saveCalculation = updateSeasoningCalculation,
-  saveRemark = updateSeasoningRemark,
+  updateSeasoning = updateSeasoningCost,
   deleteSeasoning = archiveSeasoningCost,
+  canEdit: canEditProp,
+  canDelete: canDeleteProp,
 }: {
   loadSeasonings?: SeasoningsLoader;
   createSeasoning?: SeasoningCreator;
-  saveCalculation?: CalculationSaver;
-  saveRemark?: RemarkSaver;
+  updateSeasoning?: SeasoningUpdater;
   deleteSeasoning?: SeasoningDeleter;
+  canEdit?: boolean;
+  canDelete?: boolean;
 }) {
   const { t, i18n } = useTranslation();
+  const pageAccess = useCurrentPageAccess();
+  const canEdit =
+    canEditProp ??
+    pageAccess.canAccess(FROZEN_ACTION_PERMISSION_KEYS.seasoningCost.edit);
+  const canDelete =
+    canDeleteProp ??
+    pageAccess.canAccess(FROZEN_ACTION_PERMISSION_KEYS.seasoningCost.delete);
+  const showRowActions = canEdit || canDelete;
   const [rows, setRows] = useState<SeasoningCostRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
-  const [createOpen, setCreateOpen] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [editingSeasoning, setEditingSeasoning] =
+    useState<SeasoningCostRow | null>(null);
   const [draftSearch, setDraftSearch] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -521,28 +421,24 @@ export function SeasoningCostSettingsPage({
     };
   }, [loadSeasonings, reloadKey, t]);
 
-  const handleSaveCalculation = useEffectEvent(
-    async (seasoningId: string, expression: string) => {
-      const updated = await saveCalculation(seasoningId, expression);
-      setRows((current) =>
-        current.map((row) => (row.id === seasoningId ? updated : row)),
-      );
-    },
-  );
+  const openCreate = () => {
+    setEditingSeasoning(null);
+    setPanelOpen(true);
+  };
 
-  const handleSaveRemark = useEffectEvent(
-    async (seasoningId: string, remark: string) => {
-      const saved = await saveRemark(seasoningId, remark);
-      setRows((current) =>
-        current.map((row) =>
-          row.id === seasoningId ? { ...row, description: saved } : row,
-        ),
-      );
-    },
-  );
+  const openEdit = (row: SeasoningCostRow) => {
+    if (!canEdit) return;
+    setEditingSeasoning(row);
+    setPanelOpen(true);
+  };
+
+  const closePanel = () => {
+    setPanelOpen(false);
+    setEditingSeasoning(null);
+  };
 
   const handleDelete = useEffectEvent(async (row: SeasoningCostRow) => {
-    if (deletingId) return;
+    if (!canDelete || deletingId) return;
     const confirmed = window.confirm(t("seasoningCost.deleteConfirm"));
     if (!confirmed) return;
     setDeletingId(row.id);
@@ -561,6 +457,9 @@ export function SeasoningCostSettingsPage({
     }
   });
 
+  const display = (value: string | null | undefined) =>
+    value?.trim() ? value : t("common.notSet");
+
   return (
     <section className="seasoning-cost-page">
       <header className="page-heading seasoning-cost-heading">
@@ -578,7 +477,7 @@ export function SeasoningCostSettingsPage({
             <RefreshCw />
             {t("seasoningCost.refresh")}
           </Button>
-          <Button type="button" onClick={() => setCreateOpen(true)}>
+          <Button type="button" onClick={openCreate}>
             <Plus />
             {t("seasoningCost.add")}
           </Button>
@@ -626,7 +525,7 @@ export function SeasoningCostSettingsPage({
               <strong>{t("seasoningCost.empty")}</strong>
               <span>{t("seasoningCost.emptyDescription")}</span>
             </div>
-            <Button type="button" onClick={() => setCreateOpen(true)}>
+            <Button type="button" onClick={openCreate}>
               <Plus />
               {t("seasoningCost.add")}
             </Button>
@@ -638,7 +537,11 @@ export function SeasoningCostSettingsPage({
             loading={loading}
             loadingLabel={t("seasoningCost.loading")}
             skeletonRows={SEASONING_COST_PAGE_SIZE}
-            skeletonColumns={SEASONING_COST_SKELETON_COLUMNS}
+            skeletonColumns={
+              showRowActions
+                ? [...SEASONING_COST_SKELETON_COLUMNS, SEASONING_COST_ACTION_SKELETON]
+                : SEASONING_COST_SKELETON_COLUMNS
+            }
             header={
               <tr>
                 <th>
@@ -663,7 +566,9 @@ export function SeasoningCostSettingsPage({
                   />
                 </th>
                 <th>{t("seasoningCost.columns.remark")}</th>
-                <th aria-label={t("seasoningCost.columns.actions")} />
+                {showRowActions ? (
+                  <th aria-label={t("seasoningCost.columns.actions")} />
+                ) : null}
               </tr>
             }
           >
@@ -674,38 +579,7 @@ export function SeasoningCostSettingsPage({
                   <strong>{row.name}</strong>
                 </td>
                 <td className="seasoning-cost-calc-cell">
-                  <InlineTextEditor
-                    value={row.calculationExpression}
-                    emptyLabel={t("common.notSet")}
-                    editLabel={t("seasoningCost.editCalculation")}
-                    saveLabel={t("seasoningCost.save")}
-                    cancelLabel={t("seasoningCost.cancel")}
-                    placeholder={t(
-                      "seasoningCost.fields.calculationPlaceholder",
-                    )}
-                    className="is-mono"
-                    renderPreview={(draft) => {
-                      const preview = tryEvaluateSeasoningExpression(draft);
-                      return (
-                        <>
-                          <span>{t("seasoningCost.columns.costPerGram")}</span>
-                          <strong>
-                            {preview === null
-                              ? t("common.notSet")
-                              : costFormatter.format(preview)}
-                          </strong>
-                        </>
-                      );
-                    }}
-                    onSave={async (next) => {
-                      if (tryEvaluateSeasoningExpression(next) === null) {
-                        throw new Error(
-                          t("seasoningCost.validation.expressionInvalid"),
-                        );
-                      }
-                      await handleSaveCalculation(row.id, next);
-                    }}
-                  />
+                  {display(row.calculationExpression)}
                 </td>
                 <td>
                   {row.costPerGram === null
@@ -718,35 +592,42 @@ export function SeasoningCostSettingsPage({
                     : t("common.notSet")}
                 </td>
                 <td className="seasoning-cost-remark-cell">
-                  <InlineTextEditor
-                    value={row.description}
-                    emptyLabel={t("common.notSet")}
-                    editLabel={t("seasoningCost.editRemark")}
-                    saveLabel={t("seasoningCost.save")}
-                    cancelLabel={t("seasoningCost.cancel")}
-                    placeholder={t("seasoningCost.remarkPlaceholder")}
-                    onSave={async (next) => {
-                      await handleSaveRemark(row.id, next);
-                    }}
-                  />
+                  {display(row.description)}
                 </td>
-                <td className="table-actions-cell">
-                  <div className="table-row-actions">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      disabled={deletingId === row.id}
-                      aria-label={t("seasoningCost.delete")}
-                      title={t("seasoningCost.delete")}
-                      onClick={() => {
-                        void handleDelete(row);
-                      }}
-                    >
-                      <Trash2 />
-                    </Button>
-                  </div>
-                </td>
+                {showRowActions ? (
+                  <td className="table-actions-cell">
+                    <div className="table-row-actions">
+                      {canEdit ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          disabled={deletingId === row.id}
+                          aria-label={t("seasoningCost.edit")}
+                          title={t("seasoningCost.edit")}
+                          onClick={() => openEdit(row)}
+                        >
+                          <Pencil />
+                        </Button>
+                      ) : null}
+                      {canDelete ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          disabled={deletingId === row.id}
+                          aria-label={t("seasoningCost.delete")}
+                          title={t("seasoningCost.delete")}
+                          onClick={() => {
+                            void handleDelete(row);
+                          }}
+                        >
+                          <Trash2 />
+                        </Button>
+                      ) : null}
+                    </div>
+                  </td>
+                ) : null}
               </tr>
             ))}
           </ListTable>
@@ -777,13 +658,19 @@ export function SeasoningCostSettingsPage({
         />
       </article>
 
-      <CreateSeasoningCostPanel
-        open={createOpen}
-        onClose={() => setCreateOpen(false)}
+      <SeasoningCostFormPanel
+        open={panelOpen && (!editingSeasoning || canEdit)}
+        seasoning={editingSeasoning}
+        onClose={closePanel}
         createSeasoning={createSeasoning}
-        onCreated={(row) => {
-          setRows((current) => [...current, row]);
-          setCreateOpen(false);
+        updateSeasoning={updateSeasoning}
+        onSaved={(row, mode) => {
+          setRows((current) =>
+            mode === "create"
+              ? [...current.filter((item) => item.id !== row.id), row]
+              : current.map((item) => (item.id === row.id ? row : item)),
+          );
+          closePanel();
         }}
       />
     </section>

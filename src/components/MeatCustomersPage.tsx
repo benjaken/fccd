@@ -1,7 +1,8 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, Trash2, Users } from "lucide-react";
+import { Pencil, Plus, Trash2, Users } from "lucide-react";
 
+import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
@@ -10,14 +11,17 @@ import {
   archiveMeatCustomer,
   createMeatCustomer,
   fetchMeatCustomers,
+  updateMeatCustomer,
   type MeatCustomerFilters,
   type MeatCustomerRow,
 } from "@/lib/meat-customers";
+import { FROZEN_ACTION_PERMISSION_KEYS } from "@/lib/frozen-action-permissions";
 
 type CustomersLoader = (
   filters?: MeatCustomerFilters,
 ) => Promise<MeatCustomerRow[]>;
 type CustomerCreator = typeof createMeatCustomer;
+type CustomerUpdater = typeof updateMeatCustomer;
 type CustomerDeleter = typeof archiveMeatCustomer;
 
 const MEAT_CUSTOMERS_SKELETON_COLUMNS = [
@@ -26,19 +30,26 @@ const MEAT_CUSTOMERS_SKELETON_COLUMNS = [
   { width: "8rem" },
   { width: "8rem" },
   { width: "28rem" },
-  { width: "2.5rem", variant: "action" as const },
 ];
+const MEAT_CUSTOMERS_ACTION_SKELETON = {
+  width: "4.5rem",
+  variant: "action" as const,
+};
 
-function CreateMeatCustomerPanel({
+function MeatCustomerFormPanel({
   open,
+  customer,
   onClose,
-  onCreated,
+  onSaved,
   createCustomer,
+  updateCustomer,
 }: {
   open: boolean;
+  customer: MeatCustomerRow | null;
   onClose: () => void;
-  onCreated: (row: MeatCustomerRow) => void;
+  onSaved: (row: MeatCustomerRow, mode: "create" | "edit") => void;
   createCustomer: CustomerCreator;
+  updateCustomer: CustomerUpdater;
 }) {
   const { t } = useTranslation();
   const [customerCode, setCustomerCode] = useState("");
@@ -49,13 +60,20 @@ function CreateMeatCustomerPanel({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
+  const editing = Boolean(customer);
+
+  useEffect(() => {
+    if (!open) return;
+    setCustomerCode(customer?.customerCode ?? "");
+    setName(customer?.name ?? "");
+    setContactPerson(customer?.contactPerson ?? "");
+    setPhone(customer?.phone ?? "");
+    setAddress(customer?.address ?? "");
+    setError(null);
+    setNameError(null);
+  }, [customer, open]);
 
   const closeAndReset = () => {
-    setCustomerCode("");
-    setName("");
-    setContactPerson("");
-    setPhone("");
-    setAddress("");
     setError(null);
     setNameError(null);
     onClose();
@@ -70,21 +88,24 @@ function CreateMeatCustomerPanel({
     setNameError(null);
     setSubmitting(true);
     setError(null);
+    const payload = {
+      customerCode,
+      name,
+      contactPerson,
+      phone,
+      address,
+    };
     try {
-      const row = await createCustomer({
-        customerCode,
-        name,
-        contactPerson,
-        phone,
-        address,
-      });
-      onCreated(row);
+      const row = customer
+        ? await updateCustomer(customer.id, payload)
+        : await createCustomer(payload);
+      onSaved(row, customer ? "edit" : "create");
       closeAndReset();
     } catch (saveError) {
       setError(
         saveError instanceof Error
           ? saveError.message
-          : t("meatCustomers.createError"),
+          : t(editing ? "meatCustomers.editError" : "meatCustomers.createError"),
       );
     } finally {
       setSubmitting(false);
@@ -94,7 +115,9 @@ function CreateMeatCustomerPanel({
   return (
     <SidePanel
       open={open}
-      title={t("meatCustomers.createTitle")}
+      title={t(
+        editing ? "meatCustomers.editTitle" : "meatCustomers.createTitle",
+      )}
       onClose={closeAndReset}
       closeLabel={t("meatCustomers.closePanel")}
       footer={
@@ -104,7 +127,7 @@ function CreateMeatCustomerPanel({
           </Button>
           <Button
             type="submit"
-            form="create-meat-customer-form"
+            form="meat-customer-form"
             disabled={submitting}
           >
             {submitting
@@ -115,7 +138,7 @@ function CreateMeatCustomerPanel({
       }
     >
       <form
-        id="create-meat-customer-form"
+        id="meat-customer-form"
         className="meat-customers-form"
         onSubmit={(event) => void submit(event)}
       >
@@ -173,20 +196,36 @@ function CreateMeatCustomerPanel({
 export function MeatCustomersPage({
   loadCustomers = fetchMeatCustomers,
   createCustomer = createMeatCustomer,
+  updateCustomer = updateMeatCustomer,
   deleteCustomer = archiveMeatCustomer,
+  canEdit: canEditProp,
+  canDelete: canDeleteProp,
 }: {
   loadCustomers?: CustomersLoader;
   createCustomer?: CustomerCreator;
+  updateCustomer?: CustomerUpdater;
   deleteCustomer?: CustomerDeleter;
+  canEdit?: boolean;
+  canDelete?: boolean;
 }) {
   const { t } = useTranslation();
+  const pageAccess = useCurrentPageAccess();
+  const canEdit =
+    canEditProp ??
+    pageAccess.canAccess(FROZEN_ACTION_PERMISSION_KEYS.meatCustomers.edit);
+  const canDelete =
+    canDeleteProp ??
+    pageAccess.canAccess(FROZEN_ACTION_PERMISSION_KEYS.meatCustomers.delete);
+  const showRowActions = canEdit || canDelete;
   const [rows, setRows] = useState<MeatCustomerRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [draftSearch, setDraftSearch] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
-  const [createOpen, setCreateOpen] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [editingCustomer, setEditingCustomer] =
+    useState<MeatCustomerRow | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -225,8 +264,24 @@ export function MeatCustomersPage({
   const display = (value: string | null | undefined) =>
     value?.trim() ? value : t("common.notSet");
 
+  const openCreate = () => {
+    setEditingCustomer(null);
+    setPanelOpen(true);
+  };
+
+  const openEdit = (row: MeatCustomerRow) => {
+    if (!canEdit) return;
+    setEditingCustomer(row);
+    setPanelOpen(true);
+  };
+
+  const closePanel = () => {
+    setPanelOpen(false);
+    setEditingCustomer(null);
+  };
+
   const handleDelete = async (row: MeatCustomerRow) => {
-    if (deletingId) return;
+    if (!canDelete || deletingId) return;
     const confirmed = window.confirm(t("meatCustomers.deleteConfirm"));
     if (!confirmed) return;
     setDeletingId(row.id);
@@ -252,7 +307,7 @@ export function MeatCustomersPage({
           <span className="eyebrow">{t("meatCustomers.eyebrow")}</span>
           <h1>{t("meatCustomers.title")}</h1>
         </div>
-        <Button type="button" onClick={() => setCreateOpen(true)}>
+        <Button type="button" onClick={openCreate}>
           <Plus />
           {t("meatCustomers.add")}
         </Button>
@@ -296,7 +351,7 @@ export function MeatCustomersPage({
               <strong>{t("meatCustomers.empty")}</strong>
               <span>{t("meatCustomers.emptyDescription")}</span>
             </div>
-            <Button type="button" onClick={() => setCreateOpen(true)}>
+            <Button type="button" onClick={openCreate}>
               <Plus />
               {t("meatCustomers.add")}
             </Button>
@@ -308,7 +363,11 @@ export function MeatCustomersPage({
             loading={loading}
             loadingLabel={t("meatCustomers.loading")}
             skeletonRows={8}
-            skeletonColumns={MEAT_CUSTOMERS_SKELETON_COLUMNS}
+            skeletonColumns={
+              showRowActions
+                ? [...MEAT_CUSTOMERS_SKELETON_COLUMNS, MEAT_CUSTOMERS_ACTION_SKELETON]
+                : MEAT_CUSTOMERS_SKELETON_COLUMNS
+            }
             header={
               <tr>
                 <th>{t("meatCustomers.columns.customerCode")}</th>
@@ -318,7 +377,9 @@ export function MeatCustomersPage({
                 <th className="meat-customers-address-cell">
                   {t("meatCustomers.columns.address")}
                 </th>
-                <th aria-label={t("meatCustomers.columns.actions")} />
+                {showRowActions ? (
+                  <th aria-label={t("meatCustomers.columns.actions")} />
+                ) : null}
               </tr>
             }
           >
@@ -333,36 +394,59 @@ export function MeatCustomersPage({
                 <td className="meat-customers-address-cell">
                   {display(row.address)}
                 </td>
-                <td className="table-actions-cell">
-                  <div className="table-row-actions">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      disabled={deletingId === row.id}
-                      aria-label={t("meatCustomers.delete")}
-                      title={t("meatCustomers.delete")}
-                      onClick={() => {
-                        void handleDelete(row);
-                      }}
-                    >
-                      <Trash2 />
-                    </Button>
-                  </div>
-                </td>
+                {showRowActions ? (
+                  <td className="table-actions-cell">
+                    <div className="table-row-actions">
+                      {canEdit ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          disabled={deletingId === row.id}
+                          aria-label={t("meatCustomers.edit")}
+                          title={t("meatCustomers.edit")}
+                          onClick={() => openEdit(row)}
+                        >
+                          <Pencil />
+                        </Button>
+                      ) : null}
+                      {canDelete ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          disabled={deletingId === row.id}
+                          aria-label={t("meatCustomers.delete")}
+                          title={t("meatCustomers.delete")}
+                          onClick={() => {
+                            void handleDelete(row);
+                          }}
+                        >
+                          <Trash2 />
+                        </Button>
+                      ) : null}
+                    </div>
+                  </td>
+                ) : null}
               </tr>
             ))}
           </ListTable>
         )}
       </article>
 
-      <CreateMeatCustomerPanel
-        open={createOpen}
-        onClose={() => setCreateOpen(false)}
+      <MeatCustomerFormPanel
+        open={panelOpen && (!editingCustomer || canEdit)}
+        customer={editingCustomer}
+        onClose={closePanel}
         createCustomer={createCustomer}
-        onCreated={(row) => {
-          setRows((current) => [row, ...current]);
-          setCreateOpen(false);
+        updateCustomer={updateCustomer}
+        onSaved={(row, mode) => {
+          setRows((current) =>
+            mode === "create"
+              ? [row, ...current.filter((item) => item.id !== row.id)]
+              : current.map((item) => (item.id === row.id ? row : item)),
+          );
+          closePanel();
         }}
       />
     </section>
