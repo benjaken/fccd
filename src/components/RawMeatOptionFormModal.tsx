@@ -1,9 +1,9 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 
-import { RawMeatModal } from "@/components/RawMeatModal";
 import { RawMeatTagPicker } from "@/components/RawMeatTagPicker";
 import { Button } from "@/components/ui/button";
+import { SidePanel } from "@/components/ui/side-panel";
 import {
   createRawMeatItem,
   fetchRawMeatSuppliers,
@@ -115,7 +115,7 @@ export function RawMeatOptionFormModal({
   const canSubmit = name.trim().length > 0 && !submitting;
 
   return (
-    <RawMeatModal
+    <SidePanel
       open={open}
       title={t(
         editing
@@ -125,16 +125,20 @@ export function RawMeatOptionFormModal({
       onClose={closeAndReset}
       closeLabel={t("rawMeatInventory.closeOptions")}
       footer={
-        <Button
-          type="submit"
-          form="raw-meat-option-form"
-          className="raw-meat-form-submit"
-          disabled={!canSubmit}
-        >
-          {submitting
-            ? t("rawMeatInventory.savingOption")
-            : t("rawMeatInventory.submitOption")}
-        </Button>
+        <>
+          <Button type="button" variant="outline" onClick={closeAndReset}>
+            {t("rawMeatInventory.cancel")}
+          </Button>
+          <Button
+            type="submit"
+            form="raw-meat-option-form"
+            disabled={!canSubmit}
+          >
+            {submitting
+              ? t("rawMeatInventory.savingOption")
+              : t("rawMeatInventory.submitOption")}
+          </Button>
+        </>
       }
     >
       <form
@@ -179,6 +183,6 @@ export function RawMeatOptionFormModal({
         />
         {error ? <p className="raw-meat-form-error">{error}</p> : null}
       </form>
-    </RawMeatModal>
+    </SidePanel>
   );
 }

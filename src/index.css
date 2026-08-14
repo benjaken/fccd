@@ -2209,60 +2209,16 @@ td:last-child {
   font-variant-numeric: tabular-nums;
 }
 
-.raw-meat-options-modal-root {
-  position: fixed;
-  inset: 0;
-  z-index: 60;
-  display: grid;
-  place-items: center;
-  padding: 24px;
-}
-
-.raw-meat-options-modal-backdrop {
-  position: absolute;
-  inset: 0;
-  border: 0;
-  background: color-mix(in oklch, var(--foreground) 35%, transparent);
-  cursor: pointer;
-}
-
-.raw-meat-options-modal {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
-  width: min(720px, 100%);
-  max-height: min(80dvh, 720px);
-  overflow: hidden;
-  animation: raw-meat-options-in 180ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.raw-meat-options-modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 16px 18px;
-  border-bottom: 1px solid var(--border);
-}
-
-.raw-meat-options-modal-header h2 {
-  margin: 0;
-  font-size: 1.05rem;
-}
-
-.raw-meat-options-modal-error {
-  margin: 0;
-  padding: 10px 18px;
+.raw-meat-options-panel-error {
+  margin: 0 0 12px;
   color: var(--destructive);
   font-size: 0.86rem;
-  border-bottom: 1px solid var(--border);
 }
 
 .raw-meat-options-table-wrap {
   min-height: 0;
   overflow: auto;
-  padding: 0 0 12px;
+  margin: -6px -6px 0;
   isolation: isolate;
 }
 
@@ -2326,63 +2282,6 @@ td:last-child {
 
 .raw-meat-options-table tbody tr:nth-child(even) td {
   background: color-mix(in oklch, var(--muted) 45%, var(--card));
-}
-
-@keyframes raw-meat-options-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-.raw-meat-form-modal {
-  width: min(520px, 100%);
-  max-height: min(88dvh, 760px);
-  grid-template-rows: auto minmax(0, 1fr) auto;
-}
-
-.raw-meat-form-modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 18px 20px 8px;
-}
-
-.raw-meat-form-modal-header h2 {
-  margin: 0;
-  width: 100%;
-  text-align: center;
-  font-size: 1.15rem;
-}
-
-.raw-meat-form-modal-header .button {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-}
-
-.raw-meat-form-modal {
-  position: relative;
-}
-
-.raw-meat-form-modal-body {
-  min-height: 0;
-  overflow: auto;
-  padding: 8px 22px 12px;
-}
-
-.raw-meat-form-modal-footer {
-  padding: 0 22px 20px;
-}
-
-.raw-meat-form-submit {
-  width: 100%;
-  height: 44px;
 }
 
 .raw-meat-option-form,
@@ -2545,7 +2444,7 @@ td:last-child {
 
 .raw-meat-stock-in-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 10px;
   align-items: end;
 }
@@ -2553,11 +2452,13 @@ td:last-child {
 .raw-meat-unit-toggle {
   display: inline-flex;
   align-items: center;
+  grid-column: 1 / -1;
   height: 40px;
   padding: 3px;
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--background);
+  justify-content: space-between;
 }
 
 .raw-meat-unit-toggle button {
@@ -2575,17 +2476,6 @@ td:last-child {
 .raw-meat-unit-toggle button.is-active {
   background: var(--foreground);
   color: var(--background);
-}
-
-@media (max-width: 640px) {
-  .raw-meat-stock-in-row {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .raw-meat-unit-toggle {
-    grid-column: 1 / -1;
-    justify-content: space-between;
-  }
 }
 
 @media (max-width: 960px) {

@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { X } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { SidePanel } from "@/components/ui/side-panel";
 import { Switch } from "@/components/ui/switch";
 import type { RawMeatItemOption } from "@/lib/raw-meat-inventory";
 
@@ -34,17 +33,6 @@ export function RawMeatOptionsModal({
       setSavingId(null);
     }
   }, [items, open]);
-
-  useEffect(() => {
-    if (!open) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose, open]);
-
-  if (!open) return null;
 
   const updateFlags = async (
     itemId: string,
@@ -78,40 +66,21 @@ export function RawMeatOptionsModal({
   };
 
   return (
-    <div className="raw-meat-options-modal-root" role="presentation">
-      <button
-        type="button"
-        className="raw-meat-options-modal-backdrop"
-        aria-label={t("rawMeatInventory.closeOptions")}
-        onClick={onClose}
-      />
-      <div
-        className="raw-meat-options-modal panel"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="raw-meat-options-title"
-      >
-        <header className="raw-meat-options-modal-header">
-          <h2 id="raw-meat-options-title">{t("rawMeatInventory.items")}</h2>
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            onClick={onClose}
-            aria-label={t("rawMeatInventory.closeOptions")}
-          >
-            <X />
-          </Button>
-        </header>
+    <SidePanel
+      open={open}
+      title={t("rawMeatInventory.items")}
+      onClose={onClose}
+      closeLabel={t("rawMeatInventory.closeOptions")}
+      wide
+    >
+      {error ? (
+        <p className="raw-meat-options-panel-error" role="alert">
+          {error}
+        </p>
+      ) : null}
 
-        {error ? (
-          <p className="raw-meat-options-modal-error" role="alert">
-            {error}
-          </p>
-        ) : null}
-
-        <div className="raw-meat-options-table-wrap">
-          <table className="raw-meat-options-table">
+      <div className="raw-meat-options-table-wrap">
+        <table className="raw-meat-options-table">
             <thead>
               <tr>
                 <th>{t("rawMeatInventory.optionsColumns.sort")}</th>
@@ -158,7 +127,6 @@ export function RawMeatOptionsModal({
             </tbody>
           </table>
         </div>
-      </div>
-    </div>
+    </SidePanel>
   );
 }

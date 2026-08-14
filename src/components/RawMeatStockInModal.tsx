@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 
-import { RawMeatModal } from "@/components/RawMeatModal";
 import { RawMeatTagPicker } from "@/components/RawMeatTagPicker";
 import { Button } from "@/components/ui/button";
+import { SidePanel } from "@/components/ui/side-panel";
 import { cn } from "@/lib/utils";
 import {
   createRawMeatStockIn,
@@ -157,23 +157,27 @@ export function RawMeatStockInModal({
   };
 
   return (
-    <RawMeatModal
+    <SidePanel
       open={open}
       title={t("rawMeatInventory.stockInTitle")}
       onClose={closeAndReset}
       closeLabel={t("rawMeatInventory.closeOptions")}
-      className="raw-meat-stock-in-modal"
+      wide
       footer={
-        <Button
-          type="submit"
-          form="raw-meat-stock-in-form"
-          className="raw-meat-form-submit"
-          disabled={!canSubmit}
-        >
-          {submitting
-            ? t("rawMeatInventory.savingStockIn")
-            : t("rawMeatInventory.submitOption")}
-        </Button>
+        <>
+          <Button type="button" variant="outline" onClick={closeAndReset}>
+            {t("rawMeatInventory.cancel")}
+          </Button>
+          <Button
+            type="submit"
+            form="raw-meat-stock-in-form"
+            disabled={!canSubmit}
+          >
+            {submitting
+              ? t("rawMeatInventory.savingStockIn")
+              : t("rawMeatInventory.submitOption")}
+          </Button>
+        </>
       }
     >
       <form
@@ -288,6 +292,6 @@ export function RawMeatStockInModal({
         </label>
         {error ? <p className="raw-meat-form-error">{error}</p> : null}
       </form>
-    </RawMeatModal>
+    </SidePanel>
   );
 }

@@ -280,7 +280,7 @@ describe("Raw meat inventory calculation page", () => {
     });
   });
 
-  it("opens the raw meat options modal from the sidebar header icon", async () => {
+  it("opens the raw meat options side panel from the sidebar header icon", async () => {
     const user = userEvent.setup();
     const loadItems = vi.fn().mockResolvedValue(items);
     const loadMovements = vi
@@ -304,6 +304,7 @@ describe("Raw meat inventory calculation page", () => {
     await user.click(screen.getByRole("button", { name: "管理生肉選項" }));
 
     const dialog = await screen.findByRole("dialog", { name: "生肉選項" });
+    expect(dialog).toHaveClass("side-panel");
     expect(within(dialog).getByText("排序")).toBeInTheDocument();
     expect(within(dialog).getByText("可直接出貨")).toBeInTheDocument();
     expect(within(dialog).getByText("有效")).toBeInTheDocument();
@@ -392,6 +393,7 @@ describe("Raw meat inventory calculation page", () => {
     await user.click(screen.getByRole("button", { name: "新建" }));
 
     const dialog = await screen.findByRole("dialog", { name: "添加選項" });
+    expect(dialog).toHaveClass("side-panel");
     await user.type(within(dialog).getByPlaceholderText("code"), "RAW099");
     const nameFields = within(dialog).getAllByPlaceholderText("Type here...");
     await user.type(nameFields[0]!, "test肉");
@@ -448,6 +450,7 @@ describe("Raw meat inventory calculation page", () => {
     );
 
     const dialog = await screen.findByRole("dialog", { name: "編輯選項" });
+    expect(dialog).toHaveClass("side-panel");
     const nameInput = within(dialog).getByDisplayValue("乾冬菇 (廣信)");
     await user.clear(nameInput);
     await user.type(nameInput, "乾冬菇 (廣信) 更新");
@@ -493,6 +496,7 @@ describe("Raw meat inventory calculation page", () => {
     await user.click(screen.getByRole("button", { name: "生肉入貨" }));
 
     const dialog = await screen.findByRole("dialog", { name: "生肉入貨" });
+    expect(dialog).toHaveClass("side-panel");
     expect(within(dialog).getByText("乾冬菇 (廣信)")).toBeInTheDocument();
     expect(within(dialog).getByText("廣聯興")).toBeInTheDocument();
 
