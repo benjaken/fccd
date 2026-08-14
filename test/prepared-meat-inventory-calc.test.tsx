@@ -282,6 +282,8 @@ describe("Prepared meat inventory calculation page", () => {
 
     const dialog = await screen.findByRole("dialog", { name: "製成品選項" });
     expect(dialog).toHaveClass("side-panel");
+    expect(dialog.querySelector(".raw-meat-options-table-wrap")).not.toBeNull();
+    expect(dialog.querySelector(".prepared-meat-options-table")).not.toBeNull();
     expect(within(dialog).getByText("排序")).toBeInTheDocument();
     expect(within(dialog).getByText("製成品")).toBeInTheDocument();
     expect(within(dialog).getByText("有效")).toBeInTheDocument();

@@ -2246,10 +2246,24 @@ td:last-child {
   font-size: 0.86rem;
 }
 
+.side-panel-body:has(.raw-meat-options-table-wrap) {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+}
+
+.side-panel-body:has(.raw-meat-options-table-wrap) .raw-meat-options-panel-error {
+  flex: 0 0 auto;
+  margin: 12px 18px 0;
+}
+
 .raw-meat-options-table-wrap {
+  flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
-  margin: -6px -6px 0;
+  overscroll-behavior: contain;
+  margin: 0;
   isolation: isolate;
 }
 
@@ -2283,6 +2297,15 @@ td:last-child {
   font-weight: 600;
   white-space: nowrap;
   box-shadow: 0 1px 0 var(--primary);
+}
+
+.prepared-meat-options-table th {
+  background: color-mix(in oklch, var(--background) 65%, var(--card));
+  color: var(--muted-foreground);
+  font-weight: 750;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+  box-shadow: 0 1px 0 var(--border);
 }
 
 .raw-meat-options-table tbody td {

@@ -70,7 +70,7 @@ export function PreparedMeatOptionsModal({
       ) : null}
 
       <div className="raw-meat-options-table-wrap">
-        <table className="raw-meat-options-table">
+        <table className="raw-meat-options-table prepared-meat-options-table">
           <thead>
             <tr>
               <th>{t("preparedMeatInventory.optionsColumns.sort")}</th>
