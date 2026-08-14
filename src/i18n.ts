@@ -993,6 +993,11 @@ const resources = {
         createError: "新增失敗，請重試",
         toggleError: "狀態更新失敗，請重試",
         mustKeepOneActive: "至少需要保留一組啟用中的計算設定",
+        mustKeepOne: "至少需要保留一組計算設定",
+        cannotDeleteLast: "最後一組計算設定不可刪除",
+        delete: "刪除",
+        deleteConfirm: "確定刪除這組計算設定？",
+        deleteError: "刪除失敗，請重試",
         empty: "尚未有計算設定",
         emptyDescription: "新增第一組收成差異與 Mark-up 後會顯示在此列表。",
         columns: {
@@ -1000,13 +1005,16 @@ const resources = {
           variation: "收成差異 %",
           markup: "Mark-up %",
           status: "狀態",
+          actions: "操作",
         },
         fields: {
           variation: "收成差異 %",
           markup: "Mark-up %",
+          percentHint: "0–100，最多兩位小數",
         },
         validation: {
           required: "請輸入收成差異與 Mark-up",
+          percentRange: "請輸入 0 至 100 之間、最多兩位小數的百分比",
         },
         toggleStatus: "切換 {{date}} 的啟用狀態",
       },
@@ -2348,6 +2356,11 @@ const resources = {
         toggleError: "Could not update status. Try again.",
         mustKeepOneActive:
           "At least one calculation setting must remain active",
+        mustKeepOne: "At least one calculation setting must remain",
+        cannotDeleteLast: "The last calculation setting cannot be deleted",
+        delete: "Delete",
+        deleteConfirm: "Delete this calculation setting?",
+        deleteError: "Could not delete the setting. Try again.",
         empty: "No calculation settings yet",
         emptyDescription:
           "Add the first yield variance and mark-up setting to populate this list.",
@@ -2356,13 +2369,16 @@ const resources = {
           variation: "Yield variance %",
           markup: "Mark-up %",
           status: "Status",
+          actions: "Actions",
         },
         fields: {
           variation: "Yield variance %",
           markup: "Mark-up %",
+          percentHint: "0–100, up to two decimal places",
         },
         validation: {
           required: "Enter yield variance and mark-up",
+          percentRange: "Enter a percentage from 0 to 100 with up to two decimals",
         },
         toggleStatus: "Toggle status for {{date}}",
       },

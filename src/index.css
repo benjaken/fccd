@@ -3448,6 +3448,11 @@ td:last-child {
   box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 16%, transparent);
 }
 
+.calculation-settings-field small {
+  color: var(--muted-foreground);
+  font-size: 0.8rem;
+}
+
 .calculation-settings-field-error,
 .calculation-settings-form-error {
   margin: 0;

@@ -43,6 +43,50 @@ export function rateToPercent(rate: number) {
   return rate * 100;
 }
 
+const PERCENT_INPUT_PATTERN =
+  /^(?:100(?:\.0{0,2})?|\d{0,2}(?:\.\d{0,2})?)$/;
+
+export function isPercentInput(value: string) {
+  return PERCENT_INPUT_PATTERN.test(value);
+}
+
+/** Keep 0-100 with at most two decimal places while typing. */
+export function coercePercentInput(value: string): string {
+  if (isPercentInput(value)) return value;
+  const cleaned = value.replace(/[^\d.]/g, "");
+  if (!cleaned) return "";
+  const dot = cleaned.indexOf(".");
+  const intDigits = (dot === -1 ? cleaned : cleaned.slice(0, dot)).replace(
+    /^0+(?=\d)/,
+    "",
+  );
+  const frac =
+    dot === -1 ? null : cleaned.slice(dot + 1).replace(/\./g, "").slice(0, 2);
+  const intNum = intDigits === "" ? 0 : Number.parseInt(intDigits, 10);
+  if (!Number.isFinite(intNum) || intNum > 100) return "100";
+  if (intNum === 100) {
+    if (frac === null) return "100";
+    if (frac === "" || /^0{0,2}$/.test(frac)) return `100.${frac}`;
+    return "100";
+  }
+  const intPart = intDigits === "" ? (frac === null ? "" : "0") : String(intNum);
+  if (frac === null) return intPart;
+  return `${intPart}.${frac}`;
+}
+
+export function parsePercentInput(value: string): number | null {
+  const trimmed = value.trim().replace(/%/g, "");
+  if (!trimmed) return null;
+  const parsed = Number.parseFloat(trimmed);
+  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100) return null;
+  return Math.round(parsed * 100) / 100;
+}
+
+function normalizePercent(value: number): number | null {
+  if (!Number.isFinite(value) || value < 0 || value > 100) return null;
+  return Math.round(value * 100) / 100;
+}
+
 export async function fetchCalculationSettings(): Promise<
   CalculationSettingRow[]
 > {
@@ -62,11 +106,10 @@ export async function createCalculationSetting(input: {
   variationPercent: number;
   markupPercent: number;
 }): Promise<CalculationSettingRow> {
-  if (!Number.isFinite(input.variationPercent)) {
-    throw new Error("variation_required");
-  }
-  if (!Number.isFinite(input.markupPercent)) {
-    throw new Error("markup_required");
+  const variationPercent = normalizePercent(input.variationPercent);
+  const markupPercent = normalizePercent(input.markupPercent);
+  if (variationPercent === null || markupPercent === null) {
+    throw new Error("percent_out_of_range");
   }
 
   const now = new Date().toISOString();
@@ -77,8 +120,8 @@ export async function createCalculationSetting(input: {
     .insert({
       legacy_id: legacyId,
       is_applied: false,
-      variation_rate: percentToRate(input.variationPercent),
-      markup_rate: percentToRate(input.markupPercent),
+      variation_rate: percentToRate(variationPercent),
+      markup_rate: percentToRate(markupPercent),
       bubble_created_at: now,
       bubble_modified_at: now,
       created_at: now,
@@ -112,5 +155,15 @@ export async function setCalculationSettingApplied(
 
   // RPC returns the updated row; reload list for consistent ordering.
   void data;
+  return fetchCalculationSettings();
+}
+
+export async function deleteCalculationSetting(
+  settingId: string,
+): Promise<CalculationSettingRow[]> {
+  const { error } = await supabase.rpc("delete_meat_calculation_setting", {
+    p_setting_id: settingId,
+  });
+  if (error) throw error;
   return fetchCalculationSettings();
 }

@@ -5,7 +5,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CalculationSettingsPage } from "@/components/CalculationSettingsPage";
 import i18n from "@/i18n";
-import type { CalculationSettingRow } from "@/lib/calculation-settings";
+import {
+  coercePercentInput,
+  parsePercentInput,
+  type CalculationSettingRow,
+} from "@/lib/calculation-settings";
 
 const rows: CalculationSettingRow[] = [
   {
@@ -23,6 +27,18 @@ const rows: CalculationSettingRow[] = [
     createdAt: "2023-10-13T04:24:43.667Z",
   },
 ];
+
+describe("Calculation percent input", () => {
+  it("keeps values between 0 and 100 with two decimal places", () => {
+    expect(coercePercentInput("12.34")).toBe("12.34");
+    expect(coercePercentInput("12.345")).toBe("12.34");
+    expect(coercePercentInput("101")).toBe("100");
+    expect(coercePercentInput("-3")).toBe("3");
+    expect(parsePercentInput("")).toBeNull();
+    expect(parsePercentInput("100.01")).toBeNull();
+    expect(parsePercentInput("8.2")).toBe(8.2);
+  });
+});
 
 describe("Calculation settings page", () => {
   beforeEach(async () => {
@@ -72,6 +88,80 @@ describe("Calculation settings page", () => {
     });
 
     expect(await screen.findByText("12.00%")).toBeInTheDocument();
+  });
+
+  it("limits create inputs to 0-100 with two decimals", async () => {
+    const user = userEvent.setup();
+    const loadSettings = vi.fn().mockResolvedValue(structuredClone(rows));
+
+    render(
+      <MemoryRouter>
+        <CalculationSettingsPage loadSettings={loadSettings} />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("10.00%");
+    await user.click(screen.getByRole("button", { name: "新建" }));
+    const dialog = await screen.findByRole("dialog", { name: "新增計算設定" });
+    const variation = within(dialog).getByLabelText("收成差異 %");
+    await user.type(variation, "12.345");
+    expect(variation).toHaveValue("12.34");
+    await user.clear(variation);
+    await user.type(variation, "101");
+    expect(variation).toHaveValue("100");
+  });
+
+  it("deletes a setting when more than one remains", async () => {
+    const user = userEvent.setup();
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    const loadSettings = vi.fn().mockResolvedValue(structuredClone(rows));
+    const deleteSetting = vi.fn().mockResolvedValue([rows[1]]);
+
+    render(
+      <MemoryRouter>
+        <CalculationSettingsPage
+          loadSettings={loadSettings}
+          deleteSetting={deleteSetting}
+        />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("10.00%");
+    const deleteButtons = screen.getAllByRole("button", { name: "刪除" });
+    expect(deleteButtons).toHaveLength(2);
+    await user.click(deleteButtons[0]!);
+
+    await waitFor(() => {
+      expect(deleteSetting).toHaveBeenCalledWith("c-1");
+    });
+    expect(screen.queryByText("10.00%")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "最後一組計算設定不可刪除" }),
+    ).toBeDisabled();
+    confirmSpy.mockRestore();
+  });
+
+  it("does not delete the last remaining setting", async () => {
+    const user = userEvent.setup();
+    const deleteSetting = vi.fn();
+    const loadSettings = vi.fn().mockResolvedValue([structuredClone(rows[1]!)]);
+
+    render(
+      <MemoryRouter>
+        <CalculationSettingsPage
+          loadSettings={loadSettings}
+          deleteSetting={deleteSetting}
+        />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("15.00%");
+    const deleteButton = screen.getByRole("button", {
+      name: "最後一組計算設定不可刪除",
+    });
+    expect(deleteButton).toBeDisabled();
+    await user.click(deleteButton);
+    expect(deleteSetting).not.toHaveBeenCalled();
   });
 
   it("activates one setting and deactivates the previous active one", async () => {

@@ -6,15 +6,18 @@ import {
   type FormEvent,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { Calculator, Plus, RefreshCw } from "lucide-react";
+import { Calculator, Plus, RefreshCw, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ListTable } from "@/components/ui/list-table";
 import { SidePanel } from "@/components/ui/side-panel";
 import { Switch } from "@/components/ui/switch";
 import {
+  coercePercentInput,
   createCalculationSetting,
+  deleteCalculationSetting,
   fetchCalculationSettings,
+  parsePercentInput,
   rateToPercent,
   setCalculationSettingApplied,
   type CalculationSettingRow,
@@ -23,21 +26,15 @@ import {
 type SettingsLoader = () => Promise<CalculationSettingRow[]>;
 type SettingCreator = typeof createCalculationSetting;
 type AppliedSaver = typeof setCalculationSettingApplied;
+type SettingDeleter = typeof deleteCalculationSetting;
 
 const CALCULATION_SETTINGS_SKELETON_COLUMNS = [
   { width: "8rem" },
   { width: "7rem" },
   { width: "7rem" },
   { width: "5rem" },
+  { width: "2.5rem", variant: "action" as const },
 ];
-
-function parsePercentInput(value: string): number | null {
-  const trimmed = value.trim().replace(/%/g, "");
-  if (!trimmed) return null;
-  const parsed = Number.parseFloat(trimmed);
-  if (!Number.isFinite(parsed)) return null;
-  return parsed;
-}
 
 function CreateCalculationSettingPanel({
   open,
@@ -70,7 +67,7 @@ function CreateCalculationSettingPanel({
     const variation = parsePercentInput(variationInput);
     const markup = parsePercentInput(markupInput);
     if (variation === null || markup === null) {
-      setFieldError(t("calculationSettings.validation.required"));
+      setFieldError(t("calculationSettings.validation.percentRange"));
       return;
     }
     setSubmitting(true);
@@ -129,11 +126,17 @@ function CreateCalculationSettingPanel({
           <input
             inputMode="decimal"
             value={variationInput}
-            placeholder="%"
+            placeholder="0.00"
+            min={0}
+            max={100}
+            step={0.01}
             aria-label={t("calculationSettings.fields.variation")}
             aria-invalid={Boolean(fieldError)}
-            onChange={(event) => setVariationInput(event.target.value)}
+            onChange={(event) =>
+              setVariationInput(coercePercentInput(event.target.value))
+            }
           />
+          <small>{t("calculationSettings.fields.percentHint")}</small>
         </label>
 
         <label className="calculation-settings-field">
@@ -141,11 +144,17 @@ function CreateCalculationSettingPanel({
           <input
             inputMode="decimal"
             value={markupInput}
-            placeholder="%"
+            placeholder="0.00"
+            min={0}
+            max={100}
+            step={0.01}
             aria-label={t("calculationSettings.fields.markup")}
             aria-invalid={Boolean(fieldError)}
-            onChange={(event) => setMarkupInput(event.target.value)}
+            onChange={(event) =>
+              setMarkupInput(coercePercentInput(event.target.value))
+            }
           />
+          <small>{t("calculationSettings.fields.percentHint")}</small>
         </label>
 
         {fieldError ? (
@@ -161,10 +170,12 @@ export function CalculationSettingsPage({
   loadSettings = fetchCalculationSettings,
   createSetting = createCalculationSetting,
   saveApplied = setCalculationSettingApplied,
+  deleteSetting = deleteCalculationSetting,
 }: {
   loadSettings?: SettingsLoader;
   createSetting?: SettingCreator;
   saveApplied?: AppliedSaver;
+  deleteSetting?: SettingDeleter;
 }) {
   const { t, i18n } = useTranslation();
   const [rows, setRows] = useState<CalculationSettingRow[]>([]);
@@ -173,7 +184,8 @@ export function CalculationSettingsPage({
   const [reloadKey, setReloadKey] = useState(0);
   const [createOpen, setCreateOpen] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
-  const [toggleError, setToggleError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const dateFormatter = useMemo(
     () =>
@@ -232,17 +244,17 @@ export function CalculationSettingsPage({
       if (!next && row.isApplied) {
         const activeCount = rows.filter((item) => item.isApplied).length;
         if (activeCount <= 1) {
-          setToggleError(t("calculationSettings.mustKeepOneActive"));
+          setActionError(t("calculationSettings.mustKeepOneActive"));
           return;
         }
       }
       setTogglingId(row.id);
-      setToggleError(null);
+      setActionError(null);
       try {
         const nextRows = await saveApplied(row.id, next);
         setRows(nextRows);
       } catch (saveError) {
-        setToggleError(
+        setActionError(
           saveError instanceof Error
             ? saveError.message
             : t("calculationSettings.toggleError"),
@@ -252,6 +264,30 @@ export function CalculationSettingsPage({
       }
     },
   );
+
+  const handleDelete = useEffectEvent(async (row: CalculationSettingRow) => {
+    if (deletingId || togglingId) return;
+    if (rows.length <= 1) {
+      setActionError(t("calculationSettings.mustKeepOne"));
+      return;
+    }
+    const confirmed = window.confirm(t("calculationSettings.deleteConfirm"));
+    if (!confirmed) return;
+    setDeletingId(row.id);
+    setActionError(null);
+    try {
+      const nextRows = await deleteSetting(row.id);
+      setRows(nextRows);
+    } catch (saveError) {
+      setActionError(
+        saveError instanceof Error
+          ? saveError.message
+          : t("calculationSettings.deleteError"),
+      );
+    } finally {
+      setDeletingId(null);
+    }
+  });
 
   return (
     <section className="calculation-settings-page">
@@ -278,8 +314,8 @@ export function CalculationSettingsPage({
       </header>
 
       <article className="panel calculation-settings-panel">
-        {toggleError ? (
-          <p className="calculation-settings-inline-error">{toggleError}</p>
+        {actionError ? (
+          <p className="calculation-settings-inline-error">{actionError}</p>
         ) : null}
 
         {error ? (
@@ -322,10 +358,13 @@ export function CalculationSettingsPage({
                 <th>{t("calculationSettings.columns.variation")}</th>
                 <th>{t("calculationSettings.columns.markup")}</th>
                 <th>{t("calculationSettings.columns.status")}</th>
+                <th aria-label={t("calculationSettings.columns.actions")} />
               </tr>
             }
           >
-            {rows.map((row) => (
+            {rows.map((row) => {
+              const canDelete = rows.length > 1;
+              return (
               <tr key={row.id}>
                 <td>
                   {row.createdAt
@@ -337,7 +376,7 @@ export function CalculationSettingsPage({
                 <td>
                   <Switch
                     checked={row.isApplied}
-                    disabled={togglingId === row.id}
+                    disabled={togglingId === row.id || deletingId === row.id}
                     aria-label={t("calculationSettings.toggleStatus", {
                       date: row.createdAt
                         ? dateFormatter.format(new Date(row.createdAt))
@@ -348,8 +387,34 @@ export function CalculationSettingsPage({
                     }}
                   />
                 </td>
+                <td className="table-actions-cell">
+                  <div className="table-row-actions">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      disabled={!canDelete || deletingId === row.id}
+                      aria-label={
+                        canDelete
+                          ? t("calculationSettings.delete")
+                          : t("calculationSettings.cannotDeleteLast")
+                      }
+                      title={
+                        canDelete
+                          ? t("calculationSettings.delete")
+                          : t("calculationSettings.cannotDeleteLast")
+                      }
+                      onClick={() => {
+                        void handleDelete(row);
+                      }}
+                    >
+                      <Trash2 />
+                    </Button>
+                  </div>
+                </td>
               </tr>
-            ))}
+              );
+            })}
           </ListTable>
         )}
       </article>
