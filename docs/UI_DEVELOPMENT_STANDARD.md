@@ -138,6 +138,7 @@ the same input / search / skeleton / pagination markup across list pages.
 | Pattern | Required component |
 |---|---|
 | Toolbar search (icon inside field + submit) | `ListSearchBar` → `SearchField` |
+| Mobile list filters (hidden until icon tap) | `ListSearchBar` `filters` → `SidePanel` |
 | Paginated operational table + loading rows | `ListTable` → `TableSkeletonRows` |
 | All page-level loading layouts | `PageSkeleton` with the appropriate `variant` |
 | List pagination footer | `TablePagination` |

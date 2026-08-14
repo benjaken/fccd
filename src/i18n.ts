@@ -25,6 +25,9 @@ const resources = {
         yes: "是",
         no: "否",
         dateRange: "日期範圍",
+        filters: "篩選",
+        openFilters: "開啟篩選",
+        closeFilters: "關閉篩選",
       },
       auth: {
         eyebrow: "FCCD 營運平台",
@@ -1166,6 +1169,9 @@ const resources = {
         yes: "Yes",
         no: "No",
         dateRange: "Date range",
+        filters: "Filters",
+        openFilters: "Open filters",
+        closeFilters: "Close filters",
       },
       auth: {
         eyebrow: "FCCD platform",

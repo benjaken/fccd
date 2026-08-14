@@ -1401,6 +1401,10 @@ td:last-child {
   height: 100%;
 }
 
+.list-search-host {
+  display: contents;
+}
+
 .list-search,
 .quotes-search,
 .orders-search,
@@ -1410,6 +1414,51 @@ td:last-child {
   align-items: center;
   gap: 8px;
   width: min(620px, 100%);
+}
+
+.list-search-filters {
+  display: contents;
+}
+
+.list-search-filter-trigger {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.list-search-filter-trigger.is-active::after {
+  content: "";
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--primary);
+}
+
+.list-search-filter-drawer {
+  display: grid;
+  gap: 16px;
+}
+
+.list-search-filter-drawer .products-filters,
+.list-search-filter-drawer .packages-filters,
+.list-search-filter-drawer .settings-attachments-filters {
+  display: grid;
+  gap: 16px;
+  width: 100%;
+}
+
+.list-search-filter-drawer .products-status-filter,
+.list-search-filter-drawer .packages-status-filter,
+.list-search-filter-drawer .orders-status-filter,
+.list-search-filter-drawer .quotes-status-filter {
+  width: 100%;
+  min-width: 0;
+}
+
+.list-search-filter-drawer select {
+  width: 100%;
 }
 
 .search-field,
@@ -2454,6 +2503,7 @@ td:last-child {
   font-weight: 750;
 }
 
+.side-panel-root,
 .settings-side-panel-root {
   position: fixed;
   inset: 0;
@@ -2462,6 +2512,7 @@ td:last-child {
   justify-items: end;
 }
 
+.side-panel-backdrop,
 .settings-side-panel-backdrop {
   position: absolute;
   inset: 0;
@@ -2470,6 +2521,7 @@ td:last-child {
   cursor: pointer;
 }
 
+.side-panel,
 .settings-side-panel {
   position: relative;
   z-index: 1;
@@ -2483,10 +2535,12 @@ td:last-child {
   animation: settings-side-panel-in 180ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+.side-panel-wide,
 .settings-side-panel-wide {
   width: min(520px, 100vw);
 }
 
+.side-panel-header,
 .settings-side-panel-header {
   display: flex;
   align-items: flex-start;
@@ -2496,12 +2550,14 @@ td:last-child {
   border-bottom: 1px solid var(--border);
 }
 
+.side-panel-header h2,
 .settings-side-panel-header h2 {
   margin: 0;
   font-size: 20px;
   line-height: 1.25;
 }
 
+.side-panel-header p,
 .settings-side-panel-header p {
   margin: 6px 0 0;
   color: var(--muted-foreground);
@@ -2509,12 +2565,14 @@ td:last-child {
   line-height: 1.45;
 }
 
+.side-panel-body,
 .settings-side-panel-body {
   min-height: 0;
   overflow: auto;
   padding: 18px;
 }
 
+.side-panel-footer,
 .settings-side-panel-footer {
   display: flex;
   justify-content: flex-end;
@@ -2614,6 +2672,8 @@ td:last-child {
 }
 
 @media (max-width: 720px) {
+  .side-panel,
+  .side-panel-wide,
   .settings-side-panel,
   .settings-side-panel-wide {
     width: min(100vw, 100%);
@@ -2759,24 +2819,19 @@ td:last-child {
   }
 
   .quotes-toolbar,
-  .quotes-search,
   .orders-toolbar,
-  .orders-search,
   .products-toolbar,
-  .products-search,
-  .packages-toolbar,
-  .packages-search {
-    align-items: stretch;
-    flex-direction: column;
+  .packages-toolbar {
+    align-items: center;
+    flex-direction: row;
   }
 
-  .quotes-status-filter,
-  .orders-status-filter,
-  .products-status-filter,
-  .packages-status-filter,
-  .products-filters,
-  .packages-filters {
-    width: 100%;
+  .quotes-search,
+  .orders-search,
+  .products-search,
+  .packages-search,
+  .list-search {
+    align-items: stretch;
   }
 
   .quotes-pagination,
@@ -6643,6 +6698,32 @@ td:last-child {
 }
 
 @media (max-width: 900px) {
+  .list-search-host {
+    display: flex;
+    align-items: center;
+    width: 100%;
+  }
+
+  .list-search-host .list-search {
+    width: 100%;
+  }
+
+  .list-search-host .search-field {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .list-search-submit {
+    display: none;
+  }
+
+  .quotes-toolbar,
+  .orders-toolbar,
+  .products-toolbar,
+  .packages-toolbar {
+    align-items: center;
+  }
+
   :root {
     --topbar-height: 60px;
     --workspace-height: 42px;
