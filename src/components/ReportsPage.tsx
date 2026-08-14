@@ -4,8 +4,10 @@ import { useTranslation } from "react-i18next";
 
 import { useAuth } from "@/auth/AuthProvider";
 import {
+  REPORT_GROUP_TABS,
   REPORT_TAB_PERMISSION_KEYS,
   usePageAccess,
+  type ReportGroup,
   type ReportTabKey,
 } from "@/auth/use-page-access";
 import { MeatPriceReport } from "@/components/MeatPriceReport";
@@ -35,16 +37,6 @@ function currentMonthRange() {
   return { start: format(start), end: format(end) };
 }
 
-const reportTabs = [
-  "shopOrderQuantities",
-  "averageSupplyPrice",
-  "productionCostPrice",
-  "rawMeatAveragePrice",
-  "preparedMeatStock",
-  "rawMeatStock",
-  "supplierPurchase",
-] as const satisfies readonly ReportTabKey[];
-
 const implementedTabs = new Set<ReportTabKey>([
   "shopOrderQuantities",
   "averageSupplyPrice",
@@ -55,7 +47,7 @@ const implementedTabs = new Set<ReportTabKey>([
   "supplierPurchase",
 ]);
 
-export function ReportsPage() {
+export function ReportsPage({ group }: { group: ReportGroup }) {
   const { t, i18n } = useTranslation();
   const { user, profile } = useAuth();
   const authorizationRole =
@@ -63,16 +55,16 @@ export function ReportsPage() {
       ? user.app_metadata.role
       : profile?.role;
   const pageAccess = usePageAccess(authorizationRole);
+  const reportTabs = REPORT_GROUP_TABS[group];
   const visibleTabs = useMemo(
     () =>
       reportTabs.filter((tab) =>
         pageAccess.canAccess(REPORT_TAB_PERMISSION_KEYS[tab]),
       ),
-    [pageAccess],
+    [pageAccess, reportTabs],
   );
   const range = useMemo(currentMonthRange, []);
-  const [activeTab, setActiveTab] =
-    useState<ReportTabKey>("shopOrderQuantities");
+  const [activeTab, setActiveTab] = useState<ReportTabKey>(reportTabs[0]);
   const [startDate, setStartDate] = useState(range.start);
   const [endDate, setEndDate] = useState(range.end);
   const [shops, setShops] = useState<ReportShop[]>([]);
@@ -154,6 +146,7 @@ export function ReportsPage() {
   };
 
   useEffect(() => {
+    if (group !== "shops") return;
     let active = true;
     void fetchReportShops()
       .then((data) => {
@@ -174,15 +167,16 @@ export function ReportsPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [group, t]);
 
   useEffect(() => {
+    if (group !== "shops") return;
     if (!selectedShop || !startDate || !endDate || startDate > endDate) return;
     const timeout = window.setTimeout(() => {
       void loadReport(startDate, endDate, selectedShop);
     }, 200);
     return () => window.clearTimeout(timeout);
-  }, [selectedShop, startDate, endDate]);
+  }, [group, selectedShop, startDate, endDate]);
 
   const exportCsv = () => {
     const csv = [
@@ -213,25 +207,29 @@ export function ReportsPage() {
     <div className="reports-page">
       <section className="page-heading">
         <div>
-          <span className="eyebrow">{t("reports.eyebrow")}</span>
-          <h1>{t("reports.title")}</h1>
+          <span className="eyebrow">
+            {t(`reports.groups.${group}.eyebrow`)}
+          </span>
+          <h1>{t(`reports.groups.${group}.title`)}</h1>
         </div>
       </section>
-      <nav className="report-tabs" aria-label={t("reports.navigation")}>
-        {visibleTabs.map((tab) => (
-          <button
-            className={cn(activeTab === tab && "active")}
-            disabled={!implementedTabs.has(tab)}
-            key={tab}
-            type="button"
-            onClick={() => {
-              if (implementedTabs.has(tab)) setActiveTab(tab);
-            }}
-          >
-            {t(`reports.tabs.${tab}`)}
-          </button>
-        ))}
-      </nav>
+      {visibleTabs.length > 1 ? (
+        <nav className="report-tabs" aria-label={t("reports.navigation")}>
+          {visibleTabs.map((tab) => (
+            <button
+              className={cn(activeTab === tab && "active")}
+              disabled={!implementedTabs.has(tab)}
+              key={tab}
+              type="button"
+              onClick={() => {
+                if (implementedTabs.has(tab)) setActiveTab(tab);
+              }}
+            >
+              {t(`reports.tabs.${tab}`)}
+            </button>
+          ))}
+        </nav>
+      ) : null}
       {activeTab === "shopOrderQuantities" ? (
         <>
           <section className="panel report-filter-panel">

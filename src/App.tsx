@@ -9,6 +9,7 @@ import {
 import { useTranslation } from "react-i18next";
 import {
   Bell,
+  Beef,
   Boxes,
   CalendarDays,
   ChartNoAxesCombined,
@@ -53,6 +54,9 @@ import {
 import { AuthProvider, useAuth } from "@/auth/AuthProvider";
 import {
   pageAccessKey,
+  REPORT_GROUP_PAGE_KEYS,
+  REPORT_GROUP_ROUTES,
+  REPORT_TAB_PERMISSION_KEYS,
   usePageAccess,
 } from "@/auth/use-page-access";
 import { LoginPage } from "@/components/LoginPage";
@@ -92,6 +96,7 @@ type NavItem = {
   to: string;
   icon: Icon;
   permissionKey?: string;
+  children?: NavItem[];
 };
 
 const primaryNav: NavItem[] = [
@@ -280,6 +285,20 @@ const secondaryNav: Record<string, NavItem[]> = {
       to: "/reports",
       icon: ChartNoAxesCombined,
       permissionKey: "reports",
+      children: [
+        {
+          key: "frozenMeat",
+          to: REPORT_GROUP_ROUTES.frozenMeat,
+          icon: Beef,
+          permissionKey: REPORT_GROUP_PAGE_KEYS.frozenMeat,
+        },
+        {
+          key: "shops",
+          to: REPORT_GROUP_ROUTES.shops,
+          icon: Store,
+          permissionKey: REPORT_GROUP_PAGE_KEYS.shops,
+        },
+      ],
     },
     {
       key: "finance",
@@ -338,13 +357,15 @@ const SECTION_CHILD_KEYS: Record<string, string[]> = {
   delivery: ["delivery.assign"],
   restaurant: ["restaurant.inventory", "restaurant.reports"],
   reports: [
-    "reports.shop_order_quantities",
-    "reports.average_supply_price",
-    "reports.production_cost_price",
-    "reports.raw_meat_average_price",
-    "reports.prepared_meat_stock",
-    "reports.raw_meat_stock",
-    "reports.supplier_purchase",
+    REPORT_GROUP_PAGE_KEYS.frozenMeat,
+    REPORT_GROUP_PAGE_KEYS.shops,
+    REPORT_TAB_PERMISSION_KEYS.shopOrderQuantities,
+    REPORT_TAB_PERMISSION_KEYS.averageSupplyPrice,
+    REPORT_TAB_PERMISSION_KEYS.productionCostPrice,
+    REPORT_TAB_PERMISSION_KEYS.rawMeatAveragePrice,
+    REPORT_TAB_PERMISSION_KEYS.preparedMeatStock,
+    REPORT_TAB_PERMISSION_KEYS.rawMeatStock,
+    REPORT_TAB_PERMISSION_KEYS.supplierPurchase,
   ],
   settings: [
     "settings.users",
@@ -382,6 +403,26 @@ function sectionFromPath(pathname: string) {
 /** Primary top-nav stays active for the whole section, including child routes. */
 function isPrimaryNavActive(section: string, key: string, isActive: boolean) {
   return isActive || (section !== "" && section === key);
+}
+
+function navItemPermissionKey(item: NavItem) {
+  return item.permissionKey ?? pageAccessKey(item.to);
+}
+
+function isNavItemVisible(
+  item: NavItem,
+  canAccess: (pageKey: string) => boolean,
+): boolean {
+  if (item.children?.length) {
+    return item.children.some((child) => isNavItemVisible(child, canAccess));
+  }
+  return canAccess(navItemPermissionKey(item));
+}
+
+function isNavPathActive(pathname: string, to: string, exact: boolean) {
+  if (pathname === to) return true;
+  if (exact) return false;
+  return pathname.startsWith(`${to}/`);
 }
 
 export { isPrimaryNavActive, sectionFromPath };
@@ -465,12 +506,17 @@ function OperationsShell() {
     return pageAccess.canAccessSection(key, SECTION_CHILD_KEYS[key] ?? []);
   });
   const sideItems = (secondaryNav[section] ?? secondaryNav.overview).filter(
-    (item) => pageAccess.canAccess(item.permissionKey ?? pageAccessKey(item.to)),
+    (item) => isNavItemVisible(item, pageAccess.canAccess),
   );
   const firstSettingsPath =
     secondaryNav.settings.find((item) =>
       pageAccess.canAccess(item.permissionKey ?? pageAccessKey(item.to)),
     )?.to ?? "/settings/users";
+  const firstReportsPath =
+    secondaryNav.reports
+      .flatMap((item) => item.children ?? [])
+      .find((item) => isNavItemVisible(item, pageAccess.canAccess))?.to ??
+    REPORT_GROUP_ROUTES.frozenMeat;
   const activeWorkspace =
     section === "delivery"
       ? "delivery"
@@ -671,21 +717,65 @@ function OperationsShell() {
       >
         <aside className="sidebar">
           <nav aria-label="Secondary">
-            {sideItems.map(({ key, to, icon: NavIcon }) => (
-              <NavLink
-                key={`${key}-${to}`}
-                to={to}
-                end={to === "/" || to === `/${section}`}
-                className={({ isActive }) =>
-                  cn("sidebar-link", isActive && "active")
-                }
-                title={sidebarCollapsed ? t(`navigation.${key}`) : undefined}
-              >
-                <NavIcon />
-                <span>{t(`navigation.${key}`)}</span>
-                {!sidebarCollapsed && <ChevronRight className="link-chevron" />}
-              </NavLink>
-            ))}
+            {sideItems.map((item) => {
+              const visibleChildren = (item.children ?? []).filter((child) =>
+                isNavItemVisible(child, pageAccess.canAccess),
+              );
+              const childActive = visibleChildren.some((child) =>
+                isNavPathActive(location.pathname, child.to, false),
+              );
+              const parentExact = item.to === "/" || item.to === `/${section}`;
+
+              return (
+                <div className="sidebar-nav-group" key={`${item.key}-${item.to}`}>
+                  <NavLink
+                    to={visibleChildren[0]?.to ?? item.to}
+                    end={parentExact || visibleChildren.length > 0}
+                    className={({ isActive }) =>
+                      cn(
+                        "sidebar-link",
+                        visibleChildren.length > 0 && "has-children",
+                        (isActive || childActive) &&
+                          (visibleChildren.length === 0 || sidebarCollapsed) &&
+                          "active",
+                        childActive && "open",
+                      )
+                    }
+                    title={
+                      sidebarCollapsed ? t(`navigation.${item.key}`) : undefined
+                    }
+                  >
+                    <item.icon />
+                    <span>{t(`navigation.${item.key}`)}</span>
+                    {!sidebarCollapsed && (
+                      <ChevronRight
+                        className={cn(
+                          "link-chevron",
+                          visibleChildren.length > 0 && "is-expanded",
+                        )}
+                      />
+                    )}
+                  </NavLink>
+                  {visibleChildren.length > 0 && !sidebarCollapsed ? (
+                    <div className="sidebar-subnav">
+                      {visibleChildren.map((child) => (
+                        <NavLink
+                          key={`${child.key}-${child.to}`}
+                          to={child.to}
+                          end
+                          className={({ isActive }) =>
+                            cn("sidebar-link nested", isActive && "active")
+                          }
+                        >
+                          <child.icon />
+                          <span>{t(`navigation.${child.key}`)}</span>
+                        </NavLink>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
           </nav>
           <button
             className="sidebar-collapse"
@@ -799,7 +889,18 @@ function OperationsShell() {
                 element={<PackageDetailPage />}
               />
               <Route path="/products/:id" element={<ProductDetailPage />} />
-              <Route path="/reports/*" element={<ReportsPage />} />
+              <Route
+                path="/reports/frozen-meat"
+                element={<ReportsPage group="frozenMeat" />}
+              />
+              <Route
+                path="/reports/shops"
+                element={<ReportsPage group="shops" />}
+              />
+              <Route
+                path="/reports/*"
+                element={<Navigate to={firstReportsPath} replace />}
+              />
               <Route
                 path="/settings"
                 element={<Navigate to={firstSettingsPath} replace />}

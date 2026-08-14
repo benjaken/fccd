@@ -89,6 +89,8 @@ const resources = {
         delivery: "配送與司機",
         restaurant: "餐廳營運",
         reports: "報表",
+        frozenMeat: "凍肉",
+        shops: "店鋪",
         finance: "財務對帳",
         settings: "系統設定",
         allOrders: "所有訂單",
@@ -664,6 +666,16 @@ const resources = {
       reports: {
         eyebrow: "凍肉／店舖報表",
         title: "報表",
+        groups: {
+          frozenMeat: {
+            eyebrow: "凍肉報表",
+            title: "凍肉",
+          },
+          shops: {
+            eyebrow: "店鋪報表",
+            title: "店鋪",
+          },
+        },
         description: "依店舖、日期及產品查看已遷移的營運資料。",
         navigation: "報表類型",
         tabs: {
@@ -1239,6 +1251,8 @@ const resources = {
         delivery: "Delivery & Drivers",
         restaurant: "Restaurant Operations",
         reports: "Reports",
+        frozenMeat: "Frozen Meat",
+        shops: "Shops",
         finance: "Finance Reconciliation",
         settings: "System Settings",
         allOrders: "All Orders",
@@ -1844,6 +1858,16 @@ const resources = {
       reports: {
         eyebrow: "Meat / shop reporting",
         title: "Reports",
+        groups: {
+          frozenMeat: {
+            eyebrow: "Frozen-meat reports",
+            title: "Frozen Meat",
+          },
+          shops: {
+            eyebrow: "Shop reports",
+            title: "Shops",
+          },
+        },
         description: "Review migrated operating data by shop, date, and product.",
         navigation: "Report types",
         tabs: {
