@@ -2420,6 +2420,17 @@ td:last-child {
   gap: 14px;
 }
 
+.prepared-meat-inbound-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px 16px;
+  align-items: stretch;
+}
+
+.prepared-meat-inbound-date {
+  max-width: 100%;
+}
+
 .prepared-meat-outbound-header {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);

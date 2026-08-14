@@ -1153,6 +1153,12 @@ const resources = {
           stockOut: "製成品出貨",
           manageOrders: "管理送貨單",
         },
+        inboundNoRaw: {
+          title: "製成品入貨(無原料)",
+          movementDate: "入貨日期",
+          saving: "提交中…",
+          saveError: "入貨失敗，請重試",
+        },
         outbound: {
           title: "送貨單",
           customer: "客戶",
@@ -2814,6 +2820,12 @@ const resources = {
           stockInNoRaw: "Prepared inbound (no raw)",
           stockOut: "Prepared outbound",
           manageOrders: "Manage delivery notes",
+        },
+        inboundNoRaw: {
+          title: "Prepared inbound (no raw)",
+          movementDate: "Inbound date",
+          saving: "Submitting…",
+          saveError: "Could not record inbound. Try again.",
         },
         outbound: {
           title: "Delivery note",

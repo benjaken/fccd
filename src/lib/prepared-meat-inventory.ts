@@ -717,3 +717,32 @@ export async function sendPreparedMeatOrderToFactory(
   return data as string;
 }
 
+export type PreparedMeatInboundNoRawLine = {
+  preparedMeatItemId: string;
+  quantity: number;
+  remarks?: string | null;
+};
+
+export type PreparedMeatInboundNoRawInput = {
+  movementDate: string;
+  lines: PreparedMeatInboundNoRawLine[];
+};
+
+export async function createPreparedMeatInboundNoRaw(
+  input: PreparedMeatInboundNoRawInput,
+): Promise<string> {
+  const { data, error } = await supabase.rpc(
+    "create_prepared_meat_inbound_no_raw",
+    {
+      p_movement_date: input.movementDate,
+      p_lines: input.lines.map((line) => ({
+        prepared_meat_item_id: line.preparedMeatItemId,
+        quantity: line.quantity,
+        remarks: (line.remarks ?? "").trim() || null,
+      })),
+    },
+  );
+  if (error) throw error;
+  return data as string;
+}
+

@@ -16,6 +16,7 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 
+import { PreparedMeatInboundNoRawModal } from "@/components/PreparedMeatInboundNoRawModal";
 import { PreparedMeatOptionFormModal } from "@/components/PreparedMeatOptionFormModal";
 import { PreparedMeatOptionsModal } from "@/components/PreparedMeatOptionsModal";
 import { PreparedMeatOutboundModal } from "@/components/PreparedMeatOutboundModal";
@@ -57,6 +58,10 @@ type ItemFlagsSaver = typeof updatePreparedMeatItemFlags;
 type CreateOptionProps = Pick<
   ComponentProps<typeof PreparedMeatOptionFormModal>,
   "loadRawMeatChoices" | "createItem"
+>;
+type InboundNoRawModalProps = Pick<
+  ComponentProps<typeof PreparedMeatInboundNoRawModal>,
+  "createInbound"
 >;
 type OutboundModalProps = Pick<
   ComponentProps<typeof PreparedMeatOutboundModal>,
@@ -161,6 +166,7 @@ export function PreparedMeatInventoryCalcPage({
   saveItemFlags = updatePreparedMeatItemFlags,
   loadRawMeatChoices,
   createItem = createPreparedMeatItem,
+  createInbound,
   loadCustomers,
   loadShippingMethods,
   loadOrderNumber,
@@ -175,6 +181,7 @@ export function PreparedMeatInventoryCalcPage({
   loadMovements?: MovementsLoader;
   saveItemFlags?: ItemFlagsSaver;
 } & CreateOptionProps &
+  InboundNoRawModalProps &
   OutboundModalProps) {
   const { t, i18n } = useTranslation();
   const [items, setItems] = useState<PreparedMeatItemOption[]>([]);
@@ -191,6 +198,7 @@ export function PreparedMeatInventoryCalcPage({
   const [openFilter, setOpenFilter] = useState<"month" | "shop" | null>(null);
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [createOptionOpen, setCreateOptionOpen] = useState(false);
+  const [inboundNoRawOpen, setInboundNoRawOpen] = useState(false);
   const [outboundOpen, setOutboundOpen] = useState(false);
   const [editingOrderId, setEditingOrderId] = useState<string | null | undefined>(
     undefined,
@@ -482,7 +490,7 @@ export function PreparedMeatInventoryCalcPage({
           <Button type="button" disabled title={t("preparedMeatInventory.comingSoon")}>
             {t("preparedMeatInventory.actions.stockInDeduct")}
           </Button>
-          <Button type="button" disabled title={t("preparedMeatInventory.comingSoon")}>
+          <Button type="button" onClick={() => setInboundNoRawOpen(true)}>
             {t("preparedMeatInventory.actions.stockInNoRaw")}
           </Button>
           <Button
@@ -783,6 +791,14 @@ export function PreparedMeatInventoryCalcPage({
         items={items}
         onClose={() => setOptionsOpen(false)}
         onSaveFlags={handleSaveItemFlags}
+      />
+      <PreparedMeatInboundNoRawModal
+        open={inboundNoRawOpen}
+        items={items}
+        selectedItemId={selectedItemId}
+        onClose={() => setInboundNoRawOpen(false)}
+        onSaved={reload}
+        createInbound={createInbound}
       />
       <PreparedMeatOutboundModal
         open={outboundOpen}

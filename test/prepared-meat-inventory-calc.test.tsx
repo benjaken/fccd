@@ -447,7 +447,7 @@ describe("Prepared meat inventory calculation page", () => {
 
     expect(await screen.findByRole("button", { name: "新增製成品選項" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "製成品入貨(扣原料)" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "製成品入貨(無原料)" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "製成品入貨(無原料)" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "管理送貨單" })).toBeDisabled();
 
     await user.click(screen.getByRole("button", { name: "製成品出貨" }));
@@ -553,6 +553,74 @@ describe("Prepared meat inventory calculation page", () => {
     await waitFor(() => {
       expect(sendToFactory).toHaveBeenCalledWith("order-1");
     });
+  });
+
+  it("opens an extra-wide inbound panel without raw sources and saves lines", async () => {
+    const user = userEvent.setup();
+    const loadItems = vi.fn().mockResolvedValue(items);
+    const loadMovements = vi.fn().mockResolvedValue([]);
+    const createInbound = vi.fn().mockResolvedValue("move-1");
+
+    render(
+      <MemoryRouter>
+        <PreparedMeatInventoryCalcPage
+          loadItems={loadItems}
+          loadMovements={loadMovements}
+          createInbound={createInbound}
+        />
+      </MemoryRouter>,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: "製成品入貨(無原料)" }),
+    );
+
+    const dialog = await screen.findByRole("dialog", {
+      name: "製成品入貨(無原料)",
+    });
+    expect(dialog).toHaveClass("side-panel-xl");
+    expect(within(dialog).getByLabelText("入貨日期")).toBeEnabled();
+    expect(within(dialog).queryByRole("combobox", { name: "客戶" })).toBeNull();
+    expect(within(dialog).queryByRole("combobox", { name: "生肉" })).toBeNull();
+    expect(within(dialog).getByRole("button", { name: "確定" })).toBeDisabled();
+
+    await user.click(within(dialog).getByRole("combobox", { name: "製成品" }));
+    await user.click(within(dialog).getByRole("option", { name: "五香牛腩" }));
+    const quantity = within(dialog).getByRole("textbox", { name: "製成品數量" });
+    await user.type(quantity, "勝多負少");
+    expect(quantity).toHaveValue("");
+    await user.type(quantity, "3");
+    expect(quantity).toHaveValue("3");
+    await user.type(
+      within(dialog).getByRole("textbox", { name: "製成品備註" }),
+      "工場入貨",
+    );
+    await user.click(within(dialog).getByRole("button", { name: "加入" }));
+
+    const lines = dialog.querySelector(".prepared-meat-outbound-lines");
+    expect(lines).not.toBeNull();
+    expect(within(lines as HTMLElement).getByText("五香牛腩")).toBeInTheDocument();
+    expect(
+      within(lines as HTMLElement).getByRole("textbox", { name: "五香牛腩 數量" }),
+    ).toHaveValue("3");
+
+    await user.click(within(dialog).getByRole("button", { name: "確定" }));
+    await waitFor(() => {
+      expect(createInbound).toHaveBeenCalledWith({
+        movementDate: expect.any(String),
+        lines: [
+          {
+            preparedMeatItemId: "item-1",
+            quantity: 3,
+            remarks: "工場入貨",
+          },
+        ],
+      });
+    });
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "製成品入貨(無原料)" })).toBeNull();
+    });
+    expect(loadMovements).toHaveBeenCalledTimes(2);
   });
 
   it("lets 到會 and 凍肉製作 add direct-ship raw meat", async () => {
