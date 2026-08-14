@@ -1,4 +1,4 @@
-# 生肉出貨預算收成與收成錯誤
+# 生肉出貨預算收成與收成異常
 
 This document records Bubble's 生肉出貨 「預算收成」 formula from the live
 Text expression, and how Supabase stores rows that miss that estimate by more
@@ -51,7 +51,7 @@ rate is 5,436 包 / 14,662 kg = **0.3707 包/kg**:
 ceiling(0.3707 × 150.181) = 56
 ```
 
-Actual 55 包 is within 15% of 56, so it is **not** a 收成錯誤.
+Actual 55 包 is within 15% of 56, so it is **not** a 收成異常.
 
 ## 15% error rule
 
@@ -61,7 +61,7 @@ Record a `meat_yield_errors` row only when:
 abs(actual_packs - expected_packs) / expected_packs > 0.15
 ```
 
-15% 以內（含剛好 15%）不列為錯誤。例如預算收成 31 包時，27 與 35 包（±12.9%）不記錄；26 與 36 包（±16.1%）才寫入。
+15% 以內（含剛好 15%）不列為異常。例如預算收成 31 包時，27 與 35 包（±12.9%）不記錄；26 與 36 包（±16.1%）才寫入。
 
 If historical packs or raw kg are missing (no prior inbound with linked
 outbound), do not insert an error row.
@@ -76,8 +76,9 @@ outbound), do not insert an error row.
 ## List page
 
 Route `/frozen/yield-errors` (page key `frozen.yield_errors`) is a Frozen Goods
-secondary-nav item. It is a read-only operational list: `ListSearchBar`,
-`ListTable`, and `TablePagination` at **15 rows per page**. Search covers raw /
+secondary-nav item labelled **收成異常**. It is a read-only operational list: `ListSearchBar`,
+`ListTable`, and `TablePagination` at **15 rows per page**. The list panel shows
+the 預算收成 formula and the 15% listing rule. Search covers raw /
 prepared name snapshots and remarks; the extra filter is over / under.
 
 SELECT access matches RLS: Super Admin, Admin, Factory, and Accounting. The
@@ -88,5 +89,5 @@ outbound form calls `record_meat_yield_error_if_needed`.
 
 Empty and filtered-empty states keep the warning icon with:
 
-- **未找到收成錯誤**
+- **目前沒有收成異常**
 - 調整搜尋或篩選條件後再試。

@@ -1394,6 +1394,31 @@ td:last-child {
   border-bottom: 1px solid var(--border);
 }
 
+.yield-errors-page .orders-panel {
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+}
+
+.yield-errors-rules {
+  display: grid;
+  gap: 4px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border);
+  background: var(--secondary);
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.yield-errors-rules-title {
+  color: var(--foreground);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.yield-errors-rules p {
+  margin: 0;
+}
+
 .settings-attachments-toolbar {
   flex-wrap: wrap;
   align-items: flex-end;

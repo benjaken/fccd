@@ -6,6 +6,7 @@ import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import { OperationalListState } from "@/components/ui/operational-list-state";
 import { TablePagination } from "@/components/ui/table-pagination";
+import { YIELD_ERROR_THRESHOLD_RATIO } from "@/lib/meat-yield";
 import {
   fetchMeatYieldErrors,
   YIELD_ERRORS_PAGE_SIZE,
@@ -127,7 +128,7 @@ export function MeatYieldErrorsPage({
   };
 
   return (
-    <section className="orders-page">
+    <section className="orders-page yield-errors-page">
       <header className="page-heading orders-heading">
         <div>
           <span className="eyebrow">{t("yieldErrors.eyebrow")}</span>
@@ -135,6 +136,20 @@ export function MeatYieldErrorsPage({
         </div>
       </header>
       <article className="panel orders-panel">
+        <aside
+          className="yield-errors-rules"
+          aria-label={t("yieldErrors.rulesTitle")}
+        >
+          <p className="yield-errors-rules-title">
+            {t("yieldErrors.rulesTitle")}
+          </p>
+          <p>{t("yieldErrors.ruleBudget")}</p>
+          <p>
+            {t("yieldErrors.ruleThreshold", {
+              percent: Math.round(YIELD_ERROR_THRESHOLD_RATIO * 100),
+            })}
+          </p>
+        </aside>
         <header className="orders-toolbar">
           <ListSearchBar
             id="yield-errors-search"

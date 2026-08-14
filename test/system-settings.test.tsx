@@ -719,6 +719,16 @@ describe("Super Admin system settings", () => {
       "roles.role in ('Admin', 'Factory', 'Accounting')",
     );
 
+    const yieldExceptions = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260814250000_rename_yield_errors_to_exceptions.sql",
+      ),
+      "utf8",
+    );
+    expect(yieldExceptions).toContain("frozen.yield_errors");
+    expect(yieldExceptions).toContain("收成異常");
+
     const rawMeatActions = readFileSync(
       path.resolve(
         process.cwd(),

@@ -68,7 +68,18 @@ describe("Meat yield errors page", () => {
     );
 
     expect(
-      await screen.findByRole("heading", { name: "收成錯誤" }),
+      await screen.findByRole("heading", { name: "收成異常" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("計算規則")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "預算收成 = 向上取整（該熟貨過往入貨包數 ÷ 過往生肉出貨 kg × 今次生肉出貨 kg）",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "實際入貨包數與預算收成相差超過 15% 才列入此表。",
+      ),
     ).toBeInTheDocument();
     expect(await screen.findByText("輸入 80")).toBeInTheDocument();
     expect(screen.getAllByText("豬肉碎(扁食用) (生)")).toHaveLength(2);
@@ -168,7 +179,7 @@ describe("Meat yield errors page", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText("未找到收成錯誤")).toBeInTheDocument();
+    expect(await screen.findByText("目前沒有收成異常")).toBeInTheDocument();
     expect(screen.getByText("調整搜尋或篩選條件後再試。")).toBeInTheDocument();
     expect(document.querySelector(".operational-list-state svg")).not.toBeNull();
   });
@@ -199,7 +210,7 @@ describe("Meat yield errors page", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText("暫時無法載入收成錯誤")).toBeInTheDocument();
+    expect(await screen.findByText("暫時無法載入收成異常")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "重新載入" }));
 
     expect(

@@ -46,7 +46,7 @@ describe("prepared meat 預算收成", () => {
     expect(estimate.expectedPacks).toBeNull();
   });
 
-  it("records 收成錯誤 when actual packs miss 預算收成 by more than 15%", () => {
+  it("records 收成異常 when actual packs miss 預算收成 by more than 15%", () => {
     expect(YIELD_ERROR_THRESHOLD_RATIO).toBe(0.15);
     expect(shouldRecordMeatYieldError(80, 31).isError).toBe(true);
     expect(shouldRecordMeatYieldError(80, 31).direction).toBe("over");
@@ -159,5 +159,18 @@ describe("meat yield error historical backfill", () => {
     expect(migration).toContain("/ estimate.expected_packs > 0.15");
     expect(migration).toContain("delete from public.meat_yield_errors");
     expect(migration).toContain("select private.backfill_meat_yield_errors()");
+  });
+
+  it("renames the Frozen Goods page to 收成異常", () => {
+    const migration = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260814250000_rename_yield_errors_to_exceptions.sql",
+      ),
+      "utf8",
+    );
+
+    expect(migration).toContain("page_key = 'frozen.yield_errors'");
+    expect(migration).toContain("display_name = '收成異常'");
   });
 });
