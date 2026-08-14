@@ -10,6 +10,13 @@ import {
   type MeatCustomerRow,
 } from "@/lib/meat-customers";
 
+vi.mock("@/auth/AuthProvider", () => ({
+  useAuth: () => ({
+    user: { app_metadata: { role: "Super Admin" } },
+    profile: { role: "Super Admin" },
+  }),
+}));
+
 const rows: MeatCustomerRow[] = [
   {
     id: "c-1",
@@ -180,6 +187,24 @@ describe("Meat customers page", () => {
     expect(await screen.findByText("桂花小幸 YLP 改")).toBeInTheDocument();
     expect(screen.queryByText("桂花小幸 YLP")).not.toBeInTheDocument();
     expect(screen.getByText("桂花小幸 TKO")).toBeInTheDocument();
+  });
+
+  it("hides edit and delete without action permission", async () => {
+    const loadCustomers = vi.fn().mockResolvedValue(structuredClone(rows));
+
+    render(
+      <MemoryRouter>
+        <MeatCustomersPage
+          loadCustomers={loadCustomers}
+          canEdit={false}
+          canDelete={false}
+        />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("桂花小幸 YLP");
+    expect(screen.queryByRole("button", { name: "編輯" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "刪除" })).not.toBeInTheDocument();
   });
 
   it("deletes a customer after confirmation", async () => {

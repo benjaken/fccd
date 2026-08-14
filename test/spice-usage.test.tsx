@@ -7,6 +7,13 @@ import { SpiceUsagePage } from "@/components/SpiceUsagePage";
 import i18n from "@/i18n";
 import type { SeasoningOption, SeasoningUsageRow } from "@/lib/spice-usage";
 
+vi.mock("@/auth/AuthProvider", () => ({
+  useAuth: () => ({
+    user: { app_metadata: { role: "Super Admin" } },
+    profile: { role: "Super Admin" },
+  }),
+}));
+
 const seasonings: SeasoningOption[] = [
   { id: "s-1", name: "幼鹽", sortOrder: 1 },
   { id: "s-2", name: "片糖", sortOrder: 2 },
@@ -86,6 +93,28 @@ describe("Spice usage page", () => {
     await waitFor(() => {
       expect(loadUsages).toHaveBeenCalledWith("s-1");
     });
+  });
+
+  it("hides delete without action permission", async () => {
+    const loadSeasonings = vi.fn().mockResolvedValue(seasonings);
+    const loadUsages = vi
+      .fn()
+      .mockImplementation(async (seasoningId: string) =>
+        structuredClone(usagesBySeasoning[seasoningId] ?? []),
+      );
+
+    render(
+      <MemoryRouter>
+        <SpiceUsagePage
+          loadSeasonings={loadSeasonings}
+          loadUsages={loadUsages}
+          canDelete={false}
+        />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("醃雞扒");
+    expect(screen.queryByRole("button", { name: "刪除" })).not.toBeInTheDocument();
   });
 
   it("switches usage rows when another seasoning is selected", async () => {

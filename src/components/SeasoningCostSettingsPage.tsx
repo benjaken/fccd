@@ -17,6 +17,7 @@ import {
   Trash2,
 } from "lucide-react";
 
+import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
@@ -31,6 +32,7 @@ import {
   updateSeasoningCost,
   type SeasoningCostRow,
 } from "@/lib/seasoning-cost";
+import { FROZEN_ACTION_PERMISSION_KEYS } from "@/lib/frozen-action-permissions";
 import { tryEvaluateSeasoningExpression } from "@/lib/seasoning-expression";
 import { cn } from "@/lib/utils";
 
@@ -48,8 +50,11 @@ const SEASONING_COST_SKELETON_COLUMNS = [
   { width: "6rem" },
   { width: "8rem" },
   { width: "10rem" },
-  { width: "4.5rem", variant: "action" as const },
 ];
+const SEASONING_COST_ACTION_SKELETON = {
+  width: "4.5rem",
+  variant: "action" as const,
+};
 
 function SortHeaderButton({
   label,
@@ -276,13 +281,25 @@ export function SeasoningCostSettingsPage({
   createSeasoning = createSeasoningCost,
   updateSeasoning = updateSeasoningCost,
   deleteSeasoning = archiveSeasoningCost,
+  canEdit: canEditProp,
+  canDelete: canDeleteProp,
 }: {
   loadSeasonings?: SeasoningsLoader;
   createSeasoning?: SeasoningCreator;
   updateSeasoning?: SeasoningUpdater;
   deleteSeasoning?: SeasoningDeleter;
+  canEdit?: boolean;
+  canDelete?: boolean;
 }) {
   const { t, i18n } = useTranslation();
+  const pageAccess = useCurrentPageAccess();
+  const canEdit =
+    canEditProp ??
+    pageAccess.canAccess(FROZEN_ACTION_PERMISSION_KEYS.seasoningCost.edit);
+  const canDelete =
+    canDeleteProp ??
+    pageAccess.canAccess(FROZEN_ACTION_PERMISSION_KEYS.seasoningCost.delete);
+  const showRowActions = canEdit || canDelete;
   const [rows, setRows] = useState<SeasoningCostRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -410,6 +427,7 @@ export function SeasoningCostSettingsPage({
   };
 
   const openEdit = (row: SeasoningCostRow) => {
+    if (!canEdit) return;
     setEditingSeasoning(row);
     setPanelOpen(true);
   };
@@ -420,7 +438,7 @@ export function SeasoningCostSettingsPage({
   };
 
   const handleDelete = useEffectEvent(async (row: SeasoningCostRow) => {
-    if (deletingId) return;
+    if (!canDelete || deletingId) return;
     const confirmed = window.confirm(t("seasoningCost.deleteConfirm"));
     if (!confirmed) return;
     setDeletingId(row.id);
@@ -519,7 +537,11 @@ export function SeasoningCostSettingsPage({
             loading={loading}
             loadingLabel={t("seasoningCost.loading")}
             skeletonRows={SEASONING_COST_PAGE_SIZE}
-            skeletonColumns={SEASONING_COST_SKELETON_COLUMNS}
+            skeletonColumns={
+              showRowActions
+                ? [...SEASONING_COST_SKELETON_COLUMNS, SEASONING_COST_ACTION_SKELETON]
+                : SEASONING_COST_SKELETON_COLUMNS
+            }
             header={
               <tr>
                 <th>
@@ -544,7 +566,9 @@ export function SeasoningCostSettingsPage({
                   />
                 </th>
                 <th>{t("seasoningCost.columns.remark")}</th>
-                <th aria-label={t("seasoningCost.columns.actions")} />
+                {showRowActions ? (
+                  <th aria-label={t("seasoningCost.columns.actions")} />
+                ) : null}
               </tr>
             }
           >
@@ -570,34 +594,40 @@ export function SeasoningCostSettingsPage({
                 <td className="seasoning-cost-remark-cell">
                   {display(row.description)}
                 </td>
-                <td className="table-actions-cell">
-                  <div className="table-row-actions">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      disabled={deletingId === row.id}
-                      aria-label={t("seasoningCost.edit")}
-                      title={t("seasoningCost.edit")}
-                      onClick={() => openEdit(row)}
-                    >
-                      <Pencil />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      disabled={deletingId === row.id}
-                      aria-label={t("seasoningCost.delete")}
-                      title={t("seasoningCost.delete")}
-                      onClick={() => {
-                        void handleDelete(row);
-                      }}
-                    >
-                      <Trash2 />
-                    </Button>
-                  </div>
-                </td>
+                {showRowActions ? (
+                  <td className="table-actions-cell">
+                    <div className="table-row-actions">
+                      {canEdit ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          disabled={deletingId === row.id}
+                          aria-label={t("seasoningCost.edit")}
+                          title={t("seasoningCost.edit")}
+                          onClick={() => openEdit(row)}
+                        >
+                          <Pencil />
+                        </Button>
+                      ) : null}
+                      {canDelete ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          disabled={deletingId === row.id}
+                          aria-label={t("seasoningCost.delete")}
+                          title={t("seasoningCost.delete")}
+                          onClick={() => {
+                            void handleDelete(row);
+                          }}
+                        >
+                          <Trash2 />
+                        </Button>
+                      ) : null}
+                    </div>
+                  </td>
+                ) : null}
               </tr>
             ))}
           </ListTable>
@@ -629,7 +659,7 @@ export function SeasoningCostSettingsPage({
       </article>
 
       <SeasoningCostFormPanel
-        open={panelOpen}
+        open={panelOpen && (!editingSeasoning || canEdit)}
         seasoning={editingSeasoning}
         onClose={closePanel}
         createSeasoning={createSeasoning}

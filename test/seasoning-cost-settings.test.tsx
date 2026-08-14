@@ -11,6 +11,13 @@ import {
   type SeasoningCostRow,
 } from "@/lib/seasoning-cost";
 
+vi.mock("@/auth/AuthProvider", () => ({
+  useAuth: () => ({
+    user: { app_metadata: { role: "Super Admin" } },
+    profile: { role: "Super Admin" },
+  }),
+}));
+
 const rows: SeasoningCostRow[] = [
   {
     id: "s-1",
@@ -195,6 +202,24 @@ describe("Seasoning cost settings page", () => {
     expect(await screen.findByText("0.005")).toBeInTheDocument();
     expect(screen.getByText("更新備註")).toBeInTheDocument();
     expect(screen.queryByText("2.5/600")).not.toBeInTheDocument();
+  });
+
+  it("hides edit and delete without action permission", async () => {
+    const loadSeasonings = vi.fn().mockResolvedValue(structuredClone(rows));
+
+    render(
+      <MemoryRouter>
+        <SeasoningCostSettingsPage
+          loadSeasonings={loadSeasonings}
+          canEdit={false}
+          canDelete={false}
+        />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("幼鹽");
+    expect(screen.queryByRole("button", { name: "編輯" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "刪除" })).not.toBeInTheDocument();
   });
 
   it("filters the table from the search bar", async () => {
