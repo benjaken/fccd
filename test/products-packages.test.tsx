@@ -65,11 +65,24 @@ const productDetail: ProductDetail = {
   bentoMainTypeName: "飯",
   bentoColumnTypeId: "column-1",
   bentoColumnTypeName: "雙格",
-  collections: ["西式熱盤"],
-  mainIngredients: [{ id: "ing-1", name: "雞", legacyId: "legacy-ing-1" }],
-  specialRequests: [
-    { id: "req-1", name: "不辣", legacyId: "legacy-req-1" },
-    { id: "req-2", name: "適合小朋友", legacyId: "legacy-req-2" },
+  collections: [{ id: "col-1", name: "西式熱盤", legacyId: "legacy-col-1" }],
+  premiumIngredients: [
+    {
+      id: "prem-1",
+      ingredientId: "ing-x",
+      name: "松露",
+      quantity: 1,
+      unitCost: 12,
+    },
+  ],
+  labels: [
+    {
+      id: "label-1",
+      displayA: "(雙格) 拿破崙",
+      displayB: "雞扒意粉",
+      packingMaterialId: null,
+      packingName: null,
+    },
   ],
   packages: [
     {
@@ -86,17 +99,9 @@ const productEditOptions = {
   channels: [{ id: "channel-1", name: "Catering" }],
   productTypes: [{ id: "type-1", name: "西式熱盤" }],
   cookTypes: [{ id: "cook-1", name: "焗" }],
-  bentoMainTypes: [{ id: "staple-1", name: "飯" }],
-  bentoColumnTypes: [{ id: "column-1", name: "雙格" }],
-  mainIngredients: [
-    { id: "ing-1", name: "雞", legacyId: "legacy-ing-1" },
-    { id: "ing-2", name: "豬", legacyId: "legacy-ing-2" },
-  ],
-  specialRequests: [
-    { id: "req-1", name: "不辣", legacyId: "legacy-req-1" },
-    { id: "req-2", name: "適合小朋友", legacyId: "legacy-req-2" },
-    { id: "req-3", name: "無菇", legacyId: "legacy-req-3" },
-  ],
+  collections: [{ id: "col-1", name: "西式熱盤", legacyId: "legacy-col-1" }],
+  packingMaterials: [{ id: "pack-1", name: "紙盒" }],
+  catalogIngredients: [{ id: "ing-x", name: "松露", legacyId: "legacy-ing-x" }],
 };
 
 const packageResult: PackageListResult = {
@@ -440,8 +445,11 @@ describe("Products catalog pages", () => {
       screen.getByRole("link", { name: "精緻家庭美宴 (4-6人)" }),
     ).toHaveAttribute("href", "/products/packages/package-1");
     expect(screen.getByLabelText("已推薦")).toBeInTheDocument();
-    expect(screen.getByText("雞")).toBeInTheDocument();
-    expect(screen.getByText("不辣")).toBeInTheDocument();
+    expect(screen.getByText("產品列表")).toBeInTheDocument();
+    expect(screen.getByText("名貴食材", { exact: false })).toBeInTheDocument();
+    expect(screen.getByText("松露")).toBeInTheDocument();
+    expect(screen.getByText("(雙格) 拿破崙")).toBeInTheDocument();
+    expect(screen.getAllByText("爐位類別").length).toBeGreaterThan(0);
     expect(screen.queryByRole("link", { name: "編輯" })).not.toBeInTheDocument();
   });
 
@@ -469,12 +477,11 @@ describe("Products catalog pages", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole("button", { name: "儲存" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "確認更改" })).toBeInTheDocument();
     const chineseName = await screen.findByLabelText("中文名稱");
     await user.clear(chineseName);
     await user.type(chineseName, "香草燒雞");
-    await user.click(await screen.findByRole("button", { name: "豬" }));
-    await user.click(screen.getByRole("button", { name: "儲存" }));
+    await user.click(screen.getByRole("button", { name: "確認更改" }));
 
     await waitFor(() =>
       expect(saveProduct).toHaveBeenCalledWith(
@@ -482,7 +489,7 @@ describe("Products catalog pages", () => {
         expect.objectContaining({
           chineseName: "香草燒雞",
           isBentoRecommended: true,
-          mainIngredientIds: ["ing-1", "ing-2"],
+          collectionIds: ["col-1"],
         }),
       ),
     );

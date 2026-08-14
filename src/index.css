@@ -1373,13 +1373,89 @@ button.product-tag[aria-pressed="true"] {
   opacity: 1;
 }
 
-.product-attribute-fields {
+.detail-breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.detail-breadcrumb a {
+  color: var(--primary);
+}
+
+.detail-breadcrumb a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.product-required {
+  margin-left: 4px;
+  color: var(--destructive);
+}
+
+.product-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-left: 10px;
+  border-left: 4px solid var(--primary);
+}
+
+.product-section-header h2 {
+  margin: 0;
+}
+
+.product-ingredient-cost {
+  color: var(--primary);
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.product-basics-grid {
+  display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 28px;
+}
+
+.product-inline-add {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(5.5rem, 0.5fr) auto;
+  gap: 10px;
+  align-items: end;
+  margin-bottom: 14px;
+}
+
+.product-inline-add label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  .product-basics-grid,
+  .product-inline-add {
+    grid-template-columns: 1fr;
+  }
 }
 
 .product-detail-form.is-editing .detail-field input,
 .product-detail-form.is-editing .detail-field select,
-.product-detail-form.is-editing .detail-field textarea {
+.product-detail-form.is-editing .detail-field textarea,
+.detail-page.is-editing .detail-field input,
+.detail-page.is-editing .detail-field select,
+.detail-page.is-editing .detail-field textarea,
+.product-inline-add input,
+.product-inline-add select {
   width: 100%;
   min-height: 42px;
   padding: 8px 12px;
@@ -1423,7 +1499,8 @@ button.product-tag[aria-pressed="true"] {
 }
 
 @media (max-width: 900px) {
-  .product-attribute-fields {
+  .product-basics-grid,
+  .product-inline-add {
     grid-template-columns: 1fr;
   }
 }

@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  ChevronLeft,
-  Package,
   Pencil,
+  Plus,
   RefreshCw,
   ShoppingBasket,
-  Tags,
+  Trash2,
 } from "lucide-react";
 import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
 
@@ -16,8 +15,13 @@ import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { PullToRefresh } from "@/components/ui/pull-to-refresh";
 import {
+  addProductLabel,
+  addProductPremiumIngredient,
   fetchProductDetail,
   fetchProductEditOptions,
+  productIngredientCost,
+  removeProductLabel,
+  removeProductPremiumIngredient,
   updateProduct,
   type CatalogOption,
   type ProductDetail,
@@ -36,39 +40,46 @@ type ProductFormState = {
   sku: string;
   description: string;
   price: string;
-  priceMin: string;
-  priceMax: string;
   status: string;
   isBentoRecommended: boolean;
   channelId: string;
   productTypeId: string;
   cookTypeId: string;
-  bentoMainTypeId: string;
-  bentoColumnTypeId: string;
-  mainIngredientIds: string[];
-  specialRequestIds: string[];
+  collectionIds: string[];
 };
 
 const EMPTY_OPTIONS: ProductEditOptions = {
   channels: [],
   productTypes: [],
   cookTypes: [],
-  bentoMainTypes: [],
-  bentoColumnTypes: [],
-  mainIngredients: [],
-  specialRequests: [],
+  collections: [],
+  packingMaterials: [],
+  catalogIngredients: [],
 };
+
+function RequiredMark() {
+  return (
+    <span className="product-required" aria-hidden="true">
+      *
+    </span>
+  );
+}
 
 function DetailField({
   label,
+  required,
   children,
 }: {
   label: string;
+  required?: boolean;
   children: ReactNode;
 }) {
   return (
     <div className="detail-field">
-      <span>{label}</span>
+      <span>
+        {label}
+        {required ? <RequiredMark /> : null}
+      </span>
       <strong>{children}</strong>
     </div>
   );
@@ -81,17 +92,12 @@ function formFromProduct(product: ProductDetail): ProductFormState {
     sku: product.sku ?? "",
     description: product.description ?? "",
     price: product.price === null ? "" : String(product.price),
-    priceMin: product.priceMin === null ? "" : String(product.priceMin),
-    priceMax: product.priceMax === null ? "" : String(product.priceMax),
     status: product.status ?? "",
     isBentoRecommended: product.isBentoRecommended,
     channelId: product.channelId ?? "",
     productTypeId: product.productTypeId ?? "",
     cookTypeId: product.cookTypeId ?? "",
-    bentoMainTypeId: product.bentoMainTypeId ?? "",
-    bentoColumnTypeId: product.bentoColumnTypeId ?? "",
-    mainIngredientIds: product.mainIngredients.map((item) => item.id),
-    specialRequestIds: product.specialRequests.map((item) => item.id),
+    collectionIds: product.collections.map((item) => item.id),
   };
 }
 
@@ -107,11 +113,19 @@ export function ProductDetailPage({
   loadDetail = fetchProductDetail,
   loadEditOptions = fetchProductEditOptions,
   saveProduct = updateProduct,
+  addIngredient = addProductPremiumIngredient,
+  removeIngredient = removeProductPremiumIngredient,
+  addLabel = addProductLabel,
+  removeLabel = removeProductLabel,
 }: {
   canEdit?: boolean;
   loadDetail?: DetailLoader;
   loadEditOptions?: OptionsLoader;
   saveProduct?: ProductSaver;
+  addIngredient?: typeof addProductPremiumIngredient;
+  removeIngredient?: typeof removeProductPremiumIngredient;
+  addLabel?: typeof addProductLabel;
+  removeLabel?: typeof removeProductLabel;
 }) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -127,23 +141,19 @@ export function ProductDetailPage({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [reloadKey, setReloadKey] = useState(0);
+  const [ingredientId, setIngredientId] = useState("");
+  const [ingredientQty, setIngredientQty] = useState("1");
+  const [labelDisplayA, setLabelDisplayA] = useState("");
+  const [labelDisplayB, setLabelDisplayB] = useState("");
+  const [labelPackingId, setLabelPackingId] = useState("");
+  const [adding, setAdding] = useState<"ingredient" | "label" | null>(null);
 
   const currency = useMemo(
     () =>
       new Intl.NumberFormat(i18n.language, {
         style: "currency",
         currency: "HKD",
-        maximumFractionDigits: 0,
-      }),
-    [i18n.language],
-  );
-
-  const date = useMemo(
-    () =>
-      new Intl.DateTimeFormat(i18n.language, {
-        dateStyle: "medium",
-        timeStyle: "short",
-        timeZone: "Asia/Hong_Kong",
+        maximumFractionDigits: 2,
       }),
     [i18n.language],
   );
@@ -235,36 +245,30 @@ export function ProductDetailPage({
       : product.status === "Inactive"
         ? "amber"
         : "blue";
+  const ingredientCost = productIngredientCost(product.premiumIngredients);
+
+  const refreshDetail = async () => {
+    const detail = await loadDetail(id);
+    setProduct(detail);
+    if (detail) setForm(formFromProduct(detail));
+  };
 
   const patchForm = (partial: Partial<ProductFormState>) => {
     setForm((current) => (current ? { ...current, ...partial } : current));
   };
 
-  const toggleId = (key: "mainIngredientIds" | "specialRequestIds", idValue: string) => {
-    setForm((current) => {
-      if (!current) return current;
-      const selected = current[key];
-      return {
-        ...current,
-        [key]: selected.includes(idValue)
-          ? selected.filter((item) => item !== idValue)
-          : [...selected, idValue],
-      };
-    });
-  };
-
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const nextErrors: Record<string, string> = {};
-    if (!form.name.trim()) {
-      nextErrors.name = t("productDetail.validation.nameRequired");
-    }
+    if (!form.sku.trim()) nextErrors.sku = t("productDetail.validation.skuRequired");
+    if (!form.name.trim()) nextErrors.name = t("productDetail.validation.nameRequired");
+    if (!form.channelId) nextErrors.channelId = t("productDetail.validation.channelRequired");
+    if (!form.productTypeId) nextErrors.productTypeId = t("productDetail.validation.typeRequired");
+    if (!form.status) nextErrors.status = t("productDetail.validation.statusRequired");
     const price = parseMoney(form.price);
-    const priceMin = parseMoney(form.priceMin);
-    const priceMax = parseMoney(form.priceMax);
-    if (Number.isNaN(price)) nextErrors.price = t("productDetail.validation.priceInvalid");
-    if (Number.isNaN(priceMin)) nextErrors.priceMin = t("productDetail.validation.priceInvalid");
-    if (Number.isNaN(priceMax)) nextErrors.priceMax = t("productDetail.validation.priceInvalid");
+    if (price === null || Number.isNaN(price)) {
+      nextErrors.price = t("productDetail.validation.priceInvalid");
+    }
     setFieldErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
 
@@ -277,18 +281,13 @@ export function ProductDetailPage({
         sku: form.sku,
         description: form.description,
         price,
-        priceMin,
-        priceMax,
         status: form.status,
         isActive: form.status !== "Inactive",
         isBentoRecommended: form.isBentoRecommended,
         channelId: form.channelId || null,
         productTypeId: form.productTypeId || null,
         cookTypeId: form.cookTypeId || null,
-        bentoMainTypeId: form.bentoMainTypeId || null,
-        bentoColumnTypeId: form.bentoColumnTypeId || null,
-        mainIngredientIds: form.mainIngredientIds,
-        specialRequestIds: form.specialRequestIds,
+        collectionIds: form.collectionIds,
       });
       navigate(`/products/${product.id}`);
     } catch (submitError) {
@@ -310,13 +309,15 @@ export function ProductDetailPage({
     value: string,
     onChange: (value: string) => void,
     items: CatalogOption[],
+    errorKey?: string,
+    required = false,
   ) => (
     <label className="detail-field">
-      <span>{label}</span>
-      <select
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-      >
+      <span>
+        {label}
+        {required ? <RequiredMark /> : null}
+      </span>
+      <select value={value} onChange={(event) => onChange(event.target.value)}>
         <option value="">{t("common.notSet")}</option>
         {items.map((item) => (
           <option key={item.id} value={item.id}>
@@ -324,6 +325,7 @@ export function ProductDetailPage({
           </option>
         ))}
       </select>
+      {errorKey && fieldErrors[errorKey] ? <em>{fieldErrors[errorKey]}</em> : null}
     </label>
   );
 
@@ -333,9 +335,13 @@ export function ProductDetailPage({
     onChange: (value: string) => void,
     errorKey?: string,
     type = "text",
+    required = false,
   ) => (
     <label className="detail-field">
-      <span>{label}</span>
+      <span>
+        {label}
+        {required ? <RequiredMark /> : null}
+      </span>
       <input
         type={type}
         value={value}
@@ -345,14 +351,48 @@ export function ProductDetailPage({
     </label>
   );
 
+  const handleAddIngredient = async () => {
+    if (!ingredientId) return;
+    const quantity = Number.parseFloat(ingredientQty);
+    if (!Number.isFinite(quantity) || quantity <= 0) return;
+    setAdding("ingredient");
+    try {
+      await addIngredient(product.id, ingredientId, quantity);
+      setIngredientId("");
+      setIngredientQty("1");
+      await refreshDetail();
+    } finally {
+      setAdding(null);
+    }
+  };
+
+  const handleAddLabel = async () => {
+    if (!labelDisplayA.trim() && !labelDisplayB.trim()) return;
+    setAdding("label");
+    try {
+      await addLabel(product.id, {
+        displayA: labelDisplayA,
+        displayB: labelDisplayB,
+        packingMaterialId: labelPackingId || null,
+      });
+      setLabelDisplayA("");
+      setLabelDisplayB("");
+      setLabelPackingId("");
+      await refreshDetail();
+    } finally {
+      setAdding(null);
+    }
+  };
+
   return (
-    <section className="detail-page">
+    <section className={cn("detail-page", editing && "is-editing")}>
       <header className="page-heading">
         <div>
-          <Link className="detail-back" to="/products">
-            <ChevronLeft />
-            {t("productDetail.back")}
-          </Link>
+          <nav className="detail-breadcrumb" aria-label={t("productDetail.breadcrumb")}>
+            <Link to="/products">{t("productDetail.listCrumb")}</Link>
+            <span aria-hidden="true">›</span>
+            <span>{displayName}</span>
+          </nav>
           <span className="eyebrow">
             {editing ? t("productDetail.editEyebrow") : t("productDetail.eyebrow")}
           </span>
@@ -361,6 +401,22 @@ export function ProductDetailPage({
         </div>
         <div className="heading-actions">
           <span className={cn("status-badge", statusTone)}>{statusLabel}</span>
+          <ProductRecommendStar
+            recommended={
+              editing ? form.isBentoRecommended : product.isBentoRecommended
+            }
+            label={
+              (editing ? form.isBentoRecommended : product.isBentoRecommended)
+                ? t("products.recommendedOn")
+                : t("products.recommendedOff")
+            }
+            onToggle={
+              editing
+                ? () =>
+                    patchForm({ isBentoRecommended: !form.isBentoRecommended })
+                : undefined
+            }
+          />
           {canEdit && !editing ? (
             <Button asChild>
               <Link to={`/products/${product.id}/edit`}>
@@ -377,30 +433,21 @@ export function ProductDetailPage({
         className={cn("product-detail-form", editing && "is-editing")}
         onSubmit={submit}
       >
-        <section className="detail-grid detail-grid-two">
-          <article className="panel detail-card">
-            <header>
-              <ShoppingBasket />
-              <h2>{t("productDetail.basics")}</h2>
-            </header>
+        <article className="panel detail-card">
+          <header className="product-section-header">
+            <h2>{t("productDetail.basics")}</h2>
+          </header>
+          <div className="product-basics-grid">
             <div className="detail-fields">
               {editing ? (
                 <>
                   {textField(
-                    t("productDetail.chineseName"),
-                    form.chineseName,
-                    (value) => patchForm({ chineseName: value }),
-                  )}
-                  {textField(
-                    t("productDetail.name"),
-                    form.name,
-                    (value) => patchForm({ name: value }),
-                    "name",
-                  )}
-                  {textField(
                     t("productDetail.sku"),
                     form.sku,
                     (value) => patchForm({ sku: value }),
+                    "sku",
+                    "text",
+                    true,
                   )}
                   {selectField(
                     t("productDetail.channel"),
@@ -408,91 +455,86 @@ export function ProductDetailPage({
                     (value) =>
                       patchForm({ channelId: value, productTypeId: "" }),
                     options.channels,
+                    "channelId",
+                    true,
                   )}
-                  {selectField(
-                    t("productDetail.type"),
-                    form.productTypeId,
-                    (value) => patchForm({ productTypeId: value }),
-                    options.productTypes,
+                  {textField(
+                    t("productDetail.name"),
+                    form.name,
+                    (value) => patchForm({ name: value }),
+                    "name",
+                    "text",
+                    true,
                   )}
-                  {selectField(
-                    t("productDetail.cookType"),
-                    form.cookTypeId,
-                    (value) => patchForm({ cookTypeId: value }),
-                    options.cookTypes,
+                  {textField(
+                    t("productDetail.chineseName"),
+                    form.chineseName,
+                    (value) => patchForm({ chineseName: value }),
                   )}
-                </>
-              ) : (
-                <>
-                  <DetailField label={t("productDetail.name")}>
-                    {product.name || t("common.notSet")}
-                  </DetailField>
-                  <DetailField label={t("productDetail.chineseName")}>
-                    {product.chineseName || t("common.notSet")}
-                  </DetailField>
-                  <DetailField label={t("productDetail.sku")}>
-                    {product.sku || t("common.notSet")}
-                  </DetailField>
-                  <DetailField label={t("productDetail.channel")}>
-                    {product.channelName || t("common.notSet")}
-                  </DetailField>
-                  <DetailField label={t("productDetail.type")}>
-                    {product.productTypeName || t("common.notSet")}
-                  </DetailField>
-                  <DetailField label={t("productDetail.cookType")}>
-                    {product.cookTypeName || t("common.notSet")}
-                  </DetailField>
-                  <DetailField label={t("productDetail.updated")}>
-                    {date.format(new Date(product.updatedAt))}
-                  </DetailField>
-                </>
-              )}
-            </div>
-          </article>
-
-          <article className="panel detail-card">
-            <header>
-              <Tags />
-              <h2>{t("productDetail.pricing")}</h2>
-            </header>
-            <div className="detail-fields">
-              {editing ? (
-                <>
                   {textField(
                     t("productDetail.price"),
                     form.price,
                     (value) => patchForm({ price: value }),
                     "price",
                     "number",
+                    true,
                   )}
-                  {textField(
-                    t("productDetail.priceMin"),
-                    form.priceMin,
-                    (value) => patchForm({ priceMin: value }),
-                    "priceMin",
-                    "number",
-                  )}
-                  {textField(
-                    t("productDetail.priceMax"),
-                    form.priceMax,
-                    (value) => patchForm({ priceMax: value }),
-                    "priceMax",
-                    "number",
-                  )}
+                </>
+              ) : (
+                <>
+                  <DetailField label={t("productDetail.sku")} required>
+                    {product.sku || t("common.notSet")}
+                  </DetailField>
+                  <DetailField label={t("productDetail.channel")} required>
+                    {product.channelName || t("common.notSet")}
+                  </DetailField>
+                  <DetailField label={t("productDetail.name")} required>
+                    {product.name || t("common.notSet")}
+                  </DetailField>
+                  <DetailField label={t("productDetail.chineseName")}>
+                    {product.chineseName || t("common.notSet")}
+                  </DetailField>
+                  <DetailField label={t("productDetail.price")} required>
+                    {money(product.price)}
+                  </DetailField>
+                </>
+              )}
+            </div>
+            <div className="detail-fields">
+              {editing ? (
+                <>
                   {selectField(
-                    t("productDetail.bentoMain"),
-                    form.bentoMainTypeId,
-                    (value) => patchForm({ bentoMainTypeId: value }),
-                    options.bentoMainTypes,
+                    t("productDetail.type"),
+                    form.productTypeId,
+                    (value) => patchForm({ productTypeId: value }),
+                    options.productTypes,
+                    "productTypeId",
+                    true,
                   )}
-                  {selectField(
-                    t("productDetail.bentoColumn"),
-                    form.bentoColumnTypeId,
-                    (value) => patchForm({ bentoColumnTypeId: value }),
-                    options.bentoColumnTypes,
-                  )}
+                  <div className="detail-field">
+                    <span>
+                      {t("productDetail.collections")}
+                      <RequiredMark />
+                    </span>
+                    <ProductTagList
+                      tags={options.collections}
+                      empty={t("common.notSet")}
+                      selectable
+                      selectedIds={form.collectionIds}
+                      onToggle={(tagId) =>
+                        patchForm({
+                          collectionIds: form.collectionIds.includes(tagId)
+                            ? form.collectionIds.filter((item) => item !== tagId)
+                            : [...form.collectionIds, tagId],
+                        })
+                      }
+                    />
+                  </div>
                   <label className="detail-field">
-                    <span>{t("productDetail.status")}</span>
+                    <span>
+                      {t("productDetail.status")}
+                      <RequiredMark />
+                    </span>
                     <select
                       value={form.status}
                       onChange={(event) => patchForm({ status: event.target.value })}
@@ -501,110 +543,275 @@ export function ProductDetailPage({
                       <option value="Active">{t("products.statusActive")}</option>
                       <option value="Inactive">{t("products.statusInactive")}</option>
                     </select>
+                    {fieldErrors.status ? <em>{fieldErrors.status}</em> : null}
                   </label>
-                  <div className="detail-field">
-                    <span>{t("productDetail.bentoRecommended")}</span>
-                    <div className="product-recommend-edit">
-                      <ProductRecommendStar
-                        recommended={form.isBentoRecommended}
-                        label={
-                          form.isBentoRecommended
-                            ? t("products.recommendedOn")
-                            : t("products.recommendedOff")
-                        }
-                        onToggle={() =>
-                          patchForm({
-                            isBentoRecommended: !form.isBentoRecommended,
-                          })
-                        }
-                      />
-                    </div>
-                  </div>
+                  <label className="detail-field">
+                    <span>{t("productDetail.remarks")}</span>
+                    <textarea
+                      rows={4}
+                      value={form.description}
+                      placeholder={t("productDetail.remarksPlaceholder")}
+                      onChange={(event) =>
+                        patchForm({ description: event.target.value })
+                      }
+                    />
+                  </label>
                 </>
               ) : (
                 <>
-                  <DetailField label={t("productDetail.price")}>
-                    {money(product.price)}
+                  <DetailField label={t("productDetail.type")} required>
+                    {product.productTypeName || t("common.notSet")}
                   </DetailField>
-                  <DetailField label={t("productDetail.priceMin")}>
-                    {money(product.priceMin)}
-                  </DetailField>
-                  <DetailField label={t("productDetail.priceMax")}>
-                    {money(product.priceMax)}
-                  </DetailField>
-                  <DetailField label={t("productDetail.bentoMain")}>
-                    {product.bentoMainTypeName || t("common.notSet")}
-                  </DetailField>
-                  <DetailField label={t("productDetail.bentoColumn")}>
-                    {product.bentoColumnTypeName || t("common.notSet")}
-                  </DetailField>
-                  <DetailField label={t("productDetail.bentoRecommended")}>
-                    <ProductRecommendStar
-                      recommended={product.isBentoRecommended}
-                      label={
-                        product.isBentoRecommended
-                          ? t("products.recommendedOn")
-                          : t("products.recommendedOff")
-                      }
+                  <div className="detail-field">
+                    <span>
+                      {t("productDetail.collections")}
+                      <RequiredMark />
+                    </span>
+                    <ProductTagList
+                      tags={product.collections}
+                      empty={t("common.notSet")}
                     />
+                  </div>
+                  <DetailField label={t("productDetail.status")} required>
+                    {statusLabel}
                   </DetailField>
-                  <DetailField label={t("productDetail.collections")}>
-                    {product.collections.length > 0
-                      ? product.collections.join(" · ")
-                      : t("common.notSet")}
+                  <DetailField label={t("productDetail.remarks")}>
+                    {product.description || t("common.notSet")}
                   </DetailField>
                 </>
               )}
             </div>
-          </article>
-        </section>
-
-        <article className="panel detail-card">
-          <header>
-            <Tags />
-            <h2>{t("productDetail.attributes")}</h2>
-          </header>
-          <div className="detail-fields product-attribute-fields">
-            <div className="detail-field">
-              <span>{t("productDetail.ingredients")}</span>
-              {editing ? (
-                <ProductTagList
-                  tags={options.mainIngredients}
-                  empty={t("common.notSet")}
-                  selectable
-                  selectedIds={form.mainIngredientIds}
-                  onToggle={(tagId) => toggleId("mainIngredientIds", tagId)}
-                />
-              ) : (
-                <ProductTagList
-                  tags={product.mainIngredients}
-                  empty={t("common.notSet")}
-                />
-              )}
-            </div>
-            <div className="detail-field">
-              <span>{t("productDetail.specialRequests")}</span>
-              {editing ? (
-                <ProductTagList
-                  tags={options.specialRequests}
-                  empty={t("common.notSet")}
-                  selectable
-                  selectedIds={form.specialRequestIds}
-                  onToggle={(tagId) => toggleId("specialRequestIds", tagId)}
-                />
-              ) : (
-                <ProductTagList
-                  tags={product.specialRequests}
-                  empty={t("common.notSet")}
-                />
-              )}
-            </div>
           </div>
+          {editing ? (
+            <footer className="product-edit-actions">
+              {saveError ? (
+                <div className="settings-side-form-error" role="alert">
+                  {t("productDetail.saveError")}
+                </div>
+              ) : null}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setForm(formFromProduct(product));
+                  setFieldErrors({});
+                  setSaveError(null);
+                }}
+                disabled={saving}
+              >
+                {t("productDetail.reset")}
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving ? t("productDetail.saving") : t("productDetail.confirmChanges")}
+              </Button>
+            </footer>
+          ) : null}
+        </article>
+      </form>
+
+      <section className="detail-grid detail-grid-two">
+        <article className="panel detail-card">
+          <header className="product-section-header">
+            <h2>
+              {displayName} - {t("productDetail.premiumIngredients")}
+            </h2>
+            <strong className="product-ingredient-cost">
+              {t("productDetail.ingredientCost")}: {currency.format(ingredientCost)}
+            </strong>
+          </header>
+          {editing ? (
+            <div className="product-inline-add">
+              <label>
+                <span>{t("productDetail.premiumIngredients")}</span>
+                <select
+                  value={ingredientId}
+                  onChange={(event) => setIngredientId(event.target.value)}
+                >
+                  <option value="">{t("productDetail.pickIngredient")}</option>
+                  {options.catalogIngredients.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span>{t("productDetail.quantity")}</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={ingredientQty}
+                  onChange={(event) => setIngredientQty(event.target.value)}
+                />
+              </label>
+              <Button
+                type="button"
+                disabled={!ingredientId || adding === "ingredient"}
+                onClick={() => void handleAddIngredient()}
+              >
+                <Plus />
+                {t("productDetail.addIngredient")}
+              </Button>
+            </div>
+          ) : null}
+          {product.premiumIngredients.length === 0 ? (
+            <p className="detail-description">{t("productDetail.noIngredients")}</p>
+          ) : (
+            <div className="table-wrap detail-inline-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>{t("productDetail.ingredient")}</th>
+                    <th>{t("productDetail.quantity")}</th>
+                    {editing ? <th>{t("products.columns.actions")}</th> : null}
+                  </tr>
+                </thead>
+                <tbody>
+                  {product.premiumIngredients.map((item) => (
+                    <tr key={item.id}>
+                      <td>{item.name}</td>
+                      <td>{item.quantity ?? t("common.notSet")}</td>
+                      {editing ? (
+                        <td className="table-actions-cell">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            aria-label={t("productDetail.removeIngredient")}
+                            onClick={() => {
+                              void removeIngredient(item.id).then(() =>
+                                refreshDetail(),
+                              );
+                            }}
+                          >
+                            <Trash2 />
+                          </Button>
+                        </td>
+                      ) : null}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </article>
 
+        <article className="panel detail-card">
+          <header className="product-section-header">
+            <h2>
+              {displayName} - {t("productDetail.labels")}
+            </h2>
+            {editing ? (
+              <Button
+                type="button"
+                disabled={adding === "label"}
+                onClick={() => void handleAddLabel()}
+              >
+                <Plus />
+                {t("productDetail.addLabel")}
+              </Button>
+            ) : null}
+          </header>
+          {editing ? (
+            <div className="product-inline-add">
+              <label>
+                <span>{t("productDetail.displayA")}</span>
+                <input
+                  value={labelDisplayA}
+                  onChange={(event) => setLabelDisplayA(event.target.value)}
+                />
+              </label>
+              <label>
+                <span>{t("productDetail.displayB")}</span>
+                <input
+                  value={labelDisplayB}
+                  onChange={(event) => setLabelDisplayB(event.target.value)}
+                />
+              </label>
+              <label>
+                <span>{t("productDetail.packing")}</span>
+                <select
+                  value={labelPackingId}
+                  onChange={(event) => setLabelPackingId(event.target.value)}
+                >
+                  <option value="">{t("common.notSet")}</option>
+                  {options.packingMaterials.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          ) : null}
+          {product.labels.length === 0 ? (
+            <p className="detail-description">{t("productDetail.noLabels")}</p>
+          ) : (
+            <div className="table-wrap detail-inline-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>{t("productDetail.displayA")}</th>
+                    <th>{t("productDetail.displayB")}</th>
+                    <th>{t("productDetail.packing")}</th>
+                    {editing ? <th>{t("products.columns.actions")}</th> : null}
+                  </tr>
+                </thead>
+                <tbody>
+                  {product.labels.map((label) => (
+                    <tr key={label.id}>
+                      <td>{label.displayA || t("common.notSet")}</td>
+                      <td>{label.displayB || t("common.notSet")}</td>
+                      <td>{label.packingName || t("common.notSet")}</td>
+                      {editing ? (
+                        <td className="table-actions-cell">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            aria-label={t("productDetail.removeLabel")}
+                            onClick={() => {
+                              void removeLabel(label.id).then(() =>
+                                refreshDetail(),
+                              );
+                            }}
+                          >
+                            <Trash2 />
+                          </Button>
+                        </td>
+                      ) : null}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </article>
+      </section>
+
       <article className="panel detail-card">
-        <header>
-          <Package />
+        <header className="product-section-header">
+          <h2>
+            {displayName} - {t("productDetail.stoveCategory")}
+          </h2>
+        </header>
+        {editing ? (
+          selectField(
+            t("productDetail.stoveCategory"),
+            form.cookTypeId,
+            (value) => patchForm({ cookTypeId: value }),
+            options.cookTypes,
+          )
+        ) : (
+          <DetailField label={t("productDetail.stoveCategory")}>
+            {product.cookTypeName || t("common.notSet")}
+          </DetailField>
+        )}
+      </article>
+
+      <article className="panel detail-card">
+        <header className="product-section-header">
           <h2>{t("productDetail.relatedPackages")}</h2>
         </header>
         {product.packages.length === 0 ? (
@@ -644,55 +851,13 @@ export function ProductDetailPage({
         )}
       </article>
 
-        <article className="panel detail-card">
-          <header>
-            <ShoppingBasket />
-            <h2>{t("productDetail.description")}</h2>
-          </header>
-          {editing ? (
-            <label className="detail-field">
-              <span>{t("productDetail.description")}</span>
-              <textarea
-                rows={5}
-                value={form.description}
-                onChange={(event) => patchForm({ description: event.target.value })}
-              />
-            </label>
-          ) : (
-            <p className="detail-description">
-              {product.description || t("common.notSet")}
-            </p>
-          )}
-          {product.imageUrl ? (
-            <img
-              className="product-detail-image"
-              src={product.imageUrl}
-              alt={displayName}
-            />
-          ) : null}
-        </article>
-
-        {editing ? (
-          <footer className="product-edit-actions">
-            {saveError ? (
-              <div className="settings-side-form-error" role="alert">
-                {t("productDetail.saveError")}
-              </div>
-            ) : null}
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => navigate(`/products/${product.id}`)}
-              disabled={saving}
-            >
-              {t("productDetail.cancel")}
-            </Button>
-            <Button type="submit" disabled={saving}>
-              {saving ? t("productDetail.saving") : t("productDetail.save")}
-            </Button>
-          </footer>
-        ) : null}
-      </form>
+      {product.imageUrl ? (
+        <img
+          className="product-detail-image"
+          src={product.imageUrl}
+          alt={displayName}
+        />
+      ) : null}
     </section>
   );
 }

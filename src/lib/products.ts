@@ -80,10 +80,9 @@ export type ProductEditOptions = {
   channels: CatalogOption[];
   productTypes: CatalogOption[];
   cookTypes: CatalogOption[];
-  bentoMainTypes: CatalogOption[];
-  bentoColumnTypes: CatalogOption[];
-  mainIngredients: CatalogOption[];
-  specialRequests: CatalogOption[];
+  collections: CatalogOption[];
+  packingMaterials: CatalogOption[];
+  catalogIngredients: CatalogOption[];
 };
 
 export type ProductUpdateInput = {
@@ -92,19 +91,37 @@ export type ProductUpdateInput = {
   sku: string;
   description: string;
   price: number | null;
-  priceMin: number | null;
-  priceMax: number | null;
   status: string;
   isActive: boolean;
   isBentoRecommended: boolean;
   channelId: string | null;
   productTypeId: string | null;
   cookTypeId: string | null;
-  bentoMainTypeId: string | null;
-  bentoColumnTypeId: string | null;
-  mainIngredientIds: string[];
-  specialRequestIds: string[];
+  collectionIds: string[];
 };
+
+export type ProductPremiumIngredient = {
+  id: string;
+  ingredientId: string;
+  name: string;
+  quantity: number | null;
+  unitCost: number | null;
+};
+
+export type ProductLabelRow = {
+  id: string;
+  displayA: string | null;
+  displayB: string | null;
+  packingMaterialId: string | null;
+  packingName: string | null;
+};
+
+export function productIngredientCost(items: ProductPremiumIngredient[]) {
+  return items.reduce(
+    (total, item) => total + (item.quantity ?? 0) * (item.unitCost ?? 0),
+    0,
+  );
+}
 
 export function canEditProductCatalog(role: string | null | undefined) {
   return role === "Super Admin" || role === "Admin";
@@ -145,9 +162,9 @@ export type ProductDetail = {
   bentoMainTypeName: string | null;
   bentoColumnTypeId: string | null;
   bentoColumnTypeName: string | null;
-  collections: string[];
-  mainIngredients: ProductTag[];
-  specialRequests: ProductTag[];
+  collections: ProductTag[];
+  premiumIngredients: ProductPremiumIngredient[];
+  labels: ProductLabelRow[];
   packages: RelatedPackageSummary[];
   updatedAt: string;
 };
@@ -229,6 +246,10 @@ function toNumber(value: number | string | null | undefined) {
 function emptyToNull(value: string | null | undefined) {
   const trimmed = value?.trim() ?? "";
   return trimmed ? trimmed : null;
+}
+
+function createLegacyId() {
+  return `fccd-${crypto.randomUUID()}`;
 }
 
 async function fetchNamedLookup(table: string): Promise<CatalogOption[]> {
@@ -499,41 +520,77 @@ export async function fetchProductDetail(
   const [
     { data: collectionRows, error: collectionError },
     { data: packageRows, error: packageError },
-    { data: ingredientRows, error: ingredientError },
-    { data: requestRows, error: requestError },
+    { data: premiumRows, error: premiumError },
+    { data: labelRows, error: labelError },
   ] = await Promise.all([
     supabase
       .from("product_collection_links")
-      .select("product_collections(name)")
+      .select("product_collections(id,name,legacy_id)")
       .eq("product_id", id),
     supabase
       .from("package_products")
       .select("packages(id,sku,name,chinese_name,archived_at)")
       .eq("product_id", id),
     supabase
-      .from("product_main_ingredient_links")
-      .select("bento_main_ingredients(id,name,legacy_id)")
-      .eq("product_id", id),
+      .from("product_ingredients")
+      .select("id,quantity,ingredients(id,name,cost_per_product_unit)")
+      .eq("product_id", id)
+      .is("package_id", null),
     supabase
-      .from("product_special_request_links")
-      .select("bento_special_requests(id,name,legacy_id)")
+      .from("product_labels")
+      .select("id,display_name,quantity_label,packing_materials(id,name)")
       .eq("product_id", id),
   ]);
 
   if (collectionError) throw collectionError;
   if (packageError) throw packageError;
-  if (ingredientError) throw ingredientError;
-  if (requestError) throw requestError;
+
+  type IngredientEmbed = {
+    id: string;
+    name: string;
+    cost_per_product_unit?: number | string | null;
+  };
+
+  const premiumIngredients = premiumError
+    ? []
+    : (premiumRows ?? [])
+        .map((row) => {
+          const raw = row.ingredients as IngredientEmbed | IngredientEmbed[] | null;
+          const ingredient = Array.isArray(raw) ? raw[0] : raw;
+          if (!ingredient?.name) return null;
+          return {
+            id: row.id as string,
+            ingredientId: ingredient.id,
+            name: ingredient.name,
+            quantity: toNumber(row.quantity as number | string | null),
+            unitCost: toNumber(ingredient.cost_per_product_unit),
+          } satisfies ProductPremiumIngredient;
+        })
+        .filter((item): item is ProductPremiumIngredient => Boolean(item));
+
+  const labels = labelError
+    ? []
+    : (labelRows ?? []).map((row) => {
+        const packing = relatedRecord(
+          row.packing_materials as RelatedRecord | RelatedRecord[] | null,
+        );
+        return {
+          id: row.id as string,
+          displayA: (row.display_name as string | null) ?? null,
+          displayB: (row.quantity_label as string | null) ?? null,
+          packingMaterialId: packing?.id ?? null,
+          packingName: packing?.name ?? null,
+        } satisfies ProductLabelRow;
+      });
 
   const collections = (collectionRows ?? [])
-    .map((link) => {
-      const related = link.product_collections as
-        | { name: string }
-        | { name: string }[]
-        | null;
-      return relatedName(related);
-    })
-    .filter((name): name is string => Boolean(name));
+    .map((link) => relatedRecord(link.product_collections as RelatedRecord | RelatedRecord[] | null))
+    .filter((item): item is RelatedRecord => Boolean(item?.name))
+    .map((item) => ({
+      id: item.id,
+      name: item.name,
+      legacyId: item.legacy_id ?? "",
+    }));
 
   const packages = (packageRows ?? [])
     .map((link) => {
@@ -570,24 +627,6 @@ export async function fetchProductDetail(
   const bentoMainType = relatedRecord(row.bento_main_types);
   const bentoColumnType = relatedRecord(row.bento_column_types);
 
-  const toTags = (
-    links:
-      | Array<{
-          bento_main_ingredients?: RelatedRecord | RelatedRecord[] | null;
-          bento_special_requests?: RelatedRecord | RelatedRecord[] | null;
-        }>
-      | null,
-    key: "bento_main_ingredients" | "bento_special_requests",
-  ): ProductTag[] =>
-    (links ?? [])
-      .map((link) => relatedRecord(link[key]))
-      .filter((item): item is RelatedRecord => Boolean(item?.name))
-      .map((item) => ({
-        id: item.id,
-        name: item.name,
-        legacyId: item.legacy_id ?? "",
-      }));
-
   return {
     id: row.id,
     legacyId: row.legacy_id,
@@ -613,8 +652,8 @@ export async function fetchProductDetail(
     bentoColumnTypeId: bentoColumnType?.id ?? null,
     bentoColumnTypeName: bentoColumnType?.name ?? null,
     collections,
-    mainIngredients: toTags(ingredientRows, "bento_main_ingredients"),
-    specialRequests: toTags(requestRows, "bento_special_requests"),
+    premiumIngredients,
+    labels,
     packages,
     updatedAt: row.updated_at,
   };
@@ -623,25 +662,23 @@ export async function fetchProductDetail(
 export async function fetchProductEditOptions(
   channelId = "",
 ): Promise<ProductEditOptions> {
-  const [channels, productTypes, cookTypes, bentoMainTypes, bentoColumnTypes, mainIngredients, specialRequests] =
+  const [channels, productTypes, cookTypes, collections, packingMaterials, catalogIngredients] =
     await Promise.all([
       fetchProductChannels(),
       fetchProductTypeRecords(channelId),
       fetchNamedLookup("cook_types"),
-      fetchNamedLookup("bento_main_types"),
-      fetchNamedLookup("bento_column_types"),
-      fetchNamedLookup("bento_main_ingredients"),
-      fetchNamedLookup("bento_special_requests"),
+      fetchCollectionRecords(channelId),
+      fetchNamedLookup("packing_materials"),
+      fetchCatalogIngredients(),
     ]);
 
   return {
     channels,
     productTypes,
     cookTypes,
-    bentoMainTypes,
-    bentoColumnTypes,
-    mainIngredients,
-    specialRequests,
+    collections,
+    packingMaterials,
+    catalogIngredients,
   };
 }
 
@@ -667,6 +704,40 @@ async function fetchProductTypeRecords(
   }));
 }
 
+async function fetchCollectionRecords(
+  channelId = "",
+): Promise<CatalogOption[]> {
+  let query = supabase
+    .from("product_collections")
+    .select("id,name,legacy_id")
+    .order("name", { ascending: true });
+  if (channelId) {
+    query = query.eq("channel_id", channelId);
+  }
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data ?? []).map((row) => ({
+    id: row.id as string,
+    name: row.name as string,
+    legacyId: (row.legacy_id as string | null) ?? undefined,
+  }));
+}
+
+async function fetchCatalogIngredients(): Promise<CatalogOption[]> {
+  const { data, error } = await supabase
+    .from("ingredients")
+    .select("id,name,legacy_id")
+    .is("archived_at", null)
+    .eq("is_active", true)
+    .order("name", { ascending: true })
+    .limit(100);
+  if (error) return [];
+  return (data ?? []).map((row) => ({
+    id: row.id as string,
+    name: row.name as string,
+    legacyId: (row.legacy_id as string | null) ?? undefined,
+  }));
+}
 export async function updateProductRecommendation(
   id: string,
   isBentoRecommended: boolean,
@@ -691,12 +762,12 @@ async function syncProductTagLinks({
   relatedIdColumn,
   relatedLegacyColumn,
 }: {
-  table: "product_main_ingredient_links" | "product_special_request_links";
+  table: "product_collection_links";
   productId: string;
   productLegacyId: string;
   selected: CatalogOption[];
-  relatedIdColumn: "main_ingredient_id" | "special_request_id";
-  relatedLegacyColumn: "main_ingredient_legacy_id" | "special_request_legacy_id";
+  relatedIdColumn: "collection_id";
+  relatedLegacyColumn: "collection_legacy_id";
 }) {
   const { data: existing, error: existingError } = await supabase
     .from(table)
@@ -763,47 +834,118 @@ export async function updateProduct(
       sku: emptyToNull(input.sku),
       description: emptyToNull(input.description),
       price: input.price,
-      price_min: input.priceMin,
-      price_max: input.priceMax,
       status: emptyToNull(input.status),
       is_active: input.isActive,
       is_bento_recommended: input.isBentoRecommended,
       channel_id: input.channelId,
       product_type_id: input.productTypeId,
       cook_type_id: input.cookTypeId,
-      bento_main_type_id: input.bentoMainTypeId,
-      bento_column_type_id: input.bentoColumnTypeId,
       updated_at: new Date().toISOString(),
     })
     .eq("id", id)
     .is("archived_at", null);
   if (error) throw error;
 
-  const [ingredientOptions, requestOptions] = await Promise.all([
-    fetchNamedLookup("bento_main_ingredients"),
-    fetchNamedLookup("bento_special_requests"),
-  ]);
-  const ingredientsById = new Map(ingredientOptions.map((item) => [item.id, item]));
-  const requestsById = new Map(requestOptions.map((item) => [item.id, item]));
+  const collections = await fetchCollectionRecords();
+  const collectionsById = new Map(collections.map((item) => [item.id, item]));
+  await syncProductTagLinks({
+    table: "product_collection_links",
+    productId: id,
+    productLegacyId: current.legacy_id as string,
+    selected: input.collectionIds
+      .map((itemId) => collectionsById.get(itemId))
+      .filter((item): item is CatalogOption => Boolean(item)),
+    relatedIdColumn: "collection_id",
+    relatedLegacyColumn: "collection_legacy_id",
+  });
+}
 
-  await syncProductTagLinks({
-    table: "product_main_ingredient_links",
-    productId: id,
-    productLegacyId: current.legacy_id as string,
-    selected: input.mainIngredientIds
-      .map((itemId) => ingredientsById.get(itemId))
-      .filter((item): item is CatalogOption => Boolean(item)),
-    relatedIdColumn: "main_ingredient_id",
-    relatedLegacyColumn: "main_ingredient_legacy_id",
+export async function addProductPremiumIngredient(
+  productId: string,
+  ingredientId: string,
+  quantity: number,
+) {
+  const [{ data: product, error: productError }, { data: ingredient, error: ingredientError }] =
+    await Promise.all([
+      supabase
+        .from("products")
+        .select("legacy_id")
+        .eq("id", productId)
+        .maybeSingle(),
+      supabase
+        .from("ingredients")
+        .select("legacy_id")
+        .eq("id", ingredientId)
+        .maybeSingle(),
+    ]);
+  if (productError) throw productError;
+  if (ingredientError) throw ingredientError;
+  if (!product || !ingredient) {
+    const missing = new Error("product_not_found");
+    (missing as { code?: string }).code = "product_not_found";
+    throw missing;
+  }
+
+  const { error } = await supabase.from("product_ingredients").insert({
+    legacy_id: createLegacyId(),
+    product_id: productId,
+    product_legacy_id: product.legacy_id,
+    ingredient_id: ingredientId,
+    ingredient_legacy_id: ingredient.legacy_id,
+    quantity,
   });
-  await syncProductTagLinks({
-    table: "product_special_request_links",
-    productId: id,
-    productLegacyId: current.legacy_id as string,
-    selected: input.specialRequestIds
-      .map((itemId) => requestsById.get(itemId))
-      .filter((item): item is CatalogOption => Boolean(item)),
-    relatedIdColumn: "special_request_id",
-    relatedLegacyColumn: "special_request_legacy_id",
+  if (error) throw error;
+}
+
+export async function removeProductPremiumIngredient(id: string) {
+  const { error } = await supabase.from("product_ingredients").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function addProductLabel(
+  productId: string,
+  input: {
+    displayA: string;
+    displayB: string;
+    packingMaterialId: string | null;
+  },
+) {
+  const { data: product, error: productError } = await supabase
+    .from("products")
+    .select("legacy_id")
+    .eq("id", productId)
+    .maybeSingle();
+  if (productError) throw productError;
+  if (!product) {
+    const missing = new Error("product_not_found");
+    (missing as { code?: string }).code = "product_not_found";
+    throw missing;
+  }
+
+  let packingLegacyId: string | null = null;
+  if (input.packingMaterialId) {
+    const { data: packing, error: packingError } = await supabase
+      .from("packing_materials")
+      .select("legacy_id")
+      .eq("id", input.packingMaterialId)
+      .maybeSingle();
+    if (packingError) throw packingError;
+    packingLegacyId = (packing?.legacy_id as string | null) ?? null;
+  }
+
+  const { error } = await supabase.from("product_labels").insert({
+    legacy_id: createLegacyId(),
+    product_id: productId,
+    product_legacy_id: product.legacy_id,
+    display_name: emptyToNull(input.displayA),
+    quantity_label: emptyToNull(input.displayB),
+    packing_material_id: input.packingMaterialId,
+    packing_material_legacy_id: packingLegacyId,
   });
+  if (error) throw error;
+}
+
+export async function removeProductLabel(id: string) {
+  const { error } = await supabase.from("product_labels").delete().eq("id", id);
+  if (error) throw error;
 }
