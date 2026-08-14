@@ -3017,6 +3017,198 @@ td:last-child {
   font-weight: 650;
 }
 
+.seasoning-cost-page {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
+.seasoning-cost-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.seasoning-cost-heading-actions {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.seasoning-cost-table-wrap {
+  overflow: auto;
+  padding: 0;
+}
+
+.seasoning-cost-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.seasoning-cost-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 12px 14px;
+  background: color-mix(in oklch, var(--primary) 42%, #82b3a5);
+  color: white;
+  font-size: 0.92rem;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  border-bottom: 0;
+  white-space: nowrap;
+}
+
+.seasoning-cost-table td {
+  padding: 12px 14px;
+  vertical-align: top;
+  color: var(--foreground);
+}
+
+.seasoning-cost-sort-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  cursor: pointer;
+}
+
+.seasoning-cost-sort-button svg {
+  width: 14px;
+  height: 14px;
+}
+
+.seasoning-cost-calc-cell,
+.seasoning-cost-remark-cell {
+  min-width: 8rem;
+  max-width: 14rem;
+}
+
+.seasoning-cost-inline-trigger {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  max-width: 100%;
+  width: 100%;
+  padding: 4px 6px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.seasoning-cost-inline-trigger.is-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9rem;
+}
+
+.seasoning-cost-inline-trigger.is-empty {
+  color: var(--muted-foreground);
+}
+
+.seasoning-cost-inline-trigger:hover:not(:disabled),
+.seasoning-cost-inline-trigger:focus-visible {
+  border-color: color-mix(in oklch, var(--primary) 35%, var(--border));
+  background: color-mix(in oklch, var(--accent) 55%, transparent);
+  outline: none;
+}
+
+.seasoning-cost-inline-editor {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.seasoning-cost-inline-editor input {
+  width: 100%;
+  min-width: 0;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  outline: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+}
+
+.seasoning-cost-inline-editor input:focus {
+  border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 16%, transparent);
+}
+
+.seasoning-cost-inline-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.seasoning-cost-inline-error {
+  color: var(--destructive);
+  font-size: 0.78rem;
+}
+
+.seasoning-cost-form {
+  display: grid;
+  gap: 16px;
+}
+
+.seasoning-cost-field {
+  display: grid;
+  gap: 6px;
+}
+
+.seasoning-cost-field > span {
+  color: var(--foreground);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.seasoning-cost-field input {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  outline: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+}
+
+.seasoning-cost-field input:focus {
+  border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 16%, transparent);
+}
+
+.seasoning-cost-field input:disabled,
+.seasoning-cost-field input[readonly] {
+  color: var(--muted-foreground);
+  background: color-mix(in oklch, var(--muted) 45%, var(--background));
+}
+
+.seasoning-cost-field small {
+  color: var(--muted-foreground);
+  font-size: 0.8rem;
+}
+
+.seasoning-cost-field-error,
+.seasoning-cost-form-error {
+  color: var(--destructive);
+  font-size: 0.82rem;
+  font-style: normal;
+}
+
 @media (max-width: 760px) {
   .quotes-page,
   .orders-page,
@@ -3039,7 +3231,8 @@ td:last-child {
   .orders-heading,
   .products-heading,
   .packages-heading,
-  .spice-usage-heading {
+  .spice-usage-heading,
+  .seasoning-cost-heading {
     align-items: stretch;
   }
 

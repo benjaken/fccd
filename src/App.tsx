@@ -75,6 +75,7 @@ import { ProductDetailPage } from "@/components/ProductDetailPage";
 import { PackagesListPage } from "@/components/PackagesListPage";
 import { PackageDetailPage } from "@/components/PackageDetailPage";
 import { SpiceUsagePage } from "@/components/SpiceUsagePage";
+import { SeasoningCostSettingsPage } from "@/components/SeasoningCostSettingsPage";
 import { AttachmentsListPage } from "@/components/settings/AttachmentsListPage";
 import { LoginLogsListPage } from "@/components/settings/LoginLogsListPage";
 import { RolePermissionsPage } from "@/components/settings/RolePermissionsPage";
@@ -107,7 +108,7 @@ const primaryNav: NavItem[] = [
   { key: "orders", to: "/orders", icon: ClipboardList },
   { key: "quotes", to: "/quotes", icon: FileText },
   { key: "products", to: "/products", icon: ShoppingBasket },
-  { key: "frozen", to: "/frozen/spice-usage", icon: Snowflake },
+  { key: "frozen", to: "/frozen/seasoning-cost", icon: Snowflake },
   { key: "kitchen", to: "/kitchen", icon: Utensils },
   { key: "delivery", to: "/delivery", icon: Truck },
   { key: "restaurant", to: "/restaurant", icon: Store },
@@ -235,6 +236,12 @@ const secondaryNav: Record<string, NavItem[]> = {
     },
   ],
   frozen: [
+    {
+      key: "seasoningCost",
+      to: "/frozen/seasoning-cost",
+      icon: CircleDollarSign,
+      permissionKey: "frozen.seasoning_cost",
+    },
     {
       key: "spiceUsage",
       to: "/frozen/spice-usage",
@@ -365,7 +372,7 @@ const SECTION_CHILD_KEYS: Record<string, string[]> = {
     "products.ala_carte",
     "products.packages",
   ],
-  frozen: ["frozen.spice_usage"],
+  frozen: ["frozen.seasoning_cost", "frozen.spice_usage"],
   kitchen: ["kitchen.calendar", "kitchen.inventory"],
   delivery: ["delivery.assign"],
   restaurant: ["restaurant.inventory", "restaurant.reports"],
@@ -904,7 +911,11 @@ function OperationsShell() {
               <Route path="/products/:id" element={<ProductDetailPage />} />
               <Route
                 path="/frozen"
-                element={<Navigate to="/frozen/spice-usage" replace />}
+                element={<Navigate to="/frozen/seasoning-cost" replace />}
+              />
+              <Route
+                path="/frozen/seasoning-cost"
+                element={<SeasoningCostSettingsPage />}
               />
               <Route
                 path="/frozen/spice-usage"

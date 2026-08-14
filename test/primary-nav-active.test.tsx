@@ -20,6 +20,7 @@ describe("Primary navigation section matching", () => {
     ["/products/packages", "products"],
     ["/products/packages/pkg-1", "products"],
     ["/frozen", "frozen"],
+    ["/frozen/seasoning-cost", "frozen"],
     ["/frozen/spice-usage", "frozen"],
     ["/kitchen", "kitchen"],
     ["/kitchen/calendar", "kitchen"],
@@ -68,6 +69,9 @@ describe("Primary navigation section matching", () => {
       "reports.shop_order_quantities",
     );
     expect(pageAccessKey("/frozen")).toBe("frozen");
+    expect(pageAccessKey("/frozen/seasoning-cost")).toBe(
+      "frozen.seasoning_cost",
+    );
     expect(pageAccessKey("/frozen/spice-usage")).toBe("frozen.spice_usage");
   });
 
