@@ -1922,10 +1922,6 @@ td:last-child {
   gap: 8px;
 }
 
-.raw-meat-calc-table-wrap {
-  min-height: 0;
-}
-
 .raw-meat-calc-remark-cell {
   min-width: 8rem;
   max-width: 12rem;
