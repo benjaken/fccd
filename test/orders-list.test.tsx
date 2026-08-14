@@ -24,7 +24,7 @@ const orderResult: OrderListResult = {
       grandTotal: 1610,
       outstanding: 1610,
       currency: "HKD",
-      updatedAt: "2026-08-12T01:00:00.000Z",
+      createdAt: "2026-08-12T01:00:00.000Z",
     },
   ],
 };

@@ -226,7 +226,7 @@ export function QuotesListPage({
                 <th>{t("quotes.columns.delivery")}</th>
                 <th>{t("quotes.columns.status")}</th>
                 <th>{t("quotes.columns.amount")}</th>
-                <th>{t("quotes.columns.updated")}</th>
+                <th>{t("quotes.columns.created")}</th>
                 <th aria-label={t("quotes.columns.actions")} />
               </tr>
             }
@@ -264,7 +264,7 @@ export function QuotesListPage({
                 <td>
                   <strong>{formatAmount(quote)}</strong>
                 </td>
-                <td>{dateTimeFormatter.format(new Date(quote.updatedAt))}</td>
+                <td>{dateTimeFormatter.format(new Date(quote.createdAt))}</td>
                 <td>
                   <Button variant="ghost" size="icon" asChild>
                     <Link

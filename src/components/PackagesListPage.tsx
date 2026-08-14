@@ -246,7 +246,7 @@ export function PackagesListPage({
                 <th>{t("packages.columns.members")}</th>
                 <th>{t("packages.columns.price")}</th>
                 <th>{t("packages.columns.status")}</th>
-                <th>{t("packages.columns.updated")}</th>
+                <th>{t("packages.columns.created")}</th>
               </tr>
             }
           >
@@ -281,7 +281,7 @@ export function PackagesListPage({
                         </span>
                       </td>
                       <td>
-                        {dateTimeFormatter.format(new Date(item.updatedAt))}
+                        {dateTimeFormatter.format(new Date(item.createdAt))}
                       </td>
                     </tr>
             ))}

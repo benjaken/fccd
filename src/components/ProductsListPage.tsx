@@ -370,7 +370,7 @@ export function ProductsListPage({
                 <th>{t("products.columns.type")}</th>
                 <th>{t("products.columns.price")}</th>
                 <th>{t("products.columns.status")}</th>
-                <th>{t("products.columns.updated")}</th>
+                <th>{t("products.columns.created")}</th>
               </tr>
             }
           >
@@ -402,7 +402,7 @@ export function ProductsListPage({
                         </span>
                       </td>
                       <td>
-                        {dateTimeFormatter.format(new Date(product.updatedAt))}
+                        {dateTimeFormatter.format(new Date(product.createdAt))}
                       </td>
                     </tr>
             ))}
