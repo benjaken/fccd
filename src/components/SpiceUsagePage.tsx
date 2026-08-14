@@ -1,20 +1,32 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useEffectEvent, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Leaf, RefreshCw } from "lucide-react";
+import { Leaf, RefreshCw, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { ListSearchBar } from "@/components/ui/list-search-bar";
+import { ListTable } from "@/components/ui/list-table";
+import { SearchField } from "@/components/ui/search-field";
 import {
   fetchSeasonings,
   fetchSeasoningUsages,
+  filterSeasonings,
+  filterSeasoningUsages,
+  unapplySeasoningUsage,
   type SeasoningOption,
   type SeasoningUsageRow,
 } from "@/lib/spice-usage";
 
 type SeasoningsLoader = () => Promise<SeasoningOption[]>;
 type UsagesLoader = (seasoningId: string) => Promise<SeasoningUsageRow[]>;
+type UsageDeleter = typeof unapplySeasoningUsage;
 
-const USAGE_SKELETON_CARDS = 6;
 const SIDEBAR_SKELETON_ROWS = 10;
+const SPICE_USAGE_SKELETON_COLUMNS = [
+  { width: "10rem" },
+  { width: "6rem" },
+  { width: "6rem" },
+  { width: "2.5rem", variant: "action" as const },
+];
 
 function SpiceUsageSidebarSkeleton() {
   return (
@@ -46,39 +58,14 @@ function SpiceUsageSummarySkeleton() {
   );
 }
 
-function SpiceUsageCardsSkeleton() {
-  return (
-    <div className="spice-usage-card-grid" aria-hidden="true">
-      {Array.from({ length: USAGE_SKELETON_CARDS }, (_, index) => (
-        <article key={`spice-card-skeleton-${index}`} className="spice-usage-card is-skeleton">
-          <div className="spice-usage-card-index">
-            <span className="table-skeleton-bone spice-usage-skeleton-index" />
-          </div>
-          <div className="spice-usage-card-body">
-            <span className="table-skeleton-bone spice-usage-skeleton-title" />
-            <div className="spice-usage-card-metrics">
-              <span className="spice-usage-card-metric">
-                <span className="table-skeleton-bone spice-usage-skeleton-label" />
-                <span className="table-skeleton-bone spice-usage-skeleton-value" />
-              </span>
-              <span className="spice-usage-card-metric">
-                <span className="table-skeleton-bone spice-usage-skeleton-label" />
-                <span className="table-skeleton-bone spice-usage-skeleton-value" />
-              </span>
-            </div>
-          </div>
-        </article>
-      ))}
-    </div>
-  );
-}
-
 export function SpiceUsagePage({
   loadSeasonings = fetchSeasonings,
   loadUsages = fetchSeasoningUsages,
+  deleteUsage = unapplySeasoningUsage,
 }: {
   loadSeasonings?: SeasoningsLoader;
   loadUsages?: UsagesLoader;
+  deleteUsage?: UsageDeleter;
 }) {
   const { t, i18n } = useTranslation();
   const [seasonings, setSeasonings] = useState<SeasoningOption[]>([]);
@@ -88,9 +75,24 @@ export function SpiceUsagePage({
   const [usagesLoading, setUsagesLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [spiceSearch, setSpiceSearch] = useState("");
+  const [draftSearch, setDraftSearch] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const selected =
     seasonings.find((item) => item.id === selectedId) ?? seasonings[0] ?? null;
+
+  const visibleSeasonings = useMemo(
+    () => filterSeasonings(seasonings, spiceSearch),
+    [seasonings, spiceSearch],
+  );
+
+  const visibleUsages = useMemo(
+    () => filterSeasoningUsages(usages, appliedSearch),
+    [appliedSearch, usages],
+  );
 
   const currencyFormatter = useMemo(
     () =>
@@ -157,6 +159,12 @@ export function SpiceUsagePage({
   }, [loadSeasonings, reloadKey, t]);
 
   useEffect(() => {
+    setDraftSearch("");
+    setAppliedSearch("");
+    setActionError(null);
+  }, [selected?.id]);
+
+  useEffect(() => {
     if (!selected?.id) {
       setUsages([]);
       setUsagesLoading(false);
@@ -189,6 +197,26 @@ export function SpiceUsagePage({
       cancelled = true;
     };
   }, [loadUsages, reloadKey, selected?.id, t]);
+
+  const handleDelete = useEffectEvent(async (row: SeasoningUsageRow) => {
+    if (deletingId) return;
+    const confirmed = window.confirm(t("spiceUsage.deleteConfirm"));
+    if (!confirmed) return;
+    setDeletingId(row.id);
+    setActionError(null);
+    try {
+      await deleteUsage(row.id);
+      setUsages((current) => current.filter((item) => item.id !== row.id));
+    } catch (saveError) {
+      setActionError(
+        saveError instanceof Error
+          ? saveError.message
+          : t("spiceUsage.deleteError"),
+      );
+    } finally {
+      setDeletingId(null);
+    }
+  });
 
   const loading = seasoningsLoading || usagesLoading;
 
@@ -227,142 +255,179 @@ export function SpiceUsagePage({
           </Button>
         </div>
       ) : (
-      <div className="spice-usage-layout">
-        <aside
-          className="spice-usage-sidebar panel"
-          aria-label={t("spiceUsage.tags")}
-        >
-          <div className="spice-usage-sidebar-header">
-            <strong>{t("spiceUsage.tags")}</strong>
-            <span>{seasonings.length}</span>
-          </div>
-          {seasoningsLoading ? (
-            <>
-              <span className="sr-only" role="status">
-                {t("spiceUsage.loadingSeasonings")}
-              </span>
-              <SpiceUsageSidebarSkeleton />
-            </>
-          ) : seasonings.length === 0 ? (
-            <p className="spice-usage-sidebar-state">
-              {t("spiceUsage.emptySeasonings")}
-            </p>
-          ) : (
-            <ul className="spice-usage-side-list">
-              {seasonings.map((item) => {
-                const active = item.id === selected?.id;
-                return (
-                  <li key={item.id}>
-                    <button
-                      type="button"
-                      className={
-                        active
-                          ? "spice-usage-side-item active"
-                          : "spice-usage-side-item"
-                      }
-                      aria-current={active ? "true" : undefined}
-                      onClick={() => setSelectedId(item.id)}
-                    >
-                      {item.name}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </aside>
-
-        <article
-          className="spice-usage-main panel"
-          aria-busy={usagesLoading || undefined}
-        >
-          {!selected ? (
-            <div className="spice-usage-main-empty">
-              <Leaf />
-              <strong>{t("spiceUsage.noSelection")}</strong>
-              <span>{t("spiceUsage.noSelectionDescription")}</span>
+        <div className="spice-usage-layout">
+          <aside
+            className="spice-usage-sidebar panel"
+            aria-label={t("spiceUsage.tags")}
+          >
+            <div className="spice-usage-sidebar-header">
+              <strong>{t("spiceUsage.tags")}</strong>
+              <span>{visibleSeasonings.length}</span>
             </div>
-          ) : (
-            <>
-              <header className="spice-usage-main-header">
-                <div>
-                  <p className="spice-usage-main-eyebrow">
-                    {t("spiceUsage.columns.spice")}
-                  </p>
-                  <h3>{selected.name}</h3>
-                </div>
-                {usagesLoading ? (
-                  <SpiceUsageSummarySkeleton />
-                ) : usages.length > 0 ? (
-                  <div className="spice-usage-summary">
-                    <div>
-                      <span>{t("spiceUsage.summary.recipes")}</span>
-                      <strong>{usageSummary.count}</strong>
-                    </div>
-                    <div>
-                      <span>{t("spiceUsage.summary.grams")}</span>
-                      <strong>
-                        {gramsFormatter.format(usageSummary.grams)}g
-                      </strong>
-                    </div>
-                    <div>
-                      <span>{t("spiceUsage.summary.cost")}</span>
-                      <strong>
-                        {currencyFormatter.format(usageSummary.cost)}
-                      </strong>
-                    </div>
-                  </div>
-                ) : null}
-              </header>
-
-              <div className="spice-usage-main-body">
-                {usagesLoading ? (
-                  <>
-                    <span className="sr-only" role="status">
-                      {t("spiceUsage.loadingUsages")}
-                    </span>
-                    <SpiceUsageCardsSkeleton />
-                  </>
-                ) : usages.length === 0 ? (
-                  <div className="spice-usage-main-empty">
-                    <Leaf />
-                    <strong>{t("spiceUsage.emptyUsages")}</strong>
-                  </div>
-                ) : (
-                  <div className="spice-usage-card-grid">
-                    {usages.map((usage, index) => (
-                      <article
-                        key={usage.id}
-                        className="spice-usage-card"
-                        aria-label={`${index + 1}. ${usage.preparedMeatName}`}
+            <div className="spice-usage-sidebar-search">
+              <SearchField
+                id="spice-usage-spice-search"
+                value={spiceSearch}
+                onChange={setSpiceSearch}
+                label={t("spiceUsage.spiceSearch")}
+                placeholder={t("spiceUsage.spiceSearchPlaceholder")}
+                disabled={seasoningsLoading}
+              />
+            </div>
+            {seasoningsLoading ? (
+              <>
+                <span className="sr-only" role="status">
+                  {t("spiceUsage.loadingSeasonings")}
+                </span>
+                <SpiceUsageSidebarSkeleton />
+              </>
+            ) : visibleSeasonings.length === 0 ? (
+              <p className="spice-usage-sidebar-state">
+                {t("spiceUsage.emptySeasonings")}
+              </p>
+            ) : (
+              <ul className="spice-usage-side-list">
+                {visibleSeasonings.map((item) => {
+                  const active = item.id === selected?.id;
+                  return (
+                    <li key={item.id}>
+                      <button
+                        type="button"
+                        className={
+                          active
+                            ? "spice-usage-side-item active"
+                            : "spice-usage-side-item"
+                        }
+                        aria-current={active ? "true" : undefined}
+                        onClick={() => setSelectedId(item.id)}
                       >
-                        <div className="spice-usage-card-index" aria-hidden="true">
-                          {index + 1}
-                        </div>
-                        <div className="spice-usage-card-body">
-                          <strong className="spice-usage-card-title">
-                            {usage.preparedMeatName}
-                          </strong>
-                          <div className="spice-usage-card-metrics">
-                            <span className="spice-usage-card-metric">
-                              <small>{t("spiceUsage.metric.grams")}</small>
-                              {gramsFormatter.format(usage.quantityGrams)}g
-                            </span>
-                            <span className="spice-usage-card-metric is-cost">
-                              <small>{t("spiceUsage.metric.cost")}</small>
-                              {currencyFormatter.format(usage.totalCost)}
-                            </span>
-                          </div>
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                )}
+                        {item.name}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </aside>
+
+          <article
+            className="spice-usage-main panel"
+            aria-busy={usagesLoading || undefined}
+          >
+            {!selected ? (
+              <div className="spice-usage-main-empty">
+                <Leaf />
+                <strong>{t("spiceUsage.noSelection")}</strong>
+                <span>{t("spiceUsage.noSelectionDescription")}</span>
               </div>
-            </>
-          )}
-        </article>
-      </div>
+            ) : (
+              <>
+                <header className="spice-usage-main-header">
+                  <div>
+                    <p className="spice-usage-main-eyebrow">
+                      {t("spiceUsage.columns.spice")}
+                    </p>
+                    <h3>{selected.name}</h3>
+                  </div>
+                  {usagesLoading ? (
+                    <SpiceUsageSummarySkeleton />
+                  ) : usages.length > 0 ? (
+                    <div className="spice-usage-summary">
+                      <div>
+                        <span>{t("spiceUsage.summary.recipes")}</span>
+                        <strong>{usageSummary.count}</strong>
+                      </div>
+                      <div>
+                        <span>{t("spiceUsage.summary.grams")}</span>
+                        <strong>
+                          {gramsFormatter.format(usageSummary.grams)}g
+                        </strong>
+                      </div>
+                      <div>
+                        <span>{t("spiceUsage.summary.cost")}</span>
+                        <strong>
+                          {currencyFormatter.format(usageSummary.cost)}
+                        </strong>
+                      </div>
+                    </div>
+                  ) : null}
+                </header>
+
+                <header className="spice-usage-toolbar">
+                  <ListSearchBar
+                    id="spice-usage-search"
+                    value={draftSearch}
+                    onChange={setDraftSearch}
+                    onSubmit={() => setAppliedSearch(draftSearch.trim())}
+                    label={t("spiceUsage.search")}
+                    placeholder={t("spiceUsage.searchPlaceholder")}
+                    submitLabel={t("spiceUsage.searchAction")}
+                    disabled={usagesLoading}
+                  />
+                </header>
+
+                <div className="spice-usage-main-body">
+                  {actionError ? (
+                    <p className="list-inline-error">{actionError}</p>
+                  ) : null}
+
+                  {!usagesLoading && usages.length === 0 ? (
+                    <div className="spice-usage-main-empty">
+                      <Leaf />
+                      <strong>{t("spiceUsage.emptyUsages")}</strong>
+                    </div>
+                  ) : (
+                    <ListTable
+                      className="spice-usage-table-wrap"
+                      onRefresh={() => setReloadKey((current) => current + 1)}
+                      loading={usagesLoading}
+                      loadingLabel={t("spiceUsage.loadingUsages")}
+                      skeletonRows={8}
+                      skeletonColumns={SPICE_USAGE_SKELETON_COLUMNS}
+                      header={
+                        <tr>
+                          <th>{t("spiceUsage.columns.recipe")}</th>
+                          <th>{t("spiceUsage.columns.grams")}</th>
+                          <th>{t("spiceUsage.columns.cost")}</th>
+                          <th aria-label={t("spiceUsage.columns.actions")} />
+                        </tr>
+                      }
+                    >
+                      {visibleUsages.map((usage) => (
+                        <tr key={usage.id}>
+                          <td>
+                            <strong>{usage.preparedMeatName}</strong>
+                          </td>
+                          <td>
+                            {gramsFormatter.format(usage.quantityGrams)}g
+                          </td>
+                          <td>{currencyFormatter.format(usage.totalCost)}</td>
+                          <td className="table-actions-cell">
+                            <div className="table-row-actions">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                disabled={deletingId === usage.id}
+                                aria-label={t("spiceUsage.delete")}
+                                title={t("spiceUsage.delete")}
+                                onClick={() => {
+                                  void handleDelete(usage);
+                                }}
+                              >
+                                <Trash2 />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </ListTable>
+                  )}
+                </div>
+              </>
+            )}
+          </article>
+        </div>
       )}
     </section>
   );

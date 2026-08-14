@@ -132,3 +132,10 @@ export async function createMeatCustomer(input: {
   if (error) throw error;
   return mapRow(data as CustomerRow);
 }
+
+export async function archiveMeatCustomer(customerId: string): Promise<void> {
+  const { error } = await supabase.rpc("archive_meat_customer", {
+    p_customer_id: customerId,
+  });
+  if (error) throw error;
+}

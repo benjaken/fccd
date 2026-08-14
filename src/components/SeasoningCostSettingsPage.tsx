@@ -16,15 +16,19 @@ import {
   Leaf,
   Plus,
   RefreshCw,
+  Trash2,
   X,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import { SidePanel } from "@/components/ui/side-panel";
 import {
+  archiveSeasoningCost,
   createSeasoningCost,
   fetchSeasoningCosts,
+  filterSeasoningCosts,
   updateSeasoningCalculation,
   updateSeasoningRemark,
   type SeasoningCostRow,
@@ -36,6 +40,7 @@ type SeasoningsLoader = () => Promise<SeasoningCostRow[]>;
 type SeasoningCreator = typeof createSeasoningCost;
 type CalculationSaver = typeof updateSeasoningCalculation;
 type RemarkSaver = typeof updateSeasoningRemark;
+type SeasoningDeleter = typeof archiveSeasoningCost;
 type SortKey = "sortOrder" | "updatedAt";
 type SortDirection = "asc" | "desc";
 
@@ -46,6 +51,7 @@ const SEASONING_COST_SKELETON_COLUMNS = [
   { width: "6rem" },
   { width: "8rem" },
   { width: "10rem" },
+  { width: "2.5rem", variant: "action" as const },
 ];
 
 function SortHeaderButton({
@@ -385,11 +391,13 @@ export function SeasoningCostSettingsPage({
   createSeasoning = createSeasoningCost,
   saveCalculation = updateSeasoningCalculation,
   saveRemark = updateSeasoningRemark,
+  deleteSeasoning = archiveSeasoningCost,
 }: {
   loadSeasonings?: SeasoningsLoader;
   createSeasoning?: SeasoningCreator;
   saveCalculation?: CalculationSaver;
   saveRemark?: RemarkSaver;
+  deleteSeasoning?: SeasoningDeleter;
 }) {
   const { t, i18n } = useTranslation();
   const [rows, setRows] = useState<SeasoningCostRow[]>([]);
@@ -397,6 +405,10 @@ export function SeasoningCostSettingsPage({
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [createOpen, setCreateOpen] = useState(false);
+  const [draftSearch, setDraftSearch] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("sortOrder");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
@@ -459,6 +471,11 @@ export function SeasoningCostSettingsPage({
     return next;
   }, [rows, sortDirection, sortKey]);
 
+  const visibleRows = useMemo(
+    () => filterSeasoningCosts(sortedRows, appliedSearch),
+    [appliedSearch, sortedRows],
+  );
+
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -505,6 +522,26 @@ export function SeasoningCostSettingsPage({
     },
   );
 
+  const handleDelete = useEffectEvent(async (row: SeasoningCostRow) => {
+    if (deletingId) return;
+    const confirmed = window.confirm(t("seasoningCost.deleteConfirm"));
+    if (!confirmed) return;
+    setDeletingId(row.id);
+    setActionError(null);
+    try {
+      await deleteSeasoning(row.id);
+      setRows((current) => current.filter((item) => item.id !== row.id));
+    } catch (saveError) {
+      setActionError(
+        saveError instanceof Error
+          ? saveError.message
+          : t("seasoningCost.deleteError"),
+      );
+    } finally {
+      setDeletingId(null);
+    }
+  });
+
   return (
     <section className="seasoning-cost-page">
       <header className="page-heading seasoning-cost-heading">
@@ -530,6 +567,22 @@ export function SeasoningCostSettingsPage({
       </header>
 
       <article className="panel seasoning-cost-panel">
+        <header className="seasoning-cost-toolbar">
+          <ListSearchBar
+            id="seasoning-cost-search"
+            value={draftSearch}
+            onChange={setDraftSearch}
+            onSubmit={() => setAppliedSearch(draftSearch.trim())}
+            label={t("seasoningCost.search")}
+            placeholder={t("seasoningCost.searchPlaceholder")}
+            submitLabel={t("seasoningCost.searchAction")}
+          />
+        </header>
+
+        {actionError ? (
+          <p className="list-inline-error">{actionError}</p>
+        ) : null}
+
         {error ? (
           <div className="products-state products-state-error">
             <div>
@@ -544,7 +597,7 @@ export function SeasoningCostSettingsPage({
               {t("seasoningCost.retry")}
             </Button>
           </div>
-        ) : !loading && sortedRows.length === 0 ? (
+        ) : !loading && rows.length === 0 ? (
           <div className="products-state products-state-empty">
             <Leaf />
             <div>
@@ -588,10 +641,11 @@ export function SeasoningCostSettingsPage({
                   />
                 </th>
                 <th>{t("seasoningCost.columns.remark")}</th>
+                <th aria-label={t("seasoningCost.columns.actions")} />
               </tr>
             }
           >
-            {sortedRows.map((row) => (
+            {visibleRows.map((row) => (
               <tr key={row.id}>
                 <td>{row.sortOrder ?? t("common.notSet")}</td>
                 <td>
@@ -653,6 +707,23 @@ export function SeasoningCostSettingsPage({
                       await handleSaveRemark(row.id, next);
                     }}
                   />
+                </td>
+                <td className="table-actions-cell">
+                  <div className="table-row-actions">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      disabled={deletingId === row.id}
+                      aria-label={t("seasoningCost.delete")}
+                      title={t("seasoningCost.delete")}
+                      onClick={() => {
+                        void handleDelete(row);
+                      }}
+                    >
+                      <Trash2 />
+                    </Button>
+                  </div>
                 </td>
               </tr>
             ))}

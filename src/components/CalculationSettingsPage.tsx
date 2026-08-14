@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 import { Calculator, Plus, RefreshCw, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import { SidePanel } from "@/components/ui/side-panel";
 import { Switch } from "@/components/ui/switch";
@@ -17,6 +18,7 @@ import {
   createCalculationSetting,
   deleteCalculationSetting,
   fetchCalculationSettings,
+  filterCalculationSettings,
   parsePercentInput,
   rateToPercent,
   setCalculationSettingApplied,
@@ -183,6 +185,8 @@ export function CalculationSettingsPage({
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [createOpen, setCreateOpen] = useState(false);
+  const [draftSearch, setDraftSearch] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -211,6 +215,22 @@ export function CalculationSettingsPage({
     if (rate === null) return t("common.notSet");
     return `${percentFormatter.format(rateToPercent(rate))}%`;
   };
+
+  const formatDate = (value: string | null) => {
+    if (!value) return t("common.notSet");
+    return dateFormatter.format(new Date(value));
+  };
+
+  const visibleRows = useMemo(
+    () =>
+      filterCalculationSettings(
+        rows,
+        appliedSearch,
+        formatPercent,
+        formatDate,
+      ),
+    [appliedSearch, dateFormatter, percentFormatter, rows, t],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -314,8 +334,20 @@ export function CalculationSettingsPage({
       </header>
 
       <article className="panel calculation-settings-panel">
+        <header className="calculation-settings-toolbar">
+          <ListSearchBar
+            id="calculation-settings-search"
+            value={draftSearch}
+            onChange={setDraftSearch}
+            onSubmit={() => setAppliedSearch(draftSearch.trim())}
+            label={t("calculationSettings.search")}
+            placeholder={t("calculationSettings.searchPlaceholder")}
+            submitLabel={t("calculationSettings.searchAction")}
+          />
+        </header>
+
         {actionError ? (
-          <p className="calculation-settings-inline-error">{actionError}</p>
+          <p className="list-inline-error">{actionError}</p>
         ) : null}
 
         {error ? (
@@ -362,7 +394,7 @@ export function CalculationSettingsPage({
               </tr>
             }
           >
-            {rows.map((row) => {
+            {visibleRows.map((row) => {
               const canDelete = rows.length > 1;
               return (
               <tr key={row.id}>

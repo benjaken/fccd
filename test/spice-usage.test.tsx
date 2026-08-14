@@ -74,18 +74,18 @@ describe("Spice usage page", () => {
     expect(within(sidebar).getByRole("button", { name: "片糖" })).toBeInTheDocument();
 
     expect(await screen.findByRole("heading", { name: "幼鹽" })).toBeInTheDocument();
-    expect(await screen.findByLabelText("1. 醃雞扒")).toBeInTheDocument();
-    expect(screen.getByText("醃雞扒")).toBeInTheDocument();
+    expect(await screen.findByText("醃雞扒")).toBeInTheDocument();
     expect(screen.getByText("80g")).toBeInTheDocument();
     expect(screen.getByText("$0.33")).toBeInTheDocument();
     expect(screen.getByText("扁食肉餡 (500克)")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "刪除" })).toHaveLength(2);
 
     await waitFor(() => {
       expect(loadUsages).toHaveBeenCalledWith("s-1");
     });
   });
 
-  it("switches usage cards when another seasoning is selected", async () => {
+  it("switches usage rows when another seasoning is selected", async () => {
     const user = userEvent.setup();
     const loadSeasonings = vi.fn().mockResolvedValue(seasonings);
     const loadUsages = vi
@@ -111,7 +111,7 @@ describe("Spice usage page", () => {
     });
 
     expect(await screen.findByRole("heading", { name: "片糖" })).toBeInTheDocument();
-    expect(await screen.findByLabelText("1. 粽子 (10隻)")).toBeInTheDocument();
+    expect(await screen.findByText("粽子 (10隻)")).toBeInTheDocument();
     expect(screen.getAllByText("50g").length).toBeGreaterThan(0);
     expect(screen.queryByText("醃雞扒")).not.toBeInTheDocument();
   });
@@ -146,13 +146,71 @@ describe("Spice usage page", () => {
       "aria-busy",
       "true",
     );
-    expect(document.querySelector(".spice-usage-card.is-skeleton")).toBeTruthy();
+    expect(document.querySelector(".table-skeleton-row")).toBeTruthy();
     expect(screen.queryByText("醃雞扒")).not.toBeInTheDocument();
     expect(screen.queryByText("粽子 (10隻)")).not.toBeInTheDocument();
 
     resolveSecond?.(structuredClone(usagesBySeasoning["s-2"] ?? []));
 
-    expect(await screen.findByLabelText("1. 粽子 (10隻)")).toBeInTheDocument();
-    expect(document.querySelector(".spice-usage-card.is-skeleton")).toBeNull();
+    expect(await screen.findByText("粽子 (10隻)")).toBeInTheDocument();
+    expect(document.querySelector(".table-skeleton-row")).toBeNull();
+  });
+
+  it("filters recipes from the search bar", async () => {
+    const user = userEvent.setup();
+    const loadSeasonings = vi.fn().mockResolvedValue(seasonings);
+    const loadUsages = vi
+      .fn()
+      .mockImplementation(async (seasoningId: string) =>
+        structuredClone(usagesBySeasoning[seasoningId] ?? []),
+      );
+
+    render(
+      <MemoryRouter>
+        <SpiceUsagePage
+          loadSeasonings={loadSeasonings}
+          loadUsages={loadUsages}
+        />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("醃雞扒");
+    await user.type(screen.getByPlaceholderText("搜尋配方"), "扁食");
+    await user.click(screen.getByRole("button", { name: "搜尋" }));
+
+    expect(screen.getByText("扁食肉餡 (500克)")).toBeInTheDocument();
+    expect(screen.queryByText("醃雞扒")).not.toBeInTheDocument();
+  });
+
+  it("deletes an applied usage after confirmation", async () => {
+    const user = userEvent.setup();
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    const loadSeasonings = vi.fn().mockResolvedValue(seasonings);
+    const loadUsages = vi
+      .fn()
+      .mockImplementation(async (seasoningId: string) =>
+        structuredClone(usagesBySeasoning[seasoningId] ?? []),
+      );
+    const deleteUsage = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <MemoryRouter>
+        <SpiceUsagePage
+          loadSeasonings={loadSeasonings}
+          loadUsages={loadUsages}
+          deleteUsage={deleteUsage}
+        />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("醃雞扒");
+    await user.click(screen.getAllByRole("button", { name: "刪除" })[0]!);
+
+    await waitFor(() => {
+      expect(deleteUsage).toHaveBeenCalledWith("u-1");
+    });
+    expect(screen.queryByText("醃雞扒")).not.toBeInTheDocument();
+    expect(screen.getByText("扁食肉餡 (500克)")).toBeInTheDocument();
+    confirmSpy.mockRestore();
   });
 });

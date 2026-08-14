@@ -132,4 +132,30 @@ describe("Meat customers page", () => {
 
     expect(await screen.findByText("測試客人")).toBeInTheDocument();
   });
+
+  it("deletes a customer after confirmation", async () => {
+    const user = userEvent.setup();
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    const loadCustomers = vi.fn().mockResolvedValue(structuredClone(rows));
+    const deleteCustomer = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <MemoryRouter>
+        <MeatCustomersPage
+          loadCustomers={loadCustomers}
+          deleteCustomer={deleteCustomer}
+        />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("桂花小幸 YLP");
+    await user.click(screen.getAllByRole("button", { name: "刪除" })[0]!);
+
+    await waitFor(() => {
+      expect(deleteCustomer).toHaveBeenCalledWith("c-1");
+    });
+    expect(screen.queryByText("桂花小幸 YLP")).not.toBeInTheDocument();
+    expect(screen.getByText("桂花小幸 TKO")).toBeInTheDocument();
+    confirmSpy.mockRestore();
+  });
 });

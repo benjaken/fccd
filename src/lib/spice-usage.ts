@@ -68,7 +68,7 @@ export async function fetchSeasonings(): Promise<SeasoningOption[]> {
   }));
 }
 
-/** Applied seasoning usages for one spice, one card per prepared meat item. */
+/** Applied seasoning usages for one spice, one row per prepared meat item. */
 export async function fetchSeasoningUsages(
   seasoningId: string,
 ): Promise<SeasoningUsageRow[]> {
@@ -128,4 +128,30 @@ export async function fetchSeasoningUsages(
         "zh-HK",
       );
     });
+}
+
+function includesIgnoreCase(haystack: string | null | undefined, needle: string) {
+  if (!needle) return true;
+  return (haystack ?? "")
+    .toLocaleLowerCase("zh-HK")
+    .includes(needle.toLocaleLowerCase("zh-HK"));
+}
+
+export function filterSeasonings(rows: SeasoningOption[], search = "") {
+  const query = search.trim();
+  if (!query) return rows;
+  return rows.filter((row) => includesIgnoreCase(row.name, query));
+}
+
+export function filterSeasoningUsages(rows: SeasoningUsageRow[], search = "") {
+  const query = search.trim();
+  if (!query) return rows;
+  return rows.filter((row) => includesIgnoreCase(row.preparedMeatName, query));
+}
+
+export async function unapplySeasoningUsage(versionId: string): Promise<void> {
+  const { error } = await supabase.rpc("unapply_meat_seasoning_cost_version", {
+    p_version_id: versionId,
+  });
+  if (error) throw error;
 }

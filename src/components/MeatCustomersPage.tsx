@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, Users } from "lucide-react";
+import { Plus, Trash2, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import { SidePanel } from "@/components/ui/side-panel";
 import {
+  archiveMeatCustomer,
   createMeatCustomer,
   fetchMeatCustomers,
   type MeatCustomerFilters,
@@ -17,6 +18,7 @@ type CustomersLoader = (
   filters?: MeatCustomerFilters,
 ) => Promise<MeatCustomerRow[]>;
 type CustomerCreator = typeof createMeatCustomer;
+type CustomerDeleter = typeof archiveMeatCustomer;
 
 type FilterDraft = {
   search: string;
@@ -38,6 +40,7 @@ const MEAT_CUSTOMERS_SKELETON_COLUMNS = [
   { width: "8rem" },
   { width: "8rem" },
   { width: "14rem" },
+  { width: "2.5rem", variant: "action" as const },
 ];
 
 function CreateMeatCustomerPanel({
@@ -184,9 +187,11 @@ function CreateMeatCustomerPanel({
 export function MeatCustomersPage({
   loadCustomers = fetchMeatCustomers,
   createCustomer = createMeatCustomer,
+  deleteCustomer = archiveMeatCustomer,
 }: {
   loadCustomers?: CustomersLoader;
   createCustomer?: CustomerCreator;
+  deleteCustomer?: CustomerDeleter;
 }) {
   const { t } = useTranslation();
   const [rows, setRows] = useState<MeatCustomerRow[]>([]);
@@ -196,6 +201,8 @@ export function MeatCustomersPage({
   const [draft, setDraft] = useState<FilterDraft>(EMPTY_FILTERS);
   const [applied, setApplied] = useState<FilterDraft>(EMPTY_FILTERS);
   const [createOpen, setCreateOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const filtersActive = useMemo(
     () =>
@@ -243,6 +250,26 @@ export function MeatCustomersPage({
 
   const display = (value: string | null | undefined) =>
     value?.trim() ? value : t("common.notSet");
+
+  const handleDelete = async (row: MeatCustomerRow) => {
+    if (deletingId) return;
+    const confirmed = window.confirm(t("meatCustomers.deleteConfirm"));
+    if (!confirmed) return;
+    setDeletingId(row.id);
+    setActionError(null);
+    try {
+      await deleteCustomer(row.id);
+      setRows((current) => current.filter((item) => item.id !== row.id));
+    } catch (saveError) {
+      setActionError(
+        saveError instanceof Error
+          ? saveError.message
+          : t("meatCustomers.deleteError"),
+      );
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   return (
     <section className="meat-customers-page">
@@ -328,6 +355,10 @@ export function MeatCustomersPage({
           />
         </header>
 
+        {actionError ? (
+          <p className="list-inline-error">{actionError}</p>
+        ) : null}
+
         {error ? (
           <div className="products-state products-state-error">
             <div>
@@ -369,6 +400,7 @@ export function MeatCustomersPage({
                 <th>{t("meatCustomers.columns.contactPerson")}</th>
                 <th>{t("meatCustomers.columns.phone")}</th>
                 <th>{t("meatCustomers.columns.address")}</th>
+                <th aria-label={t("meatCustomers.columns.actions")} />
               </tr>
             }
           >
@@ -382,6 +414,23 @@ export function MeatCustomersPage({
                 <td>{display(row.phone)}</td>
                 <td className="meat-customers-address-cell">
                   {display(row.address)}
+                </td>
+                <td className="table-actions-cell">
+                  <div className="table-row-actions">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      disabled={deletingId === row.id}
+                      aria-label={t("meatCustomers.delete")}
+                      title={t("meatCustomers.delete")}
+                      onClick={() => {
+                        void handleDelete(row);
+                      }}
+                    >
+                      <Trash2 />
+                    </Button>
+                  </div>
                 </td>
               </tr>
             ))}

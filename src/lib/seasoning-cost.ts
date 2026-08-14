@@ -155,3 +155,35 @@ function nullifTrim(value: string | null | undefined) {
   const trimmed = (value ?? "").trim();
   return trimmed ? trimmed : null;
 }
+
+function includesIgnoreCase(haystack: string | null | undefined, needle: string) {
+  if (!needle) return true;
+  return (haystack ?? "")
+    .toLocaleLowerCase("zh-HK")
+    .includes(needle.toLocaleLowerCase("zh-HK"));
+}
+
+export function filterSeasoningCosts(
+  rows: SeasoningCostRow[],
+  search = "",
+) {
+  const query = search.trim();
+  if (!query) return rows;
+  return rows.filter(
+    (row) =>
+      includesIgnoreCase(row.name, query) ||
+      includesIgnoreCase(row.calculationExpression, query) ||
+      includesIgnoreCase(row.description, query) ||
+      includesIgnoreCase(
+        row.costPerGram === null ? "" : String(row.costPerGram),
+        query,
+      ),
+  );
+}
+
+export async function archiveSeasoningCost(seasoningId: string): Promise<void> {
+  const { error } = await supabase.rpc("archive_seasoning", {
+    p_seasoning_id: seasoningId,
+  });
+  if (error) throw error;
+}

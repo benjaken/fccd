@@ -167,3 +167,27 @@ export async function deleteCalculationSetting(
   if (error) throw error;
   return fetchCalculationSettings();
 }
+
+function includesIgnoreCase(haystack: string | null | undefined, needle: string) {
+  if (!needle) return true;
+  return (haystack ?? "")
+    .toLocaleLowerCase("zh-HK")
+    .includes(needle.toLocaleLowerCase("zh-HK"));
+}
+
+export function filterCalculationSettings(
+  rows: CalculationSettingRow[],
+  search = "",
+  formatPercent: (rate: number | null) => string,
+  formatDate: (value: string | null) => string,
+) {
+  const query = search.trim();
+  if (!query) return rows;
+  return rows.filter((row) => {
+    return (
+      includesIgnoreCase(formatPercent(row.variationRate), query) ||
+      includesIgnoreCase(formatPercent(row.markupRate), query) ||
+      includesIgnoreCase(formatDate(row.createdAt), query)
+    );
+  });
+}

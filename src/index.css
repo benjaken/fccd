@@ -2898,9 +2898,17 @@ td:last-child {
 .spice-usage-sidebar,
 .spice-usage-main {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
   min-height: 0;
   overflow: hidden;
+}
+
+.spice-usage-sidebar {
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+
+.spice-usage-main {
+  grid-template-rows: auto auto minmax(0, 1fr);
+  padding: 0;
 }
 
 .spice-usage-sidebar-header {
@@ -2928,6 +2936,16 @@ td:last-child {
   color: var(--primary);
   font-size: 0.78rem;
   font-weight: 750;
+}
+
+.spice-usage-sidebar-search {
+  padding: 0 12px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.spice-usage-sidebar-search .search-field {
+  width: 100%;
+  min-width: 0;
 }
 
 .spice-usage-sidebar-state,
@@ -2968,10 +2986,6 @@ td:last-child {
 .spice-usage-side-item.active {
   background: color-mix(in oklch, var(--primary) 82%, #1f4d3d);
   color: white;
-}
-
-.spice-usage-main {
-  padding: 0;
 }
 
 .spice-usage-main-header {
@@ -3057,8 +3071,21 @@ td:last-child {
 }
 
 .spice-usage-main-body {
+  display: flex;
+  flex-direction: column;
   min-height: 0;
-  overflow: auto;
+  overflow: hidden;
+}
+
+.spice-usage-main-body > .list-inline-error {
+  flex: 0 0 auto;
+  padding: 12px 18px 0;
+}
+
+.spice-usage-main-body > .spice-usage-table-wrap,
+.spice-usage-main-body > .spice-usage-main-empty {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .spice-usage-main > .spice-usage-main-empty {
@@ -3211,30 +3238,36 @@ td:last-child {
 }
 
 .seasoning-cost-panel,
-.calculation-settings-panel {
-  display: grid;
-  grid-template-rows: minmax(0, 1fr);
-  min-height: 0;
-  overflow: hidden;
-}
-
+.calculation-settings-panel,
 .meat-customers-panel {
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  display: flex;
+  flex-direction: column;
   min-height: 0;
   overflow: hidden;
 }
 
+.seasoning-cost-panel > .list-inline-error,
+.calculation-settings-panel > .list-inline-error,
+.meat-customers-panel > .list-inline-error {
+  flex: 0 0 auto;
+}
+
+.seasoning-cost-panel > .products-state,
+.calculation-settings-panel > .products-state,
+.meat-customers-panel > .products-state,
 .seasoning-cost-table-wrap,
 .calculation-settings-table-wrap,
-.meat-customers-table-wrap {
+.meat-customers-table-wrap,
+.spice-usage-table-wrap {
+  flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
 }
 
 .seasoning-cost-table-wrap th,
 .calculation-settings-table-wrap th,
-.meat-customers-table-wrap th {
+.meat-customers-table-wrap th,
+.spice-usage-table-wrap th {
   position: sticky;
   z-index: 1;
   top: 0;
@@ -3409,6 +3442,7 @@ td:last-child {
   font-style: normal;
 }
 
+.list-inline-error,
 .calculation-settings-inline-error {
   margin: 0;
   padding: 12px 18px 0;
@@ -3461,7 +3495,10 @@ td:last-child {
   font-style: normal;
 }
 
-.meat-customers-toolbar {
+.seasoning-cost-toolbar,
+.calculation-settings-toolbar,
+.meat-customers-toolbar,
+.spice-usage-toolbar {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
@@ -3606,7 +3643,10 @@ td:last-child {
   .orders-toolbar,
   .products-toolbar,
   .packages-toolbar,
-  .meat-customers-toolbar {
+  .meat-customers-toolbar,
+  .seasoning-cost-toolbar,
+  .calculation-settings-toolbar,
+  .spice-usage-toolbar {
     align-items: center;
     flex-direction: row;
     flex-wrap: wrap;

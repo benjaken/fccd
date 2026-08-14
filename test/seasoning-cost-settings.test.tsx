@@ -5,7 +5,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SeasoningCostSettingsPage } from "@/components/SeasoningCostSettingsPage";
 import i18n from "@/i18n";
-import type { SeasoningCostRow } from "@/lib/seasoning-cost";
+import {
+  filterSeasoningCosts,
+  type SeasoningCostRow,
+} from "@/lib/seasoning-cost";
 
 const rows: SeasoningCostRow[] = [
   {
@@ -27,6 +30,20 @@ const rows: SeasoningCostRow[] = [
     sortOrder: 2,
   },
 ];
+
+describe("filterSeasoningCosts", () => {
+  it("matches name, formula, remark, and cost", () => {
+    expect(filterSeasoningCosts(rows, "片糖").map((row) => row.id)).toEqual([
+      "s-2",
+    ]);
+    expect(filterSeasoningCosts(rows, "2.5/600").map((row) => row.id)).toEqual([
+      "s-1",
+    ]);
+    expect(filterSeasoningCosts(rows, "2023").map((row) => row.id)).toEqual([
+      "s-1",
+    ]);
+  });
+});
 
 describe("Seasoning cost settings page", () => {
   beforeEach(async () => {
@@ -164,5 +181,49 @@ describe("Seasoning cost settings page", () => {
     await waitFor(() => {
       expect(saveRemark).toHaveBeenCalledWith("s-1", "更新備註");
     });
+  });
+
+  it("filters the table from the search bar", async () => {
+    const user = userEvent.setup();
+    const loadSeasonings = vi.fn().mockResolvedValue(structuredClone(rows));
+
+    render(
+      <MemoryRouter>
+        <SeasoningCostSettingsPage loadSeasonings={loadSeasonings} />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("幼鹽");
+    await user.type(screen.getByPlaceholderText("搜尋香料名稱或計算"), "片糖");
+    await user.click(screen.getByRole("button", { name: "搜尋" }));
+
+    expect(screen.getByText("片糖")).toBeInTheDocument();
+    expect(screen.queryByText("幼鹽")).not.toBeInTheDocument();
+  });
+
+  it("deletes a seasoning after confirmation", async () => {
+    const user = userEvent.setup();
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    const loadSeasonings = vi.fn().mockResolvedValue(structuredClone(rows));
+    const deleteSeasoning = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <MemoryRouter>
+        <SeasoningCostSettingsPage
+          loadSeasonings={loadSeasonings}
+          deleteSeasoning={deleteSeasoning}
+        />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("幼鹽");
+    await user.click(screen.getAllByRole("button", { name: "刪除" })[0]!);
+
+    await waitFor(() => {
+      expect(deleteSeasoning).toHaveBeenCalledWith("s-1");
+    });
+    expect(screen.queryByText("幼鹽")).not.toBeInTheDocument();
+    expect(screen.getByText("片糖")).toBeInTheDocument();
+    confirmSpy.mockRestore();
   });
 });

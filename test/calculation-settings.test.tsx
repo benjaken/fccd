@@ -7,6 +7,7 @@ import { CalculationSettingsPage } from "@/components/CalculationSettingsPage";
 import i18n from "@/i18n";
 import {
   coercePercentInput,
+  filterCalculationSettings,
   parsePercentInput,
   type CalculationSettingRow,
 } from "@/lib/calculation-settings";
@@ -37,6 +38,20 @@ describe("Calculation percent input", () => {
     expect(parsePercentInput("")).toBeNull();
     expect(parsePercentInput("100.01")).toBeNull();
     expect(parsePercentInput("8.2")).toBe(8.2);
+  });
+});
+
+describe("filterCalculationSettings", () => {
+  it("matches formatted percent values", () => {
+    const formatPercent = (rate: number | null) =>
+      rate === null ? "" : `${(rate * 100).toFixed(2)}%`;
+    const formatDate = (value: string | null) => value ?? "";
+
+    expect(
+      filterCalculationSettings(rows, "15", formatPercent, formatDate).map(
+        (row) => row.id,
+      ),
+    ).toEqual(["c-2"]);
   });
 });
 
@@ -88,6 +103,24 @@ describe("Calculation settings page", () => {
     });
 
     expect(await screen.findByText("12.00%")).toBeInTheDocument();
+  });
+
+  it("filters settings from the search bar", async () => {
+    const user = userEvent.setup();
+    const loadSettings = vi.fn().mockResolvedValue(structuredClone(rows));
+
+    render(
+      <MemoryRouter>
+        <CalculationSettingsPage loadSettings={loadSettings} />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("10.00%");
+    await user.type(screen.getByPlaceholderText("搜尋日期或百分比"), "15");
+    await user.click(screen.getByRole("button", { name: "搜尋" }));
+
+    expect(screen.getByText("15.00%")).toBeInTheDocument();
+    expect(screen.queryByText("10.00%")).not.toBeInTheDocument();
   });
 
   it("limits create inputs to 0-100 with two decimals", async () => {
