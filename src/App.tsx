@@ -31,6 +31,7 @@ import {
   PackageCheck,
   PanelLeftClose,
   PanelLeftOpen,
+  Receipt,
   RefreshCw,
   Settings,
   ShieldCheck,
@@ -77,6 +78,7 @@ import { PackagesListPage } from "@/components/PackagesListPage";
 import { PackageDetailPage } from "@/components/PackageDetailPage";
 import { SpiceUsagePage } from "@/components/SpiceUsagePage";
 import { SeasoningCostSettingsPage } from "@/components/SeasoningCostSettingsPage";
+import { SellingPriceCostPage } from "@/components/SellingPriceCostPage";
 import { CalculationSettingsPage } from "@/components/CalculationSettingsPage";
 import { MeatCustomersPage } from "@/components/MeatCustomersPage";
 import { AttachmentsListPage } from "@/components/settings/AttachmentsListPage";
@@ -112,7 +114,7 @@ const primaryNav: NavItem[] = [
   { key: "orders", to: "/orders", icon: ClipboardList },
   { key: "quotes", to: "/quotes", icon: FileText },
   { key: "products", to: "/products", icon: ShoppingBasket },
-  { key: "frozen", to: "/frozen/seasoning-cost", icon: Snowflake },
+  { key: "frozen", to: "/frozen/selling-price-cost", icon: Snowflake },
   { key: "kitchen", to: "/kitchen", icon: Utensils },
   { key: "delivery", to: "/delivery", icon: Truck },
   { key: "restaurant", to: "/restaurant", icon: Store },
@@ -240,6 +242,12 @@ const secondaryNav: Record<string, NavItem[]> = {
     },
   ],
   frozen: [
+    {
+      key: "sellingPriceCost",
+      to: "/frozen/selling-price-cost",
+      icon: Receipt,
+      permissionKey: "frozen.selling_price_cost",
+    },
     {
       key: "seasoningCost",
       to: "/frozen/seasoning-cost",
@@ -389,6 +397,7 @@ const SECTION_CHILD_KEYS: Record<string, string[]> = {
     "products.packages",
   ],
   frozen: [
+    "frozen.selling_price_cost",
     "frozen.seasoning_cost",
     "frozen.calculation_settings",
     "frozen.meat_customers",
@@ -993,7 +1002,11 @@ function OperationsShell() {
               <Route path="/products/:id" element={<ProductDetailPage />} />
               <Route
                 path="/frozen"
-                element={<Navigate to="/frozen/seasoning-cost" replace />}
+                element={<Navigate to="/frozen/selling-price-cost" replace />}
+              />
+              <Route
+                path="/frozen/selling-price-cost"
+                element={<SellingPriceCostPage />}
               />
               <Route
                 path="/frozen/seasoning-cost"
