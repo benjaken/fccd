@@ -158,6 +158,22 @@ export function withPreparedMeatRunningBalance(
   return withBalance.reverse();
 }
 
+function mapItem(row: ItemRow): PreparedMeatItemOption {
+  return {
+    id: row.id,
+    sku: row.sku,
+    name: row.name,
+    unit: row.unit,
+    sortOrder: toNumber(row.sort_order),
+    isActive: row.is_active !== false,
+  };
+}
+
+function nullifTrim(value: string | null | undefined) {
+  const trimmed = (value ?? "").trim();
+  return trimmed ? trimmed : null;
+}
+
 export async function fetchPreparedMeatItems(): Promise<PreparedMeatItemOption[]> {
   const { data, error } = await supabase
     .from("prepared_meat_items")
@@ -167,14 +183,70 @@ export async function fetchPreparedMeatItems(): Promise<PreparedMeatItemOption[]
     .order("name", { ascending: true });
 
   if (error) throw error;
-  return ((data ?? []) as ItemRow[]).map((row) => ({
-    id: row.id,
-    sku: row.sku,
-    name: row.name,
-    unit: row.unit,
-    sortOrder: toNumber(row.sort_order),
-    isActive: row.is_active !== false,
-  }));
+  return ((data ?? []) as ItemRow[]).map(mapItem);
+}
+
+async function fetchPreparedMeatItemById(
+  itemId: string,
+): Promise<PreparedMeatItemOption> {
+  const { data, error } = await supabase
+    .from("prepared_meat_items")
+    .select("id,sku,name,unit,sort_order,is_active")
+    .eq("id", itemId)
+    .is("archived_at", null)
+    .single();
+
+  if (error) throw error;
+  return mapItem(data as ItemRow);
+}
+
+export type PreparedMeatRawMeatChoice = {
+  id: string;
+  name: string;
+};
+
+export async function fetchPreparedMeatRawMeatChoices(): Promise<
+  PreparedMeatRawMeatChoice[]
+> {
+  const { data, error } = await supabase
+    .from("raw_meat_items")
+    .select("id,name")
+    .is("archived_at", null)
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true, nullsFirst: false })
+    .order("name", { ascending: true });
+
+  if (error) throw error;
+  return ((data ?? []) as PreparedMeatRawMeatChoice[]).filter((row) =>
+    Boolean(row.name?.trim()),
+  );
+}
+
+export type PreparedMeatItemWriteInput = {
+  name: string;
+  englishName?: string | null;
+  sku?: string | null;
+  unit?: string | null;
+  kgPerPackage?: number | null;
+  rawMeatItemIds: string[];
+};
+
+export async function createPreparedMeatItem(
+  input: PreparedMeatItemWriteInput,
+): Promise<PreparedMeatItemOption> {
+  const name = input.name.trim();
+  if (!name) throw new Error("name_required");
+
+  const { data, error } = await supabase.rpc("create_prepared_meat_item", {
+    p_name: name,
+    p_english_name: nullifTrim(input.englishName),
+    p_sku: nullifTrim(input.sku),
+    p_unit: nullifTrim(input.unit),
+    p_kg_per_package: input.kgPerPackage ?? null,
+    p_raw_meat_item_id: input.rawMeatItemIds[0] ?? null,
+  });
+  if (error) throw error;
+  return fetchPreparedMeatItemById(data as string);
 }
 
 export async function updatePreparedMeatItemFlags(

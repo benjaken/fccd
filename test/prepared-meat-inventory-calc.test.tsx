@@ -318,6 +318,76 @@ describe("Prepared meat inventory calculation page", () => {
     );
   });
 
+  it("opens an add-option side panel and keeps kg/pack numeric", async () => {
+    const user = userEvent.setup();
+    const loadItems = vi.fn().mockResolvedValue(items);
+    const loadMovements = vi.fn().mockResolvedValue([]);
+    const loadRawMeatChoices = vi.fn().mockResolvedValue([
+      { id: "raw-pork", name: "豬肉粒" },
+      { id: "raw-tripe", name: "豬肚" },
+    ]);
+    const createItem = vi.fn().mockResolvedValue({
+      id: "item-new",
+      sku: "FCR099",
+      name: "測試製成品",
+      unit: "包",
+      sortOrder: 99,
+      isActive: true,
+    });
+
+    render(
+      <MemoryRouter>
+        <PreparedMeatInventoryCalcPage
+          loadItems={loadItems}
+          loadMovements={loadMovements}
+          loadRawMeatChoices={loadRawMeatChoices}
+          createItem={createItem}
+        />
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: "新增製成品選項" }));
+    const dialog = await screen.findByRole("dialog", { name: "添加選項" });
+    expect(dialog).toHaveClass("side-panel");
+    expect(within(dialog).queryByRole("button", { name: "編輯" })).toBeNull();
+
+    await user.type(
+      within(dialog).getByRole("textbox", { name: "產品名稱", exact: true }),
+      "測試製成品",
+    );
+    await user.type(
+      within(dialog).getByRole("textbox", { name: "產品名稱 (英)" }),
+      "Test prepared",
+    );
+    await user.type(
+      within(dialog).getByRole("textbox", { name: "產品編號" }),
+      "FCR099",
+    );
+    await user.type(within(dialog).getByRole("textbox", { name: "單位" }), "包");
+
+    const kg = within(dialog).getByRole("textbox", { name: "kg/包" });
+    await user.type(kg, "勝多負少");
+    expect(kg).toHaveValue("");
+    await user.type(kg, "2");
+    expect(kg).toHaveValue("2");
+
+    await user.click(within(dialog).getByRole("textbox", { name: "生肉" }));
+    await user.click(within(dialog).getByRole("option", { name: "豬肉粒" }));
+    await user.click(within(dialog).getByRole("button", { name: "提交" }));
+
+    await waitFor(() => {
+      expect(createItem).toHaveBeenCalledWith({
+        name: "測試製成品",
+        englishName: "Test prepared",
+        sku: "FCR099",
+        unit: "包",
+        kgPerPackage: 2,
+        rawMeatItemIds: ["raw-pork"],
+      });
+    });
+    expect(await screen.findByRole("button", { name: "測試製成品" })).toBeInTheDocument();
+  });
+
   it("shows five heading actions and opens a delivery-note side panel for outbound", async () => {
     const user = userEvent.setup();
     const loadItems = vi.fn().mockResolvedValue(items);
@@ -365,7 +435,7 @@ describe("Prepared meat inventory calculation page", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole("button", { name: "新增製成品選項" })).toBeDisabled();
+    expect(await screen.findByRole("button", { name: "新增製成品選項" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "製成品入貨(扣原料)" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "製成品入貨(無原料)" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "管理送貨單" })).toBeDisabled();

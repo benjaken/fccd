@@ -16,12 +16,14 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 
+import { PreparedMeatOptionFormModal } from "@/components/PreparedMeatOptionFormModal";
 import { PreparedMeatOptionsModal } from "@/components/PreparedMeatOptionsModal";
 import { PreparedMeatOutboundModal } from "@/components/PreparedMeatOutboundModal";
 import { Button } from "@/components/ui/button";
 import { ListTable } from "@/components/ui/list-table";
 import { TablePagination } from "@/components/ui/table-pagination";
 import {
+  createPreparedMeatItem,
   currentHongKongYear,
   fetchPreparedMeatItems,
   fetchPreparedMeatMovementsForItem,
@@ -52,6 +54,10 @@ type MovementsLoader = (
   year: number,
 ) => Promise<PreparedMeatMovementRow[]>;
 type ItemFlagsSaver = typeof updatePreparedMeatItemFlags;
+type CreateOptionProps = Pick<
+  ComponentProps<typeof PreparedMeatOptionFormModal>,
+  "loadRawMeatChoices" | "createItem"
+>;
 type OutboundModalProps = Pick<
   ComponentProps<typeof PreparedMeatOutboundModal>,
   | "loadCustomers"
@@ -150,6 +156,8 @@ export function PreparedMeatInventoryCalcPage({
   loadItems = fetchPreparedMeatItems,
   loadMovements = fetchPreparedMeatMovementsForItem,
   saveItemFlags = updatePreparedMeatItemFlags,
+  loadRawMeatChoices,
+  createItem = createPreparedMeatItem,
   loadCustomers,
   loadShippingMethods,
   loadOrderNumber,
@@ -160,7 +168,8 @@ export function PreparedMeatInventoryCalcPage({
   loadItems?: ItemsLoader;
   loadMovements?: MovementsLoader;
   saveItemFlags?: ItemFlagsSaver;
-} & OutboundModalProps) {
+} & CreateOptionProps &
+  OutboundModalProps) {
   const { t, i18n } = useTranslation();
   const [items, setItems] = useState<PreparedMeatItemOption[]>([]);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
@@ -175,6 +184,7 @@ export function PreparedMeatInventoryCalcPage({
   const [shopFilter, setShopFilter] = useState<string | null>(null);
   const [openFilter, setOpenFilter] = useState<"month" | "shop" | null>(null);
   const [optionsOpen, setOptionsOpen] = useState(false);
+  const [createOptionOpen, setCreateOptionOpen] = useState(false);
   const [outboundOpen, setOutboundOpen] = useState(false);
   const monthFilterRef = useRef<HTMLDivElement>(null);
   const shopFilterRef = useRef<HTMLDivElement>(null);
@@ -438,6 +448,15 @@ export function PreparedMeatInventoryCalcPage({
     },
   );
 
+  const handleSavedOption = (row: PreparedMeatItemOption) => {
+    setItems((current) =>
+      current.some((item) => item.id === row.id)
+        ? current.map((item) => (item.id === row.id ? row : item))
+        : [...current, row],
+    );
+    if (row.isActive) setSelectedItemId(row.id);
+  };
+
   const loading = itemsLoading || movementsLoading;
 
   return (
@@ -448,7 +467,7 @@ export function PreparedMeatInventoryCalcPage({
           <h1>{t("preparedMeatInventory.title")}</h1>
         </div>
         <div className="raw-meat-calc-heading-actions">
-          <Button type="button" disabled title={t("preparedMeatInventory.comingSoon")}>
+          <Button type="button" onClick={() => setCreateOptionOpen(true)}>
             {t("preparedMeatInventory.actions.addOption")}
           </Button>
           <Button type="button" disabled title={t("preparedMeatInventory.comingSoon")}>
@@ -733,6 +752,13 @@ export function PreparedMeatInventoryCalcPage({
         </article>
       </div>
 
+      <PreparedMeatOptionFormModal
+        open={createOptionOpen}
+        onClose={() => setCreateOptionOpen(false)}
+        onSaved={handleSavedOption}
+        loadRawMeatChoices={loadRawMeatChoices}
+        createItem={createItem}
+      />
       <PreparedMeatOptionsModal
         open={optionsOpen}
         items={items}
