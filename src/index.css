@@ -2873,22 +2873,17 @@ td:last-child {
 
 .spice-usage-page {
   display: grid;
-  gap: 16px;
-  align-content: start;
-  min-height: 0;
+  gap: 20px;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: calc(
+    100dvh - var(--topbar-height) - var(--workspace-height) - 76px
+  );
+  min-height: 560px;
+  overflow: hidden;
 }
 
 .spice-usage-heading {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.spice-usage-heading-actions {
-  display: flex;
-  flex-shrink: 0;
-  gap: 8px;
+  align-items: flex-end;
 }
 
 .spice-usage-layout {
@@ -3135,50 +3130,60 @@ td:last-child {
   color: color-mix(in oklch, #0f766e 75%, var(--foreground));
 }
 
-.seasoning-cost-page {
+.seasoning-cost-page,
+.calculation-settings-page,
+.meat-customers-page {
   display: grid;
-  gap: 16px;
-  align-content: start;
+  gap: 20px;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: calc(
+    100dvh - var(--topbar-height) - var(--workspace-height) - 76px
+  );
+  min-height: 560px;
+  overflow: hidden;
 }
 
-.seasoning-cost-heading {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
+.seasoning-cost-page .page-heading,
+.calculation-settings-page .page-heading,
+.meat-customers-page .page-heading,
+.spice-usage-page .page-heading {
+  margin-bottom: 0;
 }
 
-.seasoning-cost-heading-actions {
-  display: flex;
-  flex-shrink: 0;
-  flex-wrap: wrap;
-  gap: 8px;
+.seasoning-cost-heading,
+.calculation-settings-heading,
+.meat-customers-heading {
+  align-items: flex-end;
 }
 
-.seasoning-cost-table-wrap {
+.seasoning-cost-panel,
+.calculation-settings-panel {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.meat-customers-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.seasoning-cost-table-wrap,
+.calculation-settings-table-wrap,
+.meat-customers-table-wrap {
   min-height: 0;
   overflow: auto;
 }
 
-.seasoning-cost-table-wrap th {
+.seasoning-cost-table-wrap th,
+.calculation-settings-table-wrap th,
+.meat-customers-table-wrap th {
   position: sticky;
-  top: 0;
   z-index: 1;
-  padding: 12px 14px;
-  background: color-mix(in oklch, var(--primary) 42%, #82b3a5);
-  color: white;
-  font-size: 0.92rem;
-  font-weight: 750;
-  letter-spacing: 0.02em;
-  text-transform: none;
-  border-bottom: 0;
-  white-space: nowrap;
-}
-
-.seasoning-cost-table-wrap td {
-  padding: 12px 14px;
-  vertical-align: top;
-  color: var(--foreground);
+  top: 0;
 }
 
 .seasoning-cost-sort-button {
@@ -3191,6 +3196,8 @@ td:last-child {
   color: inherit;
   font: inherit;
   font-weight: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
   cursor: pointer;
 }
 
@@ -3198,6 +3205,10 @@ td:last-child {
   width: 14px;
   height: 14px;
   opacity: 0.72;
+}
+
+.seasoning-cost-sort-button.is-active {
+  color: var(--foreground);
 }
 
 .seasoning-cost-sort-button.is-active svg {
@@ -3208,6 +3219,7 @@ td:last-child {
 .seasoning-cost-remark-cell {
   min-width: 8rem;
   max-width: 14rem;
+  white-space: normal;
 }
 
 .seasoning-cost-inline-trigger {
@@ -3225,6 +3237,7 @@ td:last-child {
   font: inherit;
   text-align: left;
   cursor: pointer;
+  white-space: normal;
 }
 
 .seasoning-cost-inline-trigger.is-mono {
@@ -3278,6 +3291,7 @@ td:last-child {
   gap: 6px;
   color: var(--muted-foreground);
   font-size: 0.82rem;
+  white-space: normal;
 }
 
 .seasoning-cost-inline-preview strong {
@@ -3288,6 +3302,7 @@ td:last-child {
 .seasoning-cost-inline-error {
   color: var(--destructive);
   font-size: 0.78rem;
+  white-space: normal;
 }
 
 .seasoning-cost-form {
@@ -3340,56 +3355,11 @@ td:last-child {
   font-style: normal;
 }
 
-.calculation-settings-page {
-  display: grid;
-  gap: 16px;
-  align-content: start;
-}
-
-.calculation-settings-heading {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.calculation-settings-heading-actions {
-  display: flex;
-  flex-shrink: 0;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
 .calculation-settings-inline-error {
   margin: 0;
+  padding: 12px 18px 0;
   color: var(--destructive);
   font-size: 0.88rem;
-}
-
-.calculation-settings-table-wrap {
-  min-height: 0;
-  overflow: auto;
-}
-
-.calculation-settings-table-wrap th {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  padding: 12px 14px;
-  background: color-mix(in oklch, var(--primary) 42%, #82b3a5);
-  color: white;
-  font-size: 0.92rem;
-  font-weight: 750;
-  letter-spacing: 0.02em;
-  text-transform: none;
-  border-bottom: 0;
-  white-space: nowrap;
-}
-
-.calculation-settings-table-wrap td {
-  padding: 12px 14px;
-  vertical-align: middle;
-  color: var(--foreground);
 }
 
 .calculation-settings-form {
@@ -3432,130 +3402,50 @@ td:last-child {
   font-style: normal;
 }
 
-.meat-customers-page {
-  display: grid;
-  gap: 16px;
-  align-content: start;
-}
-
-.meat-customers-heading {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.meat-customers-heading-actions {
-  display: flex;
-  flex-shrink: 0;
-  gap: 8px;
-}
-
 .meat-customers-toolbar {
   display: flex;
-  flex-wrap: wrap;
-  align-items: end;
-  gap: 10px;
-  padding: 14px 16px;
-  border-radius: 12px;
-  background: color-mix(in oklch, var(--primary) 55%, #1f4d3d);
-  color: white;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
 }
 
-.meat-customers-search,
+.meat-customers-filters {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
 .meat-customers-filter {
   display: grid;
   gap: 6px;
-  min-width: 8.5rem;
-  flex: 1 1 8.5rem;
-}
-
-.meat-customers-search {
-  position: relative;
-  flex: 1.4 1 12rem;
-}
-
-.meat-customers-search > span,
-.meat-customers-filter > span {
-  font-size: 0.84rem;
+  min-width: 160px;
+  color: var(--muted-foreground);
+  font-size: 14px;
   font-weight: 700;
 }
 
-.meat-customers-search svg {
-  position: absolute;
-  left: 12px;
-  bottom: 11px;
-  width: 16px;
-  height: 16px;
-  color: color-mix(in oklch, var(--foreground) 55%, transparent);
-  pointer-events: none;
-}
-
-.meat-customers-search input,
 .meat-customers-filter input {
   height: 40px;
-  padding: 0 12px;
-  border: 1px solid color-mix(in oklch, white 35%, transparent);
-  border-radius: 8px;
+  padding: 0 11px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
   outline: 0;
-  background: color-mix(in oklch, white 92%, transparent);
+  background: var(--background);
   color: var(--foreground);
-  font: inherit;
+  font-size: 14px;
 }
 
-.meat-customers-search input {
-  padding-left: 36px;
-}
-
-.meat-customers-search input:focus,
 .meat-customers-filter input:focus {
-  border-color: white;
-  box-shadow: 0 0 0 3px color-mix(in oklch, white 25%, transparent);
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 13%, transparent);
 }
 
-.meat-customers-toolbar > button {
-  flex-shrink: 0;
-}
-
-.meat-customers-filter-hint {
-  margin: 0;
-  color: var(--muted-foreground);
-  font-size: 0.86rem;
-}
-
-.meat-customers-table-wrap {
-  overflow: auto;
-  padding: 0;
-}
-
-.meat-customers-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.meat-customers-table th {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  padding: 12px 14px;
-  background: color-mix(in oklch, var(--primary) 42%, #82b3a5);
-  color: white;
-  font-size: 0.92rem;
-  font-weight: 750;
-  letter-spacing: 0.02em;
-  text-transform: none;
-  border-bottom: 0;
-  white-space: nowrap;
-}
-
-.meat-customers-table td {
-  padding: 12px 14px;
-  vertical-align: top;
-  color: var(--foreground);
-}
-
-.meat-customers-table td:last-child {
+.meat-customers-address-cell {
   min-width: 12rem;
+  max-width: 22rem;
   white-space: normal;
 }
 
@@ -3610,7 +3500,11 @@ td:last-child {
   .quotes-page,
   .orders-page,
   .products-page,
-  .packages-page {
+  .packages-page,
+  .seasoning-cost-page,
+  .calculation-settings-page,
+  .meat-customers-page,
+  .spice-usage-page {
     height: calc(100dvh - var(--topbar-height) - 62px);
     min-height: 520px;
   }
@@ -3647,7 +3541,8 @@ td:last-child {
   .quotes-toolbar,
   .orders-toolbar,
   .products-toolbar,
-  .packages-toolbar {
+  .packages-toolbar,
+  .meat-customers-toolbar {
     align-items: center;
     flex-direction: row;
     flex-wrap: wrap;

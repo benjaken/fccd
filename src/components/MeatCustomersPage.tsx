@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, RefreshCw, Search, Users } from "lucide-react";
+import { Plus, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { ListSearchBar } from "@/components/ui/list-search-bar";
+import { ListTable } from "@/components/ui/list-table";
 import { SidePanel } from "@/components/ui/side-panel";
 import {
   createMeatCustomer,
@@ -29,6 +31,14 @@ const EMPTY_FILTERS: FilterDraft = {
   name: "",
   phone: "",
 };
+
+const MEAT_CUSTOMERS_SKELETON_COLUMNS = [
+  { width: "6rem" },
+  { width: "10rem" },
+  { width: "8rem" },
+  { width: "8rem" },
+  { width: "14rem" },
+];
 
 function CreateMeatCustomerPanel({
   open,
@@ -96,7 +106,6 @@ function CreateMeatCustomerPanel({
     <SidePanel
       open={open}
       title={t("meatCustomers.createTitle")}
-      description={t("meatCustomers.createDescription")}
       onClose={closeAndReset}
       closeLabel={t("meatCustomers.closePanel")}
       footer={
@@ -190,12 +199,7 @@ export function MeatCustomersPage({
 
   const filtersActive = useMemo(
     () =>
-      Boolean(
-        applied.search ||
-          applied.customerCode ||
-          applied.name ||
-          applied.phone,
-      ),
+      Boolean(applied.customerCode || applied.name || applied.phone),
     [applied],
   );
 
@@ -230,163 +234,135 @@ export function MeatCustomersPage({
     };
   }, [applied, loadCustomers, reloadKey, t]);
 
-  const applyFilters = () => {
-    setApplied({ ...draft });
+  const submitSearch = () => {
+    setApplied({
+      ...draft,
+      search: draft.search.trim(),
+    });
   };
 
   const display = (value: string | null | undefined) =>
     value?.trim() ? value : t("common.notSet");
 
   return (
-    <section className="page-shell meat-customers-page">
-      <div className="page-heading meat-customers-heading">
+    <section className="meat-customers-page">
+      <header className="page-heading meat-customers-heading">
         <div>
-          <p className="eyebrow">{t("meatCustomers.eyebrow")}</p>
-          <h2>{t("meatCustomers.title")}</h2>
-          <p>{t("meatCustomers.description")}</p>
+          <span className="eyebrow">{t("meatCustomers.eyebrow")}</span>
+          <h1>{t("meatCustomers.title")}</h1>
         </div>
-        <div className="meat-customers-heading-actions">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setReloadKey((current) => current + 1)}
-            disabled={loading}
-          >
-            <RefreshCw />
-            {t("meatCustomers.refresh")}
-          </Button>
-        </div>
-      </div>
-
-      <div className="meat-customers-toolbar">
-        <label className="meat-customers-search">
-          <span className="sr-only">{t("meatCustomers.search")}</span>
-          <Search aria-hidden="true" />
-          <input
-            value={draft.search}
-            onChange={(event) =>
-              setDraft((current) => ({
-                ...current,
-                search: event.target.value,
-              }))
-            }
-            placeholder={t("meatCustomers.searchPlaceholder")}
-            aria-label={t("meatCustomers.search")}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                applyFilters();
-              }
-            }}
-          />
-        </label>
-        <label className="meat-customers-filter">
-          <span>{t("meatCustomers.fields.customerCode")}</span>
-          <input
-            value={draft.customerCode}
-            onChange={(event) =>
-              setDraft((current) => ({
-                ...current,
-                customerCode: event.target.value,
-              }))
-            }
-            aria-label={t("meatCustomers.fields.customerCode")}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                applyFilters();
-              }
-            }}
-          />
-        </label>
-        <label className="meat-customers-filter">
-          <span>{t("meatCustomers.fields.name")}</span>
-          <input
-            value={draft.name}
-            onChange={(event) =>
-              setDraft((current) => ({
-                ...current,
-                name: event.target.value,
-              }))
-            }
-            aria-label={t("meatCustomers.fields.name")}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                applyFilters();
-              }
-            }}
-          />
-        </label>
-        <label className="meat-customers-filter">
-          <span>{t("meatCustomers.fields.phone")}</span>
-          <input
-            value={draft.phone}
-            onChange={(event) =>
-              setDraft((current) => ({
-                ...current,
-                phone: event.target.value,
-              }))
-            }
-            aria-label={t("meatCustomers.fields.phone")}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                applyFilters();
-              }
-            }}
-          />
-        </label>
-        <Button type="button" variant="secondary" onClick={applyFilters}>
-          {t("meatCustomers.searchAction")}
-        </Button>
         <Button type="button" onClick={() => setCreateOpen(true)}>
           <Plus />
           {t("meatCustomers.add")}
         </Button>
-      </div>
+      </header>
 
-      {filtersActive ? (
-        <p className="meat-customers-filter-hint">
-          {t("meatCustomers.filtersActive")}
-        </p>
-      ) : null}
+      <article className="panel meat-customers-panel">
+        <header className="meat-customers-toolbar">
+          <ListSearchBar
+            id="meat-customers-search"
+            value={draft.search}
+            onChange={(value) =>
+              setDraft((current) => ({ ...current, search: value }))
+            }
+            onSubmit={submitSearch}
+            label={t("meatCustomers.search")}
+            placeholder={t("meatCustomers.searchPlaceholder")}
+            submitLabel={t("meatCustomers.searchAction")}
+            filtersActive={filtersActive}
+            onConfirmFilters={() => {
+              setApplied((current) => ({
+                ...draft,
+                search: current.search,
+              }));
+            }}
+            onDismissFilters={() => {
+              setDraft((current) => ({
+                ...applied,
+                search: current.search,
+              }));
+            }}
+            filters={
+              <div className="meat-customers-filters">
+                <label className="meat-customers-filter">
+                  <span>{t("meatCustomers.fields.customerCode")}</span>
+                  <input
+                    value={draft.customerCode}
+                    onChange={(event) =>
+                      setDraft((current) => ({
+                        ...current,
+                        customerCode: event.target.value,
+                      }))
+                    }
+                    aria-label={t("meatCustomers.fields.customerCode")}
+                  />
+                </label>
+                <label className="meat-customers-filter">
+                  <span>{t("meatCustomers.fields.name")}</span>
+                  <input
+                    value={draft.name}
+                    onChange={(event) =>
+                      setDraft((current) => ({
+                        ...current,
+                        name: event.target.value,
+                      }))
+                    }
+                    aria-label={t("meatCustomers.fields.name")}
+                  />
+                </label>
+                <label className="meat-customers-filter">
+                  <span>{t("meatCustomers.fields.phone")}</span>
+                  <input
+                    value={draft.phone}
+                    onChange={(event) =>
+                      setDraft((current) => ({
+                        ...current,
+                        phone: event.target.value,
+                      }))
+                    }
+                    aria-label={t("meatCustomers.fields.phone")}
+                  />
+                </label>
+              </div>
+            }
+          />
+        </header>
 
-      {error ? (
-        <div className="products-state products-state-error">
-          <div>
-            <strong>{t("meatCustomers.loadError")}</strong>
-            <span>{error}</span>
+        {error ? (
+          <div className="products-state products-state-error">
+            <div>
+              <strong>{t("meatCustomers.loadError")}</strong>
+              <span>{error}</span>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setReloadKey((current) => current + 1)}
+            >
+              {t("meatCustomers.retry")}
+            </Button>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setReloadKey((current) => current + 1)}
-          >
-            {t("meatCustomers.retry")}
-          </Button>
-        </div>
-      ) : loading ? (
-        <div className="products-state">
-          <Users />
-          <strong>{t("meatCustomers.loading")}</strong>
-        </div>
-      ) : rows.length === 0 ? (
-        <div className="products-state products-state-empty">
-          <Users />
-          <div>
-            <strong>{t("meatCustomers.empty")}</strong>
-            <span>{t("meatCustomers.emptyDescription")}</span>
+        ) : !loading && rows.length === 0 ? (
+          <div className="products-state products-state-empty">
+            <Users />
+            <div>
+              <strong>{t("meatCustomers.empty")}</strong>
+              <span>{t("meatCustomers.emptyDescription")}</span>
+            </div>
+            <Button type="button" onClick={() => setCreateOpen(true)}>
+              <Plus />
+              {t("meatCustomers.add")}
+            </Button>
           </div>
-          <Button type="button" onClick={() => setCreateOpen(true)}>
-            <Plus />
-            {t("meatCustomers.add")}
-          </Button>
-        </div>
-      ) : (
-        <div className="meat-customers-table-wrap panel">
-          <table className="meat-customers-table">
-            <thead>
+        ) : (
+          <ListTable
+            className="meat-customers-table-wrap"
+            onRefresh={() => setReloadKey((current) => current + 1)}
+            loading={loading}
+            loadingLabel={t("meatCustomers.loading")}
+            skeletonRows={8}
+            skeletonColumns={MEAT_CUSTOMERS_SKELETON_COLUMNS}
+            header={
               <tr>
                 <th>{t("meatCustomers.columns.customerCode")}</th>
                 <th>{t("meatCustomers.columns.name")}</th>
@@ -394,23 +370,24 @@ export function MeatCustomersPage({
                 <th>{t("meatCustomers.columns.phone")}</th>
                 <th>{t("meatCustomers.columns.address")}</th>
               </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.id}>
-                  <td>{display(row.customerCode)}</td>
-                  <td>
-                    <strong>{row.name}</strong>
-                  </td>
-                  <td>{display(row.contactPerson)}</td>
-                  <td>{display(row.phone)}</td>
-                  <td>{display(row.address)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+            }
+          >
+            {rows.map((row) => (
+              <tr key={row.id}>
+                <td>{display(row.customerCode)}</td>
+                <td>
+                  <strong>{row.name}</strong>
+                </td>
+                <td>{display(row.contactPerson)}</td>
+                <td>{display(row.phone)}</td>
+                <td className="meat-customers-address-cell">
+                  {display(row.address)}
+                </td>
+              </tr>
+            ))}
+          </ListTable>
+        )}
+      </article>
 
       <CreateMeatCustomerPanel
         open={createOpen}

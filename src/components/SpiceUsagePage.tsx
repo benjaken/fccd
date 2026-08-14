@@ -133,14 +133,13 @@ export function SpiceUsagePage({
   const loading = seasoningsLoading || usagesLoading;
 
   return (
-    <section className="page-shell spice-usage-page">
-      <div className="page-heading spice-usage-heading">
+    <section className="spice-usage-page">
+      <header className="page-heading spice-usage-heading">
         <div>
-          <p className="eyebrow">{t("spiceUsage.eyebrow")}</p>
-          <h2>{t("spiceUsage.title")}</h2>
-          <p>{t("spiceUsage.description")}</p>
+          <span className="eyebrow">{t("spiceUsage.eyebrow")}</span>
+          <h1>{t("spiceUsage.title")}</h1>
         </div>
-        <div className="spice-usage-heading-actions">
+        <div className="heading-actions">
           <Button
             type="button"
             variant="outline"
@@ -151,7 +150,7 @@ export function SpiceUsagePage({
             {t("spiceUsage.refresh")}
           </Button>
         </div>
-      </div>
+      </header>
 
       {error ? (
         <div className="products-state products-state-error">

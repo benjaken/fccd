@@ -254,13 +254,13 @@ export function CalculationSettingsPage({
   );
 
   return (
-    <section className="page-shell calculation-settings-page">
-      <div className="page-heading calculation-settings-heading">
+    <section className="calculation-settings-page">
+      <header className="page-heading calculation-settings-heading">
         <div>
-          <p className="eyebrow">{t("calculationSettings.eyebrow")}</p>
-          <h2>{t("calculationSettings.title")}</h2>
+          <span className="eyebrow">{t("calculationSettings.eyebrow")}</span>
+          <h1>{t("calculationSettings.title")}</h1>
         </div>
-        <div className="calculation-settings-heading-actions">
+        <div className="heading-actions">
           <Button
             type="button"
             variant="outline"
@@ -275,82 +275,84 @@ export function CalculationSettingsPage({
             {t("calculationSettings.add")}
           </Button>
         </div>
-      </div>
+      </header>
 
-      {toggleError ? (
-        <p className="calculation-settings-inline-error">{toggleError}</p>
-      ) : null}
+      <article className="panel calculation-settings-panel">
+        {toggleError ? (
+          <p className="calculation-settings-inline-error">{toggleError}</p>
+        ) : null}
 
-      {error ? (
-        <div className="products-state products-state-error">
-          <div>
-            <strong>{t("calculationSettings.loadError")}</strong>
-            <span>{error}</span>
+        {error ? (
+          <div className="products-state products-state-error">
+            <div>
+              <strong>{t("calculationSettings.loadError")}</strong>
+              <span>{error}</span>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setReloadKey((current) => current + 1)}
+            >
+              {t("calculationSettings.retry")}
+            </Button>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setReloadKey((current) => current + 1)}
+        ) : !loading && rows.length === 0 ? (
+          <div className="products-state products-state-empty">
+            <Calculator />
+            <div>
+              <strong>{t("calculationSettings.empty")}</strong>
+              <span>{t("calculationSettings.emptyDescription")}</span>
+            </div>
+            <Button type="button" onClick={() => setCreateOpen(true)}>
+              <Plus />
+              {t("calculationSettings.add")}
+            </Button>
+          </div>
+        ) : (
+          <ListTable
+            className="calculation-settings-table-wrap"
+            onRefresh={() => setReloadKey((current) => current + 1)}
+            loading={loading}
+            loadingLabel={t("calculationSettings.loading")}
+            skeletonRows={8}
+            skeletonColumns={CALCULATION_SETTINGS_SKELETON_COLUMNS}
+            header={
+              <tr>
+                <th>{t("calculationSettings.columns.createdAt")}</th>
+                <th>{t("calculationSettings.columns.variation")}</th>
+                <th>{t("calculationSettings.columns.markup")}</th>
+                <th>{t("calculationSettings.columns.status")}</th>
+              </tr>
+            }
           >
-            {t("calculationSettings.retry")}
-          </Button>
-        </div>
-      ) : !loading && rows.length === 0 ? (
-        <div className="products-state products-state-empty">
-          <Calculator />
-          <div>
-            <strong>{t("calculationSettings.empty")}</strong>
-            <span>{t("calculationSettings.emptyDescription")}</span>
-          </div>
-          <Button type="button" onClick={() => setCreateOpen(true)}>
-            <Plus />
-            {t("calculationSettings.add")}
-          </Button>
-        </div>
-      ) : (
-        <ListTable
-          className="calculation-settings-table-wrap"
-          onRefresh={() => setReloadKey((current) => current + 1)}
-          loading={loading}
-          loadingLabel={t("calculationSettings.loading")}
-          skeletonRows={8}
-          skeletonColumns={CALCULATION_SETTINGS_SKELETON_COLUMNS}
-          header={
-            <tr>
-              <th>{t("calculationSettings.columns.createdAt")}</th>
-              <th>{t("calculationSettings.columns.variation")}</th>
-              <th>{t("calculationSettings.columns.markup")}</th>
-              <th>{t("calculationSettings.columns.status")}</th>
-            </tr>
-          }
-        >
-          {rows.map((row) => (
-            <tr key={row.id}>
-              <td>
-                {row.createdAt
-                  ? dateFormatter.format(new Date(row.createdAt))
-                  : t("common.notSet")}
-              </td>
-              <td>{formatPercent(row.variationRate)}</td>
-              <td>{formatPercent(row.markupRate)}</td>
-              <td>
-                <Switch
-                  checked={row.isApplied}
-                  disabled={togglingId === row.id}
-                  aria-label={t("calculationSettings.toggleStatus", {
-                    date: row.createdAt
-                      ? dateFormatter.format(new Date(row.createdAt))
-                      : row.id,
-                  })}
-                  onCheckedChange={(checked) => {
-                    void handleToggle(row, checked);
-                  }}
-                />
-              </td>
-            </tr>
-          ))}
-        </ListTable>
-      )}
+            {rows.map((row) => (
+              <tr key={row.id}>
+                <td>
+                  {row.createdAt
+                    ? dateFormatter.format(new Date(row.createdAt))
+                    : t("common.notSet")}
+                </td>
+                <td>{formatPercent(row.variationRate)}</td>
+                <td>{formatPercent(row.markupRate)}</td>
+                <td>
+                  <Switch
+                    checked={row.isApplied}
+                    disabled={togglingId === row.id}
+                    aria-label={t("calculationSettings.toggleStatus", {
+                      date: row.createdAt
+                        ? dateFormatter.format(new Date(row.createdAt))
+                        : row.id,
+                    })}
+                    onCheckedChange={(checked) => {
+                      void handleToggle(row, checked);
+                    }}
+                  />
+                </td>
+              </tr>
+            ))}
+          </ListTable>
+        )}
+      </article>
 
       <CreateCalculationSettingPanel
         open={createOpen}
