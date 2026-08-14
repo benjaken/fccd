@@ -119,7 +119,7 @@ describe("Selling price cost page", () => {
     await i18n.changeLanguage("zh-HK");
   });
 
-  it("shows meat chips, defaults to the first type, and supports search", async () => {
+  it("shows left meat tabs, defaults to the first type, and supports search", async () => {
     const user = userEvent.setup();
     const loadOptions = vi.fn().mockResolvedValue(options);
     const loadRows = vi.fn().mockImplementation(async (id: string) => {
@@ -137,12 +137,13 @@ describe("Selling price cost page", () => {
       await screen.findByRole("heading", { name: "售價成本計算" }),
     ).toBeInTheDocument();
 
-    const chips = screen.getByRole("tablist", { name: "生肉種類" });
-    expect(within(chips).getByRole("tab", { name: "豬肚" })).toHaveAttribute(
+    const sidebar = screen.getByRole("complementary", { name: "生肉種類" });
+    const tabs = within(sidebar).getByRole("tablist", { name: "生肉種類" });
+    expect(within(tabs).getByRole("tab", { name: "豬肚" })).toHaveAttribute(
       "aria-selected",
       "true",
     );
-    expect(within(chips).getByRole("tab", { name: "雞扒" })).toBeInTheDocument();
+    expect(within(tabs).getByRole("tab", { name: "雞扒" })).toBeInTheDocument();
 
     await waitFor(() => {
       expect(loadRows).toHaveBeenCalledWith("raw-1");

@@ -3481,41 +3481,94 @@ td:last-child {
   border-bottom: 1px solid var(--border);
 }
 
-.selling-price-cost-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 16px 18px 0;
+.selling-price-cost-layout {
+  display: grid;
+  grid-template-columns: 16.5rem minmax(0, 1fr);
+  gap: 14px;
+  min-height: 0;
+  overflow: hidden;
 }
 
-.selling-price-cost-chip {
-  height: 34px;
-  padding: 0 14px;
-  border: 1px solid var(--border);
+.selling-price-cost-sidebar {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.selling-price-cost-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px 14px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.selling-price-cost-sidebar-header strong {
+  font-size: 0.95rem;
+}
+
+.selling-price-cost-sidebar-header span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.6rem;
+  height: 1.6rem;
+  padding: 0 6px;
   border-radius: 999px;
-  background: var(--background);
+  background: color-mix(in oklch, var(--primary) 14%, transparent);
+  color: var(--primary);
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.selling-price-cost-sidebar-state {
+  margin: 0;
+  padding: 18px 14px;
+  color: var(--muted-foreground);
+  font-size: 0.92rem;
+}
+
+.selling-price-cost-side-list {
+  min-height: 0;
+  margin: 0;
+  padding: 8px;
+  overflow: auto;
+  list-style: none;
+}
+
+.selling-price-cost-side-item {
+  display: flex;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
   color: var(--foreground);
   font: inherit;
-  font-size: 0.84rem;
-  font-weight: 600;
-  white-space: nowrap;
+  font-size: 0.92rem;
+  font-weight: 650;
+  text-align: left;
   cursor: pointer;
 }
 
-.selling-price-cost-chip:hover:not(.is-active):not(.is-skeleton) {
-  background: color-mix(in oklch, var(--accent) 55%, transparent);
+.selling-price-cost-side-item:hover:not(.is-active):not(.is-skeleton) {
+  background: color-mix(in oklch, var(--accent) 70%, transparent);
 }
 
-.selling-price-cost-chip.is-active {
-  background: var(--primary);
-  border-color: transparent;
-  color: var(--primary-foreground);
+.selling-price-cost-side-item.is-active {
+  background: color-mix(in oklch, var(--primary) 82%, #1f4d3d);
+  color: white;
 }
 
-.selling-price-cost-chip.is-skeleton {
-  width: 5.5rem;
-  cursor: default;
-  background: color-mix(in oklch, var(--muted) 55%, transparent);
+.selling-price-cost-side-item.is-skeleton {
+  pointer-events: none;
+}
+
+.selling-price-cost-skeleton-side {
+  width: 70%;
+  height: 12px;
 }
 
 .selling-price-cost-table-wrap table {
@@ -3710,7 +3763,8 @@ td:last-child {
     align-items: stretch;
   }
 
-  .spice-usage-layout {
+  .spice-usage-layout,
+  .selling-price-cost-layout {
     grid-template-columns: 1fr;
     grid-template-rows: minmax(9rem, 28%) minmax(0, 1fr);
     min-height: 0;

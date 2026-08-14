@@ -27,6 +27,7 @@ import {
 type OptionsLoader = () => Promise<SellingPriceRawMeatOption[]>;
 type RowsLoader = (rawMeatItemId: string) => Promise<SellingPriceCostRow[]>;
 
+const SIDEBAR_SKELETON_ROWS = 10;
 const SELLING_PRICE_COST_SKELETON_COLUMNS = [
   { width: "5.5rem" },
   { width: "4.5rem" },
@@ -43,6 +44,23 @@ const SELLING_PRICE_COST_SKELETON_COLUMNS = [
   { width: "7rem" },
   { width: "5.5rem" },
 ];
+
+function SellingPriceCostSidebarSkeleton() {
+  return (
+    <ul className="selling-price-cost-side-list" aria-hidden="true">
+      {Array.from({ length: SIDEBAR_SKELETON_ROWS }, (_, index) => (
+        <li key={`spc-side-skeleton-${index}`}>
+          <span className="selling-price-cost-side-item is-skeleton">
+            <span
+              className="table-skeleton-bone selling-price-cost-skeleton-side"
+              style={{ width: `${58 + ((index * 13) % 28)}%` }}
+            />
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 function AmountWithRate({
   amount,
@@ -324,42 +342,61 @@ export function SellingPriceCostPage({
         </div>
       </header>
 
-      <article className="panel selling-price-cost-panel">
-        <div
-          className="selling-price-cost-chips"
-          role="tablist"
+      <div className="selling-price-cost-layout">
+        <aside
+          className="selling-price-cost-sidebar panel"
           aria-label={t("sellingPriceCost.items")}
         >
-          {optionsLoading
-            ? Array.from({ length: 8 }, (_, index) => (
-                <span
-                  key={`chip-skeleton-${index}`}
-                  className="selling-price-cost-chip is-skeleton"
-                  aria-hidden="true"
-                />
-              ))
-            : options.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  role="tab"
-                  className={cn(
-                    "selling-price-cost-chip",
-                    item.id === selected?.id && "is-active",
-                  )}
-                  aria-selected={item.id === selected?.id}
-                  onClick={() => {
-                    if (item.id === selectedId) return;
-                    setSelectedId(item.id);
-                    setRowsLoading(true);
-                  }}
-                >
-                  {item.name}
-                </button>
-              ))}
-        </div>
+          <div className="selling-price-cost-sidebar-header">
+            <strong>{t("sellingPriceCost.items")}</strong>
+            <span>{options.length}</span>
+          </div>
+          {optionsLoading ? (
+            <>
+              <span className="sr-only" role="status">
+                {t("sellingPriceCost.loading")}
+              </span>
+              <SellingPriceCostSidebarSkeleton />
+            </>
+          ) : options.length === 0 ? (
+            <p className="selling-price-cost-sidebar-state">
+              {t("sellingPriceCost.emptyItems")}
+            </p>
+          ) : (
+            <ul
+              className="selling-price-cost-side-list"
+              role="tablist"
+              aria-label={t("sellingPriceCost.items")}
+            >
+              {options.map((item) => {
+                const active = item.id === selected?.id;
+                return (
+                  <li key={item.id} role="presentation">
+                    <button
+                      type="button"
+                      role="tab"
+                      className={cn(
+                        "selling-price-cost-side-item",
+                        active && "is-active",
+                      )}
+                      aria-selected={active}
+                      onClick={() => {
+                        if (item.id === selectedId) return;
+                        setSelectedId(item.id);
+                        setRowsLoading(true);
+                      }}
+                    >
+                      {item.name}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </aside>
 
-        <header className="selling-price-cost-toolbar">
+        <article className="panel selling-price-cost-panel">
+          <header className="selling-price-cost-toolbar">
           <ListSearchBar
             id="selling-price-cost-search"
             value={draftSearch}
@@ -564,7 +601,8 @@ export function SellingPriceCostPage({
           pageLabel={t("sellingPriceCost.pageOf")}
           jumpLabel={t("sellingPriceCost.jumpToPage")}
         />
-      </article>
+        </article>
+      </div>
     </section>
   );
 }
