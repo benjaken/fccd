@@ -2423,20 +2423,55 @@ td:last-child {
 .prepared-meat-outbound-header {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas:
+    "customer order-number"
+    "contact shipping-date"
+    "phone shipping-method"
+    "address remarks";
   gap: 12px 16px;
+  align-items: stretch;
+}
+
+.prepared-meat-outbound-customer {
+  grid-area: customer;
+}
+
+.prepared-meat-outbound-order-number {
+  grid-area: order-number;
+}
+
+.prepared-meat-outbound-contact {
+  grid-area: contact;
+}
+
+.prepared-meat-outbound-shipping-date {
+  grid-area: shipping-date;
+}
+
+.prepared-meat-outbound-phone {
+  grid-area: phone;
+}
+
+.prepared-meat-outbound-shipping-method {
+  grid-area: shipping-method;
 }
 
 .prepared-meat-outbound-address {
-  grid-column: 1;
+  grid-area: address;
 }
 
 .prepared-meat-outbound-remarks {
-  grid-column: 2;
+  grid-area: remarks;
 }
 
 .prepared-meat-outbound-address textarea,
 .prepared-meat-outbound-remarks textarea {
-  min-height: 4.4rem;
+  box-sizing: border-box;
+  height: 5.5rem;
+  min-height: 5.5rem;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  line-height: 1.4;
   resize: vertical;
 }
 
@@ -2512,14 +2547,21 @@ td:last-child {
 }
 
 @media (max-width: 720px) {
-  .prepared-meat-outbound-header,
-  .prepared-meat-outbound-add-row {
+  .prepared-meat-outbound-header {
     grid-template-columns: 1fr;
+    grid-template-areas:
+      "customer"
+      "order-number"
+      "contact"
+      "shipping-date"
+      "phone"
+      "shipping-method"
+      "address"
+      "remarks";
   }
 
-  .prepared-meat-outbound-address,
-  .prepared-meat-outbound-remarks {
-    grid-column: auto;
+  .prepared-meat-outbound-add-row {
+    grid-template-columns: 1fr;
   }
 }
 

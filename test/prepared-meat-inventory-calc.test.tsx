@@ -466,6 +466,20 @@ describe("Prepared meat inventory calculation page", () => {
     expect(within(dialog).getByRole("textbox", { name: "地址" }).tagName).toBe(
       "TEXTAREA",
     );
+    expect(within(dialog).getByRole("textbox", { name: "備註" })).toHaveAttribute(
+      "rows",
+      "3",
+    );
+    expect(within(dialog).getByRole("textbox", { name: "地址" })).toHaveAttribute(
+      "rows",
+      "3",
+    );
+    expect(
+      within(dialog).getByRole("textbox", { name: "備註" }).closest("label"),
+    ).toHaveClass("prepared-meat-outbound-remarks");
+    expect(
+      within(dialog).getByRole("textbox", { name: "地址" }).closest("label"),
+    ).toHaveClass("prepared-meat-outbound-address");
     expect(within(dialog).getByRole("textbox", { name: "聯絡人" })).toBeEnabled();
     expect(within(dialog).getByRole("textbox", { name: "文件編號" })).toBeEnabled();
 

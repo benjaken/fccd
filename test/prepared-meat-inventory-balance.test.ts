@@ -52,6 +52,7 @@ describe("prepared meat running balance", () => {
           created_at: "2026-06-01T00:00:00.000Z",
           meat_customer_id: "shop-1",
           meat_customers: { id: "shop-1", name: "桂花小幸 YLP" },
+          meat_order_lines: { meat_order_id: "order-c" },
         },
       ],
       "五香牛腩",
@@ -61,6 +62,7 @@ describe("prepared meat running balance", () => {
     expect(result.map((row) => row.balancePackages)).toEqual([4, 5, 3]);
     expect(result[0]?.kind).toBe("outbound");
     expect(result[0]?.shopName).toBe("桂花小幸 YLP");
+    expect(result[0]?.meatOrderId).toBe("order-c");
     expect(result[1]?.kind).toBe("inbound");
   });
 

@@ -46,6 +46,7 @@ export type PreparedMeatMovementRecord = {
   bubble_created_at: string | null;
   created_at: string;
   meat_customer_id: string | null;
+  meat_order_line_id?: string | null;
   meat_customers:
     | { id: string; name: string | null }
     | { id: string; name: string | null }[]
@@ -91,6 +92,41 @@ function relatedOrderId(row: PreparedMeatMovementRecord): string | null {
     ? row.meat_order_lines[0]
     : row.meat_order_lines;
   return nested?.meat_order_id ?? null;
+}
+
+async function withMeatOrderIds(
+  rows: PreparedMeatMovementRecord[],
+): Promise<PreparedMeatMovementRecord[]> {
+  const missingLineIds = [
+    ...new Set(
+      rows
+        .filter((row) => !relatedOrderId(row) && row.meat_order_line_id)
+        .map((row) => row.meat_order_line_id as string),
+    ),
+  ];
+  if (missingLineIds.length === 0) return rows;
+
+  const { data, error } = await supabase
+    .from("meat_order_lines")
+    .select("id,meat_order_id")
+    .in("id", missingLineIds);
+  if (error) throw error;
+
+  const orderByLine = new Map(
+    ((data ?? []) as Array<{ id: string; meat_order_id: string | null }>).map(
+      (line) => [line.id, line.meat_order_id],
+    ),
+  );
+
+  return rows.map((row) => {
+    if (relatedOrderId(row) || !row.meat_order_line_id) return row;
+    const meatOrderId = orderByLine.get(row.meat_order_line_id) ?? null;
+    if (!meatOrderId) return row;
+    return {
+      ...row,
+      meat_order_lines: { meat_order_id: meatOrderId },
+    };
+  });
 }
 
 function movementSortKey(row: PreparedMeatMovementRecord) {
@@ -289,7 +325,7 @@ export async function fetchPreparedMeatMovementsForItem(
     supabase
       .from("prepared_meat_stock_movements")
       .select(
-        "id,movement_at,inbound_packages,outbound_packages,remarks,bubble_created_at,created_at,meat_customer_id,meat_customers(id,name),meat_order_lines(meat_order_id)",
+        "id,movement_at,inbound_packages,outbound_packages,remarks,bubble_created_at,created_at,meat_customer_id,meat_order_line_id,meat_customers(id,name),meat_order_lines(meat_order_id)",
       )
       .eq("prepared_meat_item_id", itemId)
       .gte("movement_at", start)
@@ -310,7 +346,7 @@ export async function fetchPreparedMeatMovementsForItem(
   }
 
   return withPreparedMeatRunningBalance(
-    (yearResult.data ?? []) as PreparedMeatMovementRecord[],
+    await withMeatOrderIds((yearResult.data ?? []) as PreparedMeatMovementRecord[]),
     productName,
     opening,
   );

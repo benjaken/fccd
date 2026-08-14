@@ -616,7 +616,7 @@ export function PreparedMeatOutboundModal({
     >
       <div className="prepared-meat-outbound-form">
         <div className="prepared-meat-outbound-header">
-          <label className="raw-meat-field">
+          <label className="raw-meat-field prepared-meat-outbound-customer">
             <span>{t("preparedMeatInventory.outbound.customer")}</span>
             <select
               aria-label={t("preparedMeatInventory.outbound.customer")}
@@ -634,7 +634,7 @@ export function PreparedMeatOutboundModal({
               ))}
             </select>
           </label>
-          <label className="raw-meat-field">
+          <label className="raw-meat-field prepared-meat-outbound-order-number">
             <span>{t("preparedMeatInventory.outbound.orderNumber")}</span>
             <input
               value={orderNumber}
@@ -643,7 +643,7 @@ export function PreparedMeatOutboundModal({
               aria-label={t("preparedMeatInventory.outbound.orderNumber")}
             />
           </label>
-          <label className="raw-meat-field">
+          <label className="raw-meat-field prepared-meat-outbound-contact">
             <span>{t("preparedMeatInventory.outbound.contact")}</span>
             <input
               value={contactPerson}
@@ -652,7 +652,7 @@ export function PreparedMeatOutboundModal({
               aria-label={t("preparedMeatInventory.outbound.contact")}
             />
           </label>
-          <label className="raw-meat-field">
+          <label className="raw-meat-field prepared-meat-outbound-shipping-date">
             <span>{t("preparedMeatInventory.outbound.shippingDate")}</span>
             <input
               type="date"
@@ -662,7 +662,7 @@ export function PreparedMeatOutboundModal({
               aria-label={t("preparedMeatInventory.outbound.shippingDate")}
             />
           </label>
-          <label className="raw-meat-field">
+          <label className="raw-meat-field prepared-meat-outbound-phone">
             <span>{t("preparedMeatInventory.outbound.phone")}</span>
             <input
               value={phone}
@@ -671,7 +671,7 @@ export function PreparedMeatOutboundModal({
               aria-label={t("preparedMeatInventory.outbound.phone")}
             />
           </label>
-          <label className="raw-meat-field">
+          <label className="raw-meat-field prepared-meat-outbound-shipping-method">
             <span>{t("preparedMeatInventory.outbound.shippingMethod")}</span>
             <select
               aria-label={t("preparedMeatInventory.outbound.shippingMethod")}
@@ -692,7 +692,7 @@ export function PreparedMeatOutboundModal({
           <label className="raw-meat-field prepared-meat-outbound-address">
             <span>{t("preparedMeatInventory.outbound.address")}</span>
             <textarea
-              rows={2}
+              rows={3}
               value={address}
               disabled={loading || locked}
               onChange={(event) => setAddress(event.target.value)}
@@ -702,7 +702,7 @@ export function PreparedMeatOutboundModal({
           <label className="raw-meat-field prepared-meat-outbound-remarks">
             <span>{t("preparedMeatInventory.outbound.remarks")}</span>
             <textarea
-              rows={2}
+              rows={3}
               value={remarks}
               disabled={loading || locked}
               onChange={(event) => setRemarks(event.target.value)}
