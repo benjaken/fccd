@@ -12,6 +12,8 @@ progress status colors, and preview sign-in hard rules, see
 - Scroll the table body inside its panel rather than the whole page.
 - Keep previous/next pagination controls visible at the bottom of the panel.
 - Show current range, total records, current page, and total pages.
+- On mobile (`max-width: 760px`), keep the summary and page controls on **one
+  row**. Do not stack them.
 - Preserve loading, empty, error, retry, and permission states inside the same
   fixed panel.
 - Use server-side pagination, filtering, and sorting.
