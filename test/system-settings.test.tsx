@@ -760,6 +760,17 @@ describe("Super Admin system settings", () => {
     expect(createPreparedMeatItemSql).toContain("kg_per_package");
     expect(createPreparedMeatItemSql).toContain("frozen.prepared_meat_inventory");
 
+    const savePreparedMeatOutbound = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260814192000_save_prepared_meat_outbound.sql",
+      ),
+      "utf8",
+    );
+    expect(savePreparedMeatOutbound).toContain("save_prepared_meat_outbound");
+    expect(savePreparedMeatOutbound).toContain("p_contact_person");
+    expect(savePreparedMeatOutbound).toContain("p_order_id");
+
     const rawMeatActions = readFileSync(
       path.resolve(
         process.cwd(),

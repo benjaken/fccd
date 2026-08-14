@@ -12,12 +12,15 @@ import {
   fetchDirectShipRawMeatItems,
   fetchMeatShippingMethods,
   fetchNextPreparedMeatOrderNumber,
+  fetchPreparedMeatOutboundOrder,
   meatCustomerOptionLabel,
   sendPreparedMeatOrderToFactory,
+  updatePreparedMeatOutbound,
   type DirectShipRawMeatOption,
   type MeatShippingMethodOption,
   type PreparedMeatItemOption,
   type PreparedMeatOutboundInput,
+  type PreparedMeatOutboundOrder,
 } from "@/lib/prepared-meat-inventory";
 import { hongKongDateInputValue } from "@/lib/raw-meat-inventory";
 
@@ -38,12 +41,23 @@ type CustomersLoader = () => Promise<MeatCustomerRow[]>;
 type ShippingLoader = () => Promise<MeatShippingMethodOption[]>;
 type OrderNumberLoader = (shippingDate: string) => Promise<string>;
 type RawItemsLoader = () => Promise<DirectShipRawMeatOption[]>;
+type OutboundLoader = (orderId: string) => Promise<PreparedMeatOutboundOrder>;
 type OutboundCreator = (input: PreparedMeatOutboundInput) => Promise<string>;
+type OutboundUpdater = (
+  input: PreparedMeatOutboundInput & { orderId: string },
+) => Promise<string>;
 type FactorySender = (orderId: string) => Promise<string>;
 
 function parseQuantity(value: string) {
   const parsed = Number.parseFloat(coercePreparedMeatQuantityInput(value));
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function orderDateInputValue(value: string | null) {
+  if (!value) return hongKongDateInputValue();
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return hongKongDateInputValue();
+  return hongKongDateInputValue(date);
 }
 
 function QuantityInput({
@@ -179,6 +193,7 @@ function OutboundItemSearchSelect({
 
 export function PreparedMeatOutboundModal({
   open,
+  orderId,
   items,
   onClose,
   onSaved,
@@ -186,10 +201,13 @@ export function PreparedMeatOutboundModal({
   loadShippingMethods = fetchMeatShippingMethods,
   loadOrderNumber = fetchNextPreparedMeatOrderNumber,
   loadRawItems = fetchDirectShipRawMeatItems,
+  loadOutbound = fetchPreparedMeatOutboundOrder,
   createOutbound = createPreparedMeatOutbound,
+  updateOutbound = updatePreparedMeatOutbound,
   sendToFactory = sendPreparedMeatOrderToFactory,
 }: {
   open: boolean;
+  orderId?: string | null;
   items: PreparedMeatItemOption[];
   onClose: () => void;
   onSaved: () => void;
@@ -197,10 +215,13 @@ export function PreparedMeatOutboundModal({
   loadShippingMethods?: ShippingLoader;
   loadOrderNumber?: OrderNumberLoader;
   loadRawItems?: RawItemsLoader;
+  loadOutbound?: OutboundLoader;
   createOutbound?: OutboundCreator;
+  updateOutbound?: OutboundUpdater;
   sendToFactory?: FactorySender;
 }) {
   const { t } = useTranslation();
+  const isEditMode = orderId !== undefined;
   const [customers, setCustomers] = useState<MeatCustomerRow[]>([]);
   const [shippingMethods, setShippingMethods] = useState<
     MeatShippingMethodOption[]
@@ -211,7 +232,11 @@ export function PreparedMeatOutboundModal({
   const [orderNumber, setOrderNumber] = useState("");
   const [shippingDate, setShippingDate] = useState("");
   const [remarks, setRemarks] = useState("");
+  const [contactPerson, setContactPerson] = useState("");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
   const [savedOrderId, setSavedOrderId] = useState<string | null>(null);
+  const [sentToFactory, setSentToFactory] = useState(false);
   const [draftPreparedId, setDraftPreparedId] = useState("");
   const [draftPreparedQuantity, setDraftPreparedQuantity] = useState("");
   const [draftPreparedRemarks, setDraftPreparedRemarks] = useState("");
@@ -234,10 +259,11 @@ export function PreparedMeatOutboundModal({
     selectedCustomer?.name,
   );
   const rawEnabled = canShipRawMeatOnPreparedOutbound(selectedCustomer?.name);
-  const saved = Boolean(savedOrderId);
+  const locked = Boolean(savedOrderId) && !isEditMode;
   const canSave =
     Boolean(customerId && shippingDate && orderNumber && lines.length > 0) &&
-    !saved &&
+    lines.every((line) => line.quantity > 0) &&
+    !locked &&
     !submitting &&
     !loading;
 
@@ -248,7 +274,11 @@ export function PreparedMeatOutboundModal({
     setShippingMethodId("");
     setShippingDate(today);
     setRemarks("");
+    setContactPerson("");
+    setPhone("");
+    setAddress("");
     setSavedOrderId(null);
+    setSentToFactory(false);
     setDraftPreparedId("");
     setDraftPreparedQuantity("");
     setDraftPreparedRemarks("");
@@ -259,37 +289,82 @@ export function PreparedMeatOutboundModal({
     setError(null);
     setLoading(true);
 
-    void Promise.all([
-      loadCustomers(),
-      loadShippingMethods(),
-      loadOrderNumber(today),
-      loadRawItems(),
-    ])
-      .then(([nextCustomers, nextMethods, nextNumber, nextRawItems]) => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const [nextCustomers, nextMethods, nextRawItems] = await Promise.all([
+          loadCustomers(),
+          loadShippingMethods(),
+          loadRawItems(),
+        ]);
+        if (cancelled) return;
         setCustomers(nextCustomers);
         setShippingMethods(nextMethods);
-        setOrderNumber(nextNumber);
         setRawItems(nextRawItems);
-      })
-      .catch((loadError: unknown) => {
+
+        if (orderId === undefined) {
+          const nextNumber = await loadOrderNumber(today);
+          if (!cancelled) setOrderNumber(nextNumber);
+          return;
+        }
+
+        if (!orderId) {
+          setError(t("preparedMeatInventory.outbound.missingOrder"));
+          return;
+        }
+
+        const order = await loadOutbound(orderId);
+        if (cancelled) return;
+        setSavedOrderId(order.id);
+        setSentToFactory(order.sendToFactory);
+        setCustomerId(order.customerId);
+        setShippingMethodId(order.shippingMethodId ?? "");
+        setOrderNumber(order.orderNumber);
+        setShippingDate(orderDateInputValue(order.shippingAt));
+        setRemarks(order.remarks);
+        setContactPerson(order.contactPerson);
+        setPhone(order.phone);
+        setAddress(order.address);
+        setLines(
+          order.lines.map((line, index) => ({
+            key: `${line.kind}-${line.itemId}-${index + 1}`,
+            kind: line.kind,
+            itemId: line.itemId,
+            sku: line.sku,
+            name: line.name,
+            unit: line.unit,
+            quantity: line.quantity,
+            remarks: line.remarks,
+          })),
+        );
+      } catch (loadError: unknown) {
+        if (cancelled) return;
         setError(
           loadError instanceof Error
             ? loadError.message
             : t("preparedMeatInventory.outbound.loadError"),
         );
-      })
-      .finally(() => setLoading(false));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [
     loadCustomers,
     loadOrderNumber,
+    loadOutbound,
     loadRawItems,
     loadShippingMethods,
     open,
+    orderId,
     t,
   ]);
 
   useEffect(() => {
-    if (!open || !shippingDate || saved) return;
+    if (!open || !shippingDate || locked || isEditMode) return;
     let cancelled = false;
     void loadOrderNumber(shippingDate)
       .then((nextNumber) => {
@@ -301,11 +376,14 @@ export function PreparedMeatOutboundModal({
     return () => {
       cancelled = true;
     };
-  }, [loadOrderNumber, open, saved, shippingDate]);
+  }, [isEditMode, loadOrderNumber, locked, open, shippingDate]);
 
   const selectCustomer = (nextId: string) => {
     setCustomerId(nextId);
     const next = customers.find((row) => row.id === nextId);
+    setContactPerson(next?.contactPerson ?? "");
+    setPhone(next?.phone ?? "");
+    setAddress(next?.address ?? "");
     if (!canSelectPreparedMeatShippingMethod(next?.name)) {
       setShippingMethodId("");
     }
@@ -319,10 +397,7 @@ export function PreparedMeatOutboundModal({
 
   const addLine = (
     kind: DraftLine["kind"],
-    item:
-      | PreparedMeatItemOption
-      | DirectShipRawMeatOption
-      | undefined,
+    item: PreparedMeatItemOption | DirectShipRawMeatOption | undefined,
     quantityText: string,
     lineRemarks: string,
     clear: () => void,
@@ -353,32 +428,50 @@ export function PreparedMeatOutboundModal({
     setError(null);
   };
 
+  const updateLine = (key: string, patch: Partial<DraftLine>) => {
+    setLines((current) =>
+      current.map((line) => (line.key === key ? { ...line, ...patch } : line)),
+    );
+  };
+
+  const buildPayload = (): PreparedMeatOutboundInput => ({
+    customerId,
+    shippingMethodId: shippingEnabled ? shippingMethodId || null : null,
+    orderNumber,
+    shippingDate,
+    remarks,
+    contactPerson,
+    phone,
+    address,
+    lines: lines.map((line) => ({
+      preparedMeatItemId: line.kind === "prepared" ? line.itemId : null,
+      rawMeatItemId: line.kind === "raw" ? line.itemId : null,
+      quantity: line.quantity,
+      remarks: line.remarks,
+    })),
+  });
+
   const saveOutbound = async () => {
     if (!selectedCustomer || !canSave) return;
     setSubmitting(true);
     setError(null);
     try {
-      const orderId = await createOutbound({
-        customerId: selectedCustomer.id,
-        shippingMethodId: shippingEnabled ? shippingMethodId || null : null,
-        orderNumber,
-        shippingDate,
-        remarks,
-        lines: lines.map((line) => ({
-          preparedMeatItemId:
-            line.kind === "prepared" ? line.itemId : null,
-          rawMeatItemId: line.kind === "raw" ? line.itemId : null,
-          quantity: line.quantity,
-          remarks: line.remarks,
-        })),
-      });
-      setSavedOrderId(orderId);
+      if (isEditMode && savedOrderId) {
+        await updateOutbound({ ...buildPayload(), orderId: savedOrderId });
+      } else {
+        const createdId = await createOutbound(buildPayload());
+        setSavedOrderId(createdId);
+      }
       onSaved();
     } catch (saveError: unknown) {
       setError(
         saveError instanceof Error
           ? saveError.message
-          : t("preparedMeatInventory.outbound.saveError"),
+          : t(
+              isEditMode
+                ? "preparedMeatInventory.outbound.updateError"
+                : "preparedMeatInventory.outbound.saveError",
+            ),
       );
     } finally {
       setSubmitting(false);
@@ -412,27 +505,30 @@ export function PreparedMeatOutboundModal({
       closeLabel={t("preparedMeatInventory.closeOptions")}
       extraWide
       footer={
-        saved ? (
-          <Button
-            type="button"
-            disabled={sending}
-            onClick={() => void markSentToFactory()}
-          >
-            {sending
-              ? t("preparedMeatInventory.outbound.saving")
-              : t("preparedMeatInventory.outbound.sendToFactory")}
-          </Button>
-        ) : (
-          <Button
-            type="button"
-            disabled={!canSave}
-            onClick={() => void saveOutbound()}
-          >
-            {submitting
-              ? t("preparedMeatInventory.outbound.saving")
-              : t("preparedMeatInventory.outbound.confirm")}
-          </Button>
-        )
+        <>
+          {locked ? null : (
+            <Button
+              type="button"
+              disabled={!canSave}
+              onClick={() => void saveOutbound()}
+            >
+              {submitting
+                ? t("preparedMeatInventory.outbound.saving")
+                : t("preparedMeatInventory.outbound.confirm")}
+            </Button>
+          )}
+          {savedOrderId && !sentToFactory ? (
+            <Button
+              type="button"
+              disabled={sending}
+              onClick={() => void markSentToFactory()}
+            >
+              {sending
+                ? t("preparedMeatInventory.outbound.saving")
+                : t("preparedMeatInventory.outbound.sendToFactory")}
+            </Button>
+          ) : null}
+        </>
       }
     >
       <div className="prepared-meat-outbound-form">
@@ -442,7 +538,7 @@ export function PreparedMeatOutboundModal({
             <select
               aria-label={t("preparedMeatInventory.outbound.customer")}
               value={customerId}
-              disabled={loading || saved}
+              disabled={loading || locked}
               onChange={(event) => selectCustomer(event.target.value)}
             >
               <option value="">
@@ -458,16 +554,18 @@ export function PreparedMeatOutboundModal({
           <label className="raw-meat-field">
             <span>{t("preparedMeatInventory.outbound.orderNumber")}</span>
             <input
-              readOnly
               value={orderNumber}
+              disabled={loading || locked}
+              onChange={(event) => setOrderNumber(event.target.value)}
               aria-label={t("preparedMeatInventory.outbound.orderNumber")}
             />
           </label>
           <label className="raw-meat-field">
             <span>{t("preparedMeatInventory.outbound.contact")}</span>
             <input
-              readOnly
-              value={selectedCustomer?.contactPerson ?? ""}
+              value={contactPerson}
+              disabled={loading || locked}
+              onChange={(event) => setContactPerson(event.target.value)}
               aria-label={t("preparedMeatInventory.outbound.contact")}
             />
           </label>
@@ -476,7 +574,7 @@ export function PreparedMeatOutboundModal({
             <input
               type="date"
               value={shippingDate}
-              disabled={loading || saved}
+              disabled={loading || locked}
               onChange={(event) => setShippingDate(event.target.value)}
               aria-label={t("preparedMeatInventory.outbound.shippingDate")}
             />
@@ -484,8 +582,9 @@ export function PreparedMeatOutboundModal({
           <label className="raw-meat-field">
             <span>{t("preparedMeatInventory.outbound.phone")}</span>
             <input
-              readOnly
-              value={selectedCustomer?.phone ?? ""}
+              value={phone}
+              disabled={loading || locked}
+              onChange={(event) => setPhone(event.target.value)}
               aria-label={t("preparedMeatInventory.outbound.phone")}
             />
           </label>
@@ -494,7 +593,7 @@ export function PreparedMeatOutboundModal({
             <select
               aria-label={t("preparedMeatInventory.outbound.shippingMethod")}
               value={shippingMethodId}
-              disabled={!shippingEnabled || loading || saved}
+              disabled={!shippingEnabled || loading || locked}
               onChange={(event) => setShippingMethodId(event.target.value)}
             >
               <option value="">
@@ -510,17 +609,19 @@ export function PreparedMeatOutboundModal({
           <label className="raw-meat-field prepared-meat-outbound-address">
             <span>{t("preparedMeatInventory.outbound.address")}</span>
             <textarea
-              readOnly
               rows={2}
-              value={selectedCustomer?.address ?? ""}
+              value={address}
+              disabled={loading || locked}
+              onChange={(event) => setAddress(event.target.value)}
               aria-label={t("preparedMeatInventory.outbound.address")}
             />
           </label>
-          <label className="raw-meat-field">
+          <label className="raw-meat-field prepared-meat-outbound-remarks">
             <span>{t("preparedMeatInventory.outbound.remarks")}</span>
-            <input
+            <textarea
+              rows={2}
               value={remarks}
-              disabled={saved}
+              disabled={loading || locked}
               onChange={(event) => setRemarks(event.target.value)}
               placeholder={t("preparedMeatInventory.outbound.remarksPlaceholder")}
               aria-label={t("preparedMeatInventory.outbound.remarks")}
@@ -537,7 +638,7 @@ export function PreparedMeatOutboundModal({
                   placeholder={t("preparedMeatInventory.outbound.rawProduct")}
                   value={draftRawId}
                   options={rawItems}
-                  disabled={saved || loading}
+                  disabled={locked || loading}
                   onChange={setDraftRawId}
                 />
               </div>
@@ -545,7 +646,7 @@ export function PreparedMeatOutboundModal({
                 <QuantityInput
                   value={draftRawQuantity}
                   onChange={setDraftRawQuantity}
-                  disabled={saved}
+                  disabled={locked}
                   placeholder={t("preparedMeatInventory.outbound.quantity")}
                   ariaLabel={t("preparedMeatInventory.outbound.rawQuantity")}
                 />
@@ -553,7 +654,7 @@ export function PreparedMeatOutboundModal({
               <div className="raw-meat-field">
                 <input
                   value={draftRawRemarks}
-                  disabled={saved}
+                  disabled={locked}
                   onChange={(event) => setDraftRawRemarks(event.target.value)}
                   placeholder={t(
                     "preparedMeatInventory.outbound.lineRemarksPlaceholder",
@@ -563,7 +664,7 @@ export function PreparedMeatOutboundModal({
               </div>
               <Button
                 type="button"
-                disabled={saved}
+                disabled={locked}
                 onClick={() =>
                   addLine(
                     "raw",
@@ -589,7 +690,7 @@ export function PreparedMeatOutboundModal({
                 placeholder={t("preparedMeatInventory.outbound.preparedProduct")}
                 value={draftPreparedId}
                 options={activeItems}
-                disabled={saved || loading}
+                disabled={locked || loading}
                 onChange={setDraftPreparedId}
               />
             </div>
@@ -597,7 +698,7 @@ export function PreparedMeatOutboundModal({
               <QuantityInput
                 value={draftPreparedQuantity}
                 onChange={setDraftPreparedQuantity}
-                disabled={saved}
+                disabled={locked}
                 placeholder={t("preparedMeatInventory.outbound.quantity")}
                 ariaLabel={t("preparedMeatInventory.outbound.preparedQuantity")}
               />
@@ -605,7 +706,7 @@ export function PreparedMeatOutboundModal({
             <div className="raw-meat-field">
               <input
                 value={draftPreparedRemarks}
-                disabled={saved}
+                disabled={locked}
                 onChange={(event) =>
                   setDraftPreparedRemarks(event.target.value)
                 }
@@ -617,7 +718,7 @@ export function PreparedMeatOutboundModal({
             </div>
             <Button
               type="button"
-              disabled={saved}
+              disabled={locked}
               onClick={() =>
                 addLine(
                   "prepared",
@@ -646,12 +747,13 @@ export function PreparedMeatOutboundModal({
                 <th>{t("preparedMeatInventory.outbound.columns.quantity")}</th>
                 <th>{t("preparedMeatInventory.outbound.columns.unit")}</th>
                 <th>{t("preparedMeatInventory.outbound.columns.remarks")}</th>
+                <th>{t("preparedMeatInventory.outbound.columns.actions")}</th>
               </tr>
             </thead>
             <tbody>
               {lines.length === 0 ? (
                 <tr>
-                  <td colSpan={6}>
+                  <td colSpan={7}>
                     {t("preparedMeatInventory.outbound.emptyLines")}
                   </td>
                 </tr>
@@ -661,9 +763,60 @@ export function PreparedMeatOutboundModal({
                     <td>{index + 1}</td>
                     <td>{line.sku || t("common.notSet")}</td>
                     <td>{line.name}</td>
-                    <td>{line.quantity}</td>
+                    <td>
+                      {locked ? (
+                        line.quantity
+                      ) : (
+                        <QuantityInput
+                          value={line.quantity > 0 ? String(line.quantity) : ""}
+                          onChange={(value) => {
+                            const quantity = parseQuantity(value);
+                            updateLine(line.key, {
+                              quantity: quantity && quantity > 0 ? quantity : 0,
+                            });
+                          }}
+                          placeholder={t(
+                            "preparedMeatInventory.outbound.quantity",
+                          )}
+                          ariaLabel={`${line.name} ${t("preparedMeatInventory.outbound.quantity")}`}
+                        />
+                      )}
+                    </td>
                     <td>{line.unit || t("common.notSet")}</td>
-                    <td>{line.remarks || t("common.notSet")}</td>
+                    <td>
+                      {locked ? (
+                        line.remarks || t("common.notSet")
+                      ) : (
+                        <input
+                          value={line.remarks}
+                          onChange={(event) =>
+                            updateLine(line.key, {
+                              remarks: event.target.value,
+                            })
+                          }
+                          placeholder={t(
+                            "preparedMeatInventory.outbound.lineRemarksPlaceholder",
+                          )}
+                          aria-label={`${line.name} ${t("preparedMeatInventory.outbound.lineRemarks")}`}
+                        />
+                      )}
+                    </td>
+                    <td>
+                      {locked ? null : (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() =>
+                            setLines((current) =>
+                              current.filter((row) => row.key !== line.key),
+                            )
+                          }
+                          aria-label={`${t("preparedMeatInventory.outbound.removeLine")} ${line.name}`}
+                        >
+                          {t("preparedMeatInventory.outbound.removeLine")}
+                        </Button>
+                      )}
+                    </td>
                   </tr>
                 ))
               )}

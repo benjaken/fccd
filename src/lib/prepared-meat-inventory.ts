@@ -25,6 +25,7 @@ export type PreparedMeatMovementRow = {
   balancePackages: number;
   remarks: string | null;
   kind: PreparedMeatMovementKind;
+  meatOrderId: string | null;
 };
 
 type ItemRow = {
@@ -48,6 +49,10 @@ export type PreparedMeatMovementRecord = {
   meat_customers:
     | { id: string; name: string | null }
     | { id: string; name: string | null }[]
+    | null;
+  meat_order_lines?:
+    | { meat_order_id: string | null }
+    | { meat_order_id: string | null }[]
     | null;
 };
 
@@ -79,6 +84,13 @@ function relatedShop(
   if (!id) return null;
   const name = nested?.name?.trim();
   return { id, name: name || id };
+}
+
+function relatedOrderId(row: PreparedMeatMovementRecord): string | null {
+  const nested = Array.isArray(row.meat_order_lines)
+    ? row.meat_order_lines[0]
+    : row.meat_order_lines;
+  return nested?.meat_order_id ?? null;
 }
 
 function movementSortKey(row: PreparedMeatMovementRecord) {
@@ -152,6 +164,7 @@ export function withPreparedMeatRunningBalance(
       balancePackages: balance,
       remarks: row.remarks,
       kind: preparedMeatMovementKind(inbound, outbound),
+      meatOrderId: relatedOrderId(row),
     };
   });
 
@@ -276,7 +289,7 @@ export async function fetchPreparedMeatMovementsForItem(
     supabase
       .from("prepared_meat_stock_movements")
       .select(
-        "id,movement_at,inbound_packages,outbound_packages,remarks,bubble_created_at,created_at,meat_customer_id,meat_customers(id,name)",
+        "id,movement_at,inbound_packages,outbound_packages,remarks,bubble_created_at,created_at,meat_customer_id,meat_customers(id,name),meat_order_lines(meat_order_id)",
       )
       .eq("prepared_meat_item_id", itemId)
       .gte("movement_at", start)
@@ -438,29 +451,177 @@ export type PreparedMeatOutboundLineInput = {
 };
 
 export type PreparedMeatOutboundInput = {
+  orderId?: string | null;
   customerId: string;
   shippingMethodId?: string | null;
   orderNumber: string;
   shippingDate: string;
   remarks?: string | null;
+  contactPerson?: string | null;
+  phone?: string | null;
+  address?: string | null;
   lines: PreparedMeatOutboundLineInput[];
 };
 
-export async function createPreparedMeatOutbound(
-  input: PreparedMeatOutboundInput,
-): Promise<string> {
-  const { data, error } = await supabase.rpc("create_prepared_meat_outbound", {
+export type PreparedMeatOutboundLoadedLine = {
+  kind: "prepared" | "raw";
+  itemId: string;
+  sku: string | null;
+  name: string;
+  unit: string | null;
+  quantity: number;
+  remarks: string;
+};
+
+export type PreparedMeatOutboundOrder = {
+  id: string;
+  customerId: string;
+  shippingMethodId: string | null;
+  orderNumber: string;
+  shippingAt: string | null;
+  remarks: string;
+  sendToFactory: boolean;
+  contactPerson: string;
+  phone: string;
+  address: string;
+  lines: PreparedMeatOutboundLoadedLine[];
+};
+
+type NestedItem = {
+  id?: string | null;
+  sku?: string | null;
+  name?: string | null;
+  unit?: string | null;
+};
+
+function firstNested<T>(value: T | T[] | null | undefined): T | null {
+  if (!value) return null;
+  return Array.isArray(value) ? (value[0] ?? null) : value;
+}
+
+function mapOutboundLine(row: {
+  quantity: number | string | null;
+  remarks: string | null;
+  prepared_meat_item_id: string | null;
+  raw_meat_item_id: string | null;
+  prepared_meat_items: NestedItem | NestedItem[] | null;
+  raw_meat_items: NestedItem | NestedItem[] | null;
+}): PreparedMeatOutboundLoadedLine | null {
+  const prepared = firstNested(row.prepared_meat_items);
+  const raw = firstNested(row.raw_meat_items);
+  const quantity = toNumber(row.quantity);
+  if (quantity === null || quantity <= 0) return null;
+  if (row.prepared_meat_item_id && prepared?.id) {
+    return {
+      kind: "prepared",
+      itemId: prepared.id,
+      sku: prepared.sku ?? null,
+      name: prepared.name ?? "",
+      unit: prepared.unit ?? null,
+      quantity,
+      remarks: row.remarks ?? "",
+    };
+  }
+  if (row.raw_meat_item_id && raw?.id) {
+    return {
+      kind: "raw",
+      itemId: raw.id,
+      sku: raw.sku ?? null,
+      name: raw.name ?? "",
+      unit: raw.unit ?? null,
+      quantity,
+      remarks: row.remarks ?? "",
+    };
+  }
+  return null;
+}
+
+export async function fetchPreparedMeatOutboundOrder(
+  orderId: string,
+): Promise<PreparedMeatOutboundOrder> {
+  const { data, error } = await supabase
+    .from("meat_orders")
+    .select(
+      "id,order_number,order_at,shipping_at,remarks,send_to_factory,meat_customer_id,shipping_method_id,meat_customers(contact_person,phone,address),meat_order_lines(id,quantity,remarks,sort_order,prepared_meat_item_id,raw_meat_item_id,prepared_meat_items(id,sku,name,unit),raw_meat_items(id,sku,name,unit))",
+    )
+    .eq("id", orderId)
+    .single();
+
+  if (error) throw error;
+  const customer = firstNested(
+    data.meat_customers as
+      | { contact_person: string | null; phone: string | null; address: string | null }
+      | { contact_person: string | null; phone: string | null; address: string | null }[]
+      | null,
+  );
+  const lines = (
+    (data.meat_order_lines ?? []) as Array<{
+      quantity: number | string | null;
+      remarks: string | null;
+      sort_order: number | string | null;
+      prepared_meat_item_id: string | null;
+      raw_meat_item_id: string | null;
+      prepared_meat_items: NestedItem | NestedItem[] | null;
+      raw_meat_items: NestedItem | NestedItem[] | null;
+    }>
+  )
+    .sort((left, right) => (toNumber(left.sort_order) ?? 0) - (toNumber(right.sort_order) ?? 0))
+    .map(mapOutboundLine)
+    .filter((line): line is PreparedMeatOutboundLoadedLine => Boolean(line));
+
+  return {
+    id: data.id as string,
+    customerId: (data.meat_customer_id as string | null) ?? "",
+    shippingMethodId: (data.shipping_method_id as string | null) ?? null,
+    orderNumber: String(data.order_number ?? ""),
+    shippingAt:
+      (data.shipping_at as string | null) ??
+      (data.order_at as string | null) ??
+      null,
+    remarks: String(data.remarks ?? ""),
+    sendToFactory: Boolean(data.send_to_factory),
+    contactPerson: customer?.contact_person ?? "",
+    phone: customer?.phone ?? "",
+    address: customer?.address ?? "",
+    lines,
+  };
+}
+
+function outboundRpcPayload(input: PreparedMeatOutboundInput) {
+  return {
+    p_order_id: input.orderId || null,
     p_customer_id: input.customerId,
     p_shipping_method_id: input.shippingMethodId || null,
     p_order_number: input.orderNumber.trim(),
     p_shipping_date: input.shippingDate,
     p_remarks: (input.remarks ?? "").trim() || null,
+    p_contact_person: (input.contactPerson ?? "").trim() || null,
+    p_phone: (input.phone ?? "").trim() || null,
+    p_address: (input.address ?? "").trim() || null,
     p_lines: input.lines.map((line) => ({
       prepared_meat_item_id: line.preparedMeatItemId || null,
       raw_meat_item_id: line.rawMeatItemId || null,
       quantity: line.quantity,
       remarks: (line.remarks ?? "").trim() || null,
     })),
+  };
+}
+
+export async function createPreparedMeatOutbound(
+  input: PreparedMeatOutboundInput,
+): Promise<string> {
+  const { data, error } = await supabase.rpc("save_prepared_meat_outbound", {
+    ...outboundRpcPayload({ ...input, orderId: null }),
+  });
+  if (error) throw error;
+  return data as string;
+}
+
+export async function updatePreparedMeatOutbound(
+  input: PreparedMeatOutboundInput & { orderId: string },
+): Promise<string> {
+  const { data, error } = await supabase.rpc("save_prepared_meat_outbound", {
+    ...outboundRpcPayload(input),
   });
   if (error) throw error;
   return data as string;

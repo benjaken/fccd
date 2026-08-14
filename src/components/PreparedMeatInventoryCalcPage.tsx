@@ -64,7 +64,9 @@ type OutboundModalProps = Pick<
   | "loadShippingMethods"
   | "loadOrderNumber"
   | "loadRawItems"
+  | "loadOutbound"
   | "createOutbound"
+  | "updateOutbound"
   | "sendToFactory"
 >;
 
@@ -162,7 +164,9 @@ export function PreparedMeatInventoryCalcPage({
   loadShippingMethods,
   loadOrderNumber,
   loadRawItems,
+  loadOutbound,
   createOutbound,
+  updateOutbound,
   sendToFactory,
 }: {
   loadItems?: ItemsLoader;
@@ -186,6 +190,9 @@ export function PreparedMeatInventoryCalcPage({
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [createOptionOpen, setCreateOptionOpen] = useState(false);
   const [outboundOpen, setOutboundOpen] = useState(false);
+  const [editingOrderId, setEditingOrderId] = useState<string | null | undefined>(
+    undefined,
+  );
   const monthFilterRef = useRef<HTMLDivElement>(null);
   const shopFilterRef = useRef<HTMLDivElement>(null);
   const years = useMemo(() => preparedMeatYearOptions(), []);
@@ -476,7 +483,13 @@ export function PreparedMeatInventoryCalcPage({
           <Button type="button" disabled title={t("preparedMeatInventory.comingSoon")}>
             {t("preparedMeatInventory.actions.stockInNoRaw")}
           </Button>
-          <Button type="button" onClick={() => setOutboundOpen(true)}>
+          <Button
+            type="button"
+            onClick={() => {
+              setEditingOrderId(undefined);
+              setOutboundOpen(true);
+            }}
+          >
             {t("preparedMeatInventory.actions.stockOut")}
           </Button>
           <Button type="button" disabled title={t("preparedMeatInventory.comingSoon")}>
@@ -701,6 +714,10 @@ export function PreparedMeatInventoryCalcPage({
                           data-edit-form="outbound"
                           aria-label={t("preparedMeatInventory.editOutbound")}
                           title={t("preparedMeatInventory.editOutbound")}
+                          onClick={() => {
+                            setEditingOrderId(row.meatOrderId);
+                            setOutboundOpen(true);
+                          }}
                         >
                           <Pencil />
                         </Button>
@@ -767,14 +784,20 @@ export function PreparedMeatInventoryCalcPage({
       />
       <PreparedMeatOutboundModal
         open={outboundOpen}
+        orderId={editingOrderId}
         items={items}
-        onClose={() => setOutboundOpen(false)}
+        onClose={() => {
+          setOutboundOpen(false);
+          setEditingOrderId(undefined);
+        }}
         onSaved={reload}
         loadCustomers={loadCustomers}
         loadShippingMethods={loadShippingMethods}
         loadOrderNumber={loadOrderNumber}
         loadRawItems={loadRawItems}
+        loadOutbound={loadOutbound}
         createOutbound={createOutbound}
+        updateOutbound={updateOutbound}
         sendToFactory={sendToFactory}
       />
     </section>

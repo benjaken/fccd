@@ -45,6 +45,7 @@ const movementsByItem: Record<string, PreparedMeatMovementRow[]> = {
       balancePackages: 8,
       remarks: "june out",
       kind: "outbound",
+      meatOrderId: "order-june-out",
     },
     {
       id: "move-in-june",
@@ -57,6 +58,7 @@ const movementsByItem: Record<string, PreparedMeatMovementRow[]> = {
       balancePackages: 10,
       remarks: "june in",
       kind: "inbound",
+      meatOrderId: null,
     },
     {
       id: "move-out-may",
@@ -69,6 +71,7 @@ const movementsByItem: Record<string, PreparedMeatMovementRow[]> = {
       balancePackages: 6,
       remarks: "may out",
       kind: "outbound",
+      meatOrderId: "order-may-out",
     },
   ],
   "item-2": [
@@ -83,6 +86,7 @@ const movementsByItem: Record<string, PreparedMeatMovementRow[]> = {
       balancePackages: 12,
       remarks: null,
       kind: "outbound",
+      meatOrderId: "order-item-2",
     },
   ],
 };
@@ -450,6 +454,14 @@ describe("Prepared meat inventory calculation page", () => {
     expect(within(dialog).queryByRole("button", { name: "編輯" })).toBeNull();
     expect(within(dialog).queryByRole("button", { name: "送到工場" })).toBeNull();
     expect(within(dialog).getByRole("button", { name: "確定" })).toBeDisabled();
+    expect(within(dialog).getByRole("textbox", { name: "備註" }).tagName).toBe(
+      "TEXTAREA",
+    );
+    expect(within(dialog).getByRole("textbox", { name: "地址" }).tagName).toBe(
+      "TEXTAREA",
+    );
+    expect(within(dialog).getByRole("textbox", { name: "聯絡人" })).toBeEnabled();
+    expect(within(dialog).getByRole("textbox", { name: "文件編號" })).toBeEnabled();
 
     const shipping = within(dialog).getByRole("combobox", { name: "送貨方式" });
     expect(shipping).toBeDisabled();
@@ -489,7 +501,9 @@ describe("Prepared meat inventory calculation page", () => {
     const lines = dialog.querySelector(".prepared-meat-outbound-lines");
     expect(lines).not.toBeNull();
     expect(within(lines as HTMLElement).getByText("五香牛腩")).toBeInTheDocument();
-    expect(within(lines as HTMLElement).getByText("2")).toBeInTheDocument();
+    expect(
+      within(lines as HTMLElement).getByRole("textbox", { name: "五香牛腩 數量" }),
+    ).toHaveValue("2");
 
     await user.click(within(dialog).getByRole("button", { name: "確定" }));
     await waitFor(() => {
@@ -499,6 +513,9 @@ describe("Prepared meat inventory calculation page", () => {
         orderNumber: "R - 202608 - 8",
         shippingDate: expect.any(String),
         remarks: "",
+        contactPerson: "阿國 / 懷哥",
+        phone: "9899 1980",
+        address: "元朗廣場",
         lines: [
           {
             preparedMeatItemId: "item-1",
@@ -614,6 +631,9 @@ describe("Prepared meat inventory calculation page", () => {
         orderNumber: "R - 202608 - 9",
         shippingDate: expect.any(String),
         remarks: "",
+        contactPerson: "",
+        phone: "",
+        address: "",
         lines: [
           {
             preparedMeatItemId: null,
@@ -625,5 +645,179 @@ describe("Prepared meat inventory calculation page", () => {
       });
     });
     expect(within(dialog).getByRole("button", { name: "送到工場" })).toBeInTheDocument();
+  });
+
+  it("opens the matching delivery note from outbound edit and keeps every field editable", async () => {
+    const user = userEvent.setup();
+    const loadItems = vi.fn().mockResolvedValue(items);
+    const loadMovements = vi
+      .fn()
+      .mockImplementation(async (itemId: string) => movementsByItem[itemId] ?? []);
+    const loadCustomers = vi.fn().mockResolvedValue([
+      {
+        id: "cust-ylp",
+        customerCode: "C0085",
+        name: "桂花小幸 YLP",
+        contactPerson: "阿國 / 懷哥",
+        phone: "9899 1980",
+        address: "元朗廣場",
+        deliveryNoteRequired: true,
+      },
+    ]);
+    const loadShippingMethods = vi.fn().mockResolvedValue([
+      { id: "ship-1", name: "送貨" },
+    ]);
+    const loadOrderNumber = vi.fn().mockResolvedValue("R - 202608 - 99");
+    const loadRawItems = vi.fn().mockResolvedValue([]);
+    const loadOutbound = vi.fn().mockResolvedValue({
+      id: "order-june-out",
+      customerId: "cust-ylp",
+      shippingMethodId: "ship-1",
+      orderNumber: "F260728-0002",
+      shippingAt: "2026-07-28T00:00:00+08:00",
+      remarks: "2:30pm",
+      sendToFactory: false,
+      contactPerson: "陳小姐",
+      phone: "98401200",
+      address: "Room 2418",
+      lines: [
+        {
+          kind: "prepared",
+          itemId: "item-1",
+          sku: "PM001",
+          name: "五香牛腩",
+          unit: "包",
+          quantity: 2,
+          remarks: "june out",
+        },
+      ],
+    });
+    const updateOutbound = vi.fn().mockResolvedValue("order-june-out");
+    const sendToFactory = vi.fn().mockResolvedValue("order-june-out");
+
+    render(
+      <MemoryRouter>
+        <PreparedMeatInventoryCalcPage
+          loadItems={loadItems}
+          loadMovements={loadMovements}
+          loadCustomers={loadCustomers}
+          loadShippingMethods={loadShippingMethods}
+          loadOrderNumber={loadOrderNumber}
+          loadRawItems={loadRawItems}
+          loadOutbound={loadOutbound}
+          updateOutbound={updateOutbound}
+          sendToFactory={sendToFactory}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("桂花小幸 YLP")).toBeInTheDocument();
+    await user.click(screen.getAllByRole("button", { name: "出貨編輯" })[0]!);
+
+    const dialog = await screen.findByRole("dialog", { name: "送貨單" });
+    await waitFor(() => {
+      expect(loadOutbound).toHaveBeenCalledWith("order-june-out");
+    });
+    expect(loadOrderNumber).not.toHaveBeenCalled();
+
+    expect(within(dialog).getByRole("combobox", { name: "客戶" })).toHaveValue(
+      "cust-ylp",
+    );
+    expect(within(dialog).getByRole("textbox", { name: "文件編號" })).toHaveValue(
+      "F260728-0002",
+    );
+    expect(within(dialog).getByRole("textbox", { name: "聯絡人" })).toHaveValue(
+      "陳小姐",
+    );
+    expect(within(dialog).getByRole("textbox", { name: "電話" })).toHaveValue(
+      "98401200",
+    );
+    expect(within(dialog).getByRole("textbox", { name: "地址" })).toHaveValue(
+      "Room 2418",
+    );
+    expect(within(dialog).getByRole("textbox", { name: /^備註$/ })).toHaveValue(
+      "2:30pm",
+    );
+    expect(within(dialog).getByRole("textbox", { name: /^備註$/ }).tagName).toBe(
+      "TEXTAREA",
+    );
+    expect(within(dialog).getByRole("combobox", { name: "送貨方式" })).toHaveValue(
+      "ship-1",
+    );
+    expect(within(dialog).getByRole("textbox", { name: "聯絡人" })).toBeEnabled();
+    expect(within(dialog).getByRole("textbox", { name: "地址" })).toBeEnabled();
+    expect(within(dialog).getByRole("textbox", { name: "五香牛腩 數量" })).toHaveValue(
+      "2",
+    );
+    expect(within(dialog).getByRole("button", { name: "確定" })).toBeEnabled();
+    expect(within(dialog).getByRole("button", { name: "送到工場" })).toBeEnabled();
+
+    const remarks = within(dialog).getByRole("textbox", { name: /^備註$/ });
+    await user.clear(remarks);
+    await user.type(remarks, "3:00pm");
+    await user.clear(within(dialog).getByRole("textbox", { name: "聯絡人" }));
+    await user.type(within(dialog).getByRole("textbox", { name: "聯絡人" }), "陳生");
+    await user.clear(within(dialog).getByRole("textbox", { name: "五香牛腩 數量" }));
+    await user.type(within(dialog).getByRole("textbox", { name: "五香牛腩 數量" }), "5");
+
+    await user.click(within(dialog).getByRole("button", { name: "確定" }));
+    await waitFor(() => {
+      expect(updateOutbound).toHaveBeenCalledWith({
+        orderId: "order-june-out",
+        customerId: "cust-ylp",
+        shippingMethodId: "ship-1",
+        orderNumber: "F260728-0002",
+        shippingDate: "2026-07-28",
+        remarks: "3:00pm",
+        contactPerson: "陳生",
+        phone: "98401200",
+        address: "Room 2418",
+        lines: [
+          {
+            preparedMeatItemId: "item-1",
+            rawMeatItemId: null,
+            quantity: 5,
+            remarks: "june out",
+          },
+        ],
+      });
+    });
+    expect(sendToFactory).not.toHaveBeenCalled();
+    expect(within(dialog).getByRole("button", { name: "確定" })).toBeEnabled();
+    expect(within(dialog).getByRole("button", { name: "送到工場" })).toBeInTheDocument();
+  });
+
+  it("shows an error when outbound edit has no matching delivery note", async () => {
+    const user = userEvent.setup();
+    const loadItems = vi.fn().mockResolvedValue(items);
+    const loadMovements = vi.fn().mockResolvedValue([
+      {
+        ...movementsByItem["item-1"]![0],
+        meatOrderId: null,
+      },
+    ]);
+    const loadOutbound = vi.fn();
+
+    render(
+      <MemoryRouter>
+        <PreparedMeatInventoryCalcPage
+          loadItems={loadItems}
+          loadMovements={loadMovements}
+          loadCustomers={async () => []}
+          loadShippingMethods={async () => []}
+          loadRawItems={async () => []}
+          loadOutbound={loadOutbound}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("桂花小幸 YLP")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "出貨編輯" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "送貨單" });
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent(
+      "找不到對應送貨單",
+    );
+    expect(loadOutbound).not.toHaveBeenCalled();
   });
 });

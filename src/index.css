@@ -2391,6 +2391,7 @@ td:last-child {
 
 .raw-meat-field input:disabled,
 .raw-meat-field input[readonly],
+.raw-meat-field textarea:disabled,
 .raw-meat-field textarea[readonly],
 .raw-meat-field select:disabled {
   color: var(--muted-foreground);
@@ -2427,6 +2428,16 @@ td:last-child {
 
 .prepared-meat-outbound-address {
   grid-column: 1;
+}
+
+.prepared-meat-outbound-remarks {
+  grid-column: 2;
+}
+
+.prepared-meat-outbound-address textarea,
+.prepared-meat-outbound-remarks textarea {
+  min-height: 4.4rem;
+  resize: vertical;
 }
 
 .prepared-meat-outbound-add-rows {
@@ -2477,10 +2488,38 @@ td:last-child {
   text-align: center;
 }
 
+.prepared-meat-outbound-lines input {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  outline: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+}
+
+.prepared-meat-outbound-lines td:nth-child(4) {
+  width: 7rem;
+}
+
+.prepared-meat-outbound-lines td:last-child,
+.prepared-meat-outbound-lines th:last-child {
+  width: 4.5rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
 @media (max-width: 720px) {
   .prepared-meat-outbound-header,
   .prepared-meat-outbound-add-row {
     grid-template-columns: 1fr;
+  }
+
+  .prepared-meat-outbound-address,
+  .prepared-meat-outbound-remarks {
+    grid-column: auto;
   }
 }
 
