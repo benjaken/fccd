@@ -569,7 +569,7 @@ export function RawMeatInventoryCalcPage({
     <section className="raw-meat-calc-page">
       <header className="page-heading raw-meat-calc-heading">
         <div>
-          <p className="eyebrow">{t("rawMeatInventory.eyebrow")}</p>
+          <span className="eyebrow">{t("rawMeatInventory.eyebrow")}</span>
           <h1>{t("rawMeatInventory.title")}</h1>
           <p>{t("rawMeatInventory.description")}</p>
         </div>

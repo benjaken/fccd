@@ -772,6 +772,10 @@ button.bg-primary:focus-visible {
   text-transform: uppercase;
 }
 
+.page-heading .eyebrow {
+  color: var(--primary);
+}
+
 .page-heading h1,
 .placeholder-page h1 {
   margin: 0;

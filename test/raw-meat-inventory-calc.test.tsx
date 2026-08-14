@@ -129,6 +129,7 @@ describe("Raw meat inventory calculation page", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "生肉存貨計算" })).toBeInTheDocument();
+    expect(screen.getByText("凍貨")).toHaveClass("eyebrow");
 
     const sidebar = screen.getByRole("complementary", { name: "生肉選項" });
     expect(within(sidebar).getByRole("button", { name: "乾冬菇 (廣信)" })).toHaveAttribute(
