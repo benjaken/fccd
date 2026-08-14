@@ -1,6 +1,8 @@
 import { supabase } from "@/lib/supabase";
 import { evaluateSeasoningExpression } from "@/lib/seasoning-expression";
 
+export const SEASONING_COST_PAGE_SIZE = 15;
+
 export type SeasoningCostRow = {
   id: string;
   name: string;

@@ -7,6 +7,7 @@ import { SeasoningCostSettingsPage } from "@/components/SeasoningCostSettingsPag
 import i18n from "@/i18n";
 import {
   filterSeasoningCosts,
+  SEASONING_COST_PAGE_SIZE,
   type SeasoningCostRow,
 } from "@/lib/seasoning-cost";
 
@@ -225,5 +226,38 @@ describe("Seasoning cost settings page", () => {
     expect(screen.queryByText("幼鹽")).not.toBeInTheDocument();
     expect(screen.getByText("片糖")).toBeInTheDocument();
     confirmSpy.mockRestore();
+  });
+
+  it("paginates the list into pages of 15", async () => {
+    const user = userEvent.setup();
+    const manyRows = Array.from({ length: 16 }, (_, index) => ({
+      id: `s-${index + 1}`,
+      name: `香料 ${index + 1}`,
+      description: null,
+      calculationExpression: "1/1",
+      costPerGram: 1,
+      lastUpdatedAt: "2026-08-14T00:00:00.000Z",
+      sortOrder: index + 1,
+    }));
+    const loadSeasonings = vi.fn().mockResolvedValue(manyRows);
+
+    render(
+      <MemoryRouter>
+        <SeasoningCostSettingsPage loadSeasonings={loadSeasonings} />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("香料 1")).toBeInTheDocument();
+    expect(screen.getByText("香料 15")).toBeInTheDocument();
+    expect(screen.queryByText("香料 16")).not.toBeInTheDocument();
+    expect(
+      screen.getByText(`顯示 1–${SEASONING_COST_PAGE_SIZE}，共 16 項`),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "下一頁" }));
+
+    expect(await screen.findByText("香料 16")).toBeInTheDocument();
+    expect(screen.queryByText("香料 1")).not.toBeInTheDocument();
+    expect(screen.getByText("顯示 16–16，共 16 項")).toBeInTheDocument();
   });
 });

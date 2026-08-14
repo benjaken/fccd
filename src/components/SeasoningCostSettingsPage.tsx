@@ -24,11 +24,13 @@ import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import { SidePanel } from "@/components/ui/side-panel";
+import { TablePagination } from "@/components/ui/table-pagination";
 import {
   archiveSeasoningCost,
   createSeasoningCost,
   fetchSeasoningCosts,
   filterSeasoningCosts,
+  SEASONING_COST_PAGE_SIZE,
   updateSeasoningCalculation,
   updateSeasoningRemark,
   type SeasoningCostRow,
@@ -411,6 +413,7 @@ export function SeasoningCostSettingsPage({
   const [actionError, setActionError] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("sortOrder");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const [page, setPage] = useState(1);
 
   const dateFormatter = useMemo(
     () =>
@@ -438,10 +441,11 @@ export function SeasoningCostSettingsPage({
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
       setSortDirection((current) => (current === "asc" ? "desc" : "asc"));
-      return;
+    } else {
+      setSortKey(key);
+      setSortDirection(key === "updatedAt" ? "desc" : "asc");
     }
-    setSortKey(key);
-    setSortDirection(key === "updatedAt" ? "desc" : "asc");
+    setPage(1);
   };
 
   const sortedRows = useMemo(() => {
@@ -475,6 +479,21 @@ export function SeasoningCostSettingsPage({
     () => filterSeasoningCosts(sortedRows, appliedSearch),
     [appliedSearch, sortedRows],
   );
+
+  const total = visibleRows.length;
+  const totalPages = Math.max(1, Math.ceil(total / SEASONING_COST_PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const visibleFrom =
+    total === 0 ? 0 : (currentPage - 1) * SEASONING_COST_PAGE_SIZE + 1;
+  const visibleTo = Math.min(currentPage * SEASONING_COST_PAGE_SIZE, total);
+  const pagedRows = visibleRows.slice(
+    (currentPage - 1) * SEASONING_COST_PAGE_SIZE,
+    currentPage * SEASONING_COST_PAGE_SIZE,
+  );
+
+  useEffect(() => {
+    setPage((current) => Math.min(current, totalPages));
+  }, [totalPages]);
 
   useEffect(() => {
     let cancelled = false;
@@ -572,7 +591,10 @@ export function SeasoningCostSettingsPage({
             id="seasoning-cost-search"
             value={draftSearch}
             onChange={setDraftSearch}
-            onSubmit={() => setAppliedSearch(draftSearch.trim())}
+            onSubmit={() => {
+              setAppliedSearch(draftSearch.trim());
+              setPage(1);
+            }}
             label={t("seasoningCost.search")}
             placeholder={t("seasoningCost.searchPlaceholder")}
             submitLabel={t("seasoningCost.searchAction")}
@@ -615,7 +637,7 @@ export function SeasoningCostSettingsPage({
             onRefresh={() => setReloadKey((current) => current + 1)}
             loading={loading}
             loadingLabel={t("seasoningCost.loading")}
-            skeletonRows={8}
+            skeletonRows={SEASONING_COST_PAGE_SIZE}
             skeletonColumns={SEASONING_COST_SKELETON_COLUMNS}
             header={
               <tr>
@@ -645,7 +667,7 @@ export function SeasoningCostSettingsPage({
               </tr>
             }
           >
-            {visibleRows.map((row) => (
+            {pagedRows.map((row) => (
               <tr key={row.id}>
                 <td>{row.sortOrder ?? t("common.notSet")}</td>
                 <td>
@@ -729,6 +751,30 @@ export function SeasoningCostSettingsPage({
             ))}
           </ListTable>
         )}
+
+        <TablePagination
+          summary={t("seasoningCost.pagination", {
+            from: visibleFrom,
+            to: visibleTo,
+            total,
+          })}
+          page={currentPage}
+          totalPages={totalPages}
+          loading={loading}
+          onPrevious={() =>
+            setPage((current) => Math.max(1, Math.min(current, totalPages) - 1))
+          }
+          onNext={() =>
+            setPage((current) =>
+              Math.min(totalPages, Math.min(current, totalPages) + 1),
+            )
+          }
+          onPageChange={setPage}
+          previousLabel={t("seasoningCost.previous")}
+          nextLabel={t("seasoningCost.next")}
+          pageLabel={t("seasoningCost.pageOf")}
+          jumpLabel={t("seasoningCost.jumpToPage")}
+        />
       </article>
 
       <CreateSeasoningCostPanel

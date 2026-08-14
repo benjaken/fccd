@@ -1099,6 +1099,11 @@ const resources = {
         remarkPlaceholder: "輸入備註",
         sortByOrder: "按排序編號排序",
         sortByUpdated: "按上次更新日期排序",
+        previous: "上一頁",
+        next: "下一頁",
+        pageOf: "/",
+        jumpToPage: "跳至頁碼",
+        pagination: "顯示 {{from}}–{{to}}，共 {{total}} 項",
         columns: {
           sort: "排序",
           name: "香料名稱",
@@ -2489,6 +2494,11 @@ const resources = {
         remarkPlaceholder: "Enter a remark",
         sortByOrder: "Sort by order",
         sortByUpdated: "Sort by last updated",
+        previous: "Previous page",
+        next: "Next page",
+        pageOf: "of",
+        jumpToPage: "Jump to page",
+        pagination: "Showing {{from}}–{{to}} of {{total}}",
         columns: {
           sort: "Order",
           name: "Seasoning",

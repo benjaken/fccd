@@ -3305,6 +3305,10 @@ td:last-child {
   overflow: auto;
 }
 
+.seasoning-cost-panel > .operational-list-pagination {
+  flex: 0 0 auto;
+}
+
 .seasoning-cost-table-wrap th,
 .calculation-settings-table-wrap th,
 .meat-customers-table-wrap th,
