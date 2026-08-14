@@ -1029,11 +1029,15 @@ function OperationsShell() {
               />
               <Route
                 path="/products/packages"
-                element={<PackagesListPage />}
+                element={<PackagesListPage canEdit={canEditProducts} />}
+              />
+              <Route
+                path="/products/packages/:id/edit"
+                element={<PackageDetailPage canEdit={canEditProducts} />}
               />
               <Route
                 path="/products/packages/:id"
-                element={<PackageDetailPage />}
+                element={<PackageDetailPage canEdit={canEditProducts} />}
               />
               <Route
                 path="/products/:id/edit"

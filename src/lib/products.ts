@@ -736,6 +736,31 @@ async function fetchCatalogIngredients(): Promise<CatalogOption[]> {
   return (data ?? []).map((row) => mapIngredientOption(row));
 }
 
+export async function searchCatalogProducts(
+  term: string,
+): Promise<CatalogOption[]> {
+  const cleaned = safeSearchTerm(term);
+  if (!cleaned) return [];
+
+  const { data, error } = await supabase
+    .from("products")
+    .select("id,name,chinese_name,sku,legacy_id")
+    .is("archived_at", null)
+    .eq("is_active", true)
+    .or(
+      `name.ilike.%${cleaned}%,chinese_name.ilike.%${cleaned}%,sku.ilike.%${cleaned}%`,
+    )
+    .order("name", { ascending: true })
+    .limit(20);
+  if (error) return [];
+  return (data ?? []).map((row) => ({
+    id: row.id as string,
+    name: ((row.chinese_name as string | null) || (row.name as string)) as string,
+    sku: (row.sku as string | null) ?? null,
+    legacyId: (row.legacy_id as string | null) ?? undefined,
+  }));
+}
+
 export async function searchProductIngredients(
   term: string,
 ): Promise<CatalogOption[]> {

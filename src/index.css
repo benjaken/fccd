@@ -1586,6 +1586,16 @@ button.product-tag[aria-pressed="true"] {
   color: oklch(0.44 0.13 148);
 }
 
+.status-badge.neutral {
+  background: oklch(0.91 0.01 150);
+  color: oklch(0.38 0.02 150);
+}
+
+.dark .status-badge.neutral {
+  background: oklch(0.32 0.02 150);
+  color: oklch(0.86 0.01 150);
+}
+
 .status-badge.red {
   background: color-mix(in oklch, var(--destructive) 12%, var(--card));
   color: var(--destructive);
@@ -2032,6 +2042,95 @@ button.product-tag[aria-pressed="true"] {
 .detail-inline-table {
   min-height: 0;
   overflow: auto;
+}
+
+.packages-table-block {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.packages-result-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px 0;
+  color: var(--foreground);
+  font-size: 14px;
+}
+
+.packages-result-meta strong {
+  font-weight: 700;
+}
+
+.table-sort-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.table-sort-button svg {
+  width: 14px;
+  height: 14px;
+}
+
+.package-name-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.package-name-link svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+.packages-index-cell {
+  width: 1%;
+  color: var(--muted-foreground);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.packages-table-wrap td.table-actions-cell {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+  vertical-align: middle;
+}
+
+.package-options-table td {
+  vertical-align: middle;
+}
+
+.package-category-cell {
+  font-weight: 700;
+}
+
+.package-empty-products {
+  color: var(--muted-foreground);
+}
+
+.package-set-actions .table-row-actions {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+
+.package-product-search {
+  position: relative;
+  min-width: 0;
+}
+
+.product-inline-add input.is-invalid {
+  border-color: var(--destructive);
 }
 
 .products-table-wrap th,
