@@ -3900,87 +3900,9 @@ td:last-child {
   white-space: normal;
 }
 
-.seasoning-cost-inline-trigger {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
-  max-width: 100%;
-  width: 100%;
-  padding: 4px 6px;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  white-space: normal;
-}
-
-.seasoning-cost-inline-trigger.is-mono {
+.seasoning-cost-calc-cell {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.9rem;
-}
-
-.seasoning-cost-inline-trigger.is-empty {
-  color: var(--muted-foreground);
-}
-
-.seasoning-cost-inline-trigger:hover:not(:disabled),
-.seasoning-cost-inline-trigger:focus-visible {
-  border-color: color-mix(in oklch, var(--primary) 35%, var(--border));
-  background: color-mix(in oklch, var(--accent) 55%, transparent);
-  outline: none;
-}
-
-.seasoning-cost-inline-editor {
-  display: grid;
-  gap: 6px;
-  min-width: 0;
-}
-
-.seasoning-cost-inline-editor input {
-  width: 100%;
-  min-width: 0;
-  height: 34px;
-  padding: 0 10px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  outline: 0;
-  background: var(--background);
-  color: var(--foreground);
-  font: inherit;
-}
-
-.seasoning-cost-inline-editor input:focus {
-  border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
-  box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 16%, transparent);
-}
-
-.seasoning-cost-inline-actions {
-  display: flex;
-  gap: 2px;
-}
-
-.seasoning-cost-inline-preview {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  color: var(--muted-foreground);
-  font-size: 0.82rem;
-  white-space: normal;
-}
-
-.seasoning-cost-inline-preview strong {
-  color: var(--foreground);
-  font-variant-numeric: tabular-nums;
-}
-
-.seasoning-cost-inline-error {
-  color: var(--destructive);
-  font-size: 0.78rem;
-  white-space: normal;
 }
 
 .seasoning-cost-form {
@@ -3999,9 +3921,10 @@ td:last-child {
   font-weight: 700;
 }
 
-.seasoning-cost-field input {
-  height: 40px;
-  padding: 0 12px;
+.seasoning-cost-field input,
+.seasoning-cost-field textarea {
+  width: 100%;
+  padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 10px;
   outline: 0;
@@ -4010,7 +3933,14 @@ td:last-child {
   font: inherit;
 }
 
-.seasoning-cost-field input:focus {
+.seasoning-cost-field input {
+  height: 40px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.seasoning-cost-field input:focus,
+.seasoning-cost-field textarea:focus {
   border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
   box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 16%, transparent);
 }
@@ -4088,8 +4018,7 @@ td:last-child {
 
 .seasoning-cost-toolbar,
 .calculation-settings-toolbar,
-.meat-customers-toolbar,
-.spice-usage-toolbar {
+.meat-customers-toolbar {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
@@ -4218,8 +4147,7 @@ td:last-child {
   .packages-toolbar,
   .meat-customers-toolbar,
   .seasoning-cost-toolbar,
-  .calculation-settings-toolbar,
-  .spice-usage-toolbar {
+  .calculation-settings-toolbar {
     align-items: center;
     flex-direction: row;
     flex-wrap: wrap;
@@ -7618,6 +7546,7 @@ td:last-child {
 .mobile-account-actions {
   display: flex;
   flex-direction: column;
+  flex-shrink: 0;
   gap: 3px;
   margin-top: auto;
   padding-top: 12px;
@@ -8316,7 +8245,24 @@ td:last-child {
   .mobile-drawer nav {
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    flex: 1 1 auto;
+    gap: 2px;
+    min-height: 0;
+    overflow: auto;
+  }
+
+  .mobile-nav-group {
+    display: grid;
+    gap: 2px;
+    padding-bottom: 10px;
+  }
+
+  .mobile-nav-group-label {
+    margin: 0;
+    padding: 8px 10px 4px;
+    color: var(--muted-foreground);
+    font-size: 14px;
+    font-weight: 700;
   }
 
   .profile-grid,

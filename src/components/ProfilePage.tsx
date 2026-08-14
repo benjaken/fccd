@@ -4,14 +4,12 @@ import {
   BellRing,
   CalendarClock,
   Mail,
-  RefreshCw,
   ShieldCheck,
   Store,
   UserRound,
 } from "lucide-react";
 
 import { useAuth } from "@/auth/AuthProvider";
-import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 
 function ProfileField({
@@ -36,13 +34,7 @@ function ProfileField({
 
 export function ProfilePage() {
   const { t, i18n } = useTranslation();
-  const {
-    user,
-    profile,
-    profileLoading,
-    profileError,
-    refreshProfile,
-  } = useAuth();
+  const { user, profile, profileLoading, profileError } = useAuth();
   const notSet = t("common.notSet");
 
   const formatDate = (value: string | null | undefined) => {
@@ -69,14 +61,6 @@ export function ProfilePage() {
           <span className="eyebrow">{t("profile.eyebrow")}</span>
           <h1>{t("profile.title")}</h1>
         </div>
-        <Button
-          variant="outline"
-          onClick={() => void refreshProfile()}
-          disabled={profileLoading}
-        >
-          <RefreshCw />
-          {t("profile.refresh")}
-        </Button>
       </header>
 
       <article className="profile-summary">

@@ -267,6 +267,7 @@ Active 導航（側欄、工作區 soft link、migration tab）必須是**淡綠
 ### 4.5 導航 Navigation
 
 - 工作區 soft links、側欄 active state 明確
+- 移動端漢堡選單把一／二／三級目的地收成**同一份清單**（可有分組標題，但不要再套一層抽屜或側欄）
 - 麵包屑／上下文只在有層級時出現
 - 連結繼承色時，不可破壞 Primary 按鈕白字（見 `a.bg-primary` 覆蓋規則）
 

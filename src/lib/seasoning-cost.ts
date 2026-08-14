@@ -55,21 +55,33 @@ export async function fetchSeasoningCosts(): Promise<SeasoningCostRow[]> {
   return ((data ?? []) as SeasoningRow[]).map(mapRow);
 }
 
-export async function createSeasoningCost(input: {
+export type SeasoningCostWriteInput = {
   name: string;
   calculationExpression: string;
   description?: string | null;
-}): Promise<SeasoningCostRow> {
+};
+
+function writeFields(input: SeasoningCostWriteInput) {
   const name = input.name.trim();
   const expression = input.calculationExpression.trim();
   if (!name) throw new Error("name_required");
   if (!expression) throw new Error("expression_required");
+  return {
+    name,
+    calculation_expression: expression,
+    cost_per_gram: evaluateSeasoningExpression(expression),
+    description:
+      input.description === undefined ? null : nullifTrim(input.description),
+  };
+}
 
-  const costPerGram = evaluateSeasoningExpression(expression);
-  const description =
-    input.description === undefined
-      ? null
-      : nullifTrim(input.description);
+const SEASONING_COST_SELECT =
+  "id,name,description,calculation_expression,cost_per_gram,last_updated_at,sort_order";
+
+export async function createSeasoningCost(
+  input: SeasoningCostWriteInput,
+): Promise<SeasoningCostRow> {
+  const fields = writeFields(input);
 
   const { data: maxRow, error: maxError } = await supabase
     .from("seasonings")
@@ -88,69 +100,39 @@ export async function createSeasoningCost(input: {
     .from("seasonings")
     .insert({
       legacy_id: legacyId,
-      name,
-      description,
-      calculation_expression: expression,
-      cost_per_gram: costPerGram,
+      ...fields,
       last_updated_at: now,
       sort_order: nextSort,
       updated_at: now,
     })
-    .select(
-      "id,name,description,calculation_expression,cost_per_gram,last_updated_at,sort_order",
-    )
+    .select(SEASONING_COST_SELECT)
     .single();
 
   if (error) throw error;
   return mapRow(data as SeasoningRow);
 }
 
-export async function updateSeasoningCalculation(
+export async function updateSeasoningCost(
   seasoningId: string,
-  calculationExpression: string,
+  input: SeasoningCostWriteInput,
 ): Promise<SeasoningCostRow> {
-  const expression = calculationExpression.trim();
-  if (!expression) throw new Error("expression_required");
-  const costPerGram = evaluateSeasoningExpression(expression);
+  const fields = writeFields(input);
   const now = new Date().toISOString();
 
   const { data, error } = await supabase
     .from("seasonings")
     .update({
-      calculation_expression: expression,
-      cost_per_gram: costPerGram,
+      ...fields,
       last_updated_at: now,
       updated_at: now,
     })
     .eq("id", seasoningId)
-    .select(
-      "id,name,description,calculation_expression,cost_per_gram,last_updated_at,sort_order",
-    )
+    .is("archived_at", null)
+    .select(SEASONING_COST_SELECT)
     .single();
 
   if (error) throw error;
   return mapRow(data as SeasoningRow);
-}
-
-export async function updateSeasoningRemark(
-  seasoningId: string,
-  description: string,
-): Promise<string | null> {
-  const next = nullifTrim(description);
-  const now = new Date().toISOString();
-
-  const { data, error } = await supabase
-    .from("seasonings")
-    .update({
-      description: next,
-      updated_at: now,
-    })
-    .eq("id", seasoningId)
-    .select("description")
-    .single();
-
-  if (error) throw error;
-  return (data as { description: string | null }).description;
 }
 
 function nullifTrim(value: string | null | undefined) {

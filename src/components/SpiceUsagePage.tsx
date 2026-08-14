@@ -1,18 +1,18 @@
 import { useEffect, useEffectEvent, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Leaf, RefreshCw, Trash2 } from "lucide-react";
+import { Leaf, Trash2 } from "lucide-react";
 
+import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
-import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import {
   fetchSeasonings,
   fetchSeasoningUsages,
-  filterSeasoningUsages,
   unapplySeasoningUsage,
   type SeasoningOption,
   type SeasoningUsageRow,
 } from "@/lib/spice-usage";
+import { FROZEN_ACTION_PERMISSION_KEYS } from "@/lib/frozen-action-permissions";
 
 type SeasoningsLoader = () => Promise<SeasoningOption[]>;
 type UsagesLoader = (seasoningId: string) => Promise<SeasoningUsageRow[]>;
@@ -23,8 +23,11 @@ const SPICE_USAGE_SKELETON_COLUMNS = [
   { width: "10rem" },
   { width: "6rem" },
   { width: "6rem" },
-  { width: "2.5rem", variant: "action" as const },
 ];
+const SPICE_USAGE_ACTION_SKELETON = {
+  width: "2.5rem",
+  variant: "action" as const,
+};
 
 function SpiceUsageSidebarSkeleton() {
   return (
@@ -47,12 +50,18 @@ export function SpiceUsagePage({
   loadSeasonings = fetchSeasonings,
   loadUsages = fetchSeasoningUsages,
   deleteUsage = unapplySeasoningUsage,
+  canDelete: canDeleteProp,
 }: {
   loadSeasonings?: SeasoningsLoader;
   loadUsages?: UsagesLoader;
   deleteUsage?: UsageDeleter;
+  canDelete?: boolean;
 }) {
   const { t, i18n } = useTranslation();
+  const pageAccess = useCurrentPageAccess();
+  const canDelete =
+    canDeleteProp ??
+    pageAccess.canAccess(FROZEN_ACTION_PERMISSION_KEYS.spiceUsage.delete);
   const [seasonings, setSeasonings] = useState<SeasoningOption[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [usages, setUsages] = useState<SeasoningUsageRow[]>([]);
@@ -60,18 +69,11 @@ export function SpiceUsagePage({
   const [usagesLoading, setUsagesLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
-  const [draftSearch, setDraftSearch] = useState("");
-  const [appliedSearch, setAppliedSearch] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const selected =
     seasonings.find((item) => item.id === selectedId) ?? seasonings[0] ?? null;
-
-  const visibleUsages = useMemo(
-    () => filterSeasoningUsages(usages, appliedSearch),
-    [appliedSearch, usages],
-  );
 
   const currencyFormatter = useMemo(
     () =>
@@ -138,12 +140,6 @@ export function SpiceUsagePage({
   }, [loadSeasonings, reloadKey, t]);
 
   useEffect(() => {
-    setDraftSearch("");
-    setAppliedSearch("");
-    setActionError(null);
-  }, [selected?.id]);
-
-  useEffect(() => {
     if (!selected?.id) {
       setUsages([]);
       setUsagesLoading(false);
@@ -181,13 +177,11 @@ export function SpiceUsagePage({
     if (id === selectedId) return;
     setSelectedId(id);
     setUsagesLoading(true);
-    setDraftSearch("");
-    setAppliedSearch("");
     setActionError(null);
   };
 
   const handleDelete = useEffectEvent(async (row: SeasoningUsageRow) => {
-    if (deletingId) return;
+    if (!canDelete || deletingId) return;
     const confirmed = window.confirm(t("spiceUsage.deleteConfirm"));
     if (!confirmed) return;
     setDeletingId(row.id);
@@ -214,17 +208,6 @@ export function SpiceUsagePage({
         <div>
           <span className="eyebrow">{t("spiceUsage.eyebrow")}</span>
           <h1>{t("spiceUsage.title")}</h1>
-        </div>
-        <div className="heading-actions">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setReloadKey((current) => current + 1)}
-            disabled={loading}
-          >
-            <RefreshCw />
-            {t("spiceUsage.refresh")}
-          </Button>
         </div>
       </header>
 
@@ -341,19 +324,6 @@ export function SpiceUsagePage({
                   </div>
                 </header>
 
-                <header className="spice-usage-toolbar">
-                  <ListSearchBar
-                    id="spice-usage-search"
-                    value={draftSearch}
-                    onChange={setDraftSearch}
-                    onSubmit={() => setAppliedSearch(draftSearch.trim())}
-                    label={t("spiceUsage.search")}
-                    placeholder={t("spiceUsage.searchPlaceholder")}
-                    submitLabel={t("spiceUsage.searchAction")}
-                    disabled={usagesLoading}
-                  />
-                </header>
-
                 <div className="spice-usage-main-body">
                   {actionError ? (
                     <p className="list-inline-error">{actionError}</p>
@@ -365,17 +335,23 @@ export function SpiceUsagePage({
                     loading={usagesLoading}
                     loadingLabel={t("spiceUsage.loadingUsages")}
                     skeletonRows={8}
-                    skeletonColumns={SPICE_USAGE_SKELETON_COLUMNS}
+                    skeletonColumns={
+                      canDelete
+                        ? [...SPICE_USAGE_SKELETON_COLUMNS, SPICE_USAGE_ACTION_SKELETON]
+                        : SPICE_USAGE_SKELETON_COLUMNS
+                    }
                     header={
                       <tr>
                         <th>{t("spiceUsage.columns.recipe")}</th>
                         <th>{t("spiceUsage.columns.grams")}</th>
                         <th>{t("spiceUsage.columns.cost")}</th>
-                        <th aria-label={t("spiceUsage.columns.actions")} />
+                        {canDelete ? (
+                          <th aria-label={t("spiceUsage.columns.actions")} />
+                        ) : null}
                       </tr>
                     }
                   >
-                    {visibleUsages.map((usage) => (
+                    {usages.map((usage) => (
                       <tr key={usage.id}>
                         <td>
                           <strong>{usage.preparedMeatName}</strong>
@@ -384,23 +360,25 @@ export function SpiceUsagePage({
                           {gramsFormatter.format(usage.quantityGrams)}g
                         </td>
                         <td>{currencyFormatter.format(usage.totalCost)}</td>
-                        <td className="table-actions-cell">
-                          <div className="table-row-actions">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon"
-                              disabled={deletingId === usage.id}
-                              aria-label={t("spiceUsage.delete")}
-                              title={t("spiceUsage.delete")}
-                              onClick={() => {
-                                void handleDelete(usage);
-                              }}
-                            >
-                              <Trash2 />
-                            </Button>
-                          </div>
-                        </td>
+                        {canDelete ? (
+                          <td className="table-actions-cell">
+                            <div className="table-row-actions">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                disabled={deletingId === usage.id}
+                                aria-label={t("spiceUsage.delete")}
+                                title={t("spiceUsage.delete")}
+                                onClick={() => {
+                                  void handleDelete(usage);
+                                }}
+                              >
+                                <Trash2 />
+                              </Button>
+                            </div>
+                          </td>
+                        ) : null}
                       </tr>
                     ))}
                   </ListTable>

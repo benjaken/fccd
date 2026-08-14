@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
+import { useAuth } from "@/auth/AuthProvider";
 import { supabase } from "@/lib/supabase";
 
 type PermissionValue = {
@@ -155,6 +156,15 @@ export function pageAccessKey(pathname: string) {
 
   const segment = pathname.split("/").filter(Boolean)[0];
   return segment || "overview";
+}
+
+export function useCurrentPageAccess() {
+  const { user, profile } = useAuth();
+  const authorizationRole =
+    typeof user?.app_metadata?.role === "string"
+      ? user.app_metadata.role
+      : profile?.role;
+  return usePageAccess(authorizationRole);
 }
 
 export function usePageAccess(role: string | null | undefined) {

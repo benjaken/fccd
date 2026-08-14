@@ -130,25 +130,6 @@ export async function fetchSeasoningUsages(
     });
 }
 
-function includesIgnoreCase(haystack: string | null | undefined, needle: string) {
-  if (!needle) return true;
-  return (haystack ?? "")
-    .toLocaleLowerCase("zh-HK")
-    .includes(needle.toLocaleLowerCase("zh-HK"));
-}
-
-export function filterSeasonings(rows: SeasoningOption[], search = "") {
-  const query = search.trim();
-  if (!query) return rows;
-  return rows.filter((row) => includesIgnoreCase(row.name, query));
-}
-
-export function filterSeasoningUsages(rows: SeasoningUsageRow[], search = "") {
-  const query = search.trim();
-  if (!query) return rows;
-  return rows.filter((row) => includesIgnoreCase(row.preparedMeatName, query));
-}
-
 export async function unapplySeasoningUsage(versionId: string): Promise<void> {
   const { error } = await supabase.rpc("unapply_meat_seasoning_cost_version", {
     p_version_id: versionId,

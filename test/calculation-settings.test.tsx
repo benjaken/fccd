@@ -12,6 +12,13 @@ import {
   type CalculationSettingRow,
 } from "@/lib/calculation-settings";
 
+vi.mock("@/auth/AuthProvider", () => ({
+  useAuth: () => ({
+    user: { app_metadata: { role: "Super Admin" } },
+    profile: { role: "Super Admin" },
+  }),
+}));
+
 const rows: CalculationSettingRow[] = [
   {
     id: "c-1",
@@ -195,6 +202,22 @@ describe("Calculation settings page", () => {
     expect(deleteButton).toBeDisabled();
     await user.click(deleteButton);
     expect(deleteSetting).not.toHaveBeenCalled();
+  });
+
+  it("hides delete without action permission", async () => {
+    const loadSettings = vi.fn().mockResolvedValue(structuredClone(rows));
+
+    render(
+      <MemoryRouter>
+        <CalculationSettingsPage
+          loadSettings={loadSettings}
+          canDelete={false}
+        />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("10.00%");
+    expect(screen.queryByRole("button", { name: "刪除" })).not.toBeInTheDocument();
   });
 
   it("activates one setting and deactivates the previous active one", async () => {

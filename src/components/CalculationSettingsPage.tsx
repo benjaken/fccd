@@ -6,8 +6,9 @@ import {
   type FormEvent,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { Calculator, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { Calculator, Plus, Trash2 } from "lucide-react";
 
+import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
@@ -24,6 +25,7 @@ import {
   setCalculationSettingApplied,
   type CalculationSettingRow,
 } from "@/lib/calculation-settings";
+import { FROZEN_ACTION_PERMISSION_KEYS } from "@/lib/frozen-action-permissions";
 
 type SettingsLoader = () => Promise<CalculationSettingRow[]>;
 type SettingCreator = typeof createCalculationSetting;
@@ -35,8 +37,11 @@ const CALCULATION_SETTINGS_SKELETON_COLUMNS = [
   { width: "7rem" },
   { width: "7rem" },
   { width: "5rem" },
-  { width: "2.5rem", variant: "action" as const },
 ];
+const CALCULATION_SETTINGS_ACTION_SKELETON = {
+  width: "2.5rem",
+  variant: "action" as const,
+};
 
 function CreateCalculationSettingPanel({
   open,
@@ -173,13 +178,21 @@ export function CalculationSettingsPage({
   createSetting = createCalculationSetting,
   saveApplied = setCalculationSettingApplied,
   deleteSetting = deleteCalculationSetting,
+  canDelete: canDeleteProp,
 }: {
   loadSettings?: SettingsLoader;
   createSetting?: SettingCreator;
   saveApplied?: AppliedSaver;
   deleteSetting?: SettingDeleter;
+  canDelete?: boolean;
 }) {
   const { t, i18n } = useTranslation();
+  const pageAccess = useCurrentPageAccess();
+  const canDeleteRecords =
+    canDeleteProp ??
+    pageAccess.canAccess(
+      FROZEN_ACTION_PERMISSION_KEYS.calculationSettings.delete,
+    );
   const [rows, setRows] = useState<CalculationSettingRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -286,7 +299,7 @@ export function CalculationSettingsPage({
   );
 
   const handleDelete = useEffectEvent(async (row: CalculationSettingRow) => {
-    if (deletingId || togglingId) return;
+    if (!canDeleteRecords || deletingId || togglingId) return;
     if (rows.length <= 1) {
       setActionError(t("calculationSettings.mustKeepOne"));
       return;
@@ -317,15 +330,6 @@ export function CalculationSettingsPage({
           <h1>{t("calculationSettings.title")}</h1>
         </div>
         <div className="heading-actions">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setReloadKey((current) => current + 1)}
-            disabled={loading}
-          >
-            <RefreshCw />
-            {t("calculationSettings.refresh")}
-          </Button>
           <Button type="button" onClick={() => setCreateOpen(true)}>
             <Plus />
             {t("calculationSettings.add")}
@@ -383,19 +387,28 @@ export function CalculationSettingsPage({
             loading={loading}
             loadingLabel={t("calculationSettings.loading")}
             skeletonRows={8}
-            skeletonColumns={CALCULATION_SETTINGS_SKELETON_COLUMNS}
+            skeletonColumns={
+              canDeleteRecords
+                ? [
+                    ...CALCULATION_SETTINGS_SKELETON_COLUMNS,
+                    CALCULATION_SETTINGS_ACTION_SKELETON,
+                  ]
+                : CALCULATION_SETTINGS_SKELETON_COLUMNS
+            }
             header={
               <tr>
                 <th>{t("calculationSettings.columns.createdAt")}</th>
                 <th>{t("calculationSettings.columns.variation")}</th>
                 <th>{t("calculationSettings.columns.markup")}</th>
                 <th>{t("calculationSettings.columns.status")}</th>
-                <th aria-label={t("calculationSettings.columns.actions")} />
+                {canDeleteRecords ? (
+                  <th aria-label={t("calculationSettings.columns.actions")} />
+                ) : null}
               </tr>
             }
           >
             {visibleRows.map((row) => {
-              const canDelete = rows.length > 1;
+              const canDeleteLast = rows.length > 1;
               return (
               <tr key={row.id}>
                 <td>
@@ -419,31 +432,33 @@ export function CalculationSettingsPage({
                     }}
                   />
                 </td>
-                <td className="table-actions-cell">
-                  <div className="table-row-actions">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      disabled={!canDelete || deletingId === row.id}
-                      aria-label={
-                        canDelete
-                          ? t("calculationSettings.delete")
-                          : t("calculationSettings.cannotDeleteLast")
-                      }
-                      title={
-                        canDelete
-                          ? t("calculationSettings.delete")
-                          : t("calculationSettings.cannotDeleteLast")
-                      }
-                      onClick={() => {
-                        void handleDelete(row);
-                      }}
-                    >
-                      <Trash2 />
-                    </Button>
-                  </div>
-                </td>
+                {canDeleteRecords ? (
+                  <td className="table-actions-cell">
+                    <div className="table-row-actions">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        disabled={!canDeleteLast || deletingId === row.id}
+                        aria-label={
+                          canDeleteLast
+                            ? t("calculationSettings.delete")
+                            : t("calculationSettings.cannotDeleteLast")
+                        }
+                        title={
+                          canDeleteLast
+                            ? t("calculationSettings.delete")
+                            : t("calculationSettings.cannotDeleteLast")
+                        }
+                        onClick={() => {
+                          void handleDelete(row);
+                        }}
+                      >
+                        <Trash2 />
+                      </Button>
+                    </div>
+                  </td>
+                ) : null}
               </tr>
               );
             })}

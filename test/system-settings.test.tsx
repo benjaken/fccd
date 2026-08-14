@@ -677,5 +677,20 @@ describe("Super Admin system settings", () => {
     expect(reportGroups).toContain("reports.shops");
     expect(reportGroups).toContain("parent_page_key = 'reports.frozen_meat'");
     expect(reportGroups).toContain("parent_page_key = 'reports.shops'");
+
+    const frozenActions = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260814142000_frozen_list_action_permissions.sql",
+      ),
+      "utf8",
+    );
+    expect(frozenActions).toContain("frozen.seasoning_cost.edit");
+    expect(frozenActions).toContain("frozen.seasoning_cost.delete");
+    expect(frozenActions).toContain("frozen.meat_customers.edit");
+    expect(frozenActions).toContain("frozen.meat_customers.delete");
+    expect(frozenActions).toContain("frozen.spice_usage.delete");
+    expect(frozenActions).toContain("frozen.calculation_settings.delete");
+    expect(frozenActions).toContain("roles.role = 'Super Admin'");
   });
 });
