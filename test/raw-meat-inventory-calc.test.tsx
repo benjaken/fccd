@@ -323,5 +323,11 @@ describe("Raw meat inventory calculation page", () => {
     expect(screen.getByRole("button", { name: "篩選月份" })).toHaveTextContent(
       "Jun-26",
     );
+
+    const totalRow = screen.getByText("月份總數").closest("tr");
+    expect(totalRow).not.toBeNull();
+    expect(within(totalRow as HTMLElement).getByText("1.00 kg")).toBeInTheDocument();
+    expect(within(totalRow as HTMLElement).getByText("0.00 kg")).toBeInTheDocument();
+    expect(within(totalRow as HTMLElement).getByText("HK$130.00")).toBeInTheDocument();
   });
 });

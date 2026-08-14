@@ -1026,6 +1026,7 @@ const resources = {
         yearFilter: "年份",
         filterMonth: "篩選月份",
         allMonths: "全部月份",
+        monthTotal: "月份總數",
         optionsColumns: {
           sort: "排序",
           name: "生肉",
@@ -2286,6 +2287,7 @@ const resources = {
         yearFilter: "Year",
         filterMonth: "Filter by month",
         allMonths: "All months",
+        monthTotal: "Month total",
         optionsColumns: {
           sort: "Order",
           name: "Raw meat",

@@ -2150,6 +2150,21 @@ td:last-child {
   overflow: hidden;
 }
 
+.raw-meat-calc-month-total-row td {
+  background: #ffe4cc;
+  color: #3f2a1a;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+.raw-meat-calc-month-total-value {
+  display: inline-block;
+  text-decoration-line: underline;
+  text-decoration-style: double;
+  text-underline-offset: 0.2em;
+  font-variant-numeric: tabular-nums;
+}
+
 .raw-meat-options-modal-root {
   position: fixed;
   inset: 0;

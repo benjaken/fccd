@@ -272,6 +272,19 @@ export function RawMeatInventoryCalcPage({
     );
   }, [monthFilter, movements]);
 
+  const monthTotals = useMemo(() => {
+    if (!monthFilter) return null;
+    let inboundKg = 0;
+    let outboundKg = 0;
+    let amount = 0;
+    for (const row of filteredMovements) {
+      inboundKg += row.inboundQuantityKg ?? 0;
+      outboundKg += row.outboundQuantityKg ?? 0;
+      amount += row.totalAmount ?? 0;
+    }
+    return { inboundKg, outboundKg, amount };
+  }, [filteredMovements, monthFilter]);
+
   const totalPages = Math.max(
     1,
     Math.ceil(filteredMovements.length / RAW_MEAT_MOVEMENTS_PAGE_SIZE),
@@ -321,11 +334,22 @@ export function RawMeatInventoryCalcPage({
       }),
     [i18n.language],
   );
+  const totalKgFormatter = useMemo(
+    () =>
+      new Intl.NumberFormat(i18n.language, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }),
+    [i18n.language],
+  );
 
   const formatKg = (value: number | null) => {
     if (value === null) return t("common.notSet");
     return `${kgFormatter.format(value)} kg`;
   };
+
+  const formatTotalKg = (value: number) =>
+    `${totalKgFormatter.format(value)} kg`;
 
   const selectedMonthLabel =
     monthOptions.find((option) => option.key === monthFilter)?.label ??
@@ -758,6 +782,31 @@ export function RawMeatInventoryCalcPage({
                   </td>
                 </tr>
               ))}
+              {monthTotals ? (
+                <tr className="raw-meat-calc-month-total-row">
+                  <td colSpan={3}>
+                    <strong>{t("rawMeatInventory.monthTotal")}</strong>
+                  </td>
+                  <td />
+                  <td>
+                    <span className="raw-meat-calc-month-total-value">
+                      {formatTotalKg(monthTotals.inboundKg)}
+                    </span>
+                  </td>
+                  <td>
+                    <span className="raw-meat-calc-month-total-value">
+                      {formatTotalKg(monthTotals.outboundKg)}
+                    </span>
+                  </td>
+                  <td />
+                  <td>
+                    <span className="raw-meat-calc-month-total-value">
+                      {currencyFormatter.format(monthTotals.amount)}
+                    </span>
+                  </td>
+                  <td colSpan={3} />
+                </tr>
+              ) : null}
             </ListTable>
           )}
 
