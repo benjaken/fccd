@@ -5,10 +5,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { RawMeatInventoryCalcPage } from "@/components/RawMeatInventoryCalcPage";
 import i18n from "@/i18n";
-import type {
-  RawMeatItemOption,
-  RawMeatMovementRow,
+import {
+  currentHongKongYear,
+  type RawMeatItemOption,
+  type RawMeatMovementRow,
 } from "@/lib/raw-meat-inventory";
+
+const currentYear = currentHongKongYear();
 
 const items: RawMeatItemOption[] = [
   {
@@ -105,14 +108,22 @@ describe("Raw meat inventory calculation page", () => {
     expect(within(sidebar).getByRole("button", { name: "羊腩(生)" })).toBeInTheDocument();
 
     await waitFor(() => {
-      expect(loadMovements).toHaveBeenCalledWith("item-1", "乾冬菇 (廣信)");
+      expect(loadMovements).toHaveBeenCalledWith(
+        "item-1",
+        "乾冬菇 (廣信)",
+        currentYear,
+      );
     });
 
     expect(await screen.findAllByText("廣聯興")).not.toHaveLength(0);
     expect(screen.getByText("5 kg")).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "年份" })).toHaveValue(
+      String(currentYear),
+    );
     expect(screen.getByRole("button", { name: "新增生肉選項" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "生肉入貨" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "生肉出貨" })).toBeDisabled();
+    expect(screen.queryByText("15")).not.toBeInTheDocument();
   });
 
   it("switches the right-side ledger when selecting another item", async () => {
@@ -136,7 +147,11 @@ describe("Raw meat inventory calculation page", () => {
     await user.click(screen.getByRole("button", { name: "羊腩(生)" }));
 
     await waitFor(() => {
-      expect(loadMovements).toHaveBeenCalledWith("item-2", "羊腩(生)");
+      expect(loadMovements).toHaveBeenCalledWith(
+        "item-2",
+        "羊腩(生)",
+        currentYear,
+      );
     });
 
     expect(await screen.findByText("新豐凍肉 (SFFM)")).toBeInTheDocument();
@@ -144,6 +159,42 @@ describe("Raw meat inventory calculation page", () => {
       "aria-current",
       "true",
     );
+  });
+
+  it("reloads ledger data when the year filter changes", async () => {
+    const user = userEvent.setup();
+    const loadItems = vi.fn().mockResolvedValue(items);
+    const loadMovements = vi
+      .fn()
+      .mockImplementation(async (itemId: string) => movementsByItem[itemId] ?? []);
+
+    render(
+      <MemoryRouter>
+        <RawMeatInventoryCalcPage
+          loadItems={loadItems}
+          loadMovements={loadMovements}
+        />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(loadMovements).toHaveBeenCalledWith(
+        "item-1",
+        "乾冬菇 (廣信)",
+        currentYear,
+      );
+    });
+
+    const yearSelect = screen.getByRole("combobox", { name: "年份" });
+    await user.selectOptions(yearSelect, "2025");
+
+    await waitFor(() => {
+      expect(loadMovements).toHaveBeenCalledWith(
+        "item-1",
+        "乾冬菇 (廣信)",
+        2025,
+      );
+    });
   });
 
   it("lets users click a remark, edit it, and save", async () => {

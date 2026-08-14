@@ -1833,19 +1833,6 @@ td:last-child {
   font-size: 0.92rem;
 }
 
-.raw-meat-calc-sidebar-meta {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.raw-meat-calc-sidebar-meta > span {
-  color: var(--muted-foreground);
-  font-size: 0.82rem;
-  min-width: 1.25rem;
-  text-align: right;
-}
-
 .raw-meat-calc-options-trigger {
   width: 32px;
   height: 32px;
@@ -1854,11 +1841,6 @@ td:last-child {
 
 .raw-meat-calc-options-trigger:hover:not(:disabled) {
   color: var(--foreground);
-}
-
-.raw-meat-calc-sidebar-header span {
-  color: var(--muted-foreground);
-  font-size: 0.82rem;
 }
 
 .raw-meat-calc-sidebar-state {
@@ -1941,8 +1923,35 @@ td:last-child {
 .raw-meat-calc-actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-end;
   justify-content: flex-end;
   gap: 8px;
+}
+
+.raw-meat-calc-year-filter {
+  display: grid;
+  gap: 4px;
+  min-width: 7rem;
+  color: var(--muted-foreground);
+  font-size: 0.78rem;
+}
+
+.raw-meat-calc-year-filter select {
+  height: 40px;
+  min-width: 7rem;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  outline: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+.raw-meat-calc-year-filter select:focus {
+  border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 16%, transparent);
 }
 
 .raw-meat-calc-remark-cell {
@@ -2119,11 +2128,13 @@ td:last-child {
   min-height: 0;
   overflow: auto;
   padding: 0 0 12px;
+  isolation: isolate;
 }
 
 .raw-meat-options-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
 }
 
 .raw-meat-options-table th,
@@ -2135,13 +2146,27 @@ td:last-child {
   font-size: 0.9rem;
 }
 
+.raw-meat-options-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+}
+
 .raw-meat-options-table th {
   position: sticky;
   top: 0;
+  z-index: 3;
   background: var(--primary);
   color: var(--primary-foreground);
   font-weight: 600;
   white-space: nowrap;
+  box-shadow: 0 1px 0 var(--primary);
+}
+
+.raw-meat-options-table tbody td {
+  position: relative;
+  z-index: 0;
+  background: var(--card);
 }
 
 .raw-meat-options-table th:nth-child(1),
@@ -2158,8 +2183,14 @@ td:last-child {
   text-align: center;
 }
 
-.raw-meat-options-table tbody tr:nth-child(even) {
-  background: color-mix(in oklch, var(--muted) 45%, transparent);
+.raw-meat-options-table .ui-switch {
+  position: relative;
+  z-index: 0;
+  isolation: isolate;
+}
+
+.raw-meat-options-table tbody tr:nth-child(even) td {
+  background: color-mix(in oklch, var(--muted) 45%, var(--card));
 }
 
 @keyframes raw-meat-options-in {

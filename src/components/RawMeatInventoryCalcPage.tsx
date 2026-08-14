@@ -16,7 +16,9 @@ import { TablePagination } from "@/components/ui/table-pagination";
 import {
   fetchRawMeatItems,
   fetchRawMeatMovementsForItem,
+  currentHongKongYear,
   RAW_MEAT_MOVEMENTS_PAGE_SIZE,
+  rawMeatYearOptions,
   updateRawMeatItemFlags,
   updateRawMeatMovementRemark,
   type RawMeatItemOption,
@@ -41,6 +43,7 @@ type ItemsLoader = () => Promise<RawMeatItemOption[]>;
 type MovementsLoader = (
   itemId: string,
   productName: string,
+  year: number,
 ) => Promise<RawMeatMovementRow[]>;
 type RemarkSaver = (
   movementId: string,
@@ -208,6 +211,8 @@ export function RawMeatInventoryCalcPage({
   const [reloadKey, setReloadKey] = useState(0);
   const [page, setPage] = useState(1);
   const [optionsOpen, setOptionsOpen] = useState(false);
+  const [year, setYear] = useState(() => currentHongKongYear());
+  const years = useMemo(() => rawMeatYearOptions(), []);
 
   const sidebarItems = useMemo(
     () => items.filter((item) => item.isActive),
@@ -340,7 +345,7 @@ export function RawMeatInventoryCalcPage({
     setError(null);
     setPage(1);
 
-    void loadMovements(itemId, productName)
+    void loadMovements(itemId, productName, year)
       .then((rows) => {
         if (cancelled) return;
         setMovements(rows);
@@ -361,7 +366,7 @@ export function RawMeatInventoryCalcPage({
     return () => {
       cancelled = true;
     };
-  }, [loadMovements, selectedItemId, selectedItem, reloadKey, t]);
+  }, [loadMovements, selectedItemId, selectedItem, reloadKey, year, t]);
 
   const reload = useCallback(() => {
     setReloadKey((current) => current + 1);
@@ -436,21 +441,18 @@ export function RawMeatInventoryCalcPage({
         >
           <div className="raw-meat-calc-sidebar-header">
             <strong>{t("rawMeatInventory.items")}</strong>
-            <div className="raw-meat-calc-sidebar-meta">
-              <span>{sidebarItems.length}</span>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="raw-meat-calc-options-trigger"
-                aria-label={t("rawMeatInventory.openOptions")}
-                title={t("rawMeatInventory.openOptions")}
-                onClick={() => setOptionsOpen(true)}
-                disabled={itemsLoading || items.length === 0}
-              >
-                <SlidersHorizontal />
-              </Button>
-            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="raw-meat-calc-options-trigger"
+              aria-label={t("rawMeatInventory.openOptions")}
+              title={t("rawMeatInventory.openOptions")}
+              onClick={() => setOptionsOpen(true)}
+              disabled={itemsLoading || items.length === 0}
+            >
+              <SlidersHorizontal />
+            </Button>
           </div>
           {itemsLoading ? (
             <div className="raw-meat-calc-sidebar-state" role="status">
@@ -495,6 +497,21 @@ export function RawMeatInventoryCalcPage({
               <span>{t("rawMeatInventory.ledgerHint")}</span>
             </div>
             <div className="raw-meat-calc-actions">
+              <label className="raw-meat-calc-year-filter">
+                <span>{t("rawMeatInventory.yearFilter")}</span>
+                <select
+                  aria-label={t("rawMeatInventory.yearFilter")}
+                  value={year}
+                  onChange={(event) => setYear(Number(event.target.value))}
+                  disabled={loading}
+                >
+                  {years.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <Button
                 type="button"
                 disabled
