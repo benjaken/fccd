@@ -250,7 +250,7 @@ export function meatCustomerOptionLabel(row: {
 /** Keep digits and at most one decimal while typing. */
 export function coercePreparedMeatQuantityInput(value: string): string {
   const normalized = value
-    .replace(/[０-９]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xff10))
+    .replace(/[０-９]/g, (ch) => String(ch.charCodeAt(0) - 0xff10))
     .replace(/．/g, ".");
   const cleaned = normalized.replace(/[^\d.]/g, "");
   if (!cleaned) return "";
