@@ -443,6 +443,49 @@ export async function fetchDirectShipRawMeatItems(): Promise<
   );
 }
 
+export type PreparedMeatOutboundStockBalances = {
+  prepared: Record<string, number>;
+  raw: Record<string, number>;
+};
+
+function mapStockObject(value: unknown): Record<string, number> {
+  if (!value || typeof value !== "object") return {};
+  const result: Record<string, number> = {};
+  for (const [id, stock] of Object.entries(value as Record<string, unknown>)) {
+    const parsed = Number.parseFloat(String(stock));
+    if (id && Number.isFinite(parsed)) result[id] = parsed;
+  }
+  return result;
+}
+
+export function formatPreparedMeatStock(value: number) {
+  if (!Number.isFinite(value) || value <= 0) return "0";
+  return String(Number.parseFloat(value.toFixed(3)));
+}
+
+export function remainingPreparedMeatOutboundStock(input: {
+  onHand: number;
+  originalQuantity: number;
+  committedQuantity: number;
+}) {
+  return input.onHand + input.originalQuantity - input.committedQuantity;
+}
+
+export async function fetchPreparedMeatOutboundStockBalances(): Promise<PreparedMeatOutboundStockBalances> {
+  const { data, error } = await supabase.rpc(
+    "prepared_meat_outbound_stock_balances",
+  );
+  if (error) throw error;
+  const payload = (data ?? {}) as {
+    prepared?: unknown;
+    raw?: unknown;
+  };
+  return {
+    prepared: mapStockObject(payload.prepared),
+    raw: mapStockObject(payload.raw),
+  };
+}
+
 export type PreparedMeatOutboundLineInput = {
   preparedMeatItemId?: string | null;
   rawMeatItemId?: string | null;

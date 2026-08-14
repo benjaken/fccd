@@ -64,6 +64,7 @@ type OutboundModalProps = Pick<
   | "loadShippingMethods"
   | "loadOrderNumber"
   | "loadRawItems"
+  | "loadStock"
   | "loadOutbound"
   | "createOutbound"
   | "updateOutbound"
@@ -164,6 +165,7 @@ export function PreparedMeatInventoryCalcPage({
   loadShippingMethods,
   loadOrderNumber,
   loadRawItems,
+  loadStock,
   loadOutbound,
   createOutbound,
   updateOutbound,
@@ -795,6 +797,7 @@ export function PreparedMeatInventoryCalcPage({
         loadShippingMethods={loadShippingMethods}
         loadOrderNumber={loadOrderNumber}
         loadRawItems={loadRawItems}
+        loadStock={loadStock}
         loadOutbound={loadOutbound}
         createOutbound={createOutbound}
         updateOutbound={updateOutbound}

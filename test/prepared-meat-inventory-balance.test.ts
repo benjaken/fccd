@@ -6,11 +6,13 @@ import {
   coercePreparedMeatQuantityInput,
   currentHongKongYear,
   formatPreparedMeatOrderNumber,
+  formatPreparedMeatStock,
   hongKongYearBounds,
   hongKongYearMonthKey,
   nextPreparedMeatOrderSequence,
   preparedMeatMovementKind,
   preparedMeatYearOptions,
+  remainingPreparedMeatOutboundStock,
   withPreparedMeatRunningBalance,
 } from "@/lib/prepared-meat-inventory";
 
@@ -146,5 +148,31 @@ describe("prepared meat outbound helpers", () => {
     expect(coercePreparedMeatQuantityInput("1.2.3")).toBe("1.23");
     expect(coercePreparedMeatQuantityInput("１．５")).toBe("1.5");
     expect(coercePreparedMeatQuantityInput("2")).toBe("2");
+  });
+});
+
+describe("prepared meat outbound stock", () => {
+  it("treats on-hand plus this order's original quantity as available", () => {
+    expect(
+      remainingPreparedMeatOutboundStock({
+        onHand: 8,
+        originalQuantity: 2,
+        committedQuantity: 2,
+      }),
+    ).toBe(8);
+    expect(
+      remainingPreparedMeatOutboundStock({
+        onHand: 8,
+        originalQuantity: 0,
+        committedQuantity: 3,
+      }),
+    ).toBe(5);
+  });
+
+  it("formats on-hand stock without trailing zeros", () => {
+    expect(formatPreparedMeatStock(10)).toBe("10");
+    expect(formatPreparedMeatStock(10.5)).toBe("10.5");
+    expect(formatPreparedMeatStock(0)).toBe("0");
+    expect(formatPreparedMeatStock(-2)).toBe("0");
   });
 });

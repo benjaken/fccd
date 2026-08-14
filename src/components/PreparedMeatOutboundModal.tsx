@@ -13,7 +13,10 @@ import {
   fetchMeatShippingMethods,
   fetchNextPreparedMeatOrderNumber,
   fetchPreparedMeatOutboundOrder,
+  fetchPreparedMeatOutboundStockBalances,
+  formatPreparedMeatStock,
   meatCustomerOptionLabel,
+  remainingPreparedMeatOutboundStock,
   sendPreparedMeatOrderToFactory,
   updatePreparedMeatOutbound,
   type DirectShipRawMeatOption,
@@ -21,6 +24,7 @@ import {
   type PreparedMeatItemOption,
   type PreparedMeatOutboundInput,
   type PreparedMeatOutboundOrder,
+  type PreparedMeatOutboundStockBalances,
 } from "@/lib/prepared-meat-inventory";
 import { hongKongDateInputValue } from "@/lib/raw-meat-inventory";
 
@@ -41,6 +45,7 @@ type CustomersLoader = () => Promise<MeatCustomerRow[]>;
 type ShippingLoader = () => Promise<MeatShippingMethodOption[]>;
 type OrderNumberLoader = (shippingDate: string) => Promise<string>;
 type RawItemsLoader = () => Promise<DirectShipRawMeatOption[]>;
+type StockLoader = () => Promise<PreparedMeatOutboundStockBalances>;
 type OutboundLoader = (orderId: string) => Promise<PreparedMeatOutboundOrder>;
 type OutboundCreator = (input: PreparedMeatOutboundInput) => Promise<string>;
 type OutboundUpdater = (
@@ -191,6 +196,21 @@ function OutboundItemSearchSelect({
   );
 }
 
+function stockKey(kind: DraftLine["kind"], itemId: string) {
+  return `${kind}:${itemId}`;
+}
+
+function sumQuantitiesByItem(
+  rows: Array<{ kind: DraftLine["kind"]; itemId: string; quantity: number }>,
+) {
+  const totals: Record<string, number> = {};
+  for (const row of rows) {
+    const key = stockKey(row.kind, row.itemId);
+    totals[key] = (totals[key] ?? 0) + row.quantity;
+  }
+  return totals;
+}
+
 export function PreparedMeatOutboundModal({
   open,
   orderId,
@@ -201,6 +221,7 @@ export function PreparedMeatOutboundModal({
   loadShippingMethods = fetchMeatShippingMethods,
   loadOrderNumber = fetchNextPreparedMeatOrderNumber,
   loadRawItems = fetchDirectShipRawMeatItems,
+  loadStock = fetchPreparedMeatOutboundStockBalances,
   loadOutbound = fetchPreparedMeatOutboundOrder,
   createOutbound = createPreparedMeatOutbound,
   updateOutbound = updatePreparedMeatOutbound,
@@ -215,6 +236,7 @@ export function PreparedMeatOutboundModal({
   loadShippingMethods?: ShippingLoader;
   loadOrderNumber?: OrderNumberLoader;
   loadRawItems?: RawItemsLoader;
+  loadStock?: StockLoader;
   loadOutbound?: OutboundLoader;
   createOutbound?: OutboundCreator;
   updateOutbound?: OutboundUpdater;
@@ -227,6 +249,13 @@ export function PreparedMeatOutboundModal({
     MeatShippingMethodOption[]
   >([]);
   const [rawItems, setRawItems] = useState<DirectShipRawMeatOption[]>([]);
+  const [stock, setStock] = useState<PreparedMeatOutboundStockBalances>({
+    prepared: {},
+    raw: {},
+  });
+  const [originalQuantities, setOriginalQuantities] = useState<
+    Record<string, number>
+  >({});
   const [customerId, setCustomerId] = useState("");
   const [shippingMethodId, setShippingMethodId] = useState("");
   const [orderNumber, setOrderNumber] = useState("");
@@ -260,9 +289,48 @@ export function PreparedMeatOutboundModal({
   );
   const rawEnabled = canShipRawMeatOnPreparedOutbound(selectedCustomer?.name);
   const locked = Boolean(savedOrderId) && !isEditMode;
+
+  const remainingStock = (
+    kind: DraftLine["kind"],
+    itemId: string,
+    exceptKey?: string,
+  ) =>
+    remainingPreparedMeatOutboundStock({
+      onHand: (kind === "prepared" ? stock.prepared : stock.raw)[itemId] ?? 0,
+      originalQuantity: originalQuantities[stockKey(kind, itemId)] ?? 0,
+      committedQuantity: lines
+        .filter(
+          (line) =>
+            line.kind === kind &&
+            line.itemId === itemId &&
+            line.key !== exceptKey,
+        )
+        .reduce((total, line) => total + line.quantity, 0),
+    });
+
+  const quantityError = (
+    kind: DraftLine["kind"],
+    itemId: string,
+    quantity: number | null,
+    exceptKey?: string,
+  ) => {
+    if (quantity === null || quantity <= 0) {
+      return t("preparedMeatInventory.outbound.quantityRequired");
+    }
+    const remaining = remainingStock(kind, itemId, exceptKey);
+    if (quantity > remaining) {
+      return t("preparedMeatInventory.outbound.quantityExceedsStock", {
+        stock: formatPreparedMeatStock(Math.max(0, remaining)),
+      });
+    }
+    return null;
+  };
+
   const canSave =
     Boolean(customerId && shippingDate && orderNumber && lines.length > 0) &&
-    lines.every((line) => line.quantity > 0) &&
+    lines.every(
+      (line) => !quantityError(line.kind, line.itemId, line.quantity, line.key),
+    ) &&
     !locked &&
     !submitting &&
     !loading;
@@ -286,21 +354,26 @@ export function PreparedMeatOutboundModal({
     setDraftRawQuantity("");
     setDraftRawRemarks("");
     setLines([]);
+    setStock({ prepared: {}, raw: {} });
+    setOriginalQuantities({});
     setError(null);
     setLoading(true);
 
     let cancelled = false;
     void (async () => {
       try {
-        const [nextCustomers, nextMethods, nextRawItems] = await Promise.all([
-          loadCustomers(),
-          loadShippingMethods(),
-          loadRawItems(),
-        ]);
+        const [nextCustomers, nextMethods, nextRawItems, nextStock] =
+          await Promise.all([
+            loadCustomers(),
+            loadShippingMethods(),
+            loadRawItems(),
+            loadStock(),
+          ]);
         if (cancelled) return;
         setCustomers(nextCustomers);
         setShippingMethods(nextMethods);
         setRawItems(nextRawItems);
+        setStock(nextStock);
 
         if (orderId === undefined) {
           const nextNumber = await loadOrderNumber(today);
@@ -337,6 +410,7 @@ export function PreparedMeatOutboundModal({
             remarks: line.remarks,
           })),
         );
+        setOriginalQuantities(sumQuantitiesByItem(order.lines));
       } catch (loadError: unknown) {
         if (cancelled) return;
         setError(
@@ -358,6 +432,7 @@ export function PreparedMeatOutboundModal({
     loadOutbound,
     loadRawItems,
     loadShippingMethods,
+    loadStock,
     open,
     orderId,
     t,
@@ -407,8 +482,9 @@ export function PreparedMeatOutboundModal({
       setError(t("preparedMeatInventory.outbound.productRequired"));
       return;
     }
-    if (quantity === null || quantity <= 0) {
-      setError(t("preparedMeatInventory.outbound.quantityRequired"));
+    const invalid = quantityError(kind, item.id, quantity);
+    if (invalid || quantity === null) {
+      setError(invalid ?? t("preparedMeatInventory.outbound.quantityRequired"));
       return;
     }
     setLines((current) => [
@@ -453,6 +529,13 @@ export function PreparedMeatOutboundModal({
 
   const saveOutbound = async () => {
     if (!selectedCustomer || !canSave) return;
+    const invalidLine = lines
+      .map((line) => quantityError(line.kind, line.itemId, line.quantity, line.key))
+      .find(Boolean);
+    if (invalidLine) {
+      setError(invalidLine);
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
@@ -771,9 +854,22 @@ export function PreparedMeatOutboundModal({
                           value={line.quantity > 0 ? String(line.quantity) : ""}
                           onChange={(value) => {
                             const quantity = parseQuantity(value);
-                            updateLine(line.key, {
-                              quantity: quantity && quantity > 0 ? quantity : 0,
-                            });
+                            const next =
+                              quantity && quantity > 0 ? quantity : 0;
+                            if (next > 0) {
+                              const invalid = quantityError(
+                                line.kind,
+                                line.itemId,
+                                next,
+                                line.key,
+                              );
+                              if (invalid) {
+                                setError(invalid);
+                                return;
+                              }
+                            }
+                            updateLine(line.key, { quantity: next });
+                            setError(null);
                           }}
                           placeholder={t(
                             "preparedMeatInventory.outbound.quantity",

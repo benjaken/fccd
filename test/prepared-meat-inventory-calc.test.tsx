@@ -11,6 +11,11 @@ import {
   type PreparedMeatMovementRow,
 } from "@/lib/prepared-meat-inventory";
 
+const plentyOfStock = {
+  prepared: { "item-1": 100, "item-2": 100 },
+  raw: { "raw-1": 100 },
+};
+
 const currentYear = currentHongKongYear();
 
 const items: PreparedMeatItemOption[] = [
@@ -433,6 +438,7 @@ describe("Prepared meat inventory calculation page", () => {
           loadShippingMethods={loadShippingMethods}
           loadOrderNumber={loadOrderNumber}
           loadRawItems={loadRawItems}
+          loadStock={async () => plentyOfStock}
           createOutbound={createOutbound}
           sendToFactory={sendToFactory}
         />
@@ -592,6 +598,7 @@ describe("Prepared meat inventory calculation page", () => {
           loadShippingMethods={loadShippingMethods}
           loadOrderNumber={loadOrderNumber}
           loadRawItems={loadRawItems}
+          loadStock={async () => plentyOfStock}
           createOutbound={createOutbound}
           sendToFactory={sendToFactory}
         />
@@ -704,6 +711,7 @@ describe("Prepared meat inventory calculation page", () => {
           loadShippingMethods={loadShippingMethods}
           loadOrderNumber={loadOrderNumber}
           loadRawItems={loadRawItems}
+          loadStock={async () => plentyOfStock}
           loadOutbound={loadOutbound}
           updateOutbound={updateOutbound}
           sendToFactory={sendToFactory}
@@ -806,6 +814,7 @@ describe("Prepared meat inventory calculation page", () => {
           loadCustomers={async () => []}
           loadShippingMethods={async () => []}
           loadRawItems={async () => []}
+          loadStock={async () => plentyOfStock}
           loadOutbound={loadOutbound}
         />
       </MemoryRouter>,
@@ -819,5 +828,95 @@ describe("Prepared meat inventory calculation page", () => {
       "找不到對應送貨單",
     );
     expect(loadOutbound).not.toHaveBeenCalled();
+  });
+
+  it("rejects outbound add quantities that are not positive or exceed stock", async () => {
+    const user = userEvent.setup();
+    const loadItems = vi.fn().mockResolvedValue(items);
+    const loadMovements = vi.fn().mockResolvedValue([]);
+    const loadCustomers = vi.fn().mockResolvedValue([
+      {
+        id: "cust-ylp",
+        customerCode: "C0085",
+        name: "桂花小幸 YLP",
+        contactPerson: "阿國 / 懷哥",
+        phone: "9899 1980",
+        address: "元朗廣場",
+        deliveryNoteRequired: true,
+      },
+    ]);
+    const loadStock = vi.fn().mockResolvedValue({
+      prepared: { "item-1": 3 },
+      raw: {},
+    });
+
+    render(
+      <MemoryRouter>
+        <PreparedMeatInventoryCalcPage
+          loadItems={loadItems}
+          loadMovements={loadMovements}
+          loadCustomers={loadCustomers}
+          loadShippingMethods={async () => []}
+          loadOrderNumber={async () => "R - 202608 - 1"}
+          loadRawItems={async () => []}
+          loadStock={loadStock}
+        />
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: "製成品出貨" }));
+    const dialog = await screen.findByRole("dialog", { name: "送貨單" });
+    await waitFor(() => {
+      expect(within(dialog).getByRole("combobox", { name: "客戶" })).toBeEnabled();
+    });
+    await waitFor(() => {
+      expect(loadStock).toHaveBeenCalled();
+    });
+
+    await user.selectOptions(
+      within(dialog).getByRole("combobox", { name: "客戶" }),
+      "cust-ylp",
+    );
+    await user.click(within(dialog).getByRole("combobox", { name: "製成品" }));
+    await user.click(within(dialog).getByRole("option", { name: "五香牛腩" }));
+
+    await user.click(within(dialog).getByRole("button", { name: "加入" }));
+    expect(within(dialog).getByRole("alert")).toHaveTextContent(
+      "請輸入大於 0 的數量",
+    );
+
+    await user.type(within(dialog).getByRole("textbox", { name: "製成品數量" }), "0");
+    await user.click(within(dialog).getByRole("button", { name: "加入" }));
+    expect(within(dialog).getByRole("alert")).toHaveTextContent(
+      "請輸入大於 0 的數量",
+    );
+
+    const quantity = within(dialog).getByRole("textbox", { name: "製成品數量" });
+    await user.clear(quantity);
+    await user.type(quantity, "4");
+    await user.click(within(dialog).getByRole("button", { name: "加入" }));
+    expect(within(dialog).getByRole("alert")).toHaveTextContent(
+      "加入數量不能超過現存數量（現存 3）",
+    );
+    expect(within(dialog).getByText("尚未加入貨品")).toBeInTheDocument();
+
+    await user.clear(quantity);
+    await user.type(quantity, "2");
+    await user.click(within(dialog).getByRole("button", { name: "加入" }));
+    expect(within(dialog).queryByRole("alert")).toBeNull();
+    expect(
+      within(dialog.querySelector(".prepared-meat-outbound-lines") as HTMLElement).getByText(
+        "五香牛腩",
+      ),
+    ).toBeInTheDocument();
+
+    await user.type(
+      within(dialog).getByRole("textbox", { name: "製成品數量" }),
+      "2",
+    );
+    await user.click(within(dialog).getByRole("button", { name: "加入" }));
+    expect(within(dialog).getByRole("alert")).toHaveTextContent(
+      "加入數量不能超過現存數量（現存 1）",
+    );
   });
 });

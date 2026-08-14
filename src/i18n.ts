@@ -1188,6 +1188,7 @@ const resources = {
           sendError: "送到工場失敗，請重試",
           missingOrder: "找不到對應送貨單",
           quantityRequired: "請輸入大於 0 的數量",
+          quantityExceedsStock: "加入數量不能超過現存數量（現存 {{stock}}）",
           productRequired: "請選擇貨品",
           removeLine: "移除",
           columns: {
@@ -2849,6 +2850,8 @@ const resources = {
           sendError: "Could not send to the factory. Try again.",
           missingOrder: "No matching delivery note was found",
           quantityRequired: "Enter a quantity greater than 0",
+          quantityExceedsStock:
+            "Quantity cannot exceed current stock (on hand {{stock}})",
           productRequired: "Select a product",
           removeLine: "Remove",
           columns: {

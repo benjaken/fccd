@@ -771,6 +771,18 @@ describe("Super Admin system settings", () => {
     expect(savePreparedMeatOutbound).toContain("p_contact_person");
     expect(savePreparedMeatOutbound).toContain("p_order_id");
 
+    const preparedMeatOutboundStock = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260814193000_prepared_meat_outbound_stock_limits.sql",
+      ),
+      "utf8",
+    );
+    expect(preparedMeatOutboundStock).toContain(
+      "prepared_meat_outbound_stock_balances",
+    );
+    expect(preparedMeatOutboundStock).toContain("quantity exceeds current stock");
+
     const rawMeatActions = readFileSync(
       path.resolve(
         process.cwd(),
