@@ -197,8 +197,10 @@ Active 導航（側欄、工作區 soft link、migration tab）必須是**淡綠
 | 組件 | 路徑 | 用途 |
 |---|---|---|
 | `SearchField` | `src/components/ui/search-field.tsx` | 框內放大鏡的通用搜尋輸入 |
-| `ListSearchBar` | `src/components/ui/list-search-bar.tsx` | 列表工具列：搜尋欄 + 搜尋按鈕 |
-| `ListTable` | `src/components/ui/list-table.tsx` | 分頁營運列表共用表格外殼、表頭與載入骨架 |
+| `ListSearchBar` | `src/components/ui/list-search-bar.tsx` | 列表工具列：搜尋欄 + 搜尋按鈕；移動端改為側邊抽屜 |
+| `ListTable` | `src/components/ui/list-table.tsx` | 分頁營運列表共用表格外殼、表頭、載入骨架與移動端下拉重新整理 |
+| `PullToRefresh` | `src/components/ui/pull-to-refresh.tsx` | 移動端表格下拉重新整理 |
+| `SidePanel` | `src/components/ui/side-panel.tsx` | 右側滑出面板（搜尋抽屜等） |
 | `TableSkeletonRows` | `src/components/ui/table-skeleton.tsx` | 表格載入骨架列 |
 | `PageSkeleton` | `src/components/ui/page-skeleton.tsx` | 所有頁面級骨架；用 `variant` 配置權限、詳情、Dashboard、卡片、表格、報表及分析佈局 |
 | `TablePagination` | `src/components/ui/table-pagination.tsx` | 底部分頁 |
@@ -288,12 +290,17 @@ Active 導航（側欄、工作區 soft link、migration tab）必須是**淡綠
 ```
 [🔍 在輸入框內的搜尋欄] [搜尋按鈕] [狀態篩選] ...
 [表頭 sticky]
-[表身 scroll · 15 rows]
+[表身 scroll · 15 rows · 移動端下拉重新整理]
 [顯示 1-15，共 N]     [上一頁] [頁碼] [下一頁]
 ```
 
 搜尋放大鏡放在輸入框 **內部** 左側；實作必須用 `ListSearchBar`／`SearchField`
 （樣式類名 `.list-search` / `.search-field`，舊別名仍可用）。不要放在框外，也不要在頁面內複製 markup。
+
+移動端（`max-width: 900px`）：
+
+- 工具列搜尋改為圖示按鈕，點擊後從右側滑出 `SidePanel` 再搜尋
+- 表格在頂部下拉觸發 `PullToRefresh` / `ListTable.onRefresh`，不要另做一套刷新 UI
 
 ### 5.3 儀表板進度
 

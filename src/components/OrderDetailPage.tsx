@@ -13,6 +13,7 @@ import { Link, useParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { PullToRefresh } from "@/components/ui/pull-to-refresh";
 import {
   fetchOrderDetail,
   type OrderDetailResult,
@@ -281,7 +282,11 @@ export function OrderDetailPage({
             <p>{t("details.lineItemsDescription")}</p>
           </div>
         </header>
-        <div className="table-wrap">
+        <PullToRefresh
+          className="table-wrap"
+          onRefresh={() => setReloadKey((key) => key + 1)}
+          refreshing={loading}
+        >
           <table>
             <thead>
               <tr>
@@ -316,7 +321,7 @@ export function OrderDetailPage({
               )}
             </tbody>
           </table>
-        </div>
+        </PullToRefresh>
       </article>
 
       {!isQuote && (
@@ -328,7 +333,11 @@ export function OrderDetailPage({
             </div>
           </header>
           {canViewFinance ? (
-            <div className="table-wrap">
+            <PullToRefresh
+              className="table-wrap"
+              onRefresh={() => setReloadKey((key) => key + 1)}
+              refreshing={loading}
+            >
               <table>
                 <thead>
                   <tr>
@@ -358,7 +367,7 @@ export function OrderDetailPage({
                   )}
                 </tbody>
               </table>
-            </div>
+            </PullToRefresh>
           ) : (
             <p className="detail-restricted">{t("details.restricted")}</p>
           )}

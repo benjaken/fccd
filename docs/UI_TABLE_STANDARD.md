@@ -42,6 +42,19 @@ component (`src/components/ui/list-search-bar.tsx`), which wraps **`SearchField`
   each page — import `ListSearchBar` instead.
 - Prefer the canonical classes `.list-search` / `.search-field` (legacy aliases
   remain for compatibility).
+- On viewports `max-width: 900px`, hide the inline search and show an icon
+  trigger. Tapping it opens the shared **`SidePanel`** from the right with the
+  same search form. Do not invent a second mobile search pattern per page.
+
+## Mobile pull-to-refresh
+
+On mobile, every data table must refresh by pulling down. Operational lists get
+this from **`ListTable`** via `onRefresh` (usually `setReloadKey`). Other tables
+must wrap their scroll container with **`PullToRefresh`**.
+
+- Only activate the gesture at the top of the table scroller.
+- Keep the existing table chrome (sticky header, pagination) while refreshing.
+- Do not add a separate floating refresh button as a substitute on mobile.
 
 ## Loading state (skeleton)
 
@@ -76,5 +89,9 @@ lists.
 - Users list: icon-only horizontal actions in the last column (edit / change
   password).
 - Orders, quotes, payments, products, packages, users, login logs, attachments:
-  shared table shell and table-body skeleton via `ListTable`.
-- The same pages use toolbar search via `ListSearchBar`.
+  shared table shell, table-body skeleton, and mobile pull-to-refresh via
+  `ListTable`.
+- The same pages use toolbar search via `ListSearchBar` (inline on desktop,
+  side drawer on mobile).
+- Reports, dashboard jobs, role permissions, and detail inline tables wrap
+  `PullToRefresh` around the same table scroller.

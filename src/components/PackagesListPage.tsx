@@ -234,6 +234,7 @@ export function PackagesListPage({
         ) : (
           <ListTable
             className="packages-table-wrap"
+            onRefresh={() => setReloadKey((key) => key + 1)}
             loading={loading}
             loadingLabel={t("packages.loading")}
             skeletonRows={PACKAGES_PAGE_SIZE}

@@ -208,6 +208,7 @@ export function UsersListPage({
         ) : (
           <ListTable
             className="orders-table-wrap"
+            onRefresh={() => setReloadKey((key) => key + 1)}
             loading={loading}
             loadingLabel={t("settings.users.loading")}
             skeletonRows={SETTINGS_PAGE_SIZE}

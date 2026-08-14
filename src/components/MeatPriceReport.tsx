@@ -6,6 +6,7 @@ import { ReportItemSelector } from "@/components/reports/ReportItemSelector";
 import { ReportSummaryCards } from "@/components/reports/ReportSummaryCards";
 import { ReportYearFilter } from "@/components/reports/ReportYearFilter";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { PullToRefresh } from "@/components/ui/pull-to-refresh";
 import {
   fetchMonthlyPreparedMeatPrices,
   type MeatPriceMode,
@@ -38,6 +39,7 @@ export function MeatPriceReport({ mode }: { mode: MeatPriceMode }) {
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const years = Array.from(
     { length: currentYear - FIRST_DATA_YEAR + 1 },
     (_, index) => currentYear - index,
@@ -149,7 +151,7 @@ export function MeatPriceReport({ mode }: { mode: MeatPriceMode }) {
     return () => {
       active = false;
     };
-  }, [mode, year, t]);
+  }, [mode, reloadKey, t, year]);
 
   return (
     <>
@@ -301,7 +303,11 @@ export function MeatPriceReport({ mode }: { mode: MeatPriceMode }) {
               </div>
               <span>{t("reports.expandMonthlyMatrix")}</span>
             </summary>
-            <div className="report-table-wrap meat-price-table-wrap">
+            <PullToRefresh
+              className="report-table-wrap meat-price-table-wrap"
+              onRefresh={() => setReloadKey((key) => key + 1)}
+              refreshing={loading}
+            >
               <table className="meat-price-table">
               <thead>
                 <tr>
@@ -364,7 +370,7 @@ export function MeatPriceReport({ mode }: { mode: MeatPriceMode }) {
                 ))}
               </tbody>
               </table>
-            </div>
+            </PullToRefresh>
           </details>
         </>
       )}

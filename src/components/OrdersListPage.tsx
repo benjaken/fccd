@@ -282,6 +282,7 @@ export function OrdersListPage({
         ) : (
           <ListTable
             className="orders-table-wrap"
+            onRefresh={() => setReloadKey((key) => key + 1)}
             loading={loading}
             loadingLabel={t("orders.loading")}
             skeletonRows={ORDERS_PAGE_SIZE}
