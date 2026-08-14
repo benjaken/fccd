@@ -1455,7 +1455,7 @@ td:last-child {
   gap: 8px;
   overflow: hidden;
   color: var(--muted-foreground);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   transition: height 160ms ease;
 }
