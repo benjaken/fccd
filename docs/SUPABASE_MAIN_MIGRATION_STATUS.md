@@ -1,5 +1,10 @@
 # Supabase Main Migration Status
 
+Live status as of 2026-08-14 (incremental catch-up, Phase E rerun, and
+attachment migration) is in
+[`docs/migration/2026-08-14-migration-report.md`](./migration/2026-08-14-migration-report.md).
+The sections below remain the 2026-08-12 baseline import record.
+
 ## Applied schema
 
 - Target: Supabase `main` (`vignxasvlxqnyvuhtjlu`)
@@ -282,10 +287,13 @@ tombstoned immediately after verification and returns HTTP 410.
 
 ## Remaining launch gates
 
-- Modified Date incremental and financial reconciliation
-- disposition of 19 open issues affecting 24 rows
-- complete 4,198-item File Manager export, server secret, and verified private
-  file-byte migration
-- durable worker-handler approval and gated source switch
+Updated 2026-08-14:
 
-The singular `migration` table remains empty. No `migration_*` tables exist.
+- Daily Modified Date incremental is scheduled at 23:00 HKT; first night ran
+  with Phase E 503, then a successful catch-up. Financial sign-off is still
+  pending. Conflicts are append-only (`existing_legacy_id_preserved`).
+- 19 data-quality issues affecting 24 rows are `accepted`, not open.
+- Attachment baseline is complete: 4,147 verified, 54 CSV excluded, 4,038
+  unique Storage objects. See the 2026-08-14 report.
+- Option Sets data (0 / 35), durable worker-handler approval, and gated
+  source switch remain.

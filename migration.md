@@ -10,6 +10,7 @@
 - `docs/FULL_MIGRATION_DATA_REPORT.md`
 - `docs/FULL_SCHEMA_APPROVAL_DRAFT.md`
 - `docs/SUPABASE_MAIN_MIGRATION_STATUS.md`
+- `docs/migration/2026-08-14-migration-report.md`
 
 以上文件不在 `supabase/migrations/`，不会自动执行。
 

@@ -2,8 +2,19 @@
 
 ## Current gate
 
-No file bytes have been uploaded and `public.attachments` has no rows from this
-framework.
+Baseline file migration is complete as of 2026-08-14. Live aggregates:
+
+- `attachments` rows: 4,201
+- verified: 4,147 (6 of these have `source_size_corrected`)
+- excluded unavailable CSV: 54 (`accepted_unavailable_csv`)
+- unique Storage objects / SHA-256 blobs: 4,038
+
+The 2026-08-12 snapshot still contains exactly 2,711 protocol-relative
+field references. The File Manager inventory (about 4,200 items) was the
+baseline that was actually uploaded. Details:
+[`2026-08-14-migration-report.md`](./2026-08-14-migration-report.md).
+
+Historical snapshot field references (not the File Manager inventory):
 
 The fixed snapshot contains exactly 2,711 valid protocol-relative references:
 
@@ -16,11 +27,8 @@ The fixed snapshot contains exactly 2,711 valid protocol-relative references:
 | `ds_channel.Logo_png` | 8 |
 | **Total** | **2,711** |
 
-The product-owner File Manager screenshot reports 4,198 files. The remaining
-1,487 are unattached, API-unexposed, or otherwise absent from the fixed
-snapshot. Baseline upload is blocked until the complete File Manager export is
-available. A Supabase server secret is also unavailable. Neither blocker can be
-reconstructed safely from the repository.
+Those 2,711 references are a subset of the File Manager inventory. The
+inventory gap versus the old 4,198 screenshot no longer blocks upload.
 
 ## Required baseline inputs
 
