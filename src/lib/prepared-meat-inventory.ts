@@ -892,3 +892,66 @@ export async function createPreparedMeatInboundWithRaw(
   return data as string;
 }
 
+export type PreparedMeatInboundEdit = {
+  id: string;
+  productName: string;
+  inboundPackages: number;
+  requiresRaw: boolean;
+  rawInputKg: number;
+  budgetedPacks: number;
+  minPacks: number;
+  maxPacks: number;
+};
+
+export function inboundEditChecksYield(edit: Pick<PreparedMeatInboundEdit, "requiresRaw" | "budgetedPacks">) {
+  return edit.requiresRaw && edit.budgetedPacks > 0;
+}
+
+export async function fetchPreparedMeatInboundEdit(
+  movementId: string,
+): Promise<PreparedMeatInboundEdit> {
+  const { data, error } = await supabase.rpc(
+    "prepared_meat_inbound_edit_preview",
+    { p_movement_id: movementId },
+  );
+  if (error) throw error;
+  const payload = (data ?? {}) as {
+    id?: string;
+    product_name?: string | null;
+    inbound_packages?: number | string | null;
+    requires_raw?: boolean | null;
+    raw_input_kg?: number | string | null;
+    budgeted_packs?: number | string | null;
+    min_packs?: number | string | null;
+    max_packs?: number | string | null;
+  };
+  const inboundPackages = Number.parseFloat(String(payload.inbound_packages ?? 0));
+  const budgetedPacks = Number.parseFloat(String(payload.budgeted_packs ?? 0)) || 0;
+  const range = preparedInboundPackRange(budgetedPacks);
+  return {
+    id: payload.id ?? movementId,
+    productName: (payload.product_name ?? "").trim(),
+    inboundPackages: Number.isFinite(inboundPackages) ? inboundPackages : 0,
+    requiresRaw: Boolean(payload.requires_raw),
+    rawInputKg: Number.parseFloat(String(payload.raw_input_kg ?? 0)) || 0,
+    budgetedPacks,
+    minPacks: Number.parseFloat(String(payload.min_packs ?? range.min)) || range.min,
+    maxPacks: Number.parseFloat(String(payload.max_packs ?? range.max)) || range.max,
+  };
+}
+
+export async function updatePreparedMeatInboundQuantity(input: {
+  movementId: string;
+  quantity: number;
+}): Promise<string> {
+  const { data, error } = await supabase.rpc(
+    "update_prepared_meat_inbound_quantity",
+    {
+      p_movement_id: input.movementId,
+      p_quantity: input.quantity,
+    },
+  );
+  if (error) throw error;
+  return data as string;
+}
+

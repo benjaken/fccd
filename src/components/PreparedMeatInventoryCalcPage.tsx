@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 
 import { PreparedMeatInboundDeductModal } from "@/components/PreparedMeatInboundDeductModal";
+import { PreparedMeatInboundEditModal } from "@/components/PreparedMeatInboundEditModal";
 import { PreparedMeatInboundNoRawModal } from "@/components/PreparedMeatInboundNoRawModal";
 import { PreparedMeatOptionFormModal } from "@/components/PreparedMeatOptionFormModal";
 import { PreparedMeatOptionsModal } from "@/components/PreparedMeatOptionsModal";
@@ -71,6 +72,10 @@ type InboundDeductModalProps = {
 type InboundNoRawModalProps = Pick<
   ComponentProps<typeof PreparedMeatInboundNoRawModal>,
   "createInbound"
+>;
+type InboundEditModalProps = Pick<
+  ComponentProps<typeof PreparedMeatInboundEditModal>,
+  "loadInbound" | "updateInbound"
 >;
 type OutboundModalProps = Pick<
   ComponentProps<typeof PreparedMeatOutboundModal>,
@@ -178,6 +183,8 @@ export function PreparedMeatInventoryCalcPage({
   createInbound,
   loadInboundRawPreview,
   createInboundWithRaw,
+  loadInbound,
+  updateInbound,
   loadCustomers,
   loadShippingMethods,
   loadOrderNumber,
@@ -194,6 +201,7 @@ export function PreparedMeatInventoryCalcPage({
 } & CreateOptionProps &
   InboundDeductModalProps &
   InboundNoRawModalProps &
+  InboundEditModalProps &
   OutboundModalProps) {
   const { t, i18n } = useTranslation();
   const [items, setItems] = useState<PreparedMeatItemOption[]>([]);
@@ -212,6 +220,7 @@ export function PreparedMeatInventoryCalcPage({
   const [createOptionOpen, setCreateOptionOpen] = useState(false);
   const [inboundNoRawOpen, setInboundNoRawOpen] = useState(false);
   const [inboundDeductOpen, setInboundDeductOpen] = useState(false);
+  const [editingInboundId, setEditingInboundId] = useState<string | null>(null);
   const [outboundOpen, setOutboundOpen] = useState(false);
   const [editingOrderId, setEditingOrderId] = useState<string | null | undefined>(
     undefined,
@@ -722,6 +731,7 @@ export function PreparedMeatInventoryCalcPage({
                           data-edit-form="inbound"
                           aria-label={t("preparedMeatInventory.editInbound")}
                           title={t("preparedMeatInventory.editInbound")}
+                          onClick={() => setEditingInboundId(row.id)}
                         >
                           <Pencil />
                         </Button>
@@ -817,6 +827,14 @@ export function PreparedMeatInventoryCalcPage({
         onClose={() => setInboundNoRawOpen(false)}
         onSaved={reload}
         createInbound={createInbound}
+      />
+      <PreparedMeatInboundEditModal
+        open={Boolean(editingInboundId)}
+        movementId={editingInboundId}
+        onClose={() => setEditingInboundId(null)}
+        onSaved={reload}
+        loadInbound={loadInbound}
+        updateInbound={updateInbound}
       />
       <PreparedMeatOutboundModal
         open={outboundOpen}

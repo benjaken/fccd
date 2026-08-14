@@ -266,6 +266,136 @@ describe("Prepared meat inventory calculation page", () => {
     );
   });
 
+  it("edits inbound packs and checks budgeted yield when the item uses raw meat", async () => {
+    const user = userEvent.setup();
+    const loadItems = vi.fn().mockResolvedValue(items);
+    const loadMovements = vi
+      .fn()
+      .mockImplementation(async (itemId: string) =>
+        structuredClone(movementsByItem[itemId] ?? []),
+      );
+    const loadInbound = vi.fn().mockResolvedValue({
+      id: "move-in-june",
+      productName: "五香牛腩",
+      inboundPackages: 4,
+      requiresRaw: true,
+      rawInputKg: 6,
+      budgetedPacks: 4,
+      minPacks: 2,
+      maxPacks: 6,
+    });
+    const updateInbound = vi.fn().mockResolvedValue("move-in-june");
+
+    render(
+      <MemoryRouter>
+        <PreparedMeatInventoryCalcPage
+          loadItems={loadItems}
+          loadMovements={loadMovements}
+          loadInbound={loadInbound}
+          updateInbound={updateInbound}
+        />
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: "入貨編輯" }));
+    const dialog = await screen.findByRole("dialog", { name: "入貨編輯" });
+    await waitFor(() => {
+      expect(loadInbound).toHaveBeenCalledWith("move-in-june");
+    });
+    expect(within(dialog).getByText("五香牛腩")).toBeInTheDocument();
+    expect(within(dialog).getByText("預算收成 4")).toBeInTheDocument();
+
+    const quantity = within(dialog).getByRole("textbox", { name: "入貨包數" });
+    await user.clear(quantity);
+    await user.type(quantity, "1");
+    expect(
+      await within(dialog).findByText(
+        "入貨數量須介於 2 至 6 包（預算收成 4 的 ±50%）",
+      ),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "提交" })).toBeDisabled();
+
+    await user.clear(quantity);
+    await user.type(quantity, "5");
+    await waitFor(() => {
+      expect(within(dialog).queryByRole("alert")).toBeNull();
+    });
+    await user.click(within(dialog).getByRole("button", { name: "提交" }));
+    await waitFor(() => {
+      expect(updateInbound).toHaveBeenCalledWith({
+        movementId: "move-in-june",
+        quantity: 5,
+      });
+    });
+  });
+
+  it("edits inbound packs without a yield check when the item has no raw meat", async () => {
+    const user = userEvent.setup();
+    const loadItems = vi.fn().mockResolvedValue(items);
+    const loadMovements = vi.fn().mockImplementation(async (itemId: string) => {
+      if (itemId === "item-no-raw") {
+        return [
+          {
+            id: "move-no-raw",
+            movementAt: "2026-08-14T04:00:00.000Z",
+            productName: "滷水腩汁 (2kg)",
+            shopId: null,
+            shopName: null,
+            inboundPackages: 3,
+            outboundPackages: null,
+            balancePackages: 3,
+            remarks: null,
+            kind: "inbound" as const,
+            meatOrderId: null,
+          },
+        ];
+      }
+      return structuredClone(movementsByItem[itemId] ?? []);
+    });
+    const loadInbound = vi.fn().mockResolvedValue({
+      id: "move-no-raw",
+      productName: "滷水腩汁 (2kg)",
+      inboundPackages: 3,
+      requiresRaw: false,
+      rawInputKg: 0,
+      budgetedPacks: 0,
+      minPacks: 0,
+      maxPacks: 0,
+    });
+    const updateInbound = vi.fn().mockResolvedValue("move-no-raw");
+
+    render(
+      <MemoryRouter>
+        <PreparedMeatInventoryCalcPage
+          loadItems={loadItems}
+          loadMovements={loadMovements}
+          loadInbound={loadInbound}
+          updateInbound={updateInbound}
+        />
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: "滷水腩汁 (2kg)" }));
+    await user.click(await screen.findByRole("button", { name: "入貨編輯" }));
+    const dialog = await screen.findByRole("dialog", { name: "入貨編輯" });
+    await waitFor(() => {
+      expect(loadInbound).toHaveBeenCalledWith("move-no-raw");
+    });
+    expect(within(dialog).queryByText(/預算收成/)).toBeNull();
+
+    const quantity = within(dialog).getByRole("textbox", { name: "入貨包數" });
+    await user.clear(quantity);
+    await user.type(quantity, "1");
+    expect(within(dialog).queryByRole("alert")).toBeNull();
+    await user.click(within(dialog).getByRole("button", { name: "提交" }));
+    await waitFor(() => {
+      expect(updateInbound).toHaveBeenCalledWith({
+        movementId: "move-no-raw",
+        quantity: 1,
+      });
+    });
+  });
+
   it("opens the prepared meat options side panel from the sidebar header icon", async () => {
     const user = userEvent.setup();
     const loadItems = vi.fn().mockResolvedValue([

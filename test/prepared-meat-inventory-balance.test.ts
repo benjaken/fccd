@@ -15,6 +15,7 @@ import {
   isPreparedMeatWithoutRaw,
   nextPreparedMeatOrderSequence,
   budgetedPreparedYieldPacks,
+  inboundEditChecksYield,
   preparedInboundPackRange,
   preparedMeatMovementKind,
   preparedMeatYearOptions,
@@ -201,6 +202,15 @@ describe("prepared meat inbound with raw yield", () => {
     expect(isPreparedInboundPackAllowed(16.5, 35)).toBe(false);
     expect(coercePreparedMeatIntegerInput("12.9")).toBe("12");
     expect(formatPreparedMeatKg(13.91)).toBe("13.91");
+    expect(
+      inboundEditChecksYield({ requiresRaw: true, budgetedPacks: 4 }),
+    ).toBe(true);
+    expect(
+      inboundEditChecksYield({ requiresRaw: false, budgetedPacks: 4 }),
+    ).toBe(false);
+    expect(
+      inboundEditChecksYield({ requiresRaw: true, budgetedPacks: 0 }),
+    ).toBe(false);
   });
 });
 

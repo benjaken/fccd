@@ -2511,9 +2511,13 @@ td:last-child {
   font-size: 0.85rem;
 }
 
-.prepared-meat-inbound-deduct-form .raw-meat-field textarea {
-  min-height: 5.5rem;
-  resize: vertical;
+.prepared-meat-inbound-edit-form {
+  display: grid;
+  gap: 12px;
+}
+
+.prepared-meat-inbound-edit-form .prepared-meat-inbound-deduct-product-head {
+  margin-bottom: 0;
 }
 
 @media (max-width: 720px) {

@@ -1182,6 +1182,12 @@ const resources = {
           saveError: "入貨失敗，請重試",
           saving: "提交中…",
         },
+        inboundEdit: {
+          title: "入貨編輯",
+          saving: "提交中…",
+          saveError: "更新入貨失敗，請重試",
+          loadError: "暫時無法載入入貨資料",
+        },
         outbound: {
           title: "送貨單",
           customer: "客戶",
@@ -2905,6 +2911,12 @@ const resources = {
           loadError: "Raw meat stock could not be loaded",
           saveError: "Could not record inbound. Try again.",
           saving: "Submitting…",
+        },
+        inboundEdit: {
+          title: "Edit inbound",
+          saving: "Submitting…",
+          saveError: "Could not update inbound. Try again.",
+          loadError: "Inbound details could not be loaded",
         },
         outbound: {
           title: "Delivery note",
