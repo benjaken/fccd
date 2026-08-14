@@ -56,6 +56,7 @@ update public.app_pages
 set
   parent_page_key = 'reports.shops',
   page_kind = 'tab',
+  sort_order = 99,
   updated_at = now()
 where page_key = 'reports.shop_order_quantities';
 
