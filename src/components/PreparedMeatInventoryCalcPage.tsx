@@ -5,6 +5,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type ComponentProps,
   type RefObject,
 } from "react";
 import { useTranslation } from "react-i18next";
@@ -16,6 +17,7 @@ import {
 } from "lucide-react";
 
 import { PreparedMeatOptionsModal } from "@/components/PreparedMeatOptionsModal";
+import { PreparedMeatOutboundModal } from "@/components/PreparedMeatOutboundModal";
 import { Button } from "@/components/ui/button";
 import { ListTable } from "@/components/ui/list-table";
 import { TablePagination } from "@/components/ui/table-pagination";
@@ -50,6 +52,10 @@ type MovementsLoader = (
   year: number,
 ) => Promise<PreparedMeatMovementRow[]>;
 type ItemFlagsSaver = typeof updatePreparedMeatItemFlags;
+type OutboundModalProps = Pick<
+  ComponentProps<typeof PreparedMeatOutboundModal>,
+  "loadCustomers" | "loadShippingMethods" | "loadOrderNumber" | "createOutbound"
+>;
 
 type HeaderFilterOption = { key: string; label: string };
 
@@ -139,11 +145,15 @@ export function PreparedMeatInventoryCalcPage({
   loadItems = fetchPreparedMeatItems,
   loadMovements = fetchPreparedMeatMovementsForItem,
   saveItemFlags = updatePreparedMeatItemFlags,
+  loadCustomers,
+  loadShippingMethods,
+  loadOrderNumber,
+  createOutbound,
 }: {
   loadItems?: ItemsLoader;
   loadMovements?: MovementsLoader;
   saveItemFlags?: ItemFlagsSaver;
-}) {
+} & OutboundModalProps) {
   const { t, i18n } = useTranslation();
   const [items, setItems] = useState<PreparedMeatItemOption[]>([]);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
@@ -158,6 +168,7 @@ export function PreparedMeatInventoryCalcPage({
   const [shopFilter, setShopFilter] = useState<string | null>(null);
   const [openFilter, setOpenFilter] = useState<"month" | "shop" | null>(null);
   const [optionsOpen, setOptionsOpen] = useState(false);
+  const [outboundOpen, setOutboundOpen] = useState(false);
   const monthFilterRef = useRef<HTMLDivElement>(null);
   const shopFilterRef = useRef<HTMLDivElement>(null);
   const years = useMemo(() => preparedMeatYearOptions(), []);
@@ -424,10 +435,27 @@ export function PreparedMeatInventoryCalcPage({
 
   return (
     <section className="raw-meat-calc-page prepared-meat-calc-page">
-      <header className="page-heading raw-meat-calc-heading">
+      <header className="page-heading raw-meat-calc-heading prepared-meat-calc-heading">
         <div>
           <span className="eyebrow">{t("preparedMeatInventory.eyebrow")}</span>
           <h1>{t("preparedMeatInventory.title")}</h1>
+        </div>
+        <div className="raw-meat-calc-heading-actions">
+          <Button type="button" disabled title={t("preparedMeatInventory.comingSoon")}>
+            {t("preparedMeatInventory.actions.addOption")}
+          </Button>
+          <Button type="button" disabled title={t("preparedMeatInventory.comingSoon")}>
+            {t("preparedMeatInventory.actions.stockInDeduct")}
+          </Button>
+          <Button type="button" disabled title={t("preparedMeatInventory.comingSoon")}>
+            {t("preparedMeatInventory.actions.stockInNoRaw")}
+          </Button>
+          <Button type="button" onClick={() => setOutboundOpen(true)}>
+            {t("preparedMeatInventory.actions.stockOut")}
+          </Button>
+          <Button type="button" disabled title={t("preparedMeatInventory.comingSoon")}>
+            {t("preparedMeatInventory.actions.manageOrders")}
+          </Button>
         </div>
       </header>
 
@@ -703,6 +731,16 @@ export function PreparedMeatInventoryCalcPage({
         items={items}
         onClose={() => setOptionsOpen(false)}
         onSaveFlags={handleSaveItemFlags}
+      />
+      <PreparedMeatOutboundModal
+        open={outboundOpen}
+        items={items}
+        onClose={() => setOutboundOpen(false)}
+        onSaved={reload}
+        loadCustomers={loadCustomers}
+        loadShippingMethods={loadShippingMethods}
+        loadOrderNumber={loadOrderNumber}
+        createOutbound={createOutbound}
       />
     </section>
   );

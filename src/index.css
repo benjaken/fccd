@@ -2359,7 +2359,8 @@ td:last-child {
 }
 
 .raw-meat-field input,
-.raw-meat-field textarea {
+.raw-meat-field textarea,
+.raw-meat-field select {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid var(--border);
@@ -2376,15 +2377,22 @@ td:last-child {
   padding-bottom: 0;
 }
 
+.raw-meat-field select {
+  height: 40px;
+}
+
 .raw-meat-field input:focus,
 .raw-meat-field textarea:focus,
+.raw-meat-field select:focus,
 .raw-meat-tag-field:focus-within {
   border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
   box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 16%, transparent);
 }
 
 .raw-meat-field input:disabled,
-.raw-meat-field input[readonly] {
+.raw-meat-field input[readonly],
+.raw-meat-field textarea[readonly],
+.raw-meat-field select:disabled {
   color: var(--muted-foreground);
   background: color-mix(in oklch, var(--muted) 45%, var(--background));
 }
@@ -2395,6 +2403,75 @@ td:last-child {
   color: var(--destructive);
   font-size: 0.82rem;
   font-style: normal;
+}
+
+.prepared-meat-calc-heading {
+  flex-wrap: wrap;
+}
+
+.prepared-meat-calc-page .raw-meat-calc-heading-actions {
+  justify-content: flex-start;
+  max-width: 100%;
+}
+
+.prepared-meat-outbound-form {
+  display: grid;
+  gap: 14px;
+}
+
+.prepared-meat-outbound-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px 16px;
+}
+
+.prepared-meat-outbound-address {
+  grid-column: 1;
+}
+
+.prepared-meat-outbound-add-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) 6.5rem minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.prepared-meat-outbound-lines-wrap {
+  overflow: visible;
+}
+
+.prepared-meat-outbound-lines {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.prepared-meat-outbound-lines th,
+.prepared-meat-outbound-lines td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+.prepared-meat-outbound-lines th {
+  background: color-mix(in oklch, var(--background) 65%, var(--card));
+  color: var(--muted-foreground);
+  font-weight: 750;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+}
+
+.prepared-meat-outbound-lines td:first-child,
+.prepared-meat-outbound-lines th:first-child {
+  width: 3.5rem;
+  text-align: center;
+}
+
+@media (max-width: 720px) {
+  .prepared-meat-outbound-header,
+  .prepared-meat-outbound-add-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 .raw-meat-tag-field {
@@ -3409,6 +3486,10 @@ td:last-child {
   width: min(520px, 100vw);
 }
 
+.side-panel-xl {
+  width: min(820px, 100vw);
+}
+
 .side-panel-header,
 .settings-side-panel-header {
   display: flex;
@@ -3543,6 +3624,7 @@ td:last-child {
 @media (max-width: 720px) {
   .side-panel,
   .side-panel-wide,
+  .side-panel-xl,
   .settings-side-panel,
   .settings-side-panel-wide {
     width: min(100vw, 100%);

@@ -18,6 +18,7 @@ const items: PreparedMeatItemOption[] = [
     id: "item-1",
     sku: "PM001",
     name: "五香牛腩",
+    unit: "包",
     sortOrder: 1,
     isActive: true,
   },
@@ -25,6 +26,7 @@ const items: PreparedMeatItemOption[] = [
     id: "item-2",
     sku: "PM002",
     name: "滷水豬手",
+    unit: "包",
     sortOrder: 2,
     isActive: true,
   },
@@ -252,6 +254,7 @@ describe("Prepared meat inventory calculation page", () => {
         id: "item-3",
         sku: "PM003",
         name: "秘製沙茶醬 (500g)",
+        unit: "樽",
         sortOrder: 12,
         isActive: false,
       },
@@ -313,5 +316,111 @@ describe("Prepared meat inventory calculation page", () => {
       "aria-current",
       "true",
     );
+  });
+
+  it("shows five heading actions and opens a delivery-note side panel for outbound", async () => {
+    const user = userEvent.setup();
+    const loadItems = vi.fn().mockResolvedValue(items);
+    const loadMovements = vi.fn().mockResolvedValue([]);
+    const loadCustomers = vi.fn().mockResolvedValue([
+      {
+        id: "cust-ylp",
+        customerCode: "C0085",
+        name: "桂花小幸 YLP",
+        contactPerson: "阿國 / 懷哥",
+        phone: "9899 1980",
+        address: "元朗廣場",
+        deliveryNoteRequired: true,
+      },
+      {
+        id: "cust-room",
+        customerCode: "Room R",
+        name: "Room R - 到會",
+        contactPerson: null,
+        phone: null,
+        address: null,
+        deliveryNoteRequired: false,
+      },
+    ]);
+    const loadShippingMethods = vi.fn().mockResolvedValue([
+      { id: "ship-1", name: "三皇物流" },
+    ]);
+    const loadOrderNumber = vi.fn().mockResolvedValue("R - 202608 - 8");
+    const createOutbound = vi.fn().mockResolvedValue("order-1");
+
+    render(
+      <MemoryRouter>
+        <PreparedMeatInventoryCalcPage
+          loadItems={loadItems}
+          loadMovements={loadMovements}
+          loadCustomers={loadCustomers}
+          loadShippingMethods={loadShippingMethods}
+          loadOrderNumber={loadOrderNumber}
+          createOutbound={createOutbound}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("button", { name: "新增製成品選項" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "製成品入貨(扣原料)" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "製成品入貨(無原料)" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "管理送貨單" })).toBeDisabled();
+
+    await user.click(screen.getByRole("button", { name: "製成品出貨" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "送貨單" });
+    expect(dialog).toHaveClass("side-panel-xl");
+
+    const shipping = within(dialog).getByRole("combobox", { name: "送貨方式" });
+    expect(shipping).toBeDisabled();
+
+    await user.selectOptions(
+      within(dialog).getByRole("combobox", { name: "客戶" }),
+      "cust-ylp",
+    );
+    expect(shipping).toBeEnabled();
+    await user.selectOptions(shipping, "ship-1");
+    expect(shipping).toHaveValue("ship-1");
+
+    await user.selectOptions(
+      within(dialog).getByRole("combobox", { name: "客戶" }),
+      "cust-room",
+    );
+    expect(shipping).toBeDisabled();
+    expect(shipping).toHaveValue("");
+
+    await user.selectOptions(
+      within(dialog).getByRole("combobox", { name: "客戶" }),
+      "cust-ylp",
+    );
+    expect(shipping).toBeEnabled();
+    await user.selectOptions(shipping, "ship-1");
+    await user.click(within(dialog).getByRole("button", { name: "確定" }));
+    expect(shipping).toBeDisabled();
+    await user.type(within(dialog).getByRole("textbox", { name: "數量" }), "2");
+    await user.click(within(dialog).getByRole("button", { name: "加入" }));
+
+    const lines = dialog.querySelector(".prepared-meat-outbound-lines");
+    expect(lines).not.toBeNull();
+    expect(within(lines as HTMLElement).getByText("五香牛腩")).toBeInTheDocument();
+    expect(within(lines as HTMLElement).getByText("2")).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole("button", { name: "傳送到工場" }));
+    await waitFor(() => {
+      expect(createOutbound).toHaveBeenCalledWith({
+        customerId: "cust-ylp",
+        shippingMethodId: "ship-1",
+        orderNumber: "R - 202608 - 8",
+        shippingDate: expect.any(String),
+        remarks: "",
+        lines: [
+          {
+            preparedMeatItemId: "item-1",
+            quantity: 2,
+            remarks: "",
+          },
+        ],
+      });
+    });
   });
 });

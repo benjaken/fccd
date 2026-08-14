@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  canSelectPreparedMeatShippingMethod,
   currentHongKongYear,
+  formatPreparedMeatOrderNumber,
   hongKongYearBounds,
   hongKongYearMonthKey,
+  nextPreparedMeatOrderSequence,
   preparedMeatMovementKind,
   preparedMeatYearOptions,
   withPreparedMeatRunningBalance,
@@ -106,5 +109,25 @@ describe("prepared meat year helpers", () => {
       end: "2027-01-01T00:00:00+08:00",
     });
     expect(hongKongYearMonthKey("2026-06-15T04:00:00.000Z")).toBe("2026-06");
+  });
+});
+
+describe("prepared meat outbound helpers", () => {
+  it("allows shipping method only for 桂花小幸 customers", () => {
+    expect(canSelectPreparedMeatShippingMethod("桂花小幸 YLP")).toBe(true);
+    expect(canSelectPreparedMeatShippingMethod("C0022 - 桂花小幸 TKO")).toBe(
+      true,
+    );
+    expect(canSelectPreparedMeatShippingMethod("Room R - 到會")).toBe(false);
+    expect(canSelectPreparedMeatShippingMethod(null)).toBe(false);
+  });
+
+  it("builds the next R - YYYYMM - n document number", () => {
+    expect(
+      formatPreparedMeatOrderNumber(
+        "202608",
+        nextPreparedMeatOrderSequence(["R - 202608 - 7", "R - 202608 - 2"]),
+      ),
+    ).toBe("R - 202608 - 8");
   });
 });

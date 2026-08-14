@@ -7,6 +7,7 @@ export type PreparedMeatItemOption = {
   id: string;
   sku: string | null;
   name: string;
+  unit: string | null;
   sortOrder: number | null;
   isActive: boolean;
 };
@@ -30,6 +31,7 @@ type ItemRow = {
   id: string;
   sku: string | null;
   name: string;
+  unit: string | null;
   sort_order: number | string | null;
   is_active: boolean | null;
 };
@@ -159,7 +161,7 @@ export function withPreparedMeatRunningBalance(
 export async function fetchPreparedMeatItems(): Promise<PreparedMeatItemOption[]> {
   const { data, error } = await supabase
     .from("prepared_meat_items")
-    .select("id,sku,name,sort_order,is_active")
+    .select("id,sku,name,unit,sort_order,is_active")
     .is("archived_at", null)
     .order("sort_order", { ascending: true, nullsFirst: false })
     .order("name", { ascending: true });
@@ -169,6 +171,7 @@ export async function fetchPreparedMeatItems(): Promise<PreparedMeatItemOption[]
     id: row.id,
     sku: row.sku,
     name: row.name,
+    unit: row.unit,
     sortOrder: toNumber(row.sort_order),
     isActive: row.is_active !== false,
   }));
@@ -227,3 +230,111 @@ export async function fetchPreparedMeatMovementsForItem(
     opening,
   );
 }
+
+export const GUIHUA_CUSTOMER_MARKER = "桂花小幸";
+
+export function canSelectPreparedMeatShippingMethod(
+  customerName: string | null | undefined,
+) {
+  return (customerName ?? "").includes(GUIHUA_CUSTOMER_MARKER);
+}
+
+export function meatCustomerOptionLabel(row: {
+  customerCode: string | null;
+  name: string;
+}) {
+  const code = row.customerCode?.trim();
+  return code ? `${code} - ${row.name}` : row.name;
+}
+
+export function preparedMeatOrderYearMonth(dateValue: string) {
+  return dateValue.slice(0, 7).replace("-", "");
+}
+
+export function formatPreparedMeatOrderNumber(yearMonth: string, sequence: number) {
+  return `R - ${yearMonth} - ${sequence}`;
+}
+
+export function nextPreparedMeatOrderSequence(orderNumbers: Array<string | null>) {
+  let max = 0;
+  for (const value of orderNumbers) {
+    const match = String(value ?? "").match(/R - \d{6} - (\d+)$/);
+    const sequence = match ? Number.parseInt(match[1]!, 10) : Number.NaN;
+    if (Number.isFinite(sequence) && sequence > max) max = sequence;
+  }
+  return max + 1;
+}
+
+export type MeatShippingMethodOption = {
+  id: string;
+  name: string;
+};
+
+export async function fetchMeatShippingMethods(): Promise<
+  MeatShippingMethodOption[]
+> {
+  const { data, error } = await supabase
+    .from("meat_shipping_methods")
+    .select("id,name")
+    .is("archived_at", null)
+    .order("name", { ascending: true });
+
+  if (error) throw error;
+  return ((data ?? []) as MeatShippingMethodOption[]).filter((row) =>
+    Boolean(row.name?.trim()),
+  );
+}
+
+export async function fetchNextPreparedMeatOrderNumber(
+  shippingDate: string,
+): Promise<string> {
+  const yearMonth = preparedMeatOrderYearMonth(shippingDate);
+  const prefix = `R - ${yearMonth} - `;
+  const { data, error } = await supabase
+    .from("meat_orders")
+    .select("order_number")
+    .like("order_number", `${prefix}%`);
+
+  if (error) throw error;
+  return formatPreparedMeatOrderNumber(
+    yearMonth,
+    nextPreparedMeatOrderSequence(
+      (data ?? []).map((row) => row.order_number as string | null),
+    ),
+  );
+}
+
+export type PreparedMeatOutboundLineInput = {
+  preparedMeatItemId: string;
+  quantity: number;
+  remarks?: string | null;
+};
+
+export type PreparedMeatOutboundInput = {
+  customerId: string;
+  shippingMethodId?: string | null;
+  orderNumber: string;
+  shippingDate: string;
+  remarks?: string | null;
+  lines: PreparedMeatOutboundLineInput[];
+};
+
+export async function createPreparedMeatOutbound(
+  input: PreparedMeatOutboundInput,
+): Promise<string> {
+  const { data, error } = await supabase.rpc("create_prepared_meat_outbound", {
+    p_customer_id: input.customerId,
+    p_shipping_method_id: input.shippingMethodId || null,
+    p_order_number: input.orderNumber.trim(),
+    p_shipping_date: input.shippingDate,
+    p_remarks: (input.remarks ?? "").trim() || null,
+    p_lines: input.lines.map((line) => ({
+      prepared_meat_item_id: line.preparedMeatItemId,
+      quantity: line.quantity,
+      remarks: (line.remarks ?? "").trim() || null,
+    })),
+  });
+  if (error) throw error;
+  return data as string;
+}
+

@@ -727,6 +727,16 @@ describe("Super Admin system settings", () => {
     expect(preparedMeatFlags).toContain("update_prepared_meat_item_flags");
     expect(preparedMeatFlags).toContain("frozen.prepared_meat_inventory");
 
+    const preparedMeatOutbound = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260814185000_create_prepared_meat_outbound.sql",
+      ),
+      "utf8",
+    );
+    expect(preparedMeatOutbound).toContain("create_prepared_meat_outbound");
+    expect(preparedMeatOutbound).toContain("桂花小幸");
+
     const rawMeatActions = readFileSync(
       path.resolve(
         process.cwd(),
