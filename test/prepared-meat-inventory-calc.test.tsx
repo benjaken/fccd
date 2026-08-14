@@ -490,6 +490,13 @@ describe("Prepared meat inventory calculation page", () => {
     ).toHaveClass("prepared-meat-outbound-address");
     expect(within(dialog).getByRole("textbox", { name: "聯絡人" })).toBeEnabled();
     expect(within(dialog).getByRole("textbox", { name: "文件編號" })).toBeEnabled();
+    expect(within(dialog).getByPlaceholderText("選擇製成品")).toBeInTheDocument();
+    expect(within(dialog).getByPlaceholderText("例如：1")).toBeInTheDocument();
+    expect(within(dialog).getAllByPlaceholderText("輸入備註").length).toBeGreaterThan(
+      0,
+    );
+    expect(within(dialog).queryByPlaceholderText("Quantity")).toBeNull();
+    expect(within(dialog).queryByPlaceholderText("Prepared meat")).toBeNull();
 
     const shipping = within(dialog).getByRole("combobox", { name: "送貨方式" });
     expect(shipping).toBeDisabled();
@@ -591,6 +598,9 @@ describe("Prepared meat inventory calculation page", () => {
     expect(within(dialog).queryByRole("combobox", { name: "客戶" })).toBeNull();
     expect(within(dialog).queryByRole("combobox", { name: "生肉" })).toBeNull();
     expect(within(dialog).getByRole("button", { name: "確定" })).toBeDisabled();
+    expect(within(dialog).getByPlaceholderText("選擇製成品")).toBeInTheDocument();
+    expect(within(dialog).getByPlaceholderText("例如：1")).toBeInTheDocument();
+    expect(within(dialog).queryByPlaceholderText("Quantity")).toBeNull();
 
     await user.click(within(dialog).getByRole("combobox", { name: "製成品" }));
     await user.click(within(dialog).getByRole("option", { name: "五香牛腩" }));
@@ -672,6 +682,8 @@ describe("Prepared meat inventory calculation page", () => {
     });
     expect(dialog).toHaveClass("side-panel-wide");
     expect(within(dialog).getByRole("button", { name: "提交" })).toBeDisabled();
+    expect(within(dialog).getByPlaceholderText("選擇生肉")).toBeInTheDocument();
+    expect(within(dialog).queryByPlaceholderText("Choose some options...")).toBeNull();
 
     await user.click(within(dialog).getByRole("textbox", { name: "生肉" }));
     await user.click(

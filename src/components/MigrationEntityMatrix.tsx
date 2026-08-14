@@ -90,7 +90,7 @@ export function MigrationEntityMatrix() {
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder={t("migrationMatrix.search")}
+            placeholder={t("migrationMatrix.searchPlaceholder")}
           />
         </label>
       </div>

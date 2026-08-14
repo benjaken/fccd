@@ -589,7 +589,7 @@ export function PreparedMeatOutboundModal({
               <div className="raw-meat-field">
                 <PreparedMeatItemSearchSelect
                   label={t("preparedMeatInventory.outbound.rawProduct")}
-                  placeholder={t("preparedMeatInventory.outbound.rawProduct")}
+                  placeholder={t("preparedMeatInventory.outbound.rawProductPlaceholder")}
                   value={draftRawId}
                   options={rawItems}
                   disabled={locked || loading}
@@ -601,7 +601,7 @@ export function PreparedMeatOutboundModal({
                   value={draftRawQuantity}
                   onChange={setDraftRawQuantity}
                   disabled={locked}
-                  placeholder={t("preparedMeatInventory.outbound.quantity")}
+                  placeholder={t("preparedMeatInventory.outbound.quantityPlaceholder")}
                   ariaLabel={t("preparedMeatInventory.outbound.rawQuantity")}
                 />
               </div>
@@ -641,7 +641,7 @@ export function PreparedMeatOutboundModal({
             <div className="raw-meat-field">
               <PreparedMeatItemSearchSelect
                 label={t("preparedMeatInventory.outbound.preparedProduct")}
-                placeholder={t("preparedMeatInventory.outbound.preparedProduct")}
+                placeholder={t("preparedMeatInventory.outbound.preparedProductPlaceholder")}
                 value={draftPreparedId}
                 options={activeItems}
                 disabled={locked || loading}
@@ -653,7 +653,7 @@ export function PreparedMeatOutboundModal({
                 value={draftPreparedQuantity}
                 onChange={setDraftPreparedQuantity}
                 disabled={locked}
-                placeholder={t("preparedMeatInventory.outbound.quantity")}
+                placeholder={t("preparedMeatInventory.outbound.quantityPlaceholder")}
                 ariaLabel={t("preparedMeatInventory.outbound.preparedQuantity")}
               />
             </div>
@@ -743,7 +743,7 @@ export function PreparedMeatOutboundModal({
                             setError(null);
                           }}
                           placeholder={t(
-                            "preparedMeatInventory.outbound.quantity",
+                            "preparedMeatInventory.outbound.quantityPlaceholder",
                           )}
                           ariaLabel={`${line.name} ${t("preparedMeatInventory.outbound.quantity")}`}
                         />

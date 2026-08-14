@@ -190,7 +190,7 @@ export function PreparedMeatInboundNoRawModal({
             <div className="raw-meat-field">
               <PreparedMeatItemSearchSelect
                 label={t("preparedMeatInventory.outbound.preparedProduct")}
-                placeholder={t("preparedMeatInventory.outbound.preparedProduct")}
+                placeholder={t("preparedMeatInventory.outbound.preparedProductPlaceholder")}
                 value={draftItemId}
                 options={activeItems}
                 disabled={submitting}
@@ -202,7 +202,7 @@ export function PreparedMeatInboundNoRawModal({
                 value={draftQuantity}
                 onChange={setDraftQuantity}
                 disabled={submitting}
-                placeholder={t("preparedMeatInventory.outbound.quantity")}
+                placeholder={t("preparedMeatInventory.outbound.quantityPlaceholder")}
                 ariaLabel={t("preparedMeatInventory.outbound.preparedQuantity")}
               />
             </div>
@@ -265,7 +265,7 @@ export function PreparedMeatInboundNoRawModal({
                           updateLine(line.key, { quantity: next });
                           setError(null);
                         }}
-                        placeholder={t("preparedMeatInventory.outbound.quantity")}
+                        placeholder={t("preparedMeatInventory.outbound.quantityPlaceholder")}
                         ariaLabel={`${line.name} ${t("preparedMeatInventory.outbound.quantity")}`}
                       />
                     </td>

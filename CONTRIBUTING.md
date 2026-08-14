@@ -42,7 +42,8 @@ The FCCD design system (shadcn/ui + Ant Design practices) lives in
 
 Hard rules for layout, theme tokens, status colors, preview sign-in,
 **shared componentization**, and **i18n placeholders** (never hard-code
-placeholder text; zh-HK must be Traditional Chinese, not English Bubble copy):
+placeholder text; use a dedicated `*Placeholder` key; zh-HK must be
+Traditional Chinese, not English Bubble copy):
 [`docs/UI_DEVELOPMENT_STANDARD.md`](docs/UI_DEVELOPMENT_STANDARD.md).
 
 Paginated operational tables follow

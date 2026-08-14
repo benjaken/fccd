@@ -499,7 +499,7 @@ export function DataMigrationPage() {
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder={t("migration.searchObjects")}
+              placeholder={t("migration.searchObjectsPlaceholder")}
             />
           </label>
         </header>

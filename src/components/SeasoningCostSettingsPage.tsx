@@ -255,7 +255,7 @@ function SeasoningCostFormPanel({
             }
             readOnly
             disabled
-            placeholder={t("seasoningCost.fields.costPerGramAuto")}
+            placeholder={t("seasoningCost.fields.costPerGramPlaceholder")}
           />
         </label>
 

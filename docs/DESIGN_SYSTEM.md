@@ -94,7 +94,7 @@ Active 導航（側欄、工作區 soft link、migration tab）必須是**淡綠
 | Eyebrow | 小寫距大寫／品牌色 | 區塊眉題，不壓過品牌 |
 
 字型堆疊維持現有：`Inter, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui`。  
-文案一律走 `src/i18n.ts`，預設 `zh-HK`。輸入框 placeholder 同樣走 i18n；中文 locale 不得使用英文提示。
+文案一律走 `src/i18n.ts`，預設 `zh-HK`。輸入框 placeholder 同樣走獨立 `*Placeholder` i18n key；中文 locale 不得使用英文提示。
 
 ### 2.3 間距 Spacing
 
@@ -233,7 +233,7 @@ Active 導航（側欄、工作區 soft link、migration tab）必須是**淡綠
 借 Ant Design 表單節奏 + shadcn 輸入外觀：
 
 - 標籤在欄位上方（營運後台預設），文案走 i18n
-- **Placeholder 必須 `t(...)`**，禁止在 JSX 硬編碼。預設 `zh-HK` 用繁中或「例如：…」；不要把英文 Bubble 原文（如 `Product Name`、`Choose some options...`）放進中文 catalog。`en-GB` 才用英文 placeholder
+- **Placeholder 必須獨立 i18n key**（名稱以 `Placeholder` 結尾），禁止在 JSX 硬編碼，也禁止把欄位標籤拿來當 placeholder。預設 `zh-HK` 用繁中或「例如：…」；不要把英文 Bubble 原文（如 `Product Name`、`Choose some options...`）放進中文 catalog。`en-GB` 才用英文 placeholder
 - 校驗錯誤：欄位旁／下方短訊 + 必要時頂部摘要（PRD UX-07）
 - 必填在標籤標示；送出中按鈕進入 loading／disabled，防重複提交
 - 輸入高度與 middle 按鈕對齊；focus 使用 `--ring`

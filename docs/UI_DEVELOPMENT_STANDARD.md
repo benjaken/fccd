@@ -189,18 +189,20 @@ visual rule here changes, update this document in the same change set.
 ## 8. Copy / i18n placeholders (hard rule)
 
 All user-visible copy goes through `src/i18n.ts` (`t(...)`). This includes
-**input placeholders**.
+**input placeholders**. Never put English (or any) placeholder copy in JSX.
 
 | Rule | Detail |
 |---|---|
-| No hard-coded placeholders | Do not write `placeholder="Product Name"` or `placeholder="0"` in JSX. Pass `t("…Placeholder")`. |
-| zh-HK is Chinese | Default locale placeholders must be Traditional Chinese, or a numeric example such as `例如：0.5`. |
+| Dedicated `*Placeholder` keys | Use `t("module.fields.namePlaceholder")`, not a field label such as `t("module.fields.name")`. Shared controls may take a `placeholder` prop, but callers still pass `t("…Placeholder")`. |
+| No hard-coded placeholders | Do not write `placeholder="Product Name"`, `placeholder="0"`, or `placeholder="選擇生肉"` in JSX. |
+| zh-HK is Chinese | Default locale placeholders must contain Traditional Chinese, or be a numeric / email / phone example (`例如：0.5`, `name@foodchannels.com`). |
 | Do not paste Bubble English | Never copy English Bubble labels (`Product Name`, `Product Code`, `Choose some options...`, `Remark`) into the `zh-HK` catalog. |
-| en-GB may be English | The English locale is the only place for English placeholder sentences (`e.g. 1`, `Enter remarks`). |
+| en-GB may be English | The English locale is the only place for English placeholder sentences (`e.g. 1`, `Enter remarks`). Even there, use instructional copy, not Bubble leftovers. |
 | Examples | zh-HK uses `例如：…`. Do not use `e.g.` in `zh-HK`. |
 
 Automated coverage: `test/i18n-placeholders.test.ts` rejects English-prose
-`*Placeholder` strings in `zh-HK`.
+`*Placeholder` strings in `zh-HK`, hard-coded `placeholder="…"`, and
+`placeholder={t("…")}` keys that do not end in `Placeholder`.
 
 ## 9. Related standards
 
