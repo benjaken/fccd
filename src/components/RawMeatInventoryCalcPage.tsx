@@ -7,19 +7,38 @@ import {
   useState,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { Beef, Check, ChevronDown, RefreshCw, SlidersHorizontal, Trash2, X } from "lucide-react";
+import {
+  Beef,
+  Check,
+  ChevronDown,
+  Pencil,
+  Plus,
+  RefreshCw,
+  SlidersHorizontal,
+  Trash2,
+  X,
+} from "lucide-react";
 
+import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
 import { ListTable } from "@/components/ui/list-table";
+import { RawMeatOptionFormModal } from "@/components/RawMeatOptionFormModal";
 import { RawMeatOptionsModal } from "@/components/RawMeatOptionsModal";
+import { RawMeatStockInModal } from "@/components/RawMeatStockInModal";
 import { TablePagination } from "@/components/ui/table-pagination";
+import { FROZEN_ACTION_PERMISSION_KEYS } from "@/lib/frozen-action-permissions";
 import {
+  createRawMeatItem,
+  createRawMeatStockIn,
   fetchRawMeatItems,
   fetchRawMeatMovementsForItem,
+  fetchRawMeatSuppliers,
+  fetchRawMeatUnitMultipliers,
   currentHongKongYear,
   hongKongYearMonthKey,
   RAW_MEAT_MOVEMENTS_PAGE_SIZE,
   rawMeatYearOptions,
+  updateRawMeatItem,
   updateRawMeatItemFlags,
   updateRawMeatMovementRemark,
   type RawMeatItemOption,
@@ -54,6 +73,9 @@ type ItemFlagsSaver = (
   itemId: string,
   flags: { canShipDirectly: boolean; isActive: boolean },
 ) => Promise<void>;
+type ItemCreator = typeof createRawMeatItem;
+type ItemUpdater = typeof updateRawMeatItem;
+type StockInCreator = typeof createRawMeatStockIn;
 
 function RemarkEditor({
   value,
@@ -196,13 +218,39 @@ export function RawMeatInventoryCalcPage({
   loadMovements = fetchRawMeatMovementsForItem,
   saveRemark = updateRawMeatMovementRemark,
   saveItemFlags = updateRawMeatItemFlags,
+  loadSuppliers = fetchRawMeatSuppliers,
+  createItem = createRawMeatItem,
+  updateItem = updateRawMeatItem,
+  createStockIn = createRawMeatStockIn,
+  loadUnitMultipliers = fetchRawMeatUnitMultipliers,
+  canCreate: canCreateProp,
+  canEdit: canEditProp,
+  canStockIn: canStockInProp,
 }: {
   loadItems?: ItemsLoader;
   loadMovements?: MovementsLoader;
   saveRemark?: RemarkSaver;
   saveItemFlags?: ItemFlagsSaver;
+  loadSuppliers?: typeof fetchRawMeatSuppliers;
+  createItem?: ItemCreator;
+  updateItem?: ItemUpdater;
+  createStockIn?: StockInCreator;
+  loadUnitMultipliers?: typeof fetchRawMeatUnitMultipliers;
+  canCreate?: boolean;
+  canEdit?: boolean;
+  canStockIn?: boolean;
 }) {
   const { t, i18n } = useTranslation();
+  const pageAccess = useCurrentPageAccess();
+  const canCreate =
+    canCreateProp ??
+    pageAccess.canAccess(FROZEN_ACTION_PERMISSION_KEYS.rawMeatInventory.create);
+  const canEdit =
+    canEditProp ??
+    pageAccess.canAccess(FROZEN_ACTION_PERMISSION_KEYS.rawMeatInventory.edit);
+  const canStockIn =
+    canStockInProp ??
+    pageAccess.canAccess(FROZEN_ACTION_PERMISSION_KEYS.rawMeatInventory.stockIn);
   const [items, setItems] = useState<RawMeatItemOption[]>([]);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [movements, setMovements] = useState<RawMeatMovementRow[]>([]);
@@ -212,6 +260,9 @@ export function RawMeatInventoryCalcPage({
   const [reloadKey, setReloadKey] = useState(0);
   const [page, setPage] = useState(1);
   const [optionsOpen, setOptionsOpen] = useState(false);
+  const [optionFormOpen, setOptionFormOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<RawMeatItemOption | null>(null);
+  const [stockInOpen, setStockInOpen] = useState(false);
   const [year, setYear] = useState(() => currentHongKongYear());
   const [monthFilter, setMonthFilter] = useState<string | null>(null);
   const [monthMenuOpen, setMonthMenuOpen] = useState(false);
@@ -452,6 +503,27 @@ export function RawMeatInventoryCalcPage({
     setReloadKey((current) => current + 1);
   }, []);
 
+  const openCreateOption = () => {
+    setEditingItem(null);
+    setOptionFormOpen(true);
+  };
+
+  const openEditOption = (item: RawMeatItemOption) => {
+    setEditingItem(item);
+    setOptionFormOpen(true);
+  };
+
+  const handleSavedOption = (
+    row: RawMeatItemOption,
+    mode: "create" | "edit",
+  ) => {
+    setItems((current) => {
+      if (mode === "create") return [...current, row];
+      return current.map((item) => (item.id === row.id ? row : item));
+    });
+    if (row.isActive) setSelectedItemId(row.id);
+  };
+
   const handleSaveRemark = useEffectEvent(
     async (movementId: string, nextRemark: string) => {
       const saved = await saveRemark(movementId, nextRemark);
@@ -521,18 +593,33 @@ export function RawMeatInventoryCalcPage({
         >
           <div className="raw-meat-calc-sidebar-header">
             <strong>{t("rawMeatInventory.items")}</strong>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="raw-meat-calc-options-trigger"
-              aria-label={t("rawMeatInventory.openOptions")}
-              title={t("rawMeatInventory.openOptions")}
-              onClick={() => setOptionsOpen(true)}
-              disabled={itemsLoading || items.length === 0}
-            >
-              <SlidersHorizontal />
-            </Button>
+            <div className="raw-meat-calc-sidebar-actions">
+              {canCreate ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="raw-meat-calc-options-trigger"
+                  aria-label={t("rawMeatInventory.createSidebar")}
+                  title={t("rawMeatInventory.createSidebar")}
+                  onClick={openCreateOption}
+                >
+                  <Plus />
+                </Button>
+              ) : null}
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="raw-meat-calc-options-trigger"
+                aria-label={t("rawMeatInventory.openOptions")}
+                title={t("rawMeatInventory.openOptions")}
+                onClick={() => setOptionsOpen(true)}
+                disabled={itemsLoading || items.length === 0}
+              >
+                <SlidersHorizontal />
+              </Button>
+            </div>
           </div>
           {itemsLoading ? (
             <div className="raw-meat-calc-sidebar-state" role="status">
@@ -549,18 +636,40 @@ export function RawMeatInventoryCalcPage({
                 const active = item.id === selectedItem?.id;
                 return (
                   <li key={item.id}>
-                    <button
-                      type="button"
+                    <div
                       className={
                         active
-                          ? "raw-meat-calc-item active"
-                          : "raw-meat-calc-item"
+                          ? "raw-meat-calc-item-row active"
+                          : "raw-meat-calc-item-row"
                       }
-                      aria-current={active ? "true" : undefined}
-                      onClick={() => setSelectedItemId(item.id)}
                     >
-                      {item.name}
-                    </button>
+                      <button
+                        type="button"
+                        className="raw-meat-calc-item"
+                        aria-current={active ? "true" : undefined}
+                        onClick={() => setSelectedItemId(item.id)}
+                      >
+                        {item.name}
+                      </button>
+                      {canEdit ? (
+                        <button
+                          type="button"
+                          className="raw-meat-calc-item-edit"
+                          aria-label={t("rawMeatInventory.editOption", {
+                            name: item.name,
+                          })}
+                          title={t("rawMeatInventory.editOption", {
+                            name: item.name,
+                          })}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            openEditOption(item);
+                          }}
+                        >
+                          <Pencil />
+                        </button>
+                      ) : null}
+                    </div>
                   </li>
                 );
               })}
@@ -592,17 +701,23 @@ export function RawMeatInventoryCalcPage({
                   ))}
                 </select>
               </label>
+              {canCreate ? (
+                <Button type="button" onClick={openCreateOption}>
+                  {t("rawMeatInventory.addOption")}
+                </Button>
+              ) : null}
               <Button
                 type="button"
-                disabled
-                title={t("rawMeatInventory.comingSoon")}
-              >
-                {t("rawMeatInventory.addOption")}
-              </Button>
-              <Button
-                type="button"
-                disabled
-                title={t("rawMeatInventory.comingSoon")}
+                disabled={!canStockIn || !selectedItem}
+                title={
+                  canStockIn
+                    ? undefined
+                    : t("rawMeatInventory.comingSoon")
+                }
+                onClick={() => {
+                  if (!canStockIn || !selectedItem) return;
+                  setStockInOpen(true);
+                }}
               >
                 {t("rawMeatInventory.stockIn")}
               </Button>
@@ -835,6 +950,30 @@ export function RawMeatInventoryCalcPage({
         items={items}
         onClose={() => setOptionsOpen(false)}
         onSaveFlags={handleSaveItemFlags}
+      />
+      <RawMeatOptionFormModal
+        open={optionFormOpen}
+        item={editingItem}
+        onClose={() => {
+          setOptionFormOpen(false);
+          setEditingItem(null);
+        }}
+        onSaved={handleSavedOption}
+        loadSuppliers={loadSuppliers}
+        createItem={createItem}
+        updateItem={updateItem}
+      />
+      <RawMeatStockInModal
+        open={stockInOpen}
+        items={items}
+        selectedItemId={selectedItemId}
+        onClose={() => setStockInOpen(false)}
+        onSaved={(itemId) => {
+          setSelectedItemId(itemId);
+          reload();
+        }}
+        createStockIn={createStockIn}
+        loadUnitMultipliers={loadUnitMultipliers}
       />
     </section>
   );

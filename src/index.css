@@ -1833,6 +1833,12 @@ td:last-child {
   font-size: 0.92rem;
 }
 
+.raw-meat-calc-sidebar-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
 .raw-meat-calc-options-trigger {
   width: 32px;
   height: 32px;
@@ -1863,6 +1869,13 @@ td:last-child {
   gap: 4px;
 }
 
+.raw-meat-calc-item-row {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+  border-radius: 9px;
+}
+
 .raw-meat-calc-item {
   width: 100%;
   display: block;
@@ -1881,12 +1894,45 @@ td:last-child {
     color 160ms ease;
 }
 
-.raw-meat-calc-item:hover {
+.raw-meat-calc-item-row .raw-meat-calc-item {
+  flex: 1;
+  min-width: 0;
+  border-radius: 9px 0 0 9px;
+}
+
+.raw-meat-calc-item-row:not(:has(.raw-meat-calc-item-edit)) .raw-meat-calc-item {
+  border-radius: 9px;
+}
+
+.raw-meat-calc-item-edit {
+  flex: 0 0 32px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 0 9px 9px 0;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+
+.raw-meat-calc-item-edit svg {
+  width: 14px;
+  height: 14px;
+}
+
+.raw-meat-calc-item-row:hover {
   background: color-mix(in oklch, var(--accent) 70%, transparent);
 }
 
-.raw-meat-calc-item.active {
+.raw-meat-calc-item-row.active {
   background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.raw-meat-calc-item-row.active .raw-meat-calc-item,
+.raw-meat-calc-item-row.active .raw-meat-calc-item-edit {
   color: var(--primary-foreground);
   font-weight: 600;
 }
@@ -2292,6 +2338,255 @@ td:last-child {
   to {
     opacity: 1;
     transform: none;
+  }
+}
+
+.raw-meat-form-modal {
+  width: min(520px, 100%);
+  max-height: min(88dvh, 760px);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.raw-meat-form-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px 8px;
+}
+
+.raw-meat-form-modal-header h2 {
+  margin: 0;
+  width: 100%;
+  text-align: center;
+  font-size: 1.15rem;
+}
+
+.raw-meat-form-modal-header .button {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+}
+
+.raw-meat-form-modal {
+  position: relative;
+}
+
+.raw-meat-form-modal-body {
+  min-height: 0;
+  overflow: auto;
+  padding: 8px 22px 12px;
+}
+
+.raw-meat-form-modal-footer {
+  padding: 0 22px 20px;
+}
+
+.raw-meat-form-submit {
+  width: 100%;
+  height: 44px;
+}
+
+.raw-meat-option-form,
+.raw-meat-stock-in-form {
+  display: grid;
+  gap: 14px;
+}
+
+.raw-meat-field,
+.raw-meat-tag-picker {
+  display: grid;
+  gap: 6px;
+  position: relative;
+}
+
+.raw-meat-field > span,
+.raw-meat-tag-picker > span {
+  color: var(--foreground);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.raw-meat-field input,
+.raw-meat-field textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  outline: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+}
+
+.raw-meat-field input {
+  height: 40px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.raw-meat-field input:focus,
+.raw-meat-field textarea:focus,
+.raw-meat-tag-field:focus-within {
+  border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 16%, transparent);
+}
+
+.raw-meat-field input:disabled,
+.raw-meat-field input[readonly] {
+  color: var(--muted-foreground);
+  background: color-mix(in oklch, var(--muted) 45%, var(--background));
+}
+
+.raw-meat-field-error,
+.raw-meat-form-error {
+  margin: 0;
+  color: var(--destructive);
+  font-size: 0.82rem;
+  font-style: normal;
+}
+
+.raw-meat-tag-field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-height: 42px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--background);
+}
+
+.raw-meat-tag-field.is-disabled {
+  opacity: 0.65;
+}
+
+.raw-meat-tag-field input {
+  flex: 1;
+  min-width: 7rem;
+  height: 28px;
+  padding: 0 4px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--foreground);
+  font: inherit;
+}
+
+.raw-meat-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--muted) 80%, var(--background));
+  color: var(--foreground);
+  font-size: 0.82rem;
+}
+
+.raw-meat-tag button {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+
+.raw-meat-tag button svg {
+  width: 12px;
+  height: 12px;
+}
+
+.raw-meat-tag-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  max-height: 12rem;
+  overflow: auto;
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--background);
+  box-shadow: 0 10px 24px color-mix(in oklch, black 16%, transparent);
+}
+
+.raw-meat-tag-menu button {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.raw-meat-tag-menu button:hover,
+.raw-meat-tag-menu button:focus-visible {
+  background: color-mix(in oklch, var(--primary) 12%, transparent);
+  outline: none;
+}
+
+.raw-meat-tag-empty {
+  padding: 8px 12px;
+  color: var(--muted-foreground);
+  font-size: 0.84rem;
+}
+
+.raw-meat-stock-in-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.raw-meat-unit-toggle {
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--background);
+}
+
+.raw-meat-unit-toggle button {
+  height: 100%;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--foreground);
+  font: inherit;
+  font-size: 0.86rem;
+  cursor: pointer;
+}
+
+.raw-meat-unit-toggle button.is-active {
+  background: var(--foreground);
+  color: var(--background);
+}
+
+@media (max-width: 640px) {
+  .raw-meat-stock-in-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .raw-meat-unit-toggle {
+    grid-column: 1 / -1;
+    justify-content: space-between;
   }
 }
 

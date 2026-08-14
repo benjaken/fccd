@@ -7,28 +7,46 @@ import { RawMeatInventoryCalcPage } from "@/components/RawMeatInventoryCalcPage"
 import i18n from "@/i18n";
 import {
   currentHongKongYear,
+  DEFAULT_RAW_MEAT_UNIT_MULTIPLIERS,
   type RawMeatItemOption,
   type RawMeatMovementRow,
 } from "@/lib/raw-meat-inventory";
 
+vi.mock("@/auth/AuthProvider", () => ({
+  useAuth: () => ({
+    user: { app_metadata: { role: "Super Admin" } },
+    profile: { role: "Super Admin" },
+  }),
+}));
+
 const currentYear = currentHongKongYear();
+
+const suppliers = [
+  { id: "sup-1", name: "廣聯興" },
+  { id: "sup-2", name: "萬福 (OFE)" },
+  { id: "sup-3", name: "新豐凍肉 (SFFM)" },
+];
 
 const items: RawMeatItemOption[] = [
   {
     id: "item-1",
+    sku: "LKJ015",
     name: "乾冬菇 (廣信)",
-    englishName: null,
+    englishName: "Dried Mushroom",
     sortOrder: 1,
     canShipDirectly: true,
     isActive: true,
+    suppliers: [suppliers[0]!],
   },
   {
     id: "item-2",
+    sku: "RAW015",
     name: "羊腩(生)",
     englishName: null,
     sortOrder: 2,
     canShipDirectly: false,
     isActive: true,
+    suppliers: [suppliers[2]!],
   },
 ];
 
@@ -132,8 +150,9 @@ describe("Raw meat inventory calculation page", () => {
     expect(screen.getByRole("combobox", { name: "年份" })).toHaveValue(
       String(currentYear),
     );
-    expect(screen.getByRole("button", { name: "新增生肉選項" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "生肉入貨" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "新增生肉選項" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "新建" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "生肉入貨" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "生肉出貨" })).toBeDisabled();
     expect(screen.queryByText("15")).not.toBeInTheDocument();
   });
@@ -329,5 +348,199 @@ describe("Raw meat inventory calculation page", () => {
     expect(within(totalRow as HTMLElement).getByText("1.00 kg")).toBeInTheDocument();
     expect(within(totalRow as HTMLElement).getByText("0.00 kg")).toBeInTheDocument();
     expect(within(totalRow as HTMLElement).getByText("HK$130.00")).toBeInTheDocument();
+  });
+
+  it("creates a raw meat option with multiple suppliers from the sidebar and toolbar", async () => {
+    const user = userEvent.setup();
+    const loadItems = vi.fn().mockResolvedValue(structuredClone(items));
+    const loadMovements = vi.fn().mockResolvedValue([]);
+    const loadSuppliers = vi.fn().mockResolvedValue(suppliers);
+    const createItem = vi.fn().mockResolvedValue({
+      id: "item-3",
+      sku: "RAW099",
+      name: "test肉",
+      englishName: "Test meat",
+      sortOrder: 3,
+      canShipDirectly: false,
+      isActive: true,
+      suppliers: [suppliers[1]!, suppliers[2]!],
+    });
+
+    render(
+      <MemoryRouter>
+        <RawMeatInventoryCalcPage
+          loadItems={loadItems}
+          loadMovements={loadMovements}
+          loadSuppliers={loadSuppliers}
+          createItem={createItem}
+        />
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole("button", { name: "乾冬菇 (廣信)" });
+    await user.click(screen.getByRole("button", { name: "新建" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "添加選項" });
+    await user.type(within(dialog).getByPlaceholderText("code"), "RAW099");
+    const nameFields = within(dialog).getAllByPlaceholderText("Type here...");
+    await user.type(nameFields[0]!, "test肉");
+    await user.type(nameFields[1]!, "Test meat");
+
+    const supplierInput = within(dialog).getByRole("textbox", { name: "供應商" });
+    await user.click(supplierInput);
+    await user.click(await screen.findByRole("option", { name: "萬福 (OFE)" }));
+    await user.click(supplierInput);
+    await user.click(await screen.findByRole("option", { name: "新豐凍肉 (SFFM)" }));
+    await user.click(within(dialog).getByRole("button", { name: "提交" }));
+
+    await waitFor(() => {
+      expect(createItem).toHaveBeenCalledWith({
+        sku: "RAW099",
+        name: "test肉",
+        englishName: "Test meat",
+        supplierIds: ["sup-2", "sup-3"],
+      });
+    });
+
+    expect(await screen.findByRole("button", { name: "test肉" })).toBeInTheDocument();
+  });
+
+  it("edits a raw meat option from the row action", async () => {
+    const user = userEvent.setup();
+    const loadItems = vi.fn().mockResolvedValue(structuredClone(items));
+    const loadMovements = vi
+      .fn()
+      .mockImplementation(async (itemId: string) =>
+        structuredClone(movementsByItem[itemId] ?? []),
+      );
+    const loadSuppliers = vi.fn().mockResolvedValue(suppliers);
+    const updateItem = vi.fn().mockImplementation(async (itemId: string) => ({
+      ...items.find((item) => item.id === itemId)!,
+      name: "乾冬菇 (廣信) 更新",
+      suppliers: [suppliers[0]!, suppliers[1]!],
+    }));
+
+    render(
+      <MemoryRouter>
+        <RawMeatInventoryCalcPage
+          loadItems={loadItems}
+          loadMovements={loadMovements}
+          loadSuppliers={loadSuppliers}
+          updateItem={updateItem}
+        />
+      </MemoryRouter>,
+    );
+
+    await screen.findAllByText("廣聯興");
+    await user.click(
+      screen.getByRole("button", { name: "編輯 乾冬菇 (廣信)" }),
+    );
+
+    const dialog = await screen.findByRole("dialog", { name: "編輯選項" });
+    const nameInput = within(dialog).getByDisplayValue("乾冬菇 (廣信)");
+    await user.clear(nameInput);
+    await user.type(nameInput, "乾冬菇 (廣信) 更新");
+    await user.click(within(dialog).getByRole("textbox", { name: "供應商" }));
+    await user.click(await screen.findByRole("option", { name: "萬福 (OFE)" }));
+    await user.click(within(dialog).getByRole("button", { name: "提交" }));
+
+    await waitFor(() => {
+      expect(updateItem).toHaveBeenCalledWith("item-1", {
+        sku: "LKJ015",
+        name: "乾冬菇 (廣信) 更新",
+        englishName: "Dried Mushroom",
+        supplierIds: ["sup-1", "sup-2"],
+      });
+    });
+  });
+
+  it("records stock in using the option suppliers and calculated totals", async () => {
+    const user = userEvent.setup();
+    const loadItems = vi.fn().mockResolvedValue(structuredClone(items));
+    const loadMovements = vi
+      .fn()
+      .mockImplementation(async (itemId: string) =>
+        structuredClone(movementsByItem[itemId] ?? []),
+      );
+    const createStockIn = vi.fn().mockResolvedValue("move-new");
+    const loadUnitMultipliers = vi
+      .fn()
+      .mockResolvedValue(DEFAULT_RAW_MEAT_UNIT_MULTIPLIERS);
+
+    render(
+      <MemoryRouter>
+        <RawMeatInventoryCalcPage
+          loadItems={loadItems}
+          loadMovements={loadMovements}
+          createStockIn={createStockIn}
+          loadUnitMultipliers={loadUnitMultipliers}
+        />
+      </MemoryRouter>,
+    );
+
+    await screen.findAllByText("廣聯興");
+    await user.click(screen.getByRole("button", { name: "生肉入貨" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "生肉入貨" });
+    expect(within(dialog).getByText("乾冬菇 (廣信)")).toBeInTheDocument();
+    expect(within(dialog).getByText("廣聯興")).toBeInTheDocument();
+
+    await user.type(
+      within(dialog).getByRole("textbox", { name: "來貨價" }),
+      "23",
+    );
+    await user.type(
+      within(dialog).getByRole("textbox", { name: "入貨" }),
+      "3",
+    );
+
+    expect(
+      within(dialog).getByRole("textbox", { name: "來貨價 (kg)" }),
+    ).toHaveValue("$38.02");
+    expect(
+      within(dialog).getByRole("textbox", { name: "入貨 (kg)" }),
+    ).toHaveValue("1.8149");
+    expect(
+      within(dialog).getByRole("textbox", { name: "總額 HKD" }),
+    ).toHaveValue("$69");
+
+    await user.click(within(dialog).getByRole("button", { name: "提交" }));
+
+    await waitFor(() => {
+      expect(createStockIn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          itemId: "item-1",
+          supplierId: "sup-1",
+          unit: "斤",
+          unitPrice: 23,
+          quantity: 3,
+        }),
+      );
+    });
+  });
+
+  it("hides create and edit without action permission", async () => {
+    const loadItems = vi.fn().mockResolvedValue(structuredClone(items));
+    const loadMovements = vi.fn().mockResolvedValue([]);
+
+    render(
+      <MemoryRouter>
+        <RawMeatInventoryCalcPage
+          loadItems={loadItems}
+          loadMovements={loadMovements}
+          canCreate={false}
+          canEdit={false}
+          canStockIn={false}
+        />
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole("button", { name: "乾冬菇 (廣信)" });
+    expect(screen.queryByRole("button", { name: "新增生肉選項" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "新建" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "編輯 乾冬菇 (廣信)" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "生肉入貨" })).toBeDisabled();
   });
 });

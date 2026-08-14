@@ -4,7 +4,11 @@ import {
   currentHongKongYear,
   hongKongYearBounds,
   hongKongYearMonthKey,
+  inboundTotalAmount,
+  quantityToKg,
   rawMeatYearOptions,
+  roundTo,
+  unitPriceToPerKg,
 } from "@/lib/raw-meat-inventory";
 
 // Lightweight pure-logic check mirroring src/lib/raw-meat-inventory.ts
@@ -64,5 +68,14 @@ describe("raw meat year helpers", () => {
       start: "2026-01-01T00:00:00+08:00",
       end: "2027-01-01T00:00:00+08:00",
     });
+  });
+});
+
+describe("raw meat inbound conversion", () => {
+  it("converts catty price and quantity into kg and total", () => {
+    const multiplier = 1.653;
+    expect(roundTo(quantityToKg(3, multiplier) ?? 0, 4)).toBe(1.8149);
+    expect(roundTo(unitPriceToPerKg(23, multiplier) ?? 0, 2)).toBe(38.02);
+    expect(inboundTotalAmount(23, 3)).toBe(69);
   });
 });

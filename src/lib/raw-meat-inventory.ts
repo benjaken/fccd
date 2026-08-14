@@ -3,13 +3,31 @@ import { supabase } from "@/lib/supabase";
 export const RAW_MEAT_MOVEMENTS_PAGE_SIZE = 15;
 export const RAW_MEAT_FIRST_DATA_YEAR = 2023;
 
+export const RAW_MEAT_WEIGHT_UNITS = ["斤", "g", "磅", "kg"] as const;
+export type RawMeatWeightUnit = (typeof RAW_MEAT_WEIGHT_UNITS)[number];
+
+export const DEFAULT_RAW_MEAT_UNIT_MULTIPLIERS: Record<RawMeatWeightUnit, number> =
+  {
+    斤: 1.653,
+    g: 1000,
+    磅: 2.204,
+    kg: 1,
+  };
+
+export type RawMeatSupplierOption = {
+  id: string;
+  name: string;
+};
+
 export type RawMeatItemOption = {
   id: string;
+  sku: string | null;
   name: string;
   englishName: string | null;
   sortOrder: number | null;
   canShipDirectly: boolean;
   isActive: boolean;
+  suppliers: RawMeatSupplierOption[];
 };
 
 export type RawMeatMovementRow = {
@@ -27,12 +45,28 @@ export type RawMeatMovementRow = {
 
 type ItemRow = {
   id: string;
+  sku: string | null;
   name: string;
   english_name: string | null;
   sort_order: number | string | null;
   can_ship_directly: boolean | null;
   is_active: boolean | null;
+  raw_meat_item_suppliers?: Array<{
+    supplier_id: string;
+    suppliers:
+      | { id: string; company_name: string | null }
+      | { id: string; company_name: string | null }[]
+      | null;
+  }> | null;
 };
+
+type SupplierRow = {
+  id: string;
+  company_name: string | null;
+};
+
+const RAW_MEAT_ITEM_SELECT =
+  "id,sku,name,english_name,sort_order,can_ship_directly,is_active,raw_meat_item_suppliers(supplier_id,suppliers(id,company_name))";
 
 type MovementRow = {
   id: string;
@@ -54,6 +88,72 @@ function toNumber(value: number | string | null | undefined) {
   if (value === null || value === undefined || value === "") return null;
   const parsed = Number.parseFloat(String(value));
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+export function roundTo(value: number, digits: number) {
+  const factor = 10 ** digits;
+  return Math.round(value * factor) / factor;
+}
+
+export function parseDecimalInput(value: string) {
+  const parsed = Number.parseFloat(value.replace(/[$,\s]/g, ""));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+export function quantityToKg(quantity: number, multiplier: number) {
+  if (!Number.isFinite(quantity) || !Number.isFinite(multiplier) || multiplier === 0) {
+    return null;
+  }
+  return quantity / multiplier;
+}
+
+export function unitPriceToPerKg(unitPrice: number, multiplier: number) {
+  if (!Number.isFinite(unitPrice) || !Number.isFinite(multiplier)) return null;
+  return unitPrice * multiplier;
+}
+
+export function inboundTotalAmount(unitPrice: number, quantity: number) {
+  if (!Number.isFinite(unitPrice) || !Number.isFinite(quantity)) return null;
+  return unitPrice * quantity;
+}
+
+export function isRawMeatWeightUnit(value: string): value is RawMeatWeightUnit {
+  return (RAW_MEAT_WEIGHT_UNITS as readonly string[]).includes(value);
+}
+
+function relatedSupplier(
+  value: NonNullable<ItemRow["raw_meat_item_suppliers"]>[number]["suppliers"],
+  fallbackId: string,
+): RawMeatSupplierOption | null {
+  if (!value) return null;
+  const row = Array.isArray(value) ? value[0] : value;
+  const name = row?.company_name?.trim();
+  const id = row?.id ?? fallbackId;
+  if (!id) return null;
+  return { id, name: name || id };
+}
+
+function mapItem(row: ItemRow): RawMeatItemOption {
+  const suppliers = (row.raw_meat_item_suppliers ?? [])
+    .map((link) => relatedSupplier(link.suppliers, link.supplier_id))
+    .filter((supplier): supplier is RawMeatSupplierOption => Boolean(supplier))
+    .sort((left, right) => left.name.localeCompare(right.name, "zh-HK"));
+
+  return {
+    id: row.id,
+    sku: row.sku,
+    name: row.name,
+    englishName: row.english_name,
+    sortOrder: toNumber(row.sort_order),
+    canShipDirectly: Boolean(row.can_ship_directly),
+    isActive: row.is_active !== false,
+    suppliers,
+  };
+}
+
+function nullifTrim(value: string | null | undefined) {
+  const trimmed = (value ?? "").trim();
+  return trimmed ? trimmed : null;
 }
 
 function relatedSupplierName(value: MovementRow["suppliers"]): string | null {
@@ -108,21 +208,138 @@ export function hongKongYearMonthKey(value: string | Date) {
 export async function fetchRawMeatItems(): Promise<RawMeatItemOption[]> {
   const { data, error } = await supabase
     .from("raw_meat_items")
-    .select("id,name,english_name,sort_order,can_ship_directly,is_active")
+    .select(RAW_MEAT_ITEM_SELECT)
     .is("archived_at", null)
     .order("sort_order", { ascending: true, nullsFirst: false })
     .order("name", { ascending: true });
 
   if (error) throw error;
+  return ((data ?? []) as ItemRow[]).map(mapItem);
+}
 
-  return ((data ?? []) as ItemRow[]).map((row) => ({
-    id: row.id,
-    name: row.name,
-    englishName: row.english_name,
-    sortOrder: toNumber(row.sort_order),
-    canShipDirectly: Boolean(row.can_ship_directly),
-    isActive: row.is_active !== false,
-  }));
+async function fetchRawMeatItemById(itemId: string): Promise<RawMeatItemOption> {
+  const { data, error } = await supabase
+    .from("raw_meat_items")
+    .select(RAW_MEAT_ITEM_SELECT)
+    .eq("id", itemId)
+    .is("archived_at", null)
+    .single();
+
+  if (error) throw error;
+  return mapItem(data as ItemRow);
+}
+
+export async function fetchRawMeatSuppliers(): Promise<RawMeatSupplierOption[]> {
+  const { data, error } = await supabase
+    .from("suppliers")
+    .select("id,company_name")
+    .is("archived_at", null)
+    .eq("is_active", true)
+    .order("company_name", { ascending: true });
+
+  if (error) throw error;
+  return ((data ?? []) as SupplierRow[])
+    .map((row) => ({
+      id: row.id,
+      name: (row.company_name ?? "").trim(),
+    }))
+    .filter((row) => row.name);
+}
+
+export async function fetchRawMeatUnitMultipliers(): Promise<
+  Record<RawMeatWeightUnit, number>
+> {
+  const { data, error } = await supabase
+    .from("meat_unit_conversions")
+    .select("unit,multiplier");
+
+  if (error) throw error;
+
+  const next = { ...DEFAULT_RAW_MEAT_UNIT_MULTIPLIERS };
+  for (const row of data ?? []) {
+    const unit = String(row.unit ?? "");
+    const multiplier = toNumber(row.multiplier as number | string | null);
+    if (isRawMeatWeightUnit(unit) && multiplier && multiplier > 0) {
+      next[unit] = multiplier;
+    }
+  }
+  return next;
+}
+
+export type RawMeatItemWriteInput = {
+  sku?: string | null;
+  name: string;
+  englishName?: string | null;
+  supplierIds: string[];
+};
+
+export async function createRawMeatItem(
+  input: RawMeatItemWriteInput,
+): Promise<RawMeatItemOption> {
+  const name = input.name.trim();
+  if (!name) throw new Error("name_required");
+
+  const { data, error } = await supabase.rpc("create_raw_meat_item", {
+    p_sku: nullifTrim(input.sku),
+    p_name: name,
+    p_english_name: nullifTrim(input.englishName),
+    p_supplier_ids: input.supplierIds,
+  });
+  if (error) throw error;
+  return fetchRawMeatItemById(data as string);
+}
+
+export async function updateRawMeatItem(
+  itemId: string,
+  input: RawMeatItemWriteInput,
+): Promise<RawMeatItemOption> {
+  const name = input.name.trim();
+  if (!name) throw new Error("name_required");
+
+  const { data, error } = await supabase.rpc("update_raw_meat_item", {
+    p_item_id: itemId,
+    p_sku: nullifTrim(input.sku),
+    p_name: name,
+    p_english_name: nullifTrim(input.englishName),
+    p_supplier_ids: input.supplierIds,
+  });
+  if (error) throw error;
+  return fetchRawMeatItemById((data as string) || itemId);
+}
+
+export type RawMeatStockInInput = {
+  itemId: string;
+  supplierId: string;
+  movementDate: string;
+  unit: RawMeatWeightUnit;
+  unitPrice: number;
+  quantity: number;
+  remarks?: string | null;
+};
+
+export async function createRawMeatStockIn(
+  input: RawMeatStockInInput,
+): Promise<string> {
+  const { data, error } = await supabase.rpc("create_raw_meat_stock_in", {
+    p_item_id: input.itemId,
+    p_supplier_id: input.supplierId,
+    p_movement_date: input.movementDate,
+    p_unit: input.unit,
+    p_unit_price: input.unitPrice,
+    p_quantity: input.quantity,
+    p_remarks: nullifTrim(input.remarks),
+  });
+  if (error) throw error;
+  return data as string;
+}
+
+export function hongKongDateInputValue(now = new Date()) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Hong_Kong",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(now);
 }
 
 export async function fetchRawMeatMovementsForItem(
