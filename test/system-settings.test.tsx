@@ -705,6 +705,20 @@ describe("Super Admin system settings", () => {
     expect(sellingPriceCost).toContain("roles.role in ('Admin', 'Factory')");
     expect(frozenActions).toContain("roles.role = 'Super Admin'");
 
+    const yieldErrors = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260814210000_frozen_yield_errors_page_permissions.sql",
+      ),
+      "utf8",
+    );
+    expect(yieldErrors).toContain("frozen.yield_errors");
+    expect(yieldErrors).toContain("收成錯誤");
+    expect(yieldErrors).toContain("/frozen/yield-errors");
+    expect(yieldErrors).toContain(
+      "roles.role in ('Admin', 'Factory', 'Accounting')",
+    );
+
     const rawMeatActions = readFileSync(
       path.resolve(
         process.cwd(),

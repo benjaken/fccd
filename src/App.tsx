@@ -8,6 +8,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  AlertTriangle,
   Bell,
   Beef,
   Boxes,
@@ -82,6 +83,7 @@ import { SeasoningCostSettingsPage } from "@/components/SeasoningCostSettingsPag
 import { SellingPriceCostPage } from "@/components/SellingPriceCostPage";
 import { CalculationSettingsPage } from "@/components/CalculationSettingsPage";
 import { MeatCustomersPage } from "@/components/MeatCustomersPage";
+import { MeatYieldErrorsPage } from "@/components/MeatYieldErrorsPage";
 import { AttachmentsListPage } from "@/components/settings/AttachmentsListPage";
 import { LoginLogsListPage } from "@/components/settings/LoginLogsListPage";
 import { RolePermissionsPage } from "@/components/settings/RolePermissionsPage";
@@ -279,6 +281,12 @@ const secondaryNav: Record<string, NavItem[]> = {
       icon: Leaf,
       permissionKey: "frozen.spice_usage",
     },
+    {
+      key: "yieldErrors",
+      to: "/frozen/yield-errors",
+      icon: AlertTriangle,
+      permissionKey: "frozen.yield_errors",
+    },
   ],
   kitchen: [
     { key: "kitchen", to: "/kitchen", icon: Utensils, permissionKey: "kitchen" },
@@ -410,6 +418,7 @@ const SECTION_CHILD_KEYS: Record<string, string[]> = {
     "frozen.calculation_settings",
     "frozen.meat_customers",
     "frozen.spice_usage",
+    "frozen.yield_errors",
     ...FROZEN_ACTION_PAGE_KEYS,
   ],
   kitchen: ["kitchen.calendar", "kitchen.inventory"],
@@ -1035,6 +1044,10 @@ function OperationsShell() {
               <Route
                 path="/frozen/spice-usage"
                 element={<SpiceUsagePage />}
+              />
+              <Route
+                path="/frozen/yield-errors"
+                element={<MeatYieldErrorsPage />}
               />
               <Route
                 path="/reports/frozen-meat"

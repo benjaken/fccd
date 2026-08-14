@@ -3499,6 +3499,7 @@ td:last-child {
   }
 }
 
+.operational-list-state,
 .quotes-state,
 .orders-state {
   display: flex;
@@ -3511,25 +3512,30 @@ td:last-child {
   text-align: left;
 }
 
+.operational-list-state > svg,
 .quotes-state > svg,
 .orders-state > svg {
   width: 30px;
   height: 30px;
   color: var(--primary);
+  flex: 0 0 auto;
 }
 
+.operational-list-state > div,
 .quotes-state > div,
 .orders-state > div {
   display: grid;
   gap: 4px;
 }
 
+.operational-list-state strong,
 .quotes-state strong,
 .orders-state strong {
   color: var(--foreground);
   font-size: 16px;
 }
 
+.operational-list-state span,
 .quotes-state span,
 .orders-state span {
   font-size: 14px;

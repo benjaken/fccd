@@ -11,6 +11,7 @@ const FILTERED_LIST_PAGES = [
   "src/components/QuotesListPage.tsx",
   "src/components/ProductsListPage.tsx",
   "src/components/PackagesListPage.tsx",
+  "src/components/MeatYieldErrorsPage.tsx",
   "src/components/settings/UsersListPage.tsx",
   "src/components/settings/LoginLogsListPage.tsx",
   "src/components/settings/AttachmentsListPage.tsx",
