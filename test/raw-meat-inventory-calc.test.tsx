@@ -150,10 +150,21 @@ describe("Raw meat inventory calculation page", () => {
     expect(screen.getByRole("combobox", { name: "年份" })).toHaveValue(
       String(currentYear),
     );
-    expect(screen.getByRole("button", { name: "新增生肉選項" })).toBeEnabled();
+
+    const heading = screen.getByRole("banner");
+    expect(
+      within(heading).getByRole("button", { name: "重新整理" }),
+    ).toBeEnabled();
+    expect(
+      within(heading).getByRole("button", { name: "新增生肉選項" }),
+    ).toBeEnabled();
     expect(screen.getByRole("button", { name: "新建" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "生肉入貨" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "生肉出貨" })).toBeDisabled();
+    expect(
+      within(heading).getByRole("button", { name: "生肉入貨" }),
+    ).toBeEnabled();
+    expect(
+      within(heading).getByRole("button", { name: "生肉出貨" }),
+    ).toBeDisabled();
     expect(screen.queryByText("15")).not.toBeInTheDocument();
   });
 

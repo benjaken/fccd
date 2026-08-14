@@ -583,6 +583,31 @@ export function RawMeatInventoryCalcPage({
             <RefreshCw />
             {t("rawMeatInventory.refresh")}
           </Button>
+          {canCreate ? (
+            <Button type="button" onClick={openCreateOption}>
+              {t("rawMeatInventory.addOption")}
+            </Button>
+          ) : null}
+          <Button
+            type="button"
+            disabled={!canStockIn || !selectedItem}
+            title={
+              canStockIn ? undefined : t("rawMeatInventory.comingSoon")
+            }
+            onClick={() => {
+              if (!canStockIn || !selectedItem) return;
+              setStockInOpen(true);
+            }}
+          >
+            {t("rawMeatInventory.stockIn")}
+          </Button>
+          <Button
+            type="button"
+            disabled
+            title={t("rawMeatInventory.comingSoon")}
+          >
+            {t("rawMeatInventory.stockOut")}
+          </Button>
         </div>
       </header>
 
@@ -685,50 +710,21 @@ export function RawMeatInventoryCalcPage({
               </strong>
               <span>{t("rawMeatInventory.ledgerHint")}</span>
             </div>
-            <div className="raw-meat-calc-actions">
-              <label className="raw-meat-calc-year-filter">
-                <span>{t("rawMeatInventory.yearFilter")}</span>
-                <select
-                  aria-label={t("rawMeatInventory.yearFilter")}
-                  value={year}
-                  onChange={(event) => setYear(Number(event.target.value))}
-                  disabled={loading}
-                >
-                  {years.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {canCreate ? (
-                <Button type="button" onClick={openCreateOption}>
-                  {t("rawMeatInventory.addOption")}
-                </Button>
-              ) : null}
-              <Button
-                type="button"
-                disabled={!canStockIn || !selectedItem}
-                title={
-                  canStockIn
-                    ? undefined
-                    : t("rawMeatInventory.comingSoon")
-                }
-                onClick={() => {
-                  if (!canStockIn || !selectedItem) return;
-                  setStockInOpen(true);
-                }}
+            <label className="raw-meat-calc-year-filter">
+              <span>{t("rawMeatInventory.yearFilter")}</span>
+              <select
+                aria-label={t("rawMeatInventory.yearFilter")}
+                value={year}
+                onChange={(event) => setYear(Number(event.target.value))}
+                disabled={loading}
               >
-                {t("rawMeatInventory.stockIn")}
-              </Button>
-              <Button
-                type="button"
-                disabled
-                title={t("rawMeatInventory.comingSoon")}
-              >
-                {t("rawMeatInventory.stockOut")}
-              </Button>
-            </div>
+                {years.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
 
           {error ? (

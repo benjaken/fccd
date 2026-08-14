@@ -1798,7 +1798,9 @@ td:last-child {
 
 .raw-meat-calc-heading-actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
   gap: 8px;
 }
 
@@ -1951,6 +1953,10 @@ td:last-child {
   border-bottom: 1px solid var(--border);
 }
 
+.raw-meat-calc-toolbar > .raw-meat-calc-year-filter {
+  flex: 0 0 auto;
+}
+
 .raw-meat-calc-toolbar > div:first-child {
   display: grid;
   gap: 4px;
@@ -1964,14 +1970,6 @@ td:last-child {
 .raw-meat-calc-toolbar span {
   color: var(--muted-foreground);
   font-size: 0.84rem;
-}
-
-.raw-meat-calc-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: flex-end;
-  gap: 8px;
 }
 
 .raw-meat-calc-year-filter {
@@ -2609,7 +2607,7 @@ td:last-child {
     flex-direction: column;
   }
 
-  .raw-meat-calc-actions {
+  .raw-meat-calc-heading-actions {
     justify-content: flex-start;
   }
 }
