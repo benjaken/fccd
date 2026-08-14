@@ -138,7 +138,7 @@ the same input / search / skeleton / pagination markup across list pages.
 | Pattern | Required component |
 |---|---|
 | Toolbar search (icon inside field + submit) | `ListSearchBar` → `SearchField` |
-| Mobile list filters (hidden until icon tap) | `ListSearchBar` `filters` → `SidePanel` |
+| Mobile list filters (hidden until icon tap) | `ListSearchBar` `filters` → `SidePanel` (確定套用後關閉) |
 | Start–end date filters | `DateRangePicker` (one labeled range field) |
 | Paginated operational table + loading rows | `ListTable` → `TableSkeletonRows` |
 | Mobile table pull-to-refresh | `ListTable` / `PullToRefresh` |

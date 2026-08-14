@@ -15,6 +15,7 @@ import { usePageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
+import { useDeferredFilter } from "@/lib/use-deferred-filter";
 import { ChangePasswordSidePanel } from "@/components/settings/ChangePasswordSidePanel";
 import { CreateUserSidePanel } from "@/components/settings/CreateUserSidePanel";
 import { EditUserSidePanel } from "@/components/settings/EditUserSidePanel";
@@ -72,6 +73,10 @@ export function UsersListPage({
   const [search, setSearch] = useState("");
   const [role, setRole] = useState("");
   const [page, setPage] = useState(1);
+  const roleFilter = useDeferredFilter(role, (value) => {
+    setPage(1);
+    setRole(value);
+  });
   const [items, setItems] = useState<UserListItem[]>([]);
   const [restaurants, setRestaurants] = useState<RestaurantOption[]>([]);
   const [total, setTotal] = useState(0);
@@ -162,14 +167,15 @@ export function UsersListPage({
             placeholder={t("settings.users.searchPlaceholder")}
             submitLabel={t("settings.users.searchAction")}
             filtersActive={Boolean(role)}
+            onConfirmFilters={roleFilter.confirm}
+            onDismissFilters={roleFilter.revert}
             filters={
               <label className="orders-status-filter">
                 <span>{t("settings.users.roleFilter")}</span>
                 <select
-                  value={role}
+                  value={roleFilter.value}
                   onChange={(event) => {
-                    setPage(1);
-                    setRole(event.target.value);
+                    roleFilter.setValue(event.target.value);
                   }}
                 >
                   <option value="">{t("settings.users.allRoles")}</option>
