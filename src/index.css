@@ -2888,7 +2888,7 @@ td:last-child {
 
 .spice-usage-layout {
   display: grid;
-  grid-template-columns: minmax(11rem, 18%) minmax(0, 1fr);
+  grid-template-columns: 16.5rem minmax(0, 1fr);
   gap: 14px;
   min-height: 0;
   height: 100%;
@@ -2990,11 +2990,12 @@ td:last-child {
 
 .spice-usage-main-header {
   display: flex;
-  flex-wrap: wrap;
-  align-items: end;
+  flex-wrap: nowrap;
+  align-items: center;
   justify-content: space-between;
   gap: 14px;
-  padding: 18px 18px 14px;
+  min-height: 6.25rem;
+  padding: 16px 18px;
   border-bottom: 1px solid var(--border);
   background:
     linear-gradient(
@@ -3003,6 +3004,10 @@ td:last-child {
       color-mix(in oklch, var(--accent) 35%, white) 55%,
       white
     );
+}
+
+.spice-usage-main-title {
+  min-width: 0;
 }
 
 .spice-usage-main-eyebrow {
@@ -3015,22 +3020,29 @@ td:last-child {
 
 .spice-usage-main-header h3 {
   margin: 0;
+  overflow: hidden;
   color: var(--foreground);
   font-size: 1.35rem;
   font-weight: 800;
   line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .spice-usage-summary {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  flex: 0 0 auto;
   gap: 10px;
 }
 
 .spice-usage-summary > div {
   display: grid;
+  align-content: center;
   gap: 2px;
-  min-width: 5.5rem;
+  box-sizing: border-box;
+  min-width: 7.75rem;
+  height: 3.6rem;
   padding: 8px 12px;
   border: 1px solid color-mix(in oklch, var(--border) 80%, transparent);
   border-radius: 10px;
@@ -3044,9 +3056,17 @@ td:last-child {
 }
 
 .spice-usage-summary strong {
+  display: flex;
+  align-items: center;
+  min-height: 1.2rem;
   color: var(--foreground);
   font-size: 0.98rem;
   font-variant-numeric: tabular-nums;
+}
+
+.spice-usage-summary .spice-usage-skeleton-value {
+  width: 3.6rem;
+  height: 0.85rem;
 }
 
 .spice-usage-main-empty {
@@ -3071,7 +3091,9 @@ td:last-child {
 }
 
 .spice-usage-main-body {
+  position: relative;
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
@@ -3082,10 +3104,33 @@ td:last-child {
   padding: 12px 18px 0;
 }
 
-.spice-usage-main-body > .spice-usage-table-wrap,
-.spice-usage-main-body > .spice-usage-main-empty {
+.spice-usage-main-body > .spice-usage-table-wrap {
   flex: 1 1 auto;
   min-height: 0;
+  height: 100%;
+}
+
+.spice-usage-body-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 8px;
+  padding: 40px 20px;
+  background: color-mix(in oklch, var(--card) 92%, white);
+  color: var(--muted-foreground);
+  text-align: center;
+  pointer-events: none;
+}
+
+.spice-usage-body-empty svg {
+  width: 28px;
+  height: 28px;
+}
+
+.spice-usage-body-empty strong {
+  color: var(--foreground);
 }
 
 .spice-usage-main > .spice-usage-main-empty {
@@ -3205,10 +3250,6 @@ td:last-child {
 
 .spice-usage-card.is-skeleton .spice-usage-card-index {
   background: color-mix(in oklch, var(--muted) 55%, transparent);
-}
-
-.spice-usage-summary .table-skeleton-bone {
-  display: block;
 }
 
 .seasoning-cost-page,
@@ -3597,6 +3638,20 @@ td:last-child {
     grid-template-columns: 1fr;
     grid-template-rows: minmax(9rem, 28%) minmax(0, 1fr);
     min-height: 0;
+  }
+
+  .spice-usage-main-header {
+    flex-wrap: wrap;
+    min-height: 0;
+  }
+
+  .spice-usage-summary {
+    width: 100%;
+  }
+
+  .spice-usage-summary > div {
+    flex: 1 1 0;
+    min-width: 0;
   }
 
   .spice-usage-sidebar {

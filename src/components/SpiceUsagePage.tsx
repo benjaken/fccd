@@ -45,19 +45,6 @@ function SpiceUsageSidebarSkeleton() {
   );
 }
 
-function SpiceUsageSummarySkeleton() {
-  return (
-    <div className="spice-usage-summary" aria-hidden="true">
-      {Array.from({ length: 3 }, (_, index) => (
-        <div key={`spice-summary-skeleton-${index}`}>
-          <span className="table-skeleton-bone spice-usage-skeleton-label" />
-          <strong className="table-skeleton-bone spice-usage-skeleton-value" />
-        </div>
-      ))}
-    </div>
-  );
-}
-
 export function SpiceUsagePage({
   loadSeasonings = fetchSeasonings,
   loadUsages = fetchSeasoningUsages,
@@ -198,6 +185,15 @@ export function SpiceUsagePage({
     };
   }, [loadUsages, reloadKey, selected?.id, t]);
 
+  const selectSpice = (id: string) => {
+    if (id === selectedId) return;
+    setSelectedId(id);
+    setUsagesLoading(true);
+    setDraftSearch("");
+    setAppliedSearch("");
+    setActionError(null);
+  };
+
   const handleDelete = useEffectEvent(async (row: SeasoningUsageRow) => {
     if (deletingId) return;
     const confirmed = window.confirm(t("spiceUsage.deleteConfirm"));
@@ -299,7 +295,7 @@ export function SpiceUsagePage({
                             : "spice-usage-side-item"
                         }
                         aria-current={active ? "true" : undefined}
-                        onClick={() => setSelectedId(item.id)}
+                        onClick={() => selectSpice(item.id)}
                       >
                         {item.name}
                       </button>
@@ -323,34 +319,44 @@ export function SpiceUsagePage({
             ) : (
               <>
                 <header className="spice-usage-main-header">
-                  <div>
+                  <div className="spice-usage-main-title">
                     <p className="spice-usage-main-eyebrow">
                       {t("spiceUsage.columns.spice")}
                     </p>
                     <h3>{selected.name}</h3>
                   </div>
-                  {usagesLoading ? (
-                    <SpiceUsageSummarySkeleton />
-                  ) : usages.length > 0 ? (
-                    <div className="spice-usage-summary">
-                      <div>
-                        <span>{t("spiceUsage.summary.recipes")}</span>
-                        <strong>{usageSummary.count}</strong>
-                      </div>
-                      <div>
-                        <span>{t("spiceUsage.summary.grams")}</span>
-                        <strong>
-                          {gramsFormatter.format(usageSummary.grams)}g
-                        </strong>
-                      </div>
-                      <div>
-                        <span>{t("spiceUsage.summary.cost")}</span>
-                        <strong>
-                          {currencyFormatter.format(usageSummary.cost)}
-                        </strong>
-                      </div>
+                  <div className="spice-usage-summary">
+                    <div>
+                      <span>{t("spiceUsage.summary.recipes")}</span>
+                      <strong>
+                        {usagesLoading ? (
+                          <span className="table-skeleton-bone spice-usage-skeleton-value" />
+                        ) : (
+                          usageSummary.count
+                        )}
+                      </strong>
                     </div>
-                  ) : null}
+                    <div>
+                      <span>{t("spiceUsage.summary.grams")}</span>
+                      <strong>
+                        {usagesLoading ? (
+                          <span className="table-skeleton-bone spice-usage-skeleton-value" />
+                        ) : (
+                          `${gramsFormatter.format(usageSummary.grams)}g`
+                        )}
+                      </strong>
+                    </div>
+                    <div>
+                      <span>{t("spiceUsage.summary.cost")}</span>
+                      <strong>
+                        {usagesLoading ? (
+                          <span className="table-skeleton-bone spice-usage-skeleton-value" />
+                        ) : (
+                          currencyFormatter.format(usageSummary.cost)
+                        )}
+                      </strong>
+                    </div>
+                  </div>
                 </header>
 
                 <header className="spice-usage-toolbar">
@@ -371,58 +377,58 @@ export function SpiceUsagePage({
                     <p className="list-inline-error">{actionError}</p>
                   ) : null}
 
+                  <ListTable
+                    className="spice-usage-table-wrap"
+                    onRefresh={() => setReloadKey((current) => current + 1)}
+                    loading={usagesLoading}
+                    loadingLabel={t("spiceUsage.loadingUsages")}
+                    skeletonRows={8}
+                    skeletonColumns={SPICE_USAGE_SKELETON_COLUMNS}
+                    header={
+                      <tr>
+                        <th>{t("spiceUsage.columns.recipe")}</th>
+                        <th>{t("spiceUsage.columns.grams")}</th>
+                        <th>{t("spiceUsage.columns.cost")}</th>
+                        <th aria-label={t("spiceUsage.columns.actions")} />
+                      </tr>
+                    }
+                  >
+                    {visibleUsages.map((usage) => (
+                      <tr key={usage.id}>
+                        <td>
+                          <strong>{usage.preparedMeatName}</strong>
+                        </td>
+                        <td>
+                          {gramsFormatter.format(usage.quantityGrams)}g
+                        </td>
+                        <td>{currencyFormatter.format(usage.totalCost)}</td>
+                        <td className="table-actions-cell">
+                          <div className="table-row-actions">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              disabled={deletingId === usage.id}
+                              aria-label={t("spiceUsage.delete")}
+                              title={t("spiceUsage.delete")}
+                              onClick={() => {
+                                void handleDelete(usage);
+                              }}
+                            >
+                              <Trash2 />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </ListTable>
+
                   {!usagesLoading && usages.length === 0 ? (
-                    <div className="spice-usage-main-empty">
+                    <div className="spice-usage-body-empty">
                       <Leaf />
                       <strong>{t("spiceUsage.emptyUsages")}</strong>
                     </div>
-                  ) : (
-                    <ListTable
-                      className="spice-usage-table-wrap"
-                      onRefresh={() => setReloadKey((current) => current + 1)}
-                      loading={usagesLoading}
-                      loadingLabel={t("spiceUsage.loadingUsages")}
-                      skeletonRows={8}
-                      skeletonColumns={SPICE_USAGE_SKELETON_COLUMNS}
-                      header={
-                        <tr>
-                          <th>{t("spiceUsage.columns.recipe")}</th>
-                          <th>{t("spiceUsage.columns.grams")}</th>
-                          <th>{t("spiceUsage.columns.cost")}</th>
-                          <th aria-label={t("spiceUsage.columns.actions")} />
-                        </tr>
-                      }
-                    >
-                      {visibleUsages.map((usage) => (
-                        <tr key={usage.id}>
-                          <td>
-                            <strong>{usage.preparedMeatName}</strong>
-                          </td>
-                          <td>
-                            {gramsFormatter.format(usage.quantityGrams)}g
-                          </td>
-                          <td>{currencyFormatter.format(usage.totalCost)}</td>
-                          <td className="table-actions-cell">
-                            <div className="table-row-actions">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="icon"
-                                disabled={deletingId === usage.id}
-                                aria-label={t("spiceUsage.delete")}
-                                title={t("spiceUsage.delete")}
-                                onClick={() => {
-                                  void handleDelete(usage);
-                                }}
-                              >
-                                <Trash2 />
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </ListTable>
-                  )}
+                  ) : null}
                 </div>
               </>
             )}

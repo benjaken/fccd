@@ -147,6 +147,9 @@ describe("Spice usage page", () => {
       "true",
     );
     expect(document.querySelector(".table-skeleton-row")).toBeTruthy();
+    expect(screen.getByText("配方數")).toBeInTheDocument();
+    expect(screen.getByText("總用量")).toBeInTheDocument();
+    expect(screen.getByText("總成本")).toBeInTheDocument();
     expect(screen.queryByText("醃雞扒")).not.toBeInTheDocument();
     expect(screen.queryByText("粽子 (10隻)")).not.toBeInTheDocument();
 
