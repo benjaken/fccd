@@ -186,7 +186,25 @@ Canonical design-system wording (Chinese + checklist): see
 New screens should reuse these tokens, classes, **and shared components**. If a
 visual rule here changes, update this document in the same change set.
 
-## 7. Related standards
+## 8. Copy / i18n placeholders (hard rule)
+
+All user-visible copy goes through `src/i18n.ts` (`t(...)`). This includes
+**input placeholders**. Never put English (or any) placeholder copy in JSX.
+
+| Rule | Detail |
+|---|---|
+| Dedicated `*Placeholder` keys | Use `t("module.fields.namePlaceholder")`, not a field label such as `t("module.fields.name")`. Shared controls may take a `placeholder` prop, but callers still pass `t("…Placeholder")`. |
+| No hard-coded placeholders | Do not write `placeholder="Product Name"`, `placeholder="0"`, or `placeholder="選擇生肉"` in JSX. |
+| zh-HK is Chinese | Default locale placeholders must contain Traditional Chinese, or be a numeric / email / phone example (`例如：0.5`, `name@foodchannels.com`). |
+| Do not paste Bubble English | Never copy English Bubble labels (`Product Name`, `Product Code`, `Choose some options...`, `Remark`) into the `zh-HK` catalog. |
+| en-GB may be English | The English locale is the only place for English placeholder sentences (`e.g. 1`, `Enter remarks`). Even there, use instructional copy, not Bubble leftovers. |
+| Examples | zh-HK uses `例如：…`. Do not use `e.g.` in `zh-HK`. |
+
+Automated coverage: `test/i18n-placeholders.test.ts` rejects English-prose
+`*Placeholder` strings in `zh-HK`, hard-coded `placeholder="…"`, and
+`placeholder={t("…")}` keys that do not end in `Placeholder`.
+
+## 9. Related standards
 
 - [`DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md) — FCCD design system (shadcn + Ant Design)
 - [`UI_TABLE_STANDARD.md`](UI_TABLE_STANDARD.md) — paginated operational tables

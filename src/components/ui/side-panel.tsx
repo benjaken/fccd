@@ -13,6 +13,7 @@ export function SidePanel({
   footer,
   closeLabel,
   wide = false,
+  extraWide = false,
 }: {
   open: boolean;
   title: string;
@@ -22,6 +23,7 @@ export function SidePanel({
   footer?: ReactNode;
   closeLabel: string;
   wide?: boolean;
+  extraWide?: boolean;
 }) {
   useEffect(() => {
     if (!open) return;
@@ -43,7 +45,11 @@ export function SidePanel({
         onClick={onClose}
       />
       <aside
-        className={cn("side-panel", wide && "side-panel-wide")}
+        className={cn(
+          "side-panel",
+          wide && "side-panel-wide",
+          extraWide && "side-panel-xl",
+        )}
         role="dialog"
         aria-modal="true"
         aria-labelledby="side-panel-title"

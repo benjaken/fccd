@@ -32,6 +32,14 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
     pageKey: "frozen.raw_meat_inventory",
   },
   {
+    prefix: "/frozen/prepared-meat-inventory",
+    pageKey: "frozen.prepared_meat_inventory",
+  },
+  {
+    prefix: "/frozen/delivery-notes",
+    pageKey: "frozen.delivery_notes",
+  },
+  {
     prefix: "/frozen/spice-usage",
     pageKey: "frozen.spice_usage",
   },

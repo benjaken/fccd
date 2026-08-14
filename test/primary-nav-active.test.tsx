@@ -22,6 +22,8 @@ describe("Primary navigation section matching", () => {
     ["/frozen", "frozen"],
     ["/frozen/selling-price-cost", "frozen"],
     ["/frozen/raw-meat-inventory", "frozen"],
+    ["/frozen/prepared-meat-inventory", "frozen"],
+    ["/frozen/delivery-notes", "frozen"],
     ["/frozen/seasoning-cost", "frozen"],
     ["/frozen/calculation-settings", "frozen"],
     ["/frozen/customers", "frozen"],
@@ -80,6 +82,12 @@ describe("Primary navigation section matching", () => {
     expect(pageAccessKey("/frozen/raw-meat-inventory")).toBe(
       "frozen.raw_meat_inventory",
     );
+    expect(pageAccessKey("/frozen/prepared-meat-inventory")).toBe(
+      "frozen.prepared_meat_inventory",
+    );
+    expect(pageAccessKey("/frozen/delivery-notes")).toBe(
+      "frozen.delivery_notes",
+    );
     expect(pageAccessKey("/frozen/seasoning-cost")).toBe(
       "frozen.seasoning_cost",
     );
@@ -101,5 +109,20 @@ describe("Primary navigation section matching", () => {
     expect(source).toContain("REPORT_GROUP_ROUTES.frozenMeat");
     expect(source).toContain("REPORT_GROUP_ROUTES.shops");
     expect(source).toContain("sidebar-subnav");
+  });
+
+  it("places selling price cost after prepared meat inventory in Frozen Goods", () => {
+    const source = readFileSync(
+      path.resolve(process.cwd(), "src/App.tsx"),
+      "utf8",
+    );
+    const prepared = source.indexOf('key: "preparedMeatInventoryCalc"');
+    const selling = source.indexOf('key: "sellingPriceCost"');
+    const yieldErrors = source.indexOf('key: "yieldErrors"');
+    expect(prepared).toBeGreaterThan(-1);
+    expect(selling).toBeGreaterThan(prepared);
+    expect(yieldErrors).toBeGreaterThan(selling);
+    expect(source).toContain('to: "/frozen/yield-errors"');
+    expect(source).toContain('permissionKey: "frozen.yield_errors"');
   });
 });

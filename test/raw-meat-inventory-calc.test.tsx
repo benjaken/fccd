@@ -165,7 +165,7 @@ describe("Raw meat inventory calculation page", () => {
     ).toBeEnabled();
     expect(
       within(heading).getByRole("button", { name: "生肉出貨" }),
-    ).toBeDisabled();
+    ).toBeEnabled();
     expect(screen.queryByText("15")).not.toBeInTheDocument();
   });
 
@@ -537,6 +537,56 @@ describe("Raw meat inventory calculation page", () => {
     });
   });
 
+  it("opens 生肉出貨 as prepared inbound with raw, preselecting the current item", async () => {
+    const user = userEvent.setup();
+    const loadItems = vi.fn().mockResolvedValue(items);
+    const loadMovements = vi.fn().mockResolvedValue(movementsByItem["item-1"]);
+    const loadRawChoices = vi.fn().mockResolvedValue([
+      { id: "item-1", name: "乾冬菇 (廣信)" },
+    ]);
+    const loadPreview = vi.fn().mockResolvedValue({
+      remainingKg: 10,
+      items: [
+        {
+          id: "prep-1",
+          sku: "PM001",
+          name: "香菇餡",
+          unit: "包",
+          kgPerPackage: 0.5,
+          historicalInboundPacks: 0,
+          historicalRawOutboundKg: 0,
+        },
+      ],
+    });
+    const createInbound = vi.fn().mockResolvedValue("move-out-1");
+
+    render(
+      <MemoryRouter>
+        <RawMeatInventoryCalcPage
+          loadItems={loadItems}
+          loadMovements={loadMovements}
+          loadRawChoices={loadRawChoices}
+          loadPreview={loadPreview}
+          createInbound={createInbound}
+        />
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole("button", { name: "乾冬菇 (廣信)" });
+    await user.click(screen.getByRole("button", { name: "生肉出貨" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "生肉出貨" });
+    await waitFor(() => {
+      expect(loadPreview).toHaveBeenCalledWith("item-1");
+    });
+    expect(await within(dialog).findByText("乾冬菇 (廣信)")).toBeInTheDocument();
+    expect(await within(dialog).findByText("10.00 kg")).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("textbox", { name: "生肉出貨數量 (kg)" }),
+    ).toBeInTheDocument();
+    expect(createInbound).not.toHaveBeenCalled();
+  });
+
   it("hides create and edit without action permission", async () => {
     const loadItems = vi.fn().mockResolvedValue(structuredClone(items));
     const loadMovements = vi.fn().mockResolvedValue([]);
@@ -560,5 +610,6 @@ describe("Raw meat inventory calculation page", () => {
       screen.queryByRole("button", { name: "編輯 乾冬菇 (廣信)" }),
     ).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "生肉入貨" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "生肉出貨" })).toBeEnabled();
   });
 });

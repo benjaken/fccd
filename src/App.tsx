@@ -29,6 +29,7 @@ import {
   LogOut,
   Menu,
   Moon,
+  Package,
   PackageCheck,
   PanelLeftClose,
   PanelLeftOpen,
@@ -77,6 +78,8 @@ import { ProductsListPage } from "@/components/ProductsListPage";
 import { ProductDetailPage } from "@/components/ProductDetailPage";
 import { PackagesListPage } from "@/components/PackagesListPage";
 import { PackageDetailPage } from "@/components/PackageDetailPage";
+import { PreparedMeatInventoryCalcPage } from "@/components/PreparedMeatInventoryCalcPage";
+import { MeatDeliveryNotesPage } from "@/components/MeatDeliveryNotesPage";
 import { RawMeatInventoryCalcPage } from "@/components/RawMeatInventoryCalcPage";
 import { SpiceUsagePage } from "@/components/SpiceUsagePage";
 import { SeasoningCostSettingsPage } from "@/components/SeasoningCostSettingsPage";
@@ -117,7 +120,7 @@ const primaryNav: NavItem[] = [
   { key: "orders", to: "/orders", icon: ClipboardList },
   { key: "quotes", to: "/quotes", icon: FileText },
   { key: "products", to: "/products", icon: ShoppingBasket },
-  { key: "frozen", to: "/frozen/selling-price-cost", icon: Snowflake },
+  { key: "frozen", to: "/frozen/raw-meat-inventory", icon: Snowflake },
   { key: "kitchen", to: "/kitchen", icon: Utensils },
   { key: "delivery", to: "/delivery", icon: Truck },
   { key: "restaurant", to: "/restaurant", icon: Store },
@@ -246,16 +249,28 @@ const secondaryNav: Record<string, NavItem[]> = {
   ],
   frozen: [
     {
+      key: "rawMeatInventoryCalc",
+      to: "/frozen/raw-meat-inventory",
+      icon: Beef,
+      permissionKey: "frozen.raw_meat_inventory",
+    },
+    {
+      key: "preparedMeatInventoryCalc",
+      to: "/frozen/prepared-meat-inventory",
+      icon: Package,
+      permissionKey: "frozen.prepared_meat_inventory",
+    },
+    {
       key: "sellingPriceCost",
       to: "/frozen/selling-price-cost",
       icon: Receipt,
       permissionKey: "frozen.selling_price_cost",
     },
     {
-      key: "rawMeatInventoryCalc",
-      to: "/frozen/raw-meat-inventory",
-      icon: Beef,
-      permissionKey: "frozen.raw_meat_inventory",
+      key: "deliveryNotes",
+      to: "/frozen/delivery-notes",
+      icon: ClipboardList,
+      permissionKey: "frozen.delivery_notes",
     },
     {
       key: "seasoningCost",
@@ -412,8 +427,10 @@ const SECTION_CHILD_KEYS: Record<string, string[]> = {
     "products.packages",
   ],
   frozen: [
-    "frozen.selling_price_cost",
     "frozen.raw_meat_inventory",
+    "frozen.prepared_meat_inventory",
+    "frozen.selling_price_cost",
+    "frozen.delivery_notes",
     "frozen.seasoning_cost",
     "frozen.calculation_settings",
     "frozen.meat_customers",
@@ -1019,15 +1036,23 @@ function OperationsShell() {
               <Route path="/products/:id" element={<ProductDetailPage />} />
               <Route
                 path="/frozen"
-                element={<Navigate to="/frozen/selling-price-cost" replace />}
+                element={<Navigate to="/frozen/raw-meat-inventory" replace />}
+              />
+              <Route
+                path="/frozen/raw-meat-inventory"
+                element={<RawMeatInventoryCalcPage />}
+              />
+              <Route
+                path="/frozen/prepared-meat-inventory"
+                element={<PreparedMeatInventoryCalcPage />}
               />
               <Route
                 path="/frozen/selling-price-cost"
                 element={<SellingPriceCostPage />}
               />
               <Route
-                path="/frozen/raw-meat-inventory"
-                element={<RawMeatInventoryCalcPage />}
+                path="/frozen/delivery-notes"
+                element={<MeatDeliveryNotesPage />}
               />
               <Route
                 path="/frozen/seasoning-cost"

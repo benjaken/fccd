@@ -74,7 +74,7 @@ describe("Meat customers page", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole("heading", { name: "客戶" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "客戶管理" })).toBeInTheDocument();
     expect(screen.getByText("桂花小幸 YLP")).toBeInTheDocument();
     expect(screen.getByText("桂花小幸 TKO")).toBeInTheDocument();
     expect(screen.queryByLabelText("客人編號")).not.toBeInTheDocument();

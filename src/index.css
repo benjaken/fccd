@@ -1405,13 +1405,13 @@ td:last-child {
   border-bottom: 1px solid var(--border);
   background: var(--secondary);
   color: var(--muted-foreground);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.45;
 }
 
 .yield-errors-rules-title {
   color: var(--foreground);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
 }
 
@@ -2238,16 +2238,57 @@ td:last-child {
   font-variant-numeric: tabular-nums;
 }
 
+.prepared-meat-calc-page .raw-meat-calc-table-wrap th:nth-child(3),
+.prepared-meat-calc-page .raw-meat-calc-table-wrap td:nth-child(3) {
+  width: 10%;
+}
+
+.prepared-meat-calc-page .raw-meat-calc-table-wrap th:nth-child(4),
+.prepared-meat-calc-page .raw-meat-calc-table-wrap td:nth-child(4) {
+  width: 14%;
+}
+
+.prepared-meat-calc-page .raw-meat-calc-table-wrap th:nth-child(8),
+.prepared-meat-calc-page .raw-meat-calc-table-wrap td:nth-child(8) {
+  width: 14%;
+}
+
+.prepared-meat-calc-page .raw-meat-calc-table-wrap th:nth-child(9),
+.prepared-meat-calc-page .raw-meat-calc-table-wrap td:nth-child(9) {
+  width: 5.5rem;
+}
+
+.prepared-meat-calc-page .raw-meat-calc-table-wrap th:nth-child(10),
+.prepared-meat-calc-page .raw-meat-calc-table-wrap td:nth-child(10),
+.prepared-meat-calc-page .raw-meat-calc-table-wrap th:nth-child(11),
+.prepared-meat-calc-page .raw-meat-calc-table-wrap td:nth-child(11) {
+  width: auto;
+}
+
 .raw-meat-options-panel-error {
   margin: 0 0 12px;
   color: var(--destructive);
   font-size: 0.86rem;
 }
 
+.side-panel-body:has(.raw-meat-options-table-wrap) {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+}
+
+.side-panel-body:has(.raw-meat-options-table-wrap) .raw-meat-options-panel-error {
+  flex: 0 0 auto;
+  margin: 12px 18px 0;
+}
+
 .raw-meat-options-table-wrap {
+  flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
-  margin: -6px -6px 0;
+  overscroll-behavior: contain;
+  margin: 0;
   isolation: isolate;
 }
 
@@ -2281,6 +2322,15 @@ td:last-child {
   font-weight: 600;
   white-space: nowrap;
   box-shadow: 0 1px 0 var(--primary);
+}
+
+.prepared-meat-options-table th {
+  background: color-mix(in oklch, var(--background) 65%, var(--card));
+  color: var(--muted-foreground);
+  font-weight: 750;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+  box-shadow: 0 1px 0 var(--border);
 }
 
 .raw-meat-options-table tbody td {
@@ -2334,7 +2384,8 @@ td:last-child {
 }
 
 .raw-meat-field input,
-.raw-meat-field textarea {
+.raw-meat-field textarea,
+.raw-meat-field select {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid var(--border);
@@ -2351,15 +2402,23 @@ td:last-child {
   padding-bottom: 0;
 }
 
+.raw-meat-field select {
+  height: 40px;
+}
+
 .raw-meat-field input:focus,
 .raw-meat-field textarea:focus,
+.raw-meat-field select:focus,
 .raw-meat-tag-field:focus-within {
   border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
   box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 16%, transparent);
 }
 
 .raw-meat-field input:disabled,
-.raw-meat-field input[readonly] {
+.raw-meat-field input[readonly],
+.raw-meat-field textarea:disabled,
+.raw-meat-field textarea[readonly],
+.raw-meat-field select:disabled {
   color: var(--muted-foreground);
   background: color-mix(in oklch, var(--muted) 45%, var(--background));
 }
@@ -2370,6 +2429,276 @@ td:last-child {
   color: var(--destructive);
   font-size: 0.82rem;
   font-style: normal;
+}
+
+.prepared-meat-calc-heading {
+  flex-wrap: wrap;
+}
+
+.prepared-meat-calc-page .raw-meat-calc-heading-actions {
+  justify-content: flex-start;
+  max-width: 100%;
+}
+
+.prepared-meat-outbound-form {
+  display: grid;
+  gap: 14px;
+}
+
+.prepared-meat-inbound-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px 16px;
+  align-items: stretch;
+}
+
+.prepared-meat-inbound-date {
+  max-width: 100%;
+}
+
+.prepared-meat-inbound-deduct-form {
+  gap: 16px;
+}
+
+.prepared-meat-inbound-deduct-meta {
+  display: grid;
+  gap: 12px 16px;
+}
+
+.prepared-meat-inbound-deduct-meta.has-remaining {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: end;
+}
+
+.prepared-meat-inbound-deduct-metric,
+.prepared-meat-inbound-deduct-pack-total {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: color-mix(in oklch, var(--muted) 45%, var(--background));
+  color: var(--foreground);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.prepared-meat-inbound-deduct-products {
+  display: grid;
+  gap: 12px;
+}
+
+.prepared-meat-inbound-deduct-product {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+}
+
+.prepared-meat-inbound-deduct-product-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+
+.prepared-meat-inbound-deduct-product-head strong {
+  font-size: 0.95rem;
+  line-height: 1.35;
+}
+
+.prepared-meat-inbound-deduct-yield {
+  color: var(--muted-foreground);
+  background: color-mix(in oklch, var(--muted) 70%, var(--card));
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-style: normal;
+  letter-spacing: 0.01em;
+}
+
+.prepared-meat-inbound-deduct-qty-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(6.5rem, auto);
+  gap: 12px;
+  align-items: end;
+}
+
+.prepared-meat-inbound-deduct-pack-total {
+  justify-content: flex-end;
+  color: var(--muted-foreground);
+  font-size: 0.85rem;
+}
+
+.prepared-meat-inbound-edit-form {
+  display: grid;
+  gap: 12px;
+}
+
+.prepared-meat-inbound-edit-form .prepared-meat-inbound-deduct-product-head {
+  margin-bottom: 0;
+}
+
+@media (max-width: 720px) {
+  .prepared-meat-inbound-deduct-meta.has-remaining,
+  .prepared-meat-inbound-deduct-qty-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .prepared-meat-inbound-deduct-pack-total {
+    justify-content: flex-start;
+  }
+}
+
+.prepared-meat-outbound-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas:
+    "customer order-number"
+    "contact shipping-date"
+    "phone shipping-method"
+    "address remarks";
+  gap: 12px 16px;
+  align-items: stretch;
+}
+
+.prepared-meat-outbound-customer {
+  grid-area: customer;
+}
+
+.prepared-meat-outbound-order-number {
+  grid-area: order-number;
+}
+
+.prepared-meat-outbound-contact {
+  grid-area: contact;
+}
+
+.prepared-meat-outbound-shipping-date {
+  grid-area: shipping-date;
+}
+
+.prepared-meat-outbound-phone {
+  grid-area: phone;
+}
+
+.prepared-meat-outbound-shipping-method {
+  grid-area: shipping-method;
+}
+
+.prepared-meat-outbound-address {
+  grid-area: address;
+}
+
+.prepared-meat-outbound-remarks {
+  grid-area: remarks;
+}
+
+.prepared-meat-outbound-address textarea,
+.prepared-meat-outbound-remarks textarea {
+  box-sizing: border-box;
+  height: 5.5rem;
+  min-height: 5.5rem;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  line-height: 1.4;
+  resize: vertical;
+}
+
+.prepared-meat-outbound-add-rows {
+  display: grid;
+  gap: 8px;
+}
+
+.prepared-meat-outbound-add-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) 6.5rem minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.prepared-meat-outbound-item-picker {
+  position: relative;
+  min-width: 0;
+}
+
+.prepared-meat-outbound-lines-wrap {
+  overflow: visible;
+}
+
+.prepared-meat-outbound-lines {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.prepared-meat-outbound-lines th,
+.prepared-meat-outbound-lines td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+.prepared-meat-outbound-lines th {
+  background: color-mix(in oklch, var(--background) 65%, var(--card));
+  color: var(--muted-foreground);
+  font-weight: 750;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+}
+
+.prepared-meat-outbound-lines td:first-child,
+.prepared-meat-outbound-lines th:first-child {
+  width: 3.5rem;
+  text-align: center;
+}
+
+.prepared-meat-outbound-lines input {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  outline: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+}
+
+.prepared-meat-outbound-lines td:nth-child(4) {
+  width: 7rem;
+}
+
+.prepared-meat-outbound-lines td:last-child,
+.prepared-meat-outbound-lines th:last-child {
+  width: 4.5rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .prepared-meat-outbound-header {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "customer"
+      "order-number"
+      "contact"
+      "shipping-date"
+      "phone"
+      "shipping-method"
+      "address"
+      "remarks";
+  }
+
+  .prepared-meat-outbound-add-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 .raw-meat-tag-field {
@@ -3384,6 +3713,10 @@ td:last-child {
   width: min(520px, 100vw);
 }
 
+.side-panel-xl {
+  width: min(820px, 100vw);
+}
+
 .side-panel-header,
 .settings-side-panel-header {
   display: flex;
@@ -3518,6 +3851,7 @@ td:last-child {
 @media (max-width: 720px) {
   .side-panel,
   .side-panel-wide,
+  .side-panel-xl,
   .settings-side-panel,
   .settings-side-panel-wide {
     width: min(100vw, 100%);
