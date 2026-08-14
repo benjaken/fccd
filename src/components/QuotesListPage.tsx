@@ -215,6 +215,7 @@ export function QuotesListPage({
         ) : (
           <ListTable
             className="quotes-table-wrap"
+            onRefresh={() => setReloadKey((key) => key + 1)}
             loading={loading}
             loadingLabel={t("quotes.loading")}
             skeletonRows={QUOTES_PAGE_SIZE}

@@ -262,6 +262,7 @@ export function AttachmentsListPage({
         ) : (
           <ListTable
             className="orders-table-wrap settings-attachments-table"
+            onRefresh={() => setReloadKey((key) => key + 1)}
             loading={loading}
             loadingLabel={t("settings.attachments.loading")}
             skeletonRows={SETTINGS_PAGE_SIZE}

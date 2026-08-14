@@ -153,6 +153,7 @@ export function LoginLogsListPage({
         ) : (
           <ListTable
             className="orders-table-wrap"
+            onRefresh={() => setReloadKey((key) => key + 1)}
             loading={loading}
             loadingLabel={t("settings.loginLogs.loading")}
             skeletonRows={SETTINGS_PAGE_SIZE}

@@ -79,6 +79,7 @@ describe("ListTable", () => {
         'import { ListTable } from "@/components/ui/list-table";',
       );
       expect(source).toContain("<ListTable");
+      expect(source).toContain("onRefresh=");
     },
   );
 });

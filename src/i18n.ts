@@ -25,6 +25,11 @@ const resources = {
         yes: "是",
         no: "否",
         dateRange: "日期範圍",
+        openSearch: "開啟搜尋",
+        closeSearch: "關閉搜尋",
+        pullToRefresh: "下拉重新整理",
+        releaseToRefresh: "放開即可重新整理",
+        refreshing: "正在重新整理",
       },
       auth: {
         eyebrow: "FCCD 營運平台",
@@ -1166,6 +1171,11 @@ const resources = {
         yes: "Yes",
         no: "No",
         dateRange: "Date range",
+        openSearch: "Open search",
+        closeSearch: "Close search",
+        pullToRefresh: "Pull to refresh",
+        releaseToRefresh: "Release to refresh",
+        refreshing: "Refreshing",
       },
       auth: {
         eyebrow: "FCCD platform",
