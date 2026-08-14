@@ -13,6 +13,66 @@ import {
 type SeasoningsLoader = () => Promise<SeasoningOption[]>;
 type UsagesLoader = (seasoningId: string) => Promise<SeasoningUsageRow[]>;
 
+const USAGE_SKELETON_CARDS = 6;
+const SIDEBAR_SKELETON_ROWS = 10;
+
+function SpiceUsageSidebarSkeleton() {
+  return (
+    <ul className="spice-usage-side-list" aria-hidden="true">
+      {Array.from({ length: SIDEBAR_SKELETON_ROWS }, (_, index) => (
+        <li key={`spice-side-skeleton-${index}`}>
+          <span className="spice-usage-side-item is-skeleton">
+            <span
+              className="table-skeleton-bone spice-usage-skeleton-side"
+              style={{ width: `${58 + ((index * 13) % 28)}%` }}
+            />
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function SpiceUsageSummarySkeleton() {
+  return (
+    <div className="spice-usage-summary" aria-hidden="true">
+      {Array.from({ length: 3 }, (_, index) => (
+        <div key={`spice-summary-skeleton-${index}`}>
+          <span className="table-skeleton-bone spice-usage-skeleton-label" />
+          <strong className="table-skeleton-bone spice-usage-skeleton-value" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function SpiceUsageCardsSkeleton() {
+  return (
+    <div className="spice-usage-card-grid" aria-hidden="true">
+      {Array.from({ length: USAGE_SKELETON_CARDS }, (_, index) => (
+        <article key={`spice-card-skeleton-${index}`} className="spice-usage-card is-skeleton">
+          <div className="spice-usage-card-index">
+            <span className="table-skeleton-bone spice-usage-skeleton-index" />
+          </div>
+          <div className="spice-usage-card-body">
+            <span className="table-skeleton-bone spice-usage-skeleton-title" />
+            <div className="spice-usage-card-metrics">
+              <span className="spice-usage-card-metric">
+                <span className="table-skeleton-bone spice-usage-skeleton-label" />
+                <span className="table-skeleton-bone spice-usage-skeleton-value" />
+              </span>
+              <span className="spice-usage-card-metric">
+                <span className="table-skeleton-bone spice-usage-skeleton-label" />
+                <span className="table-skeleton-bone spice-usage-skeleton-value" />
+              </span>
+            </div>
+          </div>
+        </article>
+      ))}
+    </div>
+  );
+}
+
 export function SpiceUsagePage({
   loadSeasonings = fetchSeasonings,
   loadUsages = fetchSeasoningUsages,
@@ -177,9 +237,12 @@ export function SpiceUsagePage({
             <span>{seasonings.length}</span>
           </div>
           {seasoningsLoading ? (
-            <p className="spice-usage-sidebar-state">
-              {t("spiceUsage.loadingSeasonings")}
-            </p>
+            <>
+              <span className="sr-only" role="status">
+                {t("spiceUsage.loadingSeasonings")}
+              </span>
+              <SpiceUsageSidebarSkeleton />
+            </>
           ) : seasonings.length === 0 ? (
             <p className="spice-usage-sidebar-state">
               {t("spiceUsage.emptySeasonings")}
@@ -209,7 +272,10 @@ export function SpiceUsagePage({
           )}
         </aside>
 
-        <article className="spice-usage-main panel">
+        <article
+          className="spice-usage-main panel"
+          aria-busy={usagesLoading || undefined}
+        >
           {!selected ? (
             <div className="spice-usage-main-empty">
               <Leaf />
@@ -225,7 +291,9 @@ export function SpiceUsagePage({
                   </p>
                   <h3>{selected.name}</h3>
                 </div>
-                {!usagesLoading && usages.length > 0 ? (
+                {usagesLoading ? (
+                  <SpiceUsageSummarySkeleton />
+                ) : usages.length > 0 ? (
                   <div className="spice-usage-summary">
                     <div>
                       <span>{t("spiceUsage.summary.recipes")}</span>
@@ -249,9 +317,12 @@ export function SpiceUsagePage({
 
               <div className="spice-usage-main-body">
                 {usagesLoading ? (
-                  <p className="spice-usage-main-state">
-                    {t("spiceUsage.loadingUsages")}
-                  </p>
+                  <>
+                    <span className="sr-only" role="status">
+                      {t("spiceUsage.loadingUsages")}
+                    </span>
+                    <SpiceUsageCardsSkeleton />
+                  </>
                 ) : usages.length === 0 ? (
                   <div className="spice-usage-main-empty">
                     <Leaf />

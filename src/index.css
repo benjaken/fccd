@@ -3073,6 +3073,35 @@ td:last-child {
   padding: 16px 18px 18px;
 }
 
+.spice-usage-side-item.is-skeleton {
+  pointer-events: none;
+}
+
+.spice-usage-skeleton-side {
+  width: 70%;
+  height: 12px;
+}
+
+.spice-usage-skeleton-label {
+  width: 3.2rem;
+  height: 8px;
+}
+
+.spice-usage-skeleton-value {
+  width: 4.6rem;
+  height: 14px;
+}
+
+.spice-usage-skeleton-title {
+  width: 78%;
+  height: 14px;
+}
+
+.spice-usage-skeleton-index {
+  width: 1rem;
+  height: 1rem;
+}
+
 .spice-usage-card {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -3140,6 +3169,19 @@ td:last-child {
 
 .spice-usage-card-metric.is-cost {
   color: color-mix(in oklch, #0f766e 75%, var(--foreground));
+}
+
+.spice-usage-card.is-skeleton {
+  pointer-events: none;
+  box-shadow: none;
+}
+
+.spice-usage-card.is-skeleton .spice-usage-card-index {
+  background: color-mix(in oklch, var(--muted) 55%, transparent);
+}
+
+.spice-usage-summary .table-skeleton-bone {
+  display: block;
 }
 
 .seasoning-cost-page,

@@ -115,4 +115,44 @@ describe("Spice usage page", () => {
     expect(screen.getAllByText("50g").length).toBeGreaterThan(0);
     expect(screen.queryByText("醃雞扒")).not.toBeInTheDocument();
   });
+
+  it("shows a skeleton while switching seasonings", async () => {
+    const user = userEvent.setup();
+    let resolveSecond: ((rows: SeasoningUsageRow[]) => void) | null = null;
+    const loadSeasonings = vi.fn().mockResolvedValue(seasonings);
+    const loadUsages = vi.fn().mockImplementation(async (seasoningId: string) => {
+      if (seasoningId === "s-1") {
+        return structuredClone(usagesBySeasoning[seasoningId] ?? []);
+      }
+      return new Promise<SeasoningUsageRow[]>((resolve) => {
+        resolveSecond = resolve;
+      });
+    });
+
+    render(
+      <MemoryRouter>
+        <SpiceUsagePage
+          loadSeasonings={loadSeasonings}
+          loadUsages={loadUsages}
+        />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("醃雞扒");
+    await user.click(screen.getByRole("button", { name: "片糖" }));
+
+    expect(screen.getByRole("status")).toHaveTextContent("正在載入用量…");
+    expect(document.querySelector(".spice-usage-main")).toHaveAttribute(
+      "aria-busy",
+      "true",
+    );
+    expect(document.querySelector(".spice-usage-card.is-skeleton")).toBeTruthy();
+    expect(screen.queryByText("醃雞扒")).not.toBeInTheDocument();
+    expect(screen.queryByText("粽子 (10隻)")).not.toBeInTheDocument();
+
+    resolveSecond?.(structuredClone(usagesBySeasoning["s-2"] ?? []));
+
+    expect(await screen.findByLabelText("1. 粽子 (10隻)")).toBeInTheDocument();
+    expect(document.querySelector(".spice-usage-card.is-skeleton")).toBeNull();
+  });
 });
