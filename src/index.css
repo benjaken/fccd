@@ -1519,7 +1519,7 @@ button.product-tag[aria-pressed="true"] {
 
 .product-ingredient-option small {
   color: var(--muted-foreground);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
 }
 
