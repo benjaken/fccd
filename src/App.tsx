@@ -40,6 +40,7 @@ import {
   Snowflake,
   Store,
   Sun,
+  TriangleAlert,
   Truck,
   UserRound,
   Users,
@@ -85,6 +86,7 @@ import { SeasoningCostSettingsPage } from "@/components/SeasoningCostSettingsPag
 import { SellingPriceCostPage } from "@/components/SellingPriceCostPage";
 import { CalculationSettingsPage } from "@/components/CalculationSettingsPage";
 import { MeatCustomersPage } from "@/components/MeatCustomersPage";
+import { MeatYieldErrorsPage } from "@/components/MeatYieldErrorsPage";
 import { AttachmentsListPage } from "@/components/settings/AttachmentsListPage";
 import { LoginLogsListPage } from "@/components/settings/LoginLogsListPage";
 import { RolePermissionsPage } from "@/components/settings/RolePermissionsPage";
@@ -118,7 +120,7 @@ const primaryNav: NavItem[] = [
   { key: "orders", to: "/orders", icon: ClipboardList },
   { key: "quotes", to: "/quotes", icon: FileText },
   { key: "products", to: "/products", icon: ShoppingBasket },
-  { key: "frozen", to: "/frozen/selling-price-cost", icon: Snowflake },
+  { key: "frozen", to: "/frozen/raw-meat-inventory", icon: Snowflake },
   { key: "kitchen", to: "/kitchen", icon: Utensils },
   { key: "delivery", to: "/delivery", icon: Truck },
   { key: "restaurant", to: "/restaurant", icon: Store },
@@ -247,12 +249,6 @@ const secondaryNav: Record<string, NavItem[]> = {
   ],
   frozen: [
     {
-      key: "sellingPriceCost",
-      to: "/frozen/selling-price-cost",
-      icon: Receipt,
-      permissionKey: "frozen.selling_price_cost",
-    },
-    {
       key: "rawMeatInventoryCalc",
       to: "/frozen/raw-meat-inventory",
       icon: Beef,
@@ -263,6 +259,12 @@ const secondaryNav: Record<string, NavItem[]> = {
       to: "/frozen/prepared-meat-inventory",
       icon: Package,
       permissionKey: "frozen.prepared_meat_inventory",
+    },
+    {
+      key: "sellingPriceCost",
+      to: "/frozen/selling-price-cost",
+      icon: Receipt,
+      permissionKey: "frozen.selling_price_cost",
     },
     {
       key: "deliveryNotes",
@@ -293,6 +295,12 @@ const secondaryNav: Record<string, NavItem[]> = {
       to: "/frozen/spice-usage",
       icon: Leaf,
       permissionKey: "frozen.spice_usage",
+    },
+    {
+      key: "yieldErrors",
+      to: "/frozen/yield-errors",
+      icon: TriangleAlert,
+      permissionKey: "frozen.yield_errors",
     },
   ],
   kitchen: [
@@ -419,14 +427,15 @@ const SECTION_CHILD_KEYS: Record<string, string[]> = {
     "products.packages",
   ],
   frozen: [
-    "frozen.selling_price_cost",
     "frozen.raw_meat_inventory",
     "frozen.prepared_meat_inventory",
+    "frozen.selling_price_cost",
     "frozen.delivery_notes",
     "frozen.seasoning_cost",
     "frozen.calculation_settings",
     "frozen.meat_customers",
     "frozen.spice_usage",
+    "frozen.yield_errors",
     ...FROZEN_ACTION_PAGE_KEYS,
   ],
   kitchen: ["kitchen.calendar", "kitchen.inventory"],
@@ -1027,11 +1036,7 @@ function OperationsShell() {
               <Route path="/products/:id" element={<ProductDetailPage />} />
               <Route
                 path="/frozen"
-                element={<Navigate to="/frozen/selling-price-cost" replace />}
-              />
-              <Route
-                path="/frozen/selling-price-cost"
-                element={<SellingPriceCostPage />}
+                element={<Navigate to="/frozen/raw-meat-inventory" replace />}
               />
               <Route
                 path="/frozen/raw-meat-inventory"
@@ -1040,6 +1045,10 @@ function OperationsShell() {
               <Route
                 path="/frozen/prepared-meat-inventory"
                 element={<PreparedMeatInventoryCalcPage />}
+              />
+              <Route
+                path="/frozen/selling-price-cost"
+                element={<SellingPriceCostPage />}
               />
               <Route
                 path="/frozen/delivery-notes"
@@ -1060,6 +1069,10 @@ function OperationsShell() {
               <Route
                 path="/frozen/spice-usage"
                 element={<SpiceUsagePage />}
+              />
+              <Route
+                path="/frozen/yield-errors"
+                element={<MeatYieldErrorsPage />}
               />
               <Route
                 path="/reports/frozen-meat"

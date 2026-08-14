@@ -59,6 +59,10 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
     prefix: "/frozen/customers",
     pageKey: "frozen.meat_customers",
   },
+  {
+    prefix: "/frozen/yield-errors",
+    pageKey: "frozen.yield_errors",
+  },
   { prefix: "/frozen", pageKey: "frozen" },
   { prefix: "/kitchen/calendar", pageKey: "kitchen.calendar" },
   { prefix: "/kitchen/inventory", pageKey: "kitchen.inventory" },
