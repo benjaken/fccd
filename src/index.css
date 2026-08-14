@@ -3427,11 +3427,739 @@ td:last-child {
   box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 13%, transparent);
 }
 
+.spice-usage-page {
+  display: grid;
+  gap: 20px;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: calc(
+    100dvh - var(--topbar-height) - var(--workspace-height) - 56px
+  );
+  min-height: 0;
+  overflow: hidden;
+}
+
+.spice-usage-heading {
+  align-items: flex-end;
+}
+
+.spice-usage-layout {
+  display: grid;
+  grid-template-columns: 16.5rem minmax(0, 1fr);
+  gap: 14px;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.spice-usage-sidebar,
+.spice-usage-main {
+  display: grid;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.spice-usage-sidebar {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.spice-usage-main {
+  grid-template-rows: auto auto minmax(0, 1fr);
+  padding: 0;
+}
+
+.spice-usage-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px 14px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.spice-usage-sidebar-header strong {
+  font-size: 0.95rem;
+}
+
+.spice-usage-sidebar-header span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.6rem;
+  height: 1.6rem;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--primary) 14%, transparent);
+  color: var(--primary);
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.spice-usage-sidebar-state,
+.spice-usage-main-state {
+  margin: 0;
+  padding: 18px 14px;
+  color: var(--muted-foreground);
+  font-size: 0.92rem;
+}
+
+.spice-usage-side-list {
+  min-height: 0;
+  margin: 0;
+  padding: 8px;
+  overflow: auto;
+  list-style: none;
+}
+
+.spice-usage-side-item {
+  display: flex;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--foreground);
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 650;
+  text-align: left;
+  cursor: pointer;
+}
+
+.spice-usage-side-item:hover {
+  background: color-mix(in oklch, var(--accent) 70%, transparent);
+}
+
+.spice-usage-side-item.active {
+  background: color-mix(in oklch, var(--primary) 82%, #1f4d3d);
+  color: white;
+}
+
+.spice-usage-main-header {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 6.25rem;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in oklch, var(--primary) 12%, white),
+      color-mix(in oklch, var(--accent) 35%, white) 55%,
+      white
+    );
+}
+
+.spice-usage-main-title {
+  min-width: 0;
+}
+
+.spice-usage-main-eyebrow {
+  margin: 0 0 4px;
+  color: var(--muted-foreground);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.spice-usage-main-header h3 {
+  margin: 0;
+  overflow: hidden;
+  color: var(--foreground);
+  font-size: 1.35rem;
+  font-weight: 800;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.spice-usage-summary {
+  display: flex;
+  flex-wrap: nowrap;
+  flex: 0 0 auto;
+  gap: 10px;
+}
+
+.spice-usage-summary > div {
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  box-sizing: border-box;
+  min-width: 7.75rem;
+  height: 3.6rem;
+  padding: 8px 12px;
+  border: 1px solid color-mix(in oklch, var(--border) 80%, transparent);
+  border-radius: 10px;
+  background: color-mix(in oklch, white 82%, transparent);
+}
+
+.spice-usage-summary span {
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+
+.spice-usage-summary strong {
+  display: flex;
+  align-items: center;
+  min-height: 1.2rem;
+  color: var(--foreground);
+  font-size: 0.98rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.spice-usage-summary .spice-usage-skeleton-value {
+  width: 3.6rem;
+  height: 0.85rem;
+}
+
+.spice-usage-main-empty {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 8px;
+  min-height: 0;
+  height: 100%;
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--muted-foreground);
+}
+
+.spice-usage-main-empty svg {
+  width: 28px;
+  height: 28px;
+}
+
+.spice-usage-main-empty strong {
+  color: var(--foreground);
+}
+
+.spice-usage-main-body {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.spice-usage-main-body > .list-inline-error {
+  flex: 0 0 auto;
+  padding: 12px 18px 0;
+}
+
+.spice-usage-main-body > .spice-usage-table-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+}
+
+.spice-usage-body-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 8px;
+  padding: 40px 20px;
+  background: color-mix(in oklch, var(--card) 92%, white);
+  color: var(--muted-foreground);
+  text-align: center;
+  pointer-events: none;
+}
+
+.spice-usage-body-empty svg {
+  width: 28px;
+  height: 28px;
+}
+
+.spice-usage-body-empty strong {
+  color: var(--foreground);
+}
+
+.spice-usage-main > .spice-usage-main-empty {
+  grid-row: 1 / -1;
+}
+
+.spice-usage-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14.5rem, 1fr));
+  align-content: start;
+  gap: 12px;
+  padding: 16px 18px 18px;
+}
+
+.spice-usage-side-item.is-skeleton {
+  pointer-events: none;
+}
+
+.spice-usage-skeleton-side {
+  width: 70%;
+  height: 12px;
+}
+
+.spice-usage-skeleton-label {
+  width: 3.2rem;
+  height: 8px;
+}
+
+.spice-usage-skeleton-value {
+  width: 4.6rem;
+  height: 14px;
+}
+
+.spice-usage-skeleton-title {
+  width: 78%;
+  height: 14px;
+}
+
+.spice-usage-skeleton-index {
+  width: 1rem;
+  height: 1rem;
+}
+
+.spice-usage-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid color-mix(in oklch, var(--border) 85%, transparent);
+  border-radius: 14px;
+  background:
+    linear-gradient(
+      160deg,
+      color-mix(in oklch, var(--card) 92%, white),
+      color-mix(in oklch, var(--muted) 28%, white)
+    );
+  box-shadow: 0 8px 18px color-mix(in oklch, black 4%, transparent);
+}
+
+.spice-usage-card-index {
+  display: grid;
+  place-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--primary) 16%, transparent);
+  color: color-mix(in oklch, var(--primary) 70%, #0f3d2e);
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.spice-usage-card-body {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.spice-usage-card-title {
+  color: color-mix(in oklch, #1d4ed8 55%, var(--foreground));
+  font-size: 0.95rem;
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+.spice-usage-card-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.spice-usage-card-metric {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: color-mix(in oklch, white 70%, transparent);
+  color: color-mix(in oklch, #15803d 70%, var(--foreground));
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 750;
+}
+
+.spice-usage-card-metric small {
+  color: var(--muted-foreground);
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+
+.spice-usage-card-metric.is-cost {
+  color: color-mix(in oklch, #0f766e 75%, var(--foreground));
+}
+
+.spice-usage-card.is-skeleton {
+  pointer-events: none;
+  box-shadow: none;
+}
+
+.spice-usage-card.is-skeleton .spice-usage-card-index {
+  background: color-mix(in oklch, var(--muted) 55%, transparent);
+}
+
+.seasoning-cost-page,
+.calculation-settings-page,
+.meat-customers-page {
+  display: grid;
+  gap: 20px;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: calc(
+    100dvh - var(--topbar-height) - var(--workspace-height) - 76px
+  );
+  min-height: 560px;
+  overflow: hidden;
+}
+
+.seasoning-cost-page .page-heading,
+.calculation-settings-page .page-heading,
+.meat-customers-page .page-heading,
+.spice-usage-page .page-heading {
+  margin-bottom: 0;
+}
+
+.seasoning-cost-heading,
+.calculation-settings-heading,
+.meat-customers-heading {
+  align-items: flex-end;
+}
+
+.seasoning-cost-panel,
+.calculation-settings-panel,
+.meat-customers-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.seasoning-cost-panel > .list-inline-error,
+.calculation-settings-panel > .list-inline-error,
+.meat-customers-panel > .list-inline-error {
+  flex: 0 0 auto;
+}
+
+.seasoning-cost-panel > .products-state,
+.calculation-settings-panel > .products-state,
+.meat-customers-panel > .products-state,
+.seasoning-cost-table-wrap,
+.calculation-settings-table-wrap,
+.meat-customers-table-wrap,
+.spice-usage-table-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.seasoning-cost-panel > .operational-list-pagination {
+  flex: 0 0 auto;
+}
+
+.seasoning-cost-table-wrap th,
+.calculation-settings-table-wrap th,
+.meat-customers-table-wrap th,
+.spice-usage-table-wrap th {
+  position: sticky;
+  z-index: 1;
+  top: 0;
+}
+
+.seasoning-cost-sort-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+
+.seasoning-cost-sort-button svg {
+  width: 14px;
+  height: 14px;
+  opacity: 0.72;
+}
+
+.seasoning-cost-sort-button.is-active {
+  color: var(--foreground);
+}
+
+.seasoning-cost-sort-button.is-active svg {
+  opacity: 1;
+}
+
+.seasoning-cost-calc-cell,
+.seasoning-cost-remark-cell {
+  min-width: 8rem;
+  max-width: 14rem;
+  white-space: normal;
+}
+
+.seasoning-cost-inline-trigger {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  max-width: 100%;
+  width: 100%;
+  padding: 4px 6px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  white-space: normal;
+}
+
+.seasoning-cost-inline-trigger.is-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9rem;
+}
+
+.seasoning-cost-inline-trigger.is-empty {
+  color: var(--muted-foreground);
+}
+
+.seasoning-cost-inline-trigger:hover:not(:disabled),
+.seasoning-cost-inline-trigger:focus-visible {
+  border-color: color-mix(in oklch, var(--primary) 35%, var(--border));
+  background: color-mix(in oklch, var(--accent) 55%, transparent);
+  outline: none;
+}
+
+.seasoning-cost-inline-editor {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.seasoning-cost-inline-editor input {
+  width: 100%;
+  min-width: 0;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  outline: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+}
+
+.seasoning-cost-inline-editor input:focus {
+  border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 16%, transparent);
+}
+
+.seasoning-cost-inline-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.seasoning-cost-inline-preview {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  color: var(--muted-foreground);
+  font-size: 0.82rem;
+  white-space: normal;
+}
+
+.seasoning-cost-inline-preview strong {
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.seasoning-cost-inline-error {
+  color: var(--destructive);
+  font-size: 0.78rem;
+  white-space: normal;
+}
+
+.seasoning-cost-form {
+  display: grid;
+  gap: 16px;
+}
+
+.seasoning-cost-field {
+  display: grid;
+  gap: 6px;
+}
+
+.seasoning-cost-field > span {
+  color: var(--foreground);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.seasoning-cost-field input {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  outline: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+}
+
+.seasoning-cost-field input:focus {
+  border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 16%, transparent);
+}
+
+.seasoning-cost-field input:disabled,
+.seasoning-cost-field input[readonly] {
+  color: var(--muted-foreground);
+  background: color-mix(in oklch, var(--muted) 45%, var(--background));
+}
+
+.seasoning-cost-field small {
+  color: var(--muted-foreground);
+  font-size: 0.8rem;
+}
+
+.seasoning-cost-field-error,
+.seasoning-cost-form-error {
+  color: var(--destructive);
+  font-size: 0.82rem;
+  font-style: normal;
+}
+
+.list-inline-error,
+.calculation-settings-inline-error {
+  margin: 0;
+  padding: 12px 18px 0;
+  color: var(--destructive);
+  font-size: 0.88rem;
+}
+
+.calculation-settings-form {
+  display: grid;
+  gap: 16px;
+}
+
+.calculation-settings-field {
+  display: grid;
+  gap: 6px;
+}
+
+.calculation-settings-field > span {
+  color: var(--foreground);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.calculation-settings-field input {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  outline: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+}
+
+.calculation-settings-field input:focus {
+  border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 16%, transparent);
+}
+
+.calculation-settings-field small {
+  color: var(--muted-foreground);
+  font-size: 0.8rem;
+}
+
+.calculation-settings-field-error,
+.calculation-settings-form-error {
+  margin: 0;
+  color: var(--destructive);
+  font-size: 0.82rem;
+  font-style: normal;
+}
+
+.seasoning-cost-toolbar,
+.calculation-settings-toolbar,
+.meat-customers-toolbar,
+.spice-usage-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.meat-customers-address-cell {
+  min-width: 28rem;
+  width: 40%;
+  white-space: nowrap;
+}
+
+.meat-customers-form {
+  display: grid;
+  gap: 16px;
+}
+
+.meat-customers-field {
+  display: grid;
+  gap: 6px;
+}
+
+.meat-customers-field > span {
+  color: var(--foreground);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.meat-customers-field input,
+.meat-customers-field textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  outline: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+}
+
+.meat-customers-field input {
+  height: 40px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.meat-customers-field input:focus,
+.meat-customers-field textarea:focus {
+  border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 16%, transparent);
+}
+
+.meat-customers-field-error,
+.meat-customers-form-error {
+  color: var(--destructive);
+  font-size: 0.82rem;
+  font-style: normal;
+}
+
 @media (max-width: 760px) {
   .quotes-page,
   .orders-page,
   .products-page,
-  .packages-page {
+  .packages-page,
+  .seasoning-cost-page,
+  .calculation-settings-page,
+  .meat-customers-page,
+  .spice-usage-page {
     height: calc(100dvh - var(--topbar-height) - 62px);
     min-height: 520px;
   }
@@ -3448,14 +4176,50 @@ td:last-child {
   .quotes-heading,
   .orders-heading,
   .products-heading,
-  .packages-heading {
+  .packages-heading,
+  .spice-usage-heading,
+  .seasoning-cost-heading,
+  .calculation-settings-heading,
+  .meat-customers-heading {
     align-items: stretch;
+  }
+
+  .spice-usage-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(9rem, 28%) minmax(0, 1fr);
+    min-height: 0;
+  }
+
+  .spice-usage-main-header {
+    flex-wrap: wrap;
+    min-height: 0;
+  }
+
+  .spice-usage-summary {
+    width: 100%;
+  }
+
+  .spice-usage-summary > div {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .spice-usage-sidebar {
+    max-height: none;
+  }
+
+  .spice-usage-page {
+    min-height: 0;
   }
 
   .quotes-toolbar,
   .orders-toolbar,
   .products-toolbar,
-  .packages-toolbar {
+  .packages-toolbar,
+  .meat-customers-toolbar,
+  .seasoning-cost-toolbar,
+  .calculation-settings-toolbar,
+  .spice-usage-toolbar {
     align-items: center;
     flex-direction: row;
     flex-wrap: wrap;

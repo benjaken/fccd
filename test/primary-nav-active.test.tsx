@@ -19,6 +19,12 @@ describe("Primary navigation section matching", () => {
     ["/products", "products"],
     ["/products/packages", "products"],
     ["/products/packages/pkg-1", "products"],
+    ["/frozen", "frozen"],
+    ["/frozen/raw-meat-inventory", "frozen"],
+    ["/frozen/seasoning-cost", "frozen"],
+    ["/frozen/calculation-settings", "frozen"],
+    ["/frozen/customers", "frozen"],
+    ["/frozen/spice-usage", "frozen"],
     ["/kitchen", "kitchen"],
     ["/kitchen/calendar", "kitchen"],
     ["/delivery", "delivery"],
@@ -65,6 +71,18 @@ describe("Primary navigation section matching", () => {
     expect(pageAccessKey("/reports/tabs/shop-order-quantities")).toBe(
       "reports.shop_order_quantities",
     );
+    expect(pageAccessKey("/frozen")).toBe("frozen");
+    expect(pageAccessKey("/frozen/raw-meat-inventory")).toBe(
+      "frozen.raw_meat_inventory",
+    );
+    expect(pageAccessKey("/frozen/seasoning-cost")).toBe(
+      "frozen.seasoning_cost",
+    );
+    expect(pageAccessKey("/frozen/calculation-settings")).toBe(
+      "frozen.calculation_settings",
+    );
+    expect(pageAccessKey("/frozen/customers")).toBe("frozen.meat_customers");
+    expect(pageAccessKey("/frozen/spice-usage")).toBe("frozen.spice_usage");
   });
 
   it("nests frozen meat and shop pages under the reports sidebar item", () => {

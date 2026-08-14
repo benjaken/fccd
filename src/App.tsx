@@ -18,11 +18,13 @@ import {
   CircleDollarSign,
   ClipboardCheck,
   ClipboardList,
+  Calculator,
   FileArchive,
   FileText,
   HandCoins,
   History,
   LayoutDashboard,
+  Leaf,
   LogOut,
   Menu,
   Moon,
@@ -74,6 +76,10 @@ import { ProductDetailPage } from "@/components/ProductDetailPage";
 import { PackagesListPage } from "@/components/PackagesListPage";
 import { PackageDetailPage } from "@/components/PackageDetailPage";
 import { RawMeatInventoryCalcPage } from "@/components/RawMeatInventoryCalcPage";
+import { SpiceUsagePage } from "@/components/SpiceUsagePage";
+import { SeasoningCostSettingsPage } from "@/components/SeasoningCostSettingsPage";
+import { CalculationSettingsPage } from "@/components/CalculationSettingsPage";
+import { MeatCustomersPage } from "@/components/MeatCustomersPage";
 import { AttachmentsListPage } from "@/components/settings/AttachmentsListPage";
 import { LoginLogsListPage } from "@/components/settings/LoginLogsListPage";
 import { RolePermissionsPage } from "@/components/settings/RolePermissionsPage";
@@ -240,6 +246,30 @@ const secondaryNav: Record<string, NavItem[]> = {
       icon: Beef,
       permissionKey: "frozen.raw_meat_inventory",
     },
+    {
+      key: "seasoningCost",
+      to: "/frozen/seasoning-cost",
+      icon: CircleDollarSign,
+      permissionKey: "frozen.seasoning_cost",
+    },
+    {
+      key: "calculationSettings",
+      to: "/frozen/calculation-settings",
+      icon: Calculator,
+      permissionKey: "frozen.calculation_settings",
+    },
+    {
+      key: "meatCustomers",
+      to: "/frozen/customers",
+      icon: Users,
+      permissionKey: "frozen.meat_customers",
+    },
+    {
+      key: "spiceUsage",
+      to: "/frozen/spice-usage",
+      icon: Leaf,
+      permissionKey: "frozen.spice_usage",
+    },
   ],
   kitchen: [
     { key: "kitchen", to: "/kitchen", icon: Utensils, permissionKey: "kitchen" },
@@ -364,7 +394,13 @@ const SECTION_CHILD_KEYS: Record<string, string[]> = {
     "products.ala_carte",
     "products.packages",
   ],
-  frozen: ["frozen.raw_meat_inventory"],
+  frozen: [
+    "frozen.raw_meat_inventory",
+    "frozen.seasoning_cost",
+    "frozen.calculation_settings",
+    "frozen.meat_customers",
+    "frozen.spice_usage",
+  ],
   kitchen: ["kitchen.calendar", "kitchen.inventory"],
   delivery: ["delivery.assign"],
   restaurant: ["restaurant.inventory", "restaurant.reports"],
@@ -908,6 +944,22 @@ function OperationsShell() {
               <Route
                 path="/frozen/raw-meat-inventory"
                 element={<RawMeatInventoryCalcPage />}
+              />
+              <Route
+                path="/frozen/seasoning-cost"
+                element={<SeasoningCostSettingsPage />}
+              />
+              <Route
+                path="/frozen/calculation-settings"
+                element={<CalculationSettingsPage />}
+              />
+              <Route
+                path="/frozen/customers"
+                element={<MeatCustomersPage />}
+              />
+              <Route
+                path="/frozen/spice-usage"
+                element={<SpiceUsagePage />}
               />
               <Route
                 path="/reports/frozen-meat"
