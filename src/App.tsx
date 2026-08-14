@@ -465,7 +465,60 @@ function isNavPathActive(pathname: string, to: string, exact: boolean) {
   return pathname.startsWith(`${to}/`);
 }
 
-export { isPrimaryNavActive, sectionFromPath };
+/** Flatten primary + secondary destinations for the mobile drawer (no nested menus). */
+function flattenVisibleNavItems(
+  items: NavItem[],
+  canAccess: (permissionKey: string) => boolean,
+): NavItem[] {
+  return items.flatMap((item) => {
+    if (item.children?.length) {
+      return flattenVisibleNavItems(item.children, canAccess);
+    }
+    return isNavItemVisible(item, canAccess) ? [item] : [];
+  });
+}
+
+function buildMobileDrawerNav(
+  visiblePrimary: NavItem[],
+  canAccess: (permissionKey: string) => boolean,
+): Array<{ groupKey: string; items: NavItem[] }> {
+  const primaryKeys = new Set(visiblePrimary.map((item) => item.key));
+  const primaryPaths = new Set(visiblePrimary.map((item) => item.to));
+
+  return visiblePrimary
+    .map((primary) => {
+      const configured = secondaryNav[primary.key];
+      const secondary = flattenVisibleNavItems(configured ?? [], canAccess);
+
+      const items =
+        primary.key === "overview"
+          ? secondary.filter(
+              (item) =>
+                item.to === primary.to ||
+                (!primaryPaths.has(item.to) && !primaryKeys.has(item.key)),
+            )
+          : configured
+            ? secondary
+            : [
+                {
+                  ...primary,
+                  permissionKey: navItemPermissionKey(primary),
+                },
+              ];
+
+      return { groupKey: primary.key, items };
+    })
+    .filter((group) => group.items.length > 0);
+}
+
+function mobileNavLinkEnd(to: string, allHrefs: string[]) {
+  return (
+    to === "/" ||
+    allHrefs.some((href) => href !== to && href.startsWith(`${to}/`))
+  );
+}
+
+export { isPrimaryNavActive, sectionFromPath, buildMobileDrawerNav };
 
 function Brand() {
   const { t } = useTranslation();
@@ -547,6 +600,13 @@ function OperationsShell() {
   });
   const sideItems = (secondaryNav[section] ?? secondaryNav.overview).filter(
     (item) => isNavItemVisible(item, pageAccess.canAccess),
+  );
+  const mobileNavGroups = buildMobileDrawerNav(
+    visiblePrimaryNav,
+    (permissionKey) => pageAccess.canAccess(permissionKey),
+  );
+  const mobileNavHrefs = mobileNavGroups.flatMap((group) =>
+    group.items.map((item) => item.to),
   );
   const firstSettingsPath =
     secondaryNav.settings.find((item) =>
@@ -1032,22 +1092,26 @@ function OperationsShell() {
                 <X />
               </Button>
             </div>
-            <nav>
-              {visiblePrimaryNav.map(({ key, to, icon: NavIcon }) => (
-                <NavLink
-                  key={key}
-                  to={to}
-                  end={to === "/"}
-                  className={({ isActive }) =>
-                    cn(
-                      "sidebar-link",
-                      isPrimaryNavActive(section, key, isActive) && "active",
-                    )
-                  }
-                >
-                  <NavIcon />
-                  <span>{t(`navigation.${key}`)}</span>
-                </NavLink>
+            <nav aria-label="Navigation">
+              {mobileNavGroups.map((group) => (
+                <div className="mobile-nav-group" key={group.groupKey}>
+                  <p className="mobile-nav-group-label">
+                    {t(`navigation.${group.groupKey}`)}
+                  </p>
+                  {group.items.map(({ key, to, icon: NavIcon }) => (
+                    <NavLink
+                      key={`${group.groupKey}-${key}-${to}`}
+                      to={to}
+                      end={mobileNavLinkEnd(to, mobileNavHrefs)}
+                      className={({ isActive }) =>
+                        cn("sidebar-link", isActive && "active")
+                      }
+                    >
+                      <NavIcon />
+                      <span>{t(`navigation.${key}`)}</span>
+                    </NavLink>
+                  ))}
+                </div>
               ))}
             </nav>
             <div className="mobile-account-actions">
