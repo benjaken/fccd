@@ -1405,13 +1405,13 @@ td:last-child {
   border-bottom: 1px solid var(--border);
   background: var(--secondary);
   color: var(--muted-foreground);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.45;
 }
 
 .yield-errors-rules-title {
   color: var(--foreground);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
 }
 
