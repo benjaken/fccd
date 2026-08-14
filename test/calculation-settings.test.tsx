@@ -98,6 +98,7 @@ describe("Calculation settings page", () => {
 
     await user.click(screen.getByRole("button", { name: "新建" }));
     const dialog = await screen.findByRole("dialog", { name: "新增計算設定" });
+    expect(within(dialog).getAllByPlaceholderText("例如：0.00")).toHaveLength(2);
     await user.type(within(dialog).getByLabelText("收成差異 %"), "12");
     await user.type(within(dialog).getByLabelText("Mark-up %"), "8");
     await user.click(within(dialog).getByRole("button", { name: "保存" }));

@@ -394,10 +394,9 @@ describe("Raw meat inventory calculation page", () => {
 
     const dialog = await screen.findByRole("dialog", { name: "添加選項" });
     expect(dialog).toHaveClass("side-panel");
-    await user.type(within(dialog).getByPlaceholderText("code"), "RAW099");
-    const nameFields = within(dialog).getAllByPlaceholderText("Type here...");
-    await user.type(nameFields[0]!, "test肉");
-    await user.type(nameFields[1]!, "Test meat");
+    await user.type(within(dialog).getByPlaceholderText("例如：LKJ015"), "RAW099");
+    await user.type(within(dialog).getByPlaceholderText("例如：豬肚"), "test肉");
+    await user.type(within(dialog).getByPlaceholderText("輸入英文名稱"), "Test meat");
 
     const supplierInput = within(dialog).getByRole("textbox", { name: "供應商" });
     await user.click(supplierInput);
@@ -497,6 +496,9 @@ describe("Raw meat inventory calculation page", () => {
 
     const dialog = await screen.findByRole("dialog", { name: "生肉入貨" });
     expect(dialog).toHaveClass("side-panel");
+    expect(within(dialog).getByPlaceholderText("例如：$0")).toBeInTheDocument();
+    expect(within(dialog).getByPlaceholderText("例如：0.00")).toBeInTheDocument();
+    expect(within(dialog).getByPlaceholderText("輸入備註")).toBeInTheDocument();
     expect(within(dialog).getByText("乾冬菇 (廣信)")).toBeInTheDocument();
     expect(within(dialog).getByText("廣聯興")).toBeInTheDocument();
 

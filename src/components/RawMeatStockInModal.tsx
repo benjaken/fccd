@@ -218,7 +218,7 @@ export function RawMeatStockInModal({
               inputMode="decimal"
               value={unitPriceText}
               onChange={(event) => setUnitPriceText(event.target.value)}
-              placeholder="$0"
+              placeholder={t("rawMeatInventory.fields.unitPricePlaceholder")}
               aria-label={t("rawMeatInventory.fields.unitPrice")}
             />
           </label>
@@ -257,7 +257,7 @@ export function RawMeatStockInModal({
               inputMode="decimal"
               value={quantityText}
               onChange={(event) => setQuantityText(event.target.value)}
-              placeholder="0.00"
+              placeholder={t("rawMeatInventory.fields.quantityPlaceholder")}
               aria-label={t("rawMeatInventory.fields.quantity")}
             />
           </label>
