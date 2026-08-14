@@ -346,7 +346,9 @@ describe("Prepared meat inventory calculation page", () => {
       { id: "ship-1", name: "三皇物流" },
     ]);
     const loadOrderNumber = vi.fn().mockResolvedValue("R - 202608 - 8");
+    const loadRawItems = vi.fn().mockResolvedValue([]);
     const createOutbound = vi.fn().mockResolvedValue("order-1");
+    const sendToFactory = vi.fn().mockResolvedValue("order-1");
 
     render(
       <MemoryRouter>
@@ -356,7 +358,9 @@ describe("Prepared meat inventory calculation page", () => {
           loadCustomers={loadCustomers}
           loadShippingMethods={loadShippingMethods}
           loadOrderNumber={loadOrderNumber}
+          loadRawItems={loadRawItems}
           createOutbound={createOutbound}
+          sendToFactory={sendToFactory}
         />
       </MemoryRouter>,
     );
@@ -370,6 +374,12 @@ describe("Prepared meat inventory calculation page", () => {
 
     const dialog = await screen.findByRole("dialog", { name: "送貨單" });
     expect(dialog).toHaveClass("side-panel-xl");
+    await waitFor(() => {
+      expect(within(dialog).getByRole("combobox", { name: "客戶" })).toBeEnabled();
+    });
+    expect(within(dialog).queryByRole("button", { name: "編輯" })).toBeNull();
+    expect(within(dialog).queryByRole("button", { name: "送到工場" })).toBeNull();
+    expect(within(dialog).getByRole("button", { name: "確定" })).toBeDisabled();
 
     const shipping = within(dialog).getByRole("combobox", { name: "送貨方式" });
     expect(shipping).toBeDisabled();
@@ -379,6 +389,7 @@ describe("Prepared meat inventory calculation page", () => {
       "cust-ylp",
     );
     expect(shipping).toBeEnabled();
+    expect(within(dialog).queryByRole("combobox", { name: "生肉" })).toBeNull();
     await user.selectOptions(shipping, "ship-1");
     expect(shipping).toHaveValue("ship-1");
 
@@ -395,9 +406,10 @@ describe("Prepared meat inventory calculation page", () => {
     );
     expect(shipping).toBeEnabled();
     await user.selectOptions(shipping, "ship-1");
-    await user.click(within(dialog).getByRole("button", { name: "確定" }));
-    expect(shipping).toBeDisabled();
-    const quantity = within(dialog).getByRole("textbox", { name: "數量" });
+
+    await user.click(within(dialog).getByRole("combobox", { name: "製成品" }));
+    await user.click(within(dialog).getByRole("option", { name: "五香牛腩" }));
+    const quantity = within(dialog).getByRole("textbox", { name: "製成品數量" });
     await user.type(quantity, "勝多負少");
     expect(quantity).toHaveValue("");
     await user.type(quantity, "2");
@@ -409,7 +421,7 @@ describe("Prepared meat inventory calculation page", () => {
     expect(within(lines as HTMLElement).getByText("五香牛腩")).toBeInTheDocument();
     expect(within(lines as HTMLElement).getByText("2")).toBeInTheDocument();
 
-    await user.click(within(dialog).getByRole("button", { name: "傳送到工場" }));
+    await user.click(within(dialog).getByRole("button", { name: "確定" }));
     await waitFor(() => {
       expect(createOutbound).toHaveBeenCalledWith({
         customerId: "cust-ylp",
@@ -420,11 +432,128 @@ describe("Prepared meat inventory calculation page", () => {
         lines: [
           {
             preparedMeatItemId: "item-1",
+            rawMeatItemId: null,
             quantity: 2,
             remarks: "",
           },
         ],
       });
     });
+    expect(sendToFactory).not.toHaveBeenCalled();
+    expect(within(dialog).queryByRole("button", { name: "確定" })).toBeNull();
+
+    await user.click(within(dialog).getByRole("button", { name: "送到工場" }));
+    await waitFor(() => {
+      expect(sendToFactory).toHaveBeenCalledWith("order-1");
+    });
+  });
+
+  it("lets 到會 and 凍肉製作 add direct-ship raw meat", async () => {
+    const user = userEvent.setup();
+    const loadItems = vi.fn().mockResolvedValue(items);
+    const loadMovements = vi.fn().mockResolvedValue([]);
+    const loadCustomers = vi.fn().mockResolvedValue([
+      {
+        id: "cust-ylp",
+        customerCode: "C0085",
+        name: "桂花小幸 YLP",
+        contactPerson: null,
+        phone: null,
+        address: null,
+        deliveryNoteRequired: true,
+      },
+      {
+        id: "cust-room",
+        customerCode: "Room R",
+        name: "Room R - 到會",
+        contactPerson: null,
+        phone: null,
+        address: null,
+        deliveryNoteRequired: false,
+      },
+      {
+        id: "cust-factory",
+        customerCode: "Room R 2",
+        name: "Room R - 凍肉製作",
+        contactPerson: null,
+        phone: null,
+        address: null,
+        deliveryNoteRequired: false,
+      },
+    ]);
+    const loadShippingMethods = vi.fn().mockResolvedValue([
+      { id: "ship-1", name: "三皇物流" },
+    ]);
+    const loadOrderNumber = vi.fn().mockResolvedValue("R - 202608 - 9");
+    const loadRawItems = vi.fn().mockResolvedValue([
+      {
+        id: "raw-1",
+        sku: "LKJ015",
+        name: "乾冬菇 (廣信)",
+        unit: "kg",
+      },
+    ]);
+    const createOutbound = vi.fn().mockResolvedValue("order-2");
+    const sendToFactory = vi.fn().mockResolvedValue("order-2");
+
+    render(
+      <MemoryRouter>
+        <PreparedMeatInventoryCalcPage
+          loadItems={loadItems}
+          loadMovements={loadMovements}
+          loadCustomers={loadCustomers}
+          loadShippingMethods={loadShippingMethods}
+          loadOrderNumber={loadOrderNumber}
+          loadRawItems={loadRawItems}
+          createOutbound={createOutbound}
+          sendToFactory={sendToFactory}
+        />
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: "製成品出貨" }));
+    const dialog = await screen.findByRole("dialog", { name: "送貨單" });
+    await waitFor(() => {
+      expect(within(dialog).getByRole("combobox", { name: "客戶" })).toBeEnabled();
+    });
+
+    await user.selectOptions(
+      within(dialog).getByRole("combobox", { name: "客戶" }),
+      "cust-room",
+    );
+    expect(within(dialog).getByRole("combobox", { name: "生肉" })).toBeInTheDocument();
+    expect(within(dialog).getByRole("combobox", { name: "送貨方式" })).toBeDisabled();
+
+    await user.click(within(dialog).getByRole("combobox", { name: "生肉" }));
+    await user.click(within(dialog).getByRole("option", { name: "乾冬菇 (廣信)" }));
+    await user.type(within(dialog).getByRole("textbox", { name: "生肉數量" }), "3");
+    await user.click(within(dialog).getAllByRole("button", { name: "加入" })[0]!);
+
+    await user.selectOptions(
+      within(dialog).getByRole("combobox", { name: "客戶" }),
+      "cust-factory",
+    );
+    expect(within(dialog).getByRole("combobox", { name: "生肉" })).toBeInTheDocument();
+    expect(within(dialog).getByText("乾冬菇 (廣信)")).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole("button", { name: "確定" }));
+    await waitFor(() => {
+      expect(createOutbound).toHaveBeenCalledWith({
+        customerId: "cust-factory",
+        shippingMethodId: null,
+        orderNumber: "R - 202608 - 9",
+        shippingDate: expect.any(String),
+        remarks: "",
+        lines: [
+          {
+            preparedMeatItemId: null,
+            rawMeatItemId: "raw-1",
+            quantity: 3,
+            remarks: "",
+          },
+        ],
+      });
+    });
+    expect(within(dialog).getByRole("button", { name: "送到工場" })).toBeInTheDocument();
   });
 });

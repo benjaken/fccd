@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   canSelectPreparedMeatShippingMethod,
+  canShipRawMeatOnPreparedOutbound,
   coercePreparedMeatQuantityInput,
   currentHongKongYear,
   formatPreparedMeatOrderNumber,
@@ -121,6 +122,13 @@ describe("prepared meat outbound helpers", () => {
     );
     expect(canSelectPreparedMeatShippingMethod("Room R - 到會")).toBe(false);
     expect(canSelectPreparedMeatShippingMethod(null)).toBe(false);
+  });
+
+  it("allows raw meat outbound only for 到會 and 凍肉製作", () => {
+    expect(canShipRawMeatOnPreparedOutbound("Room R - 到會")).toBe(true);
+    expect(canShipRawMeatOnPreparedOutbound("Room R - 凍肉製作")).toBe(true);
+    expect(canShipRawMeatOnPreparedOutbound("桂花小幸 YLP")).toBe(false);
+    expect(canShipRawMeatOnPreparedOutbound(null)).toBe(false);
   });
 
   it("builds the next R - YYYYMM - n document number", () => {

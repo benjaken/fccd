@@ -2429,11 +2429,21 @@ td:last-child {
   grid-column: 1;
 }
 
+.prepared-meat-outbound-add-rows {
+  display: grid;
+  gap: 8px;
+}
+
 .prepared-meat-outbound-add-row {
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) 6.5rem minmax(0, 1fr) auto;
   gap: 8px;
   align-items: end;
+}
+
+.prepared-meat-outbound-item-picker {
+  position: relative;
+  min-width: 0;
 }
 
 .prepared-meat-outbound-lines-wrap {

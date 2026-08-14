@@ -232,11 +232,21 @@ export async function fetchPreparedMeatMovementsForItem(
 }
 
 export const GUIHUA_CUSTOMER_MARKER = "桂花小幸";
+export const RAW_MEAT_OUTBOUND_CUSTOMER_MARKERS = ["到會", "凍肉製作"] as const;
 
 export function canSelectPreparedMeatShippingMethod(
   customerName: string | null | undefined,
 ) {
   return (customerName ?? "").includes(GUIHUA_CUSTOMER_MARKER);
+}
+
+export function canShipRawMeatOnPreparedOutbound(
+  customerName: string | null | undefined,
+) {
+  const name = customerName ?? "";
+  return RAW_MEAT_OUTBOUND_CUSTOMER_MARKERS.some((marker) =>
+    name.includes(marker),
+  );
 }
 
 export function meatCustomerOptionLabel(row: {
@@ -323,8 +333,34 @@ export async function fetchNextPreparedMeatOrderNumber(
   );
 }
 
+export type DirectShipRawMeatOption = {
+  id: string;
+  sku: string | null;
+  name: string;
+  unit: string | null;
+};
+
+export async function fetchDirectShipRawMeatItems(): Promise<
+  DirectShipRawMeatOption[]
+> {
+  const { data, error } = await supabase
+    .from("raw_meat_items")
+    .select("id,sku,name,unit")
+    .is("archived_at", null)
+    .eq("is_active", true)
+    .eq("can_ship_directly", true)
+    .order("sort_order", { ascending: true })
+    .order("name", { ascending: true });
+
+  if (error) throw error;
+  return ((data ?? []) as DirectShipRawMeatOption[]).filter((row) =>
+    Boolean(row.name?.trim()),
+  );
+}
+
 export type PreparedMeatOutboundLineInput = {
-  preparedMeatItemId: string;
+  preparedMeatItemId?: string | null;
+  rawMeatItemId?: string | null;
   quantity: number;
   remarks?: string | null;
 };
@@ -348,11 +384,23 @@ export async function createPreparedMeatOutbound(
     p_shipping_date: input.shippingDate,
     p_remarks: (input.remarks ?? "").trim() || null,
     p_lines: input.lines.map((line) => ({
-      prepared_meat_item_id: line.preparedMeatItemId,
+      prepared_meat_item_id: line.preparedMeatItemId || null,
+      raw_meat_item_id: line.rawMeatItemId || null,
       quantity: line.quantity,
       remarks: (line.remarks ?? "").trim() || null,
     })),
   });
+  if (error) throw error;
+  return data as string;
+}
+
+export async function sendPreparedMeatOrderToFactory(
+  orderId: string,
+): Promise<string> {
+  const { data, error } = await supabase.rpc(
+    "send_prepared_meat_order_to_factory",
+    { p_order_id: orderId },
+  );
   if (error) throw error;
   return data as string;
 }

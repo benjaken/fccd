@@ -6,11 +6,15 @@ import { SidePanel } from "@/components/ui/side-panel";
 import { fetchMeatCustomers, type MeatCustomerRow } from "@/lib/meat-customers";
 import {
   canSelectPreparedMeatShippingMethod,
+  canShipRawMeatOnPreparedOutbound,
   coercePreparedMeatQuantityInput,
   createPreparedMeatOutbound,
+  fetchDirectShipRawMeatItems,
   fetchMeatShippingMethods,
   fetchNextPreparedMeatOrderNumber,
   meatCustomerOptionLabel,
+  sendPreparedMeatOrderToFactory,
+  type DirectShipRawMeatOption,
   type MeatShippingMethodOption,
   type PreparedMeatItemOption,
   type PreparedMeatOutboundInput,
@@ -19,6 +23,7 @@ import { hongKongDateInputValue } from "@/lib/raw-meat-inventory";
 
 type DraftLine = {
   key: string;
+  kind: "prepared" | "raw";
   itemId: string;
   sku: string | null;
   name: string;
@@ -27,14 +32,149 @@ type DraftLine = {
   remarks: string;
 };
 
+type SearchOption = { id: string; name: string; sku?: string | null };
+
 type CustomersLoader = () => Promise<MeatCustomerRow[]>;
 type ShippingLoader = () => Promise<MeatShippingMethodOption[]>;
 type OrderNumberLoader = (shippingDate: string) => Promise<string>;
+type RawItemsLoader = () => Promise<DirectShipRawMeatOption[]>;
 type OutboundCreator = (input: PreparedMeatOutboundInput) => Promise<string>;
+type FactorySender = (orderId: string) => Promise<string>;
 
 function parseQuantity(value: string) {
   const parsed = Number.parseFloat(coercePreparedMeatQuantityInput(value));
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function QuantityInput({
+  value,
+  onChange,
+  disabled,
+  placeholder,
+  ariaLabel,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  placeholder: string;
+  ariaLabel: string;
+}) {
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      autoComplete="off"
+      pattern="[0-9]*[.]?[0-9]*"
+      value={value}
+      disabled={disabled}
+      placeholder={placeholder}
+      aria-label={ariaLabel}
+      onBeforeInput={(event) => {
+        if (
+          typeof event.data === "string" &&
+          event.data.length > 0 &&
+          !/[\d.０-９．]/.test(event.data)
+        ) {
+          event.preventDefault();
+        }
+      }}
+      onChange={(event) =>
+        onChange(coercePreparedMeatQuantityInput(event.target.value))
+      }
+    />
+  );
+}
+
+function OutboundItemSearchSelect({
+  label,
+  placeholder,
+  value,
+  options,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  placeholder: string;
+  value: string;
+  options: SearchOption[];
+  disabled?: boolean;
+  onChange: (id: string) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const selected = options.find((option) => option.id === value) ?? null;
+  const needle = query.trim().toLocaleLowerCase("zh-HK");
+  const available = options.filter((option) => {
+    if (!needle) return true;
+    return (
+      option.name.toLocaleLowerCase("zh-HK").includes(needle) ||
+      (option.sku ?? "").toLocaleLowerCase("zh-HK").includes(needle)
+    );
+  });
+
+  return (
+    <div className="prepared-meat-outbound-item-picker">
+      <input
+        role="combobox"
+        aria-label={label}
+        aria-expanded={open}
+        aria-autocomplete="list"
+        autoComplete="off"
+        disabled={disabled}
+        placeholder={placeholder}
+        value={open ? query : (selected?.name ?? "")}
+        onFocus={() => {
+          setQuery("");
+          setOpen(true);
+        }}
+        onChange={(event) => {
+          setQuery(event.target.value);
+          setOpen(true);
+          if (value) onChange("");
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            const first = available[0];
+            if (first) {
+              onChange(first.id);
+              setQuery("");
+              setOpen(false);
+            }
+          }
+          if (event.key === "Escape") setOpen(false);
+        }}
+        onBlur={() => {
+          window.setTimeout(() => setOpen(false), 120);
+        }}
+      />
+      {open && !disabled ? (
+        <ul className="raw-meat-tag-menu" role="listbox" aria-label={label}>
+          {available.length === 0 ? (
+            <li className="raw-meat-tag-empty">{placeholder}</li>
+          ) : (
+            available.map((option) => (
+              <li key={option.id} role="presentation">
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={option.id === value}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => {
+                    onChange(option.id);
+                    setQuery("");
+                    setOpen(false);
+                  }}
+                >
+                  {option.name}
+                </button>
+              </li>
+            ))
+          )}
+        </ul>
+      ) : null}
+    </div>
+  );
 }
 
 export function PreparedMeatOutboundModal({
@@ -45,7 +185,9 @@ export function PreparedMeatOutboundModal({
   loadCustomers = fetchMeatCustomers,
   loadShippingMethods = fetchMeatShippingMethods,
   loadOrderNumber = fetchNextPreparedMeatOrderNumber,
+  loadRawItems = fetchDirectShipRawMeatItems,
   createOutbound = createPreparedMeatOutbound,
+  sendToFactory = sendPreparedMeatOrderToFactory,
 }: {
   open: boolean;
   items: PreparedMeatItemOption[];
@@ -54,25 +196,32 @@ export function PreparedMeatOutboundModal({
   loadCustomers?: CustomersLoader;
   loadShippingMethods?: ShippingLoader;
   loadOrderNumber?: OrderNumberLoader;
+  loadRawItems?: RawItemsLoader;
   createOutbound?: OutboundCreator;
+  sendToFactory?: FactorySender;
 }) {
   const { t } = useTranslation();
   const [customers, setCustomers] = useState<MeatCustomerRow[]>([]);
   const [shippingMethods, setShippingMethods] = useState<
     MeatShippingMethodOption[]
   >([]);
+  const [rawItems, setRawItems] = useState<DirectShipRawMeatOption[]>([]);
   const [customerId, setCustomerId] = useState("");
   const [shippingMethodId, setShippingMethodId] = useState("");
   const [orderNumber, setOrderNumber] = useState("");
   const [shippingDate, setShippingDate] = useState("");
   const [remarks, setRemarks] = useState("");
-  const [confirmed, setConfirmed] = useState(false);
-  const [draftItemId, setDraftItemId] = useState("");
-  const [draftQuantity, setDraftQuantity] = useState("");
-  const [draftRemarks, setDraftRemarks] = useState("");
+  const [savedOrderId, setSavedOrderId] = useState<string | null>(null);
+  const [draftPreparedId, setDraftPreparedId] = useState("");
+  const [draftPreparedQuantity, setDraftPreparedQuantity] = useState("");
+  const [draftPreparedRemarks, setDraftPreparedRemarks] = useState("");
+  const [draftRawId, setDraftRawId] = useState("");
+  const [draftRawQuantity, setDraftRawQuantity] = useState("");
+  const [draftRawRemarks, setDraftRawRemarks] = useState("");
   const [lines, setLines] = useState<DraftLine[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const activeItems = useMemo(
@@ -84,8 +233,13 @@ export function PreparedMeatOutboundModal({
   const shippingEnabled = canSelectPreparedMeatShippingMethod(
     selectedCustomer?.name,
   );
-  const canConfirm = Boolean(customerId && shippingDate && orderNumber);
-  const canSend = confirmed && lines.length > 0 && !submitting;
+  const rawEnabled = canShipRawMeatOnPreparedOutbound(selectedCustomer?.name);
+  const saved = Boolean(savedOrderId);
+  const canSave =
+    Boolean(customerId && shippingDate && orderNumber && lines.length > 0) &&
+    !saved &&
+    !submitting &&
+    !loading;
 
   useEffect(() => {
     if (!open) return;
@@ -94,10 +248,13 @@ export function PreparedMeatOutboundModal({
     setShippingMethodId("");
     setShippingDate(today);
     setRemarks("");
-    setConfirmed(false);
-    setDraftItemId(activeItems[0]?.id ?? "");
-    setDraftQuantity("");
-    setDraftRemarks("");
+    setSavedOrderId(null);
+    setDraftPreparedId("");
+    setDraftPreparedQuantity("");
+    setDraftPreparedRemarks("");
+    setDraftRawId("");
+    setDraftRawQuantity("");
+    setDraftRawRemarks("");
     setLines([]);
     setError(null);
     setLoading(true);
@@ -106,11 +263,13 @@ export function PreparedMeatOutboundModal({
       loadCustomers(),
       loadShippingMethods(),
       loadOrderNumber(today),
+      loadRawItems(),
     ])
-      .then(([nextCustomers, nextMethods, nextNumber]) => {
+      .then(([nextCustomers, nextMethods, nextNumber, nextRawItems]) => {
         setCustomers(nextCustomers);
         setShippingMethods(nextMethods);
         setOrderNumber(nextNumber);
+        setRawItems(nextRawItems);
       })
       .catch((loadError: unknown) => {
         setError(
@@ -120,10 +279,17 @@ export function PreparedMeatOutboundModal({
         );
       })
       .finally(() => setLoading(false));
-  }, [activeItems, loadCustomers, loadOrderNumber, loadShippingMethods, open, t]);
+  }, [
+    loadCustomers,
+    loadOrderNumber,
+    loadRawItems,
+    loadShippingMethods,
+    open,
+    t,
+  ]);
 
   useEffect(() => {
-    if (!open || !shippingDate || confirmed) return;
+    if (!open || !shippingDate || saved) return;
     let cancelled = false;
     void loadOrderNumber(shippingDate)
       .then((nextNumber) => {
@@ -135,7 +301,7 @@ export function PreparedMeatOutboundModal({
     return () => {
       cancelled = true;
     };
-  }, [confirmed, loadOrderNumber, open, shippingDate]);
+  }, [loadOrderNumber, open, saved, shippingDate]);
 
   const selectCustomer = (nextId: string) => {
     setCustomerId(nextId);
@@ -143,57 +309,71 @@ export function PreparedMeatOutboundModal({
     if (!canSelectPreparedMeatShippingMethod(next?.name)) {
       setShippingMethodId("");
     }
+    if (!canShipRawMeatOnPreparedOutbound(next?.name)) {
+      setDraftRawId("");
+      setDraftRawQuantity("");
+      setDraftRawRemarks("");
+      setLines((current) => current.filter((line) => line.kind !== "raw"));
+    }
   };
 
-  const confirmHeader = () => {
-    if (!canConfirm) return;
-    setConfirmed(true);
-    setError(null);
-  };
-
-  const addLine = () => {
-    const item = activeItems.find((row) => row.id === draftItemId);
-    const quantity = parseQuantity(draftQuantity);
-    if (!item || quantity === null || quantity <= 0) {
+  const addLine = (
+    kind: DraftLine["kind"],
+    item:
+      | PreparedMeatItemOption
+      | DirectShipRawMeatOption
+      | undefined,
+    quantityText: string,
+    lineRemarks: string,
+    clear: () => void,
+  ) => {
+    const quantity = parseQuantity(quantityText);
+    if (!item) {
+      setError(t("preparedMeatInventory.outbound.productRequired"));
+      return;
+    }
+    if (quantity === null || quantity <= 0) {
       setError(t("preparedMeatInventory.outbound.quantityRequired"));
       return;
     }
     setLines((current) => [
       ...current,
       {
-        key: `${item.id}-${current.length + 1}`,
+        key: `${kind}-${item.id}-${current.length + 1}`,
+        kind,
         itemId: item.id,
         sku: item.sku,
         name: item.name,
         unit: item.unit,
         quantity,
-        remarks: draftRemarks.trim(),
+        remarks: lineRemarks.trim(),
       },
     ]);
-    setDraftQuantity("");
-    setDraftRemarks("");
+    clear();
     setError(null);
   };
 
-  const sendToFactory = async () => {
-    if (!selectedCustomer || !canSend) return;
+  const saveOutbound = async () => {
+    if (!selectedCustomer || !canSave) return;
     setSubmitting(true);
     setError(null);
     try {
-      await createOutbound({
+      const orderId = await createOutbound({
         customerId: selectedCustomer.id,
         shippingMethodId: shippingEnabled ? shippingMethodId || null : null,
         orderNumber,
         shippingDate,
         remarks,
         lines: lines.map((line) => ({
-          preparedMeatItemId: line.itemId,
+          preparedMeatItemId:
+            line.kind === "prepared" ? line.itemId : null,
+          rawMeatItemId: line.kind === "raw" ? line.itemId : null,
           quantity: line.quantity,
           remarks: line.remarks,
         })),
       });
+      setSavedOrderId(orderId);
       onSaved();
-      onClose();
     } catch (saveError: unknown) {
       setError(
         saveError instanceof Error
@@ -205,6 +385,25 @@ export function PreparedMeatOutboundModal({
     }
   };
 
+  const markSentToFactory = async () => {
+    if (!savedOrderId || sending) return;
+    setSending(true);
+    setError(null);
+    try {
+      await sendToFactory(savedOrderId);
+      onSaved();
+      onClose();
+    } catch (sendError: unknown) {
+      setError(
+        sendError instanceof Error
+          ? sendError.message
+          : t("preparedMeatInventory.outbound.sendError"),
+      );
+    } finally {
+      setSending(false);
+    }
+  };
+
   return (
     <SidePanel
       open={open}
@@ -213,21 +412,27 @@ export function PreparedMeatOutboundModal({
       closeLabel={t("preparedMeatInventory.closeOptions")}
       extraWide
       footer={
-        <>
+        saved ? (
           <Button
             type="button"
-            variant="outline"
-            disabled={!confirmed}
-            onClick={() => setConfirmed(false)}
+            disabled={sending}
+            onClick={() => void markSentToFactory()}
           >
-            {t("preparedMeatInventory.outbound.edit")}
-          </Button>
-          <Button type="button" disabled={!canSend} onClick={() => void sendToFactory()}>
-            {submitting
+            {sending
               ? t("preparedMeatInventory.outbound.saving")
               : t("preparedMeatInventory.outbound.sendToFactory")}
           </Button>
-        </>
+        ) : (
+          <Button
+            type="button"
+            disabled={!canSave}
+            onClick={() => void saveOutbound()}
+          >
+            {submitting
+              ? t("preparedMeatInventory.outbound.saving")
+              : t("preparedMeatInventory.outbound.confirm")}
+          </Button>
+        )
       }
     >
       <div className="prepared-meat-outbound-form">
@@ -237,7 +442,7 @@ export function PreparedMeatOutboundModal({
             <select
               aria-label={t("preparedMeatInventory.outbound.customer")}
               value={customerId}
-              disabled={loading || confirmed}
+              disabled={loading || saved}
               onChange={(event) => selectCustomer(event.target.value)}
             >
               <option value="">
@@ -271,7 +476,7 @@ export function PreparedMeatOutboundModal({
             <input
               type="date"
               value={shippingDate}
-              disabled={loading || confirmed}
+              disabled={loading || saved}
               onChange={(event) => setShippingDate(event.target.value)}
               aria-label={t("preparedMeatInventory.outbound.shippingDate")}
             />
@@ -289,7 +494,7 @@ export function PreparedMeatOutboundModal({
             <select
               aria-label={t("preparedMeatInventory.outbound.shippingMethod")}
               value={shippingMethodId}
-              disabled={!shippingEnabled || loading || confirmed}
+              disabled={!shippingEnabled || loading || saved}
               onChange={(event) => setShippingMethodId(event.target.value)}
             >
               <option value="">
@@ -315,7 +520,7 @@ export function PreparedMeatOutboundModal({
             <span>{t("preparedMeatInventory.outbound.remarks")}</span>
             <input
               value={remarks}
-              disabled={confirmed}
+              disabled={saved}
               onChange={(event) => setRemarks(event.target.value)}
               placeholder={t("preparedMeatInventory.outbound.remarksPlaceholder")}
               aria-label={t("preparedMeatInventory.outbound.remarks")}
@@ -323,112 +528,148 @@ export function PreparedMeatOutboundModal({
           </label>
         </div>
 
-        <Button
-          type="button"
-          size="sm"
-          disabled={!canConfirm || confirmed}
-          onClick={confirmHeader}
-        >
-          {t("preparedMeatInventory.outbound.confirm")}
-        </Button>
-
-        {confirmed ? (
-          <>
+        <div className="prepared-meat-outbound-add-rows">
+          {rawEnabled ? (
             <div className="prepared-meat-outbound-add-row">
-              <label className="raw-meat-field">
-                <span>{t("preparedMeatInventory.outbound.product")}</span>
-                <select
-                  aria-label={t("preparedMeatInventory.outbound.product")}
-                  value={draftItemId}
-                  onChange={(event) => setDraftItemId(event.target.value)}
-                >
-                  {activeItems.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="raw-meat-field">
-                <span>{t("preparedMeatInventory.outbound.quantity")}</span>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  autoComplete="off"
-                  pattern="[0-9]*[.]?[0-9]*"
-                  value={draftQuantity}
-                  onBeforeInput={(event) => {
-                    if (
-                      typeof event.data === "string" &&
-                      event.data.length > 0 &&
-                      !/[\d.０-９．]/.test(event.data)
-                    ) {
-                      event.preventDefault();
-                    }
-                  }}
-                  onChange={(event) =>
-                    setDraftQuantity(
-                      coercePreparedMeatQuantityInput(event.target.value),
-                    )
-                  }
-                  placeholder={t(
-                    "preparedMeatInventory.outbound.quantityPlaceholder",
-                  )}
-                  aria-label={t("preparedMeatInventory.outbound.quantity")}
+              <div className="raw-meat-field">
+                <OutboundItemSearchSelect
+                  label={t("preparedMeatInventory.outbound.rawProduct")}
+                  placeholder={t("preparedMeatInventory.outbound.rawProduct")}
+                  value={draftRawId}
+                  options={rawItems}
+                  disabled={saved || loading}
+                  onChange={setDraftRawId}
                 />
-              </label>
-              <label className="raw-meat-field">
-                <span>{t("preparedMeatInventory.outbound.lineRemarks")}</span>
-                <input
-                  value={draftRemarks}
-                  onChange={(event) => setDraftRemarks(event.target.value)}
-                  placeholder={t(
-                    "preparedMeatInventory.outbound.remarksPlaceholder",
-                  )}
-                  aria-label={t("preparedMeatInventory.outbound.lineRemarks")}
+              </div>
+              <div className="raw-meat-field">
+                <QuantityInput
+                  value={draftRawQuantity}
+                  onChange={setDraftRawQuantity}
+                  disabled={saved}
+                  placeholder={t("preparedMeatInventory.outbound.quantity")}
+                  ariaLabel={t("preparedMeatInventory.outbound.rawQuantity")}
                 />
-              </label>
-              <Button type="button" onClick={addLine}>
+              </div>
+              <div className="raw-meat-field">
+                <input
+                  value={draftRawRemarks}
+                  disabled={saved}
+                  onChange={(event) => setDraftRawRemarks(event.target.value)}
+                  placeholder={t(
+                    "preparedMeatInventory.outbound.lineRemarksPlaceholder",
+                  )}
+                  aria-label={t("preparedMeatInventory.outbound.rawRemarks")}
+                />
+              </div>
+              <Button
+                type="button"
+                disabled={saved}
+                onClick={() =>
+                  addLine(
+                    "raw",
+                    rawItems.find((item) => item.id === draftRawId),
+                    draftRawQuantity,
+                    draftRawRemarks,
+                    () => {
+                      setDraftRawQuantity("");
+                      setDraftRawRemarks("");
+                    },
+                  )
+                }
+              >
                 {t("preparedMeatInventory.outbound.add")}
               </Button>
             </div>
+          ) : null}
 
-            <div className="prepared-meat-outbound-lines-wrap">
-              <table className="prepared-meat-outbound-lines">
-                <thead>
-                  <tr>
-                    <th>{t("preparedMeatInventory.outbound.columns.index")}</th>
-                    <th>{t("preparedMeatInventory.outbound.columns.sku")}</th>
-                    <th>{t("preparedMeatInventory.outbound.columns.name")}</th>
-                    <th>{t("preparedMeatInventory.outbound.columns.quantity")}</th>
-                    <th>{t("preparedMeatInventory.outbound.columns.unit")}</th>
-                    <th>{t("preparedMeatInventory.outbound.columns.remarks")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {lines.length === 0 ? (
-                    <tr>
-                      <td colSpan={6}>
-                        {t("preparedMeatInventory.outbound.emptyLines")}
-                      </td>
-                    </tr>
-                  ) : (
-                    lines.map((line, index) => (
-                      <tr key={line.key}>
-                        <td>{index + 1}</td>
-                        <td>{line.sku || t("common.notSet")}</td>
-                        <td>{line.name}</td>
-                        <td>{line.quantity}</td>
-                        <td>{line.unit || t("common.notSet")}</td>
-                        <td>{line.remarks || t("common.notSet")}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+          <div className="prepared-meat-outbound-add-row">
+            <div className="raw-meat-field">
+              <OutboundItemSearchSelect
+                label={t("preparedMeatInventory.outbound.preparedProduct")}
+                placeholder={t("preparedMeatInventory.outbound.preparedProduct")}
+                value={draftPreparedId}
+                options={activeItems}
+                disabled={saved || loading}
+                onChange={setDraftPreparedId}
+              />
             </div>
-          </>
-        ) : null}
+            <div className="raw-meat-field">
+              <QuantityInput
+                value={draftPreparedQuantity}
+                onChange={setDraftPreparedQuantity}
+                disabled={saved}
+                placeholder={t("preparedMeatInventory.outbound.quantity")}
+                ariaLabel={t("preparedMeatInventory.outbound.preparedQuantity")}
+              />
+            </div>
+            <div className="raw-meat-field">
+              <input
+                value={draftPreparedRemarks}
+                disabled={saved}
+                onChange={(event) =>
+                  setDraftPreparedRemarks(event.target.value)
+                }
+                placeholder={t(
+                  "preparedMeatInventory.outbound.lineRemarksPlaceholder",
+                )}
+                aria-label={t("preparedMeatInventory.outbound.preparedRemarks")}
+              />
+            </div>
+            <Button
+              type="button"
+              disabled={saved}
+              onClick={() =>
+                addLine(
+                  "prepared",
+                  activeItems.find((item) => item.id === draftPreparedId),
+                  draftPreparedQuantity,
+                  draftPreparedRemarks,
+                  () => {
+                    setDraftPreparedQuantity("");
+                    setDraftPreparedRemarks("");
+                  },
+                )
+              }
+            >
+              {t("preparedMeatInventory.outbound.add")}
+            </Button>
+          </div>
+        </div>
+
+        <div className="prepared-meat-outbound-lines-wrap">
+          <table className="prepared-meat-outbound-lines">
+            <thead>
+              <tr>
+                <th>{t("preparedMeatInventory.outbound.columns.index")}</th>
+                <th>{t("preparedMeatInventory.outbound.columns.sku")}</th>
+                <th>{t("preparedMeatInventory.outbound.columns.name")}</th>
+                <th>{t("preparedMeatInventory.outbound.columns.quantity")}</th>
+                <th>{t("preparedMeatInventory.outbound.columns.unit")}</th>
+                <th>{t("preparedMeatInventory.outbound.columns.remarks")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {lines.length === 0 ? (
+                <tr>
+                  <td colSpan={6}>
+                    {t("preparedMeatInventory.outbound.emptyLines")}
+                  </td>
+                </tr>
+              ) : (
+                lines.map((line, index) => (
+                  <tr key={line.key}>
+                    <td>{index + 1}</td>
+                    <td>{line.sku || t("common.notSet")}</td>
+                    <td>{line.name}</td>
+                    <td>{line.quantity}</td>
+                    <td>{line.unit || t("common.notSet")}</td>
+                    <td>{line.remarks || t("common.notSet")}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
 
         {error ? (
           <p className="raw-meat-form-error" role="alert">

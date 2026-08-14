@@ -737,6 +737,18 @@ describe("Super Admin system settings", () => {
     expect(preparedMeatOutbound).toContain("create_prepared_meat_outbound");
     expect(preparedMeatOutbound).toContain("桂花小幸");
 
+    const preparedMeatOutboundConfirm = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260814190000_prepared_meat_outbound_confirm_and_raw.sql",
+      ),
+      "utf8",
+    );
+    expect(preparedMeatOutboundConfirm).toContain("send_prepared_meat_order_to_factory");
+    expect(preparedMeatOutboundConfirm).toContain("can_ship_directly");
+    expect(preparedMeatOutboundConfirm).toContain("到會");
+    expect(preparedMeatOutboundConfirm).toContain("凍肉製作");
+
     const rawMeatActions = readFileSync(
       path.resolve(
         process.cwd(),

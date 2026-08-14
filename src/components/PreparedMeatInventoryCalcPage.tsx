@@ -54,7 +54,12 @@ type MovementsLoader = (
 type ItemFlagsSaver = typeof updatePreparedMeatItemFlags;
 type OutboundModalProps = Pick<
   ComponentProps<typeof PreparedMeatOutboundModal>,
-  "loadCustomers" | "loadShippingMethods" | "loadOrderNumber" | "createOutbound"
+  | "loadCustomers"
+  | "loadShippingMethods"
+  | "loadOrderNumber"
+  | "loadRawItems"
+  | "createOutbound"
+  | "sendToFactory"
 >;
 
 type HeaderFilterOption = { key: string; label: string };
@@ -148,7 +153,9 @@ export function PreparedMeatInventoryCalcPage({
   loadCustomers,
   loadShippingMethods,
   loadOrderNumber,
+  loadRawItems,
   createOutbound,
+  sendToFactory,
 }: {
   loadItems?: ItemsLoader;
   loadMovements?: MovementsLoader;
@@ -740,7 +747,9 @@ export function PreparedMeatInventoryCalcPage({
         loadCustomers={loadCustomers}
         loadShippingMethods={loadShippingMethods}
         loadOrderNumber={loadOrderNumber}
+        loadRawItems={loadRawItems}
         createOutbound={createOutbound}
+        sendToFactory={sendToFactory}
       />
     </section>
   );
