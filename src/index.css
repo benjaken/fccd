@@ -31,9 +31,10 @@
   color-scheme: light;
   --background: oklch(0.975 0.006 150);
   --foreground: oklch(0.19 0.02 150);
-  --card: oklch(1 0 0);
+  /* Hue 150 at chroma 0 so OKLCH mixes with green stay green, not pink/red. */
+  --card: oklch(1 0 150);
   --card-foreground: oklch(0.19 0.02 150);
-  --popover: oklch(1 0 0);
+  --popover: oklch(1 0 150);
   --popover-foreground: oklch(0.19 0.02 150);
   /* Clear green primary — medium saturation, brand + active system. */
   --primary: oklch(0.52 0.14 150);
@@ -5184,7 +5185,7 @@ td:last-child {
   padding: 9px 11px;
   border: 1px solid var(--border);
   border-radius: 9px;
-  background: color-mix(in oklch, var(--secondary) 35%, var(--card));
+  background: var(--secondary);
 }
 
 .shop-order-product-copy {

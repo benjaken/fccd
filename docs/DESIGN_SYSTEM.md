@@ -63,7 +63,7 @@ FCCD（**Food Channel Catering Discovery**）自有設計規範：以 **shadcn/u
 | `--accent` | 輕量強調底 | 與 primary 同色相、低彩度 |
 | `--destructive` | 刪除、失敗、危險 | **保持紅色**，不跟品牌綠混用 |
 | `--border` / `--input` / `--ring` | 邊框、表單框、focus | ring 跟隨綠系 |
-| `--background` / `--card` / `--foreground` | 頁面／卡片／內文 | Light／Dark 皆需可讀 |
+| `--background` / `--card` / `--foreground` | 頁面／卡片／內文 | Light `--card` 用 `oklch(1 0 150)`（chroma 0 仍保留綠相，避免 OKLCH mix 漂向粉紅） |
 
 **借 Ant Design 的功能色分工（映射到本系統）：**
 
