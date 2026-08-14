@@ -1482,6 +1482,10 @@ td:last-child {
   width: 100%;
 }
 
+.list-search-filter-apply {
+  width: 100%;
+}
+
 .pull-to-refresh {
   position: relative;
   overscroll-behavior-y: contain;

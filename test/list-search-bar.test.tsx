@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -115,6 +115,7 @@ describe("ListSearchBar", () => {
     expect(screen.getByRole("searchbox", { name: "搜尋商品" })).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "售價範圍" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "開啟篩選" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "確定" })).not.toBeInTheDocument();
   });
 
   it("keeps the search field on mobile and opens filters from the trailing icon", async () => {
@@ -140,6 +141,66 @@ describe("ListSearchBar", () => {
     await user.click(screen.getByRole("button", { name: "開啟篩選" }));
     expect(screen.getByRole("dialog", { name: "篩選" })).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "售價範圍" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "確定" })).toBeInTheDocument();
+  });
+
+  it("applies mobile filters on confirm and closes the drawer", async () => {
+    mockMatchMedia(true);
+    const user = userEvent.setup();
+    const onConfirmFilters = vi.fn();
+    const onDismissFilters = vi.fn();
+
+    render(
+      <ListSearchBar
+        id="unit-list-search-mobile-apply"
+        value=""
+        onChange={vi.fn()}
+        onSubmit={vi.fn()}
+        label="搜尋商品"
+        submitLabel="搜尋"
+        filters={filters}
+        onConfirmFilters={onConfirmFilters}
+        onDismissFilters={onDismissFilters}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "開啟篩選" }));
+    await user.selectOptions(screen.getByRole("combobox", { name: "售價範圍" }), "under-100");
+    expect(onConfirmFilters).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog", { name: "篩選" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "確定" }));
+    expect(onConfirmFilters).toHaveBeenCalledTimes(1);
+    expect(onDismissFilters).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("restores mobile filter drafts when the drawer is dismissed", async () => {
+    mockMatchMedia(true);
+    const user = userEvent.setup();
+    const onConfirmFilters = vi.fn();
+    const onDismissFilters = vi.fn();
+
+    render(
+      <ListSearchBar
+        id="unit-list-search-mobile-dismiss"
+        value=""
+        onChange={vi.fn()}
+        onSubmit={vi.fn()}
+        label="搜尋商品"
+        submitLabel="搜尋"
+        filters={filters}
+        onConfirmFilters={onConfirmFilters}
+        onDismissFilters={onDismissFilters}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "開啟篩選" }));
+    const dialog = screen.getByRole("dialog", { name: "篩選" });
+    await user.click(within(dialog).getByRole("button", { name: "關閉篩選" }));
+    expect(onDismissFilters).toHaveBeenCalledTimes(1);
+    expect(onConfirmFilters).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it.each(FILTERED_LIST_PAGES)(
@@ -152,6 +213,8 @@ describe("ListSearchBar", () => {
 
       expect(source).toContain("filters={");
       expect(source).toContain("filtersActive=");
+      expect(source).toContain("onConfirmFilters");
+      expect(source).toContain("onDismissFilters");
     },
   );
 });

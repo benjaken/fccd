@@ -47,8 +47,9 @@ component (`src/components/ui/list-search-bar.tsx`), which wraps **`SearchField`
 - Extra toolbar filters (status, channel, price, dates, etc.) must be passed
   into `ListSearchBar` as `filters`. On viewports `max-width: 900px`, keep the
   search field visible, hide those filters, and open them from a trailing
-  filter icon into the shared `SidePanel`. Do not leave stacked filter selects
-  on the mobile toolbar.
+  filter icon into the shared `SidePanel`. Apply with **確定** (then the drawer
+  closes); dismissing the drawer must restore uncommitted drafts. Do not leave
+  stacked filter selects on the mobile toolbar.
 
 ## Mobile pull-to-refresh
 

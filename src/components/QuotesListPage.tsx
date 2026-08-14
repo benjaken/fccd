@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import { TablePagination } from "@/components/ui/table-pagination";
+import { useDeferredFilter } from "@/lib/use-deferred-filter";
 import {
   fetchQuotes,
   QUOTES_PAGE_SIZE,
@@ -46,6 +47,10 @@ export function QuotesListPage({
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
+  const statusFilter = useDeferredFilter(status, (value) => {
+    setPage(1);
+    setStatus(value);
+  });
   const [items, setItems] = useState<QuoteListItem[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -168,14 +173,15 @@ export function QuotesListPage({
             placeholder={t("quotes.searchPlaceholder")}
             submitLabel={t("quotes.searchAction")}
             filtersActive={Boolean(status)}
+            onConfirmFilters={statusFilter.confirm}
+            onDismissFilters={statusFilter.revert}
             filters={
               <label className="quotes-status-filter">
                 <span>{t("quotes.statusFilter")}</span>
                 <select
-                  value={status}
+                  value={statusFilter.value}
                   onChange={(event) => {
-                    setPage(1);
-                    setStatus(event.target.value);
+                    statusFilter.setValue(event.target.value);
                   }}
                 >
                   <option value="">{t("quotes.allStatuses")}</option>

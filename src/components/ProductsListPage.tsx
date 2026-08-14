@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import { TablePagination } from "@/components/ui/table-pagination";
+import { useDeferredFilter } from "@/lib/use-deferred-filter";
 import {
   fetchProductChannels,
   fetchProductTypes,
@@ -61,6 +62,22 @@ export function ProductsListPage({
   );
   const [status, setStatus] = useState<ProductStatusFilter>("");
   const [priceRange, setPriceRange] = useState<ProductPriceRange>("");
+  const priceFilter = useDeferredFilter(priceRange, (value) => {
+    setPage(1);
+    setPriceRange(value);
+  });
+  const channelFilter = useDeferredFilter(channelId, (value) => {
+    setPage(1);
+    setChannelId(value);
+  });
+  const typeFilter = useDeferredFilter(productTypeName, (value) => {
+    setPage(1);
+    setProductTypeName(value);
+  });
+  const statusFilter = useDeferredFilter(status, (value) => {
+    setPage(1);
+    setStatus(value);
+  });
   const [channels, setChannels] = useState<CatalogOption[]>([]);
   const [productTypes, setProductTypes] = useState<CatalogOption[]>([]);
   const [page, setPage] = useState(1);
@@ -110,25 +127,31 @@ export function ProductsListPage({
 
   useEffect(() => {
     let active = true;
-    void loadProductTypes(channelId)
+    void loadProductTypes(channelFilter.value)
       .then((typeOptions) => {
         if (!active) return;
         setProductTypes(typeOptions);
-        setProductTypeName((current) =>
-          current && typeOptions.some((option) => option.name === current)
-            ? current
-            : "",
-        );
+        if (
+          typeFilter.value &&
+          !typeOptions.some((option) => option.name === typeFilter.value)
+        ) {
+          typeFilter.setValue("");
+        }
       })
       .catch(() => {
         if (!active) return;
         setProductTypes([]);
-        setProductTypeName("");
+        typeFilter.setValue("");
       });
     return () => {
       active = false;
     };
-  }, [channelId, loadProductTypes]);
+  }, [
+    channelFilter.value,
+    loadProductTypes,
+    typeFilter.setValue,
+    typeFilter.value,
+  ]);
 
   useEffect(() => {
     const nextChannel = searchParams.get("channel") ?? "";
@@ -258,15 +281,28 @@ export function ProductsListPage({
             filtersActive={Boolean(
               priceRange || channelId || productTypeName || status,
             )}
+            onConfirmFilters={() => {
+              priceFilter.confirm();
+              channelFilter.confirm();
+              typeFilter.confirm();
+              statusFilter.confirm();
+            }}
+            onDismissFilters={() => {
+              priceFilter.revert();
+              channelFilter.revert();
+              typeFilter.revert();
+              statusFilter.revert();
+            }}
             filters={
               <div className="products-filters">
                 <label className="products-status-filter">
                   <span>{t("products.priceRangeFilter")}</span>
                   <select
-                    value={priceRange}
+                    value={priceFilter.value}
                     onChange={(event) => {
-                      setPage(1);
-                      setPriceRange(event.target.value as ProductPriceRange);
+                      priceFilter.setValue(
+                        event.target.value as ProductPriceRange,
+                      );
                     }}
                   >
                     <option value="">{t("products.allPriceRanges")}</option>
@@ -281,11 +317,10 @@ export function ProductsListPage({
                 <label className="products-status-filter">
                   <span>{t("products.channelFilter")}</span>
                   <select
-                    value={channelId}
+                    value={channelFilter.value}
                     onChange={(event) => {
-                      setPage(1);
-                      setChannelId(event.target.value);
-                      setProductTypeName("");
+                      channelFilter.setValue(event.target.value);
+                      typeFilter.setValue("");
                     }}
                   >
                     <option value="">{t("products.allChannels")}</option>
@@ -300,10 +335,9 @@ export function ProductsListPage({
                 <label className="products-status-filter">
                   <span>{t("products.typeFilter")}</span>
                   <select
-                    value={productTypeName}
+                    value={typeFilter.value}
                     onChange={(event) => {
-                      setPage(1);
-                      setProductTypeName(event.target.value);
+                      typeFilter.setValue(event.target.value);
                     }}
                   >
                     <option value="">{t("products.allTypes")}</option>
@@ -318,10 +352,11 @@ export function ProductsListPage({
                 <label className="products-status-filter">
                   <span>{t("products.statusFilter")}</span>
                   <select
-                    value={status}
+                    value={statusFilter.value}
                     onChange={(event) => {
-                      setPage(1);
-                      setStatus(event.target.value as ProductStatusFilter);
+                      statusFilter.setValue(
+                        event.target.value as ProductStatusFilter,
+                      );
                     }}
                   >
                     <option value="">{t("products.allStatuses")}</option>
