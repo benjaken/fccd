@@ -236,6 +236,7 @@ Active 導航（側欄、工作區 soft link、migration tab）必須是**淡綠
 - 輸入高度與 middle 按鈕對齊；focus 使用 `--ring`
 - 密碼、電郵等使用正確 `autoComplete`／`inputMode`
 - 開始／結束日期必須用 `DateRangePicker`：一個可見標籤（日期範圍）+ 同一列的起迄輸入，不要兩個獨立 DatePicker 上下堆疊。年度報表篩選可繼續用年份 `<select>`
+- 報表店舖／供應商 chip 在移動端保持單行矮膠囊（約 36px），不要拉成佔滿半格的高膠囊
 
 ### 4.3 資料展示 Data display
 

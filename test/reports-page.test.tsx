@@ -467,6 +467,24 @@ describe("Shop order quantity report", () => {
     );
   });
 
+  it("keeps shop filter chips compact on mobile", () => {
+    const stylesheet = readFileSync(
+      path.resolve(process.cwd(), "src/index.css"),
+      "utf8",
+    );
+    const mobileBlock = stylesheet.slice(
+      stylesheet.lastIndexOf("@media (max-width: 900px)"),
+    );
+    const shopButtonRule = mobileBlock.match(
+      /\.report-shop-filter button\s*\{([^}]+)\}/,
+    )?.[1];
+
+    expect(shopButtonRule).toContain("height: 36px");
+    expect(shopButtonRule).toContain("white-space: nowrap");
+    expect(shopButtonRule).toContain("flex: 0 0 auto");
+    expect(shopButtonRule).not.toContain("min-height: 58px");
+  });
+
   it("lets shared item selectors scroll through the final row", () => {
     const stylesheet = readFileSync(
       path.resolve(process.cwd(), "src/index.css"),

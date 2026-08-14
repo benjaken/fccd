@@ -4869,6 +4869,7 @@ td:last-child {
 .report-shop-filter {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 7px;
 }
 
@@ -6809,6 +6810,25 @@ td:last-child {
     grid-column: auto;
   }
 
+  .report-filter-panel .report-shop-filter {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    gap: 6px;
+  }
+
+  .report-shop-filter button {
+    flex: 0 0 auto;
+    box-sizing: border-box;
+    max-width: 100%;
+    height: 36px;
+    padding: 0 10px;
+    line-height: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   @keyframes drawer-in {
     from {
       transform: translateX(-100%);
@@ -7166,6 +7186,8 @@ td:last-child {
   .report-filter-panel {
     align-items: stretch;
     flex-direction: column;
+    gap: 10px;
+    padding: 12px 14px;
   }
 
   .report-date-controls > span {
