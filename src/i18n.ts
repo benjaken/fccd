@@ -1024,6 +1024,8 @@ const resources = {
         closeOptions: "關閉",
         optionsSaveError: "生肉選項保存失敗，請重試",
         yearFilter: "年份",
+        filterMonth: "篩選月份",
+        allMonths: "全部月份",
         optionsColumns: {
           sort: "排序",
           name: "生肉",
@@ -2282,6 +2284,8 @@ const resources = {
         closeOptions: "Close",
         optionsSaveError: "Could not save raw meat options. Try again.",
         yearFilter: "Year",
+        filterMonth: "Filter by month",
+        allMonths: "All months",
         optionsColumns: {
           sort: "Order",
           name: "Raw meat",

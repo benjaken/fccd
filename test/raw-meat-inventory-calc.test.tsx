@@ -36,6 +36,18 @@ const movementsByItem: Record<string, RawMeatMovementRow[]> = {
   "item-1": [
     {
       id: "move-2",
+      movementAt: "2026-06-15T04:00:00.000Z",
+      productName: "乾冬菇 (廣信)",
+      inboundUnitPrice: 130,
+      inboundQuantityKg: 1,
+      outboundQuantityKg: null,
+      balanceKg: 6,
+      totalAmount: 130,
+      supplierName: "廣聯興",
+      remarks: "june remark",
+    },
+    {
+      id: "move-1b",
       movementAt: "2026-05-31T04:00:00.000Z",
       productName: "乾冬菇 (廣信)",
       inboundUnitPrice: 120,
@@ -278,5 +290,38 @@ describe("Raw meat inventory calculation page", () => {
         isActive: true,
       });
     });
+  });
+
+  it("filters the ledger when a concrete month is selected", async () => {
+    const user = userEvent.setup();
+    const loadItems = vi.fn().mockResolvedValue(items);
+    const loadMovements = vi
+      .fn()
+      .mockImplementation(async (itemId: string) =>
+        structuredClone(movementsByItem[itemId] ?? []),
+      );
+
+    render(
+      <MemoryRouter>
+        <RawMeatInventoryCalcPage
+          loadItems={loadItems}
+          loadMovements={loadMovements}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("june remark")).toBeInTheDocument();
+    expect(screen.getByText("remark")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "篩選月份" }));
+    const listbox = await screen.findByRole("listbox", { name: "篩選月份" });
+    expect(within(listbox).getByRole("option", { name: "全部月份" })).toBeInTheDocument();
+    await user.click(within(listbox).getByRole("option", { name: "Jun-26" }));
+
+    expect(await screen.findByText("june remark")).toBeInTheDocument();
+    expect(screen.queryByText("remark")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "篩選月份" })).toHaveTextContent(
+      "Jun-26",
+    );
   });
 });

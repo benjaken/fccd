@@ -92,6 +92,19 @@ export function hongKongYearBounds(year: number) {
   };
 }
 
+/** YYYY-MM key for a timestamp in Asia/Hong_Kong. */
+export function hongKongYearMonthKey(value: string | Date) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Hong_Kong",
+    year: "numeric",
+    month: "2-digit",
+  }).formatToParts(value instanceof Date ? value : new Date(value));
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  if (!year || !month) return "";
+  return `${year}-${month}`;
+}
+
 export async function fetchRawMeatItems(): Promise<RawMeatItemOption[]> {
   const { data, error } = await supabase
     .from("raw_meat_items")

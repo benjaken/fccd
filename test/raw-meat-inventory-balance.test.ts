@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   currentHongKongYear,
   hongKongYearBounds,
+  hongKongYearMonthKey,
   rawMeatYearOptions,
 } from "@/lib/raw-meat-inventory";
 

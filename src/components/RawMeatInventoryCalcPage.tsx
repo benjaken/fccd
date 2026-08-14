@@ -7,7 +7,7 @@ import {
   useState,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { Beef, Check, RefreshCw, SlidersHorizontal, Trash2, X } from "lucide-react";
+import { Beef, Check, ChevronDown, RefreshCw, SlidersHorizontal, Trash2, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ListTable } from "@/components/ui/list-table";
@@ -17,6 +17,7 @@ import {
   fetchRawMeatItems,
   fetchRawMeatMovementsForItem,
   currentHongKongYear,
+  hongKongYearMonthKey,
   RAW_MEAT_MOVEMENTS_PAGE_SIZE,
   rawMeatYearOptions,
   updateRawMeatItemFlags,
@@ -212,6 +213,9 @@ export function RawMeatInventoryCalcPage({
   const [page, setPage] = useState(1);
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [year, setYear] = useState(() => currentHongKongYear());
+  const [monthFilter, setMonthFilter] = useState<string | null>(null);
+  const [monthMenuOpen, setMonthMenuOpen] = useState(false);
+  const monthFilterRef = useRef<HTMLDivElement>(null);
   const years = useMemo(() => rawMeatYearOptions(), []);
 
   const sidebarItems = useMemo(
@@ -222,37 +226,6 @@ export function RawMeatInventoryCalcPage({
   const selectedItem =
     sidebarItems.find((item) => item.id === selectedItemId) ?? null;
 
-  const totalPages = Math.max(
-    1,
-    Math.ceil(movements.length / RAW_MEAT_MOVEMENTS_PAGE_SIZE),
-  );
-  const visibleFrom =
-    movements.length === 0
-      ? 0
-      : (page - 1) * RAW_MEAT_MOVEMENTS_PAGE_SIZE + 1;
-  const visibleTo = Math.min(
-    page * RAW_MEAT_MOVEMENTS_PAGE_SIZE,
-    movements.length,
-  );
-  const pageRows = useMemo(
-    () =>
-      movements.slice(
-        (page - 1) * RAW_MEAT_MOVEMENTS_PAGE_SIZE,
-        page * RAW_MEAT_MOVEMENTS_PAGE_SIZE,
-      ),
-    [movements, page],
-  );
-
-  const dateFormatter = useMemo(
-    () =>
-      new Intl.DateTimeFormat(i18n.language, {
-        day: "numeric",
-        month: "numeric",
-        year: "numeric",
-        timeZone: "Asia/Hong_Kong",
-      }),
-    [i18n.language],
-  );
   const monthFormatter = useMemo(
     () =>
       new Intl.DateTimeFormat(
@@ -263,6 +236,71 @@ export function RawMeatInventoryCalcPage({
           timeZone: "Asia/Hong_Kong",
         },
       ),
+    [i18n.language],
+  );
+
+  const formatMonthLabel = useCallback(
+    (value: string | null) => {
+      if (!value) return t("common.notSet");
+      return monthFormatter
+        .format(new Date(value))
+        .replace(" ", "-")
+        .replace(",", "");
+    },
+    [monthFormatter, t],
+  );
+
+  const monthOptions = useMemo(() => {
+    const byKey = new Map<string, string>();
+    for (const row of movements) {
+      if (!row.movementAt) continue;
+      const key = hongKongYearMonthKey(row.movementAt);
+      if (!key || byKey.has(key)) continue;
+      byKey.set(key, formatMonthLabel(row.movementAt));
+    }
+    return [...byKey.entries()]
+      .sort((left, right) => (left[0] > right[0] ? -1 : 1))
+      .map(([key, label]) => ({ key, label }));
+  }, [formatMonthLabel, movements]);
+
+  const filteredMovements = useMemo(() => {
+    if (!monthFilter) return movements;
+    return movements.filter(
+      (row) =>
+        row.movementAt !== null &&
+        hongKongYearMonthKey(row.movementAt) === monthFilter,
+    );
+  }, [monthFilter, movements]);
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredMovements.length / RAW_MEAT_MOVEMENTS_PAGE_SIZE),
+  );
+  const visibleFrom =
+    filteredMovements.length === 0
+      ? 0
+      : (page - 1) * RAW_MEAT_MOVEMENTS_PAGE_SIZE + 1;
+  const visibleTo = Math.min(
+    page * RAW_MEAT_MOVEMENTS_PAGE_SIZE,
+    filteredMovements.length,
+  );
+  const pageRows = useMemo(
+    () =>
+      filteredMovements.slice(
+        (page - 1) * RAW_MEAT_MOVEMENTS_PAGE_SIZE,
+        page * RAW_MEAT_MOVEMENTS_PAGE_SIZE,
+      ),
+    [filteredMovements, page],
+  );
+
+  const dateFormatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat(i18n.language, {
+        day: "numeric",
+        month: "numeric",
+        year: "numeric",
+        timeZone: "Asia/Hong_Kong",
+      }),
     [i18n.language],
   );
   const currencyFormatter = useMemo(
@@ -289,11 +327,27 @@ export function RawMeatInventoryCalcPage({
     return `${kgFormatter.format(value)} kg`;
   };
 
-  const formatMonth = (value: string | null) => {
-    if (!value) return t("common.notSet");
-    const label = monthFormatter.format(new Date(value));
-    return label.replace(" ", "-").replace(",", "");
-  };
+  const selectedMonthLabel =
+    monthOptions.find((option) => option.key === monthFilter)?.label ??
+    t("rawMeatInventory.columns.month");
+
+  useEffect(() => {
+    if (!monthMenuOpen) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!monthFilterRef.current?.contains(event.target as Node)) {
+        setMonthMenuOpen(false);
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMonthMenuOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [monthMenuOpen]);
 
   useEffect(() => {
     let cancelled = false;
@@ -344,6 +398,8 @@ export function RawMeatInventoryCalcPage({
     setMovementsLoading(true);
     setError(null);
     setPage(1);
+    setMonthFilter(null);
+    setMonthMenuOpen(false);
 
     void loadMovements(itemId, productName, year)
       .then((rows) => {
@@ -572,7 +628,74 @@ export function RawMeatInventoryCalcPage({
               header={
                 <tr>
                   <th>{t("rawMeatInventory.columns.date")}</th>
-                  <th>{t("rawMeatInventory.columns.month")}</th>
+                  <th>
+                    <div
+                      className="raw-meat-calc-month-filter"
+                      ref={monthFilterRef}
+                    >
+                      <button
+                        type="button"
+                        className="raw-meat-calc-month-filter-button"
+                        aria-haspopup="listbox"
+                        aria-expanded={monthMenuOpen}
+                        aria-label={t("rawMeatInventory.filterMonth")}
+                        title={t("rawMeatInventory.filterMonth")}
+                        disabled={loading || monthOptions.length === 0}
+                        onClick={() => setMonthMenuOpen((open) => !open)}
+                      >
+                        <span>{selectedMonthLabel}</span>
+                        <ChevronDown />
+                      </button>
+                      {monthMenuOpen ? (
+                        <ul
+                          className="raw-meat-calc-month-menu"
+                          role="listbox"
+                          aria-label={t("rawMeatInventory.filterMonth")}
+                        >
+                          <li role="presentation">
+                            <button
+                              type="button"
+                              role="option"
+                              aria-selected={monthFilter === null}
+                              className={
+                                monthFilter === null
+                                  ? "raw-meat-calc-month-option active"
+                                  : "raw-meat-calc-month-option"
+                              }
+                              onClick={() => {
+                                setMonthFilter(null);
+                                setMonthMenuOpen(false);
+                                setPage(1);
+                              }}
+                            >
+                              {t("rawMeatInventory.allMonths")}
+                            </button>
+                          </li>
+                          {monthOptions.map((option) => (
+                            <li key={option.key} role="presentation">
+                              <button
+                                type="button"
+                                role="option"
+                                aria-selected={monthFilter === option.key}
+                                className={
+                                  monthFilter === option.key
+                                    ? "raw-meat-calc-month-option active"
+                                    : "raw-meat-calc-month-option"
+                                }
+                                onClick={() => {
+                                  setMonthFilter(option.key);
+                                  setMonthMenuOpen(false);
+                                  setPage(1);
+                                }}
+                              >
+                                {option.label}
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                    </div>
+                  </th>
                   <th>{t("rawMeatInventory.columns.product")}</th>
                   <th>{t("rawMeatInventory.columns.unitPrice")}</th>
                   <th>{t("rawMeatInventory.columns.inbound")}</th>
@@ -592,7 +715,7 @@ export function RawMeatInventoryCalcPage({
                       ? dateFormatter.format(new Date(row.movementAt))
                       : t("common.notSet")}
                   </td>
-                  <td>{formatMonth(row.movementAt)}</td>
+                  <td>{formatMonthLabel(row.movementAt)}</td>
                   <td>
                     <strong>{row.productName}</strong>
                   </td>
@@ -642,7 +765,7 @@ export function RawMeatInventoryCalcPage({
             summary={t("rawMeatInventory.pagination", {
               from: visibleFrom,
               to: visibleTo,
-              total: movements.length,
+              total: filteredMovements.length,
             })}
             page={page}
             totalPages={totalPages}
