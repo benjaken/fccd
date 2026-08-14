@@ -5,11 +5,9 @@ import { Leaf, RefreshCw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
-import { SearchField } from "@/components/ui/search-field";
 import {
   fetchSeasonings,
   fetchSeasoningUsages,
-  filterSeasonings,
   filterSeasoningUsages,
   unapplySeasoningUsage,
   type SeasoningOption,
@@ -62,7 +60,6 @@ export function SpiceUsagePage({
   const [usagesLoading, setUsagesLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
-  const [spiceSearch, setSpiceSearch] = useState("");
   const [draftSearch, setDraftSearch] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -70,11 +67,6 @@ export function SpiceUsagePage({
 
   const selected =
     seasonings.find((item) => item.id === selectedId) ?? seasonings[0] ?? null;
-
-  const visibleSeasonings = useMemo(
-    () => filterSeasonings(seasonings, spiceSearch),
-    [seasonings, spiceSearch],
-  );
 
   const visibleUsages = useMemo(
     () => filterSeasoningUsages(usages, appliedSearch),
@@ -258,17 +250,7 @@ export function SpiceUsagePage({
           >
             <div className="spice-usage-sidebar-header">
               <strong>{t("spiceUsage.tags")}</strong>
-              <span>{visibleSeasonings.length}</span>
-            </div>
-            <div className="spice-usage-sidebar-search">
-              <SearchField
-                id="spice-usage-spice-search"
-                value={spiceSearch}
-                onChange={setSpiceSearch}
-                label={t("spiceUsage.spiceSearch")}
-                placeholder={t("spiceUsage.spiceSearchPlaceholder")}
-                disabled={seasoningsLoading}
-              />
+              <span>{seasonings.length}</span>
             </div>
             {seasoningsLoading ? (
               <>
@@ -277,13 +259,13 @@ export function SpiceUsagePage({
                 </span>
                 <SpiceUsageSidebarSkeleton />
               </>
-            ) : visibleSeasonings.length === 0 ? (
+            ) : seasonings.length === 0 ? (
               <p className="spice-usage-sidebar-state">
                 {t("spiceUsage.emptySeasonings")}
               </p>
             ) : (
               <ul className="spice-usage-side-list">
-                {visibleSeasonings.map((item) => {
+                {seasonings.map((item) => {
                   const active = item.id === selected?.id;
                   return (
                     <li key={item.id}>

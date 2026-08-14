@@ -2903,7 +2903,7 @@ td:last-child {
 }
 
 .spice-usage-sidebar {
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
 }
 
 .spice-usage-main {
@@ -2936,16 +2936,6 @@ td:last-child {
   color: var(--primary);
   font-size: 0.78rem;
   font-weight: 750;
-}
-
-.spice-usage-sidebar-search {
-  padding: 0 12px 12px;
-  border-bottom: 1px solid var(--border);
-}
-
-.spice-usage-sidebar-search .search-field {
-  width: 100%;
-  min-width: 0;
 }
 
 .spice-usage-sidebar-state,
