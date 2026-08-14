@@ -6,7 +6,7 @@ import {
   type FormEvent,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { Calculator, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { Calculator, Plus, Trash2 } from "lucide-react";
 
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
@@ -330,15 +330,6 @@ export function CalculationSettingsPage({
           <h1>{t("calculationSettings.title")}</h1>
         </div>
         <div className="heading-actions">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setReloadKey((current) => current + 1)}
-            disabled={loading}
-          >
-            <RefreshCw />
-            {t("calculationSettings.refresh")}
-          </Button>
           <Button type="button" onClick={() => setCreateOpen(true)}>
             <Plus />
             {t("calculationSettings.add")}

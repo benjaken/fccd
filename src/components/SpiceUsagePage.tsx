@@ -1,6 +1,6 @@
 import { useEffect, useEffectEvent, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Leaf, RefreshCw, Trash2 } from "lucide-react";
+import { Leaf, Trash2 } from "lucide-react";
 
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
@@ -208,17 +208,6 @@ export function SpiceUsagePage({
         <div>
           <span className="eyebrow">{t("spiceUsage.eyebrow")}</span>
           <h1>{t("spiceUsage.title")}</h1>
-        </div>
-        <div className="heading-actions">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setReloadKey((current) => current + 1)}
-            disabled={loading}
-          >
-            <RefreshCw />
-            {t("spiceUsage.refresh")}
-          </Button>
         </div>
       </header>
 

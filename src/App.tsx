@@ -1415,14 +1415,6 @@ export function Dashboard({
           <h1>{t("dashboard.title")}</h1>
         </div>
         <div className="heading-actions">
-          <Button
-            variant="outline"
-            onClick={() => setReloadKey((key) => key + 1)}
-            disabled={loading}
-          >
-            <RefreshCw />
-            {t("dashboard.refresh")}
-          </Button>
           <Button variant="outline" asChild>
             <Link to="/reports/daily">
               <FileText />

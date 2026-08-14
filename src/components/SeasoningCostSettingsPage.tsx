@@ -13,7 +13,6 @@ import {
   Leaf,
   Pencil,
   Plus,
-  RefreshCw,
   Trash2,
 } from "lucide-react";
 
@@ -468,15 +467,6 @@ export function SeasoningCostSettingsPage({
           <h1>{t("seasoningCost.title")}</h1>
         </div>
         <div className="heading-actions">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setReloadKey((current) => current + 1)}
-            disabled={loading}
-          >
-            <RefreshCw />
-            {t("seasoningCost.refresh")}
-          </Button>
           <Button type="button" onClick={openCreate}>
             <Plus />
             {t("seasoningCost.add")}
