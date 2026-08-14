@@ -2172,44 +2172,54 @@ td:last-child {
 }
 
 .detail-page-skeleton {
+  width: 100%;
   min-height: calc(
     100dvh - var(--topbar-height) - var(--workspace-height) - 56px
   );
 }
 
+.detail-page-skeleton .page-skeleton-content,
+.detail-page-skeleton .detail-grid,
+.detail-page-skeleton .detail-table-panel,
+.detail-page-skeleton .detail-card {
+  width: 100%;
+}
+
 .detail-skeleton-heading {
   display: grid;
   gap: 8px;
-  min-width: min(28rem, 70vw);
+  min-width: 0;
+  width: min(48rem, 100%);
 }
 
 .detail-skeleton-back {
-  width: 7rem;
-  height: 12px;
+  width: 7.5rem;
+  height: 14px;
 }
 
 .detail-skeleton-eyebrow {
-  width: 5.5rem;
-  height: 11px;
+  width: 7rem;
+  height: 14px;
 }
 
 .detail-skeleton-title {
-  width: min(18rem, 60vw);
+  width: min(36rem, 100%);
   height: 32px;
 }
 
 .detail-skeleton-subtitle {
-  width: min(14rem, 48vw);
-  height: 13px;
+  width: min(28rem, 80%);
+  height: 14px;
 }
 
 .detail-skeleton-badge {
-  width: 5rem;
-  height: 26px;
+  width: 6.5rem;
+  height: 28px;
+  border-radius: 999px;
 }
 
 .detail-skeleton-card {
-  min-height: 255px;
+  min-height: 0;
 }
 
 .detail-skeleton-icon {
@@ -2219,7 +2229,7 @@ td:last-child {
 }
 
 .detail-skeleton-card-title {
-  width: 8.5rem;
+  width: min(16rem, 70%);
   height: 16px;
 }
 
@@ -2229,24 +2239,35 @@ td:last-child {
 }
 
 .detail-skeleton-label {
-  width: 34%;
-  height: 10px;
-}
-
-.detail-skeleton-value {
-  width: 68%;
+  width: min(9rem, 42%);
   height: 14px;
 }
 
+.detail-skeleton-value {
+  width: 100%;
+  height: 16px;
+}
+
 .detail-skeleton-description {
-  width: 14rem;
-  max-width: 65vw;
-  height: 11px;
+  width: min(32rem, 80%);
+  height: 14px;
   margin-top: 8px;
 }
 
+.detail-skeleton-copy {
+  width: 100%;
+  height: 14px;
+  margin-top: 10px;
+}
+
 .detail-skeleton-table {
-  min-height: 300px;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 360px;
+}
+
+.detail-skeleton-table .table-wrap {
+  min-height: 0;
 }
 
 .detail-copy,

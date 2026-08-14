@@ -66,6 +66,61 @@ function heading({ action = true, back = false } = {}) {
   );
 }
 
+function detailHeading() {
+  return (
+    <header className="page-heading">
+      <div className="detail-skeleton-heading">
+        {bone("detail-skeleton-back")}
+        {bone("detail-skeleton-eyebrow")}
+        {bone("detail-skeleton-title")}
+        {bone("detail-skeleton-subtitle")}
+      </div>
+      {bone("detail-skeleton-badge")}
+    </header>
+  );
+}
+
+function detailFields(count: number) {
+  return (
+    <div className="detail-fields">
+      {Array.from({ length: count }, (_, fieldIndex) => (
+        <div className="detail-field detail-skeleton-field" key={fieldIndex}>
+          {bone("detail-skeleton-label")}
+          {bone("detail-skeleton-value")}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function detailCard({
+  fields,
+  tableColumns,
+  copyLines,
+}: {
+  fields?: number;
+  tableColumns?: number;
+  copyLines?: number;
+}) {
+  return (
+    <article className="panel detail-card detail-skeleton-card">
+      <header>
+        {bone("detail-skeleton-icon")}
+        {bone("detail-skeleton-card-title")}
+      </header>
+      {fields ? detailFields(fields) : null}
+      {tableColumns ? (
+        <div className="table-wrap detail-inline-table">{table(tableColumns, 6)}</div>
+      ) : null}
+      {copyLines
+        ? Array.from({ length: copyLines }, (_, index) => (
+            <span key={index}>{bone("detail-skeleton-copy")}</span>
+          ))
+        : null}
+    </article>
+  );
+}
+
 function permissionSkeleton() {
   return (
     <>
@@ -82,39 +137,52 @@ function permissionSkeleton() {
 }
 
 function detailSkeleton(cards: 2 | 3) {
+  const catalog = cards === 2;
+
   return (
     <>
-      {heading({ back: true })}
-      <section className={cn("detail-grid", cards === 2 && "detail-grid-two")}>
-        {Array.from({ length: cards }, (_, cardIndex) => (
-          <article
-            className="panel detail-card detail-skeleton-card"
-            key={cardIndex}
-          >
-            <header>
-              {bone("detail-skeleton-icon")}
-              {bone("detail-skeleton-card-title")}
-            </header>
-            <div className="detail-fields">
-              {Array.from({ length: 5 }, (_, fieldIndex) => (
-                <div className="detail-skeleton-field" key={fieldIndex}>
-                  {bone("detail-skeleton-label")}
-                  {bone("detail-skeleton-value")}
-                </div>
-              ))}
-            </div>
-          </article>
-        ))}
+      {detailHeading()}
+      <section className={cn("detail-grid", catalog && "detail-grid-two")}>
+        {catalog ? (
+          <>
+            {detailCard({ fields: 7 })}
+            {detailCard({ fields: 7 })}
+          </>
+        ) : (
+          <>
+            {detailCard({ fields: 5 })}
+            {detailCard({ fields: 4 })}
+            {detailCard({ fields: 4 })}
+          </>
+        )}
       </section>
-      <article className="panel detail-table-panel detail-skeleton-table">
-        <header className="panel-header">
-          <div>
-            {bone("detail-skeleton-card-title")}
-            {bone("detail-skeleton-description")}
-          </div>
-        </header>
-        {table(4, 6)}
-      </article>
+      {catalog ? (
+        <>
+          {detailCard({ tableColumns: 6 })}
+          {detailCard({ copyLines: 4 })}
+        </>
+      ) : (
+        <>
+          <article className="panel detail-table-panel detail-skeleton-table">
+            <header className="panel-header">
+              <div>
+                {bone("detail-skeleton-card-title")}
+                {bone("detail-skeleton-description")}
+              </div>
+            </header>
+            {table(5, 8)}
+          </article>
+          <article className="panel detail-table-panel detail-skeleton-table">
+            <header className="panel-header">
+              <div>
+                {bone("detail-skeleton-card-title")}
+                {bone("detail-skeleton-description")}
+              </div>
+            </header>
+            {table(3, 5)}
+          </article>
+        </>
+      )}
     </>
   );
 }

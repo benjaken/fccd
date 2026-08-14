@@ -33,6 +33,31 @@ describe("PageSkeleton", () => {
     expect(container.querySelector(".page-skeleton-panel")).not.toBeNull();
   });
 
+  it("follows the order detail page: heading, three cards, two full-width tables", () => {
+    const { container } = render(
+      <PageSkeleton label="正在載入訂單詳情" variant="detail" />,
+    );
+
+    expect(container.querySelector(".detail-page-skeleton")).not.toBeNull();
+    expect(container.querySelector(".detail-skeleton-heading")).not.toBeNull();
+    expect(container.querySelector(".detail-skeleton-badge")).not.toBeNull();
+    expect(container.querySelector(".detail-grid-two")).toBeNull();
+    expect(container.querySelectorAll(".detail-grid .detail-card")).toHaveLength(3);
+    expect(container.querySelectorAll(".detail-table-panel")).toHaveLength(2);
+    expect(container.querySelectorAll(".table-skeleton-row").length).toBeGreaterThan(8);
+  });
+
+  it("follows product and package pages: two cards plus full-width table and copy", () => {
+    const { container } = render(
+      <PageSkeleton cards={2} label="正在載入商品詳情" variant="detail" />,
+    );
+
+    expect(container.querySelector(".detail-grid-two")).not.toBeNull();
+    expect(container.querySelectorAll(".detail-grid .detail-card")).toHaveLength(2);
+    expect(container.querySelector(".detail-inline-table")).not.toBeNull();
+    expect(container.querySelectorAll(".detail-skeleton-copy").length).toBeGreaterThan(0);
+  });
+
   it.each([
     "dashboard",
     "queue",
