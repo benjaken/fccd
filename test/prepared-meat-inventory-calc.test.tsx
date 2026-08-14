@@ -469,7 +469,7 @@ describe("Prepared meat inventory calculation page", () => {
     expect(await screen.findByRole("button", { name: "新增製成品選項" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "製成品入貨(扣原料)" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "製成品入貨(無原料)" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "管理送貨單" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "管理送貨單" })).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "製成品出貨" }));
 

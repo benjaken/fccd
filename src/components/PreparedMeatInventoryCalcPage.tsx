@@ -515,9 +515,6 @@ export function PreparedMeatInventoryCalcPage({
           >
             {t("preparedMeatInventory.actions.stockOut")}
           </Button>
-          <Button type="button" disabled title={t("preparedMeatInventory.comingSoon")}>
-            {t("preparedMeatInventory.actions.manageOrders")}
-          </Button>
         </div>
       </header>
 

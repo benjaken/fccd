@@ -717,6 +717,19 @@ describe("Super Admin system settings", () => {
     expect(preparedMeatInventory).toContain("/frozen/prepared-meat-inventory");
     expect(preparedMeatInventory).toContain("roles.role in ('Admin', 'Factory')");
 
+    const deliveryNotesPage = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260814204000_frozen_delivery_notes_page.sql",
+      ),
+      "utf8",
+    );
+    expect(deliveryNotesPage).toContain("frozen.delivery_notes");
+    expect(deliveryNotesPage).toContain("送貨單管理");
+    expect(deliveryNotesPage).toContain("/frozen/delivery-notes");
+    expect(deliveryNotesPage).toContain("delete_meat_delivery_note");
+    expect(deliveryNotesPage).toContain("roles.role in ('Admin', 'Factory')");
+
     const preparedMeatFlags = readFileSync(
       path.resolve(
         process.cwd(),

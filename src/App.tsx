@@ -78,6 +78,7 @@ import { ProductDetailPage } from "@/components/ProductDetailPage";
 import { PackagesListPage } from "@/components/PackagesListPage";
 import { PackageDetailPage } from "@/components/PackageDetailPage";
 import { PreparedMeatInventoryCalcPage } from "@/components/PreparedMeatInventoryCalcPage";
+import { MeatDeliveryNotesPage } from "@/components/MeatDeliveryNotesPage";
 import { RawMeatInventoryCalcPage } from "@/components/RawMeatInventoryCalcPage";
 import { SpiceUsagePage } from "@/components/SpiceUsagePage";
 import { SeasoningCostSettingsPage } from "@/components/SeasoningCostSettingsPage";
@@ -264,6 +265,12 @@ const secondaryNav: Record<string, NavItem[]> = {
       permissionKey: "frozen.prepared_meat_inventory",
     },
     {
+      key: "deliveryNotes",
+      to: "/frozen/delivery-notes",
+      icon: ClipboardList,
+      permissionKey: "frozen.delivery_notes",
+    },
+    {
       key: "seasoningCost",
       to: "/frozen/seasoning-cost",
       icon: CircleDollarSign,
@@ -415,6 +422,7 @@ const SECTION_CHILD_KEYS: Record<string, string[]> = {
     "frozen.selling_price_cost",
     "frozen.raw_meat_inventory",
     "frozen.prepared_meat_inventory",
+    "frozen.delivery_notes",
     "frozen.seasoning_cost",
     "frozen.calculation_settings",
     "frozen.meat_customers",
@@ -1032,6 +1040,10 @@ function OperationsShell() {
               <Route
                 path="/frozen/prepared-meat-inventory"
                 element={<PreparedMeatInventoryCalcPage />}
+              />
+              <Route
+                path="/frozen/delivery-notes"
+                element={<MeatDeliveryNotesPage />}
               />
               <Route
                 path="/frozen/seasoning-cost"
