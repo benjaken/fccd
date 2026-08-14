@@ -2213,6 +2213,41 @@ td:last-child {
   font-variant-numeric: tabular-nums;
 }
 
+.prepared-meat-calc-page .raw-meat-calc-table-wrap th:nth-child(3),
+.prepared-meat-calc-page .raw-meat-calc-table-wrap td:nth-child(3) {
+  width: 10%;
+}
+
+.prepared-meat-calc-page .raw-meat-calc-table-wrap th:nth-child(4),
+.prepared-meat-calc-page .raw-meat-calc-table-wrap td:nth-child(4) {
+  width: 14%;
+}
+
+.prepared-meat-calc-page .raw-meat-calc-table-wrap th:nth-child(8),
+.prepared-meat-calc-page .raw-meat-calc-table-wrap td:nth-child(8) {
+  width: 14%;
+}
+
+.prepared-meat-calc-page .raw-meat-calc-table-wrap th:nth-child(9),
+.prepared-meat-calc-page .raw-meat-calc-table-wrap td:nth-child(9) {
+  width: 5.5rem;
+}
+
+.prepared-meat-calc-page .raw-meat-calc-table-wrap th:nth-child(10),
+.prepared-meat-calc-page .raw-meat-calc-table-wrap td:nth-child(10),
+.prepared-meat-calc-page .raw-meat-calc-table-wrap th:nth-child(11),
+.prepared-meat-calc-page .raw-meat-calc-table-wrap td:nth-child(11) {
+  width: auto;
+}
+
+.prepared-meat-calc-edit-inbound {
+  color: #0f766e;
+}
+
+.prepared-meat-calc-edit-outbound {
+  color: #c2410c;
+}
+
 .raw-meat-options-panel-error {
   margin: 0 0 12px;
   color: var(--destructive);

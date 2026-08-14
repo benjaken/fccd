@@ -28,6 +28,7 @@ import {
   LogOut,
   Menu,
   Moon,
+  Package,
   PackageCheck,
   PanelLeftClose,
   PanelLeftOpen,
@@ -76,6 +77,7 @@ import { ProductsListPage } from "@/components/ProductsListPage";
 import { ProductDetailPage } from "@/components/ProductDetailPage";
 import { PackagesListPage } from "@/components/PackagesListPage";
 import { PackageDetailPage } from "@/components/PackageDetailPage";
+import { PreparedMeatInventoryCalcPage } from "@/components/PreparedMeatInventoryCalcPage";
 import { RawMeatInventoryCalcPage } from "@/components/RawMeatInventoryCalcPage";
 import { SpiceUsagePage } from "@/components/SpiceUsagePage";
 import { SeasoningCostSettingsPage } from "@/components/SeasoningCostSettingsPage";
@@ -256,6 +258,12 @@ const secondaryNav: Record<string, NavItem[]> = {
       permissionKey: "frozen.raw_meat_inventory",
     },
     {
+      key: "preparedMeatInventoryCalc",
+      to: "/frozen/prepared-meat-inventory",
+      icon: Package,
+      permissionKey: "frozen.prepared_meat_inventory",
+    },
+    {
       key: "seasoningCost",
       to: "/frozen/seasoning-cost",
       icon: CircleDollarSign,
@@ -406,6 +414,7 @@ const SECTION_CHILD_KEYS: Record<string, string[]> = {
   frozen: [
     "frozen.selling_price_cost",
     "frozen.raw_meat_inventory",
+    "frozen.prepared_meat_inventory",
     "frozen.seasoning_cost",
     "frozen.calculation_settings",
     "frozen.meat_customers",
@@ -1019,6 +1028,10 @@ function OperationsShell() {
               <Route
                 path="/frozen/raw-meat-inventory"
                 element={<RawMeatInventoryCalcPage />}
+              />
+              <Route
+                path="/frozen/prepared-meat-inventory"
+                element={<PreparedMeatInventoryCalcPage />}
               />
               <Route
                 path="/frozen/seasoning-cost"

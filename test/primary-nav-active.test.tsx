@@ -22,6 +22,7 @@ describe("Primary navigation section matching", () => {
     ["/frozen", "frozen"],
     ["/frozen/selling-price-cost", "frozen"],
     ["/frozen/raw-meat-inventory", "frozen"],
+    ["/frozen/prepared-meat-inventory", "frozen"],
     ["/frozen/seasoning-cost", "frozen"],
     ["/frozen/calculation-settings", "frozen"],
     ["/frozen/customers", "frozen"],
@@ -78,6 +79,9 @@ describe("Primary navigation section matching", () => {
     );
     expect(pageAccessKey("/frozen/raw-meat-inventory")).toBe(
       "frozen.raw_meat_inventory",
+    );
+    expect(pageAccessKey("/frozen/prepared-meat-inventory")).toBe(
+      "frozen.prepared_meat_inventory",
     );
     expect(pageAccessKey("/frozen/seasoning-cost")).toBe(
       "frozen.seasoning_cost",

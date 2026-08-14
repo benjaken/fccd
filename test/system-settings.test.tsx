@@ -705,6 +705,18 @@ describe("Super Admin system settings", () => {
     expect(sellingPriceCost).toContain("roles.role in ('Admin', 'Factory')");
     expect(frozenActions).toContain("roles.role = 'Super Admin'");
 
+    const preparedMeatInventory = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260814183000_frozen_prepared_meat_inventory_page_permissions.sql",
+      ),
+      "utf8",
+    );
+    expect(preparedMeatInventory).toContain("frozen.prepared_meat_inventory");
+    expect(preparedMeatInventory).toContain("製成品存貨計算");
+    expect(preparedMeatInventory).toContain("/frozen/prepared-meat-inventory");
+    expect(preparedMeatInventory).toContain("roles.role in ('Admin', 'Factory')");
+
     const rawMeatActions = readFileSync(
       path.resolve(
         process.cwd(),
