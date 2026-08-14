@@ -7,15 +7,17 @@ import {
   useState,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { Beef, Check, RefreshCw, Trash2, X } from "lucide-react";
+import { Beef, Check, RefreshCw, SlidersHorizontal, Trash2, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ListTable } from "@/components/ui/list-table";
+import { RawMeatOptionsModal } from "@/components/RawMeatOptionsModal";
 import { TablePagination } from "@/components/ui/table-pagination";
 import {
   fetchRawMeatItems,
   fetchRawMeatMovementsForItem,
   RAW_MEAT_MOVEMENTS_PAGE_SIZE,
+  updateRawMeatItemFlags,
   updateRawMeatMovementRemark,
   type RawMeatItemOption,
   type RawMeatMovementRow,
@@ -44,6 +46,10 @@ type RemarkSaver = (
   movementId: string,
   remarks: string,
 ) => Promise<string | null>;
+type ItemFlagsSaver = (
+  itemId: string,
+  flags: { canShipDirectly: boolean; isActive: boolean },
+) => Promise<void>;
 
 function RemarkEditor({
   value,
@@ -185,10 +191,12 @@ export function RawMeatInventoryCalcPage({
   loadItems = fetchRawMeatItems,
   loadMovements = fetchRawMeatMovementsForItem,
   saveRemark = updateRawMeatMovementRemark,
+  saveItemFlags = updateRawMeatItemFlags,
 }: {
   loadItems?: ItemsLoader;
   loadMovements?: MovementsLoader;
   saveRemark?: RemarkSaver;
+  saveItemFlags?: ItemFlagsSaver;
 }) {
   const { t, i18n } = useTranslation();
   const [items, setItems] = useState<RawMeatItemOption[]>([]);
@@ -199,9 +207,15 @@ export function RawMeatInventoryCalcPage({
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [page, setPage] = useState(1);
+  const [optionsOpen, setOptionsOpen] = useState(false);
+
+  const sidebarItems = useMemo(
+    () => items.filter((item) => item.isActive),
+    [items],
+  );
 
   const selectedItem =
-    items.find((item) => item.id === selectedItemId) ?? items[0] ?? null;
+    sidebarItems.find((item) => item.id === selectedItemId) ?? null;
 
   const totalPages = Math.max(
     1,
@@ -286,10 +300,11 @@ export function RawMeatInventoryCalcPage({
         if (cancelled) return;
         setItems(nextItems);
         setSelectedItemId((current) => {
-          if (current && nextItems.some((item) => item.id === current)) {
+          const active = nextItems.filter((item) => item.isActive);
+          if (current && active.some((item) => item.id === current)) {
             return current;
           }
-          return nextItems[0]?.id ?? null;
+          return active[0]?.id ?? null;
         });
       })
       .catch((loadError: unknown) => {
@@ -363,6 +378,34 @@ export function RawMeatInventoryCalcPage({
     },
   );
 
+  const handleSaveItemFlags = useEffectEvent(
+    async (
+      itemId: string,
+      flags: { canShipDirectly: boolean; isActive: boolean },
+    ) => {
+      await saveItemFlags(itemId, flags);
+      setItems((current) => {
+        const next = current.map((item) =>
+          item.id === itemId
+            ? {
+                ...item,
+                canShipDirectly: flags.canShipDirectly,
+                isActive: flags.isActive,
+              }
+            : item,
+        );
+        if (!flags.isActive) {
+          const active = next.filter((item) => item.isActive);
+          setSelectedItemId((currentId) => {
+            if (currentId !== itemId) return currentId;
+            return active[0]?.id ?? null;
+          });
+        }
+        return next;
+      });
+    },
+  );
+
   const loading = itemsLoading || movementsLoading;
 
   return (
@@ -393,20 +436,34 @@ export function RawMeatInventoryCalcPage({
         >
           <div className="raw-meat-calc-sidebar-header">
             <strong>{t("rawMeatInventory.items")}</strong>
-            <span>{items.length}</span>
+            <div className="raw-meat-calc-sidebar-meta">
+              <span>{sidebarItems.length}</span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="raw-meat-calc-options-trigger"
+                aria-label={t("rawMeatInventory.openOptions")}
+                title={t("rawMeatInventory.openOptions")}
+                onClick={() => setOptionsOpen(true)}
+                disabled={itemsLoading || items.length === 0}
+              >
+                <SlidersHorizontal />
+              </Button>
+            </div>
           </div>
           {itemsLoading ? (
             <div className="raw-meat-calc-sidebar-state" role="status">
               {t("rawMeatInventory.loadingItems")}
             </div>
-          ) : items.length === 0 ? (
+          ) : sidebarItems.length === 0 ? (
             <div className="raw-meat-calc-sidebar-state">
               <Beef />
               <span>{t("rawMeatInventory.emptyItems")}</span>
             </div>
           ) : (
             <ul className="raw-meat-calc-item-list">
-              {items.map((item) => {
+              {sidebarItems.map((item) => {
                 const active = item.id === selectedItem?.id;
                 return (
                   <li key={item.id}>
@@ -583,6 +640,13 @@ export function RawMeatInventoryCalcPage({
           />
         </article>
       </div>
+
+      <RawMeatOptionsModal
+        open={optionsOpen}
+        items={items}
+        onClose={() => setOptionsOpen(false)}
+        onSaveFlags={handleSaveItemFlags}
+      />
     </section>
   );
 }

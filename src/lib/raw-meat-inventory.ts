@@ -7,6 +7,8 @@ export type RawMeatItemOption = {
   name: string;
   englishName: string | null;
   sortOrder: number | null;
+  canShipDirectly: boolean;
+  isActive: boolean;
 };
 
 export type RawMeatMovementRow = {
@@ -27,6 +29,8 @@ type ItemRow = {
   name: string;
   english_name: string | null;
   sort_order: number | string | null;
+  can_ship_directly: boolean | null;
+  is_active: boolean | null;
 };
 
 type MovementRow = {
@@ -69,7 +73,7 @@ function movementSortKey(row: MovementRow) {
 export async function fetchRawMeatItems(): Promise<RawMeatItemOption[]> {
   const { data, error } = await supabase
     .from("raw_meat_items")
-    .select("id,name,english_name,sort_order")
+    .select("id,name,english_name,sort_order,can_ship_directly,is_active")
     .is("archived_at", null)
     .order("sort_order", { ascending: true, nullsFirst: false })
     .order("name", { ascending: true });
@@ -81,6 +85,8 @@ export async function fetchRawMeatItems(): Promise<RawMeatItemOption[]> {
     name: row.name,
     englishName: row.english_name,
     sortOrder: toNumber(row.sort_order),
+    canShipDirectly: Boolean(row.can_ship_directly),
+    isActive: row.is_active !== false,
   }));
 }
 
@@ -143,4 +149,16 @@ export async function updateRawMeatMovementRemark(
   );
   if (error) throw error;
   return (data as string | null) ?? null;
+}
+
+export async function updateRawMeatItemFlags(
+  itemId: string,
+  flags: { canShipDirectly: boolean; isActive: boolean },
+): Promise<void> {
+  const { error } = await supabase.rpc("update_raw_meat_item_flags", {
+    p_item_id: itemId,
+    p_can_ship_directly: flags.canShipDirectly,
+    p_is_active: flags.isActive,
+  });
+  if (error) throw error;
 }

@@ -1833,6 +1833,29 @@ td:last-child {
   font-size: 0.92rem;
 }
 
+.raw-meat-calc-sidebar-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.raw-meat-calc-sidebar-meta > span {
+  color: var(--muted-foreground);
+  font-size: 0.82rem;
+  min-width: 1.25rem;
+  text-align: right;
+}
+
+.raw-meat-calc-options-trigger {
+  width: 32px;
+  height: 32px;
+  color: var(--muted-foreground);
+}
+
+.raw-meat-calc-options-trigger:hover:not(:disabled) {
+  color: var(--foreground);
+}
+
 .raw-meat-calc-sidebar-header span {
   color: var(--muted-foreground);
   font-size: 0.82rem;
@@ -2040,6 +2063,114 @@ td:last-child {
 .raw-meat-calc-table-wrap td.raw-meat-calc-remark-cell {
   white-space: normal;
   overflow: hidden;
+}
+
+.raw-meat-options-modal-root {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.raw-meat-options-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: color-mix(in oklch, var(--foreground) 35%, transparent);
+  cursor: pointer;
+}
+
+.raw-meat-options-modal {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  width: min(720px, 100%);
+  max-height: min(80dvh, 720px);
+  overflow: hidden;
+  animation: raw-meat-options-in 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.raw-meat-options-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.raw-meat-options-modal-header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.raw-meat-options-modal-error {
+  margin: 0;
+  padding: 10px 18px;
+  color: var(--destructive);
+  font-size: 0.86rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.raw-meat-options-table-wrap {
+  min-height: 0;
+  overflow: auto;
+  padding: 0 0 12px;
+}
+
+.raw-meat-options-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.raw-meat-options-table th,
+.raw-meat-options-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: middle;
+  font-size: 0.9rem;
+}
+
+.raw-meat-options-table th {
+  position: sticky;
+  top: 0;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.raw-meat-options-table th:nth-child(1),
+.raw-meat-options-table td:nth-child(1) {
+  width: 4.5rem;
+  text-align: center;
+}
+
+.raw-meat-options-table th:nth-child(3),
+.raw-meat-options-table td:nth-child(3),
+.raw-meat-options-table th:nth-child(4),
+.raw-meat-options-table td:nth-child(4) {
+  width: 7.5rem;
+  text-align: center;
+}
+
+.raw-meat-options-table tbody tr:nth-child(even) {
+  background: color-mix(in oklch, var(--muted) 45%, transparent);
+}
+
+@keyframes raw-meat-options-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 @media (max-width: 960px) {

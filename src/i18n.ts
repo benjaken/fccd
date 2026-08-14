@@ -1020,6 +1020,15 @@ const resources = {
         savingRemark: "保存中…",
         remarkPlaceholder: "輸入備註",
         remarkSaveError: "備註保存失敗，請重試",
+        openOptions: "管理生肉選項",
+        closeOptions: "關閉",
+        optionsSaveError: "生肉選項保存失敗，請重試",
+        optionsColumns: {
+          sort: "排序",
+          name: "生肉",
+          canShip: "可直接出貨",
+          active: "有效",
+        },
       },
       payments: {
         eyebrow: "財務",
@@ -2268,6 +2277,15 @@ const resources = {
         savingRemark: "Saving…",
         remarkPlaceholder: "Enter a remark",
         remarkSaveError: "Could not save the remark. Try again.",
+        openOptions: "Manage raw meat options",
+        closeOptions: "Close",
+        optionsSaveError: "Could not save raw meat options. Try again.",
+        optionsColumns: {
+          sort: "Order",
+          name: "Raw meat",
+          canShip: "Can ship directly",
+          active: "Active",
+        },
       },
       payments: {
         eyebrow: "Finance",

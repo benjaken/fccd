@@ -16,12 +16,16 @@ const items: RawMeatItemOption[] = [
     name: "乾冬菇 (廣信)",
     englishName: null,
     sortOrder: 1,
+    canShipDirectly: true,
+    isActive: true,
   },
   {
     id: "item-2",
     name: "羊腩(生)",
     englishName: null,
     sortOrder: 2,
+    canShipDirectly: false,
+    isActive: true,
   },
 ];
 
@@ -180,6 +184,48 @@ describe("Raw meat inventory calculation page", () => {
       expect(
         screen.getAllByRole("button", { name: "編輯備註" })[0],
       ).toHaveTextContent("更新備註");
+    });
+  });
+
+  it("opens the raw meat options modal from the sidebar header icon", async () => {
+    const user = userEvent.setup();
+    const loadItems = vi.fn().mockResolvedValue(items);
+    const loadMovements = vi
+      .fn()
+      .mockImplementation(async (itemId: string) =>
+        structuredClone(movementsByItem[itemId] ?? []),
+      );
+    const saveItemFlags = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <MemoryRouter>
+        <RawMeatInventoryCalcPage
+          loadItems={loadItems}
+          loadMovements={loadMovements}
+          saveItemFlags={saveItemFlags}
+        />
+      </MemoryRouter>,
+    );
+
+    await screen.findAllByText("廣聯興");
+    await user.click(screen.getByRole("button", { name: "管理生肉選項" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "生肉選項" });
+    expect(within(dialog).getByText("排序")).toBeInTheDocument();
+    expect(within(dialog).getByText("可直接出貨")).toBeInTheDocument();
+    expect(within(dialog).getByText("有效")).toBeInTheDocument();
+    expect(within(dialog).getByText("乾冬菇 (廣信)")).toBeInTheDocument();
+
+    const shipSwitch = within(dialog).getByRole("switch", {
+      name: "乾冬菇 (廣信) 可直接出貨",
+    });
+    await user.click(shipSwitch);
+
+    await waitFor(() => {
+      expect(saveItemFlags).toHaveBeenCalledWith("item-1", {
+        canShipDirectly: false,
+        isActive: true,
+      });
     });
   });
 });
