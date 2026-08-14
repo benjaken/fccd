@@ -139,6 +139,7 @@ the same input / search / skeleton / pagination markup across list pages.
 |---|---|
 | Toolbar search (icon inside field + submit) | `ListSearchBar` → `SearchField` |
 | Mobile list filters (hidden until icon tap) | `ListSearchBar` `filters` → `SidePanel` |
+| Start–end date filters | `DateRangePicker` (one labeled range field) |
 | Paginated operational table + loading rows | `ListTable` → `TableSkeletonRows` |
 | Mobile table pull-to-refresh | `ListTable` / `PullToRefresh` |
 | All page-level loading layouts | `PageSkeleton` with the appropriate `variant` |
