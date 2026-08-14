@@ -36,6 +36,10 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
     pageKey: "frozen.spice_usage",
   },
   {
+    prefix: "/frozen/selling-price-cost",
+    pageKey: "frozen.selling_price_cost",
+  },
+  {
     prefix: "/frozen/seasoning-cost",
     pageKey: "frozen.seasoning_cost",
   },

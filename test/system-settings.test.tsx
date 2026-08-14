@@ -691,6 +691,18 @@ describe("Super Admin system settings", () => {
     expect(frozenActions).toContain("frozen.meat_customers.delete");
     expect(frozenActions).toContain("frozen.spice_usage.delete");
     expect(frozenActions).toContain("frozen.calculation_settings.delete");
+
+    const sellingPriceCost = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260814170000_frozen_selling_price_cost_page_permissions.sql",
+      ),
+      "utf8",
+    );
+    expect(sellingPriceCost).toContain("frozen.selling_price_cost");
+    expect(sellingPriceCost).toContain("售價成本計算");
+    expect(sellingPriceCost).toContain("/frozen/selling-price-cost");
+    expect(sellingPriceCost).toContain("roles.role in ('Admin', 'Factory')");
     expect(frozenActions).toContain("roles.role = 'Super Admin'");
 
     const rawMeatActions = readFileSync(

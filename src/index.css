@@ -3987,7 +3987,8 @@ td:last-child {
 
 .seasoning-cost-page,
 .calculation-settings-page,
-.meat-customers-page {
+.meat-customers-page,
+.selling-price-cost-page {
   display: grid;
   gap: 20px;
   grid-template-rows: auto minmax(0, 1fr);
@@ -4001,19 +4002,22 @@ td:last-child {
 .seasoning-cost-page .page-heading,
 .calculation-settings-page .page-heading,
 .meat-customers-page .page-heading,
-.spice-usage-page .page-heading {
+.spice-usage-page .page-heading,
+.selling-price-cost-page .page-heading {
   margin-bottom: 0;
 }
 
 .seasoning-cost-heading,
 .calculation-settings-heading,
-.meat-customers-heading {
+.meat-customers-heading,
+.selling-price-cost-heading {
   align-items: flex-end;
 }
 
 .seasoning-cost-panel,
 .calculation-settings-panel,
-.meat-customers-panel {
+.meat-customers-panel,
+.selling-price-cost-panel {
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -4022,30 +4026,35 @@ td:last-child {
 
 .seasoning-cost-panel > .list-inline-error,
 .calculation-settings-panel > .list-inline-error,
-.meat-customers-panel > .list-inline-error {
+.meat-customers-panel > .list-inline-error,
+.selling-price-cost-panel > .list-inline-error {
   flex: 0 0 auto;
 }
 
 .seasoning-cost-panel > .products-state,
 .calculation-settings-panel > .products-state,
 .meat-customers-panel > .products-state,
+.selling-price-cost-panel > .products-state,
 .seasoning-cost-table-wrap,
 .calculation-settings-table-wrap,
 .meat-customers-table-wrap,
-.spice-usage-table-wrap {
+.spice-usage-table-wrap,
+.selling-price-cost-table-wrap {
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
 }
 
-.seasoning-cost-panel > .operational-list-pagination {
+.seasoning-cost-panel > .operational-list-pagination,
+.selling-price-cost-panel > .operational-list-pagination {
   flex: 0 0 auto;
 }
 
 .seasoning-cost-table-wrap th,
 .calculation-settings-table-wrap th,
 .meat-customers-table-wrap th,
-.spice-usage-table-wrap th {
+.spice-usage-table-wrap th,
+.selling-price-cost-table-wrap th {
   position: sticky;
   z-index: 1;
   top: 0;
@@ -4205,13 +4214,208 @@ td:last-child {
 
 .seasoning-cost-toolbar,
 .calculation-settings-toolbar,
-.meat-customers-toolbar {
+.meat-customers-toolbar,
+.selling-price-cost-toolbar {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
   gap: 16px;
   padding: 16px 18px;
   border-bottom: 1px solid var(--border);
+}
+
+.selling-price-cost-layout {
+  display: grid;
+  grid-template-columns: 16.5rem minmax(0, 1fr);
+  gap: 14px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.selling-price-cost-sidebar {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.selling-price-cost-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px 14px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.selling-price-cost-sidebar-header strong {
+  font-size: 0.95rem;
+}
+
+.selling-price-cost-sidebar-header span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.6rem;
+  height: 1.6rem;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--primary) 14%, transparent);
+  color: var(--primary);
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.selling-price-cost-sidebar-state {
+  margin: 0;
+  padding: 18px 14px;
+  color: var(--muted-foreground);
+  font-size: 0.92rem;
+}
+
+.selling-price-cost-side-list {
+  min-height: 0;
+  margin: 0;
+  padding: 8px;
+  overflow: auto;
+  list-style: none;
+}
+
+.selling-price-cost-side-item {
+  display: flex;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--foreground);
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 650;
+  text-align: left;
+  cursor: pointer;
+}
+
+.selling-price-cost-side-item:hover:not(.is-active):not(.is-skeleton) {
+  background: color-mix(in oklch, var(--accent) 70%, transparent);
+}
+
+.selling-price-cost-side-item.is-active {
+  background: color-mix(in oklch, var(--primary) 82%, #1f4d3d);
+  color: white;
+}
+
+.selling-price-cost-side-item.is-skeleton {
+  pointer-events: none;
+}
+
+.selling-price-cost-skeleton-side {
+  width: 70%;
+  height: 12px;
+}
+
+.selling-price-cost-table-wrap table {
+  min-width: 88rem;
+}
+
+.selling-price-cost-table-wrap tbody tr:nth-child(even) td {
+  background: color-mix(in oklch, var(--muted) 28%, var(--background));
+}
+
+.selling-price-cost-table-wrap td:nth-child(n + 5) {
+  font-variant-numeric: tabular-nums;
+}
+
+.selling-price-cost-with-rate {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.selling-price-cost-rate-badge {
+  display: inline-flex;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--muted) 80%, var(--background));
+  color: var(--muted-foreground);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.selling-price-cost-month-filter {
+  position: relative;
+  display: inline-flex;
+}
+
+.selling-price-cost-month-filter-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  cursor: pointer;
+}
+
+.selling-price-cost-month-filter-button svg {
+  width: 14px;
+  height: 14px;
+  opacity: 0.85;
+}
+
+.selling-price-cost-month-filter-button:hover:not(:disabled),
+.selling-price-cost-month-filter-button:focus-visible {
+  color: var(--foreground);
+  outline: none;
+}
+
+.selling-price-cost-month-filter-button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.selling-price-cost-month-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 30;
+  min-width: 6.75rem;
+  max-height: 16rem;
+  overflow: auto;
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  border: 1px solid color-mix(in oklch, var(--border) 80%, transparent);
+  border-radius: 6px;
+  background: var(--background);
+  color: var(--foreground);
+  box-shadow: 0 10px 24px color-mix(in oklch, black 16%, transparent);
+}
+
+.selling-price-cost-month-option {
+  display: block;
+  width: 100%;
+  padding: 0.4rem 0.75rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.selling-price-cost-month-option:hover,
+.selling-price-cost-month-option:focus-visible {
+  background: color-mix(in oklch, var(--primary) 12%, transparent);
+  outline: none;
+}
+
+.selling-price-cost-month-option.is-active {
+  background: var(--primary);
+  color: var(--primary-foreground);
 }
 
 .meat-customers-address-cell {
@@ -4275,7 +4479,8 @@ td:last-child {
   .seasoning-cost-page,
   .calculation-settings-page,
   .meat-customers-page,
-  .spice-usage-page {
+  .spice-usage-page,
+  .selling-price-cost-page {
     height: calc(100dvh - var(--topbar-height) - 62px);
     min-height: 520px;
   }
@@ -4296,11 +4501,13 @@ td:last-child {
   .spice-usage-heading,
   .seasoning-cost-heading,
   .calculation-settings-heading,
-  .meat-customers-heading {
+  .meat-customers-heading,
+  .selling-price-cost-heading {
     align-items: stretch;
   }
 
-  .spice-usage-layout {
+  .spice-usage-layout,
+  .selling-price-cost-layout {
     grid-template-columns: 1fr;
     grid-template-rows: minmax(9rem, 28%) minmax(0, 1fr);
     min-height: 0;
@@ -4334,7 +4541,8 @@ td:last-child {
   .packages-toolbar,
   .meat-customers-toolbar,
   .seasoning-cost-toolbar,
-  .calculation-settings-toolbar {
+  .calculation-settings-toolbar,
+  .selling-price-cost-toolbar {
     align-items: center;
     flex-direction: row;
     flex-wrap: wrap;
