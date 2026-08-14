@@ -3,12 +3,10 @@ import { useTranslation } from "react-i18next";
 import { Leaf, RefreshCw, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import {
   fetchSeasonings,
   fetchSeasoningUsages,
-  filterSeasoningUsages,
   unapplySeasoningUsage,
   type SeasoningOption,
   type SeasoningUsageRow,
@@ -60,18 +58,11 @@ export function SpiceUsagePage({
   const [usagesLoading, setUsagesLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
-  const [draftSearch, setDraftSearch] = useState("");
-  const [appliedSearch, setAppliedSearch] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const selected =
     seasonings.find((item) => item.id === selectedId) ?? seasonings[0] ?? null;
-
-  const visibleUsages = useMemo(
-    () => filterSeasoningUsages(usages, appliedSearch),
-    [appliedSearch, usages],
-  );
 
   const currencyFormatter = useMemo(
     () =>
@@ -138,12 +129,6 @@ export function SpiceUsagePage({
   }, [loadSeasonings, reloadKey, t]);
 
   useEffect(() => {
-    setDraftSearch("");
-    setAppliedSearch("");
-    setActionError(null);
-  }, [selected?.id]);
-
-  useEffect(() => {
     if (!selected?.id) {
       setUsages([]);
       setUsagesLoading(false);
@@ -181,8 +166,6 @@ export function SpiceUsagePage({
     if (id === selectedId) return;
     setSelectedId(id);
     setUsagesLoading(true);
-    setDraftSearch("");
-    setAppliedSearch("");
     setActionError(null);
   };
 
@@ -341,19 +324,6 @@ export function SpiceUsagePage({
                   </div>
                 </header>
 
-                <header className="spice-usage-toolbar">
-                  <ListSearchBar
-                    id="spice-usage-search"
-                    value={draftSearch}
-                    onChange={setDraftSearch}
-                    onSubmit={() => setAppliedSearch(draftSearch.trim())}
-                    label={t("spiceUsage.search")}
-                    placeholder={t("spiceUsage.searchPlaceholder")}
-                    submitLabel={t("spiceUsage.searchAction")}
-                    disabled={usagesLoading}
-                  />
-                </header>
-
                 <div className="spice-usage-main-body">
                   {actionError ? (
                     <p className="list-inline-error">{actionError}</p>
@@ -375,7 +345,7 @@ export function SpiceUsagePage({
                       </tr>
                     }
                   >
-                    {visibleUsages.map((usage) => (
+                    {usages.map((usage) => (
                       <tr key={usage.id}>
                         <td>
                           <strong>{usage.preparedMeatName}</strong>

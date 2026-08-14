@@ -79,6 +79,9 @@ describe("Spice usage page", () => {
     expect(screen.getByText("$0.33")).toBeInTheDocument();
     expect(screen.getByText("扁食肉餡 (500克)")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "刪除" })).toHaveLength(2);
+    expect(
+      screen.queryByPlaceholderText("搜尋配方名稱"),
+    ).not.toBeInTheDocument();
 
     await waitFor(() => {
       expect(loadUsages).toHaveBeenCalledWith("s-1");
@@ -157,32 +160,6 @@ describe("Spice usage page", () => {
 
     expect(await screen.findByText("粽子 (10隻)")).toBeInTheDocument();
     expect(document.querySelector(".table-skeleton-row")).toBeNull();
-  });
-
-  it("filters recipes from the search bar", async () => {
-    const user = userEvent.setup();
-    const loadSeasonings = vi.fn().mockResolvedValue(seasonings);
-    const loadUsages = vi
-      .fn()
-      .mockImplementation(async (seasoningId: string) =>
-        structuredClone(usagesBySeasoning[seasoningId] ?? []),
-      );
-
-    render(
-      <MemoryRouter>
-        <SpiceUsagePage
-          loadSeasonings={loadSeasonings}
-          loadUsages={loadUsages}
-        />
-      </MemoryRouter>,
-    );
-
-    await screen.findByText("醃雞扒");
-    await user.type(screen.getByPlaceholderText("搜尋配方名稱"), "扁食");
-    await user.click(screen.getByRole("button", { name: "搜尋" }));
-
-    expect(screen.getByText("扁食肉餡 (500克)")).toBeInTheDocument();
-    expect(screen.queryByText("醃雞扒")).not.toBeInTheDocument();
   });
 
   it("deletes an applied usage after confirmation", async () => {
