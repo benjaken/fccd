@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -52,12 +52,17 @@ describe("Calculation settings page", () => {
     expect(
       await screen.findByRole("heading", { name: "計算設定" }),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByText("管理收成差異與 Mark-up；同一時間只會啟用一組設定。"),
+    ).not.toBeInTheDocument();
     expect(screen.getByText("10.00%")).toBeInTheDocument();
     expect(screen.getByText("15.00%")).toBeInTheDocument();
 
-    await user.type(screen.getByLabelText("收成差異 %"), "12");
-    await user.type(screen.getByLabelText("Mark-up %"), "8");
     await user.click(screen.getByRole("button", { name: "新增" }));
+    const dialog = await screen.findByRole("dialog", { name: "新增計算設定" });
+    await user.type(within(dialog).getByLabelText("收成差異 %"), "12");
+    await user.type(within(dialog).getByLabelText("Mark-up %"), "8");
+    await user.click(within(dialog).getByRole("button", { name: "保存" }));
 
     await waitFor(() => {
       expect(createSetting).toHaveBeenCalledWith({
