@@ -3508,9 +3508,9 @@ td:last-child {
 }
 
 .meat-customers-address-cell {
-  min-width: 12rem;
-  max-width: 22rem;
-  white-space: normal;
+  min-width: 28rem;
+  width: 40%;
+  white-space: nowrap;
 }
 
 .meat-customers-form {

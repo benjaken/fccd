@@ -25,7 +25,7 @@ const MEAT_CUSTOMERS_SKELETON_COLUMNS = [
   { width: "10rem" },
   { width: "8rem" },
   { width: "8rem" },
-  { width: "14rem" },
+  { width: "28rem" },
   { width: "2.5rem", variant: "action" as const },
 ];
 
@@ -315,7 +315,9 @@ export function MeatCustomersPage({
                 <th>{t("meatCustomers.columns.name")}</th>
                 <th>{t("meatCustomers.columns.contactPerson")}</th>
                 <th>{t("meatCustomers.columns.phone")}</th>
-                <th>{t("meatCustomers.columns.address")}</th>
+                <th className="meat-customers-address-cell">
+                  {t("meatCustomers.columns.address")}
+                </th>
                 <th aria-label={t("meatCustomers.columns.actions")} />
               </tr>
             }
