@@ -692,5 +692,18 @@ describe("Super Admin system settings", () => {
     expect(frozenActions).toContain("frozen.spice_usage.delete");
     expect(frozenActions).toContain("frozen.calculation_settings.delete");
     expect(frozenActions).toContain("roles.role = 'Super Admin'");
+
+    const rawMeatActions = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260814160000_raw_meat_option_and_stock_in.sql",
+      ),
+      "utf8",
+    );
+    expect(rawMeatActions).toContain("frozen.raw_meat_inventory.create");
+    expect(rawMeatActions).toContain("frozen.raw_meat_inventory.edit");
+    expect(rawMeatActions).toContain("frozen.raw_meat_inventory.stock_in");
+    expect(rawMeatActions).toContain("create_raw_meat_item");
+    expect(rawMeatActions).toContain("create_raw_meat_stock_in");
   });
 });

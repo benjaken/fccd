@@ -75,6 +75,7 @@ import { ProductsListPage } from "@/components/ProductsListPage";
 import { ProductDetailPage } from "@/components/ProductDetailPage";
 import { PackagesListPage } from "@/components/PackagesListPage";
 import { PackageDetailPage } from "@/components/PackageDetailPage";
+import { RawMeatInventoryCalcPage } from "@/components/RawMeatInventoryCalcPage";
 import { SpiceUsagePage } from "@/components/SpiceUsagePage";
 import { SeasoningCostSettingsPage } from "@/components/SeasoningCostSettingsPage";
 import { CalculationSettingsPage } from "@/components/CalculationSettingsPage";
@@ -112,7 +113,7 @@ const primaryNav: NavItem[] = [
   { key: "orders", to: "/orders", icon: ClipboardList },
   { key: "quotes", to: "/quotes", icon: FileText },
   { key: "products", to: "/products", icon: ShoppingBasket },
-  { key: "frozen", to: "/frozen/seasoning-cost", icon: Snowflake },
+  { key: "frozen", to: "/frozen/raw-meat-inventory", icon: Snowflake },
   { key: "kitchen", to: "/kitchen", icon: Utensils },
   { key: "delivery", to: "/delivery", icon: Truck },
   { key: "restaurant", to: "/restaurant", icon: Store },
@@ -240,6 +241,12 @@ const secondaryNav: Record<string, NavItem[]> = {
     },
   ],
   frozen: [
+    {
+      key: "rawMeatInventoryCalc",
+      to: "/frozen/raw-meat-inventory",
+      icon: Beef,
+      permissionKey: "frozen.raw_meat_inventory",
+    },
     {
       key: "seasoningCost",
       to: "/frozen/seasoning-cost",
@@ -389,6 +396,7 @@ const SECTION_CHILD_KEYS: Record<string, string[]> = {
     "products.packages",
   ],
   frozen: [
+    "frozen.raw_meat_inventory",
     "frozen.seasoning_cost",
     "frozen.calculation_settings",
     "frozen.meat_customers",
@@ -993,7 +1001,11 @@ function OperationsShell() {
               <Route path="/products/:id" element={<ProductDetailPage />} />
               <Route
                 path="/frozen"
-                element={<Navigate to="/frozen/seasoning-cost" replace />}
+                element={<Navigate to="/frozen/raw-meat-inventory" replace />}
+              />
+              <Route
+                path="/frozen/raw-meat-inventory"
+                element={<RawMeatInventoryCalcPage />}
               />
               <Route
                 path="/frozen/seasoning-cost"

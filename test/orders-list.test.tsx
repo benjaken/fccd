@@ -200,16 +200,25 @@ describe("Orders list", () => {
       path.resolve(process.cwd(), "src/index.css"),
       "utf8",
     );
-    const from = stylesheet.indexOf("@media (max-width: 760px)");
-    const mobileBlock = stylesheet.slice(from, stylesheet.indexOf(".migration-page"));
-    const paginationRule = mobileBlock.match(
-      /\.operational-list-pagination\s*\{([^}]+)\}/,
-    )?.[1];
+    const paginationRules = [
+      ...stylesheet.matchAll(
+        /\.operational-list-pagination\s*\{([^}]+)\}/g,
+      ),
+    ].map((match) => match[1]);
 
-    expect(paginationRule).toContain("flex-direction: row");
-    expect(paginationRule).toContain("flex-wrap: nowrap");
-    expect(paginationRule).not.toContain("flex-direction: column");
-    expect(mobileBlock).toContain("white-space: nowrap");
+    const mobilePaginationRule = paginationRules.find(
+      (rule) =>
+        rule.includes("flex-wrap: nowrap") &&
+        rule.includes("flex-direction: row"),
+    );
+
+    expect(mobilePaginationRule).toBeTruthy();
+    expect(mobilePaginationRule).toContain("flex-direction: row");
+    expect(mobilePaginationRule).toContain("flex-wrap: nowrap");
+    expect(mobilePaginationRule).not.toContain("flex-direction: column");
+    expect(stylesheet).toMatch(
+      /\.operational-list-pagination > span\s*\{[^}]*white-space:\s*nowrap/s,
+    );
   });
 
   it("blocks finance presets for roles without finance access", async () => {

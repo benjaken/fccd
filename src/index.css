@@ -772,6 +772,10 @@ button.bg-primary:focus-visible {
   text-transform: uppercase;
 }
 
+.page-heading .eyebrow {
+  color: var(--primary);
+}
+
 .page-heading h1,
 .placeholder-page h1 {
   margin: 0;
@@ -1776,6 +1780,743 @@ td:last-child {
 .packages-state-error > svg {
   color: var(--destructive);
 }
+
+.raw-meat-calc-page {
+  display: grid;
+  gap: 20px;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: calc(
+    100dvh - var(--topbar-height) - var(--workspace-height) - 76px
+  );
+  min-height: 560px;
+  overflow: hidden;
+}
+
+.raw-meat-calc-page .page-heading {
+  margin-bottom: 0;
+}
+
+.raw-meat-calc-heading {
+  align-items: flex-end;
+}
+
+.raw-meat-calc-heading-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.raw-meat-calc-layout {
+  display: grid;
+  grid-template-columns: minmax(12rem, 20%) minmax(0, 1fr);
+  gap: 16px;
+  min-height: 0;
+}
+
+.raw-meat-calc-sidebar,
+.raw-meat-calc-main {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.raw-meat-calc-sidebar {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.raw-meat-calc-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.raw-meat-calc-sidebar-header strong {
+  font-size: 0.92rem;
+}
+
+.raw-meat-calc-sidebar-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.raw-meat-calc-options-trigger {
+  width: 32px;
+  height: 32px;
+  color: var(--muted-foreground);
+}
+
+.raw-meat-calc-options-trigger:hover:not(:disabled) {
+  color: var(--foreground);
+}
+
+.raw-meat-calc-sidebar-state {
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  padding: 24px 16px;
+  color: var(--muted-foreground);
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.raw-meat-calc-item-list {
+  list-style: none;
+  margin: 0;
+  padding: 8px;
+  overflow: auto;
+  display: grid;
+  align-content: start;
+  gap: 4px;
+}
+
+.raw-meat-calc-item-row {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+  border-radius: 9px;
+}
+
+.raw-meat-calc-item {
+  width: 100%;
+  display: block;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--foreground);
+  text-align: left;
+  font: inherit;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease;
+}
+
+.raw-meat-calc-item-row .raw-meat-calc-item {
+  flex: 1;
+  min-width: 0;
+  border-radius: 9px 0 0 9px;
+}
+
+.raw-meat-calc-item-row:not(:has(.raw-meat-calc-item-edit)) .raw-meat-calc-item {
+  border-radius: 9px;
+}
+
+.raw-meat-calc-item-edit {
+  flex: 0 0 32px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 0 9px 9px 0;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+
+.raw-meat-calc-item-edit svg {
+  width: 14px;
+  height: 14px;
+}
+
+.raw-meat-calc-item-row:hover {
+  background: color-mix(in oklch, var(--accent) 70%, transparent);
+}
+
+.raw-meat-calc-item-row.active {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.raw-meat-calc-item-row.active .raw-meat-calc-item,
+.raw-meat-calc-item-row.active .raw-meat-calc-item-edit {
+  color: var(--primary-foreground);
+  font-weight: 600;
+}
+
+.raw-meat-calc-main {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.raw-meat-calc-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.raw-meat-calc-toolbar > .raw-meat-calc-year-filter {
+  flex: 0 0 auto;
+}
+
+.raw-meat-calc-toolbar > div:first-child {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.raw-meat-calc-toolbar strong {
+  font-size: 1rem;
+}
+
+.raw-meat-calc-toolbar span {
+  color: var(--muted-foreground);
+  font-size: 0.84rem;
+}
+
+.raw-meat-calc-year-filter {
+  display: grid;
+  gap: 4px;
+  min-width: 7rem;
+  color: var(--muted-foreground);
+  font-size: 0.78rem;
+}
+
+.raw-meat-calc-year-filter select {
+  height: 40px;
+  min-width: 7rem;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  outline: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+.raw-meat-calc-year-filter select:focus {
+  border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 16%, transparent);
+}
+
+.raw-meat-calc-month-filter {
+  position: relative;
+  display: inline-flex;
+}
+
+.raw-meat-calc-month-filter-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  cursor: pointer;
+}
+
+.raw-meat-calc-month-filter-button svg {
+  width: 14px;
+  height: 14px;
+  opacity: 0.85;
+}
+
+.raw-meat-calc-month-filter-button:hover:not(:disabled),
+.raw-meat-calc-month-filter-button:focus-visible {
+  color: color-mix(in oklch, var(--primary-foreground) 88%, white);
+  outline: none;
+}
+
+.raw-meat-calc-month-filter-button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.raw-meat-calc-month-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 30;
+  min-width: 6.75rem;
+  max-height: 16rem;
+  overflow: auto;
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  border: 1px solid color-mix(in oklch, var(--border) 80%, transparent);
+  border-radius: 6px;
+  background: var(--background);
+  color: var(--foreground);
+  box-shadow: 0 10px 24px color-mix(in oklch, black 16%, transparent);
+}
+
+.raw-meat-calc-month-option {
+  display: block;
+  width: 100%;
+  padding: 0.4rem 0.75rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.raw-meat-calc-month-option:hover,
+.raw-meat-calc-month-option:focus-visible {
+  background: color-mix(in oklch, var(--primary) 12%, transparent);
+  outline: none;
+}
+
+.raw-meat-calc-month-option.active {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.raw-meat-calc-remark-cell {
+  min-width: 8rem;
+  max-width: 12rem;
+  width: 12rem;
+}
+
+.raw-meat-calc-remark-trigger {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  max-width: 100%;
+  width: 100%;
+  padding: 4px 8px;
+  border: 1px dashed transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: 1.35;
+  text-align: left;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease;
+}
+
+.raw-meat-calc-remark-trigger:hover:not(:disabled),
+.raw-meat-calc-remark-trigger:focus-visible {
+  border-color: color-mix(in oklch, var(--primary) 35%, var(--border));
+  background: color-mix(in oklch, var(--accent) 55%, transparent);
+  outline: none;
+}
+
+.raw-meat-calc-remark-trigger.is-empty {
+  color: var(--muted-foreground);
+  display: inline-flex;
+  -webkit-line-clamp: unset;
+}
+
+.raw-meat-calc-remark-editor {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.raw-meat-calc-remark-editor input {
+  width: 100%;
+  min-width: 0;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  outline: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+}
+
+.raw-meat-calc-remark-editor input:focus {
+  border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 16%, transparent);
+}
+
+.raw-meat-calc-remark-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.raw-meat-calc-remark-status {
+  color: var(--muted-foreground);
+  font-size: 0.78rem;
+}
+
+.raw-meat-calc-remark-error {
+  color: var(--destructive);
+  font-size: 0.78rem;
+}
+
+.raw-meat-calc-table-wrap {
+  min-height: 0;
+  overflow: auto;
+}
+
+.raw-meat-calc-table-wrap table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.raw-meat-calc-table-wrap th:nth-child(3),
+.raw-meat-calc-table-wrap td:nth-child(3) {
+  width: 12%;
+}
+
+.raw-meat-calc-table-wrap th:nth-child(10),
+.raw-meat-calc-table-wrap td:nth-child(10) {
+  width: 14%;
+}
+
+.raw-meat-calc-table-wrap th:nth-child(11),
+.raw-meat-calc-table-wrap td:nth-child(11) {
+  width: 3.5rem;
+}
+
+.raw-meat-calc-table-wrap td {
+  vertical-align: top;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.raw-meat-calc-table-wrap td.raw-meat-calc-remark-cell {
+  white-space: normal;
+  overflow: hidden;
+}
+
+.raw-meat-calc-month-total-row td {
+  background: #ffe4cc;
+  color: #3f2a1a;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+.raw-meat-calc-month-total-value {
+  display: inline-block;
+  text-decoration-line: underline;
+  text-decoration-style: double;
+  text-underline-offset: 0.2em;
+  font-variant-numeric: tabular-nums;
+}
+
+.raw-meat-options-panel-error {
+  margin: 0 0 12px;
+  color: var(--destructive);
+  font-size: 0.86rem;
+}
+
+.raw-meat-options-table-wrap {
+  min-height: 0;
+  overflow: auto;
+  margin: -6px -6px 0;
+  isolation: isolate;
+}
+
+.raw-meat-options-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.raw-meat-options-table th,
+.raw-meat-options-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: middle;
+  font-size: 0.9rem;
+}
+
+.raw-meat-options-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+}
+
+.raw-meat-options-table th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 1px 0 var(--primary);
+}
+
+.raw-meat-options-table tbody td {
+  position: relative;
+  z-index: 0;
+  background: var(--card);
+}
+
+.raw-meat-options-table th:nth-child(1),
+.raw-meat-options-table td:nth-child(1) {
+  width: 4.5rem;
+  text-align: center;
+}
+
+.raw-meat-options-table th:nth-child(3),
+.raw-meat-options-table td:nth-child(3),
+.raw-meat-options-table th:nth-child(4),
+.raw-meat-options-table td:nth-child(4) {
+  width: 7.5rem;
+  text-align: center;
+}
+
+.raw-meat-options-table .ui-switch {
+  position: relative;
+  z-index: 0;
+  isolation: isolate;
+}
+
+.raw-meat-options-table tbody tr:nth-child(even) td {
+  background: color-mix(in oklch, var(--muted) 45%, var(--card));
+}
+
+.raw-meat-option-form,
+.raw-meat-stock-in-form {
+  display: grid;
+  gap: 14px;
+}
+
+.raw-meat-field,
+.raw-meat-tag-picker {
+  display: grid;
+  gap: 6px;
+  position: relative;
+}
+
+.raw-meat-field > span,
+.raw-meat-tag-picker > span {
+  color: var(--foreground);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.raw-meat-field input,
+.raw-meat-field textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  outline: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+}
+
+.raw-meat-field input {
+  height: 40px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.raw-meat-field input:focus,
+.raw-meat-field textarea:focus,
+.raw-meat-tag-field:focus-within {
+  border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 16%, transparent);
+}
+
+.raw-meat-field input:disabled,
+.raw-meat-field input[readonly] {
+  color: var(--muted-foreground);
+  background: color-mix(in oklch, var(--muted) 45%, var(--background));
+}
+
+.raw-meat-field-error,
+.raw-meat-form-error {
+  margin: 0;
+  color: var(--destructive);
+  font-size: 0.82rem;
+  font-style: normal;
+}
+
+.raw-meat-tag-field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-height: 42px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--background);
+}
+
+.raw-meat-tag-field.is-disabled {
+  opacity: 0.65;
+}
+
+.raw-meat-tag-field input {
+  flex: 1;
+  min-width: 7rem;
+  height: 28px;
+  padding: 0 4px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--foreground);
+  font: inherit;
+}
+
+.raw-meat-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--muted) 80%, var(--background));
+  color: var(--foreground);
+  font-size: 0.82rem;
+}
+
+.raw-meat-tag button {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+
+.raw-meat-tag button svg {
+  width: 12px;
+  height: 12px;
+}
+
+.raw-meat-tag-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  max-height: 12rem;
+  overflow: auto;
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--background);
+  box-shadow: 0 10px 24px color-mix(in oklch, black 16%, transparent);
+}
+
+.raw-meat-tag-menu button {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.raw-meat-tag-menu button:hover,
+.raw-meat-tag-menu button:focus-visible {
+  background: color-mix(in oklch, var(--primary) 12%, transparent);
+  outline: none;
+}
+
+.raw-meat-tag-empty {
+  padding: 8px 12px;
+  color: var(--muted-foreground);
+  font-size: 0.84rem;
+}
+
+.raw-meat-stock-in-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+  align-items: end;
+}
+
+.raw-meat-unit-toggle {
+  display: inline-flex;
+  align-items: center;
+  grid-column: 1 / -1;
+  height: 40px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--background);
+  justify-content: space-between;
+}
+
+.raw-meat-unit-toggle button {
+  height: 100%;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--foreground);
+  font: inherit;
+  font-size: 0.86rem;
+  cursor: pointer;
+}
+
+.raw-meat-unit-toggle button.is-active {
+  background: var(--foreground);
+  color: var(--background);
+}
+
+@media (max-width: 960px) {
+  .raw-meat-calc-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(10rem, 28%) minmax(0, 1fr);
+  }
+
+  .raw-meat-calc-item-list {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(9rem, max-content);
+    align-content: stretch;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .raw-meat-calc-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .raw-meat-calc-heading-actions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 760px) {
+  .raw-meat-calc-page {
+    height: calc(100dvh - var(--topbar-height) - 62px);
+    min-height: 520px;
+  }
+
+  .raw-meat-calc-heading {
+    align-items: stretch;
+  }
+}
+
 
 .table-skeleton-row td {
   vertical-align: middle;
@@ -2814,6 +3555,8 @@ td:last-child {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-direction: row;
+  flex-wrap: nowrap;
   gap: 16px;
   min-height: 62px;
   padding: 10px 18px;

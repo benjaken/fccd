@@ -28,6 +28,10 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
   { prefix: "/products/lunchbox", pageKey: "products.lunchbox" },
   { prefix: "/products/ala-carte", pageKey: "products.ala_carte" },
   {
+    prefix: "/frozen/raw-meat-inventory",
+    pageKey: "frozen.raw_meat_inventory",
+  },
+  {
     prefix: "/frozen/spice-usage",
     pageKey: "frozen.spice_usage",
   },

@@ -133,7 +133,7 @@ function CreateCalculationSettingPanel({
           <input
             inputMode="decimal"
             value={variationInput}
-            placeholder="0.00"
+            placeholder={t("calculationSettings.fields.percentPlaceholder")}
             min={0}
             max={100}
             step={0.01}
@@ -151,7 +151,7 @@ function CreateCalculationSettingPanel({
           <input
             inputMode="decimal"
             value={markupInput}
-            placeholder="0.00"
+            placeholder={t("calculationSettings.fields.percentPlaceholder")}
             min={0}
             max={100}
             step={0.01}
