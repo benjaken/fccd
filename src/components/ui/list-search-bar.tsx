@@ -21,11 +21,17 @@ export type ListSearchBarProps = {
   filters?: ReactNode;
   filtersActive?: boolean;
   filtersTitle?: string;
+  /** Commit mobile filter drafts, then the drawer closes. */
+  onConfirmFilters?: () => void;
+  /** Restore mobile filter drafts when the drawer is dismissed. */
+  onDismissFilters?: () => void;
 };
 
 /**
  * Standard operational-list toolbar search: in-field icon + submit button.
  * On mobile the field stays visible; extra filters move behind a trailing icon.
+ * Changing those filters is a draft until 確定, which applies them and closes
+ * the drawer.
  */
 export function ListSearchBar({
   id,
@@ -40,6 +46,8 @@ export function ListSearchBar({
   filters,
   filtersActive = false,
   filtersTitle,
+  onConfirmFilters,
+  onDismissFilters,
 }: ListSearchBarProps) {
   const { t } = useTranslation();
   const isMobile = useIsMobile();
@@ -48,6 +56,16 @@ export function ListSearchBar({
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     onSubmit();
+  };
+
+  const dismissFilters = () => {
+    onDismissFilters?.();
+    setOpen(false);
+  };
+
+  const applyFilters = () => {
+    onConfirmFilters?.();
+    setOpen(false);
   };
 
   return (
@@ -95,8 +113,17 @@ export function ListSearchBar({
         <SidePanel
           open={open}
           title={filtersTitle ?? t("common.filters")}
-          onClose={() => setOpen(false)}
+          onClose={dismissFilters}
           closeLabel={t("common.closeFilters")}
+          footer={
+            <Button
+              type="button"
+              className="list-search-filter-apply"
+              onClick={applyFilters}
+            >
+              {t("common.applyFilters")}
+            </Button>
+          }
         >
           <div className="list-search-filter-drawer">{filters}</div>
         </SidePanel>
