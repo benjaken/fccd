@@ -166,8 +166,7 @@ export function SpiceUsagePage({
             {t("spiceUsage.retry")}
           </Button>
         </div>
-      ) : null}
-
+      ) : (
       <div className="spice-usage-layout">
         <aside
           className="spice-usage-sidebar panel"
@@ -248,49 +247,52 @@ export function SpiceUsagePage({
                 ) : null}
               </header>
 
-              {usagesLoading ? (
-                <p className="spice-usage-main-state">
-                  {t("spiceUsage.loadingUsages")}
-                </p>
-              ) : usages.length === 0 ? (
-                <div className="spice-usage-main-empty">
-                  <Leaf />
-                  <strong>{t("spiceUsage.emptyUsages")}</strong>
-                </div>
-              ) : (
-                <div className="spice-usage-card-grid">
-                  {usages.map((usage, index) => (
-                    <article
-                      key={usage.id}
-                      className="spice-usage-card"
-                      aria-label={`${index + 1}. ${usage.preparedMeatName}`}
-                    >
-                      <div className="spice-usage-card-index" aria-hidden="true">
-                        {index + 1}
-                      </div>
-                      <div className="spice-usage-card-body">
-                        <strong className="spice-usage-card-title">
-                          {usage.preparedMeatName}
-                        </strong>
-                        <div className="spice-usage-card-metrics">
-                          <span className="spice-usage-card-metric">
-                            <small>{t("spiceUsage.metric.grams")}</small>
-                            {gramsFormatter.format(usage.quantityGrams)}g
-                          </span>
-                          <span className="spice-usage-card-metric is-cost">
-                            <small>{t("spiceUsage.metric.cost")}</small>
-                            {currencyFormatter.format(usage.totalCost)}
-                          </span>
+              <div className="spice-usage-main-body">
+                {usagesLoading ? (
+                  <p className="spice-usage-main-state">
+                    {t("spiceUsage.loadingUsages")}
+                  </p>
+                ) : usages.length === 0 ? (
+                  <div className="spice-usage-main-empty">
+                    <Leaf />
+                    <strong>{t("spiceUsage.emptyUsages")}</strong>
+                  </div>
+                ) : (
+                  <div className="spice-usage-card-grid">
+                    {usages.map((usage, index) => (
+                      <article
+                        key={usage.id}
+                        className="spice-usage-card"
+                        aria-label={`${index + 1}. ${usage.preparedMeatName}`}
+                      >
+                        <div className="spice-usage-card-index" aria-hidden="true">
+                          {index + 1}
                         </div>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              )}
+                        <div className="spice-usage-card-body">
+                          <strong className="spice-usage-card-title">
+                            {usage.preparedMeatName}
+                          </strong>
+                          <div className="spice-usage-card-metrics">
+                            <span className="spice-usage-card-metric">
+                              <small>{t("spiceUsage.metric.grams")}</small>
+                              {gramsFormatter.format(usage.quantityGrams)}g
+                            </span>
+                            <span className="spice-usage-card-metric is-cost">
+                              <small>{t("spiceUsage.metric.cost")}</small>
+                              {currencyFormatter.format(usage.totalCost)}
+                            </span>
+                          </div>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </div>
             </>
           )}
         </article>
       </div>
+      )}
     </section>
   );
 }

@@ -2876,9 +2876,9 @@ td:last-child {
   gap: 20px;
   grid-template-rows: auto minmax(0, 1fr);
   height: calc(
-    100dvh - var(--topbar-height) - var(--workspace-height) - 76px
+    100dvh - var(--topbar-height) - var(--workspace-height) - 56px
   );
-  min-height: 560px;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -2890,13 +2890,15 @@ td:last-child {
   display: grid;
   grid-template-columns: minmax(11rem, 18%) minmax(0, 1fr);
   gap: 14px;
-  min-height: min(70dvh, 720px);
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
 }
 
 .spice-usage-sidebar,
 .spice-usage-main {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   min-height: 0;
   overflow: hidden;
 }
@@ -2937,7 +2939,7 @@ td:last-child {
 }
 
 .spice-usage-side-list {
-  flex: 1;
+  min-height: 0;
   margin: 0;
   padding: 8px;
   overflow: auto;
@@ -3038,7 +3040,8 @@ td:last-child {
   place-content: center;
   justify-items: center;
   gap: 8px;
-  flex: 1;
+  min-height: 0;
+  height: 100%;
   padding: 40px 20px;
   text-align: center;
   color: var(--muted-foreground);
@@ -3053,12 +3056,21 @@ td:last-child {
   color: var(--foreground);
 }
 
+.spice-usage-main-body {
+  min-height: 0;
+  overflow: auto;
+}
+
+.spice-usage-main > .spice-usage-main-empty {
+  grid-row: 1 / -1;
+}
+
 .spice-usage-card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(14.5rem, 1fr));
+  align-content: start;
   gap: 12px;
   padding: 16px 18px 18px;
-  overflow: auto;
 }
 
 .spice-usage-card {
@@ -3531,11 +3543,16 @@ td:last-child {
 
   .spice-usage-layout {
     grid-template-columns: 1fr;
+    grid-template-rows: minmax(9rem, 28%) minmax(0, 1fr);
     min-height: 0;
   }
 
   .spice-usage-sidebar {
-    max-height: 220px;
+    max-height: none;
+  }
+
+  .spice-usage-page {
+    min-height: 0;
   }
 
   .quotes-toolbar,
