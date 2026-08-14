@@ -134,6 +134,54 @@ describe("Meat customers page", () => {
     expect(await screen.findByText("測試客人")).toBeInTheDocument();
   });
 
+  it("opens the edit panel and updates a customer", async () => {
+    const user = userEvent.setup();
+    const loadCustomers = vi.fn().mockResolvedValue(structuredClone(rows));
+    const updateCustomer = vi.fn().mockResolvedValue({
+      ...rows[0],
+      name: "桂花小幸 YLP 改",
+      phone: "9123 0000",
+    });
+
+    render(
+      <MemoryRouter>
+        <MeatCustomersPage
+          loadCustomers={loadCustomers}
+          updateCustomer={updateCustomer}
+        />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("桂花小幸 YLP");
+    await user.click(screen.getAllByRole("button", { name: "編輯" })[0]!);
+
+    await screen.findByRole("dialog", { name: "編輯客戶" });
+    const nameInput = screen.getByPlaceholderText("例如：桂花小幸 YLP");
+    expect(nameInput).toHaveValue("桂花小幸 YLP");
+    expect(screen.getByPlaceholderText("例如：C0085")).toHaveValue("C0085");
+
+    await user.clear(nameInput);
+    await user.type(nameInput, "桂花小幸 YLP 改");
+    const phoneInput = screen.getByPlaceholderText("電話號碼");
+    await user.clear(phoneInput);
+    await user.type(phoneInput, "9123 0000");
+    await user.click(screen.getByRole("button", { name: "保存" }));
+
+    await waitFor(() => {
+      expect(updateCustomer).toHaveBeenCalledWith("c-1", {
+        customerCode: "C0085",
+        name: "桂花小幸 YLP 改",
+        contactPerson: "阿國 / 懷哥",
+        phone: "9123 0000",
+        address: "元朗青山公路元朗段251號元朗廣場地下3號 & 5號舖",
+      });
+    });
+
+    expect(await screen.findByText("桂花小幸 YLP 改")).toBeInTheDocument();
+    expect(screen.queryByText("桂花小幸 YLP")).not.toBeInTheDocument();
+    expect(screen.getByText("桂花小幸 TKO")).toBeInTheDocument();
+  });
+
   it("deletes a customer after confirmation", async () => {
     const user = userEvent.setup();
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);

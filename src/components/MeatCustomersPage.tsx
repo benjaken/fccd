@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, Trash2, Users } from "lucide-react";
+import { Pencil, Plus, Trash2, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
@@ -10,6 +10,7 @@ import {
   archiveMeatCustomer,
   createMeatCustomer,
   fetchMeatCustomers,
+  updateMeatCustomer,
   type MeatCustomerFilters,
   type MeatCustomerRow,
 } from "@/lib/meat-customers";
@@ -18,6 +19,7 @@ type CustomersLoader = (
   filters?: MeatCustomerFilters,
 ) => Promise<MeatCustomerRow[]>;
 type CustomerCreator = typeof createMeatCustomer;
+type CustomerUpdater = typeof updateMeatCustomer;
 type CustomerDeleter = typeof archiveMeatCustomer;
 
 const MEAT_CUSTOMERS_SKELETON_COLUMNS = [
@@ -26,19 +28,23 @@ const MEAT_CUSTOMERS_SKELETON_COLUMNS = [
   { width: "8rem" },
   { width: "8rem" },
   { width: "28rem" },
-  { width: "2.5rem", variant: "action" as const },
+  { width: "4.5rem", variant: "action" as const },
 ];
 
-function CreateMeatCustomerPanel({
+function MeatCustomerFormPanel({
   open,
+  customer,
   onClose,
-  onCreated,
+  onSaved,
   createCustomer,
+  updateCustomer,
 }: {
   open: boolean;
+  customer: MeatCustomerRow | null;
   onClose: () => void;
-  onCreated: (row: MeatCustomerRow) => void;
+  onSaved: (row: MeatCustomerRow, mode: "create" | "edit") => void;
   createCustomer: CustomerCreator;
+  updateCustomer: CustomerUpdater;
 }) {
   const { t } = useTranslation();
   const [customerCode, setCustomerCode] = useState("");
@@ -49,13 +55,20 @@ function CreateMeatCustomerPanel({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
+  const editing = Boolean(customer);
+
+  useEffect(() => {
+    if (!open) return;
+    setCustomerCode(customer?.customerCode ?? "");
+    setName(customer?.name ?? "");
+    setContactPerson(customer?.contactPerson ?? "");
+    setPhone(customer?.phone ?? "");
+    setAddress(customer?.address ?? "");
+    setError(null);
+    setNameError(null);
+  }, [customer, open]);
 
   const closeAndReset = () => {
-    setCustomerCode("");
-    setName("");
-    setContactPerson("");
-    setPhone("");
-    setAddress("");
     setError(null);
     setNameError(null);
     onClose();
@@ -70,21 +83,24 @@ function CreateMeatCustomerPanel({
     setNameError(null);
     setSubmitting(true);
     setError(null);
+    const payload = {
+      customerCode,
+      name,
+      contactPerson,
+      phone,
+      address,
+    };
     try {
-      const row = await createCustomer({
-        customerCode,
-        name,
-        contactPerson,
-        phone,
-        address,
-      });
-      onCreated(row);
+      const row = customer
+        ? await updateCustomer(customer.id, payload)
+        : await createCustomer(payload);
+      onSaved(row, customer ? "edit" : "create");
       closeAndReset();
     } catch (saveError) {
       setError(
         saveError instanceof Error
           ? saveError.message
-          : t("meatCustomers.createError"),
+          : t(editing ? "meatCustomers.editError" : "meatCustomers.createError"),
       );
     } finally {
       setSubmitting(false);
@@ -94,7 +110,9 @@ function CreateMeatCustomerPanel({
   return (
     <SidePanel
       open={open}
-      title={t("meatCustomers.createTitle")}
+      title={t(
+        editing ? "meatCustomers.editTitle" : "meatCustomers.createTitle",
+      )}
       onClose={closeAndReset}
       closeLabel={t("meatCustomers.closePanel")}
       footer={
@@ -104,7 +122,7 @@ function CreateMeatCustomerPanel({
           </Button>
           <Button
             type="submit"
-            form="create-meat-customer-form"
+            form="meat-customer-form"
             disabled={submitting}
           >
             {submitting
@@ -115,7 +133,7 @@ function CreateMeatCustomerPanel({
       }
     >
       <form
-        id="create-meat-customer-form"
+        id="meat-customer-form"
         className="meat-customers-form"
         onSubmit={(event) => void submit(event)}
       >
@@ -173,10 +191,12 @@ function CreateMeatCustomerPanel({
 export function MeatCustomersPage({
   loadCustomers = fetchMeatCustomers,
   createCustomer = createMeatCustomer,
+  updateCustomer = updateMeatCustomer,
   deleteCustomer = archiveMeatCustomer,
 }: {
   loadCustomers?: CustomersLoader;
   createCustomer?: CustomerCreator;
+  updateCustomer?: CustomerUpdater;
   deleteCustomer?: CustomerDeleter;
 }) {
   const { t } = useTranslation();
@@ -186,7 +206,9 @@ export function MeatCustomersPage({
   const [reloadKey, setReloadKey] = useState(0);
   const [draftSearch, setDraftSearch] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
-  const [createOpen, setCreateOpen] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [editingCustomer, setEditingCustomer] =
+    useState<MeatCustomerRow | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -225,6 +247,21 @@ export function MeatCustomersPage({
   const display = (value: string | null | undefined) =>
     value?.trim() ? value : t("common.notSet");
 
+  const openCreate = () => {
+    setEditingCustomer(null);
+    setPanelOpen(true);
+  };
+
+  const openEdit = (row: MeatCustomerRow) => {
+    setEditingCustomer(row);
+    setPanelOpen(true);
+  };
+
+  const closePanel = () => {
+    setPanelOpen(false);
+    setEditingCustomer(null);
+  };
+
   const handleDelete = async (row: MeatCustomerRow) => {
     if (deletingId) return;
     const confirmed = window.confirm(t("meatCustomers.deleteConfirm"));
@@ -252,7 +289,7 @@ export function MeatCustomersPage({
           <span className="eyebrow">{t("meatCustomers.eyebrow")}</span>
           <h1>{t("meatCustomers.title")}</h1>
         </div>
-        <Button type="button" onClick={() => setCreateOpen(true)}>
+        <Button type="button" onClick={openCreate}>
           <Plus />
           {t("meatCustomers.add")}
         </Button>
@@ -296,7 +333,7 @@ export function MeatCustomersPage({
               <strong>{t("meatCustomers.empty")}</strong>
               <span>{t("meatCustomers.emptyDescription")}</span>
             </div>
-            <Button type="button" onClick={() => setCreateOpen(true)}>
+            <Button type="button" onClick={openCreate}>
               <Plus />
               {t("meatCustomers.add")}
             </Button>
@@ -340,6 +377,17 @@ export function MeatCustomersPage({
                       variant="outline"
                       size="icon"
                       disabled={deletingId === row.id}
+                      aria-label={t("meatCustomers.edit")}
+                      title={t("meatCustomers.edit")}
+                      onClick={() => openEdit(row)}
+                    >
+                      <Pencil />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      disabled={deletingId === row.id}
                       aria-label={t("meatCustomers.delete")}
                       title={t("meatCustomers.delete")}
                       onClick={() => {
@@ -356,13 +404,19 @@ export function MeatCustomersPage({
         )}
       </article>
 
-      <CreateMeatCustomerPanel
-        open={createOpen}
-        onClose={() => setCreateOpen(false)}
+      <MeatCustomerFormPanel
+        open={panelOpen}
+        customer={editingCustomer}
+        onClose={closePanel}
         createCustomer={createCustomer}
-        onCreated={(row) => {
-          setRows((current) => [row, ...current]);
-          setCreateOpen(false);
+        updateCustomer={updateCustomer}
+        onSaved={(row, mode) => {
+          setRows((current) =>
+            mode === "create"
+              ? [row, ...current.filter((item) => item.id !== row.id)]
+              : current.map((item) => (item.id === row.id ? row : item)),
+          );
+          closePanel();
         }}
       />
     </section>
