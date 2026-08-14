@@ -446,7 +446,7 @@ describe("Prepared meat inventory calculation page", () => {
     );
 
     expect(await screen.findByRole("button", { name: "新增製成品選項" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "製成品入貨(扣原料)" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "製成品入貨(扣原料)" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "製成品入貨(無原料)" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "管理送貨單" })).toBeDisabled();
 
@@ -621,6 +621,134 @@ describe("Prepared meat inventory calculation page", () => {
       expect(screen.queryByRole("dialog", { name: "製成品入貨(無原料)" })).toBeNull();
     });
     expect(loadMovements).toHaveBeenCalledTimes(2);
+  });
+
+  it("records inbound that deducts remaining raw meat within budgeted yield", async () => {
+    const user = userEvent.setup();
+    const loadItems = vi.fn().mockResolvedValue(items);
+    const loadMovements = vi.fn().mockResolvedValue([]);
+    const loadRawMeatChoices = vi.fn().mockResolvedValue([
+      { id: "raw-wonton", name: "豬肉碎(扁食用) (生)" },
+    ]);
+    const loadInboundRawPreview = vi.fn().mockResolvedValue({
+      remainingKg: 104.65,
+      items: [
+        {
+          id: "item-wonton",
+          sku: "PM500",
+          name: "扁食肉餡 (500克)",
+          unit: "包",
+          kgPerPackage: 0.5,
+        },
+      ],
+    });
+    const createInboundWithRaw = vi.fn().mockResolvedValue("move-raw-1");
+
+    render(
+      <MemoryRouter>
+        <PreparedMeatInventoryCalcPage
+          loadItems={loadItems}
+          loadMovements={loadMovements}
+          loadRawMeatChoices={loadRawMeatChoices}
+          loadInboundRawPreview={loadInboundRawPreview}
+          createInboundWithRaw={createInboundWithRaw}
+        />
+      </MemoryRouter>,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: "製成品入貨(扣原料)" }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "製成品入貨(扣原料)",
+    });
+    expect(dialog).toHaveClass("side-panel-wide");
+    expect(within(dialog).getByRole("button", { name: "提交" })).toBeDisabled();
+
+    await user.click(within(dialog).getByRole("textbox", { name: "生肉" }));
+    await user.click(
+      within(dialog).getByRole("option", { name: "豬肉碎(扁食用) (生)" }),
+    );
+    await waitFor(() => {
+      expect(loadInboundRawPreview).toHaveBeenCalledWith("raw-wonton");
+    });
+    expect(within(dialog).getByText("剩餘總量")).toBeInTheDocument();
+    expect(within(dialog).getByText("Total: 104.65 kg")).toBeInTheDocument();
+
+    const outbound = within(dialog).getByRole("textbox", {
+      name: "生肉出貨數量 (kg)",
+    });
+    await user.type(outbound, "15.5");
+    expect(
+      await within(dialog).findByText("扁食肉餡 (500克)入貨 (包)"),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByText("預算收成: 31")).toBeInTheDocument();
+
+    const inboundPacks = within(dialog).getByRole("textbox", {
+      name: "扁食肉餡 (500克) 入貨包數",
+    });
+    await user.type(inboundPacks, "15");
+    expect(
+      await within(dialog).findByText(
+        "入貨數量須介於 16 至 47 包（預算收成 31 的 ±50%）",
+      ),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "提交" })).toBeDisabled();
+
+    await user.clear(inboundPacks);
+    await user.type(inboundPacks, "31");
+    expect(within(dialog).getByText("Total: 31包")).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "提交" }));
+
+    await waitFor(() => {
+      expect(createInboundWithRaw).toHaveBeenCalledWith({
+        rawMeatItemId: "raw-wonton",
+        movementDate: expect.any(String),
+        outboundKg: 15.5,
+        remarks: "",
+        lines: [{ preparedMeatItemId: "item-wonton", quantity: 31 }],
+      });
+    });
+  });
+
+  it("blocks deduct-raw inbound when the selected raw meat has no stock", async () => {
+    const user = userEvent.setup();
+    const loadItems = vi.fn().mockResolvedValue(items);
+    const loadMovements = vi.fn().mockResolvedValue([]);
+    const loadRawMeatChoices = vi.fn().mockResolvedValue([
+      { id: "raw-empty", name: "豬肉粒" },
+    ]);
+    const loadInboundRawPreview = vi.fn().mockResolvedValue({
+      remainingKg: 0,
+      items: [],
+    });
+
+    render(
+      <MemoryRouter>
+        <PreparedMeatInventoryCalcPage
+          loadItems={loadItems}
+          loadMovements={loadMovements}
+          loadRawMeatChoices={loadRawMeatChoices}
+          loadInboundRawPreview={loadInboundRawPreview}
+        />
+      </MemoryRouter>,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: "製成品入貨(扣原料)" }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "製成品入貨(扣原料)",
+    });
+    await user.click(within(dialog).getByRole("textbox", { name: "生肉" }));
+    await user.click(within(dialog).getByRole("option", { name: "豬肉粒" }));
+    expect(
+      await within(dialog).findByText("沒有剩餘生肉，無法入貨"),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).queryByRole("textbox", { name: "生肉出貨數量 (kg)" }),
+    ).toBeNull();
+    expect(within(dialog).getByRole("button", { name: "提交" })).toBeDisabled();
   });
 
   it("lets 到會 and 凍肉製作 add direct-ship raw meat", async () => {

@@ -3,13 +3,18 @@ import { describe, expect, it } from "vitest";
 import {
   canSelectPreparedMeatShippingMethod,
   canShipRawMeatOnPreparedOutbound,
+  coercePreparedMeatIntegerInput,
   coercePreparedMeatQuantityInput,
   currentHongKongYear,
+  formatPreparedMeatKg,
   formatPreparedMeatOrderNumber,
   formatPreparedMeatStock,
   hongKongYearBounds,
   hongKongYearMonthKey,
+  isPreparedInboundPackAllowed,
   nextPreparedMeatOrderSequence,
+  budgetedPreparedYieldPacks,
+  preparedInboundPackRange,
   preparedMeatMovementKind,
   preparedMeatYearOptions,
   remainingPreparedMeatOutboundStock,
@@ -150,6 +155,22 @@ describe("prepared meat outbound helpers", () => {
     expect(coercePreparedMeatQuantityInput("1.2.3")).toBe("1.23");
     expect(coercePreparedMeatQuantityInput("１．５")).toBe("1.5");
     expect(coercePreparedMeatQuantityInput("2")).toBe("2");
+  });
+});
+
+describe("prepared meat inbound with raw yield", () => {
+  it("rounds budgeted packs and allows ±50% integers", () => {
+    expect(budgetedPreparedYieldPacks(15.5, 0.5)).toBe(31);
+    expect(preparedInboundPackRange(31)).toEqual({ min: 16, max: 47 });
+    expect(isPreparedInboundPackAllowed(31, 31)).toBe(true);
+    expect(isPreparedInboundPackAllowed(16, 31)).toBe(true);
+    expect(isPreparedInboundPackAllowed(47, 31)).toBe(true);
+    expect(isPreparedInboundPackAllowed(15, 31)).toBe(false);
+    expect(isPreparedInboundPackAllowed(48, 31)).toBe(false);
+    expect(isPreparedInboundPackAllowed(0, 31)).toBe(false);
+    expect(isPreparedInboundPackAllowed(16.5, 31)).toBe(false);
+    expect(coercePreparedMeatIntegerInput("12.9")).toBe("12");
+    expect(formatPreparedMeatKg(13.91)).toBe("13.91");
   });
 });
 

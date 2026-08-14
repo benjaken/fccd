@@ -2431,6 +2431,51 @@ td:last-child {
   max-width: 100%;
 }
 
+.prepared-meat-inbound-deduct-remaining strong,
+.prepared-meat-inbound-deduct-product > div:last-child strong {
+  text-decoration: underline;
+  text-decoration-style: double;
+  text-underline-offset: 0.18em;
+}
+
+.prepared-meat-inbound-deduct-remaining {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.prepared-meat-inbound-deduct-remaining span,
+.prepared-meat-inbound-deduct-product span {
+  color: var(--muted-foreground);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.prepared-meat-inbound-deduct-products {
+  display: grid;
+  gap: 14px;
+}
+
+.prepared-meat-inbound-deduct-product {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 7.5rem;
+  gap: 12px;
+  align-items: start;
+}
+
+.prepared-meat-inbound-deduct-product > div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.prepared-meat-inbound-deduct-product > div:last-child {
+  display: grid;
+  gap: 6px;
+  justify-items: stretch;
+  text-align: right;
+}
+
 .prepared-meat-outbound-header {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);

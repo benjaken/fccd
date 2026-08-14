@@ -16,6 +16,7 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 
+import { PreparedMeatInboundDeductModal } from "@/components/PreparedMeatInboundDeductModal";
 import { PreparedMeatInboundNoRawModal } from "@/components/PreparedMeatInboundNoRawModal";
 import { PreparedMeatOptionFormModal } from "@/components/PreparedMeatOptionFormModal";
 import { PreparedMeatOptionsModal } from "@/components/PreparedMeatOptionsModal";
@@ -59,6 +60,14 @@ type CreateOptionProps = Pick<
   ComponentProps<typeof PreparedMeatOptionFormModal>,
   "loadRawMeatChoices" | "createItem"
 >;
+type InboundDeductModalProps = {
+  loadInboundRawPreview?: ComponentProps<
+    typeof PreparedMeatInboundDeductModal
+  >["loadPreview"];
+  createInboundWithRaw?: ComponentProps<
+    typeof PreparedMeatInboundDeductModal
+  >["createInbound"];
+};
 type InboundNoRawModalProps = Pick<
   ComponentProps<typeof PreparedMeatInboundNoRawModal>,
   "createInbound"
@@ -167,6 +176,8 @@ export function PreparedMeatInventoryCalcPage({
   loadRawMeatChoices,
   createItem = createPreparedMeatItem,
   createInbound,
+  loadInboundRawPreview,
+  createInboundWithRaw,
   loadCustomers,
   loadShippingMethods,
   loadOrderNumber,
@@ -181,6 +192,7 @@ export function PreparedMeatInventoryCalcPage({
   loadMovements?: MovementsLoader;
   saveItemFlags?: ItemFlagsSaver;
 } & CreateOptionProps &
+  InboundDeductModalProps &
   InboundNoRawModalProps &
   OutboundModalProps) {
   const { t, i18n } = useTranslation();
@@ -199,6 +211,7 @@ export function PreparedMeatInventoryCalcPage({
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [createOptionOpen, setCreateOptionOpen] = useState(false);
   const [inboundNoRawOpen, setInboundNoRawOpen] = useState(false);
+  const [inboundDeductOpen, setInboundDeductOpen] = useState(false);
   const [outboundOpen, setOutboundOpen] = useState(false);
   const [editingOrderId, setEditingOrderId] = useState<string | null | undefined>(
     undefined,
@@ -487,7 +500,7 @@ export function PreparedMeatInventoryCalcPage({
           <Button type="button" onClick={() => setCreateOptionOpen(true)}>
             {t("preparedMeatInventory.actions.addOption")}
           </Button>
-          <Button type="button" disabled title={t("preparedMeatInventory.comingSoon")}>
+          <Button type="button" onClick={() => setInboundDeductOpen(true)}>
             {t("preparedMeatInventory.actions.stockInDeduct")}
           </Button>
           <Button type="button" onClick={() => setInboundNoRawOpen(true)}>
@@ -791,6 +804,14 @@ export function PreparedMeatInventoryCalcPage({
         items={items}
         onClose={() => setOptionsOpen(false)}
         onSaveFlags={handleSaveItemFlags}
+      />
+      <PreparedMeatInboundDeductModal
+        open={inboundDeductOpen}
+        onClose={() => setInboundDeductOpen(false)}
+        onSaved={reload}
+        loadRawChoices={loadRawMeatChoices}
+        loadPreview={loadInboundRawPreview}
+        createInbound={createInboundWithRaw}
       />
       <PreparedMeatInboundNoRawModal
         open={inboundNoRawOpen}

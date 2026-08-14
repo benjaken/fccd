@@ -1,6 +1,9 @@
 import { useState } from "react";
 
-import { coercePreparedMeatQuantityInput } from "@/lib/prepared-meat-inventory";
+import {
+  coercePreparedMeatIntegerInput,
+  coercePreparedMeatQuantityInput,
+} from "@/lib/prepared-meat-inventory";
 
 export type PreparedMeatSearchOption = {
   id: string;
@@ -14,19 +17,21 @@ export function PreparedMeatQuantityInput({
   disabled,
   placeholder,
   ariaLabel,
+  integer = false,
 }: {
   value: string;
   onChange: (value: string) => void;
   disabled?: boolean;
   placeholder: string;
   ariaLabel: string;
+  integer?: boolean;
 }) {
   return (
     <input
       type="text"
-      inputMode="decimal"
+      inputMode={integer ? "numeric" : "decimal"}
       autoComplete="off"
-      pattern="[0-9]*[.]?[0-9]*"
+      pattern={integer ? "[0-9]*" : "[0-9]*[.]?[0-9]*"}
       value={value}
       disabled={disabled}
       placeholder={placeholder}
@@ -35,13 +40,17 @@ export function PreparedMeatQuantityInput({
         if (
           typeof event.data === "string" &&
           event.data.length > 0 &&
-          !/[\d.０-９．]/.test(event.data)
+          !(integer ? /[\d０-９]/ : /[\d.０-９．]/).test(event.data)
         ) {
           event.preventDefault();
         }
       }}
       onChange={(event) =>
-        onChange(coercePreparedMeatQuantityInput(event.target.value))
+        onChange(
+          integer
+            ? coercePreparedMeatIntegerInput(event.target.value)
+            : coercePreparedMeatQuantityInput(event.target.value),
+        )
       }
     />
   );

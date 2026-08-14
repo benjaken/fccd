@@ -397,6 +397,41 @@ export function coercePreparedMeatQuantityInput(value: string): string {
   return `${intPart}.${frac}`;
 }
 
+/** Keep digits only while typing whole packages. */
+export function coercePreparedMeatIntegerInput(value: string): string {
+  return coercePreparedMeatQuantityInput(value).split(".")[0] ?? "";
+}
+
+export function budgetedPreparedYieldPacks(
+  outboundKg: number,
+  kgPerPackage: number,
+) {
+  if (!(outboundKg > 0) || !(kgPerPackage > 0)) return 0;
+  return Math.round(outboundKg / kgPerPackage);
+}
+
+export function preparedInboundPackRange(budgetedPacks: number) {
+  const budgeted = Math.max(0, Math.round(budgetedPacks));
+  return {
+    min: Math.round(budgeted * 0.5),
+    max: Math.round(budgeted * 1.5),
+  };
+}
+
+export function isPreparedInboundPackAllowed(
+  quantity: number,
+  budgetedPacks: number,
+) {
+  if (!Number.isInteger(quantity) || quantity <= 0) return false;
+  const { min, max } = preparedInboundPackRange(budgetedPacks);
+  return quantity >= min && quantity <= max;
+}
+
+export function formatPreparedMeatKg(value: number) {
+  if (!Number.isFinite(value)) return "0.00";
+  return value.toFixed(2);
+}
+
 export function preparedMeatOrderYearMonth(dateValue: string) {
   return dateValue.slice(0, 7).replace("-", "");
 }
@@ -739,6 +774,82 @@ export async function createPreparedMeatInboundNoRaw(
         prepared_meat_item_id: line.preparedMeatItemId,
         quantity: line.quantity,
         remarks: (line.remarks ?? "").trim() || null,
+      })),
+    },
+  );
+  if (error) throw error;
+  return data as string;
+}
+
+export type PreparedMeatInboundRawProduct = {
+  id: string;
+  sku: string | null;
+  name: string;
+  unit: string | null;
+  kgPerPackage: number;
+};
+
+export type PreparedMeatInboundRawPreview = {
+  remainingKg: number;
+  items: PreparedMeatInboundRawProduct[];
+};
+
+export async function fetchPreparedMeatInboundRawPreview(
+  rawMeatItemId: string,
+): Promise<PreparedMeatInboundRawPreview> {
+  const { data, error } = await supabase.rpc(
+    "prepared_meat_inbound_raw_preview",
+    { p_raw_meat_item_id: rawMeatItemId },
+  );
+  if (error) throw error;
+  const payload = (data ?? {}) as {
+    remaining_kg?: number | string | null;
+    items?: Array<{
+      id?: string;
+      sku?: string | null;
+      name?: string | null;
+      unit?: string | null;
+      kg_per_package?: number | string | null;
+    }>;
+  };
+  return {
+    remainingKg: Number.parseFloat(String(payload.remaining_kg ?? 0)) || 0,
+    items: (payload.items ?? [])
+      .map((item) => ({
+        id: item.id ?? "",
+        sku: item.sku ?? null,
+        name: (item.name ?? "").trim(),
+        unit: item.unit ?? null,
+        kgPerPackage: Number.parseFloat(String(item.kg_per_package ?? 0)) || 0,
+      }))
+      .filter((item) => item.id && item.name && item.kgPerPackage > 0),
+  };
+}
+
+export type PreparedMeatInboundWithRawInput = {
+  rawMeatItemId: string;
+  movementDate: string;
+  outboundKg: number;
+  remarks?: string | null;
+  lines: Array<{
+    preparedMeatItemId: string;
+    quantity: number;
+  }>;
+};
+
+export async function createPreparedMeatInboundWithRaw(
+  input: PreparedMeatInboundWithRawInput,
+): Promise<string> {
+  const { data, error } = await supabase.rpc(
+    "create_prepared_meat_inbound_with_raw",
+    {
+      p_raw_meat_item_id: input.rawMeatItemId,
+      p_movement_date: input.movementDate,
+      p_outbound_kg: input.outboundKg,
+      p_remarks: (input.remarks ?? "").trim() || null,
+      p_lines: input.lines.map((line) => ({
+        prepared_meat_item_id: line.preparedMeatItemId,
+        quantity: line.quantity,
       })),
     },
   );

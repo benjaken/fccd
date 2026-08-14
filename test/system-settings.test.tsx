@@ -797,6 +797,24 @@ describe("Super Admin system settings", () => {
       "prepared_meat_stock_raw_sources",
     );
 
+    const preparedMeatInboundWithRaw = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260814195000_create_prepared_meat_inbound_with_raw.sql",
+      ),
+      "utf8",
+    );
+    expect(preparedMeatInboundWithRaw).toContain(
+      "create_prepared_meat_inbound_with_raw",
+    );
+    expect(preparedMeatInboundWithRaw).toContain(
+      "prepared_meat_inbound_raw_preview",
+    );
+    expect(preparedMeatInboundWithRaw).toContain("prepared_meat_stock_raw_sources");
+    expect(preparedMeatInboundWithRaw).toContain(
+      "inbound quantity must be within 50 percent of budgeted yield",
+    );
+
     const rawMeatActions = readFileSync(
       path.resolve(
         process.cwd(),
