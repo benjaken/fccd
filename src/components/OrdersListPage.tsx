@@ -226,26 +226,28 @@ export function OrdersListPage({
             label={t("orders.search")}
             placeholder={t("orders.searchPlaceholder")}
             submitLabel={t("orders.searchAction")}
+            filtersActive={Boolean(status)}
+            filters={
+              <label className="orders-status-filter">
+                <span>{t("orders.statusFilter")}</span>
+                <select
+                  value={status}
+                  onChange={(event) =>
+                    setStatus(event.target.value as OrderStatusFilter)
+                  }
+                  disabled={preset === "delivered-unpaid"}
+                >
+                  {STATUS_FILTERS.map((option) => (
+                    <option key={option || "all"} value={option}>
+                      {option
+                        ? t(`orders.statuses.${option}`)
+                        : t("orders.allStatuses")}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            }
           />
-
-          <label className="orders-status-filter">
-            <span>{t("orders.statusFilter")}</span>
-            <select
-              value={status}
-              onChange={(event) =>
-                setStatus(event.target.value as OrderStatusFilter)
-              }
-              disabled={preset === "delivered-unpaid"}
-            >
-              {STATUS_FILTERS.map((option) => (
-                <option key={option || "all"} value={option}>
-                  {option
-                    ? t(`orders.statuses.${option}`)
-                    : t("orders.allStatuses")}
-                </option>
-              ))}
-            </select>
-          </label>
         </header>
 
         {financeRestricted ? (

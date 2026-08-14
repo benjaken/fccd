@@ -167,25 +167,27 @@ export function QuotesListPage({
             label={t("quotes.search")}
             placeholder={t("quotes.searchPlaceholder")}
             submitLabel={t("quotes.searchAction")}
+            filtersActive={Boolean(status)}
+            filters={
+              <label className="quotes-status-filter">
+                <span>{t("quotes.statusFilter")}</span>
+                <select
+                  value={status}
+                  onChange={(event) => {
+                    setPage(1);
+                    setStatus(event.target.value);
+                  }}
+                >
+                  <option value="">{t("quotes.allStatuses")}</option>
+                  {availableStatuses.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            }
           />
-
-          <label className="quotes-status-filter">
-            <span>{t("quotes.statusFilter")}</span>
-            <select
-              value={status}
-              onChange={(event) => {
-                setPage(1);
-                setStatus(event.target.value);
-              }}
-            >
-              <option value="">{t("quotes.allStatuses")}</option>
-              {availableStatuses.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </label>
         </header>
 
         {error ? (

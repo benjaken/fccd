@@ -42,9 +42,11 @@ component (`src/components/ui/list-search-bar.tsx`), which wraps **`SearchField`
   each page — import `ListSearchBar` instead.
 - Prefer the canonical classes `.list-search` / `.search-field` (legacy aliases
   remain for compatibility).
-- On viewports `max-width: 900px`, hide the inline search and show an icon
-  trigger. Tapping it opens the shared **`SidePanel`** from the right with the
-  same search form. Do not invent a second mobile search pattern per page.
+- Extra toolbar filters (status, channel, price, dates, etc.) must be passed
+  into `ListSearchBar` as `filters`. On viewports `max-width: 900px`, keep the
+  search field visible, hide those filters, and open them from a trailing
+  filter icon into the shared `SidePanel`. Do not leave stacked filter selects
+  on the mobile toolbar.
 
 ## Mobile pull-to-refresh
 

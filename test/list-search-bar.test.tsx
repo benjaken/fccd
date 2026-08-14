@@ -1,8 +1,20 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ListSearchBar } from "@/components/ui/list-search-bar";
+
+const FILTERED_LIST_PAGES = [
+  "src/components/OrdersListPage.tsx",
+  "src/components/QuotesListPage.tsx",
+  "src/components/ProductsListPage.tsx",
+  "src/components/PackagesListPage.tsx",
+  "src/components/settings/UsersListPage.tsx",
+  "src/components/settings/LoginLogsListPage.tsx",
+  "src/components/settings/AttachmentsListPage.tsx",
+];
 
 function mockMatchMedia(matches: boolean) {
   window.matchMedia = vi.fn().mockImplementation((query: string) => ({
@@ -16,6 +28,16 @@ function mockMatchMedia(matches: boolean) {
     dispatchEvent: vi.fn(),
   }));
 }
+
+const filters = (
+  <label>
+    售價範圍
+    <select aria-label="售價範圍">
+      <option value="">全部售價</option>
+      <option value="under-100">100 以下</option>
+    </select>
+  </label>
+);
 
 describe("ListSearchBar", () => {
   afterEach(() => {
@@ -75,31 +97,61 @@ describe("ListSearchBar", () => {
     expect(onSubmit).toHaveBeenCalledTimes(1);
   });
 
-  it("hides the field on mobile and opens a side drawer on tap", async () => {
-    mockMatchMedia(true);
-    const user = userEvent.setup();
-    const onSubmit = vi.fn();
+  it("keeps filters inline on desktop", () => {
+    mockMatchMedia(false);
 
     render(
       <ListSearchBar
-        id="unit-list-search-mobile"
-        value="B-1513"
+        id="unit-list-search-desktop-filters"
+        value=""
         onChange={vi.fn()}
-        onSubmit={onSubmit}
-        label="搜尋訂單"
+        onSubmit={vi.fn()}
+        label="搜尋商品"
         submitLabel="搜尋"
+        filters={filters}
       />,
     );
 
-    expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "開啟搜尋" }));
-    expect(screen.getByRole("dialog", { name: "搜尋訂單" })).toBeInTheDocument();
-    expect(screen.getByRole("searchbox", { name: "搜尋訂單" })).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "搜尋" }));
-    expect(onSubmit).toHaveBeenCalledTimes(1);
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByRole("searchbox", { name: "搜尋商品" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "售價範圍" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "開啟篩選" })).not.toBeInTheDocument();
   });
+
+  it("keeps the search field on mobile and opens filters from the trailing icon", async () => {
+    mockMatchMedia(true);
+    const user = userEvent.setup();
+
+    render(
+      <ListSearchBar
+        id="unit-list-search-mobile-filters"
+        value=""
+        onChange={vi.fn()}
+        onSubmit={vi.fn()}
+        label="搜尋商品"
+        submitLabel="搜尋"
+        filters={filters}
+      />,
+    );
+
+    expect(screen.getByRole("searchbox", { name: "搜尋商品" })).toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "售價範圍" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "開啟篩選" }));
+    expect(screen.getByRole("dialog", { name: "篩選" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "售價範圍" })).toBeInTheDocument();
+  });
+
+  it.each(FILTERED_LIST_PAGES)(
+    "owns the toolbar filters for %s",
+    (relativePath) => {
+      const source = readFileSync(
+        path.resolve(process.cwd(), relativePath),
+        "utf8",
+      );
+
+      expect(source).toContain("filters={");
+      expect(source).toContain("filtersActive=");
+    },
+  );
 });

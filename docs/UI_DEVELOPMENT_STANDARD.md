@@ -138,7 +138,7 @@ the same input / search / skeleton / pagination markup across list pages.
 | Pattern | Required component |
 |---|---|
 | Toolbar search (icon inside field + submit) | `ListSearchBar` → `SearchField` |
-| Mobile list search (hidden until tap) | `ListSearchBar` → `SidePanel` |
+| Mobile list filters (hidden until icon tap) | `ListSearchBar` `filters` → `SidePanel` |
 | Paginated operational table + loading rows | `ListTable` → `TableSkeletonRows` |
 | Mobile table pull-to-refresh | `ListTable` / `PullToRefresh` |
 | All page-level loading layouts | `PageSkeleton` with the appropriate `variant` |
@@ -172,7 +172,7 @@ Canonical design-system wording (Chinese + checklist): see
 | Progress tone assignment | Dashboard progress data in `src/App.tsx` |
 | Table row actions | `.table-actions-cell` + `.table-row-actions`; icon-only common actions |
 | List search chrome | `SearchField` / `ListSearchBar` + `.search-field` / `.list-search` |
-| Mobile search drawer | `SidePanel` + `.side-panel` / `.list-search-trigger` |
+| Mobile filter drawer | `SidePanel` + `.side-panel` / `.list-search-filter-trigger` |
 | Mobile table refresh | `PullToRefresh` + `.pull-to-refresh` |
 | Quick-login gate | `src/lib/quick-login.ts` + env vars |
 | Copy | `src/i18n.ts` |

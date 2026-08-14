@@ -1401,6 +1401,10 @@ td:last-child {
   height: 100%;
 }
 
+.list-search-host {
+  display: contents;
+}
+
 .list-search,
 .quotes-search,
 .orders-search,
@@ -1412,16 +1416,16 @@ td:last-child {
   width: min(620px, 100%);
 }
 
-.list-search-mobile {
-  display: flex;
-  align-items: center;
+.list-search-filters {
+  display: contents;
 }
 
-.list-search-trigger {
+.list-search-filter-trigger {
   position: relative;
+  flex: 0 0 auto;
 }
 
-.list-search-trigger.is-active::after {
+.list-search-filter-trigger.is-active::after {
   content: "";
   position: absolute;
   top: 8px;
@@ -1432,14 +1436,28 @@ td:last-child {
   background: var(--primary);
 }
 
-.side-panel-body .list-search {
-  width: 100%;
-  flex-direction: column;
-  align-items: stretch;
+.list-search-filter-drawer {
+  display: grid;
+  gap: 16px;
 }
 
-.side-panel-body .list-search .button,
-.side-panel-body .list-search button {
+.list-search-filter-drawer .products-filters,
+.list-search-filter-drawer .packages-filters,
+.list-search-filter-drawer .settings-attachments-filters {
+  display: grid;
+  gap: 16px;
+  width: 100%;
+}
+
+.list-search-filter-drawer .products-status-filter,
+.list-search-filter-drawer .packages-status-filter,
+.list-search-filter-drawer .orders-status-filter,
+.list-search-filter-drawer .quotes-status-filter {
+  width: 100%;
+  min-width: 0;
+}
+
+.list-search-filter-drawer select {
   width: 100%;
 }
 
@@ -2868,16 +2886,6 @@ td:last-child {
   .packages-search,
   .list-search {
     align-items: stretch;
-    flex-direction: column;
-  }
-
-  .quotes-status-filter,
-  .orders-status-filter,
-  .products-status-filter,
-  .packages-status-filter,
-  .products-filters,
-  .packages-filters {
-    width: 100%;
   }
 
   .quotes-pagination,
@@ -6744,6 +6752,32 @@ td:last-child {
 }
 
 @media (max-width: 900px) {
+  .list-search-host {
+    display: flex;
+    align-items: center;
+    width: 100%;
+  }
+
+  .list-search-host .list-search {
+    width: 100%;
+  }
+
+  .list-search-host .search-field {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .list-search-submit {
+    display: none;
+  }
+
+  .quotes-toolbar,
+  .orders-toolbar,
+  .products-toolbar,
+  .packages-toolbar {
+    align-items: center;
+  }
+
   :root {
     --topbar-height: 60px;
     --workspace-height: 42px;
