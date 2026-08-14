@@ -159,16 +159,45 @@ describe("prepared meat outbound helpers", () => {
 });
 
 describe("prepared meat inbound with raw yield", () => {
-  it("rounds budgeted packs and allows ±50% integers", () => {
-    expect(budgetedPreparedYieldPacks(15.5, 0.5)).toBe(31);
-    expect(preparedInboundPackRange(31)).toEqual({ min: 16, max: 47 });
-    expect(isPreparedInboundPackAllowed(31, 31)).toBe(true);
-    expect(isPreparedInboundPackAllowed(16, 31)).toBe(true);
-    expect(isPreparedInboundPackAllowed(47, 31)).toBe(true);
-    expect(isPreparedInboundPackAllowed(15, 31)).toBe(false);
-    expect(isPreparedInboundPackAllowed(48, 31)).toBe(false);
-    expect(isPreparedInboundPackAllowed(0, 31)).toBe(false);
-    expect(isPreparedInboundPackAllowed(16.5, 31)).toBe(false);
+  it("uses historical packs per raw kg and ceilings the result", () => {
+    expect(
+      budgetedPreparedYieldPacks({
+        outboundKg: 15.5,
+        kgPerPackage: 0.5,
+        historicalInboundPacks: 575,
+        historicalRawOutboundKg: 260.147,
+      }),
+    ).toBe(35);
+    expect(
+      budgetedPreparedYieldPacks({
+        outboundKg: 15.5,
+        kgPerPackage: 0.5,
+        historicalInboundPacks: 20,
+        historicalRawOutboundKg: 10,
+      }),
+    ).toBe(31);
+    expect(
+      budgetedPreparedYieldPacks({
+        outboundKg: 15.1,
+        kgPerPackage: 0.5,
+        historicalInboundPacks: 20,
+        historicalRawOutboundKg: 10,
+      }),
+    ).toBe(31);
+    expect(
+      budgetedPreparedYieldPacks({
+        outboundKg: 15.5,
+        kgPerPackage: 0.5,
+      }),
+    ).toBe(31);
+    expect(preparedInboundPackRange(35)).toEqual({ min: 18, max: 53 });
+    expect(isPreparedInboundPackAllowed(35, 35)).toBe(true);
+    expect(isPreparedInboundPackAllowed(18, 35)).toBe(true);
+    expect(isPreparedInboundPackAllowed(53, 35)).toBe(true);
+    expect(isPreparedInboundPackAllowed(17, 35)).toBe(false);
+    expect(isPreparedInboundPackAllowed(54, 35)).toBe(false);
+    expect(isPreparedInboundPackAllowed(0, 35)).toBe(false);
+    expect(isPreparedInboundPackAllowed(16.5, 35)).toBe(false);
     expect(coercePreparedMeatIntegerInput("12.9")).toBe("12");
     expect(formatPreparedMeatKg(13.91)).toBe("13.91");
   });

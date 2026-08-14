@@ -402,12 +402,30 @@ export function coercePreparedMeatIntegerInput(value: string): string {
   return coercePreparedMeatQuantityInput(value).split(".")[0] ?? "";
 }
 
-export function budgetedPreparedYieldPacks(
-  outboundKg: number,
-  kgPerPackage: number,
-) {
-  if (!(outboundKg > 0) || !(kgPerPackage > 0)) return 0;
-  return Math.round(outboundKg / kgPerPackage);
+export type PreparedMeatBudgetedYieldInput = {
+  outboundKg: number;
+  kgPerPackage: number;
+  historicalInboundPacks?: number;
+  historicalRawOutboundKg?: number;
+};
+
+/**
+ * Bubble 預算收成:
+ * ceil((sum in/包 / sum from_rawStock_list.out_quantity(kg)) * current outbound kg)
+ * Falls back to ceil(outbound kg / kg per package) when there is no raw-linked history.
+ */
+export function budgetedPreparedYieldPacks(input: PreparedMeatBudgetedYieldInput) {
+  const outboundKg = input.outboundKg;
+  const historicalInboundPacks = input.historicalInboundPacks ?? 0;
+  const historicalRawOutboundKg = input.historicalRawOutboundKg ?? 0;
+  if (!(outboundKg > 0)) return 0;
+  if (historicalInboundPacks > 0 && historicalRawOutboundKg > 0) {
+    return Math.ceil(
+      (historicalInboundPacks * outboundKg) / historicalRawOutboundKg,
+    );
+  }
+  if (!(input.kgPerPackage > 0)) return 0;
+  return Math.ceil(outboundKg / input.kgPerPackage);
 }
 
 export function preparedInboundPackRange(budgetedPacks: number) {
@@ -787,6 +805,8 @@ export type PreparedMeatInboundRawProduct = {
   name: string;
   unit: string | null;
   kgPerPackage: number;
+  historicalInboundPacks: number;
+  historicalRawOutboundKg: number;
 };
 
 export type PreparedMeatInboundRawPreview = {
@@ -810,6 +830,8 @@ export async function fetchPreparedMeatInboundRawPreview(
       name?: string | null;
       unit?: string | null;
       kg_per_package?: number | string | null;
+      historical_inbound_packs?: number | string | null;
+      historical_raw_outbound_kg?: number | string | null;
     }>;
   };
   return {
@@ -821,6 +843,10 @@ export async function fetchPreparedMeatInboundRawPreview(
         name: (item.name ?? "").trim(),
         unit: item.unit ?? null,
         kgPerPackage: Number.parseFloat(String(item.kg_per_package ?? 0)) || 0,
+        historicalInboundPacks:
+          Number.parseFloat(String(item.historical_inbound_packs ?? 0)) || 0,
+        historicalRawOutboundKg:
+          Number.parseFloat(String(item.historical_raw_outbound_kg ?? 0)) || 0,
       }))
       .filter((item) => item.id && item.name && item.kgPerPackage > 0),
   };

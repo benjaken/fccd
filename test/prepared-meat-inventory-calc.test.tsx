@@ -657,6 +657,8 @@ describe("Prepared meat inventory calculation page", () => {
           name: "扁食肉餡 (500克)",
           unit: "包",
           kgPerPackage: 0.5,
+          historicalInboundPacks: 575,
+          historicalRawOutboundKg: 260.147,
         },
       ],
     });
@@ -702,7 +704,7 @@ describe("Prepared meat inventory calculation page", () => {
     expect(
       await within(dialog).findByText("扁食肉餡 (500克)入貨 (包)"),
     ).toBeInTheDocument();
-    expect(within(dialog).getByText("預算收成: 31")).toBeInTheDocument();
+    expect(within(dialog).getByText("預算收成: 35")).toBeInTheDocument();
 
     const inboundPacks = within(dialog).getByRole("textbox", {
       name: "扁食肉餡 (500克) 入貨包數",
@@ -710,14 +712,14 @@ describe("Prepared meat inventory calculation page", () => {
     await user.type(inboundPacks, "15");
     expect(
       await within(dialog).findByText(
-        "入貨數量須介於 16 至 47 包（預算收成 31 的 ±50%）",
+        "入貨數量須介於 18 至 53 包（預算收成 35 的 ±50%）",
       ),
     ).toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: "提交" })).toBeDisabled();
 
     await user.clear(inboundPacks);
-    await user.type(inboundPacks, "31");
-    expect(within(dialog).getByText("Total: 31包")).toBeInTheDocument();
+    await user.type(inboundPacks, "35");
+    expect(within(dialog).getByText("Total: 35包")).toBeInTheDocument();
     await user.click(within(dialog).getByRole("button", { name: "提交" }));
 
     await waitFor(() => {
@@ -726,7 +728,7 @@ describe("Prepared meat inventory calculation page", () => {
         movementDate: expect.any(String),
         outboundKg: 15.5,
         remarks: "",
-        lines: [{ preparedMeatItemId: "item-wonton", quantity: 31 }],
+        lines: [{ preparedMeatItemId: "item-wonton", quantity: 35 }],
       });
     });
   });

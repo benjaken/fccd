@@ -77,7 +77,12 @@ export function PreparedMeatInboundDeductModal({
   const preparedLines = useMemo(() => {
     if (!showPrepared || !preview) return [];
     return preview.items.map((item) => {
-      const budgeted = budgetedPreparedYieldPacks(outboundKg, item.kgPerPackage);
+      const budgeted = budgetedPreparedYieldPacks({
+        outboundKg,
+        kgPerPackage: item.kgPerPackage,
+        historicalInboundPacks: item.historicalInboundPacks,
+        historicalRawOutboundKg: item.historicalRawOutboundKg,
+      });
       const range = preparedInboundPackRange(budgeted);
       const quantity = parseInteger(packTexts[item.id] ?? "");
       return { item, budgeted, range, quantity };
