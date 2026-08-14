@@ -103,6 +103,7 @@ import {
 import { FROZEN_ACTION_PAGE_KEYS } from "@/lib/frozen-action-permissions";
 import { useTheme } from "@/lib/use-theme";
 import { useAnimatedNumber } from "@/lib/use-animated-number";
+import { canEditProductCatalog } from "@/lib/products";
 import { cn } from "@/lib/utils";
 
 type Icon = ComponentType<{ className?: string; strokeWidth?: number }>;
@@ -669,6 +670,7 @@ function OperationsShell() {
         ? "restaurant"
         : "catering";
   const canViewFinance = pageAccess.canAccess("finance");
+  const canEditProducts = canEditProductCatalog(authorizationRole);
 
   useEffect(() => {
     setMobileMenuOpen(false);
@@ -1012,18 +1014,18 @@ function OperationsShell() {
                   <OrderDetailPage documentType="quote" canViewFinance={canViewFinance} />
                 }
               />
-              <Route path="/products" element={<ProductsListPage />} />
+              <Route path="/products" element={<ProductsListPage canEdit={canEditProducts} />} />
               <Route
                 path="/products/catering"
-                element={<ProductsListPage preset="catering" />}
+                element={<ProductsListPage preset="catering" canEdit={canEditProducts} />}
               />
               <Route
                 path="/products/lunchbox"
-                element={<ProductsListPage preset="lunchbox" />}
+                element={<ProductsListPage preset="lunchbox" canEdit={canEditProducts} />}
               />
               <Route
                 path="/products/ala-carte"
-                element={<ProductsListPage preset="ala-carte" />}
+                element={<ProductsListPage preset="ala-carte" canEdit={canEditProducts} />}
               />
               <Route
                 path="/products/packages"
@@ -1033,7 +1035,14 @@ function OperationsShell() {
                 path="/products/packages/:id"
                 element={<PackageDetailPage />}
               />
-              <Route path="/products/:id" element={<ProductDetailPage />} />
+              <Route
+                path="/products/:id/edit"
+                element={<ProductDetailPage canEdit={canEditProducts} />}
+              />
+              <Route
+                path="/products/:id"
+                element={<ProductDetailPage canEdit={canEditProducts} />}
+              />
               <Route
                 path="/frozen"
                 element={<Navigate to="/frozen/raw-meat-inventory" replace />}

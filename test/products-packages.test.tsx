@@ -22,12 +22,20 @@ const productResult: ProductListResult = {
       name: "Roast Chicken",
       chineseName: "燒雞",
       price: 188,
+      priceMin: 168,
+      priceMax: 208,
       status: "Active",
       isActive: true,
+      isBentoRecommended: true,
       channelId: "channel-1",
       channelName: "Catering",
       productTypeId: "type-1",
       productTypeName: "西式熱盤",
+      cookTypeName: "焗",
+      bentoMainTypeName: "飯",
+      bentoColumnTypeName: "雙格",
+      mainIngredients: ["雞"],
+      specialRequests: ["不辣", "適合小朋友"],
       createdAt: "2026-08-12T01:00:00.000Z",
     },
   ],
@@ -35,6 +43,7 @@ const productResult: ProductListResult = {
 
 const productDetail: ProductDetail = {
   id: "product-1",
+  legacyId: "legacy-product-1",
   sku: "CC-001",
   name: "Roast Chicken",
   chineseName: "燒雞",
@@ -45,15 +54,23 @@ const productDetail: ProductDetail = {
   priceMax: 208,
   status: "Active",
   isActive: true,
-  isBentoRecommended: false,
+  isBentoRecommended: true,
   channelId: "channel-1",
   channelName: "Catering",
   productTypeId: "type-1",
   productTypeName: "西式熱盤",
+  cookTypeId: "cook-1",
   cookTypeName: "焗",
-  bentoMainTypeName: null,
-  bentoColumnTypeName: null,
+  bentoMainTypeId: "staple-1",
+  bentoMainTypeName: "飯",
+  bentoColumnTypeId: "column-1",
+  bentoColumnTypeName: "雙格",
   collections: ["西式熱盤"],
+  mainIngredients: [{ id: "ing-1", name: "雞", legacyId: "legacy-ing-1" }],
+  specialRequests: [
+    { id: "req-1", name: "不辣", legacyId: "legacy-req-1" },
+    { id: "req-2", name: "適合小朋友", legacyId: "legacy-req-2" },
+  ],
   packages: [
     {
       id: "package-1",
@@ -63,6 +80,23 @@ const productDetail: ProductDetail = {
     },
   ],
   updatedAt: "2026-08-12T01:00:00.000Z",
+};
+
+const productEditOptions = {
+  channels: [{ id: "channel-1", name: "Catering" }],
+  productTypes: [{ id: "type-1", name: "西式熱盤" }],
+  cookTypes: [{ id: "cook-1", name: "焗" }],
+  bentoMainTypes: [{ id: "staple-1", name: "飯" }],
+  bentoColumnTypes: [{ id: "column-1", name: "雙格" }],
+  mainIngredients: [
+    { id: "ing-1", name: "雞", legacyId: "legacy-ing-1" },
+    { id: "ing-2", name: "豬", legacyId: "legacy-ing-2" },
+  ],
+  specialRequests: [
+    { id: "req-1", name: "不辣", legacyId: "legacy-req-1" },
+    { id: "req-2", name: "適合小朋友", legacyId: "legacy-req-2" },
+    { id: "req-3", name: "無菇", legacyId: "legacy-req-3" },
+  ],
 };
 
 const packageResult: PackageListResult = {
@@ -148,6 +182,9 @@ describe("Products catalog pages", () => {
     expect(within(screen.getByRole("table")).getByText("Catering")).toBeInTheDocument();
     expect(within(screen.getByRole("table")).getByText("西式熱盤")).toBeInTheDocument();
     expect(screen.getByText("HK$188")).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "推介" })).toBeInTheDocument();
+    expect(screen.getByLabelText("已推薦")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "編輯" })).not.toBeInTheDocument();
   });
 
   it("shows table skeleton rows while products are loading", async () => {
@@ -297,6 +334,89 @@ describe("Products catalog pages", () => {
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
   });
 
+  it("lets an editor toggle recommendation and shows the edit action", async () => {
+    const user = userEvent.setup();
+    const loadProducts = vi.fn().mockResolvedValue(productResult);
+    const loadChannels = vi.fn().mockResolvedValue([
+      { id: "channel-1", name: "Catering" },
+    ]);
+    const updateRecommendation = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <MemoryRouter>
+        <ProductsListPage
+          canEdit
+          loadProducts={loadProducts}
+          loadChannels={loadChannels}
+          updateRecommendation={updateRecommendation}
+        />
+      </MemoryRouter>,
+    );
+
+    const star = await screen.findByRole("button", { name: "已推薦" });
+    await user.click(star);
+    await waitFor(() =>
+      expect(updateRecommendation).toHaveBeenCalledWith("product-1", false),
+    );
+    expect(screen.getByRole("button", { name: "未推薦" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "編輯" })).toBeInTheDocument();
+  });
+
+  it("opens product details when a list row is clicked", async () => {
+    const user = userEvent.setup();
+    const loadProducts = vi.fn().mockResolvedValue(productResult);
+    const loadChannels = vi.fn().mockResolvedValue([]);
+
+    render(
+      <MemoryRouter>
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <ProductsListPage
+                loadProducts={loadProducts}
+                loadChannels={loadChannels}
+              />
+            }
+          />
+          <Route path="/products/:id" element={<div>商品詳情頁</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const row = (await screen.findByText("CC-001")).closest("tr");
+    expect(row).not.toBeNull();
+    await user.click(row!);
+    expect(await screen.findByText("商品詳情頁")).toBeInTheDocument();
+  });
+
+  it("shows bento columns on the a-la-carte list", async () => {
+    const loadProducts = vi.fn().mockResolvedValue(productResult);
+    const loadChannels = vi.fn().mockResolvedValue([]);
+
+    render(
+      <MemoryRouter>
+        <ProductsListPage
+          preset="ala-carte"
+          loadProducts={loadProducts}
+          loadChannels={loadChannels}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "單點食物" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "主食" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "格數" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "主要食材" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "特別要求" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "烹煮方式" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "推介" })).toBeInTheDocument();
+    expect(screen.getByText("飯")).toBeInTheDocument();
+    expect(screen.getByText("雙格")).toBeInTheDocument();
+    expect(screen.getByText("雞")).toBeInTheDocument();
+    expect(screen.getByText("不辣")).toBeInTheDocument();
+  });
+
   it("renders product detail fields", async () => {
     render(
       <MemoryRouter initialEntries={["/products/product-1"]}>
@@ -319,6 +439,54 @@ describe("Products catalog pages", () => {
     expect(
       screen.getByRole("link", { name: "精緻家庭美宴 (4-6人)" }),
     ).toHaveAttribute("href", "/products/packages/package-1");
+    expect(screen.getByLabelText("已推薦")).toBeInTheDocument();
+    expect(screen.getByText("雞")).toBeInTheDocument();
+    expect(screen.getByText("不辣")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "編輯" })).not.toBeInTheDocument();
+  });
+
+  it("saves product edits from the detail form", async () => {
+    const user = userEvent.setup();
+    const saveProduct = vi.fn().mockResolvedValue(undefined);
+    const loadEditOptions = vi.fn().mockResolvedValue(productEditOptions);
+
+    render(
+      <MemoryRouter initialEntries={["/products/product-1/edit"]}>
+        <Routes>
+          <Route
+            path="/products/:id/edit"
+            element={
+              <ProductDetailPage
+                canEdit
+                loadDetail={async () => productDetail}
+                loadEditOptions={loadEditOptions}
+                saveProduct={saveProduct}
+              />
+            }
+          />
+          <Route path="/products/:id" element={<div>已返回詳情</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("button", { name: "儲存" })).toBeInTheDocument();
+    const chineseName = await screen.findByLabelText("中文名稱");
+    await user.clear(chineseName);
+    await user.type(chineseName, "香草燒雞");
+    await user.click(await screen.findByRole("button", { name: "豬" }));
+    await user.click(screen.getByRole("button", { name: "儲存" }));
+
+    await waitFor(() =>
+      expect(saveProduct).toHaveBeenCalledWith(
+        "product-1",
+        expect.objectContaining({
+          chineseName: "香草燒雞",
+          isBentoRecommended: true,
+          mainIngredientIds: ["ing-1", "ing-2"],
+        }),
+      ),
+    );
+    expect(await screen.findByText("已返回詳情")).toBeInTheDocument();
   });
 });
 

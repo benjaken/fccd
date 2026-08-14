@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  RefreshCw,
-  ShoppingBasket,
-} from "lucide-react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Pencil, RefreshCw, ShoppingBasket } from "lucide-react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
+import { ProductRecommendStar } from "@/components/ProductRecommendStar";
+import { ProductTagList } from "@/components/ProductTagList";
 import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
@@ -16,6 +15,8 @@ import {
   fetchProductTypes,
   fetchProducts,
   PRODUCTS_PAGE_SIZE,
+  showsBentoListColumns,
+  updateProductRecommendation,
   type CatalogOption,
   type ProductListFilters,
   type ProductListItem,
@@ -25,32 +26,45 @@ import {
   type ProductStatusFilter,
 } from "@/lib/products";
 
-const PRODUCT_SKELETON_COLUMNS = [
+const BASE_SKELETON_COLUMNS = [
   { width: "5.5rem" },
   { width: "72%" },
   { width: "4.5rem" },
   { width: "5.5rem" },
   { width: "4rem" },
-  { width: "3.5rem", variant: "badge" as const },
+];
+
+const BENTO_SKELETON_COLUMNS = [
+  { width: "4.5rem" },
+  { width: "5.5rem" },
+  { width: "3.5rem" },
   { width: "7rem" },
+  { width: "8rem" },
+  { width: "4.5rem" },
 ];
 
 type ProductsLoader = (filters: ProductListFilters) => Promise<ProductListResult>;
 type ChannelsLoader = () => Promise<CatalogOption[]>;
 type ProductTypesLoader = (channelId?: string) => Promise<CatalogOption[]>;
+type RecommendUpdater = typeof updateProductRecommendation;
 
 export function ProductsListPage({
   preset = "all",
+  canEdit = false,
   loadProducts = fetchProducts,
   loadChannels = fetchProductChannels,
   loadProductTypes = fetchProductTypes,
+  updateRecommendation = updateProductRecommendation,
 }: {
   preset?: ProductPreset;
+  canEdit?: boolean;
   loadProducts?: ProductsLoader;
   loadChannels?: ChannelsLoader;
   loadProductTypes?: ProductTypesLoader;
+  updateRecommendation?: RecommendUpdater;
 }) {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [draftSearch, setDraftSearch] = useState("");
   const [search, setSearch] = useState("");
@@ -86,10 +100,22 @@ export function ProductsListPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [pendingRecommendId, setPendingRecommendId] = useState<string | null>(
+    null,
+  );
+  const showBentoColumns = showsBentoListColumns(preset);
 
   const totalPages = Math.max(1, Math.ceil(total / PRODUCTS_PAGE_SIZE));
   const visibleFrom = total === 0 ? 0 : (page - 1) * PRODUCTS_PAGE_SIZE + 1;
   const visibleTo = Math.min(page * PRODUCTS_PAGE_SIZE, total);
+  const skeletonColumns = [
+    ...BASE_SKELETON_COLUMNS,
+    ...(showBentoColumns ? BENTO_SKELETON_COLUMNS : []),
+    { width: "2.5rem" },
+    { width: "3.5rem", variant: "badge" as const },
+    { width: "7rem" },
+    ...(canEdit ? [{ width: "2.75rem", variant: "action" as const }] : []),
+  ];
 
   const currencyFormatter = useMemo(
     () =>
@@ -243,6 +269,21 @@ export function ProductsListPage({
     return currencyFormatter.format(product.price);
   };
 
+  const formatRange = (product: ProductListItem) => {
+    if (product.priceMin === null && product.priceMax === null) {
+      return t("common.notSet");
+    }
+    const min =
+      product.priceMin === null
+        ? t("common.notSet")
+        : currencyFormatter.format(product.priceMin);
+    const max =
+      product.priceMax === null
+        ? t("common.notSet")
+        : currencyFormatter.format(product.priceMax);
+    return `${min} – ${max}`;
+  };
+
   const displayName = (product: ProductListItem) =>
     product.chineseName || product.name || t("common.notSet");
 
@@ -257,6 +298,39 @@ export function ProductsListPage({
     if (product.status === "Active") return "green";
     if (product.status === "Inactive") return "amber";
     return "blue";
+  };
+
+  const recommendLabel = (recommended: boolean) =>
+    recommended
+      ? t("products.recommendedOn")
+      : t("products.recommendedOff");
+
+  const openProduct = (productId: string) => {
+    navigate(`/products/${productId}`);
+  };
+
+  const toggleRecommend = async (product: ProductListItem) => {
+    if (!canEdit || pendingRecommendId) return;
+    const next = !product.isBentoRecommended;
+    setPendingRecommendId(product.id);
+    setItems((current) =>
+      current.map((item) =>
+        item.id === product.id ? { ...item, isBentoRecommended: next } : item,
+      ),
+    );
+    try {
+      await updateRecommendation(product.id, next);
+    } catch {
+      setItems((current) =>
+        current.map((item) =>
+          item.id === product.id
+            ? { ...item, isBentoRecommended: product.isBentoRecommended }
+            : item,
+        ),
+      );
+    } finally {
+      setPendingRecommendId(null);
+    }
   };
 
   return (
@@ -401,7 +475,7 @@ export function ProductsListPage({
             loading={loading}
             loadingLabel={t("products.loading")}
             skeletonRows={PRODUCTS_PAGE_SIZE}
-            skeletonColumns={PRODUCT_SKELETON_COLUMNS}
+            skeletonColumns={skeletonColumns}
             header={
               <tr>
                 <th>{t("products.columns.sku")}</th>
@@ -409,42 +483,106 @@ export function ProductsListPage({
                 <th>{t("products.columns.channel")}</th>
                 <th>{t("products.columns.type")}</th>
                 <th>{t("products.columns.price")}</th>
+                {showBentoColumns ? (
+                  <>
+                    <th>{t("products.columns.staple")}</th>
+                    <th>{t("products.columns.range")}</th>
+                    <th>{t("products.columns.compartments")}</th>
+                    <th>{t("products.columns.ingredients")}</th>
+                    <th>{t("products.columns.specialRequests")}</th>
+                    <th>{t("products.columns.cookMethod")}</th>
+                  </>
+                ) : null}
+                <th>{t("products.columns.recommended")}</th>
                 <th>{t("products.columns.status")}</th>
                 <th>{t("products.columns.created")}</th>
+                {canEdit ? <th>{t("products.columns.actions")}</th> : null}
               </tr>
             }
           >
             {items.map((product) => (
-                    <tr key={product.id}>
-                      <td>{product.sku || t("common.notSet")}</td>
-                      <td>
-                        <Link
-                          className="order-link"
-                          to={`/products/${product.id}`}
-                        >
-                          <strong>{displayName(product)}</strong>
-                        </Link>
-                        {product.chineseName &&
-                          product.name !== product.chineseName && (
-                            <small className="quote-company">
-                              {product.name}
-                            </small>
-                          )}
-                      </td>
-                    <td>{product.channelName || t("common.notSet")}</td>
-                    <td>{product.productTypeName || t("common.notSet")}</td>
-                      <td>
-                        <strong>{formatPrice(product)}</strong>
-                      </td>
-                      <td>
-                        <span className={`status-badge ${statusTone(product)}`}>
-                          {statusLabel(product)}
-                        </span>
-                      </td>
-                      <td>
-                        {dateTimeFormatter.format(new Date(product.createdAt))}
-                      </td>
-                    </tr>
+              <tr
+                key={product.id}
+                className="table-row-clickable"
+                onClick={() => openProduct(product.id)}
+              >
+                <td>{product.sku || t("common.notSet")}</td>
+                <td>
+                  <Link
+                    className="order-link"
+                    to={`/products/${product.id}`}
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    <strong>{displayName(product)}</strong>
+                  </Link>
+                  {product.chineseName &&
+                    product.name !== product.chineseName && (
+                      <small className="quote-company">{product.name}</small>
+                    )}
+                </td>
+                <td>{product.channelName || t("common.notSet")}</td>
+                <td>{product.productTypeName || t("common.notSet")}</td>
+                <td>
+                  <strong>{formatPrice(product)}</strong>
+                </td>
+                {showBentoColumns ? (
+                  <>
+                    <td>{product.bentoMainTypeName || t("common.notSet")}</td>
+                    <td>{formatRange(product)}</td>
+                    <td>{product.bentoColumnTypeName || t("common.notSet")}</td>
+                    <td>
+                      <ProductTagList
+                        tags={product.mainIngredients.map((name) => ({ name }))}
+                        empty={t("common.notSet")}
+                      />
+                    </td>
+                    <td>
+                      <ProductTagList
+                        tags={product.specialRequests.map((name) => ({ name }))}
+                        empty={t("common.notSet")}
+                      />
+                    </td>
+                    <td>{product.cookTypeName || t("common.notSet")}</td>
+                  </>
+                ) : null}
+                <td className="product-recommend-cell">
+                  <ProductRecommendStar
+                    recommended={product.isBentoRecommended}
+                    label={recommendLabel(product.isBentoRecommended)}
+                    disabled={pendingRecommendId === product.id}
+                    onToggle={
+                      canEdit ? () => void toggleRecommend(product) : undefined
+                    }
+                  />
+                </td>
+                <td>
+                  <span className={`status-badge ${statusTone(product)}`}>
+                    {statusLabel(product)}
+                  </span>
+                </td>
+                <td>
+                  {dateTimeFormatter.format(new Date(product.createdAt))}
+                </td>
+                {canEdit ? (
+                  <td className="table-actions-cell">
+                    <div className="table-row-actions">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          navigate(`/products/${product.id}/edit`);
+                        }}
+                        aria-label={t("products.editAction")}
+                        title={t("products.editAction")}
+                      >
+                        <Pencil />
+                      </Button>
+                    </div>
+                  </td>
+                ) : null}
+              </tr>
             ))}
           </ListTable>
         )}
