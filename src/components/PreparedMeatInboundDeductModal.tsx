@@ -299,7 +299,9 @@ export function PreparedMeatInboundDeductModal({
                         }
                         integer
                         disabled={submitting}
-                        placeholder="0"
+                        placeholder={t(
+                          "preparedMeatInventory.inboundDeduct.packsPlaceholder",
+                        )}
                         ariaLabel={`${line.item.name} ${t("preparedMeatInventory.inboundDeduct.inboundPacks")}`}
                       />
                       <strong>

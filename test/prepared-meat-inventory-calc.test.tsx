@@ -359,6 +359,14 @@ describe("Prepared meat inventory calculation page", () => {
     const dialog = await screen.findByRole("dialog", { name: "添加選項" });
     expect(dialog).toHaveClass("side-panel");
     expect(within(dialog).queryByRole("button", { name: "編輯" })).toBeNull();
+    expect(within(dialog).getByPlaceholderText("輸入產品名稱")).toBeInTheDocument();
+    expect(within(dialog).getByPlaceholderText("輸入英文名稱")).toBeInTheDocument();
+    expect(within(dialog).getByPlaceholderText("例如：FCR099")).toBeInTheDocument();
+    expect(within(dialog).getByPlaceholderText("例如：包")).toBeInTheDocument();
+    expect(within(dialog).getByPlaceholderText("例如：0.5")).toBeInTheDocument();
+    expect(within(dialog).getByPlaceholderText("選擇生肉")).toBeInTheDocument();
+    expect(within(dialog).queryByPlaceholderText("Product Name")).toBeNull();
+    expect(within(dialog).queryByPlaceholderText("Choose some options...")).toBeNull();
 
     await user.type(
       within(dialog).getByRole("textbox", { name: "產品名稱", exact: true }),

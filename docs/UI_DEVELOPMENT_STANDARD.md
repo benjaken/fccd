@@ -186,7 +186,23 @@ Canonical design-system wording (Chinese + checklist): see
 New screens should reuse these tokens, classes, **and shared components**. If a
 visual rule here changes, update this document in the same change set.
 
-## 7. Related standards
+## 8. Copy / i18n placeholders (hard rule)
+
+All user-visible copy goes through `src/i18n.ts` (`t(...)`). This includes
+**input placeholders**.
+
+| Rule | Detail |
+|---|---|
+| No hard-coded placeholders | Do not write `placeholder="Product Name"` or `placeholder="0"` in JSX. Pass `t("…Placeholder")`. |
+| zh-HK is Chinese | Default locale placeholders must be Traditional Chinese, or a numeric example such as `例如：0.5`. |
+| Do not paste Bubble English | Never copy English Bubble labels (`Product Name`, `Product Code`, `Choose some options...`, `Remark`) into the `zh-HK` catalog. |
+| en-GB may be English | The English locale is the only place for English placeholder sentences (`e.g. 1`, `Enter remarks`). |
+| Examples | zh-HK uses `例如：…`. Do not use `e.g.` in `zh-HK`. |
+
+Automated coverage: `test/i18n-placeholders.test.ts` rejects English-prose
+`*Placeholder` strings in `zh-HK`.
+
+## 9. Related standards
 
 - [`DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md) — FCCD design system (shadcn + Ant Design)
 - [`UI_TABLE_STANDARD.md`](UI_TABLE_STANDARD.md) — paginated operational tables
