@@ -3532,8 +3532,7 @@ td:last-child {
 
 .seasoning-cost-toolbar,
 .calculation-settings-toolbar,
-.meat-customers-toolbar,
-.spice-usage-toolbar {
+.meat-customers-toolbar {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
@@ -3662,8 +3661,7 @@ td:last-child {
   .packages-toolbar,
   .meat-customers-toolbar,
   .seasoning-cost-toolbar,
-  .calculation-settings-toolbar,
-  .spice-usage-toolbar {
+  .calculation-settings-toolbar {
     align-items: center;
     flex-direction: row;
     flex-wrap: wrap;
