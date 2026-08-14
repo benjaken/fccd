@@ -138,6 +138,7 @@ the same input / search / skeleton / pagination markup across list pages.
 | Pattern | Required component |
 |---|---|
 | Toolbar search (icon inside field + submit) | `ListSearchBar` → `SearchField` |
+| Start–end date filters | `DateRangePicker` (one labeled range field) |
 | Paginated operational table + loading rows | `ListTable` → `TableSkeletonRows` |
 | All page-level loading layouts | `PageSkeleton` with the appropriate `variant` |
 | List pagination footer | `TablePagination` |

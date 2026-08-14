@@ -198,6 +198,7 @@ Active 導航（側欄、工作區 soft link、migration tab）必須是**淡綠
 |---|---|---|
 | `SearchField` | `src/components/ui/search-field.tsx` | 框內放大鏡的通用搜尋輸入 |
 | `ListSearchBar` | `src/components/ui/list-search-bar.tsx` | 列表工具列：搜尋欄 + 搜尋按鈕 |
+| `DateRangePicker` | `src/components/ui/date-range-picker.tsx` | 開始–結束日期：單一「日期範圍」欄，起迄同一列 |
 | `ListTable` | `src/components/ui/list-table.tsx` | 分頁營運列表共用表格外殼、表頭與載入骨架 |
 | `TableSkeletonRows` | `src/components/ui/table-skeleton.tsx` | 表格載入骨架列 |
 | `PageSkeleton` | `src/components/ui/page-skeleton.tsx` | 所有頁面級骨架；用 `variant` 配置權限、詳情、Dashboard、卡片、表格、報表及分析佈局 |
@@ -234,6 +235,7 @@ Active 導航（側欄、工作區 soft link、migration tab）必須是**淡綠
 - 必填在標籤標示；送出中按鈕進入 loading／disabled，防重複提交
 - 輸入高度與 middle 按鈕對齊；focus 使用 `--ring`
 - 密碼、電郵等使用正確 `autoComplete`／`inputMode`
+- 開始／結束日期必須用 `DateRangePicker`：一個可見標籤（日期範圍）+ 同一列的起迄輸入，不要兩個獨立 DatePicker 上下堆疊。年度報表篩選可繼續用年份 `<select>`
 
 ### 4.3 資料展示 Data display
 
@@ -316,6 +318,7 @@ Active 導航（側欄、工作區 soft link、migration tab）必須是**淡綠
 | Button CVA | `src/components/ui/button.tsx` |
 | Primary 白字覆蓋 | `src/index.css` `a.bg-primary, button.bg-primary` |
 | 列表搜尋 | `src/components/ui/search-field.tsx`、`list-search-bar.tsx` |
+| 日期範圍 | `src/components/ui/date-range-picker.tsx` |
 | 列表分頁／狀態／骨架 | `table-pagination.tsx`、`operational-list-state.tsx`、`table-skeleton.tsx` |
 | 進度多色 | `.progress-row.tone-*` + Dashboard progress `tone` |
 | 文案 | `src/i18n.ts` |
@@ -342,6 +345,7 @@ Active 導航（側欄、工作區 soft link、migration tab）必須是**淡綠
 - Active 導航殘留舊藍／粉紅底而不跟隨 `--primary`
 - 業務元件內硬編碼大段顏色／文案
 - 多頁複製貼上相同搜尋框／骨架／分頁 markup，而不使用 `src/components/ui/` 共用組件
+- 開始／結束日期做成兩個獨立 DatePicker 上下堆疊，而不使用 `DateRangePicker`
 - 用動畫或 toast 掩蓋未處理的錯誤狀態
 - 表格操作欄把「編輯／修改密碼」等常用按鈕做成 icon+文字並垂直堆疊
 - 在 Production 開啟 `VITE_ENABLE_QUICK_LOGIN`

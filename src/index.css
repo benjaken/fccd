@@ -1369,21 +1369,9 @@ td:last-child {
   gap: 12px;
 }
 
-.settings-attachments-filters input[type="date"] {
-  height: 40px;
-  min-width: 150px;
-  padding: 0 12px;
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  outline: 0;
-  background: var(--background);
-  color: var(--foreground);
-  font-size: 14px;
-}
-
-.settings-attachments-filters input[type="date"]:focus {
-  border-color: color-mix(in oklab, var(--primary) 45%, var(--border));
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 18%, transparent);
+.settings-attachments-filters .date-range-picker {
+  flex: 1 1 280px;
+  min-width: min(100%, 280px);
 }
 
 .operational-table-wrap {
@@ -4928,63 +4916,64 @@ td:last-child {
   gap: 8px;
 }
 
-.report-date-controls .date-range-picker,
 .date-range-picker {
-  display: flex;
-  align-items: flex-end;
-  flex-wrap: wrap;
-  gap: 8px;
+  display: grid;
+  gap: 5px;
   margin: 0;
   padding: 0;
   border: 0;
   min-inline-size: 0;
+  max-width: 100%;
 }
 
-.date-range-picker-field {
-  display: grid;
-  gap: 5px;
-}
-
-.date-range-picker-field span {
+.date-range-picker > legend {
+  padding: 0;
   color: var(--muted-foreground);
   font-size: 14px;
   font-weight: 700;
 }
 
-.date-range-picker-separator {
-  display: inline-flex;
+.date-range-picker-control {
+  display: flex;
+  flex-wrap: nowrap;
   align-items: center;
-  height: 38px;
-  color: var(--muted-foreground);
-  font-weight: 700;
-}
-
-.report-date-controls .date-range-picker-field input,
-.date-range-picker-field input[type="date"] {
-  height: 38px;
-  min-width: 150px;
-  padding: 0 10px;
+  min-width: 0;
+  width: 100%;
+  height: 40px;
+  padding: 0 6px;
   border: 1px solid var(--border);
-  border-radius: 8px;
-  outline: 0;
+  border-radius: 9px;
   background: var(--background);
-  color: var(--foreground);
-  font-size: 14px;
 }
 
-.report-date-controls .date-range-picker-field input:focus,
-.date-range-picker-field input[type="date"]:focus {
+.date-range-picker-control:focus-within {
   border-color: var(--ring);
   box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 13%, transparent);
 }
 
-.settings-attachments-filters .date-range-picker {
-  align-items: flex-end;
+.date-range-picker-control input[type="date"] {
+  flex: 1 1 0;
+  width: 0;
+  min-width: 0;
+  height: 100%;
+  padding: 0 8px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 14px;
 }
 
-.settings-attachments-filters .date-range-picker-field input[type="date"] {
-  height: 40px;
-  border-radius: 9px;
+.date-range-picker-separator {
+  flex: 0 0 auto;
+  color: var(--muted-foreground);
+  font-weight: 700;
+  padding: 0 4px;
+}
+
+.report-date-controls .date-range-picker,
+.list-search-filter-drawer .date-range-picker {
+  width: 100%;
 }
 
 .shop-order-report {
