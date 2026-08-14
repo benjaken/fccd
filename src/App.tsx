@@ -8,6 +8,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  AlertTriangle,
   Bell,
   Beef,
   Boxes,
@@ -40,7 +41,6 @@ import {
   Snowflake,
   Store,
   Sun,
-  TriangleAlert,
   Truck,
   UserRound,
   Users,
@@ -299,7 +299,7 @@ const secondaryNav: Record<string, NavItem[]> = {
     {
       key: "yieldErrors",
       to: "/frozen/yield-errors",
-      icon: TriangleAlert,
+      icon: AlertTriangle,
       permissionKey: "frozen.yield_errors",
     },
   ],

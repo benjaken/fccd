@@ -1,243 +1,277 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { TriangleAlert } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
+import { OperationalListState } from "@/components/ui/operational-list-state";
 import { TablePagination } from "@/components/ui/table-pagination";
+import { YIELD_ERROR_THRESHOLD_RATIO } from "@/lib/meat-yield";
 import {
   fetchMeatYieldErrors,
-  MEAT_YIELD_ERRORS_PAGE_SIZE,
+  YIELD_ERRORS_PAGE_SIZE,
+  type MeatYieldErrorDirection,
   type MeatYieldErrorListFilters,
+  type MeatYieldErrorListItem,
   type MeatYieldErrorListResult,
-  type MeatYieldErrorRow,
 } from "@/lib/meat-yield-errors";
+import { useDeferredFilter } from "@/lib/use-deferred-filter";
+import { cn } from "@/lib/utils";
 
-type ErrorsLoader = (
+type YieldErrorsLoader = (
   filters: MeatYieldErrorListFilters,
 ) => Promise<MeatYieldErrorListResult>;
 
-const ERROR_SKELETON_COLUMNS = [
-  { width: "6rem" },
-  { width: "8rem" },
-  { width: "8rem" },
-  { width: "5rem" },
-  { width: "5rem" },
-  { width: "5rem" },
+const DIRECTION_FILTERS: Array<"" | MeatYieldErrorDirection> = [
+  "",
+  "over",
+  "under",
+];
+
+const YIELD_ERROR_SKELETON_COLUMNS = [
+  { width: "7rem" },
+  { width: "10rem" },
+  { width: "10rem" },
   { width: "5rem" },
   { width: "4.5rem" },
-  { width: "4rem" },
+  { width: "4.5rem" },
+  { width: "5rem" },
+  { width: "4.5rem" },
+  { width: "4.5rem", variant: "badge" as const },
+  { width: "28%" },
 ];
 
 export function MeatYieldErrorsPage({
-  loadErrors = fetchMeatYieldErrors,
+  loadYieldErrors = fetchMeatYieldErrors,
 }: {
-  loadErrors?: ErrorsLoader;
+  loadYieldErrors?: YieldErrorsLoader;
 }) {
   const { t, i18n } = useTranslation();
   const [draftSearch, setDraftSearch] = useState("");
-  const [appliedSearch, setAppliedSearch] = useState("");
+  const [search, setSearch] = useState("");
+  const [direction, setDirection] = useState<"" | MeatYieldErrorDirection>("");
   const [page, setPage] = useState(1);
-  const [rows, setRows] = useState<MeatYieldErrorRow[]>([]);
+  const directionFilter = useDeferredFilter(direction, (value) => {
+    setPage(1);
+    setDirection(value);
+  });
+  const [items, setItems] = useState<MeatYieldErrorListItem[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
-
-  const totalPages = Math.max(1, Math.ceil(total / MEAT_YIELD_ERRORS_PAGE_SIZE));
-  const visibleFrom =
-    total === 0 ? 0 : (page - 1) * MEAT_YIELD_ERRORS_PAGE_SIZE + 1;
-  const visibleTo = Math.min(page * MEAT_YIELD_ERRORS_PAGE_SIZE, total);
-
-  const dateFormatter = useMemo(
+  const totalPages = Math.max(1, Math.ceil(total / YIELD_ERRORS_PAGE_SIZE));
+  const visibleFrom = total ? (page - 1) * YIELD_ERRORS_PAGE_SIZE + 1 : 0;
+  const visibleTo = Math.min(page * YIELD_ERRORS_PAGE_SIZE, total);
+  const date = useMemo(
     () =>
-      new Intl.DateTimeFormat(i18n.language === "zh-HK" ? "en-GB" : i18n.language, {
+      new Intl.DateTimeFormat(i18n.language, {
+        dateStyle: "medium",
         timeZone: "Asia/Hong_Kong",
-        day: "numeric",
-        month: "numeric",
-        year: "numeric",
       }),
     [i18n.language],
   );
-  const numberFormatter = useMemo(
+  const kg = useMemo(
     () =>
       new Intl.NumberFormat(i18n.language, {
+        minimumFractionDigits: 0,
         maximumFractionDigits: 3,
       }),
     [i18n.language],
   );
-  const percentFormatter = useMemo(
+  const packs = useMemo(
+    () =>
+      new Intl.NumberFormat(i18n.language, {
+        maximumFractionDigits: 2,
+      }),
+    [i18n.language],
+  );
+  const signedPacks = useMemo(
+    () =>
+      new Intl.NumberFormat(i18n.language, {
+        signDisplay: "exceptZero",
+        maximumFractionDigits: 2,
+      }),
+    [i18n.language],
+  );
+  const percent = useMemo(
     () =>
       new Intl.NumberFormat(i18n.language, {
         style: "percent",
+        signDisplay: "exceptZero",
         maximumFractionDigits: 1,
       }),
     [i18n.language],
   );
 
-  const display = (value: string | null | undefined) =>
-    value?.trim() ? value : t("common.notSet");
-
-  const formatDate = (value: string | null) => {
-    if (!value) return t("common.notSet");
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return t("common.notSet");
-    return dateFormatter.format(date);
-  };
-
-  const formatNumber = (value: number | null) => {
-    if (value === null) return t("common.notSet");
-    return numberFormatter.format(value);
-  };
-
-  const formatPercent = (value: number | null) => {
-    if (value === null) return t("common.notSet");
-    return percentFormatter.format(value);
-  };
-
-  const formatDirection = (value: MeatYieldErrorRow["deviationDirection"]) => {
-    if (value === "over") return t("yieldErrors.over");
-    if (value === "under") return t("yieldErrors.under");
-    return t("common.notSet");
-  };
-
-  useEffect(() => {
-    setPage((current) => Math.min(current, totalPages));
-  }, [totalPages]);
-
-  useEffect(() => {
-    let cancelled = false;
+  const load = useCallback(async () => {
     setLoading(true);
     setError(null);
-    void loadErrors({ page, search: appliedSearch })
-      .then((result) => {
-        if (cancelled) return;
-        setRows(result.items);
-        setTotal(result.total);
-      })
-      .catch((loadError: unknown) => {
-        if (cancelled) return;
-        setRows([]);
-        setTotal(0);
-        setError(
-          loadError instanceof Error
-            ? loadError.message
-            : t("yieldErrors.loadError"),
-        );
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [appliedSearch, loadErrors, page, reloadKey, t]);
+    try {
+      const result = await loadYieldErrors({ page, search, direction });
+      setItems(result.items);
+      setTotal(result.total);
+    } catch {
+      setItems([]);
+      setTotal(0);
+      setError("yield_errors_load_failed");
+    } finally {
+      setLoading(false);
+    }
+  }, [direction, loadYieldErrors, page, reloadKey, search]);
 
-  const reload = () => setReloadKey((current) => current + 1);
+  useEffect(() => void load(), [load]);
 
   const submitSearch = () => {
-    setAppliedSearch(draftSearch.trim());
     setPage(1);
+    setSearch(draftSearch.trim());
   };
 
   return (
-    <section className="meat-customers-page meat-yield-errors-page">
-      <header className="page-heading meat-customers-heading">
+    <section className="orders-page yield-errors-page">
+      <header className="page-heading orders-heading">
         <div>
           <span className="eyebrow">{t("yieldErrors.eyebrow")}</span>
           <h1>{t("yieldErrors.title")}</h1>
         </div>
       </header>
-
-      <article className="panel meat-customers-panel">
-        <header className="meat-customers-toolbar">
+      <article className="panel orders-panel">
+        <aside
+          className="yield-errors-rules"
+          aria-label={t("yieldErrors.rulesTitle")}
+        >
+          <p className="yield-errors-rules-title">
+            {t("yieldErrors.rulesTitle")}
+          </p>
+          <p>{t("yieldErrors.ruleBudget")}</p>
+          <p>
+            {t("yieldErrors.ruleThreshold", {
+              percent: Math.round(YIELD_ERROR_THRESHOLD_RATIO * 100),
+            })}
+          </p>
+        </aside>
+        <header className="orders-toolbar">
           <ListSearchBar
-            id="meat-yield-errors-search"
+            id="yield-errors-search"
             value={draftSearch}
             onChange={setDraftSearch}
             onSubmit={submitSearch}
             label={t("yieldErrors.search")}
             placeholder={t("yieldErrors.searchPlaceholder")}
             submitLabel={t("yieldErrors.searchAction")}
+            filtersActive={Boolean(direction)}
+            onConfirmFilters={directionFilter.confirm}
+            onDismissFilters={directionFilter.revert}
+            filters={
+              <label className="orders-status-filter" htmlFor="yield-errors-direction">
+                <span>{t("yieldErrors.directionFilter")}</span>
+                <select
+                  id="yield-errors-direction"
+                  value={directionFilter.value}
+                  onChange={(event) => {
+                    const next = event.target.value;
+                    directionFilter.setValue(
+                      next === "over" || next === "under" ? next : "",
+                    );
+                  }}
+                >
+                  {DIRECTION_FILTERS.map((value) => (
+                    <option key={value || "all"} value={value}>
+                      {value
+                        ? t(`yieldErrors.direction.${value}`)
+                        : t("yieldErrors.allDirections")}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            }
           />
         </header>
-
         {error ? (
-          <div className="products-state products-state-error">
-            <div>
-              <strong>{t("yieldErrors.loadError")}</strong>
-              <span>{error}</span>
-            </div>
-            <Button type="button" variant="outline" onClick={reload}>
-              {t("yieldErrors.retry")}
-            </Button>
-          </div>
-        ) : !loading && rows.length === 0 ? (
-          <div className="products-state products-state-empty">
-            <TriangleAlert />
-            <div>
-              <strong>{t("yieldErrors.empty")}</strong>
-              <span>{t("yieldErrors.emptyDescription")}</span>
-            </div>
-          </div>
+          <OperationalListState
+            icon={AlertTriangle}
+            title={t("yieldErrors.loadError")}
+            description={t("yieldErrors.loadErrorDescription")}
+            retryLabel={t("yieldErrors.retry")}
+            onRetry={() => setReloadKey((key) => key + 1)}
+          />
+        ) : !loading && !items.length ? (
+          <OperationalListState
+            icon={AlertTriangle}
+            title={t("yieldErrors.empty")}
+            description={t("yieldErrors.emptyDescription")}
+          />
         ) : (
-          <>
-            <ListTable
-              className="meat-customers-table-wrap"
-              onRefresh={reload}
-              loading={loading}
-              loadingLabel={t("yieldErrors.loading")}
-              skeletonColumns={ERROR_SKELETON_COLUMNS}
-              header={
-                <tr>
-                  <th>{t("yieldErrors.columns.date")}</th>
-                  <th>{t("yieldErrors.columns.rawMeat")}</th>
-                  <th>{t("yieldErrors.columns.preparedMeat")}</th>
-                  <th>{t("yieldErrors.columns.rawInputKg")}</th>
-                  <th>{t("yieldErrors.columns.expectedPacks")}</th>
-                  <th>{t("yieldErrors.columns.actualPacks")}</th>
-                  <th>{t("yieldErrors.columns.deviationPacks")}</th>
-                  <th>{t("yieldErrors.columns.deviationPercent")}</th>
-                  <th>{t("yieldErrors.columns.direction")}</th>
-                </tr>
-              }
-            >
-              {rows.map((row) => (
-                <tr key={row.id}>
-                  <td>{formatDate(row.productionAt)}</td>
-                  <td>{display(row.rawMeatName)}</td>
-                  <td>
-                    <strong>{display(row.preparedMeatName)}</strong>
-                  </td>
-                  <td>{formatNumber(row.rawInputKg)}</td>
-                  <td>{formatNumber(row.expectedPacks)}</td>
-                  <td>{formatNumber(row.actualPacks)}</td>
-                  <td>{formatNumber(row.deviationPacks)}</td>
-                  <td>{formatPercent(row.deviationRatio)}</td>
-                  <td>{formatDirection(row.deviationDirection)}</td>
-                </tr>
-              ))}
-            </ListTable>
-            <TablePagination
-              summary={t("yieldErrors.pagination", {
-                from: visibleFrom,
-                to: visibleTo,
-                total,
-              })}
-              page={page}
-              totalPages={totalPages}
-              loading={loading}
-              onPrevious={() => setPage((current) => Math.max(1, current - 1))}
-              onNext={() => setPage((current) => current + 1)}
-              onPageChange={setPage}
-              previousLabel={t("yieldErrors.previous")}
-              nextLabel={t("yieldErrors.next")}
-              pageLabel={t("yieldErrors.pageOf")}
-              jumpLabel={t("yieldErrors.jumpToPage")}
-            />
-          </>
+          <ListTable
+            className="orders-table-wrap"
+            onRefresh={() => setReloadKey((key) => key + 1)}
+            loading={loading}
+            loadingLabel={t("yieldErrors.loading")}
+            skeletonRows={YIELD_ERRORS_PAGE_SIZE}
+            skeletonColumns={YIELD_ERROR_SKELETON_COLUMNS}
+            header={
+              <tr>
+                <th>{t("yieldErrors.columns.date")}</th>
+                <th>{t("yieldErrors.columns.rawMeat")}</th>
+                <th>{t("yieldErrors.columns.preparedMeat")}</th>
+                <th>{t("yieldErrors.columns.rawKg")}</th>
+                <th>{t("yieldErrors.columns.expectedPacks")}</th>
+                <th>{t("yieldErrors.columns.actualPacks")}</th>
+                <th>{t("yieldErrors.columns.deviationPacks")}</th>
+                <th>{t("yieldErrors.columns.deviationPercent")}</th>
+                <th>{t("yieldErrors.columns.direction")}</th>
+                <th>{t("yieldErrors.columns.remarks")}</th>
+              </tr>
+            }
+          >
+            {items.map((row) => (
+              <tr key={row.id}>
+                <td>
+                  {row.productionAt
+                    ? date.format(new Date(row.productionAt))
+                    : t("common.notSet")}
+                </td>
+                <td>{row.rawMeatName || t("common.notSet")}</td>
+                <td>{row.preparedMeatName || t("common.notSet")}</td>
+                <td>{kg.format(row.rawInputKg)}</td>
+                <td>
+                  <strong>{packs.format(row.expectedPacks)}</strong>
+                </td>
+                <td>{packs.format(row.actualPacks)}</td>
+                <td>{signedPacks.format(row.deviationPacks)}</td>
+                <td>{percent.format(row.deviationRatio)}</td>
+                <td>
+                  <span
+                    className={cn(
+                      "status-badge",
+                      row.direction === "over" ? "red" : "amber",
+                    )}
+                  >
+                    {t(`yieldErrors.direction.${row.direction}`)}
+                  </span>
+                </td>
+                <td>{row.remarks || t("common.notSet")}</td>
+              </tr>
+            ))}
+          </ListTable>
         )}
+        <TablePagination
+          summary={t("yieldErrors.pagination", {
+            from: visibleFrom,
+            to: visibleTo,
+            total,
+          })}
+          page={page}
+          totalPages={totalPages}
+          loading={loading}
+          onPrevious={() => setPage((value) => Math.max(1, value - 1))}
+          onNext={() => setPage((value) => value + 1)}
+          onPageChange={setPage}
+          previousLabel={t("yieldErrors.previous")}
+          nextLabel={t("yieldErrors.next")}
+          pageLabel={t("yieldErrors.pageOf")}
+          jumpLabel={t("yieldErrors.jumpToPage")}
+        />
       </article>
     </section>
   );

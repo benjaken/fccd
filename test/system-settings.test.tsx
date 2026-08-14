@@ -877,6 +877,40 @@ describe("Super Admin system settings", () => {
       "inbound quantity must be within 50 percent of budgeted yield",
     );
 
+    const yieldErrors = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260814210000_frozen_yield_errors_page_permissions.sql",
+      ),
+      "utf8",
+    );
+    expect(yieldErrors).toContain("frozen.yield_errors");
+    expect(yieldErrors).toContain("收成錯誤");
+    expect(yieldErrors).toContain("/frozen/yield-errors");
+    expect(yieldErrors).toContain(
+      "roles.role in ('Admin', 'Factory', 'Accounting')",
+    );
+
+    const yieldExceptions = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260814250000_rename_yield_errors_to_exceptions.sql",
+      ),
+      "utf8",
+    );
+    expect(yieldExceptions).toContain("frozen.yield_errors");
+    expect(yieldExceptions).toContain("收成異常");
+
+    const yieldErrorStatistics = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260814260000_rename_yield_exceptions_to_error_statistics.sql",
+      ),
+      "utf8",
+    );
+    expect(yieldErrorStatistics).toContain("frozen.yield_errors");
+    expect(yieldErrorStatistics).toContain("收成錯誤統計");
+
     const rawMeatActions = readFileSync(
       path.resolve(
         process.cwd(),

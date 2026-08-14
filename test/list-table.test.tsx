@@ -9,6 +9,7 @@ const OPERATIONAL_LIST_PAGES = [
   "src/components/OrdersListPage.tsx",
   "src/components/QuotesListPage.tsx",
   "src/components/PaymentsListPage.tsx",
+  "src/components/MeatYieldErrorsPage.tsx",
   "src/components/ProductsListPage.tsx",
   "src/components/PackagesListPage.tsx",
   "src/components/settings/UsersListPage.tsx",
