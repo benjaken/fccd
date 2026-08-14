@@ -1369,21 +1369,9 @@ td:last-child {
   gap: 12px;
 }
 
-.settings-attachments-filters input[type="date"] {
-  height: 40px;
-  min-width: 150px;
-  padding: 0 12px;
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  outline: 0;
-  background: var(--background);
-  color: var(--foreground);
-  font-size: 14px;
-}
-
-.settings-attachments-filters input[type="date"]:focus {
-  border-color: color-mix(in oklab, var(--primary) 45%, var(--border));
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 18%, transparent);
+.settings-attachments-filters .date-range-picker {
+  flex: 1 1 280px;
+  min-width: min(100%, 280px);
 }
 
 .operational-table-wrap {
@@ -1401,6 +1389,10 @@ td:last-child {
   height: 100%;
 }
 
+.list-search-host {
+  display: contents;
+}
+
 .list-search,
 .quotes-search,
 .orders-search,
@@ -1410,6 +1402,83 @@ td:last-child {
   align-items: center;
   gap: 8px;
   width: min(620px, 100%);
+}
+
+.list-search-filters {
+  display: contents;
+}
+
+.list-search-filter-trigger {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.list-search-filter-trigger.is-active::after {
+  content: "";
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--primary);
+}
+
+.list-search-filter-drawer {
+  display: grid;
+  gap: 16px;
+}
+
+.list-search-filter-drawer .products-filters,
+.list-search-filter-drawer .packages-filters,
+.list-search-filter-drawer .settings-attachments-filters {
+  display: grid;
+  gap: 16px;
+  width: 100%;
+}
+
+.list-search-filter-drawer .products-status-filter,
+.list-search-filter-drawer .packages-status-filter,
+.list-search-filter-drawer .orders-status-filter,
+.list-search-filter-drawer .quotes-status-filter {
+  width: 100%;
+  min-width: 0;
+}
+
+.list-search-filter-drawer select {
+  width: 100%;
+}
+
+.pull-to-refresh {
+  position: relative;
+  overscroll-behavior-y: contain;
+}
+
+.pull-to-refresh-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  overflow: hidden;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 600;
+  transition: height 160ms ease;
+}
+
+.pull-to-refresh.is-pulling .pull-to-refresh-indicator {
+  transition: none;
+}
+
+.pull-to-refresh-indicator svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+.pull-to-refresh-indicator.is-armed,
+.pull-to-refresh-indicator.is-busy {
+  color: var(--primary);
 }
 
 .search-field,
@@ -2357,44 +2426,54 @@ td:last-child {
 }
 
 .detail-page-skeleton {
+  width: 100%;
   min-height: calc(
     100dvh - var(--topbar-height) - var(--workspace-height) - 56px
   );
 }
 
+.detail-page-skeleton .page-skeleton-content,
+.detail-page-skeleton .detail-grid,
+.detail-page-skeleton .detail-table-panel,
+.detail-page-skeleton .detail-card {
+  width: 100%;
+}
+
 .detail-skeleton-heading {
   display: grid;
   gap: 8px;
-  min-width: min(28rem, 70vw);
+  min-width: 0;
+  width: min(48rem, 100%);
 }
 
 .detail-skeleton-back {
-  width: 7rem;
-  height: 12px;
+  width: 7.5rem;
+  height: 14px;
 }
 
 .detail-skeleton-eyebrow {
-  width: 5.5rem;
-  height: 11px;
+  width: 7rem;
+  height: 14px;
 }
 
 .detail-skeleton-title {
-  width: min(18rem, 60vw);
+  width: min(36rem, 100%);
   height: 32px;
 }
 
 .detail-skeleton-subtitle {
-  width: min(14rem, 48vw);
-  height: 13px;
+  width: min(28rem, 80%);
+  height: 14px;
 }
 
 .detail-skeleton-badge {
-  width: 5rem;
-  height: 26px;
+  width: 6.5rem;
+  height: 28px;
+  border-radius: 999px;
 }
 
 .detail-skeleton-card {
-  min-height: 255px;
+  min-height: 0;
 }
 
 .detail-skeleton-icon {
@@ -2404,7 +2483,7 @@ td:last-child {
 }
 
 .detail-skeleton-card-title {
-  width: 8.5rem;
+  width: min(16rem, 70%);
   height: 16px;
 }
 
@@ -2414,24 +2493,35 @@ td:last-child {
 }
 
 .detail-skeleton-label {
-  width: 34%;
-  height: 10px;
-}
-
-.detail-skeleton-value {
-  width: 68%;
+  width: min(9rem, 42%);
   height: 14px;
 }
 
+.detail-skeleton-value {
+  width: 100%;
+  height: 16px;
+}
+
 .detail-skeleton-description {
-  width: 14rem;
-  max-width: 65vw;
-  height: 11px;
+  width: min(32rem, 80%);
+  height: 14px;
   margin-top: 8px;
 }
 
+.detail-skeleton-copy {
+  width: 100%;
+  height: 14px;
+  margin-top: 10px;
+}
+
 .detail-skeleton-table {
-  min-height: 300px;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 360px;
+}
+
+.detail-skeleton-table .table-wrap {
+  min-height: 0;
 }
 
 .detail-copy,
@@ -2639,6 +2729,7 @@ td:last-child {
   font-weight: 750;
 }
 
+.side-panel-root,
 .settings-side-panel-root {
   position: fixed;
   inset: 0;
@@ -2647,6 +2738,7 @@ td:last-child {
   justify-items: end;
 }
 
+.side-panel-backdrop,
 .settings-side-panel-backdrop {
   position: absolute;
   inset: 0;
@@ -2655,6 +2747,7 @@ td:last-child {
   cursor: pointer;
 }
 
+.side-panel,
 .settings-side-panel {
   position: relative;
   z-index: 1;
@@ -2668,10 +2761,12 @@ td:last-child {
   animation: settings-side-panel-in 180ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+.side-panel-wide,
 .settings-side-panel-wide {
   width: min(520px, 100vw);
 }
 
+.side-panel-header,
 .settings-side-panel-header {
   display: flex;
   align-items: flex-start;
@@ -2681,12 +2776,14 @@ td:last-child {
   border-bottom: 1px solid var(--border);
 }
 
+.side-panel-header h2,
 .settings-side-panel-header h2 {
   margin: 0;
   font-size: 20px;
   line-height: 1.25;
 }
 
+.side-panel-header p,
 .settings-side-panel-header p {
   margin: 6px 0 0;
   color: var(--muted-foreground);
@@ -2694,12 +2791,14 @@ td:last-child {
   line-height: 1.45;
 }
 
+.side-panel-body,
 .settings-side-panel-body {
   min-height: 0;
   overflow: auto;
   padding: 18px;
 }
 
+.side-panel-footer,
 .settings-side-panel-footer {
   display: flex;
   justify-content: flex-end;
@@ -2799,6 +2898,8 @@ td:last-child {
 }
 
 @media (max-width: 720px) {
+  .side-panel,
+  .side-panel-wide,
   .settings-side-panel,
   .settings-side-panel-wide {
     width: min(100vw, 100%);
@@ -2944,24 +3045,20 @@ td:last-child {
   }
 
   .quotes-toolbar,
-  .quotes-search,
   .orders-toolbar,
-  .orders-search,
   .products-toolbar,
-  .products-search,
-  .packages-toolbar,
-  .packages-search {
-    align-items: stretch;
-    flex-direction: column;
+  .packages-toolbar {
+    align-items: center;
+    flex-direction: row;
+    flex-wrap: wrap;
   }
 
-  .quotes-status-filter,
-  .orders-status-filter,
-  .products-status-filter,
-  .packages-status-filter,
-  .products-filters,
-  .packages-filters {
-    width: 100%;
+  .quotes-search,
+  .orders-search,
+  .products-search,
+  .packages-search,
+  .list-search {
+    align-items: stretch;
   }
 
   .quotes-pagination,
@@ -5066,6 +5163,7 @@ td:last-child {
 .report-shop-filter {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 7px;
 }
 
@@ -5113,63 +5211,64 @@ td:last-child {
   gap: 8px;
 }
 
-.report-date-controls .date-range-picker,
 .date-range-picker {
-  display: flex;
-  align-items: flex-end;
-  flex-wrap: wrap;
-  gap: 8px;
+  display: grid;
+  gap: 5px;
   margin: 0;
   padding: 0;
   border: 0;
   min-inline-size: 0;
+  max-width: 100%;
 }
 
-.date-range-picker-field {
-  display: grid;
-  gap: 5px;
-}
-
-.date-range-picker-field span {
+.date-range-picker > legend {
+  padding: 0;
   color: var(--muted-foreground);
   font-size: 14px;
   font-weight: 700;
 }
 
-.date-range-picker-separator {
-  display: inline-flex;
+.date-range-picker-control {
+  display: flex;
+  flex-wrap: nowrap;
   align-items: center;
-  height: 38px;
-  color: var(--muted-foreground);
-  font-weight: 700;
-}
-
-.report-date-controls .date-range-picker-field input,
-.date-range-picker-field input[type="date"] {
-  height: 38px;
-  min-width: 150px;
-  padding: 0 10px;
+  min-width: 0;
+  width: 100%;
+  height: 40px;
+  padding: 0 6px;
   border: 1px solid var(--border);
-  border-radius: 8px;
-  outline: 0;
+  border-radius: 9px;
   background: var(--background);
-  color: var(--foreground);
-  font-size: 14px;
 }
 
-.report-date-controls .date-range-picker-field input:focus,
-.date-range-picker-field input[type="date"]:focus {
+.date-range-picker-control:focus-within {
   border-color: var(--ring);
   box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 13%, transparent);
 }
 
-.settings-attachments-filters .date-range-picker {
-  align-items: flex-end;
+.date-range-picker-control input[type="date"] {
+  flex: 1 1 0;
+  width: 0;
+  min-width: 0;
+  height: 100%;
+  padding: 0 8px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 14px;
 }
 
-.settings-attachments-filters .date-range-picker-field input[type="date"] {
-  height: 40px;
-  border-radius: 9px;
+.date-range-picker-separator {
+  flex: 0 0 auto;
+  color: var(--muted-foreground);
+  font-weight: 700;
+  padding: 0 4px;
+}
+
+.report-date-controls .date-range-picker,
+.list-search-filter-drawer .date-range-picker {
+  width: 100%;
 }
 
 .shop-order-report {
@@ -6828,6 +6927,32 @@ td:last-child {
 }
 
 @media (max-width: 900px) {
+  .list-search-host {
+    display: flex;
+    align-items: center;
+    width: 100%;
+  }
+
+  .list-search-host .list-search {
+    width: 100%;
+  }
+
+  .list-search-host .search-field {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .list-search-submit {
+    display: none;
+  }
+
+  .quotes-toolbar,
+  .orders-toolbar,
+  .products-toolbar,
+  .packages-toolbar {
+    align-items: center;
+  }
+
   :root {
     --topbar-height: 60px;
     --workspace-height: 42px;
@@ -7003,6 +7128,25 @@ td:last-child {
 
   .profile-card-wide {
     grid-column: auto;
+  }
+
+  .report-filter-panel .report-shop-filter {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    gap: 6px;
+  }
+
+  .report-shop-filter button {
+    flex: 0 0 auto;
+    box-sizing: border-box;
+    max-width: 100%;
+    height: 36px;
+    padding: 0 10px;
+    line-height: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   @keyframes drawer-in {
@@ -7362,6 +7506,8 @@ td:last-child {
   .report-filter-panel {
     align-items: stretch;
     flex-direction: column;
+    gap: 10px;
+    padding: 12px 14px;
   }
 
   .report-date-controls > span {

@@ -9,15 +9,15 @@ export type DateRangePickerProps = {
   onEndChange: (value: string) => void;
   startLabel: string;
   endLabel: string;
-  /** Accessible name for the range group. */
+  /** Visible group label for the single range control. */
   legend?: string;
   className?: string;
   disabled?: boolean;
 };
 
 /**
- * Shared start–end date range control (native date inputs as one picker range).
- * Prefer this over two standalone date filters on list/report toolbars.
+ * One start–end date range control (native date inputs in a single field).
+ * Prefer this over two stacked standalone date pickers on list/report toolbars.
  */
 export function DateRangePicker({
   startId,
@@ -32,38 +32,37 @@ export function DateRangePicker({
   className,
   disabled = false,
 }: DateRangePickerProps) {
+  const rangeLabel = legend ?? `${startLabel} — ${endLabel}`;
+
   return (
     <fieldset
       className={cn("date-range-picker", className)}
       disabled={disabled}
-      aria-label={legend}
     >
-      {legend ? <legend className="sr-only">{legend}</legend> : null}
-      <label className="date-range-picker-field" htmlFor={startId}>
-        <span>{startLabel}</span>
+      <legend>{rangeLabel}</legend>
+      <div className="date-range-picker-control">
         <input
           id={startId}
           type="date"
+          aria-label={startLabel}
           value={startValue}
           max={endValue || undefined}
           disabled={disabled}
           onChange={(event) => onStartChange(event.target.value)}
         />
-      </label>
-      <span className="date-range-picker-separator" aria-hidden="true">
-        —
-      </span>
-      <label className="date-range-picker-field" htmlFor={endId}>
-        <span>{endLabel}</span>
+        <span className="date-range-picker-separator" aria-hidden="true">
+          —
+        </span>
         <input
           id={endId}
           type="date"
+          aria-label={endLabel}
           value={endValue}
           min={startValue || undefined}
           disabled={disabled}
           onChange={(event) => onEndChange(event.target.value)}
         />
-      </label>
+      </div>
     </fieldset>
   );
 }

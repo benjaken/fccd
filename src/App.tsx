@@ -78,6 +78,7 @@ import { SettingsAccessDenied } from "@/components/settings/SettingsAccessDenied
 import { UsersListPage } from "@/components/settings/UsersListPage";
 import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { PullToRefresh } from "@/components/ui/pull-to-refresh";
 import {
   fetchDashboardData,
   type DashboardData,
@@ -1381,7 +1382,11 @@ export function Dashboard({
           action={t("common.viewAll")}
           actionTo="/kitchen"
         />
-        <div className="table-wrap">
+        <PullToRefresh
+          className="table-wrap"
+          onRefresh={() => setReloadKey((key) => key + 1)}
+          refreshing={loading}
+        >
           <table>
             <thead>
               <tr>
@@ -1448,7 +1453,7 @@ export function Dashboard({
               )}
             </tbody>
           </table>
-        </div>
+        </PullToRefresh>
       </article>
     </>
   );

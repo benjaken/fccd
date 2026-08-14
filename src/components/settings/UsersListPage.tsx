@@ -161,25 +161,27 @@ export function UsersListPage({
             label={t("settings.users.search")}
             placeholder={t("settings.users.searchPlaceholder")}
             submitLabel={t("settings.users.searchAction")}
+            filtersActive={Boolean(role)}
+            filters={
+              <label className="orders-status-filter">
+                <span>{t("settings.users.roleFilter")}</span>
+                <select
+                  value={role}
+                  onChange={(event) => {
+                    setPage(1);
+                    setRole(event.target.value);
+                  }}
+                >
+                  <option value="">{t("settings.users.allRoles")}</option>
+                  {SYSTEM_ROLES.map((systemRole) => (
+                    <option key={systemRole} value={systemRole}>
+                      {systemRole}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            }
           />
-
-          <label className="orders-status-filter">
-            <span>{t("settings.users.roleFilter")}</span>
-            <select
-              value={role}
-              onChange={(event) => {
-                setPage(1);
-                setRole(event.target.value);
-              }}
-            >
-              <option value="">{t("settings.users.allRoles")}</option>
-              {SYSTEM_ROLES.map((systemRole) => (
-                <option key={systemRole} value={systemRole}>
-                  {systemRole}
-                </option>
-              ))}
-            </select>
-          </label>
         </header>
 
         {error ? (
@@ -208,6 +210,7 @@ export function UsersListPage({
         ) : (
           <ListTable
             className="orders-table-wrap"
+            onRefresh={() => setReloadKey((key) => key + 1)}
             loading={loading}
             loadingLabel={t("settings.users.loading")}
             skeletonRows={SETTINGS_PAGE_SIZE}

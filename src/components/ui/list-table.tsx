@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { PullToRefresh } from "@/components/ui/pull-to-refresh";
 import {
   TableSkeletonRows,
   type TableSkeletonColumn,
@@ -15,6 +16,7 @@ export function ListTable({
   skeletonRows = 15,
   className,
   tableClassName,
+  onRefresh,
 }: {
   header: ReactNode;
   children: ReactNode;
@@ -24,10 +26,13 @@ export function ListTable({
   skeletonRows?: number;
   className?: string;
   tableClassName?: string;
+  onRefresh?: () => void | Promise<void>;
 }) {
   return (
-    <div
+    <PullToRefresh
       className={cn("table-wrap operational-table-wrap", className)}
+      onRefresh={onRefresh}
+      refreshing={loading}
       aria-busy={loading || undefined}
     >
       {loading ? (
@@ -48,6 +53,6 @@ export function ListTable({
           )}
         </tbody>
       </table>
-    </div>
+    </PullToRefresh>
   );
 }

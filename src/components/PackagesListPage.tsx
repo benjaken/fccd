@@ -172,39 +172,41 @@ export function PackagesListPage({
             label={t("packages.search")}
             placeholder={t("packages.searchPlaceholder")}
             submitLabel={t("packages.searchAction")}
+            filtersActive={Boolean(channelId) || !activeOnly}
+            filters={
+              <div className="packages-filters">
+                <label className="packages-status-filter">
+                  <span>{t("packages.channelFilter")}</span>
+                  <select
+                    value={channelId}
+                    onChange={(event) => {
+                      setPage(1);
+                      setChannelId(event.target.value);
+                    }}
+                  >
+                    <option value="">{t("packages.allChannels")}</option>
+                    {channels.map((channel) => (
+                      <option key={channel.id} value={channel.id}>
+                        {channel.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="packages-active-filter">
+                  <input
+                    type="checkbox"
+                    checked={activeOnly}
+                    onChange={(event) => {
+                      setPage(1);
+                      setActiveOnly(event.target.checked);
+                    }}
+                  />
+                  <span>{t("packages.activeOnly")}</span>
+                </label>
+              </div>
+            }
           />
-
-          <div className="packages-filters">
-            <label className="packages-status-filter">
-              <span>{t("packages.channelFilter")}</span>
-              <select
-                value={channelId}
-                onChange={(event) => {
-                  setPage(1);
-                  setChannelId(event.target.value);
-                }}
-              >
-                <option value="">{t("packages.allChannels")}</option>
-                {channels.map((channel) => (
-                  <option key={channel.id} value={channel.id}>
-                    {channel.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="packages-active-filter">
-              <input
-                type="checkbox"
-                checked={activeOnly}
-                onChange={(event) => {
-                  setPage(1);
-                  setActiveOnly(event.target.checked);
-                }}
-              />
-              <span>{t("packages.activeOnly")}</span>
-            </label>
-          </div>
         </header>
 
         {error ? (
@@ -234,6 +236,7 @@ export function PackagesListPage({
         ) : (
           <ListTable
             className="packages-table-wrap"
+            onRefresh={() => setReloadKey((key) => key + 1)}
             loading={loading}
             loadingLabel={t("packages.loading")}
             skeletonRows={PACKAGES_PAGE_SIZE}

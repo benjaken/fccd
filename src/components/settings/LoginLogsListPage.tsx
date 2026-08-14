@@ -106,25 +106,27 @@ export function LoginLogsListPage({
             label={t("settings.loginLogs.search")}
             placeholder={t("settings.loginLogs.searchPlaceholder")}
             submitLabel={t("settings.loginLogs.searchAction")}
+            filtersActive={Boolean(eventType)}
+            filters={
+              <label className="orders-status-filter">
+                <span>{t("settings.loginLogs.eventFilter")}</span>
+                <select
+                  value={eventType}
+                  onChange={(event) => {
+                    setPage(1);
+                    setEventType(event.target.value);
+                  }}
+                >
+                  <option value="">{t("settings.loginLogs.allEvents")}</option>
+                  {LOGIN_LOG_EVENT_TYPES.map((type) => (
+                    <option key={type} value={type}>
+                      {t(`settings.loginLogs.events.${type}`)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            }
           />
-
-          <label className="orders-status-filter">
-            <span>{t("settings.loginLogs.eventFilter")}</span>
-            <select
-              value={eventType}
-              onChange={(event) => {
-                setPage(1);
-                setEventType(event.target.value);
-              }}
-            >
-              <option value="">{t("settings.loginLogs.allEvents")}</option>
-              {LOGIN_LOG_EVENT_TYPES.map((type) => (
-                <option key={type} value={type}>
-                  {t(`settings.loginLogs.events.${type}`)}
-                </option>
-              ))}
-            </select>
-          </label>
         </header>
 
         {error ? (
@@ -153,6 +155,7 @@ export function LoginLogsListPage({
         ) : (
           <ListTable
             className="orders-table-wrap"
+            onRefresh={() => setReloadKey((key) => key + 1)}
             loading={loading}
             loadingLabel={t("settings.loginLogs.loading")}
             skeletonRows={SETTINGS_PAGE_SIZE}
