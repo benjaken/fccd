@@ -3507,38 +3507,6 @@ td:last-child {
   border-bottom: 1px solid var(--border);
 }
 
-.meat-customers-filters {
-  display: flex;
-  align-items: flex-end;
-  gap: 14px;
-  flex-wrap: wrap;
-}
-
-.meat-customers-filter {
-  display: grid;
-  gap: 6px;
-  min-width: 160px;
-  color: var(--muted-foreground);
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.meat-customers-filter input {
-  height: 40px;
-  padding: 0 11px;
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  outline: 0;
-  background: var(--background);
-  color: var(--foreground);
-  font-size: 14px;
-}
-
-.meat-customers-filter input:focus {
-  border-color: var(--ring);
-  box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 13%, transparent);
-}
-
 .meat-customers-address-cell {
   min-width: 12rem;
   max-width: 22rem;

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Plus, Trash2, Users } from "lucide-react";
 
@@ -19,20 +19,6 @@ type CustomersLoader = (
 ) => Promise<MeatCustomerRow[]>;
 type CustomerCreator = typeof createMeatCustomer;
 type CustomerDeleter = typeof archiveMeatCustomer;
-
-type FilterDraft = {
-  search: string;
-  customerCode: string;
-  name: string;
-  phone: string;
-};
-
-const EMPTY_FILTERS: FilterDraft = {
-  search: "",
-  customerCode: "",
-  name: "",
-  phone: "",
-};
 
 const MEAT_CUSTOMERS_SKELETON_COLUMNS = [
   { width: "6rem" },
@@ -198,27 +184,18 @@ export function MeatCustomersPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
-  const [draft, setDraft] = useState<FilterDraft>(EMPTY_FILTERS);
-  const [applied, setApplied] = useState<FilterDraft>(EMPTY_FILTERS);
+  const [draftSearch, setDraftSearch] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-
-  const filtersActive = useMemo(
-    () =>
-      Boolean(applied.customerCode || applied.name || applied.phone),
-    [applied],
-  );
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
     void loadCustomers({
-      search: applied.search,
-      customerCode: applied.customerCode,
-      name: applied.name,
-      phone: applied.phone,
+      search: appliedSearch,
     })
       .then((next) => {
         if (cancelled) return;
@@ -239,13 +216,10 @@ export function MeatCustomersPage({
     return () => {
       cancelled = true;
     };
-  }, [applied, loadCustomers, reloadKey, t]);
+  }, [appliedSearch, loadCustomers, reloadKey, t]);
 
   const submitSearch = () => {
-    setApplied({
-      ...draft,
-      search: draft.search.trim(),
-    });
+    setAppliedSearch(draftSearch.trim());
   };
 
   const display = (value: string | null | undefined) =>
@@ -288,70 +262,12 @@ export function MeatCustomersPage({
         <header className="meat-customers-toolbar">
           <ListSearchBar
             id="meat-customers-search"
-            value={draft.search}
-            onChange={(value) =>
-              setDraft((current) => ({ ...current, search: value }))
-            }
+            value={draftSearch}
+            onChange={setDraftSearch}
             onSubmit={submitSearch}
             label={t("meatCustomers.search")}
             placeholder={t("meatCustomers.searchPlaceholder")}
             submitLabel={t("meatCustomers.searchAction")}
-            filtersActive={filtersActive}
-            onConfirmFilters={() => {
-              setApplied((current) => ({
-                ...draft,
-                search: current.search,
-              }));
-            }}
-            onDismissFilters={() => {
-              setDraft((current) => ({
-                ...applied,
-                search: current.search,
-              }));
-            }}
-            filters={
-              <div className="meat-customers-filters">
-                <label className="meat-customers-filter">
-                  <span>{t("meatCustomers.fields.customerCode")}</span>
-                  <input
-                    value={draft.customerCode}
-                    onChange={(event) =>
-                      setDraft((current) => ({
-                        ...current,
-                        customerCode: event.target.value,
-                      }))
-                    }
-                    aria-label={t("meatCustomers.fields.customerCode")}
-                  />
-                </label>
-                <label className="meat-customers-filter">
-                  <span>{t("meatCustomers.fields.name")}</span>
-                  <input
-                    value={draft.name}
-                    onChange={(event) =>
-                      setDraft((current) => ({
-                        ...current,
-                        name: event.target.value,
-                      }))
-                    }
-                    aria-label={t("meatCustomers.fields.name")}
-                  />
-                </label>
-                <label className="meat-customers-filter">
-                  <span>{t("meatCustomers.fields.phone")}</span>
-                  <input
-                    value={draft.phone}
-                    onChange={(event) =>
-                      setDraft((current) => ({
-                        ...current,
-                        phone: event.target.value,
-                      }))
-                    }
-                    aria-label={t("meatCustomers.fields.phone")}
-                  />
-                </label>
-              </div>
-            }
           />
         </header>
 

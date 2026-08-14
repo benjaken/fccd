@@ -53,7 +53,7 @@ describe("Meat customers page", () => {
     await i18n.changeLanguage("zh-HK");
   });
 
-  it("lists customers and filters by customer code", async () => {
+  it("lists customers and filters from the search bar", async () => {
     const user = userEvent.setup();
     const loadCustomers = vi
       .fn()
@@ -70,16 +70,17 @@ describe("Meat customers page", () => {
     expect(await screen.findByRole("heading", { name: "客戶" })).toBeInTheDocument();
     expect(screen.getByText("桂花小幸 YLP")).toBeInTheDocument();
     expect(screen.getByText("桂花小幸 TKO")).toBeInTheDocument();
+    expect(screen.queryByLabelText("客人編號")).not.toBeInTheDocument();
 
-    await user.type(screen.getByLabelText("客人編號"), "C0022");
+    await user.type(
+      screen.getByPlaceholderText("搜尋編號、名稱、電話或地址"),
+      "C0022",
+    );
     await user.click(screen.getByRole("button", { name: "搜尋" }));
 
     await waitFor(() => {
       expect(loadCustomers).toHaveBeenLastCalledWith({
-        search: "",
-        customerCode: "C0022",
-        name: "",
-        phone: "",
+        search: "C0022",
       });
     });
 
