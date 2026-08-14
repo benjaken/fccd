@@ -9,6 +9,7 @@ import {
 import { useTranslation } from "react-i18next";
 import {
   Bell,
+  Beef,
   Boxes,
   CalendarDays,
   ChartNoAxesCombined,
@@ -32,6 +33,7 @@ import {
   Settings,
   ShieldCheck,
   ShoppingBasket,
+  Snowflake,
   Store,
   Sun,
   Truck,
@@ -68,6 +70,7 @@ import { ProductsListPage } from "@/components/ProductsListPage";
 import { ProductDetailPage } from "@/components/ProductDetailPage";
 import { PackagesListPage } from "@/components/PackagesListPage";
 import { PackageDetailPage } from "@/components/PackageDetailPage";
+import { RawMeatInventoryCalcPage } from "@/components/RawMeatInventoryCalcPage";
 import { AttachmentsListPage } from "@/components/settings/AttachmentsListPage";
 import { LoginLogsListPage } from "@/components/settings/LoginLogsListPage";
 import { RolePermissionsPage } from "@/components/settings/RolePermissionsPage";
@@ -98,6 +101,7 @@ const primaryNav: NavItem[] = [
   { key: "orders", to: "/orders", icon: ClipboardList },
   { key: "quotes", to: "/quotes", icon: FileText },
   { key: "products", to: "/products", icon: ShoppingBasket },
+  { key: "frozen", to: "/frozen/raw-meat-inventory", icon: Snowflake },
   { key: "kitchen", to: "/kitchen", icon: Utensils },
   { key: "delivery", to: "/delivery", icon: Truck },
   { key: "restaurant", to: "/restaurant", icon: Store },
@@ -224,6 +228,14 @@ const secondaryNav: Record<string, NavItem[]> = {
       permissionKey: "products.packages",
     },
   ],
+  frozen: [
+    {
+      key: "rawMeatInventoryCalc",
+      to: "/frozen/raw-meat-inventory",
+      icon: Beef,
+      permissionKey: "frozen.raw_meat_inventory",
+    },
+  ],
   kitchen: [
     { key: "kitchen", to: "/kitchen", icon: Utensils, permissionKey: "kitchen" },
     {
@@ -333,6 +345,7 @@ const SECTION_CHILD_KEYS: Record<string, string[]> = {
     "products.ala_carte",
     "products.packages",
   ],
+  frozen: ["frozen.raw_meat_inventory"],
   kitchen: ["kitchen.calendar", "kitchen.inventory"],
   delivery: ["delivery.assign"],
   restaurant: ["restaurant.inventory", "restaurant.reports"],
@@ -798,6 +811,14 @@ function OperationsShell() {
                 element={<PackageDetailPage />}
               />
               <Route path="/products/:id" element={<ProductDetailPage />} />
+              <Route
+                path="/frozen"
+                element={<Navigate to="/frozen/raw-meat-inventory" replace />}
+              />
+              <Route
+                path="/frozen/raw-meat-inventory"
+                element={<RawMeatInventoryCalcPage />}
+              />
               <Route path="/reports/*" element={<ReportsPage />} />
               <Route
                 path="/settings"

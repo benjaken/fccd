@@ -1,0 +1,131 @@
+import { supabase } from "@/lib/supabase";
+
+export const RAW_MEAT_MOVEMENTS_PAGE_SIZE = 15;
+
+export type RawMeatItemOption = {
+  id: string;
+  name: string;
+  englishName: string | null;
+  sortOrder: number | null;
+};
+
+export type RawMeatMovementRow = {
+  id: string;
+  movementAt: string | null;
+  productName: string;
+  inboundUnitPrice: number | null;
+  inboundQuantityKg: number | null;
+  outboundQuantityKg: number | null;
+  balanceKg: number;
+  totalAmount: number | null;
+  supplierName: string | null;
+  remarks: string | null;
+};
+
+type ItemRow = {
+  id: string;
+  name: string;
+  english_name: string | null;
+  sort_order: number | string | null;
+};
+
+type MovementRow = {
+  id: string;
+  movement_at: string | null;
+  inbound_quantity_kg: number | string | null;
+  outbound_quantity_kg: number | string | null;
+  inbound_unit_price: number | string | null;
+  inbound_total_amount: number | string | null;
+  remarks: string | null;
+  bubble_created_at: string | null;
+  created_at: string;
+  suppliers: { company_name: string | null } | { company_name: string | null }[] | null;
+};
+
+function toNumber(value: number | string | null | undefined) {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = Number.parseFloat(String(value));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function relatedSupplierName(
+  value: MovementRow["suppliers"],
+): string | null {
+  if (!value) return null;
+  const row = Array.isArray(value) ? value[0] : value;
+  const name = row?.company_name?.trim();
+  return name || null;
+}
+
+function movementSortKey(row: MovementRow) {
+  return (
+    row.movement_at ||
+    row.bubble_created_at ||
+    row.created_at ||
+    ""
+  );
+}
+
+export async function fetchRawMeatItems(): Promise<RawMeatItemOption[]> {
+  const { data, error } = await supabase
+    .from("raw_meat_items")
+    .select("id,name,english_name,sort_order")
+    .is("archived_at", null)
+    .order("sort_order", { ascending: true, nullsFirst: false })
+    .order("name", { ascending: true });
+
+  if (error) throw error;
+
+  return ((data ?? []) as ItemRow[]).map((row) => ({
+    id: row.id,
+    name: row.name,
+    englishName: row.english_name,
+    sortOrder: toNumber(row.sort_order),
+  }));
+}
+
+export async function fetchRawMeatMovementsForItem(
+  itemId: string,
+  productName: string,
+): Promise<RawMeatMovementRow[]> {
+  const { data, error } = await supabase
+    .from("raw_meat_stock_movements")
+    .select(
+      "id,movement_at,inbound_quantity_kg,outbound_quantity_kg,inbound_unit_price,inbound_total_amount,remarks,bubble_created_at,created_at,suppliers(company_name)",
+    )
+    .eq("raw_meat_item_id", itemId)
+    .order("movement_at", { ascending: true, nullsFirst: false })
+    .order("bubble_created_at", { ascending: true, nullsFirst: false })
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+
+  const chronological = [...((data ?? []) as MovementRow[])].sort((a, b) => {
+    const left = movementSortKey(a);
+    const right = movementSortKey(b);
+    if (left === right) return a.id.localeCompare(b.id);
+    return left < right ? -1 : 1;
+  });
+
+  let balance = 0;
+  const withBalance: RawMeatMovementRow[] = chronological.map((row) => {
+    const inbound = toNumber(row.inbound_quantity_kg) ?? 0;
+    const outbound = toNumber(row.outbound_quantity_kg) ?? 0;
+    balance += inbound - outbound;
+    return {
+      id: row.id,
+      movementAt: row.movement_at || row.bubble_created_at || row.created_at,
+      productName,
+      inboundUnitPrice: toNumber(row.inbound_unit_price),
+      inboundQuantityKg: toNumber(row.inbound_quantity_kg),
+      outboundQuantityKg: toNumber(row.outbound_quantity_kg),
+      balanceKg: balance,
+      totalAmount: toNumber(row.inbound_total_amount),
+      supplierName: relatedSupplierName(row.suppliers),
+      remarks: row.remarks,
+    };
+  });
+
+  // Newest first for the list, matching Bubble operational browsing.
+  return withBalance.reverse();
+}

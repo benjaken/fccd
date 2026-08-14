@@ -1671,6 +1671,191 @@ td:last-child {
   color: var(--destructive);
 }
 
+.raw-meat-calc-page {
+  display: grid;
+  gap: 20px;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: calc(
+    100dvh - var(--topbar-height) - var(--workspace-height) - 76px
+  );
+  min-height: 560px;
+  overflow: hidden;
+}
+
+.raw-meat-calc-page .page-heading {
+  margin-bottom: 0;
+}
+
+.raw-meat-calc-heading {
+  align-items: flex-end;
+}
+
+.raw-meat-calc-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.raw-meat-calc-layout {
+  display: grid;
+  grid-template-columns: minmax(12rem, 20%) minmax(0, 1fr);
+  gap: 16px;
+  min-height: 0;
+}
+
+.raw-meat-calc-sidebar,
+.raw-meat-calc-main {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.raw-meat-calc-sidebar {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.raw-meat-calc-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.raw-meat-calc-sidebar-header strong {
+  font-size: 0.92rem;
+}
+
+.raw-meat-calc-sidebar-header span {
+  color: var(--muted-foreground);
+  font-size: 0.82rem;
+}
+
+.raw-meat-calc-sidebar-state {
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  padding: 24px 16px;
+  color: var(--muted-foreground);
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.raw-meat-calc-item-list {
+  list-style: none;
+  margin: 0;
+  padding: 8px;
+  overflow: auto;
+  display: grid;
+  align-content: start;
+  gap: 4px;
+}
+
+.raw-meat-calc-item {
+  width: 100%;
+  display: block;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--foreground);
+  text-align: left;
+  font: inherit;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease;
+}
+
+.raw-meat-calc-item:hover {
+  background: color-mix(in oklch, var(--accent) 70%, transparent);
+}
+
+.raw-meat-calc-item.active {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: 600;
+}
+
+.raw-meat-calc-main {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.raw-meat-calc-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.raw-meat-calc-toolbar > div:first-child {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.raw-meat-calc-toolbar strong {
+  font-size: 1rem;
+}
+
+.raw-meat-calc-toolbar span {
+  color: var(--muted-foreground);
+  font-size: 0.84rem;
+}
+
+.raw-meat-calc-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.raw-meat-calc-table-wrap {
+  min-height: 0;
+}
+
+@media (max-width: 960px) {
+  .raw-meat-calc-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(10rem, 28%) minmax(0, 1fr);
+  }
+
+  .raw-meat-calc-item-list {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(9rem, max-content);
+    align-content: stretch;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .raw-meat-calc-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .raw-meat-calc-actions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 760px) {
+  .raw-meat-calc-page {
+    height: calc(100dvh - var(--topbar-height) - 62px);
+    min-height: 520px;
+  }
+
+  .raw-meat-calc-heading {
+    align-items: stretch;
+  }
+}
+
+
 .table-skeleton-row td {
   vertical-align: middle;
 }
