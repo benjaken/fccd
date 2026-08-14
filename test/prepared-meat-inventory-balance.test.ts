@@ -12,6 +12,7 @@ import {
   hongKongYearBounds,
   hongKongYearMonthKey,
   isPreparedInboundPackAllowed,
+  isPreparedMeatWithoutRaw,
   nextPreparedMeatOrderSequence,
   budgetedPreparedYieldPacks,
   preparedInboundPackRange,
@@ -200,6 +201,13 @@ describe("prepared meat inbound with raw yield", () => {
     expect(isPreparedInboundPackAllowed(16.5, 35)).toBe(false);
     expect(coercePreparedMeatIntegerInput("12.9")).toBe("12");
     expect(formatPreparedMeatKg(13.91)).toBe("13.91");
+  });
+});
+
+describe("prepared meat without raw materials", () => {
+  it("treats a missing raw meat link as no-raw inbound eligible", () => {
+    expect(isPreparedMeatWithoutRaw({ rawMeatItemId: null })).toBe(true);
+    expect(isPreparedMeatWithoutRaw({ rawMeatItemId: "raw-1" })).toBe(false);
   });
 });
 

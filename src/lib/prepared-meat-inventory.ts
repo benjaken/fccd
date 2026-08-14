@@ -10,7 +10,14 @@ export type PreparedMeatItemOption = {
   unit: string | null;
   sortOrder: number | null;
   isActive: boolean;
+  rawMeatItemId: string | null;
 };
+
+export function isPreparedMeatWithoutRaw(
+  item: Pick<PreparedMeatItemOption, "rawMeatItemId">,
+) {
+  return !item.rawMeatItemId;
+}
 
 export type PreparedMeatMovementKind = "inbound" | "outbound" | "both" | "none";
 
@@ -35,6 +42,7 @@ type ItemRow = {
   unit: string | null;
   sort_order: number | string | null;
   is_active: boolean | null;
+  raw_meat_item_id?: string | null;
 };
 
 export type PreparedMeatMovementRecord = {
@@ -215,6 +223,7 @@ function mapItem(row: ItemRow): PreparedMeatItemOption {
     unit: row.unit,
     sortOrder: toNumber(row.sort_order),
     isActive: row.is_active !== false,
+    rawMeatItemId: row.raw_meat_item_id ?? null,
   };
 }
 
@@ -226,7 +235,7 @@ function nullifTrim(value: string | null | undefined) {
 export async function fetchPreparedMeatItems(): Promise<PreparedMeatItemOption[]> {
   const { data, error } = await supabase
     .from("prepared_meat_items")
-    .select("id,sku,name,unit,sort_order,is_active")
+    .select("id,sku,name,unit,sort_order,is_active,raw_meat_item_id")
     .is("archived_at", null)
     .order("sort_order", { ascending: true, nullsFirst: false })
     .order("name", { ascending: true });
@@ -240,7 +249,7 @@ async function fetchPreparedMeatItemById(
 ): Promise<PreparedMeatItemOption> {
   const { data, error } = await supabase
     .from("prepared_meat_items")
-    .select("id,sku,name,unit,sort_order,is_active")
+    .select("id,sku,name,unit,sort_order,is_active,raw_meat_item_id")
     .eq("id", itemId)
     .is("archived_at", null)
     .single();

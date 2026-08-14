@@ -10,6 +10,7 @@ import { SidePanel } from "@/components/ui/side-panel";
 import {
   coercePreparedMeatQuantityInput,
   createPreparedMeatInboundNoRaw,
+  isPreparedMeatWithoutRaw,
   type PreparedMeatInboundNoRawInput,
   type PreparedMeatItemOption,
 } from "@/lib/prepared-meat-inventory";
@@ -59,7 +60,7 @@ export function PreparedMeatInboundNoRawModal({
   const [error, setError] = useState<string | null>(null);
 
   const activeItems = useMemo(
-    () => items.filter((item) => item.isActive),
+    () => items.filter((item) => item.isActive && isPreparedMeatWithoutRaw(item)),
     [items],
   );
 

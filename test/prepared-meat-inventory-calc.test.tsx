@@ -26,6 +26,7 @@ const items: PreparedMeatItemOption[] = [
     unit: "包",
     sortOrder: 1,
     isActive: true,
+    rawMeatItemId: "raw-1",
   },
   {
     id: "item-2",
@@ -34,6 +35,16 @@ const items: PreparedMeatItemOption[] = [
     unit: "包",
     sortOrder: 2,
     isActive: true,
+    rawMeatItemId: "raw-2",
+  },
+  {
+    id: "item-no-raw",
+    sku: "FCR099",
+    name: "滷水腩汁 (2kg)",
+    unit: "包",
+    sortOrder: 3,
+    isActive: true,
+    rawMeatItemId: null,
   },
 ];
 
@@ -266,6 +277,7 @@ describe("Prepared meat inventory calculation page", () => {
         unit: "樽",
         sortOrder: 12,
         isActive: false,
+        rawMeatItemId: null,
       },
     ]);
     const loadMovements = vi
@@ -342,6 +354,7 @@ describe("Prepared meat inventory calculation page", () => {
       unit: "包",
       sortOrder: 99,
       isActive: true,
+      rawMeatItemId: "raw-pork",
     });
 
     render(
@@ -603,7 +616,10 @@ describe("Prepared meat inventory calculation page", () => {
     expect(within(dialog).queryByPlaceholderText("Quantity")).toBeNull();
 
     await user.click(within(dialog).getByRole("combobox", { name: "製成品" }));
-    await user.click(within(dialog).getByRole("option", { name: "五香牛腩" }));
+    expect(within(dialog).getByRole("option", { name: "滷水腩汁 (2kg)" })).toBeInTheDocument();
+    expect(within(dialog).queryByRole("option", { name: "五香牛腩" })).toBeNull();
+    expect(within(dialog).queryByRole("option", { name: "滷水豬手" })).toBeNull();
+    await user.click(within(dialog).getByRole("option", { name: "滷水腩汁 (2kg)" }));
     const quantity = within(dialog).getByRole("textbox", { name: "製成品數量" });
     await user.type(quantity, "勝多負少");
     expect(quantity).toHaveValue("");
@@ -617,9 +633,9 @@ describe("Prepared meat inventory calculation page", () => {
 
     const lines = dialog.querySelector(".prepared-meat-outbound-lines");
     expect(lines).not.toBeNull();
-    expect(within(lines as HTMLElement).getByText("五香牛腩")).toBeInTheDocument();
+    expect(within(lines as HTMLElement).getByText("滷水腩汁 (2kg)")).toBeInTheDocument();
     expect(
-      within(lines as HTMLElement).getByRole("textbox", { name: "五香牛腩 數量" }),
+      within(lines as HTMLElement).getByRole("textbox", { name: "滷水腩汁 (2kg) 數量" }),
     ).toHaveValue("3");
 
     await user.click(within(dialog).getByRole("button", { name: "確定" }));
@@ -628,7 +644,7 @@ describe("Prepared meat inventory calculation page", () => {
         movementDate: expect.any(String),
         lines: [
           {
-            preparedMeatItemId: "item-1",
+            preparedMeatItemId: "item-no-raw",
             quantity: 3,
             remarks: "工場入貨",
           },

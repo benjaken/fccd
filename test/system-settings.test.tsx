@@ -797,6 +797,20 @@ describe("Super Admin system settings", () => {
       "prepared_meat_stock_raw_sources",
     );
 
+    const preparedMeatInboundNoRawFilter = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260814202000_prepared_meat_inbound_no_raw_without_raw_item.sql",
+      ),
+      "utf8",
+    );
+    expect(preparedMeatInboundNoRawFilter).toContain(
+      "prepared meat item requires raw meat",
+    );
+    expect(preparedMeatInboundNoRawFilter).not.toContain(
+      "prepared_meat_stock_raw_sources",
+    );
+
     const preparedMeatInboundWithRaw = readFileSync(
       path.resolve(
         process.cwd(),
