@@ -23,6 +23,7 @@ begin
             prepared_meat_item_id::text as item_id,
             coalesce(sum(inbound_packages), 0) - coalesce(sum(outbound_packages), 0) as stock
           from public.prepared_meat_stock_movements
+          where prepared_meat_item_id is not null
           group by prepared_meat_item_id
         ) as prepared_stock
       ),
@@ -37,6 +38,7 @@ begin
             raw_meat_item_id::text as item_id,
             coalesce(sum(inbound_quantity_kg), 0) - coalesce(sum(outbound_quantity_kg), 0) as stock
           from public.raw_meat_stock_movements
+          where raw_meat_item_id is not null
           group by raw_meat_item_id
         ) as raw_stock
       ),

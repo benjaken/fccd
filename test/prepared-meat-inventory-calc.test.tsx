@@ -1078,6 +1078,70 @@ describe("Prepared meat inventory calculation page", () => {
     expect(loadOutbound).not.toHaveBeenCalled();
   });
 
+  it("opens a new outbound form without loading an existing delivery note", async () => {
+    const user = userEvent.setup();
+    const loadItems = vi.fn().mockResolvedValue(items);
+    const loadMovements = vi.fn().mockResolvedValue([]);
+    const loadOutbound = vi.fn();
+    const loadOrderNumber = vi.fn().mockResolvedValue("R - 202608 - 1");
+    const loadStock = vi.fn().mockResolvedValue(plentyOfStock);
+
+    render(
+      <MemoryRouter>
+        <PreparedMeatInventoryCalcPage
+          loadItems={loadItems}
+          loadMovements={loadMovements}
+          loadCustomers={async () => []}
+          loadShippingMethods={async () => []}
+          loadOrderNumber={loadOrderNumber}
+          loadRawItems={async () => []}
+          loadStock={loadStock}
+          loadOutbound={loadOutbound}
+        />
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: "製成品出貨" }));
+    const dialog = await screen.findByRole("dialog", { name: "送貨單" });
+    await waitFor(() => {
+      expect(within(dialog).getByRole("combobox", { name: "客戶" })).toBeEnabled();
+    });
+    expect(within(dialog).queryByRole("alert")).toBeNull();
+    expect(loadOutbound).not.toHaveBeenCalled();
+    expect(loadOrderNumber).toHaveBeenCalled();
+    expect(loadStock).toHaveBeenCalled();
+  });
+
+  it("shows the stock lookup error when a new outbound form cannot load balances", async () => {
+    const user = userEvent.setup();
+    const loadItems = vi.fn().mockResolvedValue(items);
+    const loadMovements = vi.fn().mockResolvedValue([]);
+    const loadStock = vi.fn().mockRejectedValue({
+      message: "field name must not be null",
+      code: "22023",
+    });
+
+    render(
+      <MemoryRouter>
+        <PreparedMeatInventoryCalcPage
+          loadItems={loadItems}
+          loadMovements={loadMovements}
+          loadCustomers={async () => []}
+          loadShippingMethods={async () => []}
+          loadOrderNumber={async () => "R - 202608 - 1"}
+          loadRawItems={async () => []}
+          loadStock={loadStock}
+        />
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: "製成品出貨" }));
+    const dialog = await screen.findByRole("dialog", { name: "送貨單" });
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent(
+      "field name must not be null",
+    );
+  });
+
   it("rejects outbound add quantities that are not positive or exceed stock", async () => {
     const user = userEvent.setup();
     const loadItems = vi.fn().mockResolvedValue(items);
