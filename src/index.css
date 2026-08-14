@@ -2431,49 +2431,100 @@ td:last-child {
   max-width: 100%;
 }
 
-.prepared-meat-inbound-deduct-remaining strong,
-.prepared-meat-inbound-deduct-product > div:last-child strong {
-  text-decoration: underline;
-  text-decoration-style: double;
-  text-underline-offset: 0.18em;
+.prepared-meat-inbound-deduct-form {
+  gap: 16px;
 }
 
-.prepared-meat-inbound-deduct-remaining {
+.prepared-meat-inbound-deduct-meta {
+  display: grid;
+  gap: 12px 16px;
+}
+
+.prepared-meat-inbound-deduct-meta.has-remaining {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: end;
+}
+
+.prepared-meat-inbound-deduct-metric,
+.prepared-meat-inbound-deduct-pack-total {
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 12px;
-}
-
-.prepared-meat-inbound-deduct-remaining span,
-.prepared-meat-inbound-deduct-product span {
-  color: var(--muted-foreground);
-  font-size: 0.85rem;
-  font-weight: 600;
+  align-items: center;
+  box-sizing: border-box;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: color-mix(in oklch, var(--muted) 45%, var(--background));
+  color: var(--foreground);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .prepared-meat-inbound-deduct-products {
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
 .prepared-meat-inbound-deduct-product {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 7.5rem;
   gap: 12px;
-  align-items: start;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
 }
 
-.prepared-meat-inbound-deduct-product > div:first-child {
-  display: grid;
-  gap: 4px;
+.prepared-meat-inbound-deduct-product-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
 }
 
-.prepared-meat-inbound-deduct-product > div:last-child {
+.prepared-meat-inbound-deduct-product-head strong {
+  font-size: 0.95rem;
+  line-height: 1.35;
+}
+
+.prepared-meat-inbound-deduct-yield {
+  color: var(--muted-foreground);
+  background: color-mix(in oklch, var(--muted) 70%, var(--card));
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-style: normal;
+  letter-spacing: 0.01em;
+}
+
+.prepared-meat-inbound-deduct-qty-row {
   display: grid;
-  gap: 6px;
-  justify-items: stretch;
-  text-align: right;
+  grid-template-columns: minmax(0, 1fr) minmax(6.5rem, auto);
+  gap: 12px;
+  align-items: end;
+}
+
+.prepared-meat-inbound-deduct-pack-total {
+  justify-content: flex-end;
+  color: var(--muted-foreground);
+  font-size: 0.85rem;
+}
+
+.prepared-meat-inbound-deduct-form .raw-meat-field textarea {
+  min-height: 5.5rem;
+  resize: vertical;
+}
+
+@media (max-width: 720px) {
+  .prepared-meat-inbound-deduct-meta.has-remaining,
+  .prepared-meat-inbound-deduct-qty-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .prepared-meat-inbound-deduct-pack-total {
+    justify-content: flex-start;
+  }
 }
 
 .prepared-meat-outbound-header {

@@ -711,7 +711,7 @@ describe("Prepared meat inventory calculation page", () => {
       expect(loadInboundRawPreview).toHaveBeenCalledWith("raw-wonton");
     });
     expect(within(dialog).getByText("剩餘總量")).toBeInTheDocument();
-    expect(within(dialog).getByText("Total: 104.65 kg")).toBeInTheDocument();
+    expect(within(dialog).getByText("104.65 kg")).toBeInTheDocument();
 
     const outbound = within(dialog).getByRole("textbox", {
       name: "生肉出貨數量 (kg)",
@@ -720,7 +720,7 @@ describe("Prepared meat inventory calculation page", () => {
     expect(
       await within(dialog).findByText("扁食肉餡 (500克)入貨 (包)"),
     ).toBeInTheDocument();
-    expect(within(dialog).getByText("預算收成: 35")).toBeInTheDocument();
+    expect(within(dialog).getByText("預算收成 35")).toBeInTheDocument();
 
     const inboundPacks = within(dialog).getByRole("textbox", {
       name: "扁食肉餡 (500克) 入貨包數",
@@ -735,7 +735,7 @@ describe("Prepared meat inventory calculation page", () => {
 
     await user.clear(inboundPacks);
     await user.type(inboundPacks, "35");
-    expect(within(dialog).getByText("Total: 35包")).toBeInTheDocument();
+    expect(within(dialog).getByText("總計 35包")).toBeInTheDocument();
     await user.click(within(dialog).getByRole("button", { name: "提交" }));
 
     await waitFor(() => {

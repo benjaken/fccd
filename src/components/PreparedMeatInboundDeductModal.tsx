@@ -228,41 +228,52 @@ export function PreparedMeatInboundDeductModal({
           disabled={loading || submitting}
         />
 
-        <label className="raw-meat-field">
-          <span>{t("preparedMeatInventory.inboundDeduct.date")}</span>
-          <input
-            type="date"
-            value={movementDate}
-            disabled={submitting}
-            onChange={(event) => setMovementDate(event.target.value)}
-            aria-label={t("preparedMeatInventory.inboundDeduct.date")}
-          />
-        </label>
-
-        {rawMeatId && preview && hasStock ? (
-          <>
-            <div className="prepared-meat-inbound-deduct-remaining">
+        <div
+          className={
+            rawMeatId && preview && hasStock
+              ? "prepared-meat-inbound-deduct-meta has-remaining"
+              : "prepared-meat-inbound-deduct-meta"
+          }
+        >
+          <label className="raw-meat-field">
+            <span>{t("preparedMeatInventory.inboundDeduct.date")}</span>
+            <input
+              type="date"
+              value={movementDate}
+              disabled={submitting}
+              onChange={(event) => setMovementDate(event.target.value)}
+              aria-label={t("preparedMeatInventory.inboundDeduct.date")}
+            />
+          </label>
+          {rawMeatId && preview && hasStock ? (
+            <div className="raw-meat-field">
               <span>{t("preparedMeatInventory.inboundDeduct.remaining")}</span>
-              <strong>
+              <output
+                className="prepared-meat-inbound-deduct-metric"
+                aria-live="polite"
+              >
                 {t("preparedMeatInventory.inboundDeduct.remainingTotal", {
                   kg: formatPreparedMeatKg(remainingKg),
                 })}
-              </strong>
+              </output>
             </div>
-            <label className="raw-meat-field">
-              <span>{t("preparedMeatInventory.inboundDeduct.outboundKg")}</span>
-              <PreparedMeatQuantityInput
-                value={outboundText}
-                onChange={(value) => {
-                  setOutboundText(value);
-                  setPackTexts({});
-                }}
-                disabled={submitting}
-                placeholder={t("preparedMeatInventory.outbound.quantityPlaceholder")}
-                ariaLabel={t("preparedMeatInventory.inboundDeduct.outboundKg")}
-              />
-            </label>
-          </>
+          ) : null}
+        </div>
+
+        {rawMeatId && preview && hasStock ? (
+          <label className="raw-meat-field">
+            <span>{t("preparedMeatInventory.inboundDeduct.outboundKg")}</span>
+            <PreparedMeatQuantityInput
+              value={outboundText}
+              onChange={(value) => {
+                setOutboundText(value);
+                setPackTexts({});
+              }}
+              disabled={submitting}
+              placeholder={t("preparedMeatInventory.outbound.quantityPlaceholder")}
+              ariaLabel={t("preparedMeatInventory.inboundDeduct.outboundKg")}
+            />
+          </label>
         ) : null}
 
         {showPrepared ? (
@@ -276,47 +287,52 @@ export function PreparedMeatInboundDeductModal({
                 const unit = line.item.unit || t("preparedMeatInventory.inboundDeduct.packUnit");
                 const quantity = line.quantity ?? 0;
                 return (
-                  <div
+                  <article
                     key={line.item.id}
                     className="prepared-meat-inbound-deduct-product"
                   >
-                    <div>
+                    <header className="prepared-meat-inbound-deduct-product-head">
                       <strong>
                         {t("preparedMeatInventory.inboundDeduct.productInbound", {
                           name: line.item.name,
                           unit,
                         })}
                       </strong>
-                      <span>
+                      <span className="prepared-meat-inbound-deduct-yield">
                         {t("preparedMeatInventory.inboundDeduct.budgetedYield", {
                           packs: line.budgeted,
                         })}
                       </span>
-                    </div>
-                    <div>
-                      <PreparedMeatQuantityInput
-                        value={packTexts[line.item.id] ?? ""}
-                        onChange={(value) =>
-                          setPackTexts((current) => ({
-                            ...current,
-                            [line.item.id]: value,
-                          }))
-                        }
-                        integer
-                        disabled={submitting}
-                        placeholder={t(
-                          "preparedMeatInventory.inboundDeduct.packsPlaceholder",
-                        )}
-                        ariaLabel={`${line.item.name} ${t("preparedMeatInventory.inboundDeduct.inboundPacks")}`}
-                      />
-                      <strong>
+                    </header>
+                    <div className="prepared-meat-inbound-deduct-qty-row">
+                      <label className="raw-meat-field">
+                        <span>
+                          {t("preparedMeatInventory.inboundDeduct.inboundPacks")}
+                        </span>
+                        <PreparedMeatQuantityInput
+                          value={packTexts[line.item.id] ?? ""}
+                          onChange={(value) =>
+                            setPackTexts((current) => ({
+                              ...current,
+                              [line.item.id]: value,
+                            }))
+                          }
+                          integer
+                          disabled={submitting}
+                          placeholder={t(
+                            "preparedMeatInventory.inboundDeduct.packsPlaceholder",
+                          )}
+                          ariaLabel={`${line.item.name} ${t("preparedMeatInventory.inboundDeduct.inboundPacks")}`}
+                        />
+                      </label>
+                      <output className="prepared-meat-inbound-deduct-pack-total">
                         {t("preparedMeatInventory.inboundDeduct.packTotal", {
                           quantity,
                           unit,
                         })}
-                      </strong>
+                      </output>
                     </div>
-                  </div>
+                  </article>
                 );
               })
             )}
@@ -325,7 +341,8 @@ export function PreparedMeatInboundDeductModal({
 
         <label className="raw-meat-field">
           <span>{t("preparedMeatInventory.outbound.remarks")}</span>
-          <input
+          <textarea
+            rows={3}
             value={remarks}
             disabled={submitting}
             onChange={(event) => setRemarks(event.target.value)}
