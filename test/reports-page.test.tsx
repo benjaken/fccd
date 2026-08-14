@@ -54,6 +54,10 @@ vi.mock("@/auth/use-page-access", async () => {
   };
 });
 
+function renderReport(group: "frozenMeat" | "shops") {
+  return render(<ReportsPage group={group} />);
+}
+
 describe("Shop order quantity report", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -225,7 +229,7 @@ describe("Shop order quantity report", () => {
   });
 
   it("renders migrated quantity rows and total", async () => {
-    render(<ReportsPage />);
+    renderReport("shops");
 
     expect(
       await screen.findByRole("heading", { name: "Shop order quantities" }),
@@ -241,7 +245,7 @@ describe("Shop order quantity report", () => {
 
   it("automatically queries after a single shop or date change", async () => {
     const user = userEvent.setup();
-    render(<ReportsPage />);
+    renderReport("shops");
     await screen.findByText("豉油雞中翼");
 
     await user.click(screen.getByRole("button", { name: "桂花小幸 TKO" }));
@@ -262,7 +266,7 @@ describe("Shop order quantity report", () => {
 
   it("switches between monthly shop and factory prices", async () => {
     const user = userEvent.setup();
-    render(<ReportsPage />);
+    renderReport("frozenMeat");
 
     await user.click(
       screen.getByRole("button", { name: "Average supply price by shop" }),
@@ -303,7 +307,7 @@ describe("Shop order quantity report", () => {
   it("renders weighted monthly raw-meat purchase prices", async () => {
     const user = userEvent.setup();
     const tabLabel = i18n.t("reports.tabs.rawMeatAveragePrice");
-    render(<ReportsPage />);
+    renderReport("frozenMeat");
 
     await user.click(
       await screen.findByRole("button", {
@@ -357,7 +361,7 @@ describe("Shop order quantity report", () => {
   it("renders cumulative month-end prepared-meat stock", async () => {
     const user = userEvent.setup();
     const tabLabel = i18n.t("reports.tabs.preparedMeatStock");
-    render(<ReportsPage />);
+    renderReport("frozenMeat");
 
     await user.click(
       await screen.findByRole("button", {
@@ -404,7 +408,7 @@ describe("Shop order quantity report", () => {
   it("renders cumulative raw-meat stock in KG", async () => {
     const user = userEvent.setup();
     const tabLabel = i18n.t("reports.tabs.rawMeatStock");
-    render(<ReportsPage />);
+    renderReport("frozenMeat");
 
     await user.click(
       await screen.findByRole("button", {
@@ -437,7 +441,7 @@ describe("Shop order quantity report", () => {
   it("renders supplier purchase totals for the selected date range", async () => {
     const user = userEvent.setup();
     const tabLabel = i18n.t("reports.tabs.supplierPurchase");
-    render(<ReportsPage />);
+    renderReport("frozenMeat");
 
     await user.click(
       await screen.findByRole("button", {
@@ -484,5 +488,32 @@ describe("Shop order quantity report", () => {
     );
     expect(listRule?.[1]).toContain("min-height: 0");
     expect(listRule?.[1]).not.toContain("height: 405px");
+  });
+
+  it("keeps frozen-meat and shop reports on separate pages", async () => {
+    const { unmount } = renderReport("shops");
+
+    expect(
+      await screen.findByRole("heading", { name: "Shops" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", {
+        name: "Average supply price by shop",
+      }),
+    ).not.toBeInTheDocument();
+    unmount();
+
+    renderReport("frozenMeat");
+    expect(
+      await screen.findByRole("heading", { name: "Frozen Meat" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Shop order quantities" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: "Average supply price by shop",
+      }),
+    ).toBeInTheDocument();
   });
 });

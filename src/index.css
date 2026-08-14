@@ -707,9 +707,41 @@ button.bg-primary:focus-visible {
 }
 
 .sidebar-link:hover .link-chevron,
-.sidebar-link.active .link-chevron {
+.sidebar-link.active .link-chevron,
+.sidebar-link.open .link-chevron,
+.sidebar-link.has-children .link-chevron {
   opacity: 0.7;
   transform: translateX(0);
+}
+
+.sidebar-link.has-children .link-chevron.is-expanded {
+  transform: rotate(90deg);
+}
+
+.sidebar-link.open {
+  color: var(--foreground);
+}
+
+.sidebar-nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sidebar-subnav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 0 4px 18px;
+}
+
+.sidebar-link.nested {
+  min-height: 38px;
+  font-weight: 600;
+}
+
+.sidebar-is-collapsed .sidebar-subnav {
+  display: none;
 }
 
 .sidebar-collapse {

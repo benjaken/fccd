@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 
 import { isPrimaryNavActive, sectionFromPath } from "@/App";
+import { pageAccessKey } from "@/auth/use-page-access";
 
 describe("Primary navigation section matching", () => {
   it.each([
@@ -24,6 +27,8 @@ describe("Primary navigation section matching", () => {
     ["/restaurant/reports", "restaurant"],
     ["/reports", "reports"],
     ["/reports/daily", "reports"],
+    ["/reports/frozen-meat", "reports"],
+    ["/reports/shops", "reports"],
     ["/finance", "reports"],
     ["/settings", "settings"],
     ["/settings/users", "settings"],
@@ -51,5 +56,26 @@ describe("Primary navigation section matching", () => {
     expect(isPrimaryNavActive("orders", "settings", false)).toBe(false);
     expect(isPrimaryNavActive("", "overview", false)).toBe(false);
     expect(isPrimaryNavActive("overview", "overview", true)).toBe(true);
+  });
+
+  it("maps frozen-meat and shop report routes to their page keys", () => {
+    expect(pageAccessKey("/reports")).toBe("reports");
+    expect(pageAccessKey("/reports/frozen-meat")).toBe("reports.frozen_meat");
+    expect(pageAccessKey("/reports/shops")).toBe("reports.shops");
+    expect(pageAccessKey("/reports/tabs/shop-order-quantities")).toBe(
+      "reports.shop_order_quantities",
+    );
+  });
+
+  it("nests frozen meat and shop pages under the reports sidebar item", () => {
+    const source = readFileSync(
+      path.resolve(process.cwd(), "src/App.tsx"),
+      "utf8",
+    );
+    expect(source).toContain("key: \"frozenMeat\"");
+    expect(source).toContain("key: \"shops\"");
+    expect(source).toContain("REPORT_GROUP_ROUTES.frozenMeat");
+    expect(source).toContain("REPORT_GROUP_ROUTES.shops");
+    expect(source).toContain("sidebar-subnav");
   });
 });
