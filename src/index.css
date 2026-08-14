@@ -1889,6 +1889,76 @@ td:last-child {
   min-height: 0;
 }
 
+.raw-meat-calc-remark-cell {
+  min-width: 9rem;
+  max-width: 14rem;
+}
+
+.raw-meat-calc-remark-trigger {
+  display: inline-flex;
+  max-width: 100%;
+  padding: 4px 8px;
+  border: 1px dashed transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease;
+}
+
+.raw-meat-calc-remark-trigger:hover:not(:disabled),
+.raw-meat-calc-remark-trigger:focus-visible {
+  border-color: color-mix(in oklch, var(--primary) 35%, var(--border));
+  background: color-mix(in oklch, var(--accent) 55%, transparent);
+  outline: none;
+}
+
+.raw-meat-calc-remark-trigger.is-empty {
+  color: var(--muted-foreground);
+}
+
+.raw-meat-calc-remark-editor {
+  display: grid;
+  gap: 6px;
+  min-width: 10rem;
+}
+
+.raw-meat-calc-remark-editor input {
+  width: 100%;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  outline: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+}
+
+.raw-meat-calc-remark-editor input:focus {
+  border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 16%, transparent);
+}
+
+.raw-meat-calc-remark-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.raw-meat-calc-remark-status {
+  color: var(--muted-foreground);
+  font-size: 0.78rem;
+}
+
+.raw-meat-calc-remark-error {
+  color: var(--destructive);
+  font-size: 0.78rem;
+}
+
 @media (max-width: 960px) {
   .raw-meat-calc-layout {
     grid-template-columns: 1fr;

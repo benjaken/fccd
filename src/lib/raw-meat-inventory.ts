@@ -129,3 +129,18 @@ export async function fetchRawMeatMovementsForItem(
   // Newest first for the list, matching Bubble operational browsing.
   return withBalance.reverse();
 }
+
+export async function updateRawMeatMovementRemark(
+  movementId: string,
+  remarks: string,
+): Promise<string | null> {
+  const { data, error } = await supabase.rpc(
+    "update_raw_meat_movement_remark",
+    {
+      p_movement_id: movementId,
+      p_remarks: remarks,
+    },
+  );
+  if (error) throw error;
+  return (data as string | null) ?? null;
+}

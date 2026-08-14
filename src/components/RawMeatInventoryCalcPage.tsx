@@ -1,6 +1,13 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useEffectEvent,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
-import { Beef, RefreshCw, Settings2, X } from "lucide-react";
+import { Beef, Check, RefreshCw, Settings2, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ListTable } from "@/components/ui/list-table";
@@ -9,6 +16,7 @@ import {
   fetchRawMeatItems,
   fetchRawMeatMovementsForItem,
   RAW_MEAT_MOVEMENTS_PAGE_SIZE,
+  updateRawMeatMovementRemark,
   type RawMeatItemOption,
   type RawMeatMovementRow,
 } from "@/lib/raw-meat-inventory";
@@ -23,7 +31,7 @@ const MOVEMENT_SKELETON_COLUMNS = [
   { width: "5.5rem" },
   { width: "4.5rem" },
   { width: "6rem" },
-  { width: "5rem" },
+  { width: "8rem" },
   { width: "2.5rem" },
 ];
 
@@ -32,13 +40,155 @@ type MovementsLoader = (
   itemId: string,
   productName: string,
 ) => Promise<RawMeatMovementRow[]>;
+type RemarkSaver = (
+  movementId: string,
+  remarks: string,
+) => Promise<string | null>;
+
+function RemarkEditor({
+  value,
+  disabled,
+  onSave,
+}: {
+  value: string | null;
+  disabled?: boolean;
+  onSave: (next: string) => Promise<void>;
+}) {
+  const { t } = useTranslation();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value ?? "");
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!editing) setDraft(value ?? "");
+  }, [editing, value]);
+
+  useEffect(() => {
+    if (editing) inputRef.current?.focus();
+  }, [editing]);
+
+  const cancel = () => {
+    setDraft(value ?? "");
+    setSaveError(null);
+    setEditing(false);
+  };
+
+  const save = async () => {
+    if (saving) return;
+    const next = draft.trim();
+    const current = (value ?? "").trim();
+    if (next === current) {
+      setEditing(false);
+      setSaveError(null);
+      return;
+    }
+    setSaving(true);
+    setSaveError(null);
+    try {
+      await onSave(draft);
+      setEditing(false);
+    } catch (error) {
+      setSaveError(
+        error instanceof Error
+          ? error.message
+          : t("rawMeatInventory.remarkSaveError"),
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        className={
+          value
+            ? "raw-meat-calc-remark-trigger"
+            : "raw-meat-calc-remark-trigger is-empty"
+        }
+        onClick={() => {
+          if (disabled) return;
+          setEditing(true);
+        }}
+        disabled={disabled}
+        title={t("rawMeatInventory.editRemark")}
+        aria-label={t("rawMeatInventory.editRemark")}
+      >
+        {value || t("common.notSet")}
+      </button>
+    );
+  }
+
+  return (
+    <div className="raw-meat-calc-remark-editor">
+      <input
+        ref={inputRef}
+        type="text"
+        value={draft}
+        disabled={saving}
+        placeholder={t("rawMeatInventory.remarkPlaceholder")}
+        aria-label={t("rawMeatInventory.editRemark")}
+        onChange={(event) => setDraft(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            void save();
+          }
+          if (event.key === "Escape") {
+            event.preventDefault();
+            cancel();
+          }
+        }}
+      />
+      <div className="raw-meat-calc-remark-actions">
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          disabled={saving}
+          aria-label={t("rawMeatInventory.saveRemark")}
+          title={t("rawMeatInventory.saveRemark")}
+          onClick={() => void save()}
+        >
+          <Check />
+        </Button>
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          disabled={saving}
+          aria-label={t("rawMeatInventory.cancelRemark")}
+          title={t("rawMeatInventory.cancelRemark")}
+          onClick={cancel}
+        >
+          <X />
+        </Button>
+      </div>
+      {saving ? (
+        <span className="raw-meat-calc-remark-status" role="status">
+          {t("rawMeatInventory.savingRemark")}
+        </span>
+      ) : null}
+      {saveError ? (
+        <span className="raw-meat-calc-remark-error" role="alert">
+          {saveError}
+        </span>
+      ) : null}
+    </div>
+  );
+}
 
 export function RawMeatInventoryCalcPage({
   loadItems = fetchRawMeatItems,
   loadMovements = fetchRawMeatMovementsForItem,
+  saveRemark = updateRawMeatMovementRemark,
 }: {
   loadItems?: ItemsLoader;
   loadMovements?: MovementsLoader;
+  saveRemark?: RemarkSaver;
 }) {
   const { t, i18n } = useTranslation();
   const [items, setItems] = useState<RawMeatItemOption[]>([]);
@@ -86,11 +236,14 @@ export function RawMeatInventoryCalcPage({
   );
   const monthFormatter = useMemo(
     () =>
-      new Intl.DateTimeFormat(i18n.language === "zh-HK" ? "en-GB" : i18n.language, {
-        month: "short",
-        year: "2-digit",
-        timeZone: "Asia/Hong_Kong",
-      }),
+      new Intl.DateTimeFormat(
+        i18n.language === "zh-HK" ? "en-GB" : i18n.language,
+        {
+          month: "short",
+          year: "2-digit",
+          timeZone: "Asia/Hong_Kong",
+        },
+      ),
     [i18n.language],
   );
   const currencyFormatter = useMemo(
@@ -199,6 +352,17 @@ export function RawMeatInventoryCalcPage({
     setReloadKey((current) => current + 1);
   }, []);
 
+  const handleSaveRemark = useEffectEvent(
+    async (movementId: string, nextRemark: string) => {
+      const saved = await saveRemark(movementId, nextRemark);
+      setMovements((current) =>
+        current.map((row) =>
+          row.id === movementId ? { ...row, remarks: saved } : row,
+        ),
+      );
+    },
+  );
+
   const loading = itemsLoading || movementsLoading;
 
   return (
@@ -233,7 +397,10 @@ export function RawMeatInventoryCalcPage({
       </header>
 
       <div className="raw-meat-calc-layout">
-        <aside className="raw-meat-calc-sidebar panel" aria-label={t("rawMeatInventory.items")}>
+        <aside
+          className="raw-meat-calc-sidebar panel"
+          aria-label={t("rawMeatInventory.items")}
+        >
           <div className="raw-meat-calc-sidebar-header">
             <strong>{t("rawMeatInventory.items")}</strong>
             <span>{items.length}</span>
@@ -281,13 +448,25 @@ export function RawMeatInventoryCalcPage({
               <span>{t("rawMeatInventory.ledgerHint")}</span>
             </div>
             <div className="raw-meat-calc-actions">
-              <Button type="button" disabled title={t("rawMeatInventory.comingSoon")}>
+              <Button
+                type="button"
+                disabled
+                title={t("rawMeatInventory.comingSoon")}
+              >
                 {t("rawMeatInventory.addOption")}
               </Button>
-              <Button type="button" disabled title={t("rawMeatInventory.comingSoon")}>
+              <Button
+                type="button"
+                disabled
+                title={t("rawMeatInventory.comingSoon")}
+              >
                 {t("rawMeatInventory.stockIn")}
               </Button>
-              <Button type="button" disabled title={t("rawMeatInventory.comingSoon")}>
+              <Button
+                type="button"
+                disabled
+                title={t("rawMeatInventory.comingSoon")}
+              >
                 {t("rawMeatInventory.stockOut")}
               </Button>
             </div>
@@ -369,7 +548,13 @@ export function RawMeatInventoryCalcPage({
                       : currencyFormatter.format(row.totalAmount)}
                   </td>
                   <td>{row.supplierName || t("common.notSet")}</td>
-                  <td>{row.remarks || t("common.notSet")}</td>
+                  <td className="raw-meat-calc-remark-cell">
+                    <RemarkEditor
+                      value={row.remarks}
+                      disabled={loading}
+                      onSave={(next) => handleSaveRemark(row.id, next)}
+                    />
+                  </td>
                   <td className="table-actions-cell">
                     <div className="table-row-actions">
                       <Button

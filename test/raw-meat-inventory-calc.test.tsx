@@ -141,4 +141,45 @@ describe("Raw meat inventory calculation page", () => {
       "true",
     );
   });
+
+  it("lets users click a remark, edit it, and save", async () => {
+    const user = userEvent.setup();
+    const loadItems = vi.fn().mockResolvedValue(items);
+    const loadMovements = vi
+      .fn()
+      .mockImplementation(async (itemId: string) =>
+        structuredClone(movementsByItem[itemId] ?? []),
+      );
+    const saveRemark = vi.fn().mockResolvedValue("更新備註");
+
+    render(
+      <MemoryRouter>
+        <RawMeatInventoryCalcPage
+          loadItems={loadItems}
+          loadMovements={loadMovements}
+          saveRemark={saveRemark}
+        />
+      </MemoryRouter>,
+    );
+
+    const editButtons = await screen.findAllByRole("button", {
+      name: "編輯備註",
+    });
+    await user.click(editButtons[0]!);
+
+    const input = screen.getByRole("textbox", { name: "編輯備註" });
+    await user.clear(input);
+    await user.type(input, "更新備註");
+    await user.click(screen.getByRole("button", { name: "保存" }));
+
+    await waitFor(() => {
+      expect(saveRemark).toHaveBeenCalledWith("move-2", "更新備註");
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.getAllByRole("button", { name: "編輯備註" })[0],
+      ).toHaveTextContent("更新備註");
+    });
+  });
 });
