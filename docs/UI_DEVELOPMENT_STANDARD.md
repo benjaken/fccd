@@ -52,10 +52,15 @@ full-width rule.
   **`--nav-active-bg` / `--nav-active-fg`** — an explicit pale green wash +
   green label (about hue `150`). Do not leave residual pink/red from the old
   brand, and never the old brand blue.
+- Light `--card` / `--popover` stay **white with hue `150`** (`oklch(1 0 150)`).
+  Chroma `0` white with hue `0` looks identical until mixed in OKLCH, then it
+  drifts toward pink/red. Keep the green hue even at zero chroma.
 - Selected / active surfaces outside nav (report tabs, product pickers, filter
   chips) use **`--selection-bg` / `--selection-bg-strong`** (same green hue).
   Do **not** use `color-mix(... var(--primary) ..., var(--card))` for these
-  washes — it can read as pink/red on some displays.
+  washes — it can read as pink/red on some displays. Ranking cards and other
+  quiet surfaces should use `--secondary` / `--muted` instead of mixing a
+  chromatic token with `--card`.
 - Classes named `red` (`.status-badge.red`, `.metric-icon.red`) map to
   `--destructive` only. Do not reuse them as a stand-in for the old brand
   primary; use `--primary` (green) for brand emphasis. Keep `.status-badge.blue`
@@ -138,7 +143,7 @@ the same input / search / skeleton / pagination markup across list pages.
 | Pattern | Required component |
 |---|---|
 | Toolbar search (icon inside field + submit) | `ListSearchBar` → `SearchField` |
-| Mobile list filters (hidden until icon tap) | `ListSearchBar` `filters` → `SidePanel` |
+| Mobile list filters (hidden until icon tap) | `ListSearchBar` `filters` → `SidePanel` (確定套用後關閉) |
 | Start–end date filters | `DateRangePicker` (one labeled range field) |
 | Paginated operational table + loading rows | `ListTable` → `TableSkeletonRows` |
 | Mobile table pull-to-refresh | `ListTable` / `PullToRefresh` |

@@ -31,9 +31,10 @@
   color-scheme: light;
   --background: oklch(0.975 0.006 150);
   --foreground: oklch(0.19 0.02 150);
-  --card: oklch(1 0 0);
+  /* Hue 150 at chroma 0 so OKLCH mixes with green stay green, not pink/red. */
+  --card: oklch(1 0 150);
   --card-foreground: oklch(0.19 0.02 150);
-  --popover: oklch(1 0 0);
+  --popover: oklch(1 0 150);
   --popover-foreground: oklch(0.19 0.02 150);
   /* Clear green primary — medium saturation, brand + active system. */
   --primary: oklch(0.52 0.14 150);
@@ -665,9 +666,41 @@ button.bg-primary:focus-visible {
 }
 
 .sidebar-link:hover .link-chevron,
-.sidebar-link.active .link-chevron {
+.sidebar-link.active .link-chevron,
+.sidebar-link.open .link-chevron,
+.sidebar-link.has-children .link-chevron {
   opacity: 0.7;
   transform: translateX(0);
+}
+
+.sidebar-link.has-children .link-chevron.is-expanded {
+  transform: rotate(90deg);
+}
+
+.sidebar-link.open {
+  color: var(--foreground);
+}
+
+.sidebar-nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sidebar-subnav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 0 4px 18px;
+}
+
+.sidebar-link.nested {
+  min-height: 38px;
+  font-weight: 600;
+}
+
+.sidebar-is-collapsed .sidebar-subnav {
+  display: none;
 }
 
 .sidebar-collapse {
@@ -1449,6 +1482,10 @@ td:last-child {
   width: 100%;
 }
 
+.list-search-filter-apply {
+  width: 100%;
+}
+
 .pull-to-refresh {
   position: relative;
   overscroll-behavior-y: contain;
@@ -1890,20 +1927,29 @@ td:last-child {
 }
 
 .raw-meat-calc-remark-cell {
-  min-width: 9rem;
-  max-width: 14rem;
+  min-width: 8rem;
+  max-width: 12rem;
+  width: 12rem;
 }
 
 .raw-meat-calc-remark-trigger {
-  display: inline-flex;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
   max-width: 100%;
+  width: 100%;
   padding: 4px 8px;
   border: 1px dashed transparent;
   border-radius: 7px;
   background: transparent;
   color: inherit;
   font: inherit;
+  line-height: 1.35;
   text-align: left;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  white-space: normal;
   cursor: pointer;
   transition:
     background-color 140ms ease,
@@ -1919,16 +1965,20 @@ td:last-child {
 
 .raw-meat-calc-remark-trigger.is-empty {
   color: var(--muted-foreground);
+  display: inline-flex;
+  -webkit-line-clamp: unset;
 }
 
 .raw-meat-calc-remark-editor {
   display: grid;
   gap: 6px;
-  min-width: 10rem;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .raw-meat-calc-remark-editor input {
   width: 100%;
+  min-width: 0;
   height: 34px;
   padding: 0 10px;
   border: 1px solid var(--border);
@@ -1957,6 +2007,43 @@ td:last-child {
 .raw-meat-calc-remark-error {
   color: var(--destructive);
   font-size: 0.78rem;
+}
+
+.raw-meat-calc-table-wrap {
+  min-height: 0;
+  overflow: auto;
+}
+
+.raw-meat-calc-table-wrap table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.raw-meat-calc-table-wrap th:nth-child(3),
+.raw-meat-calc-table-wrap td:nth-child(3) {
+  width: 12%;
+}
+
+.raw-meat-calc-table-wrap th:nth-child(10),
+.raw-meat-calc-table-wrap td:nth-child(10) {
+  width: 14%;
+}
+
+.raw-meat-calc-table-wrap th:nth-child(11),
+.raw-meat-calc-table-wrap td:nth-child(11) {
+  width: 3.5rem;
+}
+
+.raw-meat-calc-table-wrap td {
+  vertical-align: top;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.raw-meat-calc-table-wrap td.raw-meat-calc-remark-cell {
+  white-space: normal;
+  overflow: hidden;
 }
 
 @media (max-width: 960px) {
@@ -3134,8 +3221,34 @@ td:last-child {
   .quotes-pagination,
   .orders-pagination,
   .operational-list-pagination {
-    align-items: flex-start;
-    flex-direction: column;
+    align-items: center;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 8px;
+    min-height: 48px;
+    padding: 8px 12px;
+  }
+
+  .quotes-pagination > span,
+  .orders-pagination > span,
+  .operational-list-pagination > span {
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .quotes-pagination > div,
+  .orders-pagination > div,
+  .operational-list-pagination > div {
+    flex: 0 0 auto;
+    gap: 6px;
+  }
+
+  .table-pagination-jump input {
+    width: 48px;
+    height: 32px;
   }
 }
 
@@ -5413,7 +5526,7 @@ td:last-child {
   padding: 9px 11px;
   border: 1px solid var(--border);
   border-radius: 9px;
-  background: color-mix(in oklch, var(--secondary) 35%, var(--card));
+  background: var(--secondary);
 }
 
 .shop-order-product-copy {

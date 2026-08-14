@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import { TablePagination } from "@/components/ui/table-pagination";
+import { useDeferredFilter } from "@/lib/use-deferred-filter";
 import {
   fetchOrders,
   ORDERS_PAGE_SIZE,
@@ -90,6 +91,14 @@ export function OrdersListPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const setStatus = (nextStatus: OrderStatusFilter) => {
+    setPage(1);
+    const next = new URLSearchParams(searchParams);
+    if (nextStatus) next.set("status", nextStatus);
+    else next.delete("status");
+    setSearchParams(next, { replace: true });
+  };
+  const statusFilter = useDeferredFilter(status, setStatus);
   const financeRestricted =
     !canViewFinance &&
     (preset === "unpaid" || preset === "delivered-unpaid");
@@ -178,14 +187,6 @@ export function OrdersListPage({
     setSearch(draftSearch.trim());
   };
 
-  const setStatus = (nextStatus: OrderStatusFilter) => {
-    setPage(1);
-    const next = new URLSearchParams(searchParams);
-    if (nextStatus) next.set("status", nextStatus);
-    else next.delete("status");
-    setSearchParams(next, { replace: true });
-  };
-
   const statusLabels = {
     confirmed: t("orders.statuses.confirmed"),
     preparing: t("orders.statuses.preparing"),
@@ -227,13 +228,17 @@ export function OrdersListPage({
             placeholder={t("orders.searchPlaceholder")}
             submitLabel={t("orders.searchAction")}
             filtersActive={Boolean(status)}
+            onConfirmFilters={statusFilter.confirm}
+            onDismissFilters={statusFilter.revert}
             filters={
               <label className="orders-status-filter">
                 <span>{t("orders.statusFilter")}</span>
                 <select
-                  value={status}
+                  value={statusFilter.value}
                   onChange={(event) =>
-                    setStatus(event.target.value as OrderStatusFilter)
+                    statusFilter.setValue(
+                      event.target.value as OrderStatusFilter,
+                    )
                   }
                   disabled={preset === "delivered-unpaid"}
                 >

@@ -7,7 +7,7 @@ import {
   useState,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { Beef, Check, RefreshCw, Settings2, X } from "lucide-react";
+import { Beef, Check, RefreshCw, Trash2, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ListTable } from "@/components/ui/list-table";
@@ -114,7 +114,7 @@ function RemarkEditor({
           setEditing(true);
         }}
         disabled={disabled}
-        title={t("rawMeatInventory.editRemark")}
+        title={value || t("rawMeatInventory.editRemark")}
         aria-label={t("rawMeatInventory.editRemark")}
       >
         {value || t("common.notSet")}
@@ -376,16 +376,6 @@ export function RawMeatInventoryCalcPage({
         <div className="raw-meat-calc-heading-actions">
           <Button
             type="button"
-            variant="ghost"
-            size="icon"
-            aria-label={t("rawMeatInventory.settingsSoon")}
-            title={t("rawMeatInventory.settingsSoon")}
-            disabled
-          >
-            <Settings2 />
-          </Button>
-          <Button
-            type="button"
             variant="outline"
             onClick={reload}
             disabled={loading}
@@ -565,7 +555,7 @@ export function RawMeatInventoryCalcPage({
                         aria-label={t("rawMeatInventory.deleteSoon")}
                         title={t("rawMeatInventory.deleteSoon")}
                       >
-                        <X />
+                        <Trash2 />
                       </Button>
                     </div>
                   </td>

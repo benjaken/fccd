@@ -665,5 +665,17 @@ describe("Super Admin system settings", () => {
     expect(permissionDriven).not.toContain(
       "new.page_key like 'settings.%'",
     );
+
+    const reportGroups = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260814120000_report_group_page_permissions.sql",
+      ),
+      "utf8",
+    );
+    expect(reportGroups).toContain("reports.frozen_meat");
+    expect(reportGroups).toContain("reports.shops");
+    expect(reportGroups).toContain("parent_page_key = 'reports.frozen_meat'");
+    expect(reportGroups).toContain("parent_page_key = 'reports.shops'");
   });
 });

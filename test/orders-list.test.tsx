@@ -195,6 +195,23 @@ describe("Orders list", () => {
     expect(paginationRules).toContain("bottom: 0");
   });
 
+  it("keeps the pagination summary and controls on one mobile row", () => {
+    const stylesheet = readFileSync(
+      path.resolve(process.cwd(), "src/index.css"),
+      "utf8",
+    );
+    const from = stylesheet.indexOf("@media (max-width: 760px)");
+    const mobileBlock = stylesheet.slice(from, stylesheet.indexOf(".migration-page"));
+    const paginationRule = mobileBlock.match(
+      /\.operational-list-pagination\s*\{([^}]+)\}/,
+    )?.[1];
+
+    expect(paginationRule).toContain("flex-direction: row");
+    expect(paginationRule).toContain("flex-wrap: nowrap");
+    expect(paginationRule).not.toContain("flex-direction: column");
+    expect(mobileBlock).toContain("white-space: nowrap");
+  });
+
   it("blocks finance presets for roles without finance access", async () => {
     const loadOrders = vi.fn().mockResolvedValue(orderResult);
 

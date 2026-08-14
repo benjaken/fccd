@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import { TablePagination } from "@/components/ui/table-pagination";
+import { useDeferredFilter } from "@/lib/use-deferred-filter";
 import {
   fetchPackages,
   PACKAGES_PAGE_SIZE,
@@ -49,6 +50,14 @@ export function PackagesListPage({
   const [activeOnly, setActiveOnly] = useState(true);
   const [channels, setChannels] = useState<CatalogOption[]>([]);
   const [page, setPage] = useState(1);
+  const channelFilter = useDeferredFilter(channelId, (value) => {
+    setPage(1);
+    setChannelId(value);
+  });
+  const activeFilter = useDeferredFilter(activeOnly, (value) => {
+    setPage(1);
+    setActiveOnly(value);
+  });
   const [items, setItems] = useState<PackageListItem[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -173,15 +182,22 @@ export function PackagesListPage({
             placeholder={t("packages.searchPlaceholder")}
             submitLabel={t("packages.searchAction")}
             filtersActive={Boolean(channelId) || !activeOnly}
+            onConfirmFilters={() => {
+              channelFilter.confirm();
+              activeFilter.confirm();
+            }}
+            onDismissFilters={() => {
+              channelFilter.revert();
+              activeFilter.revert();
+            }}
             filters={
               <div className="packages-filters">
                 <label className="packages-status-filter">
                   <span>{t("packages.channelFilter")}</span>
                   <select
-                    value={channelId}
+                    value={channelFilter.value}
                     onChange={(event) => {
-                      setPage(1);
-                      setChannelId(event.target.value);
+                      channelFilter.setValue(event.target.value);
                     }}
                   >
                     <option value="">{t("packages.allChannels")}</option>
@@ -196,10 +212,9 @@ export function PackagesListPage({
                 <label className="packages-active-filter">
                   <input
                     type="checkbox"
-                    checked={activeOnly}
+                    checked={activeFilter.value}
                     onChange={(event) => {
-                      setPage(1);
-                      setActiveOnly(event.target.checked);
+                      activeFilter.setValue(event.target.checked);
                     }}
                   />
                   <span>{t("packages.activeOnly")}</span>

@@ -12,6 +12,8 @@ progress status colors, and preview sign-in hard rules, see
 - Scroll the table body inside its panel rather than the whole page.
 - Keep previous/next pagination controls visible at the bottom of the panel.
 - Show current range, total records, current page, and total pages.
+- On mobile (`max-width: 760px`), keep the summary and page controls on **one
+  row**. Do not stack them.
 - Preserve loading, empty, error, retry, and permission states inside the same
   fixed panel.
 - Use server-side pagination, filtering, and sorting.
@@ -45,8 +47,9 @@ component (`src/components/ui/list-search-bar.tsx`), which wraps **`SearchField`
 - Extra toolbar filters (status, channel, price, dates, etc.) must be passed
   into `ListSearchBar` as `filters`. On viewports `max-width: 900px`, keep the
   search field visible, hide those filters, and open them from a trailing
-  filter icon into the shared `SidePanel`. Do not leave stacked filter selects
-  on the mobile toolbar.
+  filter icon into the shared `SidePanel`. Apply with **確定** (then the drawer
+  closes); dismissing the drawer must restore uncommitted drafts. Do not leave
+  stacked filter selects on the mobile toolbar.
 
 ## Mobile pull-to-refresh
 

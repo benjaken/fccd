@@ -63,7 +63,7 @@ FCCD（**Food Channel Catering Discovery**）自有設計規範：以 **shadcn/u
 | `--accent` | 輕量強調底 | 與 primary 同色相、低彩度 |
 | `--destructive` | 刪除、失敗、危險 | **保持紅色**，不跟品牌綠混用 |
 | `--border` / `--input` / `--ring` | 邊框、表單框、focus | ring 跟隨綠系 |
-| `--background` / `--card` / `--foreground` | 頁面／卡片／內文 | Light／Dark 皆需可讀 |
+| `--background` / `--card` / `--foreground` | 頁面／卡片／內文 | Light `--card` 用 `oklch(1 0 150)`（chroma 0 仍保留綠相，避免 OKLCH mix 漂向粉紅） |
 
 **借 Ant Design 的功能色分工（映射到本系統）：**
 
@@ -244,7 +244,7 @@ Active 導航（側欄、工作區 soft link、migration tab）必須是**淡綠
 
 | 模式 | 規範 |
 |---|---|
-| 營運表 | 遵守 [`UI_TABLE_STANDARD.md`](UI_TABLE_STANDARD.md)：15 筆／頁、sticky header、面板內捲動、底部分頁；**載入中用表格骨架列**，不用整面 spinner |
+| 營運表 | 遵守 [`UI_TABLE_STANDARD.md`](UI_TABLE_STANDARD.md)：15 筆／頁、sticky header、面板內捲動、底部分頁（移動端摘要與頁碼同一行）；**載入中用表格骨架列**，不用整面 spinner |
 | 列操作（最後一欄） | **橫向單行**；常用動作（編輯、改密碼等）用 **icon-only** + `aria-label`；禁止 icon+文字按鈕垂直堆疊把列高撐高 |
 | 狀態徽章 | 語意色短標籤；成功綠、警告琥珀、危險紅、資訊藍／青 |
 | 描述列表 | 標籤弱色、值主色；適合詳情頁 |
@@ -302,7 +302,7 @@ Active 導航（側欄、工作區 soft link、migration tab）必須是**淡綠
 
 移動端（`max-width: 900px`）：
 
-- 搜尋輸入框留在工具列；售價／渠道／分類／狀態等篩選收入右側圖示，點擊後從側邊滑出。篩選必須走 `ListSearchBar` 的 `filters`，不要在各頁各自藏選擇器。
+- 搜尋輸入框留在工具列；售價／渠道／分類／狀態等篩選收入右側圖示，點擊後從側邊滑出。篩選必須走 `ListSearchBar` 的 `filters`，不要在各頁各自藏選擇器。抽屜內先改選項，按 **確定** 才套用並自動收合；關閉／點遮罩則還原未套用的草稿。
 - 表格在頂部下拉觸發 `PullToRefresh` / `ListTable.onRefresh`，不要另做一套刷新 UI
 
 ### 5.3 儀表板進度
