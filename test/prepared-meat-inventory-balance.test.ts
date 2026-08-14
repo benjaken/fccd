@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   canSelectPreparedMeatShippingMethod,
+  coercePreparedMeatQuantityInput,
   currentHongKongYear,
   formatPreparedMeatOrderNumber,
   hongKongYearBounds,
@@ -129,5 +130,13 @@ describe("prepared meat outbound helpers", () => {
         nextPreparedMeatOrderSequence(["R - 202608 - 7", "R - 202608 - 2"]),
       ),
     ).toBe("R - 202608 - 8");
+  });
+
+  it("keeps only numeric quantity input", () => {
+    expect(coercePreparedMeatQuantityInput("勝多負少")).toBe("");
+    expect(coercePreparedMeatQuantityInput("12包")).toBe("12");
+    expect(coercePreparedMeatQuantityInput("1.2.3")).toBe("1.23");
+    expect(coercePreparedMeatQuantityInput("１．５")).toBe("1.5");
+    expect(coercePreparedMeatQuantityInput("2")).toBe("2");
   });
 });

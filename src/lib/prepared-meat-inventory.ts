@@ -247,6 +247,25 @@ export function meatCustomerOptionLabel(row: {
   return code ? `${code} - ${row.name}` : row.name;
 }
 
+/** Keep digits and at most one decimal while typing. */
+export function coercePreparedMeatQuantityInput(value: string): string {
+  const normalized = value
+    .replace(/[０-９]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xff10))
+    .replace(/．/g, ".");
+  const cleaned = normalized.replace(/[^\d.]/g, "");
+  if (!cleaned) return "";
+  const dot = cleaned.indexOf(".");
+  const intDigits = (dot === -1 ? cleaned : cleaned.slice(0, dot)).replace(
+    /^0+(?=\d)/,
+    "",
+  );
+  const frac =
+    dot === -1 ? null : cleaned.slice(dot + 1).replace(/\./g, "").slice(0, 3);
+  const intPart = intDigits === "" ? (frac === null ? "" : "0") : intDigits;
+  if (frac === null) return intPart;
+  return `${intPart}.${frac}`;
+}
+
 export function preparedMeatOrderYearMonth(dateValue: string) {
   return dateValue.slice(0, 7).replace("-", "");
 }

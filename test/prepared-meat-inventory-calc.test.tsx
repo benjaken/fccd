@@ -397,7 +397,11 @@ describe("Prepared meat inventory calculation page", () => {
     await user.selectOptions(shipping, "ship-1");
     await user.click(within(dialog).getByRole("button", { name: "確定" }));
     expect(shipping).toBeDisabled();
-    await user.type(within(dialog).getByRole("textbox", { name: "數量" }), "2");
+    const quantity = within(dialog).getByRole("textbox", { name: "數量" });
+    await user.type(quantity, "勝多負少");
+    expect(quantity).toHaveValue("");
+    await user.type(quantity, "2");
+    expect(quantity).toHaveValue("2");
     await user.click(within(dialog).getByRole("button", { name: "加入" }));
 
     const lines = dialog.querySelector(".prepared-meat-outbound-lines");

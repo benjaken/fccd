@@ -6,6 +6,7 @@ import { SidePanel } from "@/components/ui/side-panel";
 import { fetchMeatCustomers, type MeatCustomerRow } from "@/lib/meat-customers";
 import {
   canSelectPreparedMeatShippingMethod,
+  coercePreparedMeatQuantityInput,
   createPreparedMeatOutbound,
   fetchMeatShippingMethods,
   fetchNextPreparedMeatOrderNumber,
@@ -32,7 +33,7 @@ type OrderNumberLoader = (shippingDate: string) => Promise<string>;
 type OutboundCreator = (input: PreparedMeatOutboundInput) => Promise<string>;
 
 function parseQuantity(value: string) {
-  const parsed = Number.parseFloat(value.replace(/[,\s]/g, ""));
+  const parsed = Number.parseFloat(coercePreparedMeatQuantityInput(value));
   return Number.isFinite(parsed) ? parsed : null;
 }
 
@@ -351,9 +352,25 @@ export function PreparedMeatOutboundModal({
               <label className="raw-meat-field">
                 <span>{t("preparedMeatInventory.outbound.quantity")}</span>
                 <input
+                  type="text"
                   inputMode="decimal"
+                  autoComplete="off"
+                  pattern="[0-9]*[.]?[0-9]*"
                   value={draftQuantity}
-                  onChange={(event) => setDraftQuantity(event.target.value)}
+                  onBeforeInput={(event) => {
+                    if (
+                      typeof event.data === "string" &&
+                      event.data.length > 0 &&
+                      !/[\d.０-９．]/.test(event.data)
+                    ) {
+                      event.preventDefault();
+                    }
+                  }}
+                  onChange={(event) =>
+                    setDraftQuantity(
+                      coercePreparedMeatQuantityInput(event.target.value),
+                    )
+                  }
                   placeholder={t(
                     "preparedMeatInventory.outbound.quantityPlaceholder",
                   )}
