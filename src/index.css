@@ -2871,6 +2871,152 @@ td:last-child {
   box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 13%, transparent);
 }
 
+.spice-usage-page {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
+.spice-usage-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.spice-usage-heading-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.spice-usage-tags {
+  padding: 14px 16px;
+}
+
+.spice-usage-tags-state {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 0.92rem;
+}
+
+.spice-usage-tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.spice-usage-tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid color-mix(in oklch, var(--border) 80%, var(--foreground));
+  border-radius: 999px;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.spice-usage-tag:hover {
+  border-color: color-mix(in oklch, var(--primary) 35%, var(--border));
+}
+
+.spice-usage-tag.active {
+  border-color: transparent;
+  background: color-mix(in oklch, var(--primary) 78%, #3b82f6);
+  color: white;
+}
+
+.spice-usage-table-wrap {
+  overflow: auto;
+  padding: 0;
+}
+
+.spice-usage-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.spice-usage-table th {
+  padding: 12px 16px;
+  background: color-mix(in oklch, var(--primary) 42%, #82b3a5);
+  color: white;
+  font-size: 0.95rem;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  border-bottom: 0;
+}
+
+.spice-usage-table th:first-child {
+  width: 8rem;
+}
+
+.spice-usage-table td {
+  padding: 14px 16px;
+  vertical-align: top;
+  color: var(--foreground);
+  border-bottom: 0;
+}
+
+.spice-usage-name-cell {
+  white-space: nowrap;
+  font-size: 1rem;
+}
+
+.spice-usage-empty-cell {
+  color: var(--muted-foreground);
+}
+
+.spice-usage-empty {
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+}
+
+.spice-usage-empty svg {
+  width: 22px;
+  height: 22px;
+  color: var(--muted-foreground);
+}
+
+.spice-usage-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.spice-usage-card {
+  display: grid;
+  gap: 4px;
+  min-width: 10.5rem;
+  max-width: 16rem;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: color-mix(in oklch, var(--muted) 55%, white);
+}
+
+.spice-usage-card-title {
+  color: color-mix(in oklch, #1d4ed8 70%, var(--foreground));
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.spice-usage-card-metric {
+  color: color-mix(in oklch, #15803d 75%, var(--foreground));
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+}
+
 @media (max-width: 760px) {
   .quotes-page,
   .orders-page,
@@ -2892,7 +3038,8 @@ td:last-child {
   .quotes-heading,
   .orders-heading,
   .products-heading,
-  .packages-heading {
+  .packages-heading,
+  .spice-usage-heading {
     align-items: stretch;
   }
 

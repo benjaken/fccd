@@ -23,6 +23,7 @@ import {
   HandCoins,
   History,
   LayoutDashboard,
+  Leaf,
   LogOut,
   Menu,
   Moon,
@@ -33,6 +34,7 @@ import {
   Settings,
   ShieldCheck,
   ShoppingBasket,
+  Snowflake,
   Store,
   Sun,
   Truck,
@@ -72,6 +74,7 @@ import { ProductsListPage } from "@/components/ProductsListPage";
 import { ProductDetailPage } from "@/components/ProductDetailPage";
 import { PackagesListPage } from "@/components/PackagesListPage";
 import { PackageDetailPage } from "@/components/PackageDetailPage";
+import { SpiceUsagePage } from "@/components/SpiceUsagePage";
 import { AttachmentsListPage } from "@/components/settings/AttachmentsListPage";
 import { LoginLogsListPage } from "@/components/settings/LoginLogsListPage";
 import { RolePermissionsPage } from "@/components/settings/RolePermissionsPage";
@@ -104,6 +107,7 @@ const primaryNav: NavItem[] = [
   { key: "orders", to: "/orders", icon: ClipboardList },
   { key: "quotes", to: "/quotes", icon: FileText },
   { key: "products", to: "/products", icon: ShoppingBasket },
+  { key: "frozen", to: "/frozen/spice-usage", icon: Snowflake },
   { key: "kitchen", to: "/kitchen", icon: Utensils },
   { key: "delivery", to: "/delivery", icon: Truck },
   { key: "restaurant", to: "/restaurant", icon: Store },
@@ -230,6 +234,14 @@ const secondaryNav: Record<string, NavItem[]> = {
       permissionKey: "products.packages",
     },
   ],
+  frozen: [
+    {
+      key: "spiceUsage",
+      to: "/frozen/spice-usage",
+      icon: Leaf,
+      permissionKey: "frozen.spice_usage",
+    },
+  ],
   kitchen: [
     { key: "kitchen", to: "/kitchen", icon: Utensils, permissionKey: "kitchen" },
     {
@@ -353,6 +365,7 @@ const SECTION_CHILD_KEYS: Record<string, string[]> = {
     "products.ala_carte",
     "products.packages",
   ],
+  frozen: ["frozen.spice_usage"],
   kitchen: ["kitchen.calendar", "kitchen.inventory"],
   delivery: ["delivery.assign"],
   restaurant: ["restaurant.inventory", "restaurant.reports"],
@@ -889,6 +902,14 @@ function OperationsShell() {
                 element={<PackageDetailPage />}
               />
               <Route path="/products/:id" element={<ProductDetailPage />} />
+              <Route
+                path="/frozen"
+                element={<Navigate to="/frozen/spice-usage" replace />}
+              />
+              <Route
+                path="/frozen/spice-usage"
+                element={<SpiceUsagePage />}
+              />
               <Route
                 path="/reports/frozen-meat"
                 element={<ReportsPage group="frozenMeat" />}

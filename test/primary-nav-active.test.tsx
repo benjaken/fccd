@@ -19,6 +19,8 @@ describe("Primary navigation section matching", () => {
     ["/products", "products"],
     ["/products/packages", "products"],
     ["/products/packages/pkg-1", "products"],
+    ["/frozen", "frozen"],
+    ["/frozen/spice-usage", "frozen"],
     ["/kitchen", "kitchen"],
     ["/kitchen/calendar", "kitchen"],
     ["/delivery", "delivery"],
@@ -65,6 +67,8 @@ describe("Primary navigation section matching", () => {
     expect(pageAccessKey("/reports/tabs/shop-order-quantities")).toBe(
       "reports.shop_order_quantities",
     );
+    expect(pageAccessKey("/frozen")).toBe("frozen");
+    expect(pageAccessKey("/frozen/spice-usage")).toBe("frozen.spice_usage");
   });
 
   it("nests frozen meat and shop pages under the reports sidebar item", () => {
