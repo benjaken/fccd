@@ -1111,10 +1111,19 @@ const resources = {
         emptySeasonings: "未找到香料",
         emptyUsages: "此香料尚無已套用用量",
         noSelection: "尚未選擇香料",
-        noSelectionDescription: "從上方標籤選擇一種香料。",
+        noSelectionDescription: "從左側列表選擇一種香料。",
         columns: {
           spice: "香料",
           usage: "用量",
+        },
+        summary: {
+          recipes: "配方數",
+          grams: "總用量",
+          cost: "總成本",
+        },
+        metric: {
+          grams: "用量",
+          cost: "成本",
         },
       },
       payments: {
@@ -2457,10 +2466,19 @@ const resources = {
         emptySeasonings: "No seasonings found",
         emptyUsages: "No applied usages for this seasoning",
         noSelection: "No seasoning selected",
-        noSelectionDescription: "Choose a seasoning tag above.",
+        noSelectionDescription: "Choose a seasoning from the left list.",
         columns: {
           spice: "Spice",
           usage: "Usage",
+        },
+        summary: {
+          recipes: "Recipes",
+          grams: "Total usage",
+          cost: "Total cost",
+        },
+        metric: {
+          grams: "Usage",
+          cost: "Cost",
         },
       },
       payments: {

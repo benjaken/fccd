@@ -48,7 +48,7 @@ describe("Spice usage page", () => {
     await i18n.changeLanguage("zh-HK");
   });
 
-  it("lists seasoning tags and defaults to the first spice usages", async () => {
+  it("lists seasonings on the left and defaults to the first spice usages", async () => {
     const loadSeasonings = vi.fn().mockResolvedValue(seasonings);
     const loadUsages = vi
       .fn()
@@ -66,23 +66,26 @@ describe("Spice usage page", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "香料用量" })).toBeInTheDocument();
-    expect(await screen.findByText("1. 醃雞扒")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "幼鹽" })).toHaveAttribute(
-      "aria-pressed",
+    const sidebar = screen.getByRole("complementary", { name: "香料選項" });
+    expect(within(sidebar).getByRole("button", { name: "幼鹽" })).toHaveAttribute(
+      "aria-current",
       "true",
     );
-    expect(screen.getByRole("button", { name: "片糖" })).toBeInTheDocument();
+    expect(within(sidebar).getByRole("button", { name: "片糖" })).toBeInTheDocument();
+
+    expect(await screen.findByRole("heading", { name: "幼鹽" })).toBeInTheDocument();
+    expect(await screen.findByLabelText("1. 醃雞扒")).toBeInTheDocument();
+    expect(screen.getByText("醃雞扒")).toBeInTheDocument();
+    expect(screen.getByText("80g")).toBeInTheDocument();
+    expect(screen.getByText("$0.33")).toBeInTheDocument();
+    expect(screen.getByText("扁食肉餡 (500克)")).toBeInTheDocument();
 
     await waitFor(() => {
       expect(loadUsages).toHaveBeenCalledWith("s-1");
     });
-
-    expect(screen.getByText("80g")).toBeInTheDocument();
-    expect(screen.getByText("$0.33")).toBeInTheDocument();
-    expect(screen.getByText("2. 扁食肉餡 (500克)")).toBeInTheDocument();
   });
 
-  it("switches usage cards when another seasoning tag is selected", async () => {
+  it("switches usage cards when another seasoning is selected", async () => {
     const user = userEvent.setup();
     const loadSeasonings = vi.fn().mockResolvedValue(seasonings);
     const loadUsages = vi
@@ -100,18 +103,16 @@ describe("Spice usage page", () => {
       </MemoryRouter>,
     );
 
-    await screen.findByText("1. 醃雞扒");
+    await screen.findByText("醃雞扒");
     await user.click(screen.getByRole("button", { name: "片糖" }));
 
     await waitFor(() => {
       expect(loadUsages).toHaveBeenCalledWith("s-2");
     });
 
-    expect(await screen.findByText("1. 粽子 (10隻)")).toBeInTheDocument();
-    expect(screen.getByText("50g")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "片糖" })).toBeInTheDocument();
+    expect(await screen.findByLabelText("1. 粽子 (10隻)")).toBeInTheDocument();
+    expect(screen.getAllByText("50g").length).toBeGreaterThan(0);
     expect(screen.queryByText("醃雞扒")).not.toBeInTheDocument();
-
-    const table = screen.getByRole("table");
-    expect(within(table).getByText("片糖")).toBeInTheDocument();
   });
 });

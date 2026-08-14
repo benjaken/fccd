@@ -2875,6 +2875,7 @@ td:last-child {
   display: grid;
   gap: 16px;
   align-content: start;
+  min-height: 0;
 }
 
 .spice-usage-heading {
@@ -2890,131 +2891,248 @@ td:last-child {
   gap: 8px;
 }
 
-.spice-usage-tags {
-  padding: 14px 16px;
+.spice-usage-layout {
+  display: grid;
+  grid-template-columns: minmax(11rem, 18%) minmax(0, 1fr);
+  gap: 14px;
+  min-height: min(70dvh, 720px);
 }
 
-.spice-usage-tags-state {
+.spice-usage-sidebar,
+.spice-usage-main {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.spice-usage-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px 14px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.spice-usage-sidebar-header strong {
+  font-size: 0.95rem;
+}
+
+.spice-usage-sidebar-header span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.6rem;
+  height: 1.6rem;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--primary) 14%, transparent);
+  color: var(--primary);
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.spice-usage-sidebar-state,
+.spice-usage-main-state {
   margin: 0;
+  padding: 18px 14px;
   color: var(--muted-foreground);
   font-size: 0.92rem;
 }
 
-.spice-usage-tag-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+.spice-usage-side-list {
+  flex: 1;
   margin: 0;
-  padding: 0;
+  padding: 8px;
+  overflow: auto;
   list-style: none;
 }
 
-.spice-usage-tag {
-  display: inline-flex;
-  align-items: center;
-  min-height: 34px;
-  padding: 0 12px;
-  border: 1px solid color-mix(in oklch, var(--border) 80%, var(--foreground));
-  border-radius: 999px;
-  background: var(--background);
+.spice-usage-side-item {
+  display: flex;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
   color: var(--foreground);
   font: inherit;
   font-size: 0.92rem;
   font-weight: 650;
+  text-align: left;
   cursor: pointer;
 }
 
-.spice-usage-tag:hover {
-  border-color: color-mix(in oklch, var(--primary) 35%, var(--border));
+.spice-usage-side-item:hover {
+  background: color-mix(in oklch, var(--accent) 70%, transparent);
 }
 
-.spice-usage-tag.active {
-  border-color: transparent;
-  background: color-mix(in oklch, var(--primary) 78%, #3b82f6);
+.spice-usage-side-item.active {
+  background: color-mix(in oklch, var(--primary) 82%, #1f4d3d);
   color: white;
 }
 
-.spice-usage-table-wrap {
-  overflow: auto;
+.spice-usage-main {
   padding: 0;
 }
 
-.spice-usage-table {
-  width: 100%;
-  border-collapse: collapse;
+.spice-usage-main-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 18px 18px 14px;
+  border-bottom: 1px solid var(--border);
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in oklch, var(--primary) 12%, white),
+      color-mix(in oklch, var(--accent) 35%, white) 55%,
+      white
+    );
 }
 
-.spice-usage-table th {
-  padding: 12px 16px;
-  background: color-mix(in oklch, var(--primary) 42%, #82b3a5);
-  color: white;
-  font-size: 0.95rem;
-  font-weight: 750;
-  letter-spacing: 0.02em;
-  text-transform: none;
-  border-bottom: 0;
+.spice-usage-main-eyebrow {
+  margin: 0 0 4px;
+  color: var(--muted-foreground);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
 }
 
-.spice-usage-table th:first-child {
-  width: 8rem;
-}
-
-.spice-usage-table td {
-  padding: 14px 16px;
-  vertical-align: top;
+.spice-usage-main-header h3 {
+  margin: 0;
   color: var(--foreground);
-  border-bottom: 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+  line-height: 1.2;
 }
 
-.spice-usage-name-cell {
-  white-space: nowrap;
-  font-size: 1rem;
-}
-
-.spice-usage-empty-cell {
-  color: var(--muted-foreground);
-}
-
-.spice-usage-empty {
-  display: grid;
-  justify-items: start;
-  gap: 6px;
-}
-
-.spice-usage-empty svg {
-  width: 22px;
-  height: 22px;
-  color: var(--muted-foreground);
-}
-
-.spice-usage-cards {
+.spice-usage-summary {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
 }
 
+.spice-usage-summary > div {
+  display: grid;
+  gap: 2px;
+  min-width: 5.5rem;
+  padding: 8px 12px;
+  border: 1px solid color-mix(in oklch, var(--border) 80%, transparent);
+  border-radius: 10px;
+  background: color-mix(in oklch, white 82%, transparent);
+}
+
+.spice-usage-summary span {
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+
+.spice-usage-summary strong {
+  color: var(--foreground);
+  font-size: 0.98rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.spice-usage-main-empty {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 8px;
+  flex: 1;
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--muted-foreground);
+}
+
+.spice-usage-main-empty svg {
+  width: 28px;
+  height: 28px;
+}
+
+.spice-usage-main-empty strong {
+  color: var(--foreground);
+}
+
+.spice-usage-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14.5rem, 1fr));
+  gap: 12px;
+  padding: 16px 18px 18px;
+  overflow: auto;
+}
+
 .spice-usage-card {
   display: grid;
-  gap: 4px;
-  min-width: 10.5rem;
-  max-width: 16rem;
-  padding: 10px 12px;
-  border-radius: 6px;
-  background: color-mix(in oklch, var(--muted) 55%, white);
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid color-mix(in oklch, var(--border) 85%, transparent);
+  border-radius: 14px;
+  background:
+    linear-gradient(
+      160deg,
+      color-mix(in oklch, var(--card) 92%, white),
+      color-mix(in oklch, var(--muted) 28%, white)
+    );
+  box-shadow: 0 8px 18px color-mix(in oklch, black 4%, transparent);
+}
+
+.spice-usage-card-index {
+  display: grid;
+  place-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--primary) 16%, transparent);
+  color: color-mix(in oklch, var(--primary) 70%, #0f3d2e);
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.spice-usage-card-body {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
 }
 
 .spice-usage-card-title {
-  color: color-mix(in oklch, #1d4ed8 70%, var(--foreground));
-  font-size: 0.92rem;
-  font-weight: 700;
+  color: color-mix(in oklch, #1d4ed8 55%, var(--foreground));
+  font-size: 0.95rem;
+  font-weight: 750;
   line-height: 1.35;
 }
 
+.spice-usage-card-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
 .spice-usage-card-metric {
-  color: color-mix(in oklch, #15803d 75%, var(--foreground));
-  font-size: 0.9rem;
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: color-mix(in oklch, white 70%, transparent);
+  color: color-mix(in oklch, #15803d 70%, var(--foreground));
+  font-size: 0.95rem;
   font-variant-numeric: tabular-nums;
+  font-weight: 750;
+}
+
+.spice-usage-card-metric small {
+  color: var(--muted-foreground);
+  font-size: 0.72rem;
   font-weight: 650;
+}
+
+.spice-usage-card-metric.is-cost {
+  color: color-mix(in oklch, #0f766e 75%, var(--foreground));
 }
 
 .seasoning-cost-page {
@@ -3509,6 +3627,15 @@ td:last-child {
   .calculation-settings-heading,
   .meat-customers-heading {
     align-items: stretch;
+  }
+
+  .spice-usage-layout {
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+
+  .spice-usage-sidebar {
+    max-height: 220px;
   }
 
   .quotes-toolbar,

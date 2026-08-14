@@ -53,6 +53,16 @@ export function SpiceUsagePage({
     [i18n.language],
   );
 
+  const usageSummary = useMemo(() => {
+    let grams = 0;
+    let cost = 0;
+    for (const row of usages) {
+      grams += row.quantityGrams;
+      cost += row.totalCost;
+    }
+    return { count: usages.length, grams, cost };
+  }, [usages]);
+
   useEffect(() => {
     let cancelled = false;
     setSeasoningsLoading(true);
@@ -159,98 +169,128 @@ export function SpiceUsagePage({
         </div>
       ) : null}
 
-      <div className="spice-usage-tags panel" aria-label={t("spiceUsage.tags")}>
-        {seasoningsLoading ? (
-          <p className="spice-usage-tags-state">{t("spiceUsage.loadingSeasonings")}</p>
-        ) : seasonings.length === 0 ? (
-          <p className="spice-usage-tags-state">{t("spiceUsage.emptySeasonings")}</p>
-        ) : (
-          <ul className="spice-usage-tag-list">
-            {seasonings.map((item) => {
-              const active = item.id === selected?.id;
-              return (
-                <li key={item.id}>
-                  <button
-                    type="button"
-                    className={
-                      active ? "spice-usage-tag active" : "spice-usage-tag"
-                    }
-                    aria-pressed={active}
-                    onClick={() => setSelectedId(item.id)}
-                  >
-                    {item.name}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </div>
+      <div className="spice-usage-layout">
+        <aside
+          className="spice-usage-sidebar panel"
+          aria-label={t("spiceUsage.tags")}
+        >
+          <div className="spice-usage-sidebar-header">
+            <strong>{t("spiceUsage.tags")}</strong>
+            <span>{seasonings.length}</span>
+          </div>
+          {seasoningsLoading ? (
+            <p className="spice-usage-sidebar-state">
+              {t("spiceUsage.loadingSeasonings")}
+            </p>
+          ) : seasonings.length === 0 ? (
+            <p className="spice-usage-sidebar-state">
+              {t("spiceUsage.emptySeasonings")}
+            </p>
+          ) : (
+            <ul className="spice-usage-side-list">
+              {seasonings.map((item) => {
+                const active = item.id === selected?.id;
+                return (
+                  <li key={item.id}>
+                    <button
+                      type="button"
+                      className={
+                        active
+                          ? "spice-usage-side-item active"
+                          : "spice-usage-side-item"
+                      }
+                      aria-current={active ? "true" : undefined}
+                      onClick={() => setSelectedId(item.id)}
+                    >
+                      {item.name}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </aside>
 
-      <div className="spice-usage-table-wrap panel">
-        <table className="spice-usage-table">
-          <thead>
-            <tr>
-              <th scope="col">{t("spiceUsage.columns.spice")}</th>
-              <th scope="col">{t("spiceUsage.columns.usage")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {usagesLoading ? (
-              <tr>
-                <td colSpan={2} className="spice-usage-empty-cell">
+        <article className="spice-usage-main panel">
+          {!selected ? (
+            <div className="spice-usage-main-empty">
+              <Leaf />
+              <strong>{t("spiceUsage.noSelection")}</strong>
+              <span>{t("spiceUsage.noSelectionDescription")}</span>
+            </div>
+          ) : (
+            <>
+              <header className="spice-usage-main-header">
+                <div>
+                  <p className="spice-usage-main-eyebrow">
+                    {t("spiceUsage.columns.spice")}
+                  </p>
+                  <h3>{selected.name}</h3>
+                </div>
+                {!usagesLoading && usages.length > 0 ? (
+                  <div className="spice-usage-summary">
+                    <div>
+                      <span>{t("spiceUsage.summary.recipes")}</span>
+                      <strong>{usageSummary.count}</strong>
+                    </div>
+                    <div>
+                      <span>{t("spiceUsage.summary.grams")}</span>
+                      <strong>
+                        {gramsFormatter.format(usageSummary.grams)}g
+                      </strong>
+                    </div>
+                    <div>
+                      <span>{t("spiceUsage.summary.cost")}</span>
+                      <strong>
+                        {currencyFormatter.format(usageSummary.cost)}
+                      </strong>
+                    </div>
+                  </div>
+                ) : null}
+              </header>
+
+              {usagesLoading ? (
+                <p className="spice-usage-main-state">
                   {t("spiceUsage.loadingUsages")}
-                </td>
-              </tr>
-            ) : !selected ? (
-              <tr>
-                <td colSpan={2} className="spice-usage-empty-cell">
-                  <div className="spice-usage-empty">
-                    <Leaf />
-                    <strong>{t("spiceUsage.noSelection")}</strong>
-                    <span>{t("spiceUsage.noSelectionDescription")}</span>
-                  </div>
-                </td>
-              </tr>
-            ) : usages.length === 0 ? (
-              <tr>
-                <td className="spice-usage-name-cell">
-                  <strong>{selected.name}</strong>
-                </td>
-                <td className="spice-usage-empty-cell">
-                  {t("spiceUsage.emptyUsages")}
-                </td>
-              </tr>
-            ) : (
-              <tr>
-                <td className="spice-usage-name-cell">
-                  <strong>{selected.name}</strong>
-                </td>
-                <td>
-                  <div className="spice-usage-cards">
-                    {usages.map((usage, index) => (
-                      <article
-                        key={usage.id}
-                        className="spice-usage-card"
-                        aria-label={`${index + 1}. ${usage.preparedMeatName}`}
-                      >
+                </p>
+              ) : usages.length === 0 ? (
+                <div className="spice-usage-main-empty">
+                  <Leaf />
+                  <strong>{t("spiceUsage.emptyUsages")}</strong>
+                </div>
+              ) : (
+                <div className="spice-usage-card-grid">
+                  {usages.map((usage, index) => (
+                    <article
+                      key={usage.id}
+                      className="spice-usage-card"
+                      aria-label={`${index + 1}. ${usage.preparedMeatName}`}
+                    >
+                      <div className="spice-usage-card-index" aria-hidden="true">
+                        {index + 1}
+                      </div>
+                      <div className="spice-usage-card-body">
                         <strong className="spice-usage-card-title">
-                          {index + 1}. {usage.preparedMeatName}
+                          {usage.preparedMeatName}
                         </strong>
-                        <span className="spice-usage-card-metric">
-                          {gramsFormatter.format(usage.quantityGrams)}g
-                        </span>
-                        <span className="spice-usage-card-metric">
-                          {currencyFormatter.format(usage.totalCost)}
-                        </span>
-                      </article>
-                    ))}
-                  </div>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                        <div className="spice-usage-card-metrics">
+                          <span className="spice-usage-card-metric">
+                            <small>{t("spiceUsage.metric.grams")}</small>
+                            {gramsFormatter.format(usage.quantityGrams)}g
+                          </span>
+                          <span className="spice-usage-card-metric is-cost">
+                            <small>{t("spiceUsage.metric.cost")}</small>
+                            {currencyFormatter.format(usage.totalCost)}
+                          </span>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </article>
       </div>
     </section>
   );
