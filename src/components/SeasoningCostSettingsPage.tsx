@@ -5,11 +5,13 @@ import {
   useRef,
   useState,
   type FormEvent,
+  type ReactNode,
 } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ArrowDown,
   ArrowUp,
+  ArrowUpDown,
   Check,
   Leaf,
   Plus,
@@ -18,6 +20,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { ListTable } from "@/components/ui/list-table";
 import { SidePanel } from "@/components/ui/side-panel";
 import {
   createSeasoningCost,
@@ -27,12 +30,61 @@ import {
   type SeasoningCostRow,
 } from "@/lib/seasoning-cost";
 import { tryEvaluateSeasoningExpression } from "@/lib/seasoning-expression";
+import { cn } from "@/lib/utils";
 
 type SeasoningsLoader = () => Promise<SeasoningCostRow[]>;
 type SeasoningCreator = typeof createSeasoningCost;
 type CalculationSaver = typeof updateSeasoningCalculation;
 type RemarkSaver = typeof updateSeasoningRemark;
-type DateSort = "none" | "desc" | "asc";
+type SortKey = "sortOrder" | "updatedAt";
+type SortDirection = "asc" | "desc";
+
+const SEASONING_COST_SKELETON_COLUMNS = [
+  { width: "4rem" },
+  { width: "8rem" },
+  { width: "10rem" },
+  { width: "6rem" },
+  { width: "8rem" },
+  { width: "10rem" },
+];
+
+function SortHeaderButton({
+  label,
+  active,
+  direction,
+  onClick,
+  ariaLabel,
+}: {
+  label: string;
+  active: boolean;
+  direction: SortDirection;
+  onClick: () => void;
+  ariaLabel: string;
+}) {
+  return (
+    <button
+      type="button"
+      className={cn("seasoning-cost-sort-button", active && "is-active")}
+      onClick={onClick}
+      aria-label={ariaLabel}
+      title={ariaLabel}
+      aria-sort={
+        active ? (direction === "asc" ? "ascending" : "descending") : "none"
+      }
+    >
+      <span>{label}</span>
+      {active ? (
+        direction === "asc" ? (
+          <ArrowUp />
+        ) : (
+          <ArrowDown />
+        )
+      ) : (
+        <ArrowUpDown />
+      )}
+    </button>
+  );
+}
 
 function InlineTextEditor({
   value,
@@ -44,6 +96,7 @@ function InlineTextEditor({
   placeholder,
   onSave,
   className,
+  renderPreview,
 }: {
   value: string | null;
   disabled?: boolean;
@@ -54,6 +107,7 @@ function InlineTextEditor({
   placeholder: string;
   onSave: (next: string) => Promise<void>;
   className?: string;
+  renderPreview?: (draft: string) => ReactNode;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value ?? "");
@@ -163,6 +217,9 @@ function InlineTextEditor({
           <X />
         </Button>
       </div>
+      {renderPreview ? (
+        <div className="seasoning-cost-inline-preview">{renderPreview(draft)}</div>
+      ) : null}
       {saveError ? (
         <span className="seasoning-cost-inline-error">{saveError}</span>
       ) : null}
@@ -341,7 +398,8 @@ export function SeasoningCostSettingsPage({
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [createOpen, setCreateOpen] = useState(false);
-  const [dateSort, setDateSort] = useState<DateSort>("none");
+  const [sortKey, setSortKey] = useState<SortKey>("sortOrder");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
   const dateFormatter = useMemo(
     () =>
@@ -366,35 +424,41 @@ export function SeasoningCostSettingsPage({
     [i18n.language],
   );
 
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDirection((current) => (current === "asc" ? "desc" : "asc"));
+      return;
+    }
+    setSortKey(key);
+    setSortDirection(key === "updatedAt" ? "desc" : "asc");
+  };
+
   const sortedRows = useMemo(() => {
     const next = [...rows];
-    if (dateSort === "none") {
-      next.sort((left, right) => {
+    next.sort((left, right) => {
+      if (sortKey === "sortOrder") {
         const leftSort = left.sortOrder;
         const rightSort = right.sortOrder;
         if (leftSort !== rightSort) {
           if (leftSort === null) return 1;
           if (rightSort === null) return -1;
-          return leftSort - rightSort;
+          const cmp = leftSort - rightSort;
+          return sortDirection === "asc" ? cmp : -cmp;
         }
-        return left.name.localeCompare(right.name, "zh-HK");
-      });
-      return next;
-    }
-
-    next.sort((left, right) => {
-      const leftKey = left.lastUpdatedAt || "";
-      const rightKey = right.lastUpdatedAt || "";
-      if (leftKey === rightKey) {
-        return left.name.localeCompare(right.name, "zh-HK");
+      } else {
+        const leftKey = left.lastUpdatedAt || "";
+        const rightKey = right.lastUpdatedAt || "";
+        if (leftKey !== rightKey) {
+          if (!leftKey) return 1;
+          if (!rightKey) return -1;
+          const cmp = leftKey < rightKey ? -1 : 1;
+          return sortDirection === "asc" ? cmp : -cmp;
+        }
       }
-      if (!leftKey) return 1;
-      if (!rightKey) return -1;
-      if (dateSort === "asc") return leftKey < rightKey ? -1 : 1;
-      return leftKey > rightKey ? -1 : 1;
+      return left.name.localeCompare(right.name, "zh-HK");
     });
     return next;
-  }, [dateSort, rows]);
+  }, [rows, sortDirection, sortKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -442,14 +506,6 @@ export function SeasoningCostSettingsPage({
     },
   );
 
-  const toggleDateSort = () => {
-    setDateSort((current) => {
-      if (current === "none") return "desc";
-      if (current === "desc") return "asc";
-      return "none";
-    });
-  };
-
   return (
     <section className="page-shell seasoning-cost-page">
       <div className="page-heading seasoning-cost-heading">
@@ -489,12 +545,7 @@ export function SeasoningCostSettingsPage({
             {t("seasoningCost.retry")}
           </Button>
         </div>
-      ) : loading ? (
-        <div className="products-state">
-          <Leaf />
-          <strong>{t("seasoningCost.loading")}</strong>
-        </div>
-      ) : sortedRows.length === 0 ? (
+      ) : !loading && sortedRows.length === 0 ? (
         <div className="products-state products-state-empty">
           <Leaf />
           <div>
@@ -507,89 +558,106 @@ export function SeasoningCostSettingsPage({
           </Button>
         </div>
       ) : (
-        <div className="seasoning-cost-table-wrap panel">
-          <table className="seasoning-cost-table">
-            <thead>
-              <tr>
-                <th>{t("seasoningCost.columns.sort")}</th>
-                <th>{t("seasoningCost.columns.name")}</th>
-                <th>{t("seasoningCost.columns.calculation")}</th>
-                <th>{t("seasoningCost.columns.costPerGram")}</th>
-                <th>
-                  <button
-                    type="button"
-                    className="seasoning-cost-sort-button"
-                    onClick={toggleDateSort}
-                    aria-label={t("seasoningCost.sortByUpdated")}
-                    title={t("seasoningCost.sortByUpdated")}
-                  >
-                    <span>{t("seasoningCost.columns.updatedAt")}</span>
-                    {dateSort === "asc" ? (
-                      <ArrowUp />
-                    ) : dateSort === "desc" ? (
-                      <ArrowDown />
-                    ) : null}
-                  </button>
-                </th>
-                <th>{t("seasoningCost.columns.remark")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedRows.map((row) => (
-                <tr key={row.id}>
-                  <td>{row.sortOrder ?? t("common.notSet")}</td>
-                  <td>
-                    <strong>{row.name}</strong>
-                  </td>
-                  <td className="seasoning-cost-calc-cell">
-                    <InlineTextEditor
-                      value={row.calculationExpression}
-                      emptyLabel={t("common.notSet")}
-                      editLabel={t("seasoningCost.editCalculation")}
-                      saveLabel={t("seasoningCost.save")}
-                      cancelLabel={t("seasoningCost.cancel")}
-                      placeholder={t(
-                        "seasoningCost.fields.calculationPlaceholder",
-                      )}
-                      className="is-mono"
-                      onSave={async (next) => {
-                        if (tryEvaluateSeasoningExpression(next) === null) {
-                          throw new Error(
-                            t("seasoningCost.validation.expressionInvalid"),
-                          );
-                        }
-                        await handleSaveCalculation(row.id, next);
-                      }}
-                    />
-                  </td>
-                  <td>
-                    {row.costPerGram === null
-                      ? t("common.notSet")
-                      : costFormatter.format(row.costPerGram)}
-                  </td>
-                  <td>
-                    {row.lastUpdatedAt
-                      ? dateFormatter.format(new Date(row.lastUpdatedAt))
-                      : t("common.notSet")}
-                  </td>
-                  <td className="seasoning-cost-remark-cell">
-                    <InlineTextEditor
-                      value={row.description}
-                      emptyLabel={t("common.notSet")}
-                      editLabel={t("seasoningCost.editRemark")}
-                      saveLabel={t("seasoningCost.save")}
-                      cancelLabel={t("seasoningCost.cancel")}
-                      placeholder={t("seasoningCost.remarkPlaceholder")}
-                      onSave={async (next) => {
-                        await handleSaveRemark(row.id, next);
-                      }}
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <ListTable
+          className="seasoning-cost-table-wrap"
+          onRefresh={() => setReloadKey((current) => current + 1)}
+          loading={loading}
+          loadingLabel={t("seasoningCost.loading")}
+          skeletonRows={8}
+          skeletonColumns={SEASONING_COST_SKELETON_COLUMNS}
+          header={
+            <tr>
+              <th>
+                <SortHeaderButton
+                  label={t("seasoningCost.columns.sort")}
+                  active={sortKey === "sortOrder"}
+                  direction={sortDirection}
+                  onClick={() => toggleSort("sortOrder")}
+                  ariaLabel={t("seasoningCost.sortByOrder")}
+                />
+              </th>
+              <th>{t("seasoningCost.columns.name")}</th>
+              <th>{t("seasoningCost.columns.calculation")}</th>
+              <th>{t("seasoningCost.columns.costPerGram")}</th>
+              <th>
+                <SortHeaderButton
+                  label={t("seasoningCost.columns.updatedAt")}
+                  active={sortKey === "updatedAt"}
+                  direction={sortDirection}
+                  onClick={() => toggleSort("updatedAt")}
+                  ariaLabel={t("seasoningCost.sortByUpdated")}
+                />
+              </th>
+              <th>{t("seasoningCost.columns.remark")}</th>
+            </tr>
+          }
+        >
+          {sortedRows.map((row) => (
+            <tr key={row.id}>
+              <td>{row.sortOrder ?? t("common.notSet")}</td>
+              <td>
+                <strong>{row.name}</strong>
+              </td>
+              <td className="seasoning-cost-calc-cell">
+                <InlineTextEditor
+                  value={row.calculationExpression}
+                  emptyLabel={t("common.notSet")}
+                  editLabel={t("seasoningCost.editCalculation")}
+                  saveLabel={t("seasoningCost.save")}
+                  cancelLabel={t("seasoningCost.cancel")}
+                  placeholder={t(
+                    "seasoningCost.fields.calculationPlaceholder",
+                  )}
+                  className="is-mono"
+                  renderPreview={(draft) => {
+                    const preview = tryEvaluateSeasoningExpression(draft);
+                    return (
+                      <>
+                        <span>{t("seasoningCost.columns.costPerGram")}</span>
+                        <strong>
+                          {preview === null
+                            ? t("common.notSet")
+                            : costFormatter.format(preview)}
+                        </strong>
+                      </>
+                    );
+                  }}
+                  onSave={async (next) => {
+                    if (tryEvaluateSeasoningExpression(next) === null) {
+                      throw new Error(
+                        t("seasoningCost.validation.expressionInvalid"),
+                      );
+                    }
+                    await handleSaveCalculation(row.id, next);
+                  }}
+                />
+              </td>
+              <td>
+                {row.costPerGram === null
+                  ? t("common.notSet")
+                  : costFormatter.format(row.costPerGram)}
+              </td>
+              <td>
+                {row.lastUpdatedAt
+                  ? dateFormatter.format(new Date(row.lastUpdatedAt))
+                  : t("common.notSet")}
+              </td>
+              <td className="seasoning-cost-remark-cell">
+                <InlineTextEditor
+                  value={row.description}
+                  emptyLabel={t("common.notSet")}
+                  editLabel={t("seasoningCost.editRemark")}
+                  saveLabel={t("seasoningCost.save")}
+                  cancelLabel={t("seasoningCost.cancel")}
+                  placeholder={t("seasoningCost.remarkPlaceholder")}
+                  onSave={async (next) => {
+                    await handleSaveRemark(row.id, next);
+                  }}
+                />
+              </td>
+            </tr>
+          ))}
+        </ListTable>
       )}
 
       <CreateSeasoningCostPanel

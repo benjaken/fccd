@@ -3156,16 +3156,11 @@ td:last-child {
 }
 
 .seasoning-cost-table-wrap {
+  min-height: 0;
   overflow: auto;
-  padding: 0;
 }
 
-.seasoning-cost-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.seasoning-cost-table th {
+.seasoning-cost-table-wrap th {
   position: sticky;
   top: 0;
   z-index: 1;
@@ -3180,7 +3175,7 @@ td:last-child {
   white-space: nowrap;
 }
 
-.seasoning-cost-table td {
+.seasoning-cost-table-wrap td {
   padding: 12px 14px;
   vertical-align: top;
   color: var(--foreground);
@@ -3202,6 +3197,11 @@ td:last-child {
 .seasoning-cost-sort-button svg {
   width: 14px;
   height: 14px;
+  opacity: 0.72;
+}
+
+.seasoning-cost-sort-button.is-active svg {
+  opacity: 1;
 }
 
 .seasoning-cost-calc-cell,
@@ -3270,6 +3270,19 @@ td:last-child {
 .seasoning-cost-inline-actions {
   display: flex;
   gap: 2px;
+}
+
+.seasoning-cost-inline-preview {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  color: var(--muted-foreground);
+  font-size: 0.82rem;
+}
+
+.seasoning-cost-inline-preview strong {
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
 }
 
 .seasoning-cost-inline-error {

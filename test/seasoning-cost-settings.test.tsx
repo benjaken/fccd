@@ -54,6 +54,17 @@ describe("Seasoning cost settings page", () => {
     const bodyRows = screen.getAllByRole("row").slice(1);
     expect(within(bodyRows[0]!).getByText("幼鹽")).toBeInTheDocument();
 
+    expect(
+      screen.getByRole("button", { name: "按排序編號排序" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "按上次更新日期排序" }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "按排序編號排序" }));
+    const reverseOrderRows = screen.getAllByRole("row").slice(1);
+    expect(within(reverseOrderRows[0]!).getByText("片糖")).toBeInTheDocument();
+
     await user.click(screen.getByRole("button", { name: "按上次更新日期排序" }));
 
     const sortedRows = screen.getAllByRole("row").slice(1);
@@ -136,11 +147,13 @@ describe("Seasoning cost settings page", () => {
     const calcInput = screen.getByRole("textbox", { name: "修改計算" });
     await user.clear(calcInput);
     await user.type(calcInput, "3/600");
+    expect(screen.getByText("0.005")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "保存" }));
 
     await waitFor(() => {
       expect(saveCalculation).toHaveBeenCalledWith("s-1", "3/600");
     });
+    expect(await screen.findByText("0.005")).toBeInTheDocument();
 
     await user.click(screen.getAllByRole("button", { name: "修改備註" })[0]!);
     const remarkInput = screen.getByRole("textbox", { name: "修改備註" });

@@ -1074,6 +1074,7 @@ const resources = {
         editCalculation: "修改計算",
         editRemark: "修改備註",
         remarkPlaceholder: "輸入備註",
+        sortByOrder: "按排序編號排序",
         sortByUpdated: "按上次更新日期排序",
         columns: {
           sort: "排序",
@@ -2428,6 +2429,7 @@ const resources = {
         editCalculation: "Edit calculation",
         editRemark: "Edit remark",
         remarkPlaceholder: "Enter a remark",
+        sortByOrder: "Sort by order",
         sortByUpdated: "Sort by last updated",
         columns: {
           sort: "Order",
