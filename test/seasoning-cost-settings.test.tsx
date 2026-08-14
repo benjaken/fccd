@@ -132,56 +132,69 @@ describe("Seasoning cost settings page", () => {
       expect(createSeasoning).toHaveBeenCalledWith({
         name: "胡椒粉",
         calculationExpression: "10/500",
+        description: "",
       });
     });
 
     expect(await screen.findByText("胡椒粉")).toBeInTheDocument();
   });
 
-  it("lets users edit calculation and remark inline", async () => {
+  it("opens the edit panel and updates calculation and remark", async () => {
     const user = userEvent.setup();
     const loadSeasonings = vi.fn().mockResolvedValue(structuredClone(rows));
-    const saveCalculation = vi.fn().mockResolvedValue({
+    const updateSeasoning = vi.fn().mockResolvedValue({
       ...rows[0],
       calculationExpression: "3/600",
       costPerGram: 0.005,
+      description: "更新備註",
       lastUpdatedAt: "2026-08-14T03:10:00.000Z",
     });
-    const saveRemark = vi.fn().mockResolvedValue("更新備註");
 
     render(
       <MemoryRouter>
         <SeasoningCostSettingsPage
           loadSeasonings={loadSeasonings}
-          saveCalculation={saveCalculation}
-          saveRemark={saveRemark}
+          updateSeasoning={updateSeasoning}
         />
       </MemoryRouter>,
     );
 
     await screen.findByText("幼鹽");
+    expect(
+      screen.queryByRole("button", { name: "修改計算" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "修改備註" }),
+    ).not.toBeInTheDocument();
 
-    await user.click(screen.getAllByRole("button", { name: "修改計算" })[0]!);
-    const calcInput = screen.getByRole("textbox", { name: "修改計算" });
+    await user.click(screen.getAllByRole("button", { name: "編輯" })[0]!);
+
+    const dialog = await screen.findByRole("dialog", { name: "編輯香料成本" });
+    const nameInput = within(dialog).getByPlaceholderText("例如：幼鹽");
+    const calcInput = within(dialog).getByPlaceholderText("例如：2.5/600");
+    const remarkInput = within(dialog).getByPlaceholderText("輸入備註");
+    expect(nameInput).toHaveValue("幼鹽");
+    expect(calcInput).toHaveValue("2.5/600");
+    expect(remarkInput).toHaveValue("和2023年相同");
+
     await user.clear(calcInput);
     await user.type(calcInput, "3/600");
-    expect(screen.getByText("0.005")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "保存" }));
-
-    await waitFor(() => {
-      expect(saveCalculation).toHaveBeenCalledWith("s-1", "3/600");
-    });
-    expect(await screen.findByText("0.005")).toBeInTheDocument();
-
-    await user.click(screen.getAllByRole("button", { name: "修改備註" })[0]!);
-    const remarkInput = screen.getByRole("textbox", { name: "修改備註" });
+    expect(within(dialog).getByDisplayValue("0.005")).toBeInTheDocument();
     await user.clear(remarkInput);
     await user.type(remarkInput, "更新備註");
-    await user.click(screen.getByRole("button", { name: "保存" }));
+    await user.click(within(dialog).getByRole("button", { name: "保存" }));
 
     await waitFor(() => {
-      expect(saveRemark).toHaveBeenCalledWith("s-1", "更新備註");
+      expect(updateSeasoning).toHaveBeenCalledWith("s-1", {
+        name: "幼鹽",
+        calculationExpression: "3/600",
+        description: "更新備註",
+      });
     });
+
+    expect(await screen.findByText("0.005")).toBeInTheDocument();
+    expect(screen.getByText("更新備註")).toBeInTheDocument();
+    expect(screen.queryByText("2.5/600")).not.toBeInTheDocument();
   });
 
   it("filters the table from the search bar", async () => {
