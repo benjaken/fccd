@@ -3308,6 +3308,180 @@ td:last-child {
   color: var(--foreground);
 }
 
+.meat-customers-page {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
+.meat-customers-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.meat-customers-heading-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.meat-customers-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: color-mix(in oklch, var(--primary) 55%, #1f4d3d);
+  color: white;
+}
+
+.meat-customers-search,
+.meat-customers-filter {
+  display: grid;
+  gap: 6px;
+  min-width: 8.5rem;
+  flex: 1 1 8.5rem;
+}
+
+.meat-customers-search {
+  position: relative;
+  flex: 1.4 1 12rem;
+}
+
+.meat-customers-search > span,
+.meat-customers-filter > span {
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.meat-customers-search svg {
+  position: absolute;
+  left: 12px;
+  bottom: 11px;
+  width: 16px;
+  height: 16px;
+  color: color-mix(in oklch, var(--foreground) 55%, transparent);
+  pointer-events: none;
+}
+
+.meat-customers-search input,
+.meat-customers-filter input {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid color-mix(in oklch, white 35%, transparent);
+  border-radius: 8px;
+  outline: 0;
+  background: color-mix(in oklch, white 92%, transparent);
+  color: var(--foreground);
+  font: inherit;
+}
+
+.meat-customers-search input {
+  padding-left: 36px;
+}
+
+.meat-customers-search input:focus,
+.meat-customers-filter input:focus {
+  border-color: white;
+  box-shadow: 0 0 0 3px color-mix(in oklch, white 25%, transparent);
+}
+
+.meat-customers-toolbar > button {
+  flex-shrink: 0;
+}
+
+.meat-customers-filter-hint {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 0.86rem;
+}
+
+.meat-customers-table-wrap {
+  overflow: auto;
+  padding: 0;
+}
+
+.meat-customers-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.meat-customers-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 12px 14px;
+  background: color-mix(in oklch, var(--primary) 42%, #82b3a5);
+  color: white;
+  font-size: 0.92rem;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  border-bottom: 0;
+  white-space: nowrap;
+}
+
+.meat-customers-table td {
+  padding: 12px 14px;
+  vertical-align: top;
+  color: var(--foreground);
+}
+
+.meat-customers-table td:last-child {
+  min-width: 12rem;
+  white-space: normal;
+}
+
+.meat-customers-form {
+  display: grid;
+  gap: 16px;
+}
+
+.meat-customers-field {
+  display: grid;
+  gap: 6px;
+}
+
+.meat-customers-field > span {
+  color: var(--foreground);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.meat-customers-field input,
+.meat-customers-field textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  outline: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+}
+
+.meat-customers-field input {
+  height: 40px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.meat-customers-field input:focus,
+.meat-customers-field textarea:focus {
+  border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 16%, transparent);
+}
+
+.meat-customers-field-error,
+.meat-customers-form-error {
+  color: var(--destructive);
+  font-size: 0.82rem;
+  font-style: normal;
+}
+
 @media (max-width: 760px) {
   .quotes-page,
   .orders-page,
@@ -3332,7 +3506,8 @@ td:last-child {
   .packages-heading,
   .spice-usage-heading,
   .seasoning-cost-heading,
-  .calculation-settings-heading {
+  .calculation-settings-heading,
+  .meat-customers-heading {
     align-items: stretch;
   }
 

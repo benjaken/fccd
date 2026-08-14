@@ -22,6 +22,7 @@ describe("Primary navigation section matching", () => {
     ["/frozen", "frozen"],
     ["/frozen/seasoning-cost", "frozen"],
     ["/frozen/calculation-settings", "frozen"],
+    ["/frozen/customers", "frozen"],
     ["/frozen/spice-usage", "frozen"],
     ["/kitchen", "kitchen"],
     ["/kitchen/calendar", "kitchen"],
@@ -76,6 +77,7 @@ describe("Primary navigation section matching", () => {
     expect(pageAccessKey("/frozen/calculation-settings")).toBe(
       "frozen.calculation_settings",
     );
+    expect(pageAccessKey("/frozen/customers")).toBe("frozen.meat_customers");
     expect(pageAccessKey("/frozen/spice-usage")).toBe("frozen.spice_usage");
   });
 

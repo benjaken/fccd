@@ -78,6 +78,7 @@ import { PackageDetailPage } from "@/components/PackageDetailPage";
 import { SpiceUsagePage } from "@/components/SpiceUsagePage";
 import { SeasoningCostSettingsPage } from "@/components/SeasoningCostSettingsPage";
 import { CalculationSettingsPage } from "@/components/CalculationSettingsPage";
+import { MeatCustomersPage } from "@/components/MeatCustomersPage";
 import { AttachmentsListPage } from "@/components/settings/AttachmentsListPage";
 import { LoginLogsListPage } from "@/components/settings/LoginLogsListPage";
 import { RolePermissionsPage } from "@/components/settings/RolePermissionsPage";
@@ -251,6 +252,12 @@ const secondaryNav: Record<string, NavItem[]> = {
       permissionKey: "frozen.calculation_settings",
     },
     {
+      key: "meatCustomers",
+      to: "/frozen/customers",
+      icon: Users,
+      permissionKey: "frozen.meat_customers",
+    },
+    {
       key: "spiceUsage",
       to: "/frozen/spice-usage",
       icon: Leaf,
@@ -383,6 +390,7 @@ const SECTION_CHILD_KEYS: Record<string, string[]> = {
   frozen: [
     "frozen.seasoning_cost",
     "frozen.calculation_settings",
+    "frozen.meat_customers",
     "frozen.spice_usage",
   ],
   kitchen: ["kitchen.calendar", "kitchen.inventory"],
@@ -932,6 +940,10 @@ function OperationsShell() {
               <Route
                 path="/frozen/calculation-settings"
                 element={<CalculationSettingsPage />}
+              />
+              <Route
+                path="/frozen/customers"
+                element={<MeatCustomersPage />}
               />
               <Route
                 path="/frozen/spice-usage"
