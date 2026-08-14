@@ -495,6 +495,65 @@ describe("Products catalog pages", () => {
     );
     expect(await screen.findByText("已返回詳情")).toBeInTheDocument();
   });
+
+  it("searches and adds a premium ingredient", async () => {
+    const user = userEvent.setup();
+    const addIngredient = vi.fn().mockResolvedValue(undefined);
+    const searchIngredients = vi.fn().mockResolvedValue([
+      { id: "ing-coke", name: "可口可樂", sku: "COKE", legacyId: "legacy-coke" },
+    ]);
+    const loadDetail = vi
+      .fn()
+      .mockResolvedValueOnce(productDetail)
+      .mockResolvedValueOnce({
+        ...productDetail,
+        premiumIngredients: [
+          ...productDetail.premiumIngredients,
+          {
+            id: "prem-2",
+            ingredientId: "ing-coke",
+            name: "可口可樂",
+            quantity: 1,
+            unitCost: 3.25,
+          },
+        ],
+      });
+
+    render(
+      <MemoryRouter initialEntries={["/products/product-1/edit"]}>
+        <Routes>
+          <Route
+            path="/products/:id/edit"
+            element={
+              <ProductDetailPage
+                canEdit
+                loadDetail={loadDetail}
+                loadEditOptions={async () => productEditOptions}
+                searchIngredients={searchIngredients}
+                addIngredient={addIngredient}
+              />
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const search = await screen.findByRole("combobox", {
+      name: "名貴食材",
+    });
+    await user.type(search, "可樂");
+
+    await waitFor(() =>
+      expect(searchIngredients).toHaveBeenCalledWith("可樂"),
+    );
+    await user.click(await screen.findByRole("option", { name: /可口可樂/ }));
+    await user.click(screen.getByRole("button", { name: "添加食材" }));
+
+    await waitFor(() =>
+      expect(addIngredient).toHaveBeenCalledWith("product-1", "ing-coke", 1),
+    );
+    expect(await screen.findByText("可口可樂")).toBeInTheDocument();
+  });
 });
 
 describe("Packages catalog pages", () => {

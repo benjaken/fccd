@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Pencil,
@@ -22,6 +22,7 @@ import {
   productIngredientCost,
   removeProductLabel,
   removeProductPremiumIngredient,
+  searchProductIngredients,
   updateProduct,
   type CatalogOption,
   type ProductDetail,
@@ -33,6 +34,7 @@ import { cn } from "@/lib/utils";
 type DetailLoader = (id: string) => Promise<ProductDetail | null>;
 type OptionsLoader = (channelId?: string) => Promise<ProductEditOptions>;
 type ProductSaver = (id: string, input: ProductUpdateInput) => Promise<void>;
+type IngredientSearcher = (term: string) => Promise<CatalogOption[]>;
 
 type ProductFormState = {
   name: string;
@@ -113,6 +115,7 @@ export function ProductDetailPage({
   loadDetail = fetchProductDetail,
   loadEditOptions = fetchProductEditOptions,
   saveProduct = updateProduct,
+  searchIngredients = searchProductIngredients,
   addIngredient = addProductPremiumIngredient,
   removeIngredient = removeProductPremiumIngredient,
   addLabel = addProductLabel,
@@ -122,6 +125,7 @@ export function ProductDetailPage({
   loadDetail?: DetailLoader;
   loadEditOptions?: OptionsLoader;
   saveProduct?: ProductSaver;
+  searchIngredients?: IngredientSearcher;
   addIngredient?: typeof addProductPremiumIngredient;
   removeIngredient?: typeof removeProductPremiumIngredient;
   addLabel?: typeof addProductLabel;
@@ -142,7 +146,13 @@ export function ProductDetailPage({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [reloadKey, setReloadKey] = useState(0);
   const [ingredientId, setIngredientId] = useState("");
+  const [ingredientQuery, setIngredientQuery] = useState("");
   const [ingredientQty, setIngredientQty] = useState("1");
+  const [ingredientResults, setIngredientResults] = useState<CatalogOption[]>([]);
+  const [ingredientMenuOpen, setIngredientMenuOpen] = useState(false);
+  const [ingredientHighlight, setIngredientHighlight] = useState(0);
+  const [searchingIngredients, setSearchingIngredients] = useState(false);
+  const ingredientSearchRef = useRef<HTMLDivElement>(null);
   const [labelDisplayA, setLabelDisplayA] = useState("");
   const [labelDisplayB, setLabelDisplayB] = useState("");
   const [labelPackingId, setLabelPackingId] = useState("");
@@ -199,6 +209,59 @@ export function ProductDetailPage({
       active = false;
     };
   }, [canEdit, editing, form?.channelId, loadEditOptions, product?.channelId]);
+
+  const addedIngredientIds = useMemo(
+    () => new Set((product?.premiumIngredients ?? []).map((item) => item.ingredientId)),
+    [product],
+  );
+
+  useEffect(() => {
+    if (!editing || ingredientId) return;
+
+    const term = ingredientQuery.trim();
+    if (!term) {
+      setIngredientResults([]);
+      setSearchingIngredients(false);
+      return;
+    }
+
+    let active = true;
+    const timeout = window.setTimeout(() => {
+      setSearchingIngredients(true);
+      void searchIngredients(term)
+        .then((rows) => {
+          if (!active) return;
+          setIngredientResults(rows.filter((row) => !addedIngredientIds.has(row.id)));
+        })
+        .catch(() => {
+          if (!active) return;
+          setIngredientResults([]);
+        })
+        .finally(() => {
+          if (active) setSearchingIngredients(false);
+        });
+    }, 250);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timeout);
+    };
+  }, [addedIngredientIds, editing, ingredientId, ingredientQuery, searchIngredients]);
+
+  useEffect(() => {
+    setIngredientHighlight(0);
+  }, [ingredientResults]);
+
+  useEffect(() => {
+    if (!ingredientMenuOpen) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!ingredientSearchRef.current?.contains(event.target as Node)) {
+        setIngredientMenuOpen(false);
+      }
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [ingredientMenuOpen]);
 
   if (editing && !canEdit) {
     return <Navigate to={`/products/${id}`} replace />;
@@ -351,6 +414,42 @@ export function ProductDetailPage({
     </label>
   );
 
+  const selectIngredient = (item: CatalogOption) => {
+    setIngredientId(item.id);
+    setIngredientQuery(item.name);
+    setIngredientResults([item]);
+    setIngredientMenuOpen(false);
+  };
+
+  const handleIngredientSearchKey = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Escape") {
+      setIngredientMenuOpen(false);
+      return;
+    }
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setIngredientMenuOpen(true);
+      setIngredientHighlight((index) =>
+        ingredientResults.length === 0
+          ? 0
+          : Math.min(index + 1, ingredientResults.length - 1),
+      );
+      return;
+    }
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setIngredientHighlight((index) => Math.max(index - 1, 0));
+      return;
+    }
+    if (event.key === "Enter") {
+      const item = ingredientResults[ingredientHighlight];
+      if (ingredientMenuOpen && item) {
+        event.preventDefault();
+        selectIngredient(item);
+      }
+    }
+  };
+
   const handleAddIngredient = async () => {
     if (!ingredientId) return;
     const quantity = Number.parseFloat(ingredientQty);
@@ -359,6 +458,8 @@ export function ProductDetailPage({
     try {
       await addIngredient(product.id, ingredientId, quantity);
       setIngredientId("");
+      setIngredientQuery("");
+      setIngredientResults([]);
       setIngredientQty("1");
       await refreshDetail();
     } finally {
@@ -621,20 +722,68 @@ export function ProductDetailPage({
           </header>
           {editing ? (
             <div className="product-inline-add">
-              <label>
-                <span>{t("productDetail.premiumIngredients")}</span>
-                <select
-                  value={ingredientId}
-                  onChange={(event) => setIngredientId(event.target.value)}
-                >
-                  <option value="">{t("productDetail.pickIngredient")}</option>
-                  {options.catalogIngredients.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <div className="product-ingredient-search" ref={ingredientSearchRef}>
+                <label>
+                  <span>{t("productDetail.premiumIngredients")}</span>
+                  <input
+                    type="text"
+                    role="combobox"
+                    aria-autocomplete="list"
+                    aria-expanded={ingredientMenuOpen}
+                    aria-controls="product-ingredient-results"
+                    aria-activedescendant={
+                      ingredientMenuOpen && ingredientResults[ingredientHighlight]
+                        ? `product-ingredient-option-${ingredientResults[ingredientHighlight].id}`
+                        : undefined
+                    }
+                    value={ingredientQuery}
+                    placeholder={t("productDetail.searchIngredient")}
+                    autoComplete="off"
+                    onChange={(event) => {
+                      setIngredientQuery(event.target.value);
+                      setIngredientId("");
+                      setIngredientMenuOpen(true);
+                    }}
+                    onFocus={() => setIngredientMenuOpen(true)}
+                    onKeyDown={handleIngredientSearchKey}
+                  />
+                </label>
+                {ingredientMenuOpen && ingredientQuery.trim() ? (
+                  <ul
+                    id="product-ingredient-results"
+                    className="product-ingredient-results"
+                    role="listbox"
+                  >
+                    {searchingIngredients && ingredientResults.length === 0 ? (
+                      <li className="product-ingredient-empty">
+                        {t("productDetail.searchingIngredients")}
+                      </li>
+                    ) : ingredientResults.length === 0 ? (
+                      <li className="product-ingredient-empty">
+                        {t("productDetail.noIngredientResults")}
+                      </li>
+                    ) : (
+                      ingredientResults.map((item, index) => (
+                        <li key={item.id} role="presentation">
+                          <button
+                            type="button"
+                            id={`product-ingredient-option-${item.id}`}
+                            role="option"
+                            aria-selected={index === ingredientHighlight}
+                            className="product-ingredient-option"
+                            onMouseEnter={() => setIngredientHighlight(index)}
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => selectIngredient(item)}
+                          >
+                            <span>{item.name}</span>
+                            {item.sku ? <small>{item.sku}</small> : null}
+                          </button>
+                        </li>
+                      ))
+                    )}
+                  </ul>
+                ) : null}
+              </div>
               <label>
                 <span>{t("productDetail.quantity")}</span>
                 <input

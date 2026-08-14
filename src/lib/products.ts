@@ -73,6 +73,7 @@ export const PRODUCT_PRICE_RANGES: Array<{
 export type CatalogOption = {
   id: string;
   name: string;
+  sku?: string | null;
   legacyId?: string;
 };
 
@@ -726,17 +727,45 @@ async function fetchCollectionRecords(
 async function fetchCatalogIngredients(): Promise<CatalogOption[]> {
   const { data, error } = await supabase
     .from("ingredients")
-    .select("id,name,legacy_id")
+    .select("id,name,sku,legacy_id")
     .is("archived_at", null)
     .eq("is_active", true)
     .order("name", { ascending: true })
     .limit(100);
   if (error) return [];
-  return (data ?? []).map((row) => ({
+  return (data ?? []).map((row) => mapIngredientOption(row));
+}
+
+export async function searchProductIngredients(
+  term: string,
+): Promise<CatalogOption[]> {
+  const cleaned = safeSearchTerm(term);
+  if (!cleaned) return [];
+
+  const { data, error } = await supabase
+    .from("ingredients")
+    .select("id,name,sku,legacy_id")
+    .is("archived_at", null)
+    .eq("is_active", true)
+    .or(`name.ilike.%${cleaned}%,sku.ilike.%${cleaned}%`)
+    .order("name", { ascending: true })
+    .limit(20);
+  if (error) return [];
+  return (data ?? []).map((row) => mapIngredientOption(row));
+}
+
+function mapIngredientOption(row: {
+  id: unknown;
+  name: unknown;
+  sku?: unknown;
+  legacy_id?: unknown;
+}): CatalogOption {
+  return {
     id: row.id as string,
     name: row.name as string,
-    legacyId: (row.legacy_id as string | null) ?? undefined,
-  }));
+    sku: (row.sku as string | null | undefined) ?? null,
+    legacyId: (row.legacy_id as string | null | undefined) ?? undefined,
+  };
 }
 export async function updateProductRecommendation(
   id: string,
