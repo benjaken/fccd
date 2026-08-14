@@ -2879,8 +2879,34 @@ td:last-child {
   .quotes-pagination,
   .orders-pagination,
   .operational-list-pagination {
-    align-items: flex-start;
-    flex-direction: column;
+    align-items: center;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 8px;
+    min-height: 48px;
+    padding: 8px 12px;
+  }
+
+  .quotes-pagination > span,
+  .orders-pagination > span,
+  .operational-list-pagination > span {
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .quotes-pagination > div,
+  .orders-pagination > div,
+  .operational-list-pagination > div {
+    flex: 0 0 auto;
+    gap: 6px;
+  }
+
+  .table-pagination-jump input {
+    width: 48px;
+    height: 32px;
   }
 }
 
