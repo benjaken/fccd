@@ -8,7 +8,9 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  AlertTriangle,
   Bell,
+  Beef,
   Boxes,
   CalendarDays,
   ChartNoAxesCombined,
@@ -17,21 +19,26 @@ import {
   CircleDollarSign,
   ClipboardCheck,
   ClipboardList,
+  Calculator,
   FileArchive,
   FileText,
   HandCoins,
   History,
   LayoutDashboard,
+  Leaf,
   LogOut,
   Menu,
   Moon,
+  Package,
   PackageCheck,
   PanelLeftClose,
   PanelLeftOpen,
+  Receipt,
   RefreshCw,
   Settings,
   ShieldCheck,
   ShoppingBasket,
+  Snowflake,
   Store,
   Sun,
   Truck,
@@ -53,6 +60,9 @@ import {
 import { AuthProvider, useAuth } from "@/auth/AuthProvider";
 import {
   pageAccessKey,
+  REPORT_GROUP_PAGE_KEYS,
+  REPORT_GROUP_ROUTES,
+  REPORT_TAB_PERMISSION_KEYS,
   usePageAccess,
 } from "@/auth/use-page-access";
 import { LoginPage } from "@/components/LoginPage";
@@ -68,6 +78,15 @@ import { ProductsListPage } from "@/components/ProductsListPage";
 import { ProductDetailPage } from "@/components/ProductDetailPage";
 import { PackagesListPage } from "@/components/PackagesListPage";
 import { PackageDetailPage } from "@/components/PackageDetailPage";
+import { PreparedMeatInventoryCalcPage } from "@/components/PreparedMeatInventoryCalcPage";
+import { MeatDeliveryNotesPage } from "@/components/MeatDeliveryNotesPage";
+import { RawMeatInventoryCalcPage } from "@/components/RawMeatInventoryCalcPage";
+import { SpiceUsagePage } from "@/components/SpiceUsagePage";
+import { SeasoningCostSettingsPage } from "@/components/SeasoningCostSettingsPage";
+import { SellingPriceCostPage } from "@/components/SellingPriceCostPage";
+import { CalculationSettingsPage } from "@/components/CalculationSettingsPage";
+import { MeatCustomersPage } from "@/components/MeatCustomersPage";
+import { MeatYieldErrorsPage } from "@/components/MeatYieldErrorsPage";
 import { AttachmentsListPage } from "@/components/settings/AttachmentsListPage";
 import { LoginLogsListPage } from "@/components/settings/LoginLogsListPage";
 import { RolePermissionsPage } from "@/components/settings/RolePermissionsPage";
@@ -75,11 +94,13 @@ import { SettingsAccessDenied } from "@/components/settings/SettingsAccessDenied
 import { UsersListPage } from "@/components/settings/UsersListPage";
 import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { PullToRefresh } from "@/components/ui/pull-to-refresh";
 import {
   fetchDashboardData,
   type DashboardData,
   type DashboardJob,
 } from "@/lib/dashboard";
+import { FROZEN_ACTION_PAGE_KEYS } from "@/lib/frozen-action-permissions";
 import { useTheme } from "@/lib/use-theme";
 import { useAnimatedNumber } from "@/lib/use-animated-number";
 import { cn } from "@/lib/utils";
@@ -91,6 +112,7 @@ type NavItem = {
   to: string;
   icon: Icon;
   permissionKey?: string;
+  children?: NavItem[];
 };
 
 const primaryNav: NavItem[] = [
@@ -98,6 +120,7 @@ const primaryNav: NavItem[] = [
   { key: "orders", to: "/orders", icon: ClipboardList },
   { key: "quotes", to: "/quotes", icon: FileText },
   { key: "products", to: "/products", icon: ShoppingBasket },
+  { key: "frozen", to: "/frozen/raw-meat-inventory", icon: Snowflake },
   { key: "kitchen", to: "/kitchen", icon: Utensils },
   { key: "delivery", to: "/delivery", icon: Truck },
   { key: "restaurant", to: "/restaurant", icon: Store },
@@ -224,6 +247,62 @@ const secondaryNav: Record<string, NavItem[]> = {
       permissionKey: "products.packages",
     },
   ],
+  frozen: [
+    {
+      key: "rawMeatInventoryCalc",
+      to: "/frozen/raw-meat-inventory",
+      icon: Beef,
+      permissionKey: "frozen.raw_meat_inventory",
+    },
+    {
+      key: "preparedMeatInventoryCalc",
+      to: "/frozen/prepared-meat-inventory",
+      icon: Package,
+      permissionKey: "frozen.prepared_meat_inventory",
+    },
+    {
+      key: "sellingPriceCost",
+      to: "/frozen/selling-price-cost",
+      icon: Receipt,
+      permissionKey: "frozen.selling_price_cost",
+    },
+    {
+      key: "deliveryNotes",
+      to: "/frozen/delivery-notes",
+      icon: ClipboardList,
+      permissionKey: "frozen.delivery_notes",
+    },
+    {
+      key: "seasoningCost",
+      to: "/frozen/seasoning-cost",
+      icon: CircleDollarSign,
+      permissionKey: "frozen.seasoning_cost",
+    },
+    {
+      key: "calculationSettings",
+      to: "/frozen/calculation-settings",
+      icon: Calculator,
+      permissionKey: "frozen.calculation_settings",
+    },
+    {
+      key: "meatCustomers",
+      to: "/frozen/customers",
+      icon: Users,
+      permissionKey: "frozen.meat_customers",
+    },
+    {
+      key: "spiceUsage",
+      to: "/frozen/spice-usage",
+      icon: Leaf,
+      permissionKey: "frozen.spice_usage",
+    },
+    {
+      key: "yieldErrors",
+      to: "/frozen/yield-errors",
+      icon: AlertTriangle,
+      permissionKey: "frozen.yield_errors",
+    },
+  ],
   kitchen: [
     { key: "kitchen", to: "/kitchen", icon: Utensils, permissionKey: "kitchen" },
     {
@@ -279,6 +358,20 @@ const secondaryNav: Record<string, NavItem[]> = {
       to: "/reports",
       icon: ChartNoAxesCombined,
       permissionKey: "reports",
+      children: [
+        {
+          key: "frozenMeat",
+          to: REPORT_GROUP_ROUTES.frozenMeat,
+          icon: Beef,
+          permissionKey: REPORT_GROUP_PAGE_KEYS.frozenMeat,
+        },
+        {
+          key: "shops",
+          to: REPORT_GROUP_ROUTES.shops,
+          icon: Store,
+          permissionKey: REPORT_GROUP_PAGE_KEYS.shops,
+        },
+      ],
     },
     {
       key: "finance",
@@ -333,17 +426,31 @@ const SECTION_CHILD_KEYS: Record<string, string[]> = {
     "products.ala_carte",
     "products.packages",
   ],
+  frozen: [
+    "frozen.raw_meat_inventory",
+    "frozen.prepared_meat_inventory",
+    "frozen.selling_price_cost",
+    "frozen.delivery_notes",
+    "frozen.seasoning_cost",
+    "frozen.calculation_settings",
+    "frozen.meat_customers",
+    "frozen.spice_usage",
+    "frozen.yield_errors",
+    ...FROZEN_ACTION_PAGE_KEYS,
+  ],
   kitchen: ["kitchen.calendar", "kitchen.inventory"],
   delivery: ["delivery.assign"],
   restaurant: ["restaurant.inventory", "restaurant.reports"],
   reports: [
-    "reports.shop_order_quantities",
-    "reports.average_supply_price",
-    "reports.production_cost_price",
-    "reports.raw_meat_average_price",
-    "reports.prepared_meat_stock",
-    "reports.raw_meat_stock",
-    "reports.supplier_purchase",
+    REPORT_GROUP_PAGE_KEYS.frozenMeat,
+    REPORT_GROUP_PAGE_KEYS.shops,
+    REPORT_TAB_PERMISSION_KEYS.shopOrderQuantities,
+    REPORT_TAB_PERMISSION_KEYS.averageSupplyPrice,
+    REPORT_TAB_PERMISSION_KEYS.productionCostPrice,
+    REPORT_TAB_PERMISSION_KEYS.rawMeatAveragePrice,
+    REPORT_TAB_PERMISSION_KEYS.preparedMeatStock,
+    REPORT_TAB_PERMISSION_KEYS.rawMeatStock,
+    REPORT_TAB_PERMISSION_KEYS.supplierPurchase,
   ],
   settings: [
     "settings.users",
@@ -383,7 +490,80 @@ function isPrimaryNavActive(section: string, key: string, isActive: boolean) {
   return isActive || (section !== "" && section === key);
 }
 
-export { isPrimaryNavActive, sectionFromPath };
+function navItemPermissionKey(item: NavItem) {
+  return item.permissionKey ?? pageAccessKey(item.to);
+}
+
+function isNavItemVisible(
+  item: NavItem,
+  canAccess: (pageKey: string) => boolean,
+): boolean {
+  if (item.children?.length) {
+    return item.children.some((child) => isNavItemVisible(child, canAccess));
+  }
+  return canAccess(navItemPermissionKey(item));
+}
+
+function isNavPathActive(pathname: string, to: string, exact: boolean) {
+  if (pathname === to) return true;
+  if (exact) return false;
+  return pathname.startsWith(`${to}/`);
+}
+
+/** Flatten primary + secondary destinations for the mobile drawer (no nested menus). */
+function flattenVisibleNavItems(
+  items: NavItem[],
+  canAccess: (permissionKey: string) => boolean,
+): NavItem[] {
+  return items.flatMap((item) => {
+    if (item.children?.length) {
+      return flattenVisibleNavItems(item.children, canAccess);
+    }
+    return isNavItemVisible(item, canAccess) ? [item] : [];
+  });
+}
+
+function buildMobileDrawerNav(
+  visiblePrimary: NavItem[],
+  canAccess: (permissionKey: string) => boolean,
+): Array<{ groupKey: string; items: NavItem[] }> {
+  const primaryKeys = new Set(visiblePrimary.map((item) => item.key));
+  const primaryPaths = new Set(visiblePrimary.map((item) => item.to));
+
+  return visiblePrimary
+    .map((primary) => {
+      const configured = secondaryNav[primary.key];
+      const secondary = flattenVisibleNavItems(configured ?? [], canAccess);
+
+      const items =
+        primary.key === "overview"
+          ? secondary.filter(
+              (item) =>
+                item.to === primary.to ||
+                (!primaryPaths.has(item.to) && !primaryKeys.has(item.key)),
+            )
+          : configured
+            ? secondary
+            : [
+                {
+                  ...primary,
+                  permissionKey: navItemPermissionKey(primary),
+                },
+              ];
+
+      return { groupKey: primary.key, items };
+    })
+    .filter((group) => group.items.length > 0);
+}
+
+function mobileNavLinkEnd(to: string, allHrefs: string[]) {
+  return (
+    to === "/" ||
+    allHrefs.some((href) => href !== to && href.startsWith(`${to}/`))
+  );
+}
+
+export { isPrimaryNavActive, sectionFromPath, buildMobileDrawerNav };
 
 function Brand() {
   const { t } = useTranslation();
@@ -464,12 +644,24 @@ function OperationsShell() {
     return pageAccess.canAccessSection(key, SECTION_CHILD_KEYS[key] ?? []);
   });
   const sideItems = (secondaryNav[section] ?? secondaryNav.overview).filter(
-    (item) => pageAccess.canAccess(item.permissionKey ?? pageAccessKey(item.to)),
+    (item) => isNavItemVisible(item, pageAccess.canAccess),
+  );
+  const mobileNavGroups = buildMobileDrawerNav(
+    visiblePrimaryNav,
+    (permissionKey) => pageAccess.canAccess(permissionKey),
+  );
+  const mobileNavHrefs = mobileNavGroups.flatMap((group) =>
+    group.items.map((item) => item.to),
   );
   const firstSettingsPath =
     secondaryNav.settings.find((item) =>
       pageAccess.canAccess(item.permissionKey ?? pageAccessKey(item.to)),
     )?.to ?? "/settings/users";
+  const firstReportsPath =
+    secondaryNav.reports
+      .flatMap((item) => item.children ?? [])
+      .find((item) => isNavItemVisible(item, pageAccess.canAccess))?.to ??
+    REPORT_GROUP_ROUTES.frozenMeat;
   const activeWorkspace =
     section === "delivery"
       ? "delivery"
@@ -670,21 +862,65 @@ function OperationsShell() {
       >
         <aside className="sidebar">
           <nav aria-label="Secondary">
-            {sideItems.map(({ key, to, icon: NavIcon }) => (
-              <NavLink
-                key={`${key}-${to}`}
-                to={to}
-                end={to === "/" || to === `/${section}`}
-                className={({ isActive }) =>
-                  cn("sidebar-link", isActive && "active")
-                }
-                title={sidebarCollapsed ? t(`navigation.${key}`) : undefined}
-              >
-                <NavIcon />
-                <span>{t(`navigation.${key}`)}</span>
-                {!sidebarCollapsed && <ChevronRight className="link-chevron" />}
-              </NavLink>
-            ))}
+            {sideItems.map((item) => {
+              const visibleChildren = (item.children ?? []).filter((child) =>
+                isNavItemVisible(child, pageAccess.canAccess),
+              );
+              const childActive = visibleChildren.some((child) =>
+                isNavPathActive(location.pathname, child.to, false),
+              );
+              const parentExact = item.to === "/" || item.to === `/${section}`;
+
+              return (
+                <div className="sidebar-nav-group" key={`${item.key}-${item.to}`}>
+                  <NavLink
+                    to={visibleChildren[0]?.to ?? item.to}
+                    end={parentExact || visibleChildren.length > 0}
+                    className={({ isActive }) =>
+                      cn(
+                        "sidebar-link",
+                        visibleChildren.length > 0 && "has-children",
+                        (isActive || childActive) &&
+                          (visibleChildren.length === 0 || sidebarCollapsed) &&
+                          "active",
+                        childActive && "open",
+                      )
+                    }
+                    title={
+                      sidebarCollapsed ? t(`navigation.${item.key}`) : undefined
+                    }
+                  >
+                    <item.icon />
+                    <span>{t(`navigation.${item.key}`)}</span>
+                    {!sidebarCollapsed && (
+                      <ChevronRight
+                        className={cn(
+                          "link-chevron",
+                          visibleChildren.length > 0 && "is-expanded",
+                        )}
+                      />
+                    )}
+                  </NavLink>
+                  {visibleChildren.length > 0 && !sidebarCollapsed ? (
+                    <div className="sidebar-subnav">
+                      {visibleChildren.map((child) => (
+                        <NavLink
+                          key={`${child.key}-${child.to}`}
+                          to={child.to}
+                          end
+                          className={({ isActive }) =>
+                            cn("sidebar-link nested", isActive && "active")
+                          }
+                        >
+                          <child.icon />
+                          <span>{t(`navigation.${child.key}`)}</span>
+                        </NavLink>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
           </nav>
           <button
             className="sidebar-collapse"
@@ -798,7 +1034,58 @@ function OperationsShell() {
                 element={<PackageDetailPage />}
               />
               <Route path="/products/:id" element={<ProductDetailPage />} />
-              <Route path="/reports/*" element={<ReportsPage />} />
+              <Route
+                path="/frozen"
+                element={<Navigate to="/frozen/raw-meat-inventory" replace />}
+              />
+              <Route
+                path="/frozen/raw-meat-inventory"
+                element={<RawMeatInventoryCalcPage />}
+              />
+              <Route
+                path="/frozen/prepared-meat-inventory"
+                element={<PreparedMeatInventoryCalcPage />}
+              />
+              <Route
+                path="/frozen/selling-price-cost"
+                element={<SellingPriceCostPage />}
+              />
+              <Route
+                path="/frozen/delivery-notes"
+                element={<MeatDeliveryNotesPage />}
+              />
+              <Route
+                path="/frozen/seasoning-cost"
+                element={<SeasoningCostSettingsPage />}
+              />
+              <Route
+                path="/frozen/calculation-settings"
+                element={<CalculationSettingsPage />}
+              />
+              <Route
+                path="/frozen/customers"
+                element={<MeatCustomersPage />}
+              />
+              <Route
+                path="/frozen/spice-usage"
+                element={<SpiceUsagePage />}
+              />
+              <Route
+                path="/frozen/yield-errors"
+                element={<MeatYieldErrorsPage />}
+              />
+              <Route
+                path="/reports/frozen-meat"
+                element={<ReportsPage group="frozenMeat" />}
+              />
+              <Route
+                path="/reports/shops"
+                element={<ReportsPage group="shops" />}
+              />
+              <Route
+                path="/reports/*"
+                element={<Navigate to={firstReportsPath} replace />}
+              />
               <Route
                 path="/settings"
                 element={<Navigate to={firstSettingsPath} replace />}
@@ -870,22 +1157,26 @@ function OperationsShell() {
                 <X />
               </Button>
             </div>
-            <nav>
-              {visiblePrimaryNav.map(({ key, to, icon: NavIcon }) => (
-                <NavLink
-                  key={key}
-                  to={to}
-                  end={to === "/"}
-                  className={({ isActive }) =>
-                    cn(
-                      "sidebar-link",
-                      isPrimaryNavActive(section, key, isActive) && "active",
-                    )
-                  }
-                >
-                  <NavIcon />
-                  <span>{t(`navigation.${key}`)}</span>
-                </NavLink>
+            <nav aria-label="Navigation">
+              {mobileNavGroups.map((group) => (
+                <div className="mobile-nav-group" key={group.groupKey}>
+                  <p className="mobile-nav-group-label">
+                    {t(`navigation.${group.groupKey}`)}
+                  </p>
+                  {group.items.map(({ key, to, icon: NavIcon }) => (
+                    <NavLink
+                      key={`${group.groupKey}-${key}-${to}`}
+                      to={to}
+                      end={mobileNavLinkEnd(to, mobileNavHrefs)}
+                      className={({ isActive }) =>
+                        cn("sidebar-link", isActive && "active")
+                      }
+                    >
+                      <NavIcon />
+                      <span>{t(`navigation.${key}`)}</span>
+                    </NavLink>
+                  ))}
+                </div>
               ))}
             </nav>
             <div className="mobile-account-actions">
@@ -1187,14 +1478,6 @@ export function Dashboard({
           <h1>{t("dashboard.title")}</h1>
         </div>
         <div className="heading-actions">
-          <Button
-            variant="outline"
-            onClick={() => setReloadKey((key) => key + 1)}
-            disabled={loading}
-          >
-            <RefreshCw />
-            {t("dashboard.refresh")}
-          </Button>
           <Button variant="outline" asChild>
             <Link to="/reports/daily">
               <FileText />
@@ -1360,7 +1643,11 @@ export function Dashboard({
           action={t("common.viewAll")}
           actionTo="/kitchen"
         />
-        <div className="table-wrap">
+        <PullToRefresh
+          className="table-wrap"
+          onRefresh={() => setReloadKey((key) => key + 1)}
+          refreshing={loading}
+        >
           <table>
             <thead>
               <tr>
@@ -1427,7 +1714,7 @@ export function Dashboard({
               )}
             </tbody>
           </table>
-        </div>
+        </PullToRefresh>
       </article>
     </>
   );

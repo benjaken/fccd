@@ -63,7 +63,7 @@ FCCD（**Food Channel Catering Discovery**）自有設計規範：以 **shadcn/u
 | `--accent` | 輕量強調底 | 與 primary 同色相、低彩度 |
 | `--destructive` | 刪除、失敗、危險 | **保持紅色**，不跟品牌綠混用 |
 | `--border` / `--input` / `--ring` | 邊框、表單框、focus | ring 跟隨綠系 |
-| `--background` / `--card` / `--foreground` | 頁面／卡片／內文 | Light／Dark 皆需可讀 |
+| `--background` / `--card` / `--foreground` | 頁面／卡片／內文 | Light `--card` 用 `oklch(1 0 150)`（chroma 0 仍保留綠相，避免 OKLCH mix 漂向粉紅） |
 
 **借 Ant Design 的功能色分工（映射到本系統）：**
 
@@ -94,7 +94,7 @@ Active 導航（側欄、工作區 soft link、migration tab）必須是**淡綠
 | Eyebrow | 小寫距大寫／品牌色 | 區塊眉題，不壓過品牌 |
 
 字型堆疊維持現有：`Inter, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui`。  
-文案一律走 `src/i18n.ts`，預設 `zh-HK`。
+文案一律走 `src/i18n.ts`，預設 `zh-HK`。輸入框 placeholder 同樣走獨立 `*Placeholder` i18n key；中文 locale 不得使用英文提示。
 
 ### 2.3 間距 Spacing
 
@@ -197,8 +197,11 @@ Active 導航（側欄、工作區 soft link、migration tab）必須是**淡綠
 | 組件 | 路徑 | 用途 |
 |---|---|---|
 | `SearchField` | `src/components/ui/search-field.tsx` | 框內放大鏡的通用搜尋輸入 |
-| `ListSearchBar` | `src/components/ui/list-search-bar.tsx` | 列表工具列：搜尋欄 + 搜尋按鈕 |
-| `ListTable` | `src/components/ui/list-table.tsx` | 分頁營運列表共用表格外殼、表頭與載入骨架 |
+| `ListSearchBar` | `src/components/ui/list-search-bar.tsx` | 列表工具列：搜尋欄 + 搜尋按鈕；移動端保留輸入框，篩選改由右側圖示打開側欄 |
+| `DateRangePicker` | `src/components/ui/date-range-picker.tsx` | 開始–結束日期：單一「日期範圍」欄，起迄同一列 |
+| `SidePanel` | `src/components/ui/side-panel.tsx` | 右側滑出面板（列表篩選等） |
+| `ListTable` | `src/components/ui/list-table.tsx` | 分頁營運列表共用表格外殼、表頭、載入骨架與移動端下拉重新整理 |
+| `PullToRefresh` | `src/components/ui/pull-to-refresh.tsx` | 移動端表格下拉重新整理 |
 | `TableSkeletonRows` | `src/components/ui/table-skeleton.tsx` | 表格載入骨架列 |
 | `PageSkeleton` | `src/components/ui/page-skeleton.tsx` | 所有頁面級骨架；用 `variant` 配置權限、詳情、Dashboard、卡片、表格、報表及分析佈局 |
 | `TablePagination` | `src/components/ui/table-pagination.tsx` | 底部分頁 |
@@ -230,16 +233,19 @@ Active 導航（側欄、工作區 soft link、migration tab）必須是**淡綠
 借 Ant Design 表單節奏 + shadcn 輸入外觀：
 
 - 標籤在欄位上方（營運後台預設），文案走 i18n
+- **Placeholder 必須獨立 i18n key**（名稱以 `Placeholder` 結尾），禁止在 JSX 硬編碼，也禁止把欄位標籤拿來當 placeholder。預設 `zh-HK` 用繁中或「例如：…」；不要把英文 Bubble 原文（如 `Product Name`、`Choose some options...`）放進中文 catalog。`en-GB` 才用英文 placeholder
 - 校驗錯誤：欄位旁／下方短訊 + 必要時頂部摘要（PRD UX-07）
 - 必填在標籤標示；送出中按鈕進入 loading／disabled，防重複提交
 - 輸入高度與 middle 按鈕對齊；focus 使用 `--ring`
 - 密碼、電郵等使用正確 `autoComplete`／`inputMode`
+- 開始／結束日期必須用 `DateRangePicker`：一個可見標籤（日期範圍）+ 同一列的起迄輸入，不要兩個獨立 DatePicker 上下堆疊。年度報表篩選可繼續用年份 `<select>`
+- 報表店舖／供應商 chip 在移動端保持單行矮膠囊（約 36px），不要拉成佔滿半格的高膠囊
 
 ### 4.3 資料展示 Data display
 
 | 模式 | 規範 |
 |---|---|
-| 營運表 | 遵守 [`UI_TABLE_STANDARD.md`](UI_TABLE_STANDARD.md)：15 筆／頁、sticky header、面板內捲動、底部分頁；**載入中用表格骨架列**，不用整面 spinner |
+| 營運表 | 遵守 [`UI_TABLE_STANDARD.md`](UI_TABLE_STANDARD.md)：15 筆／頁、sticky header、面板內捲動、底部分頁（移動端摘要與頁碼同一行）；**載入中用表格骨架列**，不用整面 spinner |
 | 列操作（最後一欄） | **橫向單行**；常用動作（編輯、改密碼等）用 **icon-only** + `aria-label`；禁止 icon+文字按鈕垂直堆疊把列高撐高 |
 | 狀態徽章 | 語意色短標籤；成功綠、警告琥珀、危險紅、資訊藍／青 |
 | 描述列表 | 標籤弱色、值主色；適合詳情頁 |
@@ -262,6 +268,7 @@ Active 導航（側欄、工作區 soft link、migration tab）必須是**淡綠
 ### 4.5 導航 Navigation
 
 - 工作區 soft links、側欄 active state 明確
+- 移動端漢堡選單把一／二／三級目的地收成**同一份清單**（可有分組標題，但不要再套一層抽屜或側欄）
 - 麵包屑／上下文只在有層級時出現
 - 連結繼承色時，不可破壞 Primary 按鈕白字（見 `a.bg-primary` 覆蓋規則）
 
@@ -288,12 +295,17 @@ Active 導航（側欄、工作區 soft link、migration tab）必須是**淡綠
 ```
 [🔍 在輸入框內的搜尋欄] [搜尋按鈕] [狀態篩選] ...
 [表頭 sticky]
-[表身 scroll · 15 rows]
+[表身 scroll · 15 rows · 移動端下拉重新整理]
 [顯示 1-15，共 N]     [上一頁] [頁碼] [下一頁]
 ```
 
 搜尋放大鏡放在輸入框 **內部** 左側；實作必須用 `ListSearchBar`／`SearchField`
 （樣式類名 `.list-search` / `.search-field`，舊別名仍可用）。不要放在框外，也不要在頁面內複製 markup。
+
+移動端（`max-width: 900px`）：
+
+- 搜尋輸入框留在工具列；售價／渠道／分類／狀態等篩選收入右側圖示，點擊後從側邊滑出。篩選必須走 `ListSearchBar` 的 `filters`，不要在各頁各自藏選擇器。抽屜內先改選項，按 **確定** 才套用並自動收合；關閉／點遮罩則還原未套用的草稿。
+- 表格在頂部下拉觸發 `PullToRefresh` / `ListTable.onRefresh`，不要另做一套刷新 UI
 
 ### 5.3 儀表板進度
 
@@ -316,6 +328,7 @@ Active 導航（側欄、工作區 soft link、migration tab）必須是**淡綠
 | Button CVA | `src/components/ui/button.tsx` |
 | Primary 白字覆蓋 | `src/index.css` `a.bg-primary, button.bg-primary` |
 | 列表搜尋 | `src/components/ui/search-field.tsx`、`list-search-bar.tsx` |
+| 日期範圍 | `src/components/ui/date-range-picker.tsx` |
 | 列表分頁／狀態／骨架 | `table-pagination.tsx`、`operational-list-state.tsx`、`table-skeleton.tsx` |
 | 進度多色 | `.progress-row.tone-*` + Dashboard progress `tone` |
 | 文案 | `src/i18n.ts` |
@@ -342,6 +355,7 @@ Active 導航（側欄、工作區 soft link、migration tab）必須是**淡綠
 - Active 導航殘留舊藍／粉紅底而不跟隨 `--primary`
 - 業務元件內硬編碼大段顏色／文案
 - 多頁複製貼上相同搜尋框／骨架／分頁 markup，而不使用 `src/components/ui/` 共用組件
+- 開始／結束日期做成兩個獨立 DatePicker 上下堆疊，而不使用 `DateRangePicker`
 - 用動畫或 toast 掩蓋未處理的錯誤狀態
 - 表格操作欄把「編輯／修改密碼」等常用按鈕做成 icon+文字並垂直堆疊
 - 在 Production 開啟 `VITE_ENABLE_QUICK_LOGIN`

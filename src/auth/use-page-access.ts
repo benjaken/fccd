@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
+import { useAuth } from "@/auth/AuthProvider";
 import { supabase } from "@/lib/supabase";
 
 type PermissionValue = {
@@ -26,11 +27,50 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
   { prefix: "/products/catering", pageKey: "products.catering" },
   { prefix: "/products/lunchbox", pageKey: "products.lunchbox" },
   { prefix: "/products/ala-carte", pageKey: "products.ala_carte" },
+  {
+    prefix: "/frozen/raw-meat-inventory",
+    pageKey: "frozen.raw_meat_inventory",
+  },
+  {
+    prefix: "/frozen/prepared-meat-inventory",
+    pageKey: "frozen.prepared_meat_inventory",
+  },
+  {
+    prefix: "/frozen/delivery-notes",
+    pageKey: "frozen.delivery_notes",
+  },
+  {
+    prefix: "/frozen/spice-usage",
+    pageKey: "frozen.spice_usage",
+  },
+  {
+    prefix: "/frozen/selling-price-cost",
+    pageKey: "frozen.selling_price_cost",
+  },
+  {
+    prefix: "/frozen/seasoning-cost",
+    pageKey: "frozen.seasoning_cost",
+  },
+  {
+    prefix: "/frozen/calculation-settings",
+    pageKey: "frozen.calculation_settings",
+  },
+  {
+    prefix: "/frozen/customers",
+    pageKey: "frozen.meat_customers",
+  },
+  {
+    prefix: "/frozen/yield-errors",
+    pageKey: "frozen.yield_errors",
+  },
+  { prefix: "/frozen", pageKey: "frozen" },
   { prefix: "/kitchen/calendar", pageKey: "kitchen.calendar" },
   { prefix: "/kitchen/inventory", pageKey: "kitchen.inventory" },
   { prefix: "/delivery/assign", pageKey: "delivery.assign" },
   { prefix: "/restaurant/inventory", pageKey: "restaurant.inventory" },
   { prefix: "/restaurant/reports", pageKey: "restaurant.reports" },
+  { prefix: "/reports/frozen-meat", pageKey: "reports.frozen_meat" },
+  { prefix: "/reports/shops", pageKey: "reports.shops" },
   {
     prefix: "/reports/tabs/shop-order-quantities",
     pageKey: "reports.shop_order_quantities",
@@ -76,6 +116,46 @@ export const REPORT_TAB_PERMISSION_KEYS = {
 } as const;
 
 export type ReportTabKey = keyof typeof REPORT_TAB_PERMISSION_KEYS;
+export type ReportGroup = "frozenMeat" | "shops";
+
+export const REPORT_GROUP_PAGE_KEYS = {
+  frozenMeat: "reports.frozen_meat",
+  shops: "reports.shops",
+} as const;
+
+export const REPORT_GROUP_ROUTES = {
+  frozenMeat: "/reports/frozen-meat",
+  shops: "/reports/shops",
+} as const;
+
+export const REPORT_GROUP_TABS = {
+  frozenMeat: [
+    "averageSupplyPrice",
+    "productionCostPrice",
+    "rawMeatAveragePrice",
+    "preparedMeatStock",
+    "rawMeatStock",
+    "supplierPurchase",
+  ],
+  shops: ["shopOrderQuantities"],
+} as const satisfies Record<ReportGroup, readonly ReportTabKey[]>;
+
+function tabPermissionKeys(tabs: readonly ReportTabKey[]) {
+  return tabs.map((tab) => REPORT_TAB_PERMISSION_KEYS[tab]);
+}
+
+const PAGE_ACCESS_CHILD_KEYS: Record<string, string[]> = {
+  [REPORT_GROUP_PAGE_KEYS.frozenMeat]: tabPermissionKeys(
+    REPORT_GROUP_TABS.frozenMeat,
+  ),
+  [REPORT_GROUP_PAGE_KEYS.shops]: tabPermissionKeys(REPORT_GROUP_TABS.shops),
+  reports: [
+    REPORT_GROUP_PAGE_KEYS.frozenMeat,
+    REPORT_GROUP_PAGE_KEYS.shops,
+    ...tabPermissionKeys(REPORT_GROUP_TABS.frozenMeat),
+    ...tabPermissionKeys(REPORT_GROUP_TABS.shops),
+  ],
+};
 
 export function pageAccessKey(pathname: string) {
   if (pathname === "/" || pathname === "") return "overview";
@@ -92,6 +172,15 @@ export function pageAccessKey(pathname: string) {
 
   const segment = pathname.split("/").filter(Boolean)[0];
   return segment || "overview";
+}
+
+export function useCurrentPageAccess() {
+  const { user, profile } = useAuth();
+  const authorizationRole =
+    typeof user?.app_metadata?.role === "string"
+      ? user.app_metadata.role
+      : profile?.role;
+  return usePageAccess(authorizationRole);
 }
 
 export function usePageAccess(role: string | null | undefined) {
@@ -153,10 +242,13 @@ export function usePageAccess(role: string | null | undefined) {
       isSuperAdmin,
       loading,
       error,
-      canAccess: (pageKey: string) =>
-        pageKey === "profile" ||
-        isSuperAdmin ||
-        permissions.get(pageKey)?.canAccess === true,
+      canAccess: (pageKey: string) => {
+        if (pageKey === "profile" || isSuperAdmin) return true;
+        if (permissions.get(pageKey)?.canAccess === true) return true;
+        return (PAGE_ACCESS_CHILD_KEYS[pageKey] ?? []).some(
+          (child) => permissions.get(child)?.canAccess === true,
+        );
+      },
       canManage: (pageKey: string) =>
         isSuperAdmin || permissions.get(pageKey)?.canManage === true,
       /** Section nav: visible if the section itself or any of its children is allowed. */

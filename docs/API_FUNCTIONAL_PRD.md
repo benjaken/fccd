@@ -782,7 +782,7 @@ report_exceptions
 | UX-10 | 品牌顯示名稱為 **FCCD**（全稱 Food Channel Catering Discovery）；主題色採用護眼中等飽和綠色（非紅色），並以 design tokens 管理 primary、hover、active、focus、success、warning 及 danger；細節見 `docs/DESIGN_SYSTEM.md` 與 `docs/UI_DEVELOPMENT_STANDARD.md`。 |
 | UX-11 | 提供 Light／Dark mode 切換；所有頁面、表格、圖表、Dialog、Toast、狀態色及 Logo 版本均須支援兩種模式。 |
 | UX-12 | 提供繁體中文／English 切換，預設繁體中文；使用者選擇須跨 session 保存。 |
-| UX-13 | 所有介面文字、導航、表單、驗證、通知及空狀態使用 i18n key，不得在元件內散落硬編碼文案。 |
+| UX-13 | 所有介面文字、導航、表單、驗證、通知、空狀態及 **輸入框 placeholder** 使用 i18n key（placeholder 須為獨立 `*Placeholder` key，不得重用欄位標籤或在 JSX 硬編碼）；`zh-HK` placeholder 須為繁中或「例如：…」，不得使用英文 Bubble 原文。 |
 | UX-14 | 日期、時間、數字及貨幣按 locale 格式化；香港業務時間預設使用 `Asia/Hong_Kong`，貨幣預設顯示 HKD。 |
 | UX-15 | 頁面及工作區切換提供短暫、非阻塞的動態效果；不得延遲資料操作，並遵守 `prefers-reduced-motion`。 |
 
@@ -832,6 +832,7 @@ report_exceptions
 - 支援 locale：`zh-HK`（預設繁體中文）與 `en`（English）。
 - Translation namespace 至少按 `common`、`navigation`、`auth`、`orders`、`quotes`、`inventory`、`delivery`、`restaurant`、`reports`、`validation` 分拆。
 - 缺少 English 文案時 fallback 至 `zh-HK`，同時在非正式環境記錄 missing key；正式畫面不得直接顯示 translation key。
+- 輸入框 placeholder 必須使用獨立 i18n key（名稱以 `Placeholder` 結尾），不得在 JSX 硬編碼，也不得把欄位標籤當 placeholder。預設 `zh-HK` 用繁體中文或數字範例（「例如：0.5」），禁止英文句子或 Bubble 原文（如 `Product Name`、`Choose some options...`）。English locale 才使用英文 placeholder。
 - API／資料庫保存穩定 code，不保存翻譯後狀態文字；顯示時由前端按 locale 翻譯。
 - 使用者輸入的客戶名稱、地址、產品內容及備註不自動翻譯。
 

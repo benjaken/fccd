@@ -665,5 +665,263 @@ describe("Super Admin system settings", () => {
     expect(permissionDriven).not.toContain(
       "new.page_key like 'settings.%'",
     );
+
+    const reportGroups = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260814120000_report_group_page_permissions.sql",
+      ),
+      "utf8",
+    );
+    expect(reportGroups).toContain("reports.frozen_meat");
+    expect(reportGroups).toContain("reports.shops");
+    expect(reportGroups).toContain("parent_page_key = 'reports.frozen_meat'");
+    expect(reportGroups).toContain("parent_page_key = 'reports.shops'");
+
+    const frozenActions = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260814142000_frozen_list_action_permissions.sql",
+      ),
+      "utf8",
+    );
+    expect(frozenActions).toContain("frozen.seasoning_cost.edit");
+    expect(frozenActions).toContain("frozen.seasoning_cost.delete");
+    expect(frozenActions).toContain("frozen.meat_customers.edit");
+    expect(frozenActions).toContain("frozen.meat_customers.delete");
+    expect(frozenActions).toContain("frozen.spice_usage.delete");
+    expect(frozenActions).toContain("frozen.calculation_settings.delete");
+
+    const sellingPriceCost = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260814170000_frozen_selling_price_cost_page_permissions.sql",
+      ),
+      "utf8",
+    );
+    expect(sellingPriceCost).toContain("frozen.selling_price_cost");
+    expect(sellingPriceCost).toContain("售價成本計算");
+    expect(sellingPriceCost).toContain("/frozen/selling-price-cost");
+    expect(sellingPriceCost).toContain("roles.role in ('Admin', 'Factory')");
+    expect(frozenActions).toContain("roles.role = 'Super Admin'");
+
+    const preparedMeatInventory = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260814183000_frozen_prepared_meat_inventory_page_permissions.sql",
+      ),
+      "utf8",
+    );
+    expect(preparedMeatInventory).toContain("frozen.prepared_meat_inventory");
+    expect(preparedMeatInventory).toContain("製成品存貨計算");
+    expect(preparedMeatInventory).toContain("/frozen/prepared-meat-inventory");
+    expect(preparedMeatInventory).toContain("roles.role in ('Admin', 'Factory')");
+
+    const deliveryNotesPage = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260814204000_frozen_delivery_notes_page.sql",
+      ),
+      "utf8",
+    );
+    expect(deliveryNotesPage).toContain("frozen.delivery_notes");
+    expect(deliveryNotesPage).toContain("送貨單管理");
+    expect(deliveryNotesPage).toContain("/frozen/delivery-notes");
+    expect(deliveryNotesPage).toContain("delete_meat_delivery_note");
+    expect(deliveryNotesPage).toContain("roles.role in ('Admin', 'Factory')");
+
+    const frozenMenuLabels = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260814206000_frozen_menu_labels_and_selling_price_order.sql",
+      ),
+      "utf8",
+    );
+    expect(frozenMenuLabels).toContain("客戶管理");
+    expect(frozenMenuLabels).toContain("收成錯誤統計");
+    expect(frozenMenuLabels).toContain("frozen.selling_price_cost");
+    expect(frozenMenuLabels).toContain("frozen.prepared_meat_inventory");
+
+    const preparedMeatFlags = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260814184000_update_prepared_meat_item_flags.sql",
+      ),
+      "utf8",
+    );
+    expect(preparedMeatFlags).toContain("update_prepared_meat_item_flags");
+    expect(preparedMeatFlags).toContain("frozen.prepared_meat_inventory");
+
+    const preparedMeatOutbound = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260814185000_create_prepared_meat_outbound.sql",
+      ),
+      "utf8",
+    );
+    expect(preparedMeatOutbound).toContain("create_prepared_meat_outbound");
+    expect(preparedMeatOutbound).toContain("桂花小幸");
+
+    const preparedMeatOutboundConfirm = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260814190000_prepared_meat_outbound_confirm_and_raw.sql",
+      ),
+      "utf8",
+    );
+    expect(preparedMeatOutboundConfirm).toContain("send_prepared_meat_order_to_factory");
+    expect(preparedMeatOutboundConfirm).toContain("can_ship_directly");
+    expect(preparedMeatOutboundConfirm).toContain("到會");
+    expect(preparedMeatOutboundConfirm).toContain("凍肉製作");
+
+    const createPreparedMeatItemSql = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260814191000_create_prepared_meat_item.sql",
+      ),
+      "utf8",
+    );
+    expect(createPreparedMeatItemSql).toContain("create_prepared_meat_item");
+    expect(createPreparedMeatItemSql).toContain("kg_per_package");
+    expect(createPreparedMeatItemSql).toContain("frozen.prepared_meat_inventory");
+
+    const savePreparedMeatOutbound = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260814192000_save_prepared_meat_outbound.sql",
+      ),
+      "utf8",
+    );
+    expect(savePreparedMeatOutbound).toContain("save_prepared_meat_outbound");
+    expect(savePreparedMeatOutbound).toContain("p_contact_person");
+    expect(savePreparedMeatOutbound).toContain("p_order_id");
+
+    const preparedMeatOutboundStock = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260814193000_prepared_meat_outbound_stock_limits.sql",
+      ),
+      "utf8",
+    );
+    expect(preparedMeatOutboundStock).toContain(
+      "prepared_meat_outbound_stock_balances",
+    );
+    expect(preparedMeatOutboundStock).toContain("quantity exceeds current stock");
+    expect(preparedMeatOutboundStock).toContain(
+      "where prepared_meat_item_id is not null",
+    );
+    expect(preparedMeatOutboundStock).toContain(
+      "where raw_meat_item_id is not null",
+    );
+
+    const preparedMeatOutboundStockNullItems = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260814203000_prepared_meat_outbound_stock_ignore_null_items.sql",
+      ),
+      "utf8",
+    );
+    expect(preparedMeatOutboundStockNullItems).toContain(
+      "prepared_meat_outbound_stock_balances",
+    );
+    expect(preparedMeatOutboundStockNullItems).toContain(
+      "where prepared_meat_item_id is not null",
+    );
+    expect(preparedMeatOutboundStockNullItems).toContain(
+      "where raw_meat_item_id is not null",
+    );
+
+    const preparedMeatInboundNoRaw = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260814194000_create_prepared_meat_inbound_no_raw.sql",
+      ),
+      "utf8",
+    );
+    expect(preparedMeatInboundNoRaw).toContain("create_prepared_meat_inbound_no_raw");
+    expect(preparedMeatInboundNoRaw).toContain("inbound_packages");
+    expect(preparedMeatInboundNoRaw).toContain("frozen.prepared_meat_inventory");
+    expect(preparedMeatInboundNoRaw).not.toContain(
+      "prepared_meat_stock_raw_sources",
+    );
+
+    const preparedMeatInboundNoRawFilter = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260814202000_prepared_meat_inbound_no_raw_without_raw_item.sql",
+      ),
+      "utf8",
+    );
+    expect(preparedMeatInboundNoRawFilter).toContain(
+      "prepared meat item requires raw meat",
+    );
+    expect(preparedMeatInboundNoRawFilter).not.toContain(
+      "prepared_meat_stock_raw_sources",
+    );
+
+    const preparedMeatInboundWithRaw = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260814195000_create_prepared_meat_inbound_with_raw.sql",
+      ),
+      "utf8",
+    );
+    expect(preparedMeatInboundWithRaw).toContain(
+      "create_prepared_meat_inbound_with_raw",
+    );
+    expect(preparedMeatInboundWithRaw).toContain(
+      "prepared_meat_inbound_raw_preview",
+    );
+    expect(preparedMeatInboundWithRaw).toContain("prepared_meat_stock_raw_sources");
+    expect(preparedMeatInboundWithRaw).toContain(
+      "inbound quantity must be within 50 percent of budgeted yield",
+    );
+
+    const yieldErrors = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260814210000_frozen_yield_errors_page_permissions.sql",
+      ),
+      "utf8",
+    );
+    expect(yieldErrors).toContain("frozen.yield_errors");
+    expect(yieldErrors).toContain("收成錯誤");
+    expect(yieldErrors).toContain("/frozen/yield-errors");
+    expect(yieldErrors).toContain(
+      "roles.role in ('Admin', 'Factory', 'Accounting')",
+    );
+
+    const yieldExceptions = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260814250000_rename_yield_errors_to_exceptions.sql",
+      ),
+      "utf8",
+    );
+    expect(yieldExceptions).toContain("frozen.yield_errors");
+    expect(yieldExceptions).toContain("收成異常");
+
+    const yieldErrorStatistics = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260814260000_rename_yield_exceptions_to_error_statistics.sql",
+      ),
+      "utf8",
+    );
+    expect(yieldErrorStatistics).toContain("frozen.yield_errors");
+    expect(yieldErrorStatistics).toContain("收成錯誤統計");
+
+    const rawMeatActions = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260814160000_raw_meat_option_and_stock_in.sql",
+      ),
+      "utf8",
+    );
+    expect(rawMeatActions).toContain("frozen.raw_meat_inventory.create");
+    expect(rawMeatActions).toContain("frozen.raw_meat_inventory.edit");
+    expect(rawMeatActions).toContain("frozen.raw_meat_inventory.stock_in");
+    expect(rawMeatActions).toContain("create_raw_meat_item");
+    expect(rawMeatActions).toContain("create_raw_meat_stock_in");
   });
 });

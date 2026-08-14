@@ -31,9 +31,10 @@
   color-scheme: light;
   --background: oklch(0.975 0.006 150);
   --foreground: oklch(0.19 0.02 150);
-  --card: oklch(1 0 0);
+  /* Hue 150 at chroma 0 so OKLCH mixes with green stay green, not pink/red. */
+  --card: oklch(1 0 150);
   --card-foreground: oklch(0.19 0.02 150);
-  --popover: oklch(1 0 0);
+  --popover: oklch(1 0 150);
   --popover-foreground: oklch(0.19 0.02 150);
   /* Clear green primary — medium saturation, brand + active system. */
   --primary: oklch(0.52 0.14 150);
@@ -665,9 +666,41 @@ button.bg-primary:focus-visible {
 }
 
 .sidebar-link:hover .link-chevron,
-.sidebar-link.active .link-chevron {
+.sidebar-link.active .link-chevron,
+.sidebar-link.open .link-chevron,
+.sidebar-link.has-children .link-chevron {
   opacity: 0.7;
   transform: translateX(0);
+}
+
+.sidebar-link.has-children .link-chevron.is-expanded {
+  transform: rotate(90deg);
+}
+
+.sidebar-link.open {
+  color: var(--foreground);
+}
+
+.sidebar-nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sidebar-subnav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 0 4px 18px;
+}
+
+.sidebar-link.nested {
+  min-height: 38px;
+  font-weight: 600;
+}
+
+.sidebar-is-collapsed .sidebar-subnav {
+  display: none;
 }
 
 .sidebar-collapse {
@@ -737,6 +770,10 @@ button.bg-primary:focus-visible {
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+}
+
+.page-heading .eyebrow {
+  color: var(--primary);
 }
 
 .page-heading h1,
@@ -1357,6 +1394,31 @@ td:last-child {
   border-bottom: 1px solid var(--border);
 }
 
+.yield-errors-page .orders-panel {
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+}
+
+.yield-errors-rules {
+  display: grid;
+  gap: 4px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border);
+  background: var(--secondary);
+  color: var(--muted-foreground);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.yield-errors-rules-title {
+  color: var(--foreground);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.yield-errors-rules p {
+  margin: 0;
+}
+
 .settings-attachments-toolbar {
   flex-wrap: wrap;
   align-items: flex-end;
@@ -1369,21 +1431,9 @@ td:last-child {
   gap: 12px;
 }
 
-.settings-attachments-filters input[type="date"] {
-  height: 40px;
-  min-width: 150px;
-  padding: 0 12px;
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  outline: 0;
-  background: var(--background);
-  color: var(--foreground);
-  font-size: 14px;
-}
-
-.settings-attachments-filters input[type="date"]:focus {
-  border-color: color-mix(in oklab, var(--primary) 45%, var(--border));
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 18%, transparent);
+.settings-attachments-filters .date-range-picker {
+  flex: 1 1 280px;
+  min-width: min(100%, 280px);
 }
 
 .operational-table-wrap {
@@ -1401,6 +1451,10 @@ td:last-child {
   height: 100%;
 }
 
+.list-search-host {
+  display: contents;
+}
+
 .list-search,
 .quotes-search,
 .orders-search,
@@ -1410,6 +1464,87 @@ td:last-child {
   align-items: center;
   gap: 8px;
   width: min(620px, 100%);
+}
+
+.list-search-filters {
+  display: contents;
+}
+
+.list-search-filter-trigger {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.list-search-filter-trigger.is-active::after {
+  content: "";
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--primary);
+}
+
+.list-search-filter-drawer {
+  display: grid;
+  gap: 16px;
+}
+
+.list-search-filter-drawer .products-filters,
+.list-search-filter-drawer .packages-filters,
+.list-search-filter-drawer .settings-attachments-filters {
+  display: grid;
+  gap: 16px;
+  width: 100%;
+}
+
+.list-search-filter-drawer .products-status-filter,
+.list-search-filter-drawer .packages-status-filter,
+.list-search-filter-drawer .orders-status-filter,
+.list-search-filter-drawer .quotes-status-filter {
+  width: 100%;
+  min-width: 0;
+}
+
+.list-search-filter-drawer select {
+  width: 100%;
+}
+
+.list-search-filter-apply {
+  width: 100%;
+}
+
+.pull-to-refresh {
+  position: relative;
+  overscroll-behavior-y: contain;
+}
+
+.pull-to-refresh-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  overflow: hidden;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 600;
+  transition: height 160ms ease;
+}
+
+.pull-to-refresh.is-pulling .pull-to-refresh-indicator {
+  transition: none;
+}
+
+.pull-to-refresh-indicator svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+.pull-to-refresh-indicator.is-armed,
+.pull-to-refresh-indicator.is-busy {
+  color: var(--primary);
 }
 
 .search-field,
@@ -1670,6 +1805,1072 @@ td:last-child {
 .packages-state-error > svg {
   color: var(--destructive);
 }
+
+.raw-meat-calc-page {
+  display: grid;
+  gap: 20px;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: calc(
+    100dvh - var(--topbar-height) - var(--workspace-height) - 76px
+  );
+  min-height: 560px;
+  overflow: hidden;
+}
+
+.raw-meat-calc-page .page-heading {
+  margin-bottom: 0;
+}
+
+.raw-meat-calc-heading {
+  align-items: flex-end;
+}
+
+.raw-meat-calc-heading-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.raw-meat-calc-layout {
+  display: grid;
+  grid-template-columns: minmax(12rem, 20%) minmax(0, 1fr);
+  gap: 16px;
+  min-height: 0;
+}
+
+.raw-meat-calc-sidebar,
+.raw-meat-calc-main {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.raw-meat-calc-sidebar {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.raw-meat-calc-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.raw-meat-calc-sidebar-header strong {
+  font-size: 0.92rem;
+}
+
+.raw-meat-calc-sidebar-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.raw-meat-calc-options-trigger {
+  width: 32px;
+  height: 32px;
+  color: var(--muted-foreground);
+}
+
+.raw-meat-calc-options-trigger:hover:not(:disabled) {
+  color: var(--foreground);
+}
+
+.raw-meat-calc-sidebar-state {
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  padding: 24px 16px;
+  color: var(--muted-foreground);
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.raw-meat-calc-item-list {
+  list-style: none;
+  margin: 0;
+  padding: 8px;
+  overflow: auto;
+  display: grid;
+  align-content: start;
+  gap: 4px;
+}
+
+.raw-meat-calc-item-row {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+  border-radius: 9px;
+}
+
+.raw-meat-calc-item {
+  width: 100%;
+  display: block;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--foreground);
+  text-align: left;
+  font: inherit;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease;
+}
+
+.raw-meat-calc-item-row .raw-meat-calc-item {
+  flex: 1;
+  min-width: 0;
+  border-radius: 9px 0 0 9px;
+}
+
+.raw-meat-calc-item-row:not(:has(.raw-meat-calc-item-edit)) .raw-meat-calc-item {
+  border-radius: 9px;
+}
+
+.raw-meat-calc-item-edit {
+  flex: 0 0 32px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 0 9px 9px 0;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+
+.raw-meat-calc-item-edit svg {
+  width: 14px;
+  height: 14px;
+}
+
+.raw-meat-calc-item-row:hover {
+  background: color-mix(in oklch, var(--accent) 70%, transparent);
+}
+
+.raw-meat-calc-item-row.active {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.raw-meat-calc-item-row.active .raw-meat-calc-item,
+.raw-meat-calc-item-row.active .raw-meat-calc-item-edit {
+  color: var(--primary-foreground);
+  font-weight: 600;
+}
+
+.raw-meat-calc-main {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.raw-meat-calc-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.raw-meat-calc-toolbar > .raw-meat-calc-year-filter {
+  flex: 0 0 auto;
+}
+
+.raw-meat-calc-toolbar > div:first-child {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.raw-meat-calc-toolbar strong {
+  font-size: 1rem;
+}
+
+.raw-meat-calc-toolbar span {
+  color: var(--muted-foreground);
+  font-size: 0.84rem;
+}
+
+.raw-meat-calc-year-filter {
+  display: grid;
+  gap: 4px;
+  min-width: 7rem;
+  color: var(--muted-foreground);
+  font-size: 0.78rem;
+}
+
+.raw-meat-calc-year-filter select {
+  height: 40px;
+  min-width: 7rem;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  outline: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+.raw-meat-calc-year-filter select:focus {
+  border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 16%, transparent);
+}
+
+.raw-meat-calc-month-filter {
+  position: relative;
+  display: inline-flex;
+}
+
+.raw-meat-calc-month-filter-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  cursor: pointer;
+}
+
+.raw-meat-calc-month-filter-button svg {
+  width: 14px;
+  height: 14px;
+  opacity: 0.85;
+}
+
+.raw-meat-calc-month-filter-button:hover:not(:disabled),
+.raw-meat-calc-month-filter-button:focus-visible {
+  color: color-mix(in oklch, var(--primary-foreground) 88%, white);
+  outline: none;
+}
+
+.raw-meat-calc-month-filter-button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.raw-meat-calc-month-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 30;
+  min-width: 6.75rem;
+  max-height: 16rem;
+  overflow: auto;
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  border: 1px solid color-mix(in oklch, var(--border) 80%, transparent);
+  border-radius: 6px;
+  background: var(--background);
+  color: var(--foreground);
+  box-shadow: 0 10px 24px color-mix(in oklch, black 16%, transparent);
+}
+
+.raw-meat-calc-month-option {
+  display: block;
+  width: 100%;
+  padding: 0.4rem 0.75rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.raw-meat-calc-month-option:hover,
+.raw-meat-calc-month-option:focus-visible {
+  background: color-mix(in oklch, var(--primary) 12%, transparent);
+  outline: none;
+}
+
+.raw-meat-calc-month-option.active {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.raw-meat-calc-remark-cell {
+  min-width: 8rem;
+  max-width: 12rem;
+  width: 12rem;
+}
+
+.raw-meat-calc-remark-trigger {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  max-width: 100%;
+  width: 100%;
+  padding: 4px 8px;
+  border: 1px dashed transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: 1.35;
+  text-align: left;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease;
+}
+
+.raw-meat-calc-remark-trigger:hover:not(:disabled),
+.raw-meat-calc-remark-trigger:focus-visible {
+  border-color: color-mix(in oklch, var(--primary) 35%, var(--border));
+  background: color-mix(in oklch, var(--accent) 55%, transparent);
+  outline: none;
+}
+
+.raw-meat-calc-remark-trigger.is-empty {
+  color: var(--muted-foreground);
+  display: inline-flex;
+  -webkit-line-clamp: unset;
+}
+
+.raw-meat-calc-remark-editor {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.raw-meat-calc-remark-editor input {
+  width: 100%;
+  min-width: 0;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  outline: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+}
+
+.raw-meat-calc-remark-editor input:focus {
+  border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 16%, transparent);
+}
+
+.raw-meat-calc-remark-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.raw-meat-calc-remark-status {
+  color: var(--muted-foreground);
+  font-size: 0.78rem;
+}
+
+.raw-meat-calc-remark-error {
+  color: var(--destructive);
+  font-size: 0.78rem;
+}
+
+.raw-meat-calc-table-wrap {
+  min-height: 0;
+  overflow: auto;
+}
+
+.raw-meat-calc-table-wrap table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.raw-meat-calc-table-wrap th:nth-child(3),
+.raw-meat-calc-table-wrap td:nth-child(3) {
+  width: 12%;
+}
+
+.raw-meat-calc-table-wrap th:nth-child(10),
+.raw-meat-calc-table-wrap td:nth-child(10) {
+  width: 14%;
+}
+
+.raw-meat-calc-table-wrap th:nth-child(11),
+.raw-meat-calc-table-wrap td:nth-child(11) {
+  width: 3.5rem;
+}
+
+.raw-meat-calc-table-wrap td {
+  vertical-align: top;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.raw-meat-calc-table-wrap td.raw-meat-calc-remark-cell {
+  white-space: normal;
+  overflow: hidden;
+}
+
+.raw-meat-calc-month-total-row td {
+  background: #ffe4cc;
+  color: #3f2a1a;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+.raw-meat-calc-month-total-value {
+  display: inline-block;
+  text-decoration-line: underline;
+  text-decoration-style: double;
+  text-underline-offset: 0.2em;
+  font-variant-numeric: tabular-nums;
+}
+
+.prepared-meat-calc-page .raw-meat-calc-table-wrap th:nth-child(3),
+.prepared-meat-calc-page .raw-meat-calc-table-wrap td:nth-child(3) {
+  width: 10%;
+}
+
+.prepared-meat-calc-page .raw-meat-calc-table-wrap th:nth-child(4),
+.prepared-meat-calc-page .raw-meat-calc-table-wrap td:nth-child(4) {
+  width: 14%;
+}
+
+.prepared-meat-calc-page .raw-meat-calc-table-wrap th:nth-child(8),
+.prepared-meat-calc-page .raw-meat-calc-table-wrap td:nth-child(8) {
+  width: 14%;
+}
+
+.prepared-meat-calc-page .raw-meat-calc-table-wrap th:nth-child(9),
+.prepared-meat-calc-page .raw-meat-calc-table-wrap td:nth-child(9) {
+  width: 5.5rem;
+}
+
+.prepared-meat-calc-page .raw-meat-calc-table-wrap th:nth-child(10),
+.prepared-meat-calc-page .raw-meat-calc-table-wrap td:nth-child(10),
+.prepared-meat-calc-page .raw-meat-calc-table-wrap th:nth-child(11),
+.prepared-meat-calc-page .raw-meat-calc-table-wrap td:nth-child(11) {
+  width: auto;
+}
+
+.raw-meat-options-panel-error {
+  margin: 0 0 12px;
+  color: var(--destructive);
+  font-size: 0.86rem;
+}
+
+.side-panel-body:has(.raw-meat-options-table-wrap) {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+}
+
+.side-panel-body:has(.raw-meat-options-table-wrap) .raw-meat-options-panel-error {
+  flex: 0 0 auto;
+  margin: 12px 18px 0;
+}
+
+.raw-meat-options-table-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  margin: 0;
+  isolation: isolate;
+}
+
+.raw-meat-options-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.raw-meat-options-table th,
+.raw-meat-options-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: middle;
+  font-size: 0.9rem;
+}
+
+.raw-meat-options-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+}
+
+.raw-meat-options-table th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 1px 0 var(--primary);
+}
+
+.prepared-meat-options-table th {
+  background: color-mix(in oklch, var(--background) 65%, var(--card));
+  color: var(--muted-foreground);
+  font-weight: 750;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+  box-shadow: 0 1px 0 var(--border);
+}
+
+.raw-meat-options-table tbody td {
+  position: relative;
+  z-index: 0;
+  background: var(--card);
+}
+
+.raw-meat-options-table th:nth-child(1),
+.raw-meat-options-table td:nth-child(1) {
+  width: 4.5rem;
+  text-align: center;
+}
+
+.raw-meat-options-table th:nth-child(3),
+.raw-meat-options-table td:nth-child(3),
+.raw-meat-options-table th:nth-child(4),
+.raw-meat-options-table td:nth-child(4) {
+  width: 7.5rem;
+  text-align: center;
+}
+
+.raw-meat-options-table .ui-switch {
+  position: relative;
+  z-index: 0;
+  isolation: isolate;
+}
+
+.raw-meat-options-table tbody tr:nth-child(even) td {
+  background: color-mix(in oklch, var(--muted) 45%, var(--card));
+}
+
+.raw-meat-option-form,
+.raw-meat-stock-in-form {
+  display: grid;
+  gap: 14px;
+}
+
+.raw-meat-field,
+.raw-meat-tag-picker {
+  display: grid;
+  gap: 6px;
+  position: relative;
+}
+
+.raw-meat-field > span,
+.raw-meat-tag-picker > span {
+  color: var(--foreground);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.raw-meat-field input,
+.raw-meat-field textarea,
+.raw-meat-field select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  outline: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+}
+
+.raw-meat-field input {
+  height: 40px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.raw-meat-field select {
+  height: 40px;
+}
+
+.raw-meat-field input:focus,
+.raw-meat-field textarea:focus,
+.raw-meat-field select:focus,
+.raw-meat-tag-field:focus-within {
+  border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 16%, transparent);
+}
+
+.raw-meat-field input:disabled,
+.raw-meat-field input[readonly],
+.raw-meat-field textarea:disabled,
+.raw-meat-field textarea[readonly],
+.raw-meat-field select:disabled {
+  color: var(--muted-foreground);
+  background: color-mix(in oklch, var(--muted) 45%, var(--background));
+}
+
+.raw-meat-field-error,
+.raw-meat-form-error {
+  margin: 0;
+  color: var(--destructive);
+  font-size: 0.82rem;
+  font-style: normal;
+}
+
+.prepared-meat-calc-heading {
+  flex-wrap: wrap;
+}
+
+.prepared-meat-calc-page .raw-meat-calc-heading-actions {
+  justify-content: flex-start;
+  max-width: 100%;
+}
+
+.prepared-meat-outbound-form {
+  display: grid;
+  gap: 14px;
+}
+
+.prepared-meat-inbound-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px 16px;
+  align-items: stretch;
+}
+
+.prepared-meat-inbound-date {
+  max-width: 100%;
+}
+
+.prepared-meat-inbound-deduct-form {
+  gap: 16px;
+}
+
+.prepared-meat-inbound-deduct-meta {
+  display: grid;
+  gap: 12px 16px;
+}
+
+.prepared-meat-inbound-deduct-meta.has-remaining {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: end;
+}
+
+.prepared-meat-inbound-deduct-metric,
+.prepared-meat-inbound-deduct-pack-total {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: color-mix(in oklch, var(--muted) 45%, var(--background));
+  color: var(--foreground);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.prepared-meat-inbound-deduct-products {
+  display: grid;
+  gap: 12px;
+}
+
+.prepared-meat-inbound-deduct-product {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+}
+
+.prepared-meat-inbound-deduct-product-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+
+.prepared-meat-inbound-deduct-product-head strong {
+  font-size: 0.95rem;
+  line-height: 1.35;
+}
+
+.prepared-meat-inbound-deduct-yield {
+  color: var(--muted-foreground);
+  background: color-mix(in oklch, var(--muted) 70%, var(--card));
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-style: normal;
+  letter-spacing: 0.01em;
+}
+
+.prepared-meat-inbound-deduct-qty-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(6.5rem, auto);
+  gap: 12px;
+  align-items: end;
+}
+
+.prepared-meat-inbound-deduct-pack-total {
+  justify-content: flex-end;
+  color: var(--muted-foreground);
+  font-size: 0.85rem;
+}
+
+.prepared-meat-inbound-edit-form {
+  display: grid;
+  gap: 12px;
+}
+
+.prepared-meat-inbound-edit-form .prepared-meat-inbound-deduct-product-head {
+  margin-bottom: 0;
+}
+
+@media (max-width: 720px) {
+  .prepared-meat-inbound-deduct-meta.has-remaining,
+  .prepared-meat-inbound-deduct-qty-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .prepared-meat-inbound-deduct-pack-total {
+    justify-content: flex-start;
+  }
+}
+
+.prepared-meat-outbound-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas:
+    "customer order-number"
+    "contact shipping-date"
+    "phone shipping-method"
+    "address remarks";
+  gap: 12px 16px;
+  align-items: stretch;
+}
+
+.prepared-meat-outbound-customer {
+  grid-area: customer;
+}
+
+.prepared-meat-outbound-order-number {
+  grid-area: order-number;
+}
+
+.prepared-meat-outbound-contact {
+  grid-area: contact;
+}
+
+.prepared-meat-outbound-shipping-date {
+  grid-area: shipping-date;
+}
+
+.prepared-meat-outbound-phone {
+  grid-area: phone;
+}
+
+.prepared-meat-outbound-shipping-method {
+  grid-area: shipping-method;
+}
+
+.prepared-meat-outbound-address {
+  grid-area: address;
+}
+
+.prepared-meat-outbound-remarks {
+  grid-area: remarks;
+}
+
+.prepared-meat-outbound-address textarea,
+.prepared-meat-outbound-remarks textarea {
+  box-sizing: border-box;
+  height: 5.5rem;
+  min-height: 5.5rem;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  line-height: 1.4;
+  resize: vertical;
+}
+
+.prepared-meat-outbound-add-rows {
+  display: grid;
+  gap: 8px;
+}
+
+.prepared-meat-outbound-add-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) 6.5rem minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.prepared-meat-outbound-item-picker {
+  position: relative;
+  min-width: 0;
+}
+
+.prepared-meat-outbound-lines-wrap {
+  overflow: visible;
+}
+
+.prepared-meat-outbound-lines {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.prepared-meat-outbound-lines th,
+.prepared-meat-outbound-lines td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+.prepared-meat-outbound-lines th {
+  background: color-mix(in oklch, var(--background) 65%, var(--card));
+  color: var(--muted-foreground);
+  font-weight: 750;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+}
+
+.prepared-meat-outbound-lines td:first-child,
+.prepared-meat-outbound-lines th:first-child {
+  width: 3.5rem;
+  text-align: center;
+}
+
+.prepared-meat-outbound-lines input {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  outline: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+}
+
+.prepared-meat-outbound-lines td:nth-child(4) {
+  width: 7rem;
+}
+
+.prepared-meat-outbound-lines td:last-child,
+.prepared-meat-outbound-lines th:last-child {
+  width: 4.5rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .prepared-meat-outbound-header {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "customer"
+      "order-number"
+      "contact"
+      "shipping-date"
+      "phone"
+      "shipping-method"
+      "address"
+      "remarks";
+  }
+
+  .prepared-meat-outbound-add-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.raw-meat-tag-field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-height: 42px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--background);
+}
+
+.raw-meat-tag-field.is-disabled {
+  opacity: 0.65;
+}
+
+.raw-meat-tag-field input {
+  flex: 1;
+  min-width: 7rem;
+  height: 28px;
+  padding: 0 4px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--foreground);
+  font: inherit;
+}
+
+.raw-meat-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--muted) 80%, var(--background));
+  color: var(--foreground);
+  font-size: 0.82rem;
+}
+
+.raw-meat-tag button {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+
+.raw-meat-tag button svg {
+  width: 12px;
+  height: 12px;
+}
+
+.raw-meat-tag-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  max-height: 12rem;
+  overflow: auto;
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--background);
+  box-shadow: 0 10px 24px color-mix(in oklch, black 16%, transparent);
+}
+
+.raw-meat-tag-menu button {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.raw-meat-tag-menu button:hover,
+.raw-meat-tag-menu button:focus-visible {
+  background: color-mix(in oklch, var(--primary) 12%, transparent);
+  outline: none;
+}
+
+.raw-meat-tag-empty {
+  padding: 8px 12px;
+  color: var(--muted-foreground);
+  font-size: 0.84rem;
+}
+
+.raw-meat-stock-in-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+  align-items: end;
+}
+
+.raw-meat-unit-toggle {
+  display: inline-flex;
+  align-items: center;
+  grid-column: 1 / -1;
+  height: 40px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--background);
+  justify-content: space-between;
+}
+
+.raw-meat-unit-toggle button {
+  height: 100%;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--foreground);
+  font: inherit;
+  font-size: 0.86rem;
+  cursor: pointer;
+}
+
+.raw-meat-unit-toggle button.is-active {
+  background: var(--foreground);
+  color: var(--background);
+}
+
+@media (max-width: 960px) {
+  .raw-meat-calc-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(10rem, 28%) minmax(0, 1fr);
+  }
+
+  .raw-meat-calc-item-list {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(9rem, max-content);
+    align-content: stretch;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .raw-meat-calc-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .raw-meat-calc-heading-actions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 760px) {
+  .raw-meat-calc-page {
+    height: calc(100dvh - var(--topbar-height) - 62px);
+    min-height: 520px;
+  }
+
+  .raw-meat-calc-heading {
+    align-items: stretch;
+  }
+}
+
 
 .table-skeleton-row td {
   vertical-align: middle;
@@ -2172,44 +3373,54 @@ td:last-child {
 }
 
 .detail-page-skeleton {
+  width: 100%;
   min-height: calc(
     100dvh - var(--topbar-height) - var(--workspace-height) - 56px
   );
 }
 
+.detail-page-skeleton .page-skeleton-content,
+.detail-page-skeleton .detail-grid,
+.detail-page-skeleton .detail-table-panel,
+.detail-page-skeleton .detail-card {
+  width: 100%;
+}
+
 .detail-skeleton-heading {
   display: grid;
   gap: 8px;
-  min-width: min(28rem, 70vw);
+  min-width: 0;
+  width: min(48rem, 100%);
 }
 
 .detail-skeleton-back {
-  width: 7rem;
-  height: 12px;
+  width: 7.5rem;
+  height: 14px;
 }
 
 .detail-skeleton-eyebrow {
-  width: 5.5rem;
-  height: 11px;
+  width: 7rem;
+  height: 14px;
 }
 
 .detail-skeleton-title {
-  width: min(18rem, 60vw);
+  width: min(36rem, 100%);
   height: 32px;
 }
 
 .detail-skeleton-subtitle {
-  width: min(14rem, 48vw);
-  height: 13px;
+  width: min(28rem, 80%);
+  height: 14px;
 }
 
 .detail-skeleton-badge {
-  width: 5rem;
-  height: 26px;
+  width: 6.5rem;
+  height: 28px;
+  border-radius: 999px;
 }
 
 .detail-skeleton-card {
-  min-height: 255px;
+  min-height: 0;
 }
 
 .detail-skeleton-icon {
@@ -2219,7 +3430,7 @@ td:last-child {
 }
 
 .detail-skeleton-card-title {
-  width: 8.5rem;
+  width: min(16rem, 70%);
   height: 16px;
 }
 
@@ -2229,24 +3440,35 @@ td:last-child {
 }
 
 .detail-skeleton-label {
-  width: 34%;
-  height: 10px;
-}
-
-.detail-skeleton-value {
-  width: 68%;
+  width: min(9rem, 42%);
   height: 14px;
 }
 
+.detail-skeleton-value {
+  width: 100%;
+  height: 16px;
+}
+
 .detail-skeleton-description {
-  width: 14rem;
-  max-width: 65vw;
-  height: 11px;
+  width: min(32rem, 80%);
+  height: 14px;
   margin-top: 8px;
 }
 
+.detail-skeleton-copy {
+  width: 100%;
+  height: 14px;
+  margin-top: 10px;
+}
+
 .detail-skeleton-table {
-  min-height: 300px;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 360px;
+}
+
+.detail-skeleton-table .table-wrap {
+  min-height: 0;
 }
 
 .detail-copy,
@@ -2454,6 +3676,7 @@ td:last-child {
   font-weight: 750;
 }
 
+.side-panel-root,
 .settings-side-panel-root {
   position: fixed;
   inset: 0;
@@ -2462,6 +3685,7 @@ td:last-child {
   justify-items: end;
 }
 
+.side-panel-backdrop,
 .settings-side-panel-backdrop {
   position: absolute;
   inset: 0;
@@ -2470,6 +3694,7 @@ td:last-child {
   cursor: pointer;
 }
 
+.side-panel,
 .settings-side-panel {
   position: relative;
   z-index: 1;
@@ -2483,10 +3708,16 @@ td:last-child {
   animation: settings-side-panel-in 180ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+.side-panel-wide,
 .settings-side-panel-wide {
   width: min(520px, 100vw);
 }
 
+.side-panel-xl {
+  width: min(820px, 100vw);
+}
+
+.side-panel-header,
 .settings-side-panel-header {
   display: flex;
   align-items: flex-start;
@@ -2496,12 +3727,14 @@ td:last-child {
   border-bottom: 1px solid var(--border);
 }
 
+.side-panel-header h2,
 .settings-side-panel-header h2 {
   margin: 0;
   font-size: 20px;
   line-height: 1.25;
 }
 
+.side-panel-header p,
 .settings-side-panel-header p {
   margin: 6px 0 0;
   color: var(--muted-foreground);
@@ -2509,12 +3742,14 @@ td:last-child {
   line-height: 1.45;
 }
 
+.side-panel-body,
 .settings-side-panel-body {
   min-height: 0;
   overflow: auto;
   padding: 18px;
 }
 
+.side-panel-footer,
 .settings-side-panel-footer {
   display: flex;
   justify-content: flex-end;
@@ -2614,12 +3849,16 @@ td:last-child {
 }
 
 @media (max-width: 720px) {
+  .side-panel,
+  .side-panel-wide,
+  .side-panel-xl,
   .settings-side-panel,
   .settings-side-panel-wide {
     width: min(100vw, 100%);
   }
 }
 
+.operational-list-state,
 .quotes-state,
 .orders-state {
   display: flex;
@@ -2632,25 +3871,30 @@ td:last-child {
   text-align: left;
 }
 
+.operational-list-state > svg,
 .quotes-state > svg,
 .orders-state > svg {
   width: 30px;
   height: 30px;
   color: var(--primary);
+  flex: 0 0 auto;
 }
 
+.operational-list-state > div,
 .quotes-state > div,
 .orders-state > div {
   display: grid;
   gap: 4px;
 }
 
+.operational-list-state strong,
 .quotes-state strong,
 .orders-state strong {
   color: var(--foreground);
   font-size: 16px;
 }
 
+.operational-list-state span,
 .quotes-state span,
 .orders-state span {
   font-size: 14px;
@@ -2676,6 +3920,8 @@ td:last-child {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-direction: row;
+  flex-wrap: nowrap;
   gap: 16px;
   min-height: 62px;
   padding: 10px 18px;
@@ -2733,11 +3979,873 @@ td:last-child {
   box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 13%, transparent);
 }
 
+.spice-usage-page {
+  display: grid;
+  gap: 20px;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: calc(
+    100dvh - var(--topbar-height) - var(--workspace-height) - 56px
+  );
+  min-height: 0;
+  overflow: hidden;
+}
+
+.spice-usage-heading {
+  align-items: flex-end;
+}
+
+.spice-usage-layout {
+  display: grid;
+  grid-template-columns: 16.5rem minmax(0, 1fr);
+  gap: 14px;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.spice-usage-sidebar,
+.spice-usage-main {
+  display: grid;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.spice-usage-sidebar {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.spice-usage-main {
+  grid-template-rows: auto auto minmax(0, 1fr);
+  padding: 0;
+}
+
+.spice-usage-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px 14px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.spice-usage-sidebar-header strong {
+  font-size: 0.95rem;
+}
+
+.spice-usage-sidebar-header span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.6rem;
+  height: 1.6rem;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--primary) 14%, transparent);
+  color: var(--primary);
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.spice-usage-sidebar-state,
+.spice-usage-main-state {
+  margin: 0;
+  padding: 18px 14px;
+  color: var(--muted-foreground);
+  font-size: 0.92rem;
+}
+
+.spice-usage-side-list {
+  min-height: 0;
+  margin: 0;
+  padding: 8px;
+  overflow: auto;
+  list-style: none;
+}
+
+.spice-usage-side-item {
+  display: flex;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--foreground);
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 650;
+  text-align: left;
+  cursor: pointer;
+}
+
+.spice-usage-side-item:hover {
+  background: color-mix(in oklch, var(--accent) 70%, transparent);
+}
+
+.spice-usage-side-item.active {
+  background: color-mix(in oklch, var(--primary) 82%, #1f4d3d);
+  color: white;
+}
+
+.spice-usage-main-header {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 6.25rem;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in oklch, var(--primary) 12%, white),
+      color-mix(in oklch, var(--accent) 35%, white) 55%,
+      white
+    );
+}
+
+.spice-usage-main-title {
+  min-width: 0;
+}
+
+.spice-usage-main-eyebrow {
+  margin: 0 0 4px;
+  color: var(--muted-foreground);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.spice-usage-main-header h3 {
+  margin: 0;
+  overflow: hidden;
+  color: var(--foreground);
+  font-size: 1.35rem;
+  font-weight: 800;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.spice-usage-summary {
+  display: flex;
+  flex-wrap: nowrap;
+  flex: 0 0 auto;
+  gap: 10px;
+}
+
+.spice-usage-summary > div {
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  box-sizing: border-box;
+  min-width: 7.75rem;
+  height: 3.6rem;
+  padding: 8px 12px;
+  border: 1px solid color-mix(in oklch, var(--border) 80%, transparent);
+  border-radius: 10px;
+  background: color-mix(in oklch, white 82%, transparent);
+}
+
+.spice-usage-summary span {
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+
+.spice-usage-summary strong {
+  display: flex;
+  align-items: center;
+  min-height: 1.2rem;
+  color: var(--foreground);
+  font-size: 0.98rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.spice-usage-summary .spice-usage-skeleton-value {
+  width: 3.6rem;
+  height: 0.85rem;
+}
+
+.spice-usage-main-empty {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 8px;
+  min-height: 0;
+  height: 100%;
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--muted-foreground);
+}
+
+.spice-usage-main-empty svg {
+  width: 28px;
+  height: 28px;
+}
+
+.spice-usage-main-empty strong {
+  color: var(--foreground);
+}
+
+.spice-usage-main-body {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.spice-usage-main-body > .list-inline-error {
+  flex: 0 0 auto;
+  padding: 12px 18px 0;
+}
+
+.spice-usage-main-body > .spice-usage-table-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+}
+
+.spice-usage-body-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 8px;
+  padding: 40px 20px;
+  background: color-mix(in oklch, var(--card) 92%, white);
+  color: var(--muted-foreground);
+  text-align: center;
+  pointer-events: none;
+}
+
+.spice-usage-body-empty svg {
+  width: 28px;
+  height: 28px;
+}
+
+.spice-usage-body-empty strong {
+  color: var(--foreground);
+}
+
+.spice-usage-main > .spice-usage-main-empty {
+  grid-row: 1 / -1;
+}
+
+.spice-usage-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14.5rem, 1fr));
+  align-content: start;
+  gap: 12px;
+  padding: 16px 18px 18px;
+}
+
+.spice-usage-side-item.is-skeleton {
+  pointer-events: none;
+}
+
+.spice-usage-skeleton-side {
+  width: 70%;
+  height: 12px;
+}
+
+.spice-usage-skeleton-label {
+  width: 3.2rem;
+  height: 8px;
+}
+
+.spice-usage-skeleton-value {
+  width: 4.6rem;
+  height: 14px;
+}
+
+.spice-usage-skeleton-title {
+  width: 78%;
+  height: 14px;
+}
+
+.spice-usage-skeleton-index {
+  width: 1rem;
+  height: 1rem;
+}
+
+.spice-usage-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid color-mix(in oklch, var(--border) 85%, transparent);
+  border-radius: 14px;
+  background:
+    linear-gradient(
+      160deg,
+      color-mix(in oklch, var(--card) 92%, white),
+      color-mix(in oklch, var(--muted) 28%, white)
+    );
+  box-shadow: 0 8px 18px color-mix(in oklch, black 4%, transparent);
+}
+
+.spice-usage-card-index {
+  display: grid;
+  place-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--primary) 16%, transparent);
+  color: color-mix(in oklch, var(--primary) 70%, #0f3d2e);
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.spice-usage-card-body {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.spice-usage-card-title {
+  color: color-mix(in oklch, #1d4ed8 55%, var(--foreground));
+  font-size: 0.95rem;
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+.spice-usage-card-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.spice-usage-card-metric {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: color-mix(in oklch, white 70%, transparent);
+  color: color-mix(in oklch, #15803d 70%, var(--foreground));
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 750;
+}
+
+.spice-usage-card-metric small {
+  color: var(--muted-foreground);
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+
+.spice-usage-card-metric.is-cost {
+  color: color-mix(in oklch, #0f766e 75%, var(--foreground));
+}
+
+.spice-usage-card.is-skeleton {
+  pointer-events: none;
+  box-shadow: none;
+}
+
+.spice-usage-card.is-skeleton .spice-usage-card-index {
+  background: color-mix(in oklch, var(--muted) 55%, transparent);
+}
+
+.seasoning-cost-page,
+.calculation-settings-page,
+.meat-customers-page,
+.selling-price-cost-page {
+  display: grid;
+  gap: 20px;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: calc(
+    100dvh - var(--topbar-height) - var(--workspace-height) - 76px
+  );
+  min-height: 560px;
+  overflow: hidden;
+}
+
+.seasoning-cost-page .page-heading,
+.calculation-settings-page .page-heading,
+.meat-customers-page .page-heading,
+.spice-usage-page .page-heading,
+.selling-price-cost-page .page-heading {
+  margin-bottom: 0;
+}
+
+.seasoning-cost-heading,
+.calculation-settings-heading,
+.meat-customers-heading,
+.selling-price-cost-heading {
+  align-items: flex-end;
+}
+
+.seasoning-cost-panel,
+.calculation-settings-panel,
+.meat-customers-panel,
+.selling-price-cost-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.seasoning-cost-panel > .list-inline-error,
+.calculation-settings-panel > .list-inline-error,
+.meat-customers-panel > .list-inline-error,
+.selling-price-cost-panel > .list-inline-error {
+  flex: 0 0 auto;
+}
+
+.seasoning-cost-panel > .products-state,
+.calculation-settings-panel > .products-state,
+.meat-customers-panel > .products-state,
+.selling-price-cost-panel > .products-state,
+.seasoning-cost-table-wrap,
+.calculation-settings-table-wrap,
+.meat-customers-table-wrap,
+.spice-usage-table-wrap,
+.selling-price-cost-table-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.seasoning-cost-panel > .operational-list-pagination,
+.selling-price-cost-panel > .operational-list-pagination {
+  flex: 0 0 auto;
+}
+
+.seasoning-cost-table-wrap th,
+.calculation-settings-table-wrap th,
+.meat-customers-table-wrap th,
+.spice-usage-table-wrap th,
+.selling-price-cost-table-wrap th {
+  position: sticky;
+  z-index: 1;
+  top: 0;
+}
+
+.seasoning-cost-sort-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+
+.seasoning-cost-sort-button svg {
+  width: 14px;
+  height: 14px;
+  opacity: 0.72;
+}
+
+.seasoning-cost-sort-button.is-active {
+  color: var(--foreground);
+}
+
+.seasoning-cost-sort-button.is-active svg {
+  opacity: 1;
+}
+
+.seasoning-cost-calc-cell,
+.seasoning-cost-remark-cell {
+  min-width: 8rem;
+  max-width: 14rem;
+  white-space: normal;
+}
+
+.seasoning-cost-calc-cell {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9rem;
+}
+
+.seasoning-cost-form {
+  display: grid;
+  gap: 16px;
+}
+
+.seasoning-cost-field {
+  display: grid;
+  gap: 6px;
+}
+
+.seasoning-cost-field > span {
+  color: var(--foreground);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.seasoning-cost-field input,
+.seasoning-cost-field textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  outline: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+}
+
+.seasoning-cost-field input {
+  height: 40px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.seasoning-cost-field input:focus,
+.seasoning-cost-field textarea:focus {
+  border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 16%, transparent);
+}
+
+.seasoning-cost-field input:disabled,
+.seasoning-cost-field input[readonly] {
+  color: var(--muted-foreground);
+  background: color-mix(in oklch, var(--muted) 45%, var(--background));
+}
+
+.seasoning-cost-field small {
+  color: var(--muted-foreground);
+  font-size: 0.8rem;
+}
+
+.seasoning-cost-field-error,
+.seasoning-cost-form-error {
+  color: var(--destructive);
+  font-size: 0.82rem;
+  font-style: normal;
+}
+
+.list-inline-error,
+.calculation-settings-inline-error {
+  margin: 0;
+  padding: 12px 18px 0;
+  color: var(--destructive);
+  font-size: 0.88rem;
+}
+
+.calculation-settings-form {
+  display: grid;
+  gap: 16px;
+}
+
+.calculation-settings-field {
+  display: grid;
+  gap: 6px;
+}
+
+.calculation-settings-field > span {
+  color: var(--foreground);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.calculation-settings-field input {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  outline: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+}
+
+.calculation-settings-field input:focus {
+  border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 16%, transparent);
+}
+
+.calculation-settings-field small {
+  color: var(--muted-foreground);
+  font-size: 0.8rem;
+}
+
+.calculation-settings-field-error,
+.calculation-settings-form-error {
+  margin: 0;
+  color: var(--destructive);
+  font-size: 0.82rem;
+  font-style: normal;
+}
+
+.seasoning-cost-toolbar,
+.calculation-settings-toolbar,
+.meat-customers-toolbar,
+.selling-price-cost-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.selling-price-cost-layout {
+  display: grid;
+  grid-template-columns: 16.5rem minmax(0, 1fr);
+  gap: 14px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.selling-price-cost-sidebar {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.selling-price-cost-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px 14px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.selling-price-cost-sidebar-header strong {
+  font-size: 0.95rem;
+}
+
+.selling-price-cost-sidebar-header span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.6rem;
+  height: 1.6rem;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--primary) 14%, transparent);
+  color: var(--primary);
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.selling-price-cost-sidebar-state {
+  margin: 0;
+  padding: 18px 14px;
+  color: var(--muted-foreground);
+  font-size: 0.92rem;
+}
+
+.selling-price-cost-side-list {
+  min-height: 0;
+  margin: 0;
+  padding: 8px;
+  overflow: auto;
+  list-style: none;
+}
+
+.selling-price-cost-side-item {
+  display: flex;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--foreground);
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 650;
+  text-align: left;
+  cursor: pointer;
+}
+
+.selling-price-cost-side-item:hover:not(.is-active):not(.is-skeleton) {
+  background: color-mix(in oklch, var(--accent) 70%, transparent);
+}
+
+.selling-price-cost-side-item.is-active {
+  background: color-mix(in oklch, var(--primary) 82%, #1f4d3d);
+  color: white;
+}
+
+.selling-price-cost-side-item.is-skeleton {
+  pointer-events: none;
+}
+
+.selling-price-cost-skeleton-side {
+  width: 70%;
+  height: 12px;
+}
+
+.selling-price-cost-table-wrap table {
+  min-width: 88rem;
+}
+
+.selling-price-cost-table-wrap tbody tr:nth-child(even) td {
+  background: color-mix(in oklch, var(--muted) 28%, var(--background));
+}
+
+.selling-price-cost-table-wrap td:nth-child(n + 5) {
+  font-variant-numeric: tabular-nums;
+}
+
+.selling-price-cost-with-rate {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.selling-price-cost-rate-badge {
+  display: inline-flex;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--muted) 80%, var(--background));
+  color: var(--muted-foreground);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.selling-price-cost-month-filter {
+  position: relative;
+  display: inline-flex;
+}
+
+.selling-price-cost-month-filter-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  cursor: pointer;
+}
+
+.selling-price-cost-month-filter-button svg {
+  width: 14px;
+  height: 14px;
+  opacity: 0.85;
+}
+
+.selling-price-cost-month-filter-button:hover:not(:disabled),
+.selling-price-cost-month-filter-button:focus-visible {
+  color: var(--foreground);
+  outline: none;
+}
+
+.selling-price-cost-month-filter-button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.selling-price-cost-month-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 30;
+  min-width: 6.75rem;
+  max-height: 16rem;
+  overflow: auto;
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  border: 1px solid color-mix(in oklch, var(--border) 80%, transparent);
+  border-radius: 6px;
+  background: var(--background);
+  color: var(--foreground);
+  box-shadow: 0 10px 24px color-mix(in oklch, black 16%, transparent);
+}
+
+.selling-price-cost-month-option {
+  display: block;
+  width: 100%;
+  padding: 0.4rem 0.75rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.selling-price-cost-month-option:hover,
+.selling-price-cost-month-option:focus-visible {
+  background: color-mix(in oklch, var(--primary) 12%, transparent);
+  outline: none;
+}
+
+.selling-price-cost-month-option.is-active {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.meat-customers-address-cell {
+  min-width: 28rem;
+  width: 40%;
+  white-space: nowrap;
+}
+
+.meat-customers-form {
+  display: grid;
+  gap: 16px;
+}
+
+.meat-customers-field {
+  display: grid;
+  gap: 6px;
+}
+
+.meat-customers-field > span {
+  color: var(--foreground);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.meat-customers-field input,
+.meat-customers-field textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  outline: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+}
+
+.meat-customers-field input {
+  height: 40px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.meat-customers-field input:focus,
+.meat-customers-field textarea:focus {
+  border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 16%, transparent);
+}
+
+.meat-customers-field-error,
+.meat-customers-form-error {
+  color: var(--destructive);
+  font-size: 0.82rem;
+  font-style: normal;
+}
+
 @media (max-width: 760px) {
   .quotes-page,
   .orders-page,
   .products-page,
-  .packages-page {
+  .packages-page,
+  .seasoning-cost-page,
+  .calculation-settings-page,
+  .meat-customers-page,
+  .spice-usage-page,
+  .selling-price-cost-page {
     height: calc(100dvh - var(--topbar-height) - 62px);
     min-height: 520px;
   }
@@ -2754,36 +4862,96 @@ td:last-child {
   .quotes-heading,
   .orders-heading,
   .products-heading,
-  .packages-heading {
+  .packages-heading,
+  .spice-usage-heading,
+  .seasoning-cost-heading,
+  .calculation-settings-heading,
+  .meat-customers-heading,
+  .selling-price-cost-heading {
     align-items: stretch;
+  }
+
+  .spice-usage-layout,
+  .selling-price-cost-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(9rem, 28%) minmax(0, 1fr);
+    min-height: 0;
+  }
+
+  .spice-usage-main-header {
+    flex-wrap: wrap;
+    min-height: 0;
+  }
+
+  .spice-usage-summary {
+    width: 100%;
+  }
+
+  .spice-usage-summary > div {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .spice-usage-sidebar {
+    max-height: none;
+  }
+
+  .spice-usage-page {
+    min-height: 0;
   }
 
   .quotes-toolbar,
-  .quotes-search,
   .orders-toolbar,
-  .orders-search,
   .products-toolbar,
-  .products-search,
   .packages-toolbar,
-  .packages-search {
-    align-items: stretch;
-    flex-direction: column;
+  .meat-customers-toolbar,
+  .seasoning-cost-toolbar,
+  .calculation-settings-toolbar,
+  .selling-price-cost-toolbar {
+    align-items: center;
+    flex-direction: row;
+    flex-wrap: wrap;
   }
 
-  .quotes-status-filter,
-  .orders-status-filter,
-  .products-status-filter,
-  .packages-status-filter,
-  .products-filters,
-  .packages-filters {
-    width: 100%;
+  .quotes-search,
+  .orders-search,
+  .products-search,
+  .packages-search,
+  .list-search {
+    align-items: stretch;
   }
 
   .quotes-pagination,
   .orders-pagination,
   .operational-list-pagination {
-    align-items: flex-start;
-    flex-direction: column;
+    align-items: center;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 8px;
+    min-height: 48px;
+    padding: 8px 12px;
+  }
+
+  .quotes-pagination > span,
+  .orders-pagination > span,
+  .operational-list-pagination > span {
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .quotes-pagination > div,
+  .orders-pagination > div,
+  .operational-list-pagination > div {
+    flex: 0 0 auto;
+    gap: 6px;
+  }
+
+  .table-pagination-jump input {
+    width: 48px;
+    height: 32px;
   }
 }
 
@@ -4881,6 +7049,7 @@ td:last-child {
 .report-shop-filter {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 7px;
 }
 
@@ -4928,63 +7097,64 @@ td:last-child {
   gap: 8px;
 }
 
-.report-date-controls .date-range-picker,
 .date-range-picker {
-  display: flex;
-  align-items: flex-end;
-  flex-wrap: wrap;
-  gap: 8px;
+  display: grid;
+  gap: 5px;
   margin: 0;
   padding: 0;
   border: 0;
   min-inline-size: 0;
+  max-width: 100%;
 }
 
-.date-range-picker-field {
-  display: grid;
-  gap: 5px;
-}
-
-.date-range-picker-field span {
+.date-range-picker > legend {
+  padding: 0;
   color: var(--muted-foreground);
   font-size: 14px;
   font-weight: 700;
 }
 
-.date-range-picker-separator {
-  display: inline-flex;
+.date-range-picker-control {
+  display: flex;
+  flex-wrap: nowrap;
   align-items: center;
-  height: 38px;
-  color: var(--muted-foreground);
-  font-weight: 700;
-}
-
-.report-date-controls .date-range-picker-field input,
-.date-range-picker-field input[type="date"] {
-  height: 38px;
-  min-width: 150px;
-  padding: 0 10px;
+  min-width: 0;
+  width: 100%;
+  height: 40px;
+  padding: 0 6px;
   border: 1px solid var(--border);
-  border-radius: 8px;
-  outline: 0;
+  border-radius: 9px;
   background: var(--background);
-  color: var(--foreground);
-  font-size: 14px;
 }
 
-.report-date-controls .date-range-picker-field input:focus,
-.date-range-picker-field input[type="date"]:focus {
+.date-range-picker-control:focus-within {
   border-color: var(--ring);
   box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 13%, transparent);
 }
 
-.settings-attachments-filters .date-range-picker {
-  align-items: flex-end;
+.date-range-picker-control input[type="date"] {
+  flex: 1 1 0;
+  width: 0;
+  min-width: 0;
+  height: 100%;
+  padding: 0 8px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 14px;
 }
 
-.settings-attachments-filters .date-range-picker-field input[type="date"] {
-  height: 40px;
-  border-radius: 9px;
+.date-range-picker-separator {
+  flex: 0 0 auto;
+  color: var(--muted-foreground);
+  font-weight: 700;
+  padding: 0 4px;
+}
+
+.report-date-controls .date-range-picker,
+.list-search-filter-drawer .date-range-picker {
+  width: 100%;
 }
 
 .shop-order-report {
@@ -5059,7 +7229,7 @@ td:last-child {
   padding: 9px 11px;
   border: 1px solid var(--border);
   border-radius: 9px;
-  background: color-mix(in oklch, var(--secondary) 35%, var(--card));
+  background: var(--secondary);
 }
 
 .shop-order-product-copy {
@@ -6136,6 +8306,7 @@ td:last-child {
 .mobile-account-actions {
   display: flex;
   flex-direction: column;
+  flex-shrink: 0;
   gap: 3px;
   margin-top: auto;
   padding-top: 12px;
@@ -6643,6 +8814,32 @@ td:last-child {
 }
 
 @media (max-width: 900px) {
+  .list-search-host {
+    display: flex;
+    align-items: center;
+    width: 100%;
+  }
+
+  .list-search-host .list-search {
+    width: 100%;
+  }
+
+  .list-search-host .search-field {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .list-search-submit {
+    display: none;
+  }
+
+  .quotes-toolbar,
+  .orders-toolbar,
+  .products-toolbar,
+  .packages-toolbar {
+    align-items: center;
+  }
+
   :root {
     --topbar-height: 60px;
     --workspace-height: 42px;
@@ -6808,7 +9005,24 @@ td:last-child {
   .mobile-drawer nav {
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    flex: 1 1 auto;
+    gap: 2px;
+    min-height: 0;
+    overflow: auto;
+  }
+
+  .mobile-nav-group {
+    display: grid;
+    gap: 2px;
+    padding-bottom: 10px;
+  }
+
+  .mobile-nav-group-label {
+    margin: 0;
+    padding: 8px 10px 4px;
+    color: var(--muted-foreground);
+    font-size: 14px;
+    font-weight: 700;
   }
 
   .profile-grid,
@@ -6818,6 +9032,25 @@ td:last-child {
 
   .profile-card-wide {
     grid-column: auto;
+  }
+
+  .report-filter-panel .report-shop-filter {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    gap: 6px;
+  }
+
+  .report-shop-filter button {
+    flex: 0 0 auto;
+    box-sizing: border-box;
+    max-width: 100%;
+    height: 36px;
+    padding: 0 10px;
+    line-height: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   @keyframes drawer-in {
@@ -7177,6 +9410,8 @@ td:last-child {
   .report-filter-panel {
     align-items: stretch;
     flex-direction: column;
+    gap: 10px;
+    padding: 12px 14px;
   }
 
   .report-date-controls > span {

@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { PullToRefresh } from "@/components/ui/pull-to-refresh";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import {
   fetchReportSuppliers,
@@ -32,6 +33,7 @@ export function SupplierPurchaseReport() {
   const [rows, setRows] = useState<SupplierPurchaseRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const number = useMemo(
     () =>
       new Intl.NumberFormat(i18n.language, {
@@ -124,7 +126,7 @@ export function SupplierPurchaseReport() {
       active = false;
       window.clearTimeout(timeout);
     };
-  }, [endDate, selectedSupplier, startDate, t]);
+  }, [endDate, reloadKey, selectedSupplier, startDate, t]);
 
   const exportCsv = () => {
     const csv = [
@@ -250,7 +252,11 @@ export function SupplierPurchaseReport() {
                 {startDate} — {endDate}
               </strong>
             </header>
-            <div className="report-table-wrap">
+            <PullToRefresh
+              className="report-table-wrap"
+              onRefresh={() => setReloadKey((key) => key + 1)}
+              refreshing={loading}
+            >
               <table className="supplier-purchase-table">
                 <thead>
                   <tr>
@@ -283,7 +289,7 @@ export function SupplierPurchaseReport() {
                   </tr>
                 </tfoot>
               </table>
-            </div>
+            </PullToRefresh>
           </section>
         </>
       )}

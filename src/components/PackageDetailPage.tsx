@@ -11,6 +11,7 @@ import { Link, useParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { PullToRefresh } from "@/components/ui/pull-to-refresh";
 import { fetchPackageDetail, type PackageDetail } from "@/lib/packages";
 import { cn } from "@/lib/utils";
 
@@ -172,7 +173,11 @@ export function PackageDetailPage({
           {pkg.choiceSets.length === 0 ? (
             <p className="detail-description">{t("packageDetail.noChoiceSets")}</p>
           ) : (
-            <div className="table-wrap detail-inline-table">
+            <PullToRefresh
+              className="table-wrap detail-inline-table"
+              onRefresh={() => setReloadKey((key) => key + 1)}
+              refreshing={loading}
+            >
               <table>
                 <thead>
                   <tr>
@@ -191,7 +196,7 @@ export function PackageDetailPage({
                   ))}
                 </tbody>
               </table>
-            </div>
+            </PullToRefresh>
           )}
         </article>
       </section>
@@ -204,7 +209,11 @@ export function PackageDetailPage({
         {pkg.members.length === 0 ? (
           <p className="detail-description">{t("packageDetail.noMembers")}</p>
         ) : (
-          <div className="table-wrap detail-inline-table">
+          <PullToRefresh
+            className="table-wrap detail-inline-table"
+            onRefresh={() => setReloadKey((key) => key + 1)}
+            refreshing={loading}
+          >
             <table>
               <thead>
                 <tr>
@@ -250,7 +259,7 @@ export function PackageDetailPage({
                 ))}
               </tbody>
             </table>
-          </div>
+          </PullToRefresh>
         )}
       </article>
 

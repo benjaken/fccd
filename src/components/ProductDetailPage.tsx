@@ -11,6 +11,7 @@ import { Link, useParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { PullToRefresh } from "@/components/ui/pull-to-refresh";
 import { fetchProductDetail, type ProductDetail } from "@/lib/products";
 import { cn } from "@/lib/utils";
 
@@ -220,7 +221,11 @@ export function ProductDetailPage({
             {t("productDetail.noRelatedPackages")}
           </p>
         ) : (
-          <div className="table-wrap detail-inline-table">
+          <PullToRefresh
+            className="table-wrap detail-inline-table"
+            onRefresh={() => setReloadKey((key) => key + 1)}
+            refreshing={loading}
+          >
             <table>
               <thead>
                 <tr>
@@ -244,7 +249,7 @@ export function ProductDetailPage({
                 ))}
               </tbody>
             </table>
-          </div>
+          </PullToRefresh>
         )}
       </article>
 

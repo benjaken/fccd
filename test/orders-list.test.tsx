@@ -24,7 +24,7 @@ const orderResult: OrderListResult = {
       grandTotal: 1610,
       outstanding: 1610,
       currency: "HKD",
-      updatedAt: "2026-08-12T01:00:00.000Z",
+      createdAt: "2026-08-12T01:00:00.000Z",
     },
   ],
 };
@@ -193,6 +193,32 @@ describe("Orders list", () => {
     expect(tableRules).toContain("overflow: auto");
     expect(paginationRules).toContain("position: sticky");
     expect(paginationRules).toContain("bottom: 0");
+  });
+
+  it("keeps the pagination summary and controls on one mobile row", () => {
+    const stylesheet = readFileSync(
+      path.resolve(process.cwd(), "src/index.css"),
+      "utf8",
+    );
+    const paginationRules = [
+      ...stylesheet.matchAll(
+        /\.operational-list-pagination\s*\{([^}]+)\}/g,
+      ),
+    ].map((match) => match[1]);
+
+    const mobilePaginationRule = paginationRules.find(
+      (rule) =>
+        rule.includes("flex-wrap: nowrap") &&
+        rule.includes("flex-direction: row"),
+    );
+
+    expect(mobilePaginationRule).toBeTruthy();
+    expect(mobilePaginationRule).toContain("flex-direction: row");
+    expect(mobilePaginationRule).toContain("flex-wrap: nowrap");
+    expect(mobilePaginationRule).not.toContain("flex-direction: column");
+    expect(stylesheet).toMatch(
+      /\.operational-list-pagination > span\s*\{[^}]*white-space:\s*nowrap/s,
+    );
   });
 
   it("blocks finance presets for roles without finance access", async () => {

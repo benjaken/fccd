@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
+import { useDeferredFilter } from "@/lib/use-deferred-filter";
 import {
   fetchLoginLogs,
   LOGIN_LOG_EVENT_TYPES,
@@ -40,6 +41,10 @@ export function LoginLogsListPage({
   const [search, setSearch] = useState("");
   const [eventType, setEventType] = useState("");
   const [page, setPage] = useState(1);
+  const eventFilter = useDeferredFilter(eventType, (value) => {
+    setPage(1);
+    setEventType(value);
+  });
   const [items, setItems] = useState<LoginLogItem[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -106,25 +111,28 @@ export function LoginLogsListPage({
             label={t("settings.loginLogs.search")}
             placeholder={t("settings.loginLogs.searchPlaceholder")}
             submitLabel={t("settings.loginLogs.searchAction")}
+            filtersActive={Boolean(eventType)}
+            onConfirmFilters={eventFilter.confirm}
+            onDismissFilters={eventFilter.revert}
+            filters={
+              <label className="orders-status-filter">
+                <span>{t("settings.loginLogs.eventFilter")}</span>
+                <select
+                  value={eventFilter.value}
+                  onChange={(event) => {
+                    eventFilter.setValue(event.target.value);
+                  }}
+                >
+                  <option value="">{t("settings.loginLogs.allEvents")}</option>
+                  {LOGIN_LOG_EVENT_TYPES.map((type) => (
+                    <option key={type} value={type}>
+                      {t(`settings.loginLogs.events.${type}`)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            }
           />
-
-          <label className="orders-status-filter">
-            <span>{t("settings.loginLogs.eventFilter")}</span>
-            <select
-              value={eventType}
-              onChange={(event) => {
-                setPage(1);
-                setEventType(event.target.value);
-              }}
-            >
-              <option value="">{t("settings.loginLogs.allEvents")}</option>
-              {LOGIN_LOG_EVENT_TYPES.map((type) => (
-                <option key={type} value={type}>
-                  {t(`settings.loginLogs.events.${type}`)}
-                </option>
-              ))}
-            </select>
-          </label>
         </header>
 
         {error ? (
@@ -153,6 +161,7 @@ export function LoginLogsListPage({
         ) : (
           <ListTable
             className="orders-table-wrap"
+            onRefresh={() => setReloadKey((key) => key + 1)}
             loading={loading}
             loadingLabel={t("settings.loginLogs.loading")}
             skeletonRows={SETTINGS_PAGE_SIZE}

@@ -52,10 +52,15 @@ full-width rule.
   **`--nav-active-bg` / `--nav-active-fg`** — an explicit pale green wash +
   green label (about hue `150`). Do not leave residual pink/red from the old
   brand, and never the old brand blue.
+- Light `--card` / `--popover` stay **white with hue `150`** (`oklch(1 0 150)`).
+  Chroma `0` white with hue `0` looks identical until mixed in OKLCH, then it
+  drifts toward pink/red. Keep the green hue even at zero chroma.
 - Selected / active surfaces outside nav (report tabs, product pickers, filter
   chips) use **`--selection-bg` / `--selection-bg-strong`** (same green hue).
   Do **not** use `color-mix(... var(--primary) ..., var(--card))` for these
-  washes — it can read as pink/red on some displays.
+  washes — it can read as pink/red on some displays. Ranking cards and other
+  quiet surfaces should use `--secondary` / `--muted` instead of mixing a
+  chromatic token with `--card`.
 - Classes named `red` (`.status-badge.red`, `.metric-icon.red`) map to
   `--destructive` only. Do not reuse them as a stand-in for the old brand
   primary; use `--primary` (green) for brand emphasis. Keep `.status-badge.blue`
@@ -138,7 +143,10 @@ the same input / search / skeleton / pagination markup across list pages.
 | Pattern | Required component |
 |---|---|
 | Toolbar search (icon inside field + submit) | `ListSearchBar` → `SearchField` |
+| Mobile list filters (hidden until icon tap) | `ListSearchBar` `filters` → `SidePanel` (確定套用後關閉) |
+| Start–end date filters | `DateRangePicker` (one labeled range field) |
 | Paginated operational table + loading rows | `ListTable` → `TableSkeletonRows` |
+| Mobile table pull-to-refresh | `ListTable` / `PullToRefresh` |
 | All page-level loading layouts | `PageSkeleton` with the appropriate `variant` |
 | List pagination footer | `TablePagination` |
 | Panel empty / error / permission | Prefer `OperationalListState` |
@@ -170,13 +178,33 @@ Canonical design-system wording (Chinese + checklist): see
 | Progress tone assignment | Dashboard progress data in `src/App.tsx` |
 | Table row actions | `.table-actions-cell` + `.table-row-actions`; icon-only common actions |
 | List search chrome | `SearchField` / `ListSearchBar` + `.search-field` / `.list-search` |
+| Mobile filter drawer | `SidePanel` + `.side-panel` / `.list-search-filter-trigger` |
+| Mobile table refresh | `PullToRefresh` + `.pull-to-refresh` |
 | Quick-login gate | `src/lib/quick-login.ts` + env vars |
 | Copy | `src/i18n.ts` |
 
 New screens should reuse these tokens, classes, **and shared components**. If a
 visual rule here changes, update this document in the same change set.
 
-## 7. Related standards
+## 8. Copy / i18n placeholders (hard rule)
+
+All user-visible copy goes through `src/i18n.ts` (`t(...)`). This includes
+**input placeholders**. Never put English (or any) placeholder copy in JSX.
+
+| Rule | Detail |
+|---|---|
+| Dedicated `*Placeholder` keys | Use `t("module.fields.namePlaceholder")`, not a field label such as `t("module.fields.name")`. Shared controls may take a `placeholder` prop, but callers still pass `t("…Placeholder")`. |
+| No hard-coded placeholders | Do not write `placeholder="Product Name"`, `placeholder="0"`, or `placeholder="選擇生肉"` in JSX. |
+| zh-HK is Chinese | Default locale placeholders must contain Traditional Chinese, or be a numeric / email / phone example (`例如：0.5`, `name@foodchannels.com`). |
+| Do not paste Bubble English | Never copy English Bubble labels (`Product Name`, `Product Code`, `Choose some options...`, `Remark`) into the `zh-HK` catalog. |
+| en-GB may be English | The English locale is the only place for English placeholder sentences (`e.g. 1`, `Enter remarks`). Even there, use instructional copy, not Bubble leftovers. |
+| Examples | zh-HK uses `例如：…`. Do not use `e.g.` in `zh-HK`. |
+
+Automated coverage: `test/i18n-placeholders.test.ts` rejects English-prose
+`*Placeholder` strings in `zh-HK`, hard-coded `placeholder="…"`, and
+`placeholder={t("…")}` keys that do not end in `Placeholder`.
+
+## 9. Related standards
 
 - [`DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md) — FCCD design system (shadcn + Ant Design)
 - [`UI_TABLE_STANDARD.md`](UI_TABLE_STANDARD.md) — paginated operational tables

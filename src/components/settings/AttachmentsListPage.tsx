@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
+import { useDeferredFilter } from "@/lib/use-deferred-filter";
 import {
   ATTACHMENT_FILE_TYPES,
   attachmentFileType,
@@ -91,6 +92,18 @@ export function AttachmentsListPage({
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [page, setPage] = useState(1);
+  const fileTypeFilter = useDeferredFilter(fileType, (value) => {
+    setPage(1);
+    setFileType(value);
+  });
+  const startDateFilter = useDeferredFilter(startDate, (value) => {
+    setPage(1);
+    setStartDate(value);
+  });
+  const endDateFilter = useDeferredFilter(endDate, (value) => {
+    setPage(1);
+    setEndDate(value);
+  });
   const [items, setItems] = useState<AttachmentListItem[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -193,47 +206,56 @@ export function AttachmentsListPage({
             label={t("settings.attachments.search")}
             placeholder={t("settings.attachments.searchPlaceholder")}
             submitLabel={t("settings.attachments.searchAction")}
+            filtersActive={Boolean(fileType || startDate || endDate)}
+            onConfirmFilters={() => {
+              fileTypeFilter.confirm();
+              startDateFilter.confirm();
+              endDateFilter.confirm();
+            }}
+            onDismissFilters={() => {
+              fileTypeFilter.revert();
+              startDateFilter.revert();
+              endDateFilter.revert();
+            }}
+            filters={
+              <div className="settings-attachments-filters">
+                <label className="orders-status-filter">
+                  <span>{t("settings.attachments.fileTypeFilter")}</span>
+                  <select
+                    value={fileTypeFilter.value}
+                    onChange={(event) => {
+                      fileTypeFilter.setValue(event.target.value);
+                    }}
+                  >
+                    <option value="">
+                      {t("settings.attachments.allFileTypes")}
+                    </option>
+                    {ATTACHMENT_FILE_TYPES.map((type) => (
+                      <option key={type} value={type}>
+                        {t(attachmentFileTypeLabelKey(type))}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <DateRangePicker
+                  startId="settings-attachments-start-date"
+                  endId="settings-attachments-end-date"
+                  startValue={startDateFilter.value}
+                  endValue={endDateFilter.value}
+                  onStartChange={(value) => {
+                    startDateFilter.setValue(value);
+                  }}
+                  onEndChange={(value) => {
+                    endDateFilter.setValue(value);
+                  }}
+                  startLabel={t("settings.attachments.startDate")}
+                  endLabel={t("settings.attachments.endDate")}
+                  legend={t("settings.attachments.dateRange")}
+                />
+              </div>
+            }
           />
-
-          <div className="settings-attachments-filters">
-            <label className="orders-status-filter">
-              <span>{t("settings.attachments.fileTypeFilter")}</span>
-              <select
-                value={fileType}
-                onChange={(event) => {
-                  setPage(1);
-                  setFileType(event.target.value);
-                }}
-              >
-                <option value="">
-                  {t("settings.attachments.allFileTypes")}
-                </option>
-                {ATTACHMENT_FILE_TYPES.map((type) => (
-                  <option key={type} value={type}>
-                    {t(attachmentFileTypeLabelKey(type))}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <DateRangePicker
-              startId="settings-attachments-start-date"
-              endId="settings-attachments-end-date"
-              startValue={startDate}
-              endValue={endDate}
-              onStartChange={(value) => {
-                setPage(1);
-                setStartDate(value);
-              }}
-              onEndChange={(value) => {
-                setPage(1);
-                setEndDate(value);
-              }}
-              startLabel={t("settings.attachments.startDate")}
-              endLabel={t("settings.attachments.endDate")}
-              legend={t("settings.attachments.dateRange")}
-            />
-          </div>
         </header>
 
         {error ? (
@@ -262,6 +284,7 @@ export function AttachmentsListPage({
         ) : (
           <ListTable
             className="orders-table-wrap settings-attachments-table"
+            onRefresh={() => setReloadKey((key) => key + 1)}
             loading={loading}
             loadingLabel={t("settings.attachments.loading")}
             skeletonRows={SETTINGS_PAGE_SIZE}

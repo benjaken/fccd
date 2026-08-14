@@ -19,7 +19,7 @@ const quoteResult: QuoteListResult = {
       grandTotal: 12880,
       currency: "HKD",
       deliveryAt: "2026-08-18T04:00:00.000Z",
-      updatedAt: "2026-08-12T01:00:00.000Z",
+      createdAt: "2026-08-12T01:00:00.000Z",
     },
   ],
 };

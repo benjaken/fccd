@@ -28,7 +28,7 @@ export type OrderListItem = {
   grandTotal: number | null;
   outstanding: number | null;
   currency: string;
-  updatedAt: string;
+  createdAt: string;
 };
 
 export type OrderListResult = {
@@ -56,7 +56,8 @@ type OrderRow = {
   grand_total?: number | string | null;
   outstanding?: number | string | null;
   currency: string | null;
-  updated_at: string;
+  bubble_created_at: string | null;
+  created_at: string;
 };
 
 function safeSearchTerm(value: string) {
@@ -109,15 +110,16 @@ export async function fetchOrders({
   const start = (page - 1) * ORDERS_PAGE_SIZE;
   const end = start + ORDERS_PAGE_SIZE - 1;
   const selectedFields: string = canViewFinance
-    ? "id,order_number,customer_name_snapshot,company_name_snapshot,delivery_at,ship_out_time,delivery_status,is_sent_to_factory,currency,updated_at,grand_total,outstanding"
-    : "id,order_number,customer_name_snapshot,company_name_snapshot,delivery_at,ship_out_time,delivery_status,is_sent_to_factory,currency,updated_at";
+    ? "id,order_number,customer_name_snapshot,company_name_snapshot,delivery_at,ship_out_time,delivery_status,is_sent_to_factory,currency,bubble_created_at,created_at,grand_total,outstanding"
+    : "id,order_number,customer_name_snapshot,company_name_snapshot,delivery_at,ship_out_time,delivery_status,is_sent_to_factory,currency,bubble_created_at,created_at";
   let query = supabase
     .from("orders")
     .select(selectedFields, { count: "exact" })
     .eq("document_type", preset === "pending" ? "unconfirmed" : "order")
     .is("archived_at", null)
-    .order("delivery_at", { ascending: false, nullsFirst: false })
-    .order("updated_at", { ascending: false })
+    // Bubble Created Date (fallback to DB created_at).
+    .order("bubble_created_at", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false })
     .range(start, end);
 
   const term = safeSearchTerm(search);
@@ -153,7 +155,7 @@ export async function fetchOrders({
       grandTotal: optionalAmount(row.grand_total),
       outstanding: optionalAmount(row.outstanding),
       currency: row.currency || "HKD",
-      updatedAt: row.updated_at,
+      createdAt: row.bubble_created_at || row.created_at,
     })),
     total: count ?? 0,
   };

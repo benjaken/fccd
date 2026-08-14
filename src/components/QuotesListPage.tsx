@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import { TablePagination } from "@/components/ui/table-pagination";
+import { useDeferredFilter } from "@/lib/use-deferred-filter";
 import {
   fetchQuotes,
   QUOTES_PAGE_SIZE,
@@ -46,6 +47,10 @@ export function QuotesListPage({
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
+  const statusFilter = useDeferredFilter(status, (value) => {
+    setPage(1);
+    setStatus(value);
+  });
   const [items, setItems] = useState<QuoteListItem[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -167,25 +172,28 @@ export function QuotesListPage({
             label={t("quotes.search")}
             placeholder={t("quotes.searchPlaceholder")}
             submitLabel={t("quotes.searchAction")}
+            filtersActive={Boolean(status)}
+            onConfirmFilters={statusFilter.confirm}
+            onDismissFilters={statusFilter.revert}
+            filters={
+              <label className="quotes-status-filter">
+                <span>{t("quotes.statusFilter")}</span>
+                <select
+                  value={statusFilter.value}
+                  onChange={(event) => {
+                    statusFilter.setValue(event.target.value);
+                  }}
+                >
+                  <option value="">{t("quotes.allStatuses")}</option>
+                  {availableStatuses.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            }
           />
-
-          <label className="quotes-status-filter">
-            <span>{t("quotes.statusFilter")}</span>
-            <select
-              value={status}
-              onChange={(event) => {
-                setPage(1);
-                setStatus(event.target.value);
-              }}
-            >
-              <option value="">{t("quotes.allStatuses")}</option>
-              {availableStatuses.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </label>
         </header>
 
         {error ? (
@@ -215,6 +223,7 @@ export function QuotesListPage({
         ) : (
           <ListTable
             className="quotes-table-wrap"
+            onRefresh={() => setReloadKey((key) => key + 1)}
             loading={loading}
             loadingLabel={t("quotes.loading")}
             skeletonRows={QUOTES_PAGE_SIZE}
@@ -226,7 +235,7 @@ export function QuotesListPage({
                 <th>{t("quotes.columns.delivery")}</th>
                 <th>{t("quotes.columns.status")}</th>
                 <th>{t("quotes.columns.amount")}</th>
-                <th>{t("quotes.columns.updated")}</th>
+                <th>{t("quotes.columns.created")}</th>
                 <th aria-label={t("quotes.columns.actions")} />
               </tr>
             }
@@ -264,7 +273,7 @@ export function QuotesListPage({
                 <td>
                   <strong>{formatAmount(quote)}</strong>
                 </td>
-                <td>{dateTimeFormatter.format(new Date(quote.updatedAt))}</td>
+                <td>{dateTimeFormatter.format(new Date(quote.createdAt))}</td>
                 <td>
                   <Button variant="ghost" size="icon" asChild>
                     <Link

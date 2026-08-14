@@ -13,7 +13,7 @@ export type PackageListItem = {
   channelId: string | null;
   channelName: string | null;
   memberCount: number;
-  updatedAt: string;
+  createdAt: string;
 };
 
 export type PackageListResult = {
@@ -72,7 +72,8 @@ type PackageListRow = {
   price: number | string | null;
   status: string | null;
   is_active: boolean;
-  updated_at: string;
+  bubble_created_at: string | null;
+  created_at: string;
   channels: RelatedRecord | RelatedRecord[] | null;
   package_products: { id: string }[] | null;
 };
@@ -151,11 +152,13 @@ export async function fetchPackages({
   let query = supabase
     .from("packages")
     .select(
-      "id,sku,name,chinese_name,price,status,is_active,updated_at,channels(id,name),package_products(id)",
+      "id,sku,name,chinese_name,price,status,is_active,bubble_created_at,created_at,channels(id,name),package_products(id)",
       { count: "exact" },
     )
     .is("archived_at", null)
-    .order("updated_at", { ascending: false })
+    // Bubble Created Date (fallback to DB created_at).
+    .order("bubble_created_at", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false })
     .range(start, end);
 
   if (activeOnly) {
@@ -190,7 +193,7 @@ export async function fetchPackages({
         channelId: channel?.id ?? null,
         channelName: channel?.name ?? null,
         memberCount: row.package_products?.length ?? 0,
-        updatedAt: row.updated_at,
+        createdAt: row.bubble_created_at || row.created_at,
       };
     }),
     total: count ?? 0,
@@ -223,11 +226,13 @@ export async function fetchPackageDetail(
           "id,product_id,quantity,addon_price,is_selected,products(id,sku,name,chinese_name,price)",
         )
         .eq("package_id", id)
+        .order("bubble_created_at", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: true }),
       supabase
         .from("package_choice_sets")
         .select("id,choice_type,maximum_choices")
         .eq("package_id", id)
+        .order("bubble_created_at", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: true }),
     ]);
 

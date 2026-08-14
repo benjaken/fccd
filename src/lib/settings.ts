@@ -492,7 +492,7 @@ export async function fetchUsers({
       "id,email,user_name,phone,role,shop_restro_legacy_id,created_at,updated_at",
       { count: "exact" },
     )
-    .order("user_name", { ascending: true, nullsFirst: false })
+    .order("created_at", { ascending: false })
     .order("email", { ascending: true, nullsFirst: false })
     .range(start, end);
 
@@ -545,7 +545,8 @@ export async function fetchAttachments({
       "id,original_filename,source_type,source_field,owner_type,owner_legacy_id,bucket_id,object_path,mime_type,size_bytes,migration_status,last_error_code,verified_at,source_modified_at,updated_at",
       { count: "exact" },
     )
-    // Bubble "Modified Date" — original system time, not migration updated_at.
+    // Prefer original Bubble Modified Date when present; otherwise registry created_at.
+    // Attachments have no Bubble Created Date column in the registry.
     .order("source_modified_at", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false })
     .range(start, end);

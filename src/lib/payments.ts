@@ -29,7 +29,9 @@ export async function fetchPayments({
       { count: "exact" },
     )
     .is("voided_at", null)
-    .order("payment_at", { ascending: false, nullsFirst: false })
+    // Bubble Created Date (payment_at remains a display field).
+    .order("bubble_created_at", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false })
     .range(start, end);
 
   const term = search.replace(/[^\p{L}\p{N}\s@._+\-#]/gu, " ").trim();

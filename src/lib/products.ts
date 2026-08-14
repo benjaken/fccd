@@ -16,7 +16,7 @@ export type ProductListItem = {
   channelName: string | null;
   productTypeId: string | null;
   productTypeName: string | null;
-  updatedAt: string;
+  createdAt: string;
 };
 
 export type ProductListResult = {
@@ -103,7 +103,8 @@ type ProductListRow = {
   price: number | string | null;
   status: string | null;
   is_active: boolean;
-  updated_at: string;
+  bubble_created_at: string | null;
+  created_at: string;
   channels: RelatedRecord | RelatedRecord[] | null;
   product_types: RelatedRecord | RelatedRecord[] | null;
 };
@@ -248,11 +249,13 @@ export async function fetchProducts({
   let query = supabase
     .from("products")
     .select(
-      "id,sku,name,chinese_name,price,status,is_active,updated_at,channels(id,name),product_types(id,name)",
+      "id,sku,name,chinese_name,price,status,is_active,bubble_created_at,created_at,channels(id,name),product_types(id,name)",
       { count: "exact" },
     )
     .is("archived_at", null)
-    .order("updated_at", { ascending: false })
+    // Bubble Created Date (fallback to DB created_at).
+    .order("bubble_created_at", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false })
     .range(start, end);
 
   if (status === "unset") {
@@ -319,7 +322,7 @@ export async function fetchProducts({
         channelName: channel?.name ?? null,
         productTypeId: productType?.id ?? null,
         productTypeName: productType?.name ?? null,
-        updatedAt: row.updated_at,
+        createdAt: row.bubble_created_at || row.created_at,
       };
     }),
     total: count ?? 0,

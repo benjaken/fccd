@@ -142,6 +142,7 @@ export async function fetchOrderDetail(
         .from("order_timeline_entries")
         .select("id,category,comment,bubble_created_at,created_at")
         .eq("order_id", id)
+        .order("bubble_created_at", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false }),
       documentType === "quote"
         ? supabase
@@ -185,7 +186,8 @@ export async function fetchOrderDetail(
       .select("id,amount,currency,payment_at,payout_at,paypal_reference,receipt_reference")
       .eq("order_id", id)
       .is("voided_at", null)
-      .order("payment_at", { ascending: false });
+      .order("bubble_created_at", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: false });
     if (paymentError) throw paymentError;
     payments = (paymentRows ?? []).map((row) => ({
       id: row.id,

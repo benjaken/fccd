@@ -136,6 +136,7 @@ export function PaymentsListPage({
         ) : (
           <ListTable
             className="orders-table-wrap"
+            onRefresh={() => setReloadKey((key) => key + 1)}
             loading={loading}
             loadingLabel={t("payments.loading")}
             skeletonRows={PAYMENTS_PAGE_SIZE}

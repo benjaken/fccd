@@ -4,6 +4,7 @@ import { ChevronDown, RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { PullToRefresh } from "@/components/ui/pull-to-refresh";
 import { Switch } from "@/components/ui/switch";
 import {
   fetchRolePagePermissions,
@@ -147,7 +148,11 @@ export function RolePermissionsPage({
                 <ChevronDown aria-hidden="true" />
               </label>
             </header>
-            <div className="table-wrap settings-permissions-table">
+            <PullToRefresh
+              className="table-wrap settings-permissions-table"
+              onRefresh={() => setReloadKey((key) => key + 1)}
+              refreshing={loading}
+            >
               <table>
                 <thead>
                   <tr>
@@ -223,7 +228,7 @@ export function RolePermissionsPage({
                   })}
                 </tbody>
               </table>
-            </div>
+            </PullToRefresh>
           </>
         )}
       </article>

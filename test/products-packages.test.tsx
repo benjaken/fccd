@@ -28,7 +28,7 @@ const productResult: ProductListResult = {
       channelName: "Catering",
       productTypeId: "type-1",
       productTypeName: "西式熱盤",
-      updatedAt: "2026-08-12T01:00:00.000Z",
+      createdAt: "2026-08-12T01:00:00.000Z",
     },
   ],
 };
@@ -79,7 +79,7 @@ const packageResult: PackageListResult = {
       channelId: "channel-1",
       channelName: "Catering",
       memberCount: 9,
-      updatedAt: "2026-08-12T01:00:00.000Z",
+      createdAt: "2026-08-12T01:00:00.000Z",
     },
   ],
 };

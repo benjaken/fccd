@@ -194,5 +194,10 @@ describe("Dashboard navigation", () => {
     expect(stylesheet).not.toMatch(
       /background:\s*color-mix\(in oklch,\s*var\(--primary\)\s+\d+%\,\s*var\(--card\)\)/,
     );
+    expect(stylesheet).toMatch(/--card:\s*oklch\(1 0 150\)/);
+    expect(stylesheet).toMatch(/--popover:\s*oklch\(1 0 150\)/);
+    expect(stylesheet).toMatch(
+      /\.shop-order-product-grid article\s*\{[^}]*background:\s*var\(--secondary\)/,
+    );
   });
 });

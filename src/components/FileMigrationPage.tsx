@@ -7,7 +7,6 @@ import {
   LoaderCircle,
   LogIn,
   Play,
-  RefreshCw,
   Search,
   Upload,
 } from "lucide-react";
@@ -487,15 +486,6 @@ export function FileMigrationPage({
                   : "—",
               })}
         </span>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => void refreshStatus()}
-          disabled={statusLoading}
-        >
-          <RefreshCw className={statusLoading ? "spin" : ""} />
-          {t("fileMigration.incrementalPanel.refresh")}
-        </Button>
       </div>
 
       <section className="file-inventory-gate" role="alert">
