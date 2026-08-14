@@ -18,6 +18,7 @@ import {
   CircleDollarSign,
   ClipboardCheck,
   ClipboardList,
+  Calculator,
   FileArchive,
   FileText,
   HandCoins,
@@ -76,6 +77,7 @@ import { PackagesListPage } from "@/components/PackagesListPage";
 import { PackageDetailPage } from "@/components/PackageDetailPage";
 import { SpiceUsagePage } from "@/components/SpiceUsagePage";
 import { SeasoningCostSettingsPage } from "@/components/SeasoningCostSettingsPage";
+import { CalculationSettingsPage } from "@/components/CalculationSettingsPage";
 import { AttachmentsListPage } from "@/components/settings/AttachmentsListPage";
 import { LoginLogsListPage } from "@/components/settings/LoginLogsListPage";
 import { RolePermissionsPage } from "@/components/settings/RolePermissionsPage";
@@ -243,6 +245,12 @@ const secondaryNav: Record<string, NavItem[]> = {
       permissionKey: "frozen.seasoning_cost",
     },
     {
+      key: "calculationSettings",
+      to: "/frozen/calculation-settings",
+      icon: Calculator,
+      permissionKey: "frozen.calculation_settings",
+    },
+    {
       key: "spiceUsage",
       to: "/frozen/spice-usage",
       icon: Leaf,
@@ -372,7 +380,11 @@ const SECTION_CHILD_KEYS: Record<string, string[]> = {
     "products.ala_carte",
     "products.packages",
   ],
-  frozen: ["frozen.seasoning_cost", "frozen.spice_usage"],
+  frozen: [
+    "frozen.seasoning_cost",
+    "frozen.calculation_settings",
+    "frozen.spice_usage",
+  ],
   kitchen: ["kitchen.calendar", "kitchen.inventory"],
   delivery: ["delivery.assign"],
   restaurant: ["restaurant.inventory", "restaurant.reports"],
@@ -916,6 +928,10 @@ function OperationsShell() {
               <Route
                 path="/frozen/seasoning-cost"
                 element={<SeasoningCostSettingsPage />}
+              />
+              <Route
+                path="/frozen/calculation-settings"
+                element={<CalculationSettingsPage />}
               />
               <Route
                 path="/frozen/spice-usage"

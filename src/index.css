@@ -3209,6 +3209,105 @@ td:last-child {
   font-style: normal;
 }
 
+.calculation-settings-page {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
+.calculation-settings-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.calculation-settings-heading-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.calculation-settings-create-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: color-mix(in oklch, var(--primary) 55%, #1f4d3d);
+  color: white;
+}
+
+.calculation-settings-create-field {
+  display: grid;
+  gap: 6px;
+  min-width: 10rem;
+  flex: 1 1 10rem;
+}
+
+.calculation-settings-create-field > span {
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.calculation-settings-create-field input {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid color-mix(in oklch, white 35%, transparent);
+  border-radius: 8px;
+  outline: 0;
+  background: color-mix(in oklch, white 92%, transparent);
+  color: var(--foreground);
+  font: inherit;
+}
+
+.calculation-settings-create-field input:focus {
+  border-color: white;
+  box-shadow: 0 0 0 3px color-mix(in oklch, white 25%, transparent);
+}
+
+.calculation-settings-create-bar > button {
+  flex-shrink: 0;
+}
+
+.calculation-settings-inline-error {
+  margin: 0;
+  color: var(--destructive);
+  font-size: 0.88rem;
+}
+
+.calculation-settings-table-wrap {
+  overflow: auto;
+  padding: 0;
+}
+
+.calculation-settings-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.calculation-settings-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 12px 14px;
+  background: color-mix(in oklch, var(--primary) 42%, #82b3a5);
+  color: white;
+  font-size: 0.92rem;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  border-bottom: 0;
+  white-space: nowrap;
+}
+
+.calculation-settings-table td {
+  padding: 12px 14px;
+  vertical-align: middle;
+  color: var(--foreground);
+}
+
 @media (max-width: 760px) {
   .quotes-page,
   .orders-page,
@@ -3232,7 +3331,8 @@ td:last-child {
   .products-heading,
   .packages-heading,
   .spice-usage-heading,
-  .seasoning-cost-heading {
+  .seasoning-cost-heading,
+  .calculation-settings-heading {
     align-items: stretch;
   }
 
