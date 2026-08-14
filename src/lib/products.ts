@@ -717,11 +717,19 @@ async function fetchCollectionRecords(
   }
   const { data, error } = await query;
   if (error) throw error;
-  return (data ?? []).map((row) => ({
-    id: row.id as string,
-    name: row.name as string,
-    legacyId: (row.legacy_id as string | null) ?? undefined,
-  }));
+  const seen = new Set<string>();
+  return (data ?? []).flatMap((row) => {
+    const name = row.name as string;
+    if (seen.has(name)) return [];
+    seen.add(name);
+    return [
+      {
+        id: row.id as string,
+        name,
+        legacyId: (row.legacy_id as string | null) ?? undefined,
+      },
+    ];
+  });
 }
 
 async function fetchCatalogIngredients(): Promise<CatalogOption[]> {

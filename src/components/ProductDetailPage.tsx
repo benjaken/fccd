@@ -12,6 +12,7 @@ import { Link, Navigate, useLocation, useNavigate, useParams } from "react-route
 import { ProductRecommendStar } from "@/components/ProductRecommendStar";
 import { ProductTagList } from "@/components/ProductTagList";
 import { Button } from "@/components/ui/button";
+import { MultiSelect } from "@/components/ui/multi-select";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { PullToRefresh } from "@/components/ui/pull-to-refresh";
 import {
@@ -613,22 +614,19 @@ export function ProductDetailPage({
                     true,
                   )}
                   <div className="detail-field">
-                    <span>
+                    <span id="product-collections-label">
                       {t("productDetail.collections")}
                       <RequiredMark />
                     </span>
-                    <ProductTagList
-                      tags={options.collections}
-                      empty={t("common.notSet")}
-                      selectable
-                      selectedIds={form.collectionIds}
-                      onToggle={(tagId) =>
-                        patchForm({
-                          collectionIds: form.collectionIds.includes(tagId)
-                            ? form.collectionIds.filter((item) => item !== tagId)
-                            : [...form.collectionIds, tagId],
-                        })
-                      }
+                    <MultiSelect
+                      id="product-collections"
+                      labelledBy="product-collections-label"
+                      options={options.collections}
+                      value={form.collectionIds}
+                      onChange={(collectionIds) => patchForm({ collectionIds })}
+                      placeholder={t("productDetail.collectionsPlaceholder")}
+                      searchPlaceholder={t("productDetail.collectionsSearch")}
+                      emptyLabel={t("productDetail.noCollectionResults")}
                     />
                   </div>
                   <label className="detail-field">

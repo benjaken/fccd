@@ -99,7 +99,10 @@ const productEditOptions = {
   channels: [{ id: "channel-1", name: "Catering" }],
   productTypes: [{ id: "type-1", name: "西式熱盤" }],
   cookTypes: [{ id: "cook-1", name: "焗" }],
-  collections: [{ id: "col-1", name: "西式熱盤", legacyId: "legacy-col-1" }],
+  collections: [
+    { id: "col-1", name: "西式熱盤", legacyId: "legacy-col-1" },
+    { id: "col-2", name: "飲品", legacyId: "legacy-col-2" },
+  ],
   packingMaterials: [{ id: "pack-1", name: "紙盒" }],
   catalogIngredients: [{ id: "ing-x", name: "松露", legacyId: "legacy-ing-x" }],
 };
@@ -499,6 +502,46 @@ describe("Products catalog pages", () => {
       ),
     );
     expect(await screen.findByText("已返回詳情")).toBeInTheDocument();
+  });
+
+  it("lets editors pick multiple product collections from a dropdown", async () => {
+    const user = userEvent.setup();
+    const saveProduct = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <MemoryRouter initialEntries={["/products/product-1/edit"]}>
+        <Routes>
+          <Route
+            path="/products/:id/edit"
+            element={
+              <ProductDetailPage
+                canEdit
+                loadDetail={async () => productDetail}
+                loadEditOptions={async () => productEditOptions}
+                saveProduct={saveProduct}
+              />
+            }
+          />
+          <Route path="/products/:id" element={<div>已返回詳情</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const picker = await screen.findByRole("combobox", { name: "產品集" });
+    expect(picker).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "飲品", pressed: false })).not.toBeInTheDocument();
+    await user.click(picker);
+    await user.click(await screen.findByRole("option", { name: "飲品" }));
+    await user.click(screen.getByRole("button", { name: "確認更改" }));
+
+    await waitFor(() =>
+      expect(saveProduct).toHaveBeenCalledWith(
+        "product-1",
+        expect.objectContaining({
+          collectionIds: ["col-1", "col-2"],
+        }),
+      ),
+    );
   });
 
   it("searches and adds a premium ingredient", async () => {
