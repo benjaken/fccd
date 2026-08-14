@@ -174,6 +174,17 @@ export async function fetchPreparedMeatItems(): Promise<PreparedMeatItemOption[]
   }));
 }
 
+export async function updatePreparedMeatItemFlags(
+  itemId: string,
+  isActive: boolean,
+): Promise<void> {
+  const { error } = await supabase.rpc("update_prepared_meat_item_flags", {
+    p_item_id: itemId,
+    p_is_active: isActive,
+  });
+  if (error) throw error;
+}
+
 export async function fetchPreparedMeatMovementsForItem(
   itemId: string,
   productName: string,

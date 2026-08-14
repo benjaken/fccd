@@ -1,14 +1,22 @@
 import {
   useCallback,
   useEffect,
+  useEffectEvent,
   useMemo,
   useRef,
   useState,
   type RefObject,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronDown, Package, PackageMinus, PackagePlus } from "lucide-react";
+import {
+  ChevronDown,
+  Package,
+  PackageMinus,
+  PackagePlus,
+  SlidersHorizontal,
+} from "lucide-react";
 
+import { PreparedMeatOptionsModal } from "@/components/PreparedMeatOptionsModal";
 import { Button } from "@/components/ui/button";
 import { ListTable } from "@/components/ui/list-table";
 import { TablePagination } from "@/components/ui/table-pagination";
@@ -19,6 +27,7 @@ import {
   hongKongYearMonthKey,
   PREPARED_MEAT_MOVEMENTS_PAGE_SIZE,
   preparedMeatYearOptions,
+  updatePreparedMeatItemFlags,
   type PreparedMeatItemOption,
   type PreparedMeatMovementRow,
 } from "@/lib/prepared-meat-inventory";
@@ -41,6 +50,7 @@ type MovementsLoader = (
   productName: string,
   year: number,
 ) => Promise<PreparedMeatMovementRow[]>;
+type ItemFlagsSaver = typeof updatePreparedMeatItemFlags;
 
 type HeaderFilterOption = { key: string; label: string };
 
@@ -129,9 +139,11 @@ function HeaderColumnFilter({
 export function PreparedMeatInventoryCalcPage({
   loadItems = fetchPreparedMeatItems,
   loadMovements = fetchPreparedMeatMovementsForItem,
+  saveItemFlags = updatePreparedMeatItemFlags,
 }: {
   loadItems?: ItemsLoader;
   loadMovements?: MovementsLoader;
+  saveItemFlags?: ItemFlagsSaver;
 }) {
   const { t, i18n } = useTranslation();
   const [items, setItems] = useState<PreparedMeatItemOption[]>([]);
@@ -146,6 +158,7 @@ export function PreparedMeatInventoryCalcPage({
   const [monthFilter, setMonthFilter] = useState<string | null>(null);
   const [shopFilter, setShopFilter] = useState<string | null>(null);
   const [openFilter, setOpenFilter] = useState<"month" | "shop" | null>(null);
+  const [optionsOpen, setOptionsOpen] = useState(false);
   const monthFilterRef = useRef<HTMLDivElement>(null);
   const shopFilterRef = useRef<HTMLDivElement>(null);
   const years = useMemo(() => preparedMeatYearOptions(), []);
@@ -389,6 +402,25 @@ export function PreparedMeatInventoryCalcPage({
     setReloadKey((current) => current + 1);
   }, []);
 
+  const handleSaveItemFlags = useEffectEvent(
+    async (itemId: string, isActive: boolean) => {
+      await saveItemFlags(itemId, isActive);
+      setItems((current) => {
+        const next = current.map((item) =>
+          item.id === itemId ? { ...item, isActive } : item,
+        );
+        if (!isActive) {
+          const active = next.filter((item) => item.isActive);
+          setSelectedItemId((currentId) => {
+            if (currentId !== itemId) return currentId;
+            return active[0]?.id ?? null;
+          });
+        }
+        return next;
+      });
+    },
+  );
+
   const loading = itemsLoading || movementsLoading;
 
   return (
@@ -407,6 +439,20 @@ export function PreparedMeatInventoryCalcPage({
         >
           <div className="raw-meat-calc-sidebar-header">
             <strong>{t("preparedMeatInventory.items")}</strong>
+            <div className="raw-meat-calc-sidebar-actions">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="raw-meat-calc-options-trigger"
+                aria-label={t("preparedMeatInventory.openOptions")}
+                title={t("preparedMeatInventory.openOptions")}
+                onClick={() => setOptionsOpen(true)}
+                disabled={itemsLoading || items.length === 0}
+              >
+                <SlidersHorizontal />
+              </Button>
+            </div>
           </div>
           {itemsLoading ? (
             <div className="raw-meat-calc-sidebar-state" role="status">
@@ -652,6 +698,13 @@ export function PreparedMeatInventoryCalcPage({
           />
         </article>
       </div>
+
+      <PreparedMeatOptionsModal
+        open={optionsOpen}
+        items={items}
+        onClose={() => setOptionsOpen(false)}
+        onSaveFlags={handleSaveItemFlags}
+      />
     </section>
   );
 }

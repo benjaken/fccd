@@ -246,4 +246,73 @@ describe("Prepared meat inventory calculation page", () => {
       outboundEdits[0]?.querySelector("svg")?.innerHTML,
     );
   });
+
+  it("opens the prepared meat options side panel from the sidebar header icon", async () => {
+    const user = userEvent.setup();
+    const loadItems = vi.fn().mockResolvedValue([
+      ...items,
+      {
+        id: "item-3",
+        sku: "PM003",
+        name: "秘製沙茶醬 (500g)",
+        sortOrder: 12,
+        isActive: false,
+      },
+    ]);
+    const loadMovements = vi
+      .fn()
+      .mockImplementation(async (itemId: string) =>
+        structuredClone(movementsByItem[itemId] ?? []),
+      );
+    const saveItemFlags = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <MemoryRouter>
+        <PreparedMeatInventoryCalcPage
+          loadItems={loadItems}
+          loadMovements={loadMovements}
+          saveItemFlags={saveItemFlags}
+        />
+      </MemoryRouter>,
+    );
+
+    const sidebar = await screen.findByRole("complementary", {
+      name: "製成品選項",
+    });
+    expect(within(sidebar).queryByRole("button", { name: "秘製沙茶醬 (500g)" })).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "管理製成品選項" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "製成品選項" });
+    expect(dialog).toHaveClass("side-panel");
+    expect(within(dialog).getByText("排序")).toBeInTheDocument();
+    expect(within(dialog).getByText("製成品")).toBeInTheDocument();
+    expect(within(dialog).getByText("有效")).toBeInTheDocument();
+    expect(within(dialog).queryByText("可直接出貨")).not.toBeInTheDocument();
+    expect(within(dialog).getByText("五香牛腩")).toBeInTheDocument();
+    expect(within(dialog).getByText("秘製沙茶醬 (500g)")).toBeInTheDocument();
+    expect(within(dialog).getByText("12")).toBeInTheDocument();
+
+    const activeSwitch = within(dialog).getByRole("switch", {
+      name: "五香牛腩 有效",
+    });
+    expect(activeSwitch).toHaveAttribute("aria-checked", "true");
+    expect(
+      within(dialog).getByRole("switch", { name: "秘製沙茶醬 (500g) 有效" }),
+    ).toHaveAttribute("aria-checked", "false");
+
+    await user.click(activeSwitch);
+
+    await waitFor(() => {
+      expect(saveItemFlags).toHaveBeenCalledWith("item-1", false);
+    });
+
+    expect(
+      within(sidebar).queryByRole("button", { name: "五香牛腩" }),
+    ).not.toBeInTheDocument();
+    expect(within(sidebar).getByRole("button", { name: "滷水豬手" })).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
+  });
 });

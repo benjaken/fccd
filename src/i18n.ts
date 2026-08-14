@@ -1115,6 +1115,14 @@ const resources = {
         monthTotal: "月份總數",
         editInbound: "入貨編輯",
         editOutbound: "出貨編輯",
+        openOptions: "管理製成品選項",
+        closeOptions: "關閉",
+        optionsSaveError: "製成品選項保存失敗，請重試",
+        optionsColumns: {
+          sort: "排序",
+          name: "製成品",
+          active: "有效",
+        },
       },
       calculationSettings: {
         eyebrow: "凍貨",
@@ -2691,6 +2699,14 @@ const resources = {
         monthTotal: "Month total",
         editInbound: "Edit inbound",
         editOutbound: "Edit outbound",
+        openOptions: "Manage prepared meat options",
+        closeOptions: "Close",
+        optionsSaveError: "Could not save prepared meat options. Try again.",
+        optionsColumns: {
+          sort: "Order",
+          name: "Prepared meat",
+          active: "Active",
+        },
       },
       calculationSettings: {
         eyebrow: "Frozen goods",

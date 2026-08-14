@@ -717,6 +717,16 @@ describe("Super Admin system settings", () => {
     expect(preparedMeatInventory).toContain("/frozen/prepared-meat-inventory");
     expect(preparedMeatInventory).toContain("roles.role in ('Admin', 'Factory')");
 
+    const preparedMeatFlags = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260814184000_update_prepared_meat_item_flags.sql",
+      ),
+      "utf8",
+    );
+    expect(preparedMeatFlags).toContain("update_prepared_meat_item_flags");
+    expect(preparedMeatFlags).toContain("frozen.prepared_meat_inventory");
+
     const rawMeatActions = readFileSync(
       path.resolve(
         process.cwd(),
