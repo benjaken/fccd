@@ -66,6 +66,9 @@ describe("FactoryBoardPage", () => {
     expect(screen.getByText("8月18日 (二)")).toBeInTheDocument();
     expect(screen.getByText("#B-1522")).toBeInTheDocument();
     expect(screen.getByText("(7份)")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "多日菜式總表" })).toHaveClass(
+      "factory-board-multi-day",
+    );
 
     const dispatchButtons = screen.getAllByRole("button", { name: "出車表" });
     await user.click(dispatchButtons[1]!);

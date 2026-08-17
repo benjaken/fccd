@@ -9126,12 +9126,16 @@ button.product-tag[aria-pressed="true"] {
   color: oklch(0.96 0.01 150);
 }
 
+.factory-board button {
+  font-size: 18px;
+}
+
 .factory-board-top {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  gap: 16px;
-  padding: 16px 22px 12px;
+  gap: 20px;
+  padding: 20px 28px 16px;
 }
 
 .factory-board-brand {
@@ -9141,28 +9145,29 @@ button.product-tag[aria-pressed="true"] {
 }
 
 .factory-board-brand strong {
-  font-size: 18px;
+  font-size: 32px;
   font-weight: 800;
+  line-height: 1.1;
 }
 
 .factory-board-brand small {
   color: oklch(0.78 0.02 150);
-  font-size: 14px;
+  font-size: 16px;
 }
 
 .factory-board-notice {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   margin: 0;
   color: oklch(0.92 0.04 150);
-  font-size: 16px;
+  font-size: 24px;
   font-weight: 700;
 }
 
 .factory-board-notice svg {
-  width: 18px;
-  height: 18px;
+  width: 28px;
+  height: 28px;
   color: var(--primary);
 }
 
@@ -9172,6 +9177,22 @@ button.product-tag[aria-pressed="true"] {
 
 .factory-board-top > button {
   justify-self: end;
+}
+
+.factory-board-multi-day {
+  min-height: 48px;
+  padding: 0 22px;
+  border-width: 2px;
+  border-color: var(--primary);
+  background: oklch(0.99 0.01 150);
+  color: var(--primary);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.factory-board-multi-day:hover {
+  background: var(--selection-bg);
+  color: var(--primary);
 }
 
 .factory-board-days {
@@ -9197,14 +9218,22 @@ button.product-tag[aria-pressed="true"] {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 10px;
-  padding: 12px 14px;
+  gap: 14px;
+  padding: 16px 18px;
   border-bottom: 1px solid oklch(0.32 0.02 150);
 }
 
 .factory-day-header h2 {
   margin: 0;
   text-align: center;
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.factory-day-header button {
+  min-height: 48px;
+  padding: 0 18px;
   font-size: 18px;
   font-weight: 800;
 }
@@ -9212,32 +9241,32 @@ button.product-tag[aria-pressed="true"] {
 .factory-day-cards {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 14px;
+  gap: 16px;
+  padding: 18px;
 }
 
 .factory-day-state {
   margin: 0;
   color: oklch(0.78 0.02 150);
-  font-size: 14px;
+  font-size: 18px;
   text-align: center;
 }
 
 .factory-job-card {
   position: relative;
   display: grid;
-  grid-template-columns: 22px minmax(0, 1fr);
-  gap: 8px;
-  padding: 12px 14px 14px;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 10px;
+  padding: 18px 20px 20px;
   overflow: hidden;
-  border-radius: 10px;
+  border-radius: 12px;
   background: oklch(0.94 0.01 150);
   color: oklch(0.2 0.02 150);
 }
 
 .factory-job-card svg {
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
   color: var(--primary);
 }
 
@@ -9245,14 +9274,18 @@ button.product-tag[aria-pressed="true"] {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
   text-align: center;
 }
 
-.factory-job-card strong,
+.factory-job-card strong {
+  font-size: 22px;
+  line-height: 1.25;
+}
+
 .factory-job-card span,
 .factory-job-card small {
-  font-size: 14px;
+  font-size: 20px;
   line-height: 1.35;
 }
 
@@ -9262,13 +9295,13 @@ button.product-tag[aria-pressed="true"] {
   bottom: 0;
   display: grid;
   place-items: end;
-  width: 32px;
-  height: 24px;
-  padding: 0 3px 1px 0;
+  width: 40px;
+  height: 30px;
+  padding: 0 5px 2px 0;
   clip-path: polygon(100% 0, 0 100%, 100% 100%);
   background: oklch(0.55 0.12 240);
   color: white;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1;
 }
@@ -9278,40 +9311,52 @@ button.product-tag[aria-pressed="true"] {
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   gap: 16px;
-  padding: 14px 22px 18px;
+  padding: 18px 28px 22px;
 }
 
 .factory-board-pager {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 14px;
   grid-column: 2;
+}
+
+.factory-board-today {
+  min-height: 52px;
+  padding: 0 28px;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.factory-board-pager button:has(svg) {
+  width: 48px;
+  height: 48px;
 }
 
 .factory-board-date {
   display: inline-flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   justify-self: end;
   color: oklch(0.92 0.01 150);
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 700;
 }
 
 .factory-board-date svg {
-  width: 28px;
-  height: 28px;
+  width: 36px;
+  height: 36px;
 }
 
 .factory-board-date input {
-  min-height: 36px;
-  padding: 0 8px;
+  min-height: 42px;
+  padding: 0 10px;
   border: 1px solid oklch(0.4 0.02 150);
   border-radius: 8px;
   background: oklch(0.22 0.015 150);
   color: inherit;
-  font-size: 14px;
+  font-size: 16px;
 }
 
 .factory-modal-root {
@@ -9365,11 +9410,11 @@ button.product-tag[aria-pressed="true"] {
 
 .factory-modal-header h2 {
   margin: 0;
-  font-size: 16px;
+  font-size: 20px;
 }
 
 .factory-modal-body {
-  padding: 18px;
+  padding: 20px;
   overflow: auto;
 }
 
@@ -9380,20 +9425,25 @@ button.product-tag[aria-pressed="true"] {
   padding: 12px 18px 16px;
 }
 
+.factory-modal-footer button {
+  min-height: 44px;
+  font-size: 16px;
+}
+
 .factory-fleet-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 12px;
 }
 
 .factory-fleet-chip {
-  min-height: 36px;
-  padding: 0 14px;
+  min-height: 44px;
+  padding: 0 18px;
   border: 1px solid var(--border);
   border-radius: 999px;
   background: var(--card);
   color: var(--foreground);
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 650;
 }
 
@@ -9411,7 +9461,7 @@ button.product-tag[aria-pressed="true"] {
 .factory-dispatch-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 14px;
+  font-size: 16px;
 }
 
 .factory-dispatch-table th,

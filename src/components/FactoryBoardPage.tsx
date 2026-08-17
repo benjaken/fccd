@@ -272,7 +272,7 @@ export function FactoryBoardPage({
           <Megaphone />
           {t("factoryBoard.stocktakeNotice")}
         </p>
-        <Button type="button" variant="outline">
+        <Button type="button" variant="outline" className="factory-board-multi-day">
           {t("factoryBoard.multiDayMenu")}
         </Button>
       </header>
@@ -281,11 +281,11 @@ export function FactoryBoardPage({
         {dates.map((date) => (
           <article className="factory-day" key={date}>
             <header className="factory-day-header">
-              <Button type="button" size="sm" onClick={() => openFleetPicker(date)}>
+              <Button type="button" onClick={() => openFleetPicker(date)}>
                 {t("factoryBoard.dispatchSheet")}
               </Button>
               <h2>{formatDayHeading(date)}</h2>
-              <Button type="button" size="sm">
+              <Button type="button">
                 {t("factoryBoard.menuSummary")}
               </Button>
             </header>
@@ -348,6 +348,7 @@ export function FactoryBoardPage({
           </Button>
           <Button
             type="button"
+            className="factory-board-today"
             onClick={() => setStartDate(hongKongDateInputValue())}
           >
             {t("factoryBoard.goToday")}
