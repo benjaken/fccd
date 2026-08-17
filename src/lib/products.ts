@@ -35,6 +35,7 @@ export type ProductListItem = {
   productTypeId: string | null;
   productTypeName: string | null;
   cookTypeName: string | null;
+  bentoMainTypeId: string | null;
   bentoMainTypeName: string | null;
   bentoColumnTypeName: string | null;
   mainIngredients: string[];
@@ -63,6 +64,7 @@ export type ProductListFilters = {
   search: string;
   channelId: string;
   productTypeName: string;
+  bentoMainTypeId: string;
   status: ProductStatusFilter;
   priceRange: ProductPriceRange;
   sortField?: ProductSortField;
@@ -198,6 +200,7 @@ type ProductListRow = {
   channels: RelatedRecord | RelatedRecord[] | null;
   product_types: RelatedRecord | RelatedRecord[] | null;
   cook_types: NamedLookup;
+  bento_main_type_id: string | null;
   bento_main_types: NamedLookup;
   bento_column_types: NamedLookup;
 };
@@ -361,6 +364,21 @@ export async function fetchProductTypes(
     .map((name) => ({ id: name, name }));
 }
 
+export async function fetchBentoMainTypes(): Promise<CatalogOption[]> {
+  const { data, error } = await supabase
+    .from("bento_main_types")
+    .select("id,name")
+    .order("name", { ascending: true });
+  if (error) throw error;
+  return (data ?? [])
+    .map((row) => ({
+      id: row.id as string,
+      name: String(row.name ?? "").trim(),
+    }))
+    .filter((row) => row.name)
+    .sort((left, right) => left.name.localeCompare(right.name, "zh-HK"));
+}
+
 async function productTypeIdsForName(name: string, channelId = "") {
   const key = name.trim();
   if (!key) return [] as string[];
@@ -383,6 +401,7 @@ export async function fetchProducts({
   search,
   channelId,
   productTypeName,
+  bentoMainTypeId = "",
   status,
   priceRange,
   sortField = "sku",
@@ -395,7 +414,7 @@ export async function fetchProducts({
   let query = supabase
     .from("products")
     .select(
-      "id,sku,name,chinese_name,price,price_min,price_max,status,is_active,is_bento_recommended,bubble_created_at,created_at,channels(id,name),product_types(id,name),cook_types(name),bento_main_types(name),bento_column_types(name)",
+      "id,sku,name,chinese_name,price,price_min,price_max,status,is_active,is_bento_recommended,bubble_created_at,created_at,bento_main_type_id,channels(id,name),product_types(id,name),cook_types(name),bento_column_types(name)",
       { count: "exact" },
     )
     .is("archived_at", null)
@@ -442,6 +461,10 @@ export async function fetchProducts({
     query = query.in("product_type_id", typeIds);
   }
 
+  if (bentoMainTypeId) {
+    query = query.eq("bento_main_type_id", bentoMainTypeId);
+  }
+
   if (channelId) {
     query = query.eq("channel_id", channelId);
   } else if (preset !== "all") {
@@ -465,7 +488,10 @@ export async function fetchProducts({
     );
   }
 
-  const { data, count, error } = await query;
+  const [{ data, count, error }, stapleTypes] = await Promise.all([
+    query,
+    fetchBentoMainTypes().catch(() => [] as CatalogOption[]),
+  ]);
   if (error) throw error;
 
   const rows = (data ?? []) as ProductListRow[];
@@ -494,6 +520,9 @@ export async function fetchProducts({
 
   const ingredientsByProduct = mapTagLinks(ingredientRows, "bento_main_ingredients");
   const requestsByProduct = mapTagLinks(requestRows, "bento_special_requests");
+  const stapleNameById = new Map(
+    stapleTypes.map((row) => [row.id, row.name] as const),
+  );
 
   return {
     items: rows.map((row) => {
@@ -515,7 +544,11 @@ export async function fetchProducts({
         productTypeId: productType?.id ?? null,
         productTypeName: productType?.name ?? null,
         cookTypeName: relatedName(row.cook_types),
-        bentoMainTypeName: relatedName(row.bento_main_types),
+        bentoMainTypeId: row.bento_main_type_id,
+        bentoMainTypeName:
+          relatedName(row.bento_main_types) ??
+          stapleNameById.get(row.bento_main_type_id ?? "") ??
+          null,
         bentoColumnTypeName: relatedName(row.bento_column_types),
         mainIngredients:
           ingredientsByProduct.get(row.id)?.map((item) => item.name) ?? [],

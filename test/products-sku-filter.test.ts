@@ -98,4 +98,22 @@ describe("product SKU list filter", () => {
     expect(query.not).toHaveBeenCalledWith("sku", "is", null);
     expect(query.neq).toHaveBeenCalledWith("sku", "");
   });
+
+  it("filters the catalog by staple type", async () => {
+    const query = createQuery({ data: [], count: 0, error: null });
+    fromMock.mockReturnValue(query);
+
+    await fetchProducts({
+      page: 1,
+      search: "",
+      channelId: "",
+      productTypeName: "",
+      bentoMainTypeId: "staple-1",
+      status: "",
+      priceRange: "",
+      preset: "all",
+    });
+
+    expect(query.eq).toHaveBeenCalledWith("bento_main_type_id", "staple-1");
+  });
 });

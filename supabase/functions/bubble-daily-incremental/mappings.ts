@@ -251,8 +251,17 @@ const phaseB: SourceMapping[] = [
       price_max: numberValue(r.PriceRange_Max),
       status: r.Status == null ? null : String(r.Status),
       is_active: booleanValue(r.Active, true),
+      bento_main_type_id: null,
+      bento_main_type_legacy_id: text(r["bento_main dish"]),
     }),
-    relations: [relation("channel_legacy_id", "channel_id", "channels")],
+    relations: [
+      relation("channel_legacy_id", "channel_id", "channels"),
+      relation(
+        "bento_main_type_legacy_id",
+        "bento_main_type_id",
+        "bento_main_types",
+      ),
+    ],
   },
   {
     phase: "b",

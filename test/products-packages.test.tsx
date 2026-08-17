@@ -32,6 +32,7 @@ const productResult: ProductListResult = {
       productTypeId: "type-1",
       productTypeName: "西式熱盤",
       cookTypeName: "焗",
+      bentoMainTypeId: "staple-1",
       bentoMainTypeName: "飯",
       bentoColumnTypeName: "雙格",
       mainIngredients: ["雞"],
@@ -310,6 +311,7 @@ describe("Products catalog pages", () => {
         search: "燒雞",
         channelId: "",
         productTypeName: "",
+        bentoMainTypeId: "",
         status: "",
         priceRange: "",
         sortField: "sku",
@@ -360,7 +362,7 @@ describe("Products catalog pages", () => {
     );
   });
 
-  it("filters by price range, channel, type, and status dropdowns", async () => {
+  it("filters by price range, channel, type, staple, and status dropdowns", async () => {
     const user = userEvent.setup();
     const loadProducts = vi.fn().mockResolvedValue(productResult);
     const loadChannels = vi.fn().mockResolvedValue([
@@ -369,6 +371,10 @@ describe("Products catalog pages", () => {
     const loadProductTypes = vi.fn().mockResolvedValue([
       { id: "西式熱盤", name: "西式熱盤" },
     ]);
+    const loadBentoMainTypes = vi.fn().mockResolvedValue([
+      { id: "staple-1", name: "飯" },
+      { id: "staple-2", name: "扁意粉" },
+    ]);
 
     render(
       <MemoryRouter>
@@ -376,6 +382,7 @@ describe("Products catalog pages", () => {
           loadProducts={loadProducts}
           loadChannels={loadChannels}
           loadProductTypes={loadProductTypes}
+          loadBentoMainTypes={loadBentoMainTypes}
         />
       </MemoryRouter>,
     );
@@ -414,6 +421,16 @@ describe("Products catalog pages", () => {
           channelId: "channel-1",
           productTypeName: "西式熱盤",
           priceRange: "100-299",
+          page: 1,
+        }),
+      ),
+    );
+
+    await user.selectOptions(screen.getByLabelText("主食"), "staple-1");
+    await waitFor(() =>
+      expect(loadProducts).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          bentoMainTypeId: "staple-1",
           page: 1,
         }),
       ),
