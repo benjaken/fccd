@@ -188,7 +188,11 @@ export function FactoryBoardPage({
     let cancelled = false;
     setLoading(true);
     setError(false);
-    void Promise.all([loadBoard(startDate), loadFleets(), loadBrands()])
+    void Promise.all([
+      loadBoard(startDate),
+      loadFleets(),
+      loadBrands().catch(() => [] as FactoryBrand[]),
+    ])
       .then(([nextBoard, nextFleets, nextBrands]) => {
         if (cancelled) return;
         setBoard(nextBoard);

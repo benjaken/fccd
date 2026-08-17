@@ -61,6 +61,7 @@ describe("FactoryBoardPage", () => {
         loadFleets={async () => [
           { id: "team-sun", name: "Sun-Line", shortName: "宏" },
         ]}
+        loadBrands={async () => []}
       />,
     );
 
@@ -106,6 +107,7 @@ describe("FactoryBoardPage", () => {
         loadFleets={async () => [
           { id: "team-sun", name: "Sun-Line", shortName: "宏" },
         ]}
+        loadBrands={async () => []}
         loadOrderJob={async () => ({
           packingNote: "分開兩箱",
           dispatchTime: "10:00",
