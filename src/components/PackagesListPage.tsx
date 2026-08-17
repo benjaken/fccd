@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ArrowDown,
-  ArrowRight,
   ArrowUp,
   Package,
   Pencil,
@@ -387,12 +386,11 @@ export function PackagesListPage({
                   <td>{item.sku || t("common.notSet")}</td>
                   <td>
                     <DetailLink
-                      className="order-link package-name-link"
+                      className="order-link"
                       to={`/products/packages/${item.id}`}
                       onClick={(event) => event.stopPropagation()}
                     >
                       <strong>{displayName(item)}</strong>
-                      <ArrowRight aria-hidden="true" />
                     </DetailLink>
                   </td>
                   <td>{dateFormatter.format(new Date(item.createdAt))}</td>
