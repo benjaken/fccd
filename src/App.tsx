@@ -74,6 +74,7 @@ import { PaymentsListPage } from "@/components/PaymentsListPage";
 import { ProfilePage } from "@/components/ProfilePage";
 import { ReportsPage } from "@/components/ReportsPage";
 import { QuotesListPage } from "@/components/QuotesListPage";
+import { QuoteCustomersPage } from "@/components/QuoteCustomersPage";
 import { ProductsListPage } from "@/components/ProductsListPage";
 import { ProductDetailPage } from "@/components/ProductDetailPage";
 import { PackagesListPage } from "@/components/PackagesListPage";
@@ -1005,6 +1006,10 @@ function OperationsShell() {
               <Route
                 path="/quotes/follow-up"
                 element={<QuotesListPage preset="follow-up" />}
+              />
+              <Route
+                path="/quotes/customers"
+                element={<QuoteCustomersPage />}
               />
               <Route
                 path="/quotes/:id"

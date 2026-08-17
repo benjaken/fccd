@@ -91,11 +91,13 @@ lists.
   pagination.
 - Quotes list: 15 rows, sticky header, independently scrolling rows, fixed
   pagination.
+- Quote customers list: 15 rows, sticky header, independently scrolling rows,
+  fixed pagination, email-grouped company/tag stacks, and a history side panel.
 - Users list: icon-only horizontal actions in the last column (edit / change
   password).
-- Orders, quotes, payments, products, packages, users, login logs, attachments,
-  and frozen yield errors: shared table shell, table-body skeleton, and mobile
-  pull-to-refresh via `ListTable`.
+- Orders, quotes, quote customers, payments, products, packages, users, login
+  logs, attachments, and frozen yield errors: shared table shell, table-body
+  skeleton, and mobile pull-to-refresh via `ListTable`.
 - The same pages use toolbar search via `ListSearchBar` (inline on desktop,
   side drawer on mobile).
 - Reports, dashboard jobs, role permissions, and detail inline tables wrap

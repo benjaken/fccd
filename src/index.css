@@ -1657,6 +1657,145 @@ td:last-child {
   top: 0;
 }
 
+.quote-customers-toolbar {
+  align-items: center;
+}
+
+.quote-customers-result-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--foreground);
+  font-size: 15px;
+}
+
+.quote-customers-result-count strong {
+  font-weight: 750;
+}
+
+.quote-customers-toolbar .list-search {
+  width: min(420px, 100%);
+  margin-left: auto;
+}
+
+.quote-customers-table td {
+  vertical-align: top;
+}
+
+.quote-customers-index-cell {
+  width: 1%;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.quote-customers-company-cell {
+  min-width: 16rem;
+  width: 36%;
+  white-space: normal;
+}
+
+.quote-customers-numeric-cell {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.quote-customers-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+
+.quote-customers-sort svg {
+  width: 14px;
+  height: 14px;
+}
+
+.quote-customer-companies {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.quote-customer-companies li {
+  padding: 5px 0;
+  border-bottom: 1px dashed var(--border);
+}
+
+.quote-customer-companies li:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.quote-customers-row.is-selected td {
+  background: var(--selection-bg);
+  box-shadow: inset -3px 0 0 var(--primary);
+}
+
+.quote-customers-table td:last-child {
+  width: 1%;
+  padding-right: 12px;
+}
+
+.quote-customers-history-action {
+  height: auto;
+  padding: 6px 8px;
+  color: var(--primary);
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.quote-customers-history {
+  display: grid;
+  gap: 24px;
+}
+
+.quote-customers-history h3 {
+  margin: 0 0 10px;
+  font-size: 15px;
+}
+
+.quote-customers-history ul {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.quote-customers-history li {
+  display: grid;
+  gap: 4px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed var(--border);
+}
+
+.quote-customers-history li:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.quote-customers-history small,
+.quote-customers-history-status,
+.quote-customers-history-error {
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+
+.quote-customers-history-error {
+  color: var(--destructive);
+}
+
 .quote-company,
 .order-customer-name {
   display: block;
@@ -4838,6 +4977,7 @@ td:last-child {
 
 @media (max-width: 760px) {
   .quotes-page,
+  .quote-customers-page,
   .orders-page,
   .products-page,
   .packages-page,
