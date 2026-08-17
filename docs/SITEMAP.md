@@ -1,6 +1,6 @@
 # FCCD Sitemap
 
-Product: **FCCD** — Food Channel Catering Discovery.
+Product: **FCCD** — Food Channel Catering Delivery.
 
 > 狀態：已確認的 Sitemap 草案
 > 原則：第一階段先實現現有功能；標記為「第二階段」的功能不納入第一階段。

@@ -1,6 +1,6 @@
 # UI Development Standard
 
-Approved UI hard rules for **FCCD** (*Food Channel Catering Discovery*) —
+Approved UI hard rules for **FCCD** (*Food Channel Catering Delivery*) —
 layout, theme, status colors, and preview sign-in.
 
 **Canonical design system** (shadcn + Ant Design → FCCD):
@@ -9,7 +9,7 @@ layout, theme, status colors, and preview sign-in.
 ## 0. Product name
 
 - Short name: **FCCD**
-- Full name: **Food Channel Catering Discovery**
+- Full name: **Food Channel Catering Delivery**
 - UI brand tokens live under `brand.name` / `brand.system` / `brand.fullName` in
   `src/i18n.ts`. Do not hard-code the old “Food Channel Catering / Operations”
   product title in new screens.
