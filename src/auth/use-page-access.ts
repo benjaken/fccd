@@ -64,6 +64,7 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
     pageKey: "frozen.yield_errors",
   },
   { prefix: "/frozen", pageKey: "frozen" },
+  { prefix: "/kitchen/settings", pageKey: "kitchen.settings" },
   { prefix: "/kitchen/calendar", pageKey: "kitchen.calendar" },
   { prefix: "/kitchen/inventory", pageKey: "kitchen.inventory" },
   { prefix: "/delivery/assign", pageKey: "delivery.assign" },
@@ -145,6 +146,7 @@ function tabPermissionKeys(tabs: readonly ReportTabKey[]) {
 }
 
 const PAGE_ACCESS_CHILD_KEYS: Record<string, string[]> = {
+  "kitchen.settings": ["kitchen.settings.cook_types"],
   [REPORT_GROUP_PAGE_KEYS.frozenMeat]: tabPermissionKeys(
     REPORT_GROUP_TABS.frozenMeat,
   ),

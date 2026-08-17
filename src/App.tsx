@@ -87,6 +87,7 @@ import { SellingPriceCostPage } from "@/components/SellingPriceCostPage";
 import { CalculationSettingsPage } from "@/components/CalculationSettingsPage";
 import { MeatCustomersPage } from "@/components/MeatCustomersPage";
 import { MeatYieldErrorsPage } from "@/components/MeatYieldErrorsPage";
+import { KitchenSettingsPage } from "@/components/KitchenSettingsPage";
 import { AttachmentsListPage } from "@/components/settings/AttachmentsListPage";
 import { LoginLogsListPage } from "@/components/settings/LoginLogsListPage";
 import { RolePermissionsPage } from "@/components/settings/RolePermissionsPage";
@@ -101,6 +102,7 @@ import {
   type DashboardJob,
 } from "@/lib/dashboard";
 import { FROZEN_ACTION_PAGE_KEYS } from "@/lib/frozen-action-permissions";
+import { KITCHEN_ACTION_PAGE_KEYS } from "@/lib/kitchen-action-permissions";
 import { useTheme } from "@/lib/use-theme";
 import { useAnimatedNumber } from "@/lib/use-animated-number";
 import { cn } from "@/lib/utils";
@@ -317,6 +319,12 @@ const secondaryNav: Record<string, NavItem[]> = {
       icon: Warehouse,
       permissionKey: "kitchen.inventory",
     },
+    {
+      key: "kitchenSettings",
+      to: "/kitchen/settings",
+      icon: Settings,
+      permissionKey: "kitchen.settings",
+    },
   ],
   delivery: [
     {
@@ -438,7 +446,7 @@ const SECTION_CHILD_KEYS: Record<string, string[]> = {
     "frozen.yield_errors",
     ...FROZEN_ACTION_PAGE_KEYS,
   ],
-  kitchen: ["kitchen.calendar", "kitchen.inventory"],
+  kitchen: ["kitchen.calendar", "kitchen.inventory", ...KITCHEN_ACTION_PAGE_KEYS],
   delivery: ["delivery.assign"],
   restaurant: ["restaurant.inventory", "restaurant.reports"],
   reports: [
@@ -1073,6 +1081,16 @@ function OperationsShell() {
               <Route
                 path="/frozen/yield-errors"
                 element={<MeatYieldErrorsPage />}
+              />
+              <Route
+                path="/kitchen/settings"
+                element={
+                  pageAccess.canAccess("kitchen.settings") ? (
+                    <KitchenSettingsPage />
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
+                }
               />
               <Route
                 path="/reports/frozen-meat"

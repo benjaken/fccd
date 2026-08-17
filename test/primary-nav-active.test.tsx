@@ -31,6 +31,7 @@ describe("Primary navigation section matching", () => {
     ["/frozen/yield-errors", "frozen"],
     ["/kitchen", "kitchen"],
     ["/kitchen/calendar", "kitchen"],
+    ["/kitchen/settings", "kitchen"],
     ["/delivery", "delivery"],
     ["/delivery/assign", "delivery"],
     ["/restaurant", "restaurant"],
@@ -97,6 +98,10 @@ describe("Primary navigation section matching", () => {
     expect(pageAccessKey("/frozen/customers")).toBe("frozen.meat_customers");
     expect(pageAccessKey("/frozen/spice-usage")).toBe("frozen.spice_usage");
     expect(pageAccessKey("/frozen/yield-errors")).toBe("frozen.yield_errors");
+    expect(pageAccessKey("/kitchen/settings")).toBe("kitchen.settings");
+    expect(pageAccessKey("/kitchen/settings/cook-types")).toBe(
+      "kitchen.settings",
+    );
   });
 
   it("nests frozen meat and shop pages under the reports sidebar item", () => {

@@ -4352,6 +4352,7 @@ td:last-child {
 
 .seasoning-cost-page,
 .calculation-settings-page,
+.kitchen-settings-page,
 .meat-customers-page,
 .selling-price-cost-page {
   display: grid;
@@ -4366,6 +4367,7 @@ td:last-child {
 
 .seasoning-cost-page .page-heading,
 .calculation-settings-page .page-heading,
+.kitchen-settings-page .page-heading,
 .meat-customers-page .page-heading,
 .spice-usage-page .page-heading,
 .selling-price-cost-page .page-heading {
@@ -4374,6 +4376,7 @@ td:last-child {
 
 .seasoning-cost-heading,
 .calculation-settings-heading,
+.kitchen-settings-heading,
 .meat-customers-heading,
 .selling-price-cost-heading {
   align-items: flex-end;
@@ -4381,6 +4384,7 @@ td:last-child {
 
 .seasoning-cost-panel,
 .calculation-settings-panel,
+.kitchen-settings-panel,
 .meat-customers-panel,
 .selling-price-cost-panel {
   display: flex;
@@ -4391,6 +4395,7 @@ td:last-child {
 
 .seasoning-cost-panel > .list-inline-error,
 .calculation-settings-panel > .list-inline-error,
+.kitchen-settings-panel > .list-inline-error,
 .meat-customers-panel > .list-inline-error,
 .selling-price-cost-panel > .list-inline-error {
   flex: 0 0 auto;
@@ -4398,10 +4403,12 @@ td:last-child {
 
 .seasoning-cost-panel > .products-state,
 .calculation-settings-panel > .products-state,
+.kitchen-settings-panel > .products-state,
 .meat-customers-panel > .products-state,
 .selling-price-cost-panel > .products-state,
 .seasoning-cost-table-wrap,
 .calculation-settings-table-wrap,
+.kitchen-settings-table-wrap,
 .meat-customers-table-wrap,
 .spice-usage-table-wrap,
 .selling-price-cost-table-wrap {
@@ -4417,6 +4424,7 @@ td:last-child {
 
 .seasoning-cost-table-wrap th,
 .calculation-settings-table-wrap th,
+.kitchen-settings-table-wrap th,
 .meat-customers-table-wrap th,
 .spice-usage-table-wrap th,
 .selling-price-cost-table-wrap th {
@@ -4571,6 +4579,88 @@ td:last-child {
 
 .calculation-settings-field-error,
 .calculation-settings-form-error {
+  margin: 0;
+  color: var(--destructive);
+  font-size: 0.82rem;
+  font-style: normal;
+}
+
+.kitchen-settings-page {
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+
+.kitchen-settings-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  min-width: 0;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--border);
+}
+
+.kitchen-settings-tabs button {
+  flex: 0 0 auto;
+  padding: 10px 14px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.kitchen-settings-tabs button.active {
+  color: var(--foreground);
+  font-weight: 800;
+  border-bottom-color: var(--nav-active-fg, var(--primary));
+}
+
+.kitchen-settings-tabs button:disabled:not(.active) {
+  opacity: 0.62;
+}
+
+.kitchen-settings-form {
+  display: grid;
+  gap: 16px;
+}
+
+.kitchen-settings-field {
+  display: grid;
+  gap: 6px;
+}
+
+.kitchen-settings-field > span {
+  color: var(--foreground);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.kitchen-settings-field input,
+.kitchen-settings-field select {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  outline: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+}
+
+.kitchen-settings-field input:focus,
+.kitchen-settings-field select:focus {
+  border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 16%, transparent);
+}
+
+.kitchen-settings-field small {
+  color: var(--muted-foreground);
+  font-size: 0.8rem;
+}
+
+.kitchen-settings-field-error,
+.kitchen-settings-form-error {
   margin: 0;
   color: var(--destructive);
   font-size: 0.82rem;
@@ -4843,6 +4933,7 @@ td:last-child {
   .packages-page,
   .seasoning-cost-page,
   .calculation-settings-page,
+  .kitchen-settings-page,
   .meat-customers-page,
   .spice-usage-page,
   .selling-price-cost-page {
@@ -4866,6 +4957,7 @@ td:last-child {
   .spice-usage-heading,
   .seasoning-cost-heading,
   .calculation-settings-heading,
+  .kitchen-settings-heading,
   .meat-customers-heading,
   .selling-price-cost-heading {
     align-items: stretch;
