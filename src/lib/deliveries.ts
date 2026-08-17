@@ -162,6 +162,7 @@ function teamName(value: Nested<NamedRow>): string | null {
 export function clockFromValue(
   value: string | null | undefined,
   timeZone = "Asia/Hong_Kong",
+  options?: { keepMidnight?: boolean },
 ) {
   const trimmed = value?.trim();
   if (!trimmed) return null;
@@ -182,8 +183,8 @@ export function clockFromValue(
   const minute = (
     parts.find((part) => part.type === "minute")?.value ?? ""
   ).padStart(2, "0");
-  if (hour === "00" || hour === "24") {
-    if (minute === "00") return null;
+  if (!options?.keepMidnight && (hour === "00" || hour === "24") && minute === "00") {
+    return null;
   }
   return `${hour === "24" ? "00" : hour}:${minute}`;
 }

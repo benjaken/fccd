@@ -143,6 +143,11 @@ describe("delivery list helpers", () => {
     expect(clockFromValue("2026-08-01T00:00:00+08:00")).toBeNull();
     expect(clockFromValue("18:00 - 19:00")).toBe("18:00 - 19:00");
     expect(clockFromValue("2026-08-01T20:37:00+08:00")).toBe("20:37");
+    expect(
+      clockFromValue("2026-08-01T00:00:00+08:00", "Asia/Hong_Kong", {
+        keepMidnight: true,
+      }),
+    ).toBe("00:00");
   });
 
   it("treats 待取貨 as cancellable and empty image lists as no photos", () => {

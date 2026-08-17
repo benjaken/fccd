@@ -345,7 +345,9 @@ export function DeliveryListPage({
 
   const statusPresentation = (item: DeliveryListItem) => {
     if (isDeliveredStatus(item.deliveryStatus)) {
-      const time = clockFromValue(item.fulfilledAt);
+      const time = clockFromValue(item.fulfilledAt, "Asia/Hong_Kong", {
+        keepMidnight: true,
+      });
       return {
         label: time
           ? `${t("deliveryList.statuses.delivered")} ${time}`
@@ -357,7 +359,9 @@ export function DeliveryListPage({
       item.deliveryStatus === "已取" ||
       item.deliveryStatus === "送貨途中"
     ) {
-      const time = clockFromValue(item.takenAt);
+      const time = clockFromValue(item.takenAt, "Asia/Hong_Kong", {
+        keepMidnight: true,
+      });
       return {
         label: time
           ? `${t("deliveryList.statuses.pickedUp")} ${time}`

@@ -231,6 +231,33 @@ async function syncOrderShippingMethods(
   return updated;
 }
 
+async function syncDeliveryFulfillment(
+  client: AdminClient,
+  records: BubbleRecord[],
+): Promise<number> {
+  const mapping = coreMappings.find(
+    (item) => item.sourceType === "b_deliveryschedule",
+  );
+  if (!mapping) throw new Error("b_deliveryschedule mapping is missing.");
+  let updated = 0;
+  for (const record of records) {
+    const row = mapping.map(record);
+    if (typeof row.legacy_id !== "string" || !row.legacy_id) continue;
+    const { data, error } = await client
+      .from("deliveries")
+      .update({
+        taken_at: row.taken_at ?? null,
+        fulfilled_at: row.fulfilled_at ?? null,
+        delivery_status: row.delivery_status ?? null,
+      })
+      .eq("legacy_id", row.legacy_id)
+      .select("legacy_id");
+    if (error) throw error;
+    if (data?.length) updated += data.length;
+  }
+  return updated;
+}
+
 async function fetchBubbleType(
   sourceType: string,
   checkpoint: string,
@@ -560,6 +587,9 @@ async function processType(
     }
     if (mapping.sourceType === "a_order" && fetched.records.length) {
       await syncOrderShippingMethods(client, fetched.records);
+    }
+    if (mapping.sourceType === "b_deliveryschedule" && fetched.records.length) {
+      await syncDeliveryFulfillment(client, fetched.records);
     }
     const ids = fetched.records.map(requireLegacyId);
     const existingRows = await legacyIdRows(client, mapping.table, ids);
