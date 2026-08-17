@@ -8,12 +8,14 @@ import {
   Printer,
 } from "lucide-react";
 
+import { FactoryOrderJobView } from "@/components/FactoryOrderJobView";
 import { Button } from "@/components/ui/button";
 import {
   addCalendarDays,
   buildDeliveryExportCsv,
   hongKongDateInputValue,
   toDeliveryExportRow,
+  type DeliveryListItem,
   type DeliveryLookupOption,
 } from "@/lib/deliveries";
 import {
@@ -21,15 +23,18 @@ import {
   factoryVisibleDates,
   fetchFactoryBoard,
   fetchFactoryFleets,
+  fetchFactoryOrderJob,
   filterDispatchRows,
   fleetBadgeChar,
   groupDeliveriesByDate,
   type FactoryBoardData,
+  type FactoryOrderJob,
 } from "@/lib/factory-board";
 import { cn } from "@/lib/utils";
 
 type FleetLoader = typeof fetchFactoryFleets;
 type BoardLoader = (startDate: string) => Promise<FactoryBoardData>;
+type OrderJobLoader = typeof fetchFactoryOrderJob;
 
 const WEEKDAY_SHORT_ZH = ["日", "一", "二", "三", "四", "五", "六"];
 const WEEKDAY_LONG_ZH = [
@@ -104,10 +109,12 @@ function formatPortions(value: number | undefined) {
 export function FactoryBoardPage({
   loadBoard = fetchFactoryBoard,
   loadFleets = fetchFactoryFleets,
+  loadOrderJob = fetchFactoryOrderJob,
   initialDate,
 }: {
   loadBoard?: BoardLoader;
   loadFleets?: FleetLoader;
+  loadOrderJob?: OrderJobLoader;
   initialDate?: string;
 }) {
   const { t, i18n } = useTranslation();
@@ -125,6 +132,10 @@ export function FactoryBoardPage({
     fleetId: string;
     fleetName: string;
   } | null>(null);
+  const [selectedJob, setSelectedJob] = useState<DeliveryListItem | null>(null);
+  const [orderJob, setOrderJob] = useState<FactoryOrderJob | null>(null);
+  const [jobLoading, setJobLoading] = useState(false);
+  const [jobError, setJobError] = useState(false);
 
   const dates = board?.dates ?? factoryVisibleDates(startDate);
   const grouped = useMemo(
@@ -136,15 +147,16 @@ export function FactoryBoardPage({
     : [];
 
   useEffect(() => {
-    if (!fleetDate && !dispatch) return;
+    if (!fleetDate && !dispatch && !selectedJob) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       if (dispatch) setDispatch(null);
-      else setFleetDate(null);
+      else if (fleetDate) setFleetDate(null);
+      else setSelectedJob(null);
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [dispatch, fleetDate]);
+  }, [dispatch, fleetDate, selectedJob]);
 
   useEffect(() => {
     let cancelled = false;
@@ -166,6 +178,32 @@ export function FactoryBoardPage({
       cancelled = true;
     };
   }, [loadBoard, loadFleets, startDate]);
+
+  useEffect(() => {
+    const orderId = selectedJob?.orderId;
+    if (!orderId) {
+      setOrderJob(null);
+      setJobError(false);
+      setJobLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setJobLoading(true);
+    setJobError(false);
+    void loadOrderJob(orderId)
+      .then((next) => {
+        if (!cancelled) setOrderJob(next);
+      })
+      .catch(() => {
+        if (!cancelled) setJobError(true);
+      })
+      .finally(() => {
+        if (!cancelled) setJobLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [loadOrderJob, selectedJob?.orderId]);
 
   const formatDayHeading = (isoDate: string) => {
     const [, month, day] = isoDate.split("-").map(Number);
@@ -215,6 +253,13 @@ export function FactoryBoardPage({
     setDispatch(null);
     setSelectedFleetId(UNASSIGNED_FLEET_ID);
     setFleetDate(date);
+  };
+
+  const openJob = (item: DeliveryListItem) => {
+    if (!item.orderId) return;
+    setFleetDate(null);
+    setDispatch(null);
+    setSelectedJob(item);
   };
 
   const submitFleet = () => {
@@ -272,11 +317,25 @@ export function FactoryBoardPage({
           <Megaphone />
           {t("factoryBoard.stocktakeNotice")}
         </p>
-        <Button type="button" variant="outline" className="factory-board-multi-day">
-          {t("factoryBoard.multiDayMenu")}
-        </Button>
+        {selectedJob ? (
+          <span />
+        ) : (
+          <Button type="button" variant="outline" className="factory-board-multi-day">
+            {t("factoryBoard.multiDayMenu")}
+          </Button>
+        )}
       </header>
 
+      {selectedJob ? (
+        <FactoryOrderJobView
+          item={selectedJob}
+          job={orderJob}
+          loading={jobLoading}
+          error={jobError}
+          onBack={() => setSelectedJob(null)}
+        />
+      ) : (
+      <>
       <section className="factory-board-days" aria-busy={loading || undefined}>
         {dates.map((date) => (
           <article className="factory-day" key={date}>
@@ -305,7 +364,12 @@ export function FactoryBoardPage({
                   );
                   const badge = fleetBadgeChar(item.motorcadeName);
                   return (
-                    <article className="factory-job-card" key={item.id}>
+                    <button
+                      type="button"
+                      className="factory-job-card"
+                      key={item.id}
+                      onClick={() => openJob(item)}
+                    >
                       <Printer aria-hidden="true" />
                       <div>
                         <strong>{item.deliveryTime || t("common.notSet")}</strong>
@@ -326,7 +390,7 @@ export function FactoryBoardPage({
                       {badge ? (
                         <span className="factory-job-badge">{badge}</span>
                       ) : null}
-                    </article>
+                    </button>
                   );
                 })
               )}
@@ -376,6 +440,8 @@ export function FactoryBoardPage({
           />
         </label>
       </footer>
+      </>
+      )}
 
       <FactoryModal
         open={Boolean(fleetDate)}

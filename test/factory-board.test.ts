@@ -6,6 +6,7 @@ import {
   factoryVisibleDates,
   filterDispatchRows,
   fleetBadgeChar,
+  formatFactoryLineLabel,
   groupDeliveriesByDate,
   hongKongDateKey,
 } from "@/lib/factory-board";
@@ -111,5 +112,22 @@ describe("factory board helpers", () => {
     ).toEqual(["open"]);
     expect(fleetBadgeChar("Sun-Line")).toBe("S");
     expect(fleetBadgeChar("宏記")).toBe("宏");
+  });
+
+  it("formats factory dish cards with content prefix and quantity", () => {
+    expect(
+      formatFactoryLineLabel({
+        productName: "拿破崙肉丸意粉",
+        content: "雙格",
+        quantity: 8,
+      }),
+    ).toBe("(雙格) 拿破崙肉丸意粉 (x 8)");
+    expect(
+      formatFactoryLineLabel({
+        productName: "檸檬茶",
+        content: "(23包) 檸檬茶",
+        quantity: 23,
+      }),
+    ).toBe("(23包) 檸檬茶 (x 23)");
   });
 });

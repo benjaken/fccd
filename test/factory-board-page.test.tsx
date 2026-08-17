@@ -92,4 +92,51 @@ describe("FactoryBoardPage", () => {
     expect(screen.getByRole("button", { name: "Export" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "關閉" })).toBeInTheDocument();
   });
+
+  it("opens the large-screen order job from a delivery card", async () => {
+    const user = userEvent.setup();
+    render(
+      <FactoryBoardPage
+        initialDate="2026-08-17"
+        loadBoard={async () => board}
+        loadFleets={async () => [{ id: "team-sun", name: "Sun-Line" }]}
+        loadOrderJob={async () => ({
+          packingNote: "分開兩箱",
+          dispatchTime: "10:00",
+          arrivalWindow: "11:00 - 12:00",
+          lines: [
+            {
+              id: "line-1",
+              label: "(雙格) 拿破崙肉丸意粉 (x 8)",
+              printed: true,
+            },
+            {
+              id: "line-2",
+              label: "檸檬茶 (x 23)",
+              printed: false,
+            },
+          ],
+        })}
+      />,
+    );
+
+    await user.click(await screen.findByRole("button", { name: /#B-1522/ }));
+
+    expect(await screen.findByRole("heading", { name: "B-1522" })).toBeInTheDocument();
+    expect(screen.getByText("08月18日 星期二")).toBeInTheDocument();
+    expect(await screen.findByText("出車時間: 10:00")).toBeInTheDocument();
+    expect(screen.getByText("送到時間: 11:00 - 12:00")).toBeInTheDocument();
+    expect(screen.getByText(/地址: 大埔汀角道/)).toBeInTheDocument();
+    expect(screen.getByText("客人名稱: Eric Yim")).toBeInTheDocument();
+    expect(screen.getByText("包裝說明: 分開兩箱")).toBeInTheDocument();
+    expect(screen.getByText("(雙格) 拿破崙肉丸意粉 (x 8)")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "印全單" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "印地址" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "印送貨單" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "已選擇 - S" })).toBeInTheDocument();
+    expect(screen.getByLabelText("連接到標籤打印機")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "返回" }));
+    expect(screen.getAllByRole("button", { name: "出車表" })).toHaveLength(3);
+  });
 });

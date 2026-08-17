@@ -1,5 +1,6 @@
 import {
   addCalendarDays,
+  clockFromValue,
   fetchDeliveryExportRows,
   type DeliveryListItem,
   type DeliveryLookupOption,
@@ -12,6 +13,19 @@ export type FactoryBoardData = {
   dates: string[]
   items: DeliveryListItem[]
   portionsByOrderId: Record<string, number>
+}
+
+export type FactoryOrderLine = {
+  id: string
+  label: string
+  printed: boolean
+}
+
+export type FactoryOrderJob = {
+  packingNote: string | null
+  dispatchTime: string | null
+  arrivalWindow: string | null
+  lines: FactoryOrderLine[]
 }
 
 const PORTION_CHUNK_SIZE = 100
@@ -65,6 +79,38 @@ export function fleetBadgeChar(name: string | null | undefined): string {
   const trimmed = name?.trim() ?? ""
   if (!trimmed) return ""
   return Array.from(trimmed)[0] ?? ""
+}
+
+export function formatFactoryQuantity(value: number | null | undefined): string | null {
+  if (value == null || !Number.isFinite(value)) return null
+  const rounded = Number.isInteger(value) ? String(value) : value.toFixed(1)
+  return rounded.replace(/\.0$/, "")
+}
+
+export function formatFactoryLineLabel(line: {
+  productName?: string | null
+  content?: string | null
+  quantity?: number | null
+}): string {
+  const content = line.content?.trim() ?? ""
+  const product = line.productName?.trim() ?? ""
+  let base = content || product
+  if (content && product && !content.includes(product)) {
+    const prefix = /^\(.*\)$/.test(content)
+      ? content
+      : content.startsWith("(")
+        ? content
+        : `(${content})`
+    base = `${prefix} ${product}`
+  }
+  const quantity = formatFactoryQuantity(line.quantity ?? null)
+  if (!base) {
+    return quantity ? `(x ${quantity})` : ""
+  }
+  if (!quantity || /\(x\s+/i.test(base)) {
+    return base
+  }
+  return `${base} (x ${quantity})`
 }
 
 export function filterDispatchRows(
@@ -159,5 +205,52 @@ export async function fetchFactoryBoard(
     dates,
     items,
     portionsByOrderId: await fetchOrderPortionTotals(orderIds),
+  }
+}
+
+export async function fetchFactoryOrderJob(orderId: string): Promise<FactoryOrderJob> {
+  const [orderResult, linesResult] = await Promise.all([
+    supabase
+      .from("orders")
+      .select("factory_packing_note, delivery_time, ship_out_time")
+      .eq("id", orderId)
+      .maybeSingle(),
+    supabase
+      .from("order_lines")
+      .select(
+        "id, product_name_snapshot, content_snapshot, quantity, is_printed, type_sort, item_order",
+      )
+      .eq("order_id", orderId)
+      .eq("is_void", false)
+      .order("type_sort")
+      .order("item_order"),
+  ])
+  if (orderResult.error) {
+    throw orderResult.error
+  }
+  if (linesResult.error) {
+    throw linesResult.error
+  }
+
+  return {
+    packingNote:
+      (orderResult.data?.factory_packing_note as string | null)?.trim() || null,
+    dispatchTime: clockFromValue(
+      (orderResult.data?.ship_out_time as string | null) ?? null,
+    ),
+    arrivalWindow:
+      (orderResult.data?.delivery_time as string | null)?.trim() || null,
+    lines: (linesResult.data ?? []).map((row) => ({
+      id: row.id as string,
+      label: formatFactoryLineLabel({
+        productName: row.product_name_snapshot as string | null,
+        content: row.content_snapshot as string | null,
+        quantity:
+          row.quantity == null || row.quantity === ""
+            ? null
+            : Number(row.quantity),
+      }),
+      printed: Boolean(row.is_printed),
+    })),
   }
 }
