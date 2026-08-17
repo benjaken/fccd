@@ -76,6 +76,18 @@ const orders: KitchenCalendarOrder[] = [
     outstanding: 0,
     statuses: [{ name: "SP", color: "#832024" }],
   },
+  {
+    id: "order-delivered-stale",
+    orderNumber: "B#1462UB",
+    customerName: "Union Banquet",
+    companyName: null,
+    deliveryAt: "2026-08-17T04:00:00.000Z",
+    factoryDate: null,
+    deliveryStatus: "己送達",
+    isSentToFactory: null,
+    outstanding: 0,
+    statuses: [{ name: "未傳至工場", color: "#f39c12" }],
+  },
 ];
 
 const orderDetail = {
@@ -170,8 +182,8 @@ describe("Kitchen calendar page", () => {
     const legend = screen.getByRole("list", { name: "訂單狀態" });
     expect(within(legend).getByText("未傳至工場")).toBeInTheDocument();
     expect(within(legend).getByText("未完成付款")).toBeInTheDocument();
-    expect(within(legend).getByText("廚房")).toBeInTheDocument();
-    expect(within(legend).getByText("SP")).toBeInTheDocument();
+    expect(within(legend).queryByText("廚房")).not.toBeInTheDocument();
+    expect(within(legend).queryByText("SP")).not.toBeInTheDocument();
 
     const philip = await screen.findByRole("link", {
       name: /開啟訂單 #6917 - Philip Leung/,
@@ -196,6 +208,12 @@ describe("Kitchen calendar page", () => {
     expect(ada).toHaveTextContent("P-1140 - Ada Wong");
     expect(ada).not.toHaveTextContent("未完成付款");
     expect(ada).not.toHaveTextContent("廚房");
+    const delivered = screen.getByRole("link", {
+      name: /開啟訂單 B#1462UB - Union Banquet/,
+    });
+    expect(delivered).toHaveTextContent("B#1462UB - Union Banquet");
+    expect(delivered).not.toHaveTextContent("未傳至工場");
+    expect(delivered).toHaveAccessibleName(/已送達/);
   });
 
   it("opens an order from the calendar", async () => {

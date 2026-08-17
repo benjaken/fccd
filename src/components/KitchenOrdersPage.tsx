@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import { CalendarDays, ChevronRight, ClipboardList, RefreshCw } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 
-import { OrderStatusBadges } from "@/components/OrderStatusBadges";
 import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
@@ -12,12 +11,15 @@ import { kitchenOrderHref } from "@/lib/kitchen-orders";
 import { useDeferredFilter } from "@/lib/use-deferred-filter";
 import {
   fetchOrders,
+  operationalOrderStatus,
+  operationalOrderStatusTone,
   ORDERS_PAGE_SIZE,
   type OrderListFilters,
   type OrderListItem,
   type OrderListResult,
   type OrderStatusFilter,
 } from "@/lib/orders";
+import { cn } from "@/lib/utils";
 
 type KitchenOrdersLoader = (filters: OrderListFilters) => Promise<OrderListResult>;
 
@@ -120,6 +122,14 @@ export function KitchenOrdersPage({
     setSearch(draftSearch.trim());
   };
 
+  const statusLabels = {
+    confirmed: t("orders.statuses.confirmed"),
+    preparing: t("orders.statuses.preparing"),
+    ready: t("orders.statuses.ready"),
+    shipping: t("orders.statuses.shipping"),
+    completed: t("orders.statuses.completed"),
+  };
+
   return (
     <section className="orders-page kitchen-orders-page">
       <header className="page-heading orders-heading">
@@ -208,7 +218,9 @@ export function KitchenOrdersPage({
               </tr>
             }
           >
-            {items.map((order) => (
+            {items.map((order) => {
+              const statusKey = operationalOrderStatus(order);
+              return (
               <tr key={order.id}>
                 <td>
                   <Link className="order-link" to={kitchenOrderHref(order.id)}>
@@ -244,10 +256,14 @@ export function KitchenOrdersPage({
                   </span>
                 </td>
                 <td>
-                  <OrderStatusBadges
-                    statuses={order.statuses}
-                    empty={t("common.notSet")}
-                  />
+                  <span
+                    className={cn(
+                      "status-badge",
+                      operationalOrderStatusTone(statusKey),
+                    )}
+                  >
+                    {statusLabels[statusKey]}
+                  </span>
                 </td>
                 <td>
                   <Button variant="ghost" size="icon" asChild>
@@ -262,7 +278,8 @@ export function KitchenOrdersPage({
                   </Button>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </ListTable>
         )}
 

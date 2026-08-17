@@ -6,21 +6,24 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { KitchenOrdersPage } from "@/components/KitchenOrdersPage";
 import { OrderDetailPage } from "@/components/OrderDetailPage";
 import i18n from "@/i18n";
-import type { OrderListResult } from "@/lib/orders";
+import {
+  operationalOrderStatus,
+  type OrderListResult,
+} from "@/lib/orders";
 
 const orderResult: OrderListResult = {
   total: 1,
   items: [
     {
       id: "order-1",
-      orderNumber: "B-1513",
+      orderNumber: "B#1462UB",
       customerName: "陳小姐",
       companyName: "香港女童軍總會",
       deliveryAt: "2026-08-12T00:00:00+08:00",
       factoryDate: "2026-08-11T16:00:00.000Z",
       shipOutTime: "11:30",
-      deliveryStatus: "待取貨",
-      isSentToFactory: true,
+      deliveryStatus: "己送達",
+      isSentToFactory: null,
       grandTotal: null,
       outstanding: null,
       currency: "HKD",
@@ -82,7 +85,16 @@ describe("Kitchen orders page", () => {
     await i18n.changeLanguage("zh-HK");
   });
 
-  it("lists kitchen orders with configured 訂單狀態 names", async () => {
+  it("prefers 己送達 over leftover 未傳至工場 tags", () => {
+    expect(
+      operationalOrderStatus({
+        deliveryStatus: "己送達",
+        isSentToFactory: null,
+      }),
+    ).toBe("completed");
+  });
+
+  it("lists kitchen orders with live delivery status, not leftover tags", async () => {
     const loadOrders = vi.fn().mockResolvedValue(orderResult);
 
     render(
@@ -100,15 +112,15 @@ describe("Kitchen orders page", () => {
       await screen.findByRole("heading", { name: "廚房訂單" }),
     ).toBeInTheDocument();
     expect(screen.getByText("中央廚房")).toBeInTheDocument();
-    expect(await screen.findByText("B-1513")).toHaveAttribute(
+    expect(await screen.findByText("B#1462UB")).toHaveAttribute(
       "href",
       "/orders/order-1?from=kitchen",
     );
     const table = within(screen.getByRole("table"));
     expect(table.getByText("香港女童軍總會")).toBeInTheDocument();
     expect(table.getByText("陳小姐")).toBeInTheDocument();
-    expect(table.getByText("未傳至工場")).toBeInTheDocument();
-    expect(table.queryByText("待取貨")).not.toBeInTheDocument();
+    expect(table.getByText("已送達")).toBeInTheDocument();
+    expect(table.queryByText("未傳至工場")).not.toBeInTheDocument();
     expect(loadOrders).toHaveBeenCalledWith({
       page: 1,
       search: "",
@@ -168,7 +180,7 @@ describe("Kitchen orders page", () => {
       </MemoryRouter>,
     );
 
-    await user.click(await screen.findByText("B-1513"));
+    await user.click(await screen.findByText("B#1462UB"));
     const back = await screen.findByRole("link", { name: "返回中央廚房" });
     expect(back).toHaveAttribute("href", "/kitchen");
     await user.click(back);

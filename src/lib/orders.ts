@@ -21,6 +21,36 @@ export type OrderStatusFilter =
   | "shipping"
   | "completed";
 
+export type OperationalOrderStatus = Exclude<OrderStatusFilter, "">;
+
+export function operationalOrderStatus(order: {
+  deliveryStatus: string | null;
+  isSentToFactory: boolean | null;
+}): OperationalOrderStatus {
+  if (
+    order.deliveryStatus === "己送達" ||
+    order.deliveryStatus === "已送達"
+  ) {
+    return "completed";
+  }
+  if (order.deliveryStatus === "送貨途中") return "shipping";
+  if (order.deliveryStatus === "待取貨") return "ready";
+  if (
+    order.deliveryStatus === "待接單" ||
+    order.deliveryStatus === "未派車隊"
+  ) {
+    return "confirmed";
+  }
+  if (order.isSentToFactory) return "preparing";
+  return "confirmed";
+}
+
+export function operationalOrderStatusTone(status: OperationalOrderStatus) {
+  if (status === "completed" || status === "ready") return "green";
+  if (status === "preparing") return "amber";
+  return "blue";
+}
+
 export type OrderListItem = {
   id: string;
   orderNumber: string | null;

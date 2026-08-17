@@ -11,18 +11,16 @@ import {
   hongKongDateParts,
   hongKongDayKey,
   kitchenCalendarDayKey,
-  kitchenCalendarDotStyle,
-  kitchenCalendarLegendItemStyle,
   kitchenCalendarMonthParam,
   kitchenCalendarOrderHref,
   kitchenCalendarRangeIso,
-  kitchenCalendarStatusLegend,
+  kitchenCalendarStatus,
+  kitchenCalendarTone,
   KITCHEN_CALENDAR_VISIBLE_PER_DAY,
   parseKitchenCalendarMonth,
   shiftKitchenCalendarMonth,
   type KitchenCalendarOrder,
 } from "@/lib/kitchen-calendar";
-import { orderStatusLabel, type OrderStatusView } from "@/lib/order-statuses";
 import { cn } from "@/lib/utils";
 
 type KitchenCalendarLoader = (range: {
@@ -41,19 +39,13 @@ function orderLabel(
   return name ? `${number} - ${name}` : number;
 }
 
-function StatusDots({ statuses }: { statuses: readonly OrderStatusView[] }) {
-  const dots = statuses.length ? statuses : [{ name: "", color: null }];
-  return (
-    <span className="kitchen-calendar-dots" aria-hidden="true">
-      {dots.map((status, index) => (
-        <span
-          className="kitchen-calendar-dot"
-          key={`${status.name}-${index}`}
-          style={kitchenCalendarDotStyle(status.color)}
-        />
-      ))}
-    </span>
-  );
+function operationalStatusLabel(
+  order: KitchenCalendarOrder,
+  t: (key: string) => string,
+) {
+  const status = kitchenCalendarStatus(order);
+  if (status === "awaitingDriver") return t("dashboard.driverStatus");
+  return t(`orders.statuses.${status}`);
 }
 
 export function KitchenCalendarPage({
@@ -163,7 +155,6 @@ export function KitchenCalendarPage({
   }, [items]);
 
   const selectedOrders = selectedDay ? (ordersByDay.get(selectedDay) ?? []) : [];
-  const legend = useMemo(() => kitchenCalendarStatusLegend(items), [items]);
 
   return (
     <section className="kitchen-calendar-page">
@@ -172,26 +163,19 @@ export function KitchenCalendarPage({
           <span className="eyebrow">{t("navigation.kitchen")}</span>
           <h1>{t("navigation.productionCalendar")}</h1>
         </div>
-        {legend.length > 0 ? (
-          <ul
-            className="kitchen-calendar-legend"
-            aria-label={t("kitchenCalendar.legend")}
-          >
-            {legend.map((status) => (
-              <li
-                key={`${status.name}-${status.color ?? ""}`}
-                style={kitchenCalendarLegendItemStyle(status.color)}
-              >
-                <span
-                  className="kitchen-calendar-dot"
-                  style={kitchenCalendarDotStyle(status.color)}
-                  aria-hidden="true"
-                />
-                {status.name}
-              </li>
-            ))}
-          </ul>
-        ) : null}
+        <ul
+          className="kitchen-calendar-legend"
+          aria-label={t("kitchenCalendar.legend")}
+        >
+          <li>
+            <span className="kitchen-calendar-dot amber" aria-hidden="true" />
+            {t("kitchenCalendar.notSentToFactory")}
+          </li>
+          <li>
+            <span className="kitchen-calendar-dot red" aria-hidden="true" />
+            {t("kitchenCalendar.unpaid")}
+          </li>
+        </ul>
       </header>
 
       <article className="panel kitchen-calendar-panel">
@@ -297,23 +281,21 @@ export function KitchenCalendarPage({
                           />
                         ))
                       : visible.map((order) => {
+                          const tone = kitchenCalendarTone(order);
                           const label = orderLabel(order, t("common.notSet"));
-                          const statusText = orderStatusLabel(order.statuses);
+                          const statusText = operationalStatusLabel(order, t);
                           return (
                             <Link
                               className="kitchen-calendar-event"
                               key={order.id}
                               to={kitchenCalendarOrderHref(order.id, monthParam)}
-                              title={
-                                statusText ? `${label} · ${statusText}` : label
-                              }
-                              aria-label={
-                                statusText
-                                  ? `${t("orders.open")} ${label} ${statusText}`
-                                  : `${t("orders.open")} ${label}`
-                              }
+                              title={`${label} · ${statusText}`}
+                              aria-label={`${t("orders.open")} ${label} ${statusText}`}
                             >
-                              <StatusDots statuses={order.statuses} />
+                              <span
+                                className={cn("kitchen-calendar-dot", tone)}
+                                aria-hidden="true"
+                              />
                               <span className="kitchen-calendar-event-copy">
                                 {label}
                               </span>
@@ -353,20 +335,20 @@ export function KitchenCalendarPage({
         ) : (
           <ul className="kitchen-calendar-day-list">
             {selectedOrders.map((order) => {
+              const tone = kitchenCalendarTone(order);
               const label = orderLabel(order, t("common.notSet"));
-              const statusText = orderStatusLabel(order.statuses);
+              const statusText = operationalStatusLabel(order, t);
               return (
                 <li key={order.id}>
                   <Link
                     className="kitchen-calendar-day-item"
                     to={kitchenCalendarOrderHref(order.id, monthParam)}
-                    aria-label={
-                      statusText
-                        ? `${t("orders.open")} ${label} ${statusText}`
-                        : `${t("orders.open")} ${label}`
-                    }
+                    aria-label={`${t("orders.open")} ${label} ${statusText}`}
                   >
-                    <StatusDots statuses={order.statuses} />
+                    <span
+                      className={cn("kitchen-calendar-dot", tone)}
+                      aria-hidden="true"
+                    />
                     <span className="kitchen-calendar-day-copy">
                       <strong>{order.orderNumber || t("common.notSet")}</strong>
                       <small>

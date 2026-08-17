@@ -1,7 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import {
   fetchOrderStatusCatalog,
-  parseHexColor,
   resolveOrderStatuses,
   type ConfiguredOrderStatus,
   type OrderStatusView,
@@ -226,47 +225,6 @@ export function kitchenCalendarTone(order: {
   if ((order.outstanding ?? 0) > 0) return "red";
   if (order.isSentToFactory === false) return "amber";
   return "blue";
-}
-
-export function kitchenCalendarStatusLegend(
-  orders: readonly {
-    statuses: readonly OrderStatusView[] | null | undefined;
-  }[],
-): OrderStatusView[] {
-  const seen = new Set<string>();
-  const items: OrderStatusView[] = [];
-
-  for (const order of orders) {
-    for (const status of order.statuses ?? []) {
-      const name = status.name.trim();
-      if (!name) continue;
-      const color = parseHexColor(status.color);
-      const key = `${name}\0${color ?? ""}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      items.push({ name, color });
-    }
-  }
-
-  return items.sort((left, right) =>
-    left.name.localeCompare(right.name, "zh-Hant"),
-  );
-}
-
-export function kitchenCalendarDotStyle(color: string | null | undefined) {
-  const hex = parseHexColor(color);
-  return hex ? { background: hex } : undefined;
-}
-
-export function kitchenCalendarLegendItemStyle(
-  color: string | null | undefined,
-) {
-  const hex = parseHexColor(color);
-  if (!hex) return undefined;
-  return {
-    background: `color-mix(in srgb, ${hex} 14%, var(--card))`,
-    borderColor: `color-mix(in srgb, ${hex} 32%, var(--border))`,
-  };
 }
 
 function mapOrder(

@@ -430,6 +430,8 @@ const resources = {
         previousMonth: "上一個月",
         nextMonth: "下一個月",
         legend: "訂單狀態",
+        notSentToFactory: "未傳至工場",
+        unpaid: "未完成付款",
         loading: "正在載入出餐日曆…",
         loadError: "暫時無法載入出餐日曆",
         loadErrorDescription: "請稍後重試，或確認你的訂單資料權限。",
@@ -2531,6 +2533,8 @@ const resources = {
         previousMonth: "Previous month",
         nextMonth: "Next month",
         legend: "Order status",
+        notSentToFactory: "Not sent to factory",
+        unpaid: "Payment incomplete",
         loading: "Loading serving calendar…",
         loadError: "The serving calendar could not be loaded",
         loadErrorDescription:

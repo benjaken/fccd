@@ -8,7 +8,6 @@ import {
   kitchenCalendarRangeIso,
   kitchenCalendarReturnPath,
   kitchenCalendarStatus,
-  kitchenCalendarStatusLegend,
   kitchenCalendarTone,
   parseKitchenCalendarMonth,
   shiftKitchenCalendarMonth,
@@ -66,22 +65,16 @@ describe("Kitchen calendar date helpers", () => {
     expect(hongKongDayKey("2026-08-16T16:00:00.000Z")).toBe("2026-08-17");
   });
 
-  it("builds a unique order-status legend from the visible orders", () => {
+  it("does not treat leftover factory-send tags as the live order state", () => {
     expect(
-      kitchenCalendarStatusLegend([
-        { statuses: [{ name: "未完成付款", color: "#ff0000" }] },
-        {
-          statuses: [
-            { name: "未完成付款", color: "#FF0000" },
-            { name: "廚房", color: "#832024" },
-          ],
-        },
-        { statuses: [] },
-      ]),
-    ).toEqual([
-      { name: "未完成付款", color: "#ff0000" },
-      { name: "廚房", color: "#832024" },
-    ]);
+      kitchenCalendarStatus({
+        deliveryStatus: "己送達",
+        isSentToFactory: null,
+      }),
+    ).toBe("completed");
+    expect(
+      kitchenCalendarTone({ isSentToFactory: null, outstanding: 0 }),
+    ).toBe("blue");
   });
 
   it("marks unpaid orders red and only explicitly unsent orders amber", () => {

@@ -2035,14 +2035,7 @@ button.product-tag[aria-pressed="true"] {
   background: color-mix(in oklch, var(--accent) 55%, transparent);
 }
 
-.kitchen-calendar-dots {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  min-height: 8px;
-}
-
-.kitchen-calendar-event .kitchen-calendar-dots {
+.kitchen-calendar-event .kitchen-calendar-dot {
   margin-top: 7px;
 }
 
@@ -2071,7 +2064,27 @@ button.product-tag[aria-pressed="true"] {
   height: 7px;
   flex: 0 0 auto;
   border-radius: 50%;
-  background: color-mix(in oklch, var(--muted-foreground) 55%, var(--card));
+  background: oklch(0.48 0.15 250);
+}
+
+.kitchen-calendar-dot.amber {
+  background: oklch(0.72 0.16 75);
+}
+
+.kitchen-calendar-dot.red {
+  background: var(--destructive);
+}
+
+.dark .kitchen-calendar-dot {
+  background: oklch(0.72 0.12 250);
+}
+
+.dark .kitchen-calendar-dot.amber {
+  background: oklch(0.8 0.11 80);
+}
+
+.dark .kitchen-calendar-dot.red {
+  background: oklch(0.78 0.12 25);
 }
 
 .kitchen-calendar-empty-day {
