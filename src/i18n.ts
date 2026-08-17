@@ -412,6 +412,8 @@ const resources = {
           confirmed: "已確認",
           preparing: "製作中",
           ready: "待取貨",
+          pickedUp: "已取貨",
+          awaitingDriver: "待接單",
           shipping: "送貨途中",
           completed: "已送達",
         },
@@ -449,7 +451,7 @@ const resources = {
         loadErrorDescription: "請稍後重試，或確認你的訂單資料權限。",
         retry: "重新載入",
         empty: "未找到廚房訂單",
-        emptyDescription: "調整搜尋或狀態條件後再試。",
+        emptyDescription: "只顯示已送到工場的訂單。調整搜尋或狀態條件後再試。",
       },
       orderSettings: {
         eyebrow: "訂單管理",
@@ -2515,6 +2517,8 @@ const resources = {
           confirmed: "Confirmed",
           preparing: "Preparing",
           ready: "Ready for pickup",
+          pickedUp: "Picked up",
+          awaitingDriver: "Awaiting driver",
           shipping: "Delivering",
           completed: "Delivered",
         },
@@ -2554,7 +2558,8 @@ const resources = {
           "Try again shortly or check your order permissions.",
         retry: "Reload",
         empty: "No kitchen orders found",
-        emptyDescription: "Adjust the search or status filters and try again.",
+        emptyDescription:
+          "Only orders sent to the factory are listed. Adjust the search or status filters and try again.",
       },
       orderSettings: {
         eyebrow: "Orders",

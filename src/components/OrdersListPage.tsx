@@ -165,6 +165,8 @@ export function OrdersListPage({
     confirmed: t("orders.statuses.confirmed"),
     preparing: t("orders.statuses.preparing"),
     ready: t("orders.statuses.ready"),
+    pickedUp: t("orders.statuses.pickedUp"),
+    awaitingDriver: t("orders.statuses.awaitingDriver"),
     shipping: t("orders.statuses.shipping"),
     completed: t("orders.statuses.completed"),
   };

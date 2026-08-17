@@ -53,6 +53,9 @@ function displayStatus(
   if (order.deliveryStatus === "待取貨") {
     return { label: labels.ready, tone: "green" };
   }
+  if (order.deliveryStatus === "已取" || order.deliveryStatus === "已取貨") {
+    return { label: labels.pickedUp, tone: "green" };
+  }
   if (order.deliveryStatus === "待接單" || order.deliveryStatus === "未派車隊") {
     return { label: labels.awaitingDriver, tone: "amber" };
   }
@@ -159,6 +162,7 @@ export function OrderDetailPage({
         confirmed: t("orders.statuses.confirmed"),
         preparing: t("orders.statuses.preparing"),
         ready: t("orders.statuses.ready"),
+        pickedUp: t("orders.statuses.pickedUp"),
         shipping: t("orders.statuses.shipping"),
         completed: t("orders.statuses.completed"),
         awaitingDriver: t("dashboard.driverStatus"),

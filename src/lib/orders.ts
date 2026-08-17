@@ -11,20 +11,37 @@ export type OrderPreset =
   | "all"
   | "pending"
   | "unpaid"
-  | "delivered-unpaid";
+  | "delivered-unpaid"
+  | "kitchen";
 
 export type OrderStatusFilter =
   | ""
   | "confirmed"
   | "preparing"
   | "ready"
+  | "pickedUp"
+  | "awaitingDriver"
   | "shipping"
   | "completed";
 
 export type OperationalOrderStatus = Exclude<OrderStatusFilter, "">;
 
+const LATER_KITCHEN_DELIVERY_STATUSES = [
+  "己送達",
+  "已送達",
+  "送貨途中",
+  "待取貨",
+  "已取",
+  "已取貨",
+  "待接單",
+] as const;
+
 export function isOrderDelivered(deliveryStatus: string | null | undefined) {
   return deliveryStatus === "己送達" || deliveryStatus === "已送達";
+}
+
+export function isOrderPickedUp(deliveryStatus: string | null | undefined) {
+  return deliveryStatus === "已取" || deliveryStatus === "已取貨";
 }
 
 export function operationalOrderStatus(order: {
@@ -36,6 +53,7 @@ export function operationalOrderStatus(order: {
   }
   if (order.deliveryStatus === "送貨途中") return "shipping";
   if (order.deliveryStatus === "待取貨") return "ready";
+  if (isOrderPickedUp(order.deliveryStatus)) return "pickedUp";
   if (
     order.deliveryStatus === "待接單" ||
     order.deliveryStatus === "未派車隊"
@@ -47,7 +65,9 @@ export function operationalOrderStatus(order: {
 }
 
 export function operationalOrderStatusTone(status: OperationalOrderStatus) {
-  if (status === "completed" || status === "ready") return "green";
+  if (status === "completed" || status === "ready" || status === "pickedUp") {
+    return "green";
+  }
   if (status === "preparing") return "amber";
   return "blue";
 }
@@ -119,7 +139,7 @@ function applyStatusFilter<
     in: (column: string, values: readonly unknown[]) => T;
     or: (filters: string) => T;
   },
->(query: T, status: OrderStatusFilter) {
+>(query: T, status: OrderStatusFilter, preset: OrderPreset) {
   switch (status) {
     case "completed":
       return query.in("delivery_status", ["己送達", "已送達"]);
@@ -127,10 +147,21 @@ function applyStatusFilter<
       return query.eq("delivery_status", "送貨途中");
     case "ready":
       return query.eq("delivery_status", "待取貨");
-    case "preparing":
-      return query.eq("is_sent_to_factory", true).or(
-        'delivery_status.is.null,delivery_status.not.in.("己送達","已送達","送貨途中","待取貨")',
+    case "pickedUp":
+      return query.in("delivery_status", ["已取", "已取貨"]);
+    case "awaitingDriver":
+      return query.eq("delivery_status", "待接單");
+    case "preparing": {
+      const excluded =
+        preset === "kitchen"
+          ? LATER_KITCHEN_DELIVERY_STATUSES
+          : (["己送達", "已送達", "送貨途中", "待取貨", "已取", "已取貨"] as const);
+      const next =
+        preset === "kitchen" ? query : query.eq("is_sent_to_factory", true);
+      return next.or(
+        `delivery_status.is.null,delivery_status.not.in.("${excluded.join('","')}")`,
       );
+    }
     case "confirmed":
       return query
         .or("delivery_status.is.null,delivery_status.in.(未派車隊,待接單)")
@@ -169,7 +200,9 @@ export async function fetchOrders({
     );
   }
 
-  if (preset === "unpaid") {
+  if (preset === "kitchen") {
+    query = query.eq("is_sent_to_factory", true);
+  } else if (preset === "unpaid") {
     query = query.gt("outstanding", 0);
   } else if (preset === "delivered-unpaid") {
     query = query
@@ -177,7 +210,7 @@ export async function fetchOrders({
       .gt("outstanding", 0);
   }
 
-  query = applyStatusFilter(query, status);
+  query = applyStatusFilter(query, status, preset);
 
   const [{ data, count, error }, catalog] = await Promise.all([
     query,

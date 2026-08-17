@@ -7,12 +7,15 @@ import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import { TablePagination } from "@/components/ui/table-pagination";
-import { kitchenOrderHref } from "@/lib/kitchen-orders";
+import {
+  KITCHEN_STATUS_FILTERS,
+  kitchenOperationalStatus,
+  kitchenOperationalStatusTone,
+  kitchenOrderHref,
+} from "@/lib/kitchen-orders";
 import { useDeferredFilter } from "@/lib/use-deferred-filter";
 import {
   fetchOrders,
-  operationalOrderStatus,
-  operationalOrderStatusTone,
   ORDERS_PAGE_SIZE,
   type OrderListFilters,
   type OrderListItem,
@@ -22,15 +25,6 @@ import {
 import { cn } from "@/lib/utils";
 
 type KitchenOrdersLoader = (filters: OrderListFilters) => Promise<OrderListResult>;
-
-const STATUS_FILTERS: OrderStatusFilter[] = [
-  "",
-  "confirmed",
-  "preparing",
-  "ready",
-  "shipping",
-  "completed",
-];
 
 const KITCHEN_SKELETON_COLUMNS = [
   { width: "6rem" },
@@ -49,7 +43,7 @@ export function KitchenOrdersPage({
   const { t, i18n } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedStatus = searchParams.get("status") ?? "";
-  const status = STATUS_FILTERS.includes(
+  const status = KITCHEN_STATUS_FILTERS.includes(
     requestedStatus as OrderStatusFilter,
   )
     ? (requestedStatus as OrderStatusFilter)
@@ -92,7 +86,7 @@ export function KitchenOrdersPage({
         page,
         search,
         status,
-        preset: "all",
+        preset: "kitchen",
         canViewFinance: false,
       });
       setItems(result.items);
@@ -123,9 +117,10 @@ export function KitchenOrdersPage({
   };
 
   const statusLabels = {
-    confirmed: t("orders.statuses.confirmed"),
     preparing: t("orders.statuses.preparing"),
     ready: t("orders.statuses.ready"),
+    pickedUp: t("orders.statuses.pickedUp"),
+    awaitingDriver: t("orders.statuses.awaitingDriver"),
     shipping: t("orders.statuses.shipping"),
     completed: t("orders.statuses.completed"),
   };
@@ -163,7 +158,7 @@ export function KitchenOrdersPage({
                     )
                   }
                 >
-                  {STATUS_FILTERS.map((option) => (
+                  {KITCHEN_STATUS_FILTERS.map((option) => (
                     <option key={option || "all"} value={option}>
                       {option
                         ? t(`orders.statuses.${option}`)
@@ -219,7 +214,7 @@ export function KitchenOrdersPage({
             }
           >
             {items.map((order) => {
-              const statusKey = operationalOrderStatus(order);
+              const statusKey = kitchenOperationalStatus(order);
               return (
               <tr key={order.id}>
                 <td>
@@ -259,7 +254,7 @@ export function KitchenOrdersPage({
                   <span
                     className={cn(
                       "status-badge",
-                      operationalOrderStatusTone(statusKey),
+                      kitchenOperationalStatusTone(statusKey),
                     )}
                   >
                     {statusLabels[statusKey]}
