@@ -564,6 +564,10 @@ describe("Quote customers list", () => {
 
     const dialog = await screen.findByRole("dialog", { name: "留言" });
     expect(dialog).toHaveClass("side-panel-messages");
+    expect(dialog.querySelector(".quote-customers-message-feed-host"))
+      .toBeInTheDocument();
+    expect(dialog.querySelector(".quote-customers-message-feed"))
+      .toBeInTheDocument();
     await waitFor(() =>
       expect(loadMessages).toHaveBeenCalledWith(
         "sales@foodchannels-catering.com",

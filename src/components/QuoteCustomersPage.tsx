@@ -832,43 +832,49 @@ export function QuoteCustomersPage({
               </button>
             ))}
           </div>
-          <div ref={messageFeedRef} className="quote-customers-message-feed">
-            {messagesLoading ? (
-              <p className="quote-customers-history-status">
-                {t("quoteCustomers.messagesLoading")}
-              </p>
-            ) : messagesError ? (
-              <p className="quote-customers-history-error" role="alert">
-                {t("quoteCustomers.messagesError")}
-              </p>
-            ) : !visibleMessages.length ? (
-              <p className="quote-customers-history-status">
-                {t(`quoteCustomers.emptyTabs.${messageTab}`)}
-              </p>
-            ) : (
-              visibleMessages.map((message) => (
-                <MessageBubble
-                  key={message.id}
-                  message={message}
-                  timestamp={messageTimeFormatter.format(
-                    new Date(message.createdAt),
-                  )}
-                  replyLabel={
-                    messageTab === "note"
-                      ? t("quoteCustomers.reply")
-                      : undefined
-                  }
-                  onReply={
-                    messageTab === "note" ? setReplyTarget : undefined
-                  }
-                />
-              ))
-            )}
-            {sendError ? (
-              <p className="quote-customers-history-error" role="alert">
-                {t("quoteCustomers.sendError")}
-              </p>
-            ) : null}
+          <div className="quote-customers-message-feed-host">
+            <div
+              ref={messageFeedRef}
+              className="quote-customers-message-feed"
+              tabIndex={0}
+            >
+              {messagesLoading ? (
+                <p className="quote-customers-history-status">
+                  {t("quoteCustomers.messagesLoading")}
+                </p>
+              ) : messagesError ? (
+                <p className="quote-customers-history-error" role="alert">
+                  {t("quoteCustomers.messagesError")}
+                </p>
+              ) : !visibleMessages.length ? (
+                <p className="quote-customers-history-status">
+                  {t(`quoteCustomers.emptyTabs.${messageTab}`)}
+                </p>
+              ) : (
+                visibleMessages.map((message) => (
+                  <MessageBubble
+                    key={message.id}
+                    message={message}
+                    timestamp={messageTimeFormatter.format(
+                      new Date(message.createdAt),
+                    )}
+                    replyLabel={
+                      messageTab === "note"
+                        ? t("quoteCustomers.reply")
+                        : undefined
+                    }
+                    onReply={
+                      messageTab === "note" ? setReplyTarget : undefined
+                    }
+                  />
+                ))
+              )}
+              {sendError ? (
+                <p className="quote-customers-history-error" role="alert">
+                  {t("quoteCustomers.sendError")}
+                </p>
+              ) : null}
+            </div>
           </div>
         </div>
       </SidePanel>
