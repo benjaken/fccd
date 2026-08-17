@@ -93,6 +93,7 @@ export function DeliveryListPage({
   const [page, setPage] = useState(1);
   const [items, setItems] = useState<DeliveryListItem[]>([]);
   const [total, setTotal] = useState(0);
+  const [feeTotal, setFeeTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
@@ -209,6 +210,7 @@ export function DeliveryListPage({
       });
       setItems(result.items);
       setTotal(result.total);
+      setFeeTotal(result.feeTotal ?? 0);
     } catch (loadError) {
       const code =
         typeof loadError === "object" &&
@@ -219,6 +221,7 @@ export function DeliveryListPage({
           : "deliveries_load_failed";
       setItems([]);
       setTotal(0);
+      setFeeTotal(0);
       setError(code);
     } finally {
       setLoading(false);
@@ -274,11 +277,6 @@ export function DeliveryListPage({
     motorcadeFilter.revert();
     shippingMethodFilter.revert();
   };
-
-  const pageFeeTotal = items.reduce(
-    (sum, item) => sum + (item.totalFee ?? 0),
-    0,
-  );
 
   const exportCsv = async () => {
     if (exporting) return;
@@ -666,7 +664,7 @@ export function DeliveryListPage({
             from: visibleFrom,
             to: visibleTo,
             total,
-            fee: formatFee(pageFeeTotal),
+            fee: formatFee(feeTotal),
           })}
           page={page}
           totalPages={totalPages}

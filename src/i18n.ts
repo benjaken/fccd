@@ -494,7 +494,7 @@ const resources = {
         next: "下一頁",
         pageOf: "/",
         jumpToPage: "跳至頁碼",
-        pagination: "顯示 {{from}}–{{to}}，共 {{total}} 筆 · 本頁運費 {{fee}}",
+        pagination: "顯示 {{from}}–{{to}}，共 {{total}} 筆 · 總運費 {{fee}}",
         statuses: {
           unassigned: "未派車隊",
           pendingPickup: "待取貨",
@@ -2773,7 +2773,7 @@ const resources = {
         next: "Next page",
         pageOf: "of",
         jumpToPage: "Jump to page",
-        pagination: "Showing {{from}}–{{to}} of {{total}} · Page fees {{fee}}",
+        pagination: "Showing {{from}}–{{to}} of {{total}} · Total fees {{fee}}",
         statuses: {
           unassigned: "Unassigned",
           pendingPickup: "Pending pickup",

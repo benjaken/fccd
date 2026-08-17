@@ -51,6 +51,7 @@ export type DeliveryLookupOption = {
 export type DeliveryListResult = {
   items: DeliveryListItem[];
   total: number;
+  feeTotal: number;
 };
 
 export type DeliveryExportRow = {
@@ -112,6 +113,8 @@ type DeliveryRow = {
   delivery_teams?: Nested<NamedRow>;
   delivery_surcharges?: Nested<SurchargeRow>;
 };
+
+const DELIVERY_FEE_SUM_SELECT = "total_fee.sum(),orders!inner(id)";
 
 const DELIVERY_SELECT = [
   "id",
@@ -312,6 +315,22 @@ export function feeSharePercent(item: DeliveryListItem) {
   return (item.totalFee / item.grandTotal) * 100;
 }
 
+export function deliveryFeeTotal(
+  items: Array<Pick<DeliveryListItem, "totalFee">>,
+) {
+  return items.reduce((sum, item) => sum + (item.totalFee ?? 0), 0);
+}
+
+export function deliveryFeeSumFromAggregate(data: unknown) {
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row || typeof row !== "object") return 0;
+  const record = row as Record<string, unknown>;
+  const raw = record.sum ?? record.total_fee;
+  if (raw === null || raw === undefined || typeof raw === "object") return 0;
+  const value = typeof raw === "number" ? raw : Number.parseFloat(String(raw));
+  return Number.isFinite(value) ? value : 0;
+}
+
 export function deliveryOrderAmount(item: Pick<DeliveryListItem, "grandTotal" | "totalFee">) {
   if (item.grandTotal != null && item.grandTotal > 0) return item.grandTotal;
   return item.totalFee;
@@ -402,22 +421,28 @@ export async function fetchDeliveries({
 }: DeliveryListFilters): Promise<DeliveryListResult> {
   const start = (page - 1) * pageSize;
   const end = start + pageSize - 1;
-  const query = applyDeliveryFilters(
+  const filters = { search, startDate, endDate, motorcadeId, shippingMethodId };
+  const { data, count, error } = await applyDeliveryFilters(
     supabase
       .from("deliveries")
       .select(DELIVERY_SELECT, { count: "exact" })
       .order("delivery_at", { ascending: true, nullsFirst: false })
       .order("ship_out_time", { ascending: true, nullsFirst: false })
       .range(start, end),
-    { search, startDate, endDate, motorcadeId, shippingMethodId },
+    filters,
   );
-
-  const { data, count, error } = await query;
   if (error) throw error;
+
+  const { data: sumData, error: sumError } = (await applyDeliveryFilters(
+    supabase.from("deliveries").select(DELIVERY_FEE_SUM_SELECT) as never,
+    filters,
+  )) as { data: unknown; error: { message?: string } | null };
+  if (sumError) throw sumError;
 
   return {
     items: ((data ?? []) as unknown as DeliveryRow[]).map(mapDeliveryRow),
     total: count ?? 0,
+    feeTotal: deliveryFeeSumFromAggregate(sumData),
   };
 }
 
