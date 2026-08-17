@@ -10,6 +10,7 @@ import {
   groupQuoteCustomerMessages,
   mapQuoteCustomerRow,
   messageTabFromCategory,
+  QUOTE_CUSTOMER_ORDERS_PAGE_SIZE,
   summarizeCompanies,
   type QuoteCustomerHistory,
   type QuoteCustomerListResult,
@@ -134,6 +135,12 @@ describe("formatLabeledValue", () => {
   it("joins a label and tag the way the customer list displays them", () => {
     expect(formatLabeledValue("Ada", "P-1143")).toBe("Ada : P-1143");
     expect(formatLabeledValue(null, "#4455")).toBe("— : #4455");
+  });
+});
+
+describe("company and order table", () => {
+  it("loads twenty-five orders per page in the side panel", () => {
+    expect(QUOTE_CUSTOMER_ORDERS_PAGE_SIZE).toBe(25);
   });
 });
 
@@ -505,7 +512,7 @@ describe("Quote customers list", () => {
     const dialog = await screen.findByRole("dialog", {
       name: "公司與訂單",
     });
-    expect(within(dialog).getByText("顯示 1–15，共 31 筆")).toBeInTheDocument();
+    expect(within(dialog).getByText("顯示 1–25，共 31 筆")).toBeInTheDocument();
     await user.type(
       within(dialog).getByPlaceholderText("搜尋公司或訂單號碼"),
       "611",
