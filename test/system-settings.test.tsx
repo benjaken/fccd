@@ -745,6 +745,29 @@ describe("Super Admin system settings", () => {
     expect(deliveryNotesPage).toContain("delete_meat_delivery_note");
     expect(deliveryNotesPage).toContain("roles.role in ('Admin', 'Factory')");
 
+    const deliveryListSupport = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260817061000_delivery_list_support.sql",
+      ),
+      "utf8",
+    );
+    expect(deliveryListSupport).toContain("orders.shipping_method_id");
+    expect(deliveryListSupport).toContain("deliveries.delivery_time");
+    expect(deliveryListSupport).toContain("Operations read delivery surcharges");
+    expect(deliveryListSupport).toContain("'Factory'");
+
+    const deliveryListRowEdits = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260817062000_delivery_list_row_edits.sql",
+      ),
+      "utf8",
+    );
+    expect(deliveryListRowEdits).toContain("orders.delivery_time");
+    expect(deliveryListRowEdits).toContain("assign_delivery_motorcade");
+    expect(deliveryListRowEdits).toContain("'Factory'");
+
     const frozenMenuLabels = readFileSync(
       path.resolve(
         process.cwd(),

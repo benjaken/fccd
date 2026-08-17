@@ -72,6 +72,7 @@ describe("DateRangePicker", () => {
       "src/components/settings/AttachmentsListPage.tsx",
       "src/components/ReportsPage.tsx",
       "src/components/SupplierPurchaseReport.tsx",
+      "src/components/DeliveryListPage.tsx",
     ];
 
     for (const relativePath of pagesWithDates) {

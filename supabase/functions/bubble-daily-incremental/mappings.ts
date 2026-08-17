@@ -42,7 +42,12 @@ const list = (value: unknown) =>
     )
     : [];
 const dateValue = (value: unknown) => {
-  if (typeof value !== "string") return null;
+  if (typeof value === "number" && Number.isFinite(value)) {
+    const millis = value > 1e12 ? value : value * 1000;
+    const parsed = new Date(millis);
+    return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+  }
+  if (typeof value !== "string" || !value.trim()) return null;
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
 };
@@ -320,6 +325,7 @@ const phaseC: SourceMapping[] = [
       delivery_at: dateValue(r.Delivery_Date),
       factory_date: dateValue(r.Factory_date1_sd),
       factory_print_date: dateValue(r.Factory_date2_Print),
+      delivery_time: text(r.Delivery_Time),
       ship_out_time: text(r["Delivery_Ship Out Time"]),
       remarks: text(r.ORDER_Remarks),
       factory_packing_note: text(r["Factory_Packing Note"]),
@@ -327,10 +333,17 @@ const phaseC: SourceMapping[] = [
       is_quote_original: booleanValue(r["(Quote)Original"]),
       is_sent_to_factory: booleanValue(r["Factory_send/not"]),
       bubble_created_by_legacy_id: text(r["Created By"]),
+      shipping_method_id: null,
+      shipping_method_legacy_id: text(r["Delivery_DS_Shipping Method"]),
     }),
     relations: [
       relation("customer_legacy_id", "customer_id", "customers"),
       relation("channel_legacy_id", "channel_id", "channels"),
+      relation(
+        "shipping_method_legacy_id",
+        "shipping_method_id",
+        "shipping_methods",
+      ),
     ],
   },
   {
@@ -410,6 +423,7 @@ const phaseC: SourceMapping[] = [
       motorcade_legacy_id: text(r.DS_motorcade),
       subdriver_legacy_id: text(r.DS_Super_Motorcade_supDriver),
       delivery_at: dateValue(r["Delivery Date_A_order"]),
+      delivery_time: text(r["Delivery Time_A_order"]),
       fulfilled_at: dateValue(r["fulfill_date&time(trigger A_order)"]),
       taken_at: dateValue(r["take_date&time"]),
       ship_out_time: text(r["Ship-out Time_A_order"]),
@@ -426,6 +440,7 @@ const phaseC: SourceMapping[] = [
     relations: [
       relation("order_legacy_id", "order_id", "orders"),
       relation("district_legacy_id", "district_id", "delivery_districts"),
+      relation("motorcade_legacy_id", "motorcade_id", "delivery_teams"),
     ],
   },
 ];
