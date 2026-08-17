@@ -857,6 +857,20 @@ describe("Super Admin system settings", () => {
     expect(servingCalendarMove).toContain("parent_page_key = 'orders'");
     expect(servingCalendarMove).toContain("kitchen.calendar");
 
+    const orderQueueTitleSuffix = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260817074000_order_queue_title_suffix.sql",
+      ),
+      "utf8",
+    );
+    expect(orderQueueTitleSuffix).toContain("未付款訂單");
+    expect(orderQueueTitleSuffix).toContain("月結訂單");
+    expect(orderQueueTitleSuffix).toContain("拆單訂單");
+    expect(orderQueueTitleSuffix).toContain("廚房備註訂單");
+    expect(orderQueueTitleSuffix).toContain("改期未審訂單");
+    expect(orderQueueTitleSuffix).toContain("Shopify待審訂單");
+
     const preparedMeatFlags = readFileSync(
       path.resolve(
         process.cwd(),
