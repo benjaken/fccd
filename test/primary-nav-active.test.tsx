@@ -40,6 +40,8 @@ describe("Primary navigation section matching", () => {
     ["/delivery/assign", "delivery"],
     ["/restaurant", "restaurant"],
     ["/restaurant/reports", "restaurant"],
+    ["/factory", ""],
+    ["/driver-delivery", ""],
     ["/reports", "reports"],
     ["/reports/daily", "reports"],
     ["/reports/frozen-meat", "reports"],
@@ -118,6 +120,8 @@ describe("Primary navigation section matching", () => {
     expect(pageAccessKey("/kitchen/settings/cook-types")).toBe(
       "kitchen.settings",
     );
+    expect(pageAccessKey("/factory")).toBe("workspace");
+    expect(pageAccessKey("/driver-delivery")).toBe("workspace");
   });
 
   it("registers order settings before the order detail route", () => {
@@ -161,6 +165,17 @@ describe("Primary navigation section matching", () => {
     expect(yieldErrors).toBeGreaterThan(selling);
     expect(source).toContain('to: "/frozen/yield-errors"');
     expect(source).toContain('permissionKey: "frozen.yield_errors"');
+  });
+
+  it("places the delivery list under Delivery as 送貨清單", () => {
+    const source = readFileSync(
+      path.resolve(process.cwd(), "src/App.tsx"),
+      "utf8",
+    );
+    expect(source).toContain('key: "deliveryList"');
+    expect(source).toContain('to: "/delivery"');
+    expect(source).toContain("DeliveryListPage");
+    expect(pageAccessKey("/delivery")).toBe("delivery");
   });
 
   it("nests Sale Partner first under Orders settings", () => {

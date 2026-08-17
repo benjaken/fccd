@@ -349,7 +349,7 @@ describe("Kitchen calendar page", () => {
     const migration = readFileSync(
       path.resolve(
         process.cwd(),
-        "supabase/migrations/20260817061000_restore_kitchen_serving_calendar.sql",
+        "supabase/migrations/20260817064000_restore_kitchen_serving_calendar.sql",
       ),
       "utf8",
     );

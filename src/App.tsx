@@ -20,6 +20,7 @@ import {
   ClipboardCheck,
   ClipboardList,
   Calculator,
+  Factory,
   FileArchive,
   FileText,
   HandCoins,
@@ -84,6 +85,7 @@ import { PackagesListPage } from "@/components/PackagesListPage";
 import { PackageDetailPage } from "@/components/PackageDetailPage";
 import { PreparedMeatInventoryCalcPage } from "@/components/PreparedMeatInventoryCalcPage";
 import { MeatDeliveryNotesPage } from "@/components/MeatDeliveryNotesPage";
+import { DeliveryListPage } from "@/components/DeliveryListPage";
 import { RawMeatInventoryCalcPage } from "@/components/RawMeatInventoryCalcPage";
 import { SpiceUsagePage } from "@/components/SpiceUsagePage";
 import { SeasoningCostSettingsPage } from "@/components/SeasoningCostSettingsPage";
@@ -114,6 +116,7 @@ import { KITCHEN_ACTION_PAGE_KEYS } from "@/lib/kitchen-action-permissions";
 import { ORDER_ACTION_PAGE_KEYS } from "@/lib/order-action-permissions";
 import { useTheme } from "@/lib/use-theme";
 import { useAnimatedNumber } from "@/lib/use-animated-number";
+import { canAssignDeliveryFleet } from "@/lib/deliveries";
 import { canEditProductCatalog } from "@/lib/products";
 import { cn } from "@/lib/utils";
 
@@ -370,9 +373,9 @@ const secondaryNav: Record<string, NavItem[]> = {
   ],
   delivery: [
     {
-      key: "delivery",
+      key: "deliveryList",
       to: "/delivery",
-      icon: Truck,
+      icon: ClipboardList,
       permissionKey: "delivery",
     },
     {
@@ -522,9 +525,8 @@ const workspaceLinks: Array<{
   icon: Icon;
   disabled?: boolean;
 }> = [
-  { key: "catering", to: "/", icon: Utensils },
-  { key: "delivery", to: "/delivery", icon: Truck },
-  { key: "restaurant", to: "/restaurant", icon: Store },
+  { key: "factory", to: "/factory", icon: Factory },
+  { key: "delivery", to: "/driver-delivery", icon: Truck },
   { key: "customer", to: "/customer", icon: Users, disabled: true },
 ];
 
@@ -536,6 +538,24 @@ function sectionFromPath(pathname: string) {
   // Exact home only — do not light 主頁 for profile/migration/unknown paths.
   if (!segment) return "overview";
   return "";
+}
+
+function workspaceFromPath(pathname: string) {
+  if (
+    pathname === "/driver-delivery" ||
+    pathname.startsWith("/driver-delivery/")
+  ) {
+    return "delivery";
+  }
+  if (pathname === "/customer" || pathname.startsWith("/customer/")) {
+    return "customer";
+  }
+  return "factory";
+}
+
+function isWorkspaceNavActive(key: string, pathname: string) {
+  if (key === "factory") return false;
+  return workspaceFromPath(pathname) === key;
 }
 
 /** Primary top-nav stays active for the whole section, including child routes. */
@@ -616,7 +636,13 @@ function mobileNavLinkEnd(to: string, allHrefs: string[]) {
   );
 }
 
-export { isPrimaryNavActive, sectionFromPath, buildMobileDrawerNav };
+export {
+  isPrimaryNavActive,
+  sectionFromPath,
+  workspaceFromPath,
+  isWorkspaceNavActive,
+  buildMobileDrawerNav,
+};
 
 function Brand() {
   const { t } = useTranslation();
@@ -715,14 +741,9 @@ function OperationsShell() {
       .flatMap((item) => item.children ?? [])
       .find((item) => isNavItemVisible(item, pageAccess.canAccess))?.to ??
     REPORT_GROUP_ROUTES.frozenMeat;
-  const activeWorkspace =
-    section === "delivery"
-      ? "delivery"
-      : section === "restaurant"
-        ? "restaurant"
-        : "catering";
   const canViewFinance = pageAccess.canAccess("finance");
   const canEditProducts = canEditProductCatalog(authorizationRole);
+  const canEditDeliveries = canAssignDeliveryFleet(authorizationRole);
 
   useEffect(() => {
     setMobileMenuOpen(false);
@@ -791,7 +812,7 @@ function OperationsShell() {
                   to={to}
                   className={cn(
                     "workspace-soft-link",
-                    activeWorkspace === key && "active",
+                    isWorkspaceNavActive(key, location.pathname) && "active",
                   )}
                 >
                   <WorkspaceIcon />
@@ -1168,6 +1189,10 @@ function OperationsShell() {
                 element={<KitchenCalendarPage />}
               />
               <Route
+                path="/delivery"
+                element={<DeliveryListPage canEdit={canEditDeliveries} />}
+              />
+              <Route
                 path="/kitchen/settings"
                 element={
                   pageAccess.canAccess("kitchen.settings") ? (
@@ -1261,6 +1286,40 @@ function OperationsShell() {
               </Button>
             </div>
             <nav aria-label="Navigation">
+              <div className="mobile-nav-group">
+                <p className="mobile-nav-group-label">
+                  {t("workspace.label")}
+                </p>
+                {workspaceLinks.map(
+                  ({ key, to, icon: WorkspaceIcon, disabled }) =>
+                    disabled ? (
+                      <span
+                        key={key}
+                        className="sidebar-link disabled"
+                        aria-disabled="true"
+                      >
+                        <WorkspaceIcon />
+                        <span>{t(`workspace.${key}`)}</span>
+                      </span>
+                    ) : (
+                      <NavLink
+                        key={key}
+                        to={to}
+                        end
+                        className={() =>
+                          cn(
+                            "sidebar-link",
+                            isWorkspaceNavActive(key, location.pathname) &&
+                              "active",
+                          )
+                        }
+                      >
+                        <WorkspaceIcon />
+                        <span>{t(`workspace.${key}`)}</span>
+                      </NavLink>
+                    ),
+                )}
+              </div>
               {mobileNavGroups.map((group) => (
                 <div className="mobile-nav-group" key={group.groupKey}>
                   <p className="mobile-nav-group-label">
@@ -1852,6 +1911,26 @@ function PanelHeader({
   );
 }
 
+export function WorkspacePlaceholderPage({
+  workspaceKey,
+  icon: WorkspaceIcon,
+}: {
+  workspaceKey: "factory" | "delivery";
+  icon: Icon;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <section className="placeholder-page">
+      <div className="placeholder-icon">
+        <WorkspaceIcon />
+      </div>
+      <h1>{t(`workspace.${workspaceKey}`)}</h1>
+      <p>{t("workspace.placeholder")}</p>
+    </section>
+  );
+}
+
 function ModulePlaceholder({ section }: { section: string }) {
   const { t } = useTranslation();
   const navItem = primaryNav.find((item) => item.key === section);
@@ -1862,7 +1941,7 @@ function ModulePlaceholder({ section }: { section: string }) {
       <div className="placeholder-icon">
         <ModuleIcon />
       </div>
-      <span className="eyebrow">{t("workspace.catering")}</span>
+      <span className="eyebrow">{t("workspace.factory")}</span>
       <h1>{t(`navigation.${navItem?.key ?? "overview"}`)}</h1>
       <p>{t("dashboard.description")}</p>
       <Button asChild>
@@ -1872,20 +1951,57 @@ function ModulePlaceholder({ section }: { section: string }) {
   );
 }
 
-function AuthGate() {
-  const { session, loading, profileLoading } = useAuth();
+function AuthLoadingScreen() {
   const { t } = useTranslation();
 
+  return (
+    <main className="auth-loading">
+      <span className="auth-loading-mark">FC</span>
+      <div className="auth-loading-bar">
+        <span />
+      </div>
+      <p>{t("auth.loading")}</p>
+    </main>
+  );
+}
+
+function WorkspaceStandalonePage({
+  workspaceKey,
+  icon,
+}: {
+  workspaceKey: "factory" | "delivery";
+  icon: Icon;
+}) {
+  return (
+    <main className="workspace-standalone">
+      <WorkspacePlaceholderPage workspaceKey={workspaceKey} icon={icon} />
+    </main>
+  );
+}
+
+function FactoryWorkspace() {
+  const { session, loading, profileLoading } = useAuth();
+
   if (loading || (session && profileLoading)) {
-    return (
-      <main className="auth-loading">
-        <span className="auth-loading-mark">FC</span>
-        <div className="auth-loading-bar">
-          <span />
-        </div>
-        <p>{t("auth.loading")}</p>
-      </main>
-    );
+    return <AuthLoadingScreen />;
+  }
+
+  if (!session) {
+    return <LoginPage />;
+  }
+
+  return <WorkspaceStandalonePage workspaceKey="factory" icon={Factory} />;
+}
+
+function DriverDeliveryWorkspace() {
+  return <WorkspaceStandalonePage workspaceKey="delivery" icon={Truck} />;
+}
+
+function AuthGate() {
+  const { session, loading, profileLoading } = useAuth();
+
+  if (loading || (session && profileLoading)) {
+    return <AuthLoadingScreen />;
   }
 
   return session ? <OperationsShell /> : <LoginPage />;
@@ -1894,6 +2010,22 @@ function AuthGate() {
 function App() {
   return (
     <Routes>
+      <Route
+        path="/factory"
+        element={
+          <AuthProvider>
+            <FactoryWorkspace />
+          </AuthProvider>
+        }
+      />
+      <Route
+        path="/driver-delivery"
+        element={
+          <AuthProvider>
+            <DriverDeliveryWorkspace />
+          </AuthProvider>
+        }
+      />
       <Route
         path="/migration/*"
         element={

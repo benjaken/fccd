@@ -5,6 +5,7 @@ import {
   partitionConflicts,
   sha256Hex,
 } from "../supabase/functions/bubble-daily-incremental/helpers.ts";
+import { phoneText } from "../supabase/functions/bubble-daily-incremental/mappings.ts";
 
 describe("bubble daily incremental helpers", () => {
   it("canonicalizes object keys recursively and hashes deterministically", async () => {
@@ -51,5 +52,17 @@ describe("bubble daily incremental helpers", () => {
     expect(canAdvanceCheckpoint(false, false, false)).toBe(false);
     expect(canAdvanceCheckpoint(true, true, false)).toBe(false);
     expect(canAdvanceCheckpoint(true, false, true)).toBe(false);
+  });
+
+  it("keeps numeric Bubble contact numbers as text", () => {
+    expect(phoneText(90154004)).toBe("90154004");
+    expect(phoneText(" 91234567 ")).toBe("91234567");
+    expect(phoneText(null)).toBeNull();
+    expect(phoneText("")).toBeNull();
+  });
+
+  it("keeps Bubble delivery time windows as text", () => {
+    expect(phoneText("18:00 - 19:00")).toBe("18:00 - 19:00");
+    expect(phoneText(" 12:00 - 12:30 ")).toBe("12:00 - 12:30");
   });
 });
