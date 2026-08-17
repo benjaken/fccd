@@ -4,6 +4,7 @@ import { Plus, Tags, Trash2 } from "lucide-react";
 import { Navigate, NavLink, useParams } from "react-router-dom";
 
 import { useCurrentPageAccess } from "@/auth/use-page-access";
+import { OrderShippingMethodsTable } from "@/components/OrderShippingMethodsTable";
 import { Button } from "@/components/ui/button";
 import { ListTable } from "@/components/ui/list-table";
 import { SidePanel } from "@/components/ui/side-panel";
@@ -15,6 +16,11 @@ import {
   setOrderTagActive,
   type OrderTag,
 } from "@/lib/order-tags";
+import {
+  createShippingMethod,
+  fetchShippingMethods,
+  updateShippingMethod,
+} from "@/lib/shipping-methods";
 import { cn } from "@/lib/utils";
 
 const ORDER_SETTINGS_TABS = [
@@ -349,11 +355,17 @@ export function OrderSettingsPage({
   createTag = createOrderTag,
   setTagActive = setOrderTagActive,
   deleteTag = archiveOrderTag,
+  loadMethods = fetchShippingMethods,
+  createMethod = createShippingMethod,
+  updateMethod = updateShippingMethod,
 }: {
   loadTags?: TagsLoader;
   createTag?: TagCreator;
   setTagActive?: TagActiveSaver;
   deleteTag?: TagDeleter;
+  loadMethods?: typeof fetchShippingMethods;
+  createMethod?: typeof createShippingMethod;
+  updateMethod?: typeof updateShippingMethod;
 }) {
   const { t } = useTranslation();
   const pageAccess = useCurrentPageAccess();
@@ -377,10 +389,12 @@ export function OrderSettingsPage({
           <span className="eyebrow">{t("orderSettings.eyebrow")}</span>
           <h1>{t("orderSettings.title")}</h1>
         </div>
-        {activeTab === "tags" && canManage ? (
+        {(activeTab === "tags" || activeTab === "shipping") && canManage ? (
           <Button type="button" onClick={() => setCreateOpen(true)}>
             <Plus />
-            {t("orderSettings.tags.add")}
+            {activeTab === "shipping"
+              ? t("orderSettings.shipping.add")
+              : t("orderSettings.tags.add")}
           </Button>
         ) : null}
       </header>
@@ -404,6 +418,14 @@ export function OrderSettingsPage({
             createTag={createTag}
             setTagActive={setTagActive}
             deleteTag={deleteTag}
+            createOpen={createOpen}
+            onCreateOpenChange={setCreateOpen}
+          />
+        ) : activeTab === "shipping" ? (
+          <OrderShippingMethodsTable
+            loadMethods={loadMethods}
+            createMethod={createMethod}
+            updateMethod={updateMethod}
             createOpen={createOpen}
             onCreateOpenChange={setCreateOpen}
           />

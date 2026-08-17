@@ -4640,9 +4640,38 @@ td:last-child {
   top: 0;
 }
 
+.order-settings-index-col {
+  width: 3.25rem;
+  text-align: center;
+}
+
 .order-settings-active-col {
   width: 6.5rem;
   text-align: center;
+}
+
+.order-settings-switch-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 44px;
+}
+
+.order-settings-switch-field > span {
+  color: var(--foreground);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.order-settings-switch-field .ui-switch {
+  flex-shrink: 0;
+}
+
+.order-settings-locked-hint {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted-foreground);
 }
 
 .order-settings-form {
@@ -4675,6 +4704,12 @@ td:last-child {
 .order-settings-field input:focus {
   border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
   box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 16%, transparent);
+}
+
+.order-settings-field input:disabled {
+  cursor: not-allowed;
+  background: color-mix(in oklch, var(--muted) 55%, var(--background));
+  color: var(--muted-foreground);
 }
 
 .seasoning-cost-toolbar,
