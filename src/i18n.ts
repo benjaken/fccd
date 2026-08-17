@@ -127,7 +127,7 @@ const resources = {
         users: "使用者列表",
         rolePermissions: "角色與權限",
         loginLogs: "登入紀錄",
-        orderLists: "訂單列表",
+        orderLists: "訂單列表設定",
         attachments: "附件列表",
       },
       dashboard: {
@@ -330,7 +330,7 @@ const resources = {
           },
         },
         orderLists: {
-          title: "訂單列表",
+          title: "訂單列表設定",
           description:
             "設定各訂單列表的名稱與說明；說明會顯示在列表主標題下方，亦可控制側欄是否顯示。",
           search: "搜尋訂單列表",
@@ -341,7 +341,7 @@ const resources = {
           empty: "未找到訂單列表",
           emptyDescription: "調整搜尋條件後再試。",
           edit: "編輯",
-          editTitle: "編輯訂單列表",
+          editTitle: "編輯訂單列表設定",
           editDescription: "更新此列表在側欄與頁面標題顯示的名稱及說明。",
           closePanel: "關閉",
           cancel: "取消",
@@ -2445,7 +2445,7 @@ const resources = {
         users: "Users",
         rolePermissions: "Roles & Permissions",
         loginLogs: "Login Logs",
-        orderLists: "Order lists",
+        orderLists: "Order list settings",
         attachments: "Attachments",
       },
       dashboard: {
@@ -2658,7 +2658,7 @@ const resources = {
           },
         },
         orderLists: {
-          title: "Order lists",
+          title: "Order list settings",
           description:
             "Set the name and explanation for each order queue. The explanation appears under the page title, and you can hide a queue from the Orders sidebar.",
           search: "Search order lists",
@@ -2669,7 +2669,7 @@ const resources = {
           empty: "No order lists found",
           emptyDescription: "Adjust the search terms and try again.",
           edit: "Edit",
-          editTitle: "Edit order list",
+          editTitle: "Edit order list settings",
           editDescription:
             "Update the name and explanation shown in the sidebar and under the page title.",
           closePanel: "Close",

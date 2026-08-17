@@ -847,6 +847,17 @@ describe("Super Admin system settings", () => {
     expect(orderListConfigs).toContain("settings.order_lists");
     expect(orderListConfigs).toContain("settings.order_lists.edit");
     expect(orderListConfigs).toContain("/settings/order-lists");
+    expect(orderListConfigs).toContain("訂單列表設定");
+
+    const orderListSettingsTitle = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260817075000_order_list_settings_page_title.sql",
+      ),
+      "utf8",
+    );
+    expect(orderListSettingsTitle).toContain("訂單列表設定");
+    expect(orderListSettingsTitle).toContain("settings.order_lists");
 
     const servingCalendarMove = readFileSync(
       path.resolve(

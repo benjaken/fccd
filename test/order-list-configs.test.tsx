@@ -90,7 +90,7 @@ describe("Order list configs page", () => {
     );
 
     expect(
-      await screen.findByRole("heading", { name: "訂單列表" }),
+      await screen.findByRole("heading", { name: "訂單列表設定" }),
     ).toBeInTheDocument();
     expect(screen.getByText("查看全部已確認到會訂單。")).toBeInTheDocument();
 

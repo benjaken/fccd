@@ -136,7 +136,7 @@ insert into public.app_pages (
 values
   (
     'settings.order_lists',
-    '訂單列表',
+    '訂單列表設定',
     '/settings/order-lists',
     128,
     false,
@@ -145,7 +145,7 @@ values
   ),
   (
     'settings.order_lists.edit',
-    '編輯訂單列表',
+    '編輯訂單列表設定',
     '/settings/order-lists/actions/edit',
     129,
     true,
