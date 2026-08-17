@@ -289,7 +289,7 @@ function OrderTagsTable({
             <tr>
               <th>{t("orderSettings.tags.columns.name")}</th>
               <th className="order-settings-active-col">
-                {t("orderSettings.tags.columns.active")}
+                {t("orderSettings.active")}
               </th>
               {canManage ? (
                 <th aria-label={t("orderSettings.tags.columns.actions")} />

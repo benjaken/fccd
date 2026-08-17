@@ -151,10 +151,10 @@ function ShippingMethodPanel({
           />
         </label>
         <label className="order-settings-switch-field">
-          <span>{t("orderSettings.shipping.columns.active")}</span>
+          <span>{t("orderSettings.active")}</span>
           <Switch
             checked={isActive}
-            aria-label={t("orderSettings.shipping.columns.active")}
+            aria-label={t("orderSettings.active")}
             onCheckedChange={setIsActive}
           />
         </label>
@@ -317,7 +317,7 @@ export function OrderShippingMethodsTable({
                 {t("orderSettings.shipping.columns.address")}
               </th>
               <th className="order-settings-active-col">
-                {t("orderSettings.shipping.columns.active")}
+                {t("orderSettings.active")}
               </th>
               {canManage ? (
                 <th aria-label={t("orderSettings.shipping.columns.actions")} />

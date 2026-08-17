@@ -205,7 +205,7 @@ describe("Order settings tags page", () => {
 
     const table = within(await screen.findByRole("table"));
     expect(table.getByText("訂單標籤")).toBeInTheDocument();
-    expect(table.getByText("Active")).toBeInTheDocument();
+    expect(table.getByText("啟用")).toBeInTheDocument();
     expect(table.getByText("家人食飯")).toBeInTheDocument();
     expect(table.getByText("Klook")).toBeInTheDocument();
     expect(table.getByText("CNY套餐")).toBeInTheDocument();
@@ -305,7 +305,7 @@ describe("Order settings shipping methods page", () => {
     const table = within(screen.getByRole("table"));
     expect(table.getByText("運送方式")).toBeInTheDocument();
     expect(table.getByText("地址")).toBeInTheDocument();
-    expect(table.getByText("Active")).toBeInTheDocument();
+    expect(table.getByText("啟用")).toBeInTheDocument();
     expect(table.getByText("送貨上門")).toBeInTheDocument();
     expect(table.queryByText("(上門)")).not.toBeInTheDocument();
     expect(table.getByText("寫字樓 - 外賣盒上")).toBeInTheDocument();
@@ -408,7 +408,7 @@ describe("Order settings shipping methods page", () => {
       within(dialog).getByText("此運送方式為系統預設，名稱不可修改。"),
     ).toBeInTheDocument();
 
-    await user.click(within(dialog).getByLabelText("Active"));
+    await user.click(within(dialog).getByLabelText("啟用"));
     await user.click(within(dialog).getByRole("button", { name: "保存" }));
     await waitFor(() => {
       expect(updateMethod).toHaveBeenCalledWith("ship-1", {
@@ -449,7 +449,7 @@ describe("Order settings payment methods page", () => {
     await screen.findByText("QFpay (Alipay / Wechat Pay)");
     const table = within(screen.getByRole("table"));
     expect(table.getByText("付款方式")).toBeInTheDocument();
-    expect(table.getByText("Active")).toBeInTheDocument();
+    expect(table.getByText("啟用")).toBeInTheDocument();
     expect(table.getByText("PayMe")).toBeInTheDocument();
     expect(table.getByText("Cash")).toBeInTheDocument();
     expect(table.getByText("Foodpanda")).toBeInTheDocument();
@@ -526,5 +526,46 @@ describe("Order settings payment methods page", () => {
       });
     });
     expect(await screen.findByText("PayMe HK")).toBeInTheDocument();
+  });
+});
+
+describe("Order settings i18n", () => {
+  it("keeps Traditional Chinese and English copies for order settings labels", async () => {
+    expect(i18n.getResourceBundle("zh-HK", "translation").orderSettings.active).toBe(
+      "啟用",
+    );
+    expect(i18n.getResourceBundle("en", "translation").orderSettings.active).toBe(
+      "Active",
+    );
+
+    renderSettings("payments");
+    expect(await screen.findByRole("heading", { name: "設定" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "付款方式" })).toHaveClass("active");
+    expect(screen.getByRole("button", { name: "添加" })).toBeInTheDocument();
+    expect(await screen.findByText("啟用")).toBeInTheDocument();
+
+    await i18n.changeLanguage("en");
+    expect(await screen.findByRole("heading", { name: "Settings" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Payment method" })).toHaveClass("active");
+    expect(screen.getByRole("button", { name: "Add" })).toBeInTheDocument();
+    expect(screen.getByText("Active")).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Payment method" })).toBeInTheDocument();
+  });
+
+  it("translates the delivery-method table between zh-HK and English", async () => {
+    renderSettings("shipping");
+    await screen.findByText("車邊交收");
+    expect(screen.getByRole("link", { name: "送貨方式" })).toHaveClass("active");
+    expect(screen.getByText("運送方式")).toBeInTheDocument();
+    expect(screen.getByText("地址")).toBeInTheDocument();
+    expect(screen.getByText("啟用")).toBeInTheDocument();
+
+    await i18n.changeLanguage("en");
+    expect(await screen.findByRole("link", { name: "Shipping method" })).toHaveClass(
+      "active",
+    );
+    expect(screen.getByText("Delivery method")).toBeInTheDocument();
+    expect(screen.getByText("Address")).toBeInTheDocument();
+    expect(screen.getByText("Active")).toBeInTheDocument();
   });
 });

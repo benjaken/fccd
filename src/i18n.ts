@@ -429,6 +429,7 @@ const resources = {
         closePanel: "關閉",
         comingSoon: "此設定稍後開放",
         comingSoonDescription: "先使用訂單標籤、送貨方式與付款方式；其他分類會按同一表格樣式陸續加入。",
+        active: "啟用",
         tabs: {
           statuses: "訂單狀態",
           tags: "訂單標籤",
@@ -454,7 +455,7 @@ const resources = {
           emptyDescription: "新增第一個標籤後會顯示在此列表。",
           columns: {
             name: "訂單標籤",
-            active: "Active",
+            active: "啟用",
             actions: "操作",
           },
           fields: {
@@ -487,7 +488,7 @@ const resources = {
             index: "編號",
             name: "運送方式",
             address: "地址",
-            active: "Active",
+            active: "啟用",
             actions: "操作",
           },
           fields: {
@@ -518,7 +519,7 @@ const resources = {
           emptyDescription: "添加第一個付款方式後會顯示在此列表。",
           columns: {
             name: "付款方式",
-            active: "Active",
+            active: "啟用",
             actions: "操作",
           },
           fields: {
@@ -2291,6 +2292,7 @@ const resources = {
         comingSoon: "This setting is coming soon",
         comingSoonDescription:
           "Order tags, delivery methods, and payment methods are available now; the other categories will follow the same table layout.",
+        active: "Active",
         tabs: {
           statuses: "Order status",
           tags: "Order tags",
