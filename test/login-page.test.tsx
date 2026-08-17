@@ -102,12 +102,12 @@ describe("LoginPage", () => {
 
     expect(
       screen.getByRole("link", {
-        name: "Food Channel Catering Discovery",
+        name: "Food Channel Catering Delivery",
       }),
     ).toBeInTheDocument();
     expect(screen.getAllByText("FCCD").length).toBeGreaterThan(0);
     expect(
-      screen.getAllByText("Food Channel Catering Discovery").length,
+      screen.getAllByText("Food Channel Catering Delivery").length,
     ).toBeGreaterThan(0);
   });
 

@@ -6,8 +6,8 @@ const resources = {
     translation: {
       brand: {
         name: "FCCD",
-        system: "Food Channel Catering Discovery",
-        fullName: "Food Channel Catering Discovery",
+        system: "Food Channel Catering Delivery",
+        fullName: "Food Channel Catering Delivery",
       },
       common: {
         search: "搜尋訂單、客戶或產品",
@@ -37,7 +37,7 @@ const resources = {
         eyebrow: "FCCD 營運平台",
         title: "歡迎回來",
         description:
-          "登入 Food Channel Catering Discovery（FCCD），繼續處理今日營運工作。",
+          "登入 Food Channel Catering Delivery（FCCD），繼續處理今日營運工作。",
         email: "電郵地址",
         emailPlaceholder: "name@foodchannels.com",
         password: "密碼",
@@ -1746,8 +1746,8 @@ const resources = {
     translation: {
       brand: {
         name: "FCCD",
-        system: "Food Channel Catering Discovery",
-        fullName: "Food Channel Catering Discovery",
+        system: "Food Channel Catering Delivery",
+        fullName: "Food Channel Catering Delivery",
       },
       common: {
         search: "Search orders, customers or products",
@@ -1777,7 +1777,7 @@ const resources = {
         eyebrow: "FCCD platform",
         title: "Welcome back",
         description:
-          "Sign in to Food Channel Catering Discovery (FCCD) and continue today's operations.",
+          "Sign in to Food Channel Catering Delivery (FCCD) and continue today's operations.",
         email: "Email address",
         emailPlaceholder: "name@foodchannels.com",
         password: "Password",
