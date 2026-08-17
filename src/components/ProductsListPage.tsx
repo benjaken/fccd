@@ -13,6 +13,7 @@ import { TablePagination } from "@/components/ui/table-pagination";
 import { detailFromLocation } from "@/lib/detail-navigation";
 import { useDeferredFilter } from "@/lib/use-deferred-filter";
 import {
+  fetchBentoColumnTypes,
   fetchBentoMainTypes,
   fetchProductChannels,
   fetchProductTypes,
@@ -49,6 +50,7 @@ type ProductsLoader = (filters: ProductListFilters) => Promise<ProductListResult
 type ChannelsLoader = () => Promise<CatalogOption[]>;
 type ProductTypesLoader = (channelId?: string) => Promise<CatalogOption[]>;
 type StaplesLoader = () => Promise<CatalogOption[]>;
+type CompartmentsLoader = () => Promise<CatalogOption[]>;
 type RecommendUpdater = typeof updateProductRecommendation;
 
 export function ProductsListPage({
@@ -58,6 +60,7 @@ export function ProductsListPage({
   loadChannels = fetchProductChannels,
   loadProductTypes = fetchProductTypes,
   loadBentoMainTypes = fetchBentoMainTypes,
+  loadBentoColumnTypes = fetchBentoColumnTypes,
   updateRecommendation = updateProductRecommendation,
 }: {
   preset?: ProductPreset;
@@ -66,6 +69,7 @@ export function ProductsListPage({
   loadChannels?: ChannelsLoader;
   loadProductTypes?: ProductTypesLoader;
   loadBentoMainTypes?: StaplesLoader;
+  loadBentoColumnTypes?: CompartmentsLoader;
   updateRecommendation?: RecommendUpdater;
 }) {
   const { t, i18n } = useTranslation();
@@ -82,6 +86,9 @@ export function ProductsListPage({
   );
   const [bentoMainTypeId, setBentoMainTypeId] = useState(
     () => searchParams.get("staple") ?? "",
+  );
+  const [bentoColumnTypeId, setBentoColumnTypeId] = useState(
+    () => searchParams.get("compartments") ?? "",
   );
   const [status, setStatus] = useState<ProductStatusFilter>("");
   const [priceRange, setPriceRange] = useState<ProductPriceRange>("");
@@ -101,6 +108,10 @@ export function ProductsListPage({
     setPage(1);
     setBentoMainTypeId(value);
   });
+  const compartmentFilter = useDeferredFilter(bentoColumnTypeId, (value) => {
+    setPage(1);
+    setBentoColumnTypeId(value);
+  });
   const statusFilter = useDeferredFilter(status, (value) => {
     setPage(1);
     setStatus(value);
@@ -108,6 +119,7 @@ export function ProductsListPage({
   const [channels, setChannels] = useState<CatalogOption[]>([]);
   const [productTypes, setProductTypes] = useState<CatalogOption[]>([]);
   const [bentoMainTypes, setBentoMainTypes] = useState<CatalogOption[]>([]);
+  const [bentoColumnTypes, setBentoColumnTypes] = useState<CatalogOption[]>([]);
   const [page, setPage] = useState(1);
   const [items, setItems] = useState<ProductListItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -168,6 +180,20 @@ export function ProductsListPage({
 
   useEffect(() => {
     let active = true;
+    void loadBentoColumnTypes()
+      .then((compartmentOptions) => {
+        if (active) setBentoColumnTypes(compartmentOptions);
+      })
+      .catch(() => {
+        if (active) setBentoColumnTypes([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [loadBentoColumnTypes]);
+
+  useEffect(() => {
+    let active = true;
     void loadProductTypes(channelFilter.value)
       .then((typeOptions) => {
         if (!active) return;
@@ -198,10 +224,14 @@ export function ProductsListPage({
     const nextChannel = searchParams.get("channel") ?? "";
     const nextType = searchParams.get("type") ?? "";
     const nextStaple = searchParams.get("staple") ?? "";
+    const nextCompartments = searchParams.get("compartments") ?? "";
     setChannelId((current) => (current === nextChannel ? current : nextChannel));
     setProductTypeName((current) => (current === nextType ? current : nextType));
     setBentoMainTypeId((current) =>
       current === nextStaple ? current : nextStaple,
+    );
+    setBentoColumnTypeId((current) =>
+      current === nextCompartments ? current : nextCompartments,
     );
   }, [searchParams]);
 
@@ -210,18 +240,27 @@ export function ProductsListPage({
     if (channelId) next.set("channel", channelId);
     if (productTypeName) next.set("type", productTypeName);
     if (bentoMainTypeId) next.set("staple", bentoMainTypeId);
+    if (bentoColumnTypeId) next.set("compartments", bentoColumnTypeId);
     const current = searchParams.toString();
     const upcoming = next.toString();
     if (current !== upcoming) {
       setSearchParams(next, { replace: true });
     }
-  }, [bentoMainTypeId, channelId, productTypeName, searchParams, setSearchParams]);
+  }, [
+    bentoColumnTypeId,
+    bentoMainTypeId,
+    channelId,
+    productTypeName,
+    searchParams,
+    setSearchParams,
+  ]);
 
   useEffect(() => {
     setPage(1);
     setChannelId("");
     setProductTypeName("");
     setBentoMainTypeId("");
+    setBentoColumnTypeId("");
     setStatus("");
     setPriceRange("");
     setSortField("sku");
@@ -238,6 +277,7 @@ export function ProductsListPage({
         channelId,
         productTypeName,
         bentoMainTypeId,
+        bentoColumnTypeId,
         status,
         priceRange,
         sortField,
@@ -267,6 +307,7 @@ export function ProductsListPage({
     preset,
     priceRange,
     productTypeName,
+    bentoColumnTypeId,
     bentoMainTypeId,
     reloadKey,
     search,
@@ -403,6 +444,7 @@ export function ProductsListPage({
                 channelId ||
                 productTypeName ||
                 bentoMainTypeId ||
+                bentoColumnTypeId ||
                 status,
             )}
             onConfirmFilters={() => {
@@ -410,6 +452,7 @@ export function ProductsListPage({
               channelFilter.confirm();
               typeFilter.confirm();
               stapleFilter.confirm();
+              compartmentFilter.confirm();
               statusFilter.confirm();
             }}
             onDismissFilters={() => {
@@ -417,6 +460,7 @@ export function ProductsListPage({
               channelFilter.revert();
               typeFilter.revert();
               stapleFilter.revert();
+              compartmentFilter.revert();
               statusFilter.revert();
             }}
             filters={
@@ -487,6 +531,23 @@ export function ProductsListPage({
                     {bentoMainTypes.map((staple) => (
                       <option key={staple.id} value={staple.id}>
                         {staple.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="products-status-filter">
+                  <span>{t("products.compartmentFilter")}</span>
+                  <select
+                    value={compartmentFilter.value}
+                    onChange={(event) => {
+                      compartmentFilter.setValue(event.target.value);
+                    }}
+                  >
+                    <option value="">{t("products.allCompartments")}</option>
+                    {bentoColumnTypes.map((compartment) => (
+                      <option key={compartment.id} value={compartment.id}>
+                        {compartment.name}
                       </option>
                     ))}
                   </select>

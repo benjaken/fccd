@@ -34,6 +34,7 @@ const productResult: ProductListResult = {
       cookTypeName: "焗",
       bentoMainTypeId: "staple-1",
       bentoMainTypeName: "飯",
+      bentoColumnTypeId: "column-1",
       bentoColumnTypeName: "雙格",
       mainIngredients: ["雞"],
       specialRequests: ["不辣", "適合小朋友"],
@@ -312,6 +313,7 @@ describe("Products catalog pages", () => {
         channelId: "",
         productTypeName: "",
         bentoMainTypeId: "",
+        bentoColumnTypeId: "",
         status: "",
         priceRange: "",
         sortField: "sku",
@@ -362,7 +364,7 @@ describe("Products catalog pages", () => {
     );
   });
 
-  it("filters by price range, channel, type, staple, and status dropdowns", async () => {
+  it("filters by price range, channel, type, staple, compartments, and status dropdowns", async () => {
     const user = userEvent.setup();
     const loadProducts = vi.fn().mockResolvedValue(productResult);
     const loadChannels = vi.fn().mockResolvedValue([
@@ -375,6 +377,12 @@ describe("Products catalog pages", () => {
       { id: "staple-1", name: "飯" },
       { id: "staple-2", name: "扁意粉" },
     ]);
+    const loadBentoColumnTypes = vi.fn().mockResolvedValue([
+      { id: "column-1", name: "單格" },
+      { id: "column-2", name: "雙格" },
+      { id: "column-5", name: "五格" },
+      { id: "column-6", name: "六格" },
+    ]);
 
     render(
       <MemoryRouter>
@@ -383,6 +391,7 @@ describe("Products catalog pages", () => {
           loadChannels={loadChannels}
           loadProductTypes={loadProductTypes}
           loadBentoMainTypes={loadBentoMainTypes}
+          loadBentoColumnTypes={loadBentoColumnTypes}
         />
       </MemoryRouter>,
     );
@@ -435,6 +444,21 @@ describe("Products catalog pages", () => {
         }),
       ),
     );
+
+    await user.selectOptions(screen.getByLabelText("格數"), "column-2");
+    await waitFor(() =>
+      expect(loadProducts).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          bentoColumnTypeId: "column-2",
+          page: 1,
+        }),
+      ),
+    );
+
+    expect(screen.getByLabelText("格數")).toHaveTextContent("單格");
+    expect(screen.getByLabelText("格數")).toHaveTextContent("雙格");
+    expect(screen.getByLabelText("格數")).toHaveTextContent("五格");
+    expect(screen.getByLabelText("格數")).toHaveTextContent("六格");
 
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
   });

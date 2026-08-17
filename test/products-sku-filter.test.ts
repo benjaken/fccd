@@ -8,7 +8,7 @@ vi.mock("@/lib/supabase", () => ({
   },
 }));
 
-import { fetchProducts, searchCatalogProducts } from "@/lib/products";
+import { fetchBentoColumnTypes, fetchProducts, searchCatalogProducts, sortBentoColumnTypes } from "@/lib/products";
 
 function createQuery(result: { data: unknown; count?: number; error: unknown }) {
   const query: Record<string, unknown> = {};
@@ -115,5 +115,46 @@ describe("product SKU list filter", () => {
     });
 
     expect(query.eq).toHaveBeenCalledWith("bento_main_type_id", "staple-1");
+  });
+
+  it("filters the catalog by compartment type", async () => {
+    const query = createQuery({ data: [], count: 0, error: null });
+    fromMock.mockReturnValue(query);
+
+    await fetchProducts({
+      page: 1,
+      search: "",
+      channelId: "",
+      productTypeName: "",
+      bentoColumnTypeId: "column-2",
+      status: "",
+      priceRange: "",
+      preset: "all",
+    });
+
+    expect(query.eq).toHaveBeenCalledWith("bento_column_type_id", "column-2");
+  });
+
+  it("orders compartment options as 單格, 雙格, 五格, 六格", async () => {
+    const query = createQuery({
+      data: [
+        { id: "5", name: "五格" },
+        { id: "6", name: "六格" },
+        { id: "1", name: "單格" },
+        { id: "2", name: "雙格" },
+      ],
+      error: null,
+    });
+    fromMock.mockReturnValue(query);
+
+    await expect(fetchBentoColumnTypes()).resolves.toEqual([
+      { id: "1", name: "單格" },
+      { id: "2", name: "雙格" },
+      { id: "5", name: "五格" },
+      { id: "6", name: "六格" },
+    ]);
+    expect(sortBentoColumnTypes([{ id: "x", name: "其他" }, { id: "1", name: "單格" }]).map((row) => row.name)).toEqual(
+      ["單格", "其他"],
+    );
   });
 });
