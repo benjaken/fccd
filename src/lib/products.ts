@@ -397,9 +397,7 @@ export async function fetchProducts({
     // matches the old product list instead of the 7k+ incomplete records.
     .not("sku", "is", null)
     .neq("sku", "")
-    // Bubble Created Date (fallback to DB created_at).
-    .order("bubble_created_at", { ascending: false, nullsFirst: false })
-    .order("created_at", { ascending: false })
+    .order("sku", { ascending: true })
     .range(start, end);
 
   if (status === "unset") {

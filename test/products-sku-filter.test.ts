@@ -57,6 +57,7 @@ describe("product SKU list filter", () => {
     expect(fromMock).toHaveBeenCalledWith("products");
     expect(query.not).toHaveBeenCalledWith("sku", "is", null);
     expect(query.neq).toHaveBeenCalledWith("sku", "");
+    expect(query.order).toHaveBeenCalledWith("sku", { ascending: true });
   });
 
   it("excludes products without a SKU from catalog search", async () => {
