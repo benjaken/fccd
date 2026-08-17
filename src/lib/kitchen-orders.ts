@@ -6,7 +6,12 @@ import {
 
 export const KITCHEN_ORDERS_FROM = "kitchen";
 
-export const KITCHEN_STATUS_FILTERS: OrderStatusFilter[] = [
+export type KitchenOrderStatusFilter = Exclude<
+  OrderStatusFilter,
+  "confirmed"
+>;
+
+export const KITCHEN_STATUS_FILTERS: KitchenOrderStatusFilter[] = [
   "",
   "preparing",
   "ready",
@@ -16,10 +21,7 @@ export const KITCHEN_STATUS_FILTERS: OrderStatusFilter[] = [
   "completed",
 ];
 
-export type KitchenOperationalStatus = Exclude<
-  (typeof KITCHEN_STATUS_FILTERS)[number],
-  ""
->;
+export type KitchenOperationalStatus = Exclude<KitchenOrderStatusFilter, "">;
 
 export function kitchenOperationalStatus(order: {
   deliveryStatus: string | null;

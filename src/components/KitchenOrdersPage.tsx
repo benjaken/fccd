@@ -12,6 +12,7 @@ import {
   kitchenOperationalStatus,
   kitchenOperationalStatusTone,
   kitchenOrderHref,
+  type KitchenOrderStatusFilter,
 } from "@/lib/kitchen-orders";
 import { useDeferredFilter } from "@/lib/use-deferred-filter";
 import {
@@ -20,7 +21,6 @@ import {
   type OrderListFilters,
   type OrderListItem,
   type OrderListResult,
-  type OrderStatusFilter,
 } from "@/lib/orders";
 import { cn } from "@/lib/utils";
 
@@ -44,9 +44,9 @@ export function KitchenOrdersPage({
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedStatus = searchParams.get("status") ?? "";
   const status = KITCHEN_STATUS_FILTERS.includes(
-    requestedStatus as OrderStatusFilter,
+    requestedStatus as KitchenOrderStatusFilter,
   )
-    ? (requestedStatus as OrderStatusFilter)
+    ? (requestedStatus as KitchenOrderStatusFilter)
     : "";
   const [draftSearch, setDraftSearch] = useState("");
   const [search, setSearch] = useState("");
@@ -56,7 +56,7 @@ export function KitchenOrdersPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
-  const setStatus = (nextStatus: OrderStatusFilter) => {
+  const setStatus = (nextStatus: KitchenOrderStatusFilter) => {
     setPage(1);
     const next = new URLSearchParams(searchParams);
     if (nextStatus) next.set("status", nextStatus);
@@ -154,7 +154,7 @@ export function KitchenOrdersPage({
                   value={statusFilter.value}
                   onChange={(event) =>
                     statusFilter.setValue(
-                      event.target.value as OrderStatusFilter,
+                      event.target.value as KitchenOrderStatusFilter,
                     )
                   }
                 >
