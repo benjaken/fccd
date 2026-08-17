@@ -161,12 +161,36 @@ function selectedPhases(value: unknown): Phase[] {
   return [value as Phase];
 }
 
+function loginCodeFromRecord(record: BubbleRecord): string | null {
+  const value = record.Login_code;
+  if (value == null || value === "") return null;
+  return String(value);
+}
+
+async function syncDeliveryTeamLoginCodes(
+  client: AdminClient,
+  records: BubbleRecord[],
+): Promise<number> {
+  let updated = 0;
+  for (const record of records) {
+    const { data, error } = await client
+      .from("delivery_teams")
+      .update({ login_code: loginCodeFromRecord(record) })
+      .eq("legacy_id", requireLegacyId(record))
+      .select("legacy_id");
+    if (error) throw error;
+    if (data?.length) updated += data.length;
+  }
+  return updated;
+}
+
 async function fetchBubbleType(
   sourceType: string,
   checkpoint: string,
   watermark: string,
   bubbleToken: string,
   deadline: number,
+  constraints?: unknown[],
 ): Promise<{
   records: BubbleRecord[];
   pages: number;
@@ -176,6 +200,18 @@ async function fetchBubbleType(
   let cursor = 0;
   let pages = 0;
   let remaining = 0;
+  const queryConstraints = constraints ?? [
+    {
+      key: "Modified Date",
+      constraint_type: "greater than",
+      value: checkpoint,
+    },
+    {
+      key: "Modified Date",
+      constraint_type: "less than",
+      value: watermark,
+    },
+  ];
 
   while (pages < MAX_PAGES_PER_TYPE) {
     if (Date.now() >= deadline) {
@@ -186,19 +222,10 @@ async function fetchBubbleType(
       cursor: String(cursor),
       sort_field: "Modified Date",
       descending: "false",
-      constraints: JSON.stringify([
-        {
-          key: "Modified Date",
-          constraint_type: "greater than",
-          value: checkpoint,
-        },
-        {
-          key: "Modified Date",
-          constraint_type: "less than",
-          value: watermark,
-        },
-      ]),
     });
+    if (queryConstraints.length) {
+      query.set("constraints", JSON.stringify(queryConstraints));
+    }
     const response = await fetch(
       `${BUBBLE_BASE_URL}/${encodeURIComponent(sourceType)}?${query}`,
       {
@@ -239,6 +266,7 @@ async function fetchBubbleType(
       throw new Error(`Bubble returned a duplicate _id for ${sourceType}.`);
     }
     seen.add(legacyId);
+    if (constraints && constraints.length === 0) continue;
     const modified = record["Modified Date"];
     const modifiedAt = typeof modified === "string"
       ? Date.parse(modified)
@@ -480,6 +508,9 @@ async function processType(
       return result;
     }
     result.fetched = fetched.records.length;
+    if (mapping.sourceType === "ds_super_motorcade" && fetched.records.length) {
+      await syncDeliveryTeamLoginCodes(client, fetched.records);
+    }
     const ids = fetched.records.map(requireLegacyId);
     const existingRows = await legacyIdRows(client, mapping.table, ids);
     const existingIds = new Set(existingRows.map((row) => row.legacy_id));
@@ -596,8 +627,10 @@ async function handleRequest(request: Request): Promise<Response> {
 
   let phases: Phase[];
   let requestedSourceType: string | null = null;
+  let backfillLoginCodes = false;
   try {
     const body = await request.json().catch(() => ({}));
+    backfillLoginCodes = body?.backfillLoginCodes === true;
     phases = selectedPhases(body?.phase);
     if (body?.sourceType != null) {
       if (
@@ -611,6 +644,41 @@ async function handleRequest(request: Request): Promise<Response> {
     }
   } catch (error) {
     return jsonResponse({ error: safeError(error) }, 400);
+  }
+
+  if (backfillLoginCodes) {
+    const deadline = Date.parse(invocationStartedAt) + SOFT_RUNTIME_MS;
+    try {
+      const fetched = await fetchBubbleType(
+        "ds_super_motorcade",
+        INITIAL_CHECKPOINT,
+        watermark,
+        bubbleToken,
+        deadline,
+        [],
+      );
+      if (fetched.resumable) {
+        return jsonResponse({
+          status: "paused",
+          error: "login_code_backfill_incomplete",
+          pages: fetched.pages,
+        }, 504);
+      }
+      const updated = await syncDeliveryTeamLoginCodes(client, fetched.records);
+      return jsonResponse({
+        status: "completed",
+        sourceType: "ds_super_motorcade",
+        fetched: fetched.records.length,
+        loginCodesUpdated: updated,
+        pages: fetched.pages,
+      });
+    } catch (error) {
+      return jsonResponse({
+        status: "failed",
+        error: errorCode(error),
+        detail: safeError(error),
+      }, 500);
+    }
   }
 
   const invocationId = crypto.randomUUID();
