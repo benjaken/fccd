@@ -1,7 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Package, RefreshCw } from "lucide-react";
-import { Link, useSearchParams } from "react-router-dom";
+import {
+  ArrowDown,
+  ArrowRight,
+  ArrowUp,
+  Package,
+  Pencil,
+  RefreshCw,
+  X,
+} from "lucide-react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
@@ -9,11 +17,14 @@ import { ListTable } from "@/components/ui/list-table";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { useDeferredFilter } from "@/lib/use-deferred-filter";
 import {
+  archivePackage,
   fetchPackages,
   PACKAGES_PAGE_SIZE,
   type PackageListFilters,
   type PackageListItem,
   type PackageListResult,
+  type PackageSortField,
+  type PackageStatusFilter,
 } from "@/lib/packages";
 import {
   fetchProductChannels,
@@ -21,71 +32,87 @@ import {
 } from "@/lib/products";
 
 const PACKAGE_SKELETON_COLUMNS = [
+  { width: "2.5rem" },
   { width: "5.5rem" },
+  { width: "6rem" },
   { width: "72%" },
-  { width: "4.5rem" },
-  { width: "3rem" },
+  { width: "6rem" },
   { width: "4rem" },
+  { width: "5rem" },
   { width: "3.5rem", variant: "badge" as const },
-  { width: "7rem" },
+  { width: "4.5rem", variant: "action" as const },
 ];
 
 type PackagesLoader = (filters: PackageListFilters) => Promise<PackageListResult>;
 type ChannelsLoader = () => Promise<CatalogOption[]>;
+type PackageArchiver = (id: string) => Promise<void>;
 
 export function PackagesListPage({
+  canEdit = false,
   loadPackages = fetchPackages,
   loadChannels = fetchProductChannels,
+  archiveItem = archivePackage,
 }: {
+  canEdit?: boolean;
   loadPackages?: PackagesLoader;
   loadChannels?: ChannelsLoader;
+  archiveItem?: PackageArchiver;
 }) {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [draftSearch, setDraftSearch] = useState("");
   const [search, setSearch] = useState("");
   const [channelId, setChannelId] = useState(
     () => searchParams.get("channel") ?? "",
   );
-  const [activeOnly, setActiveOnly] = useState(true);
+  const [status, setStatus] = useState<PackageStatusFilter>("");
+  const [sortField, setSortField] = useState<PackageSortField>("sku");
+  const [sortAscending, setSortAscending] = useState(true);
   const [channels, setChannels] = useState<CatalogOption[]>([]);
   const [page, setPage] = useState(1);
   const channelFilter = useDeferredFilter(channelId, (value) => {
     setPage(1);
     setChannelId(value);
   });
-  const activeFilter = useDeferredFilter(activeOnly, (value) => {
+  const statusFilter = useDeferredFilter(status, (value) => {
     setPage(1);
-    setActiveOnly(value);
+    setStatus(value);
   });
   const [items, setItems] = useState<PackageListItem[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [pendingArchiveId, setPendingArchiveId] = useState<string | null>(null);
 
   const totalPages = Math.max(1, Math.ceil(total / PACKAGES_PAGE_SIZE));
   const visibleFrom = total === 0 ? 0 : (page - 1) * PACKAGES_PAGE_SIZE + 1;
   const visibleTo = Math.min(page * PACKAGES_PAGE_SIZE, total);
+  const skeletonColumns = canEdit
+    ? PACKAGE_SKELETON_COLUMNS
+    : PACKAGE_SKELETON_COLUMNS.slice(0, -1);
 
   const currencyFormatter = useMemo(
     () =>
       new Intl.NumberFormat(i18n.language, {
         style: "currency",
         currency: "HKD",
-        maximumFractionDigits: 0,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
       }),
     [i18n.language],
   );
 
-  const dateTimeFormatter = useMemo(
+  const dateFormatter = useMemo(
     () =>
-      new Intl.DateTimeFormat(i18n.language, {
-        dateStyle: "short",
-        timeStyle: "short",
+      new Intl.DateTimeFormat("en-US", {
+        month: "numeric",
+        day: "numeric",
+        year: "numeric",
         timeZone: "Asia/Hong_Kong",
       }),
-    [i18n.language],
+    [],
   );
 
   useEffect(() => {
@@ -125,7 +152,9 @@ export function PackagesListPage({
         page,
         search,
         channelId,
-        activeOnly,
+        status,
+        sortField,
+        sortAscending,
       });
       setItems(result.items);
       setTotal(result.total);
@@ -143,7 +172,7 @@ export function PackagesListPage({
     } finally {
       setLoading(false);
     }
-  }, [activeOnly, channelId, loadPackages, page, reloadKey, search]);
+  }, [channelId, loadPackages, page, reloadKey, search, sortAscending, sortField, status]);
 
   useEffect(() => {
     void loadPage();
@@ -154,6 +183,16 @@ export function PackagesListPage({
     setSearch(draftSearch.trim());
   };
 
+  const toggleSort = (field: PackageSortField) => {
+    setPage(1);
+    if (sortField === field) {
+      setSortAscending((current) => !current);
+      return;
+    }
+    setSortField(field);
+    setSortAscending(true);
+  };
+
   const formatPrice = (item: PackageListItem) => {
     if (item.price === null) return t("common.notSet");
     return currencyFormatter.format(item.price);
@@ -161,6 +200,30 @@ export function PackagesListPage({
 
   const displayName = (item: PackageListItem) =>
     item.chineseName || item.name || t("common.notSet");
+
+  const statusLabel = (item: PackageListItem) =>
+    item.isActive ? t("packages.active") : item.status || t("packages.inactive");
+
+  const openPackage = (packageId: string) => {
+    navigate(`/products/packages/${packageId}`);
+  };
+
+  const handleArchive = async (item: PackageListItem) => {
+    if (!canEdit || pendingArchiveId) return;
+    setPendingArchiveId(item.id);
+    try {
+      await archiveItem(item.id);
+      setItems((current) => current.filter((row) => row.id !== item.id));
+      setTotal((current) => Math.max(0, current - 1));
+    } finally {
+      setPendingArchiveId(null);
+    }
+  };
+
+  const sortIcon = (field: PackageSortField) => {
+    if (sortField !== field) return null;
+    return sortAscending ? <ArrowUp /> : <ArrowDown />;
+  };
 
   return (
     <section className="packages-page">
@@ -181,14 +244,14 @@ export function PackagesListPage({
             label={t("packages.search")}
             placeholder={t("packages.searchPlaceholder")}
             submitLabel={t("packages.searchAction")}
-            filtersActive={Boolean(channelId) || !activeOnly}
+            filtersActive={Boolean(channelId) || Boolean(status)}
             onConfirmFilters={() => {
               channelFilter.confirm();
-              activeFilter.confirm();
+              statusFilter.confirm();
             }}
             onDismissFilters={() => {
               channelFilter.revert();
-              activeFilter.revert();
+              statusFilter.revert();
             }}
             filters={
               <div className="packages-filters">
@@ -209,15 +272,20 @@ export function PackagesListPage({
                   </select>
                 </label>
 
-                <label className="packages-active-filter">
-                  <input
-                    type="checkbox"
-                    checked={activeFilter.value}
+                <label className="packages-status-filter">
+                  <span>{t("packages.statusFilter")}</span>
+                  <select
+                    value={statusFilter.value}
                     onChange={(event) => {
-                      activeFilter.setValue(event.target.checked);
+                      statusFilter.setValue(
+                        event.target.value as PackageStatusFilter,
+                      );
                     }}
-                  />
-                  <span>{t("packages.activeOnly")}</span>
+                  >
+                    <option value="">{t("packages.allStatuses")}</option>
+                    <option value="Active">{t("packages.active")}</option>
+                    <option value="Inactive">{t("packages.inactive")}</option>
+                  </select>
                 </label>
               </div>
             }
@@ -249,61 +317,137 @@ export function PackagesListPage({
             </div>
           </div>
         ) : (
-          <ListTable
-            className="packages-table-wrap"
-            onRefresh={() => setReloadKey((key) => key + 1)}
-            loading={loading}
-            loadingLabel={t("packages.loading")}
-            skeletonRows={PACKAGES_PAGE_SIZE}
-            skeletonColumns={PACKAGE_SKELETON_COLUMNS}
-            header={
-              <tr>
-                <th>{t("packages.columns.sku")}</th>
-                <th>{t("packages.columns.name")}</th>
-                <th>{t("packages.columns.channel")}</th>
-                <th>{t("packages.columns.members")}</th>
-                <th>{t("packages.columns.price")}</th>
-                <th>{t("packages.columns.status")}</th>
-                <th>{t("packages.columns.created")}</th>
-              </tr>
-            }
-          >
-            {items.map((item) => (
-                    <tr key={item.id}>
-                      <td>{item.sku || t("common.notSet")}</td>
-                      <td>
-                        <Link
-                          className="order-link"
-                          to={`/products/packages/${item.id}`}
+          <div className="packages-table-block">
+            <div className="packages-result-meta">
+              <strong>{t("packages.resultCount", { total })}</strong>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                aria-label={t("packages.retry")}
+                onClick={() => setReloadKey((key) => key + 1)}
+              >
+                <RefreshCw />
+              </Button>
+            </div>
+            <ListTable
+              className="packages-table-wrap"
+              onRefresh={() => setReloadKey((key) => key + 1)}
+              loading={loading}
+              loadingLabel={t("packages.loading")}
+              skeletonRows={PACKAGES_PAGE_SIZE}
+              skeletonColumns={skeletonColumns}
+              header={
+                <tr>
+                  <th aria-label={t("packages.columns.index")} />
+                  <th>{t("packages.columns.channel")}</th>
+                  <th>
+                    <button
+                      type="button"
+                      className="table-sort-button"
+                      onClick={() => toggleSort("sku")}
+                    >
+                      {t("packages.columns.sku")}
+                      {sortIcon("sku")}
+                    </button>
+                  </th>
+                  <th>{t("packages.columns.name")}</th>
+                  <th>
+                    <button
+                      type="button"
+                      className="table-sort-button"
+                      onClick={() => toggleSort("createdAt")}
+                    >
+                      {t("packages.columns.created")}
+                      {sortIcon("createdAt")}
+                    </button>
+                  </th>
+                  <th>{t("packages.columns.categories")}</th>
+                  <th>
+                    <button
+                      type="button"
+                      className="table-sort-button"
+                      onClick={() => toggleSort("price")}
+                    >
+                      {t("packages.columns.price")}
+                      {sortIcon("price")}
+                    </button>
+                  </th>
+                  <th>{t("packages.columns.status")}</th>
+                  {canEdit ? <th>{t("packages.columns.actions")}</th> : null}
+                </tr>
+              }
+            >
+              {items.map((item, index) => (
+                <tr
+                  key={item.id}
+                  className="table-row-clickable"
+                  onClick={() => openPackage(item.id)}
+                >
+                  <td className="packages-index-cell">
+                    {(page - 1) * PACKAGES_PAGE_SIZE + index + 1}
+                  </td>
+                  <td>{item.channelName || t("common.notSet")}</td>
+                  <td>{item.sku || t("common.notSet")}</td>
+                  <td>
+                    <Link
+                      className="order-link package-name-link"
+                      to={`/products/packages/${item.id}`}
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      <strong>{displayName(item)}</strong>
+                      <ArrowRight aria-hidden="true" />
+                    </Link>
+                  </td>
+                  <td>{dateFormatter.format(new Date(item.createdAt))}</td>
+                  <td>{item.choiceSetCount}</td>
+                  <td>
+                    <strong>{formatPrice(item)}</strong>
+                  </td>
+                  <td>
+                    <span
+                      className={`status-badge ${item.isActive ? "green" : "neutral"}`}
+                    >
+                      {statusLabel(item)}
+                    </span>
+                  </td>
+                  {canEdit ? (
+                    <td className="table-actions-cell">
+                      <div className="table-row-actions">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            navigate(`/products/packages/${item.id}/edit`);
+                          }}
+                          aria-label={t("packages.editAction")}
+                          title={t("packages.editAction")}
                         >
-                          <strong>{displayName(item)}</strong>
-                        </Link>
-                        {item.chineseName && item.name !== item.chineseName && (
-                          <small className="quote-company">{item.name}</small>
-                        )}
-                      </td>
-                    <td>{item.channelName || t("common.notSet")}</td>
-                      <td>{item.memberCount}</td>
-                      <td>
-                        <strong>{formatPrice(item)}</strong>
-                      </td>
-                      <td>
-                        <span
-                          className={`status-badge ${
-                            item.isActive ? "green" : "amber"
-                          }`}
+                          <Pencil />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          disabled={pendingArchiveId === item.id}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            void handleArchive(item);
+                          }}
+                          aria-label={t("packages.deleteAction")}
+                          title={t("packages.deleteAction")}
                         >
-                          {item.isActive
-                            ? t("packages.active")
-                            : item.status || t("packages.inactive")}
-                        </span>
-                      </td>
-                      <td>
-                        {dateTimeFormatter.format(new Date(item.createdAt))}
-                      </td>
-                    </tr>
-            ))}
-          </ListTable>
+                          <X />
+                        </Button>
+                      </div>
+                    </td>
+                  ) : null}
+                </tr>
+              ))}
+            </ListTable>
+          </div>
         )}
 
         <TablePagination
