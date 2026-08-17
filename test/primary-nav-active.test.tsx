@@ -14,6 +14,7 @@ describe("Primary navigation section matching", () => {
     ["/orders/pending", "orders"],
     ["/orders/order-1", "orders"],
     ["/orders/settings/statuses", "orders"],
+    ["/orders/settings/sale-partners", "orders"],
     ["/quotes", "quotes"],
     ["/quotes/customers", "quotes"],
     ["/quotes/quote-1", "quotes"],
@@ -102,6 +103,9 @@ describe("Primary navigation section matching", () => {
     expect(pageAccessKey("/orders/settings/statuses")).toBe(
       "orders.settings.statuses",
     );
+    expect(pageAccessKey("/orders/settings/sale-partners")).toBe(
+      "orders.settings.sale_partners",
+    );
   });
 
   it("nests frozen meat and shop pages under the reports sidebar item", () => {
@@ -131,15 +135,18 @@ describe("Primary navigation section matching", () => {
     expect(source).toContain('permissionKey: "frozen.yield_errors"');
   });
 
-  it("nests Order Status under Orders settings", () => {
+  it("nests Order Status and Sale Partner under Orders settings", () => {
     const source = readFileSync(
       path.resolve(process.cwd(), "src/App.tsx"),
       "utf8",
     );
     expect(source).toContain('key: "orderSettings"');
     expect(source).toContain('key: "orderStatuses"');
+    expect(source).toContain('key: "salePartners"');
     expect(source).toContain('to: "/orders/settings/statuses"');
+    expect(source).toContain('to: "/orders/settings/sale-partners"');
     expect(source).toContain('permissionKey: "orders.settings"');
     expect(source).toContain('permissionKey: "orders.settings.statuses"');
+    expect(source).toContain('permissionKey: "orders.settings.sale_partners"');
   });
 });

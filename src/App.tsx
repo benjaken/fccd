@@ -23,6 +23,7 @@ import {
   FileArchive,
   FileText,
   HandCoins,
+  Handshake,
   History,
   LayoutDashboard,
   Leaf,
@@ -89,6 +90,7 @@ import { CalculationSettingsPage } from "@/components/CalculationSettingsPage";
 import { MeatCustomersPage } from "@/components/MeatCustomersPage";
 import { MeatYieldErrorsPage } from "@/components/MeatYieldErrorsPage";
 import { OrderStatusesPage } from "@/components/OrderStatusesPage";
+import { SalesPartnersPage } from "@/components/SalesPartnersPage";
 import { AttachmentsListPage } from "@/components/settings/AttachmentsListPage";
 import { LoginLogsListPage } from "@/components/settings/LoginLogsListPage";
 import { RolePermissionsPage } from "@/components/settings/RolePermissionsPage";
@@ -208,6 +210,12 @@ const secondaryNav: Record<string, NavItem[]> = {
           to: "/orders/settings/statuses",
           icon: Palette,
           permissionKey: "orders.settings.statuses",
+        },
+        {
+          key: "salePartners",
+          to: "/orders/settings/sale-partners",
+          icon: Handshake,
+          permissionKey: "orders.settings.sale_partners",
         },
       ],
     },
@@ -437,6 +445,7 @@ const SECTION_CHILD_KEYS: Record<string, string[]> = {
     "orders.delivered_unpaid",
     "orders.settings",
     "orders.settings.statuses",
+    "orders.settings.sale_partners",
     ...ORDER_ACTION_PAGE_KEYS,
   ],
   quotes: ["quotes.customers", "quotes.follow_up"],
@@ -1011,6 +1020,10 @@ function OperationsShell() {
               <Route
                 path="/orders/settings/statuses"
                 element={<OrderStatusesPage />}
+              />
+              <Route
+                path="/orders/settings/sale-partners"
+                element={<SalesPartnersPage />}
               />
               <Route
                 path="/orders/:id"

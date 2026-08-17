@@ -4354,6 +4354,7 @@ td:last-child {
 .calculation-settings-page,
 .meat-customers-page,
 .order-statuses-page,
+.sale-partners-page,
 .selling-price-cost-page {
   display: grid;
   gap: 20px;
@@ -4369,6 +4370,7 @@ td:last-child {
 .calculation-settings-page .page-heading,
 .meat-customers-page .page-heading,
 .order-statuses-page .page-heading,
+.sale-partners-page .page-heading,
 .spice-usage-page .page-heading,
 .selling-price-cost-page .page-heading {
   margin-bottom: 0;
@@ -4378,6 +4380,7 @@ td:last-child {
 .calculation-settings-heading,
 .meat-customers-heading,
 .order-statuses-heading,
+.sale-partners-heading,
 .selling-price-cost-heading {
   align-items: flex-end;
 }
@@ -4386,6 +4389,7 @@ td:last-child {
 .calculation-settings-panel,
 .meat-customers-panel,
 .order-statuses-panel,
+.sale-partners-panel,
 .selling-price-cost-panel {
   display: flex;
   flex-direction: column;
@@ -4397,6 +4401,7 @@ td:last-child {
 .calculation-settings-panel > .list-inline-error,
 .meat-customers-panel > .list-inline-error,
 .order-statuses-panel > .list-inline-error,
+.sale-partners-panel > .list-inline-error,
 .selling-price-cost-panel > .list-inline-error,
 .selling-price-cost-panel > .list-inline-status {
   flex: 0 0 auto;
@@ -4406,11 +4411,13 @@ td:last-child {
 .calculation-settings-panel > .products-state,
 .meat-customers-panel > .products-state,
 .order-statuses-panel > .products-state,
+.sale-partners-panel > .products-state,
 .selling-price-cost-panel > .products-state,
 .seasoning-cost-table-wrap,
 .calculation-settings-table-wrap,
 .meat-customers-table-wrap,
 .order-statuses-table-wrap,
+.sale-partners-table-wrap,
 .spice-usage-table-wrap,
 .selling-price-cost-table-wrap {
   flex: 1 1 auto;
@@ -4427,6 +4434,7 @@ td:last-child {
 .calculation-settings-table-wrap th,
 .meat-customers-table-wrap th,
 .order-statuses-table-wrap th,
+.sale-partners-table-wrap th,
 .spice-usage-table-wrap th,
 .selling-price-cost-table-wrap th {
   position: sticky;
@@ -4631,6 +4639,7 @@ td:last-child {
 .calculation-settings-toolbar,
 .meat-customers-toolbar,
 .order-statuses-toolbar,
+.sale-partners-toolbar,
 .selling-price-cost-toolbar {
   display: flex;
   align-items: flex-end;
@@ -4841,19 +4850,22 @@ td:last-child {
 }
 
 .meat-customers-form,
-.order-statuses-form {
+.order-statuses-form,
+.sale-partners-form {
   display: grid;
   gap: 16px;
 }
 
 .meat-customers-field,
-.order-statuses-field {
+.order-statuses-field,
+.sale-partners-field {
   display: grid;
   gap: 6px;
 }
 
 .meat-customers-field > span,
-.order-statuses-field > span {
+.order-statuses-field > span,
+.sale-partners-field > span {
   color: var(--foreground);
   font-size: 0.9rem;
   font-weight: 700;
@@ -4861,7 +4873,8 @@ td:last-child {
 
 .meat-customers-field input,
 .meat-customers-field textarea,
-.order-statuses-field input:not([type="color"]) {
+.order-statuses-field input:not([type="color"]),
+.sale-partners-field input {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid var(--border);
@@ -4873,7 +4886,8 @@ td:last-child {
 }
 
 .meat-customers-field input,
-.order-statuses-field input:not([type="color"]) {
+.order-statuses-field input:not([type="color"]),
+.sale-partners-field input {
   height: 40px;
   padding-top: 0;
   padding-bottom: 0;
@@ -4881,7 +4895,8 @@ td:last-child {
 
 .meat-customers-field input:focus,
 .meat-customers-field textarea:focus,
-.order-statuses-field input:not([type="color"]):focus {
+.order-statuses-field input:not([type="color"]):focus,
+.sale-partners-field input:focus {
   border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
   box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 16%, transparent);
 }
@@ -4889,7 +4904,9 @@ td:last-child {
 .meat-customers-field-error,
 .meat-customers-form-error,
 .order-statuses-field-error,
-.order-statuses-form-error {
+.order-statuses-form-error,
+.sale-partners-field-error,
+.sale-partners-form-error {
   color: var(--destructive);
   font-size: 0.82rem;
   font-style: normal;
@@ -4939,6 +4956,7 @@ td:last-child {
   .calculation-settings-page,
   .meat-customers-page,
   .order-statuses-page,
+  .sale-partners-page,
   .spice-usage-page,
   .selling-price-cost-page {
     height: calc(100dvh - var(--topbar-height) - 62px);
@@ -4963,6 +4981,7 @@ td:last-child {
   .calculation-settings-heading,
   .meat-customers-heading,
   .order-statuses-heading,
+  .sale-partners-heading,
   .selling-price-cost-heading {
     align-items: stretch;
   }
@@ -5002,6 +5021,7 @@ td:last-child {
   .packages-toolbar,
   .meat-customers-toolbar,
   .order-statuses-toolbar,
+  .sale-partners-toolbar,
   .seasoning-cost-toolbar,
   .calculation-settings-toolbar,
   .selling-price-cost-toolbar {

@@ -772,6 +772,20 @@ describe("Super Admin system settings", () => {
     expect(orderStatusSettings).toContain("archive_order_status");
     expect(orderStatusSettings).toContain("private.has_page_access");
 
+    const orderSalePartners = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260817050000_orders_sale_partners_page.sql",
+      ),
+      "utf8",
+    );
+    expect(orderSalePartners).toContain("orders.settings.sale_partners");
+    expect(orderSalePartners).toContain("/orders/settings/sale-partners");
+    expect(orderSalePartners).toContain("archive_sales_partner");
+    expect(orderSalePartners).toContain(
+      "Sale partner readers select sales partners",
+    );
+
     const preparedMeatFlags = readFileSync(
       path.resolve(
         process.cwd(),
