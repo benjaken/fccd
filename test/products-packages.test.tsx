@@ -426,7 +426,7 @@ describe("Products catalog pages", () => {
       ),
     );
 
-    await user.selectOptions(screen.getByLabelText("分類"), "西式熱盤");
+    await user.selectOptions(screen.getByLabelText("類別"), "西式熱盤");
     await waitFor(() =>
       expect(loadProducts).toHaveBeenLastCalledWith(
         expect.objectContaining({ productTypeName: "西式熱盤", page: 1 }),
