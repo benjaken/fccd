@@ -103,6 +103,14 @@ function includesIgnoreCase(haystack: string | null | undefined, needle: string)
     .includes(needle.toLocaleLowerCase("zh-HK"));
 }
 
+const YEAR_MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+export function isHongKongYearMonth(
+  value: string | null | undefined,
+): value is string {
+  return Boolean(value && YEAR_MONTH_PATTERN.test(value));
+}
+
 /** YYYY-MM key for a timestamp in Asia/Hong_Kong. */
 export function hongKongYearMonthKey(value: string | Date) {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -465,4 +473,30 @@ export async function fetchSellingPriceCostRows(
       listPricePerKg: computed.listPricePerKg,
     };
   });
+}
+
+export type MonthlyMeatPricePushResult = {
+  status: string;
+  month_start?: string;
+  shop_price?: number;
+  room_price?: number;
+  shop_rows?: number;
+  room_rows?: number;
+  version_count?: number;
+};
+
+export async function pushSellingPriceMonthlyPrices(
+  rawMeatItemId: string,
+  yearMonth: string,
+): Promise<MonthlyMeatPricePushResult> {
+  if (!isHongKongYearMonth(yearMonth)) {
+    throw new Error("year month is required");
+  }
+
+  const { data, error } = await supabase.rpc("push_monthly_meat_prices", {
+    p_raw_meat_item_id: rawMeatItemId,
+    p_year_month: yearMonth,
+  });
+  if (error) throw error;
+  return (data ?? { status: "updated" }) as MonthlyMeatPricePushResult;
 }

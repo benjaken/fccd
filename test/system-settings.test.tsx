@@ -705,6 +705,21 @@ describe("Super Admin system settings", () => {
     expect(sellingPriceCost).toContain("roles.role in ('Admin', 'Factory')");
     expect(frozenActions).toContain("roles.role = 'Super Admin'");
 
+    const sellingPricePush = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260817010000_selling_price_cost_push_permission.sql",
+      ),
+      "utf8",
+    );
+    expect(sellingPricePush).toContain("frozen.selling_price_cost.push");
+    expect(sellingPricePush).toContain("推送月報售價");
+    expect(sellingPricePush).toContain("push_monthly_meat_prices");
+    expect(sellingPricePush).toContain("year month is required");
+    expect(sellingPricePush).toContain(
+      "drop trigger if exists refresh_monthly_meat_prices_raw_stock",
+    );
+
     const preparedMeatInventory = readFileSync(
       path.resolve(
         process.cwd(),

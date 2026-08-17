@@ -11,6 +11,7 @@ import {
   formatSeasoningCode,
   formatSignedPercent,
   hongKongYearMonthKey,
+  isHongKongYearMonth,
   type SellingPriceCostRow,
   type SellingPriceRawMeatOption,
 } from "@/lib/selling-price-cost";
@@ -97,6 +98,12 @@ describe("selling price cost calculations", () => {
     expect(formatSeasoningCode(20250714.1)).toBe("20250714.1");
     expect(formatSignedPercent(0.05)).toBe("+5%");
     expect(formatSignedPercent(0.15)).toBe("+15%");
+  });
+
+  it("accepts only YYYY-MM keys for monthly push", () => {
+    expect(isHongKongYearMonth("2026-07")).toBe(true);
+    expect(isHongKongYearMonth("2026-13")).toBe(false);
+    expect(isHongKongYearMonth(null)).toBe(false);
   });
 
   it("filters by search and Hong Kong month key", () => {
@@ -205,6 +212,65 @@ describe("Selling price cost page", () => {
     });
     expect(screen.getByRole("button", { name: "篩選月份" })).toHaveTextContent(
       /[A-Za-z]{3}-\d{2}/,
+    );
+  });
+
+  it("hides the push button without permission", async () => {
+    const loadOptions = vi.fn().mockResolvedValue(options);
+    const loadRows = vi.fn().mockResolvedValue(structuredClone(bellyRows));
+
+    render(
+      <MemoryRouter>
+        <SellingPriceCostPage
+          loadOptions={loadOptions}
+          loadRows={loadRows}
+          canPush={false}
+        />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("燜豬肚條");
+    expect(screen.queryByRole("button", { name: "推送" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "請先選擇對應月份" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("pushes monthly prices only after a month is selected", async () => {
+    const user = userEvent.setup();
+    const loadOptions = vi.fn().mockResolvedValue(options);
+    const loadRows = vi.fn().mockResolvedValue(structuredClone(bellyRows));
+    const pushMonthlyPrices = vi.fn().mockResolvedValue({ status: "updated" });
+
+    render(
+      <MemoryRouter>
+        <SellingPriceCostPage
+          loadOptions={loadOptions}
+          loadRows={loadRows}
+          pushMonthlyPrices={pushMonthlyPrices}
+          canPush
+        />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("燜豬肚條");
+    expect(
+      screen.getByRole("button", { name: "請先選擇對應月份" }),
+    ).toBeDisabled();
+
+    await user.click(screen.getByRole("button", { name: "篩選月份" }));
+    const listbox = await screen.findByRole("listbox", { name: "篩選月份" });
+    await user.click(within(listbox).getByRole("option", { name: /Nov-23|11月/ }));
+
+    const pushButton = await screen.findByRole("button", { name: "推送" });
+    expect(pushButton).toBeEnabled();
+    await user.click(pushButton);
+
+    await waitFor(() => {
+      expect(pushMonthlyPrices).toHaveBeenCalledWith("raw-1", "2023-11");
+    });
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "已推送 Nov-23 的月報售價",
     );
   });
 });
