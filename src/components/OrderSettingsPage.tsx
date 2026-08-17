@@ -32,7 +32,6 @@ import { cn } from "@/lib/utils";
 const ORDER_SETTINGS_TABS = [
   "statuses",
   "tags",
-  "stations",
   "shipping",
   "payments",
 ] as const;

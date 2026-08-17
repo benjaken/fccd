@@ -272,6 +272,7 @@ describe("Order settings tags page", () => {
       await screen.findByText("此設定稍後開放"),
     ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "訂單狀態" })).toHaveClass("active");
+    expect(screen.queryByRole("link", { name: "爐位類別" })).not.toBeInTheDocument();
   });
 });
 

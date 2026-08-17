@@ -433,7 +433,6 @@ const resources = {
         tabs: {
           statuses: "訂單狀態",
           tags: "訂單標籤",
-          stations: "爐位類別",
           shipping: "送貨方式",
           payments: "付款方式",
         },
@@ -2296,7 +2295,6 @@ const resources = {
         tabs: {
           statuses: "Order status",
           tags: "Order tags",
-          stations: "Station category",
           shipping: "Shipping method",
           payments: "Payment method",
         },
