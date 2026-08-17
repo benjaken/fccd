@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 
 export const QUOTE_CUSTOMERS_PAGE_SIZE = 15;
+export const QUOTE_CUSTOMER_ORDERS_PAGE_SIZE = 15;
 export const QUOTE_CUSTOMER_HISTORY_LIMIT = 1000;
 
 export type QuoteCustomerCompany = {
@@ -56,7 +57,14 @@ export type QuoteCustomerRemark = {
 
 export type QuoteCustomerHistory = {
   orders: QuoteCustomerHistoryOrder[];
+  total: number;
   remarks: QuoteCustomerRemark[];
+};
+
+export type QuoteCustomerHistoryFilters = {
+  email: string;
+  page: number;
+  search: string;
 };
 
 export const QUOTE_CUSTOMER_MESSAGE_TABS = [
@@ -120,14 +128,6 @@ type HistoryOrderRow = {
   grand_total: number | string | null;
   currency: string | null;
   customer_note_snapshot: string | null;
-  bubble_created_at: string | null;
-  created_at: string;
-};
-
-type TimelineRow = {
-  id: string;
-  comment: string;
-  order_id: string | null;
   bubble_created_at: string | null;
   created_at: string;
 };
@@ -300,33 +300,37 @@ export async function fetchQuoteCustomers({
   };
 }
 
-export async function fetchQuoteCustomerHistory(
-  email: string,
-): Promise<QuoteCustomerHistory> {
-  const [ordersResult, timelineResult] = await Promise.all([
-    supabase
-      .from("orders")
-      .select(
-        "id,order_number,document_type,customer_name_snapshot,company_name_snapshot,grand_total,currency,customer_note_snapshot,bubble_created_at,created_at",
-      )
-      .is("archived_at", null)
-      .ilike("email_snapshot", email)
-      .order("bubble_created_at", { ascending: false, nullsFirst: false })
-      .order("created_at", { ascending: false })
-      .limit(QUOTE_CUSTOMER_HISTORY_LIMIT),
-    supabase
-      .from("order_timeline_entries")
-      .select("id,comment,order_id,bubble_created_at,created_at")
-      .ilike("customer_email_snapshot", email)
-      .order("bubble_created_at", { ascending: false, nullsFirst: false })
-      .order("created_at", { ascending: false })
-      .limit(QUOTE_CUSTOMER_HISTORY_LIMIT),
-  ]);
+export async function fetchQuoteCustomerHistory({
+  email,
+  page,
+  search,
+}: QuoteCustomerHistoryFilters): Promise<QuoteCustomerHistory> {
+  const offset = (page - 1) * QUOTE_CUSTOMER_ORDERS_PAGE_SIZE;
+  const term = safeCustomerSearchTerm(search);
+  let query = supabase
+    .from("orders")
+    .select(
+      "id,order_number,document_type,customer_name_snapshot,company_name_snapshot,grand_total,currency,customer_note_snapshot,bubble_created_at,created_at",
+      { count: "exact" },
+    )
+    .is("archived_at", null)
+    .ilike("email_snapshot", email);
 
-  if (ordersResult.error) throw ordersResult.error;
-  if (timelineResult.error) throw timelineResult.error;
+  if (term) {
+    const like = `%${term}%`;
+    query = query.or(
+      `company_name_snapshot.ilike.${like},order_number.ilike.${like},customer_name_snapshot.ilike.${like}`,
+    );
+  }
 
-  const orders = ((ordersResult.data ?? []) as HistoryOrderRow[]).map((row) => ({
+  const { data, error, count } = await query
+    .order("bubble_created_at", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false })
+    .range(offset, offset + QUOTE_CUSTOMER_ORDERS_PAGE_SIZE - 1);
+
+  if (error) throw error;
+
+  const orders = ((data ?? []) as HistoryOrderRow[]).map((row) => ({
     id: row.id,
     orderNumber: row.order_number,
     documentType: row.document_type,
@@ -338,37 +342,11 @@ export async function fetchQuoteCustomerHistory(
     createdAt: row.bubble_created_at || row.created_at,
   }));
 
-  const orderNumbers = new Map(
-    orders.map((order) => [order.id, order.orderNumber]),
-  );
-  const remarks: QuoteCustomerRemark[] = [];
-  const seenNotes = new Set<string>();
-
-  for (const order of orders) {
-    const body = order.customerNote?.trim();
-    if (!body || seenNotes.has(body)) continue;
-    seenNotes.add(body);
-    remarks.push({
-      id: `note-${order.id}`,
-      body,
-      orderNumber: order.orderNumber,
-      createdAt: order.createdAt,
-    });
-  }
-
-  for (const row of (timelineResult.data ?? []) as TimelineRow[]) {
-    const body = row.comment?.trim();
-    if (!body || seenNotes.has(body)) continue;
-    seenNotes.add(body);
-    remarks.push({
-      id: row.id,
-      body,
-      orderNumber: row.order_id ? orderNumbers.get(row.order_id) ?? null : null,
-      createdAt: row.bubble_created_at || row.created_at,
-    });
-  }
-
-  return { orders, remarks };
+  return {
+    orders,
+    total: count ?? orders.length,
+    remarks: [],
+  };
 }
 
 export async function fetchQuoteCustomerMessages(

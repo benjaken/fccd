@@ -1707,22 +1707,10 @@ td:last-child {
 
 .quote-customers-history {
   display: grid;
-  grid-template-rows: minmax(0, 1fr);
-  gap: 24px;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 16px;
   flex: 1;
   min-height: 0;
-}
-
-.quote-customers-history h3 {
-  margin: 0 0 10px;
-  font-size: 15px;
-}
-
-.quote-customers-history section {
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  min-height: 0;
-  height: 100%;
 }
 
 .quote-customers-history-table-wrap {
@@ -1731,6 +1719,10 @@ td:last-child {
   overscroll-behavior: contain;
   border: 1px solid var(--border);
   border-radius: 10px;
+}
+
+.quote-customers-history > .quotes-state {
+  min-height: 0;
 }
 
 .quote-customers-history-table-wrap table {

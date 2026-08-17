@@ -74,6 +74,8 @@ const customerResult: QuoteCustomerListResult = {
 };
 
 const history: QuoteCustomerHistory = {
+  total: 31,
+  remarks: [],
   orders: [
     {
       id: "order-1143",
@@ -96,14 +98,6 @@ const history: QuoteCustomerHistory = {
       currency: "HKD",
       customerNote: null,
       createdAt: "2026-07-02T04:00:00.000Z",
-    },
-  ],
-  remarks: [
-    {
-      id: "note-order-1143",
-      body: "需要素食選項",
-      orderNumber: "P-1143",
-      createdAt: "2026-08-12T01:00:00.000Z",
     },
   ],
 };
@@ -343,9 +337,11 @@ describe("Quote customers list", () => {
     });
     expect(dialog).toHaveClass("side-panel-majority");
     await waitFor(() =>
-      expect(loadHistory).toHaveBeenCalledWith(
-        "sales@foodchannels-catering.com",
-      ),
+      expect(loadHistory).toHaveBeenCalledWith({
+        email: "sales@foodchannels-catering.com",
+        page: 1,
+        search: "",
+      }),
     );
     const detailTable = within(dialog).getByRole("table");
     expect(within(detailTable).getByText("公司")).toBeInTheDocument();
@@ -384,9 +380,11 @@ describe("Quote customers list", () => {
     const dialog = await screen.findByRole("dialog", {
       name: "公司與訂單",
     });
-    await waitFor(() => expect(loadHistory).toHaveBeenCalledWith(
-      "sales@foodchannels-catering.com",
-    ));
+    await waitFor(() => expect(loadHistory).toHaveBeenCalledWith({
+      email: "sales@foodchannels-catering.com",
+      page: 1,
+      search: "",
+    }));
     const detailTable = within(dialog).getByRole("table");
     expect(within(detailTable).getByText("公司")).toBeInTheDocument();
     expect(within(detailTable).getByText("訂單號碼")).toBeInTheDocument();
@@ -396,6 +394,53 @@ describe("Quote customers list", () => {
     expect(within(detailTable).getByText("611教會")).toBeInTheDocument();
     expect(within(detailTable).getByRole("link", { name: "P-1100" }))
       .toHaveAttribute("href", "/quotes/quote-1100");
+  });
+
+  it("searches and paginates the customer order table", async () => {
+    const user = userEvent.setup();
+    const loadCustomers = vi.fn().mockResolvedValue(customerResult);
+    const loadHistory = vi.fn().mockResolvedValue(history);
+
+    render(
+      <MemoryRouter>
+        <QuoteCustomersPage
+          loadCustomers={loadCustomers}
+          loadHistory={loadHistory}
+        />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("sales@foodchannels-catering.com");
+    await user.click(
+      screen.getByRole("button", { name: "查看訂單 Ada" }),
+    );
+
+    const dialog = await screen.findByRole("dialog", {
+      name: "公司與訂單",
+    });
+    expect(within(dialog).getByText("顯示 1–15，共 31 筆")).toBeInTheDocument();
+    await user.type(
+      within(dialog).getByPlaceholderText("搜尋公司或訂單號碼"),
+      "611",
+    );
+    await user.click(within(dialog).getByRole("button", { name: "搜尋" }));
+
+    await waitFor(() =>
+      expect(loadHistory).toHaveBeenLastCalledWith({
+        email: "sales@foodchannels-catering.com",
+        page: 1,
+        search: "611",
+      }),
+    );
+
+    await user.click(within(dialog).getByRole("button", { name: "下一頁" }));
+    await waitFor(() =>
+      expect(loadHistory).toHaveBeenLastCalledWith({
+        email: "sales@foodchannels-catering.com",
+        page: 2,
+        search: "611",
+      }),
+    );
   });
 
   it("opens a chat-style messages panel from the row action", async () => {

@@ -17,12 +17,13 @@ import {
   fetchQuoteCustomerMessages,
   fetchQuoteCustomers,
   QUOTE_CUSTOMER_MESSAGE_TABS,
+  QUOTE_CUSTOMER_ORDERS_PAGE_SIZE,
   QUOTE_CUSTOMERS_PAGE_SIZE,
-  sortOrdersByCompany,
   summarizeCompanies,
   type CreateQuoteCustomerNoteInput,
   type QuoteCustomerCompany,
   type QuoteCustomerHistory,
+  type QuoteCustomerHistoryFilters,
   type QuoteCustomerListFilters,
   type QuoteCustomerListItem,
   type QuoteCustomerListResult,
@@ -35,7 +36,9 @@ import { cn } from "@/lib/utils";
 type CustomersLoader = (
   filters: QuoteCustomerListFilters,
 ) => Promise<QuoteCustomerListResult>;
-type HistoryLoader = (email: string) => Promise<QuoteCustomerHistory>;
+type HistoryLoader = (
+  filters: QuoteCustomerHistoryFilters,
+) => Promise<QuoteCustomerHistory>;
 type MessagesLoader = (email: string) => Promise<QuoteCustomerMessages>;
 type NoteCreator = (
   input: CreateQuoteCustomerNoteInput,
@@ -52,6 +55,13 @@ const CUSTOMER_SKELETON_COLUMNS = [
   { width: "5rem" },
   { width: "7rem" },
   { width: "1.75rem", variant: "action" as const },
+];
+
+const ORDER_SKELETON_COLUMNS = [
+  { width: "28%" },
+  { width: "18%" },
+  { width: "22%" },
+  { width: "16%" },
 ];
 
 function formatMoney(
@@ -189,6 +199,10 @@ export function QuoteCustomersPage({
   const [history, setHistory] = useState<QuoteCustomerHistory | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
+  const [ordersPage, setOrdersPage] = useState(1);
+  const [ordersDraftSearch, setOrdersDraftSearch] = useState("");
+  const [ordersSearch, setOrdersSearch] = useState("");
+  const [ordersReloadKey, setOrdersReloadKey] = useState(0);
   const [messages, setMessages] = useState<QuoteCustomerMessages | null>(null);
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [messagesError, setMessagesError] = useState<string | null>(null);
@@ -206,6 +220,19 @@ export function QuoteCustomersPage({
   const totalPages = Math.max(1, Math.ceil(total / QUOTE_CUSTOMERS_PAGE_SIZE));
   const visibleFrom = total === 0 ? 0 : (page - 1) * QUOTE_CUSTOMERS_PAGE_SIZE + 1;
   const visibleTo = Math.min(page * QUOTE_CUSTOMERS_PAGE_SIZE, total);
+  const ordersTotal = history?.total ?? 0;
+  const ordersTotalPages = Math.max(
+    1,
+    Math.ceil(ordersTotal / QUOTE_CUSTOMER_ORDERS_PAGE_SIZE),
+  );
+  const ordersFrom =
+    ordersTotal === 0
+      ? 0
+      : (ordersPage - 1) * QUOTE_CUSTOMER_ORDERS_PAGE_SIZE + 1;
+  const ordersTo = Math.min(
+    ordersPage * QUOTE_CUSTOMER_ORDERS_PAGE_SIZE,
+    ordersTotal,
+  );
 
   const currencyFormatter = useMemo(
     () =>
@@ -279,14 +306,20 @@ export function QuoteCustomersPage({
       setHistory(null);
       setHistoryError(null);
       setHistoryLoading(false);
+      setOrdersPage(1);
+      setOrdersDraftSearch("");
+      setOrdersSearch("");
       return;
     }
 
     let active = true;
-    setHistory(null);
     setHistoryError(null);
     setHistoryLoading(true);
-    void loadHistory(panel.email)
+    void loadHistory({
+      email: panel.email,
+      page: ordersPage,
+      search: ordersSearch,
+    })
       .then((result) => {
         if (!active) return;
         setHistory(result);
@@ -301,6 +334,7 @@ export function QuoteCustomersPage({
             ? loadError.code
             : "quote_customers_history_failed";
         setHistoryError(code);
+        setHistory({ orders: [], total: 0, remarks: [] });
       })
       .finally(() => {
         if (active) setHistoryLoading(false);
@@ -309,7 +343,7 @@ export function QuoteCustomersPage({
     return () => {
       active = false;
     };
-  }, [loadHistory, panel]);
+  }, [loadHistory, ordersPage, ordersReloadKey, ordersSearch, panel]);
 
   useEffect(() => {
     if (panel?.kind !== "messages") {
@@ -376,6 +410,20 @@ export function QuoteCustomersPage({
   };
 
   const closePanel = () => setPanel(null);
+
+  const openOrdersPanel = (email: string) => {
+    setOrdersPage(1);
+    setOrdersDraftSearch("");
+    setOrdersSearch("");
+    setPanel({ kind: "companies", email });
+  };
+
+  const submitOrdersSearch = () => {
+    setOrdersPage(1);
+    setOrdersSearch(ordersDraftSearch.trim());
+  };
+
+  const refreshOrders = () => setOrdersReloadKey((key) => key + 1);
 
   const sendNote = async () => {
     if (!panel || panel.kind !== "messages" || sendingNote) return;
@@ -505,9 +553,7 @@ export function QuoteCustomersPage({
                   <button
                     type="button"
                     className="quote-customers-company-summary"
-                    onClick={() =>
-                      setPanel({ kind: "companies", email: customer.email })
-                    }
+                    onClick={() => openOrdersPanel(customer.email)}
                     aria-label={`${t("quoteCustomers.openOrders")} ${
                       customer.customerName || customer.email
                     }`}
@@ -542,9 +588,7 @@ export function QuoteCustomersPage({
                       total: customer.companies.length,
                     })}
                     openLabel={`${t("quoteCustomers.openCompanies")} ${customer.email}`}
-                    onOpen={() =>
-                      setPanel({ kind: "companies", email: customer.email })
-                    }
+                    onOpen={() => openOrdersPanel(customer.email)}
                   />
                 </td>
                 <td>{customer.orderCount.toLocaleString(i18n.language)}</td>
@@ -607,70 +651,98 @@ export function QuoteCustomersPage({
         onClose={closePanel}
         closeLabel={t("quoteCustomers.closePanel")}
       >
-        {historyLoading ? (
-          <p className="quote-customers-history-status">
-            {t("quoteCustomers.historyLoading")}
-          </p>
-        ) : historyError ? (
-          <p className="quote-customers-history-error" role="alert">
-            {t("quoteCustomers.historyError")}
-          </p>
-        ) : (
-          <div className="quote-customers-history">
-            <section>
-              <h3>{t("quoteCustomers.pastOrders")}</h3>
-              {!history?.orders.length ? (
-                <p>{t("quoteCustomers.pastOrdersEmpty")}</p>
-              ) : (
-                <div className="quote-customers-history-table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>{t("quoteCustomers.columns.company")}</th>
-                        <th>{t("quoteCustomers.columns.orderNumber")}</th>
-                        <th>{t("quoteCustomers.columns.date")}</th>
-                        <th>{t("quoteCustomers.columns.amount")}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {sortOrdersByCompany(history.orders).map((order) => (
-                        <tr key={order.id}>
-                          <td>
-                            <strong>
-                              {order.companyName || t("common.notSet")}
-                            </strong>
-                          </td>
-                          <td>
-                            <Link
-                              className="order-link"
-                              to={documentPath(order.documentType, order.id)}
-                            >
-                              {order.orderNumber || t("common.notSet")}
-                            </Link>
-                          </td>
-                          <td>
-                            {dateTimeFormatter.format(new Date(order.createdAt))}
-                          </td>
-                          <td>
-                            <strong>
-                              {formatMoney(
-                                order.grandTotal,
-                                order.currency,
-                                currencyFormatter,
-                                t("common.notSet"),
-                                i18n.language,
-                              )}
-                            </strong>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </section>
-          </div>
-        )}
+        <div className="quote-customers-history">
+          <ListSearchBar
+            id="quote-customer-orders-search"
+            value={ordersDraftSearch}
+            onChange={setOrdersDraftSearch}
+            onSubmit={submitOrdersSearch}
+            label={t("quoteCustomers.ordersSearch")}
+            placeholder={t("quoteCustomers.ordersSearchPlaceholder")}
+            submitLabel={t("quoteCustomers.searchAction")}
+            disabled={historyLoading}
+          />
+          {historyError ? (
+            <div className="quotes-state quotes-state-error" role="alert">
+              <strong>{t("quoteCustomers.historyError")}</strong>
+              <Button variant="outline" onClick={refreshOrders}>
+                {t("quoteCustomers.retry")}
+              </Button>
+            </div>
+          ) : !historyLoading && (history?.orders.length ?? 0) === 0 ? (
+            <div className="quotes-state quotes-state-empty">
+              <strong>{t("quoteCustomers.pastOrdersEmpty")}</strong>
+            </div>
+          ) : (
+            <ListTable
+              className="quote-customers-history-table-wrap"
+              onRefresh={refreshOrders}
+              loading={historyLoading}
+              loadingLabel={t("quoteCustomers.historyLoading")}
+              skeletonRows={QUOTE_CUSTOMER_ORDERS_PAGE_SIZE}
+              skeletonColumns={ORDER_SKELETON_COLUMNS}
+              header={
+                <tr>
+                  <th>{t("quoteCustomers.columns.company")}</th>
+                  <th>{t("quoteCustomers.columns.orderNumber")}</th>
+                  <th>{t("quoteCustomers.columns.date")}</th>
+                  <th>{t("quoteCustomers.columns.amount")}</th>
+                </tr>
+              }
+            >
+              {(history?.orders ?? []).map((order) => (
+                <tr key={order.id}>
+                  <td>
+                    <strong>
+                      {order.companyName || t("common.notSet")}
+                    </strong>
+                  </td>
+                  <td>
+                    <Link
+                      className="order-link"
+                      to={documentPath(order.documentType, order.id)}
+                    >
+                      {order.orderNumber || t("common.notSet")}
+                    </Link>
+                  </td>
+                  <td>
+                    {dateTimeFormatter.format(new Date(order.createdAt))}
+                  </td>
+                  <td>
+                    <strong>
+                      {formatMoney(
+                        order.grandTotal,
+                        order.currency,
+                        currencyFormatter,
+                        t("common.notSet"),
+                        i18n.language,
+                      )}
+                    </strong>
+                  </td>
+                </tr>
+              ))}
+            </ListTable>
+          )}
+          <TablePagination
+            summary={t("quoteCustomers.ordersPagination", {
+              from: ordersFrom,
+              to: ordersTo,
+              total: ordersTotal,
+            })}
+            page={ordersPage}
+            totalPages={ordersTotalPages}
+            loading={historyLoading}
+            onPrevious={() =>
+              setOrdersPage((current) => Math.max(1, current - 1))
+            }
+            onNext={() => setOrdersPage((current) => current + 1)}
+            onPageChange={setOrdersPage}
+            previousLabel={t("quoteCustomers.previous")}
+            nextLabel={t("quoteCustomers.next")}
+            pageLabel={t("quoteCustomers.pageOf")}
+            jumpLabel={t("quoteCustomers.jumpToPage")}
+          />
+        </div>
       </SidePanel>
 
       <SidePanel
