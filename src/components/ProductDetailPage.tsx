@@ -625,7 +625,7 @@ export function ProductDetailPage({
                       value={form.collectionIds}
                       onChange={(collectionIds) => patchForm({ collectionIds })}
                       placeholder={t("productDetail.collectionsPlaceholder")}
-                      searchPlaceholder={t("productDetail.collectionsSearch")}
+                      searchPlaceholder={t("productDetail.collectionsSearchPlaceholder")}
                       emptyLabel={t("productDetail.noCollectionResults")}
                     />
                   </div>
@@ -735,7 +735,7 @@ export function ProductDetailPage({
                         : undefined
                     }
                     value={ingredientQuery}
-                    placeholder={t("productDetail.searchIngredient")}
+                    placeholder={t("productDetail.searchIngredientPlaceholder")}
                     autoComplete="off"
                     onChange={(event) => {
                       setIngredientQuery(event.target.value);

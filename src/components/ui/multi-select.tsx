@@ -14,7 +14,7 @@ export function MultiSelect({
   options,
   value,
   onChange,
-  placeholder,
+  placeholder: triggerPlaceholder,
   searchPlaceholder,
   emptyLabel,
   disabled = false,
@@ -29,6 +29,7 @@ export function MultiSelect({
   emptyLabel: string;
   disabled?: boolean;
 }) {
+  const placeholder = searchPlaceholder ?? triggerPlaceholder;
   const rootRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -122,7 +123,7 @@ export function MultiSelect({
         onKeyDown={handleTriggerKey}
       >
         {selectedOptions.length === 0 ? (
-          <span className="multi-select-placeholder">{placeholder}</span>
+          <span className="multi-select-placeholder">{triggerPlaceholder}</span>
         ) : (
           <span className="multi-select-chips">
             {selectedOptions.map((item) => (
@@ -150,8 +151,8 @@ export function MultiSelect({
             <input
               type="text"
               value={query}
-              placeholder={searchPlaceholder}
-              aria-label={searchPlaceholder}
+              placeholder={placeholder}
+              aria-label={placeholder}
               autoComplete="off"
               onChange={(event) => setQuery(event.target.value)}
               onKeyDown={handleListKey}

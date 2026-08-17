@@ -121,9 +121,9 @@ function PackageProductSearch({
         aria-autocomplete="list"
         aria-expanded={open}
         aria-controls="package-product-results"
-        aria-label={t("packageDetail.searchProduct")}
+        aria-label={t("packageDetail.searchProductPlaceholder")}
         value={query}
-        placeholder={t("packageDetail.searchProduct")}
+        placeholder={t("packageDetail.searchProductPlaceholder")}
         autoComplete="off"
         autoFocus
         onChange={(event) => {
