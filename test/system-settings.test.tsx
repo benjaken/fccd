@@ -911,6 +911,16 @@ describe("Super Admin system settings", () => {
     expect(yieldErrorStatistics).toContain("frozen.yield_errors");
     expect(yieldErrorStatistics).toContain("收成錯誤統計");
 
+    const yieldExceptionStatistics = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260817020000_rename_yield_errors_to_exception_statistics.sql",
+      ),
+      "utf8",
+    );
+    expect(yieldExceptionStatistics).toContain("frozen.yield_errors");
+    expect(yieldExceptionStatistics).toContain("收成異常統計");
+
     const rawMeatActions = readFileSync(
       path.resolve(
         process.cwd(),
