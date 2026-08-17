@@ -1,7 +1,7 @@
 import { supabase } from "@/lib/supabase";
 
 export const QUOTE_CUSTOMERS_PAGE_SIZE = 15;
-export const QUOTE_CUSTOMER_ORDERS_PAGE_SIZE = 15;
+export const QUOTE_CUSTOMER_ORDERS_PAGE_SIZE = 25;
 export const QUOTE_CUSTOMER_HISTORY_LIMIT = 1000;
 
 export type QuoteCustomerCompany = {
