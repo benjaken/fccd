@@ -2426,6 +2426,264 @@ button.product-tag[aria-pressed="true"] {
   top: 0;
 }
 
+.quote-customers-company-cell {
+  min-width: 12rem;
+  width: 28%;
+}
+
+.quote-customers-company-summary {
+  display: grid;
+  gap: 0;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.quote-customers-company-summary:hover strong,
+.quote-customers-company-summary:focus-visible strong {
+  color: var(--primary);
+}
+
+.quote-customers-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+
+.quote-customers-sort svg {
+  width: 14px;
+  height: 14px;
+}
+
+.quote-customers-row-selected td {
+  background: var(--selection-bg);
+}
+
+.quote-customers-history-status,
+.quote-customers-history-error {
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+
+.quote-customers-history-error {
+  color: var(--destructive);
+}
+
+.side-panel-body:has(.quote-customers-orders-panel),
+.side-panel-messages > .side-panel-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0;
+}
+
+.quote-customers-orders-panel {
+  flex: 1;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+.quote-customers-messages {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.quote-customers-message-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-bottom: 1px solid var(--border);
+}
+
+.quote-customers-message-tabs button {
+  margin: 0;
+  padding: 12px 8px 10px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: none;
+  color: var(--muted-foreground);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.35;
+  cursor: pointer;
+}
+
+.quote-customers-message-tabs button.is-active {
+  color: var(--foreground);
+  border-bottom-color: var(--foreground);
+}
+
+.quote-customers-message-feed-host {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.quote-customers-message-feed {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 18px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 18px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.quote-customers-message-feed > * {
+  flex: 0 0 auto;
+}
+
+.quote-customers-message {
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+}
+
+.quote-customers-message > span {
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+
+.quote-customers-message-bubble {
+  display: grid;
+  gap: 6px;
+  max-width: 100%;
+  padding: 12px 14px;
+  border: 1px solid oklch(0.78 0.1 80);
+  border-radius: 12px;
+  background: var(--card);
+}
+
+.quote-customers-message-bubble strong {
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.quote-customers-message-bubble small,
+.quote-customers-message-bubble .order-link {
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.quote-customers-message time {
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-style: italic;
+}
+
+.quote-customers-message-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.quote-customers-message-reply {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--primary);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.quote-customers-message-composer-wrap {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+}
+
+.quote-customers-reply-target {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+
+.quote-customers-reply-target span {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.quote-customers-reply-target button {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--foreground);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.quote-customers-message-composer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.quote-customers-message-composer input {
+  height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--background);
+  color: var(--foreground);
+  outline: 0;
+}
+
+.quote-customers-message-composer input:focus {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 22%, transparent);
+}
+
+.side-panel-footer:has(.quote-customers-message-composer),
+.side-panel-footer:has(.quote-customers-message-composer-wrap) {
+  justify-content: stretch;
+}
+
 .quote-company,
 .order-customer-name {
   display: block;
@@ -4680,6 +4938,15 @@ button.product-tag[aria-pressed="true"] {
   width: min(50vw, 100vw);
 }
 
+.side-panel-majority {
+  width: 80%;
+}
+
+.side-panel-messages {
+  width: 40%;
+  overflow: hidden;
+}
+
 .side-panel-header,
 .settings-side-panel-header {
   display: flex;
@@ -4816,6 +5083,8 @@ button.product-tag[aria-pressed="true"] {
   .side-panel-wide,
   .side-panel-xl,
   .side-panel-half,
+  .side-panel-majority,
+  .side-panel-messages,
   .settings-side-panel,
   .settings-side-panel-wide {
     width: min(100vw, 100%);

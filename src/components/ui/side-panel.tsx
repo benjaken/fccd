@@ -15,6 +15,7 @@ export function SidePanel({
   wide = false,
   extraWide = false,
   half = false,
+  className,
 }: {
   open: boolean;
   title: string;
@@ -26,6 +27,7 @@ export function SidePanel({
   wide?: boolean;
   extraWide?: boolean;
   half?: boolean;
+  className?: string;
 }) {
   useEffect(() => {
     if (!open) return;
@@ -52,6 +54,7 @@ export function SidePanel({
           wide && "side-panel-wide",
           extraWide && "side-panel-xl",
           half && "side-panel-half",
+          className,
         )}
         role="dialog"
         aria-modal="true"
