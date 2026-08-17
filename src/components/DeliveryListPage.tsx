@@ -17,6 +17,7 @@ import {
   DELIVERIES_PAGE_SIZE,
   downloadCsv,
   feeSharePercent,
+  deliveryOrderAmount,
   fetchDeliveries,
   fetchDeliveryExportRows,
   fetchDeliveryLookups,
@@ -567,6 +568,7 @@ export function DeliveryListPage({
               const pickedUpTime = clockFromValue(item.takenAt);
               const deliveredTime = clockFromValue(item.fulfilledAt);
               const share = feeSharePercent(item);
+              const orderAmount = deliveryOrderAmount(item);
               return (
                 <tr key={item.id}>
                   <td>{visibleFrom + index}</td>
@@ -668,7 +670,7 @@ export function DeliveryListPage({
                   </td>
                   <td>
                     <div className="delivery-total-fee">
-                      <strong>{formatFee(item.totalFee)}</strong>
+                      <strong>{formatFee(orderAmount)}</strong>
                       {share !== null ? (
                         <small>
                           {t("deliveryList.orderShare", {

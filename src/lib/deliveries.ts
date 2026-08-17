@@ -311,6 +311,11 @@ export function feeSharePercent(item: DeliveryListItem) {
   return (item.totalFee / item.grandTotal) * 100;
 }
 
+export function deliveryOrderAmount(item: Pick<DeliveryListItem, "grandTotal" | "totalFee">) {
+  if (item.grandTotal != null && item.grandTotal > 0) return item.grandTotal;
+  return item.totalFee;
+}
+
 export function isDeliveredStatus(status: string | null) {
   return status === "己送達" || status === "已送達";
 }
