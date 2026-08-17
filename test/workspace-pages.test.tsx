@@ -18,6 +18,8 @@ vi.mock("@/lib/factory-board", async () => {
       portionsByOrderId: {},
     })),
     fetchFactoryFleets: vi.fn(async () => []),
+    fetchFactoryBrands: vi.fn(async () => []),
+    fetchFactoryMenuRows: vi.fn(async () => []),
   };
 });
 

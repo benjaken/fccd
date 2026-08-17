@@ -108,6 +108,11 @@ const resources = {
         back: "返回",
         connectPrinter: "連接到標籤打印機",
         noPrinter: "未連接打印機",
+        chooseBrandTitle: "選擇品牌 - {{date}}",
+        allBrands: "全部",
+        emptyMenu: "這個品牌當日沒有菜式。",
+        menuDish: "菜式",
+        menuQuantity: "數量",
         columns: {
           item: "項目",
           orderNumber: "訂單號碼",
@@ -2292,6 +2297,11 @@ const resources = {
         back: "Back",
         connectPrinter: "Connect to label printer",
         noPrinter: "No printer connected",
+        chooseBrandTitle: "Select brand - {{date}}",
+        allBrands: "All",
+        emptyMenu: "No dishes for this brand on this day.",
+        menuDish: "Dish",
+        menuQuantity: "Quantity",
         columns: {
           item: "Item",
           orderNumber: "Order number",

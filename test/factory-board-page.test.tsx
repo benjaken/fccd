@@ -145,4 +145,44 @@ describe("FactoryBoardPage", () => {
     await user.click(screen.getByRole("button", { name: "返回" }));
     expect(screen.getAllByRole("button", { name: "出車表" })).toHaveLength(3);
   });
+
+  it("opens the brand picker from 菜式總表 and submits the dish summary", async () => {
+    const user = userEvent.setup();
+    render(
+      <FactoryBoardPage
+        initialDate="2026-08-17"
+        loadBoard={async () => board}
+        loadFleets={async () => [
+          { id: "team-sun", name: "Sun-Line", shortName: "宏" },
+        ]}
+        loadBrands={async () => [
+          { id: "brand-express", name: "Express" },
+          { id: "brand-catering", name: "Catering" },
+        ]}
+        loadMenuRows={async () => [
+          { label: "拿破崙肉丸意粉", quantity: 8 },
+        ]}
+      />,
+    );
+
+    const menuButtons = await screen.findAllByRole("button", { name: "菜式總表" });
+    await user.click(menuButtons[1]!);
+
+    expect(
+      screen.getByRole("heading", { name: "選擇品牌 - 18/08/2026" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "全部" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Express" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Catering" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Catering" }));
+    await user.click(screen.getByRole("button", { name: "提交" }));
+
+    expect(
+      screen.getByRole("heading", { name: "08月18日 (星期二) - Catering" }),
+    ).toBeInTheDocument();
+    expect(await screen.findByText("拿破崙肉丸意粉")).toBeInTheDocument();
+    expect(screen.getByText("菜式")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "關閉" })).toBeInTheDocument();
+  });
 });

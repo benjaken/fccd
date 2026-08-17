@@ -7,6 +7,7 @@ import {
 import { supabase } from "@/lib/supabase"
 
 export const UNASSIGNED_FLEET_ID = "__unassigned__"
+export const ALL_BRAND_ID = "__all__"
 
 export type FactoryBoardData = {
   dates: string[]
@@ -31,6 +32,16 @@ export type FactoryFleet = {
   id: string
   name: string
   shortName: string | null
+}
+
+export type FactoryBrand = {
+  id: string
+  name: string
+}
+
+export type FactoryMenuRow = {
+  label: string
+  quantity: number
 }
 
 const PORTION_CHUNK_SIZE = 100
@@ -176,6 +187,86 @@ export async function fetchFactoryFleets(): Promise<FactoryFleet[]> {
       short_name: row.short_name as string | null,
     }),
   )
+}
+
+export async function fetchFactoryBrands(): Promise<FactoryBrand[]> {
+  const { data, error } = await supabase
+    .from("channels")
+    .select("id, name, is_active, archived_at, sort_order")
+    .eq("is_active", true)
+    .is("archived_at", null)
+    .order("sort_order", { ascending: true, nullsFirst: false })
+    .order("name")
+  if (error) {
+    throw error
+  }
+  return (data ?? []).map((row) => ({
+    id: row.id as string,
+    name: ((row.name as string | null)?.trim() || (row.id as string)).trim(),
+  }))
+}
+
+export async function fetchFactoryMenuRows(
+  orderIds: string[],
+  brandId: string,
+): Promise<FactoryMenuRow[]> {
+  const uniqueIds = [...new Set(orderIds.filter(Boolean))]
+  if (uniqueIds.length === 0) {
+    return []
+  }
+
+  let allowedIds = uniqueIds
+  if (brandId !== ALL_BRAND_ID) {
+    const matched: string[] = []
+    for (let index = 0; index < uniqueIds.length; index += PORTION_CHUNK_SIZE) {
+      const chunk = uniqueIds.slice(index, index + PORTION_CHUNK_SIZE)
+      const { data, error } = await supabase
+        .from("orders")
+        .select("id, channel_id")
+        .in("id", chunk)
+      if (error) {
+        throw error
+      }
+      for (const row of data ?? []) {
+        if ((row.channel_id as string | null) === brandId) {
+          matched.push(row.id as string)
+        }
+      }
+    }
+    allowedIds = matched
+  }
+
+  if (allowedIds.length === 0) {
+    return []
+  }
+
+  const totals = new Map<string, number>()
+  for (let index = 0; index < allowedIds.length; index += PORTION_CHUNK_SIZE) {
+    const chunk = allowedIds.slice(index, index + PORTION_CHUNK_SIZE)
+    const { data, error } = await supabase
+      .from("order_lines")
+      .select("product_name_snapshot, content_snapshot, quantity")
+      .in("order_id", chunk)
+      .eq("is_void", false)
+    if (error) {
+      throw error
+    }
+    for (const row of data ?? []) {
+      const quantity = Number(row.quantity ?? 0)
+      if (!Number.isFinite(quantity) || quantity === 0) continue
+      const label = formatFactoryLineLabel({
+        productName: row.product_name_snapshot as string | null,
+        content: row.content_snapshot as string | null,
+        quantity: null,
+      })
+      if (!label) continue
+      totals.set(label, (totals.get(label) ?? 0) + quantity)
+    }
+  }
+
+  return [...totals.entries()]
+    .sort((left, right) => left[0].localeCompare(right[0], "zh-Hant"))
+    .map(([label, quantity]) => ({ label, quantity }))
 }
 
 async function fetchOrderPortionTotals(

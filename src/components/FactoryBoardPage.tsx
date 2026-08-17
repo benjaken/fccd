@@ -18,23 +18,31 @@ import {
   type DeliveryListItem,
 } from "@/lib/deliveries";
 import {
+  ALL_BRAND_ID,
   UNASSIGNED_FLEET_ID,
   factoryVisibleDates,
   fetchFactoryBoard,
+  fetchFactoryBrands,
   fetchFactoryFleets,
+  fetchFactoryMenuRows,
   fetchFactoryOrderJob,
   filterDispatchRows,
   fleetBadgeForDelivery,
   groupDeliveriesByDate,
+  hongKongDateKey,
   type FactoryBoardData,
+  type FactoryBrand,
   type FactoryFleet,
+  type FactoryMenuRow,
   type FactoryOrderJob,
 } from "@/lib/factory-board";
 import { cn } from "@/lib/utils";
 
 type FleetLoader = typeof fetchFactoryFleets;
+type BrandLoader = typeof fetchFactoryBrands;
 type BoardLoader = (startDate: string) => Promise<FactoryBoardData>;
 type OrderJobLoader = typeof fetchFactoryOrderJob;
+type MenuLoader = typeof fetchFactoryMenuRows;
 
 const WEEKDAY_SHORT_ZH = ["日", "一", "二", "三", "四", "五", "六"];
 const WEEKDAY_LONG_ZH = [
@@ -109,12 +117,16 @@ function formatPortions(value: number | undefined) {
 export function FactoryBoardPage({
   loadBoard = fetchFactoryBoard,
   loadFleets = fetchFactoryFleets,
+  loadBrands = fetchFactoryBrands,
   loadOrderJob = fetchFactoryOrderJob,
+  loadMenuRows = fetchFactoryMenuRows,
   initialDate,
 }: {
   loadBoard?: BoardLoader;
   loadFleets?: FleetLoader;
+  loadBrands?: BrandLoader;
   loadOrderJob?: OrderJobLoader;
+  loadMenuRows?: MenuLoader;
   initialDate?: string;
 }) {
   const { t, i18n } = useTranslation();
@@ -123,6 +135,7 @@ export function FactoryBoardPage({
   );
   const [board, setBoard] = useState<FactoryBoardData | null>(null);
   const [fleets, setFleets] = useState<FactoryFleet[]>([]);
+  const [brands, setBrands] = useState<FactoryBrand[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [fleetDate, setFleetDate] = useState<string | null>(null);
@@ -132,6 +145,15 @@ export function FactoryBoardPage({
     fleetId: string;
     fleetName: string;
   } | null>(null);
+  const [brandDate, setBrandDate] = useState<string | null>(null);
+  const [selectedBrandId, setSelectedBrandId] = useState(ALL_BRAND_ID);
+  const [menuSummary, setMenuSummary] = useState<{
+    date: string;
+    brandId: string;
+    brandName: string;
+  } | null>(null);
+  const [menuRows, setMenuRows] = useState<FactoryMenuRow[]>([]);
+  const [menuLoading, setMenuLoading] = useState(false);
   const [selectedJob, setSelectedJob] = useState<DeliveryListItem | null>(null);
   const [orderJob, setOrderJob] = useState<FactoryOrderJob | null>(null);
   const [jobLoading, setJobLoading] = useState(false);
@@ -147,26 +169,31 @@ export function FactoryBoardPage({
     : [];
 
   useEffect(() => {
-    if (!fleetDate && !dispatch && !selectedJob) return;
+    if (!fleetDate && !dispatch && !selectedJob && !brandDate && !menuSummary) {
+      return;
+    }
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       if (dispatch) setDispatch(null);
       else if (fleetDate) setFleetDate(null);
+      else if (menuSummary) setMenuSummary(null);
+      else if (brandDate) setBrandDate(null);
       else setSelectedJob(null);
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [dispatch, fleetDate, selectedJob]);
+  }, [brandDate, dispatch, fleetDate, menuSummary, selectedJob]);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(false);
-    void Promise.all([loadBoard(startDate), loadFleets()])
-      .then(([nextBoard, nextFleets]) => {
+    void Promise.all([loadBoard(startDate), loadFleets(), loadBrands()])
+      .then(([nextBoard, nextFleets, nextBrands]) => {
         if (cancelled) return;
         setBoard(nextBoard);
         setFleets(nextFleets);
+        setBrands(nextBrands);
       })
       .catch(() => {
         if (!cancelled) setError(true);
@@ -177,7 +204,7 @@ export function FactoryBoardPage({
     return () => {
       cancelled = true;
     };
-  }, [loadBoard, loadFleets, startDate]);
+  }, [loadBoard, loadBrands, loadFleets, startDate]);
 
   useEffect(() => {
     const orderId = selectedJob?.orderId;
@@ -204,6 +231,37 @@ export function FactoryBoardPage({
       cancelled = true;
     };
   }, [loadOrderJob, selectedJob?.orderId]);
+
+  useEffect(() => {
+    if (!menuSummary) {
+      setMenuRows([]);
+      setMenuLoading(false);
+      return;
+    }
+    const orderIds = (board?.items ?? [])
+      .filter(
+        (item) =>
+          item.orderId &&
+          item.deliveryAt &&
+          hongKongDateKey(item.deliveryAt) === menuSummary.date,
+      )
+      .map((item) => item.orderId as string);
+    let cancelled = false;
+    setMenuLoading(true);
+    void loadMenuRows(orderIds, menuSummary.brandId)
+      .then((rows) => {
+        if (!cancelled) setMenuRows(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setMenuRows([]);
+      })
+      .finally(() => {
+        if (!cancelled) setMenuLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [board?.items, loadMenuRows, menuSummary]);
 
   const formatDayHeading = (isoDate: string) => {
     const [, month, day] = isoDate.split("-").map(Number);
@@ -251,14 +309,26 @@ export function FactoryBoardPage({
 
   const openFleetPicker = (date: string) => {
     setDispatch(null);
+    setBrandDate(null);
+    setMenuSummary(null);
     setSelectedFleetId(UNASSIGNED_FLEET_ID);
     setFleetDate(date);
+  };
+
+  const openBrandPicker = (date: string) => {
+    setDispatch(null);
+    setFleetDate(null);
+    setMenuSummary(null);
+    setSelectedBrandId(ALL_BRAND_ID);
+    setBrandDate(date);
   };
 
   const openJob = (item: DeliveryListItem) => {
     if (!item.orderId) return;
     setFleetDate(null);
     setDispatch(null);
+    setBrandDate(null);
+    setMenuSummary(null);
     setSelectedJob(item);
   };
 
@@ -275,6 +345,21 @@ export function FactoryBoardPage({
       fleetName,
     });
     setFleetDate(null);
+  };
+
+  const submitBrand = () => {
+    if (!brandDate) return;
+    const brandName =
+      selectedBrandId === ALL_BRAND_ID
+        ? t("factoryBoard.allBrands")
+        : (brands.find((brand) => brand.id === selectedBrandId)?.name ??
+          t("factoryBoard.allBrands"));
+    setMenuSummary({
+      date: brandDate,
+      brandId: selectedBrandId,
+      brandName,
+    });
+    setBrandDate(null);
   };
 
   const exportDispatch = () => {
@@ -345,7 +430,7 @@ export function FactoryBoardPage({
                 {t("factoryBoard.dispatchSheet")}
               </Button>
               <h2>{formatDayHeading(date)}</h2>
-              <Button type="button">
+              <Button type="button" onClick={() => openBrandPicker(date)}>
                 {t("factoryBoard.menuSummary")}
               </Button>
             </header>
@@ -494,6 +579,55 @@ export function FactoryBoardPage({
       </FactoryModal>
 
       <FactoryModal
+        open={Boolean(brandDate)}
+        title={t("factoryBoard.chooseBrandTitle", {
+          date: brandDate ? formatPickerDate(brandDate) : "",
+        })}
+        titleId="factory-brand-title"
+        onClose={() => setBrandDate(null)}
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setBrandDate(null)}
+            >
+              {t("factoryBoard.close")}
+            </Button>
+            <Button type="button" onClick={submitBrand}>
+              {t("factoryBoard.submit")}
+            </Button>
+          </>
+        }
+      >
+        <div className="factory-fleet-chips">
+          <button
+            type="button"
+            className={cn(
+              "factory-fleet-chip",
+              selectedBrandId === ALL_BRAND_ID && "is-selected",
+            )}
+            onClick={() => setSelectedBrandId(ALL_BRAND_ID)}
+          >
+            {t("factoryBoard.allBrands")}
+          </button>
+          {brands.map((brand) => (
+            <button
+              key={brand.id}
+              type="button"
+              className={cn(
+                "factory-fleet-chip",
+                selectedBrandId === brand.id && "is-selected",
+              )}
+              onClick={() => setSelectedBrandId(brand.id)}
+            >
+              {brand.name}
+            </button>
+          ))}
+        </div>
+      </FactoryModal>
+
+      <FactoryModal
         open={Boolean(dispatch)}
         title={
           dispatch
@@ -543,6 +677,55 @@ export function FactoryBoardPage({
                     <td>{item.deliveryTime || t("common.notSet")}</td>
                     <td>{item.deliveryTime || t("common.notSet")}</td>
                     <td>{item.address || t("common.notSet")}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </FactoryModal>
+
+      <FactoryModal
+        open={Boolean(menuSummary)}
+        title={
+          menuSummary
+            ? formatDispatchTitle(menuSummary.date, menuSummary.brandName)
+            : t("factoryBoard.menuSummary")
+        }
+        titleId="factory-menu-title"
+        headerTone="dispatch"
+        wide
+        onClose={() => setMenuSummary(null)}
+        footer={
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setMenuSummary(null)}
+          >
+            {t("factoryBoard.close")}
+          </Button>
+        }
+      >
+        {menuLoading ? (
+          <p className="factory-day-state">{t("common.loading")}</p>
+        ) : menuRows.length === 0 ? (
+          <p className="factory-day-state">{t("factoryBoard.emptyMenu")}</p>
+        ) : (
+          <div className="factory-dispatch-table-wrap">
+            <table className="factory-dispatch-table">
+              <thead>
+                <tr>
+                  <th>{t("factoryBoard.columns.item")}</th>
+                  <th>{t("factoryBoard.menuDish")}</th>
+                  <th>{t("factoryBoard.menuQuantity")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {menuRows.map((row, index) => (
+                  <tr key={`${row.label}-${index}`}>
+                    <td>{index + 1}</td>
+                    <td>{row.label}</td>
+                    <td>{row.quantity}</td>
                   </tr>
                 ))}
               </tbody>
