@@ -810,6 +810,9 @@ describe("Packages catalog pages", () => {
     expect(screen.getByRole("columnheader", { name: "類別數量" })).toBeInTheDocument();
     expect(screen.getByText("3/21/2024")).toBeInTheDocument();
     expect(screen.getByText("共 1 個結果")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "重新載入" }),
+    ).not.toBeInTheDocument();
     expect(screen.getByText("HK$1,280.00")).toBeInTheDocument();
   });
 
