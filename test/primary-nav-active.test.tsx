@@ -33,6 +33,7 @@ describe("Primary navigation section matching", () => {
     ["/frozen/yield-errors", "frozen"],
     ["/kitchen", "kitchen"],
     ["/kitchen/calendar", "kitchen"],
+    ["/kitchen/settings", "kitchen"],
     ["/delivery", "delivery"],
     ["/delivery/assign", "delivery"],
     ["/restaurant", "restaurant"],
@@ -105,6 +106,10 @@ describe("Primary navigation section matching", () => {
     );
     expect(pageAccessKey("/orders/settings/sale-partners")).toBe(
       "orders.settings.sale_partners",
+    );
+    expect(pageAccessKey("/kitchen/settings")).toBe("kitchen.settings");
+    expect(pageAccessKey("/kitchen/settings/cook-types")).toBe(
+      "kitchen.settings",
     );
   });
 

@@ -4891,6 +4891,7 @@ button.product-tag[aria-pressed="true"] {
 
 .seasoning-cost-page,
 .calculation-settings-page,
+.kitchen-settings-page,
 .meat-customers-page,
 .order-statuses-page,
 .sale-partners-page,
@@ -4907,6 +4908,7 @@ button.product-tag[aria-pressed="true"] {
 
 .seasoning-cost-page .page-heading,
 .calculation-settings-page .page-heading,
+.kitchen-settings-page .page-heading,
 .meat-customers-page .page-heading,
 .order-statuses-page .page-heading,
 .sale-partners-page .page-heading,
@@ -4917,6 +4919,7 @@ button.product-tag[aria-pressed="true"] {
 
 .seasoning-cost-heading,
 .calculation-settings-heading,
+.kitchen-settings-heading,
 .meat-customers-heading,
 .order-statuses-heading,
 .sale-partners-heading,
@@ -4926,6 +4929,7 @@ button.product-tag[aria-pressed="true"] {
 
 .seasoning-cost-panel,
 .calculation-settings-panel,
+.kitchen-settings-panel,
 .meat-customers-panel,
 .order-statuses-panel,
 .sale-partners-panel,
@@ -4938,6 +4942,7 @@ button.product-tag[aria-pressed="true"] {
 
 .seasoning-cost-panel > .list-inline-error,
 .calculation-settings-panel > .list-inline-error,
+.kitchen-settings-panel > .list-inline-error,
 .meat-customers-panel > .list-inline-error,
 .order-statuses-panel > .list-inline-error,
 .sale-partners-panel > .list-inline-error,
@@ -4948,12 +4953,14 @@ button.product-tag[aria-pressed="true"] {
 
 .seasoning-cost-panel > .products-state,
 .calculation-settings-panel > .products-state,
+.kitchen-settings-panel > .products-state,
 .meat-customers-panel > .products-state,
 .order-statuses-panel > .products-state,
 .sale-partners-panel > .products-state,
 .selling-price-cost-panel > .products-state,
 .seasoning-cost-table-wrap,
 .calculation-settings-table-wrap,
+.kitchen-settings-table-wrap,
 .meat-customers-table-wrap,
 .order-statuses-table-wrap,
 .sale-partners-table-wrap,
@@ -4971,6 +4978,7 @@ button.product-tag[aria-pressed="true"] {
 
 .seasoning-cost-table-wrap th,
 .calculation-settings-table-wrap th,
+.kitchen-settings-table-wrap th,
 .meat-customers-table-wrap th,
 .order-statuses-table-wrap th,
 .sale-partners-table-wrap th,
@@ -5168,6 +5176,53 @@ button.product-tag[aria-pressed="true"] {
 
 .calculation-settings-field-error,
 .calculation-settings-form-error {
+  margin: 0;
+  color: var(--destructive);
+  font-size: 0.82rem;
+  font-style: normal;
+}
+
+.kitchen-settings-form {
+  display: grid;
+  gap: 16px;
+}
+
+.kitchen-settings-field {
+  display: grid;
+  gap: 6px;
+}
+
+.kitchen-settings-field > span {
+  color: var(--foreground);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.kitchen-settings-field input,
+.kitchen-settings-field select {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  outline: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+}
+
+.kitchen-settings-field input:focus,
+.kitchen-settings-field select:focus {
+  border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 16%, transparent);
+}
+
+.kitchen-settings-field small {
+  color: var(--muted-foreground);
+  font-size: 0.8rem;
+}
+
+.kitchen-settings-field-error,
+.kitchen-settings-form-error {
   margin: 0;
   color: var(--destructive);
   font-size: 0.82rem;
@@ -5493,6 +5548,7 @@ button.product-tag[aria-pressed="true"] {
   .packages-page,
   .seasoning-cost-page,
   .calculation-settings-page,
+  .kitchen-settings-page,
   .meat-customers-page,
   .order-statuses-page,
   .sale-partners-page,
@@ -5518,6 +5574,7 @@ button.product-tag[aria-pressed="true"] {
   .spice-usage-heading,
   .seasoning-cost-heading,
   .calculation-settings-heading,
+  .kitchen-settings-heading,
   .meat-customers-heading,
   .order-statuses-heading,
   .sale-partners-heading,
