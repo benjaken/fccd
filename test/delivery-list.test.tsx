@@ -443,7 +443,12 @@ describe("Delivery list page", () => {
   it("keeps later status steps gray while the delivery is still pending pickup", async () => {
     const loadDeliveries = vi.fn().mockResolvedValue({
       total: 1,
-      items: [{ ...surchargeItem, deliveryStatus: "待取貨" }],
+      items: [{
+        ...surchargeItem,
+        deliveryStatus: "待取貨",
+        takenAt: null,
+        fulfilledAt: null,
+      }],
     });
     const loadLookups = vi.fn().mockResolvedValue(lookups);
 
