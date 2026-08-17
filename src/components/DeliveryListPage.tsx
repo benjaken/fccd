@@ -10,7 +10,6 @@ import { ListTable } from "@/components/ui/list-table";
 import { SidePanel } from "@/components/ui/side-panel";
 import { TablePagination } from "@/components/ui/table-pagination";
 import {
-  assignDeliveryMotorcade,
   buildDeliveryExportCsv,
   cancelPendingDelivery,
   clockFromValue,
@@ -41,7 +40,6 @@ type DeliveriesLoader = (
 ) => Promise<DeliveryListResult>;
 type LookupsLoader = typeof fetchDeliveryLookups;
 type ExportLoader = typeof fetchDeliveryExportRows;
-type AssignFleet = typeof assignDeliveryMotorcade;
 type CancelDelivery = typeof cancelPendingDelivery;
 
 const DELIVERY_SKELETON_COLUMNS = [
@@ -72,7 +70,6 @@ export function DeliveryListPage({
   loadDeliveries = fetchDeliveries,
   loadLookups = fetchDeliveryLookups,
   loadExportRows = fetchDeliveryExportRows,
-  assignFleet = assignDeliveryMotorcade,
   cancelDelivery = cancelPendingDelivery,
   now = new Date(),
 }: {
@@ -80,7 +77,6 @@ export function DeliveryListPage({
   loadDeliveries?: DeliveriesLoader;
   loadLookups?: LookupsLoader;
   loadExportRows?: ExportLoader;
-  assignFleet?: AssignFleet;
   cancelDelivery?: CancelDelivery;
   now?: Date;
 }) {
@@ -103,8 +99,6 @@ export function DeliveryListPage({
   >([]);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
-  const [assignError, setAssignError] = useState<string | null>(null);
-  const [assigningId, setAssigningId] = useState<string | null>(null);
   const [imageItem, setImageItem] = useState<DeliveryListItem | null>(null);
   const [cancelItem, setCancelItem] = useState<DeliveryListItem | null>(null);
   const [cancelling, setCancelling] = useState(false);
@@ -329,40 +323,6 @@ export function DeliveryListPage({
     }
   };
 
-  const changeFleet = async (item: DeliveryListItem, nextId: string) => {
-    if (!canEdit) return;
-    const motorcadeIdValue = nextId || null;
-    const motorcadeName =
-      teams.find((team) => team.id === motorcadeIdValue)?.name ?? null;
-    setAssignError(null);
-    setAssigningId(item.id);
-    setItems((current) =>
-      current.map((row) =>
-        row.id === item.id
-          ? { ...row, motorcadeId: motorcadeIdValue, motorcadeName }
-          : row,
-      ),
-    );
-    try {
-      await assignFleet(item.id, motorcadeIdValue);
-    } catch {
-      setAssignError("assign_failed");
-      setItems((current) =>
-        current.map((row) =>
-          row.id === item.id
-            ? {
-                ...row,
-                motorcadeId: item.motorcadeId,
-                motorcadeName: item.motorcadeName,
-              }
-            : row,
-        ),
-      );
-    } finally {
-      setAssigningId(null);
-    }
-  };
-
   const confirmCancelDelivery = async () => {
     if (!cancelItem || cancelling) return;
     setCancelling(true);
@@ -506,11 +466,6 @@ export function DeliveryListPage({
             {t("deliveryList.exportError")}
           </p>
         ) : null}
-        {assignError ? (
-          <p className="list-inline-error" role="alert">
-            {t("deliveryList.assignFleetError")}
-          </p>
-        ) : null}
         {cancelError && !cancelItem ? (
           <p className="list-inline-error" role="alert">
             {t("deliveryList.cancelError")}
@@ -599,28 +554,7 @@ export function DeliveryListPage({
                   <td>{item.deliveryTime?.trim() || "—"}</td>
                   <td>{display(item.districtName)}</td>
                   <td>{display(item.address)}</td>
-                  <td>
-                    {canEdit ? (
-                      <select
-                        className="delivery-fleet-select"
-                        value={item.motorcadeId ?? ""}
-                        disabled={assigningId === item.id}
-                        aria-label={t("deliveryList.chooseFleet")}
-                        onChange={(event) =>
-                          void changeFleet(item, event.target.value)
-                        }
-                      >
-                        <option value="">{t("deliveryList.chooseFleet")}</option>
-                        {teams.map((team) => (
-                          <option key={team.id} value={team.id}>
-                            {team.name}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      display(item.motorcadeName)
-                    )}
-                  </td>
+                  <td>{display(item.motorcadeName)}</td>
                   <td>
                     <span className="delivery-fee-box">
                       {formatFee(item.basicFee)}

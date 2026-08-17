@@ -190,11 +190,9 @@ describe("Delivery list page", () => {
     );
   });
 
-  it("lets a dispatcher choose the fleet on each row", async () => {
-    const user = userEvent.setup();
+  it("shows fleet names as read-only text even for dispatchers", async () => {
     const loadDeliveries = vi.fn().mockResolvedValue(listResult);
     const loadLookups = vi.fn().mockResolvedValue(lookups);
-    const assignFleet = vi.fn().mockResolvedValue(undefined);
 
     render(
       <MemoryRouter>
@@ -202,19 +200,19 @@ describe("Delivery list page", () => {
           canEdit
           loadDeliveries={loadDeliveries}
           loadLookups={loadLookups}
-          assignFleet={assignFleet}
           now={new Date("2026-08-17T04:00:00+08:00")}
         />
       </MemoryRouter>,
     );
 
-    const fleetSelects = await screen.findAllByRole("combobox", {
-      name: "選擇車隊",
-    });
-    await user.selectOptions(fleetSelects[1]!, "");
-    await waitFor(() =>
-      expect(assignFleet).toHaveBeenCalledWith("delivery-2", null),
-    );
+    const table = within(await screen.findByRole("table"));
+    expect(table.getAllByText("Sun-Line").length).toBeGreaterThan(0);
+    expect(
+      table.queryByRole("combobox", { name: "選擇車隊" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("combobox", { name: "司機／車隊" }),
+    ).toBeInTheDocument();
   });
 
   it("exports the filtered rows with the requested columns", async () => {
