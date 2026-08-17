@@ -12,11 +12,12 @@ import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
+import { SidePanel } from "@/components/ui/side-panel";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { FROZEN_ACTION_PERMISSION_KEYS } from "@/lib/frozen-action-permissions";
 import { cn } from "@/lib/utils";
 import {
-  averageFactorySupplyPrice,
+  averageMonthlySupplyPrices,
   fetchSellingPriceCostRows,
   fetchSellingPriceRawMeatOptions,
   filterSellingPriceCostRows,
@@ -354,8 +355,8 @@ export function SellingPriceCostPage({
         : [],
     [monthFilter, rows],
   );
-  const reportPreviewAverage = useMemo(
-    () => averageFactorySupplyPrice(monthRows),
+  const reportPreviewAverages = useMemo(
+    () => averageMonthlySupplyPrices(monthRows),
     [monthRows],
   );
   const showSendButton =
@@ -407,15 +408,6 @@ export function SellingPriceCostPage({
 
   const formatMoney = (value: number | null) =>
     value === null ? t("common.notSet") : currencyFormatter.format(value);
-
-  useEffect(() => {
-    if (!confirmOpen) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") closeConfirm();
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [confirmOpen, pushing]);
 
   return (
     <section className="selling-price-cost-page">
@@ -717,50 +709,57 @@ export function SellingPriceCostPage({
         </article>
       </div>
 
-      {confirmOpen ? (
-        <div className="confirm-dialog-root" role="presentation">
-          <button
-            type="button"
-            className="confirm-dialog-backdrop"
-            aria-label={t("sellingPriceCost.confirmCancel")}
-            onClick={closeConfirm}
-          />
-          <div
-            className="confirm-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="selling-price-cost-push-title"
-          >
-            <div className="selling-price-cost-push-preview">
-              <p id="selling-price-cost-push-title">
-                {t("sellingPriceCost.reportPreviewTitle")}
-              </p>
-              <strong>{formatMoney(reportPreviewAverage)}</strong>
-            </div>
-            <footer className="confirm-dialog-footer">
-              <Button
-                type="button"
-                variant="outline"
-                disabled={pushing}
-                onClick={closeConfirm}
-              >
-                {t("sellingPriceCost.confirmCancel")}
-              </Button>
-              <Button
-                type="button"
-                disabled={pushing}
-                onClick={() => {
-                  void pushSelectedMonth();
-                }}
-              >
-                {pushing
-                  ? t("sellingPriceCost.sendingToReport")
-                  : t("sellingPriceCost.sendToReport")}
-              </Button>
-            </footer>
+      <SidePanel
+        open={confirmOpen}
+        title={t("sellingPriceCost.confirmSendTitle")}
+        description={t("sellingPriceCost.confirmSendDescription", {
+          month: selectedMonthLabel,
+        })}
+        onClose={closeConfirm}
+        closeLabel={t("sellingPriceCost.closePanel")}
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={pushing}
+              onClick={closeConfirm}
+            >
+              {t("sellingPriceCost.confirmCancel")}
+            </Button>
+            <Button
+              type="button"
+              disabled={pushing}
+              onClick={() => {
+                void pushSelectedMonth();
+              }}
+            >
+              {pushing
+                ? t("sellingPriceCost.sendingToReport")
+                : t("sellingPriceCost.sendToReport")}
+            </Button>
+          </>
+        }
+      >
+        <dl className="selling-price-cost-push-metrics">
+          <div className="selling-price-cost-push-metric">
+            <dt>
+              <span>{t("sellingPriceCost.factoryPreviewTitle")}</span>
+            </dt>
+            <dd>
+              <strong>{formatMoney(reportPreviewAverages?.roomPrice ?? null)}</strong>
+            </dd>
           </div>
-        </div>
-      ) : null}
+          <div className="selling-price-cost-push-metric">
+            <dt>
+              <span>{t("sellingPriceCost.shopPreviewTitle")}</span>
+            </dt>
+            <dd>
+              <strong>{formatMoney(reportPreviewAverages?.shopPrice ?? null)}</strong>
+            </dd>
+          </div>
+        </dl>
+      </SidePanel>
     </section>
   );
 }
