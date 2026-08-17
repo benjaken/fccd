@@ -6,15 +6,6 @@ export function hasProductSku(sku: string | null | undefined) {
   return Boolean(sku?.trim());
 }
 
-function excludeProductsWithoutSku<T extends {
-  not: (column: string, operator: string, value: null) => T;
-  neq: (column: string, value: string) => T;
-}>(query: T) {
-  // Temporarily hide Bubble rows that never received a SKU so the catalog
-  // matches the old product list instead of the 7k+ incomplete records.
-  return query.not("sku", "is", null).neq("sku", "");
-}
-
 export type ProductPreset = "all" | "catering" | "lunchbox" | "ala-carte";
 
 export type ProductTag = {
@@ -395,15 +386,17 @@ export async function fetchProducts({
   const start = (page - 1) * PRODUCTS_PAGE_SIZE;
   const end = start + PRODUCTS_PAGE_SIZE - 1;
 
-  let query = excludeProductsWithoutSku(
-    supabase
-      .from("products")
-      .select(
-        "id,sku,name,chinese_name,price,price_min,price_max,status,is_active,is_bento_recommended,bubble_created_at,created_at,channels(id,name),product_types(id,name),cook_types(name),bento_main_types(name),bento_column_types(name)",
-        { count: "exact" },
-      )
-      .is("archived_at", null),
-  )
+  let query = supabase
+    .from("products")
+    .select(
+      "id,sku,name,chinese_name,price,price_min,price_max,status,is_active,is_bento_recommended,bubble_created_at,created_at,channels(id,name),product_types(id,name),cook_types(name),bento_main_types(name),bento_column_types(name)",
+      { count: "exact" },
+    )
+    .is("archived_at", null)
+    // Temporarily hide Bubble rows that never received a SKU so the catalog
+    // matches the old product list instead of the 7k+ incomplete records.
+    .not("sku", "is", null)
+    .neq("sku", "")
     // Bubble Created Date (fallback to DB created_at).
     .order("bubble_created_at", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false })
@@ -765,13 +758,13 @@ export async function searchCatalogProducts(
   const cleaned = safeSearchTerm(term);
   if (!cleaned) return [];
 
-  const { data, error } = await excludeProductsWithoutSku(
-    supabase
-      .from("products")
-      .select("id,name,chinese_name,sku,legacy_id")
-      .is("archived_at", null)
-      .eq("is_active", true),
-  )
+  const { data, error } = await supabase
+    .from("products")
+    .select("id,name,chinese_name,sku,legacy_id")
+    .is("archived_at", null)
+    .eq("is_active", true)
+    .not("sku", "is", null)
+    .neq("sku", "")
     .or(
       `name.ilike.%${cleaned}%,chinese_name.ilike.%${cleaned}%,sku.ilike.%${cleaned}%`,
     )
