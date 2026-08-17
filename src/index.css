@@ -2211,18 +2211,6 @@ button.product-tag[aria-pressed="true"] {
   font-weight: 700;
 }
 
-.delivery-fleet-select {
-  width: 100%;
-  min-width: 7.5rem;
-  height: 36px;
-  padding: 0 8px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--card);
-  color: var(--foreground);
-  font-size: 14px;
-}
-
 .delivery-surcharge-list {
   display: grid;
   gap: 4px;
