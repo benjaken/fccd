@@ -101,6 +101,58 @@ describe("Core read pages", () => {
     expect((await screen.findAllByText("無財務權限")).length).toBeGreaterThan(0);
   });
 
+  it("returns to the order list when opened without an origin", async () => {
+    render(
+      <MemoryRouter initialEntries={["/orders/order-1"]}>
+        <Routes>
+          <Route
+            path="/orders/:id"
+            element={
+              <OrderDetailPage
+                documentType="order"
+                canViewFinance
+                loadDetail={async () => detail}
+              />
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("link", { name: "返回列表" })).toHaveAttribute(
+      "href",
+      "/orders",
+    );
+  });
+
+  it("returns to the page that opened the order", async () => {
+    render(
+      <MemoryRouter
+        initialEntries={[
+          { pathname: "/orders/order-1", state: { from: "/delivery" } },
+        ]}
+      >
+        <Routes>
+          <Route
+            path="/orders/:id"
+            element={
+              <OrderDetailPage
+                documentType="order"
+                canViewFinance
+                loadDetail={async () => detail}
+              />
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("link", { name: "返回列表" })).toHaveAttribute(
+      "href",
+      "/delivery",
+    );
+  });
+
   it("blocks payment list data loading without finance access", async () => {
     const loadPayments = async () => ({
       total: 1,

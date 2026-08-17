@@ -10,6 +10,7 @@ import { Pencil, Plus, RefreshCw, X } from "lucide-react";
 import { Link, Navigate, useLocation, useParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
+import { DetailLink } from "@/components/ui/detail-link";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { PullToRefresh } from "@/components/ui/pull-to-refresh";
 import {
@@ -26,6 +27,7 @@ import {
   searchCatalogProducts,
   type CatalogOption,
 } from "@/lib/products";
+import { useDetailBackTo } from "@/lib/detail-navigation";
 import { cn } from "@/lib/utils";
 
 type DetailLoader = (id: string) => Promise<PackageDetail | null>;
@@ -192,6 +194,7 @@ export function PackageDetailPage({
   const location = useLocation();
   const { id = "" } = useParams();
   const editing = location.pathname.endsWith("/edit");
+  const backTo = useDetailBackTo("/products/packages");
   const [pkg, setPkg] = useState<PackageDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -241,7 +244,9 @@ export function PackageDetailPage({
   }, [load]);
 
   if (editing && !canEdit) {
-    return <Navigate to={`/products/packages/${id}`} replace />;
+    return (
+      <Navigate to={`/products/packages/${id}`} replace state={location.state} />
+    );
   }
 
   if (loading) {
@@ -359,9 +364,9 @@ export function PackageDetailPage({
           <>
             <td>
               {product.productId ? (
-                <Link className="order-link" to={`/products/${product.productId}`}>
+                <DetailLink className="order-link" to={`/products/${product.productId}`}>
                   {productLabel(product, t("common.notSet"))}
-                </Link>
+                </DetailLink>
               ) : (
                 productLabel(product, t("common.notSet"))
               )}
@@ -456,7 +461,7 @@ export function PackageDetailPage({
       <header className="page-heading">
         <div>
           <nav className="detail-breadcrumb" aria-label={t("packageDetail.breadcrumb")}>
-            <Link to="/products/packages">{t("packageDetail.listCrumb")}</Link>
+            <Link to={backTo}>{t("packageDetail.listCrumb")}</Link>
             <span aria-hidden="true">›</span>
             <span>{displayName}</span>
           </nav>
@@ -472,7 +477,7 @@ export function PackageDetailPage({
           </span>
           {canEdit && !editing ? (
             <Button asChild>
-              <Link to={`/products/packages/${pkg.id}/edit`}>
+              <Link to={`/products/packages/${pkg.id}/edit`} state={location.state}>
                 <Pencil />
                 {t("packageDetail.editAction")}
               </Link>

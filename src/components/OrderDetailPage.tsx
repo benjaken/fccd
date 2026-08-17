@@ -14,6 +14,7 @@ import { Link, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { PullToRefresh } from "@/components/ui/pull-to-refresh";
+import { useDetailBackTo } from "@/lib/detail-navigation";
 import {
   fetchOrderDetail,
   type OrderDetailResult,
@@ -74,7 +75,7 @@ export function OrderDetailPage({
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const isQuote = documentType === "quote";
-  const backTo = isQuote ? "/quotes" : "/orders";
+  const backTo = useDetailBackTo(isQuote ? "/quotes" : "/orders");
   const title = isQuote ? t("details.quoteTitle") : t("details.orderTitle");
   const currency = useMemo(
     () =>

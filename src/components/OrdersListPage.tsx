@@ -4,6 +4,7 @@ import { CalendarDays, ChevronRight, ClipboardList, Plus, RefreshCw } from "luci
 import { Link, useSearchParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
+import { DetailLink } from "@/components/ui/detail-link";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import { TablePagination } from "@/components/ui/table-pagination";
@@ -328,9 +329,9 @@ export function OrdersListPage({
               return (
                 <tr key={order.id}>
                   <td>
-                    <Link className="order-link" to={`/orders/${order.id}`}>
+                    <DetailLink className="order-link" to={`/orders/${order.id}`}>
                       {order.orderNumber || t("common.notSet")}
-                    </Link>
+                    </DetailLink>
                   </td>
                   <td>
                     <strong>
@@ -376,14 +377,14 @@ export function OrdersListPage({
                   )}
                   <td>
                     <Button variant="ghost" size="icon" asChild>
-                      <Link
+                      <DetailLink
                         to={`/orders/${order.id}`}
                         aria-label={`${t("orders.open")} ${
                           order.orderNumber || order.id
                         }`}
                       >
                         <ChevronRight />
-                      </Link>
+                      </DetailLink>
                     </Button>
                   </td>
                 </tr>

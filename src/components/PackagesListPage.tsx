@@ -9,13 +9,14 @@ import {
   RefreshCw,
   X,
 } from "lucide-react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
+import { DetailLink } from "@/components/ui/detail-link";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import { TablePagination } from "@/components/ui/table-pagination";
-import { useDeferredFilter } from "@/lib/use-deferred-filter";
+import { detailFromLocation } from "@/lib/detail-navigation";
 import {
   archivePackage,
   fetchPackages,
@@ -30,6 +31,7 @@ import {
   fetchProductChannels,
   type CatalogOption,
 } from "@/lib/products";
+import { useDeferredFilter } from "@/lib/use-deferred-filter";
 
 const PACKAGE_SKELETON_COLUMNS = [
   { width: "2.5rem" },
@@ -60,6 +62,7 @@ export function PackagesListPage({
 }) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [draftSearch, setDraftSearch] = useState("");
   const [search, setSearch] = useState("");
@@ -205,7 +208,9 @@ export function PackagesListPage({
     item.isActive ? t("packages.active") : item.status || t("packages.inactive");
 
   const openPackage = (packageId: string) => {
-    navigate(`/products/packages/${packageId}`);
+    navigate(`/products/packages/${packageId}`, {
+      state: detailFromLocation(location),
+    });
   };
 
   const handleArchive = async (item: PackageListItem) => {
@@ -390,14 +395,14 @@ export function PackagesListPage({
                   <td>{item.channelName || t("common.notSet")}</td>
                   <td>{item.sku || t("common.notSet")}</td>
                   <td>
-                    <Link
+                    <DetailLink
                       className="order-link package-name-link"
                       to={`/products/packages/${item.id}`}
                       onClick={(event) => event.stopPropagation()}
                     >
                       <strong>{displayName(item)}</strong>
                       <ArrowRight aria-hidden="true" />
-                    </Link>
+                    </DetailLink>
                   </td>
                   <td>{dateFormatter.format(new Date(item.createdAt))}</td>
                   <td>{item.choiceSetCount}</td>
@@ -420,7 +425,9 @@ export function PackagesListPage({
                           size="icon"
                           onClick={(event) => {
                             event.stopPropagation();
-                            navigate(`/products/packages/${item.id}/edit`);
+                            navigate(`/products/packages/${item.id}/edit`, {
+                              state: detailFromLocation(location),
+                            });
                           }}
                           aria-label={t("packages.editAction")}
                           title={t("packages.editAction")}

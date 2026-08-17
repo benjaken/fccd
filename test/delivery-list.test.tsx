@@ -2,10 +2,11 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DeliveryListPage } from "@/components/DeliveryListPage";
+import { OrderDetailPage } from "@/components/OrderDetailPage";
 import i18n from "@/i18n";
 import type { DeliveryListItem, DeliveryListResult } from "@/lib/deliveries";
 
@@ -122,6 +123,84 @@ describe("Delivery list page", () => {
     expect(
       table.queryByRole("combobox", { name: "選擇車隊" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("returns from order detail to the delivery list", async () => {
+    const user = userEvent.setup();
+    const loadDeliveries = vi.fn().mockResolvedValue({
+      total: 1,
+      items: [sampleItem],
+    });
+    const loadLookups = vi.fn().mockResolvedValue(lookups);
+
+    render(
+      <MemoryRouter initialEntries={["/delivery"]}>
+        <Routes>
+          <Route
+            path="/delivery"
+            element={
+              <DeliveryListPage
+                loadDeliveries={loadDeliveries}
+                loadLookups={loadLookups}
+                now={new Date("2026-08-17T04:00:00+08:00")}
+              />
+            }
+          />
+          <Route
+            path="/orders/:id"
+            element={
+              <OrderDetailPage
+                documentType="order"
+                canViewFinance
+                loadDetail={async () => ({
+                  order: {
+                    id: "order-1",
+                    documentType: "order",
+                    orderNumber: "6918",
+                    customerName: "Louis Chang 張",
+                    companyName: null,
+                    email: null,
+                    contactA: "90154004",
+                    contactB: null,
+                    address: "青衣長康邨",
+                    customerNote: null,
+                    quoteStatus: null,
+                    quoteDescription: null,
+                    deliveryTerms: null,
+                    deliveryAt: "2026-08-01T02:00:00.000Z",
+                    shipOutTime: "18:00 - 19:00",
+                    deliveryStatus: "已送達",
+                    isSentToFactory: null,
+                    factoryDate: null,
+                    factoryPackingNote: null,
+                    currency: "HKD",
+                    discount: 0,
+                    shippingFee: 0,
+                    grandTotal: 1330,
+                    outstanding: 0,
+                    updatedAt: "2026-08-01T00:00:00.000Z",
+                  },
+                  lines: [],
+                  deliveries: [],
+                  payments: [],
+                  timeline: [],
+                  terms: [],
+                  paymentMethods: [],
+                  quoteFiles: [],
+                })}
+              />
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole("link", { name: "#6918" }));
+    expect(await screen.findByRole("heading", { name: "6918" })).toBeInTheDocument();
+    await user.click(screen.getByRole("link", { name: "返回列表" }));
+    expect(
+      await screen.findByRole("heading", { name: "送貨清單" }),
+    ).toBeInTheDocument();
   });
 
   it("opens delivery photos in a half-width side panel", async () => {
