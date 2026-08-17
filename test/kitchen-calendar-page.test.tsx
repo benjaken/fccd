@@ -44,7 +44,7 @@ const orders: KitchenCalendarOrder[] = [
     companyName: null,
     deliveryAt: "2026-08-16T04:00:00.000Z",
     factoryDate: null,
-    deliveryStatus: "已送達",
+    deliveryStatus: "未派車隊",
     isSentToFactory: true,
     outstanding: 800,
     statuses: [
@@ -87,6 +87,21 @@ const orders: KitchenCalendarOrder[] = [
     isSentToFactory: null,
     outstanding: 0,
     statuses: [{ name: "未傳至工場", color: "#f39c12" }],
+  },
+  {
+    id: "order-delivered-unpaid",
+    orderNumber: "B-1516",
+    customerName: "Harbour Club",
+    companyName: null,
+    deliveryAt: "2026-08-17T05:00:00.000Z",
+    factoryDate: null,
+    deliveryStatus: "己送達",
+    isSentToFactory: null,
+    outstanding: 2450,
+    statuses: [
+      { name: "未完成付款", color: "#ff0000" },
+      { name: "廚房備註", color: "#979899" },
+    ],
   },
 ];
 
@@ -214,6 +229,14 @@ describe("Kitchen calendar page", () => {
     expect(delivered).toHaveTextContent("B#1462UB - Union Banquet");
     expect(delivered).not.toHaveTextContent("未傳至工場");
     expect(delivered).toHaveAccessibleName(/已送達/);
+    const deliveredUnpaid = screen.getByRole("link", {
+      name: /開啟訂單 B-1516 - Harbour Club/,
+    });
+    expect(deliveredUnpaid).toHaveAccessibleName(/已送達/);
+    expect(deliveredUnpaid).not.toHaveTextContent("未完成付款");
+    expect(deliveredUnpaid.querySelector(".kitchen-calendar-dot")).not.toHaveClass(
+      "red",
+    );
   });
 
   it("opens an order from the calendar", async () => {

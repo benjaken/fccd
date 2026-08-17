@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { isOrderDelivered } from "@/lib/orders";
 import {
   fetchOrderStatusCatalog,
   resolveOrderStatuses,
@@ -198,10 +199,7 @@ export function kitchenCalendarStatus(order: {
   deliveryStatus: string | null;
   isSentToFactory: boolean | null;
 }): KitchenCalendarStatus {
-  if (
-    order.deliveryStatus === "己送達" ||
-    order.deliveryStatus === "已送達"
-  ) {
+  if (isOrderDelivered(order.deliveryStatus)) {
     return "completed";
   }
   if (order.deliveryStatus === "送貨途中") return "shipping";
@@ -217,11 +215,13 @@ export function kitchenCalendarStatus(order: {
 }
 
 export function kitchenCalendarTone(order: {
+  deliveryStatus?: string | null;
   isSentToFactory: boolean | null;
   outstanding: number | null;
 }): KitchenCalendarTone {
-  // Bubble's calendar only painted 未完成付款 / 未傳至工場 for explicit values.
-  // Empty Factory_send/not is not "no" — most migrated orders are null, not unsent.
+  // Delivered orders keep their live delivery state. Leftover unpaid /
+  // factory-send tags and outstanding amounts must not override 已送達.
+  if (isOrderDelivered(order.deliveryStatus)) return "blue";
   if ((order.outstanding ?? 0) > 0) return "red";
   if (order.isSentToFactory === false) return "amber";
   return "blue";

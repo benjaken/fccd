@@ -23,14 +23,15 @@ export type OrderStatusFilter =
 
 export type OperationalOrderStatus = Exclude<OrderStatusFilter, "">;
 
+export function isOrderDelivered(deliveryStatus: string | null | undefined) {
+  return deliveryStatus === "己送達" || deliveryStatus === "已送達";
+}
+
 export function operationalOrderStatus(order: {
   deliveryStatus: string | null;
   isSentToFactory: boolean | null;
 }): OperationalOrderStatus {
-  if (
-    order.deliveryStatus === "己送達" ||
-    order.deliveryStatus === "已送達"
-  ) {
+  if (isOrderDelivered(order.deliveryStatus)) {
     return "completed";
   }
   if (order.deliveryStatus === "送貨途中") return "shipping";

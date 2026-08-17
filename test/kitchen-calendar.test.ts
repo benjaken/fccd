@@ -90,6 +90,13 @@ describe("Kitchen calendar date helpers", () => {
     expect(
       kitchenCalendarTone({ isSentToFactory: true, outstanding: 0 }),
     ).toBe("blue");
+    expect(
+      kitchenCalendarTone({
+        deliveryStatus: "己送達",
+        isSentToFactory: null,
+        outstanding: 2450,
+      }),
+    ).toBe("blue");
   });
 
   it("uses the same delivery status as order details", () => {
