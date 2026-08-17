@@ -234,9 +234,13 @@ export function hongKongMonthStart(now = new Date()) {
 }
 
 export function nextCalendarDate(isoDate: string) {
+  return addCalendarDays(isoDate, 1);
+}
+
+export function addCalendarDays(isoDate: string, days: number) {
   const [year, month, day] = isoDate.split("-").map(Number);
   if (!year || !month || !day) return isoDate;
-  const next = new Date(Date.UTC(year, month - 1, day + 1));
+  const next = new Date(Date.UTC(year, month - 1, day + days));
   return next.toISOString().slice(0, 10);
 }
 

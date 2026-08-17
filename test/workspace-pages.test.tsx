@@ -6,6 +6,21 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "@/App";
 import i18n from "@/i18n";
 
+vi.mock("@/lib/factory-board", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/factory-board")>(
+    "@/lib/factory-board",
+  );
+  return {
+    ...actual,
+    fetchFactoryBoard: vi.fn(async () => ({
+      dates: ["2026-08-17", "2026-08-18", "2026-08-19"],
+      items: [],
+      portionsByOrderId: {},
+    })),
+    fetchFactoryFleets: vi.fn(async () => []),
+  };
+});
+
 const auth = vi.hoisted(() => ({
   session: null as null | { user: { email: string } },
   loading: false,
@@ -56,7 +71,7 @@ describe("Standalone workspace pages", () => {
     auth.session = { user: { email: "ops@foodchannels.com" } };
     renderPath("/factory");
 
-    expect(screen.getByRole("heading", { name: "工場版面" })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "出車表" }).length).toBe(3);
     expect(screen.queryByRole("heading", { name: "歡迎回來" })).not.toBeInTheDocument();
     expect(
       screen.queryByRole("navigation", { name: "Workspaces" }),

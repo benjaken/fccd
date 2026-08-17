@@ -9118,6 +9118,343 @@ button.product-tag[aria-pressed="true"] {
   min-height: 100vh;
 }
 
+.factory-board {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: oklch(0.16 0.015 150);
+  color: oklch(0.96 0.01 150);
+}
+
+.factory-board-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  padding: 16px 22px 12px;
+}
+
+.factory-board-brand {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.factory-board-brand strong {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.factory-board-brand small {
+  color: oklch(0.78 0.02 150);
+  font-size: 14px;
+}
+
+.factory-board-notice {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: oklch(0.92 0.04 150);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.factory-board-notice svg {
+  width: 18px;
+  height: 18px;
+  color: var(--primary);
+}
+
+.factory-board-top > .factory-board-notice {
+  justify-self: center;
+}
+
+.factory-board-top > button {
+  justify-self: end;
+}
+
+.factory-board-days {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  flex: 1;
+  min-height: 0;
+  border-top: 1px solid oklch(0.32 0.02 150);
+}
+
+.factory-day {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border-right: 1px solid oklch(0.32 0.02 150);
+}
+
+.factory-day:last-child {
+  border-right: 0;
+}
+
+.factory-day-header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid oklch(0.32 0.02 150);
+}
+
+.factory-day-header h2 {
+  margin: 0;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.factory-day-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+}
+
+.factory-day-state {
+  margin: 0;
+  color: oklch(0.78 0.02 150);
+  font-size: 14px;
+  text-align: center;
+}
+
+.factory-job-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 8px;
+  padding: 12px 14px 14px;
+  overflow: hidden;
+  border-radius: 10px;
+  background: oklch(0.94 0.01 150);
+  color: oklch(0.2 0.02 150);
+}
+
+.factory-job-card svg {
+  width: 18px;
+  height: 18px;
+  color: var(--primary);
+}
+
+.factory-job-card div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-align: center;
+}
+
+.factory-job-card strong,
+.factory-job-card span,
+.factory-job-card small {
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.factory-job-badge {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  display: grid;
+  place-items: end;
+  width: 32px;
+  height: 24px;
+  padding: 0 3px 1px 0;
+  clip-path: polygon(100% 0, 0 100%, 100% 100%);
+  background: oklch(0.55 0.12 240);
+  color: white;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.factory-board-footer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  padding: 14px 22px 18px;
+}
+
+.factory-board-pager {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  grid-column: 2;
+}
+
+.factory-board-date {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  justify-self: end;
+  color: oklch(0.92 0.01 150);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.factory-board-date svg {
+  width: 28px;
+  height: 28px;
+}
+
+.factory-board-date input {
+  min-height: 36px;
+  padding: 0 8px;
+  border: 1px solid oklch(0.4 0.02 150);
+  border-radius: 8px;
+  background: oklch(0.22 0.015 150);
+  color: inherit;
+  font-size: 14px;
+}
+
+.factory-modal-root {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.factory-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: oklch(0.1 0.02 150 / 62%);
+  cursor: pointer;
+}
+
+.factory-modal {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: min(720px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--card-foreground);
+  box-shadow: 0 24px 64px oklch(0.12 0.02 150 / 35%);
+}
+
+.factory-modal.is-wide {
+  width: min(1100px, 100%);
+}
+
+.factory-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  background: var(--secondary);
+}
+
+.factory-modal-header.is-dispatch {
+  background: var(--selection-bg-strong);
+}
+
+.factory-modal-header h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.factory-modal-body {
+  padding: 18px;
+  overflow: auto;
+}
+
+.factory-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 12px 18px 16px;
+}
+
+.factory-fleet-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.factory-fleet-chip {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--foreground);
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.factory-fleet-chip.is-selected,
+.factory-fleet-chip.is-unassigned.is-selected {
+  background: var(--foreground);
+  color: var(--background);
+  border-color: var(--foreground);
+}
+
+.factory-dispatch-table-wrap {
+  overflow: auto;
+}
+
+.factory-dispatch-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.factory-dispatch-table th,
+.factory-dispatch-table td {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.factory-dispatch-table th {
+  background: var(--secondary);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .factory-board-top,
+  .factory-board-days,
+  .factory-day-header,
+  .factory-board-footer {
+    grid-template-columns: 1fr;
+  }
+
+  .factory-board-top > .factory-board-notice,
+  .factory-board-top > button,
+  .factory-board-pager,
+  .factory-board-date {
+    justify-self: stretch;
+    text-align: center;
+  }
+
+  .factory-board-pager {
+    grid-column: auto;
+    justify-content: center;
+  }
+
+  .factory-day {
+    border-right: 0;
+    border-bottom: 1px solid oklch(0.32 0.02 150);
+  }
+}
+
 .placeholder-page p {
   max-width: 480px;
   margin-bottom: 20px;
