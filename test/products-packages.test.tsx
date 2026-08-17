@@ -11,7 +11,7 @@ import { ProductDetailPage } from "@/components/ProductDetailPage";
 import { ProductsListPage } from "@/components/ProductsListPage";
 import i18n from "@/i18n";
 import type { PackageDetail, PackageListResult } from "@/lib/packages";
-import type { ProductDetail, ProductListResult } from "@/lib/products";
+import { hasProductSku, type ProductDetail, type ProductListResult } from "@/lib/products";
 
 const productResult: ProductListResult = {
   total: 1,
@@ -164,6 +164,15 @@ const packageDetail: PackageDetail = {
   ],
   ungroupedProducts: [],
 };
+
+describe("hasProductSku", () => {
+  it("treats blank values as missing so incomplete Bubble rows can be hidden", () => {
+    expect(hasProductSku(null)).toBe(false);
+    expect(hasProductSku("")).toBe(false);
+    expect(hasProductSku("   ")).toBe(false);
+    expect(hasProductSku("CC-001")).toBe(true);
+  });
+});
 
 describe("Products catalog pages", () => {
   beforeEach(async () => {
