@@ -1113,6 +1113,7 @@ const resources = {
         sendError: "暫時無法送出留言",
         reply: "回復",
         replyTo: "回復 {{order}}",
+        emailReply: "email 回覆",
         thisNote: "此備註",
         cancelReply: "取消",
         tabs: {
@@ -3405,6 +3406,7 @@ const resources = {
         sendError: "The note could not be sent",
         reply: "Reply",
         replyTo: "Reply to {{order}}",
+        emailReply: "email reply",
         thisNote: "this note",
         cancelReply: "Cancel",
         tabs: {

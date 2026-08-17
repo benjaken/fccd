@@ -136,17 +136,25 @@ function MessageBubble({
   message,
   timestamp,
   replyLabel,
+  emailReplyLabel,
   onReply,
 }: {
   message: QuoteCustomerMessage;
   timestamp: string;
   replyLabel?: string;
+  emailReplyLabel?: string;
   onReply?: (message: QuoteCustomerMessage) => void;
 }) {
   return (
     <article className="quote-customers-message">
       {message.authorName ? <span>{message.authorName}</span> : null}
       <div className="quote-customers-message-bubble">
+        {message.replyEmail ? (
+          <small className="quote-customers-email-reply">
+            {emailReplyLabel}
+            <a href={`mailto:${message.replyEmail}`}>{message.replyEmail}</a>
+          </small>
+        ) : null}
         <strong>{message.body}</strong>
         {message.orderId ? (
           <Link
@@ -440,6 +448,7 @@ export function QuoteCustomersPage({
         body,
         authorName: profile?.user_name || profile?.email || null,
         orderId: replyTarget?.orderId ?? null,
+        replyToEmail: replyTarget ? panel.email : null,
       });
       setMessages((current) => ({
         ...(current ?? emptyQuoteCustomerMessages()),
@@ -763,11 +772,11 @@ export function QuoteCustomersPage({
               {replyTarget ? (
                 <div className="quote-customers-reply-target">
                   <span>
-                    {t("quoteCustomers.replyTo", {
-                      order:
-                        replyTarget.orderNumber || t("quoteCustomers.thisNote"),
-                    })}
-                    {` · ${replyTarget.body}`}
+                    {t("quoteCustomers.emailReply")}{" "}
+                    {panel?.kind === "messages" ? panel.email : ""}
+                    {replyTarget.orderNumber
+                      ? ` · ${replyTarget.orderNumber}`
+                      : ""}
                   </span>
                   <button
                     type="button"
@@ -863,6 +872,7 @@ export function QuoteCustomersPage({
                         ? t("quoteCustomers.reply")
                         : undefined
                     }
+                    emailReplyLabel={t("quoteCustomers.emailReply")}
                     onReply={
                       messageTab === "note" ? setReplyTarget : undefined
                     }
