@@ -228,6 +228,7 @@ describe("Delivery list page", () => {
     const createObjectURL = vi.fn(() => "blob:delivery-export");
     const revokeObjectURL = vi.fn();
     const click = vi.fn();
+    let downloadLink: HTMLAnchorElement | null = null;
     vi.stubGlobal("URL", {
       createObjectURL,
       revokeObjectURL,
@@ -237,6 +238,7 @@ describe("Delivery list page", () => {
       const element = originalCreateElement(tagName);
       if (tagName === "a") {
         element.click = click;
+        downloadLink = element as HTMLAnchorElement;
       }
       return element;
     });
@@ -278,6 +280,7 @@ describe("Delivery list page", () => {
     expect(csv).toContain("6918");
     expect(csv).toContain("Sun-Line");
     expect(click).toHaveBeenCalled();
+    expect(downloadLink?.download).toBe("送貨清單 - 2026-08-01 - 2026-08-17.csv");
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });

@@ -15,6 +15,7 @@ import {
   clockFromValue,
   DELIVERIES_PAGE_SIZE,
   downloadCsv,
+  deliveryExportFilename,
   feeSharePercent,
   deliveryOrderAmount,
   fetchDeliveries,
@@ -308,7 +309,7 @@ export function DeliveryListPage({
         },
       );
       downloadCsv(
-        `delivery-list-${startDate || "all"}-${endDate || "all"}.csv`,
+        deliveryExportFilename(t("deliveryList.title"), startDate, endDate),
         csv,
       );
     } catch (loadError) {
