@@ -310,6 +310,19 @@ describe("Delivery list page", () => {
     expect(source).not.toMatch(/type=["']date["']/);
   });
 
+  it("keeps the date, fleet, and method filters on the right", () => {
+    const stylesheet = readFileSync(
+      path.resolve(process.cwd(), "src/index.css"),
+      "utf8",
+    );
+    const block = stylesheet.slice(
+      stylesheet.indexOf(".delivery-list-toolbar {"),
+      stylesheet.indexOf(".delivery-order-cell {"),
+    );
+    expect(block).toContain("justify-content: flex-end");
+    expect(block).toContain("margin-left: auto");
+  });
+
   it("shows an actionable load error", async () => {
     const loadDeliveries = vi
       .fn()

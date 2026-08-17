@@ -2141,8 +2141,17 @@ button.product-tag[aria-pressed="true"] {
   font-weight: 750;
 }
 
+.delivery-list-toolbar {
+  justify-content: space-between;
+}
+
 .delivery-list-filters {
-  display: contents;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-left: auto;
 }
 
 .delivery-list-filters .date-range-picker {
