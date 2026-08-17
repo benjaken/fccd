@@ -9,7 +9,7 @@ import {
   Truck,
   WalletCards,
 } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
@@ -19,6 +19,13 @@ import {
   type OrderDetailResult,
   type ReadOnlyOrderDetail,
 } from "@/lib/order-details";
+import { kitchenCalendarReturnPath } from "@/lib/kitchen-calendar";
+import { kitchenOrdersReturnPath } from "@/lib/kitchen-orders";
+import {
+  DEFAULT_UNPAID_STATUS_COLOR,
+  orderDetailTags,
+  statusBadgeStyle,
+} from "@/lib/order-statuses";
 import { cn } from "@/lib/utils";
 
 type DetailLoader = typeof fetchOrderDetail;
@@ -51,6 +58,9 @@ function displayStatus(
   if (order.deliveryStatus === "待取貨") {
     return { label: labels.ready, tone: "green" };
   }
+  if (order.deliveryStatus === "已取" || order.deliveryStatus === "已取貨") {
+    return { label: labels.pickedUp, tone: "green" };
+  }
   if (order.deliveryStatus === "待接單" || order.deliveryStatus === "未派車隊") {
     return { label: labels.awaitingDriver, tone: "amber" };
   }
@@ -69,12 +79,24 @@ export function OrderDetailPage({
 }) {
   const { t, i18n } = useTranslation();
   const { id = "" } = useParams();
+  const [searchParams] = useSearchParams();
   const [result, setResult] = useState<OrderDetailResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const isQuote = documentType === "quote";
-  const backTo = isQuote ? "/quotes" : "/orders";
+  const calendarBack = kitchenCalendarReturnPath(
+    searchParams.get("from"),
+    searchParams.get("month"),
+  );
+  const kitchenBack = kitchenOrdersReturnPath(searchParams.get("from"));
+  const backTo =
+    calendarBack ?? kitchenBack ?? (isQuote ? "/quotes" : "/orders");
+  const backLabel = calendarBack
+    ? t("details.backToCalendar")
+    : kitchenBack
+      ? t("details.backToKitchen")
+      : t("details.back");
   const title = isQuote ? t("details.quoteTitle") : t("details.orderTitle");
   const currency = useMemo(
     () =>
@@ -145,10 +167,19 @@ export function OrderDetailPage({
         confirmed: t("orders.statuses.confirmed"),
         preparing: t("orders.statuses.preparing"),
         ready: t("orders.statuses.ready"),
+        pickedUp: t("orders.statuses.pickedUp"),
         shipping: t("orders.statuses.shipping"),
         completed: t("orders.statuses.completed"),
         awaitingDriver: t("dashboard.driverStatus"),
       });
+  const tags = orderDetailTags(
+    order.statuses,
+    canViewFinance ? order.outstanding : null,
+    {
+      name: t("details.unpaidTag"),
+      color: DEFAULT_UNPAID_STATUS_COLOR,
+    },
+  );
   const money = (value: number | null) =>
     value === null
       ? t("details.restricted")
@@ -162,13 +193,27 @@ export function OrderDetailPage({
         <div>
           <Link className="detail-back" to={backTo}>
             <ChevronLeft />
-            {t("details.back")}
+            {backLabel}
           </Link>
           <span className="eyebrow">{title}</span>
           <h1>{order.orderNumber || t("common.notSet")}</h1>
           <p>{order.companyName || order.customerName || t("common.notSet")}</p>
         </div>
-        <span className={cn("status-badge", status.tone)}>{status.label}</span>
+        <div
+          className="heading-actions order-status-list"
+          aria-label={t("details.tags")}
+        >
+          <span className={cn("status-badge", status.tone)}>{status.label}</span>
+          {tags.map((tag) => (
+            <span
+              key={tag.name}
+              className={cn("status-badge", !tag.color && "red")}
+              style={statusBadgeStyle(tag.color)}
+            >
+              {tag.name}
+            </span>
+          ))}
+        </div>
       </header>
 
       <section className="detail-grid">

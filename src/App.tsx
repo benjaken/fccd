@@ -93,6 +93,8 @@ import { SellingPriceCostPage } from "@/components/SellingPriceCostPage";
 import { CalculationSettingsPage } from "@/components/CalculationSettingsPage";
 import { MeatCustomersPage } from "@/components/MeatCustomersPage";
 import { MeatYieldErrorsPage } from "@/components/MeatYieldErrorsPage";
+import { KitchenCalendarPage } from "@/components/KitchenCalendarPage";
+import { KitchenOrdersPage } from "@/components/KitchenOrdersPage";
 import { KitchenSettingsPage } from "@/components/KitchenSettingsPage";
 import { OrderStatusesPage } from "@/components/OrderStatusesPage";
 import { SalesPartnersPage } from "@/components/SalesPartnersPage";
@@ -190,12 +192,6 @@ const secondaryNav: Record<string, NavItem[]> = {
       permissionKey: "orders.pending",
     },
     {
-      key: "productionCalendar",
-      to: "/orders/production",
-      icon: CalendarDays,
-      permissionKey: "orders.production",
-    },
-    {
       key: "payments",
       to: "/orders/payments",
       icon: HandCoins,
@@ -209,10 +205,16 @@ const secondaryNav: Record<string, NavItem[]> = {
     },
     {
       key: "orderSettings",
-      to: "/orders/settings/statuses",
+      to: "/orders/settings/sale-partners",
       icon: Settings,
       permissionKey: "orders.settings",
       children: [
+        {
+          key: "salePartners",
+          to: "/orders/settings/sale-partners",
+          icon: Handshake,
+          permissionKey: "orders.settings.sale_partners",
+        },
         {
           key: "orderStatuses",
           to: "/orders/settings/statuses",
@@ -236,12 +238,6 @@ const secondaryNav: Record<string, NavItem[]> = {
           to: "/orders/settings/payments",
           icon: CircleDollarSign,
           permissionKey: "orders.settings",
-        },
-        {
-          key: "salePartners",
-          to: "/orders/settings/sale-partners",
-          icon: Handshake,
-          permissionKey: "orders.settings.sale_partners",
         },
       ],
     },
@@ -470,7 +466,6 @@ const SECTION_CHILD_KEYS: Record<string, string[]> = {
   orders: [
     "orders.new",
     "orders.pending",
-    "orders.production",
     "orders.payments",
     "orders.drivers",
     "orders.unpaid",
@@ -1065,8 +1060,12 @@ function OperationsShell() {
                 element={<PaymentsListPage canViewFinance={canViewFinance} />}
               />
               <Route
+                path="/orders/production"
+                element={<Navigate to="/kitchen/calendar" replace />}
+              />
+              <Route
                 path="/orders/settings"
-                element={<Navigate to="/orders/settings/statuses" replace />}
+                element={<Navigate to="/orders/settings/sale-partners" replace />}
               />
               <Route
                 path="/orders/settings/statuses"
@@ -1180,6 +1179,14 @@ function OperationsShell() {
               <Route
                 path="/frozen/yield-errors"
                 element={<MeatYieldErrorsPage />}
+              />
+              <Route
+                path="/kitchen"
+                element={<KitchenOrdersPage />}
+              />
+              <Route
+                path="/kitchen/calendar"
+                element={<KitchenCalendarPage />}
               />
               <Route
                 path="/delivery"

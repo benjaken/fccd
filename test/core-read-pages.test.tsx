@@ -32,6 +32,7 @@ const detail = {
     grandTotal: 1610,
     outstanding: 1610,
     updatedAt: "2026-08-13T00:00:00.000Z",
+    statuses: [],
   },
   lines: [
     {
@@ -78,6 +79,45 @@ describe("Core read pages", () => {
     expect(screen.getAllByText("香港女童軍總會")).toHaveLength(2);
     expect(screen.getByText("測試套餐")).toBeInTheDocument();
     expect(screen.getAllByText("HK$1,610")).toHaveLength(3);
+    expect(screen.getByText("待取貨")).toBeInTheDocument();
+    expect(screen.getByText("未完成付款")).toBeInTheDocument();
+  });
+
+  it("shows the unpaid tag on delivered orders that still have outstanding", async () => {
+    render(
+      <MemoryRouter initialEntries={["/orders/order-1"]}>
+        <Routes>
+          <Route
+            path="/orders/:id"
+            element={
+              <OrderDetailPage
+                documentType="order"
+                canViewFinance
+                loadDetail={async () => ({
+                  ...detail,
+                  order: {
+                    ...detail.order,
+                    orderNumber: "B-1516",
+                    deliveryStatus: "己送達",
+                    outstanding: 2450,
+                    statuses: [
+                      { name: "未完成付款", color: "#ff0000" },
+                      { name: "廚房備註", color: "#979899" },
+                    ],
+                  },
+                })}
+              />
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "B-1516" }))
+      .toBeInTheDocument();
+    expect(screen.getByText("已送達")).toBeInTheDocument();
+    expect(screen.getByText("未完成付款")).toBeInTheDocument();
+    expect(screen.getByText("廚房備註")).toBeInTheDocument();
   });
 
   it("hides payment data when finance access is absent", async () => {

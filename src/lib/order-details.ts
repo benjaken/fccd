@@ -1,4 +1,9 @@
 import { supabase } from "@/lib/supabase";
+import {
+  fetchOrderStatusCatalog,
+  resolveOrderStatuses,
+  type OrderStatusView,
+} from "@/lib/order-statuses";
 
 export type ReadOnlyOrderDetail = {
   id: string;
@@ -26,6 +31,7 @@ export type ReadOnlyOrderDetail = {
   grandTotal: number | null;
   outstanding: number | null;
   updatedAt: string;
+  statuses: OrderStatusView[];
 };
 
 export type DetailLine = {
@@ -86,7 +92,7 @@ export type OrderDetailResult = {
 };
 
 const fields =
-  "id,document_type,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,shipping_address_snapshot,customer_note_snapshot,quote_status,quote_description_snapshot,delivery_terms_snapshot,delivery_at,ship_out_time,delivery_status,is_sent_to_factory,factory_date,factory_packing_note,currency,discount_amount,shipping_fee,grand_total,outstanding,updated_at";
+  "id,document_type,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,shipping_address_snapshot,customer_note_snapshot,quote_status,quote_description_snapshot,delivery_terms_snapshot,delivery_at,ship_out_time,delivery_status,is_sent_to_factory,factory_date,factory_packing_note,currency,discount_amount,shipping_fee,grand_total,outstanding,updated_at,order_status_legacy_ids";
 
 function decimal(value: string | number | null) {
   return value === null ? null : Number.parseFloat(String(value));
@@ -97,13 +103,16 @@ export async function fetchOrderDetail(
   documentType: "order" | "quote",
   canViewFinance: boolean,
 ): Promise<OrderDetailResult> {
-  const { data, error } = await supabase
-    .from("orders")
-    .select(fields)
-    .eq("id", id)
-    .eq("document_type", documentType)
-    .is("archived_at", null)
-    .maybeSingle();
+  const [{ data, error }, catalog] = await Promise.all([
+    supabase
+      .from("orders")
+      .select(fields)
+      .eq("id", id)
+      .eq("document_type", documentType)
+      .is("archived_at", null)
+      .maybeSingle(),
+    fetchOrderStatusCatalog(),
+  ]);
   if (error) throw error;
   if (!data) {
     return {
@@ -226,6 +235,7 @@ export async function fetchOrderDetail(
     grandTotal: canViewFinance ? decimal(data.grand_total) : null,
     outstanding: canViewFinance ? decimal(data.outstanding) : null,
     updatedAt: data.updated_at,
+    statuses: resolveOrderStatuses(data.order_status_legacy_ids, catalog),
   } satisfies ReadOnlyOrderDetail;
 
   return {

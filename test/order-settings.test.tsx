@@ -196,12 +196,9 @@ describe("Order settings tags page", () => {
   it("lists migrated order tags with Active toggles", async () => {
     renderSettings();
 
-    expect(await screen.findByRole("heading", { name: "設定" })).toBeInTheDocument();
-    expect(screen.getByRole("navigation", { name: "訂單設定分類" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "訂單標籤" })).toHaveAttribute(
-      "href",
-      "/orders/settings/tags",
-    );
+    expect(await screen.findByRole("heading", { name: "訂單標籤" })).toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "訂單設定分類" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "送貨方式" })).not.toBeInTheDocument();
 
     const table = within(await screen.findByRole("table"));
     expect(table.getByText("訂單標籤")).toBeInTheDocument();
@@ -265,14 +262,13 @@ describe("Order settings tags page", () => {
     confirmSpy.mockRestore();
   });
 
-  it("shows coming soon for other settings tabs", async () => {
+  it("shows coming soon for unimplemented settings routes", async () => {
     renderSettings("statuses");
 
     expect(
       await screen.findByText("此設定稍後開放"),
     ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "訂單狀態" })).toHaveClass("active");
-    expect(screen.queryByRole("link", { name: "爐位類別" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "訂單設定分類" })).not.toBeInTheDocument();
   });
 });
 
@@ -294,13 +290,10 @@ describe("Order settings shipping methods page", () => {
   it("lists delivery methods with address and Active toggles", async () => {
     renderSettings("shipping");
 
-    expect(screen.getByRole("link", { name: "送貨方式" })).toHaveAttribute(
-      "href",
-      "/orders/settings/shipping",
-    );
-    expect(screen.getByRole("link", { name: "送貨方式" })).toHaveClass("active");
+    expect(await screen.findByRole("heading", { name: "送貨方式" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "添加" })).toBeInTheDocument();
     expect(screen.queryByText("此設定稍後開放")).not.toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "訂單設定分類" })).not.toBeInTheDocument();
 
     await screen.findByText("車邊交收");
     const table = within(screen.getByRole("table"));
@@ -439,13 +432,10 @@ describe("Order settings payment methods page", () => {
   it("lists payment methods with Active toggles and edit actions", async () => {
     renderSettings("payments");
 
-    expect(screen.getByRole("link", { name: "付款方式" })).toHaveAttribute(
-      "href",
-      "/orders/settings/payments",
-    );
-    expect(screen.getByRole("link", { name: "付款方式" })).toHaveClass("active");
+    expect(await screen.findByRole("heading", { name: "付款方式" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "添加" })).toBeInTheDocument();
     expect(screen.queryByText("此設定稍後開放")).not.toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "訂單設定分類" })).not.toBeInTheDocument();
 
     await screen.findByText("QFpay (Alipay / Wechat Pay)");
     const table = within(screen.getByRole("table"));
@@ -540,14 +530,13 @@ describe("Order settings i18n", () => {
     );
 
     renderSettings("payments");
-    expect(await screen.findByRole("heading", { name: "設定" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "付款方式" })).toHaveClass("active");
+    expect(await screen.findByRole("heading", { name: "付款方式" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "添加" })).toBeInTheDocument();
     expect(await screen.findByText("啟用")).toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "訂單設定分類" })).not.toBeInTheDocument();
 
     await i18n.changeLanguage("en");
-    expect(await screen.findByRole("heading", { name: "Settings" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Payment method" })).toHaveClass("active");
+    expect(await screen.findByRole("heading", { name: "Payment method" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Add" })).toBeInTheDocument();
     expect(screen.getByText("Active")).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Payment method" })).toBeInTheDocument();
@@ -556,15 +545,13 @@ describe("Order settings i18n", () => {
   it("translates the delivery-method table between zh-HK and English", async () => {
     renderSettings("shipping");
     await screen.findByText("車邊交收");
-    expect(screen.getByRole("link", { name: "送貨方式" })).toHaveClass("active");
+    expect(screen.getByRole("heading", { name: "送貨方式" })).toBeInTheDocument();
     expect(screen.getByText("運送方式")).toBeInTheDocument();
     expect(screen.getByText("地址")).toBeInTheDocument();
     expect(screen.getByText("啟用")).toBeInTheDocument();
 
     await i18n.changeLanguage("en");
-    expect(await screen.findByRole("link", { name: "Shipping method" })).toHaveClass(
-      "active",
-    );
+    expect(await screen.findByRole("heading", { name: "Shipping method" })).toBeInTheDocument();
     expect(screen.getByText("Delivery method")).toBeInTheDocument();
     expect(screen.getByText("Address")).toBeInTheDocument();
     expect(screen.getByText("Active")).toBeInTheDocument();

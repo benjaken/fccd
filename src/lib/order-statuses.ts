@@ -163,3 +163,130 @@ export async function archiveOrderStatus(statusId: string): Promise<void> {
   });
   if (error) throw error;
 }
+
+export type ConfiguredOrderStatus = {
+  id: string;
+  legacyId: string;
+  name: string;
+  color: string | null;
+  sortOrder: number | null;
+};
+
+export type OrderStatusView = {
+  name: string;
+  color: string | null;
+};
+
+type CatalogStatusRow = {
+  id: string;
+  legacy_id: string;
+  name: string;
+  color: string | null;
+  sort_order: number | null;
+};
+
+function mapCatalogRow(row: CatalogStatusRow): ConfiguredOrderStatus {
+  return {
+    id: row.id,
+    legacyId: row.legacy_id,
+    name: row.name,
+    color: row.color,
+    sortOrder: row.sort_order,
+  };
+}
+
+function statusSort(
+  left: Pick<ConfiguredOrderStatus, "name" | "sortOrder">,
+  right: Pick<ConfiguredOrderStatus, "name" | "sortOrder">,
+) {
+  const leftOrder = left.sortOrder ?? Number.MAX_SAFE_INTEGER;
+  const rightOrder = right.sortOrder ?? Number.MAX_SAFE_INTEGER;
+  if (leftOrder !== rightOrder) return leftOrder - rightOrder;
+  return left.name.localeCompare(right.name, "zh-Hant");
+}
+
+export async function fetchOrderStatusCatalog(): Promise<ConfiguredOrderStatus[]> {
+  const { data, error } = await supabase
+    .from("order_statuses")
+    .select("id,legacy_id,name,color,sort_order")
+    .is("archived_at", null)
+    .order("sort_order", { ascending: true, nullsFirst: false })
+    .order("name");
+  if (error) throw error;
+
+  return ((data ?? []) as CatalogStatusRow[]).map(mapCatalogRow);
+}
+
+export function resolveOrderStatuses(
+  legacyIds: readonly string[] | null | undefined,
+  catalog: readonly ConfiguredOrderStatus[],
+): OrderStatusView[] {
+  if (!legacyIds?.length) return [];
+
+  const byLegacyId = new Map(
+    catalog.map((status) => [status.legacyId, status]),
+  );
+  const seen = new Set<string>();
+  const matched: ConfiguredOrderStatus[] = [];
+
+  for (const legacyId of legacyIds) {
+    const status = byLegacyId.get(legacyId);
+    if (!status || seen.has(status.id)) continue;
+    seen.add(status.id);
+    matched.push(status);
+  }
+
+  return matched.sort(statusSort).map((status) => ({
+    name: status.name,
+    color: status.color,
+  }));
+}
+
+export function orderStatusLabel(
+  statuses: readonly OrderStatusView[] | null | undefined,
+  empty = "",
+) {
+  const names = (statuses ?? [])
+    .map((status) => status.name.trim())
+    .filter(Boolean);
+  return names.join(" ") || empty;
+}
+
+export function statusBadgeStyle(color: string | null | undefined) {
+  if (!color) return undefined;
+  return {
+    background: `color-mix(in srgb, ${color} 18%, var(--card))`,
+    color,
+  };
+}
+
+const UNPAID_STATUS_NAMES = new Set(["未完成付款", "未付款"]);
+export const DEFAULT_UNPAID_STATUS_COLOR = "#ef4444";
+
+export function isUnpaidOrderStatusName(name: string | null | undefined) {
+  return UNPAID_STATUS_NAMES.has((name ?? "").trim());
+}
+
+export function orderDetailTags(
+  statuses: readonly OrderStatusView[] | null | undefined,
+  outstanding: number | null | undefined,
+  unpaidTag: OrderStatusView = {
+    name: "未完成付款",
+    color: DEFAULT_UNPAID_STATUS_COLOR,
+  },
+): OrderStatusView[] {
+  const tags = [...(statuses ?? [])];
+  const unpaidIndex = tags.findIndex((tag) =>
+    isUnpaidOrderStatusName(tag.name),
+  );
+
+  if (outstanding === null || outstanding === undefined) {
+    return tags;
+  }
+  if (outstanding > 0) {
+    if (unpaidIndex >= 0) return tags;
+    return [...tags, unpaidTag];
+  }
+  if (unpaidIndex < 0) return tags;
+  return tags.filter((_, index) => index !== unpaidIndex);
+}

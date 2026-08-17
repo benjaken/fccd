@@ -1,4 +1,9 @@
 import { supabase } from "@/lib/supabase";
+import {
+  fetchOrderStatusCatalog,
+  resolveOrderStatuses,
+  type OrderStatusView,
+} from "@/lib/order-statuses";
 
 export const ORDERS_PAGE_SIZE = 15;
 
@@ -6,15 +11,66 @@ export type OrderPreset =
   | "all"
   | "pending"
   | "unpaid"
-  | "delivered-unpaid";
+  | "delivered-unpaid"
+  | "kitchen";
 
 export type OrderStatusFilter =
   | ""
   | "confirmed"
   | "preparing"
   | "ready"
+  | "pickedUp"
+  | "awaitingDriver"
   | "shipping"
   | "completed";
+
+export type OperationalOrderStatus = Exclude<OrderStatusFilter, "">;
+
+const LATER_KITCHEN_DELIVERY_STATUSES = [
+  "己送達",
+  "已送達",
+  "送貨途中",
+  "待取貨",
+  "已取",
+  "已取貨",
+  "待接單",
+] as const;
+
+export function isOrderDelivered(deliveryStatus: string | null | undefined) {
+  return deliveryStatus === "己送達" || deliveryStatus === "已送達";
+}
+
+export function isOrderPickedUp(deliveryStatus: string | null | undefined) {
+  return deliveryStatus === "已取" || deliveryStatus === "已取貨";
+}
+
+export function operationalOrderStatus(order: {
+  deliveryStatus: string | null;
+  isSentToFactory: boolean | null;
+}): OperationalOrderStatus {
+  if (isOrderDelivered(order.deliveryStatus)) {
+    return "completed";
+  }
+  if (order.deliveryStatus === "送貨途中") return "shipping";
+  if (order.deliveryStatus === "待取貨") return "ready";
+  if (isOrderPickedUp(order.deliveryStatus)) return "pickedUp";
+  if (
+    order.deliveryStatus === "待接單" ||
+    order.deliveryStatus === "未派車隊"
+  ) {
+    return "confirmed";
+  }
+  if (order.isSentToFactory) return "preparing";
+  return "confirmed";
+}
+
+export function operationalOrderStatusTone(status: OperationalOrderStatus) {
+  if (status === "completed" || status === "ready" || status === "pickedUp") {
+    return "green";
+  }
+  if (status === "preparing") return "amber";
+  return "blue";
+}
 
 export type OrderListItem = {
   id: string;
@@ -22,6 +78,7 @@ export type OrderListItem = {
   customerName: string | null;
   companyName: string | null;
   deliveryAt: string | null;
+  factoryDate: string | null;
   shipOutTime: string | null;
   deliveryStatus: string | null;
   isSentToFactory: boolean | null;
@@ -29,6 +86,7 @@ export type OrderListItem = {
   outstanding: number | null;
   currency: string;
   createdAt: string;
+  statuses: OrderStatusView[];
 };
 
 export type OrderListResult = {
@@ -50,6 +108,7 @@ type OrderRow = {
   customer_name_snapshot: string | null;
   company_name_snapshot: string | null;
   delivery_at: string | null;
+  factory_date: string | null;
   ship_out_time: string | null;
   delivery_status: string | null;
   is_sent_to_factory: boolean | null;
@@ -58,6 +117,7 @@ type OrderRow = {
   currency: string | null;
   bubble_created_at: string | null;
   created_at: string;
+  order_status_legacy_ids: string[] | null;
 };
 
 function safeSearchTerm(value: string) {
@@ -79,7 +139,7 @@ function applyStatusFilter<
     in: (column: string, values: readonly unknown[]) => T;
     or: (filters: string) => T;
   },
->(query: T, status: OrderStatusFilter) {
+>(query: T, status: OrderStatusFilter, preset: OrderPreset) {
   switch (status) {
     case "completed":
       return query.in("delivery_status", ["己送達", "已送達"]);
@@ -87,10 +147,21 @@ function applyStatusFilter<
       return query.eq("delivery_status", "送貨途中");
     case "ready":
       return query.eq("delivery_status", "待取貨");
-    case "preparing":
-      return query.eq("is_sent_to_factory", true).or(
-        'delivery_status.is.null,delivery_status.not.in.("己送達","已送達","送貨途中","待取貨")',
+    case "pickedUp":
+      return query.in("delivery_status", ["已取", "已取貨"]);
+    case "awaitingDriver":
+      return query.eq("delivery_status", "待接單");
+    case "preparing": {
+      const excluded =
+        preset === "kitchen"
+          ? LATER_KITCHEN_DELIVERY_STATUSES
+          : (["己送達", "已送達", "送貨途中", "待取貨", "已取", "已取貨"] as const);
+      const next =
+        preset === "kitchen" ? query : query.eq("is_sent_to_factory", true);
+      return next.or(
+        `delivery_status.is.null,delivery_status.not.in.("${excluded.join('","')}")`,
       );
+    }
     case "confirmed":
       return query
         .or("delivery_status.is.null,delivery_status.in.(未派車隊,待接單)")
@@ -110,8 +181,8 @@ export async function fetchOrders({
   const start = (page - 1) * ORDERS_PAGE_SIZE;
   const end = start + ORDERS_PAGE_SIZE - 1;
   const selectedFields: string = canViewFinance
-    ? "id,order_number,customer_name_snapshot,company_name_snapshot,delivery_at,ship_out_time,delivery_status,is_sent_to_factory,currency,bubble_created_at,created_at,grand_total,outstanding"
-    : "id,order_number,customer_name_snapshot,company_name_snapshot,delivery_at,ship_out_time,delivery_status,is_sent_to_factory,currency,bubble_created_at,created_at";
+    ? "id,order_number,customer_name_snapshot,company_name_snapshot,delivery_at,factory_date,ship_out_time,delivery_status,is_sent_to_factory,currency,bubble_created_at,created_at,grand_total,outstanding,order_status_legacy_ids"
+    : "id,order_number,customer_name_snapshot,company_name_snapshot,delivery_at,factory_date,ship_out_time,delivery_status,is_sent_to_factory,currency,bubble_created_at,created_at,order_status_legacy_ids";
   let query = supabase
     .from("orders")
     .select(selectedFields, { count: "exact" })
@@ -129,7 +200,9 @@ export async function fetchOrders({
     );
   }
 
-  if (preset === "unpaid") {
+  if (preset === "kitchen") {
+    query = query.eq("is_sent_to_factory", true);
+  } else if (preset === "unpaid") {
     query = query.gt("outstanding", 0);
   } else if (preset === "delivered-unpaid") {
     query = query
@@ -137,9 +210,12 @@ export async function fetchOrders({
       .gt("outstanding", 0);
   }
 
-  query = applyStatusFilter(query, status);
+  query = applyStatusFilter(query, status, preset);
 
-  const { data, count, error } = await query;
+  const [{ data, count, error }, catalog] = await Promise.all([
+    query,
+    fetchOrderStatusCatalog(),
+  ]);
   if (error) throw error;
 
   return {
@@ -149,6 +225,7 @@ export async function fetchOrders({
       customerName: row.customer_name_snapshot,
       companyName: row.company_name_snapshot,
       deliveryAt: row.delivery_at,
+      factoryDate: row.factory_date,
       shipOutTime: row.ship_out_time,
       deliveryStatus: row.delivery_status,
       isSentToFactory: row.is_sent_to_factory,
@@ -156,6 +233,7 @@ export async function fetchOrders({
       outstanding: optionalAmount(row.outstanding),
       currency: row.currency || "HKD",
       createdAt: row.bubble_created_at || row.created_at,
+      statuses: resolveOrderStatuses(row.order_status_legacy_ids, catalog),
     })),
     total: count ?? 0,
   };

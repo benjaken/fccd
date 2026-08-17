@@ -1746,6 +1746,18 @@ button.product-tag[aria-pressed="true"] {
   }
 }
 
+.order-status-list {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.detail-page .heading-actions.order-status-list {
+  justify-content: flex-end;
+  max-width: min(100%, 28rem);
+}
+
 .status-badge {
   display: inline-flex;
   align-items: center;
@@ -1807,13 +1819,15 @@ button.product-tag[aria-pressed="true"] {
 }
 
 .quotes-page,
-.orders-page {
+.orders-page,
+.kitchen-orders-page {
   display: grid;
   gap: 20px;
 }
 
 .quotes-page,
-.orders-page {
+.orders-page,
+.kitchen-orders-page {
   grid-template-rows: auto minmax(0, 1fr);
   height: calc(
     100dvh - var(--topbar-height) - var(--workspace-height) - 76px
@@ -1824,6 +1838,7 @@ button.product-tag[aria-pressed="true"] {
 
 .quotes-page .page-heading,
 .orders-page .page-heading,
+.kitchen-orders-page .page-heading,
 .delivery-list-page .page-heading {
   margin-bottom: 0;
 }
@@ -1857,6 +1872,292 @@ button.product-tag[aria-pressed="true"] {
   gap: 16px;
   padding: 16px 18px;
   border-bottom: 1px solid var(--border);
+}
+
+.kitchen-calendar-page {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 20px;
+  height: calc(
+    100dvh - var(--topbar-height) - var(--workspace-height) - 76px
+  );
+  min-height: 560px;
+  overflow: hidden;
+}
+
+.kitchen-calendar-page .page-heading {
+  margin-bottom: 0;
+}
+
+.kitchen-calendar-heading {
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+}
+
+.kitchen-calendar-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.kitchen-calendar-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.kitchen-calendar-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.kitchen-calendar-month {
+  margin: 0;
+  color: var(--foreground);
+  font-size: 18px;
+  font-weight: 720;
+  letter-spacing: -0.02em;
+  text-align: center;
+}
+
+.kitchen-calendar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  max-width: min(100%, 42rem);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kitchen-calendar-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 4px 10px 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--foreground);
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+.kitchen-calendar-legend .kitchen-calendar-dot {
+  width: 8px;
+  height: 8px;
+}
+
+.kitchen-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-rows: auto repeat(6, minmax(0, 1fr));
+  min-height: 0;
+  overflow: hidden;
+}
+
+.kitchen-calendar-weekday {
+  padding: 8px 6px;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 650;
+  text-align: center;
+}
+
+.kitchen-calendar-day {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  padding: 6px;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+}
+
+.kitchen-calendar-day:nth-child(7n) {
+  border-right: 0;
+}
+
+.kitchen-calendar-day.outside {
+  background: color-mix(in oklch, var(--muted) 70%, var(--card));
+  color: var(--muted-foreground);
+}
+
+.kitchen-calendar-day.is-today {
+  background: var(--selection-bg);
+}
+
+.kitchen-calendar-date {
+  align-self: flex-end;
+  min-width: 28px;
+  margin: 0;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 22px;
+  text-align: right;
+}
+
+.kitchen-calendar-date:hover,
+.kitchen-calendar-date:focus-visible {
+  background: var(--selection-bg-strong);
+}
+
+.kitchen-calendar-events {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+  margin-top: 2px;
+  overflow: hidden;
+}
+
+.kitchen-calendar-event,
+.kitchen-calendar-more {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 6px;
+  min-width: 0;
+  min-height: 22px;
+  padding: 2px 4px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 14px;
+  font-weight: 650;
+  text-align: left;
+}
+
+.kitchen-calendar-more {
+  display: flex;
+  align-items: center;
+}
+
+.kitchen-calendar-event:hover,
+.kitchen-calendar-more:hover {
+  background: color-mix(in oklch, var(--accent) 55%, transparent);
+}
+
+.kitchen-calendar-event .kitchen-calendar-dot {
+  margin-top: 7px;
+}
+
+.kitchen-calendar-event-copy,
+.kitchen-calendar-more {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kitchen-calendar-more {
+  color: var(--primary);
+  font-weight: 720;
+}
+
+.kitchen-calendar-event-skeleton {
+  display: block;
+  height: 18px;
+  margin: 2px 0;
+  border-radius: 5px;
+  background: color-mix(in oklch, var(--muted) 80%, var(--card));
+}
+
+.kitchen-calendar-dot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: oklch(0.48 0.15 250);
+}
+
+.kitchen-calendar-dot.amber {
+  background: oklch(0.72 0.16 75);
+}
+
+.kitchen-calendar-dot.red {
+  background: var(--destructive);
+}
+
+.dark .kitchen-calendar-dot {
+  background: oklch(0.72 0.12 250);
+}
+
+.dark .kitchen-calendar-dot.amber {
+  background: oklch(0.8 0.11 80);
+}
+
+.dark .kitchen-calendar-dot.red {
+  background: oklch(0.78 0.12 25);
+}
+
+.kitchen-calendar-empty-day {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+
+.kitchen-calendar-day-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kitchen-calendar-day-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--background);
+}
+
+.kitchen-calendar-day-item:hover {
+  border-color: color-mix(in oklch, var(--primary) 38%, var(--border));
+  background: var(--card);
+}
+
+.kitchen-calendar-day-copy {
+  display: grid;
+  min-width: 0;
+}
+
+.kitchen-calendar-day-item strong {
+  overflow: hidden;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kitchen-calendar-day-item small {
+  overflow: hidden;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .yield-errors-page .orders-panel {
@@ -5071,10 +5372,6 @@ button.product-tag[aria-pressed="true"] {
   overflow: hidden;
 }
 
-.order-statuses-page {
-  grid-template-rows: auto auto minmax(0, 1fr);
-}
-
 .seasoning-cost-page .page-heading,
 .calculation-settings-page .page-heading,
 .kitchen-settings-page .page-heading,
@@ -5354,7 +5651,7 @@ button.product-tag[aria-pressed="true"] {
 .order-settings-page {
   display: grid;
   gap: 16px;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   height: calc(
     100dvh - var(--topbar-height) - var(--workspace-height) - 76px
   );
@@ -5364,36 +5661,6 @@ button.product-tag[aria-pressed="true"] {
 
 .order-settings-page .page-heading {
   margin-bottom: 0;
-}
-
-.order-settings-tabs {
-  display: flex;
-  align-items: stretch;
-  gap: 4px;
-  overflow-x: auto;
-  border-bottom: 1px solid var(--border);
-}
-
-.order-settings-tabs a {
-  flex: 0 0 auto;
-  padding: 10px 14px;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-  color: var(--muted-foreground);
-  font-size: 14px;
-  font-weight: 700;
-  line-height: 22px;
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-.order-settings-tabs a:hover {
-  color: var(--foreground);
-}
-
-.order-settings-tabs a.active {
-  color: var(--foreground);
-  border-bottom-color: var(--primary);
 }
 
 .order-settings-panel {

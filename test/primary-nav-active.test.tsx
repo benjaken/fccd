@@ -115,6 +115,8 @@ describe("Primary navigation section matching", () => {
       "orders.settings.sale_partners",
     );
     expect(pageAccessKey("/kitchen/settings")).toBe("kitchen.settings");
+    expect(pageAccessKey("/kitchen/calendar")).toBe("kitchen.calendar");
+    expect(pageAccessKey("/orders/production")).toBe("kitchen.calendar");
     expect(pageAccessKey("/kitchen/settings/cook-types")).toBe(
       "kitchen.settings",
     );
@@ -134,7 +136,7 @@ describe("Primary navigation section matching", () => {
     expect(source.indexOf('path="/orders/settings/:tab"')).toBeLessThan(
       source.indexOf('path="/orders/:id"'),
     );
-    expect(source).toContain('to: "/orders/settings/statuses"');
+    expect(source).toContain('to: "/orders/settings/sale-partners"');
     expect(source).toContain('permissionKey: "orders.settings"');
   });
 
@@ -176,21 +178,25 @@ describe("Primary navigation section matching", () => {
     expect(pageAccessKey("/delivery")).toBe("delivery");
   });
 
-  it("nests Order Status and Sale Partner under Orders settings", () => {
+  it("nests Sale Partner first under Orders settings", () => {
     const source = readFileSync(
       path.resolve(process.cwd(), "src/App.tsx"),
       "utf8",
     );
     expect(source).toContain('key: "orderSettings"');
+    expect(source).toContain('key: "salePartners"');
     expect(source).toContain('key: "orderStatuses"');
     expect(source).toContain('key: "orderTags"');
     expect(source).toContain('key: "orderShippingMethods"');
     expect(source).toContain('key: "orderPaymentMethods"');
+    expect(source.indexOf('key: "salePartners"')).toBeLessThan(
+      source.indexOf('key: "orderStatuses"'),
+    );
+    expect(source).toContain('to: "/orders/settings/sale-partners"');
     expect(source).toContain('to: "/orders/settings/tags"');
     expect(source).toContain('to: "/orders/settings/shipping"');
     expect(source).toContain('to: "/orders/settings/payments"');
     expect(source).toContain('to: "/orders/settings/statuses"');
-    expect(source).toContain('to: "/orders/settings/sale-partners"');
     expect(source).toContain('permissionKey: "orders.settings"');
     expect(source).toContain('permissionKey: "orders.settings.statuses"');
     expect(source).toContain('permissionKey: "orders.settings.sale_partners"');

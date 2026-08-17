@@ -10,6 +10,8 @@ import { TablePagination } from "@/components/ui/table-pagination";
 import { useDeferredFilter } from "@/lib/use-deferred-filter";
 import {
   fetchOrders,
+  operationalOrderStatus,
+  operationalOrderStatusTone,
   ORDERS_PAGE_SIZE,
   type OrderListFilters,
   type OrderListItem,
@@ -37,34 +39,6 @@ const ORDER_SKELETON_COLUMNS = [
   { width: "5rem" },
   { width: "4.5rem", variant: "badge" as const },
 ];
-
-function orderStatus(
-  order: OrderListItem,
-  labels: Record<Exclude<OrderStatusFilter, "">, string>,
-) {
-  if (
-    order.deliveryStatus === "己送達" ||
-    order.deliveryStatus === "已送達"
-  ) {
-    return { label: labels.completed, tone: "green" };
-  }
-  if (order.deliveryStatus === "送貨途中") {
-    return { label: labels.shipping, tone: "blue" };
-  }
-  if (order.deliveryStatus === "待取貨") {
-    return { label: labels.ready, tone: "green" };
-  }
-  if (
-    order.deliveryStatus === "待接單" ||
-    order.deliveryStatus === "未派車隊"
-  ) {
-    return { label: labels.confirmed, tone: "blue" };
-  }
-  if (order.isSentToFactory) {
-    return { label: labels.preparing, tone: "amber" };
-  }
-  return { label: labels.confirmed, tone: "blue" };
-}
 
 export function OrdersListPage({
   preset = "all",
@@ -191,6 +165,8 @@ export function OrdersListPage({
     confirmed: t("orders.statuses.confirmed"),
     preparing: t("orders.statuses.preparing"),
     ready: t("orders.statuses.ready"),
+    pickedUp: t("orders.statuses.pickedUp"),
+    awaitingDriver: t("orders.statuses.awaitingDriver"),
     shipping: t("orders.statuses.shipping"),
     completed: t("orders.statuses.completed"),
   };
@@ -324,7 +300,13 @@ export function OrdersListPage({
                       label: t("orders.statuses.pending"),
                       tone: "amber",
                     }
-                  : orderStatus(order, statusLabels);
+                  : (() => {
+                      const statusKey = operationalOrderStatus(order);
+                      return {
+                        label: statusLabels[statusKey],
+                        tone: operationalOrderStatusTone(statusKey),
+                      };
+                    })();
               return (
                 <tr key={order.id}>
                   <td>
