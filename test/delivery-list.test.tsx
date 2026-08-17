@@ -439,4 +439,41 @@ describe("Delivery list page", () => {
       screen.queryByRole("combobox", { name: "選擇車隊" }),
     ).not.toBeInTheDocument();
   });
+
+  it("keeps later status steps gray while the delivery is still pending pickup", async () => {
+    const loadDeliveries = vi.fn().mockResolvedValue({
+      total: 1,
+      items: [{ ...surchargeItem, deliveryStatus: "待取貨" }],
+    });
+    const loadLookups = vi.fn().mockResolvedValue(lookups);
+
+    render(
+      <MemoryRouter>
+        <DeliveryListPage
+          loadDeliveries={loadDeliveries}
+          loadLookups={loadLookups}
+          now={new Date("2026-08-17T04:00:00+08:00")}
+        />
+      </MemoryRouter>,
+    );
+
+    const table = within(await screen.findByRole("table"));
+    const pickedUp = table.getByText("已取");
+    const delivered = table.getByText("已送達");
+    expect(pickedUp.className).toContain("is-picked");
+    expect(pickedUp.className).not.toContain("is-done");
+    expect(delivered.className).toContain("is-delivered");
+    expect(delivered.className).not.toContain("is-done");
+
+    const stylesheet = readFileSync(
+      path.resolve(process.cwd(), "src/index.css"),
+      "utf8",
+    );
+    const incomplete = stylesheet.slice(
+      stylesheet.indexOf(".delivery-status-steps .is-picked,"),
+      stylesheet.indexOf(".delivery-status-steps .is-picked.is-done"),
+    );
+    expect(incomplete).toContain("var(--muted)");
+    expect(incomplete).toContain("var(--muted-foreground)");
+  });
 });
