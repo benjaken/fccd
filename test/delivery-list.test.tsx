@@ -108,6 +108,7 @@ describe("Delivery list page", () => {
     expect(table.getByText("隧道費")).toBeInTheDocument();
     expect(table.getByText("HK$1,330")).toBeInTheDocument();
     expect(table.getByText("運費 90（佔7%）")).toBeInTheDocument();
+    expect(table.getAllByText("已送達 20:37").length).toBeGreaterThan(0);
     expect(table.getByRole("columnheader", { name: "操作" })).toBeTruthy();
     const viewImage = table.getByRole("button", { name: "查看圖片" });
     const noImage = table.getByRole("button", { name: "沒有送達照片" });
@@ -440,7 +441,7 @@ describe("Delivery list page", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("keeps later status steps gray while the delivery is still pending pickup", async () => {
+  it("shows only the current delivery status with its time", async () => {
     const loadDeliveries = vi.fn().mockResolvedValue({
       total: 1,
       items: [{
@@ -463,22 +464,36 @@ describe("Delivery list page", () => {
     );
 
     const table = within(await screen.findByRole("table"));
-    const pickedUp = table.getByText("已取");
-    const delivered = table.getByText("已送達");
-    expect(pickedUp.className).toContain("is-picked");
-    expect(pickedUp.className).not.toContain("is-done");
-    expect(delivered.className).toContain("is-delivered");
-    expect(delivered.className).not.toContain("is-done");
+    expect(table.getByText("待取貨")).toBeInTheDocument();
+    expect(table.queryByText("已取貨")).not.toBeInTheDocument();
+    expect(table.queryByText("已送達")).not.toBeInTheDocument();
+    expect(table.queryByRole("list")).not.toBeInTheDocument();
+  });
 
-    const stylesheet = readFileSync(
-      path.resolve(process.cwd(), "src/index.css"),
-      "utf8",
+  it("shows picked-up status with the pickup time", async () => {
+    const loadDeliveries = vi.fn().mockResolvedValue({
+      total: 1,
+      items: [{
+        ...surchargeItem,
+        deliveryStatus: "已取",
+        fulfilledAt: null,
+      }],
+    });
+    const loadLookups = vi.fn().mockResolvedValue(lookups);
+
+    render(
+      <MemoryRouter>
+        <DeliveryListPage
+          loadDeliveries={loadDeliveries}
+          loadLookups={loadLookups}
+          now={new Date("2026-08-17T04:00:00+08:00")}
+        />
+      </MemoryRouter>,
     );
-    const incomplete = stylesheet.slice(
-      stylesheet.indexOf(".delivery-status-steps .is-picked,"),
-      stylesheet.indexOf(".delivery-status-steps .is-picked.is-done"),
-    );
-    expect(incomplete).toContain("var(--muted)");
-    expect(incomplete).toContain("var(--muted-foreground)");
+
+    const table = within(await screen.findByRole("table"));
+    expect(table.getByText("已取貨 20:37")).toBeInTheDocument();
+    expect(table.queryByText("待取貨")).not.toBeInTheDocument();
+    expect(table.queryByText(/已送達/)).not.toBeInTheDocument();
   });
 });
