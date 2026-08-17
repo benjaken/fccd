@@ -132,8 +132,10 @@ HTTP 410.
 - Resolved 3,037 / 3,037 `deliveries.motorcade_legacy_id` values to
   `motorcade_id` UUID foreign keys.
 - Added database FK constraints and covering indexes for both relationships.
-- Bubble `Login_code` was intentionally not imported; `delivery_teams` has no
-  login-code column.
+- Bubble `Login_code` is now stored on `delivery_teams.login_code` (verbatim).
+  See `docs/migration/INTENTIONALLY_EXCLUDED.md`. The 2026-08-12 import
+  originally omitted this field. Backfill 2026-08-17: 5 motorcade rows
+  fetched, 3 non-empty codes copied, 2 teams have empty Bubble `Login_code`.
 - The one-time importer was disabled with HTTP 410.
 
 ## Phase D2 Meat / Inventory import

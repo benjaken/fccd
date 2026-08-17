@@ -1,11 +1,15 @@
 import { useEffect, useEffectEvent, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Plus, Tags, Trash2 } from "lucide-react";
-import { Navigate, NavLink, useParams } from "react-router-dom";
+import { Navigate, useParams } from "react-router-dom";
 
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { OrderPaymentMethodsTable } from "@/components/OrderPaymentMethodsTable";
 import { OrderShippingMethodsTable } from "@/components/OrderShippingMethodsTable";
+import {
+  OrderSettingsTabNav,
+  isOrderSettingsTab,
+} from "@/components/OrderSettingsTabNav";
 import { Button } from "@/components/ui/button";
 import { ListTable } from "@/components/ui/list-table";
 import { SidePanel } from "@/components/ui/side-panel";
@@ -27,16 +31,6 @@ import {
   fetchShippingMethods,
   updateShippingMethod,
 } from "@/lib/shipping-methods";
-import { cn } from "@/lib/utils";
-
-const ORDER_SETTINGS_TABS = [
-  "statuses",
-  "tags",
-  "shipping",
-  "payments",
-] as const;
-
-type OrderSettingsTab = (typeof ORDER_SETTINGS_TABS)[number];
 
 type TagsLoader = () => Promise<OrderTag[]>;
 type TagCreator = typeof createOrderTag;
@@ -48,10 +42,6 @@ const TAG_SKELETON_COLUMNS = [
   { width: "4.5rem" },
 ];
 const TAG_ACTION_SKELETON = { width: "2.5rem", variant: "action" as const };
-
-function isOrderSettingsTab(value: string | undefined): value is OrderSettingsTab {
-  return ORDER_SETTINGS_TABS.includes(value as OrderSettingsTab);
-}
 
 function CreateOrderTagPanel({
   open,
@@ -415,17 +405,7 @@ export function OrderSettingsPage({
         ) : null}
       </header>
 
-      <nav className="order-settings-tabs" aria-label={t("orderSettings.tabsNav")}>
-        {ORDER_SETTINGS_TABS.map((item) => (
-          <NavLink
-            key={item}
-            to={`/orders/settings/${item}`}
-            className={({ isActive }) => cn(isActive && "active")}
-          >
-            {t(`orderSettings.tabs.${item}`)}
-          </NavLink>
-        ))}
-      </nav>
+      <OrderSettingsTabNav />
 
       <article className="panel order-settings-panel">
         {activeTab === "tags" ? (

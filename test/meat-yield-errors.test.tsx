@@ -68,7 +68,7 @@ describe("Meat yield errors page", () => {
     );
 
     expect(
-      await screen.findByRole("heading", { name: "收成錯誤統計" }),
+      await screen.findByRole("heading", { name: "收成異常統計" }),
     ).toBeInTheDocument();
     expect(screen.getByText("計算規則")).toBeInTheDocument();
     expect(
@@ -179,7 +179,7 @@ describe("Meat yield errors page", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText("目前沒有收成錯誤")).toBeInTheDocument();
+    expect(await screen.findByText("目前沒有收成異常")).toBeInTheDocument();
     expect(screen.getByText("調整搜尋或篩選條件後再試。")).toBeInTheDocument();
     expect(document.querySelector(".operational-list-state svg")).not.toBeNull();
   });
@@ -210,7 +210,7 @@ describe("Meat yield errors page", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText("暫時無法載入收成錯誤統計")).toBeInTheDocument();
+    expect(await screen.findByText("暫時無法載入收成異常統計")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "重新載入" }));
 
     expect(

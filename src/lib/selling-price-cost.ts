@@ -1,3 +1,7 @@
+import {
+  averageMonthlyMeatPrices,
+  computeMonthlyMeatUnitPrices,
+} from "@/lib/monthly-meat-price";
 import { supabase } from "@/lib/supabase";
 
 export const SELLING_PRICE_COST_PAGE_SIZE = 15;
@@ -101,6 +105,14 @@ function includesIgnoreCase(haystack: string | null | undefined, needle: string)
   return (haystack ?? "")
     .toLocaleLowerCase("zh-HK")
     .includes(needle.toLocaleLowerCase("zh-HK"));
+}
+
+const YEAR_MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+export function isHongKongYearMonth(
+  value: string | null | undefined,
+): value is string {
+  return Boolean(value && YEAR_MONTH_PATTERN.test(value));
 }
 
 /** YYYY-MM key for a timestamp in Asia/Hong_Kong. */
@@ -465,4 +477,53 @@ export async function fetchSellingPriceCostRows(
       listPricePerKg: computed.listPricePerKg,
     };
   });
+}
+
+/** Arithmetic mean of 工場 / 店舖 prices for the rows that can be priced. */
+export function averageMonthlySupplyPrices(rows: SellingPriceCostRow[]) {
+  const priced = rows.flatMap((row) => {
+    if (
+      row.rawMeatWeightKg === null ||
+      row.inboundUnitPrice === null ||
+      row.yieldKg === null
+    ) {
+      return [];
+    }
+    const computed = computeMonthlyMeatUnitPrices({
+      outboundKg: row.rawMeatWeightKg,
+      inboundUnitPrice: row.inboundUnitPrice,
+      seasoningPerKg: row.seasoningPerKg,
+      yieldKg: row.yieldKg,
+      variationRate: row.variationRate,
+      markupRate: row.markupRate,
+    });
+    return computed ? [computed] : [];
+  });
+  return averageMonthlyMeatPrices(priced);
+}
+
+export type MonthlyMeatPricePushResult = {
+  status: string;
+  month_start?: string;
+  shop_price?: number;
+  room_price?: number;
+  shop_rows?: number;
+  room_rows?: number;
+  version_count?: number;
+};
+
+export async function pushSellingPriceMonthlyPrices(
+  rawMeatItemId: string,
+  yearMonth: string,
+): Promise<MonthlyMeatPricePushResult> {
+  if (!isHongKongYearMonth(yearMonth)) {
+    throw new Error("year month is required");
+  }
+
+  const { data, error } = await supabase.rpc("push_monthly_meat_prices", {
+    p_raw_meat_item_id: rawMeatItemId,
+    p_year_month: yearMonth,
+  });
+  if (error) throw error;
+  return (data ?? { status: "updated" }) as MonthlyMeatPricePushResult;
 }

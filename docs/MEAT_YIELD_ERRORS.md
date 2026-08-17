@@ -76,7 +76,7 @@ outbound), do not insert an error row.
 ## List page
 
 Route `/frozen/yield-errors` (page key `frozen.yield_errors`) is a Frozen Goods
-secondary-nav item labelled **收成錯誤統計**. It is a read-only operational list: `ListSearchBar`,
+secondary-nav item labelled **收成異常統計**. It is a read-only operational list: `ListSearchBar`,
 `ListTable`, and `TablePagination` at **15 rows per page**. The list panel shows
 the 預算收成 formula and the 15% listing rule. Search covers raw /
 prepared name snapshots and remarks; the extra filter is over / under.
@@ -89,5 +89,5 @@ outbound form calls `record_meat_yield_error_if_needed`.
 
 Empty and filtered-empty states keep the warning icon with:
 
-- **目前沒有收成錯誤**
+- **目前沒有收成異常**
 - 調整搜尋或篩選條件後再試。

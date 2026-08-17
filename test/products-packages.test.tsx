@@ -22,12 +22,20 @@ const productResult: ProductListResult = {
       name: "Roast Chicken",
       chineseName: "燒雞",
       price: 188,
+      priceMin: 168,
+      priceMax: 208,
       status: "Active",
       isActive: true,
+      isBentoRecommended: true,
       channelId: "channel-1",
       channelName: "Catering",
       productTypeId: "type-1",
       productTypeName: "西式熱盤",
+      cookTypeName: "焗",
+      bentoMainTypeName: "飯",
+      bentoColumnTypeName: "雙格",
+      mainIngredients: ["雞"],
+      specialRequests: ["不辣", "適合小朋友"],
       createdAt: "2026-08-12T01:00:00.000Z",
     },
   ],
@@ -35,6 +43,7 @@ const productResult: ProductListResult = {
 
 const productDetail: ProductDetail = {
   id: "product-1",
+  legacyId: "legacy-product-1",
   sku: "CC-001",
   name: "Roast Chicken",
   chineseName: "燒雞",
@@ -45,15 +54,36 @@ const productDetail: ProductDetail = {
   priceMax: 208,
   status: "Active",
   isActive: true,
-  isBentoRecommended: false,
+  isBentoRecommended: true,
   channelId: "channel-1",
   channelName: "Catering",
   productTypeId: "type-1",
   productTypeName: "西式熱盤",
+  cookTypeId: "cook-1",
   cookTypeName: "焗",
-  bentoMainTypeName: null,
-  bentoColumnTypeName: null,
-  collections: ["西式熱盤"],
+  bentoMainTypeId: "staple-1",
+  bentoMainTypeName: "飯",
+  bentoColumnTypeId: "column-1",
+  bentoColumnTypeName: "雙格",
+  collections: [{ id: "col-1", name: "西式熱盤", legacyId: "legacy-col-1" }],
+  premiumIngredients: [
+    {
+      id: "prem-1",
+      ingredientId: "ing-x",
+      name: "松露",
+      quantity: 1,
+      unitCost: 12,
+    },
+  ],
+  labels: [
+    {
+      id: "label-1",
+      displayA: "(雙格) 拿破崙",
+      displayB: "雞扒意粉",
+      packingMaterialId: null,
+      packingName: null,
+    },
+  ],
   packages: [
     {
       id: "package-1",
@@ -63,6 +93,18 @@ const productDetail: ProductDetail = {
     },
   ],
   updatedAt: "2026-08-12T01:00:00.000Z",
+};
+
+const productEditOptions = {
+  channels: [{ id: "channel-1", name: "Catering" }],
+  productTypes: [{ id: "type-1", name: "西式熱盤" }],
+  cookTypes: [{ id: "cook-1", name: "焗" }],
+  collections: [
+    { id: "col-1", name: "西式熱盤", legacyId: "legacy-col-1" },
+    { id: "col-2", name: "飲品", legacyId: "legacy-col-2" },
+  ],
+  packingMaterials: [{ id: "pack-1", name: "紙盒" }],
+  catalogIngredients: [{ id: "ing-x", name: "松露", legacyId: "legacy-ing-x" }],
 };
 
 const packageResult: PackageListResult = {
@@ -78,14 +120,15 @@ const packageResult: PackageListResult = {
       isActive: true,
       channelId: "channel-1",
       channelName: "Catering",
-      memberCount: 9,
-      createdAt: "2026-08-12T01:00:00.000Z",
+      choiceSetCount: 1,
+      createdAt: "2024-03-21T00:00:00.000Z",
     },
   ],
 };
 
 const packageDetail: PackageDetail = {
   id: "package-1",
+  legacyId: "legacy-package-1",
   sku: "CCFA0406",
   name: "Family Feast",
   chineseName: "精緻家庭美宴 (4-6人)",
@@ -95,27 +138,31 @@ const packageDetail: PackageDetail = {
   isActive: true,
   channelId: "channel-1",
   channelName: "Catering",
+  createdAt: "2024-03-21T00:00:00.000Z",
   updatedAt: "2026-08-12T01:00:00.000Z",
-  members: [
-    {
-      id: "member-1",
-      productId: "product-1",
-      quantity: 1,
-      addonPrice: 0,
-      isSelected: true,
-      productSku: "CC-001",
-      productName: "Roast Chicken",
-      productChineseName: "燒雞",
-      productPrice: 188,
-    },
-  ],
   choiceSets: [
     {
       id: "choice-1",
-      choiceType: "中式小菜",
+      legacyId: "legacy-choice-1",
+      name: "中式小菜",
       maximumChoices: 2,
+      products: [
+        {
+          id: "member-1",
+          productId: "product-1",
+          quantity: 1,
+          addonPrice: 0,
+          isSelected: true,
+          productSku: "CC-001",
+          productName: "Roast Chicken",
+          productChineseName: "燒雞",
+          productPrice: 188,
+          choiceSetLegacyId: "legacy-choice-1",
+        },
+      ],
     },
   ],
+  ungroupedProducts: [],
 };
 
 describe("Products catalog pages", () => {
@@ -148,6 +195,9 @@ describe("Products catalog pages", () => {
     expect(within(screen.getByRole("table")).getByText("Catering")).toBeInTheDocument();
     expect(within(screen.getByRole("table")).getByText("西式熱盤")).toBeInTheDocument();
     expect(screen.getByText("HK$188")).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "推介" })).toBeInTheDocument();
+    expect(screen.getByLabelText("已推薦")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "編輯" })).not.toBeInTheDocument();
   });
 
   it("shows table skeleton rows while products are loading", async () => {
@@ -297,6 +347,89 @@ describe("Products catalog pages", () => {
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
   });
 
+  it("lets an editor toggle recommendation and shows the edit action", async () => {
+    const user = userEvent.setup();
+    const loadProducts = vi.fn().mockResolvedValue(productResult);
+    const loadChannels = vi.fn().mockResolvedValue([
+      { id: "channel-1", name: "Catering" },
+    ]);
+    const updateRecommendation = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <MemoryRouter>
+        <ProductsListPage
+          canEdit
+          loadProducts={loadProducts}
+          loadChannels={loadChannels}
+          updateRecommendation={updateRecommendation}
+        />
+      </MemoryRouter>,
+    );
+
+    const star = await screen.findByRole("button", { name: "已推薦" });
+    await user.click(star);
+    await waitFor(() =>
+      expect(updateRecommendation).toHaveBeenCalledWith("product-1", false),
+    );
+    expect(screen.getByRole("button", { name: "未推薦" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "編輯" })).toBeInTheDocument();
+  });
+
+  it("opens product details when a list row is clicked", async () => {
+    const user = userEvent.setup();
+    const loadProducts = vi.fn().mockResolvedValue(productResult);
+    const loadChannels = vi.fn().mockResolvedValue([]);
+
+    render(
+      <MemoryRouter>
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <ProductsListPage
+                loadProducts={loadProducts}
+                loadChannels={loadChannels}
+              />
+            }
+          />
+          <Route path="/products/:id" element={<div>商品詳情頁</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const row = (await screen.findByText("CC-001")).closest("tr");
+    expect(row).not.toBeNull();
+    await user.click(row!);
+    expect(await screen.findByText("商品詳情頁")).toBeInTheDocument();
+  });
+
+  it("shows bento columns on the a-la-carte list", async () => {
+    const loadProducts = vi.fn().mockResolvedValue(productResult);
+    const loadChannels = vi.fn().mockResolvedValue([]);
+
+    render(
+      <MemoryRouter>
+        <ProductsListPage
+          preset="ala-carte"
+          loadProducts={loadProducts}
+          loadChannels={loadChannels}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "單點食物" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "主食" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "格數" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "主要食材" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "特別要求" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "烹煮方式" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "推介" })).toBeInTheDocument();
+    expect(screen.getByText("飯")).toBeInTheDocument();
+    expect(screen.getByText("雙格")).toBeInTheDocument();
+    expect(screen.getByText("雞")).toBeInTheDocument();
+    expect(screen.getByText("不辣")).toBeInTheDocument();
+  });
+
   it("renders product detail fields", async () => {
     render(
       <MemoryRouter initialEntries={["/products/product-1"]}>
@@ -319,6 +452,155 @@ describe("Products catalog pages", () => {
     expect(
       screen.getByRole("link", { name: "精緻家庭美宴 (4-6人)" }),
     ).toHaveAttribute("href", "/products/packages/package-1");
+    expect(screen.getByLabelText("已推薦")).toBeInTheDocument();
+    expect(screen.getByText("產品列表")).toBeInTheDocument();
+    expect(screen.getByText("名貴食材", { exact: false })).toBeInTheDocument();
+    expect(screen.getByText("松露")).toBeInTheDocument();
+    expect(screen.getByText("(雙格) 拿破崙")).toBeInTheDocument();
+    expect(screen.getAllByText("爐位類別").length).toBeGreaterThan(0);
+    expect(screen.queryByRole("link", { name: "編輯" })).not.toBeInTheDocument();
+  });
+
+  it("saves product edits from the detail form", async () => {
+    const user = userEvent.setup();
+    const saveProduct = vi.fn().mockResolvedValue(undefined);
+    const loadEditOptions = vi.fn().mockResolvedValue(productEditOptions);
+
+    render(
+      <MemoryRouter initialEntries={["/products/product-1/edit"]}>
+        <Routes>
+          <Route
+            path="/products/:id/edit"
+            element={
+              <ProductDetailPage
+                canEdit
+                loadDetail={async () => productDetail}
+                loadEditOptions={loadEditOptions}
+                saveProduct={saveProduct}
+              />
+            }
+          />
+          <Route path="/products/:id" element={<div>已返回詳情</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("button", { name: "確認更改" })).toBeInTheDocument();
+    const chineseName = await screen.findByLabelText("中文名稱");
+    await user.clear(chineseName);
+    await user.type(chineseName, "香草燒雞");
+    await user.click(screen.getByRole("button", { name: "確認更改" }));
+
+    await waitFor(() =>
+      expect(saveProduct).toHaveBeenCalledWith(
+        "product-1",
+        expect.objectContaining({
+          chineseName: "香草燒雞",
+          isBentoRecommended: true,
+          collectionIds: ["col-1"],
+        }),
+      ),
+    );
+    expect(await screen.findByText("已返回詳情")).toBeInTheDocument();
+  });
+
+  it("lets editors pick multiple product collections from a dropdown", async () => {
+    const user = userEvent.setup();
+    const saveProduct = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <MemoryRouter initialEntries={["/products/product-1/edit"]}>
+        <Routes>
+          <Route
+            path="/products/:id/edit"
+            element={
+              <ProductDetailPage
+                canEdit
+                loadDetail={async () => productDetail}
+                loadEditOptions={async () => productEditOptions}
+                saveProduct={saveProduct}
+              />
+            }
+          />
+          <Route path="/products/:id" element={<div>已返回詳情</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const picker = await screen.findByRole("combobox", { name: "產品集" });
+    expect(picker).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "飲品", pressed: false })).not.toBeInTheDocument();
+    await user.click(picker);
+    await user.click(await screen.findByRole("option", { name: "飲品" }));
+    await user.click(screen.getByRole("button", { name: "確認更改" }));
+
+    await waitFor(() =>
+      expect(saveProduct).toHaveBeenCalledWith(
+        "product-1",
+        expect.objectContaining({
+          collectionIds: ["col-1", "col-2"],
+        }),
+      ),
+    );
+  });
+
+  it("searches and adds a premium ingredient", async () => {
+    const user = userEvent.setup();
+    const addIngredient = vi.fn().mockResolvedValue(undefined);
+    const searchIngredients = vi.fn().mockResolvedValue([
+      { id: "ing-coke", name: "可口可樂", sku: "COKE", legacyId: "legacy-coke" },
+    ]);
+    const loadDetail = vi
+      .fn()
+      .mockResolvedValueOnce(productDetail)
+      .mockResolvedValueOnce({
+        ...productDetail,
+        premiumIngredients: [
+          ...productDetail.premiumIngredients,
+          {
+            id: "prem-2",
+            ingredientId: "ing-coke",
+            name: "可口可樂",
+            quantity: 1,
+            unitCost: 3.25,
+          },
+        ],
+      });
+
+    render(
+      <MemoryRouter initialEntries={["/products/product-1/edit"]}>
+        <Routes>
+          <Route
+            path="/products/:id/edit"
+            element={
+              <ProductDetailPage
+                canEdit
+                loadDetail={loadDetail}
+                loadEditOptions={async () => productEditOptions}
+                searchIngredients={searchIngredients}
+                addIngredient={addIngredient}
+              />
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const search = await screen.findByRole("combobox", {
+      name: "名貴食材",
+    });
+    await user.type(search, "可樂");
+
+    await waitFor(() =>
+      expect(searchIngredients).toHaveBeenCalledWith("可樂"),
+    );
+    await user.click(await screen.findByRole("option", { name: /可口可樂/ }));
+    await user.click(screen.getByRole("button", { name: "添加食材" }));
+
+    await waitFor(() =>
+      expect(addIngredient).toHaveBeenCalledWith("product-1", "ing-coke", 1),
+    );
+    expect(await screen.findByText("可口可樂")).toBeInTheDocument();
   });
 });
 
@@ -350,11 +632,71 @@ describe("Packages catalog pages", () => {
     ).toHaveAttribute("href", "/products/packages/package-1");
     expect(screen.getByText("CCFA0406")).toBeInTheDocument();
     expect(within(screen.getByRole("table")).getByText("Catering")).toBeInTheDocument();
-    expect(screen.getByText("9")).toBeInTheDocument();
-    expect(screen.getByText("HK$1,280")).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "品牌" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "套餐名稱" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "創建日期" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "類別數量" })).toBeInTheDocument();
+    expect(screen.getByText("3/21/2024")).toBeInTheDocument();
+    expect(screen.getByText("共 1 個結果")).toBeInTheDocument();
+    expect(screen.getByText("HK$1,280.00")).toBeInTheDocument();
   });
 
-  it("renders package members and choice sets", async () => {
+  it("opens package details when a list row is clicked", async () => {
+    const user = userEvent.setup();
+    const loadPackages = vi.fn().mockResolvedValue(packageResult);
+
+    render(
+      <MemoryRouter>
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <PackagesListPage
+                loadPackages={loadPackages}
+                loadChannels={async () => []}
+              />
+            }
+          />
+          <Route path="/products/packages/:id" element={<div>套餐詳情頁</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const row = (await screen.findByText("CCFA0406")).closest("tr");
+    expect(row).not.toBeNull();
+    await user.click(row!);
+    expect(await screen.findByText("套餐詳情頁")).toBeInTheDocument();
+  });
+
+  it("shows edit and delete actions for editors", async () => {
+    const user = userEvent.setup();
+    const loadPackages = vi.fn().mockResolvedValue(packageResult);
+
+    render(
+      <MemoryRouter>
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <PackagesListPage
+                canEdit
+                loadPackages={loadPackages}
+                loadChannels={async () => [{ id: "channel-1", name: "Catering" }]}
+              />
+            }
+          />
+          <Route path="/products/packages/:id/edit" element={<div>套餐編輯頁</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("button", { name: "編輯" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "刪除套餐" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "編輯" }));
+    expect(await screen.findByText("套餐編輯頁")).toBeInTheDocument();
+  });
+
+  it("renders nested package options on the detail page", async () => {
     render(
       <MemoryRouter initialEntries={["/products/packages/package-1"]}>
         <Routes>
@@ -376,7 +718,91 @@ describe("Packages catalog pages", () => {
       "href",
       "/products/product-1",
     );
-    expect(screen.getByText("Catering")).toBeInTheDocument();
-    expect(screen.getByText("CC-001")).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "類別名稱" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "附加價格" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "可選數量" })).toBeInTheDocument();
+    expect(screen.getByText("CCFA0406")).toBeInTheDocument();
+  });
+
+  it("searches and adds a product to a package option set", async () => {
+    const user = userEvent.setup();
+    const addChoiceSet = vi.fn().mockResolvedValue(undefined);
+    const addProduct = vi.fn().mockResolvedValue(undefined);
+    const searchProducts = vi.fn().mockResolvedValue([
+      { id: "product-2", name: "黑白胡椒蝦", sku: "SHRIMP", legacyId: "legacy-shrimp" },
+    ]);
+    const updatedDetail = {
+      ...packageDetail,
+      choiceSets: [
+        {
+          ...packageDetail.choiceSets[0],
+          products: [
+            ...packageDetail.choiceSets[0].products,
+            {
+              id: "member-2",
+              productId: "product-2",
+              quantity: 1,
+              addonPrice: 0,
+              isSelected: false,
+              productSku: "SHRIMP",
+              productName: "Pepper Shrimp",
+              productChineseName: "黑白胡椒蝦",
+              productPrice: 0,
+              choiceSetLegacyId: "legacy-choice-1",
+            },
+          ],
+        },
+      ],
+    };
+    const loadDetail = vi
+      .fn()
+      .mockResolvedValueOnce(packageDetail)
+      .mockResolvedValueOnce(packageDetail)
+      .mockResolvedValueOnce(updatedDetail);
+
+    render(
+      <MemoryRouter initialEntries={["/products/packages/package-1/edit"]}>
+        <Routes>
+          <Route
+            path="/products/packages/:id/edit"
+            element={
+              <PackageDetailPage
+                canEdit
+                loadDetail={loadDetail}
+                searchProducts={searchProducts}
+                addChoiceSet={addChoiceSet}
+                addProduct={addProduct}
+              />
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("button", { name: "添加選項集" })).toBeInTheDocument();
+    await user.type(screen.getByPlaceholderText("填寫類別名稱"), "套餐必選12道菜");
+    const selectable = screen.getByPlaceholderText("填寫可選數目");
+    await user.clear(selectable);
+    await user.type(selectable, "12");
+    await user.click(screen.getByRole("button", { name: "添加選項集" }));
+    await waitFor(() =>
+      expect(addChoiceSet).toHaveBeenCalledWith("package-1", "套餐必選12道菜", 12),
+    );
+
+    await user.click(screen.getByRole("button", { name: "添加產品" }));
+    await user.type(
+      screen.getByRole("combobox", { name: "搜尋產品名稱或 SKU" }),
+      "胡椒",
+    );
+    await waitFor(() => expect(searchProducts).toHaveBeenCalledWith("胡椒"));
+    await user.click(await screen.findByRole("option", { name: /黑白胡椒蝦/ }));
+    await waitFor(() =>
+      expect(addProduct).toHaveBeenCalledWith(
+        "package-1",
+        "legacy-choice-1",
+        "product-2",
+      ),
+    );
+    expect(await screen.findByText("黑白胡椒蝦")).toBeInTheDocument();
   });
 });

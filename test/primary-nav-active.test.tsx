@@ -15,6 +15,8 @@ describe("Primary navigation section matching", () => {
     ["/orders/settings", "orders"],
     ["/orders/settings/tags", "orders"],
     ["/orders/order-1", "orders"],
+    ["/orders/settings/statuses", "orders"],
+    ["/orders/settings/sale-partners", "orders"],
     ["/quotes", "quotes"],
     ["/quotes/customers", "quotes"],
     ["/quotes/quote-1", "quotes"],
@@ -33,6 +35,7 @@ describe("Primary navigation section matching", () => {
     ["/frozen/yield-errors", "frozen"],
     ["/kitchen", "kitchen"],
     ["/kitchen/calendar", "kitchen"],
+    ["/kitchen/settings", "kitchen"],
     ["/delivery", "delivery"],
     ["/delivery/assign", "delivery"],
     ["/restaurant", "restaurant"],
@@ -101,6 +104,18 @@ describe("Primary navigation section matching", () => {
     expect(pageAccessKey("/frozen/yield-errors")).toBe("frozen.yield_errors");
     expect(pageAccessKey("/orders/settings")).toBe("orders.settings");
     expect(pageAccessKey("/orders/settings/tags")).toBe("orders.settings");
+    expect(pageAccessKey("/orders/settings/shipping")).toBe("orders.settings");
+    expect(pageAccessKey("/orders/settings/payments")).toBe("orders.settings");
+    expect(pageAccessKey("/orders/settings/statuses")).toBe(
+      "orders.settings.statuses",
+    );
+    expect(pageAccessKey("/orders/settings/sale-partners")).toBe(
+      "orders.settings.sale_partners",
+    );
+    expect(pageAccessKey("/kitchen/settings")).toBe("kitchen.settings");
+    expect(pageAccessKey("/kitchen/settings/cook-types")).toBe(
+      "kitchen.settings",
+    );
   });
 
   it("registers order settings before the order detail route", () => {
@@ -109,10 +124,13 @@ describe("Primary navigation section matching", () => {
       "utf8",
     );
     expect(source.indexOf('path="/orders/settings/:tab"')).toBeGreaterThan(-1);
+    expect(source.indexOf('path="/orders/settings/statuses"')).toBeGreaterThan(
+      -1,
+    );
     expect(source.indexOf('path="/orders/settings/:tab"')).toBeLessThan(
       source.indexOf('path="/orders/:id"'),
     );
-    expect(source).toContain('to: "/orders/settings"');
+    expect(source).toContain('to: "/orders/settings/statuses"');
     expect(source).toContain('permissionKey: "orders.settings"');
   });
 
@@ -141,5 +159,25 @@ describe("Primary navigation section matching", () => {
     expect(yieldErrors).toBeGreaterThan(selling);
     expect(source).toContain('to: "/frozen/yield-errors"');
     expect(source).toContain('permissionKey: "frozen.yield_errors"');
+  });
+
+  it("nests Order Status and Sale Partner under Orders settings", () => {
+    const source = readFileSync(
+      path.resolve(process.cwd(), "src/App.tsx"),
+      "utf8",
+    );
+    expect(source).toContain('key: "orderSettings"');
+    expect(source).toContain('key: "orderStatuses"');
+    expect(source).toContain('key: "orderTags"');
+    expect(source).toContain('key: "orderShippingMethods"');
+    expect(source).toContain('key: "orderPaymentMethods"');
+    expect(source).toContain('to: "/orders/settings/tags"');
+    expect(source).toContain('to: "/orders/settings/shipping"');
+    expect(source).toContain('to: "/orders/settings/payments"');
+    expect(source).toContain('to: "/orders/settings/statuses"');
+    expect(source).toContain('to: "/orders/settings/sale-partners"');
+    expect(source).toContain('permissionKey: "orders.settings"');
+    expect(source).toContain('permissionKey: "orders.settings.statuses"');
+    expect(source).toContain('permissionKey: "orders.settings.sale_partners"');
   });
 });

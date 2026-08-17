@@ -186,4 +186,17 @@ describe("meat yield error historical backfill", () => {
     expect(migration).toContain("page_key = 'frozen.yield_errors'");
     expect(migration).toContain("display_name = '收成錯誤統計'");
   });
+
+  it("renames the Frozen Goods page to 收成異常統計", () => {
+    const migration = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260817020000_rename_yield_errors_to_exception_statistics.sql",
+      ),
+      "utf8",
+    );
+
+    expect(migration).toContain("page_key = 'frozen.yield_errors'");
+    expect(migration).toContain("display_name = '收成異常統計'");
+  });
 });
