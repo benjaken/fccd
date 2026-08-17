@@ -12,6 +12,7 @@ import { TablePagination } from "@/components/ui/table-pagination";
 import {
   assignDeliveryMotorcade,
   buildDeliveryExportCsv,
+  cancelPendingDelivery,
   clockFromValue,
   DELIVERIES_PAGE_SIZE,
   downloadCsv,
@@ -19,9 +20,11 @@ import {
   fetchDeliveries,
   fetchDeliveryExportRows,
   fetchDeliveryLookups,
+  hasDeliveryPhotos,
   hongKongDateInputValue,
   hongKongMonthStart,
   isDeliveredStatus,
+  isPendingPickupStatus,
   isPickedUpStatus,
   toDeliveryExportRow,
   type DeliveryListFilters,
@@ -38,6 +41,7 @@ type DeliveriesLoader = (
 type LookupsLoader = typeof fetchDeliveryLookups;
 type ExportLoader = typeof fetchDeliveryExportRows;
 type AssignFleet = typeof assignDeliveryMotorcade;
+type CancelDelivery = typeof cancelPendingDelivery;
 
 const DELIVERY_SKELETON_COLUMNS = [
   { width: "2.5rem" },
@@ -66,12 +70,14 @@ export function DeliveryListPage({
   loadLookups = fetchDeliveryLookups,
   loadExportRows = fetchDeliveryExportRows,
   assignFleet = assignDeliveryMotorcade,
+  cancelDelivery = cancelPendingDelivery,
   now = new Date(),
 }: {
   loadDeliveries?: DeliveriesLoader;
   loadLookups?: LookupsLoader;
   loadExportRows?: ExportLoader;
   assignFleet?: AssignFleet;
+  cancelDelivery?: CancelDelivery;
   now?: Date;
 }) {
   const { t, i18n } = useTranslation();
@@ -96,6 +102,9 @@ export function DeliveryListPage({
   const [assignError, setAssignError] = useState<string | null>(null);
   const [assigningId, setAssigningId] = useState<string | null>(null);
   const [imageItem, setImageItem] = useState<DeliveryListItem | null>(null);
+  const [cancelItem, setCancelItem] = useState<DeliveryListItem | null>(null);
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   const startDateFilter = useDeferredFilter(startDate, (value) => {
     setPage(1);
@@ -349,6 +358,25 @@ export function DeliveryListPage({
     }
   };
 
+  const confirmCancelDelivery = async () => {
+    if (!cancelItem || cancelling) return;
+    setCancelling(true);
+    setCancelError(null);
+    try {
+      await cancelDelivery(cancelItem.id);
+      setCancelItem(null);
+      if (items.length <= 1 && page > 1) {
+        setPage((current) => current - 1);
+      } else {
+        setReloadKey((key) => key + 1);
+      }
+    } catch {
+      setCancelError("cancel_failed");
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   const statusLabel = (item: DeliveryListItem) => {
     if (isDeliveredStatus(item.deliveryStatus)) {
       return t("deliveryList.statuses.delivered");
@@ -478,6 +506,11 @@ export function DeliveryListPage({
             {t("deliveryList.assignFleetError")}
           </p>
         ) : null}
+        {cancelError && !cancelItem ? (
+          <p className="list-inline-error" role="alert">
+            {t("deliveryList.cancelError")}
+          </p>
+        ) : null}
 
         {error ? (
           <div className="orders-state orders-state-error" role="alert">
@@ -549,18 +582,27 @@ export function DeliveryListPage({
                       )}
                       <span>{display(item.customerName)}</span>
                       <span>{display(item.customerPhone)}</span>
-                      {item.imageReferences.length > 0 ? (
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          size="sm"
-                          className="delivery-view-image"
-                          onClick={() => setImageItem(item)}
-                        >
-                          <ImageIcon />
-                          {t("deliveryList.viewImage")}
-                        </Button>
-                      ) : null}
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        className="delivery-view-image"
+                        disabled={!hasDeliveryPhotos(item)}
+                        aria-label={
+                          hasDeliveryPhotos(item)
+                            ? t("deliveryList.viewImage")
+                            : t("deliveryList.noImage")
+                        }
+                        title={
+                          hasDeliveryPhotos(item)
+                            ? t("deliveryList.viewImage")
+                            : t("deliveryList.noImage")
+                        }
+                        onClick={() => setImageItem(item)}
+                      >
+                        <ImageIcon />
+                        {t("deliveryList.viewImage")}
+                      </Button>
                     </div>
                   </td>
                   <td>{formatDate(item.deliveryAt)}</td>
@@ -665,6 +707,20 @@ export function DeliveryListPage({
                           {deliveredTime ? ` ${deliveredTime}` : ""}
                         </li>
                       </ol>
+                      {isPendingPickupStatus(item.deliveryStatus) ? (
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          className="delivery-cancel"
+                          onClick={() => {
+                            setCancelError(null);
+                            setCancelItem(item);
+                          }}
+                        >
+                          {t("deliveryList.cancelDelivery")}
+                        </Button>
+                      ) : null}
                     </div>
                   </td>
                 </tr>
@@ -695,7 +751,7 @@ export function DeliveryListPage({
 
       <SidePanel
         open={Boolean(imageItem)}
-        title={t("deliveryList.viewImage")}
+        title={t("deliveryList.viewImageTitle")}
         onClose={() => setImageItem(null)}
         closeLabel={t("common.closeMenu")}
       >
@@ -708,10 +764,55 @@ export function DeliveryListPage({
               rel="noreferrer"
               className="delivery-image-link"
             >
-              <img src={src} alt={t("deliveryList.viewImage")} />
+              <img src={src} alt={t("deliveryList.viewImageTitle")} />
             </a>
           ))}
         </div>
+      </SidePanel>
+
+      <SidePanel
+        open={Boolean(cancelItem)}
+        title={t("deliveryList.cancelTitle")}
+        description={t("deliveryList.cancelConfirm", {
+          order:
+            formatOrderNumber(cancelItem?.orderNumber) ||
+            t("common.notSet"),
+        })}
+        onClose={() => {
+          if (cancelling) return;
+          setCancelItem(null);
+        }}
+        closeLabel={t("common.closeMenu")}
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={cancelling}
+              onClick={() => setCancelItem(null)}
+            >
+              {t("deliveryList.cancelKeep")}
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={cancelling}
+              onClick={() => void confirmCancelDelivery()}
+            >
+              {cancelling
+                ? t("deliveryList.cancelling")
+                : t("deliveryList.cancelConfirmAction")}
+            </Button>
+          </>
+        }
+      >
+        {cancelError ? (
+          <p className="list-inline-error" role="alert">
+            {t("deliveryList.cancelError")}
+          </p>
+        ) : (
+          <p>{t("deliveryList.cancelDescription")}</p>
+        )}
       </SidePanel>
     </section>
   );

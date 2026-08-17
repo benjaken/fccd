@@ -309,6 +309,14 @@ export function isPickedUpStatus(status: string | null) {
   return status === "已取" || isDeliveredStatus(status);
 }
 
+export function isPendingPickupStatus(status: string | null) {
+  return status === "待取貨";
+}
+
+export function hasDeliveryPhotos(item: Pick<DeliveryListItem, "imageReferences">) {
+  return item.imageReferences.some((src) => src.trim().length > 0);
+}
+
 function applyDeliveryFilters<
   T extends {
     not: (column: string, operator: string, value: unknown) => T;
@@ -456,6 +464,13 @@ export async function assignDeliveryMotorcade(
   const { error } = await supabase.rpc("assign_delivery_motorcade", {
     p_delivery_id: deliveryId,
     p_motorcade_id: motorcadeId,
+  });
+  if (error) throw error;
+}
+
+export async function cancelPendingDelivery(deliveryId: string) {
+  const { error } = await supabase.rpc("cancel_pending_delivery", {
+    p_delivery_id: deliveryId,
   });
   if (error) throw error;
 }

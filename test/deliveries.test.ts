@@ -4,8 +4,10 @@ import {
   buildDeliveryExportCsv,
   clockFromValue,
   feeSharePercent,
+  hasDeliveryPhotos,
   hongKongDateInputValue,
   hongKongMonthStart,
+  isPendingPickupStatus,
   mapDeliveryRow,
   nextCalendarDate,
   toDeliveryExportRow,
@@ -103,6 +105,15 @@ describe("delivery list helpers", () => {
     expect(clockFromValue("2026-08-01T00:00:00+08:00")).toBeNull();
     expect(clockFromValue("18:00 - 19:00")).toBe("18:00 - 19:00");
     expect(clockFromValue("2026-08-01T20:37:00+08:00")).toBe("20:37");
+  });
+
+  it("treats 待取貨 as cancellable and empty image lists as no photos", () => {
+    expect(isPendingPickupStatus("待取貨")).toBe(true);
+    expect(isPendingPickupStatus("已送達")).toBe(false);
+    expect(hasDeliveryPhotos({ imageReferences: ["https://example.com/a.jpg"] })).toBe(
+      true,
+    );
+    expect(hasDeliveryPhotos({ imageReferences: ["  ", ""] })).toBe(false);
   });
 
   it("builds the delivery export CSV with the requested headers", () => {

@@ -2180,6 +2180,17 @@ button.product-tag[aria-pressed="true"] {
   font-weight: 700;
 }
 
+.delivery-view-image:disabled {
+  opacity: 0.45;
+}
+
+.delivery-cancel {
+  margin-top: 4px;
+  height: 28px;
+  padding: 0 8px;
+  font-size: 14px;
+}
+
 .delivery-fee-box {
   display: inline-flex;
   align-items: center;
