@@ -541,6 +541,14 @@ export function toDeliveryExportRow(
   };
 }
 
+export function deliveryExportFilename(
+  title: string,
+  startDate: string,
+  endDate: string,
+) {
+  return `${title} - ${startDate} - ${endDate}.csv`;
+}
+
 export function downloadCsv(filename: string, csv: string) {
   const url = URL.createObjectURL(
     new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" }),

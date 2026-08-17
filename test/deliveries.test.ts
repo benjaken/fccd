@@ -4,6 +4,7 @@ import {
   buildDeliveryExportCsv,
   canAssignDeliveryFleet,
   clockFromValue,
+  deliveryExportFilename,
   deliveryOrderAmount,
   feeSharePercent,
   hasDeliveryPhotos,
@@ -231,5 +232,11 @@ describe("delivery list helpers", () => {
     expect(csv).toContain('"18:00 - 19:00"');
     expect(csv).toContain('"車邊交收"');
     expect(csv).toContain('"Sun-Line"');
+  });
+
+  it("names the export file with the list title and date range", () => {
+    expect(deliveryExportFilename("送貨清單", "2026-08-01", "2026-08-17")).toBe(
+      "送貨清單 - 2026-08-01 - 2026-08-17.csv",
+    );
   });
 });
