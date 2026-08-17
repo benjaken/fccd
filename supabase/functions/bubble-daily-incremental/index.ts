@@ -184,6 +184,53 @@ async function syncDeliveryTeamLoginCodes(
   return updated;
 }
 
+async function syncOrderShippingMethods(
+  client: AdminClient,
+  records: BubbleRecord[],
+): Promise<number> {
+  const mapping = coreMappings.find((item) => item.sourceType === "a_order");
+  if (!mapping) throw new Error("a_order mapping is missing.");
+  const shippingRelation = (mapping.relations ?? []).filter(
+    (item) => item.idField === "shipping_method_id",
+  );
+  const rows = records
+    .map(mapping.map)
+    .filter((row) =>
+      typeof row.shipping_method_legacy_id === "string" &&
+      row.shipping_method_legacy_id
+    );
+  if (!rows.length) return 0;
+  await resolveRelations(client, rows, shippingRelation);
+
+  let updated = 0;
+  for (const row of rows) {
+    if (!row.shipping_method_id || typeof row.legacy_id !== "string") continue;
+    const { data, error } = await client
+      .from("orders")
+      .update({
+        shipping_method_id: row.shipping_method_id,
+        shipping_method_legacy_id: row.shipping_method_legacy_id,
+      })
+      .eq("legacy_id", row.legacy_id)
+      .is("shipping_method_id", null)
+      .select("id,shipping_method_id,shipping_method_legacy_id");
+    if (error) throw error;
+    for (const order of data ?? []) {
+      updated += 1;
+      const { error: deliveryError } = await client
+        .from("deliveries")
+        .update({
+          shipping_method_id: order.shipping_method_id,
+          shipping_method_legacy_id: order.shipping_method_legacy_id,
+        })
+        .eq("order_id", order.id)
+        .is("shipping_method_id", null);
+      if (deliveryError) throw deliveryError;
+    }
+  }
+  return updated;
+}
+
 async function fetchBubbleType(
   sourceType: string,
   checkpoint: string,
@@ -510,6 +557,9 @@ async function processType(
     result.fetched = fetched.records.length;
     if (mapping.sourceType === "ds_super_motorcade" && fetched.records.length) {
       await syncDeliveryTeamLoginCodes(client, fetched.records);
+    }
+    if (mapping.sourceType === "a_order" && fetched.records.length) {
+      await syncOrderShippingMethods(client, fetched.records);
     }
     const ids = fetched.records.map(requireLegacyId);
     const existingRows = await legacyIdRows(client, mapping.table, ids);

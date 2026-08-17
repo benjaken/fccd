@@ -355,6 +355,7 @@ const phaseC: SourceMapping[] = [
         "shipping_method_legacy_id",
         "shipping_method_id",
         "shipping_methods",
+        false,
       ),
     ],
   },

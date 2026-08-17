@@ -5,7 +5,7 @@ import {
   partitionConflicts,
   sha256Hex,
 } from "../supabase/functions/bubble-daily-incremental/helpers.ts";
-import { phoneText } from "../supabase/functions/bubble-daily-incremental/mappings.ts";
+import { phoneText, coreMappings } from "../supabase/functions/bubble-daily-incremental/mappings.ts";
 
 describe("bubble daily incremental helpers", () => {
   it("canonicalizes object keys recursively and hashes deterministically", async () => {
@@ -64,5 +64,20 @@ describe("bubble daily incremental helpers", () => {
   it("keeps Bubble delivery time windows as text", () => {
     expect(phoneText("18:00 - 19:00")).toBe("18:00 - 19:00");
     expect(phoneText(" 12:00 - 12:30 ")).toBe("12:00 - 12:30");
+  });
+
+  it("maps Bubble Delivery_DS_Shipping Method onto orders", () => {
+    const mapping = coreMappings.find((item) => item.sourceType === "a_order");
+    expect(mapping).toBeTruthy();
+    const row = mapping!.map({
+      _id: "order-1",
+      "Delivery_DS_Shipping Method": "1678870660114x185437087924224000",
+    });
+    expect(row.shipping_method_legacy_id).toBe(
+      "1678870660114x185437087924224000",
+    );
+    expect(
+      mapping!.relations?.some((item) => item.idField === "shipping_method_id"),
+    ).toBe(true);
   });
 });
