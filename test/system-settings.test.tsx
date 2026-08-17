@@ -705,6 +705,21 @@ describe("Super Admin system settings", () => {
     expect(sellingPriceCost).toContain("roles.role in ('Admin', 'Factory')");
     expect(frozenActions).toContain("roles.role = 'Super Admin'");
 
+    const sellingPricePush = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260817010000_selling_price_cost_push_permission.sql",
+      ),
+      "utf8",
+    );
+    expect(sellingPricePush).toContain("frozen.selling_price_cost.push");
+    expect(sellingPricePush).toContain("推送月報售價");
+    expect(sellingPricePush).toContain("push_monthly_meat_prices");
+    expect(sellingPricePush).toContain("year month is required");
+    expect(sellingPricePush).toContain(
+      "drop trigger if exists refresh_monthly_meat_prices_raw_stock",
+    );
+
     const preparedMeatInventory = readFileSync(
       path.resolve(
         process.cwd(),
@@ -733,7 +748,7 @@ describe("Super Admin system settings", () => {
     const deliveryListSupport = readFileSync(
       path.resolve(
         process.cwd(),
-        "supabase/migrations/20260817010000_delivery_list_support.sql",
+        "supabase/migrations/20260817061000_delivery_list_support.sql",
       ),
       "utf8",
     );
@@ -753,6 +768,35 @@ describe("Super Admin system settings", () => {
     expect(frozenMenuLabels).toContain("收成錯誤統計");
     expect(frozenMenuLabels).toContain("frozen.selling_price_cost");
     expect(frozenMenuLabels).toContain("frozen.prepared_meat_inventory");
+
+    const orderStatusSettings = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260817040000_order_status_settings_page.sql",
+      ),
+      "utf8",
+    );
+    expect(orderStatusSettings).toContain("orders.settings");
+    expect(orderStatusSettings).toContain("orders.settings.statuses");
+    expect(orderStatusSettings).toContain("orders.settings.statuses.create");
+    expect(orderStatusSettings).toContain("orders.settings.statuses.edit");
+    expect(orderStatusSettings).toContain("orders.settings.statuses.delete");
+    expect(orderStatusSettings).toContain("archive_order_status");
+    expect(orderStatusSettings).toContain("private.has_page_access");
+
+    const orderSalePartners = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260817050000_orders_sale_partners_page.sql",
+      ),
+      "utf8",
+    );
+    expect(orderSalePartners).toContain("orders.settings.sale_partners");
+    expect(orderSalePartners).toContain("/orders/settings/sale-partners");
+    expect(orderSalePartners).toContain("archive_sales_partner");
+    expect(orderSalePartners).toContain(
+      "Sale partner readers select sales partners",
+    );
 
     const preparedMeatFlags = readFileSync(
       path.resolve(
@@ -922,6 +966,16 @@ describe("Super Admin system settings", () => {
     );
     expect(yieldErrorStatistics).toContain("frozen.yield_errors");
     expect(yieldErrorStatistics).toContain("收成錯誤統計");
+
+    const yieldExceptionStatistics = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260817020000_rename_yield_errors_to_exception_statistics.sql",
+      ),
+      "utf8",
+    );
+    expect(yieldExceptionStatistics).toContain("frozen.yield_errors");
+    expect(yieldExceptionStatistics).toContain("收成異常統計");
 
     const rawMeatActions = readFileSync(
       path.resolve(

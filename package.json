@@ -1,7 +1,7 @@
 {
   "name": "fccd",
   "version": "1.0.0",
-  "description": "FCCD — Food Channel Catering Discovery operations system",
+  "description": "FCCD — Food Channel Catering Delivery operations system",
   "private": true,
   "type": "module",
   "directories": {

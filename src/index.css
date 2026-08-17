@@ -1291,9 +1291,449 @@ td strong {
   color: color-mix(in oklch, var(--primary) 82%, white);
 }
 
-td:last-child {
-  width: 54px;
-  padding-right: 12px;
+.products-table-wrap td.product-recommend-cell,
+.products-table-wrap td.table-actions-cell {
+  width: 1%;
+  white-space: nowrap;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.products-table-wrap td.table-actions-cell {
+  text-align: right;
+}
+
+.table-row-clickable {
+  cursor: pointer;
+}
+
+.product-recommend-star {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted-foreground);
+}
+
+.product-recommend-star svg {
+  width: 20px;
+  height: 20px;
+}
+
+button.product-recommend-star:hover:not(:disabled) {
+  background: color-mix(in oklch, var(--accent) 70%, transparent);
+}
+
+.product-recommend-star.is-on {
+  color: oklch(0.79 0.16 85);
+}
+
+.product-recommend-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.product-tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.product-tag-empty {
+  color: var(--muted-foreground);
+  font-weight: 500;
+}
+
+.product-tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--selection-bg);
+  color: var(--primary);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+button.product-tag {
+  cursor: pointer;
+  opacity: 0.55;
+}
+
+button.product-tag.is-selected,
+button.product-tag[aria-pressed="true"] {
+  opacity: 1;
+}
+
+.multi-select {
+  position: relative;
+  min-width: 0;
+}
+
+.multi-select-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 42px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  outline: 0;
+  background: var(--background);
+  color: var(--foreground);
+  text-align: left;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.multi-select-trigger:focus,
+.multi-select.is-open .multi-select-trigger {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 22%, transparent);
+}
+
+.multi-select-trigger > svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  margin-left: auto;
+  color: var(--muted-foreground);
+}
+
+.multi-select-placeholder {
+  color: var(--muted-foreground);
+}
+
+.multi-select-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.multi-select-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 26px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--selection-bg);
+  color: var(--foreground);
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.multi-select-chip button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+
+.multi-select-chip button svg {
+  width: 12px;
+  height: 12px;
+}
+
+.multi-select-menu {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 4px);
+  right: 0;
+  left: 0;
+  display: grid;
+  gap: 6px;
+  max-height: 280px;
+  padding: 8px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow: 0 10px 24px color-mix(in oklch, var(--foreground) 12%, transparent);
+}
+
+.multi-select-menu input {
+  width: 100%;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  outline: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 14px;
+}
+
+.multi-select-menu ul {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.multi-select-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 36px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.multi-select-option.is-active,
+.multi-select-option:hover {
+  background: var(--selection-bg);
+}
+
+.multi-select-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--background);
+  flex: 0 0 auto;
+}
+
+.multi-select-check.is-checked {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.multi-select-check svg {
+  width: 12px;
+  height: 12px;
+}
+
+.multi-select-empty {
+  padding: 10px 8px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+
+.detail-breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.detail-breadcrumb a {
+  color: var(--primary);
+}
+
+.detail-breadcrumb a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.product-required {
+  margin-left: 4px;
+  color: var(--destructive);
+}
+
+.product-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-left: 10px;
+  border-left: 4px solid var(--primary);
+}
+
+.product-section-header h2 {
+  margin: 0;
+}
+
+.product-ingredient-cost {
+  color: var(--primary);
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.product-basics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 28px;
+}
+
+.product-inline-add {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(5.5rem, 0.5fr) auto;
+  gap: 10px;
+  align-items: end;
+  margin-bottom: 14px;
+}
+
+.product-inline-add label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  .product-basics-grid,
+  .product-inline-add {
+    grid-template-columns: 1fr;
+  }
+}
+
+.product-detail-form.is-editing .detail-field input,
+.product-detail-form.is-editing .detail-field select,
+.product-detail-form.is-editing .detail-field textarea,
+.detail-page.is-editing .detail-field input,
+.detail-page.is-editing .detail-field select,
+.detail-page.is-editing .detail-field textarea,
+.product-inline-add input,
+.product-inline-add select {
+  width: 100%;
+  min-height: 42px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  outline: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.product-inline-add input:focus,
+.product-inline-add select:focus {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 22%, transparent);
+}
+
+.product-ingredient-search {
+  position: relative;
+  min-width: 0;
+}
+
+.product-ingredient-results {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 4px);
+  right: 0;
+  left: 0;
+  max-height: 240px;
+  overflow: auto;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow: 0 10px 24px color-mix(in oklch, var(--foreground) 12%, transparent);
+}
+
+.product-ingredient-option {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.product-ingredient-option[aria-selected="true"],
+.product-ingredient-option:hover {
+  background: var(--selection-bg);
+}
+
+.product-ingredient-option small {
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.product-ingredient-empty {
+  padding: 10px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+
+.product-detail-form.is-editing .detail-field textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.product-detail-form.is-editing .detail-field input:focus,
+.product-detail-form.is-editing .detail-field select:focus,
+.product-detail-form.is-editing .detail-field textarea:focus {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 22%, transparent);
+}
+
+.product-detail-form.is-editing .detail-field em {
+  color: var(--destructive);
+  font-style: normal;
+  font-size: 14px;
+}
+
+.product-edit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.product-edit-actions .settings-side-form-error {
+  flex: 1 1 100%;
+}
+
+@media (max-width: 900px) {
+  .product-basics-grid,
+  .product-inline-add {
+    grid-template-columns: 1fr;
+  }
 }
 
 .status-badge {
@@ -1314,6 +1754,16 @@ td:last-child {
 .status-badge.green {
   background: oklch(0.92 0.055 148);
   color: oklch(0.44 0.13 148);
+}
+
+.status-badge.neutral {
+  background: oklch(0.91 0.01 150);
+  color: oklch(0.38 0.02 150);
+}
+
+.dark .status-badge.neutral {
+  background: oklch(0.32 0.02 150);
+  color: oklch(0.86 0.01 150);
 }
 
 .status-badge.red {
@@ -1896,6 +2346,95 @@ td:last-child {
 .detail-inline-table {
   min-height: 0;
   overflow: auto;
+}
+
+.packages-table-block {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.packages-result-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px 0;
+  color: var(--foreground);
+  font-size: 14px;
+}
+
+.packages-result-meta strong {
+  font-weight: 700;
+}
+
+.table-sort-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.table-sort-button svg {
+  width: 14px;
+  height: 14px;
+}
+
+.package-name-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.package-name-link svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+.packages-index-cell {
+  width: 1%;
+  color: var(--muted-foreground);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.packages-table-wrap td.table-actions-cell {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+  vertical-align: middle;
+}
+
+.package-options-table td {
+  vertical-align: middle;
+}
+
+.package-category-cell {
+  font-weight: 700;
+}
+
+.package-empty-products {
+  color: var(--muted-foreground);
+}
+
+.package-set-actions .table-row-actions {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+
+.package-product-search {
+  position: relative;
+  min-width: 0;
+}
+
+.product-inline-add input.is-invalid {
+  border-color: var(--destructive);
 }
 
 .products-table-wrap th,
@@ -4486,7 +5025,10 @@ td:last-child {
 
 .seasoning-cost-page,
 .calculation-settings-page,
+.kitchen-settings-page,
 .meat-customers-page,
+.order-statuses-page,
+.sale-partners-page,
 .selling-price-cost-page {
   display: grid;
   gap: 20px;
@@ -4498,9 +5040,16 @@ td:last-child {
   overflow: hidden;
 }
 
+.order-statuses-page {
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+
 .seasoning-cost-page .page-heading,
 .calculation-settings-page .page-heading,
+.kitchen-settings-page .page-heading,
 .meat-customers-page .page-heading,
+.order-statuses-page .page-heading,
+.sale-partners-page .page-heading,
 .spice-usage-page .page-heading,
 .selling-price-cost-page .page-heading {
   margin-bottom: 0;
@@ -4508,14 +5057,20 @@ td:last-child {
 
 .seasoning-cost-heading,
 .calculation-settings-heading,
+.kitchen-settings-heading,
 .meat-customers-heading,
+.order-statuses-heading,
+.sale-partners-heading,
 .selling-price-cost-heading {
   align-items: flex-end;
 }
 
 .seasoning-cost-panel,
 .calculation-settings-panel,
+.kitchen-settings-panel,
 .meat-customers-panel,
+.order-statuses-panel,
+.sale-partners-panel,
 .selling-price-cost-panel {
   display: flex;
   flex-direction: column;
@@ -4525,18 +5080,28 @@ td:last-child {
 
 .seasoning-cost-panel > .list-inline-error,
 .calculation-settings-panel > .list-inline-error,
+.kitchen-settings-panel > .list-inline-error,
 .meat-customers-panel > .list-inline-error,
-.selling-price-cost-panel > .list-inline-error {
+.order-statuses-panel > .list-inline-error,
+.sale-partners-panel > .list-inline-error,
+.selling-price-cost-panel > .list-inline-error,
+.selling-price-cost-panel > .list-inline-status {
   flex: 0 0 auto;
 }
 
 .seasoning-cost-panel > .products-state,
 .calculation-settings-panel > .products-state,
+.kitchen-settings-panel > .products-state,
 .meat-customers-panel > .products-state,
+.order-statuses-panel > .products-state,
+.sale-partners-panel > .products-state,
 .selling-price-cost-panel > .products-state,
 .seasoning-cost-table-wrap,
 .calculation-settings-table-wrap,
+.kitchen-settings-table-wrap,
 .meat-customers-table-wrap,
+.order-statuses-table-wrap,
+.sale-partners-table-wrap,
 .spice-usage-table-wrap,
 .selling-price-cost-table-wrap {
   flex: 1 1 auto;
@@ -4551,7 +5116,10 @@ td:last-child {
 
 .seasoning-cost-table-wrap th,
 .calculation-settings-table-wrap th,
+.kitchen-settings-table-wrap th,
 .meat-customers-table-wrap th,
+.order-statuses-table-wrap th,
+.sale-partners-table-wrap th,
 .spice-usage-table-wrap th,
 .selling-price-cost-table-wrap th {
   position: sticky;
@@ -4666,6 +5234,47 @@ td:last-child {
   font-size: 0.88rem;
 }
 
+.list-inline-status {
+  margin: 0;
+  padding: 12px 18px 0;
+  color: var(--muted-foreground);
+  font-size: 0.88rem;
+}
+
+.selling-price-cost-push-metrics {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+}
+
+.selling-price-cost-push-metric {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--secondary);
+}
+
+.selling-price-cost-push-metric dt,
+.selling-price-cost-push-metric dd {
+  margin: 0;
+}
+
+.selling-price-cost-push-metric span {
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.selling-price-cost-push-metric strong {
+  color: var(--foreground);
+  font-size: 22px;
+  font-weight: 790;
+  letter-spacing: -0.03em;
+}
+
 .calculation-settings-form {
   display: grid;
   gap: 16px;
@@ -4711,9 +5320,193 @@ td:last-child {
   font-style: normal;
 }
 
+.order-settings-page {
+  display: grid;
+  gap: 16px;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  height: calc(
+    100dvh - var(--topbar-height) - var(--workspace-height) - 76px
+  );
+  min-height: 560px;
+  overflow: hidden;
+}
+
+.order-settings-page .page-heading {
+  margin-bottom: 0;
+}
+
+.order-settings-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--border);
+}
+
+.order-settings-tabs a {
+  flex: 0 0 auto;
+  padding: 10px 14px;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 22px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.order-settings-tabs a:hover {
+  color: var(--foreground);
+}
+
+.order-settings-tabs a.active {
+  color: var(--foreground);
+  border-bottom-color: var(--primary);
+}
+
+.order-settings-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.order-settings-table-wrap {
+  min-height: 0;
+  overflow: auto;
+}
+
+.order-settings-table-wrap th {
+  position: sticky;
+  z-index: 1;
+  top: 0;
+}
+
+.order-settings-index-col {
+  width: 3.25rem;
+  text-align: center;
+}
+
+.order-settings-active-col {
+  width: 6.5rem;
+  text-align: center;
+}
+
+.order-settings-switch-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 44px;
+}
+
+.order-settings-switch-field > span {
+  color: var(--foreground);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.order-settings-switch-field .ui-switch {
+  flex-shrink: 0;
+}
+
+.order-settings-locked-hint {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted-foreground);
+}
+
+.order-settings-form {
+  display: grid;
+  gap: 16px;
+}
+
+.order-settings-field {
+  display: grid;
+  gap: 6px;
+}
+
+.order-settings-field > span {
+  color: var(--foreground);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.order-settings-field input {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  outline: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+}
+
+.order-settings-field input:focus {
+  border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 16%, transparent);
+}
+
+.order-settings-field input:disabled {
+  cursor: not-allowed;
+  background: color-mix(in oklch, var(--muted) 55%, var(--background));
+  color: var(--muted-foreground);
+}
+
+.kitchen-settings-form {
+  display: grid;
+  gap: 16px;
+}
+
+.kitchen-settings-field {
+  display: grid;
+  gap: 6px;
+}
+
+.kitchen-settings-field > span {
+  color: var(--foreground);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.kitchen-settings-field input,
+.kitchen-settings-field select {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  outline: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+}
+
+.kitchen-settings-field input:focus,
+.kitchen-settings-field select:focus {
+  border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 16%, transparent);
+}
+
+.kitchen-settings-field small {
+  color: var(--muted-foreground);
+  font-size: 0.8rem;
+}
+
+.kitchen-settings-field-error,
+.kitchen-settings-form-error {
+  margin: 0;
+  color: var(--destructive);
+  font-size: 0.82rem;
+  font-style: normal;
+}
+
 .seasoning-cost-toolbar,
 .calculation-settings-toolbar,
 .meat-customers-toolbar,
+.order-statuses-toolbar,
+.sale-partners-toolbar,
 .selling-price-cost-toolbar {
   display: flex;
   align-items: flex-end;
@@ -4923,24 +5716,32 @@ td:last-child {
   white-space: nowrap;
 }
 
-.meat-customers-form {
+.meat-customers-form,
+.order-statuses-form,
+.sale-partners-form {
   display: grid;
   gap: 16px;
 }
 
-.meat-customers-field {
+.meat-customers-field,
+.order-statuses-field,
+.sale-partners-field {
   display: grid;
   gap: 6px;
 }
 
-.meat-customers-field > span {
+.meat-customers-field > span,
+.order-statuses-field > span,
+.sale-partners-field > span {
   color: var(--foreground);
   font-size: 0.9rem;
   font-weight: 700;
 }
 
 .meat-customers-field input,
-.meat-customers-field textarea {
+.meat-customers-field textarea,
+.order-statuses-field input:not([type="color"]),
+.sale-partners-field input {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid var(--border);
@@ -4951,23 +5752,66 @@ td:last-child {
   font: inherit;
 }
 
-.meat-customers-field input {
+.meat-customers-field input,
+.order-statuses-field input:not([type="color"]),
+.sale-partners-field input {
   height: 40px;
   padding-top: 0;
   padding-bottom: 0;
 }
 
 .meat-customers-field input:focus,
-.meat-customers-field textarea:focus {
+.meat-customers-field textarea:focus,
+.order-statuses-field input:not([type="color"]):focus,
+.sale-partners-field input:focus {
   border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
   box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 16%, transparent);
 }
 
 .meat-customers-field-error,
-.meat-customers-form-error {
+.meat-customers-form-error,
+.order-statuses-field-error,
+.order-statuses-form-error,
+.sale-partners-field-error,
+.sale-partners-form-error {
   color: var(--destructive);
   font-size: 0.82rem;
   font-style: normal;
+}
+
+.order-statuses-color-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.order-statuses-color-row input[type="color"] {
+  width: 40px;
+  height: 40px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--background);
+  cursor: pointer;
+}
+
+.order-statuses-color-row input[type="color"]:focus {
+  border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 16%, transparent);
+}
+
+.order-statuses-swatch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.order-statuses-swatch-dot {
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  flex: 0 0 auto;
 }
 
 @media (max-width: 760px) {
@@ -4977,9 +5821,13 @@ td:last-child {
   .packages-page,
   .seasoning-cost-page,
   .calculation-settings-page,
+  .kitchen-settings-page,
   .meat-customers-page,
+  .order-statuses-page,
+  .sale-partners-page,
   .spice-usage-page,
-  .selling-price-cost-page {
+  .selling-price-cost-page,
+  .order-settings-page {
     height: calc(100dvh - var(--topbar-height) - 62px);
     min-height: 520px;
   }
@@ -5000,7 +5848,10 @@ td:last-child {
   .spice-usage-heading,
   .seasoning-cost-heading,
   .calculation-settings-heading,
+  .kitchen-settings-heading,
   .meat-customers-heading,
+  .order-statuses-heading,
+  .sale-partners-heading,
   .selling-price-cost-heading {
     align-items: stretch;
   }
@@ -5039,6 +5890,8 @@ td:last-child {
   .products-toolbar,
   .packages-toolbar,
   .meat-customers-toolbar,
+  .order-statuses-toolbar,
+  .sale-partners-toolbar,
   .seasoning-cost-toolbar,
   .calculation-settings-toolbar,
   .selling-price-cost-toolbar {

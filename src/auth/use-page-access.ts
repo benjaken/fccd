@@ -21,6 +21,15 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
   { prefix: "/orders/unpaid", pageKey: "orders.unpaid" },
   { prefix: "/orders/delivered-unpaid", pageKey: "orders.delivered_unpaid" },
   { prefix: "/orders/new", pageKey: "orders.new" },
+  {
+    prefix: "/orders/settings/statuses",
+    pageKey: "orders.settings.statuses",
+  },
+  {
+    prefix: "/orders/settings/sale-partners",
+    pageKey: "orders.settings.sale_partners",
+  },
+  { prefix: "/orders/settings", pageKey: "orders.settings" },
   { prefix: "/quotes/customers", pageKey: "quotes.customers" },
   { prefix: "/quotes/follow-up", pageKey: "quotes.follow_up" },
   { prefix: "/products/packages", pageKey: "products.packages" },
@@ -64,6 +73,7 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
     pageKey: "frozen.yield_errors",
   },
   { prefix: "/frozen", pageKey: "frozen" },
+  { prefix: "/kitchen/settings", pageKey: "kitchen.settings" },
   { prefix: "/kitchen/calendar", pageKey: "kitchen.calendar" },
   { prefix: "/kitchen/inventory", pageKey: "kitchen.inventory" },
   { prefix: "/delivery/assign", pageKey: "delivery.assign" },
@@ -145,6 +155,7 @@ function tabPermissionKeys(tabs: readonly ReportTabKey[]) {
 }
 
 const PAGE_ACCESS_CHILD_KEYS: Record<string, string[]> = {
+  "kitchen.settings": ["kitchen.settings.cook_types"],
   [REPORT_GROUP_PAGE_KEYS.frozenMeat]: tabPermissionKeys(
     REPORT_GROUP_TABS.frozenMeat,
   ),
@@ -154,6 +165,10 @@ const PAGE_ACCESS_CHILD_KEYS: Record<string, string[]> = {
     REPORT_GROUP_PAGE_KEYS.shops,
     ...tabPermissionKeys(REPORT_GROUP_TABS.frozenMeat),
     ...tabPermissionKeys(REPORT_GROUP_TABS.shops),
+  ],
+  "orders.settings": [
+    "orders.settings.statuses",
+    "orders.settings.sale_partners",
   ],
 };
 

@@ -118,6 +118,9 @@ const phaseA: SourceMapping[] = [
         ? null
         : String(r["contact no."]),
       status: r.Status == null ? null : String(r.Status),
+      login_code: r.Login_code == null || r.Login_code === ""
+        ? null
+        : String(r.Login_code),
       is_active: true,
     }),
   },
