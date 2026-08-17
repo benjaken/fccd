@@ -841,7 +841,9 @@ describe("Super Admin system settings", () => {
       ),
       "utf8",
     );
-    expect(orderListConfigs).toContain("create table public.order_list_configs");
+    expect(orderListConfigs).toContain(
+      "create table if not exists public.order_list_configs",
+    );
     expect(orderListConfigs).toContain("settings.order_lists");
     expect(orderListConfigs).toContain("settings.order_lists.edit");
     expect(orderListConfigs).toContain("/settings/order-lists");
