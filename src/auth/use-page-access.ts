@@ -13,6 +13,7 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
   { prefix: "/settings/roles", pageKey: "settings.roles" },
   { prefix: "/settings/login-logs", pageKey: "settings.login_logs" },
   { prefix: "/settings/attachments", pageKey: "settings.attachments" },
+  { prefix: "/settings/order-lists", pageKey: "settings.order_lists" },
   { prefix: "/settings", pageKey: "settings" },
   { prefix: "/orders/pending", pageKey: "orders.pending" },
   { prefix: "/orders/production", pageKey: "kitchen.calendar" },
@@ -180,6 +181,7 @@ const PAGE_ACCESS_CHILD_KEYS: Record<string, string[]> = {
     "orders.settings.statuses",
     "orders.settings.sale_partners",
   ],
+  "settings.order_lists": ["settings.order_lists.edit"],
 };
 
 export function pageAccessKey(pathname: string) {

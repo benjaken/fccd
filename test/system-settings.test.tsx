@@ -834,6 +834,18 @@ describe("Super Admin system settings", () => {
     expect(orderQueueLists).toContain("orders.shopify_pending");
     expect(orderQueueLists).toContain("/orders/shopify-pending");
 
+    const orderListConfigs = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260817071000_order_list_configs.sql",
+      ),
+      "utf8",
+    );
+    expect(orderListConfigs).toContain("create table public.order_list_configs");
+    expect(orderListConfigs).toContain("settings.order_lists");
+    expect(orderListConfigs).toContain("settings.order_lists.edit");
+    expect(orderListConfigs).toContain("/settings/order-lists");
+
     const preparedMeatFlags = readFileSync(
       path.resolve(
         process.cwd(),

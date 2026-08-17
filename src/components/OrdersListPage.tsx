@@ -20,9 +20,16 @@ import {
   type OrderPreset,
   type OrderStatusFilter,
 } from "@/lib/orders";
+import {
+  fetchOrderListConfigs,
+  ORDER_LIST_I18N_KEYS,
+  type OrderListConfigPreset,
+  type OrderListConfigRow,
+} from "@/lib/order-list-configs";
 import { cn } from "@/lib/utils";
 
 type OrdersLoader = (filters: OrderListFilters) => Promise<OrderListResult>;
+type OrderListConfigLoader = typeof fetchOrderListConfigs;
 
 const STATUS_FILTERS: OrderStatusFilter[] = [
   "",
@@ -45,10 +52,12 @@ export function OrdersListPage({
   preset = "all",
   canViewFinance = true,
   loadOrders = fetchOrders,
+  loadListConfig = fetchOrderListConfigs,
 }: {
   preset?: OrderPreset;
   canViewFinance?: boolean;
   loadOrders?: OrdersLoader;
+  loadListConfig?: OrderListConfigLoader;
 }) {
   const { t, i18n } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -66,6 +75,7 @@ export function OrdersListPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [listConfig, setListConfig] = useState<OrderListConfigRow | null>(null);
   const setStatus = (nextStatus: OrderStatusFilter) => {
     setPage(1);
     const next = new URLSearchParams(searchParams);
@@ -81,24 +91,12 @@ export function OrdersListPage({
   const totalPages = Math.max(1, Math.ceil(total / ORDERS_PAGE_SIZE));
   const visibleFrom = total === 0 ? 0 : (page - 1) * ORDERS_PAGE_SIZE + 1;
   const visibleTo = Math.min(page * ORDERS_PAGE_SIZE, total);
-  const titleKey =
-    preset === "pending"
-      ? "pendingTitle"
-      : preset === "unpaid"
-        ? "unpaidTitle"
-        : preset === "delivered-unpaid"
-          ? "deliveredUnpaidTitle"
-          : preset === "monthly-settlement"
-            ? "monthlyTitle"
-            : preset === "split"
-              ? "splitTitle"
-              : preset === "kitchen-notes"
-                ? "kitchenNotesTitle"
-                : preset === "reschedule-pending"
-                  ? "reschedulePendingTitle"
-                  : preset === "shopify-pending"
-                    ? "shopifyPendingTitle"
-                    : "title";
+  const copyKeys =
+    ORDER_LIST_I18N_KEYS[preset as OrderListConfigPreset] ??
+    ORDER_LIST_I18N_KEYS.all;
+  const title = listConfig?.title.trim() || t(`orders.${copyKeys.title}`);
+  const description =
+    listConfig?.description.trim() || t(`orders.${copyKeys.description}`);
 
   const currency = useMemo(
     () =>
@@ -167,6 +165,22 @@ export function OrdersListPage({
     void loadPage();
   }, [loadPage]);
 
+  useEffect(() => {
+    let cancelled = false;
+    void loadListConfig()
+      .then((rows) => {
+        if (cancelled) return;
+        const match = rows.find((row) => row.presetKey === preset) ?? null;
+        setListConfig(match);
+      })
+      .catch(() => {
+        if (!cancelled) setListConfig(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [loadListConfig, preset]);
+
   const submitSearch = () => {
     setPage(1);
     setSearch(draftSearch.trim());
@@ -194,7 +208,8 @@ export function OrdersListPage({
       <header className="page-heading orders-heading">
         <div>
           <span className="eyebrow">{t("orders.eyebrow")}</span>
-          <h1>{t(`orders.${titleKey}`)}</h1>
+          <h1>{title}</h1>
+          {description ? <p>{description}</p> : null}
         </div>
         <Button asChild>
           <Link to="/orders/new">

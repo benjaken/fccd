@@ -57,6 +57,7 @@ describe("Primary navigation section matching", () => {
     ["/settings/users", "settings"],
     ["/settings/roles", "settings"],
     ["/settings/login-logs", "settings"],
+    ["/settings/order-lists", "settings"],
     ["/settings/attachments", "settings"],
   ] as const)("maps %s to section %s", (pathname, section) => {
     expect(sectionFromPath(pathname)).toBe(section);
@@ -120,6 +121,11 @@ describe("Primary navigation section matching", () => {
     expect(pageAccessKey("/orders/settings/sale-partners")).toBe(
       "orders.settings.sale_partners",
     );
+    expect(pageAccessKey("/settings/login-logs")).toBe("settings.login_logs");
+    expect(pageAccessKey("/settings/order-lists")).toBe("settings.order_lists");
+    expect(pageAccessKey("/settings/attachments")).toBe(
+      "settings.attachments",
+    );
     expect(pageAccessKey("/orders/unpaid")).toBe("orders.unpaid");
     expect(pageAccessKey("/orders/monthly")).toBe("orders.monthly");
     expect(pageAccessKey("/orders/split")).toBe("orders.split");
@@ -163,6 +169,8 @@ describe("Primary navigation section matching", () => {
     expect(source.indexOf('path="/orders/shopify-pending"')).toBeLessThan(
       source.indexOf('path="/orders/:id"'),
     );
+    expect(source).toContain('path="/settings/order-lists"');
+    expect(source).toContain('to: "/settings/order-lists"');
   });
 
   it("nests frozen meat and shop pages under the reports sidebar item", () => {

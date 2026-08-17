@@ -30,6 +30,7 @@ import {
   History,
   LayoutDashboard,
   Leaf,
+  ListFilter,
   LogOut,
   Menu,
   Moon,
@@ -106,6 +107,7 @@ import { OrderStatusesPage } from "@/components/OrderStatusesPage";
 import { SalesPartnersPage } from "@/components/SalesPartnersPage";
 import { AttachmentsListPage } from "@/components/settings/AttachmentsListPage";
 import { LoginLogsListPage } from "@/components/settings/LoginLogsListPage";
+import { OrderListConfigsPage } from "@/components/settings/OrderListConfigsPage";
 import { RolePermissionsPage } from "@/components/settings/RolePermissionsPage";
 import { SettingsAccessDenied } from "@/components/settings/SettingsAccessDenied";
 import { UsersListPage } from "@/components/settings/UsersListPage";
@@ -121,6 +123,14 @@ import {
 import { FROZEN_ACTION_PAGE_KEYS } from "@/lib/frozen-action-permissions";
 import { KITCHEN_ACTION_PAGE_KEYS } from "@/lib/kitchen-action-permissions";
 import { ORDER_ACTION_PAGE_KEYS } from "@/lib/order-action-permissions";
+import {
+  fetchOrderListConfigs,
+  isOrderListNavVisible,
+  ORDER_LIST_CONFIGS_CHANGED,
+  orderListConfigByPreset,
+  orderListNavLabel,
+  type OrderListConfigRow,
+} from "@/lib/order-list-configs";
 import { useTheme } from "@/lib/use-theme";
 import { useAnimatedNumber } from "@/lib/use-animated-number";
 import { canAssignDeliveryFleet } from "@/lib/deliveries";
@@ -496,6 +506,12 @@ const secondaryNav: Record<string, NavItem[]> = {
       permissionKey: "settings.login_logs",
     },
     {
+      key: "orderLists",
+      to: "/settings/order-lists",
+      icon: ListFilter,
+      permissionKey: "settings.order_lists",
+    },
+    {
       key: "attachments",
       to: "/settings/attachments",
       icon: FileArchive,
@@ -564,6 +580,8 @@ const SECTION_CHILD_KEYS: Record<string, string[]> = {
     "settings.roles",
     "settings.login_logs",
     "settings.attachments",
+    "settings.order_lists",
+    "settings.order_lists.edit",
   ],
 };
 
@@ -757,6 +775,9 @@ function OperationsShell() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [orderListConfigs, setOrderListConfigs] = useState<
+    OrderListConfigRow[] | null
+  >(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   const section = sectionFromPath(location.pathname);
@@ -770,13 +791,18 @@ function OperationsShell() {
     const key = item.permissionKey ?? item.key;
     return pageAccess.canAccessSection(key, SECTION_CHILD_KEYS[key] ?? []);
   });
-  const sideItems = (secondaryNav[section] ?? secondaryNav.overview).filter(
-    (item) => isNavItemVisible(item, pageAccess.canAccess),
-  );
+  const sideItems = (secondaryNav[section] ?? secondaryNav.overview)
+    .filter((item) => isNavItemVisible(item, pageAccess.canAccess))
+    .filter((item) => isOrderListNavVisible(item.key, orderListConfigs));
   const mobileNavGroups = buildMobileDrawerNav(
     visiblePrimaryNav,
     (permissionKey) => pageAccess.canAccess(permissionKey),
-  );
+  ).map((group) => ({
+    ...group,
+    items: group.items.filter((item) =>
+      isOrderListNavVisible(item.key, orderListConfigs),
+    ),
+  }));
   const mobileNavHrefs = mobileNavGroups.flatMap((group) =>
     group.items.map((item) => item.to),
   );
@@ -792,6 +818,28 @@ function OperationsShell() {
   const canViewFinance = pageAccess.canAccess("finance");
   const canEditProducts = canEditProductCatalog(authorizationRole);
   const canEditDeliveries = canAssignDeliveryFleet(authorizationRole);
+  const orderListConfigMap = orderListConfigByPreset(orderListConfigs);
+  const navLabel = (key: string) =>
+    orderListNavLabel(key, orderListConfigMap, t(`navigation.${key}`));
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadConfigs = () => {
+      void fetchOrderListConfigs()
+        .then((rows) => {
+          if (!cancelled) setOrderListConfigs(rows);
+        })
+        .catch(() => {
+          if (!cancelled) setOrderListConfigs([]);
+        });
+    };
+    loadConfigs();
+    window.addEventListener(ORDER_LIST_CONFIGS_CHANGED, loadConfigs);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(ORDER_LIST_CONFIGS_CHANGED, loadConfigs);
+    };
+  }, []);
 
   useEffect(() => {
     setMobileMenuOpen(false);
@@ -1010,11 +1058,11 @@ function OperationsShell() {
                       )
                     }
                     title={
-                      sidebarCollapsed ? t(`navigation.${item.key}`) : undefined
+                      sidebarCollapsed ? navLabel(item.key) : undefined
                     }
                   >
                     <item.icon />
-                    <span>{t(`navigation.${item.key}`)}</span>
+                    <span>{navLabel(item.key)}</span>
                     {!sidebarCollapsed && (
                       <ChevronRight
                         className={cn(
@@ -1036,7 +1084,7 @@ function OperationsShell() {
                           }
                         >
                           <child.icon />
-                          <span>{t(`navigation.${child.key}`)}</span>
+                          <span>{navLabel(child.key)}</span>
                         </NavLink>
                       ))}
                     </div>
@@ -1346,6 +1394,16 @@ function OperationsShell() {
                 }
               />
               <Route
+                path="/settings/order-lists"
+                element={
+                  pageAccess.canAccess("settings.order_lists") ? (
+                    <OrderListConfigsPage />
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
+                }
+              />
+              <Route
                 path="/settings/attachments"
                 element={
                   pageAccess.canAccess("settings.attachments") ? (
@@ -1432,7 +1490,7 @@ function OperationsShell() {
                       }
                     >
                       <NavIcon />
-                      <span>{t(`navigation.${key}`)}</span>
+                      <span>{navLabel(key)}</span>
                     </NavLink>
                   ))}
                 </div>

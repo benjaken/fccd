@@ -45,6 +45,7 @@ describe("buildMobileDrawerNav", () => {
       "users",
       "rolePermissions",
       "loginLogs",
+      "orderLists",
       "attachments",
     ]);
   });

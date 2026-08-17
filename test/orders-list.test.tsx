@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { OrdersListPage } from "@/components/OrdersListPage";
 import i18n from "@/i18n";
+import type { OrderListConfigRow } from "@/lib/order-list-configs";
 import type { OrderListResult } from "@/lib/orders";
 
 const orderResult: OrderListResult = {
@@ -31,6 +32,8 @@ const orderResult: OrderListResult = {
   ],
 };
 
+const emptyListConfig = vi.fn().mockResolvedValue([]);
+
 describe("Orders list", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("zh-HK");
@@ -41,7 +44,11 @@ describe("Orders list", () => {
 
     render(
       <MemoryRouter>
-        <OrdersListPage loadOrders={loadOrders} canViewFinance />
+        <OrdersListPage
+          loadOrders={loadOrders}
+          loadListConfig={emptyListConfig}
+          canViewFinance
+        />
       </MemoryRouter>,
     );
 
@@ -65,7 +72,7 @@ describe("Orders list", () => {
 
     render(
       <MemoryRouter initialEntries={["/orders?status=ready"]}>
-        <OrdersListPage loadOrders={loadOrders} />
+        <OrdersListPage loadOrders={loadOrders} loadListConfig={emptyListConfig} />
       </MemoryRouter>,
     );
 
@@ -101,7 +108,7 @@ describe("Orders list", () => {
 
     render(
       <MemoryRouter>
-        <OrdersListPage preset="pending" loadOrders={loadOrders} />
+        <OrdersListPage preset="pending" loadOrders={loadOrders} loadListConfig={emptyListConfig} />
       </MemoryRouter>,
     );
 
@@ -128,7 +135,7 @@ describe("Orders list", () => {
 
     render(
       <MemoryRouter>
-        <OrdersListPage preset={preset} loadOrders={loadOrders} />
+        <OrdersListPage preset={preset} loadOrders={loadOrders} loadListConfig={emptyListConfig} />
       </MemoryRouter>,
     );
 
@@ -136,6 +143,38 @@ describe("Orders list", () => {
     expect(loadOrders).toHaveBeenCalledWith(
       expect.objectContaining({ preset }),
     );
+  });
+
+  it("shows the configured explanation under the list title", async () => {
+    const loadOrders = vi.fn().mockResolvedValue(orderResult);
+    const loadListConfig = vi.fn().mockResolvedValue([
+      {
+        id: "cfg-unpaid",
+        presetKey: "unpaid",
+        title: "未付款",
+        description: "尚有未收金額的訂單，以未付餘額為準。",
+        sortOrder: 30,
+        isVisible: true,
+        route: "/orders/unpaid",
+      } satisfies OrderListConfigRow,
+    ]);
+
+    render(
+      <MemoryRouter>
+        <OrdersListPage
+          preset="unpaid"
+          loadOrders={loadOrders}
+          loadListConfig={loadListConfig}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(
+      await screen.findByRole("heading", { name: "未付款" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("尚有未收金額的訂單，以未付餘額為準。"),
+    ).toBeInTheDocument();
   });
 
   it("paginates orders in groups of fifteen", async () => {
@@ -146,7 +185,7 @@ describe("Orders list", () => {
 
     render(
       <MemoryRouter>
-        <OrdersListPage loadOrders={loadOrders} />
+        <OrdersListPage loadOrders={loadOrders} loadListConfig={emptyListConfig} />
       </MemoryRouter>,
     );
 
@@ -170,7 +209,7 @@ describe("Orders list", () => {
 
     render(
       <MemoryRouter>
-        <OrdersListPage loadOrders={loadOrders} />
+        <OrdersListPage loadOrders={loadOrders} loadListConfig={emptyListConfig} />
       </MemoryRouter>,
     );
 
@@ -253,7 +292,7 @@ describe("Orders list", () => {
         <OrdersListPage
           preset="unpaid"
           canViewFinance={false}
-          loadOrders={loadOrders}
+          loadOrders={loadOrders} loadListConfig={emptyListConfig}
         />
       </MemoryRouter>,
     );
@@ -279,7 +318,7 @@ describe("Orders list", () => {
 
     render(
       <MemoryRouter>
-        <OrdersListPage loadOrders={loadOrders} />
+        <OrdersListPage loadOrders={loadOrders} loadListConfig={emptyListConfig} />
       </MemoryRouter>,
     );
 
