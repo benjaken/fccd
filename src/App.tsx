@@ -562,10 +562,6 @@ function isWorkspaceNavActive(key: string, pathname: string) {
   return workspaceFromPath(pathname) === key;
 }
 
-function isWorkspaceLandingPath(pathname: string) {
-  return pathname === "/factory" || pathname === "/driver-delivery";
-}
-
 /** Primary top-nav stays active for the whole section, including child routes. */
 function isPrimaryNavActive(section: string, key: string, isActive: boolean) {
   return isActive || (section !== "" && section === key);
@@ -749,7 +745,6 @@ function OperationsShell() {
       .flatMap((item) => item.children ?? [])
       .find((item) => isNavItemVisible(item, pageAccess.canAccess))?.to ??
     REPORT_GROUP_ROUTES.frozenMeat;
-  const isWorkspaceLanding = isWorkspaceLandingPath(location.pathname);
   const canViewFinance = pageAccess.canAccess("finance");
   const canEditProducts = canEditProductCatalog(authorizationRole);
 
@@ -914,39 +909,35 @@ function OperationsShell() {
         </div>
       </header>
 
-      {!isWorkspaceLanding ? (
-        <div className="workspace-bar">
-          <div className="nav-row-spacer" aria-hidden="true" />
-          <nav className="primary-nav lowered-nav" aria-label="Primary">
-            {visiblePrimaryNav.map(({ key, to, icon: NavIcon }) => (
-              <NavLink
-                key={key}
-                to={to}
-                end={to === "/"}
-                className={({ isActive }) =>
-                  cn(
-                    "primary-nav-link",
-                    isPrimaryNavActive(section, key, isActive) && "active",
-                  )
-                }
-              >
-                <NavIcon />
-                <span>{t(`navigation.${key}`)}</span>
-              </NavLink>
-            ))}
-          </nav>
-          <CurrentDateTime />
-        </div>
-      ) : null}
+      <div className="workspace-bar">
+        <div className="nav-row-spacer" aria-hidden="true" />
+        <nav className="primary-nav lowered-nav" aria-label="Primary">
+          {visiblePrimaryNav.map(({ key, to, icon: NavIcon }) => (
+            <NavLink
+              key={key}
+              to={to}
+              end={to === "/"}
+              className={({ isActive }) =>
+                cn(
+                  "primary-nav-link",
+                  isPrimaryNavActive(section, key, isActive) && "active",
+                )
+              }
+            >
+              <NavIcon />
+              <span>{t(`navigation.${key}`)}</span>
+            </NavLink>
+          ))}
+        </nav>
+        <CurrentDateTime />
+      </div>
 
       <div
         className={cn(
           "shell-body",
           sidebarCollapsed && "sidebar-is-collapsed",
-          isWorkspaceLanding && "workspace-landing",
         )}
       >
-        {isWorkspaceLanding ? null : (
         <aside className="sidebar">
           <nav aria-label="Secondary">
             {sideItems.map((item) => {
@@ -1021,7 +1012,6 @@ function OperationsShell() {
             {!sidebarCollapsed && <span>{t("common.closeMenu")}</span>}
           </button>
         </aside>
-        )}
 
         <main className="main-content">
           <div className="page-transition" key={pageKey}>
@@ -1031,24 +1021,6 @@ function OperationsShell() {
               <SettingsAccessDenied />
             ) : (
               <Routes>
-              <Route
-                path="/factory"
-                element={
-                  <WorkspacePlaceholderPage
-                    workspaceKey="factory"
-                    icon={Factory}
-                  />
-                }
-              />
-              <Route
-                path="/driver-delivery"
-                element={
-                  <WorkspacePlaceholderPage
-                    workspaceKey="delivery"
-                    icon={Truck}
-                  />
-                }
-              />
               <Route path="/" element={<Dashboard role={profile?.role} />} />
               <Route
                 path="/follow-up"
@@ -1967,20 +1939,57 @@ function ModulePlaceholder({ section }: { section: string }) {
   );
 }
 
-function AuthGate() {
-  const { session, loading, profileLoading } = useAuth();
+function AuthLoadingScreen() {
   const { t } = useTranslation();
 
+  return (
+    <main className="auth-loading">
+      <span className="auth-loading-mark">FC</span>
+      <div className="auth-loading-bar">
+        <span />
+      </div>
+      <p>{t("auth.loading")}</p>
+    </main>
+  );
+}
+
+function WorkspaceStandalonePage({
+  workspaceKey,
+  icon,
+}: {
+  workspaceKey: "factory" | "delivery";
+  icon: Icon;
+}) {
+  return (
+    <main className="workspace-standalone">
+      <WorkspacePlaceholderPage workspaceKey={workspaceKey} icon={icon} />
+    </main>
+  );
+}
+
+function FactoryWorkspace() {
+  const { session, loading, profileLoading } = useAuth();
+
   if (loading || (session && profileLoading)) {
-    return (
-      <main className="auth-loading">
-        <span className="auth-loading-mark">FC</span>
-        <div className="auth-loading-bar">
-          <span />
-        </div>
-        <p>{t("auth.loading")}</p>
-      </main>
-    );
+    return <AuthLoadingScreen />;
+  }
+
+  if (!session) {
+    return <LoginPage />;
+  }
+
+  return <WorkspaceStandalonePage workspaceKey="factory" icon={Factory} />;
+}
+
+function DriverDeliveryWorkspace() {
+  return <WorkspaceStandalonePage workspaceKey="delivery" icon={Truck} />;
+}
+
+function AuthGate() {
+  const { session, loading, profileLoading } = useAuth();
+
+  if (loading || (session && profileLoading)) {
+    return <AuthLoadingScreen />;
   }
 
   return session ? <OperationsShell /> : <LoginPage />;
@@ -1989,6 +1998,22 @@ function AuthGate() {
 function App() {
   return (
     <Routes>
+      <Route
+        path="/factory"
+        element={
+          <AuthProvider>
+            <FactoryWorkspace />
+          </AuthProvider>
+        }
+      />
+      <Route
+        path="/driver-delivery"
+        element={
+          <AuthProvider>
+            <DriverDeliveryWorkspace />
+          </AuthProvider>
+        }
+      />
       <Route
         path="/migration/*"
         element={

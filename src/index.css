@@ -598,11 +598,6 @@ button.bg-primary:focus-visible {
   grid-template-columns: var(--sidebar-collapsed-width) minmax(0, 1fr);
 }
 
-.shell-body.workspace-landing {
-  grid-template-columns: minmax(0, 1fr);
-  padding-top: var(--topbar-height);
-}
-
 .sidebar {
   position: sticky;
   top: calc(var(--topbar-height) + var(--workspace-height));
@@ -9093,6 +9088,14 @@ button.product-tag[aria-pressed="true"] {
   justify-content: center;
   min-height: calc(100vh - 220px);
   text-align: center;
+}
+
+.workspace-standalone {
+  min-height: 100vh;
+}
+
+.workspace-standalone .placeholder-page {
+  min-height: 100vh;
 }
 
 .placeholder-page p {
