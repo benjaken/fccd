@@ -125,4 +125,15 @@ describe("Primary navigation section matching", () => {
     expect(source).toContain('to: "/frozen/yield-errors"');
     expect(source).toContain('permissionKey: "frozen.yield_errors"');
   });
+
+  it("places the delivery list under Delivery as 送貨清單", () => {
+    const source = readFileSync(
+      path.resolve(process.cwd(), "src/App.tsx"),
+      "utf8",
+    );
+    expect(source).toContain('key: "deliveryList"');
+    expect(source).toContain('to: "/delivery"');
+    expect(source).toContain("DeliveryListPage");
+    expect(pageAccessKey("/delivery")).toBe("delivery");
+  });
 });

@@ -80,6 +80,7 @@ import { PackagesListPage } from "@/components/PackagesListPage";
 import { PackageDetailPage } from "@/components/PackageDetailPage";
 import { PreparedMeatInventoryCalcPage } from "@/components/PreparedMeatInventoryCalcPage";
 import { MeatDeliveryNotesPage } from "@/components/MeatDeliveryNotesPage";
+import { DeliveryListPage } from "@/components/DeliveryListPage";
 import { RawMeatInventoryCalcPage } from "@/components/RawMeatInventoryCalcPage";
 import { SpiceUsagePage } from "@/components/SpiceUsagePage";
 import { SeasoningCostSettingsPage } from "@/components/SeasoningCostSettingsPage";
@@ -320,9 +321,9 @@ const secondaryNav: Record<string, NavItem[]> = {
   ],
   delivery: [
     {
-      key: "delivery",
+      key: "deliveryList",
       to: "/delivery",
-      icon: Truck,
+      icon: ClipboardList,
       permissionKey: "delivery",
     },
     {
@@ -1074,6 +1075,7 @@ function OperationsShell() {
                 path="/frozen/yield-errors"
                 element={<MeatYieldErrorsPage />}
               />
+              <Route path="/delivery" element={<DeliveryListPage />} />
               <Route
                 path="/reports/frozen-meat"
                 element={<ReportsPage group="frozenMeat" />}
