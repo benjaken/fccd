@@ -66,6 +66,7 @@ function formatOrderNumber(value: string | null | undefined) {
 }
 
 export function DeliveryListPage({
+  canEdit = false,
   loadDeliveries = fetchDeliveries,
   loadLookups = fetchDeliveryLookups,
   loadExportRows = fetchDeliveryExportRows,
@@ -73,6 +74,7 @@ export function DeliveryListPage({
   cancelDelivery = cancelPendingDelivery,
   now = new Date(),
 }: {
+  canEdit?: boolean;
   loadDeliveries?: DeliveriesLoader;
   loadLookups?: LookupsLoader;
   loadExportRows?: ExportLoader;
@@ -326,6 +328,7 @@ export function DeliveryListPage({
   };
 
   const changeFleet = async (item: DeliveryListItem, nextId: string) => {
+    if (!canEdit) return;
     const motorcadeIdValue = nextId || null;
     const motorcadeName =
       teams.find((team) => team.id === motorcadeIdValue)?.name ?? null;
@@ -614,22 +617,26 @@ export function DeliveryListPage({
                   <td>{display(item.districtName)}</td>
                   <td>{display(item.address)}</td>
                   <td>
-                    <select
-                      className="delivery-fleet-select"
-                      value={item.motorcadeId ?? ""}
-                      disabled={assigningId === item.id}
-                      aria-label={t("deliveryList.chooseFleet")}
-                      onChange={(event) =>
-                        void changeFleet(item, event.target.value)
-                      }
-                    >
-                      <option value="">{t("deliveryList.chooseFleet")}</option>
-                      {teams.map((team) => (
-                        <option key={team.id} value={team.id}>
-                          {team.name}
-                        </option>
-                      ))}
-                    </select>
+                    {canEdit ? (
+                      <select
+                        className="delivery-fleet-select"
+                        value={item.motorcadeId ?? ""}
+                        disabled={assigningId === item.id}
+                        aria-label={t("deliveryList.chooseFleet")}
+                        onChange={(event) =>
+                          void changeFleet(item, event.target.value)
+                        }
+                      >
+                        <option value="">{t("deliveryList.chooseFleet")}</option>
+                        {teams.map((team) => (
+                          <option key={team.id} value={team.id}>
+                            {team.name}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      display(item.motorcadeName)
+                    )}
                   </td>
                   <td>
                     <span className="delivery-fee-box">
@@ -711,7 +718,7 @@ export function DeliveryListPage({
                           {deliveredTime ? ` ${deliveredTime}` : ""}
                         </li>
                       </ol>
-                      {isPendingPickupStatus(item.deliveryStatus) ? (
+                      {canEdit && isPendingPickupStatus(item.deliveryStatus) ? (
                         <Button
                           type="button"
                           variant="destructive"
