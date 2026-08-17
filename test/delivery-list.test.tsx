@@ -108,6 +108,36 @@ describe("Delivery list page", () => {
     expect(screen.getByText(/本頁運費/)).toBeInTheDocument();
   });
 
+  it("opens delivery photos in a half-width side panel", async () => {
+    const user = userEvent.setup();
+    const loadDeliveries = vi.fn().mockResolvedValue(listResult);
+    const loadLookups = vi.fn().mockResolvedValue(lookups);
+
+    render(
+      <MemoryRouter>
+        <DeliveryListPage
+          loadDeliveries={loadDeliveries}
+          loadLookups={loadLookups}
+          now={new Date("2026-08-17T04:00:00+08:00")}
+        />
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: "查看圖片" }));
+    expect(screen.getByRole("dialog", { name: "送達照片" })).toHaveClass(
+      "side-panel-half",
+    );
+    expect(
+      screen.getByRole("img", { name: "送達照片" }),
+    ).toHaveAttribute("src", "https://example.com/photo.jpg");
+
+    const stylesheet = readFileSync(
+      path.resolve(process.cwd(), "src/index.css"),
+      "utf8",
+    );
+    expect(stylesheet).toMatch(/\.side-panel-half\s*\{[^}]*width:\s*min\(50vw/);
+  });
+
   it("filters by fleet and delivery method", async () => {
     const user = userEvent.setup();
     const loadDeliveries = vi.fn().mockResolvedValue(listResult);

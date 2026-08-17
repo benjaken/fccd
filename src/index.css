@@ -4417,6 +4417,10 @@ button.product-tag[aria-pressed="true"] {
   width: min(820px, 100vw);
 }
 
+.side-panel-half {
+  width: min(50vw, 100vw);
+}
+
 .side-panel-header,
 .settings-side-panel-header {
   display: flex;
@@ -4552,6 +4556,7 @@ button.product-tag[aria-pressed="true"] {
   .side-panel,
   .side-panel-wide,
   .side-panel-xl,
+  .side-panel-half,
   .settings-side-panel,
   .settings-side-panel-wide {
     width: min(100vw, 100%);

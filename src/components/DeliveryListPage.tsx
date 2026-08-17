@@ -758,6 +758,7 @@ export function DeliveryListPage({
         title={t("deliveryList.viewImageTitle")}
         onClose={() => setImageItem(null)}
         closeLabel={t("common.closeMenu")}
+        half
       >
         <div className="delivery-image-list">
           {(imageItem?.imageReferences ?? []).map((src) => (
