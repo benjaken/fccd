@@ -59,6 +59,37 @@ export type QuoteCustomerHistory = {
   remarks: QuoteCustomerRemark[];
 };
 
+export const QUOTE_CUSTOMER_MESSAGE_TABS = [
+  "complaint",
+  "like",
+  "note",
+] as const;
+
+export type QuoteCustomerMessageTab =
+  (typeof QUOTE_CUSTOMER_MESSAGE_TABS)[number];
+
+export type QuoteCustomerMessage = {
+  id: string;
+  tab: QuoteCustomerMessageTab;
+  body: string;
+  authorName: string | null;
+  orderNumber: string | null;
+  orderId: string | null;
+  documentType: string | null;
+  createdAt: string;
+};
+
+export type QuoteCustomerMessages = Record<
+  QuoteCustomerMessageTab,
+  QuoteCustomerMessage[]
+>;
+
+const MESSAGE_CATEGORY_BY_TAB: Record<QuoteCustomerMessageTab, string> = {
+  complaint: "orderdislike",
+  like: "orderlike",
+  note: "customer note",
+};
+
 type QuoteCustomerRow = {
   email: string;
   customer_name: string | null;
@@ -92,6 +123,26 @@ type TimelineRow = {
   order_id: string | null;
   bubble_created_at: string | null;
   created_at: string;
+};
+
+type TimelineMessageRow = {
+  id: string;
+  category: string | null;
+  comment: string;
+  author_name_snapshot: string | null;
+  order_id: string | null;
+  bubble_created_at: string | null;
+  created_at: string;
+  orders:
+    | {
+        order_number: string | null;
+        document_type: string | null;
+      }
+    | {
+        order_number: string | null;
+        document_type: string | null;
+      }[]
+    | null;
 };
 
 export function safeCustomerSearchTerm(value: string) {
@@ -138,6 +189,54 @@ export function sortOrdersByCompany(orders: QuoteCustomerHistoryOrder[]) {
     if (company !== 0) return company;
     return (right.createdAt || "").localeCompare(left.createdAt || "");
   });
+}
+
+export function messageTabFromCategory(
+  category: string | null | undefined,
+): QuoteCustomerMessageTab | null {
+  const value = category?.trim().toLowerCase();
+  if (value === "orderdislike") return "complaint";
+  if (value === "orderlike") return "like";
+  if (value === "customer note") return "note";
+  return null;
+}
+
+export function emptyQuoteCustomerMessages(): QuoteCustomerMessages {
+  return { complaint: [], like: [], note: [] };
+}
+
+function relatedOrder(value: TimelineMessageRow["orders"]) {
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value;
+}
+
+export function mapQuoteCustomerMessage(
+  row: TimelineMessageRow,
+): QuoteCustomerMessage | null {
+  const tab = messageTabFromCategory(row.category);
+  if (!tab) return null;
+  const order = relatedOrder(row.orders);
+  return {
+    id: row.id,
+    tab,
+    body: row.comment,
+    authorName: row.author_name_snapshot?.trim() || null,
+    orderNumber: order?.order_number ?? null,
+    orderId: row.order_id,
+    documentType: order?.document_type ?? null,
+    createdAt: row.bubble_created_at || row.created_at,
+  };
+}
+
+export function groupQuoteCustomerMessages(
+  rows: QuoteCustomerMessage[],
+): QuoteCustomerMessages {
+  const grouped = emptyQuoteCustomerMessages();
+  const sorted = [...rows].sort((left, right) =>
+    (left.createdAt || "").localeCompare(right.createdAt || ""),
+  );
+  for (const message of sorted) grouped[message.tab].push(message);
+  return grouped;
 }
 
 function optionalAmount(value: number | string | null | undefined) {
@@ -263,4 +362,61 @@ export async function fetchQuoteCustomerHistory(
   }
 
   return { orders, remarks };
+}
+
+export async function fetchQuoteCustomerMessages(
+  email: string,
+): Promise<QuoteCustomerMessages> {
+  const { data, error } = await supabase
+    .from("order_timeline_entries")
+    .select(
+      "id,category,comment,author_name_snapshot,order_id,bubble_created_at,created_at,orders(order_number,document_type)",
+    )
+    .ilike("customer_email_snapshot", email)
+    .order("bubble_created_at", { ascending: true, nullsFirst: false })
+    .order("created_at", { ascending: true })
+    .limit(QUOTE_CUSTOMER_HISTORY_LIMIT);
+
+  if (error) throw error;
+
+  const messages = ((data ?? []) as TimelineMessageRow[])
+    .map(mapQuoteCustomerMessage)
+    .filter((message): message is QuoteCustomerMessage => Boolean(message));
+
+  return groupQuoteCustomerMessages(messages);
+}
+
+export async function createQuoteCustomerNote({
+  email,
+  body,
+  authorName,
+}: {
+  email: string;
+  body: string;
+  authorName?: string | null;
+}): Promise<QuoteCustomerMessage> {
+  const comment = body.trim();
+  if (!comment) throw new Error("quote_customers_note_empty");
+
+  const now = new Date().toISOString();
+  const { data, error } = await supabase
+    .from("order_timeline_entries")
+    .insert({
+      legacy_id: `web-customer-note-${crypto.randomUUID()}`,
+      category: MESSAGE_CATEGORY_BY_TAB.note,
+      comment,
+      customer_email_snapshot: email,
+      author_name_snapshot: authorName?.trim() || null,
+      bubble_created_at: now,
+      bubble_modified_at: now,
+    })
+    .select(
+      "id,category,comment,author_name_snapshot,order_id,bubble_created_at,created_at,orders(order_number,document_type)",
+    )
+    .single();
+
+  if (error) throw error;
+  const message = mapQuoteCustomerMessage(data as TimelineMessageRow);
+  if (!message) throw new Error("quote_customers_note_failed");
+  return message;
 }

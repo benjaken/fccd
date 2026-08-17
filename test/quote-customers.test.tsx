@@ -7,11 +7,21 @@ import { QuoteCustomersPage } from "@/components/QuoteCustomersPage";
 import i18n from "@/i18n";
 import {
   formatLabeledValue,
+  groupQuoteCustomerMessages,
   mapQuoteCustomerRow,
+  messageTabFromCategory,
   summarizeCompanies,
   type QuoteCustomerHistory,
   type QuoteCustomerListResult,
+  type QuoteCustomerMessages,
 } from "@/lib/quote-customers";
+
+vi.mock("@/auth/AuthProvider", () => ({
+  useAuth: () => ({
+    user: { app_metadata: { role: "Super Admin" } },
+    profile: { role: "Super Admin", user_name: "Mandy", email: "mandy@example.com" },
+  }),
+}));
 
 const customerResult: QuoteCustomerListResult = {
   total: 31,
@@ -98,6 +108,34 @@ const history: QuoteCustomerHistory = {
   ],
 };
 
+const messages: QuoteCustomerMessages = {
+  complaint: [
+    {
+      id: "complaint-1",
+      tab: "complaint",
+      body: "20/12: 少左兩份沙律，退款 $516",
+      authorName: "Candice",
+      orderNumber: "#4680",
+      orderId: "order-4680",
+      documentType: "order",
+      createdAt: "2024-04-12T06:28:00.000Z",
+    },
+  ],
+  like: [],
+  note: [
+    {
+      id: "note-1",
+      tab: "note",
+      body: "payment deadline 1/6",
+      authorName: "Mandy",
+      orderNumber: "B-1178",
+      orderId: "order-1178",
+      documentType: "order",
+      createdAt: "2025-05-27T02:26:00.000Z",
+    },
+  ],
+};
+
 describe("formatLabeledValue", () => {
   it("joins a label and tag the way the customer list displays them", () => {
     expect(formatLabeledValue("Ada", "P-1143")).toBe("Ada : P-1143");
@@ -120,6 +158,28 @@ describe("summarizeCompanies", () => {
     expect(
       summarizeCompanies(customerResult.items[0].companies),
     ).toMatchObject({ primaryName: "K&K property", extraCount: 1, total: 2 });
+  });
+});
+
+describe("customer message grouping", () => {
+  it("maps Bubble comment categories onto the three message tabs", () => {
+    expect(messageTabFromCategory("orderdislike")).toBe("complaint");
+    expect(messageTabFromCategory("orderlike")).toBe("like");
+    expect(messageTabFromCategory("customer note")).toBe("note");
+    expect(messageTabFromCategory("other")).toBeNull();
+  });
+
+  it("groups messages chronologically by tab", () => {
+    expect(
+      groupQuoteCustomerMessages([
+        messages.note[0],
+        messages.complaint[0],
+      ]),
+    ).toMatchObject({
+      complaint: [{ id: "complaint-1" }],
+      like: [],
+      note: [{ id: "note-1" }],
+    });
   });
 });
 
@@ -192,7 +252,7 @@ describe("Quote customers list", () => {
     expect(screen.getByText("HK$940,852")).toBeInTheDocument();
     expect(
       screen.getByRole("button", {
-        name: "過往訂單 / 客戶備註 sales@foodchannels-catering.com",
+        name: "留言 sales@foodchannels-catering.com",
       }),
     ).toBeInTheDocument();
   });
@@ -290,7 +350,79 @@ describe("Quote customers list", () => {
     expect(within(detailTable).getByText("611教會")).toBeInTheDocument();
     expect(within(detailTable).getByRole("link", { name: "P-1100" }))
       .toHaveAttribute("href", "/quotes/quote-1100");
-    expect(within(dialog).getByText("需要素食選項")).toBeInTheDocument();
+  });
+
+  it("opens a chat-style messages panel from the row action", async () => {
+    const user = userEvent.setup();
+    const loadCustomers = vi.fn().mockResolvedValue(customerResult);
+    const loadMessages = vi.fn().mockResolvedValue(messages);
+    const createNote = vi.fn().mockResolvedValue({
+      id: "note-2",
+      tab: "note",
+      body: "已出月結",
+      authorName: "Mandy",
+      orderNumber: null,
+      orderId: null,
+      documentType: null,
+      createdAt: "2026-08-17T06:00:00.000Z",
+    });
+
+    render(
+      <MemoryRouter>
+        <QuoteCustomersPage
+          loadCustomers={loadCustomers}
+          loadMessages={loadMessages}
+          createNote={createNote}
+        />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("sales@foodchannels-catering.com");
+    await user.click(
+      screen.getByRole("button", {
+        name: "留言 sales@foodchannels-catering.com",
+      }),
+    );
+
+    const dialog = await screen.findByRole("dialog", { name: "留言" });
+    await waitFor(() =>
+      expect(loadMessages).toHaveBeenCalledWith(
+        "sales@foodchannels-catering.com",
+      ),
+    );
+    expect(within(dialog).getByRole("tab", { name: "訂單投訴 (1)" })).toBeInTheDocument();
+    expect(within(dialog).getByRole("tab", { name: "訂單讚好 (0)" })).toBeInTheDocument();
+    expect(within(dialog).getByRole("tab", { name: "客戶備註 (1)" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(within(dialog).getByText("Mandy")).toBeInTheDocument();
+    expect(within(dialog).getByText("payment deadline 1/6")).toBeInTheDocument();
+    expect(within(dialog).getByRole("link", { name: "B-1178" })).toHaveAttribute(
+      "href",
+      "/orders/order-1178",
+    );
+
+    await user.click(within(dialog).getByRole("tab", { name: "訂單投訴 (1)" }));
+    expect(within(dialog).getByText("Candice")).toBeInTheDocument();
+    expect(within(dialog).getByText("20/12: 少左兩份沙律，退款 $516")).toBeInTheDocument();
+    expect(within(dialog).getByRole("link", { name: "#4680" })).toHaveAttribute(
+      "href",
+      "/orders/order-4680",
+    );
+
+    await user.click(within(dialog).getByRole("tab", { name: "客戶備註 (1)" }));
+    await user.type(within(dialog).getByPlaceholderText("在此輸入…"), "已出月結");
+    await user.click(within(dialog).getByRole("button", { name: "送出留言" }));
+
+    await waitFor(() =>
+      expect(createNote).toHaveBeenCalledWith({
+        email: "sales@foodchannels-catering.com",
+        body: "已出月結",
+        authorName: "Mandy",
+      }),
+    );
+    expect(await within(dialog).findByText("已出月結")).toBeInTheDocument();
   });
 
   it("shows a clear migration state when the aggregation function is missing", async () => {

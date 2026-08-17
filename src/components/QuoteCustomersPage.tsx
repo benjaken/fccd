@@ -1,17 +1,22 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowDown, ArrowUp, MessageSquare, RefreshCw, Users } from "lucide-react";
+import { ArrowDown, ArrowUp, MessageSquare, RefreshCw, Send, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 
+import { useAuth } from "@/auth/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import { SidePanel } from "@/components/ui/side-panel";
 import { TablePagination } from "@/components/ui/table-pagination";
 import {
+  createQuoteCustomerNote,
   documentPath,
+  emptyQuoteCustomerMessages,
   fetchQuoteCustomerHistory,
+  fetchQuoteCustomerMessages,
   fetchQuoteCustomers,
+  QUOTE_CUSTOMER_MESSAGE_TABS,
   QUOTE_CUSTOMERS_PAGE_SIZE,
   sortOrdersByCompany,
   summarizeCompanies,
@@ -20,6 +25,9 @@ import {
   type QuoteCustomerListFilters,
   type QuoteCustomerListItem,
   type QuoteCustomerListResult,
+  type QuoteCustomerMessage,
+  type QuoteCustomerMessages,
+  type QuoteCustomerMessageTab,
 } from "@/lib/quote-customers";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +35,16 @@ type CustomersLoader = (
   filters: QuoteCustomerListFilters,
 ) => Promise<QuoteCustomerListResult>;
 type HistoryLoader = (email: string) => Promise<QuoteCustomerHistory>;
+type MessagesLoader = (email: string) => Promise<QuoteCustomerMessages>;
+type NoteCreator = (input: {
+  email: string;
+  body: string;
+  authorName?: string | null;
+}) => Promise<QuoteCustomerMessage>;
+
+type OpenPanel =
+  | { kind: "companies"; email: string }
+  | { kind: "messages"; email: string };
 
 const CUSTOMER_SKELETON_COLUMNS = [
   { width: "14rem" },
@@ -99,14 +117,47 @@ function CompanyCell({
   );
 }
 
+function MessageBubble({
+  message,
+  timestamp,
+}: {
+  message: QuoteCustomerMessage;
+  timestamp: string;
+}) {
+  return (
+    <article className="quote-customers-message">
+      {message.authorName ? <span>{message.authorName}</span> : null}
+      <div className="quote-customers-message-bubble">
+        <strong>{message.body}</strong>
+        {message.orderId ? (
+          <Link
+            className="order-link"
+            to={documentPath(message.documentType, message.orderId)}
+          >
+            {message.orderNumber}
+          </Link>
+        ) : message.orderNumber ? (
+          <small>{message.orderNumber}</small>
+        ) : null}
+      </div>
+      <time dateTime={message.createdAt}>{timestamp}</time>
+    </article>
+  );
+}
+
 export function QuoteCustomersPage({
   loadCustomers = fetchQuoteCustomers,
   loadHistory = fetchQuoteCustomerHistory,
+  loadMessages = fetchQuoteCustomerMessages,
+  createNote = createQuoteCustomerNote,
 }: {
   loadCustomers?: CustomersLoader;
   loadHistory?: HistoryLoader;
+  loadMessages?: MessagesLoader;
+  createNote?: NoteCreator;
 }) {
   const { t, i18n } = useTranslation();
+  const { profile } = useAuth();
   const [draftSearch, setDraftSearch] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -116,11 +167,21 @@ export function QuoteCustomersPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
-  const [selectedEmail, setSelectedEmail] = useState<string | null>(null);
+  const [panel, setPanel] = useState<OpenPanel | null>(null);
   const [history, setHistory] = useState<QuoteCustomerHistory | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
+  const [messages, setMessages] = useState<QuoteCustomerMessages | null>(null);
+  const [messagesLoading, setMessagesLoading] = useState(false);
+  const [messagesError, setMessagesError] = useState<string | null>(null);
+  const [messageTab, setMessageTab] =
+    useState<QuoteCustomerMessageTab>("note");
+  const [draftNote, setDraftNote] = useState("");
+  const [sendingNote, setSendingNote] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const messageFeedRef = useRef<HTMLDivElement>(null);
 
+  const selectedEmail = panel?.email ?? null;
   const totalPages = Math.max(1, Math.ceil(total / QUOTE_CUSTOMERS_PAGE_SIZE));
   const visibleFrom = total === 0 ? 0 : (page - 1) * QUOTE_CUSTOMERS_PAGE_SIZE + 1;
   const visibleTo = Math.min(page * QUOTE_CUSTOMERS_PAGE_SIZE, total);
@@ -143,6 +204,20 @@ export function QuoteCustomersPage({
         timeZone: "Asia/Hong_Kong",
       }),
     [i18n.language],
+  );
+
+  const messageTimeFormatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+        timeZone: "Asia/Hong_Kong",
+      }),
+    [],
   );
 
   const loadPage = useCallback(async () => {
@@ -178,7 +253,7 @@ export function QuoteCustomersPage({
   }, [loadPage]);
 
   useEffect(() => {
-    if (!selectedEmail) {
+    if (panel?.kind !== "companies") {
       setHistory(null);
       setHistoryError(null);
       setHistoryLoading(false);
@@ -189,7 +264,7 @@ export function QuoteCustomersPage({
     setHistory(null);
     setHistoryError(null);
     setHistoryLoading(true);
-    void loadHistory(selectedEmail)
+    void loadHistory(panel.email)
       .then((result) => {
         if (!active) return;
         setHistory(result);
@@ -212,7 +287,57 @@ export function QuoteCustomersPage({
     return () => {
       active = false;
     };
-  }, [loadHistory, selectedEmail]);
+  }, [loadHistory, panel]);
+
+  useEffect(() => {
+    if (panel?.kind !== "messages") {
+      setMessages(null);
+      setMessagesError(null);
+      setMessagesLoading(false);
+      setDraftNote("");
+      setSendError(null);
+      return;
+    }
+
+    let active = true;
+    setMessages(null);
+    setMessagesError(null);
+    setMessagesLoading(true);
+    setMessageTab("note");
+    setDraftNote("");
+    setSendError(null);
+    void loadMessages(panel.email)
+      .then((result) => {
+        if (!active) return;
+        setMessages(result);
+      })
+      .catch((loadError: unknown) => {
+        if (!active) return;
+        const code =
+          typeof loadError === "object" &&
+          loadError &&
+          "code" in loadError &&
+          typeof loadError.code === "string"
+            ? loadError.code
+            : "quote_customers_messages_failed";
+        setMessagesError(code);
+        setMessages(emptyQuoteCustomerMessages());
+      })
+      .finally(() => {
+        if (active) setMessagesLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [loadMessages, panel]);
+
+  useEffect(() => {
+    if (messageTab !== "note") return;
+    const feed = messageFeedRef.current;
+    if (!feed) return;
+    feed.scrollTop = feed.scrollHeight;
+  }, [messageTab, messages?.note.length]);
 
   const submitSearch = () => {
     setPage(1);
@@ -225,6 +350,42 @@ export function QuoteCustomersPage({
     setPage(1);
     setSortAscending((current) => !current);
   };
+
+  const closePanel = () => setPanel(null);
+
+  const sendNote = async () => {
+    if (!panel || panel.kind !== "messages" || sendingNote) return;
+    const body = draftNote.trim();
+    if (!body) return;
+
+    setSendingNote(true);
+    setSendError(null);
+    try {
+      const message = await createNote({
+        email: panel.email,
+        body,
+        authorName: profile?.user_name || profile?.email || null,
+      });
+      setMessages((current) => ({
+        ...(current ?? emptyQuoteCustomerMessages()),
+        note: [...(current?.note ?? []), message],
+      }));
+      setDraftNote("");
+    } catch (noteError: unknown) {
+      const code =
+        typeof noteError === "object" &&
+        noteError &&
+        "code" in noteError &&
+        typeof noteError.code === "string"
+          ? noteError.code
+          : "quote_customers_note_failed";
+      setSendError(code);
+    } finally {
+      setSendingNote(false);
+    }
+  };
+
+  const visibleMessages = messages?.[messageTab] ?? [];
 
   return (
     <section className="quotes-page">
@@ -341,7 +502,9 @@ export function QuoteCustomersPage({
                       total: customer.companies.length,
                     })}
                     openLabel={`${t("quoteCustomers.openCompanies")} ${customer.email}`}
-                    onOpen={() => setSelectedEmail(customer.email)}
+                    onOpen={() =>
+                      setPanel({ kind: "companies", email: customer.email })
+                    }
                   />
                 </td>
                 <td>{customer.orderCount.toLocaleString(i18n.language)}</td>
@@ -361,9 +524,11 @@ export function QuoteCustomersPage({
                       type="button"
                       variant="ghost"
                       size="icon"
-                      onClick={() => setSelectedEmail(customer.email)}
-                      aria-label={`${t("quoteCustomers.historyAction")} ${customer.email}`}
-                      title={t("quoteCustomers.historyAction")}
+                      onClick={() =>
+                        setPanel({ kind: "messages", email: customer.email })
+                      }
+                      aria-label={`${t("quoteCustomers.messagesAction")} ${customer.email}`}
+                      title={t("quoteCustomers.messagesAction")}
                     >
                       <MessageSquare />
                     </Button>
@@ -394,11 +559,11 @@ export function QuoteCustomersPage({
       </article>
 
       <SidePanel
-        open={Boolean(selectedEmail)}
+        open={panel?.kind === "companies"}
         extraWide
         title={t("quoteCustomers.historyTitle")}
-        description={selectedEmail ?? undefined}
-        onClose={() => setSelectedEmail(null)}
+        description={panel?.kind === "companies" ? panel.email : undefined}
+        onClose={closePanel}
         closeLabel={t("quoteCustomers.closePanel")}
       >
         {historyLoading ? (
@@ -462,25 +627,103 @@ export function QuoteCustomersPage({
                 </div>
               )}
             </section>
-            <section>
-              <h3>{t("quoteCustomers.remarks")}</h3>
-              {!history?.remarks.length ? (
-                <p>{t("quoteCustomers.remarksEmpty")}</p>
-              ) : (
-                <ul>
-                  {history.remarks.map((remark) => (
-                    <li key={remark.id}>
-                      {remark.orderNumber ? (
-                        <small>{remark.orderNumber}</small>
-                      ) : null}
-                      <span>{remark.body}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
           </div>
         )}
+      </SidePanel>
+
+      <SidePanel
+        open={panel?.kind === "messages"}
+        wide
+        title={t("quoteCustomers.messagesTitle")}
+        description={panel?.kind === "messages" ? panel.email : undefined}
+        onClose={closePanel}
+        closeLabel={t("quoteCustomers.closePanel")}
+        footer={
+          messageTab === "note" ? (
+            <form
+              className="quote-customers-message-composer"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void sendNote();
+              }}
+            >
+              <label className="sr-only" htmlFor="quote-customer-note">
+                {t("quoteCustomers.notePlaceholder")}
+              </label>
+              <input
+                id="quote-customer-note"
+                value={draftNote}
+                onChange={(event) => setDraftNote(event.target.value)}
+                placeholder={t("quoteCustomers.notePlaceholder")}
+                disabled={messagesLoading || sendingNote}
+                autoComplete="off"
+              />
+              <Button
+                type="submit"
+                size="icon"
+                disabled={messagesLoading || sendingNote || !draftNote.trim()}
+                aria-label={t("quoteCustomers.sendNote")}
+              >
+                <Send />
+              </Button>
+            </form>
+          ) : undefined
+        }
+      >
+        <div className="quote-customers-messages">
+          <div
+            className="quote-customers-message-tabs"
+            role="tablist"
+            aria-label={t("quoteCustomers.messagesTitle")}
+          >
+            {QUOTE_CUSTOMER_MESSAGE_TABS.map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                role="tab"
+                aria-selected={messageTab === tab}
+                className={cn(messageTab === tab && "is-active")}
+                onClick={() => setMessageTab(tab)}
+              >
+                {t(`quoteCustomers.tabs.${tab}`, {
+                  total: messages?.[tab].length ?? 0,
+                })}
+              </button>
+            ))}
+          </div>
+          {messagesLoading ? (
+            <p className="quote-customers-history-status">
+              {t("quoteCustomers.messagesLoading")}
+            </p>
+          ) : messagesError ? (
+            <p className="quote-customers-history-error" role="alert">
+              {t("quoteCustomers.messagesError")}
+            </p>
+          ) : (
+            <div ref={messageFeedRef} className="quote-customers-message-feed">
+              {!visibleMessages.length ? (
+                <p className="quote-customers-history-status">
+                  {t(`quoteCustomers.emptyTabs.${messageTab}`)}
+                </p>
+              ) : (
+                visibleMessages.map((message) => (
+                  <MessageBubble
+                    key={message.id}
+                    message={message}
+                    timestamp={messageTimeFormatter.format(
+                      new Date(message.createdAt),
+                    )}
+                  />
+                ))
+              )}
+              {sendError ? (
+                <p className="quote-customers-history-error" role="alert">
+                  {t("quoteCustomers.sendError")}
+                </p>
+              ) : null}
+            </div>
+          )}
+        </div>
       </SidePanel>
     </section>
   );

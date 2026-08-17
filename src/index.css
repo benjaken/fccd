@@ -1763,6 +1763,120 @@ td:last-child {
   color: var(--destructive);
 }
 
+.side-panel-body:has(.quote-customers-messages) {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  padding: 0;
+  overflow: hidden;
+}
+
+.quote-customers-messages {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  height: 100%;
+}
+
+.quote-customers-message-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-bottom: 1px solid var(--border);
+}
+
+.quote-customers-message-tabs button {
+  margin: 0;
+  padding: 12px 8px 10px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: none;
+  color: var(--muted-foreground);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.35;
+  cursor: pointer;
+}
+
+.quote-customers-message-tabs button.is-active {
+  color: var(--foreground);
+  border-bottom-color: var(--foreground);
+}
+
+.quote-customers-message-feed {
+  display: grid;
+  align-content: start;
+  gap: 18px;
+  min-height: 0;
+  overflow: auto;
+  padding: 18px;
+}
+
+.quote-customers-message {
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+}
+
+.quote-customers-message > span {
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+
+.quote-customers-message-bubble {
+  display: grid;
+  gap: 6px;
+  max-width: 100%;
+  padding: 12px 14px;
+  border: 1px solid oklch(0.78 0.1 80);
+  border-radius: 12px;
+  background: var(--card);
+}
+
+.quote-customers-message-bubble strong {
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.quote-customers-message-bubble small,
+.quote-customers-message-bubble .order-link {
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.quote-customers-message time {
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-style: italic;
+}
+
+.quote-customers-message-composer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.quote-customers-message-composer input {
+  height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--background);
+  color: var(--foreground);
+  outline: 0;
+}
+
+.quote-customers-message-composer input:focus {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 22%, transparent);
+}
+
+.side-panel-footer:has(.quote-customers-message-composer) {
+  justify-content: stretch;
+}
+
 .quote-company,
 .order-customer-name {
   display: block;
