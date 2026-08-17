@@ -1,3 +1,7 @@
+import {
+  averageMonthlyMeatPrices,
+  computeMonthlyMeatUnitPrices,
+} from "@/lib/monthly-meat-price";
 import { supabase } from "@/lib/supabase";
 
 export const SELLING_PRICE_COST_PAGE_SIZE = 15;
@@ -473,6 +477,29 @@ export async function fetchSellingPriceCostRows(
       listPricePerKg: computed.listPricePerKg,
     };
   });
+}
+
+/** Arithmetic mean of 工場 prices for the rows that can be priced. */
+export function averageFactorySupplyPrice(rows: SellingPriceCostRow[]) {
+  const priced = rows.flatMap((row) => {
+    if (
+      row.rawMeatWeightKg === null ||
+      row.inboundUnitPrice === null ||
+      row.yieldKg === null
+    ) {
+      return [];
+    }
+    const computed = computeMonthlyMeatUnitPrices({
+      outboundKg: row.rawMeatWeightKg,
+      inboundUnitPrice: row.inboundUnitPrice,
+      seasoningPerKg: row.seasoningPerKg,
+      yieldKg: row.yieldKg,
+      variationRate: row.variationRate,
+      markupRate: row.markupRate,
+    });
+    return computed ? [computed] : [];
+  });
+  return averageMonthlyMeatPrices(priced)?.roomPrice ?? null;
 }
 
 export type MonthlyMeatPricePushResult = {

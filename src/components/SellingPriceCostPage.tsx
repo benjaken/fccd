@@ -16,6 +16,7 @@ import { TablePagination } from "@/components/ui/table-pagination";
 import { FROZEN_ACTION_PERMISSION_KEYS } from "@/lib/frozen-action-permissions";
 import { cn } from "@/lib/utils";
 import {
+  averageFactorySupplyPrice,
   fetchSellingPriceCostRows,
   fetchSellingPriceRawMeatOptions,
   filterSellingPriceCostRows,
@@ -124,6 +125,7 @@ export function SellingPriceCostPage({
   const [monthMenuOpen, setMonthMenuOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [pushing, setPushing] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [pushMessage, setPushMessage] = useState<string | null>(null);
   const [pushError, setPushError] = useState<string | null>(null);
   const monthFilterRef = useRef<HTMLDivElement>(null);
@@ -316,6 +318,7 @@ export function SellingPriceCostPage({
     setPage(1);
     setMonthFilter(null);
     setMonthMenuOpen(false);
+    setConfirmOpen(false);
     setPushMessage(null);
     setPushError(null);
 
@@ -344,16 +347,27 @@ export function SellingPriceCostPage({
 
   const reload = () => setReloadKey((current) => current + 1);
 
-  const canPushNow =
-    canPush && Boolean(selected?.id) && isHongKongYearMonth(monthFilter) && !pushing;
+  const monthRows = useMemo(
+    () =>
+      isHongKongYearMonth(monthFilter)
+        ? filterSellingPriceCostRows(rows, "", monthFilter)
+        : [],
+    [monthFilter, rows],
+  );
+  const reportPreviewAverage = useMemo(
+    () => averageFactorySupplyPrice(monthRows),
+    [monthRows],
+  );
+  const showSendButton =
+    canPush && Boolean(selected?.id) && isHongKongYearMonth(monthFilter);
+
+  const closeConfirm = () => {
+    if (pushing) return;
+    setConfirmOpen(false);
+  };
 
   const pushSelectedMonth = async () => {
-    if (!canPush || !selected?.id) return;
-    if (!isHongKongYearMonth(monthFilter)) {
-      setPushMessage(null);
-      setPushError(t("sellingPriceCost.pushNeedMonth"));
-      return;
-    }
+    if (!canPush || !selected?.id || !isHongKongYearMonth(monthFilter)) return;
 
     setPushing(true);
     setPushMessage(null);
@@ -371,6 +385,7 @@ export function SellingPriceCostPage({
       } else {
         setPushError(t("sellingPriceCost.pushError"));
       }
+      setConfirmOpen(false);
     } catch (pushFailure: unknown) {
       setPushError(
         pushFailure instanceof Error
@@ -393,6 +408,15 @@ export function SellingPriceCostPage({
   const formatMoney = (value: number | null) =>
     value === null ? t("common.notSet") : currencyFormatter.format(value);
 
+  useEffect(() => {
+    if (!confirmOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeConfirm();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [confirmOpen, pushing]);
+
   return (
     <section className="selling-price-cost-page">
       <header className="page-heading selling-price-cost-heading">
@@ -400,29 +424,19 @@ export function SellingPriceCostPage({
           <span className="eyebrow">{t("sellingPriceCost.eyebrow")}</span>
           <h1>{t("sellingPriceCost.title")}</h1>
         </div>
-        {canPush ? (
+        {showSendButton ? (
           <div className="heading-actions">
             <Button
               type="button"
-              disabled={!canPushNow}
-              title={
-                isHongKongYearMonth(monthFilter)
-                  ? undefined
-                  : t("sellingPriceCost.pushNeedMonth")
-              }
-              aria-label={
-                isHongKongYearMonth(monthFilter)
-                  ? t("sellingPriceCost.push")
-                  : t("sellingPriceCost.pushNeedMonth")
-              }
+              disabled={pushing}
               onClick={() => {
-                void pushSelectedMonth();
+                setPushMessage(null);
+                setPushError(null);
+                setConfirmOpen(true);
               }}
             >
               <Send />
-              {pushing
-                ? t("sellingPriceCost.pushing")
-                : t("sellingPriceCost.push")}
+              {t("sellingPriceCost.sendToReport")}
             </Button>
           </div>
         ) : null}
@@ -584,6 +598,7 @@ export function SellingPriceCostPage({
                               setMonthFilter(null);
                               setMonthMenuOpen(false);
                               setPage(1);
+                              setConfirmOpen(false);
                               setPushMessage(null);
                               setPushError(null);
                             }}
@@ -605,6 +620,7 @@ export function SellingPriceCostPage({
                                 setMonthFilter(option.key);
                                 setMonthMenuOpen(false);
                                 setPage(1);
+                                setConfirmOpen(false);
                                 setPushMessage(null);
                                 setPushError(null);
                               }}
@@ -700,6 +716,51 @@ export function SellingPriceCostPage({
         />
         </article>
       </div>
+
+      {confirmOpen ? (
+        <div className="confirm-dialog-root" role="presentation">
+          <button
+            type="button"
+            className="confirm-dialog-backdrop"
+            aria-label={t("sellingPriceCost.confirmCancel")}
+            onClick={closeConfirm}
+          />
+          <div
+            className="confirm-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="selling-price-cost-push-title"
+          >
+            <div className="selling-price-cost-push-preview">
+              <p id="selling-price-cost-push-title">
+                {t("sellingPriceCost.reportPreviewTitle")}
+              </p>
+              <strong>{formatMoney(reportPreviewAverage)}</strong>
+            </div>
+            <footer className="confirm-dialog-footer">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={pushing}
+                onClick={closeConfirm}
+              >
+                {t("sellingPriceCost.confirmCancel")}
+              </Button>
+              <Button
+                type="button"
+                disabled={pushing}
+                onClick={() => {
+                  void pushSelectedMonth();
+                }}
+              >
+                {pushing
+                  ? t("sellingPriceCost.sendingToReport")
+                  : t("sellingPriceCost.sendToReport")}
+              </Button>
+            </footer>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
