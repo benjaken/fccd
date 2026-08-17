@@ -255,6 +255,8 @@ const phaseB: SourceMapping[] = [
       bento_main_type_legacy_id: text(r["bento_main dish"]),
       bento_column_type_id: null,
       bento_column_type_legacy_id: text(r["bento_no. of column"]),
+      cook_type_id: null,
+      cook_type_legacy_id: text(r["DS CookType"]),
     }),
     relations: [
       relation("channel_legacy_id", "channel_id", "channels"),
@@ -268,6 +270,7 @@ const phaseB: SourceMapping[] = [
         "bento_column_type_id",
         "bento_column_types",
       ),
+      relation("cook_type_legacy_id", "cook_type_id", "cook_types"),
     ],
   },
   {

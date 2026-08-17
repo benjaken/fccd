@@ -31,7 +31,8 @@ const productResult: ProductListResult = {
       channelName: "Catering",
       productTypeId: "type-1",
       productTypeName: "西式熱盤",
-      cookTypeName: "焗",
+      cookTypeId: "cook-1",
+      cookTypeName: "焗爐",
       bentoMainTypeId: "staple-1",
       bentoMainTypeName: "飯",
       bentoColumnTypeId: "column-1",
@@ -62,7 +63,7 @@ const productDetail: ProductDetail = {
   productTypeId: "type-1",
   productTypeName: "西式熱盤",
   cookTypeId: "cook-1",
-  cookTypeName: "焗",
+  cookTypeName: "焗爐",
   bentoMainTypeId: "staple-1",
   bentoMainTypeName: "飯",
   bentoColumnTypeId: "column-1",
@@ -100,7 +101,7 @@ const productDetail: ProductDetail = {
 const productEditOptions = {
   channels: [{ id: "channel-1", name: "Catering" }],
   productTypes: [{ id: "type-1", name: "西式熱盤" }],
-  cookTypes: [{ id: "cook-1", name: "焗" }],
+  cookTypes: [{ id: "cook-1", name: "焗爐" }],
   collections: [
     { id: "col-1", name: "西式熱盤", legacyId: "legacy-col-1" },
     { id: "col-2", name: "飲品", legacyId: "legacy-col-2" },
@@ -314,6 +315,7 @@ describe("Products catalog pages", () => {
         productTypeName: "",
         bentoMainTypeId: "",
         bentoColumnTypeId: "",
+        cookTypeId: "",
         status: "",
         priceRange: "",
         sortField: "sku",
@@ -364,7 +366,7 @@ describe("Products catalog pages", () => {
     );
   });
 
-  it("filters by price range, channel, type, staple, compartments, and status dropdowns", async () => {
+  it("filters by price range, channel, type, staple, compartments, cook method, and status dropdowns", async () => {
     const user = userEvent.setup();
     const loadProducts = vi.fn().mockResolvedValue(productResult);
     const loadChannels = vi.fn().mockResolvedValue([
@@ -383,6 +385,14 @@ describe("Products catalog pages", () => {
       { id: "column-5", name: "五格" },
       { id: "column-6", name: "六格" },
     ]);
+    const loadCookTypes = vi.fn().mockResolvedValue([
+      { id: "cook-stir", name: "炒爐" },
+      { id: "cook-steam", name: "蒸爐" },
+      { id: "cook-fry", name: "炸爐" },
+      { id: "cook-oven", name: "焗爐" },
+      { id: "cook-fridge", name: "雪櫃" },
+      { id: "cook-direct", name: "直出" },
+    ]);
 
     render(
       <MemoryRouter>
@@ -392,6 +402,7 @@ describe("Products catalog pages", () => {
           loadProductTypes={loadProductTypes}
           loadBentoMainTypes={loadBentoMainTypes}
           loadBentoColumnTypes={loadBentoColumnTypes}
+          loadCookTypes={loadCookTypes}
         />
       </MemoryRouter>,
     );
@@ -455,10 +466,26 @@ describe("Products catalog pages", () => {
       ),
     );
 
+    await user.selectOptions(screen.getByLabelText("烹煮方式"), "cook-steam");
+    await waitFor(() =>
+      expect(loadProducts).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          cookTypeId: "cook-steam",
+          page: 1,
+        }),
+      ),
+    );
+
     expect(screen.getByLabelText("格數")).toHaveTextContent("單格");
     expect(screen.getByLabelText("格數")).toHaveTextContent("雙格");
     expect(screen.getByLabelText("格數")).toHaveTextContent("五格");
     expect(screen.getByLabelText("格數")).toHaveTextContent("六格");
+    expect(screen.getByLabelText("烹煮方式")).toHaveTextContent("炒爐");
+    expect(screen.getByLabelText("烹煮方式")).toHaveTextContent("蒸爐");
+    expect(screen.getByLabelText("烹煮方式")).toHaveTextContent("炸爐");
+    expect(screen.getByLabelText("烹煮方式")).toHaveTextContent("焗爐");
+    expect(screen.getByLabelText("烹煮方式")).toHaveTextContent("雪櫃");
+    expect(screen.getByLabelText("烹煮方式")).toHaveTextContent("直出");
 
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
   });
@@ -563,7 +590,7 @@ describe("Products catalog pages", () => {
     expect(await screen.findByRole("heading", { name: "燒雞" })).toBeInTheDocument();
     expect(screen.getByText("經典到會燒雞")).toBeInTheDocument();
     expect(screen.getAllByText("西式熱盤").length).toBeGreaterThan(0);
-    expect(screen.getByText("焗")).toBeInTheDocument();
+    expect(screen.getByText("焗爐")).toBeInTheDocument();
     expect(screen.getByText("Catering")).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "精緻家庭美宴 (4-6人)" }),

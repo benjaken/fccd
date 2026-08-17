@@ -15,6 +15,7 @@ import { useDeferredFilter } from "@/lib/use-deferred-filter";
 import {
   fetchBentoColumnTypes,
   fetchBentoMainTypes,
+  fetchCatalogCookTypes,
   fetchProductChannels,
   fetchProductTypes,
   fetchProducts,
@@ -51,6 +52,7 @@ type ChannelsLoader = () => Promise<CatalogOption[]>;
 type ProductTypesLoader = (channelId?: string) => Promise<CatalogOption[]>;
 type StaplesLoader = () => Promise<CatalogOption[]>;
 type CompartmentsLoader = () => Promise<CatalogOption[]>;
+type CookTypesLoader = () => Promise<CatalogOption[]>;
 type RecommendUpdater = typeof updateProductRecommendation;
 
 export function ProductsListPage({
@@ -61,6 +63,7 @@ export function ProductsListPage({
   loadProductTypes = fetchProductTypes,
   loadBentoMainTypes = fetchBentoMainTypes,
   loadBentoColumnTypes = fetchBentoColumnTypes,
+  loadCookTypes = fetchCatalogCookTypes,
   updateRecommendation = updateProductRecommendation,
 }: {
   preset?: ProductPreset;
@@ -70,6 +73,7 @@ export function ProductsListPage({
   loadProductTypes?: ProductTypesLoader;
   loadBentoMainTypes?: StaplesLoader;
   loadBentoColumnTypes?: CompartmentsLoader;
+  loadCookTypes?: CookTypesLoader;
   updateRecommendation?: RecommendUpdater;
 }) {
   const { t, i18n } = useTranslation();
@@ -89,6 +93,9 @@ export function ProductsListPage({
   );
   const [bentoColumnTypeId, setBentoColumnTypeId] = useState(
     () => searchParams.get("compartments") ?? "",
+  );
+  const [cookTypeId, setCookTypeId] = useState(
+    () => searchParams.get("cook") ?? "",
   );
   const [status, setStatus] = useState<ProductStatusFilter>("");
   const [priceRange, setPriceRange] = useState<ProductPriceRange>("");
@@ -112,6 +119,10 @@ export function ProductsListPage({
     setPage(1);
     setBentoColumnTypeId(value);
   });
+  const cookFilter = useDeferredFilter(cookTypeId, (value) => {
+    setPage(1);
+    setCookTypeId(value);
+  });
   const statusFilter = useDeferredFilter(status, (value) => {
     setPage(1);
     setStatus(value);
@@ -120,6 +131,7 @@ export function ProductsListPage({
   const [productTypes, setProductTypes] = useState<CatalogOption[]>([]);
   const [bentoMainTypes, setBentoMainTypes] = useState<CatalogOption[]>([]);
   const [bentoColumnTypes, setBentoColumnTypes] = useState<CatalogOption[]>([]);
+  const [cookTypes, setCookTypes] = useState<CatalogOption[]>([]);
   const [page, setPage] = useState(1);
   const [items, setItems] = useState<ProductListItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -194,6 +206,20 @@ export function ProductsListPage({
 
   useEffect(() => {
     let active = true;
+    void loadCookTypes()
+      .then((cookOptions) => {
+        if (active) setCookTypes(cookOptions);
+      })
+      .catch(() => {
+        if (active) setCookTypes([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [loadCookTypes]);
+
+  useEffect(() => {
+    let active = true;
     void loadProductTypes(channelFilter.value)
       .then((typeOptions) => {
         if (!active) return;
@@ -225,6 +251,7 @@ export function ProductsListPage({
     const nextType = searchParams.get("type") ?? "";
     const nextStaple = searchParams.get("staple") ?? "";
     const nextCompartments = searchParams.get("compartments") ?? "";
+    const nextCook = searchParams.get("cook") ?? "";
     setChannelId((current) => (current === nextChannel ? current : nextChannel));
     setProductTypeName((current) => (current === nextType ? current : nextType));
     setBentoMainTypeId((current) =>
@@ -233,6 +260,7 @@ export function ProductsListPage({
     setBentoColumnTypeId((current) =>
       current === nextCompartments ? current : nextCompartments,
     );
+    setCookTypeId((current) => (current === nextCook ? current : nextCook));
   }, [searchParams]);
 
   useEffect(() => {
@@ -241,6 +269,7 @@ export function ProductsListPage({
     if (productTypeName) next.set("type", productTypeName);
     if (bentoMainTypeId) next.set("staple", bentoMainTypeId);
     if (bentoColumnTypeId) next.set("compartments", bentoColumnTypeId);
+    if (cookTypeId) next.set("cook", cookTypeId);
     const current = searchParams.toString();
     const upcoming = next.toString();
     if (current !== upcoming) {
@@ -250,6 +279,7 @@ export function ProductsListPage({
     bentoColumnTypeId,
     bentoMainTypeId,
     channelId,
+    cookTypeId,
     productTypeName,
     searchParams,
     setSearchParams,
@@ -261,6 +291,7 @@ export function ProductsListPage({
     setProductTypeName("");
     setBentoMainTypeId("");
     setBentoColumnTypeId("");
+    setCookTypeId("");
     setStatus("");
     setPriceRange("");
     setSortField("sku");
@@ -278,6 +309,7 @@ export function ProductsListPage({
         productTypeName,
         bentoMainTypeId,
         bentoColumnTypeId,
+        cookTypeId,
         status,
         priceRange,
         sortField,
@@ -309,6 +341,7 @@ export function ProductsListPage({
     productTypeName,
     bentoColumnTypeId,
     bentoMainTypeId,
+    cookTypeId,
     reloadKey,
     search,
     sortAscending,
@@ -445,6 +478,7 @@ export function ProductsListPage({
                 productTypeName ||
                 bentoMainTypeId ||
                 bentoColumnTypeId ||
+                cookTypeId ||
                 status,
             )}
             onConfirmFilters={() => {
@@ -453,6 +487,7 @@ export function ProductsListPage({
               typeFilter.confirm();
               stapleFilter.confirm();
               compartmentFilter.confirm();
+              cookFilter.confirm();
               statusFilter.confirm();
             }}
             onDismissFilters={() => {
@@ -461,6 +496,7 @@ export function ProductsListPage({
               typeFilter.revert();
               stapleFilter.revert();
               compartmentFilter.revert();
+              cookFilter.revert();
               statusFilter.revert();
             }}
             filters={
@@ -548,6 +584,23 @@ export function ProductsListPage({
                     {bentoColumnTypes.map((compartment) => (
                       <option key={compartment.id} value={compartment.id}>
                         {compartment.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="products-status-filter">
+                  <span>{t("products.cookFilter")}</span>
+                  <select
+                    value={cookFilter.value}
+                    onChange={(event) => {
+                      cookFilter.setValue(event.target.value);
+                    }}
+                  >
+                    <option value="">{t("products.allCookTypes")}</option>
+                    {cookTypes.map((cookType) => (
+                      <option key={cookType.id} value={cookType.id}>
+                        {cookType.name}
                       </option>
                     ))}
                   </select>
