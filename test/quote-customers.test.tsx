@@ -314,6 +314,44 @@ describe("Quote customers list", () => {
     );
   });
 
+  it("opens the customer order table from the customer name", async () => {
+    const user = userEvent.setup();
+    const loadCustomers = vi.fn().mockResolvedValue(customerResult);
+    const loadHistory = vi.fn().mockResolvedValue(history);
+
+    render(
+      <MemoryRouter>
+        <QuoteCustomersPage
+          loadCustomers={loadCustomers}
+          loadHistory={loadHistory}
+        />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("sales@foodchannels-catering.com");
+    await user.click(
+      screen.getByRole("button", { name: "查看訂單 Ada" }),
+    );
+
+    const dialog = await screen.findByRole("dialog", {
+      name: "公司與訂單",
+    });
+    await waitFor(() =>
+      expect(loadHistory).toHaveBeenCalledWith(
+        "sales@foodchannels-catering.com",
+      ),
+    );
+    const detailTable = within(dialog).getByRole("table");
+    expect(within(detailTable).getByText("公司")).toBeInTheDocument();
+    expect(within(detailTable).getByText("訂單號碼")).toBeInTheDocument();
+    expect(within(detailTable).getByText("K&K property")).toBeInTheDocument();
+    expect(within(detailTable).getByRole("link", { name: "P-1143" }))
+      .toHaveAttribute("href", "/orders/order-1143");
+    expect(within(detailTable).getByText("611教會")).toBeInTheDocument();
+    expect(within(detailTable).getByRole("link", { name: "P-1100" }))
+      .toHaveAttribute("href", "/quotes/quote-1100");
+  });
+
   it("opens a company-order table in the side panel from a multi-company row", async () => {
     const user = userEvent.setup();
     const loadCustomers = vi.fn().mockResolvedValue(customerResult);

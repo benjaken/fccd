@@ -473,9 +473,20 @@ export function QuoteCustomersPage({
                   <strong>{customer.email}</strong>
                 </td>
                 <td>
-                  <strong>
-                    {customer.customerName || t("common.notSet")}
-                  </strong>
+                  <button
+                    type="button"
+                    className="quote-customers-company-summary"
+                    onClick={() =>
+                      setPanel({ kind: "companies", email: customer.email })
+                    }
+                    aria-label={`${t("quoteCustomers.openOrders")} ${
+                      customer.customerName || customer.email
+                    }`}
+                  >
+                    <strong>
+                      {customer.customerName || t("common.notSet")}
+                    </strong>
+                  </button>
                   {customer.latestOrderId ? (
                     <small className="quote-company">
                       <Link
