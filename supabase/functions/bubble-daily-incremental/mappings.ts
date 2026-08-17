@@ -241,7 +241,7 @@ const phaseB: SourceMapping[] = [
       ...base(r),
       channel_id: null,
       channel_legacy_id: text(r.R_Channel),
-      sku: text(r.SKU),
+      sku: text(r.SKU)?.trim() || null,
       name: text(r["Product Name"]) || requireLegacyId(r),
       chinese_name: text(r["Chinese Name"]),
       description: text(r.Description),

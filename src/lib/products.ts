@@ -2,8 +2,13 @@ import { supabase } from "@/lib/supabase";
 
 export const PRODUCTS_PAGE_SIZE = 15;
 
+export function normalizeProductSku(sku: string | null | undefined) {
+  const trimmed = sku?.trim() ?? "";
+  return trimmed || null;
+}
+
 export function hasProductSku(sku: string | null | undefined) {
-  return Boolean(sku?.trim());
+  return Boolean(normalizeProductSku(sku));
 }
 
 export type ProductPreset = "all" | "catering" | "lunchbox" | "ala-carte";
@@ -496,7 +501,7 @@ export async function fetchProducts({
       const productType = relatedRecord(row.product_types);
       return {
         id: row.id,
-        sku: row.sku,
+        sku: normalizeProductSku(row.sku),
         name: row.name,
         chineseName: row.chinese_name,
         price: toNumber(row.price),
@@ -652,7 +657,7 @@ export async function fetchProductDetail(
   return {
     id: row.id,
     legacyId: row.legacy_id,
-    sku: row.sku,
+    sku: normalizeProductSku(row.sku),
     name: row.name,
     chineseName: row.chinese_name,
     description: row.description,
@@ -787,7 +792,7 @@ export async function searchCatalogProducts(
   return (data ?? []).map((row) => ({
     id: row.id as string,
     name: ((row.chinese_name as string | null) || (row.name as string)) as string,
-    sku: (row.sku as string | null) ?? null,
+    sku: normalizeProductSku(row.sku as string | null),
     legacyId: (row.legacy_id as string | null) ?? undefined,
   }));
 }

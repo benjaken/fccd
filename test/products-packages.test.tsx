@@ -11,7 +11,7 @@ import { ProductDetailPage } from "@/components/ProductDetailPage";
 import { ProductsListPage } from "@/components/ProductsListPage";
 import i18n from "@/i18n";
 import type { PackageDetail, PackageListResult } from "@/lib/packages";
-import { hasProductSku, type ProductDetail, type ProductListResult } from "@/lib/products";
+import { hasProductSku, normalizeProductSku, type ProductDetail, type ProductListResult } from "@/lib/products";
 
 const productResult: ProductListResult = {
   total: 1,
@@ -171,6 +171,14 @@ describe("hasProductSku", () => {
     expect(hasProductSku("")).toBe(false);
     expect(hasProductSku("   ")).toBe(false);
     expect(hasProductSku("CC-001")).toBe(true);
+  });
+});
+
+describe("normalizeProductSku", () => {
+  it("trims leftover Bubble spaces so SKU sort is A-Z", () => {
+    expect(normalizeProductSku(" KRIC04-3")).toBe("KRIC04-3");
+    expect(normalizeProductSku("CAC001")).toBe("CAC001");
+    expect(normalizeProductSku("  ")).toBeNull();
   });
 });
 
