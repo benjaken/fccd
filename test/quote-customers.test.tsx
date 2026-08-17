@@ -8,6 +8,7 @@ import i18n from "@/i18n";
 import {
   formatLabeledValue,
   mapQuoteCustomerRow,
+  summarizeCompanies,
   type QuoteCustomerHistory,
   type QuoteCustomerListResult,
 } from "@/lib/quote-customers";
@@ -75,6 +76,17 @@ const history: QuoteCustomerHistory = {
       customerNote: "需要素食選項",
       createdAt: "2026-08-12T01:00:00.000Z",
     },
+    {
+      id: "quote-1100",
+      orderNumber: "P-1100",
+      documentType: "quote",
+      customerName: "Ada",
+      companyName: "611教會",
+      grandTotal: 4200,
+      currency: "HKD",
+      customerNote: null,
+      createdAt: "2026-07-02T04:00:00.000Z",
+    },
   ],
   remarks: [
     {
@@ -90,6 +102,24 @@ describe("formatLabeledValue", () => {
   it("joins a label and tag the way the customer list displays them", () => {
     expect(formatLabeledValue("Ada", "P-1143")).toBe("Ada : P-1143");
     expect(formatLabeledValue(null, "#4455")).toBe("— : #4455");
+  });
+});
+
+describe("summarizeCompanies", () => {
+  it("keeps a single company name and counts extras for multi-company rows", () => {
+    expect(
+      summarizeCompanies([
+        {
+          companyName: "K&K property",
+          tag: "B-1274",
+          orderId: "order-1",
+          documentType: "order",
+        },
+      ]),
+    ).toMatchObject({ primaryName: "K&K property", extraCount: 0, total: 1 });
+    expect(
+      summarizeCompanies(customerResult.items[0].companies),
+    ).toMatchObject({ primaryName: "K&K property", extraCount: 1, total: 2 });
   });
 });
 
@@ -151,14 +181,12 @@ describe("Quote customers list", () => {
       "/orders/order-1143",
     );
     expect(screen.getByText("K&K property")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "B-1274" })).toHaveAttribute(
+    expect(screen.getByText("共 2 間公司")).toBeInTheDocument();
+    expect(screen.queryByText("611教會")).not.toBeInTheDocument();
+    expect(screen.getByText("Wine Passions")).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: "#4455" })[0]).toHaveAttribute(
       "href",
-      "/orders/order-1274",
-    );
-    expect(screen.getByText("611教會")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "P-1100" })).toHaveAttribute(
-      "href",
-      "/quotes/quote-1100",
+      "/orders/order-4455",
     );
     expect(screen.getByText("312")).toBeInTheDocument();
     expect(screen.getByText("HK$940,852")).toBeInTheDocument();
@@ -226,7 +254,7 @@ describe("Quote customers list", () => {
     );
   });
 
-  it("opens past orders and customer remarks in a side panel", async () => {
+  it("opens a company-order table in the side panel from a multi-company row", async () => {
     const user = userEvent.setup();
     const loadCustomers = vi.fn().mockResolvedValue(customerResult);
     const loadHistory = vi.fn().mockResolvedValue(history);
@@ -243,20 +271,25 @@ describe("Quote customers list", () => {
     await screen.findByText("sales@foodchannels-catering.com");
     await user.click(
       screen.getByRole("button", {
-        name: "過往訂單 / 客戶備註 sales@foodchannels-catering.com",
+        name: "查看公司與訂單 sales@foodchannels-catering.com",
       }),
     );
 
     const dialog = await screen.findByRole("dialog", {
-      name: "過往訂單 / 客戶備註",
+      name: "公司與訂單",
     });
     await waitFor(() => expect(loadHistory).toHaveBeenCalledWith(
       "sales@foodchannels-catering.com",
     ));
-    expect(within(dialog).getByText("過往訂單")).toBeInTheDocument();
-    expect(within(dialog).getByRole("link", { name: "P-1143" }))
+    const detailTable = within(dialog).getByRole("table");
+    expect(within(detailTable).getByText("公司")).toBeInTheDocument();
+    expect(within(detailTable).getByText("訂單號碼")).toBeInTheDocument();
+    expect(within(detailTable).getByText("K&K property")).toBeInTheDocument();
+    expect(within(detailTable).getByRole("link", { name: "P-1143" }))
       .toHaveAttribute("href", "/orders/order-1143");
-    expect(within(dialog).getByText("K&K property")).toBeInTheDocument();
+    expect(within(detailTable).getByText("611教會")).toBeInTheDocument();
+    expect(within(detailTable).getByRole("link", { name: "P-1100" }))
+      .toHaveAttribute("href", "/quotes/quote-1100");
     expect(within(dialog).getByText("需要素食選項")).toBeInTheDocument();
   });
 

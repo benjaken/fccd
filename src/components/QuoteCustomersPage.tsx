@@ -13,6 +13,9 @@ import {
   fetchQuoteCustomerHistory,
   fetchQuoteCustomers,
   QUOTE_CUSTOMERS_PAGE_SIZE,
+  sortOrdersByCompany,
+  summarizeCompanies,
+  type QuoteCustomerCompany,
   type QuoteCustomerHistory,
   type QuoteCustomerListFilters,
   type QuoteCustomerListItem,
@@ -43,6 +46,57 @@ function formatMoney(
   if (amount === null) return unset;
   if (currency === "HKD") return formatter.format(amount);
   return `${currency} ${amount.toLocaleString()}`;
+}
+
+function CompanyCell({
+  companies,
+  unset,
+  companyCountLabel,
+  openLabel,
+  onOpen,
+}: {
+  companies: QuoteCustomerCompany[];
+  unset: string;
+  companyCountLabel: string;
+  openLabel: string;
+  onOpen: () => void;
+}) {
+  if (companies.length === 0) return unset;
+
+  const first = companies[0];
+  const summary = summarizeCompanies(companies, unset);
+
+  if (companies.length === 1) {
+    return (
+      <>
+        <strong>{first.companyName || unset}</strong>
+        {first.orderId ? (
+          <small className="quote-company">
+            <Link
+              className="order-link"
+              to={documentPath(first.documentType, first.orderId)}
+            >
+              {first.tag || unset}
+            </Link>
+          </small>
+        ) : first.tag ? (
+          <small className="quote-company">{first.tag}</small>
+        ) : null}
+      </>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      className="quote-customers-company-summary"
+      onClick={onOpen}
+      aria-label={openLabel}
+    >
+      <strong>{summary.primaryName}</strong>
+      <small className="quote-company">{companyCountLabel}</small>
+    </button>
+  );
 }
 
 export function QuoteCustomersPage({
@@ -280,36 +334,15 @@ export function QuoteCustomersPage({
                   ) : null}
                 </td>
                 <td className="quote-customers-company-cell">
-                  {customer.companies.length === 0 ? (
-                    t("common.notSet")
-                  ) : (
-                    <ul className="quote-customer-companies">
-                      {customer.companies.map((company, companyIndex) => (
-                        <li
-                          key={`${company.orderId ?? company.tag ?? company.companyName}-${companyIndex}`}
-                        >
-                          <strong>
-                            {company.companyName || t("common.notSet")}
-                          </strong>
-                          {company.orderId ? (
-                            <small className="quote-company">
-                              <Link
-                                className="order-link"
-                                to={documentPath(
-                                  company.documentType,
-                                  company.orderId,
-                                )}
-                              >
-                                {company.tag || t("common.notSet")}
-                              </Link>
-                            </small>
-                          ) : company.tag ? (
-                            <small className="quote-company">{company.tag}</small>
-                          ) : null}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                  <CompanyCell
+                    companies={customer.companies}
+                    unset={t("common.notSet")}
+                    companyCountLabel={t("quoteCustomers.companyCount", {
+                      total: customer.companies.length,
+                    })}
+                    openLabel={`${t("quoteCustomers.openCompanies")} ${customer.email}`}
+                    onOpen={() => setSelectedEmail(customer.email)}
+                  />
                 </td>
                 <td>{customer.orderCount.toLocaleString(i18n.language)}</td>
                 <td>
@@ -362,7 +395,7 @@ export function QuoteCustomersPage({
 
       <SidePanel
         open={Boolean(selectedEmail)}
-        wide
+        extraWide
         title={t("quoteCustomers.historyTitle")}
         description={selectedEmail ?? undefined}
         onClose={() => setSelectedEmail(null)}
@@ -383,34 +416,50 @@ export function QuoteCustomersPage({
               {!history?.orders.length ? (
                 <p>{t("quoteCustomers.pastOrdersEmpty")}</p>
               ) : (
-                <ul>
-                  {history.orders.map((order) => (
-                    <li key={order.id}>
-                      <Link
-                        className="order-link"
-                        to={documentPath(order.documentType, order.id)}
-                      >
-                        {order.orderNumber || t("common.notSet")}
-                      </Link>
-                      <small className="quote-company">
-                        {order.companyName ||
-                          order.customerName ||
-                          t("common.notSet")}
-                      </small>
-                      <span>
-                        {dateTimeFormatter.format(new Date(order.createdAt))}
-                      </span>
-                      <strong>
-                        {formatMoney(
-                          order.grandTotal,
-                          order.currency,
-                          currencyFormatter,
-                          t("common.notSet"),
-                        )}
-                      </strong>
-                    </li>
-                  ))}
-                </ul>
+                <div className="quote-customers-history-table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>{t("quoteCustomers.columns.company")}</th>
+                        <th>{t("quoteCustomers.columns.orderNumber")}</th>
+                        <th>{t("quoteCustomers.columns.date")}</th>
+                        <th>{t("quoteCustomers.columns.amount")}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sortOrdersByCompany(history.orders).map((order) => (
+                        <tr key={order.id}>
+                          <td>
+                            <strong>
+                              {order.companyName || t("common.notSet")}
+                            </strong>
+                          </td>
+                          <td>
+                            <Link
+                              className="order-link"
+                              to={documentPath(order.documentType, order.id)}
+                            >
+                              {order.orderNumber || t("common.notSet")}
+                            </Link>
+                          </td>
+                          <td>
+                            {dateTimeFormatter.format(new Date(order.createdAt))}
+                          </td>
+                          <td>
+                            <strong>
+                              {formatMoney(
+                                order.grandTotal,
+                                order.currency,
+                                currencyFormatter,
+                                t("common.notSet"),
+                              )}
+                            </strong>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </section>
             <section>

@@ -1658,10 +1658,27 @@ td:last-child {
 }
 
 .quote-customers-company-cell {
-  min-width: 14rem;
-  width: 32%;
-  white-space: normal;
-  vertical-align: top;
+  min-width: 12rem;
+  width: 28%;
+}
+
+.quote-customers-company-summary {
+  display: grid;
+  gap: 0;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.quote-customers-company-summary:hover strong,
+.quote-customers-company-summary:focus-visible strong {
+  color: var(--primary);
 }
 
 .quote-customers-sort {
@@ -1684,19 +1701,6 @@ td:last-child {
   height: 14px;
 }
 
-.quote-customer-companies {
-  display: grid;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.quote-customer-companies li + li {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px dashed var(--border);
-}
-
 .quote-customers-row-selected td {
   background: var(--selection-bg);
 }
@@ -1709,6 +1713,23 @@ td:last-child {
 .quote-customers-history h3 {
   margin: 0 0 10px;
   font-size: 15px;
+}
+
+.quote-customers-history-table-wrap {
+  overflow: auto;
+  max-height: min(52vh, 28rem);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.quote-customers-history-table-wrap table {
+  margin: 0;
+}
+
+.quote-customers-history-table-wrap th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 .quote-customers-history ul {

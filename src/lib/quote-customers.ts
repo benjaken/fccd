@@ -1,7 +1,7 @@
 import { supabase } from "@/lib/supabase";
 
 export const QUOTE_CUSTOMERS_PAGE_SIZE = 15;
-export const QUOTE_CUSTOMER_HISTORY_LIMIT = 50;
+export const QUOTE_CUSTOMER_HISTORY_LIMIT = 1000;
 
 export type QuoteCustomerCompany = {
   companyName: string | null;
@@ -114,6 +114,30 @@ export function documentPath(
   id: string,
 ) {
   return documentType === "quote" ? `/quotes/${id}` : `/orders/${id}`;
+}
+
+export function summarizeCompanies(
+  companies: QuoteCustomerCompany[],
+  empty = "—",
+) {
+  const named = companies.filter((company) => company.companyName?.trim());
+  const primary = named[0]?.companyName?.trim() || companies[0]?.companyName?.trim();
+  return {
+    primaryName: primary || empty,
+    extraCount: Math.max(0, companies.length - 1),
+    total: companies.length,
+  };
+}
+
+export function sortOrdersByCompany(orders: QuoteCustomerHistoryOrder[]) {
+  return [...orders].sort((left, right) => {
+    const company = (left.companyName || "").localeCompare(
+      right.companyName || "",
+      "zh-Hant",
+    );
+    if (company !== 0) return company;
+    return (right.createdAt || "").localeCompare(left.createdAt || "");
+  });
 }
 
 function optionalAmount(value: number | string | null | undefined) {
