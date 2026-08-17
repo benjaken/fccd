@@ -40,15 +40,39 @@ function includesIgnoreCase(haystack: string | null | undefined, needle: string)
   );
 }
 
-export function isMissingArchivedAtColumn(error: {
+type QueryErrorLike = {
   message?: string;
   code?: string;
-}) {
+};
+
+export function readErrorMessage(error: unknown, fallback: string) {
+  if (typeof error === "string" && error.trim()) return error;
+  if (error instanceof Error && error.message.trim()) return error.message;
+  if (error && typeof error === "object" && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim()) return message;
+  }
+  return fallback;
+}
+
+export function isMissingArchivedAtColumn(error: QueryErrorLike) {
   const message = (error.message ?? "").toLowerCase();
   return (
     error.code === "42703" ||
     (message.includes("archived_at") &&
       (message.includes("does not exist") || message.includes("schema cache")))
+  );
+}
+
+export function isMissingArchiveFunction(error: QueryErrorLike) {
+  const message = (error.message ?? "").toLowerCase();
+  return (
+    error.code === "PGRST202" ||
+    error.code === "42883" ||
+    (message.includes("archive_sales_partner") &&
+      (message.includes("does not exist") ||
+        message.includes("could not find") ||
+        message.includes("schema cache")))
   );
 }
 
@@ -152,5 +176,18 @@ export async function archiveSalesPartner(partnerId: string): Promise<void> {
   const { error } = await supabase.rpc("archive_sales_partner", {
     p_partner_id: partnerId,
   });
-  if (error) throw error;
+  if (!error) return;
+
+  // The live database still has sales_partners from Bubble, but the archive
+  // RPC / archived_at column may not be migrated yet. Fall back to the
+  // original administrator DELETE policy so newly created rows can be removed.
+  if (!isMissingArchiveFunction(error) && !isMissingArchivedAtColumn(error)) {
+    throw error;
+  }
+
+  const deleted = await supabase
+    .from("sales_partners")
+    .delete()
+    .eq("id", partnerId);
+  if (deleted.error) throw deleted.error;
 }

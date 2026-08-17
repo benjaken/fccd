@@ -12,6 +12,7 @@ import {
   archiveSalesPartner,
   createSalesPartner,
   fetchSalesPartners,
+  readErrorMessage,
   updateSalesPartner,
   type SalesPartnerFilters,
   type SalesPartnerRow,
@@ -98,9 +99,10 @@ function SalesPartnerFormPanel({
       closeAndReset();
     } catch (saveError) {
       setError(
-        saveError instanceof Error
-          ? saveError.message
-          : t(editing ? "salePartners.editError" : "salePartners.createError"),
+        readErrorMessage(
+          saveError,
+          t(editing ? "salePartners.editError" : "salePartners.createError"),
+        ),
       );
     } finally {
       setSubmitting(false);
@@ -280,9 +282,7 @@ export function SalesPartnersPage({
       setRows((current) => current.filter((item) => item.id !== row.id));
     } catch (saveError) {
       setActionError(
-        saveError instanceof Error
-          ? saveError.message
-          : t("salePartners.deleteError"),
+        readErrorMessage(saveError, t("salePartners.deleteError")),
       );
     } finally {
       setDeletingId(null);

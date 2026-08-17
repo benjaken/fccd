@@ -7,7 +7,9 @@ import { SalesPartnersPage } from "@/components/SalesPartnersPage";
 import i18n from "@/i18n";
 import {
   filterSalesPartners,
+  isMissingArchiveFunction,
   isMissingArchivedAtColumn,
+  readErrorMessage,
   type SalesPartnerRow,
 } from "@/lib/sales-partners";
 
@@ -60,6 +62,36 @@ describe("isMissingArchivedAtColumn", () => {
     expect(isMissingArchivedAtColumn({ message: "permission denied" })).toBe(
       false,
     );
+  });
+});
+
+describe("isMissingArchiveFunction", () => {
+  it("detects a missing archive RPC so deletes can fall back to the table", () => {
+    expect(
+      isMissingArchiveFunction({
+        code: "PGRST202",
+        message:
+          "Could not find the function public.archive_sales_partner without parameters in the schema cache",
+      }),
+    ).toBe(true);
+    expect(
+      isMissingArchiveFunction({
+        code: "42883",
+        message: "function archive_sales_partner(uuid) does not exist",
+      }),
+    ).toBe(true);
+    expect(
+      isMissingArchiveFunction({ message: "not authorized to delete sale partners" }),
+    ).toBe(false);
+  });
+});
+
+describe("readErrorMessage", () => {
+  it("reads PostgREST-style objects that are not Error instances", () => {
+    expect(readErrorMessage({ message: "Could not find the function" }, "fallback")).toBe(
+      "Could not find the function",
+    );
+    expect(readErrorMessage({}, "刪除失敗，請重試")).toBe("刪除失敗，請重試");
   });
 });
 
@@ -245,6 +277,35 @@ describe("Sale Partner page", () => {
     });
     expect(screen.queryByText("陳大文")).not.toBeInTheDocument();
     expect(screen.getByText("李小明")).toBeInTheDocument();
+    confirmSpy.mockRestore();
+  });
+
+  it("shows the API delete error even when it is a plain object", async () => {
+    const user = userEvent.setup();
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    const loadPartners = vi.fn().mockResolvedValue(structuredClone(rows));
+    const deletePartner = vi.fn().mockRejectedValue({
+      message: "Could not find the function public.archive_sales_partner",
+    });
+
+    render(
+      <MemoryRouter>
+        <SalesPartnersPage
+          loadPartners={loadPartners}
+          deletePartner={deletePartner}
+        />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("陳大文");
+    await user.click(screen.getAllByRole("button", { name: "刪除" })[0]!);
+
+    expect(
+      await screen.findByText(
+        "Could not find the function public.archive_sales_partner",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText("陳大文")).toBeInTheDocument();
     confirmSpy.mockRestore();
   });
 });
