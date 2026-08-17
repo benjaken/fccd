@@ -7,7 +7,10 @@ import { OrderStatusesPage } from "@/components/OrderStatusesPage";
 import i18n from "@/i18n";
 import {
   filterOrderStatuses,
+  orderStatusLabel,
   parseHexColor,
+  resolveOrderStatuses,
+  type ConfiguredOrderStatus,
   type OrderStatusRow,
 } from "@/lib/order-statuses";
 
@@ -49,6 +52,37 @@ describe("filterOrderStatuses", () => {
     expect(
       filterOrderStatuses(rows, { search: "2563" }).map((row) => row.id),
     ).toEqual(["st-1"]);
+  });
+});
+
+describe("resolveOrderStatuses", () => {
+  const catalog: ConfiguredOrderStatus[] = [
+    {
+      id: "st-unpaid",
+      legacyId: "legacy-unpaid",
+      name: "未完成付款",
+      color: "#ff0000",
+      sortOrder: 2,
+    },
+    {
+      id: "st-factory",
+      legacyId: "legacy-factory",
+      name: "未傳至工場",
+      color: "#f39c12",
+      sortOrder: 1,
+    },
+  ];
+
+  it("matches legacy ids and sorts by configured order", () => {
+    expect(
+      resolveOrderStatuses(["legacy-unpaid", "legacy-factory"], catalog),
+    ).toEqual([
+      { name: "未傳至工場", color: "#f39c12" },
+      { name: "未完成付款", color: "#ff0000" },
+    ]);
+    expect(orderStatusLabel([{ name: "未傳至工場", color: "#f39c12" }])).toBe(
+      "未傳至工場",
+    );
   });
 });
 

@@ -1844,6 +1844,295 @@ button.product-tag[aria-pressed="true"] {
   border-bottom: 1px solid var(--border);
 }
 
+.kitchen-calendar-page {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 20px;
+  height: calc(
+    100dvh - var(--topbar-height) - var(--workspace-height) - 76px
+  );
+  min-height: 560px;
+  overflow: hidden;
+}
+
+.kitchen-calendar-page .page-heading {
+  margin-bottom: 0;
+}
+
+.kitchen-calendar-heading {
+  align-items: flex-end;
+}
+
+.kitchen-calendar-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.kitchen-calendar-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.kitchen-calendar-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.kitchen-calendar-month {
+  margin: 0;
+  color: var(--foreground);
+  font-size: 18px;
+  font-weight: 720;
+  letter-spacing: -0.02em;
+  text-align: center;
+}
+
+.kitchen-calendar-legend {
+  display: grid;
+  gap: 4px;
+  justify-items: end;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.kitchen-calendar-legend li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.kitchen-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-rows: auto repeat(6, minmax(0, 1fr));
+  min-height: 0;
+  overflow: hidden;
+}
+
+.kitchen-calendar-weekday {
+  padding: 8px 6px;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 650;
+  text-align: center;
+}
+
+.kitchen-calendar-day {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  padding: 6px;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+}
+
+.kitchen-calendar-day:nth-child(7n) {
+  border-right: 0;
+}
+
+.kitchen-calendar-day.outside {
+  background: color-mix(in oklch, var(--muted) 70%, var(--card));
+  color: var(--muted-foreground);
+}
+
+.kitchen-calendar-day.is-today {
+  background: var(--selection-bg);
+}
+
+.kitchen-calendar-date {
+  align-self: flex-end;
+  min-width: 28px;
+  margin: 0;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 22px;
+  text-align: right;
+}
+
+.kitchen-calendar-date:hover,
+.kitchen-calendar-date:focus-visible {
+  background: var(--selection-bg-strong);
+}
+
+.kitchen-calendar-events {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+  margin-top: 2px;
+  overflow: hidden;
+}
+
+.kitchen-calendar-event,
+.kitchen-calendar-more {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 6px;
+  min-width: 0;
+  min-height: 22px;
+  padding: 2px 4px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 14px;
+  font-weight: 650;
+  text-align: left;
+}
+
+.kitchen-calendar-more {
+  display: flex;
+  align-items: center;
+}
+
+.kitchen-calendar-event:hover,
+.kitchen-calendar-more:hover {
+  background: color-mix(in oklch, var(--accent) 55%, transparent);
+}
+
+.kitchen-calendar-event .kitchen-calendar-dot {
+  margin-top: 7px;
+}
+
+.kitchen-calendar-event-copy,
+.kitchen-calendar-more {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kitchen-calendar-event-status {
+  justify-self: end;
+  max-width: 7.5rem;
+  overflow: hidden;
+  color: oklch(0.48 0.15 250);
+  font-size: 14px;
+  font-weight: 720;
+  line-height: 22px;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dark .kitchen-calendar-event-status {
+  color: oklch(0.75 0.11 250);
+}
+
+.kitchen-calendar-more {
+  color: var(--primary);
+  font-weight: 720;
+}
+
+.kitchen-calendar-event-skeleton {
+  display: block;
+  height: 18px;
+  margin: 2px 0;
+  border-radius: 5px;
+  background: color-mix(in oklch, var(--muted) 80%, var(--card));
+}
+
+.kitchen-calendar-dot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: oklch(0.48 0.15 250);
+}
+
+.kitchen-calendar-dot.amber {
+  background: oklch(0.72 0.16 75);
+}
+
+.kitchen-calendar-dot.red {
+  background: var(--destructive);
+}
+
+.dark .kitchen-calendar-dot {
+  background: oklch(0.72 0.12 250);
+}
+
+.dark .kitchen-calendar-dot.amber {
+  background: oklch(0.8 0.11 80);
+}
+
+.dark .kitchen-calendar-dot.red {
+  background: oklch(0.78 0.12 25);
+}
+
+.kitchen-calendar-empty-day {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+
+.kitchen-calendar-day-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kitchen-calendar-day-item {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--background);
+}
+
+.kitchen-calendar-day-item:hover {
+  border-color: color-mix(in oklch, var(--primary) 38%, var(--border));
+  background: var(--card);
+}
+
+.kitchen-calendar-day-item span {
+  display: grid;
+  min-width: 0;
+}
+
+.kitchen-calendar-day-item strong {
+  overflow: hidden;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kitchen-calendar-day-item small,
+.kitchen-calendar-day-item em {
+  overflow: hidden;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .yield-errors-page .orders-panel {
   grid-template-rows: auto auto minmax(0, 1fr) auto;
 }

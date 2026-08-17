@@ -9,7 +9,7 @@ import {
   Truck,
   WalletCards,
 } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
@@ -19,6 +19,7 @@ import {
   type OrderDetailResult,
   type ReadOnlyOrderDetail,
 } from "@/lib/order-details";
+import { kitchenCalendarReturnPath } from "@/lib/kitchen-calendar";
 import { cn } from "@/lib/utils";
 
 type DetailLoader = typeof fetchOrderDetail;
@@ -69,12 +70,20 @@ export function OrderDetailPage({
 }) {
   const { t, i18n } = useTranslation();
   const { id = "" } = useParams();
+  const [searchParams] = useSearchParams();
   const [result, setResult] = useState<OrderDetailResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const isQuote = documentType === "quote";
-  const backTo = isQuote ? "/quotes" : "/orders";
+  const calendarBack = kitchenCalendarReturnPath(
+    searchParams.get("from"),
+    searchParams.get("month"),
+  );
+  const backTo = calendarBack ?? (isQuote ? "/quotes" : "/orders");
+  const backLabel = calendarBack
+    ? t("details.backToCalendar")
+    : t("details.back");
   const title = isQuote ? t("details.quoteTitle") : t("details.orderTitle");
   const currency = useMemo(
     () =>
@@ -162,7 +171,7 @@ export function OrderDetailPage({
         <div>
           <Link className="detail-back" to={backTo}>
             <ChevronLeft />
-            {t("details.back")}
+            {backLabel}
           </Link>
           <span className="eyebrow">{title}</span>
           <h1>{order.orderNumber || t("common.notSet")}</h1>

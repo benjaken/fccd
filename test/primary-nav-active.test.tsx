@@ -113,6 +113,8 @@ describe("Primary navigation section matching", () => {
       "orders.settings.sale_partners",
     );
     expect(pageAccessKey("/kitchen/settings")).toBe("kitchen.settings");
+    expect(pageAccessKey("/kitchen/calendar")).toBe("kitchen.calendar");
+    expect(pageAccessKey("/orders/production")).toBe("kitchen.calendar");
     expect(pageAccessKey("/kitchen/settings/cook-types")).toBe(
       "kitchen.settings",
     );
