@@ -42,6 +42,7 @@ export const phoneText = (value: unknown) => {
   }
   return null;
 };
+const windowText = phoneText;
 const numberValue = (value: unknown) =>
   typeof value === "number" && Number.isFinite(value) ? value : null;
 const booleanValue = (value: unknown, fallback = false) =>
@@ -336,8 +337,8 @@ const phaseC: SourceMapping[] = [
       delivery_at: dateValue(r.Delivery_Date),
       factory_date: dateValue(r.Factory_date1_sd),
       factory_print_date: dateValue(r.Factory_date2_Print),
-      delivery_time: text(r.Delivery_Time),
-      ship_out_time: text(r["Delivery_Ship Out Time"]),
+      delivery_time: windowText(r.Delivery_Time),
+      ship_out_time: windowText(r["Delivery_Ship Out Time"]),
       remarks: text(r.ORDER_Remarks),
       factory_packing_note: text(r["Factory_Packing Note"]),
       is_shopify_order: booleanValue(r.Shopify_NewOrder),
@@ -434,10 +435,10 @@ const phaseC: SourceMapping[] = [
       motorcade_legacy_id: text(r.DS_motorcade),
       subdriver_legacy_id: text(r.DS_Super_Motorcade_supDriver),
       delivery_at: dateValue(r["Delivery Date_A_order"]),
-      delivery_time: text(r["Delivery Time_A_order"]),
+      delivery_time: windowText(r["Delivery Time_A_order"]),
       fulfilled_at: dateValue(r["fulfill_date&time(trigger A_order)"]),
       taken_at: dateValue(r["take_date&time"]),
-      ship_out_time: text(r["Ship-out Time_A_order"]),
+      ship_out_time: windowText(r["Ship-out Time_A_order"]),
       driver_confirmation_status: r["OS driver conformation"] == null
         ? null
         : String(r["OS driver conformation"]),
