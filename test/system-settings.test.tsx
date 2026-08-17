@@ -820,6 +820,43 @@ describe("Super Admin system settings", () => {
       "Sale partner readers select sales partners",
     );
 
+    const orderQueueLists = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260817070000_order_queue_list_pages.sql",
+      ),
+      "utf8",
+    );
+    expect(orderQueueLists).toContain("orders.monthly");
+    expect(orderQueueLists).toContain("orders.split");
+    expect(orderQueueLists).toContain("orders.kitchen_notes");
+    expect(orderQueueLists).toContain("orders.reschedule_pending");
+    expect(orderQueueLists).toContain("orders.shopify_pending");
+    expect(orderQueueLists).toContain("/orders/shopify-pending");
+
+    const orderListConfigs = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260817071000_order_list_configs.sql",
+      ),
+      "utf8",
+    );
+    expect(orderListConfigs).toContain("create table public.order_list_configs");
+    expect(orderListConfigs).toContain("settings.order_lists");
+    expect(orderListConfigs).toContain("settings.order_lists.edit");
+    expect(orderListConfigs).toContain("/settings/order-lists");
+
+    const servingCalendarMove = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260817072000_move_serving_calendar_to_orders.sql",
+      ),
+      "utf8",
+    );
+    expect(servingCalendarMove).toContain("/orders/calendar");
+    expect(servingCalendarMove).toContain("parent_page_key = 'orders'");
+    expect(servingCalendarMove).toContain("kitchen.calendar");
+
     const preparedMeatFlags = readFileSync(
       path.resolve(
         process.cwd(),

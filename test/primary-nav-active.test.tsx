@@ -12,6 +12,13 @@ describe("Primary navigation section matching", () => {
     ["/inventory", "overview"],
     ["/orders", "orders"],
     ["/orders/pending", "orders"],
+    ["/orders/calendar", "orders"],
+    ["/orders/unpaid", "orders"],
+    ["/orders/monthly", "orders"],
+    ["/orders/split", "orders"],
+    ["/orders/kitchen-notes", "orders"],
+    ["/orders/reschedule-pending", "orders"],
+    ["/orders/shopify-pending", "orders"],
     ["/orders/settings", "orders"],
     ["/orders/settings/tags", "orders"],
     ["/orders/order-1", "orders"],
@@ -51,6 +58,7 @@ describe("Primary navigation section matching", () => {
     ["/settings/users", "settings"],
     ["/settings/roles", "settings"],
     ["/settings/login-logs", "settings"],
+    ["/settings/order-lists", "settings"],
     ["/settings/attachments", "settings"],
   ] as const)("maps %s to section %s", (pathname, section) => {
     expect(sectionFromPath(pathname)).toBe(section);
@@ -114,8 +122,24 @@ describe("Primary navigation section matching", () => {
     expect(pageAccessKey("/orders/settings/sale-partners")).toBe(
       "orders.settings.sale_partners",
     );
+    expect(pageAccessKey("/settings/login-logs")).toBe("settings.login_logs");
+    expect(pageAccessKey("/settings/order-lists")).toBe("settings.order_lists");
+    expect(pageAccessKey("/settings/attachments")).toBe(
+      "settings.attachments",
+    );
+    expect(pageAccessKey("/orders/unpaid")).toBe("orders.unpaid");
+    expect(pageAccessKey("/orders/monthly")).toBe("orders.monthly");
+    expect(pageAccessKey("/orders/split")).toBe("orders.split");
+    expect(pageAccessKey("/orders/kitchen-notes")).toBe("orders.kitchen_notes");
+    expect(pageAccessKey("/orders/reschedule-pending")).toBe(
+      "orders.reschedule_pending",
+    );
+    expect(pageAccessKey("/orders/shopify-pending")).toBe(
+      "orders.shopify_pending",
+    );
     expect(pageAccessKey("/kitchen/settings")).toBe("kitchen.settings");
     expect(pageAccessKey("/kitchen/calendar")).toBe("kitchen.calendar");
+    expect(pageAccessKey("/orders/calendar")).toBe("kitchen.calendar");
     expect(pageAccessKey("/orders/production")).toBe("kitchen.calendar");
     expect(pageAccessKey("/kitchen/settings/cook-types")).toBe(
       "kitchen.settings",
@@ -138,6 +162,21 @@ describe("Primary navigation section matching", () => {
     );
     expect(source).toContain('to: "/orders/settings/sale-partners"');
     expect(source).toContain('permissionKey: "orders.settings"');
+    expect(source).toContain('to: "/orders/unpaid"');
+    expect(source).toContain('to: "/orders/monthly"');
+    expect(source).toContain('to: "/orders/split"');
+    expect(source).toContain('to: "/orders/kitchen-notes"');
+    expect(source).toContain('to: "/orders/reschedule-pending"');
+    expect(source).toContain('to: "/orders/shopify-pending"');
+    expect(source).toContain('to: "/orders/calendar"');
+    expect(source.indexOf('path="/orders/calendar"')).toBeLessThan(
+      source.indexOf('path="/orders/:id"'),
+    );
+    expect(source.indexOf('path="/orders/shopify-pending"')).toBeLessThan(
+      source.indexOf('path="/orders/:id"'),
+    );
+    expect(source).toContain('path="/settings/order-lists"');
+    expect(source).toContain('to: "/settings/order-lists"');
   });
 
   it("nests frozen meat and shop pages under the reports sidebar item", () => {

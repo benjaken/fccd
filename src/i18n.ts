@@ -115,12 +115,19 @@ const resources = {
         allOrders: "所有訂單",
         newOrder: "建立新單",
         pendingOrders: "待確定訂單",
+        unpaidOrders: "未付款",
+        monthlyOrders: "月結",
+        splitOrders: "拆單",
+        kitchenNotesOrders: "廚房備註",
+        reschedulePendingOrders: "改期未審",
+        shopifyPendingOrders: "Shopify待審",
         productionCalendar: "出餐日曆",
         payments: "收款到賬",
         assignDriver: "安排司機",
         users: "使用者列表",
         rolePermissions: "角色與權限",
         loginLogs: "登入紀錄",
+        orderLists: "訂單列表",
         attachments: "附件列表",
       },
       dashboard: {
@@ -322,6 +329,41 @@ const resources = {
             detail: "詳情",
           },
         },
+        orderLists: {
+          title: "訂單列表",
+          description:
+            "設定各訂單列表的名稱與說明；說明會顯示在列表主標題下方，亦可控制側欄是否顯示。",
+          search: "搜尋訂單列表",
+          searchPlaceholder: "搜尋名稱或說明",
+          searchAction: "搜尋",
+          loading: "正在載入訂單列表配置…",
+          loadError: "暫時無法載入訂單列表配置",
+          empty: "未找到訂單列表",
+          emptyDescription: "調整搜尋條件後再試。",
+          edit: "編輯",
+          editTitle: "編輯訂單列表",
+          editDescription: "更新此列表在側欄與頁面標題顯示的名稱及說明。",
+          closePanel: "關閉",
+          cancel: "取消",
+          saveAction: "儲存",
+          saving: "儲存中…",
+          saveError: "暫時無法儲存訂單列表配置。",
+          toggleVisible: "顯示「{{title}}」於訂單側欄",
+          validation: {
+            titleRequired: "請輸入列表名稱。",
+          },
+          fields: {
+            title: "列表名稱",
+            description: "列表說明",
+            visible: "顯示於訂單側欄",
+          },
+          columns: {
+            title: "列表名稱",
+            description: "說明",
+            visible: "側欄",
+            actions: "操作",
+          },
+        },
         attachments: {
           title: "附件列表",
           description: "目前附件 registry 共 {{total}} 筆；文件以私人 Storage 保存。",
@@ -388,6 +430,26 @@ const resources = {
         pendingTitle: "待確定訂單",
         unpaidTitle: "未付款訂單",
         deliveredUnpaidTitle: "已送貨未付款",
+        monthlyTitle: "月結訂單",
+        splitTitle: "拆單訂單",
+        kitchenNotesTitle: "廚房備註訂單",
+        reschedulePendingTitle: "改期未審訂單",
+        shopifyPendingTitle: "Shopify待審訂單",
+        allDescription:
+          "查看全部已確認到會訂單，可搜尋訂單編號、客戶，並篩選營運狀態。",
+        pendingDescription:
+          "尚未轉為正式訂單的未確定紀錄，需確認後才進入生產及送貨。",
+        unpaidDescription:
+          "尚有未收金額的訂單，以未付餘額為準，方便跟進收款。",
+        deliveredUnpaidDescription: "已經送達但仍有未付餘額的訂單。",
+        monthlyDescription:
+          "已標示「月結」的訂單，方便跟進月結客戶對賬及收款。",
+        splitDescription: "已標示「已拆單」的訂單，方便跟進分拆後的子單。",
+        kitchenNotesDescription:
+          "已標示「廚房備註」的訂單，工場需留意特別烹調或包裝指示。",
+        reschedulePendingDescription: "送貨日期改期後尚未審核確定的訂單。",
+        shopifyPendingDescription:
+          "從 Shopify 新接入、尚待內部審核的訂單。",
         description: "集中查看及跟進到會訂單、送貨狀態及付款進度。",
         create: "建立新訂單",
         search: "搜尋訂單",
@@ -2371,12 +2433,19 @@ const resources = {
         allOrders: "All Orders",
         newOrder: "Create Order",
         pendingOrders: "Pending Confirmation",
+        unpaidOrders: "Unpaid",
+        monthlyOrders: "Monthly billing",
+        splitOrders: "Split orders",
+        kitchenNotesOrders: "Kitchen notes",
+        reschedulePendingOrders: "Reschedule pending",
+        shopifyPendingOrders: "Shopify pending",
         productionCalendar: "Serving Calendar",
         payments: "Payment Records",
         assignDriver: "Assign Driver",
         users: "Users",
         rolePermissions: "Roles & Permissions",
         loginLogs: "Login Logs",
+        orderLists: "Order lists",
         attachments: "Attachments",
       },
       dashboard: {
@@ -2588,6 +2657,42 @@ const resources = {
             detail: "Detail",
           },
         },
+        orderLists: {
+          title: "Order lists",
+          description:
+            "Set the name and explanation for each order queue. The explanation appears under the page title, and you can hide a queue from the Orders sidebar.",
+          search: "Search order lists",
+          searchPlaceholder: "Search by name or explanation",
+          searchAction: "Search",
+          loading: "Loading order list settings…",
+          loadError: "Order list settings could not be loaded",
+          empty: "No order lists found",
+          emptyDescription: "Adjust the search terms and try again.",
+          edit: "Edit",
+          editTitle: "Edit order list",
+          editDescription:
+            "Update the name and explanation shown in the sidebar and under the page title.",
+          closePanel: "Close",
+          cancel: "Cancel",
+          saveAction: "Save",
+          saving: "Saving…",
+          saveError: "Order list settings could not be saved.",
+          toggleVisible: "Show “{{title}}” in the Orders sidebar",
+          validation: {
+            titleRequired: "Enter a list name.",
+          },
+          fields: {
+            title: "List name",
+            description: "Explanation",
+            visible: "Show in Orders sidebar",
+          },
+          columns: {
+            title: "List name",
+            description: "Explanation",
+            visible: "Sidebar",
+            actions: "Actions",
+          },
+        },
         attachments: {
           title: "Attachments",
           description:
@@ -2660,6 +2765,29 @@ const resources = {
         pendingTitle: "Pending Confirmation",
         unpaidTitle: "Unpaid Orders",
         deliveredUnpaidTitle: "Delivered and Unpaid",
+        monthlyTitle: "Monthly Billing Orders",
+        splitTitle: "Split Orders",
+        kitchenNotesTitle: "Kitchen Note Orders",
+        reschedulePendingTitle: "Reschedule Pending Orders",
+        shopifyPendingTitle: "Shopify Pending Orders",
+        allDescription:
+          "Review every confirmed catering order. Search by number or customer, and filter by operations status.",
+        pendingDescription:
+          "Unconfirmed records that still need to become live orders before production and delivery.",
+        unpaidDescription:
+          "Orders with an outstanding balance, used to follow up on collection.",
+        deliveredUnpaidDescription:
+          "Delivered orders that still have an outstanding balance.",
+        monthlyDescription:
+          "Orders tagged Monthly billing, for settlement and collection follow-up.",
+        splitDescription:
+          "Orders tagged as split, for following up child orders after a split.",
+        kitchenNotesDescription:
+          "Orders tagged Kitchen notes, so the kitchen can follow special instructions.",
+        reschedulePendingDescription:
+          "Orders whose delivery date was changed and still need review.",
+        shopifyPendingDescription:
+          "New Shopify orders waiting for internal review.",
         description:
           "Review and follow up on catering orders, delivery status, and payment progress.",
         create: "Create order",

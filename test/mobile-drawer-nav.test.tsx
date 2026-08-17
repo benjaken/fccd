@@ -27,6 +27,13 @@ describe("buildMobileDrawerNav", () => {
       "/orders",
       "/orders/new",
       "/orders/pending",
+      "/orders/calendar",
+      "/orders/unpaid",
+      "/orders/monthly",
+      "/orders/split",
+      "/orders/kitchen-notes",
+      "/orders/reschedule-pending",
+      "/orders/shopify-pending",
       "/orders/payments",
       "/orders/drivers",
       "/orders/settings/sale-partners",
@@ -39,6 +46,7 @@ describe("buildMobileDrawerNav", () => {
       "users",
       "rolePermissions",
       "loginLogs",
+      "orderLists",
       "attachments",
     ]);
   });

@@ -1,7 +1,11 @@
 import { supabase } from "@/lib/supabase";
 import {
+  catalogLegacyIdsForNames,
   fetchOrderStatusCatalog,
+  isOrderTagQueuePreset,
+  ORDER_TAG_QUEUE_NAMES,
   resolveOrderStatuses,
+  type ConfiguredOrderStatus,
   type OrderStatusView,
 } from "@/lib/order-statuses";
 
@@ -12,7 +16,12 @@ export type OrderPreset =
   | "pending"
   | "unpaid"
   | "delivered-unpaid"
-  | "kitchen";
+  | "kitchen"
+  | "monthly-settlement"
+  | "split"
+  | "kitchen-notes"
+  | "reschedule-pending"
+  | "shopify-pending";
 
 export type OrderStatusFilter =
   | ""
@@ -183,6 +192,12 @@ export async function fetchOrders({
   const selectedFields: string = canViewFinance
     ? "id,order_number,customer_name_snapshot,company_name_snapshot,delivery_at,factory_date,ship_out_time,delivery_status,is_sent_to_factory,currency,bubble_created_at,created_at,grand_total,outstanding,order_status_legacy_ids"
     : "id,order_number,customer_name_snapshot,company_name_snapshot,delivery_at,factory_date,ship_out_time,delivery_status,is_sent_to_factory,currency,bubble_created_at,created_at,order_status_legacy_ids";
+  let catalog: ConfiguredOrderStatus[] | undefined;
+  const loadCatalog = async () => {
+    catalog ??= await fetchOrderStatusCatalog();
+    return catalog;
+  };
+
   let query = supabase
     .from("orders")
     .select(selectedFields, { count: "exact" })
@@ -200,7 +215,17 @@ export async function fetchOrders({
     );
   }
 
-  if (preset === "kitchen") {
+  if (isOrderTagQueuePreset(preset)) {
+    const tagCatalog = await loadCatalog();
+    const legacyIds = catalogLegacyIdsForNames(
+      tagCatalog,
+      ORDER_TAG_QUEUE_NAMES[preset],
+    );
+    if (!legacyIds.length) {
+      return { items: [], total: 0 };
+    }
+    query = query.overlaps("order_status_legacy_ids", legacyIds);
+  } else if (preset === "kitchen") {
     query = query.eq("is_sent_to_factory", true);
   } else if (preset === "unpaid") {
     query = query.gt("outstanding", 0);
@@ -208,13 +233,15 @@ export async function fetchOrders({
     query = query
       .in("delivery_status", ["己送達", "已送達"])
       .gt("outstanding", 0);
+  } else if (preset === "shopify-pending") {
+    query = query.eq("is_shopify_order", true);
   }
 
   query = applyStatusFilter(query, status, preset);
 
-  const [{ data, count, error }, catalog] = await Promise.all([
+  const [{ data, count, error }, resolvedCatalog] = await Promise.all([
     query,
-    fetchOrderStatusCatalog(),
+    loadCatalog(),
   ]);
   if (error) throw error;
 
@@ -233,7 +260,7 @@ export async function fetchOrders({
       outstanding: optionalAmount(row.outstanding),
       currency: row.currency || "HKD",
       createdAt: row.bubble_created_at || row.created_at,
-      statuses: resolveOrderStatuses(row.order_status_legacy_ids, catalog),
+      statuses: resolveOrderStatuses(row.order_status_legacy_ids, resolvedCatalog),
     })),
     total: count ?? 0,
   };

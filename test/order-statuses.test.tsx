@@ -6,7 +6,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { OrderStatusesPage } from "@/components/OrderStatusesPage";
 import i18n from "@/i18n";
 import {
+  catalogLegacyIdsForNames,
   filterOrderStatuses,
+  isOrderTagQueuePreset,
+  ORDER_TAG_QUEUE_NAMES,
   orderStatusLabel,
   parseHexColor,
   resolveOrderStatuses,
@@ -109,6 +112,65 @@ describe("orderDetailTags", () => {
     expect(orderDetailTags(leftover, 2450)).toEqual(leftover);
     expect(orderDetailTags(leftover, 0)).toEqual([]);
     expect(orderDetailTags(leftover, null)).toEqual(leftover);
+  });
+});
+
+describe("order tag queue matching", () => {
+  const catalog: ConfiguredOrderStatus[] = [
+    {
+      id: "st-monthly",
+      legacyId: "legacy-monthly",
+      name: "月結",
+      color: "#0e28e6",
+      sortOrder: 3,
+    },
+    {
+      id: "st-split",
+      legacyId: "legacy-split",
+      name: "已拆單",
+      color: "#1abc9c",
+      sortOrder: 3,
+    },
+    {
+      id: "st-notes",
+      legacyId: "legacy-notes",
+      name: "廚房備註",
+      color: "#979899",
+      sortOrder: 999,
+    },
+    {
+      id: "st-reschedule",
+      legacyId: "legacy-reschedule",
+      name: "改期未定",
+      color: "#238fd6",
+      sortOrder: 3,
+    },
+  ];
+
+  it("maps queue presets to leftover ORDER_Status names", () => {
+    expect(ORDER_TAG_QUEUE_NAMES["monthly-settlement"]).toContain("月結");
+    expect(ORDER_TAG_QUEUE_NAMES.split).toEqual(
+      expect.arrayContaining(["已拆單", "拆單"]),
+    );
+    expect(ORDER_TAG_QUEUE_NAMES["kitchen-notes"]).toContain("廚房備註");
+    expect(ORDER_TAG_QUEUE_NAMES["reschedule-pending"]).toEqual(
+      expect.arrayContaining(["改期未定", "改期未審"]),
+    );
+    expect(isOrderTagQueuePreset("split")).toBe(true);
+    expect(isOrderTagQueuePreset("shopify-pending")).toBe(false);
+  });
+
+  it("resolves catalog legacy ids for queue names", () => {
+    expect(
+      catalogLegacyIdsForNames(catalog, ORDER_TAG_QUEUE_NAMES.split),
+    ).toEqual(["legacy-split"]);
+    expect(
+      catalogLegacyIdsForNames(
+        catalog,
+        ORDER_TAG_QUEUE_NAMES["reschedule-pending"],
+      ),
+    ).toEqual(["legacy-reschedule"]);
+    expect(catalogLegacyIdsForNames(catalog, ["不存在"])).toEqual([]);
   });
 });
 

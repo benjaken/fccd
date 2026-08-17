@@ -155,7 +155,7 @@ function CurrentLocation() {
 
 function renderCalendar(
   loadOrders = vi.fn().mockResolvedValue(orders),
-  initialEntries = ["/kitchen/calendar"],
+  initialEntries = ["/orders/calendar"],
 ) {
   return {
     loadOrders,
@@ -163,7 +163,7 @@ function renderCalendar(
       <MemoryRouter initialEntries={initialEntries}>
         <Routes>
           <Route
-            path="/kitchen/calendar"
+            path="/orders/calendar"
             element={
               <KitchenCalendarPage loadOrders={loadOrders} now={now} />
             }
@@ -257,10 +257,10 @@ describe("Kitchen calendar page", () => {
   it("returns to the serving calendar from order details", async () => {
     const user = userEvent.setup();
     render(
-      <MemoryRouter initialEntries={["/kitchen/calendar"]}>
+      <MemoryRouter initialEntries={["/orders/calendar"]}>
         <Routes>
           <Route
-            path="/kitchen/calendar"
+            path="/orders/calendar"
             element={
               <KitchenCalendarPage
                 loadOrders={vi.fn().mockResolvedValue(orders)}
@@ -288,7 +288,7 @@ describe("Kitchen calendar page", () => {
       }),
     );
     const back = await screen.findByRole("link", { name: "返回出餐日曆" });
-    expect(back).toHaveAttribute("href", "/kitchen/calendar?month=2026-08");
+    expect(back).toHaveAttribute("href", "/orders/calendar?month=2026-08");
     await user.click(back);
     expect(
       await screen.findByRole("heading", { name: "出餐日曆" }),
@@ -340,7 +340,7 @@ describe("Kitchen calendar page", () => {
     );
   });
 
-  it("keeps the serving calendar under Kitchen and off the Orders menu", () => {
+  it("puts the serving calendar on the Orders sidebar", () => {
     const app = readFileSync(path.resolve(process.cwd(), "src/App.tsx"), "utf8");
     const access = readFileSync(
       path.resolve(process.cwd(), "src/auth/use-page-access.ts"),
@@ -349,20 +349,21 @@ describe("Kitchen calendar page", () => {
     const migration = readFileSync(
       path.resolve(
         process.cwd(),
-        "supabase/migrations/20260817064000_restore_kitchen_serving_calendar.sql",
+        "supabase/migrations/20260817072000_move_serving_calendar_to_orders.sql",
       ),
       "utf8",
     );
 
-    expect(app).toContain('to: "/kitchen/calendar"');
-    expect(app).not.toContain('to: "/orders/production"');
-    expect(app).toContain('path="/kitchen/calendar"');
-    expect(app).toContain('Navigate to="/kitchen/calendar"');
+    expect(app).toContain('to: "/orders/calendar"');
+    expect(app).toContain('path="/orders/calendar"');
+    expect(app).toContain("to={`/orders/calendar${location.search}`}");
+    expect(app.indexOf('to: "/orders/calendar"')).toBeLessThan(
+      app.indexOf('path="/orders/:id"'),
+    );
+    expect(access).toContain('prefix: "/orders/calendar"');
     expect(access).toContain('pageKey: "kitchen.calendar"');
-    expect(access).not.toContain('pageKey: "orders.production"');
-    expect(migration).toContain("delete from public.app_pages");
-    expect(migration).toContain("orders.production");
+    expect(migration).toContain("parent_page_key = 'orders'");
+    expect(migration).toContain("/orders/calendar");
     expect(migration).toContain("kitchen.calendar");
-    expect(migration).toContain("出餐日曆");
   });
 });

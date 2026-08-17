@@ -13,13 +13,23 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
   { prefix: "/settings/roles", pageKey: "settings.roles" },
   { prefix: "/settings/login-logs", pageKey: "settings.login_logs" },
   { prefix: "/settings/attachments", pageKey: "settings.attachments" },
+  { prefix: "/settings/order-lists", pageKey: "settings.order_lists" },
   { prefix: "/settings", pageKey: "settings" },
   { prefix: "/orders/pending", pageKey: "orders.pending" },
+  { prefix: "/orders/calendar", pageKey: "kitchen.calendar" },
   { prefix: "/orders/production", pageKey: "kitchen.calendar" },
   { prefix: "/orders/payments", pageKey: "orders.payments" },
   { prefix: "/orders/drivers", pageKey: "orders.drivers" },
   { prefix: "/orders/unpaid", pageKey: "orders.unpaid" },
   { prefix: "/orders/delivered-unpaid", pageKey: "orders.delivered_unpaid" },
+  { prefix: "/orders/monthly", pageKey: "orders.monthly" },
+  { prefix: "/orders/split", pageKey: "orders.split" },
+  { prefix: "/orders/kitchen-notes", pageKey: "orders.kitchen_notes" },
+  {
+    prefix: "/orders/reschedule-pending",
+    pageKey: "orders.reschedule_pending",
+  },
+  { prefix: "/orders/shopify-pending", pageKey: "orders.shopify_pending" },
   { prefix: "/orders/new", pageKey: "orders.new" },
   {
     prefix: "/orders/settings/statuses",
@@ -172,6 +182,7 @@ const PAGE_ACCESS_CHILD_KEYS: Record<string, string[]> = {
     "orders.settings.statuses",
     "orders.settings.sale_partners",
   ],
+  "settings.order_lists": ["settings.order_lists.edit"],
 };
 
 export function pageAccessKey(pathname: string) {

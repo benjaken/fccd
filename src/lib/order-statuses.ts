@@ -263,6 +263,36 @@ export function statusBadgeStyle(color: string | null | undefined) {
 const UNPAID_STATUS_NAMES = new Set(["未完成付款", "未付款"]);
 export const DEFAULT_UNPAID_STATUS_COLOR = "#ef4444";
 
+export const ORDER_TAG_QUEUE_NAMES = {
+  "monthly-settlement": ["月結"],
+  split: ["已拆單", "拆單"],
+  "kitchen-notes": ["廚房備註"],
+  "reschedule-pending": ["改期未定", "改期未審"],
+} as const;
+
+export type OrderTagQueuePreset = keyof typeof ORDER_TAG_QUEUE_NAMES;
+
+export function isOrderTagQueuePreset(
+  preset: string,
+): preset is OrderTagQueuePreset {
+  return Object.prototype.hasOwnProperty.call(ORDER_TAG_QUEUE_NAMES, preset);
+}
+
+export function catalogLegacyIdsForNames(
+  catalog: readonly Pick<ConfiguredOrderStatus, "name" | "legacyId">[],
+  names: readonly string[],
+) {
+  const wanted = new Set(names.map((name) => name.trim()).filter(Boolean));
+  const ids: string[] = [];
+  const seen = new Set<string>();
+  for (const row of catalog) {
+    if (!wanted.has(row.name.trim()) || seen.has(row.legacyId)) continue;
+    seen.add(row.legacyId);
+    ids.push(row.legacyId);
+  }
+  return ids;
+}
+
 export function isUnpaidOrderStatusName(name: string | null | undefined) {
   return UNPAID_STATUS_NAMES.has((name ?? "").trim());
 }
