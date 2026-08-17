@@ -21,6 +21,11 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
   { prefix: "/orders/unpaid", pageKey: "orders.unpaid" },
   { prefix: "/orders/delivered-unpaid", pageKey: "orders.delivered_unpaid" },
   { prefix: "/orders/new", pageKey: "orders.new" },
+  {
+    prefix: "/orders/settings/statuses",
+    pageKey: "orders.settings.statuses",
+  },
+  { prefix: "/orders/settings", pageKey: "orders.settings" },
   { prefix: "/quotes/customers", pageKey: "quotes.customers" },
   { prefix: "/quotes/follow-up", pageKey: "quotes.follow_up" },
   { prefix: "/products/packages", pageKey: "products.packages" },
@@ -155,6 +160,7 @@ const PAGE_ACCESS_CHILD_KEYS: Record<string, string[]> = {
     ...tabPermissionKeys(REPORT_GROUP_TABS.frozenMeat),
     ...tabPermissionKeys(REPORT_GROUP_TABS.shops),
   ],
+  "orders.settings": ["orders.settings.statuses"],
 };
 
 export function pageAccessKey(pathname: string) {

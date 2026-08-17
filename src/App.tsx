@@ -31,6 +31,7 @@ import {
   Moon,
   Package,
   PackageCheck,
+  Palette,
   PanelLeftClose,
   PanelLeftOpen,
   Receipt,
@@ -87,6 +88,7 @@ import { SellingPriceCostPage } from "@/components/SellingPriceCostPage";
 import { CalculationSettingsPage } from "@/components/CalculationSettingsPage";
 import { MeatCustomersPage } from "@/components/MeatCustomersPage";
 import { MeatYieldErrorsPage } from "@/components/MeatYieldErrorsPage";
+import { OrderStatusesPage } from "@/components/OrderStatusesPage";
 import { AttachmentsListPage } from "@/components/settings/AttachmentsListPage";
 import { LoginLogsListPage } from "@/components/settings/LoginLogsListPage";
 import { RolePermissionsPage } from "@/components/settings/RolePermissionsPage";
@@ -101,6 +103,7 @@ import {
   type DashboardJob,
 } from "@/lib/dashboard";
 import { FROZEN_ACTION_PAGE_KEYS } from "@/lib/frozen-action-permissions";
+import { ORDER_ACTION_PAGE_KEYS } from "@/lib/order-action-permissions";
 import { useTheme } from "@/lib/use-theme";
 import { useAnimatedNumber } from "@/lib/use-animated-number";
 import { cn } from "@/lib/utils";
@@ -193,6 +196,20 @@ const secondaryNav: Record<string, NavItem[]> = {
       to: "/orders/drivers",
       icon: Truck,
       permissionKey: "orders.drivers",
+    },
+    {
+      key: "orderSettings",
+      to: "/orders/settings/statuses",
+      icon: Settings,
+      permissionKey: "orders.settings",
+      children: [
+        {
+          key: "orderStatuses",
+          to: "/orders/settings/statuses",
+          icon: Palette,
+          permissionKey: "orders.settings.statuses",
+        },
+      ],
     },
   ],
   quotes: [
@@ -418,6 +435,9 @@ const SECTION_CHILD_KEYS: Record<string, string[]> = {
     "orders.drivers",
     "orders.unpaid",
     "orders.delivered_unpaid",
+    "orders.settings",
+    "orders.settings.statuses",
+    ...ORDER_ACTION_PAGE_KEYS,
   ],
   quotes: ["quotes.customers", "quotes.follow_up"],
   products: [
@@ -983,6 +1003,14 @@ function OperationsShell() {
               <Route
                 path="/orders/payments"
                 element={<PaymentsListPage canViewFinance={canViewFinance} />}
+              />
+              <Route
+                path="/orders/settings"
+                element={<Navigate to="/orders/settings/statuses" replace />}
+              />
+              <Route
+                path="/orders/settings/statuses"
+                element={<OrderStatusesPage />}
               />
               <Route
                 path="/orders/:id"
