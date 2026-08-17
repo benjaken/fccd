@@ -60,4 +60,9 @@ describe("bubble daily incremental helpers", () => {
     expect(phoneText(null)).toBeNull();
     expect(phoneText("")).toBeNull();
   });
+
+  it("keeps Bubble delivery time windows as text", () => {
+    expect(phoneText("18:00 - 19:00")).toBe("18:00 - 19:00");
+    expect(phoneText(" 12:00 - 12:30 ")).toBe("12:00 - 12:30");
+  });
 });
