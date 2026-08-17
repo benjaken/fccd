@@ -6,26 +6,36 @@ import {
   useState,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronDown, Receipt } from "lucide-react";
+import { ChevronDown, Receipt, Send } from "lucide-react";
 
+import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import { TablePagination } from "@/components/ui/table-pagination";
+import { FROZEN_ACTION_PERMISSION_KEYS } from "@/lib/frozen-action-permissions";
 import { cn } from "@/lib/utils";
 import {
+  averageFactorySupplyPrice,
   fetchSellingPriceCostRows,
   fetchSellingPriceRawMeatOptions,
   filterSellingPriceCostRows,
   formatSignedPercent,
   hongKongYearMonthKey,
+  isHongKongYearMonth,
+  pushSellingPriceMonthlyPrices,
   SELLING_PRICE_COST_PAGE_SIZE,
+  type MonthlyMeatPricePushResult,
   type SellingPriceCostRow,
   type SellingPriceRawMeatOption,
 } from "@/lib/selling-price-cost";
 
 type OptionsLoader = () => Promise<SellingPriceRawMeatOption[]>;
 type RowsLoader = (rawMeatItemId: string) => Promise<SellingPriceCostRow[]>;
+type MonthlyPricesPusher = (
+  rawMeatItemId: string,
+  yearMonth: string,
+) => Promise<MonthlyMeatPricePushResult>;
 
 const SIDEBAR_SKELETON_ROWS = 10;
 const SELLING_PRICE_COST_SKELETON_COLUMNS = [
@@ -89,11 +99,19 @@ function AmountWithRate({
 export function SellingPriceCostPage({
   loadOptions = fetchSellingPriceRawMeatOptions,
   loadRows = fetchSellingPriceCostRows,
+  pushMonthlyPrices = pushSellingPriceMonthlyPrices,
+  canPush: canPushProp,
 }: {
   loadOptions?: OptionsLoader;
   loadRows?: RowsLoader;
+  pushMonthlyPrices?: MonthlyPricesPusher;
+  canPush?: boolean;
 }) {
   const { t, i18n } = useTranslation();
+  const pageAccess = useCurrentPageAccess();
+  const canPush =
+    canPushProp ??
+    pageAccess.canAccess(FROZEN_ACTION_PERMISSION_KEYS.sellingPriceCost.push);
   const [options, setOptions] = useState<SellingPriceRawMeatOption[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [rows, setRows] = useState<SellingPriceCostRow[]>([]);
@@ -106,6 +124,10 @@ export function SellingPriceCostPage({
   const [monthFilter, setMonthFilter] = useState<string | null>(null);
   const [monthMenuOpen, setMonthMenuOpen] = useState(false);
   const [page, setPage] = useState(1);
+  const [pushing, setPushing] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pushMessage, setPushMessage] = useState<string | null>(null);
+  const [pushError, setPushError] = useState<string | null>(null);
   const monthFilterRef = useRef<HTMLDivElement>(null);
 
   const selected =
@@ -296,6 +318,9 @@ export function SellingPriceCostPage({
     setPage(1);
     setMonthFilter(null);
     setMonthMenuOpen(false);
+    setConfirmOpen(false);
+    setPushMessage(null);
+    setPushError(null);
 
     void loadRows(selected.id)
       .then((next) => {
@@ -322,6 +347,56 @@ export function SellingPriceCostPage({
 
   const reload = () => setReloadKey((current) => current + 1);
 
+  const monthRows = useMemo(
+    () =>
+      isHongKongYearMonth(monthFilter)
+        ? filterSellingPriceCostRows(rows, "", monthFilter)
+        : [],
+    [monthFilter, rows],
+  );
+  const reportPreviewAverage = useMemo(
+    () => averageFactorySupplyPrice(monthRows),
+    [monthRows],
+  );
+  const showSendButton =
+    canPush && Boolean(selected?.id) && isHongKongYearMonth(monthFilter);
+
+  const closeConfirm = () => {
+    if (pushing) return;
+    setConfirmOpen(false);
+  };
+
+  const pushSelectedMonth = async () => {
+    if (!canPush || !selected?.id || !isHongKongYearMonth(monthFilter)) return;
+
+    setPushing(true);
+    setPushMessage(null);
+    setPushError(null);
+    try {
+      const result = await pushMonthlyPrices(selected.id, monthFilter);
+      if (result.status === "skipped_no_versions") {
+        setPushMessage(t("sellingPriceCost.pushSkippedNoVersions"));
+      } else if (result.status === "skipped_no_computable_rows") {
+        setPushMessage(t("sellingPriceCost.pushSkippedNoRows"));
+      } else if (result.status === "updated") {
+        setPushMessage(
+          t("sellingPriceCost.pushSuccess", { month: selectedMonthLabel }),
+        );
+      } else {
+        setPushError(t("sellingPriceCost.pushError"));
+      }
+      setConfirmOpen(false);
+    } catch (pushFailure: unknown) {
+      setPushError(
+        pushFailure instanceof Error
+          ? pushFailure.message
+          : t("sellingPriceCost.pushError"),
+      );
+    } finally {
+      setPushing(false);
+    }
+  };
+
   const submitSearch = () => {
     setAppliedSearch(draftSearch.trim());
     setPage(1);
@@ -333,6 +408,15 @@ export function SellingPriceCostPage({
   const formatMoney = (value: number | null) =>
     value === null ? t("common.notSet") : currencyFormatter.format(value);
 
+  useEffect(() => {
+    if (!confirmOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeConfirm();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [confirmOpen, pushing]);
+
   return (
     <section className="selling-price-cost-page">
       <header className="page-heading selling-price-cost-heading">
@@ -340,6 +424,22 @@ export function SellingPriceCostPage({
           <span className="eyebrow">{t("sellingPriceCost.eyebrow")}</span>
           <h1>{t("sellingPriceCost.title")}</h1>
         </div>
+        {showSendButton ? (
+          <div className="heading-actions">
+            <Button
+              type="button"
+              disabled={pushing}
+              onClick={() => {
+                setPushMessage(null);
+                setPushError(null);
+                setConfirmOpen(true);
+              }}
+            >
+              <Send />
+              {t("sellingPriceCost.sendToReport")}
+            </Button>
+          </div>
+        ) : null}
       </header>
 
       <div className="selling-price-cost-layout">
@@ -396,6 +496,13 @@ export function SellingPriceCostPage({
         </aside>
 
         <article className="panel selling-price-cost-panel">
+          {pushError ? (
+            <p className="list-inline-error">{pushError}</p>
+          ) : pushMessage ? (
+            <p className="list-inline-status" role="status">
+              {pushMessage}
+            </p>
+          ) : null}
           <header className="selling-price-cost-toolbar">
           <ListSearchBar
             id="selling-price-cost-search"
@@ -491,6 +598,9 @@ export function SellingPriceCostPage({
                               setMonthFilter(null);
                               setMonthMenuOpen(false);
                               setPage(1);
+                              setConfirmOpen(false);
+                              setPushMessage(null);
+                              setPushError(null);
                             }}
                           >
                             {t("sellingPriceCost.allMonths")}
@@ -510,6 +620,9 @@ export function SellingPriceCostPage({
                                 setMonthFilter(option.key);
                                 setMonthMenuOpen(false);
                                 setPage(1);
+                                setConfirmOpen(false);
+                                setPushMessage(null);
+                                setPushError(null);
                               }}
                             >
                               {option.label}
@@ -603,6 +716,51 @@ export function SellingPriceCostPage({
         />
         </article>
       </div>
+
+      {confirmOpen ? (
+        <div className="confirm-dialog-root" role="presentation">
+          <button
+            type="button"
+            className="confirm-dialog-backdrop"
+            aria-label={t("sellingPriceCost.confirmCancel")}
+            onClick={closeConfirm}
+          />
+          <div
+            className="confirm-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="selling-price-cost-push-title"
+          >
+            <div className="selling-price-cost-push-preview">
+              <p id="selling-price-cost-push-title">
+                {t("sellingPriceCost.reportPreviewTitle")}
+              </p>
+              <strong>{formatMoney(reportPreviewAverage)}</strong>
+            </div>
+            <footer className="confirm-dialog-footer">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={pushing}
+                onClick={closeConfirm}
+              >
+                {t("sellingPriceCost.confirmCancel")}
+              </Button>
+              <Button
+                type="button"
+                disabled={pushing}
+                onClick={() => {
+                  void pushSelectedMonth();
+                }}
+              >
+                {pushing
+                  ? t("sellingPriceCost.sendingToReport")
+                  : t("sellingPriceCost.sendToReport")}
+              </Button>
+            </footer>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

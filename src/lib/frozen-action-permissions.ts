@@ -18,6 +18,9 @@ export const FROZEN_ACTION_PERMISSION_KEYS = {
   calculationSettings: {
     delete: "frozen.calculation_settings.delete",
   },
+  sellingPriceCost: {
+    push: "frozen.selling_price_cost.push",
+  },
 } as const;
 
 export const FROZEN_ACTION_PAGE_KEYS = [
@@ -30,4 +33,5 @@ export const FROZEN_ACTION_PAGE_KEYS = [
   FROZEN_ACTION_PERMISSION_KEYS.calculationSettings.delete,
   FROZEN_ACTION_PERMISSION_KEYS.meatCustomers.edit,
   FROZEN_ACTION_PERMISSION_KEYS.meatCustomers.delete,
+  FROZEN_ACTION_PERMISSION_KEYS.sellingPriceCost.push,
 ] as const;
