@@ -9239,10 +9239,11 @@ button.product-tag[aria-pressed="true"] {
 }
 
 .factory-day-cards {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
   padding: 18px;
+  align-content: start;
 }
 
 .factory-day-state {
@@ -9691,6 +9692,10 @@ button.factory-job-card:focus-visible {
   .factory-day {
     border-right: 0;
     border-bottom: 1px solid oklch(0.32 0.02 150);
+  }
+
+  .factory-day-cards {
+    grid-template-columns: 1fr;
   }
 
   .factory-job-card {
