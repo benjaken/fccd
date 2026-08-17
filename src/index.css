@@ -2161,6 +2161,10 @@ button.product-tag[aria-pressed="true"] {
   color: var(--muted-foreground);
 }
 
+.delivery-order-phone {
+  font-variant-numeric: tabular-nums;
+}
+
 .delivery-view-image {
   margin-top: 4px;
   height: 28px;
