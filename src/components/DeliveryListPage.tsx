@@ -589,6 +589,7 @@ export function DeliveryListPage({
                       {share !== null ? (
                         <small>
                           {t("deliveryList.orderShare", {
+                            fee: Math.round(item.totalFee ?? 0),
                             percent: Math.round(share),
                           })}
                         </small>

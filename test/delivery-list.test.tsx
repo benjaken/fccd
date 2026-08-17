@@ -103,7 +103,7 @@ describe("Delivery list page", () => {
     expect(table.getAllByText("車邊交收").length).toBeGreaterThan(0);
     expect(table.getByText("隧道費")).toBeInTheDocument();
     expect(table.getByText("HK$1,330")).toBeInTheDocument();
-    expect(table.getByText("運費佔 7%")).toBeInTheDocument();
+    expect(table.getByText("運費 90（佔7%）")).toBeInTheDocument();
     expect(table.getByRole("columnheader", { name: "操作" })).toBeTruthy();
     const viewImage = table.getByRole("button", { name: "查看圖片" });
     const noImage = table.getByRole("button", { name: "沒有送達照片" });
