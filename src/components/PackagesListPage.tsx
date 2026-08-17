@@ -325,15 +325,6 @@ export function PackagesListPage({
           <div className="packages-table-block">
             <div className="packages-result-meta">
               <strong>{t("packages.resultCount", { total })}</strong>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                aria-label={t("packages.retry")}
-                onClick={() => setReloadKey((key) => key + 1)}
-              >
-                <RefreshCw />
-              </Button>
             </div>
             <ListTable
               className="packages-table-wrap"
