@@ -1736,6 +1736,13 @@ button.product-tag[aria-pressed="true"] {
   }
 }
 
+.order-status-list {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
 .status-badge {
   display: inline-flex;
   align-items: center;
@@ -1797,13 +1804,15 @@ button.product-tag[aria-pressed="true"] {
 }
 
 .quotes-page,
-.orders-page {
+.orders-page,
+.kitchen-orders-page {
   display: grid;
   gap: 20px;
 }
 
 .quotes-page,
-.orders-page {
+.orders-page,
+.kitchen-orders-page {
   grid-template-rows: auto minmax(0, 1fr);
   height: calc(
     100dvh - var(--topbar-height) - var(--workspace-height) - 76px
@@ -1813,7 +1822,8 @@ button.product-tag[aria-pressed="true"] {
 }
 
 .quotes-page .page-heading,
-.orders-page .page-heading {
+.orders-page .page-heading,
+.kitchen-orders-page .page-heading {
   margin-bottom: 0;
 }
 

@@ -20,6 +20,7 @@ import {
   type ReadOnlyOrderDetail,
 } from "@/lib/order-details";
 import { kitchenCalendarReturnPath } from "@/lib/kitchen-calendar";
+import { kitchenOrdersReturnPath } from "@/lib/kitchen-orders";
 import { cn } from "@/lib/utils";
 
 type DetailLoader = typeof fetchOrderDetail;
@@ -80,10 +81,14 @@ export function OrderDetailPage({
     searchParams.get("from"),
     searchParams.get("month"),
   );
-  const backTo = calendarBack ?? (isQuote ? "/quotes" : "/orders");
+  const kitchenBack = kitchenOrdersReturnPath(searchParams.get("from"));
+  const backTo =
+    calendarBack ?? kitchenBack ?? (isQuote ? "/quotes" : "/orders");
   const backLabel = calendarBack
     ? t("details.backToCalendar")
-    : t("details.back");
+    : kitchenBack
+      ? t("details.backToKitchen")
+      : t("details.back");
   const title = isQuote ? t("details.quoteTitle") : t("details.orderTitle");
   const currency = useMemo(
     () =>

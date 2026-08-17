@@ -18,6 +18,7 @@ const orderResult: OrderListResult = {
       customerName: "陳小姐",
       companyName: "香港女童軍總會",
       deliveryAt: "2026-08-12T00:00:00+08:00",
+      factoryDate: "2026-08-11T16:00:00.000Z",
       shipOutTime: "11:30",
       deliveryStatus: "待取貨",
       isSentToFactory: null,
@@ -25,6 +26,7 @@ const orderResult: OrderListResult = {
       outstanding: 1610,
       currency: "HKD",
       createdAt: "2026-08-12T01:00:00.000Z",
+      statuses: [{ name: "待取貨", color: "#16a34a" }],
     },
   ],
 };

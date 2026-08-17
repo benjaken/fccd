@@ -1,4 +1,9 @@
 import { supabase } from "@/lib/supabase";
+import {
+  fetchOrderStatusCatalog,
+  resolveOrderStatuses,
+  type OrderStatusView,
+} from "@/lib/order-statuses";
 
 export const ORDERS_PAGE_SIZE = 15;
 
@@ -22,6 +27,7 @@ export type OrderListItem = {
   customerName: string | null;
   companyName: string | null;
   deliveryAt: string | null;
+  factoryDate: string | null;
   shipOutTime: string | null;
   deliveryStatus: string | null;
   isSentToFactory: boolean | null;
@@ -29,6 +35,7 @@ export type OrderListItem = {
   outstanding: number | null;
   currency: string;
   createdAt: string;
+  statuses: OrderStatusView[];
 };
 
 export type OrderListResult = {
@@ -50,6 +57,7 @@ type OrderRow = {
   customer_name_snapshot: string | null;
   company_name_snapshot: string | null;
   delivery_at: string | null;
+  factory_date: string | null;
   ship_out_time: string | null;
   delivery_status: string | null;
   is_sent_to_factory: boolean | null;
@@ -58,6 +66,7 @@ type OrderRow = {
   currency: string | null;
   bubble_created_at: string | null;
   created_at: string;
+  order_status_legacy_ids: string[] | null;
 };
 
 function safeSearchTerm(value: string) {
@@ -110,8 +119,8 @@ export async function fetchOrders({
   const start = (page - 1) * ORDERS_PAGE_SIZE;
   const end = start + ORDERS_PAGE_SIZE - 1;
   const selectedFields: string = canViewFinance
-    ? "id,order_number,customer_name_snapshot,company_name_snapshot,delivery_at,ship_out_time,delivery_status,is_sent_to_factory,currency,bubble_created_at,created_at,grand_total,outstanding"
-    : "id,order_number,customer_name_snapshot,company_name_snapshot,delivery_at,ship_out_time,delivery_status,is_sent_to_factory,currency,bubble_created_at,created_at";
+    ? "id,order_number,customer_name_snapshot,company_name_snapshot,delivery_at,factory_date,ship_out_time,delivery_status,is_sent_to_factory,currency,bubble_created_at,created_at,grand_total,outstanding,order_status_legacy_ids"
+    : "id,order_number,customer_name_snapshot,company_name_snapshot,delivery_at,factory_date,ship_out_time,delivery_status,is_sent_to_factory,currency,bubble_created_at,created_at,order_status_legacy_ids";
   let query = supabase
     .from("orders")
     .select(selectedFields, { count: "exact" })
@@ -139,7 +148,10 @@ export async function fetchOrders({
 
   query = applyStatusFilter(query, status);
 
-  const { data, count, error } = await query;
+  const [{ data, count, error }, catalog] = await Promise.all([
+    query,
+    fetchOrderStatusCatalog(),
+  ]);
   if (error) throw error;
 
   return {
@@ -149,6 +161,7 @@ export async function fetchOrders({
       customerName: row.customer_name_snapshot,
       companyName: row.company_name_snapshot,
       deliveryAt: row.delivery_at,
+      factoryDate: row.factory_date,
       shipOutTime: row.ship_out_time,
       deliveryStatus: row.delivery_status,
       isSentToFactory: row.is_sent_to_factory,
@@ -156,6 +169,7 @@ export async function fetchOrders({
       outstanding: optionalAmount(row.outstanding),
       currency: row.currency || "HKD",
       createdAt: row.bubble_created_at || row.created_at,
+      statuses: resolveOrderStatuses(row.order_status_legacy_ids, catalog),
     })),
     total: count ?? 0,
   };

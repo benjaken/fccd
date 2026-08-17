@@ -92,6 +92,7 @@ import { CalculationSettingsPage } from "@/components/CalculationSettingsPage";
 import { MeatCustomersPage } from "@/components/MeatCustomersPage";
 import { MeatYieldErrorsPage } from "@/components/MeatYieldErrorsPage";
 import { KitchenCalendarPage } from "@/components/KitchenCalendarPage";
+import { KitchenOrdersPage } from "@/components/KitchenOrdersPage";
 import { KitchenSettingsPage } from "@/components/KitchenSettingsPage";
 import { OrderStatusesPage } from "@/components/OrderStatusesPage";
 import { SalesPartnersPage } from "@/components/SalesPartnersPage";
@@ -1157,6 +1158,10 @@ function OperationsShell() {
               <Route
                 path="/frozen/yield-errors"
                 element={<MeatYieldErrorsPage />}
+              />
+              <Route
+                path="/kitchen"
+                element={<KitchenOrdersPage />}
               />
               <Route
                 path="/kitchen/calendar"

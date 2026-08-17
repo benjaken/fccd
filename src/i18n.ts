@@ -440,6 +440,15 @@ const resources = {
         closeDay: "關閉當日訂單",
         emptyDay: "這天沒有出餐訂單。",
       },
+      kitchenOrders: {
+        title: "廚房訂單",
+        loading: "正在載入廚房訂單…",
+        loadError: "暫時無法載入廚房訂單",
+        loadErrorDescription: "請稍後重試，或確認你的訂單資料權限。",
+        retry: "重新載入",
+        empty: "未找到廚房訂單",
+        emptyDescription: "調整搜尋或狀態條件後再試。",
+      },
       orderSettings: {
         eyebrow: "訂單管理",
         title: "設定",
@@ -1924,6 +1933,7 @@ const resources = {
         retry: "重新載入",
         back: "返回列表",
         backToCalendar: "返回出餐日曆",
+        backToKitchen: "返回中央廚房",
         draft: "草稿",
         customer: "客戶資料",
         fulfilment: "履行資料",
@@ -2531,6 +2541,16 @@ const resources = {
         dayDescription: "{{count}} orders on this day. Open an order for details.",
         closeDay: "Close day orders",
         emptyDay: "No serving orders on this day.",
+      },
+      kitchenOrders: {
+        title: "Kitchen orders",
+        loading: "Loading kitchen orders…",
+        loadError: "Kitchen orders could not be loaded",
+        loadErrorDescription:
+          "Try again shortly or check your order permissions.",
+        retry: "Reload",
+        empty: "No kitchen orders found",
+        emptyDescription: "Adjust the search or status filters and try again.",
       },
       orderSettings: {
         eyebrow: "Orders",
@@ -4054,6 +4074,7 @@ const resources = {
         retry: "Reload",
         back: "Back to list",
         backToCalendar: "Back to serving calendar",
+        backToKitchen: "Back to central kitchen",
         draft: "Draft",
         customer: "Customer",
         fulfilment: "Fulfilment",
