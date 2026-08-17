@@ -490,6 +490,7 @@ const resources = {
           totalFee: "總運費",
           shippingMethod: "送貨方式",
           status: "出貨狀態",
+          actions: "操作",
         },
         exportColumns: {
           orderNumber: "訂單號碼",
@@ -2645,6 +2646,7 @@ const resources = {
           totalFee: "Total fee",
           shippingMethod: "Delivery method",
           status: "Shipping status",
+          actions: "Actions",
         },
         exportColumns: {
           orderNumber: "Order number",

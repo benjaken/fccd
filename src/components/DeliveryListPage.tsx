@@ -57,6 +57,7 @@ const DELIVERY_SKELETON_COLUMNS = [
   { width: "4.5rem" },
   { width: "6rem" },
   { width: "7rem", variant: "badge" as const },
+  { width: "9rem", variant: "action" as const },
 ];
 
 function formatOrderNumber(value: string | null | undefined) {
@@ -561,6 +562,7 @@ export function DeliveryListPage({
                 <th>{t("deliveryList.columns.totalFee")}</th>
                 <th>{t("deliveryList.columns.shippingMethod")}</th>
                 <th>{t("deliveryList.columns.status")}</th>
+                <th>{t("deliveryList.columns.actions")}</th>
               </tr>
             }
           >
@@ -591,27 +593,6 @@ export function DeliveryListPage({
                           {item.customerPhone}
                         </span>
                       ) : null}
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        className="delivery-view-image"
-                        disabled={!hasDeliveryPhotos(item)}
-                        aria-label={
-                          hasDeliveryPhotos(item)
-                            ? t("deliveryList.viewImage")
-                            : t("deliveryList.noImage")
-                        }
-                        title={
-                          hasDeliveryPhotos(item)
-                            ? t("deliveryList.viewImage")
-                            : t("deliveryList.noImage")
-                        }
-                        onClick={() => setImageItem(item)}
-                      >
-                        <ImageIcon />
-                        {t("deliveryList.viewImage")}
-                      </Button>
                     </div>
                   </td>
                   <td>{formatDate(item.deliveryAt)}</td>
@@ -720,6 +701,31 @@ export function DeliveryListPage({
                           {deliveredTime ? ` ${deliveredTime}` : ""}
                         </li>
                       </ol>
+                    </div>
+                  </td>
+                  <td className="table-actions-cell">
+                    <div className="table-row-actions">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        className="delivery-view-image"
+                        disabled={!hasDeliveryPhotos(item)}
+                        aria-label={
+                          hasDeliveryPhotos(item)
+                            ? t("deliveryList.viewImage")
+                            : t("deliveryList.noImage")
+                        }
+                        title={
+                          hasDeliveryPhotos(item)
+                            ? t("deliveryList.viewImage")
+                            : t("deliveryList.noImage")
+                        }
+                        onClick={() => setImageItem(item)}
+                      >
+                        <ImageIcon />
+                        {t("deliveryList.viewImage")}
+                      </Button>
                       {canEdit && isPendingPickupStatus(item.deliveryStatus) ? (
                         <Button
                           type="button"
