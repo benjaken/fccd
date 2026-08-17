@@ -101,7 +101,9 @@ describe("Delivery list page", () => {
     expect(table.getAllByText("Sun-Line").length).toBeGreaterThan(0);
     expect(table.getAllByText("車邊交收").length).toBeGreaterThan(0);
     expect(table.getByText("隧道費")).toBeInTheDocument();
+    expect(table.getByText("佔訂單 7%")).toBeInTheDocument();
     expect(table.getByRole("button", { name: "查看圖片" })).toBeInTheDocument();
+    expect(screen.getByText(/本頁運費/)).toBeInTheDocument();
   });
 
   it("filters by fleet and delivery method", async () => {
@@ -142,6 +144,32 @@ describe("Delivery list page", () => {
           shippingMethodId: "method-1",
         }),
       ),
+    );
+  });
+
+  it("lets a dispatcher choose the fleet on each row", async () => {
+    const user = userEvent.setup();
+    const loadDeliveries = vi.fn().mockResolvedValue(listResult);
+    const loadLookups = vi.fn().mockResolvedValue(lookups);
+    const assignFleet = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <MemoryRouter>
+        <DeliveryListPage
+          loadDeliveries={loadDeliveries}
+          loadLookups={loadLookups}
+          assignFleet={assignFleet}
+          now={new Date("2026-08-17T04:00:00+08:00")}
+        />
+      </MemoryRouter>,
+    );
+
+    const fleetSelects = await screen.findAllByRole("combobox", {
+      name: "選擇車隊",
+    });
+    await user.selectOptions(fleetSelects[1]!, "");
+    await waitFor(() =>
+      expect(assignFleet).toHaveBeenCalledWith("delivery-2", null),
     );
   });
 

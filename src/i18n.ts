@@ -445,6 +445,9 @@ const resources = {
         exportError: "暫時無法導出送貨清單，請稍後再試。",
         viewImage: "查看圖片",
         surcharge: "附加費",
+        chooseFleet: "選擇車隊",
+        assignFleetError: "車隊更新失敗，請重試。",
+        orderShare: "佔訂單 {{percent}}%",
         loading: "正在載入送貨清單…",
         loadError: "暫時無法載入送貨清單",
         loadErrorDescription: "請稍後重試，或確認你的配送資料權限。",
@@ -455,7 +458,7 @@ const resources = {
         next: "下一頁",
         pageOf: "/",
         jumpToPage: "跳至頁碼",
-        pagination: "顯示 {{from}}–{{to}}，共 {{total}} 筆",
+        pagination: "顯示 {{from}}–{{to}}，共 {{total}} 筆 · 本頁運費 {{fee}}",
         statuses: {
           unassigned: "未派車隊",
           pendingPickup: "待取貨",
@@ -2584,6 +2587,9 @@ const resources = {
         exportError: "The delivery list could not be exported. Try again shortly.",
         viewImage: "View image",
         surcharge: "Surcharge",
+        chooseFleet: "Choose fleet",
+        assignFleetError: "Could not update the fleet. Try again.",
+        orderShare: "{{percent}}% of order",
         loading: "Loading deliveries…",
         loadError: "Deliveries could not be loaded",
         loadErrorDescription:
@@ -2595,7 +2601,7 @@ const resources = {
         next: "Next page",
         pageOf: "of",
         jumpToPage: "Jump to page",
-        pagination: "Showing {{from}}–{{to}} of {{total}}",
+        pagination: "Showing {{from}}–{{to}} of {{total}} · Page fees {{fee}}",
         statuses: {
           unassigned: "Unassigned",
           pendingPickup: "Pending pickup",

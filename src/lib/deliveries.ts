@@ -87,6 +87,7 @@ type OrderRow = {
   shipping_address_snapshot?: string | null;
   shipping_method_id?: string | null;
   grand_total?: number | string | null;
+  delivery_time?: string | null;
   ship_out_time?: string | null;
   delivery_status?: string | null;
   shipping_methods?: Nested<NamedRow>;
@@ -125,11 +126,11 @@ const DELIVERY_SELECT = [
   "image_references",
   "motorcade_id",
   "shipping_method_id",
-  "orders!inner(id,order_number,customer_name_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,shipping_address_snapshot,shipping_method_id,grand_total,ship_out_time,delivery_status,shipping_methods(name,display_name))",
+  "orders!inner(id,order_number,customer_name_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,shipping_address_snapshot,shipping_method_id,grand_total,delivery_time,ship_out_time,delivery_status,shipping_methods(name,display_name))",
   "delivery_districts!district_id(name)",
   "shipping_methods!shipping_method_id(name,display_name)",
   "delivery_teams!motorcade_id(name,short_name)",
-  "delivery_surcharges(amount,delivery_surcharge_types(name))",
+  "delivery_surcharges(amount,delivery_surcharge_types!surcharge_type_id(name))",
 ].join(",");
 
 function nestedRecord<T>(value: Nested<T>): T | null {
@@ -150,6 +151,50 @@ function displayName(value: Nested<NamedRow>): string | null {
     row?.name?.trim() ||
     "";
   return name || null;
+}
+
+function teamName(value: Nested<NamedRow>): string | null {
+  const row = nestedRecord(value);
+  const name = row?.name?.trim() || row?.short_name?.trim() || "";
+  return name || null;
+}
+
+export function clockFromValue(
+  value: string | null | undefined,
+  timeZone = "Asia/Hong_Kong",
+) {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  const looksLikeDateTime = /^\d{4}-\d{2}-\d{2}(?:[T\s]|$)/.test(trimmed);
+  if (!looksLikeDateTime) return trimmed;
+  const date = new Date(trimmed);
+  if (Number.isNaN(date.getTime())) return trimmed;
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
+  const hour = (parts.find((part) => part.type === "hour")?.value ?? "").padStart(
+    2,
+    "0",
+  );
+  const minute = (
+    parts.find((part) => part.type === "minute")?.value ?? ""
+  ).padStart(2, "0");
+  if (hour === "00" || hour === "24") {
+    if (minute === "00") return null;
+  }
+  return `${hour === "24" ? "00" : hour}:${minute}`;
+}
+
+export function canAssignDeliveryFleet(role: string | null | undefined) {
+  return (
+    role === "Super Admin" ||
+    role === "Admin" ||
+    role === "Accounting" ||
+    role === "Factory"
+  );
 }
 
 function optionalAmount(value: number | string | null | undefined) {
@@ -224,13 +269,14 @@ export function mapDeliveryRow(row: DeliveryRow): DeliveryListItem {
     address: order?.shipping_address_snapshot ?? null,
     deliveryAt: row.delivery_at,
     deliveryTime:
-      row.delivery_time?.trim() ||
-      row.ship_out_time?.trim() ||
-      order?.ship_out_time?.trim() ||
-      null,
+      clockFromValue(row.delivery_time) ||
+      clockFromValue(order?.delivery_time) ||
+      clockFromValue(row.ship_out_time) ||
+      clockFromValue(order?.ship_out_time) ||
+      clockFromValue(row.delivery_at),
     districtName: displayName(row.delivery_districts),
     motorcadeId: row.motorcade_id,
-    motorcadeName: displayName(row.delivery_teams),
+    motorcadeName: teamName(row.delivery_teams),
     shippingMethodId:
       row.shipping_method_id || order?.shipping_method_id || null,
     shippingMethodName:
@@ -367,8 +413,8 @@ export async function fetchDeliveryLookups(): Promise<{
     teams: (teamsResult.data ?? []).map((row) => ({
       id: row.id as string,
       name:
-        (row.short_name as string | null)?.trim() ||
         (row.name as string | null)?.trim() ||
+        (row.short_name as string | null)?.trim() ||
         (row.id as string),
     })),
     shippingMethods: (methodsResult.data ?? []).map((row) => ({
@@ -401,6 +447,17 @@ export async function fetchDeliveryExportRows(
   }
 
   return items;
+}
+
+export async function assignDeliveryMotorcade(
+  deliveryId: string,
+  motorcadeId: string | null,
+) {
+  const { error } = await supabase.rpc("assign_delivery_motorcade", {
+    p_delivery_id: deliveryId,
+    p_motorcade_id: motorcadeId,
+  });
+  if (error) throw error;
 }
 
 export function buildDeliveryExportCsv(

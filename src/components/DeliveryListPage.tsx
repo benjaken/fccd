@@ -10,7 +10,9 @@ import { ListTable } from "@/components/ui/list-table";
 import { SidePanel } from "@/components/ui/side-panel";
 import { TablePagination } from "@/components/ui/table-pagination";
 import {
+  assignDeliveryMotorcade,
   buildDeliveryExportCsv,
+  clockFromValue,
   DELIVERIES_PAGE_SIZE,
   downloadCsv,
   feeSharePercent,
@@ -35,6 +37,7 @@ type DeliveriesLoader = (
 ) => Promise<DeliveryListResult>;
 type LookupsLoader = typeof fetchDeliveryLookups;
 type ExportLoader = typeof fetchDeliveryExportRows;
+type AssignFleet = typeof assignDeliveryMotorcade;
 
 const DELIVERY_SKELETON_COLUMNS = [
   { width: "2.5rem" },
@@ -58,25 +61,17 @@ function formatOrderNumber(value: string | null | undefined) {
   return `#${trimmed}`;
 }
 
-function formatClock(
-  value: string | null,
-  formatter: Intl.DateTimeFormat,
-) {
-  if (!value) return null;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return null;
-  return formatter.format(date);
-}
-
 export function DeliveryListPage({
   loadDeliveries = fetchDeliveries,
   loadLookups = fetchDeliveryLookups,
   loadExportRows = fetchDeliveryExportRows,
+  assignFleet = assignDeliveryMotorcade,
   now = new Date(),
 }: {
   loadDeliveries?: DeliveriesLoader;
   loadLookups?: LookupsLoader;
   loadExportRows?: ExportLoader;
+  assignFleet?: AssignFleet;
   now?: Date;
 }) {
   const { t, i18n } = useTranslation();
@@ -98,6 +93,8 @@ export function DeliveryListPage({
   >([]);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [assignError, setAssignError] = useState<string | null>(null);
+  const [assigningId, setAssigningId] = useState<string | null>(null);
   const [imageItem, setImageItem] = useState<DeliveryListItem | null>(null);
 
   const startDateFilter = useDeferredFilter(startDate, (value) => {
@@ -162,16 +159,6 @@ export function DeliveryListPage({
         day: "2-digit",
         month: "2-digit",
         year: "numeric",
-      }),
-    [i18n.language],
-  );
-  const time = useMemo(
-    () =>
-      new Intl.DateTimeFormat(i18n.language, {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-        timeZone: "Asia/Hong_Kong",
       }),
     [i18n.language],
   );
@@ -329,6 +316,39 @@ export function DeliveryListPage({
     }
   };
 
+  const changeFleet = async (item: DeliveryListItem, nextId: string) => {
+    const motorcadeIdValue = nextId || null;
+    const motorcadeName =
+      teams.find((team) => team.id === motorcadeIdValue)?.name ?? null;
+    setAssignError(null);
+    setAssigningId(item.id);
+    setItems((current) =>
+      current.map((row) =>
+        row.id === item.id
+          ? { ...row, motorcadeId: motorcadeIdValue, motorcadeName }
+          : row,
+      ),
+    );
+    try {
+      await assignFleet(item.id, motorcadeIdValue);
+    } catch {
+      setAssignError("assign_failed");
+      setItems((current) =>
+        current.map((row) =>
+          row.id === item.id
+            ? {
+                ...row,
+                motorcadeId: item.motorcadeId,
+                motorcadeName: item.motorcadeName,
+              }
+            : row,
+        ),
+      );
+    } finally {
+      setAssigningId(null);
+    }
+  };
+
   const statusLabel = (item: DeliveryListItem) => {
     if (isDeliveredStatus(item.deliveryStatus)) {
       return t("deliveryList.statuses.delivered");
@@ -453,6 +473,11 @@ export function DeliveryListPage({
             {t("deliveryList.exportError")}
           </p>
         ) : null}
+        {assignError ? (
+          <p className="list-inline-error" role="alert">
+            {t("deliveryList.assignFleetError")}
+          </p>
+        ) : null}
 
         {error ? (
           <div className="orders-state orders-state-error" role="alert">
@@ -496,22 +521,15 @@ export function DeliveryListPage({
                 <th>{t("deliveryList.columns.driver")}</th>
                 <th>{t("deliveryList.columns.districtFee")}</th>
                 <th>{t("deliveryList.columns.surcharge")}</th>
-                <th>
-                  <span className="delivery-fee-heading">
-                    {t("deliveryList.columns.totalFee")}
-                    {items.length > 0 ? (
-                      <small>{formatFee(pageFeeTotal)}</small>
-                    ) : null}
-                  </span>
-                </th>
+                <th>{t("deliveryList.columns.totalFee")}</th>
                 <th>{t("deliveryList.columns.shippingMethod")}</th>
                 <th>{t("deliveryList.columns.status")}</th>
               </tr>
             }
           >
             {items.map((item, index) => {
-              const pickedUpTime = formatClock(item.takenAt, time);
-              const deliveredTime = formatClock(item.fulfilledAt, time);
+              const pickedUpTime = clockFromValue(item.takenAt);
+              const deliveredTime = clockFromValue(item.fulfilledAt);
               const share = feeSharePercent(item);
               return (
                 <tr key={item.id}>
@@ -546,10 +564,27 @@ export function DeliveryListPage({
                     </div>
                   </td>
                   <td>{formatDate(item.deliveryAt)}</td>
-                  <td>{display(item.deliveryTime)}</td>
+                  <td>{item.deliveryTime?.trim() || "—"}</td>
                   <td>{display(item.districtName)}</td>
                   <td>{display(item.address)}</td>
-                  <td>{display(item.motorcadeName)}</td>
+                  <td>
+                    <select
+                      className="delivery-fleet-select"
+                      value={item.motorcadeId ?? ""}
+                      disabled={assigningId === item.id}
+                      aria-label={t("deliveryList.chooseFleet")}
+                      onChange={(event) =>
+                        void changeFleet(item, event.target.value)
+                      }
+                    >
+                      <option value="">{t("deliveryList.chooseFleet")}</option>
+                      {teams.map((team) => (
+                        <option key={team.id} value={team.id}>
+                          {team.name}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
                   <td>
                     <span className="delivery-fee-box">
                       {formatFee(item.basicFee)}
@@ -575,14 +610,18 @@ export function DeliveryListPage({
                         </span>
                       </span>
                     ) : (
-                      t("common.notSet")
+                      "—"
                     )}
                   </td>
                   <td>
                     <div className="delivery-total-fee">
                       <strong>{formatFee(item.totalFee)}</strong>
                       {share !== null ? (
-                        <small>{Math.round(share)}%</small>
+                        <small>
+                          {t("deliveryList.orderShare", {
+                            percent: Math.round(share),
+                          })}
+                        </small>
                       ) : null}
                     </div>
                   </td>
@@ -639,6 +678,7 @@ export function DeliveryListPage({
             from: visibleFrom,
             to: visibleTo,
             total,
+            fee: formatFee(pageFeeTotal),
           })}
           page={page}
           totalPages={totalPages}

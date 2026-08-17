@@ -42,7 +42,12 @@ const list = (value: unknown) =>
     )
     : [];
 const dateValue = (value: unknown) => {
-  if (typeof value !== "string") return null;
+  if (typeof value === "number" && Number.isFinite(value)) {
+    const millis = value > 1e12 ? value : value * 1000;
+    const parsed = new Date(millis);
+    return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+  }
+  if (typeof value !== "string" || !value.trim()) return null;
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
 };
@@ -320,6 +325,7 @@ const phaseC: SourceMapping[] = [
       delivery_at: dateValue(r.Delivery_Date),
       factory_date: dateValue(r.Factory_date1_sd),
       factory_print_date: dateValue(r.Factory_date2_Print),
+      delivery_time: text(r.Delivery_Time),
       ship_out_time: text(r["Delivery_Ship Out Time"]),
       remarks: text(r.ORDER_Remarks),
       factory_packing_note: text(r["Factory_Packing Note"]),

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildDeliveryExportCsv,
+  clockFromValue,
   feeSharePercent,
   hongKongDateInputValue,
   hongKongMonthStart,
@@ -53,7 +54,7 @@ describe("delivery list helpers", () => {
     expect(item.orderNumber).toBe("6918");
     expect(item.customerPhone).toBe("90154004");
     expect(item.deliveryTime).toBe("18:00 - 19:00");
-    expect(item.motorcadeName).toBe("Sun-Line");
+    expect(item.motorcadeName).toBe("Sun-Line Logistics");
     expect(item.shippingMethodName).toBe("車邊交收");
     expect(item.surcharges).toEqual([{ name: "隧道費", amount: 50 }]);
     expect(item.surchargeAmount).toBe(50);
@@ -96,6 +97,12 @@ describe("delivery list helpers", () => {
     expect(item.deliveryTime).toBe("19:00");
     expect(item.deliveryStatus).toBe("己送達");
     expect(item.shippingMethodName).toBe("送貨上門");
+  });
+
+  it("keeps date-only midnight timestamps out of the time column", () => {
+    expect(clockFromValue("2026-08-01T00:00:00+08:00")).toBeNull();
+    expect(clockFromValue("18:00 - 19:00")).toBe("18:00 - 19:00");
+    expect(clockFromValue("2026-08-01T20:37:00+08:00")).toBe("20:37");
   });
 
   it("builds the delivery export CSV with the requested headers", () => {

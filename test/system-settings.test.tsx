@@ -757,6 +757,17 @@ describe("Super Admin system settings", () => {
     expect(deliveryListSupport).toContain("Operations read delivery surcharges");
     expect(deliveryListSupport).toContain("'Factory'");
 
+    const deliveryListRowEdits = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260817062000_delivery_list_row_edits.sql",
+      ),
+      "utf8",
+    );
+    expect(deliveryListRowEdits).toContain("orders.delivery_time");
+    expect(deliveryListRowEdits).toContain("assign_delivery_motorcade");
+    expect(deliveryListRowEdits).toContain("'Factory'");
+
     const frozenMenuLabels = readFileSync(
       path.resolve(
         process.cwd(),
