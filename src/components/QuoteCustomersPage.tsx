@@ -6,14 +6,12 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
-import { OperationalListState } from "@/components/ui/operational-list-state";
 import { SidePanel } from "@/components/ui/side-panel";
 import { TablePagination } from "@/components/ui/table-pagination";
 import {
   documentPath,
   fetchQuoteCustomerHistory,
   fetchQuoteCustomers,
-  formatLabeledValue,
   QUOTE_CUSTOMERS_PAGE_SIZE,
   type QuoteCustomerHistory,
   type QuoteCustomerListFilters,
@@ -28,13 +26,12 @@ type CustomersLoader = (
 type HistoryLoader = (email: string) => Promise<QuoteCustomerHistory>;
 
 const CUSTOMER_SKELETON_COLUMNS = [
-  { width: "2.5rem" },
   { width: "14rem" },
-  { width: "10rem" },
-  { width: "28%" },
-  { width: "4.5rem" },
+  { width: "18%" },
+  { width: "36%" },
+  { width: "5rem" },
   { width: "7rem" },
-  { width: "9rem", variant: "action" as const },
+  { width: "1.75rem", variant: "action" as const },
 ];
 
 function formatMoney(
@@ -73,16 +70,13 @@ export function QuoteCustomersPage({
   const totalPages = Math.max(1, Math.ceil(total / QUOTE_CUSTOMERS_PAGE_SIZE));
   const visibleFrom = total === 0 ? 0 : (page - 1) * QUOTE_CUSTOMERS_PAGE_SIZE + 1;
   const visibleTo = Math.min(page * QUOTE_CUSTOMERS_PAGE_SIZE, total);
-  const selectedCustomer =
-    items.find((item) => item.email === selectedEmail) ?? null;
 
   const currencyFormatter = useMemo(
     () =>
       new Intl.NumberFormat(i18n.language, {
         style: "currency",
         currency: "HKD",
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
+        maximumFractionDigits: 0,
       }),
     [i18n.language],
   );
@@ -179,7 +173,7 @@ export function QuoteCustomersPage({
   };
 
   return (
-    <section className="quotes-page quote-customers-page">
+    <section className="quotes-page">
       <header className="page-heading quotes-heading">
         <div>
           <span className="eyebrow">{t("quoteCustomers.eyebrow")}</span>
@@ -188,22 +182,7 @@ export function QuoteCustomersPage({
       </header>
 
       <article className="panel quotes-panel">
-        <header className="quotes-toolbar quote-customers-toolbar">
-          <div className="quote-customers-result-count">
-            <strong>
-              {t("quoteCustomers.resultCount", { total })}
-            </strong>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={refresh}
-              aria-label={t("quoteCustomers.refresh")}
-              title={t("quoteCustomers.refresh")}
-            >
-              <RefreshCw />
-            </Button>
-          </div>
+        <header className="quotes-toolbar">
           <ListSearchBar
             id="quote-customers-search"
             value={draftSearch}
@@ -216,27 +195,32 @@ export function QuoteCustomersPage({
         </header>
 
         {error ? (
-          <OperationalListState
-            icon={Users}
-            title={
-              error === "42P01" || error === "42883"
-                ? t("quoteCustomers.migrationPending")
-                : t("quoteCustomers.loadError")
-            }
-            description={t("quoteCustomers.loadErrorDescription")}
-            retryLabel={t("quoteCustomers.retry")}
-            onRetry={refresh}
-          />
+          <div className="quotes-state quotes-state-error" role="alert">
+            <Users />
+            <div>
+              <strong>
+                {error === "42P01" || error === "42883"
+                  ? t("quoteCustomers.migrationPending")
+                  : t("quoteCustomers.loadError")}
+              </strong>
+              <span>{t("quoteCustomers.loadErrorDescription")}</span>
+            </div>
+            <Button variant="outline" onClick={refresh}>
+              <RefreshCw />
+              {t("quoteCustomers.retry")}
+            </Button>
+          </div>
         ) : !loading && items.length === 0 ? (
-          <OperationalListState
-            icon={Users}
-            title={t("quoteCustomers.empty")}
-            description={t("quoteCustomers.emptyDescription")}
-          />
+          <div className="quotes-state quotes-state-empty">
+            <Users />
+            <div>
+              <strong>{t("quoteCustomers.empty")}</strong>
+              <span>{t("quoteCustomers.emptyDescription")}</span>
+            </div>
+          </div>
         ) : (
           <ListTable
-            className="quotes-table-wrap quote-customers-table-wrap"
-            tableClassName="quote-customers-table"
+            className="quotes-table-wrap"
             onRefresh={refresh}
             loading={loading}
             loadingLabel={t("quoteCustomers.loading")}
@@ -244,16 +228,11 @@ export function QuoteCustomersPage({
             skeletonColumns={CUSTOMER_SKELETON_COLUMNS}
             header={
               <tr>
-                <th className="quote-customers-index-cell" aria-label="#" />
                 <th>{t("quoteCustomers.columns.email")}</th>
-                <th>{t("quoteCustomers.columns.customerOrder")}</th>
-                <th className="quote-customers-company-cell">
-                  {t("quoteCustomers.columns.companyTag")}
-                </th>
-                <th className="quote-customers-numeric-cell">
-                  {t("quoteCustomers.columns.orderCount")}
-                </th>
-                <th className="quote-customers-numeric-cell">
+                <th>{t("quoteCustomers.columns.customer")}</th>
+                <th>{t("quoteCustomers.columns.company")}</th>
+                <th>{t("quoteCustomers.columns.orderCount")}</th>
+                <th>
                   <button
                     type="button"
                     className="quote-customers-sort"
@@ -264,48 +243,41 @@ export function QuoteCustomersPage({
                     {sortAscending ? <ArrowUp /> : <ArrowDown />}
                   </button>
                 </th>
-                <th
-                  className="table-actions-cell"
-                  aria-label={t("quoteCustomers.columns.actions")}
-                />
+                <th aria-label={t("quoteCustomers.columns.actions")} />
               </tr>
             }
           >
-            {items.map((customer, index) => (
+            {items.map((customer) => (
               <tr
                 key={customer.email}
                 className={cn(
-                  "quote-customers-row",
-                  selectedEmail === customer.email && "is-selected",
-                  customer.hasRemarks && "has-remarks",
+                  selectedEmail === customer.email && "quote-customers-row-selected",
                 )}
               >
-                <td className="quote-customers-index-cell">
-                  {visibleFrom + index}
-                </td>
                 <td>
                   <strong>{customer.email}</strong>
                 </td>
                 <td>
+                  <strong>
+                    {customer.customerName || t("common.notSet")}
+                  </strong>
                   {customer.latestOrderId ? (
-                    <Link
-                      className="order-link"
-                      to={documentPath(
-                        customer.latestDocumentType,
-                        customer.latestOrderId,
-                      )}
-                    >
-                      {formatLabeledValue(
-                        customer.customerName,
-                        customer.latestOrderNumber,
-                      )}
-                    </Link>
-                  ) : (
-                    formatLabeledValue(
-                      customer.customerName,
-                      customer.latestOrderNumber,
-                    )
-                  )}
+                    <small className="quote-company">
+                      <Link
+                        className="order-link"
+                        to={documentPath(
+                          customer.latestDocumentType,
+                          customer.latestOrderId,
+                        )}
+                      >
+                        {customer.latestOrderNumber || t("common.notSet")}
+                      </Link>
+                    </small>
+                  ) : customer.latestOrderNumber ? (
+                    <small className="quote-company">
+                      {customer.latestOrderNumber}
+                    </small>
+                  ) : null}
                 </td>
                 <td className="quote-customers-company-cell">
                   {customer.companies.length === 0 ? (
@@ -316,28 +288,31 @@ export function QuoteCustomersPage({
                         <li
                           key={`${company.orderId ?? company.tag ?? company.companyName}-${companyIndex}`}
                         >
+                          <strong>
+                            {company.companyName || t("common.notSet")}
+                          </strong>
                           {company.orderId ? (
-                            <Link
-                              className="order-link"
-                              to={documentPath(
-                                company.documentType,
-                                company.orderId,
-                              )}
-                            >
-                              {formatLabeledValue(company.companyName, company.tag)}
-                            </Link>
-                          ) : (
-                            formatLabeledValue(company.companyName, company.tag)
-                          )}
+                            <small className="quote-company">
+                              <Link
+                                className="order-link"
+                                to={documentPath(
+                                  company.documentType,
+                                  company.orderId,
+                                )}
+                              >
+                                {company.tag || t("common.notSet")}
+                              </Link>
+                            </small>
+                          ) : company.tag ? (
+                            <small className="quote-company">{company.tag}</small>
+                          ) : null}
                         </li>
                       ))}
                     </ul>
                   )}
                 </td>
-                <td className="quote-customers-numeric-cell">
-                  {customer.orderCount.toLocaleString(i18n.language)}
-                </td>
-                <td className="quote-customers-numeric-cell">
+                <td>{customer.orderCount.toLocaleString(i18n.language)}</td>
+                <td>
                   <strong>
                     {formatMoney(
                       customer.orderTotal,
@@ -352,11 +327,12 @@ export function QuoteCustomersPage({
                     <Button
                       type="button"
                       variant="ghost"
-                      className="quote-customers-history-action"
+                      size="icon"
                       onClick={() => setSelectedEmail(customer.email)}
+                      aria-label={`${t("quoteCustomers.historyAction")} ${customer.email}`}
+                      title={t("quoteCustomers.historyAction")}
                     >
                       <MessageSquare />
-                      {t("quoteCustomers.historyAction")}
                     </Button>
                   </div>
                 </td>
@@ -388,7 +364,7 @@ export function QuoteCustomersPage({
         open={Boolean(selectedEmail)}
         wide
         title={t("quoteCustomers.historyTitle")}
-        description={selectedEmail ?? selectedCustomer?.email}
+        description={selectedEmail ?? undefined}
         onClose={() => setSelectedEmail(null)}
         closeLabel={t("quoteCustomers.closePanel")}
       >
@@ -414,11 +390,13 @@ export function QuoteCustomersPage({
                         className="order-link"
                         to={documentPath(order.documentType, order.id)}
                       >
-                        {formatLabeledValue(
-                          order.companyName || order.customerName,
-                          order.orderNumber,
-                        )}
+                        {order.orderNumber || t("common.notSet")}
                       </Link>
+                      <small className="quote-company">
+                        {order.companyName ||
+                          order.customerName ||
+                          t("common.notSet")}
+                      </small>
                       <span>
                         {dateTimeFormatter.format(new Date(order.createdAt))}
                       </span>

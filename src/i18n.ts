@@ -837,8 +837,6 @@ const resources = {
       quoteCustomers: {
         eyebrow: "報價與客戶",
         title: "客戶列表",
-        resultCount: "共 {{total}} 個結果",
-        refresh: "重新整理",
         search: "搜尋客戶",
         searchPlaceholder: "搜尋客戶 (以客戶資料)",
         searchAction: "搜尋",
@@ -866,8 +864,8 @@ const resources = {
         closePanel: "關閉",
         columns: {
           email: "電郵地址",
-          customerOrder: "客戶名稱: 訂單號碼",
-          companyTag: "公司名稱: Tag",
+          customer: "客戶",
+          company: "公司",
           orderCount: "訂單數量",
           orderTotal: "訂單總額",
           actions: "操作",
@@ -2640,8 +2638,6 @@ const resources = {
       quoteCustomers: {
         eyebrow: "Quotes & Customers",
         title: "Customers",
-        resultCount: "{{total}} results",
-        refresh: "Refresh",
         search: "Search customers",
         searchPlaceholder: "Search customers (by customer data)",
         searchAction: "Search",
@@ -2670,8 +2666,8 @@ const resources = {
         closePanel: "Close",
         columns: {
           email: "Email",
-          customerOrder: "Customer name: Order no.",
-          companyTag: "Company name: Tag",
+          customer: "Customer",
+          company: "Company",
           orderCount: "Orders",
           orderTotal: "Order total",
           actions: "Actions",

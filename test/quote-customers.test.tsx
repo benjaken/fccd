@@ -131,7 +131,7 @@ describe("Quote customers list", () => {
     await i18n.changeLanguage("zh-HK");
   });
 
-  it("renders email-grouped customer fields from the screenshot layout", async () => {
+  it("renders email-grouped customer fields in the shared list layout", async () => {
     const loadCustomers = vi.fn().mockResolvedValue(customerResult);
 
     render(
@@ -143,25 +143,30 @@ describe("Quote customers list", () => {
     expect(
       await screen.findByRole("heading", { name: "客戶列表" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("共 31 個結果")).toBeInTheDocument();
+    expect(screen.getByText("顯示 1–15，共 31 位")).toBeInTheDocument();
     expect(screen.getByText("sales@foodchannels-catering.com")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Ada : P-1143" })).toHaveAttribute(
+    expect(screen.getByText("Ada")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "P-1143" })).toHaveAttribute(
       "href",
       "/orders/order-1143",
     );
-    expect(screen.getByRole("link", { name: "K&K property : B-1274" })).toHaveAttribute(
+    expect(screen.getByText("K&K property")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "B-1274" })).toHaveAttribute(
       "href",
       "/orders/order-1274",
     );
-    expect(screen.getByRole("link", { name: "611教會 : P-1100" })).toHaveAttribute(
+    expect(screen.getByText("611教會")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "P-1100" })).toHaveAttribute(
       "href",
       "/quotes/quote-1100",
     );
     expect(screen.getByText("312")).toBeInTheDocument();
-    expect(screen.getByText("HK$940,852.40")).toBeInTheDocument();
+    expect(screen.getByText("HK$940,852")).toBeInTheDocument();
     expect(
-      screen.getAllByRole("button", { name: "過往訂單 / 客戶備註" }),
-    ).toHaveLength(2);
+      screen.getByRole("button", {
+        name: "過往訂單 / 客戶備註 sales@foodchannels-catering.com",
+      }),
+    ).toBeInTheDocument();
   });
 
   it("submits a server-side search and resets to the first page", async () => {
@@ -237,7 +242,9 @@ describe("Quote customers list", () => {
 
     await screen.findByText("sales@foodchannels-catering.com");
     await user.click(
-      screen.getAllByRole("button", { name: "過往訂單 / 客戶備註" })[0],
+      screen.getByRole("button", {
+        name: "過往訂單 / 客戶備註 sales@foodchannels-catering.com",
+      }),
     );
 
     const dialog = await screen.findByRole("dialog", {
@@ -247,8 +254,9 @@ describe("Quote customers list", () => {
       "sales@foodchannels-catering.com",
     ));
     expect(within(dialog).getByText("過往訂單")).toBeInTheDocument();
-    expect(within(dialog).getByRole("link", { name: "K&K property : P-1143" }))
+    expect(within(dialog).getByRole("link", { name: "P-1143" }))
       .toHaveAttribute("href", "/orders/order-1143");
+    expect(within(dialog).getByText("K&K property")).toBeInTheDocument();
     expect(within(dialog).getByText("需要素食選項")).toBeInTheDocument();
   });
 
