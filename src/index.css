@@ -2593,6 +2593,20 @@ button.product-tag[aria-pressed="true"] {
   font-weight: 500;
 }
 
+.quote-customers-email-reply {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35em;
+  min-width: 0;
+}
+
+.quote-customers-email-reply a {
+  color: var(--primary);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
 .quote-customers-message time {
   color: var(--muted-foreground);
   font-size: 14px;

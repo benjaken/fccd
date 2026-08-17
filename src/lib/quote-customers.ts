@@ -81,6 +81,7 @@ export type QuoteCustomerMessage = {
   tab: QuoteCustomerMessageTab;
   body: string;
   authorName: string | null;
+  replyEmail: string | null;
   orderNumber: string | null;
   orderId: string | null;
   documentType: string | null;
@@ -92,6 +93,7 @@ export type CreateQuoteCustomerNoteInput = {
   body: string;
   authorName?: string | null;
   orderId?: string | null;
+  replyToEmail?: string | null;
 };
 
 export type QuoteCustomerMessages = Record<
@@ -222,17 +224,57 @@ function relatedOrder(value: TimelineMessageRow["orders"]) {
   return value;
 }
 
+const EMAIL_REPLY_PATTERN =
+  /^(.+?)\s+email\s*回覆\s*(?:<a\b[^>]*>)?([^\s<]+)(?:<\/a>)?\s*([\s\S]*)$/iu;
+
+function stripCommentMarkup(value: string) {
+  return value.replace(/<\/?a\b[^>]*>/gi, " ").replace(/[ \t]+\n/g, "\n").replace(/[ \t]{2,}/g, " ").trim();
+}
+
+export function parseQuoteCustomerNoteComment(
+  comment: string,
+  fallbackAuthor?: string | null,
+) {
+  const match = comment.trim().match(EMAIL_REPLY_PATTERN);
+  if (!match) {
+    return {
+      authorName: fallbackAuthor?.trim() || null,
+      replyEmail: null,
+      body: stripCommentMarkup(comment),
+    };
+  }
+
+  return {
+    authorName: match[1].trim() || fallbackAuthor?.trim() || null,
+    replyEmail: match[2].trim(),
+    body: stripCommentMarkup(match[3]),
+  };
+}
+
+export function formatQuoteCustomerEmailReply(
+  authorName: string,
+  email: string,
+  body: string,
+) {
+  return `${authorName.trim()} email 回覆${email.trim()} ${body.trim()}`.trim();
+}
+
 export function mapQuoteCustomerMessage(
   row: TimelineMessageRow,
 ): QuoteCustomerMessage | null {
   const tab = messageTabFromCategory(row.category);
   if (!tab) return null;
   const order = relatedOrder(row.orders);
+  const parsed = parseQuoteCustomerNoteComment(
+    row.comment,
+    row.author_name_snapshot,
+  );
   return {
     id: row.id,
     tab,
-    body: row.comment,
-    authorName: row.author_name_snapshot?.trim() || null,
+    body: parsed.body,
+    authorName: parsed.authorName,
+    replyEmail: parsed.replyEmail,
     orderNumber: order?.order_number ?? null,
     orderId: row.order_id,
     documentType: order?.document_type ?? null,
@@ -383,9 +425,16 @@ export async function createQuoteCustomerNote({
   body,
   authorName,
   orderId,
+  replyToEmail,
 }: CreateQuoteCustomerNoteInput): Promise<QuoteCustomerMessage> {
-  const comment = body.trim();
-  if (!comment) throw new Error("quote_customers_note_empty");
+  const trimmedBody = body.trim();
+  if (!trimmedBody) throw new Error("quote_customers_note_empty");
+  const trimmedAuthor = authorName?.trim() || null;
+  const trimmedReplyTo = replyToEmail?.trim() || null;
+  const comment =
+    trimmedAuthor && trimmedReplyTo
+      ? formatQuoteCustomerEmailReply(trimmedAuthor, trimmedReplyTo, trimmedBody)
+      : trimmedBody;
 
   const now = new Date().toISOString();
   const { data, error } = await supabase
@@ -395,7 +444,7 @@ export async function createQuoteCustomerNote({
       category: MESSAGE_CATEGORY_BY_TAB.note,
       comment,
       customer_email_snapshot: email,
-      author_name_snapshot: authorName?.trim() || null,
+      author_name_snapshot: trimmedAuthor,
       order_id: orderId || null,
       bubble_created_at: now,
       bubble_modified_at: now,

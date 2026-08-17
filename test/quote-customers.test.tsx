@@ -7,9 +7,12 @@ import { QuoteCustomersPage } from "@/components/QuoteCustomersPage";
 import i18n from "@/i18n";
 import {
   formatLabeledValue,
+  formatQuoteCustomerEmailReply,
   groupQuoteCustomerMessages,
+  mapQuoteCustomerMessage,
   mapQuoteCustomerRow,
   messageTabFromCategory,
+  parseQuoteCustomerNoteComment,
   QUOTE_CUSTOMER_ORDERS_PAGE_SIZE,
   summarizeCompanies,
   type QuoteCustomerHistory,
@@ -110,6 +113,7 @@ const messages: QuoteCustomerMessages = {
       tab: "complaint",
       body: "20/12: 少左兩份沙律，退款 $516",
       authorName: "Candice",
+      replyEmail: null,
       orderNumber: "#4680",
       orderId: "order-4680",
       documentType: "order",
@@ -123,6 +127,7 @@ const messages: QuoteCustomerMessages = {
       tab: "note",
       body: "payment deadline 1/6",
       authorName: "Mandy",
+      replyEmail: null,
       orderNumber: "B-1178",
       orderId: "order-1178",
       documentType: "order",
@@ -197,6 +202,42 @@ describe("customer message grouping", () => {
     expect(messageTabFromCategory("orderlike")).toBe("like");
     expect(messageTabFromCategory("customer note")).toBe("note");
     expect(messageTabFromCategory("other")).toBeNull();
+  });
+
+  it("parses Bubble email replies out of the comment body", () => {
+    expect(
+      parseQuoteCustomerNoteComment(
+        "Daniel email 回覆daniel.chiu@hkgga.org.hk</a>  不好意思 我地呢邊申請支票需時 未能限期前付款  預計今個月完成  payment deadline 延至 31/7",
+      ),
+    ).toEqual({
+      authorName: "Daniel",
+      replyEmail: "daniel.chiu@hkgga.org.hk",
+      body: "不好意思 我地呢邊申請支票需時 未能限期前付款 預計今個月完成 payment deadline 延至 31/7",
+    });
+    expect(
+      formatQuoteCustomerEmailReply(
+        "Daniel",
+        "daniel.chiu@hkgga.org.hk",
+        "payment deadline 延至 31/7",
+      ),
+    ).toBe("Daniel email 回覆daniel.chiu@hkgga.org.hk payment deadline 延至 31/7");
+    expect(
+      mapQuoteCustomerMessage({
+        id: "note-daniel",
+        category: "customer note",
+        comment:
+          "Daniel email 回覆daniel.chiu@hkgga.org.hk</a>  不好意思 我地呢邊申請支票需時 未能限期前付款  預計今個月完成  payment deadline 延至 31/7",
+        author_name_snapshot: null,
+        order_id: "order-1",
+        bubble_created_at: "2025-07-02T04:00:00.000Z",
+        created_at: "2025-07-02T04:00:00.000Z",
+        orders: { order_number: "B-1198", document_type: "order" },
+      }),
+    ).toMatchObject({
+      authorName: "Daniel",
+      replyEmail: "daniel.chiu@hkgga.org.hk",
+      body: "不好意思 我地呢邊申請支票需時 未能限期前付款 預計今個月完成 payment deadline 延至 31/7",
+    });
   });
 
   it("groups messages chronologically by tab", () => {
@@ -546,6 +587,7 @@ describe("Quote customers list", () => {
       tab: "note",
       body: "已出月結",
       authorName: "Mandy",
+      replyEmail: null,
       orderNumber: null,
       orderId: null,
       documentType: null,
@@ -611,6 +653,7 @@ describe("Quote customers list", () => {
         body: "已出月結",
         authorName: "Mandy",
         orderId: null,
+        replyToEmail: null,
       }),
     );
     expect(await within(dialog).findByText("已出月結")).toBeInTheDocument();
@@ -625,6 +668,7 @@ describe("Quote customers list", () => {
       tab: "note",
       body: "已追數",
       authorName: "Mandy",
+      replyEmail: "sales@foodchannels-catering.com",
       orderNumber: "B-1178",
       orderId: "order-1178",
       documentType: "order",
@@ -651,7 +695,7 @@ describe("Quote customers list", () => {
     const dialog = await screen.findByRole("dialog", { name: "留言" });
     await within(dialog).findByText("payment deadline 1/6");
     await user.click(within(dialog).getByRole("button", { name: "回復" }));
-    expect(within(dialog).getByText(/回復 B-1178/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/email 回覆\s*sales@foodchannels-catering.com/)).toBeInTheDocument();
     await user.type(within(dialog).getByPlaceholderText("在此輸入…"), "已追數");
     await user.click(within(dialog).getByRole("button", { name: "送出留言" }));
 
@@ -661,9 +705,65 @@ describe("Quote customers list", () => {
         body: "已追數",
         authorName: "Mandy",
         orderId: "order-1178",
+        replyToEmail: "sales@foodchannels-catering.com",
       }),
     );
     expect(await within(dialog).findByText("已追數")).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("link", {
+        name: "sales@foodchannels-catering.com",
+      }),
+    ).toHaveAttribute("href", "mailto:sales@foodchannels-catering.com");
+  });
+
+  it("shows a Bubble email reply with the author and mailto target", async () => {
+    const user = userEvent.setup();
+    const loadCustomers = vi.fn().mockResolvedValue(customerResult);
+    const loadMessages = vi.fn().mockResolvedValue({
+      ...messages,
+      note: [
+        {
+          id: "note-daniel",
+          tab: "note" as const,
+          body: "不好意思 我地呢邊申請支票需時 未能限期前付款 預計今個月完成 payment deadline 延至 31/7",
+          authorName: "Daniel",
+          replyEmail: "daniel.chiu@hkgga.org.hk",
+          orderNumber: "B-1198",
+          orderId: "order-1198",
+          documentType: "order",
+          createdAt: "2025-07-02T04:00:00.000Z",
+        },
+      ],
+    });
+
+    render(
+      <MemoryRouter>
+        <QuoteCustomersPage
+          loadCustomers={loadCustomers}
+          loadMessages={loadMessages}
+        />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("sales@foodchannels-catering.com");
+    await user.click(
+      screen.getByRole("button", {
+        name: "留言 sales@foodchannels-catering.com",
+      }),
+    );
+
+    const dialog = await screen.findByRole("dialog", { name: "留言" });
+    expect(await within(dialog).findByText("Daniel")).toBeInTheDocument();
+    expect(within(dialog).getByText("email 回覆")).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("link", { name: "daniel.chiu@hkgga.org.hk" }),
+    ).toHaveAttribute("href", "mailto:daniel.chiu@hkgga.org.hk");
+    expect(
+      within(dialog).getByText(
+        "不好意思 我地呢邊申請支票需時 未能限期前付款 預計今個月完成 payment deadline 延至 31/7",
+      ),
+    ).toBeInTheDocument();
+    expect(within(dialog).queryByText("</a>")).not.toBeInTheDocument();
   });
 
   it("shows a clear migration state when the aggregation function is missing", async () => {
