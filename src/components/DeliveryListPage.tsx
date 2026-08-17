@@ -25,7 +25,6 @@ import {
   hongKongMonthStart,
   isDeliveredStatus,
   isPendingPickupStatus,
-  isPickedUpStatus,
   toDeliveryExportRow,
   type DeliveryListFilters,
   type DeliveryListItem,
@@ -344,26 +343,32 @@ export function DeliveryListPage({
     }
   };
 
-  const statusLabel = (item: DeliveryListItem) => {
+  const statusPresentation = (item: DeliveryListItem) => {
     if (isDeliveredStatus(item.deliveryStatus)) {
-      return t("deliveryList.statuses.delivered");
-    }
-    if (item.deliveryStatus === "已取") {
-      return t("deliveryList.statuses.pickedUp");
-    }
-    if (item.deliveryStatus === "待取貨") {
-      return t("deliveryList.statuses.pendingPickup");
+      const time = clockFromValue(item.fulfilledAt);
+      return {
+        label: time
+          ? `${t("deliveryList.statuses.delivered")} ${time}`
+          : t("deliveryList.statuses.delivered"),
+        tone: "green" as const,
+      };
     }
     if (
-      item.deliveryStatus === "未派車隊" ||
-      item.deliveryStatus === "待接單"
+      item.deliveryStatus === "已取" ||
+      item.deliveryStatus === "送貨途中"
     ) {
-      return t("deliveryList.statuses.unassigned");
+      const time = clockFromValue(item.takenAt);
+      return {
+        label: time
+          ? `${t("deliveryList.statuses.pickedUp")} ${time}`
+          : t("deliveryList.statuses.pickedUp"),
+        tone: "blue" as const,
+      };
     }
-    if (item.deliveryStatus === "送貨途中") {
-      return t("deliveryList.statuses.shipping");
-    }
-    return item.deliveryStatus?.trim() || t("common.notSet");
+    return {
+      label: t("deliveryList.statuses.pendingPickup"),
+      tone: "blue" as const,
+    };
   };
 
   return (
@@ -526,10 +531,9 @@ export function DeliveryListPage({
             }
           >
             {items.map((item, index) => {
-              const pickedUpTime = clockFromValue(item.takenAt);
-              const deliveredTime = clockFromValue(item.fulfilledAt);
               const share = feeSharePercent(item);
               const orderAmount = deliveryOrderAmount(item);
+              const status = statusPresentation(item);
               return (
                 <tr key={item.id}>
                   <td>{visibleFrom + index}</td>
@@ -599,46 +603,10 @@ export function DeliveryListPage({
                     </div>
                   </td>
                   <td>{display(item.shippingMethodName)}</td>
-                  <td>
-                    <div className="delivery-status-cell">
-                      <span
-                        className={cn(
-                          "status-badge",
-                          isDeliveredStatus(item.deliveryStatus)
-                            ? "green"
-                            : item.deliveryStatus === "待取貨" ||
-                                item.deliveryStatus === "已取" ||
-                                item.deliveryStatus === "送貨途中"
-                              ? "blue"
-                              : "amber",
-                        )}
-                      >
-                        {statusLabel(item)}
-                      </span>
-                      <ol className="delivery-status-steps">
-                        <li className="is-pending">
-                          {t("deliveryList.statuses.pendingPickup")}
-                        </li>
-                        <li
-                          className={cn(
-                            "is-picked",
-                            isPickedUpStatus(item.deliveryStatus) && "is-done",
-                          )}
-                        >
-                          {t("deliveryList.statuses.pickedUp")}
-                          {pickedUpTime ? ` ${pickedUpTime}` : ""}
-                        </li>
-                        <li
-                          className={cn(
-                            "is-delivered",
-                            isDeliveredStatus(item.deliveryStatus) && "is-done",
-                          )}
-                        >
-                          {t("deliveryList.statuses.delivered")}
-                          {deliveredTime ? ` ${deliveredTime}` : ""}
-                        </li>
-                      </ol>
-                    </div>
+                  <td className="delivery-status-cell">
+                    <span className={cn("status-badge", status.tone)}>
+                      {status.label}
+                    </span>
                   </td>
                   <td className="table-actions-cell">
                     <div className="table-row-actions">

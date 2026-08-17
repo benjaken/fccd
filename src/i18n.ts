@@ -470,7 +470,7 @@ const resources = {
         statuses: {
           unassigned: "未派車隊",
           pendingPickup: "待取貨",
-          pickedUp: "已取",
+          pickedUp: "已取貨",
           shipping: "送貨途中",
           delivered: "已送達",
         },
