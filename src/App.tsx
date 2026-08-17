@@ -187,12 +187,6 @@ const secondaryNav: Record<string, NavItem[]> = {
       permissionKey: "orders.pending",
     },
     {
-      key: "productionCalendar",
-      to: "/orders/production",
-      icon: CalendarDays,
-      permissionKey: "orders.production",
-    },
-    {
       key: "payments",
       to: "/orders/payments",
       icon: HandCoins,
@@ -467,7 +461,6 @@ const SECTION_CHILD_KEYS: Record<string, string[]> = {
   orders: [
     "orders.new",
     "orders.pending",
-    "orders.production",
     "orders.payments",
     "orders.drivers",
     "orders.unpaid",
