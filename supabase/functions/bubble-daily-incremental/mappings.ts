@@ -31,6 +31,17 @@ export type SourceMapping = {
 
 const text = (value: unknown) =>
   typeof value === "string" && value ? value : null;
+export const phoneText = (value: unknown) => {
+  if (value == null || value === "") return null;
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(Math.trunc(value));
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed || null;
+  }
+  return null;
+};
 const numberValue = (value: unknown) =>
   typeof value === "number" && Number.isFinite(value) ? value : null;
 const booleanValue = (value: unknown, fallback = false) =>
@@ -310,8 +321,8 @@ const phaseC: SourceMapping[] = [
       customer_name_snapshot: text(r["ORDER_Customer Name"]),
       company_name_snapshot: text(r["ORDER_Company Name"]),
       email_snapshot: text(r["ORDER_Email Address"]),
-      contact_number_a_snapshot: text(r["ORDER_Contact Number A"]),
-      contact_number_b_snapshot: text(r["ORDER_Contact Number B"]),
+      contact_number_a_snapshot: phoneText(r["ORDER_Contact Number A"]),
+      contact_number_b_snapshot: phoneText(r["ORDER_Contact Number B"]),
       shipping_address_snapshot: text(r["Shipping Address"]),
       customer_note_snapshot: text(r["ORDER_Customer Note"]),
       quote_description_snapshot: text(r["(Quote)_description"]),

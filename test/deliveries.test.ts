@@ -101,6 +101,39 @@ describe("delivery list helpers", () => {
     expect(item.shippingMethodName).toBe("送貨上門");
   });
 
+  it("shows both distinct contact numbers under the customer name", () => {
+    const item = mapDeliveryRow({
+      id: "delivery-3",
+      delivery_at: "2026-08-03T10:00:00+08:00",
+      delivery_time: "18:00",
+      ship_out_time: null,
+      delivery_status: "待取貨",
+      basic_fee: 90,
+      total_fee: 90,
+      taken_at: null,
+      fulfilled_at: null,
+      image_references: [],
+      motorcade_id: "team-1",
+      shipping_method_id: null,
+      orders: {
+        id: "order-3",
+        order_number: "6920",
+        customer_name_snapshot: "雙電話客戶",
+        contact_number_a_snapshot: "90154004",
+        contact_number_b_snapshot: "91234567",
+        shipping_address_snapshot: "上環德輔道中",
+        shipping_method_id: "method-1",
+        grand_total: 500,
+        shipping_methods: { name: "送貨上門" },
+      },
+      delivery_districts: { name: "上環" },
+      shipping_methods: null,
+      delivery_teams: { name: "Sun-Line" },
+    });
+
+    expect(item.customerPhone).toBe("90154004 / 91234567");
+  });
+
   it("keeps date-only midnight timestamps out of the time column", () => {
     expect(clockFromValue("2026-08-01T00:00:00+08:00")).toBeNull();
     expect(clockFromValue("18:00 - 19:00")).toBe("18:00 - 19:00");

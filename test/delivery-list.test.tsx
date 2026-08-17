@@ -96,7 +96,8 @@ describe("Delivery list page", () => {
     expect(table.getByText("#6918")).toHaveAttribute("href", "/orders/order-1");
     expect(table.getByText("Louis Chang 張")).toBeInTheDocument();
     expect(table.getByText("90154004")).toBeInTheDocument();
-     expect(table.getAllByText("18:00 - 19:00").length).toBeGreaterThan(0);
+    expect(table.getByText("90154004").className).toContain("delivery-order-phone");
+    expect(table.getAllByText("18:00 - 19:00").length).toBeGreaterThan(0);
     expect(table.getByText("青衣")).toBeInTheDocument();
     expect(table.getAllByText("Sun-Line").length).toBeGreaterThan(0);
     expect(table.getAllByText("車邊交收").length).toBeGreaterThan(0);

@@ -581,7 +581,11 @@ export function DeliveryListPage({
                         </strong>
                       )}
                       <span>{display(item.customerName)}</span>
-                      <span>{display(item.customerPhone)}</span>
+                      {item.customerPhone ? (
+                        <span className="delivery-order-phone">
+                          {item.customerPhone}
+                        </span>
+                      ) : null}
                       <Button
                         type="button"
                         variant="secondary"

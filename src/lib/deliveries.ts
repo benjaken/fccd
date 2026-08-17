@@ -197,6 +197,16 @@ export function canAssignDeliveryFleet(role: string | null | undefined) {
   );
 }
 
+function formatContactPhones(
+  primary?: string | null,
+  secondary?: string | null,
+) {
+  const first = primary?.trim() || "";
+  const second = secondary?.trim() || "";
+  if (first && second && first !== second) return `${first} / ${second}`;
+  return first || second || null;
+}
+
 function optionalAmount(value: number | string | null | undefined) {
   if (value === null || value === undefined || value === "") return null;
   const parsed = Number.parseFloat(String(value));
@@ -262,10 +272,10 @@ export function mapDeliveryRow(row: DeliveryRow): DeliveryListItem {
     orderId: order?.id ?? null,
     orderNumber: order?.order_number ?? null,
     customerName: order?.customer_name_snapshot ?? null,
-    customerPhone:
-      order?.contact_number_a_snapshot?.trim() ||
-      order?.contact_number_b_snapshot?.trim() ||
-      null,
+    customerPhone: formatContactPhones(
+      order?.contact_number_a_snapshot,
+      order?.contact_number_b_snapshot,
+    ),
     address: order?.shipping_address_snapshot ?? null,
     deliveryAt: row.delivery_at,
     deliveryTime:
