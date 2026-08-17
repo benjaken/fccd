@@ -11,7 +11,7 @@ import { ProductDetailPage } from "@/components/ProductDetailPage";
 import { ProductsListPage } from "@/components/ProductsListPage";
 import i18n from "@/i18n";
 import type { PackageDetail, PackageListResult } from "@/lib/packages";
-import type { ProductDetail, ProductListResult } from "@/lib/products";
+import { hasProductSku, normalizeProductSku, type ProductDetail, type ProductListResult } from "@/lib/products";
 
 const productResult: ProductListResult = {
   total: 1,
@@ -31,8 +31,11 @@ const productResult: ProductListResult = {
       channelName: "Catering",
       productTypeId: "type-1",
       productTypeName: "西式熱盤",
-      cookTypeName: "焗",
+      cookTypeId: "cook-1",
+      cookTypeName: "焗爐",
+      bentoMainTypeId: "staple-1",
       bentoMainTypeName: "飯",
+      bentoColumnTypeId: "column-1",
       bentoColumnTypeName: "雙格",
       mainIngredients: ["雞"],
       specialRequests: ["不辣", "適合小朋友"],
@@ -60,7 +63,7 @@ const productDetail: ProductDetail = {
   productTypeId: "type-1",
   productTypeName: "西式熱盤",
   cookTypeId: "cook-1",
-  cookTypeName: "焗",
+  cookTypeName: "焗爐",
   bentoMainTypeId: "staple-1",
   bentoMainTypeName: "飯",
   bentoColumnTypeId: "column-1",
@@ -98,7 +101,7 @@ const productDetail: ProductDetail = {
 const productEditOptions = {
   channels: [{ id: "channel-1", name: "Catering" }],
   productTypes: [{ id: "type-1", name: "西式熱盤" }],
-  cookTypes: [{ id: "cook-1", name: "焗" }],
+  cookTypes: [{ id: "cook-1", name: "焗爐" }],
   collections: [
     { id: "col-1", name: "西式熱盤", legacyId: "legacy-col-1" },
     { id: "col-2", name: "飲品", legacyId: "legacy-col-2" },
@@ -165,6 +168,23 @@ const packageDetail: PackageDetail = {
   ungroupedProducts: [],
 };
 
+describe("hasProductSku", () => {
+  it("treats blank values as missing so incomplete Bubble rows can be hidden", () => {
+    expect(hasProductSku(null)).toBe(false);
+    expect(hasProductSku("")).toBe(false);
+    expect(hasProductSku("   ")).toBe(false);
+    expect(hasProductSku("CC-001")).toBe(true);
+  });
+});
+
+describe("normalizeProductSku", () => {
+  it("trims leftover Bubble spaces so SKU sort is A-Z", () => {
+    expect(normalizeProductSku(" KRIC04-3")).toBe("KRIC04-3");
+    expect(normalizeProductSku("CAC001")).toBe("CAC001");
+    expect(normalizeProductSku("  ")).toBeNull();
+  });
+});
+
 describe("Products catalog pages", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("zh-HK");
@@ -195,7 +215,22 @@ describe("Products catalog pages", () => {
     expect(within(screen.getByRole("table")).getByText("Catering")).toBeInTheDocument();
     expect(within(screen.getByRole("table")).getByText("西式熱盤")).toBeInTheDocument();
     expect(screen.getByText("HK$188")).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "品牌" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "SKU" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "產品名稱" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "類別" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "主食" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "價錢" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Range" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "格數" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "主要食材" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "特別要求" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "烹煮方式" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "推介" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "啟用" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("columnheader", { name: "建立日期" }),
+    ).not.toBeInTheDocument();
     expect(screen.getByLabelText("已推薦")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "編輯" })).not.toBeInTheDocument();
   });
@@ -278,14 +313,60 @@ describe("Products catalog pages", () => {
         search: "燒雞",
         channelId: "",
         productTypeName: "",
+        bentoMainTypeId: "",
+        bentoColumnTypeId: "",
+        cookTypeId: "",
         status: "",
         priceRange: "",
+        sortField: "sku",
+        sortAscending: true,
         preset: "all",
       }),
     );
   });
 
-  it("filters by price range, channel, type, and status dropdowns", async () => {
+  it("sorts the product list by SKU, name, and price", async () => {
+    const user = userEvent.setup();
+    const loadProducts = vi.fn().mockResolvedValue(productResult);
+    const loadChannels = vi.fn().mockResolvedValue([]);
+
+    render(
+      <MemoryRouter>
+        <ProductsListPage
+          loadProducts={loadProducts}
+          loadChannels={loadChannels}
+        />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(loadProducts).toHaveBeenCalledTimes(1));
+    expect(loadProducts).toHaveBeenLastCalledWith(
+      expect.objectContaining({ sortField: "sku", sortAscending: true }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "產品名稱" }));
+    await waitFor(() =>
+      expect(loadProducts).toHaveBeenLastCalledWith(
+        expect.objectContaining({ sortField: "name", sortAscending: true }),
+      ),
+    );
+
+    await user.click(screen.getByRole("button", { name: "產品名稱" }));
+    await waitFor(() =>
+      expect(loadProducts).toHaveBeenLastCalledWith(
+        expect.objectContaining({ sortField: "name", sortAscending: false }),
+      ),
+    );
+
+    await user.click(screen.getByRole("button", { name: "價錢" }));
+    await waitFor(() =>
+      expect(loadProducts).toHaveBeenLastCalledWith(
+        expect.objectContaining({ sortField: "price", sortAscending: true }),
+      ),
+    );
+  });
+
+  it("filters by price range, channel, type, staple, compartments, cook method, and status dropdowns", async () => {
     const user = userEvent.setup();
     const loadProducts = vi.fn().mockResolvedValue(productResult);
     const loadChannels = vi.fn().mockResolvedValue([
@@ -294,6 +375,24 @@ describe("Products catalog pages", () => {
     const loadProductTypes = vi.fn().mockResolvedValue([
       { id: "西式熱盤", name: "西式熱盤" },
     ]);
+    const loadBentoMainTypes = vi.fn().mockResolvedValue([
+      { id: "staple-1", name: "飯" },
+      { id: "staple-2", name: "扁意粉" },
+    ]);
+    const loadBentoColumnTypes = vi.fn().mockResolvedValue([
+      { id: "column-1", name: "單格" },
+      { id: "column-2", name: "雙格" },
+      { id: "column-5", name: "五格" },
+      { id: "column-6", name: "六格" },
+    ]);
+    const loadCookTypes = vi.fn().mockResolvedValue([
+      { id: "cook-stir", name: "炒爐" },
+      { id: "cook-steam", name: "蒸爐" },
+      { id: "cook-fry", name: "炸爐" },
+      { id: "cook-oven", name: "焗爐" },
+      { id: "cook-fridge", name: "雪櫃" },
+      { id: "cook-direct", name: "直出" },
+    ]);
 
     render(
       <MemoryRouter>
@@ -301,6 +400,9 @@ describe("Products catalog pages", () => {
           loadProducts={loadProducts}
           loadChannels={loadChannels}
           loadProductTypes={loadProductTypes}
+          loadBentoMainTypes={loadBentoMainTypes}
+          loadBentoColumnTypes={loadBentoColumnTypes}
+          loadCookTypes={loadCookTypes}
         />
       </MemoryRouter>,
     );
@@ -324,7 +426,7 @@ describe("Products catalog pages", () => {
       ),
     );
 
-    await user.selectOptions(screen.getByLabelText("分類"), "西式熱盤");
+    await user.selectOptions(screen.getByLabelText("類別"), "西式熱盤");
     await waitFor(() =>
       expect(loadProducts).toHaveBeenLastCalledWith(
         expect.objectContaining({ productTypeName: "西式熱盤", page: 1 }),
@@ -343,6 +445,47 @@ describe("Products catalog pages", () => {
         }),
       ),
     );
+
+    await user.selectOptions(screen.getByLabelText("主食"), "staple-1");
+    await waitFor(() =>
+      expect(loadProducts).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          bentoMainTypeId: "staple-1",
+          page: 1,
+        }),
+      ),
+    );
+
+    await user.selectOptions(screen.getByLabelText("格數"), "column-2");
+    await waitFor(() =>
+      expect(loadProducts).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          bentoColumnTypeId: "column-2",
+          page: 1,
+        }),
+      ),
+    );
+
+    await user.selectOptions(screen.getByLabelText("烹煮方式"), "cook-steam");
+    await waitFor(() =>
+      expect(loadProducts).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          cookTypeId: "cook-steam",
+          page: 1,
+        }),
+      ),
+    );
+
+    expect(screen.getByLabelText("格數")).toHaveTextContent("單格");
+    expect(screen.getByLabelText("格數")).toHaveTextContent("雙格");
+    expect(screen.getByLabelText("格數")).toHaveTextContent("五格");
+    expect(screen.getByLabelText("格數")).toHaveTextContent("六格");
+    expect(screen.getByLabelText("烹煮方式")).toHaveTextContent("炒爐");
+    expect(screen.getByLabelText("烹煮方式")).toHaveTextContent("蒸爐");
+    expect(screen.getByLabelText("烹煮方式")).toHaveTextContent("炸爐");
+    expect(screen.getByLabelText("烹煮方式")).toHaveTextContent("焗爐");
+    expect(screen.getByLabelText("烹煮方式")).toHaveTextContent("雪櫃");
+    expect(screen.getByLabelText("烹煮方式")).toHaveTextContent("直出");
 
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
   });
@@ -403,7 +546,7 @@ describe("Products catalog pages", () => {
     expect(await screen.findByText("商品詳情頁")).toBeInTheDocument();
   });
 
-  it("shows bento columns on the a-la-carte list", async () => {
+  it("shows bento columns on every product list", async () => {
     const loadProducts = vi.fn().mockResolvedValue(productResult);
     const loadChannels = vi.fn().mockResolvedValue([]);
 
@@ -447,7 +590,7 @@ describe("Products catalog pages", () => {
     expect(await screen.findByRole("heading", { name: "燒雞" })).toBeInTheDocument();
     expect(screen.getByText("經典到會燒雞")).toBeInTheDocument();
     expect(screen.getAllByText("西式熱盤").length).toBeGreaterThan(0);
-    expect(screen.getByText("焗")).toBeInTheDocument();
+    expect(screen.getByText("焗爐")).toBeInTheDocument();
     expect(screen.getByText("Catering")).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "精緻家庭美宴 (4-6人)" }),
@@ -667,6 +810,9 @@ describe("Packages catalog pages", () => {
     expect(screen.getByRole("columnheader", { name: "類別數量" })).toBeInTheDocument();
     expect(screen.getByText("3/21/2024")).toBeInTheDocument();
     expect(screen.getByText("共 1 個結果")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "重新載入" }),
+    ).not.toBeInTheDocument();
     expect(screen.getByText("HK$1,280.00")).toBeInTheDocument();
   });
 

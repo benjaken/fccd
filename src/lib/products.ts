@@ -2,6 +2,15 @@ import { supabase } from "@/lib/supabase";
 
 export const PRODUCTS_PAGE_SIZE = 15;
 
+export function normalizeProductSku(sku: string | null | undefined) {
+  const trimmed = sku?.trim() ?? "";
+  return trimmed || null;
+}
+
+export function hasProductSku(sku: string | null | undefined) {
+  return Boolean(normalizeProductSku(sku));
+}
+
 export type ProductPreset = "all" | "catering" | "lunchbox" | "ala-carte";
 
 export type ProductTag = {
@@ -25,8 +34,11 @@ export type ProductListItem = {
   channelName: string | null;
   productTypeId: string | null;
   productTypeName: string | null;
+  cookTypeId: string | null;
   cookTypeName: string | null;
+  bentoMainTypeId: string | null;
   bentoMainTypeName: string | null;
+  bentoColumnTypeId: string | null;
   bentoColumnTypeName: string | null;
   mainIngredients: string[];
   specialRequests: string[];
@@ -47,14 +59,20 @@ export type ProductPriceRange =
   | "2000-plus";
 
 export type ProductStatusFilter = "" | "Active" | "Inactive" | "unset";
+export type ProductSortField = "sku" | "name" | "price";
 
 export type ProductListFilters = {
   page: number;
   search: string;
   channelId: string;
   productTypeName: string;
+  bentoMainTypeId?: string;
+  bentoColumnTypeId?: string;
+  cookTypeId?: string;
   status: ProductStatusFilter;
   priceRange: ProductPriceRange;
+  sortField?: ProductSortField;
+  sortAscending?: boolean;
   preset?: ProductPreset;
 };
 
@@ -128,10 +146,6 @@ export function canEditProductCatalog(role: string | null | undefined) {
   return role === "Super Admin" || role === "Admin";
 }
 
-export function showsBentoListColumns(preset: ProductPreset) {
-  return preset === "lunchbox" || preset === "ala-carte";
-}
-
 export type RelatedPackageSummary = {
   id: string;
   sku: string | null;
@@ -189,8 +203,11 @@ type ProductListRow = {
   created_at: string;
   channels: RelatedRecord | RelatedRecord[] | null;
   product_types: RelatedRecord | RelatedRecord[] | null;
+  cook_type_id: string | null;
   cook_types: NamedLookup;
+  bento_main_type_id: string | null;
   bento_main_types: NamedLookup;
+  bento_column_type_id: string | null;
   bento_column_types: NamedLookup;
 };
 
@@ -208,6 +225,7 @@ type ProductDetailRow = {
   status: string | null;
   is_active: boolean;
   is_bento_recommended: boolean;
+  cook_type_id: string | null;
   updated_at: string;
   channels: RelatedRecord | RelatedRecord[] | null;
   product_types: RelatedRecord | RelatedRecord[] | null;
@@ -353,6 +371,83 @@ export async function fetchProductTypes(
     .map((name) => ({ id: name, name }));
 }
 
+export async function fetchBentoMainTypes(): Promise<CatalogOption[]> {
+  const { data, error } = await supabase
+    .from("bento_main_types")
+    .select("id,name")
+    .order("name", { ascending: true });
+  if (error) throw error;
+  return (data ?? [])
+    .map((row) => ({
+      id: row.id as string,
+      name: String(row.name ?? "").trim(),
+    }))
+    .filter((row) => row.name)
+    .sort((left, right) => left.name.localeCompare(right.name, "zh-HK"));
+}
+
+const BENTO_COLUMN_TYPE_ORDER = ["單格", "雙格", "五格", "六格"];
+
+export function sortBentoColumnTypes(items: CatalogOption[]): CatalogOption[] {
+  return [...items].sort((left, right) => {
+    const leftIndex = BENTO_COLUMN_TYPE_ORDER.indexOf(left.name);
+    const rightIndex = BENTO_COLUMN_TYPE_ORDER.indexOf(right.name);
+    if (leftIndex === -1 && rightIndex === -1) {
+      return left.name.localeCompare(right.name, "zh-HK");
+    }
+    if (leftIndex === -1) return 1;
+    if (rightIndex === -1) return -1;
+    return leftIndex - rightIndex;
+  });
+}
+
+export async function fetchBentoColumnTypes(): Promise<CatalogOption[]> {
+  const { data, error } = await supabase
+    .from("bento_column_types")
+    .select("id,name")
+    .order("name", { ascending: true });
+  if (error) throw error;
+  return sortBentoColumnTypes(
+    (data ?? [])
+      .map((row) => ({
+        id: row.id as string,
+        name: String(row.name ?? "").trim(),
+      }))
+      .filter((row) => row.name),
+  );
+}
+
+const COOK_TYPE_ORDER = ["炒爐", "蒸爐", "炸爐", "焗爐", "雪櫃", "直出"];
+
+export function sortCookTypes(items: CatalogOption[]): CatalogOption[] {
+  return [...items].sort((left, right) => {
+    const leftIndex = COOK_TYPE_ORDER.indexOf(left.name);
+    const rightIndex = COOK_TYPE_ORDER.indexOf(right.name);
+    if (leftIndex === -1 && rightIndex === -1) {
+      return left.name.localeCompare(right.name, "zh-HK");
+    }
+    if (leftIndex === -1) return 1;
+    if (rightIndex === -1) return -1;
+    return leftIndex - rightIndex;
+  });
+}
+
+export async function fetchCatalogCookTypes(): Promise<CatalogOption[]> {
+  const { data, error } = await supabase
+    .from("cook_types")
+    .select("id,name")
+    .order("name", { ascending: true });
+  if (error) throw error;
+  return sortCookTypes(
+    (data ?? [])
+      .map((row) => ({
+        id: row.id as string,
+        name: String(row.name ?? "").trim(),
+      }))
+      .filter((row) => row.name),
+  );
+}
+
 async function productTypeIdsForName(name: string, channelId = "") {
   const key = name.trim();
   if (!key) return [] as string[];
@@ -375,8 +470,13 @@ export async function fetchProducts({
   search,
   channelId,
   productTypeName,
+  bentoMainTypeId = "",
+  bentoColumnTypeId = "",
+  cookTypeId = "",
   status,
   priceRange,
+  sortField = "sku",
+  sortAscending = true,
   preset = "all",
 }: ProductListFilters): Promise<ProductListResult> {
   const start = (page - 1) * PRODUCTS_PAGE_SIZE;
@@ -385,14 +485,30 @@ export async function fetchProducts({
   let query = supabase
     .from("products")
     .select(
-      "id,sku,name,chinese_name,price,price_min,price_max,status,is_active,is_bento_recommended,bubble_created_at,created_at,channels(id,name),product_types(id,name),cook_types(name),bento_main_types(name),bento_column_types(name)",
+      "id,sku,name,chinese_name,price,price_min,price_max,status,is_active,is_bento_recommended,bubble_created_at,created_at,bento_main_type_id,bento_column_type_id,cook_type_id,channels(id,name),product_types(id,name),cook_types(name),bento_column_types(name)",
       { count: "exact" },
     )
     .is("archived_at", null)
-    // Bubble Created Date (fallback to DB created_at).
-    .order("bubble_created_at", { ascending: false, nullsFirst: false })
-    .order("created_at", { ascending: false })
-    .range(start, end);
+    // Temporarily hide Bubble rows that never received a SKU so the catalog
+    // matches the old product list instead of the 7k+ incomplete records.
+    .not("sku", "is", null)
+    .neq("sku", "");
+
+  if (sortField === "name") {
+    query = query
+      .order("chinese_name", {
+        ascending: sortAscending,
+        nullsFirst: false,
+      })
+      .order("name", { ascending: sortAscending, nullsFirst: false });
+  } else {
+    query = query.order(sortField === "price" ? "price" : "sku", {
+      ascending: sortAscending,
+      nullsFirst: false,
+    });
+  }
+
+  query = query.range(start, end);
 
   if (status === "unset") {
     query = query.or("status.is.null,status.eq.");
@@ -414,6 +530,18 @@ export async function fetchProducts({
       return { items: [], total: 0 };
     }
     query = query.in("product_type_id", typeIds);
+  }
+
+  if (bentoMainTypeId) {
+    query = query.eq("bento_main_type_id", bentoMainTypeId);
+  }
+
+  if (bentoColumnTypeId) {
+    query = query.eq("bento_column_type_id", bentoColumnTypeId);
+  }
+
+  if (cookTypeId) {
+    query = query.eq("cook_type_id", cookTypeId);
   }
 
   if (channelId) {
@@ -439,7 +567,13 @@ export async function fetchProducts({
     );
   }
 
-  const { data, count, error } = await query;
+  const [{ data, count, error }, stapleTypes, columnTypes, cookTypes] =
+    await Promise.all([
+      query,
+      fetchBentoMainTypes().catch(() => [] as CatalogOption[]),
+      fetchBentoColumnTypes().catch(() => [] as CatalogOption[]),
+      fetchCatalogCookTypes().catch(() => [] as CatalogOption[]),
+    ]);
   if (error) throw error;
 
   const rows = (data ?? []) as ProductListRow[];
@@ -468,6 +602,15 @@ export async function fetchProducts({
 
   const ingredientsByProduct = mapTagLinks(ingredientRows, "bento_main_ingredients");
   const requestsByProduct = mapTagLinks(requestRows, "bento_special_requests");
+  const stapleNameById = new Map(
+    stapleTypes.map((row) => [row.id, row.name] as const),
+  );
+  const columnNameById = new Map(
+    columnTypes.map((row) => [row.id, row.name] as const),
+  );
+  const cookNameById = new Map(
+    cookTypes.map((row) => [row.id, row.name] as const),
+  );
 
   return {
     items: rows.map((row) => {
@@ -475,7 +618,7 @@ export async function fetchProducts({
       const productType = relatedRecord(row.product_types);
       return {
         id: row.id,
-        sku: row.sku,
+        sku: normalizeProductSku(row.sku),
         name: row.name,
         chineseName: row.chinese_name,
         price: toNumber(row.price),
@@ -488,9 +631,21 @@ export async function fetchProducts({
         channelName: channel?.name ?? null,
         productTypeId: productType?.id ?? null,
         productTypeName: productType?.name ?? null,
-        cookTypeName: relatedName(row.cook_types),
-        bentoMainTypeName: relatedName(row.bento_main_types),
-        bentoColumnTypeName: relatedName(row.bento_column_types),
+        cookTypeId: row.cook_type_id,
+        cookTypeName:
+          relatedName(row.cook_types) ??
+          cookNameById.get(row.cook_type_id ?? "") ??
+          null,
+        bentoMainTypeId: row.bento_main_type_id,
+        bentoMainTypeName:
+          relatedName(row.bento_main_types) ??
+          stapleNameById.get(row.bento_main_type_id ?? "") ??
+          null,
+        bentoColumnTypeId: row.bento_column_type_id,
+        bentoColumnTypeName:
+          relatedName(row.bento_column_types) ??
+          columnNameById.get(row.bento_column_type_id ?? "") ??
+          null,
         mainIngredients:
           ingredientsByProduct.get(row.id)?.map((item) => item.name) ?? [],
         specialRequests:
@@ -508,7 +663,7 @@ export async function fetchProductDetail(
   const { data, error } = await supabase
     .from("products")
     .select(
-      "id,legacy_id,sku,name,chinese_name,description,image_url,price,price_min,price_max,status,is_active,is_bento_recommended,updated_at,channels(id,name),product_types(id,name),cook_types(id,name),bento_main_types(id,name),bento_column_types(id,name)",
+      "id,legacy_id,sku,name,chinese_name,description,image_url,price,price_min,price_max,status,is_active,is_bento_recommended,cook_type_id,updated_at,channels(id,name),product_types(id,name),cook_types(id,name),bento_main_types(id,name),bento_column_types(id,name)",
     )
     .eq("id", id)
     .is("archived_at", null)
@@ -627,11 +782,17 @@ export async function fetchProductDetail(
   const cookType = relatedRecord(row.cook_types);
   const bentoMainType = relatedRecord(row.bento_main_types);
   const bentoColumnType = relatedRecord(row.bento_column_types);
+  const cookTypes = await fetchCatalogCookTypes().catch(
+    () => [] as CatalogOption[],
+  );
+  const cookNameById = new Map(
+    cookTypes.map((item) => [item.id, item.name] as const),
+  );
 
   return {
     id: row.id,
     legacyId: row.legacy_id,
-    sku: row.sku,
+    sku: normalizeProductSku(row.sku),
     name: row.name,
     chineseName: row.chinese_name,
     description: row.description,
@@ -646,8 +807,9 @@ export async function fetchProductDetail(
     channelName: channel?.name ?? null,
     productTypeId: productType?.id ?? null,
     productTypeName: productType?.name ?? null,
-    cookTypeId: cookType?.id ?? null,
-    cookTypeName: cookType?.name ?? null,
+    cookTypeId: cookType?.id ?? row.cook_type_id ?? null,
+    cookTypeName:
+      cookType?.name ?? cookNameById.get(row.cook_type_id ?? "") ?? null,
     bentoMainTypeId: bentoMainType?.id ?? null,
     bentoMainTypeName: bentoMainType?.name ?? null,
     bentoColumnTypeId: bentoColumnType?.id ?? null,
@@ -755,6 +917,8 @@ export async function searchCatalogProducts(
     .select("id,name,chinese_name,sku,legacy_id")
     .is("archived_at", null)
     .eq("is_active", true)
+    .not("sku", "is", null)
+    .neq("sku", "")
     .or(
       `name.ilike.%${cleaned}%,chinese_name.ilike.%${cleaned}%,sku.ilike.%${cleaned}%`,
     )
@@ -764,7 +928,7 @@ export async function searchCatalogProducts(
   return (data ?? []).map((row) => ({
     id: row.id as string,
     name: ((row.chinese_name as string | null) || (row.name as string)) as string,
-    sku: (row.sku as string | null) ?? null,
+    sku: normalizeProductSku(row.sku as string | null),
     legacyId: (row.legacy_id as string | null) ?? undefined,
   }));
 }

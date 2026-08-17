@@ -2964,18 +2964,6 @@ button.product-tag[aria-pressed="true"] {
   height: 14px;
 }
 
-.package-name-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.package-name-link svg {
-  width: 16px;
-  height: 16px;
-  flex: 0 0 auto;
-}
-
 .packages-index-cell {
   width: 1%;
   color: var(--muted-foreground);
