@@ -114,6 +114,7 @@ import { KITCHEN_ACTION_PAGE_KEYS } from "@/lib/kitchen-action-permissions";
 import { ORDER_ACTION_PAGE_KEYS } from "@/lib/order-action-permissions";
 import { useTheme } from "@/lib/use-theme";
 import { useAnimatedNumber } from "@/lib/use-animated-number";
+import { canAssignDeliveryFleet } from "@/lib/deliveries";
 import { canEditProductCatalog } from "@/lib/products";
 import { cn } from "@/lib/utils";
 
@@ -747,6 +748,7 @@ function OperationsShell() {
     REPORT_GROUP_ROUTES.frozenMeat;
   const canViewFinance = pageAccess.canAccess("finance");
   const canEditProducts = canEditProductCatalog(authorizationRole);
+  const canEditDeliveries = canAssignDeliveryFleet(authorizationRole);
 
   useEffect(() => {
     setMobileMenuOpen(false);
@@ -1179,7 +1181,10 @@ function OperationsShell() {
                 path="/frozen/yield-errors"
                 element={<MeatYieldErrorsPage />}
               />
-              <Route path="/delivery" element={<DeliveryListPage />} />
+              <Route
+                path="/delivery"
+                element={<DeliveryListPage canEdit={canEditDeliveries} />}
+              />
               <Route
                 path="/kitchen/settings"
                 element={

@@ -106,6 +106,9 @@ describe("Delivery list page", () => {
     expect(table.getByRole("button", { name: "查看圖片" })).toBeEnabled();
     expect(table.getByRole("button", { name: "沒有送達照片" })).toBeDisabled();
     expect(screen.getByText(/本頁運費/)).toBeInTheDocument();
+    expect(
+      table.queryByRole("combobox", { name: "選擇車隊" }),
+    ).not.toBeInTheDocument();
   });
 
   it("opens delivery photos in a half-width side panel", async () => {
@@ -188,6 +191,7 @@ describe("Delivery list page", () => {
     render(
       <MemoryRouter>
         <DeliveryListPage
+          canEdit
           loadDeliveries={loadDeliveries}
           loadLookups={loadLookups}
           assignFleet={assignFleet}
@@ -340,6 +344,7 @@ describe("Delivery list page", () => {
     render(
       <MemoryRouter>
         <DeliveryListPage
+          canEdit
           loadDeliveries={loadDeliveries}
           loadLookups={loadLookups}
           cancelDelivery={cancelDelivery}
@@ -369,6 +374,7 @@ describe("Delivery list page", () => {
     render(
       <MemoryRouter>
         <DeliveryListPage
+          canEdit
           loadDeliveries={loadDeliveries}
           loadLookups={loadLookups}
           now={new Date("2026-08-17T04:00:00+08:00")}
@@ -379,6 +385,32 @@ describe("Delivery list page", () => {
     await screen.findByRole("heading", { name: "送貨清單" });
     expect(
       screen.queryByRole("button", { name: "取消送貨" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("does not let drivers cancel a pending pickup", async () => {
+    const loadDeliveries = vi.fn().mockResolvedValue({
+      total: 1,
+      items: [{ ...surchargeItem, deliveryStatus: "待取貨" }],
+    });
+    const loadLookups = vi.fn().mockResolvedValue(lookups);
+
+    render(
+      <MemoryRouter>
+        <DeliveryListPage
+          loadDeliveries={loadDeliveries}
+          loadLookups={loadLookups}
+          now={new Date("2026-08-17T04:00:00+08:00")}
+        />
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole("heading", { name: "送貨清單" });
+    expect(
+      screen.queryByRole("button", { name: "取消送貨" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("combobox", { name: "選擇車隊" }),
     ).not.toBeInTheDocument();
   });
 });
