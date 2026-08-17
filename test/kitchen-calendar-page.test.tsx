@@ -132,6 +132,7 @@ const orderDetail = {
     grandTotal: 0,
     outstanding: 0,
     updatedAt: "2026-08-16T00:00:00.000Z",
+    statuses: [{ name: "未傳至工場", color: "#f39c12" }],
   },
   lines: [],
   deliveries: [],
@@ -140,7 +141,6 @@ const orderDetail = {
   terms: [],
   paymentMethods: [],
   quoteFiles: [],
-  statuses: [{ name: "未傳至工場", color: "#f39c12" }],
 };
 
 function CurrentLocation() {

@@ -10,6 +10,7 @@ import {
   orderStatusLabel,
   parseHexColor,
   resolveOrderStatuses,
+  orderDetailTags,
   type ConfiguredOrderStatus,
   type OrderStatusRow,
 } from "@/lib/order-statuses";
@@ -83,6 +84,31 @@ describe("resolveOrderStatuses", () => {
     expect(orderStatusLabel([{ name: "未傳至工場", color: "#f39c12" }])).toBe(
       "未傳至工場",
     );
+  });
+});
+
+describe("orderDetailTags", () => {
+  it("adds a live unpaid tag when outstanding remains", () => {
+    expect(
+      orderDetailTags([], 1610, { name: "未完成付款", color: "#ef4444" }),
+    ).toEqual([{ name: "未完成付款", color: "#ef4444" }]);
+    expect(
+      orderDetailTags(
+        [{ name: "廚房備註", color: "#979899" }],
+        2450,
+        { name: "未完成付款", color: "#ef4444" },
+      ),
+    ).toEqual([
+      { name: "廚房備註", color: "#979899" },
+      { name: "未完成付款", color: "#ef4444" },
+    ]);
+  });
+
+  it("keeps leftover unpaid tags only while the order is unpaid", () => {
+    const leftover = [{ name: "未完成付款", color: "#ff0000" }];
+    expect(orderDetailTags(leftover, 2450)).toEqual(leftover);
+    expect(orderDetailTags(leftover, 0)).toEqual([]);
+    expect(orderDetailTags(leftover, null)).toEqual(leftover);
   });
 });
 

@@ -1743,6 +1743,11 @@ button.product-tag[aria-pressed="true"] {
   align-items: center;
 }
 
+.detail-page .heading-actions.order-status-list {
+  justify-content: flex-end;
+  max-width: min(100%, 28rem);
+}
+
 .status-badge {
   display: inline-flex;
   align-items: center;

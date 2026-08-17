@@ -67,6 +67,7 @@ const orderDetail = {
     grandTotal: 0,
     outstanding: 0,
     updatedAt: "2026-08-12T00:00:00.000Z",
+    statuses: [],
   },
   lines: [],
   deliveries: [],

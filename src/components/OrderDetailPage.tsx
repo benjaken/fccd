@@ -21,6 +21,11 @@ import {
 } from "@/lib/order-details";
 import { kitchenCalendarReturnPath } from "@/lib/kitchen-calendar";
 import { kitchenOrdersReturnPath } from "@/lib/kitchen-orders";
+import {
+  DEFAULT_UNPAID_STATUS_COLOR,
+  orderDetailTags,
+  statusBadgeStyle,
+} from "@/lib/order-statuses";
 import { cn } from "@/lib/utils";
 
 type DetailLoader = typeof fetchOrderDetail;
@@ -167,6 +172,14 @@ export function OrderDetailPage({
         completed: t("orders.statuses.completed"),
         awaitingDriver: t("dashboard.driverStatus"),
       });
+  const tags = orderDetailTags(
+    order.statuses,
+    canViewFinance ? order.outstanding : null,
+    {
+      name: t("details.unpaidTag"),
+      color: DEFAULT_UNPAID_STATUS_COLOR,
+    },
+  );
   const money = (value: number | null) =>
     value === null
       ? t("details.restricted")
@@ -186,7 +199,21 @@ export function OrderDetailPage({
           <h1>{order.orderNumber || t("common.notSet")}</h1>
           <p>{order.companyName || order.customerName || t("common.notSet")}</p>
         </div>
-        <span className={cn("status-badge", status.tone)}>{status.label}</span>
+        <div
+          className="heading-actions order-status-list"
+          aria-label={t("details.tags")}
+        >
+          <span className={cn("status-badge", status.tone)}>{status.label}</span>
+          {tags.map((tag) => (
+            <span
+              key={tag.name}
+              className={cn("status-badge", !tag.color && "red")}
+              style={statusBadgeStyle(tag.color)}
+            >
+              {tag.name}
+            </span>
+          ))}
+        </div>
       </header>
 
       <section className="detail-grid">

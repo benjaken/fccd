@@ -259,3 +259,34 @@ export function statusBadgeStyle(color: string | null | undefined) {
     color,
   };
 }
+
+const UNPAID_STATUS_NAMES = new Set(["未完成付款", "未付款"]);
+export const DEFAULT_UNPAID_STATUS_COLOR = "#ef4444";
+
+export function isUnpaidOrderStatusName(name: string | null | undefined) {
+  return UNPAID_STATUS_NAMES.has((name ?? "").trim());
+}
+
+export function orderDetailTags(
+  statuses: readonly OrderStatusView[] | null | undefined,
+  outstanding: number | null | undefined,
+  unpaidTag: OrderStatusView = {
+    name: "未完成付款",
+    color: DEFAULT_UNPAID_STATUS_COLOR,
+  },
+): OrderStatusView[] {
+  const tags = [...(statuses ?? [])];
+  const unpaidIndex = tags.findIndex((tag) =>
+    isUnpaidOrderStatusName(tag.name),
+  );
+
+  if (outstanding === null || outstanding === undefined) {
+    return tags;
+  }
+  if (outstanding > 0) {
+    if (unpaidIndex >= 0) return tags;
+    return [...tags, unpaidTag];
+  }
+  if (unpaidIndex < 0) return tags;
+  return tags.filter((_, index) => index !== unpaidIndex);
+}
