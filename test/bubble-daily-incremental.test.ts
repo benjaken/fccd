@@ -80,4 +80,20 @@ describe("bubble daily incremental helpers", () => {
       mapping!.relations?.some((item) => item.idField === "shipping_method_id"),
     ).toBe(true);
   });
+
+  it("maps Bubble fulfill and take timestamps onto deliveries", () => {
+    const mapping = coreMappings.find(
+      (item) => item.sourceType === "b_deliveryschedule",
+    );
+    expect(mapping).toBeTruthy();
+    const row = mapping!.map({
+      _id: "delivery-1",
+      "fulfill_date&time(trigger A_order)": "2026-08-01T12:37:00.000Z",
+      "take_date&time": "2026-08-01T12:15:54.000Z",
+      "OS driver delivery status": "已送達",
+    });
+    expect(row.fulfilled_at).toBe("2026-08-01T12:37:00.000Z");
+    expect(row.taken_at).toBe("2026-08-01T12:15:54.000Z");
+    expect(row.delivery_status).toBe("已送達");
+  });
 });
