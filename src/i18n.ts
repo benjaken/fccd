@@ -73,6 +73,9 @@ const resources = {
       },
       factoryBoard: {
         stocktakeNotice: "逢星期 1 盤點",
+        stocktakeNoticeBefore: "逢星期",
+        stocktakeNoticeDay: "1",
+        stocktakeNoticeAfter: "盤點",
         multiDayMenu: "多日菜式總表",
         dispatchSheet: "出車表",
         menuSummary: "菜式總表",
@@ -2262,6 +2265,9 @@ const resources = {
       },
       factoryBoard: {
         stocktakeNotice: "Stocktake every Monday",
+        stocktakeNoticeBefore: "Stocktake every",
+        stocktakeNoticeDay: "Mon",
+        stocktakeNoticeAfter: "",
         multiDayMenu: "Multi-day dish summary",
         dispatchSheet: "Dispatch sheet",
         menuSummary: "Dish summary",

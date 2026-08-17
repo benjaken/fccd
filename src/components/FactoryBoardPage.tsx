@@ -4,7 +4,6 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
-  Megaphone,
   Printer,
 } from "lucide-react";
 
@@ -402,9 +401,18 @@ export function FactoryBoardPage({
           <strong>{t("brand.name")}</strong>
           <small>{t("brand.system")}</small>
         </div>
-        <p className="factory-board-notice">
-          <Megaphone />
-          {t("factoryBoard.stocktakeNotice")}
+        <p
+          className="factory-board-notice"
+          aria-label={t("factoryBoard.stocktakeNotice")}
+        >
+          <span aria-hidden="true">📢</span>
+          <span>{t("factoryBoard.stocktakeNoticeBefore")}</span>
+          <span className="factory-board-notice-day">
+            {t("factoryBoard.stocktakeNoticeDay")}
+          </span>
+          {t("factoryBoard.stocktakeNoticeAfter") ? (
+            <span>{t("factoryBoard.stocktakeNoticeAfter")}</span>
+          ) : null}
         </p>
         {selectedJob ? (
           <span />

@@ -72,6 +72,10 @@ describe("FactoryBoardPage", () => {
     expect(screen.getByRole("button", { name: "多日菜式總表" })).toHaveClass(
       "factory-board-multi-day",
     );
+    expect(screen.getByLabelText("逢星期 1 盤點")).toBeInTheDocument();
+    expect(document.querySelector(".factory-board-notice-day")).toHaveTextContent(
+      "1",
+    );
 
     const dispatchButtons = screen.getAllByRole("button", { name: "出車表" });
     await user.click(dispatchButtons[1]!);

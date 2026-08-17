@@ -9119,11 +9119,26 @@ button.product-tag[aria-pressed="true"] {
 }
 
 .factory-board {
+  /* Match the original Bubble factory floor: black canvas, white rules, vivid green actions. */
+  --factory-bg: #000000;
+  --factory-fg: #ffffff;
+  --factory-line: #ffffff;
+  --factory-green: #00c853;
+  --factory-green-hover: #00e676;
+  --factory-card: #f0f0f0;
+  --factory-card-fg: #000000;
+  --factory-badge: #0000ff;
+  --factory-topbar: #ffffff;
+  --factory-topbar-fg: #111111;
+  --factory-notice-day: #2563eb;
+  --primary: var(--factory-green);
+  --primary-foreground: #ffffff;
+  --ring: var(--factory-green);
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background: oklch(0.16 0.015 150);
-  color: oklch(0.96 0.01 150);
+  background: var(--factory-bg);
+  color: var(--factory-fg);
 }
 
 .factory-board button {
@@ -9135,7 +9150,9 @@ button.product-tag[aria-pressed="true"] {
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   gap: 20px;
-  padding: 20px 28px 16px;
+  padding: 12px 28px;
+  background: var(--factory-topbar);
+  color: var(--factory-topbar-fg);
 }
 
 .factory-board-brand {
@@ -9151,24 +9168,30 @@ button.product-tag[aria-pressed="true"] {
 }
 
 .factory-board-brand small {
-  color: oklch(0.78 0.02 150);
+  color: var(--factory-topbar-fg);
   font-size: 16px;
 }
 
 .factory-board-notice {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   margin: 0;
-  color: oklch(0.92 0.04 150);
+  color: var(--factory-topbar-fg);
   font-size: 24px;
   font-weight: 700;
 }
 
-.factory-board-notice svg {
-  width: 28px;
-  height: 28px;
-  color: var(--primary);
+.factory-board-notice-day {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.35em;
+  height: 1.35em;
+  padding: 0 0.15em;
+  background: var(--factory-notice-day);
+  color: #ffffff;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .factory-board-top > .factory-board-notice {
@@ -9183,16 +9206,17 @@ button.product-tag[aria-pressed="true"] {
   min-height: 48px;
   padding: 0 22px;
   border-width: 2px;
-  border-color: var(--primary);
-  background: oklch(0.99 0.01 150);
-  color: var(--primary);
+  border-color: var(--factory-green);
+  background: #ffffff;
+  color: var(--factory-green);
   font-size: 18px;
   font-weight: 800;
 }
 
 .factory-board .factory-board-multi-day:hover {
-  background: var(--selection-bg);
-  color: var(--primary);
+  background: #ffffff;
+  border-color: var(--factory-green-hover);
+  color: var(--factory-green-hover);
 }
 
 .factory-board-days {
@@ -9200,14 +9224,14 @@ button.product-tag[aria-pressed="true"] {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   flex: 1;
   min-height: 0;
-  border-top: 1px solid oklch(0.32 0.02 150);
+  border-top: 1px solid var(--factory-line);
 }
 
 .factory-day {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  border-right: 1px solid oklch(0.32 0.02 150);
+  border-right: 1px solid var(--factory-line);
 }
 
 .factory-day:last-child {
@@ -9220,7 +9244,7 @@ button.product-tag[aria-pressed="true"] {
   align-items: center;
   gap: 14px;
   padding: 16px 18px;
-  border-bottom: 1px solid oklch(0.32 0.02 150);
+  border-bottom: 1px solid var(--factory-line);
 }
 
 .factory-day-header h2 {
@@ -9248,7 +9272,7 @@ button.product-tag[aria-pressed="true"] {
 
 .factory-day-state {
   margin: 0;
-  color: oklch(0.78 0.02 150);
+  color: #d0d0d0;
   font-size: 18px;
   text-align: center;
 }
@@ -9268,9 +9292,9 @@ button.product-tag[aria-pressed="true"] {
   padding: 18px 0 18px 16px;
   overflow: hidden;
   border: 0;
-  border-radius: 12px;
-  background: oklch(0.94 0.01 150);
-  color: oklch(0.2 0.02 150);
+  border-radius: 4px;
+  background: var(--factory-card);
+  color: var(--factory-card-fg);
   cursor: pointer;
   text-align: inherit;
   font: inherit;
@@ -9279,7 +9303,7 @@ button.product-tag[aria-pressed="true"] {
 .factory-job-card svg {
   width: 24px;
   height: 24px;
-  color: var(--primary);
+  color: var(--factory-green);
 }
 
 button.factory-job-card:hover {
@@ -9323,8 +9347,8 @@ button.factory-job-card:focus-visible {
   width: 56px;
   margin: -18px 0;
   padding: 0 8px;
-  background: oklch(0.55 0.12 240);
-  color: white;
+  background: var(--factory-badge);
+  color: #ffffff;
   font-size: 22px;
   font-weight: 800;
   line-height: 1;
@@ -9341,6 +9365,7 @@ button.factory-job-card:focus-visible {
   align-items: center;
   gap: 16px;
   padding: 18px 28px 22px;
+  border-top: 1px solid var(--factory-line);
 }
 
 .factory-board-pager {
@@ -9360,6 +9385,12 @@ button.factory-job-card:focus-visible {
 .factory-board-pager button:has(svg) {
   width: 48px;
   height: 48px;
+  color: var(--factory-fg);
+}
+
+.factory-board-pager button:has(svg):hover {
+  background: rgb(255 255 255 / 12%);
+  color: var(--factory-fg);
 }
 
 .factory-board-date {
@@ -9368,7 +9399,7 @@ button.factory-job-card:focus-visible {
   align-items: center;
   gap: 6px;
   justify-self: end;
-  color: oklch(0.92 0.01 150);
+  color: var(--factory-fg);
   font-size: 16px;
   font-weight: 700;
 }
@@ -9381,10 +9412,10 @@ button.factory-job-card:focus-visible {
 .factory-board-date input {
   min-height: 42px;
   padding: 0 10px;
-  border: 1px solid oklch(0.4 0.02 150);
+  border: 1px solid var(--factory-line);
   border-radius: 8px;
-  background: oklch(0.22 0.015 150);
-  color: inherit;
+  background: var(--factory-bg);
+  color: var(--factory-fg);
   font-size: 16px;
 }
 
@@ -9401,7 +9432,7 @@ button.factory-job-card:focus-visible {
   position: absolute;
   inset: 0;
   border: 0;
-  background: oklch(0.1 0.02 150 / 62%);
+  background: rgb(0 0 0 / 62%);
   cursor: pointer;
 }
 
@@ -9417,7 +9448,7 @@ button.factory-job-card:focus-visible {
   border-radius: 12px;
   background: var(--card);
   color: var(--card-foreground);
-  box-shadow: 0 24px 64px oklch(0.12 0.02 150 / 35%);
+  box-shadow: 0 24px 64px rgb(0 0 0 / 35%);
 }
 
 .factory-modal.is-wide {
@@ -9527,7 +9558,7 @@ button.factory-job-card:focus-visible {
   align-items: start;
   gap: 24px 32px;
   padding: 18px 28px 16px;
-  background: oklch(0.1 0.012 150);
+  background: var(--factory-bg);
 }
 
 .factory-order-number {
@@ -9561,7 +9592,7 @@ button.factory-job-card:focus-visible {
   gap: 10px;
   margin: 0;
   padding: 12px 28px;
-  border-bottom: 1px solid oklch(0.32 0.02 150);
+  border-bottom: 1px solid var(--factory-line);
   font-size: 18px;
   font-weight: 650;
 }
@@ -9569,7 +9600,7 @@ button.factory-job-card:focus-visible {
 .factory-order-packing svg {
   width: 22px;
   height: 22px;
-  color: var(--primary);
+  color: var(--factory-green);
 }
 
 .factory-order-lines {
@@ -9588,9 +9619,9 @@ button.factory-job-card:focus-visible {
   min-height: 120px;
   padding: 28px 16px 20px;
   overflow: hidden;
-  border-radius: 12px;
-  background: oklch(0.94 0.01 150);
-  color: oklch(0.2 0.02 150);
+  border-radius: 4px;
+  background: var(--factory-card);
+  color: var(--factory-card-fg);
   text-align: center;
 }
 
@@ -9610,8 +9641,8 @@ button.factory-job-card:focus-visible {
   height: 34px;
   padding: 4px 0 0 5px;
   clip-path: polygon(0 0, 100% 0, 0 100%);
-  background: var(--primary);
-  color: white;
+  background: var(--factory-green);
+  color: #ffffff;
 }
 
 .factory-order-line-print svg {
@@ -9624,8 +9655,8 @@ button.factory-job-card:focus-visible {
   flex-direction: column;
   gap: 14px;
   padding: 20px 18px 18px;
-  background: oklch(0.2 0.018 150);
-  border-left: 1px solid oklch(0.32 0.02 150);
+  background: #111111;
+  border-left: 1px solid var(--factory-line);
 }
 
 .factory-order-aside button {
@@ -9639,19 +9670,20 @@ button.factory-job-card:focus-visible {
   width: 100%;
   margin: 4px 0;
   border: 0;
-  border-top: 1px solid oklch(0.38 0.02 150);
+  border-top: 1px solid var(--factory-line);
 }
 
 .factory-board .factory-order-back {
   border-width: 2px;
-  border-color: var(--primary);
-  background: oklch(0.99 0.01 150);
-  color: var(--primary);
+  border-color: var(--factory-green);
+  background: #ffffff;
+  color: var(--factory-green);
 }
 
 .factory-board .factory-order-back:hover {
-  background: var(--selection-bg);
-  color: var(--primary);
+  background: #ffffff;
+  border-color: var(--factory-green-hover);
+  color: var(--factory-green-hover);
 }
 
 .factory-order-printer {
@@ -9666,10 +9698,10 @@ button.factory-job-card:focus-visible {
 .factory-order-printer select {
   min-height: 44px;
   padding: 0 12px;
-  border: 1px solid oklch(0.4 0.02 150);
+  border: 1px solid var(--factory-line);
   border-radius: 8px;
-  background: oklch(0.16 0.015 150);
-  color: inherit;
+  background: var(--factory-bg);
+  color: var(--factory-fg);
   font-size: 16px;
 }
 
@@ -9696,7 +9728,7 @@ button.factory-job-card:focus-visible {
 
   .factory-day {
     border-right: 0;
-    border-bottom: 1px solid oklch(0.32 0.02 150);
+    border-bottom: 1px solid var(--factory-line);
   }
 
   .factory-day-cards {
@@ -9721,7 +9753,7 @@ button.factory-job-card:focus-visible {
 
   .factory-order-aside {
     border-left: 0;
-    border-top: 1px solid oklch(0.32 0.02 150);
+    border-top: 1px solid var(--factory-line);
   }
 }
 
