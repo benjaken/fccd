@@ -461,7 +461,7 @@ export function FactoryBoardPage({
                       onClick={() => openJob(item)}
                     >
                       <Printer aria-hidden="true" />
-                      <div>
+                      <div className="factory-job-card-body">
                         <strong>{item.deliveryTime || t("common.notSet")}</strong>
                         <span>
                           {item.districtName || t("common.notSet")}
@@ -471,15 +471,19 @@ export function FactoryBoardPage({
                             ? `#${item.orderNumber.replace(/^#/, "")}`
                             : t("common.notSet")}
                         </span>
-                        {portions ? (
-                          <small>
-                            {t("factoryBoard.portions", { count: portions })}
-                          </small>
-                        ) : null}
+                        <small>
+                          {portions
+                            ? t("factoryBoard.portions", { count: portions })
+                            : "\u00a0"}
+                        </small>
                       </div>
-                      {badge ? (
-                        <span className="factory-job-badge">{badge}</span>
-                      ) : null}
+                      <span
+                        className={
+                          badge ? "factory-job-badge" : "factory-job-badge is-empty"
+                        }
+                      >
+                        {badge || "\u00a0"}
+                      </span>
                     </button>
                   );
                 })
