@@ -11,6 +11,7 @@ import {
   hongKongMonthStart,
   isPendingPickupStatus,
   mapDeliveryRow,
+  showsDeliveryPhotoAction,
   nextCalendarDate,
   toDeliveryExportRow,
 } from "@/lib/deliveries";
@@ -153,6 +154,12 @@ describe("delivery list helpers", () => {
   it("treats 待取貨 as cancellable and empty image lists as no photos", () => {
     expect(isPendingPickupStatus("待取貨")).toBe(true);
     expect(isPendingPickupStatus("已送達")).toBe(false);
+    expect(showsDeliveryPhotoAction("待取貨")).toBe(false);
+    expect(showsDeliveryPhotoAction(null)).toBe(false);
+    expect(showsDeliveryPhotoAction("未派車隊")).toBe(false);
+    expect(showsDeliveryPhotoAction("已取")).toBe(true);
+    expect(showsDeliveryPhotoAction("送貨途中")).toBe(true);
+    expect(showsDeliveryPhotoAction("已送達")).toBe(true);
     expect(hasDeliveryPhotos({ imageReferences: ["https://example.com/a.jpg"] })).toBe(
       true,
     );

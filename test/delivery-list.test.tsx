@@ -380,6 +380,12 @@ describe("Delivery list page", () => {
     const cancelButton = await screen.findByRole("button", { name: "取消送貨" });
     expect(cancelButton.closest(".table-actions-cell")).toBeTruthy();
     expect(cancelButton.closest(".delivery-status-cell")).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "查看圖片" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "沒有送達照片" }),
+    ).not.toBeInTheDocument();
     await user.click(cancelButton);
     expect(screen.getByRole("dialog", { name: "取消送貨訂單" })).toBeInTheDocument();
     expect(cancelDelivery).not.toHaveBeenCalled();
@@ -437,6 +443,12 @@ describe("Delivery list page", () => {
       screen.queryByRole("button", { name: "取消送貨" }),
     ).not.toBeInTheDocument();
     expect(
+      screen.queryByRole("button", { name: "查看圖片" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "沒有送達照片" }),
+    ).not.toBeInTheDocument();
+    expect(
       screen.queryByRole("combobox", { name: "選擇車隊" }),
     ).not.toBeInTheDocument();
   });
@@ -468,6 +480,12 @@ describe("Delivery list page", () => {
     expect(table.queryByText("已取貨")).not.toBeInTheDocument();
     expect(table.queryByText("已送達")).not.toBeInTheDocument();
     expect(table.queryByRole("list")).not.toBeInTheDocument();
+    expect(
+      table.queryByRole("button", { name: "查看圖片" }),
+    ).not.toBeInTheDocument();
+    expect(
+      table.queryByRole("button", { name: "沒有送達照片" }),
+    ).not.toBeInTheDocument();
   });
 
   it("shows picked-up status with the pickup time", async () => {
@@ -495,5 +513,8 @@ describe("Delivery list page", () => {
     expect(table.getByText("已取貨 20:37")).toBeInTheDocument();
     expect(table.queryByText("待取貨")).not.toBeInTheDocument();
     expect(table.queryByText(/已送達/)).not.toBeInTheDocument();
+    expect(
+      table.getByRole("button", { name: "沒有送達照片" }),
+    ).toBeDisabled();
   });
 });

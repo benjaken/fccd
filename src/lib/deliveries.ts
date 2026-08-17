@@ -329,6 +329,15 @@ export function isPendingPickupStatus(status: string | null) {
   return status === "待取貨";
 }
 
+/** Photo viewer is for picked-up / in-transit / delivered rows, not 待取貨. */
+export function showsDeliveryPhotoAction(status: string | null | undefined) {
+  return (
+    isDeliveredStatus(status ?? null) ||
+    status === "已取" ||
+    status === "送貨途中"
+  );
+}
+
 export function hasDeliveryPhotos(item: Pick<DeliveryListItem, "imageReferences">) {
   return item.imageReferences.some((src) => src.trim().length > 0);
 }
