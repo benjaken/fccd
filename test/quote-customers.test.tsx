@@ -554,6 +554,9 @@ describe("Quote customers list", () => {
       name: "公司與訂單",
     });
     expect(within(dialog).getByText("顯示 1–25，共 31 筆")).toBeInTheDocument();
+    expect(
+      dialog.querySelector(".side-panel-footer .operational-list-pagination"),
+    ).toBeInTheDocument();
     await user.type(
       within(dialog).getByPlaceholderText("搜尋公司或訂單號碼"),
       "611",

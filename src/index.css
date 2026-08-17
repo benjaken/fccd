@@ -2494,12 +2494,33 @@ button.product-tag[aria-pressed="true"] {
 }
 
 .quote-customers-orders-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   flex: 1;
   min-height: 0;
+  height: 100%;
+  overflow: hidden;
   border: 0;
   border-radius: 0;
   box-shadow: none;
   background: transparent;
+}
+
+.quote-customers-orders-panel > .quotes-table-wrap,
+.quote-customers-orders-panel > .quotes-state {
+  min-height: 0;
+  overflow: auto;
+}
+
+.side-panel-majority > .side-panel-footer:has(.operational-list-pagination) {
+  display: block;
+  padding: 0;
+  border-top: 0;
+  background: var(--card);
+}
+
+.side-panel-majority > .side-panel-footer .operational-list-pagination {
+  position: relative;
 }
 
 .quote-customers-messages {
