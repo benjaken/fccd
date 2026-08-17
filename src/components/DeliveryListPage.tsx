@@ -25,6 +25,7 @@ import {
   hongKongMonthStart,
   isDeliveredStatus,
   isPendingPickupStatus,
+  showsDeliveryPhotoAction,
   toDeliveryExportRow,
   type DeliveryListFilters,
   type DeliveryListItem,
@@ -614,27 +615,29 @@ export function DeliveryListPage({
                   </td>
                   <td className="table-actions-cell">
                     <div className="table-row-actions">
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        className="delivery-view-image"
-                        disabled={!hasDeliveryPhotos(item)}
-                        aria-label={
-                          hasDeliveryPhotos(item)
-                            ? t("deliveryList.viewImage")
-                            : t("deliveryList.noImage")
-                        }
-                        title={
-                          hasDeliveryPhotos(item)
-                            ? t("deliveryList.viewImage")
-                            : t("deliveryList.noImage")
-                        }
-                        onClick={() => setImageItem(item)}
-                      >
-                        <ImageIcon />
-                        {t("deliveryList.viewImage")}
-                      </Button>
+                      {showsDeliveryPhotoAction(item.deliveryStatus) ? (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          className="delivery-view-image"
+                          disabled={!hasDeliveryPhotos(item)}
+                          aria-label={
+                            hasDeliveryPhotos(item)
+                              ? t("deliveryList.viewImage")
+                              : t("deliveryList.noImage")
+                          }
+                          title={
+                            hasDeliveryPhotos(item)
+                              ? t("deliveryList.viewImage")
+                              : t("deliveryList.noImage")
+                          }
+                          onClick={() => setImageItem(item)}
+                        >
+                          <ImageIcon />
+                          {t("deliveryList.viewImage")}
+                        </Button>
+                      ) : null}
                       {canEdit && isPendingPickupStatus(item.deliveryStatus) ? (
                         <Button
                           type="button"
