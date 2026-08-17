@@ -102,7 +102,8 @@ describe("Delivery list page", () => {
     expect(table.getAllByText("車邊交收").length).toBeGreaterThan(0);
     expect(table.getByText("隧道費")).toBeInTheDocument();
     expect(table.getByText("佔訂單 7%")).toBeInTheDocument();
-    expect(table.getByRole("button", { name: "查看圖片" })).toBeInTheDocument();
+    expect(table.getByRole("button", { name: "查看圖片" })).toBeEnabled();
+    expect(table.getByRole("button", { name: "沒有送達照片" })).toBeDisabled();
     expect(screen.getByText(/本頁運費/)).toBeInTheDocument();
   });
 
@@ -290,5 +291,63 @@ describe("Delivery list page", () => {
 
     expect(await screen.findByText("暫時無法載入送貨清單")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "重新載入" })).toBeInTheDocument();
+  });
+
+  it("confirms before cancelling a pending-pickup delivery", async () => {
+    const user = userEvent.setup();
+    const pendingItem: DeliveryListItem = {
+      ...surchargeItem,
+      deliveryStatus: "待取貨",
+    };
+    const loadDeliveries = vi
+      .fn()
+      .mockResolvedValueOnce({ total: 1, items: [pendingItem] })
+      .mockResolvedValue({ total: 0, items: [] });
+    const loadLookups = vi.fn().mockResolvedValue(lookups);
+    const cancelDelivery = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <MemoryRouter>
+        <DeliveryListPage
+          loadDeliveries={loadDeliveries}
+          loadLookups={loadLookups}
+          cancelDelivery={cancelDelivery}
+          now={new Date("2026-08-17T04:00:00+08:00")}
+        />
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: "取消送貨" }));
+    expect(screen.getByRole("dialog", { name: "取消送貨訂單" })).toBeInTheDocument();
+    expect(cancelDelivery).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "返回" }));
+    expect(cancelDelivery).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "取消送貨" }));
+    await user.click(screen.getByRole("button", { name: "確認取消" }));
+    await waitFor(() =>
+      expect(cancelDelivery).toHaveBeenCalledWith("delivery-2"),
+    );
+  });
+
+  it("does not offer cancel on delivered rows", async () => {
+    const loadDeliveries = vi.fn().mockResolvedValue(listResult);
+    const loadLookups = vi.fn().mockResolvedValue(lookups);
+
+    render(
+      <MemoryRouter>
+        <DeliveryListPage
+          loadDeliveries={loadDeliveries}
+          loadLookups={loadLookups}
+          now={new Date("2026-08-17T04:00:00+08:00")}
+        />
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole("heading", { name: "送貨清單" });
+    expect(
+      screen.queryByRole("button", { name: "取消送貨" }),
+    ).not.toBeInTheDocument();
   });
 });

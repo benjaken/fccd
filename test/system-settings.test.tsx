@@ -768,6 +768,17 @@ describe("Super Admin system settings", () => {
     expect(deliveryListRowEdits).toContain("assign_delivery_motorcade");
     expect(deliveryListRowEdits).toContain("'Factory'");
 
+    const cancelPendingDelivery = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260817063000_cancel_pending_delivery.sql",
+      ),
+      "utf8",
+    );
+    expect(cancelPendingDelivery).toContain("cancel_pending_delivery");
+    expect(cancelPendingDelivery).toContain("待取貨");
+    expect(cancelPendingDelivery).toContain("'Factory'");
+
     const frozenMenuLabels = readFileSync(
       path.resolve(
         process.cwd(),
