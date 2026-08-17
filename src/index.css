@@ -3937,6 +3937,10 @@ td:last-child {
   width: min(820px, 100vw);
 }
 
+.side-panel-majority {
+  width: 80%;
+}
+
 .side-panel-header,
 .settings-side-panel-header {
   display: flex;
@@ -4072,6 +4076,7 @@ td:last-child {
   .side-panel,
   .side-panel-wide,
   .side-panel-xl,
+  .side-panel-majority,
   .settings-side-panel,
   .settings-side-panel-wide {
     width: min(100vw, 100%);

@@ -341,6 +341,7 @@ describe("Quote customers list", () => {
     const dialog = await screen.findByRole("dialog", {
       name: "公司與訂單",
     });
+    expect(dialog).toHaveClass("side-panel-majority");
     await waitFor(() =>
       expect(loadHistory).toHaveBeenCalledWith(
         "sales@foodchannels-catering.com",

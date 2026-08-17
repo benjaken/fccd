@@ -580,7 +580,7 @@ export function QuoteCustomersPage({
 
       <SidePanel
         open={panel?.kind === "companies"}
-        extraWide
+        className="side-panel-majority"
         title={t("quoteCustomers.historyTitle")}
         description={panel?.kind === "companies" ? panel.email : undefined}
         onClose={closePanel}

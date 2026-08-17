@@ -14,6 +14,7 @@ export function SidePanel({
   closeLabel,
   wide = false,
   extraWide = false,
+  className,
 }: {
   open: boolean;
   title: string;
@@ -24,6 +25,7 @@ export function SidePanel({
   closeLabel: string;
   wide?: boolean;
   extraWide?: boolean;
+  className?: string;
 }) {
   useEffect(() => {
     if (!open) return;
@@ -49,6 +51,7 @@ export function SidePanel({
           "side-panel",
           wide && "side-panel-wide",
           extraWide && "side-panel-xl",
+          className,
         )}
         role="dialog"
         aria-modal="true"
