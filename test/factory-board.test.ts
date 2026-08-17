@@ -6,9 +6,11 @@ import {
   factoryVisibleDates,
   filterDispatchRows,
   fleetBadgeChar,
+  fleetBadgeForDelivery,
   formatFactoryLineLabel,
   groupDeliveriesByDate,
   hongKongDateKey,
+  mapFactoryFleet,
 } from "@/lib/factory-board";
 import type { DeliveryListItem } from "@/lib/deliveries";
 
@@ -112,6 +114,23 @@ describe("factory board helpers", () => {
     ).toEqual(["open"]);
     expect(fleetBadgeChar("Sun-Line")).toBe("S");
     expect(fleetBadgeChar("宏記")).toBe("宏");
+    expect(
+      mapFactoryFleet({
+        id: "team-sun",
+        name: "Sun-Line",
+        short_name: "宏",
+      }),
+    ).toEqual({
+      id: "team-sun",
+      name: "Sun-Line",
+      shortName: "宏",
+    });
+    expect(
+      fleetBadgeForDelivery(
+        { motorcadeId: "team-sun", motorcadeName: "Sun-Line" },
+        [{ id: "team-sun", name: "Sun-Line", shortName: "宏" }],
+      ),
+    ).toBe("宏");
   });
 
   it("formats factory dish cards with content prefix and quantity", () => {

@@ -58,7 +58,9 @@ describe("FactoryBoardPage", () => {
       <FactoryBoardPage
         initialDate="2026-08-17"
         loadBoard={async () => board}
-        loadFleets={async () => [{ id: "team-sun", name: "Sun-Line" }]}
+        loadFleets={async () => [
+          { id: "team-sun", name: "Sun-Line", shortName: "宏" },
+        ]}
       />,
     );
 
@@ -77,6 +79,8 @@ describe("FactoryBoardPage", () => {
       screen.getByRole("heading", { name: "選擇車隊 - 18/08/2026" }),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "尚未分派車隊" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sun-Line" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "宏" })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Sun-Line" }));
     await user.click(screen.getByRole("button", { name: "提交" }));
@@ -99,7 +103,9 @@ describe("FactoryBoardPage", () => {
       <FactoryBoardPage
         initialDate="2026-08-17"
         loadBoard={async () => board}
-        loadFleets={async () => [{ id: "team-sun", name: "Sun-Line" }]}
+        loadFleets={async () => [
+          { id: "team-sun", name: "Sun-Line", shortName: "宏" },
+        ]}
         loadOrderJob={async () => ({
           packingNote: "分開兩箱",
           dispatchTime: "10:00",
@@ -125,7 +131,7 @@ describe("FactoryBoardPage", () => {
     expect(await screen.findByRole("heading", { name: "B-1522" })).toBeInTheDocument();
     expect(screen.getByText("08月18日 星期二")).toBeInTheDocument();
     expect(await screen.findByText("出車時間: 10:00")).toBeInTheDocument();
-    expect(screen.getByText("送到時間: 11:00 - 12:00")).toBeInTheDocument();
+    expect(await screen.findByText("送到時間: 11:00 - 12:00")).toBeInTheDocument();
     expect(screen.getByText(/地址: 大埔汀角道/)).toBeInTheDocument();
     expect(screen.getByText("客人名稱: Eric Yim")).toBeInTheDocument();
     expect(screen.getByText("包裝說明: 分開兩箱")).toBeInTheDocument();
@@ -133,7 +139,7 @@ describe("FactoryBoardPage", () => {
     expect(screen.getByRole("button", { name: "印全單" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "印地址" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "印送貨單" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "已選擇 - S" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "已選擇 - 宏" })).toBeInTheDocument();
     expect(screen.getByLabelText("連接到標籤打印機")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "返回" }));

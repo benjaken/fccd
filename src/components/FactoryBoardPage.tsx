@@ -16,7 +16,6 @@ import {
   hongKongDateInputValue,
   toDeliveryExportRow,
   type DeliveryListItem,
-  type DeliveryLookupOption,
 } from "@/lib/deliveries";
 import {
   UNASSIGNED_FLEET_ID,
@@ -25,9 +24,10 @@ import {
   fetchFactoryFleets,
   fetchFactoryOrderJob,
   filterDispatchRows,
-  fleetBadgeChar,
+  fleetBadgeForDelivery,
   groupDeliveriesByDate,
   type FactoryBoardData,
+  type FactoryFleet,
   type FactoryOrderJob,
 } from "@/lib/factory-board";
 import { cn } from "@/lib/utils";
@@ -122,7 +122,7 @@ export function FactoryBoardPage({
     () => initialDate ?? hongKongDateInputValue(),
   );
   const [board, setBoard] = useState<FactoryBoardData | null>(null);
-  const [fleets, setFleets] = useState<DeliveryLookupOption[]>([]);
+  const [fleets, setFleets] = useState<FactoryFleet[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [fleetDate, setFleetDate] = useState<string | null>(null);
@@ -332,6 +332,7 @@ export function FactoryBoardPage({
           job={orderJob}
           loading={jobLoading}
           error={jobError}
+          selectedBadge={fleetBadgeForDelivery(selectedJob, fleets)}
           onBack={() => setSelectedJob(null)}
         />
       ) : (
@@ -362,7 +363,7 @@ export function FactoryBoardPage({
                       ? board?.portionsByOrderId[item.orderId]
                       : undefined,
                   );
-                  const badge = fleetBadgeChar(item.motorcadeName);
+                  const badge = fleetBadgeForDelivery(item, fleets);
                   return (
                     <button
                       type="button"

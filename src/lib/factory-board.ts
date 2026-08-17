@@ -3,7 +3,6 @@ import {
   clockFromValue,
   fetchDeliveryExportRows,
   type DeliveryListItem,
-  type DeliveryLookupOption,
 } from "@/lib/deliveries"
 import { supabase } from "@/lib/supabase"
 
@@ -26,6 +25,12 @@ export type FactoryOrderJob = {
   dispatchTime: string | null
   arrivalWindow: string | null
   lines: FactoryOrderLine[]
+}
+
+export type FactoryFleet = {
+  id: string
+  name: string
+  shortName: string | null
 }
 
 const PORTION_CHUNK_SIZE = 100
@@ -79,6 +84,26 @@ export function fleetBadgeChar(name: string | null | undefined): string {
   const trimmed = name?.trim() ?? ""
   if (!trimmed) return ""
   return Array.from(trimmed)[0] ?? ""
+}
+
+export function mapFactoryFleet(row: {
+  id: string
+  name?: string | null
+  short_name?: string | null
+}): FactoryFleet {
+  return {
+    id: row.id,
+    name: row.name?.trim() || row.short_name?.trim() || row.id,
+    shortName: row.short_name?.trim() || null,
+  }
+}
+
+export function fleetBadgeForDelivery(
+  item: Pick<DeliveryListItem, "motorcadeId" | "motorcadeName">,
+  fleets: FactoryFleet[],
+): string {
+  const fleet = fleets.find((entry) => entry.id === item.motorcadeId)
+  return fleetBadgeChar(fleet?.shortName || fleet?.name || item.motorcadeName)
 }
 
 export function formatFactoryQuantity(value: number | null | undefined): string | null {
@@ -135,22 +160,22 @@ export function filterDispatchRows(
     })
 }
 
-export async function fetchFactoryFleets(): Promise<DeliveryLookupOption[]> {
+export async function fetchFactoryFleets(): Promise<FactoryFleet[]> {
   const { data, error } = await supabase
     .from("delivery_teams")
-    .select("id, name, short_name, is_active")
+    .select("id, name, short_name, is_active, bubble_created_at")
     .eq("is_active", true)
-    .order("name")
+    .order("bubble_created_at", { ascending: true, nullsFirst: false })
   if (error) {
     throw error
   }
-  return (data ?? []).map((row) => ({
-    id: row.id as string,
-    name:
-      (row.short_name as string | null)?.trim() ||
-      (row.name as string | null)?.trim() ||
-      (row.id as string),
-  }))
+  return (data ?? []).map((row) =>
+    mapFactoryFleet({
+      id: row.id as string,
+      name: row.name as string | null,
+      short_name: row.short_name as string | null,
+    }),
+  )
 }
 
 async function fetchOrderPortionTotals(

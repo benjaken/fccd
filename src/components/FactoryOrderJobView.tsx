@@ -3,11 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import type { DeliveryListItem } from "@/lib/deliveries";
-import {
-  fleetBadgeChar,
-  hongKongDateKey,
-  type FactoryOrderJob,
-} from "@/lib/factory-board";
+import { hongKongDateKey, type FactoryOrderJob } from "@/lib/factory-board";
 
 const WEEKDAY_LONG_ZH = [
   "星期日",
@@ -29,12 +25,14 @@ export function FactoryOrderJobView({
   job,
   loading,
   error,
+  selectedBadge,
   onBack,
 }: {
   item: DeliveryListItem;
   job: FactoryOrderJob | null;
   loading: boolean;
   error: boolean;
+  selectedBadge?: string;
   onBack: () => void;
 }) {
   const { t, i18n } = useTranslation();
@@ -58,11 +56,9 @@ export function FactoryOrderJobView({
     : empty;
   const orderNumber = item.orderNumber?.replace(/^#/, "") || empty;
   const dispatchTime = job?.dispatchTime || item.deliveryTime || empty;
-  const arrivalWindow = job?.arrivalWindow || item.deliveryTime || empty;
+  const arrivalWindow = job?.arrivalWindow || empty;
   const selectedName =
-    fleetBadgeChar(item.motorcadeName) ||
-    item.motorcadeName ||
-    t("factoryBoard.unassignedFleet");
+    selectedBadge || item.motorcadeName || t("factoryBoard.unassignedFleet");
 
   return (
     <section className="factory-order-job">
