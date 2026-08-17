@@ -820,6 +820,20 @@ describe("Super Admin system settings", () => {
       "Sale partner readers select sales partners",
     );
 
+    const orderQueueLists = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260817070000_order_queue_list_pages.sql",
+      ),
+      "utf8",
+    );
+    expect(orderQueueLists).toContain("orders.monthly");
+    expect(orderQueueLists).toContain("orders.split");
+    expect(orderQueueLists).toContain("orders.kitchen_notes");
+    expect(orderQueueLists).toContain("orders.reschedule_pending");
+    expect(orderQueueLists).toContain("orders.shopify_pending");
+    expect(orderQueueLists).toContain("/orders/shopify-pending");
+
     const preparedMeatFlags = readFileSync(
       path.resolve(
         process.cwd(),

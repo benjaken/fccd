@@ -20,6 +20,14 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
   { prefix: "/orders/drivers", pageKey: "orders.drivers" },
   { prefix: "/orders/unpaid", pageKey: "orders.unpaid" },
   { prefix: "/orders/delivered-unpaid", pageKey: "orders.delivered_unpaid" },
+  { prefix: "/orders/monthly", pageKey: "orders.monthly" },
+  { prefix: "/orders/split", pageKey: "orders.split" },
+  { prefix: "/orders/kitchen-notes", pageKey: "orders.kitchen_notes" },
+  {
+    prefix: "/orders/reschedule-pending",
+    pageKey: "orders.reschedule_pending",
+  },
+  { prefix: "/orders/shopify-pending", pageKey: "orders.shopify_pending" },
   { prefix: "/orders/new", pageKey: "orders.new" },
   {
     prefix: "/orders/settings/statuses",

@@ -88,7 +88,17 @@ export function OrdersListPage({
         ? "unpaidTitle"
         : preset === "delivered-unpaid"
           ? "deliveredUnpaidTitle"
-          : "title";
+          : preset === "monthly-settlement"
+            ? "monthlyTitle"
+            : preset === "split"
+              ? "splitTitle"
+              : preset === "kitchen-notes"
+                ? "kitchenNotesTitle"
+                : preset === "reschedule-pending"
+                  ? "reschedulePendingTitle"
+                  : preset === "shopify-pending"
+                    ? "shopifyPendingTitle"
+                    : "title";
 
   const currency = useMemo(
     () =>

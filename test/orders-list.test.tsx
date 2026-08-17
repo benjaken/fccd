@@ -116,6 +116,28 @@ describe("Orders list", () => {
     );
   });
 
+  it.each([
+    ["unpaid", "未付款訂單"],
+    ["monthly-settlement", "月結訂單"],
+    ["split", "拆單訂單"],
+    ["kitchen-notes", "廚房備註訂單"],
+    ["reschedule-pending", "改期未審訂單"],
+    ["shopify-pending", "Shopify待審訂單"],
+  ] as const)("loads the %s queue with its title", async (preset, title) => {
+    const loadOrders = vi.fn().mockResolvedValue(orderResult);
+
+    render(
+      <MemoryRouter>
+        <OrdersListPage preset={preset} loadOrders={loadOrders} />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: title })).toBeInTheDocument();
+    expect(loadOrders).toHaveBeenCalledWith(
+      expect.objectContaining({ preset }),
+    );
+  });
+
   it("paginates orders in groups of fifteen", async () => {
     const user = userEvent.setup();
     const loadOrders = vi
@@ -240,6 +262,16 @@ describe("Orders list", () => {
       await screen.findByText("此角色無法查看財務訂單視圖"),
     ).toBeInTheDocument();
     expect(loadOrders).not.toHaveBeenCalled();
+  });
+
+  it("filters leftover-tag queues by catalog names and Shopify new-order flag", () => {
+    const source = readFileSync(
+      path.resolve(process.cwd(), "src/lib/orders.ts"),
+      "utf8",
+    );
+    expect(source).toContain('query.overlaps("order_status_legacy_ids", legacyIds)');
+    expect(source).toContain('query.eq("is_shopify_order", true)');
+    expect(source).toContain('query.gt("outstanding", 0)');
   });
 
   it("shows an actionable load error", async () => {

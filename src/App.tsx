@@ -12,7 +12,9 @@ import {
   Bell,
   Beef,
   Boxes,
+  CalendarClock,
   CalendarDays,
+  CalendarRange,
   ChartNoAxesCombined,
   ChevronDown,
   ChevronRight,
@@ -40,8 +42,11 @@ import {
   RefreshCw,
   Settings,
   ShieldCheck,
+  ShoppingBag,
   ShoppingBasket,
   Snowflake,
+  Split,
+  StickyNote,
   Store,
   Sun,
   Tags,
@@ -192,6 +197,42 @@ const secondaryNav: Record<string, NavItem[]> = {
       to: "/orders/pending",
       icon: ClipboardCheck,
       permissionKey: "orders.pending",
+    },
+    {
+      key: "unpaidOrders",
+      to: "/orders/unpaid",
+      icon: CircleDollarSign,
+      permissionKey: "orders.unpaid",
+    },
+    {
+      key: "monthlyOrders",
+      to: "/orders/monthly",
+      icon: CalendarRange,
+      permissionKey: "orders.monthly",
+    },
+    {
+      key: "splitOrders",
+      to: "/orders/split",
+      icon: Split,
+      permissionKey: "orders.split",
+    },
+    {
+      key: "kitchenNotesOrders",
+      to: "/orders/kitchen-notes",
+      icon: StickyNote,
+      permissionKey: "orders.kitchen_notes",
+    },
+    {
+      key: "reschedulePendingOrders",
+      to: "/orders/reschedule-pending",
+      icon: CalendarClock,
+      permissionKey: "orders.reschedule_pending",
+    },
+    {
+      key: "shopifyPendingOrders",
+      to: "/orders/shopify-pending",
+      icon: ShoppingBag,
+      permissionKey: "orders.shopify_pending",
     },
     {
       key: "payments",
@@ -472,6 +513,11 @@ const SECTION_CHILD_KEYS: Record<string, string[]> = {
     "orders.drivers",
     "orders.unpaid",
     "orders.delivered_unpaid",
+    "orders.monthly",
+    "orders.split",
+    "orders.kitchen_notes",
+    "orders.reschedule_pending",
+    "orders.shopify_pending",
     "orders.settings",
     "orders.settings.statuses",
     "orders.settings.sale_partners",
@@ -1053,6 +1099,51 @@ function OperationsShell() {
                 element={
                   <OrdersListPage
                     preset="delivered-unpaid"
+                    canViewFinance={canViewFinance}
+                  />
+                }
+              />
+              <Route
+                path="/orders/monthly"
+                element={
+                  <OrdersListPage
+                    preset="monthly-settlement"
+                    canViewFinance={canViewFinance}
+                  />
+                }
+              />
+              <Route
+                path="/orders/split"
+                element={
+                  <OrdersListPage
+                    preset="split"
+                    canViewFinance={canViewFinance}
+                  />
+                }
+              />
+              <Route
+                path="/orders/kitchen-notes"
+                element={
+                  <OrdersListPage
+                    preset="kitchen-notes"
+                    canViewFinance={canViewFinance}
+                  />
+                }
+              />
+              <Route
+                path="/orders/reschedule-pending"
+                element={
+                  <OrdersListPage
+                    preset="reschedule-pending"
+                    canViewFinance={canViewFinance}
+                  />
+                }
+              />
+              <Route
+                path="/orders/shopify-pending"
+                element={
+                  <OrdersListPage
+                    preset="shopify-pending"
                     canViewFinance={canViewFinance}
                   />
                 }
