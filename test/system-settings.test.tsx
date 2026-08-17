@@ -837,7 +837,7 @@ describe("Super Admin system settings", () => {
     const orderListConfigs = readFileSync(
       path.resolve(
         process.cwd(),
-        "supabase/migrations/20260817071000_order_list_configs.sql",
+        "supabase/migrations/20260817073000_order_list_configs.sql",
       ),
       "utf8",
     );
