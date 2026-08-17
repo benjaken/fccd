@@ -4,6 +4,7 @@ import { Plus, Tags, Trash2 } from "lucide-react";
 import { Navigate, NavLink, useParams } from "react-router-dom";
 
 import { useCurrentPageAccess } from "@/auth/use-page-access";
+import { OrderPaymentMethodsTable } from "@/components/OrderPaymentMethodsTable";
 import { OrderShippingMethodsTable } from "@/components/OrderShippingMethodsTable";
 import { Button } from "@/components/ui/button";
 import { ListTable } from "@/components/ui/list-table";
@@ -16,6 +17,11 @@ import {
   setOrderTagActive,
   type OrderTag,
 } from "@/lib/order-tags";
+import {
+  createPaymentMethod,
+  fetchPaymentMethods,
+  updatePaymentMethod,
+} from "@/lib/payment-methods";
 import {
   createShippingMethod,
   fetchShippingMethods,
@@ -358,6 +364,9 @@ export function OrderSettingsPage({
   loadMethods = fetchShippingMethods,
   createMethod = createShippingMethod,
   updateMethod = updateShippingMethod,
+  loadPaymentMethods = fetchPaymentMethods,
+  createPayment = createPaymentMethod,
+  updatePayment = updatePaymentMethod,
 }: {
   loadTags?: TagsLoader;
   createTag?: TagCreator;
@@ -366,6 +375,9 @@ export function OrderSettingsPage({
   loadMethods?: typeof fetchShippingMethods;
   createMethod?: typeof createShippingMethod;
   updateMethod?: typeof updateShippingMethod;
+  loadPaymentMethods?: typeof fetchPaymentMethods;
+  createPayment?: typeof createPaymentMethod;
+  updatePayment?: typeof updatePaymentMethod;
 }) {
   const { t } = useTranslation();
   const pageAccess = useCurrentPageAccess();
@@ -389,12 +401,17 @@ export function OrderSettingsPage({
           <span className="eyebrow">{t("orderSettings.eyebrow")}</span>
           <h1>{t("orderSettings.title")}</h1>
         </div>
-        {(activeTab === "tags" || activeTab === "shipping") && canManage ? (
+        {(activeTab === "tags" ||
+          activeTab === "shipping" ||
+          activeTab === "payments") &&
+        canManage ? (
           <Button type="button" onClick={() => setCreateOpen(true)}>
             <Plus />
-            {activeTab === "shipping"
-              ? t("orderSettings.shipping.add")
-              : t("orderSettings.tags.add")}
+            {activeTab === "payments"
+              ? t("orderSettings.payments.add")
+              : activeTab === "shipping"
+                ? t("orderSettings.shipping.add")
+                : t("orderSettings.tags.add")}
           </Button>
         ) : null}
       </header>
@@ -426,6 +443,14 @@ export function OrderSettingsPage({
             loadMethods={loadMethods}
             createMethod={createMethod}
             updateMethod={updateMethod}
+            createOpen={createOpen}
+            onCreateOpenChange={setCreateOpen}
+          />
+        ) : activeTab === "payments" ? (
+          <OrderPaymentMethodsTable
+            loadMethods={loadPaymentMethods}
+            createMethod={createPayment}
+            updateMethod={updatePayment}
             createOpen={createOpen}
             onCreateOpenChange={setCreateOpen}
           />

@@ -10,6 +10,10 @@ import {
   sortShippingMethods,
   type ShippingMethod,
 } from "@/lib/shipping-methods";
+import {
+  sortPaymentMethods,
+  type PaymentMethod,
+} from "@/lib/payment-methods";
 
 vi.mock("@/auth/AuthProvider", () => ({
   useAuth: () => ({
@@ -81,6 +85,75 @@ const methods: ShippingMethod[] = [
   },
 ];
 
+const payments: PaymentMethod[] = [
+  {
+    id: "pay-1",
+    name: "QFpay (Alipay / Wechat Pay)",
+    isActive: true,
+    createdAt: "2024-01-01T00:00:00.000Z",
+  },
+  {
+    id: "pay-2",
+    name: "PayMe",
+    isActive: true,
+    createdAt: "2024-01-02T00:00:00.000Z",
+  },
+  {
+    id: "pay-3",
+    name: "Credit card",
+    isActive: true,
+    createdAt: "2024-01-03T00:00:00.000Z",
+  },
+  {
+    id: "pay-4",
+    name: "FPS",
+    isActive: true,
+    createdAt: "2024-01-04T00:00:00.000Z",
+  },
+  {
+    id: "pay-5",
+    name: "Bank Transfer",
+    isActive: true,
+    createdAt: "2024-01-05T00:00:00.000Z",
+  },
+  {
+    id: "pay-6",
+    name: "Octopus",
+    isActive: true,
+    createdAt: "2024-01-06T00:00:00.000Z",
+  },
+  {
+    id: "pay-7",
+    name: "Wine Passions",
+    isActive: true,
+    createdAt: "2024-01-07T00:00:00.000Z",
+  },
+  {
+    id: "pay-8",
+    name: "Brand Story Asia",
+    isActive: true,
+    createdAt: "2024-01-08T00:00:00.000Z",
+  },
+  {
+    id: "pay-9",
+    name: "Klook",
+    isActive: true,
+    createdAt: "2024-01-09T00:00:00.000Z",
+  },
+  {
+    id: "pay-10",
+    name: "Foodpanda",
+    isActive: true,
+    createdAt: "2024-01-10T00:00:00.000Z",
+  },
+  {
+    id: "pay-11",
+    name: "Cash",
+    isActive: true,
+    createdAt: "2024-01-11T00:00:00.000Z",
+  },
+];
+
 function renderSettings(
   tab = "tags",
   props: Partial<Parameters<typeof OrderSettingsPage>[0]> = {},
@@ -88,9 +161,13 @@ function renderSettings(
   const loadTags = props.loadTags ?? vi.fn().mockResolvedValue(structuredClone(tags));
   const loadMethods =
     props.loadMethods ?? vi.fn().mockResolvedValue(structuredClone(methods));
+  const loadPaymentMethods =
+    props.loadPaymentMethods ??
+    vi.fn().mockResolvedValue(structuredClone(payments));
   return {
     loadTags,
     loadMethods,
+    loadPaymentMethods,
     ...render(
       <MemoryRouter initialEntries={[`/orders/settings/${tab}`]}>
         <Routes>
@@ -100,6 +177,7 @@ function renderSettings(
               <OrderSettingsPage
                 loadTags={loadTags}
                 loadMethods={loadMethods}
+                loadPaymentMethods={loadPaymentMethods}
                 {...props}
               />
             }
@@ -339,5 +417,114 @@ describe("Order settings shipping methods page", () => {
         isActive: false,
       });
     });
+  });
+});
+
+describe("Order settings payment methods page", () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("zh-HK");
+  });
+
+  it("sorts methods by created time then name", () => {
+    expect(
+      sortPaymentMethods([
+        payments[10],
+        payments[0],
+        { ...payments[1], createdAt: null },
+      ]).map((row) => row.id),
+    ).toEqual(["pay-1", "pay-11", "pay-2"]);
+  });
+
+  it("lists payment methods with Active toggles and edit actions", async () => {
+    renderSettings("payments");
+
+    expect(screen.getByRole("link", { name: "付款方式" })).toHaveAttribute(
+      "href",
+      "/orders/settings/payments",
+    );
+    expect(screen.getByRole("link", { name: "付款方式" })).toHaveClass("active");
+    expect(screen.getByRole("button", { name: "添加" })).toBeInTheDocument();
+    expect(screen.queryByText("此設定稍後開放")).not.toBeInTheDocument();
+
+    await screen.findByText("QFpay (Alipay / Wechat Pay)");
+    const table = within(screen.getByRole("table"));
+    expect(table.getByText("付款方式")).toBeInTheDocument();
+    expect(table.getByText("Active")).toBeInTheDocument();
+    expect(table.getByText("PayMe")).toBeInTheDocument();
+    expect(table.getByText("Cash")).toBeInTheDocument();
+    expect(table.getByText("Foodpanda")).toBeInTheDocument();
+    expect(
+      table.getByRole("switch", {
+        name: "切換 QFpay (Alipay / Wechat Pay) 的啟用狀態",
+      }),
+    ).toHaveAttribute("aria-checked", "true");
+    expect(
+      table.getByRole("button", { name: "編輯 PayMe" }),
+    ).toBeInTheDocument();
+  });
+
+  it("creates a payment method from the heading action", async () => {
+    const user = userEvent.setup();
+    const createPayment = vi.fn().mockResolvedValue({
+      id: "pay-12",
+      name: "Visa",
+      isActive: true,
+      createdAt: "2024-01-12T00:00:00.000Z",
+    });
+    renderSettings("payments", { createPayment });
+
+    await screen.findByText("PayMe");
+    await user.click(screen.getByRole("button", { name: "添加" }));
+    const dialog = await screen.findByRole("dialog", { name: "新增付款方式" });
+    await user.type(within(dialog).getByLabelText("名稱"), "Visa");
+    await user.click(within(dialog).getByRole("button", { name: "保存" }));
+
+    await waitFor(() => {
+      expect(createPayment).toHaveBeenCalledWith({
+        name: "Visa",
+        isActive: true,
+      });
+    });
+    expect(await screen.findByText("Visa")).toBeInTheDocument();
+  });
+
+  it("toggles Active and edits a payment method", async () => {
+    const user = userEvent.setup();
+    const updatePayment = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ...payments[1],
+        isActive: false,
+      })
+      .mockResolvedValueOnce({
+        ...payments[1],
+        name: "PayMe HK",
+        isActive: false,
+      });
+    renderSettings("payments", { updatePayment });
+
+    const toggle = await screen.findByRole("switch", {
+      name: "切換 PayMe 的啟用狀態",
+    });
+    await user.click(toggle);
+    await waitFor(() => {
+      expect(updatePayment).toHaveBeenCalledWith("pay-2", { isActive: false });
+    });
+
+    await user.click(screen.getByRole("button", { name: "編輯 PayMe" }));
+    const dialog = await screen.findByRole("dialog", { name: "編輯付款方式" });
+    const nameInput = within(dialog).getByLabelText("名稱");
+    expect(nameInput).toBeEnabled();
+    expect(nameInput).toHaveValue("PayMe");
+    await user.clear(nameInput);
+    await user.type(nameInput, "PayMe HK");
+    await user.click(within(dialog).getByRole("button", { name: "保存" }));
+    await waitFor(() => {
+      expect(updatePayment).toHaveBeenCalledWith("pay-2", {
+        name: "PayMe HK",
+        isActive: false,
+      });
+    });
+    expect(await screen.findByText("PayMe HK")).toBeInTheDocument();
   });
 });
