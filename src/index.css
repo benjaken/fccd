@@ -1705,57 +1705,6 @@ td:last-child {
   background: var(--selection-bg);
 }
 
-.quote-customers-history {
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  gap: 16px;
-  flex: 1;
-  min-height: 0;
-}
-
-.quote-customers-history-table-wrap {
-  min-height: 0;
-  overflow: auto;
-  overscroll-behavior: contain;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-}
-
-.quote-customers-history > .quotes-state {
-  min-height: 0;
-}
-
-.quote-customers-history-table-wrap table {
-  margin: 0;
-}
-
-.quote-customers-history-table-wrap th {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-}
-
-.quote-customers-history ul {
-  display: grid;
-  gap: 10px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.quote-customers-history li {
-  display: grid;
-  gap: 4px;
-  padding-bottom: 10px;
-  border-bottom: 1px dashed var(--border);
-}
-
-.quote-customers-history li:last-child {
-  padding-bottom: 0;
-  border-bottom: 0;
-}
-
-.quote-customers-history small,
 .quote-customers-history-status,
 .quote-customers-history-error {
   color: var(--muted-foreground);
@@ -1766,16 +1715,22 @@ td:last-child {
   color: var(--destructive);
 }
 
-.side-panel-body:has(.quote-customers-history),
+.side-panel-body:has(.quote-customers-orders-panel),
 .side-panel-body:has(.quote-customers-messages) {
   display: flex;
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
+  padding: 0;
 }
 
-.side-panel-body:has(.quote-customers-messages) {
-  padding: 0;
+.quote-customers-orders-panel {
+  flex: 1;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
 }
 
 .quote-customers-messages {

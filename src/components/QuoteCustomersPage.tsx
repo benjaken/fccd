@@ -653,31 +653,34 @@ export function QuoteCustomersPage({
         onClose={closePanel}
         closeLabel={t("quoteCustomers.closePanel")}
       >
-        <div className="quote-customers-history">
-          <ListSearchBar
-            id="quote-customer-orders-search"
-            value={ordersDraftSearch}
-            onChange={setOrdersDraftSearch}
-            onSubmit={submitOrdersSearch}
-            label={t("quoteCustomers.ordersSearch")}
-            placeholder={t("quoteCustomers.ordersSearchPlaceholder")}
-            submitLabel={t("quoteCustomers.searchAction")}
-            disabled={historyLoading}
-          />
+        <article className="panel quotes-panel quote-customers-orders-panel">
+          <header className="quotes-toolbar">
+            <ListSearchBar
+              id="quote-customer-orders-search"
+              value={ordersDraftSearch}
+              onChange={setOrdersDraftSearch}
+              onSubmit={submitOrdersSearch}
+              label={t("quoteCustomers.ordersSearch")}
+              placeholder={t("quoteCustomers.ordersSearchPlaceholder")}
+              submitLabel={t("quoteCustomers.searchAction")}
+              disabled={historyLoading}
+            />
+          </header>
           {historyError ? (
             <div className="quotes-state quotes-state-error" role="alert">
-              <strong>{t("quoteCustomers.historyError")}</strong>
+              <Users />
+              <div>
+                <strong>{t("quoteCustomers.historyError")}</strong>
+                <span>{t("quoteCustomers.loadErrorDescription")}</span>
+              </div>
               <Button variant="outline" onClick={refreshOrders}>
+                <RefreshCw />
                 {t("quoteCustomers.retry")}
               </Button>
             </div>
-          ) : !historyLoading && (history?.orders.length ?? 0) === 0 ? (
-            <div className="quotes-state quotes-state-empty">
-              <strong>{t("quoteCustomers.pastOrdersEmpty")}</strong>
-            </div>
           ) : (
             <ListTable
-              className="quote-customers-history-table-wrap"
+              className="quotes-table-wrap"
               onRefresh={refreshOrders}
               loading={historyLoading}
               loadingLabel={t("quoteCustomers.historyLoading")}
@@ -744,7 +747,7 @@ export function QuoteCustomersPage({
             pageLabel={t("quoteCustomers.pageOf")}
             jumpLabel={t("quoteCustomers.jumpToPage")}
           />
-        </div>
+        </article>
       </SidePanel>
 
       <SidePanel

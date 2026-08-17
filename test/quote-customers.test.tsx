@@ -425,7 +425,12 @@ describe("Quote customers list", () => {
         search: "",
       }),
     );
+    expect(dialog.querySelector(".quotes-toolbar")).toBeInTheDocument();
     const detailTable = within(dialog).getByRole("table");
+    expect(detailTable.closest(".quotes-table-wrap")).toHaveClass(
+      "operational-table-wrap",
+    );
+    expect(dialog.querySelector(".quotes-panel")).toBeInTheDocument();
     expect(within(detailTable).getByText("公司")).toBeInTheDocument();
     expect(within(detailTable).getByText("訂單號碼")).toBeInTheDocument();
     expect(within(detailTable).getByText("K&K property")).toBeInTheDocument();
