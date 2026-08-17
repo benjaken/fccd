@@ -65,10 +65,11 @@ const resources = {
         quickSignIn: "一鍵登入（預覽）",
       },
       workspace: {
-        catering: "到會／中央廚房",
+        label: "工作區",
+        factory: "工場版面",
         delivery: "司機送貨",
-        restaurant: "餐廳營運",
         customer: "客戶自助",
+        placeholder: "內容稍後補上。",
       },
       navigation: {
         overview: "主頁",
@@ -2123,10 +2124,11 @@ const resources = {
         quickSignIn: "One-click sign in (preview)",
       },
       workspace: {
-        catering: "Catering / Central Kitchen",
+        label: "Workspaces",
+        factory: "Factory Floor",
         delivery: "Driver Delivery",
-        restaurant: "Restaurant Operations",
         customer: "Customer Self-service",
+        placeholder: "Content will be added later.",
       },
       navigation: {
         overview: "Home",

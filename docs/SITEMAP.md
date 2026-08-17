@@ -9,9 +9,8 @@ Product: **FCCD** — Food Channel Catering Delivery.
 
 ```text
 工作區
-├─ 到會／中央廚房
+├─ 工場版面
 ├─ 司機送貨
-├─ 餐廳營運
 └─ 客戶自助【第二階段】
 
 工具

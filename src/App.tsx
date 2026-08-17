@@ -20,6 +20,7 @@ import {
   ClipboardCheck,
   ClipboardList,
   Calculator,
+  Factory,
   FileArchive,
   FileText,
   HandCoins,
@@ -527,9 +528,8 @@ const workspaceLinks: Array<{
   icon: Icon;
   disabled?: boolean;
 }> = [
-  { key: "catering", to: "/", icon: Utensils },
-  { key: "delivery", to: "/delivery", icon: Truck },
-  { key: "restaurant", to: "/restaurant", icon: Store },
+  { key: "factory", to: "/factory", icon: Factory },
+  { key: "delivery", to: "/driver-delivery", icon: Truck },
   { key: "customer", to: "/customer", icon: Users, disabled: true },
 ];
 
@@ -541,6 +541,23 @@ function sectionFromPath(pathname: string) {
   // Exact home only — do not light 主頁 for profile/migration/unknown paths.
   if (!segment) return "overview";
   return "";
+}
+
+function workspaceFromPath(pathname: string) {
+  if (
+    pathname === "/driver-delivery" ||
+    pathname.startsWith("/driver-delivery/")
+  ) {
+    return "delivery";
+  }
+  if (pathname === "/customer" || pathname.startsWith("/customer/")) {
+    return "customer";
+  }
+  return "factory";
+}
+
+function isWorkspaceLandingPath(pathname: string) {
+  return pathname === "/factory" || pathname === "/driver-delivery";
 }
 
 /** Primary top-nav stays active for the whole section, including child routes. */
@@ -621,7 +638,7 @@ function mobileNavLinkEnd(to: string, allHrefs: string[]) {
   );
 }
 
-export { isPrimaryNavActive, sectionFromPath, buildMobileDrawerNav };
+export { isPrimaryNavActive, sectionFromPath, workspaceFromPath, buildMobileDrawerNav };
 
 function Brand() {
   const { t } = useTranslation();
@@ -720,12 +737,8 @@ function OperationsShell() {
       .flatMap((item) => item.children ?? [])
       .find((item) => isNavItemVisible(item, pageAccess.canAccess))?.to ??
     REPORT_GROUP_ROUTES.frozenMeat;
-  const activeWorkspace =
-    section === "delivery"
-      ? "delivery"
-      : section === "restaurant"
-        ? "restaurant"
-        : "catering";
+  const activeWorkspace = workspaceFromPath(location.pathname);
+  const isWorkspaceLanding = isWorkspaceLandingPath(location.pathname);
   const canViewFinance = pageAccess.canAccess("finance");
   const canEditProducts = canEditProductCatalog(authorizationRole);
 
@@ -890,35 +903,39 @@ function OperationsShell() {
         </div>
       </header>
 
-      <div className="workspace-bar">
-        <div className="nav-row-spacer" aria-hidden="true" />
-        <nav className="primary-nav lowered-nav" aria-label="Primary">
-          {visiblePrimaryNav.map(({ key, to, icon: NavIcon }) => (
-            <NavLink
-              key={key}
-              to={to}
-              end={to === "/"}
-              className={({ isActive }) =>
-                cn(
-                  "primary-nav-link",
-                  isPrimaryNavActive(section, key, isActive) && "active",
-                )
-              }
-            >
-              <NavIcon />
-              <span>{t(`navigation.${key}`)}</span>
-            </NavLink>
-          ))}
-        </nav>
-        <CurrentDateTime />
-      </div>
+      {!isWorkspaceLanding ? (
+        <div className="workspace-bar">
+          <div className="nav-row-spacer" aria-hidden="true" />
+          <nav className="primary-nav lowered-nav" aria-label="Primary">
+            {visiblePrimaryNav.map(({ key, to, icon: NavIcon }) => (
+              <NavLink
+                key={key}
+                to={to}
+                end={to === "/"}
+                className={({ isActive }) =>
+                  cn(
+                    "primary-nav-link",
+                    isPrimaryNavActive(section, key, isActive) && "active",
+                  )
+                }
+              >
+                <NavIcon />
+                <span>{t(`navigation.${key}`)}</span>
+              </NavLink>
+            ))}
+          </nav>
+          <CurrentDateTime />
+        </div>
+      ) : null}
 
       <div
         className={cn(
           "shell-body",
           sidebarCollapsed && "sidebar-is-collapsed",
+          isWorkspaceLanding && "workspace-landing",
         )}
       >
+        {isWorkspaceLanding ? null : (
         <aside className="sidebar">
           <nav aria-label="Secondary">
             {sideItems.map((item) => {
@@ -993,6 +1010,7 @@ function OperationsShell() {
             {!sidebarCollapsed && <span>{t("common.closeMenu")}</span>}
           </button>
         </aside>
+        )}
 
         <main className="main-content">
           <div className="page-transition" key={pageKey}>
@@ -1002,6 +1020,24 @@ function OperationsShell() {
               <SettingsAccessDenied />
             ) : (
               <Routes>
+              <Route
+                path="/factory"
+                element={
+                  <WorkspacePlaceholderPage
+                    workspaceKey="factory"
+                    icon={Factory}
+                  />
+                }
+              />
+              <Route
+                path="/driver-delivery"
+                element={
+                  <WorkspacePlaceholderPage
+                    workspaceKey="delivery"
+                    icon={Truck}
+                  />
+                }
+              />
               <Route path="/" element={<Dashboard role={profile?.role} />} />
               <Route
                 path="/follow-up"
@@ -1254,6 +1290,39 @@ function OperationsShell() {
               </Button>
             </div>
             <nav aria-label="Navigation">
+              <div className="mobile-nav-group">
+                <p className="mobile-nav-group-label">
+                  {t("workspace.label")}
+                </p>
+                {workspaceLinks.map(
+                  ({ key, to, icon: WorkspaceIcon, disabled }) =>
+                    disabled ? (
+                      <span
+                        key={key}
+                        className="sidebar-link disabled"
+                        aria-disabled="true"
+                      >
+                        <WorkspaceIcon />
+                        <span>{t(`workspace.${key}`)}</span>
+                      </span>
+                    ) : (
+                      <NavLink
+                        key={key}
+                        to={to}
+                        end
+                        className={() =>
+                          cn(
+                            "sidebar-link",
+                            activeWorkspace === key && "active",
+                          )
+                        }
+                      >
+                        <WorkspaceIcon />
+                        <span>{t(`workspace.${key}`)}</span>
+                      </NavLink>
+                    ),
+                )}
+              </div>
               {mobileNavGroups.map((group) => (
                 <div className="mobile-nav-group" key={group.groupKey}>
                   <p className="mobile-nav-group-label">
@@ -1845,6 +1914,26 @@ function PanelHeader({
   );
 }
 
+export function WorkspacePlaceholderPage({
+  workspaceKey,
+  icon: WorkspaceIcon,
+}: {
+  workspaceKey: "factory" | "delivery";
+  icon: Icon;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <section className="placeholder-page">
+      <div className="placeholder-icon">
+        <WorkspaceIcon />
+      </div>
+      <h1>{t(`workspace.${workspaceKey}`)}</h1>
+      <p>{t("workspace.placeholder")}</p>
+    </section>
+  );
+}
+
 function ModulePlaceholder({ section }: { section: string }) {
   const { t } = useTranslation();
   const navItem = primaryNav.find((item) => item.key === section);
@@ -1855,7 +1944,7 @@ function ModulePlaceholder({ section }: { section: string }) {
       <div className="placeholder-icon">
         <ModuleIcon />
       </div>
-      <span className="eyebrow">{t("workspace.catering")}</span>
+      <span className="eyebrow">{t("workspace.factory")}</span>
       <h1>{t(`navigation.${navItem?.key ?? "overview"}`)}</h1>
       <p>{t("dashboard.description")}</p>
       <Button asChild>

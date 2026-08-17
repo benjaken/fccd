@@ -110,6 +110,8 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
     pageKey: "reports.supplier_purchase",
   },
   { prefix: "/follow-up", pageKey: "overview.follow_up" },
+  { prefix: "/factory", pageKey: "workspace" },
+  { prefix: "/driver-delivery", pageKey: "workspace" },
   { prefix: "/finance", pageKey: "finance" },
   { prefix: "/inventory", pageKey: "inventory" },
   { prefix: "/profile", pageKey: "profile" },
@@ -258,7 +260,7 @@ export function usePageAccess(role: string | null | undefined) {
       loading,
       error,
       canAccess: (pageKey: string) => {
-        if (pageKey === "profile" || isSuperAdmin) return true;
+        if (pageKey === "profile" || pageKey === "workspace" || isSuperAdmin) return true;
         if (permissions.get(pageKey)?.canAccess === true) return true;
         return (PAGE_ACCESS_CHILD_KEYS[pageKey] ?? []).some(
           (child) => permissions.get(child)?.canAccess === true,
@@ -268,7 +270,7 @@ export function usePageAccess(role: string | null | undefined) {
         isSuperAdmin || permissions.get(pageKey)?.canManage === true,
       /** Section nav: visible if the section itself or any of its children is allowed. */
       canAccessSection: (pageKey: string, childKeys: string[] = []) => {
-        if (pageKey === "profile" || isSuperAdmin) return true;
+        if (pageKey === "profile" || pageKey === "workspace" || isSuperAdmin) return true;
         if (permissions.get(pageKey)?.canAccess === true) return true;
         return childKeys.some(
           (child) => permissions.get(child)?.canAccess === true,

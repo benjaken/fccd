@@ -598,6 +598,11 @@ button.bg-primary:focus-visible {
   grid-template-columns: var(--sidebar-collapsed-width) minmax(0, 1fr);
 }
 
+.shell-body.workspace-landing {
+  grid-template-columns: minmax(0, 1fr);
+  padding-top: var(--topbar-height);
+}
+
 .sidebar {
   position: sticky;
   top: calc(var(--topbar-height) + var(--workspace-height));
@@ -653,6 +658,16 @@ button.bg-primary:focus-visible {
   width: 18px;
   height: 18px;
   flex: 0 0 auto;
+}
+
+.sidebar-link.disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.sidebar-link.disabled:hover {
+  background: transparent;
+  color: var(--muted-foreground);
 }
 
 .sidebar-link .link-chevron {

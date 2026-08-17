@@ -40,6 +40,8 @@ describe("Primary navigation section matching", () => {
     ["/delivery/assign", "delivery"],
     ["/restaurant", "restaurant"],
     ["/restaurant/reports", "restaurant"],
+    ["/factory", ""],
+    ["/driver-delivery", ""],
     ["/reports", "reports"],
     ["/reports/daily", "reports"],
     ["/reports/frozen-meat", "reports"],
@@ -116,6 +118,8 @@ describe("Primary navigation section matching", () => {
     expect(pageAccessKey("/kitchen/settings/cook-types")).toBe(
       "kitchen.settings",
     );
+    expect(pageAccessKey("/factory")).toBe("workspace");
+    expect(pageAccessKey("/driver-delivery")).toBe("workspace");
   });
 
   it("registers order settings before the order detail route", () => {
