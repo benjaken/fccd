@@ -4585,41 +4585,6 @@ td:last-child {
   font-style: normal;
 }
 
-.kitchen-settings-page {
-  grid-template-rows: auto auto minmax(0, 1fr);
-}
-
-.kitchen-settings-tabs {
-  display: flex;
-  align-items: stretch;
-  gap: 4px;
-  min-width: 0;
-  overflow-x: auto;
-  border-bottom: 1px solid var(--border);
-}
-
-.kitchen-settings-tabs button {
-  flex: 0 0 auto;
-  padding: 10px 14px;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  background: transparent;
-  color: var(--muted-foreground);
-  font-size: 14px;
-  font-weight: 650;
-  white-space: nowrap;
-}
-
-.kitchen-settings-tabs button.active {
-  color: var(--foreground);
-  font-weight: 800;
-  border-bottom-color: var(--nav-active-fg, var(--primary));
-}
-
-.kitchen-settings-tabs button:disabled:not(.active) {
-  opacity: 0.62;
-}
-
 .kitchen-settings-form {
   display: grid;
   gap: 16px;

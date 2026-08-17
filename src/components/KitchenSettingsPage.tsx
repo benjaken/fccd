@@ -22,7 +22,6 @@ import {
   type CookTypeRow,
 } from "@/lib/cook-types";
 import { KITCHEN_ACTION_PERMISSION_KEYS } from "@/lib/kitchen-action-permissions";
-import { cn } from "@/lib/utils";
 
 type CookTypesLoader = typeof fetchCookTypes;
 type CookTypeCreator = typeof createCookType;
@@ -33,16 +32,6 @@ const COOK_TYPE_ACTION_SKELETON = {
   width: "2.5rem",
   variant: "action" as const,
 };
-
-const KITCHEN_SETTING_TABS = [
-  "cookTypes",
-  "orderStatus",
-  "orderTags",
-  "shippingMethod",
-  "paymentMethod",
-] as const;
-
-type KitchenSettingTab = (typeof KITCHEN_SETTING_TABS)[number];
 
 const WORKLOAD_OPTIONS = Array.from(
   { length: COOK_TYPE_WORKLOAD_MAX - COOK_TYPE_WORKLOAD_MIN + 1 },
@@ -204,7 +193,6 @@ export function KitchenSettingsPage({
   const canDeleteRecords =
     canDeleteProp ??
     pageAccess.canAccess(KITCHEN_ACTION_PERMISSION_KEYS.cookTypes.delete);
-  const [activeTab, setActiveTab] = useState<KitchenSettingTab>("cookTypes");
   const [rows, setRows] = useState<CookTypeRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -214,7 +202,6 @@ export function KitchenSettingsPage({
   const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (activeTab !== "cookTypes") return;
     let cancelled = false;
     setLoading(true);
     setError(null);
@@ -238,7 +225,7 @@ export function KitchenSettingsPage({
     return () => {
       cancelled = true;
     };
-  }, [activeTab, loadCookTypes, reloadKey, t]);
+  }, [loadCookTypes, reloadKey, t]);
 
   const handleDelete = useEffectEvent(async (row: CookTypeRow) => {
     if (!canDeleteRecords || deletingId) return;
@@ -269,37 +256,13 @@ export function KitchenSettingsPage({
           <span className="eyebrow">{t("kitchenSettings.eyebrow")}</span>
           <h1>{t("kitchenSettings.title")}</h1>
         </div>
-        {activeTab === "cookTypes" ? (
-          <div className="heading-actions">
-            <Button type="button" onClick={() => setCreateOpen(true)}>
-              <Plus />
-              {t("kitchenSettings.add")}
-            </Button>
-          </div>
-        ) : null}
+        <div className="heading-actions">
+          <Button type="button" onClick={() => setCreateOpen(true)}>
+            <Plus />
+            {t("kitchenSettings.add")}
+          </Button>
+        </div>
       </header>
-
-      <nav
-        className="kitchen-settings-tabs"
-        aria-label={t("kitchenSettings.navigation")}
-      >
-        {KITCHEN_SETTING_TABS.map((tab) => {
-          const implemented = tab === "cookTypes";
-          return (
-            <button
-              className={cn(activeTab === tab && "active")}
-              disabled={!implemented}
-              key={tab}
-              type="button"
-              onClick={() => {
-                if (implemented) setActiveTab(tab);
-              }}
-            >
-              {t(`kitchenSettings.tabs.${tab}`)}
-            </button>
-          );
-        })}
-      </nav>
 
       <article className="panel kitchen-settings-panel">
         {actionError ? (

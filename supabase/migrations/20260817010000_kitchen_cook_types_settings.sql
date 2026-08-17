@@ -12,7 +12,7 @@ insert into public.app_pages (
 values
   (
     'kitchen.settings',
-    '設定',
+    '爐位類別設定',
     '/kitchen/settings',
     60,
     false,

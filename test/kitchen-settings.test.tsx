@@ -78,11 +78,8 @@ describe("Kitchen settings page", () => {
     );
 
     expect(
-      await screen.findByRole("heading", { name: "設定" }),
+      await screen.findByRole("heading", { name: "爐位類別設定" }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "爐位類別" })).toHaveClass(
-      "active",
-    );
     expect(screen.getByRole("columnheader", { name: "爐位類別" })).toBeInTheDocument();
     expect(
       screen.getByRole("columnheader", { name: "Workload 分數 (1-5分)" }),
@@ -176,21 +173,5 @@ describe("Kitchen settings page", () => {
 
     await screen.findByText("炒爐");
     expect(screen.queryByRole("button", { name: "刪除" })).not.toBeInTheDocument();
-  });
-
-  it("keeps unimplemented setting tabs disabled", async () => {
-    const loadCookTypes = vi.fn().mockResolvedValue(structuredClone(rows));
-
-    render(
-      <MemoryRouter>
-        <KitchenSettingsPage loadCookTypes={loadCookTypes} />
-      </MemoryRouter>,
-    );
-
-    await screen.findByText("炒爐");
-    expect(screen.getByRole("button", { name: "訂單狀態" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "訂單標籤" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "送貨方式" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "付款方式" })).toBeDisabled();
   });
 });
