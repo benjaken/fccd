@@ -431,6 +431,7 @@ describe("Quote customers list", () => {
     );
 
     const dialog = await screen.findByRole("dialog", { name: "留言" });
+    expect(dialog).toHaveClass("side-panel-messages");
     await waitFor(() =>
       expect(loadMessages).toHaveBeenCalledWith(
         "sales@foodchannels-catering.com",
@@ -466,9 +467,60 @@ describe("Quote customers list", () => {
         email: "sales@foodchannels-catering.com",
         body: "已出月結",
         authorName: "Mandy",
+        orderId: null,
       }),
     );
     expect(await within(dialog).findByText("已出月結")).toBeInTheDocument();
+  });
+
+  it("replies to a customer note on the same order", async () => {
+    const user = userEvent.setup();
+    const loadCustomers = vi.fn().mockResolvedValue(customerResult);
+    const loadMessages = vi.fn().mockResolvedValue(messages);
+    const createNote = vi.fn().mockResolvedValue({
+      id: "note-reply",
+      tab: "note",
+      body: "已追數",
+      authorName: "Mandy",
+      orderNumber: "B-1178",
+      orderId: "order-1178",
+      documentType: "order",
+      createdAt: "2026-08-17T06:10:00.000Z",
+    });
+
+    render(
+      <MemoryRouter>
+        <QuoteCustomersPage
+          loadCustomers={loadCustomers}
+          loadMessages={loadMessages}
+          createNote={createNote}
+        />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("sales@foodchannels-catering.com");
+    await user.click(
+      screen.getByRole("button", {
+        name: "留言 sales@foodchannels-catering.com",
+      }),
+    );
+
+    const dialog = await screen.findByRole("dialog", { name: "留言" });
+    await within(dialog).findByText("payment deadline 1/6");
+    await user.click(within(dialog).getByRole("button", { name: "回復" }));
+    expect(within(dialog).getByText(/回復 B-1178/)).toBeInTheDocument();
+    await user.type(within(dialog).getByPlaceholderText("在此輸入…"), "已追數");
+    await user.click(within(dialog).getByRole("button", { name: "送出留言" }));
+
+    await waitFor(() =>
+      expect(createNote).toHaveBeenCalledWith({
+        email: "sales@foodchannels-catering.com",
+        body: "已追數",
+        authorName: "Mandy",
+        orderId: "order-1178",
+      }),
+    );
+    expect(await within(dialog).findByText("已追數")).toBeInTheDocument();
   });
 
   it("shows a clear migration state when the aggregation function is missing", async () => {

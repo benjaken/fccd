@@ -869,6 +869,10 @@ const resources = {
         notePlaceholder: "在此輸入…",
         sendNote: "送出留言",
         sendError: "暫時無法送出留言",
+        reply: "回復",
+        replyTo: "回復 {{order}}",
+        thisNote: "此備註",
+        cancelReply: "取消",
         tabs: {
           complaint: "訂單投訴 ({{total}})",
           like: "訂單讚好 ({{total}})",
@@ -2694,6 +2698,10 @@ const resources = {
         notePlaceholder: "Type here...",
         sendNote: "Send note",
         sendError: "The note could not be sent",
+        reply: "Reply",
+        replyTo: "Reply to {{order}}",
+        thisNote: "this note",
+        cancelReply: "Cancel",
         tabs: {
           complaint: "Order complaints ({{total}})",
           like: "Order likes ({{total}})",

@@ -20,6 +20,7 @@ import {
   QUOTE_CUSTOMERS_PAGE_SIZE,
   sortOrdersByCompany,
   summarizeCompanies,
+  type CreateQuoteCustomerNoteInput,
   type QuoteCustomerCompany,
   type QuoteCustomerHistory,
   type QuoteCustomerListFilters,
@@ -36,11 +37,9 @@ type CustomersLoader = (
 ) => Promise<QuoteCustomerListResult>;
 type HistoryLoader = (email: string) => Promise<QuoteCustomerHistory>;
 type MessagesLoader = (email: string) => Promise<QuoteCustomerMessages>;
-type NoteCreator = (input: {
-  email: string;
-  body: string;
-  authorName?: string | null;
-}) => Promise<QuoteCustomerMessage>;
+type NoteCreator = (
+  input: CreateQuoteCustomerNoteInput,
+) => Promise<QuoteCustomerMessage>;
 
 type OpenPanel =
   | { kind: "companies"; email: string }
@@ -124,9 +123,13 @@ function CompanyCell({
 function MessageBubble({
   message,
   timestamp,
+  replyLabel,
+  onReply,
 }: {
   message: QuoteCustomerMessage;
   timestamp: string;
+  replyLabel?: string;
+  onReply?: (message: QuoteCustomerMessage) => void;
 }) {
   return (
     <article className="quote-customers-message">
@@ -144,7 +147,18 @@ function MessageBubble({
           <small>{message.orderNumber}</small>
         ) : null}
       </div>
-      <time dateTime={message.createdAt}>{timestamp}</time>
+      <div className="quote-customers-message-meta">
+        <time dateTime={message.createdAt}>{timestamp}</time>
+        {onReply && replyLabel ? (
+          <button
+            type="button"
+            className="quote-customers-message-reply"
+            onClick={() => onReply(message)}
+          >
+            {replyLabel}
+          </button>
+        ) : null}
+      </div>
     </article>
   );
 }
@@ -181,6 +195,9 @@ export function QuoteCustomersPage({
   const [messageTab, setMessageTab] =
     useState<QuoteCustomerMessageTab>("note");
   const [draftNote, setDraftNote] = useState("");
+  const [replyTarget, setReplyTarget] = useState<QuoteCustomerMessage | null>(
+    null,
+  );
   const [sendingNote, setSendingNote] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const messageFeedRef = useRef<HTMLDivElement>(null);
@@ -301,6 +318,7 @@ export function QuoteCustomersPage({
       setMessagesLoading(false);
       setDraftNote("");
       setSendError(null);
+      setReplyTarget(null);
       return;
     }
 
@@ -311,6 +329,7 @@ export function QuoteCustomersPage({
     setMessageTab("note");
     setDraftNote("");
     setSendError(null);
+    setReplyTarget(null);
     void loadMessages(panel.email)
       .then((result) => {
         if (!active) return;
@@ -370,12 +389,14 @@ export function QuoteCustomersPage({
         email: panel.email,
         body,
         authorName: profile?.user_name || profile?.email || null,
+        orderId: replyTarget?.orderId ?? null,
       });
       setMessages((current) => ({
         ...(current ?? emptyQuoteCustomerMessages()),
         note: [...(current?.note ?? []), message],
       }));
       setDraftNote("");
+      setReplyTarget(null);
     } catch (noteError: unknown) {
       const code =
         typeof noteError === "object" &&
@@ -654,40 +675,59 @@ export function QuoteCustomersPage({
 
       <SidePanel
         open={panel?.kind === "messages"}
-        wide
+        className="side-panel-messages"
         title={t("quoteCustomers.messagesTitle")}
         description={panel?.kind === "messages" ? panel.email : undefined}
         onClose={closePanel}
         closeLabel={t("quoteCustomers.closePanel")}
         footer={
           messageTab === "note" ? (
-            <form
-              className="quote-customers-message-composer"
-              onSubmit={(event) => {
-                event.preventDefault();
-                void sendNote();
-              }}
-            >
-              <label className="sr-only" htmlFor="quote-customer-note">
-                {t("quoteCustomers.notePlaceholder")}
-              </label>
-              <input
-                id="quote-customer-note"
-                value={draftNote}
-                onChange={(event) => setDraftNote(event.target.value)}
-                placeholder={t("quoteCustomers.notePlaceholder")}
-                disabled={messagesLoading || sendingNote}
-                autoComplete="off"
-              />
-              <Button
-                type="submit"
-                size="icon"
-                disabled={messagesLoading || sendingNote || !draftNote.trim()}
-                aria-label={t("quoteCustomers.sendNote")}
+            <div className="quote-customers-message-composer-wrap">
+              {replyTarget ? (
+                <div className="quote-customers-reply-target">
+                  <span>
+                    {t("quoteCustomers.replyTo", {
+                      order:
+                        replyTarget.orderNumber || t("quoteCustomers.thisNote"),
+                    })}
+                    {` · ${replyTarget.body}`}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setReplyTarget(null)}
+                  >
+                    {t("quoteCustomers.cancelReply")}
+                  </button>
+                </div>
+              ) : null}
+              <form
+                className="quote-customers-message-composer"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void sendNote();
+                }}
               >
-                <Send />
-              </Button>
-            </form>
+                <label className="sr-only" htmlFor="quote-customer-note">
+                  {t("quoteCustomers.notePlaceholder")}
+                </label>
+                <input
+                  id="quote-customer-note"
+                  value={draftNote}
+                  onChange={(event) => setDraftNote(event.target.value)}
+                  placeholder={t("quoteCustomers.notePlaceholder")}
+                  disabled={messagesLoading || sendingNote}
+                  autoComplete="off"
+                />
+                <Button
+                  type="submit"
+                  size="icon"
+                  disabled={messagesLoading || sendingNote || !draftNote.trim()}
+                  aria-label={t("quoteCustomers.sendNote")}
+                >
+                  <Send />
+                </Button>
+              </form>
+            </div>
           ) : undefined
         }
       >
@@ -704,7 +744,10 @@ export function QuoteCustomersPage({
                 role="tab"
                 aria-selected={messageTab === tab}
                 className={cn(messageTab === tab && "is-active")}
-                onClick={() => setMessageTab(tab)}
+                onClick={() => {
+                  setMessageTab(tab);
+                  setReplyTarget(null);
+                }}
               >
                 {t(`quoteCustomers.tabs.${tab}`, {
                   total: messages?.[tab].length ?? 0,
@@ -712,38 +755,44 @@ export function QuoteCustomersPage({
               </button>
             ))}
           </div>
-          {messagesLoading ? (
-            <p className="quote-customers-history-status">
-              {t("quoteCustomers.messagesLoading")}
-            </p>
-          ) : messagesError ? (
-            <p className="quote-customers-history-error" role="alert">
-              {t("quoteCustomers.messagesError")}
-            </p>
-          ) : (
-            <div ref={messageFeedRef} className="quote-customers-message-feed">
-              {!visibleMessages.length ? (
-                <p className="quote-customers-history-status">
-                  {t(`quoteCustomers.emptyTabs.${messageTab}`)}
-                </p>
-              ) : (
-                visibleMessages.map((message) => (
-                  <MessageBubble
-                    key={message.id}
-                    message={message}
-                    timestamp={messageTimeFormatter.format(
-                      new Date(message.createdAt),
-                    )}
-                  />
-                ))
-              )}
-              {sendError ? (
-                <p className="quote-customers-history-error" role="alert">
-                  {t("quoteCustomers.sendError")}
-                </p>
-              ) : null}
-            </div>
-          )}
+          <div ref={messageFeedRef} className="quote-customers-message-feed">
+            {messagesLoading ? (
+              <p className="quote-customers-history-status">
+                {t("quoteCustomers.messagesLoading")}
+              </p>
+            ) : messagesError ? (
+              <p className="quote-customers-history-error" role="alert">
+                {t("quoteCustomers.messagesError")}
+              </p>
+            ) : !visibleMessages.length ? (
+              <p className="quote-customers-history-status">
+                {t(`quoteCustomers.emptyTabs.${messageTab}`)}
+              </p>
+            ) : (
+              visibleMessages.map((message) => (
+                <MessageBubble
+                  key={message.id}
+                  message={message}
+                  timestamp={messageTimeFormatter.format(
+                    new Date(message.createdAt),
+                  )}
+                  replyLabel={
+                    messageTab === "note"
+                      ? t("quoteCustomers.reply")
+                      : undefined
+                  }
+                  onReply={
+                    messageTab === "note" ? setReplyTarget : undefined
+                  }
+                />
+              ))
+            )}
+            {sendError ? (
+              <p className="quote-customers-history-error" role="alert">
+                {t("quoteCustomers.sendError")}
+              </p>
+            ) : null}
+          </div>
         </div>
       </SidePanel>
     </section>

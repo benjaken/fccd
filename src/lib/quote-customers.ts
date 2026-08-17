@@ -79,6 +79,13 @@ export type QuoteCustomerMessage = {
   createdAt: string;
 };
 
+export type CreateQuoteCustomerNoteInput = {
+  email: string;
+  body: string;
+  authorName?: string | null;
+  orderId?: string | null;
+};
+
 export type QuoteCustomerMessages = Record<
   QuoteCustomerMessageTab,
   QuoteCustomerMessage[]
@@ -390,11 +397,8 @@ export async function createQuoteCustomerNote({
   email,
   body,
   authorName,
-}: {
-  email: string;
-  body: string;
-  authorName?: string | null;
-}): Promise<QuoteCustomerMessage> {
+  orderId,
+}: CreateQuoteCustomerNoteInput): Promise<QuoteCustomerMessage> {
   const comment = body.trim();
   if (!comment) throw new Error("quote_customers_note_empty");
 
@@ -407,6 +411,7 @@ export async function createQuoteCustomerNote({
       comment,
       customer_email_snapshot: email,
       author_name_snapshot: authorName?.trim() || null,
+      order_id: orderId || null,
       bubble_created_at: now,
       bubble_modified_at: now,
     })
