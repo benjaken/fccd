@@ -19,6 +19,7 @@ import {
   QUOTE_CUSTOMER_MESSAGE_TABS,
   QUOTE_CUSTOMER_ORDERS_PAGE_SIZE,
   QUOTE_CUSTOMERS_PAGE_SIZE,
+  namedQuoteCustomerCompanies,
   summarizeCompanies,
   type CreateQuoteCustomerNoteInput,
   type QuoteCustomerCompany,
@@ -92,15 +93,16 @@ function CompanyCell({
   openLabel: string;
   onOpen: () => void;
 }) {
-  if (companies.length === 0) return unset;
+  const named = namedQuoteCustomerCompanies(companies);
+  const summary = summarizeCompanies(named, unset);
+  const first = named[0];
 
-  const first = companies[0];
-  const summary = summarizeCompanies(companies, unset);
+  if (!first) return unset;
 
-  if (companies.length === 1) {
+  if (summary.total === 1) {
     return (
       <>
-        <strong>{first.companyName || unset}</strong>
+        <strong>{first.companyName}</strong>
         {first.orderId ? (
           <small className="quote-company">
             <Link
@@ -585,7 +587,7 @@ export function QuoteCustomersPage({
                     companies={customer.companies}
                     unset={t("common.notSet")}
                     companyCountLabel={t("quoteCustomers.companyCount", {
-                      total: customer.companies.length,
+                      total: summarizeCompanies(customer.companies).total,
                     })}
                     openLabel={`${t("quoteCustomers.openCompanies")} ${customer.email}`}
                     onOpen={() => openOrdersPanel(customer.email)}

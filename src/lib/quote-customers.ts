@@ -174,16 +174,21 @@ export function documentPath(
   return documentType === "quote" ? `/quotes/${id}` : `/orders/${id}`;
 }
 
+export function namedQuoteCustomerCompanies(
+  companies: QuoteCustomerCompany[],
+) {
+  return companies.filter((company) => company.companyName?.trim());
+}
+
 export function summarizeCompanies(
   companies: QuoteCustomerCompany[],
   empty = "—",
 ) {
-  const named = companies.filter((company) => company.companyName?.trim());
-  const primary = named[0]?.companyName?.trim() || companies[0]?.companyName?.trim();
+  const named = namedQuoteCustomerCompanies(companies);
   return {
-    primaryName: primary || empty,
-    extraCount: Math.max(0, companies.length - 1),
-    total: companies.length,
+    primaryName: named[0]?.companyName?.trim() || empty,
+    extraCount: Math.max(0, named.length - 1),
+    total: named.length,
   };
 }
 
@@ -254,12 +259,14 @@ function optionalAmount(value: number | string | null | undefined) {
 
 function mapCompanies(value: QuoteCustomerCompany[] | null) {
   if (!Array.isArray(value)) return [];
-  return value.map((company) => ({
-    companyName: company.companyName ?? null,
-    tag: company.tag ?? null,
-    orderId: company.orderId ?? null,
-    documentType: company.documentType ?? null,
-  }));
+  return namedQuoteCustomerCompanies(
+    value.map((company) => ({
+      companyName: company.companyName ?? null,
+      tag: company.tag ?? null,
+      orderId: company.orderId ?? null,
+      documentType: company.documentType ?? null,
+    })),
+  );
 }
 
 export function mapQuoteCustomerRow(row: QuoteCustomerRow): QuoteCustomerListItem {

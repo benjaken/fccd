@@ -153,6 +153,35 @@ describe("summarizeCompanies", () => {
       summarizeCompanies(customerResult.items[0].companies),
     ).toMatchObject({ primaryName: "K&K property", extraCount: 1, total: 2 });
   });
+
+  it("ignores blank company snapshots instead of treating them as a company", () => {
+    expect(
+      summarizeCompanies([
+        {
+          companyName: null,
+          tag: "P-1143",
+          orderId: "order-1143",
+          documentType: "order",
+        },
+        {
+          companyName: "K&K Property",
+          tag: "B-1538",
+          orderId: "order-1538",
+          documentType: "order",
+        },
+        {
+          companyName: "   ",
+          tag: "P-1100",
+          orderId: "order-1100",
+          documentType: "quote",
+        },
+      ]),
+    ).toMatchObject({
+      primaryName: "K&K Property",
+      extraCount: 0,
+      total: 1,
+    });
+  });
 });
 
 describe("customer message grouping", () => {
@@ -188,6 +217,12 @@ describe("mapQuoteCustomerRow", () => {
         latest_document_type: "order",
         companies: [
           {
+            companyName: null,
+            tag: "P-1143",
+            orderId: "order-1",
+            documentType: "order",
+          },
+          {
             companyName: "K&K property",
             tag: "B-1274",
             orderId: "order-2",
@@ -206,6 +241,14 @@ describe("mapQuoteCustomerRow", () => {
       orderCount: 312,
       orderTotal: 940852.4,
       hasRemarks: true,
+      companies: [
+        {
+          companyName: "K&K property",
+          tag: "B-1274",
+          orderId: "order-2",
+          documentType: "order",
+        },
+      ],
     });
   });
 });
@@ -250,6 +293,45 @@ describe("Quote customers list", () => {
         name: "留言 sales@foodchannels-catering.com",
       }),
     ).toBeInTheDocument();
+  });
+
+  it("shows the latest named company instead of a blank snapshot", async () => {
+    const loadCustomers = vi.fn().mockResolvedValue({
+      total: 1,
+      items: [
+        {
+          ...customerResult.items[0],
+          companies: [
+            {
+              companyName: null,
+              tag: "P-1143",
+              orderId: "order-1143",
+              documentType: "order",
+            },
+            {
+              companyName: "K&K Property",
+              tag: "B-1538",
+              orderId: "order-1538",
+              documentType: "order",
+            },
+          ],
+        },
+      ],
+    });
+
+    render(
+      <MemoryRouter>
+        <QuoteCustomersPage loadCustomers={loadCustomers} />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("K&K Property")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "B-1538" })).toHaveAttribute(
+      "href",
+      "/orders/order-1538",
+    );
+    expect(screen.queryByText("共 1 間公司")).not.toBeInTheDocument();
+    expect(screen.queryByText("共 2 間公司")).not.toBeInTheDocument();
   });
 
   it("submits a server-side search and resets to the first page", async () => {
