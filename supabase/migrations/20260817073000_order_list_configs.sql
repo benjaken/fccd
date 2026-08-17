@@ -1,7 +1,7 @@
 -- Configurable titles and explanations for order list queues.
 -- Seeded lists match the Orders sidebar; edits live in 系統設定.
 
-create table public.order_list_configs (
+create table if not exists public.order_list_configs (
   id uuid primary key default gen_random_uuid(),
   preset_key text not null unique
     check (
@@ -28,7 +28,7 @@ create table public.order_list_configs (
 comment on table public.order_list_configs is
   'Titles and explanations shown on each order list; edited from System Settings.';
 
-create index order_list_configs_sort_order_idx
+create index if not exists order_list_configs_sort_order_idx
   on public.order_list_configs (sort_order, title);
 
 insert into public.order_list_configs (
@@ -55,42 +55,42 @@ values
   ),
   (
     'unpaid',
-    '未付款',
+    '未付款訂單',
     '尚有未收金額的訂單，以未付餘額為準，方便跟進收款。',
     30,
     true
   ),
   (
     'monthly-settlement',
-    '月結',
+    '月結訂單',
     '已標示「月結」的訂單，方便跟進月結客戶對賬及收款。',
     40,
     true
   ),
   (
     'split',
-    '拆單',
+    '拆單訂單',
     '已標示「已拆單」的訂單，方便跟進分拆後的子單。',
     50,
     true
   ),
   (
     'kitchen-notes',
-    '廚房備註',
+    '廚房備註訂單',
     '已標示「廚房備註」的訂單，工場需留意特別烹調或包裝指示。',
     60,
     true
   ),
   (
     'reschedule-pending',
-    '改期未審',
+    '改期未審訂單',
     '送貨日期改期後尚未審核確定的訂單。',
     70,
     true
   ),
   (
     'shopify-pending',
-    'Shopify待審',
+    'Shopify待審訂單',
     '從 Shopify 新接入、尚待內部審核的訂單。',
     80,
     true
@@ -101,18 +101,23 @@ values
     '已經送達但仍有未付餘額的訂單。',
     90,
     true
-  );
+  )
+on conflict (preset_key) do nothing;
 
 alter table public.order_list_configs enable row level security;
 
 revoke all on table public.order_list_configs from public, anon;
 grant select, update on table public.order_list_configs to authenticated;
 
+drop policy if exists "Authenticated users read order list configs"
+  on public.order_list_configs;
 create policy "Authenticated users read order list configs"
 on public.order_list_configs
 for select to authenticated
 using (true);
 
+drop policy if exists "Order list config editors update configs"
+  on public.order_list_configs;
 create policy "Order list config editors update configs"
 on public.order_list_configs
 for update to authenticated
