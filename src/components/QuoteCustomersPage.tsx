@@ -661,6 +661,27 @@ export function QuoteCustomersPage({
         description={panel?.kind === "companies" ? panel.email : undefined}
         onClose={closePanel}
         closeLabel={t("quoteCustomers.closePanel")}
+        footer={
+          <TablePagination
+            summary={t("quoteCustomers.ordersPagination", {
+              from: ordersFrom,
+              to: ordersTo,
+              total: ordersTotal,
+            })}
+            page={ordersPage}
+            totalPages={ordersTotalPages}
+            loading={historyLoading}
+            onPrevious={() =>
+              setOrdersPage((current) => Math.max(1, current - 1))
+            }
+            onNext={() => setOrdersPage((current) => current + 1)}
+            onPageChange={setOrdersPage}
+            previousLabel={t("quoteCustomers.previous")}
+            nextLabel={t("quoteCustomers.next")}
+            pageLabel={t("quoteCustomers.pageOf")}
+            jumpLabel={t("quoteCustomers.jumpToPage")}
+          />
+        }
       >
         <article className="panel quotes-panel quote-customers-orders-panel">
           <header className="quotes-toolbar">
@@ -737,25 +758,6 @@ export function QuoteCustomersPage({
               ))}
             </ListTable>
           )}
-          <TablePagination
-            summary={t("quoteCustomers.ordersPagination", {
-              from: ordersFrom,
-              to: ordersTo,
-              total: ordersTotal,
-            })}
-            page={ordersPage}
-            totalPages={ordersTotalPages}
-            loading={historyLoading}
-            onPrevious={() =>
-              setOrdersPage((current) => Math.max(1, current - 1))
-            }
-            onNext={() => setOrdersPage((current) => current + 1)}
-            onPageChange={setOrdersPage}
-            previousLabel={t("quoteCustomers.previous")}
-            nextLabel={t("quoteCustomers.next")}
-            pageLabel={t("quoteCustomers.pageOf")}
-            jumpLabel={t("quoteCustomers.jumpToPage")}
-          />
         </article>
       </SidePanel>
 
