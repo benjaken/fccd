@@ -757,6 +757,35 @@ describe("Super Admin system settings", () => {
     expect(frozenMenuLabels).toContain("frozen.selling_price_cost");
     expect(frozenMenuLabels).toContain("frozen.prepared_meat_inventory");
 
+    const orderStatusSettings = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260817040000_order_status_settings_page.sql",
+      ),
+      "utf8",
+    );
+    expect(orderStatusSettings).toContain("orders.settings");
+    expect(orderStatusSettings).toContain("orders.settings.statuses");
+    expect(orderStatusSettings).toContain("orders.settings.statuses.create");
+    expect(orderStatusSettings).toContain("orders.settings.statuses.edit");
+    expect(orderStatusSettings).toContain("orders.settings.statuses.delete");
+    expect(orderStatusSettings).toContain("archive_order_status");
+    expect(orderStatusSettings).toContain("private.has_page_access");
+
+    const orderSalePartners = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260817050000_orders_sale_partners_page.sql",
+      ),
+      "utf8",
+    );
+    expect(orderSalePartners).toContain("orders.settings.sale_partners");
+    expect(orderSalePartners).toContain("/orders/settings/sale-partners");
+    expect(orderSalePartners).toContain("archive_sales_partner");
+    expect(orderSalePartners).toContain(
+      "Sale partner readers select sales partners",
+    );
+
     const preparedMeatFlags = readFileSync(
       path.resolve(
         process.cwd(),
