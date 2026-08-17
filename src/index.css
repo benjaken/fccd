@@ -2558,12 +2558,12 @@ button.product-tag[aria-pressed="true"] {
   color: oklch(0.42 0.08 250);
 }
 
-.delivery-status-steps .is-picked {
-  background: color-mix(in oklch, var(--ring) 28%, var(--card));
-  color: oklch(0.38 0.1 250);
+.delivery-status-steps .is-picked,
+.delivery-status-steps .is-delivered {
+  background: var(--muted);
+  color: var(--muted-foreground);
 }
 
-.delivery-status-steps .is-delivered,
 .delivery-status-steps .is-picked.is-done,
 .delivery-status-steps .is-delivered.is-done {
   background: oklch(0.38 0.1 250);
@@ -2572,10 +2572,6 @@ button.product-tag[aria-pressed="true"] {
 
 .dark .delivery-status-steps .is-pending {
   color: oklch(0.82 0.06 250);
-}
-
-.dark .delivery-status-steps .is-picked {
-  color: oklch(0.88 0.05 250);
 }
 
 .delivery-image-list {
