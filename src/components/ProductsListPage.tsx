@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Pencil, RefreshCw, ShoppingBasket } from "lucide-react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import { ProductRecommendStar } from "@/components/ProductRecommendStar";
 import { ProductTagList } from "@/components/ProductTagList";
 import { Button } from "@/components/ui/button";
+import { DetailLink } from "@/components/ui/detail-link";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import { TablePagination } from "@/components/ui/table-pagination";
+import { detailFromLocation } from "@/lib/detail-navigation";
 import { useDeferredFilter } from "@/lib/use-deferred-filter";
 import {
   fetchProductChannels,
@@ -65,6 +67,7 @@ export function ProductsListPage({
 }) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [draftSearch, setDraftSearch] = useState("");
   const [search, setSearch] = useState("");
@@ -306,7 +309,9 @@ export function ProductsListPage({
       : t("products.recommendedOff");
 
   const openProduct = (productId: string) => {
-    navigate(`/products/${productId}`);
+    navigate(`/products/${productId}`, {
+      state: detailFromLocation(location),
+    });
   };
 
   const toggleRecommend = async (product: ProductListItem) => {
@@ -508,13 +513,13 @@ export function ProductsListPage({
               >
                 <td>{product.sku || t("common.notSet")}</td>
                 <td>
-                  <Link
+                  <DetailLink
                     className="order-link"
                     to={`/products/${product.id}`}
                     onClick={(event) => event.stopPropagation()}
                   >
                     <strong>{displayName(product)}</strong>
-                  </Link>
+                  </DetailLink>
                   {product.chineseName &&
                     product.name !== product.chineseName && (
                       <small className="quote-company">{product.name}</small>
@@ -572,7 +577,9 @@ export function ProductsListPage({
                         size="icon"
                         onClick={(event) => {
                           event.stopPropagation();
-                          navigate(`/products/${product.id}/edit`);
+                          navigate(`/products/${product.id}/edit`, {
+                            state: detailFromLocation(location),
+                          });
                         }}
                         aria-label={t("products.editAction")}
                         title={t("products.editAction")}

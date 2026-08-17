@@ -12,6 +12,7 @@ import { Link, Navigate, useLocation, useNavigate, useParams } from "react-route
 import { ProductRecommendStar } from "@/components/ProductRecommendStar";
 import { ProductTagList } from "@/components/ProductTagList";
 import { Button } from "@/components/ui/button";
+import { DetailLink } from "@/components/ui/detail-link";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { PullToRefresh } from "@/components/ui/pull-to-refresh";
@@ -30,6 +31,7 @@ import {
   type ProductEditOptions,
   type ProductUpdateInput,
 } from "@/lib/products";
+import { useDetailBackTo } from "@/lib/detail-navigation";
 import { cn } from "@/lib/utils";
 
 type DetailLoader = (id: string) => Promise<ProductDetail | null>;
@@ -137,6 +139,7 @@ export function ProductDetailPage({
   const location = useLocation();
   const { id = "" } = useParams();
   const editing = location.pathname.endsWith("/edit");
+  const backTo = useDetailBackTo("/products");
   const [product, setProduct] = useState<ProductDetail | null>(null);
   const [form, setForm] = useState<ProductFormState | null>(null);
   const [options, setOptions] = useState<ProductEditOptions>(EMPTY_OPTIONS);
@@ -265,7 +268,7 @@ export function ProductDetailPage({
   }, [ingredientMenuOpen]);
 
   if (editing && !canEdit) {
-    return <Navigate to={`/products/${id}`} replace />;
+    return <Navigate to={`/products/${id}`} replace state={location.state} />;
   }
 
   if (loading) {
@@ -353,7 +356,7 @@ export function ProductDetailPage({
         cookTypeId: form.cookTypeId || null,
         collectionIds: form.collectionIds,
       });
-      navigate(`/products/${product.id}`);
+      navigate(`/products/${product.id}`, { state: location.state });
     } catch (submitError) {
       const code =
         typeof submitError === "object" &&
@@ -491,7 +494,7 @@ export function ProductDetailPage({
       <header className="page-heading">
         <div>
           <nav className="detail-breadcrumb" aria-label={t("productDetail.breadcrumb")}>
-            <Link to="/products">{t("productDetail.listCrumb")}</Link>
+            <Link to={backTo}>{t("productDetail.listCrumb")}</Link>
             <span aria-hidden="true">›</span>
             <span>{displayName}</span>
           </nav>
@@ -521,7 +524,7 @@ export function ProductDetailPage({
           />
           {canEdit && !editing ? (
             <Button asChild>
-              <Link to={`/products/${product.id}/edit`}>
+              <Link to={`/products/${product.id}/edit`} state={location.state}>
                 <Pencil />
                 {t("productDetail.editAction")}
               </Link>
@@ -983,12 +986,12 @@ export function ProductDetailPage({
                   <tr key={pkg.id}>
                     <td>{pkg.sku || t("common.notSet")}</td>
                     <td>
-                      <Link
+                      <DetailLink
                         className="order-link"
                         to={`/products/packages/${pkg.id}`}
                       >
                         {pkg.chineseName || pkg.name}
-                      </Link>
+                      </DetailLink>
                     </td>
                   </tr>
                 ))}

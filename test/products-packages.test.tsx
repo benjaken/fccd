@@ -453,12 +453,41 @@ describe("Products catalog pages", () => {
       screen.getByRole("link", { name: "精緻家庭美宴 (4-6人)" }),
     ).toHaveAttribute("href", "/products/packages/package-1");
     expect(screen.getByLabelText("已推薦")).toBeInTheDocument();
-    expect(screen.getByText("產品列表")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "產品列表" }),
+    ).toHaveAttribute("href", "/products");
     expect(screen.getByText("名貴食材", { exact: false })).toBeInTheDocument();
     expect(screen.getByText("松露")).toBeInTheDocument();
     expect(screen.getByText("(雙格) 拿破崙")).toBeInTheDocument();
     expect(screen.getAllByText("爐位類別").length).toBeGreaterThan(0);
     expect(screen.queryByRole("link", { name: "編輯" })).not.toBeInTheDocument();
+  });
+
+  it("returns product detail to the page that opened it", async () => {
+    render(
+      <MemoryRouter
+        initialEntries={[
+          {
+            pathname: "/products/product-1",
+            state: { from: "/products/packages/package-1" },
+          },
+        ]}
+      >
+        <Routes>
+          <Route
+            path="/products/:id"
+            element={
+              <ProductDetailPage loadDetail={async () => productDetail} />
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("link", { name: "產品列表" })).toHaveAttribute(
+      "href",
+      "/products/packages/package-1",
+    );
   });
 
   it("saves product edits from the detail form", async () => {
@@ -718,10 +747,41 @@ describe("Packages catalog pages", () => {
       "href",
       "/products/product-1",
     );
+    expect(screen.getByRole("link", { name: "套餐列表" })).toHaveAttribute(
+      "href",
+      "/products/packages",
+    );
     expect(screen.getByRole("columnheader", { name: "類別名稱" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "附加價格" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "可選數量" })).toBeInTheDocument();
     expect(screen.getByText("CCFA0406")).toBeInTheDocument();
+  });
+
+  it("returns package detail to the page that opened it", async () => {
+    render(
+      <MemoryRouter
+        initialEntries={[
+          {
+            pathname: "/products/packages/package-1",
+            state: { from: "/products/product-1" },
+          },
+        ]}
+      >
+        <Routes>
+          <Route
+            path="/products/packages/:id"
+            element={
+              <PackageDetailPage loadDetail={async () => packageDetail} />
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("link", { name: "套餐列表" })).toHaveAttribute(
+      "href",
+      "/products/product-1",
+    );
   });
 
   it("searches and adds a product to a package option set", async () => {

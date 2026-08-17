@@ -10,6 +10,7 @@ import {
 import { Link } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
+import { DetailLink } from "@/components/ui/detail-link";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import { TablePagination } from "@/components/ui/table-pagination";
@@ -243,9 +244,9 @@ export function QuotesListPage({
             {items.map((quote) => (
               <tr key={quote.id}>
                 <td>
-                  <Link className="order-link" to={`/quotes/${quote.id}`}>
+                  <DetailLink className="order-link" to={`/quotes/${quote.id}`}>
                     {quote.orderNumber || t("common.notSet")}
-                  </Link>
+                  </DetailLink>
                 </td>
                 <td>
                   <strong>
@@ -276,14 +277,14 @@ export function QuotesListPage({
                 <td>{dateTimeFormatter.format(new Date(quote.createdAt))}</td>
                 <td>
                   <Button variant="ghost" size="icon" asChild>
-                    <Link
+                    <DetailLink
                       to={`/quotes/${quote.id}`}
                       aria-label={`${t("quotes.open")} ${
                         quote.orderNumber || quote.id
                       }`}
                     >
                       <ChevronRight />
-                    </Link>
+                    </DetailLink>
                   </Button>
                 </td>
               </tr>

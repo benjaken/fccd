@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Download, Image as ImageIcon, RefreshCw, Truck } from "lucide-react";
-import { Link } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { DetailLink } from "@/components/ui/detail-link";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import { SidePanel } from "@/components/ui/side-panel";
@@ -546,10 +546,10 @@ export function DeliveryListPage({
                   <td>
                     <div className="delivery-order-cell">
                       {item.orderId ? (
-                        <Link className="order-link" to={`/orders/${item.orderId}`}>
+                        <DetailLink className="order-link" to={`/orders/${item.orderId}`}>
                           {formatOrderNumber(item.orderNumber) ||
                             t("common.notSet")}
-                        </Link>
+                        </DetailLink>
                       ) : (
                         <strong>
                           {formatOrderNumber(item.orderNumber) ||

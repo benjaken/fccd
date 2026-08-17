@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronRight, HandCoins } from "lucide-react";
-import { Link } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
+import { DetailLink } from "@/components/ui/detail-link";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import { OperationalListState } from "@/components/ui/operational-list-state";
@@ -161,12 +161,12 @@ export function PaymentsListPage({
                 </td>
                 <td>
                   {payment.orderId ? (
-                    <Link
+                    <DetailLink
                       className="order-link"
                       to={`/orders/${payment.orderId}`}
                     >
                       {payment.orderNumber || t("common.notSet")}
-                    </Link>
+                    </DetailLink>
                   ) : (
                     payment.orderNumber || t("common.notSet")
                   )}
@@ -187,14 +187,14 @@ export function PaymentsListPage({
                 <td>
                   {payment.orderId && (
                     <Button variant="ghost" size="icon" asChild>
-                      <Link
+                      <DetailLink
                         to={`/orders/${payment.orderId}`}
                         aria-label={`${t("payments.open")} ${
                           payment.orderNumber || payment.id
                         }`}
                       >
                         <ChevronRight />
-                      </Link>
+                      </DetailLink>
                     </Button>
                   )}
                 </td>

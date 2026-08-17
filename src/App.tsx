@@ -104,6 +104,7 @@ import { RolePermissionsPage } from "@/components/settings/RolePermissionsPage";
 import { SettingsAccessDenied } from "@/components/settings/SettingsAccessDenied";
 import { UsersListPage } from "@/components/settings/UsersListPage";
 import { Button } from "@/components/ui/button";
+import { DetailLink } from "@/components/ui/detail-link";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { PullToRefresh } from "@/components/ui/pull-to-refresh";
 import {
@@ -1827,9 +1828,9 @@ export function Dashboard({
                 return (
                 <tr key={job.id}>
                   <td>
-                    <Link className="order-link" to={`/orders/${job.id}`}>
+                    <DetailLink className="order-link" to={`/orders/${job.id}`}>
                       {job.orderNumber || t("common.notSet")}
-                    </Link>
+                    </DetailLink>
                   </td>
                   <td>{job.customerName || t("common.notSet")}</td>
                   <td>{jobTime(job)}</td>
@@ -1854,14 +1855,14 @@ export function Dashboard({
                   </td>
                   <td>
                     <Button variant="ghost" size="icon" asChild>
-                      <Link
+                      <DetailLink
                         to={`/orders/${job.id}`}
                         aria-label={`${t("dashboard.no")} ${
                           job.orderNumber || job.id
                         }`}
                       >
                         <ChevronRight />
-                      </Link>
+                      </DetailLink>
                     </Button>
                   </td>
                 </tr>

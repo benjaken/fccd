@@ -14,6 +14,7 @@ import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { PullToRefresh } from "@/components/ui/pull-to-refresh";
+import { useDetailBackTo } from "@/lib/detail-navigation";
 import {
   fetchOrderDetail,
   type OrderDetailResult,
@@ -90,8 +91,8 @@ export function OrderDetailPage({
     searchParams.get("month"),
   );
   const kitchenBack = kitchenOrdersReturnPath(searchParams.get("from"));
-  const backTo =
-    calendarBack ?? kitchenBack ?? (isQuote ? "/quotes" : "/orders");
+  const originBack = useDetailBackTo(isQuote ? "/quotes" : "/orders");
+  const backTo = calendarBack ?? kitchenBack ?? originBack;
   const backLabel = calendarBack
     ? t("details.backToCalendar")
     : kitchenBack
