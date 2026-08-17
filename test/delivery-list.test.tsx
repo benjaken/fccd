@@ -27,7 +27,7 @@ const sampleItem: DeliveryListItem = {
   totalFee: 90,
   surchargeAmount: 0,
   surcharges: [],
-  grandTotal: 1286,
+  grandTotal: 1330,
   deliveryStatus: "已送達",
   takenAt: "2026-08-01T20:37:00+08:00",
   fulfilledAt: "2026-08-01T20:37:00+08:00",
@@ -102,7 +102,8 @@ describe("Delivery list page", () => {
     expect(table.getAllByText("Sun-Line").length).toBeGreaterThan(0);
     expect(table.getAllByText("車邊交收").length).toBeGreaterThan(0);
     expect(table.getByText("隧道費")).toBeInTheDocument();
-    expect(table.getByText("佔訂單 7%")).toBeInTheDocument();
+    expect(table.getByText("HK$1,330")).toBeInTheDocument();
+    expect(table.getByText("運費佔 7%")).toBeInTheDocument();
     expect(table.getByRole("button", { name: "查看圖片" })).toBeEnabled();
     expect(table.getByRole("button", { name: "沒有送達照片" })).toBeDisabled();
     expect(screen.getByText(/本頁運費/)).toBeInTheDocument();

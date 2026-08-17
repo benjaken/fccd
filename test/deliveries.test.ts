@@ -4,6 +4,7 @@ import {
   buildDeliveryExportCsv,
   canAssignDeliveryFleet,
   clockFromValue,
+  deliveryOrderAmount,
   feeSharePercent,
   hasDeliveryPhotos,
   hongKongDateInputValue,
@@ -43,7 +44,7 @@ describe("delivery list helpers", () => {
         contact_number_a_snapshot: "90154004",
         shipping_address_snapshot: "青衣長康邨",
         shipping_method_id: "method-1",
-        grand_total: "1286",
+        grand_total: "1330",
         shipping_methods: { display_name: "車邊交收", name: "curbside" },
       },
       delivery_districts: { name: "青衣" },
@@ -61,7 +62,10 @@ describe("delivery list helpers", () => {
     expect(item.shippingMethodName).toBe("車邊交收");
     expect(item.surcharges).toEqual([{ name: "隧道費", amount: 50 }]);
     expect(item.surchargeAmount).toBe(50);
-    expect(feeSharePercent(item)).toBeCloseTo((140 / 1286) * 100);
+    expect(feeSharePercent(item)).toBeCloseTo((140 / 1330) * 100);
+    expect(deliveryOrderAmount(item)).toBe(1330);
+    expect(deliveryOrderAmount({ grandTotal: 0, totalFee: 80 })).toBe(80);
+    expect(deliveryOrderAmount({ grandTotal: null, totalFee: 90 })).toBe(90);
   });
 
   it("falls back to order phone, ship-out time, and delivery status", () => {
@@ -184,7 +188,7 @@ describe("delivery list helpers", () => {
               contact_number_a_snapshot: "90154004",
               shipping_address_snapshot: "青衣長康邨",
               shipping_method_id: "method-1",
-              grand_total: 1286,
+              grand_total: 1330,
               shipping_methods: { name: "車邊交收" },
             },
             delivery_districts: { name: "青衣" },
