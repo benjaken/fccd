@@ -83,9 +83,12 @@ type OrderRow = {
   order_number?: string | null;
   customer_name_snapshot?: string | null;
   contact_number_a_snapshot?: string | null;
+  contact_number_b_snapshot?: string | null;
   shipping_address_snapshot?: string | null;
   shipping_method_id?: string | null;
   grand_total?: number | string | null;
+  ship_out_time?: string | null;
+  delivery_status?: string | null;
   shipping_methods?: Nested<NamedRow>;
 };
 
@@ -122,10 +125,10 @@ const DELIVERY_SELECT = [
   "image_references",
   "motorcade_id",
   "shipping_method_id",
-  "orders!inner(id,order_number,customer_name_snapshot,contact_number_a_snapshot,shipping_address_snapshot,shipping_method_id,grand_total,shipping_methods(name,display_name))",
-  "delivery_districts(name)",
-  "shipping_methods(name,display_name)",
-  "delivery_teams(name,short_name)",
+  "orders!inner(id,order_number,customer_name_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,shipping_address_snapshot,shipping_method_id,grand_total,ship_out_time,delivery_status,shipping_methods(name,display_name))",
+  "delivery_districts!district_id(name)",
+  "shipping_methods!shipping_method_id(name,display_name)",
+  "delivery_teams!motorcade_id(name,short_name)",
   "delivery_surcharges(amount,delivery_surcharge_types(name))",
 ].join(",");
 
@@ -214,10 +217,17 @@ export function mapDeliveryRow(row: DeliveryRow): DeliveryListItem {
     orderId: order?.id ?? null,
     orderNumber: order?.order_number ?? null,
     customerName: order?.customer_name_snapshot ?? null,
-    customerPhone: order?.contact_number_a_snapshot ?? null,
+    customerPhone:
+      order?.contact_number_a_snapshot?.trim() ||
+      order?.contact_number_b_snapshot?.trim() ||
+      null,
     address: order?.shipping_address_snapshot ?? null,
     deliveryAt: row.delivery_at,
-    deliveryTime: row.delivery_time?.trim() || row.ship_out_time,
+    deliveryTime:
+      row.delivery_time?.trim() ||
+      row.ship_out_time?.trim() ||
+      order?.ship_out_time?.trim() ||
+      null,
     districtName: displayName(row.delivery_districts),
     motorcadeId: row.motorcade_id,
     motorcadeName: displayName(row.delivery_teams),
@@ -231,7 +241,7 @@ export function mapDeliveryRow(row: DeliveryRow): DeliveryListItem {
     surchargeAmount,
     surcharges,
     grandTotal: optionalAmount(order?.grand_total),
-    deliveryStatus: row.delivery_status,
+    deliveryStatus: row.delivery_status || order?.delivery_status || null,
     takenAt: row.taken_at,
     fulfilledAt: row.fulfilled_at,
     imageReferences: (row.image_references ?? []).filter(Boolean),
@@ -259,7 +269,10 @@ function applyDeliveryFilters<
     gte: (column: string, value: string) => T;
     lt: (column: string, value: string) => T;
     eq: (column: string, value: string) => T;
-    or: (filters: string) => T;
+    or: (
+      filters: string,
+      options?: { referencedTable?: string; foreignTable?: string },
+    ) => T;
   },
 >(
   query: T,
@@ -283,15 +296,16 @@ function applyDeliveryFilters<
     next = next.eq("motorcade_id", motorcadeId);
   }
   if (shippingMethodId) {
-    next = next.or(
-      `shipping_method_id.eq.${shippingMethodId},orders.shipping_method_id.eq.${shippingMethodId}`,
-    );
+    next = next.or(`shipping_method_id.eq.${shippingMethodId}`, {
+      referencedTable: "orders",
+    });
   }
 
   const term = safeSearchTerm(search);
   if (term) {
     next = next.or(
-      `orders.order_number.ilike.%${term}%,orders.customer_name_snapshot.ilike.%${term}%,orders.contact_number_a_snapshot.ilike.%${term}%,orders.shipping_address_snapshot.ilike.%${term}%`,
+      `order_number.ilike.%${term}%,customer_name_snapshot.ilike.%${term}%,contact_number_a_snapshot.ilike.%${term}%,contact_number_b_snapshot.ilike.%${term}%,shipping_address_snapshot.ilike.%${term}%`,
+      { referencedTable: "orders" },
     );
   }
 

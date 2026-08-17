@@ -60,6 +60,44 @@ describe("delivery list helpers", () => {
     expect(feeSharePercent(item)).toBeCloseTo((140 / 1286) * 100);
   });
 
+  it("falls back to order phone, ship-out time, and delivery status", () => {
+    const item = mapDeliveryRow({
+      id: "delivery-2",
+      delivery_at: "2026-08-02T10:00:00+08:00",
+      delivery_time: "   ",
+      ship_out_time: null,
+      delivery_status: null,
+      basic_fee: 90,
+      total_fee: 90,
+      taken_at: null,
+      fulfilled_at: null,
+      image_references: [],
+      motorcade_id: "team-1",
+      shipping_method_id: null,
+      orders: {
+        id: "order-2",
+        order_number: "6919",
+        customer_name_snapshot: "測試客戶",
+        contact_number_a_snapshot: " ",
+        contact_number_b_snapshot: "91234567",
+        shipping_address_snapshot: "上環德輔道中",
+        shipping_method_id: "method-1",
+        grand_total: 500,
+        ship_out_time: "19:00",
+        delivery_status: "己送達",
+        shipping_methods: { name: "送貨上門" },
+      },
+      delivery_districts: { name: "上環" },
+      shipping_methods: null,
+      delivery_teams: { name: "Sun-Line", short_name: "Sun-Line" },
+    });
+
+    expect(item.customerPhone).toBe("91234567");
+    expect(item.deliveryTime).toBe("19:00");
+    expect(item.deliveryStatus).toBe("己送達");
+    expect(item.shippingMethodName).toBe("送貨上門");
+  });
+
   it("builds the delivery export CSV with the requested headers", () => {
     const csv = buildDeliveryExportCsv(
       [
