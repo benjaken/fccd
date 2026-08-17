@@ -47,7 +47,10 @@ const orders: KitchenCalendarOrder[] = [
     deliveryStatus: "已送達",
     isSentToFactory: true,
     outstanding: 800,
-    statuses: [{ name: "未完成付款", color: "#ff0000" }],
+    statuses: [
+      { name: "未完成付款", color: "#ff0000" },
+      { name: "廚房", color: "#832024" },
+    ],
   },
   {
     id: "order-extra-1",
@@ -164,8 +167,11 @@ describe("Kitchen calendar page", () => {
     expect(
       await screen.findByRole("heading", { name: "出餐日曆" }),
     ).toBeInTheDocument();
-    expect(screen.getAllByText("未傳至工場").length).toBeGreaterThan(1);
-    expect(screen.getAllByText("未完成付款").length).toBeGreaterThan(1);
+    const legend = screen.getByRole("list", { name: "訂單狀態" });
+    expect(within(legend).getByText("未傳至工場")).toBeInTheDocument();
+    expect(within(legend).getByText("未完成付款")).toBeInTheDocument();
+    expect(within(legend).getByText("廚房")).toBeInTheDocument();
+    expect(within(legend).getByText("SP")).toBeInTheDocument();
 
     const philip = await screen.findByRole("link", {
       name: /開啟訂單 #6917 - Philip Leung/,
@@ -174,17 +180,22 @@ describe("Kitchen calendar page", () => {
       "href",
       "/orders/order-amber?from=calendar&month=2026-08",
     );
-    expect(philip).toHaveTextContent("未傳至工場");
+    expect(philip).toHaveTextContent("#6917 - Philip Leung");
+    expect(philip).not.toHaveTextContent("未傳至工場");
     expect(philip).not.toHaveTextContent("待司機接單");
     expect(screen.getByRole("link", { name: /開啟訂單 B-1511 - Michelle Chung/ }))
       .toHaveAttribute("href", "/orders/order-blue?from=calendar&month=2026-08");
     expect(
       screen.getByRole("link", { name: /開啟訂單 B-1511 - Michelle Chung/ }),
     ).not.toHaveTextContent("已送達");
-    expect(screen.getByRole("link", { name: /開啟訂單 P-1140 - Ada Wong/ }))
-      .toHaveAttribute("href", "/orders/order-red?from=calendar&month=2026-08");
-    expect(screen.getByRole("link", { name: /開啟訂單 P-1140 - Ada Wong/ }))
-      .toHaveTextContent("未完成付款");
+    const ada = screen.getByRole("link", { name: /開啟訂單 P-1140 - Ada Wong/ });
+    expect(ada).toHaveAttribute(
+      "href",
+      "/orders/order-red?from=calendar&month=2026-08",
+    );
+    expect(ada).toHaveTextContent("P-1140 - Ada Wong");
+    expect(ada).not.toHaveTextContent("未完成付款");
+    expect(ada).not.toHaveTextContent("廚房");
   });
 
   it("opens an order from the calendar", async () => {
@@ -257,8 +268,8 @@ describe("Kitchen calendar page", () => {
       "href",
       "/orders/order-extra-2?from=calendar&month=2026-08",
     );
-    expect(within(dialog).getByText("SP")).toBeInTheDocument();
-    expect(within(dialog).getByText("未傳至工場")).toBeInTheDocument();
+    expect(within(dialog).queryByText("SP")).not.toBeInTheDocument();
+    expect(within(dialog).queryByText("未傳至工場")).not.toBeInTheDocument();
     expect(within(dialog).queryByText("待司機接單")).not.toBeInTheDocument();
     expect(within(dialog).queryByText("已送達")).not.toBeInTheDocument();
     expect(within(dialog).queryByText("已安排")).not.toBeInTheDocument();

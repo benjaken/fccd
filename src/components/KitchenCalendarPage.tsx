@@ -11,16 +11,18 @@ import {
   hongKongDateParts,
   hongKongDayKey,
   kitchenCalendarDayKey,
+  kitchenCalendarDotStyle,
+  kitchenCalendarLegendItemStyle,
   kitchenCalendarMonthParam,
   kitchenCalendarOrderHref,
   kitchenCalendarRangeIso,
-  kitchenCalendarTone,
+  kitchenCalendarStatusLegend,
   KITCHEN_CALENDAR_VISIBLE_PER_DAY,
   parseKitchenCalendarMonth,
   shiftKitchenCalendarMonth,
   type KitchenCalendarOrder,
 } from "@/lib/kitchen-calendar";
-import { orderStatusLabel } from "@/lib/order-statuses";
+import { orderStatusLabel, type OrderStatusView } from "@/lib/order-statuses";
 import { cn } from "@/lib/utils";
 
 type KitchenCalendarLoader = (range: {
@@ -37,6 +39,21 @@ function orderLabel(
   const number = order.orderNumber || fallback;
   const name = order.customerName || order.companyName;
   return name ? `${number} - ${name}` : number;
+}
+
+function StatusDots({ statuses }: { statuses: readonly OrderStatusView[] }) {
+  const dots = statuses.length ? statuses : [{ name: "", color: null }];
+  return (
+    <span className="kitchen-calendar-dots" aria-hidden="true">
+      {dots.map((status, index) => (
+        <span
+          className="kitchen-calendar-dot"
+          key={`${status.name}-${index}`}
+          style={kitchenCalendarDotStyle(status.color)}
+        />
+      ))}
+    </span>
+  );
 }
 
 export function KitchenCalendarPage({
@@ -146,6 +163,7 @@ export function KitchenCalendarPage({
   }, [items]);
 
   const selectedOrders = selectedDay ? (ordersByDay.get(selectedDay) ?? []) : [];
+  const legend = useMemo(() => kitchenCalendarStatusLegend(items), [items]);
 
   return (
     <section className="kitchen-calendar-page">
@@ -154,6 +172,26 @@ export function KitchenCalendarPage({
           <span className="eyebrow">{t("navigation.kitchen")}</span>
           <h1>{t("navigation.productionCalendar")}</h1>
         </div>
+        {legend.length > 0 ? (
+          <ul
+            className="kitchen-calendar-legend"
+            aria-label={t("kitchenCalendar.legend")}
+          >
+            {legend.map((status) => (
+              <li
+                key={`${status.name}-${status.color ?? ""}`}
+                style={kitchenCalendarLegendItemStyle(status.color)}
+              >
+                <span
+                  className="kitchen-calendar-dot"
+                  style={kitchenCalendarDotStyle(status.color)}
+                  aria-hidden="true"
+                />
+                {status.name}
+              </li>
+            ))}
+          </ul>
+        ) : null}
       </header>
 
       <article className="panel kitchen-calendar-panel">
@@ -189,16 +227,7 @@ export function KitchenCalendarPage({
             </Button>
           </div>
           <h2 className="kitchen-calendar-month">{monthTitle}</h2>
-          <ul className="kitchen-calendar-legend">
-            <li>
-              <span className="kitchen-calendar-dot amber" aria-hidden="true" />
-              {t("kitchenCalendar.notSentToFactory")}
-            </li>
-            <li>
-              <span className="kitchen-calendar-dot red" aria-hidden="true" />
-              {t("kitchenCalendar.unpaid")}
-            </li>
-          </ul>
+          <div className="kitchen-calendar-toolbar-spacer" aria-hidden="true" />
         </header>
 
         {error ? (
@@ -268,10 +297,8 @@ export function KitchenCalendarPage({
                           />
                         ))
                       : visible.map((order) => {
-                          const tone = kitchenCalendarTone(order);
                           const label = orderLabel(order, t("common.notSet"));
                           const statusText = orderStatusLabel(order.statuses);
-                          const statusColor = order.statuses?.[0]?.color;
                           return (
                             <Link
                               className="kitchen-calendar-event"
@@ -286,23 +313,10 @@ export function KitchenCalendarPage({
                                   : `${t("orders.open")} ${label}`
                               }
                             >
-                              <span
-                                className={cn("kitchen-calendar-dot", tone)}
-                                aria-hidden="true"
-                              />
+                              <StatusDots statuses={order.statuses} />
                               <span className="kitchen-calendar-event-copy">
                                 {label}
                               </span>
-                              {statusText ? (
-                                <span
-                                  className="kitchen-calendar-event-status"
-                                  style={
-                                    statusColor ? { color: statusColor } : undefined
-                                  }
-                                >
-                                  {statusText}
-                                </span>
-                              ) : null}
                             </Link>
                           );
                         })}
@@ -339,10 +353,8 @@ export function KitchenCalendarPage({
         ) : (
           <ul className="kitchen-calendar-day-list">
             {selectedOrders.map((order) => {
-              const tone = kitchenCalendarTone(order);
               const label = orderLabel(order, t("common.notSet"));
               const statusText = orderStatusLabel(order.statuses);
-              const statusColor = order.statuses?.[0]?.color;
               return (
                 <li key={order.id}>
                   <Link
@@ -354,11 +366,8 @@ export function KitchenCalendarPage({
                         : `${t("orders.open")} ${label}`
                     }
                   >
-                    <span
-                      className={cn("kitchen-calendar-dot", tone)}
-                      aria-hidden="true"
-                    />
-                    <span>
+                    <StatusDots statuses={order.statuses} />
+                    <span className="kitchen-calendar-day-copy">
                       <strong>{order.orderNumber || t("common.notSet")}</strong>
                       <small>
                         {order.customerName ||
@@ -366,16 +375,6 @@ export function KitchenCalendarPage({
                           t("common.notSet")}
                       </small>
                     </span>
-                    {statusText ? (
-                      <em
-                        className="kitchen-calendar-event-status"
-                        style={
-                          statusColor ? { color: statusColor } : undefined
-                        }
-                      >
-                        {statusText}
-                      </em>
-                    ) : null}
                   </Link>
                 </li>
               );

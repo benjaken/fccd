@@ -429,8 +429,7 @@ const resources = {
       kitchenCalendar: {
         previousMonth: "上一個月",
         nextMonth: "下一個月",
-        notSentToFactory: "未傳至工場",
-        unpaid: "未完成付款",
+        legend: "訂單狀態",
         loading: "正在載入出餐日曆…",
         loadError: "暫時無法載入出餐日曆",
         loadErrorDescription: "請稍後重試，或確認你的訂單資料權限。",
@@ -2521,8 +2520,7 @@ const resources = {
       kitchenCalendar: {
         previousMonth: "Previous month",
         nextMonth: "Next month",
-        notSentToFactory: "Not sent to factory",
-        unpaid: "Payment incomplete",
+        legend: "Order status",
         loading: "Loading serving calendar…",
         loadError: "The serving calendar could not be loaded",
         loadErrorDescription:
