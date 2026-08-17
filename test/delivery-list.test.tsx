@@ -54,6 +54,7 @@ const surchargeItem: DeliveryListItem = {
 
 const listResult: DeliveryListResult = {
   total: 2,
+  feeTotal: 230,
   items: [sampleItem, surchargeItem],
 };
 
@@ -119,7 +120,7 @@ describe("Delivery list page", () => {
     expect(viewImage.closest(".delivery-order-cell")).toBeNull();
     expect(noImage.closest(".table-actions-cell")).toBeTruthy();
     expect(noImage.closest(".delivery-order-cell")).toBeNull();
-    expect(screen.getByText(/本頁運費/)).toBeInTheDocument();
+    expect(screen.getByText(/總運費 HK\$230/)).toBeInTheDocument();
     expect(
       table.queryByRole("combobox", { name: "選擇車隊" }),
     ).not.toBeInTheDocument();
@@ -129,6 +130,7 @@ describe("Delivery list page", () => {
     const user = userEvent.setup();
     const loadDeliveries = vi.fn().mockResolvedValue({
       total: 1,
+      feeTotal: 90,
       items: [sampleItem],
     });
     const loadLookups = vi.fn().mockResolvedValue(lookups);
@@ -366,9 +368,12 @@ describe("Delivery list page", () => {
 
   it("paginates deliveries in groups of fifteen", async () => {
     const user = userEvent.setup();
-    const loadDeliveries = vi
-      .fn()
-      .mockResolvedValue({ ...listResult, total: 31 });
+    const loadDeliveries = vi.fn().mockResolvedValue({
+      ...listResult,
+      total: 31,
+      feeTotal: 1855,
+      items: [sampleItem],
+    });
     const loadLookups = vi.fn().mockResolvedValue(lookups);
 
     render(
@@ -384,6 +389,9 @@ describe("Delivery list page", () => {
     expect(
       await screen.findByRole("spinbutton", { name: "跳至頁碼" }),
     ).toHaveValue(1);
+    expect(screen.getByText(/總運費 HK\$1,855/)).toBeInTheDocument();
+    expect(screen.queryByText(/本頁運費/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/總運費 HK\$90/)).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "下一頁" }));
 
     await waitFor(() =>

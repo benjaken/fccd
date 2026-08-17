@@ -5,6 +5,8 @@ import {
   canAssignDeliveryFleet,
   clockFromValue,
   deliveryExportFilename,
+  deliveryFeeSumFromAggregate,
+  deliveryFeeTotal,
   deliveryOrderAmount,
   feeSharePercent,
   hasDeliveryPhotos,
@@ -68,6 +70,12 @@ describe("delivery list helpers", () => {
     expect(deliveryOrderAmount(item)).toBe(1330);
     expect(deliveryOrderAmount({ grandTotal: 0, totalFee: 80 })).toBe(80);
     expect(deliveryOrderAmount({ grandTotal: null, totalFee: 90 })).toBe(90);
+    expect(
+      deliveryFeeTotal([{ totalFee: 90 }, { totalFee: 140 }, { totalFee: null }]),
+    ).toBe(230);
+    expect(deliveryFeeSumFromAggregate([{ sum: "1855.4" }])).toBe(1855.4);
+    expect(deliveryFeeSumFromAggregate([{ total_fee: 90 }])).toBe(90);
+    expect(deliveryFeeSumFromAggregate([])).toBe(0);
   });
 
   it("falls back to order phone, ship-out time, and delivery status", () => {
