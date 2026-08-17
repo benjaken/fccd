@@ -6,11 +6,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { OrderSettingsPage } from "@/components/OrderSettingsPage";
 import i18n from "@/i18n";
 import type { OrderTag } from "@/lib/order-tags";
+import { filterOrderTags } from "@/lib/order-tags";
 import {
+  filterShippingMethods,
   sortShippingMethods,
   type ShippingMethod,
 } from "@/lib/shipping-methods";
 import {
+  filterPaymentMethods,
   sortPaymentMethods,
   type PaymentMethod,
 } from "@/lib/payment-methods";
@@ -214,6 +217,23 @@ describe("Order settings tags page", () => {
     ).toHaveAttribute("aria-checked", "false");
   });
 
+  it("filters tags from the search bar", async () => {
+    const user = userEvent.setup();
+    renderSettings();
+
+    await screen.findByText("家人食飯");
+    expect(filterOrderTags(tags, "klook").map((row) => row.id)).toEqual([
+      "tag-2",
+    ]);
+    await user.type(screen.getByPlaceholderText("搜尋標籤名稱"), "Klook");
+    await user.click(screen.getByRole("button", { name: "搜尋" }));
+
+    const table = within(await screen.findByRole("table"));
+    expect(table.getByText("Klook")).toBeInTheDocument();
+    expect(table.queryByText("家人食飯")).not.toBeInTheDocument();
+    expect(table.queryByText("CNY套餐")).not.toBeInTheDocument();
+  });
+
   it("creates a tag from the heading action", async () => {
     const user = userEvent.setup();
     const createTag = vi.fn().mockResolvedValue({
@@ -318,6 +338,23 @@ describe("Order settings shipping methods page", () => {
     expect(
       table.getByRole("button", { name: "編輯 車邊交收" }),
     ).toBeInTheDocument();
+  });
+
+  it("filters delivery methods from the search bar", async () => {
+    const user = userEvent.setup();
+    renderSettings("shipping");
+
+    await screen.findByText("車邊交收");
+    expect(
+      filterShippingMethods(methods, "上門").map((row) => row.displayName),
+    ).toEqual(["送貨上門"]);
+    await user.type(screen.getByPlaceholderText("搜尋運送方式"), "上門");
+    await user.click(screen.getByRole("button", { name: "搜尋" }));
+
+    const table = within(await screen.findByRole("table"));
+    expect(table.getByText("送貨上門")).toBeInTheDocument();
+    expect(table.queryByText("車邊交收")).not.toBeInTheDocument();
+    expect(table.queryByText("門市自取")).not.toBeInTheDocument();
   });
 
   it("creates a delivery method from the heading action", async () => {
@@ -452,6 +489,23 @@ describe("Order settings payment methods page", () => {
     expect(
       table.getByRole("button", { name: "編輯 PayMe" }),
     ).toBeInTheDocument();
+  });
+
+  it("filters payment methods from the search bar", async () => {
+    const user = userEvent.setup();
+    renderSettings("payments");
+
+    await screen.findByText("PayMe");
+    expect(filterPaymentMethods(payments, "payme").map((row) => row.id)).toEqual(
+      ["pay-2"],
+    );
+    await user.type(screen.getByPlaceholderText("搜尋付款方式"), "PayMe");
+    await user.click(screen.getByRole("button", { name: "搜尋" }));
+
+    const table = within(await screen.findByRole("table"));
+    expect(table.getByText("PayMe")).toBeInTheDocument();
+    expect(table.queryByText("Cash")).not.toBeInTheDocument();
+    expect(table.queryByText("Foodpanda")).not.toBeInTheDocument();
   });
 
   it("creates a payment method from the heading action", async () => {

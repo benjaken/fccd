@@ -20,6 +20,22 @@ function mapTag(row: TagRow): OrderTag {
   };
 }
 
+function includesIgnoreCase(haystack: string | null | undefined, needle: string) {
+  if (!needle) return true;
+  return (haystack ?? "").toLocaleLowerCase("zh-HK").includes(
+    needle.toLocaleLowerCase("zh-HK"),
+  );
+}
+
+export function filterOrderTags(
+  rows: readonly OrderTag[],
+  search = "",
+) {
+  const term = search.trim();
+  if (!term) return [...rows];
+  return rows.filter((row) => includesIgnoreCase(row.name, term));
+}
+
 export async function fetchOrderTags(): Promise<OrderTag[]> {
   const { data, error } = await supabase
     .from("order_tags")

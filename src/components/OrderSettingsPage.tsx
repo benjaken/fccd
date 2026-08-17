@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent, useState, type FormEvent } from "react";
+import { useEffect, useEffectEvent, useMemo, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Plus, Tags, Trash2 } from "lucide-react";
 import { Navigate, useParams } from "react-router-dom";
@@ -8,6 +8,7 @@ import { OrderPaymentMethodsTable } from "@/components/OrderPaymentMethodsTable"
 import { OrderShippingMethodsTable } from "@/components/OrderShippingMethodsTable";
 import { isOrderSettingsTab } from "@/components/OrderSettingsTabNav";
 import { Button } from "@/components/ui/button";
+import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import { SidePanel } from "@/components/ui/side-panel";
 import { Switch } from "@/components/ui/switch";
@@ -15,6 +16,7 @@ import {
   archiveOrderTag,
   createOrderTag,
   fetchOrderTags,
+  filterOrderTags,
   setOrderTagActive,
   type OrderTag,
 } from "@/lib/order-tags";
@@ -158,6 +160,13 @@ function OrderTagsTable({
   const [reloadKey, setReloadKey] = useState(0);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [draftSearch, setDraftSearch] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
+  const visibleRows = useMemo(
+    () => filterOrderTags(rows, appliedSearch),
+    [appliedSearch, rows],
+  );
+  const hasSearch = Boolean(appliedSearch);
 
   useEffect(() => {
     let cancelled = false;
@@ -224,6 +233,18 @@ function OrderTagsTable({
 
   return (
     <>
+      <header className="order-settings-toolbar">
+        <ListSearchBar
+          id="order-tags-search"
+          value={draftSearch}
+          onChange={setDraftSearch}
+          onSubmit={() => setAppliedSearch(draftSearch.trim())}
+          label={t("orderSettings.tags.search")}
+          placeholder={t("orderSettings.tags.searchPlaceholder")}
+          submitLabel={t("orderSettings.tags.searchAction")}
+        />
+      </header>
+
       {actionError ? (
         <p className="list-inline-error" role="alert">
           {actionError}
@@ -245,14 +266,22 @@ function OrderTagsTable({
             {t("orderSettings.retry")}
           </Button>
         </div>
-      ) : !loading && rows.length === 0 ? (
+      ) : !loading && visibleRows.length === 0 ? (
         <div className="orders-state">
           <Tags />
           <div>
-            <strong>{t("orderSettings.tags.empty")}</strong>
-            <span>{t("orderSettings.tags.emptyDescription")}</span>
+            <strong>
+              {hasSearch
+                ? t("orderSettings.tags.emptySearch")
+                : t("orderSettings.tags.empty")}
+            </strong>
+            <span>
+              {hasSearch
+                ? t("orderSettings.tags.emptySearchDescription")
+                : t("orderSettings.tags.emptyDescription")}
+            </span>
           </div>
-          {canManage ? (
+          {canManage && !hasSearch ? (
             <Button type="button" onClick={() => onCreateOpenChange(true)}>
               <Plus />
               {t("orderSettings.tags.add")}
@@ -283,7 +312,7 @@ function OrderTagsTable({
             </tr>
           }
         >
-          {rows.map((row) => (
+          {visibleRows.map((row) => (
             <tr key={row.id}>
               <td>{row.name}</td>
               <td className="order-settings-active-col">

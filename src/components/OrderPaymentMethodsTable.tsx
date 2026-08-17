@@ -1,15 +1,17 @@
-import { useEffect, useEffectEvent, useState, type FormEvent } from "react";
+import { useEffect, useEffectEvent, useMemo, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { CreditCard, Pencil, Plus } from "lucide-react";
 
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
+import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import { SidePanel } from "@/components/ui/side-panel";
 import { Switch } from "@/components/ui/switch";
 import {
   createPaymentMethod,
   fetchPaymentMethods,
+  filterPaymentMethods,
   sortPaymentMethods,
   updatePaymentMethod,
   type PaymentMethod,
@@ -163,6 +165,13 @@ export function OrderPaymentMethodsTable({
   const [reloadKey, setReloadKey] = useState(0);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [editing, setEditing] = useState<PaymentMethod | null>(null);
+  const [draftSearch, setDraftSearch] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
+  const visibleRows = useMemo(
+    () => filterPaymentMethods(rows, appliedSearch),
+    [appliedSearch, rows],
+  );
+  const hasSearch = Boolean(appliedSearch);
 
   useEffect(() => {
     let cancelled = false;
@@ -225,6 +234,18 @@ export function OrderPaymentMethodsTable({
 
   return (
     <>
+      <header className="order-settings-toolbar">
+        <ListSearchBar
+          id="order-payments-search"
+          value={draftSearch}
+          onChange={setDraftSearch}
+          onSubmit={() => setAppliedSearch(draftSearch.trim())}
+          label={t("orderSettings.payments.search")}
+          placeholder={t("orderSettings.payments.searchPlaceholder")}
+          submitLabel={t("orderSettings.payments.searchAction")}
+        />
+      </header>
+
       {actionError ? (
         <p className="list-inline-error" role="alert">
           {actionError}
@@ -246,14 +267,22 @@ export function OrderPaymentMethodsTable({
             {t("orderSettings.retry")}
           </Button>
         </div>
-      ) : !loading && rows.length === 0 ? (
+      ) : !loading && visibleRows.length === 0 ? (
         <div className="orders-state">
           <CreditCard />
           <div>
-            <strong>{t("orderSettings.payments.empty")}</strong>
-            <span>{t("orderSettings.payments.emptyDescription")}</span>
+            <strong>
+              {hasSearch
+                ? t("orderSettings.payments.emptySearch")
+                : t("orderSettings.payments.empty")}
+            </strong>
+            <span>
+              {hasSearch
+                ? t("orderSettings.payments.emptySearchDescription")
+                : t("orderSettings.payments.emptyDescription")}
+            </span>
           </div>
-          {canManage ? (
+          {canManage && !hasSearch ? (
             <Button type="button" onClick={() => onCreateOpenChange(true)}>
               <Plus />
               {t("orderSettings.payments.add")}
@@ -282,7 +311,7 @@ export function OrderPaymentMethodsTable({
             </tr>
           }
         >
-          {rows.map((row) => (
+          {visibleRows.map((row) => (
             <tr key={row.id}>
               <td>{row.name}</td>
               <td className="order-settings-active-col">

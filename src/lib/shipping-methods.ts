@@ -146,3 +146,25 @@ export function sortShippingMethods(rows: readonly ShippingMethod[]) {
     return left.displayName.localeCompare(right.displayName, "zh-Hant");
   });
 }
+
+function includesIgnoreCase(haystack: string | null | undefined, needle: string) {
+  if (!needle) return true;
+  return (haystack ?? "").toLocaleLowerCase("zh-HK").includes(
+    needle.toLocaleLowerCase("zh-HK"),
+  );
+}
+
+export function filterShippingMethods(
+  rows: readonly ShippingMethod[],
+  search = "",
+) {
+  const term = search.trim();
+  if (!term) return sortShippingMethods(rows);
+  return sortShippingMethods(
+    rows.filter(
+      (row) =>
+        includesIgnoreCase(row.displayName, term) ||
+        includesIgnoreCase(row.name, term),
+    ),
+  );
+}

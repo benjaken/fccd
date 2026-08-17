@@ -1,15 +1,17 @@
-import { useEffect, useEffectEvent, useState, type FormEvent } from "react";
+import { useEffect, useEffectEvent, useMemo, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Pencil, Plus, Truck } from "lucide-react";
 
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
+import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import { SidePanel } from "@/components/ui/side-panel";
 import { Switch } from "@/components/ui/switch";
 import {
   createShippingMethod,
   fetchShippingMethods,
+  filterShippingMethods,
   sortShippingMethods,
   updateShippingMethod,
   type ShippingMethod,
@@ -193,6 +195,13 @@ export function OrderShippingMethodsTable({
   const [reloadKey, setReloadKey] = useState(0);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [editing, setEditing] = useState<ShippingMethod | null>(null);
+  const [draftSearch, setDraftSearch] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
+  const visibleRows = useMemo(
+    () => filterShippingMethods(rows, appliedSearch),
+    [appliedSearch, rows],
+  );
+  const hasSearch = Boolean(appliedSearch);
 
   useEffect(() => {
     let cancelled = false;
@@ -261,6 +270,18 @@ export function OrderShippingMethodsTable({
 
   return (
     <>
+      <header className="order-settings-toolbar">
+        <ListSearchBar
+          id="order-shipping-search"
+          value={draftSearch}
+          onChange={setDraftSearch}
+          onSubmit={() => setAppliedSearch(draftSearch.trim())}
+          label={t("orderSettings.shipping.search")}
+          placeholder={t("orderSettings.shipping.searchPlaceholder")}
+          submitLabel={t("orderSettings.shipping.searchAction")}
+        />
+      </header>
+
       {actionError ? (
         <p className="list-inline-error" role="alert">
           {actionError}
@@ -282,14 +303,22 @@ export function OrderShippingMethodsTable({
             {t("orderSettings.retry")}
           </Button>
         </div>
-      ) : !loading && rows.length === 0 ? (
+      ) : !loading && visibleRows.length === 0 ? (
         <div className="orders-state">
           <Truck />
           <div>
-            <strong>{t("orderSettings.shipping.empty")}</strong>
-            <span>{t("orderSettings.shipping.emptyDescription")}</span>
+            <strong>
+              {hasSearch
+                ? t("orderSettings.shipping.emptySearch")
+                : t("orderSettings.shipping.empty")}
+            </strong>
+            <span>
+              {hasSearch
+                ? t("orderSettings.shipping.emptySearchDescription")
+                : t("orderSettings.shipping.emptyDescription")}
+            </span>
           </div>
-          {canManage ? (
+          {canManage && !hasSearch ? (
             <Button type="button" onClick={() => onCreateOpenChange(true)}>
               <Plus />
               {t("orderSettings.shipping.add")}
@@ -325,7 +354,7 @@ export function OrderShippingMethodsTable({
             </tr>
           }
         >
-          {rows.map((row, index) => (
+          {visibleRows.map((row, index) => (
             <tr key={row.id}>
               <td className="order-settings-index-col">{index + 1}</td>
               <td>{row.displayName}</td>

@@ -106,3 +106,21 @@ export function sortPaymentMethods(rows: readonly PaymentMethod[]) {
     return left.name.localeCompare(right.name, "zh-Hant");
   });
 }
+
+function includesIgnoreCase(haystack: string | null | undefined, needle: string) {
+  if (!needle) return true;
+  return (haystack ?? "").toLocaleLowerCase("zh-HK").includes(
+    needle.toLocaleLowerCase("zh-HK"),
+  );
+}
+
+export function filterPaymentMethods(
+  rows: readonly PaymentMethod[],
+  search = "",
+) {
+  const term = search.trim();
+  if (!term) return sortPaymentMethods(rows);
+  return sortPaymentMethods(
+    rows.filter((row) => includesIgnoreCase(row.name, term)),
+  );
+}

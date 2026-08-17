@@ -5764,7 +5764,8 @@ button.product-tag[aria-pressed="true"] {
 .meat-customers-toolbar,
 .order-statuses-toolbar,
 .sale-partners-toolbar,
-.selling-price-cost-toolbar {
+.selling-price-cost-toolbar,
+.order-settings-toolbar {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
@@ -6151,7 +6152,8 @@ button.product-tag[aria-pressed="true"] {
   .sale-partners-toolbar,
   .seasoning-cost-toolbar,
   .calculation-settings-toolbar,
-  .selling-price-cost-toolbar {
+  .selling-price-cost-toolbar,
+  .order-settings-toolbar {
     align-items: center;
     flex-direction: row;
     flex-wrap: wrap;
