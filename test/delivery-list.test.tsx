@@ -104,8 +104,15 @@ describe("Delivery list page", () => {
     expect(table.getByText("隧道費")).toBeInTheDocument();
     expect(table.getByText("HK$1,330")).toBeInTheDocument();
     expect(table.getByText("運費佔 7%")).toBeInTheDocument();
-    expect(table.getByRole("button", { name: "查看圖片" })).toBeEnabled();
-    expect(table.getByRole("button", { name: "沒有送達照片" })).toBeDisabled();
+    expect(table.getByRole("columnheader", { name: "操作" })).toBeTruthy();
+    const viewImage = table.getByRole("button", { name: "查看圖片" });
+    const noImage = table.getByRole("button", { name: "沒有送達照片" });
+    expect(viewImage).toBeEnabled();
+    expect(noImage).toBeDisabled();
+    expect(viewImage.closest(".table-actions-cell")).toBeTruthy();
+    expect(viewImage.closest(".delivery-order-cell")).toBeNull();
+    expect(noImage.closest(".table-actions-cell")).toBeTruthy();
+    expect(noImage.closest(".delivery-order-cell")).toBeNull();
     expect(screen.getByText(/本頁運費/)).toBeInTheDocument();
     expect(
       table.queryByRole("combobox", { name: "選擇車隊" }),
@@ -367,7 +374,10 @@ describe("Delivery list page", () => {
       </MemoryRouter>,
     );
 
-    await user.click(await screen.findByRole("button", { name: "取消送貨" }));
+    const cancelButton = await screen.findByRole("button", { name: "取消送貨" });
+    expect(cancelButton.closest(".table-actions-cell")).toBeTruthy();
+    expect(cancelButton.closest(".delivery-status-cell")).toBeNull();
+    await user.click(cancelButton);
     expect(screen.getByRole("dialog", { name: "取消送貨訂單" })).toBeInTheDocument();
     expect(cancelDelivery).not.toHaveBeenCalled();
 
