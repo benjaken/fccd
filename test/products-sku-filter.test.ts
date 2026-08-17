@@ -57,7 +57,36 @@ describe("product SKU list filter", () => {
     expect(fromMock).toHaveBeenCalledWith("products");
     expect(query.not).toHaveBeenCalledWith("sku", "is", null);
     expect(query.neq).toHaveBeenCalledWith("sku", "");
-    expect(query.order).toHaveBeenCalledWith("sku", { ascending: true });
+    expect(query.order).toHaveBeenCalledWith("sku", {
+      ascending: true,
+      nullsFirst: false,
+    });
+  });
+
+  it("orders the catalog by Chinese name then English name", async () => {
+    const query = createQuery({ data: [], count: 0, error: null });
+    fromMock.mockReturnValue(query);
+
+    await fetchProducts({
+      page: 1,
+      search: "",
+      channelId: "",
+      productTypeName: "",
+      status: "",
+      priceRange: "",
+      sortField: "name",
+      sortAscending: false,
+      preset: "all",
+    });
+
+    expect(query.order).toHaveBeenCalledWith("chinese_name", {
+      ascending: false,
+      nullsFirst: false,
+    });
+    expect(query.order).toHaveBeenCalledWith("name", {
+      ascending: false,
+      nullsFirst: false,
+    });
   });
 
   it("excludes products without a SKU from catalog search", async () => {

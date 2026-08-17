@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Pencil, RefreshCw, ShoppingBasket } from "lucide-react";
+import { ArrowDown, ArrowUp, Pencil, RefreshCw, ShoppingBasket } from "lucide-react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import { ProductRecommendStar } from "@/components/ProductRecommendStar";
@@ -17,7 +17,6 @@ import {
   fetchProductTypes,
   fetchProducts,
   PRODUCTS_PAGE_SIZE,
-  showsBentoListColumns,
   updateProductRecommendation,
   type CatalogOption,
   type ProductListFilters,
@@ -25,24 +24,24 @@ import {
   type ProductListResult,
   type ProductPreset,
   type ProductPriceRange,
+  type ProductSortField,
   type ProductStatusFilter,
 } from "@/lib/products";
 
-const BASE_SKELETON_COLUMNS = [
+const PRODUCT_SKELETON_COLUMNS = [
+  { width: "5.5rem" },
   { width: "5.5rem" },
   { width: "72%" },
-  { width: "4.5rem" },
   { width: "5.5rem" },
-  { width: "4rem" },
-];
-
-const BENTO_SKELETON_COLUMNS = [
   { width: "4.5rem" },
-  { width: "5.5rem" },
+  { width: "4.5rem" },
+  { width: "7rem" },
   { width: "3.5rem" },
   { width: "7rem" },
   { width: "8rem" },
   { width: "4.5rem" },
+  { width: "2.5rem" },
+  { width: "3.5rem", variant: "badge" as const },
 ];
 
 type ProductsLoader = (filters: ProductListFilters) => Promise<ProductListResult>;
@@ -106,17 +105,14 @@ export function ProductsListPage({
   const [pendingRecommendId, setPendingRecommendId] = useState<string | null>(
     null,
   );
-  const showBentoColumns = showsBentoListColumns(preset);
+  const [sortField, setSortField] = useState<ProductSortField>("sku");
+  const [sortAscending, setSortAscending] = useState(true);
 
   const totalPages = Math.max(1, Math.ceil(total / PRODUCTS_PAGE_SIZE));
   const visibleFrom = total === 0 ? 0 : (page - 1) * PRODUCTS_PAGE_SIZE + 1;
   const visibleTo = Math.min(page * PRODUCTS_PAGE_SIZE, total);
   const skeletonColumns = [
-    ...BASE_SKELETON_COLUMNS,
-    ...(showBentoColumns ? BENTO_SKELETON_COLUMNS : []),
-    { width: "2.5rem" },
-    { width: "3.5rem", variant: "badge" as const },
-    { width: "7rem" },
+    ...PRODUCT_SKELETON_COLUMNS,
     ...(canEdit ? [{ width: "2.75rem", variant: "action" as const }] : []),
   ];
 
@@ -126,16 +122,6 @@ export function ProductsListPage({
         style: "currency",
         currency: "HKD",
         maximumFractionDigits: 0,
-      }),
-    [i18n.language],
-  );
-
-  const dateTimeFormatter = useMemo(
-    () =>
-      new Intl.DateTimeFormat(i18n.language, {
-        dateStyle: "short",
-        timeStyle: "short",
-        timeZone: "Asia/Hong_Kong",
       }),
     [i18n.language],
   );
@@ -206,6 +192,8 @@ export function ProductsListPage({
     setProductTypeName("");
     setStatus("");
     setPriceRange("");
+    setSortField("sku");
+    setSortAscending(true);
   }, [preset]);
 
   const loadPage = useCallback(async () => {
@@ -219,6 +207,8 @@ export function ProductsListPage({
         productTypeName,
         status,
         priceRange,
+        sortField,
+        sortAscending,
         preset,
       });
       setItems(result.items);
@@ -246,6 +236,8 @@ export function ProductsListPage({
     productTypeName,
     reloadKey,
     search,
+    sortAscending,
+    sortField,
     status,
   ]);
 
@@ -256,6 +248,21 @@ export function ProductsListPage({
   const submitSearch = () => {
     setPage(1);
     setSearch(draftSearch.trim());
+  };
+
+  const toggleSort = (field: ProductSortField) => {
+    setPage(1);
+    if (sortField === field) {
+      setSortAscending((current) => !current);
+      return;
+    }
+    setSortField(field);
+    setSortAscending(true);
+  };
+
+  const sortIcon = (field: ProductSortField) => {
+    if (sortField !== field) return null;
+    return sortAscending ? <ArrowUp /> : <ArrowDown />;
   };
 
   const titleKey =
@@ -483,24 +490,46 @@ export function ProductsListPage({
             skeletonColumns={skeletonColumns}
             header={
               <tr>
-                <th>{t("products.columns.sku")}</th>
-                <th>{t("products.columns.name")}</th>
                 <th>{t("products.columns.channel")}</th>
+                <th>
+                  <button
+                    type="button"
+                    className="table-sort-button"
+                    onClick={() => toggleSort("sku")}
+                  >
+                    {t("products.columns.sku")}
+                    {sortIcon("sku")}
+                  </button>
+                </th>
+                <th>
+                  <button
+                    type="button"
+                    className="table-sort-button"
+                    onClick={() => toggleSort("name")}
+                  >
+                    {t("products.columns.name")}
+                    {sortIcon("name")}
+                  </button>
+                </th>
                 <th>{t("products.columns.type")}</th>
-                <th>{t("products.columns.price")}</th>
-                {showBentoColumns ? (
-                  <>
-                    <th>{t("products.columns.staple")}</th>
-                    <th>{t("products.columns.range")}</th>
-                    <th>{t("products.columns.compartments")}</th>
-                    <th>{t("products.columns.ingredients")}</th>
-                    <th>{t("products.columns.specialRequests")}</th>
-                    <th>{t("products.columns.cookMethod")}</th>
-                  </>
-                ) : null}
+                <th>{t("products.columns.staple")}</th>
+                <th>
+                  <button
+                    type="button"
+                    className="table-sort-button"
+                    onClick={() => toggleSort("price")}
+                  >
+                    {t("products.columns.price")}
+                    {sortIcon("price")}
+                  </button>
+                </th>
+                <th>{t("products.columns.range")}</th>
+                <th>{t("products.columns.compartments")}</th>
+                <th>{t("products.columns.ingredients")}</th>
+                <th>{t("products.columns.specialRequests")}</th>
+                <th>{t("products.columns.cookMethod")}</th>
                 <th>{t("products.columns.recommended")}</th>
                 <th>{t("products.columns.status")}</th>
-                <th>{t("products.columns.created")}</th>
                 {canEdit ? <th>{t("products.columns.actions")}</th> : null}
               </tr>
             }
@@ -511,6 +540,7 @@ export function ProductsListPage({
                 className="table-row-clickable"
                 onClick={() => openProduct(product.id)}
               >
+                <td>{product.channelName || t("common.notSet")}</td>
                 <td>{product.sku || t("common.notSet")}</td>
                 <td>
                   <DetailLink
@@ -525,31 +555,26 @@ export function ProductsListPage({
                       <small className="quote-company">{product.name}</small>
                     )}
                 </td>
-                <td>{product.channelName || t("common.notSet")}</td>
                 <td>{product.productTypeName || t("common.notSet")}</td>
+                <td>{product.bentoMainTypeName || t("common.notSet")}</td>
                 <td>
                   <strong>{formatPrice(product)}</strong>
                 </td>
-                {showBentoColumns ? (
-                  <>
-                    <td>{product.bentoMainTypeName || t("common.notSet")}</td>
-                    <td>{formatRange(product)}</td>
-                    <td>{product.bentoColumnTypeName || t("common.notSet")}</td>
-                    <td>
-                      <ProductTagList
-                        tags={product.mainIngredients.map((name) => ({ name }))}
-                        empty={t("common.notSet")}
-                      />
-                    </td>
-                    <td>
-                      <ProductTagList
-                        tags={product.specialRequests.map((name) => ({ name }))}
-                        empty={t("common.notSet")}
-                      />
-                    </td>
-                    <td>{product.cookTypeName || t("common.notSet")}</td>
-                  </>
-                ) : null}
+                <td>{formatRange(product)}</td>
+                <td>{product.bentoColumnTypeName || t("common.notSet")}</td>
+                <td>
+                  <ProductTagList
+                    tags={product.mainIngredients.map((name) => ({ name }))}
+                    empty={t("common.notSet")}
+                  />
+                </td>
+                <td>
+                  <ProductTagList
+                    tags={product.specialRequests.map((name) => ({ name }))}
+                    empty={t("common.notSet")}
+                  />
+                </td>
+                <td>{product.cookTypeName || t("common.notSet")}</td>
                 <td className="product-recommend-cell">
                   <ProductRecommendStar
                     recommended={product.isBentoRecommended}
@@ -564,9 +589,6 @@ export function ProductsListPage({
                   <span className={`status-badge ${statusTone(product)}`}>
                     {statusLabel(product)}
                   </span>
-                </td>
-                <td>
-                  {dateTimeFormatter.format(new Date(product.createdAt))}
                 </td>
                 {canEdit ? (
                   <td className="table-actions-cell">

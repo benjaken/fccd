@@ -51,6 +51,7 @@ export type ProductPriceRange =
   | "2000-plus";
 
 export type ProductStatusFilter = "" | "Active" | "Inactive" | "unset";
+export type ProductSortField = "sku" | "name" | "price";
 
 export type ProductListFilters = {
   page: number;
@@ -59,6 +60,8 @@ export type ProductListFilters = {
   productTypeName: string;
   status: ProductStatusFilter;
   priceRange: ProductPriceRange;
+  sortField?: ProductSortField;
+  sortAscending?: boolean;
   preset?: ProductPreset;
 };
 
@@ -130,10 +133,6 @@ export function productIngredientCost(items: ProductPremiumIngredient[]) {
 
 export function canEditProductCatalog(role: string | null | undefined) {
   return role === "Super Admin" || role === "Admin";
-}
-
-export function showsBentoListColumns(preset: ProductPreset) {
-  return preset === "lunchbox" || preset === "ala-carte";
 }
 
 export type RelatedPackageSummary = {
@@ -381,6 +380,8 @@ export async function fetchProducts({
   productTypeName,
   status,
   priceRange,
+  sortField = "sku",
+  sortAscending = true,
   preset = "all",
 }: ProductListFilters): Promise<ProductListResult> {
   const start = (page - 1) * PRODUCTS_PAGE_SIZE;
@@ -396,9 +397,23 @@ export async function fetchProducts({
     // Temporarily hide Bubble rows that never received a SKU so the catalog
     // matches the old product list instead of the 7k+ incomplete records.
     .not("sku", "is", null)
-    .neq("sku", "")
-    .order("sku", { ascending: true })
-    .range(start, end);
+    .neq("sku", "");
+
+  if (sortField === "name") {
+    query = query
+      .order("chinese_name", {
+        ascending: sortAscending,
+        nullsFirst: false,
+      })
+      .order("name", { ascending: sortAscending, nullsFirst: false });
+  } else {
+    query = query.order(sortField === "price" ? "price" : "sku", {
+      ascending: sortAscending,
+      nullsFirst: false,
+    });
+  }
+
+  query = query.range(start, end);
 
   if (status === "unset") {
     query = query.or("status.is.null,status.eq.");

@@ -204,7 +204,22 @@ describe("Products catalog pages", () => {
     expect(within(screen.getByRole("table")).getByText("Catering")).toBeInTheDocument();
     expect(within(screen.getByRole("table")).getByText("西式熱盤")).toBeInTheDocument();
     expect(screen.getByText("HK$188")).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "品牌" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "SKU" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "產品名稱" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "類別" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "主食" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "價錢" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Range" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "格數" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "主要食材" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "特別要求" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "烹煮方式" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "推介" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "啟用" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("columnheader", { name: "建立日期" }),
+    ).not.toBeInTheDocument();
     expect(screen.getByLabelText("已推薦")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "編輯" })).not.toBeInTheDocument();
   });
@@ -289,8 +304,51 @@ describe("Products catalog pages", () => {
         productTypeName: "",
         status: "",
         priceRange: "",
+        sortField: "sku",
+        sortAscending: true,
         preset: "all",
       }),
+    );
+  });
+
+  it("sorts the product list by SKU, name, and price", async () => {
+    const user = userEvent.setup();
+    const loadProducts = vi.fn().mockResolvedValue(productResult);
+    const loadChannels = vi.fn().mockResolvedValue([]);
+
+    render(
+      <MemoryRouter>
+        <ProductsListPage
+          loadProducts={loadProducts}
+          loadChannels={loadChannels}
+        />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(loadProducts).toHaveBeenCalledTimes(1));
+    expect(loadProducts).toHaveBeenLastCalledWith(
+      expect.objectContaining({ sortField: "sku", sortAscending: true }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "產品名稱" }));
+    await waitFor(() =>
+      expect(loadProducts).toHaveBeenLastCalledWith(
+        expect.objectContaining({ sortField: "name", sortAscending: true }),
+      ),
+    );
+
+    await user.click(screen.getByRole("button", { name: "產品名稱" }));
+    await waitFor(() =>
+      expect(loadProducts).toHaveBeenLastCalledWith(
+        expect.objectContaining({ sortField: "name", sortAscending: false }),
+      ),
+    );
+
+    await user.click(screen.getByRole("button", { name: "價錢" }));
+    await waitFor(() =>
+      expect(loadProducts).toHaveBeenLastCalledWith(
+        expect.objectContaining({ sortField: "price", sortAscending: true }),
+      ),
     );
   });
 
@@ -412,7 +470,7 @@ describe("Products catalog pages", () => {
     expect(await screen.findByText("商品詳情頁")).toBeInTheDocument();
   });
 
-  it("shows bento columns on the a-la-carte list", async () => {
+  it("shows bento columns on every product list", async () => {
     const loadProducts = vi.fn().mockResolvedValue(productResult);
     const loadChannels = vi.fn().mockResolvedValue([]);
 
