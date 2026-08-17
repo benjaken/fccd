@@ -477,6 +477,8 @@ const resources = {
         columns: {
           no: "NO",
           order: "訂單",
+          customerName: "姓名",
+          customerPhone: "電話",
           deliveryDate: "送貨日期",
           time: "時間",
           district: "地區",
@@ -2630,6 +2632,8 @@ const resources = {
         columns: {
           no: "No.",
           order: "Order",
+          customerName: "Name",
+          customerPhone: "Phone",
           deliveryDate: "Delivery date",
           time: "Time",
           district: "District",
