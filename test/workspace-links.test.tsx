@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import {
   WorkspacePlaceholderPage,
+  isWorkspaceNavActive,
   workspaceFromPath,
 } from "@/App";
 import i18n from "@/i18n";
@@ -21,6 +22,14 @@ describe("Workspace switcher", () => {
     expect(workspaceFromPath("/orders")).toBe("factory");
     expect(workspaceFromPath("/delivery")).toBe("factory");
     expect(workspaceFromPath("/restaurant")).toBe("factory");
+  });
+
+  it("never marks 工場版面 as the active workspace link", () => {
+    expect(isWorkspaceNavActive("factory", "/factory")).toBe(false);
+    expect(isWorkspaceNavActive("factory", "/")).toBe(false);
+    expect(isWorkspaceNavActive("factory", "/orders")).toBe(false);
+    expect(isWorkspaceNavActive("delivery", "/driver-delivery")).toBe(true);
+    expect(isWorkspaceNavActive("delivery", "/factory")).toBe(false);
   });
 
   it("shows factory and driver placeholder copy", () => {

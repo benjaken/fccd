@@ -556,6 +556,11 @@ function workspaceFromPath(pathname: string) {
   return "factory";
 }
 
+function isWorkspaceNavActive(key: string, pathname: string) {
+  if (key === "factory") return false;
+  return workspaceFromPath(pathname) === key;
+}
+
 function isWorkspaceLandingPath(pathname: string) {
   return pathname === "/factory" || pathname === "/driver-delivery";
 }
@@ -638,7 +643,13 @@ function mobileNavLinkEnd(to: string, allHrefs: string[]) {
   );
 }
 
-export { isPrimaryNavActive, sectionFromPath, workspaceFromPath, buildMobileDrawerNav };
+export {
+  isPrimaryNavActive,
+  sectionFromPath,
+  workspaceFromPath,
+  isWorkspaceNavActive,
+  buildMobileDrawerNav,
+};
 
 function Brand() {
   const { t } = useTranslation();
@@ -737,7 +748,6 @@ function OperationsShell() {
       .flatMap((item) => item.children ?? [])
       .find((item) => isNavItemVisible(item, pageAccess.canAccess))?.to ??
     REPORT_GROUP_ROUTES.frozenMeat;
-  const activeWorkspace = workspaceFromPath(location.pathname);
   const isWorkspaceLanding = isWorkspaceLandingPath(location.pathname);
   const canViewFinance = pageAccess.canAccess("finance");
   const canEditProducts = canEditProductCatalog(authorizationRole);
@@ -809,7 +819,7 @@ function OperationsShell() {
                   to={to}
                   className={cn(
                     "workspace-soft-link",
-                    activeWorkspace === key && "active",
+                    isWorkspaceNavActive(key, location.pathname) && "active",
                   )}
                 >
                   <WorkspaceIcon />
@@ -1313,7 +1323,8 @@ function OperationsShell() {
                         className={() =>
                           cn(
                             "sidebar-link",
-                            activeWorkspace === key && "active",
+                            isWorkspaceNavActive(key, location.pathname) &&
+                              "active",
                           )
                         }
                       >
