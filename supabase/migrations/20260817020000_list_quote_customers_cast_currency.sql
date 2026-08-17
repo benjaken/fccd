@@ -1,9 +1,3 @@
-create index if not exists orders_email_snapshot_lower_idx
-  on public.orders (lower(btrim(email_snapshot)))
-  where archived_at is null
-    and email_snapshot is not null
-    and btrim(email_snapshot) <> '';
-
 create or replace function public.list_quote_customers(
   p_search text default '',
   p_sort text default 'order_total',
@@ -155,11 +149,3 @@ begin
   offset v_offset;
 end;
 $$;
-
-comment on function public.list_quote_customers(text, text, boolean, integer, integer) is
-  'Groups visible catering orders by email for the Quotes & Customers list. Runs with caller RLS.';
-
-revoke all on function public.list_quote_customers(text, text, boolean, integer, integer)
-  from public, anon;
-grant execute on function public.list_quote_customers(text, text, boolean, integer, integer)
-  to authenticated;
