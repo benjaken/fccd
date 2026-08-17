@@ -4540,59 +4540,38 @@ td:last-child {
   font-size: 0.88rem;
 }
 
-.confirm-dialog-root {
-  position: fixed;
-  inset: 0;
-  z-index: 80;
+.selling-price-cost-push-metrics {
   display: grid;
-  place-items: center;
-  padding: 24px;
+  gap: 16px;
+  margin: 0;
 }
 
-.confirm-dialog-backdrop {
-  position: absolute;
-  inset: 0;
-  border: 0;
-  background: color-mix(in oklch, var(--foreground) 28%, transparent);
-  cursor: pointer;
-}
-
-.confirm-dialog {
-  position: relative;
-  z-index: 1;
-  width: min(28rem, 100%);
-  overflow: hidden;
-  background: var(--card);
+.selling-price-cost-push-metric {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 14px 16px;
   border: 1px solid var(--border);
   border-radius: 12px;
-  box-shadow: 0 18px 40px color-mix(in oklch, var(--foreground) 12%, transparent);
+  background: var(--secondary);
 }
 
-.selling-price-cost-push-preview {
-  display: grid;
-  gap: 8px;
-  padding: 20px 22px;
-  background: var(--primary);
-  color: var(--primary-foreground);
-}
-
-.selling-price-cost-push-preview p {
+.selling-price-cost-push-metric dt,
+.selling-price-cost-push-metric dd {
   margin: 0;
+}
+
+.selling-price-cost-push-metric span {
+  color: var(--muted-foreground);
   font-size: 14px;
   font-weight: 700;
 }
 
-.selling-price-cost-push-preview strong {
+.selling-price-cost-push-metric strong {
+  color: var(--foreground);
   font-size: 22px;
   font-weight: 790;
   letter-spacing: -0.03em;
-}
-
-.confirm-dialog-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  padding: 16px 18px;
 }
 
 .calculation-settings-form {

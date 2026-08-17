@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SellingPriceCostPage } from "@/components/SellingPriceCostPage";
 import i18n from "@/i18n";
 import {
-  averageFactorySupplyPrice,
+  averageMonthlySupplyPrices,
   computeSellingPriceCost,
   filterSellingPriceCostRows,
   formatSeasoningCode,
@@ -101,9 +101,12 @@ describe("selling price cost calculations", () => {
     expect(formatSignedPercent(0.15)).toBe("+15%");
   });
 
-  it("averages factory supply prices equally across priced rows", () => {
-    expect(averageFactorySupplyPrice(bellyRows)).toBeCloseTo(54.7945, 3);
-    expect(averageFactorySupplyPrice([])).toBeNull();
+  it("averages factory and shop supply prices equally across priced rows", () => {
+    expect(averageMonthlySupplyPrices(bellyRows)).toEqual({
+      roomPrice: 54.7945,
+      shopPrice: 57.5342,
+    });
+    expect(averageMonthlySupplyPrices([])).toBeNull();
   });
 
   it("accepts only YYYY-MM keys for monthly push", () => {
@@ -271,10 +274,12 @@ describe("Selling price cost page", () => {
     await user.click(sendButton);
 
     const dialog = await screen.findByRole("dialog", {
-      name: "產品製作成本及工場用貨售價",
+      name: "確認傳送到報表",
     });
     expect(within(dialog).getByText("產品製作成本及工場用貨售價")).toBeInTheDocument();
+    expect(within(dialog).getByText("產品供店舖平均售價")).toBeInTheDocument();
     expect(within(dialog).getByText(/\$54\.79/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/\$57\.53/)).toBeInTheDocument();
     expect(pushMonthlyPrices).not.toHaveBeenCalled();
 
     await user.click(within(dialog).getByRole("button", { name: "取消" }));

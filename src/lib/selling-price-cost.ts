@@ -479,8 +479,8 @@ export async function fetchSellingPriceCostRows(
   });
 }
 
-/** Arithmetic mean of 工場 prices for the rows that can be priced. */
-export function averageFactorySupplyPrice(rows: SellingPriceCostRow[]) {
+/** Arithmetic mean of 工場 / 店舖 prices for the rows that can be priced. */
+export function averageMonthlySupplyPrices(rows: SellingPriceCostRow[]) {
   const priced = rows.flatMap((row) => {
     if (
       row.rawMeatWeightKg === null ||
@@ -499,7 +499,7 @@ export function averageFactorySupplyPrice(rows: SellingPriceCostRow[]) {
     });
     return computed ? [computed] : [];
   });
-  return averageMonthlyMeatPrices(priced)?.roomPrice ?? null;
+  return averageMonthlyMeatPrices(priced);
 }
 
 export type MonthlyMeatPricePushResult = {
