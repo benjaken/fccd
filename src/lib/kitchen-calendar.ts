@@ -107,9 +107,9 @@ export function kitchenCalendarReturnPath(
 ) {
   if (from !== KITCHEN_CALENDAR_FROM) return null;
   if (month && /^\d{4}-\d{2}$/.test(month)) {
-    return `/kitchen/calendar?month=${month}`;
+    return `/orders/calendar?month=${month}`;
   }
-  return "/kitchen/calendar";
+  return "/orders/calendar";
 }
 
 export function parseKitchenCalendarMonth(

@@ -27,6 +27,7 @@ describe("buildMobileDrawerNav", () => {
       "/orders",
       "/orders/new",
       "/orders/pending",
+      "/orders/calendar",
       "/orders/unpaid",
       "/orders/monthly",
       "/orders/split",

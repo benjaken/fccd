@@ -846,6 +846,17 @@ describe("Super Admin system settings", () => {
     expect(orderListConfigs).toContain("settings.order_lists.edit");
     expect(orderListConfigs).toContain("/settings/order-lists");
 
+    const servingCalendarMove = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260817072000_move_serving_calendar_to_orders.sql",
+      ),
+      "utf8",
+    );
+    expect(servingCalendarMove).toContain("/orders/calendar");
+    expect(servingCalendarMove).toContain("parent_page_key = 'orders'");
+    expect(servingCalendarMove).toContain("kitchen.calendar");
+
     const preparedMeatFlags = readFileSync(
       path.resolve(
         process.cwd(),

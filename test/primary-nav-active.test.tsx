@@ -12,6 +12,7 @@ describe("Primary navigation section matching", () => {
     ["/inventory", "overview"],
     ["/orders", "orders"],
     ["/orders/pending", "orders"],
+    ["/orders/calendar", "orders"],
     ["/orders/unpaid", "orders"],
     ["/orders/monthly", "orders"],
     ["/orders/split", "orders"],
@@ -138,6 +139,7 @@ describe("Primary navigation section matching", () => {
     );
     expect(pageAccessKey("/kitchen/settings")).toBe("kitchen.settings");
     expect(pageAccessKey("/kitchen/calendar")).toBe("kitchen.calendar");
+    expect(pageAccessKey("/orders/calendar")).toBe("kitchen.calendar");
     expect(pageAccessKey("/orders/production")).toBe("kitchen.calendar");
     expect(pageAccessKey("/kitchen/settings/cook-types")).toBe(
       "kitchen.settings",
@@ -166,6 +168,10 @@ describe("Primary navigation section matching", () => {
     expect(source).toContain('to: "/orders/kitchen-notes"');
     expect(source).toContain('to: "/orders/reschedule-pending"');
     expect(source).toContain('to: "/orders/shopify-pending"');
+    expect(source).toContain('to: "/orders/calendar"');
+    expect(source.indexOf('path="/orders/calendar"')).toBeLessThan(
+      source.indexOf('path="/orders/:id"'),
+    );
     expect(source.indexOf('path="/orders/shopify-pending"')).toBeLessThan(
       source.indexOf('path="/orders/:id"'),
     );

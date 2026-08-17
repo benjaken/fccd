@@ -16,6 +16,7 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
   { prefix: "/settings/order-lists", pageKey: "settings.order_lists" },
   { prefix: "/settings", pageKey: "settings" },
   { prefix: "/orders/pending", pageKey: "orders.pending" },
+  { prefix: "/orders/calendar", pageKey: "kitchen.calendar" },
   { prefix: "/orders/production", pageKey: "kitchen.calendar" },
   { prefix: "/orders/payments", pageKey: "orders.payments" },
   { prefix: "/orders/drivers", pageKey: "orders.drivers" },

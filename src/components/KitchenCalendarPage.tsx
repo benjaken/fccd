@@ -160,7 +160,7 @@ export function KitchenCalendarPage({
     <section className="kitchen-calendar-page">
       <header className="page-heading kitchen-calendar-heading">
         <div>
-          <span className="eyebrow">{t("navigation.kitchen")}</span>
+          <span className="eyebrow">{t("orders.eyebrow")}</span>
           <h1>{t("navigation.productionCalendar")}</h1>
         </div>
         <ul

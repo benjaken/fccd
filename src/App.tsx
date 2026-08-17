@@ -209,6 +209,12 @@ const secondaryNav: Record<string, NavItem[]> = {
       permissionKey: "orders.pending",
     },
     {
+      key: "productionCalendar",
+      to: "/orders/calendar",
+      icon: CalendarDays,
+      permissionKey: "kitchen.calendar",
+    },
+    {
       key: "unpaidOrders",
       to: "/orders/unpaid",
       icon: CircleDollarSign,
@@ -406,12 +412,6 @@ const secondaryNav: Record<string, NavItem[]> = {
   kitchen: [
     { key: "kitchen", to: "/kitchen", icon: Utensils, permissionKey: "kitchen" },
     {
-      key: "productionCalendar",
-      to: "/kitchen/calendar",
-      icon: CalendarDays,
-      permissionKey: "kitchen.calendar",
-    },
-    {
       key: "inventory",
       to: "/kitchen/inventory",
       icon: Warehouse,
@@ -525,6 +525,7 @@ const SECTION_CHILD_KEYS: Record<string, string[]> = {
   orders: [
     "orders.new",
     "orders.pending",
+    "kitchen.calendar",
     "orders.payments",
     "orders.drivers",
     "orders.unpaid",
@@ -558,7 +559,7 @@ const SECTION_CHILD_KEYS: Record<string, string[]> = {
     "frozen.yield_errors",
     ...FROZEN_ACTION_PAGE_KEYS,
   ],
-  kitchen: ["kitchen.calendar", "kitchen.inventory", ...KITCHEN_ACTION_PAGE_KEYS],
+  kitchen: ["kitchen.inventory", ...KITCHEN_ACTION_PAGE_KEYS],
   delivery: ["delivery.assign"],
   restaurant: ["restaurant.inventory", "restaurant.reports"],
   reports: [
@@ -1201,8 +1202,17 @@ function OperationsShell() {
                 element={<PaymentsListPage canViewFinance={canViewFinance} />}
               />
               <Route
+                path="/orders/calendar"
+                element={<KitchenCalendarPage />}
+              />
+              <Route
                 path="/orders/production"
-                element={<Navigate to="/kitchen/calendar" replace />}
+                element={
+                  <Navigate
+                    to={`/orders/calendar${location.search}`}
+                    replace
+                  />
+                }
               />
               <Route
                 path="/orders/settings"
@@ -1331,7 +1341,12 @@ function OperationsShell() {
               />
               <Route
                 path="/kitchen/calendar"
-                element={<KitchenCalendarPage />}
+                element={
+                  <Navigate
+                    to={`/orders/calendar${location.search}`}
+                    replace
+                  />
+                }
               />
               <Route
                 path="/delivery"

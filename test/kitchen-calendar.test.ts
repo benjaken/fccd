@@ -154,10 +154,10 @@ describe("Kitchen calendar date helpers", () => {
       "/orders/order-amber?from=calendar&month=2026-08",
     );
     expect(kitchenCalendarReturnPath("calendar", "2026-08")).toBe(
-      "/kitchen/calendar?month=2026-08",
+      "/orders/calendar?month=2026-08",
     );
     expect(kitchenCalendarReturnPath("calendar", "nope")).toBe(
-      "/kitchen/calendar",
+      "/orders/calendar",
     );
     expect(kitchenCalendarReturnPath("orders", "2026-08")).toBeNull();
   });
