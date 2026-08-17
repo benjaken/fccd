@@ -44,7 +44,9 @@ type CancelDelivery = typeof cancelPendingDelivery;
 
 const DELIVERY_SKELETON_COLUMNS = [
   { width: "2.5rem" },
-  { width: "10rem" },
+  { width: "6rem" },
+  { width: "8rem" },
+  { width: "6.5rem" },
   { width: "5.5rem" },
   { width: "6.5rem" },
   { width: "4.5rem" },
@@ -507,6 +509,8 @@ export function DeliveryListPage({
               <tr>
                 <th>{t("deliveryList.columns.no")}</th>
                 <th>{t("deliveryList.columns.order")}</th>
+                <th>{t("deliveryList.columns.customerName")}</th>
+                <th>{t("deliveryList.columns.customerPhone")}</th>
                 <th>{t("deliveryList.columns.deliveryDate")}</th>
                 <th>{t("deliveryList.columns.time")}</th>
                 <th>{t("deliveryList.columns.district")}</th>
@@ -542,13 +546,11 @@ export function DeliveryListPage({
                             t("common.notSet")}
                         </strong>
                       )}
-                      <span>{display(item.customerName)}</span>
-                      {item.customerPhone ? (
-                        <span className="delivery-order-phone">
-                          {item.customerPhone}
-                        </span>
-                      ) : null}
                     </div>
+                  </td>
+                  <td>{display(item.customerName)}</td>
+                  <td className="delivery-order-phone">
+                    {item.customerPhone?.trim() || "—"}
                   </td>
                   <td>{formatDate(item.deliveryAt)}</td>
                   <td>{item.deliveryTime?.trim() || "—"}</td>

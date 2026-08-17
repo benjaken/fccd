@@ -2171,17 +2171,13 @@ button.product-tag[aria-pressed="true"] {
 .delivery-order-cell {
   display: grid;
   justify-items: start;
-  gap: 2px;
   font-size: 14px;
   line-height: 1.35;
 }
 
-.delivery-order-cell span {
-  color: var(--muted-foreground);
-}
-
 .delivery-order-phone {
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .delivery-view-image,

@@ -94,9 +94,13 @@ describe("Delivery list page", () => {
 
     const table = within(screen.getByRole("table"));
     expect(table.getByText("#6918")).toHaveAttribute("href", "/orders/order-1");
+    expect(table.getByRole("columnheader", { name: "姓名" })).toBeTruthy();
+    expect(table.getByRole("columnheader", { name: "電話" })).toBeTruthy();
     expect(table.getByText("Louis Chang 張")).toBeInTheDocument();
+    expect(table.getByText("Louis Chang 張").closest(".delivery-order-cell")).toBeNull();
     expect(table.getByText("90154004")).toBeInTheDocument();
     expect(table.getByText("90154004").className).toContain("delivery-order-phone");
+    expect(table.getByText("90154004").closest(".delivery-order-cell")).toBeNull();
     expect(table.getAllByText("18:00 - 19:00").length).toBeGreaterThan(0);
     expect(table.getByText("青衣")).toBeInTheDocument();
     expect(table.getAllByText("Sun-Line").length).toBeGreaterThan(0);
