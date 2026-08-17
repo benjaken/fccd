@@ -30,6 +30,7 @@ describe("buildMobileDrawerNav", () => {
       "/orders/production",
       "/orders/payments",
       "/orders/drivers",
+      "/orders/settings",
     ]);
     expect(settings?.items.map((item) => item.key)).toEqual([
       "users",

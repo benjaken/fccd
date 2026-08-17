@@ -41,6 +41,7 @@ import {
   Snowflake,
   Store,
   Sun,
+  Tags,
   Truck,
   UserRound,
   Users,
@@ -69,6 +70,7 @@ import { LoginPage } from "@/components/LoginPage";
 import { MigrationWorkspace } from "@/components/MigrationWorkspace";
 import { FollowUpPage } from "@/components/FollowUpPage";
 import { OrdersListPage } from "@/components/OrdersListPage";
+import { OrderSettingsPage } from "@/components/OrderSettingsPage";
 import { OrderDetailPage } from "@/components/OrderDetailPage";
 import { PaymentsListPage } from "@/components/PaymentsListPage";
 import { ProfilePage } from "@/components/ProfilePage";
@@ -193,6 +195,12 @@ const secondaryNav: Record<string, NavItem[]> = {
       to: "/orders/drivers",
       icon: Truck,
       permissionKey: "orders.drivers",
+    },
+    {
+      key: "orderSettings",
+      to: "/orders/settings",
+      icon: Tags,
+      permissionKey: "orders.settings",
     },
   ],
   quotes: [
@@ -418,6 +426,7 @@ const SECTION_CHILD_KEYS: Record<string, string[]> = {
     "orders.drivers",
     "orders.unpaid",
     "orders.delivered_unpaid",
+    "orders.settings",
   ],
   quotes: ["quotes.customers", "quotes.follow_up"],
   products: [
@@ -983,6 +992,14 @@ function OperationsShell() {
               <Route
                 path="/orders/payments"
                 element={<PaymentsListPage canViewFinance={canViewFinance} />}
+              />
+              <Route
+                path="/orders/settings"
+                element={<Navigate to="/orders/settings/tags" replace />}
+              />
+              <Route
+                path="/orders/settings/:tab"
+                element={<OrderSettingsPage />}
               />
               <Route
                 path="/orders/:id"
