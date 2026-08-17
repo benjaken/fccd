@@ -249,7 +249,8 @@ describe("Quote customers list", () => {
       "/orders/order-4455",
     );
     expect(screen.getByText("312")).toBeInTheDocument();
-    expect(screen.getByText("HK$940,852")).toBeInTheDocument();
+    expect(screen.getByText("HK$940,852.40")).toBeInTheDocument();
+    expect(screen.getByText("HK$190,098.65")).toBeInTheDocument();
     expect(
       screen.getByRole("button", {
         name: "留言 sales@foodchannels-catering.com",
@@ -297,6 +298,8 @@ describe("Quote customers list", () => {
     expect(
       await screen.findByRole("spinbutton", { name: "跳至頁碼" }),
     ).toHaveValue(1);
+    expect(screen.getByRole("columnheader", { name: "訂單總額" }))
+      .toHaveAttribute("aria-sort", "descending");
     await user.click(screen.getByRole("button", { name: "下一頁" }));
 
     await waitFor(() =>
@@ -312,6 +315,8 @@ describe("Quote customers list", () => {
         expect.objectContaining({ page: 1, ascending: true }),
       ),
     );
+    expect(screen.getByRole("columnheader", { name: "訂單總額" }))
+      .toHaveAttribute("aria-sort", "ascending");
   });
 
   it("opens the customer order table from the customer name", async () => {
@@ -350,6 +355,8 @@ describe("Quote customers list", () => {
     expect(within(detailTable).getByText("611教會")).toBeInTheDocument();
     expect(within(detailTable).getByRole("link", { name: "P-1100" }))
       .toHaveAttribute("href", "/quotes/quote-1100");
+    expect(within(detailTable).getByText("HK$12,880.00")).toBeInTheDocument();
+    expect(within(detailTable).getByText("HK$4,200.00")).toBeInTheDocument();
   });
 
   it("opens a company-order table in the side panel from a multi-company row", async () => {

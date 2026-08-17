@@ -60,10 +60,14 @@ function formatMoney(
   currency: string,
   formatter: Intl.NumberFormat,
   unset: string,
+  locale = "zh-HK",
 ) {
   if (amount === null) return unset;
   if (currency === "HKD") return formatter.format(amount);
-  return `${currency} ${amount.toLocaleString()}`;
+  return `${currency} ${amount.toLocaleString(locale, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 }
 
 function CompanyCell({
@@ -191,7 +195,8 @@ export function QuoteCustomersPage({
       new Intl.NumberFormat(i18n.language, {
         style: "currency",
         currency: "HKD",
-        maximumFractionDigits: 0,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
       }),
     [i18n.language],
   );
@@ -447,12 +452,15 @@ export function QuoteCustomersPage({
                 <th>{t("quoteCustomers.columns.customer")}</th>
                 <th>{t("quoteCustomers.columns.company")}</th>
                 <th>{t("quoteCustomers.columns.orderCount")}</th>
-                <th>
+                <th
+                  aria-sort={sortAscending ? "ascending" : "descending"}
+                >
                   <button
                     type="button"
                     className="quote-customers-sort"
                     onClick={toggleSort}
                     aria-label={t("quoteCustomers.sortByTotal")}
+                    title={t("quoteCustomers.sortByTotal")}
                   >
                     {t("quoteCustomers.columns.orderTotal")}
                     {sortAscending ? <ArrowUp /> : <ArrowDown />}
@@ -526,6 +534,7 @@ export function QuoteCustomersPage({
                       customer.currency,
                       currencyFormatter,
                       t("common.notSet"),
+                      i18n.language,
                     )}
                   </strong>
                 </td>
@@ -628,6 +637,7 @@ export function QuoteCustomersPage({
                                 order.currency,
                                 currencyFormatter,
                                 t("common.notSet"),
+                                i18n.language,
                               )}
                             </strong>
                           </td>
