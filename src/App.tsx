@@ -206,10 +206,16 @@ const secondaryNav: Record<string, NavItem[]> = {
     },
     {
       key: "orderSettings",
-      to: "/orders/settings/statuses",
+      to: "/orders/settings/sale-partners",
       icon: Settings,
       permissionKey: "orders.settings",
       children: [
+        {
+          key: "salePartners",
+          to: "/orders/settings/sale-partners",
+          icon: Handshake,
+          permissionKey: "orders.settings.sale_partners",
+        },
         {
           key: "orderStatuses",
           to: "/orders/settings/statuses",
@@ -233,12 +239,6 @@ const secondaryNav: Record<string, NavItem[]> = {
           to: "/orders/settings/payments",
           icon: CircleDollarSign,
           permissionKey: "orders.settings",
-        },
-        {
-          key: "salePartners",
-          to: "/orders/settings/sale-partners",
-          icon: Handshake,
-          permissionKey: "orders.settings.sale_partners",
         },
       ],
     },
@@ -1045,7 +1045,7 @@ function OperationsShell() {
               />
               <Route
                 path="/orders/settings"
-                element={<Navigate to="/orders/settings/statuses" replace />}
+                element={<Navigate to="/orders/settings/sale-partners" replace />}
               />
               <Route
                 path="/orders/settings/statuses"

@@ -6,10 +6,7 @@ import { Navigate, useParams } from "react-router-dom";
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { OrderPaymentMethodsTable } from "@/components/OrderPaymentMethodsTable";
 import { OrderShippingMethodsTable } from "@/components/OrderShippingMethodsTable";
-import {
-  OrderSettingsTabNav,
-  isOrderSettingsTab,
-} from "@/components/OrderSettingsTabNav";
+import { isOrderSettingsTab } from "@/components/OrderSettingsTabNav";
 import { Button } from "@/components/ui/button";
 import { ListTable } from "@/components/ui/list-table";
 import { SidePanel } from "@/components/ui/side-panel";
@@ -388,7 +385,13 @@ export function OrderSettingsPage({
       <header className="page-heading order-settings-heading">
         <div>
           <span className="eyebrow">{t("orderSettings.eyebrow")}</span>
-          <h1>{t("orderSettings.title")}</h1>
+          <h1>
+            {activeTab === "payments" ||
+            activeTab === "shipping" ||
+            activeTab === "tags"
+              ? t(`orderSettings.tabs.${activeTab}`)
+              : t("orderSettings.title")}
+          </h1>
         </div>
         {(activeTab === "tags" ||
           activeTab === "shipping" ||
@@ -404,8 +407,6 @@ export function OrderSettingsPage({
           </Button>
         ) : null}
       </header>
-
-      <OrderSettingsTabNav />
 
       <article className="panel order-settings-panel">
         {activeTab === "tags" ? (

@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import { Palette, Pencil, Plus, Trash2 } from "lucide-react";
 
 import { useCurrentPageAccess } from "@/auth/use-page-access";
-import { OrderSettingsTabNav } from "@/components/OrderSettingsTabNav";
 import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
@@ -319,8 +318,6 @@ export function OrderStatusesPage({
           </Button>
         ) : null}
       </header>
-
-      <OrderSettingsTabNav />
 
       <article className="panel order-statuses-panel">
         <header className="order-statuses-toolbar">

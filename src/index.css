@@ -4906,10 +4906,6 @@ button.product-tag[aria-pressed="true"] {
   overflow: hidden;
 }
 
-.order-statuses-page {
-  grid-template-rows: auto auto minmax(0, 1fr);
-}
-
 .seasoning-cost-page .page-heading,
 .calculation-settings-page .page-heading,
 .kitchen-settings-page .page-heading,
@@ -5189,7 +5185,7 @@ button.product-tag[aria-pressed="true"] {
 .order-settings-page {
   display: grid;
   gap: 16px;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   height: calc(
     100dvh - var(--topbar-height) - var(--workspace-height) - 76px
   );
@@ -5199,36 +5195,6 @@ button.product-tag[aria-pressed="true"] {
 
 .order-settings-page .page-heading {
   margin-bottom: 0;
-}
-
-.order-settings-tabs {
-  display: flex;
-  align-items: stretch;
-  gap: 4px;
-  overflow-x: auto;
-  border-bottom: 1px solid var(--border);
-}
-
-.order-settings-tabs a {
-  flex: 0 0 auto;
-  padding: 10px 14px;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-  color: var(--muted-foreground);
-  font-size: 14px;
-  font-weight: 700;
-  line-height: 22px;
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-.order-settings-tabs a:hover {
-  color: var(--foreground);
-}
-
-.order-settings-tabs a.active {
-  color: var(--foreground);
-  border-bottom-color: var(--primary);
 }
 
 .order-settings-panel {
