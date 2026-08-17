@@ -471,11 +471,11 @@ export function FactoryBoardPage({
                             ? `#${item.orderNumber.replace(/^#/, "")}`
                             : t("common.notSet")}
                         </span>
-                        <small>
-                          {portions
-                            ? t("factoryBoard.portions", { count: portions })
-                            : "\u00a0"}
-                        </small>
+                        {portions ? (
+                          <small>
+                            {t("factoryBoard.portions", { count: portions })}
+                          </small>
+                        ) : null}
                       </div>
                       <span
                         className={
