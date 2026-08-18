@@ -2,9 +2,12 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   mapShopifyOrder,
   mapShopifyTransaction,
+  normalizeNameForMatch,
   normalizeShopDomain,
   orderNumberKey,
-  pickCatalogMatch,
+  parseMenuRemark,
+  pickCatalogMatchByName,
+  shopifyMenuOptionLegacyId,
   type ShopifyRestOrder,
   type ShopifyRestTransaction,
 } from "./map.ts";
@@ -45,9 +48,17 @@ type StoreSyncResult = {
   linkedExisting: number;
   updatedShopify: number;
   unmatchedSkuLines: number;
+  menuOptionsInserted: number;
   paymentsInserted: number;
   paymentsPending: number;
   issueCount: number;
+};
+
+type IssueRow = {
+  store_id: string;
+  shopify_order_id: number | null;
+  sku: string | null;
+  issue: string;
 };
 
 type FetchResult =
@@ -167,6 +178,45 @@ async function authenticateUser(
   return { ok: true };
 }
 
+async function hmacSha256Base64(
+  secret: string,
+  body: string,
+): Promise<string> {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const signature = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    encoder.encode(body),
+  );
+  const bytes = new Uint8Array(signature);
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
+async function verifyShopifyWebhook(
+  request: Request,
+  storeRow: StoreRow,
+  rawBody: string,
+): Promise<boolean> {
+  const supplied = request.headers.get("X-Shopify-Hmac-Sha256");
+  if (!supplied) return false;
+  // For custom apps Shopify signs webhooks with the app's client secret. A
+  // dedicated WEBHOOK_SECRET env var, when set, takes precedence.
+  const secret = envFor(storeRow.secret_prefix, "WEBHOOK_SECRET") ??
+    envFor(storeRow.secret_prefix, "CLIENT_SECRET");
+  if (!secret) return false;
+  const computed = await hmacSha256Base64(secret, rawBody);
+  return constantTimeEqual(supplied, computed);
+}
+
 function envFor(prefix: string, suffix: string): string | null {
   return Deno.env.get(`${prefix}_${suffix}`)?.trim() || null;
 }
@@ -268,6 +318,27 @@ async function fetchOrdersPaginated(input: {
   return { orders };
 }
 
+async function fetchOrderById(input: {
+  shop: string;
+  token: string;
+  orderId: number;
+}): Promise<{ order: ShopifyRestOrder } | { error: string; status: number }> {
+  const url =
+    `https://${input.shop}/admin/api/${API_VERSION}/orders/${input.orderId}.json`;
+  const response = await fetch(url, {
+    headers: {
+      "X-Shopify-Access-Token": input.token,
+      "Content-Type": "application/json",
+    },
+  });
+  if (!response.ok) {
+    return { error: "shopify_order_failed", status: response.status };
+  }
+  const payload = await response.json() as { order?: ShopifyRestOrder };
+  if (!payload.order) return { error: "shopify_order_empty", status: 502 };
+  return { order: payload.order };
+}
+
 async function fetchOrderTransactions(input: {
   shop: string;
   token: string;
@@ -326,6 +397,108 @@ function createAdminClient() {
   );
 }
 
+type CatalogItem = {
+  id: string;
+  sku: string | null;
+  name: string;
+  channel_id: string | null;
+  kind: "product" | "package";
+};
+
+/**
+ * Loads the products and packages whose names appear in the parsed menu
+ * remark, keyed by the normalized name so remark options can be resolved to
+ * their catalog SKU.
+ */
+async function fetchCatalogByName(
+  client: AdminClient,
+  names: string[],
+): Promise<Map<string, CatalogItem>> {
+  const result = new Map<string, CatalogItem>();
+  const unique = [...new Set(names.filter(Boolean))];
+  if (!unique.length) return result;
+
+  const [{ data: products }, { data: packages }] = await Promise.all([
+    client
+      .from("products")
+      .select("id, sku, name, channel_id")
+      .in("name", unique),
+    client
+      .from("packages")
+      .select("id, sku, name, channel_id")
+      .in("name", unique),
+  ]);
+
+  for (const row of (products ?? []) as unknown as CatalogItem[]) {
+    const key = normalizeNameForMatch(row.name);
+    if (key && !result.has(key)) result.set(key, { ...row, kind: "product" });
+  }
+  for (const row of (packages ?? []) as unknown as CatalogItem[]) {
+    const key = normalizeNameForMatch(row.name);
+    if (key && !result.has(key)) result.set(key, { ...row, kind: "package" });
+  }
+  return result;
+}
+
+/**
+ * Builds the extra order_lines rows for the menu options parsed out of an
+ * order's remark. Each option becomes its own line under the package order
+ * with the resolved catalog SKU and its own quantity. Unknown option names are
+ * logged as issues.
+ */
+async function buildMenuOptionLines(input: {
+  storeRow: StoreRow;
+  orderId: number;
+  orderLegacyId: string;
+  orderSupabaseId: string;
+  remark: string | null;
+  catalogByName: Map<string, CatalogItem>;
+  issues: IssueRow[];
+}): Promise<Record<string, unknown>[]> {
+  const { storeRow, orderId, orderLegacyId, orderSupabaseId, remark, catalogByName, issues } = input;
+  if (!remark?.trim()) return [];
+
+  const options = parseMenuRemark(remark);
+  const lines: Record<string, unknown>[] = [];
+  let optionIndex = 0;
+  for (const option of options) {
+    const match = catalogByName.get(normalizeNameForMatch(option.name));
+    if (!match) {
+      issues.push({
+        store_id: storeRow.id,
+        shopify_order_id: orderId,
+        sku: null,
+        issue: "unmatched_remark_option",
+      });
+      continue;
+    }
+    lines.push({
+      legacy_id: shopifyMenuOptionLegacyId(
+        storeRow.shop_domain,
+        orderId,
+        0,
+        optionIndex,
+      ),
+      order_id: orderSupabaseId,
+      order_legacy_id: orderLegacyId,
+      product_id: match.kind === "product" ? match.id : null,
+      package_id: match.kind === "package" ? match.id : null,
+      product_legacy_id: null,
+      package_legacy_id: null,
+      sku_snapshot: match.sku,
+      product_name_snapshot: option.name,
+      quantity: option.quantity,
+      unit_price: null,
+      total_price: null,
+      item_order: 1000 + optionIndex,
+      is_addon: false,
+      is_void: false,
+    });
+    optionIndex += 1;
+  }
+  return lines;
+}
+
 async function syncPaymentsForOrders(input: {
   client: AdminClient;
   storeRow: StoreRow;
@@ -334,12 +507,7 @@ async function syncPaymentsForOrders(input: {
   processedOrders: ProcessedOrder[];
   methodsByName: Map<string, { id: string; legacy_id: string }>;
   resyncPaid: boolean;
-  issues: Array<{
-    store_id: string;
-    shopify_order_id: number | null;
-    sku: string | null;
-    issue: string;
-  }>;
+  issues: IssueRow[];
 }): Promise<{ inserted: number; pending: number }> {
   const { client, storeRow, shop, token, methodsByName, resyncPaid, issues } = input;
   const payable = input.processedOrders.filter(
@@ -441,6 +609,269 @@ async function syncPaymentsForOrders(input: {
   return { inserted: paymentsInserted, pending };
 }
 
+type MappedOrder = NonNullable<ReturnType<typeof mapShopifyOrder>>;
+
+type OrderProcessingContext = {
+  client: AdminClient;
+  storeRow: StoreRow;
+  shop: string;
+  products: Array<{
+    id: string;
+    sku: string | null;
+    name: string | null;
+    channel_id: string | null;
+  }>;
+  packages: Array<{
+    id: string;
+    sku: string | null;
+    name: string | null;
+    channel_id: string | null;
+  }>;
+  methodsByName: Map<string, { id: string; legacy_id: string }>;
+};
+
+type OrderProcessingCounters = {
+  inserted: number;
+  linkedExisting: number;
+  unmatchedSkuLines: number;
+  menuOptionsInserted: number;
+};
+
+type OrderProcessingResult = {
+  processedOrders: ProcessedOrder[];
+  issues: IssueRow[];
+  counters: OrderProcessingCounters;
+};
+
+/**
+ * Writes a batch of mapped Shopify orders. Orders, lines, and payments are
+ * immutable: a legacy_id that already exists is never overwritten, so this
+ * path can run repeatedly (cron, webhook, manual refresh) without mutating
+ * previously imported data.
+ */
+async function processMappedOrders(
+  context: OrderProcessingContext,
+  mapped: MappedOrder[],
+  existingShopify: Array<{
+    id: string;
+    legacy_id: string;
+    source_system: string | null;
+  }>,
+  existingNumbers: Array<{
+    id: string;
+    legacy_id: string;
+    order_number: string | null;
+    channel_id: string | null;
+    is_shopify_order: boolean | null;
+    shopify_order_id: number | null;
+  }>,
+): Promise<OrderProcessingResult> {
+  const { client, storeRow, products, packages, methodsByName } = context;
+
+  const shopifyIdToOrder = new Map(
+    existingShopify.map((row) => [Number(row.shopify_order_id), row]),
+  );
+  const numberRows = existingNumbers;
+
+  const remarkNames = [
+    ...new Set(
+      mapped.flatMap((item) =>
+        parseMenuRemark(item.remark).map((option) => option.name),
+      ),
+    ),
+  ];
+  const catalogByName = await fetchCatalogByName(client, remarkNames);
+
+  const processedOrders: ProcessedOrder[] = [];
+  const issues: IssueRow[] = [];
+  const counters: OrderProcessingCounters = {
+    inserted: 0,
+    linkedExisting: 0,
+    unmatchedSkuLines: 0,
+    menuOptionsInserted: 0,
+  };
+
+  for (const item of mapped) {
+    const already = shopifyIdToOrder.get(item.orderId);
+    let targetId: string | null = already?.id ?? null;
+    let mode: "insert" | "link" | "skip" = already
+      ? already.source_system === "shopify" ? "skip" : "link"
+      : "insert";
+
+    if (!targetId) {
+      const matches = numberRows.filter((row) => {
+        const sameNumber = orderNumberKey(row.order_number) ===
+          orderNumberKey(item.orderNumber);
+        if (!sameNumber) return false;
+        if (row.channel_id === storeRow.channel_id) return true;
+        return Boolean(row.is_shopify_order);
+      });
+      if (matches.length === 1) {
+        targetId = matches[0].id;
+        mode = matches[0].shopify_order_id ? "skip" : "link";
+      } else if (matches.length > 1) {
+        issues.push({
+          store_id: storeRow.id,
+          shopify_order_id: item.orderId,
+          sku: null,
+          issue: "ambiguous_order_number",
+        });
+        continue;
+      }
+    }
+
+    const currency = String(item.orderRow.currency ?? "HKD");
+    const orderLegacyIdForPayments = mode === "insert"
+      ? String(item.orderRow.legacy_id ?? "")
+      : shopifyIdToOrder.get(item.orderId)?.legacy_id ??
+        numberRows.find((row) => row.id === targetId)?.legacy_id ?? "";
+
+    if (mode === "skip" && targetId) {
+      // Immutable: an existing Shopify order is never overwritten. Payments
+      // for it can still be picked up on later runs.
+      processedOrders.push({
+        orderId: item.orderId,
+        supabaseOrderId: targetId,
+        orderLegacyId: orderLegacyIdForPayments,
+        orderNumber: item.orderNumber,
+        currency,
+        needsTransactions: item.needsPayments,
+      });
+      continue;
+    }
+
+    if (mode === "link" && targetId) {
+      const { error } = await client.from("orders").update({
+        shopify_store_id: storeRow.id,
+        shopify_order_id: item.orderId,
+        is_shopify_order: true,
+        updated_at: new Date().toISOString(),
+      }).eq("id", targetId);
+      if (error) {
+        issues.push({
+          store_id: storeRow.id,
+          shopify_order_id: item.orderId,
+          sku: null,
+          issue: "link_failed",
+        });
+        continue;
+      }
+      counters.linkedExisting += 1;
+      processedOrders.push({
+        orderId: item.orderId,
+        supabaseOrderId: targetId,
+        orderLegacyId: orderLegacyIdForPayments,
+        orderNumber: item.orderNumber,
+        currency,
+        needsTransactions: item.needsPayments,
+      });
+      continue;
+    }
+
+    const { data: insertedOrder, error: insertError } = await client
+      .from("orders")
+      .insert(item.orderRow)
+      .select("id")
+      .single();
+    if (insertError || !insertedOrder) {
+      issues.push({
+        store_id: storeRow.id,
+        shopify_order_id: item.orderId,
+        sku: null,
+        issue: "insert_failed",
+      });
+      continue;
+    }
+    counters.inserted += 1;
+
+    const lineRows = item.lines.map((line) => {
+      const match = pickCatalogMatchByName(
+        line.sku,
+        (line.row.product_name_snapshot as string | null) ?? null,
+        (products ?? []) as Array<{
+          id: string;
+          sku: string | null;
+          name: string | null;
+          channel_id: string | null;
+        }>,
+        (packages ?? []) as Array<{
+          id: string;
+          sku: string | null;
+          name: string | null;
+          channel_id: string | null;
+        }>,
+        storeRow.channel_id,
+      );
+      if (
+        (line.sku || line.row.product_name_snapshot) &&
+        !match.productId &&
+        !match.packageId
+      ) {
+        counters.unmatchedSkuLines += 1;
+        issues.push({
+          store_id: storeRow.id,
+          shopify_order_id: item.orderId,
+          sku: line.sku,
+          issue: "unmatched_sku",
+        });
+      }
+      return {
+        ...line.row,
+        order_id: insertedOrder.id,
+        product_id: match.productId,
+        package_id: match.packageId,
+      };
+    });
+
+    const menuOptionLines = await buildMenuOptionLines({
+      storeRow,
+      orderId: item.orderId,
+      orderLegacyId: String(item.orderRow.legacy_id ?? ""),
+      orderSupabaseId: insertedOrder.id,
+      remark: item.remark,
+      catalogByName,
+      issues,
+    });
+
+    const allLineRows = [...lineRows, ...menuOptionLines];
+    if (allLineRows.length) {
+      const { data: insertedLines, error: lineError } = await client
+        .from("order_lines")
+        .upsert(allLineRows, {
+          onConflict: "legacy_id",
+          ignoreDuplicates: true,
+        })
+        .select("legacy_id");
+      if (lineError) {
+        issues.push({
+          store_id: storeRow.id,
+          shopify_order_id: item.orderId,
+          sku: null,
+          issue: "lines_insert_failed",
+        });
+      } else {
+        const insertedIds = new Set(
+          (insertedLines ?? []).map((row) => row.legacy_id as string),
+        );
+        counters.menuOptionsInserted += menuOptionLines.filter((row) =>
+          insertedIds.has(row.legacy_id as string)
+        ).length;
+      }
+    }
+
+    processedOrders.push({
+      orderId: item.orderId,
+      supabaseOrderId: insertedOrder.id,
+      orderLegacyId: orderLegacyIdForPayments,
+      orderNumber: item.orderNumber,
+      currency,
+      needsTransactions: item.needsPayments,
+    });
+  }
+
+  return { processedOrders, issues, counters };
+}
+
 async function syncStore(input: {
   client: AdminClient;
   storeRow: StoreRow;
@@ -461,6 +892,7 @@ async function syncStore(input: {
     linkedExisting: 0,
     updatedShopify: 0,
     unmatchedSkuLines: 0,
+    menuOptionsInserted: 0,
     paymentsInserted: 0,
     paymentsPending: 0,
     issueCount: 0,
@@ -525,16 +957,36 @@ async function syncStore(input: {
       ),
     ),
   ];
+  const lineNames = [
+    ...new Set(
+      mapped.flatMap((row) =>
+        row.lines
+          .map((line) => (line.row.product_name_snapshot as string | null) ?? null)
+          .filter((name): name is string => Boolean(name))
+      ),
+    ),
+  ];
+
+  // The store's catalog is small (hundreds of products); fetch it in full for
+  // this channel and match by SKU or name in memory. PostgREST `or()` filters
+  // mishandle full-width parentheses in names, so avoid them here.
+  const needsCatalog = skus.length > 0 || lineNames.length > 0;
 
   const [{ data: products }, { data: packages }, { data: existingShopify }, {
     data: existingNumbers,
   }, { data: paymentMethods }] = await Promise.all([
-    skus.length
-      ? client.from("products").select("id, sku, channel_id").in("sku", skus)
-      : Promise.resolve({ data: [] as Array<{ id: string; sku: string | null; channel_id: string | null }> }),
-    skus.length
-      ? client.from("packages").select("id, sku, channel_id").in("sku", skus)
-      : Promise.resolve({ data: [] as Array<{ id: string; sku: string | null; channel_id: string | null }> }),
+    needsCatalog
+      ? client
+          .from("products")
+          .select("id, sku, name, channel_id")
+          .eq("channel_id", storeRow.channel_id)
+      : Promise.resolve({ data: [] as Array<{ id: string; sku: string | null; name: string | null; channel_id: string | null }> }),
+    needsCatalog
+      ? client
+          .from("packages")
+          .select("id, sku, name, channel_id")
+          .eq("channel_id", storeRow.channel_id)
+      : Promise.resolve({ data: [] as Array<{ id: string; sku: string | null; name: string | null; channel_id: string | null }> }),
     client
       .from("orders")
       .select("id, legacy_id, shopify_order_id, source_system")
@@ -562,198 +1014,54 @@ async function syncStore(input: {
     ]),
   );
 
-  const shopifyIdToOrder = new Map(
-    (existingShopify ?? []).map((row) => [
-      Number(row.shopify_order_id),
-      row as { id: string; legacy_id: string; source_system: string | null },
-    ]),
+  const result = await processMappedOrders(
+    {
+      client,
+      storeRow,
+      shop,
+      products: (products ?? []) as Array<{
+        id: string;
+        sku: string | null;
+        name: string | null;
+        channel_id: string | null;
+      }>,
+      packages: (packages ?? []) as Array<{
+        id: string;
+        sku: string | null;
+        name: string | null;
+        channel_id: string | null;
+      }>,
+      methodsByName,
+    },
+    mapped,
+    (existingShopify ?? []) as Array<{
+      id: string;
+      legacy_id: string;
+      source_system: string | null;
+    }>,
+    (existingNumbers ?? []) as Array<{
+      id: string;
+      legacy_id: string;
+      order_number: string | null;
+      channel_id: string | null;
+      is_shopify_order: boolean | null;
+      shopify_order_id: number | null;
+    }>,
   );
-  const numberRows = (existingNumbers ?? []) as Array<{
-    id: string;
-    legacy_id: string;
-    order_number: string | null;
-    channel_id: string | null;
-    is_shopify_order: boolean | null;
-    shopify_order_id: number | null;
-  }>;
-
-  let inserted = 0;
-  let linkedExisting = 0;
-  let updatedShopify = 0;
-  let unmatchedSkuLines = 0;
-  const issues: Array<{
-    store_id: string;
-    shopify_order_id: number | null;
-    sku: string | null;
-    issue: string;
-  }> = [];
-  const processedOrders: ProcessedOrder[] = [];
-
-  for (const item of mapped) {
-    const already = shopifyIdToOrder.get(item.orderId);
-    let targetId: string | null = already?.id ?? null;
-    let mode: "insert" | "update-shopify" | "link" = already
-      ? already.source_system === "shopify" ? "update-shopify" : "link"
-      : "insert";
-
-    if (!targetId) {
-      const matches = numberRows.filter((row) => {
-        const sameNumber = orderNumberKey(row.order_number) ===
-          orderNumberKey(item.orderNumber);
-        if (!sameNumber) return false;
-        if (row.channel_id === storeRow.channel_id) return true;
-        return Boolean(row.is_shopify_order);
-      });
-      if (matches.length === 1) {
-        targetId = matches[0].id;
-        mode = matches[0].shopify_order_id ? "update-shopify" : "link";
-      } else if (matches.length > 1) {
-        issues.push({
-          store_id: storeRow.id,
-          shopify_order_id: item.orderId,
-          sku: null,
-          issue: "ambiguous_order_number",
-        });
-        continue;
-      }
-    }
-
-    const currency = String(item.orderRow.currency ?? "HKD");
-    const orderLegacyIdForPayments = mode === "insert"
-      ? String(item.orderRow.legacy_id ?? "")
-      : shopifyIdToOrder.get(item.orderId)?.legacy_id ??
-        numberRows.find((row) => row.id === targetId)?.legacy_id ?? "";
-
-    if (mode === "link" && targetId) {
-      const { error } = await client.from("orders").update({
-        shopify_store_id: storeRow.id,
-        shopify_order_id: item.orderId,
-        is_shopify_order: true,
-        updated_at: new Date().toISOString(),
-      }).eq("id", targetId);
-      if (error) {
-        issues.push({
-          store_id: storeRow.id,
-          shopify_order_id: item.orderId,
-          sku: null,
-          issue: "link_failed",
-        });
-        continue;
-      }
-      linkedExisting += 1;
-      processedOrders.push({
-        orderId: item.orderId,
-        supabaseOrderId: targetId,
-        orderLegacyId: orderLegacyIdForPayments,
-        orderNumber: item.orderNumber,
-        currency,
-        needsTransactions: item.needsPayments,
-      });
-      continue;
-    }
-
-    if (mode === "update-shopify" && targetId) {
-      const { error } = await client.from("orders").update({
-        ...item.orderRow,
-        updated_at: new Date().toISOString(),
-      }).eq("id", targetId);
-      if (error) {
-        issues.push({
-          store_id: storeRow.id,
-          shopify_order_id: item.orderId,
-          sku: null,
-          issue: "update_failed",
-        });
-        continue;
-      }
-      updatedShopify += 1;
-      processedOrders.push({
-        orderId: item.orderId,
-        supabaseOrderId: targetId,
-        orderLegacyId: orderLegacyIdForPayments,
-        orderNumber: item.orderNumber,
-        currency,
-        needsTransactions: item.needsPayments,
-      });
-      continue;
-    }
-
-    const { data: insertedOrder, error: insertError } = await client
-      .from("orders")
-      .insert(item.orderRow)
-      .select("id")
-      .single();
-    if (insertError || !insertedOrder) {
-      issues.push({
-        store_id: storeRow.id,
-        shopify_order_id: item.orderId,
-        sku: null,
-        issue: "insert_failed",
-      });
-      continue;
-    }
-    inserted += 1;
-
-    const lineRows = item.lines.map((line) => {
-      const match = line.sku
-        ? pickCatalogMatch(
-          line.sku,
-          products ?? [],
-          packages ?? [],
-          storeRow.channel_id,
-        )
-        : { productId: null, packageId: null };
-      if (line.sku && !match.productId && !match.packageId) {
-        unmatchedSkuLines += 1;
-        issues.push({
-          store_id: storeRow.id,
-          shopify_order_id: item.orderId,
-          sku: line.sku,
-          issue: "unmatched_sku",
-        });
-      }
-      return {
-        ...line.row,
-        order_id: insertedOrder.id,
-        product_id: match.productId,
-        package_id: match.packageId,
-      };
-    });
-    if (lineRows.length) {
-      const { error: lineError } = await client.from("order_lines").insert(lineRows);
-      if (lineError) {
-        issues.push({
-          store_id: storeRow.id,
-          shopify_order_id: item.orderId,
-          sku: null,
-          issue: "lines_insert_failed",
-        });
-      }
-    }
-
-    processedOrders.push({
-      orderId: item.orderId,
-      supabaseOrderId: insertedOrder.id,
-      orderLegacyId: orderLegacyIdForPayments,
-      orderNumber: item.orderNumber,
-      currency,
-      needsTransactions: item.needsPayments,
-    });
-  }
 
   const payments = await syncPaymentsForOrders({
     client,
     storeRow,
     shop,
     token: tokenResult.token,
-    processedOrders,
+    processedOrders: result.processedOrders,
     methodsByName,
     resyncPaid,
-    issues,
+    issues: result.issues,
   });
 
-  if (issues.length) {
-    await client.from("shopify_sync_issues").insert(issues);
+  if (result.issues.length) {
+    await client.from("shopify_sync_issues").insert(result.issues);
   }
   await client.from("shopify_stores").update({
     last_synced_at: new Date().toISOString(),
@@ -765,13 +1073,208 @@ async function syncStore(input: {
     ...empty,
     ok: true,
     fetched: mapped.length,
-    inserted,
-    linkedExisting,
-    updatedShopify,
-    unmatchedSkuLines,
+    inserted: result.counters.inserted,
+    linkedExisting: result.counters.linkedExisting,
+    updatedShopify: 0,
+    unmatchedSkuLines: result.counters.unmatchedSkuLines,
+    menuOptionsInserted: result.counters.menuOptionsInserted,
     paymentsInserted: payments.inserted,
     paymentsPending: payments.pending,
-    issueCount: issues.length,
+    issueCount: result.issues.length,
+  };
+}
+
+async function syncSingleOrder(input: {
+  client: AdminClient;
+  storeRow: StoreRow;
+  orderId: number;
+  resyncPaid: boolean;
+}): Promise<StoreSyncResult> {
+  const { client, storeRow, orderId, resyncPaid } = input;
+  const empty: StoreSyncResult = {
+    store: storeRow.shop_domain,
+    secretPrefix: storeRow.secret_prefix,
+    ok: false,
+    fetched: 0,
+    inserted: 0,
+    linkedExisting: 0,
+    updatedShopify: 0,
+    unmatchedSkuLines: 0,
+    menuOptionsInserted: 0,
+    paymentsInserted: 0,
+    paymentsPending: 0,
+    issueCount: 0,
+  };
+
+  const fail = async (error: string): Promise<StoreSyncResult> => {
+    await client.from("shopify_stores").update({
+      last_error: error,
+      updated_at: new Date().toISOString(),
+    }).eq("id", storeRow.id);
+    return { ...empty, error };
+  };
+
+  const shopFromEnv = normalizeShopDomain(envFor(storeRow.secret_prefix, "SHOP"));
+  const shop = shopFromEnv ?? normalizeShopDomain(storeRow.shop_domain);
+  if (!shop || shop !== normalizeShopDomain(storeRow.shop_domain)) {
+    return fail("shop_not_permitted");
+  }
+  const clientId = envFor(storeRow.secret_prefix, "CLIENT_ID");
+  const clientSecret = envFor(storeRow.secret_prefix, "CLIENT_SECRET");
+  if (!clientId || !clientSecret) {
+    return fail("shopify_token_missing");
+  }
+
+  const tokenResult = await shopifyAccessToken({ shop, clientId, clientSecret });
+  if ("error" in tokenResult) return fail(tokenResult.error);
+
+  const fetched = await fetchOrderById({
+    shop,
+    token: tokenResult.token,
+    orderId,
+  });
+  if ("error" in fetched) return fail(fetched.error);
+
+  const mappedOrder = mapShopifyOrder({
+    order: fetched.order,
+    shopDomain: shop,
+    storeId: storeRow.id,
+    channelId: storeRow.channel_id,
+  });
+  if (!mappedOrder) return fail("order_map_failed");
+  const mapped = [mappedOrder];
+
+  const skus = [
+    ...new Set(
+      mapped.flatMap((row) =>
+        row.lines.map((line) => line.sku).filter((sku): sku is string => Boolean(sku))
+      ),
+    ),
+  ];
+  const lineNames = [
+    ...new Set(
+      mapped.flatMap((row) =>
+        row.lines
+          .map((line) => (line.row.product_name_snapshot as string | null) ?? null)
+          .filter((name): name is string => Boolean(name))
+      ),
+    ),
+  ];
+
+  // The store's catalog is small (hundreds of products); fetch it in full for
+  // this channel and match by SKU or name in memory. PostgREST `or()` filters
+  // mishandle full-width parentheses in names, so avoid them here.
+  const needsCatalog = skus.length > 0 || lineNames.length > 0;
+
+  const [{ data: products }, { data: packages }, { data: existingShopify }, {
+    data: existingNumbers,
+  }, { data: paymentMethods }] = await Promise.all([
+    needsCatalog
+      ? client
+          .from("products")
+          .select("id, sku, name, channel_id")
+          .eq("channel_id", storeRow.channel_id)
+      : Promise.resolve({ data: [] as Array<{ id: string; sku: string | null; name: string | null; channel_id: string | null }> }),
+    needsCatalog
+      ? client
+          .from("packages")
+          .select("id, sku, name, channel_id")
+          .eq("channel_id", storeRow.channel_id)
+      : Promise.resolve({ data: [] as Array<{ id: string; sku: string | null; name: string | null; channel_id: string | null }> }),
+    client
+      .from("orders")
+      .select("id, legacy_id, shopify_order_id, source_system")
+      .eq("shopify_store_id", storeRow.id)
+      .in("shopify_order_id", mapped.map((row) => row.orderId)),
+    client
+      .from("orders")
+      .select(
+        "id, legacy_id, order_number, channel_id, is_shopify_order, shopify_order_id",
+      )
+      .in(
+        "order_number",
+        [
+          ...mapped.map((row) => row.orderNumber),
+          ...mapped.map((row) => row.orderNumber.replace(/^#/, "")),
+        ],
+      ),
+    client.from("payment_methods").select("id, legacy_id, name"),
+  ]);
+
+  const methodsByName = new Map(
+    (paymentMethods ?? []).map((method) => [
+      String(method.name ?? "").trim().toLowerCase(),
+      { id: method.id, legacy_id: method.legacy_id },
+    ]),
+  );
+
+  const result = await processMappedOrders(
+    {
+      client,
+      storeRow,
+      shop,
+      products: (products ?? []) as Array<{
+        id: string;
+        sku: string | null;
+        name: string | null;
+        channel_id: string | null;
+      }>,
+      packages: (packages ?? []) as Array<{
+        id: string;
+        sku: string | null;
+        name: string | null;
+        channel_id: string | null;
+      }>,
+      methodsByName,
+    },
+    mapped,
+    (existingShopify ?? []) as Array<{
+      id: string;
+      legacy_id: string;
+      source_system: string | null;
+    }>,
+    (existingNumbers ?? []) as Array<{
+      id: string;
+      legacy_id: string;
+      order_number: string | null;
+      channel_id: string | null;
+      is_shopify_order: boolean | null;
+      shopify_order_id: number | null;
+    }>,
+  );
+
+  const payments = await syncPaymentsForOrders({
+    client,
+    storeRow,
+    shop,
+    token: tokenResult.token,
+    processedOrders: result.processedOrders,
+    methodsByName,
+    resyncPaid,
+    issues: result.issues,
+  });
+
+  if (result.issues.length) {
+    await client.from("shopify_sync_issues").insert(result.issues);
+  }
+  await client.from("shopify_stores").update({
+    last_synced_at: new Date().toISOString(),
+    last_error: null,
+    updated_at: new Date().toISOString(),
+  }).eq("id", storeRow.id);
+
+  return {
+    ...empty,
+    ok: true,
+    fetched: mapped.length,
+    inserted: result.counters.inserted,
+    linkedExisting: result.counters.linkedExisting,
+    updatedShopify: 0,
+    unmatchedSkuLines: result.counters.unmatchedSkuLines,
+    menuOptionsInserted: result.counters.menuOptionsInserted,
+    paymentsInserted: payments.inserted,
+    paymentsPending: payments.pending,
+    issueCount: result.issues.length,
   };
 }
 
@@ -781,7 +1284,7 @@ Deno.serve(async (request) => {
       headers: {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Headers":
-          "authorization, x-client-info, apikey, content-type, x-cron-secret",
+          "authorization, x-client-info, apikey, content-type, x-cron-secret, x-shopify-hmac-sha256, x-shopify-topic, x-shopify-shop-domain",
         "Access-Control-Allow-Methods": "POST, OPTIONS",
       },
     });
@@ -791,6 +1294,68 @@ Deno.serve(async (request) => {
   }
 
   const client = createAdminClient();
+
+  // Shopify order-created webhooks carry X-Shopify-Topic. Verify the HMAC
+  // against the store's webhook secret and sync only the order just created.
+  const webhookTopic = request.headers.get("X-Shopify-Topic");
+  if (webhookTopic) {
+    const rawBody = await request.text();
+    if (!rawBody) return jsonResponse({ error: "empty_body" }, 400);
+
+    let payload: { id?: number | string; shop_domain?: string };
+    try {
+      payload = JSON.parse(rawBody);
+    } catch {
+      return jsonResponse({ error: "invalid_json" }, 400);
+    }
+    const orderId = typeof payload.id === "number" ||
+        typeof payload.id === "string" && /^\d+$/.test(payload.id)
+      ? Number(payload.id)
+      : null;
+    if (!orderId) return jsonResponse({ error: "missing_order_id" }, 400);
+
+    // Shopify always sends X-Shopify-Shop-Domain on webhook requests; test
+    // notifications do not include shop_domain in the body, so prefer the
+    // header and fall back to the payload field.
+    const shopDomain = normalizeShopDomain(
+      request.headers.get("X-Shopify-Shop-Domain") ?? payload.shop_domain,
+    );
+    const { data: stores, error: storesError } = await client
+      .from("shopify_stores")
+      .select("id, shop_domain, channel_id, secret_prefix")
+      .eq("is_active", true);
+    if (storesError) {
+      return jsonResponse({ error: "store_lookup_failed" }, 500);
+    }
+    const storeRow = (stores ?? []).find((store) =>
+      normalizeShopDomain(store.shop_domain) === shopDomain
+    ) as StoreRow | undefined;
+    if (!storeRow) return jsonResponse({ error: "store_not_found" }, 404);
+    if (!(await verifyShopifyWebhook(request, storeRow, rawBody))) {
+      return jsonResponse({ error: "invalid_webhook_signature" }, 401);
+    }
+
+    const result = await syncSingleOrder({
+      client,
+      storeRow,
+      orderId,
+      resyncPaid: false,
+    });
+    return jsonResponse({
+      ok: result.ok,
+      error: result.error,
+      orderId,
+      store: result.store,
+      fetched: result.fetched,
+      inserted: result.inserted,
+      linkedExisting: result.linkedExisting,
+      unmatchedSkuLines: result.unmatchedSkuLines,
+      menuOptionsInserted: result.menuOptionsInserted,
+      paymentsInserted: result.paymentsInserted,
+      issueCount: result.issueCount,
+    }, result.ok ? 200 : 502);
+  }
+
   const cronOk = await authenticateCron(request, client);
   const userAuth = await authenticateUser(request, client);
   if (!cronOk && !userAuth.ok) {
@@ -871,6 +1436,7 @@ Deno.serve(async (request) => {
     linkedExisting: 0,
     updatedShopify: 0,
     unmatchedSkuLines: 0,
+    menuOptionsInserted: 0,
     paymentsInserted: 0,
     paymentsPending: 0,
     issueCount: 0,
@@ -881,6 +1447,7 @@ Deno.serve(async (request) => {
     totals.linkedExisting += result.linkedExisting;
     totals.updatedShopify += result.updatedShopify;
     totals.unmatchedSkuLines += result.unmatchedSkuLines;
+    totals.menuOptionsInserted += result.menuOptionsInserted;
     totals.paymentsInserted += result.paymentsInserted;
     totals.paymentsPending += result.paymentsPending;
     totals.issueCount += result.issueCount;

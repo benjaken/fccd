@@ -138,7 +138,29 @@ function firstAttr(
 
 export function parseDeliveryAt(value: string | null): string | null {
   if (!value) return null;
-  const parsed = Date.parse(value);
+  const trimmed = value.trim();
+
+  // Pure date (no time component): treat as UTC midnight so the date does not
+  // shift by the deployment region's timezone.
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return new Date(`${trimmed}T00:00:00.000Z`).toISOString();
+  }
+  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(trimmed)) {
+    const [day, month, year] = trimmed.split("/");
+    return new Date(
+      `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}T00:00:00.000Z`,
+    ).toISOString();
+  }
+  const namedMonth = trimmed.match(
+    /^(\w+),\s*(\d{1,2})\s+(\w+)\s+(\d{4})$/i,
+  );
+  if (namedMonth) {
+    const [, , day, month, year] = namedMonth;
+    const parsed = new Date(`${month} ${day}, ${year} 00:00:00 UTC`);
+    if (!Number.isNaN(parsed.getTime())) return parsed.toISOString();
+  }
+
+  const parsed = Date.parse(trimmed);
   if (Number.isNaN(parsed)) return null;
   return new Date(parsed).toISOString();
 }
@@ -352,9 +374,21 @@ export type MenuOption = {
  * is grouped into paragraphs whose first line is a title such as
  * "沙律 必選:" or "分享小食 7選3:"; every later line is a comma-separated
  * option list. A trailing "x N" on an option is its quantity.
+ *
+ * Only remarks that actually contain a menu title (必選 / N選M) are treated as
+ * menu remarks; other free-form notes (delivery/pickup blocks, customer notes)
+ * yield no options.
  */
 export function parseMenuRemark(remark: string | null | undefined): MenuOption[] {
   if (!remark?.trim()) return [];
+
+  // Only treat a remark as a menu when it has a menu title line such as
+  // "沙律 必選:" or "分享小食 7選3:". Free-form notes (delivery/pickup
+  // blocks, customer notes) yield no options.
+  const titleMatch = remark.match(
+    /^(?:[^\n:：]*?\s)?(?:必選|選\d+|\d+選\d+)\s*[:：]\s*$/m,
+  );
+  if (!titleMatch) return [];
 
   const options: MenuOption[] = [];
   const paragraphs = remark
@@ -366,13 +400,11 @@ export function parseMenuRemark(remark: string | null | undefined): MenuOption[]
     const lines = paragraph.split("\n").map((line) => line.trim());
     const bodyStart = lines.findIndex((line) => /[:：]\s*$/.test(line));
 
-    // Keep the whole paragraph body; title lines like "沙律 必選:" are dropped.
     const body = (bodyStart >= 0 ? lines.slice(bodyStart + 1) : lines)
       .join(" ")
       .trim();
     if (!body) continue;
 
-    // Split options on commas, but keep commas inside parentheses intact.
     const items: string[] = [];
     let current = "";
     let depth = 0;
@@ -426,9 +458,11 @@ export function shopifyMenuOptionLegacyId(
 }
 
 /**
- * Searches a free-form remark for a delivery date or time line, e.g.
- * "送貨日期: 2026-08-20" or "送貨時間: 05:00 PM - 06:00 PM". The catering
- * store keeps these inside the same remark text as the menu options.
+ * Searches a free-form remark for a delivery date or time. Handles both
+ * labelled lines ("送貨日期: 2026-08-20") and bare values found in Shopify's
+ * pickup/delivery note blocks, e.g. "21/08/2026", "Fri, 21 Aug 2026",
+ * "05:00 PM - 06:00 PM", "11:00 AM - 12:00 PM". Values duplicated across the
+ * note (Shopify repeats the slot) are tolerated.
  */
 export function extractDeliveryFromRemark(remark: string | null | undefined): {
   deliveryAt: string | null;
@@ -439,23 +473,51 @@ export function extractDeliveryFromRemark(remark: string | null | undefined): {
   let deliveryAt: string | null = null;
   let deliveryTime: string | null = null;
 
-  for (const line of remark.split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
+  const lines = remark.split("\n").map((line) => line.trim()).filter(Boolean);
 
-    const dateMatch = trimmed.match(
+  // Pass 1: labelled lines take precedence.
+  for (const line of lines) {
+    const dateMatch = line.match(
       /^(?:送貨日期|送貨日|delivery\s*date|日期)[:：]\s*(.+)$/i,
     );
     if (dateMatch) {
       deliveryAt = parseDeliveryAt(dateMatch[1].trim()) ?? deliveryAt;
       continue;
     }
-
-    const timeMatch = trimmed.match(
+    const timeMatch = line.match(
       /^(?:送貨時間|delivery\s*time|time\s*slot|時間)[:：]\s*(.+)$/i,
     );
     if (timeMatch) {
       deliveryTime = timeMatch[1].trim() || deliveryTime;
+    }
+  }
+
+  // Pass 2: bare values. Skip obviously non-delivery lines (section headers,
+  // notes, ids). The first parseable date/time wins.
+  for (const line of lines) {
+    if (/^(?:pickup|delivery|shipping|送貨|需要|星期五|週五|friday|dd\/mm|\.\.\.)/i.test(line)) {
+      continue;
+    }
+    if (deliveryAt === null) {
+      // Normalize d/m/yyyy (Shopify Hong Kong uses day/month/year) to ISO.
+      const slashMatch = line.match(/^\s*(\d{1,2})\/(\d{1,2})\/(\d{4})\s*$/);
+      const normalized = slashMatch
+        ? `${slashMatch[3]}-${slashMatch[2].padStart(2, "0")}-${slashMatch[1].padStart(2, "0")}`
+        : line;
+      const parsed = parseDeliveryAt(normalized);
+      if (
+        parsed &&
+        (/^\d{4}-\d{2}-\d{2}/.test(normalized) ||
+          /\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|1月|2月|3月|4月|5月|6月|7月|8月|9月|10月|11月|12月)\b/i.test(normalized))
+      ) {
+        deliveryAt = parsed;
+      }
+    }
+    if (deliveryTime === null) {
+      const timeMatch = line.match(
+        /\b\d{1,2}:\d{2}\s*(?:AM|PM|上午|下午)?\s*[-–—~到至]\s*\d{1,2}:\d{2}\s*(?:AM|PM|上午|下午)?\b/i,
+      );
+      if (timeMatch) deliveryTime = timeMatch[0].trim();
     }
   }
 
@@ -538,6 +600,50 @@ export function pickCatalogMatch(
   );
   if (productAny.length === 1) {
     return { productId: productAny[0].id, packageId: null };
+  }
+
+  return { productId: null, packageId: null };
+}
+
+/**
+ * Resolves a Shopify line item to a catalog product/package, matching first by
+ * SKU then by the item's name/title. Shopify lines sometimes omit the SKU, but
+ * the title often equals the catalog product name (e.g. "(雙格) 拿破崙雞扒意粉").
+ */
+export function pickCatalogMatchByName(
+  sku: string | null,
+  name: string | null,
+  products: Array<{ id: string; sku: string | null; name: string | null; channel_id: string | null }>,
+  packages: Array<{ id: string; sku: string | null; name: string | null; channel_id: string | null }>,
+  channelId: string,
+): { productId: string | null; packageId: string | null } {
+  if (sku) {
+    const bySku = pickCatalogMatch(
+      sku,
+      products.map(({ id, sku: s, channel_id: c }) => ({ id, sku: s, channel_id: c })),
+      packages.map(({ id, sku: s, channel_id: c }) => ({ id, sku: s, channel_id: c })),
+      channelId,
+    );
+    if (bySku.productId || bySku.packageId) return bySku;
+  }
+
+  const needle = normalizeNameForMatch(name);
+  if (!needle) return { productId: null, packageId: null };
+
+  const productByName = products.filter(
+    (row) => normalizeNameForMatch(row.name) === needle &&
+      row.channel_id === channelId,
+  );
+  if (productByName.length === 1) {
+    return { productId: productByName[0].id, packageId: null };
+  }
+
+  const packageByName = packages.filter(
+    (row) => normalizeNameForMatch(row.name) === needle &&
+      row.channel_id === channelId,
+  );
+  if (packageByName.length === 1) {
+    return { productId: null, packageId: packageByName[0].id };
   }
 
   return { productId: null, packageId: null };

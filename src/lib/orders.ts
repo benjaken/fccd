@@ -88,6 +88,7 @@ export type OrderListItem = {
   customerName: string | null;
   companyName: string | null;
   deliveryAt: string | null;
+  deliveryTime: string | null;
   factoryDate: string | null;
   shipOutTime: string | null;
   deliveryStatus: string | null;
@@ -120,6 +121,7 @@ type OrderRow = {
   customer_name_snapshot: string | null;
   company_name_snapshot: string | null;
   delivery_at: string | null;
+  delivery_time: string | null;
   factory_date: string | null;
   ship_out_time: string | null;
   delivery_status: string | null;
@@ -197,8 +199,8 @@ export async function fetchOrders({
   const start = (page - 1) * ORDERS_PAGE_SIZE;
   const end = start + ORDERS_PAGE_SIZE - 1;
   const selectedFields: string = canViewFinance
-    ? "id,order_number,customer_name_snapshot,company_name_snapshot,delivery_at,factory_date,ship_out_time,delivery_status,is_sent_to_factory,currency,bubble_created_at,created_at,grand_total,outstanding,order_status_legacy_ids,shopify_order_id,shopify_stores(shop_domain)"
-    : "id,order_number,customer_name_snapshot,company_name_snapshot,delivery_at,factory_date,ship_out_time,delivery_status,is_sent_to_factory,currency,bubble_created_at,created_at,order_status_legacy_ids,shopify_order_id,shopify_stores(shop_domain)";
+    ? "id,order_number,customer_name_snapshot,company_name_snapshot,delivery_at,delivery_time,factory_date,ship_out_time,delivery_status,is_sent_to_factory,currency,bubble_created_at,created_at,grand_total,outstanding,order_status_legacy_ids,shopify_order_id,shopify_stores(shop_domain)"
+    : "id,order_number,customer_name_snapshot,company_name_snapshot,delivery_at,delivery_time,factory_date,ship_out_time,delivery_status,is_sent_to_factory,currency,bubble_created_at,created_at,order_status_legacy_ids,shopify_order_id,shopify_stores(shop_domain)";
   let catalog: ConfiguredOrderStatus[] | undefined;
   const loadCatalog = async () => {
     catalog ??= await fetchOrderStatusCatalog();
@@ -271,6 +273,7 @@ export async function fetchOrders({
       customerName: row.customer_name_snapshot,
       companyName: row.company_name_snapshot,
       deliveryAt: row.delivery_at,
+      deliveryTime: row.delivery_time,
       factoryDate: row.factory_date,
       shipOutTime: row.ship_out_time,
       deliveryStatus: row.delivery_status,

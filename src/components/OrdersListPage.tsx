@@ -428,6 +428,11 @@ export function OrdersListPage({
                       {order.deliveryAt
                         ? date.format(new Date(order.deliveryAt))
                         : t("common.notSet")}
+                      {order.deliveryTime ? (
+                        <small className="order-delivery-time">
+                          {order.deliveryTime}
+                        </small>
+                      ) : null}
                     </span>
                   </td>
                   <td>{order.shipOutTime || t("common.notSet")}</td>
