@@ -240,7 +240,14 @@ export async function fetchOrders({
       .in("delivery_status", ["己送達", "已送達"])
       .gt("outstanding", 0);
   } else if (preset === "shopify-pending") {
-    query = query.eq("is_shopify_order", true);
+    // Only orders newly created by the Shopify sync are review candidates.
+    // Legacy Bubble orders merely linked to a Shopify ID are already
+    // confirmed/completed and must stay out of this queue.
+    query = query
+      .eq("is_shopify_order", true)
+      .eq("source_system", "shopify")
+      .is("delivery_status", null)
+      .or("is_sent_to_factory.is.null,is_sent_to_factory.eq.false");
   }
 
   query = applyStatusFilter(query, status, preset);

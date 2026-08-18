@@ -364,7 +364,14 @@ describe("Orders list", () => {
       "utf8",
     );
     expect(source).toContain('query.overlaps("order_status_legacy_ids", legacyIds)');
-    expect(source).toContain('query.eq("is_shopify_order", true)');
+    expect(source).toContain('.eq("is_shopify_order", true)');
+    // The Shopify queue must show only newly synced orders that have not
+    // entered the workflow yet, never linked-and-confirmed legacy orders.
+    expect(source).toContain('.eq("source_system", "shopify")');
+    expect(source).toContain('.is("delivery_status", null)');
+    expect(source).toContain(
+      '.or("is_sent_to_factory.is.null,is_sent_to_factory.eq.false")',
+    );
     expect(source).toContain('query.gt("outstanding", 0)');
   });
 
