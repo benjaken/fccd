@@ -2184,15 +2184,20 @@ button.product-tag[aria-pressed="true"] {
   background: color-mix(in oklch, var(--accent) 55%, transparent);
 }
 
-/* Shopify 導入且已設定送貨時間的訂單：虛線框標示。 */
+/* Shopify 導入且已設定送貨時間的訂單：虛線框 + 字體顏色變淺標示。 */
 .kitchen-calendar-event.is-shopify {
   border: 1px dashed var(--primary);
   border-radius: 6px;
   background: color-mix(in oklch, var(--primary) 7%, transparent);
+  color: var(--muted-foreground);
 }
 
 .kitchen-calendar-event.is-shopify:hover {
   background: color-mix(in oklch, var(--primary) 13%, transparent);
+}
+
+.kitchen-calendar-event.is-shopify .kitchen-calendar-event-copy {
+  color: var(--muted-foreground);
 }
 
 .kitchen-calendar-event .kitchen-calendar-dot {
@@ -2278,10 +2283,15 @@ button.product-tag[aria-pressed="true"] {
   background: var(--card);
 }
 
-/* Shopify 導入且已設定送貨時間的訂單：虛線框標示。 */
+/* Shopify 導入且已設定送貨時間的訂單：虛線框 + 字體顏色變淺標示。 */
 .kitchen-calendar-day-item.is-shopify {
   border-style: dashed;
   background: color-mix(in oklch, var(--primary) 5%, var(--background));
+}
+
+.kitchen-calendar-day-item.is-shopify strong,
+.kitchen-calendar-day-item.is-shopify small {
+  color: var(--muted-foreground);
 }
 
 .kitchen-calendar-day-item.is-shopify:hover {
@@ -2882,6 +2892,13 @@ button.product-tag[aria-pressed="true"] {
   display: inline-flex;
   align-items: center;
   gap: 7px;
+}
+
+.order-delivery-time {
+  display: block;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  margin-top: 2px;
 }
 
 .quote-date svg,
