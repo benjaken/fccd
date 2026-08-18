@@ -96,6 +96,8 @@ export type OrderListItem = {
   currency: string;
   createdAt: string;
   statuses: OrderStatusView[];
+  shopifyOrderId: number | null;
+  shopifyStoreDomain: string | null;
 };
 
 export type OrderListResult = {
@@ -127,6 +129,10 @@ type OrderRow = {
   bubble_created_at: string | null;
   created_at: string;
   order_status_legacy_ids: string[] | null;
+  shopify_order_id: number | null;
+  shopify_store: {
+    shop_domain: string | null;
+  } | null;
 };
 
 function safeSearchTerm(value: string) {
@@ -190,8 +196,8 @@ export async function fetchOrders({
   const start = (page - 1) * ORDERS_PAGE_SIZE;
   const end = start + ORDERS_PAGE_SIZE - 1;
   const selectedFields: string = canViewFinance
-    ? "id,order_number,customer_name_snapshot,company_name_snapshot,delivery_at,factory_date,ship_out_time,delivery_status,is_sent_to_factory,currency,bubble_created_at,created_at,grand_total,outstanding,order_status_legacy_ids"
-    : "id,order_number,customer_name_snapshot,company_name_snapshot,delivery_at,factory_date,ship_out_time,delivery_status,is_sent_to_factory,currency,bubble_created_at,created_at,order_status_legacy_ids";
+    ? "id,order_number,customer_name_snapshot,company_name_snapshot,delivery_at,factory_date,ship_out_time,delivery_status,is_sent_to_factory,currency,bubble_created_at,created_at,grand_total,outstanding,order_status_legacy_ids,shopify_order_id,shopify_store(shop_domain)"
+    : "id,order_number,customer_name_snapshot,company_name_snapshot,delivery_at,factory_date,ship_out_time,delivery_status,is_sent_to_factory,currency,bubble_created_at,created_at,order_status_legacy_ids,shopify_order_id,shopify_store(shop_domain)";
   let catalog: ConfiguredOrderStatus[] | undefined;
   const loadCatalog = async () => {
     catalog ??= await fetchOrderStatusCatalog();
@@ -261,6 +267,8 @@ export async function fetchOrders({
       currency: row.currency || "HKD",
       createdAt: row.bubble_created_at || row.created_at,
       statuses: resolveOrderStatuses(row.order_status_legacy_ids, resolvedCatalog),
+      shopifyOrderId: row.shopify_order_id,
+      shopifyStoreDomain: row.shopify_store?.shop_domain ?? null,
     })),
     total: count ?? 0,
   };

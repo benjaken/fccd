@@ -31,6 +31,8 @@ function listItem(
     currency: "HKD",
     createdAt: "2026-08-12T01:00:00.000Z",
     statuses: [{ name: "未傳至工場", color: "#f39c12" }],
+    shopifyOrderId: null,
+    shopifyStoreDomain: null,
     ...overrides,
   };
 }

@@ -489,8 +489,10 @@ const resources = {
           status: "狀態",
           amount: "金額",
           outstanding: "未付",
+          shopify: "Shopify",
           actions: "操作",
         },
+        openInShopify: "在 Shopify 開啟訂單 {{order}}",
       },
       kitchenCalendar: {
         previousMonth: "上一個月",
@@ -2829,8 +2831,10 @@ const resources = {
           status: "Status",
           amount: "Amount",
           outstanding: "Outstanding",
+          shopify: "Shopify",
           actions: "Actions",
         },
+        openInShopify: "Open order {{order}} in Shopify",
       },
       kitchenCalendar: {
         previousMonth: "Previous month",

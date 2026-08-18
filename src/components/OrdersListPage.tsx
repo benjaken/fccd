@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CalendarDays, ChevronRight, ClipboardList, Plus, RefreshCw } from "lucide-react";
+import { CalendarDays, ChevronRight, ClipboardList, ExternalLink, Plus, RefreshCw } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
@@ -47,7 +47,6 @@ const ORDER_SKELETON_COLUMNS = [
   { width: "5rem" },
   { width: "4.5rem", variant: "badge" as const },
 ];
-
 export function OrdersListPage({
   preset = "all",
   canViewFinance = true,
@@ -203,6 +202,12 @@ export function OrdersListPage({
       : `${currencyCode} ${value.toLocaleString(i18n.language)}`;
   };
 
+  const shopifyOrderUrl = (order: OrderListItem): string | null => {
+    if (!order.shopifyOrderId || !order.shopifyStoreDomain) return null;
+    const shop = order.shopifyStoreDomain.replace(/\.myshopify\.com$/, "");
+    return `https://admin.shopify.com/store/${shop}/orders/${order.shopifyOrderId}`;
+  };
+
   return (
     <section className="orders-page">
       <header className="page-heading orders-heading">
@@ -301,6 +306,7 @@ export function OrdersListPage({
                 ? [{ width: "5rem" }, { width: "5rem" }]
                 : []),
               { width: "1.75rem", variant: "action" as const },
+              { width: "1.75rem", variant: "action" as const },
             ]}
             header={
               <tr>
@@ -315,6 +321,7 @@ export function OrdersListPage({
                     <th>{t("orders.columns.outstanding")}</th>
                   </>
                 )}
+                <th>{t("orders.columns.shopify")}</th>
                 <th aria-label={t("orders.columns.actions")} />
               </tr>
             }
@@ -382,6 +389,30 @@ export function OrdersListPage({
                       </td>
                     </>
                   )}
+                  <td>
+                    {(() => {
+                      const url = shopifyOrderUrl(order);
+                      if (!url) return <span aria-hidden="true">—</span>;
+                      return (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          asChild
+                          aria-label={t("orders.openInShopify", {
+                            order: order.orderNumber || order.id,
+                          })}
+                        >
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <ExternalLink />
+                          </a>
+                        </Button>
+                      );
+                    })()}
+                  </td>
                   <td>
                     <Button variant="ghost" size="icon" asChild>
                       <DetailLink

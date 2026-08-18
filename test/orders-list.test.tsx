@@ -28,6 +28,8 @@ const orderResult: OrderListResult = {
       currency: "HKD",
       createdAt: "2026-08-12T01:00:00.000Z",
       statuses: [{ name: "待取貨", color: "#16a34a" }],
+      shopifyOrderId: 7808193593617,
+      shopifyStoreDomain: "hklunchbox.myshopify.com",
     },
   ],
 };
@@ -175,6 +177,59 @@ describe("Orders list", () => {
     expect(
       screen.getByText("尚有未收金額的訂單，以未付餘額為準。"),
     ).toBeInTheDocument();
+  });
+
+  it("links Shopify orders to their admin page", async () => {
+    const loadOrders = vi.fn().mockResolvedValue({
+      ...orderResult,
+      items: [
+        {
+          ...orderResult.items[0],
+          shopifyOrderId: 7808193593617,
+          shopifyStoreDomain: "hklunchbox.myshopify.com",
+        },
+      ],
+    });
+
+    render(
+      <MemoryRouter>
+        <OrdersListPage loadOrders={loadOrders} loadListConfig={emptyListConfig} />
+      </MemoryRouter>,
+    );
+
+    const link = await screen.findByRole("link", {
+      name: "在 Shopify 開啟訂單 B-1513",
+    });
+    expect(link).toHaveAttribute(
+      "href",
+      "https://admin.shopify.com/store/hklunchbox/orders/7808193593617",
+    );
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+  });
+
+  it("shows no Shopify link for orders without Shopify data", async () => {
+    const loadOrders = vi.fn().mockResolvedValue({
+      ...orderResult,
+      items: [
+        {
+          ...orderResult.items[0],
+          shopifyOrderId: null,
+          shopifyStoreDomain: null,
+        },
+      ],
+    });
+
+    render(
+      <MemoryRouter>
+        <OrdersListPage loadOrders={loadOrders} loadListConfig={emptyListConfig} />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("B-1513")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: /在 Shopify 開啟訂單/ }),
+    ).not.toBeInTheDocument();
   });
 
   it("paginates orders in groups of fifteen", async () => {
