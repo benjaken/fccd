@@ -27,7 +27,6 @@ describe("buildMobileDrawerNav", () => {
       "/orders/dashboard",
       "/orders",
       "/orders/shopify-pending",
-      "/orders/new",
       "/orders/pending",
       "/orders/not-sent-factory",
       "/orders/unpaid",

@@ -210,12 +210,6 @@ const secondaryNav: Record<string, NavItem[]> = {
       permissionKey: "orders.shopify_pending",
     },
     {
-      key: "newOrder",
-      to: "/orders/new",
-      icon: FileText,
-      permissionKey: "orders.new",
-    },
-    {
       key: "pendingOrders",
       to: "/orders/pending",
       icon: ClipboardCheck,
