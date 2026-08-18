@@ -76,6 +76,14 @@ describe("delivery list helpers", () => {
     expect(deliveryFeeSumFromAggregate([{ sum: "1855.4" }])).toBe(1855.4);
     expect(deliveryFeeSumFromAggregate([{ total_fee: 90 }])).toBe(90);
     expect(deliveryFeeSumFromAggregate([])).toBe(0);
+    expect(
+      deliveryFeeSumFromAggregate([
+        { sum: "160" },
+        { sum: "230" },
+        { sum: null },
+        { sum: "10.5" },
+      ]),
+    ).toBe(400.5);
   });
 
   it("falls back to order phone, ship-out time, and delivery status", () => {

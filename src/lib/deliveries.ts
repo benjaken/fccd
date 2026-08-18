@@ -322,13 +322,19 @@ export function deliveryFeeTotal(
 }
 
 export function deliveryFeeSumFromAggregate(data: unknown) {
-  const row = Array.isArray(data) ? data[0] : data;
-  if (!row || typeof row !== "object") return 0;
-  const record = row as Record<string, unknown>;
-  const raw = record.sum ?? record.total_fee;
-  if (raw === null || raw === undefined || typeof raw === "object") return 0;
-  const value = typeof raw === "number" ? raw : Number.parseFloat(String(raw));
-  return Number.isFinite(value) ? value : 0;
+  // PostgREST groups by the embedded order, so each row is a per-order sum;
+  // add every group to get the filtered total.
+  const rows = Array.isArray(data) ? data : data ? [data] : [];
+  let total = 0;
+  for (const row of rows) {
+    if (!row || typeof row !== "object") continue;
+    const record = row as Record<string, unknown>;
+    const raw = record.sum ?? record.total_fee;
+    if (raw === null || raw === undefined || typeof raw === "object") continue;
+    const value = typeof raw === "number" ? raw : Number.parseFloat(String(raw));
+    if (Number.isFinite(value)) total += value;
+  }
+  return total;
 }
 
 export function deliveryOrderAmount(item: Pick<DeliveryListItem, "grandTotal" | "totalFee">) {
