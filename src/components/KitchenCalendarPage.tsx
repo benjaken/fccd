@@ -37,7 +37,12 @@ function orderLabel(
   const number = order.orderNumber || fallback;
   const name = order.customerName || order.companyName;
   const base = name ? `${number} - ${name}` : number;
-  return order.districtName ? `${base} - ${order.districtName}` : base;
+  const withDistrict = order.districtName
+    ? `${base} - ${order.districtName}`
+    : base;
+  return order.deliveryTime
+    ? `${withDistrict} (${order.deliveryTime})`
+    : withDistrict;
 }
 
 function operationalStatusLabel(
@@ -287,7 +292,10 @@ export function KitchenCalendarPage({
                           const statusText = operationalStatusLabel(order, t);
                           return (
                             <Link
-                              className="kitchen-calendar-event"
+                              className={cn(
+                                "kitchen-calendar-event",
+                                order.isShopifyOrder && "is-shopify",
+                              )}
                               key={order.id}
                               to={kitchenCalendarOrderHref(order.id, monthParam)}
                               title={`${label} · ${statusText}`}
@@ -342,7 +350,10 @@ export function KitchenCalendarPage({
               return (
                 <li key={order.id}>
                   <Link
-                    className="kitchen-calendar-day-item"
+                    className={cn(
+                      "kitchen-calendar-day-item",
+                      order.isShopifyOrder && "is-shopify",
+                    )}
                     to={kitchenCalendarOrderHref(order.id, monthParam)}
                     aria-label={`${t("orders.open")} ${label} ${statusText}`}
                   >
@@ -358,6 +369,9 @@ export function KitchenCalendarPage({
                           t("common.notSet")}
                         {order.districtName
                           ? ` - ${order.districtName}`
+                          : ""}
+                        {order.deliveryTime
+                          ? ` (${order.deliveryTime})`
                           : ""}
                       </small>
                     </span>
