@@ -609,6 +609,8 @@ export function pickCatalogMatch(
  * Resolves a Shopify line item to a catalog product/package, matching first by
  * SKU then by the item's name/title. Shopify lines sometimes omit the SKU, but
  * the title often equals the catalog product name (e.g. "(雙格) 拿破崙雞扒意粉").
+ * Shopify SKUs also carry a numeric suffix ("CBESE06-51") that the catalog
+ * stores without it ("CBESE06"), so the suffix is stripped before matching.
  */
 export function pickCatalogMatchByName(
   sku: string | null,
@@ -617,14 +619,31 @@ export function pickCatalogMatchByName(
   packages: Array<{ id: string; sku: string | null; name: string | null; channel_id: string | null }>,
   channelId: string,
 ): { productId: string | null; packageId: string | null } {
-  if (sku) {
+  const candidates = [
+    sku?.trim() || null,
+    sku ? stripSkuSuffix(sku) : null,
+  ].filter((value): value is string => Boolean(value));
+
+  for (const candidate of [...new Set(candidates)]) {
     const bySku = pickCatalogMatch(
-      sku,
+      candidate,
       products.map(({ id, sku: s, channel_id: c }) => ({ id, sku: s, channel_id: c })),
       packages.map(({ id, sku: s, channel_id: c }) => ({ id, sku: s, channel_id: c })),
       channelId,
     );
     if (bySku.productId || bySku.packageId) return bySku;
+  }
+
+  // Known loose names that appear on Shopify lines but not as catalog names.
+  const alias = resolveAliasSku(name);
+  if (alias) {
+    const byAlias = pickCatalogMatch(
+      alias,
+      products.map(({ id, sku: s, channel_id: c }) => ({ id, sku: s, channel_id: c })),
+      packages.map(({ id, sku: s, channel_id: c }) => ({ id, sku: s, channel_id: c })),
+      channelId,
+    );
+    if (byAlias.productId || byAlias.packageId) return byAlias;
   }
 
   const needle = normalizeNameForMatch(name);
@@ -647,4 +666,49 @@ export function pickCatalogMatchByName(
   }
 
   return { productId: null, packageId: null };
+}
+
+/**
+ * Strips a trailing "-<digits>" (or "<digits>") suffix from a Shopify SKU so it
+ * matches the catalog SKU. "CBESE06-51" -> "CBESE06", "CBA003-18" -> "CBA003".
+ */
+export function stripSkuSuffix(sku: string | null | undefined): string | null {
+  if (!sku) return null;
+  const trimmed = sku.trim();
+  const base = trimmed.replace(/-\d+$/, "").trim();
+  return base || null;
+}
+
+/**
+ * Loose display names used on Shopify lines that the catalog stores under a
+ * different SKU prefix. Returns a canonical SKU prefix to try, or null.
+ */
+export function resolveAliasSku(name: string | null | undefined): string | null {
+  const normalized = normalizeNameForMatch(name);
+  if (!normalized) return null;
+  if (normalized.includes("可口可樂") || normalized.includes("可樂")) {
+    // The catalog stores Coke under the CDR001-* / EDR001-* prefix.
+    const match = normalized.match(/可樂[^)]*?(\d+)\s*(罐|包|份)?/);
+    if (match) {
+      return `CDR001-${match[1]}`;
+    }
+    return "CDR001";
+  }
+  return null;
+}
+
+/**
+ * Extracts the "配 ..." option text from a line item title, mirroring how the
+ * legacy Bubble system encoded selections (e.g. "(三格) 肉醬意粉盒 配瑞士雞翼 2隻").
+ * Returns the option text or null when there is no option section.
+ */
+export function extractOptionRemark(name: string | null | undefined): string | null {
+  if (!name) return null;
+  const trimmed = name.trim();
+  const match = trimmed.match(
+    /(?:配|（配|\(配)\s*(.+?)\s*$/,
+  );
+  if (!match) return null;
+  const option = match[1].trim();
+  return option || null;
 }
