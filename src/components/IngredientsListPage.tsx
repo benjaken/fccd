@@ -301,6 +301,10 @@ function IngredientFormPanel({
           <label className="ingredients-field">
             <span>{t("ingredients.fields.productQuantity")}</span>
             <input
+              type="number"
+              inputMode="decimal"
+              min="0"
+              step="0.001"
               value={productQuantity}
               onChange={(event) => setProductQuantity(event.target.value)}
               placeholder={t("ingredients.fields.productQuantityPlaceholder")}
@@ -309,6 +313,10 @@ function IngredientFormPanel({
           <label className="ingredients-field">
             <span>{t("ingredients.fields.costPerProductUnit")}</span>
             <input
+              type="number"
+              inputMode="decimal"
+              min="0"
+              step="0.0001"
               value={costPerProductUnit}
               onChange={(event) => setCostPerProductUnit(event.target.value)}
               placeholder={t("ingredients.fields.costPlaceholder")}
@@ -318,6 +326,10 @@ function IngredientFormPanel({
         <label className="ingredients-field">
           <span>{t("ingredients.fields.costPerStocktakeUnit")}</span>
           <input
+            type="number"
+            inputMode="decimal"
+            min="0"
+            step="0.0001"
             value={costPerStocktakeUnit}
             onChange={(event) => setCostPerStocktakeUnit(event.target.value)}
             placeholder={t("ingredients.fields.costPlaceholder")}
