@@ -2186,6 +2186,8 @@ const resources = {
         toggleStatusToActive: "啟用食材/包裝用品「{{ingredient}}」",
         toggleStatusToInactive: "停用食材/包裝用品「{{ingredient}}」",
         toggleStatusError: "更新狀態失敗，請重試",
+        toggleIngredientStocktake: "切換「{{ingredient}}」的食材盤點",
+        togglePackingStocktake: "切換「{{ingredient}}」的包裝用品顯示",
         columns: {
           name: "材料",
           sku: "SKU",
@@ -4874,6 +4876,10 @@ const resources = {
         toggleStatusToActive: "Activate ingredient “{{ingredient}}”",
         toggleStatusToInactive: "Deactivate ingredient “{{ingredient}}”",
         toggleStatusError: "Could not update the ingredient status. Try again.",
+        toggleIngredientStocktake:
+          "Toggle ingredient stocktake for “{{ingredient}}”",
+        togglePackingStocktake:
+          "Toggle packing display for “{{ingredient}}”",
         columns: {
           name: "Item",
           sku: "SKU",

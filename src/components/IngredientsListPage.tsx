@@ -320,28 +320,26 @@ function IngredientFormPanel({
         </label>
         <label className="ingredients-field ingredients-field-switch">
           <span>{t("ingredients.fields.isActive")}</span>
-          <input
-            type="checkbox"
+          <Switch
             checked={isActive}
-            onChange={(event) => setIsActive(event.target.checked)}
+            onCheckedChange={setIsActive}
+            aria-label={t("ingredients.fields.isActive")}
           />
         </label>
         <label className="ingredients-field ingredients-field-switch">
           <span>{t("ingredients.fields.isIngredientStocktake")}</span>
-          <input
-            type="checkbox"
+          <Switch
             checked={isIngredientStocktake}
-            onChange={(event) =>
-              setIsIngredientStocktake(event.target.checked)
-            }
+            onCheckedChange={setIsIngredientStocktake}
+            aria-label={t("ingredients.fields.isIngredientStocktake")}
           />
         </label>
         <label className="ingredients-field ingredients-field-switch">
           <span>{t("ingredients.fields.isPackingStocktake")}</span>
-          <input
-            type="checkbox"
+          <Switch
             checked={isPackingStocktake}
-            onChange={(event) => setIsPackingStocktake(event.target.checked)}
+            onCheckedChange={setIsPackingStocktake}
+            aria-label={t("ingredients.fields.isPackingStocktake")}
           />
         </label>
         {error ? <p className="ingredients-form-error">{error}</p> : null}
@@ -561,6 +559,64 @@ export function IngredientsListPage({
       setRows((current) =>
         current.map((item) =>
           item.id === row.id ? { ...item, isActive: row.isActive } : item,
+        ),
+      );
+      setActionError(
+        saveError instanceof Error
+          ? saveError.message
+          : t("ingredients.toggleStatusError"),
+      );
+    }
+  };
+
+  /** 切換「食材盤點」或「包裝用品 顯示」旗標。 */
+  const handleToggleFlag = async (
+    row: IngredientListItem,
+    field: "isIngredientStocktake" | "isPackingStocktake",
+    next: boolean,
+  ) => {
+    if (!canEdit || row[field] === next) return;
+    setRows((current) =>
+      current.map((item) =>
+        item.id === row.id ? { ...item, [field]: next } : item,
+      ),
+    );
+    setActionError(null);
+    try {
+      const updated = await updateIngredientProp(row.id, {
+        name: row.name,
+        sku: row.sku,
+        ingredientType: row.ingredientType,
+        productUnit: row.productUnit,
+        stocktakeUnit: row.stocktakeUnit,
+        description: row.description,
+        productQuantity: row.productQuantity,
+        costPerProductUnit: row.costPerProductUnit,
+        costPerStocktakeUnit: row.costPerStocktakeUnit,
+        supplierId: row.supplierId,
+        isActive: row.isActive,
+        isIngredientStocktake:
+          field === "isIngredientStocktake"
+            ? next
+            : row.isIngredientStocktake,
+        isPackingStocktake:
+          field === "isPackingStocktake" ? next : row.isPackingStocktake,
+      });
+      setRows((current) =>
+        current.map((item) =>
+          item.id === row.id
+            ? {
+                ...item,
+                isIngredientStocktake: updated.isIngredientStocktake,
+                isPackingStocktake: updated.isPackingStocktake,
+              }
+            : item,
+        ),
+      );
+    } catch (saveError) {
+      setRows((current) =>
+        current.map((item) =>
+          item.id === row.id ? { ...item, [field]: !next } : item,
         ),
       );
       setActionError(
@@ -795,8 +851,36 @@ export function IngredientsListPage({
                     </span>
                   </div>
                 </td>
-                <td>{row.isIngredientStocktake ? "✓" : "—"}</td>
-                <td>{row.isPackingStocktake ? "✓" : "—"}</td>
+                <td>
+                  <Switch
+                    checked={row.isIngredientStocktake}
+                    disabled={!canEdit}
+                    onCheckedChange={(next) => {
+                      void handleToggleFlag(
+                        row,
+                        "isIngredientStocktake",
+                        next,
+                      );
+                    }}
+                    aria-label={t(
+                      "ingredients.toggleIngredientStocktake",
+                      { ingredient: row.name },
+                    )}
+                  />
+                </td>
+                <td>
+                  <Switch
+                    checked={row.isPackingStocktake}
+                    disabled={!canEdit}
+                    onCheckedChange={(next) => {
+                      void handleToggleFlag(row, "isPackingStocktake", next);
+                    }}
+                    aria-label={t(
+                      "ingredients.togglePackingStocktake",
+                      { ingredient: row.name },
+                    )}
+                  />
+                </td>
                 {showRowActions ? (
                   <td className="table-actions-cell">
                     <div className="table-row-actions">
