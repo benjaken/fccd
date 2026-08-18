@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  extractDeliveryFromRemark,
+  mapShopifyOrder,
   mapShopifyTransaction,
+  normalizeNameForMatch,
   orderNeedsTransactionSync,
+  parseMenuRemark,
   shopifyTransactionLegacyId,
 } from "../supabase/functions/shopify-order-sync/map.ts";
 
@@ -148,5 +152,107 @@ describe("orderNeedsTransactionSync", () => {
     expect(
       orderNeedsTransactionSync({ id: 1, financial_status: null }),
     ).toBe(true);
+  });
+});
+
+const CATERING_REMARK = `沙律 必選:
+科布燒牛肉南瓜沙律配油醋 (2磅) x 2, 羽衣甘藍莓果煙鴨胸沙律配蜂蜜醋 (2磅)
+
+三文治 必選:
+芝士火腿迷你牛角酥 (18件), 迷你照燒雞肉熱狗 (12件)
+
+分享小食 7選3:
+蜜糖雞翼 (30件), 台灣烤香腸 (30條), 唐揚炸雞塊 (30件)
+
+西式熱盤 5選2:
+美式醬燒豬肋骨 (12支骨) x 2, 普羅旺斯焗海鱸魚柳 (2條)
+
+甜品 必選:
+西式甜品拼盤 (泡芙9件+布朗尼9件), 歐式甜品拼盤 (香蕉蛋糕9件+布朗尼9件)`;
+
+describe("parseMenuRemark", () => {
+  it("parses paragraphs and options with quantities", () => {
+    const options = parseMenuRemark(CATERING_REMARK);
+    expect(options).toEqual([
+      { name: "科布燒牛肉南瓜沙律配油醋 (2磅)", quantity: 2 },
+      { name: "羽衣甘藍莓果煙鴨胸沙律配蜂蜜醋 (2磅)", quantity: 1 },
+      { name: "芝士火腿迷你牛角酥 (18件)", quantity: 1 },
+      { name: "迷你照燒雞肉熱狗 (12件)", quantity: 1 },
+      { name: "蜜糖雞翼 (30件)", quantity: 1 },
+      { name: "台灣烤香腸 (30條)", quantity: 1 },
+      { name: "唐揚炸雞塊 (30件)", quantity: 1 },
+      { name: "美式醬燒豬肋骨 (12支骨)", quantity: 2 },
+      { name: "普羅旺斯焗海鱸魚柳 (2條)", quantity: 1 },
+      { name: "西式甜品拼盤 (泡芙9件+布朗尼9件)", quantity: 1 },
+      { name: "歐式甜品拼盤 (香蕉蛋糕9件+布朗尼9件)", quantity: 1 },
+    ]);
+  });
+
+  it("returns an empty list for blank remarks", () => {
+    expect(parseMenuRemark("")).toEqual([]);
+    expect(parseMenuRemark(null)).toEqual([]);
+    expect(parseMenuRemark(undefined)).toEqual([]);
+  });
+
+  it("treats a single option line without a title as one option", () => {
+    expect(parseMenuRemark("科布燒牛肉南瓜沙律配油醋 (2磅)")).toEqual([
+      { name: "科布燒牛肉南瓜沙律配油醋 (2磅)", quantity: 1 },
+    ]);
+  });
+
+  it("keeps commas inside parentheses within a single option", () => {
+    const remark = "甜品 必選:\n西式甜品拼盤 (泡芙9件+布朗尼9件)";
+    expect(parseMenuRemark(remark)).toEqual([
+      { name: "西式甜品拼盤 (泡芙9件+布朗尼9件)", quantity: 1 },
+    ]);
+  });
+});
+
+describe("normalizeNameForMatch", () => {
+  it("normalizes whitespace, full-width parens, and case", () => {
+    expect(normalizeNameForMatch(" 科布燒牛肉 南瓜沙律 (2磅) ")).toBe(
+      "科布燒牛肉南瓜沙律(2磅)",
+    );
+    expect(normalizeNameForMatch("ABC DEF")).toBe("abcdef");
+  });
+});
+
+describe("extractDeliveryFromRemark", () => {
+  it("reads delivery date and time lines from a remark", () => {
+    const { deliveryAt, deliveryTime } = extractDeliveryFromRemark(
+      "送貨日期: 2026-08-20\n送貨時間: 05:00 PM - 06:00 PM",
+    );
+    expect(deliveryAt).toBe("2026-08-20T00:00:00.000Z");
+    expect(deliveryTime).toBe("05:00 PM - 06:00 PM");
+  });
+
+  it("returns nulls when no delivery lines exist", () => {
+    expect(extractDeliveryFromRemark(CATERING_REMARK)).toEqual({
+      deliveryAt: null,
+      deliveryTime: null,
+    });
+  });
+});
+
+describe("mapShopifyOrder remark collection", () => {
+  it("merges order note and note_attributes into the remark", () => {
+    const mapped = mapShopifyOrder({
+      order: {
+        id: 555,
+        name: "#5001",
+        note: "需要侍應",
+        note_attributes: [
+          { name: "套餐選項", value: "沙律 必選:\n科布燒牛肉南瓜沙律配油醋 (2磅) x 2" },
+        ],
+        line_items: [],
+      },
+      shopDomain: "test-store.myshopify.com",
+      storeId: "store-uuid",
+      channelId: "channel-uuid",
+    });
+
+    expect(mapped).not.toBeNull();
+    expect(mapped!.remark).toContain("需要侍應");
+    expect(mapped!.remark).toContain("科布燒牛肉南瓜沙律配油醋 (2磅) x 2");
   });
 });
