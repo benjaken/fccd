@@ -140,10 +140,10 @@ export function FactoryQzTrayBanner({
 
   if (qz.state === "connected") {
     return (
-      <div className="factory-qz-banner is-connected" role="status">
+      <div className="factory-qz-tip is-connected" role="status">
         <Printer aria-hidden="true" />
         <span>
-          {t("factoryBoard.qzBannerConnected", { count: qz.printers.length })}
+          {t("factoryBoard.qzConnected", { count: qz.printers.length })}
         </span>
       </div>
     );
@@ -151,7 +151,7 @@ export function FactoryQzTrayBanner({
 
   if (qz.state === "connecting") {
     return (
-      <div className="factory-qz-banner is-connecting" role="status">
+      <div className="factory-qz-tip is-connecting" role="status">
         <Printer aria-hidden="true" />
         <span>{t("factoryBoard.qzChecking")}</span>
       </div>

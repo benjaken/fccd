@@ -99,7 +99,7 @@ describe("FactoryQzTrayBanner", () => {
     await i18n.changeLanguage("zh-HK");
   });
 
-  it("shows a connected banner with the printer count", () => {
+  it("shows a compact connected tip with the printer count", () => {
     render(
       <FactoryQzTrayBanner
         qz={qzState({
@@ -110,9 +110,10 @@ describe("FactoryQzTrayBanner", () => {
       />,
     );
 
+    expect(screen.getByText("QZ Tray 已連接 (1)")).toBeInTheDocument();
     expect(
-      screen.getByText("QZ Tray 已連接，可以使用打印功能 (1 部打印機)。"),
-    ).toBeInTheDocument();
+      screen.queryByText("QZ Tray 已連接，可以使用打印功能 (1 部打印機)。"),
+    ).not.toBeInTheDocument();
   });
 
   it("shows a failed banner with a retry button", async () => {
