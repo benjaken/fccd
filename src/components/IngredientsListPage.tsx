@@ -385,7 +385,7 @@ export function IngredientsListPage({
   const statusFilter = useDeferredFilter(status, setStatus);
   const [sortField, setSortField] = useState<
     "name" | "sku" | "cost" | "createdAt"
-  >("name");
+  >("sku");
   const [sortAscending, setSortAscending] = useState(true);
   const [page, setPage] = useState(1);
   const [supplierOptions, setSupplierOptions] = useState<
