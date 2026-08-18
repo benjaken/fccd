@@ -33,6 +33,14 @@ import {
 } from "@/lib/ingredients";
 import { useDeferredFilter } from "@/lib/use-deferred-filter";
 
+/** 食材/包裝用品的分類選項（與 Bubble 的 Type option set 對應）。 */
+export const INGREDIENT_TYPE_OPTIONS = [
+  "一般食材",
+  "包裝用品",
+  "貴重食材",
+  "飲品",
+] as const;
+
 type IngredientsLoader = (filters: {
   page: number;
   search: string;
@@ -245,11 +253,17 @@ function IngredientFormPanel({
         </label>
         <label className="ingredients-field">
           <span>{t("ingredients.fields.ingredientType")}</span>
-          <input
+          <select
             value={ingredientType}
             onChange={(event) => setIngredientType(event.target.value)}
-            placeholder={t("ingredients.fields.ingredientTypePlaceholder")}
-          />
+          >
+            <option value="">{t("ingredients.fields.noType")}</option>
+            {INGREDIENT_TYPE_OPTIONS.map((type) => (
+              <option key={type} value={type}>
+                {t(`ingredients.typeOptions.${type}`)}
+              </option>
+            ))}
+          </select>
         </label>
         <div className="ingredients-field-row">
           <label className="ingredients-field">
