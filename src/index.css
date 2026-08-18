@@ -5735,7 +5735,8 @@ button.product-tag[aria-pressed="true"] {
 .order-statuses-page,
 .sale-partners-page,
 .order-list-configs-page,
-.selling-price-cost-page {
+.selling-price-cost-page,
+.suppliers-page {
   display: grid;
   gap: 20px;
   grid-template-rows: auto minmax(0, 1fr);
@@ -5754,7 +5755,8 @@ button.product-tag[aria-pressed="true"] {
 .sale-partners-page .page-heading,
 .spice-usage-page .page-heading,
 .order-list-configs-page .page-heading,
-.selling-price-cost-page .page-heading {
+.selling-price-cost-page .page-heading,
+.suppliers-page .page-heading {
   margin-bottom: 0;
 }
 
@@ -5764,7 +5766,8 @@ button.product-tag[aria-pressed="true"] {
 .meat-customers-heading,
 .order-statuses-heading,
 .sale-partners-heading,
-.selling-price-cost-heading {
+.selling-price-cost-heading,
+.suppliers-heading {
   align-items: flex-end;
 }
 
@@ -5775,7 +5778,8 @@ button.product-tag[aria-pressed="true"] {
 .order-statuses-panel,
 .sale-partners-panel,
 .order-list-configs-panel,
-.selling-price-cost-panel {
+.selling-price-cost-panel,
+.suppliers-panel {
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -5790,7 +5794,8 @@ button.product-tag[aria-pressed="true"] {
 .sale-partners-panel > .list-inline-error,
 .order-list-configs-panel > .list-inline-error,
 .selling-price-cost-panel > .list-inline-error,
-.selling-price-cost-panel > .list-inline-status {
+.selling-price-cost-panel > .list-inline-status,
+.suppliers-panel > .list-inline-error {
   flex: 0 0 auto;
 }
 
@@ -5802,6 +5807,7 @@ button.product-tag[aria-pressed="true"] {
 .sale-partners-panel > .products-state,
 .order-list-configs-panel > .products-state,
 .selling-price-cost-panel > .products-state,
+.suppliers-panel > .products-state,
 .seasoning-cost-table-wrap,
 .calculation-settings-table-wrap,
 .kitchen-settings-table-wrap,
@@ -5810,7 +5816,8 @@ button.product-tag[aria-pressed="true"] {
 .sale-partners-table-wrap,
 .order-list-configs-table-wrap,
 .spice-usage-table-wrap,
-.selling-price-cost-table-wrap {
+.selling-price-cost-table-wrap,
+.suppliers-table-wrap {
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
@@ -5828,7 +5835,8 @@ button.product-tag[aria-pressed="true"] {
 .order-statuses-table-wrap th,
 .sale-partners-table-wrap th,
 .spice-usage-table-wrap th,
-.selling-price-cost-table-wrap th {
+.selling-price-cost-table-wrap th,
+.suppliers-table-wrap th {
   position: sticky;
   z-index: 1;
   top: 0;
@@ -6186,7 +6194,8 @@ button.product-tag[aria-pressed="true"] {
 .sale-partners-toolbar,
 .order-list-configs-toolbar,
 .selling-price-cost-toolbar,
-.order-settings-toolbar {
+.order-settings-toolbar,
+.suppliers-toolbar {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
@@ -6395,6 +6404,84 @@ button.product-tag[aria-pressed="true"] {
   white-space: nowrap;
 }
 
+.suppliers-comment-cell {
+  min-width: 10rem;
+  max-width: 16rem;
+  white-space: normal;
+}
+
+.suppliers-status-filter {
+  display: grid;
+  gap: 6px;
+}
+
+.suppliers-status-filter > span {
+  color: var(--foreground);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.suppliers-status-filter select {
+  min-width: 9rem;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  outline: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 14px;
+}
+
+.suppliers-status-filter select:focus {
+  border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 16%, transparent);
+}
+
+.suppliers-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 9px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.suppliers-status-active {
+  background: var(--selection-bg);
+  color: var(--primary);
+}
+
+.suppliers-status-inactive {
+  background: var(--muted);
+  color: var(--muted-foreground);
+}
+
+.suppliers-detail-fields {
+  display: grid;
+  gap: 14px;
+}
+
+.suppliers-detail-field {
+  display: grid;
+  gap: 4px;
+}
+
+.suppliers-detail-field dt {
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+
+.suppliers-detail-field dd {
+  color: var(--foreground);
+  font-size: 14px;
+  font-weight: 650;
+  white-space: pre-wrap;
+}
+
 .meat-customers-form,
 .order-statuses-form,
 .sale-partners-form,
@@ -6523,7 +6610,8 @@ button.product-tag[aria-pressed="true"] {
   .order-list-configs-page,
   .spice-usage-page,
   .selling-price-cost-page,
-  .order-settings-page {
+  .order-settings-page,
+  .suppliers-page {
     height: calc(100dvh - var(--topbar-height) - 62px);
     min-height: 520px;
   }
@@ -6548,7 +6636,8 @@ button.product-tag[aria-pressed="true"] {
   .meat-customers-heading,
   .order-statuses-heading,
   .sale-partners-heading,
-  .selling-price-cost-heading {
+  .selling-price-cost-heading,
+  .suppliers-heading {
     align-items: stretch;
   }
 
@@ -6591,7 +6680,8 @@ button.product-tag[aria-pressed="true"] {
   .seasoning-cost-toolbar,
   .calculation-settings-toolbar,
   .selling-price-cost-toolbar,
-  .order-settings-toolbar {
+  .order-settings-toolbar,
+  .suppliers-toolbar {
     align-items: center;
     flex-direction: row;
     flex-wrap: wrap;

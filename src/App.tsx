@@ -104,6 +104,7 @@ import { MeatYieldErrorsPage } from "@/components/MeatYieldErrorsPage";
 import { KitchenCalendarPage } from "@/components/KitchenCalendarPage";
 import { KitchenOrdersPage } from "@/components/KitchenOrdersPage";
 import { KitchenSettingsPage } from "@/components/KitchenSettingsPage";
+import { SuppliersPage } from "@/components/SuppliersPage";
 import { OrderStatusesPage } from "@/components/OrderStatusesPage";
 import { SalesPartnersPage } from "@/components/SalesPartnersPage";
 import { AttachmentsListPage } from "@/components/settings/AttachmentsListPage";
@@ -425,6 +426,12 @@ const secondaryNav: Record<string, NavItem[]> = {
       permissionKey: "kitchen.inventory",
     },
     {
+      key: "suppliers",
+      to: "/kitchen/suppliers",
+      icon: Users,
+      permissionKey: "kitchen.suppliers",
+    },
+    {
       key: "kitchenSettings",
       to: "/kitchen/settings",
       icon: Settings,
@@ -568,7 +575,11 @@ const SECTION_CHILD_KEYS: Record<string, string[]> = {
     "frozen.yield_errors",
     ...FROZEN_ACTION_PAGE_KEYS,
   ],
-  kitchen: ["kitchen.inventory", ...KITCHEN_ACTION_PAGE_KEYS],
+  kitchen: [
+    "kitchen.inventory",
+    "kitchen.suppliers",
+    ...KITCHEN_ACTION_PAGE_KEYS,
+  ],
   delivery: ["delivery.assign"],
   restaurant: ["restaurant.inventory", "restaurant.reports"],
   reports: [
@@ -1387,6 +1398,16 @@ function OperationsShell() {
                 element={
                   pageAccess.canAccess("kitchen.settings") ? (
                     <KitchenSettingsPage />
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
+                }
+              />
+              <Route
+                path="/kitchen/suppliers"
+                element={
+                  pageAccess.canAccess("kitchen.suppliers") ? (
+                    <SuppliersPage />
                   ) : (
                     <SettingsAccessDenied />
                   )

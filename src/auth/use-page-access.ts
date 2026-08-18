@@ -90,6 +90,7 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
   { prefix: "/kitchen/settings", pageKey: "kitchen.settings" },
   { prefix: "/kitchen/calendar", pageKey: "kitchen.calendar" },
   { prefix: "/kitchen/inventory", pageKey: "kitchen.inventory" },
+  { prefix: "/kitchen/suppliers", pageKey: "kitchen.suppliers" },
   { prefix: "/delivery/assign", pageKey: "delivery.assign" },
   { prefix: "/restaurant/inventory", pageKey: "restaurant.inventory" },
   { prefix: "/restaurant/reports", pageKey: "restaurant.reports" },
