@@ -5043,6 +5043,7 @@ button.product-tag[aria-pressed="true"] {
   inset: 0;
   z-index: 80;
   display: grid;
+  grid-template-rows: minmax(0, 1fr);
   justify-items: end;
 }
 
