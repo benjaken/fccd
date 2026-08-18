@@ -2106,6 +2106,9 @@ const resources = {
         delete: "刪除",
         deleteConfirm: "確定刪除供應商「{{supplier}}」？",
         deleteError: "刪除失敗，請重試",
+        toggleStatusToActive: "啟用供應商「{{supplier}}」",
+        toggleStatusToInactive: "停用供應商「{{supplier}}」",
+        toggleStatusError: "更新狀態失敗，請重試",
         noLinkedItems: "沒有已綁定的項目。",
         columns: {
           companyName: "供應商",
@@ -4699,6 +4702,9 @@ const resources = {
         delete: "Delete",
         deleteConfirm: "Delete supplier “{{supplier}}”?",
         deleteError: "Could not delete the supplier. Try again.",
+        toggleStatusToActive: "Activate supplier “{{supplier}}”",
+        toggleStatusToInactive: "Deactivate supplier “{{supplier}}”",
+        toggleStatusError: "Could not update the supplier status. Try again.",
         noLinkedItems: "No linked items yet.",
         columns: {
           companyName: "Supplier",

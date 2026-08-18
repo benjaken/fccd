@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import { SidePanel } from "@/components/ui/side-panel";
+import { Switch } from "@/components/ui/switch";
 import {
   KITCHEN_SUPPLIERS_DELETE,
   KITCHEN_SUPPLIERS_EDIT,
@@ -55,28 +56,6 @@ const STATUS_OPTIONS: Array<{ value: SupplierStatusFilter; labelKey: string }> =
   { value: "active", labelKey: "suppliers.statuses.active" },
   { value: "inactive", labelKey: "suppliers.statuses.inactive" },
 ];
-
-function StatusBadge({
-  active,
-  activeLabel,
-  inactiveLabel,
-}: {
-  active: boolean;
-  activeLabel: string;
-  inactiveLabel: string;
-}) {
-  return (
-    <span
-      className={
-        active
-          ? "suppliers-status suppliers-status-active"
-          : "suppliers-status suppliers-status-inactive"
-      }
-    >
-      {active ? activeLabel : inactiveLabel}
-    </span>
-  );
-}
 
 /** First three linked names, then a "more" button that opens the detail panel. */
 function LinkedItemsCell({
@@ -534,6 +513,43 @@ export function SuppliersPage({
     }
   };
 
+  const handleToggleStatus = async (row: SupplierRow, next: boolean) => {
+    if (!canEdit || row.isActive === next) return;
+    setRows((current) =>
+      current.map((item) =>
+        item.id === row.id ? { ...item, isActive: next } : item,
+      ),
+    );
+    setActionError(null);
+    try {
+      const updated = await updateSupplierProp(row.id, {
+        companyName: row.companyName,
+        contactPerson: row.contactPerson,
+        phoneNumber: row.phoneNumber,
+        deliverySchedule: row.deliverySchedule,
+        paymentSchedule: row.paymentSchedule,
+        comment: row.comment,
+        isActive: next,
+      });
+      setRows((current) =>
+        current.map((item) =>
+          item.id === row.id ? { ...item, isActive: updated.isActive } : item,
+        ),
+      );
+    } catch (saveError) {
+      setRows((current) =>
+        current.map((item) =>
+          item.id === row.id ? { ...item, isActive: row.isActive } : item,
+        ),
+      );
+      setActionError(
+        saveError instanceof Error
+          ? saveError.message
+          : t("suppliers.toggleStatusError"),
+      );
+    }
+  };
+
   const mergeRow = (row: SupplierRow, mode: "create" | "edit") => {
     setRows((current) =>
       mode === "create"
@@ -686,11 +702,32 @@ export function SuppliersPage({
                 <td>{display(row.deliverySchedule)}</td>
                 <td>{display(row.paymentSchedule)}</td>
                 <td>
-                  <StatusBadge
-                    active={row.isActive}
-                    activeLabel={t("suppliers.statuses.active")}
-                    inactiveLabel={t("suppliers.statuses.inactive")}
-                  />
+                  <div className="suppliers-status-cell">
+                    <Switch
+                      checked={row.isActive}
+                      disabled={!canEdit}
+                      onCheckedChange={(next) => {
+                        void handleToggleStatus(row, next);
+                      }}
+                      aria-label={t(
+                        row.isActive
+                          ? "suppliers.toggleStatusToInactive"
+                          : "suppliers.toggleStatusToActive",
+                        { supplier: row.companyName },
+                      )}
+                    />
+                    <span
+                      className={
+                        row.isActive
+                          ? "suppliers-status-text suppliers-status-text-active"
+                          : "suppliers-status-text suppliers-status-text-inactive"
+                      }
+                    >
+                      {row.isActive
+                        ? t("suppliers.statuses.active")
+                        : t("suppliers.statuses.inactive")}
+                    </span>
+                  </div>
                 </td>
                 {showRowActions ? (
                   <td className="table-actions-cell">

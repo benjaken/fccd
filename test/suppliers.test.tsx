@@ -326,6 +326,44 @@ describe("Supplier records page", () => {
     confirmSpy.mockRestore();
   });
 
+  it("toggles supplier active status via the switch", async () => {
+    const user = userEvent.setup();
+    const loadSuppliers = vi.fn().mockResolvedValue(structuredClone(rows));
+    const updateSupplier = vi.fn().mockResolvedValue({
+      ...rows[0],
+      isActive: false,
+    });
+
+    render(
+      <MemoryRouter>
+        <SuppliersPage
+          loadSuppliers={loadSuppliers}
+          updateSupplier={updateSupplier}
+        />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("A-Mart 浩運食品");
+    const activeSwitch = screen.getByRole("switch", {
+      name: "停用供應商「A-Mart 浩運食品」",
+    });
+    expect(activeSwitch).toHaveAttribute("aria-checked", "true");
+
+    await user.click(activeSwitch);
+
+    await waitFor(() => {
+      expect(updateSupplier).toHaveBeenCalledWith("s-1", {
+        companyName: "A-Mart 浩運食品",
+        contactPerson: "蔡生",
+        phoneNumber: "9802 9338",
+        deliverySchedule: "星期一",
+        paymentSchedule: "日結",
+        comment: "可靠",
+        isActive: false,
+      });
+    });
+  });
+
   it("shows an empty state when no suppliers match", async () => {
     const loadSuppliers = vi.fn().mockResolvedValue([]);
 

@@ -114,6 +114,14 @@ input {
   font: inherit;
 }
 
+/* Heading action buttons that are native <button> inherit 16px via the
+   unlayered `font: inherit` above, unlike Button-as-<a> siblings. Pin them
+   to the same 14px as the text-sm label buttons they sit next to. */
+.orders-heading .heading-actions button {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
 button,
 a {
   -webkit-tap-highlight-color: transparent;
@@ -6562,6 +6570,26 @@ button.product-tag[aria-pressed="true"] {
   background: var(--selection-bg-strong);
 }
 
+.suppliers-status-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.suppliers-status-text {
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.suppliers-status-text-active {
+  color: var(--primary);
+}
+
+.suppliers-status-text-inactive {
+  color: var(--muted-foreground);
+}
+
 .suppliers-status-filter {
   display: grid;
   gap: 6px;
@@ -10990,6 +11018,38 @@ button.factory-job-card:focus-visible {
 
 .factory-order-job > .factory-qz-banner {
   grid-column: 1 / -1;
+}
+
+/* Compact status tip for the ready/connecting states. */
+.factory-qz-tip {
+  grid-column: 1 / -1;
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 28px 0;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.factory-qz-tip > svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+}
+
+.factory-qz-tip.is-connected {
+  background: #052e16;
+  color: #86efac;
+}
+
+.factory-qz-tip.is-connecting {
+  background: #1c1917;
+  color: #d6d3d1;
 }
 
 @media (max-width: 900px) {
