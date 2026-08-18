@@ -321,11 +321,18 @@ async function syncPaymentsForOrders(input: {
     }
   }
 
-  const remaining = payable.filter(
+  // Backfill drains orders with no Shopify payment first, but recent order
+  // syncs re-fetch every paid order so a later capture or installment on an
+  // existing order is picked up. Upserts are idempotent by legacy_id.
+  const backlog = payable.filter(
     (order) => !ordersWithPayments.has(order.supabaseOrderId),
   );
-  const pending = Math.max(0, remaining.length - MAX_TRANSACTION_FETCHES_PER_RUN);
-  const toFetch = remaining.slice(0, MAX_TRANSACTION_FETCHES_PER_RUN);
+  const resync = payable.filter(
+    (order) => ordersWithPayments.has(order.supabaseOrderId),
+  );
+  const ordered = [...backlog, ...resync];
+  const pending = Math.max(0, ordered.length - MAX_TRANSACTION_FETCHES_PER_RUN);
+  const toFetch = ordered.slice(0, MAX_TRANSACTION_FETCHES_PER_RUN);
   if (!toFetch.length) return { inserted: 0, pending };
 
   const paymentRows: Record<string, unknown>[] = [];
