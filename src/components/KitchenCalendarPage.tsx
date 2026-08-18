@@ -10,6 +10,7 @@ import {
   fetchKitchenCalendarOrders,
   hongKongDateParts,
   hongKongDayKey,
+  isPendingShopifyOrder,
   kitchenCalendarDayKey,
   kitchenCalendarMonthParam,
   kitchenCalendarOrderHref,
@@ -40,7 +41,7 @@ function orderLabel(
   const withDistrict = order.districtName
     ? `${base} - ${order.districtName}`
     : base;
-  return order.deliveryTime
+  return isPendingShopifyOrder(order) && order.deliveryTime
     ? `${withDistrict} (${order.deliveryTime})`
     : withDistrict;
 }
@@ -294,7 +295,7 @@ export function KitchenCalendarPage({
                             <Link
                               className={cn(
                                 "kitchen-calendar-event",
-                                order.isShopifyOrder && "is-shopify",
+                                isPendingShopifyOrder(order) && "is-shopify",
                               )}
                               key={order.id}
                               to={kitchenCalendarOrderHref(order.id, monthParam)}
@@ -352,7 +353,7 @@ export function KitchenCalendarPage({
                   <Link
                     className={cn(
                       "kitchen-calendar-day-item",
-                      order.isShopifyOrder && "is-shopify",
+                      isPendingShopifyOrder(order) && "is-shopify",
                     )}
                     to={kitchenCalendarOrderHref(order.id, monthParam)}
                     aria-label={`${t("orders.open")} ${label} ${statusText}`}
@@ -370,7 +371,7 @@ export function KitchenCalendarPage({
                         {order.districtName
                           ? ` - ${order.districtName}`
                           : ""}
-                        {order.deliveryTime
+                        {isPendingShopifyOrder(order) && order.deliveryTime
                           ? ` (${order.deliveryTime})`
                           : ""}
                       </small>

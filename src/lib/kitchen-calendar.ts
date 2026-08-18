@@ -236,6 +236,19 @@ export function kitchenCalendarTone(order: {
   return "blue";
 }
 
+/** 是否為 Shopify 導入且尚未審批的訂單（與 shopify-pending 佇列條件一致）。 */
+export function isPendingShopifyOrder(order: {
+  isShopifyOrder: boolean;
+  deliveryStatus: string | null;
+  isSentToFactory: boolean | null;
+}): boolean {
+  return (
+    order.isShopifyOrder &&
+    order.deliveryStatus === null &&
+    (order.isSentToFactory === null || order.isSentToFactory === false)
+  );
+}
+
 function nestedRecord<T>(value: T | T[] | null | undefined): T | null {
   if (!value) return null;
   return Array.isArray(value) ? (value[0] ?? null) : value;
