@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import {
+  extractOptionRemark,
   mapShopifyOrder,
   mapShopifyTransaction,
   normalizeNameForMatch,
@@ -785,9 +786,16 @@ async function processMappedOrders(
     counters.inserted += 1;
 
     const lineRows = item.lines.map((line) => {
+      const rawName = (line.row.product_name_snapshot as string | null) ?? null;
+      const optionRemark = extractOptionRemark(rawName);
+      // Match against the base name without the "配 ..." option text so the
+      // package/product still resolves (Bubble encoded options in the name).
+      const baseName = optionRemark
+        ? rawName!.replace(/(?:配|（配|\(配)\s*.+$/, "").trim() || null
+        : rawName;
       const match = pickCatalogMatchByName(
         line.sku,
-        (line.row.product_name_snapshot as string | null) ?? null,
+        baseName,
         (products ?? []) as Array<{
           id: string;
           sku: string | null;
@@ -803,7 +811,7 @@ async function processMappedOrders(
         storeRow.channel_id,
       );
       if (
-        (line.sku || line.row.product_name_snapshot) &&
+        (line.sku || baseName) &&
         !match.productId &&
         !match.packageId
       ) {
@@ -820,6 +828,8 @@ async function processMappedOrders(
         order_id: insertedOrder.id,
         product_id: match.productId,
         package_id: match.packageId,
+        // Keep the option selection like the legacy Bubble system did.
+        remarks_1: optionRemark ?? (line.row.remarks_1 as string | null) ?? null,
       };
     });
 
