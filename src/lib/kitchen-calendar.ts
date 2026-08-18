@@ -18,6 +18,9 @@ export type KitchenCalendarOrder = {
   orderNumber: string | null;
   customerName: string | null;
   companyName: string | null;
+  districtName: string | null;
+  deliveryTime: string | null;
+  isShopifyOrder: boolean;
   deliveryAt: string | null;
   factoryDate: string | null;
   deliveryStatus: string | null;
@@ -41,11 +44,17 @@ type OrderRow = {
   customer_name_snapshot: string | null;
   company_name_snapshot: string | null;
   delivery_at: string | null;
+  delivery_time: string | null;
   factory_date: string | null;
   delivery_status: string | null;
   is_sent_to_factory: boolean | null;
+  is_shopify_order: boolean | null;
   outstanding: number | string | null;
   order_status_legacy_ids: string[] | null;
+  deliveries?: Array<{
+    district_id: string | null;
+    delivery_districts?: { name: string | null } | { name: string | null }[] | null;
+  }> | null;
 };
 
 function pad2(value: number) {
@@ -227,6 +236,33 @@ export function kitchenCalendarTone(order: {
   return "blue";
 }
 
+/** 是否為 Shopify 導入且尚未審批的訂單（與 shopify-pending 佇列條件一致）。 */
+export function isPendingShopifyOrder(order: {
+  isShopifyOrder: boolean;
+  deliveryStatus: string | null;
+  isSentToFactory: boolean | null;
+}): boolean {
+  return (
+    order.isShopifyOrder &&
+    order.deliveryStatus === null &&
+    (order.isSentToFactory === null || order.isSentToFactory === false)
+  );
+}
+
+function nestedRecord<T>(value: T | T[] | null | undefined): T | null {
+  if (!value) return null;
+  return Array.isArray(value) ? (value[0] ?? null) : value;
+}
+
+/** 從訂單的第一筆送貨記錄擷取送貨地區名稱。 */
+function districtNameFromDeliveries(
+  deliveries: OrderRow["deliveries"],
+): string | null {
+  const first = deliveries?.[0];
+  const district = nestedRecord(first?.delivery_districts);
+  return district?.name?.trim() || null;
+}
+
 function mapOrder(
   row: OrderRow,
   catalog: readonly ConfiguredOrderStatus[],
@@ -236,6 +272,9 @@ function mapOrder(
     orderNumber: row.order_number,
     customerName: row.customer_name_snapshot,
     companyName: row.company_name_snapshot,
+    districtName: districtNameFromDeliveries(row.deliveries),
+    deliveryTime: row.delivery_time?.trim() || null,
+    isShopifyOrder: row.is_shopify_order ?? false,
     deliveryAt: row.delivery_at,
     factoryDate: row.factory_date,
     deliveryStatus: row.delivery_status,
@@ -261,7 +300,7 @@ export async function fetchKitchenCalendarOrders({
     const { data, error } = await supabase
       .from("orders")
       .select(
-        "id,order_number,customer_name_snapshot,company_name_snapshot,delivery_at,factory_date,delivery_status,is_sent_to_factory,outstanding,order_status_legacy_ids",
+        "id,order_number,customer_name_snapshot,company_name_snapshot,delivery_at,delivery_time,factory_date,delivery_status,is_sent_to_factory,is_shopify_order,outstanding,order_status_legacy_ids,deliveries(district_id,delivery_districts!district_id(name))",
       )
       .eq("document_type", "order")
       .is("archived_at", null)

@@ -21,7 +21,6 @@ describe("buildMobileDrawerNav", () => {
     expect(overview?.items.map((item) => item.to)).toEqual([
       "/",
       "/follow-up",
-      "/inventory",
     ]);
     expect(orders?.items.map((item) => item.to)).toEqual([
       "/orders/dashboard",

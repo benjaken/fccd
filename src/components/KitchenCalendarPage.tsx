@@ -10,6 +10,7 @@ import {
   fetchKitchenCalendarOrders,
   hongKongDateParts,
   hongKongDayKey,
+  isPendingShopifyOrder,
   kitchenCalendarDayKey,
   kitchenCalendarMonthParam,
   kitchenCalendarOrderHref,
@@ -36,7 +37,13 @@ function orderLabel(
 ) {
   const number = order.orderNumber || fallback;
   const name = order.customerName || order.companyName;
-  return name ? `${number} - ${name}` : number;
+  const base = name ? `${number} - ${name}` : number;
+  const withDistrict = order.districtName
+    ? `${base} - ${order.districtName}`
+    : base;
+  return isPendingShopifyOrder(order) && order.deliveryTime
+    ? `${withDistrict} (${order.deliveryTime})`
+    : withDistrict;
 }
 
 function operationalStatusLabel(
@@ -286,7 +293,10 @@ export function KitchenCalendarPage({
                           const statusText = operationalStatusLabel(order, t);
                           return (
                             <Link
-                              className="kitchen-calendar-event"
+                              className={cn(
+                                "kitchen-calendar-event",
+                                isPendingShopifyOrder(order) && "is-shopify",
+                              )}
                               key={order.id}
                               to={kitchenCalendarOrderHref(order.id, monthParam)}
                               title={`${label} · ${statusText}`}
@@ -341,7 +351,10 @@ export function KitchenCalendarPage({
               return (
                 <li key={order.id}>
                   <Link
-                    className="kitchen-calendar-day-item"
+                    className={cn(
+                      "kitchen-calendar-day-item",
+                      isPendingShopifyOrder(order) && "is-shopify",
+                    )}
                     to={kitchenCalendarOrderHref(order.id, monthParam)}
                     aria-label={`${t("orders.open")} ${label} ${statusText}`}
                   >
@@ -355,6 +368,12 @@ export function KitchenCalendarPage({
                         {order.customerName ||
                           order.companyName ||
                           t("common.notSet")}
+                        {order.districtName
+                          ? ` - ${order.districtName}`
+                          : ""}
+                        {isPendingShopifyOrder(order) && order.deliveryTime
+                          ? ` (${order.deliveryTime})`
+                          : ""}
                       </small>
                     </span>
                   </Link>

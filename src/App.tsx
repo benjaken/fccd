@@ -72,6 +72,7 @@ import { KitchenCalendarPage } from "@/components/KitchenCalendarPage";
 import { KitchenOrdersPage } from "@/components/KitchenOrdersPage";
 import { KitchenSettingsPage } from "@/components/KitchenSettingsPage";
 import { SuppliersPage } from "@/components/SuppliersPage";
+import { IngredientsListPage } from "@/components/IngredientsListPage";
 import { OrderStatusesPage } from "@/components/OrderStatusesPage";
 import { SalesPartnersPage } from "@/components/SalesPartnersPage";
 import { AttachmentsListPage } from "@/components/settings/AttachmentsListPage";
@@ -795,6 +796,16 @@ function OperationsShell() {
                 element={
                   pageAccess.canAccess("kitchen.suppliers") ? (
                     <SuppliersPage />
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
+                }
+              />
+              <Route
+                path="/kitchen/ingredients"
+                element={
+                  pageAccess.canAccess("kitchen.ingredients") ? (
+                    <IngredientsListPage />
                   ) : (
                     <SettingsAccessDenied />
                   )
