@@ -204,6 +204,12 @@ const secondaryNav: Record<string, NavItem[]> = {
       permissionKey: "orders",
     },
     {
+      key: "shopifyPendingOrders",
+      to: "/orders/shopify-pending",
+      icon: ShoppingBag,
+      permissionKey: "orders.shopify_pending",
+    },
+    {
       key: "newOrder",
       to: "/orders/new",
       icon: FileText,
@@ -220,12 +226,6 @@ const secondaryNav: Record<string, NavItem[]> = {
       to: "/orders/not-sent-factory",
       icon: Factory,
       permissionKey: "orders.not_sent_factory",
-    },
-    {
-      key: "productionCalendar",
-      to: "/orders/calendar",
-      icon: CalendarDays,
-      permissionKey: "kitchen.calendar",
     },
     {
       key: "unpaidOrders",
@@ -258,12 +258,6 @@ const secondaryNav: Record<string, NavItem[]> = {
       permissionKey: "orders.reschedule_pending",
     },
     {
-      key: "shopifyPendingOrders",
-      to: "/orders/shopify-pending",
-      icon: ShoppingBag,
-      permissionKey: "orders.shopify_pending",
-    },
-    {
       key: "payments",
       to: "/orders/payments",
       icon: HandCoins,
@@ -274,6 +268,12 @@ const secondaryNav: Record<string, NavItem[]> = {
       to: "/orders/drivers",
       icon: Truck,
       permissionKey: "orders.drivers",
+    },
+    {
+      key: "productionCalendar",
+      to: "/orders/calendar",
+      icon: CalendarDays,
+      permissionKey: "kitchen.calendar",
     },
     {
       key: "orderSettings",
