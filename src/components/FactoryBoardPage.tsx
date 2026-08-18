@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 
 import { FactoryOrderJobView } from "@/components/FactoryOrderJobView";
+import { FactoryQzTrayStatus } from "@/components/FactoryQzTray";
 import { Button } from "@/components/ui/button";
 import {
   addCalendarDays,
@@ -35,6 +36,7 @@ import {
   type FactoryMenuRow,
   type FactoryOrderJob,
 } from "@/lib/factory-board";
+import { qzTrayClient, useQzTray, type QzTrayClient } from "@/lib/qz-tray";
 import { cn } from "@/lib/utils";
 
 type FleetLoader = typeof fetchFactoryFleets;
@@ -119,6 +121,7 @@ export function FactoryBoardPage({
   loadBrands = fetchFactoryBrands,
   loadOrderJob = fetchFactoryOrderJob,
   loadMenuRows = fetchFactoryMenuRows,
+  qzClient = qzTrayClient,
   initialDate,
 }: {
   loadBoard?: BoardLoader;
@@ -126,9 +129,12 @@ export function FactoryBoardPage({
   loadBrands?: BrandLoader;
   loadOrderJob?: OrderJobLoader;
   loadMenuRows?: MenuLoader;
+  qzClient?: QzTrayClient;
   initialDate?: string;
 }) {
   const { t, i18n } = useTranslation();
+  const qz = useQzTray({ client: qzClient });
+  const [qzPanelOpen, setQzPanelOpen] = useState(false);
   const [startDate, setStartDate] = useState(
     () => initialDate ?? hongKongDateInputValue(),
   );
@@ -333,6 +339,9 @@ export function FactoryBoardPage({
     setBrandDate(null);
     setMenuSummary(null);
     setSelectedJob(item);
+    // Re-check QZ Tray when entering a work order so colleagues know the
+    // label printer is available before they try to print.
+    void qz.connect();
   };
 
   const submitFleet = () => {
@@ -414,13 +423,22 @@ export function FactoryBoardPage({
             <span>{t("factoryBoard.stocktakeNoticeAfter")}</span>
           ) : null}
         </p>
-        {selectedJob ? (
-          <span />
-        ) : (
-          <Button type="button" variant="outline" className="factory-board-multi-day">
-            {t("factoryBoard.multiDayMenu")}
-          </Button>
-        )}
+        <div className="factory-board-actions">
+          <FactoryQzTrayStatus
+            qz={qz}
+            open={qzPanelOpen}
+            onToggle={() => setQzPanelOpen((current) => !current)}
+          />
+          {selectedJob ? null : (
+            <Button
+              type="button"
+              variant="outline"
+              className="factory-board-multi-day"
+            >
+              {t("factoryBoard.multiDayMenu")}
+            </Button>
+          )}
+        </div>
       </header>
 
       {selectedJob ? (
@@ -430,6 +448,7 @@ export function FactoryBoardPage({
           loading={jobLoading}
           error={jobError}
           selectedBadge={fleetBadgeForDelivery(selectedJob, fleets)}
+          qz={qz}
           onBack={() => setSelectedJob(null)}
         />
       ) : (

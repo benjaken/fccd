@@ -1,9 +1,11 @@
 import { Printer, ShoppingCart } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { FactoryQzTrayBanner } from "@/components/FactoryQzTray";
 import { Button } from "@/components/ui/button";
 import type { DeliveryListItem } from "@/lib/deliveries";
 import { hongKongDateKey, type FactoryOrderJob } from "@/lib/factory-board";
+import { useQzTray } from "@/lib/qz-tray";
 
 const WEEKDAY_LONG_ZH = [
   "星期日",
@@ -26,6 +28,7 @@ export function FactoryOrderJobView({
   loading,
   error,
   selectedBadge,
+  qz,
   onBack,
 }: {
   item: DeliveryListItem;
@@ -33,10 +36,12 @@ export function FactoryOrderJobView({
   loading: boolean;
   error: boolean;
   selectedBadge?: string;
+  qz: ReturnType<typeof useQzTray>;
   onBack: () => void;
 }) {
   const { t, i18n } = useTranslation();
   const empty = t("common.notSet");
+  const canPrint = qz.state === "connected";
   const dateKey = item.deliveryAt ? hongKongDateKey(item.deliveryAt) : "";
   const weekday = dateKey
     ? i18n.language.startsWith("zh")
@@ -62,6 +67,7 @@ export function FactoryOrderJobView({
 
   return (
     <section className="factory-order-job">
+      <FactoryQzTrayBanner qz={qz} />
       <div className="factory-order-main">
         <div className="factory-order-summary">
           <h1 className="factory-order-number">{orderNumber}</h1>
@@ -127,9 +133,15 @@ export function FactoryOrderJobView({
       </div>
 
       <aside className="factory-order-aside">
-        <Button type="button">{t("factoryBoard.printAll")}</Button>
-        <Button type="button">{t("factoryBoard.printAddress")}</Button>
-        <Button type="button">{t("factoryBoard.printDeliveryNote")}</Button>
+        <Button type="button" disabled={!canPrint}>
+          {t("factoryBoard.printAll")}
+        </Button>
+        <Button type="button" disabled={!canPrint}>
+          {t("factoryBoard.printAddress")}
+        </Button>
+        <Button type="button" disabled={!canPrint}>
+          {t("factoryBoard.printDeliveryNote")}
+        </Button>
         <Button type="button" className="factory-order-selected">
           {t("factoryBoard.selectedFleet", { name: selectedName })}
         </Button>
@@ -144,8 +156,21 @@ export function FactoryOrderJobView({
         </Button>
         <label className="factory-order-printer">
           <span>{t("factoryBoard.connectPrinter")}</span>
-          <select aria-label={t("factoryBoard.connectPrinter")} defaultValue="">
-            <option value="">{t("factoryBoard.noPrinter")}</option>
+          <select
+            aria-label={t("factoryBoard.connectPrinter")}
+            defaultValue=""
+            disabled={!canPrint}
+          >
+            <option value="">
+              {qz.printers.length
+                ? t("factoryBoard.choosePrinter")
+                : t("factoryBoard.noPrinter")}
+            </option>
+            {qz.printers.map((printer) => (
+              <option key={printer} value={printer}>
+                {printer}
+              </option>
+            ))}
           </select>
         </label>
       </aside>

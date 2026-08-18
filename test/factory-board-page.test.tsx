@@ -1,11 +1,21 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { FactoryBoardPage } from "@/components/FactoryBoardPage";
 import i18n from "@/i18n";
 import type { DeliveryListItem } from "@/lib/deliveries";
 import type { FactoryBoardData } from "@/lib/factory-board";
+import type { QzTrayClient } from "@/lib/qz-tray";
+
+const qzClient: QzTrayClient = {
+  connect: vi.fn(async () => {}),
+  disconnect: vi.fn(async () => {}),
+  listPrinters: vi.fn(async () => ["Zebra ZD421"]),
+  queryStatuses: vi.fn(async () => [
+    { name: "Zebra ZD421", status: "PAPER_OUT", severity: "WARN", message: null },
+  ]),
+};
 
 function item(
   overrides: Partial<DeliveryListItem> & Pick<DeliveryListItem, "id">,
@@ -62,6 +72,7 @@ describe("FactoryBoardPage", () => {
           { id: "team-sun", name: "Sun-Line", shortName: "宏" },
         ]}
         loadBrands={async () => []}
+        qzClient={qzClient}
       />,
     );
 
@@ -112,6 +123,7 @@ describe("FactoryBoardPage", () => {
           { id: "team-sun", name: "Sun-Line", shortName: "宏" },
         ]}
         loadBrands={async () => []}
+        qzClient={qzClient}
         loadOrderJob={async () => ({
           packingNote: "分開兩箱",
           dispatchTime: "10:00",
@@ -165,6 +177,7 @@ describe("FactoryBoardPage", () => {
           { id: "brand-express", name: "Express" },
           { id: "brand-catering", name: "Catering" },
         ]}
+        qzClient={qzClient}
         loadMenuRows={async () => [
           { label: "拿破崙肉丸意粉", quantity: 8 },
         ]}

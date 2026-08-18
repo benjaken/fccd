@@ -6,6 +6,21 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "@/App";
 import i18n from "@/i18n";
 
+vi.mock("@/lib/qz-tray", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/qz-tray")>();
+  return {
+    ...actual,
+    useQzTray: () => ({
+      state: "idle",
+      printers: [],
+      statuses: [],
+      error: null,
+      connect: vi.fn(async () => {}),
+      disconnect: vi.fn(async () => {}),
+    }),
+  };
+});
+
 vi.mock("@/lib/factory-board", async () => {
   const actual = await vi.importActual<typeof import("@/lib/factory-board")>(
     "@/lib/factory-board",
