@@ -88,12 +88,6 @@ export const secondaryNav: Record<string, NavItem[]> = {
     { key: "orders", to: "/orders", icon: ClipboardList, permissionKey: "orders" },
     { key: "quotes", to: "/quotes", icon: FileText, permissionKey: "quotes" },
     {
-      key: "inventory",
-      to: "/inventory",
-      icon: Warehouse,
-      permissionKey: "inventory",
-    },
-    {
       key: "delivery",
       to: "/delivery",
       icon: Truck,
