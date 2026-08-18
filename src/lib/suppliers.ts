@@ -1,5 +1,7 @@
 import { supabase } from "@/lib/supabase";
 
+export const SUPPLIERS_PAGE_SIZE = 15;
+
 export type SupplierLinkedItem = {
   id: string;
   name: string;

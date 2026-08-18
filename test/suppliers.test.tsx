@@ -375,4 +375,46 @@ describe("Supplier records page", () => {
 
     expect(await screen.findByText("未找到供應商")).toBeInTheDocument();
   });
+
+  it("paginates suppliers and navigates between pages", async () => {
+    const user = userEvent.setup();
+    const manyRows: SupplierRow[] = Array.from({ length: 18 }, (_, index) => ({
+      id: `s-${index}`,
+      companyName: `供應商 ${String(index + 1).padStart(2, "0")}`,
+      contactPerson: null,
+      phoneNumber: null,
+      deliverySchedule: null,
+      paymentSchedule: null,
+      comment: null,
+      isActive: true,
+      cateringIngredients: [],
+      rawMeatItems: [],
+      restaurantIngredients: [],
+      createdAt: "2026-08-01T00:00:00.000Z",
+    }));
+    const loadSuppliers = vi.fn().mockResolvedValue(structuredClone(manyRows));
+
+    render(
+      <MemoryRouter>
+        <SuppliersPage loadSuppliers={loadSuppliers} />
+      </MemoryRouter>,
+    );
+
+    // Page 1 shows the first 15 rows and the summary.
+    expect(await screen.findByText("供應商 01")).toBeInTheDocument();
+    expect(screen.getByText("供應商 15")).toBeInTheDocument();
+    expect(screen.queryByText("供應商 16")).not.toBeInTheDocument();
+    expect(screen.getByText("顯示 1–15，共 18 筆")).toBeInTheDocument();
+
+    // Go to page 2.
+    await user.click(screen.getByRole("button", { name: "下一頁" }));
+    expect(await screen.findByText("供應商 16")).toBeInTheDocument();
+    expect(screen.getByText("供應商 18")).toBeInTheDocument();
+    expect(screen.queryByText("供應商 01")).not.toBeInTheDocument();
+    expect(screen.getByText("顯示 16–18，共 18 筆")).toBeInTheDocument();
+
+    // Go back to page 1.
+    await user.click(screen.getByRole("button", { name: "上一頁" }));
+    expect(await screen.findByText("供應商 01")).toBeInTheDocument();
+  });
 });

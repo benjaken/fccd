@@ -2145,6 +2145,11 @@ const resources = {
           active: "啟用",
           inactive: "停用",
         },
+        previous: "上一頁",
+        next: "下一頁",
+        pageOf: "/",
+        jumpToPage: "跳至頁碼",
+        pagination: "顯示 {{from}}–{{to}}，共 {{total}} 筆",
       },
       sellingPriceCost: {
         eyebrow: "凍貨",
@@ -4741,6 +4746,11 @@ const resources = {
           active: "Active",
           inactive: "Inactive",
         },
+        previous: "Previous page",
+        next: "Next page",
+        pageOf: "/",
+        jumpToPage: "Jump to page",
+        pagination: "Showing {{from}}–{{to}} of {{total}}",
       },
       sellingPriceCost: {
         eyebrow: "Frozen goods",

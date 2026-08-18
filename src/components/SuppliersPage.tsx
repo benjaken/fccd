@@ -8,12 +8,14 @@ import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import { SidePanel } from "@/components/ui/side-panel";
 import { Switch } from "@/components/ui/switch";
+import { TablePagination } from "@/components/ui/table-pagination";
 import {
   KITCHEN_SUPPLIERS_DELETE,
   KITCHEN_SUPPLIERS_EDIT,
   KITCHEN_SUPPLIERS_VIEW_DETAIL,
 } from "@/lib/kitchen-action-permissions";
 import {
+  SUPPLIERS_PAGE_SIZE,
   archiveSupplier,
   createSupplier,
   fetchSuppliers,
@@ -423,6 +425,7 @@ export function SuppliersPage({
   const [appliedSearch, setAppliedSearch] = useState("");
   const [status, setStatus] = useState<SupplierStatusFilter>("");
   const statusFilter = useDeferredFilter(status, setStatus);
+  const [page, setPage] = useState(1);
   const [detailSupplier, setDetailSupplier] = useState<SupplierRow | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<SupplierRow | null>(
@@ -435,6 +438,11 @@ export function SuppliersPage({
     () => ({ search: appliedSearch, status }),
     [appliedSearch, status],
   );
+
+  // Return to the first page whenever the search or status filter changes.
+  useEffect(() => {
+    setPage(1);
+  }, [applied]);
 
   useEffect(() => {
     let cancelled = false;
@@ -558,6 +566,22 @@ export function SuppliersPage({
     );
   };
 
+  const totalPages = Math.max(1, Math.ceil(rows.length / SUPPLIERS_PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const visibleFrom = rows.length === 0 ? 0 : (safePage - 1) * SUPPLIERS_PAGE_SIZE + 1;
+  const visibleTo = Math.min(safePage * SUPPLIERS_PAGE_SIZE, rows.length);
+  const visibleRows = rows.slice(
+    (safePage - 1) * SUPPLIERS_PAGE_SIZE,
+    safePage * SUPPLIERS_PAGE_SIZE,
+  );
+
+  // When a delete removes the last row of a page, step back one page.
+  useEffect(() => {
+    if (page > 1 && visibleRows.length === 0 && rows.length > 0) {
+      setPage(page - 1);
+    }
+  }, [page, rows.length, visibleRows.length]);
+
   return (
     <section className="suppliers-page">
       <header className="page-heading suppliers-heading">
@@ -665,7 +689,7 @@ export function SuppliersPage({
               </tr>
             }
           >
-            {rows.map((row) => (
+            {visibleRows.map((row) => (
               <tr key={row.id}>
                 <td>
                   <strong>{row.companyName}</strong>
@@ -778,6 +802,24 @@ export function SuppliersPage({
             ))}
           </ListTable>
         )}
+
+        <TablePagination
+          summary={t("suppliers.pagination", {
+            from: visibleFrom,
+            to: visibleTo,
+            total: rows.length,
+          })}
+          page={safePage}
+          totalPages={totalPages}
+          loading={loading}
+          onPrevious={() => setPage((current) => Math.max(1, current - 1))}
+          onNext={() => setPage((current) => Math.min(totalPages, current + 1))}
+          onPageChange={setPage}
+          previousLabel={t("suppliers.previous")}
+          nextLabel={t("suppliers.next")}
+          pageLabel={t("suppliers.pageOf")}
+          jumpLabel={t("suppliers.jumpToPage")}
+        />
       </article>
 
       <SupplierDetailPanel
