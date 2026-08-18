@@ -21,7 +21,8 @@ export type OrderPreset =
   | "split"
   | "kitchen-notes"
   | "reschedule-pending"
-  | "shopify-pending";
+  | "shopify-pending"
+  | "not-sent-factory";
 
 export type OrderStatusFilter =
   | ""
@@ -248,6 +249,11 @@ export async function fetchOrders({
       .eq("source_system", "shopify")
       .is("delivery_status", null)
       .or("is_sent_to_factory.is.null,is_sent_to_factory.eq.false");
+  } else if (preset === "not-sent-factory") {
+    // Confirmed orders the factory has not received yet.
+    query = query.or(
+      "is_sent_to_factory.is.null,is_sent_to_factory.eq.false",
+    );
   }
 
   query = applyStatusFilter(query, status, preset);

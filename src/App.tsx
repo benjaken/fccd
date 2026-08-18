@@ -79,6 +79,7 @@ import { LoginPage } from "@/components/LoginPage";
 import { MigrationWorkspace } from "@/components/MigrationWorkspace";
 import { FollowUpPage } from "@/components/FollowUpPage";
 import { OrdersListPage } from "@/components/OrdersListPage";
+import { OrdersDashboardPage } from "@/components/OrdersDashboardPage";
 import { OrderSettingsPage } from "@/components/OrderSettingsPage";
 import { OrderDetailPage } from "@/components/OrderDetailPage";
 import { PaymentsListPage } from "@/components/PaymentsListPage";
@@ -191,6 +192,12 @@ const secondaryNav: Record<string, NavItem[]> = {
   ],
   orders: [
     {
+      key: "ordersDashboard",
+      to: "/orders/dashboard",
+      icon: LayoutDashboard,
+      permissionKey: "orders.dashboard",
+    },
+    {
       key: "allOrders",
       to: "/orders",
       icon: ClipboardList,
@@ -207,6 +214,12 @@ const secondaryNav: Record<string, NavItem[]> = {
       to: "/orders/pending",
       icon: ClipboardCheck,
       permissionKey: "orders.pending",
+    },
+    {
+      key: "notSentFactoryOrders",
+      to: "/orders/not-sent-factory",
+      icon: Factory,
+      permissionKey: "orders.not_sent_factory",
     },
     {
       key: "productionCalendar",
@@ -523,8 +536,10 @@ const secondaryNav: Record<string, NavItem[]> = {
 const SECTION_CHILD_KEYS: Record<string, string[]> = {
   overview: ["overview.follow_up"],
   orders: [
+    "orders.dashboard",
     "orders.new",
     "orders.pending",
+    "orders.not_sent_factory",
     "kitchen.calendar",
     "orders.payments",
     "orders.drivers",
@@ -1126,6 +1141,10 @@ function OperationsShell() {
                 element={<OrdersListPage canViewFinance={canViewFinance} />}
               />
               <Route
+                path="/orders/dashboard"
+                element={<OrdersDashboardPage />}
+              />
+              <Route
                 path="/orders/pending"
                 element={
                   <OrdersListPage
@@ -1198,6 +1217,15 @@ function OperationsShell() {
                 }
               />
               <Route
+                path="/orders/not-sent-factory"
+                element={
+                  <OrdersListPage
+                    preset="not-sent-factory"
+                    canViewFinance={canViewFinance}
+                  />
+                }
+              />
+              <Route
                 path="/orders/payments"
                 element={<PaymentsListPage canViewFinance={canViewFinance} />}
               />
@@ -1251,6 +1279,14 @@ function OperationsShell() {
               <Route
                 path="/quotes/follow-up"
                 element={<QuotesListPage preset="follow-up" />}
+              />
+              <Route
+                path="/quotes/pending"
+                element={<QuotesListPage preset="pending" />}
+              />
+              <Route
+                path="/quotes/upcoming"
+                element={<QuotesListPage preset="upcoming" />}
               />
               <Route
                 path="/quotes/customers"

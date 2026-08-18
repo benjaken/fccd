@@ -11,7 +11,8 @@ export type OrderListConfigPreset =
   | "split"
   | "kitchen-notes"
   | "reschedule-pending"
-  | "shopify-pending";
+  | "shopify-pending"
+  | "not-sent-factory";
 
 export type OrderListConfigRow = {
   id: string;
@@ -52,6 +53,7 @@ export const ORDER_LIST_ROUTES: Record<OrderListConfigPreset, string> = {
   "kitchen-notes": "/orders/kitchen-notes",
   "reschedule-pending": "/orders/reschedule-pending",
   "shopify-pending": "/orders/shopify-pending",
+  "not-sent-factory": "/orders/not-sent-factory",
 };
 
 export const ORDER_LIST_NAV_PRESETS: Record<string, OrderListConfigPreset> = {
@@ -63,6 +65,7 @@ export const ORDER_LIST_NAV_PRESETS: Record<string, OrderListConfigPreset> = {
   kitchenNotesOrders: "kitchen-notes",
   reschedulePendingOrders: "reschedule-pending",
   shopifyPendingOrders: "shopify-pending",
+  notSentFactoryOrders: "not-sent-factory",
 };
 
 export const ORDER_LIST_I18N_KEYS: Record<
@@ -92,6 +95,10 @@ export const ORDER_LIST_I18N_KEYS: Record<
   "shopify-pending": {
     title: "shopifyPendingTitle",
     description: "shopifyPendingDescription",
+  },
+  "not-sent-factory": {
+    title: "notSentFactoryTitle",
+    description: "notSentFactoryDescription",
   },
 };
 

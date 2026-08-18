@@ -78,6 +78,39 @@ describe("Catering quotes list", () => {
     );
   });
 
+  it.each([
+    ["pending", "待報價"],
+    ["upcoming", "即將到期報價"],
+  ] as const)("loads the %s quote queue with its title", async (preset, title) => {
+    const loadQuotes = vi.fn().mockResolvedValue(quoteResult);
+
+    render(
+      <MemoryRouter>
+        <QuotesListPage preset={preset} loadQuotes={loadQuotes} />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: title })).toBeInTheDocument();
+    expect(loadQuotes).toHaveBeenCalledWith(
+      expect.objectContaining({ preset }),
+    );
+  });
+
+  it("badges EmailMeForm-synced inquiries in the pending quote list", async () => {
+    const loadQuotes = vi.fn().mockResolvedValue({
+      ...quoteResult,
+      items: [{ ...quoteResult.items[0], sourceSystem: "emailmeform" }],
+    });
+
+    render(
+      <MemoryRouter>
+        <QuotesListPage preset="pending" loadQuotes={loadQuotes} />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("EmailMeForm")).toBeInTheDocument();
+  });
+
   it("paginates quotes in groups of fifteen", async () => {
     const user = userEvent.setup();
     const loadQuotes = vi.fn().mockResolvedValue({ ...quoteResult, total: 31 });

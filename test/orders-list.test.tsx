@@ -132,6 +132,7 @@ describe("Orders list", () => {
     ["kitchen-notes", "廚房備註訂單"],
     ["reschedule-pending", "改期未審訂單"],
     ["shopify-pending", "Shopify待審訂單"],
+    ["not-sent-factory", "未傳工場訂單"],
   ] as const)("loads the %s queue with its title", async (preset, title) => {
     const loadOrders = vi.fn().mockResolvedValue(orderResult);
 

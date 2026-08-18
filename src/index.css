@@ -1111,6 +1111,123 @@ button.bg-primary:focus-visible {
   background: oklch(0.61 0.16 148);
 }
 
+.orders-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(215px, 1fr));
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.orders-dashboard-panel-icon {
+  width: 15px;
+  height: 15px;
+  margin-right: 6px;
+  vertical-align: -2px;
+  color: var(--primary);
+}
+
+.orders-dashboard-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 96px;
+  padding: 18px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  text-align: center;
+}
+
+.orders-dashboard-empty svg {
+  width: 18px;
+  height: 18px;
+}
+
+.orders-dashboard-quote-list {
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+}
+
+.orders-dashboard-quote-list > li + li {
+  border-top: 1px solid var(--border);
+}
+
+.orders-dashboard-quote-list a {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 16px;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 6px 10px;
+  border-radius: 9px;
+  color: var(--foreground);
+  transition: background-color 150ms ease;
+}
+
+.orders-dashboard-quote-list a:hover {
+  background: var(--secondary);
+}
+
+.orders-dashboard-quote-list a:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.orders-dashboard-quote-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.orders-dashboard-quote-main strong {
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.orders-dashboard-quote-main small {
+  overflow: hidden;
+  color: var(--muted-foreground);
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.orders-dashboard-quote-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted-foreground);
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.orders-dashboard-quote-date svg {
+  width: 13px;
+  height: 13px;
+}
+
+.orders-dashboard-quote-list a > svg {
+  width: 14px;
+  color: var(--muted-foreground);
+}
+
+.quote-source-badge {
+  display: inline-block;
+  margin-top: 3px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--selection-bg-strong);
+  color: var(--primary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
 .progress-list {
   display: flex;
   flex-direction: column;

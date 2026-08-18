@@ -113,8 +113,10 @@ const resources = {
         finance: "財務對帳",
         settings: "系統設定",
         allOrders: "所有訂單",
+        ordersDashboard: "訂單儀表板",
         newOrder: "建立新單",
         pendingOrders: "待確定訂單",
+        notSentFactoryOrders: "未傳工場訂單",
         unpaidOrders: "未付款訂單",
         monthlyOrders: "月結訂單",
         splitOrders: "拆單訂單",
@@ -183,6 +185,27 @@ const resources = {
         shippingStatus: "送貨途中",
         completedStatus: "已送達",
         emptyJobs: "今日暫無生產及配送訂單。",
+      },
+      ordersDashboard: {
+        title: "訂單儀表板",
+        description: "集中查看需要跟進的訂單與報價，點擊數字即可開啟對應列表。",
+        loading: "正在載入訂單儀表板…",
+        loadError: "暫時無法載入訂單儀表板",
+        loadErrorDescription: "請稍後重試，或確認你的訂單資料權限。",
+        retry: "重試",
+        openTable: "開啟列表",
+        viewAll: "查看全部",
+        shopifyPending: "Shopify 待入單",
+        unpaid: "待收款訂單",
+        notSentToFactory: "未傳工場訂單",
+        pendingQuotes: "待報價",
+        upcomingQuotes: "即將到期報價",
+        latestPendingTitle: "最新待報價",
+        latestPendingDescription: "客戶經 EmailMeForm 查詢、尚待回覆的報價。",
+        soonestUpcomingTitle: "即將到期報價",
+        soonestUpcomingDescription: "按送餐日期排列，需聯絡客戶確認的報價。",
+        emptyPendingQuotes: "暫無待報價查詢。",
+        emptyUpcomingQuotes: "未來兩星期沒有即將到期的報價。",
       },
       user: {
         role: "營運主管",
@@ -435,6 +458,7 @@ const resources = {
         kitchenNotesTitle: "廚房備註訂單",
         reschedulePendingTitle: "改期未審訂單",
         shopifyPendingTitle: "Shopify待審訂單",
+        notSentFactoryTitle: "未傳工場訂單",
         allDescription:
           "查看全部已確認到會訂單，可搜尋訂單編號、客戶，並篩選營運狀態。",
         pendingDescription:
@@ -450,6 +474,8 @@ const resources = {
         reschedulePendingDescription: "送貨日期改期後尚未審核確定的訂單。",
         shopifyPendingDescription:
           "從 Shopify 新接入、尚待內部審核的訂單。",
+        notSentFactoryDescription:
+          "已確認但尚未傳送至工場的訂單，需安排生產。",
         description: "集中查看及跟進到會訂單、送貨狀態及付款進度。",
         create: "建立新訂單",
         search: "搜尋訂單",
@@ -1106,7 +1132,12 @@ const resources = {
         highChanceTitle: "高機會報價",
         largeTitle: "大單報價",
         followUpTitle: "報價跟進",
+        pendingTitle: "待報價",
+        upcomingTitle: "即將到期報價",
         description: "搜尋、跟進及管理所有到會報價單。",
+        pendingDescription: "客戶經 EmailMeForm 提交、尚未回覆的查詢。",
+        upcomingDescription: "送餐日期臨近、需聯絡客戶確認的報價。",
+        emailMeFormSource: "EmailMeForm",
         create: "建立報價單",
         search: "搜尋報價",
         searchPlaceholder: "搜尋報價編號、客戶或公司",
@@ -2433,8 +2464,10 @@ const resources = {
         finance: "Finance Reconciliation",
         settings: "System Settings",
         allOrders: "All Orders",
+        ordersDashboard: "Orders Dashboard",
         newOrder: "Create Order",
         pendingOrders: "Pending Confirmation",
+        notSentFactoryOrders: "Not sent to factory",
         unpaidOrders: "Unpaid orders",
         monthlyOrders: "Monthly billing orders",
         splitOrders: "Split orders",
@@ -2504,6 +2537,32 @@ const resources = {
         shippingStatus: "Delivering",
         completedStatus: "Delivered",
         emptyJobs: "No production or delivery orders today.",
+      },
+      ordersDashboard: {
+        title: "Orders Dashboard",
+        description:
+          "Track orders and quotes that need follow-up; click a number to open its list.",
+        loading: "Loading the orders dashboard…",
+        loadError: "The orders dashboard could not be loaded",
+        loadErrorDescription:
+          "Try again shortly or check your order data permissions.",
+        retry: "Retry",
+        openTable: "Open list",
+        viewAll: "View all",
+        shopifyPending: "Shopify to review",
+        unpaid: "Unpaid orders",
+        notSentToFactory: "Not sent to factory",
+        pendingQuotes: "Pending quotes",
+        upcomingQuotes: "Quotes due soon",
+        latestPendingTitle: "Latest pending quotes",
+        latestPendingDescription:
+          "EmailMeForm inquiries that still need a reply.",
+        soonestUpcomingTitle: "Quotes due soon",
+        soonestUpcomingDescription:
+          "Sorted by delivery date; contact customers to confirm.",
+        emptyPendingQuotes: "No pending quote inquiries.",
+        emptyUpcomingQuotes:
+          "No quotes due within the next two weeks.",
       },
       user: {
         role: "Operations Manager",
@@ -2772,6 +2831,7 @@ const resources = {
         kitchenNotesTitle: "Kitchen Note Orders",
         reschedulePendingTitle: "Reschedule Pending Orders",
         shopifyPendingTitle: "Shopify Pending Orders",
+        notSentFactoryTitle: "Not Sent to Factory",
         allDescription:
           "Review every confirmed catering order. Search by number or customer, and filter by operations status.",
         pendingDescription:
@@ -2790,6 +2850,8 @@ const resources = {
           "Orders whose delivery date was changed and still need review.",
         shopifyPendingDescription:
           "New Shopify orders waiting for internal review.",
+        notSentFactoryDescription:
+          "Confirmed orders the factory has not received yet, waiting for production.",
         description:
           "Review and follow up on catering orders, delivery status, and payment progress.",
         create: "Create order",
@@ -3472,7 +3534,12 @@ const resources = {
         highChanceTitle: "High-Probability Quotes",
         largeTitle: "Large Quotes",
         followUpTitle: "Quote Follow-up",
+        pendingTitle: "Pending Quotes",
+        upcomingTitle: "Quotes Due Soon",
         description: "Search, follow up, and manage every catering quotation.",
+        pendingDescription: "EmailMeForm inquiries that have not been replied to yet.",
+        upcomingDescription: "Quotes with a delivery date coming up, ready to contact customers.",
+        emailMeFormSource: "EmailMeForm",
         create: "Create quote",
         search: "Search quotes",
         searchPlaceholder: "Search quote number, customer, or company",

@@ -146,7 +146,11 @@ export function QuotesListPage({
         ? "largeTitle"
         : preset === "follow-up"
           ? "followUpTitle"
-          : "title";
+          : preset === "pending"
+            ? "pendingTitle"
+            : preset === "upcoming"
+              ? "upcomingTitle"
+              : "title";
 
   return (
     <section className="quotes-page">
@@ -256,6 +260,11 @@ export function QuotesListPage({
                   </strong>
                   {quote.customerName && quote.companyName && (
                     <small className="quote-company">{quote.companyName}</small>
+                  )}
+                  {quote.sourceSystem === "emailmeform" && (
+                    <span className="status-badge green quote-source-badge">
+                      {t("quotes.emailMeFormSource")}
+                    </span>
                   )}
                 </td>
                 <td>

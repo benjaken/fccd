@@ -24,9 +24,11 @@ describe("buildMobileDrawerNav", () => {
       "/inventory",
     ]);
     expect(orders?.items.map((item) => item.to)).toEqual([
+      "/orders/dashboard",
       "/orders",
       "/orders/new",
       "/orders/pending",
+      "/orders/not-sent-factory",
       "/orders/calendar",
       "/orders/unpaid",
       "/orders/monthly",
