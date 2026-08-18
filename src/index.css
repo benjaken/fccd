@@ -5863,7 +5863,8 @@ button.product-tag[aria-pressed="true"] {
 .sale-partners-page,
 .order-list-configs-page,
 .selling-price-cost-page,
-.suppliers-page {
+.suppliers-page,
+.ingredients-page {
   display: grid;
   gap: 20px;
   grid-template-rows: auto minmax(0, 1fr);
@@ -5883,7 +5884,8 @@ button.product-tag[aria-pressed="true"] {
 .spice-usage-page .page-heading,
 .order-list-configs-page .page-heading,
 .selling-price-cost-page .page-heading,
-.suppliers-page .page-heading {
+.suppliers-page .page-heading,
+.ingredients-page .page-heading {
   margin-bottom: 0;
 }
 
@@ -5894,7 +5896,8 @@ button.product-tag[aria-pressed="true"] {
 .order-statuses-heading,
 .sale-partners-heading,
 .selling-price-cost-heading,
-.suppliers-heading {
+.suppliers-heading,
+.ingredients-heading {
   align-items: flex-end;
 }
 
@@ -5906,7 +5909,8 @@ button.product-tag[aria-pressed="true"] {
 .sale-partners-panel,
 .order-list-configs-panel,
 .selling-price-cost-panel,
-.suppliers-panel {
+.suppliers-panel,
+.ingredients-panel {
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -5922,7 +5926,8 @@ button.product-tag[aria-pressed="true"] {
 .order-list-configs-panel > .list-inline-error,
 .selling-price-cost-panel > .list-inline-error,
 .selling-price-cost-panel > .list-inline-status,
-.suppliers-panel > .list-inline-error {
+.suppliers-panel > .list-inline-error,
+.ingredients-panel > .list-inline-error {
   flex: 0 0 auto;
 }
 
@@ -5935,6 +5940,7 @@ button.product-tag[aria-pressed="true"] {
 .order-list-configs-panel > .products-state,
 .selling-price-cost-panel > .products-state,
 .suppliers-panel > .products-state,
+.ingredients-panel > .products-state,
 .seasoning-cost-table-wrap,
 .calculation-settings-table-wrap,
 .kitchen-settings-table-wrap,
@@ -5944,7 +5950,8 @@ button.product-tag[aria-pressed="true"] {
 .order-list-configs-table-wrap,
 .spice-usage-table-wrap,
 .selling-price-cost-table-wrap,
-.suppliers-table-wrap {
+.suppliers-table-wrap,
+.ingredients-table-wrap {
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
@@ -5963,7 +5970,8 @@ button.product-tag[aria-pressed="true"] {
 .sale-partners-table-wrap th,
 .spice-usage-table-wrap th,
 .selling-price-cost-table-wrap th,
-.suppliers-table-wrap th {
+.suppliers-table-wrap th,
+.ingredients-table-wrap th {
   position: sticky;
   z-index: 1;
   top: 0;
@@ -6322,7 +6330,8 @@ button.product-tag[aria-pressed="true"] {
 .order-list-configs-toolbar,
 .selling-price-cost-toolbar,
 .order-settings-toolbar,
-.suppliers-toolbar {
+.suppliers-toolbar,
+.ingredients-toolbar {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
@@ -6781,6 +6790,132 @@ button.product-tag[aria-pressed="true"] {
   font-style: normal;
 }
 
+.ingredients-status-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ingredients-status-text {
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.ingredients-status-text-active {
+  color: var(--primary);
+}
+
+.ingredients-status-text-inactive {
+  color: var(--muted-foreground);
+}
+
+.ingredients-status-filter {
+  display: grid;
+  gap: 6px;
+}
+
+.ingredients-status-filter > span {
+  color: var(--foreground);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.ingredients-status-filter select {
+  min-width: 9rem;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  outline: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 14px;
+}
+
+.ingredients-status-filter select:focus {
+  border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 16%, transparent);
+}
+
+.ingredients-form {
+  display: grid;
+  gap: 16px;
+}
+
+.ingredients-field {
+  display: grid;
+  gap: 6px;
+}
+
+.ingredients-field > span {
+  color: var(--foreground);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.ingredients-field input:not([type="checkbox"]),
+.ingredients-field textarea,
+.ingredients-field select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  outline: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 14px;
+}
+
+.ingredients-field input:not([type="checkbox"]),
+.ingredients-field select {
+  height: 40px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.ingredients-field textarea {
+  min-height: 6.5rem;
+  height: auto;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  resize: vertical;
+}
+
+.ingredients-field input:not([type="checkbox"]):focus,
+.ingredients-field textarea:focus,
+.ingredients-field select:focus {
+  border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 16%, transparent);
+}
+
+.ingredients-field-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.ingredients-field-switch {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ingredients-field-switch input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+}
+
+.ingredients-field-error,
+.ingredients-form-error {
+  color: var(--destructive);
+  font-size: 14px;
+  font-style: normal;
+}
+
 .meat-customers-form,
 .order-statuses-form,
 .sale-partners-form,
@@ -6915,6 +7050,11 @@ button.product-tag[aria-pressed="true"] {
     min-height: 520px;
   }
 
+  .ingredients-page {
+    height: calc(100dvh - var(--topbar-height) - 62px);
+    min-height: 520px;
+  }
+
   .settings-permissions-page {
     height: calc(100dvh - var(--topbar-height) - 62px);
     min-height: 520px;
@@ -6936,7 +7076,8 @@ button.product-tag[aria-pressed="true"] {
   .order-statuses-heading,
   .sale-partners-heading,
   .selling-price-cost-heading,
-  .suppliers-heading {
+  .suppliers-heading,
+  .ingredients-heading {
     align-items: stretch;
   }
 

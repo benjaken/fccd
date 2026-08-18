@@ -335,6 +335,12 @@ export const secondaryNav: Record<string, NavItem[]> = {
       permissionKey: "kitchen.inventory",
     },
     {
+      key: "ingredients",
+      to: "/kitchen/ingredients",
+      icon: Leaf,
+      permissionKey: "kitchen.ingredients",
+    },
+    {
       key: "suppliers",
       to: "/kitchen/suppliers",
       icon: Users,
@@ -486,6 +492,7 @@ export const SECTION_CHILD_KEYS: Record<string, string[]> = {
   ],
   kitchen: [
     "kitchen.inventory",
+    "kitchen.ingredients",
     "kitchen.suppliers",
     ...KITCHEN_ACTION_PAGE_KEYS,
   ],
