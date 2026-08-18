@@ -23,6 +23,7 @@ import {
   type SupplierWriteInput,
 } from "@/lib/suppliers";
 import { useDeferredFilter } from "@/lib/use-deferred-filter";
+import { cn } from "@/lib/utils";
 
 type SuppliersLoader = (filters?: {
   search?: string;
@@ -158,7 +159,7 @@ function SupplierDetailPanel({
   if (!supplier) return null;
 
   const notSet = t("common.notSet");
-  const rows: Array<{ label: string; value: string | null }> = [
+  const rows: Array<{ label: string; value: string | null; wide?: boolean }> = [
     { label: t("suppliers.columns.companyName"), value: supplier.companyName },
     {
       label: t("suppliers.columns.contactPerson"),
@@ -168,7 +169,7 @@ function SupplierDetailPanel({
       label: t("suppliers.columns.phoneNumber"),
       value: supplier.phoneNumber,
     },
-    { label: t("suppliers.columns.comment"), value: supplier.comment },
+    { label: t("suppliers.columns.comment"), value: supplier.comment, wide: true },
     {
       label: t("suppliers.columns.deliverySchedule"),
       value: supplier.deliverySchedule,
@@ -192,28 +193,36 @@ function SupplierDetailPanel({
       description={t("suppliers.detailDescription")}
       onClose={onClose}
       closeLabel={closeLabel}
-      wide
+      half
     >
       <dl className="suppliers-detail-fields">
         {rows.map((row) => (
-          <div className="suppliers-detail-field" key={row.label}>
+          <div
+            className={cn(
+              "suppliers-detail-field",
+              row.wide && "suppliers-detail-field-wide",
+            )}
+            key={row.label}
+          >
             <dt>{row.label}</dt>
             <dd>{row.value?.trim() ? row.value : notSet}</dd>
           </div>
         ))}
       </dl>
-      <LinkedItemList
-        title={t("suppliers.columns.cateringIngredients")}
-        items={supplier.cateringIngredients}
-      />
-      <LinkedItemList
-        title={t("suppliers.columns.rawMeatItems")}
-        items={supplier.rawMeatItems}
-      />
-      <LinkedItemList
-        title={t("suppliers.columns.restaurantIngredients")}
-        items={supplier.restaurantIngredients}
-      />
+      <div className="suppliers-linked-groups">
+        <LinkedItemList
+          title={t("suppliers.columns.cateringIngredients")}
+          items={supplier.cateringIngredients}
+        />
+        <LinkedItemList
+          title={t("suppliers.columns.rawMeatItems")}
+          items={supplier.rawMeatItems}
+        />
+        <LinkedItemList
+          title={t("suppliers.columns.restaurantIngredients")}
+          items={supplier.restaurantIngredients}
+        />
+      </div>
     </SidePanel>
   );
 }

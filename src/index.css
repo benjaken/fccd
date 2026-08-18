@@ -5047,7 +5047,7 @@ button.product-tag[aria-pressed="true"] {
   justify-items: end;
 }
 
-.confirm-dialog-root {
+.modal-root {
   position: fixed;
   inset: 0;
   z-index: 90;
@@ -5056,7 +5056,7 @@ button.product-tag[aria-pressed="true"] {
   padding: 24px;
 }
 
-.confirm-dialog-backdrop {
+.modal-backdrop {
   position: absolute;
   inset: 0;
   border: 0;
@@ -5064,10 +5064,13 @@ button.product-tag[aria-pressed="true"] {
   cursor: pointer;
 }
 
-.confirm-dialog {
+.modal-panel {
   position: relative;
   z-index: 1;
+  display: grid;
+  grid-template-rows: auto minmax(0, auto) auto;
   width: min(420px, 100%);
+  max-height: min(88dvh, 100%);
   padding: 22px 22px 18px;
   border: 1px solid var(--border);
   border-radius: 14px;
@@ -5075,39 +5078,60 @@ button.product-tag[aria-pressed="true"] {
   box-shadow:
     0 18px 44px color-mix(in oklch, var(--foreground) 22%, transparent),
     0 2px 8px color-mix(in oklch, var(--foreground) 10%, transparent);
-  animation: confirm-dialog-in 150ms cubic-bezier(0.22, 1, 0.36, 1);
+  animation: modal-in 150ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.confirm-dialog h2 {
+.modal-size-sm {
+  width: min(420px, 100%);
+}
+
+.modal-size-md {
+  width: min(560px, 100%);
+}
+
+.modal-size-lg {
+  width: min(760px, 100%);
+}
+
+.modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.modal-header h2 {
   margin: 0;
   font-size: 18px;
   line-height: 1.3;
 }
 
-.confirm-dialog-description {
+.modal-description {
   margin: 8px 0 0;
   color: var(--muted-foreground);
   font-size: 14px;
   line-height: 1.5;
 }
 
-.confirm-dialog-body {
+.modal-body {
+  min-height: 0;
+  overflow: auto;
   margin-top: 14px;
 }
 
-.confirm-dialog-result {
+.modal-result {
   display: grid;
   gap: 8px;
 }
 
-.confirm-dialog-result-summary {
+.modal-result-summary {
   margin: 0;
   color: var(--foreground);
   font-size: 14px;
   line-height: 1.5;
 }
 
-.confirm-dialog-result-issues {
+.modal-result-issues {
   margin: 0;
   color: var(--destructive);
   font-size: 14px;
@@ -5115,7 +5139,7 @@ button.product-tag[aria-pressed="true"] {
   line-height: 1.5;
 }
 
-.confirm-dialog-actions {
+.modal-actions {
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -5123,7 +5147,15 @@ button.product-tag[aria-pressed="true"] {
   margin-top: 20px;
 }
 
-@keyframes confirm-dialog-in {
+.modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+@keyframes modal-in {
   from {
     transform: translateY(10px) scale(0.98);
     opacity: 0;
@@ -6582,12 +6614,18 @@ button.product-tag[aria-pressed="true"] {
 
 .suppliers-detail-fields {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
 }
 
 .suppliers-detail-field {
   display: grid;
   gap: 4px;
+  min-width: 0;
+}
+
+.suppliers-detail-field-wide {
+  grid-column: 1 / -1;
 }
 
 .suppliers-detail-field dt {
@@ -6600,12 +6638,20 @@ button.product-tag[aria-pressed="true"] {
   font-size: 14px;
   font-weight: 650;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.suppliers-linked-groups {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 20px;
 }
 
 .suppliers-detail-group {
   display: grid;
   gap: 8px;
-  margin-top: 18px;
+  min-width: 0;
 }
 
 .suppliers-detail-group h3 {
@@ -6615,10 +6661,10 @@ button.product-tag[aria-pressed="true"] {
 }
 
 .suppliers-detail-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  max-height: 14rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 10px;
+  max-height: 15rem;
   overflow: auto;
   padding: 8px 10px;
   border: 1px solid var(--border);
@@ -6630,6 +6676,7 @@ button.product-tag[aria-pressed="true"] {
   color: var(--foreground);
   font-size: 14px;
   line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 .suppliers-detail-empty {
@@ -6909,6 +6956,15 @@ button.product-tag[aria-pressed="true"] {
     align-items: center;
     flex-direction: row;
     flex-wrap: wrap;
+  }
+
+  .suppliers-detail-fields,
+  .suppliers-linked-groups {
+    grid-template-columns: 1fr;
+  }
+
+  .suppliers-detail-list {
+    grid-template-columns: 1fr;
   }
 
   .quotes-search,
@@ -10869,7 +10925,7 @@ button.factory-job-card:focus-visible {
   min-height: 22px;
   padding: 0 9px;
   border-radius: 999px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 800;
   white-space: nowrap;
 }
