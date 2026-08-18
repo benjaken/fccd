@@ -36,7 +36,8 @@ function orderLabel(
 ) {
   const number = order.orderNumber || fallback;
   const name = order.customerName || order.companyName;
-  return name ? `${number} - ${name}` : number;
+  const base = name ? `${number} - ${name}` : number;
+  return order.districtName ? `${base} - ${order.districtName}` : base;
 }
 
 function operationalStatusLabel(
@@ -355,6 +356,9 @@ export function KitchenCalendarPage({
                         {order.customerName ||
                           order.companyName ||
                           t("common.notSet")}
+                        {order.districtName
+                          ? ` - ${order.districtName}`
+                          : ""}
                       </small>
                     </span>
                   </Link>
