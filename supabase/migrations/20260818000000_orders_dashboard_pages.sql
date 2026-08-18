@@ -13,6 +13,15 @@
 alter table public.orders
   add column if not exists source_system text;
 
+-- The original Shopify sync migration restricted source_system to
+-- bubble/shopify; extend it so EmailMeForm inquiries can be stored too.
+alter table public.orders
+  drop constraint if exists orders_source_system_check;
+
+alter table public.orders
+  add constraint orders_source_system_check
+  check (source_system = any (array['bubble'::text, 'shopify'::text, 'emailmeform'::text]));
+
 create index if not exists orders_source_system_idx
   on public.orders (source_system)
   where source_system is not null;
