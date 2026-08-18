@@ -6891,6 +6891,26 @@ button.product-tag[aria-pressed="true"] {
   box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 16%, transparent);
 }
 
+.ingredients-input-suffix {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.ingredients-input-suffix input {
+  padding-right: 4.5rem;
+}
+
+.ingredients-input-suffix-text {
+  position: absolute;
+  right: 12px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 700;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
 .ingredients-field-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

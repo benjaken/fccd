@@ -325,15 +325,20 @@ function IngredientFormPanel({
         </div>
         <label className="ingredients-field">
           <span>{t("ingredients.fields.costPerStocktakeUnit")}</span>
-          <input
-            type="number"
-            inputMode="decimal"
-            min="0"
-            step="0.0001"
-            value={costPerStocktakeUnit}
-            onChange={(event) => setCostPerStocktakeUnit(event.target.value)}
-            placeholder={t("ingredients.fields.costPlaceholder")}
-          />
+          <div className="ingredients-input-suffix">
+            <input
+              type="number"
+              inputMode="decimal"
+              min="0"
+              step="0.0001"
+              value={costPerStocktakeUnit}
+              onChange={(event) => setCostPerStocktakeUnit(event.target.value)}
+              placeholder={t("ingredients.fields.costPlaceholder")}
+            />
+            <span className="ingredients-input-suffix-text">
+              {stocktakeUnit || t("ingredients.fields.unitPlaceholder")}
+            </span>
+          </div>
         </label>
         <label className="ingredients-field">
           <span>{t("ingredients.fields.description")}</span>
