@@ -6015,6 +6015,135 @@ button.product-tag[aria-pressed="true"] {
   top: 0;
 }
 
+.stocktake-quantity-value {
+  min-width: 4.5rem;
+  padding: 4px 6px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.stocktake-quantity-value:hover:not(:disabled),
+.stocktake-quantity-value:focus-visible {
+  border-color: var(--ring);
+  background: var(--accent);
+  outline: none;
+}
+
+.stocktake-quantity-value:disabled { cursor: default; }
+
+.stocktake-quantity-input {
+  width: 100%;
+  min-width: 5rem;
+  padding: 4px 6px;
+  border: 1px solid var(--ring);
+  border-radius: var(--radius);
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+}
+
+.packing-stocktakes-heading-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.stocktake-records-layout {
+  display: grid;
+  grid-template-columns: minmax(170px, 240px) minmax(0, 1fr);
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.stocktake-date-list {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: auto;
+  border-right: 1px solid var(--border);
+  background: var(--muted);
+}
+
+.stocktake-date-list > span { padding: 16px; color: var(--muted-foreground); }
+
+.stocktake-date-item {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+}
+
+.stocktake-date-item > button:first-child {
+  flex: 1 1 auto;
+  display: grid;
+  gap: 3px;
+  padding: 12px 16px;
+  border: 0;
+  background: transparent;
+  color: var(--foreground);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.stocktake-date-item small { color: var(--muted-foreground); font-size: 12px; font-style: italic; font-weight: 400; }
+.stocktake-date-item > button:last-child { margin-right: 6px; color: var(--destructive); }
+
+.stocktake-date-item:hover,
+.stocktake-date-item:focus-within,
+.stocktake-date-item.is-active {
+  background: var(--selection-bg);
+  color: var(--selection-fg);
+}
+
+.stocktake-date-item > button:first-child:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
+
+.stocktake-records-content { display: flex; flex: 1 1 auto; min-width: 0; min-height: 0; flex-direction: column; }
+
+.stocktake-records-content > .products-state { flex: 1 1 auto; }
+
+@media (max-width: 760px) {
+  .stocktake-records-layout { grid-template-columns: 1fr; }
+  .stocktake-date-list { max-height: 180px; border-right: 0; border-bottom: 1px solid var(--border); }
+}
+
+.print-stocktake-sheet {
+  color: #000;
+  font-family: Arial, "Noto Sans TC", sans-serif;
+}
+
+.print-stocktake-sheet > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.print-stocktake-sheet h1 { margin: 0; font-size: 22px; }
+.print-stocktake-sheet p { margin: 6px 0 0; }
+.print-stocktake-sheet > header > span { color: #4b5563; font-size: 13px; }
+
+.print-stocktake-sheet table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.print-stocktake-sheet th, .print-stocktake-sheet td { border: 1px solid #64748b; padding: 7px 8px; text-align: left; vertical-align: top; }
+.print-stocktake-sheet th { background: #e2e8f0; }
+.print-stocktake-quantity { min-width: 100px; height: 28px; }
+
+@media print {
+  body * { visibility: hidden; }
+  .modal-root, .modal-root * { visibility: visible; }
+  .modal-root { position: static; }
+  .modal-backdrop, .modal-header, .modal-footer { display: none !important; }
+  .modal-panel { position: static !important; width: auto !important; max-width: none !important; max-height: none !important; box-shadow: none !important; overflow: visible !important; }
+  .modal-body { padding: 0 !important; overflow: visible !important; }
+  .print-stocktake-sheet { display: block; }
+}
+
 .seasoning-cost-sort-button {
   display: inline-flex;
   align-items: center;

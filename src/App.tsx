@@ -73,6 +73,18 @@ import { KitchenOrdersPage } from "@/components/KitchenOrdersPage";
 import { KitchenSettingsPage } from "@/components/KitchenSettingsPage";
 import { SuppliersPage } from "@/components/SuppliersPage";
 import { IngredientsListPage } from "@/components/IngredientsListPage";
+import { RestaurantStaffPage } from "@/components/RestaurantStaffPage";
+import { RestaurantInventoryItemsPage } from "@/components/RestaurantInventoryItemsPage";
+import { RestaurantSettingsPage } from "@/components/RestaurantSettingsPage";
+import { RestaurantDepartmentSettingsPage } from "@/components/RestaurantDepartmentSettingsPage";
+import { RestaurantServicePeriodsPage } from "@/components/RestaurantServicePeriodsPage";
+import { RestaurantPaymentMethodsPage } from "@/components/RestaurantPaymentMethodsPage";
+import { RestaurantDeliveryPlatformsPage } from "@/components/RestaurantDeliveryPlatformsPage";
+import { RestaurantHolidaysPage } from "@/components/RestaurantHolidaysPage";
+import { RestaurantRosterTimesPage } from "@/components/RestaurantRosterTimesPage";
+import { SupplierCostCategoriesPage } from "@/components/SupplierCostCategoriesPage";
+import { MonthlyPnlCostCategoriesPage } from "@/components/MonthlyPnlCostCategoriesPage";
+import { PackingStocktakesPage } from "@/components/PackingStocktakesPage";
 import { OrderStatusesPage } from "@/components/OrderStatusesPage";
 import { SalesPartnersPage } from "@/components/SalesPartnersPage";
 import { AttachmentsListPage } from "@/components/settings/AttachmentsListPage";
@@ -812,6 +824,39 @@ function OperationsShell() {
                 }
               />
               <Route
+                path="/restaurant/staff"
+                element={pageAccess.canAccess("restaurant.staff") ? <RestaurantStaffPage /> : <SettingsAccessDenied />}
+              />
+              <Route path="/restaurant/settings/monthly-pnl-cost-categories" element={pageAccess.canAccess("restaurant.settings.monthly_pnl_cost_categories") ? <MonthlyPnlCostCategoriesPage /> : <SettingsAccessDenied />} />
+              <Route path="/restaurant/settings/inventory-items" element={pageAccess.canAccess("restaurant.settings.inventory_items") ? <RestaurantInventoryItemsPage /> : <SettingsAccessDenied />} />
+              <Route path="/restaurant/settings/restaurants" element={pageAccess.canAccess("restaurant.settings.restaurants") ? <RestaurantSettingsPage /> : <SettingsAccessDenied />} />
+              <Route path="/restaurant/settings/departments" element={pageAccess.canAccess("restaurant.settings.departments") ? <RestaurantDepartmentSettingsPage /> : <SettingsAccessDenied />} />
+              <Route path="/restaurant/settings/service-periods" element={pageAccess.canAccess("restaurant.settings.service_periods") ? <RestaurantServicePeriodsPage /> : <SettingsAccessDenied />} />
+              <Route path="/restaurant/settings/payment-methods" element={pageAccess.canAccess("restaurant.settings.payment_methods") ? <RestaurantPaymentMethodsPage /> : <SettingsAccessDenied />} />
+              <Route path="/restaurant/settings/delivery-platforms" element={pageAccess.canAccess("restaurant.settings.delivery_platforms") ? <RestaurantDeliveryPlatformsPage /> : <SettingsAccessDenied />} />
+              <Route path="/restaurant/settings/holidays" element={pageAccess.canAccess("restaurant.settings.holidays") ? <RestaurantHolidaysPage /> : <SettingsAccessDenied />} />
+              <Route path="/restaurant/settings/roster-times" element={pageAccess.canAccess("restaurant.settings.roster_times") ? <RestaurantRosterTimesPage /> : <SettingsAccessDenied />} />
+              <Route
+                path="/kitchen/packing-stocktakes"
+                element={
+                  pageAccess.canAccess("kitchen.packing_stocktakes") ? (
+                    <PackingStocktakesPage />
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
+                }
+              />
+              <Route
+                path="/kitchen/ingredient-stocktakes"
+                element={
+                  pageAccess.canAccess("kitchen.ingredient_stocktakes") ? (
+                    <PackingStocktakesPage kind="ingredient" />
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
+                }
+              />
+              <Route
                 path="/reports/frozen-meat"
                 element={<ReportsPage group="frozenMeat" />}
               />
@@ -837,6 +882,7 @@ function OperationsShell() {
                   )
                 }
               />
+              <Route path="/restaurant/settings/supplier-cost-categories" element={pageAccess.canAccess("restaurant.settings.supplier_cost_categories") ? <SupplierCostCategoriesPage /> : <SettingsAccessDenied />} />
               <Route
                 path="/settings/roles"
                 element={

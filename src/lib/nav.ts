@@ -335,6 +335,18 @@ export const secondaryNav: Record<string, NavItem[]> = {
       permissionKey: "kitchen.ingredients",
     },
     {
+      key: "packingStocktakes",
+      to: "/kitchen/packing-stocktakes",
+      icon: ClipboardList,
+      permissionKey: "kitchen.packing_stocktakes",
+    },
+    {
+      key: "ingredientStocktakes",
+      to: "/kitchen/ingredient-stocktakes",
+      icon: ClipboardList,
+      permissionKey: "kitchen.ingredient_stocktakes",
+    },
+    {
       key: "suppliers",
       to: "/kitchen/suppliers",
       icon: Users,
@@ -380,6 +392,24 @@ export const secondaryNav: Record<string, NavItem[]> = {
       icon: ChartNoAxesCombined,
       permissionKey: "restaurant.reports",
     },
+    {
+      key: "restaurantStaff",
+      to: "/restaurant/staff",
+      icon: Users,
+      permissionKey: "restaurant.staff",
+    },
+    { key: "restaurantSettings", to: "/restaurant/settings/restaurants", icon: Settings, permissionKey: "restaurant.settings", children: [
+      { key: "restaurantSettingsPage", to: "/restaurant/settings/restaurants", icon: Store, permissionKey: "restaurant.settings.restaurants" },
+      { key: "restaurantDepartmentSettings", to: "/restaurant/settings/departments", icon: Users, permissionKey: "restaurant.settings.departments" },
+      { key: "restaurantServicePeriods", to: "/restaurant/settings/service-periods", icon: CalendarClock, permissionKey: "restaurant.settings.service_periods" },
+      { key: "restaurantPaymentMethods", to: "/restaurant/settings/payment-methods", icon: HandCoins, permissionKey: "restaurant.settings.payment_methods" },
+      { key: "restaurantDeliveryPlatforms", to: "/restaurant/settings/delivery-platforms", icon: ShoppingBag, permissionKey: "restaurant.settings.delivery_platforms" },
+      { key: "restaurantHolidays", to: "/restaurant/settings/holidays", icon: CalendarDays, permissionKey: "restaurant.settings.holidays" },
+      { key: "restaurantRosterTimes", to: "/restaurant/settings/roster-times", icon: CalendarClock, permissionKey: "restaurant.settings.roster_times" },
+      { key: "supplierCostCategories", to: "/restaurant/settings/supplier-cost-categories", icon: CircleDollarSign, permissionKey: "restaurant.settings.supplier_cost_categories" },
+      { key: "restaurantInventoryItems", to: "/restaurant/settings/inventory-items", icon: Warehouse, permissionKey: "restaurant.settings.inventory_items" },
+      { key: "restaurantPnlCostCategories", to: "/restaurant/settings/monthly-pnl-cost-categories", icon: CircleDollarSign, permissionKey: "restaurant.settings.monthly_pnl_cost_categories" },
+    ] },
   ],
   reports: [
     {
@@ -487,11 +517,13 @@ export const SECTION_CHILD_KEYS: Record<string, string[]> = {
   kitchen: [
     "kitchen.inventory",
     "kitchen.ingredients",
+    "kitchen.packing_stocktakes",
+    "kitchen.ingredient_stocktakes",
     "kitchen.suppliers",
     ...KITCHEN_ACTION_PAGE_KEYS,
   ],
   delivery: ["delivery.assign"],
-  restaurant: ["restaurant.inventory", "restaurant.reports"],
+  restaurant: ["restaurant.inventory", "restaurant.reports", "restaurant.staff", "restaurant.settings", "restaurant.settings.restaurants", "restaurant.settings.departments", "restaurant.settings.service_periods", "restaurant.settings.payment_methods", "restaurant.settings.delivery_platforms", "restaurant.settings.holidays", "restaurant.settings.roster_times", "restaurant.settings.supplier_cost_categories", "restaurant.settings.inventory_items", "restaurant.settings.monthly_pnl_cost_categories"],
   reports: [
     REPORT_GROUP_PAGE_KEYS.frozenMeat,
     REPORT_GROUP_PAGE_KEYS.shops,
