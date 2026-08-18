@@ -367,7 +367,7 @@ export function IngredientsListPage({
   canEdit?: boolean;
   canDelete?: boolean;
 }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const pageAccess = useCurrentPageAccess();
   const canEdit = canEditProp ?? pageAccess.canAccess(KITCHEN_INGREDIENTS_EDIT);
   const canDelete =
@@ -396,17 +396,6 @@ export function IngredientsListPage({
     useState<IngredientListItem | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-
-  const currencyFormatter = useMemo(
-    () =>
-      new Intl.NumberFormat(i18n.language, {
-        style: "currency",
-        currency: "HKD",
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 4,
-      }),
-    [i18n.language],
-  );
 
   useEffect(() => {
     let cancelled = false;
@@ -595,8 +584,38 @@ export function IngredientsListPage({
   const visibleFrom = total === 0 ? 0 : (page - 1) * INGREDIENTS_PAGE_SIZE + 1;
   const visibleTo = Math.min(page * INGREDIENTS_PAGE_SIZE, total);
 
-  const formatCost = (value: number | null) =>
-    value === null ? t("common.notSet") : currencyFormatter.format(value);
+  const trimNumber = (value: number) =>
+    value.toLocaleString("en-US", { maximumFractionDigits: 4 });
+
+  /** 包裝規格：數量 + 產品單位 + / + 盤點單位，例如「96粒/箱」。 */
+  const formatPackingSpec = (row: IngredientListItem) => {
+    const base = [
+      row.productQuantity != null ? trimNumber(row.productQuantity) : null,
+      row.productUnit,
+    ]
+      .filter(Boolean)
+      .join("");
+    return base && row.stocktakeUnit
+      ? `${base}/${row.stocktakeUnit}`
+      : base || row.stocktakeUnit || null;
+  };
+
+  /** 內容/盤點單位：數量/產品單位/盤點單位，例如「96/粒/箱」。 */
+  const formatContentUnit = (row: IngredientListItem) => {
+    const parts = [
+      row.productQuantity != null ? trimNumber(row.productQuantity) : null,
+      row.productUnit,
+      row.stocktakeUnit,
+    ].filter(Boolean);
+    return parts.length ? parts.join("/") : null;
+  };
+
+  /** 成本/盤點單位：$金額/盤點單位，例如「$154.2/箱」。 */
+  const formatCostWithUnit = (row: IngredientListItem) => {
+    if (row.costPerStocktakeUnit === null) return t("common.notSet");
+    const money = `$${trimNumber(row.costPerStocktakeUnit)}`;
+    return row.stocktakeUnit ? `${money}/${row.stocktakeUnit}` : money;
+  };
 
   return (
     <section className="ingredients-page">
@@ -743,9 +762,9 @@ export function IngredientsListPage({
                 <td>
                   <strong>{row.name}</strong>
                 </td>
-                <td>{row.productUnit || t("common.notSet")}</td>
-                <td>{row.stocktakeUnit || t("common.notSet")}</td>
-                <td>{formatCost(row.costPerStocktakeUnit)}</td>
+                <td>{formatPackingSpec(row) || t("common.notSet")}</td>
+                <td>{formatContentUnit(row) || t("common.notSet")}</td>
+                <td>{formatCostWithUnit(row)}</td>
                 <td>{row.supplierName || t("common.notSet")}</td>
                 <td>{row.ingredientType || t("common.notSet")}</td>
                 <td>
