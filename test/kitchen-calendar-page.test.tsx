@@ -342,6 +342,10 @@ describe("Kitchen calendar page", () => {
 
   it("puts the serving calendar on the Orders sidebar", () => {
     const app = readFileSync(path.resolve(process.cwd(), "src/App.tsx"), "utf8");
+    const nav = readFileSync(
+      path.resolve(process.cwd(), "src/lib/nav.ts"),
+      "utf8",
+    );
     const access = readFileSync(
       path.resolve(process.cwd(), "src/auth/use-page-access.ts"),
       "utf8",
@@ -354,10 +358,10 @@ describe("Kitchen calendar page", () => {
       "utf8",
     );
 
-    expect(app).toContain('to: "/orders/calendar"');
+    expect(nav).toContain('to: "/orders/calendar"');
     expect(app).toContain('path="/orders/calendar"');
     expect(app).toContain("to={`/orders/calendar${location.search}`}");
-    expect(app.indexOf('to: "/orders/calendar"')).toBeLessThan(
+    expect(nav.indexOf('to: "/orders/calendar"')).toBeLessThan(
       app.indexOf('path="/orders/:id"'),
     );
     expect(access).toContain('prefix: "/orders/calendar"');

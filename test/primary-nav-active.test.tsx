@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-import { isPrimaryNavActive, sectionFromPath } from "@/App";
+import { isPrimaryNavActive, sectionFromPath } from "@/lib/nav";
 import { pageAccessKey } from "@/auth/use-page-access";
 
 describe("Primary navigation section matching", () => {
@@ -149,95 +149,107 @@ describe("Primary navigation section matching", () => {
   });
 
   it("registers order settings before the order detail route", () => {
-    const source = readFileSync(
+    const appSource = readFileSync(
       path.resolve(process.cwd(), "src/App.tsx"),
       "utf8",
     );
-    expect(source.indexOf('path="/orders/settings/:tab"')).toBeGreaterThan(-1);
-    expect(source.indexOf('path="/orders/settings/statuses"')).toBeGreaterThan(
+    const navSource = readFileSync(
+      path.resolve(process.cwd(), "src/lib/nav.ts"),
+      "utf8",
+    );
+    expect(appSource.indexOf('path="/orders/settings/:tab"')).toBeGreaterThan(-1);
+    expect(appSource.indexOf('path="/orders/settings/statuses"')).toBeGreaterThan(
       -1,
     );
-    expect(source.indexOf('path="/orders/settings/:tab"')).toBeLessThan(
-      source.indexOf('path="/orders/:id"'),
+    expect(appSource.indexOf('path="/orders/settings/:tab"')).toBeLessThan(
+      appSource.indexOf('path="/orders/:id"'),
     );
-    expect(source).toContain('to: "/orders/settings/sale-partners"');
-    expect(source).toContain('permissionKey: "orders.settings"');
-    expect(source).toContain('to: "/orders/unpaid"');
-    expect(source).toContain('to: "/orders/monthly"');
-    expect(source).toContain('to: "/orders/split"');
-    expect(source).toContain('to: "/orders/kitchen-notes"');
-    expect(source).toContain('to: "/orders/reschedule-pending"');
-    expect(source).toContain('to: "/orders/shopify-pending"');
-    expect(source).toContain('to: "/orders/calendar"');
-    expect(source.indexOf('path="/orders/calendar"')).toBeLessThan(
-      source.indexOf('path="/orders/:id"'),
+    expect(navSource).toContain('to: "/orders/settings/sale-partners"');
+    expect(navSource).toContain('permissionKey: "orders.settings"');
+    expect(navSource).toContain('to: "/orders/unpaid"');
+    expect(navSource).toContain('to: "/orders/monthly"');
+    expect(navSource).toContain('to: "/orders/split"');
+    expect(navSource).toContain('to: "/orders/kitchen-notes"');
+    expect(navSource).toContain('to: "/orders/reschedule-pending"');
+    expect(navSource).toContain('to: "/orders/shopify-pending"');
+    expect(navSource).toContain('to: "/orders/calendar"');
+    expect(appSource.indexOf('path="/orders/calendar"')).toBeLessThan(
+      appSource.indexOf('path="/orders/:id"'),
     );
-    expect(source.indexOf('path="/orders/shopify-pending"')).toBeLessThan(
-      source.indexOf('path="/orders/:id"'),
+    expect(appSource.indexOf('path="/orders/shopify-pending"')).toBeLessThan(
+      appSource.indexOf('path="/orders/:id"'),
     );
-    expect(source).toContain('path="/settings/order-lists"');
-    expect(source).toContain('to: "/settings/order-lists"');
+    expect(appSource).toContain('path="/settings/order-lists"');
+    expect(navSource).toContain('to: "/settings/order-lists"');
   });
 
   it("nests frozen meat and shop pages under the reports sidebar item", () => {
-    const source = readFileSync(
+    const appSource = readFileSync(
       path.resolve(process.cwd(), "src/App.tsx"),
       "utf8",
     );
-    expect(source).toContain("key: \"frozenMeat\"");
-    expect(source).toContain("key: \"shops\"");
-    expect(source).toContain("REPORT_GROUP_ROUTES.frozenMeat");
-    expect(source).toContain("REPORT_GROUP_ROUTES.shops");
-    expect(source).toContain("sidebar-subnav");
+    const navSource = readFileSync(
+      path.resolve(process.cwd(), "src/lib/nav.ts"),
+      "utf8",
+    );
+    expect(navSource).toContain("key: \"frozenMeat\"");
+    expect(navSource).toContain("key: \"shops\"");
+    expect(navSource).toContain("REPORT_GROUP_ROUTES.frozenMeat");
+    expect(navSource).toContain("REPORT_GROUP_ROUTES.shops");
+    expect(appSource).toContain("sidebar-subnav");
   });
 
   it("places selling price cost after prepared meat inventory in Frozen Goods", () => {
-    const source = readFileSync(
-      path.resolve(process.cwd(), "src/App.tsx"),
+    const navSource = readFileSync(
+      path.resolve(process.cwd(), "src/lib/nav.ts"),
       "utf8",
     );
-    const prepared = source.indexOf('key: "preparedMeatInventoryCalc"');
-    const selling = source.indexOf('key: "sellingPriceCost"');
-    const yieldErrors = source.indexOf('key: "yieldErrors"');
+    const prepared = navSource.indexOf('key: "preparedMeatInventoryCalc"');
+    const selling = navSource.indexOf('key: "sellingPriceCost"');
+    const yieldErrors = navSource.indexOf('key: "yieldErrors"');
     expect(prepared).toBeGreaterThan(-1);
     expect(selling).toBeGreaterThan(prepared);
     expect(yieldErrors).toBeGreaterThan(selling);
-    expect(source).toContain('to: "/frozen/yield-errors"');
-    expect(source).toContain('permissionKey: "frozen.yield_errors"');
+    expect(navSource).toContain('to: "/frozen/yield-errors"');
+    expect(navSource).toContain('permissionKey: "frozen.yield_errors"');
   });
 
   it("places the delivery list under Delivery as 送貨清單", () => {
-    const source = readFileSync(
+    const appSource = readFileSync(
       path.resolve(process.cwd(), "src/App.tsx"),
       "utf8",
     );
-    expect(source).toContain('key: "deliveryList"');
-    expect(source).toContain('to: "/delivery"');
-    expect(source).toContain("DeliveryListPage");
+    const navSource = readFileSync(
+      path.resolve(process.cwd(), "src/lib/nav.ts"),
+      "utf8",
+    );
+    expect(navSource).toContain('key: "deliveryList"');
+    expect(navSource).toContain('to: "/delivery"');
+    expect(appSource).toContain("DeliveryListPage");
     expect(pageAccessKey("/delivery")).toBe("delivery");
   });
 
   it("nests Sale Partner first under Orders settings", () => {
-    const source = readFileSync(
-      path.resolve(process.cwd(), "src/App.tsx"),
+    const navSource = readFileSync(
+      path.resolve(process.cwd(), "src/lib/nav.ts"),
       "utf8",
     );
-    expect(source).toContain('key: "orderSettings"');
-    expect(source).toContain('key: "salePartners"');
-    expect(source).toContain('key: "orderStatuses"');
-    expect(source).toContain('key: "orderTags"');
-    expect(source).toContain('key: "orderShippingMethods"');
-    expect(source).toContain('key: "orderPaymentMethods"');
-    expect(source.indexOf('key: "salePartners"')).toBeLessThan(
-      source.indexOf('key: "orderStatuses"'),
+    expect(navSource).toContain('key: "orderSettings"');
+    expect(navSource).toContain('key: "salePartners"');
+    expect(navSource).toContain('key: "orderStatuses"');
+    expect(navSource).toContain('key: "orderTags"');
+    expect(navSource).toContain('key: "orderShippingMethods"');
+    expect(navSource).toContain('key: "orderPaymentMethods"');
+    expect(navSource.indexOf('key: "salePartners"')).toBeLessThan(
+      navSource.indexOf('key: "orderStatuses"'),
     );
-    expect(source).toContain('to: "/orders/settings/sale-partners"');
-    expect(source).toContain('to: "/orders/settings/tags"');
-    expect(source).toContain('to: "/orders/settings/shipping"');
-    expect(source).toContain('to: "/orders/settings/payments"');
-    expect(source).toContain('to: "/orders/settings/statuses"');
-    expect(source).toContain('permissionKey: "orders.settings"');
-    expect(source).toContain('permissionKey: "orders.settings.statuses"');
-    expect(source).toContain('permissionKey: "orders.settings.sale_partners"');
+    expect(navSource).toContain('to: "/orders/settings/sale-partners"');
+    expect(navSource).toContain('to: "/orders/settings/tags"');
+    expect(navSource).toContain('to: "/orders/settings/shipping"');
+    expect(navSource).toContain('to: "/orders/settings/payments"');
+    expect(navSource).toContain('to: "/orders/settings/statuses"');
+    expect(navSource).toContain('permissionKey: "orders.settings"');
+    expect(navSource).toContain('permissionKey: "orders.settings.statuses"');
+    expect(navSource).toContain('permissionKey: "orders.settings.sale_partners"');
   });
 });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildMobileDrawerNav } from "@/App";
+import { buildMobileDrawerNav } from "@/lib/nav";
 
 describe("buildMobileDrawerNav", () => {
   const visiblePrimary = [

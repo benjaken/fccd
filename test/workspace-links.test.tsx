@@ -2,11 +2,11 @@ import { render, screen } from "@testing-library/react";
 import { Factory, Truck } from "lucide-react";
 import { beforeEach, describe, expect, it } from "vitest";
 
+import { WorkspacePlaceholderPage } from "@/App";
 import {
-  WorkspacePlaceholderPage,
   isWorkspaceNavActive,
   workspaceFromPath,
-} from "@/App";
+} from "@/lib/nav";
 import i18n from "@/i18n";
 
 describe("Workspace switcher", () => {

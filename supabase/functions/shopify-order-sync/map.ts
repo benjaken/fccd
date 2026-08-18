@@ -226,6 +226,7 @@ export function mapShopifyOrder(input: {
   orderId: number;
   orderNumber: string;
   needsPayments: boolean;
+  remark: string | null;
   orderRow: Record<string, unknown>;
   lines: Array<{
     lineId: number;
@@ -236,7 +237,9 @@ export function mapShopifyOrder(input: {
   const orderId = numericId(input.order.id);
   if (!orderId) return null;
   const orderNumber = String(input.order.name ?? `#${orderId}`).trim();
+  const remark = collectRemarkText(input.order);
   const delivery = extractDeliveryFields(input.order);
+  const remarkDelivery = extractDeliveryFromRemark(remark);
   const shippingFee = (input.order.shipping_lines ?? []).reduce(
     (sum, line) => sum + money(line.price),
     0,
@@ -269,11 +272,11 @@ export function mapShopifyOrder(input: {
     discount_amount: money(input.order.total_discounts),
     shipping_fee: shippingFee,
     grand_total: money(input.order.total_price),
-    delivery_at: delivery.deliveryAt,
-    delivery_time: delivery.deliveryTime,
-    remarks: input.order.cancelled_at
+    delivery_at: delivery.deliveryAt ?? remarkDelivery.deliveryAt,
+    delivery_time: delivery.deliveryTime ?? remarkDelivery.deliveryTime,
+    remarks: remark?.trim() || (input.order.cancelled_at
       ? `Shopify cancelled_at=${input.order.cancelled_at}`
-      : null,
+      : null),
     is_shopify_order: true,
     bubble_created_at: input.order.created_at ?? null,
     bubble_modified_at: input.order.updated_at ?? null,
@@ -308,9 +311,26 @@ export function mapShopifyOrder(input: {
     orderId,
     orderNumber,
     needsPayments: orderNeedsTransactionSync(input.order),
+    remark,
     orderRow,
     lines,
   };
+}
+
+/**
+ * Collects the free-form remark text attached to an order. The catering store
+ * keeps the selected menu options (and delivery date/time) inside the order
+ * note and its note_attributes, so both are merged here.
+ */
+export function collectRemarkText(order: ShopifyRestOrder): string | null {
+  const parts: string[] = [];
+  if (order.note?.trim()) parts.push(order.note.trim());
+  for (const attr of order.note_attributes ?? []) {
+    const value = String(attr.value ?? "").trim();
+    if (value) parts.push(value);
+  }
+  const merged = parts.join("\n").trim();
+  return merged || null;
 }
 
 const PAYMENT_KINDS = new Set(["sale", "capture"]);
@@ -320,6 +340,126 @@ const UNPAID_FINANCIAL_STATUSES = new Set(["pending"]);
 export function orderNeedsTransactionSync(order: ShopifyRestOrder): boolean {
   const status = String(order.financial_status ?? "").toLowerCase();
   return !UNPAID_FINANCIAL_STATUSES.has(status);
+}
+
+export type MenuOption = {
+  name: string;
+  quantity: number;
+};
+
+/**
+ * Splits a menu-remark block into its option lines. The FCCD catering remark
+ * is grouped into paragraphs whose first line is a title such as
+ * "沙律 必選:" or "分享小食 7選3:"; every later line is a comma-separated
+ * option list. A trailing "x N" on an option is its quantity.
+ */
+export function parseMenuRemark(remark: string | null | undefined): MenuOption[] {
+  if (!remark?.trim()) return [];
+
+  const options: MenuOption[] = [];
+  const paragraphs = remark
+    .split(/\n\s*\n/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean);
+
+  for (const paragraph of paragraphs) {
+    const lines = paragraph.split("\n").map((line) => line.trim());
+    const bodyStart = lines.findIndex((line) => /[:：]\s*$/.test(line));
+
+    // Keep the whole paragraph body; title lines like "沙律 必選:" are dropped.
+    const body = (bodyStart >= 0 ? lines.slice(bodyStart + 1) : lines)
+      .join(" ")
+      .trim();
+    if (!body) continue;
+
+    // Split options on commas, but keep commas inside parentheses intact.
+    const items: string[] = [];
+    let current = "";
+    let depth = 0;
+    for (const char of body) {
+      if (char === "(" || char === "（") depth += 1;
+      if (char === ")" || char === "）") depth = Math.max(0, depth - 1);
+      if (char === "," && depth === 0) {
+        items.push(current.trim());
+        current = "";
+      } else {
+        current += char;
+      }
+    }
+    if (current.trim()) items.push(current.trim());
+
+    for (const raw of items) {
+      const item = raw.replace(/\s+/g, " ").trim();
+      if (!item) continue;
+
+      const quantityMatch = item.match(/^(.*?)\s*x\s*(\d+(?:\.\d+)?)\s*$/);
+      const name = quantityMatch
+        ? quantityMatch[1].trim()
+        : item;
+      const quantity = quantityMatch ? Number(quantityMatch[2]) : 1;
+
+      if (!name) continue;
+      options.push({ name, quantity });
+    }
+  }
+  return options;
+}
+
+export function normalizeNameForMatch(value: string | null | undefined): string {
+  return (value ?? "")
+    .trim()
+    .replace(/[（(]/g, "(")
+    .replace(/[）)]/g, ")")
+    .replace(/[，,]/g, ",")
+    .replace(/\s+/g, "")
+    .toLocaleLowerCase("zh-HK");
+}
+
+export function shopifyMenuOptionLegacyId(
+  shopDomain: string,
+  orderId: number,
+  lineId: number,
+  optionIndex: number,
+): string {
+  const shop = shopDomain.replace(/\.myshopify\.com$/, "");
+  return `shopify:${shop}:${orderId}:${lineId}:opt:${optionIndex}`;
+}
+
+/**
+ * Searches a free-form remark for a delivery date or time line, e.g.
+ * "送貨日期: 2026-08-20" or "送貨時間: 05:00 PM - 06:00 PM". The catering
+ * store keeps these inside the same remark text as the menu options.
+ */
+export function extractDeliveryFromRemark(remark: string | null | undefined): {
+  deliveryAt: string | null;
+  deliveryTime: string | null;
+} {
+  if (!remark) return { deliveryAt: null, deliveryTime: null };
+
+  let deliveryAt: string | null = null;
+  let deliveryTime: string | null = null;
+
+  for (const line of remark.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+
+    const dateMatch = trimmed.match(
+      /^(?:送貨日期|送貨日|delivery\s*date|日期)[:：]\s*(.+)$/i,
+    );
+    if (dateMatch) {
+      deliveryAt = parseDeliveryAt(dateMatch[1].trim()) ?? deliveryAt;
+      continue;
+    }
+
+    const timeMatch = trimmed.match(
+      /^(?:送貨時間|delivery\s*time|time\s*slot|時間)[:：]\s*(.+)$/i,
+    );
+    if (timeMatch) {
+      deliveryTime = timeMatch[1].trim() || deliveryTime;
+    }
+  }
+
+  return { deliveryAt, deliveryTime };
 }
 
 export function mapShopifyTransaction(input: {

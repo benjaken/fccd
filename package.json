@@ -20,7 +20,8 @@
     "generate:full-migration-report": "node scripts/generate-full-migration-report.mjs",
     "generate:migration-status": "node scripts/generate-migration-entity-status.mjs",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:target": "vitest run"
   },
   "repository": {
     "type": "git",

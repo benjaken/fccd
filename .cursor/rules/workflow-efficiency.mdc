@@ -1,0 +1,43 @@
+---
+description: FCCD 專案的效率規範 — 節省 token 與時間的工作流程規則，所有對話皆適用
+globs: 
+alwaysApply: true
+---
+
+# FCCD 工作效率規範
+
+本規則基於本專案實際發生的成本問題整理而成。目的：讓每次代理執行任務時自動遵守，避免重複探索、超大 context、重複部署與無效等待。
+
+## 1. 探索（最省 token 的一環）
+
+- **Grep / Glob 一律設定 `head_limit`**（建議 50–100），禁止無上限的內容搜尋把大量文字灌進 context。
+- **禁止 Read 超大檔案**。超過 ~200KB 的檔案（如 agent transcript、大型 JSON、完整原始碼長檔）不要整檔讀入；改用 `offset`/`limit` 分段，或先用 Grep 精準定位再讀片段。
+- **MCP 查詢一次到位、記住結果**：`list_projects` / `list_edge_functions` / schema 查詢同一事實只查一次，之後引用即可，不要重複查。
+- **探索交給 explore subagent**，主對話只保留結論，避免探索過程佔用主 context。
+
+## 2. 部署（避免內嵌大 payload 與反覆部署）
+
+- **優先使用 Supabase CLI 從 repo 部署**（`supabase functions deploy <name>`，repo 已有 `supabase/config.toml`），不要用 MCP `deploy_edge_function` 內嵌完整原始碼（單次可達 2–3 萬 tokens）。
+- **部署前先本地驗證**：`deno check`（或該 function 的型別檢查）＋跑相關 unit test，通過後再一次部署。禁止「部署 → 發現錯 → 再部署」的循環。
+- 每次部署確認版本與上次實際差異，避免重複部署相同內容。
+
+## 3. 測試與建置（避免無效等待）
+
+- **改什麼跑什麼**：只跑受影響檔案的測試，如 `npx vitest run test/<file>.test.tsx`。全量 `npm test`（525 個測試、~16s）只在需要完整驗證時跑。
+- 建置前先確認只有需要的變更，避免 `npm run build`（test + tsc + vite，~30s）白跑。
+
+## 4. 開發環境（避免無效 reload）
+
+- 同一個專案**只保留一個 Vite dev server**。發現 port 被佔用（`Port 5173 is in use, trying another one...`）代表有重複 server，提醒使用者關閉舊的。
+- `src/App.tsx` 同時 export 元件與純函式會觸發 Fast Refresh bail-out 造成全頁 reload：**純函式請放 `src/lib/`，App.tsx 只保留元件 export**，測試也從新路徑 import。
+- 大規模改動前先確認 Fast Refresh 是否可用，避免每次存檔都全頁 reload 拖慢迭代。
+
+## 5. 對話與 Context 管理
+
+- **一個獨立需求開一個新對話**，不要在同一對話中夾帶多個不相關功能。若發現對話 context 過大（~200KB 以上），提醒使用者拆分。
+- 中斷/重試後不要原地重跑整個探索流程：先確認哪些探索結果已存在於對話中，直接沿用。
+- 回覆盡量精簡：結論優先，程式碼引用只放必要的行數範圍。
+
+## 6. Git
+
+- 完成一項功能且驗證通過後，自動 commit 並 push，commit message 說明 why。
