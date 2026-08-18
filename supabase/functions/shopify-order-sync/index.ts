@@ -120,6 +120,53 @@ async function authenticateCron(
   return constantTimeEqual(await sha256Hex(supplied), String(data.secret_sha256));
 }
 
+type UserAuthResult = {
+  ok: boolean;
+  error?: string;
+};
+
+/**
+ * Accepts a logged-in operations user's JWT so the Shopify pending page can
+ * trigger a sync from the browser. Super Admins and Admins always pass;
+ * other roles must hold the orders.shopify_pending page permission.
+ */
+async function authenticateUser(
+  request: Request,
+  client: AdminClient,
+): Promise<UserAuthResult> {
+  const authorization = request.headers.get("Authorization");
+  if (!authorization?.startsWith("Bearer ")) {
+    return { ok: false };
+  }
+  const token = authorization.slice("Bearer ".length);
+  const {
+    data: { user },
+    error,
+  } = await client.auth.getUser(token);
+  if (error || !user) return { ok: false, error: "invalid_authorization" };
+
+  const role =
+    typeof user.app_metadata?.role === "string"
+      ? user.app_metadata.role
+      : null;
+  if (!role) return { ok: false, error: "page_access_required" };
+  if (role === "Super Admin" || role === "Admin") return { ok: true };
+
+  const { data: permission, error: permissionError } = await client
+    .from("role_page_permissions")
+    .select("can_access")
+    .eq("role", role)
+    .eq("page_key", "orders.shopify_pending")
+    .maybeSingle();
+  if (permissionError) {
+    return { ok: false, error: "permission_check_failed" };
+  }
+  if (!permission?.can_access) {
+    return { ok: false, error: "page_access_required" };
+  }
+  return { ok: true };
+}
+
 function envFor(prefix: string, suffix: string): string | null {
   return Deno.env.get(`${prefix}_${suffix}`)?.trim() || null;
 }
@@ -286,6 +333,7 @@ async function syncPaymentsForOrders(input: {
   token: string;
   processedOrders: ProcessedOrder[];
   methodsByName: Map<string, { id: string; legacy_id: string }>;
+  resyncPaid: boolean;
   issues: Array<{
     store_id: string;
     shopify_order_id: number | null;
@@ -293,7 +341,7 @@ async function syncPaymentsForOrders(input: {
     issue: string;
   }>;
 }): Promise<{ inserted: number; pending: number }> {
-  const { client, storeRow, shop, token, methodsByName, issues } = input;
+  const { client, storeRow, shop, token, methodsByName, resyncPaid, issues } = input;
   const payable = input.processedOrders.filter(
     (order) => order.needsTransactions,
   );
@@ -321,15 +369,15 @@ async function syncPaymentsForOrders(input: {
     }
   }
 
-  // Backfill drains orders with no Shopify payment first, but recent order
-  // syncs re-fetch every paid order so a later capture or installment on an
-  // existing order is picked up. Upserts are idempotent by legacy_id.
+  // Backfill drains orders with no Shopify payment first. Cron re-fetches every
+  // paid order so a later capture or installment is picked up; browser-triggered
+  // refreshes skip that so they return quickly. Upserts are idempotent.
   const backlog = payable.filter(
     (order) => !ordersWithPayments.has(order.supabaseOrderId),
   );
-  const resync = payable.filter(
-    (order) => ordersWithPayments.has(order.supabaseOrderId),
-  );
+  const resync = resyncPaid
+    ? payable.filter((order) => ordersWithPayments.has(order.supabaseOrderId))
+    : [];
   const ordered = [...backlog, ...resync];
   const pending = Math.max(0, ordered.length - MAX_TRANSACTION_FETCHES_PER_RUN);
   const toFetch = ordered.slice(0, MAX_TRANSACTION_FETCHES_PER_RUN);
@@ -399,10 +447,11 @@ async function syncStore(input: {
   limit: number;
   dryRun: boolean;
   backfill: boolean;
+  resyncPaid: boolean;
   created_at_min?: string | null;
   created_at_max?: string | null;
 }): Promise<StoreSyncResult> {
-  const { client, storeRow, limit, dryRun, backfill, created_at_min, created_at_max } = input;
+  const { client, storeRow, limit, dryRun, backfill, resyncPaid, created_at_min, created_at_max } = input;
   const empty: StoreSyncResult = {
     store: storeRow.shop_domain,
     secretPrefix: storeRow.secret_prefix,
@@ -699,6 +748,7 @@ async function syncStore(input: {
     token: tokenResult.token,
     processedOrders,
     methodsByName,
+    resyncPaid,
     issues,
   });
 
@@ -741,10 +791,14 @@ Deno.serve(async (request) => {
   }
 
   const client = createAdminClient();
-  if (!await authenticateCron(request, client)) {
-    return jsonResponse({ error: "unauthorized" }, 401);
+  const cronOk = await authenticateCron(request, client);
+  const userAuth = await authenticateUser(request, client);
+  if (!cronOk && !userAuth.ok) {
+    return jsonResponse({ error: userAuth.error ?? "unauthorized" }, 401);
   }
-
+  // Browser-triggered syncs are a lightweight refresh only. Cron retains
+  // access to dry-run, backfill, and created-at windows.
+  const fromCron = cronOk;
   let dryRun = false;
   let limit = DEFAULT_LIMIT;
   let onlyPrefix: string | null = null;
@@ -762,18 +816,18 @@ Deno.serve(async (request) => {
         created_at_max?: string;
       }
       : {};
-    dryRun = body.dryRun === true;
+    dryRun = fromCron && body.dryRun === true;
     if (typeof body.limit === "number" && Number.isFinite(body.limit)) {
       limit = Math.min(MAX_LIMIT, Math.max(1, Math.trunc(body.limit)));
     }
     if (typeof body.store === "string" && body.store.trim()) {
       onlyPrefix = body.store.trim();
     }
-    backfill = body.mode === "backfill";
-    createdMin = typeof body.created_at_min === "string" && body.created_at_min.trim()
+    backfill = fromCron && body.mode === "backfill";
+    createdMin = fromCron && typeof body.created_at_min === "string" && body.created_at_min.trim()
       ? body.created_at_min.trim()
       : null;
-    createdMax = typeof body.created_at_max === "string" && body.created_at_max.trim()
+    createdMax = fromCron && typeof body.created_at_max === "string" && body.created_at_max.trim()
       ? body.created_at_max.trim()
       : null;
   } catch {
@@ -804,6 +858,7 @@ Deno.serve(async (request) => {
         limit,
         dryRun,
         backfill,
+        resyncPaid: fromCron,
         created_at_min: createdMin,
         created_at_max: createdMax,
       }),

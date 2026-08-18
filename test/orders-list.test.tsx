@@ -388,4 +388,132 @@ describe("Orders list", () => {
     expect(await screen.findByText("暫時無法載入訂單")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "重新載入" })).toBeInTheDocument();
   });
+
+  it("syncs Shopify orders from the pending queue after confirmation", async () => {
+    const user = userEvent.setup();
+    const loadOrders = vi.fn().mockResolvedValue(orderResult);
+    const syncShopify = vi.fn().mockResolvedValue({
+      ok: true,
+      dryRun: false,
+      backfill: false,
+      storeCount: 1,
+      fetched: 2,
+      inserted: 1,
+      linkedExisting: 1,
+      updatedShopify: 0,
+      unmatchedSkuLines: 0,
+      paymentsInserted: 0,
+      paymentsPending: 0,
+      issueCount: 0,
+      stores: [],
+    });
+
+    render(
+      <MemoryRouter>
+        <OrdersListPage
+          preset="shopify-pending"
+          loadOrders={loadOrders}
+          loadListConfig={emptyListConfig}
+          syncShopify={syncShopify}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(
+      await screen.findByRole("button", { name: "同步 Shopify" }),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "同步 Shopify" }));
+
+    expect(
+      await screen.findByRole("alertdialog", { name: "同步 Shopify 訂單" }),
+    ).toBeInTheDocument();
+    expect(syncShopify).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "確認同步" }));
+    await waitFor(() => expect(syncShopify).toHaveBeenCalledTimes(1));
+
+    expect(
+      await screen.findByRole("alertdialog", { name: "同步完成" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/已取得 2 筆訂單：新增 1 筆、更新 0 筆、連結 1 筆/),
+    ).toBeInTheDocument();
+  });
+
+  it("confirms before syncing and can cancel", async () => {
+    const user = userEvent.setup();
+    const loadOrders = vi.fn().mockResolvedValue(orderResult);
+    const syncShopify = vi.fn().mockResolvedValue({
+      ok: true,
+      dryRun: false,
+      backfill: false,
+      storeCount: 1,
+      fetched: 1,
+      inserted: 1,
+      linkedExisting: 0,
+      updatedShopify: 0,
+      unmatchedSkuLines: 0,
+      paymentsInserted: 0,
+      paymentsPending: 0,
+      issueCount: 0,
+      stores: [],
+    });
+
+    render(
+      <MemoryRouter>
+        <OrdersListPage
+          preset="shopify-pending"
+          loadOrders={loadOrders}
+          loadListConfig={emptyListConfig}
+          syncShopify={syncShopify}
+        />
+      </MemoryRouter>,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: "同步 Shopify" }),
+    );
+    const dialog = await screen.findByRole("alertdialog", {
+      name: "同步 Shopify 訂單",
+    });
+
+    const cancelButtons = within(dialog).getAllByRole("button", {
+      name: "取消",
+    });
+    await user.click(cancelButtons[cancelButtons.length - 1]!);
+    expect(syncShopify).not.toHaveBeenCalled();
+    expect(
+      screen.queryByRole("alertdialog", { name: "同步 Shopify 訂單" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows the sync error and offers a retry", async () => {
+    const user = userEvent.setup();
+    const loadOrders = vi.fn().mockResolvedValue(orderResult);
+    const syncShopify = vi.fn().mockRejectedValue(new Error("shopify_sync_failed"));
+
+    render(
+      <MemoryRouter>
+        <OrdersListPage
+          preset="shopify-pending"
+          loadOrders={loadOrders}
+          loadListConfig={emptyListConfig}
+          syncShopify={syncShopify}
+        />
+      </MemoryRouter>,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: "同步 Shopify" }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "確認同步" }),
+    );
+
+    expect(
+      await screen.findByRole("alertdialog", { name: "同步失敗" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "重試同步" })).toBeInTheDocument();
+    expect(syncShopify).toHaveBeenCalledTimes(1);
+  });
 });

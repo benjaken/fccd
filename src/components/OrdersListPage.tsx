@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CalendarDays, ChevronRight, ClipboardList, ExternalLink, Plus, RefreshCw } from "lucide-react";
+import { CalendarDays, ChevronRight, ClipboardList, ExternalLink, Plus, RefreshCw, RefreshCcw } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DetailLink } from "@/components/ui/detail-link";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
@@ -26,10 +27,15 @@ import {
   type OrderListConfigPreset,
   type OrderListConfigRow,
 } from "@/lib/order-list-configs";
+import {
+  syncShopifyOrders,
+  type ShopifySyncResult,
+} from "@/lib/shopify-sync";
 import { cn } from "@/lib/utils";
 
 type OrdersLoader = (filters: OrderListFilters) => Promise<OrderListResult>;
 type OrderListConfigLoader = typeof fetchOrderListConfigs;
+type ShopifySyncLoader = typeof syncShopifyOrders;
 
 const STATUS_FILTERS: OrderStatusFilter[] = [
   "",
@@ -52,11 +58,13 @@ export function OrdersListPage({
   canViewFinance = true,
   loadOrders = fetchOrders,
   loadListConfig = fetchOrderListConfigs,
+  syncShopify = syncShopifyOrders,
 }: {
   preset?: OrderPreset;
   canViewFinance?: boolean;
   loadOrders?: OrdersLoader;
   loadListConfig?: OrderListConfigLoader;
+  syncShopify?: ShopifySyncLoader;
 }) {
   const { t, i18n } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -75,6 +83,10 @@ export function OrdersListPage({
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [listConfig, setListConfig] = useState<OrderListConfigRow | null>(null);
+  const [syncConfirmOpen, setSyncConfirmOpen] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [syncResult, setSyncResult] = useState<ShopifySyncResult | null>(null);
   const setStatus = (nextStatus: OrderStatusFilter) => {
     setPage(1);
     const next = new URLSearchParams(searchParams);
@@ -164,6 +176,42 @@ export function OrdersListPage({
     void loadPage();
   }, [loadPage]);
 
+  const openSyncConfirm = () => {
+    setSyncError(null);
+    setSyncResult(null);
+    setSyncConfirmOpen(true);
+  };
+
+  const closeSyncConfirm = () => {
+    if (syncing) return;
+    setSyncConfirmOpen(false);
+    setSyncError(null);
+    setSyncResult(null);
+  };
+
+  const runSync = useCallback(async () => {
+    if (syncing) return;
+    setSyncing(true);
+    setSyncError(null);
+    setSyncResult(null);
+    try {
+      const result = await syncShopify();
+      setSyncResult(result);
+      setReloadKey((key) => key + 1);
+    } catch (syncFailure) {
+      const code =
+        syncFailure instanceof Error
+          ? syncFailure.message
+          : "shopify_sync_failed";
+      setSyncError(code);
+    } finally {
+      setSyncing(false);
+    }
+  }, [syncShopify, syncing]);
+
+  const syncDone = Boolean(syncResult);
+  const syncFailed = Boolean(syncError);
+
   useEffect(() => {
     let cancelled = false;
     void loadListConfig()
@@ -216,12 +264,27 @@ export function OrdersListPage({
           <h1>{title}</h1>
           {description ? <p>{description}</p> : null}
         </div>
-        <Button asChild>
-          <Link to="/orders/new">
-            <Plus />
-            {t("orders.create")}
-          </Link>
-        </Button>
+        <div className="heading-actions">
+          {preset === "shopify-pending" ? (
+            <Button
+              variant="outline"
+              onClick={openSyncConfirm}
+              disabled={syncing}
+              aria-label={t("orders.syncShopify")}
+            >
+              {syncing ? <RefreshCw className="spin" /> : <RefreshCcw />}
+              {syncing
+                ? t("orders.syncing")
+                : t("orders.syncShopify")}
+            </Button>
+          ) : null}
+          <Button asChild>
+            <Link to="/orders/new">
+              <Plus />
+              {t("orders.create")}
+            </Link>
+          </Button>
+        </div>
       </header>
 
       <article className="panel orders-panel">
@@ -449,6 +512,70 @@ export function OrdersListPage({
           jumpLabel={t("orders.jumpToPage")}
         />
       </article>
+
+      {preset === "shopify-pending" ? (
+        <ConfirmDialog
+          open={syncConfirmOpen}
+          title={
+            syncDone
+              ? t("orders.syncCompleteTitle")
+              : syncFailed
+                ? t("orders.syncFailedTitle")
+                : t("orders.syncConfirmTitle")
+          }
+          description={
+            syncDone
+              ? undefined
+              : t("orders.syncConfirmDescription")
+          }
+          confirmLabel={
+            syncDone
+              ? t("orders.syncDone")
+              : syncFailed
+                ? t("orders.syncRetry")
+                : t("orders.syncConfirmAction")
+          }
+          cancelLabel={t("orders.syncCancel")}
+          closeLabel={t("orders.syncCancel")}
+          busy={syncing}
+          busyLabel={t("orders.syncing")}
+          onConfirm={() => {
+            if (syncDone || syncFailed) closeSyncConfirm();
+            else void runSync();
+          }}
+          onCancel={closeSyncConfirm}
+        >
+          {syncDone && syncResult ? (
+            <div className="modal-result">
+              <p className="modal-result-summary" role="status">
+                {t("orders.syncSummary", {
+                  fetched: syncResult.fetched,
+                  inserted: syncResult.inserted,
+                  updated: syncResult.updatedShopify,
+                  linked: syncResult.linkedExisting,
+                  issues: syncResult.issueCount,
+                })}
+              </p>
+              {syncResult.issueCount > 0 ? (
+                <p className="modal-result-issues" role="alert">
+                  {t("orders.syncIssuesWarning", {
+                    issues: syncResult.issueCount,
+                  })}
+                </p>
+              ) : null}
+            </div>
+          ) : syncError ? (
+            <p className="list-inline-error" role="alert">
+              {syncError === "shopify_sync_failed" ||
+              syncError === "unauthorized" ||
+              syncError === "page_access_required" ||
+              syncError === "invalid_authorization"
+                ? t("orders.syncErrorDescription")
+                : syncError}
+            </p>
+          ) : null}
+        </ConfirmDialog>
+      ) : null}
     </section>
   );
 }
