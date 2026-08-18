@@ -1,12 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
   extractDeliveryFromRemark,
+  extractOptionRemark,
   mapShopifyOrder,
   mapShopifyTransaction,
   normalizeNameForMatch,
   orderNeedsTransactionSync,
   parseMenuRemark,
+  pickCatalogMatchByName,
+  resolveAliasSku,
   shopifyTransactionLegacyId,
+  stripSkuSuffix,
 } from "../supabase/functions/shopify-order-sync/map.ts";
 
 const baseInput = {
@@ -293,5 +297,56 @@ describe("mapShopifyOrder remark collection", () => {
     expect(mapped).not.toBeNull();
     expect(mapped!.remark).toContain("需要侍應");
     expect(mapped!.remark).toContain("科布燒牛肉南瓜沙律配油醋 (2磅) x 2");
+  });
+});
+
+describe("stripSkuSuffix", () => {
+  it("strips a trailing numeric suffix so Shopify SKUs match the catalog", () => {
+    expect(stripSkuSuffix("CBESE06-51")).toBe("CBESE06");
+    expect(stripSkuSuffix("CBA003-18")).toBe("CBA003");
+    expect(stripSkuSuffix("CBESE06")).toBe("CBESE06");
+    expect(stripSkuSuffix(null)).toBeNull();
+  });
+});
+
+describe("pickCatalogMatchByName", () => {
+  const products = [
+    { id: "p-cbese06", sku: "CBESE06", name: "(三格) 肉醬意粉盒", channel_id: "c-1" },
+    { id: "p-cbe003", sku: "CBE003", name: "(雙格) 拿破崙雞扒意粉", channel_id: "c-1" },
+    { id: "p-cdr001", sku: "CDR001-8", name: "可口可樂 (8罐)", channel_id: "c-1" },
+  ];
+  const packages: Array<{ id: string; sku: string | null; name: string | null; channel_id: string | null }> = [];
+
+  it("matches a suffixed Shopify SKU to the catalog base SKU", () => {
+    const match = pickCatalogMatchByName("CBESE06-51", null, products, packages, "c-1");
+    expect(match.productId).toBe("p-cbese06");
+  });
+
+  it("matches by name when SKU is missing", () => {
+    const match = pickCatalogMatchByName(null, "(雙格) 拿破崙雞扒意粉", products, packages, "c-1");
+    expect(match.productId).toBe("p-cbe003");
+  });
+
+  it("resolves a Coke line with no SKU to the catalog Coke product", () => {
+    const match = pickCatalogMatchByName(null, "可口可樂 (8罐)", products, packages, "c-1");
+    expect(match.productId).toBe("p-cdr001");
+  });
+});
+
+describe("resolveAliasSku", () => {
+  it("maps loose Coke names to the CDR001 prefix", () => {
+    expect(resolveAliasSku("可口可樂 (8罐)")).toBe("CDR001-8");
+    expect(resolveAliasSku("可口可樂 40罐")).toBe("CDR001-40");
+    expect(resolveAliasSku("(凍)可口可樂-17罐")).toBe("CDR001-17");
+    expect(resolveAliasSku("非可樂飲品")).toBeNull();
+  });
+});
+
+describe("extractOptionRemark", () => {
+  it("extracts the option text after 配 like the legacy Bubble system", () => {
+    expect(extractOptionRemark("(三格) 肉醬意粉盒 配瑞士雞翼 2隻")).toBe("瑞士雞翼 2隻");
+    expect(extractOptionRemark("(三格) 肉醬意粉盒   配菠蘿芝士腸串 2串")).toBe("菠蘿芝士腸串 2串");
+    expect(extractOptionRemark("(三格) 肉醬意粉盒")).toBeNull();
+    expect(extractOptionRemark(null)).toBeNull();
   });
 });
