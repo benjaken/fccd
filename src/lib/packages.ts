@@ -211,7 +211,11 @@ export async function fetchPackages({
       "id,sku,name,chinese_name,price,status,is_active,bubble_created_at,created_at,channels(id,name)",
       { count: "exact" },
     )
-    .is("archived_at", null);
+    .is("archived_at", null)
+    // Hide Bubble placeholder rows that never received a SKU so the package
+    // list matches the old system's usable set instead of the empty records.
+    .not("sku", "is", null)
+    .neq("sku", "");
 
   if (sortField === "createdAt") {
     query = query
