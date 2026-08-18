@@ -94,6 +94,7 @@ import { PackageDetailPage } from "@/components/PackageDetailPage";
 import { PreparedMeatInventoryCalcPage } from "@/components/PreparedMeatInventoryCalcPage";
 import { MeatDeliveryNotesPage } from "@/components/MeatDeliveryNotesPage";
 import { DeliveryListPage } from "@/components/DeliveryListPage";
+import { FactoryBoardPage } from "@/components/FactoryBoardPage";
 import { RawMeatInventoryCalcPage } from "@/components/RawMeatInventoryCalcPage";
 import { SpiceUsagePage } from "@/components/SpiceUsagePage";
 import { SeasoningCostSettingsPage } from "@/components/SeasoningCostSettingsPage";
@@ -2211,7 +2212,7 @@ function FactoryWorkspace() {
     return <LoginPage />;
   }
 
-  return <WorkspaceStandalonePage workspaceKey="factory" icon={Factory} />;
+  return <FactoryBoardPage />;
 }
 
 function DriverDeliveryWorkspace() {
