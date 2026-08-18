@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { Eye, RefreshCw, Store } from "lucide-react";
+import { Eye, Pencil, RefreshCw, Store, Trash2 } from "lucide-react";
 
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
@@ -8,12 +8,19 @@ import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import { SidePanel } from "@/components/ui/side-panel";
 import {
+  KITCHEN_SUPPLIERS_DELETE,
+  KITCHEN_SUPPLIERS_EDIT,
   KITCHEN_SUPPLIERS_VIEW_DETAIL,
 } from "@/lib/kitchen-action-permissions";
 import {
+  archiveSupplier,
+  createSupplier,
   fetchSuppliers,
+  updateSupplier,
+  type SupplierLinkedItem,
   type SupplierRow,
   type SupplierStatusFilter,
+  type SupplierWriteInput,
 } from "@/lib/suppliers";
 import { useDeferredFilter } from "@/lib/use-deferred-filter";
 
@@ -21,20 +28,24 @@ type SuppliersLoader = (filters?: {
   search?: string;
   status?: SupplierStatusFilter;
 }) => Promise<SupplierRow[]>;
+type SupplierCreator = typeof createSupplier;
+type SupplierUpdater = typeof updateSupplier;
+type SupplierDeleter = typeof archiveSupplier;
 
 const SUPPLIER_SKELETON_COLUMNS = [
-  { width: "10rem" },
+  { width: "9rem" },
   { width: "6rem" },
   { width: "7rem" },
-  { width: "4.5rem" },
-  { width: "4.5rem" },
-  { width: "16rem" },
+  { width: "14rem" },
+  { width: "14rem" },
+  { width: "14rem" },
   { width: "7rem" },
+  { width: "6rem" },
   { width: "6rem" },
   { width: "5rem" },
 ];
 const SUPPLIER_ACTION_SKELETON = {
-  width: "5.5rem",
+  width: "8rem",
   variant: "action" as const,
 };
 
@@ -66,6 +77,72 @@ function StatusBadge({
   );
 }
 
+/** First three linked names, then a "more" button that opens the detail panel. */
+function LinkedItemsCell({
+  items,
+  moreLabel,
+  onMore,
+}: {
+  items: SupplierLinkedItem[];
+  moreLabel: string;
+  onMore: () => void;
+}) {
+  const { t } = useTranslation();
+  if (!items?.length) {
+    return <span aria-label={t("suppliers.none")}>{t("suppliers.no")}</span>;
+  }
+  const visible = items.slice(0, 3);
+  return (
+    <div className="suppliers-linked-cell">
+      <div className="suppliers-linked-names">
+        {visible.map((item) => (
+          <span className="suppliers-linked-name" key={item.id} title={item.name}>
+            {item.name}
+          </span>
+        ))}
+      </div>
+      {items.length > 3 ? (
+        <button
+          type="button"
+          className="suppliers-linked-more"
+          onClick={onMore}
+          aria-label={moreLabel}
+        >
+          +{items.length - 3} {t("suppliers.more")}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+function LinkedItemList({
+  title,
+  items,
+}: {
+  title: string;
+  items: SupplierLinkedItem[];
+}) {
+  const { t } = useTranslation();
+  if (!items.length) {
+    return (
+      <div className="suppliers-detail-group">
+        <h3>{title}</h3>
+        <p className="suppliers-detail-empty">{t("suppliers.noLinkedItems")}</p>
+      </div>
+    );
+  }
+  return (
+    <div className="suppliers-detail-group">
+      <h3>{title}</h3>
+      <ul className="suppliers-detail-list">
+        {items.map((item) => (
+          <li key={item.id}>{item.name}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function SupplierDetailPanel({
   open,
   supplier,
@@ -80,10 +157,7 @@ function SupplierDetailPanel({
   const { t } = useTranslation();
   if (!supplier) return null;
 
-  const yes = t("suppliers.yes");
-  const no = t("suppliers.no");
   const notSet = t("common.notSet");
-
   const rows: Array<{ label: string; value: string | null }> = [
     { label: t("suppliers.columns.companyName"), value: supplier.companyName },
     {
@@ -93,14 +167,6 @@ function SupplierDetailPanel({
     {
       label: t("suppliers.columns.phoneNumber"),
       value: supplier.phoneNumber,
-    },
-    {
-      label: t("suppliers.columns.suppliesRawMeat"),
-      value: supplier.suppliesRawMeat ? yes : no,
-    },
-    {
-      label: t("suppliers.columns.suppliesRestaurantIngredients"),
-      value: supplier.suppliesRestaurantIngredients ? yes : no,
     },
     { label: t("suppliers.columns.comment"), value: supplier.comment },
     {
@@ -126,6 +192,7 @@ function SupplierDetailPanel({
       description={t("suppliers.detailDescription")}
       onClose={onClose}
       closeLabel={closeLabel}
+      wide
     >
       <dl className="suppliers-detail-fields">
         {rows.map((row) => (
@@ -135,21 +202,230 @@ function SupplierDetailPanel({
           </div>
         ))}
       </dl>
+      <LinkedItemList
+        title={t("suppliers.columns.cateringIngredients")}
+        items={supplier.cateringIngredients}
+      />
+      <LinkedItemList
+        title={t("suppliers.columns.rawMeatItems")}
+        items={supplier.rawMeatItems}
+      />
+      <LinkedItemList
+        title={t("suppliers.columns.restaurantIngredients")}
+        items={supplier.restaurantIngredients}
+      />
+    </SidePanel>
+  );
+}
+
+function SupplierFormPanel({
+  open,
+  supplier,
+  onClose,
+  onSaved,
+  createSupplier,
+  updateSupplier,
+}: {
+  open: boolean;
+  supplier: SupplierRow | null;
+  onClose: () => void;
+  onSaved: (row: SupplierRow, mode: "create" | "edit") => void;
+  createSupplier: SupplierCreator;
+  updateSupplier: SupplierUpdater;
+}) {
+  const { t } = useTranslation();
+  const [companyName, setCompanyName] = useState("");
+  const [contactPerson, setContactPerson] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [deliverySchedule, setDeliverySchedule] = useState("");
+  const [paymentSchedule, setPaymentSchedule] = useState("");
+  const [comment, setComment] = useState("");
+  const [isActive, setIsActive] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [nameError, setNameError] = useState<string | null>(null);
+  const editing = Boolean(supplier);
+
+  useEffect(() => {
+    if (!open) return;
+    setCompanyName(supplier?.companyName ?? "");
+    setContactPerson(supplier?.contactPerson ?? "");
+    setPhoneNumber(supplier?.phoneNumber ?? "");
+    setDeliverySchedule(supplier?.deliverySchedule ?? "");
+    setPaymentSchedule(supplier?.paymentSchedule ?? "");
+    setComment(supplier?.comment ?? "");
+    setIsActive(supplier?.isActive ?? true);
+    setError(null);
+    setNameError(null);
+  }, [open, supplier]);
+
+  const closeAndReset = () => {
+    setError(null);
+    setNameError(null);
+    onClose();
+  };
+
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!companyName.trim()) {
+      setNameError(t("suppliers.validation.companyNameRequired"));
+      return;
+    }
+    setNameError(null);
+    setSubmitting(true);
+    setError(null);
+    const payload: SupplierWriteInput = {
+      companyName,
+      contactPerson: contactPerson || null,
+      phoneNumber: phoneNumber || null,
+      deliverySchedule: deliverySchedule || null,
+      paymentSchedule: paymentSchedule || null,
+      comment: comment || null,
+      isActive,
+    };
+    try {
+      const row = supplier
+        ? await updateSupplier(supplier.id, payload)
+        : await createSupplier(payload);
+      onSaved(row, supplier ? "edit" : "create");
+      closeAndReset();
+    } catch (saveError) {
+      setError(
+        saveError instanceof Error
+          ? saveError.message
+          : t(editing ? "suppliers.editError" : "suppliers.createError"),
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <SidePanel
+      open={open}
+      title={t(
+        editing ? "suppliers.editTitle" : "suppliers.createTitle",
+      )}
+      description={t(
+        editing ? "suppliers.editDescription" : "suppliers.createDescription",
+      )}
+      onClose={closeAndReset}
+      closeLabel={t("suppliers.closePanel")}
+      footer={
+        <>
+          <Button type="button" variant="outline" onClick={closeAndReset}>
+            {t("suppliers.cancel")}
+          </Button>
+          <Button
+            type="submit"
+            form="supplier-form"
+            disabled={submitting}
+          >
+            {submitting
+              ? t("suppliers.saving")
+              : t("suppliers.saveAction")}
+          </Button>
+        </>
+      }
+    >
+      <form
+        id="supplier-form"
+        className="suppliers-form"
+        onSubmit={(event) => void submit(event)}
+      >
+        <label className="suppliers-field">
+          <span>{t("suppliers.fields.companyName")}</span>
+          <input
+            value={companyName}
+            onChange={(event) => setCompanyName(event.target.value)}
+            placeholder={t("suppliers.fields.companyNamePlaceholder")}
+            aria-invalid={Boolean(nameError)}
+          />
+          {nameError ? (
+            <em className="suppliers-field-error">{nameError}</em>
+          ) : null}
+        </label>
+        <label className="suppliers-field">
+          <span>{t("suppliers.fields.contactPerson")}</span>
+          <input
+            value={contactPerson}
+            onChange={(event) => setContactPerson(event.target.value)}
+            placeholder={t("suppliers.fields.contactPlaceholder")}
+          />
+        </label>
+        <label className="suppliers-field">
+          <span>{t("suppliers.fields.phoneNumber")}</span>
+          <input
+            value={phoneNumber}
+            onChange={(event) => setPhoneNumber(event.target.value)}
+            placeholder={t("suppliers.fields.phonePlaceholder")}
+          />
+        </label>
+        <label className="suppliers-field">
+          <span>{t("suppliers.fields.deliverySchedule")}</span>
+          <input
+            value={deliverySchedule}
+            onChange={(event) => setDeliverySchedule(event.target.value)}
+            placeholder={t("suppliers.fields.deliveryPlaceholder")}
+          />
+        </label>
+        <label className="suppliers-field">
+          <span>{t("suppliers.fields.paymentSchedule")}</span>
+          <input
+            value={paymentSchedule}
+            onChange={(event) => setPaymentSchedule(event.target.value)}
+            placeholder={t("suppliers.fields.paymentPlaceholder")}
+          />
+        </label>
+        <label className="suppliers-field">
+          <span>{t("suppliers.fields.comment")}</span>
+          <textarea
+            value={comment}
+            onChange={(event) => setComment(event.target.value)}
+            placeholder={t("suppliers.fields.commentPlaceholder")}
+            rows={3}
+          />
+        </label>
+        <label className="suppliers-field suppliers-field-switch">
+          <span>{t("suppliers.fields.isActive")}</span>
+          <input
+            type="checkbox"
+            checked={isActive}
+            onChange={(event) => setIsActive(event.target.checked)}
+          />
+        </label>
+        {error ? <p className="suppliers-form-error">{error}</p> : null}
+      </form>
     </SidePanel>
   );
 }
 
 export function SuppliersPage({
   loadSuppliers = fetchSuppliers,
+  createSupplier: createSupplierProp = createSupplier,
+  updateSupplier: updateSupplierProp = updateSupplier,
+  deleteSupplier = archiveSupplier,
   canViewDetail: canViewDetailProp,
+  canEdit: canEditProp,
+  canDelete: canDeleteProp,
 }: {
   loadSuppliers?: SuppliersLoader;
+  createSupplier?: SupplierCreator;
+  updateSupplier?: SupplierUpdater;
+  deleteSupplier?: SupplierDeleter;
   canViewDetail?: boolean;
+  canEdit?: boolean;
+  canDelete?: boolean;
 }) {
   const { t } = useTranslation();
   const pageAccess = useCurrentPageAccess();
   const canViewDetail =
     canViewDetailProp ?? pageAccess.canAccess(KITCHEN_SUPPLIERS_VIEW_DETAIL);
+  const canEdit =
+    canEditProp ?? pageAccess.canAccess(KITCHEN_SUPPLIERS_EDIT);
+  const canDelete =
+    canDeleteProp ?? pageAccess.canAccess(KITCHEN_SUPPLIERS_DELETE);
+  const showRowActions = canViewDetail || canEdit || canDelete;
 
   const [rows, setRows] = useState<SupplierRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -160,6 +436,12 @@ export function SuppliersPage({
   const [status, setStatus] = useState<SupplierStatusFilter>("");
   const statusFilter = useDeferredFilter(status, setStatus);
   const [detailSupplier, setDetailSupplier] = useState<SupplierRow | null>(null);
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [editingSupplier, setEditingSupplier] = useState<SupplierRow | null>(
+    null,
+  );
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const applied = useMemo(
     () => ({ search: appliedSearch, status }),
@@ -204,6 +486,53 @@ export function SuppliersPage({
     setDetailSupplier(row);
   };
 
+  const openCreate = () => {
+    if (!canEdit) return;
+    setEditingSupplier(null);
+    setPanelOpen(true);
+  };
+
+  const openEdit = (row: SupplierRow) => {
+    if (!canEdit) return;
+    setEditingSupplier(row);
+    setPanelOpen(true);
+  };
+
+  const closePanel = () => {
+    setPanelOpen(false);
+    setEditingSupplier(null);
+  };
+
+  const handleDelete = async (row: SupplierRow) => {
+    if (!canDelete || deletingId) return;
+    const confirmed = window.confirm(
+      t("suppliers.deleteConfirm", { supplier: row.companyName }),
+    );
+    if (!confirmed) return;
+    setDeletingId(row.id);
+    setActionError(null);
+    try {
+      await deleteSupplier(row.id);
+      setRows((current) => current.filter((item) => item.id !== row.id));
+    } catch (saveError) {
+      setActionError(
+        saveError instanceof Error
+          ? saveError.message
+          : t("suppliers.deleteError"),
+      );
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const mergeRow = (row: SupplierRow, mode: "create" | "edit") => {
+    setRows((current) =>
+      mode === "create"
+        ? [row, ...current.filter((item) => item.id !== row.id)]
+        : current.map((item) => (item.id === row.id ? row : item)),
+    );
+  };
+
   return (
     <section className="suppliers-page">
       <header className="page-heading suppliers-heading">
@@ -212,6 +541,12 @@ export function SuppliersPage({
           <h1>{t("suppliers.title")}</h1>
           <p>{t("suppliers.description")}</p>
         </div>
+        {canEdit ? (
+          <Button type="button" onClick={openCreate}>
+            <Pencil />
+            {t("suppliers.add")}
+          </Button>
+        ) : null}
       </header>
 
       <article className="panel suppliers-panel">
@@ -249,6 +584,10 @@ export function SuppliersPage({
           />
         </header>
 
+        {actionError ? (
+          <p className="list-inline-error">{actionError}</p>
+        ) : null}
+
         {error ? (
           <div className="products-state products-state-error">
             <div>
@@ -280,7 +619,7 @@ export function SuppliersPage({
             loadingLabel={t("suppliers.loading")}
             skeletonRows={8}
             skeletonColumns={
-              canViewDetail
+              showRowActions
                 ? [...SUPPLIER_SKELETON_COLUMNS, SUPPLIER_ACTION_SKELETON]
                 : SUPPLIER_SKELETON_COLUMNS
             }
@@ -289,15 +628,13 @@ export function SuppliersPage({
                 <th>{t("suppliers.columns.companyName")}</th>
                 <th>{t("suppliers.columns.contactPerson")}</th>
                 <th>{t("suppliers.columns.phoneNumber")}</th>
-                <th>{t("suppliers.columns.suppliesRawMeat")}</th>
-                <th>{t("suppliers.columns.suppliesRestaurantIngredients")}</th>
-                <th className="suppliers-comment-cell">
-                  {t("suppliers.columns.comment")}
-                </th>
+                <th>{t("suppliers.columns.cateringIngredients")}</th>
+                <th>{t("suppliers.columns.rawMeatItems")}</th>
+                <th>{t("suppliers.columns.restaurantIngredients")}</th>
                 <th>{t("suppliers.columns.deliverySchedule")}</th>
                 <th>{t("suppliers.columns.paymentSchedule")}</th>
                 <th>{t("suppliers.columns.status")}</th>
-                {canViewDetail ? (
+                {showRowActions ? (
                   <th aria-label={t("suppliers.columns.actions")} />
                 ) : null}
               </tr>
@@ -310,13 +647,33 @@ export function SuppliersPage({
                 </td>
                 <td>{display(row.contactPerson)}</td>
                 <td>{display(row.phoneNumber)}</td>
-                <td>{row.suppliesRawMeat ? t("suppliers.yes") : t("suppliers.no")}</td>
                 <td>
-                  {row.suppliesRestaurantIngredients
-                    ? t("suppliers.yes")
-                    : t("suppliers.no")}
+                  <LinkedItemsCell
+                    items={row.cateringIngredients}
+                    moreLabel={t("suppliers.viewDetail", {
+                      supplier: row.companyName,
+                    })}
+                    onMore={() => openDetail(row)}
+                  />
                 </td>
-                <td className="suppliers-comment-cell">{display(row.comment)}</td>
+                <td>
+                  <LinkedItemsCell
+                    items={row.rawMeatItems}
+                    moreLabel={t("suppliers.viewDetail", {
+                      supplier: row.companyName,
+                    })}
+                    onMore={() => openDetail(row)}
+                  />
+                </td>
+                <td>
+                  <LinkedItemsCell
+                    items={row.restaurantIngredients}
+                    moreLabel={t("suppliers.viewDetail", {
+                      supplier: row.companyName,
+                    })}
+                    onMore={() => openDetail(row)}
+                  />
+                </td>
                 <td>{display(row.deliverySchedule)}</td>
                 <td>{display(row.paymentSchedule)}</td>
                 <td>
@@ -326,22 +683,48 @@ export function SuppliersPage({
                     inactiveLabel={t("suppliers.statuses.inactive")}
                   />
                 </td>
-                {canViewDetail ? (
+                {showRowActions ? (
                   <td className="table-actions-cell">
                     <div className="table-row-actions">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openDetail(row)}
-                        aria-label={t("suppliers.viewDetail", {
-                          supplier: row.companyName,
-                        })}
-                        title={t("suppliers.viewDetailTitle")}
-                      >
-                        <Eye />
-                        {t("suppliers.viewDetailAction")}
-                      </Button>
+                      {canViewDetail ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          aria-label={t("suppliers.viewDetailTitle")}
+                          title={t("suppliers.viewDetailTitle")}
+                          onClick={() => openDetail(row)}
+                        >
+                          <Eye />
+                        </Button>
+                      ) : null}
+                      {canEdit ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          aria-label={t("suppliers.edit")}
+                          title={t("suppliers.edit")}
+                          onClick={() => openEdit(row)}
+                        >
+                          <Pencil />
+                        </Button>
+                      ) : null}
+                      {canDelete ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          disabled={deletingId === row.id}
+                          aria-label={t("suppliers.delete")}
+                          title={t("suppliers.delete")}
+                          onClick={() => {
+                            void handleDelete(row);
+                          }}
+                        >
+                          <Trash2 />
+                        </Button>
+                      ) : null}
                     </div>
                   </td>
                 ) : null}
@@ -356,6 +739,18 @@ export function SuppliersPage({
         supplier={detailSupplier}
         onClose={() => setDetailSupplier(null)}
         closeLabel={t("suppliers.closePanel")}
+      />
+
+      <SupplierFormPanel
+        open={panelOpen && (!editingSupplier || canEdit)}
+        supplier={editingSupplier}
+        onClose={closePanel}
+        createSupplier={createSupplierProp}
+        updateSupplier={updateSupplierProp}
+        onSaved={(row, mode) => {
+          mergeRow(row, mode);
+          closePanel();
+        }}
       />
     </section>
   );

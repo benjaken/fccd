@@ -2,6 +2,8 @@ export const KITCHEN_SETTINGS_PAGE_KEY = "kitchen.settings";
 export const COOK_TYPE_PAGE_KEY = "kitchen.settings.cook_types";
 export const KITCHEN_SUPPLIERS_PAGE_KEY = "kitchen.suppliers";
 export const KITCHEN_SUPPLIERS_VIEW_DETAIL = "kitchen.suppliers.view_detail";
+export const KITCHEN_SUPPLIERS_EDIT = "kitchen.suppliers.edit";
+export const KITCHEN_SUPPLIERS_DELETE = "kitchen.suppliers.delete";
 
 export const KITCHEN_ACTION_PERMISSION_KEYS = {
   cookTypes: {
@@ -9,6 +11,8 @@ export const KITCHEN_ACTION_PERMISSION_KEYS = {
   },
   suppliers: {
     viewDetail: KITCHEN_SUPPLIERS_VIEW_DETAIL,
+    edit: KITCHEN_SUPPLIERS_EDIT,
+    delete: KITCHEN_SUPPLIERS_DELETE,
   },
 } as const;
 
@@ -18,4 +22,6 @@ export const KITCHEN_ACTION_PAGE_KEYS = [
   KITCHEN_ACTION_PERMISSION_KEYS.cookTypes.delete,
   KITCHEN_SUPPLIERS_PAGE_KEY,
   KITCHEN_SUPPLIERS_VIEW_DETAIL,
+  KITCHEN_SUPPLIERS_EDIT,
+  KITCHEN_SUPPLIERS_DELETE,
 ] as const;
