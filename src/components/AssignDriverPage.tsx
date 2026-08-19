@@ -8,11 +8,10 @@ import { ListTable } from "@/components/ui/list-table";
 import { SidePanel } from "@/components/ui/side-panel";
 import { TablePagination } from "@/components/ui/table-pagination";
 import {
-  assignDeliveryTeamAndDriver,
+  assignDeliveryTeam,
   DRIVER_ASSIGNMENTS_PAGE_SIZE,
   fetchDeliveryAssignmentOptions,
   fetchUnassignedDriverDeliveries,
-  type DeliveryDriverOption,
   type DeliveryTeamOption,
   type DriverAssignmentItem,
 } from "@/lib/delivery-driver-assignment";
@@ -31,11 +30,9 @@ export function AssignDriverPage() {
   const [items, setItems] = useState<DriverAssignmentItem[]>([]);
   const [total, setTotal] = useState(0);
   const [teams, setTeams] = useState<DeliveryTeamOption[]>([]);
-  const [drivers, setDrivers] = useState<DeliveryDriverOption[]>([]);
   const [assignmentItem, setAssignmentItem] =
     useState<DriverAssignmentItem | null>(null);
   const [selectedTeamId, setSelectedTeamId] = useState("");
-  const [selectedDriverId, setSelectedDriverId] = useState("");
   const [loading, setLoading] = useState(true);
   const [loadingOptions, setLoadingOptions] = useState(true);
   const [error, setError] = useState(false);
@@ -92,12 +89,10 @@ export function AssignDriverPage() {
       .then((result) => {
         if (!active) return;
         setTeams(result.teams);
-        setDrivers(result.drivers);
       })
       .catch(() => {
         if (!active) return;
         setTeams([]);
-        setDrivers([]);
       })
       .finally(() => active && setLoadingOptions(false));
     return () => {
@@ -108,29 +103,23 @@ export function AssignDriverPage() {
   const openAssignment = (item: DriverAssignmentItem) => {
     setAssignmentItem(item);
     setSelectedTeamId(item.motorcadeId ?? "");
-    setSelectedDriverId("");
     setAssignError(null);
   };
 
   const closeAssignment = () => {
     setAssignmentItem(null);
     setSelectedTeamId("");
-    setSelectedDriverId("");
   };
 
   const assign = async () => {
-    if (!assignmentItem || !selectedTeamId || !selectedDriverId) {
+    if (!assignmentItem || !selectedTeamId) {
       setAssignError(t("assignDriverPage.selectionRequired"));
       return;
     }
     setAssigningId(assignmentItem.id);
     setAssignError(null);
     try {
-      await assignDeliveryTeamAndDriver(
-        assignmentItem.id,
-        selectedTeamId,
-        selectedDriverId,
-      );
+      await assignDeliveryTeam(assignmentItem.id, selectedTeamId);
       closeAssignment();
       setReloadKey((value) => value + 1);
     } catch {
@@ -219,7 +208,7 @@ export function AssignDriverPage() {
             loading={loading}
             loadingLabel={t("assignDriverPage.loading")}
             skeletonRows={DRIVER_ASSIGNMENTS_PAGE_SIZE}
-            skeletonColumns={7}
+            skeletonColumns={6}
             onRefresh={() => setReloadKey((value) => value + 1)}
             header={
               <tr>
@@ -228,7 +217,6 @@ export function AssignDriverPage() {
                 <th>{t("assignDriverPage.columns.delivery")}</th>
                 <th>{t("assignDriverPage.columns.status")}</th>
                 <th>{t("assignDriverPage.columns.team")}</th>
-                <th>{t("assignDriverPage.columns.driver")}</th>
                 <th aria-label={t("assignDriverPage.columns.actions")} />
               </tr>
             }
@@ -257,7 +245,6 @@ export function AssignDriverPage() {
                 </td>
                 <td>{display(item.deliveryStatus, t("common.notSet"))}</td>
                 <td>{display(item.motorcadeName, t("common.notSet"))}</td>
-                <td>{display(item.driverName, t("common.notSet"))}</td>
                 <td className="table-actions-cell">
                   <div className="table-row-actions">
                     <Button
@@ -330,7 +317,6 @@ export function AssignDriverPage() {
               disabled={loadingOptions || Boolean(assigningId)}
               onChange={(event) => {
                 setSelectedTeamId(event.target.value);
-                setSelectedDriverId("");
               }}
             >
               <option value="">{t("assignDriverPage.selectTeam")}</option>
@@ -339,25 +325,6 @@ export function AssignDriverPage() {
                   {team.name}
                 </option>
               ))}
-            </select>
-          </label>
-          <label className="ingredients-field">
-            <span>{t("assignDriverPage.columns.driver")}</span>
-            <select
-              value={selectedDriverId}
-              disabled={
-                !selectedTeamId || loadingOptions || Boolean(assigningId)
-              }
-              onChange={(event) => setSelectedDriverId(event.target.value)}
-            >
-              <option value="">{t("assignDriverPage.selectDriver")}</option>
-              {drivers
-                .filter((driver) => driver.teamId === selectedTeamId)
-                .map((driver) => (
-                  <option key={driver.id} value={driver.id}>
-                    {driver.name}
-                  </option>
-                ))}
             </select>
           </label>
         </form>

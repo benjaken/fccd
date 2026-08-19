@@ -16,11 +16,6 @@ export type DriverAssignmentItem = {
 };
 
 export type DeliveryTeamOption = { id: string; name: string };
-export type DeliveryDriverOption = {
-  id: string;
-  teamId: string;
-  name: string;
-};
 
 type Nested<T> = T | T[] | null | undefined;
 
@@ -110,21 +105,13 @@ export async function fetchUnassignedDriverDeliveries({
 }
 
 export async function fetchDeliveryAssignmentOptions() {
-  const [teamsResult, driversResult] = await Promise.all([
-    supabase
-      .from("delivery_teams")
-      .select("id,name,short_name")
-      .eq("is_active", true)
-      .is("archived_at", null)
-      .order("name"),
-    supabase
-      .from("delivery_team_drivers")
-      .select("id,delivery_team_id,display_name")
-      .eq("is_active", true)
-      .order("display_name"),
-  ]);
+  const teamsResult = await supabase
+    .from("delivery_teams")
+    .select("id,name,short_name")
+    .eq("is_active", true)
+    .is("archived_at", null)
+    .order("name");
   if (teamsResult.error) throw teamsResult.error;
-  if (driversResult.error) throw driversResult.error;
 
   return {
     teams: (teamsResult.data ?? []).map((row) => ({
@@ -134,25 +121,16 @@ export async function fetchDeliveryAssignmentOptions() {
         (row.short_name as string | null)?.trim() ||
         (row.id as string),
     })),
-    drivers: (driversResult.data ?? [])
-      .filter((row) => Boolean(row.delivery_team_id))
-      .map((row) => ({
-        id: row.id as string,
-        teamId: row.delivery_team_id as string,
-        name: row.display_name as string,
-      })),
   };
 }
 
-export async function assignDeliveryTeamAndDriver(
+export async function assignDeliveryTeam(
   deliveryId: string,
   teamId: string,
-  driverId: string,
 ) {
-  const { error } = await supabase.rpc("assign_delivery_team_and_driver", {
+  const { error } = await supabase.rpc("assign_delivery_motorcade", {
     p_delivery_id: deliveryId,
     p_motorcade_id: teamId,
-    p_driver_id: driverId,
   });
   if (error) throw error;
 }
