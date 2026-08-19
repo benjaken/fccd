@@ -28,11 +28,22 @@ const SKELETON_COLUMNS = [
   { width: "18rem" }, { width: "8rem" }, { width: "5rem" },
 ];
 
-function formatDate(value: string | null, locale: string) {
+function formatDate(value: string | null | undefined, locale: string) {
   if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
   return new Intl.DateTimeFormat(locale, {
     year: "numeric", month: "long", day: "numeric",
-  }).format(new Date(value));
+  }).format(date);
+}
+
+function formatDateTime(value: string | null | undefined, locale: string) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: "medium", timeStyle: "short",
+  }).format(date);
 }
 
 function formatQuantity(value: number | null, notCounted: string) {
@@ -61,6 +72,9 @@ export function PackingStocktakesPage({
   const { t, i18n } = useTranslation();
   const copy = kind === "ingredient" ? "ingredientStocktakes" : "packingStocktakes";
   const copyKey = (key: string) => `${copy}.${key}`;
+  const placeholder = kind === "ingredient"
+    ? t("ingredientStocktakes.searchPlaceholder")
+    : t("packingStocktakes.searchPlaceholder");
   const effectiveLoadRows = useMemo(() => loadRows ?? ((filters: { page: number; search: string; stocktakeDate: string | null }) => fetchPackingStocktakes({ ...filters, kind })), [kind, loadRows]);
   const effectiveCreateStocktake = useMemo(() => createStocktake ?? (kind === "ingredient" ? createIngredientStocktake : createPackingStocktake), [createStocktake, kind]);
   const effectiveLoadPrintRows = useMemo(() => loadPrintRows ?? ((date: string) => fetchPackingStocktakeSheet(date, kind)), [kind, loadPrintRows]);
@@ -194,14 +208,14 @@ export function PackingStocktakesPage({
       <article className="panel ingredients-panel">
         <div className="stocktake-records-layout">
         <aside className="stocktake-date-list" aria-label={t(copyKey("dateList"))}>
-          {datesLoading ? <span>{t(copyKey("loading"))}</span> : dates.length === 0 ? <span>{t(copyKey("noDates"))}</span> : dates.map((item) => <div key={item.date} className={item.date === stocktakeDate ? "stocktake-date-item is-active" : "stocktake-date-item"}><button type="button" onClick={() => { setStocktakeDate(item.date); setPage(1); }}><strong>{formatDate(`${item.date}T00:00:00+08:00`, i18n.language)}</strong><small>{t(copyKey("updatedAt"), { time: new Intl.DateTimeFormat(i18n.language, { dateStyle: "medium", timeStyle: "short" }).format(new Date(item.updatedAt)) })}</small></button>{canDelete ? <Button type="button" variant="ghost" size="icon" disabled={deletingDate === item.date} aria-label={t(copyKey("deleteDate"), { date: formatDate(`${item.date}T00:00:00+08:00`, i18n.language) })} onClick={() => void removeDate(item.date)}><Trash2 /></Button> : null}</div>)}
+          {datesLoading ? <span>{t(copyKey("loading"))}</span> : dates.length === 0 ? <span>{t(copyKey("noDates"))}</span> : dates.map((item) => <div key={item.date} className={item.date === stocktakeDate ? "stocktake-date-item is-active" : "stocktake-date-item"}><button type="button" onClick={() => { setStocktakeDate(item.date); setPage(1); }}><strong>{formatDate(`${item.date}T00:00:00+08:00`, i18n.language)}</strong><small>{t(copyKey("updatedAt"), { time: formatDateTime(item.updatedAt, i18n.language) })}</small></button>{canDelete ? <Button type="button" variant="ghost" size="icon" disabled={deletingDate === item.date} aria-label={t(copyKey("deleteDate"), { date: formatDate(`${item.date}T00:00:00+08:00`, i18n.language) })} onClick={() => void removeDate(item.date)}><Trash2 /></Button> : null}</div>)}
         </aside>
         <div className="stocktake-records-content">
         {stocktakeDate ? <>
         <header className="ingredients-toolbar">
           <ListSearchBar id="packing-stocktakes-search" value={search} onChange={setSearch}
             onSubmit={() => setAppliedSearch(search.trim())} label={t(copyKey("search"))}
-            placeholder={t(copyKey("searchPlaceholder"))} submitLabel={t(copyKey("searchAction"))} />
+            placeholder={placeholder} submitLabel={t(copyKey("searchAction"))} />
         </header>
         {error ? <p className="list-inline-error">{t(copyKey(error))}</p> : null}
         {!loading && rows.length === 0 && !error ? (

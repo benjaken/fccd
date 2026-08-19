@@ -2295,7 +2295,7 @@ button.product-tag[aria-pressed="true"] {
 }
 
 .kitchen-calendar-day-item.is-shopify:hover {
-  background: color-mix(in oklch, var(--primary) 10%, var(--card));
+  background: var(--selection-bg-strong);
 }
 
 .kitchen-calendar-day-copy {
@@ -6091,7 +6091,7 @@ button.product-tag[aria-pressed="true"] {
   cursor: pointer;
 }
 
-.stocktake-date-item small { color: var(--muted-foreground); font-size: 12px; font-style: italic; font-weight: 400; }
+.stocktake-date-item small { color: var(--muted-foreground); font-size: 14px; font-style: italic; font-weight: 400; }
 .stocktake-date-item > button:last-child { margin-right: 6px; color: var(--destructive); }
 
 .stocktake-date-item:hover,
@@ -6127,9 +6127,9 @@ button.product-tag[aria-pressed="true"] {
 
 .print-stocktake-sheet h1 { margin: 0; font-size: 22px; }
 .print-stocktake-sheet p { margin: 6px 0 0; }
-.print-stocktake-sheet > header > span { color: #4b5563; font-size: 13px; }
+.print-stocktake-sheet > header > span { color: #4b5563; font-size: 14px; }
 
-.print-stocktake-sheet table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.print-stocktake-sheet table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .print-stocktake-sheet th, .print-stocktake-sheet td { border: 1px solid #64748b; padding: 7px 8px; text-align: left; vertical-align: top; }
 .print-stocktake-sheet th { background: #e2e8f0; }
 .print-stocktake-quantity { min-width: 100px; height: 28px; }

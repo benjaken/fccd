@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -25,7 +25,8 @@ describe("Packaging stocktake records page", () => {
     render(<MemoryRouter><PackingStocktakesPage canEdit loadDates={vi.fn().mockResolvedValue([{ date: "2026-08-10" }])} loadRows={vi.fn().mockResolvedValue({ items: records, total: 1 })} saveQuantity={saveQuantity} /></MemoryRouter>);
 
     expect(await screen.findByRole("heading", { name: "包裝盤點記錄" })).toBeInTheDocument();
-    await user.click(await screen.findByRole("button", { name: /2026.*8.*10/ }));
+    const dateList = await screen.findByRole("complementary", { name: "盤點日期列表" });
+    await user.click(within(dateList).getAllByRole("button")[0]);
     expect(screen.getByRole("columnheader", { name: "盤點數量" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "編輯" })).not.toBeInTheDocument();
 
@@ -48,7 +49,9 @@ describe("Packaging stocktake records page", () => {
     await screen.findByRole("heading", { name: "包裝盤點記錄" });
     await user.click(screen.getByRole("button", { name: "新增盤點記錄" }));
     const dialog = screen.getByRole("dialog", { name: "新增包裝盤點記錄" });
-    await user.type(screen.getByLabelText("盤點日期"), "2026-08-18");
+    const dateInput = screen.getByLabelText("盤點日期");
+    await user.clear(dateInput);
+    await user.type(dateInput, "2026-08-18");
     await user.click(screen.getByRole("button", { name: "下一步" }));
 
     await waitFor(() => expect(createStocktake).toHaveBeenCalledWith("2026-08-18"));
