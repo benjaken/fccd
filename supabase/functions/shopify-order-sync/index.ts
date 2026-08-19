@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import {
+  collectLineMenuRemarkText,
   extractOptionRemark,
   mapShopifyOrder,
   mapShopifyTransaction,
@@ -8,6 +9,7 @@ import {
   orderNumberKey,
   parseMenuRemark,
   pickCatalogMatchByName,
+  resolveAliasSku,
   shopifyMenuOptionLegacyId,
   stripSkuSuffix,
   type ShopifyRestOrder,
@@ -428,10 +430,7 @@ function menuRemarkSources(item: MappedOrder): MenuRemarkSource[] {
   const sources: MenuRemarkSource[] = [];
   if (item.remark?.trim()) sources.push({ lineId: 0, text: item.remark });
   for (const line of item.lines) {
-    const text = line.properties
-      .map((property) => String(property.value ?? "").trim())
-      .filter((value) => parseMenuRemark(value).length > 0)
-      .join("\n\n");
+    const text = collectLineMenuRemarkText(line.properties);
     if (text) sources.push({ lineId: line.lineId, text });
   }
   return sources;
@@ -465,15 +464,29 @@ async function fetchCatalogByName(
   const unique = [...new Set(names.filter(Boolean))];
   if (!unique.length) return result;
 
-  const [{ data: products }, { data: packages }] = await Promise.all([
+  const nameCandidates = [...new Set(unique.flatMap((name) => [
+    name,
+    name.replace(/^\s*[（(]素[）)]\s*/, ""),
+  ]))];
+  const aliases = [...new Set(
+    unique.map(resolveAliasSku).filter((sku): sku is string => Boolean(sku)),
+  )];
+
+  const [{ data: products }, { data: packages }, { data: aliasProducts }, { data: aliasPackages }] = await Promise.all([
     client
       .from("products")
       .select("id, sku, name, channel_id")
-      .in("name", unique),
+      .in("name", nameCandidates),
     client
       .from("packages")
       .select("id, sku, name, channel_id")
-      .in("name", unique),
+      .in("name", nameCandidates),
+    aliases.length
+      ? client.from("products").select("id, sku, name, channel_id").in("sku", aliases)
+      : Promise.resolve({ data: [] }),
+    aliases.length
+      ? client.from("packages").select("id, sku, name, channel_id").in("sku", aliases)
+      : Promise.resolve({ data: [] }),
   ]);
 
   for (const row of (products ?? []) as unknown as CatalogItem[]) {
@@ -483,6 +496,17 @@ async function fetchCatalogByName(
   for (const row of (packages ?? []) as unknown as CatalogItem[]) {
     const key = normalizeNameForMatch(row.name);
     if (key && !result.has(key)) result.set(key, { ...row, kind: "package" });
+  }
+  const aliasRows = [
+    ...(aliasProducts ?? []).map((row) => ({ ...row, kind: "product" as const })),
+    ...(aliasPackages ?? []).map((row) => ({ ...row, kind: "package" as const })),
+  ];
+  for (const row of aliasRows) {
+    for (const name of unique) {
+      if (resolveAliasSku(name)?.toLowerCase() === String(row.sku ?? "").toLowerCase()) {
+        result.set(normalizeNameForMatch(name), row as CatalogItem);
+      }
+    }
   }
   return result;
 }
@@ -862,6 +886,7 @@ async function processMappedOrders(
       );
       if (
         (line.sku || baseName) &&
+        !Boolean(line.row.is_addon) &&
         !match.productId &&
         !match.packageId
       ) {

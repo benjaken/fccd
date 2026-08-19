@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  collectLineMenuRemarkText,
   extractDeliveryFromRemark,
   extractOptionRemark,
   mapShopifyOrder,
@@ -250,6 +251,7 @@ describe("normalizeNameForMatch", () => {
       "科布燒牛肉南瓜沙律(2磅)",
     );
     expect(normalizeNameForMatch("ABC DEF")).toBe("abcdef");
+    expect(normalizeNameForMatch("(素) 荷塘五色小炒 (2磅)")).toBe("荷塘五色小炒(2磅)");
   });
 });
 
@@ -319,6 +321,38 @@ describe("mapShopifyOrder remark collection", () => {
     expect(mapped!.remark).toContain("需要侍應");
     expect(mapped!.remark).toContain("科布燒牛肉南瓜沙律配油醋 (2磅) x 2");
   });
+
+  it("rebuilds menu headings stored in line property names", () => {
+    const text = collectLineMenuRemarkText([
+      { name: "必選", value: "醬香牛展拌粉皮 (1磅), 川式涼拌青瓜魚片 (1磅)" },
+      { name: "中式小菜 4選2", value: "豉油皇乾煎大蝦 (12隻), 蠔皇花膠炆大花菇 (2磅)" },
+    ]);
+    expect(parseMenuRemark(text)).toEqual([
+      { name: "醬香牛展拌粉皮 (1磅)", quantity: 1 },
+      { name: "川式涼拌青瓜魚片 (1磅)", quantity: 1 },
+      { name: "豉油皇乾煎大蝦 (12隻)", quantity: 1 },
+      { name: "蠔皇花膠炆大花菇 (2磅)", quantity: 1 },
+    ]);
+  });
+
+  it("maps discounted product price and shipping charge as separate lines", () => {
+    const mapped = mapShopifyOrder({
+      order: {
+        id: 2128,
+        name: "K-2128",
+        total_price: "3060",
+        total_discounts: "200",
+        line_items: [{ id: 1, sku: "CCMA1012", title: "中秋中菜到會", quantity: 1, price: "3080", discount_allocations: [{ amount: "200" }] }],
+        shipping_lines: [{ id: 2, title: "偏遠地區 - 車邊交收收費A", price: "180", discounted_price: "180" }],
+      },
+      shopDomain: "foodchannels-kitchen.myshopify.com",
+      storeId: "store-uuid",
+      channelId: "channel-uuid",
+    });
+    expect(mapped!.lines).toHaveLength(2);
+    expect(mapped!.lines[0].row).toMatchObject({ unit_price: 2880, total_price: 2880 });
+    expect(mapped!.lines[1].row).toMatchObject({ product_name_snapshot: "偏遠地區 - 車邊交收收費A", unit_price: 180, total_price: 180, is_addon: true });
+  });
 });
 
 describe("stripSkuSuffix", () => {
@@ -352,6 +386,13 @@ describe("pickCatalogMatchByName", () => {
     const match = pickCatalogMatchByName(null, "可口可樂 (8罐)", products, packages, "c-1");
     expect(match.productId).toBe("p-cdr001");
   });
+
+  it("matches a unique package SKU from another sales channel", () => {
+    const match = pickCatalogMatchByName("CCMA1012", "【2026中秋】中秋中菜到會", [], [
+      { id: "pkg-mid-autumn", sku: "CCMA1012", name: "【2025中秋】中秋中菜到會", channel_id: "catering" },
+    ], "kitchen");
+    expect(match.packageId).toBe("pkg-mid-autumn");
+  });
 });
 
 describe("resolveAliasSku", () => {
@@ -360,6 +401,10 @@ describe("resolveAliasSku", () => {
     expect(resolveAliasSku("可口可樂 40罐")).toBe("CDR001-40");
     expect(resolveAliasSku("(凍)可口可樂-17罐")).toBe("CDR001-17");
     expect(resolveAliasSku("非可樂飲品")).toBeNull();
+  });
+
+  it("maps the renamed 2026 cold fish option to its catalog SKU", () => {
+    expect(resolveAliasSku("川式涼拌青瓜魚片 (1磅)")).toBe("CCO024-1");
   });
 });
 

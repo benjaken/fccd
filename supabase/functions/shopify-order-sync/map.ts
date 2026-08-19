@@ -24,7 +24,18 @@ export type ShopifyRestLineItem = {
   name?: string | null;
   quantity?: number | string | null;
   price?: string | number | null;
+  total_discount?: string | number | null;
+  discount_allocations?: Array<{ amount?: string | number | null }>;
   properties?: Array<{ name?: string; value?: string | null }>;
+};
+
+export type ShopifyRestShippingLine = {
+  id?: number | string;
+  title?: string | null;
+  code?: string | null;
+  price?: string | number | null;
+  discounted_price?: string | number | null;
+  discount_allocations?: Array<{ amount?: string | number | null }>;
 };
 
 export type ShopifyRestTransaction = {
@@ -66,7 +77,7 @@ export type ShopifyRestOrder = {
     email?: string | null;
     phone?: string | null;
   } | null;
-  shipping_lines?: Array<{ price?: string | number | null }>;
+  shipping_lines?: ShopifyRestShippingLine[];
   line_items?: ShopifyRestLineItem[];
 };
 
@@ -233,6 +244,15 @@ export function shopifyLineLegacyId(
   return `shopify:${shop}:${orderId}:${lineId}`;
 }
 
+export function shopifyShippingLineLegacyId(
+  shopDomain: string,
+  orderId: number,
+  lineId: number,
+): string {
+  const shop = shopDomain.replace(/\.myshopify\.com$/, "");
+  return `shopify:${shop}:${orderId}:shipping:${lineId}`;
+}
+
 export function shopifyTransactionLegacyId(
   shopDomain: string,
   orderId: number,
@@ -309,10 +329,18 @@ export function mapShopifyOrder(input: {
     bubble_modified_at: input.order.updated_at ?? null,
   };
 
-  const lines = (input.order.line_items ?? []).flatMap((item, index) => {
+  const productLines = (input.order.line_items ?? []).flatMap((item, index) => {
     const lineId = numericId(item.id);
     if (!lineId) return [];
     const sku = item.sku?.trim() || null;
+    const quantity = money(item.quantity ?? 0);
+    const grossTotal = money(item.price) * quantity;
+    const allocatedDiscount = (item.discount_allocations ?? []).reduce(
+      (total, allocation) => total + money(allocation.amount),
+      0,
+    );
+    const discount = allocatedDiscount || money(item.total_discount);
+    const netTotal = Math.max(0, grossTotal - discount);
     return [{
       lineId,
       sku,
@@ -324,9 +352,9 @@ export function mapShopifyOrder(input: {
         shopify_line_id: lineId,
         sku_snapshot: sku,
         product_name_snapshot: (item.title || item.name || "").trim() || null,
-        quantity: money(item.quantity ?? 0),
-        unit_price: money(item.price),
-        total_price: money(item.price) * money(item.quantity ?? 0),
+        quantity,
+        unit_price: quantity ? netTotal / quantity : money(item.price),
+        total_price: netTotal,
         item_order: index + 1,
         is_addon: false,
         is_void: false,
@@ -335,6 +363,42 @@ export function mapShopifyOrder(input: {
       },
     }];
   });
+
+  const shippingLines = (input.order.shipping_lines ?? []).flatMap((line, index) => {
+    const lineId = numericId(line.id);
+    const name = String(line.title ?? line.code ?? "運費").trim();
+    if (!lineId || !name) return [];
+    const allocatedDiscount = (line.discount_allocations ?? []).reduce(
+      (total, allocation) => total + money(allocation.amount),
+      0,
+    );
+    const price = line.discounted_price === null || line.discounted_price === undefined
+      ? Math.max(0, money(line.price) - allocatedDiscount)
+      : money(line.discounted_price);
+    return [{
+      lineId,
+      sku: null,
+      properties: [],
+      variantTitle: null,
+      row: {
+        legacy_id: shopifyShippingLineLegacyId(input.shopDomain, orderId, lineId),
+        order_legacy_id: legacyId,
+        shopify_line_id: null,
+        sku_snapshot: null,
+        product_name_snapshot: name,
+        quantity: 1,
+        unit_price: price,
+        total_price: price,
+        item_order: productLines.length + index + 1,
+        is_addon: true,
+        is_void: false,
+        bubble_created_at: input.order.created_at ?? null,
+        bubble_modified_at: input.order.updated_at ?? null,
+      },
+    }];
+  });
+
+  const lines = [...productLines, ...shippingLines];
 
   return {
     orderId,
@@ -455,12 +519,32 @@ export function parseMenuRemark(remark: string | null | undefined): MenuOption[]
   return options;
 }
 
+/** Rebuilds menu sections when Shopify stores the heading in a property name
+ * and the comma-separated selections in its value. */
+export function collectLineMenuRemarkText(
+  properties: Array<{ name?: string; value?: string | null }>,
+): string | null {
+  const blocks: string[] = [];
+  for (const property of properties) {
+    const name = String(property.name ?? "").replace(/^_+/, "").trim();
+    const value = String(property.value ?? "").trim();
+    if (!value) continue;
+    if (parseMenuRemark(value).length) {
+      blocks.push(value);
+    } else if (/(?:必選|選\s*\d+|\d+\s*選\s*\d+)/.test(name)) {
+      blocks.push(`${name.replace(/[:：]\s*$/, "")}:\n${value}`);
+    }
+  }
+  return blocks.join("\n\n") || null;
+}
+
 export function normalizeNameForMatch(value: string | null | undefined): string {
   return (value ?? "")
     .trim()
     .replace(/[（(]/g, "(")
     .replace(/[）)]/g, ")")
     .replace(/[，,]/g, ",")
+    .replace(/^\(素\)/, "")
     .replace(/\s+/g, "")
     .toLocaleLowerCase("zh-HK");
 }
@@ -620,6 +704,13 @@ export function pickCatalogMatch(
     return { productId: productAny[0].id, packageId: null };
   }
 
+  const packageAny = packages.filter((row) =>
+    (row.sku ?? "").trim().toLowerCase() === needle
+  );
+  if (packageAny.length === 1) {
+    return { productId: null, packageId: packageAny[0].id };
+  }
+
   return { productId: null, packageId: null };
 }
 
@@ -712,6 +803,7 @@ export function resolveAliasSku(name: string | null | undefined): string | null 
     }
     return "CDR001";
   }
+  if (normalized === "川式涼拌青瓜魚片(1磅)") return "CCO024-1";
   return null;
 }
 
