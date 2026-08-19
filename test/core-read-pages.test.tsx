@@ -146,6 +146,7 @@ describe("Core read pages", () => {
 
     expect(await screen.findByRole("heading", { name: "B-1513" })).toBeInTheDocument();
     expect(screen.queryByText("無財務權限")).not.toBeInTheDocument();
+    expect(screen.getAllByText("-").length).toBeGreaterThan(0);
   });
 
   it("returns to the order list when opened without an origin", async () => {

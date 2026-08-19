@@ -183,7 +183,7 @@ export function OrderDetailPage({
   );
   const money = (value: number | null) =>
     value === null
-      ? ""
+      ? "-"
       : order.currency === "HKD"
         ? currency.format(value)
         : `${order.currency} ${value.toLocaleString(i18n.language)}`;
@@ -283,12 +283,12 @@ export function OrderDetailPage({
             <DetailField label={t("details.discount")}>
               {canViewFinance
                 ? money(order.discount)
-                : ""}
+                : "-"}
             </DetailField>
             <DetailField label={t("details.shippingFee")}>
               {canViewFinance
                 ? money(order.shippingFee)
-                : ""}
+                : "-"}
             </DetailField>
           </div>
         </article>
@@ -429,7 +429,9 @@ export function OrderDetailPage({
                 </tbody>
               </table>
             </PullToRefresh>
-          ) : null}
+          ) : (
+            <p className="detail-restricted">-</p>
+          )}
         </article>
       )}
     </section>
