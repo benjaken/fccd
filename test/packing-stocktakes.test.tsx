@@ -40,10 +40,10 @@ describe("Packaging stocktake records page", () => {
     expect(await screen.findByRole("button", { name: "修改「芝士汁粉」的盤點數量" })).toHaveTextContent("18");
   });
 
-  it("checks and creates the selected date before opening its stocktake list", async () => {
+  it("opens the selected date even when all eligible rows already exist", async () => {
     const user = userEvent.setup();
     const loadRows = vi.fn().mockResolvedValue({ items: records, total: 1 });
-    const createStocktake = vi.fn().mockResolvedValue(2);
+    const createStocktake = vi.fn().mockResolvedValue(0);
     render(<MemoryRouter><PackingStocktakesPage canEdit loadDates={vi.fn().mockResolvedValue([])} loadRows={loadRows} createStocktake={createStocktake} /></MemoryRouter>);
 
     await screen.findByRole("heading", { name: "包裝盤點記錄" });

@@ -145,8 +145,7 @@ export function PackingStocktakesPage({
     if (!newDate || creating) return;
     setCreating(true); setCreateError(null);
     try {
-      const created = await effectiveCreateStocktake(newDate);
-      if (created === 0) { setCreateError("noAvailableItems"); return; }
+      await effectiveCreateStocktake(newDate);
       setDates((current) => current.some((item) => item.date === newDate) ? current : [{ date: newDate, updatedAt: new Date().toISOString() }, ...current]);
       setStocktakeDate(newDate); setPage(1); setCreateOpen(false);
     } catch { setCreateError("createError"); }
