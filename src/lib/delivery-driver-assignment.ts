@@ -52,10 +52,10 @@ export async function fetchUnassignedDriverDeliveries({
     );
   }
   const { data, count, error } = await query
-    .order("delivery_at", { ascending: true, nullsFirst: false })
-    .order("delivery_time", { ascending: true, nullsFirst: false })
-    .order("ship_out_time", { ascending: true, nullsFirst: false })
-    .order("created_at", { ascending: true })
+    .order("delivery_at", { ascending: false, nullsFirst: false })
+    .order("delivery_time", { ascending: false, nullsFirst: false })
+    .order("ship_out_time", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false })
     .range(start, end);
   if (error) throw error;
 
