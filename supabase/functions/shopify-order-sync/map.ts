@@ -16,6 +16,9 @@ export type ShopifyRestAddress = {
 
 export type ShopifyRestLineItem = {
   id?: number | string;
+  product_id?: number | string | null;
+  variant_id?: number | string | null;
+  variant_title?: string | null;
   sku?: string | null;
   title?: string | null;
   name?: string | null;
@@ -253,6 +256,8 @@ export function mapShopifyOrder(input: {
   lines: Array<{
     lineId: number;
     sku: string | null;
+    properties: Array<{ name?: string; value?: string | null }>;
+    variantTitle: string | null;
     row: Record<string, unknown>;
   }>;
 } | null {
@@ -311,6 +316,8 @@ export function mapShopifyOrder(input: {
     return [{
       lineId,
       sku,
+      properties: item.properties ?? [],
+      variantTitle: item.variant_title?.trim() || null,
       row: {
         legacy_id: shopifyLineLegacyId(input.shopDomain, orderId, lineId),
         order_legacy_id: legacyId,
@@ -369,6 +376,26 @@ export type MenuOption = {
   quantity: number;
 };
 
+function splitMenuOptionQuantity(value: string): MenuOption | null {
+  const item = value.replace(/\s+/g, " ").trim();
+  if (!item) return null;
+
+  // Shopify option apps are not consistent: the multiplier may be written as
+  // "x 2", "×2", "2套", "2件", "2份", etc.  A unit inside parentheses is
+  // part of the catalog name, so only a trailing, non-parenthesised suffix is
+  // consumed here.
+  const quantityMatch = item.match(
+    /^(.*?)\s*(?:(?:[xX×*]\s*)(\d+(?:\.\d+)?)|(\d+(?:\.\d+)?)\s*(?:套|件|份|包|罐|盒|樽|支|條))\s*$/,
+  );
+  const name = quantityMatch ? quantityMatch[1].trim() : item;
+  const quantity = quantityMatch
+    ? Number(quantityMatch[2] ?? quantityMatch[3])
+    : 1;
+  return name && Number.isFinite(quantity) && quantity > 0
+    ? { name, quantity }
+    : null;
+}
+
 /**
  * Splits a menu-remark block into its option lines. The FCCD catering remark
  * is grouped into paragraphs whose first line is a title such as
@@ -411,7 +438,7 @@ export function parseMenuRemark(remark: string | null | undefined): MenuOption[]
     for (const char of body) {
       if (char === "(" || char === "（") depth += 1;
       if (char === ")" || char === "）") depth = Math.max(0, depth - 1);
-      if (char === "," && depth === 0) {
+      if ((char === "," || char === "，") && depth === 0) {
         items.push(current.trim());
         current = "";
       } else {
@@ -421,17 +448,8 @@ export function parseMenuRemark(remark: string | null | undefined): MenuOption[]
     if (current.trim()) items.push(current.trim());
 
     for (const raw of items) {
-      const item = raw.replace(/\s+/g, " ").trim();
-      if (!item) continue;
-
-      const quantityMatch = item.match(/^(.*?)\s*x\s*(\d+(?:\.\d+)?)\s*$/);
-      const name = quantityMatch
-        ? quantityMatch[1].trim()
-        : item;
-      const quantity = quantityMatch ? Number(quantityMatch[2]) : 1;
-
-      if (!name) continue;
-      options.push({ name, quantity });
+      const option = splitMenuOptionQuantity(raw);
+      if (option) options.push(option);
     }
   }
   return options;

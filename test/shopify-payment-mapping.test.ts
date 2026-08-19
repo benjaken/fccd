@@ -171,6 +171,12 @@ const CATERING_REMARK = `沙律 必選:
 西式熱盤 5選2:
 美式醬燒豬肋骨 (12支骨) x 2, 普羅旺斯焗海鱸魚柳 (2條)
 
+粉麵飯 4選2:
+芝士肉醬意粉 (3磅), 葡汁雞扒焗飯 (3磅)
+
+分享小食 必選:
+芝士忌廉燴雜菜 (2磅) x 2, 墨西哥脆片配蕃茄莎莎 (2磅) x 2
+
 甜品 必選:
 西式甜品拼盤 (泡芙9件+布朗尼9件), 歐式甜品拼盤 (香蕉蛋糕9件+布朗尼9件)`;
 
@@ -187,6 +193,10 @@ describe("parseMenuRemark", () => {
       { name: "唐揚炸雞塊 (30件)", quantity: 1 },
       { name: "美式醬燒豬肋骨 (12支骨)", quantity: 2 },
       { name: "普羅旺斯焗海鱸魚柳 (2條)", quantity: 1 },
+      { name: "芝士肉醬意粉 (3磅)", quantity: 1 },
+      { name: "葡汁雞扒焗飯 (3磅)", quantity: 1 },
+      { name: "芝士忌廉燴雜菜 (2磅)", quantity: 2 },
+      { name: "墨西哥脆片配蕃茄莎莎 (2磅)", quantity: 2 },
       { name: "西式甜品拼盤 (泡芙9件+布朗尼9件)", quantity: 1 },
       { name: "歐式甜品拼盤 (香蕉蛋糕9件+布朗尼9件)", quantity: 1 },
     ]);
@@ -219,6 +229,17 @@ describe("parseMenuRemark", () => {
     const remark = "甜品 必選:\n西式甜品拼盤 (泡芙9件+布朗尼9件)";
     expect(parseMenuRemark(remark)).toEqual([
       { name: "西式甜品拼盤 (泡芙9件+布朗尼9件)", quantity: 1 },
+    ]);
+  });
+
+  it("accepts Shopify multiplier and unit quantity spellings", () => {
+    const remark = `小食 必選:
+蜜糖雞翼 (30件) × 2，台灣烤香腸 (30條) 2套, 唐揚炸雞塊 (30件) 2件, 墨西哥脆片 (2磅) X2`;
+    expect(parseMenuRemark(remark)).toEqual([
+      { name: "蜜糖雞翼 (30件)", quantity: 2 },
+      { name: "台灣烤香腸 (30條)", quantity: 2 },
+      { name: "唐揚炸雞塊 (30件)", quantity: 2 },
+      { name: "墨西哥脆片 (2磅)", quantity: 2 },
     ]);
   });
 });

@@ -9,6 +9,7 @@ import {
   parseMenuRemark,
   pickCatalogMatchByName,
   shopifyMenuOptionLegacyId,
+  stripSkuSuffix,
   type ShopifyRestOrder,
   type ShopifyRestTransaction,
 } from "./map.ts";
@@ -23,6 +24,21 @@ const PAYMENT_LOOKUP_CHUNK = 500;
 const MAX_TRANSACTION_FETCHES_PER_RUN = 200;
 
 type AdminClient = ReturnType<typeof createClient<any>>;
+
+function catalogQuery(
+  client: AdminClient,
+  table: "products" | "packages",
+  channelId: string,
+  skus: string[],
+) {
+  const query = client.from(table).select("id, sku, name, channel_id");
+  const candidates = [...new Set(skus.flatMap((sku) =>
+    [sku.trim(), stripSkuSuffix(sku)].filter((value): value is string => Boolean(value))
+  ))].filter((sku) => /^[A-Za-z0-9_-]+$/.test(sku));
+  return candidates.length
+    ? query.or(`channel_id.eq.${channelId},sku.in.(${candidates.join(",")})`)
+    : query.eq("channel_id", channelId);
+}
 type StoreRow = {
   id: string;
   shop_domain: string;
@@ -406,6 +422,36 @@ type CatalogItem = {
   kind: "product" | "package";
 };
 
+type MenuRemarkSource = { lineId: number; text: string };
+
+function menuRemarkSources(item: MappedOrder): MenuRemarkSource[] {
+  const sources: MenuRemarkSource[] = [];
+  if (item.remark?.trim()) sources.push({ lineId: 0, text: item.remark });
+  for (const line of item.lines) {
+    const text = line.properties
+      .map((property) => String(property.value ?? "").trim())
+      .filter((value) => parseMenuRemark(value).length > 0)
+      .join("\n\n");
+    if (text) sources.push({ lineId: line.lineId, text });
+  }
+  return sources;
+}
+
+function drinkUnit(name: string): string {
+  const explicit = name.match(/(?:\d+\s*)?(罐|包|盒|樽|支|杯|份)\s*$/)?.[1];
+  if (explicit) return explicit;
+  if (/(?:可樂|汽水|soda|coke)/i.test(name)) return "罐";
+  if (/(?:水|果汁|juice)/i.test(name) && !/(?:茶|奶)/.test(name)) return "樽";
+  return "包";
+}
+
+function cleanDrinkName(value: string): string {
+  return value
+    .replace(/^(?:飲品|drink|beverage)\s*[:：-]?\s*/i, "")
+    .replace(/\s*(?:(?:[xX×*]\s*)?\d+(?:\.\d+)?\s*(?:罐|包|盒|樽|支|杯|份))\s*$/, "")
+    .trim();
+}
+
 /**
  * Loads the products and packages whose names appear in the parsed menu
  * remark, keyed by the normalized name so remark options can be resolved to
@@ -452,50 +498,41 @@ async function buildMenuOptionLines(input: {
   orderId: number;
   orderLegacyId: string;
   orderSupabaseId: string;
-  remark: string | null;
+  remarks: MenuRemarkSource[];
   catalogByName: Map<string, CatalogItem>;
   issues: IssueRow[];
 }): Promise<Record<string, unknown>[]> {
-  const { storeRow, orderId, orderLegacyId, orderSupabaseId, remark, catalogByName, issues } = input;
-  if (!remark?.trim()) return [];
-
-  const options = parseMenuRemark(remark);
+  const { storeRow, orderId, orderLegacyId, orderSupabaseId, remarks, catalogByName, issues } = input;
   const lines: Record<string, unknown>[] = [];
-  let optionIndex = 0;
-  for (const option of options) {
-    const match = catalogByName.get(normalizeNameForMatch(option.name));
-    if (!match) {
-      issues.push({
-        store_id: storeRow.id,
-        shopify_order_id: orderId,
-        sku: null,
-        issue: "unmatched_remark_option",
+  let itemOrder = 1000;
+  for (const source of remarks) {
+    let optionIndex = 0;
+    for (const option of parseMenuRemark(source.text)) {
+      const match = catalogByName.get(normalizeNameForMatch(option.name));
+      if (!match) {
+        issues.push({ store_id: storeRow.id, shopify_order_id: orderId, sku: null, issue: "unmatched_remark_option" });
+        optionIndex += 1;
+        continue;
+      }
+      lines.push({
+        legacy_id: shopifyMenuOptionLegacyId(storeRow.shop_domain, orderId, source.lineId, optionIndex),
+        order_id: orderSupabaseId,
+        order_legacy_id: orderLegacyId,
+        product_id: match.kind === "product" ? match.id : null,
+        package_id: match.kind === "package" ? match.id : null,
+        product_legacy_id: null,
+        package_legacy_id: null,
+        sku_snapshot: match.sku,
+        product_name_snapshot: option.name,
+        quantity: option.quantity,
+        unit_price: null,
+        total_price: null,
+        item_order: itemOrder++,
+        is_addon: false,
+        is_void: false,
       });
-      continue;
+      optionIndex += 1;
     }
-    lines.push({
-      legacy_id: shopifyMenuOptionLegacyId(
-        storeRow.shop_domain,
-        orderId,
-        0,
-        optionIndex,
-      ),
-      order_id: orderSupabaseId,
-      order_legacy_id: orderLegacyId,
-      product_id: match.kind === "product" ? match.id : null,
-      package_id: match.kind === "package" ? match.id : null,
-      product_legacy_id: null,
-      package_legacy_id: null,
-      sku_snapshot: match.sku,
-      product_name_snapshot: option.name,
-      quantity: option.quantity,
-      unit_price: null,
-      total_price: null,
-      item_order: 1000 + optionIndex,
-      is_addon: false,
-      is_void: false,
-    });
-    optionIndex += 1;
   }
   return lines;
 }
@@ -676,9 +713,9 @@ async function processMappedOrders(
 
   const remarkNames = [
     ...new Set(
-      mapped.flatMap((item) =>
-        parseMenuRemark(item.remark).map((option) => option.name),
-      ),
+      mapped.flatMap((item) => menuRemarkSources(item).flatMap((source) =>
+        parseMenuRemark(source.text).map((option) => option.name)
+      )),
     ),
   ];
   const catalogByName = await fetchCatalogByName(client, remarkNames);
@@ -788,6 +825,19 @@ async function processMappedOrders(
     const lineRows = item.lines.map((line) => {
       const rawName = (line.row.product_name_snapshot as string | null) ?? null;
       const optionRemark = extractOptionRemark(rawName);
+      const propertyRemark = line.properties
+        .map((property) => ({ name: String(property.name ?? ""), value: String(property.value ?? "").trim() }))
+        .filter((property) => property.value && !/^_/.test(property.name) &&
+          !/(?:飲品|drink|beverage|pickup|delivery|送貨|日期|時間)/i.test(property.name))
+        .map((property) => property.value)
+        .join("\n") || null;
+      const variantParts = (line.variantTitle ?? "")
+        .split("/")
+        .map((part) => part.trim())
+        .filter(Boolean);
+      const variantRemark = storeRow.secret_prefix === "SHOPIFY_HK_LUNCH_BOX"
+        ? variantParts.slice(0, -1).join("\n") || null
+        : null;
       // Match against the base name without the "配 ..." option text so the
       // package/product still resolves (Bubble encoded options in the name).
       const baseName = optionRemark
@@ -829,21 +879,68 @@ async function processMappedOrders(
         product_id: match.productId,
         package_id: match.packageId,
         // Keep the option selection like the legacy Bubble system did.
-        remarks_1: optionRemark ?? (line.row.remarks_1 as string | null) ?? null,
+        sku_snapshot: storeRow.secret_prefix === "SHOPIFY_HK_LUNCH_BOX"
+          ? stripSkuSuffix(line.sku)
+          : line.row.sku_snapshot,
+        remarks_1: [optionRemark, propertyRemark, variantRemark, line.row.remarks_1]
+          .filter((value): value is string =>
+            typeof value === "string" && Boolean(value.trim())
+          )
+          .filter((value, index, values) => values.indexOf(value) === index)
+          .join("\n") || null,
       };
     });
+
+    const generatedLines: Record<string, unknown>[] = [];
+    if (storeRow.secret_prefix === "SHOPIFY_HK_LUNCH_BOX") {
+      let generatedIndex = 0;
+      const beverageTotals = new Map<string, { quantity: number; unit: string }>();
+      for (const line of item.lines) {
+        const selections = new Set<string>();
+        const variantParts = (line.variantTitle ?? "").split("/").map((value) => value.trim()).filter(Boolean);
+        if (variantParts.length) selections.add(variantParts.at(-1)!);
+        for (const property of line.properties) {
+          if (!/(?:飲品|drink|beverage)/i.test(String(property.name ?? ""))) continue;
+          for (const value of String(property.value ?? "").split(/[,，/]/).map((part) => part.trim()).filter(Boolean)) selections.add(value);
+        }
+        for (const selection of selections) {
+          const name = cleanDrinkName(selection);
+          if (!name) continue;
+          const current = beverageTotals.get(name);
+          beverageTotals.set(name, { quantity: (current?.quantity ?? 0) + Number(line.row.quantity ?? 0), unit: current?.unit ?? drinkUnit(selection) });
+        }
+      }
+      for (const [beverage, details] of beverageTotals) {
+        generatedIndex += 1;
+        generatedLines.push({ legacy_id: `shopify:${storeRow.shop_domain.replace(/\.myshopify\.com$/, "")}:${item.orderId}:drink:${generatedIndex}`, order_id: insertedOrder.id, order_legacy_id: item.orderRow.legacy_id, product_name_snapshot: `${beverage} ${details.quantity}${details.unit}`, quantity: 1, unit_price: 0, total_price: 0, item_order: 10000 + generatedIndex, is_addon: false, is_void: false });
+      }
+      const boxCount = item.lines.reduce((total, line) => total + (/^CBE/i.test(line.sku ?? "") ? Number(line.row.quantity ?? 0) : 0), 0);
+      if (boxCount) generatedLines.push({ legacy_id: `shopify:${storeRow.shop_domain.replace(/\.myshopify\.com$/, "")}:${item.orderId}:utensils`, order_id: insertedOrder.id, order_legacy_id: item.orderRow.legacy_id, product_name_snapshot: `飯盒餐具包 ${boxCount}份`, quantity: 1, unit_price: 0, total_price: 0, item_order: 10999, is_addon: false, is_void: false });
+    }
+
+    const mergedLineRows = storeRow.secret_prefix === "SHOPIFY_HK_LUNCH_BOX"
+      ? [...lineRows.reduce((rows, row) => {
+          const key = [row.sku_snapshot, row.product_id, row.package_id, row.remarks_1, row.unit_price].join("|");
+          const existing = rows.get(key);
+          if (existing) {
+            existing.quantity = Number(existing.quantity ?? 0) + Number(row.quantity ?? 0);
+            existing.total_price = Number(existing.total_price ?? 0) + Number(row.total_price ?? 0);
+          } else rows.set(key, { ...row });
+          return rows;
+        }, new Map<string, Record<string, unknown>>()).values()]
+      : lineRows;
 
     const menuOptionLines = await buildMenuOptionLines({
       storeRow,
       orderId: item.orderId,
       orderLegacyId: String(item.orderRow.legacy_id ?? ""),
       orderSupabaseId: insertedOrder.id,
-      remark: item.remark,
+      remarks: menuRemarkSources(item),
       catalogByName,
       issues,
     });
 
-    const allLineRows = [...lineRows, ...menuOptionLines];
+    const allLineRows = [...mergedLineRows, ...generatedLines, ...menuOptionLines];
     if (allLineRows.length) {
       const { data: insertedLines, error: lineError } = await client
         .from("order_lines")
@@ -986,16 +1083,10 @@ async function syncStore(input: {
     data: existingNumbers,
   }, { data: paymentMethods }] = await Promise.all([
     needsCatalog
-      ? client
-          .from("products")
-          .select("id, sku, name, channel_id")
-          .eq("channel_id", storeRow.channel_id)
+      ? catalogQuery(client, "products", storeRow.channel_id, skus)
       : Promise.resolve({ data: [] as Array<{ id: string; sku: string | null; name: string | null; channel_id: string | null }> }),
     needsCatalog
-      ? client
-          .from("packages")
-          .select("id, sku, name, channel_id")
-          .eq("channel_id", storeRow.channel_id)
+      ? catalogQuery(client, "packages", storeRow.channel_id, skus)
       : Promise.resolve({ data: [] as Array<{ id: string; sku: string | null; name: string | null; channel_id: string | null }> }),
     client
       .from("orders")
@@ -1180,16 +1271,10 @@ async function syncSingleOrder(input: {
     data: existingNumbers,
   }, { data: paymentMethods }] = await Promise.all([
     needsCatalog
-      ? client
-          .from("products")
-          .select("id, sku, name, channel_id")
-          .eq("channel_id", storeRow.channel_id)
+      ? catalogQuery(client, "products", storeRow.channel_id, skus)
       : Promise.resolve({ data: [] as Array<{ id: string; sku: string | null; name: string | null; channel_id: string | null }> }),
     needsCatalog
-      ? client
-          .from("packages")
-          .select("id, sku, name, channel_id")
-          .eq("channel_id", storeRow.channel_id)
+      ? catalogQuery(client, "packages", storeRow.channel_id, skus)
       : Promise.resolve({ data: [] as Array<{ id: string; sku: string | null; name: string | null; channel_id: string | null }> }),
     client
       .from("orders")
