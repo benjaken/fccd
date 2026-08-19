@@ -197,11 +197,14 @@ export async function deleteDriverFleetDriver(token: string, driverId: string) {
 }
 
 export async function fetchDriverFleetSummary(token: string, driverId?: string, startDate?: string, endDate?: string) {
+  const filters = startDate || endDate ? {
+    p_start_date: startDate || null,
+    p_end_date: endDate || null,
+  } : {};
   const { data, error } = await supabase.rpc("driver_delivery_fleet_summary", {
     p_session_token: token,
     p_driver_id: driverId || null,
-    p_start_date: startDate || null,
-    p_end_date: endDate || null,
+    ...filters,
   });
   if (error) throw error;
   return ((data ?? []) as Array<{
@@ -218,7 +221,8 @@ export async function fetchDriverFleetSummary(token: string, driverId?: string, 
 }
 
 export async function fetchDriverIncomeSummary(token: string, startDate?: string, endDate?: string) {
-  const { data, error } = await supabase.rpc("driver_delivery_income_summary", { p_session_token: token, p_start_date: startDate || null, p_end_date: endDate || null });
+  const filters = startDate || endDate ? { p_start_date: startDate || null, p_end_date: endDate || null } : {};
+  const { data, error } = await supabase.rpc("driver_delivery_income_summary", { p_session_token: token, ...filters });
   if (error) throw error;
   return ((data ?? []) as Array<{ month_start: string; order_count: number | string; completed_count: number | string; total_fee: number | string }>).map((row) => ({ month: row.month_start, orderCount: Number(row.order_count)||0, completedCount: Number(row.completed_count)||0, totalFee: Number(row.total_fee)||0 })) satisfies DriverFleetMonth[];
 }
@@ -230,12 +234,12 @@ export async function fetchDriverFleetDays(
   startDate?: string,
   endDate?: string,
 ) {
+  const filters = startDate || endDate ? { p_start_date: startDate || null, p_end_date: endDate || null } : {};
   const { data, error } = await supabase.rpc("driver_delivery_fleet_days", {
     p_session_token: token,
     p_month_start: month,
     p_driver_id: driverId || null,
-    p_start_date: startDate || null,
-    p_end_date: endDate || null,
+    ...filters,
   });
   if (error) throw error;
   return ((data ?? []) as Array<{
@@ -250,7 +254,8 @@ export async function fetchDriverFleetDays(
 }
 
 export async function fetchDriverIncomeDays(token: string, month: string, startDate?: string, endDate?: string) {
-  const { data, error } = await supabase.rpc("driver_delivery_income_days", { p_session_token: token, p_month_start: month, p_start_date: startDate || null, p_end_date: endDate || null });
+  const filters = startDate || endDate ? { p_start_date: startDate || null, p_end_date: endDate || null } : {};
+  const { data, error } = await supabase.rpc("driver_delivery_income_days", { p_session_token: token, p_month_start: month, ...filters });
   if (error) throw error;
   return ((data ?? []) as Array<{ delivery_date: string; order_count: number|string; total_fee: number|string }>).map((row) => ({ date: row.delivery_date, orderCount: Number(row.order_count)||0, totalFee: Number(row.total_fee)||0 })) satisfies DriverFleetDay[];
 }

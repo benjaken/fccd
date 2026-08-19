@@ -415,11 +415,10 @@ function FleetOrdersView({ session, income = false }: { session: DriverDeliveryS
         ) : null}</> : null}
       </div>
       <div className="driver-date-range" aria-label="訂單日期範圍">
-        <CalendarDays aria-hidden="true" />
-        <label>開始日期<input type="date" value={startDate} max={endDate || undefined} onChange={(event) => setStartDate(event.target.value)} /></label>
+        <input type="date" aria-label="開始日期" value={startDate} max={endDate || undefined} onChange={(event) => setStartDate(event.target.value)} />
         <span>至</span>
-        <label>結束日期<input type="date" value={endDate} min={startDate || undefined} onChange={(event) => setEndDate(event.target.value)} /></label>
-        {startDate || endDate ? <Button variant="ghost" size="sm" onClick={() => { setStartDate(""); setEndDate(""); }}>清除</Button> : null}
+        <input type="date" aria-label="結束日期" value={endDate} min={startDate || undefined} onChange={(event) => setEndDate(event.target.value)} />
+        {startDate || endDate ? <Button variant="ghost" size="icon" aria-label="清除日期範圍" onClick={() => { setStartDate(""); setEndDate(""); }}><X /></Button> : null}
       </div>
       <article className="driver-fleet-total">
         <div><span>所有已派訂單收入</span><strong>{money(totalFee)}</strong><small>包括未完成訂單</small></div>
