@@ -244,15 +244,6 @@ export function shopifyLineLegacyId(
   return `shopify:${shop}:${orderId}:${lineId}`;
 }
 
-export function shopifyShippingLineLegacyId(
-  shopDomain: string,
-  orderId: number,
-  lineId: number,
-): string {
-  const shop = shopDomain.replace(/\.myshopify\.com$/, "");
-  return `shopify:${shop}:${orderId}:shipping:${lineId}`;
-}
-
 export function shopifyTransactionLegacyId(
   shopDomain: string,
   orderId: number,
@@ -329,7 +320,7 @@ export function mapShopifyOrder(input: {
     bubble_modified_at: input.order.updated_at ?? null,
   };
 
-  const productLines = (input.order.line_items ?? []).flatMap((item, index) => {
+  const lines = (input.order.line_items ?? []).flatMap((item, index) => {
     const lineId = numericId(item.id);
     if (!lineId) return [];
     const sku = item.sku?.trim() || null;
@@ -363,42 +354,6 @@ export function mapShopifyOrder(input: {
       },
     }];
   });
-
-  const shippingLines = (input.order.shipping_lines ?? []).flatMap((line, index) => {
-    const lineId = numericId(line.id);
-    const name = String(line.title ?? line.code ?? "運費").trim();
-    if (!lineId || !name) return [];
-    const allocatedDiscount = (line.discount_allocations ?? []).reduce(
-      (total, allocation) => total + money(allocation.amount),
-      0,
-    );
-    const price = line.discounted_price === null || line.discounted_price === undefined
-      ? Math.max(0, money(line.price) - allocatedDiscount)
-      : money(line.discounted_price);
-    return [{
-      lineId,
-      sku: null,
-      properties: [],
-      variantTitle: null,
-      row: {
-        legacy_id: shopifyShippingLineLegacyId(input.shopDomain, orderId, lineId),
-        order_legacy_id: legacyId,
-        shopify_line_id: null,
-        sku_snapshot: null,
-        product_name_snapshot: name,
-        quantity: 1,
-        unit_price: price,
-        total_price: price,
-        item_order: productLines.length + index + 1,
-        is_addon: true,
-        is_void: false,
-        bubble_created_at: input.order.created_at ?? null,
-        bubble_modified_at: input.order.updated_at ?? null,
-      },
-    }];
-  });
-
-  const lines = [...productLines, ...shippingLines];
 
   return {
     orderId,

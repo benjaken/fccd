@@ -335,7 +335,7 @@ describe("mapShopifyOrder remark collection", () => {
     ]);
   });
 
-  it("maps discounted product price and shipping charge as separate lines", () => {
+  it("maps the discounted product price but keeps shipping outside package lines", () => {
     const mapped = mapShopifyOrder({
       order: {
         id: 2128,
@@ -349,9 +349,9 @@ describe("mapShopifyOrder remark collection", () => {
       storeId: "store-uuid",
       channelId: "channel-uuid",
     });
-    expect(mapped!.lines).toHaveLength(2);
+    expect(mapped!.lines).toHaveLength(1);
     expect(mapped!.lines[0].row).toMatchObject({ unit_price: 2880, total_price: 2880 });
-    expect(mapped!.lines[1].row).toMatchObject({ product_name_snapshot: "偏遠地區 - 車邊交收收費A", unit_price: 180, total_price: 180, is_addon: true });
+    expect(mapped!.orderRow).toMatchObject({ shipping_fee: 180, grand_total: 3060 });
   });
 });
 
