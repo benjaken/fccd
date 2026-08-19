@@ -686,7 +686,7 @@ export function stripSkuSuffix(sku: string | null | undefined): string | null {
 export function resolveAliasSku(name: string | null | undefined): string | null {
   const normalized = normalizeNameForMatch(name);
   if (!normalized) return null;
-  if (normalized.includes("可口可樂") || normalized.includes("可樂")) {
+  if (/^(?:\(凍\))?(?:可口可樂|可樂)/.test(normalized)) {
     // The catalog stores Coke under the CDR001-* / EDR001-* prefix.
     const match = normalized.match(/可樂[^)]*?(\d+)\s*(罐|包|份)?/);
     if (match) {
