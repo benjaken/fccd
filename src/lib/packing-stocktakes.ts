@@ -15,6 +15,8 @@ export type PackingStocktakeItem = {
   name: string | null;
   quantity: number | null;
   unit: string | null;
+  supplierName?: string | null;
+  supplierPhone?: string | null;
 };
 
 export type StocktakeDateItem = { date: string; updatedAt: string };
@@ -29,11 +31,13 @@ type PackingStocktakeRow = {
     name: string | null;
     ingredient_type: string | null;
     stocktake_unit: string | null;
+    suppliers: { company_name: string | null; phone_number: string | null } | Array<{ company_name: string | null; phone_number: string | null }> | null;
   } | Array<{
     sku: string | null;
     name: string | null;
     ingredient_type: string | null;
     stocktake_unit: string | null;
+    suppliers: { company_name: string | null; phone_number: string | null } | Array<{ company_name: string | null; phone_number: string | null }> | null;
   }> | null;
 };
 
@@ -55,6 +59,8 @@ function mapRow(row: PackingStocktakeRow): PackingStocktakeItem {
     name: ingredient?.name ?? null,
     quantity: toNumber(row.quantity),
     unit: ingredient?.stocktake_unit ?? null,
+    supplierName: (Array.isArray(ingredient?.suppliers) ? ingredient.suppliers[0]?.company_name : ingredient?.suppliers?.company_name) ?? null,
+    supplierPhone: (Array.isArray(ingredient?.suppliers) ? ingredient.suppliers[0]?.phone_number : ingredient?.suppliers?.phone_number) ?? null,
   };
 }
 
@@ -80,7 +86,7 @@ export async function fetchPackingStocktakes({
   let query = supabase
     .from(eventTable(kind))
     .select(
-      "id,stocktake_at,sku_snapshot,quantity,ingredients(sku,name,ingredient_type,stocktake_unit)",
+      "id,stocktake_at,sku_snapshot,quantity,ingredients(sku,name,ingredient_type,stocktake_unit,suppliers(company_name,phone_number))",
       { count: "exact" },
     )
     .order("stocktake_at", { ascending: false, nullsFirst: false })
@@ -140,7 +146,7 @@ export async function createIngredientStocktake(stocktakeDate: string): Promise<
 export async function fetchPackingStocktakeSheet(stocktakeDate: string, kind: StocktakeKind = "packing"): Promise<PackingStocktakeItem[]> {
   const { data, error } = await supabase
     .from(eventTable(kind))
-    .select("id,stocktake_at,sku_snapshot,quantity,ingredients(sku,name,ingredient_type,stocktake_unit)")
+    .select("id,stocktake_at,sku_snapshot,quantity,ingredients(sku,name,ingredient_type,stocktake_unit,suppliers(company_name,phone_number))")
     .gte("stocktake_at", `${stocktakeDate}T00:00:00+08:00`)
     .lt("stocktake_at", `${nextDate(stocktakeDate)}T00:00:00+08:00`)
     .order("sku_snapshot", { ascending: true, nullsFirst: false })

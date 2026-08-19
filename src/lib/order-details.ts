@@ -37,6 +37,8 @@ export type ReadOnlyOrderDetail = {
 export type DetailLine = {
   id: string;
   sku: string | null;
+  productId?: string | null;
+  packageId?: string | null;
   productName: string | null;
   content: string | null;
   quantity: number | null;
@@ -98,6 +100,25 @@ function decimal(value: string | number | null) {
   return value === null ? null : Number.parseFloat(String(value));
 }
 
+function firstNonEmptyText(...values: unknown[]): string | null {
+  for (const value of values) {
+    if (typeof value !== "string") continue;
+    const trimmed = value.trim();
+    if (trimmed) return trimmed;
+  }
+  return null;
+}
+
+function relatedCatalogText(
+  relation: unknown,
+  field: "name" | "sku",
+): string | null {
+  const row = Array.isArray(relation) ? relation[0] : relation;
+  return row && typeof row === "object" && field in row
+    ? firstNonEmptyText(row[field])
+    : null;
+}
+
 export async function fetchOrderDetail(
   id: string,
   documentType: "order" | "quote",
@@ -132,7 +153,7 @@ export async function fetchOrderDetail(
       supabase
         .from("order_lines")
         .select(
-          "id,sku_snapshot,product_name_snapshot,content_snapshot,quantity,unit_price,total_price,is_addon,remarks_1,remarks_2",
+          "id,product_id,package_id,sku_snapshot,product_name_snapshot,content_snapshot,quantity,unit_price,total_price,is_addon,remarks_1,remarks_2,products(sku,name),packages(sku,name)",
         )
         .eq("order_id", id)
         .eq("is_void", false)
@@ -242,8 +263,18 @@ export async function fetchOrderDetail(
     order,
     lines: (linesResult.data ?? []).map((row) => ({
       id: row.id,
-      sku: row.sku_snapshot,
-      productName: row.product_name_snapshot,
+      sku: firstNonEmptyText(
+        row.sku_snapshot,
+        relatedCatalogText(row.products, "sku"),
+        relatedCatalogText(row.packages, "sku"),
+      ),
+      productId: row.product_id,
+      packageId: row.package_id,
+      productName: firstNonEmptyText(
+        row.product_name_snapshot,
+        relatedCatalogText(row.products, "name"),
+        relatedCatalogText(row.packages, "name"),
+      ),
       content: row.content_snapshot,
       quantity: decimal(row.quantity),
       unitPrice: canViewFinance ? decimal(row.unit_price) : null,

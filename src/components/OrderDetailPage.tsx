@@ -352,7 +352,22 @@ export function OrderDetailPage({
                       <small className="settings-cell-detail">{line.remarks}</small>
                     )}
                   </td>
-                  <td>{line.sku || t("common.notSet")}</td>
+                  <td>
+                    {line.productId ? (
+                      <Link className="order-link" to={`/products/${line.productId}`}>
+                        {line.sku || t("common.notSet")}
+                      </Link>
+                    ) : line.packageId ? (
+                      <Link
+                        className="order-link"
+                        to={`/products/packages/${line.packageId}`}
+                      >
+                        {line.sku || t("common.notSet")}
+                      </Link>
+                    ) : (
+                      line.sku || t("common.notSet")
+                    )}
+                  </td>
                   <td>{line.quantity ?? t("common.notSet")}</td>
                   {canViewFinance && <td>{money(line.unitPrice)}</td>}
                   {canViewFinance && <td>{money(line.totalPrice)}</td>}

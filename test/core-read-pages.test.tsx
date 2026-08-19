@@ -38,6 +38,8 @@ const detail = {
     {
       id: "line-1",
       sku: "SKU-1",
+      productId: "product-1",
+      packageId: null,
       productName: "測試套餐",
       content: null,
       quantity: 2,
@@ -76,6 +78,10 @@ describe("Core read pages", () => {
 
     expect(await screen.findByRole("heading", { name: "B-1513" }))
       .toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "SKU-1" })).toHaveAttribute(
+      "href",
+      "/products/product-1",
+    );
     expect(screen.getAllByText("香港女童軍總會")).toHaveLength(2);
     expect(screen.getByText("測試套餐")).toBeInTheDocument();
     expect(screen.getAllByText("HK$1,610")).toHaveLength(3);

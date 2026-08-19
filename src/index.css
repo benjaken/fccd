@@ -59,6 +59,7 @@
   --workspace-height: 44px;
   --sidebar-width: 236px;
   --sidebar-collapsed-width: 72px;
+  --master-detail-sidebar-width: 280px;
 }
 
 .dark {
@@ -3242,7 +3243,7 @@ button.product-tag[aria-pressed="true"] {
 
 .raw-meat-calc-layout {
   display: grid;
-  grid-template-columns: minmax(12rem, 20%) minmax(0, 1fr);
+  grid-template-columns: var(--master-detail-sidebar-width) minmax(0, 1fr);
   gap: 16px;
   min-height: 0;
 }
@@ -6055,11 +6056,9 @@ button.product-tag[aria-pressed="true"] {
 
 .stocktake-records-layout {
   display: grid;
-  grid-template-columns: minmax(170px, 240px) minmax(0, 1fr);
+  grid-template-columns: var(--master-detail-sidebar-width) minmax(0, 1fr);
   gap: 18px;
-  flex: 1 1 auto;
   min-height: 0;
-  padding: 14px;
 }
 
 .stocktake-date-list {
@@ -6082,7 +6081,9 @@ button.product-tag[aria-pressed="true"] {
 }
 
 .stocktake-date-list-header strong { font-size: 15px; }
-.stocktake-date-list-header svg { width: 17px; height: 17px; color: var(--muted-foreground); }
+.stocktake-date-list-actions { display: flex; align-items: center; gap: 2px; }
+.stocktake-date-list-actions button { width: 32px; height: 32px; color: var(--muted-foreground); }
+.stocktake-date-list-actions svg { width: 17px; height: 17px; color: var(--muted-foreground); }
 
 .stocktake-date-list-options {
   display: flex;
@@ -6106,9 +6107,8 @@ button.product-tag[aria-pressed="true"] {
 .stocktake-date-item > button:first-child {
   flex: 1 1 auto;
   display: grid;
-  gap: 3px;
   min-width: 0;
-  padding: 10px 12px;
+  padding: 11px 12px;
   border: 0;
   border-radius: 9px;
   background: transparent;
@@ -6119,13 +6119,19 @@ button.product-tag[aria-pressed="true"] {
   cursor: pointer;
 }
 
-.stocktake-date-item small { color: var(--muted-foreground); font-size: 14px; font-style: italic; font-weight: 400; }
+.stocktake-date-item small {
+  margin-top: 3px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-style: italic;
+  font-weight: 400;
+}
+
 .stocktake-date-item > button:last-child {
   width: 32px;
   height: 32px;
   margin-right: 4px;
-  color: var(--destructive);
-  opacity: 0;
+  color: var(--muted-foreground);
 }
 
 .stocktake-date-item:hover,
@@ -6133,13 +6139,10 @@ button.product-tag[aria-pressed="true"] {
   background: var(--selection-bg);
 }
 
-.stocktake-date-item:hover > button:last-child,
-.stocktake-date-item:focus-within > button:last-child { opacity: 1; }
-
 .stocktake-date-item.is-active { background: var(--primary); }
 .stocktake-date-item.is-active > button:first-child { color: var(--primary-foreground); }
 .stocktake-date-item.is-active small { color: color-mix(in oklch, var(--primary-foreground) 78%, transparent); }
-.stocktake-date-item.is-active > button:last-child { color: var(--primary-foreground); }
+.stocktake-date-item.is-active > button:last-child { color: color-mix(in oklch, var(--primary-foreground) 72%, transparent); }
 
 .stocktake-date-item > button:first-child:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
 
@@ -6549,7 +6552,7 @@ button.product-tag[aria-pressed="true"] {
 
 .selling-price-cost-layout {
   display: grid;
-  grid-template-columns: 16.5rem minmax(0, 1fr);
+  grid-template-columns: var(--master-detail-sidebar-width) minmax(0, 1fr);
   gap: 14px;
   min-height: 0;
   overflow: hidden;

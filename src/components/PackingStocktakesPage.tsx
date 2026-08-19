@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ClipboardList, Printer, RefreshCw, SlidersHorizontal, Trash2 } from "lucide-react";
+import { createRoot } from "react-dom/client";
+import { ClipboardList, Plus, Printer, RefreshCw, Trash2 } from "lucide-react";
 
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,7 @@ import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { Modal } from "@/components/ui/modal";
+import { writeStocktakePrintWindow } from "@/lib/stocktake-print";
 import { KITCHEN_INGREDIENT_STOCKTAKES_DELETE, KITCHEN_INGREDIENT_STOCKTAKES_EDIT, KITCHEN_PACKING_STOCKTAKES_DELETE, KITCHEN_PACKING_STOCKTAKES_EDIT } from "@/lib/kitchen-action-permissions";
 import {
   fetchPackingStocktakes,
@@ -103,10 +105,7 @@ export function PackingStocktakesPage({
   const [newDate, setNewDate] = useState("");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
-  const [printPreviewOpen, setPrintPreviewOpen] = useState(false);
-  const [printRows, setPrintRows] = useState<PackingStocktakeItem[]>([]);
   const [printLoading, setPrintLoading] = useState(false);
-  const [printError, setPrintError] = useState(false);
   const totalPages = Math.max(1, Math.ceil(total / PACKING_STOCKTAKES_PAGE_SIZE));
   const visibleFrom = total === 0 ? 0 : (page - 1) * PACKING_STOCKTAKES_PAGE_SIZE + 1;
   const visibleTo = Math.min(page * PACKING_STOCKTAKES_PAGE_SIZE, total);
@@ -151,7 +150,6 @@ export function PackingStocktakesPage({
     } catch { setCreateError("createError"); }
     finally { setCreating(false); }
   };
-  const printStocktakeSheet = () => window.print();
   const removeDate = async (date: string) => {
     if (deletingDate || !window.confirm(t(copyKey("deleteConfirm"), { date: formatDate(`${date}T00:00:00+08:00`, i18n.language) }))) return;
     setDeletingDate(date);
@@ -164,10 +162,24 @@ export function PackingStocktakesPage({
   };
   const openPrintPreview = async () => {
     if (!stocktakeDate || printLoading) return;
-    setPrintPreviewOpen(true); setPrintLoading(true); setPrintError(false);
-    try { setPrintRows(await effectiveLoadPrintRows(stocktakeDate)); }
-    catch { setPrintError(true); }
-    finally { setPrintLoading(false); }
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) { setError("printPopupBlocked"); return; }
+    printWindow.opener = null;
+    printWindow.document.write(`<p style="font-family:sans-serif;padding:24px">${t(copyKey("loading"))}</p>`);
+    setPrintLoading(true);
+    try {
+      const printRows = await effectiveLoadPrintRows(stocktakeDate);
+      writeStocktakePrintWindow(printWindow, printRows, t(copyKey("printSheet")), t(copyKey("print")));
+      const actionHost = printWindow.document.getElementById("stocktake-print-action");
+      if (actionHost) {
+        createRoot(actionHost).render(
+          <Button type="button" onClick={() => printWindow.print()}><Printer />{t(copyKey("print"))}</Button>,
+        );
+      }
+    } catch {
+      printWindow.close();
+      setError("printLoadError");
+    } finally { setPrintLoading(false); }
   };
 
   const beginEdit = (row: PackingStocktakeItem) => {
@@ -200,21 +212,22 @@ export function PackingStocktakesPage({
           <p>{t(copyKey("description"))}</p>
         </div>
         <div className="packing-stocktakes-heading-actions">
-          <Button type="button" variant="outline" disabled={!stocktakeDate || rows.length === 0} onClick={() => void openPrintPreview()}><Printer />{t(copyKey("printSheet"))}</Button>
-          {canEdit ? <Button type="button" onClick={openCreate}>{t(copyKey("add"))}</Button> : null}
+          <Button type="button" variant="outline" disabled={!stocktakeDate || rows.length === 0 || printLoading} onClick={() => void openPrintPreview()}><Printer />{t(copyKey("printSheet"))}</Button>
         </div>
       </header>
-      <article className="panel ingredients-panel">
-        <div className="stocktake-records-layout">
+      <div className="stocktake-records-layout">
         <aside className="stocktake-date-list" aria-label={t(copyKey("dateList"))}>
           <header className="stocktake-date-list-header">
             <strong>{t(copyKey("dateList"))}</strong>
-            <SlidersHorizontal aria-hidden="true" />
+            <div className="stocktake-date-list-actions">
+              {canEdit ? <Button type="button" variant="ghost" size="icon" aria-label={t(copyKey("add"))} onClick={openCreate}><Plus /></Button> : null}
+            </div>
           </header>
           <div className="stocktake-date-list-options">
             {datesLoading ? <span>{t(copyKey("loading"))}</span> : dates.length === 0 ? <span>{t(copyKey("noDates"))}</span> : dates.map((item) => <div key={item.date} className={item.date === stocktakeDate ? "stocktake-date-item is-active" : "stocktake-date-item"}><button type="button" onClick={() => { setStocktakeDate(item.date); setPage(1); }}><strong>{formatDate(`${item.date}T00:00:00+08:00`, i18n.language)}</strong><small>{t(copyKey("updatedAt"), { time: formatDateTime(item.updatedAt, i18n.language) })}</small></button>{canDelete ? <Button type="button" variant="ghost" size="icon" disabled={deletingDate === item.date} aria-label={t(copyKey("deleteDate"), { date: formatDate(`${item.date}T00:00:00+08:00`, i18n.language) })} onClick={() => void removeDate(item.date)}><Trash2 /></Button> : null}</div>)}
           </div>
         </aside>
+        <article className="panel ingredients-panel stocktake-records-panel">
         <div className="stocktake-records-content">
         {stocktakeDate ? <>
         <header className="ingredients-toolbar">
@@ -238,21 +251,11 @@ export function PackingStocktakesPage({
         {!loading && !error && total > 0 ? <TablePagination summary={t(copyKey("pagination"), { from: visibleFrom, to: visibleTo, total })} page={page} totalPages={totalPages} loading={loading} onPrevious={() => setPage((current) => Math.max(1, current - 1))} onNext={() => setPage((current) => Math.min(totalPages, current + 1))} onPageChange={setPage} previousLabel={t(copyKey("previous"))} nextLabel={t(copyKey("next"))} pageLabel={t(copyKey("pageOf"))} jumpLabel={t(copyKey("jumpToPage"))} /> : null}
         </> : <div className="products-state products-state-empty"><ClipboardList /><div><strong>{t(copyKey("selectDate"))}</strong><span>{t(copyKey("selectDateDescription"))}</span></div></div>}
         </div>
-        </div>
-      </article>
+        </article>
+      </div>
       <Modal open={createOpen} title={t(copyKey("createTitle"))} description={t(copyKey("createDescription"))} onClose={() => !creating && setCreateOpen(false)} closeLabel={t(copyKey("closePanel"))} size="sm" footer={<><Button type="button" variant="outline" disabled={creating} onClick={() => setCreateOpen(false)}>{t(copyKey("cancel"))}</Button><Button type="button" disabled={!newDate || creating} onClick={() => void createForDate()}>{creating ? t(copyKey("checking")) : t(copyKey("continueAction"))}</Button></>}>
         <label className="ingredients-field"><span>{t(copyKey("stocktakeDate"))}</span><input type="date" value={newDate} onChange={(event) => setNewDate(event.target.value)} /></label>
         {createError ? <p className="list-inline-error">{t(copyKey(createError))}</p> : null}
-      </Modal>
-      <Modal open={printPreviewOpen} title={t(copyKey("printPreviewTitle"))} description={t(copyKey("printPreviewDescription"))} onClose={() => setPrintPreviewOpen(false)} closeLabel={t(copyKey("closePanel"))} size="lg" footer={<><Button type="button" variant="outline" onClick={() => setPrintPreviewOpen(false)}>{t(copyKey("cancel"))}</Button><Button type="button" disabled={printLoading || printError || printRows.length === 0} onClick={printStocktakeSheet}><Printer />{t(copyKey("print"))}</Button></>}>
-        <section className="print-stocktake-sheet">
-          <header><div><h1>{t(copyKey("printSheet"))}</h1><p>{t(copyKey("stocktakeDate"))}：{stocktakeDate ? formatDate(`${stocktakeDate}T00:00:00+08:00`, i18n.language) : "—"}</p></div><span>{t(copyKey("printQuantityHint"))}</span></header>
-          <table><thead><tr><th>#</th><th>{t(copyKey("columns.sku"))}</th><th>{t(copyKey("columns.type"))}</th><th>{t(copyKey("columns.name"))}</th><th>{t(copyKey("columns.quantity"))}</th><th>{t(copyKey("columns.unit"))}</th></tr></thead><tbody>
-            {printRows.map((row, index) => <tr key={row.id}><td>{index + 1}</td><td>{row.sku || "—"}</td><td>{row.ingredientType || "—"}</td><td>{row.name || "—"}</td><td className="print-stocktake-quantity" /><td>{row.unit || "—"}</td></tr>)}
-          </tbody></table>
-          {printLoading ? <p>{t(copyKey("loading"))}</p> : null}
-          {printError ? <p>{t(copyKey("loadError"))}</p> : null}
-        </section>
       </Modal>
     </section>
   );

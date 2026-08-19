@@ -3,22 +3,302 @@ import { useTranslation } from "react-i18next";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
-import { ListTable } from "@/components/ui/list-table";
+import { RestaurantSettingsListTable } from "@/components/ui/restaurant-settings-list-table";
 import { SidePanel } from "@/components/ui/side-panel";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/lib/supabase";
 
-type PaymentMethod = { id: string; sortOrder: number; name: string; isActive: boolean; deductsPettyCash: boolean };
+type PaymentMethod = {
+  id: string;
+  sortOrder: number;
+  name: string;
+  isActive: boolean;
+  deductsPettyCash: boolean;
+};
 
 export function RestaurantPaymentMethodsPage() {
-  const { t } = useTranslation(); const access = useCurrentPageAccess(); const canEdit = access.canAccess("restaurant.settings.payment_methods.edit"); const canDelete = access.canAccess("restaurant.settings.payment_methods.delete");
-  const [rows, setRows] = useState<PaymentMethod[]>([]); const [loading, setLoading] = useState(true); const [open, setOpen] = useState(false); const [editing, setEditing] = useState<PaymentMethod | null>(null); const [sortOrder, setSortOrder] = useState(""); const [name, setName] = useState(""); const [active, setActive] = useState(true); const [deductsPettyCash, setDeductsPettyCash] = useState(false); const [saving, setSaving] = useState(false);
-  const load = () => { setLoading(true); void supabase.from("restaurant_payment_methods").select("id,sort_order,name,is_active,deducts_petty_cash").is("archived_at", null).order("sort_order").order("name").then(({ data }) => { setRows((data ?? []).map((row) => ({ id: row.id as string, sortOrder: Number(row.sort_order ?? 0), name: row.name as string, isActive: Boolean(row.is_active), deductsPettyCash: Boolean(row.deducts_petty_cash) }))); setLoading(false); }, () => setLoading(false)); };
+  const { t } = useTranslation();
+  const access = useCurrentPageAccess();
+  const canEdit = access.canAccess("restaurant.settings.payment_methods.edit");
+  const canDelete = access.canAccess(
+    "restaurant.settings.payment_methods.delete",
+  );
+  const [rows, setRows] = useState<PaymentMethod[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<PaymentMethod | null>(null);
+  const [sortOrder, setSortOrder] = useState("");
+  const [name, setName] = useState("");
+  const [active, setActive] = useState(true);
+  const [deductsPettyCash, setDeductsPettyCash] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const load = () => {
+    setLoading(true);
+    void supabase
+      .from("restaurant_payment_methods")
+      .select("id,sort_order,name,is_active,deducts_petty_cash")
+      .is("archived_at", null)
+      .order("sort_order")
+      .order("name")
+      .then(
+        ({ data }) => {
+          setRows(
+            (data ?? []).map((row) => ({
+              id: row.id as string,
+              sortOrder: Number(row.sort_order ?? 0),
+              name: row.name as string,
+              isActive: Boolean(row.is_active),
+              deductsPettyCash: Boolean(row.deducts_petty_cash),
+            })),
+          );
+          setLoading(false);
+        },
+        () => setLoading(false),
+      );
+  };
   useEffect(load, []);
-  const close = () => { setOpen(false); setEditing(null); setSortOrder(""); setName(""); setActive(true); setDeductsPettyCash(false); };
-  const edit = (row: PaymentMethod | null) => { setEditing(row); setSortOrder(row?.sortOrder.toString() ?? ((rows.at(-1)?.sortOrder ?? 0) + 1).toString()); setName(row?.name ?? ""); setActive(row?.isActive ?? true); setDeductsPettyCash(row?.deductsPettyCash ?? false); setOpen(true); };
-  const submit = async (event: FormEvent) => { event.preventDefault(); if (!name.trim()) return; setSaving(true); const now = new Date().toISOString(); const fields = { sort_order: Number(sortOrder) || 0, name: name.trim(), is_active: active, deducts_petty_cash: deductsPettyCash, bubble_modified_at: now }; if (editing) await supabase.from("restaurant_payment_methods").update(fields).eq("id", editing.id); else await supabase.from("restaurant_payment_methods").insert({ legacy_id: `web-restaurant-payment-method-${crypto.randomUUID()}`, bubble_created_at: now, ...fields }); close(); load(); setSaving(false); };
-  const updateFlag = async (row: PaymentMethod, fields: { is_active?: boolean; deducts_petty_cash?: boolean }) => { await supabase.from("restaurant_payment_methods").update({ ...fields, bubble_modified_at: new Date().toISOString() }).eq("id", row.id); load(); };
-  const remove = async (row: PaymentMethod) => { if (!window.confirm(t("restaurantPaymentMethods.deleteConfirm", { name: row.name }))) return; await supabase.from("restaurant_payment_methods").update({ archived_at: new Date().toISOString(), bubble_modified_at: new Date().toISOString() }).eq("id", row.id); load(); };
-  return <section className="ingredients-page"><header className="page-heading ingredients-heading"><div><span className="eyebrow">{t("navigation.restaurant")}</span><h1>{t("restaurantPaymentMethods.title")}</h1><p>{t("restaurantPaymentMethods.description")}</p></div>{canEdit ? <Button onClick={() => edit(null)}><Plus />{t("restaurantPaymentMethods.add")}</Button> : null}</header><article className="panel ingredients-panel"><ListTable className="ingredients-table-wrap" loading={loading} loadingLabel={t("restaurantPaymentMethods.loading")} skeletonColumns={canEdit || canDelete ? 5 : 4} header={<tr><th>{t("restaurantPaymentMethods.columns.order")}</th><th>{t("restaurantPaymentMethods.columns.name")}</th><th>{t("restaurantPaymentMethods.columns.status")}</th><th>{t("restaurantPaymentMethods.columns.deductsPettyCash")}</th>{canEdit || canDelete ? <th aria-label={t("restaurantPaymentMethods.columns.actions")} /> : null}</tr>}>{rows.map((row) => <tr key={row.id}><td>{row.sortOrder}</td><td><strong>{row.name}</strong></td><td>{canEdit ? <Switch checked={row.isActive} onCheckedChange={(value) => void updateFlag(row, { is_active: value })} aria-label={row.isActive ? t("restaurantPaymentMethods.active") : t("restaurantPaymentMethods.inactive")} /> : row.isActive ? t("restaurantPaymentMethods.active") : t("restaurantPaymentMethods.inactive")}</td><td>{canEdit ? <Switch checked={row.deductsPettyCash} onCheckedChange={(value) => void updateFlag(row, { deducts_petty_cash: value })} aria-label={t("restaurantPaymentMethods.columns.deductsPettyCash")} /> : row.deductsPettyCash ? t("restaurantPaymentMethods.yes") : t("restaurantPaymentMethods.no")}</td>{canEdit || canDelete ? <td className="table-actions-cell"><div className="table-row-actions">{canEdit ? <Button size="icon" variant="outline" aria-label={t("restaurantPaymentMethods.edit")} onClick={() => edit(row)}><Pencil /></Button> : null}{canDelete ? <Button size="icon" variant="destructive" aria-label={t("restaurantPaymentMethods.delete")} onClick={() => void remove(row)}><Trash2 /></Button> : null}</div></td> : null}</tr>)}</ListTable></article><SidePanel open={open} title={t(editing ? "restaurantPaymentMethods.editTitle" : "restaurantPaymentMethods.addTitle")} onClose={close} closeLabel={t("restaurantPaymentMethods.close")} footer={<><Button variant="outline" onClick={close}>{t("restaurantPaymentMethods.cancel")}</Button><Button type="submit" form="restaurant-payment-method-form" disabled={saving}>{saving ? t("restaurantPaymentMethods.saving") : t("restaurantPaymentMethods.save")}</Button></>}><form id="restaurant-payment-method-form" className="ingredients-form" onSubmit={(event) => void submit(event)}><label className="ingredients-field"><span>{t("restaurantPaymentMethods.fields.order")}</span><input type="number" min="0" value={sortOrder} onChange={(event) => setSortOrder(event.target.value)} /></label><label className="ingredients-field"><span>{t("restaurantPaymentMethods.fields.name")}</span><input value={name} onChange={(event) => setName(event.target.value)} placeholder={t("restaurantPaymentMethods.fields.namePlaceholder")} /></label><label className="ingredients-field"><span>{t("restaurantPaymentMethods.fields.status")}</span><Switch checked={active} onCheckedChange={setActive} /></label><label className="ingredients-field"><span>{t("restaurantPaymentMethods.fields.deductsPettyCash")}</span><Switch checked={deductsPettyCash} onCheckedChange={setDeductsPettyCash} /></label></form></SidePanel></section>;
+  const close = () => {
+    setOpen(false);
+    setEditing(null);
+    setSortOrder("");
+    setName("");
+    setActive(true);
+    setDeductsPettyCash(false);
+  };
+  const edit = (row: PaymentMethod | null) => {
+    setEditing(row);
+    setSortOrder(
+      row?.sortOrder.toString() ??
+        ((rows.at(-1)?.sortOrder ?? 0) + 1).toString(),
+    );
+    setName(row?.name ?? "");
+    setActive(row?.isActive ?? true);
+    setDeductsPettyCash(row?.deductsPettyCash ?? false);
+    setOpen(true);
+  };
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!name.trim()) return;
+    setSaving(true);
+    const now = new Date().toISOString();
+    const fields = {
+      sort_order: Number(sortOrder) || 0,
+      name: name.trim(),
+      is_active: active,
+      deducts_petty_cash: deductsPettyCash,
+      bubble_modified_at: now,
+    };
+    if (editing)
+      await supabase
+        .from("restaurant_payment_methods")
+        .update(fields)
+        .eq("id", editing.id);
+    else
+      await supabase
+        .from("restaurant_payment_methods")
+        .insert({
+          legacy_id: `web-restaurant-payment-method-${crypto.randomUUID()}`,
+          bubble_created_at: now,
+          ...fields,
+        });
+    close();
+    load();
+    setSaving(false);
+  };
+  const updateFlag = async (
+    row: PaymentMethod,
+    fields: { is_active?: boolean; deducts_petty_cash?: boolean },
+  ) => {
+    await supabase
+      .from("restaurant_payment_methods")
+      .update({ ...fields, bubble_modified_at: new Date().toISOString() })
+      .eq("id", row.id);
+    load();
+  };
+  const remove = async (row: PaymentMethod) => {
+    if (
+      !window.confirm(
+        t("restaurantPaymentMethods.deleteConfirm", { name: row.name }),
+      )
+    )
+      return;
+    await supabase
+      .from("restaurant_payment_methods")
+      .update({
+        archived_at: new Date().toISOString(),
+        bubble_modified_at: new Date().toISOString(),
+      })
+      .eq("id", row.id);
+    load();
+  };
+  return (
+    <section className="ingredients-page">
+      <header className="page-heading ingredients-heading">
+        <div>
+          <span className="eyebrow">{t("navigation.restaurant")}</span>
+          <h1>{t("restaurantPaymentMethods.title")}</h1>
+          <p>{t("restaurantPaymentMethods.description")}</p>
+        </div>
+        {canEdit ? (
+          <Button onClick={() => edit(null)}>
+            <Plus />
+            {t("restaurantPaymentMethods.add")}
+          </Button>
+        ) : null}
+      </header>
+      <article className="panel ingredients-panel">
+        <RestaurantSettingsListTable
+          className="ingredients-table-wrap"
+          loading={loading}
+          loadingLabel={t("restaurantPaymentMethods.loading")}
+          skeletonColumns={canEdit || canDelete ? 5 : 4}
+          header={
+            <tr>
+              <th>{t("restaurantPaymentMethods.columns.order")}</th>
+              <th>{t("restaurantPaymentMethods.columns.name")}</th>
+              <th>{t("restaurantPaymentMethods.columns.status")}</th>
+              <th>{t("restaurantPaymentMethods.columns.deductsPettyCash")}</th>
+              {canEdit || canDelete ? (
+                <th
+                  aria-label={t("restaurantPaymentMethods.columns.actions")}
+                />
+              ) : null}
+            </tr>
+          }
+        >
+          {rows.map((row) => (
+            <tr key={row.id}>
+              <td>{row.sortOrder}</td>
+              <td>
+                <strong>{row.name}</strong>
+              </td>
+              <td>
+                {canEdit ? (
+                  <Switch
+                    checked={row.isActive}
+                    onCheckedChange={(value) =>
+                      void updateFlag(row, { is_active: value })
+                    }
+                    aria-label={
+                      row.isActive
+                        ? t("restaurantPaymentMethods.active")
+                        : t("restaurantPaymentMethods.inactive")
+                    }
+                  />
+                ) : row.isActive ? (
+                  t("restaurantPaymentMethods.active")
+                ) : (
+                  t("restaurantPaymentMethods.inactive")
+                )}
+              </td>
+              <td>
+                {canEdit ? (
+                  <Switch
+                    checked={row.deductsPettyCash}
+                    onCheckedChange={(value) =>
+                      void updateFlag(row, { deducts_petty_cash: value })
+                    }
+                    aria-label={t(
+                      "restaurantPaymentMethods.columns.deductsPettyCash",
+                    )}
+                  />
+                ) : row.deductsPettyCash ? (
+                  t("restaurantPaymentMethods.yes")
+                ) : (
+                  t("restaurantPaymentMethods.no")
+                )}
+              </td>
+              {canEdit || canDelete ? (
+                <td className="table-actions-cell">
+                  <div className="table-row-actions">
+                    {canEdit ? (
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        aria-label={t("restaurantPaymentMethods.edit")}
+                        onClick={() => edit(row)}
+                      >
+                        <Pencil />
+                      </Button>
+                    ) : null}
+                    {canDelete ? (
+                      <Button
+                        size="icon"
+                        variant="destructive"
+                        aria-label={t("restaurantPaymentMethods.delete")}
+                        onClick={() => void remove(row)}
+                      >
+                        <Trash2 />
+                      </Button>
+                    ) : null}
+                  </div>
+                </td>
+              ) : null}
+            </tr>
+          ))}
+        </RestaurantSettingsListTable>
+      </article>
+      <SidePanel
+        open={open}
+        title={t(
+          editing
+            ? "restaurantPaymentMethods.editTitle"
+            : "restaurantPaymentMethods.addTitle",
+        )}
+        onClose={close}
+        closeLabel={t("restaurantPaymentMethods.close")}
+        footer={
+          <>
+            <Button variant="outline" onClick={close}>
+              {t("restaurantPaymentMethods.cancel")}
+            </Button>
+            <Button
+              type="submit"
+              form="restaurant-payment-method-form"
+              disabled={saving}
+            >
+              {saving
+                ? t("restaurantPaymentMethods.saving")
+                : t("restaurantPaymentMethods.save")}
+            </Button>
+          </>
+        }
+      >
+        <form
+          id="restaurant-payment-method-form"
+          className="ingredients-form"
+          onSubmit={(event) => void submit(event)}
+        >
+          <label className="ingredients-field">
+            <span>{t("restaurantPaymentMethods.fields.order")}</span>
+            <input
+              type="number"
+              min="0"
+              value={sortOrder}
+              onChange={(event) => setSortOrder(event.target.value)}
+            />
+          </label>
+          <label className="ingredients-field">
+            <span>{t("restaurantPaymentMethods.fields.name")}</span>
+            <input
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder={t("restaurantPaymentMethods.fields.namePlaceholder")}
+            />
+          </label>
+          <label className="ingredients-field">
+            <span>{t("restaurantPaymentMethods.fields.status")}</span>
+            <Switch checked={active} onCheckedChange={setActive} />
+          </label>
+          <label className="ingredients-field">
+            <span>{t("restaurantPaymentMethods.fields.deductsPettyCash")}</span>
+            <Switch
+              checked={deductsPettyCash}
+              onCheckedChange={setDeductsPettyCash}
+            />
+          </label>
+        </form>
+      </SidePanel>
+    </section>
+  );
 }

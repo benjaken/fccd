@@ -60,6 +60,7 @@ import { PackageDetailPage } from "@/components/PackageDetailPage";
 import { PreparedMeatInventoryCalcPage } from "@/components/PreparedMeatInventoryCalcPage";
 import { MeatDeliveryNotesPage } from "@/components/MeatDeliveryNotesPage";
 import { DeliveryListPage } from "@/components/DeliveryListPage";
+import { AssignDriverPage } from "@/components/AssignDriverPage";
 import { FactoryBoardPage } from "@/components/FactoryBoardPage";
 import { RawMeatInventoryCalcPage } from "@/components/RawMeatInventoryCalcPage";
 import { SpiceUsagePage } from "@/components/SpiceUsagePage";
@@ -792,6 +793,16 @@ function OperationsShell() {
               <Route
                 path="/delivery"
                 element={<DeliveryListPage canEdit={canEditDeliveries} />}
+              />
+              <Route
+                path="/delivery/assign"
+                element={
+                  pageAccess.canAccess("delivery.assign") ? (
+                    <AssignDriverPage />
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
+                }
               />
               <Route
                 path="/kitchen/settings"

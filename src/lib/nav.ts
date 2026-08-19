@@ -335,6 +335,12 @@ export const secondaryNav: Record<string, NavItem[]> = {
       permissionKey: "kitchen.ingredients",
     },
     {
+      key: "suppliers",
+      to: "/kitchen/suppliers",
+      icon: Users,
+      permissionKey: "kitchen.suppliers",
+    },
+    {
       key: "packingStocktakes",
       to: "/kitchen/packing-stocktakes",
       icon: ClipboardList,
@@ -345,12 +351,6 @@ export const secondaryNav: Record<string, NavItem[]> = {
       to: "/kitchen/ingredient-stocktakes",
       icon: ClipboardList,
       permissionKey: "kitchen.ingredient_stocktakes",
-    },
-    {
-      key: "suppliers",
-      to: "/kitchen/suppliers",
-      icon: Users,
-      permissionKey: "kitchen.suppliers",
     },
     {
       key: "kitchenSettings",
