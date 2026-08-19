@@ -315,8 +315,17 @@ function OperationsShell() {
         </div>
 
         <nav className="workspace-links" aria-label="Workspaces">
-          {workspaceLinks.map(
-            ({ key, to, icon: WorkspaceIcon }) => (
+          {workspaceLinks.map(({ key, to, icon: WorkspaceIcon, disabled }) =>
+            disabled ? (
+              <span
+                key={key}
+                className="workspace-soft-link disabled"
+                aria-disabled="true"
+              >
+                <WorkspaceIcon />
+                <span>{t(`workspace.${key}`)}</span>
+              </span>
+            ) : (
               <Link
                 key={key}
                 to={to}
@@ -960,8 +969,17 @@ function OperationsShell() {
                 <p className="mobile-nav-group-label">
                   {t("workspace.label")}
                 </p>
-                {workspaceLinks.map(
-                  ({ key, to, icon: WorkspaceIcon }) => (
+                {workspaceLinks.map(({ key, to, icon: WorkspaceIcon, disabled }) =>
+                  disabled ? (
+                    <span
+                      key={key}
+                      className="sidebar-link disabled"
+                      aria-disabled="true"
+                    >
+                      <WorkspaceIcon />
+                      <span>{t(`workspace.${key}`)}</span>
+                    </span>
+                  ) : (
                     <Link
                       key={key}
                       to={to}

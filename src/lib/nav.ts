@@ -552,10 +552,11 @@ export const workspaceLinks: Array<{
   key: string;
   to: string;
   icon: Icon;
+  disabled?: boolean;
 }> = [
   { key: "factory", to: "/factory", icon: Factory },
   { key: "delivery", to: "/driver-delivery", icon: Truck },
-  { key: "customer", to: "/customer", icon: Users },
+  { key: "customer", to: "/customer", icon: Users, disabled: true },
 ];
 
 export function sectionFromPath(pathname: string) {
