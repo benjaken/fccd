@@ -6056,33 +6056,61 @@ button.product-tag[aria-pressed="true"] {
 .stocktake-records-layout {
   display: grid;
   grid-template-columns: minmax(170px, 240px) minmax(0, 1fr);
+  gap: 18px;
   flex: 1 1 auto;
   min-height: 0;
+  padding: 14px;
 }
 
 .stocktake-date-list {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  overflow: auto;
-  border-right: 1px solid var(--border);
-  background: var(--muted);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
 }
 
-.stocktake-date-list > span { padding: 16px; color: var(--muted-foreground); }
-
-.stocktake-date-item {
+.stocktake-date-list-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  min-height: 60px;
+  padding: 0 16px;
   border-bottom: 1px solid var(--border);
+}
+
+.stocktake-date-list-header strong { font-size: 15px; }
+.stocktake-date-list-header svg { width: 17px; height: 17px; color: var(--muted-foreground); }
+
+.stocktake-date-list-options {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 0;
+  padding: 8px;
+  overflow: auto;
+}
+
+.stocktake-date-list-options > span { padding: 10px 8px; color: var(--muted-foreground); }
+
+.stocktake-date-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border-radius: 9px;
 }
 
 .stocktake-date-item > button:first-child {
   flex: 1 1 auto;
   display: grid;
   gap: 3px;
-  padding: 12px 16px;
+  min-width: 0;
+  padding: 10px 12px;
   border: 0;
+  border-radius: 9px;
   background: transparent;
   color: var(--foreground);
   font: inherit;
@@ -6092,14 +6120,26 @@ button.product-tag[aria-pressed="true"] {
 }
 
 .stocktake-date-item small { color: var(--muted-foreground); font-size: 14px; font-style: italic; font-weight: 400; }
-.stocktake-date-item > button:last-child { margin-right: 6px; color: var(--destructive); }
+.stocktake-date-item > button:last-child {
+  width: 32px;
+  height: 32px;
+  margin-right: 4px;
+  color: var(--destructive);
+  opacity: 0;
+}
 
 .stocktake-date-item:hover,
-.stocktake-date-item:focus-within,
-.stocktake-date-item.is-active {
+.stocktake-date-item:focus-within {
   background: var(--selection-bg);
-  color: var(--selection-fg);
 }
+
+.stocktake-date-item:hover > button:last-child,
+.stocktake-date-item:focus-within > button:last-child { opacity: 1; }
+
+.stocktake-date-item.is-active { background: var(--primary); }
+.stocktake-date-item.is-active > button:first-child { color: var(--primary-foreground); }
+.stocktake-date-item.is-active small { color: color-mix(in oklch, var(--primary-foreground) 78%, transparent); }
+.stocktake-date-item.is-active > button:last-child { color: var(--primary-foreground); }
 
 .stocktake-date-item > button:first-child:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
 
@@ -6109,7 +6149,7 @@ button.product-tag[aria-pressed="true"] {
 
 @media (max-width: 760px) {
   .stocktake-records-layout { grid-template-columns: 1fr; }
-  .stocktake-date-list { max-height: 180px; border-right: 0; border-bottom: 1px solid var(--border); }
+  .stocktake-date-list { max-height: 240px; }
 }
 
 .print-stocktake-sheet {

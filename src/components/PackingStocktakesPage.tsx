@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ClipboardList, Printer, RefreshCw, Trash2 } from "lucide-react";
+import { ClipboardList, Printer, RefreshCw, SlidersHorizontal, Trash2 } from "lucide-react";
 
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
@@ -207,7 +207,13 @@ export function PackingStocktakesPage({
       <article className="panel ingredients-panel">
         <div className="stocktake-records-layout">
         <aside className="stocktake-date-list" aria-label={t(copyKey("dateList"))}>
-          {datesLoading ? <span>{t(copyKey("loading"))}</span> : dates.length === 0 ? <span>{t(copyKey("noDates"))}</span> : dates.map((item) => <div key={item.date} className={item.date === stocktakeDate ? "stocktake-date-item is-active" : "stocktake-date-item"}><button type="button" onClick={() => { setStocktakeDate(item.date); setPage(1); }}><strong>{formatDate(`${item.date}T00:00:00+08:00`, i18n.language)}</strong><small>{t(copyKey("updatedAt"), { time: formatDateTime(item.updatedAt, i18n.language) })}</small></button>{canDelete ? <Button type="button" variant="ghost" size="icon" disabled={deletingDate === item.date} aria-label={t(copyKey("deleteDate"), { date: formatDate(`${item.date}T00:00:00+08:00`, i18n.language) })} onClick={() => void removeDate(item.date)}><Trash2 /></Button> : null}</div>)}
+          <header className="stocktake-date-list-header">
+            <strong>{t(copyKey("dateList"))}</strong>
+            <SlidersHorizontal aria-hidden="true" />
+          </header>
+          <div className="stocktake-date-list-options">
+            {datesLoading ? <span>{t(copyKey("loading"))}</span> : dates.length === 0 ? <span>{t(copyKey("noDates"))}</span> : dates.map((item) => <div key={item.date} className={item.date === stocktakeDate ? "stocktake-date-item is-active" : "stocktake-date-item"}><button type="button" onClick={() => { setStocktakeDate(item.date); setPage(1); }}><strong>{formatDate(`${item.date}T00:00:00+08:00`, i18n.language)}</strong><small>{t(copyKey("updatedAt"), { time: formatDateTime(item.updatedAt, i18n.language) })}</small></button>{canDelete ? <Button type="button" variant="ghost" size="icon" disabled={deletingDate === item.date} aria-label={t(copyKey("deleteDate"), { date: formatDate(`${item.date}T00:00:00+08:00`, i18n.language) })} onClick={() => void removeDate(item.date)}><Trash2 /></Button> : null}</div>)}
+          </div>
         </aside>
         <div className="stocktake-records-content">
         {stocktakeDate ? <>
