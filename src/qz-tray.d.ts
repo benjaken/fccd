@@ -45,6 +45,11 @@ declare module "qz-tray" {
   interface QzApi {
     websocket: QzWebSocketApi;
     printers: QzPrintersApi;
+    security: {
+      setCertificatePromise(callback: (resolve: (value: string) => void, reject: (reason?: unknown) => void) => void): void;
+      setSignatureAlgorithm(algorithm: "SHA512" | "SHA256" | "SHA1"): void;
+      setSignaturePromise(callback: (toSign: string) => (resolve: (value: string) => void, reject: (reason?: unknown) => void) => void): void;
+    };
   }
 
   const qz: QzApi;

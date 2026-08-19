@@ -13,6 +13,8 @@ export const KITCHEN_PACKING_STOCKTAKES_DELETE = "kitchen.packing_stocktakes.del
 export const KITCHEN_INGREDIENT_STOCKTAKES_PAGE_KEY = "kitchen.ingredient_stocktakes";
 export const KITCHEN_INGREDIENT_STOCKTAKES_EDIT = "kitchen.ingredient_stocktakes.edit";
 export const KITCHEN_INGREDIENT_STOCKTAKES_DELETE = "kitchen.ingredient_stocktakes.delete";
+export const KITCHEN_COST_INPUT_PAGE_KEY = "kitchen.cost_input";
+export const KITCHEN_COST_INPUT_EDIT = "kitchen.cost_input.edit";
 
 export const KITCHEN_ACTION_PERMISSION_KEYS = {
   cookTypes: {
@@ -32,6 +34,7 @@ export const KITCHEN_ACTION_PERMISSION_KEYS = {
     delete: KITCHEN_PACKING_STOCKTAKES_DELETE,
   },
   ingredientStocktakes: { edit: KITCHEN_INGREDIENT_STOCKTAKES_EDIT, delete: KITCHEN_INGREDIENT_STOCKTAKES_DELETE },
+  costInput: { edit: KITCHEN_COST_INPUT_EDIT },
 } as const;
 
 export const KITCHEN_ACTION_PAGE_KEYS = [
@@ -51,4 +54,6 @@ export const KITCHEN_ACTION_PAGE_KEYS = [
   KITCHEN_INGREDIENT_STOCKTAKES_PAGE_KEY,
   KITCHEN_INGREDIENT_STOCKTAKES_EDIT,
   KITCHEN_INGREDIENT_STOCKTAKES_DELETE,
+  KITCHEN_COST_INPUT_PAGE_KEY,
+  KITCHEN_COST_INPUT_EDIT,
 ] as const;

@@ -6015,6 +6015,889 @@ button.product-tag[aria-pressed="true"] {
   top: 0;
 }
 
+/* Central kitchen weekly advertising cost matrix. */
+.ingredients-page.kitchen-cost-page {
+  gap: 0;
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+
+.kitchen-cost-page > .page-heading {
+  margin-bottom: 20px;
+}
+
+.kitchen-cost-tabs {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 0.25rem;
+  overflow-x: auto;
+  padding: 0 0.5rem;
+  border: 1px solid var(--border);
+  border-bottom: 0;
+  border-radius: var(--radius) var(--radius) 0 0;
+  background: var(--card);
+}
+
+.kitchen-cost-tabs button {
+  position: relative;
+  flex: 0 0 auto;
+  min-height: 46px;
+  padding: 0.7rem 1.1rem;
+  border: 0;
+  background: transparent;
+  color: var(--muted-foreground);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.kitchen-cost-tabs button::after {
+  position: absolute;
+  right: 0.75rem;
+  bottom: 0;
+  left: 0.75rem;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: transparent;
+  content: "";
+}
+
+.kitchen-cost-tabs button:hover {
+  color: var(--foreground);
+  background: var(--accent);
+}
+
+.kitchen-cost-tabs button[aria-selected="true"] {
+  color: var(--primary);
+}
+
+.kitchen-cost-tabs button[aria-selected="true"]::after {
+  background: var(--primary);
+}
+
+.kitchen-cost-tabs button:focus-visible {
+  border-radius: 0.4rem;
+  outline: 2px solid var(--ring);
+  outline-offset: -3px;
+}
+
+.kitchen-cost-panel {
+  padding: 1rem;
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+
+.kitchen-cost-placeholder {
+  display: grid;
+  flex: 1 1 auto;
+  min-height: 16rem;
+  place-content: center;
+  justify-items: center;
+  gap: 0.75rem;
+  color: var(--muted-foreground);
+  text-align: center;
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+
+.kitchen-cost-placeholder > svg {
+  width: 2.25rem;
+  height: 2.25rem;
+  color: var(--primary);
+}
+
+.kitchen-cost-placeholder > div {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.kitchen-cost-placeholder strong {
+  color: var(--foreground);
+  font-size: 1.05rem;
+}
+
+.kitchen-monthly-cost-panel {
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+
+.kitchen-monthly-cost-toolbar {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.kitchen-monthly-cost-toolbar.has-pnl-notice {
+  justify-content: space-between;
+}
+
+.kitchen-monthly-cost-pnl-notice {
+  margin: 0;
+  padding: 0.65rem 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--destructive) 30%, transparent);
+  border-radius: 0.55rem;
+  background: color-mix(in srgb, var(--destructive) 10%, white);
+  color: var(--destructive);
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.kitchen-monthly-cost-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.kitchen-monthly-cost-add-panel .side-panel-header p {
+  color: var(--destructive);
+  font-weight: 750;
+}
+
+.kitchen-monthly-cost-table-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.kitchen-monthly-cost-panel > .operational-list-pagination {
+  flex: 0 0 auto;
+}
+
+.kitchen-monthly-cost-table {
+  min-width: 1080px;
+  table-layout: fixed;
+}
+
+.kitchen-monthly-cost-table th:nth-child(1) { width: 7.5rem; }
+.kitchen-monthly-cost-table th:nth-child(2) { width: 6rem; }
+.kitchen-monthly-cost-table th:nth-child(3) { width: 20rem; }
+.kitchen-monthly-cost-table th:nth-child(4) { width: 11rem; }
+.kitchen-monthly-cost-table th:nth-child(5) { width: 11rem; }
+.kitchen-monthly-cost-table th:nth-child(6) { width: 16rem; }
+.kitchen-monthly-cost-table th:nth-child(7) { width: 4.5rem; }
+
+.kitchen-monthly-cost-table th,
+.kitchen-monthly-cost-table td {
+  vertical-align: middle;
+}
+
+.kitchen-monthly-cost-table th:last-child,
+.kitchen-monthly-cost-table td:last-child {
+  text-align: center;
+}
+
+.kitchen-monthly-cost-brands {
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.kitchen-monthly-cost-table td > input,
+.kitchen-monthly-cost-table .kitchen-cost-record-amount input {
+  width: 100%;
+  min-width: 0;
+  height: 38px;
+  border: 1px solid var(--input);
+  border-radius: 0.5rem;
+  background: var(--background);
+  color: var(--foreground);
+  padding: 0 0.65rem;
+}
+
+.kitchen-monthly-cost-table .kitchen-cost-record-amount input {
+  border-radius: 0 0.5rem 0.5rem 0;
+}
+
+.kitchen-monthly-cost-remarks {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kitchen-monthly-cost-remarks:focus {
+  text-overflow: clip;
+}
+
+.kitchen-festival-brand-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: var(--foreground);
+  font-weight: 700;
+}
+
+.kitchen-festival-brand-heading .button {
+  height: auto;
+  padding: 0;
+  color: var(--primary);
+}
+
+.kitchen-festival-brand-select {
+  width: 100%;
+  min-height: 11rem;
+  padding: 0.35rem;
+  border: 1px solid var(--input);
+  border-radius: 0.6rem;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+}
+
+.kitchen-festival-brand-select option {
+  padding: 0.45rem 0.55rem;
+  border-radius: 0.35rem;
+}
+
+.kitchen-festival-brand-help {
+  margin-top: -0.5rem;
+  color: var(--muted-foreground);
+}
+
+.kitchen-festival-range-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.kitchen-festival-range-fields legend {
+  grid-column: 1 / -1;
+  margin-bottom: 0.15rem;
+  color: var(--foreground);
+  font-weight: 700;
+}
+
+.kitchen-festival-range-fields label {
+  display: grid;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.kitchen-festival-range-fields label > span {
+  color: var(--muted-foreground);
+  font-size: 0.85rem;
+  font-weight: 650;
+}
+
+.kitchen-festival-range-fields input {
+  width: 100%;
+  min-width: 0;
+  height: 42px;
+  padding: 0 0.7rem;
+  border: 1px solid var(--input);
+  border-radius: 0.6rem;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+}
+
+.kitchen-festival-cost-table th:nth-child(1) { width: 15rem; }
+.kitchen-festival-cost-table th:nth-child(2) { width: 9rem; }
+.kitchen-festival-cost-table th:nth-child(3) { width: 18rem; }
+.kitchen-festival-cost-table th:nth-child(4) { width: 10rem; }
+.kitchen-festival-cost-table th:nth-child(5) { width: 11rem; }
+.kitchen-festival-cost-table th:nth-child(6) { width: 16rem; }
+.kitchen-festival-cost-table th:nth-child(7) { width: 4.5rem; }
+
+.kitchen-festival-cost-table td:first-child {
+  white-space: nowrap;
+}
+
+.kitchen-supplier-record-toolbar {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+.kitchen-supplier-record-filters {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.kitchen-supplier-record-filters > label {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.kitchen-supplier-record-filters > label > span {
+  color: var(--muted-foreground);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.kitchen-supplier-record-filters select,
+.kitchen-supplier-record-filters input[type="date"] {
+  min-width: 8rem;
+  height: 40px;
+  padding: 0 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+}
+
+.kitchen-supplier-record-filters .date-range-picker {
+  width: 22rem;
+}
+
+.kitchen-supplier-filter-select select {
+  width: 18rem;
+}
+
+.kitchen-supplier-record-toolbar > .kitchen-monthly-cost-actions {
+  flex: 0 0 auto;
+}
+
+.kitchen-supplier-record-table {
+  min-width: 720px;
+  table-layout: fixed;
+}
+
+.kitchen-supplier-record-table th:nth-child(1) { width: 18rem; }
+.kitchen-supplier-record-table th:nth-child(2) { width: 20rem; }
+.kitchen-supplier-record-table th:nth-child(3) { width: 24rem; }
+.kitchen-supplier-record-table th:nth-child(4) { width: 14rem; text-align: right; }
+
+.kitchen-supplier-record-table td {
+  vertical-align: middle;
+}
+
+.kitchen-supplier-record-table td:last-child {
+  text-align: right;
+}
+
+.kitchen-supplier-entry-panel .side-panel-body {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0;
+}
+
+.kitchen-supplier-entry-panel {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.kitchen-supplier-entry-panel .list-inline-error {
+  margin: 0.75rem 1rem 0;
+}
+
+.kitchen-supplier-entry-table-wrap {
+  min-height: 0;
+  overflow-x: auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.kitchen-supplier-entry-table {
+  min-width: 860px;
+  table-layout: fixed;
+}
+
+.kitchen-supplier-entry-table th:nth-child(1) { width: 11rem; }
+.kitchen-supplier-entry-table th:nth-child(2) { width: 20rem; }
+.kitchen-supplier-entry-table th:nth-child(3) { width: 13rem; }
+.kitchen-supplier-entry-table th:nth-child(4) { width: 13rem; }
+.kitchen-supplier-entry-table th:nth-child(5) { width: 6rem; text-align: center; }
+
+.kitchen-supplier-entry-table td {
+  vertical-align: middle;
+}
+
+.kitchen-supplier-entry-table td:last-child {
+  text-align: center;
+}
+
+.kitchen-supplier-entry-panel .operational-list-pagination {
+  margin: 0;
+  border-top: 1px solid var(--border);
+}
+
+.kitchen-supplier-category-list {
+  display: grid;
+}
+
+.kitchen-supplier-category-list > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px dashed var(--border);
+}
+
+.kitchen-supplier-category-list > div:last-child {
+  border-bottom: 0;
+}
+
+.kitchen-supplier-category-form {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 0.65rem;
+}
+
+.kitchen-supplier-category-form-heading,
+.kitchen-supplier-category-form > label,
+.kitchen-supplier-category-total {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(12rem, 1.1fr);
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.kitchen-supplier-category-form-heading {
+  background: color-mix(in srgb, var(--primary) 10%, var(--background));
+}
+
+.kitchen-supplier-category-form > label > span {
+  color: var(--foreground);
+  font-weight: 650;
+}
+
+.kitchen-supplier-category-total {
+  border-bottom: 0;
+  background: var(--muted);
+}
+
+.kitchen-supplier-category-total strong:last-child {
+  text-align: right;
+}
+
+.kitchen-supplier-form-hint {
+  margin: 0;
+  padding: 1rem;
+  border: 1px dashed var(--border);
+  border-radius: 0.65rem;
+  color: var(--muted-foreground);
+  text-align: center;
+}
+
+
+.kitchen-cost-table-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.kitchen-cost-table {
+  min-width: 1180px;
+  table-layout: fixed;
+}
+
+.kitchen-cost-table th,
+.kitchen-cost-table td {
+  border: 1px solid var(--border);
+  padding: 0.55rem 0.65rem;
+  vertical-align: top;
+}
+
+.kitchen-cost-table thead th {
+  background: color-mix(in srgb, var(--primary) 12%, var(--card));
+  color: var(--foreground);
+  text-align: left;
+}
+
+.kitchen-cost-table thead tr:last-child th {
+  height: 48px;
+  vertical-align: middle;
+  text-align: center;
+}
+
+.kitchen-cost-table thead tr:last-child th:first-child {
+  text-align: left;
+}
+
+.kitchen-cost-table thead th:first-child,
+.kitchen-cost-table tbody th {
+  width: 9rem;
+}
+
+.kitchen-cost-table tbody th {
+  background: color-mix(in srgb, #f2b233 35%, var(--card));
+  font-weight: 750;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.kitchen-cost-week-labels th {
+  border-bottom: 0;
+  padding-block: 0.35rem;
+  text-align: center;
+}
+
+.kitchen-cost-week-select {
+  display: block;
+  width: 100%;
+  min-width: 10rem;
+  height: 36px;
+  margin: 0;
+  border: 1px solid color-mix(in srgb, var(--primary) 55%, var(--border));
+  border-radius: 0.35rem;
+  background: var(--background);
+  color: var(--foreground);
+  padding: 0.35rem 0.45rem;
+  font: inherit;
+}
+
+.kitchen-cost-cell {
+  display: grid;
+  gap: 0.28rem;
+  min-width: 9.75rem;
+}
+
+.kitchen-cost-sales,
+.kitchen-cost-line {
+  display: grid;
+  grid-template-columns: minmax(4.25rem, 1fr) auto auto;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+
+.kitchen-cost-sales {
+  grid-template-columns: minmax(4.25rem, 1fr) auto;
+}
+
+.kitchen-cost-sales strong,
+.kitchen-cost-line strong {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.kitchen-cost-line span,
+.kitchen-cost-line strong {
+  color: #1683e8;
+}
+
+.kitchen-cost-line em {
+  color: #f58b00;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.kitchen-cost-total-row th,
+.kitchen-cost-total-row td {
+  border-top-width: 0.4rem;
+  font-weight: 650;
+}
+
+.kitchen-cost-empty {
+  padding: 2.5rem !important;
+  color: var(--muted-foreground);
+  text-align: center;
+}
+
+.kitchen-cost-date-error {
+  color: var(--destructive);
+}
+
+.kitchen-cost-money-input {
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+  border: 1px solid var(--input);
+  border-radius: 0.6rem;
+  background: var(--background);
+}
+
+.kitchen-cost-money-input > span {
+  display: grid;
+  place-items: center;
+  padding: 0 0.75rem;
+  border-right: 1px solid var(--input);
+  background: var(--muted);
+  color: var(--foreground);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.ingredients-field .kitchen-cost-money-input > input {
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.kitchen-cost-money-input:focus-within {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 16%, transparent);
+}
+
+.kitchen-cost-records-table-wrap {
+  overflow-x: auto;
+}
+
+.kitchen-cost-charts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.kitchen-cost-chart-card {
+  min-width: 0;
+  margin: 0;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.8rem;
+  background: var(--card);
+}
+
+.kitchen-cost-charts-skeleton .kitchen-cost-chart-card {
+  overflow: hidden;
+}
+
+.kitchen-cost-chart-skeleton-title {
+  width: 9rem;
+  height: 16px;
+}
+
+.kitchen-cost-chart-skeleton-copy {
+  width: 6.5rem;
+  height: 10px;
+}
+
+.kitchen-cost-chart-skeleton-total {
+  width: 6rem;
+  height: 16px;
+}
+
+.kitchen-cost-chart-skeleton-legend b {
+  display: block;
+  width: 3.5rem;
+  height: 10px;
+}
+
+.kitchen-cost-chart-skeleton-value {
+  width: 3.6rem;
+  height: 10px;
+}
+
+.kitchen-cost-chart-skeleton-bar {
+  display: block;
+  width: min(72%, 3.5rem);
+  border-radius: 0.45rem 0.45rem 0 0;
+}
+
+.kitchen-cost-chart-skeleton-date {
+  width: 3.2rem;
+  height: 9px;
+  margin-inline: auto;
+}
+
+.kitchen-cost-chart-card figcaption {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.kitchen-cost-chart-card figcaption > div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.kitchen-cost-chart-card figcaption strong {
+  font-size: 1rem;
+}
+
+.kitchen-cost-chart-card figcaption span,
+.kitchen-cost-chart-card figcaption em {
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+}
+
+.kitchen-cost-chart-card figcaption em {
+  color: var(--foreground);
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.kitchen-cost-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.85rem;
+  min-height: 1.4rem;
+  margin: -0.35rem 0 0.5rem;
+}
+
+.kitchen-cost-chart-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--muted-foreground);
+  font-size: 0.8rem;
+}
+
+.kitchen-cost-chart-legend i {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 0.2rem;
+}
+
+.kitchen-cost-bar-chart {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(4.5rem, 1fr));
+  gap: 0.5rem;
+  min-width: 31rem;
+  height: 13rem;
+  padding-top: 1.6rem;
+}
+
+.kitchen-cost-bar-column {
+  position: relative;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 0.4rem;
+  min-width: 0;
+  text-align: center;
+}
+
+.kitchen-cost-bar-value {
+  position: absolute;
+  top: -1.35rem;
+  left: 50%;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.kitchen-cost-bar-track {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  min-height: 0;
+  border-bottom: 1px solid var(--border);
+  background: repeating-linear-gradient(
+    to top,
+    transparent 0,
+    transparent calc(25% - 1px),
+    color-mix(in srgb, var(--border) 55%, transparent) 25%
+  );
+}
+
+.kitchen-cost-sales-bar,
+.kitchen-cost-stacked-bar {
+  display: flex;
+  width: min(72%, 3.5rem);
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 0.45rem 0.45rem 0 0;
+}
+
+.kitchen-cost-sales-bar {
+  background: linear-gradient(to top, #1683e8, #55b2ff);
+}
+
+.kitchen-cost-stacked-bar {
+  flex-direction: column-reverse;
+}
+
+.kitchen-cost-stacked-bar > i {
+  display: block;
+  width: 100%;
+  min-height: 1px;
+}
+
+.kitchen-cost-bar-column > small {
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.kitchen-cost-records-table {
+  min-width: 860px;
+  table-layout: fixed;
+}
+
+.kitchen-cost-records-table th:nth-child(1) { width: 12rem; }
+.kitchen-cost-records-table th:nth-child(2) { width: 10rem; }
+.kitchen-cost-records-table th:nth-child(3) { width: 8rem; }
+.kitchen-cost-records-table th:nth-child(4) { width: 9rem; }
+.kitchen-cost-records-table th:nth-child(5) { width: 18rem; }
+.kitchen-cost-records-table th:nth-child(6) { width: 4.5rem; }
+
+.kitchen-cost-records-table td {
+  vertical-align: middle;
+}
+
+.kitchen-cost-records-table td > input,
+.kitchen-cost-record-amount input {
+  width: 100%;
+  min-width: 0;
+  height: 38px;
+  border: 1px solid var(--input);
+  border-radius: 0.5rem;
+  background: var(--background);
+  color: var(--foreground);
+  padding: 0 0.65rem;
+}
+
+.kitchen-cost-records-table .kitchen-cost-record-remarks {
+  max-width: 18rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kitchen-cost-records-table .kitchen-cost-record-remarks:focus {
+  text-overflow: clip;
+}
+
+.kitchen-cost-record-amount {
+  display: flex;
+  align-items: stretch;
+}
+
+.kitchen-cost-record-amount > span {
+  display: grid;
+  place-items: center;
+  padding: 0 0.5rem;
+  border: 1px solid var(--input);
+  border-right: 0;
+  border-radius: 0.5rem 0 0 0.5rem;
+  background: var(--muted);
+  font-weight: 700;
+}
+
+.kitchen-cost-record-amount input {
+  border-radius: 0 0.5rem 0.5rem 0;
+}
+
+@media (max-width: 760px) {
+  .kitchen-cost-panel {
+    padding: 0.65rem;
+  }
+
+  .kitchen-cost-charts {
+    grid-template-columns: 1fr;
+  }
+
+  .kitchen-cost-chart-card {
+    overflow-x: auto;
+  }
+}
+
 .stocktake-quantity-value {
   min-width: 4.5rem;
   padding: 4px 6px;

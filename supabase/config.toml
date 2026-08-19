@@ -13,6 +13,9 @@ verify_jwt = false
 [functions.login-log]
 verify_jwt = false
 
+[functions.qz-sign]
+verify_jwt = true
+
 [functions.bubble-daily-incremental]
 verify_jwt = false
 
