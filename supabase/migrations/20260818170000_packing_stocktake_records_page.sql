@@ -293,6 +293,40 @@ select roles.role, pages.page_key,
 from roles cross join pages left join public.role_page_permissions parent_permission on parent_permission.role = roles.role and parent_permission.page_key = pages.parent_page_key
 on conflict (role, page_key) do update set can_access = excluded.can_access, can_manage = excluded.can_manage, updated_at = now();
 
+-- Replace the legacy role-hardcoded policies from
+-- 20260812070844_create_restaurant_operations.  PostgreSQL permissive
+-- policies are OR-ed together, so leaving those policies in place would let
+-- their broad Admin/Accounting/Shop manager grants bypass the page actions
+-- introduced below.
+do $$
+declare
+  table_name text;
+  policy_name text;
+begin
+  foreach table_name in array array[
+    'restaurant_staff',
+    'restaurants',
+    'restaurant_ingredients',
+    'restaurant_ingredient_departments',
+    'restaurant_departments',
+    'restaurant_service_periods',
+    'restaurant_payment_methods',
+    'restaurant_delivery_platforms',
+    'restaurant_holidays',
+    'restaurant_time_slots'
+  ] loop
+    foreach policy_name in array array[
+      'Restaurant reads ' || table_name,
+      'Administrators insert ' || table_name,
+      'Administrators update ' || table_name,
+      'Administrators delete ' || table_name
+    ] loop
+      execute format('drop policy if exists %I on public.%I', policy_name, table_name);
+    end loop;
+  end loop;
+end;
+$$;
+
 create policy "Restaurant staff page readers" on public.restaurant_staff for select to authenticated using (private.has_page_access('restaurant.staff'));
 create policy "Restaurant staff editors" on public.restaurant_staff for insert to authenticated with check (private.has_page_access('restaurant.staff.edit'));
 create policy "Restaurant staff page restaurant readers" on public.restaurants for select to authenticated using (private.has_page_access('restaurant.staff'));
@@ -308,25 +342,6 @@ create table if not exists public.supplier_cost_categories (
   archived_at timestamptz
 );
 alter table public.supplier_cost_categories enable row level security;
-
-insert into public.app_pages (page_key, display_name, route, sort_order, is_high_risk, parent_page_key, page_kind)
-values
-  ('settings.supplier_cost_categories', '供應商費用類別', '/settings/supplier-cost-categories', 62, false, 'settings', 'subpage'),
-  ('settings.supplier_cost_categories.edit', '新增/編輯供應商費用類別', '/settings/supplier-cost-categories/actions/edit', 63, true, 'settings.supplier_cost_categories', 'action'),
-  ('settings.supplier_cost_categories.delete', '刪除供應商費用類別', '/settings/supplier-cost-categories/actions/delete', 64, true, 'settings.supplier_cost_categories', 'action')
-on conflict (page_key) do update set display_name = excluded.display_name, route = excluded.route, sort_order = excluded.sort_order, is_high_risk = excluded.is_high_risk, parent_page_key = excluded.parent_page_key, page_kind = excluded.page_kind, updated_at = now();
-
-with roles(role) as (values ('Super Admin'), ('Admin'), ('Accounting'), ('Factory'), ('Shop manager'), ('Customer_Main'), ('Customer_Sub')),
-pages as (select page_key, parent_page_key from public.app_pages where page_key like 'settings.supplier_cost_categories%')
-insert into public.role_page_permissions (role, page_key, can_access, can_manage)
-select roles.role, pages.page_key, case when roles.role in ('Super Admin', 'Admin', 'Accounting') then true else false end, roles.role = 'Super Admin'
-from roles cross join pages
-on conflict (role, page_key) do update set can_access = excluded.can_access, can_manage = excluded.can_manage, updated_at = now();
-
-create policy "Supplier cost category readers" on public.supplier_cost_categories for select to authenticated using (private.has_page_access('settings.supplier_cost_categories'));
-create policy "Supplier cost category inserts" on public.supplier_cost_categories for insert to authenticated with check (private.has_page_access('settings.supplier_cost_categories.edit'));
-create policy "Supplier cost category updates" on public.supplier_cost_categories for update to authenticated using (private.has_page_access('settings.supplier_cost_categories.edit')) with check (private.has_page_access('settings.supplier_cost_categories.edit'));
-create policy "Supplier cost category deletes" on public.supplier_cost_categories for delete to authenticated using (private.has_page_access('settings.supplier_cost_categories.delete'));
 
 create table if not exists public.restaurant_monthly_pnl_cost_categories (
   id uuid primary key default gen_random_uuid(),
