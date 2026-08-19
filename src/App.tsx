@@ -62,6 +62,7 @@ import { MeatDeliveryNotesPage } from "@/components/MeatDeliveryNotesPage";
 import { DeliveryListPage } from "@/components/DeliveryListPage";
 import { AssignDriverPage } from "@/components/AssignDriverPage";
 import { FactoryBoardPage } from "@/components/FactoryBoardPage";
+import { DriverDeliveryPage } from "@/components/DriverDeliveryPage";
 import { RawMeatInventoryCalcPage } from "@/components/RawMeatInventoryCalcPage";
 import { SpiceUsagePage } from "@/components/SpiceUsagePage";
 import { SeasoningCostSettingsPage } from "@/components/SeasoningCostSettingsPage";
@@ -1670,7 +1671,7 @@ function FactoryWorkspace() {
 }
 
 function DriverDeliveryWorkspace() {
-  return <WorkspaceStandalonePage workspaceKey="delivery" icon={Truck} />;
+  return <DriverDeliveryPage />;
 }
 
 function AuthGate() {
@@ -1695,7 +1696,7 @@ function App() {
         }
       />
       <Route
-        path="/driver-delivery"
+        path="/driver-delivery/*"
         element={
           <AuthProvider>
             <DriverDeliveryWorkspace />

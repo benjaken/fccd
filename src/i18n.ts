@@ -9,6 +9,12 @@ const resources = {
         system: "Food Channel Catering Delivery",
         fullName: "Food Channel Catering Delivery",
       },
+      driverDelivery: {
+        loginCodePlaceholder: "請輸入登入密碼",
+        searchPlaceholder: "搜尋訂單編號或地址",
+        districtSearchPlaceholder: "搜尋地區",
+        surchargeAmountPlaceholder: "0",
+      },
       common: {
         search: "搜尋訂單、客戶或產品",
         viewAll: "查看全部",
@@ -3167,6 +3173,12 @@ const resources = {
   },
   en: {
     translation: {
+      driverDelivery: {
+        loginCodePlaceholder: "輸入登入密碼",
+        searchPlaceholder: "搜尋訂單編號或地址",
+        districtSearchPlaceholder: "搜尋地區",
+        surchargeAmountPlaceholder: "0",
+      },
       brand: {
         name: "FCCD",
         system: "Food Channel Catering Delivery",

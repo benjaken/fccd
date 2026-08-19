@@ -101,7 +101,7 @@ describe("Standalone workspace pages", () => {
   it("shows the driver page as a standalone screen without the ops nav", () => {
     renderPath("/driver-delivery");
 
-    expect(screen.getByRole("heading", { name: "司機送貨" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "司機送貨平台" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "歡迎回來" })).not.toBeInTheDocument();
     expect(
       screen.queryByRole("navigation", { name: "Workspaces" }),
