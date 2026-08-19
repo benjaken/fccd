@@ -53,7 +53,9 @@ export async function fetchUnassignedDriverDeliveries({
   }
   const { data, count, error } = await query
     .order("delivery_at", { ascending: true, nullsFirst: false })
-    .order("created_at", { ascending: false })
+    .order("delivery_time", { ascending: true, nullsFirst: false })
+    .order("ship_out_time", { ascending: true, nullsFirst: false })
+    .order("created_at", { ascending: true })
     .range(start, end);
   if (error) throw error;
 

@@ -23,6 +23,7 @@ import {
   Settings,
   Sun,
   Truck,
+  Users,
   UserRound,
   X,
 } from "lucide-react";
@@ -315,29 +316,21 @@ function OperationsShell() {
 
         <nav className="workspace-links" aria-label="Workspaces">
           {workspaceLinks.map(
-            ({ key, to, icon: WorkspaceIcon, disabled }) =>
-              disabled ? (
-                <span
-                  key={key}
-                  className="workspace-soft-link disabled"
-                  aria-disabled="true"
-                >
-                  <WorkspaceIcon />
-                  <span>{t(`workspace.${key}`)}</span>
-                </span>
-              ) : (
-                <Link
-                  key={key}
-                  to={to}
-                  className={cn(
-                    "workspace-soft-link",
-                    isWorkspaceNavActive(key, location.pathname) && "active",
-                  )}
-                >
-                  <WorkspaceIcon />
-                  <span>{t(`workspace.${key}`)}</span>
-                </Link>
-              ),
+            ({ key, to, icon: WorkspaceIcon }) => (
+              <Link
+                key={key}
+                to={to}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cn(
+                  "workspace-soft-link",
+                  isWorkspaceNavActive(key, location.pathname) && "active",
+                )}
+              >
+                <WorkspaceIcon />
+                <span>{t(`workspace.${key}`)}</span>
+              </Link>
+            ),
           )}
         </nav>
 
@@ -968,33 +961,21 @@ function OperationsShell() {
                   {t("workspace.label")}
                 </p>
                 {workspaceLinks.map(
-                  ({ key, to, icon: WorkspaceIcon, disabled }) =>
-                    disabled ? (
-                      <span
-                        key={key}
-                        className="sidebar-link disabled"
-                        aria-disabled="true"
-                      >
-                        <WorkspaceIcon />
-                        <span>{t(`workspace.${key}`)}</span>
-                      </span>
-                    ) : (
-                      <NavLink
-                        key={key}
-                        to={to}
-                        end
-                        className={() =>
-                          cn(
-                            "sidebar-link",
-                            isWorkspaceNavActive(key, location.pathname) &&
-                              "active",
-                          )
-                        }
-                      >
-                        <WorkspaceIcon />
-                        <span>{t(`workspace.${key}`)}</span>
-                      </NavLink>
-                    ),
+                  ({ key, to, icon: WorkspaceIcon }) => (
+                    <Link
+                      key={key}
+                      to={to}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={cn(
+                        "sidebar-link",
+                        isWorkspaceNavActive(key, location.pathname) && "active",
+                      )}
+                    >
+                      <WorkspaceIcon />
+                      <span>{t(`workspace.${key}`)}</span>
+                    </Link>
+                  ),
                 )}
               </div>
               {mobileNavGroups.map((group) => (
@@ -1592,7 +1573,7 @@ export function WorkspacePlaceholderPage({
   workspaceKey,
   icon: WorkspaceIcon,
 }: {
-  workspaceKey: "factory" | "delivery";
+  workspaceKey: "factory" | "delivery" | "customer";
   icon: Icon;
 }) {
   const { t } = useTranslation();
@@ -1646,7 +1627,7 @@ function WorkspaceStandalonePage({
   workspaceKey,
   icon,
 }: {
-  workspaceKey: "factory" | "delivery";
+  workspaceKey: "factory" | "delivery" | "customer";
   icon: Icon;
 }) {
   return (
@@ -1672,6 +1653,10 @@ function FactoryWorkspace() {
 
 function DriverDeliveryWorkspace() {
   return <DriverDeliveryPage />;
+}
+
+function CustomerWorkspace() {
+  return <WorkspaceStandalonePage workspaceKey="customer" icon={Users} />;
 }
 
 function AuthGate() {
@@ -1700,6 +1685,14 @@ function App() {
         element={
           <AuthProvider>
             <DriverDeliveryWorkspace />
+          </AuthProvider>
+        }
+      />
+      <Route
+        path="/customer/*"
+        element={
+          <AuthProvider>
+            <CustomerWorkspace />
           </AuthProvider>
         }
       />
