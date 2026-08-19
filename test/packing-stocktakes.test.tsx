@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -20,6 +20,12 @@ const records: PackingStocktakeItem[] = [{
 describe("Packaging stocktake records page", () => {
   beforeEach(async () => { vi.restoreAllMocks(); await i18n.changeLanguage("zh-HK"); });
 
+  function dateButton(dateList: HTMLElement, date: string) {
+    const button = dateList.querySelector<HTMLButtonElement>(`button[data-stocktake-date="${date}"]`);
+    if (!button) throw new Error(`Missing stocktake date ${date}`);
+    return button;
+  }
+
   it("uses the operational table and saves a clicked quantity without an edit button", async () => {
     const user = userEvent.setup();
     const saveQuantity = vi.fn().mockResolvedValue(18);
@@ -27,7 +33,7 @@ describe("Packaging stocktake records page", () => {
 
     expect(await screen.findByRole("heading", { name: "包裝盤點記錄" })).toBeInTheDocument();
     const dateList = await screen.findByRole("complementary", { name: "盤點日期列表" });
-    await user.click(within(dateList).getByRole("button", { name: /^2026年8月10日/ }));
+    await user.click(dateButton(dateList, "2026-08-10"));
     expect(screen.getByRole("columnheader", { name: "盤點數量" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "編輯" })).not.toBeInTheDocument();
 
@@ -69,7 +75,7 @@ describe("Packaging stocktake records page", () => {
     render(<MemoryRouter><PackingStocktakesPage canEdit loadDates={vi.fn().mockResolvedValue([{ date: "2026-08-10", updatedAt: "2026-08-10T01:00:00Z" }])} loadRows={vi.fn().mockResolvedValue({ items: records, total: 1 })} loadPrintRows={loadPrintRows} /></MemoryRouter>);
 
     const dateList = await screen.findByRole("complementary", { name: "盤點日期列表" });
-    await user.click(within(dateList).getByRole("button", { name: /^2026年8月10日/ }));
+    await user.click(dateButton(dateList, "2026-08-10"));
     await screen.findByText("芝士汁粉");
     await user.click(screen.getByRole("button", { name: "列印盤點紙" }));
 
@@ -94,7 +100,7 @@ describe("Packaging stocktake records page", () => {
     render(<MemoryRouter><PackingStocktakesPage canEdit loadDates={vi.fn().mockResolvedValue([{ date: "2026-08-10", updatedAt: "2026-08-10T01:00:00Z" }])} loadRows={vi.fn().mockResolvedValue({ items: records, total: 1 })} loadPrintRows={vi.fn().mockRejectedValue(new Error("load failed"))} /></MemoryRouter>);
 
     const dateList = await screen.findByRole("complementary", { name: "盤點日期列表" });
-    await user.click(within(dateList).getByRole("button", { name: /^2026年8月10日/ }));
+    await user.click(dateButton(dateList, "2026-08-10"));
     await screen.findByText("芝士汁粉");
     await user.click(screen.getByRole("button", { name: "列印盤點紙" }));
 
