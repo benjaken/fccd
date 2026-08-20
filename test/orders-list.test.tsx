@@ -30,6 +30,12 @@ const orderResult: OrderListResult = {
       statuses: [{ name: "待取貨", color: "#16a34a" }],
       shopifyOrderId: 7808193593617,
       shopifyStoreDomain: "hklunchbox.myshopify.com",
+      channelName: "Catering",
+      districtName: "中環",
+      address: "Central",
+      contactPhone: "+85291234567",
+      quantity: 12,
+      manualTodos: [{ id: "todo-1", orderId: "order-1", key: "klook", label: "KLOOK" }],
     },
   ],
 };
@@ -62,10 +68,15 @@ describe("Orders list", () => {
       "/orders/order-1",
     );
     const table = within(screen.getByRole("table"));
-    expect(table.getByText("香港女童軍總會")).toBeInTheDocument();
     expect(table.getByText("陳小姐")).toBeInTheDocument();
-    expect(table.getByText("待取貨")).toBeInTheDocument();
-    expect(table.getAllByText("HK$1,610")).toHaveLength(2);
+    expect(table.getByText("+85291234567")).toBeInTheDocument();
+    expect(table.getByText("Central")).toBeInTheDocument();
+    expect(table.getAllByText("待取貨")).toHaveLength(2);
+    expect(table.getByText("2026-08-12")).toBeInTheDocument();
+    expect(table.getByText("出車時間：")).toBeInTheDocument();
+    expect(table.getByText("送貨時間：")).toBeInTheDocument();
+    expect(table.getByText("送貨狀態：")).toBeInTheDocument();
+    expect(table.getAllByText("HK$1,610")).toHaveLength(1);
   });
 
   it("submits search and semantic status filters to the loader", async () => {
@@ -79,13 +90,13 @@ describe("Orders list", () => {
     );
 
     await waitFor(() =>
-      expect(loadOrders).toHaveBeenLastCalledWith({
+      expect(loadOrders).toHaveBeenLastCalledWith(expect.objectContaining({
         page: 1,
         search: "",
         status: "ready",
         preset: "all",
         canViewFinance: true,
-      }),
+      })),
     );
 
     await user.type(
@@ -95,14 +106,71 @@ describe("Orders list", () => {
     await user.click(screen.getByRole("button", { name: "搜尋" }));
 
     await waitFor(() =>
-      expect(loadOrders).toHaveBeenLastCalledWith({
+      expect(loadOrders).toHaveBeenLastCalledWith(expect.objectContaining({
         page: 1,
         search: "B-1513",
         status: "ready",
         preset: "all",
         canViewFinance: true,
-      }),
+      })),
     );
+  });
+
+  it("renders the shared enhanced columns and keeps to-dos on all only", async () => {
+    const user = userEvent.setup();
+    const loadOrders = vi.fn().mockResolvedValue(orderResult);
+    const { rerender } = render(
+      <MemoryRouter><OrdersListPage loadOrders={loadOrders} loadListConfig={emptyListConfig} /></MemoryRouter>,
+    );
+    const table = await screen.findByRole("table");
+    expect(within(table).getByText("品牌")).toBeInTheDocument();
+    expect(within(table).getByText("標籤")).toBeInTheDocument();
+    expect(within(table).getByText("數量")).toBeInTheDocument();
+    expect(within(table).getByText("待辦")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "開啟篩選" }));
+    expect(screen.getByRole("combobox", { name: "品牌" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "標籤" })).toBeInTheDocument();
+    expect(within(table).getAllByText("KLOOK").length).toBeGreaterThan(0);
+    rerender(<MemoryRouter><OrdersListPage preset="pending" loadOrders={loadOrders} loadListConfig={emptyListConfig} /></MemoryRouter>);
+    expect((await screen.findAllByRole("table"))[0]).not.toHaveTextContent("待辦");
+  });
+
+  it("cancels an entire delivery after void confirmation, including delivered orders", async () => {
+    const user = userEvent.setup();
+    const loadOrders = vi.fn().mockResolvedValue({
+      ...orderResult,
+      items: [{ ...orderResult.items[0], deliveryStatus: "\u5df2\u9001\u9054" }],
+    });
+    const cancelDelivery = vi.fn().mockResolvedValue(undefined);
+    render(<MemoryRouter><OrdersListPage loadOrders={loadOrders} loadListConfig={emptyListConfig} cancelDelivery={cancelDelivery} /></MemoryRouter>);
+
+    expect(screen.queryByLabelText("Actions for B-1513")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Details" })).not.toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "報價" })).toHaveAttribute("href", "/quotes");
+    expect(screen.getByRole("link", { name: "溝通" })).toHaveAttribute("href", "tel:+85291234567");
+    expect(screen.getByRole("link", { name: "複製" })).toHaveAttribute("href", "/orders/new?copyFrom=order-1");
+
+    await user.click(screen.getByRole("button", { name: "取消訂單" }));
+    const dialog = screen.getByRole("dialog", { name: "Cancel entire delivery" });
+    const confirm = within(dialog).getByRole("button", { name: "Confirm cancellation" });
+    expect(confirm).toBeDisabled();
+    await user.type(within(dialog).getByLabelText("Enter void to confirm cancellation"), "VOID");
+    expect(confirm).toBeEnabled();
+    await user.click(confirm);
+    await waitFor(() => expect(cancelDelivery).toHaveBeenCalledWith("order-1"));
+    await waitFor(() => expect(loadOrders).toHaveBeenCalledTimes(2));
+  });
+
+  it("opens controlled printable previews without exposing finance when restricted", async () => {
+    const user = userEvent.setup();
+    const loadOrders = vi.fn().mockResolvedValue(orderResult);
+    render(<MemoryRouter><OrdersListPage canViewFinance={false} loadOrders={loadOrders} loadListConfig={emptyListConfig} /></MemoryRouter>);
+    await user.click(await screen.findByRole("button", { name: "送貨單" }));
+    const dialog = screen.getByRole("dialog", { name: "Delivery note preview" });
+    expect(within(dialog).getByText("B-1513")).toBeInTheDocument();
+    expect(within(dialog).queryByText("Amount:")).not.toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "Print" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "取消訂單" })).toBeInTheDocument();
   });
 
   it("loads the pending preset from unconfirmed orders", async () => {
@@ -118,7 +186,7 @@ describe("Orders list", () => {
       await screen.findByRole("heading", { name: "待確定訂單" }),
     ).toBeInTheDocument();
     const table = within(screen.getByRole("table"));
-    expect(table.getByText("待確定")).toBeInTheDocument();
+    expect(table.queryByText("待確定")).not.toBeInTheDocument();
     expect(table.queryByText("已確認")).not.toBeInTheDocument();
     expect(loadOrders).toHaveBeenCalledWith(
       expect.objectContaining({ preset: "pending" }),
@@ -207,6 +275,7 @@ describe("Orders list", () => {
     );
     expect(link).toHaveAttribute("target", "_blank");
     expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    expect(screen.queryByRole("columnheader", { name: "Shopify 關聯" })).not.toBeInTheDocument();
   });
 
   it("shows no Shopify link for orders without Shopify data", async () => {
