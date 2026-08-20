@@ -54,7 +54,7 @@ vi.mock("@/auth/use-page-access", async () => {
   };
 });
 
-function renderReport(group: "frozenMeat" | "shops") {
+function renderReport(group: "frozenMeat") {
   return render(<ReportsPage group={group} />);
 }
 
@@ -229,7 +229,7 @@ describe("Shop order quantity report", () => {
   });
 
   it("renders migrated quantity rows and total", async () => {
-    renderReport("shops");
+    renderReport("frozenMeat");
 
     expect(
       await screen.findByRole("heading", { name: "Shop order quantities" }),
@@ -245,7 +245,7 @@ describe("Shop order quantity report", () => {
 
   it("automatically queries after a single shop or date change", async () => {
     const user = userEvent.setup();
-    renderReport("shops");
+    renderReport("frozenMeat");
     await screen.findByText("豉油雞中翼");
 
     await user.click(screen.getByRole("button", { name: "桂花小幸 TKO" }));
@@ -471,6 +471,22 @@ describe("Shop order quantity report", () => {
     );
   });
 
+  it("keeps shop filters, dates, and export on one desktop row", () => {
+    const stylesheet = readFileSync(
+      path.resolve(process.cwd(), "src/index.css"),
+      "utf8",
+    );
+    const panelRule = stylesheet.match(/\.report-filter-panel\s*\{([^}]+)\}/);
+    const controlsRule = stylesheet.match(/\.report-date-controls\s*\{([^}]+)\}/);
+    const dateRule = stylesheet.match(
+      /\.report-date-controls \.date-range-picker\s*\{([^}]+)\}/,
+    );
+
+    expect(panelRule?.[1]).toContain("flex-wrap: nowrap");
+    expect(controlsRule?.[1]).toContain("flex-wrap: nowrap");
+    expect(dateRule?.[1]).toContain("width: 350px");
+  });
+
   it("keeps shop filter chips compact on mobile", () => {
     const stylesheet = readFileSync(
       path.resolve(process.cwd(), "src/index.css"),
@@ -508,26 +524,14 @@ describe("Shop order quantity report", () => {
     expect(listRule?.[1]).not.toContain("height: 405px");
   });
 
-  it("keeps frozen-meat and shop reports on separate pages", async () => {
-    const { unmount } = renderReport("shops");
-
-    expect(
-      await screen.findByRole("heading", { name: "Shops" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", {
-        name: "Average supply price by shop",
-      }),
-    ).not.toBeInTheDocument();
-    unmount();
-
+  it("includes shop order quantities in the frozen-meat report tabs", async () => {
     renderReport("frozenMeat");
     expect(
       await screen.findByRole("heading", { name: "Frozen Meat" }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "Shop order quantities" }),
-    ).not.toBeInTheDocument();
+      screen.getByRole("button", { name: "Shop order quantities" }),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("button", {
         name: "Average supply price by shop",

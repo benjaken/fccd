@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  ArrowLeft,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
   Printer,
+  TriangleAlert,
+  X,
 } from "lucide-react";
 
 import { FactoryOrderJobView } from "@/components/FactoryOrderJobView";
@@ -12,6 +15,7 @@ import { FactoryQzTrayStatus } from "@/components/FactoryQzTray";
 import { Button } from "@/components/ui/button";
 import {
   addCalendarDays,
+  assignDeliveryMotorcade,
   buildDeliveryExportCsv,
   hongKongDateInputValue,
   toDeliveryExportRow,
@@ -20,20 +24,27 @@ import {
 import {
   ALL_BRAND_ID,
   UNASSIGNED_FLEET_ID,
+  aggregateFactoryMultiDayMenuRows,
+  factoryMultiDayPrintedDate,
+  factoryMultiDayRangeLabels,
   factoryVisibleDates,
   fetchFactoryBoard,
   fetchFactoryBrands,
   fetchFactoryFleets,
   fetchFactoryMenuRows,
+  fetchFactoryMultiDayMenu,
   fetchFactoryOrderJob,
   filterDispatchRows,
   fleetBadgeForDelivery,
   groupDeliveriesByDate,
   hongKongDateKey,
+  markFactoryOrderLinePrinted,
   type FactoryBoardData,
+  type FactoryBoardItem,
   type FactoryBrand,
   type FactoryFleet,
   type FactoryMenuRow,
+  type FactoryMultiDayMenuContribution,
   type FactoryOrderJob,
 } from "@/lib/factory-board";
 import { qzTrayClient, useQzTray, type QzTrayClient } from "@/lib/qz-tray";
@@ -44,6 +55,9 @@ type BrandLoader = typeof fetchFactoryBrands;
 type BoardLoader = (startDate: string) => Promise<FactoryBoardData>;
 type OrderJobLoader = typeof fetchFactoryOrderJob;
 type MenuLoader = typeof fetchFactoryMenuRows;
+type MultiDayMenuLoader = typeof fetchFactoryMultiDayMenu;
+type MotorcadeAssigner = typeof assignDeliveryMotorcade;
+type LinePrintMarker = typeof markFactoryOrderLinePrinted;
 
 const WEEKDAY_SHORT_ZH = ["日", "一", "二", "三", "四", "五", "六"];
 const WEEKDAY_LONG_ZH = [
@@ -121,22 +135,32 @@ export function FactoryBoardPage({
   loadBrands = fetchFactoryBrands,
   loadOrderJob = fetchFactoryOrderJob,
   loadMenuRows = fetchFactoryMenuRows,
+  loadMultiDayMenu = fetchFactoryMultiDayMenu,
+  assignMotorcade = assignDeliveryMotorcade,
+  markLinePrinted = markFactoryOrderLinePrinted,
   qzClient = qzTrayClient,
   initialDate,
+  openOrdersInNewPage = true,
+  openMultiDayInNewPage = true,
 }: {
   loadBoard?: BoardLoader;
   loadFleets?: FleetLoader;
   loadBrands?: BrandLoader;
   loadOrderJob?: OrderJobLoader;
   loadMenuRows?: MenuLoader;
+  loadMultiDayMenu?: MultiDayMenuLoader;
+  assignMotorcade?: MotorcadeAssigner;
+  markLinePrinted?: LinePrintMarker;
   qzClient?: QzTrayClient;
   initialDate?: string;
+  openOrdersInNewPage?: boolean;
+  openMultiDayInNewPage?: boolean;
 }) {
   const { t, i18n } = useTranslation();
   const qz = useQzTray({ client: qzClient });
   const [qzPanelOpen, setQzPanelOpen] = useState(false);
   const [startDate, setStartDate] = useState(
-    () => initialDate ?? hongKongDateInputValue(),
+    () => initialDate ?? addCalendarDays(hongKongDateInputValue(), -1),
   );
   const [board, setBoard] = useState<FactoryBoardData | null>(null);
   const [fleets, setFleets] = useState<FactoryFleet[]>([]);
@@ -163,6 +187,23 @@ export function FactoryBoardPage({
   const [orderJob, setOrderJob] = useState<FactoryOrderJob | null>(null);
   const [jobLoading, setJobLoading] = useState(false);
   const [jobError, setJobError] = useState(false);
+  const [pendingReprintJob, setPendingReprintJob] =
+    useState<DeliveryListItem | null>(null);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [jumpDate, setJumpDate] = useState("");
+  const [rangePickerOpen, setRangePickerOpen] = useState(false);
+  const [rangeStart, setRangeStart] = useState("");
+  const [rangeEnd, setRangeEnd] = useState("");
+  const [multiDayReport, setMultiDayReport] = useState<{
+    startDate: string;
+    endDate: string;
+  } | null>(null);
+  const [multiDayRows, setMultiDayRows] = useState<
+    FactoryMultiDayMenuContribution[]
+  >([]);
+  const [multiDayLoading, setMultiDayLoading] = useState(false);
+  const [multiDayError, setMultiDayError] = useState(false);
+  const [activeMultiDayBrandIds, setActiveMultiDayBrandIds] = useState<string[]>([]);
 
   const dates = board?.dates ?? factoryVisibleDates(startDate);
   const grouped = useMemo(
@@ -172,9 +213,34 @@ export function FactoryBoardPage({
   const dispatchRows = dispatch
     ? filterDispatchRows(board?.items ?? [], dispatch.date, dispatch.fleetId)
     : [];
+  const activeMultiDayBrands = useMemo(
+    () => new Set(activeMultiDayBrandIds),
+    [activeMultiDayBrandIds],
+  );
+  const aggregatedMultiDayRows = useMemo(
+    () => aggregateFactoryMultiDayMenuRows(multiDayRows, activeMultiDayBrands),
+    [activeMultiDayBrands, multiDayRows],
+  );
+  const multiDayBrandCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const row of multiDayRows) {
+      if (!row.brandId) continue;
+      counts.set(row.brandId, (counts.get(row.brandId) ?? 0) + row.quantity);
+    }
+    return counts;
+  }, [multiDayRows]);
 
   useEffect(() => {
-    if (!fleetDate && !dispatch && !selectedJob && !brandDate && !menuSummary) {
+    if (
+      !fleetDate &&
+      !dispatch &&
+      !selectedJob &&
+      !brandDate &&
+      !menuSummary &&
+      !datePickerOpen &&
+      !rangePickerOpen &&
+      !pendingReprintJob
+    ) {
       return;
     }
     const onKeyDown = (event: KeyboardEvent) => {
@@ -183,11 +249,23 @@ export function FactoryBoardPage({
       else if (fleetDate) setFleetDate(null);
       else if (menuSummary) setMenuSummary(null);
       else if (brandDate) setBrandDate(null);
+      else if (datePickerOpen) setDatePickerOpen(false);
+      else if (rangePickerOpen) setRangePickerOpen(false);
+      else if (pendingReprintJob) setPendingReprintJob(null);
       else setSelectedJob(null);
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [brandDate, dispatch, fleetDate, menuSummary, selectedJob]);
+  }, [
+    brandDate,
+    datePickerOpen,
+    dispatch,
+    fleetDate,
+    menuSummary,
+    pendingReprintJob,
+    rangePickerOpen,
+    selectedJob,
+  ]);
 
   useEffect(() => {
     let cancelled = false;
@@ -272,6 +350,34 @@ export function FactoryBoardPage({
     };
   }, [board?.items, loadMenuRows, menuSummary]);
 
+  useEffect(() => {
+    if (!multiDayReport) {
+      setMultiDayRows([]);
+      setMultiDayLoading(false);
+      setMultiDayError(false);
+      return;
+    }
+    let cancelled = false;
+    setMultiDayLoading(true);
+    setMultiDayError(false);
+    void loadMultiDayMenu(multiDayReport.startDate, multiDayReport.endDate)
+      .then((rows) => {
+        if (!cancelled) setMultiDayRows(rows);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setMultiDayRows([]);
+          setMultiDayError(true);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setMultiDayLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [loadMultiDayMenu, multiDayReport]);
+
   const formatDayHeading = (isoDate: string) => {
     const [, month, day] = isoDate.split("-").map(Number);
     const weekday = i18n.language.startsWith("zh")
@@ -332,8 +438,16 @@ export function FactoryBoardPage({
     setBrandDate(date);
   };
 
-  const openJob = (item: DeliveryListItem) => {
+  const enterJob = (item: DeliveryListItem) => {
     if (!item.orderId) return;
+    if (openOrdersInNewPage) {
+      window.open(
+        `/factory/order/${encodeURIComponent(item.id)}`,
+        "_blank",
+        "noopener,noreferrer",
+      );
+      return;
+    }
     setFleetDate(null);
     setDispatch(null);
     setBrandDate(null);
@@ -342,6 +456,23 @@ export function FactoryBoardPage({
     // Re-check QZ Tray when entering a work order so colleagues know the
     // label printer is available before they try to print.
     void qz.connect();
+  };
+
+  const openJob = (item: FactoryBoardItem) => {
+    if (item.factorySource === "meat") {
+      window.open(
+        `/factory/meat-delivery-note/${encodeURIComponent(item.id)}`,
+        "_blank",
+        "noopener,noreferrer",
+      );
+      return;
+    }
+    if (!item.orderId) return;
+    if (board?.printStatusByOrderId?.[item.orderId] === "needs-reprint") {
+      setPendingReprintJob(item);
+      return;
+    }
+    enterJob(item);
   };
 
   const submitFleet = () => {
@@ -372,6 +503,29 @@ export function FactoryBoardPage({
       brandName,
     });
     setBrandDate(null);
+  };
+
+  const openMultiDayPicker = () => {
+    setRangeStart("");
+    setRangeEnd("");
+    setRangePickerOpen(true);
+  };
+
+  const submitMultiDayRange = () => {
+    if (!rangeStart || !rangeEnd || rangeEnd < rangeStart) return;
+    if (openMultiDayInNewPage) {
+      const query = new URLSearchParams({ start: rangeStart, end: rangeEnd });
+      window.open(
+        `/factory/multi-day-menu?${query.toString()}`,
+        "_blank",
+        "noopener,noreferrer",
+      );
+      setRangePickerOpen(false);
+      return;
+    }
+    setActiveMultiDayBrandIds(brands.map((brand) => brand.id));
+    setMultiDayReport({ startDate: rangeStart, endDate: rangeEnd });
+    setRangePickerOpen(false);
   };
 
   const exportDispatch = () => {
@@ -429,11 +583,13 @@ export function FactoryBoardPage({
             open={qzPanelOpen}
             onToggle={() => setQzPanelOpen((current) => !current)}
           />
-          {selectedJob ? null : (
+          {selectedJob || multiDayReport ? null : (
             <Button
               type="button"
               variant="outline"
               className="factory-board-multi-day"
+              disabled={loading}
+              onClick={openMultiDayPicker}
             >
               {t("factoryBoard.multiDayMenu")}
             </Button>
@@ -448,9 +604,172 @@ export function FactoryBoardPage({
           loading={jobLoading}
           error={jobError}
           selectedBadge={fleetBadgeForDelivery(selectedJob, fleets)}
+          fleets={fleets}
+          assignMotorcade={assignMotorcade}
+          markLinePrinted={markLinePrinted}
+          onLinePrinted={(lineId) => {
+            setOrderJob((current) => {
+              if (!current) return current;
+              const lines = current.lines.map((line) =>
+                line.id === lineId
+                  ? { ...line, printed: true, requiresReprint: false }
+                  : line,
+              );
+              const allPrinted = lines.length > 0 && lines.every((line) => line.printed);
+              if (selectedJob.orderId) {
+                setBoard((currentBoard) =>
+                  currentBoard
+                    ? {
+                        ...currentBoard,
+                        printStatusByOrderId: {
+                          ...(currentBoard.printStatusByOrderId ?? {}),
+                          [selectedJob.orderId as string]: allPrinted
+                            ? "complete"
+                            : current.requiresReprint
+                              ? "needs-reprint"
+                              : "incomplete",
+                        },
+                      }
+                    : currentBoard,
+                );
+              }
+              return {
+                ...current,
+                lines,
+                requiresReprint: allPrinted ? false : current.requiresReprint,
+              };
+            });
+          }}
+          onAssigned={(fleet) => {
+            setBoard((current) =>
+              current
+                ? {
+                    ...current,
+                    items: current.items.map((item) =>
+                      item.id === selectedJob.id
+                        ? {
+                            ...item,
+                            motorcadeId: fleet.id,
+                            motorcadeName: fleet.name,
+                          }
+                        : item,
+                    ),
+                  }
+                : current,
+            );
+            setSelectedJob((current) =>
+              current
+                ? {
+                    ...current,
+                    motorcadeId: fleet.id,
+                    motorcadeName: fleet.name,
+                  }
+                : current,
+            );
+          }}
           qz={qz}
           onBack={() => setSelectedJob(null)}
         />
+      ) : multiDayReport ? (
+        <section className="factory-multi-day-report">
+          <header className="factory-multi-day-report-header">
+            <Button
+              type="button"
+              variant="outline"
+              className="factory-multi-day-back no-print"
+              onClick={() => setMultiDayReport(null)}
+            >
+              <ArrowLeft aria-hidden="true" />
+              {t("factoryBoard.back")}
+            </Button>
+            <h1>
+              {t("factoryBoard.multiDayReportTitle", {
+                ...factoryMultiDayRangeLabels(
+                  multiDayReport.startDate,
+                  multiDayReport.endDate,
+                  i18n.language.startsWith("zh"),
+                ),
+              })}
+            </h1>
+            <p>
+              {t("factoryBoard.printedAt", {
+                date: factoryMultiDayPrintedDate(new Date(), i18n.language),
+              })}
+            </p>
+            <Button
+              type="button"
+              className="factory-multi-day-print no-print"
+              onClick={() => window.print()}
+            >
+              <Printer aria-hidden="true" />
+              {t("factoryBoard.print")}
+            </Button>
+          </header>
+
+          <div className="factory-multi-day-brands" aria-label={t("factoryBoard.brands")}>
+            {brands
+              .filter((brand) => activeMultiDayBrands.has(brand.id))
+              .map((brand) => (
+                <span className="factory-multi-day-brand" key={brand.id}>
+                  <button
+                    type="button"
+                    className="no-print"
+                    aria-label={t("factoryBoard.removeBrand", { name: brand.name })}
+                    title={t("factoryBoard.removeBrand", { name: brand.name })}
+                    onClick={() =>
+                      setActiveMultiDayBrandIds((current) =>
+                        current.filter((brandId) => brandId !== brand.id),
+                      )
+                    }
+                  >
+                    <X aria-hidden="true" />
+                  </button>
+                  <span>{brand.name}</span>
+                  <strong>[{formatPortions(multiDayBrandCounts.get(brand.id)) ?? "0"}]</strong>
+                </span>
+              ))}
+          </div>
+
+          {multiDayLoading ? (
+            <p className="factory-multi-day-state">{t("common.loading")}</p>
+          ) : multiDayError ? (
+            <p className="factory-multi-day-state">{t("factoryBoard.multiDayLoadError")}</p>
+          ) : aggregatedMultiDayRows.length === 0 ? (
+            <p className="factory-multi-day-state">{t("factoryBoard.emptyMultiDayMenu")}</p>
+          ) : (
+            <div className="factory-multi-day-table-wrap">
+              <table className="factory-multi-day-table">
+                <thead>
+                  <tr>
+                    <th>{t("factoryBoard.menuDish")}</th>
+                    <th>{t("factoryBoard.multiDayTotal")}</th>
+                    <th>{t("factoryBoard.orders")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {aggregatedMultiDayRows.map((row) => (
+                    <tr key={row.label}>
+                      <td>{row.label}</td>
+                      <td>{formatPortions(row.quantity)}</td>
+                      <td>
+                        <div className="factory-multi-day-orders">
+                          {row.orders.map((order) => (
+                            <span key={order.orderId}>
+                              {order.deliveryDate.slice(5).replace("-", "/")}
+                              {order.deliveryTime ? ` ${order.deliveryTime}` : ""}
+                              {` · #${order.orderNumber?.replace(/^#/, "") || order.orderId}`}
+                              {` × ${formatPortions(order.quantity)}`}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
       ) : (
       <>
       <section className="factory-board-days" aria-busy={loading || undefined}>
@@ -480,29 +799,70 @@ export function FactoryBoardPage({
                       : undefined,
                   );
                   const badge = fleetBadgeForDelivery(item, fleets);
+                  const printStatus =
+                    item.factorySource === "meat"
+                      ? item.factoryPrintStatus
+                      : item.orderId
+                        ? board?.printStatusByOrderId?.[item.orderId]
+                        : undefined;
                   return (
                     <button
                       type="button"
-                      className="factory-job-card"
+                      className={cn(
+                        "factory-job-card",
+                        item.factorySource === "meat" && "is-meat",
+                      )}
                       key={item.id}
                       onClick={() => openJob(item)}
                     >
-                      <Printer aria-hidden="true" />
-                      <div className="factory-job-card-body">
-                        <strong>{item.deliveryTime || t("common.notSet")}</strong>
-                        <span>
-                          {item.districtName || t("common.notSet")}
-                        </span>
-                        <span>
-                          {item.orderNumber
-                            ? `#${item.orderNumber.replace(/^#/, "")}`
-                            : t("common.notSet")}
-                        </span>
-                        {portions ? (
-                          <small>
-                            {t("factoryBoard.portions", { count: portions })}
-                          </small>
+                      <span
+                        className={cn(
+                          "factory-job-print-status",
+                          printStatus === "complete" && "is-complete",
+                          printStatus === "needs-reprint" && "needs-reprint",
+                        )}
+                        title={
+                          printStatus === "complete"
+                            ? t("factoryBoard.allLabelsPrinted")
+                            : printStatus === "needs-reprint"
+                              ? t("factoryBoard.reprintRequired")
+                              : undefined
+                        }
+                      >
+                        {printStatus === "complete" ? (
+                          <Printer
+                            aria-label={t("factoryBoard.allLabelsPrinted")}
+                          />
+                        ) : printStatus === "needs-reprint" ? (
+                          <TriangleAlert
+                            aria-label={t("factoryBoard.reprintRequired")}
+                          />
                         ) : null}
+                      </span>
+                      <div className="factory-job-card-body">
+                        {item.factorySource === "meat" ? (
+                          <>
+                            <strong>{item.orderNumber || t("common.notSet")}</strong>
+                            <span>{item.customerName || t("common.notSet")}</span>
+                          </>
+                        ) : (
+                          <>
+                            <strong>{item.deliveryTime || t("common.notSet")}</strong>
+                            <span>
+                              {item.districtName || t("common.notSet")}
+                            </span>
+                            <span>
+                              {item.orderNumber
+                                ? `#${item.orderNumber.replace(/^#/, "")}`
+                                : t("common.notSet")}
+                            </span>
+                            {portions ? (
+                              <small>
+                                {t("factoryBoard.portions", { count: portions })}
+                              </small>
+                            ) : null}
+                          </>
+                        )}
                       </div>
                       <span
                         className={
@@ -521,6 +881,20 @@ export function FactoryBoardPage({
       </section>
 
       <footer className="factory-board-footer">
+        <button
+          type="button"
+          className="factory-board-calendar"
+          onClick={() =>
+            window.open(
+              "/factory/production-calendar",
+              "_blank",
+              "noopener,noreferrer",
+            )
+          }
+        >
+          <CalendarDays aria-hidden="true" />
+          <span>{t("factoryBoard.productionCalendar")}</span>
+        </button>
         <div className="factory-board-pager">
           <Button
             type="button"
@@ -534,7 +908,9 @@ export function FactoryBoardPage({
           <Button
             type="button"
             className="factory-board-today"
-            onClick={() => setStartDate(hongKongDateInputValue())}
+            onClick={() =>
+              setStartDate(addCalendarDays(hongKongDateInputValue(), -1))
+            }
           >
             {t("factoryBoard.goToday")}
           </Button>
@@ -548,21 +924,143 @@ export function FactoryBoardPage({
             <ChevronRight />
           </Button>
         </div>
-        <label className="factory-board-date">
-          <CalendarDays />
+        <button
+          type="button"
+          className="factory-board-date"
+          aria-label={t("factoryBoard.date")}
+          onClick={() => {
+            setJumpDate(startDate);
+            setDatePickerOpen(true);
+          }}
+        >
+          <CalendarDays aria-hidden="true" />
           <span>{t("factoryBoard.date")}</span>
-          <input
-            type="date"
-            value={startDate}
-            onChange={(event) => {
-              if (event.target.value) setStartDate(event.target.value);
-            }}
-            aria-label={t("factoryBoard.date")}
-          />
-        </label>
+        </button>
       </footer>
       </>
       )}
+
+      <FactoryModal
+        open={datePickerOpen}
+        title={t("factoryBoard.chooseDate")}
+        titleId="factory-date-picker-title"
+        onClose={() => setDatePickerOpen(false)}
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDatePickerOpen(false)}
+            >
+              {t("factoryBoard.cancel")}
+            </Button>
+            <Button
+              type="button"
+              disabled={!jumpDate}
+              onClick={() => {
+                if (!jumpDate) return;
+                setStartDate(jumpDate);
+                setDatePickerOpen(false);
+              }}
+            >
+              {t("factoryBoard.confirmDate")}
+            </Button>
+          </>
+        }
+      >
+        <label className="factory-date-jump">
+          <span>{t("factoryBoard.chooseDate")}</span>
+          <input
+            type="date"
+            value={jumpDate}
+            onChange={(event) => setJumpDate(event.target.value)}
+          />
+        </label>
+      </FactoryModal>
+
+      <FactoryModal
+        open={Boolean(pendingReprintJob)}
+        title={t("factoryBoard.reprintWarningTitle")}
+        titleId="factory-reprint-warning-title"
+        onClose={() => setPendingReprintJob(null)}
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setPendingReprintJob(null)}
+            >
+              {t("factoryBoard.cancel")}
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                const item = pendingReprintJob;
+                setPendingReprintJob(null);
+                if (item) enterJob(item);
+              }}
+            >
+              {t("factoryBoard.continueToOrder")}
+            </Button>
+          </>
+        }
+      >
+        <div className="factory-reprint-warning">
+          <TriangleAlert aria-hidden="true" />
+          <p>
+            {t("factoryBoard.reprintWarningDescription", {
+              order: pendingReprintJob?.orderNumber?.replace(/^#/, "") ?? "",
+            })}
+          </p>
+        </div>
+      </FactoryModal>
+
+      <FactoryModal
+        open={rangePickerOpen}
+        title={t("factoryBoard.chooseDateRange")}
+        titleId="factory-multi-day-range-title"
+        onClose={() => setRangePickerOpen(false)}
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setRangePickerOpen(false)}
+            >
+              {t("factoryBoard.close")}
+            </Button>
+            <Button
+              type="button"
+              disabled={!rangeStart || !rangeEnd || rangeEnd < rangeStart}
+              onClick={submitMultiDayRange}
+            >
+              {t("factoryBoard.next")}
+            </Button>
+          </>
+        }
+      >
+        <div className="factory-date-range-fields">
+          <label>
+            <span>{t("factoryBoard.startDate")}</span>
+            <input
+              type="date"
+              value={rangeStart}
+              max={rangeEnd || undefined}
+              onChange={(event) => setRangeStart(event.target.value)}
+            />
+          </label>
+          <span aria-hidden="true">—</span>
+          <label>
+            <span>{t("factoryBoard.endDate")}</span>
+            <input
+              type="date"
+              value={rangeEnd}
+              min={rangeStart || undefined}
+              onChange={(event) => setRangeEnd(event.target.value)}
+            />
+          </label>
+        </div>
+      </FactoryModal>
 
       <FactoryModal
         open={Boolean(fleetDate)}

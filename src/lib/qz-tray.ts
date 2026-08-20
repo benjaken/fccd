@@ -35,6 +35,7 @@ export interface QzTrayClient {
   disconnect(): Promise<void>;
   listPrinters(): Promise<string[]>;
   queryStatuses(names: string[]): Promise<QzPrinterStatus[]>;
+  printLabels(printerName: string, html: string, copies: number): Promise<void>;
 }
 
 type QzStatusEvent = {
@@ -304,6 +305,27 @@ export const qzTrayClient: QzTrayClient = {
     });
     return result;
   },
+
+  async printLabels(printerName, html, copies) {
+    const qz = await loadQzModule();
+    if (!qz.websocket.isActive()) throw new Error("qz_not_connected");
+    const config = qz.configs.create(printerName, {
+      copies: Math.max(1, Math.floor(copies)),
+      colorType: "blackwhite",
+      margins: 0,
+      rasterize: true,
+      units: "mm",
+      size: { width: 100, height: 50 },
+    });
+    await qz.print(config, [
+      {
+        type: "pixel",
+        format: "html",
+        flavor: "plain",
+        data: html,
+      },
+    ]);
+  },
 };
 
 export function useQzTray({
@@ -381,6 +403,13 @@ export function useQzTray({
     });
   }, [apply, client]);
 
+  const printLabels = useCallback(
+    async (printerName: string, html: string, copies: number) => {
+      await client.printLabels(printerName, html, copies);
+    },
+    [client],
+  );
+
   useEffect(() => {
     if (!autoConnect) return;
     void connect();
@@ -393,5 +422,6 @@ export function useQzTray({
     error,
     connect,
     disconnect,
+    printLabels,
   };
 }

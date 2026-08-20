@@ -65,6 +65,10 @@ import { MeatDeliveryNotesPage } from "@/components/MeatDeliveryNotesPage";
 import { DeliveryListPage } from "@/components/DeliveryListPage";
 import { AssignDriverPage } from "@/components/AssignDriverPage";
 import { FactoryBoardPage } from "@/components/FactoryBoardPage";
+import { FactoryOrderPage } from "@/components/FactoryOrderPage";
+import { FactoryMeatDeliveryNotePage } from "@/components/FactoryMeatDeliveryNotePage";
+import { FactoryMultiDayReportPage } from "@/components/FactoryMultiDayReportPage";
+import { FactoryProductionCalendarPage } from "@/components/FactoryProductionCalendarPage";
 import { DriverDeliveryPage } from "@/components/DriverDeliveryPage";
 import { RawMeatInventoryCalcPage } from "@/components/RawMeatInventoryCalcPage";
 import { SpiceUsagePage } from "@/components/SpiceUsagePage";
@@ -86,6 +90,7 @@ import { KitchenAdvertisingPerformanceReportPage } from "@/components/KitchenAdv
 import { SuppliersPage } from "@/components/SuppliersPage";
 import { IngredientsListPage } from "@/components/IngredientsListPage";
 import { RestaurantStaffPage } from "@/components/RestaurantStaffPage";
+import { RestaurantSalesReportPage } from "@/components/RestaurantSalesReportPage";
 import { RestaurantInventoryItemsPage } from "@/components/RestaurantInventoryItemsPage";
 import { RestaurantSettingsPage } from "@/components/RestaurantSettingsPage";
 import { RestaurantDepartmentSettingsPage } from "@/components/RestaurantDepartmentSettingsPage";
@@ -873,6 +878,10 @@ function OperationsShell() {
                     <SettingsAccessDenied />
                   )
                 }
+              />
+              <Route
+                path="/restaurant/reports"
+                element={pageAccess.canAccess("restaurant.reports") ? <RestaurantSalesReportPage /> : <SettingsAccessDenied />}
               />
               <Route
                 path="/restaurant/staff"
@@ -1770,6 +1779,44 @@ function FactoryWorkspace() {
   return <FactoryBoardPage />;
 }
 
+function FactoryOrderWorkspace() {
+  const { session, loading, profileLoading } = useAuth();
+
+  if (loading || (session && profileLoading)) {
+    return <AuthLoadingScreen />;
+  }
+
+  if (!session) {
+    return <LoginPage />;
+  }
+
+  return <FactoryOrderPage />;
+}
+
+function FactoryMeatDeliveryNoteWorkspace() {
+  const { session, loading, profileLoading } = useAuth();
+
+  if (loading || (session && profileLoading)) return <AuthLoadingScreen />;
+  if (!session) return <LoginPage />;
+  return <FactoryMeatDeliveryNotePage />;
+}
+
+function FactoryMultiDayWorkspace() {
+  const { session, loading, profileLoading } = useAuth();
+
+  if (loading || (session && profileLoading)) return <AuthLoadingScreen />;
+  if (!session) return <LoginPage />;
+  return <FactoryMultiDayReportPage />;
+}
+
+function FactoryProductionCalendarWorkspace() {
+  const { session, loading, profileLoading } = useAuth();
+
+  if (loading || (session && profileLoading)) return <AuthLoadingScreen />;
+  if (!session) return <LoginPage />;
+  return <FactoryProductionCalendarPage />;
+}
+
 function DriverDeliveryWorkspace() {
   return <DriverDeliveryPage />;
 }
@@ -1791,6 +1838,38 @@ function AuthGate() {
 function App() {
   return (
     <Routes>
+      <Route
+        path="/factory/multi-day-menu"
+        element={
+          <AuthProvider>
+            <FactoryMultiDayWorkspace />
+          </AuthProvider>
+        }
+      />
+      <Route
+        path="/factory/meat-delivery-note/:meatOrderId"
+        element={
+          <AuthProvider>
+            <FactoryMeatDeliveryNoteWorkspace />
+          </AuthProvider>
+        }
+      />
+      <Route
+        path="/factory/order/:deliveryId"
+        element={
+          <AuthProvider>
+            <FactoryOrderWorkspace />
+          </AuthProvider>
+        }
+      />
+      <Route
+        path="/factory/production-calendar"
+        element={
+          <AuthProvider>
+            <FactoryProductionCalendarWorkspace />
+          </AuthProvider>
+        }
+      />
       <Route
         path="/factory"
         element={

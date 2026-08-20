@@ -160,14 +160,14 @@ export function FactoryQzTrayBanner({
 
   if (qz.state === "failed") {
     return (
-      <div className="factory-qz-banner is-failed" role="alert">
+      <div className="factory-qz-tip is-failed" role="alert">
         <TriangleAlert aria-hidden="true" />
-        <span>{t("factoryBoard.qzBannerFailed")}</span>
+        <span>{t("factoryBoard.qzNotRunning")}</span>
         <Button
           type="button"
           variant="outline"
           onClick={() => void qz.connect()}
-          className="factory-qz-banner-retry"
+          className="factory-qz-tip-retry"
         >
           <RefreshCw />
           {t("factoryBoard.qzRetry")}

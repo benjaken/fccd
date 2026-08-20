@@ -569,6 +569,8 @@ export const SECTION_CHILD_KEYS: Record<string, string[]> = {
     "kitchen.cost_input",
     REPORT_GROUP_PAGE_KEYS.frozenMeat,
     REPORT_GROUP_PAGE_KEYS.shops,
+    REPORT_TAB_PERMISSION_KEYS.shopSales,
+    REPORT_TAB_PERMISSION_KEYS.shopSalesWorkingHours,
     REPORT_TAB_PERMISSION_KEYS.shopOrderQuantities,
     REPORT_TAB_PERMISSION_KEYS.averageSupplyPrice,
     REPORT_TAB_PERMISSION_KEYS.productionCostPrice,

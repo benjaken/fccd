@@ -254,6 +254,42 @@ describe("Kitchen calendar page", () => {
     );
   });
 
+  it("renders the factory large-display calendar without order links", async () => {
+    render(
+      <MemoryRouter initialEntries={["/factory/production-calendar"]}>
+        <KitchenCalendarPage
+          displayMode="factory"
+          loadOrders={vi.fn().mockResolvedValue(orders)}
+          now={now}
+        />
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole("heading", { name: "2026年8月" });
+    expect(document.querySelector(".kitchen-calendar-page")).toHaveClass(
+      "is-factory-display",
+    );
+    expect(await screen.findByText(/B-1511 - Michelle Chung/)).toBeInTheDocument();
+    expect(await screen.findByText(/#6917 - Philip Leung/)).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /B-1511 - Michelle Chung/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /項$/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: "今日" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "出餐日曆" })).toBeNull();
+
+    const stylesheet = readFileSync(
+      path.resolve(process.cwd(), "src/index.css"),
+      "utf8",
+    );
+    const factoryCopyRule = stylesheet.match(
+      /\.kitchen-calendar-page\.is-factory-display \.kitchen-calendar-event-copy\s*\{([^}]+)\}/,
+    );
+    expect(factoryCopyRule?.[1]).toContain("white-space: nowrap");
+    expect(factoryCopyRule?.[1]).toContain("text-overflow: ellipsis");
+    expect(
+      document.querySelector('.kitchen-calendar-day[style*="min-height"]'),
+    ).not.toBeNull();
+  });
+
   it("returns to the serving calendar from order details", async () => {
     const user = userEvent.setup();
     render(

@@ -127,6 +127,15 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
   { prefix: "/reports/kitchen", pageKey: "kitchen.cost_input" },
   { prefix: "/reports/frozen-meat", pageKey: "reports.frozen_meat" },
   { prefix: "/reports/shops", pageKey: "reports.shops" },
+  { prefix: "/reports/tabs/shop-sales", pageKey: "reports.shop_sales" },
+  {
+    prefix: "/reports/tabs/shop-sales-working-hours",
+    pageKey: "reports.shop_sales_working_hours",
+  },
+  {
+    prefix: "/reports/tabs/restaurant-sales-salary",
+    pageKey: "reports.restaurant_sales_salary",
+  },
   {
     prefix: "/reports/tabs/shop-order-quantities",
     pageKey: "reports.shop_order_quantities",
@@ -165,6 +174,9 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
 ];
 
 export const REPORT_TAB_PERMISSION_KEYS = {
+  shopSales: "reports.shop_sales",
+  shopSalesWorkingHours: "reports.shop_sales_working_hours",
+  restaurantSalesSalary: "reports.restaurant_sales_salary",
   shopOrderQuantities: "reports.shop_order_quantities",
   averageSupplyPrice: "reports.average_supply_price",
   productionCostPrice: "reports.production_cost_price",
@@ -191,6 +203,7 @@ export const REPORT_GROUP_ROUTES = {
 
 export const REPORT_GROUP_TABS = {
   frozenMeat: [
+    "shopOrderQuantities",
     "averageSupplyPrice",
     "productionCostPrice",
     "rawMeatAveragePrice",
@@ -198,7 +211,7 @@ export const REPORT_GROUP_TABS = {
     "rawMeatStock",
     "supplierPurchase",
   ],
-  shops: ["shopOrderQuantities"],
+  shops: ["shopSales", "shopSalesWorkingHours", "restaurantSalesSalary"],
 } as const satisfies Record<ReportGroup, readonly ReportTabKey[]>;
 
 function tabPermissionKeys(tabs: readonly ReportTabKey[]) {

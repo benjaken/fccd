@@ -21,6 +21,7 @@ function qzState(overrides: Partial<QzState> = {}): QzState {
     error: null,
     connect: vi.fn(async () => {}),
     disconnect: vi.fn(async () => {}),
+    printLabels: vi.fn(async () => {}),
     ...overrides,
   } as QzState;
 }
@@ -116,7 +117,7 @@ describe("FactoryQzTrayBanner", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("shows a failed banner with a retry button", async () => {
+  it("shows a compact failed tip with a retry button", async () => {
     const user = userEvent.setup();
     const connect = vi.fn(async () => {});
     render(
@@ -125,9 +126,8 @@ describe("FactoryQzTrayBanner", () => {
       />,
     );
 
-    expect(
-      screen.getByText("QZ Tray 未啟動，暫時無法打印。請啟動 QZ Tray 後重試。"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("QZ Tray 未啟動")).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveClass("factory-qz-tip", "is-failed");
     await user.click(screen.getByRole("button", { name: "重試" }));
     expect(connect).toHaveBeenCalledTimes(1);
   });

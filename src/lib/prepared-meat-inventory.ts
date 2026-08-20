@@ -617,7 +617,9 @@ export type PreparedMeatOutboundLoadedLine = {
 export type PreparedMeatOutboundOrder = {
   id: string;
   customerId: string;
+  customerName?: string;
   shippingMethodId: string | null;
+  shippingMethodName?: string;
   orderNumber: string;
   shippingAt: string | null;
   remarks: string;
@@ -683,7 +685,7 @@ export async function fetchPreparedMeatOutboundOrder(
   const { data, error } = await supabase
     .from("meat_orders")
     .select(
-      "id,order_number,order_at,shipping_at,remarks,send_to_factory,meat_customer_id,shipping_method_id,meat_customers(contact_person,phone,address),meat_order_lines(id,quantity,remarks,sort_order,prepared_meat_item_id,raw_meat_item_id,prepared_meat_items(id,sku,name,unit),raw_meat_items(id,sku,name,unit))",
+      "id,order_number,order_at,shipping_at,remarks,send_to_factory,meat_customer_id,shipping_method_id,meat_customers(name,contact_person,phone,address),meat_shipping_methods(name),meat_order_lines(id,quantity,remarks,sort_order,prepared_meat_item_id,raw_meat_item_id,prepared_meat_items(id,sku,name,unit),raw_meat_items(id,sku,name,unit))",
     )
     .eq("id", orderId)
     .single();
@@ -691,10 +693,33 @@ export async function fetchPreparedMeatOutboundOrder(
   if (error) throw error;
   const customer = firstNested(
     data.meat_customers as
-      | { contact_person: string | null; phone: string | null; address: string | null }
-      | { contact_person: string | null; phone: string | null; address: string | null }[]
+      | { name: string | null; contact_person: string | null; phone: string | null; address: string | null }
+      | { name: string | null; contact_person: string | null; phone: string | null; address: string | null }[]
       | null,
   );
+  const shippingMethod = firstNested(
+    data.meat_shipping_methods as
+      | { name: string | null }
+      | { name: string | null }[]
+      | null,
+  );
+  let shippingMethodId = (data.shipping_method_id as string | null) ?? null;
+  let shippingMethodName = shippingMethod?.name?.trim() ?? "";
+
+  // Older imported meat orders can be missing the shipping-method relation.
+  // When the system has one unambiguous active option, use that configured
+  // value for display instead of presenting the delivery note as unset.
+  if (!shippingMethodName) {
+    try {
+      const methods = await fetchMeatShippingMethods();
+      if (methods.length === 1) {
+        shippingMethodId = methods[0].id;
+        shippingMethodName = methods[0].name;
+      }
+    } catch {
+      // The order can still be displayed if the optional fallback lookup fails.
+    }
+  }
   const lines = (
     (data.meat_order_lines ?? []) as Array<{
       quantity: number | string | null;
@@ -713,7 +738,9 @@ export async function fetchPreparedMeatOutboundOrder(
   return {
     id: data.id as string,
     customerId: (data.meat_customer_id as string | null) ?? "",
-    shippingMethodId: (data.shipping_method_id as string | null) ?? null,
+    customerName: customer?.name ?? "",
+    shippingMethodId,
+    shippingMethodName,
     orderNumber: String(data.order_number ?? ""),
     shippingAt:
       (data.shipping_at as string | null) ??
@@ -726,6 +753,14 @@ export async function fetchPreparedMeatOutboundOrder(
     address: customer?.address ?? "",
     lines,
   };
+}
+
+export async function markPreparedMeatOutboundPrinted(orderId: string) {
+  const { error } = await supabase
+    .from("meat_orders")
+    .update({ print_at: new Date().toISOString() })
+    .eq("id", orderId);
+  if (error) throw error;
 }
 
 function outboundRpcPayload(input: PreparedMeatOutboundInput) {

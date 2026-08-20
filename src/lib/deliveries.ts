@@ -517,6 +517,18 @@ export async function fetchDeliveryExportRows(
   return items;
 }
 
+export async function fetchDeliveryById(
+  deliveryId: string,
+): Promise<DeliveryListItem | null> {
+  const { data, error } = await supabase
+    .from("deliveries")
+    .select(DELIVERY_SELECT)
+    .eq("id", deliveryId)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? mapDeliveryRow(data as unknown as DeliveryRow) : null;
+}
+
 export async function assignDeliveryMotorcade(
   deliveryId: string,
   motorcadeId: string | null,
