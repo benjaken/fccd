@@ -6631,9 +6631,9 @@ button.product-tag[aria-pressed="true"] {
   outline-offset: -2px;
 }
 
-.data-input-progress-row.complete { background: color-mix(in oklch, var(--primary) 9%, var(--card)); }
+.data-input-progress-row.complete { background: color-mix(in srgb, var(--primary) 9%, var(--card)); }
 .data-input-progress-row.entered { background: oklch(0.96 0.015 250); border-color: oklch(0.82 0.045 250); }
-.data-input-progress-row.recorded { background: color-mix(in oklch, var(--primary) 9%, var(--card)); }
+.data-input-progress-row.recorded { background: color-mix(in srgb, var(--primary) 9%, var(--card)); }
 .data-input-progress-rows .data-input-progress-row.missing {
   background: oklch(0.96 0.035 25);
   border-color: oklch(0.78 0.11 25);

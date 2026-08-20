@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -323,6 +324,7 @@ function SupplierCostEntriesPanel({
 }
 
 export function KitchenMonthlySupplierRecords({ canEdit }: { canEdit: boolean }) {
+  const { t } = useTranslation();
   const [filters, setFilters] = useState<KitchenSupplierRecordFilters>({
     mode: "range",
     singleDate: "",
@@ -421,8 +423,8 @@ export function KitchenMonthlySupplierRecords({ canEdit }: { canEdit: boolean })
               options={suppliers}
               value={filters.supplierIds}
               disabled={loadingOptions}
-              placeholder="全部供應商（可多選）"
-              searchPlaceholder="搜尋供應商"
+              placeholder={t("kitchenMonthlySupplierRecords.supplierPlaceholder")}
+              searchPlaceholder={t("kitchenMonthlySupplierRecords.supplierSearchPlaceholder")}
               emptyLabel="沒有符合的供應商"
               onChange={(supplierIds) => updateFilters({ supplierIds })}
             />

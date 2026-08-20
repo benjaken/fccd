@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { Plus, RefreshCw, Trash2 } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 
@@ -54,6 +55,7 @@ function AddMonthlyNonFestivalCostPanel({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { t } = useTranslation();
   const maximumMonth = currentHongKongMonth();
   const [costTypes, setCostTypes] = useState<KitchenMonthlyCostType[]>([]);
   const [costTypeId, setCostTypeId] = useState("");
@@ -177,7 +179,7 @@ function AddMonthlyNonFestivalCostPanel({
               min="0"
               step="0.01"
               value={amount}
-              placeholder="輸入金額"
+              placeholder={t("kitchenMonthlyFestivalCosts.amountPlaceholder")}
               aria-label="金額（港幣）"
               onChange={(event) => setAmount(event.target.value)}
             />
@@ -185,7 +187,7 @@ function AddMonthlyNonFestivalCostPanel({
         </label>
         <label className="ingredients-field">
           <span>備註</span>
-          <textarea value={remarks} placeholder="備註" onChange={(event) => setRemarks(event.target.value)} />
+          <textarea value={remarks} placeholder={t("kitchenMonthlyFestivalCosts.remarksPlaceholder")} onChange={(event) => setRemarks(event.target.value)} />
         </label>
         {error ? <p className="ingredients-form-error">{error}</p> : null}
       </form>
@@ -194,6 +196,7 @@ function AddMonthlyNonFestivalCostPanel({
 }
 
 export function KitchenMonthlyNonFestivalCosts({ canEdit }: { canEdit: boolean }) {
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedMonth = /^\d{4}-\d{2}$/.test(searchParams.get("month") ?? "")
     ? searchParams.get("month")
@@ -383,7 +386,7 @@ export function KitchenMonthlyNonFestivalCosts({ canEdit }: { canEdit: boolean }
                     className="kitchen-monthly-cost-remarks"
                     value={draft.remarks}
                     title={draft.remarks}
-                    placeholder="備註"
+                    placeholder={t("kitchenMonthlyFestivalCosts.remarksPlaceholder")}
                     aria-label={`${row.costTypeName}備註`}
                     onChange={(event) => changeDraft(row.id, "remarks", event.target.value)}
                     onBlur={(event) => void saveRow(row.id, draft.amount, event.currentTarget.value)}

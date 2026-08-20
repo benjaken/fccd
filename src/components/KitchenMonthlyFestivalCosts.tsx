@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { Plus, RefreshCw, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,7 @@ function AddFestivalCostPanel({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { t } = useTranslation();
   const [costTypes, setCostTypes] = useState<KitchenMonthlyCostType[]>([]);
   const [channels, setChannels] = useState<KitchenMonthlyCostChannel[]>([]);
   const [festivals, setFestivals] = useState<KitchenFestival[]>([]);
@@ -166,8 +168,8 @@ function AddFestivalCostPanel({
           options={channels}
           value={channelIds}
           disabled={loadingOptions}
-          placeholder="選擇品牌（可多選）"
-          searchPlaceholder="搜尋品牌"
+          placeholder={t("kitchenMonthlyFestivalCosts.brandPlaceholder")}
+          searchPlaceholder={t("kitchenMonthlyFestivalCosts.brandSearchPlaceholder")}
           emptyLabel="沒有符合的品牌"
           onChange={(value) => {
             setChannelIds(value);
@@ -199,12 +201,12 @@ function AddFestivalCostPanel({
           <span>金額</span>
           <div className="kitchen-cost-money-input">
             <span aria-hidden="true">HK$</span>
-            <input type="number" min="0" step="0.01" value={amount} placeholder="輸入金額" aria-label="金額（港幣）" onChange={(event) => setAmount(event.target.value)} />
+            <input type="number" min="0" step="0.01" value={amount} placeholder={t("kitchenMonthlyFestivalCosts.amountPlaceholder")} aria-label="金額（港幣）" onChange={(event) => setAmount(event.target.value)} />
           </div>
         </label>
         <label className="ingredients-field">
           <span>備註</span>
-          <textarea value={remarks} placeholder="備註" onChange={(event) => setRemarks(event.target.value)} />
+          <textarea value={remarks} placeholder={t("kitchenMonthlyFestivalCosts.remarksPlaceholder")} onChange={(event) => setRemarks(event.target.value)} />
         </label>
         {error ? <p className="ingredients-form-error">{error}</p> : null}
       </form>
@@ -213,6 +215,7 @@ function AddFestivalCostPanel({
 }
 
 export function KitchenMonthlyFestivalCosts({ canEdit }: { canEdit: boolean }) {
+  const { t } = useTranslation();
   const [page, setPage] = useState(1);
   const [rows, setRows] = useState<KitchenFestivalCostRow[]>([]);
   const [total, setTotal] = useState(0);
@@ -297,7 +300,7 @@ export function KitchenMonthlyFestivalCosts({ canEdit }: { canEdit: boolean }) {
             <td className="kitchen-monthly-cost-brands">{row.channelNames.join(", ") || "—"}</td>
             <td><strong>{row.costTypeName}</strong></td>
             <td>{canEdit ? <div className="kitchen-cost-record-amount"><span>HK$</span><input type="number" min="0" step="0.01" value={draft.amount} aria-label={`${row.costTypeName}節日金額`} onChange={(event) => changeDraft(row.id, "amount", event.target.value)} onBlur={(event) => void saveRow(row.id, event.currentTarget.value, draft.remarks)} /></div> : `HK$${row.amount.toLocaleString("zh-HK", { maximumFractionDigits: 2 })}`}</td>
-            <td>{canEdit ? <input className="kitchen-monthly-cost-remarks" value={draft.remarks} title={draft.remarks} placeholder="備註" aria-label={`${row.costTypeName}節日備註`} onChange={(event) => changeDraft(row.id, "remarks", event.target.value)} onBlur={(event) => void saveRow(row.id, draft.amount, event.currentTarget.value)} /> : row.remarks || "—"}</td>
+            <td>{canEdit ? <input className="kitchen-monthly-cost-remarks" value={draft.remarks} title={draft.remarks} placeholder={t("kitchenMonthlyFestivalCosts.remarksPlaceholder")} aria-label={`${row.costTypeName}節日備註`} onChange={(event) => changeDraft(row.id, "remarks", event.target.value)} onBlur={(event) => void saveRow(row.id, draft.amount, event.currentTarget.value)} /> : row.remarks || "—"}</td>
             <td>{canEdit ? <Button type="button" variant="destructive" size="icon" disabled={deletingId === row.id} aria-label="刪除節日營運費用記錄" onClick={() => void remove(row)}><Trash2 /></Button> : null}</td>
           </tr>;
         })}

@@ -369,7 +369,7 @@ export function PaymentsListPage({
           </div>
           {payoutDateMode === "custom" ? <>
             <DatePicker id="payments-payout-date" value={payoutAt} onChange={setPayoutAt} label={t("payments.payoutDate")} className="payments-payout-date-picker" />
-            <label className="payments-charge-field"><span>{t("payments.charges")}</span><div className="currency-input"><span aria-hidden="true">HK$</span><input type="number" min="0" step="0.01" value={charges} onChange={(event) => setCharges(event.target.value)} aria-invalid={netAmountInvalid} /></div></label>
+            <label className="payments-charge-field"><span>{t("payments.charges")}</span><div className="currency-input"><span aria-hidden="true">HK$</span><input type="number" min="0" step="0.01" value={charges} onChange={(event) => setCharges(event.target.value)} aria-label={t("payments.charges")} aria-invalid={netAmountInvalid} /></div></label>
           </> : <p className="payments-payment-date-note">{t("payments.paymentDateModeDescription")}</p>}
           <dl className="payments-settlement-totals">
             <div><dt>{t("payments.grossAmount")}</dt><dd>{currency.format(grossAmount)}</dd></div>

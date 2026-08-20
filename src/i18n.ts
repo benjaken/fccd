@@ -1382,6 +1382,16 @@ const resources = {
           },
         },
       },
+      kitchenMonthlyFestivalCosts: {
+        brandPlaceholder: "選擇品牌（可多選）",
+        brandSearchPlaceholder: "搜尋品牌",
+        amountPlaceholder: "輸入金額",
+        remarksPlaceholder: "備註",
+      },
+      kitchenMonthlySupplierRecords: {
+        supplierPlaceholder: "全部供應商（可多選）",
+        supplierSearchPlaceholder: "搜尋供應商",
+      },
       quotes: {
         eyebrow: "報價管理",
         title: "到會報價",
@@ -3157,7 +3167,7 @@ const resources = {
         sortPayoutDate: "排序到賬日期",
         selectAll: "全選本頁收款", selectRecord: "選取收款 {{value}}", selected: "已選取{{count}}個入賬 實收淨額共{{amount}}", addInvoice: "更新所選的INV", invoiceModalDescription: "已選取{{count}}個入賬 實收淨額共{{amount}}", submit: "更新INV", invoiceSaveError: "無法更新所選的INV，請重新載入後再試。",
         empty: "未找到收款資料", emptyDescription: "調整篩選條件後再試。", restricted: "此角色無法查看收款資料", restrictedDescription: "收款資料只供獲授權的財務角色查看。",
-        edit: "編輯", editTitle: "編輯Masoft收款", editDescription: "修改發票、收據、到賬日、手續費及收款訂單。", invoice: "INV/", receipt: "REC", payoutDate: "到賬日", charges: "手續費", paymentOrders: "收款訂單", gross: "付款總額", net: "實收淨額", netInvalid: "實收淨額不可小於 0，並至少保留一筆收款訂單。", saving: "儲存中…", save: "儲存", saveError: "無法儲存收款資料，請重新載入後再試。", delete: "刪除到賬記錄", deleting: "刪除中…", deleteConfirm: "確定刪除此到賬記錄？已關聯的收款不會被刪除。", deleteError: "無法刪除到賬記錄，請重新載入後再試。", pendingConfirmation: "待確認",
+        edit: "編輯", editTitle: "編輯Masoft收款", editDescription: "修改發票、收據、到賬日、手續費及收款訂單。", invoice: "INV/", invoicePlaceholder: "輸入 INV 編號", receipt: "REC", payoutDate: "到賬日", charges: "手續費", paymentOrders: "收款訂單", gross: "付款總額", net: "實收淨額", netInvalid: "實收淨額不可小於 0，並至少保留一筆收款訂單。", saving: "儲存中…", save: "儲存", saveError: "無法儲存收款資料，請重新載入後再試。", delete: "刪除到賬記錄", deleting: "刪除中…", deleteConfirm: "確定刪除此到賬記錄？已關聯的收款不會被刪除。", deleteError: "無法刪除到賬記錄，請重新載入後再試。", pendingConfirmation: "待確認",
         columns: { invoice: "INV/", brand: "選擇品牌", payout: "到賬日期", orders: "訂單", paymentMethod: "付款方式", gross: "付款金額", charges: "手續費", net: "實收淨額", receipt: "REC" },
       },
       followUp: {
@@ -4803,6 +4813,16 @@ const resources = {
             schedule: "Update weekly",
           },
         },
+      },
+      kitchenMonthlyFestivalCosts: {
+        brandPlaceholder: "Choose brands (multiple)",
+        brandSearchPlaceholder: "Search brands",
+        amountPlaceholder: "Enter amount",
+        remarksPlaceholder: "Remarks",
+      },
+      kitchenMonthlySupplierRecords: {
+        supplierPlaceholder: "Choose suppliers (multiple)",
+        supplierSearchPlaceholder: "Search suppliers",
       },
       quotes: {
         eyebrow: "Quote management",
@@ -6636,7 +6656,7 @@ const resources = {
         sortPayoutDate: "Sort payout date",
         selectAll: "Select all receipts on this page", selectRecord: "Select receipt {{value}}", selected: "{{count}} receipt(s) selected · Net received {{amount}}", addInvoice: "Update selected INV", invoiceModalDescription: "{{count}} receipt(s) selected · Net received {{amount}}", submit: "Update INV", invoiceSaveError: "Could not update the selected INV. Reload and try again.",
         empty: "No payment receipts found", emptyDescription: "Adjust the filters and try again.", restricted: "This role cannot view payment receipts", restrictedDescription: "Payment receipts require an authorized finance role.",
-        edit: "Edit", editTitle: "Edit Masoft receipt", editDescription: "Update invoice, receipt, payout date, charges and payment orders.", invoice: "INV/", receipt: "REC", payoutDate: "Payout date", charges: "Charges", paymentOrders: "Payment orders", gross: "Payment total", net: "Net received", netInvalid: "Net received cannot be below 0 and at least one payment order is required.", saving: "Saving…", save: "Save", saveError: "Could not save the payment receipt. Reload and try again.", delete: "Delete payout record", deleting: "Deleting…", deleteConfirm: "Delete this payout record? Its linked payments will not be deleted.", deleteError: "Could not delete the payout record. Reload and try again.", pendingConfirmation: "Pending confirmation",
+        edit: "Edit", editTitle: "Edit Masoft receipt", editDescription: "Update invoice, receipt, payout date, charges and payment orders.", invoice: "INV/", invoicePlaceholder: "INV/", receipt: "REC", payoutDate: "Payout date", charges: "Charges", paymentOrders: "Payment orders", gross: "Payment total", net: "Net received", netInvalid: "Net received cannot be below 0 and at least one payment order is required.", saving: "Saving…", save: "Save", saveError: "Could not save the payment receipt. Reload and try again.", delete: "Delete payout record", deleting: "Deleting…", deleteConfirm: "Delete this payout record? Its linked payments will not be deleted.", deleteError: "Could not delete the payout record. Reload and try again.", pendingConfirmation: "Pending confirmation",
         columns: { invoice: "INV/", brand: "Brand", payout: "Payout date", orders: "Orders", paymentMethod: "Payment method", gross: "Payment amount", charges: "Charges", net: "Net received", receipt: "REC" },
       },
       followUp: {
