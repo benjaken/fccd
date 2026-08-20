@@ -89,6 +89,7 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
   },
   { prefix: "/frozen", pageKey: "frozen" },
   { prefix: "/kitchen/settings", pageKey: "kitchen.settings" },
+  { prefix: "/kitchen/cost-input", pageKey: "kitchen.cost_input" },
   { prefix: "/kitchen/calendar", pageKey: "kitchen.calendar" },
   { prefix: "/kitchen/inventory", pageKey: "kitchen.inventory" },
   {

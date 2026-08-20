@@ -74,6 +74,7 @@ import { MeatYieldErrorsPage } from "@/components/MeatYieldErrorsPage";
 import { KitchenCalendarPage } from "@/components/KitchenCalendarPage";
 import { KitchenOrdersPage } from "@/components/KitchenOrdersPage";
 import { KitchenSettingsPage } from "@/components/KitchenSettingsPage";
+import { KitchenCostInputPage } from "@/components/KitchenCostInputPage";
 import { SuppliersPage } from "@/components/SuppliersPage";
 import { IngredientsListPage } from "@/components/IngredientsListPage";
 import { RestaurantStaffPage } from "@/components/RestaurantStaffPage";
@@ -832,6 +833,16 @@ function OperationsShell() {
                 element={
                   pageAccess.canAccess("kitchen.ingredients") ? (
                     <IngredientsListPage />
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
+                }
+              />
+              <Route
+                path="/kitchen/cost-input"
+                element={
+                  pageAccess.canAccess("kitchen.cost_input") ? (
+                    <KitchenCostInputPage />
                   ) : (
                     <SettingsAccessDenied />
                   )

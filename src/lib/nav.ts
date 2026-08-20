@@ -321,13 +321,7 @@ export const secondaryNav: Record<string, NavItem[]> = {
     },
   ],
   kitchen: [
-    { key: "kitchen", to: "/kitchen", icon: Utensils, permissionKey: "kitchen" },
-    {
-      key: "inventory",
-      to: "/kitchen/inventory",
-      icon: Warehouse,
-      permissionKey: "kitchen.inventory",
-    },
+    { key: "kitchenOrders", to: "/kitchen", icon: Utensils, permissionKey: "kitchen" },
     {
       key: "ingredients",
       to: "/kitchen/ingredients",
@@ -351,6 +345,12 @@ export const secondaryNav: Record<string, NavItem[]> = {
       to: "/kitchen/ingredient-stocktakes",
       icon: ClipboardList,
       permissionKey: "kitchen.ingredient_stocktakes",
+    },
+    {
+      key: "kitchenCostInput",
+      to: "/kitchen/cost-input",
+      icon: CircleDollarSign,
+      permissionKey: "kitchen.cost_input",
     },
     {
       key: "kitchenSettings",
@@ -519,6 +519,7 @@ export const SECTION_CHILD_KEYS: Record<string, string[]> = {
     "kitchen.ingredients",
     "kitchen.packing_stocktakes",
     "kitchen.ingredient_stocktakes",
+    "kitchen.cost_input",
     "kitchen.suppliers",
     ...KITCHEN_ACTION_PAGE_KEYS,
   ],
