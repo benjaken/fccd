@@ -474,6 +474,59 @@ async function insertOnlyJunctions(
   return inserted;
 }
 
+async function upsertJunctions(
+  client: AdminClient,
+  table: string,
+  onConflict: string,
+  rows: Array<Record<string, unknown>>,
+): Promise<number> {
+  let updated = 0;
+  for (let index = 0; index < rows.length; index += INSERT_CHUNK) {
+    const { data, error } = await client
+      .from(table)
+      .upsert(rows.slice(index, index + INSERT_CHUNK), { onConflict })
+      .select("id");
+    if (error) throw error;
+    updated += data?.length ?? 0;
+  }
+  return updated;
+}
+
+async function backfillPaymentReports(
+  client: AdminClient,
+  bubbleToken: string,
+  watermark: string,
+  deadline: number,
+) {
+  const mapping = remainingMappings.find((item) => item.sourceType === "s_paymentreport");
+  if (!mapping) throw new Error("payment report mapping is missing");
+  const fetched = await fetchBubbleType(
+    mapping.sourceType, INITIAL_CHECKPOINT, watermark, bubbleToken, deadline, [],
+  );
+  if (fetched.resumable) return { status: "paused" as const, fetched: 0, updated: 0, linksUpdated: 0, pages: fetched.pages };
+  const rows = fetched.records.map(mapping.map);
+  await resolveRelations(client, rows, mapping.relations);
+  let updated = 0;
+  for (let index = 0; index < rows.length; index += INSERT_CHUNK) {
+    const { data, error } = await client
+      .from(mapping.table)
+      .upsert(rows.slice(index, index + INSERT_CHUNK), { onConflict: "legacy_id" })
+      .select("id");
+    if (error) throw error;
+    updated += data?.length ?? 0;
+  }
+  let linksUpdated = 0;
+  if (mapping.children) {
+    const parentRows = await legacyIdRows(client, mapping.table, fetched.records.map(requireLegacyId));
+    const parentIds = new Map(parentRows.map((row) => [row.legacy_id, row.id]));
+    for (const child of mapping.children(fetched.records, parentIds)) {
+      await resolveRelations(client, child.rows, child.relations);
+      linksUpdated += await upsertJunctions(client, child.table, child.onConflict, child.rows);
+    }
+  }
+  return { status: "completed" as const, fetched: fetched.records.length, updated, linksUpdated, pages: fetched.pages };
+}
+
 async function logConflicts(
   client: AdminClient,
   runId: string,
@@ -708,9 +761,11 @@ async function handleRequest(request: Request): Promise<Response> {
   let phases: Phase[];
   let requestedSourceType: string | null = null;
   let backfillLoginCodes = false;
+  let backfillPaymentReportsRequested = false;
   try {
     const body = await request.json().catch(() => ({}));
     backfillLoginCodes = body?.backfillLoginCodes === true;
+    backfillPaymentReportsRequested = body?.backfillPaymentReports === true;
     phases = selectedPhases(body?.phase);
     if (body?.sourceType != null) {
       if (
@@ -758,6 +813,16 @@ async function handleRequest(request: Request): Promise<Response> {
         error: errorCode(error),
         detail: safeError(error),
       }, 500);
+    }
+  }
+
+  if (backfillPaymentReportsRequested) {
+    const deadline = Date.parse(invocationStartedAt) + SOFT_RUNTIME_MS;
+    try {
+      const result = await backfillPaymentReports(client, bubbleToken, watermark, deadline);
+      return jsonResponse({ sourceType: "s_paymentreport", ...result }, result.status === "paused" ? 202 : 200);
+    } catch (error) {
+      return jsonResponse({ status: "failed", sourceType: "s_paymentreport", error: errorCode(error), detail: safeError(error) }, 500);
     }
   }
 

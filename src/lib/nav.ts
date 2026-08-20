@@ -18,6 +18,7 @@ import {
   Handshake,
   History,
   LayoutDashboard,
+  Landmark,
   Leaf,
   ListFilter,
   Package,
@@ -45,7 +46,10 @@ import {
   REPORT_TAB_PERMISSION_KEYS,
 } from "@/auth/use-page-access";
 import { FROZEN_ACTION_PAGE_KEYS } from "@/lib/frozen-action-permissions";
-import { KITCHEN_ACTION_PAGE_KEYS } from "@/lib/kitchen-action-permissions";
+import {
+  KITCHEN_ACTION_PAGE_KEYS,
+  KITCHEN_MATERIAL_USAGE_PAGE_KEY,
+} from "@/lib/kitchen-action-permissions";
 import { ORDER_ACTION_PAGE_KEYS } from "@/lib/order-action-permissions";
 
 export type Icon = ComponentType<{ className?: string; strokeWidth?: number }>;
@@ -157,15 +161,23 @@ export const secondaryNav: Record<string, NavItem[]> = {
     },
     {
       key: "payments",
-      to: "/orders/payments",
+      to: "/orders/payments/bank-arrival-date",
       icon: HandCoins,
       permissionKey: "orders.payments",
-    },
-    {
-      key: "assignDriver",
-      to: "/orders/drivers",
-      icon: Truck,
-      permissionKey: "orders.drivers",
+      children: [
+        {
+          key: "bankArrivalDateInput",
+          to: "/orders/payments/bank-arrival-date",
+          icon: Landmark,
+          permissionKey: "orders.payments",
+        },
+        {
+          key: "masoftInvoiceReceipts",
+          to: "/orders/payments/masoft-invoices",
+          icon: FileText,
+          permissionKey: "orders.payments",
+        },
+      ],
     },
     {
       key: "productionCalendar",
@@ -319,6 +331,12 @@ export const secondaryNav: Record<string, NavItem[]> = {
       icon: AlertTriangle,
       permissionKey: "frozen.yield_errors",
     },
+    {
+      key: "supplierQuotes",
+      to: "/frozen/supplier-quotes",
+      icon: FileText,
+      permissionKey: "frozen.supplier_quotes",
+    },
   ],
   kitchen: [
     { key: "kitchenOrders", to: "/kitchen", icon: Utensils, permissionKey: "kitchen" },
@@ -347,10 +365,10 @@ export const secondaryNav: Record<string, NavItem[]> = {
       permissionKey: "kitchen.ingredient_stocktakes",
     },
     {
-      key: "kitchenCostInput",
-      to: "/kitchen/cost-input",
-      icon: CircleDollarSign,
-      permissionKey: "kitchen.cost_input",
+      key: "kitchenMaterialUsage",
+      to: "/kitchen/material-usage",
+      icon: Calculator,
+      permissionKey: KITCHEN_MATERIAL_USAGE_PAGE_KEY,
     },
     {
       key: "kitchenSettings",
@@ -419,6 +437,12 @@ export const secondaryNav: Record<string, NavItem[]> = {
       permissionKey: "reports",
       children: [
         {
+          key: "kitchenReports",
+          to: "/reports/kitchen",
+          icon: Utensils,
+          permissionKey: "kitchen.cost_input",
+        },
+        {
           key: "frozenMeat",
           to: REPORT_GROUP_ROUTES.frozenMeat,
           icon: Beef,
@@ -437,6 +461,20 @@ export const secondaryNav: Record<string, NavItem[]> = {
       to: "/finance",
       icon: CircleDollarSign,
       permissionKey: "finance",
+      children: [
+        {
+          key: "dataInputProgress",
+          to: REPORT_GROUP_ROUTES.dataInputProgress,
+          icon: ClipboardCheck,
+          permissionKey: REPORT_GROUP_PAGE_KEYS.dataInputProgress,
+        },
+        {
+          key: "kitchenCostInput",
+          to: "/finance/cost-input",
+          icon: CircleDollarSign,
+          permissionKey: "kitchen.cost_input",
+        },
+      ],
     },
   ],
   settings: [
@@ -512,6 +550,7 @@ export const SECTION_CHILD_KEYS: Record<string, string[]> = {
     "frozen.meat_customers",
     "frozen.spice_usage",
     "frozen.yield_errors",
+    "frozen.supplier_quotes",
     ...FROZEN_ACTION_PAGE_KEYS,
   ],
   kitchen: [
@@ -519,13 +558,15 @@ export const SECTION_CHILD_KEYS: Record<string, string[]> = {
     "kitchen.ingredients",
     "kitchen.packing_stocktakes",
     "kitchen.ingredient_stocktakes",
-    "kitchen.cost_input",
     "kitchen.suppliers",
+    KITCHEN_MATERIAL_USAGE_PAGE_KEY,
     ...KITCHEN_ACTION_PAGE_KEYS,
   ],
   delivery: ["delivery.assign"],
   restaurant: ["restaurant.inventory", "restaurant.reports", "restaurant.staff", "restaurant.settings", "restaurant.settings.restaurants", "restaurant.settings.departments", "restaurant.settings.service_periods", "restaurant.settings.payment_methods", "restaurant.settings.delivery_platforms", "restaurant.settings.holidays", "restaurant.settings.roster_times", "restaurant.settings.supplier_cost_categories", "restaurant.settings.inventory_items", "restaurant.settings.monthly_pnl_cost_categories"],
   reports: [
+    REPORT_GROUP_PAGE_KEYS.dataInputProgress,
+    "kitchen.cost_input",
     REPORT_GROUP_PAGE_KEYS.frozenMeat,
     REPORT_GROUP_PAGE_KEYS.shops,
     REPORT_TAB_PERMISSION_KEYS.shopOrderQuantities,

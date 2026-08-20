@@ -87,9 +87,14 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
     prefix: "/frozen/yield-errors",
     pageKey: "frozen.yield_errors",
   },
+  {
+    prefix: "/frozen/supplier-quotes",
+    pageKey: "frozen.supplier_quotes",
+  },
   { prefix: "/frozen", pageKey: "frozen" },
   { prefix: "/kitchen/settings", pageKey: "kitchen.settings" },
   { prefix: "/kitchen/cost-input", pageKey: "kitchen.cost_input" },
+  { prefix: "/kitchen/material-usage", pageKey: "kitchen.material_usage" },
   { prefix: "/kitchen/calendar", pageKey: "kitchen.calendar" },
   { prefix: "/kitchen/inventory", pageKey: "kitchen.inventory" },
   {
@@ -115,6 +120,11 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
   { prefix: "/restaurant/settings/roster-times", pageKey: "restaurant.settings.roster_times" },
   { prefix: "/restaurant/settings/monthly-pnl-cost-categories", pageKey: "restaurant.settings.monthly_pnl_cost_categories" },
   { prefix: "/restaurant/reports", pageKey: "restaurant.reports" },
+  {
+    prefix: "/reports/data-input-progress",
+    pageKey: "reports.data_input_progress",
+  },
+  { prefix: "/reports/kitchen", pageKey: "kitchen.cost_input" },
   { prefix: "/reports/frozen-meat", pageKey: "reports.frozen_meat" },
   { prefix: "/reports/shops", pageKey: "reports.shops" },
   {
@@ -148,6 +158,7 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
   { prefix: "/follow-up", pageKey: "overview.follow_up" },
   { prefix: "/factory", pageKey: "workspace" },
   { prefix: "/driver-delivery", pageKey: "workspace" },
+  { prefix: "/finance/cost-input", pageKey: "kitchen.cost_input" },
   { prefix: "/finance", pageKey: "finance" },
   { prefix: "/inventory", pageKey: "inventory" },
   { prefix: "/profile", pageKey: "profile" },
@@ -167,11 +178,13 @@ export type ReportTabKey = keyof typeof REPORT_TAB_PERMISSION_KEYS;
 export type ReportGroup = "frozenMeat" | "shops";
 
 export const REPORT_GROUP_PAGE_KEYS = {
+  dataInputProgress: "reports.data_input_progress",
   frozenMeat: "reports.frozen_meat",
   shops: "reports.shops",
 } as const;
 
 export const REPORT_GROUP_ROUTES = {
+  dataInputProgress: "/reports/data-input-progress",
   frozenMeat: "/reports/frozen-meat",
   shops: "/reports/shops",
 } as const;
@@ -204,6 +217,7 @@ const PAGE_ACCESS_CHILD_KEYS: Record<string, string[]> = {
     ...tabPermissionKeys(REPORT_GROUP_TABS.frozenMeat),
     ...tabPermissionKeys(REPORT_GROUP_TABS.shops),
   ],
+  finance: [REPORT_GROUP_PAGE_KEYS.dataInputProgress, "kitchen.cost_input"],
   "orders.settings": [
     "orders.settings.statuses",
     "orders.settings.sale_partners",

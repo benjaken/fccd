@@ -21,6 +21,8 @@ export type ListSearchBarProps = {
   filters?: ReactNode;
   filtersActive?: boolean;
   filtersTitle?: string;
+  /** Keep filters in the side panel even on wide screens. */
+  filtersAlwaysInDrawer?: boolean;
   /** Commit mobile filter drafts, then the drawer closes. */
   onConfirmFilters?: () => void;
   /** Restore mobile filter drafts when the drawer is dismissed. */
@@ -46,6 +48,7 @@ export function ListSearchBar({
   filters,
   filtersActive = false,
   filtersTitle,
+  filtersAlwaysInDrawer = false,
   onConfirmFilters,
   onDismissFilters,
 }: ListSearchBarProps) {
@@ -68,6 +71,8 @@ export function ListSearchBar({
     setOpen(false);
   };
 
+  const showFilterDrawer = Boolean(filters) && (isMobile || filtersAlwaysInDrawer);
+
   return (
     <div className={cn("list-search-host", className)}>
       <form className="list-search" onSubmit={handleSubmit}>
@@ -87,11 +92,11 @@ export function ListSearchBar({
         >
           {submitLabel}
         </Button>
-        {filters && isMobile ? (
+        {showFilterDrawer ? (
           <Button
             type="button"
             variant="outline"
-            size="icon"
+            size={filtersAlwaysInDrawer ? "default" : "icon"}
             className={cn(
               "list-search-filter-trigger",
               filtersActive && "is-active",
@@ -103,13 +108,14 @@ export function ListSearchBar({
             disabled={disabled}
           >
             <SlidersHorizontal />
+            {filtersAlwaysInDrawer ? <span>{filtersTitle ?? t("common.filters")}</span> : null}
           </Button>
         ) : null}
       </form>
-      {filters && !isMobile ? (
+      {filters && !showFilterDrawer ? (
         <div className="list-search-filters">{filters}</div>
       ) : null}
-      {filters && isMobile ? (
+      {showFilterDrawer ? (
         <SidePanel
           open={open}
           title={filtersTitle ?? t("common.filters")}

@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Plus, RefreshCw, Trash2 } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { ListTable } from "@/components/ui/list-table";
@@ -193,6 +194,10 @@ function AddMonthlyNonFestivalCostPanel({
 }
 
 export function KitchenMonthlyNonFestivalCosts({ canEdit }: { canEdit: boolean }) {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedMonth = /^\d{4}-\d{2}$/.test(searchParams.get("month") ?? "")
+    ? searchParams.get("month")
+    : null;
   const [page, setPage] = useState(1);
   const [rows, setRows] = useState<KitchenMonthlyCostRow[]>([]);
   const [total, setTotal] = useState(0);
@@ -208,14 +213,17 @@ export function KitchenMonthlyNonFestivalCosts({ canEdit }: { canEdit: boolean }
     let active = true;
     setLoading(true);
     setError(null);
-    void fetchKitchenMonthlyNonFestivalCosts({ page, pageSize: PAGE_SIZE })
+    void fetchKitchenMonthlyNonFestivalCosts({ page: selectedMonth ? 1 : page, pageSize: selectedMonth ? 500 : PAGE_SIZE })
       .then((result) => {
         if (!active) return;
-        setRows(result.items);
-        setTotal(result.total);
+        const items = selectedMonth
+          ? result.items.filter((row) => row.monthAt?.slice(0, 7) === selectedMonth)
+          : result.items;
+        setRows(items);
+        setTotal(selectedMonth ? items.length : result.total);
         setDrafts((current) => {
           const next = { ...current };
-          for (const row of result.items) {
+          for (const row of items) {
             next[row.id] ??= { amount: String(row.amount), remarks: row.remarks };
           }
           return next;
@@ -230,7 +238,7 @@ export function KitchenMonthlyNonFestivalCosts({ canEdit }: { canEdit: boolean }
     return () => {
       active = false;
     };
-  }, [page, reloadKey]);
+  }, [page, reloadKey, selectedMonth]);
 
   const changeDraft = (id: string, field: "amount" | "remarks", value: string) => {
     setDrafts((current) => ({
@@ -290,6 +298,22 @@ export function KitchenMonthlyNonFestivalCosts({ canEdit }: { canEdit: boolean }
         <p className="kitchen-monthly-cost-pnl-notice">
           此部份數據將展示在 P&amp;L 報告
         </p>
+        <label className="kitchen-monthly-cost-month-filter">
+          <span>篩選月份</span>
+          <input
+            type="month"
+            max={currentHongKongMonth()}
+            value={selectedMonth ?? ""}
+            aria-label="篩選月份"
+            onChange={(event) => {
+              const next = new URLSearchParams(searchParams);
+              if (event.target.value) next.set("month", event.target.value);
+              else next.delete("month");
+              setPage(1);
+              setSearchParams(next);
+            }}
+          />
+        </label>
         {canEdit ? (
           <div className="kitchen-monthly-cost-actions">
             <Button variant="outline" onClick={() => setAddPanelOpen(true)}>

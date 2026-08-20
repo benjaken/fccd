@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { CircleDollarSign, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ import {
   getKitchenCostCell,
   hongKongDateKey,
   isMonday,
+  mondayForDate,
   pastWeekOptions,
   previousCompleteWeekStart,
   updateKitchenAdvertisingCosts,
@@ -48,6 +50,12 @@ const costPageTabs = [
 ] as const;
 
 type CostPageTab = (typeof costPageTabs)[number]["id"];
+
+const defaultCostPageTab: CostPageTab = "weekly-advertising";
+
+function isCostPageTab(value: string | null): value is CostPageTab {
+  return costPageTabs.some((tab) => tab.id === value);
+}
 
 const costTypeColors = ["#1683e8", "#5268d9", "#f59e0b", "#8b5cf6"];
 
@@ -647,7 +655,11 @@ function EditCostRecordsPanel({
 
 export function KitchenCostInputPage() {
   const pageAccess = useCurrentPageAccess();
-  const [activeTab, setActiveTab] = useState<CostPageTab>("weekly-advertising");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<CostPageTab>(() => {
+    const tab = searchParams.get("tab");
+    return isCostPageTab(tab) ? tab : defaultCostPageTab;
+  });
   const [newestWeekStart, setNewestWeekStart] = useState(previousCompleteWeekStart);
   const [initialWeekReady, setInitialWeekReady] = useState(false);
   const [report, setReport] = useState<KitchenCostReport | null>(null);
@@ -656,6 +668,14 @@ export function KitchenCostInputPage() {
   const [reloadKey, setReloadKey] = useState(0);
   const [panelOpen, setPanelOpen] = useState(false);
   const [editPanelOpen, setEditPanelOpen] = useState(false);
+  const requestedWeekStart = useMemo(() => {
+    const requestedWeek = searchParams.get("week");
+    // Links from the progress page use Monday.  Accept any date as well, so a
+    // deep link always opens the Monday-to-Sunday range containing that date.
+    return requestedWeek && /^\d{4}-\d{2}-\d{2}$/.test(requestedWeek)
+      ? mondayForDate(requestedWeek)
+      : null;
+  }, [searchParams]);
   const weekOptions = useMemo(() => pastWeekOptions(), []);
   const fallbackWeeks = useMemo(
     () => buildKitchenCostWeeks(newestWeekStart),
@@ -664,10 +684,39 @@ export function KitchenCostInputPage() {
   const canEdit = pageAccess.canAccess(KITCHEN_COST_INPUT_EDIT);
 
   useEffect(() => {
+    const requestedTab = searchParams.get("tab");
+    const nextTab = isCostPageTab(requestedTab)
+      ? requestedTab
+      : defaultCostPageTab;
+    setActiveTab(nextTab);
+
+    if (requestedTab && requestedTab !== nextTab) {
+      const nextSearchParams = new URLSearchParams(searchParams);
+      nextSearchParams.set("tab", nextTab);
+      setSearchParams(nextSearchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
+
+  useEffect(() => {
+    if (requestedWeekStart) setNewestWeekStart(requestedWeekStart);
+  }, [requestedWeekStart]);
+
+  const selectTab = (tab: CostPageTab) => {
+    setActiveTab(tab);
+    setPanelOpen(false);
+    setEditPanelOpen(false);
+    const nextSearchParams = new URLSearchParams(searchParams);
+    nextSearchParams.set("tab", tab);
+    setSearchParams(nextSearchParams);
+  };
+
+  useEffect(() => {
     let active = true;
     void fetchLatestKitchenAdvertisingCostWeekStart()
       .then((weekStart) => {
-        if (active && weekStart) setNewestWeekStart(weekStart);
+        // An explicit URL is authoritative.  Otherwise the page opens at the
+        // most recently entered advertising-cost week.
+        if (active && weekStart && !requestedWeekStart) setNewestWeekStart(weekStart);
       })
       .catch(() => undefined)
       .finally(() => {
@@ -676,7 +725,7 @@ export function KitchenCostInputPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [requestedWeekStart]);
 
   useEffect(() => {
     if (!initialWeekReady) return;
@@ -743,11 +792,7 @@ export function KitchenCostInputPage() {
             aria-selected={activeTab === tab.id}
             aria-controls={`kitchen-cost-panel-${tab.id}`}
             tabIndex={activeTab === tab.id ? 0 : -1}
-            onClick={() => {
-              setActiveTab(tab.id);
-              setPanelOpen(false);
-              setEditPanelOpen(false);
-            }}
+            onClick={() => selectTab(tab.id)}
           >
             {tab.label}
           </button>

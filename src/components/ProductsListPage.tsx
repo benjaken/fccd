@@ -472,6 +472,7 @@ export function ProductsListPage({
             label={t("products.search")}
             placeholder={t("products.searchPlaceholder")}
             submitLabel={t("products.searchAction")}
+            filtersAlwaysInDrawer
             filtersActive={Boolean(
               priceRange ||
                 channelId ||

@@ -4,6 +4,7 @@ import { Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { ListTable } from "@/components/ui/list-table";
+import { MultiSelect } from "@/components/ui/multi-select";
 import { SidePanel } from "@/components/ui/side-panel";
 import { TablePagination } from "@/components/ui/table-pagination";
 import {
@@ -327,7 +328,7 @@ export function KitchenMonthlySupplierRecords({ canEdit }: { canEdit: boolean })
     singleDate: "",
     startDate: "",
     endDate: "",
-    supplierId: "",
+    supplierIds: [],
   });
   const [rows, setRows] = useState<KitchenSupplierRecord[]>([]);
   const [suppliers, setSuppliers] = useState<KitchenSupplierOption[]>([]);
@@ -413,11 +414,18 @@ export function KitchenMonthlySupplierRecords({ canEdit }: { canEdit: boolean })
             />
           )}
           <label className="kitchen-supplier-filter-select">
-            <span>供應商</span>
-            <select value={filters.supplierId} disabled={loadingOptions} onChange={(event) => updateFilters({ supplierId: event.target.value })}>
-              <option value="">全部供應商</option>
-              {suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}
-            </select>
+            <span id="kitchen-supplier-filter-label">供應商</span>
+            <MultiSelect
+              id="kitchen-supplier-filter-select"
+              labelledBy="kitchen-supplier-filter-label"
+              options={suppliers}
+              value={filters.supplierIds}
+              disabled={loadingOptions}
+              placeholder="全部供應商（可多選）"
+              searchPlaceholder="搜尋供應商"
+              emptyLabel="沒有符合的供應商"
+              onChange={(supplierIds) => updateFilters({ supplierIds })}
+            />
           </label>
         </div>
         {canEdit ? <div className="kitchen-monthly-cost-actions">

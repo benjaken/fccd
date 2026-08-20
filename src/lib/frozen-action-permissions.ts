@@ -21,6 +21,12 @@ export const FROZEN_ACTION_PERMISSION_KEYS = {
   sellingPriceCost: {
     push: "frozen.selling_price_cost.push",
   },
+  supplierQuotes: {
+    upload: "frozen.supplier_quotes.upload",
+    review: "frozen.supplier_quotes.review",
+    export: "frozen.supplier_quotes.export",
+    settings: "frozen.supplier_quotes.settings",
+  },
 } as const;
 
 export const FROZEN_ACTION_PAGE_KEYS = [
@@ -34,4 +40,8 @@ export const FROZEN_ACTION_PAGE_KEYS = [
   FROZEN_ACTION_PERMISSION_KEYS.meatCustomers.edit,
   FROZEN_ACTION_PERMISSION_KEYS.meatCustomers.delete,
   FROZEN_ACTION_PERMISSION_KEYS.sellingPriceCost.push,
+  FROZEN_ACTION_PERMISSION_KEYS.supplierQuotes.upload,
+  FROZEN_ACTION_PERMISSION_KEYS.supplierQuotes.review,
+  FROZEN_ACTION_PERMISSION_KEYS.supplierQuotes.export,
+  FROZEN_ACTION_PERMISSION_KEYS.supplierQuotes.settings,
 ] as const;

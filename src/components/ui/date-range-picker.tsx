@@ -13,6 +13,7 @@ export type DateRangePickerProps = {
   legend?: string;
   className?: string;
   disabled?: boolean;
+  allowOutOfOrder?: boolean;
 };
 
 /**
@@ -31,6 +32,7 @@ export function DateRangePicker({
   legend,
   className,
   disabled = false,
+  allowOutOfOrder = false,
 }: DateRangePickerProps) {
   const rangeLabel = legend ?? `${startLabel} — ${endLabel}`;
 
@@ -46,7 +48,7 @@ export function DateRangePicker({
           type="date"
           aria-label={startLabel}
           value={startValue}
-          max={endValue || undefined}
+          max={!allowOutOfOrder && endValue ? endValue : undefined}
           disabled={disabled}
           onChange={(event) => onStartChange(event.target.value)}
         />
@@ -58,7 +60,7 @@ export function DateRangePicker({
           type="date"
           aria-label={endLabel}
           value={endValue}
-          min={startValue || undefined}
+          min={!allowOutOfOrder && startValue ? startValue : undefined}
           disabled={disabled}
           onChange={(event) => onEndChange(event.target.value)}
         />

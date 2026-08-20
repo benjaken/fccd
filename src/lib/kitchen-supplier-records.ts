@@ -30,7 +30,7 @@ export type KitchenSupplierRecordFilters = {
   singleDate: string;
   startDate: string;
   endDate: string;
-  supplierId: string;
+  supplierIds: string[];
 };
 
 export type KitchenSupplierCostEntry = {
@@ -100,7 +100,7 @@ export async function fetchKitchenSupplierRecords({
     p_single_date: filters.mode === "single" && filters.singleDate ? filters.singleDate : null,
     p_start_date: filters.mode === "range" && filters.startDate ? filters.startDate : null,
     p_end_date: filters.mode === "range" && filters.endDate ? filters.endDate : null,
-    p_supplier_id: filters.supplierId || null,
+    p_supplier_ids: filters.supplierIds.length ? filters.supplierIds : null,
     p_limit: pageSize,
     p_offset: (page - 1) * pageSize,
   });
@@ -161,7 +161,7 @@ export async function fetchKitchenSupplierCostEntries({
     p_single_date: filters.mode === "single" && filters.singleDate ? filters.singleDate : null,
     p_start_date: filters.mode === "range" && filters.startDate ? filters.startDate : null,
     p_end_date: filters.mode === "range" && filters.endDate ? filters.endDate : null,
-    p_supplier_id: filters.supplierId || null,
+    p_supplier_ids: filters.supplierIds.length ? filters.supplierIds : null,
     p_limit: pageSize,
     p_offset: (page - 1) * pageSize,
   });

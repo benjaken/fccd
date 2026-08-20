@@ -678,6 +678,28 @@ describe("Super Admin system settings", () => {
     expect(reportGroups).toContain("parent_page_key = 'reports.frozen_meat'");
     expect(reportGroups).toContain("parent_page_key = 'reports.shops'");
 
+    const dataInputProgress = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260820020000_data_input_progress_report_page.sql",
+      ),
+      "utf8",
+    );
+    expect(dataInputProgress).toContain("reports.data_input_progress");
+    expect(dataInputProgress).toContain("/reports/data-input-progress");
+    expect(dataInputProgress).toContain("parent_permission.page_key = 'reports'");
+
+    const dataInputProgressFinanceMenu = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260820140000_move_data_input_progress_to_finance.sql",
+      ),
+      "utf8",
+    );
+    expect(dataInputProgressFinanceMenu).toContain("parent_page_key = 'finance'");
+    expect(dataInputProgressFinanceMenu).toContain("parent_permission.page_key = 'finance'");
+    expect(dataInputProgressFinanceMenu).toContain("page_key = 'kitchen.cost_input'");
+
     const frozenActions = readFileSync(
       path.resolve(
         process.cwd(),

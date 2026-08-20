@@ -117,21 +117,17 @@ export async function createPackingStocktake(stocktakeDate: string): Promise<num
 }
 
 export async function fetchStocktakeDates(kind: StocktakeKind = "packing"): Promise<StocktakeDateItem[]> {
-  const { data, error } = await supabase
-    .from(eventTable(kind))
-    .select("stocktake_at,updated_at")
-    .not("stocktake_at", "is", null)
-    .order("stocktake_at", { ascending: false })
-    .range(0, 4999);
-  if (error) throw error;
-  const dates = new Map<string, string>();
-  (data ?? []).forEach((row) => {
-    const value = row.stocktake_at as string;
-    const date = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Hong_Kong", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(value));
-    const updatedAt = (row.updated_at as string | null) ?? value;
-    if (!dates.has(date) || updatedAt > (dates.get(date) ?? "")) dates.set(date, updatedAt);
+  const { data, error } = await supabase.rpc("get_stocktake_dates", {
+    p_kind: kind,
   });
-  return [...dates.entries()].map(([date, updatedAt]) => ({ date, updatedAt }));
+  if (error) throw error;
+  return ((data ?? []) as Array<{
+    stocktake_date: string;
+    updated_at: string | null;
+  }>).map((row) => ({
+    date: row.stocktake_date,
+    updatedAt: row.updated_at ?? `${row.stocktake_date}T00:00:00+08:00`,
+  }));
 }
 
 export async function createIngredientStocktake(stocktakeDate: string): Promise<number> {

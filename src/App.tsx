@@ -50,8 +50,10 @@ import { OrdersDashboardPage } from "@/components/OrdersDashboardPage";
 import { OrderSettingsPage } from "@/components/OrderSettingsPage";
 import { OrderDetailPage } from "@/components/OrderDetailPage";
 import { PaymentsListPage } from "@/components/PaymentsListPage";
+import { MasoftInvoiceReceiptsPage } from "@/components/MasoftInvoiceReceiptsPage";
 import { ProfilePage } from "@/components/ProfilePage";
 import { ReportsPage } from "@/components/ReportsPage";
+import { DataInputProgressPage } from "@/components/DataInputProgressPage";
 import { QuotesListPage } from "@/components/QuotesListPage";
 import { QuoteCustomersPage } from "@/components/QuoteCustomersPage";
 import { ProductsListPage } from "@/components/ProductsListPage";
@@ -71,10 +73,16 @@ import { SellingPriceCostPage } from "@/components/SellingPriceCostPage";
 import { CalculationSettingsPage } from "@/components/CalculationSettingsPage";
 import { MeatCustomersPage } from "@/components/MeatCustomersPage";
 import { MeatYieldErrorsPage } from "@/components/MeatYieldErrorsPage";
+import { SupplierQuotePage } from "@/components/SupplierQuotePage";
 import { KitchenCalendarPage } from "@/components/KitchenCalendarPage";
 import { KitchenOrdersPage } from "@/components/KitchenOrdersPage";
 import { KitchenSettingsPage } from "@/components/KitchenSettingsPage";
 import { KitchenCostInputPage } from "@/components/KitchenCostInputPage";
+import { KitchenMaterialUsagePage } from "@/components/KitchenMaterialUsagePage";
+import { KitchenSalesCostReportPage } from "@/components/KitchenSalesCostReportPage";
+import { KitchenProductSalesReportPage } from "@/components/KitchenProductSalesReportPage";
+import { KitchenChannelSalesReportPage } from "@/components/KitchenChannelSalesReportPage";
+import { KitchenAdvertisingPerformanceReportPage } from "@/components/KitchenAdvertisingPerformanceReportPage";
 import { SuppliersPage } from "@/components/SuppliersPage";
 import { IngredientsListPage } from "@/components/IngredientsListPage";
 import { RestaurantStaffPage } from "@/components/RestaurantStaffPage";
@@ -237,8 +245,10 @@ function OperationsShell() {
     )?.to ?? "/settings/users";
   const firstReportsPath =
     secondaryNav.reports
-      .flatMap((item) => item.children ?? [])
-      .find((item) => isNavItemVisible(item, pageAccess.canAccess))?.to ??
+      .find((item) => item.key === "reports")
+      ?.children?.find((item) =>
+        isNavItemVisible(item, pageAccess.canAccess),
+      )?.to ??
     REPORT_GROUP_ROUTES.frozenMeat;
   const canViewFinance = pageAccess.canAccess("finance");
   const canEditProducts = canEditProductCatalog(authorizationRole);
@@ -637,7 +647,15 @@ function OperationsShell() {
               />
               <Route
                 path="/orders/payments"
+                element={<Navigate to="/orders/payments/bank-arrival-date" replace />}
+              />
+              <Route
+                path="/orders/payments/bank-arrival-date"
                 element={<PaymentsListPage canViewFinance={canViewFinance} />}
+              />
+              <Route
+                path="/orders/payments/masoft-invoices"
+                element={<MasoftInvoiceReceiptsPage canViewFinance={canViewFinance} />}
               />
               <Route
                 path="/orders/calendar"
@@ -782,6 +800,10 @@ function OperationsShell() {
                 element={<MeatYieldErrorsPage />}
               />
               <Route
+                path="/frozen/supplier-quotes"
+                element={<SupplierQuotePage />}
+              />
+              <Route
                 path="/kitchen"
                 element={<KitchenOrdersPage />}
               />
@@ -840,6 +862,10 @@ function OperationsShell() {
               />
               <Route
                 path="/kitchen/cost-input"
+                element={<Navigate to={`/finance/cost-input${location.search}`} replace />}
+              />
+              <Route
+                path="/finance/cost-input"
                 element={
                   pageAccess.canAccess("kitchen.cost_input") ? (
                     <KitchenCostInputPage />
@@ -876,6 +902,70 @@ function OperationsShell() {
                 element={
                   pageAccess.canAccess("kitchen.ingredient_stocktakes") ? (
                     <PackingStocktakesPage kind="ingredient" />
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
+                }
+              />
+              <Route
+                path="/reports"
+                element={<Navigate to={firstReportsPath} replace />}
+              />
+              <Route
+                path="/reports/data-input-progress"
+                element={
+                  pageAccess.canAccess("reports.data_input_progress") ? (
+                    <DataInputProgressPage />
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
+                }
+              />
+              <Route
+                path="/reports/kitchen"
+                element={
+                  pageAccess.canAccess("kitchen.cost_input") ? (
+                    <KitchenSalesCostReportPage />
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
+                }
+              />
+              <Route
+                path="/reports/kitchen/product-sales"
+                element={
+                  pageAccess.canAccess("kitchen.cost_input") ? (
+                    <KitchenProductSalesReportPage />
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
+                }
+              />
+              <Route
+                path="/reports/kitchen/channel-sales"
+                element={
+                  pageAccess.canAccess("kitchen.cost_input") ? (
+                    <KitchenChannelSalesReportPage />
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
+                }
+              />
+              <Route
+                path="/reports/kitchen/advertising-performance"
+                element={
+                  pageAccess.canAccess("kitchen.cost_input") ? (
+                    <KitchenAdvertisingPerformanceReportPage />
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
+                }
+              />
+              <Route
+                path="/kitchen/material-usage"
+                element={
+                  pageAccess.canAccess("kitchen.material_usage") ? (
+                    <KitchenMaterialUsagePage />
                   ) : (
                     <SettingsAccessDenied />
                   )
