@@ -409,31 +409,48 @@ describe("Products catalog pages", () => {
 
     await waitFor(() => expect(loadProducts).toHaveBeenCalledTimes(1));
 
+    const openFilters = () =>
+      user.click(
+        screen.getByRole("button", { name: i18n.t("common.openFilters") }),
+      );
+    const applyFilters = () =>
+      user.click(
+        screen.getByRole("button", { name: i18n.t("common.applyFilters") }),
+      );
+
+    await openFilters();
     await user.selectOptions(
       screen.getByLabelText("售價範圍"),
       "100-299",
     );
+    await applyFilters();
     await waitFor(() =>
       expect(loadProducts).toHaveBeenLastCalledWith(
         expect.objectContaining({ priceRange: "100-299", page: 1 }),
       ),
     );
 
+    await openFilters();
     await user.selectOptions(screen.getByLabelText("渠道"), "channel-1");
+    await applyFilters();
     await waitFor(() =>
       expect(loadProducts).toHaveBeenLastCalledWith(
         expect.objectContaining({ channelId: "channel-1", page: 1 }),
       ),
     );
 
+    await openFilters();
     await user.selectOptions(screen.getByLabelText("類別"), "西式熱盤");
+    await applyFilters();
     await waitFor(() =>
       expect(loadProducts).toHaveBeenLastCalledWith(
         expect.objectContaining({ productTypeName: "西式熱盤", page: 1 }),
       ),
     );
 
+    await openFilters();
     await user.selectOptions(screen.getByLabelText("狀態"), "Active");
+    await applyFilters();
     await waitFor(() =>
       expect(loadProducts).toHaveBeenLastCalledWith(
         expect.objectContaining({
@@ -446,7 +463,9 @@ describe("Products catalog pages", () => {
       ),
     );
 
+    await openFilters();
     await user.selectOptions(screen.getByLabelText("主食"), "staple-1");
+    await applyFilters();
     await waitFor(() =>
       expect(loadProducts).toHaveBeenLastCalledWith(
         expect.objectContaining({
@@ -456,7 +475,9 @@ describe("Products catalog pages", () => {
       ),
     );
 
+    await openFilters();
     await user.selectOptions(screen.getByLabelText("格數"), "column-2");
+    await applyFilters();
     await waitFor(() =>
       expect(loadProducts).toHaveBeenLastCalledWith(
         expect.objectContaining({
@@ -466,7 +487,9 @@ describe("Products catalog pages", () => {
       ),
     );
 
+    await openFilters();
     await user.selectOptions(screen.getByLabelText("烹煮方式"), "cook-steam");
+    await applyFilters();
     await waitFor(() =>
       expect(loadProducts).toHaveBeenLastCalledWith(
         expect.objectContaining({
@@ -476,6 +499,7 @@ describe("Products catalog pages", () => {
       ),
     );
 
+    await openFilters();
     expect(screen.getByLabelText("格數")).toHaveTextContent("單格");
     expect(screen.getByLabelText("格數")).toHaveTextContent("雙格");
     expect(screen.getByLabelText("格數")).toHaveTextContent("五格");

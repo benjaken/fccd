@@ -33,8 +33,8 @@ describe("buildMobileDrawerNav", () => {
       "/orders/split",
       "/orders/kitchen-notes",
       "/orders/reschedule-pending",
-      "/orders/payments",
-      "/orders/drivers",
+      "/orders/payments/bank-arrival-date",
+      "/orders/payments/masoft-invoices",
       "/orders/calendar",
       "/orders/settings/sale-partners",
       "/orders/settings/statuses",
@@ -78,9 +78,11 @@ describe("buildMobileDrawerNav", () => {
     const reports = groups.find((group) => group.groupKey === "reports");
 
     expect(reports?.items.map((item) => item.key)).toEqual([
+      "kitchenReports",
       "frozenMeat",
       "shops",
-      "finance",
+      "dataInputProgress",
+      "kitchenCostInput",
     ]);
   });
 });

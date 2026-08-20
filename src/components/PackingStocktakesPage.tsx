@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { createRoot } from "react-dom/client";
 import { ClipboardList, Plus, Printer, RefreshCw, Trash2 } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
@@ -72,6 +73,7 @@ export function PackingStocktakesPage({
   kind?: StocktakeKind;
 }) {
   const { t, i18n } = useTranslation();
+  const [searchParams] = useSearchParams();
   const copy = kind === "ingredient" ? "ingredientStocktakes" : "packingStocktakes";
   const copyKey = (key: string) => `${copy}.${key}`;
   const placeholder = kind === "ingredient"
@@ -119,6 +121,12 @@ export function PackingStocktakesPage({
       .finally(() => { if (!cancelled) setDatesLoading(false); });
     return () => { cancelled = true; };
   }, [effectiveLoadDates, reloadKey]);
+  useEffect(() => {
+    const requestedDate = searchParams.get("date");
+    if (!requestedDate || !dates.some((item) => item.date === requestedDate)) return;
+    setStocktakeDate(requestedDate);
+    setPage(1);
+  }, [dates, searchParams]);
   useEffect(() => {
     if (!stocktakeDate) {
       setRows([]); setTotal(0); setLoading(false); setError(null);

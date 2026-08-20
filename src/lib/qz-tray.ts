@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 /**
  * QZ Tray client facade.
@@ -140,11 +141,51 @@ export function isQzPrinterHealthy(status: string | null) {
 }
 
 let loadedQz: unknown = null;
+let qzSecurityConfigured = false;
+
+function configureQzSecurity(qz: any) {
+  if (qzSecurityConfigured) return;
+
+  qz.security.setCertificatePromise((resolve: (value: string) => void, reject: (reason?: unknown) => void) => {
+    fetch("/qz/digital-certificate.txt", { cache: "no-store" })
+      .then((response) => response.ok ? response.text() : Promise.reject(new Error("qz_certificate_load_failed")))
+      .then(resolve, reject);
+  });
+
+  qz.security.setSignatureAlgorithm("SHA512");
+  qz.security.setSignaturePromise((toSign: string) => (
+    async (resolve: (value: string) => void, reject: (reason?: unknown) => void) => {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const accessToken = sessionData.session?.access_token;
+        if (!accessToken) throw new Error("qz_sign_authentication_required");
+
+        const { data, error } = await supabase.functions.invoke("qz-sign", {
+          body: { request: toSign },
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        if (error) throw error;
+        const signature = typeof data === "object" && data && "signature" in data
+          ? (data as { signature?: unknown }).signature
+          : null;
+        if (typeof signature !== "string" || !signature) {
+          throw new Error("qz_signature_missing");
+        }
+        resolve(signature);
+      } catch (error) {
+        reject(error);
+      }
+    }
+  ));
+
+  qzSecurityConfigured = true;
+}
 
 async function loadQzModule(): Promise<any> {
   if (loadedQz) return loadedQz;
   const mod = await import("qz-tray");
   const qz = (mod.default ?? mod) as any;
+  configureQzSecurity(qz);
   loadedQz = qz;
   return qz;
 }
@@ -169,7 +210,7 @@ async function withTimeout<T>(
   });
 }
 
-export const DEFAULT_QZ_CONNECT_TIMEOUT_MS = 4000;
+export const DEFAULT_QZ_CONNECT_TIMEOUT_MS = 10000;
 
 export const qzTrayClient: QzTrayClient = {
   async connect() {

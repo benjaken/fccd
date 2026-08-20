@@ -51,9 +51,12 @@ describe("Primary navigation section matching", () => {
     ["/driver-delivery", ""],
     ["/reports", "reports"],
     ["/reports/daily", "reports"],
+    ["/reports/data-input-progress", "reports"],
+    ["/reports/kitchen", "reports"],
     ["/reports/frozen-meat", "reports"],
     ["/reports/shops", "reports"],
     ["/finance", "reports"],
+    ["/finance/cost-input", "reports"],
     ["/settings", "settings"],
     ["/settings/users", "settings"],
     ["/settings/roles", "settings"],
@@ -83,10 +86,15 @@ describe("Primary navigation section matching", () => {
     expect(isPrimaryNavActive("overview", "overview", true)).toBe(true);
   });
 
-  it("maps frozen-meat and shop report routes to their page keys", () => {
+  it("maps report routes to their page keys", () => {
     expect(pageAccessKey("/reports")).toBe("reports");
+    expect(pageAccessKey("/reports/data-input-progress")).toBe(
+      "reports.data_input_progress",
+    );
+    expect(pageAccessKey("/reports/kitchen")).toBe("kitchen.cost_input");
     expect(pageAccessKey("/reports/frozen-meat")).toBe("reports.frozen_meat");
     expect(pageAccessKey("/reports/shops")).toBe("reports.shops");
+    expect(pageAccessKey("/finance/cost-input")).toBe("kitchen.cost_input");
     expect(pageAccessKey("/reports/tabs/shop-order-quantities")).toBe(
       "reports.shop_order_quantities",
     );
@@ -128,6 +136,9 @@ describe("Primary navigation section matching", () => {
       "settings.attachments",
     );
     expect(pageAccessKey("/orders/unpaid")).toBe("orders.unpaid");
+    expect(pageAccessKey("/orders/payments/bank-arrival-date")).toBe(
+      "orders.payments",
+    );
     expect(pageAccessKey("/orders/monthly")).toBe("orders.monthly");
     expect(pageAccessKey("/orders/split")).toBe("orders.split");
     expect(pageAccessKey("/orders/kitchen-notes")).toBe("orders.kitchen_notes");
@@ -173,6 +184,8 @@ describe("Primary navigation section matching", () => {
     expect(navSource).toContain('to: "/orders/reschedule-pending"');
     expect(navSource).toContain('to: "/orders/shopify-pending"');
     expect(navSource).toContain('to: "/orders/calendar"');
+    expect(navSource).toContain('key: "bankArrivalDateInput"');
+    expect(navSource).toContain('to: "/orders/payments/bank-arrival-date"');
     expect(appSource.indexOf('path="/orders/calendar"')).toBeLessThan(
       appSource.indexOf('path="/orders/:id"'),
     );
@@ -194,9 +207,30 @@ describe("Primary navigation section matching", () => {
     );
     expect(navSource).toContain("key: \"frozenMeat\"");
     expect(navSource).toContain("key: \"shops\"");
+    expect(navSource).toContain("key: \"dataInputProgress\"");
+    expect(navSource).toContain("REPORT_GROUP_ROUTES.dataInputProgress");
     expect(navSource).toContain("REPORT_GROUP_ROUTES.frozenMeat");
     expect(navSource).toContain("REPORT_GROUP_ROUTES.shops");
     expect(appSource).toContain("sidebar-subnav");
+  });
+
+  it("keeps legacy report deep routes inside the reports fallback", () => {
+    const appSource = readFileSync(
+      path.resolve(process.cwd(), "src/App.tsx"),
+      "utf8",
+    );
+
+    expect(appSource.indexOf('path="/reports/data-input-progress"')).toBeLessThan(
+      appSource.indexOf('path="/reports/*"'),
+    );
+    expect(appSource.indexOf('path="/reports/shops"')).toBeLessThan(
+      appSource.indexOf('path="/reports/*"'),
+    );
+    expect(appSource).toContain('path="/reports/*"');
+    expect(appSource).toContain(
+      'element={<Navigate to={firstReportsPath} replace />}',
+    );
+    expect(appSource).toContain('path="/reports"');
   });
 
   it("places selling price cost after prepared meat inventory in Frozen Goods", () => {

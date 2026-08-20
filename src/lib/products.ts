@@ -894,6 +894,12 @@ async function fetchCollectionRecords(
   });
 }
 
+export async function fetchProductCollections(
+  channelId = "",
+): Promise<CatalogOption[]> {
+  return fetchCollectionRecords(channelId);
+}
+
 async function fetchCatalogIngredients(): Promise<CatalogOption[]> {
   const { data, error } = await supabase
     .from("ingredients")

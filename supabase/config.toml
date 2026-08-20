@@ -13,6 +13,9 @@ verify_jwt = false
 [functions.login-log]
 verify_jwt = false
 
+[functions.qz-sign]
+verify_jwt = true
+
 [functions.bubble-daily-incremental]
 verify_jwt = false
 
@@ -41,6 +44,9 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.driver-delivery-files]
+verify_jwt = false
+
+[functions.supplier-quote-ingest]
 verify_jwt = false
 
 # Deliberately retained as a 410 Gone tombstone so preview branches cannot

@@ -248,6 +248,7 @@ export function PackagesListPage({
             label={t("packages.search")}
             placeholder={t("packages.searchPlaceholder")}
             submitLabel={t("packages.searchAction")}
+            filtersAlwaysInDrawer
             filtersActive={Boolean(channelId) || Boolean(status)}
             onConfirmFilters={() => {
               channelFilter.confirm();
