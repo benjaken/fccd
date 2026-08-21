@@ -18,6 +18,9 @@ import {
 import { RawMeatAveragePriceReport } from "@/components/RawMeatAveragePriceReport";
 import { RestaurantSalesReportPage } from "@/components/RestaurantSalesReportPage";
 import { RestaurantSalesSalaryReport } from "@/components/RestaurantSalesSalaryReport";
+import { RestaurantSalesCostReport } from "@/components/RestaurantSalesCostReport";
+import { RestaurantPnlReport } from "@/components/RestaurantPnlReport";
+import { RestaurantNewProductReport } from "@/components/RestaurantNewProductReport";
 import { SupplierPurchaseReport } from "@/components/SupplierPurchaseReport";
 import { ShopSalesWorkingHoursReport } from "@/components/ShopSalesWorkingHoursReport";
 import { Button } from "@/components/ui/button";
@@ -44,6 +47,9 @@ const implementedTabs = new Set<ReportTabKey>([
   "shopSales",
   "shopSalesWorkingHours",
   "restaurantSalesSalary",
+  "restaurantSalesCost",
+  "restaurantPnl",
+  "newProducts",
   "shopOrderQuantities",
   "averageSupplyPrice",
   "productionCostPrice",
@@ -248,6 +254,12 @@ export function ReportsPage({ group }: { group: ReportGroup }) {
         <ShopSalesWorkingHoursReport />
       ) : activeTab === "restaurantSalesSalary" ? (
         <RestaurantSalesSalaryReport />
+      ) : activeTab === "restaurantSalesCost" ? (
+        <RestaurantSalesCostReport />
+      ) : activeTab === "restaurantPnl" ? (
+        <RestaurantPnlReport />
+      ) : activeTab === "newProducts" ? (
+        <RestaurantNewProductReport />
       ) : activeTab === "shopOrderQuantities" ? (
         <>
           <section className="panel report-filter-panel">

@@ -116,6 +116,7 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
   { prefix: "/restaurant/settings/service-periods", pageKey: "restaurant.settings.service_periods" },
   { prefix: "/restaurant/settings/payment-methods", pageKey: "restaurant.settings.payment_methods" },
   { prefix: "/restaurant/settings/delivery-platforms", pageKey: "restaurant.settings.delivery_platforms" },
+  { prefix: "/restaurant/settings/new-products", pageKey: "restaurant.settings.new_products" },
   { prefix: "/restaurant/settings/holidays", pageKey: "restaurant.settings.holidays" },
   { prefix: "/restaurant/settings/roster-times", pageKey: "restaurant.settings.roster_times" },
   { prefix: "/restaurant/settings/monthly-pnl-cost-categories", pageKey: "restaurant.settings.monthly_pnl_cost_categories" },
@@ -135,6 +136,14 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
   {
     prefix: "/reports/tabs/restaurant-sales-salary",
     pageKey: "reports.restaurant_sales_salary",
+  },
+  {
+    prefix: "/reports/tabs/restaurant-pnl",
+    pageKey: "reports.restaurant_pnl",
+  },
+  {
+    prefix: "/reports/tabs/new-products",
+    pageKey: "reports.new_products",
   },
   {
     prefix: "/reports/tabs/shop-order-quantities",
@@ -177,6 +186,9 @@ export const REPORT_TAB_PERMISSION_KEYS = {
   shopSales: "reports.shop_sales",
   shopSalesWorkingHours: "reports.shop_sales_working_hours",
   restaurantSalesSalary: "reports.restaurant_sales_salary",
+  restaurantSalesCost: "reports.restaurant_sales_cost",
+  restaurantPnl: "reports.restaurant_pnl",
+  newProducts: "reports.new_products",
   shopOrderQuantities: "reports.shop_order_quantities",
   averageSupplyPrice: "reports.average_supply_price",
   productionCostPrice: "reports.production_cost_price",
@@ -211,7 +223,7 @@ export const REPORT_GROUP_TABS = {
     "rawMeatStock",
     "supplierPurchase",
   ],
-  shops: ["shopSales", "shopSalesWorkingHours", "restaurantSalesSalary"],
+  shops: ["shopSales", "shopSalesWorkingHours", "restaurantSalesSalary", "restaurantSalesCost", "restaurantPnl", "newProducts"],
 } as const satisfies Record<ReportGroup, readonly ReportTabKey[]>;
 
 function tabPermissionKeys(tabs: readonly ReportTabKey[]) {

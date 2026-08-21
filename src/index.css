@@ -13275,7 +13275,13 @@ a.masoft-order-tag:focus-visible {
   color: oklch(0.58 0.15 65);
 }
 
-.reports-page {
+.reports-page,
+.kitchen-sales-cost-report-page {
+  --report-table-header-bg: color-mix(in srgb, #d9eaff 84%, var(--card));
+  --report-table-subheader-bg: color-mix(in srgb, #eef6ff 82%, var(--card));
+  --report-table-stripe-bg: color-mix(in srgb, #dbeafe 42%, var(--card));
+  --report-table-summary-bg: color-mix(in srgb, #d9eaff 58%, var(--card));
+  --report-table-accent-border: color-mix(in srgb, #7aa7d8 70%, var(--border));
   display: grid;
   gap: 14px;
 }
@@ -19217,4 +19223,741 @@ button.factory-job-card:focus-visible {
   .factory-meat-note-sheet > footer {
     font-size: 9pt;
   }
+}
+
+.restaurant-new-product-report {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 14px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.restaurant-new-product-report-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+
+.restaurant-new-product-report-toolbar .date-range-picker {
+  flex: 0 0 350px;
+  width: 350px;
+}
+
+.restaurant-new-product-report-panel {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.restaurant-new-product-report-panel .table-wrap {
+  min-height: 0;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.restaurant-new-product-report-panel thead th {
+  position: sticky;
+  z-index: 2;
+  top: 0;
+  background: var(--card);
+}
+
+.restaurant-new-product-report-panel th:last-child,
+.restaurant-new-product-report-panel td:last-child {
+  text-align: right;
+}
+
+.restaurant-new-product-report-panel .operational-list-pagination {
+  padding: 14px 18px;
+  border-top: 1px solid var(--border);
+}
+
+.restaurant-new-product-report-empty {
+  height: 180px;
+  text-align: center !important;
+  color: var(--muted-foreground);
+}
+
+.restaurant-new-product-report-state {
+  display: grid;
+  gap: 4px;
+  padding: 28px;
+  color: var(--muted-foreground);
+  text-align: center;
+}
+
+.restaurant-new-product-report-state.is-error strong {
+  color: var(--destructive);
+}
+
+.restaurant-new-products-panel > .side-panel-body {
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.restaurant-new-products-settings {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.restaurant-new-products-settings-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+}
+
+.restaurant-new-products-settings-table {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  height: 100%;
+  max-height: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 16px 18px 18px;
+  overflow: hidden;
+}
+
+.restaurant-new-products-settings-table > .operational-list-pagination {
+  position: relative;
+  z-index: 3;
+  align-self: end;
+  margin: 0;
+  background: var(--card);
+}
+
+.restaurant-new-products-settings-table .table-wrap {
+  min-height: 0;
+  height: 100%;
+  border-radius: 8px 8px 0 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.restaurant-new-products-settings-table table {
+  min-width: 760px;
+  table-layout: fixed;
+}
+
+.restaurant-new-products-settings-table th {
+  position: sticky;
+  z-index: 2;
+  top: 0;
+  background: var(--secondary);
+  color: var(--foreground);
+}
+
+.restaurant-new-products-settings-table th:nth-child(1) { width: 26%; }
+.restaurant-new-products-settings-table th:nth-child(2) { width: 16%; }
+.restaurant-new-products-settings-table th:nth-child(3) { width: 38%; }
+.restaurant-new-products-settings-table th:nth-child(4) { width: 20%; }
+
+.restaurant-new-products-settings-table td:nth-child(2),
+.restaurant-new-products-settings-table td:nth-child(4) {
+  text-align: center;
+}
+
+.restaurant-new-products-settings-table tr.is-saving {
+  opacity: 0.72;
+}
+
+.restaurant-new-products-remarks-input {
+  width: 100%;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: color-mix(in oklch, var(--muted) 65%, var(--background));
+  color: var(--foreground);
+  text-align: center;
+}
+
+.restaurant-new-products-remarks-input:focus {
+  outline: 0;
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 13%, transparent);
+}
+
+.restaurant-new-products-remarks-input:disabled {
+  color: var(--muted-foreground);
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+@media (max-width: 680px) {
+  .restaurant-new-product-report-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .restaurant-new-product-report-toolbar > button {
+    align-self: flex-end;
+  }
+
+  .restaurant-new-product-report-toolbar .date-range-picker {
+    width: 100%;
+    flex-basis: auto;
+  }
+
+  .restaurant-new-products-panel {
+    width: 100%;
+  }
+}
+
+@media (min-width: 900px) {
+  .main-content:has(.restaurant-new-product-report) {
+    height: calc(100dvh - var(--topbar-height) - var(--workspace-height));
+  }
+
+  .page-transition:has(.restaurant-new-product-report),
+  .reports-page:has(.restaurant-new-product-report) {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .reports-page:has(.restaurant-new-product-report) {
+    grid-template-rows: auto auto minmax(0, 1fr);
+    overflow: hidden;
+  }
+}
+
+
+.restaurant-pnl-report {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.restaurant-pnl-filters {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  padding: 16px;
+}
+
+.restaurant-pnl-filters > label {
+  display: grid;
+  gap: 6px;
+  min-width: 170px;
+}
+
+.restaurant-pnl-filters > label > span,
+.restaurant-pnl-restaurants legend {
+  color: var(--muted-foreground);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.restaurant-pnl-filters input {
+  width: 100%;
+  height: 40px;
+  padding: 0 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.restaurant-pnl-restaurants {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  flex: 1;
+}
+
+.restaurant-pnl-restaurants legend {
+  margin-bottom: 6px;
+}
+
+.restaurant-pnl-restaurants > div {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+}
+
+.restaurant-pnl-restaurants button {
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--background);
+  color: var(--foreground);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.restaurant-pnl-restaurants button.active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #fff;
+}
+
+.restaurant-pnl-state {
+  min-height: 180px;
+  display: grid;
+  place-content: center;
+  gap: 8px;
+  color: var(--muted-foreground);
+  text-align: center;
+}
+
+.restaurant-pnl-state.is-error {
+  color: var(--destructive);
+}
+
+.restaurant-pnl-card {
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.restaurant-pnl-scroll {
+  overflow-x: auto;
+  overflow-y: visible;
+}
+
+.restaurant-pnl-months {
+  display: flex;
+  align-items: flex-start;
+  width: max-content;
+  min-width: 100%;
+}
+
+.restaurant-pnl-table {
+  width: 665px;
+  min-width: 665px;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+  font-size: 0.82rem;
+}
+
+.restaurant-pnl-table + .restaurant-pnl-table {
+  border-left: 4px solid #ff8a00;
+}
+
+.restaurant-pnl-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  height: 40px;
+  padding: 8px;
+  border-bottom: 1px solid #7b8794;
+  background: #d9eaff;
+  color: #111827;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.restaurant-pnl-table tbody th,
+.restaurant-pnl-table tbody td {
+  height: 28px;
+  padding: 4px 8px;
+  border-bottom: 1px dotted #d7dee8;
+  background: var(--card);
+}
+
+.restaurant-pnl-table tbody th {
+  vertical-align: top;
+  color: var(--foreground);
+  text-align: left;
+  letter-spacing: normal;
+  font-weight: 800;
+  text-transform: none;
+}
+
+.restaurant-pnl-table tbody td:nth-last-child(2),
+.restaurant-pnl-table tbody td:last-child {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.restaurant-pnl-table .restaurant-pnl-category-column {
+  width: 165px;
+}
+
+.restaurant-pnl-table .restaurant-pnl-item-column {
+  width: 195px;
+}
+
+.restaurant-pnl-table .restaurant-pnl-amount-column {
+  width: 135px;
+}
+
+.restaurant-pnl-table .restaurant-pnl-total-column {
+  width: 170px;
+}
+
+.restaurant-pnl-table tbody th + td,
+.restaurant-pnl-table tbody tr > td:first-child {
+  border-right: 1px solid #89939e;
+}
+
+.restaurant-pnl-table tbody .restaurant-pnl-category-placeholder {
+  border-right: 0;
+}
+
+.restaurant-pnl-table tbody .restaurant-pnl-category-placeholder + td {
+  border-right: 1px solid #89939e;
+}
+
+.restaurant-pnl-table tbody td:last-child span {
+  margin-left: 24px;
+}
+
+.restaurant-pnl-table tr.summary th,
+.restaurant-pnl-table tr.summary td,
+.restaurant-pnl-table tr.category-total th,
+.restaurant-pnl-table tr.category-total td {
+  font-weight: 800;
+}
+
+.restaurant-pnl-table tr.gross th,
+.restaurant-pnl-table tr.gross td,
+.restaurant-pnl-table tr.draft-profit th,
+.restaurant-pnl-table tr.draft-profit td,
+.restaurant-pnl-table tr.category-total th,
+.restaurant-pnl-table tr.category-total td {
+  border-bottom-style: solid;
+}
+
+.restaurant-pnl-table tr.operation-total th,
+.restaurant-pnl-table tr.operation-total td {
+  border-top: 1px solid #59636f;
+}
+
+.restaurant-pnl-table tbody tr.restaurant-pnl-separator td {
+  height: 20px;
+  padding: 0;
+  border: 0;
+  background: #dfe6ee;
+}
+
+@media (max-width: 899px) {
+  .restaurant-pnl-filters {
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  .restaurant-pnl-filters > label {
+    flex: 1 1 145px;
+    min-width: 0;
+  }
+
+  .restaurant-pnl-restaurants {
+    flex-basis: 100%;
+    order: 3;
+  }
+
+  .restaurant-pnl-filters > button {
+    order: 4;
+  }
+
+  .restaurant-pnl-table {
+    width: 610px;
+    min-width: 610px;
+  }
+}
+
+.restaurant-sales-cost-report {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.restaurant-sales-cost-card {
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.restaurant-sales-cost-scroll {
+  overflow-x: auto;
+}
+
+.restaurant-sales-cost-months {
+  display: flex;
+  align-items: flex-start;
+  width: max-content;
+  min-width: 100%;
+}
+
+.restaurant-sales-cost-table {
+  width: 780px;
+  min-width: 780px;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+  font-size: 0.82rem;
+}
+
+.restaurant-sales-cost-table + .restaurant-sales-cost-table {
+  border-left: 4px solid #ff8a00;
+}
+
+.restaurant-sales-cost-table col.label {
+  width: 165px;
+}
+
+.restaurant-sales-cost-table thead tr:first-child th {
+  height: 40px;
+  background: #d6e7f7;
+  color: #111827;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.restaurant-sales-cost-table thead tr:nth-child(2) th {
+  height: 42px;
+  padding: 6px 8px;
+  border-bottom: 1px solid #89939e;
+  background: var(--card);
+  text-align: right;
+}
+
+.restaurant-sales-cost-table thead tr:nth-child(2) th:first-child {
+  text-align: left;
+}
+
+.restaurant-sales-cost-table tbody th,
+.restaurant-sales-cost-table tbody td {
+  box-sizing: border-box;
+  height: 29px;
+  padding: 4px 8px;
+  border-bottom: 1px dotted #d7dee8;
+  background: var(--card);
+}
+
+.restaurant-sales-cost-table tbody th {
+  color: var(--foreground);
+  text-align: left;
+  font-weight: 800;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.restaurant-sales-cost-table tbody td {
+  border-left: 1px dotted #d7dee8;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.restaurant-sales-cost-table tr.sales th,
+.restaurant-sales-cost-table tr.sales td,
+.restaurant-sales-cost-table tr.closing th,
+.restaurant-sales-cost-table tr.closing td,
+.restaurant-sales-cost-table tr.total-cos th,
+.restaurant-sales-cost-table tr.total-cos td,
+.restaurant-sales-cost-table tr.gross-profit th,
+.restaurant-sales-cost-table tr.gross-profit td {
+  font-weight: 800;
+}
+
+.restaurant-sales-cost-table tr.supplier-heading th,
+.restaurant-sales-cost-table tr.supplier-heading td {
+  height: 22px;
+  padding-top: 2px;
+  padding-bottom: 0;
+  border-bottom: 0;
+  font-weight: 800;
+}
+
+.restaurant-sales-cost-table tr.supplier-detail th {
+  font-weight: 700;
+}
+
+.restaurant-sales-cost-table tr.sales th,
+.restaurant-sales-cost-table tr.sales td,
+.restaurant-sales-cost-table tr.total-cos th,
+.restaurant-sales-cost-table tr.total-cos td {
+  height: 48px;
+}
+
+.restaurant-sales-cost-table tr.supplier-detail th,
+.restaurant-sales-cost-table tr.supplier-detail td,
+.restaurant-sales-cost-table tr.closing th,
+.restaurant-sales-cost-table tr.closing td,
+.restaurant-sales-cost-table tr.cost-ratio-row th,
+.restaurant-sales-cost-table tr.cost-ratio-row td,
+.restaurant-sales-cost-table tr.ratio-row th,
+.restaurant-sales-cost-table tr.ratio-row td,
+.restaurant-sales-cost-table tr.gross-profit th,
+.restaurant-sales-cost-table tr.gross-profit td,
+.restaurant-sales-cost-table tr.gp-trend th,
+.restaurant-sales-cost-table tr.gp-trend td {
+  height: 30px;
+}
+
+.restaurant-sales-cost-table td.has-trend {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.restaurant-sales-cost-table td.has-trend.stacked {
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 1px;
+  height: 48px;
+}
+
+.restaurant-sales-cost-table .trend-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 1px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.restaurant-sales-cost-table td.has-trend svg,
+.restaurant-sales-cost-table .trend-indicator svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+.restaurant-sales-cost-table tr.closing th,
+.restaurant-sales-cost-table tr.closing td,
+.restaurant-sales-cost-table tr.total-cos th,
+.restaurant-sales-cost-table tr.total-cos td {
+  border-bottom: 1px solid #7f8994;
+}
+
+.restaurant-sales-cost-table tr.ratio-row th,
+.restaurant-sales-cost-table tr.ratio-row td {
+  background: #fff3c4;
+  font-weight: 800;
+}
+
+.restaurant-sales-cost-table tr.trend-row td {
+  height: 24px;
+}
+
+.restaurant-sales-cost-table tr.trend-row svg {
+  width: 17px;
+  height: 17px;
+}
+
+.restaurant-sales-cost-table .positive {
+  color: #138a4f;
+}
+
+.restaurant-sales-cost-table .negative {
+  color: #c7352f;
+}
+
+.restaurant-sales-cost-table td.trend-total {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+@media (max-width: 899px) {
+  .restaurant-sales-cost-table {
+    width: 690px;
+    min-width: 690px;
+  }
+}
+
+
+/* Reports use one restrained blue table palette across every report tab. */
+.reports-page .shop-sales-hours-summary-card thead th,
+.reports-page .restaurant-sales-salary-table thead th,
+.reports-page .shop-sales-hours-table thead tr:first-child th,
+.reports-page .restaurant-sales-table thead tr:first-child th,
+.reports-page .report-table-wrap thead th,
+.reports-page .restaurant-new-product-report-panel thead th,
+.reports-page .restaurant-pnl-table thead th,
+.reports-page .restaurant-sales-cost-table thead tr:first-child th {
+  background: var(--report-table-header-bg);
+  color: var(--foreground);
+}
+
+.reports-page .shop-sales-hours-table thead tr:nth-child(2) th,
+.reports-page .restaurant-sales-table thead tr:nth-child(2) th,
+.reports-page .restaurant-sales-cost-table thead tr:nth-child(2) th {
+  background: var(--report-table-subheader-bg);
+  color: var(--foreground);
+}
+
+.reports-page .restaurant-sales-salary-table tbody tr:nth-child(even) th,
+.reports-page .restaurant-sales-salary-table tbody tr:nth-child(even) td,
+.reports-page .shop-sales-hours-table tbody tr:nth-child(even) th,
+.reports-page .shop-sales-hours-table tbody tr:nth-child(even) td,
+.reports-page .restaurant-sales-table tbody tr:nth-child(even) th,
+.reports-page .restaurant-sales-table tbody tr:nth-child(even) td {
+  background: var(--report-table-stripe-bg);
+}
+
+.reports-page .supplier-purchase-table tfoot th,
+.reports-page .supplier-purchase-table tfoot td,
+.reports-page .report-table-wrap tfoot th,
+.reports-page .report-table-wrap tfoot td,
+.reports-page .restaurant-sales-cost-table tr.ratio-row th,
+.reports-page .restaurant-sales-cost-table tr.ratio-row td,
+.reports-page .restaurant-pnl-table tbody tr.restaurant-pnl-separator td {
+  background: var(--report-table-summary-bg);
+  color: var(--foreground);
+}
+
+.reports-page .restaurant-sales-salary-table thead tr:first-child th:not(:first-child),
+.reports-page .shop-sales-hours-table .shop-sales-hours-total,
+.reports-page .restaurant-sales-table thead tr:first-child th:not(:first-child),
+.reports-page .restaurant-pnl-table + .restaurant-pnl-table,
+.reports-page .restaurant-sales-cost-table + .restaurant-sales-cost-table {
+  border-color: var(--report-table-accent-border);
+}
+
+.kitchen-sales-cost-report-page .kitchen-sales-cost-table thead th,
+.kitchen-sales-cost-report-page .kitchen-channel-sales-table thead th,
+.kitchen-sales-cost-report-page .kitchen-product-sales-table thead th,
+.kitchen-sales-cost-report-page .kitchen-product-sales-summary-table th,
+.kitchen-sales-cost-report-page .kitchen-product-sales-package-table th,
+.kitchen-sales-cost-report-page .kitchen-advertising-performance-table th {
+  background: var(--report-table-header-bg);
+  color: var(--foreground);
+}
+
+.kitchen-sales-cost-report-page .kitchen-sales-cost-table tbody tr:nth-child(even) th,
+.kitchen-sales-cost-report-page .kitchen-sales-cost-table tbody tr:nth-child(even) td,
+.kitchen-sales-cost-report-page .kitchen-channel-sales-table tbody tr:nth-child(even) th,
+.kitchen-sales-cost-report-page .kitchen-channel-sales-table tbody tr:nth-child(even) td,
+.kitchen-sales-cost-report-page .kitchen-product-sales-table tbody tr:nth-child(even) th,
+.kitchen-sales-cost-report-page .kitchen-product-sales-table tbody tr:nth-child(even) td,
+.kitchen-sales-cost-report-page .kitchen-advertising-performance-table tbody tr:nth-child(even) th,
+.kitchen-sales-cost-report-page .kitchen-advertising-performance-table tbody tr:nth-child(even) td {
+  background: var(--report-table-stripe-bg);
+}
+
+.kitchen-sales-cost-report-page .kitchen-sales-cost-table .kitchen-sales-cost-net-row th,
+.kitchen-sales-cost-report-page .kitchen-sales-cost-table .kitchen-sales-cost-net-row td,
+.kitchen-sales-cost-report-page .kitchen-channel-sales-table tfoot th,
+.kitchen-sales-cost-report-page .kitchen-channel-sales-table tfoot td {
+  border-color: var(--report-table-accent-border);
+  background: var(--report-table-summary-bg);
+  color: var(--foreground);
 }
