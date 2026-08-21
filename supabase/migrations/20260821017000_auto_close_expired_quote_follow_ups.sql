@@ -1,4 +1,6 @@
-create extension if not exists pg_cron with schema pg_catalog;
+-- pg_cron is already provisioned by the managed Supabase project. Re-running
+-- CREATE EXTENSION invokes its platform privilege bootstrap and can fail when
+-- those managed grants already have dependants.
 
 create or replace function public.close_expired_quote_follow_ups(
   p_now timestamptz default now()

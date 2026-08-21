@@ -1,4 +1,8 @@
 import { supabase } from "@/lib/supabase";
+import {
+  normalizeDoNotSendToFactory,
+  saveOrderFactorySettings,
+} from "@/lib/order-factory-settings";
 
 export type OrderEditorOption = {
   id: string;
@@ -201,7 +205,7 @@ export async function fetchOrderEditor(
     await Promise.all([
       supabase
         .from("orders")
-        .select("id,order_number,channel_id,customer_name_snapshot,company_name_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,email_snapshot,shipping_address_snapshot,customer_note_snapshot,remarks,factory_packing_note,delivery_at,delivery_time,ship_out_time,shipping_method_id,sales_partner_id,shipping_fee,discount_amount,cashdollar_redeemed,cashdollar_purchased,is_sent_to_factory,factory_print_date,factory_reprint_required")
+        .select("id,order_number,channel_id,customer_name_snapshot,company_name_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,email_snapshot,shipping_address_snapshot,customer_note_snapshot,remarks,factory_packing_note,delivery_at,delivery_time,ship_out_time,shipping_method_id,sales_partner_id,shipping_fee,discount_amount,cashdollar_redeemed,cashdollar_purchased,do_not_send_to_factory,factory_print_date,factory_reprint_required")
         .eq("id", id)
         .eq("document_type", "order")
         .is("archived_at", null)
@@ -258,10 +262,14 @@ export async function fetchOrderEditor(
     discount: numberValue(row.discount_amount),
     cashdollarRedeemed: numberValue(row.cashdollar_redeemed),
     cashdollarPurchased: numberValue(row.cashdollar_purchased),
-    doNotSendToFactory: row.is_sent_to_factory !== true,
+    doNotSendToFactory: copy
+      ? false
+      : normalizeDoNotSendToFactory(row.do_not_send_to_factory),
     suppressFactoryReprint: false,
-    factoryPrintDate: row.factory_print_date,
-    originalFactoryReprintRequired: Boolean(row.factory_reprint_required),
+    factoryPrintDate: copy ? null : row.factory_print_date,
+    originalFactoryReprintRequired: copy
+      ? false
+      : Boolean(row.factory_reprint_required),
     lines: (linesResult.data ?? []).map((line) => ({
       id: copy ? crypto.randomUUID() : line.id,
       productId: line.product_id,
@@ -299,12 +307,24 @@ export function orderDraftTotals(draft: OrderEditorDraft) {
   return { subtotal, total, paid, outstanding: Math.max(0, total - paid) };
 }
 
+export type OrderPaymentStatus = "unpaid" | "partial" | "paid";
+
+export function orderPaymentStatus({
+  total,
+  paid,
+  outstanding,
+}: ReturnType<typeof orderDraftTotals>): OrderPaymentStatus {
+  if (outstanding <= 0 && (total > 0 || paid > 0)) return "paid";
+  if (paid > 0) return "partial";
+  return "unpaid";
+}
+
 export async function saveOrderEditor(draft: OrderEditorDraft): Promise<string> {
   const totals = orderDraftTotals(draft);
   const orderId = draft.id ?? crypto.randomUUID();
-  const orderNumber = nullable(draft.orderNumber) ?? `B-${Date.now().toString().slice(-7)}`;
+  const requestedOrderNumber = nullable(draft.orderNumber);
   const orderValues = {
-    order_number: orderNumber,
+    order_number: requestedOrderNumber,
     document_type: "order",
     channel_id: nullable(draft.channelId),
     customer_name_snapshot: nullable(draft.customerName),
@@ -325,20 +345,23 @@ export async function saveOrderEditor(draft: OrderEditorDraft): Promise<string> 
     discount_amount: draft.discount,
     cashdollar_redeemed: draft.cashdollarRedeemed,
     cashdollar_purchased: draft.cashdollarPurchased,
-    is_sent_to_factory: !draft.doNotSendToFactory,
+    do_not_send_to_factory: draft.doNotSendToFactory,
     grand_total: totals.total,
     outstanding: totals.outstanding,
     updated_at: new Date().toISOString(),
   };
 
   const orderResult = draft.id
-    ? await supabase.from("orders").update(orderValues).eq("id", orderId).select("id").single()
+    ? await supabase.from("orders").update(orderValues).eq("id", orderId).select("id,order_number").single()
     : await supabase.from("orders").insert({
         id: orderId,
         legacy_id: generatedLegacyId("order"),
+        is_sent_to_factory: false,
         ...orderValues,
-      }).select("id").single();
+      }).select("id,order_number").single();
   if (orderResult.error) throw orderResult.error;
+  const savedOrderNumber = orderResult.data.order_number;
+  if (!savedOrderNumber) throw new Error("order_number_assignment_failed");
 
   const { data: currentLines, error: currentLinesError } = await supabase
     .from("order_lines").select("id").eq("order_id", orderId).eq("is_void", false);
@@ -377,27 +400,15 @@ export async function saveOrderEditor(draft: OrderEditorDraft): Promise<string> 
   // order line changes. This one-save override restores the previous valid
   // print state only when the order was fully printed and did not already need
   // a reprint before this edit.
-  if (
-    draft.suppressFactoryReprint &&
-    !draft.doNotSendToFactory &&
-    draft.factoryPrintDate &&
-    !draft.originalFactoryReprintRequired
-  ) {
-    const { error: printedError } = await supabase
-      .from("order_lines")
-      .update({ is_printed: true })
-      .eq("order_id", orderId)
-      .eq("is_void", false);
-    if (printedError) throw printedError;
-    const { error: reprintError } = await supabase
-      .from("orders")
-      .update({
-        factory_reprint_required: false,
-        factory_print_date: new Date().toISOString(),
-      })
-      .eq("id", orderId);
-    if (reprintError) throw reprintError;
-  }
+  await saveOrderFactorySettings(
+    orderId,
+    {
+      doNotSendToFactory: draft.doNotSendToFactory,
+      suppressFactoryReprint: draft.suppressFactoryReprint,
+      factoryPrintDate: draft.factoryPrintDate,
+      originalFactoryReprintRequired: draft.originalFactoryReprintRequired,
+    },
+  );
 
   const { data: currentPayments, error: currentPaymentsError } = await supabase
     .from("payments").select("id").eq("order_id", orderId).is("voided_at", null);
@@ -414,7 +425,7 @@ export async function saveOrderEditor(draft: OrderEditorDraft): Promise<string> 
         id: payment.id,
         legacy_id: generatedLegacyId("payment"),
         order_id: orderId,
-        order_number_snapshot: orderNumber,
+        order_number_snapshot: savedOrderNumber,
         payment_method_id: nullable(payment.paymentMethodId),
         amount: payment.amount,
         currency: "HKD",
@@ -442,6 +453,7 @@ export async function saveOrderEditor(draft: OrderEditorDraft): Promise<string> 
       : await supabase.from("deliveries").insert({
           id: crypto.randomUUID(),
           legacy_id: generatedLegacyId("delivery"),
+          delivery_status: "未派車隊",
           ...deliveryValues,
         });
     if (result.error) throw result.error;

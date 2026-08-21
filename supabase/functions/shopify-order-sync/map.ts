@@ -64,6 +64,8 @@ export type ShopifyRestOrder = {
   currency?: string | null;
   financial_status?: string | null;
   total_price?: string | number | null;
+  current_total_price?: string | number | null;
+  total_outstanding?: string | number | null;
   total_discounts?: string | number | null;
   created_at?: string | null;
   updated_at?: string | null;
@@ -203,6 +205,36 @@ function money(value: string | number | null | undefined): number {
   return 0;
 }
 
+export function shopifyFinancialStatus(
+  order: ShopifyRestOrder,
+): string | null {
+  const status = String(order.financial_status ?? "").trim().toLowerCase();
+  return status || null;
+}
+
+/** Shopify's balance is authoritative only for an order linked to Shopify. */
+export function shopifyOutstanding(order: ShopifyRestOrder): number | null {
+  if (
+    order.total_outstanding !== null &&
+    order.total_outstanding !== undefined &&
+    String(order.total_outstanding).trim() !== ""
+  ) {
+    return Math.max(0, money(order.total_outstanding));
+  }
+
+  const status = shopifyFinancialStatus(order);
+  if (["paid", "partially_refunded", "refunded", "voided"].includes(status ?? "")) {
+    return 0;
+  }
+  if (["pending", "authorized"].includes(status ?? "")) {
+    const total = order.current_total_price ?? order.total_price;
+    return total === null || total === undefined || String(total).trim() === ""
+      ? null
+      : Math.max(0, money(total));
+  }
+  return null;
+}
+
 function joinAddress(address: ShopifyRestAddress | null | undefined): string | null {
   if (!address) return null;
   const parts = [
@@ -262,6 +294,8 @@ export function mapShopifyOrder(input: {
   orderId: number;
   orderNumber: string;
   needsPayments: boolean;
+  financialStatus: string | null;
+  outstanding: number | null;
   remark: string | null;
   orderRow: Record<string, unknown>;
   lines: Array<{
@@ -284,6 +318,8 @@ export function mapShopifyOrder(input: {
   );
   const legacyId = shopifyLegacyId(input.shopDomain, orderId);
   const currency = String(input.order.currency ?? "HKD").slice(0, 3).toUpperCase();
+  const financialStatus = shopifyFinancialStatus(input.order);
+  const outstanding = shopifyOutstanding(input.order);
 
   const orderRow = {
     legacy_id: legacyId,
@@ -310,6 +346,10 @@ export function mapShopifyOrder(input: {
     discount_amount: money(input.order.total_discounts),
     shipping_fee: shippingFee,
     grand_total: money(input.order.total_price),
+    ...(outstanding === null ? {} : { outstanding }),
+    payment_status_source: "shopify",
+    shopify_financial_status: financialStatus,
+    shopify_financial_status_synced_at: new Date().toISOString(),
     delivery_at: delivery.deliveryAt ?? remarkDelivery.deliveryAt,
     delivery_time: delivery.deliveryTime ?? remarkDelivery.deliveryTime,
     remarks: remark?.trim() || (input.order.cancelled_at
@@ -359,6 +399,8 @@ export function mapShopifyOrder(input: {
     orderId,
     orderNumber,
     needsPayments: orderNeedsTransactionSync(input.order),
+    financialStatus,
+    outstanding,
     remark,
     orderRow,
     lines,
@@ -627,6 +669,67 @@ export function mapShopifyTransaction(input: {
     bubble_modified_at: input.transaction.created_at ?? null,
     voided_at: null,
   };
+}
+
+export type ComparablePayment = {
+  legacy_id?: unknown;
+  order_id?: unknown;
+  amount?: unknown;
+  currency?: unknown;
+  payment_at?: unknown;
+};
+
+function hongKongDate(value: unknown): string | null {
+  if (typeof value !== "string" || !value.trim()) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  const parts = new Intl.DateTimeFormat("en", {
+    timeZone: "Asia/Hong_Kong",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const valueOf = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value;
+  const year = valueOf("year");
+  const month = valueOf("month");
+  const day = valueOf("day");
+  return year && month && day ? `${year}-${month}-${day}` : null;
+}
+
+/** Identifies one receipt across Bubble's date-only value and Shopify time. */
+export function paymentDuplicateKey(row: ComparablePayment): string | null {
+  const orderId = typeof row.order_id === "string" ? row.order_id.trim() : "";
+  const amount = Number(row.amount);
+  const currency = String(row.currency ?? "HKD").trim().toUpperCase();
+  const paymentDate = hongKongDate(row.payment_at);
+  if (!orderId || !Number.isFinite(amount) || !currency || !paymentDate) return null;
+  return `${orderId}|${amount.toFixed(2)}|${currency}|${paymentDate}`;
+}
+
+/**
+ * Removes one Shopify row per matching legacy receipt. One-to-one consumption
+ * preserves legitimate same-day instalments with equal amounts.
+ */
+export function filterLegacyPaymentDuplicates<T extends ComparablePayment>(
+  shopifyRows: T[],
+  existingRows: ComparablePayment[],
+): T[] {
+  const legacyCounts = new Map<string, number>();
+  for (const row of existingRows) {
+    if (String(row.legacy_id ?? "").startsWith("shopify:")) continue;
+    const key = paymentDuplicateKey(row);
+    if (key) legacyCounts.set(key, (legacyCounts.get(key) ?? 0) + 1);
+  }
+
+  return shopifyRows.filter((row) => {
+    const key = paymentDuplicateKey(row);
+    if (!key) return true;
+    const matches = legacyCounts.get(key) ?? 0;
+    if (matches <= 0) return true;
+    legacyCounts.set(key, matches - 1);
+    return false;
+  });
 }
 
 export function pickCatalogMatch(

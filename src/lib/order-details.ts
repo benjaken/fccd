@@ -28,6 +28,8 @@ export type ReadOnlyOrderDetail = {
   isSentToFactory: boolean | null;
   factoryDate: string | null;
   factoryPackingNote: string | null;
+  factoryPrintDate?: string | null;
+  factoryReprintRequired?: boolean;
   currency: string;
   discount: number;
   shippingFee: number;
@@ -97,7 +99,7 @@ export type OrderDetailResult = {
 };
 
 const fields =
-  "id,document_type,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,shipping_address_snapshot,customer_note_snapshot,remarks,quote_status,quote_description_snapshot,delivery_terms_snapshot,delivery_at,ship_out_time,delivery_status,is_sent_to_factory,factory_date,factory_packing_note,currency,discount_amount,shipping_fee,grand_total,outstanding,updated_at,order_status_legacy_ids,channels(id,name)";
+  "id,document_type,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,shipping_address_snapshot,customer_note_snapshot,remarks,quote_status,quote_description_snapshot,delivery_terms_snapshot,delivery_at,ship_out_time,delivery_status,is_sent_to_factory,factory_date,factory_packing_note,factory_print_date,factory_reprint_required,currency,discount_amount,shipping_fee,grand_total,outstanding,updated_at,order_status_legacy_ids,channels(id,name)";
 
 function decimal(value: string | number | null) {
   return value === null ? null : Number.parseFloat(String(value));
@@ -263,6 +265,8 @@ export async function fetchOrderDetail(
     isSentToFactory: data.is_sent_to_factory,
     factoryDate: data.factory_date,
     factoryPackingNote: data.factory_packing_note,
+    factoryPrintDate: data.factory_print_date,
+    factoryReprintRequired: Boolean(data.factory_reprint_required),
     currency: data.currency,
     discount: Number(data.discount_amount),
     shippingFee: Number(data.shipping_fee),

@@ -98,6 +98,7 @@ describe("orders dashboard data", () => {
       "is_sent_to_factory.is.null,is_sent_to_factory.eq.false",
     );
     expect(eqFilters).toContainEqual(["is_sent_to_factory", false]);
+    expect(eqFilters).toContainEqual(["do_not_send_to_factory", false]);
     expect(
       orFilters.filter((filter) =>
         filter.includes('quote_status.not.in.("Done Deal","Case Closed")'),
