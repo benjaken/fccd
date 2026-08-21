@@ -91,6 +91,38 @@ describe("Core read pages", () => {
     expect(screen.getByText("未完成付款")).toBeInTheDocument();
   });
 
+  it("does not render editable factory settings on order details", async () => {
+    render(
+      <MemoryRouter initialEntries={["/orders/order-1"]}>
+        <Routes>
+          <Route
+            path="/orders/:id"
+            element={
+              <OrderDetailPage
+                documentType="order"
+                canViewFinance
+                canEdit
+                loadDetail={async () => ({
+                  ...detail,
+                  order: {
+                    ...detail.order,
+                    isSentToFactory: true,
+                    factoryPrintDate: "2026-08-20T02:00:00.000Z",
+                    factoryReprintRequired: false,
+                  },
+                })}
+              />
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "B-1513" })).toBeInTheDocument();
+    expect(screen.queryByRole("checkbox", { name: /不傳送到工場/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "儲存工場設定" })).not.toBeInTheDocument();
+  });
+
   it("shows the unpaid tag on delivered orders that still have outstanding", async () => {
     render(
       <MemoryRouter initialEntries={["/orders/order-1"]}>

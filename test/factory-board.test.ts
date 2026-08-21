@@ -15,6 +15,7 @@ import {
   formatFactoryLineLabel,
   groupDeliveriesByDate,
   hongKongDateKey,
+  isNewFactoryOrder,
   mapFactoryFleet,
   mapFactoryMeatOrder,
 } from "@/lib/factory-board";
@@ -58,6 +59,14 @@ describe("factory board helpers", () => {
         item({ id: "legacy-fixture" }),
       ]).map((row) => row.id),
     ).toEqual(["sent", "legacy-fixture"]);
+  });
+
+  it("marks a factory order as new only during the first 12 hours", () => {
+    const now = new Date("2026-08-21T12:00:00.000Z");
+    expect(isNewFactoryOrder("2026-08-21T00:00:01.000Z", now)).toBe(true);
+    expect(isNewFactoryOrder("2026-08-21T00:00:00.000Z", now)).toBe(false);
+    expect(isNewFactoryOrder("2026-08-20T23:59:59.000Z", now)).toBe(false);
+    expect(isNewFactoryOrder(null, now)).toBe(false);
   });
 
   it("formats the compact Chinese multi-day print heading", () => {

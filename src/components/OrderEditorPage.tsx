@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react
 import {
   ArrowLeft,
   Check,
+  CircleCheckBig,
   ChevronDown,
   ChevronUp,
   CircleAlert,
@@ -18,10 +19,12 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 
 import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { OrderFactorySettingsControls } from "@/components/order-factory-settings-controls";
 import {
   emptyOrderDraft,
   fetchOrderEditor,
   orderDraftTotals,
+  orderPaymentStatus,
   saveOrderEditor,
   type OrderEditorDraft,
   type OrderEditorOption,
@@ -92,6 +95,7 @@ function InputField({
   required,
   type = "text",
   placeholder,
+  disabled,
   onChange,
 }: {
   label: string;
@@ -99,6 +103,7 @@ function InputField({
   required?: boolean;
   type?: string;
   placeholder?: string;
+  disabled?: boolean;
   onChange: (value: string) => void;
 }) {
   return (
@@ -112,6 +117,7 @@ function InputField({
         value={value}
         placeholder={placeholder}
         required={required}
+        disabled={disabled}
         min={type === "number" ? 0 : undefined}
         step={type === "number" ? "0.01" : undefined}
         onChange={(event) => onChange(event.target.value)}
@@ -164,6 +170,7 @@ export function OrderEditorPage({
   }, [load]);
 
   const totals = useMemo(() => orderDraftTotals(draft), [draft]);
+  const paymentStatus = orderPaymentStatus(totals);
   const activeStepIndex = STEPS.findIndex((item) => item.id === step);
   const update = <K extends keyof OrderEditorDraft>(key: K, value: OrderEditorDraft[K]) =>
     setDraft((current) => ({ ...current, [key]: value }));
@@ -276,10 +283,25 @@ export function OrderEditorPage({
             <p>{draft.orderNumber ? customerSummary : "依序填寫訂單、餐點與收款資料"}</p>
           </div>
         </div>
-        <div className="order-editor-balance">
-          <span>尚欠</span>
-          <strong>{money(totals.outstanding)}</strong>
-        </div>
+        <aside
+          className={`order-editor-payment-status is-${paymentStatus}`}
+          role="status"
+          aria-label={paymentStatus === "paid" ? "付款狀態：完成付款" : paymentStatus === "partial" ? `付款狀態：尚欠 ${money(totals.outstanding)}` : "付款狀態：尚未付款"}
+        >
+          <span className="order-editor-payment-status-icon" aria-hidden="true">
+            {paymentStatus === "paid" ? <CircleCheckBig /> : paymentStatus === "partial" ? <CreditCard /> : <CircleAlert />}
+          </span>
+          <span className="order-editor-payment-status-copy">
+            <small>付款狀態</small>
+            {paymentStatus === "paid" ? (
+              <><strong>完成付款</strong><em>款項已收齊</em></>
+            ) : paymentStatus === "partial" ? (
+              <><strong>尚欠 {money(totals.outstanding)}</strong><em>已收 {money(totals.paid)}</em></>
+            ) : (
+              <><strong>尚未付款</strong><em>尚未收到任何款項</em></>
+            )}
+          </span>
+        </aside>
       </header>
 
       <nav className="order-editor-steps" aria-label="訂單編輯步驟">
@@ -308,7 +330,22 @@ export function OrderEditorPage({
             </header>
             <div className="order-editor-form-grid">
               <div className="order-editor-column">
-                <InputField label="單號" value={draft.orderNumber} placeholder={t("orderEditor.orderNumberPlaceholder")} onChange={(value) => update("orderNumber", value)} />
+                {copying ? (
+                  <InputField
+                    label="單號"
+                    value={draft.orderNumber}
+                    placeholder={t("orderEditor.copiedOrderNumberPlaceholder")}
+                    disabled
+                    onChange={(value) => update("orderNumber", value)}
+                  />
+                ) : (
+                  <InputField
+                    label="單號"
+                    value={draft.orderNumber}
+                    placeholder={t("orderEditor.orderNumberPlaceholder")}
+                    onChange={(value) => update("orderNumber", value)}
+                  />
+                )}
                 <SelectField label="品牌" value={draft.channelId} options={options.channels} required onChange={(value) => update("channelId", value)} />
                 <InputField label="客人姓名" value={draft.customerName} required onChange={(value) => update("customerName", value)} />
                 <InputField label="公司名稱" value={draft.companyName} onChange={(value) => update("companyName", value)} />
@@ -409,35 +446,6 @@ export function OrderEditorPage({
               <div><span>已收</span><strong>{money(totals.paid)}</strong></div>
               <div className="outstanding"><span>尚欠</span><strong>{money(totals.outstanding)}</strong></div>
             </div>
-            <section className="order-factory-controls" aria-label="工場設定">
-              <h3>工場設定</h3>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={draft.doNotSendToFactory}
-                  onChange={(event) => {
-                    update("doNotSendToFactory", event.target.checked);
-                    if (event.target.checked) update("suppressFactoryReprint", false);
-                  }}
-                />
-                <span>
-                  <strong>不傳送到工場</strong>
-                  <small>此訂單不會進入工場版面或工場生產流程。</small>
-                </span>
-              </label>
-              <label className={draft.doNotSendToFactory ? "disabled" : ""}>
-                <input
-                  type="checkbox"
-                  checked={draft.suppressFactoryReprint}
-                  disabled={draft.doNotSendToFactory}
-                  onChange={(event) => update("suppressFactoryReprint", event.target.checked)}
-                />
-                <span>
-                  <strong>不通知工場有更改</strong>
-                  <small>本次修改不會令已打印的工場標籤變成「需要重新打印」。</small>
-                </span>
-              </label>
-            </section>
           </>
         )}
       </section>
@@ -453,6 +461,16 @@ export function OrderEditorPage({
           )}
         </div>
       </footer>
+      {step === "items" ? (
+        <OrderFactorySettingsControls
+          doNotSendToFactory={draft.doNotSendToFactory}
+          suppressFactoryReprint={draft.suppressFactoryReprint}
+          onDoNotSendChange={(checked) => update("doNotSendToFactory", checked)}
+          onSuppressFactoryReprintChange={(checked) =>
+            update("suppressFactoryReprint", checked)
+          }
+        />
+      ) : null}
     </form>
   );
 }

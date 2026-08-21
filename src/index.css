@@ -6041,6 +6041,13 @@ button.product-tag[aria-pressed="true"] {
   overflow: hidden;
 }
 
+.orders-table-wrap .order-packing-note {
+  min-width: 14rem;
+  max-width: 24rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .quote-files-panel .side-panel-body {
   display: grid;
   align-content: start;
@@ -16305,6 +16312,18 @@ a.masoft-order-tag:focus-visible {
   line-height: 20px;
 }
 
+.quote-factory-status-action {
+  display: flex;
+  margin-right: auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.quote-factory-status-action > span {
+  color: var(--destructive);
+  font-size: 14px;
+}
+
 .quote-editor-totals-row {
   display: grid;
   grid-template-columns: minmax(150px, 1fr) minmax(300px, 380px);
@@ -17053,6 +17072,27 @@ a.masoft-order-tag:focus-visible {
   color: #f59e0b;
 }
 
+.factory-new-order-corner {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 2;
+  width: 58px;
+  height: 58px;
+  background: #f5b700;
+  clip-path: polygon(0 0, 100% 0, 100% 100%);
+}
+
+.factory-new-order-corner svg {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 23px;
+  height: 23px;
+  color: #ffffff;
+  fill: #ffffff;
+}
+
 .factory-reprint-warning {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -17112,6 +17152,17 @@ button.factory-job-card:focus-visible {
 .factory-job-card-body strong {
   font-size: 25px;
   font-weight: 850;
+}
+
+.factory-job-card-body .factory-new-order-tag {
+  width: fit-content;
+  margin: 6px auto 0;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: #f5b700;
+  color: #3f2d00;
+  font-size: 16px;
+  line-height: 1.2;
 }
 
 .factory-job-badge {
@@ -18505,7 +18556,9 @@ button.factory-job-card:focus-visible {
   }
 
   .factory-delivery-note-print,
-  .factory-delivery-note-print * {
+  .factory-delivery-note-print *,
+  .order-delivery-note-sheet,
+  .order-delivery-note-sheet * {
     visibility: visible !important;
   }
 
@@ -18522,7 +18575,8 @@ button.factory-job-card:focus-visible {
     display: none !important;
   }
 
-  .factory-delivery-note-print {
+  .factory-delivery-note-print,
+  .order-delivery-note-sheet {
     position: absolute;
     top: 0;
     left: 0;
@@ -18539,6 +18593,23 @@ button.factory-job-card:focus-visible {
     font-family: Arial, "Noto Sans TC", sans-serif;
     font-size: 13pt;
     line-height: 1.35;
+  }
+
+  .order-delivery-note-sheet {
+    page: factory-delivery-note;
+    margin: 0;
+    box-shadow: none;
+  }
+
+  .order-delivery-note-panel {
+    padding: 0 !important;
+    border: 0 !important;
+  }
+
+  .order-delivery-note-preview {
+    padding: 0 !important;
+    overflow: visible !important;
+    background: #ffffff !important;
   }
 
   .factory-delivery-note-header {
@@ -18604,7 +18675,8 @@ button.factory-job-card:focus-visible {
     print-color-adjust: exact;
   }
 
-  .factory-delivery-note-print > h2 {
+  .factory-delivery-note-print > h2,
+  .order-delivery-note-sheet > h2 {
     margin: 0 0 5mm;
     font-size: 18pt;
     text-align: right;
@@ -18689,7 +18761,8 @@ button.factory-job-card:focus-visible {
     border-bottom: 1px solid #222222 !important;
   }
 
-  .factory-delivery-note-print > footer {
+  .factory-delivery-note-print > footer,
+  .order-delivery-note-sheet > footer {
     position: absolute;
     top: auto;
     right: 12mm;
@@ -18715,6 +18788,11 @@ button.factory-job-card:focus-visible {
     justify-self: stretch;
     width: 100%;
     text-align: left;
+  }
+
+  .factory-delivery-note-page-footer {
+    grid-column: 3;
+    justify-self: end;
   }
 }
 
@@ -19042,6 +19120,305 @@ button.factory-job-card:focus-visible {
   max-height: 100px;
   margin: 0 auto 24px;
   object-fit: contain;
+}
+
+.order-delivery-note-panel {
+  width: min(920px, 100vw);
+}
+
+.order-delivery-note-panel > .side-panel-body {
+  padding: 0;
+  background: #62676c;
+}
+
+.order-delivery-note-preview {
+  padding: 22px;
+  overflow: auto;
+  background: #62676c;
+}
+
+.order-delivery-note-state {
+  display: grid;
+  min-height: 280px;
+  place-items: center;
+}
+
+.order-delivery-note-sheet {
+  position: relative;
+  box-sizing: border-box;
+  width: min(100%, 794px);
+  min-height: min(1000px, calc((100vw - 140px) * 1.414));
+  margin: 0 auto;
+  padding: 45px 45px 78px;
+  background: #ffffff;
+  box-shadow: 0 2px 12px rgb(0 0 0 / 28%);
+  color: #000000;
+  font-family: Arial, "Noto Sans TC", sans-serif;
+  font-size: 18px;
+  line-height: 1.35;
+}
+
+.order-delivery-note-sheet .factory-delivery-note-header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  margin-bottom: 26px;
+}
+
+.order-delivery-note-sheet .factory-delivery-note-header h1 {
+  grid-column: 2;
+  margin: 0;
+  font-size: 23px;
+  white-space: nowrap;
+}
+
+.order-delivery-note-sheet .factory-delivery-note-cartons {
+  grid-column: 3;
+  justify-self: end;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.order-delivery-note-sheet .factory-delivery-note-brand {
+  display: flex;
+  grid-column: 1;
+  grid-row: 1;
+  align-items: center;
+  width: max-content;
+}
+
+.order-delivery-note-sheet .factory-delivery-note-brand img {
+  display: block;
+  width: 170px;
+  max-height: 56px;
+  object-fit: contain;
+  object-position: left center;
+}
+
+.order-delivery-note-sheet > h2 {
+  margin: 0 0 19px;
+  font-size: 24px;
+  text-align: right;
+}
+
+.order-delivery-note-sheet .factory-delivery-note-details {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  margin-bottom: 22px;
+  border: 1px solid #222222;
+}
+
+.order-delivery-note-sheet .factory-delivery-note-details > section {
+  min-height: 170px;
+  padding: 7px 11px;
+}
+
+.order-delivery-note-sheet .factory-delivery-note-details > section + section {
+  border-left: 1px solid #222222;
+}
+
+.order-delivery-note-sheet .factory-delivery-note-details h3 {
+  margin: -7px -11px 7px;
+  padding: 4px 8px;
+  border-bottom: 1px solid #222222;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.order-delivery-note-sheet .factory-delivery-note-details p {
+  margin: 2px 0;
+}
+
+.order-delivery-note-sheet .factory-delivery-note-contact {
+  white-space: normal;
+}
+
+.order-delivery-note-sheet .factory-delivery-note-contact span {
+  white-space: nowrap;
+}
+
+.order-delivery-note-sheet .factory-delivery-note-order-reference {
+  box-sizing: border-box;
+  margin: -7px -11px 7px !important;
+  padding: 4px 11px;
+  border-bottom: 1px solid #222222;
+}
+
+.order-delivery-note-sheet .factory-delivery-note-lines {
+  width: 100%;
+  border-collapse: collapse;
+  color: #000000;
+  font-size: 17px;
+}
+
+.order-delivery-note-sheet .factory-delivery-note-lines th,
+.order-delivery-note-sheet .factory-delivery-note-lines td {
+  padding: 5px 9px;
+  border: 1px solid #222222;
+  background: #ffffff !important;
+  color: #000000;
+  text-align: left;
+  vertical-align: top;
+}
+
+.order-delivery-note-sheet .factory-delivery-note-lines th:first-child,
+.order-delivery-note-sheet .factory-delivery-note-lines td:first-child {
+  width: 66px;
+  white-space: nowrap;
+}
+
+.order-delivery-note-sheet .factory-delivery-note-lines th:last-child {
+  text-align: center;
+}
+
+.order-delivery-note-sheet > footer {
+  position: absolute;
+  right: 45px;
+  bottom: 36px;
+  left: 45px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: end;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.order-delivery-note-sheet .factory-delivery-note-brand-footer {
+  grid-column: 2;
+  text-align: center;
+}
+
+.order-delivery-note-sheet .factory-delivery-note-page-footer {
+  grid-column: 3;
+  justify-self: end;
+}
+
+@media (max-width: 760px) {
+  .order-delivery-note-preview {
+    padding: 10px;
+  }
+
+  .order-delivery-note-sheet {
+    min-width: 680px;
+  }
+}
+
+@media print {
+  .order-delivery-note-panel {
+    position: fixed !important;
+    inset: 0 auto auto 0 !important;
+    display: block !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+  }
+
+  .order-delivery-note-panel > .side-panel-body {
+    position: static !important;
+    display: block !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+  }
+
+  .order-delivery-note-preview {
+    padding: 0 !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+  }
+
+  .order-delivery-note-sheet {
+    position: absolute;
+    top: 0;
+    left: 0;
+    box-sizing: border-box;
+    width: 210mm;
+    height: 297mm;
+    min-width: 0;
+    min-height: 297mm;
+    margin: 0;
+    padding: 12mm 12mm 22mm;
+    page: factory-delivery-note;
+    background: #ffffff;
+    box-shadow: none;
+    color: #000000;
+    font-family: Arial, "Noto Sans TC", sans-serif;
+    font-size: 13pt;
+    line-height: 1.35;
+  }
+
+  .order-delivery-note-sheet .factory-delivery-note-header {
+    margin-bottom: 7mm;
+  }
+
+  .order-delivery-note-sheet .factory-delivery-note-header h1 {
+    font-size: 17pt;
+  }
+
+  .order-delivery-note-sheet .factory-delivery-note-cartons {
+    font-size: 13pt;
+  }
+
+  .order-delivery-note-sheet .factory-delivery-note-brand img {
+    width: 45mm;
+    max-height: 15mm;
+  }
+
+  .order-delivery-note-sheet > h2 {
+    margin: 0 0 5mm;
+    font-size: 18pt;
+  }
+
+  .order-delivery-note-sheet .factory-delivery-note-details {
+    margin-bottom: 6mm;
+  }
+
+  .order-delivery-note-sheet .factory-delivery-note-details > section {
+    min-height: 45mm;
+    padding: 2mm 3mm;
+  }
+
+  .order-delivery-note-sheet .factory-delivery-note-details h3 {
+    margin: -2mm -3mm 2mm;
+    padding: 1mm 2mm;
+    font-size: 13pt;
+  }
+
+  .order-delivery-note-sheet .factory-delivery-note-details p {
+    margin: 0.5mm 0;
+  }
+
+  .order-delivery-note-sheet .factory-delivery-note-order-reference {
+    margin: -2mm -3mm 2mm !important;
+    padding: 1mm 3mm;
+  }
+
+  .order-delivery-note-sheet .factory-delivery-note-lines {
+    font-size: 12.5pt;
+  }
+
+  .order-delivery-note-sheet .factory-delivery-note-lines th,
+  .order-delivery-note-sheet .factory-delivery-note-lines td {
+    padding: 1.5mm 2.5mm;
+    background: #ffffff !important;
+  }
+
+  .order-delivery-note-sheet .factory-delivery-note-lines th:first-child,
+  .order-delivery-note-sheet .factory-delivery-note-lines td:first-child {
+    width: 18mm;
+  }
+
+  .order-delivery-note-sheet > footer {
+    right: 12mm;
+    bottom: 10mm;
+    left: 12mm;
+    font-size: 10pt;
+  }
 }
 
 .order-print-reference {
@@ -20174,6 +20551,53 @@ button.factory-job-card:focus-visible {
 .order-row-actions svg {
   width: 1rem;
   height: 1rem;
+}
+
+.order-row-actions .order-document-action {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.order-status-picker {
+  position: relative;
+}
+
+.order-status-picker-modal .modal-body {
+  overflow: visible;
+}
+
+.order-status-picker-field {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.order-status-picker-field > span {
+  color: var(--foreground);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.order-status-picker-modal .multi-select-trigger,
+.order-status-picker-modal .multi-select-menu,
+.order-status-picker-modal .multi-select-option {
+  width: 100%;
+  height: auto;
+}
+
+.order-status-picker-modal .multi-select-option {
+  justify-content: flex-start;
+}
+
+.order-status-picker-modal .multi-select-menu {
+  z-index: 60;
+}
+
+.order-status-picker-error {
+  display: block;
+  margin-top: 0.75rem;
+  color: var(--destructive);
+  font-size: 0.8125rem;
 }
 
 .order-number-cell {
@@ -21581,25 +22005,80 @@ button.factory-job-card:focus-visible {
   font-size: 0.8125rem;
 }
 
-.order-editor-balance {
+.order-editor-payment-status {
+  position: fixed;
+  z-index: 30;
+  top: calc(var(--topbar-height) + var(--workspace-height) + 20px);
+  right: 28px;
   display: flex;
-  align-items: baseline;
-  gap: 8px;
-  padding: 11px 18px;
-  border-radius: 999px;
-  background: #d6a83c;
+  align-items: center;
+  gap: 13px;
+  min-width: 245px;
+  padding: 15px 18px;
+  border: 1px solid rgb(255 255 255 / 32%);
+  border-radius: 16px;
   color: white;
-  box-shadow: 0 8px 24px rgb(131 91 0 / 12%);
+  box-shadow: 0 14px 36px rgb(15 23 42 / 20%);
+  backdrop-filter: blur(12px);
 }
 
-.order-editor-balance span {
-  font-size: 0.75rem;
-  font-weight: 700;
+.order-editor-payment-status.is-unpaid {
+  background: color-mix(in oklch, #c93636 94%, transparent);
 }
 
-.order-editor-balance strong {
-  font-size: 16px;
+.order-editor-payment-status.is-partial {
+  background: color-mix(in oklch, #c58b16 94%, transparent);
+}
+
+.order-editor-payment-status.is-paid {
+  background: color-mix(in oklch, #21864d 94%, transparent);
+}
+
+.order-editor-payment-status-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 13px;
+  background: rgb(255 255 255 / 18%);
+}
+
+.order-editor-payment-status-icon svg {
+  width: 23px;
+  height: 23px;
+}
+
+.order-editor-payment-status-copy {
+  display: grid;
+  gap: 1px;
+}
+
+.order-editor-payment-status-copy small,
+.order-editor-payment-status-copy strong,
+.order-editor-payment-status-copy em {
+  display: block;
+}
+
+.order-editor-payment-status-copy small {
+  font-size: 0.7rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  opacity: 0.78;
+}
+
+.order-editor-payment-status-copy strong {
+  font-size: 1.08rem;
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+}
+
+.order-editor-payment-status-copy em {
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 600;
+  opacity: 0.82;
 }
 
 .order-editor-steps {
@@ -22077,6 +22556,23 @@ button.factory-job-card:focus-visible {
   line-height: 1.45;
 }
 
+.order-detail-factory-controls {
+  margin-top: 20px;
+}
+
+.order-detail-factory-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.order-detail-factory-actions [role="alert"] {
+  margin-right: auto;
+  color: var(--destructive);
+  font-size: 0.8rem;
+}
+
 .order-editor-footer {
   position: sticky;
   z-index: 8;
@@ -22134,16 +22630,30 @@ button.factory-job-card:focus-visible {
     align-items: flex-start;
   }
 
-  .order-editor-balance {
-    padding: 8px 12px;
+  .order-editor-payment-status {
+    top: calc(var(--topbar-height) + 12px);
+    right: 14px;
+    min-width: 205px;
+    padding: 11px 13px;
   }
 
-  .order-editor-balance span {
+  .order-editor-payment-status-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+  }
+
+  .order-editor-payment-status-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .order-editor-payment-status-copy strong {
+    font-size: 0.95rem;
+  }
+
+  .order-editor-payment-status-copy em {
     display: none;
-  }
-
-  .order-editor-balance strong {
-    font-size: 0.8125rem;
   }
 
   .order-editor-steps button {

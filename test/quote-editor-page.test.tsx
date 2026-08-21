@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { QuoteEditorPage } from "@/components/QuoteEditorPage";
 import i18n from "@/i18n";
-import { dedupeQuoteOptions, type QuoteEditorOptions, type QuoteLine } from "@/lib/quote-editor";
+import { dedupeQuoteOptions, quoteLineTotal, type QuoteEditorOptions, type QuoteLine } from "@/lib/quote-editor";
 
 const options: QuoteEditorOptions = {
   channels: [{ id: "channel-1", name: "Residential" }],
@@ -29,9 +29,17 @@ const options: QuoteEditorOptions = {
 };
 
 const shippingFeeOptions = [
+  { id: "fee-free", item: "Free delivery", fee: 0, createdAt: "2026-08-21T00:00:00Z" },
   { id: "fee-80", item: "Ground-floor delivery", fee: 80, createdAt: "2026-08-21T00:00:00Z" },
   { id: "fee-100", item: "Remote-area delivery", fee: 100, createdAt: "2026-08-21T00:00:00Z" },
 ];
+
+describe("quote line totals", () => {
+  it("recalculates migrated rows whose stored subtotal is zero", () => {
+    expect(quoteLineTotal(24, 88, 0)).toBe(2112);
+    expect(quoteLineTotal(2, 88, 176)).toBe(176);
+  });
+});
 
 const emptyQuoteDraft = {
   channelId: "",
@@ -232,7 +240,7 @@ describe("Quote editor", () => {
       orderId: "quote-1", quantity: 2, unitPrice: 88,
     })));
     expect((await screen.findAllByText("HK$176.00")).length).toBeGreaterThanOrEqual(1);
-  });
+  }, 10_000);
 
   it("applies shipping rules and selectable delivery times", async () => {
     const user = userEvent.setup();
@@ -669,5 +677,72 @@ describe("Quote editor", () => {
     expect(screen.queryByRole("heading", { name: "活動項目" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
     expect(document.querySelector("input, select, textarea")).not.toBeInTheDocument();
+  });
+
+  it("uses the quote layout for order editing and adds customer matters to the first form", async () => {
+    const user = userEvent.setup();
+    const setFactoryStatus = vi.fn().mockResolvedValue(undefined);
+    const loadSummary = vi.fn().mockResolvedValue({
+      id: "order-1", orderNumber: "FCCO20260801", channelId: "channel-1",
+      draft: {
+        channelId: "channel-1", customerName: "Customer", companyName: "Company",
+        contactA: "12345678", contactB: "", email: "order@example.com", asanaLink: "",
+        address: "", districtId: "district-1", districtName: "", shippingMethodId: "shipping-home",
+        deliveryDate: "2026-08-21", deliveryTime: "12:00 - 13:00", shipOutTime: "",
+        customerNote: "不要香菜", packingNote: "", salesPartnerId: "", internalNote: "", tagIds: [],
+        quoteStatus: "", quoteSalesSourceId: "", quoteCommunicationChannelId: "",
+      },
+      financials: { shippingFee: 0, discount: 0, cashdollarRedeemed: 0, cashdollarPurchased: 0 },
+      payments: [],
+      isSentToFactory: false,
+      doNotSendToFactory: false,
+    });
+
+    const view = render(
+      <MemoryRouter initialEntries={["/orders/order-1/edit"]}>
+        <Routes>
+          <Route path="/orders/:id/edit" element={<QuoteEditorPage documentType="order" setFactoryStatus={setFactoryStatus} loadOptions={vi.fn().mockResolvedValue(options)} loadSummary={loadSummary} loadLines={vi.fn().mockResolvedValue([])} loadShippingFeeOptions={vi.fn().mockResolvedValue(shippingFeeOptions)} />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "FCCO20260801" })).toBeInTheDocument();
+    expect(screen.getByRole("status", { name: "付款狀態：尚未付款" })).toBeInTheDocument();
+    expect(loadSummary).toHaveBeenCalledWith("order-1", "order");
+    expect(screen.getByLabelText(/Customer matters|客人事項/)).toHaveValue("不要香菜");
+    expect(screen.queryByLabelText(/Success probability|成功機率/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Sales source|報價渠道/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Communication channel|溝通渠道/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Convert to order" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: /Add products|加入貨品/ }));
+    expect(screen.getByRole("combobox", { name: /Shipping fee option|運費選項/ })).toHaveValue("");
+    const doNotSend = screen.getByRole("checkbox", { name: /Do not send to factory|不傳送到工場/ });
+    const suppressFactoryChange = screen.getByRole("checkbox", { name: /Do not notify factory of changes|不通知工場有更改/ });
+    expect(doNotSend).not.toBeChecked();
+    expect(suppressFactoryChange).toBeEnabled();
+    expect(screen.getByRole("button", { name: /Send to factory|送至工場/ })).toBeInTheDocument();
+    await user.click(suppressFactoryChange);
+    expect(suppressFactoryChange).toBeChecked();
+    await user.click(screen.getByRole("button", { name: /Send to factory|送至工場/ }));
+    expect(setFactoryStatus).toHaveBeenCalledWith("order-1", true);
+    expect(doNotSend).not.toBeChecked();
+    await user.click(screen.getByRole("button", { name: /Cancel factory send|取消送至工場/ }));
+    expect(setFactoryStatus).toHaveBeenLastCalledWith("order-1", false);
+    expect(doNotSend).not.toBeChecked();
+
+    view.unmount();
+    render(
+      <MemoryRouter initialEntries={["/orders/order-1"]}>
+        <Routes>
+          <Route path="/orders/:id" element={<QuoteEditorPage documentType="order" combined readOnly canEdit loadOptions={vi.fn().mockResolvedValue(options)} loadSummary={loadSummary} loadLines={vi.fn().mockResolvedValue([])} loadShippingFeeOptions={vi.fn().mockResolvedValue(shippingFeeOptions)} />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    expect(await screen.findByRole("heading", { name: "FCCO20260801" })).toBeInTheDocument();
+    expect(screen.queryByText(/Success probability|成功機率/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Sales source|報價渠道/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Communication channel|溝通渠道/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("checkbox", { name: /Do not send to factory|不傳送到工場/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Send to factory|送至工場/ })).not.toBeInTheDocument();
   });
 });

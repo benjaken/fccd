@@ -2,6 +2,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   collectLineMenuRemarkText,
   extractOptionRemark,
+  filterLegacyPaymentDuplicates,
   mapShopifyOrder,
   mapShopifyTransaction,
   normalizeNameForMatch,
@@ -578,13 +579,20 @@ async function syncPaymentsForOrders(input: {
   if (!payable.length) return { inserted: 0, pending: 0 };
 
   const ordersWithPayments = new Set<string>();
+  const existingLegacyPayments: Array<{
+    legacy_id: string;
+    order_id: string;
+    amount: number;
+    currency: string;
+    payment_at: string | null;
+  }> = [];
   for (let index = 0; index < payable.length; index += PAYMENT_LOOKUP_CHUNK) {
     const chunk = payable.slice(index, index + PAYMENT_LOOKUP_CHUNK);
     const { data, error } = await client
       .from("payments")
-      .select("order_id")
+      .select("legacy_id,order_id,amount,currency,payment_at")
       .in("order_id", chunk.map((order) => order.supabaseOrderId))
-      .like("legacy_id", "shopify:%");
+      .is("voided_at", null);
     if (error) {
       issues.push({
         store_id: storeRow.id,
@@ -595,7 +603,11 @@ async function syncPaymentsForOrders(input: {
       return { inserted: 0, pending: payable.length };
     }
     for (const row of data ?? []) {
-      ordersWithPayments.add(row.order_id as string);
+      if (String(row.legacy_id).startsWith("shopify:")) {
+        ordersWithPayments.add(row.order_id as string);
+      } else {
+        existingLegacyPayments.push(row as typeof existingLegacyPayments[number]);
+      }
     }
   }
 
@@ -650,9 +662,13 @@ async function syncPaymentsForOrders(input: {
     }
   }
 
+  const uniquePaymentRows = filterLegacyPaymentDuplicates(
+    paymentRows,
+    existingLegacyPayments,
+  );
   let paymentsInserted = 0;
-  for (let index = 0; index < paymentRows.length; index += PAYMENT_INSERT_CHUNK) {
-    const chunk = paymentRows.slice(index, index + PAYMENT_INSERT_CHUNK);
+  for (let index = 0; index < uniquePaymentRows.length; index += PAYMENT_INSERT_CHUNK) {
+    const chunk = uniquePaymentRows.slice(index, index + PAYMENT_INSERT_CHUNK);
     const { data, error } = await client
       .from("payments")
       .upsert(chunk, { onConflict: "legacy_id", ignoreDuplicates: true })
@@ -672,6 +688,16 @@ async function syncPaymentsForOrders(input: {
 }
 
 type MappedOrder = NonNullable<ReturnType<typeof mapShopifyOrder>>;
+
+function shopifyPaymentStatusPatch(item: MappedOrder): Record<string, unknown> {
+  return {
+    payment_status_source: "shopify",
+    shopify_financial_status: item.financialStatus,
+    shopify_financial_status_synced_at: new Date().toISOString(),
+    ...(item.outstanding === null ? {} : { outstanding: item.outstanding }),
+    updated_at: new Date().toISOString(),
+  };
+}
 
 type OrderProcessingContext = {
   client: AdminClient;
@@ -706,10 +732,9 @@ type OrderProcessingResult = {
 };
 
 /**
- * Writes a batch of mapped Shopify orders. Orders, lines, and payments are
- * immutable: a legacy_id that already exists is never overwritten, so this
- * path can run repeatedly (cron, webhook, manual refresh) without mutating
- * previously imported data.
+ * Writes a batch of mapped Shopify orders. Operational order data, lines, and
+ * payments remain immutable, while Shopify-owned payment status is refreshed
+ * for orders that are already linked to Shopify.
  */
 async function processMappedOrders(
   context: OrderProcessingContext,
@@ -789,8 +814,19 @@ async function processMappedOrders(
         numberRows.find((row) => row.id === targetId)?.legacy_id ?? "";
 
     if (mode === "skip" && targetId) {
-      // Immutable: an existing Shopify order is never overwritten. Payments
-      // for it can still be picked up on later runs.
+      const { error } = await client.from("orders")
+        .update(shopifyPaymentStatusPatch(item))
+        .eq("id", targetId);
+      if (error) {
+        issues.push({
+          store_id: storeRow.id,
+          shopify_order_id: item.orderId,
+          sku: null,
+          issue: "payment_status_update_failed",
+        });
+      }
+      // All non-payment order fields stay immutable. Transactions can still be
+      // picked up on later runs.
       processedOrders.push({
         orderId: item.orderId,
         supabaseOrderId: targetId,
@@ -807,7 +843,7 @@ async function processMappedOrders(
         shopify_store_id: storeRow.id,
         shopify_order_id: item.orderId,
         is_shopify_order: true,
-        updated_at: new Date().toISOString(),
+        ...shopifyPaymentStatusPatch(item),
       }).eq("id", targetId);
       if (error) {
         issues.push({

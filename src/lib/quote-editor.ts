@@ -59,7 +59,13 @@ export type QuoteEditorSummary = CreatedQuote & {
   draft: QuoteDraft;
   financials: QuoteFinancials;
   payments: QuotePayment[];
+  isSentToFactory?: boolean | null;
+  doNotSendToFactory?: boolean | null;
+  factoryPrintDate?: string | null;
+  factoryReprintRequired?: boolean;
 };
+
+export type QuoteEditorDocumentType = "quote" | "order";
 
 export type QuoteFinancials = {
   shippingFee: number;
@@ -219,22 +225,23 @@ export async function duplicateQuote(
   return { id: row.id as string, orderNumber: row.order_number as string };
 }
 
-export async function fetchQuoteEditorSummary(orderId: string): Promise<QuoteEditorSummary | null> {
+export async function fetchQuoteEditorSummary(
+  orderId: string,
+  documentType: QuoteEditorDocumentType = "quote",
+): Promise<QuoteEditorSummary | null> {
   const [orderResult, deliveryResult, tagsResult, asanaResult, paymentsResult] = await Promise.all([
     supabase
       .from("orders")
-      .select("id,order_number,channel_id,quote_status,quote_sales_source_id,quote_communication_channel_id,customer_name_snapshot,company_name_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,email_snapshot,shipping_address_snapshot,customer_note_snapshot,shipping_method_id,delivery_at,delivery_time,ship_out_time,factory_packing_note,sales_partner_id,remarks,shipping_fee,discount_amount,cashdollar_redeemed,cashdollar_purchased")
+      .select("id,order_number,channel_id,quote_status,quote_sales_source_id,quote_communication_channel_id,customer_name_snapshot,company_name_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,email_snapshot,shipping_address_snapshot,customer_note_snapshot,shipping_method_id,delivery_at,delivery_time,ship_out_time,factory_packing_note,sales_partner_id,remarks,shipping_fee,discount_amount,cashdollar_redeemed,cashdollar_purchased,is_sent_to_factory,do_not_send_to_factory,factory_print_date,factory_reprint_required")
       .eq("id", orderId)
-      .in("document_type", ["quote", "unconfirmed"])
+      .in("document_type", documentType === "order" ? ["order"] : ["quote", "unconfirmed"])
       .is("archived_at", null)
       .maybeSingle(),
     supabase
       .from("deliveries")
       .select("id,district_id")
       .eq("order_id", orderId)
-      .order("created_at")
-      .limit(1)
-      .maybeSingle(),
+      .order("created_at"),
     supabase
       .from("order_tag_assignments")
       .select("order_tag_id")
@@ -254,6 +261,8 @@ export async function fetchQuoteEditorSummary(orderId: string): Promise<QuoteEdi
   if (orderResult.error) throw orderResult.error;
   const data = orderResult.data;
   if (!data) return null;
+  const primaryDelivery = (deliveryResult.data ?? []).find((delivery) => delivery.district_id)
+    ?? deliveryResult.data?.[0];
   const draft: QuoteDraft = {
     channelId: data.channel_id || "",
     quoteStatus: data.quote_status || "",
@@ -266,7 +275,7 @@ export async function fetchQuoteEditorSummary(orderId: string): Promise<QuoteEdi
     email: data.email_snapshot || "",
     asanaLink: asanaResult.error ? "" : asanaResult.data?.asana_link || "",
     address: data.shipping_address_snapshot || "",
-    districtId: deliveryResult.error ? "" : deliveryResult.data?.district_id || "",
+    districtId: deliveryResult.error ? "" : primaryDelivery?.district_id || "",
     districtName: "",
     shippingMethodId: data.shipping_method_id || "",
     deliveryDate: data.delivery_at ? String(data.delivery_at).slice(0, 10) : "",
@@ -300,7 +309,34 @@ export async function fetchQuoteEditorSummary(orderId: string): Promise<QuoteEdi
           amount: toNumber(payment.amount),
           reference: payment.receipt_reference || payment.paypal_reference || "",
         })),
+    isSentToFactory: data.is_sent_to_factory,
+    doNotSendToFactory: data.do_not_send_to_factory,
+    factoryPrintDate: data.factory_print_date,
+    factoryReprintRequired: Boolean(data.factory_reprint_required),
   };
+}
+
+export function quoteLineTotal(
+  quantity: number | string | null | undefined,
+  unitPrice: number | string | null | undefined,
+  storedTotal: number | string | null | undefined,
+) {
+  const total = toNumber(storedTotal);
+  if (total > 0) return total;
+  return toNumber(quantity) * toNumber(unitPrice);
+}
+
+export async function updateOrderFactoryStatus(orderId: string, sent: boolean) {
+  const { error } = await supabase
+    .from("orders")
+    .update({
+      is_sent_to_factory: sent,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", orderId)
+    .eq("document_type", "order")
+    .is("archived_at", null);
+  if (error) throw error;
 }
 
 export async function saveQuotePayments(
@@ -308,6 +344,7 @@ export async function saveQuotePayments(
   orderNumber: string,
   channelId: string,
   payments: QuotePayment[],
+  documentType: QuoteEditorDocumentType = "quote",
 ) {
   const { data: current, error: currentError } = await supabase
     .from("payments")
@@ -326,24 +363,42 @@ export async function saveQuotePayments(
     if (error) throw error;
   }
 
-  if (!payments.length) return;
-  const { error } = await supabase.from("payments").upsert(
-    payments.map((payment) => ({
-      id: payment.id,
-      legacy_id: `web-quote-payment-${payment.id}`,
-      order_id: orderId,
-      channel_id: channelId || null,
-      payment_method_id: payment.paymentMethodId || null,
-      order_number_snapshot: orderNumber || null,
-      currency: "HKD",
-      amount: payment.amount,
-      payment_at: payment.paymentAt ? `${payment.paymentAt}T00:00:00+08:00` : null,
-      receipt_reference: optional(payment.reference),
-      voided_at: null,
-    })),
-    { onConflict: "id" },
-  );
-  if (error) throw error;
+  if (payments.length) {
+    const { error } = await supabase.from("payments").upsert(
+      payments.map((payment) => ({
+        id: payment.id,
+        legacy_id: `web-${documentType}-payment-${payment.id}`,
+        order_id: orderId,
+        channel_id: channelId || null,
+        payment_method_id: payment.paymentMethodId || null,
+        order_number_snapshot: orderNumber || null,
+        currency: "HKD",
+        amount: payment.amount,
+        payment_at: payment.paymentAt ? `${payment.paymentAt}T00:00:00+08:00` : null,
+        receipt_reference: optional(payment.reference),
+        voided_at: null,
+      })),
+      { onConflict: "id" },
+    );
+    if (error) throw error;
+  }
+
+  if (documentType === "order") {
+    const { data: order, error: orderError } = await supabase
+      .from("orders")
+      .select("grand_total")
+      .eq("id", orderId)
+      .eq("document_type", "order")
+      .single();
+    if (orderError) throw orderError;
+    const paid = payments.reduce((sum, payment) => sum + toNumber(payment.amount), 0);
+    const { error: outstandingError } = await supabase
+      .from("orders")
+      .update({ outstanding: Math.max(0, toNumber(order.grand_total) - paid), updated_at: new Date().toISOString() })
+      .eq("id", orderId)
+      .eq("document_type", "order");
+    if (outstandingError) throw outstandingError;
+  }
 }
 
 export async function sendQuoteConfirmation(orderId: string) {
@@ -356,7 +411,11 @@ export async function sendQuoteConfirmation(orderId: string) {
   }
 }
 
-export async function updateQuote(orderId: string, input: QuoteDraft) {
+export async function updateQuote(
+  orderId: string,
+  input: QuoteDraft,
+  documentType: QuoteEditorDocumentType = "quote",
+) {
   let districtId = input.districtId || null;
   if (!districtId && input.districtName.trim()) {
     const { data: district, error: districtError } = await supabase
@@ -394,7 +453,7 @@ export async function updateQuote(orderId: string, input: QuoteDraft) {
       updated_at: new Date().toISOString(),
     })
     .eq("id", orderId)
-    .in("document_type", ["quote", "unconfirmed"]);
+    .in("document_type", documentType === "order" ? ["order"] : ["quote", "unconfirmed"]);
   if (orderError) throw orderError;
 
   const { data: delivery, error: deliveryLookupError } = await supabase
@@ -418,7 +477,7 @@ export async function updateQuote(orderId: string, input: QuoteDraft) {
         id: crypto.randomUUID(),
         legacy_id: `web-delivery-${crypto.randomUUID()}`,
         order_id: orderId,
-        delivery_status: "Pending",
+        delivery_status: documentType === "order" ? "未派車隊" : "Pending",
         ...deliveryValues,
       });
   if (deliveryResult.error) throw deliveryResult.error;
@@ -511,7 +570,7 @@ export async function fetchQuoteLines(orderId: string): Promise<QuoteLine[]> {
     name: row.product_name_snapshot || row.content_snapshot,
     quantity: toNumber(row.quantity),
     unitPrice: toNumber(row.unit_price),
-    totalPrice: toNumber(row.total_price),
+    totalPrice: quoteLineTotal(row.quantity, row.unit_price, row.total_price),
     remarks: row.remarks_1,
   }));
 }
@@ -539,7 +598,10 @@ export async function removeQuoteLine(lineId: string) {
   if (error) throw error;
 }
 
-export async function updateQuoteLine(line: QuoteLine) {
+export async function updateQuoteLine(
+  line: QuoteLine,
+  documentType: QuoteEditorDocumentType = "quote",
+) {
   const { data, error } = await supabase
     .from("order_lines")
     .update({
@@ -575,9 +637,22 @@ export async function updateQuoteLine(line: QuoteLine) {
       - toNumber(order.discount_amount)
       - toNumber(order.cashdollar_redeemed),
   );
+  let outstanding = adjustedTotal;
+  if (documentType === "order") {
+    const { data: paymentRows, error: paymentsError } = await supabase
+      .from("payments")
+      .select("amount")
+      .eq("order_id", data.order_id)
+      .is("voided_at", null);
+    if (paymentsError) throw paymentsError;
+    outstanding = Math.max(
+      0,
+      adjustedTotal - (paymentRows ?? []).reduce((sum, payment) => sum + toNumber(payment.amount), 0),
+    );
+  }
   const { error: totalError } = await supabase
     .from("orders")
-    .update({ grand_total: adjustedTotal, outstanding: adjustedTotal, updated_at: new Date().toISOString() })
+    .update({ grand_total: adjustedTotal, outstanding, updated_at: new Date().toISOString() })
     .eq("id", data.order_id);
   if (totalError) throw totalError;
 }

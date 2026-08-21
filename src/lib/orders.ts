@@ -10,6 +10,7 @@ import {
 } from "@/lib/order-statuses";
 import {
   fetchManualTodosForOrders,
+  findOrdersWithOrderTags,
   findOrdersWithManualTodos,
   type OrderListEnhancementFilters,
   type OrderListManualTodo,
@@ -93,23 +94,29 @@ export type OrderListItem = {
   orderNumber: string | null;
   customerName: string | null;
   companyName: string | null;
+  email: string | null;
   deliveryAt: string | null;
   deliveryTime: string | null;
   factoryDate: string | null;
   shipOutTime: string | null;
   deliveryStatus: string | null;
   isSentToFactory: boolean | null;
+  doNotSendToFactory?: boolean;
+  isAssignedToFleet?: boolean;
   grandTotal: number | null;
   outstanding: number | null;
   currency: string;
   createdAt: string;
   statuses: OrderStatusView[];
+  statusLegacyIds?: string[];
+  tags?: OrderStatusView[];
   shopifyOrderId: number | null;
   shopifyStoreDomain: string | null;
   channelName: string | null;
   districtName: string | null;
   address: string | null;
   customerNote?: string | null;
+  factoryPackingNote?: string | null;
   shippingMethodName?: string | null;
   contactPhone: string | null;
   quantity: number;
@@ -134,18 +141,26 @@ type OrderRow = {
   order_number: string | null;
   customer_name_snapshot: string | null;
   company_name_snapshot: string | null;
+  email_snapshot: string | null;
   delivery_at: string | null;
   delivery_time: string | null;
   factory_date: string | null;
   ship_out_time: string | null;
   delivery_status: string | null;
   is_sent_to_factory: boolean | null;
+  do_not_send_to_factory: boolean | null;
   grand_total?: number | string | null;
   outstanding?: number | string | null;
   currency: string | null;
   bubble_created_at: string | null;
   created_at: string;
   order_status_legacy_ids: string[] | null;
+  order_tag_assignments: Array<{
+    order_tags:
+      | { name: string | null }
+      | Array<{ name: string | null }>
+      | null;
+  }> | null;
   shopify_order_id: number | null;
   shopify_stores: {
     shop_domain: string | null;
@@ -156,6 +171,9 @@ type OrderRow = {
     | Array<{ name: string | null; display_name: string | null }>
     | null;
   deliveries: Array<{
+    motorcade_id: string | null;
+    delivery_time: string | null;
+    ship_out_time: string | null;
     delivery_districts:
       | { name: string | null }
       | Array<{ name: string | null }>
@@ -163,6 +181,7 @@ type OrderRow = {
   }> | null;
   shipping_address_snapshot: string | null;
   customer_note_snapshot: string | null;
+  factory_packing_note: string | null;
   contact_number_a_snapshot: string | null;
   order_lines: Array<{ quantity: number | string | null; is_void: boolean | null }> | null;
 };
@@ -233,15 +252,15 @@ export async function fetchOrders({
   deliveryStart,
   deliveryEnd,
   brandIds = [],
-  statusTagIds = [],
+  orderTagIds = [],
   manualTodoKeys = [],
   deliverySort,
 }: OrderListFilters): Promise<OrderListResult> {
   const start = (page - 1) * ORDERS_PAGE_SIZE;
   const end = start + ORDERS_PAGE_SIZE - 1;
   const selectedFields: string = canViewFinance
-    ? "id,order_number,customer_name_snapshot,company_name_snapshot,contact_number_a_snapshot,shipping_address_snapshot,customer_note_snapshot,delivery_at,delivery_time,factory_date,ship_out_time,delivery_status,is_sent_to_factory,currency,bubble_created_at,created_at,grand_total,outstanding,order_status_legacy_ids,shopify_order_id,shopify_stores(shop_domain),channels(name),shipping_methods(name,display_name),deliveries(delivery_districts!district_id(name)),order_lines(quantity,is_void)"
-    : "id,order_number,customer_name_snapshot,company_name_snapshot,contact_number_a_snapshot,shipping_address_snapshot,customer_note_snapshot,delivery_at,delivery_time,factory_date,ship_out_time,delivery_status,is_sent_to_factory,currency,bubble_created_at,created_at,order_status_legacy_ids,shopify_order_id,shopify_stores(shop_domain),channels(name),shipping_methods(name,display_name),deliveries(delivery_districts!district_id(name)),order_lines(quantity,is_void)";
+    ? "id,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,shipping_address_snapshot,customer_note_snapshot,factory_packing_note,delivery_at,delivery_time,factory_date,ship_out_time,delivery_status,is_sent_to_factory,do_not_send_to_factory,currency,bubble_created_at,created_at,grand_total,outstanding,order_status_legacy_ids,order_tag_assignments(order_tags(name)),shopify_order_id,shopify_stores(shop_domain),channels(name),shipping_methods(name,display_name),deliveries(motorcade_id,delivery_time,ship_out_time,delivery_districts!district_id(name)),order_lines(quantity,is_void)"
+    : "id,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,shipping_address_snapshot,customer_note_snapshot,factory_packing_note,delivery_at,delivery_time,factory_date,ship_out_time,delivery_status,is_sent_to_factory,do_not_send_to_factory,currency,bubble_created_at,created_at,order_status_legacy_ids,order_tag_assignments(order_tags(name)),shopify_order_id,shopify_stores(shop_domain),channels(name),shipping_methods(name,display_name),deliveries(motorcade_id,delivery_time,ship_out_time,delivery_districts!district_id(name)),order_lines(quantity,is_void)";
   let catalog: ConfiguredOrderStatus[] | undefined;
   const loadCatalog = async () => {
     catalog ??= await fetchOrderStatusCatalog();
@@ -267,7 +286,11 @@ export async function fetchOrders({
   }
 
   if (brandIds.length) query = query.in("channel_id", brandIds);
-  if (statusTagIds.length) query = query.contains("order_status_legacy_ids", statusTagIds);
+  const taggedOrderIds = await findOrdersWithOrderTags(orderTagIds);
+  if (taggedOrderIds !== null) {
+    if (!taggedOrderIds.length) return { items: [], total: 0 };
+    query = query.in("id", taggedOrderIds);
+  }
   if (deliveryDate) {
     query = query
       .gte("delivery_at", `${deliveryDate}T00:00:00+08:00`)
@@ -284,7 +307,11 @@ export async function fetchOrders({
     query = query.in("id", manualTodoOrderIds);
   }
 
-  if (isOrderTagQueuePreset(preset)) {
+  if (preset === "kitchen-notes") {
+    query = query
+      .not("factory_packing_note", "is", null)
+      .neq("factory_packing_note", "");
+  } else if (isOrderTagQueuePreset(preset)) {
     const tagCatalog = await loadCatalog();
     const legacyIds = catalogLegacyIdsForNames(
       tagCatalog,
@@ -310,11 +337,14 @@ export async function fetchOrders({
       .eq("is_shopify_order", true)
       .eq("source_system", "shopify")
       .is("delivery_status", null)
+      .eq("do_not_send_to_factory", false)
       .or("is_sent_to_factory.is.null,is_sent_to_factory.eq.false");
   } else if (preset === "not-sent-factory") {
     // Only an explicit false is actionable. Migrated legacy orders often have
     // a null flag, which does not mean they still need to be sent.
-    query = query.eq("is_sent_to_factory", false);
+    query = query
+      .eq("is_sent_to_factory", false)
+      .eq("do_not_send_to_factory", false);
   }
 
   query = applyStatusFilter(query, status, preset);
@@ -337,23 +367,33 @@ export async function fetchOrders({
       orderNumber: row.order_number,
       customerName: row.customer_name_snapshot,
       companyName: row.company_name_snapshot,
+      email: row.email_snapshot,
       deliveryAt: row.delivery_at,
-      deliveryTime: row.delivery_time,
+      deliveryTime:
+        row.delivery_time || firstDeliveryValue(row.deliveries, "delivery_time"),
       factoryDate: row.factory_date,
-      shipOutTime: row.ship_out_time,
+      shipOutTime:
+        row.ship_out_time || firstDeliveryValue(row.deliveries, "ship_out_time"),
       deliveryStatus: row.delivery_status,
       isSentToFactory: row.is_sent_to_factory,
+      doNotSendToFactory: row.do_not_send_to_factory === true,
+      isAssignedToFleet: (row.deliveries ?? []).some(
+        (delivery) => Boolean(delivery.motorcade_id),
+      ),
       grandTotal: optionalAmount(row.grand_total),
       outstanding: optionalAmount(row.outstanding),
       currency: row.currency || "HKD",
       createdAt: row.bubble_created_at || row.created_at,
       statuses: resolveOrderStatuses(row.order_status_legacy_ids, resolvedCatalog),
+      statusLegacyIds: row.order_status_legacy_ids ?? [],
+      tags: orderTagsFromAssignments(row.order_tag_assignments),
       shopifyOrderId: row.shopify_order_id,
       shopifyStoreDomain: row.shopify_stores?.shop_domain ?? null,
       channelName: row.channels?.name ?? null,
       districtName: deliveryDistrictName(row.deliveries),
       address: row.shipping_address_snapshot,
       customerNote: row.customer_note_snapshot,
+      factoryPackingNote: row.factory_packing_note,
       shippingMethodName: orderShippingMethodName(row.shipping_methods),
       contactPhone: row.contact_number_a_snapshot,
       quantity: (row.order_lines ?? []).reduce(
@@ -372,6 +412,27 @@ function deliveryDistrictName(deliveries: OrderRow["deliveries"]) {
   return value?.trim() || null;
 }
 
+function firstDeliveryValue(
+  deliveries: OrderRow["deliveries"],
+  key: "delivery_time" | "ship_out_time",
+) {
+  for (const delivery of deliveries ?? []) {
+    const value = delivery[key]?.trim();
+    if (value) return value;
+  }
+  return null;
+}
+
+function orderTagsFromAssignments(assignments: OrderRow["order_tag_assignments"]) {
+  return (assignments ?? []).flatMap((assignment) => {
+    const tag = Array.isArray(assignment.order_tags)
+      ? assignment.order_tags[0]
+      : assignment.order_tags;
+    const name = tag?.name?.trim();
+    return name ? [{ name, color: null }] : [];
+  });
+}
+
 
 /** A cancellation request may only begin while dispatch is awaiting acceptance. */
 export function isOrderAwaitingAcceptance(
@@ -379,6 +440,17 @@ export function isOrderAwaitingAcceptance(
 ) {
   const status = (deliveryStatus ?? "").trim();
   return status === "\u5f85\u63a5\u55ae" && !status.includes("\u53d6\u6d88");
+}
+
+export async function updateOrderStatusSelections(
+  orderId: string,
+  statusLegacyIds: readonly string[],
+) {
+  const { error } = await supabase.rpc("update_order_list_statuses", {
+    p_order_id: orderId,
+    p_status_legacy_ids: [...statusLegacyIds],
+  });
+  if (error) throw error;
 }
 
 function nextDate(date: string) {

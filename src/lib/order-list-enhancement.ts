@@ -18,7 +18,7 @@ export type OrderListEnhancementFilters = {
   deliveryStart?: string;
   deliveryEnd?: string;
   brandIds?: string[];
-  statusTagIds?: string[];
+  orderTagIds?: string[];
   manualTodoKeys?: string[];
   deliverySort?: "asc" | "desc";
 };
@@ -91,6 +91,25 @@ export async function findOrdersWithManualTodos(todoKeys: readonly string[]) {
   }
   return [...keysByOrder]
     .filter(([, keys]) => todoKeys.every((key) => keys.has(key)))
+    .map(([orderId]) => orderId);
+}
+
+export async function findOrdersWithOrderTags(orderTagIds: readonly string[]) {
+  if (!orderTagIds.length) return null;
+  const { data, error } = await supabase
+    .from("order_tag_assignments")
+    .select("order_id,order_tag_id")
+    .in("order_tag_id", [...orderTagIds]);
+  if (error) throw error;
+
+  const tagsByOrder = new Map<string, Set<string>>();
+  for (const row of data ?? []) {
+    const tags = tagsByOrder.get(row.order_id) ?? new Set<string>();
+    tags.add(row.order_tag_id);
+    tagsByOrder.set(row.order_id, tags);
+  }
+  return [...tagsByOrder]
+    .filter(([, tags]) => orderTagIds.every((tagId) => tags.has(tagId)))
     .map(([orderId]) => orderId);
 }
 

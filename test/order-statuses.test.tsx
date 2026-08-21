@@ -152,7 +152,6 @@ describe("order tag queue matching", () => {
     expect(ORDER_TAG_QUEUE_NAMES.split).toEqual(
       expect.arrayContaining(["已拆單", "拆單"]),
     );
-    expect(ORDER_TAG_QUEUE_NAMES["kitchen-notes"]).toContain("廚房備註");
     expect(ORDER_TAG_QUEUE_NAMES["reschedule-pending"]).toEqual(
       expect.arrayContaining(["改期未定", "改期未審"]),
     );

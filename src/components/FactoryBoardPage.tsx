@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Printer,
+  Star,
   TriangleAlert,
   X,
 } from "lucide-react";
@@ -38,6 +39,7 @@ import {
   fleetBadgeForDelivery,
   groupDeliveriesByDate,
   hongKongDateKey,
+  isNewFactoryOrder,
   markFactoryOrderLinePrinted,
   type FactoryBoardData,
   type FactoryBoardItem,
@@ -803,6 +805,9 @@ export function FactoryBoardPage({
                       : item.orderId
                         ? board?.printStatusByOrderId?.[item.orderId]
                         : undefined;
+                  const newOrder =
+                    item.factorySource !== "meat" &&
+                    isNewFactoryOrder(item.factorySentAt);
                   return (
                     <button
                       type="button"
@@ -813,6 +818,7 @@ export function FactoryBoardPage({
                       key={item.id}
                       onClick={() => openJob(item)}
                     >
+                      {newOrder ? <span className="factory-new-order-corner" title={t("factoryBoard.newOrder")}><Star aria-label={t("factoryBoard.newOrder")} /></span> : null}
                       <span
                         className={cn(
                           "factory-job-print-status",
@@ -859,6 +865,7 @@ export function FactoryBoardPage({
                                 {t("factoryBoard.portions", { count: portions })}
                               </small>
                             ) : null}
+                            {newOrder ? <small className="factory-new-order-tag">{t("factoryBoard.newOrder")}</small> : null}
                           </>
                         )}
                       </div>

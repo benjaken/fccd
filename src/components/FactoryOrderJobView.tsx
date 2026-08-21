@@ -19,28 +19,13 @@ import {
   type FactoryLabelCommandLoader,
 } from "@/lib/factory-label";
 import { useQzTray } from "@/lib/qz-tray";
-import { FOOD_CHANNEL_CATERING_LOGO_PATH } from "@/lib/brand-logo";
 import { formatDeliveryAddress } from "@/lib/delivery-address";
+import {
+  DeliveryNoteDocument,
+  formatDeliveryNoteWeekday,
+} from "@/components/DeliveryNoteDocument";
 
-const WEEKDAY_LONG_ZH = [
-  "星期日",
-  "星期一",
-  "星期二",
-  "星期三",
-  "星期四",
-  "星期五",
-  "星期六",
-];
-
-function utcWeekdayIndex(isoDate: string) {
-  const [year, month, day] = isoDate.split("-").map(Number);
-  return new Date(Date.UTC(year, (month ?? 1) - 1, day ?? 1)).getUTCDay();
-}
-
-export function formatFactoryDeliveryNoteQuantity(value: string | null) {
-  const quantity = value?.trim() || "—";
-  return quantity.replace(/(?:\s*份)+$/u, "").trim();
-}
+export { formatFactoryDeliveryNoteQuantity } from "@/components/DeliveryNoteDocument";
 
 export function preferredFactoryLabelPrinter(printers: string[]): string {
   return printers.find((printer) => /xprinter/i.test(printer)) ?? printers[0] ?? "";
@@ -90,22 +75,7 @@ export function FactoryOrderJobView({
   const empty = t("common.notSet");
   const canPrint = qz.state === "connected";
   const dateKey = item.deliveryAt ? hongKongDateKey(item.deliveryAt) : "";
-  const weekday = dateKey
-    ? i18n.language.startsWith("zh")
-      ? WEEKDAY_LONG_ZH[utcWeekdayIndex(dateKey)]
-      : new Intl.DateTimeFormat(i18n.language, {
-          weekday: "long",
-          timeZone: "UTC",
-        }).format(
-          new Date(
-            Date.UTC(
-              Number(dateKey.slice(0, 4)),
-              Number(dateKey.slice(5, 7)) - 1,
-              Number(dateKey.slice(8, 10)),
-            ),
-          ),
-        )
-    : empty;
+  const weekday = formatDeliveryNoteWeekday(dateKey, i18n.language, empty);
   const orderNumber = item.orderNumber?.replace(/^#/, "") || empty;
   const dispatchTime = job?.dispatchTime || item.deliveryTime || empty;
   const arrivalWindow = job?.arrivalWindow || empty;
@@ -355,85 +325,7 @@ export function FactoryOrderJobView({
         </label>
       </aside>
 
-      <section className="factory-delivery-note-print" aria-hidden="true">
-        <header className="factory-delivery-note-header">
-          <div className="factory-delivery-note-brand">
-            <img
-              src={FOOD_CHANNEL_CATERING_LOGO_PATH}
-              alt="Food Channel Catering"
-            />
-          </div>
-          <h1>{t("factoryBoard.deliveryNoteTitle")}</h1>
-          <p className="factory-delivery-note-cartons">
-            {t("factoryBoard.cartons")}: ______
-          </p>
-        </header>
-
-        <h2>
-          {orderNumber} {item.districtName || ""}
-        </h2>
-
-        <div className="factory-delivery-note-details">
-          <section>
-            <h3>{t("factoryBoard.customerAndDeliveryAddress")}</h3>
-            <p>{item.customerName || empty}</p>
-            <p>{formatDeliveryAddress(item.address, item.shippingMethodName, empty)}</p>
-            {job?.customerNote ? <p>* {job.customerNote}</p> : null}
-            <p className="factory-delivery-note-contact">
-              {t("factoryBoard.contactPerson")}: {item.customerName || empty}{" "}
-              <span>{item.customerPhone || empty}</span>
-            </p>
-          </section>
-          <section>
-            <p className="factory-delivery-note-order-reference">
-              {t("factoryBoard.orderLabel")} {orderNumber}
-            </p>
-            <p>
-              {t("factoryBoard.deliveryDate")}: {dateKey || empty}
-            </p>
-            <p>
-              {t("factoryBoard.arrivalWindow")}: {arrivalWindow}
-            </p>
-            <p>
-              {t("factoryBoard.deliveryDay")}: {weekday}
-            </p>
-          </section>
-        </div>
-
-        <table className="factory-delivery-note-lines">
-          <thead>
-            <tr>
-              <th aria-label={t("factoryBoard.orderedQuantity")} />
-              <th>{t("factoryBoard.orderContent")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {visibleLines.map((line) => (
-              <tr key={line.id}>
-                <td>
-                  {t("factoryBoard.portionUnit", {
-                    count: formatFactoryDeliveryNoteQuantity(line.quantityText),
-                  })}
-                </td>
-                <td>
-                  {line.label}
-                  {line.remarks.length ? `（${line.remarks.join("、")}）` : ""}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        <footer>
-          <span className="factory-delivery-note-order-footer">
-            {t("factoryBoard.orderLabel")} {orderNumber}
-          </span>
-          <span className="factory-delivery-note-brand-footer">
-            {job?.brandName || "Food Channels Catering"}
-            {job?.brandWebsite ? <><br />{job.brandWebsite}</> : null}
-          </span>
-        </footer>
-      </section>
+      <DeliveryNoteDocument order={item} job={job} printOnly />
 
       {assignOpen ? (
         <div className="factory-modal-root" role="presentation">

@@ -266,7 +266,6 @@ export const DEFAULT_UNPAID_STATUS_COLOR = "#ef4444";
 export const ORDER_TAG_QUEUE_NAMES = {
   "monthly-settlement": ["月結"],
   split: ["已拆單", "拆單"],
-  "kitchen-notes": ["廚房備註"],
   "reschedule-pending": ["改期未定", "改期未審"],
 } as const;
 

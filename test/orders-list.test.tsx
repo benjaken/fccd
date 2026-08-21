@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -10,6 +10,12 @@ import i18n from "@/i18n";
 import type { OrderListConfigRow } from "@/lib/order-list-configs";
 import type { OrderListResult } from "@/lib/orders";
 
+vi.mock("@/auth/AuthProvider", () => ({
+  useAuth: () => ({
+    profile: { user_name: "Mandy", email: "mandy@example.com" },
+  }),
+}));
+
 const orderResult: OrderListResult = {
   total: 1,
   items: [
@@ -18,21 +24,26 @@ const orderResult: OrderListResult = {
       orderNumber: "B-1513",
       customerName: "陳小姐",
       companyName: "香港女童軍總會",
+      email: "customer@example.com",
       deliveryAt: "2026-08-12T00:00:00+08:00",
       factoryDate: "2026-08-11T16:00:00.000Z",
       shipOutTime: "11:30",
       deliveryStatus: "待取貨",
       isSentToFactory: null,
+      isAssignedToFleet: false,
       grandTotal: 1610,
       outstanding: 1610,
       currency: "HKD",
       createdAt: "2026-08-12T01:00:00.000Z",
       statuses: [{ name: "待取貨", color: "#16a34a" }],
+      statusLegacyIds: [],
+      tags: [{ name: "Klook", color: null }],
       shopifyOrderId: 7808193593617,
       shopifyStoreDomain: "hklunchbox.myshopify.com",
       channelName: "Catering",
       districtName: "中環",
       address: "Central",
+      factoryPackingNote: "餐具分開包裝，紙盒請貼上標籤",
       contactPhone: "+85291234567",
       quantity: 12,
       manualTodos: [{ id: "todo-1", orderId: "order-1", key: "klook", label: "KLOOK" }],
@@ -67,11 +78,20 @@ describe("Orders list", () => {
       "href",
       "/orders/order-1",
     );
-    const table = within(screen.getByRole("table"));
+    const tableElement = screen.getByRole("table");
+    const table = within(tableElement);
     expect(table.getByText("陳小姐")).toBeInTheDocument();
     expect(table.getByText("+85291234567")).toBeInTheDocument();
     expect(table.getByText("Central")).toBeInTheDocument();
-    expect(table.getAllByText("待取貨")).toHaveLength(2);
+    const configuredStatus = Array.from(tableElement.querySelectorAll(".status-badge"))
+      .find((badge) => badge.textContent === "待取貨");
+    expect(configuredStatus).toBeInTheDocument();
+    expect(configuredStatus).toHaveStyle({
+      backgroundColor: "#16a34a",
+      borderColor: "#16a34a",
+      color: "#ffffff",
+    });
+    expect(table.getByText("Klook")).toBeInTheDocument();
     expect(table.getByText("2026-08-12")).toBeInTheDocument();
     expect(table.getByText("出車時間：")).toBeInTheDocument();
     expect(table.getByText("送貨時間：")).toBeInTheDocument();
@@ -124,15 +144,224 @@ describe("Orders list", () => {
     );
     const table = await screen.findByRole("table");
     expect(within(table).getByText("品牌")).toBeInTheDocument();
-    expect(within(table).getByText("標籤")).toBeInTheDocument();
+    expect(within(table).getByText("訂單標籤")).toBeInTheDocument();
     expect(within(table).getByText("數量")).toBeInTheDocument();
     expect(within(table).getByText("待辦")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "開啟篩選" }));
     expect(screen.getByRole("combobox", { name: "品牌" })).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "標籤" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "訂單標籤" })).toBeInTheDocument();
     expect(within(table).getAllByText("KLOOK").length).toBeGreaterThan(0);
     rerender(<MemoryRouter><OrdersListPage preset="pending" loadOrders={loadOrders} loadListConfig={emptyListConfig} /></MemoryRouter>);
     expect((await screen.findAllByRole("table"))[0]).not.toHaveTextContent("待辦");
+  });
+
+  it("hides the not-sent factory status when the order is marked not to send", async () => {
+    const loadOrders = vi.fn().mockResolvedValue({
+      ...orderResult,
+      items: [{
+        ...orderResult.items[0],
+        outstanding: 0,
+        factoryPackingNote: null,
+        doNotSendToFactory: true,
+        statuses: [{ name: "未傳至工場", color: "#f59e0b" }],
+        manualTodos: [],
+      }],
+    });
+
+    render(
+      <MemoryRouter>
+        <OrdersListPage
+          loadOrders={loadOrders}
+          loadListConfig={emptyListConfig}
+          loadStatusCatalog={vi.fn().mockResolvedValue([])}
+        />
+      </MemoryRouter>,
+    );
+
+    const table = within(await screen.findByRole("table"));
+    expect(table.queryByText("未傳至工場")).not.toBeInTheDocument();
+    expect(table.queryByText("未傳送到工場")).not.toBeInTheDocument();
+  });
+
+  it("opens the existing customer messages side panel from the row chat action", async () => {
+    const user = userEvent.setup();
+    const loadMessages = vi.fn().mockResolvedValue({
+      complaint: [],
+      like: [],
+      note: [],
+    });
+    const createNote = vi.fn().mockResolvedValue({
+      id: "note-1",
+      tab: "note",
+      body: "請留意送貨時間",
+      authorName: "Mandy",
+      replyEmail: null,
+      orderNumber: "B-1513",
+      orderId: "order-1",
+      documentType: "order",
+      createdAt: "2026-08-21T12:00:00.000Z",
+    });
+
+    render(
+      <MemoryRouter>
+        <OrdersListPage
+          loadOrders={vi.fn().mockResolvedValue(orderResult)}
+          loadListConfig={emptyListConfig}
+          loadCustomerMessages={loadMessages}
+          createCustomerNote={createNote}
+        />
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: "留言 B-1513" }));
+    const dialog = screen.getByRole("dialog", { name: "留言" });
+    expect(dialog).toHaveClass("side-panel-messages");
+    expect(loadMessages).toHaveBeenCalledWith("order-1");
+    expect(within(dialog).getByRole("tab", { name: "訂單投訴 (0)" })).toBeInTheDocument();
+    expect(within(dialog).getByRole("tab", { name: "訂單讚好 (0)" })).toBeInTheDocument();
+    expect(within(dialog).getByRole("tab", { name: "客戶備註 (0)" })).toBeInTheDocument();
+
+    await user.type(within(dialog).getByPlaceholderText("在此輸入…"), "請留意送貨時間");
+    await user.click(within(dialog).getByRole("button", { name: "送出留言" }));
+    await waitFor(() => expect(createNote).toHaveBeenCalledWith(expect.objectContaining({
+      email: "customer@example.com",
+      orderId: "order-1",
+      body: "請留意送貨時間",
+    })));
+  });
+
+  it("opens order messages when a phone exists without an email", async () => {
+    const user = userEvent.setup();
+    const loadMessages = vi.fn().mockResolvedValue({
+      complaint: [],
+      like: [],
+      note: [],
+    });
+    const phoneOnlyResult: OrderListResult = {
+      ...orderResult,
+      items: orderResult.items.map((order) => ({ ...order, email: null })),
+    };
+
+    render(
+      <MemoryRouter>
+        <OrdersListPage
+          loadOrders={vi.fn().mockResolvedValue(phoneOnlyResult)}
+          loadListConfig={emptyListConfig}
+          loadCustomerMessages={loadMessages}
+        />
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: "留言 B-1513" }));
+
+    expect(screen.getByRole("dialog", { name: "留言" })).toBeInTheDocument();
+    expect(loadMessages).toHaveBeenCalledWith("order-1");
+  });
+
+  it("adds multiple order statuses from the All Orders action column", async () => {
+    const user = userEvent.setup();
+    const loadOrders = vi.fn().mockResolvedValue(orderResult);
+    const updateStatuses = vi.fn().mockResolvedValue(undefined);
+    const loadStatusCatalog = vi.fn().mockResolvedValue([
+      { id: "status-1", legacyId: "legacy-reschedule", name: "改期未定", color: null, sortOrder: 1 },
+      { id: "status-2", legacyId: "legacy-wp", name: "WP", color: null, sortOrder: 2 },
+      { id: "status-3", legacyId: "legacy-bw", name: "BW", color: null, sortOrder: 3 },
+      { id: "status-4", legacyId: "legacy-fp", name: "FP", color: null, sortOrder: 4 },
+      { id: "status-5", legacyId: "legacy-klook", name: "KLOOK", color: null, sortOrder: 5 },
+      { id: "status-6", legacyId: "legacy-alipay", name: "Alipay", color: null, sortOrder: 6 },
+      { id: "status-7", legacyId: "legacy-split", name: "已拆單", color: null, sortOrder: 7 },
+      { id: "status-8", legacyId: "legacy-monthly", name: "月結", color: null, sortOrder: 8 },
+      { id: "status-9", legacyId: "legacy-hidden", name: "其他狀態", color: null, sortOrder: 9 },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <OrdersListPage
+          loadOrders={loadOrders}
+          loadListConfig={emptyListConfig}
+          loadStatusCatalog={loadStatusCatalog}
+          updateStatuses={updateStatuses}
+        />
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: "增加訂單狀態" }));
+    const dialog = screen.getByRole("dialog", { name: "增加訂單狀態" });
+    await user.click(within(dialog).getByRole("combobox", { name: "訂單狀態" }));
+    expect(within(dialog).queryByRole("option", { name: "其他狀態" })).not.toBeInTheDocument();
+    const reschedule = await within(dialog).findByRole("option", { name: "改期未定" });
+    const split = within(dialog).getByRole("option", { name: "已拆單" });
+    const monthly = within(dialog).getByRole("option", { name: "月結" });
+    act(() => {
+      reschedule.click();
+      split.click();
+      monthly.click();
+    });
+    await user.click(within(dialog).getByRole("button", { name: "儲存" }));
+
+    await waitFor(() => expect(updateStatuses).toHaveBeenCalledWith(
+      "order-1",
+      ["legacy-reschedule", "legacy-split", "legacy-monthly"],
+    ));
+  });
+
+  it("shows packing-note content on the kitchen-notes queue", async () => {
+    const loadOrders = vi.fn().mockResolvedValue(orderResult);
+
+    render(
+      <MemoryRouter>
+        <OrdersListPage
+          preset="kitchen-notes"
+          loadOrders={loadOrders}
+          loadListConfig={emptyListConfig}
+        />
+      </MemoryRouter>,
+    );
+
+    const table = within(await screen.findByRole("table"));
+    expect(table.getByRole("columnheader", { name: "廚房備註" })).toBeInTheDocument();
+    expect(table.getByText("餐具分開包裝，紙盒請貼上標籤")).toBeInTheDocument();
+  });
+
+  it.each([
+    "pending",
+    "not-sent-factory",
+    "unpaid",
+    "monthly-settlement",
+    "split",
+    "kitchen-notes",
+    "reschedule-pending",
+  ] as const)("shows only order tags in the %s queue tag column", async (preset) => {
+    const loadOrders = vi.fn().mockResolvedValue({
+      ...orderResult,
+      items: [{
+        ...orderResult.items[0],
+        tags: [
+          { name: "Alipay Voucher", color: null },
+          { name: "Klook", color: null },
+          { name: "中式套餐", color: null },
+        ],
+        manualTodos: [
+          { id: "todo-1", orderId: "order-1", key: "klook", label: "KLOOK" },
+        ],
+      }],
+    });
+
+    render(
+      <MemoryRouter>
+        <OrdersListPage
+          preset={preset}
+          loadOrders={loadOrders}
+          loadListConfig={emptyListConfig}
+        />
+      </MemoryRouter>,
+    );
+
+    const table = within(await screen.findByRole("table"));
+    expect(table.getByText("Alipay Voucher")).toBeInTheDocument();
+    expect(table.getByText("Klook")).toBeInTheDocument();
+    expect(table.getByText("中式套餐")).toBeInTheDocument();
+    expect(table.queryByText("KLOOK")).not.toBeInTheDocument();
   });
 
   it("cancels an entire delivery after void confirmation, including delivered orders", async () => {
@@ -148,15 +377,16 @@ describe("Orders list", () => {
     expect(screen.queryByRole("link", { name: "Details" })).not.toBeInTheDocument();
     const editLink = await screen.findByRole("link", { name: "編輯" });
     expect(editLink).toHaveAttribute("href", "/orders/order-1/edit");
-    expect(editLink.parentElement?.firstElementChild).toBe(editLink);
-    expect(screen.getByRole("link", { name: "溝通" })).toHaveAttribute("href", "tel:+85291234567");
+    expect(screen.getByRole("button", { name: "增加訂單狀態" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "溝通" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "複製" })).toHaveAttribute("href", "/orders/new?copyFrom=order-1");
 
     await user.click(screen.getByRole("button", { name: "取消訂單" }));
-    const dialog = screen.getByRole("dialog", { name: "Cancel entire delivery" });
-    const confirm = within(dialog).getByRole("button", { name: "Confirm cancellation" });
+    const dialog = screen.getByRole("dialog", { name: "取消整筆送貨" });
+    const confirm = within(dialog).getByRole("button", { name: "確認取消" });
     expect(confirm).toBeDisabled();
-    await user.type(within(dialog).getByLabelText("Enter void to confirm cancellation"), "VOID");
+    expect(within(dialog).queryByRole("link", { name: "Open order details" })).not.toBeInTheDocument();
+    await user.type(within(dialog).getByLabelText("輸入 void 以確認取消"), "VOID");
     expect(confirm).toBeEnabled();
     await user.click(confirm);
     await waitFor(() => expect(cancelDelivery).toHaveBeenCalledWith("order-1"));
@@ -165,22 +395,116 @@ describe("Orders list", () => {
 
   it("opens controlled printable previews without exposing finance when restricted", async () => {
     const user = userEvent.setup();
+    const loadOrderJob = vi.fn().mockResolvedValue({
+      packingNote: "餐具分開包裝",
+      customerNote: "Please call on arrival",
+      dispatchTime: "11:30",
+      arrivalWindow: "12:00 - 13:00",
+      brandName: "HK lunch box",
+      brandWebsite: "https://hklunchbox.com/",
+      lines: [
+        {
+          id: "line-1",
+          label: "咖喱唐揚雞塊飯",
+          quantityText: "12",
+          remarks: ["配蕃茄沙律"],
+          printed: false,
+        },
+      ],
+    });
     const loadOrders = vi.fn().mockResolvedValue({
       ...orderResult,
-      items: [{ ...orderResult.items[0], shippingMethodName: "Curbside", customerNote: "Please call on arrival" }],
+      items: [{
+        ...orderResult.items[0],
+        isSentToFactory: true,
+        isAssignedToFleet: true,
+        shippingMethodName: "Curbside",
+        customerNote: "Please call on arrival",
+      }],
     });
-    render(<MemoryRouter><OrdersListPage canViewFinance={false} loadOrders={loadOrders} loadListConfig={emptyListConfig} /></MemoryRouter>);
+    render(<MemoryRouter><OrdersListPage canViewFinance={false} loadOrders={loadOrders} loadListConfig={emptyListConfig} loadOrderJob={loadOrderJob} /></MemoryRouter>);
     await user.click(await screen.findByRole("button", { name: "送貨單" }));
-    const dialog = screen.getByRole("dialog", { name: "Delivery note preview" });
-    expect(within(dialog).getByText("B-1513")).toBeInTheDocument();
-    expect(within(dialog).getByText(/Order:/).closest("p")).toHaveClass(
-      "order-print-reference",
-    );
+    const dialog = screen.getByRole("dialog", { name: "送貨單預覽" });
+    expect(dialog).toHaveClass("side-panel", "order-delivery-note-panel");
+    expect(await within(dialog).findByText(/咖喱唐揚雞塊飯/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/訂單 B-1513/)).toBeInTheDocument();
     expect(within(dialog).getByText(/Central \* Curbside/)).toBeInTheDocument();
     expect(within(dialog).getByText(/Please call on arrival/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/12 份/)).toBeInTheDocument();
+    expect(dialog.querySelector(".factory-delivery-note-brand img")).toHaveAttribute(
+      "src",
+      "/assets/fcc-hk-lunch-box-logo.svg",
+    );
     expect(within(dialog).queryByText("Amount:")).not.toBeInTheDocument();
-    expect(within(dialog).getByRole("button", { name: "Print" })).toBeInTheDocument();
+    expect(within(dialog).getByText("此為預覽，列印不會更改訂單。")).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "列印" })).toBeInTheDocument();
+    expect(within(dialog).queryByText("Delivery note preview")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "取消訂單" })).toBeInTheDocument();
+  });
+
+  it.each([
+    {
+      label: "neither factory-sent nor fleet-assigned and unpaid",
+      isSentToFactory: false,
+      isAssignedToFleet: false,
+      outstanding: 100,
+      deliveryNote: false,
+      paidDocuments: false,
+    },
+    {
+      label: "factory-sent but not fleet-assigned and paid",
+      isSentToFactory: true,
+      isAssignedToFleet: false,
+      outstanding: 0,
+      deliveryNote: false,
+      paidDocuments: true,
+    },
+    {
+      label: "factory-sent and fleet-assigned but unpaid",
+      isSentToFactory: true,
+      isAssignedToFleet: true,
+      outstanding: 100,
+      deliveryNote: true,
+      paidDocuments: false,
+    },
+    {
+      label: "factory-sent, fleet-assigned, and paid",
+      isSentToFactory: true,
+      isAssignedToFleet: true,
+      outstanding: 0,
+      deliveryNote: true,
+      paidDocuments: true,
+    },
+  ])("gates document actions when an order is $label", async ({
+    isSentToFactory,
+    isAssignedToFleet,
+    outstanding,
+    deliveryNote,
+    paidDocuments,
+  }) => {
+    const loadOrders = vi.fn().mockResolvedValue({
+      ...orderResult,
+      items: [{
+        ...orderResult.items[0],
+        isSentToFactory,
+        isAssignedToFleet,
+        outstanding,
+      }],
+    });
+
+    render(
+      <MemoryRouter>
+        <OrdersListPage loadOrders={loadOrders} loadListConfig={emptyListConfig} />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("B-1513");
+    const deliveryButton = screen.queryByRole("button", { name: "送貨單" });
+    const receiptButton = screen.queryByRole("button", { name: "REC" });
+    const invoiceButton = screen.queryByRole("button", { name: "INV" });
+    expect(Boolean(deliveryButton)).toBe(deliveryNote);
+    expect(Boolean(receiptButton)).toBe(paidDocuments);
+    expect(Boolean(invoiceButton)).toBe(paidDocuments);
   });
 
   it("loads the pending preset from unconfirmed orders", async () => {
@@ -438,12 +762,14 @@ describe("Orders list", () => {
     expect(loadOrders).not.toHaveBeenCalled();
   });
 
-  it("filters leftover-tag queues by catalog names and Shopify new-order flag", () => {
+  it("filters kitchen notes by packing note, tag queues by catalog names, and Shopify new-order flag", () => {
     const source = readFileSync(
       path.resolve(process.cwd(), "src/lib/orders.ts"),
       "utf8",
     );
     expect(source).toContain('query.overlaps("order_status_legacy_ids", legacyIds)');
+    expect(source).toContain('.not("factory_packing_note", "is", null)');
+    expect(source).toContain('.neq("factory_packing_note", "")');
     expect(source).toContain('.eq("is_shopify_order", true)');
     // The Shopify queue must show only newly synced orders that have not
     // entered the workflow yet, never linked-and-confirmed legacy orders.
@@ -452,6 +778,7 @@ describe("Orders list", () => {
     expect(source).toContain(
       '.or("is_sent_to_factory.is.null,is_sent_to_factory.eq.false")',
     );
+    expect(source).toContain('.eq("do_not_send_to_factory", false)');
     expect(source).toContain('query.gt("outstanding", 0)');
   });
 

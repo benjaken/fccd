@@ -1,6 +1,16 @@
 import { describe, expect, it } from "vitest";
 
-import { emptyOrderDraft, orderDraftTotals } from "@/lib/order-editor";
+import { emptyOrderDraft, orderDraftTotals, orderPaymentStatus } from "@/lib/order-editor";
+import { normalizeDoNotSendToFactory } from "@/lib/order-factory-settings";
+
+describe("order factory settings", () => {
+  it("defaults to unchecked and only checks when the independent flag is true", () => {
+    expect(normalizeDoNotSendToFactory(undefined)).toBe(false);
+    expect(normalizeDoNotSendToFactory(null)).toBe(false);
+    expect(normalizeDoNotSendToFactory(false)).toBe(false);
+    expect(normalizeDoNotSendToFactory(true)).toBe(true);
+  });
+});
 
 describe("order editor totals", () => {
   it("calculates subtotal, adjustments, payments, and outstanding balance", () => {
@@ -52,5 +62,13 @@ describe("order editor totals", () => {
     ];
 
     expect(orderDraftTotals(draft)).toMatchObject({ total: 0, outstanding: 0 });
+  });
+});
+
+describe("order payment status", () => {
+  it("distinguishes unpaid, partially paid, and fully paid orders", () => {
+    expect(orderPaymentStatus({ total: 500, paid: 0, outstanding: 500, subtotal: 500 })).toBe("unpaid");
+    expect(orderPaymentStatus({ total: 500, paid: 200, outstanding: 300, subtotal: 500 })).toBe("partial");
+    expect(orderPaymentStatus({ total: 500, paid: 500, outstanding: 0, subtotal: 500 })).toBe("paid");
   });
 });

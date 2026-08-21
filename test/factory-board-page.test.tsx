@@ -194,7 +194,7 @@ describe("FactoryBoardPage", () => {
       /\.factory-delivery-note-lines tbody tr:last-child td\s*\{[^}]*border-bottom:\s*1px solid #222222 !important/s,
     );
     expect(stylesheet).toMatch(
-      /\.factory-delivery-note-print > footer\s*\{[^}]*position:\s*absolute[^}]*bottom:\s*10mm[^}]*font-size:\s*10pt/s,
+      /\.factory-delivery-note-print > footer,\s*\.order-delivery-note-sheet > footer\s*\{[^}]*position:\s*absolute[^}]*bottom:\s*10mm[^}]*font-size:\s*10pt/s,
     );
     expect(stylesheet).toMatch(
       /\.factory-delivery-note-lines th,\s*\.factory-delivery-note-lines td\s*\{[^}]*color:\s*#000000 !important[^}]*opacity:\s*1 !important/s,
@@ -385,6 +385,28 @@ describe("FactoryBoardPage", () => {
     expect(screen.getByRole("button", { name: "關閉" })).toBeInTheDocument();
   });
 
+  it("shows the yellow new-order tag and starred corner for 12 hours", async () => {
+    const { container } = render(
+      <FactoryBoardPage
+        initialDate="2026-08-17"
+        loadBoard={async () => ({
+          ...board,
+          items: board.items.map((entry) => ({
+            ...entry,
+            factorySentAt: new Date().toISOString(),
+          })),
+        })}
+        loadFleets={async () => []}
+        loadBrands={async () => []}
+        qzClient={qzClient}
+      />,
+    );
+
+    expect(await screen.findByText("新訂單")).toHaveClass("factory-new-order-tag");
+    expect(screen.getByLabelText("新訂單")).toBeInTheDocument();
+    expect(container.querySelector(".factory-new-order-corner")).not.toBeNull();
+  });
+
   it("opens an order card in a separate factory order page", async () => {
     const user = userEvent.setup();
     const open = vi.spyOn(window, "open").mockImplementation(() => null);
@@ -520,10 +542,10 @@ describe("FactoryBoardPage", () => {
     expect(brandFooter).toHaveTextContent("https://hklunchbox.com/");
     expect(
       document.querySelector(".factory-delivery-note-order-footer"),
-    ).toHaveTextContent("訂單 B-1522");
+    ).toHaveTextContent("B-1522");
     expect(document.querySelector(".factory-delivery-note-brand img")).toHaveAttribute(
       "src",
-      "/assets/fc-catering-logo.svg",
+      "/assets/fcc-hk-lunch-box-logo.svg",
     );
     print.mockRestore();
 

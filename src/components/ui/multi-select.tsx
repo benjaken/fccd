@@ -31,6 +31,7 @@ export function MultiSelect({
 }) {
   const placeholder = searchPlaceholder ?? triggerPlaceholder;
   const rootRef = useRef<HTMLDivElement>(null);
+  const valueRef = useRef(value);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [highlight, setHighlight] = useState(0);
@@ -50,6 +51,10 @@ export function MultiSelect({
   }, [visibleOptions]);
 
   useEffect(() => {
+    valueRef.current = value;
+  }, [value]);
+
+  useEffect(() => {
     if (!open) return;
     const onPointerDown = (event: PointerEvent) => {
       if (!rootRef.current?.contains(event.target as Node)) {
@@ -62,11 +67,12 @@ export function MultiSelect({
   }, [open]);
 
   const toggle = (itemId: string) => {
-    onChange(
-      selected.has(itemId)
-        ? value.filter((entry) => entry !== itemId)
-        : [...value, itemId],
-    );
+    const current = valueRef.current;
+    const next = current.includes(itemId)
+      ? current.filter((entry) => entry !== itemId)
+      : [...current, itemId];
+    valueRef.current = next;
+    onChange(next);
   };
 
   const handleTriggerKey = (event: KeyboardEvent<HTMLDivElement>) => {

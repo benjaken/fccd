@@ -89,7 +89,7 @@ export type QuoteCustomerMessage = {
 };
 
 export type CreateQuoteCustomerNoteInput = {
-  email: string;
+  email: string | null;
   body: string;
   authorName?: string | null;
   orderId?: string | null;
@@ -407,6 +407,28 @@ export async function fetchQuoteCustomerMessages(
       "id,category,comment,author_name_snapshot,order_id,bubble_created_at,created_at,orders(order_number,document_type)",
     )
     .ilike("customer_email_snapshot", email)
+    .order("bubble_created_at", { ascending: true, nullsFirst: false })
+    .order("created_at", { ascending: true })
+    .limit(QUOTE_CUSTOMER_HISTORY_LIMIT);
+
+  if (error) throw error;
+
+  const messages = ((data ?? []) as TimelineMessageRow[])
+    .map(mapQuoteCustomerMessage)
+    .filter((message): message is QuoteCustomerMessage => Boolean(message));
+
+  return groupQuoteCustomerMessages(messages);
+}
+
+export async function fetchOrderMessages(
+  orderId: string,
+): Promise<QuoteCustomerMessages> {
+  const { data, error } = await supabase
+    .from("order_timeline_entries")
+    .select(
+      "id,category,comment,author_name_snapshot,order_id,bubble_created_at,created_at,orders(order_number,document_type)",
+    )
+    .eq("order_id", orderId)
     .order("bubble_created_at", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: true })
     .limit(QUOTE_CUSTOMER_HISTORY_LIMIT);

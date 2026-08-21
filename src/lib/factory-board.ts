@@ -24,6 +24,19 @@ export type FactoryBoardItem = DeliveryListItem & {
 
 export type FactoryOrderPrintStatus = "complete" | "needs-reprint" | "incomplete"
 
+export const NEW_FACTORY_ORDER_HOURS = 12
+
+export function isNewFactoryOrder(
+  factorySentAt: string | null | undefined,
+  now = new Date(),
+): boolean {
+  if (!factorySentAt) return false
+  const sentAt = Date.parse(factorySentAt)
+  if (!Number.isFinite(sentAt)) return false
+  const elapsed = now.getTime() - sentAt
+  return elapsed >= 0 && elapsed < NEW_FACTORY_ORDER_HOURS * 60 * 60 * 1000
+}
+
 export function factoryEligibleDeliveries<T extends DeliveryListItem>(items: T[]): T[] {
   return items.filter(
     (item) => item.isSentToFactory === true || item.isSentToFactory === undefined,

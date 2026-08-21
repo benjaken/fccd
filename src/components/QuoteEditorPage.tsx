@@ -5,21 +5,27 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronUp,
+  CircleAlert,
+  CircleCheckBig,
   CreditCard,
+  Factory,
   FileText,
   GripVertical,
   LoaderCircle,
   Mail,
   Minus,
   PackagePlus,
+  Pencil,
   Plus,
   Search,
   ShoppingCart,
   Trash2,
+  Undo2,
 } from "lucide-react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
+import { OrderFactorySettingsControls } from "@/components/order-factory-settings-controls";
 import { Modal } from "@/components/ui/modal";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
@@ -38,12 +44,14 @@ import {
   updateQuoteLine,
   updateQuoteLineOrder,
   updateQuoteFinancials,
+  updateOrderFactoryStatus,
   saveQuotePayments,
   sendQuoteConfirmation,
   type CreatedQuote,
   type QuoteCatalogItem,
   type QuoteDraft,
   type QuoteEditorOptions,
+  type QuoteEditorDocumentType,
   type QuoteFinancials,
   type QuoteLine,
   type QuotePayment,
@@ -58,6 +66,12 @@ import {
 } from "@/lib/quote-pdf-draft";
 import { fetchShippingFees, type ShippingFee } from "@/lib/shipping-fees";
 import { convertQuoteToOrder, QUOTE_STATUS_OPTIONS } from "@/lib/quotes";
+import { useDetailBackTo } from "@/lib/detail-navigation";
+import {
+  normalizeDoNotSendToFactory,
+  saveOrderFactorySettings,
+  type OrderFactorySettings,
+} from "@/lib/order-factory-settings";
 
 const loadConfiguredShippingFees = async () => (await fetchShippingFees(1, 1000)).rows;
 
@@ -142,9 +156,50 @@ function emptyDraft(): QuoteDraft {
   };
 }
 
+function OrderPaymentStatus({
+  total,
+  paid,
+  formatMoney,
+}: {
+  total: number;
+  paid: number;
+  formatMoney: (value: number) => string;
+}) {
+  const outstanding = Math.max(0, total - paid);
+  const status = outstanding <= 0 && (total > 0 || paid > 0)
+    ? "paid"
+    : paid > 0
+      ? "partial"
+      : "unpaid";
+
+  return (
+    <aside
+      className={`order-editor-payment-status is-${status}`}
+      role="status"
+      aria-label={status === "paid" ? "付款狀態：完成付款" : status === "partial" ? `付款狀態：尚欠 ${formatMoney(outstanding)}` : "付款狀態：尚未付款"}
+    >
+      <span className="order-editor-payment-status-icon" aria-hidden="true">
+        {status === "paid" ? <CircleCheckBig /> : status === "partial" ? <CreditCard /> : <CircleAlert />}
+      </span>
+      <span className="order-editor-payment-status-copy">
+        <small>付款狀態</small>
+        {status === "paid" ? (
+          <><strong>完成付款</strong><em>款項已收齊</em></>
+        ) : status === "partial" ? (
+          <><strong>尚欠 {formatMoney(outstanding)}</strong><em>已收 {formatMoney(paid)}</em></>
+        ) : (
+          <><strong>尚未付款</strong><em>尚未收到任何款項</em></>
+        )}
+      </span>
+    </aside>
+  );
+}
+
 type Props = {
   combined?: boolean;
   readOnly?: boolean;
+  documentType?: QuoteEditorDocumentType;
+  canEdit?: boolean;
   loadOptions?: typeof fetchQuoteEditorOptions;
   saveQuote?: typeof createQuote;
   loadSummary?: typeof fetchQuoteEditorSummary;
@@ -162,11 +217,15 @@ type Props = {
   sendConfirmation?: typeof sendQuoteConfirmation;
   convertQuote?: typeof convertQuoteToOrder;
   copyQuote?: typeof duplicateQuote;
+  setFactoryStatus?: typeof updateOrderFactoryStatus;
+  saveFactorySettings?: typeof saveOrderFactorySettings;
 };
 
 export function QuoteEditorPage({
   combined = false,
   readOnly = false,
+  documentType = "quote",
+  canEdit = false,
   loadOptions = fetchQuoteEditorOptions,
   saveQuote = createQuote,
   loadSummary = fetchQuoteEditorSummary,
@@ -184,6 +243,8 @@ export function QuoteEditorPage({
   sendConfirmation = sendQuoteConfirmation,
   convertQuote = convertQuoteToOrder,
   copyQuote = duplicateQuote,
+  setFactoryStatus = updateOrderFactoryStatus,
+  saveFactorySettings = saveOrderFactorySettings,
 }: Props) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -191,6 +252,9 @@ export function QuoteEditorPage({
   const [searchParams] = useSearchParams();
   const copyFrom = id ? "" : searchParams.get("copyFrom") ?? "";
   const sourceId = id || copyFrom;
+  const isOrder = documentType === "order";
+  const listPath = isOrder ? "/orders" : "/quotes";
+  const backTo = useDetailBackTo(listPath);
   const [draft, setDraft] = useState<QuoteDraft>(emptyDraft);
   const [options, setOptions] = useState(EMPTY_OPTIONS);
   const [created, setCreated] = useState<CreatedQuote | null>(null);
@@ -242,6 +306,17 @@ export function QuoteEditorPage({
   const [activityOpen, setActivityOpen] = useState(false);
   const [activitySearch, setActivitySearch] = useState("");
   const [supplementsLoadedFor, setSupplementsLoadedFor] = useState("");
+  const [isSentToFactory, setIsSentToFactory] = useState(false);
+  const [changingFactoryStatus, setChangingFactoryStatus] = useState(false);
+  const [factoryStatusError, setFactoryStatusError] = useState(false);
+  const [factorySettings, setFactorySettings] = useState<OrderFactorySettings>({
+    doNotSendToFactory: false,
+    suppressFactoryReprint: false,
+    factoryPrintDate: null,
+    originalFactoryReprintRequired: false,
+  });
+  const [savingFactorySettings, setSavingFactorySettings] = useState(false);
+  const [factorySettingsError, setFactorySettingsError] = useState(false);
 
   const activeQuote = useMemo(
     () => created ?? (id ? { id, orderNumber: "" } : null),
@@ -261,7 +336,9 @@ export function QuoteEditorPage({
 
   useEffect(() => {
     if (shippingFeeId || !shippingFees.length) return;
-    const matched = shippingFees.find((fee) => fee.fee === (Number(financials.shippingFee) || 0));
+    const savedShippingFee = Number(financials.shippingFee) || 0;
+    if (savedShippingFee <= 0) return;
+    const matched = shippingFees.find((fee) => fee.fee === savedShippingFee);
     if (matched) setShippingFeeId(matched.id);
   }, [financials.shippingFee, shippingFeeId, shippingFees]);
 
@@ -281,7 +358,9 @@ export function QuoteEditorPage({
     setLoading(true);
     Promise.all([
       loadOptions(),
-      sourceId ? loadSummary(sourceId) : Promise.resolve(null),
+      sourceId
+        ? (isOrder ? loadSummary(sourceId, "order") : loadSummary(sourceId))
+        : Promise.resolve(null),
       sourceId ? loadLines(sourceId) : Promise.resolve([]),
     ])
       .then(([nextOptions, summary, nextLines]) => {
@@ -314,6 +393,16 @@ export function QuoteEditorPage({
             cashdollarPurchased: String(summary.financials?.cashdollarPurchased ?? 0),
           });
           setPayments(copyFrom ? [] : summary.payments ?? []);
+          const sentToFactory = id ? summary.isSentToFactory === true : false;
+          setIsSentToFactory(sentToFactory);
+          setFactorySettings({
+            doNotSendToFactory: id
+              ? normalizeDoNotSendToFactory(summary.doNotSendToFactory)
+              : false,
+            suppressFactoryReprint: false,
+            factoryPrintDate: summary.factoryPrintDate ?? null,
+            originalFactoryReprintRequired: Boolean(summary.factoryReprintRequired),
+          });
         }
         setLines(id ? nextLines : []);
       })
@@ -326,7 +415,10 @@ export function QuoteEditorPage({
     return () => {
       active = false;
     };
-  }, [copyFrom, id, loadLines, loadOptions, loadSummary, sourceId]);
+  }, [copyFrom, id, isOrder, loadLines, loadOptions, loadSummary, sourceId]);
+
+  const saveCurrentDetails = (orderId: string) =>
+    isOrder ? saveDetails(orderId, draft, "order") : saveDetails(orderId, draft);
 
   useEffect(() => {
     if (!activeQuote || selectedItem) return;
@@ -376,6 +468,7 @@ export function QuoteEditorPage({
     0,
     total + financialValues.shippingFee - financialValues.discount - financialValues.cashdollarRedeemed,
   );
+  const paidTotal = payments.reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0);
   const districts = useMemo(() => dedupeQuoteOptions(options.districts), [options.districts]);
   const selectedShippingMethod = options.shippingMethods.find((item) => item.id === draft.shippingMethodId);
   const automaticDistrictName = automaticDistrictForMethod(selectedShippingMethod?.name ?? "");
@@ -419,7 +512,7 @@ export function QuoteEditorPage({
     setError(null);
     try {
       if (activeQuote) {
-        await saveDetails(activeQuote.id, draft);
+        await saveCurrentDetails(activeQuote.id);
         setChannelId(draft.channelId);
       } else {
         const quote = copyFrom
@@ -448,7 +541,7 @@ export function QuoteEditorPage({
     setConverting(true);
     setConversionError(false);
     try {
-      await saveDetails(activeQuote.id, draft);
+      await saveCurrentDetails(activeQuote.id);
       await saveFinancialDetails(activeQuote.id, financialValues);
       const order = await convertQuote(activeQuote.id);
       navigate(`/orders/${order.id}`);
@@ -532,7 +625,8 @@ export function QuoteEditorPage({
     setSavingLineId(line.id);
     setError(null);
     try {
-      await saveExistingLine(line);
+      if (isOrder) await saveExistingLine(line, "order");
+      else await saveExistingLine(line);
     } catch {
       setError("quote_line_save_failed");
     } finally {
@@ -622,7 +716,7 @@ export function QuoteEditorPage({
   };
 
   const addPayment = () => {
-    const paid = payments.reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0);
+    const paid = paidTotal;
     setPayments((current) => [...current, {
       id: crypto.randomUUID(),
       paymentAt: hongKongToday(),
@@ -631,6 +725,87 @@ export function QuoteEditorPage({
       reference: "",
     }]);
   };
+
+  const toggleFactoryStatus = async () => {
+    if (!isOrder || !activeQuote || changingFactoryStatus) return;
+    const next = !isSentToFactory;
+    setChangingFactoryStatus(true);
+    setFactoryStatusError(false);
+    try {
+      await setFactoryStatus(activeQuote.id, next);
+      setIsSentToFactory(next);
+    } catch {
+      setFactoryStatusError(true);
+    } finally {
+      setChangingFactoryStatus(false);
+    }
+  };
+
+  const saveCurrentFactorySettings = async () => {
+    if (!isOrder || !activeQuote || savingFactorySettings) return;
+    setSavingFactorySettings(true);
+    setFactorySettingsError(false);
+    try {
+      await saveFactorySettings(activeQuote.id, factorySettings);
+    } catch {
+      setFactorySettingsError(true);
+    } finally {
+      setSavingFactorySettings(false);
+    }
+  };
+
+  const factorySettingsPanel =
+    isOrder && activeQuote && !readOnly ? (
+      <OrderFactorySettingsControls
+        className="quote-order-factory-settings"
+        doNotSendToFactory={factorySettings.doNotSendToFactory}
+        suppressFactoryReprint={factorySettings.suppressFactoryReprint}
+        onDoNotSendChange={(checked) =>
+          setFactorySettings((current) => ({
+            ...current,
+            doNotSendToFactory: checked,
+          }))
+        }
+        onSuppressFactoryReprintChange={(checked) =>
+          setFactorySettings((current) => ({
+            ...current,
+            suppressFactoryReprint: checked,
+          }))
+        }
+        actions={
+          <>
+            {factorySettingsError ? (
+              <span role="alert">{t("orderEditor.factorySettings.saveError")}</span>
+            ) : null}
+            {readOnly && !factorySettings.doNotSendToFactory ? (
+              <Button
+                type="button"
+                variant={isSentToFactory ? "outline" : "default"}
+                disabled={changingFactoryStatus}
+                onClick={() => void toggleFactoryStatus()}
+              >
+                {isSentToFactory ? <Undo2 /> : <Factory />}
+                {changingFactoryStatus
+                  ? t("quoteEditor.factoryStatus.saving")
+                  : isSentToFactory
+                    ? t("quoteEditor.factoryStatus.cancel")
+                    : t("quoteEditor.factoryStatus.send")}
+              </Button>
+            ) : null}
+            <Button
+              type="button"
+              onClick={() => void saveCurrentFactorySettings()}
+              disabled={savingFactorySettings}
+            >
+              {savingFactorySettings ? <LoaderCircle className="spin" /> : <Factory />}
+              {savingFactorySettings
+                ? t("orderEditor.factorySettings.saving")
+                : t("orderEditor.factorySettings.save")}
+            </Button>
+          </>
+        }
+      />
+    ) : null;
 
   const patchPayment = (paymentId: string, partial: Partial<QuotePayment>) => {
     setPayments((current) => current.map((payment) => payment.id === paymentId ? { ...payment, ...partial } : payment));
@@ -645,9 +820,10 @@ export function QuoteEditorPage({
     setCompleting(true);
     setCompletionError(null);
     try {
-      await saveDetails(activeQuote.id, draft);
+      await saveCurrentDetails(activeQuote.id);
       await saveFinancialDetails(activeQuote.id, financialValues);
-      await savePayments(activeQuote.id, activeQuote.orderNumber, draft.channelId, payments);
+      if (isOrder) await savePayments(activeQuote.id, activeQuote.orderNumber, draft.channelId, payments, "order");
+      else await savePayments(activeQuote.id, activeQuote.orderNumber, draft.channelId, payments);
       if (notify) {
         try {
           await sendConfirmation(activeQuote.id);
@@ -656,7 +832,7 @@ export function QuoteEditorPage({
           return;
         }
       }
-      navigate("/quotes", { replace: true });
+      navigate(listPath, { replace: true });
     } catch {
       setCompletionError("save");
     } finally {
@@ -690,11 +866,13 @@ export function QuoteEditorPage({
       <section className="quote-editor-page quote-detail-readonly">
         <header className="page-heading quote-editor-heading">
           <div>
-            <Link className="detail-back" to="/quotes"><ChevronLeft />{t("quoteEditor.back")}</Link>
-            <span className="eyebrow">{t("quoteEditor.eyebrow")}</span>
-            <h1>{activeQuote.orderNumber || t("quoteEditor.title")}</h1>
-            <p>{t("quoteEditor.itemsReady")}</p>
+            <Link className="detail-back" to={backTo}><ChevronLeft />{isOrder ? t("details.back") : t("quoteEditor.back")}</Link>
+            <span className="eyebrow">{isOrder ? t("details.orderTitle") : t("quoteEditor.eyebrow")}</span>
+            <h1>{activeQuote.orderNumber || (isOrder ? t("details.orderTitle") : t("quoteEditor.title"))}</h1>
+            <p>{t(isOrder ? "quoteEditor.orderItemsReady" : "quoteEditor.itemsReady")}</p>
           </div>
+          {isOrder && canEdit ? <Button asChild variant="outline"><Link to={`/orders/${activeQuote.id}/edit`}><Pencil />編輯</Link></Button> : null}
+          {isOrder ? <OrderPaymentStatus total={grandTotal} paid={paidTotal} formatMoney={money.format} /> : null}
         </header>
 
         <section className="panel quote-editor-form quote-editor-readonly-form">
@@ -708,6 +886,7 @@ export function QuoteEditorPage({
             <ReadonlyField label={t("quoteEditor.fields.contactB")} value={draft.contactB} />
             <ReadonlyField label={t("quoteEditor.fields.email")} value={draft.email} />
             <ReadonlyField label={t("quoteEditor.fields.asanaLink")} value={draft.asanaLink} />
+            {isOrder ? <ReadonlyField label={t("quoteEditor.fields.customerMatters")} value={draft.customerNote} /> : null}
             {showDeliveryAddress ? <ReadonlyField label={t("quoteEditor.fields.address")} value={draft.address} /> : null}
             <div className="quote-readonly-field">
               <span>{t("quoteEditor.fields.tags")}</span>
@@ -726,18 +905,18 @@ export function QuoteEditorPage({
             <ReadonlyField label={t("quoteEditor.fields.deliveryDate")} value={displayDate(draft.deliveryDate)} />
             <ReadonlyField label={t("quoteEditor.fields.deliveryTime")} value={draft.deliveryTime} />
             <ReadonlyField label={t("quoteEditor.fields.shipOutTime")} value={draft.shipOutTime} />
-            <ReadonlyField label={t("quoteEditor.fields.customerNote")} hint={t("quoteEditor.fields.customerNoteHint")} value={draft.customerNote} />
+            {!isOrder ? <ReadonlyField label={t("quoteEditor.fields.customerNote")} hint={t("quoteEditor.fields.customerNoteHint")} value={draft.customerNote} /> : null}
             <ReadonlyField label={t("quoteEditor.fields.packingNote")} hint={t("quoteEditor.fields.packingNoteHint")} value={draft.packingNote} />
             <ReadonlyField label={t("quoteEditor.fields.salesPartner")} value={optionName(options.salesPartners, draft.salesPartnerId)} />
-            <ReadonlyField label={t("quoteEditor.fields.quoteStatus")} value={draft.quoteStatus} />
-            <ReadonlyField label={t("quoteEditor.fields.quoteSalesSource")} value={optionName(options.quoteSalesSources, draft.quoteSalesSourceId)} />
-            <ReadonlyField label={t("quoteEditor.fields.quoteCommunicationChannel")} value={optionName(options.quoteCommunicationChannels, draft.quoteCommunicationChannelId)} />
+            {!isOrder ? <ReadonlyField label={t("quoteEditor.fields.quoteStatus")} value={draft.quoteStatus} /> : null}
+            {!isOrder ? <ReadonlyField label={t("quoteEditor.fields.quoteSalesSource")} value={optionName(options.quoteSalesSources, draft.quoteSalesSourceId)} /> : null}
+            {!isOrder ? <ReadonlyField label={t("quoteEditor.fields.quoteCommunicationChannel")} value={optionName(options.quoteCommunicationChannels, draft.quoteCommunicationChannelId)} /> : null}
             <ReadonlyField label={t("quoteEditor.fields.internalNote")} hint={t("quoteEditor.fields.internalNoteHint")} value={draft.internalNote} />
           </div>
         </section>
 
         <article className="panel quote-lines-panel quote-lines-readonly-panel">
-          <header><div><span className="eyebrow">{t("quoteEditor.items.summaryEyebrow")}</span><h2>{t("quoteEditor.items.summaryTitle")}</h2></div><strong>{money.format(total)}</strong></header>
+          <header><div><span className="eyebrow">{t(isOrder ? "quoteEditor.orderSummaryEyebrow" : "quoteEditor.items.summaryEyebrow")}</span><h2>{t("quoteEditor.items.summaryTitle")}</h2></div><strong>{money.format(total)}</strong></header>
           <div className="table-wrap"><table><thead><tr><th>{t("quoteEditor.items.sequence")}</th><th>{t("quoteEditor.items.sku")}</th><th>{t("quoteEditor.items.product")}</th><th>{t("quoteEditor.items.quantity")}</th><th>{t("quoteEditor.items.unitPrice")}</th><th>{t("quoteEditor.items.subtotal")}</th></tr></thead><tbody>
             {lines.map((line, index) => <tr key={line.id}>
               <td className="quote-line-sequence">{index + 1}</td>
@@ -764,6 +943,8 @@ export function QuoteEditorPage({
             </section>
           </div>
         </article>
+
+        {factorySettingsPanel}
 
         {supplements.additionalInfo.length || supplements.activities.length ? (
           <section className="panel quote-editor-supplements quote-editor-supplements-readonly">
@@ -799,24 +980,25 @@ export function QuoteEditorPage({
     <section className="quote-editor-page">
       <header className="page-heading quote-editor-heading">
         <div>
-          <Link className="detail-back" to="/quotes">
+          <Link className="detail-back" to={backTo}>
             <ChevronLeft />
-            {t("quoteEditor.back")}
+            {isOrder ? t("details.back") : t("quoteEditor.back")}
           </Link>
-          <span className="eyebrow">{t("quoteEditor.eyebrow")}</span>
-          <h1>{activeQuote?.orderNumber || t("quoteEditor.title")}</h1>
-          <p>{activeQuote ? t("quoteEditor.itemsReady") : t("quoteEditor.description")}</p>
+          <span className="eyebrow">{isOrder ? t("details.orderTitle") : t("quoteEditor.eyebrow")}</span>
+          <h1>{activeQuote?.orderNumber || (isOrder ? t("details.orderTitle") : t("quoteEditor.title"))}</h1>
+          <p>{activeQuote ? t(isOrder ? "quoteEditor.orderItemsReady" : "quoteEditor.itemsReady") : t("quoteEditor.description")}</p>
         </div>
         {activeQuote && (
           <span className="quote-editor-saved-badge"><Check />{t("quoteEditor.saved")}</span>
         )}
+        {isOrder && activeQuote ? <OrderPaymentStatus total={grandTotal} paid={paidTotal} formatMoney={money.format} /> : null}
       </header>
 
-      {!combined ? <nav className="quote-editor-tabs" aria-label={t("quoteEditor.steps.label")} role="tablist">
+      {!combined ? <nav className="quote-editor-tabs" aria-label={t(isOrder ? "quoteEditor.orderStepLabel" : "quoteEditor.steps.label")} role="tablist">
         <button
           type="button"
           role="tab"
-          aria-label={t("quoteEditor.steps.details")}
+          aria-label={t(isOrder ? "quoteEditor.orderDetailsStep" : "quoteEditor.steps.details")}
           aria-selected={activeTab === "details"}
           className={cn(activeTab === "details" && "is-active")}
           onClick={() => setActiveTab("details")}
@@ -824,7 +1006,7 @@ export function QuoteEditorPage({
           <span><FileText /></span>
           <div>
             <small>{t("quoteEditor.steps.number", { number: 1 })}</small>
-            <strong>{t("quoteEditor.steps.details")}</strong>
+            <strong>{t(isOrder ? "quoteEditor.orderDetailsStep" : "quoteEditor.steps.details")}</strong>
           </div>
         </button>
         <button
@@ -877,6 +1059,7 @@ export function QuoteEditorPage({
             <label><span>{t("quoteEditor.fields.contactB")}</span><input type="tel" value={draft.contactB} onChange={(event) => patchDraft({ contactB: event.target.value })} /></label>
             <label><span>{t("quoteEditor.fields.email")} *</span><input required aria-label={t("quoteEditor.fields.email")} type="email" value={draft.email} onChange={(event) => patchDraft({ email: event.target.value })} aria-invalid={Boolean(fieldErrors.email)} />{fieldErrors.email && <em>{fieldErrors.email}</em>}</label>
             <label><span>{t("quoteEditor.fields.asanaLink")}</span><input type="url" value={draft.asanaLink} onChange={(event) => patchDraft({ asanaLink: event.target.value })} placeholder={t("quoteEditor.placeholders.asanaLinkPlaceholder")} /></label>
+            {isOrder ? <label><span>{t("quoteEditor.fields.customerMatters")}</span><textarea rows={2} value={draft.customerNote} onChange={(event) => patchDraft({ customerNote: event.target.value })} /></label> : null}
             {showDeliveryAddress && <label><span>{t("quoteEditor.fields.address")}</span><textarea rows={2} value={draft.address} onChange={(event) => patchDraft({ address: event.target.value })} /></label>}
             <div className="quote-editor-tags">
               <span id="quote-order-tags-label">{t("quoteEditor.fields.tags")}</span>
@@ -895,15 +1078,15 @@ export function QuoteEditorPage({
 
           <div className="quote-editor-form-column">
             <h2><PackagePlus />{t("quoteEditor.deliverySection")}</h2>
-            <label><span>{t("quoteEditor.fields.quoteStatus")}</span><select aria-label={t("quoteEditor.fields.quoteStatus")} value={draft.quoteStatus} onChange={(event) => patchDraft({ quoteStatus: event.target.value })}><option value="">{t("common.notSet")}</option>{QUOTE_STATUS_OPTIONS.map((status) => <option key={status} value={status}>{status}</option>)}</select></label>
-            <label><span>{t("quoteEditor.fields.quoteSalesSource")}</span><select aria-label={t("quoteEditor.fields.quoteSalesSource")} value={draft.quoteSalesSourceId} onChange={(event) => patchDraft({ quoteSalesSourceId: event.target.value })}><option value="">{t("common.notSet")}</option>{options.quoteSalesSources.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-            <label><span>{t("quoteEditor.fields.quoteCommunicationChannel")}</span><select aria-label={t("quoteEditor.fields.quoteCommunicationChannel")} value={draft.quoteCommunicationChannelId} onChange={(event) => patchDraft({ quoteCommunicationChannelId: event.target.value })}><option value="">{t("common.notSet")}</option>{options.quoteCommunicationChannels.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+            {!isOrder ? <label><span>{t("quoteEditor.fields.quoteStatus")}</span><select aria-label={t("quoteEditor.fields.quoteStatus")} value={draft.quoteStatus} onChange={(event) => patchDraft({ quoteStatus: event.target.value })}><option value="">{t("common.notSet")}</option>{QUOTE_STATUS_OPTIONS.map((status) => <option key={status} value={status}>{status}</option>)}</select></label> : null}
+            {!isOrder ? <label><span>{t("quoteEditor.fields.quoteSalesSource")}</span><select aria-label={t("quoteEditor.fields.quoteSalesSource")} value={draft.quoteSalesSourceId} onChange={(event) => patchDraft({ quoteSalesSourceId: event.target.value })}><option value="">{t("common.notSet")}</option>{options.quoteSalesSources.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label> : null}
+            {!isOrder ? <label><span>{t("quoteEditor.fields.quoteCommunicationChannel")}</span><select aria-label={t("quoteEditor.fields.quoteCommunicationChannel")} value={draft.quoteCommunicationChannelId} onChange={(event) => patchDraft({ quoteCommunicationChannelId: event.target.value })}><option value="">{t("common.notSet")}</option>{options.quoteCommunicationChannels.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label> : null}
             <label><span>{t("quoteEditor.fields.district")} *</span><select aria-label={t("quoteEditor.fields.district")} value={automaticDistrictName ? `auto:${automaticDistrictName}` : draft.districtId} disabled={Boolean(automaticDistrictName)} onChange={(event) => patchDraft({ districtId: event.target.value, districtName: "" })} aria-invalid={Boolean(fieldErrors.districtId)}>{automaticDistrictName && <option value={`auto:${automaticDistrictName}`}>{automaticDistrictName}</option>}<option value="">{t("common.notSet")}</option>{districts.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>{fieldErrors.districtId && <em>{fieldErrors.districtId}</em>}</label>
             <label><span>{t("quoteEditor.fields.shippingMethod")} *</span><select required aria-label={t("quoteEditor.fields.shippingMethod")} value={draft.shippingMethodId} onChange={(event) => changeShippingMethod(event.target.value)} aria-invalid={Boolean(fieldErrors.shippingMethodId)}><option value="">{t("common.notSet")}</option>{options.shippingMethods.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>{fieldErrors.shippingMethodId && <em>{fieldErrors.shippingMethodId}</em>}</label>
             <label><span>{t("quoteEditor.fields.deliveryDate")}</span><input type="date" value={draft.deliveryDate} onChange={(event) => patchDraft({ deliveryDate: event.target.value })} /></label>
             <label><span>{t("quoteEditor.fields.deliveryTime")} *</span><div className="quote-time-control"><select required aria-label={t("quoteEditor.fields.deliveryTime")} value={deliveryTimeMode === "custom" ? "custom" : draft.deliveryTime} onChange={(event) => { const value = event.target.value; setDeliveryTimeMode(value === "custom" ? "custom" : ""); patchDraft({ deliveryTime: value === "custom" ? "" : value }); }} aria-invalid={Boolean(fieldErrors.deliveryTime)}><option value="">{t("quoteEditor.placeholders.deliveryTimeSelectPlaceholder")}</option><option value="custom">{t("quoteEditor.custom")}</option>{DELIVERY_TIME_OPTIONS.map((time) => <option key={time} value={time}>{time}</option>)}</select>{deliveryTimeMode === "custom" && <input required value={draft.deliveryTime} onChange={(event) => patchDraft({ deliveryTime: event.target.value })} placeholder={t("quoteEditor.placeholders.customDeliveryTimePlaceholder")} />}</div>{fieldErrors.deliveryTime && <em>{fieldErrors.deliveryTime}</em>}</label>
             <label><span>{t("quoteEditor.fields.shipOutTime")}</span><select value={draft.shipOutTime} onChange={(event) => patchDraft({ shipOutTime: event.target.value })}><option value="">{t("quoteEditor.placeholders.shipOutTimeSelectPlaceholder")}</option>{SHIP_OUT_TIME_OPTIONS.map((time) => <option key={time} value={time}>{time}</option>)}</select></label>
-            <label><span>{t("quoteEditor.fields.customerNote")}<small>{t("quoteEditor.fields.customerNoteHint")}</small></span><textarea rows={2} value={draft.customerNote} onChange={(event) => patchDraft({ customerNote: event.target.value })} /></label>
+            {!isOrder ? <label><span>{t("quoteEditor.fields.customerNote")}<small>{t("quoteEditor.fields.customerNoteHint")}</small></span><textarea rows={2} value={draft.customerNote} onChange={(event) => patchDraft({ customerNote: event.target.value })} /></label> : null}
             <label><span>{t("quoteEditor.fields.packingNote")}<small>{t("quoteEditor.fields.packingNoteHint")}</small></span><textarea rows={2} value={draft.packingNote} onChange={(event) => patchDraft({ packingNote: event.target.value })} /></label>
             <label><span>{t("quoteEditor.fields.salesPartner")}</span><select value={draft.salesPartnerId} onChange={(event) => patchDraft({ salesPartnerId: event.target.value })}><option value="">{t("common.notSet")}</option>{options.salesPartners.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
             <label><span>{t("quoteEditor.fields.internalNote")}<small>{t("quoteEditor.fields.internalNoteHint")}</small></span><textarea rows={2} value={draft.internalNote} onChange={(event) => patchDraft({ internalNote: event.target.value })} /></label>
@@ -912,7 +1095,7 @@ export function QuoteEditorPage({
           {error && <p className="quote-editor-error" role="alert">{t("quoteEditor.errors.create")}</p>}
           {conversionError && <p className="quote-editor-error" role="alert">{t("quoteEditor.errors.convert")}</p>}
           <footer>
-            {activeQuote ? <Button type="button" variant="outline" disabled={converting || saving} onClick={() => void convertCurrentQuote()}><ShoppingCart />{converting ? t("quotes.actions.converting") : t("quotes.actions.convert")}</Button> : <span />}
+            {activeQuote && !isOrder ? <Button type="button" variant="outline" disabled={converting || saving} onClick={() => void convertCurrentQuote()}><ShoppingCart />{converting ? t("quotes.actions.converting") : t("quotes.actions.convert")}</Button> : <span />}
             <Button type="submit" disabled={saving || converting}>{saving ? t("quoteEditor.saving") : activeQuote ? t("quoteEditor.saveChanges") : t("quoteEditor.saveAndContinue")}</Button>
           </footer>
         </form>
@@ -938,11 +1121,11 @@ export function QuoteEditorPage({
             </div>
             <label><span>{t("quoteEditor.items.remarks")}</span><textarea rows={1} maxLength={16} value={lineRemarks} onChange={(event) => setLineRemarks(event.target.value)} /></label>
             {error && <p className="quote-editor-error" role="alert">{t(`quoteEditor.errors.${error === "quote_line_invalid" ? "invalidLine" : "line"}`)}</p>}
-            <Button type="submit" disabled={!selectedItem || adding}><PackagePlus />{adding ? t("quoteEditor.items.adding") : t("quoteEditor.items.add")}</Button>
+            <Button type="submit" disabled={!selectedItem || adding}><PackagePlus />{adding ? t("quoteEditor.items.adding") : t(isOrder ? "quoteEditor.orderAdd" : "quoteEditor.items.add")}</Button>
           </form>
 
           <article className="panel quote-lines-panel">
-            <header><div><span className="eyebrow">{t("quoteEditor.items.summaryEyebrow")}</span><h2>{t("quoteEditor.items.summaryTitle")}</h2></div><strong>{money.format(total)}</strong></header>
+            <header><div><span className="eyebrow">{t(isOrder ? "quoteEditor.orderSummaryEyebrow" : "quoteEditor.items.summaryEyebrow")}</span><h2>{t("quoteEditor.items.summaryTitle")}</h2></div><strong>{money.format(total)}</strong></header>
             <div className="table-wrap"><table><thead><tr><th>{t("quoteEditor.items.sequence")}</th><th>{t("quoteEditor.items.sku")}</th><th>{t("quoteEditor.items.product")}</th><th>{t("quoteEditor.items.quantity")}</th><th>{t("quoteEditor.items.unitPrice")}</th><th>{t("quoteEditor.items.subtotal")}</th><th><span className="sr-only">{t("quoteEditor.items.actions")}</span></th></tr></thead><tbody>
               {lines.map((line, index) => <tr
                 key={line.id}
@@ -1028,9 +1211,14 @@ export function QuoteEditorPage({
                 {financialError ? <p role="alert">{t("quoteEditor.financials.saveError")}</p> : null}
               </section>
             </div>
-            <footer><Button type="button" className="quote-utensil-button" variant="outline" disabled={addingUtensil || hasUtensilPack} onClick={() => void addUtensilPack()}>{hasUtensilPack ? <Check /> : <Plus />}{hasUtensilPack ? t("quoteEditor.items.utensilAdded") : addingUtensil ? t("quoteEditor.items.addingUtensil") : t("quoteEditor.items.addUtensil")}</Button>{!combined ? <Button type="button" onClick={() => setActiveTab("payments")}>{t("quoteEditor.items.next")}</Button> : null}</footer>
+            <footer>
+              {isOrder && !factorySettings.doNotSendToFactory ? <div className="quote-factory-status-action"><Button type="button" variant={isSentToFactory ? "outline" : "default"} disabled={changingFactoryStatus} onClick={() => void toggleFactoryStatus()}>{isSentToFactory ? <Undo2 /> : <Factory />}{changingFactoryStatus ? t("quoteEditor.factoryStatus.saving") : isSentToFactory ? t("quoteEditor.factoryStatus.cancel") : t("quoteEditor.factoryStatus.send")}</Button>{factoryStatusError ? <span role="alert">{t("quoteEditor.factoryStatus.error")}</span> : null}</div> : null}
+              <Button type="button" className="quote-utensil-button" variant="outline" disabled={addingUtensil || hasUtensilPack} onClick={() => void addUtensilPack()}>{hasUtensilPack ? <Check /> : <Plus />}{hasUtensilPack ? t("quoteEditor.items.utensilAdded") : addingUtensil ? t("quoteEditor.items.addingUtensil") : t("quoteEditor.items.addUtensil")}</Button>
+              {!combined ? <Button type="button" onClick={() => setActiveTab("payments")}>{t("quoteEditor.items.next")}</Button> : null}
+            </footer>
           </article>
         </div>
+        {factorySettingsPanel}
         <section className="panel quote-editor-supplements">
           <header className="quote-editor-supplement-actions">
             <div>
@@ -1106,8 +1294,8 @@ export function QuoteEditorPage({
           <footer>
             {!combined ? <Button type="button" variant="outline" onClick={() => setActiveTab("items")}>{t("quoteEditor.payments.previous")}</Button> : <span />}
             <div>
-              <Button type="button" variant="outline" disabled={completing} onClick={() => void completeQuote(true)}><Mail />{t("quoteEditor.payments.sendAndComplete")}</Button>
-              <Button type="button" disabled={completing} onClick={() => void completeQuote(false)}>{completing ? <LoaderCircle className="spin" /> : <Check />}{t("quoteEditor.payments.complete")}</Button>
+              {!isOrder ? <Button type="button" variant="outline" disabled={completing} onClick={() => void completeQuote(true)}><Mail />{t("quoteEditor.payments.sendAndComplete")}</Button> : null}
+              <Button type="button" disabled={completing} onClick={() => void completeQuote(false)}>{completing ? <LoaderCircle className="spin" /> : <Check />}{isOrder ? t("quoteEditor.saveChanges") : t("quoteEditor.payments.complete")}</Button>
             </div>
           </footer>
         </section>

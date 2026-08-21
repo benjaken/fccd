@@ -5,23 +5,25 @@ import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { MultiSelect } from "@/components/ui/multi-select";
+import { Modal } from "@/components/ui/modal";
 import { cn } from "@/lib/utils";
-import { Ban, Copy, Pencil, Phone, Printer, ReceiptText, Truck } from "lucide-react";
+import { Ban, Copy, ListPlus, MessageSquare, Pencil, Truck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useState, type ReactNode } from "react";
 
 type BrandOption = { id: string; name: string };
-type StatusOption = { legacyId: string; name: string };
+type TagOption = { id: string; name: string };
 
 export function OrderListFiltersPanel({
   filters,
   brands,
-  statuses,
+  tags,
   onChange,
 }: {
   filters: OrderListEnhancementFilters;
   brands: readonly BrandOption[];
-  statuses: readonly StatusOption[];
+  tags: readonly TagOption[];
   onChange: (next: OrderListEnhancementFilters) => void;
 }) {
   const { t } = useTranslation();
@@ -77,9 +79,9 @@ export function OrderListFiltersPanel({
         <MultiSelect
           id="order-list-tag-filter"
           labelledBy="order-list-tag-filter-label"
-          options={statuses.map((status) => ({ id: status.legacyId, name: status.name }))}
-          value={filters.statusTagIds ?? []}
-          onChange={(statusTagIds) => set({ statusTagIds })}
+          options={[...tags]}
+          value={filters.orderTagIds ?? []}
+          onChange={(orderTagIds) => set({ orderTagIds })}
           placeholder={t("orders.enhancement.allTagsPlaceholder", { defaultValue: t("orders.enhancement.allTags") })}
           searchPlaceholder={t("orders.enhancement.searchTags")}
           emptyLabel={t("orders.enhancement.noTags")}
@@ -108,7 +110,7 @@ export function OrderTagBadges({
     ...statuses.map((tag) => ({ label: tag.name, color: tag.color, tone: tag.tone ?? badgeTone(tag.name) })),
     ...manualTodos.map((todo) => ({ label: todo.label, color: null, tone: "neutral" as const })),
   ];
-  return tags.length ? <div className="order-status-list">{tags.map((tag, index) => <span className={cn("status-badge", tag.tone)} style={tag.color ? { borderColor: tag.color } : undefined} key={`${tag.label}-${index}`}>{tag.label}</span>)}</div> : <span>—</span>;
+  return tags.length ? <div className="order-status-list">{tags.map((tag, index) => <span className={cn("status-badge", tag.tone)} style={tag.color ? { backgroundColor: tag.color, borderColor: tag.color, color: "#ffffff" } : undefined} key={`${tag.label}-${index}`}>{tag.label}</span>)}</div> : <span>—</span>;
 }
 
 function badgeTone(name: string): "amber" | "blue" | "green" {
@@ -133,31 +135,126 @@ export function OrderManualTodoControl({
 
 export type OrderPrintKind = "delivery-note" | "receipt" | "invoice";
 
-export function safeTelephoneHref(phone: string | null | undefined) {
-  const normalized = (phone ?? "").replace(/[^0-9+]/g, "");
-  return /^\+?[0-9]{5,20}$/.test(normalized) ? `tel:${normalized}` : null;
+export const ORDER_LIST_STATUS_NAMES = [
+  "改期未定",
+  "WP",
+  "BW",
+  "FP",
+  "KLOOK",
+  "Alipay",
+  "已拆單",
+  "月結",
+] as const;
+
+export function OrderStatusPicker({
+  order,
+  options,
+  disabled,
+  onSave,
+}: {
+  order: OrderListItem;
+  options: readonly { legacyId: string; name: string }[];
+  disabled: boolean;
+  onSave: (legacyIds: string[]) => Promise<void>;
+}) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(false);
+  const labelId = `order-status-picker-${order.id}`;
+  const optionIds = new Set(options.map((option) => option.legacyId));
+  const openPicker = () => {
+    setSelected((order.statusLegacyIds ?? []).filter((id) => optionIds.has(id)));
+    setError(false);
+    setOpen(true);
+  };
+  const save = async () => {
+    if (saving) return;
+    setSaving(true);
+    setError(false);
+    try {
+      await onSave(selected);
+      setOpen(false);
+    } catch {
+      setError(true);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="order-status-picker">
+      <button
+        type="button"
+        onClick={openPicker}
+        disabled={disabled}
+        aria-label={t("orders.statusPicker.add")}
+        title={t("orders.statusPicker.add")}
+      >
+        <ListPlus />
+      </button>
+      <Modal
+        open={open}
+        title={t("orders.statusPicker.add")}
+        closeLabel={t("orders.statusPicker.close")}
+        size="sm"
+        className="order-status-picker-modal"
+        onClose={() => setOpen(false)}
+        footer={<><Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={saving}>{t("common.cancel")}</Button><Button type="button" onClick={() => void save()} disabled={saving}>{saving ? t("orders.statusPicker.saving") : t("orders.statusPicker.save")}</Button></>}
+      >
+        <label className="order-status-picker-field">
+          <span id={labelId}>{t("orders.statusPicker.field")}</span>
+          <MultiSelect
+            id={`${labelId}-select`}
+            labelledBy={labelId}
+            options={options.map((option) => ({ id: option.legacyId, name: option.name }))}
+            value={selected}
+            onChange={setSelected}
+            placeholder={t("orders.statusPicker.placeholder")}
+            searchPlaceholder={t("orders.statusPicker.searchPlaceholder")}
+            emptyLabel={t("orders.statusPicker.empty")}
+            disabled={saving}
+          />
+        </label>
+        {error ? <span className="order-status-picker-error" role="alert">{t("orders.statusPicker.error")}</span> : null}
+      </Modal>
+    </div>
+  );
 }
 
 export function OrderRowActionMenu({
   order,
   canCancel,
   onCancel,
+  onMessages,
   onPreview,
+  statusPicker,
 }: {
   order: OrderListItem;
   canCancel: boolean;
   onCancel: () => void;
+  onMessages: () => void;
   onPreview: (kind: OrderPrintKind) => void;
+  statusPicker?: ReactNode;
 }) {
-  const phoneHref = safeTelephoneHref(order.contactPhone);
+  const { t } = useTranslation();
+  const messageLabel = `${t("quoteCustomers.messagesAction")} ${order.orderNumber || order.id}`;
+  const showDeliveryNote =
+    order.isSentToFactory === true && order.isAssignedToFleet === true;
+  const isPaidInFull =
+    order.outstanding !== null &&
+    order.outstanding !== undefined &&
+    order.outstanding <= 0;
   return (
     <div className="order-row-actions">
+      {statusPicker}
       <Link to={`/orders/${encodeURIComponent(order.id)}/edit`} aria-label="編輯" title="編輯"><Pencil /></Link>
-      {phoneHref ? <a href={phoneHref} aria-label="溝通" title="溝通"><Phone /></a> : <span aria-label="溝通資料不可用" title="溝通資料不可用"><Phone /></span>}
+      {order.contactPhone ? <button type="button" onClick={onMessages} aria-label={messageLabel} title={t("quoteCustomers.messagesAction")}><MessageSquare /></button> : <span aria-label={`${messageLabel} ${t("common.notSet")}`} title={t("common.notSet")}><MessageSquare /></span>}
       {canCancel ? <button type="button" onClick={onCancel} aria-label="取消訂單" title="取消訂單"><Ban /></button> : null}
-      <button type="button" onClick={() => onPreview("delivery-note")} aria-label="送貨單" title="送貨單"><Truck /></button>
-      <button type="button" onClick={() => onPreview("receipt")} aria-label="打印" title="打印"><Printer /></button>
-      <button type="button" onClick={() => onPreview("invoice")} aria-label="發票" title="發票"><ReceiptText /></button>
+      {showDeliveryNote ? <button type="button" onClick={() => onPreview("delivery-note")} aria-label="送貨單" title="送貨單"><Truck /></button> : null}
+      {isPaidInFull ? <button className="order-document-action" type="button" onClick={() => onPreview("receipt")} aria-label={t("orders.documents.receipt")} title={t("orders.documents.receipt")}>{t("orders.documents.receipt")}</button> : null}
+      {isPaidInFull ? <button className="order-document-action" type="button" onClick={() => onPreview("invoice")} aria-label={t("orders.documents.invoice")} title={t("orders.documents.invoice")}>{t("orders.documents.invoice")}</button> : null}
       <Link to={`/orders/new?copyFrom=${encodeURIComponent(order.id)}`} aria-label="複製" title="複製"><Copy /></Link>
     </div>
   );

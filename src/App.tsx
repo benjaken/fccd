@@ -49,7 +49,6 @@ import { FollowUpPage } from "@/components/FollowUpPage";
 import { OrdersListPage } from "@/components/OrdersListPage";
 import { OrdersDashboardPage } from "@/components/OrdersDashboardPage";
 import { OrderSettingsPage } from "@/components/OrderSettingsPage";
-import { OrderDetailPage } from "@/components/OrderDetailPage";
 import { OrderEditorPage } from "@/components/OrderEditorPage";
 import { PaymentsListPage } from "@/components/PaymentsListPage";
 import { MasoftInvoiceReceiptsPage } from "@/components/MasoftInvoiceReceiptsPage";
@@ -704,17 +703,13 @@ function OperationsShell() {
               <Route
                 path="/orders/:id/edit"
                 element={
-                  canEditOrders ? <OrderEditorPage /> : <SettingsAccessDenied />
+                  canEditOrders ? <QuoteEditorPage documentType="order" /> : <SettingsAccessDenied />
                 }
               />
               <Route
                 path="/orders/:id"
                 element={
-                  <OrderDetailPage
-                    documentType="order"
-                    canViewFinance={canViewFinance}
-                    canEdit={canEditOrders}
-                  />
+                  <QuoteEditorPage documentType="order" combined readOnly canEdit={canEditOrders} />
                 }
               />
               <Route path="/quotes" element={<QuotesListPage />} />

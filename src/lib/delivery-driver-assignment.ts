@@ -41,8 +41,7 @@ export async function fetchUnassignedDriverDeliveries({
       { count: "exact" },
     )
     .not("order_id", "is", null)
-    .is("subdriver_id", null)
-    .in("delivery_status", ["未派車隊", "待取貨"]);
+    .in("delivery_status", ["未派車隊", "待接單", "待取貨"]);
   if (teamId) query = query.eq("motorcade_id", teamId);
   const term = safeSearchTerm(search);
   if (term) {
