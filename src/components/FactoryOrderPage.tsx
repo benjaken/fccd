@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import { FactoryOrderJobView } from "@/components/FactoryOrderJobView";
 import { FactoryQzTrayStatus } from "@/components/FactoryQzTray";
+import { FactoryBrandLogo } from "@/components/FactoryBrandLogo";
 import {
   assignDeliveryMotorcade,
   fetchDeliveryById,
@@ -18,6 +19,10 @@ import {
   type FactoryOrderJob,
 } from "@/lib/factory-board";
 import { qzTrayClient, useQzTray, type QzTrayClient } from "@/lib/qz-tray";
+import {
+  fetchFactoryLabelCommand,
+  type FactoryLabelCommandLoader,
+} from "@/lib/factory-label";
 
 export function FactoryOrderPage({
   loadDelivery = fetchDeliveryById,
@@ -25,6 +30,7 @@ export function FactoryOrderPage({
   loadFleets = fetchFactoryFleets,
   assignMotorcade = assignDeliveryMotorcade,
   markLinePrinted = markFactoryOrderLinePrinted,
+  loadLabelCommand = fetchFactoryLabelCommand,
   qzClient = qzTrayClient,
 }: {
   loadDelivery?: typeof fetchDeliveryById;
@@ -32,6 +38,7 @@ export function FactoryOrderPage({
   loadFleets?: typeof fetchFactoryFleets;
   assignMotorcade?: typeof assignDeliveryMotorcade;
   markLinePrinted?: typeof markFactoryOrderLinePrinted;
+  loadLabelCommand?: FactoryLabelCommandLoader;
   qzClient?: QzTrayClient;
 }) {
   const { t } = useTranslation();
@@ -77,10 +84,7 @@ export function FactoryOrderPage({
   return (
     <main className="factory-board factory-order-page">
       <header className="factory-board-top">
-        <div className="factory-board-brand">
-          <strong>{t("brand.name")}</strong>
-          <small>{t("brand.system")}</small>
-        </div>
+        <FactoryBrandLogo />
         <p className="factory-order-page-title">{t("factoryBoard.orderPageTitle")}</p>
         <div className="factory-board-actions">
           <FactoryQzTrayStatus
@@ -108,6 +112,7 @@ export function FactoryOrderPage({
           fleets={fleets}
           assignMotorcade={assignMotorcade}
           markLinePrinted={markLinePrinted}
+          loadLabelCommand={loadLabelCommand}
           onLinePrinted={(lineId) =>
             setJob((current) => {
               if (!current) return current;

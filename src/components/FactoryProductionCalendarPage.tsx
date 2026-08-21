@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { FactoryQzTrayStatus } from "@/components/FactoryQzTray";
+import { FactoryBrandLogo } from "@/components/FactoryBrandLogo";
 import { KitchenCalendarPage } from "@/components/KitchenCalendarPage";
 import { Button } from "@/components/ui/button";
 import { qzTrayClient, useQzTray, type QzTrayClient } from "@/lib/qz-tray";
@@ -18,10 +19,7 @@ export function FactoryProductionCalendarPage({
   return (
     <main className="factory-board factory-production-calendar-page">
       <header className="factory-board-top">
-        <div className="factory-board-brand">
-          <strong>{t("brand.name")}</strong>
-          <small>{t("brand.system")}</small>
-        </div>
+        <FactoryBrandLogo />
         <p
           className="factory-board-notice"
           aria-label={t("factoryBoard.stocktakeNotice")}

@@ -32,7 +32,7 @@ describe("FactoryMeatDeliveryNotePage", () => {
       /\.factory-meat-note-lines tbody tr:last-child td\s*\{[^}]*border-bottom:\s*2px solid #000000 !important/s,
     );
     expect(stylesheet).toMatch(
-      /\.factory-meat-note-details \.factory-meat-note-order-number\s*\{[^}]*border-bottom:\s*2px solid #000000/s,
+      /\.factory-meat-note-details \.factory-meat-note-order-number\s*\{[^}]*margin:\s*-5px -8px 5px[^}]*border-bottom:\s*2px solid #000000/s,
     );
   });
 
@@ -91,6 +91,7 @@ describe("FactoryMeatDeliveryNotePage", () => {
     expect(screen.getByText("4份")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /列印/ }));
+    expect(document.querySelector(".factory-meat-note-details section p")).toHaveTextContent("*");
     expect(markPrinted).toHaveBeenCalledWith("meat-1");
     expect(print).toHaveBeenCalledOnce();
     print.mockRestore();

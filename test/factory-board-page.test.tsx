@@ -5,9 +5,13 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { FactoryBoardPage } from "@/components/FactoryBoardPage";
-import { formatFactoryDeliveryNoteQuantity } from "@/components/FactoryOrderJobView";
+import {
+  formatFactoryDeliveryNoteQuantity,
+  preferredFactoryLabelPrinter,
+} from "@/components/FactoryOrderJobView";
 import i18n from "@/i18n";
 import type { DeliveryListItem } from "@/lib/deliveries";
+import { addCalendarDays } from "@/lib/deliveries";
 import type { FactoryBoardData } from "@/lib/factory-board";
 import type { QzTrayClient } from "@/lib/qz-tray";
 
@@ -62,6 +66,11 @@ const board: FactoryBoardData = {
 };
 
 describe("FactoryBoardPage", () => {
+  it("prefers an Xprinter for label printing", () => {
+    expect(
+      preferredFactoryLabelPrinter(["Zebra ZD421", "Xprinter XP-420B"]),
+    ).toBe("Xprinter XP-420B");
+  });
   beforeEach(async () => {
     await i18n.changeLanguage("zh-HK");
   });
@@ -137,8 +146,8 @@ describe("FactoryBoardPage", () => {
     expect(printRule?.[1]).toContain("left: 10px");
     expect(orderDishRule?.[1]).toContain("font-size: 32px");
     expect(orderRemarkRule?.[1]).toContain("color: #dc2626");
-    expect(orderNumberRule?.[1]).toContain("font-size: 58px");
-    expect(orderMetaRule?.[1]).toContain("font-size: 30px");
+    expect(orderNumberRule?.[1]).toContain("font-size: 72px");
+    expect(orderMetaRule?.[1]).toContain("font-size: 36px");
     expect(packingRule?.[1]).toContain("background: #fffaf3");
     expect(packingRule?.[1]).toContain("font-size: 22px");
     expect(orderPrintRule?.[1]).toContain("width: 60px");
@@ -155,11 +164,9 @@ describe("FactoryBoardPage", () => {
       /@page factory-multi-day-report\s*\{[^}]*size:\s*A4 portrait/s,
     );
     expect(stylesheet).toMatch(
-      /@page factory-delivery-note\s*\{[^}]*size:\s*A4 portrait/s,
+      /@page factory-delivery-note\s*\{[^}]*size:\s*A4 portrait[^}]*margin:\s*0/s,
     );
-    expect(stylesheet).toMatch(
-      /\.factory-delivery-note-print\s*\{[^}]*page:\s*factory-delivery-note/s,
-    );
+    expect(stylesheet).toMatch(/@page\s*\{[^}]*margin:\s*0/s);
     expect(stylesheet).toMatch(
       /\.factory-multi-day-report\s*\{[^}]*page:\s*factory-multi-day-report/s,
     );
@@ -187,7 +194,16 @@ describe("FactoryBoardPage", () => {
       /\.factory-delivery-note-lines tbody tr:last-child td\s*\{[^}]*border-bottom:\s*1px solid #222222 !important/s,
     );
     expect(stylesheet).toMatch(
-      /\.factory-delivery-note-print > footer\s*\{[^}]*position:\s*absolute[^}]*top:\s*250mm/s,
+      /\.factory-delivery-note-print > footer\s*\{[^}]*position:\s*absolute[^}]*bottom:\s*10mm[^}]*font-size:\s*10pt/s,
+    );
+    expect(stylesheet).toMatch(
+      /\.factory-delivery-note-lines th,\s*\.factory-delivery-note-lines td\s*\{[^}]*color:\s*#000000 !important[^}]*opacity:\s*1 !important/s,
+    );
+    expect(stylesheet).not.toMatch(
+      /\.factory-delivery-note-order-footer\s*\{[^}]*border-bottom/s,
+    );
+    expect(stylesheet).toMatch(
+      /\.factory-delivery-note-order-reference\s*\{[^}]*margin:\s*-2mm -3mm 2mm !important[^}]*border-bottom:\s*1px solid #000000/s,
     );
     expect(stylesheet).toMatch(
       /\.factory-board\.factory-order-page\s*\{[^}]*height:\s*0 !important[^}]*min-height:\s*0 !important/s,
@@ -262,6 +278,35 @@ describe("FactoryBoardPage", () => {
     expect(
       screen.queryByRole("heading", { name: "選擇日期" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("moves the footer pager by one three-day group", async () => {
+    const user = userEvent.setup();
+    const loadBoard = vi.fn(async (date: string) => ({
+      ...board,
+      dates: [date, addCalendarDays(date, 1), addCalendarDays(date, 2)],
+    }));
+
+    render(
+      <FactoryBoardPage
+        initialDate="2026-08-17"
+        loadBoard={loadBoard}
+        loadFleets={async () => []}
+        loadBrands={async () => []}
+        qzClient={qzClient}
+      />,
+    );
+
+    await waitFor(() => expect(loadBoard).toHaveBeenCalledWith("2026-08-17"));
+    const pagerButtons = document.querySelectorAll<HTMLButtonElement>(
+      ".factory-board-pager button",
+    );
+
+    await user.click(pagerButtons[0]!);
+    await waitFor(() => expect(loadBoard).toHaveBeenCalledWith("2026-08-14"));
+
+    await user.click(pagerButtons[2]!);
+    await waitFor(() => expect(loadBoard).toHaveBeenCalledWith("2026-08-17"));
   });
 
   it("opens the large serving calendar from the lower-left footer", async () => {
@@ -383,6 +428,7 @@ describe("FactoryBoardPage", () => {
         qzClient={qzClient}
         loadOrderJob={async () => ({
           packingNote: "分開兩箱",
+          customerNote: "到達前致電客戶",
           dispatchTime: "10:00",
           arrivalWindow: "11:00 - 12:00",
           brandName: "HK lunch box",
@@ -451,6 +497,18 @@ describe("FactoryBoardPage", () => {
     expect(document.querySelector(".factory-delivery-note-print")).toHaveTextContent(
       "B-1522",
     );
+    expect(document.querySelector(".factory-delivery-note-details")).toHaveTextContent("*");
+    expect(document.querySelector(".factory-delivery-note-details")).toHaveTextContent(
+      "到達前致電客戶",
+    );
+    expect(document.querySelector(".factory-delivery-note-details")).not.toHaveTextContent(
+      "分開兩箱",
+    );
+    const deliveryContact = document.querySelector(
+      ".factory-delivery-note-contact",
+    );
+    expect(deliveryContact).toHaveTextContent(/Eric Yim\s+66817198/);
+    expect(deliveryContact?.querySelector("span")).toHaveTextContent("66817198");
     expect(document.querySelector(".factory-delivery-note-print")).toHaveTextContent(
       "拿破崙肉丸意粉",
     );
@@ -462,7 +520,11 @@ describe("FactoryBoardPage", () => {
     expect(brandFooter).toHaveTextContent("https://hklunchbox.com/");
     expect(
       document.querySelector(".factory-delivery-note-order-footer"),
-    ).toHaveTextContent("B-1522");
+    ).toHaveTextContent("訂單 B-1522");
+    expect(document.querySelector(".factory-delivery-note-brand img")).toHaveAttribute(
+      "src",
+      "/assets/fc-catering-logo.svg",
+    );
     print.mockRestore();
 
     await user.click(screen.getByRole("button", { name: "返回" }));
@@ -579,6 +641,7 @@ describe("FactoryBoardPage", () => {
     const user = userEvent.setup();
     const printLabels = vi.fn(async () => {});
     const markLinePrinted = vi.fn(async () => {});
+    const loadLabelCommand = vi.fn(async () => "VEVTUA==");
     const connectedQzClient: QzTrayClient = {
       connect: vi.fn(async () => {}),
       disconnect: vi.fn(async () => {}),
@@ -609,6 +672,7 @@ describe("FactoryBoardPage", () => {
           ],
         })}
         markLinePrinted={markLinePrinted}
+        loadLabelCommand={loadLabelCommand}
         openOrdersInNewPage={false}
         qzClient={connectedQzClient}
       />,
@@ -625,11 +689,10 @@ describe("FactoryBoardPage", () => {
     await waitFor(() => expect(fullSet).toBeEnabled());
     await user.click(fullSet);
 
-    expect(printLabels).toHaveBeenCalledWith(
-      "Zebra ZD421",
-      expect.stringContaining("煎雞扒胡麻沙律"),
-      3,
+    expect(loadLabelCommand).toHaveBeenCalledWith(
+      expect.objectContaining({ copies: 3 }),
     );
+    expect(printLabels).toHaveBeenCalledWith("Zebra ZD421", "VEVTUA==", 1);
     expect(markLinePrinted).toHaveBeenCalledWith("line-print");
     expect(
       await screen.findByText("全套標籤打印完成，已更新為已印刷。"),
@@ -671,6 +734,7 @@ describe("FactoryBoardPage", () => {
           ],
         })}
         markLinePrinted={markLinePrinted}
+        loadLabelCommand={async () => "VEVTUA=="}
         openOrdersInNewPage={false}
         qzClient={failingQzClient}
       />,

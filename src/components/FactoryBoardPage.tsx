@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 
 import { FactoryOrderJobView } from "@/components/FactoryOrderJobView";
-import { FactoryQzTrayStatus } from "@/components/FactoryQzTray";
+import { FactoryBrandLogo } from "@/components/FactoryBrandLogo";
 import { Button } from "@/components/ui/button";
 import {
   addCalendarDays,
@@ -48,6 +48,10 @@ import {
   type FactoryOrderJob,
 } from "@/lib/factory-board";
 import { qzTrayClient, useQzTray, type QzTrayClient } from "@/lib/qz-tray";
+import {
+  fetchFactoryLabelCommand,
+  type FactoryLabelCommandLoader,
+} from "@/lib/factory-label";
 import { cn } from "@/lib/utils";
 
 type FleetLoader = typeof fetchFactoryFleets;
@@ -138,6 +142,7 @@ export function FactoryBoardPage({
   loadMultiDayMenu = fetchFactoryMultiDayMenu,
   assignMotorcade = assignDeliveryMotorcade,
   markLinePrinted = markFactoryOrderLinePrinted,
+  loadLabelCommand = fetchFactoryLabelCommand,
   qzClient = qzTrayClient,
   initialDate,
   openOrdersInNewPage = true,
@@ -151,14 +156,14 @@ export function FactoryBoardPage({
   loadMultiDayMenu?: MultiDayMenuLoader;
   assignMotorcade?: MotorcadeAssigner;
   markLinePrinted?: LinePrintMarker;
+  loadLabelCommand?: FactoryLabelCommandLoader;
   qzClient?: QzTrayClient;
   initialDate?: string;
   openOrdersInNewPage?: boolean;
   openMultiDayInNewPage?: boolean;
 }) {
   const { t, i18n } = useTranslation();
-  const qz = useQzTray({ client: qzClient });
-  const [qzPanelOpen, setQzPanelOpen] = useState(false);
+  const qz = useQzTray({ client: qzClient, autoConnect: false });
   const [startDate, setStartDate] = useState(
     () => initialDate ?? addCalendarDays(hongKongDateInputValue(), -1),
   );
@@ -560,10 +565,7 @@ export function FactoryBoardPage({
   return (
     <main className="factory-board">
       <header className="factory-board-top">
-        <div className="factory-board-brand">
-          <strong>{t("brand.name")}</strong>
-          <small>{t("brand.system")}</small>
-        </div>
+        <FactoryBrandLogo />
         <p
           className="factory-board-notice"
           aria-label={t("factoryBoard.stocktakeNotice")}
@@ -578,11 +580,6 @@ export function FactoryBoardPage({
           ) : null}
         </p>
         <div className="factory-board-actions">
-          <FactoryQzTrayStatus
-            qz={qz}
-            open={qzPanelOpen}
-            onToggle={() => setQzPanelOpen((current) => !current)}
-          />
           {selectedJob || multiDayReport ? null : (
             <Button
               type="button"
@@ -607,6 +604,7 @@ export function FactoryBoardPage({
           fleets={fleets}
           assignMotorcade={assignMotorcade}
           markLinePrinted={markLinePrinted}
+          loadLabelCommand={loadLabelCommand}
           onLinePrinted={(lineId) => {
             setOrderJob((current) => {
               if (!current) return current;
@@ -901,7 +899,7 @@ export function FactoryBoardPage({
             variant="ghost"
             size="icon"
             aria-label={t("factoryBoard.previousDays")}
-            onClick={() => setStartDate((current) => addCalendarDays(current, -1))}
+            onClick={() => setStartDate((current) => addCalendarDays(current, -3))}
           >
             <ChevronLeft />
           </Button>
@@ -919,7 +917,7 @@ export function FactoryBoardPage({
             variant="ghost"
             size="icon"
             aria-label={t("factoryBoard.nextDays")}
-            onClick={() => setStartDate((current) => addCalendarDays(current, 1))}
+            onClick={() => setStartDate((current) => addCalendarDays(current, 3))}
           >
             <ChevronRight />
           </Button>

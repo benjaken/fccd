@@ -36,7 +36,7 @@
   --card-foreground: oklch(0.19 0.02 150);
   --popover: oklch(1 0 150);
   --popover-foreground: oklch(0.19 0.02 150);
-  /* Clear green primary — medium saturation, brand + active system. */
+  /* Clear green primary ? medium saturation, brand + active system. */
   --primary: oklch(0.52 0.14 150);
   --primary-foreground: oklch(0.99 0.005 150);
   --secondary: oklch(0.955 0.012 150);
@@ -148,7 +148,7 @@ a {
 
 /* Primary filled actions must keep light label/icon text on the blue fill.
    Unlayered `a { color: inherit }` otherwise wins over Tailwind utilities on
-   Button asChild <Link> buttons such as「建立新訂單」. */
+   Button asChild <Link> buttons such as???????. */
 a.bg-primary,
 button.bg-primary,
 a.bg-primary:hover,
@@ -203,6 +203,14 @@ button.bg-primary:focus-visible {
   gap: 10px;
   min-width: 0;
 }
+.brand-logo {
+  display: block;
+  width: min(174px, calc(var(--sidebar-width) - 32px));
+  max-height: 52px;
+  object-fit: contain;
+  object-position: left center;
+}
+
 
 .brand-mark {
   position: relative;
@@ -2204,7 +2212,7 @@ button.product-tag[aria-pressed="true"] {
   background: color-mix(in oklch, var(--accent) 55%, transparent);
 }
 
-/* Shopify 導入且已設定送貨時間的訂單：虛線框 + 字體顏色變淺標示。 */
+/* Shopify ????????????????? + ????????? */
 .kitchen-calendar-event.is-shopify {
   border: 1px dashed var(--primary);
   border-radius: 6px;
@@ -2303,7 +2311,7 @@ button.product-tag[aria-pressed="true"] {
   background: var(--card);
 }
 
-/* Shopify 導入且已設定送貨時間的訂單：虛線框 + 字體顏色變淺標示。 */
+/* Shopify ????????????????? + ????????? */
 .kitchen-calendar-day-item.is-shopify {
   border-style: dashed;
   background: color-mix(in oklch, var(--primary) 5%, var(--background));
@@ -2597,6 +2605,13 @@ button.product-tag[aria-pressed="true"] {
 .list-search-filters {
   display: contents;
 }
+.quotes-filter-group {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  margin-left: auto;
+}
+
 
 .list-search-filter-trigger {
   position: relative;
@@ -2627,6 +2642,13 @@ button.product-tag[aria-pressed="true"] {
   gap: 16px;
   width: 100%;
 }
+.list-search-filter-drawer .quotes-filter-group {
+  display: grid;
+  gap: 16px;
+  width: 100%;
+  margin-left: 0;
+}
+
 
 .list-search-filter-drawer .products-status-filter,
 .list-search-filter-drawer .packages-status-filter,
@@ -5798,6 +5820,57 @@ button.product-tag[aria-pressed="true"] {
   width: 40%;
   overflow: hidden;
 }
+.quote-files-panel .side-panel-body {
+  display: grid;
+  align-content: start;
+  gap: 22px;
+  padding: 22px;
+  background: color-mix(in oklch, var(--muted) 34%, var(--background));
+}
+
+.quote-file-upload-card {
+  display: grid;
+  gap: 16px;
+  padding: 22px;
+  border: 1px dashed color-mix(in oklch, var(--primary) 45%, var(--border));
+  border-radius: 14px;
+  background: var(--card);
+  text-align: center;
+}
+
+.quote-file-upload-card > div {
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+}
+
+.quote-file-upload-card strong { font-size: 16px; }
+.quote-file-upload-card p { margin: 0; color: var(--muted-foreground); font-size: 14px; line-height: 1.55; }
+.quote-file-upload-icon { display: grid; width: 46px; height: 46px; place-items: center; border-radius: 50%; color: var(--primary); background: color-mix(in oklch, var(--primary) 11%, transparent); }
+.quote-file-upload-icon svg { width: 22px; height: 22px; }
+.quote-file-input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+
+.quote-file-history { display: grid; gap: 12px; }
+.quote-file-history > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.quote-file-history > header > div { display: flex; align-items: center; gap: 8px; }
+.quote-file-history h3 { margin: 0; font-size: 16px; }
+.quote-file-history header svg { width: 18px; color: var(--primary); }
+.quote-file-history header > span { color: var(--muted-foreground); font-size: 14px; }
+.quote-file-history ul { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.quote-file-history li { display: grid; grid-template-columns: 42px minmax(0, 1fr) 40px; align-items: center; gap: 11px; padding: 13px; border: 1px solid var(--border); border-radius: 12px; background: var(--card); }
+.quote-file-history li > div { display: grid; min-width: 0; gap: 3px; }
+.quote-file-history li strong { overflow: hidden; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+.quote-file-history li small { color: var(--muted-foreground); font-size: 14px; }
+.quote-file-history li em { color: var(--destructive); font-size: 14px; font-style: normal; }
+.quote-file-type { display: grid; width: 42px; height: 42px; place-items: center; border-radius: 10px; color: var(--primary); background: color-mix(in oklch, var(--primary) 9%, transparent); }
+.quote-file-type svg { width: 20px; height: 20px; }
+.quote-file-state { display: flex; min-height: 120px; align-items: center; justify-content: center; gap: 8px; color: var(--muted-foreground); }
+.quote-file-empty { flex-direction: column; padding: 25px; border: 1px dashed var(--border); border-radius: 12px; text-align: center; }
+.quote-file-empty svg { width: 28px; height: 28px; }
+.quote-file-empty strong { color: var(--foreground); }
+.quote-file-empty span { font-size: 14px; }
+.quote-file-error { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 13px; border: 1px solid color-mix(in oklch, var(--destructive) 32%, var(--border)); border-radius: 10px; color: var(--destructive); background: color-mix(in oklch, var(--destructive) 7%, var(--card)); font-size: 14px; }
+
 
 .side-panel-header,
 .settings-side-panel-header {
@@ -13638,7 +13711,7 @@ a.masoft-order-tag:focus-visible {
 .restaurant-sales-salary-table thead th {
   position: sticky;
   z-index: 3;
-  background: color-mix(in srgb, var(--primary) 11%, var(--background));
+  background: var(--report-table-header-bg);
   color: var(--foreground);
   font-weight: 800;
   text-align: center;
@@ -13655,17 +13728,17 @@ a.masoft-order-tag:focus-visible {
 }
 
 .restaurant-sales-salary-table thead tr:first-child th:not(:first-child) {
-  border-right: 3px solid color-mix(in srgb, var(--primary) 52%, var(--border));
+  border-right: 3px solid var(--report-table-accent-border);
 }
 
 .restaurant-sales-salary-table thead th:first-child {
   z-index: 5;
-  background: color-mix(in srgb, var(--primary) 11%, var(--background));
+  background: var(--report-table-header-bg);
 }
 
 .restaurant-sales-salary-table tbody tr:nth-child(even) th,
 .restaurant-sales-salary-table tbody tr:nth-child(even) td {
-  background: color-mix(in srgb, var(--primary) 5%, var(--background));
+  background: var(--report-table-stripe-bg);
 }
 
 @media (max-width: 980px) {
@@ -13790,18 +13863,18 @@ a.masoft-order-tag:focus-visible {
 .shop-sales-hours-table thead tr:first-child th {
   top: 0;
   height: 38px;
-  background: color-mix(in oklch, #d9eafb 78%, var(--card));
+  background: var(--report-table-header-bg);
 }
 
 .shop-sales-hours-table thead tr:nth-child(2) th {
   top: 38px;
-  background: var(--card);
-  color: #f59e0b;
+  background: var(--report-table-subheader-bg);
+  color: var(--foreground);
 }
 
 .shop-sales-hours-table tbody tr:nth-child(even) th,
 .shop-sales-hours-table tbody tr:nth-child(even) td {
-  background: color-mix(in oklch, #dbeafe 42%, var(--card));
+  background: var(--report-table-stripe-bg);
 }
 
 .shop-sales-hours-table td strong {
@@ -13829,7 +13902,7 @@ a.masoft-order-tag:focus-visible {
 }
 
 .shop-sales-hours-table .shop-sales-hours-total {
-  border-left: 3px solid #f59e0b;
+  border-left: 3px solid var(--report-table-accent-border);
   font-weight: 850;
 }
 
@@ -14021,8 +14094,8 @@ a.masoft-order-tag:focus-visible {
   top: 0;
   z-index: 3;
   height: 42px;
-  border-bottom-color: color-mix(in oklch, var(--primary) 30%, var(--border));
-  background: color-mix(in oklch, #d9eafb 78%, var(--card));
+  border-bottom-color: var(--report-table-accent-border);
+  background: var(--report-table-header-bg);
   color: var(--foreground);
   text-align: center;
   font-weight: 800;
@@ -14698,7 +14771,7 @@ a.masoft-order-tag:focus-visible {
 }
 
 .price-up {
-  /* Semantic rise/alert tone — not brand color. Keep distinct from primary green. */
+  /* Semantic rise/alert tone ? not brand color. Keep distinct from primary green. */
   color: oklch(0.56 0.18 28) !important;
 }
 
@@ -14707,7 +14780,7 @@ a.masoft-order-tag:focus-visible {
 }
 
 .stock-negative {
-  /* Semantic shortage/alert tone — not brand color. */
+  /* Semantic shortage/alert tone ? not brand color. */
   color: oklch(0.56 0.18 28) !important;
 }
 
@@ -15127,6 +15200,1446 @@ a.masoft-order-tag:focus-visible {
   display: flex;
   flex-direction: column;
   min-width: 0;
+}
+
+.quotes-table-wrap .quote-description-cell {
+  width: 24rem;
+  min-width: 24rem;
+  white-space: normal;
+}
+
+.quote-description-cell textarea {
+  width: 100%;
+  min-height: 5.5rem;
+  resize: vertical;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--input);
+  border-radius: 0.55rem;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+  line-height: 1.45;
+}
+
+.quote-description-cell textarea:focus {
+  border-color: var(--ring);
+  outline: 0;
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 18%, transparent);
+}
+
+.quote-description-cell small {
+  display: block;
+  margin-top: 0.3rem;
+  color: var(--destructive);
+}
+
+.quote-editor-page {
+  display: grid;
+  gap: 20px;
+  max-width: 1500px;
+  margin: 0 auto;
+}
+
+.quote-editor-heading {
+  align-items: flex-end;
+}
+
+.quote-editor-saved-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 13px;
+  border: 1px solid color-mix(in oklch, var(--success) 35%, var(--border));
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--success) 10%, var(--card));
+  color: var(--success);
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.quote-editor-saved-badge svg {
+  width: 16px;
+  height: 16px;
+}
+
+.quote-editor-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 15px;
+  background: var(--card);
+}
+
+.quote-payment-step {
+  display: grid;
+  gap: 22px;
+  padding: 28px;
+}
+
+.quote-payment-step > header,
+.quote-payment-step > footer,
+.quote-payment-step > footer > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.quote-payment-step > header h2 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 4px 0;
+}
+
+.quote-payment-step > header h2 svg { width: 21px; height: 21px; color: var(--primary); }
+.quote-payment-step > header p { margin: 0; color: var(--muted-foreground); }
+
+.quote-payment-list { display: grid; gap: 10px; }
+.quote-payment-row {
+  display: grid;
+  grid-template-columns: minmax(145px, .8fr) minmax(180px, 1fr) minmax(150px, .75fr) minmax(180px, 1fr) 36px;
+  align-items: end;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--background);
+.quote-payment-row label { display: grid; gap: 6px; font-size: 14px; font-weight: 700; }
+.quote-payment-row input,
+.quote-payment-row select { min-width: 0; height: 42px; padding: 0 11px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: var(--foreground); font: inherit; }
+.quote-payment-row .quote-money-input { height: 42px; }
+.quote-payment-row .quote-money-input input { height: 40px; border: 0; }
+.quote-payment-row .quote-line-delete { margin-bottom: 7px; }
+}
+
+.quote-payment-empty {
+  display: grid;
+  min-height: 170px;
+  place-items: center;
+  align-content: center;
+  gap: 7px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  color: var(--muted-foreground);
+  text-align: center;
+.quote-payment-empty svg { width: 30px; height: 30px; color: var(--primary); }
+.quote-payment-empty strong { color: var(--foreground); }
+}
+
+.quote-payment-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+.quote-payment-summary > div { display: grid; gap: 5px; padding: 16px 20px; border-right: 1px solid var(--border); }
+.quote-payment-summary > div:last-child { border-right: 0; background: var(--selection-bg); }
+.quote-payment-summary span { color: var(--muted-foreground); font-size: 14px; font-weight: 700; }
+.quote-payment-summary strong { font-size: 20px; }
+}
+
+@media (max-width: 900px) {
+  .quote-payment-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .quote-payment-row .quote-line-delete { margin: 0; }
+}
+
+@media (max-width: 620px) {
+  .quote-payment-step { padding: 18px; }
+  .quote-payment-step > header,
+  .quote-payment-step > footer { align-items: stretch; flex-direction: column; }
+  .quote-payment-row, .quote-payment-summary { grid-template-columns: 1fr; }
+  .quote-payment-summary > div { border-right: 0; border-bottom: 1px solid var(--border); }
+  .quote-payment-summary > div:last-child { border-bottom: 0; }
+}
+
+.quote-editor-tabs button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  min-width: 0;
+  min-height: 72px;
+  padding: 13px 18px;
+  border: 0;
+  border-right: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted-foreground);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.quote-editor-tabs button:last-child {
+  border-right: 0;
+}
+
+.quote-editor-tabs button > span {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 10px;
+  background: var(--muted);
+  color: var(--muted-foreground);
+}
+
+.quote-editor-tabs button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.quote-editor-tabs button > div {
+  display: grid;
+  gap: 2px;
+}
+
+.quote-editor-tabs button small,
+.quote-editor-tabs button strong {
+  display: block;
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.quote-editor-tabs button small {
+  font-weight: 700;
+}
+
+.quote-editor-tabs button strong {
+  color: var(--foreground);
+  font-weight: 750;
+}
+
+.quote-editor-tabs button.is-active {
+  background: var(--selection-bg);
+  color: var(--nav-active-fg);
+}
+
+.quote-editor-tabs button.is-active::after {
+  position: absolute;
+  right: 18px;
+  bottom: 0;
+  left: 18px;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: var(--primary);
+  content: "";
+}
+
+.quote-editor-tabs button.is-active > span {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.quote-editor-tabs button:disabled {
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+.quote-editor-steps {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.quote-editor-steps li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.quote-editor-steps li + li::before {
+  width: 48px;
+  height: 1px;
+  margin-right: 2px;
+  background: var(--border);
+  content: "";
+}
+
+.quote-editor-steps li > span {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--card);
+}
+
+.quote-editor-steps .is-complete,
+.quote-editor-steps .is-active {
+  color: var(--foreground);
+}
+
+.quote-editor-steps .is-complete > span,
+.quote-editor-steps .is-active > span {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.quote-editor-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 34px 48px;
+  padding: 30px;
+}
+
+.quote-editor-form-column {
+  display: grid;
+  align-content: start;
+  gap: 15px;
+}
+
+.quote-editor-form-column + .quote-editor-form-column {
+  padding-left: 48px;
+  border-left: 1px solid var(--border);
+}
+
+.quote-editor-form-column h2,
+.quote-item-form h2,
+.quote-lines-panel h2 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 0 5px;
+  font-size: 17px;
+}
+
+.quote-editor-form-column h2 svg {
+  width: 19px;
+  height: 19px;
+  color: var(--primary);
+}
+
+.quote-editor-form-column > label,
+.quote-item-form > label,
+.quote-item-numbers label {
+  display: grid;
+  grid-template-columns: minmax(130px, 0.42fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+
+.quote-editor-form label > span,
+.quote-item-form label > span {
+  display: grid;
+  gap: 2px;
+  color: var(--foreground);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.quote-editor-form label > span small {
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.quote-editor-form input,
+.quote-editor-form select,
+.quote-editor-form textarea,
+.quote-item-form input,
+.quote-item-form select,
+.quote-item-form textarea {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 11px;
+  border: 1px solid var(--input);
+  border-radius: 8px;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+}
+
+.quote-editor-form textarea,
+.quote-item-form textarea {
+  resize: vertical;
+}
+
+.quote-editor-form input:focus,
+.quote-editor-form select:focus,
+.quote-editor-form textarea:focus,
+.quote-item-form input:focus,
+.quote-item-form textarea:focus {
+  border-color: var(--ring);
+  outline: 0;
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 16%, transparent);
+}
+
+.quote-editor-form input:disabled {
+  background: var(--muted);
+  color: var(--muted-foreground);
+}
+
+.quote-editor-form select:disabled {
+  background: var(--muted);
+  color: var(--foreground);
+  opacity: 1;
+}
+
+.quote-time-control {
+  display: grid;
+  gap: 8px;
+}
+
+.quote-time-control select,
+.quote-time-control input {
+  width: 100%;
+}
+
+.quote-editor-form [aria-invalid="true"] {
+  border-color: var(--destructive);
+}
+
+.quote-editor-form em,
+.quote-editor-field-error,
+.quote-editor-error {
+  margin: 0;
+  color: var(--destructive);
+  font-size: 14px;
+  font-style: normal;
+}
+
+.quote-editor-form label > em {
+  grid-column: 2;
+}
+
+.quote-editor-field-error {
+  padding-left: calc(42% + 12px);
+}
+
+.quote-editor-tags {
+  display: grid;
+  grid-template-columns: minmax(130px, 0.42fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+
+.quote-editor-tags > span {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.quote-editor-tags .multi-select-menu {
+  z-index: 30;
+}
+
+.quote-editor-readonly-form {
+  align-items: start;
+}
+
+.quote-readonly-field {
+  display: grid;
+  grid-template-columns: minmax(130px, 0.42fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  min-height: 42px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.quote-readonly-field > span {
+  display: grid;
+  gap: 2px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.quote-readonly-field > span small {
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.quote-readonly-field > strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-weight: 500;
+  white-space: pre-wrap;
+}
+
+.quote-readonly-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.quote-readonly-tags > span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 4px 10px;
+  border: 1px solid color-mix(in oklch, var(--primary) 38%, var(--border));
+  border-radius: 999px;
+  background: var(--selection-bg);
+  color: var(--primary);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.quote-lines-readonly-panel .quote-line-sequence,
+.quote-lines-readonly-panel td:not(.quote-line-product, .quote-line-sku) {
+  text-align: center;
+}
+
+.quote-lines-readonly-panel .quote-line-product small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+
+.quote-financial-readonly .quote-readonly-field {
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 0;
+  padding: 9px 15px;
+}
+
+.quote-financial-readonly .quote-readonly-field > strong {
+  font-weight: 700;
+  text-align: right;
+}
+
+.quote-editor-supplements-readonly .quote-editor-supplement-grid article > p {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  margin: 0;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  color: var(--foreground);
+}
+
+.quote-editor-supplements-readonly .quote-editor-supplement-grid.is-single {
+  grid-template-columns: 1fr;
+}
+
+.quote-payment-readonly .quote-payment-row {
+  align-items: start;
+}
+
+.quote-payment-readonly .quote-readonly-field {
+  grid-template-columns: 1fr;
+  gap: 5px;
+  padding: 0 0 10px;
+}
+
+.quote-editor-form > footer,
+.quote-editor-form > .quote-editor-error {
+  grid-column: 1 / -1;
+}
+
+.quote-editor-form > footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.quote-editor-form > footer .ui-button {
+  min-width: 190px;
+}
+
+.quote-items-layout {
+  display: grid;
+  grid-template-columns: minmax(310px, 0.7fr) minmax(0, 1.3fr);
+  align-items: start;
+  gap: 20px;
+}
+
+.quote-item-form,
+.quote-lines-panel {
+  padding: 22px;
+}
+
+.quote-item-form {
+  position: sticky;
+  top: calc(var(--topbar-height) + 16px);
+  display: grid;
+  gap: 16px;
+}
+
+.quote-item-form > header,
+.quote-lines-panel > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.quote-item-form > label,
+.quote-catalog-control > label,
+.quote-item-numbers label {
+  grid-template-columns: 1fr;
+  gap: 7px;
+}
+
+.quote-catalog-control {
+  position: relative;
+  z-index: 12;
+}
+
+.quote-catalog-control > label {
+  display: grid;
+}
+
+.quote-catalog-search > div {
+  position: relative;
+}
+
+.quote-catalog-search svg {
+  position: absolute;
+  top: 50%;
+  left: 11px;
+  width: 17px;
+  height: 17px;
+  color: var(--muted-foreground);
+  transform: translateY(-50%);
+}
+
+.quote-catalog-search input {
+  padding-left: 36px;
+}
+
+.quote-catalog-results {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 5px);
+  right: 0;
+  left: 0;
+  display: grid;
+  max-height: 290px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--card);
+  box-shadow: 0 14px 30px rgb(15 23 42 / 10%);
+}
+
+.quote-catalog-results > p {
+  margin: 0;
+  padding: 18px;
+  color: var(--muted-foreground);
+  text-align: center;
+}
+
+.quote-catalog-results button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 12px;
+  padding: 11px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: var(--foreground);
+  text-align: left;
+}
+
+.quote-catalog-results button:last-child {
+  border-bottom: 0;
+}
+
+.quote-catalog-results button:hover,
+.quote-catalog-results button:focus-visible {
+  background: var(--muted);
+  outline: 0;
+}
+
+.quote-catalog-results button span {
+  grid-column: 1;
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+
+.quote-catalog-results button b {
+  grid-column: 2;
+  grid-row: 1 / 3;
+  align-self: center;
+  font-size: 14px;
+}
+
+.quote-item-numbers {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.quote-lines-panel {
+  min-width: 0;
+}
+
+.quote-lines-panel > header {
+  margin-bottom: 18px;
+}
+
+.quote-lines-panel > header > strong {
+  color: var(--primary);
+  font-size: 24px;
+}
+
+.quote-lines-panel .table-wrap {
+  border-radius: 9px;
+}
+
+.quote-lines-panel table {
+  table-layout: auto;
+}
+
+.quote-lines-panel thead th {
+  background: color-mix(in oklch, var(--selection-bg) 72%, var(--card));
+  color: var(--foreground);
+}
+
+.quote-lines-panel .quote-line-product strong {
+  display: block;
+}
+
+.quote-lines-panel .quote-line-sku {
+  min-width: 86px;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+.quote-lines-panel .quote-line-sequence {
+  width: 64px;
+  padding-right: 4px;
+  padding-left: 4px;
+}
+
+.quote-line-drag-handle {
+  display: inline-flex;
+  min-width: 48px;
+  min-height: 34px;
+  padding: 4px 7px;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted-foreground);
+  font: inherit;
+  cursor: grab;
+}
+
+.quote-line-drag-handle:hover,
+.quote-line-drag-handle:focus-visible {
+  border-color: var(--border);
+  background: var(--muted);
+  color: var(--foreground);
+  outline: 0;
+}
+
+.quote-line-drag-handle:active {
+  cursor: grabbing;
+}
+
+.quote-line-drag-handle svg {
+  width: 16px;
+  height: 16px;
+}
+
+.quote-lines-panel tbody tr {
+  transition: opacity 120ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+
+.quote-lines-panel tbody tr.is-dragging {
+  opacity: 0.42;
+}
+
+.quote-lines-panel tbody tr.is-drag-over {
+  background: var(--selection-bg);
+  box-shadow: inset 0 2px 0 var(--primary);
+}
+
+.quote-line-edit-number,
+.quote-line-edit-remarks {
+  width: 100%;
+  min-width: 72px;
+  padding: 7px 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--foreground);
+  font: inherit;
+}
+
+.quote-line-remarks-toggle {
+  display: flex;
+  width: 100%;
+  max-width: 240px;
+  margin-top: 6px;
+  padding: 5px 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  color: var(--muted-foreground);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+}
+
+.quote-line-remarks-toggle span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quote-line-remarks-toggle svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+}
+
+.quote-line-edit-remarks {
+  min-height: 34px;
+  margin-top: 6px;
+  resize: vertical;
+}
+
+.quote-line-edit-number:hover,
+.quote-line-edit-number:focus,
+.quote-line-edit-remarks:hover,
+.quote-line-edit-remarks:focus {
+  border-color: var(--input);
+  background: var(--background);
+  outline: 0;
+}
+
+.quote-line-delete {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--destructive);
+}
+
+.quote-line-delete:hover {
+  background: color-mix(in oklch, var(--destructive) 10%, transparent);
+}
+
+.quote-line-delete svg {
+  width: 16px;
+  height: 16px;
+}
+
+.quote-lines-empty {
+  height: 210px;
+  color: var(--muted-foreground);
+  text-align: center;
+}
+
+.quote-lines-empty svg,
+.quote-lines-empty strong,
+.quote-lines-empty span {
+  display: block;
+  margin: 5px auto;
+}
+
+.quote-lines-empty svg {
+  width: 28px;
+  height: 28px;
+}
+
+.quote-lines-panel > footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 18px;
+}
+
+.quote-lines-panel > footer > button,
+.quote-lines-panel > footer > a {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.quote-editor-totals-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(300px, 380px);
+  gap: 16px;
+  margin-top: 14px;
+  align-items: center;
+}
+
+.quote-editor-item-count {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto;
+  min-height: 48px;
+  padding: 10px 16px;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid color-mix(in oklch, var(--primary) 18%, var(--border));
+  border-radius: 9px;
+  background: var(--selection-bg);
+}
+
+.quote-editor-item-count span {
+  color: var(--muted-foreground);
+  font-size: 14px;
+  text-align: right;
+}
+
+.quote-editor-item-count strong {
+  min-width: 54px;
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.quote-utensil-button {
+  justify-self: center;
+  min-width: 150px;
+  border-color: #9f3b26;
+  background: #9f3b26;
+  color: #fff;
+}
+
+.quote-utensil-button:hover {
+  border-color: #7f2d1d;
+  background: #7f2d1d;
+  color: #fff;
+}
+
+.quote-financial-card {
+  grid-column: 2;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  box-shadow: 0 8px 24px rgb(15 23 42 / 6%);
+}
+
+.quote-financial-card > header {
+  padding: 13px 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in oklch, var(--selection-bg) 70%, var(--card));
+}
+
+.quote-financial-card h3,
+.quote-financial-card .eyebrow,
+.quote-financial-card p {
+  margin: 0;
+}
+
+.quote-financial-card h3 {
+  font-size: 16px;
+}
+
+.quote-financial-card .eyebrow {
+  margin-bottom: 2px;
+  font-size: 14px;
+}
+
+.quote-financial-card > header > span {
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+
+.quote-financial-card > label {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 130px;
+  min-height: 44px;
+  padding: 7px 14px;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+
+.quote-money-input {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+
+.quote-money-input input {
+  width: 100%;
+  min-width: 0;
+  height: 34px;
+  padding: 5px 7px;
+  border: 0;
+  border-bottom: 1px solid var(--input);
+  border-radius: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--foreground);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.quote-shipping-fee-control {
+  display: grid;
+  gap: 7px;
+}
+
+.quote-shipping-fee-control > select {
+  width: 100%;
+  min-width: 0;
+  height: 36px;
+  padding: 5px 28px 5px 8px;
+  border: 1px solid var(--input);
+  border-radius: 7px;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+}
+
+.quote-shipping-fee-control > select:focus {
+  border-color: var(--primary);
+  outline: 0;
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 16%, transparent);
+}
+
+.quote-money-input input:focus {
+  border-bottom-color: var(--primary);
+  box-shadow: 0 1px 0 var(--primary);
+}
+
+.quote-financial-card > footer {
+  display: flex;
+  min-height: 54px;
+  padding: 10px 14px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--selection-bg-strong);
+}
+
+.quote-financial-card > footer strong {
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+}
+
+.quote-financial-card > p {
+  padding: 9px 14px;
+  color: var(--destructive);
+  font-size: 14px;
+}
+
+.quote-editor-supplements {
+  display: grid;
+  gap: 18px;
+  margin-top: 20px;
+  padding: 22px;
+}
+
+.quote-editor-supplements > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.quote-editor-supplements > .quote-editor-supplement-actions {
+  justify-content: flex-end;
+}
+
+.quote-editor-supplements h2,
+.quote-editor-supplements h3 {
+  margin: 0;
+}
+
+.quote-editor-supplements > header > div:last-child {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.quote-editor-supplement-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.quote-editor-supplement-grid > article {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: 15px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--background);
+}
+
+.quote-editor-supplement-grid article > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 7px;
+}
+
+.quote-editor-supplement-grid input {
+  min-width: 0;
+  height: 38px;
+  padding: 7px 9px;
+  border: 1px solid var(--input);
+  border-radius: 7px;
+  background: var(--card);
+  color: var(--foreground);
+  font: inherit;
+}
+
+.quote-editor-supplement-grid input.is-amount {
+  width: 92px;
+}
+
+.quote-editor-supplement-grid article > div > button {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: var(--muted);
+  color: var(--muted-foreground);
+}
+
+.quote-editor-supplement-grid article > div > button svg {
+  width: 14px;
+  height: 14px;
+}
+
+.quote-editor-supplement-grid p {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+
+@media (max-width: 960px) {
+  .quote-editor-form,
+  .quote-items-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .quote-editor-form-column + .quote-editor-form-column {
+    padding-top: 28px;
+    padding-left: 0;
+    border-top: 1px solid var(--border);
+    border-left: 0;
+  }
+
+  .quote-item-form {
+    position: static;
+  }
+
+  .quote-editor-supplement-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .quote-editor-totals-row {
+    grid-template-columns: 1fr;
+  }
+
+  .quote-financial-card {
+    grid-column: auto;
+    width: min(100%, 430px);
+    justify-self: end;
+}
+  }
+
+@media (max-width: 620px) {
+  .quote-editor-form {
+    padding: 20px 16px;
+  }
+
+  .quote-editor-form-column > label {
+    gap: 6px;
+    grid-template-columns: 1fr;
+  }
+
+  .quote-editor-tags {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .quote-editor-form label > em,
+  .quote-editor-field-error {
+    grid-column: auto;
+    padding-left: 0;
+  }
+
+  .quote-editor-tabs button {
+    min-height: 66px;
+    gap: 9px;
+    padding: 11px 12px;
+  }
+
+  .quote-editor-tabs button > span {
+    width: 32px;
+    height: 32px;
+  }
+
+  .quote-editor-tabs button.is-active::after {
+    right: 12px;
+    left: 12px;
+  }
+
+  .quote-lines-panel > footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .quote-editor-item-count {
+    grid-template-columns: 1fr auto;
+  }
+
+  .quote-financial-card {
+    width: 100%;
+  }
+
+  .quote-financial-card > label {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}
+
+.restaurant-new-product-report {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 14px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.restaurant-new-product-report-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+
+.restaurant-new-product-report-toolbar .date-range-picker {
+  flex: 0 0 350px;
+  width: 350px;
+}
+
+.restaurant-new-product-report-panel {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.restaurant-new-product-report-panel .table-wrap {
+  min-height: 0;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.restaurant-new-product-report-panel thead th {
+  position: sticky;
+  z-index: 2;
+  top: 0;
+  background: var(--card);
+}
+
+.restaurant-new-product-report-panel th:last-child,
+.restaurant-new-product-report-panel td:last-child {
+  text-align: right;
+}
+
+.restaurant-new-product-report-panel .operational-list-pagination {
+  padding: 14px 18px;
+  border-top: 1px solid var(--border);
+}
+
+.restaurant-new-product-report-empty {
+  height: 180px;
+  text-align: center !important;
+  color: var(--muted-foreground);
+}
+
+.restaurant-new-product-report-state {
+  display: grid;
+  gap: 4px;
+  padding: 28px;
+  color: var(--muted-foreground);
+  text-align: center;
+}
+
+.restaurant-new-product-report-state.is-error strong {
+  color: var(--destructive);
+}
+
+.restaurant-new-products-panel > .side-panel-body {
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.restaurant-new-products-settings {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.restaurant-new-products-settings-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+}
+
+.restaurant-new-products-settings-table {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  height: 100%;
+  max-height: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 16px 18px 18px;
+  overflow: hidden;
+}
+
+.restaurant-new-products-settings-table > .operational-list-pagination {
+  position: relative;
+  z-index: 3;
+  align-self: end;
+  margin: 0;
+  background: var(--card);
+}
+
+.restaurant-new-products-settings-table .table-wrap {
+  min-height: 0;
+  height: 100%;
+  border-radius: 8px 8px 0 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.restaurant-new-products-settings-table table {
+  min-width: 760px;
+  table-layout: fixed;
+}
+
+.restaurant-new-products-settings-table th {
+  position: sticky;
+  z-index: 2;
+  top: 0;
+  background: var(--secondary);
+  color: var(--foreground);
+}
+
+.restaurant-new-products-settings-table th:nth-child(1) { width: 26%; }
+.restaurant-new-products-settings-table th:nth-child(2) { width: 16%; }
+.restaurant-new-products-settings-table th:nth-child(3) { width: 38%; }
+.restaurant-new-products-settings-table th:nth-child(4) { width: 20%; }
+
+.restaurant-new-products-settings-table td:nth-child(2),
+.restaurant-new-products-settings-table td:nth-child(4) {
+  text-align: center;
+}
+
+.restaurant-new-products-settings-table tr.is-saving {
+  opacity: 0.72;
+}
+
+.restaurant-new-products-remarks-input {
+  width: 100%;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: color-mix(in oklch, var(--muted) 65%, var(--background));
+  color: var(--foreground);
+  text-align: center;
+}
+
+.restaurant-new-products-remarks-input:focus {
+  outline: 0;
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 13%, transparent);
+}
+
+.restaurant-new-products-remarks-input:disabled {
+  color: var(--muted-foreground);
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+@media (max-width: 680px) {
+  .restaurant-new-product-report-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .restaurant-new-product-report-toolbar > button {
+    align-self: flex-end;
+  }
+
+  .restaurant-new-product-report-toolbar .date-range-picker {
+    width: 100%;
+    flex-basis: auto;
+  }
+
+  .restaurant-new-products-panel {
+    width: 100%;
+  }
+}
+
+@media (min-width: 900px) {
+  .main-content:has(.restaurant-new-product-report) {
+    height: calc(100dvh - var(--topbar-height) - var(--workspace-height));
+  }
+
+  .page-transition:has(.restaurant-new-product-report),
+  .reports-page:has(.restaurant-new-product-report) {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .reports-page:has(.restaurant-new-product-report) {
+    grid-template-rows: auto auto minmax(0, 1fr);
+    overflow: hidden;
+  }
+}
+
+.factory-board-brand img {
+  display: block;
+  width: min(210px, 100%);
+  max-height: 68px;
+  object-fit: contain;
+  object-position: left center;
 }
 
 .factory-board-brand strong {
@@ -15830,7 +17343,7 @@ button.factory-job-card:focus-visible {
 
 .factory-order-number {
   margin: 0;
-  font-size: 58px;
+  font-size: 72px;
   font-weight: 800;
   line-height: 1;
   letter-spacing: 0.02em;
@@ -15839,9 +17352,9 @@ button.factory-job-card:focus-visible {
 .factory-order-meta {
   display: grid;
   grid-template-columns: 1.1fr 0.9fr 1fr 0.9fr;
-  gap: 14px 28px;
+  gap: 10px 18px;
   margin: 0;
-  font-size: 30px;
+  font-size: 36px;
   font-weight: 750;
   line-height: 1.35;
 }
@@ -16055,7 +17568,14 @@ button.factory-job-card:focus-visible {
    named page so its margins and pagination cannot affect another print view. */
 @page factory-delivery-note {
   size: A4 portrait;
-  margin: 12mm;
+  margin: 0;
+}
+
+/* Chromium only suppresses its automatic date/title/URL footer reliably when
+   the active sheet also has an unnamed zero-margin page rule. */
+@page {
+  size: A4 portrait;
+  margin: 0;
 }
 
 @page factory-meat-delivery-note {
@@ -16745,7 +18265,7 @@ button.factory-job-card:focus-visible {
   }
 
   .factory-multi-day-brand .no-print + span::before {
-    content: "× ";
+    content: "? ";
   }
 
   .factory-multi-day-table tr {
@@ -16776,10 +18296,10 @@ button.factory-job-card:focus-visible {
     left: 0;
     display: block !important;
     box-sizing: border-box;
-    width: 100%;
-    min-height: 0;
-    padding: 0;
-    page: factory-delivery-note;
+    width: 210mm;
+    height: 297mm;
+    min-height: 297mm;
+    padding: 12mm 12mm 22mm;
     break-after: auto;
     break-inside: auto;
     background: #ffffff;
@@ -16822,6 +18342,14 @@ button.factory-job-card:focus-visible {
     font-weight: 800;
     line-height: 1.05;
   }
+  .factory-delivery-note-brand img {
+    display: block;
+    width: 45mm;
+    max-height: 15mm;
+    object-fit: contain;
+    object-position: left center;
+  }
+
 
   .factory-delivery-note-brand > strong {
     display: grid;
@@ -16877,18 +18405,41 @@ button.factory-job-card:focus-visible {
   .factory-delivery-note-details p {
     margin: 0.5mm 0;
   }
+  .factory-delivery-note-contact {
+    white-space: normal;
+  }
+
+  .factory-delivery-note-contact span {
+    white-space: nowrap;
+  }
+
+  .factory-delivery-note-order-reference {
+    display: block;
+    box-sizing: border-box;
+    width: auto;
+    margin: -2mm -3mm 2mm !important;
+    padding: 1mm 3mm;
+    border-bottom: 1px solid #000000;
+  }
+
 
   .factory-delivery-note-lines {
     width: 100%;
+    color: #000000 !important;
     border-collapse: collapse;
+    print-color-adjust: exact;
     font-size: 12.5pt;
   }
 
   .factory-delivery-note-lines th,
   .factory-delivery-note-lines td {
     padding: 1.5mm 2.5mm;
+    color: #000000 !important;
+    opacity: 1 !important;
     border: 1px solid #222222;
     text-align: left;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
     vertical-align: top;
   }
 
@@ -16908,15 +18459,17 @@ button.factory-job-card:focus-visible {
 
   .factory-delivery-note-print > footer {
     position: absolute;
-    top: 250mm;
-    right: 0;
-    bottom: auto;
-    left: 0;
+    top: auto;
+    right: 12mm;
+    bottom: 10mm;
+    left: 12mm;
     display: grid;
     grid-template-columns: 1fr auto 1fr;
     align-items: end;
-    color: #68707c;
-    font-size: 8pt;
+    color: #000000;
+    font-size: 10pt;
+    font-weight: 600;
+    line-height: 1.3;
   }
 
   .factory-delivery-note-brand-footer {
@@ -16924,7 +18477,10 @@ button.factory-job-card:focus-visible {
     text-align: center;
   }
 
+    box-sizing: border-box;
   .factory-delivery-note-order-footer {
+    justify-self: stretch;
+    width: 100%;
     grid-column: 1;
     text-align: left;
   }
@@ -17239,6 +18795,28 @@ button.factory-job-card:focus-visible {
   align-self: flex-start;
   color: white;
 }
+.login-brand-logo {
+  display: block;
+  width: clamp(180px, 20vw, 260px);
+  max-height: 88px;
+  object-fit: contain;
+  object-position: left center;
+}
+
+.order-print-logo {
+  display: block;
+  width: min(280px, 70%);
+  max-height: 100px;
+  margin: 0 auto 24px;
+  object-fit: contain;
+}
+
+.order-print-reference {
+  width: 100%;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #000000;
+}
+
 
 .login-brand-mark {
   display: grid;
@@ -18264,9 +19842,9 @@ button.factory-job-card:focus-visible {
 
   .report-filter-panel {
     align-items: stretch;
-    flex-direction: column;
     gap: 10px;
     padding: 12px 14px;
+    flex-direction: column;
   }
 
   .report-date-controls > span {
@@ -18293,8 +19871,8 @@ button.factory-job-card:focus-visible {
 
   .entity-matrix-toolbar {
     align-items: stretch;
-    flex-direction: column;
     padding: 0 12px 12px;
+    flex-direction: column;
   }
 
   .entity-matrix-toolbar > label {
@@ -18313,8 +19891,8 @@ button.factory-job-card:focus-visible {
   .editor-only-mappings article > code:nth-of-type(2),
   .editor-only-mappings article > small {
     grid-column: 1 / 3;
-  }
 }
+  }
 
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -18324,13 +19902,21 @@ button.factory-job-card:focus-visible {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
-  }
 }
 .order-row-actions {
   display: grid;
   grid-template-columns: repeat(3, 2rem);
   gap: 0.35rem;
 }
+
+.quote-row-actions {
+  grid-template-columns: repeat(2, 2rem);
+}
+
+.quote-generated-order-cell { min-width: 132px; }
+.quote-generated-order-cell > small { display: block; max-width: 150px; margin-top: 6px; color: var(--destructive); line-height: 1.3; }
+.quote-generated-order-cell .button { white-space: nowrap; }
+.quote-generated-order-cell svg { width: 15px; height: 15px; }
 
 .order-row-actions a,
 .order-row-actions button,
@@ -18386,6 +19972,13 @@ button.factory-job-card:focus-visible {
 /* Central-kitchen advertising-performance report. */
 .kitchen-advertising-performance-page {
   gap: 1rem;
+  --advertising-light-blue: #e7f2ff;
+  --advertising-blue: #24578f;
+  --advertising-cost-blue: #438dcc;
+  --primary: var(--advertising-blue);
+  --selection-bg: #eef6ff;
+  --selection-bg-strong: #dcecff;
+  --nav-active-fg: var(--advertising-blue);
 }
 
 .kitchen-advertising-performance-page .kitchen-sales-cost-page-heading p {
@@ -18416,7 +20009,7 @@ button.factory-job-card:focus-visible {
   display: grid;
   align-content: start;
   min-width: 0;
-  background: color-mix(in srgb, #f99b9f 12%, var(--card));
+  background: color-mix(in srgb, var(--advertising-light-blue) 72%, var(--card));
 }
 
 .kitchen-advertising-performance-sidebar-heading {
@@ -18425,7 +20018,7 @@ button.factory-job-card:focus-visible {
   justify-content: space-between;
   min-height: 2.4rem;
   padding: 0.55rem 0.75rem;
-  background: color-mix(in srgb, var(--primary) 78%, #a30c11);
+  background: var(--advertising-blue);
   color: #fff;
   font-size: 0.875rem;
 }
@@ -18499,6 +20092,7 @@ button.factory-job-card:focus-visible {
   font: inherit;
   cursor: pointer;
 }
+  }
 
 .kitchen-advertising-performance-year-actions button:hover {
   text-decoration: underline;
@@ -18512,7 +20106,7 @@ button.factory-job-card:focus-visible {
 .kitchen-advertising-performance-annual-summary h2 {
   margin: 0;
   padding: 0.45rem 0.65rem;
-  background: color-mix(in srgb, var(--primary) 84%, #a30c11);
+  background: var(--advertising-blue);
   color: #fff;
   font-size: 0.875rem;
   font-weight: 800;
@@ -18523,9 +20117,9 @@ button.factory-job-card:focus-visible {
   justify-content: space-between;
   gap: 0.5rem;
   padding: 0.24rem 0.65rem;
-  border-bottom: 1px dotted color-mix(in srgb, #fff 50%, var(--primary));
+  border-bottom: 1px dotted color-mix(in srgb, #fff 48%, var(--advertising-blue));
   color: #fff;
-  background: color-mix(in srgb, var(--primary) 85%, #a30c11);
+  background: var(--advertising-blue);
   font-size: 0.875rem;
   font-variant-numeric: tabular-nums;
 }
@@ -18565,8 +20159,8 @@ button.factory-job-card:focus-visible {
 .kitchen-advertising-performance-table th {
   min-width: 7.8rem;
   padding: 0.55rem 0.4rem;
-  background: color-mix(in srgb, var(--primary) 82%, #ff777d);
-  color: #fff;
+  background: var(--advertising-light-blue);
+  color: var(--foreground);
   font-size: 0.875rem;
   font-weight: 800;
   text-align: center;
@@ -18586,7 +20180,7 @@ button.factory-job-card:focus-visible {
 }
 
 .kitchen-advertising-performance-table td:nth-child(even) {
-  background: color-mix(in srgb, #f99b9f 16%, var(--card));
+  background: var(--advertising-light-blue);
 }
 
 .kitchen-advertising-performance-year-cell {
@@ -18629,7 +20223,7 @@ button.factory-job-card:focus-visible {
 
 .kitchen-advertising-performance-line.cost {
   grid-template-columns: minmax(0, 1fr) auto auto;
-  color: #ed242d;
+  color: var(--advertising-cost-blue);
 }
 
 .kitchen-advertising-performance-line.cost em {
@@ -18708,7 +20302,7 @@ button.factory-job-card:focus-visible {
 }
 
 .kitchen-advertising-performance-chart-eyebrow {
-  color: var(--primary);
+  color: var(--advertising-blue);
   font-size: 0.875rem;
   font-weight: 850;
   letter-spacing: 0.08em;
@@ -18771,15 +20365,34 @@ button.factory-job-card:focus-visible {
 
 .kitchen-advertising-performance-chart-legend i.sales,
 .kitchen-advertising-performance-chart-bar.sales {
-  background: var(--primary);
-  fill: var(--primary);
+  background: var(--advertising-blue);
+  fill: var(--advertising-blue);
 }
 
 .kitchen-advertising-performance-chart-legend i.advertising,
 .kitchen-advertising-performance-chart-bar.advertising {
-  background: #ed242d;
-  fill: #ed242d;
+  background: var(--advertising-cost-blue);
+  fill: var(--advertising-cost-blue);
 }
+
+.kitchen-advertising-performance-chart-legend i.sales {
+  background: linear-gradient(90deg, #356fa8 0 20%, #d97706 20% 40%, #2f855a 40% 60%, #7c4dba 60% 80%, #c24167 80%);
+}
+
+.kitchen-advertising-performance-chart-legend i.advertising {
+  background: linear-gradient(90deg, #74b3e6 0 20%, #f4b860 20% 40%, #78c79a 40% 60%, #b497dc 60% 80%, #e78da8 80%);
+}
+
+.kitchen-advertising-performance-chart-bar.sales.tone-0 { fill: #356fa8; }
+.kitchen-advertising-performance-chart-bar.advertising.tone-0 { fill: #74b3e6; }
+.kitchen-advertising-performance-chart-bar.sales.tone-1 { fill: #d97706; }
+.kitchen-advertising-performance-chart-bar.advertising.tone-1 { fill: #f4b860; }
+.kitchen-advertising-performance-chart-bar.sales.tone-2 { fill: #2f855a; }
+.kitchen-advertising-performance-chart-bar.advertising.tone-2 { fill: #78c79a; }
+.kitchen-advertising-performance-chart-bar.sales.tone-3 { fill: #7c4dba; }
+.kitchen-advertising-performance-chart-bar.advertising.tone-3 { fill: #b497dc; }
+.kitchen-advertising-performance-chart-bar.sales.tone-4 { fill: #c24167; }
+.kitchen-advertising-performance-chart-bar.advertising.tone-4 { fill: #e78da8; }
 
 .kitchen-advertising-performance-chart-svg {
   display: block;
@@ -18851,11 +20464,11 @@ button.factory-job-card:focus-visible {
 }
 
 .kitchen-advertising-performance-chart-detail-heading strong.sales {
-  color: var(--primary);
+  color: var(--advertising-blue);
 }
 
 .kitchen-advertising-performance-chart-detail-heading strong.advertising {
-  color: #ed242d;
+  color: var(--advertising-cost-blue);
 }
 
 .kitchen-advertising-performance-chart-details small {
@@ -18874,11 +20487,11 @@ button.factory-job-card:focus-visible {
   display: flex;
   justify-content: space-between;
   gap: 0.35rem;
-  min-width: 0;
 }
 
 .kitchen-advertising-performance-channel-details b,
 .kitchen-advertising-performance-channel-details em {
+  min-width: 0;
   overflow: hidden;
   font-size: 0.875rem;
   font-style: normal;
@@ -18908,7 +20521,7 @@ button.factory-job-card:focus-visible {
 }
 
 .kitchen-advertising-performance-chart-footer strong {
-  color: #ed242d;
+  color: var(--advertising-cost-blue);
   font-variant-numeric: tabular-nums;
 }
 
@@ -19144,8 +20757,8 @@ button.factory-job-card:focus-visible {
 
 .factory-meat-note-sheet > footer {
   margin-top: 5px;
-  text-align: right;
   font-weight: 500;
+  text-align: right;
 }
 
 @media print {
@@ -19163,6 +20776,518 @@ button.factory-job-card:focus-visible {
     background: #ffffff !important;
   }
 
+  .factory-meat-note-sheet {
+    width: 100%;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    page: factory-meat-delivery-note;
+    box-shadow: none;
+    font-size: 11pt;
+  }
+
+  .factory-meat-note-print-button {
+    display: none !important;
+  }
+
+  .factory-meat-note-header {
+    grid-template-columns: 1fr auto 1fr;
+  }
+
+  .factory-meat-note-header h1 {
+    font-size: 17pt;
+  }
+
+  .factory-meat-note-brand > strong {
+    width: 44px;
+    height: 44px;
+    font-size: 14pt;
+  }
+
+  .factory-meat-note-brand span {
+    font-size: 13pt;
+  }
+
+  .factory-meat-note-brand em {
+    top: 4px;
+    left: 75px;
+    font-size: 5pt;
+  }
+
+  .factory-meat-note-remarks {
+    min-height: 24px;
+    margin: 9mm 0 2mm;
+  }
+
+  .factory-meat-note-details section {
+    min-height: 28mm;
+  }
+
+  .factory-meat-note-details h2,
+  .factory-meat-note-lines th,
+  .factory-meat-note-lines td {
+    font-size: 10.5pt;
+  }
+
+  .factory-meat-note-lines {
+    margin-top: 22mm;
+  }
+
+  .factory-meat-note-sheet > footer {
+    font-size: 9pt;
+  }
+}
+.restaurant-pnl-report {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.factory-meat-note-brand img {
+  display: block;
+  width: 52mm;
+  max-height: 18mm;
+  object-fit: contain;
+  object-position: left center;
+}
+
+.restaurant-pnl-filters {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  padding: 16px;
+}
+
+.restaurant-pnl-filters > label {
+  display: grid;
+  gap: 6px;
+  min-width: 170px;
+}
+
+.restaurant-pnl-filters > label > span,
+.restaurant-pnl-restaurants legend {
+  color: var(--muted-foreground);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.restaurant-pnl-filters input {
+  width: 100%;
+  height: 40px;
+  padding: 0 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.restaurant-pnl-restaurants {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  flex: 1;
+}
+
+.restaurant-pnl-restaurants legend {
+  margin-bottom: 6px;
+}
+
+.restaurant-pnl-restaurants > div {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+}
+
+.restaurant-pnl-restaurants button {
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--background);
+  color: var(--foreground);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.restaurant-pnl-restaurants button.active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #fff;
+}
+
+.restaurant-pnl-state {
+  min-height: 180px;
+  display: grid;
+  place-content: center;
+  gap: 8px;
+  color: var(--muted-foreground);
+  text-align: center;
+}
+
+.restaurant-pnl-state.is-error {
+  color: var(--destructive);
+}
+
+.restaurant-pnl-card {
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.restaurant-pnl-scroll {
+  overflow-x: auto;
+  overflow-y: visible;
+}
+
+.restaurant-pnl-months {
+  display: flex;
+  align-items: flex-start;
+  width: max-content;
+  min-width: 100%;
+}
+
+.restaurant-pnl-table {
+  width: 665px;
+  min-width: 665px;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+  font-size: 0.82rem;
+}
+
+.restaurant-pnl-table + .restaurant-pnl-table {
+  border-left: 4px solid #ff8a00;
+}
+
+.restaurant-pnl-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  height: 40px;
+  padding: 8px;
+  border-bottom: 1px solid #7b8794;
+  background: #d9eaff;
+  color: #111827;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.restaurant-pnl-table tbody th,
+.restaurant-pnl-table tbody td {
+  height: 28px;
+  padding: 4px 8px;
+  border-bottom: 1px dotted #d7dee8;
+  background: var(--card);
+}
+
+.restaurant-pnl-table tbody th {
+  vertical-align: top;
+  color: var(--foreground);
+  text-align: left;
+  letter-spacing: normal;
+  font-weight: 800;
+  text-transform: none;
+}
+
+.restaurant-pnl-table tbody td:nth-last-child(2),
+.restaurant-pnl-table tbody td:last-child {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.restaurant-pnl-table .restaurant-pnl-category-column {
+  width: 165px;
+}
+
+.restaurant-pnl-table .restaurant-pnl-item-column {
+  width: 195px;
+}
+
+.restaurant-pnl-table .restaurant-pnl-amount-column {
+  width: 135px;
+}
+
+.restaurant-pnl-table .restaurant-pnl-total-column {
+  width: 170px;
+}
+
+.restaurant-pnl-table tbody th + td,
+.restaurant-pnl-table tbody tr > td:first-child {
+  border-right: 1px solid #89939e;
+}
+
+.restaurant-pnl-table tbody .restaurant-pnl-category-placeholder {
+  border-right: 0;
+}
+
+.restaurant-pnl-table tbody .restaurant-pnl-category-placeholder + td {
+  border-right: 1px solid #89939e;
+}
+
+.restaurant-pnl-table tbody td:last-child span {
+  margin-left: 24px;
+}
+
+.restaurant-pnl-table tr.summary th,
+.restaurant-pnl-table tr.summary td,
+.restaurant-pnl-table tr.category-total th,
+.restaurant-pnl-table tr.category-total td {
+  font-weight: 800;
+}
+
+.restaurant-pnl-table tr.gross th,
+.restaurant-pnl-table tr.gross td,
+.restaurant-pnl-table tr.draft-profit th,
+.restaurant-pnl-table tr.draft-profit td,
+.restaurant-pnl-table tr.category-total th,
+.restaurant-pnl-table tr.category-total td {
+  border-bottom-style: solid;
+}
+
+.restaurant-pnl-table tr.operation-total th,
+.restaurant-pnl-table tr.operation-total td {
+  border-top: 1px solid #59636f;
+}
+
+.restaurant-pnl-table tbody tr.restaurant-pnl-separator td {
+  height: 20px;
+  padding: 0;
+  border: 0;
+  background: #dfe6ee;
+}
+
+@media (max-width: 899px) {
+  .restaurant-pnl-filters {
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  .restaurant-pnl-filters > label {
+    flex: 1 1 145px;
+    min-width: 0;
+  }
+
+  .restaurant-pnl-restaurants {
+    flex-basis: 100%;
+    order: 3;
+  }
+
+  .restaurant-pnl-filters > button {
+    order: 4;
+  }
+
+  .restaurant-pnl-table {
+    width: 610px;
+    min-width: 610px;
+  }
+}
+
+.restaurant-sales-cost-report {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.restaurant-sales-cost-card {
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.restaurant-sales-cost-scroll {
+  overflow-x: auto;
+}
+
+.restaurant-sales-cost-months {
+  display: flex;
+  align-items: flex-start;
+  width: max-content;
+  min-width: 100%;
+}
+
+.restaurant-sales-cost-table {
+  width: 780px;
+  min-width: 780px;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+  font-size: 0.82rem;
+}
+
+.restaurant-sales-cost-table + .restaurant-sales-cost-table {
+  border-left: 4px solid #ff8a00;
+}
+
+.restaurant-sales-cost-table col.label {
+  width: 165px;
+}
+
+.restaurant-sales-cost-table thead tr:first-child th {
+  height: 40px;
+  background: #d6e7f7;
+  color: #111827;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.restaurant-sales-cost-table thead tr:nth-child(2) th {
+  height: 42px;
+  padding: 6px 8px;
+  border-bottom: 1px solid #89939e;
+  background: var(--card);
+  text-align: right;
+}
+
+.restaurant-sales-cost-table thead tr:nth-child(2) th:first-child {
+  text-align: left;
+}
+
+.restaurant-sales-cost-table tbody th,
+.restaurant-sales-cost-table tbody td {
+  box-sizing: border-box;
+  height: 29px;
+  padding: 4px 8px;
+  border-bottom: 1px dotted #d7dee8;
+  background: var(--card);
+}
+
+.restaurant-sales-cost-table tbody th {
+  color: var(--foreground);
+  text-align: left;
+  font-weight: 800;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.restaurant-sales-cost-table tbody td {
+  border-left: 1px dotted #d7dee8;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.restaurant-sales-cost-table tr.sales th,
+.restaurant-sales-cost-table tr.sales td,
+.restaurant-sales-cost-table tr.closing th,
+.restaurant-sales-cost-table tr.closing td,
+.restaurant-sales-cost-table tr.total-cos th,
+.restaurant-sales-cost-table tr.total-cos td,
+.restaurant-sales-cost-table tr.gross-profit th,
+.restaurant-sales-cost-table tr.gross-profit td {
+  font-weight: 800;
+}
+
+.restaurant-sales-cost-table tr.supplier-heading th,
+.restaurant-sales-cost-table tr.supplier-heading td {
+  height: 22px;
+  padding-top: 2px;
+  padding-bottom: 0;
+  border-bottom: 0;
+  font-weight: 800;
+}
+
+.restaurant-sales-cost-table tr.supplier-detail th {
+  font-weight: 700;
+}
+
+.restaurant-sales-cost-table tr.sales th,
+.restaurant-sales-cost-table tr.sales td,
+.restaurant-sales-cost-table tr.total-cos th,
+.restaurant-sales-cost-table tr.total-cos td {
+  height: 48px;
+}
+
+.restaurant-sales-cost-table tr.supplier-detail th,
+.restaurant-sales-cost-table tr.supplier-detail td,
+.restaurant-sales-cost-table tr.closing th,
+.restaurant-sales-cost-table tr.closing td,
+.restaurant-sales-cost-table tr.cost-ratio-row th,
+.restaurant-sales-cost-table tr.cost-ratio-row td,
+.restaurant-sales-cost-table tr.ratio-row th,
+.restaurant-sales-cost-table tr.ratio-row td,
+.restaurant-sales-cost-table tr.gross-profit th,
+.restaurant-sales-cost-table tr.gross-profit td,
+.restaurant-sales-cost-table tr.gp-trend th,
+.restaurant-sales-cost-table tr.gp-trend td {
+  height: 30px;
+}
+
+.restaurant-sales-cost-table td.has-trend {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.restaurant-sales-cost-table td.has-trend.stacked {
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 1px;
+  height: 48px;
+}
+
+.restaurant-sales-cost-table .trend-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 1px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.restaurant-sales-cost-table td.has-trend svg,
+.restaurant-sales-cost-table .trend-indicator svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+.restaurant-sales-cost-table tr.closing th,
+.restaurant-sales-cost-table tr.closing td,
+.restaurant-sales-cost-table tr.total-cos th,
+.restaurant-sales-cost-table tr.total-cos td {
+  border-bottom: 1px solid #7f8994;
+}
+
+.restaurant-sales-cost-table tr.ratio-row th,
+.restaurant-sales-cost-table tr.ratio-row td {
+  background: #fff3c4;
+  font-weight: 800;
+}
+
+.restaurant-sales-cost-table tr.trend-row td {
+  height: 24px;
+}
+
+.restaurant-sales-cost-table tr.trend-row svg {
+  width: 17px;
+  height: 17px;
+}
+
+.restaurant-sales-cost-table .positive {
+  color: #138a4f;
+}
+
+.restaurant-sales-cost-table .negative {
+  color: #c7352f;
+}
+
+.restaurant-sales-cost-table td.trend-total {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+@media (max-width: 899px) {
+  .restaurant-sales-cost-table {
+    width: 690px;
+    min-width: 690px;
+}
+  }
+
+@media print {
   .factory-meat-note-sheet {
     width: 100%;
     min-height: 0;
@@ -19679,208 +21804,537 @@ button.factory-job-card:focus-visible {
   }
 }
 
-.restaurant-sales-cost-report {
-  display: grid;
-  gap: 16px;
-  min-width: 0;
+/* Editable quote PDF workspace */
+.quote-pdf-pages-settings-page .orders-heading { align-items: flex-end; }
+.quote-pdf-pages-toolbar { display: flex; gap: 0.75rem; align-items: flex-end; }
+.quote-pdf-pages-toolbar .orders-status-filter { min-width: 220px; }
+.quote-pdf-pages-toolbar > .button { margin-left: auto; }
+.quote-pdf-pages-table td:nth-child(3) { min-width: 240px; }
+.quote-pdf-pages-table td:nth-child(3) strong,
+.quote-pdf-pages-table td:nth-child(3) small { display: block; }
+.quote-pdf-pages-table td:nth-child(3) small { margin-top: 0.2rem; color: var(--muted-foreground); }
+.quote-pdf-page-thumbnail { display: block; width: 42px; height: 60px; border: 1px solid var(--border); border-radius: 4px; background: #fff; object-fit: contain; }
+.quote-pdf-page-form { display: grid; gap: 1rem; }
+.quote-pdf-page-form > label { display: grid; gap: 0.4rem; color: var(--foreground); font-size: 0.86rem; font-weight: 700; }
+.quote-pdf-page-form input,
+.quote-pdf-page-form select { width: 100%; min-height: 42px; padding: 0.5rem 0.65rem; border: 1px solid var(--border); border-radius: 6px; background: var(--background); color: var(--foreground); }
+.quote-pdf-page-form input[type="file"] { padding: 0.45rem; }
+.quote-pdf-page-form label small { color: var(--muted-foreground); font-weight: 500; line-height: 1.45; }
+.quote-pdf-page-active-field { grid-template-columns: minmax(0, 1fr) auto; align-items: center; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px; }
+.quote-pdf-page-active-field > span { display: grid; gap: 0.2rem; }
+
+.quote-pdf-editor {
+  min-height: 100vh;
+  margin: -1.75rem;
+  padding: 1.5rem;
+  background: #eef2f5;
+  color: #17202a;
 }
 
-.restaurant-sales-cost-card {
-  min-width: 0;
+body:has(.quote-pdf-editor) .topbar,
+body:has(.quote-pdf-editor) .workspace-bar,
+body:has(.quote-pdf-editor) .sidebar {
+  display: none;
+}
+
+body:has(.quote-pdf-editor) .shell-body {
+  display: block;
+  padding-top: 0;
+}
+
+body:has(.quote-pdf-editor) .main-content {
   padding: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
-.restaurant-sales-cost-scroll {
-  overflow-x: auto;
+body:has(.quote-pdf-editor) .quote-pdf-editor {
+  margin: 0;
 }
 
-.restaurant-sales-cost-months {
+.quote-pdf-toolbar {
+  position: sticky;
+  z-index: 20;
+  top: 0;
+  display: flex;
+  max-width: 210mm;
+  margin: 0 auto 1rem;
+  padding: 0.8rem 1rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid #d8e0e6;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 6px 22px rgba(34, 48, 60, 0.08);
+}
+
+.quote-pdf-toolbar > div,
+.quote-pdf-toolbar > div:last-child {
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.quote-pdf-toolbar > div:first-child {
   display: flex;
   align-items: flex-start;
-  width: max-content;
-  min-width: 100%;
+  flex-direction: column;
+  gap: 0.1rem;
 }
 
-.restaurant-sales-cost-table {
-  width: 780px;
-  min-width: 780px;
-  border-collapse: separate;
-  border-spacing: 0;
-  table-layout: fixed;
-  font-size: 0.82rem;
+.quote-pdf-toolbar span {
+  color: #667786;
+  font-size: 0.78rem;
 }
 
-.restaurant-sales-cost-table + .restaurant-sales-cost-table {
-  border-left: 4px solid #ff8a00;
-}
-
-.restaurant-sales-cost-table col.label {
-  width: 165px;
-}
-
-.restaurant-sales-cost-table thead tr:first-child th {
-  height: 40px;
-  background: #d6e7f7;
-  color: #111827;
-  text-align: center;
-  font-size: 0.9rem;
-}
-
-.restaurant-sales-cost-table thead tr:nth-child(2) th {
-  height: 42px;
-  padding: 6px 8px;
-  border-bottom: 1px solid #89939e;
-  background: var(--card);
-  text-align: right;
-}
-
-.restaurant-sales-cost-table thead tr:nth-child(2) th:first-child {
-  text-align: left;
-}
-
-.restaurant-sales-cost-table tbody th,
-.restaurant-sales-cost-table tbody td {
-  box-sizing: border-box;
-  height: 29px;
-  padding: 4px 8px;
-  border-bottom: 1px dotted #d7dee8;
-  background: var(--card);
-}
-
-.restaurant-sales-cost-table tbody th {
-  color: var(--foreground);
-  text-align: left;
-  font-weight: 800;
-  letter-spacing: normal;
-  text-transform: none;
-}
-
-.restaurant-sales-cost-table tbody td {
-  border-left: 1px dotted #d7dee8;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-.restaurant-sales-cost-table tr.sales th,
-.restaurant-sales-cost-table tr.sales td,
-.restaurant-sales-cost-table tr.closing th,
-.restaurant-sales-cost-table tr.closing td,
-.restaurant-sales-cost-table tr.total-cos th,
-.restaurant-sales-cost-table tr.total-cos td,
-.restaurant-sales-cost-table tr.gross-profit th,
-.restaurant-sales-cost-table tr.gross-profit td {
-  font-weight: 800;
-}
-
-.restaurant-sales-cost-table tr.supplier-heading th,
-.restaurant-sales-cost-table tr.supplier-heading td {
-  height: 22px;
-  padding-top: 2px;
-  padding-bottom: 0;
-  border-bottom: 0;
-  font-weight: 800;
-}
-
-.restaurant-sales-cost-table tr.supplier-detail th {
+.quote-pdf-saved {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: #17805d !important;
   font-weight: 700;
 }
 
-.restaurant-sales-cost-table tr.sales th,
-.restaurant-sales-cost-table tr.sales td,
-.restaurant-sales-cost-table tr.total-cos th,
-.restaurant-sales-cost-table tr.total-cos td {
-  height: 48px;
-}
+.quote-pdf-saved svg { width: 16px; height: 16px; }
 
-.restaurant-sales-cost-table tr.supplier-detail th,
-.restaurant-sales-cost-table tr.supplier-detail td,
-.restaurant-sales-cost-table tr.closing th,
-.restaurant-sales-cost-table tr.closing td,
-.restaurant-sales-cost-table tr.cost-ratio-row th,
-.restaurant-sales-cost-table tr.cost-ratio-row td,
-.restaurant-sales-cost-table tr.ratio-row th,
-.restaurant-sales-cost-table tr.ratio-row td,
-.restaurant-sales-cost-table tr.gross-profit th,
-.restaurant-sales-cost-table tr.gross-profit td,
-.restaurant-sales-cost-table tr.gp-trend th,
-.restaurant-sales-cost-table tr.gp-trend td {
-  height: 30px;
-}
-
-.restaurant-sales-cost-table td.has-trend {
+.quote-pdf-sheet {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.restaurant-sales-cost-table td.has-trend.stacked {
   flex-direction: column;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 1px;
-  height: 48px;
+  width: min(100%, 210mm);
+  height: 297mm;
+  margin: 0 auto;
+  padding: 10mm 10mm 16mm;
+  overflow: hidden;
+  box-sizing: border-box;
+  background: white;
+  color: #000;
+  font-weight: 700;
+  box-shadow: 0 12px 38px rgba(31, 45, 56, 0.13);
+}
+.quote-pdf-insert-page {
+  display: none;
+  width: 210mm;
+  height: 297mm;
+  margin: 1.5rem auto 0;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 16px 40px rgba(17, 30, 37, 0.18);
+.quote-pdf-insert-page img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.quote-pdf-insert-count { color: #246f78 !important; font-weight: 750 !important; }
+.quote-pdf-insert-error { color: var(--destructive) !important; font-weight: 750 !important; }
 }
 
-.restaurant-sales-cost-table .trend-indicator {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 1px;
-  font-weight: 800;
-  white-space: nowrap;
+.quote-pdf-sheet-continuation { margin-top: 1.5rem; }
+.quote-pdf-letterhead-continuation > div strong { display: block; font-size: 1rem; font-weight: 900; }
+.quote-pdf-page-footer { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: auto; padding-top: 1.1rem; color: #8a969f; font-size: 0.68rem; font-weight: 600; }
+.quote-pdf-page-footer span:first-child { text-align: left; }
+.quote-pdf-page-footer span:nth-child(2) { text-align: center; }
+.quote-pdf-page-footer span:last-child { text-align: right; }
+.quote-pdf-page-footer.is-print-only { display: none; }
+.quote-pdf-print-only { display: none; }
+
+.quote-pdf-letterhead {
+  display: grid;
+  grid-template-columns: 1fr 1.3fr 1fr;
+  align-items: start;
+  gap: 1rem;
+  margin-bottom: 1.4rem;
 }
 
-.restaurant-sales-cost-table td.has-trend svg,
-.restaurant-sales-cost-table .trend-indicator svg {
-  width: 16px;
-  height: 16px;
-  flex: 0 0 auto;
+.quote-pdf-letterhead > img:first-child {
+  width: 190px;
+  max-height: 58px;
+  object-fit: contain;
+  object-position: left center;
 }
 
-.restaurant-sales-cost-table tr.closing th,
-.restaurant-sales-cost-table tr.closing td,
-.restaurant-sales-cost-table tr.total-cos th,
-.restaurant-sales-cost-table tr.total-cos td {
-  border-bottom: 1px solid #7f8994;
+.quote-pdf-letterhead > div { text-align: center; }
+.quote-pdf-letterhead h1 { margin: 0 0 0.35rem; font-size: 1.28rem; font-weight: 900; }
+.quote-pdf-letterhead input { width: 100%; border: 0; text-align: center; font-weight: 900; }
+.quote-pdf-award { width: 190px; max-height: 70px; object-fit: contain; object-position: right center; justify-self: end; }
+
+.quote-pdf-meta-grid {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1.3fr) 88px minmax(0, 0.7fr);
+  border-top: 2px solid #000;
+  border-left: 2px solid #000;
 }
 
-.restaurant-sales-cost-table tr.ratio-row th,
-.restaurant-sales-cost-table tr.ratio-row td {
-  background: #fff3c4;
-  font-weight: 800;
+.quote-pdf-customer-company {
+  grid-column: 1 / 3;
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  grid-template-rows: repeat(2, minmax(42px, auto));
 }
 
-.restaurant-sales-cost-table tr.trend-row td {
-  height: 24px;
-}
-
-.restaurant-sales-cost-table tr.trend-row svg {
-  width: 17px;
-  height: 17px;
-}
-
-.restaurant-sales-cost-table .positive {
-  color: #138a4f;
-}
-
-.restaurant-sales-cost-table .negative {
-  color: #c7352f;
-}
-
-.restaurant-sales-cost-table td.trend-total {
+.quote-pdf-meta-grid label {
   display: flex;
+  min-height: 42px;
   align-items: center;
-  justify-content: flex-end;
-  gap: 12px;
+  padding: 0.45rem 0.4rem;
+  border-right: 2px solid #000;
+  border-bottom: 2px solid #000;
+  font-size: 0.86rem;
+  font-weight: 800;
+  background: #eeeeee;
+  color: #000;
 }
 
-@media (max-width: 899px) {
-  .restaurant-sales-cost-table {
-    width: 690px;
-    min-width: 690px;
-  }
+.quote-pdf-meta-grid label::after {
+  margin-left: 0.08em;
+  content: "?";
+}
+
+.quote-pdf-meta-grid > input,
+.quote-pdf-customer-company > input,
+.quote-pdf-meta-grid > textarea {
+  min-width: 0;
+  min-height: 42px;
+  padding: 0.55rem;
+  border: 0;
+  border-right: 2px solid #000;
+  border-bottom: 2px solid #000;
+  border-radius: 0;
+  background: #fff;
+  color: #000;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 750;
+}
+
+.quote-pdf-meta-grid input,
+.quote-pdf-meta-grid textarea,
+.quote-pdf-table input,
+.quote-pdf-table textarea,
+.quote-pdf-additional textarea,
+.quote-pdf-summary input,
+.quote-pdf-notes textarea {
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  transition: border-color 150ms, background 150ms;
+}
+
+/* PDF fields grow with their content; native resize handles must not appear. */
+.quote-pdf-editor textarea { resize: none; }
+
+.quote-pdf-meta-grid input,
+.quote-pdf-meta-grid textarea { align-self: stretch; padding: 0.55rem; }
+.quote-pdf-meta-grid input:hover,
+.quote-pdf-meta-grid textarea:hover,
+.quote-pdf-table input:hover,
+.quote-pdf-table textarea:hover,
+.quote-pdf-additional textarea:hover,
+.quote-pdf-summary input:hover,
+.quote-pdf-notes textarea:hover { background: #f6fbff; border-color: #b5d8e9; }
+
+.quote-pdf-meta-grid input:focus,
+.quote-pdf-meta-grid textarea:focus,
+.quote-pdf-table input:focus,
+.quote-pdf-table textarea:focus,
+.quote-pdf-additional textarea:focus,
+.quote-pdf-summary input:focus,
+.quote-pdf-notes textarea:focus { outline: 2px solid #4a9fbd; outline-offset: -2px; }
+
+.quote-pdf-meta-grid > input,
+.quote-pdf-customer-company > input,
+.quote-pdf-meta-grid > textarea {
+  min-width: 0;
+  border: 0;
+  border-right: 2px solid #000;
+  border-bottom: 2px solid #000;
+  border-radius: 0;
+  background: #fff;
+  font-weight: 750;
+}
+
+.quote-pdf-customer-company > input {
+  background: #fff;
+}
+
+.quote-pdf-meta-grid > textarea {
+  field-sizing: content;
+  min-height: 42px;
+  overflow: hidden;
+  resize: none;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.quote-pdf-wide { grid-column: span 2; }
+.quote-pdf-table-wrap { margin-top: 1rem; }
+.quote-pdf-table { width: 100%; border: 2.5px solid #000; border-collapse: collapse; table-layout: fixed; font-size: 0.88rem; }
+.quote-pdf-table th, .quote-pdf-table td { border: 1.5px solid #000; padding: 0.28rem 0.35rem; background: #fff; color: #000; }
+.quote-pdf-table th { background: #fff; text-align: center; font-weight: 850; }
+.quote-pdf-table tbody td:first-child { text-align: center; vertical-align: middle; }
+.quote-pdf-table th:nth-child(1) { width: 40px; }
+.quote-pdf-table th:nth-child(3) { width: 72px; }
+.quote-pdf-table th:nth-child(4), .quote-pdf-table th:nth-child(5) { width: 90px; }
+.quote-pdf-table input { padding: 0.45rem; text-align: right; }
+.quote-pdf-table .quote-pdf-product-input { text-align: left; }
+.quote-pdf-price-input { display: flex; align-items: center; gap: 0.15rem; }
+.quote-pdf-price-input > input { width: auto; min-width: 0; flex: 1; padding-left: 0.1rem; }
+.quote-pdf-summary-rows td { height: 34px; padding: 0.2rem 0.45rem; font-weight: 800; }
+.quote-pdf-table .quote-pdf-summary-rows td { text-align: right; }
+.quote-pdf-table tbody td.quote-pdf-summary-label { text-align: right; }
+.quote-pdf-summary-rows select { display: block; width: min(100%, 340px); min-height: 28px; margin-left: auto; border: 1px solid transparent; background: #fff; color: #000; font: inherit; font-weight: 750; text-align: right; text-align-last: right; }
+.quote-pdf-summary-rows input { padding-block: 0.25rem; }
+.quote-pdf-money { text-align: right; font-weight: 700; }
+.quote-pdf-delete, .quote-pdf-additional li button { display: inline-grid; width: 26px; height: 26px; padding: 0; place-items: center; border: 0; border-radius: 50%; background: #e9edf0; color: #64717b; cursor: pointer; }
+.quote-pdf-delete svg, .quote-pdf-additional li button svg { width: 14px; height: 14px; }
+.quote-pdf-add-row { margin-top: 0.6rem; }
+.quote-pdf-add-row,
+.quote-pdf-section-title button,
+.quote-pdf-page-controls button:last-of-type {
+  border-color: #2f6fed;
+  background: #2f6fed;
+  color: #fff;
+}
+
+.quote-pdf-page-controls button:not(:last-of-type) {
+  border-color: #2f6fed;
+  background: #fff;
+  color: #2f6fed;
+}
+
+.quote-pdf-page-controls button:disabled {
+  border-color: #b9d0f7;
+  background: #f5f8fe;
+  color: #a8c2ee;
+}
+
+.quote-pdf-table.is-lunch-box th:nth-child(3) { width: 72px; }
+.quote-pdf-table.is-lunch-box th:nth-child(4) { width: 64px; }
+.quote-pdf-table.is-lunch-box th:nth-child(5) { width: 86px; }
+.quote-pdf-table.is-lunch-box tbody:not(.quote-pdf-summary-rows) td { border-top: 0; border-bottom: 0; }
+.quote-pdf-table.is-lunch-box tbody:not(.quote-pdf-summary-rows) tr:last-child td { border-bottom: 1.5px solid #000; }
+.quote-pdf-table.is-lunch-box td:nth-child(3) input,
+.quote-pdf-table.is-lunch-box td:nth-child(4) input { text-align: right; }
+
+.quote-pdf-additional { margin-top: 0; border: 1.5px solid #000; border-top: 0; background: #fff; color: #000; font-size: 0.78rem; }
+.quote-pdf-section-title { display: flex; min-height: 40px; padding: 0.38rem 0.55rem; align-items: center; justify-content: flex-start; gap: 0.6rem; background: #fff; }
+.quote-pdf-additional ol { margin: 0; padding: 0.18rem 0.5rem 0.45rem 1.8rem; }
+.quote-pdf-additional li { padding: 0.02rem 0; line-height: 1.35; }
+.quote-pdf-additional li::marker { font-size: 0.72rem; }
+.quote-pdf-additional li { display: list-item; }
+.quote-pdf-additional li textarea { display: inline-block; width: calc(100% - 34px); min-height: 26px; padding: 0.18rem 0.3rem; vertical-align: middle; font-size: 0.78rem; line-height: 1.35; }
+.quote-pdf-additional > p { margin: 0; padding: 0.55rem; color: #6f7c85; font-size: 0.76rem; }
+
+.quote-pdf-page-controls {
+  display: flex;
+  margin-top: 0.85rem;
+  padding: 0.8rem;
+  align-items: center;
+  gap: 0.65rem;
+  background: #eaf2ff;
+}
+
+.quote-pdf-page-controls > span {
+  margin-left: auto;
+  color: #687987;
+  font-size: 0.8rem;
+}
+
+.quote-pdf-activity {
+  position: relative;
+  margin-top: 0.85rem;
+  transition: margin-top 180ms ease;
+}
+
+.quote-pdf-activity.is-empty {
+  margin-top: 0;
+}
+
+.quote-pdf-activity.starts-new-page {
+  margin-top: 4.5rem;
+  padding-top: 1.2rem;
+  border-top: 2px dashed #91a9bc;
+  break-before: page;
+  page-break-before: always;
+}
+
+.quote-pdf-activity.starts-new-page::before {
+  position: absolute;
+  top: -2rem;
+  left: 50%;
+  padding: 0.18rem 0.65rem;
+  border-radius: 999px;
+  background: #dce9f4;
+  color: #5a7182;
+  content: "???";
+  font-size: 0.75rem;
+  font-weight: 700;
+  transform: translateX(-50%);
+}
+
+.quote-pdf-activity table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 0.8rem;
+}
+
+.quote-pdf-activity th,
+.quote-pdf-activity td {
+  height: 34px;
+  padding: 0.3rem 0.45rem;
+  border: 1.5px solid #000;
+  background: #e7f0fb;
+  color: #000;
+}
+
+.quote-pdf-activity th { background: #e7f0fb; text-align: left; }
+.quote-pdf-activity th:first-child { width: 38px; }
+.quote-pdf-activity th:nth-child(3) { width: 110px; text-align: center; }
+.quote-pdf-activity td:first-child { text-align: center; }
+.quote-pdf-activity td:nth-child(3),
+.quote-pdf-activity tfoot td { text-align: right; font-weight: 700; }
+.quote-pdf-activity input { width: 100%; border: 1px solid transparent; background: transparent; color: #000; font: inherit; }
+.quote-pdf-activity td:nth-child(3) input { width: calc(100% - 12px); text-align: right; }
+.quote-pdf-activity tfoot td,
+.quote-pdf-activity tfoot td:first-child { text-align: right; }
+.quote-pdf-activity tfoot select { display: block; width: min(100%, 390px); min-height: 28px; margin-left: auto; border: 1px solid transparent; background: #e7f0fb; color: #000; direction: ltr; font: inherit; font-weight: 750; text-align: right; text-align-last: right; }
+.quote-pdf-activity tfoot .quote-pdf-price-input { display: grid; grid-template-columns: auto auto; justify-content: end; }
+.quote-pdf-activity tfoot .quote-pdf-price-input > input { width: 64px; flex: none; text-align: right; }
+.quote-pdf-activity button,
+.quote-activity-selected button { display: inline-grid; width: 26px; height: 26px; padding: 0; place-items: center; border: 0; border-radius: 50%; background: #e9edf0; color: #64717b; }
+.quote-pdf-activity button svg,
+.quote-activity-selected button svg { width: 14px; height: 14px; }
+.quote-pdf-activity tfoot tr:nth-child(2) td { font-weight: 500; }
+
+.quote-activity-picker ul li { display: grid; grid-template-columns: 1fr auto auto; }
+.quote-activity-selected { display: grid; border: 1px solid #d4dce2; }
+.quote-activity-selected > strong { padding: 0.55rem 0.7rem; background: #f0f3f5; }
+.quote-activity-selected > div { display: flex; min-height: 40px; padding: 0.35rem 0.65rem; align-items: center; justify-content: space-between; gap: 0.75rem; border-top: 1px solid #e1e6ea; }
+
+.quote-pdf-summary { width: 52%; margin: 0.8rem 0 1rem auto; border: 1.5px solid #000; background: #e7f0fb; color: #000; }
+.quote-pdf-summary label { display: grid; grid-template-columns: 1fr 125px; min-height: 34px; align-items: center; padding: 0 0 0 0.7rem; border-bottom: 1px solid #000; background: #e7f0fb; font-size: 0.8rem; }
+.quote-pdf-summary label:last-child { border-bottom: 0; background: #e7f0fb; font-weight: 800; }
+.quote-pdf-summary strong { padding-right: 0.6rem; text-align: right; }
+.quote-pdf-summary input { height: 32px; padding: 0.35rem 0.6rem; text-align: right; }
+
+.quote-pdf-notes { display: grid; gap: 0.45rem; margin-top: 0.75rem; color: #000; }
+.quote-pdf-notes-page-controls { background: #fff7dd; }
+.quote-pdf-note-block { border: 1.5px solid #000; background: #fff7dd; }
+.quote-pdf-note-heading { display: block; width: 100%; min-height: 38px; padding: 0.42rem 0.6rem; border: 0; border-bottom: 1.5px solid #000; border-radius: 0; background: #fff7dd; color: #000; font: inherit; font-size: 0.88rem; font-weight: 850; text-align: left; }
+.quote-pdf-note-block ol { display: grid; gap: 0.05rem; margin: 0; padding: 0.25rem 0.45rem 0.35rem; counter-reset: quote-note; list-style: none; }
+.quote-pdf-note-block li { display: grid; grid-template-columns: 2rem minmax(0, 1fr); align-items: start; counter-increment: quote-note; }
+.quote-pdf-note-block li::before { padding-top: 0.24rem; content: "(" counter(quote-note) ")"; font-size: 0.84rem; text-align: center; }
+.quote-pdf-notes textarea { field-sizing: content; display: block; min-height: 29px; padding: 0.22rem 0.32rem; overflow: hidden; border-radius: 0; background: #fff7dd; color: #000; font-size: 0.84rem; line-height: 1.45; resize: none; }
+
+.quote-pdf-signature-page-controls { background: #e8f9e9; }
+.quote-pdf-customer-signature-toggle { display: inline-flex; align-items: center; gap: 0.45rem; color: #2f6fed; font-size: 0.82rem; font-weight: 800; cursor: pointer; }
+.quote-pdf-customer-signature-toggle input { width: 15px; height: 15px; margin: 0; accent-color: #2f6fed; }
+.quote-pdf-signature {
+  display: grid;
+  min-height: 132px;
+  margin-top: 0.75rem;
+  padding: 0.6rem 1rem;
+  background: #e8f9e9;
+  color: #000;
+}
+.quote-pdf-signature.has-customer-signature { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3.2rem; }
+.quote-pdf-signature-party { display: grid; min-width: 0; align-content: start; font-size: 0.86rem; }
+.quote-pdf-signature:not(.has-customer-signature) .quote-pdf-signature-issuer { width: calc(50% - 1.6rem); margin-left: auto; }
+.quote-pdf-signature-party > strong,
+.quote-pdf-signature-party label strong { font-weight: 850; }
+.quote-pdf-signature-party > em { min-height: 22px; font-family: Poppins, sans-serif; font-size: 0.84rem; }
+.quote-pdf-signature-issuer { grid-template-rows: auto auto 72px auto; }
+.quote-pdf-signature-issuer > img { width: 90px; height: 72px; object-fit: contain; justify-self: center; }
+.quote-pdf-signature-customer { grid-template-rows: auto auto 72px repeat(3, minmax(29px, auto)); }
+.quote-pdf-signature-stamp-spacer { display: block; min-height: 72px; }
+.quote-pdf-signature-party label { display: grid; grid-template-columns: auto minmax(70px, 1fr); gap: 0.45rem; align-items: end; }
+.quote-pdf-signature-party label span { min-height: 20px; border-bottom: 1px solid #000; }
+
+.quote-additional-picker { display: grid; gap: 0.75rem; }
+.quote-pdf-editor .modal-backdrop { background: rgba(20, 28, 34, 0.55); }
+.quote-pdf-editor .modal-panel { border-color: #d4dce2; background: #fff; color: #17202a; }
+.quote-pdf-editor .modal-panel .modal-header h2,
+.quote-pdf-editor .modal-panel .quote-additional-picker li { color: #17202a; }
+.quote-pdf-editor .modal-header button,
+.quote-pdf-editor .quote-additional-search button,
+.quote-pdf-editor .quote-additional-picker li button {
+  width: auto;
+  height: 2.25rem;
+  padding: 0 0.75rem;
+  border-radius: 0.375rem;
+  border-color: #378a94;
+  background: #fff;
+  color: #246f78;
+}
+.quote-pdf-editor .modal-header button { width: 2.5rem; height: 2.5rem; padding: 0; }
+.quote-additional-search { display: grid; grid-template-columns: 22px 1fr 110px; gap: 0.55rem; align-items: center; }
+.quote-additional-search svg { color: #74838d; }
+.quote-additional-search input { height: 44px; padding: 0 0.7rem; border: 1px solid #b7c2ca; border-radius: 6px; background: #fff; color: #17202a; }
+.quote-additional-picker > p { margin: 0; color: #6d7982; font-size: 0.82rem; }
+.quote-additional-picker ul { margin: 0; padding: 0; border: 1px solid #d4dce2; list-style: none; }
+.quote-additional-picker li { display: flex; min-height: 44px; padding: 0.45rem 0.65rem; align-items: center; justify-content: space-between; gap: 0.75rem; border-bottom: 1px solid #e3e8ec; }
+.quote-additional-picker li:last-child { border-bottom: 0; }
+.quote-clause-search-wrap { position: relative; z-index: 3; }
+.quote-clause-search-wrap .quote-additional-search { position: relative; z-index: 2; background: #fff; }
+.quote-clause-suggestions { position: absolute; z-index: 20; top: calc(100% + 4px); right: 0; left: 0; display: none; max-height: 250px; overflow-y: auto; background: #fff; box-shadow: 0 12px 28px rgba(26, 38, 48, 0.2); }
+.quote-clause-search-wrap:focus-within .quote-clause-suggestions { display: block; }
+.quote-clause-picker li > span { line-height: 1.45; }
+.quote-clause-selected { display: grid; border: 1px solid #d4dce2; }
+.quote-clause-selected > strong { padding: 0.55rem 0.7rem; background: #f0f3f5; }
+.quote-clause-selected > div { display: grid; grid-template-columns: minmax(0, 1fr) 32px; min-height: 42px; padding: 0.4rem 0.65rem; align-items: center; gap: 0.65rem; border-top: 1px solid #e1e6ea; }
+.quote-clause-selected > div > span { font-size: 0.82rem; line-height: 1.45; }
+.quote-clause-selected button { display: inline-grid; width: 26px; height: 26px; padding: 0; place-items: center; border: 0; border-radius: 50%; background: #e9edf0; color: #64717b; }
+.quote-clause-selected button svg { width: 14px; height: 14px; }
+.quote-pdf-state { display: flex; min-height: 50vh; align-items: center; justify-content: center; gap: 0.8rem; color: #53636e; }
+
+@media (max-width: 800px) {
+  .quote-pdf-editor { margin: -1rem; padding: 0.75rem; }
+  .quote-pdf-toolbar, .quote-pdf-toolbar > div:last-child { align-items: stretch; flex-direction: column; }
+  .quote-pdf-toolbar { position: static; }
+  .quote-pdf-sheet { min-width: 700px; padding: 32px 32px 48px; }
+  .quote-pdf-editor { overflow-x: auto; }
+  .quote-pdf-insert-page { min-width: 700px; height: 990px; }
+  .quote-pdf-pages-toolbar { align-items: stretch; flex-direction: column; }
+  .quote-pdf-pages-toolbar > .button { margin-left: 0; }
+}
+@media print {
+  @page { size: A4; margin: 0; }
+  body { background: white !important; }
+  .quote-pdf-editor, .quote-pdf-editor * { visibility: visible !important; }
+  .quote-pdf-editor { position: absolute !important; inset: 0 auto auto 0 !important; width: 100% !important; }
+  .topbar, .workspace-bar, .sidebar, .quote-pdf-toolbar, .quote-pdf-add-row, .quote-pdf-delete, .quote-pdf-section-title, .quote-pdf-additional li button, .quote-pdf-page-controls, .quote-pdf-activity button { display: none !important; }
+  .shell-body, .main-content, .quote-pdf-editor { margin: 0 !important; padding: 0 !important; background: white !important; overflow: visible !important; }
+  .quote-pdf-sheet { width: 100%; height: 297mm; margin: 0; padding: 10mm 10mm 24mm; overflow: hidden; break-after: page; box-shadow: none; }
+  .quote-pdf-sheet:last-of-type { break-after: auto; }
+  .quote-pdf-editor.has-back-pages .quote-pdf-sheet:last-of-type { break-after: page; }
+  .quote-pdf-insert-page { display: block; width: 210mm; height: 297mm; margin: 0; break-after: page; box-shadow: none; }
+  .quote-pdf-insert-page.is-final-page { break-after: auto; }
+  .quote-pdf-page-footer:not(.is-print-only) { display: none !important; }
+  .quote-pdf-page-footer.is-print-only { position: fixed; z-index: 50; right: 10mm; bottom: 4mm; left: 10mm; display: grid !important; min-height: 10mm; padding: 2mm 0 0; align-content: start; background: #fff; }
+  .quote-pdf-edit-only { display: none !important; }
+  .quote-pdf-print-only { display: block !important; width: fit-content; margin-left: auto; padding: 0; text-align: right; }
+  .quote-pdf-note-block.is-empty,
+  .quote-pdf-notes.is-empty,
+  .quote-pdf-additional.is-empty { display: none !important; }
+  .quote-pdf-note-block,
+  .quote-pdf-note-heading { border: 0 !important; }
+  .quote-pdf-meta-grid input, .quote-pdf-table input, .quote-pdf-table textarea, .quote-pdf-additional textarea, .quote-pdf-summary input, .quote-pdf-notes textarea { border-color: transparent !important; outline: 0 !important; background: transparent !important; resize: none !important; }
+  .quote-pdf-additional li textarea { width: 100% !important; padding-right: 0 !important; }
+  .quote-pdf-meta-grid > input,
+  .quote-pdf-customer-company > input,
+  .quote-pdf-meta-grid > textarea { border-right: 2px solid #000 !important; border-bottom: 2px solid #000 !important; }
+  .quote-pdf-table { border: 0 !important; border-collapse: separate !important; border-spacing: 0 !important; }
+  .quote-pdf-table thead { display: table-header-group; }
+  .quote-pdf-table tbody,
+  .quote-pdf-table tfoot { display: table-row-group; }
+  .quote-pdf-summary-rows { break-inside: avoid; }
+  .quote-pdf-table th,
+  .quote-pdf-table td { border-top: 0 !important; border-left: 0 !important; border-right: 1.5px solid #000 !important; border-bottom: 1.5px solid #000 !important; }
+  .quote-pdf-table tr > :first-child { border-left: 2.5px solid #000 !important; }
+  .quote-pdf-table tr > :last-child { border-right: 2.5px solid #000 !important; }
+  .quote-pdf-table thead tr:first-child > * { border-top: 2.5px solid #000 !important; }
+  .quote-pdf-summary-rows tr:last-child > * { border-bottom: 2.5px solid #000 !important; }
+  .quote-pdf-table tr, .quote-pdf-additional li, .quote-pdf-summary, .quote-pdf-notes label, .quote-pdf-signature { break-inside: avoid; }
+  .quote-pdf-activity.starts-new-page { margin-top: 0; padding-top: 0; border-top: 0; }
+  .quote-pdf-activity.starts-new-page::before { display: none; }
 }
 
 
@@ -19960,4 +22414,28 @@ button.factory-job-card:focus-visible {
   border-color: var(--report-table-accent-border);
   background: var(--report-table-summary-bg);
   color: var(--foreground);
+
+.kitchen-sales-cost-report-page .kitchen-channel-sales-table tfoot .kitchen-channel-sales-cell-values b,
+.kitchen-sales-cost-report-page .kitchen-channel-sales-table tfoot .kitchen-channel-sales-cell-values strong {
+  color: #000;
 }
+
+.kitchen-sales-cost-report-page .kitchen-product-sales-summary-table th,
+.kitchen-sales-cost-report-page .kitchen-product-sales-package-table th {
+  background: transparent;
+}
+
+.kitchen-advertising-performance-page .kitchen-advertising-performance-table th {
+  background: var(--advertising-blue);
+  color: #fff;
+}
+
+.kitchen-advertising-performance-page .kitchen-advertising-performance-table td,
+.kitchen-advertising-performance-page .kitchen-advertising-performance-table td:nth-child(even) {
+  background: var(--advertising-light-blue);
+  color: var(--foreground);
+}
+}
+
+
+

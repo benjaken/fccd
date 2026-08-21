@@ -8,14 +8,19 @@ import {
   type DeliveryListItem,
 } from "@/lib/deliveries";
 import {
-  buildFactoryDishLabelHtml,
   hongKongDateKey,
   markFactoryOrderLinePrinted,
   type FactoryFleet,
   type FactoryOrderLine,
   type FactoryOrderJob,
 } from "@/lib/factory-board";
+import {
+  fetchFactoryLabelCommand,
+  type FactoryLabelCommandLoader,
+} from "@/lib/factory-label";
 import { useQzTray } from "@/lib/qz-tray";
+import { FOOD_CHANNEL_CATERING_LOGO_PATH } from "@/lib/brand-logo";
+import { formatDeliveryAddress } from "@/lib/delivery-address";
 
 const WEEKDAY_LONG_ZH = [
   "星期日",
@@ -37,6 +42,10 @@ export function formatFactoryDeliveryNoteQuantity(value: string | null) {
   return quantity.replace(/(?:\s*份)+$/u, "").trim();
 }
 
+export function preferredFactoryLabelPrinter(printers: string[]): string {
+  return printers.find((printer) => /xprinter/i.test(printer)) ?? printers[0] ?? "";
+}
+
 export function FactoryOrderJobView({
   item,
   job,
@@ -46,6 +55,7 @@ export function FactoryOrderJobView({
   fleets,
   assignMotorcade = assignDeliveryMotorcade,
   markLinePrinted = markFactoryOrderLinePrinted,
+  loadLabelCommand = fetchFactoryLabelCommand,
   onLinePrinted,
   onAssigned,
   qz,
@@ -59,6 +69,7 @@ export function FactoryOrderJobView({
   fleets: FactoryFleet[];
   assignMotorcade?: typeof assignDeliveryMotorcade;
   markLinePrinted?: typeof markFactoryOrderLinePrinted;
+  loadLabelCommand?: FactoryLabelCommandLoader;
   onLinePrinted?: (lineId: string) => void;
   onAssigned?: (fleet: FactoryFleet) => void;
   qz: ReturnType<typeof useQzTray>;
@@ -120,7 +131,9 @@ export function FactoryOrderJobView({
       return;
     }
     setSelectedPrinter((current) =>
-      qz.printers.includes(current) ? current : qz.printers[0]!,
+      qz.printers.includes(current)
+        ? current
+        : preferredFactoryLabelPrinter(qz.printers),
     );
   }, [qz.printers]);
 
@@ -137,18 +150,17 @@ export function FactoryOrderJobView({
     setPrintSuccess(null);
     try {
       const copies = fullSet ? labelCopies(line) : 1;
+      const commandBase64 = await loadLabelCommand({
+        orderNumber,
+        deliveryDate: dateKey,
+        labelName: line.labelName?.trim() || line.label,
+        remarks: [...line.remarks, job?.packingNote ?? ""].filter(Boolean),
+        copies,
+      });
       await qz.printLabels(
         selectedPrinter,
-        buildFactoryDishLabelHtml({
-          orderNumber,
-          dish: line.label,
-          quantity: line.quantityText,
-          remarks: line.remarks,
-          deliveryDate: dateKey,
-          deliveryTime: dispatchTime === empty ? null : dispatchTime,
-          packingNote: job?.packingNote ?? null,
-        }),
-        copies,
+        commandBase64,
+        1,
       );
       if (fullSet) {
         await markLinePrinted(line.id);
@@ -210,8 +222,11 @@ export function FactoryOrderJobView({
               {t("factoryBoard.phone")}: {item.customerPhone || empty}
             </div>
             <div className="is-address">
-              {t("factoryBoard.address")}: {item.address || empty}
-              {item.shippingMethodName ? ` * ${item.shippingMethodName}` : ""}
+              {t("factoryBoard.address")}: {formatDeliveryAddress(
+                item.address,
+                item.shippingMethodName,
+                empty,
+              )}
             </div>
             <div className="is-customer">
               {t("factoryBoard.guestName")}: {item.customerName || empty}
@@ -343,12 +358,10 @@ export function FactoryOrderJobView({
       <section className="factory-delivery-note-print" aria-hidden="true">
         <header className="factory-delivery-note-header">
           <div className="factory-delivery-note-brand">
-            <strong>FC</strong>
-            <span>
-              Food <b>CATERING</b>
-              <br />
-              Channels
-            </span>
+            <img
+              src={FOOD_CHANNEL_CATERING_LOGO_PATH}
+              alt="Food Channel Catering"
+            />
           </div>
           <h1>{t("factoryBoard.deliveryNoteTitle")}</h1>
           <p className="factory-delivery-note-cartons">
@@ -364,15 +377,15 @@ export function FactoryOrderJobView({
           <section>
             <h3>{t("factoryBoard.customerAndDeliveryAddress")}</h3>
             <p>{item.customerName || empty}</p>
-            <p>{item.address || empty}</p>
-            {job?.packingNote ? <p>* {job.packingNote}</p> : null}
-            <p>
-              {t("factoryBoard.contactPerson")}: {item.customerName || empty}
+            <p>{formatDeliveryAddress(item.address, item.shippingMethodName, empty)}</p>
+            {job?.customerNote ? <p>* {job.customerNote}</p> : null}
+            <p className="factory-delivery-note-contact">
+              {t("factoryBoard.contactPerson")}: {item.customerName || empty}{" "}
+              <span>{item.customerPhone || empty}</span>
             </p>
-            <p>{item.customerPhone || empty}</p>
           </section>
           <section>
-            <p>
+            <p className="factory-delivery-note-order-reference">
               {t("factoryBoard.orderLabel")} {orderNumber}
             </p>
             <p>
@@ -413,7 +426,7 @@ export function FactoryOrderJobView({
 
         <footer>
           <span className="factory-delivery-note-order-footer">
-            {orderNumber}
+            {t("factoryBoard.orderLabel")} {orderNumber}
           </span>
           <span className="factory-delivery-note-brand-footer">
             {job?.brandName || "Food Channels Catering"}

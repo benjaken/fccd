@@ -43,6 +43,7 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
     pageKey: "orders.settings.sale_partners",
   },
   { prefix: "/orders/settings", pageKey: "orders.settings" },
+  { prefix: "/quotes/pdf-pages", pageKey: "quotes.pdf_pages" },
   { prefix: "/quotes/customers", pageKey: "quotes.customers" },
   { prefix: "/quotes/follow-up", pageKey: "quotes.follow_up" },
   { prefix: "/quotes/pending", pageKey: "quotes.pending" },

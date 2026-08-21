@@ -24,9 +24,16 @@ export type FactoryBoardItem = DeliveryListItem & {
 
 export type FactoryOrderPrintStatus = "complete" | "needs-reprint" | "incomplete"
 
+export function factoryEligibleDeliveries<T extends DeliveryListItem>(items: T[]): T[] {
+  return items.filter(
+    (item) => item.isSentToFactory === true || item.isSentToFactory === undefined,
+  )
+}
+
 export type FactoryOrderLine = {
   id: string
   label: string
+  labelName?: string
   quantityText: string | null
   remarks: string[]
   printed: boolean
@@ -35,6 +42,7 @@ export type FactoryOrderLine = {
 
 export type FactoryOrderJob = {
   packingNote: string | null
+  customerNote?: string | null
   dispatchTime: string | null
   arrivalWindow: string | null
   brandName?: string | null
@@ -464,13 +472,13 @@ export async function fetchFactoryMultiDayMenu(
   startDate: string,
   endDate: string,
 ): Promise<FactoryMultiDayMenuContribution[]> {
-  const deliveries = await fetchDeliveryExportRows({
+  const deliveries = factoryEligibleDeliveries(await fetchDeliveryExportRows({
     search: "",
     startDate,
     endDate,
     motorcadeId: "",
     shippingMethodId: "",
-  })
+  }))
   const orderIds = [
     ...new Set(
       deliveries
@@ -683,7 +691,7 @@ export async function fetchFactoryBoard(
     fetchFactoryMeatOrders(dates[0]!, dates[dates.length - 1]!),
   ])
   const items: FactoryBoardItem[] = [
-    ...deliveryItems.map((item) => ({ ...item, factorySource: "delivery" as const })),
+    ...factoryEligibleDeliveries(deliveryItems).map((item) => ({ ...item, factorySource: "delivery" as const })),
     ...meatItems,
   ]
   const orderIds = [
@@ -706,7 +714,7 @@ export async function fetchFactoryOrderJob(orderId: string): Promise<FactoryOrde
     supabase
       .from("orders")
       .select(
-        "factory_packing_note, delivery_time, ship_out_time, factory_print_date, factory_reprint_required, channels(name,website)",
+        "factory_packing_note, customer_note_snapshot, delivery_time, ship_out_time, factory_print_date, factory_reprint_required, channels(name,website)",
       )
       .eq("id", orderId)
       .maybeSingle(),
@@ -754,6 +762,8 @@ export async function fetchFactoryOrderJob(orderId: string): Promise<FactoryOrde
   return {
     packingNote:
       (orderResult.data?.factory_packing_note as string | null)?.trim() || null,
+    customerNote:
+      (orderResult.data?.customer_note_snapshot as string | null)?.trim() || null,
     dispatchTime: clockFromValue(
       (orderResult.data?.ship_out_time as string | null) ?? null,
     ),
@@ -764,6 +774,10 @@ export async function fetchFactoryOrderJob(orderId: string): Promise<FactoryOrde
     requiresReprint,
     lines: allLines.filter((row) => !row.is_void).map((row) => ({
       id: row.id as string,
+      labelName:
+        (row.content_snapshot as string | null)?.trim() ||
+        (row.product_name_snapshot as string | null)?.trim() ||
+        "",
       label: formatFactoryLineLabel({
         productName: row.product_name_snapshot as string | null,
         content: row.content_snapshot as string | null,

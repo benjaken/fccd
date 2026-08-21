@@ -13,6 +13,7 @@ import {
   ClipboardList,
   Factory,
   FileArchive,
+  FileImage,
   FileText,
   HandCoins,
   Handshake,
@@ -238,10 +239,22 @@ export const secondaryNav: Record<string, NavItem[]> = {
       permissionKey: "quotes.customers",
     },
     {
+      key: "pendingQuotes",
+      to: "/quotes/pending",
+      icon: CalendarClock,
+      permissionKey: "quotes.pending",
+    },
+    {
       key: "followUp",
       to: "/quotes/follow-up",
       icon: ClipboardCheck,
       permissionKey: "quotes.follow_up",
+    },
+    {
+      key: "quotePdfPages",
+      to: "/quotes/pdf-pages",
+      icon: FileImage,
+      permissionKey: "quotes.pdf_pages",
     },
   ],
   products: [

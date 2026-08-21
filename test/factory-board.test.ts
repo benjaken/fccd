@@ -8,6 +8,7 @@ import {
   factoryMultiDayRangeLabels,
   factoryVisibleDates,
   factoryOrderPrintStatus,
+  factoryEligibleDeliveries,
   filterDispatchRows,
   fleetBadgeChar,
   fleetBadgeForDelivery,
@@ -49,6 +50,16 @@ function item(
 }
 
 describe("factory board helpers", () => {
+  it("excludes orders explicitly marked as not sent to the factory", () => {
+    expect(
+      factoryEligibleDeliveries([
+        item({ id: "sent", isSentToFactory: true }),
+        item({ id: "not-sent", isSentToFactory: false }),
+        item({ id: "legacy-fixture" }),
+      ]).map((row) => row.id),
+    ).toEqual(["sent", "legacy-fixture"]);
+  });
+
   it("formats the compact Chinese multi-day print heading", () => {
     expect(
       factoryMultiDayRangeLabels("2026-08-01", "2026-08-20", true),

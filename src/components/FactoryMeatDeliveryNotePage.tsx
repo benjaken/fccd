@@ -4,6 +4,8 @@ import { ArrowLeft, Printer } from "lucide-react";
 import { useParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
+import { FOOD_CHANNEL_CATERING_LOGO_PATH } from "@/lib/brand-logo";
+import { formatDeliveryAddress } from "@/lib/delivery-address";
 import {
   fetchPreparedMeatOutboundOrder,
   markPreparedMeatOutboundPrinted,
@@ -97,12 +99,7 @@ export function FactoryMeatDeliveryNotePage({
       <section className="factory-meat-note-sheet">
         <header className="factory-meat-note-header">
           <div className="factory-meat-note-brand" aria-label="Food Channels Catering">
-            <strong>FC</strong>
-            <span>
-              <b>Food</b>
-              <b>Channels</b>
-            </span>
-            <em>CATERING</em>
+            <img src={FOOD_CHANNEL_CATERING_LOGO_PATH} alt="" aria-hidden="true" />
           </div>
           <h1>{t("factoryBoard.deliveryNoteTitle")}</h1>
           <Button
@@ -124,7 +121,7 @@ export function FactoryMeatDeliveryNotePage({
           <section>
             <h2>{t("factoryBoard.customerAndDeliveryAddress")}</h2>
             <strong>{display(note.customerName, notSet)}</strong>
-            <p>{display(note.address, notSet)}</p>
+            <p>{formatDeliveryAddress(note.address, note.shippingMethodName, notSet)}</p>
             <p>
               {t("factoryBoard.contactPerson")}: {display(note.contactPerson, notSet)}
               {note.phone ? `  ${note.phone}` : ""}

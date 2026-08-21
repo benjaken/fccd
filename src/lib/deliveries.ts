@@ -38,6 +38,7 @@ export type DeliveryListItem = {
   surcharges: DeliverySurcharge[];
   grandTotal: number | null;
   deliveryStatus: string | null;
+  isSentToFactory?: boolean | null;
   takenAt: string | null;
   fulfilledAt: string | null;
   imageReferences: string[];
@@ -91,6 +92,7 @@ type OrderRow = {
   delivery_time?: string | null;
   ship_out_time?: string | null;
   delivery_status?: string | null;
+  is_sent_to_factory?: boolean | null;
   shipping_methods?: Nested<NamedRow>;
 };
 
@@ -129,7 +131,7 @@ const DELIVERY_SELECT = [
   "image_references",
   "motorcade_id",
   "shipping_method_id",
-  "orders!inner(id,order_number,customer_name_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,shipping_address_snapshot,shipping_method_id,grand_total,delivery_time,ship_out_time,delivery_status,shipping_methods(name,display_name))",
+  "orders!inner(id,order_number,customer_name_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,shipping_address_snapshot,shipping_method_id,grand_total,delivery_time,ship_out_time,delivery_status,is_sent_to_factory,shipping_methods(name,display_name))",
   "delivery_districts!district_id(name)",
   "shipping_methods!shipping_method_id(name,display_name)",
   "delivery_teams!motorcade_id(name,short_name)",
@@ -306,6 +308,7 @@ export function mapDeliveryRow(row: DeliveryRow): DeliveryListItem {
     surcharges,
     grandTotal: optionalAmount(order?.grand_total),
     deliveryStatus: row.delivery_status || order?.delivery_status || null,
+    isSentToFactory: order?.is_sent_to_factory ?? null,
     takenAt: row.taken_at,
     fulfilledAt: row.fulfilled_at,
     imageReferences: (row.image_references ?? []).filter(Boolean),

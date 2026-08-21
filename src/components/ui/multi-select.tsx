@@ -116,6 +116,7 @@ export function MultiSelect({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={`${id}-listbox`}
+        {...{ "aria-placeholder": triggerPlaceholder }}
         aria-disabled={disabled || undefined}
         onClick={() => {
           if (!disabled) setOpen((current) => !current);

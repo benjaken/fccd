@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { FactoryQzTrayStatus } from "@/components/FactoryQzTray";
+import { FactoryBrandLogo } from "@/components/FactoryBrandLogo";
 import { Button } from "@/components/ui/button";
 import {
   aggregateFactoryMultiDayMenuRows,
@@ -112,10 +113,7 @@ export function FactoryMultiDayReportPage({
   return (
     <main className="factory-board factory-multi-day-page">
       <header className="factory-board-top no-print">
-        <div className="factory-board-brand">
-          <strong>{t("brand.name")}</strong>
-          <small>{t("brand.system")}</small>
-        </div>
+        <FactoryBrandLogo />
         <p className="factory-order-page-title">{t("factoryBoard.multiDayMenu")}</p>
         <div className="factory-board-actions">
           <FactoryQzTrayStatus

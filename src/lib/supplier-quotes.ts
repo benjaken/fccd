@@ -764,7 +764,7 @@ export function quoteStatusLabel(
   status: QuoteDocumentStatus | null | undefined,
   labels: Partial<Record<QuoteDocumentStatus, string>> = {},
 ): string {
-  if (!status) return "未設定";
+  if (!status) return " ";
   return labels[status] ?? DEFAULT_QUOTE_STATUS_LABELS[status] ?? status;
 }
 
@@ -779,7 +779,7 @@ export const DEFAULT_QUOTE_AVAILABILITY_LABELS: Readonly<
 export function quoteAvailabilityLabel(
   availability: QuoteAvailability | null | undefined,
 ): string {
-  if (!availability) return "未設定";
+  if (!availability) return " ";
   return DEFAULT_QUOTE_AVAILABILITY_LABELS[availability] ?? availability;
 }
 
