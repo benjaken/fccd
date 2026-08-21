@@ -50,6 +50,7 @@ import { OrdersListPage } from "@/components/OrdersListPage";
 import { OrdersDashboardPage } from "@/components/OrdersDashboardPage";
 import { OrderSettingsPage } from "@/components/OrderSettingsPage";
 import { OrderDetailPage } from "@/components/OrderDetailPage";
+import { OrderEditorPage } from "@/components/OrderEditorPage";
 import { PaymentsListPage } from "@/components/PaymentsListPage";
 import { MasoftInvoiceReceiptsPage } from "@/components/MasoftInvoiceReceiptsPage";
 import { ProfilePage } from "@/components/ProfilePage";
@@ -259,6 +260,8 @@ function OperationsShell() {
       )?.to ??
     REPORT_GROUP_ROUTES.frozenMeat;
   const canViewFinance = pageAccess.canAccess("finance");
+  const canEditOrders =
+    authorizationRole === "Super Admin" || authorizationRole === "Admin";
   const canEditProducts = canEditProductCatalog(authorizationRole);
   const canEditDeliveries = canAssignDeliveryFleet(authorizationRole);
   const orderListConfigMap = orderListConfigByPreset(orderListConfigs);
@@ -695,11 +698,22 @@ function OperationsShell() {
                 element={<OrderSettingsPage />}
               />
               <Route
+                path="/orders/new"
+                element={<OrderEditorPage />}
+              />
+              <Route
+                path="/orders/:id/edit"
+                element={
+                  canEditOrders ? <OrderEditorPage /> : <SettingsAccessDenied />
+                }
+              />
+              <Route
                 path="/orders/:id"
                 element={
                   <OrderDetailPage
                     documentType="order"
                     canViewFinance={canViewFinance}
+                    canEdit={canEditOrders}
                   />
                 }
               />

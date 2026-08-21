@@ -18,6 +18,7 @@ export type ReadOnlyOrderDetail = {
   contactB: string | null;
   address: string | null;
   customerNote: string | null;
+  internalNote?: string | null;
   quoteStatus: string | null;
   quoteDescription: string | null;
   deliveryTerms: string | null;
@@ -96,7 +97,7 @@ export type OrderDetailResult = {
 };
 
 const fields =
-  "id,document_type,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,shipping_address_snapshot,customer_note_snapshot,quote_status,quote_description_snapshot,delivery_terms_snapshot,delivery_at,ship_out_time,delivery_status,is_sent_to_factory,factory_date,factory_packing_note,currency,discount_amount,shipping_fee,grand_total,outstanding,updated_at,order_status_legacy_ids,channels(id,name)";
+  "id,document_type,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,shipping_address_snapshot,customer_note_snapshot,remarks,quote_status,quote_description_snapshot,delivery_terms_snapshot,delivery_at,ship_out_time,delivery_status,is_sent_to_factory,factory_date,factory_packing_note,currency,discount_amount,shipping_fee,grand_total,outstanding,updated_at,order_status_legacy_ids,channels(id,name)";
 
 function decimal(value: string | number | null) {
   return value === null ? null : Number.parseFloat(String(value));
@@ -252,6 +253,7 @@ export async function fetchOrderDetail(
     contactB: data.contact_number_b_snapshot,
     address: data.shipping_address_snapshot,
     customerNote: data.customer_note_snapshot,
+    internalNote: data.remarks,
     quoteStatus: data.quote_status,
     quoteDescription: data.quote_description_snapshot,
     deliveryTerms: data.delivery_terms_snapshot,

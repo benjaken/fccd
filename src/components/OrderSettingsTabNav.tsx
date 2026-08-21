@@ -2,6 +2,7 @@ export const ORDER_SETTINGS_TABS = [
   "statuses",
   "tags",
   "shipping",
+  "shipping-fees",
   "payments",
 ] as const;
 

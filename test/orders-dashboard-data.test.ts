@@ -40,7 +40,7 @@ describe("orders dashboard data", () => {
     fromMock.mockReset();
   });
 
-  it("counts the four queues and two quote windows", async () => {
+  it("counts the five queues and loads four top-five lists", async () => {
     const counts: Record<string, number> = {
       shopify: 4,
       unpaid: 12,
@@ -57,6 +57,8 @@ describe("orders dashboard data", () => {
       { data: [], count: counts.upcoming, error: null },
       { data: [], count: 0, error: null },
       { data: [], count: 0, error: null },
+      { data: [], count: 0, error: null },
+      { data: [], count: 0, error: null },
     ];
     fromMock.mockImplementation(() => createCountQuery(results[index++]));
 
@@ -69,16 +71,22 @@ describe("orders dashboard data", () => {
     expect(data.notSentToFactory).toBe(7);
     expect(data.pendingQuotes).toBe(3);
     expect(data.upcomingQuotes).toBe(5);
-    expect(fromMock).toHaveBeenCalledTimes(7);
+    expect(fromMock).toHaveBeenCalledTimes(9);
   });
 
-  it("filters Shopify pending and not-sent-to-factory with the shared or-filter", async () => {
+  it("keeps Shopify review filters while only treating explicit false as not sent", async () => {
     const orFilters: string[] = [];
+    const eqFilters: Array<[string, unknown]> = [];
     fromMock.mockImplementation((table: string) => {
       const query = createCountQuery({ data: [], count: 0, error: null });
       const originalOr = query.or as ReturnType<typeof vi.fn>;
       originalOr.mockImplementation((filter: string) => {
         orFilters.push(filter);
+        return query;
+      });
+      const originalEq = query.eq as ReturnType<typeof vi.fn>;
+      originalEq.mockImplementation((column: string, value: unknown) => {
+        eqFilters.push([column, value]);
         return query;
       });
       return query;
@@ -87,11 +95,9 @@ describe("orders dashboard data", () => {
     await fetchOrdersDashboardData(new Date("2026-08-18T04:00:00+08:00"));
 
     expect(orFilters).toContain(
-      "delivery_status.is.null,is_sent_to_factory.is.null,is_sent_to_factory.eq.false",
-    );
-    expect(orFilters).toContain(
       "is_sent_to_factory.is.null,is_sent_to_factory.eq.false",
     );
+    expect(eqFilters).toContainEqual(["is_sent_to_factory", false]);
     expect(
       orFilters.filter((filter) =>
         filter.includes('quote_status.not.in.("Done Deal","Case Closed")'),

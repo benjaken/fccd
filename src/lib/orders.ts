@@ -109,6 +109,8 @@ export type OrderListItem = {
   channelName: string | null;
   districtName: string | null;
   address: string | null;
+  customerNote?: string | null;
+  shippingMethodName?: string | null;
   contactPhone: string | null;
   quantity: number;
   manualTodos: OrderListManualTodo[];
@@ -149,6 +151,10 @@ type OrderRow = {
     shop_domain: string | null;
   } | null;
   channels: { name: string | null } | null;
+  shipping_methods:
+    | { name: string | null; display_name: string | null }
+    | Array<{ name: string | null; display_name: string | null }>
+    | null;
   deliveries: Array<{
     delivery_districts:
       | { name: string | null }
@@ -156,6 +162,7 @@ type OrderRow = {
       | null;
   }> | null;
   shipping_address_snapshot: string | null;
+  customer_note_snapshot: string | null;
   contact_number_a_snapshot: string | null;
   order_lines: Array<{ quantity: number | string | null; is_void: boolean | null }> | null;
 };
@@ -171,6 +178,11 @@ function optionalAmount(value: number | string | null | undefined) {
   return value === null || value === undefined
     ? null
     : Number.parseFloat(String(value));
+}
+
+function orderShippingMethodName(value: OrderRow["shipping_methods"]) {
+  const row = Array.isArray(value) ? value[0] : value;
+  return row?.display_name?.trim() || row?.name?.trim() || null;
 }
 
 function applyStatusFilter<
@@ -228,8 +240,8 @@ export async function fetchOrders({
   const start = (page - 1) * ORDERS_PAGE_SIZE;
   const end = start + ORDERS_PAGE_SIZE - 1;
   const selectedFields: string = canViewFinance
-    ? "id,order_number,customer_name_snapshot,company_name_snapshot,contact_number_a_snapshot,shipping_address_snapshot,delivery_at,delivery_time,factory_date,ship_out_time,delivery_status,is_sent_to_factory,currency,bubble_created_at,created_at,grand_total,outstanding,order_status_legacy_ids,shopify_order_id,shopify_stores(shop_domain),channels(name),deliveries(delivery_districts!district_id(name)),order_lines(quantity,is_void)"
-    : "id,order_number,customer_name_snapshot,company_name_snapshot,contact_number_a_snapshot,shipping_address_snapshot,delivery_at,delivery_time,factory_date,ship_out_time,delivery_status,is_sent_to_factory,currency,bubble_created_at,created_at,order_status_legacy_ids,shopify_order_id,shopify_stores(shop_domain),channels(name),deliveries(delivery_districts!district_id(name)),order_lines(quantity,is_void)";
+    ? "id,order_number,customer_name_snapshot,company_name_snapshot,contact_number_a_snapshot,shipping_address_snapshot,customer_note_snapshot,delivery_at,delivery_time,factory_date,ship_out_time,delivery_status,is_sent_to_factory,currency,bubble_created_at,created_at,grand_total,outstanding,order_status_legacy_ids,shopify_order_id,shopify_stores(shop_domain),channels(name),shipping_methods(name,display_name),deliveries(delivery_districts!district_id(name)),order_lines(quantity,is_void)"
+    : "id,order_number,customer_name_snapshot,company_name_snapshot,contact_number_a_snapshot,shipping_address_snapshot,customer_note_snapshot,delivery_at,delivery_time,factory_date,ship_out_time,delivery_status,is_sent_to_factory,currency,bubble_created_at,created_at,order_status_legacy_ids,shopify_order_id,shopify_stores(shop_domain),channels(name),shipping_methods(name,display_name),deliveries(delivery_districts!district_id(name)),order_lines(quantity,is_void)";
   let catalog: ConfiguredOrderStatus[] | undefined;
   const loadCatalog = async () => {
     catalog ??= await fetchOrderStatusCatalog();
@@ -300,10 +312,9 @@ export async function fetchOrders({
       .is("delivery_status", null)
       .or("is_sent_to_factory.is.null,is_sent_to_factory.eq.false");
   } else if (preset === "not-sent-factory") {
-    // Confirmed orders the factory has not received yet.
-    query = query.or(
-      "is_sent_to_factory.is.null,is_sent_to_factory.eq.false",
-    );
+    // Only an explicit false is actionable. Migrated legacy orders often have
+    // a null flag, which does not mean they still need to be sent.
+    query = query.eq("is_sent_to_factory", false);
   }
 
   query = applyStatusFilter(query, status, preset);
@@ -342,6 +353,8 @@ export async function fetchOrders({
       channelName: row.channels?.name ?? null,
       districtName: deliveryDistrictName(row.deliveries),
       address: row.shipping_address_snapshot,
+      customerNote: row.customer_note_snapshot,
+      shippingMethodName: orderShippingMethodName(row.shipping_methods),
       contactPhone: row.contact_number_a_snapshot,
       quantity: (row.order_lines ?? []).reduce(
         (sum, line) => sum + (line.is_void ? 0 : optionalAmount(line.quantity) ?? 0),

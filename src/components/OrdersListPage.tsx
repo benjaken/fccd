@@ -34,6 +34,8 @@ import {
 import { fetchOrderStatusCatalog, type ConfiguredOrderStatus } from "@/lib/order-statuses";
 import { toggleManualOrderTodo, type OrderListEnhancementFilters } from "@/lib/order-list-enhancement";
 import { OrderListFiltersPanel, OrderManualTodoControl, OrderRowActionMenu, OrderTagBadges, type OrderPrintKind } from "@/components/order-list-enhancement";
+import { getBrandLogoAlt, getDocumentLogoPath } from "@/lib/brand-logo";
+import { formatDeliveryAddress } from "@/lib/delivery-address";
 
 type OrdersLoader = (filters: OrderListFilters) => Promise<OrderListResult>;
 type OrderListConfigLoader = typeof fetchOrderListConfigs;
@@ -708,12 +710,28 @@ export function OrdersListPage({
         footer={<><Button type="button" variant="outline" onClick={() => setPrintPreview(null)}>Close</Button><Button type="button" onClick={() => window.print()}>Print</Button></>}
       >
         {printPreview ? <div className="order-print-preview">
-          <p><strong>Order:</strong> {printPreview.order.orderNumber || t("common.notSet")}</p>
+          <img
+            className="order-print-logo"
+            src={getDocumentLogoPath(
+              printPreview.order.channelName,
+              printPreview.order.shopifyStoreDomain,
+            )}
+            alt={getBrandLogoAlt(
+              printPreview.order.channelName,
+              printPreview.order.shopifyStoreDomain,
+            )}
+          />
+          <p className="order-print-reference"><strong>Order:</strong> {printPreview.order.orderNumber || t("common.notSet")}</p>
           <p><strong>Customer:</strong> {printPreview.order.companyName || printPreview.order.customerName || t("common.notSet")}</p>
-          <p><strong>Address:</strong> {printPreview.order.address || t("common.notSet")}</p>
+          <p><strong>Address:</strong> {formatDeliveryAddress(
+            printPreview.order.address,
+            printPreview.order.shippingMethodName,
+            t("common.notSet"),
+          )}</p>
           <p><strong>Delivery:</strong> {printPreview.order.deliveryAt ? date.format(new Date(printPreview.order.deliveryAt)) : t("common.notSet")}</p>
           <p><strong>Time:</strong> {printPreview.order.deliveryTime || printPreview.order.shipOutTime || t("common.notSet")}</p>
           <p><strong>Quantity:</strong> {(printPreview.order.quantity ?? 0).toLocaleString(i18n.language)}</p>
+          {printPreview.kind === "delivery-note" && printPreview.order.customerNote ? <p><strong>Customer note:</strong> {printPreview.order.customerNote}</p> : null}
           {canViewFinance && printPreview.kind !== "delivery-note" ? <p><strong>Amount:</strong> {formatAmount(printPreview.order.grandTotal, printPreview.order.currency)}</p> : null}
         </div> : null}
       </Modal>

@@ -6,7 +6,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { cn } from "@/lib/utils";
-import { Ban, Copy, FileText, Phone, Printer, ReceiptText, Truck } from "lucide-react";
+import { Ban, Copy, Pencil, Phone, Printer, ReceiptText, Truck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
@@ -152,7 +152,7 @@ export function OrderRowActionMenu({
   const phoneHref = safeTelephoneHref(order.contactPhone);
   return (
     <div className="order-row-actions">
-      <Link to="/quotes" aria-label="報價" title="報價"><FileText /></Link>
+      <Link to={`/orders/${encodeURIComponent(order.id)}/edit`} aria-label="編輯" title="編輯"><Pencil /></Link>
       {phoneHref ? <a href={phoneHref} aria-label="溝通" title="溝通"><Phone /></a> : <span aria-label="溝通資料不可用" title="溝通資料不可用"><Phone /></span>}
       {canCancel ? <button type="button" onClick={onCancel} aria-label="取消訂單" title="取消訂單"><Ban /></button> : null}
       <button type="button" onClick={() => onPreview("delivery-note")} aria-label="送貨單" title="送貨單"><Truck /></button>

@@ -146,7 +146,9 @@ describe("Orders list", () => {
 
     expect(screen.queryByLabelText("Actions for B-1513")).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Details" })).not.toBeInTheDocument();
-    expect(await screen.findByRole("link", { name: "報價" })).toHaveAttribute("href", "/quotes");
+    const editLink = await screen.findByRole("link", { name: "編輯" });
+    expect(editLink).toHaveAttribute("href", "/orders/order-1/edit");
+    expect(editLink.parentElement?.firstElementChild).toBe(editLink);
     expect(screen.getByRole("link", { name: "溝通" })).toHaveAttribute("href", "tel:+85291234567");
     expect(screen.getByRole("link", { name: "複製" })).toHaveAttribute("href", "/orders/new?copyFrom=order-1");
 
@@ -163,11 +165,19 @@ describe("Orders list", () => {
 
   it("opens controlled printable previews without exposing finance when restricted", async () => {
     const user = userEvent.setup();
-    const loadOrders = vi.fn().mockResolvedValue(orderResult);
+    const loadOrders = vi.fn().mockResolvedValue({
+      ...orderResult,
+      items: [{ ...orderResult.items[0], shippingMethodName: "Curbside", customerNote: "Please call on arrival" }],
+    });
     render(<MemoryRouter><OrdersListPage canViewFinance={false} loadOrders={loadOrders} loadListConfig={emptyListConfig} /></MemoryRouter>);
     await user.click(await screen.findByRole("button", { name: "送貨單" }));
     const dialog = screen.getByRole("dialog", { name: "Delivery note preview" });
     expect(within(dialog).getByText("B-1513")).toBeInTheDocument();
+    expect(within(dialog).getByText(/Order:/).closest("p")).toHaveClass(
+      "order-print-reference",
+    );
+    expect(within(dialog).getByText(/Central \* Curbside/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/Please call on arrival/)).toBeInTheDocument();
     expect(within(dialog).queryByText("Amount:")).not.toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: "Print" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "取消訂單" })).toBeInTheDocument();

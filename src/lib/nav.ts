@@ -217,6 +217,12 @@ export const secondaryNav: Record<string, NavItem[]> = {
           permissionKey: "orders.settings",
         },
         {
+          key: "orderShippingFees",
+          to: "/orders/settings/shipping-fees",
+          icon: Truck,
+          permissionKey: "orders.settings",
+        },
+        {
           key: "orderPaymentMethods",
           to: "/orders/settings/payments",
           icon: CircleDollarSign,
