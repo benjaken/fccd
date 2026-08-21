@@ -164,17 +164,18 @@ function CategorySummary({
   packageRows: KitchenProductSalesPackageRow[];
 }) {
   const categories = useMemo(() => {
-    const grouped = new Map<string, { name: string; quantity: number }>();
+    const grouped = new Map<string, { key: string; name: string; quantity: number }>();
     for (const row of rows) {
       const key = `${row.brandName}\u0000${row.categoryName}`;
       const current = grouped.get(key);
       grouped.set(key, {
+        key,
         name: row.categoryName,
         quantity: (current?.quantity ?? 0) + 1,
       });
     }
     return [...grouped.values()]
-      .sort((left, right) => right.quantity - left.quantity || left.name.localeCompare(right.name, "zh-HK"));
+      .sort((left, right) => right.quantity - left.quantity || left.key.localeCompare(right.key, "zh-HK"));
   }, [rows]);
 
   return (
@@ -194,7 +195,7 @@ function CategorySummary({
             </thead>
             <tbody>
               {categories.map((category) => (
-                <tr key={category.name}>
+                <tr key={category.key}>
                   <th scope="row">{category.name}</th>
                   <td>{formatQuantity(category.quantity)}</td>
                 </tr>

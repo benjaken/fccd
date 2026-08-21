@@ -16,7 +16,13 @@ import {
   RawMeatStockReport,
 } from "@/components/PreparedMeatStockReport";
 import { RawMeatAveragePriceReport } from "@/components/RawMeatAveragePriceReport";
+import { RestaurantSalesReportPage } from "@/components/RestaurantSalesReportPage";
+import { RestaurantSalesSalaryReport } from "@/components/RestaurantSalesSalaryReport";
+import { RestaurantSalesCostReport } from "@/components/RestaurantSalesCostReport";
+import { RestaurantPnlReport } from "@/components/RestaurantPnlReport";
+import { RestaurantNewProductReport } from "@/components/RestaurantNewProductReport";
 import { SupplierPurchaseReport } from "@/components/SupplierPurchaseReport";
+import { ShopSalesWorkingHoursReport } from "@/components/ShopSalesWorkingHoursReport";
 import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
@@ -38,6 +44,12 @@ function currentMonthRange() {
 }
 
 const implementedTabs = new Set<ReportTabKey>([
+  "shopSales",
+  "shopSalesWorkingHours",
+  "restaurantSalesSalary",
+  "restaurantSalesCost",
+  "restaurantPnl",
+  "newProducts",
   "shopOrderQuantities",
   "averageSupplyPrice",
   "productionCostPrice",
@@ -146,7 +158,10 @@ export function ReportsPage({ group }: { group: ReportGroup }) {
   };
 
   useEffect(() => {
-    if (group !== "shops") return;
+    if (
+      activeTab !== "shopOrderQuantities" ||
+      !visibleTabs.includes("shopOrderQuantities")
+    ) return;
     let active = true;
     void fetchReportShops()
       .then((data) => {
@@ -167,16 +182,19 @@ export function ReportsPage({ group }: { group: ReportGroup }) {
     return () => {
       active = false;
     };
-  }, [group, t]);
+  }, [activeTab, t, visibleTabs]);
 
   useEffect(() => {
-    if (group !== "shops") return;
+    if (
+      activeTab !== "shopOrderQuantities" ||
+      !visibleTabs.includes("shopOrderQuantities")
+    ) return;
     if (!selectedShop || !startDate || !endDate || startDate > endDate) return;
     const timeout = window.setTimeout(() => {
       void loadReport(startDate, endDate, selectedShop);
     }, 200);
     return () => window.clearTimeout(timeout);
-  }, [group, selectedShop, startDate, endDate]);
+  }, [activeTab, endDate, selectedShop, startDate, visibleTabs]);
 
   const exportCsv = () => {
     const csv = [
@@ -213,7 +231,7 @@ export function ReportsPage({ group }: { group: ReportGroup }) {
           <h1>{t(`reports.groups.${group}.title`)}</h1>
         </div>
       </section>
-      {visibleTabs.length > 1 ? (
+      {visibleTabs.length > 1 || group === "shops" ? (
         <nav className="report-tabs" aria-label={t("reports.navigation")}>
           {visibleTabs.map((tab) => (
             <button
@@ -230,7 +248,19 @@ export function ReportsPage({ group }: { group: ReportGroup }) {
           ))}
         </nav>
       ) : null}
-      {activeTab === "shopOrderQuantities" ? (
+      {activeTab === "shopSales" ? (
+        <RestaurantSalesReportPage embedded />
+      ) : activeTab === "shopSalesWorkingHours" ? (
+        <ShopSalesWorkingHoursReport />
+      ) : activeTab === "restaurantSalesSalary" ? (
+        <RestaurantSalesSalaryReport />
+      ) : activeTab === "restaurantSalesCost" ? (
+        <RestaurantSalesCostReport />
+      ) : activeTab === "restaurantPnl" ? (
+        <RestaurantPnlReport />
+      ) : activeTab === "newProducts" ? (
+        <RestaurantNewProductReport />
+      ) : activeTab === "shopOrderQuantities" ? (
         <>
           <section className="panel report-filter-panel">
         <div className="report-shop-filter">

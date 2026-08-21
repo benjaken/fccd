@@ -16,6 +16,7 @@ import {
 
 import { useAuth } from "@/auth/AuthProvider";
 import { Button } from "@/components/ui/button";
+import { FOOD_CHANNEL_CATERING_LOGO_PATH } from "@/lib/brand-logo";
 import {
   getQuickLoginCredentials,
   shouldAutologinFromUrl,
@@ -153,10 +154,15 @@ export function LoginPage() {
             href="/"
             aria-label={t("brand.fullName")}
           >
-            <span className="login-brand-mark">FC</span>
-            <span>
+            <img
+              className="login-brand-logo"
+              src={FOOD_CHANNEL_CATERING_LOGO_PATH}
+              alt=""
+              aria-hidden="true"
+            />
+            <span className="sr-only">
               <strong>{t("brand.name")}</strong>
-              <small>{t("brand.system")}</small>
+              <small>{t("brand.fullName")}</small>
             </span>
           </a>
 

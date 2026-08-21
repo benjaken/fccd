@@ -58,9 +58,11 @@ function operationalStatusLabel(
 export function KitchenCalendarPage({
   loadOrders = fetchKitchenCalendarOrders,
   now,
+  displayMode = "standard",
 }: {
   loadOrders?: KitchenCalendarLoader;
   now?: Date;
+  displayMode?: "standard" | "factory";
 }) {
   const { t, i18n } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -78,6 +80,7 @@ export function KitchenCalendarPage({
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const isFactoryDisplay = displayMode === "factory";
 
   const days = useMemo(
     () => buildKitchenCalendarGrid(year, month, todayKey),
@@ -164,40 +167,49 @@ export function KitchenCalendarPage({
   const selectedOrders = selectedDay ? (ordersByDay.get(selectedDay) ?? []) : [];
 
   return (
-    <section className="kitchen-calendar-page">
-      <header className="page-heading kitchen-calendar-heading">
-        <div>
-          <span className="eyebrow">{t("orders.eyebrow")}</span>
-          <h1>{t("navigation.productionCalendar")}</h1>
-        </div>
-        <ul
-          className="kitchen-calendar-legend"
-          aria-label={t("kitchenCalendar.legend")}
-        >
-          <li>
-            <span className="kitchen-calendar-dot amber" aria-hidden="true" />
-            {t("kitchenCalendar.notSentToFactory")}
-          </li>
-          <li>
-            <span className="kitchen-calendar-dot red" aria-hidden="true" />
-            {t("kitchenCalendar.unpaid")}
-          </li>
-        </ul>
-      </header>
+    <section
+      className={cn(
+        "kitchen-calendar-page",
+        isFactoryDisplay && "is-factory-display",
+      )}
+    >
+      {isFactoryDisplay ? null : (
+        <header className="page-heading kitchen-calendar-heading">
+          <div>
+            <span className="eyebrow">{t("orders.eyebrow")}</span>
+            <h1>{t("navigation.productionCalendar")}</h1>
+          </div>
+          <ul
+            className="kitchen-calendar-legend"
+            aria-label={t("kitchenCalendar.legend")}
+          >
+            <li>
+              <span className="kitchen-calendar-dot amber" aria-hidden="true" />
+              {t("kitchenCalendar.notSentToFactory")}
+            </li>
+            <li>
+              <span className="kitchen-calendar-dot red" aria-hidden="true" />
+              {t("kitchenCalendar.unpaid")}
+            </li>
+          </ul>
+        </header>
+      )}
 
       <article className="panel kitchen-calendar-panel">
         <header className="kitchen-calendar-toolbar">
           <div className="kitchen-calendar-nav">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                setMonth({ year: todayParts.year, month: todayParts.month })
-              }
-            >
-              {t("common.today")}
-            </Button>
+            {isFactoryDisplay ? null : (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  setMonth({ year: todayParts.year, month: todayParts.month })
+                }
+              >
+                {t("common.today")}
+              </Button>
+            )}
             <Button
               type="button"
               variant="ghost"
@@ -253,8 +265,14 @@ export function KitchenCalendarPage({
               </div>
             ))}
             {days.map((day) => {
-              const dayOrders = ordersByDay.get(day.key) ?? [];
-              const visible = dayOrders.slice(0, KITCHEN_CALENDAR_VISIBLE_PER_DAY);
+              const dayOrders =
+                isFactoryDisplay && !day.inMonth
+                  ? []
+                  : (ordersByDay.get(day.key) ?? []);
+              const visibleLimit = isFactoryDisplay
+                ? dayOrders.length
+                : KITCHEN_CALENDAR_VISIBLE_PER_DAY;
+              const visible = dayOrders.slice(0, visibleLimit);
               const hidden = dayOrders.length - visible.length;
               return (
                 <div
@@ -265,6 +283,16 @@ export function KitchenCalendarPage({
                   )}
                   key={day.key}
                   role="gridcell"
+                  style={
+                    isFactoryDisplay
+                      ? {
+                          minHeight: `${Math.max(
+                            120,
+                            56 + dayOrders.length * 41,
+                          )}px`,
+                        }
+                      : undefined
+                  }
                   aria-selected={day.isToday}
                   aria-current={day.isToday ? "date" : undefined}
                 >
@@ -291,7 +319,29 @@ export function KitchenCalendarPage({
                           const tone = kitchenCalendarTone(order);
                           const label = orderLabel(order, t("common.notSet"));
                           const statusText = operationalStatusLabel(order, t);
-                          return (
+                          const eventContent = (
+                            <>
+                              <span
+                                className={cn("kitchen-calendar-dot", tone)}
+                                aria-hidden="true"
+                              />
+                              <span className="kitchen-calendar-event-copy">
+                                {label}
+                              </span>
+                            </>
+                          );
+                          return isFactoryDisplay ? (
+                            <div
+                              className={cn(
+                                "kitchen-calendar-event",
+                                isPendingShopifyOrder(order) && "is-shopify",
+                              )}
+                              key={order.id}
+                              title={`${label} · ${statusText}`}
+                            >
+                              {eventContent}
+                            </div>
+                          ) : (
                             <Link
                               className={cn(
                                 "kitchen-calendar-event",
@@ -302,13 +352,7 @@ export function KitchenCalendarPage({
                               title={`${label} · ${statusText}`}
                               aria-label={`${t("orders.open")} ${label} ${statusText}`}
                             >
-                              <span
-                                className={cn("kitchen-calendar-dot", tone)}
-                                aria-hidden="true"
-                              />
-                              <span className="kitchen-calendar-event-copy">
-                                {label}
-                              </span>
+                              {eventContent}
                             </Link>
                           );
                         })}
@@ -348,35 +392,49 @@ export function KitchenCalendarPage({
               const tone = kitchenCalendarTone(order);
               const label = orderLabel(order, t("common.notSet"));
               const statusText = operationalStatusLabel(order, t);
+              const dayContent = (
+                <>
+                  <span
+                    className={cn("kitchen-calendar-dot", tone)}
+                    aria-hidden="true"
+                  />
+                  <span className="kitchen-calendar-day-copy">
+                    <strong>{order.orderNumber || t("common.notSet")}</strong>
+                    <small>
+                      {order.customerName ||
+                        order.companyName ||
+                        t("common.notSet")}
+                      {order.districtName ? ` - ${order.districtName}` : ""}
+                      {isPendingShopifyOrder(order) && order.deliveryTime
+                        ? ` (${order.deliveryTime})`
+                        : ""}
+                    </small>
+                  </span>
+                </>
+              );
               return (
                 <li key={order.id}>
-                  <Link
-                    className={cn(
-                      "kitchen-calendar-day-item",
-                      isPendingShopifyOrder(order) && "is-shopify",
-                    )}
-                    to={kitchenCalendarOrderHref(order.id, monthParam)}
-                    aria-label={`${t("orders.open")} ${label} ${statusText}`}
-                  >
-                    <span
-                      className={cn("kitchen-calendar-dot", tone)}
-                      aria-hidden="true"
-                    />
-                    <span className="kitchen-calendar-day-copy">
-                      <strong>{order.orderNumber || t("common.notSet")}</strong>
-                      <small>
-                        {order.customerName ||
-                          order.companyName ||
-                          t("common.notSet")}
-                        {order.districtName
-                          ? ` - ${order.districtName}`
-                          : ""}
-                        {isPendingShopifyOrder(order) && order.deliveryTime
-                          ? ` (${order.deliveryTime})`
-                          : ""}
-                      </small>
-                    </span>
-                  </Link>
+                  {isFactoryDisplay ? (
+                    <div
+                      className={cn(
+                        "kitchen-calendar-day-item",
+                        isPendingShopifyOrder(order) && "is-shopify",
+                      )}
+                    >
+                      {dayContent}
+                    </div>
+                  ) : (
+                    <Link
+                      className={cn(
+                        "kitchen-calendar-day-item",
+                        isPendingShopifyOrder(order) && "is-shopify",
+                      )}
+                      to={kitchenCalendarOrderHref(order.id, monthParam)}
+                      aria-label={`${t("orders.open")} ${label} ${statusText}`}
+                    >
+                      {dayContent}
+                    </Link>
+                  )}
                 </li>
               );
             })}

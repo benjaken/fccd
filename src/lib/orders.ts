@@ -8,6 +8,12 @@ import {
   type ConfiguredOrderStatus,
   type OrderStatusView,
 } from "@/lib/order-statuses";
+import {
+  fetchManualTodosForOrders,
+  findOrdersWithManualTodos,
+  type OrderListEnhancementFilters,
+  type OrderListManualTodo,
+} from "@/lib/order-list-enhancement";
 
 export const ORDERS_PAGE_SIZE = 15;
 
@@ -100,6 +106,12 @@ export type OrderListItem = {
   statuses: OrderStatusView[];
   shopifyOrderId: number | null;
   shopifyStoreDomain: string | null;
+  channelName: string | null;
+  districtName: string | null;
+  address: string | null;
+  contactPhone: string | null;
+  quantity: number;
+  manualTodos: OrderListManualTodo[];
 };
 
 export type OrderListResult = {
@@ -113,7 +125,7 @@ export type OrderListFilters = {
   status: OrderStatusFilter;
   preset: OrderPreset;
   canViewFinance: boolean;
-};
+} & OrderListEnhancementFilters;
 
 type OrderRow = {
   id: string;
@@ -136,6 +148,16 @@ type OrderRow = {
   shopify_stores: {
     shop_domain: string | null;
   } | null;
+  channels: { name: string | null } | null;
+  deliveries: Array<{
+    delivery_districts:
+      | { name: string | null }
+      | Array<{ name: string | null }>
+      | null;
+  }> | null;
+  shipping_address_snapshot: string | null;
+  contact_number_a_snapshot: string | null;
+  order_lines: Array<{ quantity: number | string | null; is_void: boolean | null }> | null;
 };
 
 function safeSearchTerm(value: string) {
@@ -195,12 +217,19 @@ export async function fetchOrders({
   status,
   preset,
   canViewFinance,
+  deliveryDate,
+  deliveryStart,
+  deliveryEnd,
+  brandIds = [],
+  statusTagIds = [],
+  manualTodoKeys = [],
+  deliverySort,
 }: OrderListFilters): Promise<OrderListResult> {
   const start = (page - 1) * ORDERS_PAGE_SIZE;
   const end = start + ORDERS_PAGE_SIZE - 1;
   const selectedFields: string = canViewFinance
-    ? "id,order_number,customer_name_snapshot,company_name_snapshot,delivery_at,delivery_time,factory_date,ship_out_time,delivery_status,is_sent_to_factory,currency,bubble_created_at,created_at,grand_total,outstanding,order_status_legacy_ids,shopify_order_id,shopify_stores(shop_domain)"
-    : "id,order_number,customer_name_snapshot,company_name_snapshot,delivery_at,delivery_time,factory_date,ship_out_time,delivery_status,is_sent_to_factory,currency,bubble_created_at,created_at,order_status_legacy_ids,shopify_order_id,shopify_stores(shop_domain)";
+    ? "id,order_number,customer_name_snapshot,company_name_snapshot,contact_number_a_snapshot,shipping_address_snapshot,delivery_at,delivery_time,factory_date,ship_out_time,delivery_status,is_sent_to_factory,currency,bubble_created_at,created_at,grand_total,outstanding,order_status_legacy_ids,shopify_order_id,shopify_stores(shop_domain),channels(name),deliveries(delivery_districts!district_id(name)),order_lines(quantity,is_void)"
+    : "id,order_number,customer_name_snapshot,company_name_snapshot,contact_number_a_snapshot,shipping_address_snapshot,delivery_at,delivery_time,factory_date,ship_out_time,delivery_status,is_sent_to_factory,currency,bubble_created_at,created_at,order_status_legacy_ids,shopify_order_id,shopify_stores(shop_domain),channels(name),deliveries(delivery_districts!district_id(name)),order_lines(quantity,is_void)";
   let catalog: ConfiguredOrderStatus[] | undefined;
   const loadCatalog = async () => {
     catalog ??= await fetchOrderStatusCatalog();
@@ -213,6 +242,7 @@ export async function fetchOrders({
     .eq("document_type", preset === "pending" ? "unconfirmed" : "order")
     .is("archived_at", null)
     // Bubble Created Date (fallback to DB created_at).
+    .order("delivery_at", { ascending: deliverySort === "asc", nullsFirst: false })
     .order("bubble_created_at", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false })
     .range(start, end);
@@ -220,8 +250,26 @@ export async function fetchOrders({
   const term = safeSearchTerm(search);
   if (term) {
     query = query.or(
-      `order_number.ilike.%${term}%,customer_name_snapshot.ilike.%${term}%,company_name_snapshot.ilike.%${term}%`,
+      `order_number.ilike.%${term}%,customer_name_snapshot.ilike.%${term}%,company_name_snapshot.ilike.%${term}%,contact_number_a_snapshot.ilike.%${term}%,shipping_address_snapshot.ilike.%${term}%`,
     );
+  }
+
+  if (brandIds.length) query = query.in("channel_id", brandIds);
+  if (statusTagIds.length) query = query.contains("order_status_legacy_ids", statusTagIds);
+  if (deliveryDate) {
+    query = query
+      .gte("delivery_at", `${deliveryDate}T00:00:00+08:00`)
+      .lt("delivery_at", `${deliveryDate}T00:00:00+08:00`.replace(deliveryDate, nextDate(deliveryDate)));
+  } else if (deliveryStart && deliveryEnd) {
+    query = query
+      .gte("delivery_at", `${deliveryStart}T00:00:00+08:00`)
+      .lt("delivery_at", `${nextDate(deliveryEnd)}T00:00:00+08:00`);
+  }
+
+  const manualTodoOrderIds = await findOrdersWithManualTodos(manualTodoKeys);
+  if (manualTodoOrderIds !== null) {
+    if (!manualTodoOrderIds.length) return { items: [], total: 0 };
+    query = query.in("id", manualTodoOrderIds);
   }
 
   if (isOrderTagQueuePreset(preset)) {
@@ -266,8 +314,14 @@ export async function fetchOrders({
   ]);
   if (error) throw error;
 
+  const rows = (data ?? []) as unknown as OrderRow[];
+  const manualTodos = await fetchManualTodosForOrders(rows.map((row) => row.id));
+  const todosByOrder = new Map<string, OrderListManualTodo[]>();
+  for (const todo of manualTodos) {
+    todosByOrder.set(todo.orderId, [...(todosByOrder.get(todo.orderId) ?? []), todo]);
+  }
   return {
-    items: ((data ?? []) as unknown as OrderRow[]).map((row) => ({
+    items: rows.map((row) => ({
       id: row.id,
       orderNumber: row.order_number,
       customerName: row.customer_name_snapshot,
@@ -285,7 +339,38 @@ export async function fetchOrders({
       statuses: resolveOrderStatuses(row.order_status_legacy_ids, resolvedCatalog),
       shopifyOrderId: row.shopify_order_id,
       shopifyStoreDomain: row.shopify_stores?.shop_domain ?? null,
+      channelName: row.channels?.name ?? null,
+      districtName: deliveryDistrictName(row.deliveries),
+      address: row.shipping_address_snapshot,
+      contactPhone: row.contact_number_a_snapshot,
+      quantity: (row.order_lines ?? []).reduce(
+        (sum, line) => sum + (line.is_void ? 0 : optionalAmount(line.quantity) ?? 0),
+        0,
+      ),
+      manualTodos: todosByOrder.get(row.id) ?? [],
     })),
     total: count ?? 0,
   };
+}
+
+function deliveryDistrictName(deliveries: OrderRow["deliveries"]) {
+  const district = deliveries?.[0]?.delivery_districts;
+  const value = Array.isArray(district) ? district[0]?.name : district?.name;
+  return value?.trim() || null;
+}
+
+
+/** A cancellation request may only begin while dispatch is awaiting acceptance. */
+export function isOrderAwaitingAcceptance(
+  deliveryStatus: string | null | undefined,
+) {
+  const status = (deliveryStatus ?? "").trim();
+  return status === "\u5f85\u63a5\u55ae" && !status.includes("\u53d6\u6d88");
+}
+
+function nextDate(date: string) {
+  const [year, month, day] = date.split("-").map(Number);
+  return new Date(Date.UTC(year, (month ?? 1) - 1, (day ?? 1) + 1))
+    .toISOString()
+    .slice(0, 10);
 }

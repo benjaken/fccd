@@ -43,6 +43,7 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
     pageKey: "orders.settings.sale_partners",
   },
   { prefix: "/orders/settings", pageKey: "orders.settings" },
+  { prefix: "/quotes/pdf-pages", pageKey: "quotes.pdf_pages" },
   { prefix: "/quotes/customers", pageKey: "quotes.customers" },
   { prefix: "/quotes/follow-up", pageKey: "quotes.follow_up" },
   { prefix: "/quotes/pending", pageKey: "quotes.pending" },
@@ -116,6 +117,7 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
   { prefix: "/restaurant/settings/service-periods", pageKey: "restaurant.settings.service_periods" },
   { prefix: "/restaurant/settings/payment-methods", pageKey: "restaurant.settings.payment_methods" },
   { prefix: "/restaurant/settings/delivery-platforms", pageKey: "restaurant.settings.delivery_platforms" },
+  { prefix: "/restaurant/settings/new-products", pageKey: "restaurant.settings.new_products" },
   { prefix: "/restaurant/settings/holidays", pageKey: "restaurant.settings.holidays" },
   { prefix: "/restaurant/settings/roster-times", pageKey: "restaurant.settings.roster_times" },
   { prefix: "/restaurant/settings/monthly-pnl-cost-categories", pageKey: "restaurant.settings.monthly_pnl_cost_categories" },
@@ -127,6 +129,23 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
   { prefix: "/reports/kitchen", pageKey: "kitchen.cost_input" },
   { prefix: "/reports/frozen-meat", pageKey: "reports.frozen_meat" },
   { prefix: "/reports/shops", pageKey: "reports.shops" },
+  { prefix: "/reports/tabs/shop-sales", pageKey: "reports.shop_sales" },
+  {
+    prefix: "/reports/tabs/shop-sales-working-hours",
+    pageKey: "reports.shop_sales_working_hours",
+  },
+  {
+    prefix: "/reports/tabs/restaurant-sales-salary",
+    pageKey: "reports.restaurant_sales_salary",
+  },
+  {
+    prefix: "/reports/tabs/restaurant-pnl",
+    pageKey: "reports.restaurant_pnl",
+  },
+  {
+    prefix: "/reports/tabs/new-products",
+    pageKey: "reports.new_products",
+  },
   {
     prefix: "/reports/tabs/shop-order-quantities",
     pageKey: "reports.shop_order_quantities",
@@ -165,6 +184,12 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
 ];
 
 export const REPORT_TAB_PERMISSION_KEYS = {
+  shopSales: "reports.shop_sales",
+  shopSalesWorkingHours: "reports.shop_sales_working_hours",
+  restaurantSalesSalary: "reports.restaurant_sales_salary",
+  restaurantSalesCost: "reports.restaurant_sales_cost",
+  restaurantPnl: "reports.restaurant_pnl",
+  newProducts: "reports.new_products",
   shopOrderQuantities: "reports.shop_order_quantities",
   averageSupplyPrice: "reports.average_supply_price",
   productionCostPrice: "reports.production_cost_price",
@@ -191,6 +216,7 @@ export const REPORT_GROUP_ROUTES = {
 
 export const REPORT_GROUP_TABS = {
   frozenMeat: [
+    "shopOrderQuantities",
     "averageSupplyPrice",
     "productionCostPrice",
     "rawMeatAveragePrice",
@@ -198,7 +224,7 @@ export const REPORT_GROUP_TABS = {
     "rawMeatStock",
     "supplierPurchase",
   ],
-  shops: ["shopOrderQuantities"],
+  shops: ["shopSales", "shopSalesWorkingHours", "restaurantSalesSalary", "restaurantSalesCost", "restaurantPnl", "newProducts"],
 } as const satisfies Record<ReportGroup, readonly ReportTabKey[]>;
 
 function tabPermissionKeys(tabs: readonly ReportTabKey[]) {

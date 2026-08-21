@@ -8,6 +8,8 @@ import {
 export type ReadOnlyOrderDetail = {
   id: string;
   documentType: "order" | "quote";
+  channelId?: string | null;
+  channelName?: string | null;
   orderNumber: string | null;
   customerName: string | null;
   companyName: string | null;
@@ -94,7 +96,7 @@ export type OrderDetailResult = {
 };
 
 const fields =
-  "id,document_type,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,shipping_address_snapshot,customer_note_snapshot,quote_status,quote_description_snapshot,delivery_terms_snapshot,delivery_at,ship_out_time,delivery_status,is_sent_to_factory,factory_date,factory_packing_note,currency,discount_amount,shipping_fee,grand_total,outstanding,updated_at,order_status_legacy_ids";
+  "id,document_type,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,shipping_address_snapshot,customer_note_snapshot,quote_status,quote_description_snapshot,delivery_terms_snapshot,delivery_at,ship_out_time,delivery_status,is_sent_to_factory,factory_date,factory_packing_note,currency,discount_amount,shipping_fee,grand_total,outstanding,updated_at,order_status_legacy_ids,channels(id,name)";
 
 function decimal(value: string | number | null) {
   return value === null ? null : Number.parseFloat(String(value));
@@ -116,6 +118,13 @@ function relatedCatalogText(
   const row = Array.isArray(relation) ? relation[0] : relation;
   return row && typeof row === "object" && field in row
     ? firstNonEmptyText(row[field])
+    : null;
+}
+
+function relatedCatalogId(relation: unknown): string | null {
+  const row = Array.isArray(relation) ? relation[0] : relation;
+  return row && typeof row === "object" && "id" in row
+    ? firstNonEmptyText(row.id)
     : null;
 }
 
@@ -233,6 +242,8 @@ export async function fetchOrderDetail(
   const order = {
     id: data.id,
     documentType: data.document_type as "order" | "quote",
+    channelId: relatedCatalogId(data.channels),
+    channelName: relatedCatalogText(data.channels, "name"),
     orderNumber: data.order_number,
     customerName: data.customer_name_snapshot,
     companyName: data.company_name_snapshot,

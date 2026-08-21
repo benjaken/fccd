@@ -94,6 +94,9 @@ describe("Primary navigation section matching", () => {
     expect(pageAccessKey("/reports/kitchen")).toBe("kitchen.cost_input");
     expect(pageAccessKey("/reports/frozen-meat")).toBe("reports.frozen_meat");
     expect(pageAccessKey("/reports/shops")).toBe("reports.shops");
+    expect(pageAccessKey("/reports/tabs/shop-sales")).toBe(
+      "reports.shop_sales",
+    );
     expect(pageAccessKey("/finance/cost-input")).toBe("kitchen.cost_input");
     expect(pageAccessKey("/reports/tabs/shop-order-quantities")).toBe(
       "reports.shop_order_quantities",
@@ -196,7 +199,7 @@ describe("Primary navigation section matching", () => {
     expect(navSource).toContain('to: "/settings/order-lists"');
   });
 
-  it("nests frozen meat and shop pages under the reports sidebar item", () => {
+  it("nests the frozen meat page under the reports sidebar item", () => {
     const appSource = readFileSync(
       path.resolve(process.cwd(), "src/App.tsx"),
       "utf8",

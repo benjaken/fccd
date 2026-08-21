@@ -43,6 +43,7 @@ import {
   usePageAccess,
 } from "@/auth/use-page-access";
 import { LoginPage } from "@/components/LoginPage";
+import { FOOD_CHANNEL_CATERING_LOGO_PATH } from "@/lib/brand-logo";
 import { MigrationWorkspace } from "@/components/MigrationWorkspace";
 import { FollowUpPage } from "@/components/FollowUpPage";
 import { OrdersListPage } from "@/components/OrdersListPage";
@@ -55,6 +56,9 @@ import { ProfilePage } from "@/components/ProfilePage";
 import { ReportsPage } from "@/components/ReportsPage";
 import { DataInputProgressPage } from "@/components/DataInputProgressPage";
 import { QuotesListPage } from "@/components/QuotesListPage";
+import { QuoteEditorPage } from "@/components/QuoteEditorPage";
+import { QuotePdfEditorPage } from "@/components/QuotePdfEditorPage";
+import { QuotePdfPagesSettingsPage } from "@/components/QuotePdfPagesSettingsPage";
 import { QuoteCustomersPage } from "@/components/QuoteCustomersPage";
 import { ProductsListPage } from "@/components/ProductsListPage";
 import { ProductDetailPage } from "@/components/ProductDetailPage";
@@ -65,6 +69,10 @@ import { MeatDeliveryNotesPage } from "@/components/MeatDeliveryNotesPage";
 import { DeliveryListPage } from "@/components/DeliveryListPage";
 import { AssignDriverPage } from "@/components/AssignDriverPage";
 import { FactoryBoardPage } from "@/components/FactoryBoardPage";
+import { FactoryOrderPage } from "@/components/FactoryOrderPage";
+import { FactoryMeatDeliveryNotePage } from "@/components/FactoryMeatDeliveryNotePage";
+import { FactoryMultiDayReportPage } from "@/components/FactoryMultiDayReportPage";
+import { FactoryProductionCalendarPage } from "@/components/FactoryProductionCalendarPage";
 import { DriverDeliveryPage } from "@/components/DriverDeliveryPage";
 import { RawMeatInventoryCalcPage } from "@/components/RawMeatInventoryCalcPage";
 import { SpiceUsagePage } from "@/components/SpiceUsagePage";
@@ -86,6 +94,7 @@ import { KitchenAdvertisingPerformanceReportPage } from "@/components/KitchenAdv
 import { SuppliersPage } from "@/components/SuppliersPage";
 import { IngredientsListPage } from "@/components/IngredientsListPage";
 import { RestaurantStaffPage } from "@/components/RestaurantStaffPage";
+import { RestaurantSalesReportPage } from "@/components/RestaurantSalesReportPage";
 import { RestaurantInventoryItemsPage } from "@/components/RestaurantInventoryItemsPage";
 import { RestaurantSettingsPage } from "@/components/RestaurantSettingsPage";
 import { RestaurantDepartmentSettingsPage } from "@/components/RestaurantDepartmentSettingsPage";
@@ -148,13 +157,12 @@ function Brand() {
 
   return (
     <Link className="brand" to="/" aria-label={t("brand.name")}>
-      <span className="brand-mark" aria-hidden="true">
-        <span>FC</span>
-      </span>
-      <span className="brand-copy">
-        <strong>{t("brand.name")}</strong>
-        <small>{t("brand.system")}</small>
-      </span>
+      <img
+        className="brand-logo"
+        src={FOOD_CHANNEL_CATERING_LOGO_PATH}
+        alt=""
+        aria-hidden="true"
+      />
     </Link>
   );
 }
@@ -721,10 +729,24 @@ function OperationsShell() {
                 element={<QuoteCustomersPage />}
               />
               <Route
-                path="/quotes/:id"
+                path="/quotes/pdf-pages"
                 element={
-                  <OrderDetailPage documentType="quote" canViewFinance={canViewFinance} />
+                  pageAccess.canAccess("quotes.pdf_pages") ? (
+                    <QuotePdfPagesSettingsPage />
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
                 }
+              />
+              <Route path="/quotes/new" element={<QuoteEditorPage />} />
+              <Route path="/quotes/:id/edit" element={<QuoteEditorPage />} />
+              <Route
+                path="/quotes/:id/pdf"
+                element={<QuotePdfEditorPage />}
+              />
+              <Route
+                path="/quotes/:id"
+                element={<QuoteEditorPage combined readOnly />}
               />
               <Route path="/products" element={<ProductsListPage canEdit={canEditProducts} />} />
               <Route
@@ -873,6 +895,10 @@ function OperationsShell() {
                     <SettingsAccessDenied />
                   )
                 }
+              />
+              <Route
+                path="/restaurant/reports"
+                element={pageAccess.canAccess("restaurant.reports") ? <RestaurantSalesReportPage /> : <SettingsAccessDenied />}
               />
               <Route
                 path="/restaurant/staff"
@@ -1770,6 +1796,44 @@ function FactoryWorkspace() {
   return <FactoryBoardPage />;
 }
 
+function FactoryOrderWorkspace() {
+  const { session, loading, profileLoading } = useAuth();
+
+  if (loading || (session && profileLoading)) {
+    return <AuthLoadingScreen />;
+  }
+
+  if (!session) {
+    return <LoginPage />;
+  }
+
+  return <FactoryOrderPage />;
+}
+
+function FactoryMeatDeliveryNoteWorkspace() {
+  const { session, loading, profileLoading } = useAuth();
+
+  if (loading || (session && profileLoading)) return <AuthLoadingScreen />;
+  if (!session) return <LoginPage />;
+  return <FactoryMeatDeliveryNotePage />;
+}
+
+function FactoryMultiDayWorkspace() {
+  const { session, loading, profileLoading } = useAuth();
+
+  if (loading || (session && profileLoading)) return <AuthLoadingScreen />;
+  if (!session) return <LoginPage />;
+  return <FactoryMultiDayReportPage />;
+}
+
+function FactoryProductionCalendarWorkspace() {
+  const { session, loading, profileLoading } = useAuth();
+
+  if (loading || (session && profileLoading)) return <AuthLoadingScreen />;
+  if (!session) return <LoginPage />;
+  return <FactoryProductionCalendarPage />;
+}
+
 function DriverDeliveryWorkspace() {
   return <DriverDeliveryPage />;
 }
@@ -1791,6 +1855,38 @@ function AuthGate() {
 function App() {
   return (
     <Routes>
+      <Route
+        path="/factory/multi-day-menu"
+        element={
+          <AuthProvider>
+            <FactoryMultiDayWorkspace />
+          </AuthProvider>
+        }
+      />
+      <Route
+        path="/factory/meat-delivery-note/:meatOrderId"
+        element={
+          <AuthProvider>
+            <FactoryMeatDeliveryNoteWorkspace />
+          </AuthProvider>
+        }
+      />
+      <Route
+        path="/factory/order/:deliveryId"
+        element={
+          <AuthProvider>
+            <FactoryOrderWorkspace />
+          </AuthProvider>
+        }
+      />
+      <Route
+        path="/factory/production-calendar"
+        element={
+          <AuthProvider>
+            <FactoryProductionCalendarWorkspace />
+          </AuthProvider>
+        }
+      />
       <Route
         path="/factory"
         element={

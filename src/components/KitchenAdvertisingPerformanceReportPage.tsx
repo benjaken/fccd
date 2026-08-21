@@ -250,7 +250,7 @@ function AdvertisingPerformanceChart({
           return (
             <g key={summary.year}>
               <rect
-                className={`kitchen-advertising-performance-chart-bar sales${selected?.year === summary.year && selected.kind === "sales" ? " is-selected" : ""}`}
+                className={`kitchen-advertising-performance-chart-bar sales tone-${index % 5}${selected?.year === summary.year && selected.kind === "sales" ? " is-selected" : ""}`}
                 x={center - barWidth - 1}
                 y={salesY}
                 width={barWidth}
@@ -265,7 +265,7 @@ function AdvertisingPerformanceChart({
                 <title>{`${summary.year}年銷售 ${formatMoney(summary.totalSales)}`}</title>
               </rect>
               <rect
-                className={`kitchen-advertising-performance-chart-bar advertising${selected?.year === summary.year && selected.kind === "advertising" ? " is-selected" : ""}`}
+                className={`kitchen-advertising-performance-chart-bar advertising tone-${index % 5}${selected?.year === summary.year && selected.kind === "advertising" ? " is-selected" : ""}`}
                 x={center + 1}
                 y={advertisingY}
                 width={barWidth}

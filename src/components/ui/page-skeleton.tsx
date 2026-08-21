@@ -16,7 +16,9 @@ type PageSkeletonProps = {
   variant?: PageSkeletonVariant;
   cards?: 2 | 3;
   analysis?: boolean;
+  showSummary?: boolean;
   compact?: boolean;
+  tableRows?: number;
 };
 
 const tableColumns = [
@@ -292,18 +294,24 @@ function tableSkeleton() {
   );
 }
 
-function reportSkeleton(analysis: boolean) {
+function reportSkeleton(
+  analysis: boolean,
+  showSummary: boolean,
+  tableRows: number,
+) {
   return (
     <>
-      <section className="shop-order-summary">
-        {Array.from({ length: 4 }, (_, index) => (
-          <article className="panel content-skeleton-summary" key={index}>
-            {bone("content-skeleton-label")}
-            {bone("content-skeleton-number")}
-            {bone("content-skeleton-copy")}
-          </article>
-        ))}
-      </section>
+      {showSummary ? (
+        <section className="shop-order-summary">
+          {Array.from({ length: 4 }, (_, index) => (
+            <article className="panel content-skeleton-summary" key={index}>
+              {bone("content-skeleton-label")}
+              {bone("content-skeleton-number")}
+              {bone("content-skeleton-copy")}
+            </article>
+          ))}
+        </section>
+      ) : null}
       {analysis ? (
         <section className="meat-price-analysis-grid">
           <article className="panel content-skeleton-analysis">
@@ -324,7 +332,7 @@ function reportSkeleton(analysis: boolean) {
         <div className="panel-header">
           {bone("content-skeleton-section-title")}
         </div>
-        {table(5, 10)}
+        {table(5, tableRows)}
       </article>
     </>
   );
@@ -362,7 +370,9 @@ export function PageSkeleton({
   variant = "permission",
   cards = 3,
   analysis = false,
+  showSummary = true,
   compact = false,
+  tableRows = 10,
 }: PageSkeletonProps) {
   const content =
     variant === "detail"
@@ -376,7 +386,7 @@ export function PageSkeleton({
             : variant === "table"
               ? tableSkeleton()
               : variant === "report"
-                ? reportSkeleton(analysis)
+                ? reportSkeleton(analysis, showSummary, tableRows)
                 : variant === "analysis"
                   ? analysisSkeleton()
                   : permissionSkeleton();
@@ -391,6 +401,9 @@ export function PageSkeleton({
         variant === "queue" && "follow-up-page content-page-skeleton",
         variant === "profile" && "profile-page content-page-skeleton",
         variant === "report" && "report-content-skeleton",
+        variant === "report" &&
+          !showSummary &&
+          "report-content-skeleton-table-only",
         variant === "analysis" &&
           "relationship-report content-analysis-skeleton",
       )}
