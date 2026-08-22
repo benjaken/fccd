@@ -3,6 +3,7 @@ import {
   collectLineMenuRemarkText,
   extractDeliveryFromRemark,
   extractOptionRemark,
+  filterLegacyPaymentDuplicates,
   mapShopifyOrder,
   mapShopifyTransaction,
   normalizeNameForMatch,
@@ -10,6 +11,8 @@ import {
   parseMenuRemark,
   pickCatalogMatchByName,
   resolveAliasSku,
+  shopifyFinancialStatus,
+  shopifyOutstanding,
   shopifyTransactionLegacyId,
   stripSkuSuffix,
 } from "../supabase/functions/shopify-order-sync/map.ts";
@@ -140,6 +143,52 @@ describe("shopify transaction mapping", () => {
   });
 });
 
+describe("Shopify payment duplicate prevention", () => {
+  const shopify = (id: string, amount: number, paymentAt: string) => ({
+    legacy_id: `shopify:test:1:txn:${id}`,
+    order_id: "order-1",
+    amount,
+    currency: "HKD",
+    payment_at: paymentAt,
+  });
+  const bubble = (id: string, amount: number, paymentAt: string) => ({
+    legacy_id: `bubble-${id}`,
+    order_id: "order-1",
+    amount,
+    currency: "HKD",
+    payment_at: paymentAt,
+  });
+
+  it("does not add a Shopify receipt already imported from Bubble", () => {
+    expect(filterLegacyPaymentDuplicates(
+      [shopify("1", 7440, "2026-08-04T08:02:15.000Z")],
+      [bubble("1", 7440, "2026-08-03T16:00:00.000Z")],
+    )).toEqual([]);
+  });
+
+  it("keeps different amounts, currencies, dates, and orders", () => {
+    const rows = [
+      shopify("amount", 7441, "2026-08-04T08:02:15.000Z"),
+      { ...shopify("currency", 7440, "2026-08-04T08:02:15.000Z"), currency: "USD" },
+      shopify("date", 7440, "2026-08-05T08:02:15.000Z"),
+      { ...shopify("order", 7440, "2026-08-04T08:02:15.000Z"), order_id: "order-2" },
+    ];
+    expect(filterLegacyPaymentDuplicates(
+      rows,
+      [bubble("1", 7440, "2026-08-03T16:00:00.000Z")],
+    )).toEqual(rows);
+  });
+
+  it("pairs duplicates one-to-one and preserves a real same-amount instalment", () => {
+    const first = shopify("1", 1200, "2026-08-04T08:00:00.000Z");
+    const second = shopify("2", 1200, "2026-08-04T10:00:00.000Z");
+    expect(filterLegacyPaymentDuplicates(
+      [first, second],
+      [bubble("1", 1200, "2026-08-03T16:00:00.000Z")],
+    )).toEqual([second]);
+  });
+});
+
 describe("orderNeedsTransactionSync", () => {
   it("returns false for unpaid (pending) orders", () => {
     expect(
@@ -157,6 +206,51 @@ describe("orderNeedsTransactionSync", () => {
     expect(
       orderNeedsTransactionSync({ id: 1, financial_status: null }),
     ).toBe(true);
+  });
+});
+
+describe("Shopify-owned payment status", () => {
+  it("uses Shopify total_outstanding when it is available", () => {
+    const order = {
+      id: 1,
+      financial_status: "PARTIALLY_PAID",
+      total_price: "1000.00",
+      total_outstanding: "350.00",
+    };
+
+    expect(shopifyFinancialStatus(order)).toBe("partially_paid");
+    expect(shopifyOutstanding(order)).toBe(350);
+  });
+
+  it("does not turn a refund into a new customer debt", () => {
+    expect(shopifyOutstanding({
+      id: 1,
+      financial_status: "partially_refunded",
+      total_price: "1000.00",
+    })).toBe(0);
+  });
+
+  it("marks a mapped Shopify order as Shopify-managed", () => {
+    const mapped = mapShopifyOrder({
+      order: {
+        id: 101,
+        name: "#101",
+        financial_status: "paid",
+        total_price: "500.00",
+        total_outstanding: "0.00",
+        line_items: [],
+      },
+      shopDomain: "test-store.myshopify.com",
+      storeId: "store-uuid",
+      channelId: "channel-uuid",
+    });
+
+    expect(mapped).not.toBeNull();
+    expect(mapped!.orderRow).toMatchObject({
+      payment_status_source: "shopify",
+      shopify_financial_status: "paid",
+      outstanding: 0,
+    });
   });
 });
 

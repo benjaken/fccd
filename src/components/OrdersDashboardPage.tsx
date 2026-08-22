@@ -1,12 +1,14 @@
-import { useEffect, useState, type ComponentType } from "react";
+import { useEffect, useMemo, useState, type ComponentType } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  BarChart3,
   CalendarClock,
   ChevronRight,
   CircleDollarSign,
   Factory,
   Inbox,
   MessageSquareQuote,
+  PieChart,
   RefreshCw,
   ShoppingBag,
 } from "lucide-react";
@@ -17,14 +19,14 @@ import { DetailLink } from "@/components/ui/detail-link";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import {
   fetchOrdersDashboardData,
-  type DashboardQuoteItem,
+  type DashboardQueueItem,
   type OrdersDashboardData,
 } from "@/lib/orders-dashboard";
 import { cn } from "@/lib/utils";
 
 type Icon = ComponentType<{ className?: string; strokeWidth?: number }>;
-
 type OrdersDashboardLoader = () => Promise<OrdersDashboardData>;
+type Tone = "red" | "blue" | "green" | "amber";
 
 const EMPTY_DASHBOARD: OrdersDashboardData = {
   shopifyPending: 0,
@@ -32,6 +34,8 @@ const EMPTY_DASHBOARD: OrdersDashboardData = {
   notSentToFactory: 0,
   pendingQuotes: 0,
   upcomingQuotes: 0,
+  latestPendingOrders: [],
+  latestUnpaidOrders: [],
   latestPendingQuotes: [],
   soonestUpcomingQuotes: [],
 };
@@ -47,10 +51,14 @@ export function OrdersDashboardPage({
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
-  const dateFormatter = new Intl.DateTimeFormat(i18n.language, {
-    dateStyle: "medium",
-    timeZone: "Asia/Hong_Kong",
-  });
+  const dateFormatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat(i18n.language, {
+        dateStyle: "medium",
+        timeZone: "Asia/Hong_Kong",
+      }),
+    [i18n.language],
+  );
 
   useEffect(() => {
     let active = true;
@@ -85,7 +93,7 @@ export function OrdersDashboardPage({
     key: string;
     label: string;
     count: number;
-    tone: "red" | "blue" | "green" | "amber";
+    tone: Tone;
     icon: Icon;
     to: string;
   }> = [
@@ -106,14 +114,6 @@ export function OrdersDashboardPage({
       to: "/orders/unpaid",
     },
     {
-      key: "notSentToFactory",
-      label: t("ordersDashboard.notSentToFactory"),
-      count: data.notSentToFactory,
-      tone: "amber",
-      icon: Factory,
-      to: "/orders/not-sent-factory",
-    },
-    {
       key: "pendingQuotes",
       label: t("ordersDashboard.pendingQuotes"),
       count: data.pendingQuotes,
@@ -129,7 +129,17 @@ export function OrdersDashboardPage({
       icon: CalendarClock,
       to: "/quotes/upcoming",
     },
+    {
+      key: "notSentToFactory",
+      label: t("ordersDashboard.notSentToFactory"),
+      count: data.notSentToFactory,
+      tone: "amber",
+      icon: Factory,
+      to: "/orders/not-sent-factory",
+    },
   ];
+
+  const primaryQueues = cards.slice(0, 4);
 
   if (loading) {
     return <PageSkeleton label={t("ordersDashboard.loading")} variant="dashboard" />;
@@ -158,7 +168,7 @@ export function OrdersDashboardPage({
         </div>
       )}
 
-      <section className="orders-dashboard-grid">
+      <section className="orders-dashboard-grid" aria-label={t("ordersDashboard.queueSummary")}>
         {cards.map(({ key, label, count, tone, icon: CardIcon, to }) => (
           <Link className="metric-card" to={to} key={key}>
             <div className={cn("metric-icon", tone)}>
@@ -174,100 +184,191 @@ export function OrdersDashboardPage({
         ))}
       </section>
 
-      <section className="dashboard-grid">
-        <QuotePanel
-          icon={Inbox}
-          title={t("ordersDashboard.latestPendingTitle")}
-          description={t("ordersDashboard.latestPendingDescription")}
-          action={t("ordersDashboard.viewAll")}
-          actionTo="/quotes/pending"
-          quotes={data.latestPendingQuotes}
-          dateFormatter={dateFormatter}
-          emptyLabel={t("ordersDashboard.emptyPendingQuotes")}
-        />
-        <QuotePanel
-          icon={CalendarClock}
-          title={t("ordersDashboard.soonestUpcomingTitle")}
-          description={t("ordersDashboard.soonestUpcomingDescription")}
-          action={t("ordersDashboard.viewAll")}
-          actionTo="/quotes/upcoming"
-          quotes={data.soonestUpcomingQuotes}
-          dateFormatter={dateFormatter}
-          emptyLabel={t("ordersDashboard.emptyUpcomingQuotes")}
-        />
+      <section className="orders-dashboard-body-layout">
+        <section className="orders-dashboard-queue-grid">
+          <QueuePanel
+            icon={ShoppingBag}
+            title={t("ordersDashboard.latestPendingOrdersTitle")}
+            description={t("ordersDashboard.latestPendingOrdersDescription")}
+            actionTo="/orders/shopify-pending"
+            items={data.latestPendingOrders}
+            dateFormatter={dateFormatter}
+            emptyLabel={t("ordersDashboard.emptyPendingOrders")}
+          />
+          <QueuePanel
+            icon={CircleDollarSign}
+            title={t("ordersDashboard.latestUnpaidTitle")}
+            description={t("ordersDashboard.latestUnpaidDescription")}
+            actionTo="/orders/unpaid"
+            items={data.latestUnpaidOrders}
+            dateFormatter={dateFormatter}
+            emptyLabel={t("ordersDashboard.emptyUnpaidOrders")}
+            showOutstanding
+          />
+          <QueuePanel
+            icon={Inbox}
+            title={t("ordersDashboard.latestPendingTitle")}
+            description={t("ordersDashboard.latestPendingDescription")}
+            actionTo="/quotes/pending"
+            items={data.latestPendingQuotes}
+            dateFormatter={dateFormatter}
+            emptyLabel={t("ordersDashboard.emptyPendingQuotes")}
+          />
+          <QueuePanel
+            icon={CalendarClock}
+            title={t("ordersDashboard.soonestUpcomingTitle")}
+            description={t("ordersDashboard.soonestUpcomingDescription")}
+            actionTo="/quotes/upcoming"
+            items={data.soonestUpcomingQuotes}
+            dateFormatter={dateFormatter}
+            emptyLabel={t("ordersDashboard.emptyUpcomingQuotes")}
+          />
+        </section>
+        <aside className="orders-dashboard-chart-column">
+          <DashboardCharts queues={primaryQueues} locale={i18n.language} />
+        </aside>
       </section>
     </section>
   );
 }
 
-function QuotePanel({
+function DashboardCharts({
+  queues,
+  locale,
+}: {
+  queues: Array<{ key: string; label: string; count: number; tone: Tone; to: string }>;
+  locale: string;
+}) {
+  const { t } = useTranslation();
+  const max = Math.max(...queues.map((queue) => queue.count), 1);
+  const total = queues.reduce((sum, queue) => sum + queue.count, 0);
+  let cursor = 0;
+  const colors: Record<Tone, string> = {
+    blue: "#4f7ee8",
+    red: "#e05f65",
+    green: "#35a46f",
+    amber: "#d6952f",
+  };
+  const gradient = total
+    ? `conic-gradient(${queues
+        .map((queue) => {
+          const start = (cursor / total) * 100;
+          cursor += queue.count;
+          const end = (cursor / total) * 100;
+          return `${colors[queue.tone]} ${start}% ${end}%`;
+        })
+        .join(",")})`
+    : "var(--secondary)";
+
+  return (
+    <section className="orders-dashboard-charts">
+      <article className="panel dashboard-chart-panel">
+        <header className="panel-header">
+          <div>
+            <h2><BarChart3 className="orders-dashboard-panel-icon" />{t("ordersDashboard.queueChartTitle")}</h2>
+            <p>{t("ordersDashboard.queueChartDescription")}</p>
+          </div>
+        </header>
+        <div className="orders-dashboard-bars">
+          {queues.map((queue) => (
+            <Link to={queue.to} className="orders-dashboard-bar-row" key={queue.key}>
+              <span>{queue.label}</span>
+              <div className="orders-dashboard-bar-track">
+                <i className={`tone-${queue.tone}`} style={{ width: `${(queue.count / max) * 100}%` }} />
+              </div>
+              <strong>{queue.count.toLocaleString(locale)}</strong>
+            </Link>
+          ))}
+        </div>
+      </article>
+
+      <article className="panel dashboard-chart-panel dashboard-share-panel">
+        <header className="panel-header">
+          <div>
+            <h2><PieChart className="orders-dashboard-panel-icon" />{t("ordersDashboard.shareChartTitle")}</h2>
+            <p>{t("ordersDashboard.shareChartDescription")}</p>
+          </div>
+        </header>
+        <div className="orders-dashboard-share">
+          <div className="orders-dashboard-donut" style={{ background: gradient }} role="img" aria-label={t("ordersDashboard.shareChartAria", { count: total })}>
+            <span><strong>{total.toLocaleString(locale)}</strong><small>{t("ordersDashboard.totalActions")}</small></span>
+          </div>
+          <ul>
+            {queues.map((queue) => (
+              <li key={queue.key}>
+                <i className={`tone-${queue.tone}`} />
+                <span>{queue.label}</span>
+                <strong>{total ? Math.round((queue.count / total) * 100) : 0}%</strong>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </article>
+    </section>
+  );
+}
+
+function QueuePanel({
   icon: PanelIcon,
   title,
   description,
-  action,
   actionTo,
-  quotes,
+  items,
   dateFormatter,
   emptyLabel,
+  showOutstanding = false,
 }: {
   icon: Icon;
   title: string;
   description: string;
-  action: string;
   actionTo: string;
-  quotes: DashboardQuoteItem[];
+  items: DashboardQueueItem[];
   dateFormatter: Intl.DateTimeFormat;
   emptyLabel: string;
+  showOutstanding?: boolean;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   return (
     <article className="panel queue-panel">
       <header className="panel-header">
         <div>
-          <h2>
-            <PanelIcon className="orders-dashboard-panel-icon" />
-            {title}
-          </h2>
+          <h2><PanelIcon className="orders-dashboard-panel-icon" />{title}</h2>
           <p>{description}</p>
         </div>
         <Button variant="ghost" asChild>
-          <Link to={actionTo}>
-            {action}
-            <ChevronRight />
-          </Link>
+          <Link to={actionTo}>{t("ordersDashboard.viewAll")}<ChevronRight /></Link>
         </Button>
       </header>
-      {quotes.length === 0 ? (
+      {items.length === 0 ? (
         <div className="orders-dashboard-empty">
           <MessageSquareQuote />
           <span>{emptyLabel}</span>
         </div>
       ) : (
         <ul className="orders-dashboard-quote-list">
-          {quotes.map((quote) => (
-            <li key={quote.id}>
-              <DetailLink to={`/quotes/${quote.id}`}>
-                <span className="orders-dashboard-quote-main">
-                  <strong>
-                    {quote.orderNumber || quote.customerName || t("common.notSet")}
-                  </strong>
-                  <small>
-                    {quote.customerName && quote.orderNumber
-                      ? quote.customerName
-                      : quote.companyName || t("common.notSet")}
-                  </small>
-                </span>
-                {quote.deliveryAt && (
-                  <span className="orders-dashboard-quote-date">
-                    <CalendarClock />
-                    {dateFormatter.format(new Date(quote.deliveryAt))}
+          {items.map((item) => {
+            const detailTo = item.kind === "order" ? `/orders/${item.id}` : `/quotes/${item.id}`;
+            const amount = showOutstanding && item.outstanding !== null
+              ? new Intl.NumberFormat(i18n.language, { style: "currency", currency: item.currency, maximumFractionDigits: 0 }).format(item.outstanding)
+              : null;
+            return (
+              <li key={item.id}>
+                <DetailLink to={detailTo}>
+                  <span className="orders-dashboard-quote-main">
+                    <strong>{item.orderNumber || item.customerName || t("common.notSet")}</strong>
+                    <small>{item.customerName && item.orderNumber ? item.customerName : item.companyName || t("common.notSet")}</small>
                   </span>
-                )}
-                <ChevronRight />
-              </DetailLink>
-            </li>
-          ))}
+                  {amount ? (
+                    <span className="orders-dashboard-amount">{amount}</span>
+                  ) : item.deliveryAt ? (
+                    <span className="orders-dashboard-quote-date"><CalendarClock />{dateFormatter.format(new Date(item.deliveryAt))}</span>
+                  ) : null}
+                  <ChevronRight />
+                </DetailLink>
+              </li>
+            );
+          })}
         </ul>
       )}
     </article>

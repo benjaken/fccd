@@ -1,4 +1,5 @@
 import { useEffect, useId, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -49,7 +50,7 @@ export function Modal({
     if (closeOnBackdrop) onClose();
   };
 
-  return (
+  return createPortal(
     <div className="modal-root" role="presentation">
       <button
         type="button"
@@ -87,6 +88,7 @@ export function Modal({
         {children ? <div className="modal-body">{children}</div> : null}
         {footer ? <footer className="modal-footer">{footer}</footer> : null}
       </section>
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -239,9 +239,14 @@ async function syncDeliveryFulfillment(
     (item) => item.sourceType === "b_deliveryschedule",
   );
   if (!mapping) throw new Error("b_deliveryschedule mapping is missing.");
+  const rows = records.map(mapping.map);
+  const motorcadeRelations = (mapping.relations ?? []).filter(
+    (relation) => relation.idField === "motorcade_id",
+  );
+  await resolveRelations(client, rows, motorcadeRelations);
+
   let updated = 0;
-  for (const record of records) {
-    const row = mapping.map(record);
+  for (const row of rows) {
     if (typeof row.legacy_id !== "string" || !row.legacy_id) continue;
     const { data, error } = await client
       .from("deliveries")
@@ -254,6 +259,24 @@ async function syncDeliveryFulfillment(
       .select("legacy_id");
     if (error) throw error;
     if (data?.length) updated += data.length;
+
+    // Incremental imports preserve existing delivery rows. Fill a missing UUID
+    // link when Bubble already has a valid fleet, without overwriting a fleet
+    // that operations assigned in the new system.
+    if (
+      typeof row.motorcade_id === "string" && row.motorcade_id &&
+      typeof row.motorcade_legacy_id === "string" && row.motorcade_legacy_id
+    ) {
+      const { error: motorcadeError } = await client
+        .from("deliveries")
+        .update({
+          motorcade_id: row.motorcade_id,
+          motorcade_legacy_id: row.motorcade_legacy_id,
+        })
+        .eq("legacy_id", row.legacy_id)
+        .is("motorcade_id", null);
+      if (motorcadeError) throw motorcadeError;
+    }
   }
   return updated;
 }

@@ -6,6 +6,7 @@ import { Navigate, useParams } from "react-router-dom";
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { OrderPaymentMethodsTable } from "@/components/OrderPaymentMethodsTable";
 import { OrderShippingMethodsTable } from "@/components/OrderShippingMethodsTable";
+import { OrderShippingFeesTable } from "@/components/OrderShippingFeesTable";
 import { isOrderSettingsTab } from "@/components/OrderSettingsTabNav";
 import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
@@ -382,6 +383,10 @@ export function OrderSettingsPage({
   loadPaymentMethods = fetchPaymentMethods,
   createPayment = createPaymentMethod,
   updatePayment = updatePaymentMethod,
+  loadFees,
+  createFee,
+  updateFee,
+  deleteFee,
 }: {
   loadTags?: TagsLoader;
   createTag?: TagCreator;
@@ -393,6 +398,10 @@ export function OrderSettingsPage({
   loadPaymentMethods?: typeof fetchPaymentMethods;
   createPayment?: typeof createPaymentMethod;
   updatePayment?: typeof updatePaymentMethod;
+  loadFees?: Parameters<typeof OrderShippingFeesTable>[0]["loadFees"];
+  createFee?: Parameters<typeof OrderShippingFeesTable>[0]["createFee"];
+  updateFee?: Parameters<typeof OrderShippingFeesTable>[0]["updateFee"];
+  deleteFee?: Parameters<typeof OrderShippingFeesTable>[0]["deleteFee"];
 }) {
   const { t } = useTranslation();
   const pageAccess = useCurrentPageAccess();
@@ -417,6 +426,7 @@ export function OrderSettingsPage({
           <h1>
             {activeTab === "payments" ||
             activeTab === "shipping" ||
+            activeTab === "shipping-fees" ||
             activeTab === "tags"
               ? t(`orderSettings.tabs.${activeTab}`)
               : t("orderSettings.title")}
@@ -424,12 +434,15 @@ export function OrderSettingsPage({
         </div>
         {(activeTab === "tags" ||
           activeTab === "shipping" ||
+          activeTab === "shipping-fees" ||
           activeTab === "payments") &&
         canManage ? (
           <Button type="button" onClick={() => setCreateOpen(true)}>
             <Plus />
             {activeTab === "payments"
               ? t("orderSettings.payments.add")
+              : activeTab === "shipping-fees"
+                ? t("orderSettings.shippingFees.add")
               : activeTab === "shipping"
                 ? t("orderSettings.shipping.add")
                 : t("orderSettings.tags.add")}
@@ -460,6 +473,15 @@ export function OrderSettingsPage({
             loadMethods={loadPaymentMethods}
             createMethod={createPayment}
             updateMethod={updatePayment}
+            createOpen={createOpen}
+            onCreateOpenChange={setCreateOpen}
+          />
+        ) : activeTab === "shipping-fees" ? (
+          <OrderShippingFeesTable
+            loadFees={loadFees}
+            createFee={createFee}
+            updateFee={updateFee}
+            deleteFee={deleteFee}
             createOpen={createOpen}
             onCreateOpenChange={setCreateOpen}
           />

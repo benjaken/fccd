@@ -5,6 +5,7 @@ import {
   ChevronLeft,
   FileText,
   Package,
+  Pencil,
   RefreshCw,
   Truck,
   WalletCards,
@@ -72,10 +73,12 @@ function displayStatus(
 export function OrderDetailPage({
   documentType,
   canViewFinance,
+  canEdit = false,
   loadDetail = fetchOrderDetail,
 }: {
   documentType: "order" | "quote";
   canViewFinance: boolean;
+  canEdit?: boolean;
   loadDetail?: DetailLoader;
 }) {
   const { t, i18n } = useTranslation();
@@ -86,6 +89,7 @@ export function OrderDetailPage({
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const isQuote = documentType === "quote";
+  const emptyValue = isQuote ? "-" : t("common.notSet");
   const calendarBack = kitchenCalendarReturnPath(
     searchParams.get("from"),
     searchParams.get("month"),
@@ -197,13 +201,21 @@ export function OrderDetailPage({
             {backLabel}
           </Link>
           <span className="eyebrow">{title}</span>
-          <h1>{order.orderNumber || t("common.notSet")}</h1>
-          <p>{order.companyName || order.customerName || t("common.notSet")}</p>
+          <h1>{order.orderNumber || emptyValue}</h1>
+          <p>{order.companyName || order.customerName || emptyValue}</p>
         </div>
         <div
           className="heading-actions order-status-list"
           aria-label={t("details.tags")}
         >
+          {!isQuote && canEdit && (
+            <Button asChild variant="outline">
+              <Link to={`/orders/${order.id}/edit`}>
+                <Pencil />
+                編輯
+              </Link>
+            </Button>
+          )}
           <span className={cn("status-badge", status.tone)}>{status.label}</span>
           {tags.map((tag) => (
             <span
@@ -225,20 +237,20 @@ export function OrderDetailPage({
           </header>
           <div className="detail-fields">
             <DetailField label={t("details.name")}>
-              {order.customerName || order.companyName || t("common.notSet")}
+              {order.customerName || order.companyName || emptyValue}
             </DetailField>
             <DetailField label={t("details.company")}>
-              {order.companyName || t("common.notSet")}
+              {order.companyName || emptyValue}
             </DetailField>
             <DetailField label={t("details.email")}>
-              {order.email || t("common.notSet")}
+              {order.email || emptyValue}
             </DetailField>
             <DetailField label={t("details.contact")}>
               {[order.contactA, order.contactB].filter(Boolean).join(" · ") ||
-                t("common.notSet")}
+                emptyValue}
             </DetailField>
             <DetailField label={t("details.address")}>
-              {order.address || t("common.notSet")}
+              {order.address || emptyValue}
             </DetailField>
           </div>
         </article>
@@ -252,18 +264,21 @@ export function OrderDetailPage({
             <DetailField label={t("details.deliveryAt")}>
               {order.deliveryAt
                 ? date.format(new Date(order.deliveryAt))
-                : t("common.notSet")}
+                : emptyValue}
             </DetailField>
             <DetailField label={t("details.shipOut")}>
-              {order.shipOutTime || t("common.notSet")}
+              {order.shipOutTime || emptyValue}
             </DetailField>
             <DetailField label={t("details.factoryDate")}>
               {order.factoryDate
                 ? date.format(new Date(order.factoryDate))
-                : t("common.notSet")}
+                : emptyValue}
             </DetailField>
             <DetailField label={t("details.factoryNote")}>
-              {order.factoryPackingNote || t("common.notSet")}
+              {order.factoryPackingNote || emptyValue}
+            </DetailField>
+            <DetailField label={t("details.internalNote")}>
+              {order.internalNote || emptyValue}
             </DetailField>
           </div>
         </article>
@@ -302,7 +317,7 @@ export function OrderDetailPage({
               <h2>{t("details.quoteDescription")}</h2>
             </header>
             <p className="detail-copy">
-              {order.quoteDescription || t("common.notSet")}
+              {order.quoteDescription || emptyValue}
             </p>
           </article>
           <article className="panel detail-card">
@@ -313,7 +328,7 @@ export function OrderDetailPage({
             <div className="detail-stack">
               {result.terms.length
                 ? result.terms.map((term, index) => <p key={index}>{term}</p>)
-                : t("common.notSet")}
+                : emptyValue}
             </div>
           </article>
         </section>
@@ -347,7 +362,7 @@ export function OrderDetailPage({
               {result.lines.map((line) => (
                 <tr key={line.id}>
                   <td>
-                    <strong>{line.productName || line.content || t("common.notSet")}</strong>
+                    <strong>{line.productName || line.content || emptyValue}</strong>
                     {line.remarks && (
                       <small className="settings-cell-detail">{line.remarks}</small>
                     )}
@@ -355,20 +370,20 @@ export function OrderDetailPage({
                   <td>
                     {line.productId ? (
                       <Link className="order-link" to={`/products/${line.productId}`}>
-                        {line.sku || t("common.notSet")}
+                        {line.sku || emptyValue}
                       </Link>
                     ) : line.packageId ? (
                       <Link
                         className="order-link"
                         to={`/products/packages/${line.packageId}`}
                       >
-                        {line.sku || t("common.notSet")}
+                        {line.sku || emptyValue}
                       </Link>
                     ) : (
-                      line.sku || t("common.notSet")
+                      line.sku || emptyValue
                     )}
                   </td>
-                  <td>{line.quantity ?? t("common.notSet")}</td>
+                  <td>{line.quantity ?? emptyValue}</td>
                   {canViewFinance && <td>{money(line.unitPrice)}</td>}
                   {canViewFinance && <td>{money(line.totalPrice)}</td>}
                 </tr>
@@ -413,10 +428,10 @@ export function OrderDetailPage({
                       <td>
                         {payment.paymentAt
                           ? date.format(new Date(payment.paymentAt))
-                          : t("common.notSet")}
+                          : emptyValue}
                       </td>
                       <td>{money(payment.amount)}</td>
-                      <td>{payment.reference || t("common.notSet")}</td>
+                      <td>{payment.reference || emptyValue}</td>
                     </tr>
                   ))}
                   {!result.payments.length && (

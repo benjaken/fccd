@@ -17,6 +17,7 @@ const detail = {
     contactB: null,
     address: "香港測試地址",
     customerNote: null,
+    internalNote: "只供內部查看",
     quoteStatus: null,
     quoteDescription: null,
     deliveryTerms: null,
@@ -84,9 +85,42 @@ describe("Core read pages", () => {
     );
     expect(screen.getAllByText("香港女童軍總會")).toHaveLength(2);
     expect(screen.getByText("測試套餐")).toBeInTheDocument();
+    expect(screen.getByText("只供內部查看")).toBeInTheDocument();
     expect(screen.getAllByText("HK$1,610")).toHaveLength(3);
     expect(screen.getByText("待取貨")).toBeInTheDocument();
     expect(screen.getByText("未完成付款")).toBeInTheDocument();
+  });
+
+  it("does not render editable factory settings on order details", async () => {
+    render(
+      <MemoryRouter initialEntries={["/orders/order-1"]}>
+        <Routes>
+          <Route
+            path="/orders/:id"
+            element={
+              <OrderDetailPage
+                documentType="order"
+                canViewFinance
+                canEdit
+                loadDetail={async () => ({
+                  ...detail,
+                  order: {
+                    ...detail.order,
+                    isSentToFactory: true,
+                    factoryPrintDate: "2026-08-20T02:00:00.000Z",
+                    factoryReprintRequired: false,
+                  },
+                })}
+              />
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "B-1513" })).toBeInTheDocument();
+    expect(screen.queryByRole("checkbox", { name: /不傳送到工場/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "儲存工場設定" })).not.toBeInTheDocument();
   });
 
   it("shows the unpaid tag on delivered orders that still have outstanding", async () => {
@@ -199,6 +233,49 @@ describe("Core read pages", () => {
       "href",
       "/delivery",
     );
+  });
+
+  it("renders empty quote-detail values as a hyphen", async () => {
+    render(
+      <MemoryRouter initialEntries={["/quotes/quote-1"]}>
+        <Routes>
+          <Route
+            path="/quotes/:id"
+            element={
+              <OrderDetailPage
+                documentType="quote"
+                canViewFinance
+                loadDetail={async () => ({
+                  ...detail,
+                  order: {
+                    ...detail.order,
+                    id: "quote-1",
+                    documentType: "quote" as const,
+                    orderNumber: "Q-1001",
+                    companyName: null,
+                    email: null,
+                    contactA: null,
+                    address: null,
+                    deliveryAt: null,
+                    shipOutTime: null,
+                    factoryDate: null,
+                    factoryPackingNote: null,
+                    internalNote: null,
+                    quoteDescription: null,
+                  },
+                  lines: [],
+                  terms: [],
+                })}
+              />
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Q-1001" })).toBeInTheDocument();
+    expect(screen.getAllByText("-").length).toBeGreaterThan(5);
+    expect(screen.queryByText("未設定")).not.toBeInTheDocument();
   });
 
   it("blocks payment list data loading without finance access", async () => {

@@ -40,6 +40,7 @@ describe("buildMobileDrawerNav", () => {
       "/orders/settings/statuses",
       "/orders/settings/tags",
       "/orders/settings/shipping",
+      "/orders/settings/shipping-fees",
       "/orders/settings/payments",
     ]);
     expect(settings?.items.map((item) => item.key)).toEqual([

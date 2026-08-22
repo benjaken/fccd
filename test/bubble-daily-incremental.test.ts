@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   canAdvanceCheckpoint,
@@ -95,5 +97,19 @@ describe("bubble daily incremental helpers", () => {
     expect(row.fulfilled_at).toBe("2026-08-01T12:37:00.000Z");
     expect(row.taken_at).toBe("2026-08-01T12:15:54.000Z");
     expect(row.delivery_status).toBe("已送達");
+  });
+
+  it("fills only missing motorcade UUID links on existing deliveries", () => {
+    const source = fs.readFileSync(
+      path.join(
+        process.cwd(),
+        "supabase/functions/bubble-daily-incremental/index.ts",
+      ),
+      "utf8",
+    );
+
+    expect(source).toContain('relation.idField === "motorcade_id"');
+    expect(source).toContain("motorcade_id: row.motorcade_id");
+    expect(source).toContain('.is("motorcade_id", null)');
   });
 });
