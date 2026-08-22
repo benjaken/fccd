@@ -36,7 +36,7 @@ describe("DateRangePicker", () => {
     expect(
       screen.getByRole("group", { name: "日期範圍" }),
     ).toBeInTheDocument();
-    expect(container.querySelector("legend")?.textContent).toBe("日期範圍");
+    expect(container.querySelector(".date-range-picker-label")?.textContent).toBe("日期範圍");
 
     const start = screen.getByLabelText("開始日期");
     const end = screen.getByLabelText("結束日期");

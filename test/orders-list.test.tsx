@@ -500,10 +500,16 @@ describe("Orders list", () => {
 
     await screen.findByText("B-1513");
     const deliveryButton = screen.queryByRole("button", { name: "送貨單" });
-    const receiptButton = screen.queryByRole("button", { name: "REC" });
-    const invoiceButton = screen.queryByRole("button", { name: "INV" });
+    const receiptButton = screen.queryByRole("link", { name: "REC" });
+    const invoiceButton = screen.queryByRole("link", { name: "INV" });
     expect(Boolean(deliveryButton)).toBe(deliveryNote);
     expect(Boolean(receiptButton)).toBe(paidDocuments);
+    if (paidDocuments) {
+      expect(receiptButton).toHaveAttribute("href", "/orders/order-1/receipt");
+      expect(receiptButton).toHaveAttribute("target", "_blank");
+      expect(invoiceButton).toHaveAttribute("href", "/orders/order-1/invoice");
+      expect(invoiceButton).toHaveAttribute("target", "_blank");
+    }
     expect(Boolean(invoiceButton)).toBe(paidDocuments);
   });
 

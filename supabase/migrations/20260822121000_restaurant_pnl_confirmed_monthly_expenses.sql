@@ -1,38 +1,4 @@
--- Monthly restaurant P&L report, matching the legacy month-by-month layout.
-
-insert into public.app_pages (
-  page_key, display_name, route, sort_order, is_high_risk, parent_page_key, page_kind
-)
-values (
-  'reports.restaurant_pnl', 'P&L 報告', '/reports/tabs/restaurant-pnl', 101,
-  false, 'reports.shops', 'tab'
-)
-on conflict (page_key) do update
-set display_name = excluded.display_name,
-    route = excluded.route,
-    sort_order = excluded.sort_order,
-    is_high_risk = excluded.is_high_risk,
-    parent_page_key = excluded.parent_page_key,
-    page_kind = excluded.page_kind,
-    updated_at = now();
-
-with roles(role) as (
-  values
-    ('Super Admin'), ('Admin'), ('Accounting'), ('Factory'),
-    ('Shop manager'), ('Customer_Main'), ('Customer_Sub')
-)
-insert into public.role_page_permissions (role, page_key, can_access, can_manage)
-select
-  roles.role,
-  'reports.restaurant_pnl',
-  roles.role in ('Super Admin', 'Admin', 'Accounting', 'Shop manager'),
-  roles.role = 'Super Admin'
-from roles
-on conflict (role, page_key) do update
-set can_access = public.role_page_permissions.can_access or excluded.can_access,
-    can_manage = public.role_page_permissions.can_manage or excluded.can_manage,
-    updated_at = now();
-
+-- Only explicitly confirmed monthly expenses are pushed into the P&L report.
 create or replace function public.report_restaurant_pnl(
   p_start_month date,
   p_end_month date,
@@ -190,4 +156,4 @@ grant execute on function public.report_restaurant_pnl(date, date, uuid)
   to authenticated, service_role;
 
 comment on function public.report_restaurant_pnl(date, date, uuid) is
-  'Returns monthly sales, stock-based cost of sales, and configured operating costs for one restaurant.';
+  'Returns monthly sales, stock-based cost of sales, and confirmed operating costs for one restaurant.';

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-import { isPrimaryNavActive, sectionFromPath } from "@/lib/nav";
+import { isPrimaryNavActive, primaryNav, sectionFromPath } from "@/lib/nav";
 import { pageAccessKey } from "@/auth/use-page-access";
 
 describe("Primary navigation section matching", () => {
@@ -46,6 +46,8 @@ describe("Primary navigation section matching", () => {
     ["/delivery", "delivery"],
     ["/delivery/assign", "delivery"],
     ["/restaurant", "restaurant"],
+    ["/restaurant/daily-sales", "restaurant"],
+    ["/restaurant/daily-purchases", "restaurant"],
     ["/restaurant/reports", "restaurant"],
     ["/factory", ""],
     ["/driver-delivery", ""],
@@ -84,6 +86,9 @@ describe("Primary navigation section matching", () => {
     expect(isPrimaryNavActive("orders", "settings", false)).toBe(false);
     expect(isPrimaryNavActive("", "overview", false)).toBe(false);
     expect(isPrimaryNavActive("overview", "overview", true)).toBe(true);
+    expect(primaryNav.find((item) => item.key === "restaurant")?.to).toBe(
+      "/restaurant/daily-sales",
+    );
   });
 
   it("maps report routes to their page keys", () => {
@@ -139,6 +144,8 @@ describe("Primary navigation section matching", () => {
       "settings.attachments",
     );
     expect(pageAccessKey("/orders/unpaid")).toBe("orders.unpaid");
+    expect(pageAccessKey("/follow-up")).toBe("overview.follow_up");
+    expect(pageAccessKey("/orders/dashboard")).toBe("overview.follow_up");
     expect(pageAccessKey("/orders/payments/bank-arrival-date")).toBe(
       "orders.payments",
     );
@@ -150,6 +157,14 @@ describe("Primary navigation section matching", () => {
     );
     expect(pageAccessKey("/orders/shopify-pending")).toBe(
       "orders.shopify_pending",
+    );
+    expect(pageAccessKey("/quotes/pending")).toBe("quotes.pending");
+    expect(pageAccessKey("/quotes/follow-up")).toBe("quotes.pending");
+    expect(pageAccessKey("/restaurant/daily-sales")).toBe(
+      "restaurant.daily_sales",
+    );
+    expect(pageAccessKey("/restaurant/daily-purchases")).toBe(
+      "restaurant.daily_purchases",
     );
     expect(pageAccessKey("/kitchen/settings")).toBe("kitchen.settings");
     expect(pageAccessKey("/kitchen/calendar")).toBe("kitchen.calendar");

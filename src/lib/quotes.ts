@@ -14,7 +14,6 @@ export type QuotePreset =
   | "all"
   | "high-chance"
   | "large"
-  | "follow-up"
   | "pending"
   | "upcoming";
 
@@ -182,8 +181,6 @@ export async function fetchQuotes({
     query = query
       .gte("grand_total", LARGE_QUOTE_THRESHOLD)
       .or(OPEN_QUOTE_STATUS);
-  } else if (preset === "follow-up") {
-    query = query.or(OPEN_QUOTE_STATUS);
   } else if (preset === "pending") {
     // Match the legacy Bubble queue: quotes still open for follow-up.
     query = query.or(OPEN_QUOTE_STATUS);

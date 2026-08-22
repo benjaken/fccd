@@ -240,13 +240,11 @@ export function QuotesListPage({
       ? "highChanceTitle"
       : preset === "large"
         ? "largeTitle"
-        : preset === "follow-up"
-          ? "followUpTitle"
-          : preset === "pending"
-            ? "pendingTitle"
-            : preset === "upcoming"
-              ? "upcomingTitle"
-              : "title";
+        : preset === "pending"
+          ? "pendingTitle"
+          : preset === "upcoming"
+            ? "upcomingTitle"
+            : "title";
 
   return (
     <section className="quotes-page">

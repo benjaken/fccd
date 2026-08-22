@@ -253,8 +253,8 @@ export function OrderRowActionMenu({
       {order.contactPhone ? <button type="button" onClick={onMessages} aria-label={messageLabel} title={t("quoteCustomers.messagesAction")}><MessageSquare /></button> : <span aria-label={`${messageLabel} ${t("common.notSet")}`} title={t("common.notSet")}><MessageSquare /></span>}
       {canCancel ? <button type="button" onClick={onCancel} aria-label="取消訂單" title="取消訂單"><Ban /></button> : null}
       {showDeliveryNote ? <button type="button" onClick={() => onPreview("delivery-note")} aria-label="送貨單" title="送貨單"><Truck /></button> : null}
-      {isPaidInFull ? <button className="order-document-action" type="button" onClick={() => onPreview("receipt")} aria-label={t("orders.documents.receipt")} title={t("orders.documents.receipt")}>{t("orders.documents.receipt")}</button> : null}
-      {isPaidInFull ? <button className="order-document-action" type="button" onClick={() => onPreview("invoice")} aria-label={t("orders.documents.invoice")} title={t("orders.documents.invoice")}>{t("orders.documents.invoice")}</button> : null}
+      {isPaidInFull ? <Link className="order-document-action" to={`/orders/${order.id}/receipt`} target="_blank" rel="noopener noreferrer" aria-label={t("orders.documents.receipt")} title={t("orders.documents.receipt")}>{t("orders.documents.receipt")}</Link> : null}
+      {isPaidInFull ? <Link className="order-document-action" to={`/orders/${order.id}/invoice`} target="_blank" rel="noopener noreferrer" aria-label={t("orders.documents.invoice")} title={t("orders.documents.invoice")}>{t("orders.documents.invoice")}</Link> : null}
       <Link to={`/orders/new?copyFrom=${encodeURIComponent(order.id)}`} aria-label="複製" title="複製"><Copy /></Link>
     </div>
   );

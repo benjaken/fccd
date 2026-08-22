@@ -17,7 +17,8 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
   { prefix: "/settings/order-lists", pageKey: "settings.order_lists" },
   { prefix: "/settings", pageKey: "settings" },
   { prefix: "/orders/pending", pageKey: "orders.pending" },
-  { prefix: "/orders/dashboard", pageKey: "orders.dashboard" },
+  // Keep legacy bookmarks accessible through the dashboard's new home location.
+  { prefix: "/orders/dashboard", pageKey: "overview.follow_up" },
   { prefix: "/orders/not-sent-factory", pageKey: "orders.not_sent_factory" },
   { prefix: "/orders/calendar", pageKey: "kitchen.calendar" },
   { prefix: "/orders/production", pageKey: "kitchen.calendar" },
@@ -45,7 +46,8 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
   { prefix: "/orders/settings", pageKey: "orders.settings" },
   { prefix: "/quotes/pdf-pages", pageKey: "quotes.pdf_pages" },
   { prefix: "/quotes/customers", pageKey: "quotes.customers" },
-  { prefix: "/quotes/follow-up", pageKey: "quotes.follow_up" },
+  // Keep legacy bookmarks accessible through the surviving pending-quotes permission.
+  { prefix: "/quotes/follow-up", pageKey: "quotes.pending" },
   { prefix: "/quotes/pending", pageKey: "quotes.pending" },
   { prefix: "/quotes/upcoming", pageKey: "quotes.upcoming" },
   { prefix: "/products/packages", pageKey: "products.packages" },
@@ -109,6 +111,10 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
   { prefix: "/kitchen/ingredients", pageKey: "kitchen.ingredients" },
   { prefix: "/kitchen/suppliers", pageKey: "kitchen.suppliers" },
   { prefix: "/delivery/assign", pageKey: "delivery.assign" },
+  { prefix: "/delivery/fleets", pageKey: "delivery.fleets" },
+  { prefix: "/restaurant/daily-purchases", pageKey: "restaurant.daily_purchases" },
+  { prefix: "/restaurant/daily-sales", pageKey: "restaurant.daily_sales" },
+  { prefix: "/restaurant/monthly-expenses", pageKey: "restaurant.monthly_expenses" },
   { prefix: "/restaurant/inventory", pageKey: "restaurant.inventory" },
   { prefix: "/restaurant/staff", pageKey: "restaurant.staff" },
   { prefix: "/restaurant/settings/inventory-items", pageKey: "restaurant.settings.inventory_items" },
@@ -232,6 +238,7 @@ function tabPermissionKeys(tabs: readonly ReportTabKey[]) {
 }
 
 const PAGE_ACCESS_CHILD_KEYS: Record<string, string[]> = {
+  restaurant: ["restaurant.daily_sales", "restaurant.daily_purchases", "restaurant.inventory"],
   "kitchen.settings": ["kitchen.settings.cook_types"],
   [REPORT_GROUP_PAGE_KEYS.frozenMeat]: tabPermissionKeys(
     REPORT_GROUP_TABS.frozenMeat,

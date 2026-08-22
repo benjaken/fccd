@@ -8,6 +8,7 @@ describe("buildMobileDrawerNav", () => {
     { key: "orders", to: "/orders", icon: () => null },
     { key: "quotes", to: "/quotes", icon: () => null },
     { key: "delivery", to: "/delivery", icon: () => null },
+    { key: "restaurant", to: "/restaurant", icon: () => null },
     { key: "settings", to: "/settings", icon: () => null, permissionKey: "settings" },
     { key: "reports", to: "/reports", icon: () => null },
   ];
@@ -16,6 +17,8 @@ describe("buildMobileDrawerNav", () => {
     const groups = buildMobileDrawerNav(visiblePrimary, () => true);
     const overview = groups.find((group) => group.groupKey === "overview");
     const orders = groups.find((group) => group.groupKey === "orders");
+    const quotes = groups.find((group) => group.groupKey === "quotes");
+    const restaurant = groups.find((group) => group.groupKey === "restaurant");
     const settings = groups.find((group) => group.groupKey === "settings");
 
     expect(overview?.items.map((item) => item.to)).toEqual([
@@ -23,7 +26,6 @@ describe("buildMobileDrawerNav", () => {
       "/follow-up",
     ]);
     expect(orders?.items.map((item) => item.to)).toEqual([
-      "/orders/dashboard",
       "/orders",
       "/orders/shopify-pending",
       "/orders/pending",
@@ -43,6 +45,24 @@ describe("buildMobileDrawerNav", () => {
       "/orders/settings/shipping-fees",
       "/orders/settings/payments",
     ]);
+    expect(quotes?.items.map((item) => item.to)).toEqual([
+      "/quotes",
+      "/quotes/customers",
+      "/quotes/pending",
+      "/quotes/pdf-pages",
+    ]);
+    expect(restaurant?.items.map((item) => item.to)).toContain(
+      "/restaurant/inventory",
+    );
+    expect(restaurant?.items.map((item) => item.to)).not.toContain(
+      "/restaurant/reports",
+    );
+    expect(restaurant?.items.map((item) => item.to)).toContain(
+      "/restaurant/daily-sales",
+    );
+    expect(restaurant?.items.map((item) => item.to)).toContain(
+      "/restaurant/daily-purchases",
+    );
     expect(settings?.items.map((item) => item.key)).toEqual([
       "users",
       "rolePermissions",

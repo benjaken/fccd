@@ -71,7 +71,7 @@ export const primaryNav: NavItem[] = [
   { key: "frozen", to: "/frozen/raw-meat-inventory", icon: Snowflake },
   { key: "kitchen", to: "/kitchen", icon: Utensils },
   { key: "delivery", to: "/delivery", icon: Truck },
-  { key: "restaurant", to: "/restaurant", icon: Store },
+  { key: "restaurant", to: "/restaurant/daily-sales", icon: Store },
   { key: "reports", to: "/reports", icon: ChartNoAxesCombined },
   {
     key: "settings",
@@ -100,12 +100,6 @@ export const secondaryNav: Record<string, NavItem[]> = {
     },
   ],
   orders: [
-    {
-      key: "ordersDashboard",
-      to: "/orders/dashboard",
-      icon: LayoutDashboard,
-      permissionKey: "orders.dashboard",
-    },
     {
       key: "allOrders",
       to: "/orders",
@@ -249,12 +243,6 @@ export const secondaryNav: Record<string, NavItem[]> = {
       to: "/quotes/pending",
       icon: CalendarClock,
       permissionKey: "quotes.pending",
-    },
-    {
-      key: "followUp",
-      to: "/quotes/follow-up",
-      icon: ClipboardCheck,
-      permissionKey: "quotes.follow_up",
     },
     {
       key: "quotePdfPages",
@@ -409,25 +397,37 @@ export const secondaryNav: Record<string, NavItem[]> = {
       icon: PackageCheck,
       permissionKey: "delivery.assign",
     },
+    {
+      key: "deliveryFleets",
+      to: "/delivery/fleets",
+      icon: Truck,
+      permissionKey: "delivery.fleets",
+    },
   ],
   restaurant: [
     {
-      key: "restaurant",
-      to: "/restaurant",
+      key: "restaurantDailySales",
+      to: "/restaurant/daily-sales",
       icon: Store,
-      permissionKey: "restaurant",
+      permissionKey: "restaurant.daily_sales",
     },
     {
-      key: "inventory",
+      key: "restaurantDailyPurchases",
+      to: "/restaurant/daily-purchases",
+      icon: Receipt,
+      permissionKey: "restaurant.daily_purchases",
+    },
+    {
+      key: "restaurantStocktakes",
       to: "/restaurant/inventory",
-      icon: Warehouse,
+      icon: ClipboardCheck,
       permissionKey: "restaurant.inventory",
     },
     {
-      key: "reports",
-      to: "/restaurant/reports",
-      icon: ChartNoAxesCombined,
-      permissionKey: "restaurant.reports",
+      key: "restaurantMonthlyExpenses",
+      to: "/restaurant/monthly-expenses",
+      icon: CircleDollarSign,
+      permissionKey: "restaurant.monthly_expenses",
     },
     {
       key: "restaurantStaff",
@@ -533,7 +533,6 @@ export const secondaryNav: Record<string, NavItem[]> = {
 export const SECTION_CHILD_KEYS: Record<string, string[]> = {
   overview: ["overview.follow_up"],
   orders: [
-    "orders.dashboard",
     "orders.new",
     "orders.pending",
     "orders.not_sent_factory",
@@ -552,7 +551,7 @@ export const SECTION_CHILD_KEYS: Record<string, string[]> = {
     "orders.settings.sale_partners",
     ...ORDER_ACTION_PAGE_KEYS,
   ],
-  quotes: ["quotes.customers", "quotes.follow_up"],
+  quotes: ["quotes.customers", "quotes.pending"],
   products: [
     "products.catering",
     "products.lunchbox",
@@ -581,8 +580,8 @@ export const SECTION_CHILD_KEYS: Record<string, string[]> = {
     KITCHEN_MATERIAL_USAGE_PAGE_KEY,
     ...KITCHEN_ACTION_PAGE_KEYS,
   ],
-  delivery: ["delivery.assign"],
-  restaurant: ["restaurant.inventory", "restaurant.reports", "restaurant.staff", "restaurant.settings", "restaurant.settings.restaurants", "restaurant.settings.departments", "restaurant.settings.service_periods", "restaurant.settings.payment_methods", "restaurant.settings.delivery_platforms", "restaurant.settings.holidays", "restaurant.settings.roster_times", "restaurant.settings.supplier_cost_categories", "restaurant.settings.inventory_items", "restaurant.settings.monthly_pnl_cost_categories"],
+  delivery: ["delivery.assign", "delivery.fleets"],
+  restaurant: ["restaurant.daily_sales", "restaurant.daily_purchases", "restaurant.monthly_expenses", "restaurant.inventory", "restaurant.reports", "restaurant.staff", "restaurant.settings", "restaurant.settings.restaurants", "restaurant.settings.departments", "restaurant.settings.service_periods", "restaurant.settings.payment_methods", "restaurant.settings.delivery_platforms", "restaurant.settings.holidays", "restaurant.settings.roster_times", "restaurant.settings.supplier_cost_categories", "restaurant.settings.inventory_items", "restaurant.settings.monthly_pnl_cost_categories"],
   reports: [
     REPORT_GROUP_PAGE_KEYS.dataInputProgress,
     "kitchen.cost_input",

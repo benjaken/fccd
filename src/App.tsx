@@ -45,7 +45,6 @@ import {
 import { LoginPage } from "@/components/LoginPage";
 import { FOOD_CHANNEL_CATERING_LOGO_PATH } from "@/lib/brand-logo";
 import { MigrationWorkspace } from "@/components/MigrationWorkspace";
-import { FollowUpPage } from "@/components/FollowUpPage";
 import { OrdersListPage } from "@/components/OrdersListPage";
 import { OrdersDashboardPage } from "@/components/OrdersDashboardPage";
 import { OrderSettingsPage } from "@/components/OrderSettingsPage";
@@ -58,6 +57,7 @@ import { DataInputProgressPage } from "@/components/DataInputProgressPage";
 import { QuotesListPage } from "@/components/QuotesListPage";
 import { QuoteEditorPage } from "@/components/QuoteEditorPage";
 import { QuotePdfEditorPage } from "@/components/QuotePdfEditorPage";
+import { ReceiptPdfEditorPage } from "@/components/ReceiptPdfEditorPage";
 import { QuotePdfPagesSettingsPage } from "@/components/QuotePdfPagesSettingsPage";
 import { QuoteCustomersPage } from "@/components/QuoteCustomersPage";
 import { ProductsListPage } from "@/components/ProductsListPage";
@@ -68,6 +68,7 @@ import { PreparedMeatInventoryCalcPage } from "@/components/PreparedMeatInventor
 import { MeatDeliveryNotesPage } from "@/components/MeatDeliveryNotesPage";
 import { DeliveryListPage } from "@/components/DeliveryListPage";
 import { AssignDriverPage } from "@/components/AssignDriverPage";
+import { DeliveryFleetsPage } from "@/components/DeliveryFleetsPage";
 import { FactoryBoardPage } from "@/components/FactoryBoardPage";
 import { FactoryOrderPage } from "@/components/FactoryOrderPage";
 import { FactoryMeatDeliveryNotePage } from "@/components/FactoryMeatDeliveryNotePage";
@@ -94,6 +95,10 @@ import { KitchenAdvertisingPerformanceReportPage } from "@/components/KitchenAdv
 import { SuppliersPage } from "@/components/SuppliersPage";
 import { IngredientsListPage } from "@/components/IngredientsListPage";
 import { RestaurantStaffPage } from "@/components/RestaurantStaffPage";
+import { RestaurantDailySalesPage } from "@/components/RestaurantDailySalesPage";
+import { RestaurantDailyPurchasesPage } from "@/components/RestaurantDailyPurchasesPage";
+import { RestaurantStocktakesPage } from "@/components/RestaurantStocktakesPage";
+import { RestaurantMonthlyExpensesPage } from "@/components/RestaurantMonthlyExpensesPage";
 import { RestaurantSalesReportPage } from "@/components/RestaurantSalesReportPage";
 import { RestaurantInventoryItemsPage } from "@/components/RestaurantInventoryItemsPage";
 import { RestaurantSettingsPage } from "@/components/RestaurantSettingsPage";
@@ -212,6 +217,9 @@ function OperationsShell() {
   const { t, i18n } = useTranslation();
   const { user, profile, signOut } = useAuth();
   const location = useLocation();
+  const documentEditorMode = /^(?:\/orders\/[^/]+\/(?:receipt|invoice)|\/quotes\/[^/]+\/pdf)\/?$/.test(
+    location.pathname,
+  );
   const { dark, toggleTheme } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -320,7 +328,7 @@ function OperationsShell() {
   };
 
   return (
-    <div className="app-shell">
+    <div className={cn("app-shell", documentEditorMode && "document-editor-shell")}>
       <header className="topbar">
         <div className="topbar-brand">
           <Button
@@ -563,7 +571,7 @@ function OperationsShell() {
               <Route path="/" element={<Dashboard role={profile?.role} />} />
               <Route
                 path="/follow-up"
-                element={<FollowUpPage role={profile?.role ?? null} />}
+                element={<OrdersDashboardPage />}
               />
               <Route path="/profile" element={<ProfilePage />} />
               <Route
@@ -572,7 +580,7 @@ function OperationsShell() {
               />
               <Route
                 path="/orders/dashboard"
-                element={<OrdersDashboardPage />}
+                element={<Navigate to="/follow-up" replace />}
               />
               <Route
                 path="/orders/pending"
@@ -707,6 +715,14 @@ function OperationsShell() {
                 }
               />
               <Route
+                path="/orders/:id/receipt"
+                element={<ReceiptPdfEditorPage />}
+              />
+              <Route
+                path="/orders/:id/invoice"
+                element={<ReceiptPdfEditorPage documentKind="invoice" />}
+              />
+              <Route
                 path="/orders/:id"
                 element={
                   <QuoteEditorPage documentType="order" combined readOnly canEdit={canEditOrders} />
@@ -723,7 +739,7 @@ function OperationsShell() {
               />
               <Route
                 path="/quotes/follow-up"
-                element={<QuotesListPage preset="follow-up" />}
+                element={<Navigate to="/quotes/pending" replace />}
               />
               <Route
                 path="/quotes/pending"
@@ -862,6 +878,16 @@ function OperationsShell() {
                 }
               />
               <Route
+                path="/delivery/fleets"
+                element={
+                  pageAccess.canAccess("delivery.fleets") ? (
+                    <DeliveryFleetsPage />
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
+                }
+              />
+              <Route
                 path="/kitchen/settings"
                 element={
                   pageAccess.canAccess("kitchen.settings") ? (
@@ -904,6 +930,26 @@ function OperationsShell() {
                     <SettingsAccessDenied />
                   )
                 }
+              />
+              <Route
+                path="/restaurant"
+                element={<Navigate to="/restaurant/daily-sales" replace />}
+              />
+              <Route
+                path="/restaurant/daily-sales"
+                element={pageAccess.canAccess("restaurant.daily_sales") ? <RestaurantDailySalesPage /> : <SettingsAccessDenied />}
+              />
+              <Route
+                path="/restaurant/daily-purchases"
+                element={pageAccess.canAccess("restaurant.daily_purchases") ? <RestaurantDailyPurchasesPage /> : <SettingsAccessDenied />}
+              />
+              <Route
+                path="/restaurant/inventory"
+                element={pageAccess.canAccess("restaurant.inventory") ? <RestaurantStocktakesPage /> : <SettingsAccessDenied />}
+              />
+              <Route
+                path="/restaurant/monthly-expenses"
+                element={pageAccess.canAccess("restaurant.monthly_expenses") ? <RestaurantMonthlyExpensesPage /> : <SettingsAccessDenied />}
               />
               <Route
                 path="/restaurant/reports"

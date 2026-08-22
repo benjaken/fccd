@@ -107,7 +107,7 @@ describe("Orders dashboard page", () => {
     renderDashboard();
 
     expect(
-      await screen.findByRole("heading", { name: "訂單儀表板" }),
+      await screen.findByRole("heading", { name: "跟進總覽" }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: /Shopify 待入單\s*4.*開啟列表/ }),

@@ -14,6 +14,8 @@ import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
+import { PdfAutoResizeTextarea } from "@/components/PdfAutoResizeTextarea";
+import { QuoteClauseSearchPicker } from "@/components/QuoteClauseSearchPicker";
 import {
   getBrandKind,
   getBrandLogoAlt,
@@ -28,6 +30,7 @@ import {
   quotePdfDraftStorageKey,
   type QuoteActivityDraft,
 } from "@/lib/quote-pdf-draft";
+import { PAYMENT_METHOD_OPTIONS, TERM_OPTIONS } from "@/lib/quote-clause-options";
 import {
   fetchActiveQuotePdfPages,
   type QuotePdfPage,
@@ -102,22 +105,6 @@ const ACTIVITY_OPTIONS = [
   { description: "即棄餐具及飲品套裝", amount: "480" },
 ];
 
-const TERM_OPTIONS = [
-  "以上訂單附送 54 份餐具，包括即棄餐具、紙碗及一些食物夾。",
-  "此報價單有效期至 2026年10月16日，逾期無效。",
-  "所有訂單會在收到款項後方確認預留送餐日期及時段，該時段額滿即截單。",
-  "訂單一經付款後不設退款，如需更改送貨日期需在原定送餐時間24小時前通知。",
-  "送貨時段為上午 11 時至晚上 8 時，每 30 分鐘一個時段。",
-];
-
-const PAYMENT_METHOD_OPTIONS = [
-  "銀行轉帳：匯豐銀行 HSBC：747-221000-838（戶口名稱：Food Channels Ltd.）",
-  "支票付款：抬頭「Food Channels Limited」，郵寄至「荃灣青山公路459-469號華力工業中心5字樓D-G室」",
-  "轉數快：轉數快識別碼 FPS ID: 102938271（Food Channels Ltd.）",
-  "PayMe：可按連結 https://qr.payme.hsbc.com.hk/2/KccY4yvtnscAvVWbvdUR",
-  "八達通：可按連結",
-];
-
 function pdfDate(value: string | null | undefined) {
   if (!value) return "";
   const isoDate = value.slice(0, 10).match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -130,7 +117,7 @@ function lineToDraft(line: DetailLine): EditableLine {
     id: line.id,
     description: line.productName || line.content || "",
     quantity: line.quantity === null ? "" : String(line.quantity),
-    unitPrice: line.unitPrice === null ? "" : String(line.unitPrice),
+    unitPrice: line.unitPrice === null ? "0" : String(line.unitPrice),
   };
 }
 
@@ -184,9 +171,15 @@ function normalizeDraft(value: Partial<QuotePdfDraft> | null | undefined, fallba
     brandName: fallback.brandName,
     quoteDate: pdfDate(stored.quoteDate || fallback.quoteDate),
     deliveryDate: pdfDate(stored.deliveryDate || fallback.deliveryDate),
-    lines: Array.isArray(stored.lines) ? stored.lines : fallback.lines,
+    lines: (Array.isArray(stored.lines) ? stored.lines : fallback.lines).map((line) => ({
+      ...line,
+      unitPrice: line.unitPrice?.trim() || "0",
+    })),
     additionalInfo: stored.additionalInfo ?? [],
-    activities: stored.activities ?? [],
+    activities: (stored.activities ?? []).map((activity) => ({
+      ...activity,
+      amount: activity.amount?.trim() || "0",
+    })),
     utensilPackQuantity: stored.utensilPackQuantity ?? "0",
     activityStartsNewPage: stored.activityStartsNewPage ?? false,
     notesStartsNewPage: stored.notesStartsNewPage ?? false,
@@ -195,9 +188,10 @@ function normalizeDraft(value: Partial<QuotePdfDraft> | null | undefined, fallba
     activityShippingFeeId: stored.activityShippingFeeId ?? "",
     activityShippingNote:
       stored.activityShippingNote ?? "運費－滿 $2800 免運費－地面交收",
-    activityShippingFee: stored.activityShippingFee ?? "0",
+    activityShippingFee: stored.activityShippingFee?.trim() || "0",
     shippingFeeId: stored.shippingFeeId ?? "",
     shippingFeeLabel: stored.shippingFeeLabel ?? "",
+    shippingFee: stored.shippingFee?.trim() || "0",
     discount: stored.discount ?? fallback.discount,
     cashDollarDeduction: stored.cashDollarDeduction ?? "0",
     cashDollarPurchase: stored.cashDollarPurchase ?? "0",
@@ -569,7 +563,7 @@ export function QuotePdfEditorPage({
               <tr key={activity.id}>
                 <td>{index + 1}</td>
                 <td><input aria-label={`活動報價 ${index + 1}`} value={activity.description} onChange={(event) => updateActivity(index, { description: event.target.value })} /></td>
-                <td>$<input aria-label={`活動價錢 ${index + 1}`} inputMode="decimal" value={activity.amount} onChange={(event) => updateActivity(index, { amount: event.target.value })} /></td>
+                <td>$<input aria-label={`活動價錢 ${index + 1}`} inputMode="decimal" value={activity.amount} onChange={(event) => updateActivity(index, { amount: event.target.value })} onBlur={() => { if (!activity.amount.trim()) updateActivity(index, { amount: "0" }); }} /></td>
               </tr>
             ))}
           </tbody>
@@ -584,7 +578,7 @@ export function QuotePdfEditorPage({
               </select>
               <span className="quote-pdf-print-only">{draft.activityShippingNote || "選擇運費"}</span>
             </td>
-            <td><span className="quote-pdf-price-input"><span aria-hidden="true">$</span><input aria-label="活動運費" inputMode="decimal" value={draft.activityShippingFee} onChange={(event) => update("activityShippingFee", event.target.value)} /></span></td>
+            <td><span className="quote-pdf-price-input"><span aria-hidden="true">$</span><input aria-label="活動運費" inputMode="decimal" size={Math.max(draft.activityShippingFee.length, 1)} value={draft.activityShippingFee} onChange={(event) => update("activityShippingFee", event.target.value)} onBlur={() => { if (!draft.activityShippingFee.trim()) update("activityShippingFee", "0"); }} /></span></td>
           </tr>
           <tr><td colSpan={2}>總數：</td><td>${totals.activityTotal.toLocaleString("zh-HK")}</td></tr>
         </tfoot>
@@ -609,7 +603,7 @@ export function QuotePdfEditorPage({
               <tr key={line.id}>
                 <td>{index + 1}</td>
                 <td><input className="quote-pdf-product-input" aria-label={`產品 ${index + 1}`} value={line.description} onChange={(event) => updateLine(index, { description: event.target.value })} /></td>
-                <td><span className="quote-pdf-price-input"><span aria-hidden="true">$</span><input aria-label={`單價 ${index + 1}`} inputMode="decimal" value={line.unitPrice} onChange={(event) => updateLine(index, { unitPrice: event.target.value })} /></span></td>
+                <td><span className="quote-pdf-price-input"><span aria-hidden="true">$</span><input aria-label={`單價 ${index + 1}`} inputMode="decimal" size={Math.max(line.unitPrice.length, 1)} value={line.unitPrice} onChange={(event) => updateLine(index, { unitPrice: event.target.value })} onBlur={() => { if (!line.unitPrice.trim()) updateLine(index, { unitPrice: "0" }); }} /></span></td>
                 <td><input aria-label={`${isLunchBox ? "份數" : "數量"} ${index + 1}`} inputMode="decimal" value={line.quantity} onChange={(event) => updateLine(index, { quantity: event.target.value })} /></td>
                 <td className="quote-pdf-money">${(numberValue(line.quantity) * numberValue(line.unitPrice)).toLocaleString("zh-HK")}</td>
               </tr>
@@ -635,7 +629,7 @@ export function QuotePdfEditorPage({
               </select>
               <span className="quote-pdf-print-only">{draft.shippingFeeLabel || "選擇運費"}</span>
             </td>
-            <td><span className="quote-pdf-price-input"><span aria-hidden="true">$</span><input aria-label="運費" inputMode="decimal" value={draft.shippingFee} onChange={(event) => update("shippingFee", event.target.value)} /></span></td>
+            <td><span className="quote-pdf-price-input"><span aria-hidden="true">$</span><input aria-label="運費" inputMode="decimal" size={Math.max(draft.shippingFee.length, 1)} value={draft.shippingFee} onChange={(event) => update("shippingFee", event.target.value)} onBlur={() => { if (!draft.shippingFee.trim()) update("shippingFee", "0"); }} /></span></td>
           </tr>
           <tr><td className="quote-pdf-summary-label" colSpan={4}>總數：</td><td><strong>${totals.productTotal.toLocaleString("zh-HK")}</strong></td></tr>
         </tbody> : null}
@@ -697,7 +691,7 @@ export function QuotePdfEditorPage({
           <label htmlFor="quote-date">報價日期</label><input id="quote-date" inputMode="numeric" placeholder={t("quotes.pdfEditor.datePlaceholder")} value={draft.quoteDate} onChange={(event) => update("quoteDate", event.target.value)} />
           <label htmlFor="quote-contact">聯絡資料</label><input id="quote-contact" value={draft.contact} onChange={(event) => update("contact", event.target.value)} />
           <label htmlFor="quote-delivery-date">送貨日期</label><input id="quote-delivery-date" inputMode="numeric" placeholder={t("quotes.pdfEditor.datePlaceholder")} value={draft.deliveryDate} onChange={(event) => update("deliveryDate", event.target.value)} />
-          <label htmlFor="quote-address">送貨地址</label><textarea id="quote-address" rows={1} value={draft.deliveryAddress} onChange={(event) => update("deliveryAddress", event.target.value)} />
+          <label htmlFor="quote-address">送貨地址</label><PdfAutoResizeTextarea id="quote-address" value={draft.deliveryAddress} onChange={(event) => update("deliveryAddress", event.target.value)} />
           <label htmlFor="quote-delivery-time">送貨時段</label><input id="quote-delivery-time" value={draft.deliveryTime} onChange={(event) => update("deliveryTime", event.target.value)} />
         </div>
 
@@ -771,23 +765,17 @@ export function QuotePdfEditorPage({
         </div>
       </Modal> : null}
 
-      <Modal open={termsOpen} onClose={() => setTermsOpen(false)} title="條款及細則" closeLabel="關閉條款及細則" size="lg" footer={<Button onClick={() => setTermsOpen(false)}>確定</Button>}>
+      <Modal open={termsOpen} onClose={() => setTermsOpen(false)} title="條款及細則" closeLabel="關閉條款及細則" size="lg" rootClassName="quote-clause-modal-root" className="quote-clause-modal" footer={<Button onClick={() => setTermsOpen(false)}>確定</Button>}>
         <div className="quote-additional-picker quote-clause-picker">
-          <div className="quote-clause-search-wrap">
-            <div className="quote-additional-search"><Search /><input autoFocus aria-label="搜尋條款及細則" placeholder={t("quotes.pdfEditor.termsSearchPlaceholder")} value={termSearch} onChange={(event) => setTermSearch(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") addDraftItem("terms", termSearch); }} /><Button variant="outline" onClick={() => addDraftItem("terms", termSearch)}>加入</Button></div>
-            <ul className="quote-clause-suggestions">{TERM_OPTIONS.filter((option) => !termSearch.trim() || option.toLocaleLowerCase().includes(termSearch.trim().toLocaleLowerCase())).map((option) => <li key={option}><span>{option}</span><Button size="sm" variant="outline" onClick={() => addDraftItem("terms", option)}><Plus />加入</Button></li>)}</ul>
-          </div>
+          <QuoteClauseSearchPicker search={termSearch} onSearchChange={setTermSearch} options={TERM_OPTIONS} searchLabel="搜尋條款及細則" placeholder={t("quotes.pdfEditor.termsSearchPlaceholder")} onAdd={(value) => addDraftItem("terms", value)} />
           <p>可搜尋條款範本，亦可自由輸入內容後按「加入」。</p>
           <div className="quote-clause-selected"><strong>已加入的條例</strong>{draft.terms.map((item, index) => <div key={`selected-term-${index}`}><span>（{index + 1}）{item}</span><button type="button" aria-label={`移除條款及細則 ${index + 1}`} onClick={() => update("terms", draft.terms.filter((_, itemIndex) => itemIndex !== index))}><Minus /></button></div>)}</div>
         </div>
       </Modal>
 
-      <Modal open={paymentsOpen} onClose={() => setPaymentsOpen(false)} title="付款方式" closeLabel="關閉付款方式" size="lg" footer={<Button onClick={() => setPaymentsOpen(false)}>確定</Button>}>
+      <Modal open={paymentsOpen} onClose={() => setPaymentsOpen(false)} title="付款方式" closeLabel="關閉付款方式" size="lg" rootClassName="quote-clause-modal-root" className="quote-clause-modal" footer={<Button onClick={() => setPaymentsOpen(false)}>確定</Button>}>
         <div className="quote-additional-picker quote-clause-picker">
-          <div className="quote-clause-search-wrap">
-            <div className="quote-additional-search"><Search /><input autoFocus aria-label="搜尋付款方式" placeholder={t("quotes.pdfEditor.paymentSearchPlaceholder")} value={paymentSearch} onChange={(event) => setPaymentSearch(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") addDraftItem("paymentMethods", paymentSearch); }} /><Button variant="outline" onClick={() => addDraftItem("paymentMethods", paymentSearch)}>加入</Button></div>
-            <ul className="quote-clause-suggestions">{PAYMENT_METHOD_OPTIONS.filter((option) => !paymentSearch.trim() || option.toLocaleLowerCase().includes(paymentSearch.trim().toLocaleLowerCase())).map((option) => <li key={option}><span>{option}</span><Button size="sm" variant="outline" onClick={() => addDraftItem("paymentMethods", option)}><Plus />加入</Button></li>)}</ul>
-          </div>
+          <QuoteClauseSearchPicker search={paymentSearch} onSearchChange={setPaymentSearch} options={PAYMENT_METHOD_OPTIONS} searchLabel="搜尋付款方式" placeholder={t("quotes.pdfEditor.paymentSearchPlaceholder")} onAdd={(value) => addDraftItem("paymentMethods", value)} />
           <p>可搜尋付款方式範本，亦可自由輸入內容後按「加入」。</p>
           <div className="quote-clause-selected"><strong>已加入的付款方式</strong>{draft.paymentMethods.map((item, index) => <div key={`selected-payment-${index}`}><span>（{index + 1}）{item}</span><button type="button" aria-label={`移除付款方式 ${index + 1}`} onClick={() => update("paymentMethods", draft.paymentMethods.filter((_, itemIndex) => itemIndex !== index))}><Minus /></button></div>)}</div>
         </div>
