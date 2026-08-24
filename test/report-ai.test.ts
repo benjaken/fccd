@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 
 import {
   buildReportAiProviderRequest,
@@ -6,6 +7,11 @@ import {
   sameReportAiScalar,
   textNumbersAreSupported,
 } from "../supabase/functions/_shared/report-ai-provider";
+import {
+  reportAiLimitExceeded,
+  sanitizeReportAiSnapshot,
+  trustedReportAiRole,
+} from "../supabase/functions/_shared/report-ai-security";
 import i18n from "@/i18n";
 
 import {
@@ -158,5 +164,82 @@ describe("report AI snapshot seam", () => {
       .toBe("有限分析：根據目前可用資料");
     expect(i18n.t("reports.ai.partial", { lng: "en" }))
       .toBe("Limited analysis based on the currently available data");
+  });
+});
+
+describe("report AI server security contract", () => {
+  const edgeSource = readFileSync(
+    "supabase/functions/report-ai-interpret/index.ts",
+    "utf8",
+  );
+  const packageJson = JSON.parse(readFileSync("package.json", "utf8")) as {
+    scripts: Record<string, string>;
+  };
+
+  it("never authorizes from user-controlled metadata", () => {
+    expect(edgeSource).not.toContain("user.user_metadata?.role");
+    expect(edgeSource).toContain("trustedReportAiRole");
+  });
+
+  it("only treats a trusted app-metadata role as an administrator", () => {
+    expect(trustedReportAiRole({ role: "Super Admin" })).toBe("Super Admin");
+    expect(trustedReportAiRole(undefined)).toBe("");
+  });
+
+  it("enforces the limit for ordinary users but allows trusted administrators", () => {
+    expect(reportAiLimitExceeded(100, 100, "Operations")).toBe(true);
+    expect(reportAiLimitExceeded(100, 100, "Super Admin")).toBe(false);
+  });
+
+  it("stops non-admin users at the daily limit before calling the provider", () => {
+    const limitCheck = edgeSource.indexOf("reportAiLimitExceeded");
+    const providerCall = edgeSource.indexOf("callModel(sanitizedBody");
+
+    expect(limitCheck).toBeGreaterThan(-1);
+    expect(edgeSource.slice(limitCheck, providerCall)).toContain("429");
+    expect(limitCheck).toBeLessThan(providerCall);
+  });
+
+  it("sanitizes the snapshot on the server before hashing or provider use", () => {
+    const sanitizeCall = edgeSource.indexOf("sanitizeReportAiSnapshot");
+    const fingerprint = edgeSource.indexOf("const fingerprint");
+
+    expect(sanitizeCall).toBeGreaterThan(-1);
+    expect(sanitizeCall).toBeLessThan(fingerprint);
+  });
+
+  it("keeps only report-specific fields and strips arbitrary sensitive input", () => {
+    const sanitized = sanitizeReportAiSnapshot("shopSales", {
+      filters: {
+        period: "month",
+        startDate: "2026-08-01",
+        email: "private@example.com",
+      },
+      currentAggregates: [{
+        bucketStart: "2026-08-01",
+        amount: 120,
+        customerPhone: "+852 9123 4567",
+        arbitraryPayload: "send this to the provider",
+      }],
+      completeness: {
+        status: "partial",
+        notes: ["client-controlled free text"],
+      },
+    });
+
+    expect(sanitized.filters).toEqual({
+      period: "month",
+      startDate: "2026-08-01",
+    });
+    expect(sanitized.currentAggregates).toEqual([{
+      bucketStart: "2026-08-01",
+      amount: 120,
+    }]);
+    expect(sanitized.completeness).toEqual({ status: "partial" });
+  });
+
+  it("runs all Edge Function type checks during the normal build", () => {
+    expect(packageJson.scripts["check:edge-functions"]).toBeTruthy();
+    expect(packageJson.scripts.build).toContain("npm run check:edge-functions");
   });
 });

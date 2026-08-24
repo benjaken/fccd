@@ -13,6 +13,7 @@
     "runtime-check.d.ts",
     "_shared/supplier-quote-recognition.ts",
     "_shared/report-ai-provider.ts",
+    "_shared/report-ai-security.ts",
     "supplier-quote-ingest/index.ts",
     "report-ai-interpret/index.ts"
   ]
