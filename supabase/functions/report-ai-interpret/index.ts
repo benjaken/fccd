@@ -373,8 +373,10 @@ function completedDrafts(content: string) {
 
 async function callModel(body: RequestBody, onDraft: (text: string) => void) {
   const endpoint = reportAiEnv("REPORT_AI_ENDPOINT", "SUPPLIER_QUOTE_AI_ENDPOINT");
-  const apiKey = reportAiEnv("REPORT_AI_API_KEY", "SUPPLIER_QUOTE_AI_API_KEY");
+  const apiKey = Deno.env.get("REPORT_AI_API_KEY") ?? Deno.env.get("XAI_API_KEY") ??
+    Deno.env.get("SUPPLIER_QUOTE_AI_API_KEY") ?? "";
   const model = reportAiEnv("REPORT_AI_MODEL", "SUPPLIER_QUOTE_AI_MODEL");
+  const provider = reportAiEnv("REPORT_AI_PROVIDER", "SUPPLIER_QUOTE_AI_PROVIDER");
   const enabled = reportAiEnv("REPORT_AI_ENABLED", "SUPPLIER_QUOTE_AI_ENABLED") === "true";
   if (!enabled || !endpoint || !apiKey || !model) {
     throw new Error("report_ai_disabled");
@@ -388,6 +390,8 @@ async function callModel(body: RequestBody, onDraft: (text: string) => void) {
       signal: controller.signal,
       body: JSON.stringify(buildReportAiProviderRequest({
         model,
+        provider,
+        endpoint,
         systemPrompt: systemPrompt(body.locale ?? "zh-HK"),
         reportContext: {
             reportKey: body.reportKey,

@@ -646,7 +646,7 @@ function openAiOutputText(payload: Record<string, unknown>) {
   throw new Error("openai_output_text_missing");
 }
 
-function deepSeekOutputText(payload: Record<string, unknown>) {
+function chatCompletionsOutputText(payload: Record<string, unknown>, provider: "deepseek" | "xai") {
   const choices = Array.isArray(payload.choices) ? payload.choices : [];
   const first = choices[0];
   if (first && typeof first === "object") {
@@ -654,7 +654,7 @@ function deepSeekOutputText(payload: Record<string, unknown>) {
     if (message && typeof message === "object" && typeof (message as { content?: unknown }).content === "string"
       && (message as { content: string }).content.trim()) return (message as { content: string }).content;
   }
-  throw new Error("deepseek_output_content_missing");
+  throw new Error(`${provider}_output_content_missing`);
 }
 
 function hasValidAiEvidence(candidate: QuoteCandidate, blocks: LayoutBlock[]) {
@@ -681,6 +681,7 @@ export async function recognizeWithAi(blocks: LayoutBlock[], config: AiAdapterCo
   const fetchImpl = config.fetchImpl ?? fetch;
   const isOpenAi = config.provider?.toLowerCase() === "openai" || /api\.openai\.com\/v1\/responses/i.test(config.endpoint);
   const isDeepSeek = config.provider?.toLowerCase() === "deepseek" || /api\.deepseek\.com\/chat\/completions/i.test(config.endpoint);
+  const isXai = ["xai", "grok"].includes(config.provider?.toLowerCase() ?? "") || /api\.x\.ai\/v1\/chat\/completions/i.test(config.endpoint);
   let lastError = "ai_provider_failed";
   for (let attempt = 0; attempt <= config.maxRetries; attempt += 1) {
     const controller = new AbortController();
@@ -693,14 +694,14 @@ export async function recognizeWithAi(blocks: LayoutBlock[], config: AiAdapterCo
         text: { format: { type: "json_schema", name: "supplier_quote_candidates", strict: true, schema: OPENAI_CANDIDATE_SCHEMA } },
         max_output_tokens: 8_000,
         store: false,
-      } : isDeepSeek ? {
+      } : isDeepSeek || isXai ? {
         model: config.model,
         messages: [
           { role: "system", content: `Extract supplier quote candidates only from the supplied layout cells. Return JSON only with shape {"candidates": [...]}. For vertical catalogue cards, group Item, product name, Origin, Packing and Price rows only when their bounding boxes occupy the same horizontal product-card range. Return only real products that have both an explicit measurable weight (for example 520g, 2kg, 4 x 2kg) and an explicit positive quoted price; exclude volume-only products such as 2.3L. Map bottle, jar, can, tin, tray, pouch, squeezer, cup and pet price labels to priceUnit unit while preserving rawPriceUnit exactly. Never return field labels such as Item:, Origin:, Packing: or Price: as products. Every sourceBlockId, sourcePage, evidence blockId and evidence cellId must exactly match the supplied IDs. Every evidence text must exactly equal text from one of its referenced cells. sourceText must be exact contiguous text from the referenced block. Use null for unknown values, never infer a price or unit, and never convert TBA or unavailable items to zero. If every schema and evidence constraint cannot be satisfied, return {"candidates":[]}. The required JSON schema is: ${JSON.stringify(OPENAI_CANDIDATE_SCHEMA)}` },
           { role: "user", content: serialized },
         ],
         response_format: { type: "json_object" },
-        thinking: { type: "disabled" },
+        ...(isXai ? { reasoning_effort: "low" } : { thinking: { type: "disabled" } }),
         max_tokens: 8_000,
         stream: false,
       } : { model: config.model, response_format: { type: "json_schema", name: "supplier_quote_candidates", strict: true }, input: serialized };
@@ -711,7 +712,9 @@ export async function recognizeWithAi(blocks: LayoutBlock[], config: AiAdapterCo
       const payload = await response.json() as Record<string, unknown>;
       const candidatePayload = isOpenAi
         ? JSON.parse(openAiOutputText(payload)) as { candidates?: unknown; output?: unknown }
-        : isDeepSeek ? JSON.parse(deepSeekOutputText(payload)) as { candidates?: unknown; output?: unknown } : payload;
+        : isDeepSeek || isXai
+        ? JSON.parse(chatCompletionsOutputText(payload, isXai ? "xai" : "deepseek")) as { candidates?: unknown; output?: unknown }
+        : payload;
       const candidates = assertCandidateArray(candidatePayload.candidates ?? candidatePayload.output, config.model);
       const validCandidates = candidates.filter((candidate) => hasValidAiEvidence(candidate, blocks));
       return { candidates: validCandidates, status: "ok" as const,

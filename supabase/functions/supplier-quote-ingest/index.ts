@@ -216,7 +216,7 @@ async function executePipeline(admin: SupabaseClient, document: DocumentRow, run
       normalizedSpecFingerprint: String(alias.normalized_spec_fingerprint), confidence: Number(alias.confidence) })) as MatchAlias[],
     allowedItems: matchScope.items, supplierScopeApplied: matchScope.supplierScopeApplied,
     ai: { enabled: Deno.env.get("SUPPLIER_QUOTE_AI_ENABLED") === "true", endpoint: Deno.env.get("SUPPLIER_QUOTE_AI_ENDPOINT"),
-      apiKey: Deno.env.get("SUPPLIER_QUOTE_AI_API_KEY"), provider: Deno.env.get("SUPPLIER_QUOTE_AI_PROVIDER"),
+      apiKey: Deno.env.get("XAI_API_KEY") ?? Deno.env.get("SUPPLIER_QUOTE_AI_API_KEY"), provider: Deno.env.get("SUPPLIER_QUOTE_AI_PROVIDER"),
       model: Deno.env.get("SUPPLIER_QUOTE_AI_MODEL"), timeoutMs: Number(Deno.env.get("SUPPLIER_QUOTE_AI_TIMEOUT_MS") ?? 20_000),
       maxRetries: Number(Deno.env.get("SUPPLIER_QUOTE_AI_MAX_RETRIES") ?? 0),
       maxInputChars: Number(Deno.env.get("SUPPLIER_QUOTE_AI_MAX_INPUT_CHARS") ?? 80_000),
