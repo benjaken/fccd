@@ -24,6 +24,17 @@ describe("Primary navigation section matching", () => {
     expect(isSecondaryNavItemActive(pathname, itemPath)).toBe(true);
   });
 
+  it.each([
+    ["/orders/pending", ["/orders", "/orders/pending", "/orders/unpaid"], "/orders/pending"],
+    ["/quotes/customers", ["/quotes", "/quotes/customers", "/quotes/pending"], "/quotes/customers"],
+    ["/products/packages", ["/products", "/products/packages"], "/products/packages"],
+    ["/delivery/assign", ["/delivery", "/delivery/assign", "/delivery/fleets"], "/delivery/assign"],
+  ])("activates only the longest matching secondary route for %s", (pathname, siblings, expected) => {
+    expect(
+      siblings.filter((to) => isSecondaryNavItemActive(pathname, to, siblings)),
+    ).toEqual([expected]);
+  });
+
   it.each(Object.entries(REPORT_GROUP_TABS))(
     "gives every %s report tab a unique URL inside its group",
     (group, tabs) => {

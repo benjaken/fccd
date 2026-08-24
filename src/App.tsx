@@ -537,6 +537,7 @@ function OperationsShell() {
                               isSecondaryNavItemActive(
                                 location.pathname,
                                 child.to,
+                                visibleChildren.map((item) => item.to),
                               ) && "active",
                             )
                           }
