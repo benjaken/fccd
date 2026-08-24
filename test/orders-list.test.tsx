@@ -567,6 +567,7 @@ describe("Orders list", () => {
     expect(loadOrders).toHaveBeenCalledWith(
       expect.objectContaining({ preset: "pending" }),
     );
+    expect(screen.getByText("B-1513")).toHaveAttribute("href", "/quotes/order-1");
   });
 
   it.each([

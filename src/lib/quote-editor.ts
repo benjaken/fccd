@@ -57,6 +57,7 @@ export type CreatedQuote = {
 };
 
 export type QuoteEditorSummary = CreatedQuote & {
+  documentType: "quote" | "unconfirmed" | "order";
   channelId: string;
   draft: QuoteDraft;
   financials: QuoteFinancials;
@@ -245,7 +246,7 @@ export async function fetchQuoteEditorSummary(
   const [orderResult, deliveryResult, tagsResult, asanaResult, paymentsResult] = await Promise.all([
     supabase
       .from("orders")
-      .select("id,order_number,channel_id,quote_status,quote_auto_closed_at,quote_reopen_reason,quote_sales_source_id,quote_communication_channel_id,customer_name_snapshot,company_name_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,email_snapshot,shipping_address_snapshot,customer_note_snapshot,shipping_method_id,delivery_at,delivery_time,ship_out_time,factory_packing_note,sales_partner_id,remarks,shipping_fee,discount_amount,cashdollar_redeemed,cashdollar_purchased,is_sent_to_factory,do_not_send_to_factory,factory_print_date,factory_reprint_required")
+      .select("id,document_type,order_number,channel_id,quote_status,quote_auto_closed_at,quote_reopen_reason,quote_sales_source_id,quote_communication_channel_id,customer_name_snapshot,company_name_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,email_snapshot,shipping_address_snapshot,customer_note_snapshot,shipping_method_id,delivery_at,delivery_time,ship_out_time,factory_packing_note,sales_partner_id,remarks,shipping_fee,discount_amount,cashdollar_redeemed,cashdollar_purchased,is_sent_to_factory,do_not_send_to_factory,factory_print_date,factory_reprint_required")
       .eq("id", resolvedOrderId)
       .in("document_type", documentType === "order" ? ["order"] : ["quote", "unconfirmed"])
       .is("archived_at", null)
@@ -306,6 +307,7 @@ export async function fetchQuoteEditorSummary(
   };
   return {
     id: data.id,
+    documentType: data.document_type as QuoteEditorSummary["documentType"],
     orderNumber: data.order_number || "",
     channelId: data.channel_id || "",
     draft,

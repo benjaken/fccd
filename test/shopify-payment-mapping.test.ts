@@ -6,11 +6,16 @@ import {
   filterLegacyPaymentDuplicates,
   mapShopifyOrder,
   mapShopifyTransaction,
+  linkedOrderLineSnapshotPatch,
   normalizeNameForMatch,
   orderNeedsTransactionSync,
+  planShopifyMenuOptions,
   parseMenuRemark,
   pickCatalogMatchByName,
+  replaceShopifyLunchBoxAggregate,
+  resolveShopifySkuSnapshot,
   resolveAliasSku,
+  shopifyCateringUtensilPacks,
   shopifyFinancialStatus,
   shopifyOutstanding,
   shopifyTransactionLegacyId,
@@ -303,6 +308,29 @@ describe("parseMenuRemark", () => {
     expect(parseMenuRemark(undefined)).toEqual([]);
   });
 
+  it("parses a lunch-box order note containing structured meal rows", () => {
+    const remark = `Tina 9383 2361
+Yoyo 6553 0678
+
+(雙格) 沙嗲雞扒飯 x8
+(雙格) 手撕雞髀飯 x5
+(雙格) 鮮茄牛肉飯 x3
+(雙格) 咕嚕魚塊飯 x3
+(雙格) 黑椒雞扒炒意粉 x5
+(單格) 乾燒雜菌伊麵 x2
+
+共26個`;
+
+    expect(parseMenuRemark(remark)).toEqual([
+      { name: "(雙格) 沙嗲雞扒飯", quantity: 8 },
+      { name: "(雙格) 手撕雞髀飯", quantity: 5 },
+      { name: "(雙格) 鮮茄牛肉飯", quantity: 3 },
+      { name: "(雙格) 咕嚕魚塊飯", quantity: 3 },
+      { name: "(雙格) 黑椒雞扒炒意粉", quantity: 5 },
+      { name: "(單格) 乾燒雜菌伊麵", quantity: 2 },
+    ]);
+  });
+
   it("does not parse a bare option line without a menu title", () => {
     expect(parseMenuRemark("科布燒牛肉南瓜沙律配油醋 (2磅)")).toEqual([]);
   });
@@ -345,6 +373,9 @@ describe("normalizeNameForMatch", () => {
       "科布燒牛肉南瓜沙律(2磅)",
     );
     expect(normalizeNameForMatch("ABC DEF")).toBe("abcdef");
+    expect(normalizeNameForMatch("(單格) 乾燒雜菌伊麵")).toBe(
+      normalizeNameForMatch("(單格) 干燒雜菌伊麵"),
+    );
     expect(normalizeNameForMatch("(素) 荷塘五色小炒 (2磅)")).toBe("荷塘五色小炒(2磅)");
   });
 });
@@ -429,14 +460,14 @@ describe("mapShopifyOrder remark collection", () => {
     ]);
   });
 
-  it("maps the discounted product price but keeps shipping outside package lines", () => {
+  it("keeps the gross product price while discount and shipping stay at order level", () => {
     const mapped = mapShopifyOrder({
       order: {
         id: 2128,
         name: "K-2128",
         total_price: "3060",
         total_discounts: "200",
-        line_items: [{ id: 1, sku: "CCMA1012", title: "中秋中菜到會", quantity: 1, price: "3080", discount_allocations: [{ amount: "200" }] }],
+        line_items: [{ id: 1, sku: "CCMA1012", title: "【2026中秋】中秋中菜到會 (10-12人)", quantity: 1, price: "3080", discount_allocations: [{ amount: "200" }] }],
         shipping_lines: [{ id: 2, title: "偏遠地區 - 車邊交收收費A", price: "180", discounted_price: "180" }],
       },
       shopDomain: "foodchannels-kitchen.myshopify.com",
@@ -444,8 +475,120 @@ describe("mapShopifyOrder remark collection", () => {
       channelId: "channel-uuid",
     });
     expect(mapped!.lines).toHaveLength(1);
-    expect(mapped!.lines[0].row).toMatchObject({ unit_price: 2880, total_price: 2880 });
-    expect(mapped!.orderRow).toMatchObject({ shipping_fee: 180, grand_total: 3060 });
+    expect(mapped!.lines[0].row).toMatchObject({
+      sku_snapshot: "CCMA1012",
+      product_name_snapshot: "【2026中秋】中秋中菜到會 (10-12人)",
+      unit_price: 3080,
+      total_price: 3080,
+    });
+    expect(mapped!.orderRow).toMatchObject({ discount_amount: 200, shipping_fee: 180, grand_total: 3060 });
+  });
+
+  it("keeps package options beside their parent and absorbs priced add-on variants", () => {
+    const plan = planShopifyMenuOptions({
+      sources: [{
+        lineId: 400,
+        parentItemOrder: 4,
+        parentPackageId: "package-ccch0810",
+        text: "中式小菜 7選4:\n脆皮吊燒雞 (1隻), 明爐叉燒 (1斤), 鮑汁花菇扒西蘭花 (2磅), 當紅川味辣子雞 (1隻)",
+      }],
+      addonCandidates: [
+        {
+          legacyId: "addon-10",
+          itemOrder: 5,
+          sku: null,
+          variantTitle: "鮑汁花菇扒西蘭花 (2磅)",
+          quantity: 1,
+          unitPrice: 10,
+          totalPrice: 10,
+        },
+        {
+          legacyId: "addon-40",
+          itemOrder: 6,
+          sku: null,
+          variantTitle: "當紅川味辣子雞 (1隻)",
+          quantity: 1,
+          unitPrice: 40,
+          totalPrice: 40,
+        },
+      ],
+    });
+
+    expect(plan.options.map((option) => ({
+      name: option.name,
+      itemOrder: option.itemOrder,
+      parentPackageId: option.parentPackageId,
+      unitPrice: option.unitPrice,
+      totalPrice: option.totalPrice,
+    }))).toEqual([
+      { name: "脆皮吊燒雞 (1隻)", itemOrder: 4.001, parentPackageId: "package-ccch0810", unitPrice: null, totalPrice: null },
+      { name: "明爐叉燒 (1斤)", itemOrder: 4.002, parentPackageId: "package-ccch0810", unitPrice: null, totalPrice: null },
+      { name: "鮑汁花菇扒西蘭花 (2磅)", itemOrder: 4.003, parentPackageId: "package-ccch0810", unitPrice: 10, totalPrice: 10 },
+      { name: "當紅川味辣子雞 (1隻)", itemOrder: 4.004, parentPackageId: "package-ccch0810", unitPrice: 40, totalPrice: 40 },
+    ]);
+    expect(plan.consumedAddonLegacyIds).toEqual(["addon-10", "addon-40"]);
+  });
+
+  it("derives free six-person utensil packs from catering package capacity", () => {
+    expect(shopifyCateringUtensilPacks([
+      { packageId: "package-1", name: "精緻中式盛宴 (8-10人)", quantity: 1 },
+      { packageId: null, name: "鮮味炸蟹柳蟹鉗 (12件)", quantity: 2 },
+    ])).toBe(2);
+    expect(shopifyCateringUtensilPacks([
+      { packageId: "package-1", name: "精緻中式盛宴 (8-10人)", quantity: 2 },
+    ])).toBe(4);
+  });
+});
+
+describe("Shopify SKU snapshots", () => {
+  it("falls back to the matched catalog SKU when a lunch-box line omits its SKU", () => {
+    expect(resolveShopifySkuSnapshot({
+      shopifySku: null,
+      productId: "product-cbe003",
+      packageId: null,
+      products: [{ id: "product-cbe003", sku: "CBE003", channel_id: "lunch-box" }],
+      packages: [],
+      stripSuffix: true,
+    })).toBe("CBE003");
+  });
+});
+
+describe("Shopify lunch-box aggregate expansion", () => {
+  it("replaces the aggregate line and distributes its unit price to parsed meals", () => {
+    const expanded = replaceShopifyLunchBoxAggregate({
+      baseLines: [{
+        legacy_id: "aggregate",
+        product_name_snapshot: "雙格飯盒",
+        quantity: 26,
+        unit_price: 54,
+        total_price: 1404,
+        item_order: 1,
+      }],
+      menuLines: [
+        { product_name_snapshot: "(雙格) 沙嗲雞扒飯", quantity: 8, unit_price: null, total_price: null },
+        { product_name_snapshot: "(雙格) 手撕雞髀飯", quantity: 5, unit_price: null, total_price: null },
+      ],
+    });
+
+    expect(expanded.baseLines).toEqual([]);
+    expect(expanded.menuLines).toMatchObject([
+      { product_name_snapshot: "(雙格) 沙嗲雞扒飯", unit_price: 54, total_price: 432, item_order: 1 },
+      { product_name_snapshot: "(雙格) 手撕雞髀飯", unit_price: 54, total_price: 270, item_order: 1.001 },
+    ]);
+  });
+
+  it("fills a linked Bubble line's blank name and amount from Shopify", () => {
+    expect(linkedOrderLineSnapshotPatch({
+      existing: { productName: "   ", unitPrice: 3080, totalPrice: null },
+      shopify: {
+        productName: "【2026中秋】中秋中菜到會 (10-12人)",
+        unitPrice: 3080,
+        totalPrice: 3080,
+      },
+    })).toEqual({
+      product_name_snapshot: "【2026中秋】中秋中菜到會 (10-12人)",
+      total_price: 3080,
+    });
   });
 });
 
