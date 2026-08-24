@@ -19,6 +19,21 @@ const OPERATIONAL_LIST_PAGES = [
 ];
 
 describe("ListTable", () => {
+  it("leaves vertical wheel scrolling to the page", () => {
+    const css = readFileSync(
+      path.resolve(process.cwd(), "src/index.css"),
+      "utf8",
+    );
+    const operationalRule = css.match(/\.operational-table-wrap\s*\{([^}]*)\}/)?.[1];
+    const pullToRefreshRule = css.match(/\.pull-to-refresh\s*\{([^}]*)\}/)?.[1];
+
+    expect(operationalRule).toBeDefined();
+    expect(operationalRule).toContain("overflow-x: auto");
+    expect(operationalRule).not.toMatch(/(?:^|[;\s])overflow:\s*auto/);
+    expect(pullToRefreshRule).toBeDefined();
+    expect(pullToRefreshRule).not.toContain("overscroll-behavior-y: contain");
+  });
+
   it("keeps the table shell visible and swaps skeleton rows for data", () => {
     const { rerender } = render(
       <ListTable

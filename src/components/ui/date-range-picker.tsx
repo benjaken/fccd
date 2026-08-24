@@ -35,13 +35,15 @@ export function DateRangePicker({
   allowOutOfOrder = false,
 }: DateRangePickerProps) {
   const rangeLabel = legend ?? `${startLabel} — ${endLabel}`;
+  const labelId = `${startId}-${endId}-label`;
 
   return (
-    <fieldset
+    <div
       className={cn("date-range-picker", className)}
-      disabled={disabled}
+      role="group"
+      aria-labelledby={labelId}
     >
-      <legend>{rangeLabel}</legend>
+      <span id={labelId} className="date-range-picker-label">{rangeLabel}</span>
       <div className="date-range-picker-control">
         <input
           id={startId}
@@ -65,6 +67,6 @@ export function DateRangePicker({
           onChange={(event) => onEndChange(event.target.value)}
         />
       </div>
-    </fieldset>
+    </div>
   );
 }

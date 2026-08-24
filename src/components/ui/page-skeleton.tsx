@@ -15,6 +15,7 @@ type PageSkeletonProps = {
   label: string;
   variant?: PageSkeletonVariant;
   cards?: 2 | 3;
+  detailLayout?: "default" | "document";
   analysis?: boolean;
   showSummary?: boolean;
   compact?: boolean;
@@ -120,6 +121,51 @@ function detailCard({
           ))
         : null}
     </article>
+  );
+}
+
+function documentDetailField() {
+  return (
+    <div className="quote-readonly-field document-detail-skeleton-field">
+      {bone("document-detail-skeleton-label")}
+      {bone("document-detail-skeleton-value")}
+    </div>
+  );
+}
+
+function documentDetailColumn(fields: number) {
+  return (
+    <div className="quote-editor-form-column document-detail-skeleton-column">
+      <h2>
+        {bone("detail-skeleton-icon")}
+        {bone("detail-skeleton-card-title")}
+      </h2>
+      {Array.from({ length: fields }, (_, index) => (
+        <span key={index}>{documentDetailField()}</span>
+      ))}
+    </div>
+  );
+}
+
+function documentDetailSkeleton() {
+  return (
+    <>
+      {detailHeading()}
+      <section className="panel quote-editor-form quote-editor-readonly-form document-detail-skeleton">
+        {documentDetailColumn(10)}
+        {documentDetailColumn(9)}
+      </section>
+      <article className="panel quote-lines-panel quote-lines-readonly-panel document-detail-skeleton-items">
+        <header>
+          <div className="content-skeleton-stack">
+            {bone("content-skeleton-eyebrow")}
+            {bone("detail-skeleton-card-title")}
+          </div>
+          {bone("document-detail-skeleton-total")}
+        </header>
+        {table(6, 6)}
+      </article>
+    </>
   );
 }
 
@@ -369,6 +415,7 @@ export function PageSkeleton({
   label,
   variant = "permission",
   cards = 3,
+  detailLayout = "default",
   analysis = false,
   showSummary = true,
   compact = false,
@@ -376,7 +423,9 @@ export function PageSkeleton({
 }: PageSkeletonProps) {
   const content =
     variant === "detail"
-      ? detailSkeleton(cards)
+      ? detailLayout === "document"
+        ? documentDetailSkeleton()
+        : detailSkeleton(cards)
       : variant === "dashboard"
         ? dashboardSkeleton()
         : variant === "queue"
@@ -397,6 +446,9 @@ export function PageSkeleton({
         "page-skeleton-root",
         variant === "permission" && !compact && "page-skeleton",
         variant === "detail" && "detail-page detail-page-skeleton",
+        variant === "detail" &&
+          detailLayout === "document" &&
+          "quote-editor-page quote-detail-readonly document-detail-page-skeleton",
         variant === "dashboard" && "dashboard-skeleton",
         variant === "queue" && "follow-up-page content-page-skeleton",
         variant === "profile" && "profile-page content-page-skeleton",

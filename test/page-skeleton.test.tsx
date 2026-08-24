@@ -58,6 +58,33 @@ describe("PageSkeleton", () => {
     expect(container.querySelectorAll(".detail-skeleton-copy").length).toBeGreaterThan(0);
   });
 
+  it("follows order and quote details: one two-column information panel and an items table", () => {
+    const { container } = render(
+      <PageSkeleton
+        detailLayout="document"
+        label="正在載入訂單詳情"
+        variant="detail"
+      />,
+    );
+
+    expect(container.querySelector(".document-detail-skeleton")).not.toBeNull();
+    expect(container.querySelectorAll(".document-detail-skeleton-column")).toHaveLength(2);
+    expect(container.querySelectorAll(".document-detail-skeleton-field").length).toBeGreaterThan(12);
+    expect(container.querySelector(".document-detail-skeleton-items")).not.toBeNull();
+    expect(container.querySelectorAll(".document-detail-skeleton-items .table-skeleton-row")).toHaveLength(6);
+    expect(container.querySelector(".detail-grid-two")).toBeNull();
+  });
+
+  it("uses the document detail skeleton for both orders and quotes", () => {
+    const source = readFileSync(
+      path.resolve(process.cwd(), "src/components/QuoteEditorPage.tsx"),
+      "utf8",
+    );
+
+    expect(source).toContain('detailLayout="document"');
+    expect(source).not.toContain('<PageSkeleton cards={2} label={t("quoteEditor.loading")} variant="detail" />');
+  });
+
   it.each([
     "dashboard",
     "queue",

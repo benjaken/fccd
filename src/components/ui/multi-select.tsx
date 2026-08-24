@@ -1,4 +1,14 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent,
+} from "react";
+import { createPortal } from "react-dom";
 import { Check, ChevronDown, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -31,8 +41,10 @@ export function MultiSelect({
 }) {
   const placeholder = searchPlaceholder ?? triggerPlaceholder;
   const rootRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const valueRef = useRef(value);
   const [open, setOpen] = useState(false);
+  const [menuStyle, setMenuStyle] = useState<CSSProperties>({});
   const [query, setQuery] = useState("");
   const [highlight, setHighlight] = useState(0);
   const selected = useMemo(() => new Set(value), [value]);
@@ -54,10 +66,50 @@ export function MultiSelect({
     valueRef.current = value;
   }, [value]);
 
+  const updateMenuPosition = useCallback(() => {
+    const trigger = rootRef.current?.getBoundingClientRect();
+    if (!trigger) return;
+    const viewportPadding = 8;
+    const gap = 4;
+    const preferredHeight = 280;
+    const availableBelow = window.innerHeight - trigger.bottom - viewportPadding;
+    const availableAbove = trigger.top - viewportPadding;
+    const openAbove = availableBelow < 180 && availableAbove > availableBelow;
+    const availableHeight = openAbove ? availableAbove : availableBelow;
+    const width = Math.min(trigger.width, window.innerWidth - viewportPadding * 2);
+    const left = Math.min(
+      Math.max(viewportPadding, trigger.left),
+      Math.max(viewportPadding, window.innerWidth - width - viewportPadding),
+    );
+    setMenuStyle({
+      position: "fixed",
+      top: openAbove ? "auto" : trigger.bottom + gap,
+      bottom: openAbove ? window.innerHeight - trigger.top + gap : "auto",
+      left,
+      width,
+      maxHeight: Math.min(preferredHeight, Math.max(120, availableHeight - gap)),
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    updateMenuPosition();
+    window.addEventListener("resize", updateMenuPosition);
+    window.addEventListener("scroll", updateMenuPosition, true);
+    return () => {
+      window.removeEventListener("resize", updateMenuPosition);
+      window.removeEventListener("scroll", updateMenuPosition, true);
+    };
+  }, [open, updateMenuPosition]);
+
   useEffect(() => {
     if (!open) return;
     const onPointerDown = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (
+        !rootRef.current?.contains(target) &&
+        !menuRef.current?.contains(target)
+      ) {
         setOpen(false);
         setQuery("");
       }
@@ -152,8 +204,12 @@ export function MultiSelect({
         )}
         <ChevronDown aria-hidden="true" />
       </div>
-      {open ? (
-        <div className="multi-select-menu">
+      {open ? createPortal(
+        <div
+          ref={menuRef}
+          className="multi-select-menu multi-select-menu-portal"
+          style={menuStyle}
+        >
           {searchPlaceholder ? (
             <input
               type="text"
@@ -201,7 +257,8 @@ export function MultiSelect({
               })
             )}
           </ul>
-        </div>
+        </div>,
+        document.body,
       ) : null}
     </div>
   );

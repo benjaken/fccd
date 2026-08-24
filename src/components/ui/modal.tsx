@@ -18,6 +18,7 @@ export function Modal({
   closeOnBackdrop = true,
   closeOnEscape = true,
   className,
+  rootClassName,
 }: {
   open: boolean;
   title: string;
@@ -31,6 +32,7 @@ export function Modal({
   closeOnBackdrop?: boolean;
   closeOnEscape?: boolean;
   className?: string;
+  rootClassName?: string;
 }) {
   const titleId = useId();
   const descriptionId = useId();
@@ -51,7 +53,7 @@ export function Modal({
   };
 
   return createPortal(
-    <div className="modal-root" role="presentation">
+    <div className={cn("modal-root", rootClassName)} role="presentation">
       <button
         type="button"
         className="modal-backdrop"
