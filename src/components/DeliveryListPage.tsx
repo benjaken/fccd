@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { Download, Image as ImageIcon, RefreshCw, Truck } from "lucide-react";
+import { Download, Image as ImageIcon, Printer, RefreshCw, Truck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
@@ -103,6 +104,10 @@ export function DeliveryListPage({
   >([]);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [printOpen, setPrintOpen] = useState(false);
+  const [printRows, setPrintRows] = useState<DeliveryListItem[]>([]);
+  const [printLoading, setPrintLoading] = useState(false);
+  const [printError, setPrintError] = useState(false);
   const [imageItem, setImageItem] = useState<DeliveryListItem | null>(null);
   const [cancelItem, setCancelItem] = useState<DeliveryListItem | null>(null);
   const [cancelling, setCancelling] = useState(false);
@@ -134,6 +139,7 @@ export function DeliveryListPage({
   const filtersActive = Boolean(
     startDate || endDate || motorcadeId || shippingMethodId,
   );
+  const selectedTeam = teams.find((team) => team.id === motorcadeId) ?? null;
 
   const currency = useMemo(
     () =>
@@ -195,6 +201,38 @@ export function DeliveryListPage({
     if (value === null) return t("common.notSet");
     return exact ? currencyExact.format(value) : currency.format(value);
   };
+
+  const formatSummaryDate = (value: string, includeYear = true) => {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+    if (!match) return value;
+    const [, year, month, day] = match;
+    return `${includeYear ? `${Number(year)}年` : ""}${Number(month)}月${Number(day)}日`;
+  };
+
+  const formatPrintTimestamp = (value: Date) => {
+    const parts = new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Asia/Hong_Kong",
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).formatToParts(value);
+    const part = (type: Intl.DateTimeFormatPartTypes) =>
+      parts.find((item) => item.type === type)?.value ?? "";
+    return `${part("year")}/${Number(part("month"))}/${Number(part("day"))} ${part("hour")}:${part("minute")}`;
+  };
+
+  const summaryDateRange = (() => {
+    if (!startDate && !endDate) return t("common.notSet");
+    if (!startDate) return formatSummaryDate(endDate);
+    if (!endDate) return formatSummaryDate(startDate);
+    return `${formatSummaryDate(startDate)} - ${formatSummaryDate(
+      endDate,
+      startDate.slice(0, 4) !== endDate.slice(0, 4),
+    )}`;
+  })();
 
   const loadPage = useCallback(async () => {
     setLoading(true);
@@ -324,6 +362,86 @@ export function DeliveryListPage({
     }
   };
 
+  const openPrintPreview = async () => {
+    if (!selectedTeam || printLoading) return;
+    setPrintOpen(true);
+    setPrintLoading(true);
+    setPrintError(false);
+    setPrintRows([]);
+    try {
+      const rows = await loadExportRows({
+        search,
+        startDate,
+        endDate,
+        motorcadeId,
+        shippingMethodId,
+      });
+      setPrintRows(rows);
+    } catch {
+      setPrintError(true);
+    } finally {
+      setPrintLoading(false);
+    }
+  };
+
+  const printTotals = useMemo(
+    () =>
+      printRows.reduce(
+        (totals, item) => ({
+          basic: totals.basic + (item.basicFee ?? 0),
+          surcharge: totals.surcharge + (item.surchargeAmount ?? 0),
+          total: totals.total + (item.totalFee ?? 0),
+        }),
+        { basic: 0, surcharge: 0, total: 0 },
+      ),
+    [printRows],
+  );
+
+  const renderDeliverySummarySheet = (ariaLabel?: string) => (
+    <article className="delivery-summary-sheet" aria-label={ariaLabel}>
+      <header>
+        <time>{formatPrintTimestamp(now)}</time>
+        <h1>FCCD 送貨清單</h1>
+      </header>
+      <dl className="delivery-summary-sheet-meta">
+        <div><dt>車隊:</dt><dd>{selectedTeam?.name ?? "—"}</dd></div>
+        <div><dt>日期:</dt><dd>{summaryDateRange}</dd></div>
+        <div className="delivery-summary-sheet-payment"><dt>付款方式:</dt><dd>{selectedTeam?.bankAccount || "—"}</dd></div>
+      </dl>
+      <table>
+        <thead><tr><th aria-label="序號" /><th>訂單</th><th>送貨日期</th><th>地區</th><th>地區運費</th><th>附加費</th><th>總運費</th></tr></thead>
+        <tbody>
+          {printRows.map((item, index) => (
+            <tr key={item.id}>
+              <td>{index + 1}</td>
+              <td>{formatOrderNumber(item.orderNumber) || "—"}</td>
+              <td>{formatDate(item.deliveryAt)}</td>
+              <td>{item.districtName || "—"}</td>
+              <td>{formatFee(item.basicFee)}</td>
+              <td>
+                {item.surcharges.length ? (
+                  <div className="delivery-summary-surcharges">
+                    {item.surcharges.map((fee, feeIndex) => (
+                      <span key={`${item.id}-print-surcharge-${feeIndex}`}>
+                        {fee.name || "附加費"} {formatFee(fee.amount, true)}
+                      </span>
+                    ))}
+                  </div>
+                ) : item.surchargeAmount ? (
+                  <div className="delivery-summary-surcharges">
+                    <span>附加費 {formatFee(item.surchargeAmount, true)}</span>
+                  </div>
+                ) : null}
+              </td>
+              <td>{formatFee(item.totalFee)}</td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot><tr><td colSpan={4} /><td>{formatFee(printTotals.basic)}</td><td>{formatFee(printTotals.surcharge, true)}</td><td>{formatFee(printTotals.total)}</td></tr></tfoot>
+      </table>
+    </article>
+  );
+
   const confirmCancelDelivery = async () => {
     if (!cancelItem || cancelling) return;
     setCancelling(true);
@@ -383,6 +501,19 @@ export function DeliveryListPage({
           <h1>{t("deliveryList.title")}</h1>
         </div>
         <div className="heading-actions delivery-list-heading-actions">
+          {selectedTeam ? (
+            <aside className="delivery-fleet-summary" aria-label="已選車隊資料">
+              <dl>
+                <div><dt>車隊:</dt><dd>{selectedTeam.name}</dd></div>
+                <div><dt>日期:</dt><dd>{summaryDateRange}</dd></div>
+                <div className="delivery-fleet-summary-payment"><dt>付款方式:</dt><dd>{selectedTeam.bankAccount || "—"}</dd></div>
+              </dl>
+              <Button type="button" onClick={() => void openPrintPreview()} disabled={printLoading || loading || total === 0}>
+                <Printer />
+                列印
+              </Button>
+            </aside>
+          ) : null}
           <Button
             type="button"
             variant="outline"
@@ -678,6 +809,43 @@ export function DeliveryListPage({
           jumpLabel={t("deliveryList.jumpToPage")}
         />
       </article>
+
+      <SidePanel
+        open={printOpen}
+        title="送貨清單列印預覽"
+        description="確認內容後開啟系統列印對話框。"
+        onClose={() => setPrintOpen(false)}
+        closeLabel="關閉列印預覽"
+        half
+        className="delivery-summary-panel"
+        footer={
+          <>
+            <Button type="button" variant="outline" onClick={() => setPrintOpen(false)}>關閉</Button>
+            <Button type="button" disabled={printLoading || printError || printRows.length === 0} onClick={() => window.print()}>
+              <Printer />列印
+            </Button>
+          </>
+        }
+      >
+        {printLoading ? (
+          <div className="delivery-summary-print-state">正在載入送貨清單…</div>
+        ) : printError ? (
+          <div className="delivery-summary-print-state list-inline-error" role="alert">暫時無法載入列印資料，請稍後再試。</div>
+        ) : (
+          <div className="delivery-summary-preview">
+            {renderDeliverySummarySheet("送貨清單列印內容")}
+          </div>
+        )}
+      </SidePanel>
+
+      {printOpen && !printLoading && !printError && printRows.length > 0
+        ? createPortal(
+            <div className="delivery-summary-print-root" aria-hidden="true">
+              {renderDeliverySummarySheet()}
+            </div>,
+            document.body,
+          )
+        : null}
 
       <SidePanel
         open={Boolean(imageItem)}

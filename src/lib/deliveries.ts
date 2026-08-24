@@ -48,6 +48,7 @@ export type DeliveryListItem = {
 export type DeliveryLookupOption = {
   id: string;
   name: string;
+  bankAccount?: string | null;
 };
 
 export type DeliveryListResult = {
@@ -469,7 +470,7 @@ export async function fetchDeliveryLookups(): Promise<{
   const [teamsResult, methodsResult] = await Promise.all([
     supabase
       .from("delivery_teams")
-      .select("id,name,short_name")
+      .select("id,name,short_name,bank_account")
       .eq("is_active", true)
       .order("name"),
     supabase
@@ -480,17 +481,44 @@ export async function fetchDeliveryLookups(): Promise<{
       .order("display_order", { ascending: true, nullsFirst: false })
       .order("name"),
   ]);
-  if (teamsResult.error) throw teamsResult.error;
+
+  let teamRows: Array<{
+    id: string;
+    name: string | null;
+    short_name: string | null;
+    bank_account: string | null;
+  }>;
+  if (teamsResult.error) {
+    const fallbackTeamsResult = await supabase
+      .from("delivery_teams")
+      .select("id,name,short_name")
+      .eq("is_active", true)
+      .order("name");
+    if (fallbackTeamsResult.error) throw fallbackTeamsResult.error;
+    teamRows = (fallbackTeamsResult.data ?? []).map((row) => ({
+      id: row.id as string,
+      name: row.name as string | null,
+      short_name: row.short_name as string | null,
+      bank_account: null,
+    }));
+  } else {
+    teamRows = (teamsResult.data ?? []) as typeof teamRows;
+  }
   if (methodsResult.error) throw methodsResult.error;
 
   return {
-    teams: (teamsResult.data ?? []).map((row) => ({
-      id: row.id as string,
-      name:
+    teams: teamRows.map((row) => {
+      const name =
         (row.name as string | null)?.trim() ||
         (row.short_name as string | null)?.trim() ||
-        (row.id as string),
-    })),
+        (row.id as string);
+      const configuredBankAccount = row.bank_account?.trim() || null;
+      const bankAccount = configuredBankAccount ||
+        (name.toLowerCase().replace(/[^a-z0-9]/g, "") === "sunline"
+          ? "SUN-LINE LOGISTICS CO,  渣打 - 40711305668"
+          : null);
+      return { id: row.id as string, name, bankAccount };
+    }),
     shippingMethods: (methodsResult.data ?? []).map((row) => ({
       id: row.id as string,
       name:

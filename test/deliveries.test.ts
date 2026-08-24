@@ -1,4 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+const { fromMock } = vi.hoisted(() => ({ fromMock: vi.fn() }));
+
+vi.mock("@/lib/supabase", () => ({
+  supabase: { from: fromMock },
+}));
 
 import {
   buildDeliveryExportCsv,
@@ -9,6 +15,7 @@ import {
   deliveryFeeTotal,
   deliveryOrderAmount,
   feeSharePercent,
+  fetchDeliveryLookups,
   hasDeliveryPhotos,
   hongKongDateInputValue,
   hongKongMonthStart,
@@ -20,6 +27,33 @@ import {
 } from "@/lib/deliveries";
 
 describe("delivery list helpers", () => {
+  it("keeps fleet and shipping-method options when bank_account is unavailable", async () => {
+    fromMock.mockImplementation((table: string) => ({
+      select: (columns: string) => {
+        const result = table === "delivery_teams"
+          ? columns.includes("bank_account")
+            ? { data: null, error: { code: "42501", message: "permission denied for table delivery_teams" } }
+            : { data: [{ id: "team-1", name: "Sun-Line", short_name: null }], error: null }
+          : { data: [{ id: "method-1", name: "curbside", display_name: "車邊交收" }], error: null };
+        const builder: Record<string, unknown> = {};
+        builder.eq = () => builder;
+        builder.is = () => builder;
+        builder.order = () => builder;
+        builder.then = (resolve: (value: unknown) => unknown) => Promise.resolve(result).then(resolve);
+        return builder;
+      },
+    }));
+
+    await expect(fetchDeliveryLookups()).resolves.toEqual({
+      teams: [{
+        id: "team-1",
+        name: "Sun-Line",
+        bankAccount: "SUN-LINE LOGISTICS CO,  渣打 - 40711305668",
+      }],
+      shippingMethods: [{ id: "method-1", name: "車邊交收" }],
+    });
+  });
+
   it("defaults the date range to the current Hong Kong month", () => {
     const now = new Date("2026-08-17T04:00:00+08:00");
     expect(hongKongDateInputValue(now)).toBe("2026-08-17");
