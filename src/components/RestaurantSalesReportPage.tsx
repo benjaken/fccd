@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { MultiSelect } from "@/components/ui/multi-select";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { useReportAiSnapshot } from "@/components/report-ai/ReportAiWorkspace";
 import {
@@ -17,6 +18,10 @@ import {
   type RestaurantSalesPeriod,
   type RestaurantSalesReportRow,
 } from "@/lib/restaurant-sales-report";
+import {
+  fetchShopReportRestaurants,
+  type ShopReportRestaurant,
+} from "@/lib/shop-sales-working-hours-report";
 import { cn } from "@/lib/utils";
 
 type ReportLoader = typeof fetchRestaurantSalesReport;
@@ -40,9 +45,11 @@ function formatMoney(value: number) {
 }
 
 export function RestaurantSalesReportPage({
+  loadRestaurants = fetchShopReportRestaurants,
   loadReport = fetchRestaurantSalesReport,
   embedded = false,
 }: {
+  loadRestaurants?: () => Promise<ShopReportRestaurant[]>;
   loadReport?: ReportLoader;
   embedded?: boolean;
 }) {
@@ -56,29 +63,65 @@ export function RestaurantSalesReportPage({
   const [dayStart, setDayStart] = useState(defaults.dayStart);
   const [dayEnd, setDayEnd] = useState(defaults.dayEnd);
   const [weekDate, setWeekDate] = useState(defaults.weekDate);
+  const [restaurants, setRestaurants] = useState<ShopReportRestaurant[]>([]);
+  const [selectedRestaurantIds, setSelectedRestaurantIds] = useState<string[]>([]);
   const [rows, setRows] = useState<RestaurantSalesReportRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [restaurantsLoading, setRestaurantsLoading] = useState(true);
+  const [reportLoading, setReportLoading] = useState(true);
+  const [restaurantsError, setRestaurantsError] = useState<string | null>(null);
+  const [reportError, setReportError] = useState<string | null>(null);
 
   const range = useMemo(() => {
     if (period === "month") return monthDateRange(monthStart, monthEnd);
     if (period === "week") return weekDateRange(weekDate);
     return { startDate: dayStart, endDate: dayEnd };
   }, [dayEnd, dayStart, monthEnd, monthStart, period, weekDate]);
-  const matrix = useMemo(() => buildRestaurantSalesMatrix(rows), [rows]);
+  const filteredRows = useMemo(
+    () => rows.filter((row) => selectedRestaurantIds.includes(row.restaurantId)),
+    [rows, selectedRestaurantIds],
+  );
+  const matrix = useMemo(() => buildRestaurantSalesMatrix(filteredRows), [filteredRows]);
+  const loading = restaurantsLoading || reportLoading;
+  const error = restaurantsError ?? reportError;
   const validRange = Boolean(
     range.startDate && range.endDate && range.startDate <= range.endDate,
   );
 
   useEffect(() => {
+    let active = true;
+    setRestaurantsLoading(true);
+    setRestaurantsError(null);
+    void loadRestaurants()
+      .then((items) => {
+        if (!active) return;
+        setRestaurants(items);
+        setSelectedRestaurantIds(items.map((item) => item.id));
+      })
+      .catch((loadError: unknown) => {
+        if (!active) return;
+        setRestaurants([]);
+        setSelectedRestaurantIds([]);
+        setRestaurantsError(
+          loadError instanceof Error ? loadError.message : "load_failed",
+        );
+      })
+      .finally(() => {
+        if (active) setRestaurantsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [loadRestaurants]);
+
+  useEffect(() => {
     if (!validRange) {
       setRows([]);
-      setLoading(false);
+      setReportLoading(false);
       return;
     }
     let active = true;
-    setLoading(true);
-    setError(null);
+    setReportLoading(true);
+    setReportError(null);
     void loadReport({
       startDate: range.startDate,
       endDate: range.endDate,
@@ -91,10 +134,10 @@ export function RestaurantSalesReportPage({
       .catch((loadError: unknown) => {
         if (!active) return;
         setRows([]);
-        setError(loadError instanceof Error ? loadError.message : "load_failed");
+        setReportError(loadError instanceof Error ? loadError.message : "load_failed");
       })
       .finally(() => {
-        if (active) setLoading(false);
+        if (active) setReportLoading(false);
       });
     return () => {
       active = false;
@@ -110,8 +153,9 @@ export function RestaurantSalesReportPage({
               category,
               startDate: range.startDate,
               endDate: range.endDate,
+              restaurantIds: selectedRestaurantIds,
             },
-            currentAggregates: rows.map((row) => ({ ...row })),
+            currentAggregates: filteredRows.map((row) => ({ ...row })),
             completeness: {
               status: "partial" as const,
               notes: [
@@ -122,7 +166,7 @@ export function RestaurantSalesReportPage({
             },
           }
         : null,
-    [category, loading, period, range.endDate, range.startDate, rows, validRange],
+    [category, filteredRows, loading, period, range.endDate, range.startDate, selectedRestaurantIds, validRange],
   );
   useReportAiSnapshot(aiSnapshot);
 
@@ -258,6 +302,22 @@ export function RestaurantSalesReportPage({
             ))}
           </div>
         </div>
+
+        <div className="restaurant-sales-filter-group restaurant-sales-restaurant-filter">
+          <span id="restaurant-sales-restaurant-label">
+            {t("restaurantSalesReport.restaurants")}
+          </span>
+          <MultiSelect
+            id="restaurant-sales-restaurants"
+            labelledBy="restaurant-sales-restaurant-label"
+            options={restaurants}
+            value={selectedRestaurantIds}
+            onChange={setSelectedRestaurantIds}
+            placeholder={t("restaurantSalesReport.selectRestaurantsPlaceholder")}
+            searchPlaceholder={t("restaurantSalesReport.searchRestaurantsPlaceholder")}
+            emptyLabel={t("restaurantSalesReport.noRestaurants")}
+          />
+        </div>
       </section>
 
       {!validRange ? (
@@ -278,6 +338,14 @@ export function RestaurantSalesReportPage({
             <strong>{t("restaurantSalesReport.loadError")}</strong>
             <span>{error}</span>
           </div>
+        </section>
+      ) : restaurants.length === 0 ? (
+        <section className="panel restaurant-sales-state">
+          {t("restaurantSalesReport.noRestaurants")}
+        </section>
+      ) : selectedRestaurantIds.length === 0 ? (
+        <section className="panel restaurant-sales-state">
+          {t("restaurantSalesReport.selectAtLeastOne")}
         </section>
       ) : matrix.buckets.length === 0 ? (
         <section className="panel restaurant-sales-state">

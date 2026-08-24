@@ -54,7 +54,6 @@ export async function fetchShopReportRestaurants(): Promise<
   const { data, error } = await supabase
     .from("restaurants")
     .select("id,name")
-    .eq("is_active", true)
     .is("archived_at", null)
     .order("name");
   if (error) throw new Error(error.message);

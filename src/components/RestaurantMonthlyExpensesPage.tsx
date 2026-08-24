@@ -314,8 +314,7 @@ export function RestaurantMonthlyExpensesPage({
           <p>{t("restaurantMonthlyExpenses.description")}</p>
         </div>
         <Button variant="outline" disabled={!canEdit} onClick={() => {
-          const defaultRestaurant = masters?.restaurants.find((restaurant) => /將軍澳|将军澳|\bTKO\b/i.test(restaurant.name));
-          setDraftRestaurantId(defaultRestaurant?.id ?? "");
+          setDraftRestaurantId(masters?.restaurants[0]?.id ?? "");
           setDraftMonth(currentHongKongMonth());
           setNewRecordExists(false);
           setNewDialogOpen(true);

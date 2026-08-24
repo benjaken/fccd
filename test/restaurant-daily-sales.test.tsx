@@ -32,8 +32,8 @@ const masters: RestaurantDailySalesMasters = {
 };
 
 describe("restaurant daily sales input", () => {
-  it("selects the Tseung Kwan O restaurant by default", () => {
-    expect(pickDefaultRestaurant(masters.restaurants)?.id).toBe("tko");
+  it("selects the first restaurant by default", () => {
+    expect(pickDefaultRestaurant(masters.restaurants)?.id).toBe("ylp");
   });
 
   it("formats imported timestamps using the Hong Kong business date", () => {
@@ -47,7 +47,7 @@ describe("restaurant daily sales input", () => {
       .toBe("https://example.com/image.jpg");
   });
 
-  it("defaults to TKO with no selected history record and a blank editor", async () => {
+  it("defaults to the first restaurant with no selected history record and a blank editor", async () => {
     await i18n.changeLanguage("zh-HK");
     const loadSales = vi.fn(async () => emptyRestaurantDailySalesRecord());
 
@@ -60,8 +60,8 @@ describe("restaurant daily sales input", () => {
       />,
     );
 
-    const tko = await screen.findByRole("button", { name: "TKO 桂花小幸 將軍澳" });
-    await waitFor(() => expect(tko).toHaveAttribute("aria-pressed", "true"));
+    const ylp = await screen.findByRole("button", { name: "YLP 桂花小幸 元朗" });
+    await waitFor(() => expect(ylp).toHaveAttribute("aria-pressed", "true"));
     expect(await screen.findByText("尚未選擇銷售記錄")).toBeInTheDocument();
     expect(loadSales).not.toHaveBeenCalled();
   });
@@ -125,7 +125,7 @@ describe("restaurant daily sales input", () => {
     expect(screen.queryByRole("spinbutton", { name: "總營業額" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "放大查看機紙" }));
     expect(await screen.findByRole("dialog", { name: "機紙預覽" })).toBeInTheDocument();
-    expect(loadSales).toHaveBeenCalledWith("tko", "2026-08-20");
+    expect(loadSales).toHaveBeenCalledWith("ylp", "2026-08-20");
   });
 
   it("shows delivery-platform amounts and legacy department working hours", async () => {
@@ -178,7 +178,7 @@ describe("restaurant daily sales input", () => {
 
     await user.selectOptions(await screen.findByLabelText("日期篩選"), "single");
     await user.type(screen.getByLabelText("篩選日期"), "2026-08-21");
-    await waitFor(() => expect(loadRecent).toHaveBeenLastCalledWith("tko", "2026-08-21", "2026-08-21"));
+    await waitFor(() => expect(loadRecent).toHaveBeenLastCalledWith("ylp", "2026-08-21", "2026-08-21"));
     expect(await screen.findByRole("button", { name: /2026-08-21/ })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /2026-08-20/ })).not.toBeInTheDocument();
   });
@@ -242,7 +242,7 @@ describe("restaurant daily sales input", () => {
     await user.click(saveButton);
 
     await waitFor(() => expect(saveSales).toHaveBeenCalledWith(expect.objectContaining({
-      restaurantId: "tko",
+      restaurantId: "ylp",
       total: 100,
       paymentAmounts: { cash: 100 },
       departmentAmounts: expect.objectContaining({ restaurant: 100 }),

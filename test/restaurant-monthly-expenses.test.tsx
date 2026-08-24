@@ -13,8 +13,8 @@ vi.mock("@/auth/use-page-access", () => ({
 
 const masters: RestaurantMonthlyExpenseMasters = {
   restaurants: [
-    { id: "tko", name: "TKO 桂花小幸 將軍澳" },
     { id: "ylp", name: "YLP 桂花小幸 元朗" },
+    { id: "tko", name: "TKO 桂花小幸 將軍澳" },
   ],
   costs: [
     { id: "rent", legacyId: "rent-legacy", name: "租金、管理費、冷氣費", sortOrder: 1, costTypeId: "lease", costTypeLegacyId: "lease-legacy", categoryName: "租金", categorySortOrder: 1 },
@@ -35,7 +35,9 @@ describe("restaurant monthly expense input", () => {
   it("starts without a selected month and blocks an existing restaurant-month combination", async () => {
     await i18n.changeLanguage("zh-HK");
     const user = userEvent.setup();
-    const checkRecordExists = vi.fn(async () => false);
+    const checkRecordExists = vi.fn(async (restaurantId: string, month: string) =>
+      restaurantId === "ylp" && month === "2026-07",
+    );
     render(
       <RestaurantMonthlyExpensesPage
         loadMasters={async () => masters}
@@ -52,12 +54,12 @@ describe("restaurant monthly expense input", () => {
       month: "2-digit",
     }).formatToParts(new Date());
     const currentMonth = `${currentMonthParts.find((part) => part.type === "year")?.value}-${currentMonthParts.find((part) => part.type === "month")?.value}`;
-    expect(screen.getByLabelText("餐廳")).toHaveValue("tko");
+    expect(screen.getByLabelText("餐廳")).toHaveValue("ylp");
     expect(screen.getByLabelText("月份")).toHaveValue(currentMonth);
     fireEvent.change(screen.getByLabelText("月份"), { target: { value: "2026-07" } });
     expect(await screen.findByText("此餐廳在所選月份已有資料，請選擇其他月份或餐廳。")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "開始輸入" })).toBeDisabled();
-    expect(checkRecordExists).toHaveBeenCalledWith("tko", currentMonth);
+    expect(checkRecordExists).toHaveBeenCalledWith("ylp", currentMonth);
   });
 
   it("opens existing records in view mode, enables editing, and confirms P&L", async () => {

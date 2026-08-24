@@ -29,6 +29,13 @@ const rows: RestaurantSalesReportRow[] = [
   },
 ];
 
+const restaurants = [
+  { id: "ylp", name: "YLP 桂花小幸 元朗" },
+  { id: "tko", name: "TKO 桂花小幸 將軍澳" },
+];
+
+const loadRestaurants = async () => restaurants;
+
 describe("RestaurantSalesReportPage", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("zh-HK");
@@ -36,7 +43,12 @@ describe("RestaurantSalesReportPage", () => {
 
   it("defaults to monthly platform sales from January through this month", async () => {
     const loadReport = vi.fn(async () => rows);
-    render(<RestaurantSalesReportPage loadReport={loadReport} />);
+    render(
+      <RestaurantSalesReportPage
+        loadRestaurants={loadRestaurants}
+        loadReport={loadReport}
+      />,
+    );
 
     expect(screen.getByRole("heading", { name: "銷售報告" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "每月" })).toHaveAttribute(
@@ -55,7 +67,9 @@ describe("RestaurantSalesReportPage", () => {
         category: "platform",
       }),
     );
-    expect(await screen.findByText("YLP 桂花小幸 元朗")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("columnheader", { name: "YLP 桂花小幸 元朗" }),
+    ).toBeInTheDocument();
     expect(screen.getByText("店舖銷售")).toBeInTheDocument();
     expect(screen.getByText("$900,776.00")).toBeInTheDocument();
   });
@@ -64,6 +78,7 @@ describe("RestaurantSalesReportPage", () => {
     const { container } = render(
       <RestaurantSalesReportPage
         embedded
+        loadRestaurants={loadRestaurants}
         loadReport={async () => []}
       />,
     );
@@ -78,7 +93,10 @@ describe("RestaurantSalesReportPage", () => {
 
   it("shows only the table skeleton while loading", () => {
     const { container } = render(
-      <RestaurantSalesReportPage loadReport={() => new Promise(() => undefined)} />,
+      <RestaurantSalesReportPage
+        loadRestaurants={loadRestaurants}
+        loadReport={() => new Promise(() => undefined)}
+      />,
     );
 
     expect(container.querySelector(".content-skeleton-report-table")).toBeInTheDocument();
@@ -88,7 +106,12 @@ describe("RestaurantSalesReportPage", () => {
   it("switches to daily ranges, weekly dates, and alternate categories", async () => {
     const user = userEvent.setup();
     const loadReport = vi.fn(async () => rows);
-    render(<RestaurantSalesReportPage loadReport={loadReport} />);
+    render(
+      <RestaurantSalesReportPage
+        loadRestaurants={loadRestaurants}
+        loadReport={loadReport}
+      />,
+    );
     await waitFor(() => expect(loadReport).toHaveBeenCalledOnce());
 
     await user.click(screen.getByRole("button", { name: "每日" }));
@@ -125,5 +148,23 @@ describe("RestaurantSalesReportPage", () => {
         expect.objectContaining({ category: "department" }),
       ),
     );
+  });
+
+  it("filters the report table by selected restaurants", async () => {
+    const user = userEvent.setup();
+    render(
+      <RestaurantSalesReportPage
+        loadRestaurants={loadRestaurants}
+        loadReport={async () => rows}
+      />,
+    );
+
+    expect(await screen.findByRole("combobox", { name: "餐廳" })).toBeInTheDocument();
+    expect(await screen.findByText("$900,776.00")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "YLP 桂花小幸 元朗" }));
+
+    expect(await screen.findByText("所選條件沒有銷售資料。")).toBeInTheDocument();
+    expect(screen.queryByText("$900,776.00")).not.toBeInTheDocument();
   });
 });

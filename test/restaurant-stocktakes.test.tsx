@@ -112,4 +112,23 @@ describe("restaurant stocktake records", () => {
     await user.click(within(dialog).getByRole("button", { name: "建立記錄" }));
     await waitFor(() => expect(api.createRecord).toHaveBeenCalledWith("2026-07", "restaurant-1", "水吧"));
   });
+
+  it("defaults a new stocktake to the first available restaurant", async () => {
+    const user = userEvent.setup();
+    const api = services({
+      loadMasters: vi.fn().mockResolvedValue({
+        restaurants: [
+          { id: "restaurant-0", name: "YLP 桂花小幸" },
+          { id: "restaurant-1", name: "TKO 桂花小幸" },
+        ],
+        departments: [{ id: "department-restaurant", name: "餐廳" }],
+      }),
+      loadRecords: vi.fn().mockResolvedValue([]),
+    });
+    render(<MemoryRouter><RestaurantStocktakesPage services={api} canEdit canDelete /></MemoryRouter>);
+
+    await user.click(await screen.findByRole("button", { name: "新增盤點記錄" }));
+
+    expect(within(screen.getByRole("dialog")).getByLabelText("餐廳")).toHaveValue("restaurant-0");
+  });
 });
