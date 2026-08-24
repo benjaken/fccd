@@ -8,6 +8,7 @@ import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { ListTable } from "@/components/ui/list-table";
 import { SidePanel } from "@/components/ui/side-panel";
 import { TablePagination } from "@/components/ui/table-pagination";
+import { useReportAiSnapshot } from "@/components/report-ai/ReportAiWorkspace";
 import {
   defaultNewProductReportDates,
   fetchRestaurantNewProductReport,
@@ -74,6 +75,25 @@ export function RestaurantNewProductReport({
   const quantity = new Intl.NumberFormat(i18n.language, {
     maximumFractionDigits: 3,
   });
+  const aiSnapshot = useMemo(
+    () =>
+      !loading && validRange
+        ? {
+            filters: { startDate, endDate, page, pageSize: PAGE_SIZE },
+            currentAggregates: rows.map((row) => ({ ...row })),
+            completeness: {
+              status: total > rows.length ? "partial" as const : "complete" as const,
+              notes: [
+                total > rows.length
+                  ? `目前只載入第 ${page} 頁的 ${rows.length} 筆，共 ${total} 筆；不可把本頁當作全量排行。`
+                  : "目前篩選範圍已完整載入。",
+              ],
+            },
+          }
+        : null,
+    [endDate, loading, page, rows, startDate, total, validRange],
+  );
+  useReportAiSnapshot(aiSnapshot);
 
   return (
     <section className="restaurant-new-product-report">

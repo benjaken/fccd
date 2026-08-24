@@ -6,9 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import {
+  ReportAiTrigger,
+  useReportAiSnapshot,
+} from "@/components/report-ai/ReportAiWorkspace";
+import {
   buildKitchenAdvertisingPerformanceYearSummaries,
   defaultKitchenAdvertisingPerformanceYears,
-  KITCHEN_ADVERTISING_FESTIVAL_OPTIONS,
   kitchenAdvertisingPerformanceChannels,
   kitchenAdvertisingPerformanceCostTypes,
   kitchenAdvertisingPerformanceFestivals,
@@ -18,6 +21,7 @@ import {
   type KitchenAdvertisingPerformanceReport,
   type KitchenAdvertisingPerformanceYearSummary,
 } from "@/lib/kitchen-advertising-performance-report";
+import { DICT_TYPE, useDictItems } from "@/lib/dictionaries";
 
 const money = new Intl.NumberFormat("zh-HK", {
   style: "currency",
@@ -327,8 +331,16 @@ function PerformanceSection({
   rows: KitchenAdvertisingPerformanceReport["rows"];
   mode: KitchenAdvertisingPerformanceMode;
 }) {
-  const festivals = useMemo(() => kitchenAdvertisingPerformanceFestivals(rows), [rows]);
-  const [festival, setFestival] = useState<string>(KITCHEN_ADVERTISING_FESTIVAL_OPTIONS[0]);
+  const festivalDict = useDictItems(DICT_TYPE.kitchenAdvertisingFestival);
+  const preferredFestivals = useMemo(
+    () => festivalDict.items.map((item) => item.value),
+    [festivalDict.items],
+  );
+  const festivals = useMemo(
+    () => kitchenAdvertisingPerformanceFestivals(rows, preferredFestivals),
+    [preferredFestivals, rows],
+  );
+  const [festival, setFestival] = useState<string>("");
   const [month, setMonth] = useState("1");
   const segmentKey = mode === "festival" ? festival : month;
   const segmentRows = useMemo(
@@ -352,7 +364,7 @@ function PerformanceSection({
 
   useEffect(() => {
     if (mode === "festival" && !festivals.includes(festival)) {
-      setFestival(festivals[0] ?? KITCHEN_ADVERTISING_FESTIVAL_OPTIONS[0]);
+      setFestival(festivals[0] ?? "");
     }
   }, [festival, festivals, mode]);
 
@@ -374,6 +386,27 @@ function PerformanceSection({
   const totalSales = summaries.reduce((total, summary) => total + summary.totalSales, 0);
   const label = mode === "festival" ? festival : `${month}月 non-peak`;
   const title = mode === "festival" ? "節日" : "月份(non-peak)";
+  const aiSnapshot = useMemo(
+    () => ({
+      filters: { mode, segmentKey, selectedYears },
+      currentAggregates: segmentRows
+        .filter((row) => selectedYears.includes(row.year))
+        .map((row) => ({
+          year: row.year,
+          segmentKey: row.segmentKey,
+          segmentLabel: row.segmentLabel,
+          channel: row.channel,
+          metric: row.metric,
+          amount: row.amount,
+        })),
+      completeness: {
+        status: "partial" as const,
+        notes: ["廣告表現只可比較相同節日或相同 non-peak 月份的年度資料。"],
+      },
+    }),
+    [mode, segmentKey, segmentRows, selectedYears],
+  );
+  useReportAiSnapshot(aiSnapshot, mode);
 
   return (
     <section className="kitchen-advertising-performance-section panel">
@@ -514,7 +547,10 @@ export function KitchenAdvertisingPerformanceReportPage() {
           <h1>廣告表現</h1>
         </div>
       </header>
-      <ReportTabs />
+      <div className="report-ai-nav-row">
+        <ReportTabs />
+        <ReportAiTrigger />
+      </div>
 
       {loading && !report ? <PageSkeleton label="正在載入廣告表現報表" variant="report" /> : null}
       {error ? (

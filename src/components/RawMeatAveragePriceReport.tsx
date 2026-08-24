@@ -7,6 +7,7 @@ import { ReportSummaryCards } from "@/components/reports/ReportSummaryCards";
 import { ReportYearFilter } from "@/components/reports/ReportYearFilter";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { PullToRefresh } from "@/components/ui/pull-to-refresh";
+import { useReportAiSnapshot } from "@/components/report-ai/ReportAiWorkspace";
 import {
   fetchMonthlyRawMeatAveragePrices,
   type MonthlyRawMeatAveragePriceRow,
@@ -146,6 +147,29 @@ export function RawMeatAveragePriceReport() {
       active = false;
     };
   }, [reloadKey, t, year]);
+
+  const aiSnapshot = useMemo(
+    () =>
+      !loading
+        ? {
+            filters: { year, selectedRawMeatId: selectedItemId },
+            currentAggregates: rows.map((row) => ({
+              rawMeatItemId: row.rawMeatItemId,
+              rawMeatName: row.rawMeatName,
+              month: row.monthNumber,
+              averagePricePerKg: row.averagePricePerKg,
+              totalQuantityKg: row.totalQuantityKg,
+              receiptCount: row.receiptCount,
+            })),
+            completeness: {
+              status: "complete" as const,
+              notes: ["平均價格按採購公斤數加權；沒有採購記錄的月份不可視為零價格。"],
+            },
+          }
+        : null,
+    [loading, rows, selectedItemId, year],
+  );
+  useReportAiSnapshot(aiSnapshot);
 
   return (
     <>
