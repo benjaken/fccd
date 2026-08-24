@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "files": [
+    "runtime-check.d.ts",
+    "_shared/supplier-quote-recognition.ts",
+    "_shared/report-ai-provider.ts",
+    "supplier-quote-ingest/index.ts",
+    "report-ai-interpret/index.ts"
+  ]
+}

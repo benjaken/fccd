@@ -1,0 +1,19 @@
+{
+  "name": "Tai Fung redacted double-column price list",
+  "pages": [{
+    "page": 1, "width": 600, "height": 800,
+    "items": [
+      { "text": "TF-001", "x": 25, "y": 700, "width": 42, "height": 10 },
+      { "text": "急凍雞胸 2kg", "x": 75, "y": 700, "width": 88, "height": 10 },
+      { "text": "$39.80/kg", "x": 175, "y": 700, "width": 52, "height": 10 },
+      { "text": "TF-101", "x": 330, "y": 700, "width": 42, "height": 10 },
+      { "text": "牛筋 10包/箱", "x": 380, "y": 700, "width": 82, "height": 10 },
+      { "text": "$320/箱", "x": 485, "y": 700, "width": 48, "height": 10 },
+      { "text": "TF-002", "x": 25, "y": 680, "width": 42, "height": 10 },
+      { "text": "豬腩片 真空包裝", "x": 75, "y": 680, "width": 92, "height": 10 },
+      { "text": "暫缺", "x": 175, "y": 680, "width": 26, "height": 10 },
+      { "text": "包裝附加費每箱 $10", "x": 25, "y": 630, "width": 112, "height": 10 }
+    ]
+  }],
+  "expected": { "candidateCount": 3, "conditionCount": 1, "columnCount": 2 }
+}

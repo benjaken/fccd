@@ -1,0 +1,20 @@
+{
+  "name": "A-Mart redacted multi-column catalogue",
+  "pages": [{
+    "page": 1, "width": 600, "height": 800,
+    "items": [
+      { "text": "AM-CH-035", "x": 30, "y": 700, "width": 62, "height": 10 },
+      { "text": "Chicken Thigh Boneless", "x": 100, "y": 700, "width": 118, "height": 10 },
+      { "text": "Brazil", "x": 225, "y": 700, "width": 32, "height": 10 },
+      { "text": "2.5kg 6 bags/carton", "x": 265, "y": 700, "width": 102, "height": 10 },
+      { "text": "HK$42.80/kg", "x": 380, "y": 700, "width": 62, "height": 10 },
+      { "text": "AM-BF-112", "x": 30, "y": 680, "width": 60, "height": 10 },
+      { "text": "Beef Short Rib 牛小排", "x": 100, "y": 680, "width": 120, "height": 10 },
+      { "text": "USA", "x": 225, "y": 680, "width": 24, "height": 10 },
+      { "text": "4x2kg box", "x": 265, "y": 680, "width": 62, "height": 10 },
+      { "text": "TBA", "x": 380, "y": 680, "width": 22, "height": 10 },
+      { "text": "Minimum order 5 boxes", "x": 30, "y": 630, "width": 120, "height": 10 }
+    ]
+  }],
+  "expected": { "candidateCount": 2, "conditionCount": 1, "codes": ["AM-CH-035", "AM-BF-112"] }
+}
