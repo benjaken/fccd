@@ -155,6 +155,42 @@ describe("Orders list", () => {
     expect((await screen.findAllByRole("table"))[0]).not.toHaveTextContent("待辦");
   });
 
+  it("keeps the holiday and district filters connected and selectable", async () => {
+    const user = userEvent.setup();
+    const loadOrders = vi.fn().mockResolvedValue(orderResult);
+
+    render(
+      <MemoryRouter>
+        <OrdersListPage
+          loadOrders={loadOrders}
+          loadListConfig={emptyListConfig}
+          loadFilterOptions={vi.fn().mockResolvedValue({
+            festivals: [{ id: "festival-1", name: "母親節" }],
+            districts: [{ id: "中環", name: "中環" }],
+          })}
+        />
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: "開啟篩選" }));
+    const holidayFilter = screen.getByRole("combobox", { name: "節日" });
+    const districtFilter = screen.getByRole("combobox", { name: "地區" });
+    expect(holidayFilter).not.toHaveAttribute("aria-disabled", "true");
+    expect(districtFilter).not.toHaveAttribute("aria-disabled", "true");
+
+    await user.click(holidayFilter);
+    await user.click(await screen.findByRole("option", { name: "母親節" }));
+    await user.click(districtFilter);
+    await user.click(await screen.findByRole("option", { name: "中環" }));
+
+    await waitFor(() =>
+      expect(loadOrders).toHaveBeenLastCalledWith(expect.objectContaining({
+        festivalIds: ["festival-1"],
+        districtNames: ["中環"],
+      })),
+    );
+  });
+
   it("hides the not-sent factory status when the order is marked not to send", async () => {
     const loadOrders = vi.fn().mockResolvedValue({
       ...orderResult,
@@ -288,10 +324,10 @@ describe("Orders list", () => {
     await user.click(await screen.findByRole("button", { name: "增加訂單狀態" }));
     const dialog = screen.getByRole("dialog", { name: "增加訂單狀態" });
     await user.click(within(dialog).getByRole("combobox", { name: "訂單狀態" }));
-    expect(within(dialog).queryByRole("option", { name: "其他狀態" })).not.toBeInTheDocument();
-    const reschedule = await within(dialog).findByRole("option", { name: "改期未定" });
-    const split = within(dialog).getByRole("option", { name: "已拆單" });
-    const monthly = within(dialog).getByRole("option", { name: "月結" });
+    expect(screen.queryByRole("option", { name: "其他狀態" })).not.toBeInTheDocument();
+    const reschedule = await screen.findByRole("option", { name: "改期未定" });
+    const split = screen.getByRole("option", { name: "已拆單" });
+    const monthly = screen.getByRole("option", { name: "月結" });
     act(() => {
       reschedule.click();
       split.click();
@@ -500,10 +536,16 @@ describe("Orders list", () => {
 
     await screen.findByText("B-1513");
     const deliveryButton = screen.queryByRole("button", { name: "送貨單" });
-    const receiptButton = screen.queryByRole("button", { name: "REC" });
-    const invoiceButton = screen.queryByRole("button", { name: "INV" });
+    const receiptButton = screen.queryByRole("link", { name: "REC" });
+    const invoiceButton = screen.queryByRole("link", { name: "INV" });
     expect(Boolean(deliveryButton)).toBe(deliveryNote);
     expect(Boolean(receiptButton)).toBe(paidDocuments);
+    if (paidDocuments) {
+      expect(receiptButton).toHaveAttribute("href", "/orders/order-1/receipt");
+      expect(receiptButton).toHaveAttribute("target", "_blank");
+      expect(invoiceButton).toHaveAttribute("href", "/orders/order-1/invoice");
+      expect(invoiceButton).toHaveAttribute("target", "_blank");
+    }
     expect(Boolean(invoiceButton)).toBe(paidDocuments);
   });
 

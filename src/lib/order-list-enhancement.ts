@@ -1,17 +1,5 @@
 import { supabase } from "@/lib/supabase";
-
-export const MANUAL_TODO_OPTIONS = [
-  { key: "reschedule-pending", label: "Reschedule pending" },
-  { key: "lwp", label: "LWP" },
-  { key: "lbw", label: "LBW" },
-  { key: "lfp", label: "LFP" },
-  { key: "klook", label: "KLOOK" },
-  { key: "alipay", label: "Alipay" },
-  { key: "cancelled", label: "Cancelled" },
-  { key: "monthly-settlement", label: "Monthly settlement" },
-] as const;
-
-export type ManualTodoKey = (typeof MANUAL_TODO_OPTIONS)[number]["key"];
+import { DICT_TYPE, dictItemLabel, fetchDictItems } from "@/lib/dictionaries";
 
 export type OrderListEnhancementFilters = {
   deliveryDate?: string;
@@ -20,7 +8,16 @@ export type OrderListEnhancementFilters = {
   brandIds?: string[];
   orderTagIds?: string[];
   manualTodoKeys?: string[];
+  festivalIds?: string[];
+  districtNames?: string[];
   deliverySort?: "asc" | "desc";
+};
+
+export type OrderListFilterOption = { id: string; name: string };
+
+export type OrderListFilterOptions = {
+  festivals: OrderListFilterOption[];
+  districts: OrderListFilterOption[];
 };
 
 export type OrderListManualTodo = {
@@ -36,6 +33,45 @@ type TodoRow = {
   todo_key: string;
 };
 
+function namedOptions(rows: Array<{ id: string; name: string | null }>) {
+  return rows.flatMap((row) => {
+    const name = row.name?.trim();
+    return name ? [{ id: row.id, name }] : [];
+  });
+}
+
+function uniqueDistrictNames(rows: OrderListFilterOption[]) {
+  const names = new Map<string, OrderListFilterOption>();
+  for (const row of rows) {
+    const key = row.name.toLocaleLowerCase("zh-HK");
+    if (!names.has(key)) names.set(key, { id: row.name, name: row.name });
+  }
+  return [...names.values()].sort((left, right) =>
+    left.name.localeCompare(right.name, "zh-HK"),
+  );
+}
+
+export async function fetchOrderListFilterOptions(): Promise<OrderListFilterOptions> {
+  const [festivals, districts] = await Promise.all([
+    supabase
+      .from("festivals")
+      .select("id,name")
+      .eq("is_active", true)
+      .order("name"),
+    supabase
+      .from("delivery_districts")
+      .select("id,name")
+      .is("archived_at", null)
+      .order("name"),
+  ]);
+  if (festivals.error) throw festivals.error;
+  if (districts.error) throw districts.error;
+  return {
+    festivals: namedOptions(festivals.data ?? []),
+    districts: uniqueDistrictNames(namedOptions(districts.data ?? [])),
+  };
+}
+
 /**
  * The list enhancement is deployed independently from the existing orders
  * table. Until its migration has been applied, the core order list must keep
@@ -45,10 +81,6 @@ export function isManualTodoTableUnavailable(error: unknown) {
   if (!error || typeof error !== "object") return false;
   const code = "code" in error ? String(error.code ?? "") : "";
   return code === "42P01" || code === "PGRST205";
-}
-
-export function manualTodoLabel(key: string) {
-  return MANUAL_TODO_OPTIONS.find((todo) => todo.key === key)?.label ?? key;
 }
 
 export async function fetchManualTodosForOrders(orderIds: readonly string[]) {
@@ -62,11 +94,15 @@ export async function fetchManualTodosForOrders(orderIds: readonly string[]) {
     if (isManualTodoTableUnavailable(error)) return [];
     throw error;
   }
-  return ((data ?? []) as TodoRow[]).map((row) => ({
+  const rows = (data ?? []) as TodoRow[];
+  if (!rows.length) return [];
+  const dictionary = await fetchDictItems(DICT_TYPE.orderManualTodo).catch(() => []);
+  const labels = new Map(dictionary.map((item) => [item.value, dictItemLabel(item, "zh-HK")]));
+  return rows.map((row) => ({
     id: row.id,
     orderId: row.order_id,
     key: row.todo_key,
-    label: manualTodoLabel(row.todo_key),
+    label: labels.get(row.todo_key) ?? row.todo_key,
   }));
 }
 
@@ -111,6 +147,25 @@ export async function findOrdersWithOrderTags(orderTagIds: readonly string[]) {
   return [...tagsByOrder]
     .filter(([, tags]) => orderTagIds.every((tagId) => tags.has(tagId)))
     .map(([orderId]) => orderId);
+}
+
+export async function findOrdersWithDistrictNames(districtNames: readonly string[]) {
+  if (!districtNames.length) return null;
+  const { data: districts, error: districtError } = await supabase
+    .from("delivery_districts")
+    .select("id")
+    .in("name", [...districtNames])
+    .is("archived_at", null);
+  if (districtError) throw districtError;
+  const districtIds = (districts ?? []).map((row) => row.id);
+  if (!districtIds.length) return [];
+
+  const { data: deliveries, error: deliveryError } = await supabase
+    .from("deliveries")
+    .select("order_id")
+    .in("district_id", districtIds);
+  if (deliveryError) throw deliveryError;
+  return [...new Set((deliveries ?? []).flatMap((row) => row.order_id ? [row.order_id] : []))];
 }
 
 export async function toggleManualOrderTodo(orderId: string, key: string) {
