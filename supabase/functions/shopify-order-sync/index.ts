@@ -10,6 +10,7 @@ import {
   orderNumberKey,
   parseMenuRemark,
   pickCatalogMatchByName,
+  resolveOperationalOrderMatch,
   resolveAliasSku,
   shopifyMenuOptionLegacyId,
   stripSkuSuffix,
@@ -751,6 +752,7 @@ async function processMappedOrders(
     channel_id: string | null;
     is_shopify_order: boolean | null;
     shopify_order_id: number | null;
+    source_system: string | null;
   }>,
 ): Promise<OrderProcessingResult> {
   const { client, storeRow, products, packages, methodsByName } = context;
@@ -781,9 +783,30 @@ async function processMappedOrders(
   for (const item of mapped) {
     const already = shopifyIdToOrder.get(item.orderId);
     let targetId: string | null = already?.id ?? null;
-    let mode: "insert" | "link" | "skip" = already
+    let mode: "insert" | "link" | "relink" | "skip" = already
       ? already.source_system === "shopify" ? "skip" : "link"
       : "insert";
+
+    if (already?.source_system === "shopify") {
+      const operationalMatch = resolveOperationalOrderMatch({
+        currentOrderId: already.id,
+        orderNumber: item.orderNumber,
+        channelId: storeRow.channel_id,
+        candidates: numberRows,
+      });
+      if (operationalMatch.status === "unique") {
+        targetId = operationalMatch.orderId;
+        mode = "relink";
+      } else if (operationalMatch.status === "ambiguous") {
+        issues.push({
+          store_id: storeRow.id,
+          shopify_order_id: item.orderId,
+          sku: null,
+          issue: "ambiguous_order_number",
+        });
+        continue;
+      }
+    }
 
     if (!targetId) {
       const matches = numberRows.filter((row) => {
@@ -812,6 +835,32 @@ async function processMappedOrders(
       ? String(item.orderRow.legacy_id ?? "")
       : shopifyIdToOrder.get(item.orderId)?.legacy_id ??
         numberRows.find((row) => row.id === targetId)?.legacy_id ?? "";
+
+    if (mode === "relink" && targetId && already) {
+      const { error } = await client.rpc("reconcile_shopify_order_shadow", {
+        p_shadow_order_id: already.id,
+        p_canonical_order_id: targetId,
+      });
+      if (error) {
+        issues.push({
+          store_id: storeRow.id,
+          shopify_order_id: item.orderId,
+          sku: null,
+          issue: "relink_failed",
+        });
+        continue;
+      }
+      counters.linkedExisting += 1;
+      processedOrders.push({
+        orderId: item.orderId,
+        supabaseOrderId: targetId,
+        orderLegacyId: orderLegacyIdForPayments,
+        orderNumber: item.orderNumber,
+        currency,
+        needsTransactions: item.needsPayments,
+      });
+      continue;
+    }
 
     if (mode === "skip" && targetId) {
       const { error } = await client.from("orders")
@@ -1152,12 +1201,13 @@ async function syncStore(input: {
     client
       .from("orders")
       .select("id, legacy_id, shopify_order_id, source_system")
+      .is("archived_at", null)
       .eq("shopify_store_id", storeRow.id)
       .in("shopify_order_id", mapped.map((row) => row.orderId)),
     client
       .from("orders")
       .select(
-        "id, legacy_id, order_number, channel_id, is_shopify_order, shopify_order_id",
+        "id, legacy_id, order_number, channel_id, is_shopify_order, shopify_order_id, source_system",
       )
       .in(
         "order_number",
@@ -1165,7 +1215,8 @@ async function syncStore(input: {
           ...mapped.map((row) => row.orderNumber),
           ...mapped.map((row) => row.orderNumber.replace(/^#/, "")),
         ],
-      ),
+      )
+      .is("archived_at", null),
     client.from("payment_methods").select("id, legacy_id, name"),
   ]);
 
@@ -1208,6 +1259,7 @@ async function syncStore(input: {
       channel_id: string | null;
       is_shopify_order: boolean | null;
       shopify_order_id: number | null;
+      source_system: string | null;
     }>,
   );
 
@@ -1340,12 +1392,13 @@ async function syncSingleOrder(input: {
     client
       .from("orders")
       .select("id, legacy_id, shopify_order_id, source_system")
+      .is("archived_at", null)
       .eq("shopify_store_id", storeRow.id)
       .in("shopify_order_id", mapped.map((row) => row.orderId)),
     client
       .from("orders")
       .select(
-        "id, legacy_id, order_number, channel_id, is_shopify_order, shopify_order_id",
+        "id, legacy_id, order_number, channel_id, is_shopify_order, shopify_order_id, source_system",
       )
       .in(
         "order_number",
@@ -1353,7 +1406,8 @@ async function syncSingleOrder(input: {
           ...mapped.map((row) => row.orderNumber),
           ...mapped.map((row) => row.orderNumber.replace(/^#/, "")),
         ],
-      ),
+      )
+      .is("archived_at", null),
     client.from("payment_methods").select("id, legacy_id, name"),
   ]);
 
@@ -1396,6 +1450,7 @@ async function syncSingleOrder(input: {
       channel_id: string | null;
       is_shopify_order: boolean | null;
       shopify_order_id: number | null;
+      source_system: string | null;
     }>,
   );
 

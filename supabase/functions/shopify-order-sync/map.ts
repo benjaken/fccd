@@ -679,6 +679,47 @@ export type ComparablePayment = {
   payment_at?: unknown;
 };
 
+export type OperationalOrderCandidate = {
+  id: string;
+  order_number: string | null;
+  channel_id: string | null;
+  source_system: string | null;
+  shopify_order_id: number | null;
+};
+
+export type OperationalOrderMatch =
+  | { status: "none" }
+  | { status: "ambiguous" }
+  | { status: "unique"; orderId: string };
+
+function normalizedOrderNumber(value: string | null | undefined): string {
+  return String(value ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+/**
+ * Finds an operational order that arrived after its Shopify shadow. Automatic
+ * reconciliation is deliberately limited to one unlinked non-Shopify record;
+ * the database RPC performs the final customer/amount validation atomically.
+ */
+export function resolveOperationalOrderMatch(input: {
+  currentOrderId: string;
+  orderNumber: string;
+  channelId: string;
+  candidates: OperationalOrderCandidate[];
+}): OperationalOrderMatch {
+  const key = normalizedOrderNumber(input.orderNumber);
+  const matches = input.candidates.filter((candidate) =>
+    candidate.id !== input.currentOrderId &&
+    candidate.source_system !== "shopify" &&
+    candidate.shopify_order_id == null &&
+    normalizedOrderNumber(candidate.order_number) === key &&
+    candidate.channel_id === input.channelId
+  );
+  if (!matches.length) return { status: "none" };
+  if (matches.length > 1) return { status: "ambiguous" };
+  return { status: "unique", orderId: matches[0].id };
+}
+
 function hongKongDate(value: unknown): string | null {
   if (typeof value !== "string" || !value.trim()) return null;
   const date = new Date(value);
