@@ -1,11 +1,13 @@
 import { Download } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { useAuth } from "@/auth/AuthProvider";
 import {
   REPORT_GROUP_TABS,
   REPORT_TAB_PERMISSION_KEYS,
+  REPORT_TAB_ROUTES,
   usePageAccess,
   type ReportGroup,
   type ReportTabKey,
@@ -23,6 +25,11 @@ import { RestaurantPnlReport } from "@/components/RestaurantPnlReport";
 import { RestaurantNewProductReport } from "@/components/RestaurantNewProductReport";
 import { SupplierPurchaseReport } from "@/components/SupplierPurchaseReport";
 import { ShopSalesWorkingHoursReport } from "@/components/ShopSalesWorkingHoursReport";
+import {
+  ReportAiSnapshotPublisher,
+  ReportAiTrigger,
+  ReportAiWorkspace,
+} from "@/components/report-ai/ReportAiWorkspace";
 import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
@@ -43,24 +50,10 @@ function currentMonthRange() {
   return { start: format(start), end: format(end) };
 }
 
-const implementedTabs = new Set<ReportTabKey>([
-  "shopSales",
-  "shopSalesWorkingHours",
-  "restaurantSalesSalary",
-  "restaurantSalesCost",
-  "restaurantPnl",
-  "newProducts",
-  "shopOrderQuantities",
-  "averageSupplyPrice",
-  "productionCostPrice",
-  "rawMeatAveragePrice",
-  "preparedMeatStock",
-  "rawMeatStock",
-  "supplierPurchase",
-]);
-
 export function ReportsPage({ group }: { group: ReportGroup }) {
   const { t, i18n } = useTranslation();
+  const location = useLocation();
+  const navigate = useNavigate();
   const { user, profile } = useAuth();
   const authorizationRole =
     typeof user?.app_metadata?.role === "string"
@@ -75,8 +68,15 @@ export function ReportsPage({ group }: { group: ReportGroup }) {
       ),
     [pageAccess, reportTabs],
   );
+  const routeTab = reportTabs.find(
+    (tab) => REPORT_TAB_ROUTES[tab] === location.pathname,
+  );
+  const activeTab =
+    routeTab && visibleTabs.includes(routeTab) ? routeTab : visibleTabs[0];
+  const canViewShopOrderQuantities = visibleTabs.includes(
+    "shopOrderQuantities",
+  );
   const range = useMemo(currentMonthRange, []);
-  const [activeTab, setActiveTab] = useState<ReportTabKey>(reportTabs[0]);
   const [startDate, setStartDate] = useState(range.start);
   const [endDate, setEndDate] = useState(range.end);
   const [shops, setShops] = useState<ReportShop[]>([]);
@@ -86,9 +86,11 @@ export function ReportsPage({ group }: { group: ReportGroup }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (visibleTabs.includes(activeTab)) return;
-    if (visibleTabs[0]) setActiveTab(visibleTabs[0]);
-  }, [activeTab, visibleTabs]);
+    if (!activeTab) return;
+    const activePath = REPORT_TAB_ROUTES[activeTab];
+    if (location.pathname !== activePath) navigate(activePath, { replace: true });
+  }, [activeTab, location.pathname, navigate]);
+
   const quantity = new Intl.NumberFormat(i18n.language, {
     maximumFractionDigits: 3,
   });
@@ -133,6 +135,47 @@ export function ReportsPage({ group }: { group: ReportGroup }) {
           ) + 1,
         )
       : 0;
+  const shopOrderAiSnapshot = useMemo(
+    () =>
+      activeTab === "shopOrderQuantities" && !loading
+        ? {
+            filters: {
+              startDate,
+              endDate,
+              shopId: selectedShop || null,
+              shopName: selectedShopName,
+            },
+            currentAggregates: products.map((product) => ({
+              productName: product.name,
+              unit: product.unit,
+              quantity: product.quantity,
+              sharePercent: total ? (product.quantity / total) * 100 : 0,
+            })),
+            detailRows: rows.map((row) => ({
+              orderDate: row.orderDate,
+              shopName: row.shopName,
+              productName: row.productName,
+              quantity: row.totalQuantity,
+              unit: row.unit,
+            })),
+            completeness: {
+              status: "complete" as const,
+              notes: ["數量是所選店舖及日期範圍的訂貨匯總。"],
+            },
+          }
+        : null,
+    [
+      activeTab,
+      endDate,
+      loading,
+      products,
+      rows,
+      selectedShop,
+      selectedShopName,
+      startDate,
+      total,
+    ],
+  );
 
   const loadReport = async (
     nextStart = startDate,
@@ -160,7 +203,7 @@ export function ReportsPage({ group }: { group: ReportGroup }) {
   useEffect(() => {
     if (
       activeTab !== "shopOrderQuantities" ||
-      !visibleTabs.includes("shopOrderQuantities")
+      !canViewShopOrderQuantities
     ) return;
     let active = true;
     void fetchReportShops()
@@ -182,19 +225,19 @@ export function ReportsPage({ group }: { group: ReportGroup }) {
     return () => {
       active = false;
     };
-  }, [activeTab, t, visibleTabs]);
+  }, [activeTab, canViewShopOrderQuantities, t]);
 
   useEffect(() => {
     if (
       activeTab !== "shopOrderQuantities" ||
-      !visibleTabs.includes("shopOrderQuantities")
+      !canViewShopOrderQuantities
     ) return;
     if (!selectedShop || !startDate || !endDate || startDate > endDate) return;
     const timeout = window.setTimeout(() => {
       void loadReport(startDate, endDate, selectedShop);
     }, 200);
     return () => window.clearTimeout(timeout);
-  }, [activeTab, endDate, selectedShop, startDate, visibleTabs]);
+  }, [activeTab, canViewShopOrderQuantities, endDate, selectedShop, startDate]);
 
   const exportCsv = () => {
     const csv = [
@@ -221,8 +264,17 @@ export function ReportsPage({ group }: { group: ReportGroup }) {
     URL.revokeObjectURL(url);
   };
 
+  if (!activeTab) return null;
+
   return (
+    <ReportAiWorkspace
+      key={activeTab}
+      reportKey={activeTab}
+      permissionKey={REPORT_TAB_PERMISSION_KEYS[activeTab]}
+      reportTitle={t(`reports.tabs.${activeTab}`)}
+    >
     <div className="reports-page">
+      <ReportAiSnapshotPublisher snapshot={shopOrderAiSnapshot} />
       <section className="page-heading">
         <div>
           <span className="eyebrow">
@@ -231,23 +283,23 @@ export function ReportsPage({ group }: { group: ReportGroup }) {
           <h1>{t(`reports.groups.${group}.title`)}</h1>
         </div>
       </section>
-      {visibleTabs.length > 1 || group === "shops" ? (
-        <nav className="report-tabs" aria-label={t("reports.navigation")}>
-          {visibleTabs.map((tab) => (
-            <button
-              className={cn(activeTab === tab && "active")}
-              disabled={!implementedTabs.has(tab)}
-              key={tab}
-              type="button"
-              onClick={() => {
-                if (implementedTabs.has(tab)) setActiveTab(tab);
-              }}
-            >
-              {t(`reports.tabs.${tab}`)}
-            </button>
-          ))}
-        </nav>
-      ) : null}
+      <div className="report-ai-nav-row">
+        {visibleTabs.length > 1 || group === "shops" ? (
+          <nav className="report-tabs" aria-label={t("reports.navigation")}>
+            {visibleTabs.map((tab) => (
+              <Link
+                aria-current={activeTab === tab ? "page" : undefined}
+                className={cn(activeTab === tab && "active")}
+                key={tab}
+                to={REPORT_TAB_ROUTES[tab]}
+              >
+                {t(`reports.tabs.${tab}`)}
+              </Link>
+            ))}
+          </nav>
+        ) : null}
+        <ReportAiTrigger />
+      </div>
       {activeTab === "shopSales" ? (
         <RestaurantSalesReportPage embedded />
       ) : activeTab === "shopSalesWorkingHours" ? (
@@ -411,5 +463,6 @@ export function ReportsPage({ group }: { group: ReportGroup }) {
         />
       )}
     </div>
+    </ReportAiWorkspace>
   );
 }
