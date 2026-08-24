@@ -719,10 +719,30 @@ describe("FactoryBoardPage", () => {
             {
               id: "line-print",
               label: "(單格) 煎雞扒胡麻沙律",
+              labelName: "煎雞扒胡麻沙律\n走醬另上",
               quantityText: "3",
               remarks: ["走醬"],
               printed: false,
               requiresReprint: true,
+              changes: [
+                {
+                  id: "change-quantity",
+                  orderLineId: "line-print",
+                  operation: "update",
+                  lineName: "煎雞扒胡麻沙律",
+                  changedFields: { quantity: { before: 1, after: 3 } },
+                  changedAt: "2026-08-24T12:01:00+08:00",
+                },
+              ],
+            },
+            {
+              id: "line-ok",
+              label: "不受影響菜式",
+              labelName: "不受影響標籤",
+              quantityText: "1",
+              remarks: [],
+              printed: true,
+              requiresReprint: false,
             },
           ],
         })}
@@ -734,12 +754,23 @@ describe("FactoryBoardPage", () => {
     );
 
     await user.click(await screen.findByRole("button", { name: /#B-1522/ }));
-    await user.click(
-      await screen.findByRole("button", { name: /煎雞扒胡麻沙律/ }),
-    );
+    expect(await screen.findByLabelText("標籤需要重新打印")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /不受影響菜式/ }));
+    expect(screen.queryByText(/必須重新打印/)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "關閉" }));
+    await user.click(screen.getByRole("button", { name: /煎雞扒胡麻沙律/ }));
 
     expect(screen.getByRole("heading", { name: "印標籤" })).toBeInTheDocument();
-    expect(screen.getByText(/必須重新打印/)).toBeInTheDocument();
+    expect(screen.getByText("原名稱")).toBeInTheDocument();
+    expect(screen.getByText("標籤名稱")).toBeInTheDocument();
+    expect(
+      screen.getAllByText("(單格) 煎雞扒胡麻沙律")
+        .find((element) => element.classList.contains("factory-label-original-name")),
+    ).toBeInTheDocument();
+    expect(screen.getByText("煎雞扒胡麻沙律 走醬另上")).toHaveClass("factory-label-database-name");
+    expect(screen.getByText(/此菜式有以下變更/)).toBeInTheDocument();
+    expect(screen.getByText("數量")).toBeInTheDocument();
+    expect(screen.getByText("1 → 3")).toBeInTheDocument();
     const fullSet = screen.getByRole("button", { name: "印全套標籤（3個）" });
     await waitFor(() => expect(fullSet).toBeEnabled());
     await user.click(fullSet);
@@ -753,7 +784,7 @@ describe("FactoryBoardPage", () => {
       await screen.findByText("全套標籤打印完成，已更新為已印刷。"),
     ).toBeInTheDocument();
     expect(screen.getByLabelText("已經印刷")).toBeInTheDocument();
-    expect(screen.getByLabelText("標籤已打印")).toBeInTheDocument();
+    expect(screen.getAllByLabelText("標籤已打印")).toHaveLength(2);
   });
 
   it("does not show the pending-change summary on the factory home page", async () => {
