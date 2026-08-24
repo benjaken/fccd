@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { useReportAiSnapshot } from "@/components/report-ai/ReportAiWorkspace";
 import {
   buildRestaurantPnlReport,
   defaultRestaurantPnlMonths,
@@ -118,6 +119,24 @@ export function RestaurantPnlReport({
     setEndMonth(defaults.endMonth);
     setRestaurantId(findDefaultPnlRestaurant(restaurants)?.id ?? "");
   };
+  const aiSnapshot = useMemo(
+    () =>
+      !loading && validRange && restaurantId
+        ? {
+            filters: { startMonth, endMonth, restaurantId },
+            currentAggregates: rows.map((row) => ({ ...row })),
+            completeness: {
+              status: "partial" as const,
+              notes: [
+                "損益結論必須沿用報表既定分類與計算口徑，不可自行重分類。",
+                "當前月份可能未完成，存貨或費用尚未輸入時不可視為零。",
+              ],
+            },
+          }
+        : null,
+    [endMonth, loading, restaurantId, rows, startMonth, validRange],
+  );
+  useReportAiSnapshot(aiSnapshot);
   const monthLabel = (value: string) => {
     const [year, month] = value.slice(0, 7).split("-").map(Number);
     return new Intl.DateTimeFormat(i18n.language, {

@@ -3,6 +3,7 @@ import path from "node:path";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { MemoryRouter } from "react-router-dom";
 
 import { ReportsPage } from "@/components/ReportsPage";
 import i18n from "@/i18n";
@@ -55,7 +56,11 @@ vi.mock("@/auth/use-page-access", async () => {
 });
 
 function renderReport(group: "frozenMeat") {
-  return render(<ReportsPage group={group} />);
+  return render(
+    <MemoryRouter initialEntries={["/reports/frozen-meat"]}>
+      <ReportsPage group={group} />
+    </MemoryRouter>,
+  );
 }
 
 describe("Shop order quantity report", () => {
@@ -269,7 +274,7 @@ describe("Shop order quantity report", () => {
     renderReport("frozenMeat");
 
     await user.click(
-      screen.getByRole("button", { name: "Average supply price by shop" }),
+      screen.getByRole("link", { name: "Average supply price by shop" }),
     );
     expect((await screen.findAllByText("香菇滷肉")).length).toBeGreaterThan(1);
     await waitFor(() =>
@@ -292,7 +297,7 @@ describe("Shop order quantity report", () => {
     expect(screen.getAllByText("$42.80").length).toBeGreaterThanOrEqual(2);
 
     await user.click(
-      screen.getByRole("button", {
+      screen.getByRole("link", {
         name: "Production cost and factory supply price",
       }),
     );
@@ -310,7 +315,7 @@ describe("Shop order quantity report", () => {
     renderReport("frozenMeat");
 
     await user.click(
-      await screen.findByRole("button", {
+      await screen.findByRole("link", {
         name: tabLabel,
       }),
     );
@@ -364,7 +369,7 @@ describe("Shop order quantity report", () => {
     renderReport("frozenMeat");
 
     await user.click(
-      await screen.findByRole("button", {
+      await screen.findByRole("link", {
         name: tabLabel,
       }),
     );
@@ -411,7 +416,7 @@ describe("Shop order quantity report", () => {
     renderReport("frozenMeat");
 
     await user.click(
-      await screen.findByRole("button", {
+      await screen.findByRole("link", {
         name: tabLabel,
       }),
     );
@@ -444,7 +449,7 @@ describe("Shop order quantity report", () => {
     renderReport("frozenMeat");
 
     await user.click(
-      await screen.findByRole("button", {
+      await screen.findByRole("link", {
         name: tabLabel,
       }),
     );
@@ -530,10 +535,10 @@ describe("Shop order quantity report", () => {
       await screen.findByRole("heading", { name: "Frozen Meat" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Shop order quantities" }),
+      screen.getByRole("link", { name: "Shop order quantities" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", {
+      screen.getByRole("link", {
         name: "Average supply price by shop",
       }),
     ).toBeInTheDocument();

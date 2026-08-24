@@ -3,6 +3,36 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
+const dictionaryValues = vi.hoisted(() => ({
+  quote_term_template: ["以上訂單附送 54 份餐具，包括即棄餐具、紙碗及一些食物夾。"],
+  quote_payment_template: ["銀行轉帳：匯豐銀行 HSBC：747-221000-838（戶口名稱：Food Channels Ltd.）", "轉數快：轉數快識別碼 FPS ID: 102938271（Food Channels Ltd.）"],
+  quote_additional_info: ["每個便當包括一份餐具"],
+  quote_activity: ["10月15日 120個飯盒"],
+}));
+
+vi.mock("@/lib/dictionaries", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/dictionaries")>();
+  return {
+    ...actual,
+    useDictItems: (typeCode: string) => ({
+      items: (dictionaryValues[typeCode as keyof typeof dictionaryValues] ?? []).map((value, index) => ({
+        id: `${typeCode}-${index}`,
+        dictTypeId: typeCode,
+        value,
+        label: value,
+        labelEn: null,
+        description: "",
+        metadata: typeCode === "quote_activity" ? { amount: "5400" } : {},
+        sortOrder: index,
+        isActive: true,
+      })),
+      loading: false,
+      error: null,
+      reload: vi.fn(),
+    }),
+  };
+});
+
 import { QuotePdfEditorPage } from "@/components/QuotePdfEditorPage";
 import type { OrderDetailResult } from "@/lib/order-details";
 

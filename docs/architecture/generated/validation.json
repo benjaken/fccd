@@ -1,0 +1,23 @@
+{
+  "checkedAt": "2026-08-23T15:47:11.965Z",
+  "files": [
+    "docs/architecture/data-flows.md",
+    "docs/architecture/domain-model.md",
+    "docs/architecture/evidence-index.md",
+    "docs/architecture/functional-catalog.md",
+    "docs/architecture/gaps-and-differences.md",
+    "docs/architecture/maintenance.md",
+    "docs/architecture/permissions-matrix.md",
+    "docs/architecture/README.md",
+    "docs/architecture/walkthroughs.md"
+  ],
+  "counts": {
+    "files": 9,
+    "links": 19,
+    "evidence": 116,
+    "mermaidBlocks": 5
+  },
+  "errors": [],
+  "warnings": [],
+  "passed": true
+}

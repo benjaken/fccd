@@ -32,14 +32,7 @@ import {
   type IngredientWriteInput,
 } from "@/lib/ingredients";
 import { useDeferredFilter } from "@/lib/use-deferred-filter";
-
-/** 食材/包裝用品的分類選項（與 Bubble 的 Type option set 對應）。 */
-export const INGREDIENT_TYPE_OPTIONS = [
-  "一般食材",
-  "包裝用品",
-  "貴重食材",
-  "飲品",
-] as const;
+import { DICT_TYPE, dictSelectOptions, useDictItems, type DictItem } from "@/lib/dictionaries";
 
 type IngredientsLoader = (filters: {
   page: number;
@@ -85,6 +78,7 @@ function IngredientFormPanel({
   onClose,
   onSaved,
   supplierOptions,
+  ingredientTypeOptions,
   createIngredient,
   updateIngredient,
 }: {
@@ -93,10 +87,11 @@ function IngredientFormPanel({
   onClose: () => void;
   onSaved: (row: IngredientListItem, mode: "create" | "edit") => void;
   supplierOptions: Array<{ id: string; name: string }>;
+  ingredientTypeOptions: DictItem[];
   createIngredient: IngredientCreator;
   updateIngredient: IngredientUpdater;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [name, setName] = useState("");
   const [sku, setSku] = useState("");
   const [ingredientType, setIngredientType] = useState("");
@@ -258,9 +253,9 @@ function IngredientFormPanel({
             onChange={(event) => setIngredientType(event.target.value)}
           >
             <option value="">{t("ingredients.fields.noType")}</option>
-            {INGREDIENT_TYPE_OPTIONS.map((type) => (
-              <option key={type} value={type}>
-                {t(`ingredients.typeOptions.${type}`)}
+            {dictSelectOptions(ingredientTypeOptions, i18n.language, ingredientType).map((type) => (
+              <option key={type.value} value={type.value}>
+                {type.label}
               </option>
             ))}
           </select>
@@ -397,6 +392,7 @@ export function IngredientsListPage({
   canDelete?: boolean;
 }) {
   const { t } = useTranslation();
+  const ingredientTypes = useDictItems(DICT_TYPE.ingredientType);
   const pageAccess = useCurrentPageAccess();
   const canEdit = canEditProp ?? pageAccess.canAccess(KITCHEN_INGREDIENTS_EDIT);
   const canDelete =
@@ -974,6 +970,7 @@ export function IngredientsListPage({
         ingredient={editingIngredient}
         onClose={closePanel}
         supplierOptions={supplierOptions}
+        ingredientTypeOptions={ingredientTypes.items}
         createIngredient={createIngredientProp}
         updateIngredient={updateIngredientProp}
         onSaved={(row, mode) => {

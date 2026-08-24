@@ -15,6 +15,7 @@ export type FactoryBoardData = {
   items: FactoryBoardItem[]
   portionsByOrderId: Record<string, number>
   printStatusByOrderId?: Record<string, FactoryOrderPrintStatus>
+  pendingChangeCount?: number
 }
 
 export type FactoryBoardItem = DeliveryListItem & {
@@ -61,6 +62,9 @@ export type FactoryOrderJob = {
   brandName?: string | null
   brandWebsite?: string | null
   requiresReprint?: boolean
+  changeTaskPending?: boolean
+  needsLabelReprint?: boolean
+  needsDeliveryNoteReprint?: boolean
   lines: FactoryOrderLine[]
 }
 
@@ -714,16 +718,29 @@ export async function fetchFactoryBoard(
         .filter((orderId): orderId is string => Boolean(orderId)),
     ),
   ]
+  const [portionsByOrderId, printStatusByOrderId, changeTasksResult] = await Promise.all([
+    fetchOrderPortionTotals(orderIds),
+    fetchOrderPrintStatuses(orderIds),
+    orderIds.length
+      ? supabase
+          .from("factory_change_tasks")
+          .select("order_id", { count: "exact", head: true })
+          .eq("status", "pending")
+          .in("order_id", orderIds)
+      : Promise.resolve({ count: 0, error: null }),
+  ])
+  if (changeTasksResult.error) throw changeTasksResult.error
   return {
     dates,
     items,
-    portionsByOrderId: await fetchOrderPortionTotals(orderIds),
-    printStatusByOrderId: await fetchOrderPrintStatuses(orderIds),
+    portionsByOrderId,
+    printStatusByOrderId,
+    pendingChangeCount: changeTasksResult.count ?? 0,
   }
 }
 
 export async function fetchFactoryOrderJob(orderId: string): Promise<FactoryOrderJob> {
-  const [orderResult, linesResult] = await Promise.all([
+  const [orderResult, linesResult, changeTaskResult] = await Promise.all([
     supabase
       .from("orders")
       .select(
@@ -739,12 +756,20 @@ export async function fetchFactoryOrderJob(orderId: string): Promise<FactoryOrde
       .eq("order_id", orderId)
       .order("type_sort")
       .order("item_order"),
+    supabase
+      .from("factory_change_tasks")
+      .select("status,needs_label_reprint,needs_delivery_note_reprint")
+      .eq("order_id", orderId)
+      .maybeSingle(),
   ])
   if (orderResult.error) {
     throw orderResult.error
   }
   if (linesResult.error) {
     throw linesResult.error
+  }
+  if (changeTaskResult.error) {
+    throw changeTaskResult.error
   }
 
   const factoryPrintDate =
@@ -785,6 +810,9 @@ export async function fetchFactoryOrderJob(orderId: string): Promise<FactoryOrde
     brandName: channel?.name?.trim() || null,
     brandWebsite: channel?.website?.trim() || null,
     requiresReprint,
+    changeTaskPending: changeTaskResult.data?.status === "pending",
+    needsLabelReprint: Boolean(changeTaskResult.data?.needs_label_reprint),
+    needsDeliveryNoteReprint: Boolean(changeTaskResult.data?.needs_delivery_note_reprint),
     lines: allLines.filter((row) => !row.is_void).map((row) => ({
       id: row.id as string,
       labelName:

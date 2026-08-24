@@ -35,7 +35,11 @@ import {
 } from "@/lib/shopify-sync";
 import { fetchOrderTags, type OrderTag } from "@/lib/order-tags";
 import { fetchOrderStatusCatalog, type ConfiguredOrderStatus } from "@/lib/order-statuses";
-import { type OrderListEnhancementFilters } from "@/lib/order-list-enhancement";
+import {
+  fetchOrderListFilterOptions,
+  type OrderListEnhancementFilters,
+  type OrderListFilterOptions,
+} from "@/lib/order-list-enhancement";
 import { ORDER_LIST_STATUS_NAMES, OrderListFiltersPanel, OrderRowActionMenu, OrderStatusPicker, OrderTagBadges, type OrderPrintKind } from "@/components/order-list-enhancement";
 import { getBrandLogoAlt, getDocumentLogoPath } from "@/lib/brand-logo";
 import { formatDeliveryAddress } from "@/lib/delivery-address";
@@ -75,6 +79,7 @@ export function OrdersListPage({
   loadOrders = fetchOrders,
   loadListConfig = fetchOrderListConfigs,
   loadStatusCatalog = fetchOrderStatusCatalog,
+  loadFilterOptions = fetchOrderListFilterOptions,
   updateStatuses = updateOrderStatusSelections,
   loadCustomerMessages = fetchOrderMessages,
   createCustomerNote = createQuoteCustomerNote,
@@ -89,6 +94,7 @@ export function OrdersListPage({
   loadOrders?: OrdersLoader;
   loadListConfig?: OrderListConfigLoader;
   loadStatusCatalog?: typeof fetchOrderStatusCatalog;
+  loadFilterOptions?: typeof fetchOrderListFilterOptions;
   updateStatuses?: OrderStatusesUpdater;
   loadCustomerMessages?: typeof fetchOrderMessages;
   createCustomerNote?: typeof createQuoteCustomerNote;
@@ -120,6 +126,10 @@ export function OrdersListPage({
   const [orderTags, setOrderTags] = useState<OrderTag[]>([]);
   const [orderStatusCatalog, setOrderStatusCatalog] = useState<ConfiguredOrderStatus[]>([]);
   const [brands, setBrands] = useState<Array<{ id: string; name: string }>>([]);
+  const [filterOptions, setFilterOptions] = useState<OrderListFilterOptions>({
+    festivals: [],
+    districts: [],
+  });
   const [cancelOrder, setCancelOrder] = useState<OrderListItem | null>(null);
   const [cancelText, setCancelText] = useState("");
   const [cancelNotice, setCancelNotice] = useState<string | null>(null);
@@ -136,6 +146,8 @@ export function OrdersListPage({
     brandIds: splitQueryValues(searchParams.get("brands")),
     orderTagIds: splitQueryValues(searchParams.get("tags")),
     manualTodoKeys: splitQueryValues(searchParams.get("todos")),
+    festivalIds: splitQueryValues(searchParams.get("festivals")),
+    districtNames: splitQueryValues(searchParams.get("districts")),
     deliverySort: searchParams.get("deliverySort") === "asc" ? "asc" : searchParams.get("deliverySort") === "desc" ? "desc" : undefined,
   }), [searchParams]);
   const setEnhancementFilters = (next: OrderListEnhancementFilters) => {
@@ -147,6 +159,8 @@ export function OrdersListPage({
     setOptionalParam(params, "brands", next.brandIds?.join(","));
     setOptionalParam(params, "tags", next.orderTagIds?.join(","));
     setOptionalParam(params, "todos", next.manualTodoKeys?.join(","));
+    setOptionalParam(params, "festivals", next.festivalIds?.join(","));
+    setOptionalParam(params, "districts", next.districtNames?.join(","));
     setOptionalParam(params, "deliverySort", next.deliverySort);
     setSearchParams(params, { replace: true });
   };
@@ -350,6 +364,18 @@ export function OrdersListPage({
     return () => { active = false; };
   }, [loadStatusCatalog]);
 
+  useEffect(() => {
+    let active = true;
+    void loadFilterOptions()
+      .then((options) => {
+        if (active) setFilterOptions(options);
+      })
+      .catch(() => {
+        if (active) setFilterOptions({ festivals: [], districts: [] });
+      });
+    return () => { active = false; };
+  }, [loadFilterOptions]);
+
   const openCancel = (order: OrderListItem) => {
     setCancelText("");
     setCancelNotice(null);
@@ -433,7 +459,7 @@ export function OrdersListPage({
             submitLabel={t("orders.searchAction")}
             filtersAlwaysInDrawer
             filtersTitle={t("common.filters")}
-            filtersActive={Boolean(status || enhancementFilters.deliveryDate || enhancementFilters.deliveryStart || enhancementFilters.brandIds?.length || enhancementFilters.orderTagIds?.length || enhancementFilters.manualTodoKeys?.length)}
+            filtersActive={Boolean(status || enhancementFilters.deliveryDate || enhancementFilters.deliveryStart || enhancementFilters.brandIds?.length || enhancementFilters.orderTagIds?.length || enhancementFilters.manualTodoKeys?.length || enhancementFilters.festivalIds?.length || enhancementFilters.districtNames?.length)}
             onConfirmFilters={statusFilter.confirm}
             onDismissFilters={statusFilter.revert}
             filters={
@@ -464,6 +490,8 @@ export function OrdersListPage({
                 tags={orderTags
                   .filter((tag) => tag.isActive)
                   .map((tag) => ({ id: tag.id, name: tag.name }))}
+                festivals={filterOptions.festivals}
+                districts={filterOptions.districts}
                 onChange={setEnhancementFilters}
               />
               </>

@@ -10,6 +10,7 @@ import {
 } from "@/lib/order-statuses";
 import {
   fetchManualTodosForOrders,
+  findOrdersWithDistrictNames,
   findOrdersWithOrderTags,
   findOrdersWithManualTodos,
   type OrderListEnhancementFilters,
@@ -254,6 +255,8 @@ export async function fetchOrders({
   brandIds = [],
   orderTagIds = [],
   manualTodoKeys = [],
+  festivalIds = [],
+  districtNames = [],
   deliverySort,
 }: OrderListFilters): Promise<OrderListResult> {
   const start = (page - 1) * ORDERS_PAGE_SIZE;
@@ -286,6 +289,12 @@ export async function fetchOrders({
   }
 
   if (brandIds.length) query = query.in("channel_id", brandIds);
+  if (festivalIds.length) query = query.in("festival_id", festivalIds);
+  const districtOrderIds = await findOrdersWithDistrictNames(districtNames);
+  if (districtOrderIds !== null) {
+    if (!districtOrderIds.length) return { items: [], total: 0 };
+    query = query.in("id", districtOrderIds);
+  }
   const taggedOrderIds = await findOrdersWithOrderTags(orderTagIds);
   if (taggedOrderIds !== null) {
     if (!taggedOrderIds.length) return { items: [], total: 0 };

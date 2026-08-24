@@ -19,12 +19,12 @@ import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { QuoteFilesSidePanel } from "@/components/QuoteFilesSidePanel";
+import { DICT_TYPE, dictItemLabel, useDictItems } from "@/lib/dictionaries";
 import { useDeferredFilter } from "@/lib/use-deferred-filter";
 import {
   fetchQuoteBrands,
   fetchQuotes,
   QUOTES_PAGE_SIZE,
-  QUOTE_STATUS_OPTIONS,
   QUOTE_STATUS_UNSET,
   updateQuoteDescription,
   type QuoteBrandOption,
@@ -62,6 +62,7 @@ export function QuotesListPage({
   saveDescription?: QuoteDescriptionUpdater;
 }) {
   const { t, i18n } = useTranslation();
+  const quoteStatusDict = useDictItems(DICT_TYPE.quoteStatus);
   const [draftSearch, setDraftSearch] = useState("");
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
@@ -173,13 +174,17 @@ export function QuotesListPage({
       [
         ...new Set(
           [
-            ...QUOTE_STATUS_OPTIONS,
+            ...quoteStatusDict.items.map((item) => item.value),
             ...(status && status !== QUOTE_STATUS_UNSET ? [status] : []),
             ...items.map((quote) => quote.quoteStatus),
           ].filter(Boolean),
         ),
       ] as string[],
-    [items, status],
+    [items, quoteStatusDict.items, status],
+  );
+  const statusLabels = useMemo(
+    () => new Map(quoteStatusDict.items.map((item) => [item.value, dictItemLabel(item, i18n.language)])),
+    [i18n.language, quoteStatusDict.items],
   );
   const submitSearch = () => {
     setPage(1);
@@ -240,13 +245,11 @@ export function QuotesListPage({
       ? "highChanceTitle"
       : preset === "large"
         ? "largeTitle"
-        : preset === "follow-up"
-          ? "followUpTitle"
-          : preset === "pending"
-            ? "pendingTitle"
-            : preset === "upcoming"
-              ? "upcomingTitle"
-              : "title";
+        : preset === "pending"
+          ? "pendingTitle"
+          : preset === "upcoming"
+            ? "upcomingTitle"
+            : "title";
 
   return (
     <section className="quotes-page">
@@ -289,7 +292,7 @@ export function QuotesListPage({
                     <option value="">{t("quotes.allStatuses")}</option>
                     {availableStatuses.map((option) => (
                       <option key={option} value={option}>
-                        {option}
+                        {statusLabels.get(option) ?? option}
                       </option>
                     ))}
                     <option value={QUOTE_STATUS_UNSET}>

@@ -1,0 +1,9 @@
+.factory-change-task-alert { display: grid; padding: 12px; grid-template-columns: 20px minmax(0, 1fr); gap: 4px 8px; border: 1px solid color-mix(in oklch, var(--destructive) 45%, var(--border)); border-radius: 9px; background: color-mix(in oklch, var(--destructive) 8%, var(--card)); color: var(--foreground); }
+.factory-change-task-alert > svg { width: 19px; color: var(--destructive); grid-row: 1 / span 2; }
+.factory-change-task-alert strong { font-size: 13px; }
+.factory-change-task-alert span { color: var(--muted-foreground); font-size: 12px; line-height: 1.35; }
+.factory-change-task-error { margin: 0; color: var(--destructive); font-size: 12px; font-weight: 700; }
+.factory-board-change-alert { display: grid; margin: 0 18px 12px; padding: 11px 14px; grid-template-columns: 22px auto minmax(0, 1fr); align-items: center; gap: 9px; border: 1px solid color-mix(in oklch, var(--destructive) 42%, var(--border)); border-radius: 10px; background: color-mix(in oklch, var(--destructive) 7%, var(--card)); }
+.factory-board-change-alert svg { width: 20px; color: var(--destructive); }
+.factory-board-change-alert strong { font-size: 14px; }
+.factory-board-change-alert span { color: var(--muted-foreground); font-size: 13px; }

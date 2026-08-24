@@ -3,7 +3,7 @@ import { supabase } from "@/lib/supabase";
 export const PACKAGES_PAGE_SIZE = 15;
 
 export type PackageSortField = "sku" | "createdAt" | "price";
-export type PackageStatusFilter = "" | "Active" | "Inactive";
+export type PackageStatusFilter = string;
 
 export type PackageListItem = {
   id: string;
@@ -234,10 +234,8 @@ export async function fetchPackages({
   query = query
     .range(start, end);
 
-  if (status === "Active") {
-    query = query.eq("is_active", true);
-  } else if (status === "Inactive") {
-    query = query.eq("is_active", false);
+  if (status) {
+    query = query.eq("status", status);
   }
 
   if (channelId) {
@@ -267,7 +265,7 @@ export async function fetchPackages({
         chineseName: row.chinese_name,
         price: toNumber(row.price),
         status: row.status,
-        isActive: row.is_active,
+        isActive: row.status ? row.status === "Active" : row.is_active,
         channelId: channel?.id ?? null,
         channelName: channel?.name ?? null,
         choiceSetCount: choiceSetCounts.get(row.id) ?? 0,
@@ -356,7 +354,7 @@ export async function fetchPackageDetail(
     description: row.description,
     price: toNumber(row.price),
     status: row.status,
-    isActive: row.is_active,
+    isActive: row.status ? row.status === "Active" : row.is_active,
     channelId: channel?.id ?? null,
     channelName: channel?.name ?? null,
     createdAt: row.created_at,

@@ -771,7 +771,18 @@ export function FactoryBoardPage({
           )}
         </section>
       ) : (
-      <>
+        <>
+          {(board?.pendingChangeCount ?? 0) > 0 ? (
+            <div className="factory-board-change-alert" role="alert">
+              <TriangleAlert aria-hidden="true" />
+              <strong>
+                {t("factoryBoard.pendingChanges", {
+                  count: board?.pendingChangeCount ?? 0,
+                })}
+              </strong>
+              <span>{t("factoryBoard.pendingChangesDescription")}</span>
+            </div>
+          ) : null}
       <section className="factory-board-days" aria-busy={loading || undefined}>
         {dates.map((date) => (
           <article className="factory-day" key={date}>

@@ -23,6 +23,7 @@ export type ReadOnlyOrderDetail = {
   quoteDescription: string | null;
   deliveryTerms: string | null;
   deliveryAt: string | null;
+  deliveryTime?: string | null;
   shipOutTime: string | null;
   deliveryStatus: string | null;
   isSentToFactory: boolean | null;
@@ -35,6 +36,8 @@ export type ReadOnlyOrderDetail = {
   shippingFee: number;
   grandTotal: number | null;
   outstanding: number | null;
+  createdAt?: string | null;
+  shopifyStoreDomain?: string | null;
   updatedAt: string;
   statuses: OrderStatusView[];
 };
@@ -71,6 +74,8 @@ export type DetailPayment = {
   payoutAt: string | null;
   paymentMethod: string | null;
   reference: string | null;
+  receiptReference?: string | null;
+  receiptNumber?: string | null;
 };
 
 export type DetailTimeline = {
@@ -99,7 +104,7 @@ export type OrderDetailResult = {
 };
 
 const fields =
-  "id,document_type,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,shipping_address_snapshot,customer_note_snapshot,remarks,quote_status,quote_description_snapshot,delivery_terms_snapshot,delivery_at,ship_out_time,delivery_status,is_sent_to_factory,factory_date,factory_packing_note,factory_print_date,factory_reprint_required,currency,discount_amount,shipping_fee,grand_total,outstanding,updated_at,order_status_legacy_ids,channels(id,name)";
+  "id,document_type,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,shipping_address_snapshot,customer_note_snapshot,remarks,quote_status,quote_description_snapshot,delivery_terms_snapshot,delivery_at,delivery_time,ship_out_time,delivery_status,is_sent_to_factory,factory_date,factory_packing_note,factory_print_date,factory_reprint_required,currency,discount_amount,shipping_fee,grand_total,outstanding,bubble_created_at,created_at,updated_at,order_status_legacy_ids,channels(id,name),shopify_stores(shop_domain)";
 
 function decimal(value: string | number | null) {
   return value === null ? null : Number.parseFloat(String(value));
@@ -116,7 +121,7 @@ function firstNonEmptyText(...values: unknown[]): string | null {
 
 function relatedCatalogText(
   relation: unknown,
-  field: "name" | "sku",
+  field: "name" | "sku" | "shop_domain",
 ): string | null {
   const row = Array.isArray(relation) ? relation[0] : relation;
   return row && typeof row === "object" && field in row
@@ -186,20 +191,16 @@ export async function fetchOrderDetail(
         .eq("order_id", id)
         .order("bubble_created_at", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false }),
-      documentType === "quote"
-        ? supabase
-            .from("order_terms_snapshots")
-            .select("content")
-            .eq("order_id", id)
-            .order("created_at")
-        : Promise.resolve({ data: [], error: null }),
-      documentType === "quote"
-        ? supabase
-            .from("order_payment_method_snapshots")
-            .select("content")
-            .eq("order_id", id)
-            .order("created_at")
-        : Promise.resolve({ data: [], error: null }),
+      supabase
+        .from("order_terms_snapshots")
+        .select("content")
+        .eq("order_id", id)
+        .order("created_at"),
+      supabase
+        .from("order_payment_method_snapshots")
+        .select("content")
+        .eq("order_id", id)
+        .order("created_at"),
       documentType === "quote"
         ? supabase
             .from("quote_file_metadata")
@@ -225,21 +226,33 @@ export async function fetchOrderDetail(
   if (canViewFinance && documentType === "order") {
     const { data: paymentRows, error: paymentError } = await supabase
       .from("payments")
-      .select("id,amount,currency,payment_at,payout_at,paypal_reference,receipt_reference")
+      .select("id,amount,currency,payment_at,payout_at,paypal_reference,receipt_reference,payment_methods(name),payment_settlement_payments(payment_settlements(receipt_number))")
       .eq("order_id", id)
       .is("voided_at", null)
       .order("bubble_created_at", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false });
     if (paymentError) throw paymentError;
-    payments = (paymentRows ?? []).map((row) => ({
-      id: row.id,
-      amount: Number(row.amount),
-      currency: row.currency,
-      paymentAt: row.payment_at,
-      payoutAt: row.payout_at,
-      paymentMethod: null,
-      reference: row.receipt_reference || row.paypal_reference,
-    }));
+    payments = (paymentRows ?? []).map((row) => {
+      const paymentMethod = row.payment_methods as { name: string } | { name: string }[] | null;
+      const settlementLinks = (row.payment_settlement_payments ?? []) as unknown as Array<{
+        payment_settlements: { receipt_number: string | null } | { receipt_number: string | null }[] | null;
+      }>;
+      const receiptNumber = settlementLinks
+        .flatMap((link) => Array.isArray(link.payment_settlements) ? link.payment_settlements : link.payment_settlements ? [link.payment_settlements] : [])
+        .map((settlement) => settlement.receipt_number?.trim() || "")
+        .find(Boolean) || null;
+      return {
+        id: row.id,
+        amount: Number(row.amount),
+        currency: row.currency,
+        paymentAt: row.payment_at,
+        payoutAt: row.payout_at,
+        paymentMethod: Array.isArray(paymentMethod) ? paymentMethod[0]?.name ?? null : paymentMethod?.name ?? null,
+        reference: row.receipt_reference || row.paypal_reference,
+        receiptReference: row.receipt_reference,
+        receiptNumber,
+      };
+    });
   }
 
   const order = {
@@ -260,6 +273,7 @@ export async function fetchOrderDetail(
     quoteDescription: data.quote_description_snapshot,
     deliveryTerms: data.delivery_terms_snapshot,
     deliveryAt: data.delivery_at,
+    deliveryTime: data.delivery_time,
     shipOutTime: data.ship_out_time,
     deliveryStatus: data.delivery_status,
     isSentToFactory: data.is_sent_to_factory,
@@ -272,6 +286,8 @@ export async function fetchOrderDetail(
     shippingFee: Number(data.shipping_fee),
     grandTotal: canViewFinance ? decimal(data.grand_total) : null,
     outstanding: canViewFinance ? decimal(data.outstanding) : null,
+    createdAt: data.bubble_created_at || data.created_at,
+    shopifyStoreDomain: relatedCatalogText(data.shopify_stores, "shop_domain"),
     updatedAt: data.updated_at,
     statuses: resolveOrderStatuses(data.order_status_legacy_ids, catalog),
   } satisfies ReadOnlyOrderDetail;

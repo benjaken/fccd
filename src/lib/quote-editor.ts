@@ -27,6 +27,8 @@ export type QuotePayment = {
 export type QuoteDraft = {
   channelId: string;
   quoteStatus: string;
+  quoteAutoClosedAt?: string | null;
+  quoteReopenReason?: string;
   quoteSalesSourceId: string;
   quoteCommunicationChannelId: string;
   customerName: string;
@@ -225,36 +227,47 @@ export async function duplicateQuote(
   return { id: row.id as string, orderNumber: row.order_number as string };
 }
 
+async function resolveCanonicalOrderId(orderId: string): Promise<string> {
+  const { data, error } = await supabase
+    .from("orders")
+    .select("id,merged_into_order_id")
+    .eq("id", orderId)
+    .maybeSingle();
+  if (error) throw error;
+  return data?.merged_into_order_id || data?.id || orderId;
+}
+
 export async function fetchQuoteEditorSummary(
   orderId: string,
   documentType: QuoteEditorDocumentType = "quote",
 ): Promise<QuoteEditorSummary | null> {
+  const resolvedOrderId = await resolveCanonicalOrderId(orderId);
   const [orderResult, deliveryResult, tagsResult, asanaResult, paymentsResult] = await Promise.all([
     supabase
       .from("orders")
-      .select("id,order_number,channel_id,quote_status,quote_sales_source_id,quote_communication_channel_id,customer_name_snapshot,company_name_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,email_snapshot,shipping_address_snapshot,customer_note_snapshot,shipping_method_id,delivery_at,delivery_time,ship_out_time,factory_packing_note,sales_partner_id,remarks,shipping_fee,discount_amount,cashdollar_redeemed,cashdollar_purchased,is_sent_to_factory,do_not_send_to_factory,factory_print_date,factory_reprint_required")
-      .eq("id", orderId)
+      .select("id,order_number,channel_id,quote_status,quote_auto_closed_at,quote_reopen_reason,quote_sales_source_id,quote_communication_channel_id,customer_name_snapshot,company_name_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,email_snapshot,shipping_address_snapshot,customer_note_snapshot,shipping_method_id,delivery_at,delivery_time,ship_out_time,factory_packing_note,sales_partner_id,remarks,shipping_fee,discount_amount,cashdollar_redeemed,cashdollar_purchased,is_sent_to_factory,do_not_send_to_factory,factory_print_date,factory_reprint_required")
+      .eq("id", resolvedOrderId)
       .in("document_type", documentType === "order" ? ["order"] : ["quote", "unconfirmed"])
       .is("archived_at", null)
       .maybeSingle(),
     supabase
       .from("deliveries")
       .select("id,district_id")
-      .eq("order_id", orderId)
+      .eq("order_id", resolvedOrderId)
       .order("created_at"),
     supabase
       .from("order_tag_assignments")
       .select("order_tag_id")
-      .eq("order_id", orderId),
+      .eq("order_id", resolvedOrderId),
     supabase
       .from("orders")
       .select("asana_link")
-      .eq("id", orderId)
+      .eq("id", resolvedOrderId)
       .maybeSingle(),
     supabase
       .from("payments")
       .select("id,payment_at,payment_method_id,amount,receipt_reference,paypal_reference")
-      .eq("order_id", orderId)
+      .eq("order_id", resolvedOrderId)
       .is("voided_at", null)
       .order("payment_at"),
   ]);
@@ -266,6 +279,8 @@ export async function fetchQuoteEditorSummary(
   const draft: QuoteDraft = {
     channelId: data.channel_id || "",
     quoteStatus: data.quote_status || "",
+    quoteAutoClosedAt: data.quote_auto_closed_at || null,
+    quoteReopenReason: data.quote_reopen_reason || "",
     quoteSalesSourceId: data.quote_sales_source_id || "",
     quoteCommunicationChannelId: data.quote_communication_channel_id || "",
     customerName: data.customer_name_snapshot || "",
@@ -496,8 +511,12 @@ export async function updateQuote(
 }
 
 function quoteWorkflowValues(input: QuoteDraft) {
+  const reopeningAutoClosedQuote = Boolean(input.quoteAutoClosedAt) && input.quoteStatus !== "Case Closed";
   return {
     quote_status: optional(input.quoteStatus),
+    quote_auto_closed_at: reopeningAutoClosedQuote ? null : input.quoteAutoClosedAt ?? null,
+    quote_close_reason: reopeningAutoClosedQuote ? null : undefined,
+    quote_reopen_reason: reopeningAutoClosedQuote ? optional(input.quoteReopenReason ?? "") : undefined,
     quote_sales_source_id: input.quoteSalesSourceId || null,
     quote_communication_channel_id: input.quoteCommunicationChannelId || null,
     asana_link: optional(input.asanaLink),
@@ -554,10 +573,11 @@ export async function searchQuoteCatalog(
 }
 
 export async function fetchQuoteLines(orderId: string): Promise<QuoteLine[]> {
+  const resolvedOrderId = await resolveCanonicalOrderId(orderId);
   const { data, error } = await supabase
     .from("order_lines")
     .select("id,product_id,package_id,sku_snapshot,product_name_snapshot,content_snapshot,quantity,unit_price,total_price,remarks_1")
-    .eq("order_id", orderId)
+    .eq("order_id", resolvedOrderId)
     .eq("is_void", false)
     .order("item_order", { ascending: true, nullsFirst: false })
     .order("created_at");

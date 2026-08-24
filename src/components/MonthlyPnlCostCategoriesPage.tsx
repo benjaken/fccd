@@ -6,19 +6,8 @@ import { Button } from "@/components/ui/button";
 import { RestaurantSettingsListTable } from "@/components/ui/restaurant-settings-list-table";
 import { SidePanel } from "@/components/ui/side-panel";
 import { Switch } from "@/components/ui/switch";
+import { DICT_TYPE, dictItemLabel, useDictItems } from "@/lib/dictionaries";
 import { supabase } from "@/lib/supabase";
-
-const pnlCategories = [
-  "Discount",
-  "其他營運開支",
-  "員工成本",
-  "外賣平台",
-  "推廣費用",
-  "收款平台手續費",
-  "水電費",
-  "租金",
-  "行政費用",
-];
 type PnlCost = {
   id: string;
   sortOrder: number;
@@ -28,7 +17,8 @@ type PnlCost = {
 };
 
 export function MonthlyPnlCostCategoriesPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const pnlCategoryDict = useDictItems(DICT_TYPE.restaurantMonthlyPnlCategory);
   const access = useCurrentPageAccess();
   const canEdit = access.canAccess(
     "restaurant.settings.monthly_pnl_cost_categories.edit",
@@ -252,9 +242,10 @@ export function MonthlyPnlCostCategoriesPage() {
               <option value="">
                 {t("monthlyPnlCostCategories.fields.categoryPlaceholder")}
               </option>
-              {pnlCategories.map((value) => (
-                <option key={value} value={value}>
-                  {value}
+              {category && !pnlCategoryDict.items.some((item) => item.value === category) ? <option value={category}>{category}</option> : null}
+              {pnlCategoryDict.items.map((item) => (
+                <option key={item.value} value={item.value}>
+                  {dictItemLabel(item, i18n.language)}
                 </option>
               ))}
             </select>

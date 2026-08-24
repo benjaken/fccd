@@ -11,6 +11,12 @@ import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { detailFromLocation } from "@/lib/detail-navigation";
+import {
+  DICT_TYPE,
+  dictItemLabel,
+  dictSelectOptions,
+  useDictItems,
+} from "@/lib/dictionaries";
 import { useDeferredFilter } from "@/lib/use-deferred-filter";
 import {
   fetchBentoColumnTypes,
@@ -77,6 +83,8 @@ export function ProductsListPage({
   updateRecommendation?: RecommendUpdater;
 }) {
   const { t, i18n } = useTranslation();
+  const catalogStatusDictionary = useDictItems(DICT_TYPE.catalogStatus);
+  const priceRangeDictionary = useDictItems(DICT_TYPE.productPriceRange);
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -406,8 +414,10 @@ export function ProductsListPage({
     product.chineseName || product.name || t("common.notSet");
 
   const statusLabel = (product: ProductListItem) => {
-    if (product.status === "Active") return t("products.statusActive");
-    if (product.status === "Inactive") return t("products.statusInactive");
+    const item = catalogStatusDictionary.items.find(
+      (candidate) => candidate.value === product.status,
+    );
+    if (item) return dictItemLabel(item, i18n.language);
     if (product.status) return product.status;
     return t("products.statusUnset");
   };
@@ -513,11 +523,15 @@ export function ProductsListPage({
                     }}
                   >
                     <option value="">{t("products.allPriceRanges")}</option>
-                    <option value="under-100">{t("products.priceRanges.under100")}</option>
-                    <option value="100-299">{t("products.priceRanges.r100to299")}</option>
-                    <option value="300-799">{t("products.priceRanges.r300to799")}</option>
-                    <option value="800-1999">{t("products.priceRanges.r800to1999")}</option>
-                    <option value="2000-plus">{t("products.priceRanges.r2000Plus")}</option>
+                    {dictSelectOptions(
+                      priceRangeDictionary.items,
+                      i18n.language,
+                      priceFilter.value,
+                    ).map((item) => (
+                      <option key={item.value} value={item.value}>
+                        {item.label}
+                      </option>
+                    ))}
                   </select>
                 </label>
 
@@ -618,8 +632,15 @@ export function ProductsListPage({
                     }}
                   >
                     <option value="">{t("products.allStatuses")}</option>
-                    <option value="Active">{t("products.statusActive")}</option>
-                    <option value="Inactive">{t("products.statusInactive")}</option>
+                    {dictSelectOptions(
+                      catalogStatusDictionary.items,
+                      i18n.language,
+                      statusFilter.value === "unset" ? null : statusFilter.value,
+                    ).map((item) => (
+                      <option key={item.value} value={item.value}>
+                        {item.label}
+                      </option>
+                    ))}
                     <option value="unset">{t("products.statusUnset")}</option>
                   </select>
                 </label>

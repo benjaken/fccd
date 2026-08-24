@@ -6,6 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import {
+  ReportAiTrigger,
+  useReportAiSnapshot,
+} from "@/components/report-ai/ReportAiWorkspace";
+import {
   buildKitchenSalesCostYearSummary,
   defaultKitchenSalesCostYears,
   fetchKitchenSalesCostReport,
@@ -616,6 +620,26 @@ export function KitchenSalesCostReportPage() {
     () => selectedYears.map((year) => buildKitchenSalesCostYearSummary(report?.rows ?? [], year, categories)),
     [categories, report, selectedYears],
   );
+  const aiSnapshot = useMemo(
+    () =>
+      report && !loading
+        ? {
+            filters: { selectedYears },
+            currentAggregates: report.rows
+              .filter((row) => selectedYears.includes(row.year))
+              .map((row) => ({ ...row })),
+            completeness: {
+              status: "partial" as const,
+              notes: [
+                "沒有原始列的月份會在頁面匯總中補為 0；解讀只可把原始列視為已有資料。",
+                "銷售按送貨日期、成本按成本月份或節日開始日期歸類。",
+              ],
+            },
+          }
+        : null,
+    [loading, report, selectedYears],
+  );
+  useReportAiSnapshot(aiSnapshot);
 
   return (
     <div className="kitchen-sales-cost-report-page">
@@ -625,13 +649,16 @@ export function KitchenSalesCostReportPage() {
           <h1>所有銷售及成本</h1>
         </div>
       </header>
-      <nav className="report-tabs kitchen-sales-cost-tabs" aria-label="中央廚房報表分類">
-        <Link className="active" to="/reports/kitchen">所有銷售及成本</Link>
-        <Link to="/reports/kitchen/channel-sales">頻道銷售</Link>
-        <Link to="/reports/kitchen/product-sales">產品銷售</Link>
-        <button disabled type="button">訂單項別報表</button>
-        <Link to="/reports/kitchen/advertising-performance">廣告表現</Link>
-      </nav>
+      <div className="report-ai-nav-row">
+        <nav className="report-tabs kitchen-sales-cost-tabs" aria-label="中央廚房報表分類">
+          <Link className="active" to="/reports/kitchen">所有銷售及成本</Link>
+          <Link to="/reports/kitchen/channel-sales">頻道銷售</Link>
+          <Link to="/reports/kitchen/product-sales">產品銷售</Link>
+          <button disabled type="button">訂單項別報表</button>
+          <Link to="/reports/kitchen/advertising-performance">廣告表現</Link>
+        </nav>
+        <ReportAiTrigger />
+      </div>
 
       {loading && !report ? <PageSkeleton label="正在載入銷售及成本報表" variant="report" /> : null}
       {error ? (

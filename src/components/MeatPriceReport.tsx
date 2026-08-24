@@ -7,6 +7,7 @@ import { ReportSummaryCards } from "@/components/reports/ReportSummaryCards";
 import { ReportYearFilter } from "@/components/reports/ReportYearFilter";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { PullToRefresh } from "@/components/ui/pull-to-refresh";
+import { useReportAiSnapshot } from "@/components/report-ai/ReportAiWorkspace";
 import {
   fetchMonthlyPreparedMeatPrices,
   type MeatPriceMode,
@@ -152,6 +153,39 @@ export function MeatPriceReport({ mode }: { mode: MeatPriceMode }) {
       active = false;
     };
   }, [mode, reloadKey, t, year]);
+
+  const aiSnapshot = useMemo(
+    () =>
+      !loading
+        ? {
+            filters: {
+              year,
+              priceUnit: unit,
+              selectedProductId,
+              priceMode: mode,
+            },
+            currentAggregates: rows.map((row) => ({
+              productId: row.productId,
+              productName: row.productName,
+              productUnit: row.productUnit,
+              month: row.monthNumber,
+              pricePerKg: row.pricePerKg,
+              pricePerPackage: row.pricePerPackage,
+            })),
+            completeness: {
+              status: "partial" as const,
+              notes: [
+                "只可把嚴格相鄰且兩個月都有價格的記錄稱為按月變化。",
+                mode === "shop"
+                  ? "此報表是內部供店舖價格，不是供應商採購報價；不可歸因到個別供應商。"
+                  : "每包歷史價格使用目前包裝公斤數換算，包裝規格變更可能影響歷史顯示。",
+              ],
+            },
+          }
+        : null,
+    [loading, mode, rows, selectedProductId, unit, year],
+  );
+  useReportAiSnapshot(aiSnapshot);
 
   return (
     <>

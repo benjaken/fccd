@@ -1,25 +1,5 @@
 import { supabase } from "@/lib/supabase";
 
-export const KITCHEN_ADVERTISING_FESTIVAL_OPTIONS = [
-  "父親節",
-  "中秋節",
-  "母親節",
-  "Xmas + 冬至",
-  "農曆新年",
-  "復活節",
-] as const;
-
-export const KITCHEN_ADVERTISING_CHANNEL_ORDER = [
-  "Catering",
-  "Kitchen",
-  "Express",
-  "Cuisine",
-  "Delivery",
-  "Residential",
-  "HK lunch box",
-  "HK Party Food",
-] as const;
-
 export const KITCHEN_ADVERTISING_FIRST_REPORT_YEAR = 2022;
 
 export type KitchenAdvertisingPerformanceMode = "festival" | "non_peak";
@@ -65,11 +45,7 @@ function numericValue(value: number | string | null) {
 }
 
 function canonicalChannelName(value: string) {
-  const trimmed = value.trim();
-  const known = KITCHEN_ADVERTISING_CHANNEL_ORDER.find(
-    (channel) => channel.toLowerCase() === trimmed.toLowerCase(),
-  );
-  return known ?? trimmed;
+  return value.trim();
 }
 
 export async function fetchKitchenAdvertisingPerformanceReport(): Promise<KitchenAdvertisingPerformanceReport> {
@@ -124,6 +100,7 @@ export function defaultKitchenAdvertisingPerformanceYears(years: number[]) {
 
 export function kitchenAdvertisingPerformanceFestivals(
   rows: KitchenAdvertisingPerformanceRow[],
+  preferred: readonly string[] = [],
 ) {
   const configured = rows
     .filter((row) => row.mode === "festival")
@@ -133,13 +110,13 @@ export function kitchenAdvertisingPerformanceFestivals(
     ...new Set(
       configured.filter(
         (name) =>
-          !KITCHEN_ADVERTISING_FESTIVAL_OPTIONS.some(
+          !preferred.some(
             (option) => option.toLowerCase() === name.toLowerCase(),
           ),
       ),
     ),
   ].sort((left, right) => left.localeCompare(right, "zh-HK"));
-  return [...KITCHEN_ADVERTISING_FESTIVAL_OPTIONS, ...extras];
+  return [...preferred, ...extras];
 }
 
 export function kitchenAdvertisingPerformanceChannels(
@@ -148,11 +125,7 @@ export function kitchenAdvertisingPerformanceChannels(
   const configured = [
     ...new Set(rows.map((row) => canonicalChannelName(row.channel)).filter(Boolean)),
   ];
-  const known = [...KITCHEN_ADVERTISING_CHANNEL_ORDER];
-  const extras = configured
-    .filter((channel) => !known.some((item) => item.toLowerCase() === channel.toLowerCase()))
-    .sort((left, right) => left.localeCompare(right, "zh-HK"));
-  return [...known, ...extras];
+  return configured.sort((left, right) => left.localeCompare(right, "zh-HK"));
 }
 
 export function kitchenAdvertisingPerformanceCostTypes(

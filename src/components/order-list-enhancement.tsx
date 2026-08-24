@@ -11,6 +11,7 @@ import { Ban, Copy, ListPlus, MessageSquare, Pencil, Truck } from "lucide-react"
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useState, type ReactNode } from "react";
+import { DICT_TYPE, dictItemLabel, useDictItems } from "@/lib/dictionaries";
 
 type BrandOption = { id: string; name: string };
 type TagOption = { id: string; name: string };
@@ -19,11 +20,15 @@ export function OrderListFiltersPanel({
   filters,
   brands,
   tags,
+  festivals,
+  districts,
   onChange,
 }: {
   filters: OrderListEnhancementFilters;
   brands: readonly BrandOption[];
   tags: readonly TagOption[];
+  festivals: readonly TagOption[];
+  districts: readonly TagOption[];
   onChange: (next: OrderListEnhancementFilters) => void;
 }) {
   const { t } = useTranslation();
@@ -88,12 +93,30 @@ export function OrderListFiltersPanel({
         />
       </label>
       <label className="orders-status-filter">
-        <span>{t("orders.enhancement.holiday")}</span>
-        <select disabled aria-label={t("orders.enhancement.holidayUnavailable")}><option>{t("orders.enhancement.noHolidayData")}</option></select>
+        <span id="order-list-festival-filter-label">{t("orders.enhancement.holiday")}</span>
+        <MultiSelect
+          id="order-list-festival-filter"
+          labelledBy="order-list-festival-filter-label"
+          options={[...festivals]}
+          value={filters.festivalIds ?? []}
+          onChange={(festivalIds) => set({ festivalIds })}
+          placeholder={t("orders.enhancement.allHolidaysPlaceholder")}
+          searchPlaceholder={t("orders.enhancement.searchHolidaysPlaceholder")}
+          emptyLabel={t("orders.enhancement.noHolidayData")}
+        />
       </label>
       <label className="orders-status-filter">
-        <span>{t("orders.enhancement.region")}</span>
-        <select disabled aria-label={t("orders.enhancement.regionUnavailable")}><option>{t("orders.enhancement.noRegionData")}</option></select>
+        <span id="order-list-district-filter-label">{t("orders.enhancement.region")}</span>
+        <MultiSelect
+          id="order-list-district-filter"
+          labelledBy="order-list-district-filter-label"
+          options={[...districts]}
+          value={filters.districtNames ?? []}
+          onChange={(districtNames) => set({ districtNames })}
+          placeholder={t("orders.enhancement.allRegionsPlaceholder")}
+          searchPlaceholder={t("orders.enhancement.searchRegionsPlaceholder")}
+          emptyLabel={t("orders.enhancement.noRegionData")}
+        />
       </label>
     </>
   );
@@ -128,9 +151,9 @@ export function OrderManualTodoControl({
   disabled: boolean;
   onToggle: (key: string) => void;
 }) {
-  return <details><summary>Add to-do</summary><div>{[
-    ["reschedule-pending", "Reschedule pending"], ["lwp", "LWP"], ["lbw", "LBW"], ["lfp", "LFP"], ["klook", "KLOOK"], ["alipay", "Alipay"], ["cancelled", "Cancelled"], ["monthly-settlement", "Monthly settlement"],
-  ].map(([key, label]) => <button type="button" disabled={disabled} key={key} aria-pressed={todos.some((todo) => todo.key === key)} onClick={() => onToggle(key)}>{label}</button>)}</div></details>;
+  const { i18n } = useTranslation();
+  const todoDictionary = useDictItems(DICT_TYPE.orderManualTodo);
+  return <details><summary>Add to-do</summary><div>{todoDictionary.items.map((item) => <button type="button" disabled={disabled} key={item.value} aria-pressed={todos.some((todo) => todo.key === item.value)} onClick={() => onToggle(item.value)}>{dictItemLabel(item, i18n.language)}</button>)}</div></details>;
 }
 
 export type OrderPrintKind = "delivery-note" | "receipt" | "invoice";
@@ -253,8 +276,8 @@ export function OrderRowActionMenu({
       {order.contactPhone ? <button type="button" onClick={onMessages} aria-label={messageLabel} title={t("quoteCustomers.messagesAction")}><MessageSquare /></button> : <span aria-label={`${messageLabel} ${t("common.notSet")}`} title={t("common.notSet")}><MessageSquare /></span>}
       {canCancel ? <button type="button" onClick={onCancel} aria-label="取消訂單" title="取消訂單"><Ban /></button> : null}
       {showDeliveryNote ? <button type="button" onClick={() => onPreview("delivery-note")} aria-label="送貨單" title="送貨單"><Truck /></button> : null}
-      {isPaidInFull ? <button className="order-document-action" type="button" onClick={() => onPreview("receipt")} aria-label={t("orders.documents.receipt")} title={t("orders.documents.receipt")}>{t("orders.documents.receipt")}</button> : null}
-      {isPaidInFull ? <button className="order-document-action" type="button" onClick={() => onPreview("invoice")} aria-label={t("orders.documents.invoice")} title={t("orders.documents.invoice")}>{t("orders.documents.invoice")}</button> : null}
+      {isPaidInFull ? <Link className="order-document-action" to={`/orders/${order.id}/receipt`} target="_blank" rel="noopener noreferrer" aria-label={t("orders.documents.receipt")} title={t("orders.documents.receipt")}>{t("orders.documents.receipt")}</Link> : null}
+      {isPaidInFull ? <Link className="order-document-action" to={`/orders/${order.id}/invoice`} target="_blank" rel="noopener noreferrer" aria-label={t("orders.documents.invoice")} title={t("orders.documents.invoice")}>{t("orders.documents.invoice")}</Link> : null}
       <Link to={`/orders/new?copyFrom=${encodeURIComponent(order.id)}`} aria-label="複製" title="複製"><Copy /></Link>
     </div>
   );

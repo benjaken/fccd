@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { useReportAiSnapshot } from "@/components/report-ai/ReportAiWorkspace";
 import {
   buildRestaurantSalesSalaryTable,
   defaultSalesSalaryMonths,
@@ -140,6 +141,24 @@ export function RestaurantSalesSalaryReport({
     setEndMonth(defaults.endMonth);
     setSelectedIds(restaurants.map((item) => item.id));
   };
+  const aiSnapshot = useMemo(
+    () =>
+      !loading && validRange && selectedIds.length
+        ? {
+            filters: { startMonth, endMonth, restaurantIds: selectedIds },
+            currentAggregates: rows.map((row) => ({ ...row })),
+            completeness: {
+              status: "partial" as const,
+              notes: [
+                "salary 為 null 代表缺少薪金資料，不可視為零薪金。",
+                "當前月份可能尚未完整，不能直接與完整歷史月份比較。",
+              ],
+            },
+          }
+        : null,
+    [endMonth, loading, rows, selectedIds, startMonth, validRange],
+  );
+  useReportAiSnapshot(aiSnapshot);
   const monthLabel = (value: string) => {
     const [year, month] = value.slice(0, 7).split("-").map(Number);
     return new Intl.DateTimeFormat(i18n.language, {

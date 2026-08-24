@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CheckCircle2, Printer, ShoppingCart } from "lucide-react";
+import { CheckCircle2, Printer, ShoppingCart, TriangleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,8 @@ import {
 } from "@/lib/factory-label";
 import { useQzTray } from "@/lib/qz-tray";
 import { formatDeliveryAddress } from "@/lib/delivery-address";
+import { acknowledgeFactoryChange } from "@/lib/notifications";
+import "@/components/factory-change-task.css";
 import {
   DeliveryNoteDocument,
   formatDeliveryNoteWeekday,
@@ -72,6 +74,10 @@ export function FactoryOrderJobView({
   const [printing, setPrinting] = useState(false);
   const [printError, setPrintError] = useState(false);
   const [printSuccess, setPrintSuccess] = useState<string | null>(null);
+  const [deliveryNotePrinted, setDeliveryNotePrinted] = useState(false);
+  const [changeAcknowledged, setChangeAcknowledged] = useState(false);
+  const [acknowledgingChange, setAcknowledgingChange] = useState(false);
+  const [acknowledgeError, setAcknowledgeError] = useState(false);
   const empty = t("common.notSet");
   const canPrint = qz.state === "connected";
   const dateKey = item.deliveryAt ? hongKongDateKey(item.deliveryAt) : "";
@@ -89,6 +95,9 @@ export function FactoryOrderJobView({
     t("factoryBoard.unassignedFleet");
   const visibleLines =
     job?.lines.filter((line) => line.label.trim().length > 0) ?? [];
+  const changeTaskPending = Boolean(job?.changeTaskPending) && !changeAcknowledged;
+  const labelsReady = !job?.needsLabelReprint || !job?.requiresReprint;
+  const deliveryNoteReady = !job?.needsDeliveryNoteReprint || deliveryNotePrinted;
 
   useEffect(() => {
     setAssignedFleetId(item.motorcadeId ?? "");
@@ -164,6 +173,20 @@ export function FactoryOrderJobView({
       setAssignError(true);
     } finally {
       setAssigning(false);
+    }
+  };
+
+  const confirmFactoryChange = async () => {
+    if (!item.orderId) return;
+    setAcknowledgingChange(true);
+    setAcknowledgeError(false);
+    try {
+      await acknowledgeFactoryChange(item.orderId, deliveryNotePrinted);
+      setChangeAcknowledged(true);
+    } catch {
+      setAcknowledgeError(true);
+    } finally {
+      setAcknowledgingChange(false);
     }
   };
 
@@ -262,6 +285,13 @@ export function FactoryOrderJobView({
       </div>
 
       <aside className="factory-order-aside">
+        {changeTaskPending ? (
+          <div className="factory-change-task-alert" role="alert">
+            <TriangleAlert aria-hidden="true" />
+            <strong>{t("factoryBoard.changeTaskTitle")}</strong>
+            <span>{t("factoryBoard.changeTaskDescription")}</span>
+          </div>
+        ) : null}
         <Button type="button" disabled={!canPrint}>
           {t("factoryBoard.printAll")}
         </Button>
@@ -271,10 +301,36 @@ export function FactoryOrderJobView({
         <Button
           type="button"
           disabled={loading || error || !job}
-          onClick={() => window.print()}
+          onClick={() => {
+            setDeliveryNotePrinted(true);
+            window.print();
+          }}
         >
           {t("factoryBoard.printDeliveryNote")}
         </Button>
+        {changeTaskPending ? (
+          <Button
+            type="button"
+            disabled={!labelsReady || !deliveryNoteReady || acknowledgingChange}
+            onClick={() => void confirmFactoryChange()}
+          >
+            <CheckCircle2 />
+            {acknowledgingChange
+              ? t("factoryBoard.confirmingChange")
+              : t("factoryBoard.confirmChangeUpdated")}
+          </Button>
+        ) : null}
+        {changeAcknowledged ? (
+          <p className="factory-assignment-success" role="status">
+            <CheckCircle2 aria-hidden="true" />
+            {t("factoryBoard.changeConfirmed")}
+          </p>
+        ) : null}
+        {acknowledgeError ? (
+          <p className="factory-change-task-error" role="alert">
+            {t("factoryBoard.changeConfirmError")}
+          </p>
+        ) : null}
         <Button
           type="button"
           className="factory-order-selected"

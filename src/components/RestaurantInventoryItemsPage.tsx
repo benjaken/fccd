@@ -7,6 +7,7 @@ import { RestaurantSettingsListTable } from "@/components/ui/restaurant-settings
 import { SidePanel } from "@/components/ui/side-panel";
 import { Switch } from "@/components/ui/switch";
 import { fetchSupplierOptions } from "@/lib/ingredients";
+import { DICT_TYPE, dictSelectOptions, useDictItems } from "@/lib/dictionaries";
 import { supabase } from "@/lib/supabase";
 
 type InventoryItem = {
@@ -20,13 +21,13 @@ type InventoryItem = {
   department: string | null;
   isActive: boolean;
 };
-const departments = ["廚房", "水吧"];
 function related<T>(value: T | T[] | null | undefined) {
   return Array.isArray(value) ? (value[0] ?? null) : (value ?? null);
 }
 
 export function RestaurantInventoryItemsPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const departmentDict = useDictItems(DICT_TYPE.restaurantInventoryDepartment);
   const access = useCurrentPageAccess();
   const canEdit = access.canAccess("restaurant.settings.inventory_items.edit");
   const canDelete = access.canAccess(
@@ -44,6 +45,7 @@ export function RestaurantInventoryItemsPage() {
   const [unit, setUnit] = useState("");
   const [cost, setCost] = useState("");
   const [department, setDepartment] = useState("");
+  const departments = dictSelectOptions(departmentDict.items, i18n.language, department);
   const [active, setActive] = useState(true);
   const [saving, setSaving] = useState(false);
   const load = () => {
@@ -366,8 +368,8 @@ export function RestaurantInventoryItemsPage() {
               <option value="">
                 {t("restaurantInventoryItems.fields.departmentPlaceholder")}
               </option>
-              {departments.map((value) => (
-                <option key={value}>{value}</option>
+              {departments.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
               ))}
             </select>
           </label>

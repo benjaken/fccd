@@ -38,6 +38,18 @@ export function SidePanel({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onClose, open]);
 
+  useEffect(() => {
+    if (!open) return;
+    const previousDocumentOverflow = document.documentElement.style.overflow;
+    const previousBodyOverflow = document.body.style.overflow;
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.documentElement.style.overflow = previousDocumentOverflow;
+      document.body.style.overflow = previousBodyOverflow;
+    };
+  }, [open]);
+
   if (!open) return null;
 
   return (

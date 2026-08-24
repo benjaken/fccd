@@ -147,6 +147,7 @@ as $$
       sum(coalesce(monthly.amount, 0))::numeric as amount
     from public.restaurant_monthly_costs monthly
     where monthly.restaurant_id = p_restaurant_id
+      and monthly.can_proceed_pnl
       and monthly.month_at is not null
       and (monthly.month_at at time zone 'Asia/Hong_Kong')::date >= date_trunc('month', p_start_month::timestamp)::date
       and (monthly.month_at at time zone 'Asia/Hong_Kong')::date < date_trunc('month', p_end_month::timestamp)::date + interval '1 month'

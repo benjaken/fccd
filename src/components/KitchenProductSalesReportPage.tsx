@@ -8,6 +8,10 @@ import { DetailLink } from "@/components/ui/detail-link";
 import { ListTable } from "@/components/ui/list-table";
 import { TablePagination } from "@/components/ui/table-pagination";
 import {
+  ReportAiTrigger,
+  useReportAiSnapshot,
+} from "@/components/report-ai/ReportAiWorkspace";
+import {
   fetchProductChannels,
   fetchProductCollections,
   fetchProductTypes,
@@ -324,6 +328,60 @@ export function KitchenProductSalesReportPage() {
     setPage(1);
   }, [brandId, collectionId, endDate, productTypeName, sortDirection, startDate]);
 
+  const aiSnapshot = useMemo(
+    () =>
+      rows && !loading
+        ? {
+            filters: {
+              startDate,
+              endDate,
+              brandId: brandId || null,
+              productTypeName: productTypeName || null,
+              collectionId: collectionId || null,
+            },
+            currentAggregates: [
+              ...rows.map((row) => ({
+                rowType: "product",
+                productId: row.productId,
+                sku: row.sku,
+                productName: row.productName,
+                brandName: row.brandName,
+                categoryName: row.categoryName,
+                productSetName: row.productSetName,
+                quantity: row.quantity,
+                totalAmount: row.totalAmount,
+              })),
+              ...packageRows.map((row) => ({
+                rowType: "package",
+                productId: row.packageId,
+                sku: row.sku,
+                productName: row.packageName,
+                brandName: row.brandName,
+                categoryName: "package",
+                productSetName: "package",
+                quantity: row.quantity,
+                totalAmount: row.totalAmount,
+              })),
+            ],
+            completeness: {
+              status: "complete" as const,
+              notes: ["報表只包含目前篩選條件下有銷售匯總的產品及套餐。"],
+            },
+          }
+        : null,
+    [
+      brandId,
+      collectionId,
+      endDate,
+      loading,
+      packageRows,
+      productTypeName,
+      rows,
+      startDate,
+    ],
+  );
+  useReportAiSnapshot(aiSnapshot);
+
   const onRefresh = () => setReloadKey((value) => value + 1);
 
   return (
@@ -335,13 +393,16 @@ export function KitchenProductSalesReportPage() {
         </div>
       </header>
 
-      <nav className="report-tabs kitchen-sales-cost-tabs" aria-label="中央廚房報表分類">
-        <Link to="/reports/kitchen">所有銷售及成本</Link>
-        <Link to="/reports/kitchen/channel-sales">渠道銷售</Link>
-        <Link className="active" to="/reports/kitchen/product-sales">產品銷售</Link>
-        <button disabled type="button">訂單明細報表</button>
-        <Link to="/reports/kitchen/advertising-performance">廣告表現</Link>
-      </nav>
+      <div className="report-ai-nav-row">
+        <nav className="report-tabs kitchen-sales-cost-tabs" aria-label="中央廚房報表分類">
+          <Link to="/reports/kitchen">所有銷售及成本</Link>
+          <Link to="/reports/kitchen/channel-sales">渠道銷售</Link>
+          <Link className="active" to="/reports/kitchen/product-sales">產品銷售</Link>
+          <button disabled type="button">訂單明細報表</button>
+          <Link to="/reports/kitchen/advertising-performance">廣告表現</Link>
+        </nav>
+        <ReportAiTrigger />
+      </div>
 
       <section className="panel kitchen-product-sales-filters" aria-label="產品銷售篩選">
         <FilterSelect label="品牌" value={brandId} options={brands} onChange={setBrandId} disabled={optionsLoading} />

@@ -32,6 +32,12 @@ import {
   type ProductUpdateInput,
 } from "@/lib/products";
 import { useDetailBackTo } from "@/lib/detail-navigation";
+import {
+  DICT_TYPE,
+  dictItemLabel,
+  dictSelectOptions,
+  useDictItems,
+} from "@/lib/dictionaries";
 import { cn } from "@/lib/utils";
 
 type DetailLoader = (id: string) => Promise<ProductDetail | null>;
@@ -135,6 +141,7 @@ export function ProductDetailPage({
   removeLabel?: typeof removeProductLabel;
 }) {
   const { t, i18n } = useTranslation();
+  const catalogStatusDictionary = useDictItems(DICT_TYPE.catalogStatus);
   const navigate = useNavigate();
   const location = useLocation();
   const { id = "" } = useParams();
@@ -300,12 +307,12 @@ export function ProductDetailPage({
   const money = (value: number | null) =>
     value === null ? t("common.notSet") : currency.format(value);
   const displayName = product.chineseName || product.name;
-  const statusLabel =
-    product.status === "Active"
-      ? t("products.statusActive")
-      : product.status === "Inactive"
-        ? t("products.statusInactive")
-        : product.status || t("products.statusUnset");
+  const statusItem = catalogStatusDictionary.items.find(
+    (item) => item.value === product.status,
+  );
+  const statusLabel = statusItem
+    ? dictItemLabel(statusItem, i18n.language)
+    : product.status || t("products.statusUnset");
   const statusTone =
     product.status === "Active"
       ? "green"
@@ -642,8 +649,15 @@ export function ProductDetailPage({
                       onChange={(event) => patchForm({ status: event.target.value })}
                     >
                       <option value="">{t("products.statusUnset")}</option>
-                      <option value="Active">{t("products.statusActive")}</option>
-                      <option value="Inactive">{t("products.statusInactive")}</option>
+                      {dictSelectOptions(
+                        catalogStatusDictionary.items,
+                        i18n.language,
+                        form.status,
+                      ).map((item) => (
+                        <option key={item.value} value={item.value}>
+                          {item.label}
+                        </option>
+                      ))}
                     </select>
                     {fieldErrors.status ? <em>{fieldErrors.status}</em> : null}
                   </label>

@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { useReportAiSnapshot } from "@/components/report-ai/ReportAiWorkspace";
 import {
   buildRestaurantSalesMatrix,
   currentMonthValue,
@@ -99,6 +100,31 @@ export function RestaurantSalesReportPage({
       active = false;
     };
   }, [category, loadReport, period, range.endDate, range.startDate, validRange]);
+
+  const aiSnapshot = useMemo(
+    () =>
+      !loading && validRange
+        ? {
+            filters: {
+              period,
+              category,
+              startDate: range.startDate,
+              endDate: range.endDate,
+            },
+            currentAggregates: rows.map((row) => ({ ...row })),
+            completeness: {
+              status: "partial" as const,
+              notes: [
+                "包含今天的日、周或月可能尚未完整，必須標示為未完成周期。",
+                "categoryKey=__total__ 是控制總額；其他分類合計不一定等於控制總額，差額不可擅自歸因。",
+                "報表沒有訂單數，不可計算客單價。",
+              ],
+            },
+          }
+        : null,
+    [category, loading, period, range.endDate, range.startDate, rows, validRange],
+  );
+  useReportAiSnapshot(aiSnapshot);
 
   const bucketLabel = (value: string) => {
     const date = new Date(`${value}T00:00:00`);

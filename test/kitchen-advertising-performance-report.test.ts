@@ -1,10 +1,12 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
   buildKitchenAdvertisingPerformanceYearSummaries,
   defaultKitchenAdvertisingPerformanceYears,
-  KITCHEN_ADVERTISING_FESTIVAL_OPTIONS,
   kitchenAdvertisingPerformanceChannels,
+  kitchenAdvertisingPerformanceFestivals,
   kitchenAdvertisingPerformanceYears,
   type KitchenAdvertisingPerformanceRow,
 } from "@/lib/kitchen-advertising-performance-report";
@@ -19,14 +21,37 @@ const rows: KitchenAdvertisingPerformanceRow[] = [
 ];
 
 describe("central kitchen advertising performance report", () => {
-  it("keeps the requested festival options and selects every available year by default", () => {
-    expect(KITCHEN_ADVERTISING_FESTIVAL_OPTIONS).toEqual([
-      "父親節",
+  it("uses a light-blue table on white while keeping the surrounding report green", () => {
+    const stylesheet = readFileSync(
+      path.resolve(process.cwd(), "src/index.css"),
+      "utf8",
+    );
+    const pageRule = stylesheet.match(
+      /\.kitchen-advertising-performance-page\s*\{([^}]+)\}/,
+    )?.[1];
+    const chartPanelRule = stylesheet.match(
+      /\.kitchen-advertising-performance-chart-panel\s*\{([^}]+)\}/,
+    )?.[1];
+
+    expect(pageRule).toContain("--primary: var(--advertising-green)");
+    expect(pageRule).toContain("--selection-bg: #edf8f2");
+    expect(pageRule).toContain("--advertising-side-surface:");
+    expect(pageRule).toContain(
+      "--report-table-header-bg: var(--advertising-table-blue)",
+    );
+    expect(chartPanelRule).not.toContain("--primary:");
+    expect(stylesheet).toContain(
+      ".kitchen-advertising-performance-chart-bar.sales.tone-0 { fill: #356fa8; }",
+    );
+    expect(stylesheet).toMatch(
+      /\.kitchen-advertising-performance-page \.kitchen-advertising-performance-table td,[\s\S]*?background:\s*#fff/,
+    );
+  });
+
+  it("uses dictionary festival order and selects every available year by default", () => {
+    expect(kitchenAdvertisingPerformanceFestivals(rows, ["中秋節", "父親節"])).toEqual([
       "中秋節",
-      "母親節",
-      "Xmas + 冬至",
-      "農曆新年",
-      "復活節",
+      "父親節",
     ]);
     expect(defaultKitchenAdvertisingPerformanceYears([2021, 2025, 2023, 2024])).toEqual([
       2025,
@@ -51,19 +76,14 @@ describe("central kitchen advertising performance report", () => {
     expect(summaries[1].cells.Kitchen).toEqual({ sales: 5000, costs: {} });
   });
 
-  it("preserves the screenshot channel order before custom channels", () => {
+  it("derives channel options from report data", () => {
     expect(kitchenAdvertisingPerformanceChannels([
       ...rows,
       { mode: "festival", segmentKey: "父親節", segmentLabel: "父親節", year: 2025, channel: "Custom", metric: "Sales", amount: 1 },
-    ]).slice(0, 8)).toEqual([
+    ])).toEqual([
       "Catering",
+      "Custom",
       "Kitchen",
-      "Express",
-      "Cuisine",
-      "Delivery",
-      "Residential",
-      "HK lunch box",
-      "HK Party Food",
     ]);
   });
 });

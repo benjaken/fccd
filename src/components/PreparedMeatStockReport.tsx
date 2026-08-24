@@ -7,6 +7,7 @@ import { ReportSummaryCards } from "@/components/reports/ReportSummaryCards";
 import { ReportYearFilter } from "@/components/reports/ReportYearFilter";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { PullToRefresh } from "@/components/ui/pull-to-refresh";
+import { useReportAiSnapshot } from "@/components/report-ai/ReportAiWorkspace";
 import {
   fetchMonthlyPreparedMeatStock,
   fetchMonthlyRawMeatStock,
@@ -170,6 +171,25 @@ function MeatStockReport({ kind }: { kind: StockKind }) {
       active = false;
     };
   }, [kind, reloadKey, t, year]);
+
+  const aiSnapshot = useMemo(
+    () =>
+      !loading
+        ? {
+            filters: { year, stockKind: kind, selectedItemId },
+            currentAggregates: rows.map((row) => ({ ...row })),
+            completeness: {
+              status: "partial" as const,
+              notes: [
+                "月份缺行代表沒有可用快照，不可視為零庫存。",
+                "月底存貨為累計結餘；月淨變動與月底結餘含義不同。",
+              ],
+            },
+          }
+        : null,
+    [kind, loading, rows, selectedItemId, year],
+  );
+  useReportAiSnapshot(aiSnapshot);
 
   return (
     <>

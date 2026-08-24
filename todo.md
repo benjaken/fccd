@@ -2,28 +2,28 @@
 
 更新时间：2026-08-22
 
-## P0：待确认及执行的数据库迁移
+## P0：数据库迁移（2026-08-22 已完成）
 
-> 当前未能通过本机 Supabase CLI 对照线上 `schema_migrations`。以下清单根据本地 Git 状态整理，均应视为“待确认是否已部署”，不能仅凭文件存在就认为线上已经执行。
+> 已通过 Supabase Management API 对照线上 `schema_migrations`、表结构、触发器、RPC 和历史数据。由于本机 Supabase CLI 缺少 Windows 对应执行组件，本次改用同一项目的管理 API 完成只读核对和事务式部署。
 
-- [ ] 连接目标 Supabase 项目，先检查线上 migration 历史和当前表／函数定义，再执行新 migration。
-- [ ] 按时间顺序执行并验证以下尚未纳入版本控制的 migration：
-  - [ ] `20260821018000_kitchen_notes_use_packing_note.sql`
-  - [ ] `20260821019000_quote_editor_supports_orders.sql`
-  - [ ] `20260821020000_order_list_status_picker.sql`
-  - [ ] `20260821021000_order_factory_sent_at.sql`
-  - [ ] `20260821022000_reconcile_duplicate_shopify_payments.sql`
-  - [ ] `20260821023000_restore_kitchen_notes_wording.sql`
-  - [ ] `20260821024000_assign_web_order_numbers.sql`
-  - [ ] `20260821025000_backfill_unassigned_delivery_motorcades.sql`
-  - [ ] `20260821026000_order_do_not_send_to_factory.sql`
-  - [ ] `20260822000000_order_payment_status_sources.sql`
-  - [ ] `20260822001000_delivery_fleet_acceptance_workflow.sql`
-- [ ] `20260821017000_auto_close_expired_quote_follow_ups.sql` 已修改，但如果旧版本曾在线上执行，Supabase 不会自动重跑同名 migration；应检查线上版本，必要时把修正内容放进一个新的 forward-only migration，不要依赖修改已执行的旧文件。
-- [ ] 执行 `20260822001000_delivery_fleet_acceptance_workflow.sql` 后核对 `deliveries.accepted_at`、触发器及全部司机门户 RPC 是否存在且为最新定义。
-- [ ] 核对历史数据修复结果：旧逻辑中状态为“待取貨”但已有 `taken_at` 的记录，应迁移为有 `accepted_at`、无 `taken_at`；真实“已取貨／已送達”记录不得被清空取货时间。
-- [ ] 核对 `orders.delivery_status` 回填结果，确保与关联 `deliveries` 一致：`未派車隊 → 待接單 → 待取貨 → 已取貨 → 已送達`。
-- [ ] 数据库迁移完成前不要上线依赖新字段／新 RPC 的前端版本，避免车队页面因 `accepted_at` 或函数版本不一致而失败。
+- [x] 连接目标 Supabase 项目，检查线上 migration 历史和当前表／函数定义。
+- [x] 核对并验证以下 migration：
+  - [x] `20260821018000_kitchen_notes_use_packing_note.sql`
+  - [x] `20260821019000_quote_editor_supports_orders.sql`
+  - [x] `20260821020000_order_list_status_picker.sql`
+  - [x] `20260821021000_order_factory_sent_at.sql`
+  - [x] `20260821022000_reconcile_duplicate_shopify_payments.sql`
+  - [x] `20260821023000_restore_kitchen_notes_wording.sql`
+  - [x] `20260821024000_assign_web_order_numbers.sql`
+  - [x] `20260821025000_backfill_unassigned_delivery_motorcades.sql`
+  - [x] `20260821026000_order_do_not_send_to_factory.sql`
+  - [x] `20260822000000_order_payment_status_sources.sql`
+  - [x] `20260822001000_delivery_fleet_acceptance_workflow.sql`
+- [x] 核对 `20260821017000_auto_close_expired_quote_follow_ups.sql`：线上函数定义与本地修正版一致，定时任务为每 5 分钟执行，无需追加 forward-only migration。
+- [x] 部署 `20260822001000_delivery_fleet_acceptance_workflow.sql`，并核对 `deliveries.accepted_at`、2 个触发器及 9 个司机门户／后台 RPC 均存在。
+- [x] 核对历史数据修复结果：已有取货或送达时间但缺少 `accepted_at` 的记录为 0，未误清真实取货时间。
+- [x] 核对 `orders.delivery_status` 与关联 `deliveries`：配送记录不一致数为 0，订单汇总不一致数为 0。
+- [x] 数据库已具备新字段和新 RPC，可上线对应前端版本。
 
 ## P1：配送流程剩余验证
 
@@ -53,4 +53,5 @@
 
 ## 已知测试问题
 
-- [ ] 完整测试目前为 812/813 通过；`test/header-display.test.tsx` 检测到一个显式 `13px` 字号，规则要求至少 `14px`。此问题与本次配送流程修改无关，但应单独修复。
+- [x] `test/header-display.test.tsx` 当前 4/4 通过；旧记录中的显式 `13px` 字号问题已不再复现。
+- [x] 完整测试曾因并发资源竞争令多条重交互案例超过默认 5 秒；已限制测试并发数，并统一设置 10 秒上限。当前完整测试 815/815 通过，类型检查及生产打包成功。

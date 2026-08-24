@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { useReportAiSnapshot } from "@/components/report-ai/ReportAiWorkspace";
 import {
   buildShopSalesWorkingHoursTables,
   fetchShopReportRestaurants,
@@ -118,6 +119,24 @@ export function ShopSalesWorkingHoursReport({
     setEndDate(defaults.endDate);
     setSelectedIds(restaurants.map((restaurant) => restaurant.id));
   };
+  const aiSnapshot = useMemo(
+    () =>
+      !loading && validRange && selectedIds.length
+        ? {
+            filters: { startDate, endDate, restaurantIds: selectedIds },
+            currentAggregates: rows.map((row) => ({ ...row })),
+            completeness: {
+              status: "partial" as const,
+              notes: [
+                "銷售每工時只可在工時大於零且資料完整時比較。",
+                "包含今天的日期範圍可能仍在輸入，解讀必須標示未完成。",
+              ],
+            },
+          }
+        : null,
+    [endDate, loading, rows, selectedIds, startDate, validRange],
+  );
+  useReportAiSnapshot(aiSnapshot);
 
   const formatDate = (value: string) =>
     new Intl.DateTimeFormat(i18n.language, {

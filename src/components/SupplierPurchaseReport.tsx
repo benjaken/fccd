@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { PullToRefresh } from "@/components/ui/pull-to-refresh";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { useReportAiSnapshot } from "@/components/report-ai/ReportAiWorkspace";
 import {
   fetchReportSuppliers,
   fetchSupplierPurchases,
@@ -127,6 +128,40 @@ export function SupplierPurchaseReport() {
       window.clearTimeout(timeout);
     };
   }, [endDate, reloadKey, selectedSupplier, startDate, t]);
+
+  const aiSnapshot = useMemo(
+    () =>
+      !loading
+        ? {
+            filters: {
+              startDate,
+              endDate,
+              supplierId: selectedSupplier || null,
+              supplierName: selectedSupplierName,
+            },
+            currentAggregates: rows.map((row) => ({
+              supplierName: row.supplierName,
+              rawMeatName: row.rawMeatName,
+              quantityKg: row.quantityKg,
+              purchaseAmount: row.purchaseAmount,
+              averagePricePerKg: row.averagePricePerKg,
+            })),
+            completeness: {
+              status: "complete" as const,
+              notes: ["平均每公斤價格應按採購數量加權，不可把各品項平均價再做簡單平均。"],
+            },
+          }
+        : null,
+    [
+      endDate,
+      loading,
+      rows,
+      selectedSupplier,
+      selectedSupplierName,
+      startDate,
+    ],
+  );
+  useReportAiSnapshot(aiSnapshot);
 
   const exportCsv = () => {
     const csv = [

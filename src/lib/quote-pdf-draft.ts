@@ -10,20 +10,6 @@ export type QuotePdfSupplementDraft = {
   utensilPackQuantity: string;
 };
 
-export const QUOTE_ADDITIONAL_INFO_OPTIONS = [
-  "每個便當包括一份餐具",
-  "每款揀選的飯盒最少3盒",
-  "以上只列出部份款式，我們另可提供更多選擇及客制款式",
-  "以上便當款式每盒可自選一款飲品：烏龍茶／檸檬茶／可口可樂",
-  "如需加購紙包飲品 $4／包：烏龍茶／檸檬茶／可口可樂",
-];
-
-export const QUOTE_ACTIVITY_OPTIONS = [
-  { description: "10月15日 120個飯盒", amount: "5400" },
-  { description: "活動場地佈置及運送", amount: "800" },
-  { description: "即棄餐具及飲品套裝", amount: "480" },
-];
-
 export function quotePdfDraftStorageKey(quoteId: string) {
   return `fccd:quote-pdf-draft:${quoteId}`;
 }

@@ -149,8 +149,8 @@ export function OrdersDashboardPage({
     <section className="orders-dashboard-page">
       <header className="page-heading orders-heading">
         <div>
-          <span className="eyebrow">{t("orders.eyebrow")}</span>
-          <h1>{t("ordersDashboard.title")}</h1>
+          <span className="eyebrow">{t("followUp.eyebrow")}</span>
+          <h1>{t("followUp.title")}</h1>
           <p>{t("ordersDashboard.description")}</p>
         </div>
       </header>

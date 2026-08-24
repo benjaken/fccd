@@ -1,0 +1,24 @@
+{
+  "name": "Euro Foodstuff redacted mixed tables",
+  "pages": [{
+    "page": 1, "width": 600, "height": 800,
+    "items": [
+      { "text": "EU-PK-01", "x": 30, "y": 710, "width": 52, "height": 10 },
+      { "text": "Pork Belly 豬腩片", "x": 95, "y": 710, "width": 105, "height": 10 },
+      { "text": "Spain", "x": 210, "y": 710, "width": 28, "height": 10 },
+      { "text": "sliced 2mm vacuum bag", "x": 250, "y": 710, "width": 120, "height": 10 },
+      { "text": "$58.00/kg", "x": 390, "y": 710, "width": 55, "height": 10 },
+      { "text": "Delivery charge applies below HK$500", "x": 30, "y": 660, "width": 210, "height": 10 }
+    ]
+  }, {
+    "page": 2, "width": 600, "height": 800,
+    "items": [
+      { "text": "EU-LM-09", "x": 30, "y": 700, "width": 52, "height": 10 },
+      { "text": "Lamb Rack 羊架", "x": 95, "y": 700, "width": 90, "height": 10 },
+      { "text": "New Zealand", "x": 195, "y": 700, "width": 68, "height": 10 },
+      { "text": "8 bags case", "x": 275, "y": 700, "width": 64, "height": 10 },
+      { "text": "HKD 780/case", "x": 360, "y": 700, "width": 76, "height": 10 }
+    ]
+  }],
+  "expected": { "candidateCount": 2, "conditionCount": 1, "pages": [1, 2] }
+}

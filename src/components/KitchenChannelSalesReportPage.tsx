@@ -6,6 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import {
+  ReportAiTrigger,
+  useReportAiSnapshot,
+} from "@/components/report-ai/ReportAiWorkspace";
+import {
   buildKitchenChannelSalesYearSummary,
   defaultKitchenChannelSalesYears,
   fetchKitchenChannelSalesReport,
@@ -585,6 +589,26 @@ export function KitchenChannelSalesReportPage() {
       ),
     [channels, report, selectedYears],
   );
+  const aiSnapshot = useMemo(
+    () =>
+      report && !loading
+        ? {
+            filters: { selectedYears },
+            currentAggregates: report.rows
+              .filter((row) => selectedYears.includes(row.year))
+              .map((row) => ({ ...row })),
+            completeness: {
+              status: "partial" as const,
+              notes: [
+                "沒有原始列的月份不可視為實際零銷售。",
+                "未分配頻道的銷售會以 Unassigned 類別顯示。",
+              ],
+            },
+          }
+        : null,
+    [loading, report, selectedYears],
+  );
+  useReportAiSnapshot(aiSnapshot);
 
   return (
     <div className="kitchen-sales-cost-report-page kitchen-channel-sales-report-page">
@@ -594,7 +618,10 @@ export function KitchenChannelSalesReportPage() {
           <h1>頻道銷售</h1>
         </div>
       </header>
-      <ReportTabs />
+      <div className="report-ai-nav-row">
+        <ReportTabs />
+        <ReportAiTrigger />
+      </div>
 
       {loading && !report ? (
         <PageSkeleton label="正在載入頻道銷售報表" variant="report" />

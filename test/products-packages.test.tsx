@@ -5,6 +5,50 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("@/lib/dictionaries", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/dictionaries")>(
+    "@/lib/dictionaries",
+  );
+  const item = (
+    value: string,
+    label: string,
+    labelEn: string,
+    metadata: Record<string, unknown> = {},
+  ) => ({
+    id: `dict-${value}`,
+    dictTypeId: "dict-type",
+    value,
+    label,
+    labelEn,
+    description: "",
+    metadata,
+    sortOrder: 10,
+    isActive: true,
+  });
+  const itemsByType: Record<string, ReturnType<typeof item>[]> = {
+    catalog_status: [
+      item("Active", "啟用", "Active", { isActive: true }),
+      item("Inactive", "停用", "Inactive", { isActive: false }),
+    ],
+    product_price_range: [
+      item("under-100", "少於 $100", "Under $100", { min: 0, max: 100 }),
+      item("100-299", "$100 – $299", "$100 – $299", { min: 100, max: 300 }),
+      item("300-799", "$300 – $799", "$300 – $799", { min: 300, max: 800 }),
+      item("800-1999", "$800 – $1,999", "$800 – $1,999", { min: 800, max: 2000 }),
+      item("2000-plus", "$2,000 或以上", "$2,000 or more", { min: 2000, max: null }),
+    ],
+  };
+  return {
+    ...actual,
+    useDictItems: (typeCode: string) => ({
+      items: itemsByType[typeCode] ?? [],
+      loading: false,
+      error: null,
+      reload: vi.fn(),
+    }),
+  };
+});
+
 import { PackagesListPage } from "@/components/PackagesListPage";
 import { PackageDetailPage } from "@/components/PackageDetailPage";
 import { ProductDetailPage } from "@/components/ProductDetailPage";
