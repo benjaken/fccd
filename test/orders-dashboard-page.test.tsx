@@ -13,6 +13,23 @@ const dashboardData: OrdersDashboardData = {
   notSentToFactory: 7,
   pendingQuotes: 3,
   upcomingQuotes: 5,
+  todayFollowUpQuotes: 1,
+  todayFollowUpQuoteItems: [
+    {
+      id: "quote-follow-up-1",
+      kind: "quote",
+      orderNumber: "Q-260824-009",
+      customerName: "黃先生",
+      companyName: null,
+      quoteStatus: "High Chance",
+      followUpDate: "2026-08-24",
+      deliveryAt: "2026-09-01T10:00:00+08:00",
+      createdAt: "2026-08-20T01:00:00.000Z",
+      sourceSystem: null,
+      outstanding: null,
+      currency: "HKD",
+    },
+  ],
   latestPendingOrders: [
     {
       id: "order-pending-1",
@@ -21,6 +38,7 @@ const dashboardData: OrdersDashboardData = {
       customerName: "李先生",
       companyName: null,
       quoteStatus: null,
+      followUpDate: null,
       deliveryAt: "2026-08-24T10:00:00+08:00",
       createdAt: "2026-08-18T02:00:00.000Z",
       sourceSystem: "shopify",
@@ -36,6 +54,7 @@ const dashboardData: OrdersDashboardData = {
       customerName: "王小姐",
       companyName: null,
       quoteStatus: null,
+      followUpDate: null,
       deliveryAt: "2026-08-23T10:00:00+08:00",
       createdAt: "2026-08-18T01:30:00.000Z",
       sourceSystem: null,
@@ -51,6 +70,7 @@ const dashboardData: OrdersDashboardData = {
       customerName: "陳小姐",
       companyName: null,
       quoteStatus: null,
+      followUpDate: null,
       deliveryAt: "2026-08-25T10:00:00+08:00",
       createdAt: "2026-08-18T01:00:00.000Z",
       sourceSystem: "emailmeform",
@@ -66,6 +86,7 @@ const dashboardData: OrdersDashboardData = {
       customerName: "香港女童軍總會",
       companyName: null,
       quoteStatus: "High Chance",
+      followUpDate: null,
       deliveryAt: "2026-08-19T04:00:00.000Z",
       createdAt: "2026-08-12T01:00:00.000Z",
       sourceSystem: null,
@@ -110,6 +131,9 @@ describe("Orders dashboard page", () => {
       await screen.findByRole("heading", { name: "跟進總覽" }),
     ).toBeInTheDocument();
     expect(
+      screen.getByRole("link", { name: /今日跟進報價\s*1.*開啟列表/ }),
+    ).toHaveAttribute("href", "/follow-up#today-quotes");
+    expect(
       screen.getByRole("link", { name: /Shopify 待入單\s*4.*開啟列表/ }),
     ).toHaveAttribute("href", "/orders/shopify-pending");
     expect(
@@ -130,6 +154,11 @@ describe("Orders dashboard page", () => {
     renderDashboard();
 
     expect(await screen.findByText("陳小姐")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "今日跟進報價・前五筆" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Q-260824-009/ })).toHaveAttribute(
+      "href",
+      "/quotes/quote-follow-up-1",
+    );
     expect(
       screen.getByRole("link", { name: /Q-260818-001/ }),
     ).toHaveAttribute("href", "/quotes/quote-1");

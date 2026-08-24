@@ -5,6 +5,12 @@ import { buildMobileDrawerNav } from "@/lib/nav";
 describe("buildMobileDrawerNav", () => {
   const visiblePrimary = [
     { key: "overview", to: "/", icon: () => null },
+    {
+      key: "followUp",
+      to: "/follow-up",
+      icon: () => null,
+      permissionKey: "overview.follow_up",
+    },
     { key: "orders", to: "/orders", icon: () => null },
     { key: "quotes", to: "/quotes", icon: () => null },
     { key: "delivery", to: "/delivery", icon: () => null },
@@ -21,10 +27,10 @@ describe("buildMobileDrawerNav", () => {
     const restaurant = groups.find((group) => group.groupKey === "restaurant");
     const settings = groups.find((group) => group.groupKey === "settings");
 
-    expect(overview?.items.map((item) => item.to)).toEqual([
-      "/",
-      "/follow-up",
-    ]);
+    const followUp = groups.find((group) => group.groupKey === "followUp");
+
+    expect(overview?.items.map((item) => item.to)).toEqual(["/"]);
+    expect(followUp?.items.map((item) => item.to)).toEqual(["/follow-up"]);
     expect(orders?.items.map((item) => item.to)).toEqual([
       "/orders",
       "/orders/shopify-pending",
@@ -91,9 +97,11 @@ describe("buildMobileDrawerNav", () => {
       key === "orders" || key === "overview" || key === "overview.follow_up",
     );
     const orders = groups.find((group) => group.groupKey === "orders");
+    const followUp = groups.find((group) => group.groupKey === "followUp");
     const settings = groups.find((group) => group.groupKey === "settings");
 
     expect(orders?.items.map((item) => item.to)).toEqual(["/orders"]);
+    expect(followUp?.items.map((item) => item.to)).toEqual(["/follow-up"]);
     expect(settings).toBeUndefined();
   });
 

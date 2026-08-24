@@ -4,6 +4,7 @@ import { addCalendarDays } from "@/lib/deliveries";
 import {
   UNASSIGNED_FLEET_ID,
   buildFactoryDishLabelHtml,
+  compareFactoryMenuRows,
   factoryMultiDayPrintedDate,
   factoryMultiDayRangeLabels,
   factoryVisibleDates,
@@ -202,6 +203,24 @@ describe("factory board helpers", () => {
         quantity: 23,
       }),
     ).toBe("(23包) 檸檬茶 (x 23)");
+  });
+
+  it("sorts menu rows by dish type with desserts and utensils at the end", () => {
+    const rows = [
+      { label: "餐具包", typeSort: null },
+      { label: "清甜泰檸桂花糕", typeSort: 13 },
+      { label: "熱盤燒雞", typeSort: 3 },
+      { label: "麻醬青瓜手撕雞", typeSort: 1 },
+      { label: "沙律", typeSort: 2 },
+    ].sort(compareFactoryMenuRows);
+
+    expect(rows.map((row) => row.label)).toEqual([
+      "麻醬青瓜手撕雞",
+      "沙律",
+      "熱盤燒雞",
+      "清甜泰檸桂花糕",
+      "餐具包",
+    ]);
   });
 
   it("only marks an order complete when every active label is printed", () => {

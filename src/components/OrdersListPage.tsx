@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ClipboardList, Plus, RefreshCw, RefreshCcw } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
@@ -14,6 +14,7 @@ import { SidePanel } from "@/components/ui/side-panel";
 import { useDeferredFilter } from "@/lib/use-deferred-filter";
 import {
   fetchOrders,
+  orderDeliveryStatusTone,
   ORDERS_PAGE_SIZE,
   updateOrderStatusSelections,
   type OrderListFilters,
@@ -36,6 +37,7 @@ import {
 import { fetchOrderTags, type OrderTag } from "@/lib/order-tags";
 import { fetchOrderStatusCatalog, type ConfiguredOrderStatus } from "@/lib/order-statuses";
 import {
+  assignFestivalToOrders,
   fetchOrderListFilterOptions,
   type OrderListEnhancementFilters,
   type OrderListFilterOptions,
@@ -50,11 +52,14 @@ import {
   fetchFactoryOrderJob,
   type FactoryOrderJob,
 } from "@/lib/factory-board";
+import { cn } from "@/lib/utils";
+import { useMediaQuery } from "@/lib/use-media-query";
 
 type OrdersLoader = (filters: OrderListFilters) => Promise<OrderListResult>;
 type OrderListConfigLoader = typeof fetchOrderListConfigs;
 type ShopifySyncLoader = typeof syncShopifyOrders;
 type OrderStatusesUpdater = typeof updateOrderStatusSelections;
+type FestivalAssigner = typeof assignFestivalToOrders;
 
 const STATUS_FILTERS: OrderStatusFilter[] = [
   "",
@@ -72,6 +77,25 @@ const ORDER_SKELETON_COLUMNS = [
   { width: "5rem" },
   { width: "4.5rem", variant: "badge" as const },
 ];
+
+function formatDistrictWithShippingMethod(
+  districtName: string | null,
+  shippingMethodName: string | null | undefined,
+) {
+  const district = districtName?.trim();
+  if (!district) return null;
+  const method = shippingMethodName?.trim();
+  if (
+    !method ||
+    method.includes("車邊交收") ||
+    method.toLocaleLowerCase("en").includes("curbside")
+  ) {
+    return district;
+  }
+  const unwrappedMethod = method.replace(/^\((.*)\)$/, "$1").trim();
+  return unwrappedMethod ? `${district}(${unwrappedMethod})` : district;
+}
+
 export function OrdersListPage({
   preset = "all",
   canViewFinance = true,
@@ -81,6 +105,7 @@ export function OrdersListPage({
   loadStatusCatalog = fetchOrderStatusCatalog,
   loadFilterOptions = fetchOrderListFilterOptions,
   updateStatuses = updateOrderStatusSelections,
+  assignFestivals = assignFestivalToOrders,
   loadCustomerMessages = fetchOrderMessages,
   createCustomerNote = createQuoteCustomerNote,
   syncShopify = syncShopifyOrders,
@@ -96,6 +121,7 @@ export function OrdersListPage({
   loadStatusCatalog?: typeof fetchOrderStatusCatalog;
   loadFilterOptions?: typeof fetchOrderListFilterOptions;
   updateStatuses?: OrderStatusesUpdater;
+  assignFestivals?: FestivalAssigner;
   loadCustomerMessages?: typeof fetchOrderMessages;
   createCustomerNote?: typeof createQuoteCustomerNote;
   syncShopify?: ShopifySyncLoader;
@@ -117,6 +143,8 @@ export function OrdersListPage({
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [listConfig, setListConfig] = useState<OrderListConfigRow | null>(null);
   const [syncConfirmOpen, setSyncConfirmOpen] = useState(false);
@@ -139,6 +167,13 @@ export function OrdersListPage({
   const [deliveryNoteLoading, setDeliveryNoteLoading] = useState(false);
   const [deliveryNoteError, setDeliveryNoteError] = useState(false);
   const [messageOrder, setMessageOrder] = useState<OrderListItem | null>(null);
+  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
+  const [festivalModalOpen, setFestivalModalOpen] = useState(false);
+  const [selectedFestivalId, setSelectedFestivalId] = useState("");
+  const [festivalSaving, setFestivalSaving] = useState(false);
+  const [festivalError, setFestivalError] = useState(false);
+  const isMobileList = useMediaQuery("(max-width: 760px)");
+  const previousMobileListRef = useRef(isMobileList);
   const enhancementFilters = useMemo<OrderListEnhancementFilters>(() => ({
     deliveryDate: searchParams.get("deliveryDate") || undefined,
     deliveryStart: searchParams.get("deliveryStart") || undefined,
@@ -238,8 +273,14 @@ export function OrdersListPage({
       return;
     }
 
-    setLoading(true);
-    setError(null);
+    const appending = isMobileList && page > 1;
+    if (appending) {
+      setLoadingMore(true);
+      setLoadMoreError(false);
+    } else {
+      setLoading(true);
+      setError(null);
+    }
     try {
       const result = await loadOrders({
         page,
@@ -249,7 +290,12 @@ export function OrdersListPage({
         canViewFinance,
         ...enhancementFilters,
       });
-      setItems(result.items);
+      setItems((current) => {
+        if (!appending) return result.items;
+        const next = new Map(current.map((item) => [item.id, item]));
+        result.items.forEach((item) => next.set(item.id, item));
+        return [...next.values()];
+      });
       setTotal(result.total);
     } catch (loadError) {
       const code =
@@ -259,11 +305,16 @@ export function OrdersListPage({
         typeof loadError.code === "string"
           ? loadError.code
           : "orders_load_failed";
-      setItems([]);
-      setTotal(0);
-      setError(code);
+      if (appending) {
+        setLoadMoreError(true);
+      } else {
+        setItems([]);
+        setTotal(0);
+        setError(code);
+      }
     } finally {
-      setLoading(false);
+      if (appending) setLoadingMore(false);
+      else setLoading(false);
     }
   }, [
     canViewFinance,
@@ -275,11 +326,20 @@ export function OrdersListPage({
     search,
     status,
     enhancementFilters,
+    isMobileList,
   ]);
 
   useEffect(() => {
     void loadPage();
   }, [loadPage]);
+
+  useEffect(() => {
+    if (previousMobileListRef.current === isMobileList) return;
+    previousMobileListRef.current = isMobileList;
+    setItems([]);
+    setPage(1);
+    setLoadMoreError(false);
+  }, [isMobileList]);
 
   const openSyncConfirm = () => {
     setSyncError(null);
@@ -416,6 +476,72 @@ export function OrdersListPage({
     return `https://admin.shopify.com/store/${shop}/orders/${order.shopifyOrderId}`;
   };
 
+  const listStatusOptions = orderStatusCatalog.filter((catalogStatus) =>
+    (ORDER_LIST_STATUS_NAMES as readonly string[]).includes(catalogStatus.name.trim()),
+  );
+  const renderStatusPicker = (order: OrderListItem) => preset === "all" ? (
+    <OrderStatusPicker
+      order={order}
+      options={listStatusOptions}
+      disabled={!canManageStatuses}
+      onSave={async (legacyIds) => {
+        await updateStatuses(order.id, legacyIds);
+        setReloadKey((key) => key + 1);
+      }}
+    />
+  ) : null;
+  const renderOrderActions = (order: OrderListItem) => (
+    <OrderRowActionMenu
+      order={order}
+      canCancel={canCancelOrderDelivery(order.deliveryStatus)}
+      onCancel={() => openCancel(order)}
+      onMessages={() => setMessageOrder(order)}
+      onPreview={(kind) => setPrintPreview({ order, kind })}
+      statusPicker={renderStatusPicker(order)}
+    />
+  );
+
+  const visibleOrderIds = items.map((order) => order.id);
+  const allVisibleSelected = visibleOrderIds.length > 0 &&
+    visibleOrderIds.every((id) => selectedOrderIds.has(id));
+  const toggleOrderSelection = (orderId: string) => {
+    setSelectedOrderIds((current) => {
+      const next = new Set(current);
+      if (next.has(orderId)) next.delete(orderId);
+      else next.add(orderId);
+      return next;
+    });
+  };
+  const toggleVisibleOrders = () => {
+    setSelectedOrderIds((current) => {
+      const next = new Set(current);
+      if (allVisibleSelected) visibleOrderIds.forEach((id) => next.delete(id));
+      else visibleOrderIds.forEach((id) => next.add(id));
+      return next;
+    });
+  };
+  const openFestivalModal = () => {
+    setSelectedFestivalId("");
+    setFestivalError(false);
+    setFestivalModalOpen(true);
+  };
+  const saveFestival = async () => {
+    if (!selectedFestivalId || !selectedOrderIds.size) return;
+    setFestivalSaving(true);
+    setFestivalError(false);
+    try {
+      await assignFestivals([...selectedOrderIds], selectedFestivalId);
+      setFestivalModalOpen(false);
+      setSelectedFestivalId("");
+      setSelectedOrderIds(new Set());
+      setReloadKey((key) => key + 1);
+    } catch {
+      setFestivalError(true);
+    } finally {
+      setFestivalSaving(false);
+    }
+  };
+
   return (
     <section className="orders-page">
       <header className="page-heading orders-heading">
@@ -447,7 +573,7 @@ export function OrdersListPage({
         </div>
       </header>
 
-      <article className="panel orders-panel">
+      <article className="panel orders-panel responsive-card-list-panel">
         <header className="orders-toolbar">
           <ListSearchBar
             id="orders-search"
@@ -531,13 +657,105 @@ export function OrdersListPage({
             </div>
           </div>
         ) : (
+          <>
+          {selectedOrderIds.size ? (
+            <div className="orders-selection-actions" role="status">
+              <span>{t("orders.festivalAssignment.selected", { count: selectedOrderIds.size })}</span>
+              <Button type="button" variant="outline" onClick={openFestivalModal}>
+                {t("orders.festivalAssignment.add")}
+              </Button>
+            </div>
+          ) : null}
           <ListTable
             className="orders-table-wrap"
-            onRefresh={() => setReloadKey((key) => key + 1)}
+            onRefresh={() => {
+              if (isMobileList && page !== 1) setPage(1);
+              else setReloadKey((key) => key + 1);
+            }}
             loading={loading}
             loadingLabel={t("orders.loading")}
+            mobileHasMore={items.length < total}
+            mobileLoadingMore={loadingMore}
+            mobileLoadError={loadMoreError}
+            onMobileLoadMore={() => {
+              if (loadingMore) return;
+              if (loadMoreError) setReloadKey((key) => key + 1);
+              else setPage((current) => current + 1);
+            }}
+            mobileLoadingMoreLabel={t("orders.loading")}
+            mobileRetryLabel={t("orders.retry")}
+            mobileEndLabel={t("orders.pagination", {
+              from: total ? 1 : 0,
+              to: Math.min(items.length, total),
+              total,
+            })}
+            mobileContent={isMobileList ? (
+              <div className="mobile-card-list order-mobile-list" role="list" aria-label={title}>
+                {items.map((order) => (
+                  <article className="mobile-list-card order-mobile-card" role="listitem" key={order.id}>
+                    <header>
+                      <label className="order-mobile-select">
+                        <input
+                          type="checkbox"
+                          checked={selectedOrderIds.has(order.id)}
+                          onChange={() => toggleOrderSelection(order.id)}
+                          aria-label={t("orders.festivalAssignment.selectOrder", {
+                            order: order.orderNumber || order.id,
+                          })}
+                        />
+                      </label>
+                      <div className="order-mobile-title">
+                        <DetailLink to={preset === "pending" ? `/quotes/${order.id}` : `/orders/${order.id}`}>
+                          {order.orderNumber || t("common.notSet")}
+                        </DetailLink>
+                        <span>{order.channelName || t("common.notSet")}</span>
+                      </div>
+                      <span className={cn("status-badge", orderDeliveryStatusTone(order.deliveryStatus))}>
+                        {order.deliveryStatus || t("orders.deliveryDetails.unassigned")}
+                      </span>
+                    </header>
+
+                    <div className="order-mobile-customer">
+                      <strong>{order.customerName || order.companyName || t("common.notSet")}</strong>
+                      {order.contactPhone ? <a href={`tel:${order.contactPhone}`}>{order.contactPhone}</a> : null}
+                      <span>{order.address || t("common.notSet")}</span>
+                    </div>
+
+                    <dl className="order-mobile-facts">
+                      <div>
+                        <dt>{t("orders.columns.delivery")}</dt>
+                        <dd>{order.deliveryAt?.slice(0, 10) || t("common.notSet")} · {order.deliveryTime || t("common.notSet")}</dd>
+                      </div>
+                      <div>
+                        <dt>{t("orders.columns.region")}</dt>
+                        <dd>{formatDistrictWithShippingMethod(order.districtName, order.shippingMethodName) ?? t("common.notSet")}</dd>
+                      </div>
+                      <div>
+                        <dt>{t("orders.columns.quantity")}</dt>
+                        <dd>{(order.quantity ?? 0).toLocaleString(i18n.language)}</dd>
+                      </div>
+                      {canViewFinance ? (
+                        <div>
+                          <dt>{t("orders.columns.amount")}</dt>
+                          <dd>{formatAmount(order.grandTotal, order.currency)}</dd>
+                        </div>
+                      ) : null}
+                    </dl>
+
+                    {order.tags?.length ? (
+                      <OrderTagBadges statuses={order.tags} manualTodos={[]} />
+                    ) : null}
+
+                    <footer>
+                      {renderOrderActions(order)}
+                    </footer>
+                  </article>
+                ))}
+              </div>
+            ) : undefined}
             skeletonRows={ORDERS_PAGE_SIZE}
             skeletonColumns={[
+              { width: "2.5rem" },
               ...ORDER_SKELETON_COLUMNS,
               { width: "5rem" },
               { width: "7rem" },
@@ -553,6 +771,14 @@ export function OrdersListPage({
             ]}
             header={
               <tr>
+                <th className="orders-selection-cell">
+                  <input
+                    type="checkbox"
+                    checked={allVisibleSelected}
+                    onChange={toggleVisibleOrders}
+                    aria-label={t("orders.festivalAssignment.selectAll")}
+                  />
+                </th>
                 <th>{t("orders.columns.brand")}</th>
                 <th>{t("orders.columns.number")}</th>
                 <th>{t("orders.columns.customer")}</th>
@@ -588,11 +814,12 @@ export function OrdersListPage({
                 (status) =>
                   !order.doNotSendToFactory ||
                   !factoryTodoAliases.includes(status.name.trim()),
-              );
+              ).map((status) => ({ ...status, tooltip: undefined as string | undefined }));
               const addTodoStatus = (
                 aliases: readonly string[],
                 fallbackName: string,
                 fallbackColor: string,
+                tooltip?: string,
               ) => {
                 if (todoStatuses.some((status) => aliases.includes(status.name.trim()))) return;
                 const configured = orderStatusCatalog.find((status) =>
@@ -601,6 +828,7 @@ export function OrdersListPage({
                 todoStatuses.push({
                   name: configured?.name ?? fallbackName,
                   color: configured?.color ?? fallbackColor,
+                  tooltip,
                 });
               };
               if (canViewFinance && (order.outstanding ?? 0) > 0) {
@@ -622,10 +850,21 @@ export function OrdersListPage({
                   ["廚房備註"],
                   t("orders.todos.kitchenNote"),
                   "#3b82f6",
+                  order.factoryPackingNote.trim(),
                 );
               }
               return (
                 <tr key={order.id}>
+                  <td className="orders-selection-cell">
+                    <input
+                      type="checkbox"
+                      checked={selectedOrderIds.has(order.id)}
+                      onChange={() => toggleOrderSelection(order.id)}
+                      aria-label={t("orders.festivalAssignment.selectOrder", {
+                        order: order.orderNumber || order.id,
+                      })}
+                    />
+                  </td>
                   <td>{order.channelName || t("common.notSet")}</td>
                   <td>
                     <div className="order-number-cell">
@@ -658,17 +897,24 @@ export function OrdersListPage({
                     <div>{order.contactPhone || t("common.notSet")}</div>
                     <div>{order.address || t("common.notSet")}</div>
                   </td>
-                  <td>{order.districtName || t("common.notSet")}</td>
+                  <td>
+                    {formatDistrictWithShippingMethod(
+                      order.districtName,
+                      order.shippingMethodName,
+                    ) ?? t("common.notSet")}
+                  </td>
                   <td>
                     {order.deliveryAt?.slice(0, 10) || t("common.notSet")}
                   </td>
                   <td>
                     <div>{t("orders.deliveryDetails.shipOut")}</div>
-                    <strong>{order.shipOutTime || t("common.notSet")}</strong>
+                    <strong>{order.shipOutTime || "-"}</strong>
                     <div>{t("orders.deliveryDetails.deliveryTime")}</div>
                     <strong>{order.deliveryTime || t("common.notSet")}</strong>
                     <div>{t("orders.deliveryDetails.status")}</div>
-                    <strong>{order.deliveryStatus || t("orders.deliveryDetails.unassigned")}</strong>
+                    <span className={cn("status-badge", orderDeliveryStatusTone(order.deliveryStatus))}>
+                      {order.deliveryStatus || t("orders.deliveryDetails.unassigned")}
+                    </span>
                   </td>
                   <td>
                     <OrderTagBadges
@@ -700,31 +946,13 @@ export function OrdersListPage({
                     </td>
                   ) : null}
                   <td>
-                    <OrderRowActionMenu
-                      order={order}
-                      canCancel={canCancelOrderDelivery(order.deliveryStatus)}
-                      onCancel={() => openCancel(order)}
-                      onMessages={() => setMessageOrder(order)}
-                      onPreview={(kind) => setPrintPreview({ order, kind })}
-                      statusPicker={preset === "all" ? (
-                        <OrderStatusPicker
-                          order={order}
-                          options={orderStatusCatalog.filter((status) =>
-                            (ORDER_LIST_STATUS_NAMES as readonly string[]).includes(status.name.trim()),
-                          )}
-                          disabled={!canManageStatuses}
-                          onSave={async (legacyIds) => {
-                            await updateStatuses(order.id, legacyIds);
-                            setReloadKey((key) => key + 1);
-                          }}
-                        />
-                      ) : null}
-                    />
+                    {renderOrderActions(order)}
                   </td>
                 </tr>
               );
             })}
           </ListTable>
+          </>
         )}
 
         <TablePagination
@@ -820,6 +1048,35 @@ export function OrdersListPage({
           ) : null}
         </ConfirmDialog>
       ) : null}
+
+      <Modal
+        open={festivalModalOpen}
+        title={t("orders.festivalAssignment.modalTitle", { count: selectedOrderIds.size })}
+        onClose={() => !festivalSaving && setFestivalModalOpen(false)}
+        closeLabel={t("orders.festivalAssignment.close")}
+        size="sm"
+        closeOnBackdrop={!festivalSaving}
+        closeOnEscape={!festivalSaving}
+        footer={
+          <>
+            <Button type="button" variant="outline" disabled={festivalSaving} onClick={() => setFestivalModalOpen(false)}>
+              {t("orders.festivalAssignment.close")}
+            </Button>
+            <Button type="button" disabled={festivalSaving || !selectedFestivalId} onClick={() => void saveFestival()}>
+              {festivalSaving ? t("orders.festivalAssignment.saving") : t("orders.festivalAssignment.submit")}
+            </Button>
+          </>
+        }
+      >
+        <label className="ingredients-field">
+          <span>{t("orders.festivalAssignment.festival")}</span>
+          <select aria-label={t("orders.festivalAssignment.festival")} value={selectedFestivalId} disabled={festivalSaving} onChange={(event) => setSelectedFestivalId(event.target.value)}>
+            <option value="">{t("orders.festivalAssignment.placeholder")}</option>
+            {filterOptions.festivals.map((festival) => <option key={festival.id} value={festival.id}>{festival.name}</option>)}
+          </select>
+        </label>
+        {festivalError ? <p className="list-inline-error" role="alert">{t("orders.festivalAssignment.error")}</p> : null}
+      </Modal>
 
       <Modal
         open={Boolean(cancelOrder)}

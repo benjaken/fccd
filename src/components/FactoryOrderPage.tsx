@@ -15,6 +15,7 @@ import {
   fetchFactoryOrderJob,
   fleetBadgeForDelivery,
   markFactoryOrderLinePrinted,
+  updateFactoryDispatchTime,
   type FactoryFleet,
   type FactoryOrderJob,
 } from "@/lib/factory-board";
@@ -31,6 +32,7 @@ export function FactoryOrderPage({
   assignMotorcade = assignDeliveryMotorcade,
   markLinePrinted = markFactoryOrderLinePrinted,
   loadLabelCommand = fetchFactoryLabelCommand,
+  saveDispatchTime = updateFactoryDispatchTime,
   qzClient = qzTrayClient,
 }: {
   loadDelivery?: typeof fetchDeliveryById;
@@ -39,6 +41,7 @@ export function FactoryOrderPage({
   assignMotorcade?: typeof assignDeliveryMotorcade;
   markLinePrinted?: typeof markFactoryOrderLinePrinted;
   loadLabelCommand?: FactoryLabelCommandLoader;
+  saveDispatchTime?: typeof updateFactoryDispatchTime;
   qzClient?: QzTrayClient;
 }) {
   const { t } = useTranslation();
@@ -113,6 +116,7 @@ export function FactoryOrderPage({
           assignMotorcade={assignMotorcade}
           markLinePrinted={markLinePrinted}
           loadLabelCommand={loadLabelCommand}
+          saveDispatchTime={saveDispatchTime}
           onLinePrinted={(lineId) =>
             setJob((current) => {
               if (!current) return current;

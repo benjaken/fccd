@@ -25,6 +25,10 @@ import {
   overwriteFieldSources,
   type OverwriteSourceType,
 } from "./overwrite.ts";
+import {
+  fallbackDeliveryLegacyId,
+  orderMetadataFromRecord,
+} from "./order-metadata.ts";
 
 const BUBBLE_BASE_URL = "https://cs.foodchannels-catering.com/api/1.1/obj";
 const INITIAL_CHECKPOINT = "2026-08-12T02:39:34.000Z";
@@ -35,6 +39,7 @@ const INSERT_CHUNK = 250;
 const QUERY_CHUNK = 100;
 const SOFT_RUNTIME_MS = 60_000;
 const OVERWRITE_RUNTIME_MS = 150_000;
+const ORDER_METADATA_BACKFILL_CONFIRMATION = "APPLY_ORDER_METADATA_BACKFILL";
 
 type AdminClient = ReturnType<typeof createClient<any>>;
 type Checkpoint = {
@@ -52,6 +57,7 @@ type TypeResult = {
   inserted: number;
   conflicts: number;
   junctionsInserted: number;
+  metadataUpdated?: number;
   pages: number;
   status: "completed" | "failed" | "resumable";
   error?: string;
@@ -178,6 +184,13 @@ function loginCodeFromRecord(record: BubbleRecord): string | null {
   return String(value);
 }
 
+function bankAccountFromRecord(record: BubbleRecord): string | null {
+  const value = record["payment method(text)"];
+  if (value == null) return null;
+  const normalized = String(value).trim();
+  return normalized || null;
+}
+
 async function syncDeliveryTeamLoginCodes(
   client: AdminClient,
   records: BubbleRecord[],
@@ -242,6 +255,229 @@ async function syncOrderShippingMethods(
   return updated;
 }
 
+async function backfillDeliveryTeamBankAccounts(
+  client: AdminClient,
+  records: BubbleRecord[],
+): Promise<number> {
+  let updated = 0;
+  for (const record of records) {
+    const bankAccount = bankAccountFromRecord(record);
+    if (!bankAccount) continue;
+    const { data, error } = await client
+      .from("delivery_teams")
+      .update({ bank_account: bankAccount })
+      .eq("legacy_id", requireLegacyId(record))
+      .is("bank_account", null)
+      .select("legacy_id");
+    if (error) throw error;
+    if (data?.length) updated += data.length;
+  }
+  return updated;
+}
+
+async function authenticateAdmin(
+  request: Request,
+  client: AdminClient,
+): Promise<boolean> {
+  const authorization = request.headers.get("authorization") ?? "";
+  const token = authorization.replace(/^Bearer\s+/i, "").trim();
+  if (!token) return false;
+  const { data, error } = await client.auth.getUser(token);
+  if (error || !data.user) return false;
+  const role = data.user.app_metadata?.role;
+  return role === "Super Admin" || role === "Admin";
+}
+
+type OrderMetadataSyncResult = {
+  tagsInserted: number;
+  districtsUpdated: number;
+  deliveriesCreated: number;
+};
+
+async function deliveriesByOrderId(
+  client: AdminClient,
+  orderIds: string[],
+): Promise<Map<string, Array<{
+  id: string;
+  legacy_id: string;
+  order_id: string;
+  district_id: string | null;
+}>>> {
+  const result = new Map<string, Array<{
+    id: string;
+    legacy_id: string;
+    order_id: string;
+    district_id: string | null;
+  }>>();
+  const unique = [...new Set(orderIds)];
+  for (let index = 0; index < unique.length; index += QUERY_CHUNK) {
+    const { data, error } = await client
+      .from("deliveries")
+      .select("id,legacy_id,order_id,district_id")
+      .in("order_id", unique.slice(index, index + QUERY_CHUNK))
+      .order("created_at", { ascending: true });
+    if (error) throw error;
+    for (const row of data ?? []) {
+      const orderId = String(row.order_id);
+      result.set(orderId, [
+        ...(result.get(orderId) ?? []),
+        {
+          id: String(row.id),
+          legacy_id: String(row.legacy_id),
+          order_id: orderId,
+          district_id: row.district_id ? String(row.district_id) : null,
+        },
+      ]);
+    }
+  }
+  return result;
+}
+
+async function syncOrderMetadata(
+  client: AdminClient,
+  records: BubbleRecord[],
+): Promise<OrderMetadataSyncResult> {
+  const result: OrderMetadataSyncResult = {
+    tagsInserted: 0,
+    districtsUpdated: 0,
+    deliveriesCreated: 0,
+  };
+  if (!records.length) return result;
+
+  const mapping = coreMappings.find((item) => item.sourceType === "a_order");
+  if (!mapping) throw new Error("a_order mapping is missing.");
+  const metadata = records.map(orderMetadataFromRecord);
+  const mappedOrders = new Map(
+    records.map((record) => {
+      const row = mapping.map(record);
+      return [String(row.legacy_id), row] as const;
+    }),
+  );
+  const orderRows = await selectedLegacyRows(
+    client,
+    "orders",
+    metadata.map((item) => item.orderLegacyId),
+    [
+      "id",
+      "document_type",
+      "shipping_method_id",
+      "shipping_method_legacy_id",
+    ],
+  );
+  const orders = new Map(orderRows.map((row) => [String(row.legacy_id), row]));
+  const tagLegacyIds = metadata.flatMap((item) => item.tagLegacyIds);
+  const districtLegacyIds = metadata.flatMap((item) =>
+    item.districtLegacyId ? [item.districtLegacyId] : []
+  );
+  const [tagRows, districtRows] = await Promise.all([
+    legacyIdRows(client, "order_tags", tagLegacyIds),
+    legacyIdRows(client, "delivery_districts", districtLegacyIds),
+  ]);
+  const tags = new Map(tagRows.map((row) => [row.legacy_id, row.id]));
+  const districts = new Map(
+    districtRows.map((row) => [row.legacy_id, row.id]),
+  );
+  const unresolvedTags = tagLegacyIds.filter((id) => !tags.has(id));
+  const unresolvedDistricts = districtLegacyIds.filter((id) =>
+    !districts.has(id)
+  );
+  if (unresolvedTags.length) {
+    throw new Error(
+      `${new Set(unresolvedTags).size} required order_tags references are unresolved.`,
+    );
+  }
+  if (unresolvedDistricts.length) {
+    throw new Error(
+      `${new Set(unresolvedDistricts).size} required delivery_districts references are unresolved.`,
+    );
+  }
+
+  const tagAssignments = metadata.flatMap((item) => {
+    const order = orders.get(item.orderLegacyId);
+    if (!order) return [];
+    return item.tagLegacyIds.map((tagLegacyId) => ({
+      order_id: order.id,
+      order_tag_id: tags.get(tagLegacyId),
+    }));
+  });
+  if (tagAssignments.length) {
+    result.tagsInserted = await insertOnlyJunctions(
+      client,
+      "order_tag_assignments",
+      "order_id,order_tag_id",
+      tagAssignments,
+    );
+  }
+
+  const deliveries = await deliveriesByOrderId(
+    client,
+    orderRows.map((row) => String(row.id)),
+  );
+  const deliveryUpdates: Array<Record<string, unknown>> = [];
+  const deliveryInserts: Array<Record<string, unknown>> = [];
+  for (const item of metadata) {
+    if (!item.districtLegacyId) continue;
+    const order = orders.get(item.orderLegacyId);
+    const districtId = districts.get(item.districtLegacyId);
+    if (!order || !districtId) continue;
+    const existing = deliveries.get(String(order.id)) ?? [];
+    if (existing.length) {
+      deliveryUpdates.push(...existing.flatMap((delivery) =>
+        delivery.district_id ? [] : [{
+          id: delivery.id,
+          legacy_id: delivery.legacy_id,
+          order_id: delivery.order_id,
+          district_id: districtId,
+          district_legacy_id: item.districtLegacyId,
+        }]
+      ));
+      continue;
+    }
+
+    const mapped = mappedOrders.get(item.orderLegacyId) ?? {};
+    if (order.document_type !== "order") continue;
+    deliveryInserts.push({
+      id: crypto.randomUUID(),
+      legacy_id: fallbackDeliveryLegacyId(item.orderLegacyId),
+      order_id: order.id,
+      order_legacy_id: item.orderLegacyId,
+      district_id: districtId,
+      district_legacy_id: item.districtLegacyId,
+      shipping_method_id: order.shipping_method_id ?? null,
+      shipping_method_legacy_id:
+        order.shipping_method_legacy_id ?? null,
+      delivery_at: mapped.delivery_at ?? null,
+      delivery_time: mapped.delivery_time ?? null,
+      ship_out_time: mapped.ship_out_time ?? null,
+      delivery_status: mapped.delivery_status ?? null,
+      bubble_created_at: mapped.bubble_created_at ?? null,
+      bubble_modified_at: mapped.bubble_modified_at ?? null,
+    });
+  }
+  for (let index = 0; index < deliveryUpdates.length; index += INSERT_CHUNK) {
+    const { data, error } = await client
+      .from("deliveries")
+      .upsert(deliveryUpdates.slice(index, index + INSERT_CHUNK), {
+        onConflict: "id",
+      })
+      .select("id");
+    if (error) throw error;
+    result.districtsUpdated += data?.length ?? 0;
+  }
+  for (let index = 0; index < deliveryInserts.length; index += INSERT_CHUNK) {
+    const { data, error } = await client
+      .from("deliveries")
+      .upsert(deliveryInserts.slice(index, index + INSERT_CHUNK), {
+        onConflict: "legacy_id",
+        ignoreDuplicates: true,
+      })
+      .select("id");
+    if (error) throw error;
+    result.deliveriesCreated += data?.length ?? 0;
+  }
+  return result;
+}
+
 async function syncDeliveryFulfillment(
   client: AdminClient,
   records: BubbleRecord[],
@@ -251,14 +487,46 @@ async function syncDeliveryFulfillment(
   );
   if (!mapping) throw new Error("b_deliveryschedule mapping is missing.");
   const rows = records.map(mapping.map);
-  const motorcadeRelations = (mapping.relations ?? []).filter(
-    (relation) => relation.idField === "motorcade_id",
-  );
-  await resolveRelations(client, rows, motorcadeRelations);
+  await resolveRelations(client, rows, mapping.relations);
 
   let updated = 0;
   for (const row of rows) {
     if (typeof row.legacy_id !== "string" || !row.legacy_id) continue;
+    if (
+      typeof row.order_legacy_id === "string" && row.order_legacy_id &&
+      typeof row.order_id === "string" && row.order_id
+    ) {
+      const { data: existing, error: existingError } = await client
+        .from("deliveries")
+        .select("id")
+        .eq("legacy_id", row.legacy_id)
+        .maybeSingle();
+      if (existingError) throw existingError;
+      if (!existing) {
+        const { error: promoteError } = await client
+          .from("deliveries")
+          .update({
+            legacy_id: row.legacy_id,
+            order_id: row.order_id,
+            order_legacy_id: row.order_legacy_id,
+            district_id: row.district_id ?? null,
+            district_legacy_id: row.district_legacy_id ?? null,
+            delivery_at: row.delivery_at ?? null,
+            delivery_time: row.delivery_time ?? null,
+            ship_out_time: row.ship_out_time ?? null,
+            basic_fee: row.basic_fee ?? null,
+            total_fee: row.total_fee ?? null,
+            image_references: row.image_references ?? [],
+            bubble_created_at: row.bubble_created_at ?? null,
+            bubble_modified_at: row.bubble_modified_at ?? null,
+          })
+          .eq(
+            "legacy_id",
+            fallbackDeliveryLegacyId(row.order_legacy_id),
+          );
+        if (promoteError) throw promoteError;
+      }
+    }
     const { data, error } = await client
       .from("deliveries")
       .update({
@@ -390,6 +658,46 @@ async function fetchBubbleType(
     }
   }
   return { records, pages, resumable: false };
+}
+
+async function fetchBubblePage(
+  sourceType: string,
+  cursor: number,
+  bubbleToken: string,
+): Promise<{ records: BubbleRecord[]; remaining: number }> {
+  const query = new URLSearchParams({
+    limit: String(FETCH_LIMIT),
+    cursor: String(cursor),
+    sort_field: "Modified Date",
+    descending: "false",
+  });
+  const response = await fetch(
+    `${BUBBLE_BASE_URL}/${encodeURIComponent(sourceType)}?${query}`,
+    {
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${bubbleToken}`,
+      },
+      signal: AbortSignal.timeout(30_000),
+    },
+  );
+  const payload = await response.json().catch(() => null);
+  const pageRows = payload?.response?.results;
+  const remaining = Number(payload?.response?.remaining ?? Number.NaN);
+  if (
+    !response.ok || !Array.isArray(pageRows) || !Number.isFinite(remaining) ||
+    remaining < 0
+  ) {
+    throw new Error(
+      `Bubble fetch for ${sourceType} failed with HTTP ${response.status}.`,
+    );
+  }
+  if (remaining > 0 && pageRows.length === 0) {
+    throw new Error(
+      `Bubble pagination stalled for ${sourceType} at cursor ${cursor}.`,
+    );
+  }
+  return { records: pageRows as BubbleRecord[], remaining };
 }
 
 async function getCheckpoint(
@@ -671,9 +979,14 @@ async function processType(
     result.fetched = fetched.records.length;
     if (mapping.sourceType === "ds_super_motorcade" && fetched.records.length) {
       await syncDeliveryTeamLoginCodes(client, fetched.records);
+      await backfillDeliveryTeamBankAccounts(client, fetched.records);
     }
     if (mapping.sourceType === "a_order" && fetched.records.length) {
       await syncOrderShippingMethods(client, fetched.records);
+      const metadata = await syncOrderMetadata(client, fetched.records);
+      result.junctionsInserted += metadata.tagsInserted;
+      result.metadataUpdated =
+        metadata.districtsUpdated + metadata.deliveriesCreated;
     }
     if (mapping.sourceType === "b_deliveryschedule" && fetched.records.length) {
       await syncDeliveryFulfillment(client, fetched.records);
@@ -947,7 +1260,15 @@ async function handleRequest(request: Request): Promise<Response> {
     console.error("bubble-daily-incremental configuration error");
     return jsonResponse({ error: "Function is not configured." }, 500);
   }
-  if (!(await authenticateCron(request, client))) {
+  const body = await request.json().catch(() => ({}));
+  const cronAuthenticated = await authenticateCron(request, client);
+  const adminBackfillRequested =
+    body?.backfillOrderMetadata === true &&
+    body?.confirmation === ORDER_METADATA_BACKFILL_CONFIRMATION;
+  if (
+    !cronAuthenticated &&
+    !(adminBackfillRequested && await authenticateAdmin(request, client))
+  ) {
     return jsonResponse({ error: "Unauthorized." }, 401);
   }
   let bubbleToken: string;
@@ -965,15 +1286,30 @@ async function handleRequest(request: Request): Promise<Response> {
   let requestedSourceType: string | null = null;
   let backfillLoginCodes = false;
   let backfillPaymentReportsRequested = false;
+  let backfillOrderMetadataRequested = false;
+  let orderMetadataBackfillCursor = 0;
   let overwriteRequest: {
     mode: OverwriteMode;
     sourceType: OverwriteSourceType;
     watermark: string;
   } | null = null;
   try {
-    const body = await request.json().catch(() => ({}));
     backfillLoginCodes = body?.backfillLoginCodes === true;
     backfillPaymentReportsRequested = body?.backfillPaymentReports === true;
+    backfillOrderMetadataRequested = body?.backfillOrderMetadata === true;
+    if (
+      backfillOrderMetadataRequested &&
+      body?.confirmation !== ORDER_METADATA_BACKFILL_CONFIRMATION
+    ) {
+      throw new Error("order metadata backfill confirmation is invalid.");
+    }
+    if (backfillOrderMetadataRequested) {
+      const cursor = body?.cursor ?? 0;
+      if (!Number.isInteger(cursor) || cursor < 0) {
+        throw new Error("order metadata backfill cursor is invalid.");
+      }
+      orderMetadataBackfillCursor = cursor;
+    }
     phases = selectedPhases(body?.phase);
     if (body?.overwrite != null) {
       const mode = body.overwrite.mode;
@@ -1117,11 +1453,16 @@ async function handleRequest(request: Request): Promise<Response> {
         }, 504);
       }
       const updated = await syncDeliveryTeamLoginCodes(client, fetched.records);
+      const bankAccountsUpdated = await backfillDeliveryTeamBankAccounts(
+        client,
+        fetched.records,
+      );
       return jsonResponse({
         status: "completed",
         sourceType: "ds_super_motorcade",
         fetched: fetched.records.length,
         loginCodesUpdated: updated,
+        bankAccountsUpdated,
         pages: fetched.pages,
       });
     } catch (error) {
@@ -1140,6 +1481,41 @@ async function handleRequest(request: Request): Promise<Response> {
       return jsonResponse({ sourceType: "s_paymentreport", ...result }, result.status === "paused" ? 202 : 200);
     } catch (error) {
       return jsonResponse({ status: "failed", sourceType: "s_paymentreport", error: errorCode(error), detail: safeError(error) }, 500);
+    }
+  }
+
+  if (backfillOrderMetadataRequested) {
+    try {
+      const fetched = await fetchBubblePage(
+        "a_order",
+        orderMetadataBackfillCursor,
+        bubbleToken,
+      );
+      const shippingMethodsUpdated = await syncOrderShippingMethods(
+        client,
+        fetched.records,
+      );
+      const result = await syncOrderMetadata(client, fetched.records);
+      const nextCursor = fetched.remaining > 0
+        ? orderMetadataBackfillCursor + fetched.records.length
+        : null;
+      return jsonResponse({
+        status: nextCursor == null ? "completed" : "paused",
+        sourceType: "a_order",
+        fetched: fetched.records.length,
+        shippingMethodsUpdated,
+        ...result,
+        cursor: orderMetadataBackfillCursor,
+        nextCursor,
+        remaining: fetched.remaining,
+      }, nextCursor == null ? 200 : 202);
+    } catch (error) {
+      return jsonResponse({
+        status: "failed",
+        sourceType: "a_order",
+        error: errorCode(error),
+        detail: safeError(error),
+      }, 500);
     }
   }
 

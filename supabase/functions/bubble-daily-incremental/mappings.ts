@@ -134,6 +134,7 @@ const phaseA: SourceMapping[] = [
       contact_number: r["contact no."] == null
         ? null
         : String(r["contact no."]),
+      bank_account: phoneText(r["payment method(text)"]),
       status: r.Status == null ? null : String(r.Status),
       login_code: r.Login_code == null || r.Login_code === ""
         ? null

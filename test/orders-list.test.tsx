@@ -55,6 +55,16 @@ const emptyListConfig = vi.fn().mockResolvedValue([]);
 
 describe("Orders list", () => {
   beforeEach(async () => {
+    vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
     await i18n.changeLanguage("zh-HK");
   });
 
@@ -84,7 +94,7 @@ describe("Orders list", () => {
     expect(table.getByText("+85291234567")).toBeInTheDocument();
     expect(table.getByText("Central")).toBeInTheDocument();
     const configuredStatus = Array.from(tableElement.querySelectorAll(".status-badge"))
-      .find((badge) => badge.textContent === "待取貨");
+      .find((badge) => badge.textContent === "待取貨" && badge.hasAttribute("style"));
     expect(configuredStatus).toBeInTheDocument();
     expect(configuredStatus).toHaveStyle({
       backgroundColor: "#16a34a",
@@ -96,7 +106,212 @@ describe("Orders list", () => {
     expect(table.getByText("出車時間：")).toBeInTheDocument();
     expect(table.getByText("送貨時間：")).toBeInTheDocument();
     expect(table.getByText("送貨狀態：")).toBeInTheDocument();
+    const deliveryDetails = table.getByText("送貨狀態：").parentElement;
+    expect(deliveryDetails).not.toBeNull();
+    expect(within(deliveryDetails!).getByText("待取貨")).toHaveClass("status-badge", "green");
     expect(table.getAllByText("HK$1,610")).toHaveLength(1);
+  });
+
+  it("appends the next server page to the mobile card list", async () => {
+    vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
+      matches: true,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
+    let notifyIntersection: IntersectionObserverCallback = () => undefined;
+    const observe = vi.fn();
+    vi.stubGlobal(
+      "IntersectionObserver",
+      class IntersectionObserverMock {
+        constructor(callback: IntersectionObserverCallback) {
+          notifyIntersection = callback;
+        }
+
+        observe = observe;
+        disconnect = vi.fn();
+        unobserve = vi.fn();
+        takeRecords = vi.fn(() => []);
+        root = null;
+        rootMargin = "180px 0px";
+        thresholds = [0];
+      },
+    );
+    const loadOrders = vi.fn().mockImplementation(async ({ page }: { page: number }) => ({
+      total: 2,
+      items: page === 1 ? orderResult.items : [{
+        ...orderResult.items[0],
+        id: "order-2",
+        orderNumber: "B-1514",
+      }],
+    }));
+
+    render(
+      <MemoryRouter>
+        <OrdersListPage loadOrders={loadOrders} loadListConfig={emptyListConfig} />
+      </MemoryRouter>,
+    );
+
+    const mobileList = await waitFor(() => {
+      const node = document.querySelector<HTMLElement>(".order-mobile-list");
+      expect(node).toBeInTheDocument();
+      return node!;
+    });
+    expect(within(mobileList).getByText("B-1513")).toBeInTheDocument();
+    expect(document.querySelector(".mobile-list-load-more button")).not.toBeInTheDocument();
+    await waitFor(() => expect(observe).toHaveBeenCalledTimes(1));
+    act(() => {
+      notifyIntersection(
+        [{ isIntersecting: true } as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
+    });
+
+    expect(await within(mobileList).findByText("B-1514")).toBeInTheDocument();
+    expect(loadOrders).toHaveBeenCalledWith(expect.objectContaining({ page: 2 }));
+    vi.unstubAllGlobals();
+
+    vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
+  });
+
+  it("shows a dash for a missing dispatch time and colors the delivery status", async () => {
+    const loadOrders = vi.fn().mockResolvedValue({
+      ...orderResult,
+      items: [{
+        ...orderResult.items[0],
+        shipOutTime: null,
+        deliveryStatus: "送貨途中",
+        statuses: [],
+      }],
+    });
+
+    render(
+      <MemoryRouter>
+        <OrdersListPage loadOrders={loadOrders} loadListConfig={emptyListConfig} />
+      </MemoryRouter>,
+    );
+
+    const table = within(await screen.findByRole("table"));
+    const dispatchDetails = table.getByText("出車時間：").parentElement;
+    expect(dispatchDetails).not.toBeNull();
+    expect(within(dispatchDetails!).getByText("-")).toBeInTheDocument();
+    expect(table.getByText("送貨途中")).toHaveClass("status-badge", "blue");
+  });
+
+  it("shows awaiting-driver delivery status in blue", async () => {
+    const loadOrders = vi.fn().mockResolvedValue({
+      ...orderResult,
+      items: [{
+        ...orderResult.items[0],
+        deliveryStatus: "待接單",
+        statuses: [],
+      }],
+    });
+
+    render(
+      <MemoryRouter>
+        <OrdersListPage loadOrders={loadOrders} loadListConfig={emptyListConfig} />
+      </MemoryRouter>,
+    );
+
+    expect(within(await screen.findByRole("table")).getByText("待接單"))
+      .toHaveClass("status-badge", "blue");
+  });
+
+  it("shows the shipping method beside the delivery district", async () => {
+    const loadOrders = vi.fn().mockResolvedValue({
+      ...orderResult,
+      items: [{
+        ...orderResult.items[0],
+        districtName: "中環",
+        shippingMethodName: "上門",
+      }],
+    });
+
+    render(
+      <MemoryRouter>
+        <OrdersListPage loadOrders={loadOrders} loadListConfig={emptyListConfig} />
+      </MemoryRouter>,
+    );
+
+    expect(within(await screen.findByRole("table")).getByText("中環(上門)"))
+      .toBeInTheDocument();
+  });
+
+  it("does not show curbside handoff beside the delivery district", async () => {
+    const loadOrders = vi.fn().mockResolvedValue({
+      ...orderResult,
+      items: [{
+        ...orderResult.items[0],
+        districtName: "中環",
+        shippingMethodName: "車邊交收",
+      }],
+    });
+
+    render(
+      <MemoryRouter>
+        <OrdersListPage loadOrders={loadOrders} loadListConfig={emptyListConfig} />
+      </MemoryRouter>,
+    );
+
+    const table = within(await screen.findByRole("table"));
+    expect(table.getByText("中環")).toBeInTheDocument();
+    expect(table.queryByText("中環(車邊交收)")).not.toBeInTheDocument();
+  });
+
+  it("assigns a festival to selected orders", async () => {
+    const user = userEvent.setup();
+    const loadOrders = vi.fn().mockResolvedValue(orderResult);
+    const assignFestivals = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <MemoryRouter>
+        <OrdersListPage
+          loadOrders={loadOrders}
+          loadListConfig={emptyListConfig}
+          loadFilterOptions={vi.fn().mockResolvedValue({
+            festivals: [{ id: "festival-1", name: "中秋節" }],
+            districts: [],
+          })}
+          assignFestivals={assignFestivals}
+        />
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole("checkbox", { name: "選擇訂單 B-1513" }));
+    await user.click(screen.getByRole("button", { name: "添加節日" }));
+    expect(screen.getByRole("heading", { name: "為 1 張訂單添加節日" })).toBeInTheDocument();
+    await user.selectOptions(screen.getByRole("combobox", { name: "節日" }), "festival-1");
+    await user.click(screen.getByRole("button", { name: "加入" }));
+
+    await waitFor(() => expect(assignFestivals).toHaveBeenCalledWith(["order-1"], "festival-1"));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "選擇訂單 B-1513" })).not.toBeChecked();
+  });
+
+  it("shows the kitchen note when hovering its tag", async () => {
+    const loadOrders = vi.fn().mockResolvedValue(orderResult);
+    render(
+      <MemoryRouter>
+        <OrdersListPage loadOrders={loadOrders} loadListConfig={emptyListConfig} />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByTitle("餐具分開包裝，紙盒請貼上標籤"))
+      .toHaveTextContent("廚房備註");
   });
 
   it("submits search and semantic status filters to the loader", async () => {
@@ -415,7 +630,7 @@ describe("Orders list", () => {
     expect(editLink).toHaveAttribute("href", "/orders/order-1/edit");
     expect(screen.getByRole("button", { name: "增加訂單狀態" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "溝通" })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "複製" })).toHaveAttribute("href", "/orders/new?copyFrom=order-1");
+    expect(screen.getByRole("link", { name: "復製訂單" })).toHaveAttribute("href", "/orders/new?copyFrom=order-1");
 
     await user.click(screen.getByRole("button", { name: "取消訂單" }));
     const dialog = screen.getByRole("dialog", { name: "取消整筆送貨" });
@@ -823,6 +1038,16 @@ describe("Orders list", () => {
     );
     expect(source).toContain('.eq("do_not_send_to_factory", false)');
     expect(source).toContain('query.gt("outstanding", 0)');
+  });
+
+  it("filters districts through an inner relation without putting every order ID in the URL", () => {
+    const source = readFileSync(
+      path.resolve(process.cwd(), "src/lib/orders.ts"),
+      "utf8",
+    );
+    expect(source).toContain("deliveries!inner(");
+    expect(source).toContain('query.in("deliveries.delivery_districts.name", districtNames)');
+    expect(source).not.toContain('query.in("id", districtOrderIds)');
   });
 
   it("shows an actionable load error", async () => {

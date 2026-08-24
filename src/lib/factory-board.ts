@@ -74,6 +74,17 @@ export type FactoryFleet = {
   shortName: string | null
 }
 
+export async function updateFactoryDispatchTime(
+  orderId: string,
+  dispatchTime: string,
+): Promise<void> {
+  const { error } = await supabase.rpc("update_factory_order_dispatch_time", {
+    p_order_id: orderId,
+    p_ship_out_time: dispatchTime,
+  })
+  if (error) throw error
+}
+
 export type FactoryBrand = {
   id: string
   name: string
@@ -81,6 +92,15 @@ export type FactoryBrand = {
 
 export type FactoryMenuRow = {
   label: string
+  quantity: number
+  typeSort?: number | null
+  orders?: FactoryMenuOrder[]
+}
+
+export type FactoryMenuOrder = {
+  orderId: string
+  orderNumber: string | null
+  completionTime: string | null
   quantity: number
 }
 
@@ -92,6 +112,7 @@ export type FactoryMultiDayMenuContribution = {
   deliveryTime: string | null
   label: string
   quantity: number
+  typeSort?: number | null
 }
 
 export type FactoryMultiDayMenuOrder = {
@@ -105,6 +126,7 @@ export type FactoryMultiDayMenuOrder = {
 export type FactoryMultiDayMenuRow = {
   label: string
   quantity: number
+  typeSort?: number | null
   orders: FactoryMultiDayMenuOrder[]
 }
 
@@ -328,16 +350,18 @@ export function aggregateFactoryMultiDayMenuRows(
 ): FactoryMultiDayMenuRow[] {
   const rows = new Map<
     string,
-    { quantity: number; orders: Map<string, FactoryMultiDayMenuOrder> }
+    { quantity: number; typeSort: number | null; orders: Map<string, FactoryMultiDayMenuOrder> }
   >()
 
   for (const contribution of contributions) {
     if (!contribution.brandId || !activeBrandIds.has(contribution.brandId)) continue
     const row = rows.get(contribution.label) ?? {
       quantity: 0,
+      typeSort: null,
       orders: new Map<string, FactoryMultiDayMenuOrder>(),
     }
     row.quantity += contribution.quantity
+    row.typeSort = minimumFactoryTypeSort(row.typeSort, contribution.typeSort)
     const order = row.orders.get(contribution.orderId) ?? {
       orderId: contribution.orderId,
       orderNumber: contribution.orderNumber,
@@ -354,6 +378,7 @@ export function aggregateFactoryMultiDayMenuRows(
     .map(([label, row]) => ({
       label,
       quantity: row.quantity,
+      typeSort: row.typeSort,
       orders: [...row.orders.values()].sort((left, right) =>
         `${left.deliveryDate}-${left.deliveryTime ?? ""}-${left.orderNumber ?? ""}`
           .localeCompare(
@@ -362,7 +387,38 @@ export function aggregateFactoryMultiDayMenuRows(
           ),
       ),
     }))
-    .sort((left, right) => left.label.localeCompare(right.label, "zh-Hant"))
+    .sort(compareFactoryMenuRows)
+}
+
+function minimumFactoryTypeSort(
+  current: number | null | undefined,
+  candidate: number | null | undefined,
+): number | null {
+  if (candidate == null) return current ?? null
+  const next = Number(candidate)
+  if (!Number.isFinite(next)) return current ?? null
+  return current == null ? next : Math.min(current, next)
+}
+
+function factoryMenuTrailingRank(label: string): number {
+  const normalized = label.replace(/\s/g, "")
+  if (/餐具|刀叉|紙碟|紙杯/.test(normalized)) return 2
+  if (/甜品|糖水|布甸|啫喱|蛋糕|布朗尼|麻糬|桂花糕|壽桃|曲奇|撻/.test(normalized)) return 1
+  return 0
+}
+
+export function compareFactoryMenuRows(
+  left: Pick<FactoryMenuRow, "label" | "typeSort">,
+  right: Pick<FactoryMenuRow, "label" | "typeSort">,
+): number {
+  const trailing = factoryMenuTrailingRank(left.label) - factoryMenuTrailingRank(right.label)
+  if (trailing !== 0) return trailing
+  const leftSort = left.typeSort == null ? Number.NaN : Number(left.typeSort)
+  const rightSort = right.typeSort == null ? Number.NaN : Number(right.typeSort)
+  const typeSort = (Number.isFinite(leftSort) ? leftSort : 999) -
+    (Number.isFinite(rightSort) ? rightSort : 999)
+  if (typeSort !== 0) return typeSort
+  return left.label.localeCompare(right.label, "zh-Hant")
 }
 
 export function filterDispatchRows(
@@ -431,37 +487,52 @@ export async function fetchFactoryMenuRows(
     return []
   }
 
-  let allowedIds = uniqueIds
-  if (brandId !== ALL_BRAND_ID) {
-    const matched: string[] = []
-    for (let index = 0; index < uniqueIds.length; index += PORTION_CHUNK_SIZE) {
-      const chunk = uniqueIds.slice(index, index + PORTION_CHUNK_SIZE)
-      const { data, error } = await supabase
-        .from("orders")
-        .select("id, channel_id")
-        .in("id", chunk)
-      if (error) {
-        throw error
-      }
-      for (const row of data ?? []) {
-        if ((row.channel_id as string | null) === brandId) {
-          matched.push(row.id as string)
-        }
-      }
+  const allowedIds: string[] = []
+  const orderMeta = new Map<string, { orderNumber: string | null; completionTime: string | null }>()
+  for (let index = 0; index < uniqueIds.length; index += PORTION_CHUNK_SIZE) {
+    const chunk = uniqueIds.slice(index, index + PORTION_CHUNK_SIZE)
+    const { data, error } = await supabase
+      .from("orders")
+      .select("id, channel_id, order_number, ship_out_time")
+      .in("id", chunk)
+    if (error) throw error
+    for (const row of data ?? []) {
+      if (brandId !== ALL_BRAND_ID && (row.channel_id as string | null) !== brandId) continue
+      const id = row.id as string
+      allowedIds.push(id)
+      orderMeta.set(id, {
+        orderNumber: (row.order_number as string | null) ?? null,
+        completionTime: clockFromValue((row.ship_out_time as string | null) ?? null),
+      })
     }
-    allowedIds = matched
   }
 
   if (allowedIds.length === 0) {
     return []
   }
 
-  const totals = new Map<string, number>()
+  for (let index = 0; index < allowedIds.length; index += PORTION_CHUNK_SIZE) {
+    const chunk = allowedIds.slice(index, index + PORTION_CHUNK_SIZE)
+    const { data, error } = await supabase
+      .from("deliveries")
+      .select("order_id, ship_out_time")
+      .in("order_id", chunk)
+    if (error) throw error
+    for (const row of data ?? []) {
+      const orderId = row.order_id as string
+      const deliveryTime = clockFromValue((row.ship_out_time as string | null) ?? null)
+      if (deliveryTime && orderMeta.has(orderId)) {
+        orderMeta.set(orderId, { ...orderMeta.get(orderId)!, completionTime: deliveryTime })
+      }
+    }
+  }
+
+  const totals = new Map<string, FactoryMenuRow & { orderMap: Map<string, FactoryMenuOrder> }>()
   for (let index = 0; index < allowedIds.length; index += PORTION_CHUNK_SIZE) {
     const chunk = allowedIds.slice(index, index + PORTION_CHUNK_SIZE)
     const { data, error } = await supabase
       .from("order_lines")
-      .select("product_name_snapshot, content_snapshot, quantity")
+      .select("order_id, product_name_snapshot, content_snapshot, quantity, type_sort")
       .in("order_id", chunk)
       .eq("is_void", false)
     if (error) {
@@ -476,13 +547,42 @@ export async function fetchFactoryMenuRows(
         quantity: null,
       })
       if (!label) continue
-      totals.set(label, (totals.get(label) ?? 0) + quantity)
+      const current = totals.get(label) ?? {
+        label,
+        quantity: 0,
+        typeSort: null,
+        orders: [],
+        orderMap: new Map<string, FactoryMenuOrder>(),
+      }
+      current.quantity += quantity
+      current.typeSort = minimumFactoryTypeSort(
+        current.typeSort,
+        row.type_sort == null ? null : Number(row.type_sort),
+      )
+      const orderId = row.order_id as string
+      const meta = orderMeta.get(orderId)
+      const order = current.orderMap.get(orderId) ?? {
+        orderId,
+        orderNumber: meta?.orderNumber ?? null,
+        completionTime: meta?.completionTime ?? null,
+        quantity: 0,
+      }
+      order.quantity += quantity
+      current.orderMap.set(orderId, order)
+      totals.set(label, current)
     }
   }
 
-  return [...totals.entries()]
-    .sort((left, right) => left[0].localeCompare(right[0], "zh-Hant"))
-    .map(([label, quantity]) => ({ label, quantity }))
+  return [...totals.values()]
+    .map(({ orderMap, ...row }) => ({
+      ...row,
+      orders: [...orderMap.values()].sort((left, right) =>
+        `${left.completionTime ?? ""}-${left.orderNumber ?? ""}`.localeCompare(
+          `${right.completionTime ?? ""}-${right.orderNumber ?? ""}`,
+          "zh-Hant",
+        )),
+    }))
+    .sort(compareFactoryMenuRows)
 }
 
 export async function fetchFactoryMultiDayMenu(
@@ -535,7 +635,7 @@ export async function fetchFactoryMultiDayMenu(
     const chunk = orderIds.slice(index, index + PORTION_CHUNK_SIZE)
     const { data, error } = await supabase
       .from("order_lines")
-      .select("order_id, product_name_snapshot, content_snapshot, quantity")
+      .select("order_id, product_name_snapshot, content_snapshot, quantity, type_sort")
       .in("order_id", chunk)
       .eq("is_void", false)
     if (error) throw error
@@ -559,6 +659,7 @@ export async function fetchFactoryMultiDayMenu(
         deliveryTime: delivery.deliveryTime,
         label,
         quantity,
+        typeSort: line.type_sort == null ? null : Number(line.type_sort),
       })
     }
   }

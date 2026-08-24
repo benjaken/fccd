@@ -1,8 +1,6 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   Check,
-  ChevronDown,
-  ChevronUp,
   LoaderCircle,
   Minus,
   Plus,
@@ -17,6 +15,7 @@ import { Modal } from "@/components/ui/modal";
 import { PdfAutoResizeTextarea } from "@/components/PdfAutoResizeTextarea";
 import { QuoteClauseSearchPicker } from "@/components/QuoteClauseSearchPicker";
 import {
+  getBrandContactEmail,
   getBrandKind,
   getBrandLogoAlt,
   getDocumentLogoPath,
@@ -31,6 +30,7 @@ import {
   type QuoteActivityDraft,
 } from "@/lib/quote-pdf-draft";
 import { DICT_TYPE, dictItemLabel, useDictItems } from "@/lib/dictionaries";
+import { splitPdfModuleIndexes, usePdfAutoPageBreaks } from "@/lib/pdf-auto-pagination";
 import {
   fetchActiveQuotePdfPages,
   type QuotePdfPage,
@@ -56,6 +56,10 @@ type EditableLine = {
 
 type EditableActivity = QuoteActivityDraft;
 
+type QuoteTrailingUnit =
+  | { kind: "node"; key: string; node: ReactNode }
+  | { kind: "term" | "payment"; itemIndex: number | null };
+
 const FIRST_PRODUCT_PAGE_SIZE = 10;
 const CONTINUATION_PRODUCT_PAGE_SIZE = 18;
 
@@ -74,9 +78,6 @@ type QuotePdfDraft = {
   additionalInfo: string[];
   activities: EditableActivity[];
   utensilPackQuantity: string;
-  activityStartsNewPage: boolean;
-  notesStartsNewPage: boolean;
-  signatureStartsNewPage: boolean;
   showCustomerSignature: boolean;
   activityShippingFeeId: string;
   activityShippingNote: string;
@@ -126,9 +127,6 @@ function resultToDraft(result: OrderDetailResult): QuotePdfDraft {
     additionalInfo: [],
     activities: [],
     utensilPackQuantity: "0",
-    activityStartsNewPage: false,
-    notesStartsNewPage: false,
-    signatureStartsNewPage: false,
     showCustomerSignature: false,
     activityShippingFeeId: "",
     activityShippingNote: "運費－滿 $2800 免運費－地面交收",
@@ -167,9 +165,8 @@ function normalizeDraft(value: Partial<QuotePdfDraft> | null | undefined, fallba
       amount: activity.amount?.trim() || "0",
     })),
     utensilPackQuantity: stored.utensilPackQuantity ?? "0",
-    activityStartsNewPage: stored.activityStartsNewPage ?? false,
-    notesStartsNewPage: stored.notesStartsNewPage ?? false,
-    signatureStartsNewPage: stored.signatureStartsNewPage ?? false,
+    // Pagination is calculated from the rendered page. Ignore legacy manual
+    // page-placement preferences so every draft starts in document order.
     showCustomerSignature: stored.showCustomerSignature ?? false,
     activityShippingFeeId: stored.activityShippingFeeId ?? "",
     activityShippingNote:
@@ -198,12 +195,12 @@ function quoteDocumentTitle(quoteNumber: string, isLunchBox: boolean) {
   return "報價";
 }
 
-function QuotePdfPageFooter({ printOnly = false }: { printOnly?: boolean }) {
+function QuotePdfPageFooter({ email, printOnly = false }: { email: string; printOnly?: boolean }) {
   return (
-    <footer className={`quote-pdf-page-footer${printOnly ? " is-print-only" : ""}`}>
+    <footer className={`quote-pdf-page-footer${printOnly ? " is-print-only" : ""}`} data-pdf-auto-footer>
       <span>荃灣華力工業中心5樓D-G室</span>
       <span>(+852) 2185 7373 / 5396 4335</span>
-      <span>sales@foodchannels-catering.com</span>
+      <span>{email}</span>
     </footer>
   );
 }
@@ -241,9 +238,18 @@ export function QuotePdfEditorPage({
   const [shippingFees, setShippingFees] = useState<ShippingFee[]>([]);
   const [pdfPages, setPdfPages] = useState<QuotePdfPage[]>([]);
   const [pdfPagesError, setPdfPagesError] = useState(false);
-  const [sourceBrand, setSourceBrand] = useState<{ channelId: string; name: string; quoteNumber: string }>({ channelId: "", name: "", quoteNumber: "" });
+  const [sourceBrand, setSourceBrand] = useState<{ channelId: string; name: string; email: string; quoteNumber: string }>({ channelId: "", name: "", email: "", quoteNumber: "" });
   const [saved, setSaved] = useState(true);
   const editorRef = useRef<HTMLElement>(null);
+  const paginationBrandKind = getBrandKind(sourceBrand.name, sourceBrand.quoteNumber, draft?.brandName, draft?.quoteNumber);
+  const paginationModuleCount = draft
+    ? 1
+      + Math.max(draft.terms.length, 1)
+      + Math.max(draft.paymentMethods.length, 1)
+      + (paginationBrandKind === "lunch-box" ? 2 : paginationBrandKind === "party-food" ? 1 : 0)
+    : 0;
+  const paginationResetKey = draft ? JSON.stringify([draft, sourceBrand]) : "";
+  const trailingPageBreaks = usePdfAutoPageBreaks(editorRef, paginationModuleCount, paginationResetKey);
 
   const storageKey = quotePdfDraftStorageKey(id);
   const load = useCallback(async () => {
@@ -257,6 +263,7 @@ export function QuotePdfEditorPage({
       setSourceBrand({
         channelId: result.order.channelId || "",
         name: result.order.channelName || "",
+        email: result.order.channelEmail || "",
         quoteNumber: result.order.orderNumber || "",
       });
       setPdfPagesError(false);
@@ -310,32 +317,6 @@ export function QuotePdfEditorPage({
     return () => window.clearTimeout(timer);
   }, [draft, storageKey]);
 
-  useLayoutEffect(() => {
-    if (!draft) return;
-    const frame = window.requestAnimationFrame(() => {
-      const overflowingPage = Array.from(
-        editorRef.current?.querySelectorAll<HTMLElement>(".quote-pdf-sheet") ?? [],
-      ).find((page) => page.scrollHeight > page.clientHeight + 2);
-      if (!overflowingPage) return;
-
-      const moveSignature = !draft.signatureStartsNewPage
-        && Boolean(overflowingPage.querySelector(".quote-pdf-signature"));
-      const moveNotes = !draft.notesStartsNewPage
-        && Boolean(overflowingPage.querySelector(".quote-pdf-notes"));
-      const moveActivity = !draft.activityStartsNewPage
-        && Boolean(overflowingPage.querySelector(".quote-pdf-activity"));
-      if (!moveSignature && !moveNotes && !moveActivity) return;
-
-      setDraft((current) => current ? {
-        ...current,
-        ...(moveSignature ? { signatureStartsNewPage: true } : {}),
-        ...(!moveSignature && moveNotes ? { notesStartsNewPage: true } : {}),
-        ...(!moveSignature && !moveNotes && moveActivity ? { activityStartsNewPage: true } : {}),
-      } : current);
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [draft]);
-
   const printQuotePdf = useCallback(async () => {
     const images = Array.from(
       document.querySelectorAll<HTMLImageElement>(".quote-pdf-insert-page img"),
@@ -386,7 +367,10 @@ export function QuotePdfEditorPage({
 
   const update = <K extends keyof QuotePdfDraft>(key: K, value: QuotePdfDraft[K]) => {
     setSaved(false);
-    setDraft((current) => (current ? { ...current, [key]: value } : current));
+    setDraft((current) => (current ? {
+      ...current,
+      [key]: value,
+    } : current));
   };
 
   const updateLine = (index: number, patch: Partial<EditableLine>) => {
@@ -474,15 +458,13 @@ export function QuotePdfEditorPage({
   }
 
   const brandValues = [sourceBrand.name, sourceBrand.quoteNumber, draft.brandName, draft.quoteNumber];
+  const brandEmail = getBrandContactEmail(sourceBrand.email, ...brandValues);
   const brandLogo = getDocumentLogoPath(...brandValues);
   const brandLogoAlt = getBrandLogoAlt(...brandValues);
   const isLunchBox = getBrandKind(...brandValues) === "lunch-box";
   const documentTitle = quoteDocumentTitle(sourceBrand.quoteNumber || draft.quoteNumber, isLunchBox);
   const canAddAdditionalInfo = isLunchBox || getBrandKind(...brandValues) === "party-food";
   const hasActivities = isLunchBox && draft.activities.length > 0;
-  // Legacy drafts can retain this flag after their final activity is removed.
-  // Treat it as a layout preference only while there is activity content to move.
-  const activityStartsNewPage = hasActivities && draft.activityStartsNewPage;
   const frontPages = pdfPages.filter((page) => page.placement === "front");
   const backPages = pdfPages.filter((page) => page.placement === "back");
   const productLinePages = [draft.lines.slice(0, FIRST_PRODUCT_PAGE_SIZE)];
@@ -490,34 +472,11 @@ export function QuotePdfEditorPage({
     productLinePages.push(draft.lines.slice(index, index + CONTINUATION_PRODUCT_PAGE_SIZE));
   }
   const hasUtensilPackLine = draft.lines.some((line) => (line.description ?? "").replace(/\s/g, "").includes("餐具包"));
-  const notesControls = (
-    <div className="quote-pdf-page-controls quote-pdf-notes-page-controls" aria-label="條款及付款方式分頁控制">
-      <Button variant="outline" disabled={draft.notesStartsNewPage} onClick={() => update("notesStartsNewPage", true)}><ChevronDown />下移一頁</Button>
-      <Button variant="outline" disabled={!draft.notesStartsNewPage} onClick={() => update("notesStartsNewPage", false)}><ChevronUp />上移一頁</Button>
-      <span>{draft.notesStartsNewPage ? "條款及付款方式已移至下一頁" : "條款及付款方式接續在本頁"}</span>
-    </div>
-  );
-  const notesContent = (
-    <section className={`quote-pdf-notes${!draft.terms.length && !draft.paymentMethods.length ? " is-empty" : ""}`}>
-      <section className={`quote-pdf-note-block${!draft.terms.length ? " is-empty" : ""}`}>
-        <button type="button" className="quote-pdf-note-heading" onClick={() => setTermsOpen(true)}>條款及細則：<span className="quote-pdf-edit-only" aria-hidden="true">＋</span></button>
-        <ol>{draft.terms.map((item, index) => <li key={`term-${index}`}><textarea rows={1} aria-label={`條款及細則 ${index + 1}`} value={item} onChange={(event) => update("terms", draft.terms.map((current, itemIndex) => itemIndex === index ? event.target.value : current))} /></li>)}</ol>
-      </section>
-      <section className={`quote-pdf-note-block${!draft.paymentMethods.length ? " is-empty" : ""}`}>
-        <button type="button" className="quote-pdf-note-heading" onClick={() => setPaymentsOpen(true)}>我們提供以下付款方式：<span className="quote-pdf-edit-only" aria-hidden="true">＋</span></button>
-        <ol>{draft.paymentMethods.map((item, index) => <li key={`payment-${index}`}><textarea rows={1} aria-label={`付款方式 ${index + 1}`} value={item} onChange={(event) => update("paymentMethods", draft.paymentMethods.map((current, itemIndex) => itemIndex === index ? event.target.value : current))} /></li>)}</ol>
-      </section>
-    </section>
-  );
-  const signatureControls = (
-    <div className="quote-pdf-page-controls quote-pdf-signature-page-controls" aria-label="客戶簽署分頁控制">
-      <Button variant="outline" disabled={draft.signatureStartsNewPage} onClick={() => update("signatureStartsNewPage", true)}><ChevronDown />下移一頁</Button>
-      <Button variant="outline" disabled={!draft.signatureStartsNewPage} onClick={() => update("signatureStartsNewPage", false)}><ChevronUp />上移一頁</Button>
-      <label className="quote-pdf-customer-signature-toggle">
-        <input type="checkbox" checked={draft.showCustomerSignature} onChange={(event) => update("showCustomerSignature", event.target.checked)} />
-        顯示客戶簽署
-      </label>
-    </div>
+  const signatureToggle = (
+    <label className="quote-pdf-customer-signature-toggle quote-pdf-edit-only">
+      <input type="checkbox" checked={draft.showCustomerSignature} onChange={(event) => update("showCustomerSignature", event.target.checked)} />
+      顯示客戶簽署
+    </label>
   );
   const signatureContent = (
     <section className={`quote-pdf-signature${draft.showCustomerSignature ? " has-customer-signature" : ""}`} aria-label="簽署確認">
@@ -530,7 +489,7 @@ export function QuotePdfEditorPage({
       {draft.showCustomerSignature ? (
         <div className="quote-pdf-signature-party quote-pdf-signature-customer">
           <strong>請仔細閱讀以上內容並簽署確認：</strong>
-          <em>{draft.customerName || "客戶"}</em>
+          <em>{draft.companyName || "公司"}</em>
           <span className="quote-pdf-signature-stamp-spacer" aria-hidden="true" />
           <label><strong>公司蓋印及簽署：</strong><span /></label>
           <label><strong>負責人姓名：</strong><span /></label>
@@ -539,12 +498,9 @@ export function QuotePdfEditorPage({
       ) : null}
     </section>
   );
-  const activityControls = isLunchBox ? (
-    <div className="quote-pdf-page-controls" aria-label="活動報價分頁控制">
-      <Button variant="outline" disabled={!hasActivities || activityStartsNewPage} onClick={() => update("activityStartsNewPage", true)}><ChevronDown />下移一頁</Button>
-      <Button variant="outline" disabled={!activityStartsNewPage} onClick={() => update("activityStartsNewPage", false)}><ChevronUp />上移一頁</Button>
+  const activityActions = isLunchBox ? (
+    <div className="quote-pdf-section-title quote-pdf-edit-only">
       <Button onClick={() => setActivityOpen(true)}><Plus />新增活動項目</Button>
-      <span>{!hasActivities ? "尚未新增活動項目" : activityStartsNewPage ? "活動報價將由下一頁開始" : "活動報價接續在本頁"}</span>
     </div>
   ) : null;
   const activityContent = isLunchBox ? (
@@ -630,21 +586,82 @@ export function QuotePdfEditorPage({
       </table>
     </div>
   );
-  const trailingQuoteContent = (
-    <>
-      {canAddAdditionalInfo ? <section className={`quote-pdf-additional${draft.additionalInfo.length ? "" : " is-empty"}`} aria-label="額外資訊">
+  const trailingQuoteUnits: QuoteTrailingUnit[] = [
+    ...(canAddAdditionalInfo ? [{ kind: "node" as const, key: "additional", node: <section className={`quote-pdf-additional${draft.additionalInfo.length ? "" : " is-empty"}`} aria-label="額外資訊">
         <div className="quote-pdf-section-title"><Button size="sm" onClick={() => setAdditionalOpen(true)}><Plus />新增額外資訊</Button></div>
         {draft.additionalInfo.length ? <ol>
           {draft.additionalInfo.map((item, index) => (
             <li key={`${item}-${index}`}><textarea aria-label={`額外資訊 ${index + 1}`} value={item} rows={1} onChange={(event) => update("additionalInfo", draft.additionalInfo.map((current, itemIndex) => itemIndex === index ? event.target.value : current))} /><button type="button" aria-label={`刪除額外資訊 ${index + 1}`} onClick={() => update("additionalInfo", draft.additionalInfo.filter((_, itemIndex) => itemIndex !== index))}><Minus /></button></li>
           ))}
         </ol> : null}
-      </section> : null}
-      {isLunchBox && !activityStartsNewPage ? <>{activityControls}{activityContent}</> : null}
-      {!activityStartsNewPage && !draft.notesStartsNewPage ? <>{notesControls}{notesContent}</> : null}
-      {!activityStartsNewPage && !draft.notesStartsNewPage && !draft.signatureStartsNewPage ? <>{signatureControls}{signatureContent}</> : null}
-    </>
-  );
+      </section> }] : []),
+    ...(isLunchBox ? [{ kind: "node" as const, key: "activity", node: <div>{activityActions}{activityContent}</div> }] : []),
+    ...(draft.terms.length
+      ? draft.terms.map((_, itemIndex) => ({ kind: "term" as const, itemIndex }))
+      : [{ kind: "term" as const, itemIndex: null }]),
+    ...(draft.paymentMethods.length
+      ? draft.paymentMethods.map((_, itemIndex) => ({ kind: "payment" as const, itemIndex }))
+      : [{ kind: "payment" as const, itemIndex: null }]),
+    { kind: "node", key: "signature", node: <div>{signatureToggle}{signatureContent}</div> },
+  ];
+  const trailingModulePages = splitPdfModuleIndexes(trailingQuoteUnits.length, trailingPageBreaks);
+  const renderTrailingModules = (indexes: number[]) => {
+    const rendered: ReactNode[] = [];
+    for (let cursor = 0; cursor < indexes.length;) {
+      const moduleIndex = indexes[cursor];
+      const unit = trailingQuoteUnits[moduleIndex];
+      if (unit.kind === "node") {
+        rendered.push(
+          <div className="quote-pdf-auto-module" data-pdf-auto-module-index={moduleIndex} key={unit.key}>
+            {unit.node}
+          </div>,
+        );
+        cursor += 1;
+        continue;
+      }
+
+      const kind = unit.kind;
+      const run: Array<{ moduleIndex: number; itemIndex: number | null }> = [];
+      while (cursor < indexes.length) {
+        const nextModuleIndex = indexes[cursor];
+        const nextUnit = trailingQuoteUnits[nextModuleIndex];
+        if (nextUnit.kind !== kind) break;
+        run.push({ moduleIndex: nextModuleIndex, itemIndex: nextUnit.itemIndex });
+        cursor += 1;
+      }
+      const isTerm = kind === "term";
+      const isEmpty = run.every((item) => item.itemIndex === null);
+      const firstItemIndex = run.find((item) => item.itemIndex !== null)?.itemIndex ?? 0;
+      rendered.push(
+        <section className={`quote-pdf-notes${isEmpty ? " is-empty" : ""}`} key={`${kind}-${moduleIndex}`}>
+          <section
+            className={`quote-pdf-note-block${isEmpty ? " is-empty" : ""}`}
+            {...(isEmpty ? { "data-pdf-auto-module-index": moduleIndex } : {})}
+          >
+            <button type="button" className="quote-pdf-note-heading" onClick={() => isTerm ? setTermsOpen(true) : setPaymentsOpen(true)}>
+              {isTerm ? "條款及細則：" : "我們提供以下付款方式："}<span className="quote-pdf-edit-only" aria-hidden="true">＋</span>
+            </button>
+            <ol style={{ counterReset: `quote-note ${firstItemIndex}` }}>
+              {run.map((item) => item.itemIndex === null ? null : (
+                <li data-pdf-auto-module-index={item.moduleIndex} key={`${kind}-${item.itemIndex}`}>
+                  <textarea
+                    rows={1}
+                    aria-label={`${isTerm ? "條款及細則" : "付款方式"} ${item.itemIndex + 1}`}
+                    value={isTerm ? draft.terms[item.itemIndex] : draft.paymentMethods[item.itemIndex]}
+                    onChange={(event) => {
+                      if (isTerm) update("terms", draft.terms.map((current, itemIndex) => itemIndex === item.itemIndex ? event.target.value : current));
+                      else update("paymentMethods", draft.paymentMethods.map((current, itemIndex) => itemIndex === item.itemIndex ? event.target.value : current));
+                    }}
+                  />
+                </li>
+              ))}
+            </ol>
+          </section>
+        </section>,
+      );
+    }
+    return rendered;
+  };
 
   return (
     <section ref={editorRef} className={`quote-pdf-editor${backPages.length ? " has-back-pages" : ""}`}>
@@ -667,7 +684,7 @@ export function QuotePdfEditorPage({
         </main>
       ))}
 
-      <main className="quote-pdf-sheet">
+      <main className="quote-pdf-sheet" data-pdf-auto-page={productLinePages.length === 1 ? "products" : undefined}>
         <header className="quote-pdf-letterhead">
           <img src={brandLogo} alt={brandLogoAlt} />
           <div>
@@ -690,52 +707,35 @@ export function QuotePdfEditorPage({
         </div>
 
         {renderProductTable(productLinePages[0], 0, productLinePages.length === 1)}
-        {productLinePages.length === 1 ? trailingQuoteContent : null}
-        <QuotePdfPageFooter />
+        {productLinePages.length === 1 ? renderTrailingModules(trailingModulePages[0] ?? []) : null}
+        <QuotePdfPageFooter email={brandEmail} />
       </main>
 
       {productLinePages.slice(1).map((lines, pageIndex) => {
         const isFinalProductPage = pageIndex === productLinePages.length - 2;
         const offset = FIRST_PRODUCT_PAGE_SIZE + pageIndex * CONTINUATION_PRODUCT_PAGE_SIZE;
         return (
-          <main className="quote-pdf-sheet quote-pdf-sheet-continuation quote-pdf-product-continuation" aria-label={`PDF 第 ${pageIndex + 2} 頁`} key={`products-${pageIndex}`}>
+          <main className="quote-pdf-sheet quote-pdf-sheet-continuation quote-pdf-product-continuation" data-pdf-auto-page={isFinalProductPage ? "products" : undefined} aria-label={`PDF 第 ${pageIndex + 2} 頁`} key={`products-${pageIndex}`}>
             {continuationLetterhead}
             {renderProductTable(lines, offset, isFinalProductPage)}
-            {isFinalProductPage ? trailingQuoteContent : null}
-            <QuotePdfPageFooter />
+            {isFinalProductPage ? renderTrailingModules(trailingModulePages[0] ?? []) : null}
+            <QuotePdfPageFooter email={brandEmail} />
           </main>
         );
       })}
 
-      {activityStartsNewPage ? (
-        <main className="quote-pdf-sheet quote-pdf-sheet-continuation" aria-label={`PDF 第 ${productLinePages.length + 1} 頁`}>
+      {trailingModulePages.slice(1).map((moduleIndexes, pageIndex) => (
+        <main
+          className="quote-pdf-sheet quote-pdf-sheet-continuation quote-pdf-auto-continuation"
+          data-pdf-auto-page="modules"
+          aria-label={`PDF 第 ${productLinePages.length + pageIndex + 1} 頁`}
+          key={`trailing-page-${pageIndex}`}
+        >
           {continuationLetterhead}
-          {activityControls}
-          {activityContent}
-          {!draft.notesStartsNewPage ? <>{notesControls}{notesContent}</> : null}
-          {!draft.notesStartsNewPage && !draft.signatureStartsNewPage ? <>{signatureControls}{signatureContent}</> : null}
-          <QuotePdfPageFooter />
+          {renderTrailingModules(moduleIndexes)}
+          <QuotePdfPageFooter email={brandEmail} />
         </main>
-      ) : null}
-
-      {draft.notesStartsNewPage ? (
-        <main className="quote-pdf-sheet quote-pdf-sheet-continuation" aria-label={`PDF 第 ${productLinePages.length + 1 + Number(activityStartsNewPage)} 頁`}>
-          {continuationLetterhead}
-          {notesControls}
-          {notesContent}
-          {!draft.signatureStartsNewPage ? <>{signatureControls}{signatureContent}</> : null}
-          <QuotePdfPageFooter />
-        </main>
-      ) : null}
-
-      {draft.signatureStartsNewPage ? (
-        <main className="quote-pdf-sheet quote-pdf-sheet-continuation" aria-label={`PDF 第 ${productLinePages.length + 1 + Number(activityStartsNewPage) + Number(draft.notesStartsNewPage)} 頁`}>
-          {continuationLetterhead}
-          {signatureControls}
-          {signatureContent}
-          <QuotePdfPageFooter />
-        </main>
-      ) : null}
+      ))}
 
       {backPages.map((page, index) => (
         <main
@@ -747,7 +747,7 @@ export function QuotePdfEditorPage({
         </main>
       ))}
 
-      <QuotePdfPageFooter printOnly />
+      <QuotePdfPageFooter email={brandEmail} printOnly />
 
       {canAddAdditionalInfo ? <Modal open={additionalOpen} onClose={() => setAdditionalOpen(false)} title="額外資訊" closeLabel="關閉額外資訊" size="lg" footer={<Button onClick={() => setAdditionalOpen(false)}>確定</Button>}>
         <div className="quote-additional-picker">

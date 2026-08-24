@@ -67,6 +67,12 @@ export type NavItem = {
 
 export const primaryNav: NavItem[] = [
   { key: "overview", to: "/", icon: LayoutDashboard },
+  {
+    key: "followUp",
+    to: "/follow-up",
+    icon: ClipboardCheck,
+    permissionKey: "overview.follow_up",
+  },
   { key: "orders", to: "/orders", icon: ClipboardList },
   { key: "quotes", to: "/quotes", icon: FileText },
   { key: "products", to: "/products", icon: ShoppingBasket },
@@ -86,12 +92,6 @@ export const primaryNav: NavItem[] = [
 export const secondaryNav: Record<string, NavItem[]> = {
   overview: [
     { key: "overview", to: "/", icon: LayoutDashboard, permissionKey: "overview" },
-    {
-      key: "followUp",
-      to: "/follow-up",
-      icon: ClipboardCheck,
-      permissionKey: "overview.follow_up",
-    },
     { key: "orders", to: "/orders", icon: ClipboardList, permissionKey: "orders" },
     { key: "quotes", to: "/quotes", icon: FileText, permissionKey: "quotes" },
     {
@@ -99,6 +99,14 @@ export const secondaryNav: Record<string, NavItem[]> = {
       to: "/delivery",
       icon: Truck,
       permissionKey: "delivery",
+    },
+  ],
+  followUp: [
+    {
+      key: "followUp",
+      to: "/follow-up",
+      icon: ClipboardCheck,
+      permissionKey: "overview.follow_up",
     },
   ],
   orders: [
@@ -551,7 +559,6 @@ export const secondaryNav: Record<string, NavItem[]> = {
 };
 
 export const SECTION_CHILD_KEYS: Record<string, string[]> = {
-  overview: ["overview.follow_up"],
   orders: [
     "orders.new",
     "orders.pending",
@@ -648,7 +655,8 @@ export const workspaceLinks: Array<{
 
 export function sectionFromPath(pathname: string) {
   const segment = pathname.split("/")[1] ?? "";
-  if (segment === "follow-up" || segment === "inventory") return "overview";
+  if (segment === "follow-up") return "followUp";
+  if (segment === "inventory") return "overview";
   if (segment === "finance") return "reports";
   if (secondaryNav[segment]) return segment;
   // Exact home only — do not light 主頁 for profile/migration/unknown paths.

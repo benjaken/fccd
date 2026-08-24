@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { emptyOrderDraft, orderDraftTotals, orderPaymentStatus } from "@/lib/order-editor";
+import { clearOrderCustomerInfo, emptyOrderDraft, orderDraftTotals, orderPaymentStatus } from "@/lib/order-editor";
 import { normalizeDoNotSendToFactory } from "@/lib/order-factory-settings";
 
 describe("order factory settings", () => {
@@ -62,6 +62,48 @@ describe("order editor totals", () => {
     ];
 
     expect(orderDraftTotals(draft)).toMatchObject({ total: 0, outstanding: 0 });
+  });
+});
+
+describe("clear order customer info", () => {
+  it("clears customer identity and contact fields while preserving order contents", () => {
+    const draft = emptyOrderDraft();
+    Object.assign(draft, {
+      channelId: "lunch-box",
+      customerName: "陳小姐",
+      companyName: "測試公司",
+      contactA: "91234567",
+      contactB: "92345678",
+      email: "customer@example.com",
+      address: "九龍送貨地址",
+      customerNote: "到達前致電",
+      deliveryAt: "2026-08-25T12:00",
+    });
+    draft.lines = [{
+      id: "line-1",
+      productId: "product-1",
+      packageId: null,
+      sku: "LB-1",
+      name: "試食飯盒",
+      remarks: "不要辣",
+      quantity: 2,
+      unitPrice: 50,
+    }];
+
+    const cleared = clearOrderCustomerInfo(draft);
+
+    expect(cleared).toMatchObject({
+      customerName: "",
+      companyName: "",
+      contactA: "",
+      contactB: "",
+      email: "",
+      address: "",
+      customerNote: "",
+      channelId: "lunch-box",
+      deliveryAt: "2026-08-25T12:00",
+    });
+    expect(cleared.lines).toEqual(draft.lines);
   });
 });
 

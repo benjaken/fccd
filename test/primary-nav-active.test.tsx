@@ -48,7 +48,7 @@ describe("Primary navigation section matching", () => {
   );
   it.each([
     ["/", "overview"],
-    ["/follow-up", "overview"],
+    ["/follow-up", "followUp"],
     ["/inventory", "overview"],
     ["/orders", "orders"],
     ["/orders/pending", "orders"],
@@ -129,6 +129,10 @@ describe("Primary navigation section matching", () => {
     expect(isPrimaryNavActive("orders", "settings", false)).toBe(false);
     expect(isPrimaryNavActive("", "overview", false)).toBe(false);
     expect(isPrimaryNavActive("overview", "overview", true)).toBe(true);
+    expect(primaryNav.find((item) => item.key === "followUp")).toMatchObject({
+      to: "/follow-up",
+      permissionKey: "overview.follow_up",
+    });
     expect(primaryNav.find((item) => item.key === "restaurant")?.to).toBe(
       "/restaurant/daily-sales",
     );

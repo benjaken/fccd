@@ -27,8 +27,11 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { Button } from "@/components/ui/button";
 import { OrderFactorySettingsControls } from "@/components/order-factory-settings-controls";
 import { Modal } from "@/components/ui/modal";
-import { MultiSelect } from "@/components/ui/multi-select";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
+import {
+  fetchPackageDetail,
+  type PackageChoiceSet,
+} from "@/lib/packages";
 import {
   addQuoteLine,
   addQuoteUtensilLine,
@@ -55,6 +58,8 @@ import {
   type QuoteFinancials,
   type QuoteLine,
   type QuotePayment,
+  type QuotePackageChoiceGroup,
+  type QuotePackageChoiceSelection,
 } from "@/lib/quote-editor";
 import { cn } from "@/lib/utils";
 import {
@@ -71,6 +76,7 @@ import {
   type OrderFactorySettings,
 } from "@/lib/order-factory-settings";
 import { DICT_TYPE, dictItemLabel, useDictItems } from "@/lib/dictionaries";
+import { useMediaQuery } from "@/lib/use-media-query";
 
 const loadConfiguredShippingFees = async () => (await fetchShippingFees(1, 1000)).rows;
 
@@ -94,6 +100,30 @@ function automaticDistrictForMethod(name: string) {
   return null;
 }
 
+function requiredPackageChoiceCount(choiceSet: PackageChoiceSet) {
+  if (!choiceSet.products.length) return 0;
+  const configured = Math.floor(choiceSet.maximumChoices ?? 1);
+  return Math.min(choiceSet.products.length, Math.max(1, configured));
+}
+
+function PackageChoiceGroups({ groups }: { groups?: QuotePackageChoiceGroup[] }) {
+  if (!groups?.length) return null;
+  return (
+    <ul className="quote-line-package-choices">
+      {groups.map((group) => (
+        <li key={group.choiceSetId}>
+          {group.choiceSetName ? <small>{group.choiceSetName}</small> : null}
+          <span>
+            {group.products.map((product) => (
+              <em key={product.packageProductId}>{product.name}</em>
+            ))}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function hongKongToday() {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Hong_Kong",
@@ -109,6 +139,7 @@ function emptyDraft(): QuoteDraft {
     quoteStatus: "",
     quoteSalesSourceId: "",
     quoteCommunicationChannelId: "",
+    followUpDate: "",
     customerName: "",
     companyName: "",
     contactA: "",
@@ -180,6 +211,7 @@ type Props = {
   loadLines?: typeof fetchQuoteLines;
   searchCatalog?: typeof searchQuoteCatalog;
   saveLine?: typeof addQuoteLine;
+  loadPackageDetail?: typeof fetchPackageDetail;
   deleteLine?: typeof removeQuoteLine;
   saveDetails?: typeof updateQuote;
   saveExistingLine?: typeof updateQuoteLine;
@@ -196,7 +228,6 @@ type Props = {
 };
 
 export function QuoteEditorPage({
-  combined = false,
   readOnly = false,
   documentType = "quote",
   canEdit = false,
@@ -206,6 +237,7 @@ export function QuoteEditorPage({
   loadLines = fetchQuoteLines,
   searchCatalog = searchQuoteCatalog,
   saveLine = addQuoteLine,
+  loadPackageDetail = fetchPackageDetail,
   deleteLine = removeQuoteLine,
   saveDetails = updateQuote,
   saveExistingLine = updateQuoteLine,
@@ -260,6 +292,14 @@ export function QuoteEditorPage({
   const [deliveryTimeMode, setDeliveryTimeMode] = useState("");
   const [searching, setSearching] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [packageChoiceOpen, setPackageChoiceOpen] = useState(false);
+  const [packageChoiceSets, setPackageChoiceSets] = useState<PackageChoiceSet[]>([]);
+  const [packageSelections, setPackageSelections] = useState<Record<string, string[]>>({});
+  const [pendingPackageLine, setPendingPackageLine] = useState<Parameters<typeof addQuoteLine>[0] | null>(null);
+  const [packageChoiceError, setPackageChoiceError] = useState(false);
+  const [customProductOpen, setCustomProductOpen] = useState(false);
+  const [customProductName, setCustomProductName] = useState("");
+  const [customProductPrice, setCustomProductPrice] = useState("");
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [savingLineId, setSavingLineId] = useState<string | null>(null);
   const [draggedLineId, setDraggedLineId] = useState<string | null>(null);
@@ -277,6 +317,7 @@ export function QuoteEditorPage({
   const [shippingFees, setShippingFees] = useState<ShippingFee[]>([]);
   const [shippingFeeId, setShippingFeeId] = useState("");
   const [activeTab, setActiveTab] = useState<"details" | "items" | "payments">("details");
+  const isMobileEditor = useMediaQuery("(max-width: 760px)");
   const [payments, setPayments] = useState<QuotePayment[]>([]);
   const [completing, setCompleting] = useState(false);
   const [completionError, setCompletionError] = useState<"save" | "send" | null>(null);
@@ -373,6 +414,7 @@ export function QuoteEditorPage({
                   quoteStatus: "",
                   quoteSalesSourceId: "",
                   quoteCommunicationChannelId: "",
+                  followUpDate: "",
                   deliveryTime: "",
                   shipOutTime: "",
                 }
@@ -513,6 +555,38 @@ export function QuoteEditorPage({
     return Object.keys(nextErrors).length === 0;
   };
 
+  const flushPendingLines = async (orderId: string) => {
+    const pendingLines = lines.filter(
+      (line): line is QuoteLine & { pendingItem: QuoteCatalogItem } =>
+        Boolean(line.isPending && line.pendingItem),
+    );
+    if (!pendingLines.length) return;
+
+    const savedIds = new Set<string>();
+    try {
+      for (const line of pendingLines) {
+        await saveLine({
+          orderId,
+          item: line.pendingItem,
+          quantity: line.quantity,
+          unitPrice: line.unitPrice,
+          remarks: line.remarks || "",
+          packageChoices: line.pendingPackageChoices ?? [],
+        });
+        savedIds.add(line.id);
+      }
+      setLines(await loadLines(orderId));
+    } catch (cause) {
+      const remainingDrafts = pendingLines.filter((line) => !savedIds.has(line.id));
+      try {
+        setLines([...(await loadLines(orderId)), ...remainingDrafts]);
+      } catch {
+        setLines((current) => current.filter((line) => !savedIds.has(line.id)));
+      }
+      throw cause;
+    }
+  };
+
   const submitHeader = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!validateDetails()) return;
@@ -522,6 +596,7 @@ export function QuoteEditorPage({
     try {
       if (activeQuote) {
         await saveCurrentDetails(activeQuote.id);
+        await flushPendingLines(activeQuote.id);
         setChannelId(draft.channelId);
       } else {
         const quote = copyFrom
@@ -551,6 +626,7 @@ export function QuoteEditorPage({
     setConversionError(false);
     try {
       await saveCurrentDetails(activeQuote.id);
+      await flushPendingLines(activeQuote.id);
       await saveFinancialDetails(activeQuote.id, financialValues);
       const order = await convertQuote(activeQuote.id);
       navigate(`/orders/${order.id}`);
@@ -566,6 +642,7 @@ export function QuoteEditorPage({
     setSendingConfirmation(true);
     setConfirmationSendError(false);
     try {
+      await flushPendingLines(activeQuote.id);
       await sendConfirmation(activeQuote.id);
     } catch {
       setConfirmationSendError(true);
@@ -576,7 +653,11 @@ export function QuoteEditorPage({
 
   const refreshLines = useCallback(async () => {
     if (!activeQuote) return;
-    setLines(await loadLines(activeQuote.id));
+    const savedLines = await loadLines(activeQuote.id);
+    setLines((current) => [
+      ...savedLines,
+      ...current.filter((line) => line.isPending),
+    ]);
   }, [activeQuote, loadLines]);
 
   const selectCatalogItem = (item: QuoteCatalogItem) => {
@@ -584,6 +665,73 @@ export function QuoteEditorPage({
     setCatalogSearch(`${item.sku ? `${item.sku} · ` : ""}${item.name}`);
     setUnitPrice(item.price === null ? "" : String(item.price));
     setCatalogResults([]);
+  };
+
+  const resetLineDraft = () => {
+    setCatalogSearch("");
+    setSelectedItem(null);
+    setQuantity("1");
+    setUnitPrice("");
+    setLineRemarks("");
+  };
+
+  const stageLine = (
+    input: Parameters<typeof addQuoteLine>[0],
+    packageChoices: QuotePackageChoiceSelection[] = [],
+    packageChoiceGroups: QuotePackageChoiceGroup[] = [],
+  ) => {
+    setError(null);
+    setPackageChoiceError(false);
+    setLines((current) => [...current, {
+      id: `draft-${crypto.randomUUID()}`,
+      productId: input.item.kind === "product" ? input.item.id : null,
+      packageId: input.item.kind === "package" ? input.item.id : null,
+      sku: input.item.sku,
+      name: input.item.name,
+      quantity: input.quantity,
+      unitPrice: input.unitPrice,
+      totalPrice: input.quantity * input.unitPrice,
+      remarks: input.remarks.trim() || null,
+      packageChoiceGroups,
+      isPending: true,
+      pendingItem: input.item,
+      pendingPackageChoices: packageChoices,
+    }]);
+    resetLineDraft();
+    setPackageChoiceOpen(false);
+    setPackageChoiceSets([]);
+    setPackageSelections({});
+    setPendingPackageLine(null);
+  };
+
+  const closeCustomProductModal = () => {
+    setCustomProductOpen(false);
+    setCustomProductName("");
+    setCustomProductPrice("");
+  };
+
+  const customProductPriceValue = Number(customProductPrice);
+  const customProductValid = Boolean(customProductName.trim())
+    && Number.isFinite(customProductPriceValue)
+    && customProductPriceValue >= 0;
+
+  const addCustomProduct = () => {
+    if (!activeQuote || !customProductValid) return;
+    const name = customProductName.trim();
+    stageLine({
+      orderId: activeQuote.id,
+      item: {
+        id: `custom-${crypto.randomUUID()}`,
+        kind: "custom",
+        sku: null,
+        name,
+        price: customProductPriceValue,
+      },
+      quantity: 1,
+      unitPrice: customProductPriceValue,
+      remarks: "",
+    });
+    closeCustomProductModal();
   };
 
   const submitLine = async (event: FormEvent<HTMLFormElement>) => {
@@ -595,30 +743,103 @@ export function QuoteEditorPage({
       setError("quote_line_invalid");
       return;
     }
-    setAdding(true);
-    setError(null);
-    try {
-      await saveLine({
-        orderId: activeQuote.id,
-        item: selectedItem,
-        quantity: parsedQuantity,
-        unitPrice: parsedPrice,
-        remarks: lineRemarks,
-      });
-      await refreshLines();
-      setCatalogSearch("");
-      setSelectedItem(null);
-      setQuantity("1");
-      setUnitPrice("");
-      setLineRemarks("");
-    } catch {
-      setError("quote_line_save_failed");
-    } finally {
-      setAdding(false);
+    const input = {
+      orderId: activeQuote.id,
+      item: selectedItem,
+      quantity: parsedQuantity,
+      unitPrice: parsedPrice,
+      remarks: lineRemarks,
+    };
+    if (selectedItem.kind === "package") {
+      setAdding(true);
+      setError(null);
+      try {
+        const detail = await loadPackageDetail(selectedItem.id);
+        if (!detail) throw new Error("package_not_found");
+        const choiceSets = detail.choiceSets.filter(
+          (choiceSet) => requiredPackageChoiceCount(choiceSet) > 0,
+        );
+        if (choiceSets.length) {
+          setPendingPackageLine(input);
+          setPackageChoiceSets(choiceSets);
+          setPackageSelections(Object.fromEntries(choiceSets.map((choiceSet) => {
+            const required = requiredPackageChoiceCount(choiceSet);
+            return [
+              choiceSet.id,
+              choiceSet.products
+                .filter((product) => product.isSelected)
+                .slice(0, required)
+                .map((product) => product.id),
+            ];
+          })));
+          setPackageChoiceError(false);
+          setPackageChoiceOpen(true);
+          return;
+        }
+      } catch {
+        setError("quote_line_save_failed");
+        return;
+      } finally {
+        setAdding(false);
+      }
     }
+    stageLine(input);
+  };
+
+  const packageChoicesComplete = packageChoiceSets.every(
+    (choiceSet) =>
+      (packageSelections[choiceSet.id]?.length ?? 0) === requiredPackageChoiceCount(choiceSet),
+  );
+
+  const togglePackageChoice = (choiceSet: PackageChoiceSet, packageProductId: string) => {
+    const required = requiredPackageChoiceCount(choiceSet);
+    setPackageSelections((current) => {
+      const selected = current[choiceSet.id] ?? [];
+      const next = selected.includes(packageProductId)
+        ? selected.filter((id) => id !== packageProductId)
+        : selected.length < required
+          ? [...selected, packageProductId]
+          : selected;
+      return { ...current, [choiceSet.id]: next };
+    });
+  };
+
+  const confirmPackageChoices = () => {
+    if (!pendingPackageLine || !packageChoicesComplete) return;
+    stageLine(
+      pendingPackageLine,
+      packageChoiceSets.map((choiceSet) => ({
+        choiceSetId: choiceSet.id,
+        packageProductIds: packageSelections[choiceSet.id] ?? [],
+      })),
+      packageChoiceSets.map((choiceSet) => ({
+        choiceSetId: choiceSet.id,
+        choiceSetName: choiceSet.name,
+        products: (packageSelections[choiceSet.id] ?? []).map((packageProductId) => {
+          const product = choiceSet.products.find((item) => item.id === packageProductId);
+          return {
+            packageProductId,
+            name: product?.productChineseName || product?.productName || product?.productSku || "-",
+          };
+        }),
+      })),
+    );
+  };
+
+  const closePackageChoiceModal = () => {
+    if (adding) return;
+    setPackageChoiceOpen(false);
+    setPackageChoiceSets([]);
+    setPackageSelections({});
+    setPendingPackageLine(null);
+    setPackageChoiceError(false);
   };
 
   const removeLine = async (lineId: string) => {
+    if (lines.some((line) => line.id === lineId && line.isPending)) {
+      setLines((current) => current.filter((line) => line.id !== lineId));
+      return;
+    }
     setRemovingId(lineId);
     setError(null);
     try {
@@ -644,6 +865,7 @@ export function QuoteEditorPage({
       setError("quote_line_invalid");
       return;
     }
+    if (line.isPending) return;
     setSavingLineId(line.id);
     setError(null);
     try {
@@ -668,6 +890,7 @@ export function QuoteEditorPage({
     setLines(nextLines);
     setDraggedLineId(null);
     setDragOverLineId(null);
+    if (nextLines.some((line) => line.isPending)) return;
     setReordering(true);
     setError(null);
     try {
@@ -831,7 +1054,96 @@ export function QuoteEditorPage({
           </>
         }
       />
-    ) : null;
+      ) : null;
+
+  type EditorSection = "details" | "items" | "payments";
+  const sectionId = (section: EditorSection) =>
+    `quote-editor-${readOnly ? "readonly" : "editable"}-${section}`;
+  const scrollToSection = (section: EditorSection) => {
+    setActiveTab(section);
+    document.getElementById(sectionId(section))?.scrollIntoView?.({
+      behavior: "smooth",
+      block: "start",
+    });
+  };
+
+  const moveLine = async (lineId: string, direction: -1 | 1) => {
+    if (reordering) return;
+    const sourceIndex = lines.findIndex((line) => line.id === lineId);
+    const targetIndex = sourceIndex + direction;
+    if (sourceIndex < 0 || targetIndex < 0 || targetIndex >= lines.length) return;
+    const previousLines = lines;
+    const nextLines = [...previousLines];
+    const [movedLine] = nextLines.splice(sourceIndex, 1);
+    nextLines.splice(targetIndex, 0, movedLine);
+    setLines(nextLines);
+    if (nextLines.some((line) => line.isPending)) return;
+    setReordering(true);
+    setError(null);
+    try {
+      await saveLineOrder(nextLines.map((line) => line.id));
+    } catch {
+      setLines(previousLines);
+      setError("quote_line_save_failed");
+    } finally {
+      setReordering(false);
+    }
+  };
+  const sectionNavigation = (
+    <nav
+      className="quote-editor-tabs quote-editor-section-navigation"
+      aria-label={t(isOrder ? "quoteEditor.orderStepLabel" : "quoteEditor.steps.label")}
+      role="tablist"
+    >
+      <button
+        type="button"
+        role="tab"
+        aria-label={t(isOrder ? "quoteEditor.orderDetailsStep" : "quoteEditor.steps.details")}
+        aria-controls={sectionId("details")}
+        aria-selected={activeTab === "details"}
+        className={cn(activeTab === "details" && "is-active")}
+        onClick={() => scrollToSection("details")}
+      >
+        <span><FileText /></span>
+        <div>
+          <small>{t("quoteEditor.steps.number", { number: 1 })}</small>
+          <strong>{t(isOrder ? "quoteEditor.orderDetailsStep" : "quoteEditor.steps.details")}</strong>
+        </div>
+      </button>
+      <button
+        type="button"
+        role="tab"
+        aria-label={t("quoteEditor.steps.items")}
+        aria-controls={sectionId("items")}
+        aria-selected={activeTab === "items"}
+        disabled={!activeQuote}
+        className={cn(activeTab === "items" && "is-active")}
+        onClick={() => scrollToSection("items")}
+      >
+        <span><PackagePlus /></span>
+        <div>
+          <small>{t("quoteEditor.steps.number", { number: 2 })}</small>
+          <strong>{t("quoteEditor.steps.items")}</strong>
+        </div>
+      </button>
+      <button
+        type="button"
+        role="tab"
+        aria-label={t("quoteEditor.steps.payments")}
+        aria-controls={sectionId("payments")}
+        aria-selected={activeTab === "payments"}
+        disabled={!activeQuote}
+        className={cn(activeTab === "payments" && "is-active")}
+        onClick={() => scrollToSection("payments")}
+      >
+        <span><CreditCard /></span>
+        <div>
+          <small>{t("quoteEditor.steps.number", { number: 3 })}</small>
+          <strong>{t("quoteEditor.steps.payments")}</strong>
+        </div>
+      </button>
+    </nav>
+  );
 
   const factoryValidationModal = (
     <Modal
@@ -864,6 +1176,7 @@ export function QuoteEditorPage({
     setCompletionError(null);
     try {
       await saveCurrentDetails(activeQuote.id);
+      await flushPendingLines(activeQuote.id);
       await saveFinancialDetails(activeQuote.id, financialValues);
       if (isOrder) await savePayments(activeQuote.id, activeQuote.orderNumber, draft.channelId, payments, "order");
       else await savePayments(activeQuote.id, activeQuote.orderNumber, draft.channelId, payments);
@@ -972,7 +1285,12 @@ export function QuoteEditorPage({
           <p className="quote-editor-error" role="alert">{t("quoteEditor.factoryStatus.error")}</p>
         ) : null}
 
-        <section className="panel quote-editor-form quote-editor-readonly-form">
+        {sectionNavigation}
+
+        <section
+          id={sectionId("details")}
+          className="panel quote-editor-form quote-editor-readonly-form quote-editor-scroll-section"
+        >
           <div className="quote-editor-form-column">
             <h2><FileText />{t("quoteEditor.customerSection")}</h2>
             <ReadonlyField label={t("quoteEditor.fields.number")} value={activeQuote.orderNumber} />
@@ -983,7 +1301,6 @@ export function QuoteEditorPage({
             <ReadonlyField label={t("quoteEditor.fields.contactB")} value={draft.contactB} />
             <ReadonlyField label={t("quoteEditor.fields.email")} value={draft.email} />
             <ReadonlyField label={t("quoteEditor.fields.asanaLink")} value={draft.asanaLink} />
-            {isOrder ? <ReadonlyField label={t("quoteEditor.fields.customerMatters")} value={draft.customerNote} /> : null}
             {showDeliveryAddress ? <ReadonlyField label={t("quoteEditor.fields.address")} value={draft.address} /> : null}
             <div className="quote-readonly-field">
               <span>{t("quoteEditor.fields.tags")}</span>
@@ -1002,23 +1319,27 @@ export function QuoteEditorPage({
             <ReadonlyField label={t("quoteEditor.fields.deliveryDate")} value={displayDate(draft.deliveryDate)} />
             <ReadonlyField label={t("quoteEditor.fields.deliveryTime")} value={draft.deliveryTime} />
             <ReadonlyField label={t("quoteEditor.fields.shipOutTime")} value={draft.shipOutTime} />
-            {!isOrder ? <ReadonlyField label={t("quoteEditor.fields.customerNote")} hint={t("quoteEditor.fields.customerNoteHint")} value={draft.customerNote} /> : null}
+            <ReadonlyField label={t("quoteEditor.fields.customerNote")} hint={t("quoteEditor.fields.customerNoteHint")} value={draft.customerNote} />
             <ReadonlyField label={t("quoteEditor.fields.packingNote")} hint={t("quoteEditor.fields.packingNoteHint")} value={draft.packingNote} />
             <ReadonlyField label={t("quoteEditor.fields.salesPartner")} value={optionName(options.salesPartners, draft.salesPartnerId)} />
             {!isOrder ? <ReadonlyField label={t("quoteEditor.fields.quoteStatus")} value={draft.quoteStatus} /> : null}
+            {!isOrder ? <ReadonlyField label={t("quoteEditor.fields.followUpDate")} value={displayDate(draft.followUpDate)} /> : null}
             {!isOrder ? <ReadonlyField label={t("quoteEditor.fields.quoteSalesSource")} value={optionName(options.quoteSalesSources, draft.quoteSalesSourceId)} /> : null}
             {!isOrder ? <ReadonlyField label={t("quoteEditor.fields.quoteCommunicationChannel")} value={optionName(options.quoteCommunicationChannels, draft.quoteCommunicationChannelId)} /> : null}
             <ReadonlyField label={t("quoteEditor.fields.internalNote")} hint={t("quoteEditor.fields.internalNoteHint")} value={draft.internalNote} />
           </div>
         </section>
 
-        <article className="panel quote-lines-panel quote-lines-readonly-panel">
+        <article
+          id={sectionId("items")}
+          className="panel quote-lines-panel quote-lines-readonly-panel quote-editor-scroll-section"
+        >
           <header><div><span className="eyebrow">{t(isOrder ? "quoteEditor.orderSummaryEyebrow" : "quoteEditor.items.summaryEyebrow")}</span><h2>{t("quoteEditor.items.summaryTitle")}</h2></div><strong>{money.format(total)}</strong></header>
           <div className="table-wrap"><table><thead><tr><th>{t("quoteEditor.items.sequence")}</th><th>{t("quoteEditor.items.sku")}</th><th>{t("quoteEditor.items.product")}</th><th>{t("quoteEditor.items.quantity")}</th><th>{t("quoteEditor.items.unitPrice")}</th><th>{t("quoteEditor.items.subtotal")}</th></tr></thead><tbody>
             {lines.map((line, index) => <tr key={line.id}>
               <td className="quote-line-sequence">{index + 1}</td>
               <td className="quote-line-sku">{displayValue(line.sku)}</td>
-              <td className="quote-line-product"><strong>{displayValue(line.name)}</strong>{line.remarks ? <small title={line.remarks}>{line.remarks}</small> : null}</td>
+              <td className="quote-line-product"><strong>{displayValue(line.name)}</strong><PackageChoiceGroups groups={line.packageChoiceGroups} />{line.remarks ? <small title={line.remarks}>{line.remarks}</small> : null}</td>
               <td>{line.quantity}</td>
               <td>{money.format(line.unitPrice)}</td>
               <td>{money.format(line.totalPrice)}</td>
@@ -1052,7 +1373,10 @@ export function QuoteEditorPage({
           </section>
         ) : null}
 
-        <section className="panel quote-payment-step quote-payment-readonly">
+        <section
+          id={sectionId("payments")}
+          className="panel quote-payment-step quote-payment-readonly quote-editor-scroll-section"
+        >
           <header><div><h2><CreditCard />{t("quoteEditor.payments.title")}</h2></div></header>
           <div className="quote-payment-list">
             {payments.map((payment) => <div className="quote-payment-row" key={payment.id}>
@@ -1092,55 +1416,13 @@ export function QuoteEditorPage({
         {isOrder && activeQuote ? <OrderPaymentStatus total={grandTotal} paid={paidTotal} formatMoney={money.format} /> : null}
       </header>
 
-      {!combined ? <nav className="quote-editor-tabs" aria-label={t(isOrder ? "quoteEditor.orderStepLabel" : "quoteEditor.steps.label")} role="tablist">
-        <button
-          type="button"
-          role="tab"
-          aria-label={t(isOrder ? "quoteEditor.orderDetailsStep" : "quoteEditor.steps.details")}
-          aria-selected={activeTab === "details"}
-          className={cn(activeTab === "details" && "is-active")}
-          onClick={() => setActiveTab("details")}
-        >
-          <span><FileText /></span>
-          <div>
-            <small>{t("quoteEditor.steps.number", { number: 1 })}</small>
-            <strong>{t(isOrder ? "quoteEditor.orderDetailsStep" : "quoteEditor.steps.details")}</strong>
-          </div>
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-label={t("quoteEditor.steps.items")}
-          aria-selected={activeTab === "items"}
-          disabled={!activeQuote}
-          className={cn(activeTab === "items" && "is-active")}
-          onClick={() => setActiveTab("items")}
-        >
-          <span><PackagePlus /></span>
-          <div>
-            <small>{t("quoteEditor.steps.number", { number: 2 })}</small>
-            <strong>{t("quoteEditor.steps.items")}</strong>
-          </div>
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-label={t("quoteEditor.steps.payments")}
-          aria-selected={activeTab === "payments"}
-          disabled={!activeQuote}
-          className={cn(activeTab === "payments" && "is-active")}
-          onClick={() => setActiveTab("payments")}
-        >
-          <span><CreditCard /></span>
-          <div>
-            <small>{t("quoteEditor.steps.number", { number: 3 })}</small>
-            <strong>{t("quoteEditor.steps.payments")}</strong>
-          </div>
-        </button>
-      </nav> : null}
+      {sectionNavigation}
 
-      {combined || activeTab === "details" ? (
-        <form className="panel quote-editor-form" onSubmit={submitHeader}>
+      <form
+        id={sectionId("details")}
+        className="panel quote-editor-form quote-editor-scroll-section"
+        onSubmit={submitHeader}
+      >
           <div className="quote-editor-form-column">
             <h2><FileText />{t("quoteEditor.customerSection")}</h2>
             <label><span>{t("quoteEditor.fields.number")}</span><input value={activeQuote?.orderNumber || t("quoteEditor.autoNumber")} disabled /></label>
@@ -1157,26 +1439,41 @@ export function QuoteEditorPage({
             <label><span>{t("quoteEditor.fields.contactB")}</span><input type="tel" value={draft.contactB} onChange={(event) => patchDraft({ contactB: event.target.value })} /></label>
             <label><span>{t("quoteEditor.fields.email")} *</span><input required aria-label={t("quoteEditor.fields.email")} type="email" value={draft.email} onChange={(event) => patchDraft({ email: event.target.value })} aria-invalid={Boolean(fieldErrors.email)} />{fieldErrors.email && <em>{fieldErrors.email}</em>}</label>
             <label><span>{t("quoteEditor.fields.asanaLink")}</span><input type="url" value={draft.asanaLink} onChange={(event) => patchDraft({ asanaLink: event.target.value })} placeholder={t("quoteEditor.placeholders.asanaLinkPlaceholder")} /></label>
-            {isOrder ? <label><span>{t("quoteEditor.fields.customerMatters")}</span><textarea rows={2} value={draft.customerNote} onChange={(event) => patchDraft({ customerNote: event.target.value })} /></label> : null}
             {showDeliveryAddress && <label><span>{t("quoteEditor.fields.address")}</span><textarea rows={2} value={draft.address} onChange={(event) => patchDraft({ address: event.target.value })} /></label>}
             <div className="quote-editor-tags">
               <span id="quote-order-tags-label">{t("quoteEditor.fields.tags")}</span>
-              <MultiSelect
+              <div
                 id="quote-order-tags"
-                labelledBy="quote-order-tags-label"
-                options={options.orderTags}
-                value={draft.tagIds}
-                onChange={(tagIds) => patchDraft({ tagIds })}
-                placeholder={t("quoteEditor.placeholders.tagsPlaceholder")}
-                searchPlaceholder={t("quoteEditor.placeholders.tagsSearchPlaceholder")}
-                emptyLabel={t("quoteEditor.noTagResults")}
-              />
+                className="quote-editor-tag-options"
+                role="group"
+                aria-labelledby="quote-order-tags-label"
+              >
+                {options.orderTags.length ? options.orderTags.map((tag) => {
+                  const selected = draft.tagIds.includes(tag.id);
+                  return (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      aria-pressed={selected}
+                      className={cn(selected && "is-selected")}
+                      onClick={() => patchDraft({
+                        tagIds: selected
+                          ? draft.tagIds.filter((tagId) => tagId !== tag.id)
+                          : [...draft.tagIds, tag.id],
+                      })}
+                    >
+                      {tag.name}
+                    </button>
+                  );
+                }) : <span className="quote-editor-tags-empty">{t("quoteEditor.noTagResults")}</span>}
+              </div>
             </div>
           </div>
 
           <div className="quote-editor-form-column">
             <h2><PackagePlus />{t("quoteEditor.deliverySection")}</h2>
             {!isOrder ? <label><span>{t("quoteEditor.fields.quoteStatus")}</span><select aria-label={t("quoteEditor.fields.quoteStatus")} value={draft.quoteStatus} onChange={(event) => patchDraft({ quoteStatus: event.target.value })}><option value="">{t("common.notSet")}</option>{draft.quoteStatus && !quoteStatusOptions.some((option) => option.value === draft.quoteStatus) ? <option value={draft.quoteStatus}>{draft.quoteStatus}</option> : null}{quoteStatusOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label> : null}
+            {!isOrder ? <label><span>{t("quoteEditor.fields.followUpDate")}</span><input aria-label={t("quoteEditor.fields.followUpDate")} type="date" value={draft.followUpDate} onChange={(event) => patchDraft({ followUpDate: event.target.value })} /></label> : null}
             {!isOrder && draft.quoteAutoClosedAt && draft.quoteStatus !== "Case Closed" ? <label><span>{t("quoteEditor.fields.quoteReopenReason")}</span><textarea required rows={2} value={draft.quoteReopenReason ?? ""} onChange={(event) => patchDraft({ quoteReopenReason: event.target.value })} /></label> : null}
             {!isOrder ? <label><span>{t("quoteEditor.fields.quoteSalesSource")}</span><select aria-label={t("quoteEditor.fields.quoteSalesSource")} value={draft.quoteSalesSourceId} onChange={(event) => patchDraft({ quoteSalesSourceId: event.target.value })}><option value="">{t("common.notSet")}</option>{options.quoteSalesSources.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label> : null}
             {!isOrder ? <label><span>{t("quoteEditor.fields.quoteCommunicationChannel")}</span><select aria-label={t("quoteEditor.fields.quoteCommunicationChannel")} value={draft.quoteCommunicationChannelId} onChange={(event) => patchDraft({ quoteCommunicationChannelId: event.target.value })}><option value="">{t("common.notSet")}</option>{options.quoteCommunicationChannels.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label> : null}
@@ -1185,7 +1482,7 @@ export function QuoteEditorPage({
             <label><span>{t("quoteEditor.fields.deliveryDate")}</span><input type="date" value={draft.deliveryDate} onChange={(event) => patchDraft({ deliveryDate: event.target.value })} /></label>
             <label><span>{t("quoteEditor.fields.deliveryTime")} *</span><div className="quote-time-control"><select required aria-label={t("quoteEditor.fields.deliveryTime")} value={deliveryTimeMode === "custom" ? "custom" : draft.deliveryTime} onChange={(event) => { const value = event.target.value; setDeliveryTimeMode(value === "custom" ? "custom" : ""); patchDraft({ deliveryTime: value === "custom" ? "" : value }); }} aria-invalid={Boolean(fieldErrors.deliveryTime)}><option value="">{t("quoteEditor.placeholders.deliveryTimeSelectPlaceholder")}</option><option value="custom">{t("quoteEditor.custom")}</option>{deliveryTimeOptions.map((time) => <option key={time} value={time}>{time}</option>)}</select>{deliveryTimeMode === "custom" && <input required value={draft.deliveryTime} onChange={(event) => patchDraft({ deliveryTime: event.target.value })} placeholder={t("quoteEditor.placeholders.customDeliveryTimePlaceholder")} />}</div>{fieldErrors.deliveryTime && <em>{fieldErrors.deliveryTime}</em>}</label>
             <label><span>{t("quoteEditor.fields.shipOutTime")}</span><select value={draft.shipOutTime} onChange={(event) => patchDraft({ shipOutTime: event.target.value })}><option value="">{t("quoteEditor.placeholders.shipOutTimeSelectPlaceholder")}</option>{shipOutTimeOptions.map((time) => <option key={time} value={time}>{time}</option>)}</select></label>
-            {!isOrder ? <label><span>{t("quoteEditor.fields.customerNote")}<small>{t("quoteEditor.fields.customerNoteHint")}</small></span><textarea rows={2} value={draft.customerNote} onChange={(event) => patchDraft({ customerNote: event.target.value })} /></label> : null}
+            <label><span>{t("quoteEditor.fields.customerNote")}<small>{t("quoteEditor.fields.customerNoteHint")}</small></span><textarea rows={2} value={draft.customerNote} onChange={(event) => patchDraft({ customerNote: event.target.value })} /></label>
             <label><span>{t("quoteEditor.fields.packingNote")}<small>{t("quoteEditor.fields.packingNoteHint")}</small></span><textarea rows={2} value={draft.packingNote} onChange={(event) => patchDraft({ packingNote: event.target.value })} /></label>
             <label><span>{t("quoteEditor.fields.salesPartner")}</span><select value={draft.salesPartnerId} onChange={(event) => patchDraft({ salesPartnerId: event.target.value })}><option value="">{t("common.notSet")}</option>{options.salesPartners.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
             <label><span>{t("quoteEditor.fields.internalNote")}<small>{t("quoteEditor.fields.internalNoteHint")}</small></span><textarea rows={2} value={draft.internalNote} onChange={(event) => patchDraft({ internalNote: event.target.value })} /></label>
@@ -1197,12 +1494,14 @@ export function QuoteEditorPage({
             {activeQuote && !isOrder ? <Button type="button" variant="outline" disabled={converting || saving} onClick={() => void convertCurrentQuote()}><ShoppingCart />{converting ? t("quotes.actions.converting") : t("quotes.actions.convert")}</Button> : <span />}
             <Button type="submit" disabled={saving || converting}>{saving ? t("quoteEditor.saving") : activeQuote ? t("quoteEditor.saveChanges") : t("quoteEditor.saveAndContinue")}</Button>
           </footer>
-        </form>
-      ) : null}
+      </form>
 
-      {(combined || activeTab === "items") && activeQuote ? (
+      {activeQuote ? (
         <>
-        <div className="quote-items-layout">
+        <div
+          id={sectionId("items")}
+          className="quote-items-layout quote-editor-scroll-section"
+        >
           <form className="panel quote-item-form" onSubmit={submitLine}>
             <header><div><span className="eyebrow">{t("quoteEditor.items.addEyebrow")}</span><h2>{t("quoteEditor.items.addTitle")}</h2></div></header>
             <label><span>{t("quoteEditor.fields.brand")}</span><select value={channelId} onChange={(event) => { setChannelId(event.target.value); setCatalogSearch(""); setSelectedItem(null); }}><option value="">{t("quoteEditor.placeholders.brand")}</option>{options.channels.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
@@ -1220,11 +1519,38 @@ export function QuoteEditorPage({
             </div>
             <label><span>{t("quoteEditor.items.remarks")}</span><textarea rows={1} maxLength={16} value={lineRemarks} onChange={(event) => setLineRemarks(event.target.value)} /></label>
             {error && <p className="quote-editor-error" role="alert">{t(`quoteEditor.errors.${error === "quote_line_invalid" ? "invalidLine" : "line"}`)}</p>}
-            <Button type="submit" disabled={!selectedItem || adding}><PackagePlus />{adding ? t("quoteEditor.items.adding") : t(isOrder ? "quoteEditor.orderAdd" : "quoteEditor.items.add")}</Button>
+            <div className="quote-item-form-actions">
+              <Button type="button" variant="outline" onClick={() => setCustomProductOpen(true)}><Pencil />{t("quoteEditor.items.customProduct")}</Button>
+              <Button type="submit" disabled={!selectedItem || adding}><PackagePlus />{adding ? t("quoteEditor.items.adding") : t(isOrder ? "quoteEditor.orderAdd" : "quoteEditor.items.add")}</Button>
+            </div>
           </form>
 
           <article className="panel quote-lines-panel">
             <header><div><span className="eyebrow">{t(isOrder ? "quoteEditor.orderSummaryEyebrow" : "quoteEditor.items.summaryEyebrow")}</span><h2>{t("quoteEditor.items.summaryTitle")}</h2></div><strong>{money.format(total)}</strong></header>
+            {isMobileEditor ? (
+              <div className="quote-mobile-lines" role="list" aria-label={t("quoteEditor.items.summaryTitle")}>
+                {lines.map((line, index) => (
+                  <article className="quote-mobile-line" role="listitem" key={line.id}>
+                    <header>
+                      <span>{index + 1}</span>
+                      <div><strong>{line.name || "—"}</strong><small>{line.sku || "—"}</small><PackageChoiceGroups groups={line.packageChoiceGroups} /></div>
+                      <div className="quote-mobile-line-actions">
+                        <button type="button" disabled={!index || reordering} aria-label={`${t("quoteEditor.items.sequence")} ${index}`} onClick={() => void moveLine(line.id, -1)}><ChevronUp /></button>
+                        <button type="button" disabled={index === lines.length - 1 || reordering} aria-label={`${t("quoteEditor.items.sequence")} ${index + 2}`} onClick={() => void moveLine(line.id, 1)}><ChevronDown /></button>
+                        <button type="button" className="quote-line-delete" aria-label={t("quoteEditor.items.remove", { name: line.name || "" })} disabled={removingId === line.id || savingLineId === line.id} onClick={() => void removeLine(line.id)}><Trash2 /></button>
+                      </div>
+                    </header>
+                    <div className="quote-mobile-line-fields">
+                      <label><span>{t("quoteEditor.items.quantity")}</span><input type="number" inputMode="decimal" min="0.001" step="0.001" value={line.quantity} disabled={savingLineId === line.id} onChange={(event) => patchLine(line.id, { quantity: Number(event.target.value) })} onBlur={() => void saveEditedLine(line)} /></label>
+                      <label><span>{t("quoteEditor.items.unitPrice")}</span><input type="number" inputMode="decimal" min="0" step="0.01" value={line.unitPrice} disabled={savingLineId === line.id} onChange={(event) => patchLine(line.id, { unitPrice: Number(event.target.value) })} onBlur={() => void saveEditedLine(line)} /></label>
+                      <label className="is-wide"><span>{t("quoteEditor.items.remarks")}</span><textarea rows={2} maxLength={16} value={line.remarks || ""} disabled={savingLineId === line.id} onChange={(event) => patchLine(line.id, { remarks: event.target.value })} onBlur={() => void saveEditedLine(line)} /></label>
+                    </div>
+                    <footer><span>{t("quoteEditor.items.subtotal")}</span><strong>{money.format(line.totalPrice)}</strong></footer>
+                  </article>
+                ))}
+                {!lines.length ? <div className="quote-lines-empty"><PackagePlus /><strong>{t("quoteEditor.items.empty")}</strong><span>{t("quoteEditor.items.emptyHint")}</span></div> : null}
+              </div>
+            ) : (
             <div className="table-wrap"><table><thead><tr><th>{t("quoteEditor.items.sequence")}</th><th>{t("quoteEditor.items.sku")}</th><th>{t("quoteEditor.items.product")}</th><th>{t("quoteEditor.items.quantity")}</th><th>{t("quoteEditor.items.unitPrice")}</th><th>{t("quoteEditor.items.subtotal")}</th><th><span className="sr-only">{t("quoteEditor.items.actions")}</span></th></tr></thead><tbody>
               {lines.map((line, index) => <tr
                 key={line.id}
@@ -1250,6 +1576,7 @@ export function QuoteEditorPage({
                 <td className="quote-line-sku">{line.sku || "—"}</td>
                 <td className="quote-line-product">
                   <strong>{line.name || "—"}</strong>
+                  <PackageChoiceGroups groups={line.packageChoiceGroups} />
                   <button
                     type="button"
                     className="quote-line-remarks-toggle"
@@ -1283,6 +1610,7 @@ export function QuoteEditorPage({
               </tr>)}
               {!lines.length && <tr><td colSpan={7} className="quote-lines-empty"><PackagePlus /><strong>{t("quoteEditor.items.empty")}</strong><span>{t("quoteEditor.items.emptyHint")}</span></td></tr>}
             </tbody></table></div>
+            )}
             <div className="quote-editor-totals-row">
               <div className="quote-editor-item-count">
                 <span>{t("quoteEditor.items.totalQuantity")}</span>
@@ -1313,7 +1641,7 @@ export function QuoteEditorPage({
             <footer>
               {isOrder && !factorySettings.doNotSendToFactory ? <div className="quote-factory-status-action"><Button type="button" variant={isSentToFactory ? "outline" : "default"} disabled={changingFactoryStatus} onClick={() => void toggleFactoryStatus()}>{isSentToFactory ? <Undo2 /> : <Factory />}{changingFactoryStatus ? t("quoteEditor.factoryStatus.saving") : isSentToFactory ? t("quoteEditor.factoryStatus.cancel") : t("quoteEditor.factoryStatus.send")}</Button>{factoryStatusError ? <span role="alert">{t("quoteEditor.factoryStatus.error")}</span> : null}</div> : null}
               <Button type="button" className="quote-utensil-button" variant="outline" disabled={addingUtensil || hasUtensilPack} onClick={() => void addUtensilPack()}>{hasUtensilPack ? <Check /> : <Plus />}{hasUtensilPack ? t("quoteEditor.items.utensilAdded") : addingUtensil ? t("quoteEditor.items.addingUtensil") : t("quoteEditor.items.addUtensil")}</Button>
-              {!combined ? <Button type="button" onClick={() => setActiveTab("payments")}>{t("quoteEditor.items.next")}</Button> : null}
+              <Button type="button" onClick={() => scrollToSection("payments")}>{t("quoteEditor.items.next")}</Button>
             </footer>
           </article>
         </div>
@@ -1348,6 +1676,111 @@ export function QuoteEditorPage({
           </div>
         </section>
 
+        <Modal
+          open={packageChoiceOpen}
+          onClose={closePackageChoiceModal}
+          title={t("quoteEditor.items.packageChoicesTitle")}
+          description={pendingPackageLine?.item.name}
+          closeLabel={t("quoteEditor.items.packageChoicesCancel")}
+          size="lg"
+          closeOnBackdrop={!adding}
+          closeOnEscape={!adding}
+          className="quote-package-choice-modal"
+          footer={(
+            <>
+              <Button type="button" variant="outline" disabled={adding} onClick={closePackageChoiceModal}>
+                {t("quoteEditor.items.packageChoicesCancel")}
+              </Button>
+              <Button type="button" disabled={!packageChoicesComplete || adding} onClick={() => void confirmPackageChoices()}>
+                {adding ? <LoaderCircle className="spin" /> : <Check />}
+                {adding ? t("quoteEditor.items.adding") : t("quoteEditor.items.packageChoicesConfirm")}
+              </Button>
+            </>
+          )}
+        >
+          <div className="quote-package-choice-groups">
+            <p>{t("quoteEditor.items.packageChoicesDescription")}</p>
+            {packageChoiceSets.map((choiceSet) => {
+              const selected = packageSelections[choiceSet.id] ?? [];
+              const required = requiredPackageChoiceCount(choiceSet);
+              return (
+                <fieldset key={choiceSet.id} className="quote-package-choice-group">
+                  <legend>
+                    <strong>{choiceSet.name || t("quoteEditor.items.packageChoicesFallbackGroup")}</strong>
+                    <span>{t("quoteEditor.items.packageChoicesRequired", { count: required })}</span>
+                  </legend>
+                  <div className="quote-package-choice-options">
+                    {choiceSet.products.map((product) => {
+                      const checked = selected.includes(product.id);
+                      const disabled = !checked && selected.length >= required;
+                      return (
+                        <label key={product.id} className={cn(checked && "is-selected", disabled && "is-disabled")}>
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            disabled={disabled || adding}
+                            onChange={() => togglePackageChoice(choiceSet, product.id)}
+                          />
+                          <span>
+                            <strong>{product.productChineseName || product.productName || product.productSku || "-"}</strong>
+                            {product.productSku ? <small>{product.productSku}</small> : null}
+                          </span>
+                          {product.addonPrice ? <b>+{money.format(product.addonPrice)}</b> : null}
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <p className={cn(selected.length === required && "is-complete")}>
+                    {t("quoteEditor.items.packageChoicesSelected", { selected: selected.length, count: required })}
+                  </p>
+                </fieldset>
+              );
+            })}
+            {packageChoiceError ? <p className="quote-editor-error" role="alert">{t("quoteEditor.errors.line")}</p> : null}
+          </div>
+        </Modal>
+
+        <Modal
+          open={customProductOpen}
+          onClose={closeCustomProductModal}
+          title={t("quoteEditor.items.customProduct")}
+          closeLabel={t("quoteEditor.items.customProductCancel")}
+          size="sm"
+          className="quote-custom-product-modal"
+          footer={(
+            <Button type="submit" form="quote-custom-product-form" disabled={!customProductValid}>
+              {t("quoteEditor.items.customProductAdd")}
+            </Button>
+          )}
+        >
+          <form
+            id="quote-custom-product-form"
+            className="quote-custom-product-form"
+            onSubmit={(event) => { event.preventDefault(); addCustomProduct(); }}
+          >
+            <label>
+              <span>{t("quoteEditor.items.customProductName")}</span>
+              <input
+                autoFocus
+                value={customProductName}
+                placeholder={t("quoteEditor.items.customProductNamePlaceholder")}
+                onChange={(event) => setCustomProductName(event.target.value)}
+              />
+            </label>
+            <label>
+              <span>{t("quoteEditor.items.unitPrice")}</span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={customProductPrice}
+                placeholder={t("quoteEditor.items.customProductPricePlaceholder")}
+                onChange={(event) => setCustomProductPrice(event.target.value)}
+              />
+            </label>
+          </form>
+        </Modal>
+
         <Modal open={additionalOpen} onClose={() => setAdditionalOpen(false)} title="額外資訊" closeLabel="關閉額外資訊" size="lg" footer={<Button onClick={() => setAdditionalOpen(false)}>確定</Button>}>
           <div className="quote-additional-picker">
             <div className="quote-additional-search"><Search /><input autoFocus aria-label="搜尋額外資訊" placeholder={t("quoteEditor.placeholders.additionalSearchPlaceholder")} value={additionalSearch} onChange={(event) => setAdditionalSearch(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") addAdditionalInfo(additionalSearch); }} /><Button variant="outline" onClick={() => addAdditionalInfo(additionalSearch)}>Add</Button></div>
@@ -1364,8 +1797,11 @@ export function QuoteEditorPage({
         </>
       ) : null}
 
-      {(combined || activeTab === "payments") && activeQuote ? (
-        <section className="panel quote-payment-step">
+      {activeQuote ? (
+        <section
+          id={sectionId("payments")}
+          className="panel quote-payment-step quote-editor-scroll-section"
+        >
           <header>
             <div>
               <h2><CreditCard />{t("quoteEditor.payments.title")}</h2>
@@ -1391,7 +1827,7 @@ export function QuoteEditorPage({
           </div>
           {completionError ? <p className="quote-editor-error" role="alert">{t(`quoteEditor.payments.${completionError === "send" ? "sendError" : "saveError"}`)}</p> : null}
           <footer>
-            {!combined ? <Button type="button" variant="outline" onClick={() => setActiveTab("items")}>{t("quoteEditor.payments.previous")}</Button> : <span />}
+            <Button type="button" variant="outline" onClick={() => scrollToSection("items")}>{t("quoteEditor.payments.previous")}</Button>
             <div>
               {!isOrder ? <Button type="button" variant="outline" disabled={completing} onClick={() => void completeQuote(true)}><Mail />{t("quoteEditor.payments.sendAndComplete")}</Button> : null}
               <Button type="button" disabled={completing} onClick={() => void completeQuote(false)}>{completing ? <LoaderCircle className="spin" /> : <Check />}{isOrder ? t("quoteEditor.saveChanges") : t("quoteEditor.payments.complete")}</Button>

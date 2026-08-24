@@ -161,6 +161,39 @@ describe("FactoryBoardPage", () => {
     expect(orderSummaryRule?.[1]).toContain("grid-column: 1 / -1");
     expect(orderAsideRule?.[1]).toContain("grid-row: 3");
     expect(stylesheet).toMatch(
+      /\.factory-modal\.is-wide\.factory-menu-summary-modal\s*\{[^}]*width:\s*80vw !important[^}]*min-width:\s*80vw[^}]*max-width:\s*80vw !important/s,
+    );
+    expect(stylesheet).toMatch(
+      /\.factory-menu-summary-table th:first-child,\s*\.factory-menu-summary-table td:first-child\s*\{[^}]*white-space:\s*normal[^}]*overflow-wrap:\s*anywhere[^}]*overflow:\s*hidden/s,
+    );
+    expect(stylesheet).toMatch(
+      /\.factory-menu-summary-modal \.factory-dispatch-table-wrap\s*\{[^}]*flex:\s*1[^}]*overflow:\s*auto[^}]*scrollbar-gutter:\s*stable/s,
+    );
+    expect(stylesheet).toMatch(
+      /@page factory-menu-list\s*\{[^}]*size:\s*A4 portrait[^}]*margin:\s*12mm/s,
+    );
+    expect(stylesheet).toMatch(
+      /\.factory-board:has\(> \.factory-menu-print-root\) > :not\(\.factory-menu-print-root\)\s*\{[^}]*display:\s*none !important/s,
+    );
+    expect(stylesheet).toMatch(
+      /\.factory-board:has\(> \.factory-menu-print-root\)\s*\{[^}]*min-height:\s*0 !important[^}]*page:\s*factory-menu-list/s,
+    );
+    expect(stylesheet).toMatch(
+      /\.factory-menu-summary-table tbody td\.has-data\s*\{[^}]*background:\s*#ffffff[^}]*font-size:\s*19px[^}]*font-weight:\s*800/s,
+    );
+    expect(stylesheet).toMatch(
+      /\.factory-menu-summary-table\s*\{[^}]*font-size:\s*19px/s,
+    );
+    expect(stylesheet).toMatch(
+      /\.factory-menu-summary-table th:first-child,\s*\.factory-menu-summary-table td:first-child\s*\{[^}]*width:\s*380px/s,
+    );
+    expect(stylesheet).toMatch(
+      /\.factory-menu-summary-table \.factory-menu-summary-dish-column\s*\{[^}]*width:\s*380px/s,
+    );
+    expect(stylesheet).toMatch(
+      /\.factory-menu-summary-table \.factory-menu-summary-title\s*\{[^}]*font-size:\s*24px/s,
+    );
+    expect(stylesheet).toMatch(
       /@page factory-multi-day-report\s*\{[^}]*size:\s*A4 portrait/s,
     );
     expect(stylesheet).toMatch(
@@ -506,7 +539,7 @@ describe("FactoryBoardPage", () => {
     ]);
     expect(orderView.getByText("涼拌雲耳")).toHaveClass("factory-order-line-remark");
     expect(orderView.getAllByLabelText("標籤已打印")).toHaveLength(1);
-    expect(orderView.getAllByRole("button")).toHaveLength(2);
+    expect(orderView.getAllByRole("button")).toHaveLength(3);
     expect(screen.getByRole("button", { name: "印全單" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "印地址" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "印送貨單" })).toBeInTheDocument();
@@ -723,6 +756,119 @@ describe("FactoryBoardPage", () => {
     expect(screen.getByLabelText("標籤已打印")).toBeInTheDocument();
   });
 
+  it("does not show the pending-change summary on the factory home page", async () => {
+    render(
+      <FactoryBoardPage
+        initialDate="2026-08-17"
+        loadBoard={async () => ({ ...board, pendingChangeCount: 8 })}
+        loadFleets={async () => []}
+        loadBrands={async () => []}
+        qzClient={qzClient}
+      />,
+    );
+
+    await screen.findByRole("button", { name: /#B-1522/ });
+    expect(screen.queryByText("8 張訂單有待確認修改")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("請進入相關訂單完成重印並確認現場資料。"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("prints every order label and an address-only label from the order actions", async () => {
+    const user = userEvent.setup();
+    const printLabels = vi.fn(async () => {});
+    const markLinePrinted = vi.fn(async () => {});
+    const loadLabelCommand = vi.fn(async () => "VEVTUA==");
+    const connectedQzClient: QzTrayClient = {
+      connect: vi.fn(async () => {}),
+      disconnect: vi.fn(async () => {}),
+      listPrinters: vi.fn(async () => ["Zebra ZD421"]),
+      queryStatuses: vi.fn(async () => []),
+      printLabels,
+    };
+    render(
+      <FactoryBoardPage
+        initialDate="2026-08-17"
+        loadBoard={async () => board}
+        loadFleets={async () => []}
+        loadBrands={async () => []}
+        loadOrderJob={async () => ({
+          packingNote: "分開包裝",
+          dispatchTime: "10:00",
+          arrivalWindow: "10:30 - 11:00",
+          lines: [
+            { id: "line-a", label: "檸檬茶", quantityText: "2", remarks: [], printed: false },
+            { id: "line-b", label: "飯盒餐具包", quantityText: "1", remarks: [], printed: false },
+          ],
+        })}
+        markLinePrinted={markLinePrinted}
+        loadLabelCommand={loadLabelCommand}
+        openOrdersInNewPage={false}
+        qzClient={connectedQzClient}
+      />,
+    );
+
+    await user.click(await screen.findByRole("button", { name: /#B-1522/ }));
+    const printAll = await screen.findByRole("button", { name: "印全單" });
+    await waitFor(() => expect(printAll).toBeEnabled());
+    await user.click(printAll);
+
+    await waitFor(() => expect(markLinePrinted).toHaveBeenCalledTimes(2));
+    expect(loadLabelCommand).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ labelName: "檸檬茶", copies: 2 }),
+    );
+    expect(loadLabelCommand).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ labelName: "飯盒餐具包", copies: 1 }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "印地址" }));
+    await waitFor(() => expect(loadLabelCommand).toHaveBeenCalledTimes(3));
+    expect(loadLabelCommand).toHaveBeenLastCalledWith({
+      kind: "address",
+      orderNumber: "B-1522",
+      address: "大埔汀角道船灣香港青年協會大美督戶外活動中心",
+      arrivalWindow: "10:30 - 11:00",
+      customerName: "Eric Yim",
+      customerPhone: "66817198",
+    });
+    expect(printLabels).toHaveBeenCalledTimes(3);
+  });
+
+  it("opens the hidden dispatch-time editor and saves the time to the order", async () => {
+    const user = userEvent.setup();
+    const saveDispatchTime = vi.fn(async () => {});
+    render(
+      <FactoryBoardPage
+        initialDate="2026-08-17"
+        loadBoard={async () => board}
+        loadFleets={async () => []}
+        loadBrands={async () => []}
+        loadOrderJob={async () => ({
+          packingNote: null,
+          dispatchTime: "10:00",
+          arrivalWindow: "10:30 - 11:00",
+          lines: [],
+        })}
+        saveDispatchTime={saveDispatchTime}
+        openOrdersInNewPage={false}
+        qzClient={qzClient}
+      />,
+    );
+
+    await user.click(await screen.findByRole("button", { name: /#B-1522/ }));
+    await user.click(screen.getByRole("button", { name: "修改出車時間" }));
+    const dialog = screen.getByRole("dialog", { name: "修改出車時間" });
+    const input = within(dialog).getByLabelText("出車時間");
+    await user.clear(input);
+    await user.type(input, "11:15");
+    await user.click(within(dialog).getByRole("button", { name: "儲存出車時間" }));
+
+    expect(saveDispatchTime).toHaveBeenCalledWith("order-1", "11:15");
+    expect(await screen.findByText("出車時間: 11:15")).toBeInTheDocument();
+  });
+
   it("does not turn a label green when the printer call fails", async () => {
     const user = userEvent.setup();
     const markLinePrinted = vi.fn(async () => {});
@@ -777,6 +923,7 @@ describe("FactoryBoardPage", () => {
 
   it("opens the brand picker from 菜式總表 and submits the dish summary", async () => {
     const user = userEvent.setup();
+    const print = vi.spyOn(window, "print").mockImplementation(() => {});
     render(
       <FactoryBoardPage
         initialDate="2026-08-17"
@@ -790,7 +937,19 @@ describe("FactoryBoardPage", () => {
         ]}
         qzClient={qzClient}
         loadMenuRows={async () => [
-          { label: "拿破崙肉丸意粉", quantity: 8 },
+          {
+            label: "拿破崙肉丸意粉",
+            quantity: 8,
+            typeSort: 10,
+            orders: [
+              {
+                orderId: "order-1",
+                orderNumber: "B-1522",
+                completionTime: "10:00",
+                quantity: 8,
+              },
+            ],
+          },
         ]}
       />,
     );
@@ -808,12 +967,35 @@ describe("FactoryBoardPage", () => {
     await user.click(screen.getByRole("button", { name: "Catering" }));
     await user.click(screen.getByRole("button", { name: "提交" }));
 
+    const summary = screen.getByRole("dialog", {
+      name: "08月18日 (星期二) - Catering",
+    });
+    expect(summary).toHaveClass("factory-menu-summary-modal");
+    expect(summary.querySelector("col.factory-menu-summary-dish-column")).toBeInTheDocument();
+    expect(await within(summary).findByText("拿破崙肉丸意粉")).toBeInTheDocument();
+    expect(within(summary).getByText("菜式")).toBeInTheDocument();
+    expect(within(summary).getByText("全日總數")).toBeInTheDocument();
+    expect(within(summary).getByText("備料及出車時間一覽表")).toBeInTheDocument();
+    expect(within(summary).getByText(/^列印時間：/)).toBeInTheDocument();
+    expect(within(summary).getByText("Catering")).toBeInTheDocument();
+    expect(within(summary).getByText("#B-1522")).toBeInTheDocument();
+    expect(within(summary).getByText("10點完成")).toBeInTheDocument();
+    expect(within(summary).getAllByText("8")).toHaveLength(2);
     expect(
-      screen.getByRole("heading", { name: "08月18日 (星期二) - Catering" }),
-    ).toBeInTheDocument();
-    expect(await screen.findByText("拿破崙肉丸意粉")).toBeInTheDocument();
-    expect(screen.getByText("菜式")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "關閉" })).toBeInTheDocument();
+      within(summary).getAllByText("8").some((cell) => cell.classList.contains("has-data")),
+    ).toBe(true);
+    expect(summary.querySelector("thead tr:first-child th:first-child")).toHaveAttribute(
+      "colspan",
+      "10",
+    );
+    expect(within(summary).getByRole("button", { name: "關閉" })).toBeInTheDocument();
+    await user.click(within(summary).getByRole("button", { name: "列印" }));
+    expect(print).toHaveBeenCalledTimes(1);
+    const printRoot = document.querySelector(".factory-menu-print-root");
+    expect(printRoot).toHaveTextContent("日期: 2026年8月18日");
+    expect(printRoot).toHaveTextContent("拿破崙肉丸意粉");
+    expect(printRoot?.querySelectorAll("tbody tr")).toHaveLength(1);
+    print.mockRestore();
   });
 
   it("opens the selected multi-day range in a separate report page", async () => {

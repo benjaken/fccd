@@ -30,7 +30,6 @@ export type ReceiptPdfDraft = {
   terms: string[];
   paymentMethods: string[];
   showCustomerSignature: boolean;
-  trailingStartsNewPage: boolean;
 };
 
 export function receiptPdfDraftStorageKey(

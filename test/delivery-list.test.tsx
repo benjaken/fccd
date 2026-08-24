@@ -59,7 +59,11 @@ const listResult: DeliveryListResult = {
 };
 
 const lookups = {
-  teams: [{ id: "team-1", name: "Sun-Line" }],
+  teams: [{
+    id: "team-1",
+    name: "Sun-Line",
+    bankAccount: "SUN-LINE LOGISTICS CO,  渣打 - 40711305668",
+  }],
   shippingMethods: [{ id: "method-1", name: "車邊交收" }],
 };
 
@@ -274,6 +278,91 @@ describe("Delivery list page", () => {
         }),
       ),
     );
+  });
+
+  it("shows the selected fleet summary and prints every filtered row", async () => {
+    const user = userEvent.setup();
+    const loadDeliveries = vi.fn().mockResolvedValue(listResult);
+    const loadLookups = vi.fn().mockResolvedValue(lookups);
+    const loadExportRows = vi.fn().mockResolvedValue([sampleItem, surchargeItem]);
+    const print = vi.spyOn(window, "print").mockImplementation(() => undefined);
+
+    render(
+      <MemoryRouter>
+        <DeliveryListPage
+          loadDeliveries={loadDeliveries}
+          loadLookups={loadLookups}
+          loadExportRows={loadExportRows}
+          now={new Date("2026-08-22T16:20:00+08:00")}
+        />
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole("heading", { name: "送貨清單" });
+    const dateInputs = screen.getAllByDisplayValue(/^2026-08-/);
+    await user.clear(dateInputs[0]);
+    await user.type(dateInputs[0], "2026-08-16");
+    await user.selectOptions(screen.getAllByRole("combobox")[0], "team-1");
+
+    const summary = await screen.findByLabelText("已選車隊資料");
+    expect(within(summary).getByText("Sun-Line")).toBeInTheDocument();
+    expect(within(summary).getByText("2026年8月16日 - 8月22日")).toBeInTheDocument();
+    expect(within(summary).getByText(/SUN-LINE LOGISTICS CO,\s+渣打 - 40711305668/)).toBeInTheDocument();
+    expect(within(summary).queryByText("戶口名稱:")).not.toBeInTheDocument();
+
+    await user.click(within(summary).getByRole("button", { name: "列印" }));
+    await waitFor(() => expect(loadExportRows).toHaveBeenCalledWith({
+      search: "",
+      startDate: "2026-08-16",
+      endDate: "2026-08-22",
+      motorcadeId: "team-1",
+      shippingMethodId: "",
+    }));
+
+    const dialog = await screen.findByRole("dialog", { name: "送貨清單列印預覽" });
+    const sheet = within(dialog).getByLabelText("送貨清單列印內容");
+    const printRoot = document.body.querySelector(":scope > .delivery-summary-print-root");
+    expect(printRoot?.firstElementChild).toHaveClass("delivery-summary-sheet");
+    expect(printRoot?.querySelector(".side-panel-root")).toBeNull();
+    expect(within(sheet).queryByText("戶口名稱:")).not.toBeInTheDocument();
+    expect(within(sheet).getByText(/SUN-LINE LOGISTICS CO,\s+渣打 - 40711305668/)).toBeInTheDocument();
+    expect(within(sheet).getByText("#6918")).toBeInTheDocument();
+    expect(within(sheet).getByText("B#1462W")).toBeInTheDocument();
+    expect(within(sheet).getByText("HK$180")).toBeInTheDocument();
+    expect(within(sheet).getByText("HK$50.00")).toBeInTheDocument();
+    expect(within(sheet).getByText("HK$230")).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole("button", { name: "列印" }));
+    expect(print).toHaveBeenCalledOnce();
+  });
+
+  it("lets long delivery summaries paginate and wraps each surcharge", () => {
+    const source = readFileSync(
+      path.resolve(process.cwd(), "src/components/DeliveryListPage.tsx"),
+      "utf8",
+    );
+    const stylesheet = readFileSync(
+      path.resolve(process.cwd(), "src/index.css"),
+      "utf8",
+    );
+    const deliveryPrintSelector = stylesheet.indexOf("body:has(.delivery-summary-print-root)");
+    const printStart = stylesheet.lastIndexOf("@media print {", deliveryPrintSelector);
+    const printEnd = stylesheet.indexOf("\n}", printStart) + 2;
+    const printBlock = stylesheet.slice(printStart, printEnd);
+
+    expect(source).toContain('className="delivery-summary-surcharges"');
+    expect(source).toContain("createPortal");
+    expect(source).toContain('className="delivery-summary-print-root"');
+    expect(stylesheet).toMatch(/\.delivery-summary-surcharges\s+span\s*\{[^}]*display:\s*block/);
+    expect(printBlock).toContain("body:has(.delivery-summary-print-root) > *");
+    expect(printBlock).toContain("display: none !important");
+    expect(printBlock).toContain("body:has(.delivery-summary-print-root) > .delivery-summary-print-root");
+    expect(printBlock).not.toContain(".side-panel-root");
+    expect(printBlock).not.toContain("position: fixed !important");
+    expect(printBlock).toContain("width: 100%");
+    expect(printBlock).not.toContain("width: 210mm");
+    expect(stylesheet).toMatch(/@page delivery-summary\s*\{[^}]*margin:\s*[1-9][\d.]*mm 0/);
+    expect(printBlock).toContain("page: delivery-summary");
   });
 
   it("shows fleet names as read-only text even for dispatchers", async () => {

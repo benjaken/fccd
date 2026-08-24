@@ -34,10 +34,12 @@ const EMPTY_DASHBOARD: OrdersDashboardData = {
   notSentToFactory: 0,
   pendingQuotes: 0,
   upcomingQuotes: 0,
+  todayFollowUpQuotes: 0,
   latestPendingOrders: [],
   latestUnpaidOrders: [],
   latestPendingQuotes: [],
   soonestUpcomingQuotes: [],
+  todayFollowUpQuoteItems: [],
 };
 
 export function OrdersDashboardPage({
@@ -97,6 +99,14 @@ export function OrdersDashboardPage({
     icon: Icon;
     to: string;
   }> = [
+    {
+      key: "todayFollowUpQuotes",
+      label: t("ordersDashboard.todayFollowUpQuotes"),
+      count: data.todayFollowUpQuotes,
+      tone: "amber",
+      icon: CalendarClock,
+      to: "/follow-up#today-quotes",
+    },
     {
       key: "shopifyPending",
       label: t("ordersDashboard.shopifyPending"),
@@ -186,6 +196,17 @@ export function OrdersDashboardPage({
 
       <section className="orders-dashboard-body-layout">
         <section className="orders-dashboard-queue-grid">
+          <QueuePanel
+            id="today-quotes"
+            icon={CalendarClock}
+            title={t("ordersDashboard.todayFollowUpTitle")}
+            description={t("ordersDashboard.todayFollowUpDescription")}
+            actionTo="/quotes"
+            items={data.todayFollowUpQuoteItems}
+            dateFormatter={dateFormatter}
+            dateField="followUpDate"
+            emptyLabel={t("ordersDashboard.emptyTodayFollowUpQuotes")}
+          />
           <QueuePanel
             icon={ShoppingBag}
             title={t("ordersDashboard.latestPendingOrdersTitle")}
@@ -309,6 +330,7 @@ function DashboardCharts({
 }
 
 function QueuePanel({
+  id,
   icon: PanelIcon,
   title,
   description,
@@ -317,7 +339,9 @@ function QueuePanel({
   dateFormatter,
   emptyLabel,
   showOutstanding = false,
+  dateField = "deliveryAt",
 }: {
+  id?: string;
   icon: Icon;
   title: string;
   description: string;
@@ -326,11 +350,12 @@ function QueuePanel({
   dateFormatter: Intl.DateTimeFormat;
   emptyLabel: string;
   showOutstanding?: boolean;
+  dateField?: "deliveryAt" | "followUpDate";
 }) {
   const { t, i18n } = useTranslation();
 
   return (
-    <article className="panel queue-panel">
+    <article className="panel queue-panel" id={id}>
       <header className="panel-header">
         <div>
           <h2><PanelIcon className="orders-dashboard-panel-icon" />{title}</h2>
@@ -349,6 +374,7 @@ function QueuePanel({
         <ul className="orders-dashboard-quote-list">
           {items.map((item) => {
             const detailTo = item.kind === "order" ? `/orders/${item.id}` : `/quotes/${item.id}`;
+            const dateValue = item[dateField];
             const amount = showOutstanding && item.outstanding !== null
               ? new Intl.NumberFormat(i18n.language, { style: "currency", currency: item.currency, maximumFractionDigits: 0 }).format(item.outstanding)
               : null;
@@ -361,8 +387,8 @@ function QueuePanel({
                   </span>
                   {amount ? (
                     <span className="orders-dashboard-amount">{amount}</span>
-                  ) : item.deliveryAt ? (
-                    <span className="orders-dashboard-quote-date"><CalendarClock />{dateFormatter.format(new Date(item.deliveryAt))}</span>
+                  ) : dateValue ? (
+                    <span className="orders-dashboard-quote-date"><CalendarClock />{dateFormatter.format(new Date(dateValue.length === 10 ? `${dateValue}T00:00:00+08:00` : dateValue))}</span>
                   ) : null}
                   <ChevronRight />
                 </DetailLink>

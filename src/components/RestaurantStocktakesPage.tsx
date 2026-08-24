@@ -206,7 +206,9 @@ export function RestaurantStocktakesPage({
   const openCreate = () => {
     const month = selected?.month ?? hongKongMonth();
     setNewMonth(month);
-    const preferredRestaurant = selected?.restaurantId && !restaurantUnavailableFor(month, selected.restaurantId) ? selected.restaurantId : "";
+    const preferredRestaurant = masters.restaurants.find(
+      (restaurant) => !restaurantUnavailableFor(month, restaurant.id),
+    )?.id ?? "";
     setNewRestaurantId(preferredRestaurant);
     setNewDepartment("");
     setCreateError(null);

@@ -13,6 +13,10 @@ import {
   mergeOverwriteRow,
   normalizeOrderNumber,
 } from "../supabase/functions/bubble-daily-incremental/overwrite.ts";
+import {
+  fallbackDeliveryLegacyId,
+  orderMetadataFromRecord,
+} from "../supabase/functions/bubble-daily-incremental/order-metadata.ts";
 
 describe("bubble daily incremental helpers", () => {
   it("canonicalizes object keys recursively and hashes deterministically", async () => {
@@ -73,6 +77,30 @@ describe("bubble daily incremental helpers", () => {
     expect(phoneText(" 12:00 - 12:30 ")).toBe("12:00 - 12:30");
   });
 
+  it("maps and backfills fleet bank accounts from Bubble payment text", () => {
+    const mapping = coreMappings.find(
+      (item) => item.sourceType === "ds_super_motorcade",
+    );
+    expect(mapping).toBeTruthy();
+    expect(mapping!.map({
+      _id: "fleet-1",
+      "Full Name": "Sun-Line Logistics",
+      "payment method(text)": "  渣打 40711305668  ",
+    }).bank_account).toBe("渣打 40711305668");
+
+    const source = fs.readFileSync(
+      path.join(
+        process.cwd(),
+        "supabase/functions/bubble-daily-incremental/index.ts",
+      ),
+      "utf8",
+    );
+    expect(source).toContain(
+      "backfillDeliveryTeamBankAccounts(client, fetched.records)",
+    );
+    expect(source).toContain('.is("bank_account", null)');
+  });
+
   it("maps Bubble Delivery_DS_Shipping Method onto orders", () => {
     const mapping = coreMappings.find((item) => item.sourceType === "a_order");
     expect(mapping).toBeTruthy();
@@ -86,6 +114,38 @@ describe("bubble daily incremental helpers", () => {
     expect(
       mapping!.relations?.some((item) => item.idField === "shipping_method_id"),
     ).toBe(true);
+  });
+
+  it("extracts order tags and the fallback delivery district from A_Order", () => {
+    expect(orderMetadataFromRecord({
+      _id: "order-1",
+      ORDER_tag: ["tag-1", "tag-2", "tag-1"],
+      "Delivery_DS_Deli District": "district-1",
+    })).toEqual({
+      orderLegacyId: "order-1",
+      tagLegacyIds: ["tag-1", "tag-2"],
+      districtLegacyId: "district-1",
+    });
+    expect(fallbackDeliveryLegacyId("order-1")).toBe(
+      "bubble-order-fallback-delivery-order-1",
+    );
+  });
+
+  it("runs the A_Order metadata hook for daily sync and exposes a full backfill", () => {
+    const source = fs.readFileSync(
+      path.join(
+        process.cwd(),
+        "supabase/functions/bubble-daily-incremental/index.ts",
+      ),
+      "utf8",
+    );
+
+    expect(source).toContain("syncOrderMetadata(client, fetched.records)");
+    expect(source).toContain("backfillOrderMetadata");
+    expect(source).toContain("body?.cursor");
+    expect(source).toContain("nextCursor");
+    expect(source).toContain("order_tag_assignments");
+    expect(source).toContain("delivery.district_id ? []");
   });
 
   it("maps Bubble fulfill and take timestamps onto deliveries", () => {
@@ -113,7 +173,7 @@ describe("bubble daily incremental helpers", () => {
       "utf8",
     );
 
-    expect(source).toContain('relation.idField === "motorcade_id"');
+    expect(source).toContain("resolveRelations(client, rows, mapping.relations)");
     expect(source).toContain("motorcade_id: row.motorcade_id");
     expect(source).toContain('.is("motorcade_id", null)');
   });

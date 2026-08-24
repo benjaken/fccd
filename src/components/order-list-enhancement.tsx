@@ -126,14 +126,14 @@ export function OrderTagBadges({
   statuses,
   manualTodos,
 }: {
-  statuses: readonly (OrderStatusView & { tone?: "amber" | "blue" | "green" | "neutral" | "red" })[];
+  statuses: readonly (OrderStatusView & { tone?: "amber" | "blue" | "green" | "neutral" | "red"; tooltip?: string })[];
   manualTodos: readonly OrderListManualTodo[];
 }) {
   const tags = [
-    ...statuses.map((tag) => ({ label: tag.name, color: tag.color, tone: tag.tone ?? badgeTone(tag.name) })),
-    ...manualTodos.map((todo) => ({ label: todo.label, color: null, tone: "neutral" as const })),
+    ...statuses.map((tag) => ({ label: tag.name, color: tag.color, tone: tag.tone ?? badgeTone(tag.name), tooltip: tag.tooltip })),
+    ...manualTodos.map((todo) => ({ label: todo.label, color: null, tone: "neutral" as const, tooltip: undefined })),
   ];
-  return tags.length ? <div className="order-status-list">{tags.map((tag, index) => <span className={cn("status-badge", tag.tone)} style={tag.color ? { backgroundColor: tag.color, borderColor: tag.color, color: "#ffffff" } : undefined} key={`${tag.label}-${index}`}>{tag.label}</span>)}</div> : <span>—</span>;
+  return tags.length ? <div className="order-status-list">{tags.map((tag, index) => <span className={cn("status-badge", tag.tone)} title={tag.tooltip} style={tag.color ? { backgroundColor: tag.color, borderColor: tag.color, color: "#ffffff" } : undefined} key={`${tag.label}-${index}`}>{tag.label}</span>)}</div> : <span>—</span>;
 }
 
 function badgeTone(name: string): "amber" | "blue" | "green" {
@@ -278,7 +278,7 @@ export function OrderRowActionMenu({
       {showDeliveryNote ? <button type="button" onClick={() => onPreview("delivery-note")} aria-label="送貨單" title="送貨單"><Truck /></button> : null}
       {isPaidInFull ? <Link className="order-document-action" to={`/orders/${order.id}/receipt`} target="_blank" rel="noopener noreferrer" aria-label={t("orders.documents.receipt")} title={t("orders.documents.receipt")}>{t("orders.documents.receipt")}</Link> : null}
       {isPaidInFull ? <Link className="order-document-action" to={`/orders/${order.id}/invoice`} target="_blank" rel="noopener noreferrer" aria-label={t("orders.documents.invoice")} title={t("orders.documents.invoice")}>{t("orders.documents.invoice")}</Link> : null}
-      <Link to={`/orders/new?copyFrom=${encodeURIComponent(order.id)}`} aria-label="複製" title="複製"><Copy /></Link>
+      <Link to={`/orders/new?copyFrom=${encodeURIComponent(order.id)}`} aria-label={t("orders.copy")} title={t("orders.copy")}><Copy /></Link>
     </div>
   );
 }

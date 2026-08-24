@@ -13,6 +13,7 @@ import {
   Plus,
   Save,
   Trash2,
+  UserX,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -21,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { OrderFactorySettingsControls } from "@/components/order-factory-settings-controls";
 import {
+  clearOrderCustomerInfo,
   emptyOrderDraft,
   fetchOrderEditor,
   orderDraftTotals,
@@ -30,6 +32,7 @@ import {
   type OrderEditorOption,
   type OrderEditorOptions,
 } from "@/lib/order-editor";
+import { useMediaQuery } from "@/lib/use-media-query";
 
 type Step = "details" | "items" | "payments";
 type EditorLoader = typeof fetchOrderEditor;
@@ -150,6 +153,7 @@ export function OrderEditorPage({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const isMobileEditor = useMediaQuery("(max-width: 760px)");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -174,6 +178,11 @@ export function OrderEditorPage({
   const activeStepIndex = STEPS.findIndex((item) => item.id === step);
   const update = <K extends keyof OrderEditorDraft>(key: K, value: OrderEditorDraft[K]) =>
     setDraft((current) => ({ ...current, [key]: value }));
+
+  const clearCustomerInfo = () => {
+    setDraft((current) => clearOrderCustomerInfo(current));
+    setSaveError(null);
+  };
 
   const addCatalogItem = () => {
     const item = options.catalog.find((option) => option.id === selectedCatalogId);
@@ -327,6 +336,10 @@ export function OrderEditorPage({
           <>
             <header className="order-editor-section-heading">
               <div><span>01</span><div><h2>訂單與客戶資料</h2><p>確認聯絡方式、送餐日期及工場指示。</p></div></div>
+              <Button type="button" variant="outline" onClick={clearCustomerInfo}>
+                <UserX />
+                {t("orderEditor.clearCustomerInfo")}
+              </Button>
             </header>
             <div className="order-editor-form-grid">
               <div className="order-editor-column">
@@ -393,26 +406,53 @@ export function OrderEditorPage({
                 <Button type="button" onClick={addCatalogItem} disabled={!selectedCatalogId}><Plus />加入</Button>
               </div>
             </header>
-            <div className="order-editor-table-wrap">
-              <table className="order-editor-table">
-                <thead><tr><th>排序</th><th>SKU</th><th>產品</th><th>數量</th><th>單價</th><th>總數</th><th><span className="sr-only">操作</span></th></tr></thead>
-                <tbody>
-                  {draft.lines.map((line, index) => (
-                    <tr key={line.id}>
-                      <td><div className="order-editor-sort"><button type="button" disabled={!index} onClick={() => moveLine(index, -1)}><ChevronUp /></button><button type="button" disabled={index === draft.lines.length - 1} onClick={() => moveLine(index, 1)}><ChevronDown /></button></div></td>
-                      <td><input value={line.sku} onChange={(event) => updateLine(index, { sku: event.target.value })} /></td>
-                      <td><input value={line.name} aria-label={`產品 ${index + 1}`} onChange={(event) => updateLine(index, { name: event.target.value })} /><input className="order-line-note" value={line.remarks} placeholder={t("orderEditor.lineNotePlaceholder")} onChange={(event) => updateLine(index, { remarks: event.target.value })} /></td>
-                      <td><input type="number" min="0.001" step="0.001" value={line.quantity} onChange={(event) => updateLine(index, { quantity: Number(event.target.value) })} /></td>
-                      <td><input type="number" min="0" step="0.01" value={line.unitPrice} onChange={(event) => updateLine(index, { unitPrice: Number(event.target.value) })} /></td>
-                      <td><strong>{money(line.quantity * line.unitPrice)}</strong></td>
-                      <td><button className="order-editor-delete" type="button" aria-label={`刪除 ${line.name}`} onClick={() => update("lines", draft.lines.filter((_, lineIndex) => lineIndex !== index))}><Trash2 /></button></td>
-                    </tr>
-                  ))}
-                  {!draft.lines.length && <tr><td className="order-editor-empty" colSpan={7}><PackagePlus /><strong>尚未加入餐點</strong><span>從上方產品選單加入第一項。</span></td></tr>}
-                </tbody>
-                <tfoot><tr><td colSpan={3}>總件數：<strong>{draft.lines.reduce((sum, line) => sum + line.quantity, 0)}</strong></td><td colSpan={4}>小計：<strong>{money(totals.subtotal)}</strong></td></tr></tfoot>
-              </table>
-            </div>
+            {isMobileEditor ? (
+              <div className="order-editor-mobile-lines" role="list" aria-label="訂單餐點">
+                {draft.lines.map((line, index) => (
+                  <article className="order-editor-mobile-line" role="listitem" key={line.id}>
+                    <header>
+                      <strong>{line.name || `產品 ${index + 1}`}</strong>
+                      <div className="order-editor-mobile-line-actions">
+                        <button type="button" disabled={!index} aria-label={`上移 ${line.name}`} onClick={() => moveLine(index, -1)}><ChevronUp /></button>
+                        <button type="button" disabled={index === draft.lines.length - 1} aria-label={`下移 ${line.name}`} onClick={() => moveLine(index, 1)}><ChevronDown /></button>
+                        <button className="order-editor-delete" type="button" aria-label={`刪除 ${line.name}`} onClick={() => update("lines", draft.lines.filter((_, lineIndex) => lineIndex !== index))}><Trash2 /></button>
+                      </div>
+                    </header>
+                    <div className="order-editor-mobile-line-fields">
+                      <label><span>SKU</span><input value={line.sku} onChange={(event) => updateLine(index, { sku: event.target.value })} /></label>
+                      <label className="is-wide"><span>產品</span><input value={line.name} aria-label={`產品 ${index + 1}`} onChange={(event) => updateLine(index, { name: event.target.value })} /></label>
+                      <label><span>數量</span><input type="number" inputMode="decimal" min="0.001" step="0.001" value={line.quantity} onChange={(event) => updateLine(index, { quantity: Number(event.target.value) })} /></label>
+                      <label><span>單價</span><input type="number" inputMode="decimal" min="0" step="0.01" value={line.unitPrice} onChange={(event) => updateLine(index, { unitPrice: Number(event.target.value) })} /></label>
+                      <label className="is-wide"><span>備註</span><input value={line.remarks} placeholder={t("orderEditor.lineNotePlaceholder")} onChange={(event) => updateLine(index, { remarks: event.target.value })} /></label>
+                    </div>
+                    <footer><span>小計</span><strong>{money(line.quantity * line.unitPrice)}</strong></footer>
+                  </article>
+                ))}
+                {!draft.lines.length ? <div className="order-editor-empty"><PackagePlus /><strong>尚未加入餐點</strong><span>從上方產品選單加入第一項。</span></div> : null}
+                {draft.lines.length ? <div className="order-editor-mobile-lines-summary"><span>總件數 <strong>{draft.lines.reduce((sum, line) => sum + line.quantity, 0)}</strong></span><span>小計 <strong>{money(totals.subtotal)}</strong></span></div> : null}
+              </div>
+            ) : (
+              <div className="order-editor-table-wrap">
+                <table className="order-editor-table">
+                  <thead><tr><th>排序</th><th>SKU</th><th>產品</th><th>數量</th><th>單價</th><th>總數</th><th><span className="sr-only">操作</span></th></tr></thead>
+                  <tbody>
+                    {draft.lines.map((line, index) => (
+                      <tr key={line.id}>
+                        <td><div className="order-editor-sort"><button type="button" disabled={!index} onClick={() => moveLine(index, -1)}><ChevronUp /></button><button type="button" disabled={index === draft.lines.length - 1} onClick={() => moveLine(index, 1)}><ChevronDown /></button></div></td>
+                        <td><input value={line.sku} onChange={(event) => updateLine(index, { sku: event.target.value })} /></td>
+                        <td><input value={line.name} aria-label={`產品 ${index + 1}`} onChange={(event) => updateLine(index, { name: event.target.value })} /><input className="order-line-note" value={line.remarks} placeholder={t("orderEditor.lineNotePlaceholder")} onChange={(event) => updateLine(index, { remarks: event.target.value })} /></td>
+                        <td><input type="number" min="0.001" step="0.001" value={line.quantity} onChange={(event) => updateLine(index, { quantity: Number(event.target.value) })} /></td>
+                        <td><input type="number" min="0" step="0.01" value={line.unitPrice} onChange={(event) => updateLine(index, { unitPrice: Number(event.target.value) })} /></td>
+                        <td><strong>{money(line.quantity * line.unitPrice)}</strong></td>
+                        <td><button className="order-editor-delete" type="button" aria-label={`刪除 ${line.name}`} onClick={() => update("lines", draft.lines.filter((_, lineIndex) => lineIndex !== index))}><Trash2 /></button></td>
+                      </tr>
+                    ))}
+                    {!draft.lines.length && <tr><td className="order-editor-empty" colSpan={7}><PackagePlus /><strong>尚未加入餐點</strong><span>從上方產品選單加入第一項。</span></td></tr>}
+                  </tbody>
+                  <tfoot><tr><td colSpan={3}>總件數：<strong>{draft.lines.reduce((sum, line) => sum + line.quantity, 0)}</strong></td><td colSpan={4}>小計：<strong>{money(totals.subtotal)}</strong></td></tr></tfoot>
+                </table>
+              </div>
+            )}
             <div className="order-editor-costs">
               <InputField label="運費 (+)" value={draft.shippingFee} type="number" onChange={(value) => update("shippingFee", Number(value))} />
               <InputField label="折扣 (-)" value={draft.discount} type="number" onChange={(value) => update("discount", Number(value))} />

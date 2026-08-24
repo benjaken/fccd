@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
@@ -40,6 +40,7 @@ const result: OrderDetailResult = {
   order: {
     id: "quote-1",
     documentType: "quote",
+    channelEmail: "quotes@foodchannels-catering.com",
     orderNumber: "FCCQ20260828",
     customerName: "程嘉敏",
     companyName: "STFA Seaward Woo College",
@@ -205,6 +206,7 @@ describe("editable quote PDF page", () => {
     const customerCompany = screen.getByTestId("quote-customer-company");
     expect(within(customerCompany).getByLabelText("客戶名稱")).toHaveValue("程嘉敏");
     expect(within(customerCompany).getByLabelText("公司名稱")).toHaveValue("STFA Seaward Woo College");
+    expect(screen.getAllByText("quotes@foodchannels-catering.com").length).toBeGreaterThan(0);
     expect(screen.getByLabelText("產品 1")).toHaveValue("雙拼飯盒");
     expect(screen.getByLabelText("產品 1").tagName).toBe("INPUT");
     expect(screen.getByLabelText("送貨地址").tagName).toBe("TEXTAREA");
@@ -360,8 +362,10 @@ describe("editable quote PDF page", () => {
     await user.click(toggle);
     expect(screen.getByText("請仔細閱讀以上內容並簽署確認：")).toBeInTheDocument();
     expect(screen.getByText("公司蓋印及簽署：")).toBeInTheDocument();
-    expect(screen.getByText("程嘉敏")).toBeInTheDocument();
+    expect(screen.getByText("STFA Seaward Woo College")).toBeInTheDocument();
+    expect(document.querySelector(".quote-pdf-signature-customer")).not.toHaveTextContent("程嘉敏");
     expect(document.querySelector(".quote-pdf-signature-stamp-spacer")).toBeInTheDocument();
+    expect(screen.queryByRole("main", { name: "PDF 第 2 頁" })).not.toBeInTheDocument();
   });
 
   it("does not insert a visible footer spacer between products and trailing content", async () => {
@@ -392,23 +396,211 @@ describe("editable quote PDF page", () => {
     expect(sheets[1].querySelector(".quote-pdf-summary-rows")).toBeInTheDocument();
   });
 
-  it("moves the signing block to its own PDF page", async () => {
-    const user = userEvent.setup();
+  it("moves overflowing trailing modules to another sheet instead of clipping the signature", async () => {
+    const rectSpy = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function () {
+      const isFooter = this.hasAttribute("data-pdf-auto-footer");
+      const isOverflowingSignature = Boolean(this.querySelector(".quote-pdf-signature"))
+        && this.closest<HTMLElement>("[data-pdf-auto-page]")?.dataset.pdfAutoPage === "products";
+      const top = isFooter ? 1000 : 0;
+      const bottom = isOverflowingSignature ? 1100 : 500;
+      return { x: 0, y: top, top, right: 800, bottom, left: 0, width: 800, height: bottom - top, toJSON: () => ({}) } as DOMRect;
+    });
+    localStorage.setItem("fccd:quote-pdf-draft:quote-1", JSON.stringify({
+      showCustomerSignature: true,
+      additionalInfo: Array.from({ length: 5 }, (_, index) => `額外資訊 ${index + 1}`),
+      activities: Array.from({ length: 3 }, (_, index) => ({
+        id: `activity-${index + 1}`,
+        description: `活動 ${index + 1}`,
+        amount: "100",
+      })),
+    }));
+    const longResult: OrderDetailResult = {
+      ...lunchBoxResult,
+      lines: Array.from({ length: 20 }, (_, index) => ({
+        ...lunchBoxResult.lines[0],
+        id: `line-${index + 1}`,
+        productName: `產品 ${index + 1}`,
+      })),
+    };
+    renderPage(vi.fn().mockResolvedValue(longResult));
+
+    try {
+      await waitFor(() => expect(document.querySelectorAll(".quote-pdf-sheet")).toHaveLength(3));
+      const sheets = document.querySelectorAll(".quote-pdf-sheet");
+      expect(sheets[2].querySelector(".quote-pdf-signature")).toBeInTheDocument();
+    } finally {
+      rectSpy.mockRestore();
+    }
+  });
+
+  it("fills the remaining product-page space with clauses before continuing them", async () => {
+    const rectSpy = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function () {
+      const isFooter = this.hasAttribute("data-pdf-auto-footer");
+      const moduleIndex = Number(this.dataset.pdfAutoModuleIndex);
+      const isProductPage = this.closest<HTMLElement>("[data-pdf-auto-page]")?.dataset.pdfAutoPage === "products";
+      const isLegacyWholeNotesBlock = Boolean(this.querySelector(".quote-pdf-notes")) && isProductPage;
+      const top = isFooter ? 1000 : 0;
+      const clauseBottom = isProductPage && Number.isInteger(moduleIndex) && moduleIndex >= 2 && moduleIndex <= 8
+        ? 650 + (moduleIndex - 2) * 100
+        : 500;
+      const bottom = isLegacyWholeNotesBlock ? 1100 : clauseBottom;
+      return { x: 0, y: top, top, right: 800, bottom, left: 0, width: 800, height: bottom - top, toJSON: () => ({}) } as DOMRect;
+    });
+    localStorage.setItem("fccd:quote-pdf-draft:quote-1", JSON.stringify({
+      terms: Array.from({ length: 7 }, (_, index) => `條款 ${index + 1}`),
+      paymentMethods: [],
+    }));
+    const longResult: OrderDetailResult = {
+      ...lunchBoxResult,
+      lines: Array.from({ length: 20 }, (_, index) => ({
+        ...lunchBoxResult.lines[0],
+        id: `line-${index + 1}`,
+        productName: `產品 ${index + 1}`,
+      })),
+    };
+    renderPage(vi.fn().mockResolvedValue(longResult));
+
+    try {
+      const firstClause = await screen.findByLabelText("條款及細則 1");
+      expect(firstClause.closest("main")).toHaveAccessibleName("PDF 第 2 頁");
+      expect(screen.getByLabelText("條款及細則 5").closest("main")).toHaveAccessibleName("PDF 第 3 頁");
+    } finally {
+      rectSpy.mockRestore();
+    }
+  });
+
+  it("keeps every clause visible when a populated activity table consumes the remaining space", async () => {
+    const rectSpy = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function () {
+      const page = this.closest<HTMLElement>(".quote-pdf-sheet");
+      const pages = Array.from(document.querySelectorAll<HTMLElement>(".quote-pdf-sheet"));
+      const pageIndex = page ? pages.indexOf(page) : 0;
+      const pageTop = pageIndex * 1200;
+      if (this.hasAttribute("data-pdf-auto-footer")) {
+        return { x: 0, y: pageTop + 1000, top: pageTop + 1000, right: 800, bottom: pageTop + 1030, left: 0, width: 800, height: 30, toJSON: () => ({}) } as DOMRect;
+      }
+      const moduleIndex = Number(this.dataset.pdfAutoModuleIndex);
+      if (page && Number.isInteger(moduleIndex)) {
+        const modules = Array.from(page.querySelectorAll<HTMLElement>("[data-pdf-auto-module-index]"));
+        const modulePosition = modules.indexOf(this);
+        const heightFor = (element: HTMLElement) => {
+          const index = Number(element.dataset.pdfAutoModuleIndex);
+          if (index === 0) return 100;
+          if (index === 1) return 350;
+          if (index >= 2 && index <= 8) return 60;
+          if (index === 9) return 50;
+          return 200;
+        };
+        const start = page.dataset.pdfAutoPage === "products" ? 600 : 100;
+        const top = pageTop + start + modules.slice(0, modulePosition).reduce((total, element) => total + heightFor(element), 0);
+        const height = heightFor(this);
+        return { x: 0, y: top, top, right: 800, bottom: top + height, left: 0, width: 800, height, toJSON: () => ({}) } as DOMRect;
+      }
+      return { x: 0, y: 0, top: 0, right: 800, bottom: 0, left: 0, width: 800, height: 0, toJSON: () => ({}) } as DOMRect;
+    });
+    localStorage.setItem("fccd:quote-pdf-draft:quote-1", JSON.stringify({
+      showCustomerSignature: true,
+      additionalInfo: Array.from({ length: 5 }, (_, index) => `額外資訊 ${index + 1}`),
+      activities: Array.from({ length: 3 }, (_, index) => ({ id: `activity-${index}`, description: `活動 ${index + 1}`, amount: "100" })),
+      terms: Array.from({ length: 7 }, (_, index) => `條款 ${index + 1}`),
+      paymentMethods: [],
+    }));
+    const longResult: OrderDetailResult = {
+      ...lunchBoxResult,
+      lines: Array.from({ length: 20 }, (_, index) => ({ ...lunchBoxResult.lines[0], id: `line-${index + 1}` })),
+    };
+    renderPage(vi.fn().mockResolvedValue(longResult));
+
+    try {
+      await waitFor(() => {
+        for (let index = 1; index <= 7; index += 1) {
+          const clause = screen.getByLabelText(`條款及細則 ${index}`);
+          const page = clause.closest("main");
+          const footer = page?.querySelector<HTMLElement>("[data-pdf-auto-footer]");
+          expect(clause.getBoundingClientRect().bottom).toBeLessThanOrEqual(footer?.getBoundingClientRect().top ?? 0);
+        }
+      });
+    } finally {
+      rectSpy.mockRestore();
+    }
+  });
+
+  it("repaginates when rendered content becomes taller after the first measurement", async () => {
+    let activityHeight = 100;
+    let notifyResize: (() => void) | undefined;
+    class ResizeObserverMock {
+      constructor(callback: ResizeObserverCallback) {
+        notifyResize = () => callback([], this as unknown as ResizeObserver);
+      }
+      observe() {}
+      disconnect() {}
+      unobserve() {}
+    }
+    vi.stubGlobal("ResizeObserver", ResizeObserverMock);
+    const rectSpy = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function () {
+      const page = this.closest<HTMLElement>(".quote-pdf-sheet");
+      const pages = Array.from(document.querySelectorAll<HTMLElement>(".quote-pdf-sheet"));
+      const pageIndex = page ? pages.indexOf(page) : 0;
+      const pageTop = pageIndex * 1200;
+      if (this.hasAttribute("data-pdf-auto-footer")) {
+        return { x: 0, y: pageTop + 1000, top: pageTop + 1000, right: 800, bottom: pageTop + 1030, left: 0, width: 800, height: 30, toJSON: () => ({}) } as DOMRect;
+      }
+      const moduleIndex = Number(this.dataset.pdfAutoModuleIndex);
+      if (page && Number.isInteger(moduleIndex)) {
+        const modules = Array.from(page.querySelectorAll<HTMLElement>("[data-pdf-auto-module-index]"));
+        const heightFor = (element: HTMLElement) => {
+          const index = Number(element.dataset.pdfAutoModuleIndex);
+          if (index === 0) return 50;
+          if (index === 1) return activityHeight;
+          if (index >= 2 && index <= 8) return 50;
+          return 100;
+        };
+        const modulePosition = modules.indexOf(this);
+        const start = page.dataset.pdfAutoPage === "products" ? 300 : 100;
+        const top = pageTop + start + modules.slice(0, modulePosition).reduce((total, element) => total + heightFor(element), 0);
+        const height = heightFor(this);
+        return { x: 0, y: top, top, right: 800, bottom: top + height, left: 0, width: 800, height, toJSON: () => ({}) } as DOMRect;
+      }
+      return { x: 0, y: 0, top: 0, right: 800, bottom: 0, left: 0, width: 800, height: 0, toJSON: () => ({}) } as DOMRect;
+    });
+    localStorage.setItem("fccd:quote-pdf-draft:quote-1", JSON.stringify({
+      additionalInfo: ["額外資訊"],
+      activities: [{ id: "activity-1", description: "活動", amount: "100" }],
+      terms: Array.from({ length: 7 }, (_, index) => `條款 ${index + 1}`),
+      paymentMethods: [],
+    }));
+    const longResult: OrderDetailResult = {
+      ...lunchBoxResult,
+      lines: Array.from({ length: 20 }, (_, index) => ({ ...lunchBoxResult.lines[0], id: `line-${index + 1}` })),
+    };
+    renderPage(vi.fn().mockResolvedValue(longResult));
+
+    try {
+      const firstClause = await screen.findByLabelText("條款及細則 1");
+      expect(firstClause.closest("main")).toHaveAccessibleName("PDF 第 2 頁");
+      activityHeight = 500;
+      await act(async () => notifyResize?.());
+      await waitFor(() => expect(screen.getByLabelText("條款及細則 3").closest("main")).toHaveAccessibleName("PDF 第 3 頁"));
+    } finally {
+      rectSpy.mockRestore();
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("keeps the signing block in sequence without manual page controls", async () => {
+    localStorage.setItem("fccd:quote-pdf-draft:quote-1", JSON.stringify({
+      showCustomerSignature: true,
+      signatureStartsNewPage: true,
+    }));
     renderPage();
 
     await screen.findByRole("heading", { name: "到會套餐報價" });
-    const controls = screen.getByRole("generic", { name: "客戶簽署分頁控制" });
-    await user.click(within(controls).getByRole("button", { name: "下移一頁" }));
-
-    const secondPage = screen.getByRole("main", { name: "PDF 第 2 頁" });
-    expect(within(secondPage).getByRole("region", { name: "簽署確認" })).toBeInTheDocument();
-    const secondPageControls = within(secondPage).getByRole("generic", { name: "客戶簽署分頁控制" });
-    await user.click(within(secondPageControls).getByRole("button", { name: "上移一頁" }));
+    expect(screen.getByRole("region", { name: "簽署確認" })).toBeInTheDocument();
     expect(screen.queryByRole("main", { name: "PDF 第 2 頁" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "下移一頁" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "上移一頁" })).not.toBeInTheDocument();
   });
 
-  it("moves the activity block between PDF pages", async () => {
-    const user = userEvent.setup();
+  it("keeps the activity block in sequence without manual page controls", async () => {
     localStorage.setItem("fccd:quote-pdf-draft:quote-1", JSON.stringify({
       activities: [{ id: "activity-1", description: "10月15日 120個飯盒", amount: "5400" }],
     }));
@@ -416,22 +608,10 @@ describe("editable quote PDF page", () => {
 
     await screen.findByRole("heading", { name: "便當報價" });
     const activity = screen.getByRole("region", { name: "活動報價表" });
-    const activityControls = screen.getByLabelText("活動報價分頁控制");
-    const moveDown = within(activityControls).getByRole("button", { name: "下移一頁" });
-    const moveUp = within(activityControls).getByRole("button", { name: "上移一頁" });
     expect(activity.closest("main")).not.toHaveAccessibleName("PDF 第 2 頁");
-    expect(moveUp).toBeDisabled();
-
-    await user.click(moveDown);
-    const secondPage = screen.getByRole("main", { name: "PDF 第 2 頁" });
-    expect(within(secondPage).getByRole("region", { name: "活動報價表" })).toBeInTheDocument();
-    expect(within(secondPage).getByRole("img", { name: "HK Lunch Box" })).toBeInTheDocument();
-    expect(within(secondPage).getByRole("img", { name: "公司認證及獎項" })).toBeInTheDocument();
-    expect(within(secondPage).getByText("FCBQ20260828")).toBeInTheDocument();
-
-    const secondPageActivityControls = within(secondPage).getByLabelText("活動報價分頁控制");
-    await user.click(within(secondPageActivityControls).getByRole("button", { name: "上移一頁" }));
-    expect(screen.queryByRole("main", { name: "PDF 第 2 頁" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "新增活動項目" })).toBeEnabled();
+    expect(screen.queryByRole("button", { name: "下移一頁" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "上移一頁" })).not.toBeInTheDocument();
   });
 
   it("keeps totals without rendering or paginating an empty activity table", async () => {
@@ -451,10 +631,9 @@ describe("editable quote PDF page", () => {
     expect(within(activitySummary).getByText("總數：")).toBeInTheDocument();
     expect(screen.queryByRole("main", { name: "PDF 第 2 頁" })).not.toBeInTheDocument();
 
-    const controls = screen.getByLabelText("活動報價分頁控制");
-    expect(within(controls).getByRole("button", { name: "下移一頁" })).toBeDisabled();
-    expect(within(controls).getByRole("button", { name: "上移一頁" })).toBeDisabled();
-    expect(within(controls).getByRole("button", { name: "新增活動項目" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "新增活動項目" })).toBeEnabled();
+    expect(screen.queryByRole("button", { name: "下移一頁" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "上移一頁" })).not.toBeInTheDocument();
   });
 
   it("opens the activity picker and adds a priced activity item", async () => {
@@ -517,21 +696,13 @@ describe("editable quote PDF page", () => {
     expect(document.querySelectorAll(".quote-pdf-note-block.is-empty")).toHaveLength(2);
   });
 
-  it("moves the terms and payment methods block between PDF pages", async () => {
-    const user = userEvent.setup();
+  it("keeps terms and payment methods in sequence without manual page controls", async () => {
     renderPage();
 
     await screen.findByRole("heading", { name: "到會套餐報價" });
-    const controls = screen.getByRole("generic", { name: "條款及付款方式分頁控制" });
-    expect(screen.queryByRole("main", { name: "PDF 第 2 頁" })).not.toBeInTheDocument();
-
-    await user.click(within(controls).getByRole("button", { name: "下移一頁" }));
-    const secondPage = screen.getByRole("main", { name: "PDF 第 2 頁" });
-    expect(secondPage.querySelector(".quote-pdf-notes")).toBeInTheDocument();
-    expect(within(secondPage).getByText("條款及付款方式已移至下一頁")).toBeInTheDocument();
-
-    const secondPageControls = within(secondPage).getByRole("generic", { name: "條款及付款方式分頁控制" });
-    await user.click(within(secondPageControls).getByRole("button", { name: "上移一頁" }));
+    expect(document.querySelector(".quote-pdf-notes")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "下移一頁" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "上移一頁" })).not.toBeInTheDocument();
     expect(screen.queryByRole("main", { name: "PDF 第 2 頁" })).not.toBeInTheDocument();
   });
 });

@@ -12,7 +12,10 @@ vi.mock("@/auth/use-page-access", () => ({
   useCurrentPageAccess: () => ({ canAccess: () => true }),
 }));
 
-const restaurants = [{ id: "tko", legacyId: "tko-legacy", name: "TKO 桂花小幸 將軍澳" }];
+const restaurants = [
+  { id: "ylp", legacyId: "ylp-legacy", name: "YLP 桂花小幸 元朗" },
+  { id: "tko", legacyId: "tko-legacy", name: "TKO 桂花小幸 將軍澳" },
+];
 const suppliers = [{ id: "supplier-1", legacyId: "supplier-legacy", name: "長明國際 (CI)" }];
 const purchaseTypes = [
   { id: "kitchen", legacyId: "kitchen-legacy", name: "廚房用料" },
@@ -52,7 +55,8 @@ function makeServices(overrides: Partial<RestaurantDailyPurchaseServices> = {}):
 describe("restaurant daily purchase input", () => {
   it("shows restaurant, supplier, category totals, and edit actions", async () => {
     await i18n.changeLanguage("zh-HK");
-    render(<RestaurantDailyPurchasesPage canEdit services={makeServices()} />);
+    const api = makeServices();
+    render(<RestaurantDailyPurchasesPage canEdit services={api} />);
 
     expect(await screen.findByRole("heading", { name: "每日採購單輸入" })).toBeInTheDocument();
     expect(await screen.findByText("TKO 桂花小幸 將軍澳")).toBeInTheDocument();
@@ -60,6 +64,9 @@ describe("restaurant daily purchase input", () => {
     expect(screen.getByText("廚房用料")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /新增採購記錄/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /編輯採購記錄/ })).toBeInTheDocument();
+    await waitFor(() => expect(api.loadRecords).toHaveBeenLastCalledWith(expect.objectContaining({
+      filters: expect.objectContaining({ restaurantIds: ["ylp"] }),
+    })));
   });
 
   it("saves one categorized purchase group for a date, restaurant, and supplier", async () => {
@@ -70,6 +77,7 @@ describe("restaurant daily purchase input", () => {
 
     await user.click(await screen.findByRole("button", { name: /新增採購記錄/ }));
     const dialog = screen.getByRole("dialog");
+    expect(within(dialog).getByLabelText("餐廳")).toHaveValue("ylp");
     await user.type(within(dialog).getByLabelText("日期"), "2026-08-22");
     await user.selectOptions(within(dialog).getByLabelText("餐廳"), "tko");
     await user.selectOptions(within(dialog).getByLabelText("供應商"), "supplier-1");

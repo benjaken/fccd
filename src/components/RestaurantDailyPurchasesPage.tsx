@@ -99,11 +99,11 @@ function PurchaseRecordPanel({
   useEffect(() => {
     if (!open) return;
     setDate("");
-    setRestaurantId("");
+    setRestaurantId(restaurants[0]?.id ?? "");
     setSupplierId("");
     setAmounts(Object.fromEntries(purchaseTypes.map((type) => [type.id, "0"])));
     setError(null);
-  }, [open, purchaseTypes]);
+  }, [open, purchaseTypes, restaurants]);
 
   const total = useMemo(
     () => purchaseTypes.reduce((sum, type) => sum + (Number(amounts[type.id]) || 0), 0),
@@ -378,6 +378,14 @@ export function RestaurantDailyPurchasesPage({
         setRestaurants(restaurantItems);
         setSuppliers(supplierItems);
         setPurchaseTypes(typeItems);
+        setFilters((current) => ({
+          ...current,
+          restaurantIds: current.restaurantIds.length
+            ? current.restaurantIds
+            : restaurantItems[0]?.id
+              ? [restaurantItems[0].id]
+              : [],
+        }));
       })
       .catch((loadError) => {
         if (active) setError(loadError instanceof Error ? loadError.message : t("restaurantDailyPurchases.optionsLoadError"));

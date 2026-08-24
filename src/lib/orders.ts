@@ -10,7 +10,6 @@ import {
 } from "@/lib/order-statuses";
 import {
   fetchManualTodosForOrders,
-  findOrdersWithDistrictNames,
   findOrdersWithOrderTags,
   findOrdersWithManualTodos,
   type OrderListEnhancementFilters,
@@ -88,6 +87,28 @@ export function operationalOrderStatusTone(status: OperationalOrderStatus) {
   }
   if (status === "preparing") return "amber";
   return "blue";
+}
+
+export function orderDeliveryStatusTone(
+  deliveryStatus: string | null | undefined,
+) {
+  if (
+    isOrderDelivered(deliveryStatus) ||
+    isOrderPickedUp(deliveryStatus) ||
+    deliveryStatus === "待取貨"
+  ) {
+    return "green";
+  }
+  if (deliveryStatus === "送貨途中" || deliveryStatus === "待接單") {
+    return "blue";
+  }
+  if (
+    deliveryStatus === "未派車隊" ||
+    !deliveryStatus?.trim()
+  ) {
+    return "amber";
+  }
+  return "neutral";
 }
 
 export type OrderListItem = {
@@ -286,9 +307,12 @@ export async function fetchOrders({
 }: OrderListFilters): Promise<OrderListResult> {
   const start = (page - 1) * ORDERS_PAGE_SIZE;
   const end = start + ORDERS_PAGE_SIZE - 1;
+  const deliverySelection = districtNames.length
+    ? "deliveries!inner(motorcade_id,delivery_time,ship_out_time,delivery_districts!district_id!inner(name))"
+    : "deliveries(motorcade_id,delivery_time,ship_out_time,delivery_districts!district_id(name))";
   const selectedFields: string = canViewFinance
-    ? "id,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,shipping_address_snapshot,customer_note_snapshot,factory_packing_note,delivery_at,delivery_time,factory_date,ship_out_time,delivery_status,is_sent_to_factory,do_not_send_to_factory,currency,bubble_created_at,created_at,grand_total,outstanding,order_status_legacy_ids,order_tag_assignments(order_tags(name)),shopify_order_id,shopify_stores(shop_domain),channels(name),shipping_methods(name,display_name),deliveries(motorcade_id,delivery_time,ship_out_time,delivery_districts!district_id(name)),order_lines(quantity,is_void)"
-    : "id,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,shipping_address_snapshot,customer_note_snapshot,factory_packing_note,delivery_at,delivery_time,factory_date,ship_out_time,delivery_status,is_sent_to_factory,do_not_send_to_factory,currency,bubble_created_at,created_at,order_status_legacy_ids,order_tag_assignments(order_tags(name)),shopify_order_id,shopify_stores(shop_domain),channels(name),shipping_methods(name,display_name),deliveries(motorcade_id,delivery_time,ship_out_time,delivery_districts!district_id(name)),order_lines(quantity,is_void)";
+    ? `id,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,shipping_address_snapshot,customer_note_snapshot,factory_packing_note,delivery_at,delivery_time,factory_date,ship_out_time,delivery_status,is_sent_to_factory,do_not_send_to_factory,currency,bubble_created_at,created_at,grand_total,outstanding,order_status_legacy_ids,order_tag_assignments(order_tags(name)),shopify_order_id,shopify_stores(shop_domain),channels(name),shipping_methods(name,display_name),${deliverySelection},order_lines(quantity,is_void)`
+    : `id,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,shipping_address_snapshot,customer_note_snapshot,factory_packing_note,delivery_at,delivery_time,factory_date,ship_out_time,delivery_status,is_sent_to_factory,do_not_send_to_factory,currency,bubble_created_at,created_at,order_status_legacy_ids,order_tag_assignments(order_tags(name)),shopify_order_id,shopify_stores(shop_domain),channels(name),shipping_methods(name,display_name),${deliverySelection},order_lines(quantity,is_void)`;
   let catalog: ConfiguredOrderStatus[] | undefined;
   const loadCatalog = async () => {
     catalog ??= await fetchOrderStatusCatalog();
@@ -315,10 +339,8 @@ export async function fetchOrders({
 
   if (brandIds.length) query = query.in("channel_id", brandIds);
   if (festivalIds.length) query = query.in("festival_id", festivalIds);
-  const districtOrderIds = await findOrdersWithDistrictNames(districtNames);
-  if (districtOrderIds !== null) {
-    if (!districtOrderIds.length) return { items: [], total: 0 };
-    query = query.in("id", districtOrderIds);
+  if (districtNames.length) {
+    query = query.in("deliveries.delivery_districts.name", districtNames);
   }
   const taggedOrderIds = await findOrdersWithOrderTags(orderTagIds);
   if (taggedOrderIds !== null) {

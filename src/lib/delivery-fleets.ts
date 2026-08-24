@@ -6,6 +6,7 @@ export type DeliveryFleet = {
   shortName: string | null;
   contactPerson: string | null;
   contactNumber: string | null;
+  bankAccount: string | null;
   status: string | null;
   isActive: boolean;
   hasLoginCode: boolean;
@@ -18,6 +19,7 @@ type DeliveryFleetRow = {
   short_name: string | null;
   contact_person: string | null;
   contact_number: string | null;
+  bank_account: string | null;
   status: string | null;
   is_active: boolean;
   created_at: string;
@@ -31,6 +33,7 @@ function mapFleet(row: DeliveryFleetRow): DeliveryFleet {
     shortName: row.short_name,
     contactPerson: row.contact_person,
     contactNumber: row.contact_number,
+    bankAccount: row.bank_account,
     status: row.status,
     isActive: row.is_active,
     hasLoginCode: Boolean(row.has_login_code),
@@ -51,6 +54,7 @@ export type DeliveryFleetInput = {
   shortName?: string;
   contactPerson?: string;
   contactNumber?: string;
+  bankAccount?: string;
   isActive?: boolean;
   loginCode?: string;
 };
@@ -63,6 +67,7 @@ function fleetFields(input: DeliveryFleetInput) {
     short_name: input.shortName?.trim() || null,
     contact_person: input.contactPerson?.trim() || null,
     contact_number: input.contactNumber?.trim() || null,
+    bank_account: input.bankAccount?.trim() || null,
     status: input.isActive === false ? "inactive" : "active",
     is_active: input.isActive !== false,
     bubble_modified_at: new Date().toISOString(),
@@ -77,6 +82,7 @@ export async function createDeliveryFleet(input: DeliveryFleetInput) {
     p_short_name: fields.short_name,
     p_contact_person: fields.contact_person,
     p_contact_number: fields.contact_number,
+    p_bank_account: fields.bank_account,
     p_is_active: fields.is_active,
     p_login_code: input.loginCode?.trim() || null,
   });
@@ -95,9 +101,54 @@ export async function updateDeliveryFleet(
     p_short_name: fields.short_name,
     p_contact_person: fields.contact_person,
     p_contact_number: fields.contact_number,
+    p_bank_account: fields.bank_account,
     p_is_active: fields.is_active,
     p_login_code: input.loginCode?.trim() || null,
   });
   if (error) throw error;
   return mapFleet((data as DeliveryFleetRow[])[0]);
+}
+
+export type DeliveryFleetFee = {
+  districtId: string;
+  fleetId: string;
+  fleetName: string;
+  districtName: string;
+  fee: number;
+};
+
+type DeliveryFleetFeeRow = {
+  district_id: string;
+  fleet_id: string;
+  fleet_name: string;
+  district_name: string;
+  fee: number | string;
+};
+
+function mapFleetFee(row: DeliveryFleetFeeRow): DeliveryFleetFee {
+  return {
+    districtId: row.district_id,
+    fleetId: row.fleet_id,
+    fleetName: row.fleet_name,
+    districtName: row.district_name,
+    fee: Number(row.fee) || 0,
+  };
+}
+
+export async function fetchDeliveryFleetFees(fleetId: string | null = null) {
+  const { data, error } = await supabase.rpc("delivery_fleet_fee_list", {
+    p_fleet_id: fleetId,
+  });
+  if (error) throw error;
+  return ((data ?? []) as DeliveryFleetFeeRow[]).map(mapFleetFee);
+}
+
+export async function updateDeliveryFleetFee(districtId: string, fee: number) {
+  if (!Number.isFinite(fee) || fee < 0) throw new Error("fee_invalid");
+  const { data, error } = await supabase.rpc("save_delivery_fleet_fee", {
+    p_district_id: districtId,
+    p_fee: fee,
+  });
+  if (error) throw error;
+  return mapFleetFee((data as DeliveryFleetFeeRow[])[0]);
 }

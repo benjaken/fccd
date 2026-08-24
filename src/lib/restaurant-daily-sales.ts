@@ -103,10 +103,6 @@ function optionSort(left: DailySalesOption, right: DailySalesOption) {
   return left.sortOrder - right.sortOrder || left.name.localeCompare(right.name);
 }
 
-function normalizeRestaurantName(value: string) {
-  return value.toLocaleLowerCase().replace(/\s+/g, "");
-}
-
 function normalizeWorkingHoursDepartment(value: string) {
   const normalized = value.trim().replace(/\s+/g, "");
   if (/樓面|楼面/.test(normalized)) return "樓面";
@@ -158,12 +154,7 @@ async function fetchDeliveryPlatformOptions() {
 }
 
 export function pickDefaultRestaurant(restaurants: DailySalesRestaurant[]) {
-  return (
-    restaurants.find((restaurant) => {
-      const name = normalizeRestaurantName(restaurant.name);
-      return name.includes("將軍澳") || name.includes("将军澳") || name.includes("tko");
-    }) ?? restaurants[0] ?? null
-  );
+  return restaurants[0] ?? null;
 }
 
 export function hongKongDateValue(now = new Date()) {

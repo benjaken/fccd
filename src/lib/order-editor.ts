@@ -205,7 +205,7 @@ export async function fetchOrderEditor(
     await Promise.all([
       supabase
         .from("orders")
-        .select("id,order_number,channel_id,customer_name_snapshot,company_name_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,email_snapshot,shipping_address_snapshot,customer_note_snapshot,remarks,factory_packing_note,delivery_at,delivery_time,ship_out_time,shipping_method_id,sales_partner_id,shipping_fee,discount_amount,cashdollar_redeemed,cashdollar_purchased,do_not_send_to_factory,factory_print_date,factory_reprint_required")
+        .select("id,order_number,channel_id,customer_name_snapshot,company_name_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,email_snapshot,shipping_address_snapshot,customer_note_snapshot,remarks,factory_packing_note,delivery_at,delivery_time,ship_out_time,shipping_method_id,delivery_district_id,sales_partner_id,shipping_fee,discount_amount,cashdollar_redeemed,cashdollar_purchased,do_not_send_to_factory,factory_print_date,factory_reprint_required")
         .eq("id", id)
         .eq("document_type", "order")
         .is("archived_at", null)
@@ -256,7 +256,7 @@ export async function fetchOrderEditor(
     deliveryTime: row.delivery_time ?? "",
     shipOutTime: row.ship_out_time ?? "",
     shippingMethodId: row.shipping_method_id ?? "",
-    districtId: deliveryResult.data?.district_id ?? "",
+    districtId: deliveryResult.data?.district_id ?? row.delivery_district_id ?? "",
     salesPartnerId: row.sales_partner_id ?? "",
     shippingFee: numberValue(row.shipping_fee),
     discount: numberValue(row.discount_amount),
@@ -307,6 +307,21 @@ export function orderDraftTotals(draft: OrderEditorDraft) {
   return { subtotal, total, paid, outstanding: Math.max(0, total - paid) };
 }
 
+export function clearOrderCustomerInfo(
+  draft: OrderEditorDraft,
+): OrderEditorDraft {
+  return {
+    ...draft,
+    customerName: "",
+    companyName: "",
+    contactA: "",
+    contactB: "",
+    email: "",
+    address: "",
+    customerNote: "",
+  };
+}
+
 export type OrderPaymentStatus = "unpaid" | "partial" | "paid";
 
 export function orderPaymentStatus({
@@ -340,6 +355,7 @@ export async function saveOrderEditor(draft: OrderEditorDraft): Promise<string> 
     delivery_time: nullable(draft.deliveryTime),
     ship_out_time: nullable(draft.shipOutTime),
     shipping_method_id: nullable(draft.shippingMethodId),
+    delivery_district_id: nullable(draft.districtId),
     sales_partner_id: nullable(draft.salesPartnerId),
     shipping_fee: draft.shippingFee,
     discount_amount: draft.discount,
@@ -438,7 +454,7 @@ export async function saveOrderEditor(draft: OrderEditorDraft): Promise<string> 
     if (error) throw error;
   }
 
-  if (draft.deliveryAt || draft.deliveryId) {
+  if (draft.deliveryId) {
     const deliveryValues = {
       order_id: orderId,
       district_id: nullable(draft.districtId),
@@ -448,14 +464,10 @@ export async function saveOrderEditor(draft: OrderEditorDraft): Promise<string> 
       ship_out_time: nullable(draft.shipOutTime),
       total_fee: draft.shippingFee,
     };
-    const result = draft.deliveryId
-      ? await supabase.from("deliveries").update(deliveryValues).eq("id", draft.deliveryId)
-      : await supabase.from("deliveries").insert({
-          id: crypto.randomUUID(),
-          legacy_id: generatedLegacyId("delivery"),
-          delivery_status: "未派車隊",
-          ...deliveryValues,
-        });
+    const result = await supabase
+      .from("deliveries")
+      .update(deliveryValues)
+      .eq("id", draft.deliveryId);
     if (result.error) throw result.error;
   }
 

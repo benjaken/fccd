@@ -1,6 +1,6 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { Pencil, Plus, RefreshCw, Truck } from "lucide-react";
+import { Banknote, ChevronLeft, ChevronRight, MapPinned, Pencil, Plus, RefreshCw, Truck } from "lucide-react";
 
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
@@ -8,11 +8,15 @@ import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import { SidePanel } from "@/components/ui/side-panel";
 import { Switch } from "@/components/ui/switch";
+import { useDeferredFilter } from "@/lib/use-deferred-filter";
 import {
   createDeliveryFleet,
+  fetchDeliveryFleetFees,
   fetchDeliveryFleets,
+  updateDeliveryFleetFee,
   updateDeliveryFleet,
   type DeliveryFleet,
+  type DeliveryFleetFee,
 } from "@/lib/delivery-fleets";
 
 const emptyForm = {
@@ -20,9 +24,12 @@ const emptyForm = {
   shortName: "",
   contactPerson: "",
   contactNumber: "",
+  bankAccount: "",
   isActive: true,
   loginCode: "",
 };
+
+const FEE_PAGE_SIZE = 15;
 
 export function DeliveryFleetsPage() {
   const { t } = useTranslation();
@@ -41,6 +48,38 @@ export function DeliveryFleetsPage() {
   const [saveError, setSaveError] = useState(false);
   const [saving, setSaving] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [feeFleet, setFeeFleet] = useState<DeliveryFleet | null>(null);
+  const [feeRows, setFeeRows] = useState<DeliveryFleetFee[]>([]);
+  const [feeDrafts, setFeeDrafts] = useState<Record<string, string>>({});
+  const [feesLoading, setFeesLoading] = useState(false);
+  const [feesError, setFeesError] = useState(false);
+  const [savingFeeIds, setSavingFeeIds] = useState<Set<string>>(() => new Set());
+  const [feeFleetFilter, setFeeFleetFilter] = useState("");
+  const [feeDistrictFilter, setFeeDistrictFilter] = useState("");
+  const [feeDraftSearch, setFeeDraftSearch] = useState("");
+  const [feeSearch, setFeeSearch] = useState("");
+  const [feePage, setFeePage] = useState(1);
+  const feeFleetControl = useDeferredFilter(feeFleetFilter, (value) => { setFeeFleetFilter(value); setFeePage(1); });
+  const feeDistrictControl = useDeferredFilter(feeDistrictFilter, (value) => { setFeeDistrictFilter(value); setFeePage(1); });
+
+  const feeDistrictOptions = useMemo(() => [...new Set(feeRows.map((row) => row.districtName))].sort((left, right) => left.localeCompare(right, "zh-HK")), [feeRows]);
+  const feeFleetOptions = useMemo(() => [...new Map(feeRows.map((row) => [row.fleetId, row.fleetName])).entries()].map(([id, name]) => ({ id, name })).sort((left, right) => left.name.localeCompare(right.name, "zh-HK")), [feeRows]);
+
+  const filteredFeeRows = useMemo(() => {
+    const search = feeSearch.trim().toLocaleLowerCase("zh-HK");
+    return feeRows.filter((row) =>
+      (!feeFleetFilter || row.fleetId === feeFleetFilter) &&
+      (!feeDistrictFilter || row.districtName === feeDistrictFilter) &&
+      (!search || `${row.fleetName} ${row.districtName}`.toLocaleLowerCase("zh-HK").includes(search))
+    );
+  }, [feeDistrictFilter, feeFleetFilter, feeRows, feeSearch]);
+  const feeTotalPages = Math.max(1, Math.ceil(filteredFeeRows.length / FEE_PAGE_SIZE));
+  const visibleFeeRows = filteredFeeRows.slice(
+    (feePage - 1) * FEE_PAGE_SIZE,
+    feePage * FEE_PAGE_SIZE,
+  );
+  const feeFrom = filteredFeeRows.length === 0 ? 0 : (feePage - 1) * FEE_PAGE_SIZE + 1;
+  const feeTo = Math.min(feePage * FEE_PAGE_SIZE, filteredFeeRows.length);
 
   useEffect(() => {
     let active = true;
@@ -79,12 +118,61 @@ export function DeliveryFleetsPage() {
       shortName: fleet.shortName ?? "",
       contactPerson: fleet.contactPerson ?? "",
       contactNumber: fleet.contactNumber ?? "",
+      bankAccount: fleet.bankAccount ?? "",
       isActive: fleet.isActive,
       loginCode: "",
     });
     setNameError(false);
     setSaveError(false);
     setPanelOpen(true);
+  };
+
+  const openFees = async (fleet: DeliveryFleet) => {
+    setFeeFleet(fleet);
+    setFeeRows([]);
+    setFeeDrafts({});
+    setFeeFleetFilter(fleet.id);
+    setFeeDistrictFilter("");
+    setFeeDraftSearch("");
+    setFeeSearch("");
+    setFeePage(1);
+    setFeesLoading(true);
+    setFeesError(false);
+    try {
+      const next = await fetchDeliveryFleetFees(null);
+      setFeeRows(next);
+      setFeeDrafts(Object.fromEntries(next.map((row) => [row.districtId, String(row.fee)])));
+    } catch {
+      setFeesError(true);
+    } finally {
+      setFeesLoading(false);
+    }
+  };
+
+  const saveFee = async (row: DeliveryFleetFee) => {
+    const fee = Number(feeDrafts[row.districtId]);
+    if (!Number.isFinite(fee) || fee < 0) {
+      setFeesError(true);
+      setFeeDrafts((current) => ({ ...current, [row.districtId]: String(row.fee) }));
+      return;
+    }
+    if (fee === row.fee || savingFeeIds.has(row.districtId)) return;
+    setSavingFeeIds((current) => new Set(current).add(row.districtId));
+    setFeesError(false);
+    try {
+      const saved = await updateDeliveryFleetFee(row.districtId, fee);
+      setFeeRows((current) => current.map((item) => item.districtId === saved.districtId ? saved : item));
+      setFeeDrafts((current) => ({ ...current, [saved.districtId]: String(saved.fee) }));
+    } catch {
+      setFeesError(true);
+      setFeeDrafts((current) => ({ ...current, [row.districtId]: String(row.fee) }));
+    } finally {
+      setSavingFeeIds((current) => {
+        const next = new Set(current);
+        next.delete(row.districtId);
+        return next;
+      });
+    }
   };
 
   const closePanel = () => {
@@ -133,6 +221,7 @@ export function DeliveryFleetsPage() {
         shortName: fleet.shortName ?? "",
         contactPerson: fleet.contactPerson ?? "",
         contactNumber: fleet.contactNumber ?? "",
+        bankAccount: fleet.bankAccount ?? "",
         isActive: checked,
       });
       setRows((current) =>
@@ -203,16 +292,17 @@ export function DeliveryFleetsPage() {
             loading={loading}
             loadingLabel={t("deliveryFleets.loading")}
             skeletonRows={8}
-            skeletonColumns={canManage ? 7 : 6}
+            skeletonColumns={8}
             onRefresh={() => setReloadKey((key) => key + 1)}
             header={<tr>
               <th>{t("deliveryFleets.columns.name")}</th>
               <th>{t("deliveryFleets.columns.shortName")}</th>
               <th>{t("deliveryFleets.columns.contact")}</th>
               <th>{t("deliveryFleets.columns.phone")}</th>
+              <th>{t("deliveryFleets.columns.bankAccount")}</th>
               <th>{t("deliveryFleets.columns.loginCode")}</th>
               <th>{t("deliveryFleets.columns.status")}</th>
-              {canManage ? <th aria-label={t("deliveryFleets.columns.actions")} /> : null}
+              <th>{t("deliveryFleets.columns.actions")}</th>
             </tr>}
           >
             {rows.map((fleet) => <tr key={fleet.id}>
@@ -220,6 +310,7 @@ export function DeliveryFleetsPage() {
               <td>{fleet.shortName || "—"}</td>
               <td>{fleet.contactPerson || "—"}</td>
               <td>{fleet.contactNumber || "—"}</td>
+              <td>{fleet.bankAccount || "—"}</td>
               <td><span className={fleet.hasLoginCode ? "status-badge tone-green" : "status-badge tone-slate"}>{t(fleet.hasLoginCode ? "deliveryFleets.loginCodeSet" : "deliveryFleets.loginCodeMissing")}</span></td>
               <td>
                 {canManage ? <div className="delivery-fleet-status">
@@ -232,13 +323,16 @@ export function DeliveryFleetsPage() {
                   <span>{t(fleet.isActive ? "deliveryFleets.active" : "deliveryFleets.inactive")}</span>
                 </div> : t(fleet.isActive ? "deliveryFleets.active" : "deliveryFleets.inactive")}
               </td>
-              {canManage ? <td className="table-actions-cell"><Button
-                type="button"
-                size="icon"
-                variant="outline"
-                onClick={() => openEdit(fleet)}
-                aria-label={t("deliveryFleets.edit", { name: fleet.name })}
-              ><Pencil /></Button></td> : null}
+              <td className="table-actions-cell"><div className="table-row-actions">
+                {canManage ? <Button
+                  type="button"
+                  size="icon"
+                  variant="outline"
+                  onClick={() => openEdit(fleet)}
+                  aria-label={t("deliveryFleets.edit", { name: fleet.name })}
+                ><Pencil /></Button> : null}
+                <Button type="button" variant="outline" onClick={() => void openFees(fleet)}><Banknote />{t("deliveryFleets.feeManagement.action")}</Button>
+              </div></td>
             </tr>)}
           </ListTable>
         )}
@@ -266,6 +360,7 @@ export function DeliveryFleetsPage() {
           <label className="ingredients-field"><span>{t("deliveryFleets.fields.shortName")}</span><input value={form.shortName} onChange={(event) => setForm((current) => ({ ...current, shortName: event.target.value }))} /></label>
           <label className="ingredients-field"><span>{t("deliveryFleets.fields.contact")}</span><input value={form.contactPerson} onChange={(event) => setForm((current) => ({ ...current, contactPerson: event.target.value }))} /></label>
           <label className="ingredients-field"><span>{t("deliveryFleets.fields.phone")}</span><input type="tel" value={form.contactNumber} onChange={(event) => setForm((current) => ({ ...current, contactNumber: event.target.value }))} /></label>
+          <label className="ingredients-field"><span>{t("deliveryFleets.fields.bankAccount")}</span><input value={form.bankAccount} onChange={(event) => setForm((current) => ({ ...current, bankAccount: event.target.value }))} /></label>
           <label className="ingredients-field" htmlFor="delivery-fleet-login-code">
             <span>{t(editing ? "deliveryFleets.fields.newLoginCode" : "deliveryFleets.fields.loginCode")}</span>
             <input id="delivery-fleet-login-code" type="password" autoComplete="new-password" value={form.loginCode} onChange={(event) => { setForm((current) => ({ ...current, loginCode: event.target.value })); setSaveError(false); }} required={!editing} />
@@ -274,6 +369,77 @@ export function DeliveryFleetsPage() {
           <label className="ingredients-field"><span>{t("deliveryFleets.fields.status")}</span><div className="delivery-fleet-status"><Switch checked={form.isActive} onCheckedChange={(checked) => setForm((current) => ({ ...current, isActive: checked }))} /><span>{t(form.isActive ? "deliveryFleets.active" : "deliveryFleets.inactive")}</span></div></label>
           {saveError ? <p className="order-statuses-form-error">{t("deliveryFleets.saveError")}</p> : null}
         </form>
+      </SidePanel>
+
+      <SidePanel
+        open={Boolean(feeFleet)}
+        title={t("deliveryFleets.feeManagement.title", { name: feeFleet?.name ?? "" })}
+        description={t("deliveryFleets.feeManagement.description")}
+        onClose={() => { if (savingFeeIds.size === 0) setFeeFleet(null); }}
+        closeLabel={t("deliveryFleets.feeManagement.close")}
+        className="side-panel-majority"
+      >
+        <div className="delivery-fleet-fee-panel">
+          <div className="delivery-fleet-fee-toolbar">
+            {feesError ? <p className="list-inline-error" role="alert">{t("deliveryFleets.feeManagement.error")}</p> : null}
+            <ListSearchBar
+              id="delivery-fleet-fee-search"
+              value={feeDraftSearch}
+              onChange={setFeeDraftSearch}
+              onSubmit={() => { setFeeSearch(feeDraftSearch.trim()); setFeePage(1); }}
+              label={t("deliveryFleets.feeManagement.search")}
+              placeholder={t("deliveryFleets.feeManagement.searchPlaceholder")}
+              submitLabel={t("deliveryFleets.feeManagement.searchAction")}
+              className="delivery-fleet-fee-search"
+              filtersActive={Boolean(feeFleetFilter || feeDistrictFilter)}
+              filtersTitle={t("common.filters")}
+              onConfirmFilters={() => { feeFleetControl.confirm(); feeDistrictControl.confirm(); }}
+              onDismissFilters={() => { feeFleetControl.revert(); feeDistrictControl.revert(); }}
+              filters={<div className="delivery-fleet-fee-filters">
+                <label>
+                  <span>{t("deliveryFleets.feeManagement.filters.driver")}</span>
+                  <select value={feeFleetControl.value} onChange={(event) => feeFleetControl.setValue(event.target.value)}>
+                    <option value="">{t("deliveryFleets.feeManagement.filters.allDrivers")}</option>
+                    {feeFleetOptions.map((fleet) => <option key={fleet.id} value={fleet.id}>{fleet.name}</option>)}
+                  </select>
+                </label>
+                <label>
+                  <span>{t("deliveryFleets.feeManagement.filters.district")}</span>
+                  <select value={feeDistrictControl.value} onChange={(event) => feeDistrictControl.setValue(event.target.value)}>
+                    <option value="">{t("deliveryFleets.feeManagement.filters.allDistricts")}</option>
+                    {feeDistrictOptions.map((district) => <option key={district} value={district}>{district}</option>)}
+                  </select>
+                </label>
+              </div>}
+            />
+          </div>
+          {!feesLoading && !feesError && feeRows.length === 0 ? (
+            <div className="products-state products-state-empty"><MapPinned /><div><strong>{t("deliveryFleets.feeManagement.empty")}</strong><span>{t("deliveryFleets.feeManagement.emptyDescription")}</span></div></div>
+          ) : (
+            <ListTable
+              className="ingredients-table-wrap"
+              loading={feesLoading}
+              loadingLabel={t("deliveryFleets.feeManagement.loading")}
+              skeletonRows={8}
+              skeletonColumns={3}
+              header={<tr><th>{t("deliveryFleets.feeManagement.columns.fleet")}</th><th>{t("deliveryFleets.feeManagement.columns.district")}</th><th>{t("deliveryFleets.feeManagement.columns.fee")}</th></tr>}
+            >
+              {visibleFeeRows.map((row) => <tr key={row.districtId}>
+                <td><strong>{row.fleetName}</strong></td>
+                <td>{row.districtName}</td>
+                <td>{canManage ? <label className="delivery-fleet-fee-input"><span aria-hidden="true">HK$</span><input aria-label={t("deliveryFleets.feeManagement.feeLabel", { district: row.districtName })} type="number" min="0" step="0.01" value={feeDrafts[row.districtId] ?? ""} disabled={savingFeeIds.has(row.districtId)} onChange={(event) => setFeeDrafts((current) => ({ ...current, [row.districtId]: event.target.value }))} onBlur={() => void saveFee(row)} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }} /></label> : `HK$${row.fee.toLocaleString("zh-HK", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</td>
+              </tr>)}
+            </ListTable>
+          )}
+          {!feesLoading && !feesError && filteredFeeRows.length > 0 ? <footer className="orders-pagination">
+            <span>{t("deliveryFleets.feeManagement.pagination", { from: feeFrom, to: feeTo, total: filteredFeeRows.length })}</span>
+            <div>
+              <Button type="button" variant="outline" size="icon" disabled={feePage <= 1} onClick={() => setFeePage((page) => Math.max(1, page - 1))} aria-label={t("deliveryFleets.feeManagement.previous")}><ChevronLeft /></Button>
+              <strong>{feePage} / {feeTotalPages}</strong>
+              <Button type="button" variant="outline" size="icon" disabled={feePage >= feeTotalPages} onClick={() => setFeePage((page) => Math.min(feeTotalPages, page + 1))} aria-label={t("deliveryFleets.feeManagement.next")}><ChevronRight /></Button>
+            </div>
+          </footer> : <div />}
+        </div>
       </SidePanel>
     </section>
   );
