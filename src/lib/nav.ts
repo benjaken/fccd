@@ -703,8 +703,21 @@ export function isNavPathActive(pathname: string, to: string, exact: boolean) {
   return pathname.startsWith(`${to}/`);
 }
 
-export function isSecondaryNavItemActive(pathname: string, to: string) {
-  return isNavPathActive(pathname, to, false);
+export function isSecondaryNavItemActive(
+  pathname: string,
+  to: string,
+  siblingPaths: readonly string[] = [to],
+) {
+  const matchingPaths = siblingPaths.filter((path) =>
+    isNavPathActive(pathname, path, false),
+  );
+  const longestMatch = matchingPaths.reduce<string | null>(
+    (longest, path) =>
+      !longest || path.length > longest.length ? path : longest,
+    null,
+  );
+
+  return longestMatch === to;
 }
 
 /** Flatten primary + secondary destinations for the mobile drawer (no nested menus). */

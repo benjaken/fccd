@@ -5,6 +5,12 @@ import {
   sameReportAiScalar,
   textNumbersAreSupported,
 } from "../_shared/report-ai-provider.ts";
+import {
+  reportAiLimitExceeded,
+  sanitizeReportAiSnapshot,
+  trustedReportAiRole,
+  type ReportAiSnapshot,
+} from "../_shared/report-ai-security.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,7 +20,14 @@ const corsHeaders = {
 
 const PROMPT_VERSION = "report-ai/2";
 const MAX_INPUT_CHARS = Number(Deno.env.get("REPORT_AI_MAX_INPUT_CHARS") ?? 180_000);
-const MAX_DAILY_REQUESTS = Number(Deno.env.get("REPORT_AI_DAILY_SOFT_LIMIT") ?? 100);
+const configuredDailyLimit = Number(
+  Deno.env.get("REPORT_AI_DAILY_LIMIT") ??
+    Deno.env.get("REPORT_AI_DAILY_SOFT_LIMIT") ??
+    100,
+);
+const MAX_DAILY_REQUESTS = Number.isFinite(configuredDailyLimit) && configuredDailyLimit >= 0
+  ? configuredDailyLimit
+  : 100;
 const CACHE_HOURS = Number(Deno.env.get("REPORT_AI_CACHE_HOURS") ?? 24);
 
 function reportAiEnv(name: string, supplierQuoteName: string) {
@@ -43,13 +56,7 @@ const REPORT_PERMISSION_KEYS: Record<string, string> = {
 
 type Scalar = string | number | boolean | null;
 type Row = Record<string, Scalar>;
-type Snapshot = {
-  filters: Record<string, Scalar | Scalar[]>;
-  currentAggregates: Row[];
-  comparisonAggregates?: Row[];
-  detailRows?: Row[];
-  completeness: { status: "complete" | "partial" | "unknown"; latestDataAt?: string; notes?: string[] };
-};
+type Snapshot = ReportAiSnapshot;
 type Evidence = { label: string; value: Scalar; unit?: string; source: string };
 type Finding = { text: string; evidence: Evidence[] };
 type Interpretation = {
@@ -123,7 +130,7 @@ async function requirePermission(request: Request, admin: SupabaseClient, permis
   if (!authorization?.startsWith("Bearer ")) throw jsonResponse({ error: "authentication_required" }, 401);
   const { data, error } = await admin.auth.getUser(authorization.slice(7));
   if (error || !data.user) throw jsonResponse({ error: "authentication_required" }, 401);
-  const role = String(data.user.app_metadata?.role ?? data.user.user_metadata?.role ?? "");
+  const role = trustedReportAiRole(data.user.app_metadata);
   if (role !== "Super Admin") {
     const { data: permission, error: permissionError } = await admin
       .from("role_page_permissions")
@@ -166,7 +173,7 @@ function validateBody(body: RequestBody) {
   if (serialized.length > MAX_INPUT_CHARS) {
     throw jsonResponse({ error: "report_context_too_large" }, 413);
   }
-  return { permissionKey, serialized };
+  return { permissionKey };
 }
 
 async function sha256(value: string) {
@@ -484,9 +491,14 @@ export async function handleRequest(request: Request) {
   try {
     const body = await request.json() as RequestBody | FeedbackBody;
     if (body.action === "feedback") return await handleFeedback(request, admin, body);
-    const { permissionKey, serialized } = validateBody(body);
+    const { permissionKey } = validateBody(body);
     const user = await requirePermission(request, admin, permissionKey);
-    const snapshot = body.snapshot as Snapshot;
+    const snapshot = sanitizeReportAiSnapshot(
+      body.reportKey as string,
+      body.snapshot as Snapshot,
+    );
+    const sanitizedBody: RequestBody = { ...body, snapshot };
+    const serialized = JSON.stringify(sanitizedBody);
     const fingerprint = await sha256(`${PROMPT_VERSION}:${body.locale ?? "zh-HK"}:${serialized}`);
     const cached = await cachedResult(admin, user.id, body.reportKey as string, body.locale ?? "zh-HK", fingerprint);
     if (cached) {
@@ -497,8 +509,12 @@ export async function handleRequest(request: Request) {
     }
 
     const dayAgo = new Date(Date.now() - 86_400_000).toISOString();
-    const { count } = await admin.from("report_ai_runs").select("id", { count: "exact", head: true })
+    const { count, error: countError } = await admin.from("report_ai_runs").select("id", { count: "exact", head: true })
       .eq("user_id", user.id).gte("created_at", dayAgo);
+    if (countError) return jsonResponse({ error: "report_ai_limit_unavailable" }, 503);
+    if (reportAiLimitExceeded(count ?? 0, MAX_DAILY_REQUESTS, user.role)) {
+      return jsonResponse({ error: "report_ai_daily_limit_exceeded" }, 429);
+    }
     const { data: run } = await admin.from("report_ai_runs").insert({
       user_id: user.id, user_role: user.role, report_key: body.reportKey,
       permission_key: permissionKey, locale: body.locale ?? "zh-HK",
@@ -517,7 +533,7 @@ export async function handleRequest(request: Request) {
       let result: Interpretation;
       let errorCode: string | null = null;
       try {
-        const raw = await callModel(body, (text) => emit("draft", { text }));
+        const raw = await callModel(sanitizedBody, (text) => emit("draft", { text }));
         emit("status", { stage: "validating" });
         const validated = validateInterpretation(snapshot, raw, fingerprint);
         result = validated ?? fallback(snapshot, body.locale ?? "zh-HK", fingerprint);
