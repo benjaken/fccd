@@ -1,58 +1,126 @@
-# Custom Product Modal Design QA
+# Custom Product Modal Focus-State QA
 
 **Evidence**
 
-- Source visual truth: `C:\Users\ADMINI~1\AppData\Local\Temp\codex-clipboard-dc712694-c8b1-413b-9cd9-0d0fb413ff08.png`
-- Browser-rendered implementation: `D:\work\FCCD\artifacts\custom-product-modal.png`
-- Normalized side-by-side comparison: `D:\work\FCCD\artifacts\custom-product-comparison.png`
+- Source visual truth: `C:\Users\neroc\AppData\Local\Temp\codex-clipboard-a7f37f55-06c0-47cd-8a8d-3d268d601083.png`
+- Browser-rendered implementation: `E:\fccd\artifacts\custom-product-modal-no-focus-glow.png`
+- Normalized comparison: `E:\fccd\artifacts\custom-product-modal-focus-comparison.png`
 - Browser route: existing quote edit page on the local Vite preview
-- CSS viewport: 1000 x 700 at device scale factor 1
-- Source pixels: 567 x 381
-- Implementation pixels: 979 x 685 (browser content capture)
-- Comparison pixels: 1110 x 410; source and implementation modal regions were cropped and scaled into adjacent 550 x 365 and 520 x 365 regions for a single visual comparison input.
-- State: authenticated quote edit page, custom-product modal open, empty form, disabled Add button. The implementation capture reflects the tester's active dark theme; the source reflects light theme.
+- CSS viewport: 1280 x 720 at device scale factor 1
+- Source pixels: 421 x 267
+- Implementation pixels: 1280 x 720
+- Comparison pixels: 1100 x 400; both modal regions were cropped and scaled into adjacent panels.
+- State: custom-product modal open with the unit-price number input focused. The implementation preserves the active dark theme; the issue reference is light theme.
 
 **Findings**
 
-- No actionable P0, P1, or P2 mismatch remains.
-- Fonts and typography: title, labels, placeholders, and button retain the source hierarchy and weight. The implementation uses the existing FCCD font stack and Chinese localized placeholders instead of the reference's English placeholders.
-- Spacing and layout rhythm: the modal is centered, compact, and follows the source's two-column label/input alignment, generous vertical spacing, rounded frame, and centered action.
-- Colors and visual tokens: the active dark theme uses the product's existing surface, border, overlay, text, and disabled-button tokens. This is an intentional theme variant rather than structural drift from the light-theme reference.
-- Image quality and asset fidelity: the reference contains no illustrative or photographic assets. The close control uses the existing app icon/component and remains sharp at the captured density.
-- Copy and content: title, field labels, and action match the requested Traditional Chinese UI. Placeholders are localized for the deployed language.
-- Interaction state: Add is disabled while either required field is empty; after entering a name and valid price it enables, closes the modal on click, and stages a row in the local list with the expected name and HK$320.00 price.
+- No actionable P0, P1, or P2 issue remains.
+- Fonts and typography: unchanged from the shared component implementation.
+- Spacing and layout rhythm: unchanged; the compact single-column form and shared footer remain aligned.
+- Colors and visual tokens: the shadcn Input focus ring and focus border are overridden only for these two modal fields. Computed focus state has a zero-width ring and the normal input border color, so the green glow is gone.
+- Image quality and asset fidelity: no raster or decorative assets are involved; the shared close icon remains sharp.
+- Copy and content: all Traditional Chinese labels and actions are unchanged.
+- Accessibility: labels and keyboard focus behavior remain functional. The text caret and native number-input controls still identify the active field without an outer glow.
 
-**Focused Region Comparison**
+**Full-view comparison evidence**
 
-- The normalized side-by-side image focuses on the complete modal because the relevant fidelity surfaces are the title, paired form rows, input borders/placeholders, and disabled action. No additional sub-region was required because these elements remain clearly readable in the focused comparison.
+- The combined before/after image clearly shows the original green focus glow and the revised neutral focused field.
 
-**Open Questions**
+**Focused region comparison**
 
-- None blocking. The screenshot reference uses light theme while the authenticated test session was already using dark theme; both are driven by the existing FCCD theme system.
+- No additional crop was needed because the normalized comparison makes the complete focused input border readable.
 
-**Comparison History**
+**Comparison history**
 
-- Pass 1: no P0/P1/P2 findings. The first normalized comparison confirmed matching information hierarchy, form geometry, modal proportions, and disabled action state, so no visual correction iteration was required.
+- Pass 1 found the visible green shadcn focus ring reported by the user.
+- Fix: added component-level `focus-visible:ring-0` and restored the normal input border token for both custom-product inputs.
+- Pass 2: browser screenshot and computed styles confirm no visible outer focus ring; no P0/P1/P2 finding remains.
 
-**Primary Interactions Tested**
+**Primary interactions tested**
 
 - Opened the custom-product modal from an existing quote.
-- Verified Add is disabled with an empty form.
-- Entered `測試自訂產品` and unit price `320`.
-- Verified Add becomes enabled and stages the item locally as HK$320.00.
-- Did not invoke the final save action or any deployment workflow.
-- Browser DOM remained available after the interaction and the local development server reported no runtime compilation errors.
+- Focused the unit-price field and visually checked the focused state.
+- Confirmed the computed ring width is zero and the browser console has no errors.
+- Targeted quote-editor tests and TypeScript checks pass.
 
-**Implementation Checklist**
+**Implementation checklist**
 
-- [x] Custom Product button available in the shared order/quote editor.
-- [x] Modal follows the supplied visual structure.
-- [x] Required-field and price validation controls the Add state.
-- [x] Add stages the line locally without a save API call.
-- [x] Staged custom line displays in the item list.
+- [x] Removed the visible focus glow from both custom-product inputs.
+- [x] Kept the shared shadcn Input component.
+- [x] Preserved validation, labels, number controls, and form behavior.
+- [x] Verified the focused state in the browser.
 
-**Follow-up Polish**
+**Follow-up polish**
 
-- P3: capture a light-theme comparison later if an exact color-token comparison against the supplied light reference is desired; the current test intentionally preserved the signed-in user's active theme.
+- None required for this scope.
+
+final result: passed
+
+---
+
+# Lunch Box Product Side-Panel QA
+
+**Evidence**
+
+- Source visual truth: `C:\Users\neroc\AppData\Local\Temp\codex-clipboard-ea7d5081-f39f-4ca0-a607-07a9e8acb5b8.png`
+- Browser-rendered desktop implementation: `E:\fccd\artifacts\lunchbox-picker-sidebar-selected.png`
+- Browser-rendered mobile implementation: `E:\fccd\artifacts\lunchbox-picker-sidebar-mobile.png`
+- Independent-scroll implementation: `E:\fccd\artifacts\lunchbox-picker-independent-scroll.png`
+- Normalized side-by-side comparison: `E:\fccd\artifacts\lunchbox-picker-comparison.png`
+- Browser route: local order `#6951` edit page with the lunch-box picker open
+- Desktop viewport: 1440 x 900 CSS pixels at device scale factor 1
+- Mobile viewport: 390 x 844 CSS pixels at device scale factor 1
+- Source pixels: 1928 x 1048; desktop implementation pixels: 1440 x 900; mobile implementation pixels: 390 x 844
+- Comparison pixels: 3096 x 900. The source was proportionally scaled to 1656 x 900 and placed beside the unchanged 1440 x 900 implementation.
+- State: one recommended lunch-box product selected, sticky footer enabled, product results loaded.
+
+**Findings**
+
+- No actionable P0, P1, or P2 issue remains.
+- Fonts and typography: the side panel uses the application's existing type scale and weights; headings, SKU labels, tags, prices, and actions retain readable hierarchy in desktop and mobile layouts.
+- Spacing and layout rhythm: the desktop panel is exactly 80% of the viewport. The selected tray occupies the left column, while recommended and more products occupy the right column; the 390 px layout collapses to one column without horizontal overflow. Search and confirmation controls remain visible.
+- Colors and visual tokens: selection uses the existing primary and selection tokens, recommended items use a restrained amber accent, and surfaces inherit the active light or dark theme without gradients.
+- Image quality and asset fidelity: the picker contains no raster product imagery or decorative assets. Existing Lucide icons remain sharp at both checked sizes.
+- Copy and content: the final panel preserves the requested `已選取`, `推介`, and `更多產品` sections. It intentionally replaces the legacy modal/table treatment with the user-approved side panel and removes edit and row-arrow controls.
+- Accessibility and interaction: product rows expose selected state through `aria-pressed`; the confirmation action is disabled at zero selections and enabled after selection. No edit buttons or chevron row controls are present.
+
+**Full-view comparison evidence**
+
+- The normalized comparison shows the legacy table's dense horizontal structure on the left and the approved side-panel hierarchy on the right. The new layout preserves the product metadata while making selection, selected state, and confirmation visually dominant.
+
+**Focused region comparison**
+
+- The desktop implementation screenshot keeps the complete side panel readable at 1440 x 900, including search, selected tray, recommended list, more-products list, and sticky footer, so no additional focused crop was needed.
+
+**Comparison history**
+
+- Pass 1 found that the Catering order brand allowed unrelated catalog items into `更多產品`.
+- Fix: the picker now queries products with an assigned lunch-box staple category independently of the order's current brand.
+- Pass 2: browser evidence shows 6 recommended and 96 more lunch-box products with CBE SKUs and bento attributes. Desktop and 390 px mobile states have no overflow, missing persistent controls, console errors, edit buttons, or row-arrow icons.
+- Pass 3: changed the panel to exactly 80% viewport width and moved the selected tray into a persistent left column. Browser measurements confirm a 0.80 panel-to-viewport ratio, separated left/right columns, and no horizontal overflow; mobile remains a single column.
+- Pass 4: moved the selected title above its full-height box and aligned it exactly with the recommended title. Browser measurements report a 0 px heading offset; the selected box and product catalog both use independent `overflow: auto` regions while search and footer remain fixed.
+
+**Primary interactions tested**
+
+- Opened the picker from the local `#6951` order edit page.
+- Loaded recommended and more-product sections from live local-app data.
+- Selected a recommended item and confirmed the selected tray/count and enabled footer action.
+- Verified desktop and mobile responsive layouts.
+- Checked the browser console for errors; none were present.
+
+**Implementation checklist**
+
+- [x] Use a right-side panel instead of a centered modal.
+- [x] Keep `已選取`, `推介`, and `更多產品` sections.
+- [x] Add search and expandable filters.
+- [x] Make the whole product row selectable.
+- [x] Remove edit and table-arrow controls.
+- [x] Add every confirmed product as a separate pending order line.
+- [x] Restrict results to lunch-box products.
+- [x] Verify desktop and mobile layouts in the browser.
+
+**Follow-up polish**
+
+- None required for this scope.
 
 final result: passed
