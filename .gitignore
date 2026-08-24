@@ -11,6 +11,11 @@ next-env.d.ts
 .DS_Store
 .migration-data/
 supabase/.temp/
+.agent/
+.agents/
+.codex/
+artifacts/
+output/
 __pycache__/
 *.pyc
 *.tsbuildinfo
