@@ -1,6 +1,11 @@
 import iconv from "npm:iconv-lite@0.6.3";
 
-import { buildFactoryLabelTspl, type FactoryLabelTsplInput } from "./tspl.ts";
+import {
+  buildFactoryAddressLabelTspl,
+  buildFactoryLabelTspl,
+  type FactoryAddressLabelTsplInput,
+  type FactoryLabelTsplInput,
+} from "./tspl.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -33,6 +38,17 @@ function isValidInput(value: unknown): value is FactoryLabelTsplInput {
     typeof input.copies === "number";
 }
 
+function isValidAddressInput(value: unknown): value is FactoryAddressLabelTsplInput {
+  if (!value || typeof value !== "object") return false;
+  const input = value as Record<string, unknown>;
+  return input.kind === "address" &&
+    typeof input.orderNumber === "string" &&
+    typeof input.address === "string" &&
+    typeof input.arrivalWindow === "string" &&
+    typeof input.customerName === "string" &&
+    typeof input.customerPhone === "string";
+}
+
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (request.method !== "POST") return jsonResponse({ error: "method_not_allowed" }, 405);
@@ -42,11 +58,16 @@ Deno.serve(async (request) => {
 
   try {
     const body = await request.json();
-    if (!isValidInput(body)) return jsonResponse({ error: "invalid_label_input" }, 400);
-    if (body.orderNumber.length > 100 || body.labelName.length > 500 || body.remarks.join("").length > 1000) {
+    if (!isValidInput(body) && !isValidAddressInput(body)) {
+      return jsonResponse({ error: "invalid_label_input" }, 400);
+    }
+    const inputSize = JSON.stringify(body).length;
+    if (inputSize > 5000) {
       return jsonResponse({ error: "label_input_too_large" }, 413);
     }
-    const tspl = buildFactoryLabelTspl(body);
+    const tspl = isValidAddressInput(body)
+      ? buildFactoryAddressLabelTspl(body)
+      : buildFactoryLabelTspl(body);
     const cp950Bytes = iconv.encode(tspl, "cp950");
     return jsonResponse({ commandBase64: encodeBase64(cp950Bytes) });
   } catch (error) {

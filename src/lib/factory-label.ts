@@ -1,12 +1,26 @@
 import { supabase } from "@/lib/supabase";
 
-export type FactoryLabelCommandInput = {
+export type FactoryDishLabelCommandInput = {
+  kind?: "dish";
   orderNumber: string;
   deliveryDate: string;
   labelName: string;
   remarks: string[];
   copies: number;
 };
+
+export type FactoryAddressLabelCommandInput = {
+  kind: "address";
+  orderNumber: string;
+  address: string;
+  arrivalWindow: string;
+  customerName: string;
+  customerPhone: string;
+};
+
+export type FactoryLabelCommandInput =
+  | FactoryDishLabelCommandInput
+  | FactoryAddressLabelCommandInput;
 
 export type FactoryLabelCommandLoader = (
   input: FactoryLabelCommandInput,

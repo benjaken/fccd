@@ -1,9 +1,19 @@
 export type FactoryLabelTsplInput = {
+  kind?: "dish";
   orderNumber: string;
   deliveryDate: string;
   labelName: string;
   remarks: string[];
   copies: number;
+};
+
+export type FactoryAddressLabelTsplInput = {
+  kind: "address";
+  orderNumber: string;
+  address: string;
+  arrivalWindow: string;
+  customerName: string;
+  customerPhone: string;
 };
 
 const WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
@@ -102,4 +112,36 @@ export function buildFactoryLabelTspl(input: FactoryLabelTsplInput): string {
   // this final line ending QZ can successfully spool the job while the
   // printer keeps waiting and never executes the last (or only) PRINT.
   return `${command}\r\n`;
+}
+
+function text(x: number, y: number, value: string, xScale = 1, yScale = 1): string {
+  return `TEXT ${x},${y},"TST24.BF2",0,${xScale},${yScale},"${sanitizeTsplText(value)}"`;
+}
+
+export function buildFactoryAddressLabelTspl(input: FactoryAddressLabelTsplInput): string {
+  const orderNumber = sanitizeTsplText(input.orderNumber).replace(/^#/, "");
+  const addressLines = wrapLabelText(input.address, 14).slice(0, 5);
+  const nameLines = wrapLabelText(input.customerName, 14).slice(0, 2);
+  const displayedNameLines = nameLines.length ? nameLines : [""];
+  const phone = sanitizeTsplText(input.customerPhone);
+  const arrivalWindow = sanitizeTsplText(input.arrivalWindow);
+  const phoneY = 145 + displayedNameLines.length * 36;
+  const addressDividerY = phoneY + 40;
+  const lines = [
+    "SIZE 50 mm,75 mm",
+    "GAP 2 mm,0",
+    "DIRECTION 1",
+    "CODEPAGE 950",
+    "CLS",
+    centeredText(18, orderNumber, 2, 2),
+    "BAR 16,86,368,2",
+    text(16, 105, `送達時間：${arrivalWindow}`, 1, 1),
+    ...displayedNameLines.map((line, index) => text(16, 145 + index * 36, `${index === 0 ? "姓名：" : ""}${line}`, 1, 1)),
+    text(16, phoneY, `電話：${phone}`, 1, 1),
+    `BAR 16,${addressDividerY},368,2`,
+    text(16, addressDividerY + 19, "地址：", 1, 1),
+    ...addressLines.map((line, index) => text(16, addressDividerY + 60 + index * 52, line, 1, 1)),
+    "PRINT 1",
+  ];
+  return `${lines.join("\r\n")}\r\n`;
 }

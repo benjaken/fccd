@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildFactoryAddressLabelTspl,
   buildFactoryLabelTspl,
   wrapLabelText,
 } from "../supabase/functions/qz-label-tspl/tspl";
@@ -42,6 +43,24 @@ describe("factory label TSPL", () => {
     });
 
     expect(tspl).not.toContain('B-1"\nPRINT 99');
+    expect(tspl.match(/PRINT 1/g)).toHaveLength(1);
+  });
+
+  it("builds an address label with only the requested order and delivery fields", () => {
+    const tspl = buildFactoryAddressLabelTspl({
+      kind: "address",
+      orderNumber: "B-1546",
+      address: "沙田香港恒生大學何善衡教學大樓A座",
+      arrivalWindow: "12:00 - 13:00",
+      customerName: "Ka Wai Hui",
+      customerPhone: "91027090",
+    });
+
+    expect(tspl).toContain('"B-1546"');
+    expect(tspl).toContain('"送達時間:12:00 - 13:00"');
+    expect(tspl).toContain('"姓名:Ka Wai Hui"');
+    expect(tspl).toContain('"電話:91027090"');
+    expect(tspl).toContain('"地址:"');
     expect(tspl.match(/PRINT 1/g)).toHaveLength(1);
   });
 });

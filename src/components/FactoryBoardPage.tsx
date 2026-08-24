@@ -26,6 +26,7 @@ import {
   ALL_BRAND_ID,
   UNASSIGNED_FLEET_ID,
   aggregateFactoryMultiDayMenuRows,
+  compareFactoryMenuRows,
   factoryMultiDayPrintedDate,
   factoryMultiDayRangeLabels,
   factoryVisibleDates,
@@ -41,6 +42,7 @@ import {
   hongKongDateKey,
   isNewFactoryOrder,
   markFactoryOrderLinePrinted,
+  updateFactoryDispatchTime,
   type FactoryBoardData,
   type FactoryBoardItem,
   type FactoryBrand,
@@ -64,6 +66,7 @@ type MenuLoader = typeof fetchFactoryMenuRows;
 type MultiDayMenuLoader = typeof fetchFactoryMultiDayMenu;
 type MotorcadeAssigner = typeof assignDeliveryMotorcade;
 type LinePrintMarker = typeof markFactoryOrderLinePrinted;
+type DispatchTimeUpdater = typeof updateFactoryDispatchTime;
 
 const WEEKDAY_SHORT_ZH = ["日", "一", "二", "三", "四", "五", "六"];
 const WEEKDAY_LONG_ZH = [
@@ -89,6 +92,7 @@ function FactoryModal({
   headerAction,
   footer,
   wide = false,
+  modalClassName,
   onClose,
   children,
 }: {
@@ -99,6 +103,7 @@ function FactoryModal({
   headerAction?: ReactNode;
   footer?: ReactNode;
   wide?: boolean;
+  modalClassName?: string;
   onClose: () => void;
   children: ReactNode;
 }) {
@@ -108,7 +113,7 @@ function FactoryModal({
     <div className="factory-modal-root" role="presentation">
       <div className="factory-modal-backdrop" onClick={onClose} />
       <div
-        className={cn("factory-modal", wide && "is-wide")}
+        className={cn("factory-modal", wide && "is-wide", modalClassName)}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -145,6 +150,7 @@ export function FactoryBoardPage({
   assignMotorcade = assignDeliveryMotorcade,
   markLinePrinted = markFactoryOrderLinePrinted,
   loadLabelCommand = fetchFactoryLabelCommand,
+  saveDispatchTime = updateFactoryDispatchTime,
   qzClient = qzTrayClient,
   initialDate,
   openOrdersInNewPage = true,
@@ -159,6 +165,7 @@ export function FactoryBoardPage({
   assignMotorcade?: MotorcadeAssigner;
   markLinePrinted?: LinePrintMarker;
   loadLabelCommand?: FactoryLabelCommandLoader;
+  saveDispatchTime?: DispatchTimeUpdater;
   qzClient?: QzTrayClient;
   initialDate?: string;
   openOrdersInNewPage?: boolean;
@@ -228,6 +235,31 @@ export function FactoryBoardPage({
     () => aggregateFactoryMultiDayMenuRows(multiDayRows, activeMultiDayBrands),
     [activeMultiDayBrands, multiDayRows],
   );
+  const menuCompletionColumns = useMemo(() => {
+    const hours = Array.from({ length: 11 }, (_, index) => index + 9);
+    return hours.map((hour) => {
+      const orders = new Map<string, string>();
+      for (const row of menuRows) {
+        for (const order of row.orders ?? []) {
+          const match = /^(\d{1,2})/.exec(order.completionTime ?? "");
+          if (match && Number(match[1]) === hour) {
+            orders.set(
+              order.orderId,
+              `#${order.orderNumber?.replace(/^#/, "") || order.orderId}`,
+            );
+          }
+        }
+      }
+      return { hour, orders: [...orders.values()] };
+    });
+  }, [menuRows]);
+  const sortedMenuRows = useMemo(
+    () => [...menuRows].sort(compareFactoryMenuRows),
+    [menuRows],
+  );
+  const menuBrandHeading = menuSummary?.brandId === ALL_BRAND_ID
+    ? brands.map((brand) => brand.name).join(", ") || menuSummary?.brandName || ""
+    : menuSummary?.brandName || "";
   const multiDayBrandCounts = useMemo(() => {
     const counts = new Map<string, number>();
     for (const row of multiDayRows) {
@@ -607,6 +639,7 @@ export function FactoryBoardPage({
           assignMotorcade={assignMotorcade}
           markLinePrinted={markLinePrinted}
           loadLabelCommand={loadLabelCommand}
+          saveDispatchTime={saveDispatchTime}
           onLinePrinted={(lineId) => {
             setOrderJob((current) => {
               if (!current) return current;
@@ -772,17 +805,6 @@ export function FactoryBoardPage({
         </section>
       ) : (
         <>
-          {(board?.pendingChangeCount ?? 0) > 0 ? (
-            <div className="factory-board-change-alert" role="alert">
-              <TriangleAlert aria-hidden="true" />
-              <strong>
-                {t("factoryBoard.pendingChanges", {
-                  count: board?.pendingChangeCount ?? 0,
-                })}
-              </strong>
-              <span>{t("factoryBoard.pendingChangesDescription")}</span>
-            </div>
-          ) : null}
       <section className="factory-board-days" aria-busy={loading || undefined}>
         {dates.map((date) => (
           <article className="factory-day" key={date}>
@@ -1244,15 +1266,22 @@ export function FactoryBoardPage({
         titleId="factory-menu-title"
         headerTone="dispatch"
         wide
+        modalClassName="factory-menu-summary-modal"
         onClose={() => setMenuSummary(null)}
         footer={
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setMenuSummary(null)}
-          >
-            {t("factoryBoard.close")}
-          </Button>
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setMenuSummary(null)}
+            >
+              {t("factoryBoard.close")}
+            </Button>
+            <Button type="button" onClick={() => window.print()}>
+              <Printer aria-hidden="true" />
+              {t("factoryBoard.print")}
+            </Button>
+          </>
         }
       >
         {menuLoading ? (
@@ -1261,20 +1290,70 @@ export function FactoryBoardPage({
           <p className="factory-day-state">{t("factoryBoard.emptyMenu")}</p>
         ) : (
           <div className="factory-dispatch-table-wrap">
-            <table className="factory-dispatch-table">
+            <table className="factory-dispatch-table factory-menu-summary-table">
+              <colgroup>
+                <col className="factory-menu-summary-dish-column" />
+                <col className="factory-menu-summary-total-column" />
+                {menuCompletionColumns.map((column) => (
+                  <col
+                    className="factory-menu-summary-time-column"
+                    key={`column-${column.hour}`}
+                  />
+                ))}
+              </colgroup>
               <thead>
                 <tr>
-                  <th>{t("factoryBoard.columns.item")}</th>
+                  <th className="factory-menu-summary-title" colSpan={10}>
+                    {t("factoryBoard.preparationOverviewTitle")}
+                  </th>
+                  <th className="factory-menu-summary-printed" colSpan={3}>
+                    {t("factoryBoard.printedAt", {
+                      date: factoryMultiDayPrintedDate(new Date(), i18n.language),
+                    })}
+                  </th>
+                </tr>
+                <tr>
+                  <th className="factory-menu-summary-brands">{menuBrandHeading}</th>
+                  <th aria-hidden="true" />
+                  {menuCompletionColumns.map((column) => (
+                    <th className="factory-menu-orders" key={`orders-${column.hour}`}>
+                      {column.orders.join(", ")}
+                    </th>
+                  ))}
+                </tr>
+                <tr>
                   <th>{t("factoryBoard.menuDish")}</th>
-                  <th>{t("factoryBoard.menuQuantity")}</th>
+                  <th>{t("factoryBoard.allDayTotal")}</th>
+                  {menuCompletionColumns.map((column) => (
+                    <th key={`hour-${column.hour}`}>
+                      {t("factoryBoard.completionHour", {
+                        hour: column.hour > 12 ? column.hour - 12 : column.hour,
+                      })}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {menuRows.map((row, index) => (
-                  <tr key={`${row.label}-${index}`}>
-                    <td>{index + 1}</td>
+                {sortedMenuRows.map((row) => (
+                  <tr key={row.label}>
                     <td>{row.label}</td>
                     <td>{row.quantity}</td>
+                    {menuCompletionColumns.map((column) => {
+                      const quantity = (row.orders ?? []).reduce((total, order) => {
+                        const match = /^(\d{1,2})/.exec(order.completionTime ?? "");
+                        return match && Number(match[1]) === column.hour
+                          ? total + order.quantity
+                          : total;
+                      }, 0);
+                      return (
+                        <td
+                          className={cn(quantity > 0 && "has-data")}
+                          key={`${row.label}-${column.hour}`}
+                        >
+                          {quantity || ""}
+                        </td>
+                      );
+                    })}
                   </tr>
                 ))}
               </tbody>
@@ -1282,6 +1361,34 @@ export function FactoryBoardPage({
           </div>
         )}
       </FactoryModal>
+
+      {menuSummary && sortedMenuRows.length > 0 ? (
+        <section className="factory-menu-print-root" aria-hidden="true">
+          <h1>
+            {t("factoryBoard.menuPrintDate", {
+              year: Number(menuSummary.date.slice(0, 4)),
+              month: Number(menuSummary.date.slice(5, 7)),
+              day: Number(menuSummary.date.slice(8, 10)),
+            })}
+          </h1>
+          <table className="factory-menu-print-table">
+            <thead>
+              <tr>
+                <th>{t("factoryBoard.menuDish")}</th>
+                <th>{t("factoryBoard.allDayTotal")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sortedMenuRows.map((row) => (
+                <tr key={`print-${row.label}`}>
+                  <td>{row.label}</td>
+                  <td>{row.quantity}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      ) : null}
     </main>
   );
 }

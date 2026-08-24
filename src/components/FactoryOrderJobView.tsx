@@ -10,6 +10,7 @@ import {
 import {
   hongKongDateKey,
   markFactoryOrderLinePrinted,
+  updateFactoryDispatchTime,
   type FactoryFleet,
   type FactoryOrderLine,
   type FactoryOrderJob,
@@ -43,6 +44,7 @@ export function FactoryOrderJobView({
   assignMotorcade = assignDeliveryMotorcade,
   markLinePrinted = markFactoryOrderLinePrinted,
   loadLabelCommand = fetchFactoryLabelCommand,
+  saveDispatchTime = updateFactoryDispatchTime,
   onLinePrinted,
   onAssigned,
   qz,
@@ -57,6 +59,7 @@ export function FactoryOrderJobView({
   assignMotorcade?: typeof assignDeliveryMotorcade;
   markLinePrinted?: typeof markFactoryOrderLinePrinted;
   loadLabelCommand?: FactoryLabelCommandLoader;
+  saveDispatchTime?: typeof updateFactoryDispatchTime;
   onLinePrinted?: (lineId: string) => void;
   onAssigned?: (fleet: FactoryFleet) => void;
   qz: ReturnType<typeof useQzTray>;
@@ -72,6 +75,14 @@ export function FactoryOrderJobView({
   const [selectedLineId, setSelectedLineId] = useState<string | null>(null);
   const [selectedPrinter, setSelectedPrinter] = useState("");
   const [printing, setPrinting] = useState(false);
+  const [bulkPrinting, setBulkPrinting] = useState<"all" | "address" | null>(null);
+  const [bulkPrintError, setBulkPrintError] = useState(false);
+  const [bulkPrintSuccess, setBulkPrintSuccess] = useState<string | null>(null);
+  const [dispatchOpen, setDispatchOpen] = useState(false);
+  const [dispatchDraft, setDispatchDraft] = useState("");
+  const [savedDispatchTime, setSavedDispatchTime] = useState(job?.dispatchTime || item.deliveryTime || "");
+  const [savingDispatch, setSavingDispatch] = useState(false);
+  const [dispatchError, setDispatchError] = useState(false);
   const [printError, setPrintError] = useState(false);
   const [printSuccess, setPrintSuccess] = useState<string | null>(null);
   const [deliveryNotePrinted, setDeliveryNotePrinted] = useState(false);
@@ -83,7 +94,7 @@ export function FactoryOrderJobView({
   const dateKey = item.deliveryAt ? hongKongDateKey(item.deliveryAt) : "";
   const weekday = formatDeliveryNoteWeekday(dateKey, i18n.language, empty);
   const orderNumber = item.orderNumber?.replace(/^#/, "") || empty;
-  const dispatchTime = job?.dispatchTime || item.deliveryTime || empty;
+  const dispatchTime = savedDispatchTime || empty;
   const arrivalWindow = job?.arrivalWindow || empty;
   const assignedFleet = fleets.find((fleet) => fleet.id === assignedFleetId);
   const selectedLine = job?.lines.find((line) => line.id === selectedLineId) ?? null;
@@ -103,6 +114,10 @@ export function FactoryOrderJobView({
     setAssignedFleetId(item.motorcadeId ?? "");
     setSelectedFleetId(item.motorcadeId ?? "");
   }, [item.motorcadeId]);
+
+  useEffect(() => {
+    setSavedDispatchTime(job?.dispatchTime || item.deliveryTime || "");
+  }, [item.deliveryTime, job?.dispatchTime]);
 
   useEffect(() => {
     if (!qz.printers.length) {
@@ -157,6 +172,70 @@ export function FactoryOrderJobView({
     }
   };
 
+  const printAllLabels = async () => {
+    if (qz.state !== "connected" || !selectedPrinter || !visibleLines.length) return;
+    setBulkPrinting("all");
+    setBulkPrintError(false);
+    setBulkPrintSuccess(null);
+    try {
+      for (const line of visibleLines) {
+        const commandBase64 = await loadLabelCommand({
+          orderNumber,
+          deliveryDate: dateKey,
+          labelName: line.labelName?.trim() || line.label,
+          remarks: [...line.remarks, job?.packingNote ?? ""].filter(Boolean),
+          copies: labelCopies(line),
+        });
+        await qz.printLabels(selectedPrinter, commandBase64, 1);
+        await markLinePrinted(line.id);
+        onLinePrinted?.(line.id);
+      }
+      setBulkPrintSuccess(t("factoryBoard.printAllSuccess"));
+    } catch {
+      setBulkPrintError(true);
+    } finally {
+      setBulkPrinting(null);
+    }
+  };
+
+  const printAddressLabel = async () => {
+    if (qz.state !== "connected" || !selectedPrinter) return;
+    setBulkPrinting("address");
+    setBulkPrintError(false);
+    setBulkPrintSuccess(null);
+    try {
+      const commandBase64 = await loadLabelCommand({
+        kind: "address",
+        orderNumber,
+        address: formatDeliveryAddress(item.address, item.shippingMethodName, empty),
+        arrivalWindow,
+        customerName: item.customerName || empty,
+        customerPhone: item.customerPhone || empty,
+      });
+      await qz.printLabels(selectedPrinter, commandBase64, 1);
+      setBulkPrintSuccess(t("factoryBoard.printAddressSuccess"));
+    } catch {
+      setBulkPrintError(true);
+    } finally {
+      setBulkPrinting(null);
+    }
+  };
+
+  const submitDispatchTime = async () => {
+    if (!item.orderId || !dispatchDraft) return;
+    setSavingDispatch(true);
+    setDispatchError(false);
+    try {
+      await saveDispatchTime(item.orderId, dispatchDraft);
+      setSavedDispatchTime(dispatchDraft);
+      setDispatchOpen(false);
+    } catch {
+      setDispatchError(true);
+    } finally {
+      setSavingDispatch(false);
+    }
+  };
+
   const submitAssignment = async () => {
     const fleet = fleets.find((entry) => entry.id === selectedFleetId);
     if (!fleet) return;
@@ -206,7 +285,18 @@ export function FactoryOrderJobView({
                 : empty}
             </div>
             <div>
-              {t("factoryBoard.dispatchTime")}: {dispatchTime}
+              <button
+                type="button"
+                className="factory-dispatch-time-trigger"
+                aria-label={t("factoryBoard.editDispatchTime")}
+                onClick={() => {
+                  setDispatchDraft(savedDispatchTime);
+                  setDispatchError(false);
+                  setDispatchOpen(true);
+                }}
+              >
+                {t("factoryBoard.dispatchTime")}: {dispatchTime}
+              </button>
             </div>
             <div>
               {t("factoryBoard.arrivalWindow")}: {arrivalWindow}
@@ -292,12 +382,22 @@ export function FactoryOrderJobView({
             <span>{t("factoryBoard.changeTaskDescription")}</span>
           </div>
         ) : null}
-        <Button type="button" disabled={!canPrint}>
-          {t("factoryBoard.printAll")}
+        <Button
+          type="button"
+          disabled={!canPrint || !selectedPrinter || !visibleLines.length || bulkPrinting !== null}
+          onClick={() => void printAllLabels()}
+        >
+          {bulkPrinting === "all" ? t("factoryBoard.printing") : t("factoryBoard.printAll")}
         </Button>
-        <Button type="button" disabled={!canPrint}>
-          {t("factoryBoard.printAddress")}
+        <Button
+          type="button"
+          disabled={!canPrint || !selectedPrinter || bulkPrinting !== null}
+          onClick={() => void printAddressLabel()}
+        >
+          {bulkPrinting === "address" ? t("factoryBoard.printing") : t("factoryBoard.printAddress")}
         </Button>
+        {bulkPrintSuccess ? <p className="factory-label-print-success" role="status">{bulkPrintSuccess}</p> : null}
+        {bulkPrintError ? <p className="factory-label-print-error" role="alert">{t("factoryBoard.labelPrintError")}</p> : null}
         <Button
           type="button"
           disabled={loading || error || !job}
@@ -382,6 +482,49 @@ export function FactoryOrderJobView({
       </aside>
 
       <DeliveryNoteDocument order={item} job={job} printOnly />
+
+      {dispatchOpen ? (
+        <div className="factory-modal-root" role="presentation">
+          <div
+            className="factory-modal-backdrop"
+            onClick={() => !savingDispatch && setDispatchOpen(false)}
+          />
+          <div
+            className="factory-modal factory-dispatch-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="factory-dispatch-modal-title"
+          >
+            <header className="factory-modal-header">
+              <h2 id="factory-dispatch-modal-title">{t("factoryBoard.editDispatchTime")}</h2>
+            </header>
+            <div className="factory-modal-body">
+              <label className="factory-dispatch-time-field">
+                <span>{t("factoryBoard.dispatchTime")}</span>
+                <input
+                  type="time"
+                  value={dispatchDraft}
+                  disabled={savingDispatch}
+                  onChange={(event) => setDispatchDraft(event.target.value)}
+                />
+              </label>
+              {dispatchError ? (
+                <p className="factory-assignment-error" role="alert">
+                  {t("factoryBoard.dispatchTimeUpdateError")}
+                </p>
+              ) : null}
+            </div>
+            <footer className="factory-modal-footer">
+              <Button type="button" variant="outline" disabled={savingDispatch} onClick={() => setDispatchOpen(false)}>
+                {t("factoryBoard.cancel")}
+              </Button>
+              <Button type="button" disabled={!dispatchDraft || savingDispatch} onClick={() => void submitDispatchTime()}>
+                {savingDispatch ? t("factoryBoard.saving") : t("factoryBoard.saveDispatchTime")}
+              </Button>
+            </footer>
+          </div>
+        </div>
+      ) : null}
 
       {assignOpen ? (
         <div className="factory-modal-root" role="presentation">
