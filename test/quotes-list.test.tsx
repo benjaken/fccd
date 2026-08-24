@@ -3,6 +3,30 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("@/lib/dictionaries", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/dictionaries")>();
+  const values = ["Low Chance", "High Chance", "Done Deal", "Case Closed"];
+  return {
+    ...actual,
+    useDictItems: () => ({
+      items: values.map((value, index) => ({
+        id: `quote-status-${index}`,
+        dictTypeId: "quote_status",
+        value,
+        label: value,
+        labelEn: null,
+        description: "",
+        metadata: {},
+        sortOrder: index,
+        isActive: true,
+      })),
+      loading: false,
+      error: null,
+      reload: vi.fn(),
+    }),
+  };
+});
+
 import { QuotesListPage } from "@/components/QuotesListPage";
 import i18n from "@/i18n";
 import type { QuoteListResult } from "@/lib/quotes";

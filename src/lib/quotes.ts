@@ -2,19 +2,12 @@ import { supabase } from "@/lib/supabase";
 
 export const QUOTES_PAGE_SIZE = 15;
 export const LARGE_QUOTE_THRESHOLD = 10_000;
-export const QUOTE_STATUS_OPTIONS = [
-  "Low Chance",
-  "High Chance",
-  "Done Deal",
-  "Case Closed",
-] as const;
 export const QUOTE_STATUS_UNSET = "__unset__";
 
 export type QuotePreset =
   | "all"
   | "high-chance"
   | "large"
-  | "follow-up"
   | "pending"
   | "upcoming";
 
@@ -182,8 +175,6 @@ export async function fetchQuotes({
     query = query
       .gte("grand_total", LARGE_QUOTE_THRESHOLD)
       .or(OPEN_QUOTE_STATUS);
-  } else if (preset === "follow-up") {
-    query = query.or(OPEN_QUOTE_STATUS);
   } else if (preset === "pending") {
     // Match the legacy Bubble queue: quotes still open for follow-up.
     query = query.or(OPEN_QUOTE_STATUS);
