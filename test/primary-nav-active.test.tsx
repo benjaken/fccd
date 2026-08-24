@@ -2,10 +2,39 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-import { isPrimaryNavActive, sectionFromPath } from "@/lib/nav";
-import { pageAccessKey } from "@/auth/use-page-access";
+import {
+  isPrimaryNavActive,
+  isSecondaryNavItemActive,
+  primaryNav,
+  sectionFromPath,
+} from "@/lib/nav";
+import {
+  pageAccessKey,
+  REPORT_GROUP_TABS,
+  REPORT_TAB_ROUTES,
+} from "@/auth/use-page-access";
 
 describe("Primary navigation section matching", () => {
+  it.each([
+    ["/reports/frozen-meat", "/reports/frozen-meat"],
+    ["/reports/frozen-meat/raw-meat-stock", "/reports/frozen-meat"],
+    ["/reports/shops/sales-working-hours", "/reports/shops"],
+    ["/reports/kitchen/advertising-performance", "/reports/kitchen"],
+  ])("keeps report secondary item %s active under %s", (pathname, itemPath) => {
+    expect(isSecondaryNavItemActive(pathname, itemPath)).toBe(true);
+  });
+
+  it.each(Object.entries(REPORT_GROUP_TABS))(
+    "gives every %s report tab a unique URL inside its group",
+    (group, tabs) => {
+      const routes = tabs.map((tab) => REPORT_TAB_ROUTES[tab]);
+
+      expect(new Set(routes).size).toBe(routes.length);
+      expect(routes.every((route) =>
+        route.startsWith(group === "shops" ? "/reports/shops" : "/reports/frozen-meat"),
+      )).toBe(true);
+    },
+  );
   it.each([
     ["/", "overview"],
     ["/follow-up", "overview"],
@@ -46,6 +75,8 @@ describe("Primary navigation section matching", () => {
     ["/delivery", "delivery"],
     ["/delivery/assign", "delivery"],
     ["/restaurant", "restaurant"],
+    ["/restaurant/daily-sales", "restaurant"],
+    ["/restaurant/daily-purchases", "restaurant"],
     ["/restaurant/reports", "restaurant"],
     ["/factory", ""],
     ["/driver-delivery", ""],
@@ -61,8 +92,11 @@ describe("Primary navigation section matching", () => {
     ["/settings/users", "settings"],
     ["/settings/roles", "settings"],
     ["/settings/login-logs", "settings"],
+    ["/settings/dictionaries", "settings"],
+    ["/settings/districts", "settings"],
     ["/settings/order-lists", "settings"],
     ["/settings/attachments", "settings"],
+    ["/orders/settings/order-list-tips", "orders"],
   ] as const)("maps %s to section %s", (pathname, section) => {
     expect(sectionFromPath(pathname)).toBe(section);
   });
@@ -84,6 +118,9 @@ describe("Primary navigation section matching", () => {
     expect(isPrimaryNavActive("orders", "settings", false)).toBe(false);
     expect(isPrimaryNavActive("", "overview", false)).toBe(false);
     expect(isPrimaryNavActive("overview", "overview", true)).toBe(true);
+    expect(primaryNav.find((item) => item.key === "restaurant")?.to).toBe(
+      "/restaurant/daily-sales",
+    );
   });
 
   it("maps report routes to their page keys", () => {
@@ -94,12 +131,12 @@ describe("Primary navigation section matching", () => {
     expect(pageAccessKey("/reports/kitchen")).toBe("kitchen.cost_input");
     expect(pageAccessKey("/reports/frozen-meat")).toBe("reports.frozen_meat");
     expect(pageAccessKey("/reports/shops")).toBe("reports.shops");
-    expect(pageAccessKey("/reports/tabs/shop-sales")).toBe(
-      "reports.shop_sales",
+    expect(pageAccessKey("/reports/shops/sales-working-hours")).toBe(
+      "reports.shop_sales_working_hours",
     );
     expect(pageAccessKey("/finance/cost-input")).toBe("kitchen.cost_input");
-    expect(pageAccessKey("/reports/tabs/shop-order-quantities")).toBe(
-      "reports.shop_order_quantities",
+    expect(pageAccessKey("/reports/frozen-meat/raw-meat-stock")).toBe(
+      "reports.raw_meat_stock",
     );
     expect(pageAccessKey("/frozen")).toBe("frozen");
     expect(pageAccessKey("/frozen/selling-price-cost")).toBe(
@@ -133,12 +170,19 @@ describe("Primary navigation section matching", () => {
     expect(pageAccessKey("/orders/settings/sale-partners")).toBe(
       "orders.settings.sale_partners",
     );
+    expect(pageAccessKey("/orders/settings/order-list-tips")).toBe(
+      "settings.order_lists",
+    );
     expect(pageAccessKey("/settings/login-logs")).toBe("settings.login_logs");
+    expect(pageAccessKey("/settings/dictionaries")).toBe("settings.dictionaries");
+    expect(pageAccessKey("/settings/districts")).toBe("settings.districts");
     expect(pageAccessKey("/settings/order-lists")).toBe("settings.order_lists");
     expect(pageAccessKey("/settings/attachments")).toBe(
       "settings.attachments",
     );
     expect(pageAccessKey("/orders/unpaid")).toBe("orders.unpaid");
+    expect(pageAccessKey("/follow-up")).toBe("overview.follow_up");
+    expect(pageAccessKey("/orders/dashboard")).toBe("overview.follow_up");
     expect(pageAccessKey("/orders/payments/bank-arrival-date")).toBe(
       "orders.payments",
     );
@@ -150,6 +194,14 @@ describe("Primary navigation section matching", () => {
     );
     expect(pageAccessKey("/orders/shopify-pending")).toBe(
       "orders.shopify_pending",
+    );
+    expect(pageAccessKey("/quotes/pending")).toBe("quotes.pending");
+    expect(pageAccessKey("/quotes/follow-up")).toBe("quotes.pending");
+    expect(pageAccessKey("/restaurant/daily-sales")).toBe(
+      "restaurant.daily_sales",
+    );
+    expect(pageAccessKey("/restaurant/daily-purchases")).toBe(
+      "restaurant.daily_purchases",
     );
     expect(pageAccessKey("/kitchen/settings")).toBe("kitchen.settings");
     expect(pageAccessKey("/kitchen/calendar")).toBe("kitchen.calendar");
@@ -195,8 +247,10 @@ describe("Primary navigation section matching", () => {
     expect(appSource.indexOf('path="/orders/shopify-pending"')).toBeLessThan(
       appSource.indexOf('path="/orders/:id"'),
     );
+    expect(appSource).toContain('path="/orders/settings/order-list-tips"');
     expect(appSource).toContain('path="/settings/order-lists"');
-    expect(navSource).toContain('to: "/settings/order-lists"');
+    expect(navSource).toContain('to: "/orders/settings/order-list-tips"');
+    expect(navSource).not.toContain('to: "/settings/order-lists"');
   });
 
   it("nests the frozen meat page under the reports sidebar item", () => {
