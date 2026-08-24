@@ -672,6 +672,7 @@ describe("Quote editor", () => {
   });
 
   it("shows all three editor sections together on the quote detail page without tabs", async () => {
+    const longRemark = "No onions, no garlic, keep every sauce separate, and label every tray";
     const summary = {
       id: "quote-1", orderNumber: "FCLQ20260801", channelId: "channel-1",
       draft: {
@@ -688,7 +689,7 @@ describe("Quote editor", () => {
     render(
       <MemoryRouter initialEntries={["/quotes/quote-1"]}>
         <Routes>
-          <Route path="/quotes/:id" element={<QuoteEditorPage combined readOnly loadOptions={vi.fn().mockResolvedValue(options)} loadSummary={vi.fn().mockResolvedValue(summary)} loadLines={vi.fn().mockResolvedValue([])} loadShippingFeeOptions={vi.fn().mockResolvedValue(shippingFeeOptions)} />} />
+          <Route path="/quotes/:id" element={<QuoteEditorPage combined readOnly loadOptions={vi.fn().mockResolvedValue(options)} loadSummary={vi.fn().mockResolvedValue(summary)} loadLines={vi.fn().mockResolvedValue([{ id: "line-1", sku: "PKG-1", name: "Banquet package", quantity: 1, unitPrice: 100, totalPrice: 100, remarks: longRemark }])} loadShippingFeeOptions={vi.fn().mockResolvedValue(shippingFeeOptions)} />} />
         </Routes>
       </MemoryRouter>,
     );
@@ -702,10 +703,57 @@ describe("Quote editor", () => {
     expect(screen.getByText("High Chance")).toBeInTheDocument();
     expect(screen.getAllByText("Email").length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText("WATI")).toBeInTheDocument();
+    expect(screen.getByText(longRemark)).toHaveAttribute("title", longRemark);
     expect(screen.queryByRole("heading", { name: "額外資訊" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "活動項目" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Convert to order" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Send WATI and email order confirmation" })).not.toBeInTheDocument();
     expect(document.querySelector("input, select, textarea")).not.toBeInTheDocument();
+  });
+
+  it("shows notification and conversion actions only for unconfirmed order details", async () => {
+    const user = userEvent.setup();
+    const sendConfirmation = vi.fn().mockResolvedValue(undefined);
+    const convertQuote = vi.fn().mockResolvedValue({ id: "order-1", orderNumber: "FCLO20260801" });
+    const saveDetails = vi.fn().mockResolvedValue(undefined);
+    const saveFinancialDetails = vi.fn().mockResolvedValue(undefined);
+    const summary = {
+      id: "quote-1", documentType: "unconfirmed" as const, orderNumber: "FCLQ20260801", channelId: "channel-1",
+      draft: {
+        channelId: "channel-1", customerName: "Customer", companyName: "Company",
+        contactA: "12345678", contactB: "", email: "quote@example.com", asanaLink: "",
+        address: "", districtId: "district-1", districtName: "", shippingMethodId: "shipping-home",
+        deliveryDate: "2026-08-21", deliveryTime: "12:00 - 13:00", shipOutTime: "",
+        customerNote: "", packingNote: "", salesPartnerId: "", internalNote: "", tagIds: [],
+        quoteStatus: "", quoteSalesSourceId: "", quoteCommunicationChannelId: "",
+      },
+      financials: { shippingFee: 0, discount: 0, cashdollarRedeemed: 0, cashdollarPurchased: 0 },
+      payments: [],
+    };
+
+    render(
+      <MemoryRouter initialEntries={["/quotes/quote-1"]}>
+        <Routes>
+          <Route path="/quotes/:id" element={<QuoteEditorPage combined readOnly loadOptions={vi.fn().mockResolvedValue(options)} loadSummary={vi.fn().mockResolvedValue(summary)} loadLines={vi.fn().mockResolvedValue([])} saveDetails={saveDetails} saveFinancialDetails={saveFinancialDetails} sendConfirmation={sendConfirmation} convertQuote={convertQuote} loadShippingFeeOptions={vi.fn().mockResolvedValue(shippingFeeOptions)} />} />
+          <Route path="/orders/:id" element={<div>Converted order</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole("heading", { name: "FCLQ20260801" });
+    await user.click(screen.getByRole("button", { name: "Send WATI and email order confirmation" }));
+    await waitFor(() => expect(sendConfirmation).toHaveBeenCalledWith("quote-1"));
+
+    await user.click(screen.getByRole("button", { name: "Convert to order" }));
+    await waitFor(() => expect(convertQuote).toHaveBeenCalledWith("quote-1"));
+    expect(saveDetails).toHaveBeenCalledWith("quote-1", expect.objectContaining({ customerName: "Customer" }));
+    expect(saveFinancialDetails).toHaveBeenCalledWith("quote-1", {
+      shippingFee: 0,
+      discount: 0,
+      cashdollarRedeemed: 0,
+      cashdollarPurchased: 0,
+    });
+    expect(await screen.findByText("Converted order")).toBeInTheDocument();
   });
 
   it("uses the quote layout for order editing and adds customer matters to the first form", async () => {
@@ -716,7 +764,7 @@ describe("Quote editor", () => {
       draft: {
         channelId: "channel-1", customerName: "Customer", companyName: "Company",
         contactA: "12345678", contactB: "", email: "order@example.com", asanaLink: "",
-        address: "", districtId: "district-1", districtName: "", shippingMethodId: "shipping-home",
+        address: "1 Central Road", districtId: "district-1", districtName: "", shippingMethodId: "shipping-home",
         deliveryDate: "2026-08-21", deliveryTime: "12:00 - 13:00", shipOutTime: "",
         customerNote: "不要香菜", packingNote: "", salesPartnerId: "", internalNote: "", tagIds: [],
         quoteStatus: "", quoteSalesSourceId: "", quoteCommunicationChannelId: "",
@@ -763,7 +811,7 @@ describe("Quote editor", () => {
     render(
       <MemoryRouter initialEntries={["/orders/order-1"]}>
         <Routes>
-          <Route path="/orders/:id" element={<QuoteEditorPage documentType="order" combined readOnly canEdit loadOptions={vi.fn().mockResolvedValue(options)} loadSummary={loadSummary} loadLines={vi.fn().mockResolvedValue([])} loadShippingFeeOptions={vi.fn().mockResolvedValue(shippingFeeOptions)} />} />
+          <Route path="/orders/:id" element={<QuoteEditorPage documentType="order" combined readOnly canEdit setFactoryStatus={setFactoryStatus} loadOptions={vi.fn().mockResolvedValue(options)} loadSummary={loadSummary} loadLines={vi.fn().mockResolvedValue([])} loadShippingFeeOptions={vi.fn().mockResolvedValue(shippingFeeOptions)} />} />
         </Routes>
       </MemoryRouter>,
     );
@@ -772,6 +820,67 @@ describe("Quote editor", () => {
     expect(screen.queryByText(/Sales source|報價渠道/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Communication channel|溝通渠道/)).not.toBeInTheDocument();
     expect(screen.queryByRole("checkbox", { name: /Do not send to factory|不傳送到工場/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Send to factory|送至工場/ })).not.toBeInTheDocument();
+    const detailSendButton = screen.getByRole("button", { name: /Send to factory|送至工場/ });
+    const detailEditLink = screen.getByRole("link", { name: /Edit|編輯/ });
+    expect(detailSendButton.closest(".quote-detail-actions")).toBe(detailEditLink.closest(".quote-detail-actions"));
+    await user.click(detailSendButton);
+    expect(setFactoryStatus).toHaveBeenLastCalledWith("order-1", true);
+    await waitFor(() => expect(screen.queryByRole("button", { name: /Send to factory|送至工場/ })).not.toBeInTheDocument());
+  });
+
+  it("blocks factory sending from detail and edit pages when required contact or delivery details are missing", async () => {
+    const setFactoryStatus = vi.fn().mockResolvedValue(undefined);
+    const loadSummary = vi.fn().mockResolvedValue({
+      id: "order-1", orderNumber: "6951", channelId: "channel-1",
+      draft: {
+        channelId: "channel-1", customerName: "MirandaKwok", companyName: "",
+        contactA: "94350022", contactB: "", email: "", asanaLink: "",
+        address: "", districtId: "", districtName: "", shippingMethodId: "",
+        deliveryDate: "2026-08-28", deliveryTime: "18:00 - 19:00", shipOutTime: "",
+        customerNote: "", packingNote: "", salesPartnerId: "", internalNote: "", tagIds: [],
+        quoteStatus: "", quoteSalesSourceId: "", quoteCommunicationChannelId: "",
+      },
+      financials: { shippingFee: 0, discount: 0, cashdollarRedeemed: 0, cashdollarPurchased: 0 },
+      payments: [],
+      isSentToFactory: false,
+      doNotSendToFactory: false,
+    });
+
+    const detail = render(
+      <MemoryRouter initialEntries={["/orders/order-1"]}>
+        <Routes>
+          <Route path="/orders/:id" element={<QuoteEditorPage documentType="order" combined readOnly canEdit setFactoryStatus={setFactoryStatus} loadOptions={vi.fn().mockResolvedValue(options)} loadSummary={loadSummary} loadLines={vi.fn().mockResolvedValue([])} loadShippingFeeOptions={vi.fn().mockResolvedValue(shippingFeeOptions)} />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await userEvent.setup().click(await screen.findByRole("button", { name: "Send to factory" }));
+    const detailDialog = screen.getByRole("alertdialog", { name: "Cannot send to factory" });
+    expect(detailDialog).toHaveTextContent("Company name");
+    expect(detailDialog).toHaveTextContent("Email");
+    expect(detailDialog).toHaveTextContent("Shipping method");
+    expect(detailDialog).toHaveTextContent("District");
+    expect(detailDialog).toHaveTextContent("Delivery address");
+    expect(setFactoryStatus).not.toHaveBeenCalled();
+
+    detail.unmount();
+    render(
+      <MemoryRouter initialEntries={["/orders/order-1/edit"]}>
+        <Routes>
+          <Route path="/orders/:id/edit" element={<QuoteEditorPage documentType="order" setFactoryStatus={setFactoryStatus} loadOptions={vi.fn().mockResolvedValue(options)} loadSummary={loadSummary} loadLines={vi.fn().mockResolvedValue([])} loadShippingFeeOptions={vi.fn().mockResolvedValue(shippingFeeOptions)} />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole("heading", { name: "6951" });
+    await userEvent.setup().click(screen.getByRole("tab", { name: "Add products" }));
+    await userEvent.setup().click(screen.getByRole("button", { name: "Send to factory" }));
+    const editDialog = screen.getByRole("alertdialog", { name: "Cannot send to factory" });
+    expect(editDialog).toHaveTextContent("Company name");
+    expect(editDialog).toHaveTextContent("Email");
+    expect(editDialog).toHaveTextContent("Shipping method");
+    expect(editDialog).toHaveTextContent("District");
+    expect(editDialog).toHaveTextContent("Delivery address");
+    expect(setFactoryStatus).not.toHaveBeenCalled();
   });
 });

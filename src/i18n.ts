@@ -2004,6 +2004,10 @@ const resources = {
           cancel: "取消送至工場",
           saving: "更新中…",
           error: "未能更新送至工場狀態，請重試。",
+          blockedTitle: "無法送至工場",
+          blockedDescription: "請先在編輯頁補齊以下資料：",
+          closeBlocked: "關閉資料提示",
+          acknowledge: "知道了",
         },
         validation: {
           brand: "請選擇品牌。", customer: "請輸入客人姓名。", company: "請輸入公司名稱。",
@@ -2044,6 +2048,9 @@ const resources = {
           previous: "上一步", complete: "完成", sendAndComplete: "傳送 WATI 及電郵確認",
           saveError: "未能完成儲存；如已新增收款，請完整填寫日期、付款方式及金額。",
           sendError: "報價已儲存，但 WATI 或電郵未能傳送，請檢查通知服務設定後重試。",
+        },
+        detailActions: {
+          sendConfirmation: "傳送 WATI 及電郵訂單確認通知",
         },
       },
       quoteCustomers: {
@@ -6468,6 +6475,10 @@ const resources = {
           cancel: "Cancel factory send",
           saving: "Updating…",
           error: "The factory status could not be updated. Please retry.",
+          blockedTitle: "Cannot send to factory",
+          blockedDescription: "Complete these details on the edit page first:",
+          closeBlocked: "Close missing-details message",
+          acknowledge: "Got it",
         },
         validation: {
           brand: "Choose a brand.", customer: "Enter a customer name.", company: "Enter a company name.",
@@ -6508,6 +6519,9 @@ const resources = {
           previous: "Previous", complete: "Complete", sendAndComplete: "Send WATI and email confirmation",
           saveError: "Could not complete the save. If a payment was added, fill in its date, method, and amount.",
           sendError: "The quote was saved, but WATI or email could not be sent. Check the notification service configuration and retry.",
+        },
+        detailActions: {
+          sendConfirmation: "Send WATI and email order confirmation",
         },
       },
       quoteCustomers: {

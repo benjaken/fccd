@@ -8,6 +8,11 @@ import {
   sha256Hex,
 } from "../supabase/functions/bubble-daily-incremental/helpers.ts";
 import { phoneText, coreMappings } from "../supabase/functions/bubble-daily-incremental/mappings.ts";
+import {
+  changedOverwriteFields,
+  mergeOverwriteRow,
+  normalizeOrderNumber,
+} from "../supabase/functions/bubble-daily-incremental/overwrite.ts";
 
 describe("bubble daily incremental helpers", () => {
   it("canonicalizes object keys recursively and hashes deterministically", async () => {
@@ -111,5 +116,72 @@ describe("bubble daily incremental helpers", () => {
     expect(source).toContain('relation.idField === "motorcade_id"');
     expect(source).toContain("motorcade_id: row.motorcade_id");
     expect(source).toContain('.is("motorcade_id", null)');
+  });
+
+  it("preserves Supabase values when Bubble omits the source field", () => {
+    const merged = mergeOverwriteRow(
+      "a_order",
+      {
+        _id: "bubble-order",
+        "Modified Date": "2026-08-24T01:00:00.000Z",
+        "ORDER_Grand total": 123,
+      },
+      {
+        legacy_id: "bubble-order",
+        bubble_modified_at: "2026-08-24T01:00:00.000Z",
+        grand_total: 123,
+        factory_print_date: null,
+      },
+      {
+        legacy_id: "bubble-order",
+        bubble_modified_at: "2026-08-23T01:00:00.000Z",
+        grand_total: 100,
+        factory_print_date: "2026-08-20T02:00:00.000Z",
+      },
+    );
+
+    expect(merged.grand_total).toBe(123);
+    expect(merged.factory_print_date).toBe("2026-08-20T02:00:00.000Z");
+    expect(changedOverwriteFields(merged, {
+      bubble_modified_at: "2026-08-23T01:00:00.000Z",
+      grand_total: 100,
+      factory_print_date: "2026-08-20T02:00:00.000Z",
+    })).toEqual(["bubble_modified_at", "grand_total"]);
+  });
+
+  it("normalizes Shopify and Bubble order number formatting", () => {
+    expect(normalizeOrderNumber("B - 1546")).toBe("B1546");
+    expect(normalizeOrderNumber("b1546")).toBe("B1546");
+  });
+
+  it("treats equivalent timestamp and numeric representations as unchanged", () => {
+    expect(changedOverwriteFields(
+      {
+        legacy_id: "order-1",
+        delivery_at: "2026-08-24T01:00:00.000Z",
+        grand_total: 123,
+      },
+      {
+        legacy_id: "order-1",
+        delivery_at: "2026-08-24T01:00:00+00:00",
+        grand_total: "123.00",
+      },
+    )).toEqual([]);
+  });
+
+  it("preserves Shopify-owned identity and outstanding on a linked order", () => {
+    const merged = mergeOverwriteRow(
+      "a_order",
+      { _id: "bubble-order", Shopify_NewOrder: false, ORDER_oustanding: 500 },
+      { legacy_id: "bubble-order", is_shopify_order: false, outstanding: 500 },
+      {
+        legacy_id: "bubble-order",
+        shopify_order_id: 123,
+        is_shopify_order: true,
+        outstanding: 0,
+      },
+    );
+    expect(merged.is_shopify_order).toBe(true);
+    expect(merged.outstanding).toBe(0);
   });
 });

@@ -280,6 +280,9 @@ export function QuoteEditorPage({
   const [payments, setPayments] = useState<QuotePayment[]>([]);
   const [completing, setCompleting] = useState(false);
   const [completionError, setCompletionError] = useState<"save" | "send" | null>(null);
+  const [sourceDocumentType, setSourceDocumentType] = useState<"quote" | "unconfirmed" | "order" | null>(null);
+  const [sendingConfirmation, setSendingConfirmation] = useState(false);
+  const [confirmationSendError, setConfirmationSendError] = useState(false);
   const [converting, setConverting] = useState(false);
   const [conversionError, setConversionError] = useState(false);
   const [expandedRemarkIds, setExpandedRemarkIds] = useState<Set<string>>(new Set());
@@ -296,6 +299,7 @@ export function QuoteEditorPage({
   const [isSentToFactory, setIsSentToFactory] = useState(false);
   const [changingFactoryStatus, setChangingFactoryStatus] = useState(false);
   const [factoryStatusError, setFactoryStatusError] = useState(false);
+  const [factoryValidationOpen, setFactoryValidationOpen] = useState(false);
   const [factorySettings, setFactorySettings] = useState<OrderFactorySettings>({
     doNotSendToFactory: false,
     suppressFactoryReprint: false,
@@ -359,6 +363,7 @@ export function QuoteEditorPage({
         }
         if (summary) {
           if (id) setCreated(summary);
+          setSourceDocumentType(summary.documentType ?? (isOrder ? "order" : "quote"));
           setChannelId(summary.channelId);
           if (summary.draft) {
             const loadedDraft = { ...emptyDraft(), ...summary.draft };
@@ -460,6 +465,23 @@ export function QuoteEditorPage({
   const selectedShippingMethod = options.shippingMethods.find((item) => item.id === draft.shippingMethodId);
   const automaticDistrictName = automaticDistrictForMethod(selectedShippingMethod?.name ?? "");
   const showDeliveryAddress = DELIVERY_ADDRESS_METHODS.has(selectedShippingMethod?.name ?? "");
+  const factoryMissingFields = useMemo(() => {
+    const missing: string[] = [];
+    if (!draft.channelId) missing.push(t("quoteEditor.fields.brand"));
+    if (!draft.customerName.trim()) missing.push(t("quoteEditor.fields.customerName"));
+    if (!draft.companyName.trim()) missing.push(t("quoteEditor.fields.companyName"));
+    if (!draft.contactA.trim()) missing.push(t("quoteEditor.fields.contactA"));
+    if (!draft.email.trim()) missing.push(t("quoteEditor.fields.email"));
+    if (!draft.shippingMethodId) missing.push(t("quoteEditor.fields.shippingMethod"));
+    if (!draft.districtId && !draft.districtName.trim() && !automaticDistrictName) {
+      missing.push(t("quoteEditor.fields.district"));
+    }
+    if (!draft.address.trim() && (!selectedShippingMethod || showDeliveryAddress)) {
+      missing.push(t("quoteEditor.fields.address"));
+    }
+    if (!draft.deliveryTime.trim()) missing.push(t("quoteEditor.fields.deliveryTime"));
+    return missing;
+  }, [automaticDistrictName, draft, selectedShippingMethod, showDeliveryAddress, t]);
 
   const patchDraft = (partial: Partial<QuoteDraft>) =>
     setDraft((current) => ({ ...current, ...partial }));
@@ -536,6 +558,19 @@ export function QuoteEditorPage({
       setConversionError(true);
     } finally {
       setConverting(false);
+    }
+  };
+
+  const sendCurrentQuoteConfirmation = async () => {
+    if (!activeQuote || sendingConfirmation) return;
+    setSendingConfirmation(true);
+    setConfirmationSendError(false);
+    try {
+      await sendConfirmation(activeQuote.id);
+    } catch {
+      setConfirmationSendError(true);
+    } finally {
+      setSendingConfirmation(false);
     }
   };
 
@@ -716,6 +751,10 @@ export function QuoteEditorPage({
   const toggleFactoryStatus = async () => {
     if (!isOrder || !activeQuote || changingFactoryStatus) return;
     const next = !isSentToFactory;
+    if (next && factoryMissingFields.length) {
+      setFactoryValidationOpen(true);
+      return;
+    }
     setChangingFactoryStatus(true);
     setFactoryStatusError(false);
     try {
@@ -794,6 +833,23 @@ export function QuoteEditorPage({
       />
     ) : null;
 
+  const factoryValidationModal = (
+    <Modal
+      open={factoryValidationOpen}
+      onClose={() => setFactoryValidationOpen(false)}
+      title={t("quoteEditor.factoryStatus.blockedTitle")}
+      description={t("quoteEditor.factoryStatus.blockedDescription")}
+      closeLabel={t("quoteEditor.factoryStatus.closeBlocked")}
+      role="alertdialog"
+      size="sm"
+      footer={<Button type="button" onClick={() => setFactoryValidationOpen(false)}>{t("quoteEditor.factoryStatus.acknowledge")}</Button>}
+    >
+      <ul className="quote-factory-missing-list">
+        {factoryMissingFields.map((field) => <li key={field}>{field}</li>)}
+      </ul>
+    </Modal>
+  );
+
   const patchPayment = (paymentId: string, partial: Partial<QuotePayment>) => {
     setPayments((current) => current.map((payment) => payment.id === paymentId ? { ...payment, ...partial } : payment));
   };
@@ -841,6 +897,8 @@ export function QuoteEditorPage({
     const districtName = automaticDistrictName || draft.districtName || optionName(districts, draft.districtId);
     const selectedTags = options.orderTags.filter((item) => draft.tagIds.includes(item.id));
     const paid = payments.reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0);
+    const showConfirmationAction = !isOrder && sourceDocumentType === "unconfirmed";
+    const showConvertAction = !isOrder;
 
     const ReadonlyField = ({ label, value, hint }: { label: string; value?: string | number | null; hint?: string }) => (
       <div className="quote-readonly-field">
@@ -858,9 +916,61 @@ export function QuoteEditorPage({
             <h1>{activeQuote.orderNumber || (isOrder ? t("details.orderTitle") : t("quoteEditor.title"))}</h1>
             <p>{t(isOrder ? "quoteEditor.orderItemsReady" : "quoteEditor.itemsReady")}</p>
           </div>
-          {isOrder && canEdit ? <Button asChild variant="outline"><Link to={`/orders/${activeQuote.id}/edit`}><Pencil />編輯</Link></Button> : null}
-          {isOrder ? <OrderPaymentStatus total={grandTotal} paid={paidTotal} formatMoney={money.format} /> : null}
+          {showConfirmationAction || showConvertAction ? (
+            <div className="quote-detail-actions">
+              {showConfirmationAction ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={sendingConfirmation || converting}
+                  onClick={() => void sendCurrentQuoteConfirmation()}
+                >
+                  {sendingConfirmation ? <LoaderCircle className="spin" /> : <Mail />}
+                  {t("quoteEditor.detailActions.sendConfirmation")}
+                </Button>
+              ) : null}
+              {showConvertAction ? (
+                <Button
+                  type="button"
+                  disabled={converting || sendingConfirmation}
+                  onClick={() => void convertCurrentQuote()}
+                >
+                  {converting ? <LoaderCircle className="spin" /> : <ShoppingCart />}
+                  {converting ? t("quotes.actions.converting") : t("quotes.actions.convert")}
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
+          {isOrder ? (
+            <div className="quote-order-detail-summary">
+              <OrderPaymentStatus total={grandTotal} paid={paidTotal} formatMoney={money.format} />
+              <div className="quote-detail-actions">
+                {!isSentToFactory && !factorySettings.doNotSendToFactory ? (
+                  <Button
+                    type="button"
+                    disabled={changingFactoryStatus}
+                    onClick={() => void toggleFactoryStatus()}
+                  >
+                    {changingFactoryStatus ? <LoaderCircle className="spin" /> : <Factory />}
+                    {changingFactoryStatus
+                      ? t("quoteEditor.factoryStatus.saving")
+                      : t("quoteEditor.factoryStatus.send")}
+                  </Button>
+                ) : null}
+                {canEdit ? <Button asChild variant="outline"><Link to={`/orders/${activeQuote.id}/edit`}><Pencil />編輯</Link></Button> : null}
+              </div>
+            </div>
+          ) : null}
         </header>
+
+        {!isOrder && (confirmationSendError || conversionError) ? (
+          <p className="quote-editor-error" role="alert">
+            {t(confirmationSendError ? "quoteEditor.payments.sendError" : "quoteEditor.errors.convert")}
+          </p>
+        ) : null}
+        {isOrder && factoryStatusError ? (
+          <p className="quote-editor-error" role="alert">{t("quoteEditor.factoryStatus.error")}</p>
+        ) : null}
 
         <section className="panel quote-editor-form quote-editor-readonly-form">
           <div className="quote-editor-form-column">
@@ -908,7 +1018,7 @@ export function QuoteEditorPage({
             {lines.map((line, index) => <tr key={line.id}>
               <td className="quote-line-sequence">{index + 1}</td>
               <td className="quote-line-sku">{displayValue(line.sku)}</td>
-              <td className="quote-line-product"><strong>{displayValue(line.name)}</strong>{line.remarks ? <small>{line.remarks}</small> : null}</td>
+              <td className="quote-line-product"><strong>{displayValue(line.name)}</strong>{line.remarks ? <small title={line.remarks}>{line.remarks}</small> : null}</td>
               <td>{line.quantity}</td>
               <td>{money.format(line.unitPrice)}</td>
               <td>{money.format(line.totalPrice)}</td>
@@ -959,6 +1069,7 @@ export function QuoteEditorPage({
             <div><span>{t("quoteEditor.payments.outstanding")}</span><strong>{money.format(Math.max(0, grandTotal - paid))}</strong></div>
           </div>
         </section>
+        {factoryValidationModal}
       </section>
     );
   }
@@ -1288,6 +1399,7 @@ export function QuoteEditorPage({
           </footer>
         </section>
       ) : null}
+      {factoryValidationModal}
     </section>
   );
 }

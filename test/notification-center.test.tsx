@@ -70,6 +70,36 @@ describe("NotificationCenter", () => {
     expect(screen.getByRole("button", { name: "待處理" })).toBeInTheDocument();
   });
 
+  it("does not show the login summary when there are no action items", async () => {
+    vi.mocked(fetchNotifications).mockResolvedValue([
+      {
+        id: "notice-info-1",
+        eventType: "system_information",
+        category: "information",
+        priority: "normal",
+        title: "系統資訊",
+        body: null,
+        entityType: null,
+        entityId: null,
+        route: null,
+        metadata: {},
+        readAt: null,
+        snoozedUntil: null,
+        createdAt: "2026-08-23T01:00:00.000Z",
+        updatedAt: "2026-08-23T01:00:00.000Z",
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <NotificationCenter userId="user-1" />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByLabelText("1 則未讀通知")).toBeInTheDocument();
+    expect(screen.queryByText("你有 0 項待處理工作")).not.toBeInTheDocument();
+  });
+
   it("supports a one-hour snooze without resolving an action", async () => {
     render(
       <MemoryRouter>

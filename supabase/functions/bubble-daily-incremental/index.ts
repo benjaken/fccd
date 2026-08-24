@@ -15,6 +15,16 @@ import {
   unsupportedMappings,
 } from "./mappings.ts";
 import { remainingMappings } from "./remaining-mappings.ts";
+import {
+  AUGUST_OVERWRITE_CONFIRMATION,
+  AUGUST_OVERWRITE_SINCE,
+  changedOverwriteFields,
+  isOverwriteSourceType,
+  mergeOverwriteRow,
+  normalizeOrderNumber,
+  overwriteFieldSources,
+  type OverwriteSourceType,
+} from "./overwrite.ts";
 
 const BUBBLE_BASE_URL = "https://cs.foodchannels-catering.com/api/1.1/obj";
 const INITIAL_CHECKPOINT = "2026-08-12T02:39:34.000Z";
@@ -24,6 +34,7 @@ const MAX_PAGES_PER_TYPE = 100;
 const INSERT_CHUNK = 250;
 const QUERY_CHUNK = 100;
 const SOFT_RUNTIME_MS = 60_000;
+const OVERWRITE_RUNTIME_MS = 150_000;
 
 type AdminClient = ReturnType<typeof createClient<any>>;
 type Checkpoint = {
@@ -750,6 +761,175 @@ async function processType(
   }
 }
 
+type OverwriteMode = "dry-run" | "apply";
+
+async function selectedLegacyRows(
+  client: AdminClient,
+  table: string,
+  legacyIds: string[],
+  fields: string[],
+): Promise<Array<Record<string, unknown>>> {
+  const rows: Array<Record<string, unknown>> = [];
+  const unique = [...new Set(legacyIds)];
+  const select = [...new Set(["legacy_id", ...fields])].join(",");
+  for (let index = 0; index < unique.length; index += QUERY_CHUNK) {
+    const { data, error } = await client
+      .from(table)
+      .select(select)
+      .in("legacy_id", unique.slice(index, index + QUERY_CHUNK));
+    if (error) throw error;
+    rows.push(...((data ?? []) as Array<Record<string, unknown>>));
+  }
+  return rows;
+}
+
+async function activeShopifyOrderNumbers(
+  client: AdminClient,
+): Promise<Map<string, Array<{ id: string; legacy_id: string }>>> {
+  const { data, error } = await client
+    .from("orders")
+    .select("id,legacy_id,order_number")
+    .is("archived_at", null)
+    .or("source_system.eq.shopify,shopify_order_id.not.is.null");
+  if (error) throw error;
+  const result = new Map<string, Array<{ id: string; legacy_id: string }>>();
+  for (const row of data ?? []) {
+    const key = normalizeOrderNumber(row.order_number);
+    if (!key) continue;
+    const values = result.get(key) ?? [];
+    values.push({ id: String(row.id), legacy_id: String(row.legacy_id) });
+    result.set(key, values);
+  }
+  return result;
+}
+
+async function writeOverwriteRows(
+  client: AdminClient,
+  table: string,
+  rows: Array<Record<string, unknown>>,
+): Promise<number> {
+  let written = 0;
+  for (let index = 0; index < rows.length; index += INSERT_CHUNK) {
+    const { data, error } = await client
+      .from(table)
+      .upsert(rows.slice(index, index + INSERT_CHUNK), {
+        onConflict: "legacy_id",
+      })
+      .select("legacy_id");
+    if (error) throw error;
+    written += data?.length ?? 0;
+  }
+  return written;
+}
+
+async function processAugustOverwrite(
+  client: AdminClient,
+  sourceType: OverwriteSourceType,
+  mode: OverwriteMode,
+  watermark: string,
+  bubbleToken: string,
+  deadline: number,
+) {
+  const mapping = [...coreMappings, ...remainingMappings].find((item) =>
+    item.sourceType === sourceType
+  );
+  if (!mapping) throw new Error("Overwrite source mapping is unavailable.");
+  const fetched = await fetchBubbleType(
+    sourceType,
+    AUGUST_OVERWRITE_SINCE,
+    watermark,
+    bubbleToken,
+    deadline,
+  );
+  if (fetched.resumable) {
+    return { status: "paused" as const, sourceType, pages: fetched.pages };
+  }
+
+  const mappedRows = fetched.records.map(mapping.map);
+  await resolveRelations(client, mappedRows, mapping.relations);
+  const fields = [
+    ...Object.keys(overwriteFieldSources[sourceType]),
+    ...(sourceType === "a_order"
+      ? ["shopify_order_id", "payment_status_source"]
+      : []),
+  ];
+  const existingRows = await selectedLegacyRows(
+    client,
+    mapping.table,
+    fetched.records.map(requireLegacyId),
+    fields,
+  );
+  const existingByLegacyId = new Map(
+    existingRows.map((row) => [String(row.legacy_id), row]),
+  );
+  const shopifyNumbers = sourceType === "a_order"
+    ? await activeShopifyOrderNumbers(client)
+    : new Map<string, Array<{ id: string; legacy_id: string }>>();
+  const rowsToWrite: Array<Record<string, unknown>> = [];
+  let inserted = 0;
+  let updated = 0;
+  let unchanged = 0;
+  let blockedShopifyDuplicates = 0;
+  let activeShopifyShadows = 0;
+  const changedFieldCounts: Record<string, number> = {};
+
+  for (let index = 0; index < fetched.records.length; index += 1) {
+    const source = fetched.records[index];
+    const mapped = mappedRows[index];
+    const legacyId = requireLegacyId(source);
+    const existing = existingByLegacyId.get(legacyId);
+    const orderKey = sourceType === "a_order"
+      ? normalizeOrderNumber(mapped.order_number)
+      : "";
+    const otherShopifyRows = orderKey
+      ? (shopifyNumbers.get(orderKey) ?? []).filter((row) =>
+        row.legacy_id !== legacyId
+      )
+      : [];
+    if (otherShopifyRows.length) activeShopifyShadows += 1;
+    if (!existing && otherShopifyRows.length) {
+      blockedShopifyDuplicates += 1;
+      continue;
+    }
+    const row = mergeOverwriteRow(sourceType, source, mapped, existing);
+    const changedFields = existing ? changedOverwriteFields(row, existing) : [];
+    if (!existing) inserted += 1;
+    else if (changedFields.length) updated += 1;
+    else unchanged += 1;
+    for (const field of changedFields) {
+      changedFieldCounts[field] = (changedFieldCounts[field] ?? 0) + 1;
+    }
+    if (!existing || changedFields.length) {
+      rowsToWrite.push(row);
+    }
+  }
+
+  const written = mode === "apply"
+    ? await writeOverwriteRows(client, mapping.table, rowsToWrite)
+    : 0;
+  if (mode === "apply" && written !== rowsToWrite.length) {
+    throw new Error("Overwrite write count did not match the dry-run set.");
+  }
+  return {
+    status: "completed" as const,
+    operation: "august_2026_overwrite",
+    mode,
+    sourceType,
+    table: mapping.table,
+    since: AUGUST_OVERWRITE_SINCE,
+    watermark,
+    fetched: fetched.records.length,
+    inserted,
+    updated,
+    unchanged,
+    blockedShopifyDuplicates,
+    activeShopifyShadows,
+    changedFieldCounts,
+    written,
+    pages: fetched.pages,
+  };
+}
+
 async function handleRequest(request: Request): Promise<Response> {
   const invocationStartedAt = new Date().toISOString();
   const watermark = invocationStartedAt;
@@ -785,11 +965,47 @@ async function handleRequest(request: Request): Promise<Response> {
   let requestedSourceType: string | null = null;
   let backfillLoginCodes = false;
   let backfillPaymentReportsRequested = false;
+  let overwriteRequest: {
+    mode: OverwriteMode;
+    sourceType: OverwriteSourceType;
+    watermark: string;
+  } | null = null;
   try {
     const body = await request.json().catch(() => ({}));
     backfillLoginCodes = body?.backfillLoginCodes === true;
     backfillPaymentReportsRequested = body?.backfillPaymentReports === true;
     phases = selectedPhases(body?.phase);
+    if (body?.overwrite != null) {
+      const mode = body.overwrite.mode;
+      if (mode !== "dry-run" && mode !== "apply") {
+        throw new Error("overwrite.mode must be dry-run or apply.");
+      }
+      if (!isOverwriteSourceType(body.overwrite.sourceType)) {
+        throw new Error("overwrite.sourceType is not approved.");
+      }
+      const overwriteWatermark = mode === "dry-run"
+        ? String(body.overwrite.watermark ?? invocationStartedAt)
+        : String(body.overwrite.watermark ?? "");
+      if (
+        !overwriteWatermark ||
+        Number.isNaN(Date.parse(overwriteWatermark)) ||
+        Date.parse(overwriteWatermark) <= Date.parse(AUGUST_OVERWRITE_SINCE) ||
+        Date.parse(overwriteWatermark) > Date.parse(invocationStartedAt)
+      ) {
+        throw new Error("overwrite.watermark is invalid.");
+      }
+      if (
+        mode === "apply" &&
+        body.overwrite.confirmation !== AUGUST_OVERWRITE_CONFIRMATION
+      ) {
+        throw new Error("overwrite confirmation is invalid.");
+      }
+      overwriteRequest = {
+        mode,
+        sourceType: body.overwrite.sourceType,
+        watermark: new Date(overwriteWatermark).toISOString(),
+      };
+    }
     if (body?.sourceType != null) {
       if (
         typeof body.sourceType !== "string" ||
@@ -802,6 +1018,84 @@ async function handleRequest(request: Request): Promise<Response> {
     }
   } catch (error) {
     return jsonResponse({ error: safeError(error) }, 400);
+  }
+
+  if (overwriteRequest) {
+    const deadline = Date.parse(invocationStartedAt) + OVERWRITE_RUNTIME_MS;
+    let overwriteRunId: string | null = null;
+    try {
+      if (overwriteRequest.mode === "apply") {
+        const { data: overwriteRun, error: overwriteRunError } = await client
+          .from("migration")
+          .insert({
+            migration_key:
+              `bubble-august-overwrite-${overwriteRequest.sourceType}-${invocationStartedAt}-${crypto.randomUUID()}`,
+            mode: "reconciliation",
+            status: "running",
+            source_system: "bubble",
+            target_system: "supabase",
+            snapshot_at: overwriteRequest.watermark,
+            checkpoint_at: AUGUST_OVERWRITE_SINCE,
+            started_at: invocationStartedAt,
+            details: {
+              operation: "august_2026_overwrite",
+              source_type: overwriteRequest.sourceType,
+              watermark: overwriteRequest.watermark,
+            },
+          })
+          .select("id")
+          .single();
+        if (overwriteRunError || !overwriteRun) {
+          throw new Error("Unable to create overwrite audit run.");
+        }
+        overwriteRunId = String(overwriteRun.id);
+      }
+      const result = await processAugustOverwrite(
+        client,
+        overwriteRequest.sourceType,
+        overwriteRequest.mode,
+        overwriteRequest.watermark,
+        bubbleToken,
+        deadline,
+      );
+      if (overwriteRunId) {
+        const { error: auditError } = await client.from("migration").update({
+          status: result.status === "paused" ? "paused" : "completed",
+          records_expected: result.status === "completed" ? result.fetched : 0,
+          records_processed: result.status === "completed" ? result.written : 0,
+          records_failed: 0,
+          error_count: 0,
+          completed_at: result.status === "completed"
+            ? new Date().toISOString()
+            : null,
+          details: result,
+          updated_at: new Date().toISOString(),
+        }).eq("id", overwriteRunId);
+        if (auditError) throw new Error("Unable to finalize overwrite audit run.");
+      }
+      return jsonResponse(result, result.status === "paused" ? 202 : 200);
+    } catch (error) {
+      if (overwriteRunId) {
+        await client.from("migration").update({
+          status: "failed",
+          records_failed: 1,
+          error_count: 1,
+          completed_at: new Date().toISOString(),
+          details: {
+            operation: "august_2026_overwrite",
+            source_type: overwriteRequest.sourceType,
+            error: errorCode(error),
+          },
+          updated_at: new Date().toISOString(),
+        }).eq("id", overwriteRunId);
+      }
+      return jsonResponse({
+        status: "failed",
+        sourceType: overwriteRequest.sourceType,
+        error: errorCode(error),
+        detail: safeError(error),
+      }, 500);
+    }
   }
 
   if (backfillLoginCodes) {

@@ -3,19 +3,25 @@ import {
   collectLineMenuRemarkText,
   extractOptionRemark,
   filterLegacyPaymentDuplicates,
+  linkedOrderLineSnapshotPatch,
   mapShopifyOrder,
   mapShopifyTransaction,
   normalizeNameForMatch,
   normalizeShopDomain,
   orderNumberKey,
+  planShopifyMenuOptions,
   parseMenuRemark,
   pickCatalogMatchByName,
+  resolveShopifySkuSnapshot,
   resolveOperationalOrderMatch,
   resolveAliasSku,
+  replaceShopifyLunchBoxAggregate,
+  shopifyCateringUtensilPacks,
   shopifyMenuOptionLegacyId,
   stripSkuSuffix,
   type ShopifyRestOrder,
   type ShopifyRestTransaction,
+  type ShopifyMenuRemarkSource,
 } from "./map.ts";
 
 const API_VERSION = "2025-07";
@@ -426,14 +432,24 @@ type CatalogItem = {
   kind: "product" | "package";
 };
 
-type MenuRemarkSource = { lineId: number; text: string };
-
-function menuRemarkSources(item: MappedOrder): MenuRemarkSource[] {
-  const sources: MenuRemarkSource[] = [];
-  if (item.remark?.trim()) sources.push({ lineId: 0, text: item.remark });
+function menuRemarkSources(
+  item: MappedOrder,
+  packageIdsByLineId: Map<number, string | null> = new Map(),
+): ShopifyMenuRemarkSource[] {
+  const sources: ShopifyMenuRemarkSource[] = [];
+  if (item.remark?.trim()) {
+    sources.push({ lineId: 0, parentItemOrder: null, parentPackageId: null, text: item.remark });
+  }
   for (const line of item.lines) {
     const text = collectLineMenuRemarkText(line.properties);
-    if (text) sources.push({ lineId: line.lineId, text });
+    if (text) {
+      sources.push({
+        lineId: line.lineId,
+        parentItemOrder: Number(line.row.item_order ?? 0) || null,
+        parentPackageId: packageIdsByLineId.get(line.lineId) ?? null,
+        text,
+      });
+    }
   }
   return sources;
 }
@@ -469,6 +485,8 @@ async function fetchCatalogByName(
   const nameCandidates = [...new Set(unique.flatMap((name) => [
     name,
     name.replace(/^\s*[（(]素[）)]\s*/, ""),
+    name.replace(/乾/g, "干"),
+    name.replace(/干/g, "乾"),
   ]))];
   const aliases = [...new Set(
     unique.map(resolveAliasSku).filter((sku): sku is string => Boolean(sku)),
@@ -493,7 +511,10 @@ async function fetchCatalogByName(
 
   for (const row of (products ?? []) as unknown as CatalogItem[]) {
     const key = normalizeNameForMatch(row.name);
-    if (key && !result.has(key)) result.set(key, { ...row, kind: "product" });
+    const existing = result.get(key);
+    if (key && (!existing || (!existing.sku && row.sku))) {
+      result.set(key, { ...row, kind: "product" });
+    }
   }
   for (const row of (packages ?? []) as unknown as CatalogItem[]) {
     const key = normalizeNameForMatch(row.name);
@@ -524,43 +545,60 @@ async function buildMenuOptionLines(input: {
   orderId: number;
   orderLegacyId: string;
   orderSupabaseId: string;
-  remarks: MenuRemarkSource[];
+  remarks: ShopifyMenuRemarkSource[];
+  addonCandidates: Array<{
+    legacyId: string;
+    itemOrder: number;
+    sku: string | null;
+    variantTitle: string | null;
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
+  }>;
   catalogByName: Map<string, CatalogItem>;
   issues: IssueRow[];
-}): Promise<Record<string, unknown>[]> {
-  const { storeRow, orderId, orderLegacyId, orderSupabaseId, remarks, catalogByName, issues } = input;
+}): Promise<{ lines: Record<string, unknown>[]; consumedAddonLegacyIds: string[] }> {
+  const {
+    storeRow,
+    orderId,
+    orderLegacyId,
+    orderSupabaseId,
+    remarks,
+    addonCandidates,
+    catalogByName,
+    issues,
+  } = input;
   const lines: Record<string, unknown>[] = [];
-  let itemOrder = 1000;
-  for (const source of remarks) {
-    let optionIndex = 0;
-    for (const option of parseMenuRemark(source.text)) {
-      const match = catalogByName.get(normalizeNameForMatch(option.name));
-      if (!match) {
-        issues.push({ store_id: storeRow.id, shopify_order_id: orderId, sku: null, issue: "unmatched_remark_option" });
-        optionIndex += 1;
-        continue;
-      }
-      lines.push({
-        legacy_id: shopifyMenuOptionLegacyId(storeRow.shop_domain, orderId, source.lineId, optionIndex),
-        order_id: orderSupabaseId,
-        order_legacy_id: orderLegacyId,
-        product_id: match.kind === "product" ? match.id : null,
-        package_id: match.kind === "package" ? match.id : null,
-        product_legacy_id: null,
-        package_legacy_id: null,
-        sku_snapshot: match.sku,
-        product_name_snapshot: option.name,
-        quantity: option.quantity,
-        unit_price: null,
-        total_price: null,
-        item_order: itemOrder++,
-        is_addon: false,
-        is_void: false,
-      });
-      optionIndex += 1;
+  const plan = planShopifyMenuOptions({ sources: remarks, addonCandidates });
+  for (const option of plan.options) {
+    const match = catalogByName.get(normalizeNameForMatch(option.name));
+    if (!match) {
+      issues.push({ store_id: storeRow.id, shopify_order_id: orderId, sku: null, issue: "unmatched_remark_option" });
     }
+    lines.push({
+      legacy_id: shopifyMenuOptionLegacyId(
+        storeRow.shop_domain,
+        orderId,
+        option.lineId,
+        option.optionIndex,
+      ),
+      order_id: orderSupabaseId,
+      order_legacy_id: orderLegacyId,
+      product_id: match?.kind === "product" ? match.id : null,
+      package_id: option.parentPackageId ?? (match?.kind === "package" ? match.id : null),
+      product_legacy_id: null,
+      package_legacy_id: null,
+      sku_snapshot: match?.sku ?? null,
+      product_name_snapshot: option.name,
+      quantity: option.quantity,
+      unit_price: option.unitPrice,
+      total_price: option.totalPrice,
+      item_order: option.itemOrder,
+      is_addon: false,
+      is_void: false,
+    });
   }
-  return lines;
+  return { lines, consumedAddonLegacyIds: plan.consumedAddonLegacyIds };
 }
 
 async function syncPaymentsForOrders(input: {
@@ -698,6 +736,48 @@ function shopifyPaymentStatusPatch(item: MappedOrder): Record<string, unknown> {
     ...(item.outstanding === null ? {} : { outstanding: item.outstanding }),
     updated_at: new Date().toISOString(),
   };
+}
+
+async function backfillLinkedOrderLineSnapshots(input: {
+  client: AdminClient;
+  orderId: string;
+  item: MappedOrder;
+  stripSkuSuffixes: boolean;
+}): Promise<boolean> {
+  const { data, error } = await input.client.from("order_lines")
+    .select("id,sku_snapshot,product_name_snapshot,unit_price,total_price")
+    .eq("order_id", input.orderId);
+  if (error) return false;
+
+  const normalizedSku = (value: string | null | undefined) => {
+    const sku = value?.trim() || null;
+    return (input.stripSkuSuffixes ? stripSkuSuffix(sku) : sku)?.toLowerCase() ?? null;
+  };
+  for (const existing of data ?? []) {
+    const sku = normalizedSku(existing.sku_snapshot);
+    if (!sku) continue;
+    const sources = input.item.lines.filter((line) => normalizedSku(line.sku) === sku);
+    if (sources.length !== 1) continue;
+    const source = sources[0].row;
+    const patch = linkedOrderLineSnapshotPatch({
+      existing: {
+        productName: existing.product_name_snapshot,
+        unitPrice: existing.unit_price === null ? null : Number(existing.unit_price),
+        totalPrice: existing.total_price === null ? null : Number(existing.total_price),
+      },
+      shopify: {
+        productName: (source.product_name_snapshot as string | null) ?? null,
+        unitPrice: source.unit_price === null ? null : Number(source.unit_price),
+        totalPrice: source.total_price === null ? null : Number(source.total_price),
+      },
+    });
+    if (!patch) continue;
+    const { error: updateError } = await input.client.from("order_lines")
+      .update(patch)
+      .eq("id", existing.id);
+    if (updateError) return false;
+  }
+  return true;
 }
 
 type OrderProcessingContext = {
@@ -850,6 +930,19 @@ async function processMappedOrders(
         });
         continue;
       }
+      if (!(await backfillLinkedOrderLineSnapshots({
+        client,
+        orderId: targetId,
+        item,
+        stripSkuSuffixes: storeRow.secret_prefix === "SHOPIFY_HK_LUNCH_BOX",
+      }))) {
+        issues.push({
+          store_id: storeRow.id,
+          shopify_order_id: item.orderId,
+          sku: null,
+          issue: "linked_line_backfill_failed",
+        });
+      }
       counters.linkedExisting += 1;
       processedOrders.push({
         orderId: item.orderId,
@@ -902,6 +995,19 @@ async function processMappedOrders(
           issue: "link_failed",
         });
         continue;
+      }
+      if (!(await backfillLinkedOrderLineSnapshots({
+        client,
+        orderId: targetId,
+        item,
+        stripSkuSuffixes: storeRow.secret_prefix === "SHOPIFY_HK_LUNCH_BOX",
+      }))) {
+        issues.push({
+          store_id: storeRow.id,
+          shopify_order_id: item.orderId,
+          sku: null,
+          issue: "linked_line_backfill_failed",
+        });
       }
       counters.linkedExisting += 1;
       processedOrders.push({
@@ -989,9 +1095,22 @@ async function processMappedOrders(
         product_id: match.productId,
         package_id: match.packageId,
         // Keep the option selection like the legacy Bubble system did.
-        sku_snapshot: storeRow.secret_prefix === "SHOPIFY_HK_LUNCH_BOX"
-          ? stripSkuSuffix(line.sku)
-          : line.row.sku_snapshot,
+        sku_snapshot: resolveShopifySkuSnapshot({
+          shopifySku: line.sku,
+          productId: match.productId,
+          packageId: match.packageId,
+          products: (products ?? []) as Array<{
+            id: string;
+            sku: string | null;
+            channel_id: string | null;
+          }>,
+          packages: (packages ?? []) as Array<{
+            id: string;
+            sku: string | null;
+            channel_id: string | null;
+          }>,
+          stripSuffix: storeRow.secret_prefix === "SHOPIFY_HK_LUNCH_BOX",
+        }),
         remarks_1: [optionRemark, propertyRemark, variantRemark, line.row.remarks_1]
           .filter((value): value is string =>
             typeof value === "string" && Boolean(value.trim())
@@ -1026,6 +1145,29 @@ async function processMappedOrders(
       }
       const boxCount = item.lines.reduce((total, line) => total + (/^CBE/i.test(line.sku ?? "") ? Number(line.row.quantity ?? 0) : 0), 0);
       if (boxCount) generatedLines.push({ legacy_id: `shopify:${storeRow.shop_domain.replace(/\.myshopify\.com$/, "")}:${item.orderId}:utensils`, order_id: insertedOrder.id, order_legacy_id: item.orderRow.legacy_id, product_name_snapshot: `飯盒餐具包 ${boxCount}份`, quantity: 1, unit_price: 0, total_price: 0, item_order: 10999, is_addon: false, is_void: false });
+    } else {
+      const utensilPacks = shopifyCateringUtensilPacks(lineRows.map((line) => ({
+        packageId: (line.package_id as string | null) ?? null,
+        name: (line.product_name_snapshot as string | null) ?? null,
+        quantity: Number(line.quantity ?? 0),
+      })));
+      const alreadyHasUtensils = lineRows.some((line) =>
+        /餐具包/.test(String(line.product_name_snapshot ?? ""))
+      );
+      if (utensilPacks && !alreadyHasUtensils) {
+        generatedLines.push({
+          legacy_id: `shopify:${storeRow.shop_domain.replace(/\.myshopify\.com$/, "")}:${item.orderId}:utensils`,
+          order_id: insertedOrder.id,
+          order_legacy_id: item.orderRow.legacy_id,
+          product_name_snapshot: "餐具包 (6位)",
+          quantity: utensilPacks,
+          unit_price: 0,
+          total_price: 0,
+          item_order: 10999,
+          is_addon: false,
+          is_void: false,
+        });
+      }
     }
 
     const mergedLineRows = storeRow.secret_prefix === "SHOPIFY_HK_LUNCH_BOX"
@@ -1040,17 +1182,49 @@ async function processMappedOrders(
         }, new Map<string, Record<string, unknown>>()).values()]
       : lineRows;
 
-    const menuOptionLines = await buildMenuOptionLines({
+    const menuOptionResult = await buildMenuOptionLines({
       storeRow,
       orderId: item.orderId,
       orderLegacyId: String(item.orderRow.legacy_id ?? ""),
       orderSupabaseId: insertedOrder.id,
-      remarks: menuRemarkSources(item),
+      remarks: menuRemarkSources(
+        item,
+        new Map(item.lines.map((line, index) => [
+          line.lineId,
+          (lineRows[index]?.package_id as string | null) ?? null,
+        ])),
+      ),
+      addonCandidates: item.lines.map((line) => ({
+        legacyId: String(line.row.legacy_id ?? ""),
+        itemOrder: Number(line.row.item_order ?? 0),
+        sku: line.sku,
+        variantTitle: line.variantTitle,
+        quantity: Number(line.row.quantity ?? 0),
+        unitPrice: Number(line.row.unit_price ?? 0),
+        totalPrice: Number(line.row.total_price ?? 0),
+      })),
       catalogByName,
       issues,
     });
 
-    const allLineRows = [...mergedLineRows, ...generatedLines, ...menuOptionLines];
+    const consumedAddonIds = new Set(menuOptionResult.consumedAddonLegacyIds);
+    let baseLineRows = mergedLineRows.filter((line) =>
+      !consumedAddonIds.has(String(line.legacy_id ?? ""))
+    );
+    let optionLineRows = menuOptionResult.lines;
+    if (storeRow.secret_prefix === "SHOPIFY_HK_LUNCH_BOX") {
+      const expanded = replaceShopifyLunchBoxAggregate({
+        baseLines: baseLineRows,
+        menuLines: optionLineRows,
+      });
+      baseLineRows = expanded.baseLines;
+      optionLineRows = expanded.menuLines;
+    }
+    const allLineRows = [
+      ...baseLineRows,
+      ...generatedLines,
+      ...optionLineRows,
+    ];
     if (allLineRows.length) {
       const { data: insertedLines, error: lineError } = await client
         .from("order_lines")
@@ -1070,7 +1244,7 @@ async function processMappedOrders(
         const insertedIds = new Set(
           (insertedLines ?? []).map((row) => row.legacy_id as string),
         );
-        counters.menuOptionsInserted += menuOptionLines.filter((row) =>
+        counters.menuOptionsInserted += menuOptionResult.lines.filter((row) =>
           insertedIds.has(row.legacy_id as string)
         ).length;
       }

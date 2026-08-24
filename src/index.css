@@ -17984,6 +17984,19 @@ a.masoft-order-tag:focus-visible {
   align-items: flex-end;
 }
 
+.quote-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.quote-order-detail-summary {
+  display: grid;
+  justify-items: end;
+  gap: 10px;
+}
+
 .quote-editor-saved-badge {
   display: inline-flex;
   align-items: center;
@@ -18435,10 +18448,20 @@ a.masoft-order-tag:focus-visible {
 }
 
 .quote-lines-readonly-panel .quote-line-product small {
-  display: block;
+  display: -webkit-box;
   margin-top: 4px;
+  overflow: hidden;
   color: var(--muted-foreground);
   font-size: 14px;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.quote-lines-readonly-panel td.quote-line-product {
+  max-width: min(560px, 48vw);
+  white-space: normal;
 }
 
 .quote-financial-readonly .quote-readonly-field {
@@ -18815,7 +18838,7 @@ a.masoft-order-tag:focus-visible {
 
 .quote-factory-status-action {
   display: flex;
-  margin-right: auto;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
 }
@@ -18823,6 +18846,13 @@ a.masoft-order-tag:focus-visible {
 .quote-factory-status-action > span {
   color: var(--destructive);
   font-size: 14px;
+}
+
+.quote-factory-missing-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 22px;
 }
 
 .quote-editor-totals-row {

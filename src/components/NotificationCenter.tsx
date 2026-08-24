@@ -52,7 +52,7 @@ export function NotificationCenter({ userId }: { userId: string }) {
       setError(false);
       const next = await fetchNotifications();
       setItems(next);
-      if (initialLoad.current && next.length > 0) {
+      if (initialLoad.current && next.some((item) => item.category === "action")) {
         setSummaryVisible(true);
         if (next.some((item) => item.priority === "urgent")) setOpen(true);
       }
@@ -124,7 +124,7 @@ export function NotificationCenter({ userId }: { userId: string }) {
         ) : null}
       </Button>
 
-      {summaryVisible && !open ? (
+      {summaryVisible && actionCount > 0 && !open ? (
         <button
           type="button"
           className={cn(

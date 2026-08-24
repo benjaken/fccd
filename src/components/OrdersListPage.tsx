@@ -629,7 +629,7 @@ export function OrdersListPage({
                   <td>{order.channelName || t("common.notSet")}</td>
                   <td>
                     <div className="order-number-cell">
-                      <DetailLink className="order-link" to={`/orders/${order.id}`}>
+                      <DetailLink className="order-link" to={preset === "pending" ? `/quotes/${order.id}` : `/orders/${order.id}`}>
                         {order.orderNumber || t("common.notSet")}
                       </DetailLink>
                       {(() => {

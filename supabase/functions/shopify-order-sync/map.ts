@@ -366,12 +366,6 @@ export function mapShopifyOrder(input: {
     const sku = item.sku?.trim() || null;
     const quantity = money(item.quantity ?? 0);
     const grossTotal = money(item.price) * quantity;
-    const allocatedDiscount = (item.discount_allocations ?? []).reduce(
-      (total, allocation) => total + money(allocation.amount),
-      0,
-    );
-    const discount = allocatedDiscount || money(item.total_discount);
-    const netTotal = Math.max(0, grossTotal - discount);
     return [{
       lineId,
       sku,
@@ -384,8 +378,8 @@ export function mapShopifyOrder(input: {
         sku_snapshot: sku,
         product_name_snapshot: (item.title || item.name || "").trim() || null,
         quantity,
-        unit_price: quantity ? netTotal / quantity : money(item.price),
-        total_price: netTotal,
+        unit_price: money(item.price),
+        total_price: grossTotal,
         item_order: index + 1,
         is_addon: false,
         is_void: false,
@@ -437,6 +431,63 @@ export type MenuOption = {
   quantity: number;
 };
 
+export type ShopifyMenuRemarkSource = {
+  lineId: number;
+  parentItemOrder: number | null;
+  parentPackageId?: string | null;
+  text: string;
+};
+
+export type ShopifyOptionAddonCandidate = {
+  legacyId: string;
+  itemOrder: number;
+  sku: string | null;
+  variantTitle: string | null;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+};
+
+export type PlannedShopifyMenuOption = MenuOption & {
+  lineId: number;
+  optionIndex: number;
+  itemOrder: number;
+  parentPackageId: string | null;
+  unitPrice: number | null;
+  totalPrice: number | null;
+};
+
+export function replaceShopifyLunchBoxAggregate(input: {
+  baseLines: Array<Record<string, unknown>>;
+  menuLines: Array<Record<string, unknown>>;
+}): {
+  baseLines: Array<Record<string, unknown>>;
+  menuLines: Array<Record<string, unknown>>;
+} {
+  if (input.menuLines.length < 2) return input;
+  const aggregateIndex = input.baseLines.findIndex((line) =>
+    normalizeNameForMatch(String(line.product_name_snapshot ?? "")) ===
+      normalizeNameForMatch("雙格飯盒")
+  );
+  if (aggregateIndex < 0) return input;
+
+  const aggregate = input.baseLines[aggregateIndex];
+  const unitPrice = Number(aggregate.unit_price ?? 0);
+  const parentOrder = Number(aggregate.item_order ?? 1);
+  return {
+    baseLines: input.baseLines.filter((_, index) => index !== aggregateIndex),
+    menuLines: input.menuLines.map((line, index) => {
+      const quantity = Number(line.quantity ?? 0);
+      return {
+        ...line,
+        unit_price: line.unit_price ?? unitPrice,
+        total_price: line.total_price ?? unitPrice * quantity,
+        item_order: Number((parentOrder + index / 1000).toFixed(3)),
+      };
+    }),
+  };
+}
+
 function splitMenuOptionQuantity(value: string): MenuOption | null {
   const item = value.replace(/\s+/g, " ").trim();
   if (!item) return null;
@@ -469,6 +520,26 @@ function splitMenuOptionQuantity(value: string): MenuOption | null {
  */
 export function parseMenuRemark(remark: string | null | undefined): MenuOption[] {
   if (!remark?.trim()) return [];
+
+  // Lunch-box orders use the Shopify note as a compact manifest without a
+  // "required / choose N" heading. Require at least two compartment-prefixed
+  // rows with explicit quantities so ordinary free-form notes remain ignored.
+  const lunchBoxOptions = remark
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) =>
+      /^[（(](?:單格|雙格|三格|四格|五格|六格)[）)]/.test(line) &&
+      /(?:[xX×*]\s*\d+|\d+\s*(?:盒|個|份))\s*$/.test(line)
+    )
+    .map(splitMenuOptionQuantity)
+    .filter((option): option is MenuOption => Boolean(option));
+  if (lunchBoxOptions.length >= 2) {
+    const declaredTotal = remark.match(/共\s*(\d+)\s*(?:盒|個|份)/)?.[1];
+    const parsedTotal = lunchBoxOptions.reduce((sum, option) => sum + option.quantity, 0);
+    if (!declaredTotal || Number(declaredTotal) === parsedTotal) {
+      return lunchBoxOptions;
+    }
+  }
 
   // Only treat a remark as a menu when it has a menu title line such as
   // "沙律 必選:" or "分享小食 7選3:". Free-form notes (delivery/pickup
@@ -516,6 +587,84 @@ export function parseMenuRemark(remark: string | null | undefined): MenuOption[]
   return options;
 }
 
+/**
+ * Plans package child rows before catalog resolution. Shopify's product-option
+ * app emits priced choices as separate, SKU-less lines whose variant title is
+ * the real dish name. Those lines are folded back into the matching package
+ * option and their legacy ids are returned so callers can omit the duplicate
+ * heading rows.
+ */
+export function planShopifyMenuOptions(input: {
+  sources: ShopifyMenuRemarkSource[];
+  addonCandidates: ShopifyOptionAddonCandidate[];
+}): {
+  options: PlannedShopifyMenuOption[];
+  consumedAddonLegacyIds: string[];
+} {
+  const options: PlannedShopifyMenuOption[] = [];
+  const consumed = new Set<string>();
+  let detachedOrder = 1000;
+
+  for (const source of input.sources) {
+    const parsed = parseMenuRemark(source.text);
+    for (let optionIndex = 0; optionIndex < parsed.length; optionIndex += 1) {
+      const option = parsed[optionIndex];
+      const candidates = input.addonCandidates
+        .filter((candidate) =>
+          !consumed.has(candidate.legacyId) &&
+          !candidate.sku &&
+          candidate.totalPrice > 0 &&
+          normalizeNameForMatch(candidate.variantTitle) === normalizeNameForMatch(option.name)
+        )
+        .sort((left, right) => {
+          if (source.parentItemOrder === null) return left.itemOrder - right.itemOrder;
+          const leftAfterParent = left.itemOrder > source.parentItemOrder ? 0 : 1;
+          const rightAfterParent = right.itemOrder > source.parentItemOrder ? 0 : 1;
+          return leftAfterParent - rightAfterParent ||
+            Math.abs(left.itemOrder - source.parentItemOrder) -
+              Math.abs(right.itemOrder - source.parentItemOrder);
+        });
+      const addon = candidates[0] ?? null;
+      if (addon) consumed.add(addon.legacyId);
+
+      const itemOrder = source.parentItemOrder === null
+        ? detachedOrder++
+        : Number((source.parentItemOrder + (optionIndex + 1) / 1000).toFixed(3));
+      const totalPrice = addon?.totalPrice ?? null;
+      options.push({
+        ...option,
+        lineId: source.lineId,
+        optionIndex,
+        itemOrder,
+        parentPackageId: source.parentPackageId ?? null,
+        unitPrice: totalPrice === null ? null : totalPrice / option.quantity,
+        totalPrice,
+      });
+    }
+  }
+
+  return {
+    options,
+    consumedAddonLegacyIds: [...consumed],
+  };
+}
+
+/** Returns the number of free six-person utensil packs implied by catering
+ * package capacity labels such as "(8-10人)". Ad-hoc/manual overrides are data
+ * concerns and can safely replace the generated row because its id is stable. */
+export function shopifyCateringUtensilPacks(
+  lines: Array<{ packageId: string | null; name: string | null; quantity: number }>,
+): number {
+  return lines.reduce((total, line) => {
+    if (!line.packageId || !line.name || line.quantity <= 0) return total;
+    const range = line.name.match(/(\d+)\s*[-–至]\s*(\d+)\s*(?:人|位)/);
+    const single = line.name.match(/(\d+)\s*(?:人|位)/);
+    const capacity = range ? Number(range[2]) : single ? Number(single[1]) : 0;
+    if (!capacity) return total;
+    return total + Math.ceil(capacity / 6) * line.quantity;
+  }, 0);
+}
+
 /** Rebuilds menu sections when Shopify stores the heading in a property name
  * and the comma-separated selections in its value. */
 export function collectLineMenuRemarkText(
@@ -541,6 +690,7 @@ export function normalizeNameForMatch(value: string | null | undefined): string 
     .replace(/[（(]/g, "(")
     .replace(/[）)]/g, ")")
     .replace(/[，,]/g, ",")
+    .replace(/乾/g, "干")
     .replace(/^\(素\)/, "")
     .replace(/\s+/g, "")
     .toLocaleLowerCase("zh-HK");
@@ -885,6 +1035,54 @@ export function stripSkuSuffix(sku: string | null | undefined): string | null {
   const trimmed = sku.trim();
   const base = trimmed.replace(/-\d+$/, "").trim();
   return base || null;
+}
+
+/** Keeps the Shopify SKU when present and otherwise snapshots the SKU from
+ * the catalog row that name matching already resolved. */
+export function resolveShopifySkuSnapshot(input: {
+  shopifySku: string | null;
+  productId: string | null;
+  packageId: string | null;
+  products: Array<{ id: string; sku: string | null; channel_id: string | null }>;
+  packages: Array<{ id: string; sku: string | null; channel_id: string | null }>;
+  stripSuffix: boolean;
+}): string | null {
+  const catalogSku = input.productId
+    ? input.products.find((row) => row.id === input.productId)?.sku ?? null
+    : input.packageId
+    ? input.packages.find((row) => row.id === input.packageId)?.sku ?? null
+    : null;
+  const resolved = input.shopifySku?.trim() || catalogSku?.trim() || null;
+  return input.stripSuffix ? stripSkuSuffix(resolved) : resolved;
+}
+
+/** Fills snapshots that a linked Bubble order left blank without replacing
+ * non-blank historical values. Shopify remains the source for the current
+ * display title and gross line amount. */
+export function linkedOrderLineSnapshotPatch(input: {
+  existing: {
+    productName: string | null;
+    unitPrice: number | null;
+    totalPrice: number | null;
+  };
+  shopify: {
+    productName: string | null;
+    unitPrice: number | null;
+    totalPrice: number | null;
+  };
+}): Record<string, string | number> | null {
+  const patch: Record<string, string | number> = {};
+  const title = input.shopify.productName?.trim();
+  if (!input.existing.productName?.trim() && title) {
+    patch.product_name_snapshot = title;
+  }
+  if (input.existing.unitPrice === null && input.shopify.unitPrice !== null) {
+    patch.unit_price = input.shopify.unitPrice;
+  }
+  if (input.existing.totalPrice === null && input.shopify.totalPrice !== null) {
+    patch.total_price = input.shopify.totalPrice;
+  }
+  return Object.keys(patch).length ? patch : null;
 }
 
 /**
