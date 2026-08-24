@@ -31,6 +31,7 @@ export type QuoteDraft = {
   quoteReopenReason?: string;
   quoteSalesSourceId: string;
   quoteCommunicationChannelId: string;
+  followUpDate: string;
   customerName: string;
   companyName: string;
   contactA: string;
@@ -79,10 +80,24 @@ export type QuoteFinancials = {
 
 export type QuoteCatalogItem = {
   id: string;
-  kind: "product" | "package";
+  kind: "product" | "package" | "custom";
   sku: string | null;
   name: string;
   price: number | null;
+};
+
+export type QuotePackageChoiceSelection = {
+  choiceSetId: string;
+  packageProductIds: string[];
+};
+
+export type QuotePackageChoiceGroup = {
+  choiceSetId: string;
+  choiceSetName: string | null;
+  products: Array<{
+    packageProductId: string;
+    name: string;
+  }>;
 };
 
 export type QuoteLine = {
@@ -95,6 +110,10 @@ export type QuoteLine = {
   unitPrice: number;
   totalPrice: number;
   remarks: string | null;
+  packageChoiceGroups?: QuotePackageChoiceGroup[];
+  isPending?: boolean;
+  pendingItem?: QuoteCatalogItem;
+  pendingPackageChoices?: QuotePackageChoiceSelection[];
 };
 
 type NamedRow = { id: string; name: string };
@@ -246,7 +265,7 @@ export async function fetchQuoteEditorSummary(
   const [orderResult, deliveryResult, tagsResult, asanaResult, paymentsResult] = await Promise.all([
     supabase
       .from("orders")
-      .select("id,document_type,order_number,channel_id,quote_status,quote_auto_closed_at,quote_reopen_reason,quote_sales_source_id,quote_communication_channel_id,customer_name_snapshot,company_name_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,email_snapshot,shipping_address_snapshot,customer_note_snapshot,shipping_method_id,delivery_at,delivery_time,ship_out_time,factory_packing_note,sales_partner_id,remarks,shipping_fee,discount_amount,cashdollar_redeemed,cashdollar_purchased,is_sent_to_factory,do_not_send_to_factory,factory_print_date,factory_reprint_required")
+      .select("id,document_type,order_number,channel_id,quote_status,quote_auto_closed_at,quote_reopen_reason,quote_sales_source_id,quote_communication_channel_id,quote_follow_up_date,customer_name_snapshot,company_name_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,email_snapshot,shipping_address_snapshot,customer_note_snapshot,shipping_method_id,delivery_at,delivery_time,ship_out_time,factory_packing_note,sales_partner_id,remarks,shipping_fee,discount_amount,cashdollar_redeemed,cashdollar_purchased,is_sent_to_factory,do_not_send_to_factory,factory_print_date,factory_reprint_required")
       .eq("id", resolvedOrderId)
       .in("document_type", documentType === "order" ? ["order"] : ["quote", "unconfirmed"])
       .is("archived_at", null)
@@ -284,6 +303,7 @@ export async function fetchQuoteEditorSummary(
     quoteReopenReason: data.quote_reopen_reason || "",
     quoteSalesSourceId: data.quote_sales_source_id || "",
     quoteCommunicationChannelId: data.quote_communication_channel_id || "",
+    followUpDate: data.quote_follow_up_date || "",
     customerName: data.customer_name_snapshot || "",
     companyName: data.company_name_snapshot || "",
     contactA: data.contact_number_a_snapshot || "",
@@ -512,7 +532,7 @@ export async function updateQuote(
   }
 }
 
-function quoteWorkflowValues(input: QuoteDraft) {
+export function quoteWorkflowValues(input: QuoteDraft) {
   const reopeningAutoClosedQuote = Boolean(input.quoteAutoClosedAt) && input.quoteStatus !== "Case Closed";
   return {
     quote_status: optional(input.quoteStatus),
@@ -521,6 +541,7 @@ function quoteWorkflowValues(input: QuoteDraft) {
     quote_reopen_reason: reopeningAutoClosedQuote ? optional(input.quoteReopenReason ?? "") : undefined,
     quote_sales_source_id: input.quoteSalesSourceId || null,
     quote_communication_channel_id: input.quoteCommunicationChannelId || null,
+    quote_follow_up_date: input.followUpDate || null,
     asana_link: optional(input.asanaLink),
   };
 }
@@ -576,15 +597,61 @@ export async function searchQuoteCatalog(
 
 export async function fetchQuoteLines(orderId: string): Promise<QuoteLine[]> {
   const resolvedOrderId = await resolveCanonicalOrderId(orderId);
-  const { data, error } = await supabase
-    .from("order_lines")
-    .select("id,product_id,package_id,sku_snapshot,product_name_snapshot,content_snapshot,quantity,unit_price,total_price,remarks_1")
-    .eq("order_id", resolvedOrderId)
-    .eq("is_void", false)
-    .order("item_order", { ascending: true, nullsFirst: false })
-    .order("created_at");
-  if (error) throw error;
-  return (data ?? []).map((row) => ({
+  const [lineResult, choiceResult] = await Promise.all([
+    supabase
+      .from("order_lines")
+      .select("id,product_id,package_id,sku_snapshot,product_name_snapshot,content_snapshot,quantity,unit_price,total_price,remarks_1")
+      .eq("order_id", resolvedOrderId)
+      .eq("is_void", false)
+      .order("item_order", { ascending: true, nullsFirst: false })
+      .order("created_at"),
+    supabase
+      .from("order_package_choice_snapshots")
+      .select("order_line_id,package_choice_set_id,package_product_id,package_choice_sets(choice_type),package_products(products(name,chinese_name))")
+      .eq("order_id", resolvedOrderId)
+      .eq("is_selected", true)
+      .not("order_line_id", "is", null)
+      .order("created_at"),
+  ]);
+  if (lineResult.error) throw lineResult.error;
+  if (choiceResult.error) throw choiceResult.error;
+
+  type ChoiceSnapshotRow = {
+    order_line_id: string;
+    package_choice_set_id: string;
+    package_product_id: string;
+    package_choice_sets: { choice_type: string | null } | Array<{ choice_type: string | null }> | null;
+    package_products: {
+      products: { name: string; chinese_name: string | null } | Array<{ name: string; chinese_name: string | null }> | null;
+    } | Array<{
+      products: { name: string; chinese_name: string | null } | Array<{ name: string; chinese_name: string | null }> | null;
+    }> | null;
+  };
+  const relatedOne = <T,>(value: T | T[] | null): T | null =>
+    Array.isArray(value) ? value[0] ?? null : value;
+  const choiceGroupsByLine = new Map<string, QuotePackageChoiceGroup[]>();
+  for (const snapshot of (choiceResult.data ?? []) as unknown as ChoiceSnapshotRow[]) {
+    const choiceSet = relatedOne(snapshot.package_choice_sets);
+    const packageProduct = relatedOne(snapshot.package_products);
+    const product = relatedOne(packageProduct?.products ?? null);
+    const groups = choiceGroupsByLine.get(snapshot.order_line_id) ?? [];
+    let group = groups.find((item) => item.choiceSetId === snapshot.package_choice_set_id);
+    if (!group) {
+      group = {
+        choiceSetId: snapshot.package_choice_set_id,
+        choiceSetName: choiceSet?.choice_type ?? null,
+        products: [],
+      };
+      groups.push(group);
+    }
+    group.products.push({
+      packageProductId: snapshot.package_product_id,
+      name: product?.chinese_name || product?.name || "-",
+    });
+    choiceGroupsByLine.set(snapshot.order_line_id, groups);
+  }
+
+  return (lineResult.data ?? []).map((row) => ({
     id: row.id,
     productId: row.product_id,
     packageId: row.package_id,
@@ -594,6 +661,7 @@ export async function fetchQuoteLines(orderId: string): Promise<QuoteLine[]> {
     unitPrice: toNumber(row.unit_price),
     totalPrice: quoteLineTotal(row.quantity, row.unit_price, row.total_price),
     remarks: row.remarks_1,
+    packageChoiceGroups: choiceGroupsByLine.get(row.id) ?? [],
   }));
 }
 
@@ -603,7 +671,19 @@ export async function addQuoteLine(input: {
   quantity: number;
   unitPrice: number;
   remarks: string;
+  packageChoices?: QuotePackageChoiceSelection[];
 }) {
+  if (input.item.kind === "custom") {
+    const { error } = await supabase.rpc("add_custom_quote_line", {
+      p_order_id: input.orderId,
+      p_name: input.item.name,
+      p_quantity: input.quantity,
+      p_unit_price: input.unitPrice,
+      p_remarks: optional(input.remarks),
+    });
+    if (error) throw error;
+    return;
+  }
   const { error } = await supabase.rpc("add_quote_line", {
     p_order_id: input.orderId,
     p_item_kind: input.item.kind,
@@ -611,6 +691,7 @@ export async function addQuoteLine(input: {
     p_quantity: input.quantity,
     p_unit_price: input.unitPrice,
     p_remarks: optional(input.remarks),
+    p_package_choices: input.packageChoices ?? [],
   });
   if (error) throw error;
 }

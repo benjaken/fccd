@@ -10,6 +10,7 @@ export type DashboardQueueItem = {
   customerName: string | null;
   companyName: string | null;
   quoteStatus: string | null;
+  followUpDate: string | null;
   deliveryAt: string | null;
   createdAt: string;
   sourceSystem: string | null;
@@ -23,10 +24,12 @@ export type OrdersDashboardData = {
   notSentToFactory: number;
   pendingQuotes: number;
   upcomingQuotes: number;
+  todayFollowUpQuotes: number;
   latestPendingOrders: DashboardQueueItem[];
   latestUnpaidOrders: DashboardQueueItem[];
   latestPendingQuotes: DashboardQueueItem[];
   soonestUpcomingQuotes: DashboardQueueItem[];
+  todayFollowUpQuoteItems: DashboardQueueItem[];
 };
 
 type DashboardRow = {
@@ -35,6 +38,7 @@ type DashboardRow = {
   customer_name_snapshot: string | null;
   company_name_snapshot: string | null;
   quote_status: string | null;
+  quote_follow_up_date: string | null;
   delivery_at: string | null;
   bubble_created_at: string | null;
   created_at: string;
@@ -70,6 +74,7 @@ function dashboardDayBounds(now: Date) {
   const upcoming = isoDate(year, month, day + UPCOMING_QUOTE_DAYS);
 
   return {
+    today,
     todayStart: `${today}T00:00:00+08:00`,
     upcomingStart: `${upcoming}T00:00:00+08:00`,
   };
@@ -83,6 +88,7 @@ function mapQueueItem(row: DashboardRow, kind: "order" | "quote"): DashboardQueu
     customerName: row.customer_name_snapshot,
     companyName: row.company_name_snapshot,
     quoteStatus: row.quote_status,
+    followUpDate: row.quote_follow_up_date,
     deliveryAt: row.delivery_at,
     createdAt: row.bubble_created_at || row.created_at,
     sourceSystem: row.source_system,
@@ -97,12 +103,12 @@ function requireSuccess(error: { message: string } | null) {
 }
 
 const QUEUE_QUERY_FIELDS =
-  "id,order_number,customer_name_snapshot,company_name_snapshot,quote_status,delivery_at,bubble_created_at,created_at,source_system,outstanding,currency";
+  "id,order_number,customer_name_snapshot,company_name_snapshot,quote_status,quote_follow_up_date,delivery_at,bubble_created_at,created_at,source_system,outstanding,currency";
 
 export async function fetchOrdersDashboardData(
   now = new Date(),
 ): Promise<OrdersDashboardData> {
-  const { todayStart, upcomingStart } = dashboardDayBounds(now);
+  const { today, todayStart, upcomingStart } = dashboardDayBounds(now);
   const openQuoteStatus =
     'quote_status.is.null,quote_status.not.in.("Done Deal","Case Closed")';
 
@@ -112,10 +118,12 @@ export async function fetchOrdersDashboardData(
     notSentToFactoryResult,
     pendingQuotesResult,
     upcomingQuotesResult,
+    todayFollowUpQuotesResult,
     latestPendingOrdersResult,
     latestUnpaidOrdersResult,
     latestPendingQuotesResult,
     soonestUpcomingQuotesResult,
+    todayFollowUpQuoteItemsResult,
   ] = await Promise.all([
     supabase
       .from("orders")
@@ -153,6 +161,13 @@ export async function fetchOrdersDashboardData(
       .is("archived_at", null)
       .gte("delivery_at", todayStart)
       .lt("delivery_at", upcomingStart)
+      .or(openQuoteStatus),
+    supabase
+      .from("orders")
+      .select("id", { count: "exact", head: true })
+      .eq("document_type", "quote")
+      .is("archived_at", null)
+      .eq("quote_follow_up_date", today)
       .or(openQuoteStatus),
     supabase
       .from("orders")
@@ -195,6 +210,16 @@ export async function fetchOrdersDashboardData(
       .or(openQuoteStatus)
       .order("delivery_at", { ascending: true, nullsFirst: false })
       .limit(DASHBOARD_QUEUE_LIMIT),
+    supabase
+      .from("orders")
+      .select(QUEUE_QUERY_FIELDS)
+      .eq("document_type", "quote")
+      .is("archived_at", null)
+      .eq("quote_follow_up_date", today)
+      .or(openQuoteStatus)
+      .order("bubble_created_at", { ascending: true, nullsFirst: false })
+      .order("created_at", { ascending: true })
+      .limit(DASHBOARD_QUEUE_LIMIT),
   ]);
 
   [
@@ -203,10 +228,12 @@ export async function fetchOrdersDashboardData(
     notSentToFactoryResult,
     pendingQuotesResult,
     upcomingQuotesResult,
+    todayFollowUpQuotesResult,
     latestPendingOrdersResult,
     latestUnpaidOrdersResult,
     latestPendingQuotesResult,
     soonestUpcomingQuotesResult,
+    todayFollowUpQuoteItemsResult,
   ].forEach((result) => requireSuccess(result.error));
 
   return {
@@ -215,6 +242,7 @@ export async function fetchOrdersDashboardData(
     notSentToFactory: notSentToFactoryResult.count ?? 0,
     pendingQuotes: pendingQuotesResult.count ?? 0,
     upcomingQuotes: upcomingQuotesResult.count ?? 0,
+    todayFollowUpQuotes: todayFollowUpQuotesResult.count ?? 0,
     latestPendingOrders: (
       (latestPendingOrdersResult.data ?? []) as DashboardRow[]
     ).map((row) => mapQueueItem(row, "order")),
@@ -226,6 +254,9 @@ export async function fetchOrdersDashboardData(
     ).map((row) => mapQueueItem(row, "quote")),
     soonestUpcomingQuotes: (
       (soonestUpcomingQuotesResult.data ?? []) as DashboardRow[]
+    ).map((row) => mapQueueItem(row, "quote")),
+    todayFollowUpQuoteItems: (
+      (todayFollowUpQuoteItemsResult.data ?? []) as DashboardRow[]
     ).map((row) => mapQueueItem(row, "quote")),
   };
 }

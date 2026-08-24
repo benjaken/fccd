@@ -1,5 +1,5 @@
 import type { ComponentProps } from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -35,7 +35,7 @@ vi.mock("@/lib/dictionaries", async (importOriginal) => {
 
 import { QuoteEditorPage } from "@/components/QuoteEditorPage";
 import i18n from "@/i18n";
-import { dedupeQuoteOptions, quoteLineTotal, type QuoteEditorOptions, type QuoteLine } from "@/lib/quote-editor";
+import { dedupeQuoteOptions, quoteLineTotal, quoteWorkflowValues, type QuoteEditorOptions, type QuoteLine } from "@/lib/quote-editor";
 
 const options: QuoteEditorOptions = {
   channels: [{ id: "channel-1", name: "Residential" }],
@@ -53,7 +53,10 @@ const options: QuoteEditorOptions = {
     { id: "shipping-office", name: "寫字樓 - 外賣盒上" },
   ],
   salesPartners: [{ id: "partner-1", name: "Amy" }],
-  orderTags: [{ id: "tag-1", name: "Birthday" }],
+  orderTags: [
+    { id: "tag-1", name: "Birthday" },
+    { id: "tag-2", name: "VIP" },
+  ],
   paymentMethods: [{ id: "payme", name: "PayMe" }],
 };
 
@@ -62,6 +65,19 @@ const shippingFeeOptions = [
   { id: "fee-80", item: "Ground-floor delivery", fee: 80, createdAt: "2026-08-21T00:00:00Z" },
   { id: "fee-100", item: "Remote-area delivery", fee: 100, createdAt: "2026-08-21T00:00:00Z" },
 ];
+
+function setMobileViewport(matches: boolean) {
+  vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
+    matches,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  }));
+}
 
 describe("quote line totals", () => {
   it("recalculates migrated rows whose stored subtotal is zero", () => {
@@ -75,6 +91,7 @@ const emptyQuoteDraft = {
   quoteStatus: "",
   quoteSalesSourceId: "",
   quoteCommunicationChannelId: "",
+  followUpDate: "",
   customerName: "",
   companyName: "",
   contactA: "",
@@ -95,6 +112,15 @@ const emptyQuoteDraft = {
   tagIds: [],
 };
 
+describe("quote workflow fields", () => {
+  it("persists the selected follow-up date and clears an empty date", () => {
+    expect(quoteWorkflowValues({ ...emptyQuoteDraft, followUpDate: "2026-08-24" }))
+      .toMatchObject({ quote_follow_up_date: "2026-08-24" });
+    expect(quoteWorkflowValues(emptyQuoteDraft))
+      .toMatchObject({ quote_follow_up_date: null });
+  });
+});
+
 function renderEditor(
   overrides: Partial<ComponentProps<typeof QuoteEditorPage>> = {},
   initialEntry = "/quotes/new",
@@ -106,6 +132,7 @@ function renderEditor(
     loadLines: vi.fn().mockResolvedValue([]),
     searchCatalog: vi.fn().mockResolvedValue([]),
     saveLine: vi.fn().mockResolvedValue(undefined),
+    loadPackageDetail: vi.fn().mockResolvedValue(null),
     deleteLine: vi.fn().mockResolvedValue(undefined),
     saveDetails: vi.fn().mockResolvedValue(undefined),
     saveExistingLine: vi.fn().mockResolvedValue(undefined),
@@ -139,7 +166,40 @@ async function fillRequiredQuoteDetails(user: ReturnType<typeof userEvent.setup>
 
 describe("Quote editor", () => {
   beforeEach(async () => {
+    setMobileViewport(false);
     await i18n.changeLanguage("en");
+  });
+
+  it("renders editable product cards instead of the wide table on mobile", async () => {
+    setMobileViewport(true);
+    const line: QuoteLine = {
+      id: "line-mobile",
+      productId: "product-1",
+      packageId: null,
+      sku: "MOBILE-1",
+      name: "Mobile banquet",
+      quantity: 2,
+      unitPrice: 80,
+      totalPrice: 160,
+      remarks: "No nuts",
+    };
+    renderEditor({
+      loadSummary: vi.fn().mockResolvedValue({
+        id: "quote-1",
+        orderNumber: "FCLQ-MOBILE",
+        channelId: "channel-1",
+      }),
+      loadLines: vi.fn().mockResolvedValue([line]),
+    }, "/quotes/quote-1/edit");
+
+    const mobileList = await waitFor(() => {
+      const node = document.querySelector<HTMLElement>(".quote-mobile-lines");
+      expect(node).toBeInTheDocument();
+      return node!;
+    });
+    expect(within(mobileList).getByRole("listitem")).toHaveTextContent("Mobile banquet");
+    expect(document.querySelector(".quote-lines-panel table")).not.toBeInTheDocument();
+    expect(within(mobileList).getByRole("spinbutton", { name: "Quantity" })).toHaveValue(2);
   });
 
   it("saves quote details before opening the product step", async () => {
@@ -147,6 +207,8 @@ describe("Quote editor", () => {
     const props = renderEditor();
 
     expect(await screen.findByRole("heading", { name: "New quote" })).toBeInTheDocument();
+    expect(screen.getByLabelText(/Customer note/)).toBeInTheDocument();
+    expect(screen.getByText("Shown on delivery note")).toBeInTheDocument();
     await fillRequiredQuoteDetails(user);
     await user.click(screen.getByRole("button", { name: "Save and add products" }));
 
@@ -159,7 +221,7 @@ describe("Quote editor", () => {
     expect(screen.getByText("The quote is saved. You can now start adding products.")).toBeInTheDocument();
   });
 
-  it("copies quote data into a new quote while clearing delivery and dispatch times", async () => {
+  it("copies quote data into a new quote while clearing follow-up, delivery and dispatch times", async () => {
     const user = userEvent.setup();
     const sourceLine: QuoteLine = {
       id: "source-line-1",
@@ -181,6 +243,7 @@ describe("Quote editor", () => {
       email: "copied@example.com",
       districtId: "district-1",
       shippingMethodId: "shipping-home",
+      followUpDate: "2026-08-24",
       deliveryTime: "12:00 - 13:00",
       shipOutTime: "11:15",
     };
@@ -219,6 +282,7 @@ describe("Quote editor", () => {
     expect(loadLines).toHaveBeenCalledWith("source-quote");
     expect(screen.getByLabelText("Delivery time")).toHaveValue("");
     expect(screen.getByLabelText("Dispatch time")).toHaveValue("");
+    expect(screen.getByLabelText("Follow-up date")).toHaveValue("");
 
     await user.selectOptions(
       screen.getByLabelText("Delivery time"),
@@ -235,6 +299,7 @@ describe("Quote editor", () => {
           customerName: "Copied customer",
           deliveryTime: "13:00 - 14:00",
           shipOutTime: "",
+          followUpDate: "",
         }),
       ),
     );
@@ -265,10 +330,109 @@ describe("Quote editor", () => {
     await user.type(screen.getByLabelText("Quantity"), "2");
     await user.click(screen.getByRole("button", { name: "Add to quote" }));
 
-    await waitFor(() => expect(props.saveLine).toHaveBeenCalledWith(expect.objectContaining({
-      orderId: "quote-1", quantity: 2, unitPrice: 88,
-    })));
+    expect(props.saveLine).not.toHaveBeenCalled();
     expect((await screen.findAllByText("HK$176.00")).length).toBeGreaterThanOrEqual(1);
+
+    const stagedQuantity = screen.getByRole("spinbutton", { name: "Quantity Roast pork" });
+    await user.clear(stagedQuantity);
+    await user.type(stagedQuantity, "3");
+    await user.tab();
+    expect(props.saveExistingLine).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Complete" }));
+    await waitFor(() => expect(props.saveLine).toHaveBeenCalledWith(expect.objectContaining({
+      orderId: "quote-1", quantity: 3, unitPrice: 88,
+    })));
+  }, 10_000);
+
+  it("adds a custom product to the local draft before saving the quote", async () => {
+    const user = userEvent.setup();
+    const saveLine = vi.fn().mockResolvedValue(undefined);
+
+    renderEditor({ saveLine });
+    await screen.findByLabelText(/Brand/);
+    await fillRequiredQuoteDetails(user);
+    await user.click(screen.getByRole("button", { name: "Save and add products" }));
+
+    await user.click(screen.getByRole("button", { name: "Custom product" }));
+    const dialog = await screen.findByRole("dialog", { name: "Custom product" });
+    const addButton = within(dialog).getByRole("button", { name: "Add" });
+    expect(addButton).toBeDisabled();
+
+    await user.type(within(dialog).getByLabelText("Product name"), "Special banquet item");
+    await user.type(within(dialog).getByLabelText("Unit price"), "320");
+    expect(addButton).toBeEnabled();
+    await user.click(addButton);
+
+    const customRow = await screen.findByRole("row", { name: /Special banquet item/ });
+    expect(within(customRow).getByText("HK$320.00")).toBeInTheDocument();
+    expect(saveLine).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Complete" }));
+    await waitFor(() => expect(saveLine).toHaveBeenCalledWith(expect.objectContaining({
+      orderId: "quote-1",
+      item: expect.objectContaining({ kind: "custom", name: "Special banquet item" }),
+      quantity: 1,
+      unitPrice: 320,
+    })));
+  }, 10_000);
+
+  it("requires package dish selections before adding a package", async () => {
+    const user = userEvent.setup();
+    const searchCatalog = vi.fn().mockResolvedValue([
+      { id: "package-1", kind: "package", sku: "SET-1", name: "Family Feast", price: 680 },
+    ]);
+    const loadPackageDetail = vi.fn().mockResolvedValue({
+      id: "package-1",
+      choiceSets: [{
+        id: "choice-set-1",
+        legacyId: "legacy-choice-set-1",
+        name: "Main dishes",
+        maximumChoices: 2,
+        products: [
+          { id: "member-1", productSku: "D-1", productName: "Roast chicken", productChineseName: null, addonPrice: 0, isSelected: false },
+          { id: "member-2", productSku: "D-2", productName: "Steamed fish", productChineseName: null, addonPrice: 0, isSelected: false },
+          { id: "member-3", productSku: "D-3", productName: "Braised tofu", productChineseName: null, addonPrice: 0, isSelected: false },
+        ],
+      }],
+      ungroupedProducts: [],
+    });
+    const saveLine = vi.fn().mockResolvedValue(undefined);
+
+    renderEditor({ searchCatalog, loadPackageDetail, saveLine });
+    await screen.findByLabelText(/Brand/);
+    await fillRequiredQuoteDetails(user);
+    await user.click(screen.getByRole("button", { name: "Save and add products" }));
+
+    await user.type(await screen.findByPlaceholderText("Search product name or SKU"), "SET-1");
+    await user.click(await screen.findByRole("option", { name: /Family Feast/ }));
+    await user.click(screen.getByRole("button", { name: "Add to quote" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Choose package dishes" });
+    const confirm = within(dialog).getByRole("button", { name: "Confirm and add" });
+    expect(saveLine).not.toHaveBeenCalled();
+    expect(confirm).toBeDisabled();
+
+    await user.click(within(dialog).getByRole("checkbox", { name: /Roast chicken/ }));
+    expect(confirm).toBeDisabled();
+    await user.click(within(dialog).getByRole("checkbox", { name: /Steamed fish/ }));
+    expect(confirm).toBeEnabled();
+    await user.click(confirm);
+
+    expect(saveLine).not.toHaveBeenCalled();
+    const packageRow = await screen.findByRole("row", { name: /Family Feast/ });
+    expect(within(packageRow).getByText("Roast chicken")).toBeInTheDocument();
+    expect(within(packageRow).getByText("Steamed fish")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Complete" }));
+    await waitFor(() => expect(saveLine).toHaveBeenCalledWith(expect.objectContaining({
+      orderId: "quote-1",
+      item: expect.objectContaining({ id: "package-1", kind: "package" }),
+      packageChoices: [{
+        choiceSetId: "choice-set-1",
+        packageProductIds: ["member-1", "member-2"],
+      }],
+    })));
   }, 10_000);
 
   it("applies shipping rules and selectable delivery times", async () => {
@@ -306,23 +470,27 @@ describe("Quote editor", () => {
     ]);
   });
 
-  it("selects multiple order tags from a searchable dropdown", async () => {
+  it("shows all order tags and supports selecting more than one", async () => {
     const user = userEvent.setup();
     renderEditor();
 
-    const tags = await screen.findByRole("combobox", { name: "Order tags" });
-    expect(tags).toHaveTextContent("Choose order tags");
+    const tags = await screen.findByRole("group", { name: "Order tags" });
+    const birthday = within(tags).getByRole("button", { name: "Birthday" });
+    const vip = within(tags).getByRole("button", { name: "VIP" });
     expect(tags.closest(".quote-editor-form-column")).toBe(
       screen.getByText("Asana Link").closest(".quote-editor-form-column"),
     );
-    await user.click(tags);
-    expect(screen.getByRole("listbox")).toHaveAttribute("aria-multiselectable", "true");
-    await user.click(screen.getByRole("option", { name: "Birthday" }));
-    expect(tags).toHaveTextContent("Birthday");
-    expect(screen.getByRole("option", { name: "Birthday" })).toHaveAttribute("aria-selected", "true");
+    expect(birthday).toHaveAttribute("aria-pressed", "false");
+    expect(vip).toHaveAttribute("aria-pressed", "false");
+
+    await user.click(birthday);
+    await user.click(vip);
+
+    expect(birthday).toHaveAttribute("aria-pressed", "true");
+    expect(vip).toHaveAttribute("aria-pressed", "true");
   });
 
-  it("shows the order-tag placeholder when editing a quote without tags", async () => {
+  it("keeps all order tags visible when editing a quote without selected tags", async () => {
     const summary = {
       id: "quote-1",
       orderNumber: "FCLQ20260801",
@@ -341,9 +509,9 @@ describe("Quote editor", () => {
       </MemoryRouter>,
     );
 
-    const tags = await screen.findByRole("combobox", { name: "Order tags" });
-    expect(tags).toHaveTextContent("Choose order tags");
-    expect(tags).toHaveAttribute("aria-placeholder", "Choose order tags");
+    const tags = await screen.findByRole("group", { name: "Order tags" });
+    expect(within(tags).getByRole("button", { name: "Birthday" })).toHaveAttribute("aria-pressed", "false");
+    expect(within(tags).getByRole("button", { name: "VIP" })).toHaveAttribute("aria-pressed", "false");
   });
 
   it("edits and saves the three legacy quote workflow statuses", async () => {
@@ -374,6 +542,7 @@ describe("Quote editor", () => {
     );
 
     await user.selectOptions(await screen.findByLabelText("Success probability"), "High Chance");
+    await user.type(screen.getByLabelText("Follow-up date"), "2026-08-24");
     await user.selectOptions(screen.getByLabelText("Sales source"), "source-email");
     await user.selectOptions(screen.getByLabelText("Communication channel"), "communication-wati");
     await user.click(screen.getByRole("button", { name: "Save changes" }));
@@ -384,6 +553,7 @@ describe("Quote editor", () => {
         quoteStatus: "High Chance",
         quoteSalesSourceId: "source-email",
         quoteCommunicationChannelId: "communication-wati",
+        followUpDate: "2026-08-24",
       }),
     ));
   });
@@ -671,7 +841,11 @@ describe("Quote editor", () => {
     expect(await screen.findByText("Converted order")).toBeInTheDocument();
   });
 
-  it("shows all three editor sections together on the quote detail page without tabs", async () => {
+  it("shows all three sections with scroll navigation on the quote detail page", async () => {
+    const user = userEvent.setup();
+    const scrollIntoView = vi.fn();
+    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
+    HTMLElement.prototype.scrollIntoView = scrollIntoView;
     const longRemark = "No onions, no garlic, keep every sauce separate, and label every tray";
     const summary = {
       id: "quote-1", orderNumber: "FCLQ20260801", channelId: "channel-1",
@@ -695,10 +869,13 @@ describe("Quote editor", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "FCLQ20260801" })).toBeInTheDocument();
-    expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
+    expect(screen.getByRole("tablist", { name: "Quote creation steps" })).toBeInTheDocument();
+    expect(screen.getAllByRole("tab")).toHaveLength(3);
     expect(screen.getByRole("heading", { name: "Customer details" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Add product" })).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Payment records" })).toBeInTheDocument();
+    expect(screen.getByText("Customer note")).toBeInTheDocument();
+    expect(screen.getByText("Shown on delivery note")).toBeInTheDocument();
     expect(screen.getByText("Birthday")).toBeInTheDocument();
     expect(screen.getByText("High Chance")).toBeInTheDocument();
     expect(screen.getAllByText("Email").length).toBeGreaterThanOrEqual(2);
@@ -709,6 +886,11 @@ describe("Quote editor", () => {
     expect(screen.getByRole("button", { name: "Convert to order" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Send WATI and email order confirmation" })).not.toBeInTheDocument();
     expect(document.querySelector("input, select, textarea")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("tab", { name: "Add products" }));
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
+    expect(screen.getByRole("tab", { name: "Add products" })).toHaveAttribute("aria-selected", "true");
+    HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
   });
 
   it("shows notification and conversion actions only for unconfirmed order details", async () => {
@@ -756,7 +938,7 @@ describe("Quote editor", () => {
     expect(await screen.findByText("Converted order")).toBeInTheDocument();
   });
 
-  it("uses the quote layout for order editing and adds customer matters to the first form", async () => {
+  it("shows the delivery-note customer note on order editing and details", async () => {
     const user = userEvent.setup();
     const setFactoryStatus = vi.fn().mockResolvedValue(undefined);
     const loadSummary = vi.fn().mockResolvedValue({
@@ -785,8 +967,11 @@ describe("Quote editor", () => {
 
     expect(await screen.findByRole("heading", { name: "FCCO20260801" })).toBeInTheDocument();
     expect(screen.getByRole("status", { name: "付款狀態：尚未付款" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Add product|加入貨品/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Payment records|付款紀錄/ })).toBeInTheDocument();
     expect(loadSummary).toHaveBeenCalledWith("order-1", "order");
-    expect(screen.getByLabelText(/Customer matters|客人事項/)).toHaveValue("不要香菜");
+    expect(screen.getByLabelText(/Customer note|客戶備註/)).toHaveValue("不要香菜");
+    expect(screen.getByText(/Shown on delivery note|送貨單顯示/)).toBeInTheDocument();
     expect(screen.queryByLabelText(/Success probability|成功機率/)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/Sales source|報價渠道/)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/Communication channel|溝通渠道/)).not.toBeInTheDocument();
@@ -816,6 +1001,8 @@ describe("Quote editor", () => {
       </MemoryRouter>,
     );
     expect(await screen.findByRole("heading", { name: "FCCO20260801" })).toBeInTheDocument();
+    expect(screen.getByText(/Customer note|客戶備註/)).toBeInTheDocument();
+    expect(screen.getByText(/Shown on delivery note|送貨單顯示/)).toBeInTheDocument();
     expect(screen.queryByText(/Success probability|成功機率/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Sales source|報價渠道/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Communication channel|溝通渠道/)).not.toBeInTheDocument();
