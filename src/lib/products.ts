@@ -64,6 +64,11 @@ export type ProductListFilters = {
   bentoMainTypeId?: string;
   bentoColumnTypeId?: string;
   cookTypeId?: string;
+  mainIngredientId?: string;
+  specialRequestId?: string;
+  recommended?: boolean;
+  pageSize?: number;
+  productIds?: string[];
   status: ProductStatusFilter;
   priceRange: ProductPriceRange;
   sortField?: ProductSortField;
@@ -441,6 +446,67 @@ export async function fetchCatalogCookTypes(): Promise<CatalogOption[]> {
   );
 }
 
+export type LunchboxPickerFilterOptions = {
+  staples: CatalogOption[];
+  compartments: CatalogOption[];
+  cookTypes: CatalogOption[];
+  mainIngredients: CatalogOption[];
+  specialRequests: CatalogOption[];
+};
+
+async function fetchBentoTagOptions(
+  table: "bento_main_ingredients" | "bento_special_requests",
+): Promise<CatalogOption[]> {
+  const { data, error } = await supabase
+    .from(table)
+    .select("id,name")
+    .order("name", { ascending: true });
+  if (error) throw error;
+  return (data ?? [])
+    .map((row) => ({ id: row.id as string, name: String(row.name ?? "").trim() }))
+    .filter((row) => row.name);
+}
+
+export async function fetchLunchboxPickerFilterOptions(): Promise<LunchboxPickerFilterOptions> {
+  const [staples, compartments, cookTypes, mainIngredients, specialRequests] = await Promise.all([
+    fetchBentoMainTypes(),
+    fetchBentoColumnTypes(),
+    fetchCatalogCookTypes(),
+    fetchBentoTagOptions("bento_main_ingredients"),
+    fetchBentoTagOptions("bento_special_requests"),
+  ]);
+  return { staples, compartments, cookTypes, mainIngredients, specialRequests };
+}
+
+async function linkedProductIdsForLunchboxFilters(
+  mainIngredientId: string,
+  specialRequestId: string,
+) {
+  const [ingredientResult, requestResult] = await Promise.all([
+    mainIngredientId
+      ? supabase
+          .from("product_main_ingredient_links")
+          .select("product_id")
+          .eq("main_ingredient_id", mainIngredientId)
+      : Promise.resolve({ data: null, error: null }),
+    specialRequestId
+      ? supabase
+          .from("product_special_request_links")
+          .select("product_id")
+          .eq("special_request_id", specialRequestId)
+      : Promise.resolve({ data: null, error: null }),
+  ]);
+  if (ingredientResult.error) throw ingredientResult.error;
+  if (requestResult.error) throw requestResult.error;
+  const ingredientIds = ingredientResult.data?.map((row) => row.product_id as string) ?? null;
+  const requestIds = requestResult.data?.map((row) => row.product_id as string) ?? null;
+  if (ingredientIds && requestIds) {
+    const requestSet = new Set(requestIds);
+    return ingredientIds.filter((id) => requestSet.has(id));
+  }
+  return ingredientIds ?? requestIds;
+}
+
 async function productTypeIdsForName(name: string, channelId = "") {
   const key = name.trim();
   if (!key) return [] as string[];
@@ -466,14 +532,26 @@ export async function fetchProducts({
   bentoMainTypeId = "",
   bentoColumnTypeId = "",
   cookTypeId = "",
+  mainIngredientId = "",
+  specialRequestId = "",
+  recommended,
+  pageSize = PRODUCTS_PAGE_SIZE,
+  productIds: selectedProductIds,
   status,
   priceRange,
   sortField = "sku",
   sortAscending = true,
   preset = "all",
 }: ProductListFilters): Promise<ProductListResult> {
-  const start = (page - 1) * PRODUCTS_PAGE_SIZE;
-  const end = start + PRODUCTS_PAGE_SIZE - 1;
+  const safePageSize = Math.min(100, Math.max(1, Math.trunc(pageSize)));
+  const start = (page - 1) * safePageSize;
+  const end = start + safePageSize - 1;
+  const linkedProductIds = await linkedProductIdsForLunchboxFilters(
+    mainIngredientId,
+    specialRequestId,
+  );
+  if (linkedProductIds?.length === 0) return { items: [], total: 0 };
+  if (selectedProductIds?.length === 0) return { items: [], total: 0 };
 
   let query = supabase
     .from("products")
@@ -542,18 +620,28 @@ export async function fetchProducts({
     query = query.eq("cook_type_id", cookTypeId);
   }
 
+  if (linkedProductIds) {
+    query = query.in("id", linkedProductIds);
+  }
+
+  if (selectedProductIds) {
+    query = query.in("id", selectedProductIds);
+  }
+
+  if (typeof recommended === "boolean") {
+    query = query.eq("is_bento_recommended", recommended);
+  }
+
   if (channelId) {
     query = query.eq("channel_id", channelId);
   } else if (preset !== "all") {
-    const ids = await channelIdsForNames(PRESET_CHANNEL_NAMES[preset]);
-    if (ids.length === 0) {
-      return { items: [], total: 0 };
-    }
     if (preset === "lunchbox") {
-      query = query.or(
-        `channel_id.in.(${ids.join(",")}),bento_main_type_id.not.is.null`,
-      );
+      query.not("bento_main_type_id", "is", null);
     } else {
+      const ids = await channelIdsForNames(PRESET_CHANNEL_NAMES[preset]);
+      if (ids.length === 0) {
+        return { items: [], total: 0 };
+      }
       query = query.in("channel_id", ids);
     }
   }
