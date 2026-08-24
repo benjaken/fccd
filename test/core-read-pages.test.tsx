@@ -16,7 +16,7 @@ const detail = {
     contactA: "91234567",
     contactB: null,
     address: "香港測試地址",
-    customerNote: null,
+    customerNote: "到達前致電客戶",
     internalNote: "只供內部查看",
     quoteStatus: null,
     quoteDescription: null,
@@ -119,6 +119,12 @@ describe("Core read pages", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "B-1513" })).toBeInTheDocument();
+    expect(screen.getByText(/Customer note \(Shown on delivery note\)|客戶備註.*送貨單顯示/)).toBeInTheDocument();
+    expect(screen.getByText("到達前致電客戶")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "復製訂單" })).toHaveAttribute(
+      "href",
+      "/orders/new?copyFrom=order-1",
+    );
     expect(screen.queryByRole("checkbox", { name: /不傳送到工場/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "儲存工場設定" })).not.toBeInTheDocument();
   });

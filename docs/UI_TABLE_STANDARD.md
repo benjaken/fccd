@@ -12,8 +12,10 @@ progress status colors, and preview sign-in hard rules, see
 - Scroll the table body inside its panel rather than the whole page.
 - Keep previous/next pagination controls visible at the bottom of the panel.
 - Show current range, total records, current page, and total pages.
-- On mobile (`max-width: 760px`), keep the summary and page controls on **one
-  row**. Do not stack them.
+- On mobile (`max-width: 760px`), operational lists with a mobile card adapter
+  hide numbered pagination and append the next server page as the user reaches
+  the end of the card list. Lists that have not migrated yet keep the summary
+  and page controls on **one row**; do not stack them.
 - Preserve loading, empty, error, retry, and permission states inside the same
   fixed panel.
 - Use server-side pagination, filtering, and sorting.
@@ -60,6 +62,27 @@ must wrap their scroll container with **`PullToRefresh`**.
 - Only activate the gesture at the top of the table scroller.
 - Keep the existing table chrome (sticky header, pagination) while refreshing.
 - Do not add a separate floating refresh button as a substitute on mobile.
+
+## Mobile display modes
+
+Every data table must deliberately use one of these mobile modes:
+
+- **Card list** for operational entity lists. Keep server pagination, render a
+  compact card per record, and append pages with the shared `ListTable` mobile
+  loader. Search, filters, and sorting reset the accumulated list to page one.
+- **Editable cards** for line items and other dense editable rows. Do not make
+  users horizontally scroll a desktop form table to edit quantities, prices,
+  notes, or payments.
+- **Scrollable matrix** for reports where row-to-column comparison is the main
+  task. Preserve the table and sticky headings instead of forcing unrelated
+  values into cards.
+- **Document layout** for printable invoices, receipts, delivery notes, and PDF
+  previews. Preserve the document proportions and provide a separate summary
+  when the full document is impractical on a phone.
+
+The first card-list adapter is the orders queue; the first editable-card
+adapter is the order editor's line-item section. Unmigrated `ListTable` callers
+retain their current table behavior until they supply `mobileContent`.
 
 ## Loading state (skeleton)
 

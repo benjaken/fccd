@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { vi } from "vitest";
 
 import { ListTable } from "@/components/ui/list-table";
 
@@ -32,6 +33,37 @@ describe("ListTable", () => {
     expect(operationalRule).not.toMatch(/(?:^|[;\s])overflow:\s*auto/);
     expect(pullToRefreshRule).toBeDefined();
     expect(pullToRefreshRule).not.toContain("overscroll-behavior-y: contain");
+  });
+
+  it("lets mobile order cards use page scrolling without an outer panel", () => {
+    const css = readFileSync(
+      path.resolve(process.cwd(), "src/index.css"),
+      "utf8",
+    );
+    const pageRule = css.match(
+      /\.orders-page:has\(\.responsive-card-list-panel\)\s*\{([^}]*)\}/,
+    )?.[1];
+    const panelRule = css.match(
+      /\.orders-panel\.responsive-card-list-panel\s*\{([^}]*)\}/,
+    )?.[1];
+    const toolbarRule = css.match(
+      /\.orders-panel\.responsive-card-list-panel\s*>\s*\.orders-toolbar\s*\{([^}]*)\}/,
+    )?.[1];
+    const listRule = css.match(
+      /\.orders-panel\.responsive-card-list-panel\s+\.orders-table-wrap\.has-mobile-list\s*\{([^}]*)\}/,
+    )?.[1];
+
+    expect(pageRule).toContain("height: auto");
+    expect(pageRule).toContain("min-height: 0");
+    expect(pageRule).toContain("overflow: visible");
+    expect(panelRule).toContain("border: 0");
+    expect(panelRule).toContain("background: transparent");
+    expect(panelRule).toContain("box-shadow: none");
+    expect(panelRule).toContain("overflow: visible");
+    expect(toolbarRule).toContain("padding: 0");
+    expect(toolbarRule).toContain("border: 0");
+    expect(toolbarRule).toContain("background: transparent");
+    expect(listRule).toContain("overflow: visible");
   });
 
   it("keeps the table shell visible and swaps skeleton rows for data", () => {
@@ -82,6 +114,72 @@ describe("ListTable", () => {
 
     expect(document.querySelectorAll(".table-skeleton-row")).toHaveLength(0);
     expect(screen.getByText("測試資料")).toBeInTheDocument();
+  });
+
+  it("automatically loads more mobile cards without showing a next-page button", () => {
+    const loadMore = vi.fn();
+    let notifyIntersection: IntersectionObserverCallback = () => undefined;
+    const observe = vi.fn();
+    const disconnect = vi.fn();
+    vi.stubGlobal(
+      "IntersectionObserver",
+      class IntersectionObserverMock {
+        constructor(callback: IntersectionObserverCallback) {
+          notifyIntersection = callback;
+        }
+
+        observe = observe;
+        disconnect = disconnect;
+        unobserve = vi.fn();
+        takeRecords = vi.fn(() => []);
+        root = null;
+        rootMargin = "180px 0px";
+        thresholds = [0];
+      },
+    );
+
+    const { rerender } = render(
+      <ListTable
+        loading={false}
+        loadingLabel="Loading"
+        skeletonColumns={1}
+        header={<tr><th>Name</th></tr>}
+        mobileContent={<div role="list"><article role="listitem">Mobile record</article></div>}
+        mobileHasMore
+        onMobileLoadMore={loadMore}
+        mobileEndLabel="All records loaded"
+      >
+        <tr><td>Desktop record</td></tr>
+      </ListTable>,
+    );
+
+    expect(screen.getByRole("listitem")).toHaveTextContent("Mobile record");
+    expect(screen.queryByRole("button", { name: /load more|next page/i })).not.toBeInTheDocument();
+    expect(observe).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      notifyIntersection(
+        [{ isIntersecting: true } as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
+    });
+    expect(loadMore).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <ListTable
+        loading={false}
+        loadingLabel="Loading"
+        skeletonColumns={1}
+        header={<tr><th>Name</th></tr>}
+        mobileContent={<div role="list"><article role="listitem">Mobile record</article></div>}
+        mobileEndLabel="All records loaded"
+      >
+        <tr><td>Desktop record</td></tr>
+      </ListTable>,
+    );
+    expect(screen.getByText("All records loaded")).toBeInTheDocument();
+    expect(disconnect).toHaveBeenCalled();
+    vi.unstubAllGlobals();
   });
 
   it.each(OPERATIONAL_LIST_PAGES)(
