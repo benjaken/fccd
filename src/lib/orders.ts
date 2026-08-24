@@ -137,6 +137,31 @@ export type OrderListFilters = {
   canViewFinance: boolean;
 } & OrderListEnhancementFilters;
 
+type OrderListSort = {
+  column: "delivery_at" | "bubble_created_at" | "created_at";
+  ascending: boolean;
+  nullsFirst?: boolean;
+};
+
+export function getOrderListSorts(
+  deliverySort: OrderListFilters["deliverySort"],
+): OrderListSort[] {
+  const createdSorts: OrderListSort[] = [
+    { column: "bubble_created_at", ascending: false, nullsFirst: false },
+    { column: "created_at", ascending: false },
+  ];
+  if (!deliverySort) return createdSorts;
+
+  return [
+    {
+      column: "delivery_at",
+      ascending: deliverySort === "asc",
+      nullsFirst: false,
+    },
+    ...createdSorts,
+  ];
+}
+
 type OrderRow = {
   id: string;
   order_number: string | null;
@@ -274,12 +299,12 @@ export async function fetchOrders({
     .from("orders")
     .select(selectedFields, { count: "exact" })
     .eq("document_type", preset === "pending" ? "unconfirmed" : "order")
-    .is("archived_at", null)
-    // Bubble Created Date (fallback to DB created_at).
-    .order("delivery_at", { ascending: deliverySort === "asc", nullsFirst: false })
-    .order("bubble_created_at", { ascending: false, nullsFirst: false })
-    .order("created_at", { ascending: false })
-    .range(start, end);
+    .is("archived_at", null);
+
+  for (const { column, ascending, nullsFirst } of getOrderListSorts(deliverySort)) {
+    query = query.order(column, { ascending, nullsFirst });
+  }
+  query = query.range(start, end);
 
   const term = safeSearchTerm(search);
   if (term) {
