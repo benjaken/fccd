@@ -265,7 +265,7 @@ export async function fetchQuoteEditorSummary(
   const [orderResult, deliveryResult, tagsResult, asanaResult, paymentsResult] = await Promise.all([
     supabase
       .from("orders")
-      .select("id,document_type,order_number,channel_id,quote_status,quote_auto_closed_at,quote_reopen_reason,quote_sales_source_id,quote_communication_channel_id,quote_follow_up_date,customer_name_snapshot,company_name_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,email_snapshot,shipping_address_snapshot,customer_note_snapshot,shipping_method_id,delivery_at,delivery_time,ship_out_time,factory_packing_note,sales_partner_id,remarks,shipping_fee,discount_amount,cashdollar_redeemed,cashdollar_purchased,is_sent_to_factory,do_not_send_to_factory,factory_print_date,factory_reprint_required")
+      .select("id,document_type,order_number,channel_id,quote_status,quote_auto_closed_at,quote_reopen_reason,quote_sales_source_id,quote_communication_channel_id,quote_follow_up_date,customer_name_snapshot,company_name_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,email_snapshot,shipping_address_snapshot,customer_note_snapshot,shipping_method_id,delivery_district_id,delivery_at,delivery_time,ship_out_time,factory_packing_note,sales_partner_id,remarks,shipping_fee,discount_amount,cashdollar_redeemed,cashdollar_purchased,is_sent_to_factory,do_not_send_to_factory,factory_print_date,factory_reprint_required")
       .eq("id", resolvedOrderId)
       .in("document_type", documentType === "order" ? ["order"] : ["quote", "unconfirmed"])
       .is("archived_at", null)
@@ -311,7 +311,9 @@ export async function fetchQuoteEditorSummary(
     email: data.email_snapshot || "",
     asanaLink: asanaResult.error ? "" : asanaResult.data?.asana_link || "",
     address: data.shipping_address_snapshot || "",
-    districtId: deliveryResult.error ? "" : primaryDelivery?.district_id || "",
+    districtId: deliveryResult.error
+      ? data.delivery_district_id || ""
+      : primaryDelivery?.district_id || data.delivery_district_id || "",
     districtName: "",
     shippingMethodId: data.shipping_method_id || "",
     deliveryDate: data.delivery_at ? String(data.delivery_at).slice(0, 10) : "",
@@ -364,15 +366,10 @@ export function quoteLineTotal(
 }
 
 export async function updateOrderFactoryStatus(orderId: string, sent: boolean) {
-  const { error } = await supabase
-    .from("orders")
-    .update({
-      is_sent_to_factory: sent,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", orderId)
-    .eq("document_type", "order")
-    .is("archived_at", null);
+  const { error } = await supabase.rpc("set_order_factory_status", {
+    p_order_id: orderId,
+    p_sent: sent,
+  });
   if (error) throw error;
 }
 
@@ -481,6 +478,7 @@ export async function updateQuote(
       shipping_address_snapshot: optional(input.address),
       customer_note_snapshot: optional(input.customerNote),
       shipping_method_id: input.shippingMethodId || null,
+      delivery_district_id: districtId,
       delivery_at: deliveryAt,
       delivery_time: optional(input.deliveryTime),
       ship_out_time: optional(input.shipOutTime),
@@ -508,16 +506,22 @@ export async function updateQuote(
     delivery_time: optional(input.deliveryTime),
     ship_out_time: optional(input.shipOutTime),
   };
-  const deliveryResult = delivery
-    ? await supabase.from("deliveries").update(deliveryValues).eq("id", delivery.id)
-    : await supabase.from("deliveries").insert({
-        id: crypto.randomUUID(),
-        legacy_id: `web-delivery-${crypto.randomUUID()}`,
-        order_id: orderId,
-        delivery_status: documentType === "order" ? "未派車隊" : "Pending",
-        ...deliveryValues,
-      });
-  if (deliveryResult.error) throw deliveryResult.error;
+  if (delivery) {
+    const deliveryResult = await supabase
+      .from("deliveries")
+      .update(deliveryValues)
+      .eq("id", delivery.id);
+    if (deliveryResult.error) throw deliveryResult.error;
+  } else if (documentType !== "order") {
+    const deliveryResult = await supabase.from("deliveries").insert({
+      id: crypto.randomUUID(),
+      legacy_id: `web-delivery-${crypto.randomUUID()}`,
+      order_id: orderId,
+      delivery_status: "Pending",
+      ...deliveryValues,
+    });
+    if (deliveryResult.error) throw deliveryResult.error;
+  }
 
   const { error: clearTagsError } = await supabase
     .from("order_tag_assignments")
