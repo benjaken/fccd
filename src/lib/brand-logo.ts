@@ -55,3 +55,24 @@ export function getBrandLogoAlt(
       return "Food Channel Catering";
   }
 }
+
+export function getBrandContactEmail(
+  configuredEmail: string | null | undefined,
+  ...brandValues: Array<string | null | undefined>
+): string {
+  const email = configuredEmail?.trim();
+  if (email) return email;
+
+  switch (getBrandKind(...brandValues)) {
+    case "lunch-box":
+      return "sales@hklunchbox.com";
+    case "party-food":
+      return "sales@hkpartyfood.com";
+    case "kitchen":
+      return "sales@foodchannels-kitchen.com";
+    case "cuisine":
+      return "sales@foodchannels-cuisine.com";
+    default:
+      return "sales@foodchannels-catering.com";
+  }
+}

@@ -6,6 +6,7 @@ import {
   FC_CUISINE_LOGO_PATH,
   HK_LUNCH_BOX_LOGO_PATH,
   HK_PARTY_FOOD_LOGO_PATH,
+  getBrandContactEmail,
   getDocumentLogoPath,
   getBrandLogoAlt,
 } from "@/lib/brand-logo";
@@ -42,5 +43,14 @@ describe("brand logo selection", () => {
     expect(getDocumentLogoPath("福滿樓")).toBe(FC_CUISINE_LOGO_PATH);
     expect(getDocumentLogoPath("FC Cuisine")).toBe(FC_CUISINE_LOGO_PATH);
     expect(getBrandLogoAlt("福滿樓")).toBe("FC Cuisine 福滿樓");
+  });
+
+  it("uses the configured brand email before the brand fallback", () => {
+    expect(getBrandContactEmail(" quotes@example.com ", "HK lunch box")).toBe("quotes@example.com");
+    expect(getBrandContactEmail(null, "HK lunch box")).toBe("sales@hklunchbox.com");
+    expect(getBrandContactEmail(null, "hkpartyfood.com")).toBe("sales@hkpartyfood.com");
+    expect(getBrandContactEmail(null, "Food Channels Kitchen")).toBe("sales@foodchannels-kitchen.com");
+    expect(getBrandContactEmail(null, "FC Cuisine")).toBe("sales@foodchannels-cuisine.com");
+    expect(getBrandContactEmail(null, "Catering")).toBe("sales@foodchannels-catering.com");
   });
 });

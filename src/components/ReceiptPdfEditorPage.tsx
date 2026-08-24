@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Check, ChevronDown, ChevronUp, LoaderCircle, Minus, Plus, Printer } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Check, LoaderCircle, Minus, Plus, Printer } from "lucide-react";
 import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { PdfAutoResizeTextarea } from "@/components/PdfAutoResizeTextarea";
 import { QuoteClauseSearchPicker } from "@/components/QuoteClauseSearchPicker";
-import { getBrandLogoAlt, getDocumentLogoPath } from "@/lib/brand-logo";
+import { getBrandContactEmail, getBrandLogoAlt, getDocumentLogoPath } from "@/lib/brand-logo";
 import {
   fetchOrderDetail,
   type DetailLine,
@@ -19,14 +19,21 @@ import {
   type ReceiptPdfLineDraft,
 } from "@/lib/receipt-pdf-draft";
 import { DICT_TYPE, dictItemLabel, useDictItems } from "@/lib/dictionaries";
+import { splitPdfModuleIndexes, usePdfAutoPageBreaks } from "@/lib/pdf-auto-pagination";
 import { fetchShippingFees, type ShippingFee } from "@/lib/shipping-fees";
 
 type ReceiptPdfLoader = typeof fetchOrderDetail;
 type ShippingFeeLoader = () => Promise<ShippingFee[]>;
 type FinancialDocumentKind = "receipt" | "invoice";
+type ReceiptTrailingUnit =
+  | { kind: "node"; key: string; node: ReactNode }
+  | { kind: "term" | "payment"; itemIndex: number | null };
 
 const fetchConfiguredShippingFees: ShippingFeeLoader = async () =>
   (await fetchShippingFees(1, 1000)).rows;
+
+const FIRST_PRODUCT_PAGE_SIZE = 10;
+const CONTINUATION_PRODUCT_PAGE_SIZE = 18;
 
 function pdfDate(value: string | null | undefined) {
   if (!value) return "";
@@ -53,12 +60,12 @@ function money(value: number, decimals = false) {
   })}`;
 }
 
-function ReceiptPdfPageFooter({ page, total }: { page: number; total: number }) {
+function ReceiptPdfPageFooter({ email, page, total }: { email: string; page: number; total: number }) {
   return (
-    <footer className="receipt-pdf-page-footer">
+    <footer className="receipt-pdf-page-footer" data-pdf-auto-footer>
       <span>5D-G Wah Lik Ind Ctr Tsuen Wan</span>
       <span>(+852) 2185 7373 / 5396 4335</span>
-      <span>sales@hkpartyfood.com</span>
+      <span>{email}</span>
       <span>{`第${page}頁 | 共${total}頁`}</span>
     </footer>
   );
@@ -118,9 +125,6 @@ function resultToDraft(
     terms: documentKind === "invoice" ? result.terms : [],
     paymentMethods: documentKind === "invoice" ? result.paymentMethods : [],
     showCustomerSignature: false,
-    trailingStartsNewPage:
-      documentKind === "invoice" &&
-      (result.lines.length >= 8 || result.terms.length + result.paymentMethods.length >= 6),
   };
 }
 
@@ -184,6 +188,7 @@ export function ReceiptPdfEditorPage({
   const [draft, setDraft] = useState<ReceiptPdfDraft | null>(null);
   const [sourceBrand, setSourceBrand] = useState({
     channelName: "",
+    channelEmail: "",
     shopifyStoreDomain: "",
     orderNumber: "",
   });
@@ -195,6 +200,14 @@ export function ReceiptPdfEditorPage({
   const [termSearch, setTermSearch] = useState("");
   const [paymentsOpen, setPaymentsOpen] = useState(false);
   const [paymentSearch, setPaymentSearch] = useState("");
+  const editorRef = useRef<HTMLElement>(null);
+  const paginationResetKey = draft ? JSON.stringify([draft, sourceBrand, documentKind]) : "";
+  const paginationModuleCount = draft
+    ? documentKind === "invoice"
+      ? Math.max(draft.terms.length, 1) + Math.max(draft.paymentMethods.length, 1) + 1
+      : 2
+    : 0;
+  const trailingPageBreaks = usePdfAutoPageBreaks(editorRef, paginationModuleCount, paginationResetKey);
   const storageKey = receiptPdfDraftStorageKey(id, documentKind);
   const isInvoice = documentKind === "invoice";
   const documentTitle = isInvoice ? "INVOICE" : "RECEIPT";
@@ -210,6 +223,7 @@ export function ReceiptPdfEditorPage({
       const stored = window.localStorage.getItem(storageKey);
       setSourceBrand({
         channelName: result.order.channelName || "",
+        channelEmail: result.order.channelEmail || "",
         shopifyStoreDomain: result.order.shopifyStoreDomain || "",
         orderNumber: result.order.orderNumber || "",
       });
@@ -267,7 +281,10 @@ export function ReceiptPdfEditorPage({
     value: ReceiptPdfDraft[K],
   ) => {
     setSaved(false);
-    setDraft((current) => (current ? { ...current, [key]: value } : current));
+    setDraft((current) => (current ? {
+      ...current,
+      [key]: value,
+    } : current));
   };
 
   const updateLine = (index: number, patch: Partial<ReceiptPdfLineDraft>) => {
@@ -324,9 +341,10 @@ export function ReceiptPdfEditorPage({
     sourceBrand.shopifyStoreDomain,
     sourceBrand.orderNumber,
   );
-  const invoiceTermsHaveContent = draft.terms.some((item) => item.trim());
-  const invoicePaymentsHaveContent = draft.paymentMethods.some((item) => item.trim());
-  const totalPdfPages = draft.trailingStartsNewPage ? 2 : 1;
+  const productLinePages = [draft.lines.slice(0, FIRST_PRODUCT_PAGE_SIZE)];
+  for (let index = FIRST_PRODUCT_PAGE_SIZE; index < draft.lines.length; index += CONTINUATION_PRODUCT_PAGE_SIZE) {
+    productLinePages.push(draft.lines.slice(index, index + CONTINUATION_PRODUCT_PAGE_SIZE));
+  }
   const letterhead = (
     <header className="receipt-pdf-letterhead">
       <img src={brandLogo} alt={brandLogoAlt} />
@@ -338,15 +356,7 @@ export function ReceiptPdfEditorPage({
       </div>
     </header>
   );
-  const trailingLabel = isInvoice ? "條款、付款方式及簽署" : "付款資料及公司蓋章";
-  const trailingControls = (
-    <div className="quote-pdf-page-controls receipt-pdf-page-controls" aria-label={isInvoice ? "條款、付款方式及簽署分頁控制" : "付款及蓋章分頁控制"}>
-      <Button variant="outline" disabled={draft.trailingStartsNewPage} onClick={() => update("trailingStartsNewPage", true)}><ChevronDown />下移一頁</Button>
-      <Button variant="outline" disabled={!draft.trailingStartsNewPage} onClick={() => update("trailingStartsNewPage", false)}><ChevronUp />上移一頁</Button>
-      <span>{draft.trailingStartsNewPage ? `${trailingLabel}已移至下一頁` : `${trailingLabel}接續在本頁`}</span>
-    </div>
-  );
-  const receiptTrailingContent = (
+  const receiptPaymentContent = (
     <div className="receipt-pdf-trailing" aria-label="付款資料及公司蓋章">
       <section className="receipt-pdf-payment">
         <strong>Payment information:</strong>
@@ -361,7 +371,10 @@ export function ReceiptPdfEditorPage({
           );
         })}
       </section>
-
+    </div>
+  );
+  const receiptSignatureContent = (
+    <div className="receipt-pdf-trailing receipt-pdf-trailing-signature">
       <section className="receipt-pdf-signature" aria-label="公司簽署">
         <span>For and on behalf of</span>
         <strong>Food Channels Limited</strong>
@@ -369,20 +382,6 @@ export function ReceiptPdfEditorPage({
         <span>Authorized Signature &amp; Co. Chop</span>
       </section>
     </div>
-  );
-  const invoiceNotes = (
-    <section className={`quote-pdf-notes receipt-invoice-notes${!invoiceTermsHaveContent && !invoicePaymentsHaveContent ? " is-empty" : ""}`} aria-label="條款及付款方式">
-      <section className={`quote-pdf-note-block receipt-invoice-note-block${!invoiceTermsHaveContent ? " is-empty" : ""}`}>
-        <button type="button" className="quote-pdf-note-heading quote-pdf-edit-only" onClick={() => setTermsOpen(true)}>條款及細則：<Plus aria-hidden="true" /></button>
-        <strong className="quote-pdf-print-only receipt-invoice-print-heading">條款及細則：</strong>
-        <ol>{draft.terms.map((item, index) => <li className={`receipt-invoice-clause${item.trim() ? "" : " is-empty"}`} key={`invoice-term-${index}`}><textarea rows={1} aria-label={`條款及細則 ${index + 1}`} value={item} onChange={(event) => update("terms", draft.terms.map((current, itemIndex) => itemIndex === index ? event.target.value : current))} /><button type="button" className="quote-pdf-edit-only receipt-invoice-clause-delete" aria-label={`刪除條款及細則 ${index + 1}`} onClick={() => update("terms", draft.terms.filter((_, itemIndex) => itemIndex !== index))}><Minus /></button></li>)}</ol>
-      </section>
-      <section className={`quote-pdf-note-block receipt-invoice-note-block${!invoicePaymentsHaveContent ? " is-empty" : ""}`}>
-        <button type="button" className="quote-pdf-note-heading quote-pdf-edit-only" onClick={() => setPaymentsOpen(true)}>付款方式：<Plus aria-hidden="true" /></button>
-        <strong className="quote-pdf-print-only receipt-invoice-print-heading">付款方式：</strong>
-        <ol>{draft.paymentMethods.map((item, index) => <li className={`receipt-invoice-clause${item.trim() ? "" : " is-empty"}`} key={`invoice-payment-${index}`}><textarea rows={1} aria-label={`付款方式 ${index + 1}`} value={item} onChange={(event) => update("paymentMethods", draft.paymentMethods.map((current, itemIndex) => itemIndex === index ? event.target.value : current))} /><button type="button" className="quote-pdf-edit-only receipt-invoice-clause-delete" aria-label={`刪除付款方式 ${index + 1}`} onClick={() => update("paymentMethods", draft.paymentMethods.filter((_, itemIndex) => itemIndex !== index))}><Minus /></button></li>)}</ol>
-      </section>
-    </section>
   );
   const invoiceSignature = (
     <>
@@ -410,16 +409,134 @@ export function ReceiptPdfEditorPage({
       </section>
     </>
   );
-  const invoiceTrailingContent = (
-    <div className="receipt-invoice-trailing" aria-label="條款、付款方式及簽署">
-      {invoiceNotes}
-      {invoiceSignature}
+  const brandEmail = getBrandContactEmail(
+    sourceBrand.channelEmail,
+    sourceBrand.channelName,
+    sourceBrand.shopifyStoreDomain,
+    sourceBrand.orderNumber,
+  );
+  const trailingUnits: ReceiptTrailingUnit[] = isInvoice
+    ? [
+        ...(draft.terms.length
+          ? draft.terms.map((_, itemIndex) => ({ kind: "term" as const, itemIndex }))
+          : [{ kind: "term" as const, itemIndex: null }]),
+        ...(draft.paymentMethods.length
+          ? draft.paymentMethods.map((_, itemIndex) => ({ kind: "payment" as const, itemIndex }))
+          : [{ kind: "payment" as const, itemIndex: null }]),
+        { kind: "node", key: "invoice-signature", node: <div className="receipt-invoice-trailing">{invoiceSignature}</div> },
+      ]
+    : [
+        { kind: "node", key: "receipt-payment", node: receiptPaymentContent },
+        { kind: "node", key: "receipt-signature", node: receiptSignatureContent },
+      ];
+  const trailingModulePages = splitPdfModuleIndexes(trailingUnits.length, trailingPageBreaks);
+  const totalPdfPages = productLinePages.length + Math.max(trailingModulePages.length - 1, 0);
+  const renderTrailingModules = (indexes: number[]) => {
+    const rendered: ReactNode[] = [];
+    for (let cursor = 0; cursor < indexes.length;) {
+      const moduleIndex = indexes[cursor];
+      const unit = trailingUnits[moduleIndex];
+      if (unit.kind === "node") {
+        rendered.push(
+          <div className="quote-pdf-auto-module" data-pdf-auto-module-index={moduleIndex} key={unit.key}>{unit.node}</div>,
+        );
+        cursor += 1;
+        continue;
+      }
+
+      const kind = unit.kind;
+      const run: Array<{ moduleIndex: number; itemIndex: number | null }> = [];
+      while (cursor < indexes.length) {
+        const nextModuleIndex = indexes[cursor];
+        const nextUnit = trailingUnits[nextModuleIndex];
+        if (nextUnit.kind !== kind) break;
+        run.push({ moduleIndex: nextModuleIndex, itemIndex: nextUnit.itemIndex });
+        cursor += 1;
+      }
+      const isTerm = kind === "term";
+      const isEmpty = run.every((item) => item.itemIndex === null);
+      const firstItemIndex = run.find((item) => item.itemIndex !== null)?.itemIndex ?? 0;
+      rendered.push(
+        <section
+          className={`quote-pdf-notes receipt-invoice-notes${isEmpty ? " is-empty" : ""}`}
+          aria-label={isTerm ? "條款、付款方式及簽署" : undefined}
+          key={`${kind}-${moduleIndex}`}
+        >
+          <section
+            className={`quote-pdf-note-block receipt-invoice-note-block${isEmpty ? " is-empty" : ""}`}
+            aria-label={isTerm ? "條款及付款方式" : undefined}
+            {...(isEmpty ? { "data-pdf-auto-module-index": moduleIndex } : {})}
+          >
+            <button type="button" className="quote-pdf-note-heading quote-pdf-edit-only" onClick={() => isTerm ? setTermsOpen(true) : setPaymentsOpen(true)}>
+              {isTerm ? "條款及細則：" : "付款方式："}<Plus aria-hidden="true" />
+            </button>
+            <strong className="quote-pdf-print-only receipt-invoice-print-heading">{isTerm ? "條款及細則：" : "付款方式："}</strong>
+            <ol style={{ counterReset: `quote-note ${firstItemIndex}` }}>
+              {run.map((item) => item.itemIndex === null ? null : (
+                <li
+                  className={`receipt-invoice-clause${(isTerm ? draft.terms[item.itemIndex] : draft.paymentMethods[item.itemIndex]).trim() ? "" : " is-empty"}`}
+                  data-pdf-auto-module-index={item.moduleIndex}
+                  key={`${kind}-${item.itemIndex}`}
+                >
+                  <textarea
+                    rows={1}
+                    aria-label={`${isTerm ? "條款及細則" : "付款方式"} ${item.itemIndex + 1}`}
+                    value={isTerm ? draft.terms[item.itemIndex] : draft.paymentMethods[item.itemIndex]}
+                    onChange={(event) => {
+                      if (isTerm) update("terms", draft.terms.map((current, itemIndex) => itemIndex === item.itemIndex ? event.target.value : current));
+                      else update("paymentMethods", draft.paymentMethods.map((current, itemIndex) => itemIndex === item.itemIndex ? event.target.value : current));
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="quote-pdf-edit-only receipt-invoice-clause-delete"
+                    aria-label={`刪除${isTerm ? "條款及細則" : "付款方式"} ${item.itemIndex + 1}`}
+                    onClick={() => isTerm
+                      ? update("terms", draft.terms.filter((_, itemIndex) => itemIndex !== item.itemIndex))
+                      : update("paymentMethods", draft.paymentMethods.filter((_, itemIndex) => itemIndex !== item.itemIndex))}
+                  ><Minus /></button>
+                </li>
+              ))}
+            </ol>
+          </section>
+        </section>,
+      );
+    }
+    return rendered;
+  };
+  const renderProductTable = (
+    lines: ReceiptPdfLineDraft[],
+    offset: number,
+    showTotals: boolean,
+  ) => (
+    <div className="receipt-pdf-table-wrap">
+      <table className="receipt-pdf-table">
+        <thead><tr><th aria-label="序號" /><th>Description</th><th>Unit Price</th><th>Qty</th><th>Total</th></tr></thead>
+        <tbody>
+          {lines.map((line, pageIndex) => {
+            const index = offset + pageIndex;
+            return (
+              <tr key={line.id}>
+                <td>{index + 1}</td>
+                <td><textarea aria-label={`產品 ${index + 1}`} rows={1} value={line.description} onChange={(event) => updateLine(index, { description: event.target.value })} /></td>
+                <td><span className="receipt-pdf-price-input"><span aria-hidden="true">$</span><input aria-label={`單價 ${index + 1}`} inputMode="decimal" size={Math.max(line.unitPrice.length, 1)} value={line.unitPrice} onChange={(event) => updateLine(index, { unitPrice: event.target.value })} onBlur={() => { if (!line.unitPrice.trim()) updateLine(index, { unitPrice: "0" }); }} /></span></td>
+                <td><input aria-label={`數量 ${index + 1}`} inputMode="decimal" value={line.quantity} onChange={(event) => updateLine(index, { quantity: event.target.value })} /></td>
+                <td>{money(numberValue(line.unitPrice) * numberValue(line.quantity))}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+        {showTotals ? <tfoot>
+          <tr><td colSpan={4}>Subtotal:</td><td>{money(totals.subtotal)}</td></tr>
+          <tr><td colSpan={4}><select className="quote-pdf-edit-only" aria-label="運費選項" value={draft.deliveryFeeId} onChange={(event) => selectDeliveryFee(event.target.value)}><option value="">Delivery Fee</option>{shippingFees.map((fee) => <option key={fee.id} value={fee.id}>{fee.item}</option>)}</select><span className="quote-pdf-print-only">{draft.deliveryFeeLabel}</span></td><td><span className="receipt-pdf-price-input">{draft.deliveryFee ? <span aria-hidden="true">$</span> : null}<input aria-label="運費" inputMode="decimal" size={Math.max(draft.deliveryFee.length, 1)} value={draft.deliveryFee} onChange={(event) => update("deliveryFee", event.target.value)} /></span></td></tr>
+          <tr><td colSpan={4}>Grand Total:</td><td>{money(totals.grandTotal)}</td></tr>
+        </tfoot> : null}
+      </table>
     </div>
   );
-  const trailingContent = isInvoice ? invoiceTrailingContent : receiptTrailingContent;
 
   return (
-    <section className="quote-pdf-editor receipt-pdf-editor">
+    <section ref={editorRef} className="quote-pdf-editor receipt-pdf-editor">
       <div className="quote-pdf-toolbar receipt-pdf-toolbar">
         <div>
           <strong>{documentName}工作稿</strong>
@@ -431,7 +548,7 @@ export function ReceiptPdfEditorPage({
         </div>
       </div>
 
-      <main className="quote-pdf-sheet receipt-pdf-sheet" aria-label={`${documentName} PDF`}>
+      <main className="quote-pdf-sheet receipt-pdf-sheet" data-pdf-auto-page={productLinePages.length === 1 ? "products" : undefined} aria-label={`${documentName} PDF`}>
         {letterhead}
 
         <div className="receipt-pdf-meta-grid">
@@ -449,40 +566,41 @@ export function ReceiptPdfEditorPage({
           <input id="receipt-delivery-time" value={draft.deliveryTime} onChange={(event) => update("deliveryTime", event.target.value)} />
         </div>
 
-        <div className="receipt-pdf-table-wrap">
-          <table className="receipt-pdf-table">
-            <thead><tr><th aria-label="序號" /><th>Description</th><th>Unit Price</th><th>Qty</th><th>Total</th></tr></thead>
-            <tbody>
-              {draft.lines.map((line, index) => (
-                <tr key={line.id}>
-                  <td>{index + 1}</td>
-                  <td><textarea aria-label={`產品 ${index + 1}`} rows={1} value={line.description} onChange={(event) => updateLine(index, { description: event.target.value })} /></td>
-                  <td><span className="receipt-pdf-price-input"><span aria-hidden="true">$</span><input aria-label={`單價 ${index + 1}`} inputMode="decimal" size={Math.max(line.unitPrice.length, 1)} value={line.unitPrice} onChange={(event) => updateLine(index, { unitPrice: event.target.value })} onBlur={() => { if (!line.unitPrice.trim()) updateLine(index, { unitPrice: "0" }); }} /></span></td>
-                  <td><input aria-label={`數量 ${index + 1}`} inputMode="decimal" value={line.quantity} onChange={(event) => updateLine(index, { quantity: event.target.value })} /></td>
-                  <td>{money(numberValue(line.unitPrice) * numberValue(line.quantity))}</td>
-                </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr><td colSpan={4}>Subtotal:</td><td>{money(totals.subtotal)}</td></tr>
-              <tr><td colSpan={4}><select className="quote-pdf-edit-only" aria-label="運費選項" value={draft.deliveryFeeId} onChange={(event) => selectDeliveryFee(event.target.value)}><option value="">Delivery Fee</option>{shippingFees.map((fee) => <option key={fee.id} value={fee.id}>{fee.item}</option>)}</select><span className="quote-pdf-print-only">{draft.deliveryFeeLabel}</span></td><td><span className="receipt-pdf-price-input">{draft.deliveryFee ? <span aria-hidden="true">$</span> : null}<input aria-label="運費" inputMode="decimal" size={Math.max(draft.deliveryFee.length, 1)} value={draft.deliveryFee} onChange={(event) => update("deliveryFee", event.target.value)} /></span></td></tr>
-              <tr><td colSpan={4}>Grand Total:</td><td>{money(totals.grandTotal)}</td></tr>
-            </tfoot>
-          </table>
-        </div>
+        {renderProductTable(productLinePages[0], 0, productLinePages.length === 1)}
 
-        {!draft.trailingStartsNewPage ? <>{trailingControls}{trailingContent}</> : null}
-        <ReceiptPdfPageFooter page={1} total={totalPdfPages} />
+        {productLinePages.length === 1 ? renderTrailingModules(trailingModulePages[0] ?? []) : null}
+        <ReceiptPdfPageFooter email={brandEmail} page={1} total={totalPdfPages} />
       </main>
 
-      {draft.trailingStartsNewPage ? (
-        <main className="quote-pdf-sheet quote-pdf-sheet-continuation receipt-pdf-sheet receipt-pdf-sheet-continuation" aria-label={`${documentName} PDF 第 2 頁`}>
-          {letterhead}
-          {trailingControls}
-          {trailingContent}
-          <ReceiptPdfPageFooter page={2} total={totalPdfPages} />
-        </main>
-      ) : null}
+      {productLinePages.slice(1).map((lines, pageIndex) => {
+        const page = pageIndex + 2;
+        const isFinalProductPage = page === productLinePages.length;
+        const offset = FIRST_PRODUCT_PAGE_SIZE + pageIndex * CONTINUATION_PRODUCT_PAGE_SIZE;
+        return (
+          <main className="quote-pdf-sheet quote-pdf-sheet-continuation receipt-pdf-sheet receipt-pdf-sheet-continuation receipt-pdf-product-continuation" data-pdf-auto-page={isFinalProductPage ? "products" : undefined} aria-label={`${documentName} PDF 第 ${page} 頁`} key={`products-${page}`}>
+            {letterhead}
+            {renderProductTable(lines, offset, isFinalProductPage)}
+            {isFinalProductPage ? renderTrailingModules(trailingModulePages[0] ?? []) : null}
+            <ReceiptPdfPageFooter email={brandEmail} page={page} total={totalPdfPages} />
+          </main>
+        );
+      })}
+
+      {trailingModulePages.slice(1).map((moduleIndexes, pageIndex) => {
+        const page = productLinePages.length + pageIndex + 1;
+        return (
+          <main
+            className="quote-pdf-sheet quote-pdf-sheet-continuation receipt-pdf-sheet receipt-pdf-sheet-continuation quote-pdf-auto-continuation"
+            data-pdf-auto-page="modules"
+            aria-label={`${documentName} PDF 第 ${page} 頁`}
+            key={`trailing-page-${page}`}
+          >
+            {letterhead}
+            {renderTrailingModules(moduleIndexes)}
+            <ReceiptPdfPageFooter email={brandEmail} page={page} total={totalPdfPages} />
+          </main>
+        );
+      })}
 
       {isInvoice ? (
         <>

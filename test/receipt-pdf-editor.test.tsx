@@ -12,6 +12,7 @@ const result: OrderDetailResult = {
     documentType: "order",
     channelId: "brand-1",
     channelName: "Catering",
+    channelEmail: "orders@hklunchbox.com",
     shopifyStoreDomain: "hklunchbox.myshopify.com",
     orderNumber: "B-1547",
     customerName: "Momo",
@@ -125,6 +126,7 @@ describe("Receipt PDF editor", () => {
     );
 
     const receipt = screen.getByRole("main", { name: "收據 PDF" });
+    expect(within(receipt).getByText("orders@hklunchbox.com")).toBeInTheDocument();
     expect(within(receipt).getByRole("columnheader", { name: "Description" })).toBeInTheDocument();
     expect(within(receipt).getByText("$1,650")).toBeInTheDocument();
     expect(screen.queryByText("公司認證及獎項")).not.toBeInTheDocument();
@@ -132,8 +134,7 @@ describe("Receipt PDF editor", () => {
     expect(screen.queryByRole("button", { name: "新增額外資訊" })).not.toBeInTheDocument();
   });
 
-  it("supports invoice clauses and moves the complete invoice trailing group together", async () => {
-    const user = userEvent.setup();
+  it("keeps invoice clauses and signing in document order without manual page controls", async () => {
     render(
       <MemoryRouter initialEntries={["/orders/order-1/invoice"]}>
         <Routes>
@@ -150,13 +151,8 @@ describe("Receipt PDF editor", () => {
     expect(within(firstPage).getByLabelText("付款方式 1")).toHaveValue("銀行轉帳。");
     expect(within(firstPage).getByLabelText("發票簽署")).toBeInTheDocument();
 
-    await user.click(within(firstPage).getByRole("button", { name: "下移一頁" }));
-    const secondPage = screen.getByRole("main", { name: "發票 PDF 第 2 頁" });
-    expect(within(firstPage).queryByLabelText("條款、付款方式及簽署")).not.toBeInTheDocument();
-    expect(within(secondPage).getByLabelText("條款、付款方式及簽署")).toBeInTheDocument();
-    expect(within(secondPage).getByLabelText("條款及細則 1")).toBeInTheDocument();
-    expect(within(secondPage).getByLabelText("付款方式 1")).toBeInTheDocument();
-    expect(within(secondPage).getByLabelText("發票簽署")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "下移一頁" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "上移一頁" })).not.toBeInTheDocument();
   });
 
   it("marks empty invoice clauses so print output can omit them without a blank page", async () => {
@@ -187,7 +183,7 @@ describe("Receipt PDF editor", () => {
     expect(screen.getByRole("dialog", { name: "付款方式" })).toBeInTheDocument();
   });
 
-  it("starts a populated invoice trailing group on page two when product rows would clip it", async () => {
+  it("keeps a populated invoice trailing group directly after the product rows", async () => {
     render(
       <MemoryRouter initialEntries={["/orders/order-1/invoice"]}>
         <Routes>
@@ -196,9 +192,11 @@ describe("Receipt PDF editor", () => {
       </MemoryRouter>,
     );
 
-    const secondPage = await screen.findByRole("main", { name: "發票 PDF 第 2 頁" });
-    expect(within(secondPage).getByLabelText("發票簽署")).toBeInTheDocument();
-    expect(within(screen.getByRole("main", { name: "發票 PDF" })).queryByLabelText("條款、付款方式及簽署")).not.toBeInTheDocument();
+    await screen.findByRole("heading", { name: "INVOICE" });
+    const firstPage = screen.getByRole("main", { name: "發票 PDF" });
+    expect(within(firstPage).getByLabelText("發票簽署")).toBeInTheDocument();
+    expect(within(firstPage).getByLabelText("條款、付款方式及簽署")).toBeInTheDocument();
+    expect(screen.queryByRole("main", { name: "發票 PDF 第 2 頁" })).not.toBeInTheDocument();
   });
 
   it("recalculates totals and automatically saves receipt edits", async () => {
@@ -217,8 +215,7 @@ describe("Receipt PDF editor", () => {
     expect(JSON.parse(window.localStorage.getItem("fccd:receipt-pdf-draft:order-1") || "{}").lines[0].unitPrice).toBe("50");
   });
 
-  it("uses only a real receipt reference and moves the payment block between pages", async () => {
-    const user = userEvent.setup();
+  it("uses only a real receipt reference and keeps payment details in sequence", async () => {
     renderPage(vi.fn().mockResolvedValue({
       ...result,
       payments: [{
@@ -235,16 +232,29 @@ describe("Receipt PDF editor", () => {
 
     expect(await screen.findByLabelText("收據編號")).toHaveValue("REC/#6939");
     const firstPage = screen.getByRole("main", { name: "收據 PDF" });
-    const controls = screen.getByLabelText("付款及蓋章分頁控制");
-    expect(within(controls).getByRole("button", { name: "上移一頁" })).toBeDisabled();
-
-    await user.click(within(controls).getByRole("button", { name: "下移一頁" }));
-    const secondPage = screen.getByRole("main", { name: "收據 PDF 第 2 頁" });
-    expect(within(firstPage).queryByLabelText("付款資料及公司蓋章")).not.toBeInTheDocument();
-    expect(within(secondPage).getByLabelText("付款資料及公司蓋章")).toBeInTheDocument();
-
-    await user.click(within(secondPage).getByRole("button", { name: "上移一頁" }));
-    expect(screen.queryByRole("main", { name: "收據 PDF 第 2 頁" })).not.toBeInTheDocument();
     expect(within(firstPage).getByLabelText("付款資料及公司蓋章")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "下移一頁" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "上移一頁" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("main", { name: "收據 PDF 第 2 頁" })).not.toBeInTheDocument();
+  });
+
+  it("automatically continues long receipt product tables on the next A4 sheet", async () => {
+    renderPage(vi.fn().mockResolvedValue({
+      ...result,
+      lines: Array.from({ length: 18 }, (_, index) => ({
+        ...result.lines[0],
+        id: `line-${index + 1}`,
+        productName: `產品 ${index + 1}`,
+      })),
+    }));
+
+    expect(await screen.findAllByRole("heading", { name: "RECEIPT" })).toHaveLength(2);
+    const sheets = document.querySelectorAll(".receipt-pdf-sheet");
+    expect(sheets).toHaveLength(2);
+    expect(sheets[0].querySelectorAll(".receipt-pdf-table tbody tr")).toHaveLength(10);
+    expect(sheets[1].querySelectorAll(".receipt-pdf-table tbody tr")).toHaveLength(8);
+    expect(sheets[0].querySelector("tfoot")).not.toBeInTheDocument();
+    expect(sheets[1].querySelector("tfoot")).toBeInTheDocument();
+    expect(within(sheets[1] as HTMLElement).getByLabelText("產品 18")).toHaveValue("產品 18");
   });
 });

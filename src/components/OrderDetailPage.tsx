@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import {
   CalendarDays,
   ChevronLeft,
+  Copy,
   FileText,
   Package,
   Pencil,
@@ -209,12 +210,20 @@ export function OrderDetailPage({
           aria-label={t("details.tags")}
         >
           {!isQuote && canEdit && (
-            <Button asChild variant="outline">
-              <Link to={`/orders/${order.id}/edit`}>
-                <Pencil />
-                編輯
-              </Link>
-            </Button>
+            <>
+              <Button asChild variant="outline">
+                <Link to={`/orders/new?copyFrom=${encodeURIComponent(order.id)}`}>
+                  <Copy />
+                  {t("orders.copy")}
+                </Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link to={`/orders/${order.id}/edit`}>
+                  <Pencil />
+                  編輯
+                </Link>
+              </Button>
+            </>
           )}
           <span className={cn("status-badge", status.tone)}>{status.label}</span>
           {tags.map((tag) => (
@@ -251,6 +260,11 @@ export function OrderDetailPage({
             </DetailField>
             <DetailField label={t("details.address")}>
               {order.address || emptyValue}
+            </DetailField>
+            <DetailField
+              label={`${t("quoteEditor.fields.customerNote")} (${t("quoteEditor.fields.customerNoteHint")})`}
+            >
+              {order.customerNote || emptyValue}
             </DetailField>
           </div>
         </article>

@@ -10,6 +10,7 @@ export type ReadOnlyOrderDetail = {
   documentType: "order" | "quote";
   channelId?: string | null;
   channelName?: string | null;
+  channelEmail?: string | null;
   orderNumber: string | null;
   customerName: string | null;
   companyName: string | null;
@@ -104,7 +105,7 @@ export type OrderDetailResult = {
 };
 
 const fields =
-  "id,document_type,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,shipping_address_snapshot,customer_note_snapshot,remarks,quote_status,quote_description_snapshot,delivery_terms_snapshot,delivery_at,delivery_time,ship_out_time,delivery_status,is_sent_to_factory,factory_date,factory_packing_note,factory_print_date,factory_reprint_required,currency,discount_amount,shipping_fee,grand_total,outstanding,bubble_created_at,created_at,updated_at,order_status_legacy_ids,channels(id,name),shopify_stores(shop_domain)";
+  "id,document_type,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,shipping_address_snapshot,customer_note_snapshot,remarks,quote_status,quote_description_snapshot,delivery_terms_snapshot,delivery_at,delivery_time,ship_out_time,delivery_status,is_sent_to_factory,factory_date,factory_packing_note,factory_print_date,factory_reprint_required,currency,discount_amount,shipping_fee,grand_total,outstanding,bubble_created_at,created_at,updated_at,order_status_legacy_ids,channels(id,name,email),shopify_stores(shop_domain)";
 
 function decimal(value: string | number | null) {
   return value === null ? null : Number.parseFloat(String(value));
@@ -121,7 +122,7 @@ function firstNonEmptyText(...values: unknown[]): string | null {
 
 function relatedCatalogText(
   relation: unknown,
-  field: "name" | "sku" | "shop_domain",
+  field: "name" | "sku" | "shop_domain" | "email",
 ): string | null {
   const row = Array.isArray(relation) ? relation[0] : relation;
   return row && typeof row === "object" && field in row
@@ -260,6 +261,7 @@ export async function fetchOrderDetail(
     documentType: data.document_type as "order" | "quote",
     channelId: relatedCatalogId(data.channels),
     channelName: relatedCatalogText(data.channels, "name"),
+    channelEmail: relatedCatalogText(data.channels, "email"),
     orderNumber: data.order_number,
     customerName: data.customer_name_snapshot,
     companyName: data.company_name_snapshot,
