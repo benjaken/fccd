@@ -124,6 +124,24 @@ describe("report AI snapshot seam", () => {
     expect(request.max_tokens).toBeGreaterThanOrEqual(6_000);
   });
 
+  it("uses xAI reasoning controls without sending DeepSeek-only fields", () => {
+    const request = buildReportAiProviderRequest({
+      model: "grok-4.6",
+      provider: "xai",
+      endpoint: "https://api.x.ai/v1/chat/completions",
+      systemPrompt: "Return one JSON object",
+      reportContext: { currentAggregates: [] },
+    });
+
+    expect(request).toMatchObject({
+      model: "grok-4.6",
+      response_format: { type: "json_object" },
+      reasoning_effort: "low",
+      stream: true,
+    });
+    expect(request).not.toHaveProperty("thinking");
+  });
+
   it("accepts display-formatted numbers only when their numeric value is exact", () => {
     expect(sameReportAiScalar("82,258", 82258)).toBe(true);
     expect(sameReportAiScalar("82,259", 82258)).toBe(false);

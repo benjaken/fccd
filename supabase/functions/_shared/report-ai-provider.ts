@@ -72,14 +72,20 @@ export function canonicalReportAiEvidence(
 
 export function buildReportAiProviderRequest(input: {
   model: string;
+  provider?: string;
+  endpoint?: string;
   systemPrompt: string;
   reportContext: unknown;
 }) {
+  const isXai = ["xai", "grok"].includes(input.provider?.toLowerCase() ?? "") ||
+    /api\.x\.ai\/v1\/chat\/completions/i.test(input.endpoint ?? "");
   return {
     model: input.model,
     response_format: { type: "json_object" as const },
     temperature: 0.1,
-    thinking: { type: "disabled" as const },
+    ...(isXai
+      ? { reasoning_effort: "low" as const }
+      : { thinking: { type: "disabled" as const } }),
     max_tokens: REPORT_AI_MAX_OUTPUT_TOKENS,
     stream: true,
     messages: [

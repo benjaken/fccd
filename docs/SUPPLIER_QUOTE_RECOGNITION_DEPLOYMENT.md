@@ -28,7 +28,8 @@ unconfirmed candidates.
 | `SUPPLIER_QUOTE_AI_PROVIDER` | unset | Provider audit label |
 | `SUPPLIER_QUOTE_AI_ENDPOINT` | unset | Structured recognition endpoint |
 | `SUPPLIER_QUOTE_AI_MODEL` | unset | Model/version label |
-| `SUPPLIER_QUOTE_AI_API_KEY` | unset | Server-only provider secret |
+| `XAI_API_KEY` | unset | Shared server-only xAI secret for report and supplier AI |
+| `SUPPLIER_QUOTE_AI_API_KEY` | unset | Legacy/provider-specific fallback secret |
 | `SUPPLIER_QUOTE_AI_TIMEOUT_MS` | `12000` | Per-attempt timeout |
 | `SUPPLIER_QUOTE_AI_MAX_RETRIES` | `1` | Retry ceiling |
 | `SUPPLIER_QUOTE_AI_MAX_INPUT_CHARS` | `80000` | Layout-fragment input ceiling |
@@ -46,12 +47,15 @@ and reads the structured JSON from `output_text`. `gpt-5.6-luna` is the default
 deployment choice for this cost-sensitive extraction fallback; change the model
 secret independently if a higher-quality tier is required.
 
-For DeepSeek, use `https://api.deepseek.com/chat/completions` with
-`deepseek-v4-flash`. The adapter requests JSON Output, includes the complete
-candidate shape in the system message, disables thinking mode, and reads
-`choices[0].message.content`. DeepSeek can occasionally return empty content in
-JSON mode, so keep at least one bounded retry; persistent empty or invalid output
-fails closed and leaves deterministic recognition available for review.
+For xAI, use `https://api.x.ai/v1/chat/completions` with `grok-4.6`. The adapter
+requests JSON Output, includes the complete candidate shape in the system
+message, sets reasoning effort to `low`, and reads
+`choices[0].message.content`. Keep at least one bounded retry; persistent empty
+or invalid output fails closed and leaves deterministic recognition available
+for review. Store the xAI key only in the server-side `XAI_API_KEY` secret.
+
+The DeepSeek Chat Completions contract remains supported as a rollback path, but
+new deployments use xAI/Grok.
 
 ## Targeted checks
 

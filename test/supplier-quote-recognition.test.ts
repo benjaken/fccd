@@ -263,6 +263,23 @@ describe("provider-neutral AI fallback", () => {
     expect(result).toMatchObject({ status: "failed", candidates: [], error: "deepseek_output_content_missing" });
   });
 
+  it("uses xAI Chat Completions structured JSON and reads Grok message content", async () => {
+    let sent: Record<string, unknown> = {};
+    const source = evidenceCandidate();
+    const result = await recognizeWithAi(blocks, { ...config, provider: "xai",
+      endpoint: "https://api.x.ai/v1/chat/completions", model: "grok-4.6",
+      fetchImpl: vi.fn(async (_url, init) => {
+        sent = JSON.parse(String(init?.body));
+        return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify({ candidates: [source] }) } }] }), { status: 200 });
+      }) });
+    expect(sent).toMatchObject({ model: "grok-4.6", response_format: { type: "json_object" },
+      reasoning_effort: "low", stream: false });
+    expect(sent).toHaveProperty("messages");
+    expect(sent).not.toHaveProperty("thinking");
+    expect(sent).not.toHaveProperty("input");
+    expect(result).toMatchObject({ status: "ok", candidates: [{ modelVersion: "grok-4.6" }] });
+  });
+
   it("fails closed for malformed JSON, timeout and unconfigured provider", async () => {
     const malformed = await recognizeWithAi(blocks, { ...config, fetchImpl: vi.fn(async () =>
       new Response(JSON.stringify({ candidates: [{ productName: "missing evidence" }] }), { status: 200 })) });
