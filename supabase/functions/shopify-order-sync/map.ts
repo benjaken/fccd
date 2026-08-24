@@ -129,6 +129,17 @@ export function normalizeShopDomain(value: string | null | undefined): string | 
   return trimmed;
 }
 
+export function shopDomainMatches(
+  candidate: string | null | undefined,
+  configuredDomains: Array<string | null | undefined>,
+): boolean {
+  const normalizedCandidate = normalizeShopDomain(candidate);
+  if (!normalizedCandidate) return false;
+  return configuredDomains.some((domain) =>
+    normalizeShopDomain(domain) === normalizedCandidate
+  );
+}
+
 function attrMap(
   attrs: Array<{ name?: string; value?: string | null }> | undefined,
 ): Map<string, string> {

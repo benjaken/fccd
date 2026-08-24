@@ -15,6 +15,7 @@ import {
   resolveShopifySkuSnapshot,
   resolveOperationalOrderMatch,
   resolveAliasSku,
+  shopDomainMatches,
   replaceShopifyLunchBoxAggregate,
   shopifyCateringUtensilPacks,
   shopifyMenuOptionLegacyId,
@@ -23,6 +24,7 @@ import {
   type ShopifyRestTransaction,
   type ShopifyMenuRemarkSource,
 } from "./map.ts";
+import { corsHeaders, jsonResponse } from "./response.ts";
 
 const API_VERSION = "2025-07";
 const DEFAULT_LIMIT = 50;
@@ -95,16 +97,6 @@ type FetchResult =
 type TxnFetchResult =
   | { transactions: ShopifyRestTransaction[] }
   | { error: string; status: number };
-
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      "Content-Type": "application/json",
-      "Cache-Control": "no-store",
-    },
-  });
-}
 
 function serviceKey(): string {
   const legacy = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim();
@@ -246,6 +238,18 @@ async function verifyShopifyWebhook(
 
 function envFor(prefix: string, suffix: string): string | null {
   return Deno.env.get(`${prefix}_${suffix}`)?.trim() || null;
+}
+
+function webhookShopDomains(storeRow: StoreRow): string[] {
+  const aliases = envFor(storeRow.secret_prefix, "SHOP_ALIASES")
+    ?.split(",")
+    .map((domain) => domain.trim())
+    .filter(Boolean) ?? [];
+  return [
+    storeRow.shop_domain,
+    envFor(storeRow.secret_prefix, "SHOP"),
+    ...aliases,
+  ].filter((domain): domain is string => Boolean(domain));
 }
 
 async function shopifyAccessToken(input: {
@@ -1665,14 +1669,7 @@ async function syncSingleOrder(input: {
 
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") {
-    return new Response("ok", {
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers":
-          "authorization, x-client-info, apikey, content-type, x-cron-secret, x-shopify-hmac-sha256, x-shopify-topic, x-shopify-shop-domain",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-      },
-    });
+    return new Response("ok", { headers: corsHeaders });
   }
   if (request.method !== "POST") {
     return jsonResponse({ error: "method_not_allowed" }, 405);
@@ -1713,7 +1710,7 @@ Deno.serve(async (request) => {
       return jsonResponse({ error: "store_lookup_failed" }, 500);
     }
     const storeRow = (stores ?? []).find((store) =>
-      normalizeShopDomain(store.shop_domain) === shopDomain
+      shopDomainMatches(shopDomain, webhookShopDomains(store as StoreRow))
     ) as StoreRow | undefined;
     if (!storeRow) return jsonResponse({ error: "store_not_found" }, 404);
     if (!(await verifyShopifyWebhook(request, storeRow, rawBody))) {

@@ -19,6 +19,7 @@ import {
   shopifyFinancialStatus,
   shopifyOutstanding,
   shopifyTransactionLegacyId,
+  shopDomainMatches,
   stripSkuSuffix,
 } from "../supabase/functions/shopify-order-sync/map.ts";
 
@@ -31,6 +32,20 @@ const baseInput = {
   orderNumber: "#1001",
   orderCurrency: "HKD",
 };
+
+describe("Shopify store domain aliases", () => {
+  it("accepts the configured primary domain and aliases only", () => {
+    const configuredDomains = [
+      "hklunchbox.myshopify.com",
+      "test-bisbis.myshopify.com",
+    ];
+
+    expect(shopDomainMatches("hklunchbox.myshopify.com", configuredDomains)).toBe(true);
+    expect(shopDomainMatches("https://TEST-BISBIS.myshopify.com/admin", configuredDomains)).toBe(true);
+    expect(shopDomainMatches("another-store.myshopify.com", configuredDomains)).toBe(false);
+    expect(shopDomainMatches("hklunchbox.com", configuredDomains)).toBe(false);
+  });
+});
 
 describe("shopify transaction mapping", () => {
   it("maps a successful sale transaction into a payments row", () => {
