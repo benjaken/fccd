@@ -307,6 +307,21 @@ export function orderDraftTotals(draft: OrderEditorDraft) {
   return { subtotal, total, paid, outstanding: Math.max(0, total - paid) };
 }
 
+export function clearOrderCustomerInfo(
+  draft: OrderEditorDraft,
+): OrderEditorDraft {
+  return {
+    ...draft,
+    customerName: "",
+    companyName: "",
+    contactA: "",
+    contactB: "",
+    email: "",
+    address: "",
+    customerNote: "",
+  };
+}
+
 export type OrderPaymentStatus = "unpaid" | "partial" | "paid";
 
 export function orderPaymentStatus({

@@ -72,6 +72,28 @@ export async function fetchOrderListFilterOptions(): Promise<OrderListFilterOpti
   };
 }
 
+export async function assignFestivalToOrders(
+  orderIds: readonly string[],
+  festivalId: string,
+) {
+  if (!orderIds.length) return;
+  const { data: festival, error: festivalError } = await supabase
+    .from("festivals")
+    .select("id,legacy_id")
+    .eq("id", festivalId)
+    .eq("is_active", true)
+    .single();
+  if (festivalError) throw festivalError;
+  const { error } = await supabase
+    .from("orders")
+    .update({
+      festival_id: festival.id,
+      festival_legacy_id: festival.legacy_id,
+    })
+    .in("id", [...orderIds]);
+  if (error) throw error;
+}
+
 /**
  * The list enhancement is deployed independently from the existing orders
  * table. Until its migration has been applied, the core order list must keep
