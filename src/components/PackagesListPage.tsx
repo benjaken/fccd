@@ -17,6 +17,12 @@ import { ListTable } from "@/components/ui/list-table";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { detailFromLocation } from "@/lib/detail-navigation";
 import {
+  DICT_TYPE,
+  dictItemLabel,
+  dictSelectOptions,
+  useDictItems,
+} from "@/lib/dictionaries";
+import {
   archivePackage,
   fetchPackages,
   PACKAGES_PAGE_SIZE,
@@ -60,6 +66,7 @@ export function PackagesListPage({
   archiveItem?: PackageArchiver;
 }) {
   const { t, i18n } = useTranslation();
+  const catalogStatusDictionary = useDictItems(DICT_TYPE.catalogStatus);
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -203,8 +210,14 @@ export function PackagesListPage({
   const displayName = (item: PackageListItem) =>
     item.chineseName || item.name || t("common.notSet");
 
-  const statusLabel = (item: PackageListItem) =>
-    item.isActive ? t("packages.active") : item.status || t("packages.inactive");
+  const statusLabel = (item: PackageListItem) => {
+    const statusItem = catalogStatusDictionary.items.find(
+      (candidate) => candidate.value === item.status,
+    );
+    return statusItem
+      ? dictItemLabel(statusItem, i18n.language)
+      : item.status || t("packages.inactive");
+  };
 
   const openPackage = (packageId: string) => {
     navigate(`/products/packages/${packageId}`, {
@@ -288,8 +301,15 @@ export function PackagesListPage({
                     }}
                   >
                     <option value="">{t("packages.allStatuses")}</option>
-                    <option value="Active">{t("packages.active")}</option>
-                    <option value="Inactive">{t("packages.inactive")}</option>
+                    {dictSelectOptions(
+                      catalogStatusDictionary.items,
+                      i18n.language,
+                      statusFilter.value,
+                    ).map((item) => (
+                      <option key={item.value} value={item.value}>
+                        {item.label}
+                      </option>
+                    ))}
                   </select>
                 </label>
               </div>

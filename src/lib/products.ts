@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { DICT_TYPE, fetchDictItems, type DictItem } from "@/lib/dictionaries";
 
 export const PRODUCTS_PAGE_SIZE = 15;
 
@@ -50,15 +51,9 @@ export type ProductListResult = {
   total: number;
 };
 
-export type ProductPriceRange =
-  | ""
-  | "under-100"
-  | "100-299"
-  | "300-799"
-  | "800-1999"
-  | "2000-plus";
+export type ProductPriceRange = string;
 
-export type ProductStatusFilter = "" | "Active" | "Inactive" | "unset";
+export type ProductStatusFilter = string;
 export type ProductSortField = "sku" | "name" | "price";
 
 export type ProductListFilters = {
@@ -76,17 +71,15 @@ export type ProductListFilters = {
   preset?: ProductPreset;
 };
 
-export const PRODUCT_PRICE_RANGES: Array<{
-  value: Exclude<ProductPriceRange, "">;
-  min: number;
-  max: number | null;
-}> = [
-  { value: "under-100", min: 0, max: 100 },
-  { value: "100-299", min: 100, max: 300 },
-  { value: "300-799", min: 300, max: 800 },
-  { value: "800-1999", min: 800, max: 2000 },
-  { value: "2000-plus", min: 2000, max: null },
-];
+export function productPriceRangeBounds(items: readonly DictItem[], value: string) {
+  const item = items.find((candidate) => candidate.value === value);
+  if (!item) return null;
+  const min = Number(item.metadata.min);
+  const rawMax = item.metadata.max;
+  const max = rawMax === null || rawMax === undefined ? null : Number(rawMax);
+  if (!Number.isFinite(min) || (max !== null && !Number.isFinite(max))) return null;
+  return { min, max };
+}
 
 export type CatalogOption = {
   id: string;
@@ -516,7 +509,12 @@ export async function fetchProducts({
     query = query.eq("status", status);
   }
 
-  const range = PRODUCT_PRICE_RANGES.find((item) => item.value === priceRange);
+  const range = priceRange
+    ? productPriceRangeBounds(
+        await fetchDictItems(DICT_TYPE.productPriceRange),
+        priceRange,
+      )
+    : null;
   if (range) {
     query = query.gte("price", range.min);
     if (range.max !== null) {
@@ -625,7 +623,7 @@ export async function fetchProducts({
         priceMin: toNumber(row.price_min),
         priceMax: toNumber(row.price_max),
         status: row.status,
-        isActive: row.is_active,
+        isActive: row.status ? row.status === "Active" : row.is_active,
         isBentoRecommended: Boolean(row.is_bento_recommended),
         channelId: channel?.id ?? null,
         channelName: channel?.name ?? null,
@@ -801,7 +799,7 @@ export async function fetchProductDetail(
     priceMin: toNumber(row.price_min),
     priceMax: toNumber(row.price_max),
     status: row.status,
-    isActive: row.is_active,
+    isActive: row.status ? row.status === "Active" : row.is_active,
     isBentoRecommended: row.is_bento_recommended,
     channelId: channel?.id ?? null,
     channelName: channel?.name ?? null,

@@ -71,6 +71,6 @@ describe("package SKU list filter", () => {
       sortAscending: true,
     });
 
-    expect(query.eq).toHaveBeenCalledWith("is_active", true);
+    expect(query.eq).toHaveBeenCalledWith("status", "Active");
   });
 });

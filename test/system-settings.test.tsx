@@ -881,6 +881,74 @@ describe("Super Admin system settings", () => {
     expect(orderListSettingsTitle).toContain("訂單列表設定");
     expect(orderListSettingsTitle).toContain("settings.order_lists");
 
+    const movedOrderListTips = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260823010000_move_order_list_tips_to_order_settings.sql",
+      ),
+      "utf8",
+    );
+    expect(movedOrderListTips).toContain("訂單列表提示");
+    expect(movedOrderListTips).toContain("/orders/settings/order-list-tips");
+    expect(movedOrderListTips).toContain("parent_page_key = 'orders.settings'");
+
+    const configurableDictionaries = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260823020000_configurable_dictionaries.sql",
+      ),
+      "utf8",
+    );
+    expect(configurableDictionaries).toContain("create table if not exists public.dict_types");
+    expect(configurableDictionaries).toContain("create table if not exists public.dict_items");
+    expect(configurableDictionaries).toContain("settings.dictionaries.edit");
+    expect(configurableDictionaries).toContain("/settings/dictionaries");
+    expect(configurableDictionaries).toContain("'quote_status'");
+    expect(configurableDictionaries).toContain("'restaurant_monthly_pnl_category'");
+    expect(configurableDictionaries).toContain("'kitchen_advertising_festival'");
+    expect(configurableDictionaries).toContain(
+      "drop constraint if exists restaurant_monthly_pnl_cost_categories_category_check",
+    );
+
+    const expandedDictionaries = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260823030000_expand_configurable_dictionaries.sql",
+      ),
+      "utf8",
+    );
+    expect(expandedDictionaries).toContain("'order_manual_todo'");
+    expect(expandedDictionaries).toContain("'supplier_quote_price_unit'");
+    expect(expandedDictionaries).toContain("'catalog_status'");
+    expect(expandedDictionaries).toContain("'product_price_range'");
+    expect(expandedDictionaries).toContain("validate_order_manual_todo_dict");
+    expect(expandedDictionaries).toContain("validate_supplier_quote_price_unit_dict");
+    expect(expandedDictionaries).toContain("validate_product_status_dict");
+    expect(expandedDictionaries).toContain("validate_package_status_dict");
+
+    const supplierQuotePackUnit = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260823041000_add_supplier_quote_pack_price_unit.sql",
+      ),
+      "utf8",
+    );
+    expect(supplierQuotePackUnit).toContain("'supplier_quote_price_unit'");
+    expect(supplierQuotePackUnit).toContain("'pack'");
+    expect(supplierQuotePackUnit).toContain("'包'");
+
+    const districtSettings = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260823042000_delivery_district_settings.sql",
+      ),
+      "utf8",
+    );
+    expect(districtSettings).toContain("'settings.districts'");
+    expect(districtSettings).toContain("'settings.districts.edit'");
+    expect(districtSettings).toContain("/settings/districts");
+    expect(districtSettings).toContain("private.has_page_access('settings.districts.edit')");
+
     const servingCalendarMove = readFileSync(
       path.resolve(
         process.cwd(),

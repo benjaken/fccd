@@ -58,20 +58,19 @@ import {
 } from "@/lib/quote-editor";
 import { cn } from "@/lib/utils";
 import {
-  QUOTE_ACTIVITY_OPTIONS,
-  QUOTE_ADDITIONAL_INFO_OPTIONS,
   readQuotePdfSupplements,
   writeQuotePdfSupplements,
   type QuotePdfSupplementDraft,
 } from "@/lib/quote-pdf-draft";
 import { fetchShippingFees, type ShippingFee } from "@/lib/shipping-fees";
-import { convertQuoteToOrder, QUOTE_STATUS_OPTIONS } from "@/lib/quotes";
+import { convertQuoteToOrder } from "@/lib/quotes";
 import { useDetailBackTo } from "@/lib/detail-navigation";
 import {
   normalizeDoNotSendToFactory,
   saveOrderFactorySettings,
   type OrderFactorySettings,
 } from "@/lib/order-factory-settings";
+import { DICT_TYPE, dictItemLabel, useDictItems } from "@/lib/dictionaries";
 
 const loadConfiguredShippingFees = async () => (await fetchShippingFees(1, 1000)).rows;
 
@@ -86,19 +85,6 @@ const EMPTY_OPTIONS: QuoteEditorOptions = {
   paymentMethods: [],
 };
 
-const DELIVERY_TIME_OPTIONS = [
-  "10:00 - 11:00",
-  "11:00 - 12:00",
-  "12:00 - 13:00",
-  "13:00 - 14:00",
-  "14:00 - 15:00",
-  "15:00 - 16:00",
-  "16:00 - 17:00",
-  "17:00 - 18:00",
-  "18:00 - 19:00",
-  "19:00 - 20:00",
-];
-
 const DELIVERY_ADDRESS_METHODS = new Set(["車邊交收", "送貨上門"]);
 
 function automaticDistrictForMethod(name: string) {
@@ -107,18 +93,6 @@ function automaticDistrictForMethod(name: string) {
   if (name.startsWith("寫字樓")) return "寫字樓";
   return null;
 }
-
-function quarterHourOptions(startHour = 8, startMinute = 30, endHour = 20) {
-  const values: string[] = [];
-  for (let minutes = startHour * 60 + startMinute; minutes <= endHour * 60; minutes += 15) {
-    const hours = Math.floor(minutes / 60);
-    const minute = minutes % 60;
-    values.push(`${String(hours).padStart(2, "0")}:${String(minute).padStart(2, "0")}`);
-  }
-  return values;
-}
-
-const SHIP_OUT_TIME_OPTIONS = quarterHourOptions();
 
 function hongKongToday() {
   return new Intl.DateTimeFormat("en-CA", {
@@ -247,6 +221,19 @@ export function QuoteEditorPage({
   saveFactorySettings = saveOrderFactorySettings,
 }: Props) {
   const { t, i18n } = useTranslation();
+  const additionalInfoDict = useDictItems(DICT_TYPE.quoteAdditionalInfo);
+  const activityDict = useDictItems(DICT_TYPE.quoteActivity);
+  const deliveryTimeDict = useDictItems(DICT_TYPE.deliveryTimeSlot);
+  const shipOutTimeDict = useDictItems(DICT_TYPE.shipOutTimeSlot);
+  const quoteStatusDict = useDictItems(DICT_TYPE.quoteStatus);
+  const additionalInfoOptions = additionalInfoDict.items.map((item) => dictItemLabel(item, i18n.language));
+  const activityOptions = activityDict.items.map((item) => ({ description: dictItemLabel(item, i18n.language), amount: String(item.metadata.amount ?? "0") }));
+  const deliveryTimeOptions = deliveryTimeDict.items.map((item) => item.value);
+  const shipOutTimeOptions = shipOutTimeDict.items.map((item) => item.value);
+  const quoteStatusOptions = quoteStatusDict.items.map((item) => ({
+    value: item.value,
+    label: dictItemLabel(item, i18n.language),
+  }));
   const navigate = useNavigate();
   const { id = "" } = useParams();
   const [searchParams] = useSearchParams();
@@ -840,7 +827,7 @@ export function QuoteEditorPage({
     }
   };
 
-  if (loading) return <PageSkeleton cards={2} label={t("quoteEditor.loading")} variant="detail" />;
+  if (loading) return <PageSkeleton detailLayout="document" label={t("quoteEditor.loading")} variant="detail" />;
 
   if (readOnly && activeQuote) {
     const displayValue = (value?: string | number | null) =>
@@ -1078,14 +1065,15 @@ export function QuoteEditorPage({
 
           <div className="quote-editor-form-column">
             <h2><PackagePlus />{t("quoteEditor.deliverySection")}</h2>
-            {!isOrder ? <label><span>{t("quoteEditor.fields.quoteStatus")}</span><select aria-label={t("quoteEditor.fields.quoteStatus")} value={draft.quoteStatus} onChange={(event) => patchDraft({ quoteStatus: event.target.value })}><option value="">{t("common.notSet")}</option>{QUOTE_STATUS_OPTIONS.map((status) => <option key={status} value={status}>{status}</option>)}</select></label> : null}
+            {!isOrder ? <label><span>{t("quoteEditor.fields.quoteStatus")}</span><select aria-label={t("quoteEditor.fields.quoteStatus")} value={draft.quoteStatus} onChange={(event) => patchDraft({ quoteStatus: event.target.value })}><option value="">{t("common.notSet")}</option>{draft.quoteStatus && !quoteStatusOptions.some((option) => option.value === draft.quoteStatus) ? <option value={draft.quoteStatus}>{draft.quoteStatus}</option> : null}{quoteStatusOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label> : null}
+            {!isOrder && draft.quoteAutoClosedAt && draft.quoteStatus !== "Case Closed" ? <label><span>{t("quoteEditor.fields.quoteReopenReason")}</span><textarea required rows={2} value={draft.quoteReopenReason ?? ""} onChange={(event) => patchDraft({ quoteReopenReason: event.target.value })} /></label> : null}
             {!isOrder ? <label><span>{t("quoteEditor.fields.quoteSalesSource")}</span><select aria-label={t("quoteEditor.fields.quoteSalesSource")} value={draft.quoteSalesSourceId} onChange={(event) => patchDraft({ quoteSalesSourceId: event.target.value })}><option value="">{t("common.notSet")}</option>{options.quoteSalesSources.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label> : null}
             {!isOrder ? <label><span>{t("quoteEditor.fields.quoteCommunicationChannel")}</span><select aria-label={t("quoteEditor.fields.quoteCommunicationChannel")} value={draft.quoteCommunicationChannelId} onChange={(event) => patchDraft({ quoteCommunicationChannelId: event.target.value })}><option value="">{t("common.notSet")}</option>{options.quoteCommunicationChannels.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label> : null}
             <label><span>{t("quoteEditor.fields.district")} *</span><select aria-label={t("quoteEditor.fields.district")} value={automaticDistrictName ? `auto:${automaticDistrictName}` : draft.districtId} disabled={Boolean(automaticDistrictName)} onChange={(event) => patchDraft({ districtId: event.target.value, districtName: "" })} aria-invalid={Boolean(fieldErrors.districtId)}>{automaticDistrictName && <option value={`auto:${automaticDistrictName}`}>{automaticDistrictName}</option>}<option value="">{t("common.notSet")}</option>{districts.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>{fieldErrors.districtId && <em>{fieldErrors.districtId}</em>}</label>
             <label><span>{t("quoteEditor.fields.shippingMethod")} *</span><select required aria-label={t("quoteEditor.fields.shippingMethod")} value={draft.shippingMethodId} onChange={(event) => changeShippingMethod(event.target.value)} aria-invalid={Boolean(fieldErrors.shippingMethodId)}><option value="">{t("common.notSet")}</option>{options.shippingMethods.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>{fieldErrors.shippingMethodId && <em>{fieldErrors.shippingMethodId}</em>}</label>
             <label><span>{t("quoteEditor.fields.deliveryDate")}</span><input type="date" value={draft.deliveryDate} onChange={(event) => patchDraft({ deliveryDate: event.target.value })} /></label>
-            <label><span>{t("quoteEditor.fields.deliveryTime")} *</span><div className="quote-time-control"><select required aria-label={t("quoteEditor.fields.deliveryTime")} value={deliveryTimeMode === "custom" ? "custom" : draft.deliveryTime} onChange={(event) => { const value = event.target.value; setDeliveryTimeMode(value === "custom" ? "custom" : ""); patchDraft({ deliveryTime: value === "custom" ? "" : value }); }} aria-invalid={Boolean(fieldErrors.deliveryTime)}><option value="">{t("quoteEditor.placeholders.deliveryTimeSelectPlaceholder")}</option><option value="custom">{t("quoteEditor.custom")}</option>{DELIVERY_TIME_OPTIONS.map((time) => <option key={time} value={time}>{time}</option>)}</select>{deliveryTimeMode === "custom" && <input required value={draft.deliveryTime} onChange={(event) => patchDraft({ deliveryTime: event.target.value })} placeholder={t("quoteEditor.placeholders.customDeliveryTimePlaceholder")} />}</div>{fieldErrors.deliveryTime && <em>{fieldErrors.deliveryTime}</em>}</label>
-            <label><span>{t("quoteEditor.fields.shipOutTime")}</span><select value={draft.shipOutTime} onChange={(event) => patchDraft({ shipOutTime: event.target.value })}><option value="">{t("quoteEditor.placeholders.shipOutTimeSelectPlaceholder")}</option>{SHIP_OUT_TIME_OPTIONS.map((time) => <option key={time} value={time}>{time}</option>)}</select></label>
+            <label><span>{t("quoteEditor.fields.deliveryTime")} *</span><div className="quote-time-control"><select required aria-label={t("quoteEditor.fields.deliveryTime")} value={deliveryTimeMode === "custom" ? "custom" : draft.deliveryTime} onChange={(event) => { const value = event.target.value; setDeliveryTimeMode(value === "custom" ? "custom" : ""); patchDraft({ deliveryTime: value === "custom" ? "" : value }); }} aria-invalid={Boolean(fieldErrors.deliveryTime)}><option value="">{t("quoteEditor.placeholders.deliveryTimeSelectPlaceholder")}</option><option value="custom">{t("quoteEditor.custom")}</option>{deliveryTimeOptions.map((time) => <option key={time} value={time}>{time}</option>)}</select>{deliveryTimeMode === "custom" && <input required value={draft.deliveryTime} onChange={(event) => patchDraft({ deliveryTime: event.target.value })} placeholder={t("quoteEditor.placeholders.customDeliveryTimePlaceholder")} />}</div>{fieldErrors.deliveryTime && <em>{fieldErrors.deliveryTime}</em>}</label>
+            <label><span>{t("quoteEditor.fields.shipOutTime")}</span><select value={draft.shipOutTime} onChange={(event) => patchDraft({ shipOutTime: event.target.value })}><option value="">{t("quoteEditor.placeholders.shipOutTimeSelectPlaceholder")}</option>{shipOutTimeOptions.map((time) => <option key={time} value={time}>{time}</option>)}</select></label>
             {!isOrder ? <label><span>{t("quoteEditor.fields.customerNote")}<small>{t("quoteEditor.fields.customerNoteHint")}</small></span><textarea rows={2} value={draft.customerNote} onChange={(event) => patchDraft({ customerNote: event.target.value })} /></label> : null}
             <label><span>{t("quoteEditor.fields.packingNote")}<small>{t("quoteEditor.fields.packingNoteHint")}</small></span><textarea rows={2} value={draft.packingNote} onChange={(event) => patchDraft({ packingNote: event.target.value })} /></label>
             <label><span>{t("quoteEditor.fields.salesPartner")}</span><select value={draft.salesPartnerId} onChange={(event) => patchDraft({ salesPartnerId: event.target.value })}><option value="">{t("common.notSet")}</option>{options.salesPartners.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
@@ -1252,14 +1240,14 @@ export function QuoteEditorPage({
         <Modal open={additionalOpen} onClose={() => setAdditionalOpen(false)} title="額外資訊" closeLabel="關閉額外資訊" size="lg" footer={<Button onClick={() => setAdditionalOpen(false)}>確定</Button>}>
           <div className="quote-additional-picker">
             <div className="quote-additional-search"><Search /><input autoFocus aria-label="搜尋額外資訊" placeholder={t("quoteEditor.placeholders.additionalSearchPlaceholder")} value={additionalSearch} onChange={(event) => setAdditionalSearch(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") addAdditionalInfo(additionalSearch); }} /><Button variant="outline" onClick={() => addAdditionalInfo(additionalSearch)}>Add</Button></div>
-            <ul>{QUOTE_ADDITIONAL_INFO_OPTIONS.filter((option) => !additionalSearch.trim() || option.toLocaleLowerCase().includes(additionalSearch.trim().toLocaleLowerCase())).map((option) => <li key={option}><span>{option}</span><Button size="sm" variant="outline" onClick={() => addAdditionalInfo(option)}><Plus />加入</Button></li>)}</ul>
+            <ul>{additionalInfoOptions.filter((option) => !additionalSearch.trim() || option.toLocaleLowerCase().includes(additionalSearch.trim().toLocaleLowerCase())).map((option) => <li key={option}><span>{option}</span><Button size="sm" variant="outline" onClick={() => addAdditionalInfo(option)}><Plus />加入</Button></li>)}</ul>
           </div>
         </Modal>
 
         <Modal open={activityOpen} onClose={() => setActivityOpen(false)} title="活動項目" closeLabel="關閉活動項目" size="lg" footer={<Button onClick={() => setActivityOpen(false)}>確定</Button>}>
           <div className="quote-additional-picker quote-activity-picker">
             <div className="quote-additional-search"><Search /><input autoFocus aria-label="搜尋活動項目" placeholder={t("quoteEditor.placeholders.activitySearchPlaceholder")} value={activitySearch} onChange={(event) => setActivitySearch(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") addActivity(activitySearch); }} /><Button variant="outline" onClick={() => addActivity(activitySearch)}>Add</Button></div>
-            <ul>{QUOTE_ACTIVITY_OPTIONS.filter((option) => !activitySearch.trim() || option.description.toLocaleLowerCase().includes(activitySearch.trim().toLocaleLowerCase())).map((option) => <li key={option.description}><span>{option.description}</span><span>${Number(option.amount).toLocaleString("zh-HK")}</span><Button size="sm" variant="outline" onClick={() => addActivity(option.description, option.amount)}><Plus />加入</Button></li>)}</ul>
+            <ul>{activityOptions.filter((option) => !activitySearch.trim() || option.description.toLocaleLowerCase().includes(activitySearch.trim().toLocaleLowerCase())).map((option) => <li key={option.description}><span>{option.description}</span><span>${Number(option.amount).toLocaleString("zh-HK")}</span><Button size="sm" variant="outline" onClick={() => addActivity(option.description, option.amount)}><Plus />加入</Button></li>)}</ul>
           </div>
         </Modal>
         </>

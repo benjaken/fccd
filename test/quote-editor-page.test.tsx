@@ -4,6 +4,35 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+const dictionaryValues = vi.hoisted(() => ({
+  delivery_time_slot: ["12:00 - 13:00", "13:00 - 14:00"],
+  ship_out_time_slot: ["08:30", "11:30", "12:00", "13:15"],
+  quote_status: ["Low Chance", "High Chance", "Done Deal", "Case Closed"],
+}));
+
+vi.mock("@/lib/dictionaries", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/dictionaries")>();
+  return {
+    ...actual,
+    useDictItems: (typeCode: string) => ({
+      items: (dictionaryValues[typeCode as keyof typeof dictionaryValues] ?? []).map((value, index) => ({
+        id: `${typeCode}-${index}`,
+        dictTypeId: typeCode,
+        value,
+        label: value,
+        labelEn: null,
+        description: "",
+        metadata: {},
+        sortOrder: index,
+        isActive: true,
+      })),
+      loading: false,
+      error: null,
+      reload: vi.fn(),
+    }),
+  };
+});
+
 import { QuoteEditorPage } from "@/components/QuoteEditorPage";
 import i18n from "@/i18n";
 import { dedupeQuoteOptions, quoteLineTotal, type QuoteEditorOptions, type QuoteLine } from "@/lib/quote-editor";
