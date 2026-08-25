@@ -36,4 +36,18 @@ describe("sales document editing permissions", () => {
     expect(migration).toContain('Document managers update order tag assignments');
     expect(migration).not.toContain("auth.jwt() -> 'app_metadata' ->> 'role'");
   });
+
+  it("grants Accounting users order management", () => {
+    const migration = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260825060000_grant_accounting_order_manage.sql",
+      ),
+      "utf8",
+    );
+
+    expect(migration).toContain("where role = 'Accounting'");
+    expect(migration).toContain("page_key = 'orders'");
+    expect(migration).toContain("can_manage = true");
+  });
 });
