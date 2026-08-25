@@ -4,12 +4,14 @@ import {
   ArrowDown,
   ArrowUp,
   Package,
+  PackagePlus,
   Pencil,
   RefreshCw,
   X,
 } from "lucide-react";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
+import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
 import { DetailLink } from "@/components/ui/detail-link";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
@@ -249,6 +251,9 @@ export function PackagesListPage({
           <span className="eyebrow">{t("packages.eyebrow")}</span>
           <h1>{t("packages.title")}</h1>
         </div>
+        {canEdit ? (
+          <Button asChild><Link to="/products/packages/new"><PackagePlus />{t("catalogCreate.newPackage")}</Link></Button>
+        ) : null}
       </header>
 
       <article className="panel packages-panel">
@@ -275,7 +280,7 @@ export function PackagesListPage({
               <div className="packages-filters">
                 <label className="packages-status-filter">
                   <span>{t("packages.channelFilter")}</span>
-                  <select
+                  <FilterableSelect
                     value={channelFilter.value}
                     onChange={(event) => {
                       channelFilter.setValue(event.target.value);
@@ -287,12 +292,12 @@ export function PackagesListPage({
                         {channel.name}
                       </option>
                     ))}
-                  </select>
+                  </FilterableSelect>
                 </label>
 
                 <label className="packages-status-filter">
                   <span>{t("packages.statusFilter")}</span>
-                  <select
+                  <FilterableSelect
                     value={statusFilter.value}
                     onChange={(event) => {
                       statusFilter.setValue(
@@ -310,7 +315,7 @@ export function PackagesListPage({
                         {item.label}
                       </option>
                     ))}
-                  </select>
+                  </FilterableSelect>
                 </label>
               </div>
             }

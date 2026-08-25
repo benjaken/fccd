@@ -51,7 +51,7 @@ const quoteResult: QuoteListResult = {
       quoteStatus: "跟進中",
       grandTotal: 12880,
       currency: "HKD",
-      deliveryAt: "2026-08-18T04:00:00.000Z",
+      deliveryAt: "2026-08-17T16:00:00.000Z",
       createdAt: "2026-08-12T01:00:00.000Z",
     },
   ],

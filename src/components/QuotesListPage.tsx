@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
+import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
 import { DetailLink } from "@/components/ui/detail-link";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
@@ -21,6 +22,7 @@ import { TablePagination } from "@/components/ui/table-pagination";
 import { QuoteFilesSidePanel } from "@/components/QuoteFilesSidePanel";
 import { DICT_TYPE, dictItemLabel, useDictItems } from "@/lib/dictionaries";
 import { useDeferredFilter } from "@/lib/use-deferred-filter";
+import { hongKongDateKey } from "@/lib/date-time";
 import {
   fetchQuoteBrands,
   fetchQuotes,
@@ -307,7 +309,7 @@ export function QuotesListPage({
                 </label>
                 <label className="quotes-status-filter">
                   <span>{t("quotes.brandFilter")}</span>
-                  <select
+                  <FilterableSelect
                     value={brandId}
                     onChange={(event) => {
                       setPage(1);
@@ -320,7 +322,7 @@ export function QuotesListPage({
                         {name}
                       </option>
                     ))}
-                  </select>
+                  </FilterableSelect>
                 </label>
               </div>
             }
@@ -437,7 +439,7 @@ export function QuotesListPage({
                       .filter(Boolean)
                       .join(" ")}
                   </div>
-                  <div>{t("quotes.customerDetails.deliveryDate")}: {quote.deliveryAt?.slice(0, 10) || ""}</div>
+                  <div>{t("quotes.customerDetails.deliveryDate")}: {hongKongDateKey(quote.deliveryAt)}</div>
                   <div>{t("quotes.customerDetails.deliveryTime")}: {quote.deliveryTime || ""}</div>
                   <div>{t("quotes.customerDetails.shipOutTime")}: {quote.shipOutTime || ""}</div>
                   <div>{t("quotes.customerDetails.quantity")}: {(quote.quantity ?? 0).toLocaleString(i18n.language)}</div>

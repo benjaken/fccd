@@ -4,8 +4,10 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { WorkspacePlaceholderPage } from "@/App";
 import {
+  accessiblePrimaryNavigationPath,
   firstAccessibleNavigationPath,
   isWorkspaceNavActive,
+  primaryNav,
   workspaceLinks,
   workspaceFromPath,
 } from "@/lib/nav";
@@ -80,6 +82,18 @@ describe("Workspace switcher", () => {
     expect(
       firstAccessibleNavigationPath(canAccess, canAccessSection),
     ).toBe("/orders/pending");
+  });
+
+  it("does not link a primary menu to a landing page the role cannot open", () => {
+    const allowed = new Set(["kitchen.cost_input"]);
+    const canAccess = (key: string) => allowed.has(key);
+    const kitchen = primaryNav.find((item) => item.key === "kitchen")!;
+    const reports = primaryNav.find((item) => item.key === "reports")!;
+
+    expect(accessiblePrimaryNavigationPath(kitchen, canAccess)).toBeNull();
+    expect(accessiblePrimaryNavigationPath(reports, canAccess)).toBe(
+      "/reports/kitchen",
+    );
   });
 
   it("falls back to an authorized workspace and returns null with no grants", () => {

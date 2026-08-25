@@ -1,126 +1,104 @@
-# Custom Product Modal Focus-State QA
+# Shopify Pending Products Design QA
 
-**Evidence**
+- Source visual truth: `C:/Users/ADMINI~1/AppData/Local/Temp/codex-clipboard-bf619a53-29fe-4c15-991d-000ca54c4138.png`
+- Implementation screenshot: `D:/work/FCCD/.design-qa/shopify-pending-implementation.png`
+- Combined comparison: `D:/work/FCCD/.design-qa/shopify-comparison.png`
+- Reference pixels: 2048 x 298
+- Implementation pixels: 2048 x 1024
+- CSS viewport: 2048 x 1024
+- Device scale factor: 1
+- State: authenticated Super Admin, light theme, populated Shopify pending-product table
 
-- Source visual truth: `C:\Users\neroc\AppData\Local\Temp\codex-clipboard-a7f37f55-06c0-47cd-8a8d-3d268d601083.png`
-- Browser-rendered implementation: `E:\fccd\artifacts\custom-product-modal-no-focus-glow.png`
-- Normalized comparison: `E:\fccd\artifacts\custom-product-modal-focus-comparison.png`
-- Browser route: existing quote edit page on the local Vite preview
-- CSS viewport: 1280 x 720 at device scale factor 1
-- Source pixels: 421 x 267
-- Implementation pixels: 1280 x 720
-- Comparison pixels: 1100 x 400; both modal regions were cropped and scaled into adjacent panels.
-- State: custom-product modal open with the unit-price number input focused. The implementation preserves the active dark theme; the issue reference is light theme.
+## Full-view comparison evidence
 
-**Findings**
+The implementation uses the same hierarchy as the package-list reference: compact eyebrow and title, one rounded table panel, a single search/filter toolbar, a result-count strip, sticky table header, scrollable rows, and anchored pagination. The surrounding FCCD application chrome is intentionally retained because the source is a content-region crop.
 
-- No actionable P0, P1, or P2 issue remains.
-- Fonts and typography: unchanged from the shared component implementation.
-- Spacing and layout rhythm: unchanged; the compact single-column form and shared footer remain aligned.
-- Colors and visual tokens: the shadcn Input focus ring and focus border are overridden only for these two modal fields. Computed focus state has a zero-width ring and the normal input border color, so the green glow is gone.
-- Image quality and asset fidelity: no raster or decorative assets are involved; the shared close icon remains sharp.
-- Copy and content: all Traditional Chinese labels and actions are unchanged.
-- Accessibility: labels and keyboard focus behavior remain functional. The text caret and native number-input controls still identify the active field without an outer glow.
+The Shopify-specific sync controls remain at the right of the toolbar. This is an intentional functional extension and does not alter the reference layout rhythm on the left.
 
-**Full-view comparison evidence**
+## Focused region comparison evidence
 
-- The combined before/after image clearly shows the original green focus glow and the revised neutral focused field.
+The combined image compares the reference toolbar/table crop with the rendered implementation at the same 2048-pixel width. Search field height, button density, panel radius, separators, result metadata, header treatment, row density, and green/neutral token usage follow the existing package-list design system. No raster or decorative image assets are required by this screen.
 
-**Focused region comparison**
+## Required fidelity surfaces
 
-- No additional crop was needed because the normalized comparison makes the complete focused input border readable.
+- Fonts and typography: inherited FCCD Inter/Noto Sans TC stack, weights, table labels, and heading hierarchy match the reference design system.
+- Spacing and layout rhythm: 20px page gap, 16px x 18px toolbar padding, compact result strip, fixed-height table region, and sticky pagination match the package-list composition.
+- Colors and visual tokens: existing background, card, border, foreground, muted, primary, warning, and status tokens are preserved in both light and dark themes.
+- Image quality and asset fidelity: no content imagery is present in the source or required in the implementation; existing application logo and Lucide control icons are reused.
+- Copy and content: Shopify-specific labels, columns, status information, sync controls, and live result count are retained while following the reference hierarchy.
 
-**Comparison history**
+## Interaction and runtime checks
 
-- Pass 1 found the visible green shadcn focus ring reported by the user.
-- Fix: added component-level `focus-visible:ring-0` and restored the normal input border token for both custom-product inputs.
-- Pass 2: browser screenshot and computed styles confirm no visible outer focus ring; no P0/P1/P2 finding remains.
+- Local route opened successfully after preview login.
+- Search, filter trigger, filter dialog, close control, refresh control, sync selectors, table scrolling, row links, and pagination render as interactive controls.
+- Filter dialog opened and closed successfully.
+- Browser console errors: none.
+- TypeScript lint: passed.
+- Targeted Shopify integration tests: passed.
+- Full production build: passed (140 test files, 1091 tests).
 
-**Primary interactions tested**
+## Findings
 
-- Opened the custom-product modal from an existing quote.
-- Focused the unit-price field and visually checked the focused state.
-- Confirmed the computed ring width is zero and the browser console has no errors.
-- Targeted quote-editor tests and TypeScript checks pass.
+No actionable P0, P1, or P2 visual differences remain. The additional sync controls and recent-sync text are accepted Shopify workflow requirements.
 
-**Implementation checklist**
+## Comparison history
 
-- [x] Removed the visible focus glow from both custom-product inputs.
-- [x] Kept the shared shadcn Input component.
-- [x] Preserved validation, labels, number controls, and form behavior.
-- [x] Verified the focused state in the browser.
+- Pass 1: reorganized the previously separate sync and filter sections into one package-list-style panel, moved list filters into the shared filter drawer, added the result-count strip and row index, and verified the revised light/dark render. Post-fix comparison found no actionable P0/P1/P2 issues.
 
-**Follow-up polish**
+## Follow-up polish
 
-- None required for this scope.
+- P3: long Shopify product titles and numeric IDs can be further separated typographically if the team prefers a two-line product cell.
 
 final result: passed
 
 ---
 
-# Lunch Box Product Side-Panel QA
+# Product Material Three-Column Design QA
 
-**Evidence**
+- Source visual truth: `C:/Users/ADMINI~1/AppData/Local/Temp/codex-clipboard-ea5cc29d-4a08-4339-b4bb-d7977486852b.png`
+- Implementation screenshot: `D:/work/FCCD/.design-qa/product-material-three-column.png`
+- Combined comparison: `D:/work/FCCD/.design-qa/product-material-comparison.png`
+- Skeleton screenshot: `D:/work/FCCD/.design-qa/product-detail-skeleton.png`
+- Reference pixels: 1678 x 463
+- Implementation pixels: 1663 x 1253; CSS viewport 1678 x 900; device scale factor 1
+- State: authenticated Super Admin, light theme, product `蒜蓉牛油多士 (12件)` with populated ingredient, packaging, and Label data
 
-- Source visual truth: `C:\Users\neroc\AppData\Local\Temp\codex-clipboard-ea7d5081-f39f-4ca0-a607-07a9e8acb5b8.png`
-- Browser-rendered desktop implementation: `E:\fccd\artifacts\lunchbox-picker-sidebar-selected.png`
-- Browser-rendered mobile implementation: `E:\fccd\artifacts\lunchbox-picker-sidebar-mobile.png`
-- Independent-scroll implementation: `E:\fccd\artifacts\lunchbox-picker-independent-scroll.png`
-- Normalized side-by-side comparison: `E:\fccd\artifacts\lunchbox-picker-comparison.png`
-- Browser route: local order `#6951` edit page with the lunch-box picker open
-- Desktop viewport: 1440 x 900 CSS pixels at device scale factor 1
-- Mobile viewport: 390 x 844 CSS pixels at device scale factor 1
-- Source pixels: 1928 x 1048; desktop implementation pixels: 1440 x 900; mobile implementation pixels: 390 x 844
-- Comparison pixels: 3096 x 900. The source was proportionally scaled to 1656 x 900 and placed beside the unchanged 1440 x 900 implementation.
-- State: one recommended lunch-box product selected, sticky footer enabled, product results loaded.
+## Full-view comparison evidence
 
-**Findings**
+The source records the previous two-column wrap. The user-requested target is the same three cards in one row. The browser-rendered implementation places all three cards at the same y-position in three equal tracks (`446.328px 446.328px 446.344px`) with 16px gaps and equal 217px heights. Existing FCCD card borders, radii, spacing, table headers, and green section accents are unchanged.
 
-- No actionable P0, P1, or P2 issue remains.
-- Fonts and typography: the side panel uses the application's existing type scale and weights; headings, SKU labels, tags, prices, and actions retain readable hierarchy in desktop and mobile layouts.
-- Spacing and layout rhythm: the desktop panel is exactly 80% of the viewport. The selected tray occupies the left column, while recommended and more products occupy the right column; the 390 px layout collapses to one column without horizontal overflow. Search and confirmation controls remain visible.
-- Colors and visual tokens: selection uses the existing primary and selection tokens, recommended items use a restrained amber accent, and surfaces inherit the active light or dark theme without gradients.
-- Image quality and asset fidelity: the picker contains no raster product imagery or decorative assets. Existing Lucide icons remain sharp at both checked sizes.
-- Copy and content: the final panel preserves the requested `已選取`, `推介`, and `更多產品` sections. It intentionally replaces the legacy modal/table treatment with the user-approved side panel and removes edit and row-arrow controls.
-- Accessibility and interaction: product rows expose selected state through `aria-pressed`; the confirmation action is disabled at zero selections and enabled after selection. No edit buttons or chevron row controls are present.
+## Focused region comparison evidence
 
-**Full-view comparison evidence**
+`product-material-comparison.png` places the supplied before-state and the rendered three-column result in one image. Card order remains 名貴食材, 包裝用品, Label. Text and table values remain readable without clipping at the requested desktop width.
 
-- The normalized comparison shows the legacy table's dense horizontal structure on the left and the approved side-panel hierarchy on the right. The new layout preserves the product metadata while making selection, selected state, and confirmation visually dominant.
+## Required fidelity surfaces
 
-**Focused region comparison**
+- Fonts and typography: existing FCCD font stack, weights, line heights, and section/table hierarchy are preserved; headings remain on one line at the tested width.
+- Spacing and layout rhythm: three equal columns, 16px gaps, aligned card tops and bottoms, and consistent 18px card padding pass.
+- Colors and visual tokens: background, panel, border, muted table header, foreground, and primary green tokens match the supplied screen.
+- Image quality and asset fidelity: the changed region contains no raster assets or non-standard icons; no assets were substituted.
+- Copy and content: all source labels and values are preserved. The empty packaging state also retains its middle column so Label never shifts position.
 
-- The desktop implementation screenshot keeps the complete side panel readable at 1440 x 900, including search, selected tray, recommended list, more-products list, and sticky footer, so no additional focused crop was needed.
+## Skeleton and runtime checks
 
-**Comparison history**
+- Product detail now uses a dedicated `product` skeleton rather than the generic two-card detail skeleton.
+- Browser measurement confirms the material skeleton has three children and three equal columns (`446.328px 446.328px 446.344px`) at the same desktop viewport.
+- Product route and populated data loaded successfully after preview login.
+- Browser console errors: none.
+- TypeScript lint: passed.
+- Targeted tests: 31 passed.
 
-- Pass 1 found that the Catering order brand allowed unrelated catalog items into `更多產品`.
-- Fix: the picker now queries products with an assigned lunch-box staple category independently of the order's current brand.
-- Pass 2: browser evidence shows 6 recommended and 96 more lunch-box products with CBE SKUs and bento attributes. Desktop and 390 px mobile states have no overflow, missing persistent controls, console errors, edit buttons, or row-arrow icons.
-- Pass 3: changed the panel to exactly 80% viewport width and moved the selected tray into a persistent left column. Browser measurements confirm a 0.80 panel-to-viewport ratio, separated left/right columns, and no horizontal overflow; mobile remains a single column.
-- Pass 4: moved the selected title above its full-height box and aligned it exactly with the recommended title. Browser measurements report a 0 px heading offset; the selected box and product catalog both use independent `overflow: auto` regions while search and footer remain fixed.
+## Findings
 
-**Primary interactions tested**
+No actionable P0, P1, or P2 differences remain. At widths below 900px, the existing responsive behavior intentionally stacks the cards to prevent table clipping.
 
-- Opened the picker from the local `#6951` order edit page.
-- Loaded recommended and more-product sections from live local-app data.
-- Selected a recommended item and confirmed the selected tray/count and enabled footer action.
-- Verified desktop and mobile responsive layouts.
-- Checked the browser console for errors; none were present.
+## Comparison history
 
-**Implementation checklist**
+- Pass 1: changed the content grid from two columns to three, but the generic skeleton still overrepresented the first card and did not mirror the material row closely enough.
+- Pass 2: added the product-specific summary skeleton and three compact material table skeletons. Post-fix browser measurement confirmed three equal columns, aligned with the final content grid.
 
-- [x] Use a right-side panel instead of a centered modal.
-- [x] Keep `已選取`, `推介`, and `更多產品` sections.
-- [x] Add search and expandable filters.
-- [x] Make the whole product row selectable.
-- [x] Remove edit and table-arrow controls.
-- [x] Add every confirmed product as a separate pending order line.
-- [x] Restrict results to lunch-box products.
-- [x] Verify desktop and mobile layouts in the browser.
+## Follow-up polish
 
-**Follow-up polish**
-
-- None required for this scope.
+- No P3 follow-up is required for the requested layout.
 
 final result: passed

@@ -15,7 +15,7 @@ type PageSkeletonProps = {
   label: string;
   variant?: PageSkeletonVariant;
   cards?: 2 | 3;
-  detailLayout?: "default" | "document";
+  detailLayout?: "default" | "document" | "product";
   analysis?: boolean;
   showSummary?: boolean;
   compact?: boolean;
@@ -99,10 +99,12 @@ function detailFields(count: number) {
 function detailCard({
   fields,
   tableColumns,
+  tableRows = 6,
   copyLines,
 }: {
   fields?: number;
   tableColumns?: number;
+  tableRows?: number;
   copyLines?: number;
 }) {
   return (
@@ -113,7 +115,7 @@ function detailCard({
       </header>
       {fields ? detailFields(fields) : null}
       {tableColumns ? (
-        <div className="table-wrap detail-inline-table">{table(tableColumns, 6)}</div>
+        <div className="table-wrap detail-inline-table">{table(tableColumns, tableRows)}</div>
       ) : null}
       {copyLines
         ? Array.from({ length: copyLines }, (_, index) => (
@@ -165,6 +167,29 @@ function documentDetailSkeleton() {
         </header>
         {table(6, 6)}
       </article>
+    </>
+  );
+}
+
+function productDetailSkeleton() {
+  return (
+    <>
+      {detailHeading()}
+      <article className="panel detail-card detail-skeleton-card product-detail-summary-skeleton">
+        <header>{bone("detail-skeleton-card-title")}</header>
+        <div className="product-detail-summary-skeleton-body">
+          {bone("product-detail-image-skeleton")}
+          <div className="product-detail-summary-skeleton-fields">{detailFields(8)}</div>
+        </div>
+        {bone("detail-skeleton-copy")}
+      </article>
+      <section className="detail-grid product-material-grid product-material-grid-skeleton">
+        {detailCard({ tableColumns: 2, tableRows: 2 })}
+        {detailCard({ tableColumns: 2, tableRows: 2 })}
+        {detailCard({ tableColumns: 3, tableRows: 2 })}
+      </section>
+      {detailCard({ fields: 1 })}
+      {detailCard({ tableColumns: 2 })}
     </>
   );
 }
@@ -425,6 +450,8 @@ export function PageSkeleton({
     variant === "detail"
       ? detailLayout === "document"
         ? documentDetailSkeleton()
+        : detailLayout === "product"
+          ? productDetailSkeleton()
         : detailSkeleton(cards)
       : variant === "dashboard"
         ? dashboardSkeleton()

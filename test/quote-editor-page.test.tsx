@@ -139,7 +139,9 @@ function renderEditor(
     saveExistingLine: vi.fn().mockResolvedValue(undefined),
     saveLineOrder: vi.fn().mockResolvedValue(undefined),
     saveFinancialDetails: vi.fn().mockResolvedValue(undefined),
+    savePayments: vi.fn().mockResolvedValue(undefined),
     saveUtensilLine: vi.fn().mockResolvedValue(undefined),
+    saveFactorySettings: vi.fn().mockResolvedValue(undefined),
     loadShippingFeeOptions: vi.fn().mockResolvedValue(shippingFeeOptions),
     ...overrides,
   };
@@ -160,7 +162,8 @@ async function fillRequiredQuoteDetails(user: ReturnType<typeof userEvent.setup>
   await user.type(screen.getByLabelText("Contact number"), "94808987");
   await user.type(screen.getByLabelText("Email"), "quote@example.com");
   await user.selectOptions(screen.getByLabelText("Shipping method"), "shipping-home");
-  await user.selectOptions(screen.getByLabelText("District"), "district-1");
+  await user.click(screen.getByRole("combobox", { name: "District" }));
+  await user.click(screen.getByRole("option", { name: "Central" }));
 }
 
 describe("Quote editor", () => {
@@ -206,6 +209,9 @@ describe("Quote editor", () => {
     const props = renderEditor();
 
     expect(await screen.findByRole("heading", { name: "New quote" })).toBeInTheDocument();
+    expect(screen.getAllByRole("tab")).toHaveLength(2);
+    expect(screen.getByRole("tablist")).toHaveClass("is-quote");
+    expect(screen.queryByRole("heading", { name: "Payment records" })).not.toBeInTheDocument();
     expect(screen.getByLabelText(/Customer note/)).toBeInTheDocument();
     expect(screen.getByText("Shown on delivery note")).toBeInTheDocument();
     await fillRequiredQuoteDetails(user);
@@ -338,7 +344,7 @@ describe("Quote editor", () => {
     await user.tab();
     expect(props.saveExistingLine).not.toHaveBeenCalled();
 
-    await user.click(screen.getByRole("button", { name: "Complete" }));
+    await user.click(within(document.getElementById("quote-editor-editable-items")!).getByRole("button", { name: "Save changes" }));
     await waitFor(() => expect(props.saveLine).toHaveBeenCalledWith(expect.objectContaining({
       orderId: "quote-1", quantity: 3, unitPrice: 88,
     })));
@@ -367,7 +373,7 @@ describe("Quote editor", () => {
     expect(within(customRow).getByText("HK$320.00")).toBeInTheDocument();
     expect(saveLine).not.toHaveBeenCalled();
 
-    await user.click(screen.getByRole("button", { name: "Complete" }));
+    await user.click(within(document.getElementById("quote-editor-editable-items")!).getByRole("button", { name: "Save changes" }));
     await waitFor(() => expect(saveLine).toHaveBeenCalledWith(expect.objectContaining({
       orderId: "quote-1",
       item: expect.objectContaining({ kind: "custom", name: "Special banquet item" }),
@@ -452,7 +458,7 @@ describe("Quote editor", () => {
     expect(within(reopenedPanel).getByRole("button", { name: "Unselect 魚香茄子飯" })).toHaveAttribute("aria-pressed", "true");
     await user.click(within(reopenedPanel).getByRole("button", { name: "Cancel" }));
 
-    await user.click(screen.getByRole("button", { name: "Complete" }));
+    await user.click(within(document.getElementById("quote-editor-editable-items")!).getByRole("button", { name: "Save changes" }));
     await waitFor(() => expect(saveLine).toHaveBeenCalledTimes(2));
     expect(saveLine).toHaveBeenCalledWith(expect.objectContaining({
       item: expect.objectContaining({ id: "lunchbox-1", kind: "product" }),
@@ -520,7 +526,7 @@ describe("Quote editor", () => {
     expect(within(steamedFishRow).getByRole("spinbutton", { name: "Unit price Steamed fish" })).toHaveValue(10);
     expect(within(steamedFishRow).getByText("HK$10.00")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Complete" }));
+    await user.click(within(document.getElementById("quote-editor-editable-items")!).getByRole("button", { name: "Save changes" }));
     await waitFor(() => expect(saveLine).toHaveBeenCalledWith(expect.objectContaining({
       orderId: "quote-1",
       item: expect.objectContaining({ id: "package-1", kind: "package" }),
@@ -557,7 +563,7 @@ describe("Quote editor", () => {
 
     await user.selectOptions(shippingMethod, "shipping-store");
     expect(screen.queryByLabelText("Delivery address")).not.toBeInTheDocument();
-    expect(screen.getByLabelText("District")).toHaveDisplayValue("門市自取");
+    expect(screen.getByLabelText("District")).toHaveTextContent("門市自取");
     expect(screen.getByLabelText("District")).toBeDisabled();
 
     const deliveryTime = screen.getByLabelText("Delivery time");
@@ -657,7 +663,7 @@ describe("Quote editor", () => {
     await user.type(screen.getByLabelText("Follow-up date"), "2026-08-24");
     await user.selectOptions(screen.getByLabelText("Sales source"), "source-email");
     await user.selectOptions(screen.getByLabelText("Communication channel"), "communication-wati");
-    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    await user.click(within(document.getElementById("quote-editor-editable-details")!).getByRole("button", { name: "Save changes" }));
 
     await waitFor(() => expect(saveDetails).toHaveBeenCalledWith(
       "quote-1",
@@ -723,9 +729,12 @@ describe("Quote editor", () => {
     expect(tabs[0]).toHaveAttribute("aria-selected", "true");
     await user.click(tabs[1]);
     expect(screen.getByLabelText("Brand")).toHaveValue("channel-1");
-    expect(screen.queryByRole("textbox", { name: "Remarks Roast pork" })).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /Original remark/ }));
-    expect(screen.getByRole("textbox", { name: "Remarks Roast pork" })).toHaveAttribute("maxlength", "16");
+    expect(screen.queryByRole("button", { name: /Original remark/ })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Preview / edit" }));
+    const labelDialog = screen.getByRole("dialog");
+    expect(within(labelDialog).getByRole("textbox", { name: "Remarks" })).toHaveValue("Original remark");
+    expect(within(labelDialog).getByRole("textbox", { name: "Remarks" })).toHaveAttribute("maxlength", "16");
+    await user.click(within(labelDialog).getByRole("button", { name: "Cancel" }));
 
     const quantityInput = screen.getByRole("spinbutton", { name: "Quantity Roast pork" });
     expect(quantityInput).toHaveAttribute("min", "1");
@@ -739,6 +748,62 @@ describe("Quote editor", () => {
     fireEvent.blur(quantityInput);
     expect(await screen.findByText("Quantity must be a whole number above 0 and price cannot be negative.")).toBeInTheDocument();
     expect(saveExistingLine).not.toHaveBeenCalled();
+  });
+
+  it("previews and saves edits to a linked SKU label", async () => {
+    const user = userEvent.setup();
+    const saveLineLabel = vi.fn().mockResolvedValue(undefined);
+    const saveExistingLine = vi.fn().mockResolvedValue(undefined);
+    const line: QuoteLine = {
+      id: "line-label-1",
+      productId: "product-1",
+      packageId: null,
+      sku: "P001",
+      name: "Roast pork",
+      quantity: 2,
+      unitPrice: 88,
+      totalPrice: 176,
+      remarks: null,
+      labelId: "label-1",
+      labelDisplayA: "Roast pork label",
+      labelDisplayB: "2 boxes",
+    };
+
+    renderEditor({
+      loadSummary: vi.fn().mockResolvedValue({
+        id: "quote-1",
+        orderNumber: "FCLQ-LABEL",
+        channelId: "channel-1",
+        draft: { ...emptyQuoteDraft },
+      }),
+      loadLines: vi.fn().mockResolvedValue([line]),
+      saveLineLabel,
+      saveExistingLine,
+    }, "/quotes/quote-1/edit");
+
+    const tabs = await screen.findAllByRole("tab");
+    await user.click(tabs[1]);
+    expect(screen.getByRole("columnheader", { name: "Label preview" })).toBeInTheDocument();
+    expect(screen.queryByLabelText("50 × 75 mm 標籤預覽：FCLQ-LABEL")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Preview / edit" }));
+    expect(screen.getByLabelText("50 × 75 mm 標籤預覽：FCLQ-LABEL")).toBeInTheDocument();
+    expect(screen.getByText("－ 送貨日期 －")).toBeInTheDocument();
+    const displayA = screen.getByRole("textbox", { name: "Label line 1" });
+    await user.clear(displayA);
+    await user.type(displayA, "Updated label");
+    await user.type(within(screen.getByRole("dialog")).getByRole("textbox", { name: "Remarks" }), "No onion");
+    await user.click(screen.getByRole("button", { name: "Save label" }));
+
+    await waitFor(() => expect(saveLineLabel).toHaveBeenCalledWith(expect.objectContaining({
+      id: "line-label-1",
+      labelId: "label-1",
+      labelDisplayA: "Updated label",
+      labelDisplayB: "2 boxes",
+    })));
+    expect(saveExistingLine).toHaveBeenCalledWith(expect.objectContaining({
+      id: "line-label-1",
+      remarks: "No onion",
+    }), "quote");
   });
 
   it("matches Shopify 12-hour delivery times to the current option", async () => {
@@ -778,7 +843,7 @@ describe("Quote editor", () => {
     expect(screen.getByLabelText("Contact number")).toBeRequired();
     expect(screen.getByLabelText("Email")).toBeRequired();
     expect(screen.getByLabelText("Shipping method")).toBeRequired();
-    expect(screen.getByLabelText("District")).toBeRequired();
+    expect(screen.getByLabelText("District")).toHaveAttribute("aria-required", "true");
     expect(screen.getByLabelText("Delivery date")).toBeRequired();
     expect(screen.getByLabelText("Company name")).not.toBeRequired();
     expect(screen.getByLabelText("Delivery time")).not.toBeRequired();
@@ -825,7 +890,9 @@ describe("Quote editor", () => {
     expect(screen.getByText("P001")).toBeInTheDocument();
 
     const dragHandle = screen.getByRole("button", { name: "Drag to reorder item 2 Beef" });
-    const targetRow = screen.getByText("Roast pork").closest("tr");
+    const targetRow = screen.getAllByText("Roast pork")
+      .map((element) => element.closest("tr"))
+      .find(Boolean) ?? null;
     expect(targetRow).not.toBeNull();
     const dataTransfer = {
       effectAllowed: "none",
@@ -895,7 +962,7 @@ describe("Quote editor", () => {
 
     await user.click(screen.getByRole("button", { name: "Add utensil pack" }));
     await waitFor(() => expect(saveUtensilLine).toHaveBeenCalledWith("quote-1"));
-    expect(await screen.findByText("餐具包")).toBeInTheDocument();
+    expect((await screen.findAllByText("餐具包")).length).toBeGreaterThan(0);
     expect(screen.getByRole("spinbutton", { name: "Unit price 餐具包" })).toHaveValue(0);
     expect(screen.getByRole("spinbutton", { name: "Unit price 餐具包" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Utensil pack added" })).toBeDisabled();
@@ -903,7 +970,7 @@ describe("Quote editor", () => {
     expect(screen.queryByText("PDF 內容")).not.toBeInTheDocument();
   });
 
-  it("shows an optional third payment step and completes without a payment", async () => {
+  it("omits payment records from quote editing and does not write payments when saving", async () => {
     const user = userEvent.setup();
     const saveDetails = vi.fn().mockResolvedValue(undefined);
     const saveFinancialDetails = vi.fn().mockResolvedValue(undefined);
@@ -932,17 +999,109 @@ describe("Quote editor", () => {
     );
 
     const tabs = await screen.findAllByRole("tab");
-    expect(tabs).toHaveLength(3);
-    await user.click(tabs[2]);
-    expect(screen.getByRole("heading", { name: "Payment records" })).toBeInTheDocument();
-    expect(screen.queryByText("Payment records are optional and can be added later.")).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Complete" }));
+    expect(tabs).toHaveLength(2);
+    expect(screen.queryByRole("heading", { name: "Payment records" })).not.toBeInTheDocument();
+    expect(document.getElementById("quote-editor-editable-payments")).not.toBeInTheDocument();
+    await user.click(within(document.getElementById("quote-editor-editable-details")!).getByRole("button", { name: "Save changes" }));
 
-    await waitFor(() => expect(savePayments).toHaveBeenCalledWith("quote-1", "FCLQ20260801", "channel-1", []));
-    expect(saveDetails).toHaveBeenCalled();
+    await waitFor(() => expect(saveDetails).toHaveBeenCalled());
     expect(saveFinancialDetails).toHaveBeenCalled();
+    expect(savePayments).not.toHaveBeenCalled();
     expect(sendConfirmation).not.toHaveBeenCalled();
-    expect(await screen.findByText("Quotes list")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "FCLQ20260801" })).toBeInTheDocument();
+    expect(screen.queryByText("Quotes list")).not.toBeInTheDocument();
+  });
+
+  it("searches district options by text", async () => {
+    const user = userEvent.setup();
+    renderEditor({
+      loadOptions: vi.fn().mockResolvedValue({
+        ...options,
+        districts: [
+          { id: "district-1", name: "Central" },
+          { id: "district-2", name: "Kowloon Bay" },
+        ],
+      }),
+    }, "/quotes/quote-1/edit");
+
+    const district = await screen.findByRole("combobox", { name: "District" });
+    await user.click(district);
+    await user.type(screen.getByRole("searchbox", { name: "Search" }), "Kowloon");
+    expect(screen.queryByRole("option", { name: "Central" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("option", { name: "Kowloon Bay" }));
+    expect(district).toHaveTextContent("Kowloon Bay");
+  });
+
+  it.each([
+    { kind: "quote" as const, path: "/quotes/quote-1/edit", number: "FCLQ20260801" },
+    { kind: "order" as const, path: "/orders/order-1/edit", number: "FCCO20260801" },
+  ])("saves all data from each available $kind section button", async ({ kind, path, number }) => {
+    const user = userEvent.setup();
+    const saveDetails = vi.fn().mockResolvedValue(undefined);
+    const saveExistingLine = vi.fn().mockResolvedValue(undefined);
+    const saveFinancialDetails = vi.fn().mockResolvedValue(undefined);
+    const savePayments = vi.fn().mockResolvedValue(undefined);
+    const saveFactorySettings = vi.fn().mockResolvedValue(undefined);
+    const summary = {
+      id: `${kind}-1`, orderNumber: number, channelId: "channel-1",
+      draft: {
+        ...emptyQuoteDraft,
+        channelId: "channel-1",
+        customerName: "Customer",
+        contactA: "12345678",
+        email: "quote@example.com",
+        districtId: "district-1",
+        shippingMethodId: "shipping-home",
+      },
+      financials: { shippingFee: 80, discount: 10, cashdollarRedeemed: 0, cashdollarPurchased: 0 },
+      payments: [],
+      isSentToFactory: false,
+      doNotSendToFactory: false,
+    };
+    const line: QuoteLine = {
+      id: "line-1", productId: "product-1", packageId: null, sku: "P001",
+      name: "Roast pork", quantity: 2, unitPrice: 88, totalPrice: 176, remarks: null,
+    };
+
+    render(
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route path={path.replace(`${kind}-1`, ":id")} element={(
+            <QuoteEditorPage
+              documentType={kind}
+              loadOptions={vi.fn().mockResolvedValue(options)}
+              loadSummary={vi.fn().mockResolvedValue(summary)}
+              loadLines={vi.fn().mockResolvedValue([line])}
+              saveDetails={saveDetails}
+              saveExistingLine={saveExistingLine}
+              saveFinancialDetails={saveFinancialDetails}
+              savePayments={savePayments}
+              saveFactorySettings={saveFactorySettings}
+              loadShippingFeeOptions={vi.fn().mockResolvedValue(shippingFeeOptions)}
+            />
+          )} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: number })).toBeInTheDocument();
+    const sectionIds = kind === "order" ? ["details", "items", "payments"] : ["details", "items"];
+    for (const section of sectionIds) {
+      await user.click(within(document.getElementById(`quote-editor-editable-${section}`)!).getByRole("button", { name: "Save changes" }));
+      await waitFor(() => expect(saveDetails).toHaveBeenCalledTimes(sectionIds.indexOf(section) + 1));
+    }
+
+    expect(saveExistingLine).toHaveBeenCalledTimes(sectionIds.length);
+    expect(saveFinancialDetails).toHaveBeenCalledTimes(sectionIds.length);
+    if (kind === "order") {
+      expect(savePayments).toHaveBeenCalledTimes(3);
+      expect(savePayments).toHaveBeenLastCalledWith("order-1", number, "channel-1", [], "order");
+      expect(saveFactorySettings).toHaveBeenCalledTimes(3);
+    } else {
+      expect(savePayments).not.toHaveBeenCalled();
+      expect(saveFactorySettings).not.toHaveBeenCalled();
+    }
+    expect(screen.getByRole("heading", { name: number })).toBeInTheDocument();
   });
 
   it("only sends notifications from the explicit WATI and email action", async () => {
@@ -969,8 +1128,7 @@ describe("Quote editor", () => {
       </MemoryRouter>,
     );
 
-    const tabs = await screen.findAllByRole("tab");
-    await user.click(tabs[2]);
+    expect(await screen.findAllByRole("tab")).toHaveLength(2);
     expect(sendConfirmation).not.toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: "Send WATI and email confirmation" }));
     await waitFor(() => expect(sendConfirmation).toHaveBeenCalledWith("quote-1"));
@@ -1006,7 +1164,7 @@ describe("Quote editor", () => {
     expect(await screen.findByText("Converted order")).toBeInTheDocument();
   });
 
-  it("shows all three sections with scroll navigation on the quote detail page", async () => {
+  it("shows quote details without payment records", async () => {
     const user = userEvent.setup();
     const scrollIntoView = vi.fn();
     const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
@@ -1035,10 +1193,11 @@ describe("Quote editor", () => {
 
     expect(await screen.findByRole("heading", { name: "FCLQ20260801" })).toBeInTheDocument();
     expect(screen.getByRole("tablist", { name: "Quote creation steps" })).toBeInTheDocument();
-    expect(screen.getAllByRole("tab")).toHaveLength(3);
+    expect(screen.getAllByRole("tab")).toHaveLength(2);
     expect(screen.getByRole("heading", { name: "Customer details" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Add product" })).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Payment records" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Payment records" })).not.toBeInTheDocument();
+    expect(document.getElementById("quote-editor-readonly-payments")).not.toBeInTheDocument();
     expect(screen.getByText("Customer note")).toBeInTheDocument();
     expect(screen.getByText("Shown on delivery note")).toBeInTheDocument();
     expect(screen.getByText("Birthday")).toBeInTheDocument();
@@ -1046,6 +1205,11 @@ describe("Quote editor", () => {
     expect(screen.getAllByText("Email").length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText("WATI")).toBeInTheDocument();
     expect(screen.getByText(longRemark)).toHaveAttribute("title", longRemark);
+    expect(screen.queryByLabelText("50 × 75 mm 標籤預覽：FCLQ20260801")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "View label" }));
+    expect(screen.getByLabelText("50 × 75 mm 標籤預覽：FCLQ20260801")).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Label line 1" })).not.toBeInTheDocument();
+    await user.click(screen.getAllByRole("button", { name: "Close label dialog" })[1]);
     expect(screen.queryByRole("heading", { name: "額外資訊" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "活動項目" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Convert to order" })).toBeInTheDocument();

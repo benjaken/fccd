@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Maximize2, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
 
+import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
@@ -418,13 +419,13 @@ function PerformanceSection({
         <label className="kitchen-advertising-performance-select">
           <span className="sr-only">選擇{title}</span>
           {mode === "festival" ? (
-            <select aria-label="節日" value={festival} onChange={(event) => setFestival(event.target.value)}>
+            <FilterableSelect aria-label="節日" value={festival} onChange={(event) => setFestival(event.target.value)}>
               {festivals.map((option) => <option key={option} value={option}>{option}</option>)}
-            </select>
+            </FilterableSelect>
           ) : (
-            <select aria-label="月份(non-peak)" value={month} onChange={(event) => setMonth(event.target.value)}>
+            <FilterableSelect aria-label="月份(non-peak)" value={month} onChange={(event) => setMonth(event.target.value)}>
               {monthOptions.map((option) => <option key={option} value={option}>{option}月 non-peak</option>)}
-            </select>
+            </FilterableSelect>
           )}
         </label>
         <YearSelector years={years} selectedYears={selectedYears} onChange={setSelectedYears} />

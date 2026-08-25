@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useCurrentPageAccess } from "@/auth/use-page-access";
+import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
 import { RestaurantSettingsListTable } from "@/components/ui/restaurant-settings-list-table";
 import { SidePanel } from "@/components/ui/side-panel";
@@ -235,7 +236,7 @@ export function MonthlyPnlCostCategoriesPage() {
         >
           <label className="ingredients-field">
             <span>{t("monthlyPnlCostCategories.fields.category")}</span>
-            <select
+            <FilterableSelect
               value={category}
               onChange={(event) => setCategory(event.target.value)}
             >
@@ -248,7 +249,7 @@ export function MonthlyPnlCostCategoriesPage() {
                   {dictItemLabel(item, i18n.language)}
                 </option>
               ))}
-            </select>
+            </FilterableSelect>
           </label>
           <label className="ingredients-field">
             <span>{t("monthlyPnlCostCategories.fields.name")}</span>

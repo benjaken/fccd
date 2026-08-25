@@ -9,6 +9,7 @@ type PermissionValue = {
 };
 
 const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
+  { prefix: "/settings/employees", pageKey: "settings.employees" },
   { prefix: "/settings/users", pageKey: "settings.users" },
   { prefix: "/settings/roles", pageKey: "settings.roles" },
   { prefix: "/settings/login-logs", pageKey: "settings.login_logs" },
@@ -192,9 +193,46 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
   { prefix: "/reports/frozen-meat", pageKey: "reports.frozen_meat" },
   { prefix: "/reports/shops", pageKey: "reports.shops" },
   { prefix: "/follow-up", pageKey: "overview.follow_up" },
-  { prefix: "/factory", pageKey: "workspace.factory" },
+  {
+    prefix: "/factory/multi-day-menu",
+    pageKey: "workspace.factory.multi_day_menu",
+  },
+  {
+    prefix: "/factory/meat-delivery-note",
+    pageKey: "workspace.factory.meat_delivery_note",
+  },
+  { prefix: "/factory/order", pageKey: "workspace.factory.order" },
+  {
+    prefix: "/factory/production-calendar",
+    pageKey: "workspace.factory.production_calendar",
+  },
+  { prefix: "/factory", pageKey: "workspace.factory.board" },
+  {
+    prefix: "/driver-delivery/available",
+    pageKey: "workspace.delivery.available",
+  },
+  {
+    prefix: "/driver-delivery/accepted",
+    pageKey: "workspace.delivery.accepted",
+  },
+  {
+    prefix: "/driver-delivery/fleet",
+    pageKey: "workspace.delivery.fleet",
+  },
+  {
+    prefix: "/driver-delivery/income",
+    pageKey: "workspace.delivery.income",
+  },
+  {
+    prefix: "/driver-delivery/districts",
+    pageKey: "workspace.delivery.districts",
+  },
+  {
+    prefix: "/driver-delivery/settings",
+    pageKey: "workspace.delivery.settings",
+  },
   { prefix: "/driver-delivery", pageKey: "workspace.delivery" },
-  { prefix: "/customer", pageKey: "workspace.customer" },
+  { prefix: "/customer", pageKey: "workspace.customer.portal" },
   { prefix: "/finance/cost-input", pageKey: "kitchen.cost_input" },
   { prefix: "/finance", pageKey: "finance" },
   { prefix: "/inventory", pageKey: "inventory" },
@@ -297,6 +335,22 @@ const PAGE_ACCESS_CHILD_KEYS: Record<string, string[]> = {
     "workspace.delivery",
     "workspace.customer",
   ],
+  "workspace.factory": [
+    "workspace.factory.board",
+    "workspace.factory.order",
+    "workspace.factory.meat_delivery_note",
+    "workspace.factory.multi_day_menu",
+    "workspace.factory.production_calendar",
+  ],
+  "workspace.delivery": [
+    "workspace.delivery.available",
+    "workspace.delivery.accepted",
+    "workspace.delivery.fleet",
+    "workspace.delivery.income",
+    "workspace.delivery.districts",
+    "workspace.delivery.settings",
+  ],
+  "workspace.customer": ["workspace.customer.portal"],
 };
 
 export function pageAccessKey(pathname: string) {
@@ -373,6 +427,7 @@ export function usePageAccess(role: string | null | undefined) {
     () => ({
       loading,
       error,
+      hasPermission: (pageKey: string) => permissions.has(pageKey),
       canAccess: (pageKey: string) => {
         if (pageKey === "profile") return true;
         if (permissions.get(pageKey)?.canAccess === true) return true;

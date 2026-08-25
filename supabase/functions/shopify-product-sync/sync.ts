@@ -2,8 +2,10 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   canonicalCatalogJson,
   catalogChangeDiff,
+  isShopifyOptionHelperProduct,
   normalizeCatalogProduct,
-  normalizeShopDomain,
+  parseGloboPackageSchema,
+  resolveShopDomain,
   type NormalizedCatalogProduct,
   type ShopifyBundleComponent,
   type ShopifyCatalogEnrichment,
@@ -44,6 +46,10 @@ export function envFor(prefix: string, suffix: string): string | null {
   return Deno.env.get(`${prefix}_${suffix}`)?.trim() || null;
 }
 
+function shopDomainFor(store: StoreRow): string | null {
+  return resolveShopDomain(envFor(store.secret_prefix, "SHOP"), store.shop_domain);
+}
+
 async function sha256Hex(value: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
   return Array.from(new Uint8Array(digest))
@@ -76,7 +82,7 @@ export async function getShopifyToken(store: StoreRow): Promise<string> {
   if (configured) return configured;
   const clientId = envFor(store.secret_prefix, "CLIENT_ID");
   const clientSecret = envFor(store.secret_prefix, "CLIENT_SECRET");
-  const shop = normalizeShopDomain(envFor(store.secret_prefix, "SHOP") ?? store.shop_domain);
+  const shop = shopDomainFor(store);
   if (!clientId || !clientSecret || !shop) throw new Error("shopify_credentials_missing");
   const response = await fetchWithRetry(`https://${shop}/admin/oauth/access_token`, {
     method: "POST",
@@ -94,7 +100,7 @@ export async function getShopifyToken(store: StoreRow): Promise<string> {
 }
 
 async function shopifyJson<T>(store: StoreRow, token: string, path: string): Promise<T> {
-  const shop = normalizeShopDomain(envFor(store.secret_prefix, "SHOP") ?? store.shop_domain);
+  const shop = shopDomainFor(store);
   if (!shop) throw new Error("shopify_store_invalid");
   const response = await fetchWithRetry(`https://${shop}/admin/api/${SHOPIFY_API_VERSION}/${path}`, {
     headers: { "X-Shopify-Access-Token": token, "Content-Type": "application/json" },
@@ -104,7 +110,7 @@ async function shopifyJson<T>(store: StoreRow, token: string, path: string): Pro
 }
 
 async function graphQl<T>(store: StoreRow, token: string, query: string, variables: Record<string, unknown>): Promise<T> {
-  const shop = normalizeShopDomain(envFor(store.secret_prefix, "SHOP") ?? store.shop_domain);
+  const shop = shopDomainFor(store);
   if (!shop) throw new Error("shopify_store_invalid");
   const response = await fetchWithRetry(`https://${shop}/admin/api/${SHOPIFY_API_VERSION}/graphql.json`, {
     method: "POST",
@@ -120,8 +126,9 @@ async function graphQl<T>(store: StoreRow, token: string, query: string, variabl
 export async function fetchProductEnrichment(
   store: StoreRow,
   token: string,
-  productId: number,
+  product: ShopifyProduct,
 ): Promise<ShopifyCatalogEnrichment> {
+  const productId = Number(product.id);
   type ComponentNode = {
     quantity: number;
     productVariant: {
@@ -186,9 +193,25 @@ export async function fetchProductEnrichment(
       });
     }
   }
+  let packageSchema: unknown = data.product?.packageSchema?.value ?? null;
+  const tags = Array.isArray(product.tags) ? product.tags.join(",") : String(product.tags ?? "");
+  const mayUseStorefrontOptions = /自選|任選|套餐/.test(`${product.title ?? ""} ${product.product_type ?? ""} ${tags}`);
+  if (!packageSchema && !fixedComponents.length && mayUseStorefrontOptions && product.handle) {
+    const shop = shopDomainFor(store);
+    if (shop) {
+      try {
+        const response = await fetchWithRetry(`https://${shop}/products/${encodeURIComponent(product.handle)}`, {
+          headers: { Accept: "text/html" },
+        });
+        if (response.ok) packageSchema = parseGloboPackageSchema(await response.text(), productId);
+      } catch {
+        // Storefront option enrichment is best-effort; the Admin API record remains reviewable.
+      }
+    }
+  }
   return {
     fixedComponents,
-    packageSchema: data.product?.packageSchema?.value ?? null,
+    packageSchema,
     variantRequiresComponents,
   };
 }
@@ -211,7 +234,7 @@ async function fetchProducts(
     const params = new URLSearchParams({ limit: String(PAGE_SIZE) });
     if (pageInfo) params.set("page_info", pageInfo);
     else if (mode === "incremental" && updatedAtMin) params.set("updated_at_min", updatedAtMin);
-    const shop = normalizeShopDomain(envFor(store.secret_prefix, "SHOP") ?? store.shop_domain);
+    const shop = shopDomainFor(store);
     if (!shop) throw new Error("shopify_store_invalid");
     const response = await fetchWithRetry(
       `https://${shop}/admin/api/${SHOPIFY_API_VERSION}/products.json?${params}`,
@@ -296,7 +319,10 @@ export async function persistCatalogProduct(input: {
 }): Promise<{ status: string; catalogType: string; matched: number }> {
   const normalized = normalizeCatalogProduct(input.product, input.enrichment);
   const fingerprint = await sha256Hex(canonicalCatalogJson(normalized));
-  const { variantMatches, itemMatches } = await resolveMatches(input.client, input.store, normalized);
+  const ignored = isShopifyOptionHelperProduct(input.product);
+  const { variantMatches, itemMatches } = ignored
+    ? { variantMatches: new Map<number, CatalogMatch>(), itemMatches: new Map<string, CatalogMatch>() }
+    : await resolveMatches(input.client, input.store, normalized);
   const blockingReasons = new Set<string>();
   for (const match of variantMatches.values()) {
     if (match.status === "missing_sku" || match.status === "duplicate_sku") blockingReasons.add(match.status);
@@ -312,7 +338,7 @@ export async function persistCatalogProduct(input: {
     .maybeSingle();
   if (previousError) throw previousError;
   const hasApprovedMapping = Boolean(previous?.approved_fingerprint || previous?.approval_status === "approved");
-  let approvalStatus = blockingReasons.size
+  let approvalStatus = ignored ? "ignored" : blockingReasons.size
     ? (normalized.catalogType === "product" ? "conflict" : "dependency_pending")
     : hasApprovedMapping && previous?.approved_fingerprint !== fingerprint
       ? "change_pending"
@@ -320,7 +346,7 @@ export async function persistCatalogProduct(input: {
   if (previous?.content_fingerprint === fingerprint && previous.approval_status === "rejected") {
     approvalStatus = "rejected";
   }
-  const changeDiff = hasApprovedMapping
+  const changeDiff = !ignored && hasApprovedMapping
     ? catalogChangeDiff((previous?.approved_snapshot as Record<string, unknown> | null) ?? null, normalized as unknown as Record<string, unknown>)
     : {};
   const draftRow = {
@@ -331,7 +357,7 @@ export async function persistCatalogProduct(input: {
     description_html: normalized.descriptionHtml,
     vendor: normalized.vendor,
     product_type: normalized.productType,
-    catalog_type: normalized.catalogType,
+    catalog_type: ignored ? "unknown" : normalized.catalogType,
     shopify_status: normalized.shopifyStatus,
     tags: normalized.tags,
     featured_image_url: normalized.featuredImageUrl,
@@ -362,6 +388,7 @@ export async function persistCatalogProduct(input: {
   ]);
   const cleanupError = cleanup.find((result) => result.error)?.error;
   if (cleanupError) throw cleanupError;
+  if (ignored) return { status: "ignored", catalogType: "unknown", matched: 0 };
   if (normalized.variants.length) {
     const { error } = await input.client.from("shopify_catalog_draft_variants").insert(
       normalized.variants.map((variant) => {
@@ -469,7 +496,7 @@ export async function runStoreSync(input: {
     for (const product of products) {
       counters.fetched += 1;
       try {
-        const enrichment = await fetchProductEnrichment(input.store, token, Number(product.id));
+        const enrichment = await fetchProductEnrichment(input.store, token, product);
         const result = await persistCatalogProduct({
           client: input.client,
           store: input.store,
@@ -478,6 +505,7 @@ export async function runStoreSync(input: {
           runId,
           sourceTopic: null,
         });
+        if (result.status === "ignored") continue;
         if (result.catalogType === "product") counters.products += 1;
         else counters.packages += 1;
         counters.matched += result.matched;
@@ -611,7 +639,7 @@ export async function processWebhookEvent(input: {
       }).eq("store_id", input.store.id).eq("shopify_product_id", Number(input.product.id));
     } else {
       const token = await getShopifyToken(input.store);
-      const enrichment = await fetchProductEnrichment(input.store, token, Number(input.product.id));
+      const enrichment = await fetchProductEnrichment(input.store, token, input.product);
       await persistCatalogProduct({
         client: input.client,
         store: input.store,

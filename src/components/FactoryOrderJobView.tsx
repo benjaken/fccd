@@ -3,6 +3,7 @@ import { CheckCircle2, Printer, ShoppingCart, TriangleAlert } from "lucide-react
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
+import { FactoryDishLabelPreview } from "@/components/FactoryDishLabelPreview";
 import {
   assignDeliveryMotorcade,
   type DeliveryListItem,
@@ -17,6 +18,7 @@ import {
   type FactoryOrderJob,
 } from "@/lib/factory-board";
 import {
+  combineFactoryLabelBase64,
   fetchFactoryLabelCommand,
   type FactoryLabelCommandLoader,
 } from "@/lib/factory-label";
@@ -227,6 +229,7 @@ export function FactoryOrderJobView({
     setBulkPrintError(false);
     setBulkPrintSuccess(null);
     try {
+      const labelCommands: string[] = [];
       for (const line of visibleLines) {
         const commandBase64 = await loadLabelCommand({
           orderNumber,
@@ -235,7 +238,14 @@ export function FactoryOrderJobView({
           remarks: [...line.remarks, job?.packingNote ?? ""].filter(Boolean),
           copies: labelCopies(line),
         });
-        await qz.printLabels(selectedPrinter, commandBase64, 1);
+        labelCommands.push(commandBase64);
+      }
+      await qz.printLabels(
+        selectedPrinter,
+        combineFactoryLabelBase64(labelCommands),
+        1,
+      );
+      for (const line of visibleLines) {
         try {
           await markLinePrinted(line.id);
           onLinePrinted?.(line.id);
@@ -260,8 +270,8 @@ export function FactoryOrderJobView({
       const commandBase64 = await loadLabelCommand({
         kind: "address",
         orderNumber,
-        address: formatDeliveryAddress(item.address, item.shippingMethodName, empty),
-        arrivalWindow,
+        deliveryDate: dateKey,
+        district: item.districtName || empty,
         customerName: item.customerName || empty,
         customerPhone: item.customerPhone || empty,
       });
@@ -688,6 +698,17 @@ export function FactoryOrderJobView({
                   )}
                 </div>
               ) : null}
+              <div className="factory-label-print-preview">
+                <FactoryDishLabelPreview
+                  input={{
+                    orderNumber,
+                    deliveryDate: dateKey,
+                    labelName: selectedLine.labelName?.trim() || selectedLine.label,
+                    remarks: [...selectedLine.remarks, job?.packingNote ?? ""].filter(Boolean),
+                    copies: labelCopies(selectedLine),
+                  }}
+                />
+              </div>
               <div className="factory-label-summary">
                 <div>
                   <span>{t("factoryBoard.originalName")}</span>

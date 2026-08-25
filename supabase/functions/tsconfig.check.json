@@ -14,6 +14,8 @@
     "_shared/supplier-quote-recognition.ts",
     "_shared/report-ai-provider.ts",
     "_shared/report-ai-security.ts",
+    "_shared/daily-sales-email.ts",
+    "send-daily-sales-report/index.ts",
     "shopify-product-sync/index.ts",
     "shopify-product-sync/map.ts",
     "shopify-product-sync/sync.ts",

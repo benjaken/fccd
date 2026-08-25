@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { RefreshCw, UserRoundCheck } from "lucide-react";
 
+import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
@@ -159,7 +160,7 @@ export function AssignDriverPage() {
             filters={
               <label className="orders-status-filter">
                 <span>{t("assignDriverPage.teamFilter")}</span>
-                <select
+                <FilterableSelect
                   value={teamFilter.value}
                   onChange={(event) => teamFilter.setValue(event.target.value)}
                 >
@@ -169,7 +170,7 @@ export function AssignDriverPage() {
                       {team.name}
                     </option>
                   ))}
-                </select>
+                </FilterableSelect>
               </label>
             }
           />
@@ -312,7 +313,7 @@ export function AssignDriverPage() {
         >
           <label className="ingredients-field">
             <span>{t("assignDriverPage.columns.team")}</span>
-            <select
+            <FilterableSelect
               value={selectedTeamId}
               disabled={loadingOptions || Boolean(assigningId)}
               onChange={(event) => {
@@ -325,7 +326,7 @@ export function AssignDriverPage() {
                   {team.name}
                 </option>
               ))}
-            </select>
+            </FilterableSelect>
           </label>
         </form>
       </SidePanel>

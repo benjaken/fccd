@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowDown, ArrowUp, Pencil, ReceiptText } from "lucide-react";
 
+import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
@@ -157,8 +158,8 @@ export function MasoftInvoiceReceiptsPage({
         <label className="payments-date-filter-mode"><span>{t("masoft.payoutFilter")}</span><select value={dateMode} onChange={(event) => { setDateMode(event.target.value as DateMode); resetPage(); }}><option value="single">{t("masoft.singleDate")}</option><option value="range">{t("masoft.dateRange")}</option></select></label>
         {dateMode === "single" ? <DatePicker id="masoft-payout-date" value={date} onChange={(value) => { setDate(value); resetPage(); }} label={t("masoft.payoutFilter")} hideLabel /> : <DateRangePicker startId="masoft-payout-start" endId="masoft-payout-end" startValue={startDate} endValue={endDate} onStartChange={(value) => { setStartDate(value); resetPage(); }} onEndChange={(value) => { setEndDate(value); resetPage(); }} startLabel={t("masoft.from")} endLabel={t("masoft.to")} legend={t("masoft.payoutRange")} />}
         <div className="payments-filter-fields">
-          <label className="payments-filter-field"><span>{t("masoft.brand")}</span><select value={channelId} onChange={(event) => { setChannelId(event.target.value); resetPage(); }}><option value="">{t("masoft.allBrands")}</option>{options.channels.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}</select></label>
-          <label className="payments-filter-field"><span>{t("masoft.paymentMethod")}</span><select value={methodId} onChange={(event) => { setMethodId(event.target.value); resetPage(); }}><option value="">{t("masoft.allPaymentMethods")}</option>{options.paymentMethods.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}</select></label>
+          <label className="payments-filter-field"><span>{t("masoft.brand")}</span><FilterableSelect value={channelId} onChange={(event) => { setChannelId(event.target.value); resetPage(); }}><option value="">{t("masoft.allBrands")}</option>{options.channels.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}</FilterableSelect></label>
+          <label className="payments-filter-field"><span>{t("masoft.paymentMethod")}</span><FilterableSelect value={methodId} onChange={(event) => { setMethodId(event.target.value); resetPage(); }}><option value="">{t("masoft.allPaymentMethods")}</option>{options.paymentMethods.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}</FilterableSelect></label>
         </div>
         {canManageActions && selectedItems.length ? <div className="masoft-selection-actions"><span>{t("masoft.selected", { count: selectedItems.length, amount: formatter.format(selectedNet) })}</span><Button type="button" variant="outline" onClick={openInvoiceModal}>{t("masoft.addInvoice")}</Button></div> : null}
       </header>

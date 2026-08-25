@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { FilterableSelect } from "@/components/ui/filterable-select";
 
 export function ReportYearFilter({
   label,
@@ -20,7 +21,7 @@ export function ReportYearFilter({
       {children}
       <label>
         <span>{label}</span>
-        <select
+        <FilterableSelect
           aria-label={label}
           value={year}
           onChange={(event) => onYearChange(Number(event.target.value))}
@@ -30,7 +31,7 @@ export function ReportYearFilter({
               {option}
             </option>
           ))}
-        </select>
+        </FilterableSelect>
       </label>
     </section>
   );

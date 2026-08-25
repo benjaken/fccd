@@ -3,10 +3,12 @@ import { useTranslation } from "react-i18next";
 import { Banknote, ChevronLeft, ChevronRight, MapPinned, Pencil, Plus, RefreshCw, Truck } from "lucide-react";
 
 import { useCurrentPageAccess } from "@/auth/use-page-access";
+import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import { SidePanel } from "@/components/ui/side-panel";
+import { SearchSelect } from "@/components/ui/search-select";
 import { Switch } from "@/components/ui/switch";
 import { useDeferredFilter } from "@/lib/use-deferred-filter";
 import {
@@ -62,7 +64,7 @@ export function DeliveryFleetsPage() {
   const feeFleetControl = useDeferredFilter(feeFleetFilter, (value) => { setFeeFleetFilter(value); setFeePage(1); });
   const feeDistrictControl = useDeferredFilter(feeDistrictFilter, (value) => { setFeeDistrictFilter(value); setFeePage(1); });
 
-  const feeDistrictOptions = useMemo(() => [...new Set(feeRows.map((row) => row.districtName))].sort((left, right) => left.localeCompare(right, "zh-HK")), [feeRows]);
+  const feeDistrictOptions = useMemo(() => [...new Set(feeRows.map((row) => row.districtName))].sort((left, right) => left.localeCompare(right, "zh-HK")).map((district) => ({ id: district, name: district })), [feeRows]);
   const feeFleetOptions = useMemo(() => [...new Map(feeRows.map((row) => [row.fleetId, row.fleetName])).entries()].map(([id, name]) => ({ id, name })).sort((left, right) => left.name.localeCompare(right.name, "zh-HK")), [feeRows]);
 
   const filteredFeeRows = useMemo(() => {
@@ -398,17 +400,14 @@ export function DeliveryFleetsPage() {
               filters={<div className="delivery-fleet-fee-filters">
                 <label>
                   <span>{t("deliveryFleets.feeManagement.filters.driver")}</span>
-                  <select value={feeFleetControl.value} onChange={(event) => feeFleetControl.setValue(event.target.value)}>
+                  <FilterableSelect value={feeFleetControl.value} onChange={(event) => feeFleetControl.setValue(event.target.value)}>
                     <option value="">{t("deliveryFleets.feeManagement.filters.allDrivers")}</option>
                     {feeFleetOptions.map((fleet) => <option key={fleet.id} value={fleet.id}>{fleet.name}</option>)}
-                  </select>
+                  </FilterableSelect>
                 </label>
                 <label>
                   <span>{t("deliveryFleets.feeManagement.filters.district")}</span>
-                  <select value={feeDistrictControl.value} onChange={(event) => feeDistrictControl.setValue(event.target.value)}>
-                    <option value="">{t("deliveryFleets.feeManagement.filters.allDistricts")}</option>
-                    {feeDistrictOptions.map((district) => <option key={district} value={district}>{district}</option>)}
-                  </select>
+                  <SearchSelect id="delivery-fleet-fee-district" label={t("deliveryFleets.feeManagement.filters.district")} value={feeDistrictControl.value} options={[{ id: "", name: t("deliveryFleets.feeManagement.filters.allDistricts") }, ...feeDistrictOptions]} placeholder={t("deliveryFleets.feeManagement.filters.allDistrictsPlaceholder")} onChange={(option) => feeDistrictControl.setValue(option.id)} />
                 </label>
               </div>}
             />

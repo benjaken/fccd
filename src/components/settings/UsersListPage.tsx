@@ -36,6 +36,8 @@ const USER_SKELETON_COLUMNS = [
   { width: "72%" },
   { width: "6rem" },
   { width: "5rem", variant: "badge" as const },
+  { width: "5rem", variant: "badge" as const },
+  { width: "6rem", variant: "badge" as const },
   { width: "60%" },
   { width: "7rem" },
   { width: "7rem" },
@@ -89,9 +91,11 @@ export function UsersListPage({
     timeZone: "Asia/Hong_Kong",
   });
 
-  const loadPage = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  const loadPage = useCallback(async (silent = false) => {
+    if (!silent) {
+      setLoading(true);
+      setError(null);
+    }
     try {
       const result = await loadUsers({ page, search, role });
       setItems(result.items);
@@ -104,16 +108,27 @@ export function UsersListPage({
         typeof loadError.code === "string"
           ? loadError.code
           : "users_load_failed";
-      setItems([]);
-      setTotal(0);
-      setError(code);
+      if (!silent) {
+        setItems([]);
+        setTotal(0);
+        setError(code);
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [loadUsers, page, reloadKey, role, search]);
 
   useEffect(() => {
     void loadPage();
+  }, [loadPage]);
+
+  useEffect(() => {
+    const refreshTimer = window.setInterval(() => {
+      if (document.visibilityState === "visible") void loadPage(true);
+    }, 60_000);
+    return () => {
+      window.clearInterval(refreshTimer);
+    };
   }, [loadPage]);
 
   useEffect(() => {
@@ -228,6 +243,8 @@ export function UsersListPage({
                 <th>{t("settings.users.columns.email")}</th>
                 <th>{t("settings.users.columns.phone")}</th>
                 <th>{t("settings.users.columns.role")}</th>
+                <th>{t("settings.users.columns.connection")}</th>
+                <th>{t("settings.users.columns.accountType")}</th>
                 <th>{t("settings.users.columns.restaurant")}</th>
                 <th>{t("settings.users.columns.created")}</th>
                 <th>{t("settings.users.columns.updated")}</th>
@@ -237,59 +254,83 @@ export function UsersListPage({
               </tr>
             }
           >
-            {items.map((listUser) => (
-              <tr key={listUser.id}>
-                <td>
-                  <strong>{listUser.userName || t("common.notSet")}</strong>
-                </td>
-                <td>{listUser.email || t("common.notSet")}</td>
-                <td>{listUser.phone || t("common.notSet")}</td>
-                <td>
-                  <span className="status-badge blue">
-                    {listUser.role || t("common.notSet")}
-                  </span>
-                </td>
-                <td>
-                  {restaurantLabel(
-                    listUser.shopRestroLegacyId,
-                    restaurants,
-                    t("common.notSet"),
-                  )}
-                </td>
-                <td>{date.format(new Date(listUser.createdAt))}</td>
-                <td>{date.format(new Date(listUser.updatedAt))}</td>
-                {showActions ? (
-                  <td className="table-actions-cell">
-                    <div className="table-row-actions">
-                      {canEdit ? (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          onClick={() => setEditUser(listUser)}
-                          aria-label={t("settings.users.editAction")}
-                          title={t("settings.users.editAction")}
-                        >
-                          <Pencil />
-                        </Button>
-                      ) : null}
-                      {canChangePassword ? (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          onClick={() => setPasswordUser(listUser)}
-                          aria-label={t("settings.users.changePassword")}
-                          title={t("settings.users.changePassword")}
-                        >
-                          <KeyRound />
-                        </Button>
-                      ) : null}
-                    </div>
+            {items.map((listUser) => {
+              return (
+                <tr key={listUser.id}>
+                  <td>
+                    <strong>{listUser.userName || t("common.notSet")}</strong>
                   </td>
-                ) : null}
-              </tr>
-            ))}
+                  <td>{listUser.email || t("common.notSet")}</td>
+                  <td>{listUser.phone || t("common.notSet")}</td>
+                  <td>
+                    <span className="status-badge blue">
+                      {listUser.role || t("common.notSet")}
+                    </span>
+                  </td>
+                  <td>
+                    <span
+                      className={`status-badge connection-status-badge ${
+                        listUser.isEmployeeLinked ? "green" : "neutral"
+                      }`}
+                    >
+                      {listUser.isEmployeeLinked
+                        ? t("settings.users.connection.linked")
+                        : t("settings.users.connection.unlinked")}
+                    </span>
+                  </td>
+                  <td>
+                    <span
+                      className={`status-badge ${
+                        listUser.isDedicatedAccount ? "blue" : "neutral"
+                      }`}
+                    >
+                      {listUser.isDedicatedAccount
+                        ? t("settings.users.accountType.dedicated")
+                        : t("settings.users.accountType.standard")}
+                    </span>
+                  </td>
+                  <td>
+                    {restaurantLabel(
+                      listUser.shopRestroLegacyId,
+                      restaurants,
+                      t("common.notSet"),
+                    )}
+                  </td>
+                  <td>{date.format(new Date(listUser.createdAt))}</td>
+                  <td>{date.format(new Date(listUser.updatedAt))}</td>
+                  {showActions ? (
+                    <td className="table-actions-cell">
+                      <div className="table-row-actions">
+                        {canEdit ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            onClick={() => setEditUser(listUser)}
+                            aria-label={t("settings.users.editAction")}
+                            title={t("settings.users.editAction")}
+                          >
+                            <Pencil />
+                          </Button>
+                        ) : null}
+                        {canChangePassword ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            onClick={() => setPasswordUser(listUser)}
+                            aria-label={t("settings.users.changePassword")}
+                            title={t("settings.users.changePassword")}
+                          >
+                            <KeyRound />
+                          </Button>
+                        ) : null}
+                      </div>
+                    </td>
+                  ) : null}
+                </tr>
+              );
+            })}
           </ListTable>
         )}
 

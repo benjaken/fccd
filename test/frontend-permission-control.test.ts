@@ -33,6 +33,16 @@ describe("frontend permission control", () => {
     }
   });
 
+  it("falls back to workspace access until sitemap child permissions exist", () => {
+    const access = source("src/auth/use-page-access.ts");
+    const app = source("src/App.tsx");
+
+    expect(access).toContain("hasPermission: (pageKey: string)");
+    expect(app).toContain("!pageAccess.hasPermission(permissionKey)");
+    expect(app).toContain('fallbackPermissionKey="workspace.factory"');
+    expect(app).toContain('fallbackPermissionKey="workspace.delivery"');
+  });
+
   it("does not keep legacy role-based edit helpers or locked permission rows", () => {
     expect(source("src/lib/products.ts")).not.toContain(
       "canEditProductCatalog",

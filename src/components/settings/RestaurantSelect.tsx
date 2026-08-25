@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { FilterableSelect } from "@/components/ui/filterable-select";
 
 import {
   fetchRestaurantOptions,
@@ -64,7 +65,7 @@ export function RestaurantSelect({
   return (
     <label>
       <span>{t("settings.users.fields.restaurant")}</span>
-      <select
+      <FilterableSelect
         value={value}
         disabled={disabled || loading}
         onChange={(event) => onChange(event.target.value)}
@@ -75,7 +76,7 @@ export function RestaurantSelect({
             {restaurant.name}
           </option>
         ))}
-      </select>
+      </FilterableSelect>
       {loading ? (
         <em>{t("settings.users.fields.restaurantLoading")}</em>
       ) : null}

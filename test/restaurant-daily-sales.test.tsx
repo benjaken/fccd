@@ -201,12 +201,14 @@ describe("restaurant daily sales input", () => {
     await i18n.changeLanguage("zh-HK");
     const user = userEvent.setup();
     const saveSales = vi.fn(async () => undefined);
+    const sendReportEmail = vi.fn(async () => ({ sent: true }));
     render(
       <RestaurantDailySalesPage
         loadMasters={async () => masters}
         loadRecent={async () => []}
         checkRecordExists={async () => false}
         saveSales={saveSales}
+        sendReportEmail={sendReportEmail}
       />,
     );
 
@@ -252,6 +254,7 @@ describe("restaurant daily sales input", () => {
       pettyCashAmount: 20,
     })));
     expect(saveSales.mock.calls[0]?.[0].receiptFile?.name).toBe("pos.jpg");
+    expect(sendReportEmail).toHaveBeenCalledWith("ylp", expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/));
     expect(await screen.findByText("已儲存")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "查看" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.queryByRole("spinbutton", { name: "總營業額" })).not.toBeInTheDocument();

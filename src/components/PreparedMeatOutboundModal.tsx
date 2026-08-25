@@ -5,6 +5,7 @@ import {
   PreparedMeatItemSearchSelect,
   PreparedMeatQuantityInput,
 } from "@/components/prepared-meat-line-controls";
+import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
 import { SidePanel } from "@/components/ui/side-panel";
 import { fetchMeatCustomers, type MeatCustomerRow } from "@/lib/meat-customers";
@@ -500,7 +501,7 @@ export function PreparedMeatOutboundModal({
         <div className="prepared-meat-outbound-header">
           <label className="raw-meat-field prepared-meat-outbound-customer">
             <span>{t("preparedMeatInventory.outbound.customer")}</span>
-            <select
+            <FilterableSelect
               aria-label={t("preparedMeatInventory.outbound.customer")}
               value={customerId}
               disabled={loading || locked}
@@ -514,7 +515,7 @@ export function PreparedMeatOutboundModal({
                   {meatCustomerOptionLabel(row)}
                 </option>
               ))}
-            </select>
+            </FilterableSelect>
           </label>
           <label className="raw-meat-field prepared-meat-outbound-order-number">
             <span>{t("preparedMeatInventory.outbound.orderNumber")}</span>
@@ -555,7 +556,7 @@ export function PreparedMeatOutboundModal({
           </label>
           <label className="raw-meat-field prepared-meat-outbound-shipping-method">
             <span>{t("preparedMeatInventory.outbound.shippingMethod")}</span>
-            <select
+            <FilterableSelect
               aria-label={t("preparedMeatInventory.outbound.shippingMethod")}
               value={shippingMethodId}
               disabled={!shippingEnabled || loading || locked}
@@ -569,7 +570,7 @@ export function PreparedMeatOutboundModal({
                   {row.name}
                 </option>
               ))}
-            </select>
+            </FilterableSelect>
           </label>
           <label className="raw-meat-field prepared-meat-outbound-address">
             <span>{t("preparedMeatInventory.outbound.address")}</span>

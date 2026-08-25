@@ -3,6 +3,7 @@ import { CircleDollarSign, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react"
 import { useSearchParams } from "react-router-dom";
 
 import { useCurrentPageAccess } from "@/auth/use-page-access";
+import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
 import { KitchenMonthlyFestivalCosts } from "@/components/KitchenMonthlyFestivalCosts";
 import { KitchenMonthlyNonFestivalCosts } from "@/components/KitchenMonthlyNonFestivalCosts";
@@ -339,27 +340,27 @@ function AddCostPanel({
       >
         <label className="ingredients-field">
           <span>品牌</span>
-          <select value={channelId} onChange={(event) => setChannelId(event.target.value)}>
+          <FilterableSelect value={channelId} onChange={(event) => setChannelId(event.target.value)}>
             <option value="">選擇品牌</option>
             {channels.map((channel) => (
               <option key={channel.id} value={channel.id}>
                 {channel.name}{channel.shortName ? ` - ${channel.shortName}` : ""}
               </option>
             ))}
-          </select>
+          </FilterableSelect>
         </label>
         <label className="ingredients-field">
           <span>類型</span>
-          <select value={costTypeId} onChange={(event) => setCostTypeId(event.target.value)}>
+          <FilterableSelect value={costTypeId} onChange={(event) => setCostTypeId(event.target.value)}>
             <option value="">選擇廣告類型</option>
             {costTypes.map((type) => (
               <option key={type.id} value={type.id}>{type.name}</option>
             ))}
-          </select>
+          </FilterableSelect>
         </label>
         <label className="ingredients-field">
           <span>日期（星期一）</span>
-          <select
+          <FilterableSelect
             value={weekStart}
             aria-invalid={!validMonday}
             onChange={(event) => {
@@ -372,7 +373,7 @@ function AddCostPanel({
                 {option.start}（星期一）
               </option>
             ))}
-          </select>
+          </FilterableSelect>
           <small className={validMonday ? "" : "kitchen-cost-date-error"}>
             週期：{selectedRange}
           </small>
@@ -840,7 +841,7 @@ export function KitchenCostInputPage() {
                 {weeks.map((week, index) => (
                   <th key={week.start}>
                     {index === 0 ? (
-                      <select
+                      <FilterableSelect
                         className="kitchen-cost-week-select"
                         value={newestWeekStart}
                         aria-label="選擇第一個星期"
@@ -851,7 +852,7 @@ export function KitchenCostInputPage() {
                             {formatWeekRange(option)}
                           </option>
                         ))}
-                      </select>
+                      </FilterableSelect>
                     ) : formatWeekRange(week)}
                   </th>
                 ))}

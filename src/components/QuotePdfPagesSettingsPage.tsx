@@ -3,6 +3,7 @@ import { Eye, FileImage, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { useCurrentPageAccess } from "@/auth/use-page-access";
+import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
 import { ListTable } from "@/components/ui/list-table";
 import { SidePanel } from "@/components/ui/side-panel";
@@ -346,7 +347,7 @@ export function QuotePdfPagesSettingsPage({
         }
       >
         <form id="quote-pdf-page-form" className="quote-pdf-page-form" onSubmit={(event) => void submit(event)}>
-          <label><span>{t("quotes.pdfPages.brand")}</span><select value={form.channelId} onChange={(event) => setForm((current) => ({ ...current, channelId: event.target.value }))}>{brands.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}</select></label>
+          <label><span>{t("quotes.pdfPages.brand")}</span><FilterableSelect value={form.channelId} onChange={(event) => setForm((current) => ({ ...current, channelId: event.target.value }))}>{brands.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}</FilterableSelect></label>
           <label><span>{t("quotes.pdfPages.fields.title")}</span><input value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} /></label>
           <label><span>{t("quotes.pdfPages.placement")}</span><select value={form.placement} onChange={(event) => setForm((current) => ({ ...current, placement: event.target.value as QuotePdfPagePlacement }))}><option value="front">{t("quotes.pdfPages.front")}</option><option value="back">{t("quotes.pdfPages.back")}</option></select></label>
           <label><span>{t("quotes.pdfPages.fields.order")}</span><input type="number" min="0" value={form.sortOrder} onChange={(event) => setForm((current) => ({ ...current, sortOrder: event.target.value }))} /></label>

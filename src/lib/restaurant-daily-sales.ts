@@ -41,6 +41,11 @@ export type RestaurantDailySalesSaveInput = RestaurantDailySalesRecord & {
   receiptFile?: File | null;
 };
 
+export type RestaurantDailySalesEmailResult = {
+  sent: boolean;
+  skipped?: boolean;
+};
+
 export type RestaurantDailySalesRecentItem = {
   date: string;
   total: number;
@@ -432,4 +437,19 @@ export async function saveRestaurantDailySales(input: RestaurantDailySalesSaveIn
     const { error: insertError } = await supabase.from("restaurant_daily_sales").insert(inserts);
     if (insertError) throw new Error(insertError.message);
   }
+}
+
+export async function sendRestaurantDailySalesReportEmail(
+  restaurantId: string,
+  date: string,
+): Promise<RestaurantDailySalesEmailResult> {
+  const { data, error } = await supabase.functions.invoke("send-daily-sales-report", {
+    body: { restaurantId, date },
+  });
+  if (error) throw new Error(error.message);
+  if (data?.error) throw new Error(String(data.error));
+  return {
+    sent: data?.sent === true,
+    skipped: data?.skipped === true,
+  };
 }

@@ -97,7 +97,7 @@ export type NormalizedCatalogProduct = {
   packageItems: NormalizedPackageItem[];
 };
 
-type ConfigurableSchema = {
+export type ConfigurableSchema = {
   version?: number;
   type?: string;
   groups?: Array<{
@@ -116,6 +116,37 @@ type ConfigurableSchema = {
       default?: boolean;
     }>;
   }>;
+};
+
+type GloboOptionValue = {
+  id?: number | string;
+  name?: number | string;
+  value?: string;
+  "value_zh-TW"?: string;
+  variant_id?: number | string;
+  variant_price?: number | string;
+  selected?: boolean;
+};
+
+type GloboOptionElement = {
+  id?: string;
+  type?: string;
+  label?: string;
+  label_on_cart?: string;
+  min?: number | string;
+  max?: number | string;
+  required?: boolean;
+  option_values?: GloboOptionValue[];
+  elements?: GloboOptionElement[];
+};
+
+type GloboOptionSet = {
+  elements?: GloboOptionElement[];
+  products?: {
+    rule?: {
+      manual?: { enable?: boolean; ids?: Array<number | string> };
+    };
+  };
 };
 
 function nullableText(value: unknown): string | null {
@@ -170,6 +201,94 @@ export function normalizeShopDomain(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const normalized = value.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/$/, "");
   return normalized.endsWith(".myshopify.com") ? normalized : null;
+}
+
+function globoJsonAssignments(html: string): Array<{ id: string; value: GloboOptionSet }> {
+  const assignments: Array<{ id: string; value: GloboOptionSet }> = [];
+  const marker = /window\.GPOConfigs\.options\[([^\]]+)\]\s*=\s*/g;
+  let match: RegExpExecArray | null;
+  while ((match = marker.exec(html))) {
+    const start = marker.lastIndex;
+    let depth = 0;
+    let quoted = false;
+    let escaped = false;
+    let end = -1;
+    for (let index = start; index < html.length; index += 1) {
+      const character = html[index];
+      if (quoted) {
+        if (escaped) escaped = false;
+        else if (character === "\\") escaped = true;
+        else if (character === '"') quoted = false;
+        continue;
+      }
+      if (character === '"') quoted = true;
+      else if (character === "{") depth += 1;
+      else if (character === "}" && --depth === 0) {
+        end = index + 1;
+        break;
+      }
+    }
+    if (end < 0) continue;
+    try {
+      assignments.push({ id: match[1], value: JSON.parse(html.slice(start, end)) as GloboOptionSet });
+    } catch {
+      // Ignore a malformed third-party assignment and continue with other sets.
+    }
+    marker.lastIndex = end;
+  }
+  return assignments;
+}
+
+function nestedGloboElements(elements: GloboOptionElement[]): GloboOptionElement[] {
+  return elements.flatMap((element) => [element, ...nestedGloboElements(element.elements ?? [])]);
+}
+
+export function parseGloboPackageSchema(html: string, productId: number): ConfigurableSchema | null {
+  const applicableAssignments = globoJsonAssignments(html)
+    .filter((assignment) => {
+      const manualRule = assignment.value.products?.rule?.manual;
+      return manualRule?.enable === true
+        && (manualRule.ids ?? []).some((id) => numericId(id) === productId);
+    })
+    .sort((left, right) => (numericId(right.id) ?? 0) - (numericId(left.id) ?? 0));
+  for (const assignment of applicableAssignments) {
+    const groups: NonNullable<ConfigurableSchema["groups"]> = [];
+    for (const [elementIndex, element] of nestedGloboElements(assignment.value.elements ?? []).entries()) {
+      const values = Array.isArray(element.option_values) ? element.option_values : [];
+      if (!values.length) continue;
+      const code = `${assignment.id}:${nullableText(element.id) ?? `group-${elementIndex + 1}`}`;
+      groups.push({
+        code,
+        name: nullableText(element.label) ?? nullableText(element.label_on_cart) ?? code,
+        min: nullableNumber(element.min) ?? (element.required ? 1 : 0),
+        max: positiveNumber(element.max, Math.max(1, values.length)),
+        items: values.map((value, valueIndex) => ({
+          key: `${code}:${String(value.name ?? value.id ?? valueIndex + 1)}`,
+          variant_id: numericId(value.variant_id) ?? undefined,
+          name: nullableText(value["value_zh-TW"]) ?? nullableText(value.value) ?? `Item ${valueIndex + 1}`,
+          quantity: 1,
+          addon_price: nullableNumber(value.variant_price) ?? 0,
+          default: value.selected === true,
+        })),
+      });
+    }
+    // Globo may leave an older option set assigned to the same product. The
+    // highest numeric set id is the latest definition and must win as a unit.
+    if (groups.length) return { version: 1, type: "configurable_package", groups };
+  }
+  return null;
+}
+
+export function isShopifyOptionHelperProduct(product: ShopifyProduct): boolean {
+  const tags = parseTags(product.tags).map((tag) => tag.toLowerCase());
+  const handle = nullableText(product.handle)?.toLowerCase() ?? "";
+  const title = nullableText(product.title)?.normalize("NFKC") ?? "";
+  const isSelectionGroup = /\d+\s*選\s*\d+[)）]?\s*$/.test(title);
+  return tags.includes("globo-product-options") || handle.startsWith("option-set-") || isSelectionGroup;
+}
+
+export function resolveShopDomain(configured: unknown, stored: unknown): string | null {
+  return normalizeShopDomain(configured) ?? normalizeShopDomain(stored);
 }
 
 export function normalizeCatalogProduct(

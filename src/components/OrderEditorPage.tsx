@@ -18,8 +18,10 @@ import {
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
+import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { SearchSelect } from "@/components/ui/search-select";
 import { OrderFactorySettingsControls } from "@/components/order-factory-settings-controls";
 import {
   clearOrderCustomerInfo,
@@ -82,12 +84,12 @@ function SelectField({
         {label}
         {required && <em>*</em>}
       </span>
-      <select value={value} onChange={(event) => onChange(event.target.value)} required={required}>
+      <FilterableSelect value={value} onChange={(event) => onChange(event.target.value)} required={required}>
         <option value="">{emptyLabel}</option>
         {options.map((option) => (
           <option key={option.id} value={option.id}>{option.name}</option>
         ))}
-      </select>
+      </FilterableSelect>
     </label>
   );
 }
@@ -377,7 +379,10 @@ export function OrderEditorPage({
                 <InputField label="送貨地址" value={draft.address} onChange={(value) => update("address", value)} />
               </div>
               <div className="order-editor-column">
-                <SelectField label="地區" value={draft.districtId} options={options.districts} required onChange={(value) => update("districtId", value)} />
+                <label className="order-editor-field">
+                  <span>地區<em>*</em></span>
+                  <SearchSelect id="order-editor-district" label="地區" value={draft.districtId} options={options.districts} required onChange={(option) => update("districtId", option.id)} />
+                </label>
                 <InputField label="送貨日期及時間" value={draft.deliveryAt} required type="datetime-local" onChange={(value) => update("deliveryAt", value)} />
                 <InputField label="送貨時段" value={draft.deliveryTime} placeholder={t("orderEditor.deliveryTimePlaceholder")} onChange={(value) => update("deliveryTime", value)} />
                 <InputField label="出車時間" value={draft.shipOutTime} placeholder={t("orderEditor.shipOutTimePlaceholder")} onChange={(value) => update("shipOutTime", value)} />

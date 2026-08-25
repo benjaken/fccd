@@ -10,6 +10,7 @@ export const SYSTEM_ROLES = [
   "Shop manager",
   "Customer_Main",
   "Customer_Sub",
+  "Company User",
 ] as const;
 
 export type SystemRole = (typeof SYSTEM_ROLES)[number];
@@ -23,6 +24,8 @@ export type UserListItem = {
   phone: string | null;
   role: string | null;
   shopRestroLegacyId: string | null;
+  isDedicatedAccount: boolean;
+  isEmployeeLinked: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -155,6 +158,7 @@ type UserRow = {
   phone: string | null;
   role: string | null;
   shop_restro_legacy_id: string | null;
+  is_dedicated_account: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -252,6 +256,7 @@ export type CreateUserInput = {
   phone?: string;
   role: SystemRole;
   shopRestroLegacyId?: string;
+  isDedicatedAccount?: boolean;
 };
 
 export type UpdateUserProfileInput = {
@@ -260,6 +265,7 @@ export type UpdateUserProfileInput = {
   role: SystemRole;
   phone?: string;
   shopRestroLegacyId?: string;
+  isDedicatedAccount?: boolean;
 };
 
 /** Action-level permission keys under the users settings page. */
@@ -320,6 +326,7 @@ export async function createManagedUser(input: CreateUserInput) {
       phone: string | null;
       role: SystemRole;
       shopRestroLegacyId: string | null;
+      isDedicatedAccount: boolean;
     };
   }>({
     action: "create",
@@ -329,6 +336,7 @@ export async function createManagedUser(input: CreateUserInput) {
     phone: phone || null,
     role: input.role,
     shopRestroLegacyId: input.shopRestroLegacyId?.trim() || null,
+    isDedicatedAccount: Boolean(input.isDedicatedAccount),
   });
   return result.user;
 }
@@ -360,6 +368,7 @@ export async function updateManagedUserProfile(input: UpdateUserProfileInput) {
       role: SystemRole;
       phone: string | null;
       shopRestroLegacyId: string | null;
+      isDedicatedAccount: boolean;
     };
   }>({
     action: "updateProfile",
@@ -368,6 +377,7 @@ export async function updateManagedUserProfile(input: UpdateUserProfileInput) {
     role: input.role,
     phone: phone || null,
     shopRestroLegacyId: input.shopRestroLegacyId?.trim() || null,
+    isDedicatedAccount: Boolean(input.isDedicatedAccount),
   });
   return result.user;
 }
@@ -518,7 +528,7 @@ export async function fetchUsers({
   let query = supabase
     .from("user_profiles")
     .select(
-      "id,email,user_name,phone,role,shop_restro_legacy_id,created_at,updated_at",
+      "id,email,user_name,phone,role,shop_restro_legacy_id,is_dedicated_account,created_at,updated_at",
       { count: "exact" },
     )
     .order("created_at", { ascending: false })
@@ -536,19 +546,32 @@ export async function fetchUsers({
   const { data, count, error } = await query;
   if (error) throw error;
 
-  return {
-    total: count ?? 0,
-    items: ((data ?? []) as UserRow[]).map((row) => ({
-      id: row.id,
-      email: row.email,
-      userName: row.user_name,
-      phone: row.phone,
-      role: row.role,
-      shopRestroLegacyId: row.shop_restro_legacy_id,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-    })) satisfies UserListItem[],
-  };
+  const items: UserListItem[] = ((data ?? []) as UserRow[]).map((row) => ({
+        id: row.id,
+        email: row.email,
+        userName: row.user_name,
+        phone: row.phone,
+        role: row.role,
+        shopRestroLegacyId: row.shop_restro_legacy_id,
+        isDedicatedAccount: row.is_dedicated_account,
+        isEmployeeLinked: false,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      }));
+
+  if (items.length) {
+    const { data: links, error: linksError } = await supabase.rpc(
+      "user_employee_link_status",
+      { requested_user_ids: items.map((item) => item.id) },
+    );
+    if (linksError) throw linksError;
+    const linkedIds = new Set(
+      ((links ?? []) as Array<{ user_id: string }>).map((link) => link.user_id),
+    );
+    for (const item of items) item.isEmployeeLinked = linkedIds.has(item.id);
+  }
+
+  return { total: count ?? 0, items };
 }
 
 export async function fetchAttachments({

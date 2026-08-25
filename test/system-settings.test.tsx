@@ -52,6 +52,8 @@ const userItem: UserListItem = {
   phone: "+852 9123 4567",
   role: "Super Admin",
   shopRestroLegacyId: "1706068657987x347172380334358500",
+  isDedicatedAccount: true,
+  isEmployeeLinked: true,
   createdAt: "2026-08-12T00:00:00.000Z",
   updatedAt: "2026-08-13T00:00:00.000Z",
 };
@@ -225,6 +227,8 @@ describe("Super Admin system settings", () => {
     expect(screen.getByText("Admin User")).toBeInTheDocument();
     expect(screen.getByText("admin@example.com")).toBeInTheDocument();
     expect(screen.getByText("+852 9123 4567")).toBeInTheDocument();
+    expect(screen.getByText("已連結")).toBeInTheDocument();
+    expect(screen.getByText("專用帳號")).toBeInTheDocument();
     expect(await screen.findByText("TKO 桂花小幸 將軍澳")).toBeInTheDocument();
     expect(screen.getByText("顯示 1–15，共 24 筆")).toBeInTheDocument();
     expect(
@@ -433,10 +437,7 @@ describe("Super Admin system settings", () => {
       screen.queryByText("Super Admin 固定可訪問所有頁面。"),
     ).not.toBeInTheDocument();
 
-    await user.selectOptions(
-      screen.getByLabelText("當前查看角色"),
-      "Admin",
-    );
+    await user.click(screen.getByRole("button", { name: /^Admin/ }));
     expect(
       screen.getByRole("switch", { name: "財務對帳 可訪問" }),
     ).toBeChecked();
@@ -466,9 +467,8 @@ describe("Super Admin system settings", () => {
       </MemoryRouter>,
     );
 
-    await user.selectOptions(
-      await screen.findByLabelText("當前查看角色"),
-      "Admin",
+    await user.click(
+      await screen.findByRole("button", { name: /^Admin/ }),
     );
     await user.click(screen.getByRole("switch", { name: "訂單 可訪問" }));
     await user.click(screen.getByRole("switch", { name: "訂單 可管理" }));
@@ -503,9 +503,8 @@ describe("Super Admin system settings", () => {
       </MemoryRouter>,
     );
 
-    await user.selectOptions(
-      await screen.findByLabelText("當前查看角色"),
-      "Admin",
+    await user.click(
+      await screen.findByRole("button", { name: /^Admin/ }),
     );
     await user.click(screen.getByRole("switch", { name: "訂單 可訪問" }));
 
@@ -1267,6 +1266,35 @@ describe("Super Admin system settings", () => {
     expect(migration).toContain("'workspace.delivery'");
     expect(migration).toContain("'workspace.customer'");
     expect(migration).toContain("public.role_page_permissions");
+  });
+
+  it("splits standalone workspaces into sitemap-level permissions", () => {
+    const migration = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260825130000_workspace_sitemap_permissions.sql",
+      ),
+      "utf8",
+    );
+
+    for (const pageKey of [
+      "workspace.factory.board",
+      "workspace.factory.order",
+      "workspace.factory.meat_delivery_note",
+      "workspace.factory.multi_day_menu",
+      "workspace.factory.production_calendar",
+      "workspace.delivery.available",
+      "workspace.delivery.accepted",
+      "workspace.delivery.fleet",
+      "workspace.delivery.income",
+      "workspace.delivery.districts",
+      "workspace.delivery.settings",
+      "workspace.customer.portal",
+    ]) {
+      expect(migration).toContain(`'${pageKey}'`);
+    }
+    expect(migration).toContain("coalesce(parent.can_access, false)");
+    expect(migration).toContain("on conflict (role, page_key) do nothing");
   });
 
   it("reconciles the visible restaurant settings with role permissions", () => {

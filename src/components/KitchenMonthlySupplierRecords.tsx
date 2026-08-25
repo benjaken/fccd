@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { ListTable } from "@/components/ui/list-table";
 import { MultiSelect } from "@/components/ui/multi-select";
+import { SearchSelect } from "@/components/ui/search-select";
 import { SidePanel } from "@/components/ui/side-panel";
 import { TablePagination } from "@/components/ui/table-pagination";
 import {
@@ -66,6 +67,7 @@ function SupplierRecordPanel({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { t } = useTranslation();
   const [date, setDate] = useState("");
   const [supplierId, setSupplierId] = useState("");
   const [amounts, setAmounts] = useState<Record<string, string>>({});
@@ -140,13 +142,23 @@ function SupplierRecordPanel({
           <span>日期</span>
           <input type="date" value={date} onChange={(event) => { setDate(event.target.value); setError(null); }} />
         </label>
-        <label className="ingredients-field">
+        <div className="ingredients-field">
           <span>供應商</span>
-          <select value={supplierId} disabled={loadingOptions} onChange={(event) => { setSupplierId(event.target.value); setError(null); }}>
-            <option value="">選擇供應商</option>
-            {suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}
-          </select>
-        </label>
+          <SearchSelect
+            id="kitchen-supplier-record-supplier"
+            label={t("restaurantDailyPurchases.supplier")}
+            options={[
+              { id: "", name: t("restaurantDailyPurchases.supplierPlaceholder") },
+              ...suppliers,
+            ]}
+            value={supplierId}
+            placeholder={t("restaurantDailyPurchases.supplierPlaceholder")}
+            searchPlaceholder={t("kitchenMonthlySupplierRecords.supplierSearchPlaceholder")}
+            emptyLabel={t("kitchenMonthlySupplierRecords.supplierEmpty")}
+            disabled={loadingOptions}
+            onChange={(option) => { setSupplierId(option.id); setError(null); }}
+          />
+        </div>
 
         {readyForAmounts ? (
           <section className="kitchen-supplier-category-form" aria-label="供應商費用分類">
