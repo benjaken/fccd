@@ -22,7 +22,6 @@ import {
 } from "@/lib/factory-label";
 import { useQzTray } from "@/lib/qz-tray";
 import { formatDeliveryAddress } from "@/lib/delivery-address";
-import { acknowledgeFactoryChange } from "@/lib/notifications";
 import "@/components/factory-change-task.css";
 import {
   DeliveryNoteDocument,
@@ -126,10 +125,6 @@ export function FactoryOrderJobView({
   const [dispatchError, setDispatchError] = useState(false);
   const [printError, setPrintError] = useState(false);
   const [printSuccess, setPrintSuccess] = useState<string | null>(null);
-  const [deliveryNotePrinted, setDeliveryNotePrinted] = useState(false);
-  const [changeAcknowledged, setChangeAcknowledged] = useState(false);
-  const [acknowledgingChange, setAcknowledgingChange] = useState(false);
-  const [acknowledgeError, setAcknowledgeError] = useState(false);
   const empty = t("common.notSet");
   const canPrint = qz.state === "connected";
   const dateKey = item.deliveryAt ? hongKongDateKey(item.deliveryAt) : "";
@@ -147,9 +142,6 @@ export function FactoryOrderJobView({
     t("factoryBoard.unassignedFleet");
   const visibleLines =
     job?.lines.filter((line) => line.label.trim().length > 0) ?? [];
-  const changeTaskPending = Boolean(job?.changeTaskPending) && !changeAcknowledged;
-  const labelsReady = !job?.needsLabelReprint || !job?.requiresReprint;
-  const deliveryNoteReady = !job?.needsDeliveryNoteReprint || deliveryNotePrinted;
 
   useEffect(() => {
     setAssignedFleetId(item.motorcadeId ?? "");
@@ -209,8 +201,13 @@ export function FactoryOrderJobView({
         1,
       );
       if (completesSet) {
-        await markLinePrinted(line.id);
-        onLinePrinted?.(line.id);
+        try {
+          await markLinePrinted(line.id);
+          onLinePrinted?.(line.id);
+        } catch {
+          // Printing already succeeded. A status-write failure must not be
+          // reported as a printer failure or encourage a duplicate print.
+        }
       }
       setPrintSuccess(
         completesSet
@@ -239,8 +236,12 @@ export function FactoryOrderJobView({
           copies: labelCopies(line),
         });
         await qz.printLabels(selectedPrinter, commandBase64, 1);
-        await markLinePrinted(line.id);
-        onLinePrinted?.(line.id);
+        try {
+          await markLinePrinted(line.id);
+          onLinePrinted?.(line.id);
+        } catch {
+          // Continue after a successful print even if its status cannot be saved.
+        }
       }
       setBulkPrintSuccess(t("factoryBoard.printAllSuccess"));
     } catch {
@@ -307,32 +308,9 @@ export function FactoryOrderJobView({
     }
   };
 
-  const confirmFactoryChange = async () => {
-    if (!item.orderId) return;
-    setAcknowledgingChange(true);
-    setAcknowledgeError(false);
-    try {
-      await acknowledgeFactoryChange(item.orderId, deliveryNotePrinted);
-      setChangeAcknowledged(true);
-    } catch {
-      setAcknowledgeError(true);
-    } finally {
-      setAcknowledgingChange(false);
-    }
-  };
-
   return (
     <section className="factory-order-job">
       <div className="factory-job-notifications" aria-live="polite">
-        {changeTaskPending ? (
-          <div className="factory-job-notification is-warning" role="alert">
-            <TriangleAlert aria-hidden="true" />
-            <span>
-              <strong>{t("factoryBoard.changeTaskTitle")}</strong>
-              <small>{t("factoryBoard.changeTaskDescription")}</small>
-            </span>
-          </div>
-        ) : null}
         {bulkPrintSuccess ? (
           <p className="factory-job-notification is-success" role="status">
             <CheckCircle2 aria-hidden="true" />
@@ -343,18 +321,6 @@ export function FactoryOrderJobView({
           <p className="factory-job-notification is-error" role="alert">
             <TriangleAlert aria-hidden="true" />
             <span>{t("factoryBoard.labelPrintError")}</span>
-          </p>
-        ) : null}
-        {changeAcknowledged ? (
-          <p className="factory-job-notification is-success" role="status">
-            <CheckCircle2 aria-hidden="true" />
-            <span>{t("factoryBoard.changeConfirmed")}</span>
-          </p>
-        ) : null}
-        {acknowledgeError ? (
-          <p className="factory-job-notification is-error" role="alert">
-            <TriangleAlert aria-hidden="true" />
-            <span>{t("factoryBoard.changeConfirmError")}</span>
           </p>
         ) : null}
         {assignSuccess ? (
@@ -507,25 +473,10 @@ export function FactoryOrderJobView({
         <Button
           type="button"
           disabled={loading || error || !job}
-          onClick={() => {
-            setDeliveryNotePrinted(true);
-            window.print();
-          }}
+          onClick={() => window.print()}
         >
           {t("factoryBoard.printDeliveryNote")}
         </Button>
-        {changeTaskPending ? (
-          <Button
-            type="button"
-            disabled={!labelsReady || !deliveryNoteReady || acknowledgingChange}
-            onClick={() => void confirmFactoryChange()}
-          >
-            <CheckCircle2 />
-            {acknowledgingChange
-              ? t("factoryBoard.confirmingChange")
-              : t("factoryBoard.confirmChangeUpdated")}
-          </Button>
-        ) : null}
         <Button
           type="button"
           className="factory-order-selected"

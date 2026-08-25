@@ -896,6 +896,8 @@ describe("Quote editor", () => {
     await user.click(screen.getByRole("button", { name: "Add utensil pack" }));
     await waitFor(() => expect(saveUtensilLine).toHaveBeenCalledWith("quote-1"));
     expect(await screen.findByText("餐具包")).toBeInTheDocument();
+    expect(screen.getByRole("spinbutton", { name: "Unit price 餐具包" })).toHaveValue(0);
+    expect(screen.getByRole("spinbutton", { name: "Unit price 餐具包" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Utensil pack added" })).toBeDisabled();
     expect(screen.queryByRole("link", { name: "View quote" })).not.toBeInTheDocument();
     expect(screen.queryByText("PDF 內容")).not.toBeInTheDocument();

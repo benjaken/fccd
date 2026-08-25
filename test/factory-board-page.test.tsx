@@ -788,10 +788,65 @@ describe("FactoryBoardPage", () => {
     expect(printLabels).toHaveBeenCalledWith("Zebra ZD421", "VEVTUA==", 1);
     expect(markLinePrinted).toHaveBeenCalledWith("line-print");
     expect(
-      await screen.findByText("全套標籤打印完成，已更新為已印刷。"),
+      await screen.findByText("全套標籤已送到打印機。"),
     ).toBeInTheDocument();
     expect(screen.getByLabelText("已經印刷")).toBeInTheDocument();
     expect(screen.getAllByLabelText("標籤已打印")).toHaveLength(2);
+  });
+
+  it("does not report a printer failure after printing succeeds when status saving fails", async () => {
+    const user = userEvent.setup();
+    const printLabels = vi.fn(async () => {});
+    const markLinePrinted = vi.fn(async () => {
+      throw new Error("status_write_failed");
+    });
+    const connectedQzClient: QzTrayClient = {
+      connect: vi.fn(async () => {}),
+      disconnect: vi.fn(async () => {}),
+      listPrinters: vi.fn(async () => ["Zebra ZD421"]),
+      queryStatuses: vi.fn(async () => []),
+      printLabels,
+    };
+    render(
+      <FactoryBoardPage
+        initialDate="2026-08-17"
+        loadBoard={async () => board}
+        loadFleets={async () => []}
+        loadBrands={async () => []}
+        loadOrderJob={async () => ({
+          packingNote: null,
+          dispatchTime: "10:00",
+          arrivalWindow: null,
+          changeTaskPending: true,
+          lines: [
+            {
+              id: "line-status-fail",
+              label: "檸檬茶",
+              quantityText: "2",
+              remarks: [],
+              printed: false,
+            },
+          ],
+        })}
+        markLinePrinted={markLinePrinted}
+        loadLabelCommand={async () => "VEVTUA=="}
+        openOrdersInNewPage={false}
+        qzClient={connectedQzClient}
+      />,
+    );
+
+    await user.click(await screen.findByRole("button", { name: /#B-1522/ }));
+    await user.click(await screen.findByRole("button", { name: /檸檬茶/ }));
+    const fullSet = screen.getByRole("button", { name: "印全套標籤（2個）" });
+    await waitFor(() => expect(fullSet).toBeEnabled());
+    await user.click(fullSet);
+
+    expect(printLabels).toHaveBeenCalledWith("Zebra ZD421", "VEVTUA==", 1);
+    expect(markLinePrinted).toHaveBeenCalledWith("line-status-fail");
+    expect(await screen.findByText("全套標籤已送到打印機。")).toBeInTheDocument();
+    expect(screen.queryByText(/標籤打印失敗，狀態沒有更新/)).not.toBeInTheDocument();
+    expect(screen.queryByText("訂單資料已修改")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "確認打印及現場資料已更新" })).not.toBeInTheDocument();
   });
 
   it("does not show the pending-change summary on the factory home page", async () => {
