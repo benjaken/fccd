@@ -52,6 +52,16 @@ export type FactoryOrderLine = {
   remarks: string[]
   printed: boolean
   requiresReprint?: boolean
+  changes?: FactoryOrderLineChange[]
+}
+
+export type FactoryOrderLineChange = {
+  id: string
+  orderLineId: string
+  operation: "insert" | "update" | "delete"
+  lineName: string | null
+  changedFields: Record<string, { before: unknown; after: unknown }>
+  changedAt: string
 }
 
 export type FactoryOrderJob = {
@@ -65,7 +75,48 @@ export type FactoryOrderJob = {
   changeTaskPending?: boolean
   needsLabelReprint?: boolean
   needsDeliveryNoteReprint?: boolean
+  removedLineChanges?: FactoryOrderLineChange[]
   lines: FactoryOrderLine[]
+}
+
+type FactoryProductLabelRow = {
+  product_id: string | null
+  display_name: string | null
+  quantity_label: string | null
+}
+
+type FactoryOrderLineChangeRow = {
+  id: string
+  order_line_id: string
+  operation: "insert" | "update" | "delete"
+  line_name: string | null
+  changed_fields: Record<string, { before: unknown; after: unknown }> | null
+  changed_at: string
+}
+
+function mapFactoryOrderLineChange(
+  row: FactoryOrderLineChangeRow,
+): FactoryOrderLineChange {
+  return {
+    id: row.id,
+    orderLineId: row.order_line_id,
+    operation: row.operation,
+    lineName: row.line_name?.trim() || null,
+    changedFields: row.changed_fields ?? {},
+    changedAt: row.changed_at,
+  }
+}
+
+export function factoryProductLabelName(
+  labels: Array<Pick<FactoryProductLabelRow, "display_name" | "quantity_label">>,
+): string | null {
+  for (const label of labels) {
+    const lines = [label.display_name, label.quantity_label]
+      .map((value) => value?.trim() ?? "")
+      .filter(Boolean)
+    if (lines.length) return lines.join("\n")
+  }
+  return null
 }
 
 export type FactoryFleet = {
@@ -841,7 +892,7 @@ export async function fetchFactoryBoard(
 }
 
 export async function fetchFactoryOrderJob(orderId: string): Promise<FactoryOrderJob> {
-  const [orderResult, linesResult, changeTaskResult] = await Promise.all([
+  const [orderResult, linesResult, changeTaskResult, lineChangesResult] = await Promise.all([
     supabase
       .from("orders")
       .select(
@@ -852,7 +903,7 @@ export async function fetchFactoryOrderJob(orderId: string): Promise<FactoryOrde
     supabase
       .from("order_lines")
       .select(
-        "id, product_name_snapshot, content_snapshot, quantity, new_quantity_text, remarks_1, remarks_2, is_printed, is_void, bubble_modified_at, updated_at, type_sort, item_order",
+        "id, product_id, product_name_snapshot, content_snapshot, quantity, new_quantity_text, remarks_1, remarks_2, is_printed, is_void, bubble_modified_at, updated_at, type_sort, item_order",
       )
       .eq("order_id", orderId)
       .order("type_sort")
@@ -862,6 +913,12 @@ export async function fetchFactoryOrderJob(orderId: string): Promise<FactoryOrde
       .select("status,needs_label_reprint,needs_delivery_note_reprint")
       .eq("order_id", orderId)
       .maybeSingle(),
+    supabase
+      .from("factory_order_line_changes")
+      .select("id,order_line_id,operation,line_name,changed_fields,changed_at")
+      .eq("order_id", orderId)
+      .is("resolved_at", null)
+      .order("changed_at"),
   ])
   if (orderResult.error) {
     throw orderResult.error
@@ -871,6 +928,9 @@ export async function fetchFactoryOrderJob(orderId: string): Promise<FactoryOrde
   }
   if (changeTaskResult.error) {
     throw changeTaskResult.error
+  }
+  if (lineChangesResult.error) {
+    throw lineChangesResult.error
   }
 
   const factoryPrintDate =
@@ -884,6 +944,46 @@ export async function fetchFactoryOrderJob(orderId: string): Promise<FactoryOrde
     ? (channelValue[0] ?? null)
     : (channelValue ?? null)
   const allLines = linesResult.data ?? []
+  const pendingLineChanges = (lineChangesResult.data ?? []).map((row) =>
+    mapFactoryOrderLineChange(row as FactoryOrderLineChangeRow),
+  )
+  const changesByLineId = new Map<string, FactoryOrderLineChange[]>()
+  for (const change of pendingLineChanges) {
+    const changes = changesByLineId.get(change.orderLineId) ?? []
+    changes.push(change)
+    changesByLineId.set(change.orderLineId, changes)
+  }
+  const currentLineIds = new Set(allLines.map((row) => row.id as string))
+  const removedLineChanges = pendingLineChanges.filter(
+    (change) => change.operation === "delete" && !currentLineIds.has(change.orderLineId),
+  )
+  const productIds = [
+    ...new Set(
+      allLines
+        .map((row) => row.product_id as string | null)
+        .filter((productId): productId is string => Boolean(productId)),
+    ),
+  ]
+  const productLabelsResult = productIds.length
+    ? await supabase
+        .from("product_labels")
+        .select("product_id,display_name,quantity_label,created_at")
+        .in("product_id", productIds)
+        .order("created_at")
+    : { data: [], error: null }
+  if (productLabelsResult.error) throw productLabelsResult.error
+  const productLabelsByProductId = new Map<string, FactoryProductLabelRow[]>()
+  for (const label of productLabelsResult.data ?? []) {
+    const productId = label.product_id as string | null
+    if (!productId) continue
+    const labels = productLabelsByProductId.get(productId) ?? []
+    labels.push({
+      product_id: productId,
+      display_name: (label.display_name as string | null) ?? null,
+      quantity_label: (label.quantity_label as string | null) ?? null,
+    })
+    productLabelsByProductId.set(productId, labels)
+  }
   const requiresReprint =
     Boolean(orderResult.data?.factory_reprint_required) ||
     factoryOrderPrintStatus({
@@ -910,13 +1010,20 @@ export async function fetchFactoryOrderJob(orderId: string): Promise<FactoryOrde
       (orderResult.data?.delivery_time as string | null)?.trim() || null,
     brandName: channel?.name?.trim() || null,
     brandWebsite: channel?.website?.trim() || null,
-    requiresReprint,
+    requiresReprint:
+      pendingLineChanges.length > 0
+        ? pendingLineChanges.some((change) => change.operation !== "delete")
+        : requiresReprint,
     changeTaskPending: changeTaskResult.data?.status === "pending",
     needsLabelReprint: Boolean(changeTaskResult.data?.needs_label_reprint),
     needsDeliveryNoteReprint: Boolean(changeTaskResult.data?.needs_delivery_note_reprint),
+    removedLineChanges,
     lines: allLines.filter((row) => !row.is_void).map((row) => ({
       id: row.id as string,
       labelName:
+        factoryProductLabelName(
+          productLabelsByProductId.get((row.product_id as string | null) ?? "") ?? [],
+        ) ||
         (row.content_snapshot as string | null)?.trim() ||
         (row.product_name_snapshot as string | null)?.trim() ||
         "",
@@ -936,15 +1043,20 @@ export async function fetchFactoryOrderJob(orderId: string): Promise<FactoryOrde
         .map((value) => (value as string | null)?.trim() ?? "")
         .filter((value, index, values) => value && values.indexOf(value) === index),
       printed: Boolean(row.is_printed),
+      changes: changesByLineId.get(row.id as string) ?? [],
       requiresReprint:
-        requiresReprint &&
-        (!row.is_printed ||
-          (Boolean(factoryPrintDate) &&
-            Date.parse(
-              ((row.bubble_modified_at as string | null) ??
-                (row.updated_at as string | null) ??
-                ""),
-            ) > Date.parse(factoryPrintDate ?? ""))),
+        pendingLineChanges.length > 0
+          ? (changesByLineId.get(row.id as string) ?? []).some(
+              (change) => change.operation !== "delete",
+            )
+          : requiresReprint &&
+            (!row.is_printed ||
+              (Boolean(factoryPrintDate) &&
+                Date.parse(
+                  ((row.bubble_modified_at as string | null) ??
+                    (row.updated_at as string | null) ??
+                    ""),
+                ) > Date.parse(factoryPrintDate ?? ""))),
     })),
   }
 }

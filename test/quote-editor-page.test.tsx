@@ -36,6 +36,7 @@ vi.mock("@/lib/dictionaries", async (importOriginal) => {
 import { QuoteEditorPage } from "@/components/QuoteEditorPage";
 import i18n from "@/i18n";
 import { dedupeQuoteOptions, quoteLineTotal, quoteWorkflowValues, type QuoteEditorOptions, type QuoteLine } from "@/lib/quote-editor";
+import type { ProductListItem } from "@/lib/products";
 
 const options: QuoteEditorOptions = {
   channels: [{ id: "channel-1", name: "Residential" }],
@@ -377,6 +378,96 @@ describe("Quote editor", () => {
     })));
   }, 10_000);
 
+  it("selects multiple lunch box products from the side panel and stages each as a separate line", async () => {
+    const user = userEvent.setup();
+    const lunchbox = (overrides: Partial<ProductListItem>): ProductListItem => ({
+      id: "lunchbox-1",
+      sku: "CBE001",
+      name: "Chicken rice",
+      chineseName: "香草雞飯",
+      price: 68,
+      priceMin: 60,
+      priceMax: 80,
+      status: "active",
+      isActive: true,
+      isBentoRecommended: false,
+      channelId: "channel-1",
+      channelName: "Residential",
+      productTypeId: null,
+      productTypeName: null,
+      cookTypeId: null,
+      cookTypeName: "Roasted",
+      bentoMainTypeId: null,
+      bentoMainTypeName: "Rice",
+      bentoColumnTypeId: null,
+      bentoColumnTypeName: "Two compartments",
+      mainIngredients: ["Chicken"],
+      specialRequests: ["No nuts"],
+      createdAt: "2026-08-24T00:00:00Z",
+      ...overrides,
+    });
+    const recommended = lunchbox({ isBentoRecommended: true });
+    const more = lunchbox({ id: "lunchbox-2", sku: "CBE002", chineseName: "魚香茄子飯", name: "Eggplant rice", price: 72 });
+    const loadLunchboxProducts = vi.fn().mockImplementation(async (filters: { recommended?: boolean; productIds?: string[] }) => {
+      if (filters.productIds) {
+        const selectedItems = [recommended, more].filter((item) => filters.productIds?.includes(item.id));
+        return { items: selectedItems, total: selectedItems.length };
+      }
+      return { items: filters.recommended ? [recommended] : [more], total: 1 };
+    });
+    const saveLine = vi.fn().mockResolvedValue(undefined);
+
+    renderEditor({
+      saveLine,
+      loadLunchboxProducts,
+      loadLunchboxFilterOptions: vi.fn().mockResolvedValue({
+        staples: [],
+        compartments: [],
+        cookTypes: [],
+        mainIngredients: [],
+        specialRequests: [],
+      }),
+    });
+    await screen.findByLabelText(/Brand/);
+    await fillRequiredQuoteDetails(user);
+    await user.click(screen.getByRole("button", { name: "Save and add products" }));
+    await user.click(await screen.findByRole("button", { name: "Search lunch box products" }));
+
+    const panel = await screen.findByRole("dialog", { name: "Choose lunch box products" });
+    expect(within(panel).getByRole("heading", { name: "Selected" })).toBeInTheDocument();
+    expect(within(panel).getByRole("heading", { name: "Recommended" })).toBeInTheDocument();
+    expect(within(panel).getByRole("heading", { name: "More products" })).toBeInTheDocument();
+    expect(within(panel).queryByRole("button", { name: /edit/i })).not.toBeInTheDocument();
+
+    await user.click(within(panel).getByRole("button", { name: "Select 香草雞飯" }));
+    await user.click(within(panel).getByRole("button", { name: "Select 魚香茄子飯" }));
+    await user.click(within(panel).getByRole("button", { name: "Confirm and add 2 items" }));
+
+    expect(await screen.findByRole("row", { name: /CBE001 香草雞飯/ })).toBeInTheDocument();
+    expect(screen.getByRole("row", { name: /CBE002 魚香茄子飯/ })).toBeInTheDocument();
+    expect(saveLine).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Search lunch box products" }));
+    const reopenedPanel = await screen.findByRole("dialog", { name: "Choose lunch box products" });
+    expect(within(reopenedPanel).getByText("2", { selector: ".lunchbox-picker-column-heading span" })).toBeInTheDocument();
+    expect(within(reopenedPanel).getByRole("button", { name: "Unselect 香草雞飯" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(reopenedPanel).getByRole("button", { name: "Unselect 魚香茄子飯" })).toHaveAttribute("aria-pressed", "true");
+    await user.click(within(reopenedPanel).getByRole("button", { name: "Cancel" }));
+
+    await user.click(screen.getByRole("button", { name: "Complete" }));
+    await waitFor(() => expect(saveLine).toHaveBeenCalledTimes(2));
+    expect(saveLine).toHaveBeenCalledWith(expect.objectContaining({
+      item: expect.objectContaining({ id: "lunchbox-1", kind: "product" }),
+      quantity: 1,
+      unitPrice: 68,
+    }));
+    expect(saveLine).toHaveBeenCalledWith(expect.objectContaining({
+      item: expect.objectContaining({ id: "lunchbox-2", kind: "product" }),
+      quantity: 1,
+      unitPrice: 72,
+    }));
+  }, 10_000);
+
   it("requires package dish selections before adding a package", async () => {
     const user = userEvent.setup();
     const searchCatalog = vi.fn().mockResolvedValue([
@@ -390,9 +481,9 @@ describe("Quote editor", () => {
         name: "Main dishes",
         maximumChoices: 2,
         products: [
-          { id: "member-1", productSku: "D-1", productName: "Roast chicken", productChineseName: null, addonPrice: 0, isSelected: false },
-          { id: "member-2", productSku: "D-2", productName: "Steamed fish", productChineseName: null, addonPrice: 0, isSelected: false },
-          { id: "member-3", productSku: "D-3", productName: "Braised tofu", productChineseName: null, addonPrice: 0, isSelected: false },
+          { id: "member-1", productId: "product-1", productSku: "D-1", productName: "Roast chicken", productChineseName: null, addonPrice: 0, isSelected: false },
+          { id: "member-2", productId: "product-2", productSku: "D-2", productName: "Steamed fish", productChineseName: null, addonPrice: 10, isSelected: false },
+          { id: "member-3", productId: "product-3", productSku: "D-3", productName: "Braised tofu", productChineseName: null, addonPrice: 0, isSelected: false },
         ],
       }],
       ungroupedProducts: [],
@@ -421,8 +512,15 @@ describe("Quote editor", () => {
 
     expect(saveLine).not.toHaveBeenCalled();
     const packageRow = await screen.findByRole("row", { name: /Family Feast/ });
-    expect(within(packageRow).getByText("Roast chicken")).toBeInTheDocument();
-    expect(within(packageRow).getByText("Steamed fish")).toBeInTheDocument();
+    expect(within(packageRow).queryByText("Main dishes")).not.toBeInTheDocument();
+    expect(within(packageRow).queryByText("Roast chicken")).not.toBeInTheDocument();
+    expect(within(packageRow).queryByText("Steamed fish")).not.toBeInTheDocument();
+    const roastChickenRow = screen.getByRole("row", { name: /^2 D-1 Roast chicken/ });
+    const steamedFishRow = screen.getByRole("row", { name: /^3 D-2 Steamed fish/ });
+    expect(within(roastChickenRow).getByRole("spinbutton", { name: "Unit price Roast chicken" })).toHaveValue(0);
+    expect(within(roastChickenRow).getByText("HK$0.00")).toBeInTheDocument();
+    expect(within(steamedFishRow).getByRole("spinbutton", { name: "Unit price Steamed fish" })).toHaveValue(10);
+    expect(within(steamedFishRow).getByText("HK$10.00")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Complete" }));
     await waitFor(() => expect(saveLine).toHaveBeenCalledWith(expect.objectContaining({
@@ -433,6 +531,19 @@ describe("Quote editor", () => {
         packageProductIds: ["member-1", "member-2"],
       }],
     })));
+    expect(saveLine).toHaveBeenCalledWith(expect.objectContaining({
+      orderId: "quote-1",
+      item: expect.objectContaining({ id: "product-1", kind: "product", sku: "D-1" }),
+      quantity: 1,
+      unitPrice: 0,
+    }));
+    expect(saveLine).toHaveBeenCalledWith(expect.objectContaining({
+      orderId: "quote-1",
+      item: expect.objectContaining({ id: "product-2", kind: "product", sku: "D-2" }),
+      quantity: 1,
+      unitPrice: 10,
+    }));
+    expect(saveLine).toHaveBeenCalledTimes(3);
   }, 10_000);
 
   it("applies shipping rules and selectable delivery times", async () => {

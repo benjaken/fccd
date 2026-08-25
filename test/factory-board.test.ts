@@ -10,6 +10,7 @@ import {
   factoryVisibleDates,
   factoryOrderPrintStatus,
   factoryEligibleDeliveries,
+  factoryProductLabelName,
   filterDispatchRows,
   fleetBadgeChar,
   fleetBadgeForDelivery,
@@ -52,6 +53,15 @@ function item(
 }
 
 describe("factory board helpers", () => {
+  it("uses the database product label lines for factory printing", () => {
+    expect(factoryProductLabelName([{
+      display_name: "童趣拼盤(台灣腸蟹蓋",
+      quantity_label: "肉丸年糕各6件)",
+    }])).toBe("童趣拼盤(台灣腸蟹蓋\n肉丸年糕各6件)");
+    expect(factoryProductLabelName([{ display_name: "童趣拼盤 (1份)", quantity_label: null }]))
+      .toBe("童趣拼盤 (1份)");
+  });
+
   it("excludes orders explicitly marked as not sent to the factory", () => {
     expect(
       factoryEligibleDeliveries([

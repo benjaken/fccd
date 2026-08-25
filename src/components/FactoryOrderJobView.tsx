@@ -13,6 +13,7 @@ import {
   updateFactoryDispatchTime,
   type FactoryFleet,
   type FactoryOrderLine,
+  type FactoryOrderLineChange,
   type FactoryOrderJob,
 } from "@/lib/factory-board";
 import {
@@ -32,6 +33,33 @@ export { formatFactoryDeliveryNoteQuantity } from "@/components/DeliveryNoteDocu
 
 export function preferredFactoryLabelPrinter(printers: string[]): string {
   return printers.find((printer) => /xprinter/i.test(printer)) ?? printers[0] ?? "";
+}
+
+const factoryChangeFieldKeys: Record<string, string> = {
+  product_id: "factoryBoard.changedProduct",
+  package_id: "factoryBoard.changedPackage",
+  product_name_snapshot: "factoryBoard.changedOriginalName",
+  content_snapshot: "factoryBoard.changedLabelContent",
+  quantity: "factoryBoard.changedQuantity",
+  new_quantity_text: "factoryBoard.changedQuantityText",
+  remarks_1: "factoryBoard.changedRemarkOne",
+  remarks_2: "factoryBoard.changedRemarkTwo",
+  is_addon: "factoryBoard.changedComplimentary",
+  is_void: "factoryBoard.changedVoided",
+};
+
+function factoryChangeValue(value: unknown, language: string, empty: string): string {
+  if (value === null || value === undefined || value === "") return empty;
+  if (typeof value === "boolean") {
+    return language.startsWith("zh") ? (value ? "是" : "否") : value ? "Yes" : "No";
+  }
+  return typeof value === "string" ? value : JSON.stringify(value);
+}
+
+function visibleFactoryChangeFields(change: FactoryOrderLineChange) {
+  return Object.entries(change.changedFields).filter(([field]) =>
+    Boolean(factoryChangeFieldKeys[field]),
+  );
 }
 
 export function FactoryOrderJobView({
@@ -343,7 +371,15 @@ export function FactoryOrderJobView({
                   setPrintSuccess(null);
                 }}
               >
-                {line.printed ? (
+                {line.requiresReprint ? (
+                  <span
+                    className="factory-order-line-print is-reprint"
+                    aria-label={t("factoryBoard.labelRequiresReprint")}
+                    title={t("factoryBoard.labelRequiresReprint")}
+                  >
+                    <TriangleAlert aria-hidden="true" />
+                  </span>
+                ) : line.printed ? (
                   <span
                     className="factory-order-line-print is-printed"
                     aria-label={t("factoryBoard.labelPrinted")}
@@ -380,6 +416,20 @@ export function FactoryOrderJobView({
             <TriangleAlert aria-hidden="true" />
             <strong>{t("factoryBoard.changeTaskTitle")}</strong>
             <span>{t("factoryBoard.changeTaskDescription")}</span>
+          </div>
+        ) : null}
+        {job?.removedLineChanges?.length ? (
+          <div className="factory-removed-lines-alert" role="alert">
+            <TriangleAlert aria-hidden="true" />
+            <div>
+              <strong>{t("factoryBoard.removedDishTitle")}</strong>
+              <span>{t("factoryBoard.removedDishDescription")}</span>
+              <ul>
+                {job.removedLineChanges.map((change) => (
+                  <li key={change.id}>{change.lineName || t("factoryBoard.unknownDish")}</li>
+                ))}
+              </ul>
+            </div>
           </div>
         ) : null}
         <Button
@@ -613,15 +663,51 @@ export function FactoryOrderJobView({
               </h2>
             </header>
             <div className="factory-modal-body">
-              {selectedLine.requiresReprint || job?.requiresReprint ? (
+              {selectedLine.requiresReprint ? (
                 <div className="factory-label-reprint-alert" role="alert">
-                  {t("factoryBoard.dishChangedReprint")}
+                  <strong>{t("factoryBoard.dishChangedReprint")}</strong>
+                  {selectedLine.changes?.length ? (
+                    <ul className="factory-label-change-details">
+                      {selectedLine.changes.flatMap((change) => {
+                        if (change.operation === "insert") {
+                          return [
+                            <li key={change.id}>{t("factoryBoard.dishAddedAfterPrint")}</li>,
+                          ];
+                        }
+                        const fields = visibleFactoryChangeFields(change);
+                        return fields.map(([field, values]) => (
+                          <li key={`${change.id}-${field}`}>
+                            <span>{t(factoryChangeFieldKeys[field])}</span>
+                            {field === "product_id" || field === "package_id" ? (
+                              <b>{t("factoryBoard.valueChanged")}</b>
+                            ) : (
+                              <b>
+                                {factoryChangeValue(values.before, i18n.language, empty)}
+                                {" → "}
+                                {factoryChangeValue(values.after, i18n.language, empty)}
+                              </b>
+                            )}
+                          </li>
+                        ));
+                      })}
+                    </ul>
+                  ) : (
+                    <span className="factory-label-legacy-change">
+                      {t("factoryBoard.legacyChangeDetailUnavailable")}
+                    </span>
+                  )}
                 </div>
               ) : null}
               <div className="factory-label-summary">
                 <div>
-                  <span>{t("factoryBoard.label")}</span>
-                  <strong>{selectedLine.label}</strong>
+                  <span>{t("factoryBoard.originalName")}</span>
+                  <strong className="factory-label-original-name">
+                    {selectedLine.label}
+                  </strong>
+                  <span>{t("factoryBoard.labelName")}</span>
+                  <strong className="factory-label-database-name">
+                    {selectedLine.labelName?.trim().replace(/\r?\n/g, " ") || selectedLine.label}
+                  </strong>
                 </div>
                 <div>
                   <span>{t("factoryBoard.orderedQuantity")}</span>

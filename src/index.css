@@ -641,6 +641,22 @@ button.bg-primary:focus-visible {
   background: var(--card);
 }
 
+body:has(.side-panel-root) .shell-body > .main-content {
+  grid-column: 2;
+}
+
+body:has(.side-panel-root) .sidebar {
+  position: fixed;
+  z-index: 0;
+  top: calc(var(--topbar-height) + var(--workspace-height));
+  left: 0;
+  width: var(--sidebar-width);
+}
+
+body:has(.side-panel-root) .shell-body.sidebar-is-collapsed .sidebar {
+  width: var(--sidebar-collapsed-width);
+}
+
 .sidebar nav {
   display: flex;
   min-height: 0;
@@ -18929,53 +18945,551 @@ a.masoft-order-tag:focus-visible {
   gap: 10px;
 }
 
-.quote-custom-product-modal {
-  width: min(500px, 100%);
-  padding: 28px 34px 30px;
+.lunchbox-picker-panel {
+  width: 80vw;
 }
 
-.quote-custom-product-modal .modal-header {
-  align-items: center;
+.lunchbox-picker-panel > .side-panel-body {
+  overflow: hidden;
+  padding: 0;
+  background: color-mix(in oklch, var(--muted) 28%, var(--background));
 }
 
-.quote-custom-product-modal .modal-header > div {
-  flex: 1;
-  padding-left: 40px;
-  text-align: center;
+.lunchbox-picker-panel > .side-panel-footer {
+  background: var(--card);
 }
 
-.quote-custom-product-modal .modal-body {
-  margin-top: 30px;
+.lunchbox-picker-workspace {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  padding: 20px;
 }
 
-.quote-custom-product-form {
+.lunchbox-picker-search {
+  z-index: 3;
+  flex: 0 0 auto;
   display: grid;
+  grid-template-columns: minmax(280px, 1fr) auto auto;
   gap: 10px;
+  margin: -20px -20px 18px;
+  padding: 20px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in oklch, var(--card) 94%, transparent);
+  backdrop-filter: blur(10px);
 }
 
-.quote-custom-product-form label {
-  display: grid;
-  grid-template-columns: minmax(120px, 1fr) minmax(180px, 216px);
+.lunchbox-picker-search > label {
+  position: relative;
+  display: flex;
   align-items: center;
-  gap: 20px;
+  min-width: 0;
 }
 
-.quote-custom-product-form label > span {
-  font-size: 16px;
+.lunchbox-picker-search > label svg {
+  position: absolute;
+  left: 13px;
+  width: 18px;
+  color: var(--muted-foreground);
+  pointer-events: none;
+}
+
+.lunchbox-picker-search input,
+.lunchbox-picker-filters select {
+  width: 100%;
+  height: 42px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  outline: 0;
+  background: var(--card);
+  color: var(--foreground);
+  font: inherit;
+}
+
+.lunchbox-picker-search input {
+  padding: 0 14px 0 42px;
+}
+
+.lunchbox-picker-search input:focus,
+.lunchbox-picker-filters select:focus {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 13%, transparent);
+}
+
+.lunchbox-picker-search .button:last-child > span {
+  display: grid;
+  min-width: 20px;
+  height: 20px;
+  place-items: center;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--primary) 12%, transparent);
+  font-size: 14px;
+}
+
+.lunchbox-picker-active-filters {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.lunchbox-picker-active-filters button,
+.lunchbox-picker-selected > div > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid color-mix(in oklch, var(--primary) 42%, var(--border));
+  border-radius: 999px;
+  background: var(--selection-bg);
+  color: var(--foreground);
+  font: inherit;
+  cursor: pointer;
+}
+
+.lunchbox-picker-active-filters button {
+  min-height: 32px;
+  padding: 5px 10px;
+  font-size: 14px;
   font-weight: 700;
 }
 
-.quote-custom-product-form input {
-  min-height: 45px;
+.lunchbox-picker-active-filters button svg {
+  width: 14px;
+  height: 14px;
 }
 
-.quote-custom-product-modal .modal-footer {
+.lunchbox-picker-active-filters .is-clear {
+  border-color: transparent;
+  background: transparent;
+  color: var(--primary);
+}
+
+.lunchbox-picker-filters {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+}
+
+.lunchbox-picker-filters label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.lunchbox-picker-filters select {
+  padding: 0 34px 0 11px;
+}
+
+.lunchbox-picker-selected,
+.lunchbox-picker-section {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.lunchbox-picker-content {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: minmax(240px, 27%) minmax(0, 1fr);
+  min-height: 0;
+  gap: 20px;
+}
+
+.lunchbox-picker-selected-column {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  gap: 12px;
+}
+
+.lunchbox-picker-catalog {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  gap: 24px;
+  padding-right: 4px;
+  align-content: start;
+}
+
+.lunchbox-picker-selected {
+  min-height: 0;
+  overflow: auto;
+  align-content: start;
+  padding: 15px 16px;
+  border: 1px solid #d5dbd8;
+  border-radius: 12px;
+  background: #fff;
+  color: #1f2923;
+}
+
+.lunchbox-picker-column-heading,
+.lunchbox-picker-section > header,
+.lunchbox-picker-column-heading > div,
+.lunchbox-picker-section > header > div {
+  display: flex;
+  align-items: center;
+}
+
+.lunchbox-picker-column-heading,
+.lunchbox-picker-section > header {
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.lunchbox-picker-column-heading > div,
+.lunchbox-picker-section > header > div {
+  gap: 8px;
+}
+
+.lunchbox-picker-column-heading h3,
+.lunchbox-picker-section h3 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.lunchbox-picker-column-heading span,
+.lunchbox-picker-section header > span {
+  display: grid;
+  min-width: 24px;
+  height: 24px;
+  place-items: center;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--muted) 64%, var(--card));
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.lunchbox-picker-column-heading button {
+  border: 0;
+  background: transparent;
+  color: var(--primary);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.lunchbox-picker-selected > div {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.lunchbox-picker-selected > div > button {
+  width: 100%;
+  max-width: none;
+  justify-content: space-between;
+  min-height: 56px;
+  border-color: #e2c56b;
+  border-radius: 9px;
+  background: #fff7d6;
+  color: #4f3c08;
+  padding: 7px 9px 7px 11px;
+}
+
+.lunchbox-picker-selected > div > button small {
+  color: #80671d;
+}
+
+.lunchbox-picker-selected > div > button:hover,
+.lunchbox-picker-selected > div > button:focus-visible {
+  border-color: #c9a83f;
+  background: #fff0b3;
+  outline: 0;
+}
+
+.lunchbox-picker-selected > div > button > span {
+  display: grid;
+  min-width: 0;
+  text-align: left;
+}
+
+.lunchbox-picker-selected small,
+.lunchbox-picker-product small {
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+
+.lunchbox-picker-selected strong {
+  overflow: hidden;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lunchbox-picker-selected svg {
+  width: 16px;
+  height: 16px;
+}
+
+.lunchbox-picker-selected > p,
+.lunchbox-picker-empty {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+
+.lunchbox-picker-selected > p,
+.lunchbox-picker-selected small {
+  color: #68736d;
+}
+
+.lunchbox-picker-section {
+  margin-top: 0;
+}
+
+.lunchbox-picker-section > header svg {
+  width: 18px;
+  color: #b7791f;
+}
+
+.lunchbox-picker-product-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.lunchbox-picker-product {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 92px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--card);
+  color: var(--foreground);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 140ms ease, box-shadow 140ms ease, background 140ms ease;
+}
+
+.lunchbox-picker-product:hover,
+.lunchbox-picker-product:focus-visible {
+  border-color: color-mix(in oklch, var(--primary) 48%, var(--border));
+  outline: 0;
+  box-shadow: 0 4px 14px color-mix(in oklch, var(--foreground) 8%, transparent);
+}
+
+.lunchbox-picker-product.is-selected {
+  border-color: var(--primary);
+  background: color-mix(in oklch, var(--selection-bg) 72%, var(--card));
+  box-shadow: 0 0 0 1px var(--primary);
+}
+
+.lunchbox-picker-check {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--background);
+}
+
+.lunchbox-picker-product.is-selected .lunchbox-picker-check {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.lunchbox-picker-check svg {
+  width: 15px;
+  height: 15px;
+}
+
+.lunchbox-picker-product-copy,
+.lunchbox-picker-product-heading,
+.lunchbox-picker-product-heading > span,
+.lunchbox-picker-price {
+  display: grid;
+  min-width: 0;
+}
+
+.lunchbox-picker-product-copy {
+  gap: 8px;
+}
+
+.lunchbox-picker-product-heading {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 8px;
+}
+
+.lunchbox-picker-product-heading > span {
+  gap: 3px;
+}
+
+.lunchbox-picker-product-heading strong {
+  line-height: 1.4;
+}
+
+.lunchbox-picker-product-heading em {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: color-mix(in oklch, #f6c453 22%, var(--card));
+  color: #8a5a09;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.lunchbox-picker-product-heading em svg {
+  width: 11px;
+  height: 11px;
+}
+
+.lunchbox-picker-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.lunchbox-picker-tags small {
+  padding: 3px 6px;
+  border-radius: 5px;
+  background: color-mix(in oklch, var(--muted) 58%, var(--card));
+}
+
+.lunchbox-picker-price {
+  justify-items: end;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.lunchbox-picker-price strong {
+  color: var(--primary);
+  font-size: 15px;
+}
+
+.lunchbox-picker-state {
+  display: flex;
+  min-height: 180px;
+  align-items: center;
   justify-content: center;
-  margin-top: 25px;
+  gap: 10px;
+  color: var(--muted-foreground);
 }
 
-.quote-custom-product-modal .modal-footer .ui-button {
-  min-width: 80px;
+.lunchbox-picker-state.is-error {
+  flex-direction: column;
+  color: var(--destructive);
+}
+
+.lunchbox-picker-load-more {
+  justify-self: center;
+  margin-top: 2px;
+}
+
+.lunchbox-picker-footer {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.lunchbox-picker-footer > span {
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.lunchbox-picker-footer > div {
+  display: flex;
+  gap: 10px;
+}
+
+@media (max-width: 1100px) {
+  .lunchbox-picker-search {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .lunchbox-picker-search > label {
+    grid-column: 1 / -1;
+  }
+
+  .lunchbox-picker-filters,
+  .lunchbox-picker-product-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .lunchbox-picker-panel {
+    width: 100vw;
+  }
+
+  .lunchbox-picker-content {
+    grid-template-columns: 1fr;
+    overflow: auto;
+  }
+
+  .lunchbox-picker-workspace {
+    overflow: auto;
+  }
+
+  .lunchbox-picker-selected-column {
+    grid-template-rows: auto auto;
+  }
+
+  .lunchbox-picker-selected {
+    max-height: 220px;
+  }
+
+  .lunchbox-picker-catalog {
+    overflow: visible;
+  }
+}
+
+@media (max-width: 600px) {
+  .lunchbox-picker-workspace {
+    padding: 14px;
+  }
+
+  .lunchbox-picker-search {
+    top: -14px;
+    margin: -14px -14px 14px;
+    padding: 14px;
+  }
+
+  .lunchbox-picker-product {
+    grid-template-columns: 22px minmax(0, 1fr);
+  }
+
+  .lunchbox-picker-price {
+    grid-column: 2;
+    justify-items: start;
+  }
+
+  .lunchbox-picker-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .lunchbox-picker-footer > div,
+  .lunchbox-picker-footer .button {
+    flex: 1;
+  }
 }
 
 .quote-package-choice-groups > p {
@@ -19072,14 +19586,6 @@ a.masoft-order-tag:focus-visible {
     grid-template-columns: 1fr;
   }
 
-  .quote-custom-product-modal {
-    padding: 22px 20px 24px;
-  }
-
-  .quote-custom-product-form label {
-    grid-template-columns: 1fr;
-    gap: 6px;
-  }
 }
 
 .quote-editor-readonly-form {
@@ -19490,43 +19996,6 @@ a.masoft-order-tag:focus-visible {
 
 .quote-lines-panel .quote-line-product strong {
   display: block;
-}
-
-.quote-line-package-choices {
-  display: grid;
-  gap: 5px;
-  margin: 7px 0 3px;
-  padding: 0;
-  list-style: none;
-}
-
-.quote-line-package-choices li {
-  display: grid;
-  gap: 2px;
-}
-
-.quote-line-package-choices small {
-  color: var(--muted-foreground);
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.quote-line-package-choices li > span {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 6px;
-}
-
-.quote-line-package-choices em {
-  display: inline-flex;
-  padding: 2px 7px;
-  border: 1px solid color-mix(in oklch, var(--primary) 25%, var(--border));
-  border-radius: 999px;
-  background: color-mix(in oklch, var(--selection-bg) 55%, var(--card));
-  color: var(--foreground);
-  font-size: 14px;
-  font-style: normal;
-  line-height: 1.4;
 }
 
 .quote-lines-panel .quote-line-sku {
@@ -21406,6 +21875,10 @@ button.factory-job-card:focus-visible {
   height: 24px;
 }
 
+.factory-order-line-print.is-reprint {
+  background: #dc2626;
+}
+
 .factory-order-aside {
   display: flex;
   grid-column: 2;
@@ -21845,6 +22318,65 @@ button.factory-job-card:focus-visible {
 
 .factory-label-summary strong {
   font-size: 27px;
+}
+
+.factory-label-reprint-alert > strong,
+.factory-label-reprint-alert > span {
+  display: block;
+}
+
+.factory-label-change-details {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
+.factory-label-change-details li + li {
+  margin-top: 4px;
+}
+
+.factory-label-change-details li span {
+  display: inline-block;
+  min-width: 88px;
+  margin-right: 8px;
+}
+
+.factory-label-legacy-change {
+  margin-top: 6px;
+  font-size: 14px;
+}
+
+.factory-removed-lines-alert {
+  display: flex;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #f59e0b;
+  border-radius: 8px;
+  color: #92400e;
+  background: #fffbeb;
+}
+
+.factory-removed-lines-alert svg {
+  width: 20px;
+  flex: 0 0 auto;
+}
+
+.factory-removed-lines-alert strong,
+.factory-removed-lines-alert span {
+  display: block;
+}
+
+.factory-removed-lines-alert ul {
+  margin: 6px 0 0;
+  padding-left: 20px;
+}
+
+.factory-label-summary .factory-label-database-name {
+  white-space: nowrap;
+}
+
+.factory-label-summary .factory-label-original-name {
+  color: var(--muted-foreground);
+  font-size: 21px;
 }
 
 .factory-label-summary strong.is-printed {

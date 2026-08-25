@@ -25,7 +25,9 @@ import {
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { OrderFactorySettingsControls } from "@/components/order-factory-settings-controls";
+import { LunchboxProductPicker } from "@/components/LunchboxProductPicker";
 import { Modal } from "@/components/ui/modal";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import {
@@ -77,6 +79,11 @@ import {
 } from "@/lib/order-factory-settings";
 import { DICT_TYPE, dictItemLabel, useDictItems } from "@/lib/dictionaries";
 import { useMediaQuery } from "@/lib/use-media-query";
+import {
+  fetchLunchboxPickerFilterOptions,
+  fetchProducts,
+  type ProductListItem,
+} from "@/lib/products";
 
 const loadConfiguredShippingFees = async () => (await fetchShippingFees(1, 1000)).rows;
 
@@ -104,24 +111,6 @@ function requiredPackageChoiceCount(choiceSet: PackageChoiceSet) {
   if (!choiceSet.products.length) return 0;
   const configured = Math.floor(choiceSet.maximumChoices ?? 1);
   return Math.min(choiceSet.products.length, Math.max(1, configured));
-}
-
-function PackageChoiceGroups({ groups }: { groups?: QuotePackageChoiceGroup[] }) {
-  if (!groups?.length) return null;
-  return (
-    <ul className="quote-line-package-choices">
-      {groups.map((group) => (
-        <li key={group.choiceSetId}>
-          {group.choiceSetName ? <small>{group.choiceSetName}</small> : null}
-          <span>
-            {group.products.map((product) => (
-              <em key={product.packageProductId}>{product.name}</em>
-            ))}
-          </span>
-        </li>
-      ))}
-    </ul>
-  );
 }
 
 function hongKongToday() {
@@ -225,6 +214,8 @@ type Props = {
   copyQuote?: typeof duplicateQuote;
   setFactoryStatus?: typeof updateOrderFactoryStatus;
   saveFactorySettings?: typeof saveOrderFactorySettings;
+  loadLunchboxProducts?: typeof fetchProducts;
+  loadLunchboxFilterOptions?: typeof fetchLunchboxPickerFilterOptions;
 };
 
 export function QuoteEditorPage({
@@ -251,6 +242,8 @@ export function QuoteEditorPage({
   copyQuote = duplicateQuote,
   setFactoryStatus = updateOrderFactoryStatus,
   saveFactorySettings = saveOrderFactorySettings,
+  loadLunchboxProducts = fetchProducts,
+  loadLunchboxFilterOptions = fetchLunchboxPickerFilterOptions,
 }: Props) {
   const { t, i18n } = useTranslation();
   const additionalInfoDict = useDictItems(DICT_TYPE.quoteAdditionalInfo);
@@ -298,6 +291,7 @@ export function QuoteEditorPage({
   const [pendingPackageLine, setPendingPackageLine] = useState<Parameters<typeof addQuoteLine>[0] | null>(null);
   const [packageChoiceError, setPackageChoiceError] = useState(false);
   const [customProductOpen, setCustomProductOpen] = useState(false);
+  const [lunchboxPickerOpen, setLunchboxPickerOpen] = useState(false);
   const [customProductName, setCustomProductName] = useState("");
   const [customProductPrice, setCustomProductPrice] = useState("");
   const [removingId, setRemovingId] = useState<string | null>(null);
@@ -679,24 +673,34 @@ export function QuoteEditorPage({
     input: Parameters<typeof addQuoteLine>[0],
     packageChoices: QuotePackageChoiceSelection[] = [],
     packageChoiceGroups: QuotePackageChoiceGroup[] = [],
+    additionalLines: Array<Parameters<typeof addQuoteLine>[0]> = [],
   ) => {
     setError(null);
     setPackageChoiceError(false);
-    setLines((current) => [...current, {
+    const toPendingLine = (
+      lineInput: Parameters<typeof addQuoteLine>[0],
+      choices: QuotePackageChoiceSelection[] = [],
+      groups: QuotePackageChoiceGroup[] = [],
+    ): QuoteLine => ({
       id: `draft-${crypto.randomUUID()}`,
-      productId: input.item.kind === "product" ? input.item.id : null,
-      packageId: input.item.kind === "package" ? input.item.id : null,
-      sku: input.item.sku,
-      name: input.item.name,
-      quantity: input.quantity,
-      unitPrice: input.unitPrice,
-      totalPrice: input.quantity * input.unitPrice,
-      remarks: input.remarks.trim() || null,
-      packageChoiceGroups,
+      productId: lineInput.item.kind === "product" ? lineInput.item.id : null,
+      packageId: lineInput.item.kind === "package" ? lineInput.item.id : null,
+      sku: lineInput.item.sku,
+      name: lineInput.item.name,
+      quantity: lineInput.quantity,
+      unitPrice: lineInput.unitPrice,
+      totalPrice: lineInput.quantity * lineInput.unitPrice,
+      remarks: lineInput.remarks.trim() || null,
+      packageChoiceGroups: groups,
       isPending: true,
-      pendingItem: input.item,
-      pendingPackageChoices: packageChoices,
-    }]);
+      pendingItem: lineInput.item,
+      pendingPackageChoices: choices,
+    });
+    setLines((current) => [
+      ...current,
+      toPendingLine(input, packageChoices, packageChoiceGroups),
+      ...additionalLines.map((line) => toPendingLine(line)),
+    ]);
     resetLineDraft();
     setPackageChoiceOpen(false);
     setPackageChoiceSets([]);
@@ -732,6 +736,28 @@ export function QuoteEditorPage({
       remarks: "",
     });
     closeCustomProductModal();
+  };
+
+  const addLunchboxProducts = (items: ProductListItem[]) => {
+    if (!activeQuote || !items.length) return;
+    const inputs = items.map((item) => {
+      const unitPrice = item.price ?? item.priceMin ?? 0;
+      return {
+        orderId: activeQuote.id,
+        item: {
+          id: item.id,
+          kind: "product" as const,
+          sku: item.sku,
+          name: item.chineseName || item.name || item.sku || "-",
+          price: unitPrice,
+        },
+        quantity: 1,
+        unitPrice,
+        remarks: "",
+      };
+    });
+    stageLine(inputs[0], [], [], inputs.slice(1));
+    setLunchboxPickerOpen(false);
   };
 
   const submitLine = async (event: FormEvent<HTMLFormElement>) => {
@@ -806,6 +832,12 @@ export function QuoteEditorPage({
 
   const confirmPackageChoices = () => {
     if (!pendingPackageLine || !packageChoicesComplete) return;
+    const selectedPackageProducts = packageChoiceSets.flatMap((choiceSet) =>
+      (packageSelections[choiceSet.id] ?? []).flatMap((packageProductId) => {
+        const product = choiceSet.products.find((item) => item.id === packageProductId);
+        return product ? [product] : [];
+      }),
+    );
     stageLine(
       pendingPackageLine,
       packageChoiceSets.map((choiceSet) => ({
@@ -823,6 +855,22 @@ export function QuoteEditorPage({
           };
         }),
       })),
+      selectedPackageProducts.map((product) => {
+        const addonPrice = Number(product.addonPrice);
+        return {
+          orderId: pendingPackageLine.orderId,
+          item: {
+            id: product.productId ?? `package-choice-${product.id}`,
+            kind: product.productId ? "product" as const : "custom" as const,
+            sku: product.productSku,
+            name: product.productChineseName || product.productName || product.productSku || "-",
+            price: Number.isFinite(addonPrice) && addonPrice >= 0 ? addonPrice : 0,
+          },
+          quantity: pendingPackageLine.quantity,
+          unitPrice: Number.isFinite(addonPrice) && addonPrice >= 0 ? addonPrice : 0,
+          remarks: "",
+        };
+      }),
     );
   };
 
@@ -1339,7 +1387,7 @@ export function QuoteEditorPage({
             {lines.map((line, index) => <tr key={line.id}>
               <td className="quote-line-sequence">{index + 1}</td>
               <td className="quote-line-sku">{displayValue(line.sku)}</td>
-              <td className="quote-line-product"><strong>{displayValue(line.name)}</strong><PackageChoiceGroups groups={line.packageChoiceGroups} />{line.remarks ? <small title={line.remarks}>{line.remarks}</small> : null}</td>
+              <td className="quote-line-product"><strong>{displayValue(line.name)}</strong>{line.remarks ? <small title={line.remarks}>{line.remarks}</small> : null}</td>
               <td>{line.quantity}</td>
               <td>{money.format(line.unitPrice)}</td>
               <td>{money.format(line.totalPrice)}</td>
@@ -1520,6 +1568,7 @@ export function QuoteEditorPage({
             <label><span>{t("quoteEditor.items.remarks")}</span><textarea rows={1} maxLength={16} value={lineRemarks} onChange={(event) => setLineRemarks(event.target.value)} /></label>
             {error && <p className="quote-editor-error" role="alert">{t(`quoteEditor.errors.${error === "quote_line_invalid" ? "invalidLine" : "line"}`)}</p>}
             <div className="quote-item-form-actions">
+              <Button type="button" variant="outline" onClick={() => setLunchboxPickerOpen(true)}><Search />{t("quoteEditor.items.lunchboxSearchButton")}</Button>
               <Button type="button" variant="outline" onClick={() => setCustomProductOpen(true)}><Pencil />{t("quoteEditor.items.customProduct")}</Button>
               <Button type="submit" disabled={!selectedItem || adding}><PackagePlus />{adding ? t("quoteEditor.items.adding") : t(isOrder ? "quoteEditor.orderAdd" : "quoteEditor.items.add")}</Button>
             </div>
@@ -1533,7 +1582,7 @@ export function QuoteEditorPage({
                   <article className="quote-mobile-line" role="listitem" key={line.id}>
                     <header>
                       <span>{index + 1}</span>
-                      <div><strong>{line.name || "—"}</strong><small>{line.sku || "—"}</small><PackageChoiceGroups groups={line.packageChoiceGroups} /></div>
+                      <div><strong>{line.name || "—"}</strong><small>{line.sku || "—"}</small></div>
                       <div className="quote-mobile-line-actions">
                         <button type="button" disabled={!index || reordering} aria-label={`${t("quoteEditor.items.sequence")} ${index}`} onClick={() => void moveLine(line.id, -1)}><ChevronUp /></button>
                         <button type="button" disabled={index === lines.length - 1 || reordering} aria-label={`${t("quoteEditor.items.sequence")} ${index + 2}`} onClick={() => void moveLine(line.id, 1)}><ChevronDown /></button>
@@ -1576,7 +1625,6 @@ export function QuoteEditorPage({
                 <td className="quote-line-sku">{line.sku || "—"}</td>
                 <td className="quote-line-product">
                   <strong>{line.name || "—"}</strong>
-                  <PackageChoiceGroups groups={line.packageChoiceGroups} />
                   <button
                     type="button"
                     className="quote-line-remarks-toggle"
@@ -1740,41 +1788,58 @@ export function QuoteEditorPage({
           </div>
         </Modal>
 
+        <LunchboxProductPicker
+          open={lunchboxPickerOpen}
+          initialSelectedProductIds={lines.flatMap((line) => line.productId ? [line.productId] : [])}
+          onClose={() => setLunchboxPickerOpen(false)}
+          onConfirm={addLunchboxProducts}
+          loadProducts={loadLunchboxProducts}
+          loadFilterOptions={loadLunchboxFilterOptions}
+        />
+
         <Modal
           open={customProductOpen}
           onClose={closeCustomProductModal}
           title={t("quoteEditor.items.customProduct")}
           closeLabel={t("quoteEditor.items.customProductCancel")}
           size="sm"
-          className="quote-custom-product-modal"
           footer={(
-            <Button type="submit" form="quote-custom-product-form" disabled={!customProductValid}>
-              {t("quoteEditor.items.customProductAdd")}
-            </Button>
+            <>
+              <Button type="button" variant="outline" onClick={closeCustomProductModal}>
+                {t("common.cancel")}
+              </Button>
+              <Button type="submit" form="quote-custom-product-form" disabled={!customProductValid}>
+                {t("quoteEditor.items.customProductAdd")}
+              </Button>
+            </>
           )}
         >
           <form
             id="quote-custom-product-form"
-            className="quote-custom-product-form"
+            className="grid gap-4"
             onSubmit={(event) => { event.preventDefault(); addCustomProduct(); }}
           >
-            <label>
-              <span>{t("quoteEditor.items.customProductName")}</span>
-              <input
+            <label className="grid gap-2 text-sm font-medium">
+              {t("quoteEditor.items.customProductName")}
+              <Input
                 autoFocus
+                className="focus-visible:border-input focus-visible:ring-0"
                 value={customProductName}
                 placeholder={t("quoteEditor.items.customProductNamePlaceholder")}
+                aria-label={t("quoteEditor.items.customProductName")}
                 onChange={(event) => setCustomProductName(event.target.value)}
               />
             </label>
-            <label>
-              <span>{t("quoteEditor.items.unitPrice")}</span>
-              <input
+            <label className="grid gap-2 text-sm font-medium">
+              {t("quoteEditor.items.unitPrice")}
+              <Input
                 type="number"
+                className="focus-visible:border-input focus-visible:ring-0"
                 min="0"
                 step="0.01"
                 value={customProductPrice}
                 placeholder={t("quoteEditor.items.customProductPricePlaceholder")}
+                aria-label={t("quoteEditor.items.unitPrice")}
                 onChange={(event) => setCustomProductPrice(event.target.value)}
               />
             </label>

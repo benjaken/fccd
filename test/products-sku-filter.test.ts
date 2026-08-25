@@ -176,6 +176,24 @@ describe("product SKU list filter", () => {
     expect(query.eq).toHaveBeenCalledWith("cook_type_id", "cook-steam");
   });
 
+  it("limits the lunchbox preset to products with a lunchbox staple category", async () => {
+    const productsQuery = createQuery({ data: [], count: 0, error: null });
+    fromMock.mockReturnValue(productsQuery);
+
+    await fetchProducts({
+      page: 1,
+      search: "",
+      channelId: "",
+      productTypeName: "",
+      status: "",
+      priceRange: "",
+      preset: "lunchbox",
+    });
+
+    expect(productsQuery.not).toHaveBeenCalledWith("bento_main_type_id", "is", null);
+    expect(fromMock).not.toHaveBeenCalledWith("channels");
+  });
+
   it("orders cook type options as 炒爐, 蒸爐, 炸爐, 焗爐, 雪櫃, 直出", async () => {
     const query = createQuery({
       data: [
