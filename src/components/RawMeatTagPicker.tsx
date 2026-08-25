@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { X } from "lucide-react";
 
 import type { RawMeatSupplierOption } from "@/lib/raw-meat-inventory";
@@ -22,6 +22,15 @@ export function RawMeatTagPicker({
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
+  const blurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const cancelBlurTimer = () => {
+    if (blurTimer.current === null) return;
+    clearTimeout(blurTimer.current);
+    blurTimer.current = null;
+  };
+
+  useEffect(() => cancelBlurTimer, []);
 
   const selected = useMemo(
     () =>
@@ -81,7 +90,10 @@ export function RawMeatTagPicker({
           aria-label={label}
           aria-expanded={open}
           aria-haspopup="listbox"
-          onFocus={() => setOpen(true)}
+          onFocus={() => {
+            cancelBlurTimer();
+            setOpen(true);
+          }}
           onChange={(event) => {
             setQuery(event.target.value);
             setOpen(true);
@@ -97,7 +109,11 @@ export function RawMeatTagPicker({
             }
           }}
           onBlur={() => {
-            window.setTimeout(() => setOpen(false), 120);
+            cancelBlurTimer();
+            blurTimer.current = setTimeout(() => {
+              blurTimer.current = null;
+              setOpen(false);
+            }, 120);
           }}
         />
       </div>
