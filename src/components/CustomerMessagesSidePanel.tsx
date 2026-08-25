@@ -70,6 +70,7 @@ export function CustomerMessagesSidePanel({
   phone = null,
   orderNumber = null,
   defaultOrderId = null,
+  canCreateNote = true,
   onClose,
   loadMessages = fetchQuoteCustomerMessages,
   createNote = createQuoteCustomerNote,
@@ -79,6 +80,7 @@ export function CustomerMessagesSidePanel({
   phone?: string | null;
   orderNumber?: string | null;
   defaultOrderId?: string | null;
+  canCreateNote?: boolean;
   onClose: () => void;
   loadMessages?: MessagesLoader;
   createNote?: NoteCreator;
@@ -140,7 +142,7 @@ export function CustomerMessagesSidePanel({
   }, [messageTab, messages?.note.length]);
 
   const sendNote = async () => {
-    if (!defaultOrderId || sendingNote) return;
+    if (!canCreateNote || !defaultOrderId || sendingNote) return;
     const body = draftNote.trim();
     if (!body) return;
     setSendingNote(true);
@@ -175,7 +177,7 @@ export function CustomerMessagesSidePanel({
       description={[orderNumber, phone || email].filter(Boolean).join(" · ") || undefined}
       onClose={onClose}
       closeLabel={t("quoteCustomers.closePanel")}
-      footer={messageTab === "note" ? (
+      footer={messageTab === "note" && canCreateNote ? (
         <div className="quote-customers-message-composer-wrap">
           {replyTarget ? (
             <div className="quote-customers-reply-target">

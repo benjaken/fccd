@@ -65,6 +65,8 @@ import { ProductsListPage } from "@/components/ProductsListPage";
 import { ProductDetailPage } from "@/components/ProductDetailPage";
 import { PackagesListPage } from "@/components/PackagesListPage";
 import { PackageDetailPage } from "@/components/PackageDetailPage";
+import { ShopifyPendingProductsPage } from "@/components/ShopifyPendingProductsPage";
+import { ShopifyPendingProductDetailPage } from "@/components/ShopifyPendingProductDetailPage";
 import { PreparedMeatInventoryCalcPage } from "@/components/PreparedMeatInventoryCalcPage";
 import { MeatDeliveryNotesPage } from "@/components/MeatDeliveryNotesPage";
 import { DeliveryListPage } from "@/components/DeliveryListPage";
@@ -143,13 +145,12 @@ import {
 } from "@/lib/order-list-configs";
 import { useTheme } from "@/lib/use-theme";
 import { useAnimatedNumber } from "@/lib/use-animated-number";
-import { canAssignDeliveryFleet } from "@/lib/deliveries";
-import { canEditProductCatalog } from "@/lib/products";
 import { cn } from "@/lib/utils";
 import {
   type Icon,
   type NavItem,
   buildMobileDrawerNav,
+  firstAccessibleNavigationPath,
   isNavItemVisible,
   isNavPathActive,
   isPrimaryNavActive,
@@ -236,16 +237,20 @@ function OperationsShell() {
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   const section = sectionFromPath(location.pathname);
-  const authorizationRole =
-    typeof user?.app_metadata?.role === "string"
-      ? user.app_metadata.role
-      : profile?.role;
+  const authorizationRole = profile?.role;
   const pageAccess = usePageAccess(authorizationRole);
   const currentPageKey = pageAccessKey(location.pathname);
   const visiblePrimaryNav = primaryNav.filter((item) => {
     const key = item.permissionKey ?? item.key;
     return pageAccess.canAccessSection(key, SECTION_CHILD_KEYS[key] ?? []);
   });
+  const visibleWorkspaceLinks = workspaceLinks.filter((item) =>
+    pageAccess.canAccess(item.permissionKey),
+  );
+  const firstAccessiblePath = firstAccessibleNavigationPath(
+    pageAccess.canAccess,
+    pageAccess.canAccessSection,
+  );
   const sideItems = (secondaryNav[section] ?? secondaryNav.overview)
     .filter((item) => isNavItemVisible(item, pageAccess.canAccess))
     .filter((item) => isOrderListNavVisible(item.key, orderListConfigs));
@@ -275,8 +280,10 @@ function OperationsShell() {
   const canViewFinance = pageAccess.canAccess("finance");
   const canEditOrders = pageAccess.canManage("orders");
   const canEditQuotes = pageAccess.canManage("quotes");
-  const canEditProducts = canEditProductCatalog(authorizationRole);
-  const canEditDeliveries = canAssignDeliveryFleet(authorizationRole);
+  const canEditProducts = pageAccess.canManage("products");
+  const canEditPackages = pageAccess.canManage("products.packages");
+  const canManageShopifyCatalog = pageAccess.canManage("products.shopify_pending");
+  const canEditDeliveries = pageAccess.canManage("delivery");
   const orderListConfigMap = orderListConfigByPreset(orderListConfigs);
   const navLabel = (key: string) =>
     orderListNavLabel(key, orderListConfigMap, t(`navigation.${key}`));
@@ -350,7 +357,7 @@ function OperationsShell() {
         </div>
 
         <nav className="workspace-links" aria-label="Workspaces">
-          {workspaceLinks.map(({ key, to, icon: WorkspaceIcon, disabled }) =>
+          {visibleWorkspaceLinks.map(({ key, to, icon: WorkspaceIcon, disabled }) =>
             disabled ? (
               <span
                 key={key}
@@ -569,6 +576,10 @@ function OperationsShell() {
           <div className="page-transition" key={pageKey}>
             {pageAccess.loading ? (
               <PageSkeleton label={t("settings.loadingPermissions")} />
+            ) : location.pathname === "/" &&
+              !pageAccess.canAccess("overview") &&
+              firstAccessiblePath ? (
+              <Navigate to={firstAccessiblePath} replace />
             ) : !pageAccess.canAccess(currentPageKey) ? (
               <SettingsAccessDenied />
             ) : (
@@ -581,7 +592,7 @@ function OperationsShell() {
               <Route path="/profile" element={<ProfilePage />} />
               <Route
                 path="/orders"
-                element={<OrdersListPage canViewFinance={canViewFinance} />}
+                element={<OrdersListPage canViewFinance={canViewFinance} canManageStatuses={canEditOrders} />}
               />
               <Route
                 path="/orders/dashboard"
@@ -591,6 +602,7 @@ function OperationsShell() {
                 path="/orders/pending"
                 element={
                   <OrdersListPage
+                    canManageStatuses={canEditOrders}
                     preset="pending"
                     canViewFinance={canViewFinance}
                   />
@@ -600,6 +612,7 @@ function OperationsShell() {
                 path="/orders/unpaid"
                 element={
                   <OrdersListPage
+                    canManageStatuses={canEditOrders}
                     preset="unpaid"
                     canViewFinance={canViewFinance}
                   />
@@ -609,6 +622,7 @@ function OperationsShell() {
                 path="/orders/delivered-unpaid"
                 element={
                   <OrdersListPage
+                    canManageStatuses={canEditOrders}
                     preset="delivered-unpaid"
                     canViewFinance={canViewFinance}
                   />
@@ -618,6 +632,7 @@ function OperationsShell() {
                 path="/orders/monthly"
                 element={
                   <OrdersListPage
+                    canManageStatuses={canEditOrders}
                     preset="monthly-settlement"
                     canViewFinance={canViewFinance}
                   />
@@ -627,6 +642,7 @@ function OperationsShell() {
                 path="/orders/split"
                 element={
                   <OrdersListPage
+                    canManageStatuses={canEditOrders}
                     preset="split"
                     canViewFinance={canViewFinance}
                   />
@@ -636,6 +652,7 @@ function OperationsShell() {
                 path="/orders/kitchen-notes"
                 element={
                   <OrdersListPage
+                    canManageStatuses={canEditOrders}
                     preset="kitchen-notes"
                     canViewFinance={canViewFinance}
                   />
@@ -645,6 +662,7 @@ function OperationsShell() {
                 path="/orders/reschedule-pending"
                 element={
                   <OrdersListPage
+                    canManageStatuses={canEditOrders}
                     preset="reschedule-pending"
                     canViewFinance={canViewFinance}
                   />
@@ -654,6 +672,7 @@ function OperationsShell() {
                 path="/orders/shopify-pending"
                 element={
                   <OrdersListPage
+                    canManageStatuses={canEditOrders}
                     preset="shopify-pending"
                     canViewFinance={canViewFinance}
                   />
@@ -663,6 +682,7 @@ function OperationsShell() {
                 path="/orders/not-sent-factory"
                 element={
                   <OrdersListPage
+                    canManageStatuses={canEditOrders}
                     preset="not-sent-factory"
                     canViewFinance={canViewFinance}
                   />
@@ -674,11 +694,21 @@ function OperationsShell() {
               />
               <Route
                 path="/orders/payments/bank-arrival-date"
-                element={<PaymentsListPage canViewFinance={canViewFinance} />}
+                element={
+                  <PaymentsListPage
+                    canViewFinance={canViewFinance}
+                    canManageActions={pageAccess.canManage("orders.payments")}
+                  />
+                }
               />
               <Route
                 path="/orders/payments/masoft-invoices"
-                element={<MasoftInvoiceReceiptsPage canViewFinance={canViewFinance} />}
+                element={
+                  <MasoftInvoiceReceiptsPage
+                    canViewFinance={canViewFinance}
+                    canManageActions={pageAccess.canManage("orders.payments")}
+                  />
+                }
               />
               <Route
                 path="/orders/calendar"
@@ -753,14 +783,14 @@ function OperationsShell() {
                   <QuoteEditorPage documentType="order" combined readOnly canEdit={canEditOrders} />
                 }
               />
-              <Route path="/quotes" element={<QuotesListPage />} />
+              <Route path="/quotes" element={<QuotesListPage canManage={canEditQuotes} />} />
               <Route
                 path="/quotes/high-chance"
-                element={<QuotesListPage preset="high-chance" />}
+                element={<QuotesListPage preset="high-chance" canManage={canEditQuotes} />}
               />
               <Route
                 path="/quotes/large"
-                element={<QuotesListPage preset="large" />}
+                element={<QuotesListPage preset="large" canManage={canEditQuotes} />}
               />
               <Route
                 path="/quotes/follow-up"
@@ -768,15 +798,19 @@ function OperationsShell() {
               />
               <Route
                 path="/quotes/pending"
-                element={<QuotesListPage preset="pending" />}
+                element={<QuotesListPage preset="pending" canManage={canEditQuotes} />}
               />
               <Route
                 path="/quotes/upcoming"
-                element={<QuotesListPage preset="upcoming" />}
+                element={<QuotesListPage preset="upcoming" canManage={canEditQuotes} />}
               />
               <Route
                 path="/quotes/customers"
-                element={<QuoteCustomersPage />}
+                element={
+                  <QuoteCustomersPage
+                    canManageActions={pageAccess.canManage("quotes.customers")}
+                  />
+                }
               />
               <Route
                 path="/quotes/pdf-pages"
@@ -819,15 +853,23 @@ function OperationsShell() {
               />
               <Route
                 path="/products/packages"
-                element={<PackagesListPage canEdit={canEditProducts} />}
+                element={<PackagesListPage canEdit={canEditPackages} />}
               />
               <Route
                 path="/products/packages/:id/edit"
-                element={<PackageDetailPage canEdit={canEditProducts} />}
+                element={<PackageDetailPage canEdit={canEditPackages} />}
               />
               <Route
                 path="/products/packages/:id"
-                element={<PackageDetailPage canEdit={canEditProducts} />}
+                element={<PackageDetailPage canEdit={canEditPackages} />}
+              />
+              <Route
+                path="/products/shopify-pending"
+                element={<ShopifyPendingProductsPage canManage={canManageShopifyCatalog} />}
+              />
+              <Route
+                path="/products/shopify-pending/:id"
+                element={<ShopifyPendingProductDetailPage canManage={canManageShopifyCatalog} />}
               />
               <Route
                 path="/products/:id/edit"
@@ -847,7 +889,11 @@ function OperationsShell() {
               />
               <Route
                 path="/frozen/prepared-meat-inventory"
-                element={<PreparedMeatInventoryCalcPage />}
+                element={
+                  <PreparedMeatInventoryCalcPage
+                    canManageActions={pageAccess.canManage("frozen.prepared_meat_inventory")}
+                  />
+                }
               />
               <Route
                 path="/frozen/selling-price-cost"
@@ -855,7 +901,11 @@ function OperationsShell() {
               />
               <Route
                 path="/frozen/delivery-notes"
-                element={<MeatDeliveryNotesPage />}
+                element={
+                  <MeatDeliveryNotesPage
+                    canManageActions={pageAccess.canManage("frozen.delivery_notes")}
+                  />
+                }
               />
               <Route
                 path="/frozen/seasoning-cost"
@@ -879,7 +929,14 @@ function OperationsShell() {
               />
               <Route
                 path="/frozen/supplier-quotes"
-                element={<SupplierQuotePage />}
+                element={
+                  <SupplierQuotePage
+                    canUpload={pageAccess.canAccess("frozen.supplier_quotes.upload")}
+                    canReview={pageAccess.canAccess("frozen.supplier_quotes.review")}
+                    canExport={pageAccess.canAccess("frozen.supplier_quotes.export")}
+                    canConfigure={pageAccess.canAccess("frozen.supplier_quotes.settings")}
+                  />
+                }
               />
               <Route
                 path="/kitchen"
@@ -1230,7 +1287,7 @@ function OperationsShell() {
                 <p className="mobile-nav-group-label">
                   {t("workspace.label")}
                 </p>
-                {workspaceLinks.map(({ key, to, icon: WorkspaceIcon, disabled }) =>
+                {visibleWorkspaceLinks.map(({ key, to, icon: WorkspaceIcon, disabled }) =>
                   disabled ? (
                     <span
                       key={key}
@@ -1918,64 +1975,93 @@ function WorkspaceStandalonePage({
   );
 }
 
-function FactoryWorkspace() {
-  const { session, loading, profileLoading } = useAuth();
+function ProtectedWorkspace({
+  permissionKey,
+  allowAnonymous = false,
+  children,
+}: {
+  permissionKey: string;
+  allowAnonymous?: boolean;
+  children: ReactNode;
+}) {
+  const { session, profile, loading, profileLoading } = useAuth();
+  const authorizationRole = profile?.role;
+  const pageAccess = usePageAccess(authorizationRole);
 
   if (loading || (session && profileLoading)) {
     return <AuthLoadingScreen />;
   }
 
   if (!session) {
-    return <LoginPage />;
+    return allowAnonymous ? children : <LoginPage />;
   }
 
-  return <FactoryBoardPage />;
+  if (pageAccess.loading) return <AuthLoadingScreen />;
+  if (!pageAccess.canAccess(permissionKey)) {
+    return (
+      <main className="workspace-standalone">
+        <SettingsAccessDenied />
+      </main>
+    );
+  }
+
+  return children;
+}
+
+function FactoryWorkspace() {
+  return (
+    <ProtectedWorkspace permissionKey="workspace.factory">
+      <FactoryBoardPage />
+    </ProtectedWorkspace>
+  );
 }
 
 function FactoryOrderWorkspace() {
-  const { session, loading, profileLoading } = useAuth();
-
-  if (loading || (session && profileLoading)) {
-    return <AuthLoadingScreen />;
-  }
-
-  if (!session) {
-    return <LoginPage />;
-  }
-
-  return <FactoryOrderPage />;
+  return (
+    <ProtectedWorkspace permissionKey="workspace.factory">
+      <FactoryOrderPage />
+    </ProtectedWorkspace>
+  );
 }
 
 function FactoryMeatDeliveryNoteWorkspace() {
-  const { session, loading, profileLoading } = useAuth();
-
-  if (loading || (session && profileLoading)) return <AuthLoadingScreen />;
-  if (!session) return <LoginPage />;
-  return <FactoryMeatDeliveryNotePage />;
+  return (
+    <ProtectedWorkspace permissionKey="workspace.factory">
+      <FactoryMeatDeliveryNotePage />
+    </ProtectedWorkspace>
+  );
 }
 
 function FactoryMultiDayWorkspace() {
-  const { session, loading, profileLoading } = useAuth();
-
-  if (loading || (session && profileLoading)) return <AuthLoadingScreen />;
-  if (!session) return <LoginPage />;
-  return <FactoryMultiDayReportPage />;
+  return (
+    <ProtectedWorkspace permissionKey="workspace.factory">
+      <FactoryMultiDayReportPage />
+    </ProtectedWorkspace>
+  );
 }
 
 function FactoryProductionCalendarWorkspace() {
-  const { session, loading, profileLoading } = useAuth();
-
-  if (loading || (session && profileLoading)) return <AuthLoadingScreen />;
-  if (!session) return <LoginPage />;
-  return <FactoryProductionCalendarPage />;
+  return (
+    <ProtectedWorkspace permissionKey="workspace.factory">
+      <FactoryProductionCalendarPage />
+    </ProtectedWorkspace>
+  );
 }
 
 function DriverDeliveryWorkspace() {
-  return <DriverDeliveryPage />;
+  return (
+    <ProtectedWorkspace permissionKey="workspace.delivery" allowAnonymous>
+      <DriverDeliveryPage />
+    </ProtectedWorkspace>
+  );
 }
 
 function CustomerWorkspace() {
-  return <WorkspaceStandalonePage workspaceKey="customer" icon={Users} />;
+  return (
+    <ProtectedWorkspace permissionKey="workspace.customer">
+      <WorkspaceStandalonePage workspaceKey="customer" icon={Users} />
+    </ProtectedWorkspace>
+  );
 }
 
 function AuthGate() {

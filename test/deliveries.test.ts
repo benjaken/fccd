@@ -8,7 +8,6 @@ vi.mock("@/lib/supabase", () => ({
 
 import {
   buildDeliveryExportCsv,
-  canAssignDeliveryFleet,
   clockFromValue,
   deliveryExportFilename,
   deliveryFeeSumFromAggregate,
@@ -215,16 +214,6 @@ describe("delivery list helpers", () => {
       true,
     );
     expect(hasDeliveryPhotos({ imageReferences: ["  ", ""] })).toBe(false);
-  });
-
-  it("lets operations edit delivery assignments, not shop or customer roles", () => {
-    expect(canAssignDeliveryFleet("Super Admin")).toBe(true);
-    expect(canAssignDeliveryFleet("Admin")).toBe(true);
-    expect(canAssignDeliveryFleet("Accounting")).toBe(true);
-    expect(canAssignDeliveryFleet("Factory")).toBe(true);
-    expect(canAssignDeliveryFleet("Shop manager")).toBe(false);
-    expect(canAssignDeliveryFleet("Customer_Main")).toBe(false);
-    expect(canAssignDeliveryFleet(null)).toBe(false);
   });
 
   it("builds the delivery export CSV with the requested headers", () => {

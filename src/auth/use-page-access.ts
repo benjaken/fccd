@@ -62,6 +62,7 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
   { prefix: "/quotes/pending", pageKey: "quotes.pending" },
   { prefix: "/quotes/upcoming", pageKey: "quotes.upcoming" },
   { prefix: "/products/packages", pageKey: "products.packages" },
+  { prefix: "/products/shopify-pending", pageKey: "products.shopify_pending" },
   { prefix: "/products/catering", pageKey: "products.catering" },
   { prefix: "/products/lunchbox", pageKey: "products.lunchbox" },
   { prefix: "/products/ala-carte", pageKey: "products.ala_carte" },
@@ -191,8 +192,9 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
   { prefix: "/reports/frozen-meat", pageKey: "reports.frozen_meat" },
   { prefix: "/reports/shops", pageKey: "reports.shops" },
   { prefix: "/follow-up", pageKey: "overview.follow_up" },
-  { prefix: "/factory", pageKey: "workspace" },
-  { prefix: "/driver-delivery", pageKey: "workspace" },
+  { prefix: "/factory", pageKey: "workspace.factory" },
+  { prefix: "/driver-delivery", pageKey: "workspace.delivery" },
+  { prefix: "/customer", pageKey: "workspace.customer" },
   { prefix: "/finance/cost-input", pageKey: "kitchen.cost_input" },
   { prefix: "/finance", pageKey: "finance" },
   { prefix: "/inventory", pageKey: "inventory" },
@@ -266,6 +268,12 @@ function tabPermissionKeys(tabs: readonly ReportTabKey[]) {
 const PAGE_ACCESS_CHILD_KEYS: Record<string, string[]> = {
   restaurant: ["restaurant.daily_sales", "restaurant.daily_purchases", "restaurant.inventory"],
   "kitchen.settings": ["kitchen.settings.cook_types"],
+  "restaurant.settings": [
+    "restaurant.settings.payment_methods",
+    "restaurant.settings.delivery_platforms",
+    "restaurant.settings.holidays",
+    "restaurant.settings.roster_times",
+  ],
   [REPORT_GROUP_PAGE_KEYS.frozenMeat]: tabPermissionKeys(
     REPORT_GROUP_TABS.frozenMeat,
   ),
@@ -284,6 +292,11 @@ const PAGE_ACCESS_CHILD_KEYS: Record<string, string[]> = {
   ],
   "settings.order_lists": ["settings.order_lists.edit"],
   "settings.districts": ["settings.districts.edit"],
+  workspace: [
+    "workspace.factory",
+    "workspace.delivery",
+    "workspace.customer",
+  ],
 };
 
 export function pageAccessKey(pathname: string) {
@@ -304,32 +317,22 @@ export function pageAccessKey(pathname: string) {
 }
 
 export function useCurrentPageAccess() {
-  const { user, profile } = useAuth();
-  const authorizationRole =
-    typeof user?.app_metadata?.role === "string"
-      ? user.app_metadata.role
-      : profile?.role;
-  return usePageAccess(authorizationRole);
+  const { profile } = useAuth();
+  return usePageAccess(profile?.role);
 }
 
 export function usePageAccess(role: string | null | undefined) {
-  const isSuperAdmin = role === "Super Admin";
   const [permissions, setPermissions] = useState<Map<string, PermissionValue>>(
     new Map(),
   );
-  const [loading, setLoading] = useState(!isSuperAdmin);
+  const [loading, setLoading] = useState(Boolean(role));
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isSuperAdmin) {
-      setPermissions(new Map());
-      setLoading(false);
-      setError(null);
-      return;
-    }
     if (!role) {
       setPermissions(new Map());
       setLoading(false);
+      setError(null);
       return;
     }
 
@@ -364,31 +367,30 @@ export function usePageAccess(role: string | null | undefined) {
     return () => {
       active = false;
     };
-  }, [isSuperAdmin, role]);
+  }, [role]);
 
   return useMemo(
     () => ({
-      isSuperAdmin,
       loading,
       error,
       canAccess: (pageKey: string) => {
-        if (pageKey === "profile" || pageKey === "workspace" || isSuperAdmin) return true;
+        if (pageKey === "profile") return true;
         if (permissions.get(pageKey)?.canAccess === true) return true;
         return (PAGE_ACCESS_CHILD_KEYS[pageKey] ?? []).some(
           (child) => permissions.get(child)?.canAccess === true,
         );
       },
       canManage: (pageKey: string) =>
-        isSuperAdmin || permissions.get(pageKey)?.canManage === true,
+        permissions.get(pageKey)?.canManage === true,
       /** Section nav: visible if the section itself or any of its children is allowed. */
       canAccessSection: (pageKey: string, childKeys: string[] = []) => {
-        if (pageKey === "profile" || pageKey === "workspace" || isSuperAdmin) return true;
+        if (pageKey === "profile") return true;
         if (permissions.get(pageKey)?.canAccess === true) return true;
         return childKeys.some(
           (child) => permissions.get(child)?.canAccess === true,
         );
       },
     }),
-    [error, isSuperAdmin, loading, permissions],
+    [error, loading, permissions],
   );
 }

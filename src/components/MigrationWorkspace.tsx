@@ -2,7 +2,7 @@ import { Database, FileArchive, Languages, Network, TableProperties } from "luci
 import { useTranslation } from "react-i18next";
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
 
-import { useAuth } from "@/auth/AuthProvider";
+import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { DataMigrationPage } from "@/components/DataMigrationPage";
 import { FileMigrationPage } from "@/components/FileMigrationPage";
 import { MigrationControlPage } from "@/components/MigrationControlPage";
@@ -12,8 +12,8 @@ import { cn } from "@/lib/utils";
 
 export function MigrationWorkspace() {
   const { t, i18n } = useTranslation();
-  const { session } = useAuth();
-  const isSuperAdmin = session?.user.app_metadata?.role === "Super Admin";
+  const pageAccess = useCurrentPageAccess();
+  const canManageMigration = pageAccess.canManage("migration");
 
   const switchLanguage = () => {
     void i18n.changeLanguage(i18n.language === "en" ? "zh-HK" : "en");
@@ -89,13 +89,17 @@ export function MigrationWorkspace() {
           <Route index element={<Navigate to="control" replace />} />
           <Route
             path="control"
-            element={<MigrationControlPage isSuperAdmin={isSuperAdmin} />}
+            element={
+              <MigrationControlPage canManageMigration={canManageMigration} />
+            }
           />
           <Route path="inventory" element={<DataMigrationPage />} />
           <Route path="fk" element={<MigratedFkPage />} />
           <Route
             path="files"
-            element={<FileMigrationPage isSuperAdmin={isSuperAdmin} />}
+            element={
+              <FileMigrationPage canManageMigration={canManageMigration} />
+            }
           />
           <Route path="*" element={<Navigate to="control" replace />} />
         </Routes>

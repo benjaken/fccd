@@ -247,14 +247,16 @@ export function OrderStatusPicker({
 }
 
 export function OrderRowActionMenu({
-  order,
+    order,
+    canManage = true,
   canCancel,
   onCancel,
   onMessages,
   onPreview,
   statusPicker,
 }: {
-  order: OrderListItem;
+    order: OrderListItem;
+    canManage?: boolean;
   canCancel: boolean;
   onCancel: () => void;
   onMessages: () => void;
@@ -272,13 +274,13 @@ export function OrderRowActionMenu({
   return (
     <div className="order-row-actions">
       {statusPicker}
-      <Link to={`/orders/${encodeURIComponent(order.id)}/edit`} aria-label="編輯" title="編輯"><Pencil /></Link>
+        {canManage ? <Link to={`/orders/${encodeURIComponent(order.id)}/edit`} aria-label="編輯" title="編輯"><Pencil /></Link> : null}
       {order.contactPhone ? <button type="button" onClick={onMessages} aria-label={messageLabel} title={t("quoteCustomers.messagesAction")}><MessageSquare /></button> : <span aria-label={`${messageLabel} ${t("common.notSet")}`} title={t("common.notSet")}><MessageSquare /></span>}
-      {canCancel ? <button type="button" onClick={onCancel} aria-label="取消訂單" title="取消訂單"><Ban /></button> : null}
+        {canManage && canCancel ? <button type="button" onClick={onCancel} aria-label="取消訂單" title="取消訂單"><Ban /></button> : null}
       {showDeliveryNote ? <button type="button" onClick={() => onPreview("delivery-note")} aria-label="送貨單" title="送貨單"><Truck /></button> : null}
       {isPaidInFull ? <Link className="order-document-action" to={`/orders/${order.id}/receipt`} target="_blank" rel="noopener noreferrer" aria-label={t("orders.documents.receipt")} title={t("orders.documents.receipt")}>{t("orders.documents.receipt")}</Link> : null}
       {isPaidInFull ? <Link className="order-document-action" to={`/orders/${order.id}/invoice`} target="_blank" rel="noopener noreferrer" aria-label={t("orders.documents.invoice")} title={t("orders.documents.invoice")}>{t("orders.documents.invoice")}</Link> : null}
-      <Link to={`/orders/new?copyFrom=${encodeURIComponent(order.id)}`} aria-label={t("orders.copy")} title={t("orders.copy")}><Copy /></Link>
+        {canManage ? <Link to={`/orders/new?copyFrom=${encodeURIComponent(order.id)}`} aria-label={t("orders.copy")} title={t("orders.copy")}><Copy /></Link> : null}
     </div>
   );
 }

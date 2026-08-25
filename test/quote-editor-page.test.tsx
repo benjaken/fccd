@@ -5,7 +5,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const dictionaryValues = vi.hoisted(() => ({
-  delivery_time_slot: ["12:00 - 13:00", "13:00 - 14:00"],
+  delivery_time_slot: ["12:00 - 13:00", "13:00 - 14:00", "17:00 - 18:00"],
   ship_out_time_slot: ["08:30", "11:30", "12:00", "13:15"],
   quote_status: ["Low Chance", "High Chance", "Done Deal", "Case Closed"],
 }));
@@ -157,12 +157,10 @@ function renderEditor(
 async function fillRequiredQuoteDetails(user: ReturnType<typeof userEvent.setup>) {
   await user.selectOptions(screen.getByLabelText(/Brand/), "channel-1");
   await user.type(screen.getByLabelText("Customer name"), "BWT Database");
-  await user.type(screen.getByLabelText("Company name"), "BWT Limited");
   await user.type(screen.getByLabelText("Contact number"), "94808987");
   await user.type(screen.getByLabelText("Email"), "quote@example.com");
   await user.selectOptions(screen.getByLabelText("Shipping method"), "shipping-home");
   await user.selectOptions(screen.getByLabelText("District"), "district-1");
-  await user.selectOptions(screen.getByLabelText("Delivery time"), "12:00 - 13:00");
 }
 
 describe("Quote editor", () => {
@@ -579,6 +577,9 @@ describe("Quote editor", () => {
     expect(dedupeQuoteOptions(options.districts)).toEqual([
       { id: "district-1", name: "Central" },
     ]);
+    expect(dedupeQuoteOptions(options.districts, "district-duplicate")).toEqual([
+      { id: "district-duplicate", name: "Central" },
+    ]);
   });
 
   it("shows all order tags and supports selecting more than one", async () => {
@@ -738,6 +739,49 @@ describe("Quote editor", () => {
     fireEvent.blur(quantityInput);
     expect(await screen.findByText("Quantity must be a whole number above 0 and price cannot be negative.")).toBeInTheDocument();
     expect(saveExistingLine).not.toHaveBeenCalled();
+  });
+
+  it("matches Shopify 12-hour delivery times to the current option", async () => {
+    renderEditor({
+      loadSummary: vi.fn().mockResolvedValue({
+        id: "quote-1",
+        orderNumber: "FCLQ-TIME",
+        channelId: "channel-1",
+        draft: { ...emptyQuoteDraft, deliveryTime: "5:00 PM - 6:00 PM" },
+      }),
+    }, "/quotes/quote-1/edit");
+
+    await waitFor(() => expect(screen.getByLabelText("Delivery time")).toHaveValue("17:00 - 18:00"));
+    expect(screen.queryByPlaceholderText("Enter a custom delivery time")).not.toBeInTheDocument();
+  });
+
+  it("shows unmatched Shopify delivery times as custom with the corresponding time", async () => {
+    renderEditor({
+      loadSummary: vi.fn().mockResolvedValue({
+        id: "quote-1",
+        orderNumber: "FCLQ-CUSTOM-TIME",
+        channelId: "channel-1",
+        draft: { ...emptyQuoteDraft, deliveryTime: "5:30 PM - 6:30 PM" },
+      }),
+    }, "/quotes/quote-1/edit");
+
+    await waitFor(() => expect(screen.getByLabelText("Delivery time")).toHaveValue("custom"));
+    expect(screen.getByPlaceholderText("Enter a custom delivery time")).toHaveValue("17:30 - 18:30");
+  });
+
+  it("requires only the seven customer and delivery fields on quotes", async () => {
+    renderEditor();
+
+    await screen.findByRole("heading", { name: "New quote" });
+    expect(screen.getByLabelText(/Brand/)).toBeRequired();
+    expect(screen.getByLabelText("Customer name")).toBeRequired();
+    expect(screen.getByLabelText("Contact number")).toBeRequired();
+    expect(screen.getByLabelText("Email")).toBeRequired();
+    expect(screen.getByLabelText("Shipping method")).toBeRequired();
+    expect(screen.getByLabelText("District")).toBeRequired();
+    expect(screen.getByLabelText("Delivery date")).toBeRequired();
+    expect(screen.getByLabelText("Company name")).not.toBeRequired();
+    expect(screen.getByLabelText("Delivery time")).not.toBeRequired();
   });
 
   it("shows sequence and SKU columns and saves a dragged product order", async () => {
@@ -1062,6 +1106,8 @@ describe("Quote editor", () => {
     const setFactoryStatus = vi.fn().mockResolvedValue(undefined);
     const loadSummary = vi.fn().mockResolvedValue({
       id: "order-1", orderNumber: "FCCO20260801", channelId: "channel-1",
+      shopifyOrderId: 7808193593617,
+      shopifyStoreDomain: "hklunchbox.myshopify.com",
       draft: {
         channelId: "channel-1", customerName: "Customer", companyName: "Company",
         contactA: "12345678", contactB: "", email: "order@example.com", asanaLink: "",
@@ -1085,6 +1131,10 @@ describe("Quote editor", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "FCCO20260801" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open order FCCO20260801 in Shopify" })).toHaveAttribute(
+      "href",
+      "https://admin.shopify.com/store/hklunchbox/orders/7808193593617",
+    );
     expect(screen.getByRole("status", { name: "付款狀態：尚未付款" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Add product|加入貨品/ })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Payment records|付款紀錄/ })).toBeInTheDocument();
@@ -1120,6 +1170,10 @@ describe("Quote editor", () => {
       </MemoryRouter>,
     );
     expect(await screen.findByRole("heading", { name: "FCCO20260801" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open order FCCO20260801 in Shopify" })).toHaveAttribute(
+      "href",
+      "https://admin.shopify.com/store/hklunchbox/orders/7808193593617",
+    );
     expect(screen.getByText(/Customer note|客戶備註/)).toBeInTheDocument();
     expect(screen.getByText(/Shown on delivery note|送貨單顯示/)).toBeInTheDocument();
     expect(screen.queryByText(/Success probability|成功機率/)).not.toBeInTheDocument();
@@ -1134,15 +1188,15 @@ describe("Quote editor", () => {
     await waitFor(() => expect(screen.queryByRole("button", { name: /Send to factory|送至工場/ })).not.toBeInTheDocument());
   });
 
-  it("blocks factory sending from detail and edit pages when required contact or delivery details are missing", async () => {
+  it("blocks factory sending from detail and edit pages unless all seven required fields are present", async () => {
     const setFactoryStatus = vi.fn().mockResolvedValue(undefined);
     const loadSummary = vi.fn().mockResolvedValue({
-      id: "order-1", orderNumber: "6951", channelId: "channel-1",
+      id: "order-1", orderNumber: "6951", channelId: "",
       draft: {
-        channelId: "channel-1", customerName: "MirandaKwok", companyName: "",
-        contactA: "94350022", contactB: "", email: "", asanaLink: "",
+        channelId: "", customerName: "", companyName: "Optional company",
+        contactA: "", contactB: "", email: "", asanaLink: "",
         address: "", districtId: "", districtName: "", shippingMethodId: "",
-        deliveryDate: "2026-08-28", deliveryTime: "18:00 - 19:00", shipOutTime: "",
+        deliveryDate: "", deliveryTime: "", shipOutTime: "",
         customerNote: "", packingNote: "", salesPartnerId: "", internalNote: "", tagIds: [],
         quoteStatus: "", quoteSalesSourceId: "", quoteCommunicationChannelId: "",
       },
@@ -1162,11 +1216,16 @@ describe("Quote editor", () => {
 
     await userEvent.setup().click(await screen.findByRole("button", { name: "Send to factory" }));
     const detailDialog = screen.getByRole("alertdialog", { name: "Cannot send to factory" });
-    expect(detailDialog).toHaveTextContent("Company name");
+    expect(detailDialog).toHaveTextContent("Brand");
+    expect(detailDialog).toHaveTextContent("Customer name");
+    expect(detailDialog).toHaveTextContent("Contact number");
     expect(detailDialog).toHaveTextContent("Email");
     expect(detailDialog).toHaveTextContent("Shipping method");
     expect(detailDialog).toHaveTextContent("District");
-    expect(detailDialog).toHaveTextContent("Delivery address");
+    expect(detailDialog).toHaveTextContent("Delivery date");
+    expect(detailDialog).not.toHaveTextContent("Company name");
+    expect(detailDialog).not.toHaveTextContent("Delivery address");
+    expect(detailDialog).not.toHaveTextContent("Delivery time");
     expect(setFactoryStatus).not.toHaveBeenCalled();
 
     detail.unmount();
@@ -1182,11 +1241,16 @@ describe("Quote editor", () => {
     await userEvent.setup().click(screen.getByRole("tab", { name: "Add products" }));
     await userEvent.setup().click(screen.getByRole("button", { name: "Send to factory" }));
     const editDialog = screen.getByRole("alertdialog", { name: "Cannot send to factory" });
-    expect(editDialog).toHaveTextContent("Company name");
+    expect(editDialog).toHaveTextContent("Brand");
+    expect(editDialog).toHaveTextContent("Customer name");
+    expect(editDialog).toHaveTextContent("Contact number");
     expect(editDialog).toHaveTextContent("Email");
     expect(editDialog).toHaveTextContent("Shipping method");
     expect(editDialog).toHaveTextContent("District");
-    expect(editDialog).toHaveTextContent("Delivery address");
+    expect(editDialog).toHaveTextContent("Delivery date");
+    expect(editDialog).not.toHaveTextContent("Company name");
+    expect(editDialog).not.toHaveTextContent("Delivery address");
+    expect(editDialog).not.toHaveTextContent("Delivery time");
     expect(setFactoryStatus).not.toHaveBeenCalled();
   });
 });

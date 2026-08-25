@@ -141,4 +141,19 @@ describe("order delivery lifecycle", () => {
     );
     expect(migration).toContain("order_delivery_district_required");
   });
+
+  it("enforces all seven factory-send fields at the database boundary", () => {
+    const migration = readFileSync(
+      "supabase/migrations/20260825114000_validate_order_factory_required_fields.sql",
+      "utf8",
+    );
+
+    expect(migration).toContain("new.channel_id is null");
+    expect(migration).toContain("new.customer_name_snapshot");
+    expect(migration).toContain("new.contact_number_a_snapshot");
+    expect(migration).toContain("new.email_snapshot");
+    expect(migration).toContain("new.shipping_method_id is null");
+    expect(migration).toContain("new.delivery_district_id is null");
+    expect(migration).toContain("new.delivery_at is null");
+  });
 });

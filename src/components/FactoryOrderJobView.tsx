@@ -35,6 +35,19 @@ export function preferredFactoryLabelPrinter(printers: string[]): string {
   return printers.find((printer) => /xprinter/i.test(printer)) ?? printers[0] ?? "";
 }
 
+export function factoryLabelCopies(quantityText: string | null): number {
+  const match = quantityText?.match(/\d+(?:\.\d+)?/);
+  const quantity = match ? Number(match[0]) : 1;
+  return Number.isFinite(quantity) ? Math.max(1, Math.ceil(quantity)) : 1;
+}
+
+export function factoryLabelPrintCompletesSet(
+  quantityText: string | null,
+  fullSet: boolean,
+): boolean {
+  return fullSet || factoryLabelCopies(quantityText) === 1;
+}
+
 const factoryChangeFieldKeys: Record<string, string> = {
   product_id: "factoryBoard.changedProduct",
   package_id: "factoryBoard.changedPackage",
@@ -159,10 +172,16 @@ export function FactoryOrderJobView({
     );
   }, [qz.printers]);
 
+  useEffect(() => {
+    if (!bulkPrintSuccess) return;
+    const timeoutId = window.setTimeout(() => {
+      setBulkPrintSuccess(null);
+    }, 2_000);
+    return () => window.clearTimeout(timeoutId);
+  }, [bulkPrintSuccess]);
+
   const labelCopies = (line: FactoryOrderLine) => {
-    const match = line.quantityText?.match(/\d+(?:\.\d+)?/);
-    const quantity = match ? Number(match[0]) : 1;
-    return Number.isFinite(quantity) ? Math.max(1, Math.ceil(quantity)) : 1;
+    return factoryLabelCopies(line.quantityText);
   };
 
   const printLine = async (line: FactoryOrderLine, fullSet: boolean) => {
@@ -171,7 +190,12 @@ export function FactoryOrderJobView({
     setPrintError(false);
     setPrintSuccess(null);
     try {
-      const copies = fullSet ? labelCopies(line) : 1;
+      const fullSetCopies = labelCopies(line);
+      const copies = fullSet ? fullSetCopies : 1;
+      const completesSet = factoryLabelPrintCompletesSet(
+        line.quantityText,
+        fullSet,
+      );
       const commandBase64 = await loadLabelCommand({
         orderNumber,
         deliveryDate: dateKey,
@@ -184,12 +208,12 @@ export function FactoryOrderJobView({
         commandBase64,
         1,
       );
-      if (fullSet) {
+      if (completesSet) {
         await markLinePrinted(line.id);
         onLinePrinted?.(line.id);
       }
       setPrintSuccess(
-        fullSet
+        completesSet
           ? t("factoryBoard.fullLabelPrintSuccess")
           : t("factoryBoard.singleLabelPrintSuccess"),
       );
@@ -299,6 +323,47 @@ export function FactoryOrderJobView({
 
   return (
     <section className="factory-order-job">
+      <div className="factory-job-notifications" aria-live="polite">
+        {changeTaskPending ? (
+          <div className="factory-job-notification is-warning" role="alert">
+            <TriangleAlert aria-hidden="true" />
+            <span>
+              <strong>{t("factoryBoard.changeTaskTitle")}</strong>
+              <small>{t("factoryBoard.changeTaskDescription")}</small>
+            </span>
+          </div>
+        ) : null}
+        {bulkPrintSuccess ? (
+          <p className="factory-job-notification is-success" role="status">
+            <CheckCircle2 aria-hidden="true" />
+            <span>{bulkPrintSuccess}</span>
+          </p>
+        ) : null}
+        {bulkPrintError ? (
+          <p className="factory-job-notification is-error" role="alert">
+            <TriangleAlert aria-hidden="true" />
+            <span>{t("factoryBoard.labelPrintError")}</span>
+          </p>
+        ) : null}
+        {changeAcknowledged ? (
+          <p className="factory-job-notification is-success" role="status">
+            <CheckCircle2 aria-hidden="true" />
+            <span>{t("factoryBoard.changeConfirmed")}</span>
+          </p>
+        ) : null}
+        {acknowledgeError ? (
+          <p className="factory-job-notification is-error" role="alert">
+            <TriangleAlert aria-hidden="true" />
+            <span>{t("factoryBoard.changeConfirmError")}</span>
+          </p>
+        ) : null}
+        {assignSuccess ? (
+          <p className="factory-job-notification is-success" role="status">
+            <CheckCircle2 aria-hidden="true" />
+            <span>{t("factoryBoard.assignmentSuccess")}</span>
+          </p>
+        ) : null}
+      </div>
       <div className="factory-order-main">
         <div className="factory-order-summary">
           <h1 className="factory-order-number">{orderNumber}</h1>
@@ -411,13 +476,6 @@ export function FactoryOrderJobView({
       </div>
 
       <aside className="factory-order-aside">
-        {changeTaskPending ? (
-          <div className="factory-change-task-alert" role="alert">
-            <TriangleAlert aria-hidden="true" />
-            <strong>{t("factoryBoard.changeTaskTitle")}</strong>
-            <span>{t("factoryBoard.changeTaskDescription")}</span>
-          </div>
-        ) : null}
         {job?.removedLineChanges?.length ? (
           <div className="factory-removed-lines-alert" role="alert">
             <TriangleAlert aria-hidden="true" />
@@ -446,8 +504,6 @@ export function FactoryOrderJobView({
         >
           {bulkPrinting === "address" ? t("factoryBoard.printing") : t("factoryBoard.printAddress")}
         </Button>
-        {bulkPrintSuccess ? <p className="factory-label-print-success" role="status">{bulkPrintSuccess}</p> : null}
-        {bulkPrintError ? <p className="factory-label-print-error" role="alert">{t("factoryBoard.labelPrintError")}</p> : null}
         <Button
           type="button"
           disabled={loading || error || !job}
@@ -470,17 +526,6 @@ export function FactoryOrderJobView({
               : t("factoryBoard.confirmChangeUpdated")}
           </Button>
         ) : null}
-        {changeAcknowledged ? (
-          <p className="factory-assignment-success" role="status">
-            <CheckCircle2 aria-hidden="true" />
-            {t("factoryBoard.changeConfirmed")}
-          </p>
-        ) : null}
-        {acknowledgeError ? (
-          <p className="factory-change-task-error" role="alert">
-            {t("factoryBoard.changeConfirmError")}
-          </p>
-        ) : null}
         <Button
           type="button"
           className="factory-order-selected"
@@ -494,12 +539,6 @@ export function FactoryOrderJobView({
             ? t("factoryBoard.selectedFleet", { name: selectedName })
             : t("factoryBoard.assignDriver")}
         </Button>
-        {assignSuccess ? (
-          <p className="factory-assignment-success" role="status">
-            <CheckCircle2 aria-hidden="true" />
-            {t("factoryBoard.assignmentSuccess")}
-          </p>
-        ) : null}
         <hr />
         <Button
           type="button"

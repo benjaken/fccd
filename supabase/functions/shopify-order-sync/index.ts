@@ -17,6 +17,7 @@ import {
   resolveAliasSku,
   shopDomainMatches,
   replaceShopifyLunchBoxAggregate,
+  resolveShopifyShippingMethodId,
   shopifyCateringUtensilPacks,
   shopifyMenuOptionLegacyId,
   stripSkuSuffix,
@@ -742,6 +743,21 @@ function shopifyPaymentStatusPatch(item: MappedOrder): Record<string, unknown> {
   };
 }
 
+function shopifyOwnedOrderPatch(item: MappedOrder): Record<string, unknown> {
+  return {
+    contact_number_a_snapshot: item.orderRow.contact_number_a_snapshot ?? null,
+    shipping_address_snapshot: item.orderRow.shipping_address_snapshot ?? null,
+    customer_note_snapshot: item.orderRow.customer_note_snapshot ?? null,
+    delivery_at: item.orderRow.delivery_at ?? null,
+    delivery_time: item.orderRow.delivery_time ?? null,
+    remarks: null,
+    ...(item.orderRow.shipping_method_id
+      ? { shipping_method_id: item.orderRow.shipping_method_id }
+      : {}),
+    ...shopifyPaymentStatusPatch(item),
+  };
+}
+
 async function backfillLinkedOrderLineSnapshots(input: {
   client: AdminClient;
   orderId: string;
@@ -806,6 +822,7 @@ type OrderProcessingContext = {
 type OrderProcessingCounters = {
   inserted: number;
   linkedExisting: number;
+  updatedShopify: number;
   unmatchedSkuLines: number;
   menuOptionsInserted: number;
 };
@@ -860,11 +877,20 @@ async function processMappedOrders(
   const counters: OrderProcessingCounters = {
     inserted: 0,
     linkedExisting: 0,
+    updatedShopify: 0,
     unmatchedSkuLines: 0,
     menuOptionsInserted: 0,
   };
 
   for (const item of mapped) {
+    if (item.shippingMethodTitle && !item.orderRow.shipping_method_id) {
+      issues.push({
+        store_id: storeRow.id,
+        shopify_order_id: item.orderId,
+        sku: null,
+        issue: "unmatched_shipping_method",
+      });
+    }
     const already = shopifyIdToOrder.get(item.orderId);
     let targetId: string | null = already?.id ?? null;
     let mode: "insert" | "link" | "relink" | "skip" = already
@@ -961,7 +987,11 @@ async function processMappedOrders(
 
     if (mode === "skip" && targetId) {
       const { error } = await client.from("orders")
-        .update(shopifyPaymentStatusPatch(item))
+        .update(
+          already?.source_system === "shopify"
+            ? shopifyOwnedOrderPatch(item)
+            : shopifyPaymentStatusPatch(item),
+        )
         .eq("id", targetId);
       if (error) {
         issues.push({
@@ -971,8 +1001,11 @@ async function processMappedOrders(
           issue: "payment_status_update_failed",
         });
       }
-      // All non-payment order fields stay immutable. Transactions can still be
-      // picked up on later runs.
+      if (!error && already?.source_system === "shopify") {
+        counters.updatedShopify += 1;
+      }
+      // Shopify-created rows refresh Shopify-owned contact snapshots. Linked
+      // operational rows keep their non-payment fields immutable.
       processedOrders.push({
         orderId: item.orderId,
         supabaseOrderId: targetId,
@@ -1369,7 +1402,7 @@ async function syncStore(input: {
 
   const [{ data: products }, { data: packages }, { data: existingShopify }, {
     data: existingNumbers,
-  }, { data: paymentMethods }] = await Promise.all([
+  }, { data: shippingMethods }, { data: paymentMethods }] = await Promise.all([
     needsCatalog
       ? catalogQuery(client, "products", storeRow.channel_id, skus)
       : Promise.resolve({ data: [] as Array<{ id: string; sku: string | null; name: string | null; channel_id: string | null }> }),
@@ -1395,8 +1428,18 @@ async function syncStore(input: {
         ],
       )
       .is("archived_at", null),
+    client.from("shipping_methods").select("id,name,display_name")
+      .eq("is_active", true).is("archived_at", null),
     client.from("payment_methods").select("id, legacy_id, name"),
   ]);
+
+  for (const item of mapped) {
+    const shippingMethodId = resolveShopifyShippingMethodId(
+      item.shippingMethodTitle,
+      shippingMethods ?? [],
+    );
+    if (shippingMethodId) item.orderRow.shipping_method_id = shippingMethodId;
+  }
 
   const methodsByName = new Map(
     (paymentMethods ?? []).map((method) => [
@@ -1467,7 +1510,7 @@ async function syncStore(input: {
     fetched: mapped.length,
     inserted: result.counters.inserted,
     linkedExisting: result.counters.linkedExisting,
-    updatedShopify: 0,
+    updatedShopify: result.counters.updatedShopify,
     unmatchedSkuLines: result.counters.unmatchedSkuLines,
     menuOptionsInserted: result.counters.menuOptionsInserted,
     paymentsInserted: payments.inserted,
@@ -1560,7 +1603,7 @@ async function syncSingleOrder(input: {
 
   const [{ data: products }, { data: packages }, { data: existingShopify }, {
     data: existingNumbers,
-  }, { data: paymentMethods }] = await Promise.all([
+  }, { data: shippingMethods }, { data: paymentMethods }] = await Promise.all([
     needsCatalog
       ? catalogQuery(client, "products", storeRow.channel_id, skus)
       : Promise.resolve({ data: [] as Array<{ id: string; sku: string | null; name: string | null; channel_id: string | null }> }),
@@ -1586,8 +1629,18 @@ async function syncSingleOrder(input: {
         ],
       )
       .is("archived_at", null),
+    client.from("shipping_methods").select("id,name,display_name")
+      .eq("is_active", true).is("archived_at", null),
     client.from("payment_methods").select("id, legacy_id, name"),
   ]);
+
+  for (const item of mapped) {
+    const shippingMethodId = resolveShopifyShippingMethodId(
+      item.shippingMethodTitle,
+      shippingMethods ?? [],
+    );
+    if (shippingMethodId) item.orderRow.shipping_method_id = shippingMethodId;
+  }
 
   const methodsByName = new Map(
     (paymentMethods ?? []).map((method) => [
@@ -1658,7 +1711,7 @@ async function syncSingleOrder(input: {
     fetched: mapped.length,
     inserted: result.counters.inserted,
     linkedExisting: result.counters.linkedExisting,
-    updatedShopify: 0,
+    updatedShopify: result.counters.updatedShopify,
     unmatchedSkuLines: result.counters.unmatchedSkuLines,
     menuOptionsInserted: result.counters.menuOptionsInserted,
     paymentsInserted: payments.inserted,

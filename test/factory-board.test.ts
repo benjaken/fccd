@@ -252,6 +252,16 @@ describe("factory board helpers", () => {
         ],
       }),
     ).toBe("incomplete");
+    expect(
+      factoryOrderPrintStatus({
+        factoryPrintDate: "2026-08-20T02:00:00.000Z",
+        requiresReprint: true,
+        lines: [
+          { isPrinted: true, isVoid: false },
+          { isPrinted: false, isVoid: false, isPrintable: false },
+        ],
+      }),
+    ).toBe("complete");
   });
 
   it("requires reprinting when dishes change after the last full print", () => {

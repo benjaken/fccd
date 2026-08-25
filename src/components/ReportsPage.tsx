@@ -3,12 +3,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
-import { useAuth } from "@/auth/AuthProvider";
 import {
   REPORT_GROUP_TABS,
   REPORT_TAB_PERMISSION_KEYS,
   REPORT_TAB_ROUTES,
-  usePageAccess,
+  useCurrentPageAccess,
   type ReportGroup,
   type ReportTabKey,
 } from "@/auth/use-page-access";
@@ -54,12 +53,7 @@ export function ReportsPage({ group }: { group: ReportGroup }) {
   const { t, i18n } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, profile } = useAuth();
-  const authorizationRole =
-    typeof user?.app_metadata?.role === "string"
-      ? user.app_metadata.role
-      : profile?.role;
-  const pageAccess = usePageAccess(authorizationRole);
+  const pageAccess = useCurrentPageAccess();
   const reportTabs = REPORT_GROUP_TABS[group];
   const visibleTabs = useMemo(
     () =>

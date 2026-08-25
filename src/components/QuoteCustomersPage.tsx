@@ -184,11 +184,13 @@ function MessageBubble({
 }
 
 export function QuoteCustomersPage({
+  canManageActions = true,
   loadCustomers = fetchQuoteCustomers,
   loadHistory = fetchQuoteCustomerHistory,
   loadMessages = fetchQuoteCustomerMessages,
   createNote = createQuoteCustomerNote,
 }: {
+  canManageActions?: boolean;
   loadCustomers?: CustomersLoader;
   loadHistory?: HistoryLoader;
   loadMessages?: MessagesLoader;
@@ -436,7 +438,7 @@ export function QuoteCustomersPage({
   const refreshOrders = () => setOrdersReloadKey((key) => key + 1);
 
   const sendNote = async () => {
-    if (!panel || panel.kind !== "messages" || sendingNote) return;
+    if (!canManageActions || !panel || panel.kind !== "messages" || sendingNote) return;
     const body = draftNote.trim();
     if (!body) return;
 
@@ -769,7 +771,7 @@ export function QuoteCustomersPage({
         onClose={closePanel}
         closeLabel={t("quoteCustomers.closePanel")}
         footer={
-          messageTab === "note" ? (
+          messageTab === "note" && canManageActions ? (
             <div className="quote-customers-message-composer-wrap">
               {replyTarget ? (
                 <div className="quote-customers-reply-target">

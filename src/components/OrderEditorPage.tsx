@@ -232,7 +232,15 @@ export function OrderEditorPage({
     update("payments", draft.payments.map((payment, paymentIndex) => paymentIndex === index ? { ...payment, ...patch } : payment));
 
   const validate = () => {
-    if (!draft.customerName.trim() || !draft.contactA.trim() || !draft.email.trim() || !draft.channelId || !draft.deliveryAt) {
+    if (
+      !draft.customerName.trim() ||
+      !draft.contactA.trim() ||
+      !draft.email.trim() ||
+      !draft.channelId ||
+      !draft.shippingMethodId ||
+      !draft.districtId ||
+      !draft.deliveryAt
+    ) {
       setStep("details");
       setSaveError("請填寫所有標示 * 的訂單資料。");
       return false;
@@ -365,11 +373,11 @@ export function OrderEditorPage({
                 <InputField label="聯絡電話" value={draft.contactA} required type="tel" onChange={(value) => update("contactA", value)} />
                 <InputField label="第二聯絡電話" value={draft.contactB} type="tel" onChange={(value) => update("contactB", value)} />
                 <InputField label="電郵地址" value={draft.email} required type="email" onChange={(value) => update("email", value)} />
-                <SelectField label="運送方式" value={draft.shippingMethodId} options={options.shippingMethods} onChange={(value) => update("shippingMethodId", value)} />
+                <SelectField label="運送方式" value={draft.shippingMethodId} options={options.shippingMethods} required onChange={(value) => update("shippingMethodId", value)} />
                 <InputField label="送貨地址" value={draft.address} onChange={(value) => update("address", value)} />
               </div>
               <div className="order-editor-column">
-                <SelectField label="地區" value={draft.districtId} options={options.districts} onChange={(value) => update("districtId", value)} />
+                <SelectField label="地區" value={draft.districtId} options={options.districts} required onChange={(value) => update("districtId", value)} />
                 <InputField label="送貨日期及時間" value={draft.deliveryAt} required type="datetime-local" onChange={(value) => update("deliveryAt", value)} />
                 <InputField label="送貨時段" value={draft.deliveryTime} placeholder={t("orderEditor.deliveryTimePlaceholder")} onChange={(value) => update("deliveryTime", value)} />
                 <InputField label="出車時間" value={draft.shipOutTime} placeholder={t("orderEditor.shipOutTimePlaceholder")} onChange={(value) => update("shipOutTime", value)} />

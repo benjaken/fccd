@@ -48,6 +48,7 @@ const NOTE_SKELETON_COLUMNS = [
 ];
 
 export function MeatDeliveryNotesPage({
+  canManageActions = true,
   loadNotes = fetchMeatDeliveryNotes,
   deleteNote = deleteMeatDeliveryNote,
   loadItems = fetchPreparedMeatItems,
@@ -61,6 +62,7 @@ export function MeatDeliveryNotesPage({
   updateOutbound,
   sendToFactory,
 }: {
+  canManageActions?: boolean;
   loadNotes?: NotesLoader;
   deleteNote?: NoteDeleter;
   loadItems?: ItemsLoader;
@@ -251,7 +253,7 @@ export function MeatDeliveryNotesPage({
                   <td>{display(row.shippingMethodName)}</td>
                   <td>{display(row.remarks)}</td>
                   <td className="table-actions-cell">
-                    <div className="table-row-actions">
+                    {canManageActions ? <div className="table-row-actions">
                       <Button
                         type="button"
                         variant="outline"
@@ -276,7 +278,7 @@ export function MeatDeliveryNotesPage({
                       >
                         <Trash2 />
                       </Button>
-                    </div>
+                    </div> : null}
                   </td>
                 </tr>
               ))}

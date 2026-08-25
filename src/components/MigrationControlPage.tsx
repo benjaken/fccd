@@ -23,11 +23,11 @@ import {
 import { cn } from "@/lib/utils";
 
 type MigrationControlPageProps = {
-  isSuperAdmin: boolean;
+  canManageMigration: boolean;
 };
 
 export function MigrationControlPage({
-  isSuperAdmin,
+  canManageMigration,
 }: MigrationControlPageProps) {
   const { t, i18n } = useTranslation();
   const number = new Intl.NumberFormat(i18n.language);
@@ -40,7 +40,7 @@ export function MigrationControlPage({
     {
       key: "full",
       icon: Play,
-      enabled: isSuperAdmin && fullReady,
+      enabled: canManageMigration && fullReady,
       gateReason: !allReadinessGatesComplete
         ? "readinessIncomplete"
         : "handlersIncomplete",
@@ -48,19 +48,19 @@ export function MigrationControlPage({
     {
       key: "incremental",
       icon: RefreshCw,
-      enabled: isSuperAdmin && handlersReady,
+      enabled: canManageMigration && handlersReady,
       gateReason: "handlersIncomplete",
     },
     {
       key: "resume",
       icon: FastForward,
-      enabled: isSuperAdmin && handlersReady,
+      enabled: canManageMigration && handlersReady,
       gateReason: "handlersIncomplete",
     },
     {
       key: "switch",
       icon: Database,
-      enabled: isSuperAdmin && switchReady,
+      enabled: canManageMigration && switchReady,
       gateReason:
         !allReadinessGatesComplete || !reconciliationGatesComplete
           ? "switchGatesIncomplete"
@@ -77,8 +77,8 @@ export function MigrationControlPage({
           <p>{t("migrationControl.securityDescription")}</p>
         </div>
         <span>
-          {isSuperAdmin
-            ? t("migrationControl.superAdmin")
+          {canManageMigration
+            ? t("migrationControl.authorized")
             : t("migrationControl.locked")}
         </span>
       </section>
@@ -263,7 +263,7 @@ export function MigrationControlPage({
         </header>
         <div className="migration-action-grid">
           {actions.map(({ key, icon: ActionIcon, enabled, gateReason }) => {
-            const reason = !isSuperAdmin ? "superAdminRequired" : gateReason;
+            const reason = !canManageMigration ? "permissionRequired" : gateReason;
             return (
               <article key={key}>
                 <Button disabled={!enabled} aria-describedby={`${key}-reason`}>

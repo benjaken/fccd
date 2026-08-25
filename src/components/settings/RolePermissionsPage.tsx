@@ -8,7 +8,6 @@ import { PullToRefresh } from "@/components/ui/pull-to-refresh";
 import { Switch } from "@/components/ui/switch";
 import {
   fetchRolePagePermissions,
-  isPagePermissionLocked,
   SYSTEM_ROLES,
   updateRolePagePermission,
   updateRolePagePermissionCascade,
@@ -71,6 +70,43 @@ export function RolePermissionsPage({
         permission.role,
         permission.pageKey,
         "canAccess",
+        checked,
+        permissions,
+        savePermission,
+      );
+      setPermissions((current) =>
+        current.map((item) => {
+          if (item.role !== permission.role) return item;
+          const next = updates.get(item.pageKey);
+          return next ? { ...item, ...next } : item;
+        }),
+      );
+    } catch (saveError) {
+      const code =
+        typeof saveError === "object" &&
+        saveError &&
+        "code" in saveError &&
+        typeof saveError.code === "string"
+          ? saveError.code
+          : "permissions_save_failed";
+      setError(code);
+    } finally {
+      setSavingKey(null);
+    }
+  };
+
+  const updateManage = async (
+    permission: RolePagePermission,
+    checked: boolean,
+  ) => {
+    const key = `${permission.role}:${permission.pageKey}:manage`;
+    setSavingKey(key);
+    setError(null);
+    try {
+      const updates = await updateRolePagePermissionCascade(
+        permission.role,
+        permission.pageKey,
+        "canManage",
         checked,
         permissions,
         savePermission,
@@ -161,14 +197,11 @@ export function RolePermissionsPage({
                     <th>{t("settings.roles.columns.kind")}</th>
                     <th>{t("settings.roles.columns.risk")}</th>
                     <th>{t("settings.roles.columns.access")}</th>
+                    <th>{t("settings.roles.columns.manage")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {visiblePermissions.map((permission) => {
-                    const locked = isPagePermissionLocked(
-                      selectedRole,
-                      permission.pageKey,
-                    );
                     const rowKey = `${permission.role}:${permission.pageKey}`;
                     const kindLabel = t(
                       `settings.roles.kinds.${permission.pageKind}`,
@@ -214,7 +247,7 @@ export function RolePermissionsPage({
                         <td>
                           <Switch
                             checked={permission.canAccess}
-                            disabled={locked || savingKey === rowKey}
+                            disabled={savingKey?.startsWith(rowKey)}
                             onCheckedChange={(checked) =>
                               void updateAccess(permission, checked)
                             }
@@ -222,6 +255,25 @@ export function RolePermissionsPage({
                               "settings.roles.columns.access",
                             )}`}
                           />
+                        </td>
+                        <td>
+                          {permission.pageKind === "action" ? (
+                            <span aria-hidden="true">—</span>
+                          ) : (
+                            <Switch
+                              checked={permission.canManage}
+                              disabled={
+                                !permission.canAccess ||
+                                savingKey?.startsWith(rowKey)
+                              }
+                              onCheckedChange={(checked) =>
+                                void updateManage(permission, checked)
+                              }
+                              aria-label={`${permission.displayName} ${t(
+                                "settings.roles.columns.manage",
+                              )}`}
+                            />
+                          )}
                         </td>
                       </tr>
                     );

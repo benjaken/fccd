@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { FactoryBoardPage } from "@/components/FactoryBoardPage";
 import {
+  factoryLabelPrintCompletesSet,
   formatFactoryDeliveryNoteQuantity,
   preferredFactoryLabelPrinter,
 } from "@/components/FactoryOrderJobView";
@@ -70,6 +71,12 @@ describe("FactoryBoardPage", () => {
     expect(
       preferredFactoryLabelPrinter(["Zebra ZD421", "Xprinter XP-420B"]),
     ).toBe("Xprinter XP-420B");
+  });
+
+  it("completes a one-copy label set when printing one label", () => {
+    expect(factoryLabelPrintCompletesSet("1 份", false)).toBe(true);
+    expect(factoryLabelPrintCompletesSet("3 份", false)).toBe(false);
+    expect(factoryLabelPrintCompletesSet("3 份", true)).toBe(true);
   });
   beforeEach(async () => {
     await i18n.changeLanguage("zh-HK");

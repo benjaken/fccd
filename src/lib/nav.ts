@@ -298,6 +298,12 @@ export const secondaryNav: Record<string, NavItem[]> = {
       icon: PackageCheck,
       permissionKey: "products.packages",
     },
+    {
+      key: "shopifyPendingProducts",
+      to: "/products/shopify-pending",
+      icon: ShoppingBag,
+      permissionKey: "products.shopify_pending",
+    },
   ],
   frozen: [
     {
@@ -587,6 +593,7 @@ export const SECTION_CHILD_KEYS: Record<string, string[]> = {
     "products.lunchbox",
     "products.ala_carte",
     "products.packages",
+    "products.shopify_pending",
   ],
   frozen: [
     "frozen.raw_meat_inventory",
@@ -647,12 +654,57 @@ export const workspaceLinks: Array<{
   key: string;
   to: string;
   icon: Icon;
+  permissionKey: string;
   disabled?: boolean;
 }> = [
-  { key: "factory", to: "/factory", icon: Factory },
-  { key: "delivery", to: "/driver-delivery", icon: Truck },
-  { key: "customer", to: "/customer", icon: Users, disabled: true },
+  {
+    key: "factory",
+    to: "/factory",
+    icon: Factory,
+    permissionKey: "workspace.factory",
+  },
+  {
+    key: "delivery",
+    to: "/driver-delivery",
+    icon: Truck,
+    permissionKey: "workspace.delivery",
+  },
+  {
+    key: "customer",
+    to: "/customer",
+    icon: Users,
+    permissionKey: "workspace.customer",
+    disabled: true,
+  },
 ];
+
+/** First real destination available to a role, following the visible menu order. */
+export function firstAccessibleNavigationPath(
+  canAccess: (pageKey: string) => boolean,
+  canAccessSection: (pageKey: string, childKeys?: string[]) => boolean,
+) {
+  for (const primary of primaryNav) {
+    const permissionKey = primary.permissionKey ?? primary.key;
+    if (
+      !canAccessSection(permissionKey, SECTION_CHILD_KEYS[permissionKey] ?? [])
+    ) {
+      continue;
+    }
+
+    const configured = secondaryNav[primary.key];
+    const firstVisible = configured
+      ? flattenVisibleNavItems(configured, canAccess)[0]
+      : undefined;
+    if (firstVisible) return firstVisible.to;
+    if (canAccess(pageAccessKey(primary.to))) return primary.to;
+  }
+
+  return (
+    workspaceLinks.find(
+      (item) => !item.disabled && canAccess(item.permissionKey),
+    )?.to ?? null
+  );
+}
 
 export function sectionFromPath(pathname: string) {
   const segment = pathname.split("/")[1] ?? "";
