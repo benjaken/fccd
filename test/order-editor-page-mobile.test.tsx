@@ -72,6 +72,8 @@ describe("mobile order editor", () => {
     const itemCard = screen.getByRole("listitem");
     expect(itemCard).toHaveTextContent("Mobile lunch");
     expect(screen.getByRole("spinbutton", { name: "數量" })).toHaveValue(2);
+    expect(screen.getByRole("spinbutton", { name: "數量" })).toHaveAttribute("min", "1");
+    expect(screen.getByRole("spinbutton", { name: "數量" })).toHaveAttribute("step", "1");
     expect(within(itemCard).getByText("HK$100.00")).toBeInTheDocument();
   });
 });

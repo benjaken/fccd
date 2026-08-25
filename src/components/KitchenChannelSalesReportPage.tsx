@@ -117,7 +117,7 @@ function YearValues({
   return (
     <div className="kitchen-channel-sales-cell-values">
       {summaries.map((summary) => (
-        <span key={summary.year}>
+        <span className={`year-tone-${Math.abs(summary.year) % 4}`} key={summary.year}>
           <b>{summary.year}</b>
           <strong>{formatMoney(value(summary))}</strong>
         </span>

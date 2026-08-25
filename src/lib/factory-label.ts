@@ -10,8 +10,8 @@ export type FactoryDishLabelCommandInput = {
 export type FactoryAddressLabelCommandInput = {
   kind: "address";
   orderNumber: string;
-  address: string;
-  arrivalWindow: string;
+  deliveryDate: string;
+  district: string;
   customerName: string;
   customerPhone: string;
 };
@@ -19,6 +19,17 @@ export type FactoryAddressLabelCommandInput = {
 export type FactoryLabelCommandInput =
   | FactoryDishLabelCommandInput
   | FactoryAddressLabelCommandInput;
+
+export type FactoryDishLabelLayout = {
+  widthMm: 50;
+  heightMm: 75;
+  orderNumber: string;
+  deliveryDate: string;
+  copies: number;
+  labelLines: string[];
+  remarkLines: string[];
+  bodyLines: Array<{ line: string; isDishName: boolean }>;
+};
 
 export type FactoryLabelCommandLoader = (
   input: FactoryLabelCommandInput,
@@ -37,6 +48,7 @@ export type FactoryTextBitmapOptions = {
   fontWeight?: number;
   align?: "left" | "center";
   trailingBox?: boolean;
+  fillWidth?: boolean;
 };
 
 export type FactoryTextRasterizer = (
@@ -47,6 +59,8 @@ export type FactoryTextRasterizer = (
 const WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
 const CONTENT_X = 8;
 const CONTENT_WIDTH = 384;
+const DISH_BODY_LINE_HEIGHT = 52;
+const DISH_BODY_LINE_STEP = 76;
 const FONT_FAMILY = '"Noto Sans TC", "Noto Sans CJK TC", "PingFang TC", "Microsoft JhengHei", sans-serif';
 
 type GraphemeSegmenter = {
@@ -99,6 +113,50 @@ export function wrapFactoryLabelText(value: string, maxUnits: number): string[] 
   return lines;
 }
 
+function wrapFactoryDishText(value: string, maxCharacters = 8): string[] {
+  const characters = graphemes(sanitizeFactoryLabelText(value));
+  const lines: string[] = [];
+  for (let offset = 0; offset < characters.length; offset += maxCharacters) {
+    lines.push(characters.slice(offset, offset + maxCharacters).join(""));
+  }
+  return lines;
+}
+
+export function buildFactoryDishLabelLayout(
+  input: FactoryDishLabelCommandInput,
+): FactoryDishLabelLayout {
+  const copies = Math.min(100, Math.max(1, Math.floor(Number(input.copies) || 1)));
+  const orderNumber = sanitizeFactoryLabelText(input.orderNumber).replace(/^#/, "");
+  const deliveryDate = formatDeliveryDate(input.deliveryDate);
+  const configuredLabelLines = input.labelName
+    .split(/\r?\n/)
+    .map(sanitizeFactoryLabelText)
+    .filter(Boolean);
+  const labelLines = configuredLabelLines.length > 1
+    ? configuredLabelLines
+      .slice(0, 2)
+      .map((line) => graphemes(line).slice(0, 8).join(""))
+    : wrapFactoryDishText(configuredLabelLines[0] ?? "", 8).slice(0, 2);
+  const remarkLines = input.remarks
+    .flatMap((remark) => wrapFactoryDishText(remark, 8))
+    .filter(Boolean)
+    .slice(0, 2);
+  const bodyLines = [
+    ...labelLines.map((line) => ({ line, isDishName: true })),
+    ...remarkLines.map((line) => ({ line, isDishName: false })),
+  ].slice(0, 4);
+  return {
+    widthMm: 50,
+    heightMm: 75,
+    orderNumber,
+    deliveryDate,
+    copies,
+    labelLines,
+    remarkLines,
+    bodyLines,
+  };
+}
+
 function formatDeliveryDate(value: string): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
   if (!match) return sanitizeFactoryLabelText(value);
@@ -141,9 +199,45 @@ export function packFactoryBitmapPixels(
   return packed;
 }
 
+/** Rotates a packed monochrome bitmap for sideways printing on 50 x 75 mm stock. */
+export function rotateFactoryBitmapClockwise(
+  bitmap: FactoryTextBitmap,
+): FactoryTextBitmap {
+  if (bitmap.height % 8 !== 0) {
+    throw new Error("factory_rotated_bitmap_width_invalid");
+  }
+  const width = bitmap.height;
+  const height = bitmap.width;
+  const widthBytes = width / 8;
+  const bytes = new Uint8Array(widthBytes * height);
+  bytes.fill(0xff);
+
+  for (let y = 0; y < bitmap.height; y += 1) {
+    for (let x = 0; x < bitmap.width; x += 1) {
+      const sourceByte = bitmap.bytes[y * (bitmap.width / 8) + Math.floor(x / 8)];
+      const isBlack = (sourceByte & (0x80 >> (x % 8))) === 0;
+      if (!isBlack) continue;
+      const rotatedX = bitmap.height - 1 - y;
+      const rotatedY = x;
+      bytes[rotatedY * widthBytes + Math.floor(rotatedX / 8)] &=
+        ~(0x80 >> (rotatedX % 8));
+    }
+  }
+
+  return { width, height, bytes };
+}
+
 export const rasterizeFactoryLabelText: FactoryTextRasterizer = async (
   value,
-  { width, height, fontSize, fontWeight = 700, align = "center", trailingBox = false },
+  {
+    width,
+    height,
+    fontSize,
+    fontWeight = 700,
+    align = "center",
+    trailingBox = false,
+    fillWidth = false,
+  },
 ) => {
   if (typeof document === "undefined") {
     throw new Error("factory_bitmap_canvas_unavailable");
@@ -167,10 +261,11 @@ export const rasterizeFactoryLabelText: FactoryTextRasterizer = async (
   const text = sanitizeFactoryLabelText(value);
   if (trailingBox) {
     const boxSize = Math.min(26, height - 8);
+    const boxWidth = boxSize * 2;
     const boxGap = 10;
-    const maxTextWidth = width - boxSize - boxGap - 8;
+    const maxTextWidth = width - boxWidth - boxGap - 8;
     const renderedTextWidth = Math.min(context.measureText(text).width, maxTextWidth);
-    const groupWidth = renderedTextWidth + boxGap + boxSize;
+    const groupWidth = renderedTextWidth + boxGap + boxWidth;
     const startX = Math.max(4, (width - groupWidth) / 2);
     context.textAlign = "left";
     context.fillText(text, startX, height / 2, maxTextWidth);
@@ -179,9 +274,19 @@ export const rasterizeFactoryLabelText: FactoryTextRasterizer = async (
     context.strokeRect(
       startX + renderedTextWidth + boxGap,
       (height - boxSize) / 2,
-      boxSize,
+      boxWidth,
       boxSize,
     );
+  } else if (fillWidth && text) {
+    const measuredWidth = context.measureText(text).width;
+    const targetWidth = width - 4;
+    const horizontalScale = measuredWidth > 0 ? targetWidth / measuredWidth : 1;
+    context.save();
+    context.translate(width / 2, height / 2);
+    context.scale(horizontalScale, 1);
+    context.textAlign = "center";
+    context.fillText(text, 0, 0);
+    context.restore();
   } else {
     context.textAlign = align;
     const x = align === "left" ? 4 : width / 2;
@@ -229,41 +334,37 @@ async function textBitmap(
   y: number,
   value: string,
   options: Omit<FactoryTextBitmapOptions, "width">,
+  placement: { x?: number; width?: number } = {},
 ): Promise<Uint8Array> {
-  const bitmap = await rasterize(value, { width: CONTENT_WIDTH, ...options });
-  return bitmapCommand(CONTENT_X, y, bitmap);
+  const bitmap = await rasterize(value, {
+    width: placement.width ?? CONTENT_WIDTH,
+    ...options,
+  });
+  return bitmapCommand(placement.x ?? CONTENT_X, y, bitmap);
 }
 
 async function buildDishLabelBytes(
   input: FactoryDishLabelCommandInput,
   rasterize: FactoryTextRasterizer,
 ): Promise<Uint8Array> {
-  const copies = Math.min(100, Math.max(1, Math.floor(Number(input.copies) || 1)));
-  const orderNumber = sanitizeFactoryLabelText(input.orderNumber).replace(/^#/, "");
-  const deliveryDate = formatDeliveryDate(input.deliveryDate);
-  const configuredLabelLines = input.labelName
-    .split(/\r?\n/)
-    .map(sanitizeFactoryLabelText)
-    .filter(Boolean);
-  const labelLines = configuredLabelLines.length > 1
-    ? configuredLabelLines.slice(0, 2)
-    : wrapFactoryLabelText(configuredLabelLines[0] ?? "", 8).slice(0, 2);
-  const remarkLines = input.remarks
-    .flatMap((remark) => wrapFactoryLabelText(remark, 8))
-    .filter(Boolean)
-    .slice(0, 2);
-  const bodyLines = [...labelLines, ...remarkLines].slice(0, 4);
+  const { copies, orderNumber, deliveryDate, bodyLines } = buildFactoryDishLabelLayout(input);
   const chunks: Uint8Array[] = [
     command("SIZE 50 mm,75 mm"),
     command("GAP 2 mm,0"),
     command("DIRECTION 1"),
     command("CLS"),
-    await textBitmap(rasterize, 15, orderNumber, { height: 64, fontSize: 48, fontWeight: 700, align: "center" }),
-    command("BAR 16,88,368,2"),
-    await textBitmap(rasterize, 102, "送貨日期", { height: 34, fontSize: 24, fontWeight: 700, align: "center" }),
-    await textBitmap(rasterize, 138, deliveryDate, { height: 40, fontSize: 30, fontWeight: 700, align: "center" }),
-    command("BAR 16,184,368,2"),
-    await textBitmap(rasterize, 198, `1份 / 共${copies}份`, {
+    await textBitmap(
+      rasterize,
+      0,
+      orderNumber,
+      { height: 120, fontSize: 120, fontWeight: 800, align: "center" },
+      { x: 100, width: 200 },
+    ),
+    command("BAR 16,124,368,2"),
+    await textBitmap(rasterize, 132, "－ 送貨日期 －", { height: 40, fontSize: 30, fontWeight: 800, align: "center" }),
+    await textBitmap(rasterize, 170, deliveryDate, { height: 50, fontSize: 46, fontWeight: 800, align: "center" }),
+    command("BAR 16,224,368,2"),
+    await textBitmap(rasterize, 234, `1份 / 共${copies}份`, {
       height: 44,
       fontSize: 32,
       fontWeight: 700,
@@ -271,10 +372,10 @@ async function buildDishLabelBytes(
       trailingBox: true,
     }),
   ];
-  for (const [lineIndex, line] of bodyLines.entries()) {
-    chunks.push(await textBitmap(rasterize, 252 + lineIndex * 66, line, {
-      height: 52,
-      fontSize: 40,
+  for (const [lineIndex, { line, isDishName }] of bodyLines.entries()) {
+    chunks.push(await textBitmap(rasterize, 288 + lineIndex * DISH_BODY_LINE_STEP, line, {
+      height: isDishName ? 60 : DISH_BODY_LINE_HEIGHT,
+      fontSize: isDishName ? 54 : 52,
       fontWeight: 700,
       align: "center",
     }));
@@ -289,41 +390,59 @@ async function buildAddressLabelBytes(
   rasterize: FactoryTextRasterizer,
 ): Promise<Uint8Array> {
   const orderNumber = sanitizeFactoryLabelText(input.orderNumber).replace(/^#/, "");
-  const addressLines = wrapFactoryLabelText(input.address, 14).slice(0, 5);
-  const nameLines = wrapFactoryLabelText(input.customerName, 14).slice(0, 2);
-  const displayedNameLines = nameLines.length ? nameLines : [""];
-  const phoneY = 145 + displayedNameLines.length * 36;
-  const addressDividerY = phoneY + 40;
+  const deliveryDate = formatDeliveryDate(input.deliveryDate);
+  const districtLines = wrapFactoryLabelText(input.district, 4).slice(0, 2);
+  const customerName = sanitizeFactoryLabelText(input.customerName);
+  const customerPhone = sanitizeFactoryLabelText(input.customerPhone);
   const chunks: Uint8Array[] = [
     command("SIZE 50 mm,75 mm"),
     command("GAP 2 mm,0"),
     command("DIRECTION 1"),
     command("CLS"),
-    await textBitmap(rasterize, 14, orderNumber, { height: 64, fontSize: 48, fontWeight: 700, align: "center" }),
-    command("BAR 16,86,368,2"),
-    await textBitmap(rasterize, 101, `送達時間：${input.arrivalWindow}`, { height: 32, fontSize: 22, fontWeight: 700, align: "left" }),
+    await textBitmap(
+      rasterize,
+      0,
+      `#${orderNumber}`,
+      { height: 120, fontSize: 120, fontWeight: 800, align: "center" },
+      { x: 100, width: 200 },
+    ),
+    command("BAR 16,124,368,2"),
+    await textBitmap(rasterize, 132, "－ 送貨日期 －", {
+      height: 40,
+      fontSize: 30,
+      fontWeight: 800,
+      align: "center",
+    }),
+    await textBitmap(rasterize, 170, deliveryDate, {
+      height: 50,
+      fontSize: 46,
+      fontWeight: 800,
+      align: "center",
+    }),
   ];
-  for (const [index, line] of displayedNameLines.entries()) {
-    chunks.push(await textBitmap(rasterize, 141 + index * 36, `${index === 0 ? "姓名：" : ""}${line}`, {
-      height: 32,
-      fontSize: 22,
-      fontWeight: 700,
-      align: "left",
+  for (const [index, line] of districtLines.entries()) {
+    chunks.push(await textBitmap(rasterize, 218 + index * 100, line, {
+      height: 90,
+      fontSize: 80,
+      fontWeight: 800,
+      align: "center",
     }));
   }
   chunks.push(
-    await textBitmap(rasterize, phoneY - 4, `電話：${input.customerPhone}`, { height: 32, fontSize: 22, fontWeight: 700, align: "left" }),
-    command(`BAR 16,${addressDividerY},368,2`),
-    await textBitmap(rasterize, addressDividerY + 15, "地址：", { height: 34, fontSize: 24, fontWeight: 700, align: "left" }),
-  );
-  for (const [index, line] of addressLines.entries()) {
-    chunks.push(await textBitmap(rasterize, addressDividerY + 55 + index * 52, line, {
-      height: 44,
-      fontSize: 30,
+    command("BAR 16,442,368,2"),
+    await textBitmap(rasterize, 458, customerName, {
+      height: 50,
+      fontSize: 38,
       fontWeight: 700,
-      align: "left",
-    }));
-  }
+      align: "center",
+    }),
+    await textBitmap(rasterize, 514, customerPhone, {
+      height: 62,
+      fontSize: 50,
+      fontWeight: 800,
+      align: "center",
+    }),
+  );
   chunks.push(command("PRINT 1"));
   return concatBytes(chunks);
 }
@@ -343,6 +462,15 @@ export function encodeFactoryLabelBase64(bytes: Uint8Array): string {
     binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
   }
   return btoa(binary);
+}
+
+/** Combines complete TSPL labels into one raw print job so rapid QZ Tray
+ * submissions cannot drop dishes from a full-order print. */
+export function combineFactoryLabelBase64(commands: string[]): string {
+  const chunks = commands.map((encoded) =>
+    Uint8Array.from(atob(encoded), (character) => character.charCodeAt(0)),
+  );
+  return encodeFactoryLabelBase64(concatBytes(chunks));
 }
 
 export const fetchFactoryLabelCommand: FactoryLabelCommandLoader = async (input) => {

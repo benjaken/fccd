@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { ClipboardList, Plus, RefreshCw, RefreshCcw } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 
+import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DetailLink } from "@/components/ui/detail-link";
@@ -54,6 +55,7 @@ import {
 } from "@/lib/factory-board";
 import { cn } from "@/lib/utils";
 import { useMediaQuery } from "@/lib/use-media-query";
+import { hongKongDateKey } from "@/lib/date-time";
 
 type OrdersLoader = (filters: OrderListFilters) => Promise<OrderListResult>;
 type OrderListConfigLoader = typeof fetchOrderListConfigs;
@@ -355,7 +357,7 @@ export function OrdersListPage({
   };
 
   const runSync = useCallback(async () => {
-    if (syncing) return;
+    if (!canManageStatuses || syncing) return;
     setSyncing(true);
     setSyncError(null);
     setSyncResult(null);
@@ -372,7 +374,7 @@ export function OrdersListPage({
     } finally {
       setSyncing(false);
     }
-  }, [syncShopify, syncing]);
+  }, [canManageStatuses, syncShopify, syncing]);
 
   const syncDone = Boolean(syncResult);
   const syncFailed = Boolean(syncError);
@@ -443,6 +445,7 @@ export function OrdersListPage({
   };
 
   const confirmCancel = async () => {
+    if (!canManageStatuses) return;
     if (cancelText.trim().toLowerCase() !== "void") return;
     if (!cancelOrder) return;
     setCancelling(true);
@@ -493,6 +496,7 @@ export function OrdersListPage({
   const renderOrderActions = (order: OrderListItem) => (
     <OrderRowActionMenu
       order={order}
+      canManage={canManageStatuses}
       canCancel={canCancelOrderDelivery(order.deliveryStatus)}
       onCancel={() => openCancel(order)}
       onMessages={() => setMessageOrder(order)}
@@ -521,12 +525,13 @@ export function OrdersListPage({
     });
   };
   const openFestivalModal = () => {
+    if (!canManageStatuses) return;
     setSelectedFestivalId("");
     setFestivalError(false);
     setFestivalModalOpen(true);
   };
   const saveFestival = async () => {
-    if (!selectedFestivalId || !selectedOrderIds.size) return;
+    if (!canManageStatuses || !selectedFestivalId || !selectedOrderIds.size) return;
     setFestivalSaving(true);
     setFestivalError(false);
     try {
@@ -551,7 +556,7 @@ export function OrdersListPage({
           {description ? <p>{description}</p> : null}
         </div>
         <div className="heading-actions">
-          {preset === "shopify-pending" ? (
+          {canManageStatuses && preset === "shopify-pending" ? (
             <Button
               variant="outline"
               onClick={openSyncConfirm}
@@ -564,12 +569,12 @@ export function OrdersListPage({
                 : t("orders.syncShopify")}
             </Button>
           ) : null}
-          <Button asChild>
+          {canManageStatuses ? <Button asChild>
             <Link to="/orders/new">
               <Plus />
               {t("orders.create")}
             </Link>
-          </Button>
+          </Button> : null}
         </div>
       </header>
 
@@ -592,7 +597,7 @@ export function OrdersListPage({
               <>
               <label className="orders-status-filter">
                 <span>{t("orders.statusFilter")}</span>
-                <select
+                <FilterableSelect
                   value={statusFilter.value}
                   onChange={(event) =>
                     statusFilter.setValue(
@@ -608,7 +613,7 @@ export function OrdersListPage({
                         : t("orders.allStatuses")}
                     </option>
                   ))}
-                </select>
+                </FilterableSelect>
               </label>
               <OrderListFiltersPanel
                 filters={enhancementFilters}
@@ -658,7 +663,7 @@ export function OrdersListPage({
           </div>
         ) : (
           <>
-          {selectedOrderIds.size ? (
+          {canManageStatuses && selectedOrderIds.size ? (
             <div className="orders-selection-actions" role="status">
               <span>{t("orders.festivalAssignment.selected", { count: selectedOrderIds.size })}</span>
               <Button type="button" variant="outline" onClick={openFestivalModal}>
@@ -697,6 +702,7 @@ export function OrdersListPage({
                       <label className="order-mobile-select">
                         <input
                           type="checkbox"
+                          disabled={!canManageStatuses}
                           checked={selectedOrderIds.has(order.id)}
                           onChange={() => toggleOrderSelection(order.id)}
                           aria-label={t("orders.festivalAssignment.selectOrder", {
@@ -724,7 +730,7 @@ export function OrdersListPage({
                     <dl className="order-mobile-facts">
                       <div>
                         <dt>{t("orders.columns.delivery")}</dt>
-                        <dd>{order.deliveryAt?.slice(0, 10) || t("common.notSet")} · {order.deliveryTime || t("common.notSet")}</dd>
+                        <dd>{hongKongDateKey(order.deliveryAt) || t("common.notSet")} · {order.deliveryTime || t("common.notSet")}</dd>
                       </div>
                       <div>
                         <dt>{t("orders.columns.region")}</dt>
@@ -774,6 +780,7 @@ export function OrdersListPage({
                 <th className="orders-selection-cell">
                   <input
                     type="checkbox"
+                    disabled={!canManageStatuses}
                     checked={allVisibleSelected}
                     onChange={toggleVisibleOrders}
                     aria-label={t("orders.festivalAssignment.selectAll")}
@@ -858,6 +865,7 @@ export function OrdersListPage({
                   <td className="orders-selection-cell">
                     <input
                       type="checkbox"
+                      disabled={!canManageStatuses}
                       checked={selectedOrderIds.has(order.id)}
                       onChange={() => toggleOrderSelection(order.id)}
                       aria-label={t("orders.festivalAssignment.selectOrder", {
@@ -904,7 +912,7 @@ export function OrdersListPage({
                     ) ?? t("common.notSet")}
                   </td>
                   <td>
-                    {order.deliveryAt?.slice(0, 10) || t("common.notSet")}
+                    {hongKongDateKey(order.deliveryAt) || t("common.notSet")}
                   </td>
                   <td>
                     <div>{t("orders.deliveryDetails.shipOut")}</div>
@@ -980,6 +988,7 @@ export function OrdersListPage({
         phone={messageOrder?.contactPhone ?? null}
         orderNumber={messageOrder?.orderNumber ?? null}
         defaultOrderId={messageOrder?.id ?? null}
+        canCreateNote={canManageStatuses}
         onClose={() => setMessageOrder(null)}
         loadMessages={loadCustomerMessages}
         createNote={createCustomerNote}
@@ -1070,10 +1079,10 @@ export function OrdersListPage({
       >
         <label className="ingredients-field">
           <span>{t("orders.festivalAssignment.festival")}</span>
-          <select aria-label={t("orders.festivalAssignment.festival")} value={selectedFestivalId} disabled={festivalSaving} onChange={(event) => setSelectedFestivalId(event.target.value)}>
+          <FilterableSelect aria-label={t("orders.festivalAssignment.festival")} value={selectedFestivalId} disabled={festivalSaving} onChange={(event) => setSelectedFestivalId(event.target.value)}>
             <option value="">{t("orders.festivalAssignment.placeholder")}</option>
             {filterOptions.festivals.map((festival) => <option key={festival.id} value={festival.id}>{festival.name}</option>)}
-          </select>
+          </FilterableSelect>
         </label>
         {festivalError ? <p className="list-inline-error" role="alert">{t("orders.festivalAssignment.error")}</p> : null}
       </Modal>

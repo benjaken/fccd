@@ -648,7 +648,12 @@ export function FactoryBoardPage({
                   ? { ...line, printed: true, requiresReprint: false }
                   : line,
               );
-              const allPrinted = lines.length > 0 && lines.every((line) => line.printed);
+              const printableLines = lines.filter(
+                (line) => line.label.trim().length > 0,
+              );
+              const allPrinted =
+                printableLines.length > 0 &&
+                printableLines.every((line) => line.printed);
               if (selectedJob.orderId) {
                 setBoard((currentBoard) =>
                   currentBoard

@@ -40,6 +40,7 @@ type AuthContextValue = {
   signIn: (email: string, password: string) => Promise<string | null>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<string | null>;
+  updateRecoveredPassword: (password: string) => Promise<string | null>;
   refreshProfile: () => Promise<void>;
 };
 
@@ -164,7 +165,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!isSupabaseConfigured) return "configuration";
 
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/`,
+          redirectTo: `${window.location.origin}/reset-password`,
         });
 
         void recordLoginEvent({
@@ -174,6 +175,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
 
         return error ? error.code || "reset_failed" : null;
+      },
+      updateRecoveredPassword: async (password) => {
+        if (!isSupabaseConfigured) return "configuration";
+        const { data, error } = await supabase.auth.updateUser({ password });
+        if (!error) {
+          void recordLoginEvent({
+            eventType: "password_change",
+            email: data.user.email ?? null,
+            userId: data.user.id,
+          });
+        }
+        return error ? error.code || "password_update_failed" : null;
       },
       refreshProfile: async () => {
         if (!session?.user.id) return;

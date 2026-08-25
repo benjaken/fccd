@@ -368,6 +368,20 @@ describe("editable quote PDF page", () => {
     expect(screen.queryByRole("main", { name: "PDF 第 2 頁" })).not.toBeInTheDocument();
   });
 
+  it("shows the customer name in the signature when the company name is blank", async () => {
+    const user = userEvent.setup();
+    renderPage(vi.fn().mockResolvedValue({
+      ...result,
+      order: result.order ? { ...result.order, companyName: null } : null,
+    }));
+
+    await screen.findByRole("heading", { name: "到會套餐報價" });
+    await user.click(screen.getByRole("checkbox", { name: "顯示客戶簽署" }));
+
+    expect(document.querySelector(".quote-pdf-signature-customer"))
+      .toHaveTextContent("程嘉敏");
+  });
+
   it("does not insert a visible footer spacer between products and trailing content", async () => {
     renderPage();
 
@@ -428,6 +442,45 @@ describe("editable quote PDF page", () => {
       await waitFor(() => expect(document.querySelectorAll(".quote-pdf-sheet")).toHaveLength(3));
       const sheets = document.querySelectorAll(".quote-pdf-sheet");
       expect(sheets[2].querySelector(".quote-pdf-signature")).toBeInTheDocument();
+    } finally {
+      rectSpy.mockRestore();
+    }
+  });
+
+  it("keeps clauses visible when overflowing content pushes the page footer outside the A4 sheet", async () => {
+    const rectSpy = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function () {
+      const page = this.closest<HTMLElement>(".quote-pdf-sheet");
+      const pages = Array.from(document.querySelectorAll<HTMLElement>(".quote-pdf-sheet"));
+      const pageIndex = page ? pages.indexOf(page) : 0;
+      const pageTop = pageIndex * 1200;
+
+      if (this.classList.contains("quote-pdf-sheet")) {
+        return { x: 0, y: pageTop, top: pageTop, right: 800, bottom: pageTop + 1000, left: 0, width: 800, height: 1000, toJSON: () => ({}) } as DOMRect;
+      }
+      if (this.hasAttribute("data-pdf-auto-footer")) {
+        const top = page?.dataset.pdfAutoPage === "products" ? pageTop + 1200 : pageTop + 900;
+        return { x: 0, y: top, top, right: 800, bottom: top + 30, left: 0, width: 800, height: 30, toJSON: () => ({}) } as DOMRect;
+      }
+
+      const moduleIndex = Number(this.dataset.pdfAutoModuleIndex);
+      if (page && Number.isInteger(moduleIndex)) {
+        const modules = Array.from(page.querySelectorAll<HTMLElement>("[data-pdf-auto-module-index]"));
+        const position = modules.indexOf(this);
+        const start = page.dataset.pdfAutoPage === "products" ? 800 : 100;
+        const top = pageTop + start + position * 120;
+        return { x: 0, y: top, top, right: 800, bottom: top + 100, left: 0, width: 800, height: 100, toJSON: () => ({}) } as DOMRect;
+      }
+
+      return { x: 0, y: 0, top: 0, right: 800, bottom: 0, left: 0, width: 800, height: 0, toJSON: () => ({}) } as DOMRect;
+    });
+
+    renderPage();
+
+    try {
+      await waitFor(() => expect(document.querySelectorAll(".quote-pdf-sheet")).toHaveLength(2));
+      expect(screen.getByLabelText("條款及細則 1").closest("main")).toHaveAttribute("data-pdf-auto-page", "products");
+      expect(screen.getByLabelText("付款方式 1").closest("main")).toHaveAccessibleName("PDF 第 2 頁");
+      expect(document.querySelectorAll("[aria-label='付款方式 1']")).toHaveLength(1);
     } finally {
       rectSpy.mockRestore();
     }

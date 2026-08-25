@@ -25,6 +25,17 @@ vi.mock("@/auth/AuthProvider", () => ({
   }),
 }));
 
+vi.mock("@/auth/use-page-access", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/auth/use-page-access")>()),
+  useCurrentPageAccess: () => ({
+    loading: false,
+    error: null,
+    canAccess: () => true,
+    canManage: () => true,
+    canAccessSection: () => true,
+  }),
+}));
+
 const tags: OrderTag[] = [
   { id: "tag-1", name: "家人食飯", isActive: true },
   { id: "tag-2", name: "Klook", isActive: true },

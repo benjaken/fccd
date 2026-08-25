@@ -11,6 +11,7 @@ import {
   factoryOrderPrintStatus,
   factoryEligibleDeliveries,
   factoryProductLabelName,
+  factoryOrderLineLabelName,
   filterDispatchRows,
   fleetBadgeChar,
   fleetBadgeForDelivery,
@@ -60,6 +61,15 @@ describe("factory board helpers", () => {
     }])).toBe("童趣拼盤(台灣腸蟹蓋\n肉丸年糕各6件)");
     expect(factoryProductLabelName([{ display_name: "童趣拼盤 (1份)", quantity_label: null }]))
       .toBe("童趣拼盤 (1份)");
+  });
+
+  it("uses a temporary order-line label only when no SKU label is linked", () => {
+    expect(factoryOrderLineLabelName([], "臨時名稱", "2 盒")).toBe("臨時名稱\n2 盒");
+    expect(factoryOrderLineLabelName(
+      [{ display_name: "SKU 標籤", quantity_label: "1 份" }],
+      "舊臨時名稱",
+      "3 盒",
+    )).toBe("SKU 標籤\n1 份");
   });
 
   it("excludes orders explicitly marked as not sent to the factory", () => {
@@ -252,6 +262,16 @@ describe("factory board helpers", () => {
         ],
       }),
     ).toBe("incomplete");
+    expect(
+      factoryOrderPrintStatus({
+        factoryPrintDate: "2026-08-20T02:00:00.000Z",
+        requiresReprint: true,
+        lines: [
+          { isPrinted: true, isVoid: false },
+          { isPrinted: false, isVoid: false, isPrintable: false },
+        ],
+      }),
+    ).toBe("complete");
   });
 
   it("requires reprinting when dishes change after the last full print", () => {

@@ -102,9 +102,9 @@ function parseInventory(text: string) {
 }
 
 export function FileMigrationPage({
-  isSuperAdmin,
+  canManageMigration,
 }: {
-  isSuperAdmin: boolean;
+  canManageMigration: boolean;
 }) {
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
@@ -162,7 +162,7 @@ export function FileMigrationPage({
   }, []);
 
   async function analyzeInventory() {
-    if (!inventoryFile || !isSuperAdmin) return;
+    if (!inventoryFile || !canManageMigration) return;
     setBusy("analyze");
     setError(undefined);
     setProgress(undefined);
@@ -220,7 +220,7 @@ export function FileMigrationPage({
   }
 
   async function runIncremental() {
-    if (!analysis || !isSuperAdmin || busy) return;
+    if (!analysis || !canManageMigration || busy) return;
     const actionable = new Set(analysis.actionableIds);
     const queue = inventory.filter((record) => actionable.has(record._id));
     let cursor = 0;
@@ -294,13 +294,13 @@ export function FileMigrationPage({
           </div>
           <div className="attachment-auth-actions">
             <span
-              className={`status-badge ${isSuperAdmin ? "green" : "amber"}`}
+              className={`status-badge ${canManageMigration ? "green" : "amber"}`}
             >
-              {isSuperAdmin
+              {canManageMigration
                 ? t("fileMigration.incrementalPanel.authorized")
-                : t("fileMigration.incrementalPanel.superAdminRequired")}
+                : t("fileMigration.incrementalPanel.permissionRequired")}
             </span>
-            {!isSuperAdmin && (
+            {!canManageMigration && (
               <Button
                 variant="outline"
                 onClick={() => window.location.assign("/")}
@@ -340,7 +340,7 @@ export function FileMigrationPage({
           </label>
           <Button
             onClick={() => void analyzeInventory()}
-            disabled={!isSuperAdmin || !inventoryFile || Boolean(busy)}
+            disabled={!canManageMigration || !inventoryFile || Boolean(busy)}
           >
             {busy === "analyze" ? (
               <LoaderCircle className="spin" />
@@ -352,7 +352,7 @@ export function FileMigrationPage({
           <Button
             onClick={() => void runIncremental()}
             disabled={
-              !isSuperAdmin ||
+              !canManageMigration ||
               !analysis?.actionableIds.length ||
               Boolean(busy)
             }

@@ -5,12 +5,14 @@ import {
   Plus,
   RefreshCw,
   ShoppingBasket,
+  ShoppingBag,
   Trash2,
 } from "lucide-react";
 import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { ProductRecommendStar } from "@/components/ProductRecommendStar";
 import { ProductTagList } from "@/components/ProductTagList";
+import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
 import { DetailLink } from "@/components/ui/detail-link";
 import { MultiSelect } from "@/components/ui/multi-select";
@@ -281,9 +283,9 @@ export function ProductDetailPage({
   if (loading) {
     return (
       <PageSkeleton
-        cards={2}
         label={t("productDetail.loading")}
         variant="detail"
+        detailLayout="product"
       />
     );
   }
@@ -319,7 +321,13 @@ export function ProductDetailPage({
       : product.status === "Inactive"
         ? "amber"
         : "blue";
-  const ingredientCost = productIngredientCost(product.premiumIngredients);
+  const premiumIngredients = product.premiumIngredients.filter(
+    (item) => item.ingredientType !== "包裝用品",
+  );
+  const packingSupplies = product.premiumIngredients.filter(
+    (item) => item.ingredientType === "包裝用品",
+  );
+  const ingredientCost = productIngredientCost(premiumIngredients);
 
   const refreshDetail = async () => {
     const detail = await loadDetail(id);
@@ -391,14 +399,14 @@ export function ProductDetailPage({
         {label}
         {required ? <RequiredMark /> : null}
       </span>
-      <select value={value} onChange={(event) => onChange(event.target.value)}>
+      <FilterableSelect value={value} onChange={(event) => onChange(event.target.value)}>
         <option value="">{t("common.notSet")}</option>
         {items.map((item) => (
           <option key={item.id} value={item.id}>
             {item.name}
           </option>
         ))}
-      </select>
+      </FilterableSelect>
       {errorKey && fieldErrors[errorKey] ? <em>{fieldErrors[errorKey]}</em> : null}
     </label>
   );
@@ -508,7 +516,33 @@ export function ProductDetailPage({
           <span className="eyebrow">
             {editing ? t("productDetail.editEyebrow") : t("productDetail.eyebrow")}
           </span>
-          <h1>{displayName}</h1>
+          <div className="product-detail-title-row">
+            <h1>{displayName}</h1>
+            {product.shopifyLinks.map((shopifyLink) => {
+              const storeHandle = shopifyLink.storeDomain.replace(
+                /\.myshopify\.com$/,
+                "",
+              );
+              return (
+                <a
+                  key={`${shopifyLink.storeDomain}:${shopifyLink.shopifyProductId}`}
+                  className="shopify-product-admin-link"
+                  href={`https://admin.shopify.com/store/${storeHandle}/products/${shopifyLink.shopifyProductId}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={t("productDetail.openShopify", {
+                    store: shopifyLink.storeDomain,
+                  })}
+                  title={t("productDetail.openShopify", {
+                    store: shopifyLink.storeDomain,
+                  })}
+                >
+                  <ShoppingBag aria-hidden="true" />
+                  <strong aria-hidden="true">S</strong>
+                </a>
+              );
+            })}
+          </div>
           <p>{product.sku || t("common.notSet")}</p>
         </div>
         <div className="heading-actions">
@@ -550,6 +584,17 @@ export function ProductDetailPage({
             <h2>{t("productDetail.basics")}</h2>
           </header>
           <div className="product-basics-grid">
+            {!editing ? (
+              <figure className="product-detail-media">
+                {product.imageUrl ? (
+                  <img src={product.imageUrl} alt={displayName} />
+                ) : (
+                  <div className="product-detail-image-placeholder" aria-hidden="true">
+                    <ShoppingBasket />
+                  </div>
+                )}
+              </figure>
+            ) : null}
             <div className="detail-fields">
               {editing ? (
                 <>
@@ -644,7 +689,7 @@ export function ProductDetailPage({
                       {t("productDetail.status")}
                       <RequiredMark />
                     </span>
-                    <select
+                    <FilterableSelect
                       value={form.status}
                       onChange={(event) => patchForm({ status: event.target.value })}
                     >
@@ -658,7 +703,7 @@ export function ProductDetailPage({
                           {item.label}
                         </option>
                       ))}
-                    </select>
+                    </FilterableSelect>
                     {fieldErrors.status ? <em>{fieldErrors.status}</em> : null}
                   </label>
                   <label className="detail-field">
@@ -691,13 +736,16 @@ export function ProductDetailPage({
                   <DetailField label={t("productDetail.status")} required>
                     {statusLabel}
                   </DetailField>
-                  <DetailField label={t("productDetail.remarks")}>
-                    {product.description || t("common.notSet")}
-                  </DetailField>
                 </>
               )}
             </div>
           </div>
+          {!editing ? (
+            <div className="product-detail-description">
+              <span>{t("productDetail.description")}</span>
+              <p>{product.description || t("common.notSet")}</p>
+            </div>
+          ) : null}
           {editing ? (
             <footer className="product-edit-actions">
               {saveError ? (
@@ -725,7 +773,7 @@ export function ProductDetailPage({
         </article>
       </form>
 
-      <section className="detail-grid detail-grid-two">
+      <section className="detail-grid product-material-grid">
         <article className="panel detail-card">
           <header className="product-section-header">
             <h2>
@@ -819,7 +867,7 @@ export function ProductDetailPage({
               </Button>
             </div>
           ) : null}
-          {product.premiumIngredients.length === 0 ? (
+          {premiumIngredients.length === 0 ? (
             <p className="detail-description">{t("productDetail.noIngredients")}</p>
           ) : (
             <div className="table-wrap detail-inline-table">
@@ -832,7 +880,7 @@ export function ProductDetailPage({
                   </tr>
                 </thead>
                 <tbody>
-                  {product.premiumIngredients.map((item) => (
+                  {premiumIngredients.map((item) => (
                     <tr key={item.id}>
                       <td>{item.name}</td>
                       <td>{item.quantity ?? t("common.notSet")}</td>
@@ -860,6 +908,54 @@ export function ProductDetailPage({
             </div>
           )}
         </article>
+
+        <article className="panel detail-card">
+            <header className="product-section-header">
+              <h2>
+                {displayName} - {t("productDetail.packingSupplies")}
+              </h2>
+            </header>
+            {packingSupplies.length === 0 ? (
+              <p className="detail-description">{t("productDetail.noPackingSupplies")}</p>
+            ) : (
+              <div className="table-wrap detail-inline-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>{t("productDetail.packingSupply")}</th>
+                    <th>{t("productDetail.quantity")}</th>
+                    {editing ? <th>{t("products.columns.actions")}</th> : null}
+                  </tr>
+                </thead>
+                <tbody>
+                  {packingSupplies.map((item) => (
+                    <tr key={item.id}>
+                      <td>{item.name}</td>
+                      <td>{item.quantity ?? t("common.notSet")}</td>
+                      {editing ? (
+                        <td className="table-actions-cell">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            aria-label={t("productDetail.removePackingSupply")}
+                            onClick={() => {
+                              void removeIngredient(item.id).then(() =>
+                                refreshDetail(),
+                              );
+                            }}
+                          >
+                            <Trash2 />
+                          </Button>
+                        </td>
+                      ) : null}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              </div>
+            )}
+          </article>
 
         <article className="panel detail-card">
           <header className="product-section-header">
@@ -895,7 +991,7 @@ export function ProductDetailPage({
               </label>
               <label>
                 <span>{t("productDetail.packing")}</span>
-                <select
+                <FilterableSelect
                   value={labelPackingId}
                   onChange={(event) => setLabelPackingId(event.target.value)}
                 >
@@ -905,7 +1001,7 @@ export function ProductDetailPage({
                       {item.name}
                     </option>
                   ))}
-                </select>
+                </FilterableSelect>
               </label>
             </div>
           ) : null}
@@ -1015,13 +1111,6 @@ export function ProductDetailPage({
         )}
       </article>
 
-      {product.imageUrl ? (
-        <img
-          className="product-detail-image"
-          src={product.imageUrl}
-          alt={displayName}
-        />
-      ) : null}
     </section>
   );
 }

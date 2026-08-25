@@ -22,6 +22,7 @@ import { PreparedMeatInboundNoRawModal } from "@/components/PreparedMeatInboundN
 import { PreparedMeatOptionFormModal } from "@/components/PreparedMeatOptionFormModal";
 import { PreparedMeatOptionsModal } from "@/components/PreparedMeatOptionsModal";
 import { PreparedMeatOutboundModal } from "@/components/PreparedMeatOutboundModal";
+import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
 import { ListTable } from "@/components/ui/list-table";
 import { TablePagination } from "@/components/ui/table-pagination";
@@ -175,6 +176,7 @@ function HeaderColumnFilter({
 }
 
 export function PreparedMeatInventoryCalcPage({
+  canManageActions = true,
   loadItems = fetchPreparedMeatItems,
   loadMovements = fetchPreparedMeatMovementsForItem,
   saveItemFlags = updatePreparedMeatItemFlags,
@@ -195,6 +197,7 @@ export function PreparedMeatInventoryCalcPage({
   updateOutbound,
   sendToFactory,
 }: {
+  canManageActions?: boolean;
   loadItems?: ItemsLoader;
   loadMovements?: MovementsLoader;
   saveItemFlags?: ItemFlagsSaver;
@@ -505,7 +508,7 @@ export function PreparedMeatInventoryCalcPage({
           <span className="eyebrow">{t("preparedMeatInventory.eyebrow")}</span>
           <h1>{t("preparedMeatInventory.title")}</h1>
         </div>
-        <div className="raw-meat-calc-heading-actions">
+        {canManageActions ? <div className="raw-meat-calc-heading-actions">
           <Button type="button" onClick={() => setCreateOptionOpen(true)}>
             {t("preparedMeatInventory.actions.addOption")}
           </Button>
@@ -524,7 +527,7 @@ export function PreparedMeatInventoryCalcPage({
           >
             {t("preparedMeatInventory.actions.stockOut")}
           </Button>
-        </div>
+        </div> : null}
       </header>
 
       <div className="raw-meat-calc-layout">
@@ -535,7 +538,7 @@ export function PreparedMeatInventoryCalcPage({
           <div className="raw-meat-calc-sidebar-header">
             <strong>{t("preparedMeatInventory.items")}</strong>
             <div className="raw-meat-calc-sidebar-actions">
-              <Button
+              {canManageActions ? <Button
                 type="button"
                 variant="ghost"
                 size="icon"
@@ -546,7 +549,7 @@ export function PreparedMeatInventoryCalcPage({
                 disabled={itemsLoading || items.length === 0}
               >
                 <SlidersHorizontal />
-              </Button>
+              </Button> : null}
             </div>
           </div>
           {itemsLoading ? (
@@ -597,7 +600,7 @@ export function PreparedMeatInventoryCalcPage({
             </div>
             <label className="raw-meat-calc-year-filter">
               <span>{t("preparedMeatInventory.yearFilter")}</span>
-              <select
+              <FilterableSelect
                 aria-label={t("preparedMeatInventory.yearFilter")}
                 value={year}
                 onChange={(event) => setYear(Number(event.target.value))}
@@ -608,7 +611,7 @@ export function PreparedMeatInventoryCalcPage({
                     {option}
                   </option>
                 ))}
-              </select>
+              </FilterableSelect>
             </label>
           </div>
 
@@ -723,7 +726,7 @@ export function PreparedMeatInventoryCalcPage({
                   <td>{row.remarks || t("common.notSet")}</td>
                   <td className="table-actions-cell">
                     <div className="table-row-actions">
-                      {row.kind === "inbound" || row.kind === "both" ? (
+                      {canManageActions && (row.kind === "inbound" || row.kind === "both") ? (
                         <Button
                           type="button"
                           variant="ghost"
@@ -736,7 +739,7 @@ export function PreparedMeatInventoryCalcPage({
                           <Pencil />
                         </Button>
                       ) : null}
-                      {row.kind === "outbound" || row.kind === "both" ? (
+                      {canManageActions && (row.kind === "outbound" || row.kind === "both") ? (
                         <Button
                           type="button"
                           variant="ghost"

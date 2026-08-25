@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
 
+import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { DetailLink } from "@/components/ui/detail-link";
@@ -80,7 +81,7 @@ function FilterSelect({
   return (
     <label className="kitchen-product-sales-filter-field">
       <span>{label}</span>
-      <select
+      <FilterableSelect
         aria-label={label}
         value={value}
         disabled={disabled}
@@ -92,7 +93,7 @@ function FilterSelect({
             {option.name}
           </option>
         ))}
-      </select>
+      </FilterableSelect>
     </label>
   );
 }

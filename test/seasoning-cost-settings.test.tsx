@@ -18,6 +18,17 @@ vi.mock("@/auth/AuthProvider", () => ({
   }),
 }));
 
+vi.mock("@/auth/use-page-access", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/auth/use-page-access")>()),
+  useCurrentPageAccess: () => ({
+    loading: false,
+    error: null,
+    canAccess: () => true,
+    canManage: () => true,
+    canAccessSection: () => true,
+  }),
+}));
+
 const rows: SeasoningCostRow[] = [
   {
     id: "s-1",

@@ -16,7 +16,10 @@ const restaurants = [
   { id: "ylp", legacyId: "ylp-legacy", name: "YLP 桂花小幸 元朗" },
   { id: "tko", legacyId: "tko-legacy", name: "TKO 桂花小幸 將軍澳" },
 ];
-const suppliers = [{ id: "supplier-1", legacyId: "supplier-legacy", name: "長明國際 (CI)" }];
+const suppliers = [
+  { id: "supplier-1", legacyId: "supplier-legacy", name: "長明國際 (CI)" },
+  { id: "supplier-2", legacyId: "supplier-legacy-2", name: "泰豐食品" },
+];
 const purchaseTypes = [
   { id: "kitchen", legacyId: "kitchen-legacy", name: "廚房用料" },
   { id: "bar", legacyId: "bar-legacy", name: "水吧用料" },
@@ -80,7 +83,10 @@ describe("restaurant daily purchase input", () => {
     expect(within(dialog).getByLabelText("餐廳")).toHaveValue("ylp");
     await user.type(within(dialog).getByLabelText("日期"), "2026-08-22");
     await user.selectOptions(within(dialog).getByLabelText("餐廳"), "tko");
-    await user.selectOptions(within(dialog).getByLabelText("供應商"), "supplier-1");
+    await user.click(within(dialog).getByRole("combobox", { name: "供應商" }));
+    await user.type(screen.getByRole("searchbox", { name: "搜尋供應商" }), "CI");
+    expect(screen.queryByRole("option", { name: suppliers[1].name })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("option", { name: suppliers[0].name }));
     await user.clear(within(dialog).getByLabelText("廚房用料金額"));
     await user.type(within(dialog).getByLabelText("廚房用料金額"), "1280.5");
     await user.click(within(dialog).getByRole("button", { name: "確定" }));

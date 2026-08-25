@@ -58,7 +58,7 @@ describe("Bubble file migration framework", () => {
 
   it("provides list search, type, private, and 50-row pagination controls", async () => {
     const user = userEvent.setup();
-    render(<FileMigrationPage isSuperAdmin={false} />);
+    render(<FileMigrationPage canManageMigration={false} />);
 
     const table = screen.getByRole("table");
     expect(within(table).getByText("Redacted POS sheet aggregate")).toBeInTheDocument();
@@ -81,9 +81,9 @@ describe("Bubble file migration framework", () => {
     expect(within(table).queryByText("Redacted Logo_png aggregate")).not.toBeInTheDocument();
   });
 
-  it("uploads and compares a valid JSON inventory for a Super Admin", async () => {
+  it("uploads and compares a valid JSON inventory with migration manage permission", async () => {
     const user = userEvent.setup();
-    render(<FileMigrationPage isSuperAdmin />);
+    render(<FileMigrationPage canManageMigration />);
     const inventory = {
       response: {
         results: [

@@ -12,6 +12,7 @@ const auth = vi.hoisted(() => ({
     user: { app_metadata: { role?: string } };
   },
 }));
+const migrationAccess = vi.hoisted(() => ({ canManage: false }));
 
 vi.mock("@/auth/AuthProvider", () => ({
   AuthProvider: ({ children }: { children: ReactNode }) => children,
@@ -19,6 +20,21 @@ vi.mock("@/auth/AuthProvider", () => ({
     session: auth.session,
   }),
 }));
+
+vi.mock("@/auth/use-page-access", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/auth/use-page-access")>();
+  return {
+    ...actual,
+    useCurrentPageAccess: () => ({
+      loading: false,
+      error: null,
+      canAccess: () => true,
+      canAccessSection: () => true,
+      canManage: (pageKey: string) =>
+        pageKey === "migration" && migrationAccess.canManage,
+    }),
+  };
+});
 
 function CurrentLocation() {
   const location = useLocation();
@@ -37,6 +53,7 @@ function renderWorkspace(path: string) {
 describe("Migration workspace", () => {
   beforeEach(async () => {
     auth.session = null;
+    migrationAccess.canManage = false;
     await i18n.changeLanguage("en");
   });
 
@@ -69,7 +86,7 @@ describe("Migration workspace", () => {
     );
   });
 
-  it("locks every write action without a Super Admin app_metadata role", () => {
+  it("locks every write action without migration manage permission", () => {
     renderWorkspace("/migration/control");
 
     for (const name of [
@@ -81,7 +98,7 @@ describe("Migration workspace", () => {
       expect(screen.getByRole("button", { name })).toBeDisabled();
     }
     expect(
-      screen.getAllByText(/current session requires the Super Admin/),
+      screen.getAllByText(/migration management permission is required/i),
     ).toHaveLength(4);
   });
 
@@ -109,9 +126,7 @@ describe("Migration workspace", () => {
   });
 
   it("keeps source switching disabled when reconciliation gates are incomplete", () => {
-    auth.session = {
-      user: { app_metadata: { role: "Super Admin" } },
-    };
+    migrationAccess.canManage = true;
     renderWorkspace("/migration/control");
 
     expect(

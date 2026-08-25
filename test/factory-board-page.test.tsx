@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { FactoryBoardPage } from "@/components/FactoryBoardPage";
 import {
+  factoryLabelPrintCompletesSet,
   formatFactoryDeliveryNoteQuantity,
   preferredFactoryLabelPrinter,
 } from "@/components/FactoryOrderJobView";
@@ -70,6 +71,12 @@ describe("FactoryBoardPage", () => {
     expect(
       preferredFactoryLabelPrinter(["Zebra ZD421", "Xprinter XP-420B"]),
     ).toBe("Xprinter XP-420B");
+  });
+
+  it("completes a one-copy label set when printing one label", () => {
+    expect(factoryLabelPrintCompletesSet("1 份", false)).toBe(true);
+    expect(factoryLabelPrintCompletesSet("3 份", false)).toBe(false);
+    expect(factoryLabelPrintCompletesSet("3 份", true)).toBe(true);
   });
   beforeEach(async () => {
     await i18n.changeLanguage("zh-HK");
@@ -781,10 +788,65 @@ describe("FactoryBoardPage", () => {
     expect(printLabels).toHaveBeenCalledWith("Zebra ZD421", "VEVTUA==", 1);
     expect(markLinePrinted).toHaveBeenCalledWith("line-print");
     expect(
-      await screen.findByText("全套標籤打印完成，已更新為已印刷。"),
+      await screen.findByText("全套標籤已送到打印機。"),
     ).toBeInTheDocument();
     expect(screen.getByLabelText("已經印刷")).toBeInTheDocument();
     expect(screen.getAllByLabelText("標籤已打印")).toHaveLength(2);
+  });
+
+  it("does not report a printer failure after printing succeeds when status saving fails", async () => {
+    const user = userEvent.setup();
+    const printLabels = vi.fn(async () => {});
+    const markLinePrinted = vi.fn(async () => {
+      throw new Error("status_write_failed");
+    });
+    const connectedQzClient: QzTrayClient = {
+      connect: vi.fn(async () => {}),
+      disconnect: vi.fn(async () => {}),
+      listPrinters: vi.fn(async () => ["Zebra ZD421"]),
+      queryStatuses: vi.fn(async () => []),
+      printLabels,
+    };
+    render(
+      <FactoryBoardPage
+        initialDate="2026-08-17"
+        loadBoard={async () => board}
+        loadFleets={async () => []}
+        loadBrands={async () => []}
+        loadOrderJob={async () => ({
+          packingNote: null,
+          dispatchTime: "10:00",
+          arrivalWindow: null,
+          changeTaskPending: true,
+          lines: [
+            {
+              id: "line-status-fail",
+              label: "檸檬茶",
+              quantityText: "2",
+              remarks: [],
+              printed: false,
+            },
+          ],
+        })}
+        markLinePrinted={markLinePrinted}
+        loadLabelCommand={async () => "VEVTUA=="}
+        openOrdersInNewPage={false}
+        qzClient={connectedQzClient}
+      />,
+    );
+
+    await user.click(await screen.findByRole("button", { name: /#B-1522/ }));
+    await user.click(await screen.findByRole("button", { name: /檸檬茶/ }));
+    const fullSet = screen.getByRole("button", { name: "印全套標籤（2個）" });
+    await waitFor(() => expect(fullSet).toBeEnabled());
+    await user.click(fullSet);
+
+    expect(printLabels).toHaveBeenCalledWith("Zebra ZD421", "VEVTUA==", 1);
+    expect(markLinePrinted).toHaveBeenCalledWith("line-status-fail");
+    expect(await screen.findByText("全套標籤已送到打印機。")).toBeInTheDocument();
+    expect(screen.queryByText(/標籤打印失敗，狀態沒有更新/)).not.toBeInTheDocument();
+    expect(screen.queryByText("訂單資料已修改")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "確認打印及現場資料已更新" })).not.toBeInTheDocument();
   });
 
   it("does not show the pending-change summary on the factory home page", async () => {
@@ -853,18 +915,24 @@ describe("FactoryBoardPage", () => {
       2,
       expect.objectContaining({ labelName: "飯盒餐具包", copies: 1 }),
     );
+    expect(printLabels).toHaveBeenCalledTimes(1);
+    expect(printLabels).toHaveBeenLastCalledWith(
+      "Zebra ZD421",
+      "VEVTUFRFU1A=",
+      1,
+    );
 
     await user.click(screen.getByRole("button", { name: "印地址" }));
     await waitFor(() => expect(loadLabelCommand).toHaveBeenCalledTimes(3));
     expect(loadLabelCommand).toHaveBeenLastCalledWith({
       kind: "address",
       orderNumber: "B-1522",
-      address: "大埔汀角道船灣香港青年協會大美督戶外活動中心",
-      arrivalWindow: "10:30 - 11:00",
+      deliveryDate: "2026-08-18",
+      district: "大尾督",
       customerName: "Eric Yim",
       customerPhone: "66817198",
     });
-    expect(printLabels).toHaveBeenCalledTimes(3);
+    expect(printLabels).toHaveBeenCalledTimes(2);
   });
 
   it("opens the hidden dispatch-time editor and saves the time to the order", async () => {

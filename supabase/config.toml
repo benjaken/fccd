@@ -60,3 +60,9 @@ verify_jwt = false
 [functions.bubble-migrate]
 verify_jwt = false
 
+[functions.shopify-product-sync]
+verify_jwt = false
+
+[functions.otc2-staff-sync]
+verify_jwt = false
+

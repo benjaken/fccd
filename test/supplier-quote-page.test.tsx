@@ -82,10 +82,10 @@ describe("SupplierQuotePage", () => {
     expect(screen.getByText("供應商與日期必須由你確認")).toBeInTheDocument();
     expect(within(reviewPanel).getByRole("combobox", { name: "供應商" })).toBeInTheDocument();
     fireEvent.click(within(reviewPanel).getByRole("combobox", { name: "供應商" }));
-    fireEvent.change(within(reviewPanel).getByRole("searchbox", { name: "搜尋供應商名稱或編號" }), {
+    fireEvent.change(screen.getByRole("searchbox", { name: "搜尋供應商名稱或編號" }), {
       target: { value: "New Frozen Foods Ltd" },
     });
-    fireEvent.click(within(reviewPanel).getByRole("button", { name: "新增「New Frozen Foods Ltd」" }));
+    fireEvent.click(screen.getByRole("button", { name: "新增「New Frozen Foods Ltd」" }));
     expect(within(reviewPanel).getByText("保存審核時會新增此供應商。")).toBeInTheDocument();
     expect(within(reviewPanel).getByText("PDF 原文證據")).toBeInTheDocument();
     expect(within(reviewPanel).getByText("PDF 識別出的凍肉")).toBeInTheDocument();

@@ -10,6 +10,7 @@ import {
 import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
+import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { PdfAutoResizeTextarea } from "@/components/PdfAutoResizeTextarea";
@@ -489,7 +490,7 @@ export function QuotePdfEditorPage({
       {draft.showCustomerSignature ? (
         <div className="quote-pdf-signature-party quote-pdf-signature-customer">
           <strong>請仔細閱讀以上內容並簽署確認：</strong>
-          <em>{draft.companyName || "公司"}</em>
+          <em>{draft.companyName || draft.customerName || "公司"}</em>
           <span className="quote-pdf-signature-stamp-spacer" aria-hidden="true" />
           <label><strong>公司蓋印及簽署：</strong><span /></label>
           <label><strong>負責人姓名：</strong><span /></label>
@@ -522,10 +523,10 @@ export function QuotePdfEditorPage({
           <tr><td colSpan={2}>小計：</td><td>${totals.activitySubtotal.toLocaleString("zh-HK")}</td></tr>
           <tr>
             <td colSpan={2}>
-              <select className="quote-pdf-edit-only" aria-label="活動運費項目" value={draft.activityShippingFeeId} onChange={(event) => selectActivityShippingFee(event.target.value)}>
+              <FilterableSelect className="quote-pdf-edit-only" aria-label="活動運費項目" value={draft.activityShippingFeeId} onChange={(event) => selectActivityShippingFee(event.target.value)}>
                 <option value="">選擇運費</option>
                 {shippingFees.map((fee) => <option key={fee.id} value={fee.id}>{fee.item}</option>)}
-              </select>
+              </FilterableSelect>
               <span className="quote-pdf-print-only">{draft.activityShippingNote || "選擇運費"}</span>
             </td>
             <td><span className="quote-pdf-price-input"><span aria-hidden="true">$</span><input aria-label="活動運費" inputMode="decimal" size={Math.max(draft.activityShippingFee.length, 1)} value={draft.activityShippingFee} onChange={(event) => update("activityShippingFee", event.target.value)} onBlur={() => { if (!draft.activityShippingFee.trim()) update("activityShippingFee", "0"); }} /></span></td>
@@ -573,10 +574,10 @@ export function QuotePdfEditorPage({
           <tr><td className="quote-pdf-summary-label" colSpan={4}>小計：</td><td><strong>${totals.productSubtotal.toLocaleString("zh-HK")}</strong></td></tr>
           <tr>
             <td colSpan={4}>
-              <select className="quote-pdf-edit-only" aria-label="運費項目" value={draft.shippingFeeId} onChange={(event) => selectShippingFee(event.target.value)}>
+              <FilterableSelect className="quote-pdf-edit-only" aria-label="運費項目" value={draft.shippingFeeId} onChange={(event) => selectShippingFee(event.target.value)}>
                 <option value="">選擇運費</option>
                 {shippingFees.map((fee) => <option key={fee.id} value={fee.id}>{fee.item}</option>)}
-              </select>
+              </FilterableSelect>
               <span className="quote-pdf-print-only">{draft.shippingFeeLabel || "選擇運費"}</span>
             </td>
             <td><span className="quote-pdf-price-input"><span aria-hidden="true">$</span><input aria-label="運費" inputMode="decimal" size={Math.max(draft.shippingFee.length, 1)} value={draft.shippingFee} onChange={(event) => update("shippingFee", event.target.value)} onBlur={() => { if (!draft.shippingFee.trim()) update("shippingFee", "0"); }} /></span></td>

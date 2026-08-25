@@ -24,6 +24,7 @@ import {
 
 import { MonthlyTrendChart } from "@/components/reports/MonthlyTrendChart";
 import { SupplierQuotePdfPreview } from "@/components/SupplierQuotePdfPreview";
+import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { SearchSelect } from "@/components/ui/search-select";
@@ -725,7 +726,17 @@ export function reviewLinesFromIngestResult(result: SupplierQuoteIngestResult, i
   });
 }
 
-export function SupplierQuotePage() {
+export function SupplierQuotePage({
+  canUpload = true,
+  canReview = true,
+  canExport = true,
+  canConfigure = true,
+}: {
+  canUpload?: boolean;
+  canReview?: boolean;
+  canExport?: boolean;
+  canConfigure?: boolean;
+}) {
   const { t, i18n } = useTranslation();
   const priceUnitDictionary = useDictItems(DICT_TYPE.supplierQuotePriceUnit);
   const initialDashboard = initialSupplierQuoteDashboard(import.meta.env.MODE);
@@ -1320,13 +1331,13 @@ export function SupplierQuotePage() {
           <p>保存每份 PDF 報價版本，人工確認商品對應，再比較報價與實際入貨價。</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button type="button" variant="outline" onClick={() => setSettingsOpen(true)}><Settings2 />門檻設定</Button>
-          <Button type="button" variant="outline" onClick={downloadCsv} disabled={!filteredLines.length}><Download />CSV</Button>
-          <Button type="button" variant="outline" onClick={printReport} disabled={!filteredLines.length}><FileText />PDF 報告</Button>
-          <Button type="button" disabled={displayedUploadProgress?.status === "active"} onClick={() => fileInputRef.current?.click()}>
+          {canConfigure ? <Button type="button" variant="outline" onClick={() => setSettingsOpen(true)}><Settings2 />門檻設定</Button> : null}
+          {canExport ? <Button type="button" variant="outline" onClick={downloadCsv} disabled={!filteredLines.length}><Download />CSV</Button> : null}
+          {canExport ? <Button type="button" variant="outline" onClick={printReport} disabled={!filteredLines.length}><FileText />PDF 報告</Button> : null}
+          {canUpload ? <Button type="button" disabled={displayedUploadProgress?.status === "active"} onClick={() => fileInputRef.current?.click()}>
             {displayedUploadProgress?.status === "active" ? <RefreshCw className="animate-spin" /> : <Upload />}
             {displayedUploadProgress?.status === "active" ? `處理中 ${displayedUploadProgress.percent}%` : "上傳報價 PDF"}
-          </Button>
+          </Button> : null}
           <input ref={fileInputRef} type="file" accept="application/pdf,.pdf" className="sr-only" disabled={displayedUploadProgress?.status === "active"} onChange={(event) => { handleFile(event.target.files?.[0]); event.currentTarget.value = ""; }} />
         </div>
       </section>
@@ -1358,7 +1369,7 @@ export function SupplierQuotePage() {
           <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex flex-wrap items-center gap-3">
               <div className="relative min-w-56 flex-1"><Filter className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t("navigation.supplierQuotesSearchPlaceholder")} className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" /></div>
-              <label className="flex items-center gap-2 text-sm text-slate-600"><span>供應商</span><select value={supplierFilter} onChange={(event) => setSupplierFilter(event.target.value)} className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm"><option>全部供應商</option>{supplierFilterOptions.map((option) => <option key={option}>{option}</option>)}</select></label>
+              <div className="min-w-56 text-sm text-slate-600"><span>供應商</span><SearchSelect id="supplier-quote-comparison-supplier" label="供應商" value={supplierFilter} options={[{ id: "全部供應商", name: t("navigation.supplierQuotesSupplierFilterPlaceholder") }, ...supplierFilterOptions.map((option) => ({ id: option, name: option }))]} placeholder={t("navigation.supplierQuotesSupplierFilterPlaceholder")} searchPlaceholder={t("navigation.supplierQuotesSupplierSearchPlaceholder")} emptyLabel={t("navigation.supplierQuotesSupplierEmpty")} onChange={(option) => setSupplierFilter(option.id)} /></div>
               <label className="flex items-center gap-2 text-sm text-slate-600"><span>狀態</span><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm"><option>全部狀態</option><option>異常</option><option>上漲</option><option>下跌</option><option>不變</option><option>新增商品</option><option>TBA／待確認</option><option>單位待確認</option><option>規格變更</option></select></label>
               <button type="button" className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-600 hover:bg-slate-50" onClick={() => { setSearch(""); setSupplierFilter("全部供應商"); setStatusFilter("全部狀態"); }}><RefreshCw className="size-4" />重設</button>
             </div>
@@ -1383,7 +1394,7 @@ export function SupplierQuotePage() {
         <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
             <div><h2 className="font-semibold text-slate-950">PDF 報價版本</h2><p className="mt-1 text-sm text-slate-500">舊版本及已確認 line 永不被重試覆蓋；每次識別均有獨立 parse run。</p></div>
-            <Button type="button" disabled={displayedUploadProgress?.status === "active"} onClick={() => fileInputRef.current?.click()}><Plus />新增版本</Button>
+            {canUpload ? <Button type="button" disabled={displayedUploadProgress?.status === "active"} onClick={() => fileInputRef.current?.click()}><Plus />新增版本</Button> : null}
           </div>
           <div className="divide-y divide-slate-100">{documents.map((document) => {
             const meta = documentStatusMeta(document.status);
@@ -1391,7 +1402,7 @@ export function SupplierQuotePage() {
               <div className="flex min-w-0 items-start gap-3"><div className="rounded-xl bg-emerald-50 p-2.5 text-emerald-700"><FileText className="size-5" /></div><div className="min-w-0"><strong className="block truncate text-sm text-slate-950">{document.filename}</strong><span className="mt-1 block text-sm text-slate-500">{document.supplier} · 報價 {document.quoteDate || "待確認"} · 生效 {document.effectiveDate || "待確認"}</span><span className="mt-1 block text-sm text-slate-400">{document.lineCount} 筆已選 line · parser {document.parserVersion}{document.confirmedAt ? ` · 確認於 ${document.confirmedAt}` : ""}</span>{document.status === "ocr_required" ? <span className="mt-1 block text-sm text-purple-700">PDF 沒有可抽取文字；本期需另行 OCR，不會產生候選。</span> : null}{document.errorSummary ? <span className="mt-1 block text-sm text-red-700">{document.errorSummary}</span> : null}</div></div>
               <div className="flex items-center gap-2">
                 <span className={cn("rounded-full px-2.5 py-1 text-sm font-semibold", meta.className)}>{meta.label}</span>
-                {document.status === "review" || document.status === "confirmed" ? (
+                {canReview && (document.status === "review" || document.status === "confirmed") ? (
                   <Button
                     type="button"
                     variant="outline"
@@ -1403,7 +1414,7 @@ export function SupplierQuotePage() {
                     {openingReviewDocumentId === document.id ? "載入中" : "審核"}
                   </Button>
                 ) : null}
-                {document.status !== "uploading" && document.status !== "processing" ? <Button type="button" variant="outline" disabled={remoteLoading} aria-label={`重新識別 ${document.filename}`} onClick={() => void handleRetryDocument(document)}>{recognizingDocumentId === document.id ? <RefreshCw className="animate-spin" /> : <Sparkles />}{recognizingDocumentId === document.id ? "識別中" : "重新識別"}</Button> : null}
+                {canReview && document.status !== "uploading" && document.status !== "processing" ? <Button type="button" variant="outline" disabled={remoteLoading} aria-label={`重新識別 ${document.filename}`} onClick={() => void handleRetryDocument(document)}>{recognizingDocumentId === document.id ? <RefreshCw className="animate-spin" /> : <Sparkles />}{recognizingDocumentId === document.id ? "識別中" : "重新識別"}</Button> : null}
               </div>
             </article>;
           })}</div>
@@ -1534,7 +1545,7 @@ export function SupplierQuotePage() {
                   <div className="hidden items-center justify-center lg:flex"><span className="rounded-full bg-slate-100 p-2 text-slate-500"><ArrowRight className="size-5" /></span></div>
                   <section className={cn("rounded-xl border p-4", selectedSystemItem ? "border-emerald-200 bg-emerald-50" : "border-orange-200 bg-orange-50")}>
                     <div className="flex items-center justify-between gap-2"><span className={cn("text-sm font-semibold uppercase tracking-wide", selectedSystemItem ? "text-emerald-700" : "text-orange-700")}>系統內的凍肉商品</span>{selectedSystemItem ? <span className="rounded-full bg-emerald-600 px-2 py-1 text-sm font-semibold text-white">已對應</span> : <span className="rounded-full bg-orange-500 px-2 py-1 text-sm font-semibold text-white">待選擇</span>}</div>
-                    <label className="mt-3 block text-sm font-semibold text-slate-700">選擇對應商品<select value={line.matchedItem} onChange={(event) => setReviewLines((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, matchedItem: event.target.value, matchedRawMeatItemId: itemOptions.find((option) => option.name === event.target.value)?.id ?? null, newItemRequested: false } : item))} className={cn("mt-1 h-10 w-full rounded-lg border bg-white px-3 text-sm font-normal text-slate-900", selectedSystemItem ? "border-emerald-300" : "border-orange-300")}><option value="">請選擇</option>{itemOptions.map((option) => <option key={option.id} value={option.name}>{option.name}</option>)}</select></label>
+                    <label className="mt-3 block text-sm font-semibold text-slate-700">選擇對應商品<FilterableSelect value={line.matchedItem} onChange={(event) => setReviewLines((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, matchedItem: event.target.value, matchedRawMeatItemId: itemOptions.find((option) => option.name === event.target.value)?.id ?? null, newItemRequested: false } : item))} className={cn("mt-1 h-10 w-full rounded-lg border bg-white px-3 text-sm font-normal text-slate-900", selectedSystemItem ? "border-emerald-300" : "border-orange-300")}><option value="">請選擇</option>{itemOptions.map((option) => <option key={option.id} value={option.name}>{option.name}</option>)}</FilterableSelect></label>
                     {selectedSystemItem ? <p className="mt-2 text-sm font-medium text-emerald-800">目前對應：{selectedSystemItem.name}{selectedSystemItem.sku ? ` · ${selectedSystemItem.sku}` : ""}</p> : <p className="mt-2 text-sm text-orange-800">尚未對應系統商品，請選擇或標記為新商品。</p>}
                   </section>
                 </div>
@@ -1546,7 +1557,7 @@ export function SupplierQuotePage() {
 
                 {line.validationErrors.length ? <p className="rounded-lg bg-red-100 px-3 py-2 text-sm font-semibold text-red-800">錯誤：{line.validationErrors.join("；")}</p> : null}{line.validationWarnings.length ? <p className="rounded-lg bg-amber-100 px-3 py-2 text-sm font-semibold text-amber-800">警告：{line.validationWarnings.join("；")}</p> : null}
                 <div className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 sm:grid-cols-2">
-                  <label className="text-sm font-semibold text-slate-600">價格單位<select value={line.priceUnit ?? ""} onChange={(event) => setReviewLines((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, priceUnit: event.target.value || null } : item))} className="mt-1 h-9 w-full rounded-lg border border-slate-200 bg-white px-2 text-sm font-normal"><option value="">請選擇</option>{line.priceUnit && !priceUnitDictionary.items.some((item) => item.value === line.priceUnit) ? <option value={line.priceUnit}>{line.priceUnit}</option> : null}{priceUnitDictionary.items.map((item) => <option key={item.value} value={item.value}>{dictItemLabel(item, i18n.language)}</option>)}</select></label>
+                  <label className="text-sm font-semibold text-slate-600">價格單位<FilterableSelect value={line.priceUnit ?? ""} onChange={(event) => setReviewLines((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, priceUnit: event.target.value || null } : item))} className="mt-1 h-9 w-full rounded-lg border border-slate-200 bg-white px-2 text-sm font-normal"><option value="">請選擇</option>{line.priceUnit && !priceUnitDictionary.items.some((item) => item.value === line.priceUnit) ? <option value={line.priceUnit}>{line.priceUnit}</option> : null}{priceUnitDictionary.items.map((item) => <option key={item.value} value={item.value}>{dictItemLabel(item, i18n.language)}</option>)}</FilterableSelect></label>
                   <label className="text-sm font-semibold text-slate-600">規格 fingerprint<input value={line.normalizedSpecFingerprint} onChange={(event) => setReviewLines((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, normalizedSpecFingerprint: event.target.value } : item))} className="mt-1 h-9 w-full rounded-lg border border-slate-200 bg-white px-2 font-mono text-sm font-normal" /></label>
                   <div className={cn("rounded-lg border px-3 py-2 text-sm sm:col-span-2", normalizedReviewPrice.comparablePricePerKg === null ? "border-amber-200 bg-amber-50 text-amber-900" : "border-emerald-200 bg-emerald-50 text-emerald-900")}><strong>統一比較價格：</strong>{normalizedReviewPrice.comparablePricePerKg === null ? "尚未能折算；請確認價格單位及每件重量。" : `${formatMoney(normalizedReviewPrice.comparablePricePerKg)} / kg`}{normalizedReviewPrice.containerPrice !== null && normalizedReviewPrice.containerPrice !== line.price ? <span className="ml-2">· 整箱 {formatMoney(normalizedReviewPrice.containerPrice)}</span> : null}</div>
                   <label className="flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-900 sm:col-span-2"><input type="checkbox" checked={line.newItemRequested} onChange={(event) => setReviewLines((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, newItemRequested: event.target.checked, matchedItem: event.target.checked ? "" : item.matchedItem, matchedRawMeatItemId: event.target.checked ? null : item.matchedRawMeatItemId } : item))} className="mt-0.5 size-4 accent-emerald-600" /><span>保存時新增到凍貨商品主檔<span className="mt-0.5 block font-normal text-emerald-700">同名商品會自動復用，並記住這個供應商的商品名稱與規格。</span></span></label>

@@ -101,6 +101,10 @@ vi.mock("@/auth/AuthProvider", () => ({
   AuthProvider: ({ children }: { children: ReactNode }) => children,
   useAuth: () => ({
     session: auth.session,
+    user: auth.session
+      ? { app_metadata: { role: "Super Admin" } }
+      : null,
+    profile: auth.session ? { role: "Super Admin" } : null,
     loading: auth.loading,
     profileLoading: auth.profileLoading,
     signIn: vi.fn(),
@@ -108,6 +112,23 @@ vi.mock("@/auth/AuthProvider", () => ({
     configured: true,
   }),
 }));
+
+vi.mock("@/auth/use-page-access", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/auth/use-page-access")>();
+  const grantedAccess = {
+    loading: false,
+    error: null,
+    canAccess: () => true,
+    canManage: () => true,
+    canAccessSection: () => true,
+    hasPermission: () => true,
+  };
+  return {
+    ...actual,
+    usePageAccess: () => grantedAccess,
+    useCurrentPageAccess: () => grantedAccess,
+  };
+});
 
 function renderPath(path: string) {
   return render(

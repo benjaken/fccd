@@ -22,6 +22,7 @@ export type ProductTag = {
 
 export type ProductListItem = {
   id: string;
+  imageUrl: string | null;
   sku: string | null;
   name: string;
   chineseName: string | null;
@@ -117,10 +118,13 @@ export type ProductUpdateInput = {
   collectionIds: string[];
 };
 
+export type ProductCreateInput = ProductUpdateInput;
+
 export type ProductPremiumIngredient = {
   id: string;
   ingredientId: string;
   name: string;
+  ingredientType?: string | null;
   quantity: number | null;
   unitCost: number | null;
 };
@@ -140,15 +144,16 @@ export function productIngredientCost(items: ProductPremiumIngredient[]) {
   );
 }
 
-export function canEditProductCatalog(role: string | null | undefined) {
-  return role === "Super Admin" || role === "Admin";
-}
-
 export type RelatedPackageSummary = {
   id: string;
   sku: string | null;
   name: string;
   chineseName: string | null;
+};
+
+export type ShopifyProductLink = {
+  storeDomain: string;
+  shopifyProductId: number;
 };
 
 export type ProductDetail = {
@@ -179,6 +184,7 @@ export type ProductDetail = {
   premiumIngredients: ProductPremiumIngredient[];
   labels: ProductLabelRow[];
   packages: RelatedPackageSummary[];
+  shopifyLinks: ShopifyProductLink[];
   updatedAt: string;
 };
 
@@ -188,6 +194,7 @@ type NamedLookup = { id: string; name: string } | { id: string; name: string }[]
 
 type ProductListRow = {
   id: string;
+  image_url: string | null;
   sku: string | null;
   name: string;
   chinese_name: string | null;
@@ -556,7 +563,7 @@ export async function fetchProducts({
   let query = supabase
     .from("products")
     .select(
-      "id,sku,name,chinese_name,price,price_min,price_max,status,is_active,is_bento_recommended,bubble_created_at,created_at,bento_main_type_id,bento_column_type_id,cook_type_id,channels(id,name),product_types(id,name),cook_types(name),bento_column_types(name)",
+      "id,image_url,sku,name,chinese_name,price,price_min,price_max,status,is_active,is_bento_recommended,bubble_created_at,created_at,bento_main_type_id,bento_column_type_id,cook_type_id,channels(id,name),product_types(id,name),cook_types(name),bento_column_types(name)",
       { count: "exact" },
     )
     .is("archived_at", null)
@@ -704,6 +711,7 @@ export async function fetchProducts({
       const productType = relatedRecord(row.product_types);
       return {
         id: row.id,
+        imageUrl: row.image_url,
         sku: normalizeProductSku(row.sku),
         name: row.name,
         chineseName: row.chinese_name,
@@ -764,6 +772,7 @@ export async function fetchProductDetail(
     { data: packageRows, error: packageError },
     { data: premiumRows, error: premiumError },
     { data: labelRows, error: labelError },
+    { data: shopifyMappingRows, error: shopifyMappingsError },
   ] = await Promise.all([
     supabase
       .from("product_collection_links")
@@ -775,21 +784,51 @@ export async function fetchProductDetail(
       .eq("product_id", id),
     supabase
       .from("product_ingredients")
-      .select("id,quantity,ingredients(id,name,cost_per_product_unit)")
+      .select("id,quantity,ingredients(id,name,ingredient_type,cost_per_product_unit)")
       .eq("product_id", id)
       .is("package_id", null),
     supabase
       .from("product_labels")
       .select("id,display_name,quantity_label,packing_materials(id,name)")
       .eq("product_id", id),
+    supabase
+      .from("shopify_catalog_mappings")
+      .select("shopify_product_id,shopify_stores(shop_domain)")
+      .eq("internal_product_id", id)
+      .eq("resource_type", "product_variant")
+      .eq("is_active", true),
   ]);
 
   if (collectionError) throw collectionError;
   if (packageError) throw packageError;
 
+  type ShopifyStoreEmbed =
+    | { shop_domain: string }
+    | { shop_domain: string }[]
+    | null;
+
+  const shopifyLinks = shopifyMappingsError
+    ? []
+    : Array.from(
+        new Map(
+          (shopifyMappingRows ?? []).flatMap((mapping) => {
+            const rawStore = mapping.shopify_stores as ShopifyStoreEmbed;
+            const store = Array.isArray(rawStore) ? rawStore[0] : rawStore;
+            const productId = Number(mapping.shopify_product_id);
+            if (!store?.shop_domain || !Number.isSafeInteger(productId)) return [];
+            const link: ShopifyProductLink = {
+              storeDomain: store.shop_domain,
+              shopifyProductId: productId,
+            };
+            return [[`${link.storeDomain}:${link.shopifyProductId}`, link] as const];
+          }),
+        ).values(),
+      );
+
   type IngredientEmbed = {
     id: string;
     name: string;
+    ingredient_type?: string | null;
     cost_per_product_unit?: number | string | null;
   };
 
@@ -804,11 +843,12 @@ export async function fetchProductDetail(
             id: row.id as string,
             ingredientId: ingredient.id,
             name: ingredient.name,
+            ingredientType: ingredient.ingredient_type ?? null,
             quantity: toNumber(row.quantity as number | string | null),
             unitCost: toNumber(ingredient.cost_per_product_unit),
           } satisfies ProductPremiumIngredient;
         })
-        .filter((item): item is ProductPremiumIngredient => Boolean(item));
+        .filter((item): item is NonNullable<typeof item> => Boolean(item));
 
   const labels = labelError
     ? []
@@ -904,6 +944,7 @@ export async function fetchProductDetail(
     premiumIngredients,
     labels,
     packages,
+    shopifyLinks,
     updatedAt: row.updated_at,
   };
 }
@@ -992,6 +1033,7 @@ async function fetchCatalogIngredients(): Promise<CatalogOption[]> {
     .select("id,name,sku,legacy_id")
     .is("archived_at", null)
     .eq("is_active", true)
+    .or("ingredient_type.is.null,ingredient_type.neq.包裝用品")
     .order("name", { ascending: true })
     .limit(100);
   if (error) return [];
@@ -1036,6 +1078,7 @@ export async function searchProductIngredients(
     .select("id,name,sku,legacy_id")
     .is("archived_at", null)
     .eq("is_active", true)
+    .or("ingredient_type.is.null,ingredient_type.neq.包裝用品")
     .or(`name.ilike.%${cleaned}%,sku.ilike.%${cleaned}%`)
     .order("name", { ascending: true })
     .limit(20);
@@ -1176,6 +1219,44 @@ export async function updateProduct(
     relatedIdColumn: "collection_id",
     relatedLegacyColumn: "collection_legacy_id",
   });
+}
+
+export async function createProduct(input: ProductCreateInput): Promise<string> {
+  const legacyId = createLegacyId();
+  const { data, error } = await supabase
+    .from("products")
+    .insert({
+      legacy_id: legacyId,
+      name: input.name.trim(),
+      chinese_name: emptyToNull(input.chineseName),
+      sku: emptyToNull(input.sku),
+      description: emptyToNull(input.description),
+      price: input.price,
+      status: emptyToNull(input.status),
+      is_active: input.isActive,
+      is_bento_recommended: input.isBentoRecommended,
+      channel_id: input.channelId,
+      product_type_id: input.productTypeId,
+      cook_type_id: input.cookTypeId,
+    })
+    .select("id")
+    .single();
+  if (error) throw error;
+
+  const productId = data.id as string;
+  const collections = await fetchCollectionRecords();
+  const collectionsById = new Map(collections.map((item) => [item.id, item]));
+  await syncProductTagLinks({
+    table: "product_collection_links",
+    productId,
+    productLegacyId: legacyId,
+    selected: input.collectionIds
+      .map((itemId) => collectionsById.get(itemId))
+      .filter((item): item is CatalogOption => Boolean(item)),
+    relatedIdColumn: "collection_id",
+    relatedLegacyColumn: "collection_legacy_id",
+  });
+  return productId;
 }
 
 export async function addProductPremiumIngredient(

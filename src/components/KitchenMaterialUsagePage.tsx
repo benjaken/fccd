@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { RefreshCw, Scale } from "lucide-react";
 
+import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
@@ -177,7 +178,7 @@ export function KitchenMaterialUsagePage({
         <div className="kitchen-material-usage-toolbar">
           <label className="kitchen-material-usage-field">
             <span>{t("kitchenMaterialUsage.stocktakeRecord")}</span>
-            <select
+            <FilterableSelect
               aria-label={t("kitchenMaterialUsage.stocktakeRecord")}
               value={stocktakeDate}
               disabled={stocktakeDatesLoading}
@@ -193,7 +194,7 @@ export function KitchenMaterialUsagePage({
                   {item.date.split("-").reverse().join("/")} {t("kitchenMaterialUsage.stocktakeSuffix")}
                 </option>
               ))}
-            </select>
+            </FilterableSelect>
           </label>
           <label className="kitchen-material-usage-field">
             <span>{t("kitchenMaterialUsage.usageMode")}</span>

@@ -14,6 +14,17 @@ vi.mock("@/auth/AuthProvider", () => ({
   }),
 }));
 
+vi.mock("@/auth/use-page-access", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/auth/use-page-access")>()),
+  useCurrentPageAccess: () => ({
+    loading: false,
+    error: null,
+    canAccess: () => true,
+    canManage: () => true,
+    canAccessSection: () => true,
+  }),
+}));
+
 const seasonings: SeasoningOption[] = [
   { id: "s-1", name: "幼鹽", sortOrder: 1 },
   { id: "s-2", name: "片糖", sortOrder: 2 },

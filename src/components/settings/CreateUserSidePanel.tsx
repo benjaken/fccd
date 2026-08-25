@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { RestaurantSelect } from "@/components/settings/RestaurantSelect";
 import { SettingsSidePanel } from "@/components/settings/SettingsSidePanel";
 import {
@@ -23,6 +24,7 @@ const initialForm = {
   shopRestroLegacyId: "",
   password: "",
   confirmPassword: "",
+  isDedicatedAccount: false,
 };
 
 export function CreateUserSidePanel({
@@ -85,6 +87,7 @@ export function CreateUserSidePanel({
         role: form.role,
         shopRestroLegacyId: form.shopRestroLegacyId.trim(),
         password: form.password,
+        isDedicatedAccount: form.isDedicatedAccount,
       };
       await createUser(payload);
       setForm(initialForm);
@@ -182,6 +185,19 @@ export function CreateUserSidePanel({
           loadRestaurants={loadRestaurants}
           disabled={submitting}
         />
+        <div className="settings-side-switch-row">
+          <div>
+            <strong>{t("settings.users.fields.dedicatedAccount")}</strong>
+            <span>{t("settings.users.fields.dedicatedAccountHint")}</span>
+          </div>
+          <Switch
+            checked={form.isDedicatedAccount}
+            onCheckedChange={(isDedicatedAccount) =>
+              setForm((current) => ({ ...current, isDedicatedAccount }))
+            }
+            aria-label={t("settings.users.fields.dedicatedAccount")}
+          />
+        </div>
         <label>
           <span>{t("settings.users.fields.password")}</span>
           <input

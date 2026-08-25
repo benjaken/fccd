@@ -18,8 +18,10 @@ import {
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
+import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { SearchSelect } from "@/components/ui/search-select";
 import { OrderFactorySettingsControls } from "@/components/order-factory-settings-controls";
 import {
   clearOrderCustomerInfo,
@@ -82,12 +84,12 @@ function SelectField({
         {label}
         {required && <em>*</em>}
       </span>
-      <select value={value} onChange={(event) => onChange(event.target.value)} required={required}>
+      <FilterableSelect value={value} onChange={(event) => onChange(event.target.value)} required={required}>
         <option value="">{emptyLabel}</option>
         {options.map((option) => (
           <option key={option.id} value={option.id}>{option.name}</option>
         ))}
-      </select>
+      </FilterableSelect>
     </label>
   );
 }
@@ -232,14 +234,22 @@ export function OrderEditorPage({
     update("payments", draft.payments.map((payment, paymentIndex) => paymentIndex === index ? { ...payment, ...patch } : payment));
 
   const validate = () => {
-    if (!draft.customerName.trim() || !draft.contactA.trim() || !draft.email.trim() || !draft.channelId || !draft.deliveryAt) {
+    if (
+      !draft.customerName.trim() ||
+      !draft.contactA.trim() ||
+      !draft.email.trim() ||
+      !draft.channelId ||
+      !draft.shippingMethodId ||
+      !draft.districtId ||
+      !draft.deliveryAt
+    ) {
       setStep("details");
       setSaveError("請填寫所有標示 * 的訂單資料。");
       return false;
     }
-    if (!draft.lines.length || draft.lines.some((line) => !line.name.trim() || line.quantity <= 0)) {
+    if (!draft.lines.length || draft.lines.some((line) => !line.name.trim() || !Number.isInteger(line.quantity) || line.quantity < 1)) {
       setStep("items");
-      setSaveError("訂單至少需要一項餐點，數量必須大於 0。");
+      setSaveError("訂單至少需要一項餐點，數量必須是大於 0 的整數。");
       return false;
     }
     if (draft.payments.some((payment) => !payment.paymentAt || !payment.paymentMethodId || payment.amount <= 0)) {
@@ -365,11 +375,14 @@ export function OrderEditorPage({
                 <InputField label="聯絡電話" value={draft.contactA} required type="tel" onChange={(value) => update("contactA", value)} />
                 <InputField label="第二聯絡電話" value={draft.contactB} type="tel" onChange={(value) => update("contactB", value)} />
                 <InputField label="電郵地址" value={draft.email} required type="email" onChange={(value) => update("email", value)} />
-                <SelectField label="運送方式" value={draft.shippingMethodId} options={options.shippingMethods} onChange={(value) => update("shippingMethodId", value)} />
+                <SelectField label="運送方式" value={draft.shippingMethodId} options={options.shippingMethods} required onChange={(value) => update("shippingMethodId", value)} />
                 <InputField label="送貨地址" value={draft.address} onChange={(value) => update("address", value)} />
               </div>
               <div className="order-editor-column">
-                <SelectField label="地區" value={draft.districtId} options={options.districts} onChange={(value) => update("districtId", value)} />
+                <label className="order-editor-field">
+                  <span>地區<em>*</em></span>
+                  <SearchSelect id="order-editor-district" label="地區" value={draft.districtId} options={options.districts} required onChange={(option) => update("districtId", option.id)} />
+                </label>
                 <InputField label="送貨日期及時間" value={draft.deliveryAt} required type="datetime-local" onChange={(value) => update("deliveryAt", value)} />
                 <InputField label="送貨時段" value={draft.deliveryTime} placeholder={t("orderEditor.deliveryTimePlaceholder")} onChange={(value) => update("deliveryTime", value)} />
                 <InputField label="出車時間" value={draft.shipOutTime} placeholder={t("orderEditor.shipOutTimePlaceholder")} onChange={(value) => update("shipOutTime", value)} />
@@ -421,7 +434,7 @@ export function OrderEditorPage({
                     <div className="order-editor-mobile-line-fields">
                       <label><span>SKU</span><input value={line.sku} onChange={(event) => updateLine(index, { sku: event.target.value })} /></label>
                       <label className="is-wide"><span>產品</span><input value={line.name} aria-label={`產品 ${index + 1}`} onChange={(event) => updateLine(index, { name: event.target.value })} /></label>
-                      <label><span>數量</span><input type="number" inputMode="decimal" min="0.001" step="0.001" value={line.quantity} onChange={(event) => updateLine(index, { quantity: Number(event.target.value) })} /></label>
+                      <label><span>數量</span><input type="number" inputMode="numeric" min="1" step="1" value={line.quantity} onChange={(event) => updateLine(index, { quantity: Number(event.target.value) })} /></label>
                       <label><span>單價</span><input type="number" inputMode="decimal" min="0" step="0.01" value={line.unitPrice} onChange={(event) => updateLine(index, { unitPrice: Number(event.target.value) })} /></label>
                       <label className="is-wide"><span>備註</span><input value={line.remarks} placeholder={t("orderEditor.lineNotePlaceholder")} onChange={(event) => updateLine(index, { remarks: event.target.value })} /></label>
                     </div>
@@ -441,7 +454,7 @@ export function OrderEditorPage({
                         <td><div className="order-editor-sort"><button type="button" disabled={!index} onClick={() => moveLine(index, -1)}><ChevronUp /></button><button type="button" disabled={index === draft.lines.length - 1} onClick={() => moveLine(index, 1)}><ChevronDown /></button></div></td>
                         <td><input value={line.sku} onChange={(event) => updateLine(index, { sku: event.target.value })} /></td>
                         <td><input value={line.name} aria-label={`產品 ${index + 1}`} onChange={(event) => updateLine(index, { name: event.target.value })} /><input className="order-line-note" value={line.remarks} placeholder={t("orderEditor.lineNotePlaceholder")} onChange={(event) => updateLine(index, { remarks: event.target.value })} /></td>
-                        <td><input type="number" min="0.001" step="0.001" value={line.quantity} onChange={(event) => updateLine(index, { quantity: Number(event.target.value) })} /></td>
+                        <td><input type="number" inputMode="numeric" min="1" step="1" value={line.quantity} onChange={(event) => updateLine(index, { quantity: Number(event.target.value) })} /></td>
                         <td><input type="number" min="0" step="0.01" value={line.unitPrice} onChange={(event) => updateLine(index, { unitPrice: Number(event.target.value) })} /></td>
                         <td><strong>{money(line.quantity * line.unitPrice)}</strong></td>
                         <td><button className="order-editor-delete" type="button" aria-label={`刪除 ${line.name}`} onClick={() => update("lines", draft.lines.filter((_, lineIndex) => lineIndex !== index))}><Trash2 /></button></td>

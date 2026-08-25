@@ -21,6 +21,17 @@ vi.mock("@/auth/AuthProvider", () => ({
   }),
 }));
 
+vi.mock("@/auth/use-page-access", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/auth/use-page-access")>()),
+  useCurrentPageAccess: () => ({
+    loading: false,
+    error: null,
+    canAccess: () => true,
+    canManage: () => true,
+    canAccessSection: () => true,
+  }),
+}));
+
 vi.mock("@/lib/delivery-fleets", () => ({
   fetchDeliveryFleets: api.fetch,
   createDeliveryFleet: api.create,
@@ -111,7 +122,10 @@ describe("Delivery fleet management", () => {
     expect(api.fetchFees).toHaveBeenCalledWith(null);
     expect(screen.getByRole("searchbox", { name: "搜尋運費" })).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "司機／車隊" })).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "地區" })).toBeInTheDocument();
+    const districtFilter = screen.getByRole("combobox", { name: "地區" });
+    expect(districtFilter).toBeInTheDocument();
+    await user.click(districtFilter);
+    expect(screen.getByRole("searchbox", { name: "搜尋" })).toBeInTheDocument();
 
     const feeInput = screen.getByRole("spinbutton", { name: "荃灣 運費" });
     await user.clear(feeInput);

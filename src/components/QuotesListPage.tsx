@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
+import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
 import { DetailLink } from "@/components/ui/detail-link";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
@@ -21,6 +22,7 @@ import { TablePagination } from "@/components/ui/table-pagination";
 import { QuoteFilesSidePanel } from "@/components/QuoteFilesSidePanel";
 import { DICT_TYPE, dictItemLabel, useDictItems } from "@/lib/dictionaries";
 import { useDeferredFilter } from "@/lib/use-deferred-filter";
+import { hongKongDateKey } from "@/lib/date-time";
 import {
   fetchQuoteBrands,
   fetchQuotes,
@@ -52,11 +54,13 @@ const QUOTE_SKELETON_COLUMNS = [
 
 export function QuotesListPage({
   preset = "all",
+  canManage = false,
   loadQuotes = fetchQuotes,
   loadBrands = fetchQuoteBrands,
   saveDescription = updateQuoteDescription,
 }: {
   preset?: QuotePreset;
+  canManage?: boolean;
   loadQuotes?: QuotesLoader;
   loadBrands?: QuoteBrandsLoader;
   saveDescription?: QuoteDescriptionUpdater;
@@ -214,6 +218,7 @@ export function QuotesListPage({
   };
 
   const saveQuoteDescription = async (quote: QuoteListItem) => {
+    if (!canManage) return;
     const draft = descriptionDrafts[quote.id];
     if (draft === undefined || draft === (quote.quoteDescription ?? "")) return;
 
@@ -258,12 +263,14 @@ export function QuotesListPage({
           <span className="eyebrow">{t("quotes.eyebrow")}</span>
           <h1>{t(`quotes.${titleKey}`)}</h1>
         </div>
-        <Button asChild>
-          <Link to="/quotes/new">
-            <Plus />
-            {t("quotes.create")}
-          </Link>
-        </Button>
+        {canManage ? (
+          <Button asChild>
+            <Link to="/quotes/new">
+              <Plus />
+              {t("quotes.create")}
+            </Link>
+          </Button>
+        ) : null}
       </header>
 
       <article className="panel quotes-panel">
@@ -302,7 +309,7 @@ export function QuotesListPage({
                 </label>
                 <label className="quotes-status-filter">
                   <span>{t("quotes.brandFilter")}</span>
-                  <select
+                  <FilterableSelect
                     value={brandId}
                     onChange={(event) => {
                       setPage(1);
@@ -315,7 +322,7 @@ export function QuotesListPage({
                         {name}
                       </option>
                     ))}
-                  </select>
+                  </FilterableSelect>
                 </label>
               </div>
             }
@@ -432,7 +439,7 @@ export function QuotesListPage({
                       .filter(Boolean)
                       .join(" ")}
                   </div>
-                  <div>{t("quotes.customerDetails.deliveryDate")}: {quote.deliveryAt?.slice(0, 10) || ""}</div>
+                  <div>{t("quotes.customerDetails.deliveryDate")}: {hongKongDateKey(quote.deliveryAt)}</div>
                   <div>{t("quotes.customerDetails.deliveryTime")}: {quote.deliveryTime || ""}</div>
                   <div>{t("quotes.customerDetails.shipOutTime")}: {quote.shipOutTime || ""}</div>
                   <div>{t("quotes.customerDetails.quantity")}: {(quote.quantity ?? 0).toLocaleString(i18n.language)}</div>
@@ -443,6 +450,7 @@ export function QuotesListPage({
                 <td className="quote-description-cell">
                   <textarea
                     rows={3}
+                    readOnly={!canManage}
                     value={
                       descriptionDrafts[quote.id] ?? quote.quoteDescription ?? ""
                     }
@@ -482,21 +490,21 @@ export function QuotesListPage({
                 </td>
                 <td>
                   <div className="order-row-actions quote-row-actions">
-                    <Link
+                    {canManage ? <Link
                       to={`/quotes/${quote.id}/pdf`}
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label={t("quotes.actions.pdf")}
                       title={t("quotes.actions.pdf")}
-                    ><FileText /></Link>
-                    <Link to={`/quotes/${quote.id}/edit`} aria-label={t("quotes.actions.edit")} title={t("quotes.actions.edit")}><Pencil /></Link>
+                    ><FileText /></Link> : null}
+                    {canManage ? <Link to={`/quotes/${quote.id}/edit`} aria-label={t("quotes.actions.edit")} title={t("quotes.actions.edit")}><Pencil /></Link> : null}
                     <button
                       type="button"
                       aria-label={t("quotes.actions.file")}
                       title={t("quotes.actions.file")}
                       onClick={() => setFilesQuote(quote)}
                     ><Paperclip /></button>
-                    <Link to={`/quotes/new?copyFrom=${encodeURIComponent(quote.id)}`} aria-label={t("quotes.actions.copy")} title={t("quotes.actions.copy")}><Copy /></Link>
+                    {canManage ? <Link to={`/quotes/new?copyFrom=${encodeURIComponent(quote.id)}`} aria-label={t("quotes.actions.copy")} title={t("quotes.actions.copy")}><Copy /></Link> : null}
                   </div>
                 </td>
               </tr>
@@ -524,6 +532,7 @@ export function QuotesListPage({
       </article>
       <QuoteFilesSidePanel
         quote={filesQuote}
+        canUpload={canManage}
         onClose={() => setFilesQuote(null)}
       />
     </section>

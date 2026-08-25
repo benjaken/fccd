@@ -88,6 +88,7 @@ type QuoteRow = {
   }> | null;
   bubble_created_at: string | null;
   created_at: string;
+  effective_created_at: string;
   source_system: string | null;
 };
 
@@ -163,7 +164,7 @@ export async function fetchQuotes({
   let query = supabase
     .from("orders")
     .select(
-      "id,channel_id,order_number,customer_name_snapshot,company_name_snapshot,contact_number_a_snapshot,quote_description_snapshot,quote_status,grand_total,currency,delivery_at,delivery_time,ship_out_time,bubble_created_at,created_at,source_system,channels(name),shipping_methods(name,display_name),deliveries(delivery_districts!district_id(name)),order_lines(quantity,is_void)",
+      "id,channel_id,order_number,customer_name_snapshot,company_name_snapshot,contact_number_a_snapshot,quote_description_snapshot,quote_status,grand_total,currency,delivery_at,delivery_time,ship_out_time,bubble_created_at,created_at,effective_created_at,source_system,channels(name),shipping_methods(name,display_name),deliveries(delivery_districts!district_id(name)),order_lines(quantity,is_void)",
       { count: "exact" },
     )
     .eq("document_type", "quote")
@@ -208,26 +209,19 @@ export async function fetchQuotes({
         ascending: orderNumberSort === "ascending",
         nullsFirst: false,
       })
-      .order("bubble_created_at", { ascending: false, nullsFirst: false })
-      .order("created_at", { ascending: false });
+      .order("effective_created_at", { ascending: false });
   } else if (createdSort) {
-    query = query
-      .order("bubble_created_at", {
-        ascending: createdSort === "ascending",
-        nullsFirst: false,
-      })
-      .order("created_at", { ascending: createdSort === "ascending" });
+    query = query.order("effective_created_at", {
+      ascending: createdSort === "ascending",
+    });
   } else if (preset === "upcoming") {
     // Quotes due soon are driven by the delivery date so colleagues know
     // when to contact the customer.
     query = query
       .order("delivery_at", { ascending: true, nullsFirst: false })
-      .order("bubble_created_at", { ascending: false, nullsFirst: false });
+      .order("effective_created_at", { ascending: false });
   } else {
-    // Bubble Created Date (fallback to DB created_at).
-    query = query
-      .order("bubble_created_at", { ascending: false, nullsFirst: false })
-      .order("created_at", { ascending: false });
+    query = query.order("effective_created_at", { ascending: false });
   }
   query = query.range(start, end);
 
@@ -281,7 +275,7 @@ export async function fetchQuotes({
             : Number.parseFloat(String(line.quantity)) || 0),
         0,
       ),
-      createdAt: row.bubble_created_at || row.created_at,
+      createdAt: row.effective_created_at,
       sourceSystem: row.source_system,
       asanaLink: asanaById.get(row.id) ?? null,
       generatedOrderId: generatedOrderByQuoteId.get(row.id)?.id ?? null,

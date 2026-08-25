@@ -8,7 +8,7 @@ vi.mock("@/lib/supabase", () => ({
   },
 }));
 
-import { fetchBentoColumnTypes, fetchCatalogCookTypes, fetchProducts, searchCatalogProducts, sortBentoColumnTypes, sortCookTypes } from "@/lib/products";
+import { fetchBentoColumnTypes, fetchCatalogCookTypes, fetchProducts, searchCatalogProducts, searchProductIngredients, sortBentoColumnTypes, sortCookTypes } from "@/lib/products";
 
 function createQuery(result: { data: unknown; count?: number; error: unknown }) {
   const query: Record<string, unknown> = {};
@@ -97,6 +97,20 @@ describe("product SKU list filter", () => {
 
     expect(query.not).toHaveBeenCalledWith("sku", "is", null);
     expect(query.neq).toHaveBeenCalledWith("sku", "");
+  });
+
+  it("keeps packaging supplies out of the product ingredient search", async () => {
+    const query = createQuery({ data: [], error: null });
+    fromMock.mockReturnValue(query);
+
+    await searchProductIngredients("紙盒");
+
+    expect(query.or).toHaveBeenCalledWith(
+      "ingredient_type.is.null,ingredient_type.neq.包裝用品",
+    );
+    expect(query.or).toHaveBeenCalledWith(
+      "name.ilike.%紙盒%,sku.ilike.%紙盒%",
+    );
   });
 
   it("filters the catalog by staple type", async () => {

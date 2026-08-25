@@ -10,8 +10,10 @@ import {
 import { phoneText, coreMappings } from "../supabase/functions/bubble-daily-incremental/mappings.ts";
 import {
   changedOverwriteFields,
+  INVENTORY_OVERWRITE_SINCE,
   mergeOverwriteRow,
   normalizeOrderNumber,
+  overwriteSince,
 } from "../supabase/functions/bubble-daily-incremental/overwrite.ts";
 import {
   fallbackDeliveryLegacyId,
@@ -229,6 +231,23 @@ describe("bubble daily incremental helpers", () => {
     )).toEqual([]);
   });
 
+  it("treats inventory values rounded to database column scale as unchanged", () => {
+    expect(changedOverwriteFields(
+      {
+        legacy_id: "raw-1",
+        inbound_quantity_kg: 122.273139745917,
+        inbound_total_amount: 9027.915,
+        applied_seasoning_cost: 359.037679828589,
+      },
+      {
+        legacy_id: "raw-1",
+        inbound_quantity_kg: "122.273",
+        inbound_total_amount: "9027.92",
+        applied_seasoning_cost: "359.0377",
+      },
+    )).toEqual([]);
+  });
+
   it("preserves Shopify-owned identity and outstanding on a linked order", () => {
     const merged = mergeOverwriteRow(
       "a_order",
@@ -243,5 +262,33 @@ describe("bubble daily incremental helpers", () => {
     );
     expect(merged.is_shopify_order).toBe(true);
     expect(merged.outstanding).toBe(0);
+  });
+
+  it("limits inventory overwrite sources to records modified after August 10 HKT", () => {
+    expect(INVENTORY_OVERWRITE_SINCE).toBe("2026-08-09T16:00:00.000Z");
+    expect(overwriteSince("m_raw_stock")).toBe(INVENTORY_OVERWRITE_SINCE);
+    expect(overwriteSince("m_donemeat_stock")).toBe(
+      INVENTORY_OVERWRITE_SINCE,
+    );
+  });
+
+  it("overwrites only supplied raw and prepared inventory fields", () => {
+    const raw = mergeOverwriteRow(
+      "m_raw_stock",
+      { _id: "raw-1", "in_quantity(kg)": 12 },
+      { legacy_id: "raw-1", inbound_quantity_kg: 12, remarks: null },
+      { legacy_id: "raw-1", inbound_quantity_kg: 10, remarks: "keep" },
+    );
+    expect(raw.inbound_quantity_kg).toBe(12);
+    expect(raw.remarks).toBe("keep");
+
+    const prepared = mergeOverwriteRow(
+      "m_donemeat_stock",
+      { _id: "prepared-1", "out/包": 4 },
+      { legacy_id: "prepared-1", outbound_packages: 4, remarks: null },
+      { legacy_id: "prepared-1", outbound_packages: 3, remarks: "keep" },
+    );
+    expect(prepared.outbound_packages).toBe(4);
+    expect(prepared.remarks).toBe("keep");
   });
 });

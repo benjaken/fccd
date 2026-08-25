@@ -91,6 +91,41 @@ describe("Core read pages", () => {
     expect(screen.getByText("未完成付款")).toBeInTheDocument();
   });
 
+  it("shows a Shopify link beside the order number for linked orders", async () => {
+    render(
+      <MemoryRouter initialEntries={["/orders/order-1"]}>
+        <Routes>
+          <Route
+            path="/orders/:id"
+            element={
+              <OrderDetailPage
+                documentType="order"
+                canViewFinance
+                loadDetail={async () => ({
+                  ...detail,
+                  order: {
+                    ...detail.order,
+                    shopifyOrderId: 7808193593617,
+                    shopifyStoreDomain: "hklunchbox.myshopify.com",
+                  },
+                })}
+              />
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "B-1513" }))
+      .toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "在 Shopify 開啟訂單 B-1513" }),
+    ).toHaveAttribute(
+      "href",
+      "https://admin.shopify.com/store/hklunchbox/orders/7808193593617",
+    );
+  });
+
   it("does not render editable factory settings on order details", async () => {
     render(
       <MemoryRouter initialEntries={["/orders/order-1"]}>

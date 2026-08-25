@@ -15,6 +15,7 @@ import {
   isValidEmail,
   isValidPassword,
   isValidPhone,
+  sortRolePagePermissions,
   attachmentFileType,
   type AttachmentListItem,
   type RolePagePermission,
@@ -34,8 +35,7 @@ vi.mock("@/auth/use-page-access", async () => {
   );
   return {
     ...actual,
-    usePageAccess: () => ({
-      isSuperAdmin: true,
+    useCurrentPageAccess: () => ({
       loading: false,
       error: null,
       canAccess: () => true,
@@ -52,6 +52,8 @@ const userItem: UserListItem = {
   phone: "+852 9123 4567",
   role: "Super Admin",
   shopRestroLegacyId: "1706068657987x347172380334358500",
+  isDedicatedAccount: true,
+  isEmployeeLinked: true,
   createdAt: "2026-08-12T00:00:00.000Z",
   updatedAt: "2026-08-13T00:00:00.000Z",
 };
@@ -225,6 +227,8 @@ describe("Super Admin system settings", () => {
     expect(screen.getByText("Admin User")).toBeInTheDocument();
     expect(screen.getByText("admin@example.com")).toBeInTheDocument();
     expect(screen.getByText("+852 9123 4567")).toBeInTheDocument();
+    expect(screen.getByText("已連結")).toBeInTheDocument();
+    expect(screen.getByText("專用帳號")).toBeInTheDocument();
     expect(await screen.findByText("TKO 桂花小幸 將軍澳")).toBeInTheDocument();
     expect(screen.getByText("顯示 1–15，共 24 筆")).toBeInTheDocument();
     expect(
@@ -410,7 +414,7 @@ describe("Super Admin system settings", () => {
     );
   });
 
-  it("locks Super Admin grants and keeps migration reserved", async () => {
+  it("lets every role grant page permissions through the permission editor", async () => {
     const user = userEvent.setup();
     const loadPermissions = vi.fn().mockResolvedValue(permissions);
     const savePermission = vi.fn().mockResolvedValue(undefined);
@@ -428,15 +432,12 @@ describe("Super Admin system settings", () => {
       name: "使用者列表 可訪問",
     });
     expect(superAdminAccess).toBeChecked();
-    expect(superAdminAccess).toBeDisabled();
+    expect(superAdminAccess).not.toBeDisabled();
     expect(
       screen.queryByText("Super Admin 固定可訪問所有頁面。"),
     ).not.toBeInTheDocument();
 
-    await user.selectOptions(
-      screen.getByLabelText("當前查看角色"),
-      "Admin",
-    );
+    await user.click(screen.getByRole("button", { name: /^Admin/ }));
     expect(
       screen.getByRole("switch", { name: "財務對帳 可訪問" }),
     ).toBeChecked();
@@ -446,7 +447,46 @@ describe("Super Admin system settings", () => {
     expect(adminUsers).not.toBeChecked();
     // Settings pages are permission-driven (editable), not hard-locked.
     expect(adminUsers).not.toBeDisabled();
-    expect(screen.queryByText("可管理")).not.toBeInTheDocument();
+    expect(screen.getByText("可管理")).toBeInTheDocument();
+    expect(
+      screen.getByRole("switch", { name: "財務對帳 可管理" }),
+    ).not.toBeChecked();
+  });
+
+  it("configures parent management without granting child management", async () => {
+    const user = userEvent.setup();
+    const loadPermissions = vi.fn().mockResolvedValue(permissions);
+    const savePermission = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <MemoryRouter>
+        <RolePermissionsPage
+          loadPermissions={loadPermissions}
+          savePermission={savePermission}
+        />
+      </MemoryRouter>,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: /^Admin/ }),
+    );
+    await user.click(screen.getByRole("switch", { name: "訂單 可訪問" }));
+    await user.click(screen.getByRole("switch", { name: "訂單 可管理" }));
+
+    await waitFor(() => {
+      expect(savePermission).toHaveBeenCalledWith("Admin", "orders", {
+        canAccess: true,
+        canManage: true,
+      });
+      expect(savePermission).toHaveBeenCalledWith("Admin", "orders.pending", {
+        canAccess: true,
+        canManage: false,
+      });
+      expect(savePermission).toHaveBeenCalledWith("Admin", "orders.new", {
+        canAccess: true,
+        canManage: false,
+      });
+    });
   });
 
   it("selecting a parent access grant opens every child page and tab", async () => {
@@ -463,9 +503,8 @@ describe("Super Admin system settings", () => {
       </MemoryRouter>,
     );
 
-    await user.selectOptions(
-      await screen.findByLabelText("當前查看角色"),
-      "Admin",
+    await user.click(
+      await screen.findByRole("button", { name: /^Admin/ }),
     );
     await user.click(screen.getByRole("switch", { name: "訂單 可訪問" }));
 
@@ -476,11 +515,11 @@ describe("Super Admin system settings", () => {
       });
       expect(savePermission).toHaveBeenCalledWith("Admin", "orders.pending", {
         canAccess: true,
-        canManage: true,
+        canManage: false,
       });
       expect(savePermission).toHaveBeenCalledWith("Admin", "orders.new", {
         canAccess: true,
-        canManage: true,
+        canManage: false,
       });
     });
 
@@ -501,6 +540,53 @@ describe("Super Admin system settings", () => {
     expect(collectAncestorPageKeys("orders.pending", permissions)).toEqual([
       "orders",
     ]);
+  });
+
+  it("keeps permission children with their menu instead of globally interleaving them", () => {
+    const input = [
+      permission({
+        role: "Admin",
+        pageKey: "orders",
+        displayName: "Orders",
+        route: "/orders",
+        sortOrder: 20,
+      }),
+      permission({
+        role: "Admin",
+        pageKey: "reports",
+        displayName: "Reports",
+        route: "/reports",
+        sortOrder: 30,
+      }),
+      permission({
+        role: "Admin",
+        pageKey: "orders.settings",
+        parentPageKey: "orders",
+        pageKind: "subpage",
+        displayName: "Order settings",
+        route: "/orders/settings",
+        sortOrder: 100,
+      }),
+      permission({
+        role: "Admin",
+        pageKey: "orders.settings.statuses",
+        parentPageKey: "orders.settings",
+        pageKind: "subpage",
+        displayName: "Order statuses",
+        route: "/orders/settings/statuses",
+        sortOrder: 10,
+      }),
+    ];
+
+    const sorted = sortRolePagePermissions(input);
+
+    expect(sorted.map((item) => item.pageKey)).toEqual([
+      "orders",
+      "orders.settings",
+      "orders.settings.statuses",
+      "reports",
+    ]);
+    expect(sorted.map((item) => item.depth)).toEqual([0, 1, 2, 0]);
   });
 
   it("validates email, Hong Kong phone, and password formats", () => {
@@ -1165,5 +1251,71 @@ describe("Super Admin system settings", () => {
     expect(rawMeatActions).toContain("frozen.raw_meat_inventory.stock_in");
     expect(rawMeatActions).toContain("create_raw_meat_item");
     expect(rawMeatActions).toContain("create_raw_meat_stock_in");
+  });
+
+  it("adds workspace switcher entries to role page permissions", () => {
+    const migration = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260825020000_workspace_page_permissions.sql",
+      ),
+      "utf8",
+    );
+
+    expect(migration).toContain("'workspace.factory'");
+    expect(migration).toContain("'workspace.delivery'");
+    expect(migration).toContain("'workspace.customer'");
+    expect(migration).toContain("public.role_page_permissions");
+  });
+
+  it("splits standalone workspaces into sitemap-level permissions", () => {
+    const migration = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260825130000_workspace_sitemap_permissions.sql",
+      ),
+      "utf8",
+    );
+
+    for (const pageKey of [
+      "workspace.factory.board",
+      "workspace.factory.order",
+      "workspace.factory.meat_delivery_note",
+      "workspace.factory.multi_day_menu",
+      "workspace.factory.production_calendar",
+      "workspace.delivery.available",
+      "workspace.delivery.accepted",
+      "workspace.delivery.fleet",
+      "workspace.delivery.income",
+      "workspace.delivery.districts",
+      "workspace.delivery.settings",
+      "workspace.customer.portal",
+    ]) {
+      expect(migration).toContain(`'${pageKey}'`);
+    }
+    expect(migration).toContain("coalesce(parent.can_access, false)");
+    expect(migration).toContain("on conflict (role, page_key) do nothing");
+  });
+
+  it("reconciles the visible restaurant settings with role permissions", () => {
+    const migration = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260825030000_reconcile_restaurant_settings_permissions.sql",
+      ),
+      "utf8",
+    );
+
+    for (const pageKey of [
+      "restaurant.settings.payment_methods",
+      "restaurant.settings.delivery_platforms",
+      "restaurant.settings.holidays",
+      "restaurant.settings.roster_times",
+    ]) {
+      expect(migration).toContain(`'${pageKey}'`);
+      expect(migration).toContain(`'${pageKey}.edit'`);
+      expect(migration).toContain(`'${pageKey}.delete'`);
+    }
+    expect(migration).toContain("on conflict (role, page_key) do nothing");
   });
 });
