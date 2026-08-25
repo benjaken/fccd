@@ -273,8 +273,8 @@ function OperationsShell() {
       )?.to ??
     REPORT_GROUP_ROUTES.frozenMeat;
   const canViewFinance = pageAccess.canAccess("finance");
-  const canEditOrders =
-    authorizationRole === "Super Admin" || authorizationRole === "Admin";
+  const canEditOrders = pageAccess.canManage("orders");
+  const canEditQuotes = pageAccess.canManage("quotes");
   const canEditProducts = canEditProductCatalog(authorizationRole);
   const canEditDeliveries = canAssignDeliveryFleet(authorizationRole);
   const orderListConfigMap = orderListConfigByPreset(orderListConfigs);
@@ -721,7 +721,9 @@ function OperationsShell() {
               />
               <Route
                 path="/orders/new"
-                element={<OrderEditorPage />}
+                element={
+                  canEditOrders ? <OrderEditorPage /> : <SettingsAccessDenied />
+                }
               />
               <Route
                 path="/orders/:id/edit"
@@ -731,11 +733,19 @@ function OperationsShell() {
               />
               <Route
                 path="/orders/:id/receipt"
-                element={<ReceiptPdfEditorPage />}
+                element={
+                  canEditOrders ? <ReceiptPdfEditorPage /> : <SettingsAccessDenied />
+                }
               />
               <Route
                 path="/orders/:id/invoice"
-                element={<ReceiptPdfEditorPage documentKind="invoice" />}
+                element={
+                  canEditOrders ? (
+                    <ReceiptPdfEditorPage documentKind="invoice" />
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
+                }
               />
               <Route
                 path="/orders/:id"
@@ -778,11 +788,17 @@ function OperationsShell() {
                   )
                 }
               />
-              <Route path="/quotes/new" element={<QuoteEditorPage />} />
-              <Route path="/quotes/:id/edit" element={<QuoteEditorPage />} />
+              <Route
+                path="/quotes/new"
+                element={canEditQuotes ? <QuoteEditorPage /> : <SettingsAccessDenied />}
+              />
+              <Route
+                path="/quotes/:id/edit"
+                element={canEditQuotes ? <QuoteEditorPage /> : <SettingsAccessDenied />}
+              />
               <Route
                 path="/quotes/:id/pdf"
-                element={<QuotePdfEditorPage />}
+                element={canEditQuotes ? <QuotePdfEditorPage /> : <SettingsAccessDenied />}
               />
               <Route
                 path="/quotes/:id"
