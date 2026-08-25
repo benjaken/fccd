@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { ClipboardList, Plus, RefreshCw, RefreshCcw } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 
+import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DetailLink } from "@/components/ui/detail-link";
@@ -54,6 +55,7 @@ import {
 } from "@/lib/factory-board";
 import { cn } from "@/lib/utils";
 import { useMediaQuery } from "@/lib/use-media-query";
+import { hongKongDateKey } from "@/lib/date-time";
 
 type OrdersLoader = (filters: OrderListFilters) => Promise<OrderListResult>;
 type OrderListConfigLoader = typeof fetchOrderListConfigs;
@@ -595,7 +597,7 @@ export function OrdersListPage({
               <>
               <label className="orders-status-filter">
                 <span>{t("orders.statusFilter")}</span>
-                <select
+                <FilterableSelect
                   value={statusFilter.value}
                   onChange={(event) =>
                     statusFilter.setValue(
@@ -611,7 +613,7 @@ export function OrdersListPage({
                         : t("orders.allStatuses")}
                     </option>
                   ))}
-                </select>
+                </FilterableSelect>
               </label>
               <OrderListFiltersPanel
                 filters={enhancementFilters}
@@ -728,7 +730,7 @@ export function OrdersListPage({
                     <dl className="order-mobile-facts">
                       <div>
                         <dt>{t("orders.columns.delivery")}</dt>
-                        <dd>{order.deliveryAt?.slice(0, 10) || t("common.notSet")} · {order.deliveryTime || t("common.notSet")}</dd>
+                        <dd>{hongKongDateKey(order.deliveryAt) || t("common.notSet")} · {order.deliveryTime || t("common.notSet")}</dd>
                       </div>
                       <div>
                         <dt>{t("orders.columns.region")}</dt>
@@ -910,7 +912,7 @@ export function OrdersListPage({
                     ) ?? t("common.notSet")}
                   </td>
                   <td>
-                    {order.deliveryAt?.slice(0, 10) || t("common.notSet")}
+                    {hongKongDateKey(order.deliveryAt) || t("common.notSet")}
                   </td>
                   <td>
                     <div>{t("orders.deliveryDetails.shipOut")}</div>
@@ -1077,10 +1079,10 @@ export function OrdersListPage({
       >
         <label className="ingredients-field">
           <span>{t("orders.festivalAssignment.festival")}</span>
-          <select aria-label={t("orders.festivalAssignment.festival")} value={selectedFestivalId} disabled={festivalSaving} onChange={(event) => setSelectedFestivalId(event.target.value)}>
+          <FilterableSelect aria-label={t("orders.festivalAssignment.festival")} value={selectedFestivalId} disabled={festivalSaving} onChange={(event) => setSelectedFestivalId(event.target.value)}>
             <option value="">{t("orders.festivalAssignment.placeholder")}</option>
             {filterOptions.festivals.map((festival) => <option key={festival.id} value={festival.id}>{festival.name}</option>)}
-          </select>
+          </FilterableSelect>
         </label>
         {festivalError ? <p className="list-inline-error" role="alert">{t("orders.festivalAssignment.error")}</p> : null}
       </Modal>

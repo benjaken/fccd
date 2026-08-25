@@ -15,6 +15,7 @@ const SYSTEM_ROLES = [
   "Shop manager",
   "Customer_Main",
   "Customer_Sub",
+  "Company User",
 ] as const;
 
 type SystemRole = (typeof SYSTEM_ROLES)[number];
@@ -27,6 +28,7 @@ type CreatePayload = {
   phone?: string | null;
   role: SystemRole;
   shopRestroLegacyId?: string | null;
+  isDedicatedAccount?: boolean;
 };
 
 type UpdatePasswordPayload = {
@@ -42,9 +44,20 @@ type UpdateProfilePayload = {
   role: SystemRole;
   phone?: string | null;
   shopRestroLegacyId?: string | null;
+  isDedicatedAccount?: boolean;
 };
 
-type Payload = CreatePayload | UpdatePasswordPayload | UpdateProfilePayload;
+type InviteEmployeePayload = {
+  action: "inviteEmployee";
+  employeeId: string;
+  redirectTo: string;
+};
+
+type Payload =
+  | CreatePayload
+  | UpdatePasswordPayload
+  | UpdateProfilePayload
+  | InviteEmployeePayload;
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -197,6 +210,7 @@ function parsePayload(value: unknown): Payload {
         typeof body.shopRestroLegacyId === "string"
           ? body.shopRestroLegacyId.trim() || null
           : null,
+      isDedicatedAccount: body.isDedicatedAccount === true,
     };
   }
   if (body.action === "updatePassword") {
@@ -219,9 +233,38 @@ function parsePayload(value: unknown): Payload {
         typeof body.shopRestroLegacyId === "string"
           ? body.shopRestroLegacyId.trim() || null
           : null,
+      isDedicatedAccount: body.isDedicatedAccount === true,
+    };
+  }
+  if (body.action === "inviteEmployee") {
+    return {
+      action: "inviteEmployee",
+      employeeId:
+        typeof body.employeeId === "string" ? body.employeeId.trim() : "",
+      redirectTo:
+        typeof body.redirectTo === "string" ? body.redirectTo.trim() : "",
     };
   }
   throw jsonResponse({ error: "unsupported_action" }, 400);
+}
+
+function validatedResetRedirect(request: Request, value: string) {
+  const origin = request.headers.get("origin")?.trim();
+  let redirect: URL;
+  try {
+    redirect = new URL(value);
+  } catch {
+    throw jsonResponse({ error: "invalid_redirect" }, 400);
+  }
+  if (
+    !origin ||
+    redirect.origin !== origin ||
+    redirect.pathname !== "/reset-password" ||
+    !["http:", "https:"].includes(redirect.protocol)
+  ) {
+    throw jsonResponse({ error: "invalid_redirect" }, 400);
+  }
+  return redirect.toString();
 }
 
 async function createUser(admin: AdminClient, payload: CreatePayload) {
@@ -275,6 +318,7 @@ async function createUser(admin: AdminClient, payload: CreatePayload) {
       role: payload.role,
       shop_restro_legacy_id: restaurant.shopRestroLegacyId,
       shop_restro_id: restaurant.shopRestroId,
+      is_dedicated_account: payload.isDedicatedAccount ?? false,
     })
     .eq("id", data.user.id);
   if (profileError) {
@@ -291,6 +335,7 @@ async function createUser(admin: AdminClient, payload: CreatePayload) {
     phone: payload.phone,
     role: payload.role,
     shopRestroLegacyId: restaurant.shopRestroLegacyId,
+    isDedicatedAccount: payload.isDedicatedAccount ?? false,
   };
 }
 
@@ -393,6 +438,7 @@ async function updateProfile(
       phone: payload.phone ?? null,
       shop_restro_legacy_id: restaurant.shopRestroLegacyId,
       shop_restro_id: restaurant.shopRestroId,
+      is_dedicated_account: payload.isDedicatedAccount ?? false,
     })
     .eq("id", payload.userId);
   if (profileError) {
@@ -408,7 +454,116 @@ async function updateProfile(
     role: payload.role,
     phone: payload.phone ?? null,
     shopRestroLegacyId: restaurant.shopRestroLegacyId,
+    isDedicatedAccount: payload.isDedicatedAccount ?? false,
   };
+}
+
+async function inviteEmployee(
+  admin: AdminClient,
+  request: Request,
+  payload: InviteEmployeePayload,
+) {
+  if (!payload.employeeId) {
+    throw jsonResponse({ error: "invalid_employee_id" }, 400);
+  }
+  const redirectTo = validatedResetRedirect(request, payload.redirectTo);
+  const { data: employee, error: employeeError } = await admin
+    .from("company_employees")
+    .select(
+      "id,display_name,full_name,chinese_name,work_email,private_email,company_phone,private_phone,is_active,linked_user_id",
+    )
+    .eq("id", payload.employeeId)
+    .maybeSingle();
+  if (employeeError) {
+    throw jsonResponse(
+      { error: "employee_lookup_failed", detail: employeeError.message },
+      500,
+    );
+  }
+  if (!employee || !employee.is_active) {
+    throw jsonResponse({ error: "employee_not_active" }, 409);
+  }
+  if (employee.linked_user_id) {
+    throw jsonResponse({ error: "employee_already_linked" }, 409);
+  }
+
+  const email = String(employee.work_email ?? employee.private_email ?? "")
+    .trim()
+    .toLowerCase();
+  if (!isEmailValid(email)) {
+    throw jsonResponse({ error: "employee_email_missing" }, 400);
+  }
+  const userName = String(
+    employee.display_name ?? employee.chinese_name ?? employee.full_name ?? email,
+  ).trim();
+  const phone = normalizePhone(
+    String(employee.company_phone ?? employee.private_phone ?? ""),
+  );
+
+  const { data: invited, error: inviteError } =
+    await admin.auth.admin.inviteUserByEmail(email, {
+      redirectTo,
+      data: { user_name: userName, phone },
+    });
+  if (inviteError || !invited.user) {
+    const message = inviteError?.message?.toLowerCase() ?? "";
+    if (message.includes("already") || message.includes("registered")) {
+      throw jsonResponse({ error: "email_already_registered" }, 409);
+    }
+    throw jsonResponse(
+      { error: "employee_invite_failed", detail: inviteError?.message ?? null },
+      500,
+    );
+  }
+
+  const { error: authError } = await admin.auth.admin.updateUserById(
+    invited.user.id,
+    {
+      app_metadata: { role: "Company User" },
+      user_metadata: { user_name: userName, phone },
+    },
+  );
+  if (authError) {
+    throw jsonResponse(
+      { error: "employee_role_update_failed", detail: authError.message },
+      500,
+    );
+  }
+
+  const { error: profileError } = await admin
+    .from("user_profiles")
+    .update({
+      user_name: userName,
+      phone,
+      role: "Company User",
+      login_enabled: true,
+      login_disabled_at: null,
+      login_disabled_reason: null,
+    })
+    .eq("id", invited.user.id);
+  if (profileError) {
+    throw jsonResponse(
+      { error: "employee_profile_update_failed", detail: profileError.message },
+      500,
+    );
+  }
+
+  const { data: linked, error: linkError } = await admin
+    .from("company_employees")
+    .update({ linked_user_id: invited.user.id })
+    .eq("id", payload.employeeId)
+    .eq("is_active", true)
+    .is("linked_user_id", null)
+    .select("id")
+    .maybeSingle();
+  if (linkError || !linked) {
+    throw jsonResponse(
+      { error: "employee_link_failed", detail: linkError?.message ?? null },
+      409,
+    );
+  }
+
+  return { id: invited.user.id, email };
 }
 
 Deno.serve(async (request) => {
@@ -425,6 +580,8 @@ Deno.serve(async (request) => {
     const requiredPageKey =
       payload.action === "create"
         ? "settings.users.create"
+        : payload.action === "inviteEmployee"
+          ? "settings.employees"
         : payload.action === "updateProfile"
           ? "settings.users.edit"
           : "settings.users.change_password";
@@ -434,6 +591,9 @@ Deno.serve(async (request) => {
     }
     if (payload.action === "updateProfile") {
       return jsonResponse({ user: await updateProfile(admin, payload) });
+    }
+    if (payload.action === "inviteEmployee") {
+      return jsonResponse({ user: await inviteEmployee(admin, request, payload) }, 201);
     }
     return jsonResponse({ user: await updatePassword(admin, request, payload) });
   } catch (error) {

@@ -25,7 +25,7 @@ const orderResult: OrderListResult = {
       customerName: "陳小姐",
       companyName: "香港女童軍總會",
       email: "customer@example.com",
-      deliveryAt: "2026-08-12T00:00:00+08:00",
+      deliveryAt: "2026-08-11T16:00:00.000Z",
       factoryDate: "2026-08-11T16:00:00.000Z",
       shipOutTime: "11:30",
       deliveryStatus: "待取貨",

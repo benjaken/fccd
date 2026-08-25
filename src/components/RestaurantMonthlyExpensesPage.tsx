@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { PdfAutoResizeTextarea } from "@/components/PdfAutoResizeTextarea";
+import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { TableSkeletonRows } from "@/components/ui/table-skeleton";
@@ -454,7 +455,7 @@ export function RestaurantMonthlyExpensesPage({
         }}>{t("restaurantMonthlyExpenses.startInput")}</Button></>}
       >
         <div className="monthly-expenses-new-form">
-          <label><span>{t("restaurantMonthlyExpenses.restaurant")}</span><select aria-label={t("restaurantMonthlyExpenses.restaurant")} value={draftRestaurantId} onChange={(event) => setDraftRestaurantId(event.target.value)}><option value="">{t("restaurantMonthlyExpenses.restaurantPlaceholder")}</option>{masters?.restaurants.map((restaurant) => <option key={restaurant.id} value={restaurant.id}>{restaurant.name}</option>)}</select></label>
+          <label><span>{t("restaurantMonthlyExpenses.restaurant")}</span><FilterableSelect aria-label={t("restaurantMonthlyExpenses.restaurant")} value={draftRestaurantId} onChange={(event) => setDraftRestaurantId(event.target.value)}><option value="">{t("restaurantMonthlyExpenses.restaurantPlaceholder")}</option>{masters?.restaurants.map((restaurant) => <option key={restaurant.id} value={restaurant.id}>{restaurant.name}</option>)}</FilterableSelect></label>
           <label><span>{t("restaurantMonthlyExpenses.month")}</span><input aria-label={t("restaurantMonthlyExpenses.month")} type="month" value={draftMonth} onChange={(event) => setDraftMonth(event.target.value)} /></label>
           {checkingNewRecord ? <p>{t("restaurantMonthlyExpenses.checkingMonth")}</p> : newRecordExists ? <p className="is-error" role="alert">{t("restaurantMonthlyExpenses.recordExists")}</p> : newRecordCheckError ? <p className="is-error" role="alert">{t("restaurantMonthlyExpenses.checkMonthError")}</p> : null}
         </div>

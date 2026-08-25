@@ -121,6 +121,7 @@ vi.mock("@/auth/use-page-access", async (importOriginal) => {
     canAccess: () => true,
     canManage: () => true,
     canAccessSection: () => true,
+    hasPermission: () => true,
   };
   return {
     ...actual,

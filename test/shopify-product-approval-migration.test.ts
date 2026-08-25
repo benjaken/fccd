@@ -6,6 +6,10 @@ const sql = fs.readFileSync(
   path.resolve(process.cwd(), "supabase/migrations/20260825080000_shopify_product_approval_sync.sql"),
   "utf8",
 );
+const materialSql = fs.readFileSync(
+  path.resolve(process.cwd(), "supabase/migrations/20260825173000_shopify_approval_material_mappings.sql"),
+  "utf8",
+);
 
 describe("Shopify catalog approval migration", () => {
   it("creates durable webhook dedupe, sync evidence, drafts, children, and mappings", () => {
@@ -36,5 +40,16 @@ describe("Shopify catalog approval migration", () => {
     expect(sql).toContain("'0 19 * * *'");
     expect(sql).toContain("\"mode\":\"incremental\"");
     expect(sql.match(/select cron\.schedule\(/g)).toHaveLength(1);
+  });
+
+  it("adds selected ingredients and packaging atomically during approval", () => {
+    expect(materialSql).toContain("approve_shopify_pending_catalog_item_with_materials");
+    expect(materialSql).toContain("public.approve_shopify_pending_catalog_item(");
+    expect(materialSql).toContain("jsonb_to_recordset");
+    expect(materialSql).toContain("v_ingredient.ingredient_type = '包裝用品'");
+    expect(materialSql).toContain("insert into public.product_ingredients");
+    expect(materialSql).toContain("mapping.resource_type = 'product_variant'");
+    expect(materialSql).toContain("mapping.resource_type = 'package'");
+    expect(materialSql).toContain("private.has_page_access('products.shopify_pending')");
   });
 });

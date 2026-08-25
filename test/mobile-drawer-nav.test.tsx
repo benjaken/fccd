@@ -71,6 +71,7 @@ describe("buildMobileDrawerNav", () => {
       "/restaurant/daily-purchases",
     );
     expect(settings?.items.map((item) => item.key)).toEqual([
+      "employees",
       "users",
       "rolePermissions",
       "loginLogs",

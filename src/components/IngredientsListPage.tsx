@@ -10,9 +10,11 @@ import {
 } from "lucide-react";
 
 import { useCurrentPageAccess } from "@/auth/use-page-access";
+import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
+import { SearchSelect } from "@/components/ui/search-select";
 import { SidePanel } from "@/components/ui/side-panel";
 import { Switch } from "@/components/ui/switch";
 import { TablePagination } from "@/components/ui/table-pagination";
@@ -248,7 +250,7 @@ function IngredientFormPanel({
         </label>
         <label className="ingredients-field">
           <span>{t("ingredients.fields.ingredientType")}</span>
-          <select
+          <FilterableSelect
             value={ingredientType}
             onChange={(event) => setIngredientType(event.target.value)}
           >
@@ -258,7 +260,7 @@ function IngredientFormPanel({
                 {type.label}
               </option>
             ))}
-          </select>
+          </FilterableSelect>
         </label>
         <div className="ingredients-field-row">
           <label className="ingredients-field">
@@ -278,20 +280,22 @@ function IngredientFormPanel({
             />
           </label>
         </div>
-        <label className="ingredients-field">
+        <div className="ingredients-field">
           <span>{t("ingredients.fields.supplier")}</span>
-          <select
+          <SearchSelect
+            id="ingredient-supplier"
+            label={t("ingredients.fields.supplier")}
             value={supplierId}
-            onChange={(event) => setSupplierId(event.target.value)}
-          >
-            <option value="">{t("ingredients.fields.noSupplier")}</option>
-            {supplierOptions.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.name}
-              </option>
-            ))}
-          </select>
-        </label>
+            options={[
+              { id: "", name: t("ingredients.fields.noSupplier") },
+              ...supplierOptions,
+            ]}
+            placeholder={t("ingredients.fields.supplierPlaceholder")}
+            searchPlaceholder={t("ingredients.fields.supplierSearchPlaceholder")}
+            emptyLabel={t("ingredients.fields.supplierEmpty")}
+            onChange={(option) => setSupplierId(option.id)}
+          />
+        </div>
         <div className="ingredients-field-row">
           <label className="ingredients-field">
             <span>{t("ingredients.fields.productQuantity")}</span>

@@ -43,6 +43,7 @@ import {
   usePageAccess,
 } from "@/auth/use-page-access";
 import { LoginPage } from "@/components/LoginPage";
+import { ResetPasswordPage } from "@/components/ResetPasswordPage";
 import { NotificationCenter } from "@/components/NotificationCenter";
 import { FOOD_CHANNEL_CATERING_LOGO_PATH } from "@/lib/brand-logo";
 import { MigrationWorkspace } from "@/components/MigrationWorkspace";
@@ -65,6 +66,7 @@ import { ProductsListPage } from "@/components/ProductsListPage";
 import { ProductDetailPage } from "@/components/ProductDetailPage";
 import { PackagesListPage } from "@/components/PackagesListPage";
 import { PackageDetailPage } from "@/components/PackageDetailPage";
+import { CatalogCreatePage } from "@/components/CatalogCreatePage";
 import { ShopifyPendingProductsPage } from "@/components/ShopifyPendingProductsPage";
 import { ShopifyPendingProductDetailPage } from "@/components/ShopifyPendingProductDetailPage";
 import { PreparedMeatInventoryCalcPage } from "@/components/PreparedMeatInventoryCalcPage";
@@ -118,6 +120,7 @@ import { PackingStocktakesPage } from "@/components/PackingStocktakesPage";
 import { OrderStatusesPage } from "@/components/OrderStatusesPage";
 import { SalesPartnersPage } from "@/components/SalesPartnersPage";
 import { AttachmentsListPage } from "@/components/settings/AttachmentsListPage";
+import { CompanyEmployeesPage } from "@/components/settings/CompanyEmployeesPage";
 import { DictionariesPage } from "@/components/settings/DictionariesPage";
 import { DeliveryDistrictsPage } from "@/components/settings/DeliveryDistrictsPage";
 import { LoginLogsListPage } from "@/components/settings/LoginLogsListPage";
@@ -149,6 +152,7 @@ import { cn } from "@/lib/utils";
 import {
   type Icon,
   type NavItem,
+  accessiblePrimaryNavigationPath,
   buildMobileDrawerNav,
   firstAccessibleNavigationPath,
   isNavItemVisible,
@@ -234,6 +238,7 @@ function OperationsShell() {
   const [orderListConfigs, setOrderListConfigs] = useState<
     OrderListConfigRow[] | null
   >(null);
+  const [recoveringInitialPath, setRecoveringInitialPath] = useState(true);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   const section = sectionFromPath(location.pathname);
@@ -242,7 +247,10 @@ function OperationsShell() {
   const currentPageKey = pageAccessKey(location.pathname);
   const visiblePrimaryNav = primaryNav.filter((item) => {
     const key = item.permissionKey ?? item.key;
-    return pageAccess.canAccessSection(key, SECTION_CHILD_KEYS[key] ?? []);
+    return (
+      pageAccess.canAccessSection(key, SECTION_CHILD_KEYS[key] ?? []) &&
+      accessiblePrimaryNavigationPath(item, pageAccess.canAccess) !== null
+    );
   });
   const visibleWorkspaceLinks = workspaceLinks.filter((item) =>
     pageAccess.canAccess(item.permissionKey),
@@ -311,6 +319,10 @@ function OperationsShell() {
     setMobileMenuOpen(false);
     setUserMenuOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (!pageAccess.loading) setRecoveringInitialPath(false);
+  }, [pageAccess.loading]);
 
   useEffect(() => {
     if (!userMenuOpen) return;
@@ -464,7 +476,12 @@ function OperationsShell() {
       <div className="workspace-bar">
         <div className="nav-row-spacer" aria-hidden="true" />
         <nav className="primary-nav lowered-nav" aria-label="Primary">
-          {visiblePrimaryNav.map(({ key, to, icon: NavIcon }) => (
+          {visiblePrimaryNav.map((item) => {
+            const { key, icon: NavIcon } = item;
+            const to =
+              accessiblePrimaryNavigationPath(item, pageAccess.canAccess) ??
+              item.to;
+            return (
             <NavLink
               key={key}
               to={to}
@@ -479,7 +496,8 @@ function OperationsShell() {
               <NavIcon />
               <span>{t(`navigation.${key}`)}</span>
             </NavLink>
-          ))}
+            );
+          })}
         </nav>
         <CurrentDateTime />
       </div>
@@ -576,8 +594,8 @@ function OperationsShell() {
           <div className="page-transition" key={pageKey}>
             {pageAccess.loading ? (
               <PageSkeleton label={t("settings.loadingPermissions")} />
-            ) : location.pathname === "/" &&
-              !pageAccess.canAccess("overview") &&
+            ) : recoveringInitialPath &&
+              !pageAccess.canAccess(currentPageKey) &&
               firstAccessiblePath ? (
               <Navigate to={firstAccessiblePath} replace />
             ) : !pageAccess.canAccess(currentPageKey) ? (
@@ -838,22 +856,26 @@ function OperationsShell() {
                 path="/quotes/:id"
                 element={<QuoteEditorPage combined readOnly />}
               />
-              <Route path="/products" element={<ProductsListPage canEdit={canEditProducts} />} />
+              <Route path="/products" element={<ProductsListPage canEdit={canEditProducts} canCreatePackage={canEditPackages} />} />
               <Route
                 path="/products/catering"
-                element={<ProductsListPage preset="catering" canEdit={canEditProducts} />}
+                element={<ProductsListPage preset="catering" canEdit={canEditProducts} canCreatePackage={canEditPackages} />}
               />
               <Route
                 path="/products/lunchbox"
-                element={<ProductsListPage preset="lunchbox" canEdit={canEditProducts} />}
+                element={<ProductsListPage preset="lunchbox" canEdit={canEditProducts} canCreatePackage={canEditPackages} />}
               />
               <Route
                 path="/products/ala-carte"
-                element={<ProductsListPage preset="ala-carte" canEdit={canEditProducts} />}
+                element={<ProductsListPage preset="ala-carte" canEdit={canEditProducts} canCreatePackage={canEditPackages} />}
               />
               <Route
                 path="/products/packages"
                 element={<PackagesListPage canEdit={canEditPackages} />}
+              />
+              <Route
+                path="/products/packages/new"
+                element={<CatalogCreatePage kind="package" canCreate={canEditPackages} />}
               />
               <Route
                 path="/products/packages/:id/edit"
@@ -870,6 +892,10 @@ function OperationsShell() {
               <Route
                 path="/products/shopify-pending/:id"
                 element={<ShopifyPendingProductDetailPage canManage={canManageShopifyCatalog} />}
+              />
+              <Route
+                path="/products/new"
+                element={<CatalogCreatePage kind="product" canCreate={canEditProducts} />}
               />
               <Route
                 path="/products/:id/edit"
@@ -1179,6 +1205,16 @@ function OperationsShell() {
               <Route
                 path="/settings"
                 element={<Navigate to={firstSettingsPath} replace />}
+              />
+              <Route
+                path="/settings/employees"
+                element={
+                  pageAccess.canAccess("settings.employees") ? (
+                    <CompanyEmployeesPage />
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
+                }
               />
               <Route
                 path="/settings/users"
@@ -1977,10 +2013,12 @@ function WorkspaceStandalonePage({
 
 function ProtectedWorkspace({
   permissionKey,
+  fallbackPermissionKey,
   allowAnonymous = false,
   children,
 }: {
   permissionKey: string;
+  fallbackPermissionKey?: string;
   allowAnonymous?: boolean;
   children: ReactNode;
 }) {
@@ -1997,7 +2035,11 @@ function ProtectedWorkspace({
   }
 
   if (pageAccess.loading) return <AuthLoadingScreen />;
-  if (!pageAccess.canAccess(permissionKey)) {
+  const effectivePermissionKey =
+    fallbackPermissionKey && !pageAccess.hasPermission(permissionKey)
+      ? fallbackPermissionKey
+      : permissionKey;
+  if (!pageAccess.canAccess(effectivePermissionKey)) {
     return (
       <main className="workspace-standalone">
         <SettingsAccessDenied />
@@ -2010,7 +2052,10 @@ function ProtectedWorkspace({
 
 function FactoryWorkspace() {
   return (
-    <ProtectedWorkspace permissionKey="workspace.factory">
+    <ProtectedWorkspace
+      permissionKey="workspace.factory.board"
+      fallbackPermissionKey="workspace.factory"
+    >
       <FactoryBoardPage />
     </ProtectedWorkspace>
   );
@@ -2018,7 +2063,10 @@ function FactoryWorkspace() {
 
 function FactoryOrderWorkspace() {
   return (
-    <ProtectedWorkspace permissionKey="workspace.factory">
+    <ProtectedWorkspace
+      permissionKey="workspace.factory.order"
+      fallbackPermissionKey="workspace.factory"
+    >
       <FactoryOrderPage />
     </ProtectedWorkspace>
   );
@@ -2026,7 +2074,10 @@ function FactoryOrderWorkspace() {
 
 function FactoryMeatDeliveryNoteWorkspace() {
   return (
-    <ProtectedWorkspace permissionKey="workspace.factory">
+    <ProtectedWorkspace
+      permissionKey="workspace.factory.meat_delivery_note"
+      fallbackPermissionKey="workspace.factory"
+    >
       <FactoryMeatDeliveryNotePage />
     </ProtectedWorkspace>
   );
@@ -2034,7 +2085,10 @@ function FactoryMeatDeliveryNoteWorkspace() {
 
 function FactoryMultiDayWorkspace() {
   return (
-    <ProtectedWorkspace permissionKey="workspace.factory">
+    <ProtectedWorkspace
+      permissionKey="workspace.factory.multi_day_menu"
+      fallbackPermissionKey="workspace.factory"
+    >
       <FactoryMultiDayReportPage />
     </ProtectedWorkspace>
   );
@@ -2042,15 +2096,23 @@ function FactoryMultiDayWorkspace() {
 
 function FactoryProductionCalendarWorkspace() {
   return (
-    <ProtectedWorkspace permissionKey="workspace.factory">
+    <ProtectedWorkspace
+      permissionKey="workspace.factory.production_calendar"
+      fallbackPermissionKey="workspace.factory"
+    >
       <FactoryProductionCalendarPage />
     </ProtectedWorkspace>
   );
 }
 
 function DriverDeliveryWorkspace() {
+  const location = useLocation();
   return (
-    <ProtectedWorkspace permissionKey="workspace.delivery" allowAnonymous>
+    <ProtectedWorkspace
+      permissionKey={pageAccessKey(location.pathname)}
+      fallbackPermissionKey="workspace.delivery"
+      allowAnonymous
+    >
       <DriverDeliveryPage />
     </ProtectedWorkspace>
   );
@@ -2058,7 +2120,10 @@ function DriverDeliveryWorkspace() {
 
 function CustomerWorkspace() {
   return (
-    <ProtectedWorkspace permissionKey="workspace.customer">
+    <ProtectedWorkspace
+      permissionKey="workspace.customer.portal"
+      fallbackPermissionKey="workspace.customer"
+    >
       <WorkspaceStandalonePage workspaceKey="customer" icon={Users} />
     </ProtectedWorkspace>
   );
@@ -2077,6 +2142,14 @@ function AuthGate() {
 function App() {
   return (
     <Routes>
+      <Route
+        path="/reset-password"
+        element={
+          <AuthProvider>
+            <ResetPasswordPage />
+          </AuthProvider>
+        }
+      />
       <Route
         path="/factory/multi-day-menu"
         element={

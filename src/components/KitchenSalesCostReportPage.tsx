@@ -14,6 +14,7 @@ import {
   defaultKitchenSalesCostYears,
   fetchKitchenSalesCostReport,
   kitchenSalesCostCategories,
+  kitchenSalesCostDetailYears,
   kitchenSalesCostYears,
   KITCHEN_SALES_CATEGORY,
   type KitchenSalesCostReport,
@@ -617,7 +618,8 @@ export function KitchenSalesCostReportPage() {
   }, [report, years]);
 
   const summaries = useMemo(
-    () => selectedYears.map((year) => buildKitchenSalesCostYearSummary(report?.rows ?? [], year, categories)),
+    () => kitchenSalesCostDetailYears(selectedYears).map((year) =>
+      buildKitchenSalesCostYearSummary(report?.rows ?? [], year, categories)),
     [categories, report, selectedYears],
   );
   const aiSnapshot = useMemo(

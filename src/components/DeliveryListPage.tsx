@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Download, Image as ImageIcon, Printer, RefreshCw, Truck } from "lucide-react";
 
+import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { DetailLink } from "@/components/ui/detail-link";
@@ -564,7 +565,7 @@ export function DeliveryListPage({
                 />
                 <label className="orders-status-filter">
                   <span>{t("deliveryList.driverFilter")}</span>
-                  <select
+                  <FilterableSelect
                     value={motorcadeFilter.value}
                     onChange={(event) =>
                       motorcadeFilter.setValue(event.target.value)
@@ -577,11 +578,11 @@ export function DeliveryListPage({
                         {team.name}
                       </option>
                     ))}
-                  </select>
+                  </FilterableSelect>
                 </label>
                 <label className="orders-status-filter">
                   <span>{t("deliveryList.shippingMethodFilter")}</span>
-                  <select
+                  <FilterableSelect
                     value={shippingMethodFilter.value}
                     onChange={(event) =>
                       shippingMethodFilter.setValue(event.target.value)
@@ -596,7 +597,7 @@ export function DeliveryListPage({
                         {method.name}
                       </option>
                     ))}
-                  </select>
+                  </FilterableSelect>
                 </label>
               </div>
             }

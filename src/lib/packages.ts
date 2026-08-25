@@ -72,6 +72,16 @@ export type PackageDetail = {
   ungroupedProducts: PackageMember[];
 };
 
+export type PackageCreateInput = {
+  sku: string;
+  name: string;
+  chineseName: string;
+  description: string;
+  price: number;
+  status: string;
+  channelId: string;
+};
+
 type RelatedRecord = { id: string; name: string };
 
 type PackageListRow = {
@@ -374,6 +384,26 @@ export async function archivePackage(id: string) {
     .eq("id", id)
     .is("archived_at", null);
   if (error) throw error;
+}
+
+export async function createPackage(input: PackageCreateInput): Promise<string> {
+  const { data, error } = await supabase
+    .from("packages")
+    .insert({
+      legacy_id: createLegacyId(),
+      sku: input.sku.trim(),
+      name: input.name.trim(),
+      chinese_name: input.chineseName.trim() || null,
+      description: input.description.trim() || null,
+      price: input.price,
+      status: input.status,
+      is_active: input.status !== "Inactive",
+      channel_id: input.channelId,
+    })
+    .select("id")
+    .single();
+  if (error) throw error;
+  return data.id as string;
 }
 
 export async function addPackageChoiceSet(

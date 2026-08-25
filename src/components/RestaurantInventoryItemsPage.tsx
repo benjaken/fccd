@@ -2,8 +2,10 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useCurrentPageAccess } from "@/auth/use-page-access";
+import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
 import { RestaurantSettingsListTable } from "@/components/ui/restaurant-settings-list-table";
+import { SearchSelect } from "@/components/ui/search-select";
 import { SidePanel } from "@/components/ui/side-panel";
 import { Switch } from "@/components/ui/switch";
 import { fetchSupplierOptions } from "@/lib/ingredients";
@@ -313,22 +315,25 @@ export function RestaurantInventoryItemsPage() {
           className="ingredients-form"
           onSubmit={(event) => void submit(event)}
         >
-          <label className="ingredients-field">
+          <div className="ingredients-field">
             <span>{t("restaurantInventoryItems.fields.supplier")}</span>
-            <select
+            <SearchSelect
+              id="restaurant-inventory-item-supplier"
+              label={t("restaurantInventoryItems.fields.supplier")}
               value={supplierId}
-              onChange={(event) => setSupplierId(event.target.value)}
-            >
-              <option value="">
-                {t("restaurantInventoryItems.fields.supplierPlaceholder")}
-              </option>
-              {suppliers.map((supplier) => (
-                <option key={supplier.id} value={supplier.id}>
-                  {supplier.name}
-                </option>
-              ))}
-            </select>
-          </label>
+              options={[
+                {
+                  id: "",
+                  name: t("restaurantInventoryItems.fields.supplierPlaceholder"),
+                },
+                ...suppliers,
+              ]}
+              placeholder={t("restaurantInventoryItems.fields.supplierPlaceholder")}
+              searchPlaceholder={t("restaurantInventoryItems.fields.supplierSearchPlaceholder")}
+              emptyLabel={t("restaurantInventoryItems.fields.supplierEmpty")}
+              onChange={(option) => setSupplierId(option.id)}
+            />
+          </div>
           <label className="ingredients-field">
             <span>{t("restaurantInventoryItems.fields.name")}</span>
             <input
@@ -361,7 +366,7 @@ export function RestaurantInventoryItemsPage() {
           </label>
           <label className="ingredients-field">
             <span>{t("restaurantInventoryItems.fields.department")}</span>
-            <select
+            <FilterableSelect
               value={department}
               onChange={(event) => setDepartment(event.target.value)}
             >
@@ -371,7 +376,7 @@ export function RestaurantInventoryItemsPage() {
               {departments.map((option) => (
                 <option key={option.value} value={option.value}>{option.label}</option>
               ))}
-            </select>
+            </FilterableSelect>
           </label>
           <label className="ingredients-field">
             <span>{t("restaurantInventoryItems.fields.status")}</span>

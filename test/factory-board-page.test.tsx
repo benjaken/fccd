@@ -915,18 +915,24 @@ describe("FactoryBoardPage", () => {
       2,
       expect.objectContaining({ labelName: "飯盒餐具包", copies: 1 }),
     );
+    expect(printLabels).toHaveBeenCalledTimes(1);
+    expect(printLabels).toHaveBeenLastCalledWith(
+      "Zebra ZD421",
+      "VEVTUFRFU1A=",
+      1,
+    );
 
     await user.click(screen.getByRole("button", { name: "印地址" }));
     await waitFor(() => expect(loadLabelCommand).toHaveBeenCalledTimes(3));
     expect(loadLabelCommand).toHaveBeenLastCalledWith({
       kind: "address",
       orderNumber: "B-1522",
-      address: "大埔汀角道船灣香港青年協會大美督戶外活動中心",
-      arrivalWindow: "10:30 - 11:00",
+      deliveryDate: "2026-08-18",
+      district: "大尾督",
       customerName: "Eric Yim",
       customerPhone: "66817198",
     });
-    expect(printLabels).toHaveBeenCalledTimes(3);
+    expect(printLabels).toHaveBeenCalledTimes(2);
   });
 
   it("opens the hidden dispatch-time editor and saves the time to the order", async () => {

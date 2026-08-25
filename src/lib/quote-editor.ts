@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { hongKongDateKey } from "@/lib/date-time";
 
 export type QuoteEditorOption = {
   id: string;
@@ -86,6 +87,9 @@ export type QuoteCatalogItem = {
   sku: string | null;
   name: string;
   price: number | null;
+  labelId?: string | null;
+  labelDisplayA?: string | null;
+  labelDisplayB?: string | null;
 };
 
 export type QuotePackageChoiceSelection = {
@@ -112,6 +116,10 @@ export type QuoteLine = {
   unitPrice: number;
   totalPrice: number;
   remarks: string | null;
+  labelId?: string | null;
+  labelDisplayA?: string | null;
+  labelDisplayB?: string | null;
+  labelEdited?: boolean;
   packageChoiceGroups?: QuotePackageChoiceGroup[];
   isPending?: boolean;
   pendingItem?: QuoteCatalogItem;
@@ -324,7 +332,7 @@ export async function fetchQuoteEditorSummary(
       : primaryDelivery?.district_id || data.delivery_district_id || "",
     districtName: "",
     shippingMethodId: data.shipping_method_id || "",
-    deliveryDate: data.delivery_at ? String(data.delivery_at).slice(0, 10) : "",
+    deliveryDate: hongKongDateKey(data.delivery_at),
     deliveryTime: data.delivery_time || "",
     shipOutTime: data.ship_out_time || "",
     customerNote: data.customer_note_snapshot || "",
@@ -579,7 +587,7 @@ export async function searchQuoteCatalog(
   const filter = `name.ilike.%${term}%,chinese_name.ilike.%${term}%,sku.ilike.%${term}%`;
   let products = supabase
     .from("products")
-    .select("id,sku,name,chinese_name,price")
+    .select("id,sku,name,chinese_name,price,product_labels(id,display_name,quantity_label,created_at)")
     .eq("is_active", true)
     .is("archived_at", null)
     .or(filter)
@@ -600,15 +608,25 @@ export async function searchQuoteCatalog(
   if (packageResult.error) throw packageResult.error;
 
   const mapRow = (
-    row: { id: string; sku: string | null; name: string; chinese_name: string | null; price: number | string | null },
+    row: { id: string; sku: string | null; name: string; chinese_name: string | null; price: number | string | null; product_labels?: Array<{ id: string; display_name: string | null; quantity_label: string | null; created_at: string }> },
     kind: QuoteCatalogItem["kind"],
-  ): QuoteCatalogItem => ({
-    id: row.id,
-    kind,
-    sku: row.sku,
-    name: row.chinese_name || row.name,
-    price: row.price === null ? null : toNumber(row.price),
-  });
+  ): QuoteCatalogItem => {
+    const sortedLabels = kind === "product"
+      ? [...(row.product_labels ?? [])].sort((a, b) => a.created_at.localeCompare(b.created_at))
+      : [];
+    const label = sortedLabels.find((item) => item.display_name?.trim() || item.quantity_label?.trim())
+      ?? sortedLabels[0];
+    return {
+      id: row.id,
+      kind,
+      sku: row.sku,
+      name: row.chinese_name || row.name,
+      price: row.price === null ? null : toNumber(row.price),
+      labelId: label?.id ?? null,
+      labelDisplayA: label?.display_name ?? null,
+      labelDisplayB: label?.quantity_label ?? null,
+    };
+  };
   return [
     ...((productResult.data ?? []) as Parameters<typeof mapRow>[0][]).map((row) => mapRow(row, "product")),
     ...((packageResult.data ?? []) as Parameters<typeof mapRow>[0][]).map((row) => mapRow(row, "package")),
@@ -620,7 +638,7 @@ export async function fetchQuoteLines(orderId: string): Promise<QuoteLine[]> {
   const [lineResult, choiceResult] = await Promise.all([
     supabase
       .from("order_lines")
-      .select("id,product_id,package_id,sku_snapshot,product_name_snapshot,content_snapshot,quantity,unit_price,total_price,remarks_1")
+      .select("id,product_id,package_id,sku_snapshot,product_name_snapshot,content_snapshot,quantity,unit_price,total_price,remarks_1,temporary_label_display_name,temporary_label_quantity_label,products(product_labels(id,display_name,quantity_label,created_at))")
       .eq("order_id", resolvedOrderId)
       .eq("is_void", false)
       .order("item_order", { ascending: true, nullsFirst: false })
@@ -671,18 +689,30 @@ export async function fetchQuoteLines(orderId: string): Promise<QuoteLine[]> {
     choiceGroupsByLine.set(snapshot.order_line_id, groups);
   }
 
-  return (lineResult.data ?? []).map((row) => ({
-    id: row.id,
-    productId: row.product_id,
-    packageId: row.package_id,
-    sku: row.sku_snapshot,
-    name: row.product_name_snapshot || row.content_snapshot,
-    quantity: toNumber(row.quantity),
-    unitPrice: toNumber(row.unit_price),
-    totalPrice: quoteLineTotal(row.quantity, row.unit_price, row.total_price),
-    remarks: row.remarks_1,
-    packageChoiceGroups: choiceGroupsByLine.get(row.id) ?? [],
-  }));
+  return (lineResult.data ?? []).map((row) => {
+    type LabelRow = { id: string; display_name: string | null; quantity_label: string | null; created_at: string };
+    const product = Array.isArray(row.products) ? row.products[0] : row.products;
+    const labels = ((product as { product_labels?: LabelRow[] } | null)?.product_labels ?? [])
+      .slice()
+      .sort((a, b) => a.created_at.localeCompare(b.created_at));
+    const label = labels.find((item) => item.display_name?.trim() || item.quantity_label?.trim())
+      ?? labels[0];
+    return {
+      id: row.id,
+      productId: row.product_id,
+      packageId: row.package_id,
+      sku: row.sku_snapshot,
+      name: row.product_name_snapshot || row.content_snapshot,
+      quantity: toNumber(row.quantity),
+      unitPrice: toNumber(row.unit_price),
+      totalPrice: quoteLineTotal(row.quantity, row.unit_price, row.total_price),
+      remarks: row.remarks_1,
+      labelId: label?.id ?? null,
+      labelDisplayA: label?.display_name ?? row.temporary_label_display_name ?? null,
+      labelDisplayB: label?.quantity_label ?? row.temporary_label_quantity_label ?? null,
+      packageChoiceGroups: choiceGroupsByLine.get(row.id) ?? [],
+    };
+  });
 }
 
 export async function addQuoteLine(input: {
@@ -692,9 +722,9 @@ export async function addQuoteLine(input: {
   unitPrice: number;
   remarks: string;
   packageChoices?: QuotePackageChoiceSelection[];
-}) {
+}): Promise<string> {
   if (input.item.kind === "custom") {
-    const { error } = await supabase.rpc("add_custom_quote_line", {
+    const { data, error } = await supabase.rpc("add_custom_quote_line", {
       p_order_id: input.orderId,
       p_name: input.item.name,
       p_quantity: input.quantity,
@@ -702,9 +732,9 @@ export async function addQuoteLine(input: {
       p_remarks: optional(input.remarks),
     });
     if (error) throw error;
-    return;
+    return data as string;
   }
-  const { error } = await supabase.rpc("add_quote_line", {
+  const { data, error } = await supabase.rpc("add_quote_line", {
     p_order_id: input.orderId,
     p_item_kind: input.item.kind,
     p_item_id: input.item.id,
@@ -713,6 +743,45 @@ export async function addQuoteLine(input: {
     p_remarks: optional(input.remarks),
     p_package_choices: input.packageChoices ?? [],
   });
+  if (error) throw error;
+  return data as string;
+}
+
+export async function updateQuoteLineLabel(line: QuoteLine): Promise<void> {
+  const displayA = optional(line.labelDisplayA || "");
+  const displayB = optional(line.labelDisplayB || "");
+  let labelId = line.labelId ?? null;
+
+  // Resolve the link again at save time. This also covers products inserted by
+  // pickers whose compact catalog payload did not include label metadata.
+  if (!labelId && line.productId) {
+    const { data, error } = await supabase
+      .from("product_labels")
+      .select("id,display_name,quantity_label")
+      .eq("product_id", line.productId)
+      .order("created_at")
+      .limit(20);
+    if (error) throw error;
+    const labels = (data ?? []) as Array<{ id: string; display_name: string | null; quantity_label: string | null }>;
+    labelId = (labels.find((item) => item.display_name?.trim() || item.quantity_label?.trim()) ?? labels[0])?.id ?? null;
+  }
+
+  if (labelId) {
+    const { error } = await supabase
+      .from("product_labels")
+      .update({ display_name: displayA, quantity_label: displayB })
+      .eq("id", labelId);
+    if (error) throw error;
+    return;
+  }
+
+  const { error } = await supabase
+    .from("order_lines")
+    .update({
+      temporary_label_display_name: displayA,
+      temporary_label_quantity_label: displayB,
+    })
+    .eq("id", line.id);
   if (error) throw error;
 }
 

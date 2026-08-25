@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Plus, RefreshCw, Trash2 } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 
+import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
 import { ListTable } from "@/components/ui/list-table";
 import { SidePanel } from "@/components/ui/side-panel";
@@ -152,10 +153,10 @@ function AddMonthlyNonFestivalCostPanel({
       >
         <label className="ingredients-field">
           <span>類型</span>
-          <select value={costTypeId} disabled={loadingTypes} onChange={(event) => setCostTypeId(event.target.value)}>
+          <FilterableSelect value={costTypeId} disabled={loadingTypes} onChange={(event) => setCostTypeId(event.target.value)}>
             <option value="">{loadingTypes ? "正在載入費用…" : "選擇費用"}</option>
             {costTypes.map((type) => <option key={type.id} value={type.id}>{type.name}</option>)}
-          </select>
+          </FilterableSelect>
         </label>
         <label className="ingredients-field">
           <span>月份</span>

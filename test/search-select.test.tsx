@@ -22,6 +22,9 @@ describe("SearchSelect", () => {
     );
 
     fireEvent.click(screen.getByRole("combobox", { name: "供應商" }));
+    const menu = screen.getByRole("searchbox", { name: "搜尋供應商名稱或編號" }).closest(".multi-select-menu");
+    expect(menu).toHaveClass("multi-select-menu-portal");
+    expect(menu).toHaveStyle({ position: "fixed" });
     fireEvent.change(screen.getByRole("searchbox", { name: "搜尋供應商名稱或編號" }), {
       target: { value: "泰豐" },
     });

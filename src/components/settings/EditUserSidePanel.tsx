@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { RestaurantSelect } from "@/components/settings/RestaurantSelect";
 import { SettingsSidePanel } from "@/components/settings/SettingsSidePanel";
 import {
@@ -33,6 +34,7 @@ export function EditUserSidePanel({
   const [role, setRole] = useState<SystemRole>("Admin");
   const [phone, setPhone] = useState("");
   const [shopRestroLegacyId, setShopRestroLegacyId] = useState("");
+  const [isDedicatedAccount, setIsDedicatedAccount] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -47,6 +49,7 @@ export function EditUserSidePanel({
     );
     setPhone(user.phone ?? "");
     setShopRestroLegacyId(user.shopRestroLegacyId ?? "");
+    setIsDedicatedAccount(user.isDedicatedAccount);
     setError(null);
     setFieldErrors({});
   }, [open, user]);
@@ -79,6 +82,7 @@ export function EditUserSidePanel({
         role,
         phone: phone.trim(),
         shopRestroLegacyId: shopRestroLegacyId.trim(),
+        isDedicatedAccount,
       });
       onUpdated?.();
       onClose();
@@ -157,6 +161,17 @@ export function EditUserSidePanel({
           loadRestaurants={loadRestaurants}
           disabled={submitting}
         />
+        <div className="settings-side-switch-row">
+          <div>
+            <strong>{t("settings.users.fields.dedicatedAccount")}</strong>
+            <span>{t("settings.users.fields.dedicatedAccountHint")}</span>
+          </div>
+          <Switch
+            checked={isDedicatedAccount}
+            onCheckedChange={setIsDedicatedAccount}
+            aria-label={t("settings.users.fields.dedicatedAccount")}
+          />
+        </div>
         {error ? (
           <div className="settings-side-form-error" role="alert">
             {t(`settings.users.errors.${error}`, {

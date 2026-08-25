@@ -3,10 +3,12 @@ import { Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { useCurrentPageAccess } from "@/auth/use-page-access";
+import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { ListTable } from "@/components/ui/list-table";
 import { MultiSelect } from "@/components/ui/multi-select";
+import { SearchSelect } from "@/components/ui/search-select";
 import { SidePanel } from "@/components/ui/side-panel";
 import { TablePagination } from "@/components/ui/table-pagination";
 import {
@@ -156,19 +158,29 @@ function PurchaseRecordPanel({
           <span>{t("restaurantDailyPurchases.date")}</span>
           <input aria-label={t("restaurantDailyPurchases.date")} type="date" value={date} onChange={(event) => { setDate(event.target.value); setError(null); }} />
         </label>
-        <label className="ingredients-field">
+        <div className="ingredients-field">
           <span>{t("restaurantDailyPurchases.supplier")}</span>
-          <select aria-label={t("restaurantDailyPurchases.supplier")} value={supplierId} disabled={loadingOptions} onChange={(event) => { setSupplierId(event.target.value); setError(null); }}>
-            <option value="">{t("restaurantDailyPurchases.supplierPlaceholder")}</option>
-            {suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}
-          </select>
-        </label>
+          <SearchSelect
+            id="restaurant-daily-purchase-supplier"
+            label={t("restaurantDailyPurchases.supplier")}
+            options={[
+              { id: "", name: t("restaurantDailyPurchases.supplierPlaceholder") },
+              ...suppliers,
+            ]}
+            value={supplierId}
+            placeholder={t("restaurantDailyPurchases.supplierPlaceholder")}
+            searchPlaceholder={t("restaurantDailyPurchases.supplierSearchPlaceholder")}
+            emptyLabel={t("restaurantDailyPurchases.supplierEmpty")}
+            disabled={loadingOptions}
+            onChange={(option) => { setSupplierId(option.id); setError(null); }}
+          />
+        </div>
         <label className="ingredients-field">
           <span>{t("restaurantDailyPurchases.restaurant")}</span>
-          <select aria-label={t("restaurantDailyPurchases.restaurant")} value={restaurantId} disabled={loadingOptions} onChange={(event) => { setRestaurantId(event.target.value); setError(null); }}>
+          <FilterableSelect aria-label={t("restaurantDailyPurchases.restaurant")} value={restaurantId} disabled={loadingOptions} onChange={(event) => { setRestaurantId(event.target.value); setError(null); }}>
             <option value="">{t("restaurantDailyPurchases.restaurantPlaceholder")}</option>
             {restaurants.map((restaurant) => <option key={restaurant.id} value={restaurant.id}>{restaurant.name}</option>)}
-          </select>
+          </FilterableSelect>
         </label>
 
         {readyForAmounts ? (

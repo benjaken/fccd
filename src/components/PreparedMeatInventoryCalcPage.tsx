@@ -22,6 +22,7 @@ import { PreparedMeatInboundNoRawModal } from "@/components/PreparedMeatInboundN
 import { PreparedMeatOptionFormModal } from "@/components/PreparedMeatOptionFormModal";
 import { PreparedMeatOptionsModal } from "@/components/PreparedMeatOptionsModal";
 import { PreparedMeatOutboundModal } from "@/components/PreparedMeatOutboundModal";
+import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
 import { ListTable } from "@/components/ui/list-table";
 import { TablePagination } from "@/components/ui/table-pagination";
@@ -599,7 +600,7 @@ export function PreparedMeatInventoryCalcPage({
             </div>
             <label className="raw-meat-calc-year-filter">
               <span>{t("preparedMeatInventory.yearFilter")}</span>
-              <select
+              <FilterableSelect
                 aria-label={t("preparedMeatInventory.yearFilter")}
                 value={year}
                 onChange={(event) => setYear(Number(event.target.value))}
@@ -610,7 +611,7 @@ export function PreparedMeatInventoryCalcPage({
                     {option}
                   </option>
                 ))}
-              </select>
+              </FilterableSelect>
             </label>
           </div>
 

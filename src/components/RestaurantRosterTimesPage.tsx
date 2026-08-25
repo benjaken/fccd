@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useCurrentPageAccess } from "@/auth/use-page-access";
+import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
 import { RestaurantSettingsListTable } from "@/components/ui/restaurant-settings-list-table";
 import { SidePanel } from "@/components/ui/side-panel";
@@ -287,7 +288,7 @@ export function RestaurantRosterTimesPage() {
         >
           <label className="ingredients-field">
             <span>{t("restaurantRosterTimes.fields.period")}</span>
-            <select
+            <FilterableSelect
               value={periodId}
               onChange={(event) => setPeriodId(event.target.value)}
             >
@@ -299,7 +300,7 @@ export function RestaurantRosterTimesPage() {
                   {period.name}
                 </option>
               ))}
-            </select>
+            </FilterableSelect>
           </label>
           <label className="ingredients-field">
             <span>{t("restaurantRosterTimes.fields.order")}</span>

@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Plus, RefreshCw, Trash2 } from "lucide-react";
 
+import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { ListTable } from "@/components/ui/list-table";
@@ -145,10 +146,10 @@ function AddFestivalCostPanel({
       <form id="monthly-festival-cost-form" className="ingredients-form" onSubmit={(event) => void submit(event)}>
         <label className="ingredients-field">
           <span>類型</span>
-          <select value={costTypeId} disabled={loadingOptions} onChange={(event) => setCostTypeId(event.target.value)}>
+          <FilterableSelect value={costTypeId} disabled={loadingOptions} onChange={(event) => setCostTypeId(event.target.value)}>
             <option value="">選擇費用</option>
             {costTypes.map((type) => <option key={type.id} value={type.id}>{type.name}</option>)}
-          </select>
+          </FilterableSelect>
         </label>
 
         <div className="kitchen-festival-brand-heading">
@@ -192,10 +193,10 @@ function AddFestivalCostPanel({
 
         <label className="ingredients-field">
           <span>節日</span>
-          <select value={festivalId} disabled={loadingOptions} onChange={(event) => setFestivalId(event.target.value)}>
+          <FilterableSelect value={festivalId} disabled={loadingOptions} onChange={(event) => setFestivalId(event.target.value)}>
             <option value="">選擇節日</option>
             {festivals.map((festival) => <option key={festival.id} value={festival.id}>{festival.name}</option>)}
-          </select>
+          </FilterableSelect>
         </label>
         <label className="ingredients-field">
           <span>金額</span>

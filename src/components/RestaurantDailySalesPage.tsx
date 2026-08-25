@@ -11,6 +11,7 @@ import { CalendarDays, Check, CircleAlert, Eye, ImagePlus, Pencil, RefreshCw, Sa
 import { useTranslation } from "react-i18next";
 
 import { useCurrentPageAccess } from "@/auth/use-page-access";
+import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
@@ -24,6 +25,7 @@ import {
   pickDefaultRestaurant,
   RESTAURANT_WORKING_HOUR_OPTIONS,
   restaurantDailySalesRecordExists,
+  sendRestaurantDailySalesReportEmail,
   saveRestaurantDailySales,
   type DailySalesOption,
   type RestaurantDailySalesRecord,
@@ -244,6 +246,7 @@ export function RestaurantDailySalesPage({
   loadRecent = fetchRecentRestaurantDailySales,
   checkRecordExists = restaurantDailySalesRecordExists,
   saveSales = saveRestaurantDailySales,
+  sendReportEmail = sendRestaurantDailySalesReportEmail,
   canEdit: canEditOverride,
 }: {
   loadMasters?: typeof fetchRestaurantDailySalesMasters;
@@ -251,6 +254,7 @@ export function RestaurantDailySalesPage({
   loadRecent?: typeof fetchRecentRestaurantDailySales;
   checkRecordExists?: typeof restaurantDailySalesRecordExists;
   saveSales?: typeof saveRestaurantDailySales;
+  sendReportEmail?: typeof sendRestaurantDailySalesReportEmail;
   canEdit?: boolean;
 }) {
   const { t, i18n } = useTranslation();
@@ -294,6 +298,7 @@ export function RestaurantDailySalesPage({
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [emailWarning, setEmailWarning] = useState(false);
   const [validationErrors, setValidationErrors] = useState<ValidationKey[]>([]);
   const [validationNoticeErrors, setValidationNoticeErrors] = useState<ValidationKey[]>([]);
   const skipNextExistingLoadRef = useRef(false);
@@ -330,13 +335,14 @@ export function RestaurantDailySalesPage({
   }, [receiptFile, receiptUrl]);
 
   useEffect(() => {
-    if (!validationNoticeErrors.length && !saveError) return;
+    if (!validationNoticeErrors.length && !saveError && !emailWarning) return;
     const timeout = window.setTimeout(() => {
       setValidationNoticeErrors([]);
       setSaveError(null);
+      setEmailWarning(false);
     }, 5000);
     return () => window.clearTimeout(timeout);
-  }, [saveError, validationNoticeErrors]);
+  }, [emailWarning, saveError, validationNoticeErrors]);
 
   useEffect(() => {
     let active = true;
@@ -462,6 +468,7 @@ export function RestaurantDailySalesPage({
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setSaveError(null);
+    setEmailWarning(false);
     const nextValidationErrors: ValidationKey[] = [];
     if (!total.trim()) nextValidationErrors.push("total");
     if ((masters?.departments.length ?? 0) > 0 && !Object.values(departmentAmounts).some((value) => value.trim() !== "")) nextValidationErrors.push("departments");
@@ -491,9 +498,17 @@ export function RestaurantDailySalesPage({
         receiptUrl,
         receiptFile,
       });
+      const isNewRecord = editorMode === "new";
       setSaved(true);
       setValidationNoticeErrors([]);
-      if (editorMode === "new") skipNextExistingLoadRef.current = true;
+      if (isNewRecord) {
+        skipNextExistingLoadRef.current = true;
+        try {
+          await sendReportEmail(restaurantId, date);
+        } catch {
+          setEmailWarning(true);
+        }
+      }
       setEditorMode("existing");
       setEditingExisting(false);
       setRecent(await loadRecent(restaurantId, recentFromDate || undefined, recentToDate || undefined));
@@ -528,16 +543,18 @@ export function RestaurantDailySalesPage({
         </Button>
       </header>
 
-      {validationNoticeErrors.length || saveError ? (
+      {validationNoticeErrors.length || saveError || emailWarning ? (
         <aside className="daily-sales-validation-notification" role="alert" aria-live="assertive">
           <CircleAlert aria-hidden="true" />
           <div>
-            <strong>{t(validationNoticeErrors.length ? "restaurantDailySales.validationNoticeTitle" : "restaurantDailySales.saveErrorTitle")}</strong>
+            <strong>{t(validationNoticeErrors.length ? "restaurantDailySales.validationNoticeTitle" : emailWarning ? "restaurantDailySales.emailWarningTitle" : "restaurantDailySales.saveErrorTitle")}</strong>
             {validationNoticeErrors.length
               ? validationNoticeErrors.map((key) => <span key={key}>{t(`restaurantDailySales.validation.${key}`)}</span>)
-              : <span>{saveError === "save_failed" ? t("restaurantDailySales.saveError") : saveError}</span>}
+              : emailWarning
+                ? <span>{t("restaurantDailySales.emailWarning")}</span>
+                : <span>{saveError === "save_failed" ? t("restaurantDailySales.saveError") : saveError}</span>}
           </div>
-          <button type="button" aria-label={t("common.close")} onClick={() => { setValidationNoticeErrors([]); setSaveError(null); }}><X /></button>
+          <button type="button" aria-label={t("common.close")} onClick={() => { setValidationNoticeErrors([]); setSaveError(null); setEmailWarning(false); }}><X /></button>
         </aside>
       ) : null}
 
@@ -752,7 +769,7 @@ export function RestaurantDailySalesPage({
         footer={<><Button variant="outline" onClick={() => setNewDialogOpen(false)}>{t("common.cancel")}</Button><Button disabled={!draftRestaurantId || !draftDate || checkingNewRecord || newRecordExists || newRecordCheckError} onClick={() => { setRestaurantId(draftRestaurantId); setDate(draftDate); setEditingExisting(false); applyRecord(emptyRestaurantDailySalesRecord()); setEditorMode("new"); setNewDialogOpen(false); }}>{t("restaurantDailySales.startInput")}</Button></>}
       >
         <div className="daily-sales-new-form">
-          <label><span>{t("restaurantDailySales.restaurantPicker")}</span><select aria-label={t("restaurantDailySales.restaurantPicker")} value={draftRestaurantId} onChange={(event) => setDraftRestaurantId(event.target.value)}>{masters?.restaurants.map((restaurant) => <option value={restaurant.id} key={restaurant.id}>{restaurant.name}</option>)}</select></label>
+          <label><span>{t("restaurantDailySales.restaurantPicker")}</span><FilterableSelect aria-label={t("restaurantDailySales.restaurantPicker")} value={draftRestaurantId} onChange={(event) => setDraftRestaurantId(event.target.value)}>{masters?.restaurants.map((restaurant) => <option value={restaurant.id} key={restaurant.id}>{restaurant.name}</option>)}</FilterableSelect></label>
           <label><span>{t("restaurantDailySales.date")}</span><input aria-label={t("restaurantDailySales.date")} type="date" value={draftDate} max={hongKongDateValue()} onChange={(event) => setDraftDate(event.target.value)} /></label>
           {checkingNewRecord ? <p>{t("restaurantDailySales.checkingDate")}</p> : newRecordExists ? <p className="is-error" role="alert">{t("restaurantDailySales.recordExists")}</p> : newRecordCheckError ? <p className="is-error" role="alert">{t("restaurantDailySales.checkDateError")}</p> : null}
         </div>

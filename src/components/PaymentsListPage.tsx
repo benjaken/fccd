@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronRight, HandCoins } from "lucide-react";
 
+import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
@@ -274,25 +275,25 @@ export function PaymentsListPage({
           <div className="payments-filter-fields">
             <label className="payments-filter-field">
               <span>{t("payments.brandFilter")}</span>
-              <select
+              <FilterableSelect
                 value={channelId}
                 aria-label={t("payments.brandFilter")}
                 onChange={(event) => { setChannelId(event.target.value); setPage(1); }}
               >
                 <option value="">{t("payments.allBrands")}</option>
                 {filterOptions.channels.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}
-              </select>
+              </FilterableSelect>
             </label>
             <label className="payments-filter-field">
               <span>{t("payments.paymentMethodFilter")}</span>
-              <select
+              <FilterableSelect
                 value={paymentMethodId}
                 aria-label={t("payments.paymentMethodFilter")}
                 onChange={(event) => { setPaymentMethodId(event.target.value); setPage(1); }}
               >
                 <option value="">{t("payments.allPaymentMethods")}</option>
                 {filterOptions.paymentMethods.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}
-              </select>
+              </FilterableSelect>
             </label>
           </div>
           <div className="payments-selection-actions">

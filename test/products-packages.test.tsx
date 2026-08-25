@@ -53,6 +53,7 @@ import { PackagesListPage } from "@/components/PackagesListPage";
 import { PackageDetailPage } from "@/components/PackageDetailPage";
 import { ProductDetailPage } from "@/components/ProductDetailPage";
 import { ProductsListPage } from "@/components/ProductsListPage";
+import { CatalogCreatePage } from "@/components/CatalogCreatePage";
 import i18n from "@/i18n";
 import type { PackageDetail, PackageListResult } from "@/lib/packages";
 import { hasProductSku, normalizeProductSku, type ProductDetail, type ProductListResult } from "@/lib/products";
@@ -62,6 +63,7 @@ const productResult: ProductListResult = {
   items: [
     {
       id: "product-1",
+      imageUrl: "https://cdn.example.test/roast-chicken.jpg",
       sku: "CC-001",
       name: "Roast Chicken",
       chineseName: "燒雞",
@@ -95,7 +97,7 @@ const productDetail: ProductDetail = {
   name: "Roast Chicken",
   chineseName: "燒雞",
   description: "經典到會燒雞",
-  imageUrl: null,
+  imageUrl: "https://cdn.example.test/roast-chicken.jpg",
   price: 188,
   priceMin: 168,
   priceMax: 208,
@@ -118,8 +120,17 @@ const productDetail: ProductDetail = {
       id: "prem-1",
       ingredientId: "ing-x",
       name: "松露",
+      ingredientType: "貴重食材",
       quantity: 1,
       unitCost: 12,
+    },
+    {
+      id: "packing-1",
+      ingredientId: "packing-box",
+      name: "雙格紙盒",
+      ingredientType: "包裝用品",
+      quantity: 1,
+      unitCost: 2,
     },
   ],
   labels: [
@@ -137,6 +148,12 @@ const productDetail: ProductDetail = {
       sku: "CCFA0406",
       name: "Family Feast",
       chineseName: "精緻家庭美宴 (4-6人)",
+    },
+  ],
+  shopifyLinks: [
+    {
+      storeDomain: "fcc-test.myshopify.com",
+      shopifyProductId: 123456789,
     },
   ],
   updatedAt: "2026-08-12T01:00:00.000Z",
@@ -235,6 +252,7 @@ describe("Products catalog pages", () => {
   });
 
   it("renders product fields and links to the product record", async () => {
+    const user = userEvent.setup();
     const loadProducts = vi.fn().mockResolvedValue(productResult);
     const loadChannels = vi.fn().mockResolvedValue([
       { id: "channel-1", name: "Catering" },
@@ -256,6 +274,23 @@ describe("Products catalog pages", () => {
       await screen.findByRole("link", { name: "燒雞" }),
     ).toHaveAttribute("href", "/products/product-1");
     expect(screen.getByText("CC-001")).toBeInTheDocument();
+    expect(document.querySelector(".product-list-image")).toHaveAttribute(
+      "src",
+      "https://cdn.example.test/roast-chicken.jpg",
+    );
+    await user.click(screen.getByRole("button", { name: "放大查看 燒雞 圖片" }));
+    expect(screen.getByRole("dialog", { name: "燒雞" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "燒雞" })).toHaveAttribute(
+      "src",
+      "https://cdn.example.test/roast-chicken.jpg",
+    );
+    await user.click(
+      within(screen.getByRole("dialog", { name: "燒雞" })).getByRole(
+        "button",
+        { name: "關閉" },
+      ),
+    );
+    expect(screen.queryByRole("dialog", { name: "燒雞" })).not.toBeInTheDocument();
     expect(within(screen.getByRole("table")).getByText("Catering")).toBeInTheDocument();
     expect(within(screen.getByRole("table")).getByText("西式熱盤")).toBeInTheDocument();
     expect(screen.getByText("HK$188")).toBeInTheDocument();
@@ -656,6 +691,18 @@ describe("Products catalog pages", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "燒雞" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", {
+        name: "在 fcc-test.myshopify.com 的 Shopify 後台開啟",
+      }),
+    ).toHaveAttribute(
+      "href",
+      "https://admin.shopify.com/store/fcc-test/products/123456789",
+    );
+    expect(screen.getByRole("img", { name: "燒雞" })).toHaveAttribute(
+      "src",
+      "https://cdn.example.test/roast-chicken.jpg",
+    );
     expect(screen.getByText("經典到會燒雞")).toBeInTheDocument();
     expect(screen.getAllByText("西式熱盤").length).toBeGreaterThan(0);
     expect(screen.getByText("焗爐")).toBeInTheDocument();
@@ -669,9 +716,62 @@ describe("Products catalog pages", () => {
     ).toHaveAttribute("href", "/products");
     expect(screen.getByText("名貴食材", { exact: false })).toBeInTheDocument();
     expect(screen.getByText("松露")).toBeInTheDocument();
+    const premiumCard = screen
+      .getByRole("heading", { name: /燒雞 - 名貴食材/ })
+      .closest("article");
+    const packingCard = screen
+      .getByRole("heading", { name: /燒雞 - 包裝用品/ })
+      .closest("article");
+    expect(premiumCard).not.toBeNull();
+    expect(packingCard).not.toBeNull();
+    expect(within(premiumCard!).queryByText("雙格紙盒")).not.toBeInTheDocument();
+    expect(within(packingCard!).getByText("雙格紙盒")).toBeInTheDocument();
+    expect(premiumCard?.parentElement).toHaveClass("product-material-grid");
+    expect(premiumCard?.parentElement?.children).toHaveLength(3);
     expect(screen.getByText("(雙格) 拿破崙")).toBeInTheDocument();
     expect(screen.getAllByText("爐位類別").length).toBeGreaterThan(0);
     expect(screen.queryByRole("link", { name: "編輯" })).not.toBeInTheDocument();
+  });
+
+  it("shows create product and package actions to catalog editors", async () => {
+    render(
+      <MemoryRouter>
+        <ProductsListPage
+          canEdit
+          canCreatePackage
+          loadProducts={async () => ({ items: [], total: 0 })}
+          loadChannels={async () => []}
+          loadProductTypes={async () => []}
+          loadBentoMainTypes={async () => []}
+          loadBentoColumnTypes={async () => []}
+          loadCookTypes={async () => []}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("link", { name: "新建商品" })).toHaveAttribute("href", "/products/new");
+    expect(screen.getByRole("link", { name: "新建套餐" })).toHaveAttribute("href", "/products/packages/new");
+  });
+
+  it("keeps all three material cards in one row when packaging is empty", async () => {
+    const withoutPacking = {
+      ...productDetail,
+      premiumIngredients: productDetail.premiumIngredients.filter(
+        (item) => item.ingredientType !== "包裝用品",
+      ),
+    };
+    render(
+      <MemoryRouter initialEntries={["/products/product-1"]}>
+        <Routes>
+          <Route path="/products/:id" element={<ProductDetailPage loadDetail={async () => withoutPacking} />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    expect(await screen.findByRole("heading", { name: /燒雞 - 包裝用品/ })).toBeInTheDocument();
+    expect(screen.getByText("尚未添加包裝用品。")).toBeInTheDocument();
+    const grid = screen.getByRole("heading", { name: /燒雞 - 名貴食材/ }).closest("section");
+    expect(grid).toHaveClass("product-material-grid");
+    expect(grid?.children).toHaveLength(3);
   });
 
   it("returns product detail to the page that opened it", async () => {
@@ -841,6 +941,66 @@ describe("Products catalog pages", () => {
       expect(addIngredient).toHaveBeenCalledWith("product-1", "ing-coke", 1),
     );
     expect(await screen.findByText("可口可樂")).toBeInTheDocument();
+  });
+});
+
+describe("Catalog creation pages", () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("en");
+  });
+
+  const createOptions = {
+    channels: [{ id: "channel-1", name: "Catering" }],
+    productTypes: [{ id: "type-1", name: "Main dish" }],
+    cookTypes: [{ id: "cook-1", name: "Roast" }],
+    collections: [], packingMaterials: [], catalogIngredients: [],
+  };
+
+  it("creates a product with the detail-page fields and opens its detail", async () => {
+    const user = userEvent.setup();
+    const saveProduct = vi.fn().mockResolvedValue("product-new");
+    render(
+      <MemoryRouter initialEntries={["/products/new"]}>
+        <Routes>
+          <Route path="/products/new" element={<CatalogCreatePage kind="product" canCreate loadOptions={async () => createOptions} saveProduct={saveProduct} />} />
+          <Route path="/products/:id" element={<div>Created product detail</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole("heading", { name: "Create product" });
+    await user.type(screen.getByLabelText(/^SKU/), "NEW-001");
+    await user.selectOptions(screen.getByLabelText(/^Brand/), "channel-1");
+    await user.type(screen.getByLabelText(/^Product name/), "New product");
+    await user.type(screen.getByLabelText(/^Price/), "88");
+    await user.selectOptions(screen.getByLabelText(/^Category/), "type-1");
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    await waitFor(() => expect(saveProduct).toHaveBeenCalledWith(expect.objectContaining({ sku: "NEW-001", name: "New product", price: 88, channelId: "channel-1", productTypeId: "type-1" })));
+    expect(await screen.findByText("Created product detail")).toBeInTheDocument();
+  });
+
+  it("creates a package and opens its detail", async () => {
+    const user = userEvent.setup();
+    const savePackage = vi.fn().mockResolvedValue("package-new");
+    render(
+      <MemoryRouter initialEntries={["/products/packages/new"]}>
+        <Routes>
+          <Route path="/products/packages/new" element={<CatalogCreatePage kind="package" canCreate loadOptions={async () => createOptions} savePackage={savePackage} />} />
+          <Route path="/products/packages/:id" element={<div>Created package detail</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole("heading", { name: "Create package" });
+    await user.type(screen.getByLabelText(/^SKU/), "SET-001");
+    await user.selectOptions(screen.getByLabelText(/^Brand/), "channel-1");
+    await user.type(screen.getByLabelText(/^English name/), "New package");
+    await user.type(screen.getByLabelText(/^Price/), "288");
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    await waitFor(() => expect(savePackage).toHaveBeenCalledWith(expect.objectContaining({ sku: "SET-001", name: "New package", price: 288, channelId: "channel-1" })));
+    expect(await screen.findByText("Created package detail")).toBeInTheDocument();
   });
 });
 

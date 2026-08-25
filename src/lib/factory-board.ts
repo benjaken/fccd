@@ -119,6 +119,19 @@ export function factoryProductLabelName(
   return null
 }
 
+export function factoryOrderLineLabelName(
+  labels: Array<Pick<FactoryProductLabelRow, "display_name" | "quantity_label">>,
+  temporaryDisplayName: string | null | undefined,
+  temporaryQuantityLabel: string | null | undefined,
+): string | null {
+  return factoryProductLabelName(labels) ||
+    [temporaryDisplayName, temporaryQuantityLabel]
+      .map((value) => value?.trim() ?? "")
+      .filter(Boolean)
+      .join("\n") ||
+    null
+}
+
 export type FactoryFleet = {
   id: string
   name: string
@@ -918,7 +931,7 @@ export async function fetchFactoryOrderJob(orderId: string): Promise<FactoryOrde
     supabase
       .from("order_lines")
       .select(
-        "id, product_id, product_name_snapshot, content_snapshot, quantity, new_quantity_text, remarks_1, remarks_2, is_printed, is_void, bubble_modified_at, updated_at, type_sort, item_order",
+        "id, product_id, product_name_snapshot, content_snapshot, quantity, new_quantity_text, remarks_1, remarks_2, is_printed, is_void, bubble_modified_at, updated_at, type_sort, item_order, temporary_label_display_name, temporary_label_quantity_label",
       )
       .eq("order_id", orderId)
       .order("type_sort")
@@ -1036,8 +1049,10 @@ export async function fetchFactoryOrderJob(orderId: string): Promise<FactoryOrde
     lines: allLines.filter((row) => !row.is_void).map((row) => ({
       id: row.id as string,
       labelName:
-        factoryProductLabelName(
+        factoryOrderLineLabelName(
           productLabelsByProductId.get((row.product_id as string | null) ?? "") ?? [],
+          row.temporary_label_display_name as string | null,
+          row.temporary_label_quantity_label as string | null,
         ) ||
         (row.content_snapshot as string | null)?.trim() ||
         (row.product_name_snapshot as string | null)?.trim() ||

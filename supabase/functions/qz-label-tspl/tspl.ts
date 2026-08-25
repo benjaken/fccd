@@ -76,6 +76,13 @@ function centeredText(y: number, value: string, xScale = 1, yScale = 1): string 
   return `TEXT ${x},${y},"TST24.BF2",0,${xScale},${yScale},"${value}"`;
 }
 
+function largeOrderNumber(y: number, value: string): string {
+  const xScale = 2;
+  const renderedWidth = estimatedWidth(value, xScale);
+  const x = Math.max(100, Math.floor((LABEL_WIDTH_DOTS - renderedWidth) / 2));
+  return `TEXT ${x},${y},"TST24.BF2",0,${xScale},5,"${value}"`;
+}
+
 export function buildFactoryLabelTspl(input: FactoryLabelTsplInput): string {
   const copies = Math.min(100, Math.max(1, Math.floor(Number(input.copies) || 1)));
   const orderNumber = sanitizeTsplText(input.orderNumber).replace(/^#/, "");
@@ -94,7 +101,7 @@ export function buildFactoryLabelTspl(input: FactoryLabelTsplInput): string {
       "DIRECTION 1",
       "CODEPAGE 950",
       "CLS",
-      centeredText(20, orderNumber, 2, 2),
+      largeOrderNumber(2, orderNumber),
       "BAR 16,88,368,2",
       centeredText(106, "送貨日期"),
       centeredText(145, deliveryDate),
@@ -133,7 +140,7 @@ export function buildFactoryAddressLabelTspl(input: FactoryAddressLabelTsplInput
     "DIRECTION 1",
     "CODEPAGE 950",
     "CLS",
-    centeredText(18, orderNumber, 2, 2),
+    largeOrderNumber(2, orderNumber),
     "BAR 16,86,368,2",
     text(16, 105, `送達時間：${arrivalWindow}`, 1, 1),
     ...displayedNameLines.map((line, index) => text(16, 145 + index * 36, `${index === 0 ? "姓名：" : ""}${line}`, 1, 1)),

@@ -3,6 +3,7 @@ import { Check, LoaderCircle, Minus, Plus, Printer } from "lucide-react";
 import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
+import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { PdfAutoResizeTextarea } from "@/components/PdfAutoResizeTextarea";
@@ -528,7 +529,7 @@ export function ReceiptPdfEditorPage({
         </tbody>
         {showTotals ? <tfoot>
           <tr><td colSpan={4}>Subtotal:</td><td>{money(totals.subtotal)}</td></tr>
-          <tr><td colSpan={4}><select className="quote-pdf-edit-only" aria-label="運費選項" value={draft.deliveryFeeId} onChange={(event) => selectDeliveryFee(event.target.value)}><option value="">Delivery Fee</option>{shippingFees.map((fee) => <option key={fee.id} value={fee.id}>{fee.item}</option>)}</select><span className="quote-pdf-print-only">{draft.deliveryFeeLabel}</span></td><td><span className="receipt-pdf-price-input">{draft.deliveryFee ? <span aria-hidden="true">$</span> : null}<input aria-label="運費" inputMode="decimal" size={Math.max(draft.deliveryFee.length, 1)} value={draft.deliveryFee} onChange={(event) => update("deliveryFee", event.target.value)} /></span></td></tr>
+          <tr><td colSpan={4}><FilterableSelect className="quote-pdf-edit-only" aria-label="運費選項" value={draft.deliveryFeeId} onChange={(event) => selectDeliveryFee(event.target.value)}><option value="">Delivery Fee</option>{shippingFees.map((fee) => <option key={fee.id} value={fee.id}>{fee.item}</option>)}</FilterableSelect><span className="quote-pdf-print-only">{draft.deliveryFeeLabel}</span></td><td><span className="receipt-pdf-price-input">{draft.deliveryFee ? <span aria-hidden="true">$</span> : null}<input aria-label="運費" inputMode="decimal" size={Math.max(draft.deliveryFee.length, 1)} value={draft.deliveryFee} onChange={(event) => update("deliveryFee", event.target.value)} /></span></td></tr>
           <tr><td colSpan={4}>Grand Total:</td><td>{money(totals.grandTotal)}</td></tr>
         </tfoot> : null}
       </table>

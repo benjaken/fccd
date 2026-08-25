@@ -520,6 +520,12 @@ export const secondaryNav: Record<string, NavItem[]> = {
   ],
   settings: [
     {
+      key: "employees",
+      to: "/settings/employees",
+      icon: Users,
+      permissionKey: "settings.employees",
+    },
+    {
       key: "users",
       to: "/settings/users",
       icon: Users,
@@ -635,6 +641,7 @@ export const SECTION_CHILD_KEYS: Record<string, string[]> = {
     REPORT_TAB_PERMISSION_KEYS.supplierPurchase,
   ],
   settings: [
+    "settings.employees",
     "settings.users",
     "settings.users.create",
     "settings.users.edit",
@@ -704,6 +711,23 @@ export function firstAccessibleNavigationPath(
       (item) => !item.disabled && canAccess(item.permissionKey),
     )?.to ?? null
   );
+}
+
+/** Resolve a primary tab to a destination the current role can really open. */
+export function accessiblePrimaryNavigationPath(
+  primary: NavItem,
+  canAccess: (pageKey: string) => boolean,
+) {
+  // Home is not a container for the shortcut links shown in its sidebar.
+  if (primary.key === "overview") {
+    return canAccess(navItemPermissionKey(primary)) ? primary.to : null;
+  }
+
+  const configured = secondaryNav[primary.key];
+  if (configured) {
+    return flattenVisibleNavItems(configured, canAccess)[0]?.to ?? null;
+  }
+  return canAccess(navItemPermissionKey(primary)) ? primary.to : null;
 }
 
 export function sectionFromPath(pathname: string) {

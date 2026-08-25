@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowDown, ArrowUp, Pencil, RefreshCw, ShoppingBasket } from "lucide-react";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { ArrowDown, ArrowUp, PackagePlus, Pencil, Plus, RefreshCw, ShoppingBasket } from "lucide-react";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import { ProductRecommendStar } from "@/components/ProductRecommendStar";
 import { ProductTagList } from "@/components/ProductTagList";
+import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
 import { DetailLink } from "@/components/ui/detail-link";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
+import { Modal } from "@/components/ui/modal";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { detailFromLocation } from "@/lib/detail-navigation";
 import {
@@ -38,6 +40,7 @@ import {
 } from "@/lib/products";
 
 const PRODUCT_SKELETON_COLUMNS = [
+  { width: "3.5rem" },
   { width: "5.5rem" },
   { width: "5.5rem" },
   { width: "72%" },
@@ -64,6 +67,7 @@ type RecommendUpdater = typeof updateProductRecommendation;
 export function ProductsListPage({
   preset = "all",
   canEdit = false,
+  canCreatePackage = false,
   loadProducts = fetchProducts,
   loadChannels = fetchProductChannels,
   loadProductTypes = fetchProductTypes,
@@ -74,6 +78,7 @@ export function ProductsListPage({
 }: {
   preset?: ProductPreset;
   canEdit?: boolean;
+  canCreatePackage?: boolean;
   loadProducts?: ProductsLoader;
   loadChannels?: ChannelsLoader;
   loadProductTypes?: ProductTypesLoader;
@@ -149,6 +154,10 @@ export function ProductsListPage({
   const [pendingRecommendId, setPendingRecommendId] = useState<string | null>(
     null,
   );
+  const [imagePreview, setImagePreview] = useState<{
+    url: string;
+    name: string;
+  } | null>(null);
   const [sortField, setSortField] = useState<ProductSortField>("sku");
   const [sortAscending, setSortAscending] = useState(true);
 
@@ -470,6 +479,20 @@ export function ProductsListPage({
           <span className="eyebrow">{t("products.eyebrow")}</span>
           <h1>{t(`products.${titleKey}`)}</h1>
         </div>
+        {canEdit || canCreatePackage ? (
+          <div className="heading-actions">
+            {canCreatePackage ? (
+              <Button asChild variant="outline">
+                <Link to="/products/packages/new"><PackagePlus />{t("catalogCreate.newPackage")}</Link>
+              </Button>
+            ) : null}
+            {canEdit ? (
+              <Button asChild>
+                <Link to="/products/new"><Plus />{t("catalogCreate.newProduct")}</Link>
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
       </header>
 
       <article className="panel products-panel">
@@ -514,7 +537,7 @@ export function ProductsListPage({
               <div className="products-filters">
                 <label className="products-status-filter">
                   <span>{t("products.priceRangeFilter")}</span>
-                  <select
+                  <FilterableSelect
                     value={priceFilter.value}
                     onChange={(event) => {
                       priceFilter.setValue(
@@ -532,12 +555,12 @@ export function ProductsListPage({
                         {item.label}
                       </option>
                     ))}
-                  </select>
+                  </FilterableSelect>
                 </label>
 
                 <label className="products-status-filter">
                   <span>{t("products.channelFilter")}</span>
-                  <select
+                  <FilterableSelect
                     value={channelFilter.value}
                     onChange={(event) => {
                       channelFilter.setValue(event.target.value);
@@ -550,12 +573,12 @@ export function ProductsListPage({
                         {channel.name}
                       </option>
                     ))}
-                  </select>
+                  </FilterableSelect>
                 </label>
 
                 <label className="products-status-filter">
                   <span>{t("products.typeFilter")}</span>
-                  <select
+                  <FilterableSelect
                     value={typeFilter.value}
                     onChange={(event) => {
                       typeFilter.setValue(event.target.value);
@@ -567,12 +590,12 @@ export function ProductsListPage({
                         {productType.name}
                       </option>
                     ))}
-                  </select>
+                  </FilterableSelect>
                 </label>
 
                 <label className="products-status-filter">
                   <span>{t("products.stapleFilter")}</span>
-                  <select
+                  <FilterableSelect
                     value={stapleFilter.value}
                     onChange={(event) => {
                       stapleFilter.setValue(event.target.value);
@@ -584,12 +607,12 @@ export function ProductsListPage({
                         {staple.name}
                       </option>
                     ))}
-                  </select>
+                  </FilterableSelect>
                 </label>
 
                 <label className="products-status-filter">
                   <span>{t("products.compartmentFilter")}</span>
-                  <select
+                  <FilterableSelect
                     value={compartmentFilter.value}
                     onChange={(event) => {
                       compartmentFilter.setValue(event.target.value);
@@ -601,12 +624,12 @@ export function ProductsListPage({
                         {compartment.name}
                       </option>
                     ))}
-                  </select>
+                  </FilterableSelect>
                 </label>
 
                 <label className="products-status-filter">
                   <span>{t("products.cookFilter")}</span>
-                  <select
+                  <FilterableSelect
                     value={cookFilter.value}
                     onChange={(event) => {
                       cookFilter.setValue(event.target.value);
@@ -618,12 +641,12 @@ export function ProductsListPage({
                         {cookType.name}
                       </option>
                     ))}
-                  </select>
+                  </FilterableSelect>
                 </label>
 
                 <label className="products-status-filter">
                   <span>{t("products.statusFilter")}</span>
-                  <select
+                  <FilterableSelect
                     value={statusFilter.value}
                     onChange={(event) => {
                       statusFilter.setValue(
@@ -642,7 +665,7 @@ export function ProductsListPage({
                       </option>
                     ))}
                     <option value="unset">{t("products.statusUnset")}</option>
-                  </select>
+                  </FilterableSelect>
                 </label>
               </div>
             }
@@ -683,6 +706,7 @@ export function ProductsListPage({
             skeletonColumns={skeletonColumns}
             header={
               <tr>
+                <th>{t("products.columns.image")}</th>
                 <th>{t("products.columns.channel")}</th>
                 <th>
                   <button
@@ -733,6 +757,35 @@ export function ProductsListPage({
                 className="table-row-clickable"
                 onClick={() => openProduct(product.id)}
               >
+                <td className="product-image-cell">
+                  {product.imageUrl ? (
+                    <button
+                      type="button"
+                      className="product-list-image-button"
+                      aria-label={t("products.previewImage", {
+                        name: displayName(product),
+                      })}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setImagePreview({
+                          url: product.imageUrl as string,
+                          name: displayName(product),
+                        });
+                      }}
+                    >
+                      <img
+                        className="product-list-image"
+                        src={product.imageUrl}
+                        alt=""
+                        loading="lazy"
+                      />
+                    </button>
+                  ) : (
+                    <span className="product-list-image-placeholder" aria-hidden="true">
+                      <ShoppingBasket />
+                    </span>
+                  )}
+                </td>
                 <td>{product.channelName || t("common.notSet")}</td>
                 <td>{product.sku || t("common.notSet")}</td>
                 <td>
@@ -827,6 +880,18 @@ export function ProductsListPage({
           jumpLabel={t("products.jumpToPage")}
         />
       </article>
+      <Modal
+        open={Boolean(imagePreview)}
+        title={imagePreview?.name ?? ""}
+        closeLabel={t("common.close")}
+        size="lg"
+        className="product-image-preview-modal"
+        onClose={() => setImagePreview(null)}
+      >
+        {imagePreview ? (
+          <img src={imagePreview.url} alt={imagePreview.name} />
+        ) : null}
+      </Modal>
     </section>
   );
 }

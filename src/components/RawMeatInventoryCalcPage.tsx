@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 
 import { useCurrentPageAccess } from "@/auth/use-page-access";
+import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
 import { ListTable } from "@/components/ui/list-table";
 import { PreparedMeatInboundDeductModal } from "@/components/PreparedMeatInboundDeductModal";
@@ -721,7 +722,7 @@ export function RawMeatInventoryCalcPage({
             </div>
             <label className="raw-meat-calc-year-filter">
               <span>{t("rawMeatInventory.yearFilter")}</span>
-              <select
+              <FilterableSelect
                 aria-label={t("rawMeatInventory.yearFilter")}
                 value={year}
                 onChange={(event) => setYear(Number(event.target.value))}
@@ -732,7 +733,7 @@ export function RawMeatInventoryCalcPage({
                     {option}
                   </option>
                 ))}
-              </select>
+              </FilterableSelect>
             </label>
           </div>
 
