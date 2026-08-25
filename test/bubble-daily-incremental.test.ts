@@ -231,6 +231,23 @@ describe("bubble daily incremental helpers", () => {
     )).toEqual([]);
   });
 
+  it("treats inventory values rounded to database column scale as unchanged", () => {
+    expect(changedOverwriteFields(
+      {
+        legacy_id: "raw-1",
+        inbound_quantity_kg: 122.273139745917,
+        inbound_total_amount: 9027.915,
+        applied_seasoning_cost: 359.037679828589,
+      },
+      {
+        legacy_id: "raw-1",
+        inbound_quantity_kg: "122.273",
+        inbound_total_amount: "9027.92",
+        applied_seasoning_cost: "359.0377",
+      },
+    )).toEqual([]);
+  });
+
   it("preserves Shopify-owned identity and outstanding on a linked order", () => {
     const merged = mergeOverwriteRow(
       "a_order",

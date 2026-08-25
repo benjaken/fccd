@@ -153,6 +153,22 @@ export const overwriteFieldSources = {
   },
 } as const;
 
+const overwriteNumericScales: Partial<Record<string, number>> = {
+  inbound_quantity_kg: 3,
+  outbound_quantity_kg: 3,
+  allocated_inbound_quantity_kg: 3,
+  inbound_unit_price: 4,
+  inbound_total_amount: 2,
+  applied_seasoning_cost: 4,
+  applied_seasoning_code: 4,
+  applied_markup_rate: 6,
+  applied_variation_rate: 6,
+  applied_seasoning_per_kg: 4,
+  inbound_packages: 3,
+  outbound_packages: 3,
+  prepared_meat_order: 3,
+};
+
 export type OverwriteSourceType = keyof typeof overwriteFieldSources;
 
 export function isOverwriteSourceType(value: unknown): value is OverwriteSourceType {
@@ -197,11 +213,15 @@ export function changedOverwriteFields(
 ): string[] {
   return Object.keys(row).filter((field) =>
     field !== "legacy_id" &&
-    !equivalentOverwriteValue(row[field], existing[field])
+    !equivalentOverwriteValue(row[field], existing[field], field)
   );
 }
 
-function equivalentOverwriteValue(left: unknown, right: unknown): boolean {
+function equivalentOverwriteValue(
+  left: unknown,
+  right: unknown,
+  field: string,
+): boolean {
   if (left == null && right == null) return true;
   if (
     (typeof left === "number" || typeof left === "string") &&
@@ -217,6 +237,11 @@ function equivalentOverwriteValue(left: unknown, right: unknown): boolean {
       const leftNumber = Number(leftText);
       const rightNumber = Number(rightText);
       if (Number.isFinite(leftNumber) && Number.isFinite(rightNumber)) {
+        const scale = overwriteNumericScales[field];
+        if (scale != null) {
+          const halfUnit = 0.5 * 10 ** -scale;
+          return Math.abs(leftNumber - rightNumber) < halfUnit + Number.EPSILON;
+        }
         return leftNumber === rightNumber;
       }
     }
