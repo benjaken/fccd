@@ -368,6 +368,20 @@ describe("editable quote PDF page", () => {
     expect(screen.queryByRole("main", { name: "PDF 第 2 頁" })).not.toBeInTheDocument();
   });
 
+  it("shows the customer name in the signature when the company name is blank", async () => {
+    const user = userEvent.setup();
+    renderPage(vi.fn().mockResolvedValue({
+      ...result,
+      order: result.order ? { ...result.order, companyName: null } : null,
+    }));
+
+    await screen.findByRole("heading", { name: "到會套餐報價" });
+    await user.click(screen.getByRole("checkbox", { name: "顯示客戶簽署" }));
+
+    expect(document.querySelector(".quote-pdf-signature-customer"))
+      .toHaveTextContent("程嘉敏");
+  });
+
   it("does not insert a visible footer spacer between products and trailing content", async () => {
     renderPage();
 

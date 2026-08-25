@@ -142,7 +142,6 @@ async function roleHasPageAccess(
   pageKey: string,
 ) {
   if (!role) return false;
-  if (role === "Super Admin") return true;
   const { data, error } = await supabase
     .from("role_page_permissions")
     .select("can_access")

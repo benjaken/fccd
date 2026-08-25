@@ -47,6 +47,10 @@ export type FactoryTextRasterizer = (
 const WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
 const CONTENT_X = 8;
 const CONTENT_WIDTH = 384;
+const ADDRESS_CONTENT_WIDTH = 584;
+const DISH_BODY_LINE_HEIGHT = 52;
+const DISH_BODY_LINE_STEP = 66;
+const ADDRESS_LANDSCAPE_HEIGHT = 400;
 const FONT_FAMILY = '"Noto Sans TC", "Noto Sans CJK TC", "PingFang TC", "Microsoft JhengHei", sans-serif';
 
 type GraphemeSegmenter = {
@@ -141,6 +145,34 @@ export function packFactoryBitmapPixels(
   return packed;
 }
 
+/** Rotates a packed monochrome bitmap for sideways printing on 50 x 75 mm stock. */
+export function rotateFactoryBitmapClockwise(
+  bitmap: FactoryTextBitmap,
+): FactoryTextBitmap {
+  if (bitmap.height % 8 !== 0) {
+    throw new Error("factory_rotated_bitmap_width_invalid");
+  }
+  const width = bitmap.height;
+  const height = bitmap.width;
+  const widthBytes = width / 8;
+  const bytes = new Uint8Array(widthBytes * height);
+  bytes.fill(0xff);
+
+  for (let y = 0; y < bitmap.height; y += 1) {
+    for (let x = 0; x < bitmap.width; x += 1) {
+      const sourceByte = bitmap.bytes[y * (bitmap.width / 8) + Math.floor(x / 8)];
+      const isBlack = (sourceByte & (0x80 >> (x % 8))) === 0;
+      if (!isBlack) continue;
+      const rotatedX = bitmap.height - 1 - y;
+      const rotatedY = x;
+      bytes[rotatedY * widthBytes + Math.floor(rotatedX / 8)] &=
+        ~(0x80 >> (rotatedX % 8));
+    }
+  }
+
+  return { width, height, bytes };
+}
+
 export const rasterizeFactoryLabelText: FactoryTextRasterizer = async (
   value,
   { width, height, fontSize, fontWeight = 700, align = "center", trailingBox = false },
@@ -229,9 +261,31 @@ async function textBitmap(
   y: number,
   value: string,
   options: Omit<FactoryTextBitmapOptions, "width">,
+  placement: { x?: number; width?: number } = {},
 ): Promise<Uint8Array> {
-  const bitmap = await rasterize(value, { width: CONTENT_WIDTH, ...options });
-  return bitmapCommand(CONTENT_X, y, bitmap);
+  const bitmap = await rasterize(value, {
+    width: placement.width ?? CONTENT_WIDTH,
+    ...options,
+  });
+  return bitmapCommand(placement.x ?? CONTENT_X, y, bitmap);
+}
+
+async function sidewaysAddressTextBitmap(
+  rasterize: FactoryTextRasterizer,
+  y: number,
+  value: string,
+  options: Omit<FactoryTextBitmapOptions, "width">,
+): Promise<Uint8Array> {
+  const bitmap = await rasterize(value, {
+    width: ADDRESS_CONTENT_WIDTH,
+    ...options,
+  });
+  const rotated = rotateFactoryBitmapClockwise(bitmap);
+  return bitmapCommand(
+    ADDRESS_LANDSCAPE_HEIGHT - y - bitmap.height,
+    CONTENT_X,
+    rotated,
+  );
 }
 
 async function buildDishLabelBytes(
@@ -272,8 +326,8 @@ async function buildDishLabelBytes(
     }),
   ];
   for (const [lineIndex, line] of bodyLines.entries()) {
-    chunks.push(await textBitmap(rasterize, 252 + lineIndex * 66, line, {
-      height: 52,
+    chunks.push(await textBitmap(rasterize, 252 + lineIndex * DISH_BODY_LINE_STEP, line, {
+      height: DISH_BODY_LINE_HEIGHT,
       fontSize: 40,
       fontWeight: 700,
       align: "center",
@@ -289,39 +343,45 @@ async function buildAddressLabelBytes(
   rasterize: FactoryTextRasterizer,
 ): Promise<Uint8Array> {
   const orderNumber = sanitizeFactoryLabelText(input.orderNumber).replace(/^#/, "");
-  const addressLines = wrapFactoryLabelText(input.address, 14).slice(0, 5);
-  const nameLines = wrapFactoryLabelText(input.customerName, 14).slice(0, 2);
-  const displayedNameLines = nameLines.length ? nameLines : [""];
-  const phoneY = 145 + displayedNameLines.length * 36;
-  const addressDividerY = phoneY + 40;
+  const addressLines = wrapFactoryLabelText(input.address, 18).slice(0, 3);
   const chunks: Uint8Array[] = [
     command("SIZE 50 mm,75 mm"),
     command("GAP 2 mm,0"),
     command("DIRECTION 1"),
     command("CLS"),
-    await textBitmap(rasterize, 14, orderNumber, { height: 64, fontSize: 48, fontWeight: 700, align: "center" }),
-    command("BAR 16,86,368,2"),
-    await textBitmap(rasterize, 101, `送達時間：${input.arrivalWindow}`, { height: 32, fontSize: 22, fontWeight: 700, align: "left" }),
-  ];
-  for (const [index, line] of displayedNameLines.entries()) {
-    chunks.push(await textBitmap(rasterize, 141 + index * 36, `${index === 0 ? "姓名：" : ""}${line}`, {
+    await sidewaysAddressTextBitmap(rasterize, 10, orderNumber, {
+      height: 56,
+      fontSize: 44,
+      fontWeight: 800,
+      align: "center",
+    }),
+    command("BAR 322,16,2,568"),
+    await sidewaysAddressTextBitmap(rasterize, 90, `送達時間：${input.arrivalWindow}`, {
+      height: 40,
+      fontSize: 28,
+      fontWeight: 800,
+      align: "center",
+    }),
+    await sidewaysAddressTextBitmap(
+      rasterize,
+      136,
+      `姓名：${input.customerName}　電話：${input.customerPhone}`,
+      { height: 40, fontSize: 28, fontWeight: 800, align: "center" },
+    ),
+    command("BAR 208,16,2,568"),
+    await sidewaysAddressTextBitmap(rasterize, 204, "地址：", {
       height: 32,
-      fontSize: 22,
-      fontWeight: 700,
-      align: "left",
-    }));
-  }
-  chunks.push(
-    await textBitmap(rasterize, phoneY - 4, `電話：${input.customerPhone}`, { height: 32, fontSize: 22, fontWeight: 700, align: "left" }),
-    command(`BAR 16,${addressDividerY},368,2`),
-    await textBitmap(rasterize, addressDividerY + 15, "地址：", { height: 34, fontSize: 24, fontWeight: 700, align: "left" }),
-  );
+      fontSize: 26,
+      fontWeight: 800,
+      align: "center",
+    }),
+  ];
   for (const [index, line] of addressLines.entries()) {
-    chunks.push(await textBitmap(rasterize, addressDividerY + 55 + index * 52, line, {
-      height: 44,
-      fontSize: 30,
-      fontWeight: 700,
-      align: "left",
+    chunks.push(await sidewaysAddressTextBitmap(rasterize, 240 + index * 52, line, {
+      height: 40,
+      fontSize: 32,
+      fontWeight: 800,
+      align: "center",
     }));
   }
   chunks.push(command("PRINT 1"));

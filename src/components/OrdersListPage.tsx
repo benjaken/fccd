@@ -355,7 +355,7 @@ export function OrdersListPage({
   };
 
   const runSync = useCallback(async () => {
-    if (syncing) return;
+    if (!canManageStatuses || syncing) return;
     setSyncing(true);
     setSyncError(null);
     setSyncResult(null);
@@ -372,7 +372,7 @@ export function OrdersListPage({
     } finally {
       setSyncing(false);
     }
-  }, [syncShopify, syncing]);
+  }, [canManageStatuses, syncShopify, syncing]);
 
   const syncDone = Boolean(syncResult);
   const syncFailed = Boolean(syncError);
@@ -443,6 +443,7 @@ export function OrdersListPage({
   };
 
   const confirmCancel = async () => {
+    if (!canManageStatuses) return;
     if (cancelText.trim().toLowerCase() !== "void") return;
     if (!cancelOrder) return;
     setCancelling(true);
@@ -493,6 +494,7 @@ export function OrdersListPage({
   const renderOrderActions = (order: OrderListItem) => (
     <OrderRowActionMenu
       order={order}
+      canManage={canManageStatuses}
       canCancel={canCancelOrderDelivery(order.deliveryStatus)}
       onCancel={() => openCancel(order)}
       onMessages={() => setMessageOrder(order)}
@@ -521,12 +523,13 @@ export function OrdersListPage({
     });
   };
   const openFestivalModal = () => {
+    if (!canManageStatuses) return;
     setSelectedFestivalId("");
     setFestivalError(false);
     setFestivalModalOpen(true);
   };
   const saveFestival = async () => {
-    if (!selectedFestivalId || !selectedOrderIds.size) return;
+    if (!canManageStatuses || !selectedFestivalId || !selectedOrderIds.size) return;
     setFestivalSaving(true);
     setFestivalError(false);
     try {
@@ -551,7 +554,7 @@ export function OrdersListPage({
           {description ? <p>{description}</p> : null}
         </div>
         <div className="heading-actions">
-          {preset === "shopify-pending" ? (
+          {canManageStatuses && preset === "shopify-pending" ? (
             <Button
               variant="outline"
               onClick={openSyncConfirm}
@@ -564,12 +567,12 @@ export function OrdersListPage({
                 : t("orders.syncShopify")}
             </Button>
           ) : null}
-          <Button asChild>
+          {canManageStatuses ? <Button asChild>
             <Link to="/orders/new">
               <Plus />
               {t("orders.create")}
             </Link>
-          </Button>
+          </Button> : null}
         </div>
       </header>
 
@@ -658,7 +661,7 @@ export function OrdersListPage({
           </div>
         ) : (
           <>
-          {selectedOrderIds.size ? (
+          {canManageStatuses && selectedOrderIds.size ? (
             <div className="orders-selection-actions" role="status">
               <span>{t("orders.festivalAssignment.selected", { count: selectedOrderIds.size })}</span>
               <Button type="button" variant="outline" onClick={openFestivalModal}>
@@ -697,6 +700,7 @@ export function OrdersListPage({
                       <label className="order-mobile-select">
                         <input
                           type="checkbox"
+                          disabled={!canManageStatuses}
                           checked={selectedOrderIds.has(order.id)}
                           onChange={() => toggleOrderSelection(order.id)}
                           aria-label={t("orders.festivalAssignment.selectOrder", {
@@ -774,6 +778,7 @@ export function OrdersListPage({
                 <th className="orders-selection-cell">
                   <input
                     type="checkbox"
+                    disabled={!canManageStatuses}
                     checked={allVisibleSelected}
                     onChange={toggleVisibleOrders}
                     aria-label={t("orders.festivalAssignment.selectAll")}
@@ -858,6 +863,7 @@ export function OrdersListPage({
                   <td className="orders-selection-cell">
                     <input
                       type="checkbox"
+                      disabled={!canManageStatuses}
                       checked={selectedOrderIds.has(order.id)}
                       onChange={() => toggleOrderSelection(order.id)}
                       aria-label={t("orders.festivalAssignment.selectOrder", {
@@ -980,6 +986,7 @@ export function OrdersListPage({
         phone={messageOrder?.contactPhone ?? null}
         orderNumber={messageOrder?.orderNumber ?? null}
         defaultOrderId={messageOrder?.id ?? null}
+        canCreateNote={canManageStatuses}
         onClose={() => setMessageOrder(null)}
         loadMessages={loadCustomerMessages}
         createNote={createCustomerNote}

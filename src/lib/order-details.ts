@@ -38,6 +38,7 @@ export type ReadOnlyOrderDetail = {
   grandTotal: number | null;
   outstanding: number | null;
   createdAt?: string | null;
+  shopifyOrderId?: number | null;
   shopifyStoreDomain?: string | null;
   updatedAt: string;
   statuses: OrderStatusView[];
@@ -105,7 +106,7 @@ export type OrderDetailResult = {
 };
 
 const fields =
-  "id,document_type,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,shipping_address_snapshot,customer_note_snapshot,remarks,quote_status,quote_description_snapshot,delivery_terms_snapshot,delivery_at,delivery_time,ship_out_time,delivery_status,is_sent_to_factory,factory_date,factory_packing_note,factory_print_date,factory_reprint_required,currency,discount_amount,shipping_fee,grand_total,outstanding,bubble_created_at,created_at,updated_at,order_status_legacy_ids,channels(id,name,email),shopify_stores(shop_domain)";
+  "id,document_type,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,shipping_address_snapshot,customer_note_snapshot,remarks,quote_status,quote_description_snapshot,delivery_terms_snapshot,delivery_at,delivery_time,ship_out_time,delivery_status,is_sent_to_factory,factory_date,factory_packing_note,factory_print_date,factory_reprint_required,currency,discount_amount,shipping_fee,grand_total,outstanding,bubble_created_at,created_at,updated_at,order_status_legacy_ids,shopify_order_id,channels(id,name,email),shopify_stores(shop_domain)";
 
 function decimal(value: string | number | null) {
   return value === null ? null : Number.parseFloat(String(value));
@@ -289,6 +290,7 @@ export async function fetchOrderDetail(
     grandTotal: canViewFinance ? decimal(data.grand_total) : null,
     outstanding: canViewFinance ? decimal(data.outstanding) : null,
     createdAt: data.bubble_created_at || data.created_at,
+    shopifyOrderId: data.shopify_order_id,
     shopifyStoreDomain: relatedCatalogText(data.shopify_stores, "shop_domain"),
     updatedAt: data.updated_at,
     statuses: resolveOrderStatuses(data.order_status_legacy_ids, catalog),

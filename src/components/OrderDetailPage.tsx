@@ -33,6 +33,12 @@ import { cn } from "@/lib/utils";
 
 type DetailLoader = typeof fetchOrderDetail;
 
+function shopifyOrderUrl(order: ReadOnlyOrderDetail): string | null {
+  if (!order.shopifyOrderId || !order.shopifyStoreDomain) return null;
+  const shop = order.shopifyStoreDomain.replace(/\.myshopify\.com$/, "");
+  return `https://admin.shopify.com/store/${shop}/orders/${order.shopifyOrderId}`;
+}
+
 function DetailField({
   label,
   children,
@@ -167,6 +173,7 @@ export function OrderDetailPage({
   }
 
   const { order } = result;
+  const shopifyUrl = shopifyOrderUrl(order);
   const status = isQuote
     ? { label: order.quoteStatus || t("details.draft"), tone: "amber" }
     : displayStatus(order, {
@@ -202,7 +209,25 @@ export function OrderDetailPage({
             {backLabel}
           </Link>
           <span className="eyebrow">{title}</span>
-          <h1>{order.orderNumber || emptyValue}</h1>
+          <div className="order-number-cell">
+            <h1>{order.orderNumber || emptyValue}</h1>
+            {shopifyUrl ? (
+              <a
+                className="shopify-order-icon"
+                href={shopifyUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={t("orders.openInShopify", {
+                  order: order.orderNumber || order.id,
+                })}
+                title={t("orders.openInShopify", {
+                  order: order.orderNumber || order.id,
+                })}
+              >
+                <span aria-hidden="true">S</span>
+              </a>
+            ) : null}
+          </div>
           <p>{order.companyName || order.customerName || emptyValue}</p>
         </div>
         <div

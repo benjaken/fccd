@@ -225,8 +225,12 @@ describe("Primary navigation section matching", () => {
     expect(pageAccessKey("/kitchen/settings/cook-types")).toBe(
       "kitchen.settings",
     );
-    expect(pageAccessKey("/factory")).toBe("workspace");
-    expect(pageAccessKey("/driver-delivery")).toBe("workspace");
+    expect(pageAccessKey("/factory")).toBe("workspace.factory");
+    expect(pageAccessKey("/factory/order/delivery-1")).toBe(
+      "workspace.factory",
+    );
+    expect(pageAccessKey("/driver-delivery")).toBe("workspace.delivery");
+    expect(pageAccessKey("/customer")).toBe("workspace.customer");
   });
 
   it("registers order settings before the order detail route", () => {

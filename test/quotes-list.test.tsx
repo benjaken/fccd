@@ -67,7 +67,7 @@ describe("Catering quotes list", () => {
 
     render(
       <MemoryRouter>
-        <QuotesListPage loadQuotes={loadQuotes} />
+        <QuotesListPage loadQuotes={loadQuotes} canManage />
       </MemoryRouter>,
     );
 
@@ -222,7 +222,7 @@ describe("Catering quotes list", () => {
     const loadQuotes = vi.fn().mockResolvedValue(quoteResult);
     render(
       <MemoryRouter>
-        <QuotesListPage loadQuotes={loadQuotes} />
+        <QuotesListPage loadQuotes={loadQuotes} canManage />
       </MemoryRouter>,
     );
 
@@ -286,6 +286,7 @@ describe("Catering quotes list", () => {
     render(
       <MemoryRouter>
         <QuotesListPage
+          canManage
           loadQuotes={loadQuotes}
           saveDescription={saveDescription}
         />
@@ -306,6 +307,30 @@ describe("Catering quotes list", () => {
       ),
     );
     expect(description).toHaveValue("更新後的報價描述");
+  });
+
+  it("keeps quote editing controls read-only without manage permission", async () => {
+    const loadQuotes = vi.fn().mockResolvedValue(quoteResult);
+    const saveDescription = vi.fn().mockResolvedValue(undefined);
+    render(
+      <MemoryRouter>
+        <QuotesListPage
+          loadQuotes={loadQuotes}
+          saveDescription={saveDescription}
+        />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("Q-260812-001");
+    const description = document.querySelector(
+      ".quote-description-cell textarea",
+    );
+    expect(description).not.toBeNull();
+    expect(description).toHaveAttribute("readonly");
+    expect(document.querySelector('a[href="/quotes/quote-1/edit"]')).toBeNull();
+    expect(document.querySelector('a[href="/quotes/new?copyFrom=quote-1"]')).toBeNull();
+    expect(document.querySelector('a[href="/quotes/quote-1/pdf"]')).toBeNull();
+    expect(saveDescription).not.toHaveBeenCalled();
   });
 
   it("submits a server-side search and resets to the first page", async () => {

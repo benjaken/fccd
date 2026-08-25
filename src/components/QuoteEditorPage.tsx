@@ -78,6 +78,7 @@ import {
   type OrderFactorySettings,
 } from "@/lib/order-factory-settings";
 import { DICT_TYPE, dictItemLabel, useDictItems } from "@/lib/dictionaries";
+import { matchDeliveryTimeOption, normalizeDeliveryTimeRange } from "@/lib/delivery-time";
 import { useMediaQuery } from "@/lib/use-media-query";
 import {
   fetchLunchboxPickerFilterOptions,
@@ -86,6 +87,16 @@ import {
 } from "@/lib/products";
 
 const loadConfiguredShippingFees = async () => (await fetchShippingFees(1, 1000)).rows;
+
+function shopifyOrderUrl(order: CreatedQuote): string | null {
+  if (!order.shopifyOrderId || !order.shopifyStoreDomain) return null;
+  const shop = order.shopifyStoreDomain.replace(/\.myshopify\.com$/, "");
+  return `https://admin.shopify.com/store/${shop}/orders/${order.shopifyOrderId}`;
+}
+
+function isFreeUtensilPackLine(line: QuoteLine) {
+  return !line.productId && !line.packageId && line.name?.trim() === "餐具包";
+}
 
 const EMPTY_OPTIONS: QuoteEditorOptions = {
   channels: [],
@@ -253,7 +264,10 @@ export function QuoteEditorPage({
   const quoteStatusDict = useDictItems(DICT_TYPE.quoteStatus);
   const additionalInfoOptions = additionalInfoDict.items.map((item) => dictItemLabel(item, i18n.language));
   const activityOptions = activityDict.items.map((item) => ({ description: dictItemLabel(item, i18n.language), amount: String(item.metadata.amount ?? "0") }));
-  const deliveryTimeOptions = deliveryTimeDict.items.map((item) => item.value);
+  const deliveryTimeOptions = useMemo(
+    () => deliveryTimeDict.items.map((item) => item.value),
+    [deliveryTimeDict.items],
+  );
   const shipOutTimeOptions = shipOutTimeDict.items.map((item) => item.value);
   const quoteStatusOptions = quoteStatusDict.items.map((item) => ({
     value: item.value,
@@ -344,10 +358,31 @@ export function QuoteEditorPage({
   const [savingFactorySettings, setSavingFactorySettings] = useState(false);
   const [factorySettingsError, setFactorySettingsError] = useState(false);
 
+  useEffect(() => {
+    if (deliveryTimeDict.loading || !draft.deliveryTime.trim()) return;
+    const matched = matchDeliveryTimeOption(draft.deliveryTime, deliveryTimeOptions);
+    if (matched) {
+      if (matched !== draft.deliveryTime) {
+        setDraft((current) => ({ ...current, deliveryTime: matched }));
+      }
+      setDeliveryTimeMode("");
+      return;
+    }
+
+    setDraft((current) => {
+      const normalized = normalizeDeliveryTimeRange(current.deliveryTime);
+      return normalized === current.deliveryTime
+        ? current
+        : { ...current, deliveryTime: normalized };
+    });
+    setDeliveryTimeMode("custom");
+  }, [deliveryTimeDict.loading, deliveryTimeOptions, draft.deliveryTime]);
+
   const activeQuote = useMemo(
     () => created ?? (id ? { id, orderNumber: "" } : null),
     [created, id],
   );
+  const activeShopifyUrl = isOrder && activeQuote ? shopifyOrderUrl(activeQuote) : null;
 
   useEffect(() => {
     let active = true;
@@ -497,27 +532,27 @@ export function QuoteEditorPage({
     total + financialValues.shippingFee - financialValues.discount - financialValues.cashdollarRedeemed,
   );
   const paidTotal = payments.reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0);
-  const districts = useMemo(() => dedupeQuoteOptions(options.districts), [options.districts]);
+  const districts = useMemo(
+    () => dedupeQuoteOptions(options.districts, draft.districtId),
+    [draft.districtId, options.districts],
+  );
   const selectedShippingMethod = options.shippingMethods.find((item) => item.id === draft.shippingMethodId);
   const automaticDistrictName = automaticDistrictForMethod(selectedShippingMethod?.name ?? "");
-  const showDeliveryAddress = DELIVERY_ADDRESS_METHODS.has(selectedShippingMethod?.name ?? "");
+  const showDeliveryAddress = Boolean(draft.address.trim()) ||
+    DELIVERY_ADDRESS_METHODS.has(selectedShippingMethod?.name ?? "");
   const factoryMissingFields = useMemo(() => {
     const missing: string[] = [];
     if (!draft.channelId) missing.push(t("quoteEditor.fields.brand"));
     if (!draft.customerName.trim()) missing.push(t("quoteEditor.fields.customerName"));
-    if (!draft.companyName.trim()) missing.push(t("quoteEditor.fields.companyName"));
     if (!draft.contactA.trim()) missing.push(t("quoteEditor.fields.contactA"));
     if (!draft.email.trim()) missing.push(t("quoteEditor.fields.email"));
     if (!draft.shippingMethodId) missing.push(t("quoteEditor.fields.shippingMethod"));
     if (!draft.districtId && !draft.districtName.trim() && !automaticDistrictName) {
       missing.push(t("quoteEditor.fields.district"));
     }
-    if (!draft.address.trim() && (!selectedShippingMethod || showDeliveryAddress)) {
-      missing.push(t("quoteEditor.fields.address"));
-    }
-    if (!draft.deliveryTime.trim()) missing.push(t("quoteEditor.fields.deliveryTime"));
+    if (!draft.deliveryDate.trim()) missing.push(t("quoteEditor.fields.deliveryDate"));
     return missing;
-  }, [automaticDistrictName, draft, selectedShippingMethod, showDeliveryAddress, t]);
+  }, [automaticDistrictName, draft, t]);
 
   const patchDraft = (partial: Partial<QuoteDraft>) =>
     setDraft((current) => ({ ...current, ...partial }));
@@ -537,14 +572,13 @@ export function QuoteEditorPage({
     const nextErrors: Record<string, string> = {};
     if (!draft.channelId) nextErrors.channelId = t("quoteEditor.validation.brand");
     if (!draft.customerName.trim()) nextErrors.customerName = t("quoteEditor.validation.customer");
-    if (!draft.companyName.trim()) nextErrors.companyName = t("quoteEditor.validation.company");
     if (!draft.contactA.trim()) nextErrors.contactA = t("quoteEditor.validation.contact");
     if (!draft.email.trim()) nextErrors.email = t("quoteEditor.validation.email");
     if (!draft.shippingMethodId) nextErrors.shippingMethodId = t("quoteEditor.validation.shippingMethod");
     if (!draft.districtId && !draft.districtName.trim() && !automaticDistrictName) {
       nextErrors.districtId = t("quoteEditor.validation.district");
     }
-    if (!draft.deliveryTime.trim()) nextErrors.deliveryTime = t("quoteEditor.validation.deliveryTime");
+    if (!draft.deliveryDate.trim()) nextErrors.deliveryDate = t("quoteEditor.validation.deliveryDate");
     setFieldErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   };
@@ -765,7 +799,7 @@ export function QuoteEditorPage({
     if (!activeQuote || !selectedItem) return;
     const parsedQuantity = Number(quantity);
     const parsedPrice = Number(unitPrice);
-    if (!Number.isFinite(parsedQuantity) || parsedQuantity <= 0 || !Number.isFinite(parsedPrice) || parsedPrice < 0) {
+    if (!Number.isInteger(parsedQuantity) || parsedQuantity < 1 || !Number.isFinite(parsedPrice) || parsedPrice < 0) {
       setError("quote_line_invalid");
       return;
     }
@@ -909,16 +943,19 @@ export function QuoteEditorPage({
   };
 
   const saveEditedLine = async (line: QuoteLine) => {
-    if (line.quantity <= 0 || line.unitPrice < 0) {
+    const nextLine = isFreeUtensilPackLine(line)
+      ? { ...line, unitPrice: 0, totalPrice: 0 }
+      : line;
+    if (!Number.isInteger(nextLine.quantity) || nextLine.quantity < 1 || nextLine.unitPrice < 0) {
       setError("quote_line_invalid");
       return;
     }
-    if (line.isPending) return;
-    setSavingLineId(line.id);
+    if (nextLine.isPending) return;
+    setSavingLineId(nextLine.id);
     setError(null);
     try {
-      if (isOrder) await saveExistingLine(line, "order");
-      else await saveExistingLine(line);
+      if (isOrder) await saveExistingLine(nextLine, "order");
+      else await saveExistingLine(nextLine);
     } catch {
       setError("quote_line_save_failed");
     } finally {
@@ -1274,7 +1311,21 @@ export function QuoteEditorPage({
           <div>
             <Link className="detail-back" to={backTo}><ChevronLeft />{isOrder ? t("details.back") : t("quoteEditor.back")}</Link>
             <span className="eyebrow">{isOrder ? t("details.orderTitle") : t("quoteEditor.eyebrow")}</span>
-            <h1>{activeQuote.orderNumber || (isOrder ? t("details.orderTitle") : t("quoteEditor.title"))}</h1>
+            <div className="order-number-cell">
+              <h1>{activeQuote.orderNumber || (isOrder ? t("details.orderTitle") : t("quoteEditor.title"))}</h1>
+              {activeShopifyUrl ? (
+                <a
+                  className="shopify-order-icon"
+                  href={activeShopifyUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={t("orders.openInShopify", { order: activeQuote.orderNumber || activeQuote.id })}
+                  title={t("orders.openInShopify", { order: activeQuote.orderNumber || activeQuote.id })}
+                >
+                  <span aria-hidden="true">S</span>
+                </a>
+              ) : null}
+            </div>
             <p>{t(isOrder ? "quoteEditor.orderItemsReady" : "quoteEditor.itemsReady")}</p>
           </div>
           {showConfirmationAction || showConvertAction ? (
@@ -1455,7 +1506,21 @@ export function QuoteEditorPage({
             {isOrder ? t("details.back") : t("quoteEditor.back")}
           </Link>
           <span className="eyebrow">{isOrder ? t("details.orderTitle") : t("quoteEditor.eyebrow")}</span>
-          <h1>{activeQuote?.orderNumber || (isOrder ? t("details.orderTitle") : t("quoteEditor.title"))}</h1>
+          <div className="order-number-cell">
+            <h1>{activeQuote?.orderNumber || (isOrder ? t("details.orderTitle") : t("quoteEditor.title"))}</h1>
+            {activeQuote && activeShopifyUrl ? (
+              <a
+                className="shopify-order-icon"
+                href={activeShopifyUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={t("orders.openInShopify", { order: activeQuote.orderNumber || activeQuote.id })}
+                title={t("orders.openInShopify", { order: activeQuote.orderNumber || activeQuote.id })}
+              >
+                <span aria-hidden="true">S</span>
+              </a>
+            ) : null}
+          </div>
           <p>{activeQuote ? t(isOrder ? "quoteEditor.orderItemsReady" : "quoteEditor.itemsReady") : t("quoteEditor.description")}</p>
         </div>
         {activeQuote && (
@@ -1475,14 +1540,14 @@ export function QuoteEditorPage({
             <h2><FileText />{t("quoteEditor.customerSection")}</h2>
             <label><span>{t("quoteEditor.fields.number")}</span><input value={activeQuote?.orderNumber || t("quoteEditor.autoNumber")} disabled /></label>
             <label><span>{t("quoteEditor.fields.brand")} *</span>
-              <select value={draft.channelId} onChange={(event) => patchDraft({ channelId: event.target.value })} aria-invalid={Boolean(fieldErrors.channelId)}>
+              <select required value={draft.channelId} onChange={(event) => patchDraft({ channelId: event.target.value })} aria-invalid={Boolean(fieldErrors.channelId)}>
                 <option value="">{t("quoteEditor.placeholders.brand")}</option>
                 {options.channels.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
               </select>
               {fieldErrors.channelId && <em>{fieldErrors.channelId}</em>}
             </label>
             <label><span>{t("quoteEditor.fields.customerName")} *</span><input required aria-label={t("quoteEditor.fields.customerName")} value={draft.customerName} onChange={(event) => patchDraft({ customerName: event.target.value })} aria-invalid={Boolean(fieldErrors.customerName)} />{fieldErrors.customerName && <em>{fieldErrors.customerName}</em>}</label>
-            <label><span>{t("quoteEditor.fields.companyName")} *</span><input required aria-label={t("quoteEditor.fields.companyName")} value={draft.companyName} onChange={(event) => patchDraft({ companyName: event.target.value })} aria-invalid={Boolean(fieldErrors.companyName)} />{fieldErrors.companyName && <em>{fieldErrors.companyName}</em>}</label>
+            <label><span>{t("quoteEditor.fields.companyName")}</span><input aria-label={t("quoteEditor.fields.companyName")} value={draft.companyName} onChange={(event) => patchDraft({ companyName: event.target.value })} /></label>
             <label><span>{t("quoteEditor.fields.contactA")} *</span><input required aria-label={t("quoteEditor.fields.contactA")} type="tel" value={draft.contactA} onChange={(event) => patchDraft({ contactA: event.target.value })} aria-invalid={Boolean(fieldErrors.contactA)} />{fieldErrors.contactA && <em>{fieldErrors.contactA}</em>}</label>
             <label><span>{t("quoteEditor.fields.contactB")}</span><input type="tel" value={draft.contactB} onChange={(event) => patchDraft({ contactB: event.target.value })} /></label>
             <label><span>{t("quoteEditor.fields.email")} *</span><input required aria-label={t("quoteEditor.fields.email")} type="email" value={draft.email} onChange={(event) => patchDraft({ email: event.target.value })} aria-invalid={Boolean(fieldErrors.email)} />{fieldErrors.email && <em>{fieldErrors.email}</em>}</label>
@@ -1522,13 +1587,13 @@ export function QuoteEditorPage({
             <h2><PackagePlus />{t("quoteEditor.deliverySection")}</h2>
             {!isOrder ? <label><span>{t("quoteEditor.fields.quoteStatus")}</span><select aria-label={t("quoteEditor.fields.quoteStatus")} value={draft.quoteStatus} onChange={(event) => patchDraft({ quoteStatus: event.target.value })}><option value="">{t("common.notSet")}</option>{draft.quoteStatus && !quoteStatusOptions.some((option) => option.value === draft.quoteStatus) ? <option value={draft.quoteStatus}>{draft.quoteStatus}</option> : null}{quoteStatusOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label> : null}
             {!isOrder ? <label><span>{t("quoteEditor.fields.followUpDate")}</span><input aria-label={t("quoteEditor.fields.followUpDate")} type="date" value={draft.followUpDate} onChange={(event) => patchDraft({ followUpDate: event.target.value })} /></label> : null}
-            {!isOrder && draft.quoteAutoClosedAt && draft.quoteStatus !== "Case Closed" ? <label><span>{t("quoteEditor.fields.quoteReopenReason")}</span><textarea required rows={2} value={draft.quoteReopenReason ?? ""} onChange={(event) => patchDraft({ quoteReopenReason: event.target.value })} /></label> : null}
+            {!isOrder && draft.quoteAutoClosedAt && draft.quoteStatus !== "Case Closed" ? <label><span>{t("quoteEditor.fields.quoteReopenReason")}</span><textarea rows={2} value={draft.quoteReopenReason ?? ""} onChange={(event) => patchDraft({ quoteReopenReason: event.target.value })} /></label> : null}
             {!isOrder ? <label><span>{t("quoteEditor.fields.quoteSalesSource")}</span><select aria-label={t("quoteEditor.fields.quoteSalesSource")} value={draft.quoteSalesSourceId} onChange={(event) => patchDraft({ quoteSalesSourceId: event.target.value })}><option value="">{t("common.notSet")}</option>{options.quoteSalesSources.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label> : null}
             {!isOrder ? <label><span>{t("quoteEditor.fields.quoteCommunicationChannel")}</span><select aria-label={t("quoteEditor.fields.quoteCommunicationChannel")} value={draft.quoteCommunicationChannelId} onChange={(event) => patchDraft({ quoteCommunicationChannelId: event.target.value })}><option value="">{t("common.notSet")}</option>{options.quoteCommunicationChannels.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label> : null}
-            <label><span>{t("quoteEditor.fields.district")} *</span><select aria-label={t("quoteEditor.fields.district")} value={automaticDistrictName ? `auto:${automaticDistrictName}` : draft.districtId} disabled={Boolean(automaticDistrictName)} onChange={(event) => patchDraft({ districtId: event.target.value, districtName: "" })} aria-invalid={Boolean(fieldErrors.districtId)}>{automaticDistrictName && <option value={`auto:${automaticDistrictName}`}>{automaticDistrictName}</option>}<option value="">{t("common.notSet")}</option>{districts.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>{fieldErrors.districtId && <em>{fieldErrors.districtId}</em>}</label>
+            <label><span>{t("quoteEditor.fields.district")} *</span><select required={!automaticDistrictName} aria-label={t("quoteEditor.fields.district")} value={automaticDistrictName ? `auto:${automaticDistrictName}` : draft.districtId} disabled={Boolean(automaticDistrictName)} onChange={(event) => patchDraft({ districtId: event.target.value, districtName: "" })} aria-invalid={Boolean(fieldErrors.districtId)}>{automaticDistrictName && <option value={`auto:${automaticDistrictName}`}>{automaticDistrictName}</option>}<option value="">{t("common.notSet")}</option>{districts.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>{fieldErrors.districtId && <em>{fieldErrors.districtId}</em>}</label>
             <label><span>{t("quoteEditor.fields.shippingMethod")} *</span><select required aria-label={t("quoteEditor.fields.shippingMethod")} value={draft.shippingMethodId} onChange={(event) => changeShippingMethod(event.target.value)} aria-invalid={Boolean(fieldErrors.shippingMethodId)}><option value="">{t("common.notSet")}</option>{options.shippingMethods.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>{fieldErrors.shippingMethodId && <em>{fieldErrors.shippingMethodId}</em>}</label>
-            <label><span>{t("quoteEditor.fields.deliveryDate")}</span><input type="date" value={draft.deliveryDate} onChange={(event) => patchDraft({ deliveryDate: event.target.value })} /></label>
-            <label><span>{t("quoteEditor.fields.deliveryTime")} *</span><div className="quote-time-control"><select required aria-label={t("quoteEditor.fields.deliveryTime")} value={deliveryTimeMode === "custom" ? "custom" : draft.deliveryTime} onChange={(event) => { const value = event.target.value; setDeliveryTimeMode(value === "custom" ? "custom" : ""); patchDraft({ deliveryTime: value === "custom" ? "" : value }); }} aria-invalid={Boolean(fieldErrors.deliveryTime)}><option value="">{t("quoteEditor.placeholders.deliveryTimeSelectPlaceholder")}</option><option value="custom">{t("quoteEditor.custom")}</option>{deliveryTimeOptions.map((time) => <option key={time} value={time}>{time}</option>)}</select>{deliveryTimeMode === "custom" && <input required value={draft.deliveryTime} onChange={(event) => patchDraft({ deliveryTime: event.target.value })} placeholder={t("quoteEditor.placeholders.customDeliveryTimePlaceholder")} />}</div>{fieldErrors.deliveryTime && <em>{fieldErrors.deliveryTime}</em>}</label>
+            <label><span>{t("quoteEditor.fields.deliveryDate")} *</span><input required aria-label={t("quoteEditor.fields.deliveryDate")} type="date" value={draft.deliveryDate} onChange={(event) => patchDraft({ deliveryDate: event.target.value })} aria-invalid={Boolean(fieldErrors.deliveryDate)} />{fieldErrors.deliveryDate && <em>{fieldErrors.deliveryDate}</em>}</label>
+            <label><span>{t("quoteEditor.fields.deliveryTime")}</span><div className="quote-time-control"><select aria-label={t("quoteEditor.fields.deliveryTime")} value={deliveryTimeMode === "custom" ? "custom" : draft.deliveryTime} onChange={(event) => { const value = event.target.value; setDeliveryTimeMode(value === "custom" ? "custom" : ""); patchDraft({ deliveryTime: value === "custom" ? "" : value }); }}><option value="">{t("quoteEditor.placeholders.deliveryTimeSelectPlaceholder")}</option><option value="custom">{t("quoteEditor.custom")}</option>{deliveryTimeOptions.map((time) => <option key={time} value={time}>{time}</option>)}</select>{deliveryTimeMode === "custom" && <input value={draft.deliveryTime} onChange={(event) => patchDraft({ deliveryTime: event.target.value })} placeholder={t("quoteEditor.placeholders.customDeliveryTimePlaceholder")} />}</div></label>
             <label><span>{t("quoteEditor.fields.shipOutTime")}</span><select value={draft.shipOutTime} onChange={(event) => patchDraft({ shipOutTime: event.target.value })}><option value="">{t("quoteEditor.placeholders.shipOutTimeSelectPlaceholder")}</option>{shipOutTimeOptions.map((time) => <option key={time} value={time}>{time}</option>)}</select></label>
             <label><span>{t("quoteEditor.fields.customerNote")}<small>{t("quoteEditor.fields.customerNoteHint")}</small></span><textarea rows={2} value={draft.customerNote} onChange={(event) => patchDraft({ customerNote: event.target.value })} /></label>
             <label><span>{t("quoteEditor.fields.packingNote")}<small>{t("quoteEditor.fields.packingNoteHint")}</small></span><textarea rows={2} value={draft.packingNote} onChange={(event) => patchDraft({ packingNote: event.target.value })} /></label>
@@ -1562,7 +1627,7 @@ export function QuoteEditorPage({
               )}
             </div>
             <div className="quote-item-numbers">
-              <label><span>{t("quoteEditor.items.quantity")}</span><input type="number" min="0.001" step="0.001" value={quantity} onChange={(event) => setQuantity(event.target.value)} /></label>
+              <label><span>{t("quoteEditor.items.quantity")}</span><input type="number" inputMode="numeric" min="1" step="1" value={quantity} onChange={(event) => setQuantity(event.target.value)} /></label>
               <label><span>{t("quoteEditor.items.unitPrice")}</span><input type="number" min="0" step="0.01" value={unitPrice} onChange={(event) => setUnitPrice(event.target.value)} /></label>
             </div>
             <label><span>{t("quoteEditor.items.remarks")}</span><textarea rows={1} maxLength={16} value={lineRemarks} onChange={(event) => setLineRemarks(event.target.value)} /></label>
@@ -1590,8 +1655,8 @@ export function QuoteEditorPage({
                       </div>
                     </header>
                     <div className="quote-mobile-line-fields">
-                      <label><span>{t("quoteEditor.items.quantity")}</span><input type="number" inputMode="decimal" min="0.001" step="0.001" value={line.quantity} disabled={savingLineId === line.id} onChange={(event) => patchLine(line.id, { quantity: Number(event.target.value) })} onBlur={() => void saveEditedLine(line)} /></label>
-                      <label><span>{t("quoteEditor.items.unitPrice")}</span><input type="number" inputMode="decimal" min="0" step="0.01" value={line.unitPrice} disabled={savingLineId === line.id} onChange={(event) => patchLine(line.id, { unitPrice: Number(event.target.value) })} onBlur={() => void saveEditedLine(line)} /></label>
+                      <label><span>{t("quoteEditor.items.quantity")}</span><input type="number" inputMode="numeric" min="1" step="1" value={line.quantity} disabled={savingLineId === line.id} onChange={(event) => patchLine(line.id, { quantity: Number(event.target.value) })} onBlur={() => void saveEditedLine(line)} /></label>
+                      <label><span>{t("quoteEditor.items.unitPrice")}</span><input type="number" inputMode="decimal" min="0" step="0.01" value={isFreeUtensilPackLine(line) ? 0 : line.unitPrice} disabled={savingLineId === line.id || isFreeUtensilPackLine(line)} onChange={(event) => patchLine(line.id, { unitPrice: Number(event.target.value) })} onBlur={() => void saveEditedLine(line)} /></label>
                       <label className="is-wide"><span>{t("quoteEditor.items.remarks")}</span><textarea rows={2} maxLength={16} value={line.remarks || ""} disabled={savingLineId === line.id} onChange={(event) => patchLine(line.id, { remarks: event.target.value })} onBlur={() => void saveEditedLine(line)} /></label>
                     </div>
                     <footer><span>{t("quoteEditor.items.subtotal")}</span><strong>{money.format(line.totalPrice)}</strong></footer>
@@ -1651,8 +1716,8 @@ export function QuoteEditorPage({
                     />
                   ) : null}
                 </td>
-                <td><input className="quote-line-edit-number" type="number" min="0.001" step="0.001" value={line.quantity} aria-label={`${t("quoteEditor.items.quantity")} ${line.name || ""}`} disabled={savingLineId === line.id} onChange={(event) => patchLine(line.id, { quantity: Number(event.target.value) })} onBlur={() => void saveEditedLine(line)} /></td>
-                <td><input className="quote-line-edit-number" type="number" min="0" step="0.01" value={line.unitPrice} aria-label={`${t("quoteEditor.items.unitPrice")} ${line.name || ""}`} disabled={savingLineId === line.id} onChange={(event) => patchLine(line.id, { unitPrice: Number(event.target.value) })} onBlur={() => void saveEditedLine(line)} /></td>
+                <td><input className="quote-line-edit-number" type="number" inputMode="numeric" min="1" step="1" value={line.quantity} aria-label={`${t("quoteEditor.items.quantity")} ${line.name || ""}`} disabled={savingLineId === line.id} onChange={(event) => patchLine(line.id, { quantity: Number(event.target.value) })} onBlur={() => void saveEditedLine(line)} /></td>
+                <td><input className="quote-line-edit-number" type="number" min="0" step="0.01" value={isFreeUtensilPackLine(line) ? 0 : line.unitPrice} aria-label={`${t("quoteEditor.items.unitPrice")} ${line.name || ""}`} disabled={savingLineId === line.id || isFreeUtensilPackLine(line)} onChange={(event) => patchLine(line.id, { unitPrice: Number(event.target.value) })} onBlur={() => void saveEditedLine(line)} /></td>
                 <td>{money.format(line.totalPrice)}</td>
                 <td><button type="button" className="quote-line-delete" aria-label={t("quoteEditor.items.remove", { name: line.name || "" })} disabled={removingId === line.id || savingLineId === line.id} onClick={() => void removeLine(line.id)}><Trash2 /></button></td>
               </tr>)}

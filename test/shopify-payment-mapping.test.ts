@@ -6,6 +6,8 @@ import {
   filterLegacyPaymentDuplicates,
   mapShopifyOrder,
   mapShopifyTransaction,
+  normalizeShopifyDeliveryTime,
+  normalizeShopifyPhone,
   linkedOrderLineSnapshotPatch,
   normalizeNameForMatch,
   orderNeedsTransactionSync,
@@ -13,6 +15,7 @@ import {
   parseMenuRemark,
   pickCatalogMatchByName,
   replaceShopifyLunchBoxAggregate,
+  resolveShopifyShippingMethodId,
   resolveShopifySkuSnapshot,
   resolveAliasSku,
   shopifyCateringUtensilPacks,
@@ -274,6 +277,79 @@ describe("Shopify-owned payment status", () => {
   });
 });
 
+describe("Shopify contact mapping", () => {
+  it("removes a leading +852 from phone snapshots", () => {
+    expect(normalizeShopifyPhone("+852 9123 4567")).toBe("9123 4567");
+    expect(normalizeShopifyPhone("+852-91234567")).toBe("91234567");
+    expect(normalizeShopifyPhone("9123 4567")).toBe("9123 4567");
+  });
+
+  it("uses only the shipping address and leaves internal remarks empty", () => {
+    const mapped = mapShopifyOrder({
+      order: {
+        id: 102,
+        name: "#102",
+        phone: "+852 6123 4567",
+        note: "Customer delivery instruction",
+        shipping_address: {
+          address1: "Shipping address 1",
+          address2: "Room 2",
+          city: "Hong Kong",
+        },
+        billing_address: { address1: "Billing address must not be used" },
+        line_items: [],
+      },
+      shopDomain: "test-store.myshopify.com",
+      storeId: "store-uuid",
+      channelId: "channel-uuid",
+    });
+
+    expect(mapped!.orderRow).toMatchObject({
+      contact_number_a_snapshot: "6123 4567",
+      shipping_address_snapshot: "Shipping address 1",
+      customer_note_snapshot: "Customer delivery instruction",
+      remarks: null,
+    });
+  });
+
+  it("maps the Shopify shipping-line title to an operational method", () => {
+    const methods = [
+      { id: "curbside", name: "車邊交收" },
+      { id: "door", name: "(上門)", display_name: "送貨上門" },
+      { id: "pickup", name: "門市自取" },
+      { id: "wine", name: "品酒室 - 外賣盒上" },
+      { id: "office", name: "寫字樓 - 外賣盒上" },
+    ];
+
+    expect(resolveShopifyShippingMethodId("偏遠地區 - 車邊交收收費A", methods))
+      .toBe("curbside");
+    expect(resolveShopifyShippingMethodId("偏遠地區－上門收費A", methods))
+      .toBe("door");
+    expect(resolveShopifyShippingMethodId("門市自取（免費）", methods))
+      .toBe("pickup");
+    expect(resolveShopifyShippingMethodId("品酒室：外賣盒上", methods))
+      .toBe("wine");
+    expect(resolveShopifyShippingMethodId("寫字樓–外賣盒上", methods))
+      .toBe("office");
+    expect(resolveShopifyShippingMethodId("Unknown carrier", methods)).toBeNull();
+  });
+
+  it("does not fall back to the billing address", () => {
+    const mapped = mapShopifyOrder({
+      order: {
+        id: 103,
+        billing_address: { address1: "Billing address" },
+        line_items: [],
+      },
+      shopDomain: "test-store.myshopify.com",
+      storeId: "store-uuid",
+      channelId: "channel-uuid",
+    });
+
+    expect(mapped!.orderRow.shipping_address_snapshot).toBeNull();
+  });
+});
+
 const CATERING_REMARK = `沙律 必選:
 科布燒牛肉南瓜沙律配油醋 (2磅) x 2, 羽衣甘藍莓果煙鴨胸沙律配蜂蜜醋 (2磅)
 
@@ -437,6 +513,29 @@ describe("extractDeliveryFromRemark", () => {
     );
     expect(deliveryAt).toBeNull();
     expect(deliveryTime).toBeNull();
+  });
+});
+
+describe("Shopify delivery time normalization", () => {
+  it("converts Shopify 12-hour ranges to the current 24-hour options", () => {
+    expect(normalizeShopifyDeliveryTime("5:00 PM - 6:00 PM")).toBe("17:00 - 18:00");
+    expect(normalizeShopifyDeliveryTime("11:00 AM - 12:00 PM")).toBe("11:00 - 12:00");
+    expect(normalizeShopifyDeliveryTime("5:30 PM - 6:30 PM")).toBe("17:30 - 18:30");
+  });
+
+  it("stores the normalized range on mapped orders", () => {
+    const mapped = mapShopifyOrder({
+      order: {
+        id: 556,
+        name: "#5002",
+        note_attributes: [{ name: "Delivery time", value: "5:00 PM - 6:00 PM" }],
+        line_items: [],
+      },
+      shopDomain: "test-store.myshopify.com",
+      storeId: "store-uuid",
+      channelId: "channel-uuid",
+    });
+    expect(mapped!.orderRow.delivery_time).toBe("17:00 - 18:00");
   });
 });
 

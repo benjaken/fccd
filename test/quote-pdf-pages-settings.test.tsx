@@ -9,7 +9,6 @@ import type { QuotePdfPage } from "@/lib/quote-pdf-pages";
 
 vi.mock("@/auth/use-page-access", () => ({
   useCurrentPageAccess: () => ({
-    isSuperAdmin: true,
     loading: false,
     error: null,
     canAccess: () => true,

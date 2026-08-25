@@ -372,30 +372,67 @@ export async function updateManagedUserProfile(input: UpdateUserProfileInput) {
   return result.user;
 }
 
-function isReservedPageKey(pageKey: string) {
-  // Only migration remains exclusively Super Admin; settings pages are
-  // permission-driven through role_page_permissions.
-  return pageKey === "migration";
-}
-
 function normalizePageKind(value: string | null | undefined): PageKind {
   if (value === "subpage" || value === "tab" || value === "action") return value;
   return "page";
 }
 
-function permissionDepth(
-  pageKey: string,
-  parentByKey: Map<string, string | null>,
+/**
+ * Keep every permission directly below its parent, matching the navigation
+ * hierarchy. A global sort_order sort can interleave children from one menu
+ * with a later top-level menu after pages are added or moved.
+ */
+export function sortRolePagePermissions(
+  permissions: RolePagePermission[],
 ) {
-  let depth = 0;
-  let current = parentByKey.get(pageKey) ?? null;
-  const seen = new Set<string>();
-  while (current && !seen.has(current)) {
-    seen.add(current);
-    depth += 1;
-    current = parentByKey.get(current) ?? null;
-  }
-  return depth;
+  const compare = (left: RolePagePermission, right: RolePagePermission) => {
+    if (left.sortOrder !== right.sortOrder) {
+      return left.sortOrder - right.sortOrder;
+    }
+    return left.pageKey.localeCompare(right.pageKey);
+  };
+
+  return SYSTEM_ROLES.flatMap((role) => {
+    const rolePermissions = permissions.filter((item) => item.role === role);
+    const pageKeys = new Set(rolePermissions.map((item) => item.pageKey));
+    const childrenByParent = new Map<string, RolePagePermission[]>();
+
+    for (const item of rolePermissions) {
+      if (!item.parentPageKey || !pageKeys.has(item.parentPageKey)) continue;
+      const children = childrenByParent.get(item.parentPageKey) ?? [];
+      children.push(item);
+      childrenByParent.set(item.parentPageKey, children);
+    }
+    for (const children of childrenByParent.values()) children.sort(compare);
+
+    const ordered: RolePagePermission[] = [];
+    const visited = new Set<string>();
+    const visit = (item: RolePagePermission, depth: number) => {
+      if (visited.has(item.pageKey)) return;
+      visited.add(item.pageKey);
+      ordered.push({ ...item, depth });
+      for (const child of childrenByParent.get(item.pageKey) ?? []) {
+        visit(child, depth + 1);
+      }
+    };
+
+    rolePermissions
+      .filter(
+        (item) =>
+          !item.parentPageKey || !pageKeys.has(item.parentPageKey),
+      )
+      .sort(compare)
+      .forEach((item) => visit(item, 0));
+
+    // Keep malformed/cyclic rows visible so administrators can still inspect
+    // them instead of silently losing a permission from the page.
+    rolePermissions
+      .filter((item) => !visited.has(item.pageKey))
+      .sort(compare)
+      .forEach((item) => visit(item, 0));
+
+    return ordered;
+  });
 }
 
 /** Collect pageKey plus every descendant key from a flat permission list. */
@@ -441,14 +478,6 @@ export function collectAncestorPageKeys(
     current = parentByKey.get(current) ?? null;
   }
   return keys;
-}
-
-export function isPagePermissionLocked(
-  role: SystemRole,
-  pageKey: string,
-) {
-  // Super Admin grants are always on (DB enforced). Migration stays reserved.
-  return role === "Super Admin" || isReservedPageKey(pageKey);
 }
 
 export async function fetchRestaurantOptions() {
@@ -723,24 +752,7 @@ export async function fetchRolePagePermissions() {
     } satisfies RolePagePermission;
   });
 
-  const parentByKey = new Map(
-    mapped.map((item) => [item.pageKey, item.parentPageKey]),
-  );
-
-  return mapped
-    .map((item) => ({
-      ...item,
-      depth: permissionDepth(item.pageKey, parentByKey),
-    }))
-    .sort((left, right) => {
-      const roleOrder =
-        SYSTEM_ROLES.indexOf(left.role) - SYSTEM_ROLES.indexOf(right.role);
-      if (roleOrder) return roleOrder;
-      if (left.sortOrder !== right.sortOrder) {
-        return left.sortOrder - right.sortOrder;
-      }
-      return left.pageKey.localeCompare(right.pageKey);
-    });
+  return sortRolePagePermissions(mapped);
 }
 
 export async function updateRolePagePermission(
@@ -788,14 +800,13 @@ export async function updateRolePagePermissionCascade(
     if (field === "canAccess") {
       updates.set(key, {
         canAccess: checked,
-        canManage: isRoot
-          ? checked
-            ? Boolean(row?.canManage)
-            : false
-          : // Children fully open when parent access is selected.
-            checked,
+        // Access cascades through the hierarchy, but it must never elevate a
+        // child's independent management grant.
+        canManage: checked ? Boolean(row?.canManage) : false,
       });
-    } else {
+    } else if (isRoot) {
+      // Management belongs to the selected permission only. Child pages and
+      // actions must be granted explicitly.
       updates.set(key, {
         canAccess: checked ? true : Boolean(row?.canAccess),
         canManage: checked,
@@ -808,23 +819,18 @@ export async function updateRolePagePermissionCascade(
       const row = rolePermissions.find((item) => item.pageKey === key);
       updates.set(key, {
         canAccess: true,
-        canManage:
-          field === "canManage" ? true : Boolean(row?.canManage),
+        // Enabling a descendant only opens its route ancestors; it does not
+        // grant management of those ancestors.
+        canManage: Boolean(row?.canManage),
       });
     }
   }
 
   for (const [key, value] of [...updates.entries()]) {
-    if (role === "Super Admin") {
-      updates.set(key, { canAccess: true, canManage: true });
-    } else if (isPagePermissionLocked(role, key)) {
-      updates.set(key, { canAccess: false, canManage: false });
-    } else {
-      updates.set(key, {
-        canAccess: value.canAccess,
-        canManage: value.canAccess && value.canManage,
-      });
-    }
+    updates.set(key, {
+      canAccess: value.canAccess,
+      canManage: value.canAccess && value.canManage,
+    });
   }
 
   await Promise.all(

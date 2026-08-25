@@ -4,6 +4,7 @@ import {
   buildFactoryLabelBytes,
   encodeFactoryLabelBase64,
   packFactoryBitmapPixels,
+  rotateFactoryBitmapClockwise,
   wrapFactoryLabelText,
   type FactoryTextRasterizer,
 } from "@/lib/factory-label";
@@ -44,6 +45,30 @@ describe("factory label bitmap TSPL", () => {
     expect(rasterizer).toHaveBeenCalledWith("肉丸年糕各6件)", expect.objectContaining({ fontSize: 40 }));
   });
 
+  it("keeps the dish at the top of the body with remarks underneath", async () => {
+    const rasterizer = vi.fn<FactoryTextRasterizer>(fakeRasterizer);
+    const bytes = await buildFactoryLabelBytes({
+      orderNumber: "B-1",
+      deliveryDate: "2026-08-24",
+      labelName: "叉燒飯",
+      remarks: ["走蔥", "少鹽"],
+      copies: 1,
+    }, rasterizer);
+    const tspl = latin1(bytes);
+
+    expect(tspl).toContain("BITMAP 8,15,48,64,0,");
+    expect(tspl).toContain("BITMAP 8,252,48,52,0,");
+    expect(tspl).toContain("BITMAP 8,318,48,52,0,");
+    expect(tspl).toContain("BITMAP 8,384,48,52,0,");
+    expect(rasterizer).toHaveBeenCalledWith(
+      "叉燒飯",
+      expect.objectContaining({ align: "center", fontSize: 40 }),
+    );
+    expect(
+      rasterizer.mock.calls.every(([, options]) => options.align === "center"),
+    ).toBe(true);
+  });
+
   it("packs black and white pixels MSB first using TSPL polarity", () => {
     const rgba = new Uint8ClampedArray([
       0, 0, 0, 255,
@@ -56,6 +81,20 @@ describe("factory label bitmap TSPL", () => {
       255, 255, 255, 255,
     ]);
     expect([...packFactoryBitmapPixels(rgba, 8, 1)]).toEqual([0x55]);
+  });
+
+  it("rotates address bitmaps clockwise for sideways printing", () => {
+    const rotated = rotateFactoryBitmapClockwise({
+      width: 8,
+      height: 8,
+      bytes: new Uint8Array([0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff]),
+    });
+
+    expect(rotated.width).toBe(8);
+    expect(rotated.height).toBe(8);
+    expect([...rotated.bytes]).toEqual([
+      0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    ]);
   });
 
   it("builds one 50x75 bitmap-text label per requested copy", async () => {
@@ -95,12 +134,19 @@ describe("factory label bitmap TSPL", () => {
     }, rasterizer);
     const tspl = latin1(bytes);
 
-    expect(tspl).toContain("BITMAP 8,");
-    expect(tspl).toContain("BAR 16,86,368,2\r\n");
+    expect(tspl).toContain("SIZE 50 mm,75 mm\r\n");
+    expect(tspl).toContain("BITMAP 334,8,7,584,0,");
+    expect(tspl).toContain("BAR 322,16,2,568\r\n");
     expect(tspl).not.toContain("Ka Wai Hui");
     expect(tspl).not.toContain("91027090");
-    expect(rasterizer).toHaveBeenCalledWith("地址：", expect.any(Object));
-    expect(rasterizer).toHaveBeenCalledWith("沙田香港恒生大學何善衡教學大", expect.any(Object));
+    expect(rasterizer).toHaveBeenCalledWith(
+      "地址：",
+      expect.objectContaining({ width: 584, fontSize: 26, align: "center" }),
+    );
+    expect(rasterizer).toHaveBeenCalledWith(
+      "沙田香港恒生大學何善衡教學大樓A座",
+      expect.objectContaining({ width: 584, fontSize: 32, align: "center" }),
+    );
   });
 
   it("base64-encodes arbitrary bitmap bytes without transcoding", () => {

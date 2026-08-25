@@ -197,15 +197,6 @@ export function clockFromValue(
   return `${hour === "24" ? "00" : hour}:${minute}`;
 }
 
-export function canAssignDeliveryFleet(role: string | null | undefined) {
-  return (
-    role === "Super Admin" ||
-    role === "Admin" ||
-    role === "Accounting" ||
-    role === "Factory"
-  );
-}
-
 function formatContactPhones(
   primary?: string | null,
   secondary?: string | null,

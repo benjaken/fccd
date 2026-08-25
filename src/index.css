@@ -138,6 +138,50 @@ button {
   cursor: pointer;
 }
 
+/* Shopify catalog review */
+.shopify-catalog-page { display: grid; gap: 1rem; }
+.shopify-sync-panel { display: flex; align-items: end; gap: 1rem; flex-wrap: wrap; }
+.shopify-sync-panel > div { display: grid; gap: .2rem; margin-right: auto; max-width: 32rem; }
+.shopify-sync-panel > div span { color: var(--muted-foreground); font-size: .875rem; }
+.shopify-sync-panel label, .shopify-catalog-filters label, .shopify-review-note { display: grid; gap: .35rem; font-size: .8rem; font-weight: 700; }
+.shopify-sync-panel select, .shopify-sync-panel input, .shopify-catalog-filters select, .shopify-review-note textarea { min-height: 2.5rem; border: 1px solid var(--border); border-radius: .55rem; background: var(--background); padding: .55rem .7rem; color: inherit; }
+.shopify-catalog-filters { display: flex; align-items: end; gap: .75rem; padding-bottom: 1rem; flex-wrap: wrap; }
+.shopify-catalog-filters > :first-child { flex: 1 1 20rem; }
+.shopify-run-summary { display: grid; gap: .75rem; }
+.shopify-run-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: .75rem; }
+.shopify-run-grid > div { display: grid; gap: .2rem; padding: .75rem; border: 1px solid var(--border); border-radius: .65rem; }
+.shopify-run-grid span, .shopify-run-grid small { color: var(--muted-foreground); }
+.shopify-warning { display: inline-flex; align-items: center; gap: .3rem; color: #b45309; font-size: .8rem; }
+.shopify-warning svg { width: 1rem; }
+.shopify-detail-grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(18rem, .65fr); gap: 1rem; }
+.shopify-detail-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem 1rem; }
+.shopify-detail-list div { display: grid; gap: .2rem; }
+.shopify-detail-list dt { color: var(--muted-foreground); font-size: .8rem; }
+.shopify-detail-list dd { margin: 0; font-weight: 700; }
+.shopify-description { white-space: pre-wrap; font: inherit; color: var(--muted-foreground); }
+.shopify-blockers, .shopify-success { display: flex; gap: .65rem; border-radius: .65rem; padding: .8rem; }
+.shopify-blockers { background: #fff7ed; color: #9a3412; }
+.shopify-success { background: #ecfdf5; color: #166534; }
+.shopify-review-note { margin: 1rem 0; }
+.shopify-review-actions, .shopify-match-search { display: flex; gap: .65rem; align-items: center; flex-wrap: wrap; }
+.shopify-match-workbench { display: grid; grid-template-columns: minmax(14rem, 1fr) minmax(20rem, 2fr); gap: 1rem; align-items: end; }
+.shopify-match-search input, .shopify-match-search select { min-height: 2.5rem; border: 1px solid var(--border); border-radius: .55rem; background: var(--background); padding: .55rem .7rem; color: inherit; }
+.shopify-match-search input, .shopify-match-search select { flex: 1 1 13rem; }
+.shopify-diff-list { display: grid; gap: .75rem; }
+.shopify-diff-list > div { display: grid; grid-template-columns: 10rem minmax(0, 1fr) auto minmax(0, 1fr); align-items: start; gap: .6rem; }
+.shopify-diff-list pre { overflow: auto; margin: 0; padding: .55rem; border-radius: .45rem; background: var(--muted); white-space: pre-wrap; }
+.shopify-status-conflict, .shopify-status-dependency_pending, .shopify-match-duplicate_sku, .shopify-match-missing_sku { background: #fff7ed; color: #9a3412; }
+.shopify-status-change_pending { background: #eff6ff; color: #1d4ed8; }
+.shopify-status-pending { background: #fefce8; color: #854d0e; }
+
+@media (max-width: 800px) {
+  .shopify-detail-grid { grid-template-columns: 1fr; }
+  .shopify-detail-list { grid-template-columns: 1fr; }
+  .shopify-diff-list > div { grid-template-columns: 1fr; }
+  .shopify-sync-panel { align-items: stretch; }
+  .shopify-match-workbench { grid-template-columns: 1fr; }
+}
+
 /* Keep shared Button labels at the design-system text-sm size. This
    unlayered rule must outrank the native button font inheritance above. */
 .ui-button {
@@ -18531,8 +18575,67 @@ a.masoft-order-tag:focus-visible {
   background: var(--card);
 }
 
+/* Orders and quotes share this navigator. Once it reaches the fixed app
+   navigation, keep it visible while the document sections continue scrolling. */
+.main-content:has(.quote-editor-section-navigation) {
+  overflow: visible;
+  overflow-x: clip;
+}
+
+.quote-editor-section-navigation {
+  position: sticky;
+  z-index: 30;
+  top: calc(var(--topbar-height) + var(--workspace-height) + 12px);
+  box-shadow: 0 8px 18px color-mix(in oklch, var(--foreground) 8%, transparent);
+}
+
 .quote-editor-scroll-section {
-  scroll-margin-top: 24px;
+  scroll-margin-top: calc(var(--topbar-height) + var(--workspace-height) + 98px);
+}
+
+@media (max-width: 900px) {
+  html,
+  body,
+  #root {
+    max-width: 100%;
+    overflow-x: clip;
+  }
+
+  .quote-editor-page,
+  .order-editor-page {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .quote-editor-tabs {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .quote-editor-section-navigation {
+    top: calc(var(--topbar-height) + 12px);
+  }
+
+  .quote-editor-scroll-section {
+    scroll-margin-top: calc(var(--topbar-height) + 90px);
+  }
+}
+
+@media (max-width: 760px) {
+  .quote-editor-tabs button {
+    gap: 8px;
+    padding: 10px 8px;
+  }
+
+  .quote-editor-tabs button > span {
+    width: 32px;
+    height: 32px;
+  }
+
+  .quote-editor-tabs button > div {
+    min-width: 0;
+  }
 }
 
 .quote-payment-step {
@@ -21484,11 +21587,18 @@ button.factory-job-card:focus-visible {
 }
 
 .factory-order-job {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(260px, 20%);
   grid-template-rows: auto auto minmax(0, 1fr);
   flex: 1;
   min-height: 0;
+}
+
+.factory-board:has(> .factory-order-job) {
+  height: 100vh;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .factory-order-main {
@@ -21801,7 +21911,77 @@ button.factory-job-card:focus-visible {
   align-content: start;
   gap: 14px 18px;
   padding: 14px 28px;
-  overflow: auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.factory-job-notifications {
+  position: fixed;
+  z-index: 120;
+  top: 78px;
+  right: 24px;
+  display: grid;
+  gap: 12px;
+  width: min(460px, calc(100vw - 48px));
+  pointer-events: none;
+}
+
+.factory-job-notification {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  padding: 17px 20px;
+  border: 3px solid currentColor;
+  border-radius: 12px;
+  box-shadow: 0 14px 36px rgb(0 0 0 / 38%);
+  font-size: 22px;
+  font-weight: 850;
+  line-height: 1.35;
+}
+
+.factory-job-notification svg {
+  width: 30px;
+  height: 30px;
+}
+
+.factory-job-notification strong,
+.factory-job-notification small {
+  display: block;
+}
+
+.factory-job-notification strong {
+  font-size: 24px;
+  line-height: 1.25;
+}
+
+.factory-job-notification small {
+  margin-top: 5px;
+  font-size: 19px;
+  font-weight: 750;
+  line-height: 1.4;
+}
+
+.factory-job-notification.is-success {
+  border-color: #16a34a;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.factory-job-notification.is-error {
+  border-color: #dc2626;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.factory-job-notification.is-warning {
+  border-color: #f59e0b;
+  background: #fffbeb;
+  color: #92400e;
 }
 
 .factory-order-line {
@@ -22502,6 +22682,18 @@ button.factory-job-card:focus-visible {
 }
 
 @media (max-width: 900px) {
+  .factory-board:has(> .factory-order-job) {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .factory-job-notifications {
+    top: 12px;
+    right: 12px;
+    width: calc(100vw - 24px);
+  }
+
   .factory-board-top,
   .factory-day-header,
   .factory-board-footer {
@@ -26313,8 +26505,9 @@ button.factory-job-card:focus-visible {
 
 .order-editor-payment-status {
   position: fixed;
-  z-index: 30;
-  top: calc(var(--topbar-height) + var(--workspace-height) + 20px);
+  z-index: 29;
+  /* Keep the price card below the 72px sticky step tabs, with a 12px gap. */
+  top: calc(var(--topbar-height) + var(--workspace-height) + 96px);
   right: 28px;
   display: flex;
   align-items: center;
@@ -27057,7 +27250,7 @@ button.factory-job-card:focus-visible {
   }
 
   .order-editor-payment-status {
-    top: calc(var(--topbar-height) + 12px);
+    top: calc(var(--topbar-height) + 96px);
     right: 14px;
     min-width: 205px;
     padding: 11px 13px;

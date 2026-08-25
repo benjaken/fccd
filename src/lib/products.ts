@@ -140,10 +140,6 @@ export function productIngredientCost(items: ProductPremiumIngredient[]) {
   );
 }
 
-export function canEditProductCatalog(role: string | null | undefined) {
-  return role === "Super Admin" || role === "Admin";
-}
-
 export type RelatedPackageSummary = {
   id: string;
   sku: string | null;

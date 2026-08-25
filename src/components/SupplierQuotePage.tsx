@@ -725,7 +725,17 @@ export function reviewLinesFromIngestResult(result: SupplierQuoteIngestResult, i
   });
 }
 
-export function SupplierQuotePage() {
+export function SupplierQuotePage({
+  canUpload = true,
+  canReview = true,
+  canExport = true,
+  canConfigure = true,
+}: {
+  canUpload?: boolean;
+  canReview?: boolean;
+  canExport?: boolean;
+  canConfigure?: boolean;
+}) {
   const { t, i18n } = useTranslation();
   const priceUnitDictionary = useDictItems(DICT_TYPE.supplierQuotePriceUnit);
   const initialDashboard = initialSupplierQuoteDashboard(import.meta.env.MODE);
@@ -1320,13 +1330,13 @@ export function SupplierQuotePage() {
           <p>保存每份 PDF 報價版本，人工確認商品對應，再比較報價與實際入貨價。</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button type="button" variant="outline" onClick={() => setSettingsOpen(true)}><Settings2 />門檻設定</Button>
-          <Button type="button" variant="outline" onClick={downloadCsv} disabled={!filteredLines.length}><Download />CSV</Button>
-          <Button type="button" variant="outline" onClick={printReport} disabled={!filteredLines.length}><FileText />PDF 報告</Button>
-          <Button type="button" disabled={displayedUploadProgress?.status === "active"} onClick={() => fileInputRef.current?.click()}>
+          {canConfigure ? <Button type="button" variant="outline" onClick={() => setSettingsOpen(true)}><Settings2 />門檻設定</Button> : null}
+          {canExport ? <Button type="button" variant="outline" onClick={downloadCsv} disabled={!filteredLines.length}><Download />CSV</Button> : null}
+          {canExport ? <Button type="button" variant="outline" onClick={printReport} disabled={!filteredLines.length}><FileText />PDF 報告</Button> : null}
+          {canUpload ? <Button type="button" disabled={displayedUploadProgress?.status === "active"} onClick={() => fileInputRef.current?.click()}>
             {displayedUploadProgress?.status === "active" ? <RefreshCw className="animate-spin" /> : <Upload />}
             {displayedUploadProgress?.status === "active" ? `處理中 ${displayedUploadProgress.percent}%` : "上傳報價 PDF"}
-          </Button>
+          </Button> : null}
           <input ref={fileInputRef} type="file" accept="application/pdf,.pdf" className="sr-only" disabled={displayedUploadProgress?.status === "active"} onChange={(event) => { handleFile(event.target.files?.[0]); event.currentTarget.value = ""; }} />
         </div>
       </section>
@@ -1383,7 +1393,7 @@ export function SupplierQuotePage() {
         <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
             <div><h2 className="font-semibold text-slate-950">PDF 報價版本</h2><p className="mt-1 text-sm text-slate-500">舊版本及已確認 line 永不被重試覆蓋；每次識別均有獨立 parse run。</p></div>
-            <Button type="button" disabled={displayedUploadProgress?.status === "active"} onClick={() => fileInputRef.current?.click()}><Plus />新增版本</Button>
+            {canUpload ? <Button type="button" disabled={displayedUploadProgress?.status === "active"} onClick={() => fileInputRef.current?.click()}><Plus />新增版本</Button> : null}
           </div>
           <div className="divide-y divide-slate-100">{documents.map((document) => {
             const meta = documentStatusMeta(document.status);
@@ -1391,7 +1401,7 @@ export function SupplierQuotePage() {
               <div className="flex min-w-0 items-start gap-3"><div className="rounded-xl bg-emerald-50 p-2.5 text-emerald-700"><FileText className="size-5" /></div><div className="min-w-0"><strong className="block truncate text-sm text-slate-950">{document.filename}</strong><span className="mt-1 block text-sm text-slate-500">{document.supplier} · 報價 {document.quoteDate || "待確認"} · 生效 {document.effectiveDate || "待確認"}</span><span className="mt-1 block text-sm text-slate-400">{document.lineCount} 筆已選 line · parser {document.parserVersion}{document.confirmedAt ? ` · 確認於 ${document.confirmedAt}` : ""}</span>{document.status === "ocr_required" ? <span className="mt-1 block text-sm text-purple-700">PDF 沒有可抽取文字；本期需另行 OCR，不會產生候選。</span> : null}{document.errorSummary ? <span className="mt-1 block text-sm text-red-700">{document.errorSummary}</span> : null}</div></div>
               <div className="flex items-center gap-2">
                 <span className={cn("rounded-full px-2.5 py-1 text-sm font-semibold", meta.className)}>{meta.label}</span>
-                {document.status === "review" || document.status === "confirmed" ? (
+                {canReview && (document.status === "review" || document.status === "confirmed") ? (
                   <Button
                     type="button"
                     variant="outline"
@@ -1403,7 +1413,7 @@ export function SupplierQuotePage() {
                     {openingReviewDocumentId === document.id ? "載入中" : "審核"}
                   </Button>
                 ) : null}
-                {document.status !== "uploading" && document.status !== "processing" ? <Button type="button" variant="outline" disabled={remoteLoading} aria-label={`重新識別 ${document.filename}`} onClick={() => void handleRetryDocument(document)}>{recognizingDocumentId === document.id ? <RefreshCw className="animate-spin" /> : <Sparkles />}{recognizingDocumentId === document.id ? "識別中" : "重新識別"}</Button> : null}
+                {canReview && document.status !== "uploading" && document.status !== "processing" ? <Button type="button" variant="outline" disabled={remoteLoading} aria-label={`重新識別 ${document.filename}`} onClick={() => void handleRetryDocument(document)}>{recognizingDocumentId === document.id ? <RefreshCw className="animate-spin" /> : <Sparkles />}{recognizingDocumentId === document.id ? "識別中" : "重新識別"}</Button> : null}
               </div>
             </article>;
           })}</div>

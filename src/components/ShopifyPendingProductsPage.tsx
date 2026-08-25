@@ -1,0 +1,141 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { AlertTriangle, RefreshCw, ShoppingBag } from "lucide-react";
+import { Link } from "react-router-dom";
+
+import { Button } from "@/components/ui/button";
+import { ListSearchBar } from "@/components/ui/list-search-bar";
+import { ListTable } from "@/components/ui/list-table";
+import { TablePagination } from "@/components/ui/table-pagination";
+import {
+  fetchShopifyPendingItems,
+  fetchShopifyStores,
+  fetchShopifySyncRuns,
+  SHOPIFY_PENDING_PAGE_SIZE,
+  startShopifyCatalogSync,
+  type ShopifyPendingItem,
+  type ShopifyStoreOption,
+  type ShopifySyncMode,
+  type ShopifySyncRun,
+} from "@/lib/shopify-product-approvals";
+
+export function ShopifyPendingProductsPage({ canManage = false }: { canManage?: boolean }) {
+  const { t, i18n } = useTranslation();
+  const [items, setItems] = useState<ShopifyPendingItem[]>([]);
+  const [stores, setStores] = useState<ShopifyStoreOption[]>([]);
+  const [runs, setRuns] = useState<ShopifySyncRun[]>([]);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [draftSearch, setDraftSearch] = useState("");
+  const [search, setSearch] = useState("");
+  const [storeId, setStoreId] = useState("");
+  const [status, setStatus] = useState("");
+  const [catalogType, setCatalogType] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMode, setSyncMode] = useState<ShopifySyncMode>("incremental");
+  const [syncStoreId, setSyncStoreId] = useState("");
+  const [productId, setProductId] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
+  const pages = Math.max(1, Math.ceil(total / SHOPIFY_PENDING_PAGE_SIZE));
+  const date = useMemo(
+    () => new Intl.DateTimeFormat(i18n.language, { dateStyle: "short", timeStyle: "short" }),
+    [i18n.language],
+  );
+
+  const reload = useCallback(() => setReloadKey((value) => value + 1), []);
+
+  useEffect(() => {
+    let active = true;
+    void fetchShopifyStores().then((rows) => active && setStores(rows)).catch(() => active && setStores([]));
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setError(null);
+    void Promise.all([
+      fetchShopifyPendingItems({ page, search, storeId, status, catalogType }),
+      fetchShopifySyncRuns(),
+    ]).then(([result, runRows]) => {
+      if (!active) return;
+      setItems(result.items);
+      setTotal(result.total);
+      setRuns(runRows);
+    }).catch(() => active && setError(t("shopifyCatalog.loadError")))
+      .finally(() => active && setLoading(false));
+    return () => { active = false; };
+  }, [page, search, storeId, status, catalogType, reloadKey, t]);
+
+  const runSync = async () => {
+    const numericProductId = productId.trim() ? Number(productId) : undefined;
+    if (syncMode === "specific_product" && (!Number.isSafeInteger(numericProductId) || Number(numericProductId) <= 0)) {
+      setError(t("shopifyCatalog.productIdRequired"));
+      return;
+    }
+    setSyncing(true);
+    setError(null);
+    try {
+      await startShopifyCatalogSync({ mode: syncMode, storeId: syncStoreId || undefined, productId: numericProductId });
+      reload();
+    } catch {
+      setError(t("shopifyCatalog.syncError"));
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  return (
+    <section className="shopify-catalog-page">
+      <header className="page-heading">
+        <div>
+          <span className="eyebrow">Shopify</span>
+          <h1>{t("shopifyCatalog.title")}</h1>
+          <p>{t("shopifyCatalog.description")}</p>
+        </div>
+        <Button variant="outline" onClick={reload} disabled={loading}>
+          <RefreshCw />{t("shopifyCatalog.refresh")}
+        </Button>
+      </header>
+
+      {canManage ? (
+        <article className="panel shopify-sync-panel" aria-label={t("shopifyCatalog.syncTitle")}>
+          <div>
+            <strong>{t("shopifyCatalog.syncTitle")}</strong>
+            <span>{t("shopifyCatalog.syncDescription")}</span>
+          </div>
+          <label><span>{t("shopifyCatalog.store")}</span><select value={syncStoreId} onChange={(event) => setSyncStoreId(event.target.value)}><option value="">{t("shopifyCatalog.allStores")}</option>{stores.map((store) => <option key={store.id} value={store.id}>{store.domain}</option>)}</select></label>
+          <label><span>{t("shopifyCatalog.syncMode")}</span><select value={syncMode} onChange={(event) => setSyncMode(event.target.value as ShopifySyncMode)}><option value="incremental">{t("shopifyCatalog.modes.incremental")}</option><option value="full">{t("shopifyCatalog.modes.full")}</option><option value="specific_product">{t("shopifyCatalog.modes.specific")}</option><option value="retry_failed">{t("shopifyCatalog.modes.retry")}</option></select></label>
+          {syncMode === "specific_product" ? <label><span>{t("shopifyCatalog.productId")}</span><input inputMode="numeric" value={productId} onChange={(event) => setProductId(event.target.value)} /></label> : null}
+          <Button onClick={() => void runSync()} disabled={syncing}>{syncing ? t("shopifyCatalog.syncing") : t("shopifyCatalog.sync")}</Button>
+        </article>
+      ) : null}
+
+      {runs.length ? (
+        <article className="panel shopify-run-summary" aria-label={t("shopifyCatalog.recentRuns")}>
+          <strong>{t("shopifyCatalog.recentRuns")}</strong>
+          <div className="shopify-run-grid">
+            {runs.slice(0, 4).map((run) => <div key={run.id}><span>{run.storeDomain ?? t("shopifyCatalog.allStores")} · {t(`shopifyCatalog.modes.${run.mode === "specific_product" ? "specific" : run.mode === "retry_failed" ? "retry" : run.mode}`)}</span><b>{t(`shopifyCatalog.runStatus.${run.status}`, { defaultValue: run.status })}</b><small>{t("shopifyCatalog.runCounts", { total: run.totalFetched, pending: run.pending, conflicts: run.conflicts, failed: run.failed })}</small></div>)}
+          </div>
+        </article>
+      ) : null}
+
+      <article className="panel">
+        <div className="shopify-catalog-filters">
+          <ListSearchBar id="shopify-product-search" value={draftSearch} onChange={setDraftSearch} onSubmit={() => { setPage(1); setSearch(draftSearch.trim()); }} label={t("shopifyCatalog.search")} placeholder={t("shopifyCatalog.searchPlaceholder")} submitLabel={t("shopifyCatalog.searchAction")} />
+          <label><span>{t("shopifyCatalog.store")}</span><select value={storeId} onChange={(event) => { setPage(1); setStoreId(event.target.value); }}><option value="">{t("shopifyCatalog.allStores")}</option>{stores.map((store) => <option key={store.id} value={store.id}>{store.domain}</option>)}</select></label>
+          <label><span>{t("shopifyCatalog.status")}</span><select value={status} onChange={(event) => { setPage(1); setStatus(event.target.value); }}><option value="">{t("shopifyCatalog.actionable")}</option>{["pending", "change_pending", "dependency_pending", "conflict", "approved", "rejected", "deleted"].map((value) => <option key={value} value={value}>{t(`shopifyCatalog.statuses.${value}`)}</option>)}</select></label>
+          <label><span>{t("shopifyCatalog.type")}</span><select value={catalogType} onChange={(event) => { setPage(1); setCatalogType(event.target.value); }}><option value="">{t("shopifyCatalog.allTypes")}</option>{["product", "fixed_package", "configurable_package"].map((value) => <option key={value} value={value}>{t(`shopifyCatalog.types.${value}`)}</option>)}</select></label>
+        </div>
+        {error ? <div className="products-state products-state-error" role="alert"><AlertTriangle /><span>{error}</span></div> : null}
+        <ListTable loading={loading} loadingLabel={t("shopifyCatalog.loading")} skeletonColumns={8} header={<tr><th>{t("shopifyCatalog.store")}</th><th>{t("shopifyCatalog.product")}</th><th>{t("shopifyCatalog.type")}</th><th>SKU</th><th>{t("shopifyCatalog.variants")}</th><th>{t("shopifyCatalog.status")}</th><th>{t("shopifyCatalog.issues")}</th><th>{t("shopifyCatalog.receivedAt")}</th></tr>}>
+          {items.map((item) => <tr key={item.id}><td>{item.storeDomain}</td><td><Link className="order-link" to={`/products/shopify-pending/${item.id}`}><strong>{item.title}</strong><small>#{item.shopifyProductId}</small></Link></td><td>{t(`shopifyCatalog.types.${item.catalogType}`)}</td><td>{item.skus.join(", ") || "—"}</td><td>{item.variantCount}</td><td><span className={`status-badge shopify-status-${item.status}`}>{t(`shopifyCatalog.statuses.${item.status}`)}</span></td><td>{item.blockingReasons.length ? <span className="shopify-warning"><AlertTriangle />{item.blockingReasons.join(", ")}</span> : "—"}</td><td>{date.format(new Date(item.updatedAt))}</td></tr>)}
+          {!loading && items.length === 0 ? <tr><td colSpan={8}><div className="products-state products-state-empty"><ShoppingBag /><strong>{t("shopifyCatalog.empty")}</strong></div></td></tr> : null}
+        </ListTable>
+        <TablePagination summary={t("shopifyCatalog.pagination", { from: total ? (page - 1) * SHOPIFY_PENDING_PAGE_SIZE + 1 : 0, to: Math.min(page * SHOPIFY_PENDING_PAGE_SIZE, total), total })} page={page} totalPages={pages} loading={loading} onPrevious={() => setPage((value) => Math.max(1, value - 1))} onNext={() => setPage((value) => Math.min(pages, value + 1))} onPageChange={setPage} previousLabel={t("shopifyCatalog.previous")} nextLabel={t("shopifyCatalog.next")} pageLabel={t("shopifyCatalog.pageOf")} jumpLabel={t("shopifyCatalog.jumpToPage")} />
+      </article>
+    </section>
+  );
+}

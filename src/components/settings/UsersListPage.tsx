@@ -10,8 +10,7 @@ import {
   Users,
 } from "lucide-react";
 
-import { useAuth } from "@/auth/AuthProvider";
-import { usePageAccess } from "@/auth/use-page-access";
+import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
@@ -56,12 +55,7 @@ export function UsersListPage({
   updateProfile?: typeof import("@/lib/settings").updateManagedUserProfile;
 }) {
   const { t, i18n } = useTranslation();
-  const { user, profile } = useAuth();
-  const authorizationRole =
-    typeof user?.app_metadata?.role === "string"
-      ? user.app_metadata.role
-      : profile?.role;
-  const pageAccess = usePageAccess(authorizationRole);
+  const pageAccess = useCurrentPageAccess();
   const canCreate = pageAccess.canAccess(USER_ACTION_PERMISSION_KEYS.create);
   const canEdit = pageAccess.canAccess(USER_ACTION_PERMISSION_KEYS.edit);
   const canChangePassword = pageAccess.canAccess(

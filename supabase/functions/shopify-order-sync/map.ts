@@ -192,6 +192,37 @@ export function parseDeliveryAt(value: string | null): string | null {
   return new Date(parsed).toISOString();
 }
 
+function shopifyClock24(hourText: string, minuteText: string, meridiem?: string) {
+  let hour = Number(hourText);
+  const minute = Number(minuteText);
+  if (!Number.isInteger(hour) || !Number.isInteger(minute) || minute < 0 || minute > 59) return null;
+  const period = meridiem?.toUpperCase();
+  if (period) {
+    if (hour < 1 || hour > 12) return null;
+    if (period === "AM") hour = hour === 12 ? 0 : hour;
+    if (period === "PM") hour = hour === 12 ? 12 : hour + 12;
+  } else if (hour < 0 || hour > 23) {
+    return null;
+  }
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
+export function normalizeShopifyDeliveryTime(value: string | null | undefined): string | null {
+  const source = String(value ?? "")
+    .trim()
+    .replaceAll("：", ":")
+    .replace(/[–—~至到]/g, "-")
+    .replace(/\s+/g, " ");
+  if (!source) return null;
+  const match = source.match(
+    /^(\d{1,2}):(\d{2})\s*(AM|PM)?\s*-\s*(\d{1,2}):(\d{2})\s*(AM|PM)?$/i,
+  );
+  if (!match) return source;
+  const start = shopifyClock24(match[1], match[2], match[3] || match[6]);
+  const end = shopifyClock24(match[4], match[5], match[6] || match[3]);
+  return start && end ? `${start} - ${end}` : source;
+}
+
 export function extractDeliveryFields(order: ShopifyRestOrder): {
   deliveryAt: string | null;
   deliveryTime: string | null;
@@ -250,15 +281,53 @@ function joinAddress(address: ShopifyRestAddress | null | undefined): string | n
   if (!address) return null;
   const parts = [
     address.address1,
-    address.address2,
-    address.city,
-    address.province,
-    address.zip,
-    address.country,
   ]
     .map((part) => String(part ?? "").trim())
     .filter(Boolean);
   return parts.length ? parts.join(", ") : null;
+}
+
+export function shopifyShippingMethodTitle(
+  order: ShopifyRestOrder,
+): string | null {
+  for (const line of order.shipping_lines ?? []) {
+    const title = String(line.title ?? line.code ?? "").trim();
+    if (title) return title;
+  }
+  return null;
+}
+
+export function resolveShopifyShippingMethodId(
+  title: string | null | undefined,
+  methods: Array<{
+    id: string;
+    name: string | null;
+    display_name?: string | null;
+  }>,
+): string | null {
+  const normalize = (value: string | null | undefined) => String(value ?? "")
+    .replace(/[\s()[\]{}（）【】<>《》\-–—_:：/\\]+/g, "")
+    .toLowerCase();
+  const normalizedTitle = normalize(title);
+  if (!normalizedTitle) return null;
+  const candidates = methods.flatMap((method) =>
+    [method.display_name, method.name]
+      .map((name) => String(name ?? "").trim())
+      .filter(Boolean)
+      .map((name) => ({ id: method.id, name }))
+  ).sort((left, right) => right.name.length - left.name.length);
+  return candidates.find((candidate) =>
+    normalizedTitle.includes(normalize(candidate.name))
+  )?.id ?? null;
+}
+
+/** Keep Hong Kong Shopify phone numbers local in the operational snapshot. */
+export function normalizeShopifyPhone(
+  value: string | null | undefined,
+): string | null {
+  const phone = String(value ?? "").trim();
+  if (!phone) return null;
+  return phone.replace(/^\+852(?:[\s-]*)/, "").trim() || null;
 }
 
 function customerName(order: ShopifyRestOrder): string | null {
@@ -308,6 +377,7 @@ export function mapShopifyOrder(input: {
   financialStatus: string | null;
   outstanding: number | null;
   remark: string | null;
+  shippingMethodTitle: string | null;
   orderRow: Record<string, unknown>;
   lines: Array<{
     lineId: number;
@@ -346,12 +416,12 @@ export function mapShopifyOrder(input: {
     email_snapshot: input.order.email?.trim() ||
       input.order.customer?.email?.trim() ||
       null,
-    contact_number_a_snapshot: input.order.phone?.trim() ||
-      input.order.shipping_address?.phone?.trim() ||
-      input.order.customer?.phone?.trim() ||
-      null,
-    shipping_address_snapshot: joinAddress(input.order.shipping_address) ??
-      joinAddress(input.order.billing_address),
+    contact_number_a_snapshot: normalizeShopifyPhone(
+      input.order.phone ||
+        input.order.shipping_address?.phone ||
+        input.order.customer?.phone,
+    ),
+    shipping_address_snapshot: joinAddress(input.order.shipping_address),
     customer_note_snapshot: input.order.note?.trim() || null,
     currency,
     discount_amount: money(input.order.total_discounts),
@@ -362,10 +432,11 @@ export function mapShopifyOrder(input: {
     shopify_financial_status: financialStatus,
     shopify_financial_status_synced_at: new Date().toISOString(),
     delivery_at: delivery.deliveryAt ?? remarkDelivery.deliveryAt,
-    delivery_time: delivery.deliveryTime ?? remarkDelivery.deliveryTime,
-    remarks: remark?.trim() || (input.order.cancelled_at
-      ? `Shopify cancelled_at=${input.order.cancelled_at}`
-      : null),
+    delivery_time: normalizeShopifyDeliveryTime(
+      delivery.deliveryTime ?? remarkDelivery.deliveryTime,
+    ),
+    // Shopify notes are customer-facing source data, not internal remarks.
+    remarks: null,
     is_shopify_order: true,
     bubble_created_at: input.order.created_at ?? null,
     bubble_modified_at: input.order.updated_at ?? null,
@@ -407,6 +478,7 @@ export function mapShopifyOrder(input: {
     financialStatus,
     outstanding,
     remark,
+    shippingMethodTitle: shopifyShippingMethodTitle(input.order),
     orderRow,
     lines,
   };

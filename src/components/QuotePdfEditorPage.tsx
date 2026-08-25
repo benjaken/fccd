@@ -489,7 +489,7 @@ export function QuotePdfEditorPage({
       {draft.showCustomerSignature ? (
         <div className="quote-pdf-signature-party quote-pdf-signature-customer">
           <strong>請仔細閱讀以上內容並簽署確認：</strong>
-          <em>{draft.companyName || "公司"}</em>
+          <em>{draft.companyName || draft.customerName || "公司"}</em>
           <span className="quote-pdf-signature-stamp-spacer" aria-hidden="true" />
           <label><strong>公司蓋印及簽署：</strong><span /></label>
           <label><strong>負責人姓名：</strong><span /></label>

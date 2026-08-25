@@ -27,12 +27,14 @@ type FileUrlCreator = typeof createQuoteFileUrl;
 
 export function QuoteFilesSidePanel({
   quote,
+  canUpload = false,
   onClose,
   loadFiles = fetchQuoteFiles,
   uploadFile = uploadQuoteFile,
   createFileUrl = createQuoteFileUrl,
 }: {
   quote: QuoteListItem | null;
+  canUpload?: boolean;
   onClose: () => void;
   loadFiles?: FilesLoader;
   uploadFile?: FileUploader;
@@ -66,7 +68,7 @@ export function QuoteFilesSidePanel({
   }, [load, quote]);
 
   const selectFile = async (file?: File) => {
-    if (!quote || !file) return;
+    if (!canUpload || !quote || !file) return;
     if (file.size > MAX_QUOTE_FILE_SIZE) {
       setError("size");
       return;
@@ -121,7 +123,7 @@ export function QuoteFilesSidePanel({
       onClose={onClose}
       className="quote-files-panel"
     >
-      <section className="quote-file-upload-card">
+      {canUpload ? <section className="quote-file-upload-card">
         <div>
           <span className="quote-file-upload-icon"><Upload /></span>
           <strong>{t("quotes.files.uploadTitle")}</strong>
@@ -145,7 +147,7 @@ export function QuoteFilesSidePanel({
           aria-label={t("quotes.files.chooseFile")}
           onChange={(event) => void selectFile(event.target.files?.[0])}
         />
-      </section>
+      </section> : null}
 
       {error && (
         <div className="quote-file-error" role="alert">

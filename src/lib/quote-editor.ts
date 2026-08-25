@@ -55,6 +55,8 @@ export type QuoteDraft = {
 export type CreatedQuote = {
   id: string;
   orderNumber: string;
+  shopifyOrderId?: number | null;
+  shopifyStoreDomain?: string | null;
 };
 
 export type QuoteEditorSummary = CreatedQuote & {
@@ -130,10 +132,16 @@ function toNumber(value: number | string | null | undefined) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-export function dedupeQuoteOptions(items: QuoteEditorOption[]) {
+export function dedupeQuoteOptions(
+  items: QuoteEditorOption[],
+  preferredId = "",
+) {
+  const preferred = items.find((item) => item.id === preferredId);
+  const preferredKey = preferred?.name.trim().toLocaleLowerCase("zh-HK") ?? "";
   const seen = new Set<string>();
   return items.filter((item) => {
     const key = item.name.trim().toLocaleLowerCase("zh-HK");
+    if (preferredKey && key === preferredKey && item.id !== preferredId) return false;
     if (!key || seen.has(key)) return false;
     seen.add(key);
     return true;
@@ -162,7 +170,7 @@ export async function fetchQuoteEditorOptions(): Promise<QuoteEditorOptions> {
     channels: (channels.data ?? []) as NamedRow[],
     quoteSalesSources: (quoteSalesSources.data ?? []) as NamedRow[],
     quoteCommunicationChannels: (quoteCommunicationChannels.data ?? []) as NamedRow[],
-    districts: dedupeQuoteOptions((districts.data ?? []) as NamedRow[]),
+    districts: (districts.data ?? []) as NamedRow[],
     shippingMethods: ((shippingMethods.data ?? []) as ShippingRow[]).map((row) => ({
       id: row.id,
       name: row.display_name || row.name,
@@ -265,7 +273,7 @@ export async function fetchQuoteEditorSummary(
   const [orderResult, deliveryResult, tagsResult, asanaResult, paymentsResult] = await Promise.all([
     supabase
       .from("orders")
-      .select("id,document_type,order_number,channel_id,quote_status,quote_auto_closed_at,quote_reopen_reason,quote_sales_source_id,quote_communication_channel_id,quote_follow_up_date,customer_name_snapshot,company_name_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,email_snapshot,shipping_address_snapshot,customer_note_snapshot,shipping_method_id,delivery_district_id,delivery_at,delivery_time,ship_out_time,factory_packing_note,sales_partner_id,remarks,shipping_fee,discount_amount,cashdollar_redeemed,cashdollar_purchased,is_sent_to_factory,do_not_send_to_factory,factory_print_date,factory_reprint_required")
+      .select("id,document_type,order_number,channel_id,quote_status,quote_auto_closed_at,quote_reopen_reason,quote_sales_source_id,quote_communication_channel_id,quote_follow_up_date,customer_name_snapshot,company_name_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,email_snapshot,shipping_address_snapshot,customer_note_snapshot,shipping_method_id,delivery_district_id,delivery_at,delivery_time,ship_out_time,factory_packing_note,sales_partner_id,remarks,shipping_fee,discount_amount,cashdollar_redeemed,cashdollar_purchased,is_sent_to_factory,do_not_send_to_factory,factory_print_date,factory_reprint_required,shopify_order_id,shopify_stores(shop_domain)")
       .eq("id", resolvedOrderId)
       .in("document_type", documentType === "order" ? ["order"] : ["quote", "unconfirmed"])
       .is("archived_at", null)
@@ -327,10 +335,18 @@ export async function fetchQuoteEditorSummary(
       ? []
       : (tagsResult.data ?? []).map((item) => item.order_tag_id),
   };
+  const shopifyStore = data.shopify_stores as unknown as
+    | { shop_domain: string | null }
+    | Array<{ shop_domain: string | null }>
+    | null;
   return {
     id: data.id,
     documentType: data.document_type as QuoteEditorSummary["documentType"],
     orderNumber: data.order_number || "",
+    shopifyOrderId: data.shopify_order_id,
+    shopifyStoreDomain: Array.isArray(shopifyStore)
+      ? shopifyStore[0]?.shop_domain ?? null
+      : shopifyStore?.shop_domain ?? null,
     channelId: data.channel_id || "",
     draft,
     financials: {

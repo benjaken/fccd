@@ -44,8 +44,7 @@ vi.mock("@/auth/use-page-access", async () => {
   );
   return {
     ...actual,
-    usePageAccess: () => ({
-      isSuperAdmin: true,
+    useCurrentPageAccess: () => ({
       loading: false,
       error: null,
       canAccess: () => true,

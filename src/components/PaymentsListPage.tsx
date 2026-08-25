@@ -45,11 +45,13 @@ function localToday() {
 
 export function PaymentsListPage({
   canViewFinance,
+  canManageActions = true,
   loadPayments = fetchPayments,
   loadPaymentFilterOptions = fetchPaymentFilterOptions,
   saveSettlement = settlePayments,
 }: {
   canViewFinance: boolean;
+  canManageActions?: boolean;
   loadPayments?: typeof fetchPayments;
   loadPaymentFilterOptions?: typeof fetchPaymentFilterOptions;
   saveSettlement?: (input: PaymentSettlementInput) => Promise<void>;
@@ -194,7 +196,7 @@ export function PaymentsListPage({
   };
 
   const submitSettlement = async () => {
-    if (!selectionCompatible || saving || netAmountInvalid || (payoutDateMode === "custom" && !payoutAt)) return;
+    if (!canManageActions || !selectionCompatible || saving || netAmountInvalid || (payoutDateMode === "custom" && !payoutAt)) return;
     setSaving(true);
     setSaveError(null);
     try {
@@ -296,7 +298,7 @@ export function PaymentsListPage({
           <div className="payments-selection-actions">
             {selectedItems.length ? <span>{t("payments.selected", { count: selectedItems.length, amount: selectedTotal })}</span> : null}
             {selectionWarning ? <span className="payments-selection-warning" role="status">{selectionWarning}</span> : null}
-            {selectionCompatible ? <Button type="button" onClick={() => { setSaveError(null); setManageOpen(true); }}>{t("payments.manage")}</Button> : null}
+            {canManageActions && selectionCompatible ? <Button type="button" onClick={() => { setSaveError(null); setManageOpen(true); }}>{t("payments.manage")}</Button> : null}
           </div>
         </header>
         {error ? (
@@ -349,7 +351,7 @@ export function PaymentsListPage({
         />
       </article>
       <Modal
-        open={manageOpen}
+        open={manageOpen && canManageActions}
         title={t("payments.manageTitle")}
         description={t("payments.manageDescription", { count: selectedItems.length })}
         onClose={closeManage}

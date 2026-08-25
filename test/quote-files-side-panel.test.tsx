@@ -52,6 +52,20 @@ describe("quote file side panel", () => {
     expect(loadFiles).toHaveBeenCalledWith("quote-1");
   });
 
+  it("hides upload controls without quote manage permission", async () => {
+    const loadFiles = vi.fn().mockResolvedValue([]);
+    render(
+      <QuoteFilesSidePanel
+        quote={quote}
+        onClose={vi.fn()}
+        loadFiles={loadFiles}
+      />,
+    );
+
+    await waitFor(() => expect(loadFiles).toHaveBeenCalledWith("quote-1"));
+    expect(document.querySelector('input[type="file"]')).toBeNull();
+  });
+
   it("uploads a file and refreshes the history", async () => {
     const user = userEvent.setup();
     const loadFiles = vi
@@ -62,6 +76,7 @@ describe("quote file side panel", () => {
     render(
       <QuoteFilesSidePanel
         quote={quote}
+        canUpload
         onClose={vi.fn()}
         loadFiles={loadFiles}
         uploadFile={uploadFile}
