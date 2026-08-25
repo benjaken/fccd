@@ -9,6 +9,13 @@ const migration = readFileSync(
   ),
   "utf8",
 );
+const deliveryDateMigration = readFileSync(
+  join(
+    process.cwd(),
+    "supabase/migrations/20260825234500_close_quotes_on_delivery_date.sql",
+  ),
+  "utf8",
+);
 
 describe("expired quote follow-up automation", () => {
   it("closes only open, unarchived quotes with a valid elapsed dispatch time", () => {
@@ -33,6 +40,18 @@ describe("expired quote follow-up automation", () => {
     );
     expect(migration).toContain(
       "revoke all on function public.close_expired_quote_follow_ups(timestamptz) from authenticated;",
+    );
+  });
+
+  it("closes an open quote when its Hong Kong delivery date arrives", () => {
+    expect(deliveryDateMigration).toContain(
+      "<= (p_now at time zone 'Asia/Hong_Kong')::date",
+    );
+    expect(deliveryDateMigration).toContain(
+      "quote_close_reason = 'delivery_date_passed'",
+    );
+    expect(deliveryDateMigration).toContain(
+      "select public.close_expired_quote_follow_ups();",
     );
   });
 });

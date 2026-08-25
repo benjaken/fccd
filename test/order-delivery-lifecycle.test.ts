@@ -59,6 +59,7 @@ describe("order delivery lifecycle", () => {
         return {
           update: vi.fn(() => ({
             eq: vi.fn(() => ({
+              eq: vi.fn().mockResolvedValue({ error: null }),
               in: vi.fn().mockResolvedValue({ error: null }),
             })),
           })),

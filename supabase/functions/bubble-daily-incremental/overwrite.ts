@@ -153,26 +153,55 @@ export const overwriteFieldSources = {
   },
 } as const;
 
-const overwriteNumericScales: Partial<Record<string, number>> = {
-  inbound_quantity_kg: 3,
-  outbound_quantity_kg: 3,
-  allocated_inbound_quantity_kg: 3,
-  inbound_unit_price: 4,
-  inbound_total_amount: 2,
-  applied_seasoning_cost: 4,
-  applied_seasoning_code: 4,
-  applied_markup_rate: 6,
-  applied_variation_rate: 6,
-  applied_seasoning_per_kg: 4,
-  inbound_packages: 3,
-  outbound_packages: 3,
-  prepared_meat_order: 3,
-};
+export const directOverwriteSourceTypes = [
+  // Quote configuration and per-order snapshots.
+  "ds_quote_delivery",
+  "ds_quote_payment",
+  "ds_quote_t&c",
+  "dscommuchannels(quote)",
+  "dsreminderperson(first)",
+  "dsreminderperson(second)",
+  "dssourceofsales(quote)",
+  "s_packages_choiceset",
+  "cal_control",
+  "cal_package_choice",
+  "quote_bento_additionalitem",
+  "quote_bento_eventpart",
+  "quote_paymentmethod",
+  "quote_t&c",
+  "s_comment",
+  // Frozen-meat master, order, stock, and price data.
+  "m_cal_to_kg",
+  "m_calculation%",
+  "m_customer",
+  "m_rawmeat",
+  "m_donemeat",
+  "m_seasoning",
+  "m_shippingmethod",
+  "m_outdone_order",
+  "m_outdone_donemeat",
+  "m_raw_stock",
+  "m_donemeat_stock",
+  "m_meatseasoning_cost",
+  "m_monthly_meatprice",
+] as const;
 
-export type OverwriteSourceType = keyof typeof overwriteFieldSources;
+export type FieldAwareOverwriteSourceType = keyof typeof overwriteFieldSources;
+export type DirectOverwriteSourceType = typeof directOverwriteSourceTypes[number];
+export type OverwriteSourceType =
+  | FieldAwareOverwriteSourceType
+  | DirectOverwriteSourceType;
+
+export function isFieldAwareOverwriteSourceType(
+  value: OverwriteSourceType,
+): value is FieldAwareOverwriteSourceType {
+  return value in overwriteFieldSources;
+}
 
 export function isOverwriteSourceType(value: unknown): value is OverwriteSourceType {
-  return typeof value === "string" && value in overwriteFieldSources;
+  return typeof value === "string" &&
+    (value in overwriteFieldSources ||
+      directOverwriteSourceTypes.includes(value as DirectOverwriteSourceType));
 }
 
 export function overwriteSince(sourceType: OverwriteSourceType): string {
@@ -186,7 +215,7 @@ function hasOwn(record: BubbleRecord, field: string): boolean {
 }
 
 export function mergeOverwriteRow(
-  sourceType: OverwriteSourceType,
+  sourceType: FieldAwareOverwriteSourceType,
   source: BubbleRecord,
   mapped: Record<string, unknown>,
   existing?: Record<string, unknown>,
@@ -204,6 +233,15 @@ export function mergeOverwriteRow(
     merged.is_shopify_order = existing.is_shopify_order;
     merged.outstanding = existing.outstanding;
   }
+  if (
+    sourceType === "b_deliveryschedule" && existing &&
+    existing.motorcade_id != null && existing.district_id != null
+  ) {
+    // Assigned deliveries use a fleet-specific district row so the fee can
+    // differ by carrier. Preserve that operational UUID; the insert/update
+    // trigger already normalized it from Bubble's shared district.
+    merged.district_id = existing.district_id;
+  }
   return merged;
 }
 
@@ -216,6 +254,29 @@ export function changedOverwriteFields(
     !equivalentOverwriteValue(row[field], existing[field], field)
   );
 }
+
+const overwriteNumericScales: Partial<Record<string, number>> = {
+  current_seasoning_cost: 4,
+  current_seasoning_code: 4,
+  cost_per_gram: 6,
+  inbound_quantity_kg: 3,
+  outbound_quantity_kg: 3,
+  allocated_inbound_quantity_kg: 3,
+  inbound_unit_price: 4,
+  inbound_total_amount: 2,
+  applied_seasoning_cost: 4,
+  applied_seasoning_code: 4,
+  applied_markup_rate: 6,
+  applied_variation_rate: 6,
+  applied_seasoning_per_kg: 4,
+  inbound_packages: 3,
+  outbound_packages: 3,
+  prepared_meat_order: 3,
+  total_cost: 4,
+  unit_cost: 6,
+  shop_price: 4,
+  room_price: 4,
+};
 
 function equivalentOverwriteValue(
   left: unknown,
@@ -240,7 +301,7 @@ function equivalentOverwriteValue(
         const scale = overwriteNumericScales[field];
         if (scale != null) {
           const halfUnit = 0.5 * 10 ** -scale;
-          return Math.abs(leftNumber - rightNumber) < halfUnit + Number.EPSILON;
+          return Math.abs(leftNumber - rightNumber) <= halfUnit + 1e-9;
         }
         return leftNumber === rightNumber;
       }

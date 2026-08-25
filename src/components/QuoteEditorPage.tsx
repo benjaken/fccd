@@ -340,7 +340,6 @@ export function QuoteEditorPage({
   const [payments, setPayments] = useState<QuotePayment[]>([]);
   const [completing, setCompleting] = useState(false);
   const [completionError, setCompletionError] = useState<"save" | "send" | null>(null);
-  const [sourceDocumentType, setSourceDocumentType] = useState<"quote" | "unconfirmed" | "order" | null>(null);
   const [sendingConfirmation, setSendingConfirmation] = useState(false);
   const [confirmationSendError, setConfirmationSendError] = useState(false);
   const [converting, setConverting] = useState(false);
@@ -476,7 +475,6 @@ export function QuoteEditorPage({
         }
         if (summary) {
           if (id) setCreated(summary);
-          setSourceDocumentType(summary.documentType ?? (isOrder ? "order" : "quote"));
           setChannelId(summary.channelId);
           if (summary.draft) {
             const loadedDraft = { ...emptyDraft(), ...summary.draft };
@@ -1530,7 +1528,7 @@ export function QuoteEditorPage({
     const districtName = automaticDistrictName || draft.districtName || optionName(districts, draft.districtId);
     const selectedTags = options.orderTags.filter((item) => draft.tagIds.includes(item.id));
     const paid = payments.reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0);
-    const showConfirmationAction = !isOrder && sourceDocumentType === "unconfirmed";
+    const showConfirmationAction = !isOrder && !draft.quoteStatus;
     const showConvertAction = !isOrder;
 
     const ReadonlyField = ({ label, value, hint }: { label: string; value?: string | number | null; hint?: string }) => (

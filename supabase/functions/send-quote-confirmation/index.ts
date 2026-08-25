@@ -62,7 +62,7 @@ Deno.serve(async (request) => {
       .from("orders")
       .select("id,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,grand_total,currency")
       .eq("id", orderId)
-      .in("document_type", ["quote", "unconfirmed"])
+      .eq("document_type", "quote")
       .is("archived_at", null)
       .single();
     if (quoteError || !quote) return response({ error: "quote_not_found" }, 404);
