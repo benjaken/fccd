@@ -4,7 +4,6 @@ import {
   buildKitchenSalesCostYearSummary,
   defaultKitchenSalesCostYears,
   kitchenSalesCostCategories,
-  kitchenSalesCostDetailYears,
   kitchenSalesCostYears,
   type KitchenSalesCostReportRow,
 } from "@/lib/kitchen-sales-cost-report";
@@ -23,10 +22,6 @@ describe("central kitchen sales and cost report", () => {
     expect(kitchenSalesCostYears(rows)).toEqual([2025, 2026]);
     expect(defaultKitchenSalesCostYears([2027, 2026, 2025, 2024])).toEqual([2025, 2026]);
     expect(defaultKitchenSalesCostYears([2023, 2024])).toEqual([2023, 2024]);
-  });
-
-  it("shows the newest annual detail first", () => {
-    expect(kitchenSalesCostDetailYears([2025, 2026])).toEqual([2026, 2025]);
   });
 
   it("keeps standard categories in report order and calculates net totals", () => {

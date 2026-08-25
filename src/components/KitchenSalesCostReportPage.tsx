@@ -14,7 +14,6 @@ import {
   defaultKitchenSalesCostYears,
   fetchKitchenSalesCostReport,
   kitchenSalesCostCategories,
-  kitchenSalesCostDetailYears,
   kitchenSalesCostYears,
   KITCHEN_SALES_CATEGORY,
   type KitchenSalesCostReport,
@@ -387,7 +386,11 @@ function ReportTable({
   const [expandedChart, setExpandedChart] = useState<"trend" | "composition" | null>(null);
 
   return (
-    <section className="kitchen-sales-cost-year panel">
+    <section
+      className="kitchen-sales-cost-year panel"
+      data-report-year={summary.year}
+      style={{ order: -summary.year }}
+    >
       <header className="kitchen-sales-cost-year-heading">
         <div>
           <span className="kitchen-sales-cost-year-badge">{summary.year}</span>
@@ -618,8 +621,10 @@ export function KitchenSalesCostReportPage() {
   }, [report, years]);
 
   const summaries = useMemo(
-    () => kitchenSalesCostDetailYears(selectedYears).map((year) =>
-      buildKitchenSalesCostYearSummary(report?.rows ?? [], year, categories)),
+    () => selectedYears
+      .map((year) =>
+        buildKitchenSalesCostYearSummary(report?.rows ?? [], year, categories))
+      .sort((left, right) => right.year - left.year),
     [categories, report, selectedYears],
   );
   const aiSnapshot = useMemo(

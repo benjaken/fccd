@@ -96,10 +96,6 @@ export function defaultKitchenSalesCostYears(years: number[]) {
   return years.slice(-2);
 }
 
-export function kitchenSalesCostDetailYears(years: number[]) {
-  return [...years].sort((left, right) => right - left);
-}
-
 export function kitchenSalesCostCategories(rows: KitchenSalesCostReportRow[]) {
   const configured = [
     ...new Set(
