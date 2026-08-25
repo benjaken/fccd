@@ -12955,7 +12955,7 @@ a.masoft-order-tag:focus-visible {
   gap: 0.35rem;
   align-items: baseline;
   width: 100%;
-  padding: 0;
+  padding: 0.18rem 0.38rem;
   border-radius: 0;
 }
 
@@ -21121,6 +21121,15 @@ a.masoft-order-tag:focus-visible {
 .quote-line-label-cell {
   min-width: 132px;
   vertical-align: middle;
+}
+
+.kitchen-channel-sales-table tbody th,
+.kitchen-channel-sales-table tbody td {
+  padding: 0;
+}
+
+.kitchen-channel-sales-table tfoot td {
+  padding: 0;
 }
 
 .quote-line-label-control {

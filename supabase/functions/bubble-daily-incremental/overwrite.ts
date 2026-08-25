@@ -1,6 +1,7 @@
 import type { BubbleRecord } from "./helpers.ts";
 
 export const AUGUST_OVERWRITE_SINCE = "2026-07-31T16:00:00.000Z";
+export const INVENTORY_OVERWRITE_SINCE = "2026-08-09T16:00:00.000Z";
 export const AUGUST_OVERWRITE_CONFIRMATION = "APPLY_AUGUST_2026_OVERWRITE";
 
 export const overwriteFieldSources = {
@@ -112,12 +113,56 @@ export const overwriteFieldSources = {
     total_fee: ["Basic+surcharge total"],
     image_references: ["image"],
   },
+  m_raw_stock: {
+    bubble_created_at: ["Created Date"],
+    bubble_modified_at: ["Modified Date"],
+    raw_meat_item_id: ["Raw_meat"],
+    raw_meat_item_legacy_id: ["Raw_meat"],
+    supplier_id: ["in_supplier"],
+    supplier_legacy_id: ["in_supplier"],
+    meat_order_line_id: ["M_outDone_doneMeat"],
+    meat_order_line_legacy_id: ["M_outDone_doneMeat"],
+    movement_at: ["date"],
+    inbound_quantity_kg: ["in_quantity(kg)"],
+    outbound_quantity_kg: ["out_quantity(kg)"],
+    allocated_inbound_quantity_kg: ["out_from_in"],
+    inbound_unit_price: ["in_price(HKD/kg)"],
+    inbound_total_amount: ["in_totalAmount(HKD)"],
+    applied_seasoning_cost: ["applied_seasoning_cost"],
+    applied_seasoning_code: ["applied_seasoning_code"],
+    applied_markup_rate: ["applied_mark_up"],
+    applied_variation_rate: ["applied_variation"],
+    applied_seasoning_per_kg: ["applied_seasoning/kg"],
+    raw_meat_order: ["RawMeat_Order"],
+    remarks: ["Remarks"],
+  },
+  m_donemeat_stock: {
+    bubble_created_at: ["Created Date"],
+    bubble_modified_at: ["Modified Date"],
+    prepared_meat_item_id: ["DoneMeat"],
+    prepared_meat_item_legacy_id: ["DoneMeat"],
+    meat_customer_id: ["Shop_M_cust"],
+    meat_customer_legacy_id: ["Shop_M_cust"],
+    meat_order_line_id: ["M_outDone_doneMeat"],
+    meat_order_line_legacy_id: ["M_outDone_doneMeat"],
+    movement_at: ["Date"],
+    inbound_packages: ["in/包"],
+    outbound_packages: ["out/包"],
+    prepared_meat_order: ["DoneMeat_order"],
+    remarks: ["remark"],
+  },
 } as const;
 
 export type OverwriteSourceType = keyof typeof overwriteFieldSources;
 
 export function isOverwriteSourceType(value: unknown): value is OverwriteSourceType {
   return typeof value === "string" && value in overwriteFieldSources;
+}
+
+export function overwriteSince(sourceType: OverwriteSourceType): string {
+  return sourceType === "m_raw_stock" || sourceType === "m_donemeat_stock"
+    ? INVENTORY_OVERWRITE_SINCE
+    : AUGUST_OVERWRITE_SINCE;
 }
 
 function hasOwn(record: BubbleRecord, field: string): boolean {

@@ -22,6 +22,7 @@ import {
   isOverwriteSourceType,
   mergeOverwriteRow,
   normalizeOrderNumber,
+  overwriteSince,
   overwriteFieldSources,
   type OverwriteSourceType,
 } from "./overwrite.ts";
@@ -1143,13 +1144,14 @@ async function processAugustOverwrite(
   bubbleToken: string,
   deadline: number,
 ) {
+  const since = overwriteSince(sourceType);
   const mapping = [...coreMappings, ...remainingMappings].find((item) =>
     item.sourceType === sourceType
   );
   if (!mapping) throw new Error("Overwrite source mapping is unavailable.");
   const fetched = await fetchBubbleType(
     sourceType,
-    AUGUST_OVERWRITE_SINCE,
+    since,
     watermark,
     bubbleToken,
     deadline,
@@ -1229,7 +1231,7 @@ async function processAugustOverwrite(
     mode,
     sourceType,
     table: mapping.table,
-    since: AUGUST_OVERWRITE_SINCE,
+    since,
     watermark,
     fetched: fetched.records.length,
     inserted,
@@ -1265,9 +1267,11 @@ async function handleRequest(request: Request): Promise<Response> {
   const adminBackfillRequested =
     body?.backfillOrderMetadata === true &&
     body?.confirmation === ORDER_METADATA_BACKFILL_CONFIRMATION;
+  const adminOverwriteRequested = body?.overwrite != null;
   if (
     !cronAuthenticated &&
-    !(adminBackfillRequested && await authenticateAdmin(request, client))
+    !((adminBackfillRequested || adminOverwriteRequested) &&
+      await authenticateAdmin(request, client))
   ) {
     return jsonResponse({ error: "Unauthorized." }, 401);
   }
@@ -1319,13 +1323,14 @@ async function handleRequest(request: Request): Promise<Response> {
       if (!isOverwriteSourceType(body.overwrite.sourceType)) {
         throw new Error("overwrite.sourceType is not approved.");
       }
+      const overwriteCheckpoint = overwriteSince(body.overwrite.sourceType);
       const overwriteWatermark = mode === "dry-run"
         ? String(body.overwrite.watermark ?? invocationStartedAt)
         : String(body.overwrite.watermark ?? "");
       if (
         !overwriteWatermark ||
         Number.isNaN(Date.parse(overwriteWatermark)) ||
-        Date.parse(overwriteWatermark) <= Date.parse(AUGUST_OVERWRITE_SINCE) ||
+        Date.parse(overwriteWatermark) <= Date.parse(overwriteCheckpoint) ||
         Date.parse(overwriteWatermark) > Date.parse(invocationStartedAt)
       ) {
         throw new Error("overwrite.watermark is invalid.");
@@ -1371,7 +1376,7 @@ async function handleRequest(request: Request): Promise<Response> {
             source_system: "bubble",
             target_system: "supabase",
             snapshot_at: overwriteRequest.watermark,
-            checkpoint_at: AUGUST_OVERWRITE_SINCE,
+            checkpoint_at: overwriteSince(overwriteRequest.sourceType),
             started_at: invocationStartedAt,
             details: {
               operation: "august_2026_overwrite",
