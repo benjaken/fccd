@@ -12943,7 +12943,7 @@ a.masoft-order-tag:focus-visible {
 .kitchen-channel-sales-cell-values {
   display: grid;
   justify-items: end;
-  gap: 0.18rem;
+  gap: 0;
   min-width: 6.3rem;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -12955,8 +12955,8 @@ a.masoft-order-tag:focus-visible {
   gap: 0.35rem;
   align-items: baseline;
   width: 100%;
-  padding: 0.18rem 0.38rem;
-  border-radius: 0.35rem;
+  padding: 0;
+  border-radius: 0;
 }
 
 .kitchen-channel-sales-cell-values .year-tone-0 {
