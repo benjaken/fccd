@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   coercePreparedMeatIntegerInput,
@@ -73,6 +73,15 @@ export function PreparedMeatItemSearchSelect({
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
+  const blurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const cancelBlurTimer = () => {
+    if (blurTimer.current === null) return;
+    clearTimeout(blurTimer.current);
+    blurTimer.current = null;
+  };
+
+  useEffect(() => cancelBlurTimer, []);
   const selected = options.find((option) => option.id === value) ?? null;
   const needle = query.trim().toLocaleLowerCase("zh-HK");
   const available = options.filter((option) => {
@@ -95,6 +104,7 @@ export function PreparedMeatItemSearchSelect({
         placeholder={placeholder}
         value={open ? query : (selected?.name ?? "")}
         onFocus={() => {
+          cancelBlurTimer();
           setQuery("");
           setOpen(true);
         }}
@@ -116,7 +126,11 @@ export function PreparedMeatItemSearchSelect({
           if (event.key === "Escape") setOpen(false);
         }}
         onBlur={() => {
-          window.setTimeout(() => setOpen(false), 120);
+          cancelBlurTimer();
+          blurTimer.current = setTimeout(() => {
+            blurTimer.current = null;
+            setOpen(false);
+          }, 120);
         }}
       />
       {open && !disabled ? (
