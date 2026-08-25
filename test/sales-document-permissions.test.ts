@@ -28,8 +28,10 @@ describe("sales document editing permissions", () => {
     expect(migration).toContain("private.has_page_manage('quotes')");
     expect(migration).toContain('Document managers update orders');
     expect(migration).toContain(
-      "array['order_lines', 'payments', 'deliveries']",
+      "array['order_lines', 'payments']",
     );
+    expect(migration).toContain('Delivery managers update deliveries');
+    expect(migration).toContain("private.has_page_manage('delivery')");
     expect(migration).toContain('Document managers update %1$s');
     expect(migration).toContain('Document managers update order tag assignments');
     expect(migration).not.toContain("auth.jwt() -> 'app_metadata' ->> 'role'");
