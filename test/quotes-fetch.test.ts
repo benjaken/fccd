@@ -124,12 +124,27 @@ describe("quote list presets", () => {
       createdSort: "ascending",
     });
 
-    expect(query.order).toHaveBeenCalledWith("bubble_created_at", {
+    expect(query.order).toHaveBeenCalledWith("effective_created_at", {
       ascending: true,
-      nullsFirst: false,
     });
-    expect(query.order).toHaveBeenCalledWith("created_at", {
-      ascending: true,
+  });
+
+  it("orders the default quote list by newest effective creation date", async () => {
+    const query = createQuery({ data: [], count: 0, error: null });
+    fromMock.mockReturnValue(query);
+
+    await fetchQuotes({
+      page: 1,
+      search: "",
+      status: "",
+    });
+
+    expect(query.select).toHaveBeenCalledWith(
+      expect.stringContaining("effective_created_at"),
+      { count: "exact" },
+    );
+    expect(query.order).toHaveBeenCalledWith("effective_created_at", {
+      ascending: false,
     });
   });
 
