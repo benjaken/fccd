@@ -4,6 +4,21 @@ const PAGE_SELECTOR = "[data-pdf-auto-page]";
 const MODULE_SELECTOR = "[data-pdf-auto-module-index]";
 const FOOTER_SELECTOR = "[data-pdf-auto-footer]";
 
+function pageContentBottom(page: HTMLElement, footer: HTMLElement) {
+  const pageRect = page.getBoundingClientRect();
+  const footerRect = footer.getBoundingClientRect();
+
+  // Once a fixed-height sheet overflows, its flex footer is pushed below the
+  // visible A4 box. Using that displaced footer as the boundary makes clipped
+  // modules look as though they still fit. Reconstruct the footer's intended
+  // top edge from the sheet itself and clamp to it.
+  if (pageRect.height <= 0) return footerRect.top;
+
+  const paddingBottom = Number.parseFloat(window.getComputedStyle(page).paddingBottom) || 0;
+  const intendedFooterTop = pageRect.bottom - paddingBottom - footerRect.height;
+  return Math.min(footerRect.top, intendedFooterTop);
+}
+
 export function splitPdfModuleIndexes(moduleCount: number, pageBreaks: number[]) {
   const starts = [0, ...pageBreaks.filter((index) => index > 0 && index < moduleCount)];
   return starts.map((start, pageIndex) => {
@@ -43,7 +58,7 @@ export function usePdfAutoPageBreaks(
       const modules = Array.from(page.querySelectorAll<HTMLElement>(MODULE_SELECTOR));
       if (!footer || !modules.length) continue;
 
-      const footerTop = footer.getBoundingClientRect().top;
+      const footerTop = pageContentBottom(page, footer);
       const overflowingModule = modules.find((module) => module.getBoundingClientRect().bottom > footerTop - 1);
       if (!overflowingModule) continue;
 
