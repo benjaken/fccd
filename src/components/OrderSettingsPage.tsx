@@ -436,7 +436,9 @@ export function OrderSettingsPage({
           activeTab === "shipping" ||
           activeTab === "shipping-fees" ||
           activeTab === "payments") &&
-        canManage ? (
+        (activeTab === "shipping-fees"
+          ? pageAccess.canManage("orders.settings.shipping_fees")
+          : canManage) ? (
           <Button type="button" onClick={() => setCreateOpen(true)}>
             <Plus />
             {activeTab === "payments"

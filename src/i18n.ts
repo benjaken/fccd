@@ -2084,7 +2084,7 @@ const resources = {
         },
         errors: {
           create: "未能儲存報價表，請確認資料與權限後重試。",
-          line: "未能更新貨品，請重試。", invalidLine: "數量須大於 0，單價不可小於 0。",
+          line: "未能更新貨品，請重試。", invalidLine: "數量須為大於 0 的整數，單價不可小於 0。",
           convert: "未能轉成訂單，請確認報價資料後重試。",
         },
         items: {
@@ -6670,7 +6670,7 @@ const resources = {
         },
         errors: {
           create: "The quote could not be saved. Check the details and your permissions, then retry.",
-          line: "The product could not be updated. Please retry.", invalidLine: "Quantity must be above 0 and price cannot be negative.",
+          line: "The product could not be updated. Please retry.", invalidLine: "Quantity must be a whole number above 0 and price cannot be negative.",
           convert: "The quote could not be converted to an order. Check the quote details and retry.",
         },
         items: {

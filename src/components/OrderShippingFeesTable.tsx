@@ -160,7 +160,7 @@ export function OrderShippingFeesTable({
 }) {
   const { t, i18n } = useTranslation();
   const pageAccess = useCurrentPageAccess();
-  const canManage = pageAccess.canManage("orders.settings");
+  const canManage = pageAccess.canManage("orders.settings.shipping_fees");
   const [rows, setRows] = useState<ShippingFee[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);

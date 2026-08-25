@@ -50,6 +50,10 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
     prefix: "/orders/settings/order-list-tips",
     pageKey: "settings.order_lists",
   },
+  {
+    prefix: "/orders/settings/shipping-fees",
+    pageKey: "orders.settings.shipping_fees",
+  },
   { prefix: "/orders/settings", pageKey: "orders.settings" },
   { prefix: "/quotes/pdf-pages", pageKey: "quotes.pdf_pages" },
   { prefix: "/quotes/customers", pageKey: "quotes.customers" },
@@ -276,6 +280,7 @@ const PAGE_ACCESS_CHILD_KEYS: Record<string, string[]> = {
   "orders.settings": [
     "orders.settings.statuses",
     "orders.settings.sale_partners",
+    "orders.settings.shipping_fees",
   ],
   "settings.order_lists": ["settings.order_lists.edit"],
   "settings.districts": ["settings.districts.edit"],

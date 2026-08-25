@@ -765,7 +765,7 @@ export function QuoteEditorPage({
     if (!activeQuote || !selectedItem) return;
     const parsedQuantity = Number(quantity);
     const parsedPrice = Number(unitPrice);
-    if (!Number.isFinite(parsedQuantity) || parsedQuantity <= 0 || !Number.isFinite(parsedPrice) || parsedPrice < 0) {
+    if (!Number.isInteger(parsedQuantity) || parsedQuantity < 1 || !Number.isFinite(parsedPrice) || parsedPrice < 0) {
       setError("quote_line_invalid");
       return;
     }
@@ -909,7 +909,7 @@ export function QuoteEditorPage({
   };
 
   const saveEditedLine = async (line: QuoteLine) => {
-    if (line.quantity <= 0 || line.unitPrice < 0) {
+    if (!Number.isInteger(line.quantity) || line.quantity < 1 || line.unitPrice < 0) {
       setError("quote_line_invalid");
       return;
     }
@@ -1562,7 +1562,7 @@ export function QuoteEditorPage({
               )}
             </div>
             <div className="quote-item-numbers">
-              <label><span>{t("quoteEditor.items.quantity")}</span><input type="number" min="0.001" step="0.001" value={quantity} onChange={(event) => setQuantity(event.target.value)} /></label>
+              <label><span>{t("quoteEditor.items.quantity")}</span><input type="number" inputMode="numeric" min="1" step="1" value={quantity} onChange={(event) => setQuantity(event.target.value)} /></label>
               <label><span>{t("quoteEditor.items.unitPrice")}</span><input type="number" min="0" step="0.01" value={unitPrice} onChange={(event) => setUnitPrice(event.target.value)} /></label>
             </div>
             <label><span>{t("quoteEditor.items.remarks")}</span><textarea rows={1} maxLength={16} value={lineRemarks} onChange={(event) => setLineRemarks(event.target.value)} /></label>
@@ -1590,7 +1590,7 @@ export function QuoteEditorPage({
                       </div>
                     </header>
                     <div className="quote-mobile-line-fields">
-                      <label><span>{t("quoteEditor.items.quantity")}</span><input type="number" inputMode="decimal" min="0.001" step="0.001" value={line.quantity} disabled={savingLineId === line.id} onChange={(event) => patchLine(line.id, { quantity: Number(event.target.value) })} onBlur={() => void saveEditedLine(line)} /></label>
+                      <label><span>{t("quoteEditor.items.quantity")}</span><input type="number" inputMode="numeric" min="1" step="1" value={line.quantity} disabled={savingLineId === line.id} onChange={(event) => patchLine(line.id, { quantity: Number(event.target.value) })} onBlur={() => void saveEditedLine(line)} /></label>
                       <label><span>{t("quoteEditor.items.unitPrice")}</span><input type="number" inputMode="decimal" min="0" step="0.01" value={line.unitPrice} disabled={savingLineId === line.id} onChange={(event) => patchLine(line.id, { unitPrice: Number(event.target.value) })} onBlur={() => void saveEditedLine(line)} /></label>
                       <label className="is-wide"><span>{t("quoteEditor.items.remarks")}</span><textarea rows={2} maxLength={16} value={line.remarks || ""} disabled={savingLineId === line.id} onChange={(event) => patchLine(line.id, { remarks: event.target.value })} onBlur={() => void saveEditedLine(line)} /></label>
                     </div>
@@ -1651,7 +1651,7 @@ export function QuoteEditorPage({
                     />
                   ) : null}
                 </td>
-                <td><input className="quote-line-edit-number" type="number" min="0.001" step="0.001" value={line.quantity} aria-label={`${t("quoteEditor.items.quantity")} ${line.name || ""}`} disabled={savingLineId === line.id} onChange={(event) => patchLine(line.id, { quantity: Number(event.target.value) })} onBlur={() => void saveEditedLine(line)} /></td>
+                <td><input className="quote-line-edit-number" type="number" inputMode="numeric" min="1" step="1" value={line.quantity} aria-label={`${t("quoteEditor.items.quantity")} ${line.name || ""}`} disabled={savingLineId === line.id} onChange={(event) => patchLine(line.id, { quantity: Number(event.target.value) })} onBlur={() => void saveEditedLine(line)} /></td>
                 <td><input className="quote-line-edit-number" type="number" min="0" step="0.01" value={line.unitPrice} aria-label={`${t("quoteEditor.items.unitPrice")} ${line.name || ""}`} disabled={savingLineId === line.id} onChange={(event) => patchLine(line.id, { unitPrice: Number(event.target.value) })} onBlur={() => void saveEditedLine(line)} /></td>
                 <td>{money.format(line.totalPrice)}</td>
                 <td><button type="button" className="quote-line-delete" aria-label={t("quoteEditor.items.remove", { name: line.name || "" })} disabled={removingId === line.id || savingLineId === line.id} onClick={() => void removeLine(line.id)}><Trash2 /></button></td>

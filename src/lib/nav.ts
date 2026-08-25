@@ -224,7 +224,7 @@ export const secondaryNav: Record<string, NavItem[]> = {
           key: "orderShippingFees",
           to: "/orders/settings/shipping-fees",
           icon: Truck,
-          permissionKey: "orders.settings",
+          permissionKey: "orders.settings.shipping_fees",
         },
         {
           key: "orderPaymentMethods",
@@ -576,6 +576,7 @@ export const SECTION_CHILD_KEYS: Record<string, string[]> = {
     "orders.settings",
     "orders.settings.statuses",
     "orders.settings.sale_partners",
+    "orders.settings.shipping_fees",
     "settings.order_lists",
     "settings.order_lists.edit",
     ...ORDER_ACTION_PAGE_KEYS,

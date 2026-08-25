@@ -727,9 +727,17 @@ describe("Quote editor", () => {
     expect(screen.getByRole("textbox", { name: "Remarks Roast pork" })).toHaveAttribute("maxlength", "16");
 
     const quantityInput = screen.getByRole("spinbutton", { name: "Quantity Roast pork" });
+    expect(quantityInput).toHaveAttribute("min", "1");
+    expect(quantityInput).toHaveAttribute("step", "1");
     fireEvent.change(quantityInput, { target: { value: "3" } });
     fireEvent.blur(quantityInput);
     await waitFor(() => expect(saveExistingLine).toHaveBeenCalledWith(expect.objectContaining({ id: "line-1", quantity: 3 })));
+
+    saveExistingLine.mockClear();
+    fireEvent.change(quantityInput, { target: { value: "1.5" } });
+    fireEvent.blur(quantityInput);
+    expect(await screen.findByText("Quantity must be a whole number above 0 and price cannot be negative.")).toBeInTheDocument();
+    expect(saveExistingLine).not.toHaveBeenCalled();
   });
 
   it("shows sequence and SKU columns and saves a dragged product order", async () => {
