@@ -1,3 +1,4 @@
+import { coerceMeatQuantityInput } from "@/lib/meat-quantity";
 import { supabase } from "@/lib/supabase";
 
 export const PREPARED_MEAT_MOVEMENTS_PAGE_SIZE = 15;
@@ -387,23 +388,9 @@ export function meatCustomerOptionLabel(row: {
   return code ? `${code} - ${row.name}` : row.name;
 }
 
-/** Keep digits and at most one decimal while typing. */
+/** Keep digits and at most two decimal places while typing. */
 export function coercePreparedMeatQuantityInput(value: string): string {
-  const normalized = value
-    .replace(/[０-９]/g, (ch) => String(ch.charCodeAt(0) - 0xff10))
-    .replace(/．/g, ".");
-  const cleaned = normalized.replace(/[^\d.]/g, "");
-  if (!cleaned) return "";
-  const dot = cleaned.indexOf(".");
-  const intDigits = (dot === -1 ? cleaned : cleaned.slice(0, dot)).replace(
-    /^0+(?=\d)/,
-    "",
-  );
-  const frac =
-    dot === -1 ? null : cleaned.slice(dot + 1).replace(/\./g, "").slice(0, 3);
-  const intPart = intDigits === "" ? (frac === null ? "" : "0") : intDigits;
-  if (frac === null) return intPart;
-  return `${intPart}.${frac}`;
+  return coerceMeatQuantityInput(value);
 }
 
 /** Keep digits only while typing whole packages. */
@@ -558,7 +545,7 @@ function mapStockObject(value: unknown): Record<string, number> {
 
 export function formatPreparedMeatStock(value: number) {
   if (!Number.isFinite(value) || value <= 0) return "0";
-  return String(Number.parseFloat(value.toFixed(3)));
+  return String(Number.parseFloat(value.toFixed(2)));
 }
 
 export function remainingPreparedMeatOutboundStock(input: {

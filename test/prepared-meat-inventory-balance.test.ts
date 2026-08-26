@@ -151,10 +151,11 @@ describe("prepared meat outbound helpers", () => {
     ).toBe("R - 202608 - 8");
   });
 
-  it("keeps only numeric quantity input", () => {
+  it("keeps numeric quantity input to two decimal places", () => {
     expect(coercePreparedMeatQuantityInput("勝多負少")).toBe("");
     expect(coercePreparedMeatQuantityInput("12包")).toBe("12");
     expect(coercePreparedMeatQuantityInput("1.2.3")).toBe("1.23");
+    expect(coercePreparedMeatQuantityInput("1.234")).toBe("1.23");
     expect(coercePreparedMeatQuantityInput("１．５")).toBe("1.5");
     expect(coercePreparedMeatQuantityInput("2")).toBe("2");
   });
@@ -242,6 +243,7 @@ describe("prepared meat outbound stock", () => {
   it("formats on-hand stock without trailing zeros", () => {
     expect(formatPreparedMeatStock(10)).toBe("10");
     expect(formatPreparedMeatStock(10.5)).toBe("10.5");
+    expect(formatPreparedMeatStock(1.239)).toBe("1.24");
     expect(formatPreparedMeatStock(0)).toBe("0");
     expect(formatPreparedMeatStock(-2)).toBe("0");
   });

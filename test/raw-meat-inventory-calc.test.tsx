@@ -518,17 +518,18 @@ describe("Raw meat inventory calculation page", () => {
       within(dialog).getByRole("textbox", { name: "來貨價" }),
       "23",
     );
-    await user.type(
-      within(dialog).getByRole("textbox", { name: "入貨" }),
-      "3",
-    );
+    const quantityInput = within(dialog).getByRole("textbox", { name: "入貨" });
+    await user.type(quantityInput, "1.234");
+    expect(quantityInput).toHaveValue("1.23");
+    await user.clear(quantityInput);
+    await user.type(quantityInput, "3");
 
     expect(
       within(dialog).getByRole("textbox", { name: "來貨價 (kg)" }),
     ).toHaveValue("$38.02");
     expect(
       within(dialog).getByRole("textbox", { name: "入貨 (kg)" }),
-    ).toHaveValue("1.8149");
+    ).toHaveValue("1.81");
     expect(
       within(dialog).getByRole("textbox", { name: "總額 HKD" }),
     ).toHaveValue("$69");

@@ -1,3 +1,4 @@
+import { coerceMeatQuantityInput } from "@/lib/meat-quantity";
 import { supabase } from "@/lib/supabase";
 
 export const RAW_MEAT_MOVEMENTS_PAGE_SIZE = 15;
@@ -97,6 +98,15 @@ export function roundTo(value: number, digits: number) {
 
 export function parseDecimalInput(value: string) {
   const parsed = Number.parseFloat(value.replace(/[$,\s]/g, ""));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+export function coerceRawMeatQuantityInput(value: string) {
+  return coerceMeatQuantityInput(value);
+}
+
+export function parseRawMeatQuantityInput(value: string) {
+  const parsed = Number.parseFloat(coerceRawMeatQuantityInput(value));
   return Number.isFinite(parsed) ? parsed : null;
 }
 

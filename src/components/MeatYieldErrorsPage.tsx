@@ -75,7 +75,7 @@ export function MeatYieldErrorsPage({
     () =>
       new Intl.NumberFormat(i18n.language, {
         minimumFractionDigits: 0,
-        maximumFractionDigits: 3,
+        maximumFractionDigits: 2,
       }),
     [i18n.language],
   );

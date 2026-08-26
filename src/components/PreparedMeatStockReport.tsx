@@ -86,7 +86,7 @@ function MeatStockReport({ kind }: { kind: StockKind }) {
   const number = useMemo(
     () =>
       new Intl.NumberFormat(i18n.language, {
-        maximumFractionDigits: 3,
+        maximumFractionDigits: 2,
       }),
     [i18n.language],
   );
