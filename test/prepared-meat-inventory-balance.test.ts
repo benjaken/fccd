@@ -9,6 +9,7 @@ import {
   formatPreparedMeatKg,
   formatPreparedMeatOrderNumber,
   formatPreparedMeatStock,
+  hongKongDateKey,
   hongKongYearBounds,
   hongKongYearMonthKey,
   isPreparedInboundPackAllowed,
@@ -92,6 +93,76 @@ describe("prepared meat running balance", () => {
       10,
     );
     expect(result[0]?.balancePackages).toBe(12);
+  });
+
+  it("shows the same Hong Kong day-end stock on every row that day", () => {
+    const result = withPreparedMeatRunningBalance(
+      [
+        {
+          id: "tko",
+          movement_at: "2026-08-03T16:00:00.000Z",
+          inbound_packages: null,
+          outbound_packages: 24,
+          remarks: null,
+          bubble_created_at: null,
+          created_at: "2026-08-03T16:00:00.000Z",
+          meat_customer_id: "tko",
+          meat_customers: { id: "tko", name: "桂花小幸 TKO" },
+        },
+        {
+          id: "room-r",
+          movement_at: "2026-08-03T16:00:00.000Z",
+          inbound_packages: null,
+          outbound_packages: 3,
+          remarks: null,
+          bubble_created_at: null,
+          created_at: "2026-08-03T16:00:00.000Z",
+          meat_customer_id: "room-r",
+          meat_customers: { id: "room-r", name: "Room R - 到會" },
+        },
+      ],
+      "醃雞扒",
+      82,
+    );
+
+    expect(result.map((row) => row.balancePackages)).toEqual([55, 55]);
+    expect(hongKongDateKey("2026-08-03T16:00:00.000Z")).toBe("2026-08-04");
+  });
+
+  it("includes earlier-year net stock so August is not 8 packs too high", () => {
+    const movement = (
+      id: string,
+      movementAt: string,
+      inbound: number | null,
+      outbound: number | null,
+    ) => ({
+      id,
+      movement_at: movementAt,
+      inbound_packages: inbound,
+      outbound_packages: outbound,
+      remarks: null,
+      bubble_created_at: null,
+      created_at: movementAt,
+      meat_customer_id: null,
+      meat_customers: null,
+    });
+
+    const withoutJanuaryToJuly = withPreparedMeatRunningBalance(
+      [movement("aug-out", "2026-08-24T16:00:00.000Z", null, 54)],
+      "醃雞扒",
+      90,
+    );
+    const withJanuaryToJuly = withPreparedMeatRunningBalance(
+      [
+        movement("jul-out", "2026-07-30T16:00:00.000Z", null, 8),
+        movement("aug-out", "2026-08-24T16:00:00.000Z", null, 54),
+      ],
+      "醃雞扒",
+      90,
+    );
+
+    expect(withoutJanuaryToJuly[0]?.balancePackages).toBe(36);
+    expect(withJanuaryToJuly[0]?.balancePackages).toBe(28);
   });
 });
 
