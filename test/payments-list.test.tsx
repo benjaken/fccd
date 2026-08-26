@@ -85,6 +85,9 @@ describe("PaymentsListPage", () => {
 
     const headers = (await screen.findAllByRole("columnheader")).map((header) => header.textContent);
     expect(headers.slice(1, 6)).toEqual(["Brand", "Order", "Payment method", "Payment date", "Amount"]);
+    expect(
+      screen.getByRole("link", { name: "Open order B-1001" }).closest("td"),
+    ).toHaveClass("table-actions-cell");
   });
 
   it("prevents a negative net amount and reconciles compatible selections", async () => {

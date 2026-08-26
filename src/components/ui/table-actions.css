@@ -66,3 +66,15 @@
   margin-top: 3px;
   color: var(--muted-foreground);
 }
+
+.table-wrap:has(
+    > table > tbody > tr > .table-actions-cell:last-child,
+    > table > thead > tr > th[aria-label*="action" i],
+    > table > thead > tr > th[aria-label*="操作"]
+  )
+  > table
+  > tbody
+  > tr.quote-customers-row-selected
+  > :last-child {
+  background: var(--selection-bg);
+}

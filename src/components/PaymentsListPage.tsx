@@ -333,7 +333,7 @@ export function PaymentsListPage({
               <td>{payment.paymentAt ? date.format(new Date(payment.paymentAt)) : t("common.notSet")}</td>
               <td><strong>{payment.currency === "HKD" ? currency.format(payment.amount) : `${payment.currency} ${payment.amount}`}</strong></td>
               <td>{payment.reference || t("common.notSet")}</td>
-              <td>{payment.orderId && <Button variant="ghost" size="icon" asChild><DetailLink to={`/orders/${payment.orderId}`} aria-label={`${t("payments.open")} ${payment.orderNumber || payment.id}`}><ChevronRight /></DetailLink></Button>}</td>
+              <td className="table-actions-cell">{payment.orderId && <Button variant="ghost" size="icon" asChild><DetailLink to={`/orders/${payment.orderId}`} aria-label={`${t("payments.open")} ${payment.orderNumber || payment.id}`}><ChevronRight /></DetailLink></Button>}</td>
             </tr>)}
           </ListTable>
         )}

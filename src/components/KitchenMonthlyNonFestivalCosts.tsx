@@ -365,7 +365,7 @@ export function KitchenMonthlyNonFestivalCosts({ canEdit }: { canEdit: boolean }
               <td>{date.quarter}</td>
               <td className="kitchen-monthly-cost-brands">{row.channelNames.join(", ") || "—"}</td>
               <td><strong>{row.costTypeName}</strong></td>
-              <td className="table-actions-cell">
+              <td>
                 {canEdit ? (
                   <div className="kitchen-cost-record-amount">
                     <span>HK$</span>
@@ -394,7 +394,7 @@ export function KitchenMonthlyNonFestivalCosts({ canEdit }: { canEdit: boolean }
                   />
                 ) : row.remarks || "—"}
               </td>
-              <td>
+              <td className="table-actions-cell">
                 {canEdit ? (
                   <Button
                     type="button"
