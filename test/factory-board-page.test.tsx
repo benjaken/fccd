@@ -768,6 +768,9 @@ describe("FactoryBoardPage", () => {
     await user.click(screen.getByRole("button", { name: /煎雞扒胡麻沙律/ }));
 
     expect(screen.getByRole("heading", { name: "印標籤" })).toBeInTheDocument();
+    expect(
+      screen.queryByLabelText("50 × 75 mm 標籤預覽：B-1522"),
+    ).not.toBeInTheDocument();
     expect(screen.getByText("原名稱")).toBeInTheDocument();
     expect(screen.getByText("標籤名稱")).toBeInTheDocument();
     expect(

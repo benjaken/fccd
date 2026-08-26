@@ -3,7 +3,6 @@ import { CheckCircle2, Printer, ShoppingCart, TriangleAlert } from "lucide-react
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
-import { FactoryDishLabelPreview } from "@/components/FactoryDishLabelPreview";
 import {
   assignDeliveryMotorcade,
   type DeliveryListItem,
@@ -698,17 +697,6 @@ export function FactoryOrderJobView({
                   )}
                 </div>
               ) : null}
-              <div className="factory-label-print-preview">
-                <FactoryDishLabelPreview
-                  input={{
-                    orderNumber,
-                    deliveryDate: dateKey,
-                    labelName: selectedLine.labelName?.trim() || selectedLine.label,
-                    remarks: [...selectedLine.remarks, job?.packingNote ?? ""].filter(Boolean),
-                    copies: labelCopies(selectedLine),
-                  }}
-                />
-              </div>
               <div className="factory-label-summary">
                 <div>
                   <span>{t("factoryBoard.originalName")}</span>

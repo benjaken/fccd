@@ -23731,18 +23731,6 @@ button.factory-job-card:focus-visible {
   font-size: 27px;
 }
 
-.factory-label-print-preview {
-  display: grid;
-  padding: 16px;
-  place-items: center;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--muted);
-}
-
-.factory-label-print-preview .factory-dish-label-preview {
-  width: min(15rem, 72vw);
-}
 
 .factory-label-reprint-alert > strong,
 .factory-label-reprint-alert > span {
