@@ -8715,6 +8715,7 @@ button.product-tag[aria-pressed="true"] {
 }
 
 .settings-permission-workspace {
+  --permission-toggle-column: 72px;
   display: grid;
   grid-template-rows: auto auto auto minmax(0, 1fr);
   min-width: 0;
@@ -8876,9 +8877,13 @@ button.product-tag[aria-pressed="true"] {
 }
 
 .settings-permission-column-labels,
-.settings-permission-row {
+.settings-permission-row,
+.settings-permission-section-heading button {
   display: grid;
-  grid-template-columns: minmax(320px, 1fr) 92px 92px;
+  grid-template-columns:
+    minmax(0, 1fr)
+    var(--permission-toggle-column)
+    var(--permission-toggle-column);
   align-items: center;
 }
 
@@ -8904,9 +8909,16 @@ button.product-tag[aria-pressed="true"] {
   background: color-mix(in oklab, var(--muted) 16%, var(--background));
 }
 
+.settings-permission-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  align-items: start;
+  gap: 12px;
+}
+
 .settings-permission-section {
   overflow: hidden;
-  margin-bottom: 10px;
+  min-width: 0;
   border: 1px solid var(--border);
   border-radius: 11px;
   background: var(--card);
@@ -8923,12 +8935,9 @@ button.product-tag[aria-pressed="true"] {
 }
 
 .settings-permission-section-heading button {
-  display: flex;
-  align-items: center;
-  gap: 9px;
   width: 100%;
   min-height: 42px;
-  padding: 8px 12px;
+  padding: 8px 10px;
   border: 0;
   background: transparent;
   color: var(--foreground);
@@ -8937,23 +8946,36 @@ button.product-tag[aria-pressed="true"] {
   cursor: pointer;
 }
 
-.settings-permission-section-heading button > svg {
+.settings-permission-section-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.settings-permission-section-label > svg {
   width: 17px;
   height: 17px;
+  flex: 0 0 auto;
   color: var(--muted-foreground);
   transition: transform 160ms ease;
 }
 
-.settings-permission-section-heading button[aria-expanded="true"] > svg {
+.settings-permission-section-heading button[aria-expanded="true"]
+  .settings-permission-section-label > svg {
   transform: rotate(90deg);
 }
 
-.settings-permission-section-heading button span {
+.settings-permission-section-label > strong {
+  min-width: 0;
+  overflow: hidden;
   font-size: 14px;
   font-weight: 760;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.settings-permission-section-heading button small {
+.settings-permission-section-label > small {
   display: inline-grid;
   place-items: center;
   min-width: 24px;
@@ -8964,6 +8986,13 @@ button.product-tag[aria-pressed="true"] {
   color: var(--muted-foreground);
   font-size: 14px;
   font-weight: 700;
+}
+
+.settings-permission-section-stat {
+  justify-self: center;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 750;
 }
 
 .settings-permission-row {
@@ -9159,9 +9188,12 @@ button.product-tag[aria-pressed="true"] {
     grid-template-columns: 190px minmax(0, 1fr);
   }
 
-  .settings-permission-column-labels,
-  .settings-permission-row {
-    grid-template-columns: minmax(250px, 1fr) 80px 80px;
+  .settings-permission-workspace {
+    --permission-toggle-column: 64px;
+  }
+
+  .settings-permission-grid {
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   }
 
   .settings-permission-meta span {
@@ -9236,6 +9268,24 @@ button.product-tag[aria-pressed="true"] {
     max-height: none;
     padding: 10px;
     overflow: visible;
+  }
+
+  .settings-permission-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .settings-permission-section-heading button {
+    display: flex;
+    gap: 8px;
+  }
+
+  .settings-permission-section-label {
+    flex: 1 1 auto;
+  }
+
+  .settings-permission-section-stat {
+    display: none;
   }
 
   .settings-permission-row {

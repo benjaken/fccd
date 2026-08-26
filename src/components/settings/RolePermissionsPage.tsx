@@ -35,6 +35,12 @@ type PermissionTreeNode = {
   children: PermissionTreeNode[];
 };
 
+type PermissionTreeSummary = {
+  total: number;
+  access: number;
+  manage: number;
+};
+
 function buildPermissionTree(
   permissions: RolePagePermission[],
 ): PermissionTreeNode[] {
@@ -77,11 +83,21 @@ function filterPermissionTree(
   });
 }
 
-function countTree(nodes: PermissionTreeNode[]): number {
-  return nodes.reduce(
-    (total, node) => total + 1 + countTree(node.children),
-    0,
-  );
+function summarizeTree(nodes: PermissionTreeNode[]): PermissionTreeSummary {
+  return nodes.reduce((summary, node) => {
+    const children: PermissionTreeSummary = summarizeTree(node.children);
+    return {
+      total: summary.total + 1 + children.total,
+      access:
+        summary.access +
+        (node.permission.canAccess ? 1 : 0) +
+        children.access,
+      manage:
+        summary.manage +
+        (node.permission.canManage ? 1 : 0) +
+        children.manage,
+    };
+  }, { total: 0, access: 0, manage: 0 });
 }
 
 function PermissionRow({
@@ -437,49 +453,60 @@ export function RolePermissionsPage({
                 refreshing={loading}
               >
                 {filteredTree.length ? (
-                  filteredTree.map((node) => {
-                    const pageKey = node.permission.pageKey;
-                    const expanded = query.trim()
-                      ? true
-                      : expandedSections.has(pageKey);
-                    return (
-                      <section className="settings-permission-section" key={pageKey}>
-                        <header className="settings-permission-section-heading">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setExpandedSections((current) => {
-                                const next = new Set(current);
-                                if (next.has(pageKey)) next.delete(pageKey);
-                                else next.add(pageKey);
-                                return next;
-                              })
-                            }
-                            aria-expanded={expanded}
-                          >
-                            <ChevronRight aria-hidden="true" />
-                            <span>{node.permission.displayName}</span>
-                            <small>{countTree([node])}</small>
-                          </button>
-                        </header>
-                        {expanded ? (
-                          <div className="settings-permission-section-body">
-                            <PermissionRow
-                              node={node}
-                              depth={0}
-                              savingKey={savingKey}
-                              onAccessChange={(permission, checked) =>
-                                void saveCascade(permission, "canAccess", checked)
+                  <div className="settings-permission-grid">
+                    {filteredTree.map((node) => {
+                      const pageKey = node.permission.pageKey;
+                      const expanded = query.trim()
+                        ? true
+                        : expandedSections.has(pageKey);
+                      const summary = summarizeTree([node]);
+                      return (
+                        <section className="settings-permission-section" key={pageKey}>
+                          <header className="settings-permission-section-heading">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setExpandedSections((current) => {
+                                  const next = new Set(current);
+                                  if (next.has(pageKey)) next.delete(pageKey);
+                                  else next.add(pageKey);
+                                  return next;
+                                })
                               }
-                              onManageChange={(permission, checked) =>
-                                void saveCascade(permission, "canManage", checked)
-                              }
-                            />
-                          </div>
-                        ) : null}
-                      </section>
-                    );
-                  })
+                              aria-expanded={expanded}
+                            >
+                              <span className="settings-permission-section-label">
+                                <ChevronRight aria-hidden="true" />
+                                <strong>{node.permission.displayName}</strong>
+                                <small>{summary.total}</small>
+                              </span>
+                              <span className="settings-permission-section-stat">
+                                {summary.access}
+                              </span>
+                              <span className="settings-permission-section-stat">
+                                {summary.manage}
+                              </span>
+                            </button>
+                          </header>
+                          {expanded ? (
+                            <div className="settings-permission-section-body">
+                              <PermissionRow
+                                node={node}
+                                depth={0}
+                                savingKey={savingKey}
+                                onAccessChange={(permission, checked) =>
+                                  void saveCascade(permission, "canAccess", checked)
+                                }
+                                onManageChange={(permission, checked) =>
+                                  void saveCascade(permission, "canManage", checked)
+                                }
+                              />
+                            </div>
+                          ) : null}
+                        </section>
+                      );
+                    })}
+                  </div>
                 ) : (
                   <div className="settings-permission-empty">
                     <Search aria-hidden="true" />
