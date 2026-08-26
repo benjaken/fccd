@@ -12,6 +12,7 @@ export type RestaurantPurchaseCategory = RestaurantPurchaseOption & {
 
 export type RestaurantDailyPurchaseRecord = {
   date: string | null;
+  recordId: string | null;
   restaurantId: string;
   restaurantName: string;
   supplierId: string;
@@ -31,6 +32,7 @@ export type RestaurantDailyPurchaseFilters = {
 
 export type RestaurantDailyPurchaseEntry = {
   id: string;
+  recordId: string | null;
   date: string;
   restaurantId: string;
   restaurantName: string;
@@ -43,6 +45,7 @@ export type RestaurantDailyPurchaseEntry = {
 
 type PurchaseRecordRpcRow = {
   record_date: string | null;
+  purchase_record_id: string | null;
   restaurant_id: string;
   restaurant_name: string;
   supplier_id: string;
@@ -130,6 +133,7 @@ export async function fetchRestaurantDailyPurchaseRecords({
   return {
     items: rows.map((row) => ({
       date: row.record_date,
+      recordId: row.purchase_record_id ?? null,
       restaurantId: row.restaurant_id,
       restaurantName: row.restaurant_name,
       supplierId: row.supplier_id,
@@ -186,6 +190,7 @@ export async function fetchRestaurantDailyPurchaseEntries({
   if (error) throw new Error(error.message);
   const rows = (data ?? []) as Array<{
     id: string;
+    purchase_record_id: string | null;
     record_date: string;
     restaurant_id: string;
     restaurant_name: string;
@@ -199,6 +204,7 @@ export async function fetchRestaurantDailyPurchaseEntries({
   return {
     items: rows.map((row) => ({
       id: row.id,
+      recordId: row.purchase_record_id ?? null,
       date: row.record_date,
       restaurantId: row.restaurant_id,
       restaurantName: row.restaurant_name,

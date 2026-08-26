@@ -11563,6 +11563,25 @@ a.masoft-order-tag:focus-visible {
   padding: 0;
 }
 
+.restaurant-purchase-entry-toolbar {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.restaurant-purchase-entry-filters {
+  flex-wrap: wrap;
+}
+
+.restaurant-purchase-entry-filters .date-range-picker {
+  width: 22rem;
+}
+
+.restaurant-purchase-entry-toolbar .list-inline-error {
+  margin: 0;
+}
+
 .kitchen-supplier-entry-panel {
   min-height: 0;
   overflow: hidden;

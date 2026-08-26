@@ -34,6 +34,7 @@ function makeServices(overrides: Partial<RestaurantDailyPurchaseServices> = {}):
     loadRecords: vi.fn(async () => ({
       items: [{
         date: null,
+        recordId: null,
         restaurantId: "tko",
         restaurantName: "TKO 桂花小幸 將軍澳",
         supplierId: "supplier-1",
@@ -109,6 +110,7 @@ describe("restaurant daily purchase input", () => {
     const loadEntries = vi.fn(async () => ({
       items: [{
         id: "entry-1",
+        recordId: "record-1",
         date: "2026-08-22",
         restaurantId: "tko",
         restaurantName: "TKO 桂花小幸 將軍澳",
@@ -128,6 +130,28 @@ describe("restaurant daily purchase input", () => {
     expect(amount).toHaveValue(147891);
     expect(amount.closest(".kitchen-cost-record-amount")).not.toBeNull();
     expect(dialog.querySelector(".restaurant-purchase-entry-table")).toBeInTheDocument();
+  });
+
+  it("filters edit records by date and supplier", async () => {
+    await i18n.changeLanguage("zh-HK");
+    const user = userEvent.setup();
+    const loadEntries = vi.fn(async () => ({ items: [], total: 0 }));
+    render(<RestaurantDailyPurchasesPage canEdit services={makeServices({ loadEntries })} />);
+
+    await user.click(await screen.findByRole("button", { name: /編輯採購記錄/ }));
+    const dialog = screen.getByRole("dialog", { name: "編輯採購記錄" });
+    await user.selectOptions(within(dialog).getByLabelText("日期模式"), "single");
+    await user.type(within(dialog).getByLabelText("日期"), "2026-08-22");
+    await user.click(within(dialog).getByRole("combobox", { name: "供應商" }));
+    await user.click(screen.getByRole("option", { name: suppliers[1].name }));
+
+    await waitFor(() => expect(loadEntries).toHaveBeenLastCalledWith(expect.objectContaining({
+      filters: expect.objectContaining({
+        mode: "single",
+        singleDate: "2026-08-22",
+        supplierIds: ["supplier-2"],
+      }),
+    })));
   });
 
   it("keeps write controls hidden for read-only roles", async () => {
