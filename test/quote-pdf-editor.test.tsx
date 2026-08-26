@@ -168,6 +168,44 @@ describe("editable quote PDF page", () => {
     expect(screen.getByLabelText("客戶名稱")).toHaveValue("舊草稿客戶");
   });
 
+  it("uses quote product lines when a local draft only has empty placeholder rows", async () => {
+    localStorage.setItem("fccd:quote-pdf-draft:quote-1", JSON.stringify({
+      lines: [{ id: "placeholder", description: "", quantity: "1", unitPrice: "0" }],
+    }));
+
+    renderPage();
+
+    expect(await screen.findByLabelText("產品 1")).toHaveValue("雙拼飯盒");
+  });
+
+  it("keeps locally edited product names for matching quote lines", async () => {
+    localStorage.setItem("fccd:quote-pdf-draft:quote-1", JSON.stringify({
+      lines: [{ id: "line-1", description: "自訂雙拼", quantity: "120", unitPrice: "45" }],
+    }));
+
+    renderPage();
+
+    expect(await screen.findByLabelText("產品 1")).toHaveValue("自訂雙拼");
+  });
+
+  it("adds newly saved quote dishes that are missing from a local draft", async () => {
+    localStorage.setItem("fccd:quote-pdf-draft:quote-1", JSON.stringify({
+      lines: [{ id: "line-1", description: "雙拼飯盒", quantity: "120", unitPrice: "45" }],
+    }));
+    const twoLines: OrderDetailResult = {
+      ...result,
+      lines: [
+        result.lines[0],
+        { ...result.lines[0], id: "line-2", productName: "鹽酥雞扒滷肉飯" },
+      ],
+    };
+
+    renderPage(vi.fn().mockResolvedValue(twoLines));
+
+    expect(await screen.findByLabelText("產品 1")).toHaveValue("雙拼飯盒");
+    expect(screen.getByLabelText("產品 2")).toHaveValue("鹽酥雞扒滷肉飯");
+  });
+
   it("does not append a legacy utensil row when the quote already contains a utensil line", async () => {
     localStorage.setItem("fccd:quote-pdf-draft:quote-1", JSON.stringify({
       utensilPackQuantity: "1",

@@ -145,6 +145,30 @@ function resultToDraft(result: OrderDetailResult): QuotePdfDraft {
   };
 }
 
+function isEditableLine(value: unknown): value is EditableLine {
+  return Boolean(value && typeof value === "object" && "id" in value);
+}
+
+function hasNamedProductLines(lines: unknown): lines is EditableLine[] {
+  return Array.isArray(lines) && lines.some((line) =>
+    isEditableLine(line) && Boolean(line.description?.trim()),
+  );
+}
+
+function mergeDraftLines(storedLines: unknown, fallbackLines: EditableLine[]): EditableLine[] {
+  if (!hasNamedProductLines(storedLines)) return fallbackLines;
+  const storedById = new Map(storedLines.filter(isEditableLine).map((line) => [line.id, line]));
+  return fallbackLines.map((line) => {
+    const overlay = storedById.get(line.id);
+    if (!overlay) return line;
+    return {
+      ...line,
+      ...overlay,
+      unitPrice: overlay.unitPrice?.trim() || line.unitPrice || "0",
+    };
+  });
+}
+
 function normalizeDraft(value: Partial<QuotePdfDraft> | null | undefined, fallback: QuotePdfDraft): QuotePdfDraft {
   const stored = value && typeof value === "object" ? value : {};
   const normalizeItems = (items: unknown, fallbackItems: string[]) => {
@@ -158,7 +182,7 @@ function normalizeDraft(value: Partial<QuotePdfDraft> | null | undefined, fallba
     brandName: fallback.brandName,
     quoteDate: pdfDate(stored.quoteDate || fallback.quoteDate),
     deliveryDate: pdfDate(stored.deliveryDate || fallback.deliveryDate),
-    lines: (Array.isArray(stored.lines) ? stored.lines : fallback.lines).map((line) => ({
+    lines: mergeDraftLines(stored.lines, fallback.lines).map((line) => ({
       ...line,
       unitPrice: line.unitPrice?.trim() || "0",
     })),
