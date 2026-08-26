@@ -8,6 +8,7 @@ import {
   type ConfiguredOrderStatus,
   type OrderStatusView,
 } from "@/lib/order-statuses";
+import { districtNameFromAddress } from "@/lib/district-name";
 import {
   fetchManualTodosForOrders,
   findOrdersWithOrderTags,
@@ -411,10 +412,12 @@ export async function fetchOrders({
 
   query = applyStatusFilter(query, status, preset);
 
-  const [{ data, count, error }, resolvedCatalog] = await Promise.all([
-    query,
-    loadCatalog(),
-  ]);
+  const [{ data, count, error }, resolvedCatalog, addressDistrictNames] =
+    await Promise.all([
+      query,
+      loadCatalog(),
+      fetchActiveDistrictNames(),
+    ]);
   if (error) throw error;
 
   const rows = (data ?? []) as unknown as OrderRow[];
@@ -454,7 +457,11 @@ export async function fetchOrders({
       channelName: row.channels?.name ?? null,
       districtName:
         deliveryDistrictName(row.deliveries) ??
-        plannedDistrictName(row.planned_delivery_district),
+        plannedDistrictName(row.planned_delivery_district) ??
+        districtNameFromAddress(
+          row.shipping_address_snapshot,
+          addressDistrictNames,
+        ),
       address: row.shipping_address_snapshot,
       customerNote: row.customer_note_snapshot,
       factoryPackingNote: row.factory_packing_note,
@@ -479,6 +486,18 @@ function deliveryDistrictName(deliveries: OrderRow["deliveries"]) {
 function plannedDistrictName(value: OrderRow["planned_delivery_district"]) {
   const district = Array.isArray(value) ? value[0] : value;
   return district?.name?.trim() || null;
+}
+
+async function fetchActiveDistrictNames() {
+  const { data, error } = await supabase
+    .from("delivery_districts")
+    .select("name")
+    .is("archived_at", null);
+  if (error) return [];
+  return [...new Set((data ?? []).flatMap((row) => {
+    const name = row.name?.trim();
+    return name ? [name] : [];
+  }))];
 }
 
 function firstDeliveryValue(
