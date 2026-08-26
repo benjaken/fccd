@@ -28,6 +28,7 @@ const orderResult: OrderListResult = {
       deliveryAt: "2026-08-11T16:00:00.000Z",
       factoryDate: "2026-08-11T16:00:00.000Z",
       shipOutTime: "11:30",
+      deliveryTime: "18:00 - 19:00",
       deliveryStatus: "待取貨",
       isSentToFactory: null,
       isAssignedToFleet: false,
@@ -103,8 +104,11 @@ describe("Orders list", () => {
     });
     expect(table.getByText("Klook")).toBeInTheDocument();
     expect(table.getByText("2026-08-12")).toBeInTheDocument();
+    expect(table.getByText("18:00 - 19:00")).toBeInTheDocument();
+    expect(table.getByText("2026-08-12").closest("td")).toHaveTextContent("18:00 - 19:00");
+    expect(table.getByRole("columnheader", { name: /送貨日期 \/ 送貨時間/ })).toBeInTheDocument();
     expect(table.getByText("出車時間：")).toBeInTheDocument();
-    expect(table.getByText("送貨時間：")).toBeInTheDocument();
+    expect(table.queryByText("送貨時間：")).not.toBeInTheDocument();
     expect(table.getByText("送貨狀態：")).toBeInTheDocument();
     const deliveryDetails = table.getByText("送貨狀態：").parentElement;
     expect(deliveryDetails).not.toBeNull();

@@ -798,7 +798,8 @@ export function OrdersListPage({
                       deliverySort: enhancementFilters.deliverySort === "asc" ? "desc" : "asc",
                     })}
                   >
-                    {t("orders.columns.delivery")} <span aria-hidden="true">›</span>
+                    {t("orders.columns.delivery")} / {t("orders.columns.deliveryTime")}{" "}
+                    <span aria-hidden="true">›</span>
                   </button>
                 </th>
                 <th>{t("orders.columns.shipOutAndDelivery")}</th>
@@ -912,13 +913,12 @@ export function OrdersListPage({
                     ) ?? t("common.notSet")}
                   </td>
                   <td>
-                    {hongKongDateKey(order.deliveryAt) || t("common.notSet")}
+                    <div>{hongKongDateKey(order.deliveryAt) || t("common.notSet")}</div>
+                    {order.deliveryTime ? <div>{order.deliveryTime}</div> : null}
                   </td>
                   <td>
                     <div>{t("orders.deliveryDetails.shipOut")}</div>
                     <strong>{order.shipOutTime || "-"}</strong>
-                    <div>{t("orders.deliveryDetails.deliveryTime")}</div>
-                    <strong>{order.deliveryTime || t("common.notSet")}</strong>
                     <div>{t("orders.deliveryDetails.status")}</div>
                     <span className={cn("status-badge", orderDeliveryStatusTone(order.deliveryStatus))}>
                       {order.deliveryStatus || t("orders.deliveryDetails.unassigned")}
