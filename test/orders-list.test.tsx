@@ -93,7 +93,7 @@ describe("Orders list", () => {
     const table = within(tableElement);
     expect(table.getByText("陳小姐")).toBeInTheDocument();
     expect(table.getByText("+85291234567")).toBeInTheDocument();
-    expect(table.getByText("Central")).toBeInTheDocument();
+    expect(table.getByText("Central")).toHaveClass("order-region-address", "whitespace-nowrap");
     expect(table.getByText("中環").closest("td")).toHaveTextContent("Central");
     expect(table.getByRole("columnheader", { name: /地區 \/ 地址/ })).toBeInTheDocument();
     const configuredStatus = Array.from(tableElement.querySelectorAll(".status-badge"))

@@ -937,7 +937,7 @@ export function OrdersListPage({
                       : (
                         <>
                           {district ? <div>{district}</div> : null}
-                          {address ? <div>{address}</div> : null}
+                          {address ? <div className="order-region-address whitespace-nowrap">{address}</div> : null}
                         </>
                       )}
                   </td>
