@@ -19,6 +19,8 @@ import {
   resolveShopifyDistrictId,
   matchShopifyDistrictName,
   mappedShopifyCityName,
+  shopifyLineRemarksSnapshot,
+  stripParsedMenuRemarksFromLines,
   resolveShopifySkuSnapshot,
   resolveAliasSku,
   shopifyCateringUtensilPacks,
@@ -666,6 +668,33 @@ describe("mapShopifyOrder remark collection", () => {
       { name: "豉油皇乾煎大蝦 (12隻)", quantity: 1 },
       { name: "蠔皇花膠炆大花菇 (2磅)", quantity: 1 },
     ]);
+  });
+
+  it("drops package menu properties from remarks after they become product lines", () => {
+    const properties = [
+      { name: "必選", value: "醬香牛展拌粉皮 (1磅), 川式涼拌青瓜魚片 (1磅)" },
+      { name: "internal_id", value: "2420" },
+    ];
+    expect(shopifyLineRemarksSnapshot({ properties })).toContain("醬香牛展拌粉皮");
+    expect(shopifyLineRemarksSnapshot({ properties, omitMenuSelections: true }))
+      .toBe("2420");
+
+    const stripped = stripParsedMenuRemarksFromLines({
+      lines: [{
+        shopify_line_id: 88,
+        remarks_1: "醬香牛展拌粉皮 (1磅), 川式涼拌青瓜魚片 (1磅)\n2420",
+        product_name_snapshot: "【2026中秋】中秋中菜到會 (10-12人)",
+      }],
+      parsedSourceLineIds: [88],
+      mappedLines: [{
+        lineId: 88,
+        properties,
+        variantTitle: null,
+        row: { product_name_snapshot: "【2026中秋】中秋中菜到會 (10-12人)" },
+      }],
+      lunchBox: false,
+    });
+    expect(stripped[0].remarks_1).toBe("2420");
   });
 
   it("keeps the gross product price while discount and shipping stay at order level", () => {

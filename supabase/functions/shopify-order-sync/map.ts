@@ -948,21 +948,112 @@ export function shopifyCateringUtensilPacks(
 
 /** Rebuilds menu sections when Shopify stores the heading in a property name
  * and the comma-separated selections in its value. */
+export function isShopifyMenuSelectionProperty(
+  property: { name?: string; value?: string | null },
+): boolean {
+  const name = String(property.name ?? "").replace(/^_+/, "").trim();
+  const value = String(property.value ?? "").trim();
+  if (!value) return false;
+  if (parseMenuRemark(value).length) return true;
+  if (/(?:必選|選\s*\d+|\d+\s*選\s*\d+)/.test(name)) {
+    return parseMenuRemark(`${name.replace(/[:：]\s*$/, "")}:\n${value}`).length > 0;
+  }
+  return false;
+}
+
 export function collectLineMenuRemarkText(
   properties: Array<{ name?: string; value?: string | null }>,
 ): string | null {
   const blocks: string[] = [];
   for (const property of properties) {
+    if (!isShopifyMenuSelectionProperty(property)) continue;
     const name = String(property.name ?? "").replace(/^_+/, "").trim();
     const value = String(property.value ?? "").trim();
-    if (!value) continue;
-    if (parseMenuRemark(value).length) {
-      blocks.push(value);
-    } else if (/(?:必選|選\s*\d+|\d+\s*選\s*\d+)/.test(name)) {
-      blocks.push(`${name.replace(/[:：]\s*$/, "")}:\n${value}`);
-    }
+    if (parseMenuRemark(value).length) blocks.push(value);
+    else blocks.push(`${name.replace(/[:：]\s*$/, "")}:\n${value}`);
   }
   return blocks.join("\n\n") || null;
+}
+
+const IGNORED_LINE_PROPERTY_NAME =
+  /(?:飲品|drink|beverage|pickup|delivery|送貨|日期|時間)/i;
+
+/** Line remarks after Shopify option properties have been turned into child
+ * product rows. Menu selections are omitted so the package does not repeat
+ * the same dishes as free-form notes. */
+export function shopifyLineRemarksSnapshot(input: {
+  properties: Array<{ name?: string; value?: string | null }>;
+  optionRemark?: string | null;
+  variantRemark?: string | null;
+  existing?: unknown;
+  omitMenuSelections?: boolean;
+}): string | null {
+  const propertyRemark = input.properties
+    .map((property) => ({
+      name: String(property.name ?? ""),
+      value: String(property.value ?? "").trim(),
+    }))
+    .filter((property) =>
+      Boolean(property.value) &&
+      !/^_/.test(property.name) &&
+      !IGNORED_LINE_PROPERTY_NAME.test(property.name) &&
+      (!input.omitMenuSelections || !isShopifyMenuSelectionProperty(property))
+    )
+    .map((property) => property.value)
+    .join("\n") || null;
+  return [
+    input.omitMenuSelections ? null : input.optionRemark,
+    propertyRemark,
+    input.variantRemark ?? null,
+    typeof input.existing === "string" ? input.existing : null,
+  ]
+    .filter((value): value is string => typeof value === "string" && Boolean(value.trim()))
+    .filter((value, index, values) => values.indexOf(value) === index)
+    .join("\n") || null;
+}
+
+export function stripParsedMenuRemarksFromLines(input: {
+  lines: Array<Record<string, unknown>>;
+  parsedSourceLineIds: Iterable<number>;
+  mappedLines: Array<{
+    lineId: number;
+    properties: Array<{ name?: string; value?: string | null }>;
+    variantTitle: string | null;
+    row: Record<string, unknown>;
+  }>;
+  lunchBox: boolean;
+}): Array<Record<string, unknown>> {
+  const parsed = new Set([...input.parsedSourceLineIds].filter((lineId) => lineId > 0));
+  if (!parsed.size) return input.lines;
+  const sourceByLineId = new Map(input.mappedLines.map((line) => {
+    const rawName = (line.row.product_name_snapshot as string | null) ?? null;
+    const variantParts = (line.variantTitle ?? "")
+      .split("/")
+      .map((part) => part.trim())
+      .filter(Boolean);
+    return [line.lineId, {
+      properties: line.properties,
+      optionRemark: extractOptionRemark(rawName),
+      variantRemark: input.lunchBox
+        ? variantParts.slice(0, -1).join("\n") || null
+        : null,
+    }] as const;
+  }));
+  return input.lines.map((row) => {
+    const lineId = numericId(row.shopify_line_id as number | string | null);
+    if (!lineId || !parsed.has(lineId)) return row;
+    const source = sourceByLineId.get(lineId);
+    return {
+      ...row,
+      remarks_1: shopifyLineRemarksSnapshot({
+        properties: source?.properties ?? [],
+        optionRemark: source?.optionRemark ?? null,
+        variantRemark: source?.variantRemark ?? null,
+        existing: null,
+        omitMenuSelections: true,
+      }),
+    };
+  });
 }
 
 export function normalizeNameForMatch(value: string | null | undefined): string {

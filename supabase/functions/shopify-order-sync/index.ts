@@ -20,7 +20,9 @@ import {
   resolveShopifyShippingMethodId,
   resolveShopifyDistrictId,
   shopifyCateringUtensilPacks,
+  shopifyLineRemarksSnapshot,
   shopifyMenuOptionLegacyId,
+  stripParsedMenuRemarksFromLines,
   stripSkuSuffix,
   type ShopifyRestOrder,
   type ShopifyRestTransaction,
@@ -563,7 +565,11 @@ async function buildMenuOptionLines(input: {
   }>;
   catalogByName: Map<string, CatalogItem>;
   issues: IssueRow[];
-}): Promise<{ lines: Record<string, unknown>[]; consumedAddonLegacyIds: string[] }> {
+}): Promise<{
+  lines: Record<string, unknown>[];
+  consumedAddonLegacyIds: string[];
+  parsedSourceLineIds: number[];
+}> {
   const {
     storeRow,
     orderId,
@@ -604,7 +610,11 @@ async function buildMenuOptionLines(input: {
       is_void: false,
     });
   }
-  return { lines, consumedAddonLegacyIds: plan.consumedAddonLegacyIds };
+  return {
+    lines,
+    consumedAddonLegacyIds: plan.consumedAddonLegacyIds,
+    parsedSourceLineIds: [...new Set(plan.options.map((option) => option.lineId))],
+  };
 }
 
 async function syncPaymentsForOrders(input: {
@@ -1122,12 +1132,6 @@ async function processMappedOrders(
     const lineRows = item.lines.map((line) => {
       const rawName = (line.row.product_name_snapshot as string | null) ?? null;
       const optionRemark = extractOptionRemark(rawName);
-      const propertyRemark = line.properties
-        .map((property) => ({ name: String(property.name ?? ""), value: String(property.value ?? "").trim() }))
-        .filter((property) => property.value && !/^_/.test(property.name) &&
-          !/(?:飲品|drink|beverage|pickup|delivery|送貨|日期|時間)/i.test(property.name))
-        .map((property) => property.value)
-        .join("\n") || null;
       const variantParts = (line.variantTitle ?? "")
         .split("/")
         .map((part) => part.trim())
@@ -1193,12 +1197,12 @@ async function processMappedOrders(
           }>,
           stripSuffix: storeRow.secret_prefix === "SHOPIFY_HK_LUNCH_BOX",
         }),
-        remarks_1: [optionRemark, propertyRemark, variantRemark, line.row.remarks_1]
-          .filter((value): value is string =>
-            typeof value === "string" && Boolean(value.trim())
-          )
-          .filter((value, index, values) => values.indexOf(value) === index)
-          .join("\n") || null,
+        remarks_1: shopifyLineRemarksSnapshot({
+          properties: line.properties,
+          optionRemark,
+          variantRemark,
+          existing: line.row.remarks_1,
+        }),
       };
     });
 
@@ -1294,6 +1298,14 @@ async function processMappedOrders(
       !consumedAddonIds.has(String(line.legacy_id ?? ""))
     );
     let optionLineRows = menuOptionResult.lines;
+    if (menuOptionResult.parsedSourceLineIds.length) {
+      baseLineRows = stripParsedMenuRemarksFromLines({
+        lines: baseLineRows,
+        parsedSourceLineIds: menuOptionResult.parsedSourceLineIds,
+        mappedLines: item.lines,
+        lunchBox: storeRow.secret_prefix === "SHOPIFY_HK_LUNCH_BOX",
+      });
+    }
     if (storeRow.secret_prefix === "SHOPIFY_HK_LUNCH_BOX") {
       const expanded = replaceShopifyLunchBoxAggregate({
         baseLines: baseLineRows,
