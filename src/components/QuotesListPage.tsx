@@ -45,6 +45,7 @@ const QUOTE_SKELETON_COLUMNS = [
   { width: "7rem" },
   { width: "7rem" },
   { width: "10rem" },
+  { width: "16rem" },
   { width: "8rem" },
   { width: "8rem" },
   { width: "12rem" },
@@ -400,6 +401,9 @@ export function QuotesListPage({
                 </th>
                 <th>{t("quotes.columns.customer")}</th>
                 <th>
+                  {t("orders.columns.region")} / {t("orders.columns.address")}
+                </th>
+                <th>
                   {t("quotes.customerDetails.deliveryDate")} /{" "}
                   {t("quotes.customerDetails.deliveryTime")}
                 </th>
@@ -436,19 +440,28 @@ export function QuotesListPage({
                     </span>
                   )}
                   <div>{quote.contactPhone || ""}</div>
-                  <div>
-                    {[
-                      quote.shippingMethodName
-                        ? `(${quote.shippingMethodName})`
-                        : "",
-                      quote.districtName || "",
-                    ]
-                      .filter(Boolean)
-                      .join(" ")}
-                  </div>
                   {quote.asanaLink && (
                     <a href={quote.asanaLink} target="_blank" rel="noopener noreferrer">Asana Link</a>
                   )}
+                </td>
+                <td className="quote-region-address-cell">
+                  {quote.shippingMethodName || quote.districtName ? (
+                    <div>
+                      {[
+                        quote.shippingMethodName
+                          ? `(${quote.shippingMethodName})`
+                          : "",
+                        quote.districtName || "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                    </div>
+                  ) : null}
+                  {quote.address ? (
+                    <div className="quote-address-line" title={quote.address}>
+                      {quote.address}
+                    </div>
+                  ) : null}
                 </td>
                 <td>
                   <div>{hongKongDateKey(quote.deliveryAt)}</div>

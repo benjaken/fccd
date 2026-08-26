@@ -45,6 +45,7 @@ const quoteResult: QuoteListResult = {
       contactPhone: "62897758",
       shippingMethodName: "送貨上門",
       districtName: "油尖旺",
+      address: "九龍尖沙咀梳士巴利道 18 號",
       deliveryTime: "10:00 - 11:00",
       shipOutTime: null,
       quantity: 6,
@@ -86,6 +87,10 @@ describe("Catering quotes list", () => {
     expect(screen.getByText("公司午餐到會")).toBeInTheDocument();
     expect(screen.getByText("62897758")).toBeInTheDocument();
     expect(screen.getByText("(送貨上門) 油尖旺")).toBeInTheDocument();
+    expect(screen.getByText("九龍尖沙咀梳士巴利道 18 號")).toHaveAttribute(
+      "title",
+      "九龍尖沙咀梳士巴利道 18 號",
+    );
     expect(screen.getByText("2026-08-18")).toBeInTheDocument();
     expect(screen.getByText("10:00 - 11:00")).toBeInTheDocument();
     expect(screen.getByText("6")).toBeInTheDocument();
@@ -98,6 +103,7 @@ describe("Catering quotes list", () => {
       "創建日期",
       "報價單號",
       "客戶",
+      "地區 / 地址",
       "送貨日期 / 送貨時間",
       "數量",
       "報價單描述",
@@ -258,6 +264,7 @@ describe("Catering quotes list", () => {
         contactPhone: null,
         shippingMethodName: null,
         districtName: null,
+        address: null,
         deliveryAt: null,
         deliveryTime: null,
         shipOutTime: null,
@@ -280,7 +287,8 @@ describe("Catering quotes list", () => {
     expect(customerCell).not.toHaveTextContent("送貨時間:");
     expect(customerCell).not.toHaveTextContent("數量:");
     expect(cells[4]?.textContent).toBe("");
-    expect(cells[5]?.textContent).toBe("6");
+    expect(cells[5]?.textContent).toBe("");
+    expect(cells[6]?.textContent).toBe("6");
   });
 
   it("edits and saves the quote description on blur", async () => {

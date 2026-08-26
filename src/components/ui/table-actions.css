@@ -48,3 +48,21 @@
   > :last-child {
   background: color-mix(in oklch, var(--accent) 45%, var(--card));
 }
+
+.quotes-table-wrap .quote-region-address-cell {
+  width: 20rem;
+  min-width: 16rem;
+  max-width: 24rem;
+  white-space: nowrap;
+}
+
+.quotes-table-wrap .quote-region-address-cell > div {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quotes-table-wrap .quote-region-address-cell > div + div {
+  margin-top: 3px;
+  color: var(--muted-foreground);
+}

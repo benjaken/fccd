@@ -29,6 +29,7 @@ export type QuoteListItem = {
   contactPhone?: string | null;
   shippingMethodName?: string | null;
   districtName?: string | null;
+  address?: string | null;
   quantity?: number;
   createdAt: string;
   sourceSystem: string | null;
@@ -282,6 +283,7 @@ export async function fetchQuotes({
           row.shipping_address_snapshot,
           addressDistrictNames,
         ),
+      address: row.shipping_address_snapshot,
       quantity: (row.order_lines ?? []).reduce(
         (sum, line) =>
           sum +
