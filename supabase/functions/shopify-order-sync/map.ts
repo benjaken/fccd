@@ -614,7 +614,7 @@ export function mapShopifyOrder(input: {
         input.order.customer?.phone,
     ),
     shipping_address_snapshot: joinAddress(input.order.shipping_address),
-    customer_note_snapshot: input.order.note?.trim() || null,
+    customer_note_snapshot: stripShopifyCustomProductRemark(input.order.note),
     currency,
     discount_amount: money(input.order.total_discounts),
     shipping_fee: shippingFee,
@@ -682,16 +682,40 @@ export function mapShopifyOrder(input: {
   };
 }
 
+const SHOPIFY_CUSTOM_PRODUCT_LABEL =
+  /^\s*custom\s+product(?:\s*[:：].*)?\s*$/i;
+
+export function isShopifyCustomProductProperty(
+  property: { name?: string; value?: string | null },
+): boolean {
+  const name = String(property.name ?? "").replace(/^_+/, "").trim();
+  return SHOPIFY_CUSTOM_PRODUCT_LABEL.test(name);
+}
+
+export function stripShopifyCustomProductRemark(
+  value: string | null | undefined,
+): string | null {
+  const lines = String(value ?? "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && !SHOPIFY_CUSTOM_PRODUCT_LABEL.test(line));
+  return lines.join("\n") || null;
+}
+
 /**
  * Collects the free-form remark text attached to an order. The catering store
  * keeps the selected menu options (and delivery date/time) inside the order
- * note and its note_attributes, so both are merged here.
+ * note and its note_attributes, so both are merged here. Shopify's
+ * "Custom Product: <id>" metadata is an internal option-app marker, not a
+ * customer remark.
  */
 export function collectRemarkText(order: ShopifyRestOrder): string | null {
   const parts: string[] = [];
-  if (order.note?.trim()) parts.push(order.note.trim());
+  const note = stripShopifyCustomProductRemark(order.note);
+  if (note) parts.push(note);
   for (const attr of order.note_attributes ?? []) {
-    const value = String(attr.value ?? "").trim();
+    if (isShopifyCustomProductProperty(attr)) continue;
+    const value = stripShopifyCustomProductRemark(attr.value);
     if (value) parts.push(value);
   }
   const merged = parts.join("\n").trim();
@@ -1003,7 +1027,7 @@ export function collectLineMenuRemarkText(
 }
 
 const IGNORED_LINE_PROPERTY_NAME =
-  /(?:飲品|drink|beverage|pickup|delivery|送貨|日期|時間)/i;
+  /(?:飲品|drink|beverage|pickup|delivery|送貨|日期|時間|internal_id)/i;
 
 /** Line remarks after Shopify option properties have been turned into child
  * product rows. Menu selections are omitted so the package does not repeat
@@ -1018,11 +1042,12 @@ export function shopifyLineRemarksSnapshot(input: {
   const propertyRemark = input.properties
     .map((property) => ({
       name: String(property.name ?? ""),
-      value: String(property.value ?? "").trim(),
+      value: stripShopifyCustomProductRemark(property.value),
     }))
     .filter((property) =>
       Boolean(property.value) &&
       !/^_/.test(property.name) &&
+      !isShopifyCustomProductProperty(property) &&
       !IGNORED_LINE_PROPERTY_NAME.test(property.name) &&
       (!input.omitMenuSelections || !isShopifyMenuSelectionProperty(property))
     )
@@ -1034,6 +1059,7 @@ export function shopifyLineRemarksSnapshot(input: {
     input.variantRemark ?? null,
     typeof input.existing === "string" ? input.existing : null,
   ]
+    .map((value) => stripShopifyCustomProductRemark(value))
     .filter((value): value is string => typeof value === "string" && Boolean(value.trim()))
     .filter((value, index, values) => values.indexOf(value) === index)
     .join("\n") || null;

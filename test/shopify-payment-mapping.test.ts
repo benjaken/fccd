@@ -675,15 +675,16 @@ describe("mapShopifyOrder remark collection", () => {
     const properties = [
       { name: "必選", value: "醬香牛展拌粉皮 (1磅), 川式涼拌青瓜魚片 (1磅)" },
       { name: "internal_id", value: "2420" },
+      { name: "Custom Product", value: "2420" },
     ];
     expect(shopifyLineRemarksSnapshot({ properties })).toContain("醬香牛展拌粉皮");
     expect(shopifyLineRemarksSnapshot({ properties, omitMenuSelections: true }))
-      .toBe("2420");
+      .toBeNull();
 
     const stripped = stripParsedMenuRemarksFromLines({
       lines: [{
         shopify_line_id: 88,
-        remarks_1: "醬香牛展拌粉皮 (1磅), 川式涼拌青瓜魚片 (1磅)\n2420",
+        remarks_1: "醬香牛展拌粉皮 (1磅), 川式涼拌青瓜魚片 (1磅)\nCustom Product: 2420",
         product_name_snapshot: "【2026中秋】中秋中菜到會 (10-12人)",
       }],
       parsedSourceLineIds: [88],
@@ -695,7 +696,29 @@ describe("mapShopifyOrder remark collection", () => {
       }],
       lunchBox: false,
     });
-    expect(stripped[0].remarks_1).toBe("2420");
+    expect(stripped[0].remarks_1).toBeNull();
+  });
+
+  it("does not import Custom Product markers into order remarks", () => {
+    const mapped = mapShopifyOrder({
+      order: {
+        id: 556,
+        name: "#5002",
+        note: "Custom Product: 2420\n需要侍應",
+        note_attributes: [
+          { name: "Custom Product", value: "2420" },
+          { name: "其他備註", value: "請提前通知" },
+        ],
+        line_items: [],
+      },
+      shopDomain: "test-store.myshopify.com",
+      storeId: "store-uuid",
+      channelId: "channel-uuid",
+    });
+
+    expect(mapped).not.toBeNull();
+    expect(mapped!.remark).toBe("需要侍應\n請提前通知");
+    expect(mapped!.orderRow.customer_note_snapshot).toBe("需要侍應");
   });
 
   it("keeps the gross product price while discount and shipping stay at order level", () => {
