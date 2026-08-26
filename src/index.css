@@ -28997,10 +28997,21 @@ body:has(.quote-pdf-editor) .quote-pdf-editor {
 .quote-pdf-activity tfoot .shipping-fee-select { display: block; width: min(100%, 390px); min-width: 0; min-height: 28px; margin-left: auto; border: 1px solid transparent; background: #e7f0fb; color: #000; direction: ltr; font: inherit; font-weight: 750; text-align: right; text-align-last: right; }
 .quote-pdf-activity tfoot .quote-pdf-price-input { display: grid; grid-template-columns: auto auto; justify-content: end; }
 .quote-pdf-activity tfoot .quote-pdf-price-input > input { width: 64px; flex: none; text-align: right; }
-.quote-pdf-activity button,
+.quote-pdf-activity button:not(.multi-select-trigger),
 .quote-activity-selected button { display: inline-grid; width: 26px; height: 26px; padding: 0; place-items: center; border: 0; border-radius: 50%; background: #e9edf0; color: #64717b; }
-.quote-pdf-activity button svg,
+.quote-pdf-activity button:not(.multi-select-trigger) svg,
 .quote-activity-selected button svg { width: 14px; height: 14px; }
+.quote-pdf-activity tfoot .shipping-fee-select.multi-select-trigger,
+.quote-pdf-summary-rows .shipping-fee-select.multi-select-trigger {
+  display: flex;
+  align-items: center;
+  width: min(100%, 390px);
+  height: 28px;
+  min-height: 28px;
+  padding: 0 8px;
+  border-radius: 0;
+  box-shadow: none;
+}
 .quote-pdf-activity tfoot tr:nth-child(2) td { font-weight: 500; }
 
 .quote-activity-picker ul li { display: grid; grid-template-columns: 1fr auto auto; }
@@ -29507,6 +29518,15 @@ body:has(.quote-clause-modal-root) { overflow: hidden; }
   min-width: 0;
   text-align: right;
   text-align-last: right;
+}
+.receipt-pdf-table .shipping-fee-select.multi-select-trigger {
+  display: flex;
+  align-items: center;
+  height: 23px;
+  min-height: 23px;
+  padding: 0 8px;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .receipt-pdf-table textarea {
