@@ -1951,7 +1951,7 @@ export function QuoteEditorPage({
                   <div><span className="eyebrow">{t("quoteEditor.financials.eyebrow")}</span><h3>{t("quoteEditor.financials.title")}</h3></div>
                   <span>{savingFinancials ? t("quoteEditor.financials.saving") : t("quoteEditor.financials.autoSave")}</span>
                 </header>
-                <label><span>{t("quoteEditor.financials.shippingFee")}</span><div className="quote-shipping-fee-control"><FilterableSelect aria-label={t("quoteEditor.financials.shippingFeeOption")} value={shippingFeeId} onChange={(event) => {
+                <label><span>{t("quoteEditor.financials.shippingFee")}</span><div className="quote-shipping-fee-control"><FilterableSelect className="shipping-fee-select" aria-label={t("quoteEditor.financials.shippingFeeOption")} value={shippingFeeId} onChange={(event) => {
                   const nextId = event.target.value;
                   const selected = shippingFees.find((fee) => fee.id === nextId);
                   const shippingFee = selected?.fee ?? 0;

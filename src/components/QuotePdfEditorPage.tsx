@@ -523,7 +523,7 @@ export function QuotePdfEditorPage({
           <tr><td colSpan={2}>小計：</td><td>${totals.activitySubtotal.toLocaleString("zh-HK")}</td></tr>
           <tr>
             <td colSpan={2}>
-              <FilterableSelect className="quote-pdf-edit-only" aria-label="活動運費項目" value={draft.activityShippingFeeId} onChange={(event) => selectActivityShippingFee(event.target.value)}>
+              <FilterableSelect className="quote-pdf-edit-only shipping-fee-select" aria-label="活動運費項目" value={draft.activityShippingFeeId} onChange={(event) => selectActivityShippingFee(event.target.value)}>
                 <option value="">選擇運費</option>
                 {shippingFees.map((fee) => <option key={fee.id} value={fee.id}>{fee.item}</option>)}
               </FilterableSelect>
@@ -574,7 +574,7 @@ export function QuotePdfEditorPage({
           <tr><td className="quote-pdf-summary-label" colSpan={4}>小計：</td><td><strong>${totals.productSubtotal.toLocaleString("zh-HK")}</strong></td></tr>
           <tr>
             <td colSpan={4}>
-              <FilterableSelect className="quote-pdf-edit-only" aria-label="運費項目" value={draft.shippingFeeId} onChange={(event) => selectShippingFee(event.target.value)}>
+              <FilterableSelect className="quote-pdf-edit-only shipping-fee-select" aria-label="運費項目" value={draft.shippingFeeId} onChange={(event) => selectShippingFee(event.target.value)}>
                 <option value="">選擇運費</option>
                 {shippingFees.map((fee) => <option key={fee.id} value={fee.id}>{fee.item}</option>)}
               </FilterableSelect>
