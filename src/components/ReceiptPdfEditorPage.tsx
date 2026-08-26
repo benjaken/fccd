@@ -15,6 +15,10 @@ import {
   type OrderDetailResult,
 } from "@/lib/order-details";
 import {
+  paginatePdfProductLines,
+  paginateReceiptPdfLines,
+  RECEIPT_PDF_CONTINUATION_PAGE_SIZE,
+  RECEIPT_PDF_FIRST_PAGE_WITH_TRAILING,
   receiptPdfDraftStorageKey,
   type ReceiptPdfDraft,
   type ReceiptPdfLineDraft,
@@ -32,9 +36,6 @@ type ReceiptTrailingUnit =
 
 const fetchConfiguredShippingFees: ShippingFeeLoader = async () =>
   (await fetchShippingFees(1, 1000)).rows;
-
-const FIRST_PRODUCT_PAGE_SIZE = 10;
-const CONTINUATION_PRODUCT_PAGE_SIZE = 18;
 
 function pdfDate(value: string | null | undefined) {
   if (!value) return "";
@@ -343,10 +344,13 @@ export function ReceiptPdfEditorPage({
     sourceBrand.shopifyStoreDomain,
     sourceBrand.orderNumber,
   );
-  const productLinePages = [draft.lines.slice(0, FIRST_PRODUCT_PAGE_SIZE)];
-  for (let index = FIRST_PRODUCT_PAGE_SIZE; index < draft.lines.length; index += CONTINUATION_PRODUCT_PAGE_SIZE) {
-    productLinePages.push(draft.lines.slice(index, index + CONTINUATION_PRODUCT_PAGE_SIZE));
-  }
+  const productLinePages = isInvoice
+    ? paginatePdfProductLines(
+        draft.lines,
+        RECEIPT_PDF_FIRST_PAGE_WITH_TRAILING,
+        RECEIPT_PDF_CONTINUATION_PAGE_SIZE,
+      )
+    : paginateReceiptPdfLines(draft.lines);
   const letterhead = (
     <header className="receipt-pdf-letterhead">
       <img src={brandLogo} alt={brandLogoAlt} />
@@ -583,7 +587,7 @@ export function ReceiptPdfEditorPage({
       {productLinePages.slice(1).map((lines, pageIndex) => {
         const page = pageIndex + 2;
         const isFinalProductPage = page === productLinePages.length;
-        const offset = FIRST_PRODUCT_PAGE_SIZE + pageIndex * CONTINUATION_PRODUCT_PAGE_SIZE;
+        const offset = productLinePages.slice(0, pageIndex + 1).reduce((sum, page) => sum + page.length, 0);
         return (
           <main className="quote-pdf-sheet quote-pdf-sheet-continuation receipt-pdf-sheet receipt-pdf-sheet-continuation receipt-pdf-product-continuation" data-pdf-auto-page={isFinalProductPage ? "products" : undefined} aria-label={`${documentName} PDF 第 ${page} 頁`} key={`products-${page}`}>
             {letterhead}

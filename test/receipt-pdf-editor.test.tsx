@@ -257,6 +257,23 @@ describe("Receipt PDF editor", () => {
     expect(screen.queryByRole("main", { name: "收據 PDF 第 2 頁" })).not.toBeInTheDocument();
   });
 
+  it("keeps eleven receipt lines on the first sheet instead of splitting after ten", async () => {
+    renderPage(vi.fn().mockResolvedValue({
+      ...result,
+      lines: Array.from({ length: 11 }, (_, index) => ({
+        ...result.lines[0],
+        id: `line-${index + 1}`,
+        productName: `產品 ${index + 1}`,
+      })),
+    }));
+
+    expect(await screen.findByRole("heading", { name: "RECEIPT" })).toBeInTheDocument();
+    const sheets = document.querySelectorAll(".receipt-pdf-sheet");
+    expect(sheets).toHaveLength(1);
+    expect(sheets[0].querySelectorAll(".receipt-pdf-table tbody tr")).toHaveLength(11);
+    expect(sheets[0].querySelector("tfoot")).toBeInTheDocument();
+  });
+
   it("automatically continues long receipt product tables on the next A4 sheet", async () => {
     renderPage(vi.fn().mockResolvedValue({
       ...result,
@@ -270,8 +287,8 @@ describe("Receipt PDF editor", () => {
     expect(await screen.findAllByRole("heading", { name: "RECEIPT" })).toHaveLength(2);
     const sheets = document.querySelectorAll(".receipt-pdf-sheet");
     expect(sheets).toHaveLength(2);
-    expect(sheets[0].querySelectorAll(".receipt-pdf-table tbody tr")).toHaveLength(10);
-    expect(sheets[1].querySelectorAll(".receipt-pdf-table tbody tr")).toHaveLength(8);
+    expect(sheets[0].querySelectorAll(".receipt-pdf-table tbody tr")).toHaveLength(16);
+    expect(sheets[1].querySelectorAll(".receipt-pdf-table tbody tr")).toHaveLength(2);
     expect(sheets[0].querySelector("tfoot")).not.toBeInTheDocument();
     expect(sheets[1].querySelector("tfoot")).toBeInTheDocument();
     expect(within(sheets[1] as HTMLElement).getByLabelText("產品 18")).toHaveValue("產品 18");
