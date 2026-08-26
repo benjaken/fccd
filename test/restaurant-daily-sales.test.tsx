@@ -7,8 +7,10 @@ import i18n from "@/i18n";
 import {
   emptyRestaurantDailySalesRecord,
   hongKongDateValue,
+  collapseDailySalesRecentItems,
   pickDefaultRestaurant,
   pickRestaurantSalesReceiptSource,
+  preferWebDailySalesRows,
   type RestaurantDailySalesMasters,
 } from "@/lib/restaurant-daily-sales";
 
@@ -45,6 +47,29 @@ describe("restaurant daily sales input", () => {
       .toBe("//files.example.com/pos.jpg");
     expect(pickRestaurantSalesReceiptSource(null, " https://example.com/image.jpg "))
       .toBe("https://example.com/image.jpg");
+  });
+
+  it("keeps one history row per Hong Kong date and prefers the web-entered control total", () => {
+    expect(collapseDailySalesRecentItems([
+      { date: "2026-08-24", total: 28464, editedAt: "2026-08-25T09:31:33.640Z", isWeb: false },
+      { date: "2026-08-24", total: 28464, editedAt: "2026-08-25T08:39:59.093Z", isWeb: true },
+      { date: "2026-08-23", total: 12000, editedAt: "2026-08-24T02:00:00.000Z", isWeb: false },
+    ])).toEqual([
+      { date: "2026-08-24", total: 28464, editedAt: "2026-08-25T08:39:59.093Z" },
+      { date: "2026-08-23", total: 12000, editedAt: "2026-08-24T02:00:00.000Z" },
+    ]);
+  });
+
+  it("ignores Bubble copies when a web-entered daily sales record already exists", () => {
+    const rows = preferWebDailySalesRows([
+      { sales_at: "2026-08-24T04:00:00.000Z", legacy_id: "web-daily-sales-tko-2026-08-24-control", amount: 28464 },
+      { sales_at: "2026-08-24T04:00:00.000Z", legacy_id: "1787574453963x358031104073793540", amount: 28464 },
+      { sales_at: "2026-08-23T04:00:00.000Z", legacy_id: "1787574000000x1", amount: 9900 },
+    ]);
+    expect(rows).toEqual([
+      { sales_at: "2026-08-24T04:00:00.000Z", legacy_id: "web-daily-sales-tko-2026-08-24-control", amount: 28464 },
+      { sales_at: "2026-08-23T04:00:00.000Z", legacy_id: "1787574000000x1", amount: 9900 },
+    ]);
   });
 
   it("defaults to the first restaurant with no selected history record and a blank editor", async () => {

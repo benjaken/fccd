@@ -4,6 +4,8 @@ import { describe, expect, it } from "vitest";
 import {
   canAdvanceCheckpoint,
   canonicalJson,
+  dailySalesRestaurantDateKey,
+  filterBubbleDailySalesCoveredByWeb,
   partitionConflicts,
   sha256Hex,
 } from "../supabase/functions/bubble-daily-incremental/helpers.ts";
@@ -358,5 +360,46 @@ describe("bubble daily incremental helpers", () => {
     expect(source).toContain("replaceOverwriteChildren");
     expect(source).toContain("childRowsDeleted");
     expect(source).toContain("childRowsWritten");
+  });
+
+  it("skips Bubble daily sales for restaurant dates already entered in FCCD", () => {
+    const covered = new Set([
+      dailySalesRestaurantDateKey("tko", "2026-08-24T04:00:00.000Z"),
+    ]);
+    const result = filterBubbleDailySalesCoveredByWeb(
+      [
+        {
+          legacy_id: "bubble-control",
+          restaurant_id: "tko",
+          sales_at: "2026-08-24T04:00:00.000Z",
+        },
+        {
+          legacy_id: "bubble-other-day",
+          restaurant_id: "tko",
+          sales_at: "2026-08-23T04:00:00.000Z",
+        },
+        {
+          legacy_id: "bubble-other-shop",
+          restaurant_id: "ylp",
+          sales_at: "2026-08-24T04:00:00.000Z",
+        },
+      ],
+      covered,
+    );
+    expect(result.skippedLegacyIds).toEqual(["bubble-control"]);
+    expect(result.kept.map((row) => row.legacy_id)).toEqual([
+      "bubble-other-day",
+      "bubble-other-shop",
+    ]);
+
+    const source = fs.readFileSync(
+      path.join(
+        process.cwd(),
+        "supabase/functions/bubble-daily-incremental/index.ts",
+      ),
+      "utf8",
+    );
+    expect(source).toContain('mapping.sourceType === "shop_dailysales"');
+    expect(source).toContain("filterBubbleDailySalesCoveredByWeb");
   });
 });
