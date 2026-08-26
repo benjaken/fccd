@@ -279,12 +279,10 @@ export function shopifyOutstanding(order: ShopifyRestOrder): number | null {
 
 function joinAddress(address: ShopifyRestAddress | null | undefined): string | null {
   if (!address) return null;
-  const parts = [
-    address.address1,
-  ]
-    .map((part) => String(part ?? "").trim())
-    .filter(Boolean);
-  return parts.length ? parts.join(", ") : null;
+  const street = String(address.address1 ?? "").trim();
+  const city = mappedShopifyCityName(address.city);
+  if (city && street && !street.includes(city)) return `${city}${street}`;
+  return street || city || null;
 }
 
 export function shopifyShippingMethodTitle(
@@ -319,6 +317,197 @@ export function resolveShopifyShippingMethodId(
   return candidates.find((candidate) =>
     normalizedTitle.includes(normalize(candidate.name))
   )?.id ?? null;
+}
+
+const GENERIC_SHOPIFY_CITIES = new Set([
+  "hong kong",
+  "hongkong",
+  "hk",
+  "香港",
+  "china",
+  "中國",
+  "prc",
+]);
+
+const GENERIC_DISTRICT_NAMES = new Set(["新界", "九龍", "香港", "TBC", "按要求"]);
+
+/** English city labels used by Shopify Hong Kong checkouts. */
+const SHOPIFY_CITY_ALIASES: Record<string, string> = {
+  "aberdeen": "香港仔",
+  "causeway bay": "銅鑼灣",
+  "central": "中環",
+  "fanling": "粉嶺",
+  "fo tan": "火炭",
+  "hang hau": "坑口",
+  "kowloon city": "九龍城",
+  "kwai chung": "葵涌",
+  "kwun tong": "觀塘",
+  "ma on shan": "馬鞍山",
+  "mong kok": "旺角",
+  "north point": "北角",
+  "quarry bay": "鰂魚涌",
+  "sai kung": "西貢",
+  "sha tin": "沙田",
+  "shatin": "沙田",
+  "sham shui po": "深水埗",
+  "sheung shui": "上水",
+  "tai po": "大埔",
+  "tin shui wai": "天水圍",
+  "tsim sha tsui": "尖沙咀",
+  "tsing yi": "青衣",
+  "tsueng kwan o": "將軍澳",
+  "tseung kwan o": "將軍澳",
+  "tsuen wan": "荃灣",
+  "tuen mun": "屯門",
+  "tung chung": "東涌",
+  "wan chai": "灣仔",
+  "yau ma tei": "油麻地",
+  "yuen long": "元朗",
+};
+
+export type ShopifyDistrictSources = {
+  city: string | null;
+  province: string | null;
+  address1: string | null;
+  address2: string | null;
+  noteDistrict: string | null;
+};
+
+export function extractShopifyDistrictSources(
+  order: ShopifyRestOrder,
+): ShopifyDistrictSources {
+  const notes = attrMap(order.note_attributes);
+  return {
+    city: order.shipping_address?.city?.trim() || null,
+    province: order.shipping_address?.province?.trim() || null,
+    address1: order.shipping_address?.address1?.trim() || null,
+    address2: order.shipping_address?.address2?.trim() || null,
+    noteDistrict: firstAttr(notes, [
+      "district",
+      "delivery district",
+      "delivery_district",
+      "地區",
+      "送貨地區",
+    ]),
+  };
+}
+
+function normalizeDistrictLabel(value: string | null | undefined) {
+  return String(value ?? "")
+    .trim()
+    .replace(/,?\s*(hong kong|香港)$/i, "")
+    .replace(/\s+/g, " ")
+    .normalize("NFKC")
+    .toLocaleLowerCase("zh-HK");
+}
+
+function isGenericShopifyCity(value: string | null | undefined) {
+  const normalized = normalizeDistrictLabel(value);
+  return !normalized || GENERIC_SHOPIFY_CITIES.has(normalized);
+}
+
+export function mappedShopifyCityName(value: string | null | undefined) {
+  const normalized = normalizeDistrictLabel(value);
+  if (!normalized || isGenericShopifyCity(normalized)) return null;
+  return SHOPIFY_CITY_ALIASES[normalized] ?? value?.trim() ?? null;
+}
+
+function stripDistrictPrefix(value: string, prefix: string) {
+  if (value.length <= prefix.length || !value.startsWith(prefix)) return value;
+  const rest = value.slice(prefix.length).replace(/^[\s,，]+/, "").trim();
+  return rest || value;
+}
+
+function longestDistrictPrefix(
+  text: string,
+  names: readonly string[],
+  allowGeneric: boolean,
+) {
+  let matched: string | null = null;
+  for (const name of names) {
+    const district = name.trim();
+    if (!district || !text.startsWith(district)) continue;
+    if (!allowGeneric && GENERIC_DISTRICT_NAMES.has(district)) continue;
+    if (!matched || district.length > matched.length) matched = district;
+  }
+  return matched;
+}
+
+export function matchShopifyDistrictName(
+  sources: ShopifyDistrictSources,
+  districtNames: readonly string[],
+): string | null {
+  const names = districtNames.map((name) => name.trim()).filter(Boolean);
+  if (!names.length) return null;
+
+  const city = mappedShopifyCityName(sources.city);
+  const texts = [
+    sources.noteDistrict,
+    city,
+    sources.address1,
+    city && sources.address1 && !sources.address1.includes(city)
+      ? `${city}${sources.address1}`
+      : null,
+    sources.address2,
+  ].flatMap((value) => {
+    const text = String(value ?? "").trim();
+    return text ? [text] : [];
+  });
+
+  for (const text of texts) {
+    const exact = names.find((name) =>
+      normalizeDistrictLabel(name) === normalizeDistrictLabel(text)
+    );
+    if (exact && !GENERIC_DISTRICT_NAMES.has(exact)) return exact;
+  }
+
+  let best: string | null = null;
+  for (const text of texts) {
+    const attempts = [...new Set([
+      text,
+      stripDistrictPrefix(text, "香港新界"),
+      stripDistrictPrefix(text, "香港"),
+      stripDistrictPrefix(text, "新界"),
+      stripDistrictPrefix(text, "九龍"),
+    ])];
+    for (const attempt of attempts) {
+      const specific = longestDistrictPrefix(attempt, names, false);
+      if (specific && (!best || specific.length > best.length)) best = specific;
+    }
+  }
+  if (best) return best;
+
+  for (const text of texts) {
+    const generic = longestDistrictPrefix(text, names, true);
+    if (generic && (!best || generic.length > best.length)) best = generic;
+  }
+  return best;
+}
+
+export function resolveShopifyDistrictId(
+  sources: ShopifyDistrictSources,
+  districts: Array<{
+    id: string;
+    name: string | null;
+    driver_team_id?: string | null;
+    created_at?: string | null;
+  }>,
+): string | null {
+  const matchedName = matchShopifyDistrictName(
+    sources,
+    districts.map((district) => district.name ?? ""),
+  );
+  if (!matchedName) return null;
+  const needle = normalizeDistrictLabel(matchedName);
+  return districts
+    .filter((district) => normalizeDistrictLabel(district.name) === needle)
+    .sort((left, right) => {
+      const leftTeam = left.driver_team_id ? 1 : 0;
+      const rightTeam = right.driver_team_id ? 1 : 0;
+      if (leftTeam !== rightTeam) return leftTeam - rightTeam;
+      return String(left.created_at ?? "").localeCompare(String(right.created_at ?? "")) ||
+        left.id.localeCompare(right.id);
+    })[0]?.id ?? null;
 }
 
 /** Keep Hong Kong Shopify phone numbers local in the operational snapshot. */
@@ -378,6 +567,8 @@ export function mapShopifyOrder(input: {
   outstanding: number | null;
   remark: string | null;
   shippingMethodTitle: string | null;
+  districtSources: ShopifyDistrictSources;
+  hasDistrictHint: boolean;
   orderRow: Record<string, unknown>;
   lines: Array<{
     lineId: number;
@@ -393,6 +584,7 @@ export function mapShopifyOrder(input: {
   const remark = collectRemarkText(input.order);
   const delivery = extractDeliveryFields(input.order);
   const remarkDelivery = extractDeliveryFromRemark(remark);
+  const districtSources = extractShopifyDistrictSources(input.order);
   const shippingFee = (input.order.shipping_lines ?? []).reduce(
     (sum, line) => sum + money(line.price),
     0,
@@ -479,6 +671,12 @@ export function mapShopifyOrder(input: {
     outstanding,
     remark,
     shippingMethodTitle: shopifyShippingMethodTitle(input.order),
+    districtSources,
+    hasDistrictHint: Boolean(
+      districtSources.noteDistrict ||
+        districtSources.city ||
+        districtSources.address1,
+    ),
     orderRow,
     lines,
   };

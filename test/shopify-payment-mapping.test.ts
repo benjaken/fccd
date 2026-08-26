@@ -16,6 +16,9 @@ import {
   pickCatalogMatchByName,
   replaceShopifyLunchBoxAggregate,
   resolveShopifyShippingMethodId,
+  resolveShopifyDistrictId,
+  matchShopifyDistrictName,
+  mappedShopifyCityName,
   resolveShopifySkuSnapshot,
   resolveAliasSku,
   shopifyCateringUtensilPacks,
@@ -347,6 +350,97 @@ describe("Shopify contact mapping", () => {
     });
 
     expect(mapped!.orderRow.shipping_address_snapshot).toBeNull();
+  });
+
+  it("prepends a Shopify city when it is a real district name", () => {
+    const mapped = mapShopifyOrder({
+      order: {
+        id: 2129,
+        name: "K-2129",
+        shipping_address: {
+          address1: "馬鈴徑2-88",
+          city: "屯門",
+          province: "New Territories",
+        },
+        line_items: [],
+      },
+      shopDomain: "test-store.myshopify.com",
+      storeId: "store-uuid",
+      channelId: "channel-uuid",
+    });
+
+    expect(mapped!.orderRow.shipping_address_snapshot).toBe("屯門馬鈴徑2-88");
+    expect(mapped!.districtSources).toMatchObject({
+      city: "屯門",
+      address1: "馬鈴徑2-88",
+    });
+  });
+});
+
+describe("Shopify district mapping", () => {
+  const districts = [
+    { id: "tuen-shared", name: "屯門", driver_team_id: null, created_at: "2026-01-01" },
+    { id: "tuen-fleet", name: "屯門", driver_team_id: "fleet-1", created_at: "2026-01-02" },
+    { id: "sai-kung", name: "西貢", driver_team_id: "fleet-1", created_at: "2026-01-01" },
+    { id: "sha-tin", name: "沙田", driver_team_id: "fleet-1", created_at: "2026-01-01" },
+    { id: "nt", name: "新界", driver_team_id: null, created_at: "2026-01-01" },
+  ];
+
+  it("maps city, English city aliases, and address prefixes", () => {
+    expect(mappedShopifyCityName("Tuen Mun")).toBe("屯門");
+    expect(mappedShopifyCityName("Hong Kong")).toBeNull();
+
+    expect(matchShopifyDistrictName({
+      city: "屯門",
+      province: "New Territories",
+      address1: "馬鈴徑2-88",
+      address2: null,
+      noteDistrict: null,
+    }, districts.map((row) => row.name))).toBe("屯門");
+
+    expect(matchShopifyDistrictName({
+      city: "Tuen Mun",
+      province: null,
+      address1: "馬鈴徑2-88",
+      address2: null,
+      noteDistrict: null,
+    }, districts.map((row) => row.name))).toBe("屯門");
+
+    expect(matchShopifyDistrictName({
+      city: "Hong Kong",
+      province: "New Territories",
+      address1: "西貢康健路泰湖閣海濱別墅16號1樓",
+      address2: null,
+      noteDistrict: null,
+    }, districts.map((row) => row.name))).toBe("西貢");
+
+    expect(matchShopifyDistrictName({
+      city: null,
+      province: null,
+      address1: "新界沙田銀城街30-32號威爾斯親王醫院",
+      address2: null,
+      noteDistrict: null,
+    }, districts.map((row) => row.name))).toBe("沙田");
+  });
+
+  it("prefers a shared district row when the same name exists per fleet", () => {
+    expect(resolveShopifyDistrictId({
+      city: "屯門",
+      province: null,
+      address1: "馬鈴徑2-88",
+      address2: null,
+      noteDistrict: null,
+    }, districts)).toBe("tuen-shared");
+  });
+
+  it("reads a district cart attribute when the street has no prefix", () => {
+    expect(matchShopifyDistrictName({
+      city: "Hong Kong",
+      province: null,
+      address1: "馬鈴徑2-88",
+      address2: null,
+      noteDistrict: "屯門",
+    }, districts.map((row) => row.name))).toBe("屯門");
   });
 });
 

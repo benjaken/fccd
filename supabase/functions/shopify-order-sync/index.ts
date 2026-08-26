@@ -18,6 +18,7 @@ import {
   shopDomainMatches,
   replaceShopifyLunchBoxAggregate,
   resolveShopifyShippingMethodId,
+  resolveShopifyDistrictId,
   shopifyCateringUtensilPacks,
   shopifyMenuOptionLegacyId,
   stripSkuSuffix,
@@ -733,6 +734,33 @@ async function syncPaymentsForOrders(input: {
 
 type MappedOrder = NonNullable<ReturnType<typeof mapShopifyOrder>>;
 
+type DistrictLookupRow = {
+  id: string;
+  name: string | null;
+  driver_team_id: string | null;
+  created_at: string | null;
+};
+
+function attachShopifyLookups(
+  mapped: MappedOrder[],
+  shippingMethods: Array<{
+    id: string;
+    name: string | null;
+    display_name?: string | null;
+  }>,
+  districts: DistrictLookupRow[],
+) {
+  for (const item of mapped) {
+    const shippingMethodId = resolveShopifyShippingMethodId(
+      item.shippingMethodTitle,
+      shippingMethods,
+    );
+    if (shippingMethodId) item.orderRow.shipping_method_id = shippingMethodId;
+    const districtId = resolveShopifyDistrictId(item.districtSources, districts);
+    if (districtId) item.orderRow.delivery_district_id = districtId;
+  }
+}
+
 function shopifyPaymentStatusPatch(item: MappedOrder): Record<string, unknown> {
   return {
     payment_status_source: "shopify",
@@ -891,6 +919,14 @@ async function processMappedOrders(
         issue: "unmatched_shipping_method",
       });
     }
+    if (item.hasDistrictHint && !item.orderRow.delivery_district_id) {
+      issues.push({
+        store_id: storeRow.id,
+        shopify_order_id: item.orderId,
+        sku: null,
+        issue: "unmatched_delivery_district",
+      });
+    }
     const already = shopifyIdToOrder.get(item.orderId);
     let targetId: string | null = already?.id ?? null;
     let mode: "insert" | "link" | "relink" | "skip" = already
@@ -1000,6 +1036,15 @@ async function processMappedOrders(
           sku: null,
           issue: "payment_status_update_failed",
         });
+      }
+      if (
+        !error &&
+        already?.source_system === "shopify" &&
+        item.orderRow.delivery_district_id
+      ) {
+        await client.from("orders").update({
+          delivery_district_id: item.orderRow.delivery_district_id,
+        }).eq("id", targetId).is("delivery_district_id", null);
       }
       if (!error && already?.source_system === "shopify") {
         counters.updatedShopify += 1;
@@ -1402,7 +1447,7 @@ async function syncStore(input: {
 
   const [{ data: products }, { data: packages }, { data: existingShopify }, {
     data: existingNumbers,
-  }, { data: shippingMethods }, { data: paymentMethods }] = await Promise.all([
+  }, { data: shippingMethods }, { data: paymentMethods }, { data: districts }] = await Promise.all([
     needsCatalog
       ? catalogQuery(client, "products", storeRow.channel_id, skus)
       : Promise.resolve({ data: [] as Array<{ id: string; sku: string | null; name: string | null; channel_id: string | null }> }),
@@ -1431,15 +1476,15 @@ async function syncStore(input: {
     client.from("shipping_methods").select("id,name,display_name")
       .eq("is_active", true).is("archived_at", null),
     client.from("payment_methods").select("id, legacy_id, name"),
+    client.from("delivery_districts").select("id,name,driver_team_id,created_at")
+      .is("archived_at", null),
   ]);
 
-  for (const item of mapped) {
-    const shippingMethodId = resolveShopifyShippingMethodId(
-      item.shippingMethodTitle,
-      shippingMethods ?? [],
-    );
-    if (shippingMethodId) item.orderRow.shipping_method_id = shippingMethodId;
-  }
+  attachShopifyLookups(
+    mapped,
+    shippingMethods ?? [],
+    (districts ?? []) as DistrictLookupRow[],
+  );
 
   const methodsByName = new Map(
     (paymentMethods ?? []).map((method) => [
@@ -1603,7 +1648,7 @@ async function syncSingleOrder(input: {
 
   const [{ data: products }, { data: packages }, { data: existingShopify }, {
     data: existingNumbers,
-  }, { data: shippingMethods }, { data: paymentMethods }] = await Promise.all([
+  }, { data: shippingMethods }, { data: paymentMethods }, { data: districts }] = await Promise.all([
     needsCatalog
       ? catalogQuery(client, "products", storeRow.channel_id, skus)
       : Promise.resolve({ data: [] as Array<{ id: string; sku: string | null; name: string | null; channel_id: string | null }> }),
@@ -1632,15 +1677,15 @@ async function syncSingleOrder(input: {
     client.from("shipping_methods").select("id,name,display_name")
       .eq("is_active", true).is("archived_at", null),
     client.from("payment_methods").select("id, legacy_id, name"),
+    client.from("delivery_districts").select("id,name,driver_team_id,created_at")
+      .is("archived_at", null),
   ]);
 
-  for (const item of mapped) {
-    const shippingMethodId = resolveShopifyShippingMethodId(
-      item.shippingMethodTitle,
-      shippingMethods ?? [],
-    );
-    if (shippingMethodId) item.orderRow.shipping_method_id = shippingMethodId;
-  }
+  attachShopifyLookups(
+    mapped,
+    shippingMethods ?? [],
+    (districts ?? []) as DistrictLookupRow[],
+  );
 
   const methodsByName = new Map(
     (paymentMethods ?? []).map((method) => [
