@@ -496,7 +496,7 @@ export function QuotesListPage({
                     {quote.quoteStatus || t("quotes.draft")}
                   </span>
                 </td>
-                <td>
+                <td className="table-actions-cell">
                   <div className="order-row-actions quote-row-actions">
                     {canManage ? <Link
                       to={`/quotes/${quote.id}/pdf`}

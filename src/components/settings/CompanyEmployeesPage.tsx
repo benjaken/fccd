@@ -168,7 +168,7 @@ export function CompanyEmployeesPage({
                   </span>
                 </td>
                 <td>{date.format(new Date(employee.lastSyncedAt))}</td>
-                <td>
+                <td className="table-actions-cell">
                   {!employee.linkedUserId && (employee.workEmail || employee.privateEmail) ? (
                     <Button
                       variant="outline"

@@ -1,0 +1,50 @@
+/* Keep the trailing operation column visible while list tables scroll. */
+.table-wrap:has(
+    > table > tbody > tr > .table-actions-cell:last-child,
+    > table > thead > tr > th[aria-label*="action" i],
+    > table > thead > tr > th[aria-label*="操作"]
+  )
+  > table
+  > thead
+  > tr
+  > :last-child,
+.table-wrap:has(
+    > table > tbody > tr > .table-actions-cell:last-child,
+    > table > thead > tr > th[aria-label*="action" i],
+    > table > thead > tr > th[aria-label*="操作"]
+  )
+  > table
+  > tbody
+  > tr
+  > :last-child {
+  position: sticky;
+  inset-inline-end: 0;
+  z-index: 2;
+  background: var(--card);
+  box-shadow: -1px 0 0 var(--border);
+}
+
+.table-wrap:has(
+    > table > tbody > tr > .table-actions-cell:last-child,
+    > table > thead > tr > th[aria-label*="action" i],
+    > table > thead > tr > th[aria-label*="操作"]
+  )
+  > table
+  > thead
+  > tr
+  > :last-child {
+  z-index: 3;
+  background: color-mix(in oklch, var(--background) 65%, var(--card));
+}
+
+.table-wrap:has(
+    > table > tbody > tr > .table-actions-cell:last-child,
+    > table > thead > tr > th[aria-label*="action" i],
+    > table > thead > tr > th[aria-label*="操作"]
+  )
+  > table
+  > tbody
+  > tr:hover
+  > :last-child {
+  background: color-mix(in oklch, var(--accent) 45%, var(--card));
+}

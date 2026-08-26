@@ -302,7 +302,7 @@ export function KitchenMonthlyFestivalCosts({ canEdit }: { canEdit: boolean }) {
             <td><strong>{row.costTypeName}</strong></td>
             <td>{canEdit ? <div className="kitchen-cost-record-amount"><span>HK$</span><input type="number" min="0" step="0.01" value={draft.amount} aria-label={`${row.costTypeName}節日金額`} onChange={(event) => changeDraft(row.id, "amount", event.target.value)} onBlur={(event) => void saveRow(row.id, event.currentTarget.value, draft.remarks)} /></div> : `HK$${row.amount.toLocaleString("zh-HK", { maximumFractionDigits: 2 })}`}</td>
             <td>{canEdit ? <input className="kitchen-monthly-cost-remarks" value={draft.remarks} title={draft.remarks} placeholder={t("kitchenMonthlyFestivalCosts.remarksPlaceholder")} aria-label={`${row.costTypeName}節日備註`} onChange={(event) => changeDraft(row.id, "remarks", event.target.value)} onBlur={(event) => void saveRow(row.id, draft.amount, event.currentTarget.value)} /> : row.remarks || "—"}</td>
-            <td>{canEdit ? <Button type="button" variant="destructive" size="icon" disabled={deletingId === row.id} aria-label="刪除節日營運費用記錄" onClick={() => void remove(row)}><Trash2 /></Button> : null}</td>
+            <td className="table-actions-cell">{canEdit ? <Button type="button" variant="destructive" size="icon" disabled={deletingId === row.id} aria-label="刪除節日營運費用記錄" onClick={() => void remove(row)}><Trash2 /></Button> : null}</td>
           </tr>;
         })}
         {!loading && rows.length === 0 ? <tr><td colSpan={7} className="kitchen-cost-empty">暫時沒有節日營運費用。</td></tr> : null}

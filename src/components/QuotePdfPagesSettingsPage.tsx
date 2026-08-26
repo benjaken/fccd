@@ -306,7 +306,7 @@ export function QuotePdfPagesSettingsPage({
                 <td><span className={`status-badge ${item.placement === "front" ? "blue" : "gray"}`}>{t(`quotes.pdfPages.${item.placement}`)}</span></td>
                 <td>{item.sortOrder}</td>
                 <td><span className={`status-badge ${item.isActive ? "green" : "gray"}`}>{t(item.isActive ? "quotes.pdfPages.active" : "quotes.pdfPages.inactive")}</span></td>
-                <td>
+                <td className="table-actions-cell">
                   <div className="table-actions">
                     <Button variant="ghost" size="icon" onClick={() => window.open(item.previewUrl, "_blank", "noopener,noreferrer")} aria-label={t("quotes.pdfPages.previewAction", { title: item.title })}><Eye /></Button>
                     {canManage ? <Button variant="ghost" size="icon" onClick={() => openEdit(item)} aria-label={t("quotes.pdfPages.editAction", { title: item.title })}><Pencil /></Button> : null}

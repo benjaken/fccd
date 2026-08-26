@@ -33,7 +33,10 @@ export function TableSkeletonRows({
           className={cn("table-skeleton-row", className)}
         >
           {specs.map((column, columnIndex) => (
-            <td key={`skeleton-cell-${rowIndex}-${columnIndex}`}>
+            <td
+              key={`skeleton-cell-${rowIndex}-${columnIndex}`}
+              className={column.variant === "action" ? "table-actions-cell" : undefined}
+            >
               <span
                 className={cn(
                   "table-skeleton-bone",

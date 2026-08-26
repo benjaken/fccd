@@ -618,7 +618,7 @@ function EditCostRecordsPanel({
                   onChange={(event) => changeDraft(row.id, "remarks", event.target.value)}
                 />
               </td>
-              <td>
+              <td className="table-actions-cell">
                 <Button
                   type="button"
                   variant="destructive"

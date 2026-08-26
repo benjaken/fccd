@@ -260,7 +260,7 @@ export function KitchenOrdersPage({
                     {statusLabels[statusKey]}
                   </span>
                 </td>
-                <td>
+                <td className="table-actions-cell">
                   <Button variant="ghost" size="icon" asChild>
                     <Link
                       to={kitchenOrderHref(order.id)}
