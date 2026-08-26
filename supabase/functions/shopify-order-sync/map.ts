@@ -710,6 +710,7 @@ export function orderNeedsTransactionSync(order: ShopifyRestOrder): boolean {
 export type MenuOption = {
   name: string;
   quantity: number;
+  surcharge?: number | null;
 };
 
 export type ShopifyMenuRemarkSource = {
@@ -769,8 +770,22 @@ export function replaceShopifyLunchBoxAggregate(input: {
   };
 }
 
+function splitMenuOptionSurcharge(value: string): {
+  text: string;
+  surcharge: number | null;
+} {
+  const match = value.match(/^(.*?)\s*\[\s*\$?\s*([\d,]+(?:\.\d+)?)\s*\]\s*$/);
+  if (!match) return { text: value.trim(), surcharge: null };
+  const amount = Number(match[2].replace(/,/g, ""));
+  return {
+    text: match[1].trim(),
+    surcharge: Number.isFinite(amount) ? amount : null,
+  };
+}
+
 function splitMenuOptionQuantity(value: string): MenuOption | null {
-  const item = value.replace(/\s+/g, " ").trim();
+  const { text, surcharge } = splitMenuOptionSurcharge(value);
+  const item = text.replace(/\s+/g, " ").trim();
   if (!item) return null;
 
   // Shopify option apps are not consistent: the multiplier may be written as
@@ -784,9 +799,18 @@ function splitMenuOptionQuantity(value: string): MenuOption | null {
   const quantity = quantityMatch
     ? Number(quantityMatch[2] ?? quantityMatch[3])
     : 1;
-  return name && Number.isFinite(quantity) && quantity > 0
-    ? { name, quantity }
-    : null;
+  if (!name || !Number.isFinite(quantity) || quantity <= 0) return null;
+  return surcharge == null ? { name, quantity } : { name, quantity, surcharge };
+}
+
+/** Shopify's option app emits a SKU-less "Customization Cost for {package}"
+ * heading whose properties are the real dish choices. */
+export function shopifyCustomizationCostParentName(
+  title: string | null | undefined,
+): string | null {
+  const match = String(title ?? "").trim().match(/^Customization Cost for\s+(.+)$/i);
+  const parent = match?.[1].trim() || null;
+  return parent || null;
 }
 
 /**
@@ -911,7 +935,10 @@ export function planShopifyMenuOptions(input: {
       const itemOrder = source.parentItemOrder === null
         ? detachedOrder++
         : Number((source.parentItemOrder + (optionIndex + 1) / 1000).toFixed(3));
-      const totalPrice = addon?.totalPrice ?? null;
+      const surchargeTotal = option.surcharge == null
+        ? null
+        : option.surcharge * option.quantity;
+      const totalPrice = addon?.totalPrice ?? surchargeTotal;
       options.push({
         ...option,
         lineId: source.lineId,

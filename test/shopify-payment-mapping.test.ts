@@ -24,6 +24,7 @@ import {
   resolveShopifySkuSnapshot,
   resolveAliasSku,
   shopifyCateringUtensilPacks,
+  shopifyCustomizationCostParentName,
   shopifyFinancialStatus,
   shopifyOutstanding,
   shopifyTransactionLegacyId,
@@ -764,6 +765,37 @@ describe("mapShopifyOrder remark collection", () => {
       { name: "當紅川味辣子雞 (1隻)", itemOrder: 4.004, parentPackageId: "package-ccch0810", unitPrice: 40, totalPrice: 40 },
     ]);
     expect(plan.consumedAddonLegacyIds).toEqual(["addon-10", "addon-40"]);
+  });
+
+  it("reads a surcharge written beside the dish and drops the customization heading", () => {
+    expect(parseMenuRemark(`中式小菜 3選1:
+薑蔥霸王雞 (1隻) [ $40.00 ]
+
+中式小菜 2選1:
+龍躉兩食 (粉絲金菇蒸頭腩+荷豆炒龍躉) [ $100.00 ]`)).toEqual([
+      { name: "薑蔥霸王雞 (1隻)", quantity: 1, surcharge: 40 },
+      { name: "龍躉兩食 (粉絲金菇蒸頭腩+荷豆炒龍躉)", quantity: 1, surcharge: 100 },
+    ]);
+
+    const plan = planShopifyMenuOptions({
+      sources: [{
+        lineId: 30,
+        parentItemOrder: 2,
+        parentPackageId: "package-ccma0810",
+        text: "中式小菜 3選1:\n薑蔥霸王雞 (1隻) [ $40.00 ]",
+      }],
+      addonCandidates: [],
+    });
+    expect(plan.options[0]).toMatchObject({
+      name: "薑蔥霸王雞 (1隻)",
+      itemOrder: 2.001,
+      parentPackageId: "package-ccma0810",
+      unitPrice: 40,
+      totalPrice: 40,
+    });
+    expect(shopifyCustomizationCostParentName(
+      "Customization Cost for 【2026中秋】賞月到會套餐 (8-10人)",
+    )).toBe("【2026中秋】賞月到會套餐 (8-10人)");
   });
 
   it("derives free six-person utensil packs from catering package capacity", () => {

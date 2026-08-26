@@ -20,6 +20,7 @@ import {
   resolveShopifyShippingMethodId,
   resolveShopifyDistrictId,
   shopifyCateringUtensilPacks,
+  shopifyCustomizationCostParentName,
   shopifyLineRemarksSnapshot,
   shopifyMenuOptionLegacyId,
   stripParsedMenuRemarksFromLines,
@@ -450,14 +451,23 @@ function menuRemarkSources(
   }
   for (const line of item.lines) {
     const text = collectLineMenuRemarkText(line.properties);
-    if (text) {
-      sources.push({
-        lineId: line.lineId,
-        parentItemOrder: Number(line.row.item_order ?? 0) || null,
-        parentPackageId: packageIdsByLineId.get(line.lineId) ?? null,
-        text,
-      });
-    }
+    if (!text) continue;
+    const title = String(line.row.product_name_snapshot ?? "").trim();
+    const costParentName = shopifyCustomizationCostParentName(title);
+    const parentLine = costParentName
+      ? item.lines.find((candidate) =>
+        normalizeNameForMatch(String(candidate.row.product_name_snapshot ?? "")) ===
+          normalizeNameForMatch(costParentName)
+      ) ?? line
+      : line;
+    sources.push({
+      lineId: line.lineId,
+      parentItemOrder: Number(parentLine.row.item_order ?? 0) || null,
+      parentPackageId: packageIdsByLineId.get(parentLine.lineId) ??
+        packageIdsByLineId.get(line.lineId) ??
+        null,
+      text,
+    });
   }
   return sources;
 }
@@ -1294,6 +1304,15 @@ async function processMappedOrders(
     });
 
     const consumedAddonIds = new Set(menuOptionResult.consumedAddonLegacyIds);
+    const parsedSourceLineIds = new Set(menuOptionResult.parsedSourceLineIds);
+    for (const line of item.lines) {
+      if (!parsedSourceLineIds.has(line.lineId)) continue;
+      if (!shopifyCustomizationCostParentName(String(line.row.product_name_snapshot ?? ""))) {
+        continue;
+      }
+      const legacyId = String(line.row.legacy_id ?? "");
+      if (legacyId) consumedAddonIds.add(legacyId);
+    }
     let baseLineRows = mergedLineRows.filter((line) =>
       !consumedAddonIds.has(String(line.legacy_id ?? ""))
     );
