@@ -103,6 +103,33 @@ describe("restaurant daily purchase input", () => {
     }));
   });
 
+  it("opens the edit panel with a wide amount field", async () => {
+    await i18n.changeLanguage("zh-HK");
+    const user = userEvent.setup();
+    const loadEntries = vi.fn(async () => ({
+      items: [{
+        id: "entry-1",
+        date: "2026-08-22",
+        restaurantId: "tko",
+        restaurantName: "TKO 桂花小幸 將軍澳",
+        supplierId: "supplier-1",
+        supplierName: "長明國際 (CI)",
+        purchaseTypeId: "kitchen",
+        purchaseTypeName: "廚房用料",
+        amount: 147891,
+      }],
+      total: 1,
+    }));
+    render(<RestaurantDailyPurchasesPage canEdit services={makeServices({ loadEntries })} />);
+
+    await user.click(await screen.findByRole("button", { name: /編輯採購記錄/ }));
+    const dialog = screen.getByRole("dialog", { name: "編輯採購記錄" });
+    const amount = await within(dialog).findByLabelText("TKO 桂花小幸 將軍澳長明國際 (CI)廚房用料金額");
+    expect(amount).toHaveValue(147891);
+    expect(amount.closest(".kitchen-cost-record-amount")).not.toBeNull();
+    expect(dialog.querySelector(".restaurant-purchase-entry-table")).toBeInTheDocument();
+  });
+
   it("keeps write controls hidden for read-only roles", async () => {
     await i18n.changeLanguage("zh-HK");
     render(<RestaurantDailyPurchasesPage canEdit={false} services={makeServices()} />);
