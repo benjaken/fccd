@@ -143,6 +143,12 @@ describe("quote list presets", () => {
       expect.stringContaining("effective_created_at"),
       { count: "exact" },
     );
+    expect(query.select).toHaveBeenCalledWith(
+      expect.stringContaining(
+        "planned_delivery_district:delivery_districts!delivery_district_id(name)",
+      ),
+      { count: "exact" },
+    );
     expect(query.order).toHaveBeenCalledWith("effective_created_at", {
       ascending: false,
     });
