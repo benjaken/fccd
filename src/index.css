@@ -9261,7 +9261,13 @@ button.product-tag[aria-pressed="true"] {
   }
 
   .settings-permission-column-labels {
-    display: none;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 8px;
+    min-height: 28px;
+    padding: 0 10px 6px;
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
   }
 
   .settings-permission-tree {
