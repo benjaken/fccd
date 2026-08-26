@@ -72,3 +72,43 @@ export function canAdvanceCheckpoint(
 ): boolean {
   return completed && !failed && !resumable;
 }
+
+export function hongKongBusinessDate(value: Date | string) {
+  const date = value instanceof Date ? value : new Date(value);
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Hong_Kong",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const pick = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? "";
+  return `${pick("year")}-${pick("month")}-${pick("day")}`;
+}
+
+export function dailySalesRestaurantDateKey(restaurantId: string, salesAt: string) {
+  return `${restaurantId}:${hongKongBusinessDate(salesAt)}`;
+}
+
+export function filterBubbleDailySalesCoveredByWeb(
+  rows: Array<Record<string, unknown>>,
+  coveredKeys: ReadonlySet<string>,
+): { kept: Array<Record<string, unknown>>; skippedLegacyIds: string[] } {
+  const kept: Array<Record<string, unknown>> = [];
+  const skippedLegacyIds: string[] = [];
+  for (const row of rows) {
+    const restaurantId = typeof row.restaurant_id === "string" ? row.restaurant_id : "";
+    const salesAt = typeof row.sales_at === "string" ? row.sales_at : "";
+    const legacyId = typeof row.legacy_id === "string" ? row.legacy_id : "";
+    if (
+      restaurantId &&
+      salesAt &&
+      coveredKeys.has(dailySalesRestaurantDateKey(restaurantId, salesAt))
+    ) {
+      if (legacyId) skippedLegacyIds.push(legacyId);
+      continue;
+    }
+    kept.push(row);
+  }
+  return { kept, skippedLegacyIds };
+}

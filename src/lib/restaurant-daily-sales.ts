@@ -53,8 +53,11 @@ export type RestaurantDailySalesRecentItem = {
   editedAt?: string | null;
 };
 
+export const WEB_DAILY_SALES_LEGACY_PREFIX = "web-daily-sales-";
+
 type DailySalesRow = {
   id: string;
+  legacy_id?: string | null;
   sales_at?: string | null;
   payment_method_id: string | null;
   payment_method_legacy_id: string | null;
@@ -174,6 +177,61 @@ export function hongKongDateValue(now = new Date()) {
   return `${value("year")}-${value("month")}-${value("day")}`;
 }
 
+export function isWebDailySalesLegacyId(legacyId: string | null | undefined) {
+  return Boolean(legacyId?.startsWith(WEB_DAILY_SALES_LEGACY_PREFIX));
+}
+
+export function collapseDailySalesRecentItems(
+  items: Array<RestaurantDailySalesRecentItem & { isWeb?: boolean }>,
+): RestaurantDailySalesRecentItem[] {
+  const chosen = new Map<string, RestaurantDailySalesRecentItem & { isWeb?: boolean }>();
+  const dateOrder: string[] = [];
+  for (const item of items) {
+    if (!chosen.has(item.date)) dateOrder.push(item.date);
+    const current = chosen.get(item.date);
+    if (!current) {
+      chosen.set(item.date, item);
+      continue;
+    }
+    if (item.isWeb && !current.isWeb) {
+      chosen.set(item.date, item);
+      continue;
+    }
+    if (!item.isWeb && current.isWeb) continue;
+    if ((item.editedAt ?? "") > (current.editedAt ?? "")) {
+      chosen.set(item.date, item);
+    }
+  }
+  return dateOrder.map((date) => {
+    const { isWeb, ...item } = chosen.get(date)!;
+    void isWeb;
+    return item;
+  });
+}
+
+export function preferWebDailySalesRows<T extends { sales_at?: string | null; legacy_id?: string | null }>(
+  rows: T[],
+): T[] {
+  const grouped = new Map<string, T[]>();
+  const withoutDate: T[] = [];
+  for (const row of rows) {
+    if (!row.sales_at) {
+      withoutDate.push(row);
+      continue;
+    }
+    const date = hongKongDateValue(new Date(row.sales_at));
+    const list = grouped.get(date) ?? [];
+    list.push(row);
+    grouped.set(date, list);
+  }
+  const preferred = [...withoutDate];
+  for (const dateRows of grouped.values()) {
+    const webRows = dateRows.filter((row) => isWebDailySalesLegacyId(row.legacy_id));
+    preferred.push(...(webRows.length ? webRows : dateRows));
+  }
+  return preferred;
+}
+
 export function restaurantSalesDayBounds(date: string) {
   return {
     start: `${date}T00:00:00+08:00`,
@@ -228,7 +286,7 @@ export async function fetchRestaurantDailySales(
   const [salesResult, platforms] = await Promise.all([
     supabase
       .from("restaurant_daily_sales")
-      .select("id,payment_method_id,payment_method_legacy_id,service_period_id,service_period_legacy_id,restaurant_department_id,restaurant_department_legacy_id,delivery_platform_id,delivery_platform_legacy_id,new_product_id,new_product_legacy_id,amount,quantity,sort_order,is_control_total,is_remark_section,petty_cash,manager_hours_department,working_hours,real_cash_count_amount,petty_cash_amount,remarks,image_url,pos_sheet_url")
+      .select("id,legacy_id,sales_at,payment_method_id,payment_method_legacy_id,service_period_id,service_period_legacy_id,restaurant_department_id,restaurant_department_legacy_id,delivery_platform_id,delivery_platform_legacy_id,new_product_id,new_product_legacy_id,amount,quantity,sort_order,is_control_total,is_remark_section,petty_cash,manager_hours_department,working_hours,real_cash_count_amount,petty_cash_amount,remarks,image_url,pos_sheet_url")
       .eq("restaurant_id", restaurantId)
       .gte("sales_at", start)
       .lte("sales_at", end),
@@ -237,7 +295,7 @@ export async function fetchRestaurantDailySales(
   if (salesResult.error) throw new Error(salesResult.error.message);
 
   const record = emptyRestaurantDailySalesRecord();
-  for (const row of (salesResult.data ?? []) as DailySalesRow[]) {
+  for (const row of preferWebDailySalesRows((salesResult.data ?? []) as DailySalesRow[])) {
     const amount = Number(row.amount ?? 0);
     const receiptSource = pickRestaurantSalesReceiptSource(row.pos_sheet_url, row.image_url);
     if (receiptSource && !record.receiptPath) record.receiptPath = receiptSource;
@@ -298,7 +356,7 @@ export async function fetchRecentRestaurantDailySales(
 ): Promise<RestaurantDailySalesRecentItem[]> {
   let query = supabase
     .from("restaurant_daily_sales")
-    .select("sales_at,amount,bubble_modified_at,created_at")
+    .select("sales_at,amount,bubble_modified_at,created_at,legacy_id")
     .eq("restaurant_id", restaurantId)
     .eq("is_control_total", true)
     .not("sales_at", "is", null)
@@ -307,11 +365,12 @@ export async function fetchRecentRestaurantDailySales(
   if (toDate) query = query.lte("sales_at", restaurantSalesDayBounds(toDate).end);
   const { data, error } = await query.limit(fromDate || toDate ? 1000 : 30);
   if (error) throw new Error(error.message);
-  const recentItems = (data ?? []).map((row) => ({
+  const recentItems = collapseDailySalesRecentItems((data ?? []).map((row) => ({
     date: hongKongDateValue(new Date(String(row.sales_at))),
     total: Number(row.amount ?? 0),
     editedAt: row.bubble_modified_at ?? row.created_at ?? null,
-  }));
+    isWeb: isWebDailySalesLegacyId(row.legacy_id),
+  })));
   if (!recentItems.length) return [];
 
   const firstDate = recentItems.reduce((earliest, item) => item.date < earliest ? item.date : earliest, recentItems[0].date);
@@ -321,7 +380,7 @@ export async function fetchRecentRestaurantDailySales(
   for (let offset = 0; ; offset += pageSize) {
     const detailResult = await supabase
       .from("restaurant_daily_sales")
-      .select("id,sales_at,payment_method_id,payment_method_legacy_id,service_period_id,service_period_legacy_id,restaurant_department_id,restaurant_department_legacy_id,delivery_platform_id,delivery_platform_legacy_id,new_product_id,new_product_legacy_id,amount,quantity,sort_order,is_control_total,is_remark_section,petty_cash,manager_hours_department")
+      .select("id,legacy_id,sales_at,payment_method_id,payment_method_legacy_id,service_period_id,service_period_legacy_id,restaurant_department_id,restaurant_department_legacy_id,delivery_platform_id,delivery_platform_legacy_id,new_product_id,new_product_legacy_id,amount,quantity,sort_order,is_control_total,is_remark_section,petty_cash,manager_hours_department")
       .eq("restaurant_id", restaurantId)
       .gte("sales_at", restaurantSalesDayBounds(firstDate).start)
       .lte("sales_at", restaurantSalesDayBounds(lastDate).end)
@@ -335,7 +394,7 @@ export async function fetchRecentRestaurantDailySales(
 
   const platforms = await fetchDeliveryPlatformOptions();
   const totalsByDate = new Map<string, { payments: number; departments: number; periods: number }>();
-  for (const row of detailRows) {
+  for (const row of preferWebDailySalesRows(detailRows)) {
     if (!row.sales_at || row.is_control_total) continue;
     const rowDate = hongKongDateValue(new Date(row.sales_at));
     const totals = totalsByDate.get(rowDate) ?? { payments: 0, departments: 0, periods: 0 };
@@ -386,7 +445,7 @@ export async function saveRestaurantDailySales(input: RestaurantDailySalesSaveIn
   const [salesResult, platforms] = await Promise.all([
     supabase
       .from("restaurant_daily_sales")
-      .select("id,payment_method_id,payment_method_legacy_id,service_period_id,service_period_legacy_id,restaurant_department_id,restaurant_department_legacy_id,delivery_platform_id,delivery_platform_legacy_id,new_product_id,new_product_legacy_id,amount,quantity,sort_order,is_control_total,is_remark_section,petty_cash,manager_hours_department,working_hours,real_cash_count_amount,petty_cash_amount,remarks,image_url,pos_sheet_url")
+      .select("id,legacy_id,payment_method_id,payment_method_legacy_id,service_period_id,service_period_legacy_id,restaurant_department_id,restaurant_department_legacy_id,delivery_platform_id,delivery_platform_legacy_id,new_product_id,new_product_legacy_id,amount,quantity,sort_order,is_control_total,is_remark_section,petty_cash,manager_hours_department,working_hours,real_cash_count_amount,petty_cash_amount,remarks,image_url,pos_sheet_url")
       .eq("restaurant_id", input.restaurantId)
       .gte("sales_at", start)
       .lte("sales_at", end),
@@ -394,8 +453,24 @@ export async function saveRestaurantDailySales(input: RestaurantDailySalesSaveIn
   ]);
   if (salesResult.error) throw new Error(salesResult.error.message);
 
+  const rowsFromDb = (salesResult.data ?? []) as DailySalesRow[];
+  const hasWebRows = rowsFromDb.some((row) => isWebDailySalesLegacyId(row.legacy_id));
+  const leftoverIds = hasWebRows
+    ? rowsFromDb.filter((row) => !isWebDailySalesLegacyId(row.legacy_id)).map((row) => row.id)
+    : [];
+  if (leftoverIds.length) {
+    const { error: deleteError } = await supabase
+      .from("restaurant_daily_sales")
+      .delete()
+      .in("id", leftoverIds);
+    if (deleteError) throw new Error(deleteError.message);
+  }
+  const remainingRows = leftoverIds.length
+    ? rowsFromDb.filter((row) => isWebDailySalesLegacyId(row.legacy_id))
+    : rowsFromDb;
+
   const existing = new Map<string, DailySalesRow>();
-  for (const row of (salesResult.data ?? []) as DailySalesRow[]) {
+  for (const row of remainingRows) {
     const key = existingKey(row, platforms);
     if (key && !existing.has(key)) existing.set(key, row);
   }
@@ -412,7 +487,7 @@ export async function saveRestaurantDailySales(input: RestaurantDailySalesSaveIn
 
   const updates = rows.filter((row) => existing.has(row.key));
   const inserts = rows.filter((row) => !existing.has(row.key)).map((row) => ({
-    legacy_id: `web-daily-sales-${input.restaurantId}-${input.date}-${row.key}`,
+    legacy_id: `${WEB_DAILY_SALES_LEGACY_PREFIX}${input.restaurantId}-${input.date}-${row.key}`,
     restaurant_id: input.restaurantId,
     sales_at: salesAt,
     bubble_created_at: new Date().toISOString(),

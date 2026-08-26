@@ -2,6 +2,8 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   type BubbleRecord,
   canAdvanceCheckpoint,
+  dailySalesRestaurantDateKey,
+  filterBubbleDailySalesCoveredByWeb,
   hashBubblePayload,
   partitionConflicts,
   requireLegacyId,
@@ -850,6 +852,47 @@ async function resolveRelations(
   }
 }
 
+async function webCoveredDailySalesKeys(
+  client: AdminClient,
+  rows: Array<Record<string, unknown>>,
+): Promise<Set<string>> {
+  const restaurantIds = [...new Set(
+    rows.flatMap((row) =>
+      typeof row.restaurant_id === "string" && row.restaurant_id
+        ? [row.restaurant_id]
+        : []
+    ),
+  )];
+  const salesTimes = rows.flatMap((row) => {
+    if (typeof row.sales_at !== "string" || !row.sales_at) return [];
+    const time = new Date(row.sales_at).getTime();
+    return Number.isFinite(time) ? [time] : [];
+  });
+  if (!restaurantIds.length || !salesTimes.length) return new Set();
+
+  const min = new Date(Math.min(...salesTimes) - 36 * 60 * 60 * 1000).toISOString();
+  const max = new Date(Math.max(...salesTimes) + 36 * 60 * 60 * 1000).toISOString();
+  const covered = new Set<string>();
+  for (let index = 0; index < restaurantIds.length; index += QUERY_CHUNK) {
+    const { data, error } = await client
+      .from("restaurant_daily_sales")
+      .select("restaurant_id,sales_at")
+      .like("legacy_id", "web-daily-sales-%")
+      .in("restaurant_id", restaurantIds.slice(index, index + QUERY_CHUNK))
+      .gte("sales_at", min)
+      .lte("sales_at", max);
+    if (error) throw error;
+    for (const row of data ?? []) {
+      if (!row.restaurant_id || !row.sales_at) continue;
+      covered.add(dailySalesRestaurantDateKey(
+        String(row.restaurant_id),
+        String(row.sales_at),
+      ));
+    }
+  }
+  return covered;
+}
+
 async function insertOnlyParents(
   client: AdminClient,
   table: string,
@@ -1077,10 +1120,18 @@ async function processType(
 
     const parentRows = partitioned.fresh.map(mapping.map);
     await resolveRelations(client, parentRows, mapping.relations);
+    const skippedLegacyIds = new Set<string>();
+    let rowsToInsert = parentRows;
+    if (mapping.sourceType === "shop_dailysales" && parentRows.length) {
+      const covered = await webCoveredDailySalesKeys(client, parentRows);
+      const filtered = filterBubbleDailySalesCoveredByWeb(parentRows, covered);
+      rowsToInsert = filtered.kept;
+      for (const legacyId of filtered.skippedLegacyIds) skippedLegacyIds.add(legacyId);
+    }
     const insertedParents = await insertOnlyParents(
       client,
       mapping.table,
-      parentRows,
+      rowsToInsert,
     );
     result.inserted = insertedParents.length;
 
@@ -1103,9 +1154,10 @@ async function processType(
     const insertedIds = new Set(
       insertedParents.map((row) => row.legacy_id),
     );
-    const racingConflicts = partitioned.fresh.filter((record) =>
-      !insertedIds.has(requireLegacyId(record))
-    );
+    const racingConflicts = partitioned.fresh.filter((record) => {
+      const legacyId = requireLegacyId(record);
+      return !insertedIds.has(legacyId) && !skippedLegacyIds.has(legacyId);
+    });
     result.conflicts += await logConflicts(
       client,
       runId,
