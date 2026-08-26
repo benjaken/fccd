@@ -2102,6 +2102,7 @@ const resources = {
           paymentSearchPlaceholder: "搜尋付款方式或輸入自訂內容",
           additionalSearchPlaceholder: "Search 額外資訊 item",
           activitySearchPlaceholder: "Search 活動報價 item",
+          signaturePartyPlaceholder: "輸入簽署公司或客戶名稱",
         },
         pdfPages: {
           title: "封面封底設定",
@@ -6922,6 +6923,7 @@ const resources = {
           paymentSearchPlaceholder: "Search payment methods or enter custom content",
           additionalSearchPlaceholder: "Search additional information",
           activitySearchPlaceholder: "Search activity quote items",
+          signaturePartyPlaceholder: "Enter signing company or customer name",
         },
         pdfPages: {
           title: "Cover and back page settings",

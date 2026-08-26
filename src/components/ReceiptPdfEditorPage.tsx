@@ -409,7 +409,7 @@ export function ReceiptPdfEditorPage({
               className="quote-pdf-signature-party-name"
               aria-label="簽署公司或客戶名稱"
               value={draft.signaturePartyName}
-              placeholder="客戶"
+              placeholder={t("quotes.pdfEditor.signaturePartyPlaceholder")}
               onChange={(event) => update("signaturePartyName", event.target.value)}
             />
             <span className="quote-pdf-signature-stamp-spacer" aria-hidden="true" />
