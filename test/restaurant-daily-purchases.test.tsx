@@ -40,7 +40,7 @@ const purchaseEntriesDataMigration = readFileSync(
   "utf8",
 );
 const purchaseSupplierTotalsMigration = readFileSync(
-  path.resolve(process.cwd(), "supabase/migrations/20260826160000_restaurant_daily_purchase_supplier_totals.sql"),
+  path.resolve(process.cwd(), "supabase/migrations/20260826170000_restaurant_daily_purchase_supplier_range_totals.sql"),
   "utf8",
 ).replace(/\r\n/g, "\n");
 
@@ -106,7 +106,7 @@ describe("restaurant daily purchase input", () => {
           total: 100,
         },
         {
-          date: "2026-08-22",
+          date: "2026-08-20",
           recordId: "record-2",
           restaurantId: "tko",
           restaurantName: "TKO 桂花小幸 將軍澳",
@@ -223,6 +223,7 @@ describe("restaurant daily purchase input", () => {
   });
 
   it("aggregates the main purchase page by supplier", () => {
+    expect(purchaseSupplierTotalsMigration).toContain("null::date as record_date");
     expect(purchaseSupplierTotalsMigration).toContain("null::uuid as purchase_record_id");
     expect(purchaseSupplierTotalsMigration).toContain(
       "purchase.restaurant_id,\n      purchase.supplier_id,\n      purchase.purchase_type_id",

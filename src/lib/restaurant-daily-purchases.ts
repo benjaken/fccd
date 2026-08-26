@@ -47,11 +47,12 @@ export function mergeRestaurantDailyPurchaseRecords(records: RestaurantDailyPurc
   const grouped = new Map<string, RestaurantDailyPurchaseRecord>();
 
   for (const record of records) {
-    const key = JSON.stringify([record.date, record.restaurantId, record.supplierId]);
+    const key = JSON.stringify([record.restaurantId, record.supplierId]);
     const existing = grouped.get(key);
     if (!existing) {
       grouped.set(key, {
         ...record,
+        date: null,
         recordId: null,
         categories: record.categories.map((category) => ({ ...category })),
       });
