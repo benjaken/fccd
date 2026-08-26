@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -25,6 +27,10 @@ const purchaseTypes = [
   { id: "bar", legacyId: "bar-legacy", name: "水吧用料" },
   { id: "sundries", legacyId: "sundries-legacy", name: "清潔/SUNDRIES" },
 ];
+const purchaseRecordsMigration = readFileSync(
+  path.resolve(process.cwd(), "supabase/migrations/20260826130000_restaurant_daily_purchase_records.sql"),
+  "utf8",
+);
 
 function makeServices(overrides: Partial<RestaurantDailyPurchaseServices> = {}): RestaurantDailyPurchaseServices {
   return {
@@ -152,6 +158,13 @@ describe("restaurant daily purchase input", () => {
         supplierIds: ["supplier-2"],
       }),
     })));
+  });
+
+  it("keeps each new purchase form in a separate record group", () => {
+    expect(purchaseRecordsMigration).toContain("add column if not exists purchase_record_id uuid;");
+    expect(purchaseRecordsMigration).toContain("record_group_id uuid := gen_random_uuid();");
+    expect(purchaseRecordsMigration).toContain("filtered.record_date,\n      filtered.purchase_record_id");
+    expect(purchaseRecordsMigration).not.toContain("where restaurant_id = p_restaurant_id");
   });
 
   it("keeps write controls hidden for read-only roles", async () => {
