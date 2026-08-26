@@ -29050,7 +29050,9 @@ body:has(.quote-pdf-editor) .quote-pdf-editor {
 .quote-pdf-signature:not(.has-customer-signature) .quote-pdf-signature-issuer { width: calc(50% - 1.6rem); margin-left: auto; }
 .quote-pdf-signature-party > strong,
 .quote-pdf-signature-party label strong { font-weight: 850; }
-.quote-pdf-signature-party > em { min-height: 22px; font-family: Poppins, sans-serif; font-size: 0.84rem; }
+.quote-pdf-signature-party > em,
+.quote-pdf-signature-party-name { min-height: 22px; width: 100%; padding: 0; border: 0; border-radius: 0; background: transparent; color: inherit; font-family: Poppins, sans-serif; font-size: 0.84rem; font-style: italic; }
+.quote-pdf-signature-party-name:focus { outline: 2px solid #4a9fbd; outline-offset: -2px; }
 .quote-pdf-signature-issuer { grid-template-rows: auto auto 72px auto; }
 .quote-pdf-signature-issuer > img { width: 90px; height: 72px; object-fit: contain; justify-self: center; }
 .quote-pdf-signature-customer { grid-template-rows: auto auto 72px repeat(3, minmax(29px, auto)); }
@@ -29187,7 +29189,7 @@ body:has(.quote-clause-modal-root) { overflow: hidden; }
   .quote-pdf-additional.is-empty { display: none !important; }
   .quote-pdf-note-block,
   .quote-pdf-note-heading { border: 0 !important; }
-  .quote-pdf-meta-grid input, .quote-pdf-table input, .quote-pdf-table textarea, .quote-pdf-additional textarea, .quote-pdf-summary input, .quote-pdf-notes textarea { border-color: transparent !important; outline: 0 !important; background: transparent !important; resize: none !important; }
+  .quote-pdf-meta-grid input, .quote-pdf-table input, .quote-pdf-table textarea, .quote-pdf-additional textarea, .quote-pdf-summary input, .quote-pdf-notes textarea, .quote-pdf-signature-party-name { border-color: transparent !important; outline: 0 !important; background: transparent !important; resize: none !important; }
   .quote-pdf-additional li textarea { width: 100% !important; padding-right: 0 !important; }
   .quote-pdf-meta-grid > input,
   .quote-pdf-customer-company > input,

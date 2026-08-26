@@ -199,6 +199,25 @@ describe("Receipt PDF editor", () => {
     expect(screen.queryByRole("main", { name: "發票 PDF 第 2 頁" })).not.toBeInTheDocument();
   });
 
+  it("lets the invoice signature company or customer name be edited", async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={["/orders/order-1/invoice"]}>
+        <Routes>
+          <Route path="/orders/:id/invoice" element={<ReceiptPdfEditorPage documentKind="invoice" loadDetail={vi.fn().mockResolvedValue(result)} loadShippingFees={vi.fn().mockResolvedValue(shippingFees)} />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole("heading", { name: "INVOICE" });
+    await user.click(screen.getByRole("checkbox", { name: "顯示客戶簽署" }));
+    const signatureName = screen.getByLabelText("簽署公司或客戶名稱");
+    expect(signatureName).toHaveValue("Momo");
+    await user.clear(signatureName);
+    await user.type(signatureName, "簽名客戶");
+    expect(signatureName).toHaveValue("簽名客戶");
+  });
+
   it("recalculates totals and automatically saves receipt edits", async () => {
     const user = userEvent.setup();
     renderPage();

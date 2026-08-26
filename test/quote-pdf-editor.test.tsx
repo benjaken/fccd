@@ -362,7 +362,7 @@ describe("editable quote PDF page", () => {
     await user.click(toggle);
     expect(screen.getByText("請仔細閱讀以上內容並簽署確認：")).toBeInTheDocument();
     expect(screen.getByText("公司蓋印及簽署：")).toBeInTheDocument();
-    expect(screen.getByText("STFA Seaward Woo College")).toBeInTheDocument();
+    expect(screen.getByLabelText("簽署公司或客戶名稱")).toHaveValue("STFA Seaward Woo College");
     expect(document.querySelector(".quote-pdf-signature-customer")).not.toHaveTextContent("程嘉敏");
     expect(document.querySelector(".quote-pdf-signature-stamp-spacer")).toBeInTheDocument();
     expect(screen.queryByRole("main", { name: "PDF 第 2 頁" })).not.toBeInTheDocument();
@@ -378,8 +378,22 @@ describe("editable quote PDF page", () => {
     await screen.findByRole("heading", { name: "到會套餐報價" });
     await user.click(screen.getByRole("checkbox", { name: "顯示客戶簽署" }));
 
-    expect(document.querySelector(".quote-pdf-signature-customer"))
-      .toHaveTextContent("程嘉敏");
+    expect(screen.getByLabelText("簽署公司或客戶名稱")).toHaveValue("程嘉敏");
+  });
+
+  it("lets the signature company or customer name be edited without changing the header fields", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByRole("heading", { name: "到會套餐報價" });
+    await user.click(screen.getByRole("checkbox", { name: "顯示客戶簽署" }));
+    const signatureName = screen.getByLabelText("簽署公司或客戶名稱");
+    await user.clear(signatureName);
+    await user.type(signatureName, "簽名專用名稱");
+
+    expect(signatureName).toHaveValue("簽名專用名稱");
+    expect(screen.getByLabelText("公司名稱")).toHaveValue("STFA Seaward Woo College");
+    expect(screen.getByLabelText("客戶名稱")).toHaveValue("程嘉敏");
   });
 
   it("does not insert a visible footer spacer between products and trailing content", async () => {

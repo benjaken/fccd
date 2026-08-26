@@ -126,6 +126,7 @@ function resultToDraft(
     terms: documentKind === "invoice" ? result.terms : [],
     paymentMethods: documentKind === "invoice" ? result.paymentMethods : [],
     showCustomerSignature: false,
+    signaturePartyName: order?.companyName || order?.customerName || "",
   };
 }
 
@@ -400,7 +401,13 @@ export function ReceiptPdfEditorPage({
         {draft.showCustomerSignature ? (
           <div className="quote-pdf-signature-party quote-pdf-signature-customer">
             <strong>請仔細閱讀以上內容並簽署確認：</strong>
-            <em>{draft.customer || "客戶"}</em>
+            <input
+              className="quote-pdf-signature-party-name"
+              aria-label="簽署公司或客戶名稱"
+              value={draft.signaturePartyName}
+              placeholder="客戶"
+              onChange={(event) => update("signaturePartyName", event.target.value)}
+            />
             <span className="quote-pdf-signature-stamp-spacer" aria-hidden="true" />
             <label><strong>公司蓋印及簽署：</strong><span /></label>
             <label><strong>負責人姓名：</strong><span /></label>

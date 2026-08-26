@@ -80,6 +80,7 @@ type QuotePdfDraft = {
   activities: EditableActivity[];
   utensilPackQuantity: string;
   showCustomerSignature: boolean;
+  signaturePartyName: string;
   activityShippingFeeId: string;
   activityShippingNote: string;
   activityShippingFee: string;
@@ -129,6 +130,7 @@ function resultToDraft(result: OrderDetailResult): QuotePdfDraft {
     activities: [],
     utensilPackQuantity: "0",
     showCustomerSignature: false,
+    signaturePartyName: order?.companyName || order?.customerName || "",
     activityShippingFeeId: "",
     activityShippingNote: "運費－滿 $2800 免運費－地面交收",
     activityShippingFee: "0",
@@ -169,6 +171,9 @@ function normalizeDraft(value: Partial<QuotePdfDraft> | null | undefined, fallba
     // Pagination is calculated from the rendered page. Ignore legacy manual
     // page-placement preferences so every draft starts in document order.
     showCustomerSignature: stored.showCustomerSignature ?? false,
+    signaturePartyName: typeof stored.signaturePartyName === "string"
+      ? stored.signaturePartyName
+      : fallback.signaturePartyName,
     activityShippingFeeId: stored.activityShippingFeeId ?? "",
     activityShippingNote:
       stored.activityShippingNote ?? "運費－滿 $2800 免運費－地面交收",
@@ -490,7 +495,13 @@ export function QuotePdfEditorPage({
       {draft.showCustomerSignature ? (
         <div className="quote-pdf-signature-party quote-pdf-signature-customer">
           <strong>請仔細閱讀以上內容並簽署確認：</strong>
-          <em>{draft.companyName || draft.customerName || "公司"}</em>
+          <input
+            className="quote-pdf-signature-party-name"
+            aria-label="簽署公司或客戶名稱"
+            value={draft.signaturePartyName}
+            placeholder={draft.companyName ? "公司" : "客戶"}
+            onChange={(event) => update("signaturePartyName", event.target.value)}
+          />
           <span className="quote-pdf-signature-stamp-spacer" aria-hidden="true" />
           <label><strong>公司蓋印及簽署：</strong><span /></label>
           <label><strong>負責人姓名：</strong><span /></label>
