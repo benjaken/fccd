@@ -194,28 +194,21 @@ type LoginLogRow = {
   created_at: string;
 };
 
-type PermissionRow = {
+type AppPageRow = {
+  page_key: string;
+  display_name: string;
+  route: string;
+  sort_order: number;
+  is_high_risk: boolean;
+  parent_page_key: string | null;
+  page_kind: PageKind | null;
+};
+
+type RolePermissionGrantRow = {
   role: SystemRole;
   page_key: string;
   can_access: boolean;
   can_manage: boolean;
-  app_pages:
-    | {
-        display_name: string;
-        route: string;
-        sort_order: number;
-        is_high_risk: boolean;
-        parent_page_key: string | null;
-        page_kind: PageKind | null;
-      }
-    | {
-        display_name: string;
-        route: string;
-        sort_order: number;
-        is_high_risk: boolean;
-        parent_page_key: string | null;
-        page_kind: PageKind | null;
-      }[];
 };
 
 function safeSearchTerm(value: string) {
@@ -749,31 +742,45 @@ export async function recordLoginEvent(input: {
 }
 
 export async function fetchRolePagePermissions() {
-  const { data, error } = await supabase
-    .from("role_page_permissions")
-    .select(
-      "role,page_key,can_access,can_manage,app_pages!inner(display_name,route,sort_order,is_high_risk,parent_page_key,page_kind)",
-    );
-  if (error) throw error;
+  const [{ data: pageData, error: pageError }, { data: grantData, error: grantError }] =
+    await Promise.all([
+      supabase
+        .from("app_pages")
+        .select(
+          "page_key,display_name,route,sort_order,is_high_risk,parent_page_key,page_kind",
+        ),
+      supabase
+        .from("role_page_permissions")
+        .select("role,page_key,can_access,can_manage"),
+    ]);
+  if (pageError) throw pageError;
+  if (grantError) throw grantError;
 
-  const mapped = ((data ?? []) as unknown as PermissionRow[]).map((row) => {
-    const page = Array.isArray(row.app_pages)
-      ? row.app_pages[0]
-      : row.app_pages;
-    return {
-      role: row.role,
-      pageKey: row.page_key,
-      parentPageKey: page.parent_page_key ?? null,
-      pageKind: normalizePageKind(page.page_kind),
-      displayName: page.display_name,
-      route: page.route,
-      sortOrder: page.sort_order,
-      isHighRisk: page.is_high_risk,
-      canAccess: row.can_access,
-      canManage: row.can_manage,
-      depth: 0,
-    } satisfies RolePagePermission;
-  });
+  const grants = new Map(
+    ((grantData ?? []) as unknown as RolePermissionGrantRow[]).map((grant) => [
+      `${grant.role}:${grant.page_key}`,
+      grant,
+    ]),
+  );
+  const pages = (pageData ?? []) as unknown as AppPageRow[];
+  const mapped = pages.flatMap((page) =>
+    SYSTEM_ROLES.map((role) => {
+      const grant = grants.get(`${role}:${page.page_key}`);
+      return {
+        role,
+        pageKey: page.page_key,
+        parentPageKey: page.parent_page_key,
+        pageKind: normalizePageKind(page.page_kind),
+        displayName: page.display_name,
+        route: page.route,
+        sortOrder: page.sort_order,
+        isHighRisk: page.is_high_risk,
+        canAccess: grant?.can_access ?? false,
+        canManage: grant?.can_manage ?? false,
+        depth: 0,
+      } satisfies RolePagePermission;
+    }),
+  );
 
   return sortRolePagePermissions(mapped);
 }

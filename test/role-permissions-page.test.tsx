@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
@@ -8,12 +8,19 @@ import type { RolePagePermission } from "@/lib/settings";
 const permissions: RolePagePermission[] = [
   permission("orders", "訂單", null, true, true),
   permission("orders.pending", "待確定訂單", "orders", true, false),
+  permission(
+    "orders.pending.today",
+    "今日待確定",
+    "orders.pending",
+    true,
+    false,
+  ),
   permission("orders.payments", "收款紀錄", "orders", false, false),
   permission("quotes", "報價", null, false, false),
 ];
 
 describe("RolePermissionsPage", () => {
-  it("organizes the sitemap into separate sections with access summaries", async () => {
+  it("organizes the sitemap into three selectable menu-level columns", async () => {
     render(
       <MemoryRouter>
         <RolePermissionsPage
@@ -23,15 +30,21 @@ describe("RolePermissionsPage", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText("訂單")).toBeInTheDocument();
+    const columns = await screen.findAllByRole("region");
+    expect(columns).toHaveLength(3);
+    const [firstColumn, secondColumn, thirdColumn] = columns;
 
-    const grid = document.querySelector(".settings-permission-grid");
-    expect(grid).toBeInTheDocument();
-    expect(grid?.querySelectorAll(".settings-permission-section")).toHaveLength(2);
-    expect(
-      grid?.querySelectorAll(".settings-permission-section-stat"),
-    ).toHaveLength(4);
-    expect(screen.getByText("報價")).toBeInTheDocument();
+    expect(document.querySelector(".settings-permission-level-columns"))
+      .toBeInTheDocument();
+    expect(within(firstColumn).getByRole("button", { name: /訂單/ }))
+      .toBeInTheDocument();
+    expect(within(secondColumn).getByRole("button", { name: /待確定訂單/ }))
+      .toBeInTheDocument();
+    expect(within(thirdColumn).getByText("今日待確定"))
+      .toBeInTheDocument();
+    expect(screen.queryByText("已開放頁面")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "全部收起" }))
+      .not.toBeInTheDocument();
   });
 });
 

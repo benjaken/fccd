@@ -447,7 +447,7 @@ describe("Super Admin system settings", () => {
     expect(adminUsers).not.toBeChecked();
     // Settings pages are permission-driven (editable), not hard-locked.
     expect(adminUsers).not.toBeDisabled();
-    expect(screen.getByText("可管理")).toBeInTheDocument();
+    expect(screen.getAllByText("可管理").length).toBeGreaterThan(0);
     expect(
       screen.getByRole("switch", { name: "財務對帳 可管理" }),
     ).not.toBeChecked();
@@ -530,6 +530,7 @@ describe("Super Admin system settings", () => {
       screen.getByRole("switch", { name: "建立新單 可訪問" }),
     ).toBeChecked();
     expect(screen.getAllByText("子頁面").length).toBeGreaterThan(0);
+    await user.click(screen.getByRole("button", { name: /^報表/ }));
     expect(screen.getAllByText("分頁").length).toBeGreaterThan(0);
   });
 

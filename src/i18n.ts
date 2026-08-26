@@ -981,7 +981,6 @@ const resources = {
           description:
             "配置各角色的頁面、子頁面、分頁及操作權限，包括資料遷移頁。",
           role: "角色",
-          viewingRole: "當前查看角色",
           chooseRole: "選擇角色",
           roleList: "系統角色",
           loading: "正在載入角色權限…",
@@ -993,16 +992,15 @@ const resources = {
           sitemap: "Sitemap 權限結構",
           search: "搜尋權限",
           searchPlaceholder: "搜尋頁面、路由或權限鍵…",
-          expandAll: "全部展開",
-          collapseAll: "全部收起",
+          levels: {
+            first: "一級菜單",
+            second: "二級菜單",
+            third: "三級菜單",
+          },
+          levelEmpty: "請先選擇上一級菜單",
           emptySearch: "找不到相符權限",
           emptySearchDescription: "請嘗試其他頁面名稱、路由或權限鍵。",
           notApplicable: "不適用",
-          summary: {
-            access: "已開放頁面",
-            manage: "可管理項目",
-            highRisk: "高風險授權",
-          },
           highRisk: "高風險",
           standard: "一般",
           kinds: {
@@ -5746,7 +5744,6 @@ const resources = {
           description:
             "Configure access and management for pages, sub-pages, tabs, actions, and migration tools.",
           role: "Role",
-          viewingRole: "Currently viewing role",
           chooseRole: "Choose role",
           roleList: "System roles",
           loading: "Loading role permissions…",
@@ -5760,16 +5757,15 @@ const resources = {
           sitemap: "Sitemap permission structure",
           search: "Search permissions",
           searchPlaceholder: "Search page, route, or permission key…",
-          expandAll: "Expand all",
-          collapseAll: "Collapse all",
+          levels: {
+            first: "Level 1 menu",
+            second: "Level 2 menu",
+            third: "Level 3 menu",
+          },
+          levelEmpty: "Select the previous menu level first",
           emptySearch: "No matching permissions",
           emptySearchDescription: "Try another page name, route, or permission key.",
           notApplicable: "N/A",
-          summary: {
-            access: "Accessible pages",
-            manage: "Manage grants",
-            highRisk: "High-risk grants",
-          },
           highRisk: "High risk",
           standard: "Standard",
           kinds: {

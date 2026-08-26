@@ -7,9 +7,6 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  ChevronRight,
-  Eye,
-  PencilLine,
   RefreshCw,
   Search,
   ShieldCheck,
@@ -33,12 +30,6 @@ import { cn } from "@/lib/utils";
 type PermissionTreeNode = {
   permission: RolePagePermission;
   children: PermissionTreeNode[];
-};
-
-type PermissionTreeSummary = {
-  total: number;
-  access: number;
-  manage: number;
 };
 
 function buildPermissionTree(
@@ -83,118 +74,173 @@ function filterPermissionTree(
   });
 }
 
-function summarizeTree(nodes: PermissionTreeNode[]): PermissionTreeSummary {
-  return nodes.reduce((summary, node) => {
-    const children: PermissionTreeSummary = summarizeTree(node.children);
-    return {
-      total: summary.total + 1 + children.total,
-      access:
-        summary.access +
-        (node.permission.canAccess ? 1 : 0) +
-        children.access,
-      manage:
-        summary.manage +
-        (node.permission.canManage ? 1 : 0) +
-        children.manage,
-    };
-  }, { total: 0, access: 0, manage: 0 });
-}
-
 function PermissionRow({
   node,
   depth,
   savingKey,
   onAccessChange,
   onManageChange,
+  selected = false,
+  onSelect,
 }: {
   node: PermissionTreeNode;
   depth: number;
   savingKey: string | null;
   onAccessChange: (permission: RolePagePermission, checked: boolean) => void;
   onManageChange: (permission: RolePagePermission, checked: boolean) => void;
+  selected?: boolean;
+  onSelect?: () => void;
 }) {
   const { t } = useTranslation();
   const { permission } = node;
   const rowKey = `${permission.role}:${permission.pageKey}`;
   const isAction = permission.pageKind === "action";
+  const identity = (
+    <>
+      <span className="settings-permission-tree-line" aria-hidden="true" />
+      <span className="settings-permission-copy">
+        <span className="settings-permission-name-line">
+          <strong>{permission.displayName}</strong>
+          <span className="settings-permission-kind">
+            {t(`settings.roles.kinds.${permission.pageKind}`)}
+          </span>
+          {permission.isHighRisk ? (
+            <span className="settings-permission-risk">
+              <TriangleAlert aria-hidden="true" />
+              {t("settings.roles.highRisk")}
+            </span>
+          ) : null}
+        </span>
+        <span className="settings-permission-meta">
+          <code>{permission.route}</code>
+          <span>{permission.pageKey}</span>
+        </span>
+      </span>
+    </>
+  );
 
   return (
-    <>
-      <div
-        className={cn(
-          "settings-permission-row",
-          permission.isHighRisk && "is-high-risk",
-        )}
-        data-depth={depth}
-        data-page-kind={permission.pageKind}
-      >
+    <div
+      className={cn(
+        "settings-permission-row",
+        selected && "is-selected",
+        permission.isHighRisk && "is-high-risk",
+      )}
+      data-depth={depth}
+      data-page-kind={permission.pageKind}
+    >
+      {onSelect ? (
+        <button
+          type="button"
+          className="settings-permission-identity settings-permission-select"
+          style={{ "--permission-depth": depth } as CSSProperties}
+          onClick={onSelect}
+          aria-pressed={selected}
+        >
+          {identity}
+        </button>
+      ) : (
         <div
           className="settings-permission-identity"
           style={{ "--permission-depth": depth } as CSSProperties}
         >
-          <span className="settings-permission-tree-line" aria-hidden="true" />
-          <div className="settings-permission-copy">
-            <div className="settings-permission-name-line">
-              <strong>{permission.displayName}</strong>
-              <span className="settings-permission-kind">
-                {t(`settings.roles.kinds.${permission.pageKind}`)}
-              </span>
-              {permission.isHighRisk ? (
-                <span className="settings-permission-risk">
-                  <TriangleAlert aria-hidden="true" />
-                  {t("settings.roles.highRisk")}
-                </span>
-              ) : null}
-            </div>
-            <div className="settings-permission-meta">
-              <code>{permission.route}</code>
-              <span>{permission.pageKey}</span>
-            </div>
-          </div>
+          {identity}
         </div>
+      )}
 
-        <div className="settings-permission-toggle">
-          <Switch
-            checked={permission.canAccess}
-            disabled={savingKey?.startsWith(rowKey)}
-            onCheckedChange={(checked) => onAccessChange(permission, checked)}
-            aria-label={`${permission.displayName} ${t(
-              "settings.roles.columns.access",
-            )}`}
-          />
-        </div>
-
-        <div className="settings-permission-toggle">
-          {isAction ? (
-            <span className="settings-permission-not-applicable">
-              {t("settings.roles.notApplicable")}
-            </span>
-          ) : (
-            <Switch
-              checked={permission.canManage}
-              disabled={
-                !permission.canAccess || savingKey?.startsWith(rowKey)
-              }
-              onCheckedChange={(checked) => onManageChange(permission, checked)}
-              aria-label={`${permission.displayName} ${t(
-                "settings.roles.columns.manage",
-              )}`}
-            />
-          )}
-        </div>
+      <div className="settings-permission-toggle">
+        <Switch
+          checked={permission.canAccess}
+          disabled={savingKey?.startsWith(rowKey)}
+          onCheckedChange={(checked) => onAccessChange(permission, checked)}
+          aria-label={`${permission.displayName} ${t(
+            "settings.roles.columns.access",
+          )}`}
+        />
       </div>
 
-      {node.children.map((child) => (
-        <PermissionRow
-          key={child.permission.pageKey}
-          node={child}
-          depth={depth + 1}
-          savingKey={savingKey}
-          onAccessChange={onAccessChange}
-          onManageChange={onManageChange}
-        />
-      ))}
-    </>
+      <div className="settings-permission-toggle">
+        {isAction ? (
+          <span className="settings-permission-not-applicable">
+            {t("settings.roles.notApplicable")}
+          </span>
+        ) : (
+          <Switch
+            checked={permission.canManage}
+            disabled={
+              !permission.canAccess || savingKey?.startsWith(rowKey)
+            }
+            onCheckedChange={(checked) => onManageChange(permission, checked)}
+            aria-label={`${permission.displayName} ${t(
+              "settings.roles.columns.manage",
+            )}`}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PermissionColumn({
+  level,
+  title,
+  nodes,
+  selectedPageKey,
+  onSelect,
+  savingKey,
+  onAccessChange,
+  onManageChange,
+}: {
+  level: "first" | "second" | "third";
+  title: string;
+  nodes: PermissionTreeNode[];
+  selectedPageKey?: string | null;
+  onSelect?: (pageKey: string) => void;
+  savingKey: string | null;
+  onAccessChange: (permission: RolePagePermission, checked: boolean) => void;
+  onManageChange: (permission: RolePagePermission, checked: boolean) => void;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <section
+      className="settings-permission-level-column"
+      aria-label={t(`settings.roles.levels.${level}`)}
+    >
+      <header className="settings-permission-level-heading">
+        <div className="settings-permission-level-title">
+          <span>{t(`settings.roles.levels.${level}`)}</span>
+          <strong>{title}</strong>
+          <small>{nodes.length}</small>
+        </div>
+        <span>{t("settings.roles.columns.access")}</span>
+        <span>{t("settings.roles.columns.manage")}</span>
+      </header>
+      <div className="settings-permission-level-list">
+        {nodes.length ? (
+          nodes.map((node) => (
+            <PermissionRow
+              key={node.permission.pageKey}
+              node={node}
+              depth={0}
+              selected={node.permission.pageKey === selectedPageKey}
+              onSelect={
+                onSelect
+                  ? () => onSelect(node.permission.pageKey)
+                  : undefined
+              }
+              savingKey={savingKey}
+              onAccessChange={onAccessChange}
+              onManageChange={onManageChange}
+            />
+          ))
+        ) : (
+          <div className="settings-permission-level-empty">
+            <span>{t("settings.roles.levelEmpty")}</span>
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -213,8 +259,9 @@ export function RolePermissionsPage({
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [query, setQuery] = useState("");
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(
-    new Set(),
+  const [selectedRootKey, setSelectedRootKey] = useState<string | null>(null);
+  const [selectedSecondKey, setSelectedSecondKey] = useState<string | null>(
+    null,
   );
 
   const loadPage = useCallback(async () => {
@@ -252,6 +299,43 @@ export function RolePermissionsPage({
     () => filterPermissionTree(permissionTree, query),
     [permissionTree, query],
   );
+  const selectedRoot = useMemo(
+    () =>
+      filteredTree.find(
+        (node) => node.permission.pageKey === selectedRootKey,
+      ) ?? filteredTree[0],
+    [filteredTree, selectedRootKey],
+  );
+  const secondLevelNodes = selectedRoot?.children ?? [];
+  const selectedSecond = useMemo(
+    () =>
+      secondLevelNodes.find(
+        (node) => node.permission.pageKey === selectedSecondKey,
+      ) ?? secondLevelNodes[0],
+    [secondLevelNodes, selectedSecondKey],
+  );
+  const thirdLevelNodes = selectedSecond?.children ?? [];
+
+  useEffect(() => {
+    const nextRootKey = filteredTree[0]?.permission.pageKey ?? null;
+    setSelectedRootKey((current) =>
+      current &&
+      filteredTree.some((node) => node.permission.pageKey === current)
+        ? current
+        : nextRootKey,
+    );
+  }, [filteredTree]);
+
+  useEffect(() => {
+    const nextSecondKey = secondLevelNodes[0]?.permission.pageKey ?? null;
+    setSelectedSecondKey((current) =>
+      current &&
+      secondLevelNodes.some((node) => node.permission.pageKey === current)
+        ? current
+        : nextSecondKey,
+    );
+  }, [secondLevelNodes]);
+
   const roleCounts = useMemo(() => {
     const counts = new Map<SystemRole, { access: number; total: number }>();
     for (const role of SYSTEM_ROLES) {
@@ -263,22 +347,6 @@ export function RolePermissionsPage({
     }
     return counts;
   }, [permissions]);
-  const accessCount = visiblePermissions.filter((item) => item.canAccess).length;
-  const manageCount = visiblePermissions.filter((item) => item.canManage).length;
-  const highRiskCount = visiblePermissions.filter(
-    (item) => item.isHighRisk && item.canAccess,
-  ).length;
-  const allSectionsExpanded =
-    permissionTree.length > 0 &&
-    permissionTree.every((node) =>
-      expandedSections.has(node.permission.pageKey),
-    );
-
-  useEffect(() => {
-    setExpandedSections(
-      new Set(permissionTree.map((node) => node.permission.pageKey)),
-    );
-  }, [selectedRole, permissionTree.length]);
 
   const applyUpdates = (
     role: SystemRole,
@@ -330,14 +398,8 @@ export function RolePermissionsPage({
   const selectRole = (role: SystemRole) => {
     setSelectedRole(role);
     setQuery("");
-  };
-
-  const toggleAllSections = () => {
-    setExpandedSections(
-      allSectionsExpanded
-        ? new Set()
-        : new Set(permissionTree.map((node) => node.permission.pageKey)),
-    );
+    setSelectedRootKey(null);
+    setSelectedSecondKey(null);
   };
 
   return (
@@ -402,10 +464,6 @@ export function RolePermissionsPage({
 
             <div className="settings-permission-workspace">
               <header className="settings-permissions-toolbar">
-                <div>
-                  <span>{t("settings.roles.viewingRole")}</span>
-                  <strong>{selectedRole}</strong>
-                </div>
                 <label className="settings-permission-search">
                   <Search aria-hidden="true" />
                   <input
@@ -416,36 +474,7 @@ export function RolePermissionsPage({
                     aria-label={t("settings.roles.search")}
                   />
                 </label>
-                <Button type="button" variant="outline" onClick={toggleAllSections}>
-                  {allSectionsExpanded
-                    ? t("settings.roles.collapseAll")
-                    : t("settings.roles.expandAll")}
-                </Button>
               </header>
-
-              <div className="settings-permission-summary">
-                <div>
-                  <Eye aria-hidden="true" />
-                  <span>{t("settings.roles.summary.access")}</span>
-                  <strong>{accessCount}<small>/{visiblePermissions.length}</small></strong>
-                </div>
-                <div>
-                  <PencilLine aria-hidden="true" />
-                  <span>{t("settings.roles.summary.manage")}</span>
-                  <strong>{manageCount}</strong>
-                </div>
-                <div className={cn(highRiskCount > 0 && "has-risk")}>
-                  <TriangleAlert aria-hidden="true" />
-                  <span>{t("settings.roles.summary.highRisk")}</span>
-                  <strong>{highRiskCount}</strong>
-                </div>
-              </div>
-
-              <div className="settings-permission-column-labels" aria-hidden="true">
-                <span>{t("settings.roles.sitemap")}</span>
-                <span>{t("settings.roles.columns.access")}</span>
-                <span>{t("settings.roles.columns.manage")}</span>
-              </div>
 
               <PullToRefresh
                 className="settings-permission-tree"
@@ -453,59 +482,56 @@ export function RolePermissionsPage({
                 refreshing={loading}
               >
                 {filteredTree.length ? (
-                  <div className="settings-permission-grid">
-                    {filteredTree.map((node) => {
-                      const pageKey = node.permission.pageKey;
-                      const expanded = query.trim()
-                        ? true
-                        : expandedSections.has(pageKey);
-                      const summary = summarizeTree([node]);
-                      return (
-                        <section className="settings-permission-section" key={pageKey}>
-                          <header className="settings-permission-section-heading">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setExpandedSections((current) => {
-                                  const next = new Set(current);
-                                  if (next.has(pageKey)) next.delete(pageKey);
-                                  else next.add(pageKey);
-                                  return next;
-                                })
-                              }
-                              aria-expanded={expanded}
-                            >
-                              <span className="settings-permission-section-label">
-                                <ChevronRight aria-hidden="true" />
-                                <strong>{node.permission.displayName}</strong>
-                                <small>{summary.total}</small>
-                              </span>
-                              <span className="settings-permission-section-stat">
-                                {summary.access}
-                              </span>
-                              <span className="settings-permission-section-stat">
-                                {summary.manage}
-                              </span>
-                            </button>
-                          </header>
-                          {expanded ? (
-                            <div className="settings-permission-section-body">
-                              <PermissionRow
-                                node={node}
-                                depth={0}
-                                savingKey={savingKey}
-                                onAccessChange={(permission, checked) =>
-                                  void saveCascade(permission, "canAccess", checked)
-                                }
-                                onManageChange={(permission, checked) =>
-                                  void saveCascade(permission, "canManage", checked)
-                                }
-                              />
-                            </div>
-                          ) : null}
-                        </section>
-                      );
-                    })}
+                  <div className="settings-permission-level-columns">
+                    <PermissionColumn
+                      level="first"
+                      title={t("settings.roles.sitemap")}
+                      nodes={filteredTree}
+                      selectedPageKey={selectedRoot?.permission.pageKey}
+                      onSelect={(pageKey) => {
+                        setSelectedRootKey(pageKey);
+                        setSelectedSecondKey(null);
+                      }}
+                      savingKey={savingKey}
+                      onAccessChange={(permission, checked) =>
+                        void saveCascade(permission, "canAccess", checked)
+                      }
+                      onManageChange={(permission, checked) =>
+                        void saveCascade(permission, "canManage", checked)
+                      }
+                    />
+                    <PermissionColumn
+                      level="second"
+                      title={
+                        selectedRoot?.permission.displayName ??
+                        t("settings.roles.levelEmpty")
+                      }
+                      nodes={secondLevelNodes}
+                      selectedPageKey={selectedSecond?.permission.pageKey}
+                      onSelect={(pageKey) => setSelectedSecondKey(pageKey)}
+                      savingKey={savingKey}
+                      onAccessChange={(permission, checked) =>
+                        void saveCascade(permission, "canAccess", checked)
+                      }
+                      onManageChange={(permission, checked) =>
+                        void saveCascade(permission, "canManage", checked)
+                      }
+                    />
+                    <PermissionColumn
+                      level="third"
+                      title={
+                        selectedSecond?.permission.displayName ??
+                        t("settings.roles.levelEmpty")
+                      }
+                      nodes={thirdLevelNodes}
+                      savingKey={savingKey}
+                      onAccessChange={(permission, checked) =>
+                        void saveCascade(permission, "canAccess", checked)
+                      }
+                      onManageChange={(permission, checked) =>
+                        void saveCascade(permission, "canManage", checked)
+                      }
+                    />
                   </div>
                 ) : (
                   <div className="settings-permission-empty">
