@@ -31,6 +31,10 @@ const purchaseRecordsMigration = readFileSync(
   path.resolve(process.cwd(), "supabase/migrations/20260826130000_restaurant_daily_purchase_records.sql"),
   "utf8",
 );
+const legacyPurchaseRecordBackfillMigration = readFileSync(
+  path.resolve(process.cwd(), "supabase/migrations/20260826140000_backfill_restaurant_purchase_record_ids.sql"),
+  "utf8",
+);
 
 function makeServices(overrides: Partial<RestaurantDailyPurchaseServices> = {}): RestaurantDailyPurchaseServices {
   return {
@@ -165,6 +169,12 @@ describe("restaurant daily purchase input", () => {
     expect(purchaseRecordsMigration).toContain("record_group_id uuid := gen_random_uuid();");
     expect(purchaseRecordsMigration).toContain("filtered.record_date,\n      filtered.purchase_record_id");
     expect(purchaseRecordsMigration).not.toContain("where restaurant_id = p_restaurant_id");
+  });
+
+  it("backfills legacy purchases by date, restaurant, and supplier", () => {
+    expect(legacyPurchaseRecordBackfillMigration).toContain("gen_random_uuid() as purchase_record_id");
+    expect(legacyPurchaseRecordBackfillMigration).toContain("purchase.purchase_record_id is null");
+    expect(legacyPurchaseRecordBackfillMigration).toContain("is not distinct from legacy_groups");
   });
 
   it("keeps write controls hidden for read-only roles", async () => {
