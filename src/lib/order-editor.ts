@@ -3,6 +3,7 @@ import {
   normalizeDoNotSendToFactory,
   saveOrderFactorySettings,
 } from "@/lib/order-factory-settings";
+import { productListDisplayName } from "@/lib/products";
 
 export type OrderEditorOption = {
   id: string;
@@ -167,14 +168,14 @@ async function fetchOptions(): Promise<OrderEditorOptions> {
   const catalog = [
     ...(products.data ?? []).map((row) => ({
       id: row.id,
-      name: row.chinese_name || row.name,
+      name: productListDisplayName(row.name, row.chinese_name, row.sku ?? ""),
       sku: row.sku,
       price: row.price === null ? null : numberValue(row.price),
       kind: "product" as const,
     })),
     ...(packages.data ?? []).map((row) => ({
       id: row.id,
-      name: row.chinese_name || row.name,
+      name: productListDisplayName(row.name, row.chinese_name, row.sku ?? ""),
       sku: row.sku,
       price: row.price === null ? null : numberValue(row.price),
       kind: "package" as const,
@@ -212,7 +213,7 @@ export async function fetchOrderEditor(
         .maybeSingle(),
       supabase
         .from("order_lines")
-        .select("id,product_id,package_id,sku_snapshot,product_name_snapshot,content_snapshot,quantity,unit_price,remarks_1")
+        .select("id,product_id,package_id,sku_snapshot,product_name_snapshot,content_snapshot,quantity,unit_price,remarks_1,products(name),packages(name)")
         .eq("order_id", id)
         .eq("is_void", false)
         .order("type_sort")
@@ -270,16 +271,24 @@ export async function fetchOrderEditor(
     originalFactoryReprintRequired: copy
       ? false
       : Boolean(row.factory_reprint_required),
-    lines: (linesResult.data ?? []).map((line) => ({
-      id: copy ? crypto.randomUUID() : line.id,
-      productId: line.product_id,
-      packageId: line.package_id,
-      sku: line.sku_snapshot ?? "",
-      name: line.product_name_snapshot || line.content_snapshot || "",
-      remarks: line.remarks_1 ?? "",
-      quantity: numberValue(line.quantity),
-      unitPrice: numberValue(line.unit_price),
-    })),
+    lines: (linesResult.data ?? []).map((line) => {
+      const product = Array.isArray(line.products) ? line.products[0] : line.products;
+      const pkg = Array.isArray(line.packages) ? line.packages[0] : line.packages;
+      return {
+        id: copy ? crypto.randomUUID() : line.id,
+        productId: line.product_id,
+        packageId: line.package_id,
+        sku: line.sku_snapshot ?? "",
+        name: productListDisplayName(
+          product?.name ?? pkg?.name,
+          null,
+          line.product_name_snapshot || line.content_snapshot || "",
+        ),
+        remarks: line.remarks_1 ?? "",
+        quantity: numberValue(line.quantity),
+        unitPrice: numberValue(line.unit_price),
+      };
+    }),
     payments: copy
       ? []
       : (paymentsResult.data ?? []).map((payment) => ({

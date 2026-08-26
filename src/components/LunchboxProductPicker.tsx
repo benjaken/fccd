@@ -43,7 +43,7 @@ const EMPTY_FILTERS: PickerFilters = {
 };
 
 function itemName(item: ProductListItem) {
-  return item.chineseName || item.name || item.sku || "—";
+  return item.name || item.chineseName || item.sku || "—";
 }
 
 export function LunchboxProductPicker({

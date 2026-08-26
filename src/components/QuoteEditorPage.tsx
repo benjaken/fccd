@@ -875,7 +875,7 @@ export function QuoteEditorPage({
           id: item.id,
           kind: "product" as const,
           sku: item.sku,
-          name: item.chineseName || item.name || item.sku || "-",
+          name: item.name || item.chineseName || item.sku || "-",
           price: unitPrice,
         },
         quantity: 1,
@@ -978,7 +978,7 @@ export function QuoteEditorPage({
           const product = choiceSet.products.find((item) => item.id === packageProductId);
           return {
             packageProductId,
-            name: product?.productChineseName || product?.productName || product?.productSku || "-",
+            name: product?.productName || product?.productChineseName || product?.productSku || "-",
           };
         }),
       })),
@@ -990,7 +990,7 @@ export function QuoteEditorPage({
             id: product.productId ?? `package-choice-${product.id}`,
             kind: product.productId ? "product" as const : "custom" as const,
             sku: product.productSku,
-            name: product.productChineseName || product.productName || product.productSku || "-",
+            name: product.productName || product.productChineseName || product.productSku || "-",
             price: Number.isFinite(addonPrice) && addonPrice >= 0 ? addonPrice : 0,
           },
           quantity: pendingPackageLine.quantity,
@@ -2050,7 +2050,7 @@ export function QuoteEditorPage({
                             onChange={() => togglePackageChoice(choiceSet, product.id)}
                           />
                           <span>
-                            <strong>{product.productChineseName || product.productName || product.productSku || "-"}</strong>
+                            <strong>{product.productName || product.productChineseName || product.productSku || "-"}</strong>
                             {product.productSku ? <small>{product.productSku}</small> : null}
                           </span>
                           {product.addonPrice ? <b>+{money.format(product.addonPrice)}</b> : null}

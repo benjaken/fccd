@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { hongKongDateKey } from "@/lib/date-time";
+import { productListDisplayName } from "@/lib/products";
 
 export type QuoteEditorOption = {
   id: string;
@@ -620,7 +621,7 @@ export async function searchQuoteCatalog(
       id: row.id,
       kind,
       sku: row.sku,
-      name: row.chinese_name || row.name,
+      name: productListDisplayName(row.name, row.chinese_name, row.sku ?? "-"),
       price: row.price === null ? null : toNumber(row.price),
       labelId: label?.id ?? null,
       labelDisplayA: label?.display_name ?? null,
@@ -638,7 +639,7 @@ export async function fetchQuoteLines(orderId: string): Promise<QuoteLine[]> {
   const [lineResult, choiceResult] = await Promise.all([
     supabase
       .from("order_lines")
-      .select("id,product_id,package_id,sku_snapshot,product_name_snapshot,content_snapshot,quantity,unit_price,total_price,remarks_1,temporary_label_display_name,temporary_label_quantity_label,products(product_labels(id,display_name,quantity_label,created_at))")
+      .select("id,product_id,package_id,sku_snapshot,product_name_snapshot,content_snapshot,quantity,unit_price,total_price,remarks_1,temporary_label_display_name,temporary_label_quantity_label,products(name,product_labels(id,display_name,quantity_label,created_at)),packages(name)")
       .eq("order_id", resolvedOrderId)
       .eq("is_void", false)
       .order("item_order", { ascending: true, nullsFirst: false })
@@ -684,7 +685,7 @@ export async function fetchQuoteLines(orderId: string): Promise<QuoteLine[]> {
     }
     group.products.push({
       packageProductId: snapshot.package_product_id,
-      name: product?.chinese_name || product?.name || "-",
+      name: product?.name || product?.chinese_name || "-",
     });
     choiceGroupsByLine.set(snapshot.order_line_id, groups);
   }
@@ -692,6 +693,7 @@ export async function fetchQuoteLines(orderId: string): Promise<QuoteLine[]> {
   return (lineResult.data ?? []).map((row) => {
     type LabelRow = { id: string; display_name: string | null; quantity_label: string | null; created_at: string };
     const product = Array.isArray(row.products) ? row.products[0] : row.products;
+    const pkg = Array.isArray(row.packages) ? row.packages[0] : row.packages;
     const labels = ((product as { product_labels?: LabelRow[] } | null)?.product_labels ?? [])
       .slice()
       .sort((a, b) => a.created_at.localeCompare(b.created_at));
@@ -702,7 +704,11 @@ export async function fetchQuoteLines(orderId: string): Promise<QuoteLine[]> {
       productId: row.product_id,
       packageId: row.package_id,
       sku: row.sku_snapshot,
-      name: row.product_name_snapshot || row.content_snapshot,
+      name: productListDisplayName(
+        (product as { name?: string | null } | null)?.name ?? (pkg as { name?: string | null } | null)?.name,
+        null,
+        row.product_name_snapshot || row.content_snapshot || "",
+      ),
       quantity: toNumber(row.quantity),
       unitPrice: toNumber(row.unit_price),
       totalPrice: quoteLineTotal(row.quantity, row.unit_price, row.total_price),

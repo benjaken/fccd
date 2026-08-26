@@ -56,7 +56,7 @@ import { ProductsListPage } from "@/components/ProductsListPage";
 import { CatalogCreatePage } from "@/components/CatalogCreatePage";
 import i18n from "@/i18n";
 import type { PackageDetail, PackageListResult } from "@/lib/packages";
-import { hasProductSku, normalizeProductSku, type ProductDetail, type ProductListResult } from "@/lib/products";
+import { hasProductSku, normalizeProductSku, productListDisplayName, type ProductDetail, type ProductListResult } from "@/lib/products";
 
 const productResult: ProductListResult = {
   total: 1,
@@ -235,6 +235,14 @@ describe("hasProductSku", () => {
     expect(hasProductSku("")).toBe(false);
     expect(hasProductSku("   ")).toBe(false);
     expect(hasProductSku("CC-001")).toBe(true);
+  });
+});
+
+describe("productListDisplayName", () => {
+  it("prefers 產品名稱 over 中文名稱", () => {
+    expect(productListDisplayName("Chicken rice", "香草雞飯")).toBe("Chicken rice");
+    expect(productListDisplayName("  ", "香草雞飯")).toBe("香草雞飯");
+    expect(productListDisplayName(null, null, "fallback")).toBe("fallback");
   });
 });
 

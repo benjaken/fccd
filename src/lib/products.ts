@@ -12,6 +12,15 @@ export function hasProductSku(sku: string | null | undefined) {
   return Boolean(normalizeProductSku(sku));
 }
 
+/** Prefer 產品名稱 (`name`) over 中文名稱 for order and quote product lists. */
+export function productListDisplayName(
+  name: string | null | undefined,
+  chineseName?: string | null,
+  fallback = "",
+) {
+  return name?.trim() || chineseName?.trim() || fallback;
+}
+
 export type ProductPreset = "all" | "catering" | "lunchbox" | "ala-carte";
 
 export type ProductTag = {

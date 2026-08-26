@@ -443,19 +443,19 @@ describe("Quote editor", () => {
     expect(within(panel).getByRole("heading", { name: "More products" })).toBeInTheDocument();
     expect(within(panel).queryByRole("button", { name: /edit/i })).not.toBeInTheDocument();
 
-    await user.click(within(panel).getByRole("button", { name: "Select 香草雞飯" }));
-    await user.click(within(panel).getByRole("button", { name: "Select 魚香茄子飯" }));
+    await user.click(within(panel).getByRole("button", { name: "Select Chicken rice" }));
+    await user.click(within(panel).getByRole("button", { name: "Select Eggplant rice" }));
     await user.click(within(panel).getByRole("button", { name: "Confirm and add 2 items" }));
 
-    expect(await screen.findByRole("row", { name: /CBE001 香草雞飯/ })).toBeInTheDocument();
-    expect(screen.getByRole("row", { name: /CBE002 魚香茄子飯/ })).toBeInTheDocument();
+    expect(await screen.findByRole("row", { name: /CBE001 Chicken rice/ })).toBeInTheDocument();
+    expect(screen.getByRole("row", { name: /CBE002 Eggplant rice/ })).toBeInTheDocument();
     expect(saveLine).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: "Search lunch box products" }));
     const reopenedPanel = await screen.findByRole("dialog", { name: "Choose lunch box products" });
     expect(within(reopenedPanel).getByText("2", { selector: ".lunchbox-picker-column-heading span" })).toBeInTheDocument();
-    expect(within(reopenedPanel).getByRole("button", { name: "Unselect 香草雞飯" })).toHaveAttribute("aria-pressed", "true");
-    expect(within(reopenedPanel).getByRole("button", { name: "Unselect 魚香茄子飯" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(reopenedPanel).getByRole("button", { name: "Unselect Chicken rice" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(reopenedPanel).getByRole("button", { name: "Unselect Eggplant rice" })).toHaveAttribute("aria-pressed", "true");
     await user.click(within(reopenedPanel).getByRole("button", { name: "Cancel" }));
 
     await user.click(within(document.getElementById("quote-editor-editable-items")!).getByRole("button", { name: "Save changes" }));

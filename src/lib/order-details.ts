@@ -308,9 +308,9 @@ export async function fetchOrderDetail(
       productId: row.product_id,
       packageId: row.package_id,
       productName: firstNonEmptyText(
-        row.product_name_snapshot,
         relatedCatalogText(row.products, "name"),
         relatedCatalogText(row.packages, "name"),
+        row.product_name_snapshot,
       ),
       content: row.content_snapshot,
       quantity: decimal(row.quantity),
