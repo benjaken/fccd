@@ -67,6 +67,10 @@
   color: var(--muted-foreground);
 }
 
+.quotes-table-wrap .quote-description-cell textarea {
+  min-height: 3.5rem;
+}
+
 .table-wrap:has(
     > table > tbody > tr > .table-actions-cell:last-child,
     > table > thead > tr > th[aria-label*="action" i],

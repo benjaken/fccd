@@ -470,7 +470,7 @@ export function QuotesListPage({
                 <td>{(quote.quantity ?? 0).toLocaleString(i18n.language)}</td>
                 <td className="quote-description-cell">
                   <textarea
-                    rows={3}
+                    rows={2}
                     readOnly={!canManage}
                     value={
                       descriptionDrafts[quote.id] ?? quote.quoteDescription ?? ""
