@@ -399,8 +399,11 @@ export function QuotesListPage({
                   </button>
                 </th>
                 <th>{t("quotes.columns.customer")}</th>
-                <th>{t("quotes.customerDetails.deliveryDate")}</th>
-                <th>{t("quotes.customerDetails.shipOutTime")}</th>
+                <th>
+                  {t("quotes.customerDetails.deliveryDate")} /{" "}
+                  {t("quotes.customerDetails.deliveryTime")}
+                </th>
+                <th>{t("quotes.customerDetails.quantity")}</th>
                 <th>{t("quotes.columns.description")}</th>
                 <th>{t("quotes.columns.amount")}</th>
                 <th>{t("quotes.columns.generatedOrder")}</th>
@@ -443,14 +446,15 @@ export function QuotesListPage({
                       .filter(Boolean)
                       .join(" ")}
                   </div>
-                  <div>{t("quotes.customerDetails.deliveryTime")}: {quote.deliveryTime || ""}</div>
-                  <div>{t("quotes.customerDetails.quantity")}: {(quote.quantity ?? 0).toLocaleString(i18n.language)}</div>
                   {quote.asanaLink && (
                     <a href={quote.asanaLink} target="_blank" rel="noopener noreferrer">Asana Link</a>
                   )}
                 </td>
-                <td>{hongKongDateKey(quote.deliveryAt)}</td>
-                <td>{quote.shipOutTime || ""}</td>
+                <td>
+                  <div>{hongKongDateKey(quote.deliveryAt)}</div>
+                  <div>{quote.deliveryTime || ""}</div>
+                </td>
+                <td>{(quote.quantity ?? 0).toLocaleString(i18n.language)}</td>
                 <td className="quote-description-cell">
                   <textarea
                     rows={3}

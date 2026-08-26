@@ -87,8 +87,8 @@ describe("Catering quotes list", () => {
     expect(screen.getByText("62897758")).toBeInTheDocument();
     expect(screen.getByText("(送貨上門) 油尖旺")).toBeInTheDocument();
     expect(screen.getByText("2026-08-18")).toBeInTheDocument();
-    expect(screen.getByText("送貨時間: 10:00 - 11:00")).toBeInTheDocument();
-    expect(screen.getByText("數量: 6")).toBeInTheDocument();
+    expect(screen.getByText("10:00 - 11:00")).toBeInTheDocument();
+    expect(screen.getByText("6")).toBeInTheDocument();
     expect(
       within(screen.getByRole("table"))
         .getAllByRole("columnheader")
@@ -98,8 +98,8 @@ describe("Catering quotes list", () => {
       "創建日期",
       "報價單號",
       "客戶",
-      "送貨日期",
-      "出車時間",
+      "送貨日期 / 送貨時間",
+      "數量",
       "報價單描述",
       "總額",
       "生成訂單",
@@ -276,11 +276,11 @@ describe("Catering quotes list", () => {
     const cells = within(row as HTMLTableRowElement).getAllByRole("cell");
     const customerCell = cells[3];
     expect(customerCell).not.toHaveTextContent("未設定");
-    expect(customerCell).toHaveTextContent("送貨時間:");
     expect(customerCell).not.toHaveTextContent("送貨日期:");
-    expect(customerCell).not.toHaveTextContent("出車時間:");
+    expect(customerCell).not.toHaveTextContent("送貨時間:");
+    expect(customerCell).not.toHaveTextContent("數量:");
     expect(cells[4]?.textContent).toBe("");
-    expect(cells[5]?.textContent).toBe("");
+    expect(cells[5]?.textContent).toBe("6");
   });
 
   it("edits and saves the quote description on blur", async () => {
