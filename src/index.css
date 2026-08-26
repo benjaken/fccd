@@ -19539,6 +19539,7 @@ a.masoft-order-tag:focus-visible {
 @media (min-width: 901px) {
   .quote-editor-tabs.is-quote {
     width: min(100%, 720px);
+    margin-inline: auto;
   }
 }
 
