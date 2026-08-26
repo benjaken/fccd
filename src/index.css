@@ -11529,16 +11529,16 @@ a.masoft-order-tag:focus-visible {
 .restaurant-purchase-record-table th:nth-child(4) { width: 22rem; }
 .restaurant-purchase-record-table th:nth-child(5) { width: 13rem; text-align: right; }
 
-.restaurant-purchase-entry-table {
+.kitchen-supplier-entry-table.restaurant-purchase-entry-table {
   min-width: 1040px;
 }
 
-.restaurant-purchase-entry-table th:nth-child(1) { width: 11rem; }
-.restaurant-purchase-entry-table th:nth-child(2) { width: 17rem; }
-.restaurant-purchase-entry-table th:nth-child(3) { width: 15rem; }
-.restaurant-purchase-entry-table th:nth-child(4) { width: 12rem; }
-.restaurant-purchase-entry-table th:nth-child(5) { width: 13rem; }
-.restaurant-purchase-entry-table th:nth-child(6) { width: 6rem; text-align: center; }
+.kitchen-supplier-entry-table.restaurant-purchase-entry-table th:nth-child(1) { width: 11rem; }
+.kitchen-supplier-entry-table.restaurant-purchase-entry-table th:nth-child(2) { width: 17rem; }
+.kitchen-supplier-entry-table.restaurant-purchase-entry-table th:nth-child(3) { width: 15rem; }
+.kitchen-supplier-entry-table.restaurant-purchase-entry-table th:nth-child(4) { width: 12rem; }
+.kitchen-supplier-entry-table.restaurant-purchase-entry-table th:nth-child(5) { width: 13rem; }
+.kitchen-supplier-entry-table.restaurant-purchase-entry-table th:nth-child(6) { width: 6rem; text-align: center; }
 
 @media (max-width: 900px) {
   .restaurant-purchase-panel .kitchen-supplier-record-toolbar,
