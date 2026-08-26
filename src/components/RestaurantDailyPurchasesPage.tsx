@@ -18,6 +18,7 @@ import {
   fetchRestaurantPurchaseRestaurants,
   fetchRestaurantPurchaseSuppliers,
   fetchRestaurantPurchaseTypes,
+  mergeRestaurantDailyPurchaseRecords,
   saveRestaurantDailyPurchaseRecord,
   updateRestaurantDailyPurchaseEntry,
   type RestaurantDailyPurchaseEntry,
@@ -249,10 +250,9 @@ function PurchaseEntriesPanel({
     void services.loadEntries({ filters: entryFilters, page, pageSize: EDITOR_PAGE_SIZE })
       .then((result) => {
         if (!active) return;
-        const itemsWithData = result.items.filter((row) => row.amount > 0);
-        setRows(itemsWithData);
+        setRows(result.items);
         setTotal(result.total);
-        setDrafts(Object.fromEntries(itemsWithData.map((row) => [row.id, String(row.amount)])));
+        setDrafts(Object.fromEntries(result.items.map((row) => [row.id, String(row.amount)])));
       })
       .catch((loadError) => {
         if (active) setError(loadError instanceof Error ? loadError.message : t("restaurantDailyPurchases.entriesLoadError"));
@@ -482,7 +482,7 @@ export function RestaurantDailyPurchasesPage({
     setError(null);
     void services.loadRecords({ filters, page: 1, pageSize: MAIN_ROW_LIMIT })
       .then((result) => {
-        if (active) setRows(result.items);
+        if (active) setRows(mergeRestaurantDailyPurchaseRecords(result.items));
       })
       .catch((loadError) => {
         if (active) setError(loadError instanceof Error ? loadError.message : t("restaurantDailyPurchases.loadError"));

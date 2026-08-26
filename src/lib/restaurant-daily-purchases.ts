@@ -43,6 +43,37 @@ export type RestaurantDailyPurchaseEntry = {
   amount: number;
 };
 
+export function mergeRestaurantDailyPurchaseRecords(records: RestaurantDailyPurchaseRecord[]) {
+  const grouped = new Map<string, RestaurantDailyPurchaseRecord>();
+
+  for (const record of records) {
+    const key = JSON.stringify([record.date, record.restaurantId, record.supplierId]);
+    const existing = grouped.get(key);
+    if (!existing) {
+      grouped.set(key, {
+        ...record,
+        recordId: null,
+        categories: record.categories.map((category) => ({ ...category })),
+      });
+      continue;
+    }
+
+    const categories = new Map(existing.categories.map((category) => [category.id, category]));
+    for (const category of record.categories) {
+      const existingCategory = categories.get(category.id);
+      if (existingCategory) {
+        existingCategory.amount += category.amount;
+      } else {
+        categories.set(category.id, { ...category });
+      }
+    }
+    existing.categories = [...categories.values()];
+    existing.total += record.total;
+  }
+
+  return [...grouped.values()];
+}
+
 type PurchaseRecordRpcRow = {
   record_date: string | null;
   purchase_record_id: string | null;
