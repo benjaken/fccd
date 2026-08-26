@@ -45,6 +45,8 @@ const QUOTE_SKELETON_COLUMNS = [
   { width: "7rem" },
   { width: "7rem" },
   { width: "10rem" },
+  { width: "8rem" },
+  { width: "8rem" },
   { width: "12rem" },
   { width: "6rem" },
   { width: "6rem" },
@@ -397,6 +399,8 @@ export function QuotesListPage({
                   </button>
                 </th>
                 <th>{t("quotes.columns.customer")}</th>
+                <th>{t("quotes.customerDetails.deliveryDate")}</th>
+                <th>{t("quotes.customerDetails.shipOutTime")}</th>
                 <th>{t("quotes.columns.description")}</th>
                 <th>{t("quotes.columns.amount")}</th>
                 <th>{t("quotes.columns.generatedOrder")}</th>
@@ -439,14 +443,14 @@ export function QuotesListPage({
                       .filter(Boolean)
                       .join(" ")}
                   </div>
-                  <div>{t("quotes.customerDetails.deliveryDate")}: {hongKongDateKey(quote.deliveryAt)}</div>
                   <div>{t("quotes.customerDetails.deliveryTime")}: {quote.deliveryTime || ""}</div>
-                  <div>{t("quotes.customerDetails.shipOutTime")}: {quote.shipOutTime || ""}</div>
                   <div>{t("quotes.customerDetails.quantity")}: {(quote.quantity ?? 0).toLocaleString(i18n.language)}</div>
                   {quote.asanaLink && (
                     <a href={quote.asanaLink} target="_blank" rel="noopener noreferrer">Asana Link</a>
                   )}
                 </td>
+                <td>{hongKongDateKey(quote.deliveryAt)}</td>
+                <td>{quote.shipOutTime || ""}</td>
                 <td className="quote-description-cell">
                   <textarea
                     rows={3}
