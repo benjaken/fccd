@@ -343,7 +343,7 @@ export function FactoryOrderJobView({
         <div className="factory-order-summary">
           <h1 className="factory-order-number">{orderNumber}</h1>
           <dl className="factory-order-meta">
-            <div>
+            <div className="is-date">
               {dateKey
                 ? t("factoryBoard.orderDate", {
                     month: dateKey.slice(5, 7),
@@ -352,7 +352,7 @@ export function FactoryOrderJobView({
                   })
                 : empty}
             </div>
-            <div>
+            <div className="is-dispatch">
               <button
                 type="button"
                 className="factory-dispatch-time-trigger"
@@ -366,10 +366,10 @@ export function FactoryOrderJobView({
                 {t("factoryBoard.dispatchTime")}: {dispatchTime}
               </button>
             </div>
-            <div>
+            <div className="is-arrival">
               {t("factoryBoard.arrivalWindow")}: {arrivalWindow}
             </div>
-            <div>
+            <div className="is-phone">
               {t("factoryBoard.phone")}: {item.customerPhone || empty}
             </div>
             <div className="is-address">

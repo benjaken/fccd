@@ -530,7 +530,10 @@ describe("FactoryBoardPage", () => {
     const orderView = within(orderMain as HTMLElement);
     expect(orderView.getByText("08月18日 星期二")).toBeInTheDocument();
     expect(orderView.getByText("出車時間: 10:00")).toBeInTheDocument();
-    expect(orderView.getByText("送到時間: 11:00 - 12:00")).toBeInTheDocument();
+    expect(orderView.getByRole("button", { name: "修改出車時間" })).toHaveClass(
+      "factory-dispatch-time-trigger",
+    );
+    expect(orderView.getByText("送到時間: 11:00 - 12:00")).toHaveClass("is-arrival");
     expect(
       orderView.getByText(/地址: 大埔汀角道.*\* 車邊交收/),
     ).toBeInTheDocument();

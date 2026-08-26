@@ -22803,20 +22803,44 @@ button.factory-job-card:focus-visible {
 
 .factory-order-meta {
   display: grid;
-  grid-template-columns: 1.1fr 0.9fr 1fr 0.9fr;
-  gap: 10px 18px;
+  grid-template-columns: auto auto minmax(20rem, 1fr) max-content;
+  grid-template-areas:
+    "date dispatch arrival arrival"
+    "phone address address customer";
+  gap: 16px 48px;
   margin: 0;
   font-size: 36px;
   font-weight: 750;
   line-height: 1.35;
 }
 
+.factory-order-meta .is-date {
+  grid-area: date;
+  white-space: nowrap;
+}
+
+.factory-order-meta .is-dispatch {
+  grid-area: dispatch;
+  white-space: nowrap;
+}
+
+.factory-order-meta .is-arrival {
+  grid-area: arrival;
+  white-space: nowrap;
+}
+
+.factory-order-meta .is-phone {
+  grid-area: phone;
+  white-space: nowrap;
+}
+
 .factory-order-meta .is-address {
-  grid-column: 1 / 4;
+  grid-area: address;
 }
 
 .factory-order-meta .is-customer {
-  grid-column: 4;
+  grid-area: customer;
+  white-space: nowrap;
 }
 
 .factory-menu-summary-table {
@@ -22988,20 +23012,21 @@ button.factory-job-card:focus-visible {
   }
 }
 
-.factory-dispatch-time-trigger {
+.factory-order-meta .factory-dispatch-time-trigger {
   appearance: none;
   padding: 0;
   border: 0;
   background: transparent;
   color: inherit;
   font: inherit;
+  font-size: inherit;
   font-weight: inherit;
   line-height: inherit;
   text-align: left;
   cursor: pointer;
 }
 
-.factory-dispatch-time-trigger:focus-visible {
+.factory-order-meta .factory-dispatch-time-trigger:focus-visible {
   outline: 3px solid #00c85a;
   outline-offset: 4px;
 }
@@ -23914,8 +23939,13 @@ button.factory-job-card:focus-visible {
     grid-row: auto;
   }
 
+  .factory-order-meta .is-date,
+  .factory-order-meta .is-dispatch,
+  .factory-order-meta .is-arrival,
+  .factory-order-meta .is-phone,
   .factory-order-meta .is-address,
   .factory-order-meta .is-customer {
+    grid-area: auto;
     grid-column: auto;
   }
 
