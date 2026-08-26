@@ -249,9 +249,10 @@ function PurchaseEntriesPanel({
     void services.loadEntries({ filters: entryFilters, page, pageSize: EDITOR_PAGE_SIZE })
       .then((result) => {
         if (!active) return;
-        setRows(result.items);
+        const itemsWithData = result.items.filter((row) => row.amount > 0);
+        setRows(itemsWithData);
         setTotal(result.total);
-        setDrafts(Object.fromEntries(result.items.map((row) => [row.id, String(row.amount)])));
+        setDrafts(Object.fromEntries(itemsWithData.map((row) => [row.id, String(row.amount)])));
       })
       .catch((loadError) => {
         if (active) setError(loadError instanceof Error ? loadError.message : t("restaurantDailyPurchases.entriesLoadError"));
@@ -279,7 +280,14 @@ function PurchaseEntriesPanel({
     setError(null);
     try {
       await services.updateEntry(row.id, amount);
-      setRows((current) => current.map((item) => item.id === row.id ? { ...item, amount } : item));
+      if (amount > 0) {
+        setRows((current) => current.map((item) => item.id === row.id ? { ...item, amount } : item));
+      } else {
+        const nextTotal = Math.max(0, total - 1);
+        const nextPages = Math.max(1, Math.ceil(nextTotal / EDITOR_PAGE_SIZE));
+        if (page > nextPages) setPage(nextPages);
+        else setReloadKey((value) => value + 1);
+      }
       onChanged();
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : t("restaurantDailyPurchases.saveError"));
