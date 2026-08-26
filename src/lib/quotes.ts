@@ -307,7 +307,7 @@ export async function updateQuoteDescription(
       updated_at: new Date().toISOString(),
     })
     .eq("id", quoteId)
-    .in("document_type", ["quote", "unconfirmed"]);
+    .eq("document_type", "quote");
   if (error) throw error;
 }
 

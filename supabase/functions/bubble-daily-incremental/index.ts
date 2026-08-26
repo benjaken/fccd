@@ -17,8 +17,8 @@ import {
 import { remainingMappings } from "./remaining-mappings.ts";
 import {
   AUGUST_OVERWRITE_CONFIRMATION,
-  AUGUST_OVERWRITE_SINCE,
   changedOverwriteFields,
+  isFieldAwareOverwriteSourceType,
   isOverwriteSourceType,
   mergeOverwriteRow,
   normalizeOrderNumber,
@@ -59,11 +59,72 @@ type TypeResult = {
   conflicts: number;
   junctionsInserted: number;
   metadataUpdated?: number;
+  snapshotsUpdated?: number;
   pages: number;
   status: "completed" | "failed" | "resumable";
   error?: string;
   errorDetail?: string;
 };
+
+async function hydrateOrderLineSnapshots(
+  client: AdminClient,
+  records: BubbleRecord[],
+): Promise<number> {
+  const candidates = records.flatMap((record) => {
+    const lineLegacyId = requireLegacyId(record);
+    const productLegacyId = typeof record.Product === "string"
+      ? record.Product.trim()
+      : "";
+    if (!productLegacyId) return [];
+    return [{ lineLegacyId, productLegacyId }];
+  });
+  if (!candidates.length) return 0;
+
+  const [lineRows, productRows] = await Promise.all([
+    selectedLegacyRows(
+      client,
+      "order_lines",
+      candidates.map((item) => item.lineLegacyId),
+      ["id", "sku_snapshot", "product_name_snapshot"],
+    ),
+    selectedLegacyRows(
+      client,
+      "products",
+      candidates.map((item) => item.productLegacyId),
+      ["sku", "name", "chinese_name"],
+    ),
+  ]);
+  const lines = new Map(
+    lineRows.map((row) => [String(row.legacy_id), row]),
+  );
+  const products = new Map(
+    productRows.map((row) => [String(row.legacy_id), row]),
+  );
+
+  let updated = 0;
+  for (const candidate of candidates) {
+    const line = lines.get(candidate.lineLegacyId);
+    const product = products.get(candidate.productLegacyId);
+    if (!line || !product) continue;
+    const patch: Record<string, unknown> = {};
+    if (!String(line.sku_snapshot ?? "").trim()) {
+      const sku = String(product.sku ?? "").trim();
+      if (sku) patch.sku_snapshot = sku;
+    }
+    if (!String(line.product_name_snapshot ?? "").trim()) {
+      const name = String(product.name ?? product.chinese_name ?? "").trim();
+      if (name) patch.product_name_snapshot = name;
+    }
+    if (!Object.keys(patch).length) continue;
+    const { error } = await client
+      .from("order_lines")
+      .update(patch)
+      .eq("id", line.id);
+    if (error) throw error;
+    updated += 1;
+  }
+  return updated;
+}
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -361,6 +422,7 @@ async function syncOrderMetadata(
     [
       "id",
       "document_type",
+      "delivery_district_id",
       "shipping_method_id",
       "shipping_method_legacy_id",
     ],
@@ -416,11 +478,15 @@ async function syncOrderMetadata(
   );
   const deliveryUpdates: Array<Record<string, unknown>> = [];
   const deliveryInserts: Array<Record<string, unknown>> = [];
+  const orderDistrictUpdates: Array<{ id: string; districtId: string }> = [];
   for (const item of metadata) {
     if (!item.districtLegacyId) continue;
     const order = orders.get(item.orderLegacyId);
     const districtId = districts.get(item.districtLegacyId);
     if (!order || !districtId) continue;
+    if (!order.delivery_district_id) {
+      orderDistrictUpdates.push({ id: String(order.id), districtId });
+    }
     const existing = deliveries.get(String(order.id)) ?? [];
     if (existing.length) {
       deliveryUpdates.push(...existing.flatMap((delivery) =>
@@ -454,6 +520,16 @@ async function syncOrderMetadata(
       bubble_created_at: mapped.bubble_created_at ?? null,
       bubble_modified_at: mapped.bubble_modified_at ?? null,
     });
+  }
+  for (const update of orderDistrictUpdates) {
+    const { data, error } = await client
+      .from("orders")
+      .update({ delivery_district_id: update.districtId })
+      .eq("id", update.id)
+      .is("delivery_district_id", null)
+      .select("id");
+    if (error) throw error;
+    result.districtsUpdated += data?.length ?? 0;
   }
   for (let index = 0; index < deliveryUpdates.length; index += INSERT_CHUNK) {
     const { data, error } = await client
@@ -984,10 +1060,6 @@ async function processType(
     }
     if (mapping.sourceType === "a_order" && fetched.records.length) {
       await syncOrderShippingMethods(client, fetched.records);
-      const metadata = await syncOrderMetadata(client, fetched.records);
-      result.junctionsInserted += metadata.tagsInserted;
-      result.metadataUpdated =
-        metadata.districtsUpdated + metadata.deliveriesCreated;
     }
     if (mapping.sourceType === "b_deliveryschedule" && fetched.records.length) {
       await syncDeliveryFulfillment(client, fetched.records);
@@ -1011,6 +1083,22 @@ async function processType(
       parentRows,
     );
     result.inserted = insertedParents.length;
+
+    // Metadata references the order UUID, so it must run after fresh A_Order
+    // rows have been inserted. Running it before the parent write silently
+    // skipped tags and fallback districts on an order's first sync.
+    if (mapping.sourceType === "a_order" && fetched.records.length) {
+      const metadata = await syncOrderMetadata(client, fetched.records);
+      result.junctionsInserted += metadata.tagsInserted;
+      result.metadataUpdated =
+        metadata.districtsUpdated + metadata.deliveriesCreated;
+    }
+    if (mapping.sourceType === "s_order" && fetched.records.length) {
+      result.snapshotsUpdated = await hydrateOrderLineSnapshots(
+        client,
+        fetched.records,
+      );
+    }
 
     const insertedIds = new Set(
       insertedParents.map((row) => row.legacy_id),
@@ -1136,6 +1224,49 @@ async function writeOverwriteRows(
   return written;
 }
 
+async function replaceOverwriteChildren(
+  client: AdminClient,
+  mapping: SourceMapping,
+  records: BubbleRecord[],
+): Promise<{ deleted: number; written: number }> {
+  if (!mapping.children || records.length === 0) {
+    return { deleted: 0, written: 0 };
+  }
+  const parentRows = await legacyIdRows(
+    client,
+    mapping.table,
+    records.map(requireLegacyId),
+  );
+  if (parentRows.length !== records.length) {
+    throw new Error("Overwrite child rebuild could not resolve every parent.");
+  }
+  const parentIds = new Map(parentRows.map((row) => [row.legacy_id, row.id]));
+  let deleted = 0;
+  let written = 0;
+  for (const child of mapping.children(records, parentIds)) {
+    const parentField = child.onConflict.split(",")[0]?.trim();
+    if (!parentField) throw new Error("Overwrite child conflict key is invalid.");
+    const ids = parentRows.map((row) => row.id);
+    for (let index = 0; index < ids.length; index += QUERY_CHUNK) {
+      const { data, error } = await client
+        .from(child.table)
+        .delete()
+        .in(parentField, ids.slice(index, index + QUERY_CHUNK))
+        .select("id");
+      if (error) throw error;
+      deleted += data?.length ?? 0;
+    }
+    await resolveRelations(client, child.rows, child.relations);
+    written += await upsertJunctions(
+      client,
+      child.table,
+      child.onConflict,
+      child.rows,
+    );
+  }
+  return { deleted, written };
+}
+
 async function processAugustOverwrite(
   client: AdminClient,
   sourceType: OverwriteSourceType,
@@ -1162,12 +1293,17 @@ async function processAugustOverwrite(
 
   const mappedRows = fetched.records.map(mapping.map);
   await resolveRelations(client, mappedRows, mapping.relations);
-  const fields = [
-    ...Object.keys(overwriteFieldSources[sourceType]),
-    ...(sourceType === "a_order"
-      ? ["shopify_order_id", "payment_status_source"]
-      : []),
-  ];
+  const fieldAware = isFieldAwareOverwriteSourceType(sourceType);
+  const fields = fieldAware
+    ? [
+      ...Object.keys(overwriteFieldSources[sourceType]),
+      ...(sourceType === "a_order"
+        ? ["shopify_order_id", "payment_status_source"]
+        : []),
+    ]
+    : [...new Set(mappedRows.flatMap((row) => Object.keys(row)))].filter(
+      (field) => field !== "legacy_id",
+    );
   const existingRows = await selectedLegacyRows(
     client,
     mapping.table,
@@ -1187,6 +1323,11 @@ async function processAugustOverwrite(
   let blockedShopifyDuplicates = 0;
   let activeShopifyShadows = 0;
   const changedFieldCounts: Record<string, number> = {};
+  const changePreview: Array<{
+    legacyId: string;
+    changedFields: string[];
+    newValues: Record<string, unknown>;
+  }> = [];
 
   for (let index = 0; index < fetched.records.length; index += 1) {
     const source = fetched.records[index];
@@ -1206,13 +1347,24 @@ async function processAugustOverwrite(
       blockedShopifyDuplicates += 1;
       continue;
     }
-    const row = mergeOverwriteRow(sourceType, source, mapped, existing);
+    const row = fieldAware
+      ? mergeOverwriteRow(sourceType, source, mapped, existing)
+      : mapped;
     const changedFields = existing ? changedOverwriteFields(row, existing) : [];
     if (!existing) inserted += 1;
     else if (changedFields.length) updated += 1;
     else unchanged += 1;
     for (const field of changedFields) {
       changedFieldCounts[field] = (changedFieldCounts[field] ?? 0) + 1;
+    }
+    if (changedFields.length && changePreview.length < 100) {
+      changePreview.push({
+        legacyId,
+        changedFields,
+        newValues: Object.fromEntries(
+          changedFields.map((field) => [field, row[field]]),
+        ),
+      });
     }
     if (!existing || changedFields.length) {
       rowsToWrite.push(row);
@@ -1225,6 +1377,9 @@ async function processAugustOverwrite(
   if (mode === "apply" && written !== rowsToWrite.length) {
     throw new Error("Overwrite write count did not match the dry-run set.");
   }
+  const children = mode === "apply" && !fieldAware
+    ? await replaceOverwriteChildren(client, mapping, fetched.records)
+    : { deleted: 0, written: 0 };
   return {
     status: "completed" as const,
     operation: "august_2026_overwrite",
@@ -1240,7 +1395,10 @@ async function processAugustOverwrite(
     blockedShopifyDuplicates,
     activeShopifyShadows,
     changedFieldCounts,
+    changePreview,
     written,
+    childRowsDeleted: children.deleted,
+    childRowsWritten: children.written,
     pages: fetched.pages,
   };
 }

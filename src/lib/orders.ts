@@ -328,7 +328,7 @@ export async function fetchOrders({
   let query = supabase
     .from("orders")
     .select(selectedFields, { count: "exact" })
-    .eq("document_type", preset === "pending" ? "unconfirmed" : "order")
+    .eq("document_type", preset === "pending" ? "quote" : "order")
     .is("archived_at", null);
 
   for (const { column, ascending, nullsFirst } of getOrderListSorts(deliverySort)) {

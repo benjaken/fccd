@@ -329,9 +329,7 @@ const phaseC: SourceMapping[] = [
       document_type: r["(Quote)chg to order"] === true ||
           r.AddOrder_DONE === true || r.Shopify_NewOrder === true
         ? "order"
-        : r["(Quote) Status"] || r["(Quote)_description"]
-        ? "quote"
-        : "unconfirmed",
+        : "quote",
       quote_status: r["(Quote) Status"] == null
         ? null
         : String(r["(Quote) Status"]),

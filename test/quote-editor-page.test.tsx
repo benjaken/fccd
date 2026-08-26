@@ -1222,14 +1222,14 @@ describe("Quote editor", () => {
     HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
   });
 
-  it("shows notification and conversion actions only for unconfirmed order details", async () => {
+  it("shows notification and conversion actions for quote details", async () => {
     const user = userEvent.setup();
     const sendConfirmation = vi.fn().mockResolvedValue(undefined);
     const convertQuote = vi.fn().mockResolvedValue({ id: "order-1", orderNumber: "FCLO20260801" });
     const saveDetails = vi.fn().mockResolvedValue(undefined);
     const saveFinancialDetails = vi.fn().mockResolvedValue(undefined);
     const summary = {
-      id: "quote-1", documentType: "unconfirmed" as const, orderNumber: "FCLQ20260801", channelId: "channel-1",
+      id: "quote-1", documentType: "quote" as const, orderNumber: "FCLQ20260801", channelId: "channel-1",
       draft: {
         channelId: "channel-1", customerName: "Customer", companyName: "Company",
         contactA: "12345678", contactB: "", email: "quote@example.com", asanaLink: "",

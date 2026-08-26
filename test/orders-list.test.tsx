@@ -764,7 +764,7 @@ describe("Orders list", () => {
     expect(Boolean(invoiceButton)).toBe(paidDocuments);
   });
 
-  it("loads the pending preset from unconfirmed orders", async () => {
+  it("loads the pending preset from quotes", async () => {
     const loadOrders = vi.fn().mockResolvedValue(orderResult);
 
     render(
@@ -1024,7 +1024,7 @@ describe("Orders list", () => {
     const source = readFileSync(
       path.resolve(process.cwd(), "src/lib/orders.ts"),
       "utf8",
-    );
+    ).replace(/\r\n/g, "\n");
     expect(source).toContain('query.overlaps("order_status_legacy_ids", legacyIds)');
     expect(source).toContain('.not("factory_packing_note", "is", null)');
     expect(source).toContain('.neq("factory_packing_note", "")');
