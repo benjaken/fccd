@@ -4,6 +4,7 @@ import {
   resolveOrderStatuses,
   type OrderStatusView,
 } from "@/lib/order-statuses";
+import { districtNameFromAddress } from "@/lib/district-name";
 
 export type ReadOnlyOrderDetail = {
   id: string;
@@ -18,6 +19,7 @@ export type ReadOnlyOrderDetail = {
   contactA: string | null;
   contactB: string | null;
   address: string | null;
+  districtName?: string | null;
   customerNote: string | null;
   internalNote?: string | null;
   quoteStatus: string | null;
@@ -106,7 +108,7 @@ export type OrderDetailResult = {
 };
 
 const fields =
-  "id,document_type,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,shipping_address_snapshot,customer_note_snapshot,remarks,quote_status,quote_description_snapshot,delivery_terms_snapshot,delivery_at,delivery_time,ship_out_time,delivery_status,is_sent_to_factory,factory_date,factory_packing_note,factory_print_date,factory_reprint_required,currency,discount_amount,shipping_fee,grand_total,outstanding,bubble_created_at,created_at,updated_at,order_status_legacy_ids,shopify_order_id,channels(id,name,email),shopify_stores(shop_domain)";
+  "id,document_type,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,shipping_address_snapshot,customer_note_snapshot,remarks,quote_status,quote_description_snapshot,delivery_terms_snapshot,delivery_at,delivery_time,ship_out_time,delivery_status,is_sent_to_factory,factory_date,factory_packing_note,factory_print_date,factory_reprint_required,currency,discount_amount,shipping_fee,grand_total,outstanding,bubble_created_at,created_at,updated_at,order_status_legacy_ids,shopify_order_id,planned_delivery_district:delivery_districts!delivery_district_id(name),channels(id,name,email),shopify_stores(shop_domain)";
 
 function decimal(value: string | number | null) {
   return value === null ? null : Number.parseFloat(String(value));
@@ -138,12 +140,35 @@ function relatedCatalogId(relation: unknown): string | null {
     : null;
 }
 
+function firstDeliveryDistrictName(relation: unknown): string | null {
+  if (!Array.isArray(relation)) return null;
+  for (const delivery of relation) {
+    if (!delivery || typeof delivery !== "object") continue;
+    const district = (delivery as { delivery_districts?: unknown }).delivery_districts;
+    const name = relatedCatalogText(district, "name");
+    if (name) return name;
+  }
+  return null;
+}
+
+async function fetchActiveDistrictNames(): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("delivery_districts")
+    .select("name")
+    .is("archived_at", null);
+  if (error) return [];
+  return [...new Set((data ?? []).flatMap((row) => {
+    const name = typeof row.name === "string" ? row.name.trim() : "";
+    return name ? [name] : [];
+  }))];
+}
+
 export async function fetchOrderDetail(
   id: string,
   documentType: "order" | "quote",
   canViewFinance: boolean,
 ): Promise<OrderDetailResult> {
-  const [{ data, error }, catalog] = await Promise.all([
+  const [{ data, error }, catalog, addressDistrictNames] = await Promise.all([
     supabase
       .from("orders")
       .select(fields)
@@ -152,6 +177,7 @@ export async function fetchOrderDetail(
       .is("archived_at", null)
       .maybeSingle(),
     fetchOrderStatusCatalog(),
+    fetchActiveDistrictNames(),
   ]);
   if (error) throw error;
   if (!data) {
@@ -182,7 +208,7 @@ export async function fetchOrderDetail(
         ? supabase
             .from("deliveries")
             .select(
-              "id,delivery_at,ship_out_time,delivery_status,driver_confirmation_status,fulfilled_at,total_fee",
+              "id,delivery_at,ship_out_time,delivery_status,driver_confirmation_status,fulfilled_at,total_fee,delivery_districts!district_id(name)",
             )
             .eq("order_id", id)
             .order("delivery_at")
@@ -270,6 +296,13 @@ export async function fetchOrderDetail(
     contactA: data.contact_number_a_snapshot,
     contactB: data.contact_number_b_snapshot,
     address: data.shipping_address_snapshot,
+    districtName:
+      firstDeliveryDistrictName(deliveriesResult.data) ??
+      relatedCatalogText(data.planned_delivery_district, "name") ??
+      districtNameFromAddress(
+        data.shipping_address_snapshot,
+        addressDistrictNames,
+      ),
     customerNote: data.customer_note_snapshot,
     internalNote: data.remarks,
     quoteStatus: data.quote_status,

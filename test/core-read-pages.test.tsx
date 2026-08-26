@@ -16,6 +16,7 @@ const detail = {
     contactA: "91234567",
     contactB: null,
     address: "香港測試地址",
+    districtName: "沙田",
     customerNote: "到達前致電客戶",
     internalNote: "只供內部查看",
     quoteStatus: null,
@@ -85,6 +86,7 @@ describe("Core read pages", () => {
     );
     expect(screen.getAllByText("香港女童軍總會")).toHaveLength(2);
     expect(screen.getByText("測試套餐")).toBeInTheDocument();
+    expect(screen.getByText("沙田")).toBeInTheDocument();
     expect(screen.getByText("只供內部查看")).toBeInTheDocument();
     expect(screen.getAllByText("HK$1,610")).toHaveLength(3);
     expect(screen.getByText("待取貨")).toBeInTheDocument();

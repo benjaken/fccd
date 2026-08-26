@@ -286,6 +286,9 @@ export function OrderDetailPage({
             <DetailField label={t("details.address")}>
               {order.address || emptyValue}
             </DetailField>
+            <DetailField label={t("details.district")}>
+              {order.districtName || emptyValue}
+            </DetailField>
             <DetailField
               label={`${t("quoteEditor.fields.customerNote")} (${t("quoteEditor.fields.customerNoteHint")})`}
             >
