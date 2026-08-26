@@ -247,9 +247,9 @@ export function OrderEditorPage({
       setSaveError("請填寫所有標示 * 的訂單資料。");
       return false;
     }
-    if (!draft.lines.length || draft.lines.some((line) => !line.name.trim() || !Number.isInteger(line.quantity) || line.quantity < 1)) {
+    if (!draft.lines.length || draft.lines.some((line) => !line.name.trim() || !Number.isInteger(line.quantity) || line.quantity < 0)) {
       setStep("items");
-      setSaveError("訂單至少需要一項餐點，數量必須是大於 0 的整數。");
+      setSaveError("訂單至少需要一項餐點，數量必須是 0 或以上的整數。");
       return false;
     }
     if (draft.payments.some((payment) => !payment.paymentAt || !payment.paymentMethodId || payment.amount <= 0)) {
@@ -434,7 +434,7 @@ export function OrderEditorPage({
                     <div className="order-editor-mobile-line-fields">
                       <label><span>SKU</span><input value={line.sku} onChange={(event) => updateLine(index, { sku: event.target.value })} /></label>
                       <label className="is-wide"><span>產品</span><input value={line.name} aria-label={`產品 ${index + 1}`} onChange={(event) => updateLine(index, { name: event.target.value })} /></label>
-                      <label><span>數量</span><input type="number" inputMode="numeric" min="1" step="1" value={line.quantity} onChange={(event) => updateLine(index, { quantity: Number(event.target.value) })} /></label>
+                      <label><span>數量</span><input type="number" inputMode="numeric" min="0" step="1" value={line.quantity} onChange={(event) => updateLine(index, { quantity: Number(event.target.value) })} /></label>
                       <label><span>單價</span><input type="number" inputMode="decimal" min="0" step="0.01" value={line.unitPrice} onChange={(event) => updateLine(index, { unitPrice: Number(event.target.value) })} /></label>
                       <label className="is-wide"><span>備註</span><input value={line.remarks} placeholder={t("orderEditor.lineNotePlaceholder")} onChange={(event) => updateLine(index, { remarks: event.target.value })} /></label>
                     </div>
@@ -454,7 +454,7 @@ export function OrderEditorPage({
                         <td><div className="order-editor-sort"><button type="button" disabled={!index} onClick={() => moveLine(index, -1)}><ChevronUp /></button><button type="button" disabled={index === draft.lines.length - 1} onClick={() => moveLine(index, 1)}><ChevronDown /></button></div></td>
                         <td><input value={line.sku} onChange={(event) => updateLine(index, { sku: event.target.value })} /></td>
                         <td><input value={line.name} aria-label={`產品 ${index + 1}`} onChange={(event) => updateLine(index, { name: event.target.value })} /><input className="order-line-note" value={line.remarks} placeholder={t("orderEditor.lineNotePlaceholder")} onChange={(event) => updateLine(index, { remarks: event.target.value })} /></td>
-                        <td><input type="number" inputMode="numeric" min="1" step="1" value={line.quantity} onChange={(event) => updateLine(index, { quantity: Number(event.target.value) })} /></td>
+                        <td><input type="number" inputMode="numeric" min="0" step="1" value={line.quantity} onChange={(event) => updateLine(index, { quantity: Number(event.target.value) })} /></td>
                         <td><input type="number" min="0" step="0.01" value={line.unitPrice} onChange={(event) => updateLine(index, { unitPrice: Number(event.target.value) })} /></td>
                         <td><strong>{money(line.quantity * line.unitPrice)}</strong></td>
                         <td><button className="order-editor-delete" type="button" aria-label={`刪除 ${line.name}`} onClick={() => update("lines", draft.lines.filter((_, lineIndex) => lineIndex !== index))}><Trash2 /></button></td>
