@@ -189,7 +189,7 @@ export function FilterableSelect({
         disabled={disabled}
         onClick={() => setOpen((current) => !current)}
       >
-        <span className="truncate">{selectedOption ? textContent(selectedOption.props.children) : ""}</span>
+        <span className="min-w-0 flex-1 truncate leading-5">{selectedOption ? textContent(selectedOption.props.children) : ""}</span>
         <ChevronDown aria-hidden="true" />
       </button>
       {open ? createPortal(

@@ -4099,7 +4099,14 @@ button.product-tag[aria-pressed="true"] {
   cursor: pointer;
   font-size: 14px;
   font-weight: 500;
+  line-height: 1.4;
   overflow: hidden;
+}
+
+.multi-select-trigger > span {
+  min-width: 0;
+  flex: 1 1 auto;
+  line-height: 1.4;
 }
 
 .multi-select-trigger:focus,
@@ -6898,14 +6905,21 @@ button.product-tag[aria-pressed="true"] {
   font: inherit;
 }
 
-.raw-meat-field input {
+.raw-meat-field input,
+.raw-meat-field select {
   height: 40px;
   padding-top: 0;
   padding-bottom: 0;
+  line-height: 1.4;
 }
 
-.raw-meat-field select {
+.raw-meat-field .multi-select-trigger {
   height: 40px;
+  min-height: 40px;
+  padding-top: 0;
+  padding-bottom: 0;
+  border-radius: 10px;
+  line-height: 1.4;
 }
 
 .raw-meat-field input:focus,
