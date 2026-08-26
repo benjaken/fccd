@@ -3,10 +3,83 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/auth/AuthProvider";
 import { supabase } from "@/lib/supabase";
 
-type PermissionValue = {
+export type PagePermissionValue = {
   canAccess: boolean;
   canManage: boolean;
+  parentPageKey: string | null;
 };
+
+const WORKSPACE_CONTAINER_KEYS = new Set([
+  "workspace",
+  "workspace.factory",
+  "workspace.delivery",
+  "workspace.customer",
+]);
+
+function hasAccessibleAncestors(
+  pageKey: string,
+  permissions: ReadonlyMap<string, PagePermissionValue>,
+  visited = new Set<string>(),
+) {
+  if (visited.has(pageKey)) return false;
+
+  const parentPageKey = permissions.get(pageKey)?.parentPageKey;
+  if (!parentPageKey) return true;
+
+  const parent = permissions.get(parentPageKey);
+  // Keep the legacy parent fallback when the parent row is not registered yet.
+  if (!parent) return true;
+  if (!parent.canAccess) return false;
+
+  const nextVisited = new Set(visited);
+  nextVisited.add(pageKey);
+  return hasAccessibleAncestors(parentPageKey, permissions, nextVisited);
+}
+
+/**
+ * Resolve page access without allowing a stale child grant to bypass a
+ * disabled parent permission. Containers can still be inferred from children
+ * when the relevant parent row has not been registered in an older database.
+ */
+export function hasEffectivePageAccess(
+  pageKey: string,
+  permissions: ReadonlyMap<string, PagePermissionValue>,
+  visited = new Set<string>(),
+): boolean {
+  if (pageKey === "profile") return true;
+  if (visited.has(pageKey)) return false;
+
+  const permission = permissions.get(pageKey);
+  const directAccess =
+    permission?.canAccess === true &&
+    hasAccessibleAncestors(pageKey, permissions);
+  const childKeys = PAGE_ACCESS_CHILD_KEYS[pageKey] ?? [];
+
+  // Workspace links lead to a container whose actual routes are the child
+  // pages. Do not leave a dead top-level link visible after all children have
+  // been disabled. Keep the legacy fallback if those child rows are absent.
+  if (WORKSPACE_CONTAINER_KEYS.has(pageKey)) {
+    const registeredChildren = childKeys.filter((child) =>
+      permissions.has(child),
+    );
+    if (registeredChildren.length > 0) {
+      const parentAllowsChildren =
+        !permission ||
+        (permission.canAccess && hasAccessibleAncestors(pageKey, permissions));
+      if (!parentAllowsChildren) return false;
+      return registeredChildren.some((child) =>
+        hasEffectivePageAccess(child, permissions, new Set(visited).add(pageKey)),
+      );
+    }
+  }
+
+  const nextVisited = new Set(visited);
+  nextVisited.add(pageKey);
+  if (directAccess) return true;
+  return childKeys.some((child) =>
+    hasEffectivePageAccess(child, permissions, nextVisited),
+  );
+}
 
 const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
   { prefix: "/settings/employees", pageKey: "settings.employees" },
@@ -383,7 +456,9 @@ export function useCurrentPageAccess() {
 }
 
 export function usePageAccess(role: string | null | undefined) {
-  const [permissions, setPermissions] = useState<Map<string, PermissionValue>>(
+  const [permissions, setPermissions] = useState<
+    Map<string, PagePermissionValue>
+  >(
     new Map(),
   );
   const [loading, setLoading] = useState(Boolean(role));
@@ -402,7 +477,9 @@ export function usePageAccess(role: string | null | undefined) {
     setError(null);
     void supabase
       .from("role_page_permissions")
-      .select("page_key,can_access,can_manage")
+      .select(
+        "page_key,can_access,can_manage,app_pages!inner(parent_page_key)",
+      )
       .eq("role", role)
       .then(({ data, error: loadError }) => {
         if (!active) return;
@@ -412,13 +489,19 @@ export function usePageAccess(role: string | null | undefined) {
         } else {
           setPermissions(
             new Map(
-              (data ?? []).map((item) => [
-                item.page_key,
-                {
-                  canAccess: item.can_access,
-                  canManage: item.can_manage,
-                },
-              ]),
+              (data ?? []).map((item) => {
+                const page = Array.isArray(item.app_pages)
+                  ? item.app_pages[0]
+                  : item.app_pages;
+                return [
+                  item.page_key,
+                  {
+                    canAccess: item.can_access,
+                    canManage: item.can_manage,
+                    parentPageKey: page?.parent_page_key ?? null,
+                  },
+                ];
+              }),
             ),
           );
         }
@@ -435,21 +518,16 @@ export function usePageAccess(role: string | null | undefined) {
       loading,
       error,
       hasPermission: (pageKey: string) => permissions.has(pageKey),
-      canAccess: (pageKey: string) => {
-        if (pageKey === "profile") return true;
-        if (permissions.get(pageKey)?.canAccess === true) return true;
-        return (PAGE_ACCESS_CHILD_KEYS[pageKey] ?? []).some(
-          (child) => permissions.get(child)?.canAccess === true,
-        );
-      },
+      canAccess: (pageKey: string) =>
+        hasEffectivePageAccess(pageKey, permissions),
       canManage: (pageKey: string) =>
         permissions.get(pageKey)?.canManage === true,
       /** Section nav: visible if the section itself or any of its children is allowed. */
       canAccessSection: (pageKey: string, childKeys: string[] = []) => {
         if (pageKey === "profile") return true;
-        if (permissions.get(pageKey)?.canAccess === true) return true;
-        return childKeys.some(
-          (child) => permissions.get(child)?.canAccess === true,
+        return (
+          hasEffectivePageAccess(pageKey, permissions) ||
+          childKeys.some((child) => hasEffectivePageAccess(child, permissions))
         );
       },
     }),
