@@ -1319,37 +1319,39 @@ function OperationsShell() {
               </Button>
             </div>
             <nav aria-label="Navigation">
-              <div className="mobile-nav-group">
-                <p className="mobile-nav-group-label">
-                  {t("workspace.label")}
-                </p>
-                {visibleWorkspaceLinks.map(({ key, to, icon: WorkspaceIcon, disabled }) =>
-                  disabled ? (
-                    <span
-                      key={key}
-                      className="sidebar-link disabled"
-                      aria-disabled="true"
-                    >
-                      <WorkspaceIcon />
-                      <span>{t(`workspace.${key}`)}</span>
-                    </span>
-                  ) : (
-                    <Link
-                      key={key}
-                      to={to}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={cn(
-                        "sidebar-link",
-                        isWorkspaceNavActive(key, location.pathname) && "active",
-                      )}
-                    >
-                      <WorkspaceIcon />
-                      <span>{t(`workspace.${key}`)}</span>
-                    </Link>
-                  ),
-                )}
-              </div>
+              {visibleWorkspaceLinks.length > 0 ? (
+                <div className="mobile-nav-group">
+                  <p className="mobile-nav-group-label">
+                    {t("workspace.label")}
+                  </p>
+                  {visibleWorkspaceLinks.map(({ key, to, icon: WorkspaceIcon, disabled }) =>
+                    disabled ? (
+                      <span
+                        key={key}
+                        className="sidebar-link disabled"
+                        aria-disabled="true"
+                      >
+                        <WorkspaceIcon />
+                        <span>{t(`workspace.${key}`)}</span>
+                      </span>
+                    ) : (
+                      <Link
+                        key={key}
+                        to={to}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={cn(
+                          "sidebar-link",
+                          isWorkspaceNavActive(key, location.pathname) && "active",
+                        )}
+                      >
+                        <WorkspaceIcon />
+                        <span>{t(`workspace.${key}`)}</span>
+                      </Link>
+                    ),
+                  )}
+                </div>
+              ) : null}
               {mobileNavGroups.map((group) => (
                 <div className="mobile-nav-group" key={group.groupKey}>
                   <p className="mobile-nav-group-label">
