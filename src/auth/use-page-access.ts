@@ -307,10 +307,17 @@ const PAGE_ACCESS_CHILD_KEYS: Record<string, string[]> = {
   restaurant: ["restaurant.daily_sales", "restaurant.daily_purchases", "restaurant.inventory"],
   "kitchen.settings": ["kitchen.settings.cook_types"],
   "restaurant.settings": [
+    "restaurant.settings.restaurants",
+    "restaurant.settings.departments",
+    "restaurant.settings.service_periods",
     "restaurant.settings.payment_methods",
     "restaurant.settings.delivery_platforms",
+    "restaurant.settings.new_products",
     "restaurant.settings.holidays",
     "restaurant.settings.roster_times",
+    "restaurant.settings.supplier_cost_categories",
+    "restaurant.settings.inventory_items",
+    "restaurant.settings.monthly_pnl_cost_categories",
   ],
   [REPORT_GROUP_PAGE_KEYS.frozenMeat]: tabPermissionKeys(
     REPORT_GROUP_TABS.frozenMeat,
