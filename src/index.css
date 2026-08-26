@@ -147,12 +147,12 @@ button {
 .shopify-catalog-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 18px; border-bottom: 1px solid var(--border); }
 .shopify-catalog-toolbar > .list-search-host { flex: 1 1 420px; min-width: 280px; }
 .shopify-catalog-toolbar-actions { display: flex; align-items: center; gap: 8px; }
-.shopify-catalog-filter-fields select { min-height: 2.5rem; border: 1px solid var(--border); border-radius: .55rem; background: var(--background); padding: .55rem .7rem; color: inherit; }
+.shopify-catalog-filter-fields select { min-height: 2.5rem; border: 1px solid var(--border); border-radius: .55rem; background: var(--background); padding: 0 .7rem; line-height: 1.4; color: inherit; }
 .shopify-sync-form { display: grid; gap: 16px; }
 .shopify-sync-form-error { display: flex; align-items: flex-start; gap: 8px; border-radius: .55rem; padding: .7rem .8rem; background: #fff7ed; color: #9a3412; font-size: 14px; }
 .shopify-sync-form-error svg { width: 17px; height: 17px; flex: 0 0 auto; margin-top: 1px; }
 .shopify-sync-form label { display: grid; gap: 7px; color: var(--foreground); font-size: 14px; font-weight: 700; }
-.shopify-sync-form select, .shopify-sync-form input { width: 100%; min-height: 2.6rem; border: 1px solid var(--border); border-radius: .55rem; background: var(--background); padding: .6rem .75rem; color: inherit; font: inherit; font-weight: 400; }
+.shopify-sync-form select, .shopify-sync-form input { width: 100%; min-height: 2.6rem; border: 1px solid var(--border); border-radius: .55rem; background: var(--background); padding: 0 .75rem; line-height: 1.4; color: inherit; font: inherit; font-weight: 400; }
 .shopify-sync-form select:focus, .shopify-sync-form input:focus { outline: 0; border-color: var(--ring); box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 15%, transparent); }
 .shopify-catalog-filter-fields { display: grid; gap: 16px; }
 .shopify-catalog-filter-fields label, .shopify-review-note { display: grid; gap: 6px; color: var(--foreground); font-size: 14px; font-weight: 700; }
@@ -277,7 +277,7 @@ button {
 .shopify-match-workbench h2, .shopify-match-workbench p { margin: 0; }
 .shopify-match-workbench h2 { font-size: 1rem; }
 .shopify-match-workbench p { margin-top: .25rem; color: var(--muted-foreground); font-size: .875rem; }
-.shopify-match-search input, .shopify-match-search select { min-height: 2.5rem; border: 1px solid var(--border); border-radius: .55rem; background: var(--background); padding: .55rem .7rem; color: inherit; }
+.shopify-match-search input, .shopify-match-search select { min-height: 2.5rem; border: 1px solid var(--border); border-radius: .55rem; background: var(--background); padding: 0 .7rem; line-height: 1.4; color: inherit; }
 .shopify-match-search input, .shopify-match-search select { flex: 1 1 13rem; }
 .shopify-package-panel { overflow: hidden; padding: 0; }
 .shopify-package-panel .shopify-section-card-header { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; }
@@ -4470,6 +4470,17 @@ button.product-tag[aria-pressed="true"] {
   font-weight: 500;
 }
 
+.product-detail-form.is-editing .detail-field input,
+.product-detail-form.is-editing .detail-field select,
+.detail-page.is-editing .detail-field input,
+.detail-page.is-editing .detail-field select,
+.product-inline-add input,
+.product-inline-add select {
+  padding-top: 0;
+  padding-bottom: 0;
+  line-height: 1.4;
+}
+
 .product-inline-add input:focus,
 .product-inline-add select:focus {
   border-color: var(--ring);
@@ -6913,7 +6924,8 @@ button.product-tag[aria-pressed="true"] {
   line-height: 1.4;
 }
 
-.raw-meat-field .multi-select-trigger {
+.raw-meat-field .multi-select-trigger,
+.ingredients-field .multi-select-trigger {
   height: 40px;
   min-height: 40px;
   padding-top: 0;
@@ -10789,7 +10801,8 @@ button.product-tag[aria-pressed="true"] {
 
 .payments-date-filter-mode select {
   min-height: 2.5rem;
-  padding: 0.45rem 0.6rem;
+  padding: 0 0.6rem;
+  line-height: 1.4;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--background);
@@ -10805,7 +10818,8 @@ button.product-tag[aria-pressed="true"] {
 .payments-reconciliation-toolbar > .date-picker input[type="date"] {
   width: 100%;
   min-height: 2.5rem;
-  padding: 0.45rem 0.6rem;
+  padding: 0 0.6rem;
+  line-height: 1.4;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--background);
@@ -10840,7 +10854,8 @@ button.product-tag[aria-pressed="true"] {
 
 .payments-filter-field select {
   min-height: 2.5rem;
-  padding: 0.45rem 0.6rem;
+  padding: 0 0.6rem;
+  line-height: 1.4;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--background);
@@ -19882,6 +19897,22 @@ a.masoft-order-tag:focus-visible {
   font: inherit;
 }
 
+.quote-editor-form input,
+.quote-editor-form select,
+.quote-item-form input,
+.quote-item-form select {
+  padding-top: 0;
+  padding-bottom: 0;
+  line-height: 1.4;
+}
+
+.quote-editor-form .multi-select-trigger,
+.quote-item-form .multi-select-trigger {
+  padding-top: 0;
+  padding-bottom: 0;
+  line-height: 1.4;
+}
+
 .quote-editor-form textarea,
 .quote-item-form textarea {
   resize: vertical;
@@ -21587,7 +21618,8 @@ a.masoft-order-tag:focus-visible {
   width: 100%;
   min-width: 0;
   height: 36px;
-  padding: 5px 28px 5px 8px;
+  padding: 0 28px 0 8px;
+  line-height: 1.4;
   border: 1px solid var(--input);
   border-radius: 7px;
   background: var(--background);
@@ -21604,7 +21636,8 @@ a.masoft-order-tag:focus-visible {
   width: 100%;
   height: 36px;
   min-height: 36px;
-  padding: 5px 28px 5px 8px;
+  padding: 0 28px 0 8px;
+  line-height: 1.4;
   border: 1px solid var(--input);
   border-radius: 7px;
   background: var(--background);
@@ -28606,7 +28639,7 @@ button.factory-job-card:focus-visible {
 .quote-pdf-page-form { display: grid; gap: 1rem; }
 .quote-pdf-page-form > label { display: grid; gap: 0.4rem; color: var(--foreground); font-size: 0.86rem; font-weight: 700; }
 .quote-pdf-page-form input,
-.quote-pdf-page-form select { width: 100%; min-height: 42px; padding: 0.5rem 0.65rem; border: 1px solid var(--border); border-radius: 6px; background: var(--background); color: var(--foreground); }
+.quote-pdf-page-form select { width: 100%; min-height: 42px; padding: 0 0.65rem; line-height: 1.4; border: 1px solid var(--border); border-radius: 6px; background: var(--background); color: var(--foreground); }
 .quote-pdf-page-form input[type="file"] { padding: 0.45rem; }
 .quote-pdf-page-form label small { color: var(--muted-foreground); font-weight: 500; line-height: 1.45; }
 .quote-pdf-page-active-field { grid-template-columns: minmax(0, 1fr) auto; align-items: center; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px; }
