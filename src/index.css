@@ -11590,6 +11590,24 @@ a.masoft-order-tag:focus-visible {
 .kitchen-supplier-entry-table th:nth-child(4) { width: 13rem; }
 .kitchen-supplier-entry-table th:nth-child(5) { width: 6rem; text-align: center; }
 
+.kitchen-supplier-entry-table.restaurant-purchase-entry-table {
+  min-width: 1120px;
+}
+
+.kitchen-supplier-entry-table.restaurant-purchase-entry-table th:nth-child(5) {
+  width: 16rem;
+  text-align: left;
+}
+
+.restaurant-purchase-entry-table .kitchen-cost-record-amount {
+  min-width: 14rem;
+}
+
+.restaurant-purchase-entry-table .kitchen-cost-record-amount input {
+  min-width: 9rem;
+  height: 42px;
+}
+
 .kitchen-supplier-entry-table td {
   vertical-align: middle;
 }
