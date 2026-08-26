@@ -98,6 +98,17 @@ function formatDistrictWithShippingMethod(
   return unwrappedMethod ? `${district}(${unwrappedMethod})` : district;
 }
 
+function districtAndAddress(
+  districtName: string | null,
+  shippingMethodName: string | null | undefined,
+  address: string | null | undefined,
+) {
+  return {
+    district: formatDistrictWithShippingMethod(districtName, shippingMethodName),
+    address: address?.trim() || "",
+  };
+}
+
 export function OrdersListPage({
   preset = "all",
   canViewFinance = true,
@@ -696,7 +707,13 @@ export function OrdersListPage({
             })}
             mobileContent={isMobileList ? (
               <div className="mobile-card-list order-mobile-list" role="list" aria-label={title}>
-                {items.map((order) => (
+                {items.map((order) => {
+                  const { district, address } = districtAndAddress(
+                    order.districtName,
+                    order.shippingMethodName,
+                    order.address,
+                  );
+                  return (
                   <article className="mobile-list-card order-mobile-card" role="listitem" key={order.id}>
                     <header>
                       <label className="order-mobile-select">
@@ -724,7 +741,6 @@ export function OrdersListPage({
                     <div className="order-mobile-customer">
                       <strong>{order.customerName || order.companyName || t("common.notSet")}</strong>
                       {order.contactPhone ? <a href={`tel:${order.contactPhone}`}>{order.contactPhone}</a> : null}
-                      <span>{order.address || t("common.notSet")}</span>
                     </div>
 
                     <dl className="order-mobile-facts">
@@ -733,8 +749,8 @@ export function OrdersListPage({
                         <dd>{hongKongDateKey(order.deliveryAt) || t("common.notSet")} · {order.deliveryTime || t("common.notSet")}</dd>
                       </div>
                       <div>
-                        <dt>{t("orders.columns.region")}</dt>
-                        <dd>{formatDistrictWithShippingMethod(order.districtName, order.shippingMethodName) ?? t("common.notSet")}</dd>
+                        <dt>{t("orders.columns.region")} / {t("orders.columns.address")}</dt>
+                        <dd>{[district, address].filter(Boolean).join(" · ") || t("common.notSet")}</dd>
                       </div>
                       <div>
                         <dt>{t("orders.columns.quantity")}</dt>
@@ -756,7 +772,8 @@ export function OrdersListPage({
                       {renderOrderActions(order)}
                     </footer>
                   </article>
-                ))}
+                  );
+                })}
               </div>
             ) : undefined}
             skeletonRows={ORDERS_PAGE_SIZE}
@@ -766,6 +783,7 @@ export function OrdersListPage({
               { width: "5rem" },
               { width: "7rem" },
               { width: "6rem" },
+              { width: "5.5rem", variant: "badge" as const },
               { width: "6rem" },
               { width: "5rem" },
               ...(preset === "kitchen-notes" ? [{ width: "14rem" }] : []),
@@ -789,7 +807,9 @@ export function OrdersListPage({
                 <th>{t("orders.columns.brand")}</th>
                 <th>{t("orders.columns.number")}</th>
                 <th>{t("orders.columns.customer")}</th>
-                <th>{t("orders.columns.region")}</th>
+                <th>
+                  {t("orders.columns.region")} / {t("orders.columns.address")}
+                </th>
                 <th>
                   <button
                     type="button"
@@ -803,6 +823,7 @@ export function OrdersListPage({
                   </button>
                 </th>
                 <th>{t("orders.columns.shipOutAndDelivery")}</th>
+                <th>{t("orders.columns.deliveryStatus")}</th>
                 <th>{t("orders.columns.tags")}</th>
                 <th>{t("orders.columns.quantity")}</th>
                 {preset === "kitchen-notes" && (
@@ -817,6 +838,11 @@ export function OrdersListPage({
             }
           >
             {items.map((order) => {
+              const { district, address } = districtAndAddress(
+                order.districtName,
+                order.shippingMethodName,
+                order.address,
+              );
               const factoryTodoAliases = ["未傳至工場", "未傳送到工場"];
               const todoStatuses = (order.statuses ?? []).filter(
                 (status) =>
@@ -904,22 +930,23 @@ export function OrdersListPage({
                   <td className="order-customer-summary">
                     <div>{order.customerName || order.companyName || t("common.notSet")}</div>
                     <div>{order.contactPhone || t("common.notSet")}</div>
-                    <div>{order.address || t("common.notSet")}</div>
                   </td>
-                  <td>
-                    {formatDistrictWithShippingMethod(
-                      order.districtName,
-                      order.shippingMethodName,
-                    ) ?? t("common.notSet")}
+                  <td className="order-region-summary">
+                    {!district && !address
+                      ? t("common.notSet")
+                      : (
+                        <>
+                          {district ? <div>{district}</div> : null}
+                          {address ? <div>{address}</div> : null}
+                        </>
+                      )}
                   </td>
                   <td>
                     <div>{hongKongDateKey(order.deliveryAt) || t("common.notSet")}</div>
                     {order.deliveryTime ? <div>{order.deliveryTime}</div> : null}
                   </td>
+                  <td>{order.shipOutTime || "-"}</td>
                   <td>
-                    <div>{t("orders.deliveryDetails.shipOut")}</div>
-                    <strong>{order.shipOutTime || "-"}</strong>
-                    <div>{t("orders.deliveryDetails.status")}</div>
                     <span className={cn("status-badge", orderDeliveryStatusTone(order.deliveryStatus))}>
                       {order.deliveryStatus || t("orders.deliveryDetails.unassigned")}
                     </span>

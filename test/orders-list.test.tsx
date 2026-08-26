@@ -94,6 +94,8 @@ describe("Orders list", () => {
     expect(table.getByText("陳小姐")).toBeInTheDocument();
     expect(table.getByText("+85291234567")).toBeInTheDocument();
     expect(table.getByText("Central")).toBeInTheDocument();
+    expect(table.getByText("中環").closest("td")).toHaveTextContent("Central");
+    expect(table.getByRole("columnheader", { name: /地區 \/ 地址/ })).toBeInTheDocument();
     const configuredStatus = Array.from(tableElement.querySelectorAll(".status-badge"))
       .find((badge) => badge.textContent === "待取貨" && badge.hasAttribute("style"));
     expect(configuredStatus).toBeInTheDocument();
@@ -107,12 +109,15 @@ describe("Orders list", () => {
     expect(table.getByText("18:00 - 19:00")).toBeInTheDocument();
     expect(table.getByText("2026-08-12").closest("td")).toHaveTextContent("18:00 - 19:00");
     expect(table.getByRole("columnheader", { name: /送貨日期 \/ 送貨時間/ })).toBeInTheDocument();
-    expect(table.getByText("出車時間：")).toBeInTheDocument();
+    expect(table.getByRole("columnheader", { name: "送貨狀態" })).toBeInTheDocument();
+    expect(table.getByText("11:30")).toBeInTheDocument();
+    expect(table.queryByText("出車時間：")).not.toBeInTheDocument();
     expect(table.queryByText("送貨時間：")).not.toBeInTheDocument();
-    expect(table.getByText("送貨狀態：")).toBeInTheDocument();
-    const deliveryDetails = table.getByText("送貨狀態：").parentElement;
-    expect(deliveryDetails).not.toBeNull();
-    expect(within(deliveryDetails!).getByText("待取貨")).toHaveClass("status-badge", "green");
+    expect(table.queryByText("送貨狀態：")).not.toBeInTheDocument();
+    const deliveryStatus = table.getAllByText("待取貨").find((badge) =>
+      badge.classList.contains("status-badge") && badge.classList.contains("green"),
+    );
+    expect(deliveryStatus).toBeTruthy();
     expect(table.getAllByText("HK$1,610")).toHaveLength(1);
   });
 
@@ -209,9 +214,7 @@ describe("Orders list", () => {
     );
 
     const table = within(await screen.findByRole("table"));
-    const dispatchDetails = table.getByText("出車時間：").parentElement;
-    expect(dispatchDetails).not.toBeNull();
-    expect(within(dispatchDetails!).getByText("-")).toBeInTheDocument();
+    expect(table.getByText("-")).toBeInTheDocument();
     expect(table.getByText("送貨途中")).toHaveClass("status-badge", "blue");
   });
 
