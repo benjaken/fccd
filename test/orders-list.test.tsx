@@ -1040,13 +1040,18 @@ describe("Orders list", () => {
     expect(source).toContain('query.gt("outstanding", 0)');
   });
 
-  it("filters districts through an inner relation without putting every order ID in the URL", () => {
+  it("shows and filters the planned district before a delivery exists", () => {
     const source = readFileSync(
       path.resolve(process.cwd(), "src/lib/orders.ts"),
       "utf8",
+    ).replace(/\r\n/g, "\n");
+    expect(source).toContain(
+      "planned_delivery_district:delivery_districts!delivery_district_id!inner(name)",
     );
-    expect(source).toContain("deliveries!inner(");
-    expect(source).toContain('query.in("deliveries.delivery_districts.name", districtNames)');
+    expect(source).toContain('query.in("planned_delivery_district.name", districtNames)');
+    expect(source).toContain(
+      "deliveryDistrictName(row.deliveries) ??\n        plannedDistrictName(row.planned_delivery_district)",
+    );
     expect(source).not.toContain('query.in("id", districtOrderIds)');
   });
 

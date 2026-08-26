@@ -217,6 +217,10 @@ type OrderRow = {
     | { name: string | null; display_name: string | null }
     | Array<{ name: string | null; display_name: string | null }>
     | null;
+  planned_delivery_district:
+    | { name: string | null }
+    | Array<{ name: string | null }>
+    | null;
   deliveries: Array<{
     motorcade_id: string | null;
     delivery_time: string | null;
@@ -307,12 +311,14 @@ export async function fetchOrders({
 }: OrderListFilters): Promise<OrderListResult> {
   const start = (page - 1) * ORDERS_PAGE_SIZE;
   const end = start + ORDERS_PAGE_SIZE - 1;
-  const deliverySelection = districtNames.length
-    ? "deliveries!inner(motorcade_id,delivery_time,ship_out_time,delivery_districts!district_id!inner(name))"
-    : "deliveries(motorcade_id,delivery_time,ship_out_time,delivery_districts!district_id(name))";
+  const plannedDistrictSelection = districtNames.length
+    ? "planned_delivery_district:delivery_districts!delivery_district_id!inner(name)"
+    : "planned_delivery_district:delivery_districts!delivery_district_id(name)";
+  const deliverySelection =
+    "deliveries(motorcade_id,delivery_time,ship_out_time,delivery_districts!district_id(name))";
   const selectedFields: string = canViewFinance
-    ? `id,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,shipping_address_snapshot,customer_note_snapshot,factory_packing_note,delivery_at,delivery_time,factory_date,ship_out_time,delivery_status,is_sent_to_factory,do_not_send_to_factory,currency,bubble_created_at,created_at,grand_total,outstanding,order_status_legacy_ids,order_tag_assignments(order_tags(name)),shopify_order_id,shopify_stores(shop_domain),channels(name),shipping_methods(name,display_name),${deliverySelection},order_lines(quantity,is_void)`
-    : `id,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,shipping_address_snapshot,customer_note_snapshot,factory_packing_note,delivery_at,delivery_time,factory_date,ship_out_time,delivery_status,is_sent_to_factory,do_not_send_to_factory,currency,bubble_created_at,created_at,order_status_legacy_ids,order_tag_assignments(order_tags(name)),shopify_order_id,shopify_stores(shop_domain),channels(name),shipping_methods(name,display_name),${deliverySelection},order_lines(quantity,is_void)`;
+    ? `id,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,shipping_address_snapshot,customer_note_snapshot,factory_packing_note,delivery_at,delivery_time,factory_date,ship_out_time,delivery_status,is_sent_to_factory,do_not_send_to_factory,currency,bubble_created_at,created_at,grand_total,outstanding,order_status_legacy_ids,order_tag_assignments(order_tags(name)),shopify_order_id,shopify_stores(shop_domain),channels(name),shipping_methods(name,display_name),${plannedDistrictSelection},${deliverySelection},order_lines(quantity,is_void)`
+    : `id,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,shipping_address_snapshot,customer_note_snapshot,factory_packing_note,delivery_at,delivery_time,factory_date,ship_out_time,delivery_status,is_sent_to_factory,do_not_send_to_factory,currency,bubble_created_at,created_at,order_status_legacy_ids,order_tag_assignments(order_tags(name)),shopify_order_id,shopify_stores(shop_domain),channels(name),shipping_methods(name,display_name),${plannedDistrictSelection},${deliverySelection},order_lines(quantity,is_void)`;
   let catalog: ConfiguredOrderStatus[] | undefined;
   const loadCatalog = async () => {
     catalog ??= await fetchOrderStatusCatalog();
@@ -340,7 +346,7 @@ export async function fetchOrders({
   if (brandIds.length) query = query.in("channel_id", brandIds);
   if (festivalIds.length) query = query.in("festival_id", festivalIds);
   if (districtNames.length) {
-    query = query.in("deliveries.delivery_districts.name", districtNames);
+    query = query.in("planned_delivery_district.name", districtNames);
   }
   const taggedOrderIds = await findOrdersWithOrderTags(orderTagIds);
   if (taggedOrderIds !== null) {
@@ -446,7 +452,9 @@ export async function fetchOrders({
       shopifyOrderId: row.shopify_order_id,
       shopifyStoreDomain: row.shopify_stores?.shop_domain ?? null,
       channelName: row.channels?.name ?? null,
-      districtName: deliveryDistrictName(row.deliveries),
+      districtName:
+        deliveryDistrictName(row.deliveries) ??
+        plannedDistrictName(row.planned_delivery_district),
       address: row.shipping_address_snapshot,
       customerNote: row.customer_note_snapshot,
       factoryPackingNote: row.factory_packing_note,
@@ -466,6 +474,11 @@ function deliveryDistrictName(deliveries: OrderRow["deliveries"]) {
   const district = deliveries?.[0]?.delivery_districts;
   const value = Array.isArray(district) ? district[0]?.name : district?.name;
   return value?.trim() || null;
+}
+
+function plannedDistrictName(value: OrderRow["planned_delivery_district"]) {
+  const district = Array.isArray(value) ? value[0] : value;
+  return district?.name?.trim() || null;
 }
 
 function firstDeliveryValue(
