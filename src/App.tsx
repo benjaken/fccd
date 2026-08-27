@@ -80,6 +80,7 @@ import { FactoryMeatDeliveryNotePage } from "@/components/FactoryMeatDeliveryNot
 import { FactoryMultiDayReportPage } from "@/components/FactoryMultiDayReportPage";
 import { FactoryProductionCalendarPage } from "@/components/FactoryProductionCalendarPage";
 import { DriverDeliveryPage } from "@/components/DriverDeliveryPage";
+import { CustomerSelfServicePage } from "@/components/CustomerSelfServicePage";
 import { RawMeatInventoryCalcPage } from "@/components/RawMeatInventoryCalcPage";
 import { SpiceUsagePage } from "@/components/SpiceUsagePage";
 import { SeasoningCostSettingsPage } from "@/components/SeasoningCostSettingsPage";
@@ -2200,6 +2201,7 @@ function App() {
           </AuthProvider>
         }
       />
+      <Route path="/self_service_search" element={<CustomerSelfServicePage />} />
       <Route
         path="/customer/*"
         element={

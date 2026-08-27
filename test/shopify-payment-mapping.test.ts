@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   collectLineMenuRemarkText,
+  collectFreeDrinkRemarkText,
   extractDeliveryFromRemark,
   extractOptionRemark,
   filterLegacyPaymentDuplicates,
@@ -13,6 +14,8 @@ import {
   orderNeedsTransactionSync,
   planShopifyMenuOptions,
   parseMenuRemark,
+  parseShopifyFreeDrinks,
+  replaceShopifyFreeDrinkSourceLines,
   pickCatalogMatchByName,
   replaceShopifyLunchBoxAggregate,
   resolveShopifyShippingMethodId,
@@ -24,6 +27,7 @@ import {
   resolveShopifySkuSnapshot,
   resolveAliasSku,
   shopifyCateringUtensilPacks,
+  shopifyBentoUtensilCount,
   shopifyCustomizationCostParentName,
   shopifyFinancialStatus,
   shopifyOutstanding,
@@ -382,6 +386,9 @@ describe("Shopify contact mapping", () => {
 
 describe("Shopify district mapping", () => {
   const districts = [
+    { id: "kowloon-bay", name: "九龍灣", driver_team_id: "fleet-1", created_at: "2026-01-01" },
+    { id: "tseung-kwan-o", name: "將軍澳", driver_team_id: "fleet-1", created_at: "2026-01-01" },
+    { id: "tbc", name: "TBC", driver_team_id: null, created_at: "2026-01-01" },
     { id: "tuen-shared", name: "屯門", driver_team_id: null, created_at: "2026-01-01" },
     { id: "tuen-fleet", name: "屯門", driver_team_id: "fleet-1", created_at: "2026-01-02" },
     { id: "sai-kung", name: "西貢", driver_team_id: "fleet-1", created_at: "2026-01-01" },
@@ -391,7 +398,34 @@ describe("Shopify district mapping", () => {
 
   it("maps city, English city aliases, and address prefixes", () => {
     expect(mappedShopifyCityName("Tuen Mun")).toBe("屯門");
+    expect(mappedShopifyCityName("kowloon bay")).toBe("九龍灣");
+    expect(mappedShopifyCityName("Kowloon-Bay")).toBe("九龍灣");
+    expect(mappedShopifyCityName("KowloonBay")).toBe("九龍灣");
     expect(mappedShopifyCityName("Hong Kong")).toBeNull();
+
+    expect(matchShopifyDistrictName({
+      city: "kowloon bay",
+      province: "Kowloon",
+      address1: "UNIT 501, 5/F,",
+      address2: null,
+      noteDistrict: null,
+    }, districts.map((row) => row.name))).toBe("九龍灣");
+
+    expect(matchShopifyDistrictName({
+      city: "Hong Kong",
+      province: null,
+      address1: "LOHAS Park, Tower 3",
+      address2: null,
+      noteDistrict: null,
+    }, districts.map((row) => row.name))).toBe("將軍澳");
+
+    expect(matchShopifyDistrictName({
+      city: "Hong Kong",
+      province: null,
+      address1: "日出康城第八期 Sea To Sky",
+      address2: null,
+      noteDistrict: null,
+    }, districts.map((row) => row.name))).toBe("將軍澳");
 
     expect(matchShopifyDistrictName({
       city: "屯門",
@@ -434,6 +468,16 @@ describe("Shopify district mapping", () => {
       address2: null,
       noteDistrict: null,
     }, districts)).toBe("tuen-shared");
+  });
+
+  it("falls back to TBC instead of leaving the district empty", () => {
+    expect(resolveShopifyDistrictId({
+      city: "Hong Kong",
+      province: null,
+      address1: "Unknown Place",
+      address2: null,
+      noteDistrict: null,
+    }, districts)).toBe("tbc");
   });
 
   it("reads a district cart attribute when the street has no prefix", () => {
@@ -551,6 +595,56 @@ Yoyo 6553 0678
       { name: "台灣烤香腸 (30條)", quantity: 2 },
       { name: "唐揚炸雞塊 (30件)", quantity: 2 },
       { name: "墨西哥脆片 (2磅)", quantity: 2 },
+    ]);
+  });
+});
+
+describe("parseShopifyFreeDrinks", () => {
+  it("keeps note-attribute names so free drink fields remain detectable", () => {
+    const text = collectFreeDrinkRemarkText({
+      id: 1,
+      note_attributes: [{ name: "免費飲品", value: "檸檬茶 10包，紅茶 10包" }],
+      line_items: [],
+    });
+    expect(parseShopifyFreeDrinks(text)).toEqual([
+      { name: "檸檬茶", quantity: 10, unit: "包" },
+      { name: "紅茶", quantity: 10, unit: "包" },
+    ]);
+  });
+
+  it("extracts every complimentary tea entry from an order note", () => {
+    expect(parseShopifyFreeDrinks(
+      "免費飲品：烏龍茶 26包，檸檬茶 x 26包\n送貨前致電",
+    )).toEqual([
+      { name: "烏龍茶", quantity: 26, unit: "包" },
+      { name: "檸檬茶", quantity: 26, unit: "包" },
+    ]);
+  });
+
+  it("aggregates repeated tea rows and supports English quantities", () => {
+    expect(parseShopifyFreeDrinks(
+      "Complimentary drinks\nLemon Tea 6 packs\nLemon Tea 4 packs",
+    )).toEqual([{ name: "Lemon Tea", quantity: 10, unit: "包" }]);
+  });
+
+  it("keeps unmatched tea bags even without a catalog/free marker", () => {
+    expect(parseShopifyFreeDrinks("茉莉花茶 20包")).toEqual([
+      { name: "茉莉花茶", quantity: 20, unit: "包" },
+    ]);
+    expect(parseShopifyFreeDrinks("客人想飲茶，送貨前致電")).toEqual([]);
+  });
+
+  it("replaces the original free tea row while retaining paid drinks", () => {
+    const replacements = parseShopifyFreeDrinks(
+      "免費飲品：檸檬茶 10包，紅茶 10包",
+    );
+    expect(replaceShopifyFreeDrinkSourceLines([
+      { product_name_snapshot: "烏龍茶 20包", unit_price: 0 },
+      { product_name_snapshot: "道地蜂蜜綠茶 (6包)", unit_price: 28 },
+      { product_name_snapshot: "免費紙巾", unit_price: 0 },
+    ], replacements)).toEqual([
+      { product_name_snapshot: "道地蜂蜜綠茶 (6包)", unit_price: 28 },
+      { product_name_snapshot: "免費紙巾", unit_price: 0 },
     ]);
   });
 });
@@ -829,6 +923,15 @@ describe("mapShopifyOrder remark collection", () => {
     expect(shopifyCateringUtensilPacks([
       { packageId: "package-1", name: "精緻中式盛宴 (8-10人)", quantity: 2 },
     ])).toBe(4);
+  });
+
+  it("counts one utensil set for every dish containing 便當", () => {
+    expect(shopifyBentoUtensilCount([
+      { name: "咖喱吉列豬扒便當", quantity: 5 },
+      { name: "咖喱唐揚雞塊便當", quantity: 5 },
+      { name: "鹽酥雞排滷肉便當", quantity: 5 },
+      { name: "粟米魚塊欖菜炒飯", sku: "CBECH06", quantity: 5 },
+    ])).toBe(20);
   });
 });
 

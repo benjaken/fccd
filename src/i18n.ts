@@ -125,6 +125,10 @@ const resources = {
         districtSearchPlaceholder: "搜尋地區",
         surchargeAmountPlaceholder: "0",
       },
+      customerSelfService: {
+        phonePlaceholder: "例如：5163 4127",
+        emailPlaceholder: "輸入下單時使用的電郵地址",
+      },
       common: {
         search: "搜尋訂單、客戶或產品",
         viewAll: "查看全部",
@@ -4883,6 +4887,10 @@ const resources = {
         searchPlaceholder: "搜尋訂單編號或地址",
         districtSearchPlaceholder: "搜尋地區",
         surchargeAmountPlaceholder: "0",
+      },
+      customerSelfService: {
+        phonePlaceholder: "e.g. 5163 4127",
+        emailPlaceholder: "Enter the email used for the order",
       },
       brand: {
         name: "FCCD",
