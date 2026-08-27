@@ -14,6 +14,8 @@ supabase/.temp/
 .agent/
 .agents/
 .codex/
+.codex-temp/
+.design-qa/
 artifacts/
 output/
 __pycache__/
