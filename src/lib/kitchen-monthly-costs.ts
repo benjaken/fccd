@@ -70,6 +70,10 @@ const monthlyCostTypeOrder = [
   "Marketing",
 ];
 
+export function kitchenMonthlyCostRequiresBrand(costTypeName: string) {
+  return ["google", "facebook"].includes(costTypeName.trim().toLowerCase());
+}
+
 export async function fetchKitchenMonthlyCostTypes() {
   const { data, error } = await supabase
     .from("cost_types")
@@ -123,23 +127,48 @@ export async function fetchKitchenFestivals() {
 
 export async function createKitchenMonthlyNonFestivalCost(input: {
   costType: KitchenMonthlyCostType;
+  channels: KitchenMonthlyCostChannel[];
   month: string;
   amount: number;
   remarks: string;
 }) {
+  if (kitchenMonthlyCostRequiresBrand(input.costType.name) && input.channels.length === 0) {
+    throw new Error("Google 或 Facebook 費用必須選擇品牌");
+  }
   const now = new Date().toISOString();
-  const { error } = await supabase.from("monthly_costs").insert({
-    legacy_id: `web-monthly-cost-${crypto.randomUUID()}`,
-    cost_type_id: input.costType.id,
-    cost_type_legacy_id: input.costType.legacyId,
-    month_at: `${input.month}-01T00:00:00+08:00`,
-    non_peak_amount: input.amount,
-    season: "Non-peak",
-    remarks: input.remarks.trim() || null,
-    bubble_created_at: now,
-    bubble_modified_at: now,
-  });
+  const legacyId = `web-monthly-cost-${crypto.randomUUID()}`;
+  const primaryChannel = input.channels.length === 1 ? input.channels[0] : null;
+  const { data, error } = await supabase
+    .from("monthly_costs")
+    .insert({
+      legacy_id: legacyId,
+      cost_type_id: input.costType.id,
+      cost_type_legacy_id: input.costType.legacyId,
+      primary_channel_id: primaryChannel?.id ?? null,
+      primary_channel_legacy_id: primaryChannel?.legacyId ?? null,
+      month_at: `${input.month}-01T00:00:00+08:00`,
+      non_peak_amount: input.amount,
+      season: "Non-peak",
+      remarks: input.remarks.trim() || null,
+      bubble_created_at: now,
+      bubble_modified_at: now,
+    })
+    .select("id")
+    .single();
   if (error) throw new Error(error.message);
+
+  const links = input.channels.map((channel) => ({
+    monthly_cost_id: data.id,
+    monthly_cost_legacy_id: legacyId,
+    channel_id: channel.id,
+    channel_legacy_id: channel.legacyId,
+  }));
+  if (links.length === 0) return;
+  const linked = await supabase.from("monthly_cost_channels").insert(links);
+  if (linked.error) {
+    await supabase.from("monthly_costs").delete().eq("id", data.id);
+    throw new Error(linked.error.message);
+  }
 }
 
 export async function fetchKitchenMonthlyFestivalCosts({

@@ -2073,6 +2073,10 @@ const resources = {
         supplierPlaceholder: "全部供應商（可多選）",
         supplierSearchPlaceholder: "搜尋供應商",
         supplierEmpty: "沒有符合的供應商",
+        entrySupplierPlaceholder: "全部供應商",
+        entryCategoryPlaceholder: "全部分類",
+        categorySearchPlaceholder: "搜尋分類",
+        categoryEmpty: "沒有符合的分類",
       },
       quotes: {
         eyebrow: "報價管理",
@@ -6893,6 +6897,10 @@ const resources = {
         supplierPlaceholder: "Choose suppliers (multiple)",
         supplierSearchPlaceholder: "Search suppliers",
         supplierEmpty: "No matching suppliers",
+        entrySupplierPlaceholder: "All suppliers",
+        entryCategoryPlaceholder: "All categories",
+        categorySearchPlaceholder: "Search categories",
+        categoryEmpty: "No matching categories",
       },
       quotes: {
         eyebrow: "Quote management",

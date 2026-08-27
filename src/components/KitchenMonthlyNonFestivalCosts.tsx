@@ -6,14 +6,18 @@ import { useSearchParams } from "react-router-dom";
 import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
 import { ListTable } from "@/components/ui/list-table";
+import { MultiSelect } from "@/components/ui/multi-select";
 import { SidePanel } from "@/components/ui/side-panel";
 import { TablePagination } from "@/components/ui/table-pagination";
 import {
   createKitchenMonthlyNonFestivalCost,
   deleteKitchenMonthlyCost,
   fetchKitchenMonthlyNonFestivalCosts,
+  fetchKitchenMonthlyCostChannels,
   fetchKitchenMonthlyCostTypes,
+  kitchenMonthlyCostRequiresBrand,
   updateKitchenMonthlyNonFestivalCosts,
+  type KitchenMonthlyCostChannel,
   type KitchenMonthlyCostType,
   type KitchenMonthlyCostRow,
 } from "@/lib/kitchen-monthly-costs";
@@ -59,35 +63,40 @@ function AddMonthlyNonFestivalCostPanel({
   const { t } = useTranslation();
   const maximumMonth = currentHongKongMonth();
   const [costTypes, setCostTypes] = useState<KitchenMonthlyCostType[]>([]);
+  const [channels, setChannels] = useState<KitchenMonthlyCostChannel[]>([]);
   const [costTypeId, setCostTypeId] = useState("");
+  const [channelIds, setChannelIds] = useState<string[]>([]);
   const [month, setMonth] = useState(maximumMonth);
   const [amount, setAmount] = useState("");
   const [remarks, setRemarks] = useState("");
-  const [loadingTypes, setLoadingTypes] = useState(false);
+  const [loadingOptions, setLoadingOptions] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!open || costTypes.length > 0) return;
+    if (!open || (costTypes.length > 0 && channels.length > 0)) return;
     let active = true;
-    setLoadingTypes(true);
-    void fetchKitchenMonthlyCostTypes()
-      .then((items) => {
-        if (active) setCostTypes(items);
+    setLoadingOptions(true);
+    void Promise.all([fetchKitchenMonthlyCostTypes(), fetchKitchenMonthlyCostChannels()])
+      .then(([typeItems, channelItems]) => {
+        if (!active) return;
+        setCostTypes(typeItems);
+        setChannels(channelItems);
       })
       .catch((loadError) => {
-        if (active) setError(loadError instanceof Error ? loadError.message : "讀取費用類型失敗");
+        if (active) setError(loadError instanceof Error ? loadError.message : "讀取費用類型或品牌失敗");
       })
       .finally(() => {
-        if (active) setLoadingTypes(false);
+        if (active) setLoadingOptions(false);
       });
     return () => {
       active = false;
     };
-  }, [costTypes.length, open]);
+  }, [channels.length, costTypes.length, open]);
 
   const resetAndClose = () => {
     setCostTypeId("");
+    setChannelIds([]);
     setMonth(maximumMonth);
     setAmount("");
     setRemarks("");
@@ -98,9 +107,14 @@ function AddMonthlyNonFestivalCostPanel({
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const costType = costTypes.find((item) => item.id === costTypeId);
+    const selectedChannels = channels.filter((item) => channelIds.includes(item.id));
     const numericAmount = Number(amount);
     if (!costType) {
       setError("請選擇費用類型");
+      return;
+    }
+    if (kitchenMonthlyCostRequiresBrand(costType.name) && selectedChannels.length === 0) {
+      setError("Google 或 Facebook 費用必須選擇品牌");
       return;
     }
     if (!/^\d{4}-\d{2}$/.test(month) || month > maximumMonth) {
@@ -116,6 +130,7 @@ function AddMonthlyNonFestivalCostPanel({
     try {
       await createKitchenMonthlyNonFestivalCost({
         costType,
+        channels: selectedChannels,
         month,
         amount: numericAmount,
         remarks,
@@ -140,7 +155,7 @@ function AddMonthlyNonFestivalCostPanel({
       footer={
         <>
           <Button type="button" variant="outline" onClick={resetAndClose}>取消</Button>
-          <Button type="submit" form="monthly-non-festival-cost-form" disabled={saving || loadingTypes}>
+          <Button type="submit" form="monthly-non-festival-cost-form" disabled={saving || loadingOptions}>
             {saving ? "儲存中…" : "確定"}
           </Button>
         </>
@@ -153,11 +168,42 @@ function AddMonthlyNonFestivalCostPanel({
       >
         <label className="ingredients-field">
           <span>類型</span>
-          <FilterableSelect value={costTypeId} disabled={loadingTypes} onChange={(event) => setCostTypeId(event.target.value)}>
-            <option value="">{loadingTypes ? "正在載入費用…" : "選擇費用"}</option>
+          <FilterableSelect
+            value={costTypeId}
+            disabled={loadingOptions}
+            onChange={(event) => {
+              const nextId = event.target.value;
+              const nextType = costTypes.find((item) => item.id === nextId);
+              setCostTypeId(nextId);
+              if (!nextType || !kitchenMonthlyCostRequiresBrand(nextType.name)) setChannelIds([]);
+              setError(null);
+            }}
+          >
+            <option value="">{loadingOptions ? "正在載入費用…" : "選擇費用"}</option>
             {costTypes.map((type) => <option key={type.id} value={type.id}>{type.name}</option>)}
           </FilterableSelect>
         </label>
+        {kitchenMonthlyCostRequiresBrand(
+          costTypes.find((item) => item.id === costTypeId)?.name ?? "",
+        ) ? (
+          <div className="ingredients-field">
+            <span id="kitchen-non-festival-brand-label">品牌（必須選擇）</span>
+            <MultiSelect
+              id="kitchen-non-festival-brand-select"
+              labelledBy="kitchen-non-festival-brand-label"
+              options={channels}
+              value={channelIds}
+              disabled={loadingOptions}
+              placeholder={t("kitchenMonthlyFestivalCosts.brandPlaceholder")}
+              searchPlaceholder={t("kitchenMonthlyFestivalCosts.brandSearchPlaceholder")}
+              emptyLabel="沒有符合的品牌"
+              onChange={(value) => {
+                setChannelIds(value);
+                setError(null);
+              }}
+            />
+          </div>
+        ) : null}
         <label className="ingredients-field">
           <span>月份</span>
           <input

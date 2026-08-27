@@ -11537,6 +11537,7 @@ a.masoft-order-tag:focus-visible {
   padding: 0;
 }
 
+.kitchen-supplier-entry-toolbar,
 .restaurant-purchase-entry-toolbar {
   display: grid;
   gap: 0.75rem;
@@ -11544,6 +11545,7 @@ a.masoft-order-tag:focus-visible {
   border-bottom: 1px solid var(--border);
 }
 
+.kitchen-supplier-entry-filters,
 .restaurant-purchase-entry-filters {
   flex-wrap: wrap;
 }
@@ -11552,6 +11554,7 @@ a.masoft-order-tag:focus-visible {
   width: 22rem;
 }
 
+.kitchen-supplier-entry-toolbar .list-inline-error,
 .restaurant-purchase-entry-toolbar .list-inline-error {
   margin: 0;
 }
@@ -11569,6 +11572,7 @@ a.masoft-order-tag:focus-visible {
   min-height: 0;
   overflow-x: auto;
   overflow-y: auto;
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
   overscroll-behavior: contain;
 }
 
