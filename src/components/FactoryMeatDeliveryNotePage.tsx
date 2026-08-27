@@ -6,6 +6,7 @@ import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { FOOD_CHANNEL_CATERING_LOGO_PATH } from "@/lib/brand-logo";
 import { formatDeliveryAddress } from "@/lib/delivery-address";
+import { printPdf } from "@/lib/print-pdf";
 import {
   fetchPreparedMeatOutboundOrder,
   markPreparedMeatOutboundPrinted,
@@ -75,7 +76,7 @@ export function FactoryMeatDeliveryNotePage({
       // Printing must remain available even if the status update is temporarily
       // unavailable; the factory board will simply not show it as completed.
     }
-    window.print();
+    printPdf("送貨單", note.orderNumber);
   };
 
   if (loading) {

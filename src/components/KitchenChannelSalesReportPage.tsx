@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent,
+} from "react";
 import { CalendarDays, Maximize2, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -40,6 +46,11 @@ function formatCompactMoney(value: number) {
 
 function sumSummaries(summaries: KitchenChannelSalesYearSummary[]) {
   return summaries.reduce((total, summary) => total + summary.totalSales, 0);
+}
+
+function yearToneColor(year: number) {
+  const hue = (Math.abs(year) * 137.508) % 360;
+  return `hsl(${hue.toFixed(1)} 68% 38%)`;
 }
 
 function YearSelector({
@@ -117,7 +128,16 @@ function YearValues({
   return (
     <div className="kitchen-channel-sales-cell-values">
       {summaries.map((summary) => (
-        <span className={`year-tone-${Math.abs(summary.year) % 4}`} key={summary.year}>
+        <span
+          className="kitchen-channel-sales-year-value"
+          data-report-year={summary.year}
+          style={
+            {
+              "--year-tone-color": yearToneColor(summary.year),
+            } as CSSProperties
+          }
+          key={summary.year}
+        >
           <b>{summary.year}</b>
           <strong>{formatMoney(value(summary))}</strong>
         </span>
@@ -220,7 +240,6 @@ function MonthlyTrendChart({
   const valueToY = (value: number) =>
     plotTop + ((maxValue - value) / maxValue) * plotHeight;
   const slotWidth = plotWidth / months.length;
-  const colors = ["#e95b61", "#4267b2", "#ed9c31", "#6c5ce7"];
   const interactive = Boolean(onExpand);
   const selectPoint = (summary: KitchenChannelSalesYearSummary, month: number) => {
     const amount = summary.monthlyTotals[month - 1];
@@ -263,9 +282,9 @@ function MonthlyTrendChart({
         )}
       </figcaption>
       <div className="kitchen-sales-cost-chart-legend" aria-hidden="true">
-        {summaries.map((summary, index) => (
+        {summaries.map((summary) => (
           <span key={summary.year}>
-            <i style={{ background: colors[index % colors.length] }} />
+            <i style={{ background: yearToneColor(summary.year) }} />
             {summary.year}
           </span>
         ))}
@@ -310,11 +329,11 @@ function MonthlyTrendChart({
             {month}
           </text>
         ))}
-        {summaries.map((summary, summaryIndex) => (
+        {summaries.map((summary) => (
           <g key={summary.year}>
             <polyline
               className="kitchen-channel-sales-chart-line"
-              stroke={colors[summaryIndex % colors.length]}
+              stroke={yearToneColor(summary.year)}
               points={summary.monthlyTotals
                 .map(
                   (value, index) =>

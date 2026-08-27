@@ -14,6 +14,7 @@ export type ReceiptPdfPaymentDraft = {
 
 export type ReceiptPdfDraft = {
   invoiceSourceContentVersion: number;
+  sourceFinancialsVersion: number;
   receiptNumber: string;
   customer: string;
   contactPerson: string;

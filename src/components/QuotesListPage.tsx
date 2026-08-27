@@ -44,8 +44,7 @@ const QUOTE_SKELETON_COLUMNS = [
   { width: "6rem", variant: "badge" as const },
   { width: "7rem" },
   { width: "7rem" },
-  { width: "10rem" },
-  { width: "16rem" },
+  { width: "18rem" },
   { width: "8rem" },
   { width: "8rem" },
   { width: "12rem" },
@@ -399,9 +398,8 @@ export function QuotesListPage({
                     )}
                   </button>
                 </th>
-                <th>{t("quotes.columns.customer")}</th>
                 <th>
-                  {t("orders.columns.region")} / {t("orders.columns.address")}
+                  {t("quotes.columns.customer")} / {t("orders.columns.region")} / {t("orders.columns.address")}
                 </th>
                 <th>
                   {t("quotes.customerDetails.deliveryDate")} /{" "}
@@ -425,7 +423,7 @@ export function QuotesListPage({
                     {quote.orderNumber || t("common.notSet")}
                   </DetailLink>
                 </td>
-                <td className="order-customer-summary">
+                <td className="order-customer-summary quote-customer-location-summary">
                   <strong>
                     {quote.customerName ||
                       quote.companyName ||
@@ -443,10 +441,9 @@ export function QuotesListPage({
                   {quote.asanaLink && (
                     <a href={quote.asanaLink} target="_blank" rel="noopener noreferrer">Asana Link</a>
                   )}
-                </td>
-                <td className="quote-region-address-cell">
-                  {quote.shippingMethodName || quote.districtName ? (
-                    <div>
+                  {quote.shippingMethodName || quote.districtName || quote.address ? (
+                    <div className="quote-customer-location">
+                      <div>
                       {[
                         quote.shippingMethodName
                           ? `(${quote.shippingMethodName})`
@@ -455,11 +452,12 @@ export function QuotesListPage({
                       ]
                         .filter(Boolean)
                         .join(" ")}
-                    </div>
-                  ) : null}
-                  {quote.address ? (
-                    <div className="quote-address-line" title={quote.address}>
-                      {quote.address}
+                      </div>
+                      {quote.address ? (
+                        <div className="quote-address-line" title={quote.address}>
+                          {quote.address}
+                        </div>
+                      ) : null}
                     </div>
                   ) : null}
                 </td>

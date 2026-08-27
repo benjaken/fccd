@@ -37,6 +37,8 @@ export type ReadOnlyOrderDetail = {
   currency: string;
   discount: number;
   shippingFee: number;
+  cashdollarRedeemed?: number;
+  cashdollarPurchased?: number;
   grandTotal: number | null;
   outstanding: number | null;
   createdAt?: string | null;
@@ -108,7 +110,7 @@ export type OrderDetailResult = {
 };
 
 const fields =
-  "id,document_type,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,shipping_address_snapshot,customer_note_snapshot,remarks,quote_status,quote_description_snapshot,delivery_terms_snapshot,delivery_at,delivery_time,ship_out_time,delivery_status,is_sent_to_factory,factory_date,factory_packing_note,factory_print_date,factory_reprint_required,currency,discount_amount,shipping_fee,grand_total,outstanding,bubble_created_at,created_at,updated_at,order_status_legacy_ids,shopify_order_id,planned_delivery_district:delivery_districts!delivery_district_id(name),channels(id,name,email),shopify_stores(shop_domain)";
+  "id,document_type,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,shipping_address_snapshot,customer_note_snapshot,remarks,quote_status,quote_description_snapshot,delivery_terms_snapshot,delivery_at,delivery_time,ship_out_time,delivery_status,is_sent_to_factory,factory_date,factory_packing_note,factory_print_date,factory_reprint_required,currency,discount_amount,shipping_fee,cashdollar_redeemed,cashdollar_purchased,grand_total,outstanding,bubble_created_at,created_at,updated_at,order_status_legacy_ids,shopify_order_id,planned_delivery_district:delivery_districts!delivery_district_id(name),channels(id,name,email),shopify_stores(shop_domain)";
 
 function decimal(value: string | number | null) {
   return value === null ? null : Number.parseFloat(String(value));
@@ -320,6 +322,8 @@ export async function fetchOrderDetail(
     currency: data.currency,
     discount: Number(data.discount_amount),
     shippingFee: Number(data.shipping_fee),
+    cashdollarRedeemed: Number(data.cashdollar_redeemed),
+    cashdollarPurchased: Number(data.cashdollar_purchased),
     grandTotal: canViewFinance ? decimal(data.grand_total) : null,
     outstanding: canViewFinance ? decimal(data.outstanding) : null,
     createdAt: data.bubble_created_at || data.created_at,

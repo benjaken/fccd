@@ -134,6 +134,29 @@ describe("Receipt PDF editor", () => {
     expect(screen.queryByRole("button", { name: "新增額外資訊" })).not.toBeInTheDocument();
   });
 
+  it("refreshes receipt source data instead of restoring a stale PDF draft", async () => {
+    localStorage.setItem("fccd:receipt-pdf-draft:order-1", JSON.stringify({
+      customer: "舊客戶",
+      contactPerson: "00000000",
+      deliveryAddress: "舊地址",
+      deliveryDate: "1/1/2020",
+      deliveryTime: "00:00 - 00:30",
+      lines: [{ id: "line-1", description: "舊產品", unitPrice: "1", quantity: "1" }],
+      paymentInformation: "舊付款狀態",
+    }));
+
+    renderPage();
+
+    expect(await screen.findByLabelText("Customer:")).toHaveValue("Momo");
+    expect(screen.getByLabelText("Contact Person:")).toHaveValue("53007575");
+    expect(screen.getByLabelText("Delivery Address:")).toHaveValue("上水古洞金錢南路140號雙魚小丘 *車邊交收");
+    expect(screen.getByLabelText("Delivery Date:")).toHaveValue("4/9/2026");
+    expect(screen.getByLabelText("Delivery Time:")).toHaveValue("16:45 - 17:15");
+    expect(screen.getByLabelText("產品 1")).toHaveValue("雙格 雞扒意粉");
+    expect(screen.getByLabelText("單價 1")).toHaveValue("45");
+    expect(screen.getByLabelText("付款資料")).toHaveValue("Payment Status: Paid");
+  });
+
   it("keeps invoice clauses and signing in document order without manual page controls", async () => {
     render(
       <MemoryRouter initialEntries={["/orders/order-1/invoice"]}>
@@ -225,6 +248,7 @@ describe("Receipt PDF editor", () => {
     await screen.findByRole("heading", { name: "RECEIPT" });
     await user.clear(screen.getByLabelText("單價 1"));
     await user.type(screen.getByLabelText("單價 1"), "50");
+    expect(screen.getByText("$1,690")).toBeInTheDocument();
     await user.selectOptions(screen.getByLabelText("運費選項"), "fee-1");
 
     expect(screen.getByText("$1,790")).toBeInTheDocument();
@@ -232,6 +256,32 @@ describe("Receipt PDF editor", () => {
     expect(document.querySelector(".quote-pdf-print-only")).toHaveTextContent("運費－新界區－地面交收");
     await waitFor(() => expect(screen.getByText("已自動儲存")).toBeInTheDocument());
     expect(JSON.parse(window.localStorage.getItem("fccd:receipt-pdf-draft:order-1") || "{}").lines[0].unitPrice).toBe("50");
+  });
+
+  it("repairs zero totals saved by legacy receipt drafts", async () => {
+    localStorage.setItem("fccd:receipt-pdf-draft:order-1", JSON.stringify({
+      lines: result.lines.map((line) => ({
+        id: line.id,
+        description: line.productName,
+        quantity: String(line.quantity),
+        unitPrice: "0",
+      })),
+    }));
+
+    renderPage();
+
+    expect(await screen.findByLabelText("單價 1")).toHaveValue("45");
+    expect(screen.getByText("$1,650")).toBeInTheDocument();
+  });
+
+  it("derives a missing receipt unit price from the saved line total", async () => {
+    renderPage(vi.fn().mockResolvedValue({
+      ...result,
+      lines: [{ ...result.lines[0], unitPrice: null, totalPrice: 630 }],
+    }));
+
+    expect(await screen.findByLabelText("單價 1")).toHaveValue("45");
+    expect(screen.getByText("$660")).toBeInTheDocument();
   });
 
   it("uses only a real receipt reference and keeps payment details in sequence", async () => {

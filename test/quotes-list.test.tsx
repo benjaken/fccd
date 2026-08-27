@@ -102,8 +102,7 @@ describe("Catering quotes list", () => {
       "品牌",
       "創建日期",
       "報價單號",
-      "客戶",
-      "地區 / 地址",
+      "客戶 / 地區 / 地址",
       "送貨日期 / 送貨時間",
       "數量",
       "報價單描述",
@@ -287,8 +286,7 @@ describe("Catering quotes list", () => {
     expect(customerCell).not.toHaveTextContent("送貨時間:");
     expect(customerCell).not.toHaveTextContent("數量:");
     expect(cells[4]?.textContent).toBe("");
-    expect(cells[5]?.textContent).toBe("");
-    expect(cells[6]?.textContent).toBe("6");
+    expect(cells[5]?.textContent).toBe("6");
   });
 
   it("edits and saves the quote description on blur", async () => {

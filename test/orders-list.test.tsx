@@ -111,8 +111,8 @@ describe("Orders list", () => {
     expect(table.getByRole("columnheader", { name: /送貨日期 \/ 送貨時間/ })).toBeInTheDocument();
     expect(table.getByRole("columnheader", { name: "送貨狀態" })).toBeInTheDocument();
     expect(table.getByText("11:30")).toBeInTheDocument();
-    expect(table.queryByText("出車時間：")).not.toBeInTheDocument();
-    expect(table.queryByText("送貨時間：")).not.toBeInTheDocument();
+    expect(table.getByText("出車時間：")).toBeInTheDocument();
+    expect(table.getByText("送貨時間：")).toBeInTheDocument();
     expect(table.queryByText("送貨狀態：")).not.toBeInTheDocument();
     const deliveryStatus = table.getAllByText("待取貨").find((badge) =>
       badge.classList.contains("status-badge") && badge.classList.contains("green"),
@@ -707,7 +707,6 @@ describe("Orders list", () => {
       isAssignedToFleet: false,
       outstanding: 100,
       deliveryNote: false,
-      paidDocuments: false,
     },
     {
       label: "factory-sent but not fleet-assigned and paid",
@@ -715,7 +714,6 @@ describe("Orders list", () => {
       isAssignedToFleet: false,
       outstanding: 0,
       deliveryNote: false,
-      paidDocuments: true,
     },
     {
       label: "factory-sent and fleet-assigned but unpaid",
@@ -723,7 +721,6 @@ describe("Orders list", () => {
       isAssignedToFleet: true,
       outstanding: 100,
       deliveryNote: true,
-      paidDocuments: false,
     },
     {
       label: "factory-sent, fleet-assigned, and paid",
@@ -731,14 +728,12 @@ describe("Orders list", () => {
       isAssignedToFleet: true,
       outstanding: 0,
       deliveryNote: true,
-      paidDocuments: true,
     },
-  ])("gates document actions when an order is $label", async ({
+  ])("shows document actions when an order is $label", async ({
     isSentToFactory,
     isAssignedToFleet,
     outstanding,
     deliveryNote,
-    paidDocuments,
   }) => {
     const loadOrders = vi.fn().mockResolvedValue({
       ...orderResult,
@@ -761,14 +756,10 @@ describe("Orders list", () => {
     const receiptButton = screen.queryByRole("link", { name: "REC" });
     const invoiceButton = screen.queryByRole("link", { name: "INV" });
     expect(Boolean(deliveryButton)).toBe(deliveryNote);
-    expect(Boolean(receiptButton)).toBe(paidDocuments);
-    if (paidDocuments) {
-      expect(receiptButton).toHaveAttribute("href", "/orders/order-1/receipt");
-      expect(receiptButton).toHaveAttribute("target", "_blank");
-      expect(invoiceButton).toHaveAttribute("href", "/orders/order-1/invoice");
-      expect(invoiceButton).toHaveAttribute("target", "_blank");
-    }
-    expect(Boolean(invoiceButton)).toBe(paidDocuments);
+    expect(receiptButton).toHaveAttribute("href", "/orders/order-1/receipt");
+    expect(receiptButton).toHaveAttribute("target", "_blank");
+    expect(invoiceButton).toHaveAttribute("href", "/orders/order-1/invoice");
+    expect(invoiceButton).toHaveAttribute("target", "_blank");
   });
 
   it("loads the pending preset from quotes", async () => {

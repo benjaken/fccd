@@ -13,6 +13,7 @@ import { TablePagination } from "@/components/ui/table-pagination";
 import { Modal } from "@/components/ui/modal";
 import { SidePanel } from "@/components/ui/side-panel";
 import { useDeferredFilter } from "@/lib/use-deferred-filter";
+import { printPdf } from "@/lib/print-pdf";
 import {
   fetchOrders,
   orderDeliveryStatusTone,
@@ -745,8 +746,17 @@ export function OrdersListPage({
 
                     <dl className="order-mobile-facts">
                       <div>
-                        <dt>{t("orders.columns.delivery")}</dt>
-                        <dd>{hongKongDateKey(order.deliveryAt) || t("common.notSet")} · {order.deliveryTime || t("common.notSet")}</dd>
+                        <dt>{t("orders.columns.delivery")} / {t("orders.columns.shipOutAndDelivery")}</dt>
+                        <dd className="order-mobile-delivery-times">
+                          <span>
+                            {hongKongDateKey(order.deliveryAt) || t("common.notSet")} · {t("orders.deliveryDetails.deliveryTime")}
+                            <span>{order.deliveryTime || t("common.notSet")}</span>
+                          </span>
+                          <span>
+                            {t("orders.deliveryDetails.shipOut")}
+                            <span>{order.shipOutTime || "-"}</span>
+                          </span>
+                        </dd>
                       </div>
                       <div>
                         <dt>{t("orders.columns.region")} / {t("orders.columns.address")}</dt>
@@ -806,9 +816,8 @@ export function OrdersListPage({
                 </th>
                 <th>{t("orders.columns.brand")}</th>
                 <th>{t("orders.columns.number")}</th>
-                <th>{t("orders.columns.customer")}</th>
                 <th>
-                  {t("orders.columns.region")} / {t("orders.columns.address")}
+                  {t("orders.columns.customer")} / {t("orders.columns.region")} / {t("orders.columns.address")}
                 </th>
                 <th>
                   <button
@@ -821,8 +830,8 @@ export function OrdersListPage({
                     {t("orders.columns.delivery")} / {t("orders.columns.deliveryTime")}{" "}
                     <span aria-hidden="true">›</span>
                   </button>
+                  <span> / {t("orders.columns.shipOutAndDelivery")}</span>
                 </th>
-                <th>{t("orders.columns.shipOutAndDelivery")}</th>
                 <th>{t("orders.columns.deliveryStatus")}</th>
                 <th>{t("orders.columns.tags")}</th>
                 <th>{t("orders.columns.quantity")}</th>
@@ -927,25 +936,29 @@ export function OrdersListPage({
                       })()}
                     </div>
                   </td>
-                  <td className="order-customer-summary">
+                  <td className="order-customer-summary order-customer-location-summary">
                     <div>{order.customerName || order.companyName || t("common.notSet")}</div>
                     <div>{order.contactPhone || t("common.notSet")}</div>
+                    {!district && !address ? null : (
+                      <div className="order-customer-location">
+                        {district ? <strong>{district}</strong> : null}
+                        {address ? <span className="order-region-address whitespace-nowrap" title={address}>{address}</span> : null}
+                      </div>
+                    )}
                   </td>
-                  <td className="order-region-summary">
-                    {!district && !address
-                      ? t("common.notSet")
-                      : (
-                        <>
-                          {district ? <div>{district}</div> : null}
-                          {address ? <div className="order-region-address whitespace-nowrap">{address}</div> : null}
-                        </>
-                      )}
-                  </td>
-                  <td>
+                  <td className="order-delivery-times-summary">
                     <div>{hongKongDateKey(order.deliveryAt) || t("common.notSet")}</div>
-                    {order.deliveryTime ? <div>{order.deliveryTime}</div> : null}
+                    {order.deliveryTime ? (
+                      <div>
+                        {t("orders.deliveryDetails.deliveryTime")}
+                        <span>{order.deliveryTime}</span>
+                      </div>
+                    ) : null}
+                    <small>
+                      {t("orders.deliveryDetails.shipOut")}
+                      <span>{order.shipOutTime || "-"}</span>
+                    </small>
                   </td>
-                  <td>{order.shipOutTime || "-"}</td>
                   <td>
                     <span className={cn("status-badge", orderDeliveryStatusTone(order.deliveryStatus))}>
                       {order.deliveryStatus || t("orders.deliveryDetails.unassigned")}
@@ -1142,7 +1155,7 @@ export function OrdersListPage({
         onClose={() => setPrintPreview(null)}
         closeLabel={t("orders.printPreview.closeLabel")}
         className="order-delivery-note-panel"
-        footer={<><Button type="button" variant="outline" onClick={() => setPrintPreview(null)}>{t("common.close")}</Button><Button type="button" disabled={deliveryNoteLoading || deliveryNoteError} onClick={() => window.print()}>{t("orders.printPreview.print")}</Button></>}
+        footer={<><Button type="button" variant="outline" onClick={() => setPrintPreview(null)}>{t("common.close")}</Button><Button type="button" disabled={deliveryNoteLoading || deliveryNoteError} onClick={() => printPdf("送貨單", printPreview?.order.orderNumber || "")}>{t("orders.printPreview.print")}</Button></>}
       >
         {printPreview?.kind === "delivery-note" ? (
           deliveryNoteLoading ? (
@@ -1174,7 +1187,7 @@ export function OrdersListPage({
         onClose={() => setPrintPreview(null)}
         closeLabel={t("orders.printPreview.closeLabel")}
         size="md"
-        footer={<><Button type="button" variant="outline" onClick={() => setPrintPreview(null)}>{t("common.close")}</Button><Button type="button" onClick={() => window.print()}>{t("orders.printPreview.print")}</Button></>}
+        footer={<><Button type="button" variant="outline" onClick={() => setPrintPreview(null)}>{t("common.close")}</Button><Button type="button" onClick={() => printPdf(printPreview?.kind === "invoice" ? "發票" : "收據", printPreview?.order.orderNumber || "")}>{t("orders.printPreview.print")}</Button></>}
       >
         {printPreview && printPreview.kind !== "delivery-note" ? <div className="order-print-preview">
           <img

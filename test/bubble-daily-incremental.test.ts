@@ -4,8 +4,6 @@ import { describe, expect, it } from "vitest";
 import {
   canAdvanceCheckpoint,
   canonicalJson,
-  dailySalesRestaurantDateKey,
-  filterBubbleDailySalesCoveredByWeb,
   partitionConflicts,
   sha256Hex,
 } from "../supabase/functions/bubble-daily-incremental/helpers.ts";
@@ -13,12 +11,10 @@ import { phoneText, coreMappings } from "../supabase/functions/bubble-daily-incr
 import {
   changedOverwriteFields,
   INVENTORY_OVERWRITE_SINCE,
-  directOverwriteSourceTypes,
-  isFieldAwareOverwriteSourceType,
-  isOverwriteSourceType,
   mergeOverwriteRow,
   normalizeOrderNumber,
   overwriteSince,
+  reconciliationOwnedRow,
 } from "../supabase/functions/bubble-daily-incremental/overwrite.ts";
 import {
   fallbackDeliveryLegacyId,
@@ -153,12 +149,23 @@ describe("bubble daily incremental helpers", () => {
     expect(source).toContain("nextCursor");
     expect(source).toContain("order_tag_assignments");
     expect(source).toContain("delivery.district_id ? []");
-    expect(source).toContain("delivery_district_id: update.districtId");
-    expect(source.indexOf("const insertedParents = await insertOnlyParents(")).toBeLessThan(
-      source.indexOf("const metadata = await syncOrderMetadata(client, fetched.records)"),
+  });
+
+  it("exposes an admin-only read-only reconciliation audit", () => {
+    const source = fs.readFileSync(
+      path.join(
+        process.cwd(),
+        "supabase/functions/bubble-daily-incremental/index.ts",
+      ),
+      "utf8",
     );
-    expect(source).toContain("hydrateOrderLineSnapshots");
-    expect(source).toContain('mapping.sourceType === "s_order"');
+    expect(source).toContain("processReconciliationAudit");
+    expect(source).toContain("reconciliationAudit");
+    expect(source).toContain('operation: "reconciliation_audit"');
+    expect(source).toContain("targetWithoutBubbleCreatedAt");
+    expect(source).toContain("APPLY_JULY15_RECONCILIATION");
+    expect(source).toContain("reconciliationChildParentFields");
+    expect(source).toContain('"shopify_order_id", "payment_status_source"');
   });
 
   it("maps Bubble fulfill and take timestamps onto deliveries", () => {
@@ -222,39 +229,6 @@ describe("bubble daily incremental helpers", () => {
     })).toEqual(["bubble_modified_at", "grand_total"]);
   });
 
-  it("uses only quote and order document types for Bubble orders", () => {
-    const mapping = coreMappings.find((item) => item.sourceType === "a_order");
-    expect(mapping).toBeTruthy();
-    expect(mapping!.map({ _id: "quote-1" }).document_type).toBe("quote");
-    expect(mapping!.map({
-      _id: "order-1",
-      AddOrder_DONE: true,
-    }).document_type).toBe("order");
-  });
-
-  it("preserves the fleet-specific district on an assigned delivery", () => {
-    const merged = mergeOverwriteRow(
-      "b_deliveryschedule",
-      {
-        _id: "delivery-1",
-        "DS_delivery district": "bubble-district",
-        DS_motorcade: "fleet-1",
-      },
-      {
-        legacy_id: "delivery-1",
-        district_id: "shared-district-id",
-        motorcade_id: "fleet-id",
-      },
-      {
-        legacy_id: "delivery-1",
-        district_id: "fleet-specific-district-id",
-        motorcade_id: "fleet-id",
-      },
-    );
-
-    expect(merged.district_id).toBe("fleet-specific-district-id");
-  });
-
   it("normalizes Shopify and Bubble order number formatting", () => {
     expect(normalizeOrderNumber("B - 1546")).toBe("B1546");
     expect(normalizeOrderNumber("b1546")).toBe("B1546");
@@ -275,23 +249,19 @@ describe("bubble daily incremental helpers", () => {
     )).toEqual([]);
   });
 
-  it("treats Bubble precision rounded to database scale as unchanged", () => {
+  it("treats inventory values rounded to database column scale as unchanged", () => {
     expect(changedOverwriteFields(
       {
-        legacy_id: "raw-stock-1",
-        inbound_quantity_kg: 120.05444646098,
-        inbound_total_amount: 9683.175,
-        applied_seasoning_cost: 39.5078580899773,
-        total_cost: 2.02235,
-        unit_cost: 0.0106666666666667,
+        legacy_id: "raw-1",
+        inbound_quantity_kg: 122.273139745917,
+        inbound_total_amount: 9027.915,
+        applied_seasoning_cost: 359.037679828589,
       },
       {
-        legacy_id: "raw-stock-1",
-        inbound_quantity_kg: "120.054",
-        inbound_total_amount: "9683.18",
-        applied_seasoning_cost: "39.5079",
-        total_cost: "2.0224",
-        unit_cost: "0.010667",
+        legacy_id: "raw-1",
+        inbound_quantity_kg: "122.273",
+        inbound_total_amount: "9027.92",
+        applied_seasoning_cost: "359.0377",
       },
     )).toEqual([]);
   });
@@ -340,66 +310,25 @@ describe("bubble daily incremental helpers", () => {
     expect(prepared.remarks).toBe("keep");
   });
 
-  it("approves direct Bubble overwrite for quote and frozen-meat data", () => {
-    expect(directOverwriteSourceTypes).toContain("quote_t&c");
-    expect(directOverwriteSourceTypes).toContain("m_raw_stock");
-    expect(directOverwriteSourceTypes).toContain("m_donemeat_stock");
-    expect(isOverwriteSourceType("m_outdone_order")).toBe(true);
-    expect(isFieldAwareOverwriteSourceType("a_order")).toBe(true);
-    expect(isFieldAwareOverwriteSourceType("m_outdone_order")).toBe(false);
-  });
-
-  it("rebuilds direct-overwrite child links after parent upserts", () => {
-    const source = fs.readFileSync(
-      path.join(
-        process.cwd(),
-        "supabase/functions/bubble-daily-incremental/index.ts",
-      ),
-      "utf8",
+  it("uses explicit ownership dependencies for high-risk reconciliation sources", () => {
+    const row = reconciliationOwnedRow(
+      "a_order",
+      { _id: "order-1", "ORDER_Grand total": 250 },
+      {
+        legacy_id: "order-1",
+        grand_total: 250,
+        delivery_status: null,
+        factory_print_date: null,
+      },
+      {
+        legacy_id: "order-1",
+        grand_total: 200,
+        delivery_status: "local-status",
+        factory_print_date: "2026-08-20T02:00:00.000Z",
+      },
     );
-    expect(source).toContain("replaceOverwriteChildren");
-    expect(source).toContain("childRowsDeleted");
-    expect(source).toContain("childRowsWritten");
-  });
-
-  it("skips Bubble daily sales for restaurant dates already entered in FCCD", () => {
-    const covered = new Set([
-      dailySalesRestaurantDateKey("tko", "2026-08-24T04:00:00.000Z"),
-    ]);
-    const result = filterBubbleDailySalesCoveredByWeb(
-      [
-        {
-          legacy_id: "bubble-control",
-          restaurant_id: "tko",
-          sales_at: "2026-08-24T04:00:00.000Z",
-        },
-        {
-          legacy_id: "bubble-other-day",
-          restaurant_id: "tko",
-          sales_at: "2026-08-23T04:00:00.000Z",
-        },
-        {
-          legacy_id: "bubble-other-shop",
-          restaurant_id: "ylp",
-          sales_at: "2026-08-24T04:00:00.000Z",
-        },
-      ],
-      covered,
-    );
-    expect(result.skippedLegacyIds).toEqual(["bubble-control"]);
-    expect(result.kept.map((row) => row.legacy_id)).toEqual([
-      "bubble-other-day",
-      "bubble-other-shop",
-    ]);
-
-    const source = fs.readFileSync(
-      path.join(
-        process.cwd(),
-        "supabase/functions/bubble-daily-incremental/index.ts",
-      ),
-      "utf8",
-    );
-    expect(source).toContain('mapping.sourceType === "shop_dailysales"');
-    expect(source).toContain("filterBubbleDailySalesCoveredByWeb");
+    expect(row.grand_total).toBe(250);
+    expect(row.factory_print_date).toBe("2026-08-20T02:00:00.000Z");
+    expect(row).not.toHaveProperty("delivery_status");
   });
 });

@@ -23,6 +23,7 @@ import {
 } from "@/lib/factory-label";
 import { useQzTray } from "@/lib/qz-tray";
 import { formatDeliveryAddress } from "@/lib/delivery-address";
+import { printPdf } from "@/lib/print-pdf";
 import "@/components/factory-change-task.css";
 import {
   DeliveryNoteDocument,
@@ -482,7 +483,7 @@ export function FactoryOrderJobView({
         <Button
           type="button"
           disabled={loading || error || !job}
-          onClick={() => window.print()}
+          onClick={() => printPdf("送貨單", orderNumber === empty ? "" : orderNumber)}
         >
           {t("factoryBoard.printDeliveryNote")}
         </Button>
