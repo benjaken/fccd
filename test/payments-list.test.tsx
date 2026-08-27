@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PaymentsListPage } from "@/components/PaymentsListPage";
 import i18n from "@/i18n";
 import type { PaymentListItem } from "@/lib/payments";
+import { selectDate, selectDateRange } from "./calendar-test-helpers";
 
 const payments: PaymentListItem[] = [
   {
@@ -44,14 +45,25 @@ describe("PaymentsListPage", () => {
     render(<MemoryRouter><PaymentsListPage canViewFinance loadPayments={loadPayments} loadPaymentFilterOptions={async () => filterOptions} /></MemoryRouter>);
 
     await screen.findByText("B-1001");
-    await user.type(screen.getByLabelText("Payment date"), "2026-08-20");
+    await selectDate(
+      user,
+      screen.getByRole("combobox", { name: "Payment date" }),
+      "2026-08-20",
+    );
     await waitFor(() => expect(loadPayments).toHaveBeenLastCalledWith(expect.objectContaining({ unreconciled: true, paymentDate: "2026-08-20" })));
 
     const dateFilter = screen.getByRole("combobox", { name: "Payment date filter" });
     expect(dateFilter).toHaveValue("single");
     await user.selectOptions(dateFilter, "range");
-    await user.type(screen.getByLabelText("From"), "2026-08-20");
-    await user.type(screen.getByLabelText("To"), "2026-08-22");
+    const paymentDateRange = screen.getByRole("group", {
+      name: "Payment date range",
+    });
+    await selectDateRange(
+      user,
+      paymentDateRange.querySelector("button")!,
+      "2026-08-20",
+      "2026-08-22",
+    );
     await waitFor(() => expect(loadPayments).toHaveBeenLastCalledWith(expect.objectContaining({ unreconciled: true, paymentDate: null, paymentDateStart: "2026-08-20", paymentDateEnd: "2026-08-22" })));
   });
 
@@ -106,9 +118,11 @@ describe("PaymentsListPage", () => {
 
     await user.clear(charges);
     await user.type(charges, "20");
-    const payoutDate = within(dialog).getByLabelText("Payout date");
-    await user.clear(payoutDate);
-    await user.type(payoutDate, "2026-08-20");
+    await selectDate(
+      user,
+      within(dialog).getByRole("combobox", { name: "Payout date" }),
+      "2026-08-20",
+    );
     await user.click(within(dialog).getByRole("button", { name: "Confirm reconciliation" }));
     await waitFor(() => expect(saveSettlement).toHaveBeenCalledWith({ paymentIds: ["payment-1", "payment-2"], payoutDateMode: "custom", payoutAt: expect.any(String), charges: 20 }));
   });

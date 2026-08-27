@@ -7,6 +7,7 @@ import { MemoryRouter } from "react-router-dom";
 
 import { ReportsPage } from "@/components/ReportsPage";
 import i18n from "@/i18n";
+import { selectDateRange } from "./calendar-test-helpers";
 
 const reports = vi.hoisted(() => ({
   fetchMonthlyPreparedMeatStock: vi.fn(),
@@ -253,16 +254,17 @@ describe("Shop order quantity report", () => {
     await screen.findByText("豉油雞中翼");
 
     await user.click(screen.getByRole("button", { name: "桂花小幸 TKO" }));
-    const start = screen.getByLabelText("Start date");
-    const end = screen.getByLabelText("End date");
-    await user.clear(start);
-    await user.type(start, "2026-06-01");
-    await user.clear(end);
-    await user.type(end, "2026-06-30");
+    const dateRange = screen.getByRole("group", { name: "Date range" });
+    await selectDateRange(
+      user,
+      dateRange.querySelector("button")!,
+      "2026-08-02",
+      "2026-08-03",
+    );
     await waitFor(() =>
       expect(reports.fetchShopOrderQuantities).toHaveBeenLastCalledWith({
-        startDate: "2026-06-01",
-        endDate: "2026-06-30",
+        startDate: "2026-08-02",
+        endDate: "2026-08-03",
         shopIds: ["tko"],
       }),
     );
