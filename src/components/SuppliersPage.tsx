@@ -1,6 +1,22 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { Eye, Pencil, RefreshCw, Store, Trash2 } from "lucide-react";
+import {
+  CircleCheck,
+  CircleX,
+  Eye,
+  MessageSquareText,
+  Package,
+  PackageOpen,
+  Pencil,
+  Phone,
+  ReceiptText,
+  RefreshCw,
+  Store,
+  Trash2,
+  Truck,
+  UserRound,
+  type LucideIcon,
+} from "lucide-react";
 
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
@@ -108,17 +124,35 @@ function LinkedItemList({
   if (!items.length) {
     return (
       <div className="suppliers-detail-group">
-        <h3>{title}</h3>
-        <p className="suppliers-detail-empty">{t("suppliers.noLinkedItems")}</p>
+        <div className="suppliers-detail-group-heading">
+          <div className="suppliers-detail-group-title">
+            <Package aria-hidden="true" />
+            <h3>{title}</h3>
+          </div>
+          <span className="suppliers-detail-count">0</span>
+        </div>
+        <div className="suppliers-detail-empty">
+          <PackageOpen aria-hidden="true" />
+          <p>{t("suppliers.noLinkedItems")}</p>
+        </div>
       </div>
     );
   }
   return (
     <div className="suppliers-detail-group">
-      <h3>{title}</h3>
+      <div className="suppliers-detail-group-heading">
+        <div className="suppliers-detail-group-title">
+          <Package aria-hidden="true" />
+          <h3>{title}</h3>
+        </div>
+        <span className="suppliers-detail-count">{items.length}</span>
+      </div>
       <ul className="suppliers-detail-list">
         {items.map((item) => (
-          <li key={item.id}>{item.name}</li>
+          <li key={item.id}>
+            <span aria-hidden="true" />
+            {item.name}
+          </li>
         ))}
       </ul>
     </div>
@@ -140,30 +174,51 @@ function SupplierDetailPanel({
   if (!supplier) return null;
 
   const notSet = t("common.notSet");
-  const rows: Array<{ label: string; value: string | null; wide?: boolean }> = [
-    { label: t("suppliers.columns.companyName"), value: supplier.companyName },
+  const rows: Array<{
+    label: string;
+    value: string | null;
+    icon: LucideIcon;
+    wide?: boolean;
+    status?: "active" | "inactive";
+  }> = [
+    {
+      label: t("suppliers.columns.companyName"),
+      value: supplier.companyName,
+      icon: Store,
+    },
     {
       label: t("suppliers.columns.contactPerson"),
       value: supplier.contactPerson,
+      icon: UserRound,
     },
     {
       label: t("suppliers.columns.phoneNumber"),
       value: supplier.phoneNumber,
+      icon: Phone,
     },
-    { label: t("suppliers.columns.comment"), value: supplier.comment, wide: true },
+    {
+      label: t("suppliers.columns.comment"),
+      value: supplier.comment,
+      icon: MessageSquareText,
+      wide: true,
+    },
     {
       label: t("suppliers.columns.deliverySchedule"),
       value: supplier.deliverySchedule,
+      icon: Truck,
     },
     {
       label: t("suppliers.columns.paymentSchedule"),
       value: supplier.paymentSchedule,
+      icon: ReceiptText,
     },
     {
       label: t("suppliers.columns.status"),
       value: supplier.isActive
         ? t("suppliers.statuses.active")
         : t("suppliers.statuses.inactive"),
+      icon: supplier.isActive ? CircleCheck : CircleX,
+      status: supplier.isActive ? "active" : "inactive",
     },
   ];
 
@@ -175,20 +230,38 @@ function SupplierDetailPanel({
       onClose={onClose}
       closeLabel={closeLabel}
       half
+      className="suppliers-detail-panel"
     >
       <dl className="suppliers-detail-fields">
-        {rows.map((row) => (
-          <div
-            className={cn(
-              "suppliers-detail-field",
-              row.wide && "suppliers-detail-field-wide",
-            )}
-            key={row.label}
-          >
-            <dt>{row.label}</dt>
-            <dd>{row.value?.trim() ? row.value : notSet}</dd>
-          </div>
-        ))}
+        {rows.map((row) => {
+          const Icon = row.icon;
+          return (
+            <div
+              className={cn(
+                "suppliers-detail-field",
+                row.wide && "suppliers-detail-field-wide",
+              )}
+              key={row.label}
+            >
+              <div className="suppliers-detail-field-icon" aria-hidden="true">
+                <Icon />
+              </div>
+              <div className="suppliers-detail-field-copy">
+                <dt>{row.label}</dt>
+                <dd
+                  className={cn(
+                    row.status && "suppliers-detail-status",
+                    row.status === "active" && "suppliers-detail-status-active",
+                    row.status === "inactive" &&
+                      "suppliers-detail-status-inactive",
+                  )}
+                >
+                  {row.value?.trim() ? row.value : notSet}
+                </dd>
+              </div>
+            </div>
+          );
+        })}
       </dl>
       <div className="suppliers-linked-groups">
         <LinkedItemList
