@@ -373,6 +373,8 @@ describe("editable quote PDF page", () => {
     await user.type(screen.getByLabelText("產品 1"), "自訂活動項目");
     await user.clear(screen.getByLabelText("單價 1"));
     await user.type(screen.getByLabelText("單價 1"), "300");
+    expect(screen.getAllByText("$5,400").length).toBeGreaterThan(0);
+    await user.tab();
     expect(screen.getAllByText("$36,000").length).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: "儲存工作稿" })).not.toBeInTheDocument();
     await waitFor(() => expect(screen.getByText("已自動儲存")).toBeInTheDocument());
@@ -434,6 +436,8 @@ describe("editable quote PDF page", () => {
 
     await user.clear(screen.getByLabelText("運費"));
     await user.type(screen.getByLabelText("運費"), "150");
+    expect(screen.getByText("$5,500")).toBeInTheDocument();
+    await user.tab();
     expect(screen.getByText("$5,550")).toBeInTheDocument();
   });
 
@@ -852,6 +856,8 @@ describe("editable quote PDF page", () => {
 
     await user.clear(screen.getByLabelText("活動運費"));
     await user.type(screen.getByLabelText("活動運費"), "150");
+    expect(within(screen.getByRole("region", { name: "活動報價表" })).getByText("$10,900")).toBeInTheDocument();
+    await user.tab();
     expect(within(screen.getByRole("region", { name: "活動報價表" })).getByText("$10,950")).toBeInTheDocument();
   });
 

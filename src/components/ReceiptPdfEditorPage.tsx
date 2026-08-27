@@ -537,8 +537,8 @@ export function ReceiptPdfEditorPage({
               <tr key={line.id}>
                 <td>{index + 1}</td>
                 <td><PdfBlurCommitTextarea aria-label={`產品 ${index + 1}`} rows={1} value={line.description} onDirty={markDraftDirty} onCommit={(value) => updateLine(index, { description: value })} /></td>
-                <td><span className="receipt-pdf-price-input"><span aria-hidden="true">$</span><input aria-label={`單價 ${index + 1}`} inputMode="decimal" size={Math.max(line.unitPrice.length, 1)} value={line.unitPrice} onChange={(event) => updateLine(index, { unitPrice: event.target.value })} onBlur={() => { if (!line.unitPrice.trim()) updateLine(index, { unitPrice: "0" }); }} /></span></td>
-                <td><input aria-label={`數量 ${index + 1}`} inputMode="decimal" value={line.quantity} onChange={(event) => updateLine(index, { quantity: event.target.value })} /></td>
+                <td><span className="receipt-pdf-price-input"><span aria-hidden="true">$</span><PdfBlurCommitInput aria-label={`單價 ${index + 1}`} inputMode="decimal" size={Math.max(line.unitPrice.length, 1)} value={line.unitPrice} onDirty={markDraftDirty} onCommit={(value) => updateLine(index, { unitPrice: value.trim() ? value : "0" })} /></span></td>
+                <td><PdfBlurCommitInput aria-label={`數量 ${index + 1}`} inputMode="decimal" value={line.quantity} onDirty={markDraftDirty} onCommit={(value) => updateLine(index, { quantity: value })} /></td>
                 <td>{money(numberValue(line.unitPrice) * numberValue(line.quantity))}</td>
               </tr>
             );
@@ -546,7 +546,7 @@ export function ReceiptPdfEditorPage({
         </tbody>
         {showTotals ? <tfoot>
           <tr><td colSpan={4}>Subtotal:</td><td>{money(totals.subtotal)}</td></tr>
-          <tr><td colSpan={4}><FilterableSelect className="quote-pdf-edit-only shipping-fee-select" aria-label="運費選項" value={draft.deliveryFeeId} onChange={(event) => selectDeliveryFee(event.target.value)}><option value="">Delivery Fee</option>{shippingFees.map((fee) => <option key={fee.id} value={fee.id}>{fee.item}</option>)}</FilterableSelect><span className="quote-pdf-print-only">{draft.deliveryFeeLabel}</span></td><td><span className="receipt-pdf-price-input">{draft.deliveryFee ? <span aria-hidden="true">$</span> : null}<input aria-label="運費" inputMode="decimal" size={Math.max(draft.deliveryFee.length, 1)} value={draft.deliveryFee} onChange={(event) => update("deliveryFee", event.target.value)} /></span></td></tr>
+          <tr><td colSpan={4}><FilterableSelect className="quote-pdf-edit-only shipping-fee-select" aria-label="運費選項" value={draft.deliveryFeeId} onChange={(event) => selectDeliveryFee(event.target.value)}><option value="">Delivery Fee</option>{shippingFees.map((fee) => <option key={fee.id} value={fee.id}>{fee.item}</option>)}</FilterableSelect><span className="quote-pdf-print-only">{draft.deliveryFeeLabel}</span></td><td><span className="receipt-pdf-price-input">{draft.deliveryFee ? <span aria-hidden="true">$</span> : null}<PdfBlurCommitInput aria-label="運費" inputMode="decimal" size={Math.max(draft.deliveryFee.length, 1)} value={draft.deliveryFee} onDirty={markDraftDirty} onCommit={(value) => update("deliveryFee", value.trim() ? value : "0")} /></span></td></tr>
           <tr><td colSpan={4}>Grand Total:</td><td>{money(totals.grandTotal)}</td></tr>
         </tfoot> : null}
       </table>
