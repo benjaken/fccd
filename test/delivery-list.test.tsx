@@ -299,9 +299,23 @@ describe("Delivery list page", () => {
     );
 
     await screen.findByRole("heading", { name: "送貨清單" });
-    const dateInputs = screen.getAllByDisplayValue(/^2026-08-/);
-    await user.clear(dateInputs[0]);
-    await user.type(dateInputs[0], "2026-08-16");
+    await user.click(
+      screen.getByRole("button", { name: /2026\/08\/01.*2026\/08\/22/ }),
+    );
+    let datePopover = document.querySelector<HTMLElement>(
+      ".date-range-picker-popover",
+    );
+    const startDay = within(datePopover!)
+      .getAllByRole("button")
+      .find((button) => button.textContent === "16");
+    await user.click(startDay!);
+    datePopover = document.querySelector<HTMLElement>(
+      ".date-range-picker-popover",
+    );
+    const endDay = within(datePopover!)
+      .getAllByRole("button")
+      .find((button) => button.textContent === "22");
+    await user.click(endDay!);
     await user.selectOptions(screen.getAllByRole("combobox")[0], "team-1");
 
     const summary = await screen.findByLabelText("已選車隊資料");
