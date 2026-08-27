@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { buildQuoteConfirmationContent } from "../_shared/order-notification-content.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -33,12 +34,6 @@ function serviceRoleKey() {
 function digits(value: string | null) {
   const normalized = (value || "").replace(/\D/g, "");
   return normalized.length === 8 ? `852${normalized}` : normalized;
-}
-
-function html(value: string | null) {
-  return (value || "").replace(/[&<>"']/g, (character) => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
-  })[character] || character);
 }
 
 Deno.serve(async (request) => {
@@ -78,7 +73,7 @@ Deno.serve(async (request) => {
     const watiEndpoint = requiredEnv("WATI_API_ENDPOINT").replace(/\/$/, "");
     const watiTemplate = requiredEnv("WATI_TEMPLATE_NAME");
     const watiResponse = await fetch(
-      `${watiEndpoint}/api/v1/sendTemplateMessage?whatsappNumber=${encodeURIComponent(phone)}`,
+      `${watiEndpoint}/api/v2/sendTemplateMessage?whatsappNumber=${encodeURIComponent(phone)}`,
       {
         method: "POST",
         headers: {
@@ -97,13 +92,16 @@ Deno.serve(async (request) => {
         }),
       },
     );
-    if (!watiResponse.ok) {
+    const watiPayload = await watiResponse.json().catch(() => null) as { result?: unknown } | null;
+    if (!watiResponse.ok || watiPayload?.result === false) {
       return response({ error: "wati_send_failed", watiSent: false, emailSent: false }, 502);
     }
 
-    const formattedTotal = new Intl.NumberFormat("zh-HK", {
-      style: "currency", currency: quote.currency || "HKD",
-    }).format(Number(quote.grand_total) || 0);
+    const notification = buildQuoteConfirmationContent({
+      name: customerName,
+      quoteNumber: quote.order_number || "",
+      pdfUrl,
+    });
     const emailResponse = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -113,8 +111,8 @@ Deno.serve(async (request) => {
       body: JSON.stringify({
         from: requiredEnv("QUOTE_EMAIL_FROM"),
         to: [quote.email_snapshot],
-        subject: `報價確認 ${quote.order_number || ""}`.trim(),
-        html: `<p>${html(customerName)} 您好：</p><p>報價單 <strong>${html(quote.order_number)}</strong> 已準備好，總額為 <strong>${html(formattedTotal)}</strong>。</p><p><a href="${html(pdfUrl)}">查看報價單 PDF</a></p>`,
+        subject: notification.subject,
+        html: notification.html,
       }),
     });
     if (!emailResponse.ok) {

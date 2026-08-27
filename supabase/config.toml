@@ -72,3 +72,6 @@ verify_jwt = false
 [functions.refresh-prepared-meat-from-bubble]
 verify_jwt = false
 
+[functions.wati-order-notifications]
+verify_jwt = false
+
