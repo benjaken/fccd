@@ -248,6 +248,8 @@ describe("Receipt PDF editor", () => {
     await screen.findByRole("heading", { name: "RECEIPT" });
     await user.clear(screen.getByLabelText("單價 1"));
     await user.type(screen.getByLabelText("單價 1"), "50");
+    expect(screen.getByText("$1,650")).toBeInTheDocument();
+    await user.tab();
     expect(screen.getByText("$1,690")).toBeInTheDocument();
     await user.selectOptions(screen.getByLabelText("運費選項"), "fee-1");
 

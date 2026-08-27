@@ -567,7 +567,7 @@ export function QuotePdfEditorPage({
               <tr key={activity.id}>
                 <td>{index + 1}</td>
                 <td><PdfBlurCommitInput aria-label={`活動報價 ${index + 1}`} value={activity.description} onDirty={markDraftDirty} onCommit={(value) => updateActivity(index, { description: value })} /></td>
-                <td>$<input aria-label={`活動價錢 ${index + 1}`} inputMode="decimal" value={activity.amount} onChange={(event) => updateActivity(index, { amount: event.target.value })} onBlur={() => { if (!activity.amount.trim()) updateActivity(index, { amount: "0" }); }} /></td>
+                <td>$<PdfBlurCommitInput aria-label={`活動價錢 ${index + 1}`} inputMode="decimal" value={activity.amount} onDirty={markDraftDirty} onCommit={(value) => updateActivity(index, { amount: value.trim() ? value : "0" })} /></td>
               </tr>
             ))}
           </tbody>
@@ -582,7 +582,7 @@ export function QuotePdfEditorPage({
               </FilterableSelect>
               <span className="quote-pdf-print-only">{draft.activityShippingNote || "選擇運費"}</span>
             </td>
-            <td><span className="quote-pdf-price-input"><span aria-hidden="true">$</span><input aria-label="活動運費" inputMode="decimal" size={Math.max(draft.activityShippingFee.length, 1)} value={draft.activityShippingFee} onChange={(event) => update("activityShippingFee", event.target.value)} onBlur={() => { if (!draft.activityShippingFee.trim()) update("activityShippingFee", "0"); }} /></span></td>
+            <td><span className="quote-pdf-price-input"><span aria-hidden="true">$</span><PdfBlurCommitInput aria-label="活動運費" inputMode="decimal" size={Math.max(draft.activityShippingFee.length, 1)} value={draft.activityShippingFee} onDirty={markDraftDirty} onCommit={(value) => update("activityShippingFee", value.trim() ? value : "0")} /></span></td>
           </tr>
           <tr><td colSpan={2}>總數：</td><td>${totals.activityTotal.toLocaleString("zh-HK")}</td></tr>
         </tfoot>
@@ -607,8 +607,8 @@ export function QuotePdfEditorPage({
               <tr key={line.id}>
                 <td>{index + 1}</td>
                 <td><PdfBlurCommitInput className="quote-pdf-product-input" aria-label={`產品 ${index + 1}`} value={line.description} onDirty={markDraftDirty} onCommit={(value) => updateLine(index, { description: value })} /></td>
-                <td><span className="quote-pdf-price-input"><span aria-hidden="true">$</span><input aria-label={`單價 ${index + 1}`} inputMode="decimal" size={Math.max(line.unitPrice.length, 1)} value={line.unitPrice} onChange={(event) => updateLine(index, { unitPrice: event.target.value })} onBlur={() => { if (!line.unitPrice.trim()) updateLine(index, { unitPrice: "0" }); }} /></span></td>
-                <td><input aria-label={`${isLunchBox ? "份數" : "數量"} ${index + 1}`} inputMode="decimal" value={line.quantity} onChange={(event) => updateLine(index, { quantity: event.target.value })} /></td>
+                <td><span className="quote-pdf-price-input"><span aria-hidden="true">$</span><PdfBlurCommitInput aria-label={`單價 ${index + 1}`} inputMode="decimal" size={Math.max(line.unitPrice.length, 1)} value={line.unitPrice} onDirty={markDraftDirty} onCommit={(value) => updateLine(index, { unitPrice: value.trim() ? value : "0" })} /></span></td>
+                <td><PdfBlurCommitInput aria-label={`${isLunchBox ? "份數" : "數量"} ${index + 1}`} inputMode="decimal" value={line.quantity} onDirty={markDraftDirty} onCommit={(value) => updateLine(index, { quantity: value })} /></td>
                 <td className="quote-pdf-money">${(numberValue(line.quantity) * numberValue(line.unitPrice)).toLocaleString("zh-HK")}</td>
               </tr>
             );
@@ -633,7 +633,7 @@ export function QuotePdfEditorPage({
               </FilterableSelect>
               <span className="quote-pdf-print-only">{draft.shippingFeeLabel || "選擇運費"}</span>
             </td>
-            <td><span className="quote-pdf-price-input"><span aria-hidden="true">$</span><input aria-label="運費" inputMode="decimal" size={Math.max(draft.shippingFee.length, 1)} value={draft.shippingFee} onChange={(event) => update("shippingFee", event.target.value)} onBlur={() => { if (!draft.shippingFee.trim()) update("shippingFee", "0"); }} /></span></td>
+            <td><span className="quote-pdf-price-input"><span aria-hidden="true">$</span><PdfBlurCommitInput aria-label="運費" inputMode="decimal" size={Math.max(draft.shippingFee.length, 1)} value={draft.shippingFee} onDirty={markDraftDirty} onCommit={(value) => update("shippingFee", value.trim() ? value : "0")} /></span></td>
           </tr>
           <tr><td className="quote-pdf-summary-label" colSpan={4}>總數：</td><td><strong>${totals.productTotal.toLocaleString("zh-HK")}</strong></td></tr>
         </tbody> : null}
