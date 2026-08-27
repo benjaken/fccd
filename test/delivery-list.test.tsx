@@ -299,9 +299,8 @@ describe("Delivery list page", () => {
     );
 
     await screen.findByRole("heading", { name: "送貨清單" });
-    await user.click(
-      screen.getByRole("button", { name: /2026\/08\/01.*2026\/08\/22/ }),
-    );
+    const dateRangePicker = screen.getByRole("group", { name: "日期範圍" });
+    await user.click(within(dateRangePicker).getByRole("button"));
     let datePopover = document.querySelector<HTMLElement>(
       ".date-range-picker-popover",
     );
