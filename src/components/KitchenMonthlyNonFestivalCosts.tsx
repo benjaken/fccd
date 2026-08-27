@@ -6,6 +6,7 @@ import { useSearchParams } from "react-router-dom";
 import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
 import { ListTable } from "@/components/ui/list-table";
+import { MonthPicker } from "@/components/ui/month-picker";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { SidePanel } from "@/components/ui/side-panel";
 import { TablePagination } from "@/components/ui/table-pagination";
@@ -24,26 +25,38 @@ import {
 
 const PAGE_SIZE = 15;
 
-function currentHongKongMonth() {
+function currentHongKongDate() {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "Asia/Hong_Kong",
     year: "numeric",
     month: "2-digit",
+    day: "2-digit",
   }).formatToParts(new Date());
   const value = (type: Intl.DateTimeFormatPartTypes) =>
     parts.find((part) => part.type === type)?.value ?? "";
-  return `${value("year")}-${value("month")}`;
+  return `${value("year")}-${value("month")}-${value("day")}`;
 }
 
-function monthDetails(timestamp: string | null) {
-  if (!timestamp) return { month: "—", quarter: "—" };
+function currentHongKongMonth() {
+  return currentHongKongDate().slice(0, 7);
+}
+
+function hongKongMonthKey(timestamp: string | null) {
+  if (!timestamp) return null;
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "Asia/Hong_Kong",
     year: "numeric",
-    month: "numeric",
+    month: "2-digit",
   }).formatToParts(new Date(timestamp));
-  const year = Number(parts.find((part) => part.type === "year")?.value);
-  const month = Number(parts.find((part) => part.type === "month")?.value);
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  return year && month ? `${year}-${month}` : null;
+}
+
+function monthDetails(timestamp: string | null) {
+  const monthKey = hongKongMonthKey(timestamp);
+  if (!monthKey) return { month: "—", quarter: "—" };
+  const [year, month] = monthKey.split("-").map(Number);
   if (!year || !month) return { month: "—", quarter: "—" };
   return {
     month: `${String(year).slice(-2)}年${month}月`,
@@ -243,7 +256,7 @@ function AddMonthlyNonFestivalCostPanel({
 }
 
 export function KitchenMonthlyNonFestivalCosts({ canEdit }: { canEdit: boolean }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedMonth = /^\d{4}-\d{2}$/.test(searchParams.get("month") ?? "")
     ? searchParams.get("month")
@@ -267,7 +280,7 @@ export function KitchenMonthlyNonFestivalCosts({ canEdit }: { canEdit: boolean }
       .then((result) => {
         if (!active) return;
         const items = selectedMonth
-          ? result.items.filter((row) => row.monthAt?.slice(0, 7) === selectedMonth)
+          ? result.items.filter((row) => hongKongMonthKey(row.monthAt) === selectedMonth)
           : result.items;
         setRows(items);
         setTotal(selectedMonth ? items.length : result.total);
@@ -348,22 +361,25 @@ export function KitchenMonthlyNonFestivalCosts({ canEdit }: { canEdit: boolean }
         <p className="kitchen-monthly-cost-pnl-notice">
           此部份數據將展示在 P&amp;L 報告
         </p>
-        <label className="kitchen-monthly-cost-month-filter">
-          <span>篩選月份</span>
-          <input
-            type="month"
-            max={currentHongKongMonth()}
-            value={selectedMonth ?? ""}
-            aria-label="篩選月份"
-            onChange={(event) => {
-              const next = new URLSearchParams(searchParams);
-              if (event.target.value) next.set("month", event.target.value);
-              else next.delete("month");
-              setPage(1);
-              setSearchParams(next);
-            }}
-          />
-        </label>
+        <MonthPicker
+          id="kitchen-monthly-cost-month-filter"
+          className="kitchen-monthly-cost-month-filter"
+          label={t("kitchenMonthlyNonFestivalCosts.monthFilter")}
+          placeholder={t("kitchenMonthlyNonFestivalCosts.allMonthsPlaceholder")}
+          clearLabel={t("kitchenMonthlyNonFestivalCosts.clearMonth")}
+          previousYearLabel={t("kitchenMonthlyNonFestivalCosts.previousYear")}
+          nextYearLabel={t("kitchenMonthlyNonFestivalCosts.nextYear")}
+          locale={i18n.language}
+          max={currentHongKongMonth()}
+          value={selectedMonth ?? ""}
+          onChange={(value) => {
+            const next = new URLSearchParams(searchParams);
+            if (value) next.set("month", value);
+            else next.delete("month");
+            setPage(1);
+            setSearchParams(next);
+          }}
+        />
         {canEdit ? (
           <div className="kitchen-monthly-cost-actions">
             <Button variant="outline" onClick={() => setAddPanelOpen(true)}>

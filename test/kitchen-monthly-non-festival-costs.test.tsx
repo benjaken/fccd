@@ -74,4 +74,19 @@ describe("monthly non-festival operating costs", () => {
     await user.selectOptions(within(dialog).getByLabelText("類型"), "rent");
     expect(within(dialog).queryByText("品牌（必須選擇）")).not.toBeInTheDocument();
   });
+
+  it("uses the shared date picker for the month filter", async () => {
+    await i18n.changeLanguage("zh-HK");
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <KitchenMonthlyNonFestivalCosts canEdit />
+      </MemoryRouter>,
+    );
+
+    const filter = await screen.findByLabelText("篩選月份");
+    expect(filter).toHaveAttribute("type", "button");
+    await user.click(filter);
+    expect(await screen.findByRole("grid")).toBeInTheDocument();
+  });
 });
