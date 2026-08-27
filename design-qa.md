@@ -53,6 +53,60 @@ final result: passed
 
 ---
 
+# Customer Self-Service Portal Design QA
+
+- Source visual truth: `C:/Users/ADMINI~1/AppData/Local/Temp/codex-clipboard-f875c5bc-7283-40d4-ab0b-2adb59e5410a.png`, `codex-clipboard-9aab4ed6-49d8-4dfd-ac65-0be3c25af4a6.png`, `codex-clipboard-801e58c3-f001-4570-9539-bb11133a8678.png`, `codex-clipboard-2345e4fc-047d-40e2-a387-34820bff20ce.png`, and `codex-clipboard-125cde5a-a6f8-46fe-b019-b95724830e63.png`
+- Implementation screenshots: `D:/work/FCCD/.design-qa/customer-self-service-list.jpg`, `D:/work/FCCD/.design-qa/customer-self-service-detail.jpg`, and `D:/work/FCCD/.design-qa/customer-self-service-receipt.jpg`
+- Mobile implementation evidence: `C:/Users/ADMINI~1/AppData/Local/Temp/codex-clipboard-f8694af6-8be2-496f-b66f-3f4e7251a62c.png`
+- Source pixels: 1278 x 1278 desktop captures
+- Implementation pixels: 1280 x 720 desktop captures; 430 x 858 mobile capture
+- CSS viewport: 1280 x 720 at device scale factor 1 for browser verification
+- Density normalization: source and implementation were both inspected at original 1x density. Desktop comparison used the shared approximately 1280-pixel width and matched content state; the source has a taller blank canvas, so vertical whitespace below the relevant content was excluded from fidelity judgments.
+- States: customer login/error, populated order list, paid order detail, delivery information, receipt modal, and successful PDF download state
+
+## Full-view comparison evidence
+
+The implementation preserves the source journey and information architecture: phone plus email verification, a three-order list, order status and line items, delivery details, and an official receipt preview. The application intentionally uses the current FCCD green design system, current channel logos, responsive cards, and stronger hierarchy instead of reproducing the old page's sparse legacy styling. The mobile login capture confirms the requested explanatory sentence was removed and the card spacing closed correctly.
+
+## Focused region comparison evidence
+
+The order-list comparison used the supplied three-order source and the populated browser render with the same order numbers, dates, and totals. The detail comparison used B-1247 with the same six line items, status badges, total, and delivery content. The receipt comparison used REC/B-124701, the same customer, delivery date, amount, payment method, company chop, and footer contacts. These focused regions were necessary because typography and receipt fields are too small to judge reliably from a single full-page image.
+
+## Required fidelity surfaces
+
+- Fonts and typography: the current Inter/Noto Sans TC stack, compact labels, readable Traditional Chinese text, numeric totals, and document-style Arial receipt hierarchy are consistent and do not clip.
+- Spacing and layout rhythm: desktop content stays within a 920px reading column; cards, rows, status chips, and delivery fields align consistently. Mobile fields and the primary action remain full width without horizontal overflow.
+- Colors and visual tokens: the current green primary, pale green canvas, neutral card borders, semantic payment/factory/fleet chips, and amber add-on notice follow the existing FCCD system with sufficient contrast.
+- Image quality and asset fidelity: real repository logo assets are used for Catering and channel-specific brands. The real company-chop asset is used in the receipt; no visible asset is recreated with CSS or inline SVG.
+- Copy and content: supplied order data and receipt fields are retained. The user-requested introductory sentence is absent. No outstanding-balance amount reminder is shown.
+
+## Interaction and runtime checks
+
+- Public route `/self_service_search` opened without application authentication.
+- Populated order list opened B-1247 and displayed six line items plus delivery details.
+- `預覽並下載收據` opened the modal and generated the PDF; the final state displayed `PDF 已開始下載`, with `再次下載` enabled.
+- Browser console was checked after the final reload and successful receipt generation; no new error entries were recorded.
+- Phone/email mismatch and backend-unavailable errors have separate customer-facing messages.
+- Full production build passed: 165 test files and 1,228 tests, edge-function type-check, TypeScript build, and Vite production bundle.
+
+## Findings
+
+No actionable P0, P1, or P2 visual differences remain. The current green visual language and channel-specific logos are intentional improvements aligned with the existing application rather than legacy-source drift.
+
+## Comparison history
+
+- Pass 1: the receipt preview rendered, but PDF generation failed because html2canvas could not parse inherited OKLCH design tokens (P0 core download failure).
+- Fix: sanitized cloned document color tokens and descendant border/outline colors before canvas rendering.
+- Pass 2: browser verification reached `PDF 已開始下載`, enabled repeat download, preserved the receipt preview, and produced no new console errors. The earlier P0 is resolved.
+
+## Follow-up polish
+
+- P3: on short 720px desktop viewports, the A4 receipt preview scrolls inside the modal; on taller desktop viewports it presents more of the page at once. The PDF itself remains a complete A4 document.
+
+final result: passed
+
+---
+
 # Product Material Three-Column Design QA
 
 - Source visual truth: `C:/Users/ADMINI~1/AppData/Local/Temp/codex-clipboard-ea5cc29d-4a08-4339-b4bb-d7977486852b.png`
