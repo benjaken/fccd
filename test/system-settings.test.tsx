@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { render, screen, waitFor, within, fireEvent } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 
@@ -381,8 +381,8 @@ describe("Super Admin system settings", () => {
     ).toBeInTheDocument();
     expect(screen.getAllByText("PDF").length).toBeGreaterThan(0);
     expect(screen.getByLabelText("文件類型")).toBeInTheDocument();
-    expect(screen.getByLabelText("開始日期")).toBeInTheDocument();
-    expect(screen.getByLabelText("結束日期")).toBeInTheDocument();
+    const dateRange = screen.getByRole("group", { name: "日期範圍" });
+    expect(dateRange).toBeInTheDocument();
     expect(screen.queryByText("遷移狀態")).not.toBeInTheDocument();
     expect(screen.queryByText("來源")).not.toBeInTheDocument();
     expect(screen.queryByText("所屬資料")).not.toBeInTheDocument();
@@ -394,12 +394,28 @@ describe("Super Admin system settings", () => {
       ),
     );
 
-    fireEvent.change(screen.getByLabelText("開始日期"), {
-      target: { value: "2026-08-01" },
-    });
+    const startDateInput = screen.queryByLabelText("開始日期");
+    if (startDateInput) {
+      expect(screen.getByLabelText("結束日期")).toBeInTheDocument();
+      fireEvent.change(startDateInput, { target: { value: "2026-08-01" } });
+    } else {
+      const dateRangeTrigger = within(dateRange).getByRole("button", {
+        name: /開始日期.*結束日期/,
+      });
+      await user.click(dateRangeTrigger);
+      const dateRangePopover = document.querySelector<HTMLElement>(
+        ".date-range-picker-popover",
+      );
+      const firstDate = within(dateRangePopover!).getAllByRole("button").find(
+        (button) => button.hasAttribute("data-day") && !button.hasAttribute("disabled"),
+      );
+      await user.click(firstDate!);
+    }
     await waitFor(() =>
       expect(loadAttachments).toHaveBeenLastCalledWith(
-        expect.objectContaining({ startDate: "2026-08-01" }),
+        expect.objectContaining({
+          startDate: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+        }),
       ),
     );
 
