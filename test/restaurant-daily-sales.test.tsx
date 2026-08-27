@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { RestaurantDailySalesPage } from "@/components/RestaurantDailySalesPage";
 import i18n from "@/i18n";
+import { selectDate } from "./calendar-test-helpers";
 import {
   emptyRestaurantDailySalesRecord,
   hongKongDateValue,
@@ -202,7 +203,11 @@ describe("restaurant daily sales input", () => {
     );
 
     await user.selectOptions(await screen.findByLabelText("日期篩選"), "single");
-    await user.type(screen.getByLabelText("篩選日期"), "2026-08-21");
+    await selectDate(
+      user,
+      screen.getByRole("combobox", { name: "篩選日期" }),
+      "2026-08-21",
+    );
     await waitFor(() => expect(loadRecent).toHaveBeenLastCalledWith("ylp", "2026-08-21", "2026-08-21"));
     expect(await screen.findByRole("button", { name: /2026-08-21/ })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /2026-08-20/ })).not.toBeInTheDocument();

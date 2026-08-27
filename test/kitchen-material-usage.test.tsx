@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
 
@@ -10,6 +10,7 @@ import {
 import { pageAccessKey } from "@/auth/use-page-access";
 import { secondaryNav } from "@/lib/nav";
 import i18n from "@/i18n";
+import { selectDate } from "./calendar-test-helpers";
 
 describe("kitchen material usage", () => {
   beforeEach(async () => {
@@ -208,10 +209,10 @@ describe("kitchen material usage", () => {
     expect(loadReportCalls).toBe(0);
     expect(screen.queryByText("番茄")).not.toBeInTheDocument();
 
-    const usageDate = screen.getByLabelText("預計用量日期");
+    const usageDate = screen.getByRole("combobox", { name: "預計用量日期" });
     expect(usageDate).toHaveValue("");
     await user.selectOptions(stocktakeSelect, "2026-08-20");
-    fireEvent.change(usageDate, { target: { value: "2026-08-20" } });
+    await selectDate(user, usageDate, "2026-08-20");
     await waitFor(() => expect(screen.getByText("番茄")).toBeInTheDocument());
     expect(stocktakeSelect).toHaveValue("2026-08-20");
     const usageMode = screen.getAllByRole("combobox")[1];
@@ -230,10 +231,9 @@ describe("kitchen material usage", () => {
     expect(screen.getByText(/訂單：order-1/)).toBeInTheDocument();
 
     await user.selectOptions(usageMode, "range");
-    expect(screen.getByLabelText("預計用量開始日")).toBeInTheDocument();
-    expect(screen.getByLabelText("預計用量結束日")).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "預計用量日期範圍" })).toBeInTheDocument();
     await user.selectOptions(usageMode, "single");
-    expect(screen.getByLabelText("預計用量日期")).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "預計用量日期" })).toBeInTheDocument();
 
   });
 });

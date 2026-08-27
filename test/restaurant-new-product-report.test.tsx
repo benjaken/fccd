@@ -58,11 +58,11 @@ describe("restaurant new product report", () => {
       page: 1,
       pageSize: 20,
     }));
-    expect(screen.getByLabelText("開始日期")).toHaveValue(
-      `${new Date().getFullYear()}-01-01`,
+    expect(document.getElementById("new-product-report-start-date")).toHaveTextContent(
+      `${new Date().getFullYear()}/01/01`,
     );
-    expect(screen.getByLabelText("結束日期")).toHaveValue(
-      defaultNewProductReportDates().endDate,
+    expect(document.getElementById("new-product-report-end-date")).toHaveTextContent(
+      defaultNewProductReportDates().endDate.replaceAll("-", "/"),
     );
     expect(screen.getByRole("columnheader", { name: "日期" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "新品" })).toBeInTheDocument();
