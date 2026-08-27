@@ -49,22 +49,58 @@
   background: color-mix(in oklch, var(--accent) 45%, var(--card));
 }
 
-.quotes-table-wrap .quote-region-address-cell {
-  width: 20rem;
-  min-width: 16rem;
-  max-width: 24rem;
-  white-space: nowrap;
+.orders-table-wrap .order-customer-location-summary,
+.quotes-table-wrap .quote-customer-location-summary {
+  width: 21rem;
+  min-width: 18rem;
+  max-width: 23rem;
+  white-space: normal;
 }
 
-.quotes-table-wrap .quote-region-address-cell > div {
+.order-customer-location,
+.quote-customer-location {
+  display: grid;
+  gap: 2px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid color-mix(in oklch, var(--border) 72%, transparent);
+  color: var(--muted-foreground);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.order-customer-location strong {
+  color: var(--foreground);
+  font-size: inherit;
+}
+
+.order-customer-location .order-region-address,
+.quote-customer-location .quote-address-line {
+  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.quotes-table-wrap .quote-region-address-cell > div + div {
+.order-customer-location .order-region-address {
+  max-width: 100%;
+}
+
+.orders-table-wrap .order-delivery-times-summary small {
+  display: block;
   margin-top: 3px;
   color: var(--muted-foreground);
+  font-size: 0.78rem;
+}
+
+.order-mobile-delivery-times {
+  display: grid;
+  gap: 2px;
+}
+
+.order-mobile-delivery-times span:last-child {
+  color: var(--muted-foreground);
+  font-size: 0.78rem;
 }
 
 .quotes-table-wrap .quote-description-cell textarea {

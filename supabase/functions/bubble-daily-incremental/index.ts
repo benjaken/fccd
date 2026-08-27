@@ -2,8 +2,6 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   type BubbleRecord,
   canAdvanceCheckpoint,
-  dailySalesRestaurantDateKey,
-  filterBubbleDailySalesCoveredByWeb,
   hashBubblePayload,
   partitionConflicts,
   requireLegacyId,
@@ -19,13 +17,14 @@ import {
 import { remainingMappings } from "./remaining-mappings.ts";
 import {
   AUGUST_OVERWRITE_CONFIRMATION,
+  AUGUST_OVERWRITE_SINCE,
   changedOverwriteFields,
-  isFieldAwareOverwriteSourceType,
   isOverwriteSourceType,
   mergeOverwriteRow,
   normalizeOrderNumber,
   overwriteSince,
   overwriteFieldSources,
+  reconciliationOwnedRow,
   type OverwriteSourceType,
 } from "./overwrite.ts";
 import {
@@ -43,6 +42,7 @@ const QUERY_CHUNK = 100;
 const SOFT_RUNTIME_MS = 60_000;
 const OVERWRITE_RUNTIME_MS = 150_000;
 const ORDER_METADATA_BACKFILL_CONFIRMATION = "APPLY_ORDER_METADATA_BACKFILL";
+const RECONCILIATION_CONFIRMATION = "APPLY_JULY15_RECONCILIATION";
 
 type AdminClient = ReturnType<typeof createClient<any>>;
 type Checkpoint = {
@@ -61,72 +61,11 @@ type TypeResult = {
   conflicts: number;
   junctionsInserted: number;
   metadataUpdated?: number;
-  snapshotsUpdated?: number;
   pages: number;
   status: "completed" | "failed" | "resumable";
   error?: string;
   errorDetail?: string;
 };
-
-async function hydrateOrderLineSnapshots(
-  client: AdminClient,
-  records: BubbleRecord[],
-): Promise<number> {
-  const candidates = records.flatMap((record) => {
-    const lineLegacyId = requireLegacyId(record);
-    const productLegacyId = typeof record.Product === "string"
-      ? record.Product.trim()
-      : "";
-    if (!productLegacyId) return [];
-    return [{ lineLegacyId, productLegacyId }];
-  });
-  if (!candidates.length) return 0;
-
-  const [lineRows, productRows] = await Promise.all([
-    selectedLegacyRows(
-      client,
-      "order_lines",
-      candidates.map((item) => item.lineLegacyId),
-      ["id", "sku_snapshot", "product_name_snapshot"],
-    ),
-    selectedLegacyRows(
-      client,
-      "products",
-      candidates.map((item) => item.productLegacyId),
-      ["sku", "name", "chinese_name"],
-    ),
-  ]);
-  const lines = new Map(
-    lineRows.map((row) => [String(row.legacy_id), row]),
-  );
-  const products = new Map(
-    productRows.map((row) => [String(row.legacy_id), row]),
-  );
-
-  let updated = 0;
-  for (const candidate of candidates) {
-    const line = lines.get(candidate.lineLegacyId);
-    const product = products.get(candidate.productLegacyId);
-    if (!line || !product) continue;
-    const patch: Record<string, unknown> = {};
-    if (!String(line.sku_snapshot ?? "").trim()) {
-      const sku = String(product.sku ?? "").trim();
-      if (sku) patch.sku_snapshot = sku;
-    }
-    if (!String(line.product_name_snapshot ?? "").trim()) {
-      const name = String(product.name ?? product.chinese_name ?? "").trim();
-      if (name) patch.product_name_snapshot = name;
-    }
-    if (!Object.keys(patch).length) continue;
-    const { error } = await client
-      .from("order_lines")
-      .update(patch)
-      .eq("id", line.id);
-    if (error) throw error;
-    updated += 1;
-  }
-  return updated;
-}
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -424,7 +363,6 @@ async function syncOrderMetadata(
     [
       "id",
       "document_type",
-      "delivery_district_id",
       "shipping_method_id",
       "shipping_method_legacy_id",
     ],
@@ -480,15 +418,11 @@ async function syncOrderMetadata(
   );
   const deliveryUpdates: Array<Record<string, unknown>> = [];
   const deliveryInserts: Array<Record<string, unknown>> = [];
-  const orderDistrictUpdates: Array<{ id: string; districtId: string }> = [];
   for (const item of metadata) {
     if (!item.districtLegacyId) continue;
     const order = orders.get(item.orderLegacyId);
     const districtId = districts.get(item.districtLegacyId);
     if (!order || !districtId) continue;
-    if (!order.delivery_district_id) {
-      orderDistrictUpdates.push({ id: String(order.id), districtId });
-    }
     const existing = deliveries.get(String(order.id)) ?? [];
     if (existing.length) {
       deliveryUpdates.push(...existing.flatMap((delivery) =>
@@ -522,16 +456,6 @@ async function syncOrderMetadata(
       bubble_created_at: mapped.bubble_created_at ?? null,
       bubble_modified_at: mapped.bubble_modified_at ?? null,
     });
-  }
-  for (const update of orderDistrictUpdates) {
-    const { data, error } = await client
-      .from("orders")
-      .update({ delivery_district_id: update.districtId })
-      .eq("id", update.id)
-      .is("delivery_district_id", null)
-      .select("id");
-    if (error) throw error;
-    result.districtsUpdated += data?.length ?? 0;
   }
   for (let index = 0; index < deliveryUpdates.length; index += INSERT_CHUNK) {
     const { data, error } = await client
@@ -852,47 +776,6 @@ async function resolveRelations(
   }
 }
 
-async function webCoveredDailySalesKeys(
-  client: AdminClient,
-  rows: Array<Record<string, unknown>>,
-): Promise<Set<string>> {
-  const restaurantIds = [...new Set(
-    rows.flatMap((row) =>
-      typeof row.restaurant_id === "string" && row.restaurant_id
-        ? [row.restaurant_id]
-        : []
-    ),
-  )];
-  const salesTimes = rows.flatMap((row) => {
-    if (typeof row.sales_at !== "string" || !row.sales_at) return [];
-    const time = new Date(row.sales_at).getTime();
-    return Number.isFinite(time) ? [time] : [];
-  });
-  if (!restaurantIds.length || !salesTimes.length) return new Set();
-
-  const min = new Date(Math.min(...salesTimes) - 36 * 60 * 60 * 1000).toISOString();
-  const max = new Date(Math.max(...salesTimes) + 36 * 60 * 60 * 1000).toISOString();
-  const covered = new Set<string>();
-  for (let index = 0; index < restaurantIds.length; index += QUERY_CHUNK) {
-    const { data, error } = await client
-      .from("restaurant_daily_sales")
-      .select("restaurant_id,sales_at")
-      .like("legacy_id", "web-daily-sales-%")
-      .in("restaurant_id", restaurantIds.slice(index, index + QUERY_CHUNK))
-      .gte("sales_at", min)
-      .lte("sales_at", max);
-    if (error) throw error;
-    for (const row of data ?? []) {
-      if (!row.restaurant_id || !row.sales_at) continue;
-      covered.add(dailySalesRestaurantDateKey(
-        String(row.restaurant_id),
-        String(row.sales_at),
-      ));
-    }
-  }
-  return covered;
-}
-
 async function insertOnlyParents(
   client: AdminClient,
   table: string,
@@ -1103,6 +986,10 @@ async function processType(
     }
     if (mapping.sourceType === "a_order" && fetched.records.length) {
       await syncOrderShippingMethods(client, fetched.records);
+      const metadata = await syncOrderMetadata(client, fetched.records);
+      result.junctionsInserted += metadata.tagsInserted;
+      result.metadataUpdated =
+        metadata.districtsUpdated + metadata.deliveriesCreated;
     }
     if (mapping.sourceType === "b_deliveryschedule" && fetched.records.length) {
       await syncDeliveryFulfillment(client, fetched.records);
@@ -1120,44 +1007,19 @@ async function processType(
 
     const parentRows = partitioned.fresh.map(mapping.map);
     await resolveRelations(client, parentRows, mapping.relations);
-    const skippedLegacyIds = new Set<string>();
-    let rowsToInsert = parentRows;
-    if (mapping.sourceType === "shop_dailysales" && parentRows.length) {
-      const covered = await webCoveredDailySalesKeys(client, parentRows);
-      const filtered = filterBubbleDailySalesCoveredByWeb(parentRows, covered);
-      rowsToInsert = filtered.kept;
-      for (const legacyId of filtered.skippedLegacyIds) skippedLegacyIds.add(legacyId);
-    }
     const insertedParents = await insertOnlyParents(
       client,
       mapping.table,
-      rowsToInsert,
+      parentRows,
     );
     result.inserted = insertedParents.length;
-
-    // Metadata references the order UUID, so it must run after fresh A_Order
-    // rows have been inserted. Running it before the parent write silently
-    // skipped tags and fallback districts on an order's first sync.
-    if (mapping.sourceType === "a_order" && fetched.records.length) {
-      const metadata = await syncOrderMetadata(client, fetched.records);
-      result.junctionsInserted += metadata.tagsInserted;
-      result.metadataUpdated =
-        metadata.districtsUpdated + metadata.deliveriesCreated;
-    }
-    if (mapping.sourceType === "s_order" && fetched.records.length) {
-      result.snapshotsUpdated = await hydrateOrderLineSnapshots(
-        client,
-        fetched.records,
-      );
-    }
 
     const insertedIds = new Set(
       insertedParents.map((row) => row.legacy_id),
     );
-    const racingConflicts = partitioned.fresh.filter((record) => {
-      const legacyId = requireLegacyId(record);
-      return !insertedIds.has(legacyId) && !skippedLegacyIds.has(legacyId);
-    });
+    const racingConflicts = partitioned.fresh.filter((record) =>
+      !insertedIds.has(requireLegacyId(record))
+    );
     result.conflicts += await logConflicts(
       client,
       runId,
@@ -1216,6 +1078,16 @@ async function processType(
 }
 
 type OverwriteMode = "dry-run" | "apply";
+type ReconciliationMode = "dry-run" | "apply";
+
+const reconciliationChildParentFields: Record<string, string> = {
+  monthly_cost_channels: "monthly_cost_id",
+  payment_settlement_payments: "payment_settlement_id",
+  raw_meat_item_suppliers: "raw_meat_item_id",
+  raw_meat_stock_relations: "movement_id",
+  prepared_meat_stock_raw_sources: "prepared_movement_id",
+  restaurant_ingredient_departments: "restaurant_ingredient_id",
+};
 
 async function selectedLegacyRows(
   client: AdminClient,
@@ -1276,47 +1148,160 @@ async function writeOverwriteRows(
   return written;
 }
 
-async function replaceOverwriteChildren(
+async function processReconciliationAudit(
   client: AdminClient,
-  mapping: SourceMapping,
-  records: BubbleRecord[],
-): Promise<{ deleted: number; written: number }> {
-  if (!mapping.children || records.length === 0) {
-    return { deleted: 0, written: 0 };
+  sourceType: string,
+  since: string,
+  watermark: string,
+  bubbleToken: string,
+  deadline: number,
+  mode: ReconciliationMode = "dry-run",
+) {
+  const mapping = [...coreMappings, ...remainingMappings].find((item) =>
+    item.sourceType === sourceType
+  );
+  if (!mapping) throw new Error("Reconciliation source mapping is unavailable.");
+  const fetched = await fetchBubbleType(
+    sourceType,
+    since,
+    watermark,
+    bubbleToken,
+    deadline,
+  );
+  if (fetched.resumable) {
+    return { status: "paused" as const, sourceType, pages: fetched.pages };
   }
-  const parentRows = await legacyIdRows(
+
+  const mappedRows = fetched.records.map(mapping.map);
+  await resolveRelations(client, mappedRows, mapping.relations);
+  const fields = [...new Set([
+    ...mappedRows.flatMap((row) => Object.keys(row)),
+    ...(sourceType === "a_order"
+      ? ["shopify_order_id", "payment_status_source"]
+      : []),
+  ])]
+    .filter((field) => field !== "legacy_id");
+  const existingRows = await selectedLegacyRows(
     client,
     mapping.table,
-    records.map(requireLegacyId),
+    fetched.records.map(requireLegacyId),
+    fields,
   );
-  if (parentRows.length !== records.length) {
-    throw new Error("Overwrite child rebuild could not resolve every parent.");
-  }
-  const parentIds = new Map(parentRows.map((row) => [row.legacy_id, row.id]));
-  let deleted = 0;
-  let written = 0;
-  for (const child of mapping.children(records, parentIds)) {
-    const parentField = child.onConflict.split(",")[0]?.trim();
-    if (!parentField) throw new Error("Overwrite child conflict key is invalid.");
-    const ids = parentRows.map((row) => row.id);
-    for (let index = 0; index < ids.length; index += QUERY_CHUNK) {
-      const { data, error } = await client
-        .from(child.table)
-        .delete()
-        .in(parentField, ids.slice(index, index + QUERY_CHUNK))
-        .select("id");
-      if (error) throw error;
-      deleted += data?.length ?? 0;
+  const existingByLegacyId = new Map(
+    existingRows.map((row) => [String(row.legacy_id), row]),
+  );
+
+  let inserted = 0;
+  let updated = 0;
+  let unchanged = 0;
+  const changedFieldCounts: Record<string, number> = {};
+  const rowsToWrite: Array<Record<string, unknown>> = [];
+  for (let index = 0; index < mappedRows.length; index += 1) {
+    const mapped = mappedRows[index];
+    const legacyId = String(mapped.legacy_id);
+    const existing = existingByLegacyId.get(legacyId);
+    if (!existing) {
+      inserted += 1;
+      rowsToWrite.push(reconciliationOwnedRow(
+        sourceType,
+        fetched.records[index],
+        mapped,
+      ));
+      continue;
     }
-    await resolveRelations(client, child.rows, child.relations);
-    written += await upsertJunctions(
-      client,
-      child.table,
-      child.onConflict,
-      child.rows,
+    const ownedRow = reconciliationOwnedRow(
+      sourceType,
+      fetched.records[index],
+      mapped,
+      existing,
     );
+    const changedFields = changedOverwriteFields(ownedRow, existing);
+    if (!changedFields.length) {
+      unchanged += 1;
+      continue;
+    }
+    updated += 1;
+    rowsToWrite.push(ownedRow);
+    for (const field of changedFields) {
+      changedFieldCounts[field] = (changedFieldCounts[field] ?? 0) + 1;
+    }
   }
-  return { deleted, written };
+
+  const written = mode === "apply"
+    ? await writeOverwriteRows(client, mapping.table, rowsToWrite)
+    : 0;
+  if (mode === "apply" && written !== rowsToWrite.length) {
+    throw new Error("Reconciliation write count did not match the dry-run set.");
+  }
+
+  const children: Array<Record<string, unknown>> = [];
+  if (mapping.children) {
+    const parentRows = await legacyIdRows(
+      client,
+      mapping.table,
+      fetched.records.map(requireLegacyId),
+    );
+    const parentIds = new Map(parentRows.map((row) => [row.legacy_id, row.id]));
+    for (const child of mapping.children(fetched.records, parentIds)) {
+      await resolveRelations(client, child.rows, child.relations);
+      let removed = 0;
+      let upserted = 0;
+      if (mode === "apply") {
+        const parentField = reconciliationChildParentFields[child.table];
+        if (!parentField) {
+          throw new Error(`Reconciliation child parent field is unavailable for ${child.table}.`);
+        }
+        const parentUuids = [...parentIds.values()];
+        for (let index = 0; index < parentUuids.length; index += QUERY_CHUNK) {
+          const { data, error } = await client
+            .from(child.table)
+            .delete()
+            .in(parentField, parentUuids.slice(index, index + QUERY_CHUNK))
+            .select("id");
+          if (error) throw error;
+          removed += data?.length ?? 0;
+        }
+        upserted = await upsertJunctions(
+          client,
+          child.table,
+          child.onConflict,
+          child.rows,
+        );
+      }
+      children.push({
+        table: child.table,
+        sourceRows: child.rows.length,
+        removed,
+        upserted,
+      });
+    }
+  }
+  const { count: targetWithoutBubbleCreatedAt, error: candidateError } =
+    await client
+      .from(mapping.table)
+      .select("legacy_id", { count: "exact", head: true })
+      .is("bubble_created_at", null);
+  if (candidateError) throw candidateError;
+
+  return {
+    status: "completed" as const,
+    operation: "reconciliation_audit",
+    mode,
+    sourceType,
+    table: mapping.table,
+    phase: mapping.phase,
+    since,
+    watermark,
+    fetched: fetched.records.length,
+    inserted,
+    updated,
+    unchanged,
+    changedFieldCounts,
+    written,
+    targetWithoutBubbleCreatedAt: targetWithoutBubbleCreatedAt ?? 0,
+    children,
+    pages: fetched.pages,
+  };
 }
 
 async function processAugustOverwrite(
@@ -1345,17 +1330,12 @@ async function processAugustOverwrite(
 
   const mappedRows = fetched.records.map(mapping.map);
   await resolveRelations(client, mappedRows, mapping.relations);
-  const fieldAware = isFieldAwareOverwriteSourceType(sourceType);
-  const fields = fieldAware
-    ? [
-      ...Object.keys(overwriteFieldSources[sourceType]),
-      ...(sourceType === "a_order"
-        ? ["shopify_order_id", "payment_status_source"]
-        : []),
-    ]
-    : [...new Set(mappedRows.flatMap((row) => Object.keys(row)))].filter(
-      (field) => field !== "legacy_id",
-    );
+  const fields = [
+    ...Object.keys(overwriteFieldSources[sourceType]),
+    ...(sourceType === "a_order"
+      ? ["shopify_order_id", "payment_status_source"]
+      : []),
+  ];
   const existingRows = await selectedLegacyRows(
     client,
     mapping.table,
@@ -1375,11 +1355,6 @@ async function processAugustOverwrite(
   let blockedShopifyDuplicates = 0;
   let activeShopifyShadows = 0;
   const changedFieldCounts: Record<string, number> = {};
-  const changePreview: Array<{
-    legacyId: string;
-    changedFields: string[];
-    newValues: Record<string, unknown>;
-  }> = [];
 
   for (let index = 0; index < fetched.records.length; index += 1) {
     const source = fetched.records[index];
@@ -1399,24 +1374,13 @@ async function processAugustOverwrite(
       blockedShopifyDuplicates += 1;
       continue;
     }
-    const row = fieldAware
-      ? mergeOverwriteRow(sourceType, source, mapped, existing)
-      : mapped;
+    const row = mergeOverwriteRow(sourceType, source, mapped, existing);
     const changedFields = existing ? changedOverwriteFields(row, existing) : [];
     if (!existing) inserted += 1;
     else if (changedFields.length) updated += 1;
     else unchanged += 1;
     for (const field of changedFields) {
       changedFieldCounts[field] = (changedFieldCounts[field] ?? 0) + 1;
-    }
-    if (changedFields.length && changePreview.length < 100) {
-      changePreview.push({
-        legacyId,
-        changedFields,
-        newValues: Object.fromEntries(
-          changedFields.map((field) => [field, row[field]]),
-        ),
-      });
     }
     if (!existing || changedFields.length) {
       rowsToWrite.push(row);
@@ -1429,9 +1393,6 @@ async function processAugustOverwrite(
   if (mode === "apply" && written !== rowsToWrite.length) {
     throw new Error("Overwrite write count did not match the dry-run set.");
   }
-  const children = mode === "apply" && !fieldAware
-    ? await replaceOverwriteChildren(client, mapping, fetched.records)
-    : { deleted: 0, written: 0 };
   return {
     status: "completed" as const,
     operation: "august_2026_overwrite",
@@ -1447,10 +1408,7 @@ async function processAugustOverwrite(
     blockedShopifyDuplicates,
     activeShopifyShadows,
     changedFieldCounts,
-    changePreview,
     written,
-    childRowsDeleted: children.deleted,
-    childRowsWritten: children.written,
     pages: fetched.pages,
   };
 }
@@ -1478,9 +1436,11 @@ async function handleRequest(request: Request): Promise<Response> {
     body?.backfillOrderMetadata === true &&
     body?.confirmation === ORDER_METADATA_BACKFILL_CONFIRMATION;
   const adminOverwriteRequested = body?.overwrite != null;
+  const adminReconciliationAuditRequested = body?.reconciliationAudit != null;
   if (
     !cronAuthenticated &&
-    !((adminBackfillRequested || adminOverwriteRequested) &&
+    !((adminBackfillRequested || adminOverwriteRequested ||
+      adminReconciliationAuditRequested) &&
       await authenticateAdmin(request, client))
   ) {
     return jsonResponse({ error: "Unauthorized." }, 401);
@@ -1505,6 +1465,12 @@ async function handleRequest(request: Request): Promise<Response> {
   let overwriteRequest: {
     mode: OverwriteMode;
     sourceType: OverwriteSourceType;
+    watermark: string;
+  } | null = null;
+  let reconciliationAuditRequest: {
+    mode: ReconciliationMode;
+    sourceType: string;
+    since: string;
     watermark: string;
   } | null = null;
   try {
@@ -1557,6 +1523,36 @@ async function handleRequest(request: Request): Promise<Response> {
         watermark: new Date(overwriteWatermark).toISOString(),
       };
     }
+    if (body?.reconciliationAudit != null) {
+      const mode = body.reconciliationAudit.mode ?? "dry-run";
+      const sourceType = String(body.reconciliationAudit.sourceType ?? "");
+      const since = new Date(String(body.reconciliationAudit.since ?? ""));
+      const auditWatermark = new Date(
+        String(body.reconciliationAudit.watermark ?? invocationStartedAt),
+      );
+      if (
+        (mode !== "dry-run" && mode !== "apply") ||
+        !sourceType || sourceType.length > 120 ||
+        Number.isNaN(since.getTime()) ||
+        Number.isNaN(auditWatermark.getTime()) ||
+        since.getTime() >= auditWatermark.getTime() ||
+        auditWatermark.getTime() > Date.parse(invocationStartedAt)
+      ) {
+        throw new Error("reconciliation audit parameters are invalid.");
+      }
+      if (
+        mode === "apply" &&
+        body.reconciliationAudit.confirmation !== RECONCILIATION_CONFIRMATION
+      ) {
+        throw new Error("reconciliation confirmation is invalid.");
+      }
+      reconciliationAuditRequest = {
+        mode,
+        sourceType,
+        since: since.toISOString(),
+        watermark: auditWatermark.toISOString(),
+      };
+    }
     if (body?.sourceType != null) {
       if (
         typeof body.sourceType !== "string" ||
@@ -1569,6 +1565,29 @@ async function handleRequest(request: Request): Promise<Response> {
     }
   } catch (error) {
     return jsonResponse({ error: safeError(error) }, 400);
+  }
+
+  if (reconciliationAuditRequest) {
+    try {
+      const result = await processReconciliationAudit(
+        client,
+        reconciliationAuditRequest.sourceType,
+        reconciliationAuditRequest.since,
+        reconciliationAuditRequest.watermark,
+        bubbleToken,
+        Date.parse(invocationStartedAt) + OVERWRITE_RUNTIME_MS,
+        reconciliationAuditRequest.mode,
+      );
+      return jsonResponse(result, result.status === "paused" ? 202 : 200);
+    } catch (error) {
+      return jsonResponse({
+        status: "failed",
+        operation: "reconciliation_audit",
+        sourceType: reconciliationAuditRequest.sourceType,
+        error: errorCode(error),
+        detail: safeError(error),
+      }, 500);
+    }
   }
 
   if (overwriteRequest) {

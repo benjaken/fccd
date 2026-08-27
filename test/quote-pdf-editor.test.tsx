@@ -53,6 +53,7 @@ const result: OrderDetailResult = {
     quoteDescription: null,
     deliveryTerms: null,
     deliveryAt: "2026-10-15T03:00:00.000Z",
+    deliveryTime: "12:00 - 12:30",
     shipOutTime: "11:00 - 12:00",
     deliveryStatus: null,
     isSentToFactory: false,
@@ -115,6 +116,18 @@ function renderPage(
 }
 
 describe("editable quote PDF page", () => {
+  it("uses the delivery time instead of the ship-out time", async () => {
+    renderPage();
+
+    await waitFor(() => expect(document.querySelector("#quote-delivery-time")).toHaveValue("12:00 - 12:30"));
+  });
+
+  it("keeps a single-line delivery address at one textarea row", async () => {
+    renderPage();
+
+    await waitFor(() => expect(document.querySelector("#quote-address")).toHaveAttribute("rows", "1"));
+  });
+
   it("inserts all active brand pages before and after the generated quote", async () => {
     const brandedResult: OrderDetailResult = {
       ...result,
@@ -155,17 +168,22 @@ describe("editable quote PDF page", () => {
     expect(screen.getByRole("button", { name: "確定並列印 PDF" })).toBeEnabled();
   });
 
-  it("repairs legacy auto-saved drafts that do not contain product lines", async () => {
+  it("refreshes source fields while retaining PDF-only content from a legacy draft", async () => {
     localStorage.setItem("fccd:quote-pdf-draft:quote-1", JSON.stringify({
-      quoteNumber: "FCCQ20260828",
+      quoteNumber: "OLD-QUOTE",
       customerName: "舊草稿客戶",
+      deliveryAddress: "舊地址",
+      terms: ["PDF 專用條款"],
     }));
 
     renderPage();
 
     expect(await screen.findByRole("heading", { name: "到會套餐報價" })).toBeInTheDocument();
     expect(screen.getByLabelText("產品 1")).toHaveValue("雙拼飯盒");
-    expect(screen.getByLabelText("客戶名稱")).toHaveValue("舊草稿客戶");
+    expect(screen.getByLabelText("報價單號")).toHaveValue("FCCQ20260828");
+    expect(screen.getByLabelText("客戶名稱")).toHaveValue("程嘉敏");
+    expect(screen.getByLabelText("送貨地址")).toHaveValue("灣仔杜老誌道20號");
+    expect(screen.getByLabelText("條款及細則 1")).toHaveValue("PDF 專用條款");
   });
 
   it("uses quote product lines when a local draft only has empty placeholder rows", async () => {
@@ -178,14 +196,63 @@ describe("editable quote PDF page", () => {
     expect(await screen.findByLabelText("產品 1")).toHaveValue("雙拼飯盒");
   });
 
-  it("keeps locally edited product names for matching quote lines", async () => {
+  it("refreshes product data instead of restoring a stale local PDF copy", async () => {
     localStorage.setItem("fccd:quote-pdf-draft:quote-1", JSON.stringify({
       lines: [{ id: "line-1", description: "自訂雙拼", quantity: "120", unitPrice: "45" }],
     }));
 
     renderPage();
 
-    expect(await screen.findByLabelText("產品 1")).toHaveValue("自訂雙拼");
+    expect(await screen.findByLabelText("產品 1")).toHaveValue("雙拼飯盒");
+  });
+
+  it("refreshes every financial adjustment from the latest quote", async () => {
+    localStorage.setItem("fccd:quote-pdf-draft:quote-1", JSON.stringify({
+      discount: "999",
+      cashDollarDeduction: "999",
+      cashDollarPurchase: "999",
+    }));
+    const latestResult: OrderDetailResult = {
+      ...lunchBoxResult,
+      order: lunchBoxResult.order ? {
+        ...lunchBoxResult.order,
+        discount: 100,
+        cashdollarRedeemed: 50,
+        cashdollarPurchased: 10,
+      } : null,
+    };
+
+    renderPage(vi.fn().mockResolvedValue(latestResult));
+
+    await screen.findByRole("heading", { name: "便當報價" });
+    await waitFor(() => {
+      const saved = JSON.parse(localStorage.getItem("fccd:quote-pdf-draft:quote-1") || "{}");
+      expect(saved.discount).toBe("100");
+      expect(saved.cashDollarDeduction).toBe("50");
+      expect(saved.cashDollarPurchase).toBe("10");
+    });
+  });
+
+  it("repairs zero totals saved by legacy PDF drafts", async () => {
+    localStorage.setItem("fccd:quote-pdf-draft:quote-1", JSON.stringify({
+      lines: [{ id: "line-1", description: "自訂雙拼", quantity: "120", unitPrice: "0" }],
+    }));
+
+    renderPage();
+
+    expect(await screen.findByLabelText("單價 1")).toHaveValue("45");
+    expect(screen.getAllByText("$5,400").length).toBeGreaterThan(0);
+    expect(screen.getByLabelText("產品 1")).toHaveValue("雙拼飯盒");
+  });
+
+  it("derives a missing unit price from the saved line total", async () => {
+    renderPage(vi.fn().mockResolvedValue({
+      ...result,
+      lines: [{ ...result.lines[0], unitPrice: null, totalPrice: 5400 }],
+    }));
+
+    expect(await screen.findByLabelText("單價 1")).toHaveValue("45");
+    expect(screen.getAllByText("$5,400").length).toBeGreaterThan(0);
   });
 
   it("adds newly saved quote dishes that are missing from a local draft", async () => {
@@ -306,9 +373,30 @@ describe("editable quote PDF page", () => {
     await user.type(screen.getByLabelText("產品 1"), "自訂活動項目");
     await user.clear(screen.getByLabelText("單價 1"));
     await user.type(screen.getByLabelText("單價 1"), "300");
+    expect(screen.getAllByText("$36,000").length).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: "儲存工作稿" })).not.toBeInTheDocument();
     await waitFor(() => expect(screen.getByText("已自動儲存")).toBeInTheDocument());
     expect(JSON.parse(localStorage.getItem("fccd:quote-pdf-draft:quote-1") || "{}").lines[0].description).toBe("自訂活動項目");
+  });
+
+  it("keeps typing in a PDF text field local until the field loses focus", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByRole("heading", { name: "到會套餐報價" });
+    await waitFor(() => expect(localStorage.getItem("fccd:quote-pdf-draft:quote-1")).not.toBeNull());
+    const term = screen.getByLabelText("條款及細則 1");
+    const originalTerm = JSON.parse(localStorage.getItem("fccd:quote-pdf-draft:quote-1") || "{}").terms[0];
+
+    await user.clear(term);
+    await user.type(term, "完成整段修改後才儲存");
+
+    expect(term).toHaveFocus();
+    expect(term).toHaveValue("完成整段修改後才儲存");
+    expect(JSON.parse(localStorage.getItem("fccd:quote-pdf-draft:quote-1") || "{}").terms[0]).toBe(originalTerm);
+
+    await user.tab();
+    await waitFor(() => expect(JSON.parse(localStorage.getItem("fccd:quote-pdf-draft:quote-1") || "{}").terms[0]).toBe("完成整段修改後才儲存"));
   });
 
   it("does not show product deletion controls in the PDF table", async () => {
@@ -365,7 +453,7 @@ describe("editable quote PDF page", () => {
     expect(screen.getByRole("columnheader", { name: "份數" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "總數" })).toBeInTheDocument();
     expect(screen.getByLabelText("份數 1")).toHaveValue("120");
-    expect(screen.getByText("$5,400")).toBeInTheDocument();
+    expect(screen.getAllByText("$5,400")).toHaveLength(3);
   });
 
   it("hides lunch-box financial summary rows and follows the table with additional information", async () => {
@@ -734,6 +822,7 @@ describe("editable quote PDF page", () => {
     expect(within(activitySummary).getByText("小計：")).toBeInTheDocument();
     expect(within(activitySummary).getByLabelText("活動運費")).toBeInTheDocument();
     expect(within(activitySummary).getByText("總數：")).toBeInTheDocument();
+    expect(within(activitySummary).getAllByText("$5,400")).toHaveLength(2);
     expect(screen.queryByRole("main", { name: "PDF 第 2 頁" })).not.toBeInTheDocument();
 
     expect(screen.getByRole("button", { name: "新增活動項目" })).toBeEnabled();
@@ -753,17 +842,56 @@ describe("editable quote PDF page", () => {
 
     expect(screen.getByLabelText("活動報價 1")).toHaveValue("10月15日 120個飯盒");
     expect(screen.getByLabelText("活動價錢 1")).toHaveValue("5400");
-    expect(within(screen.getByRole("region", { name: "活動報價表" })).getAllByText("$5,400")).toHaveLength(2);
+    expect(within(screen.getByRole("region", { name: "活動報價表" })).getAllByText("$10,800")).toHaveLength(2);
 
     await user.selectOptions(screen.getByLabelText("活動運費項目"), "fee-1");
     expect(screen.getByLabelText("活動運費項目")).toHaveClass("quote-pdf-edit-only");
     expect(document.querySelector(".quote-pdf-activity .quote-pdf-print-only")).toHaveTextContent("運費－新界區－地面交收");
     expect(screen.getByLabelText("活動運費")).toHaveValue("100");
-    expect(within(screen.getByRole("region", { name: "活動報價表" })).getByText("$5,500")).toBeInTheDocument();
+    expect(within(screen.getByRole("region", { name: "活動報價表" })).getByText("$10,900")).toBeInTheDocument();
 
     await user.clear(screen.getByLabelText("活動運費"));
     await user.type(screen.getByLabelText("活動運費"), "150");
-    expect(within(screen.getByRole("region", { name: "活動報價表" })).getByText("$5,550")).toBeInTheDocument();
+    expect(within(screen.getByRole("region", { name: "活動報價表" })).getByText("$10,950")).toBeInTheDocument();
+  });
+
+  it("repairs saved product and activity shipping selections whose amounts are still zero", async () => {
+    localStorage.setItem("fccd:quote-pdf-draft:quote-1", JSON.stringify({
+      shippingFeeId: "fee-1",
+      shippingFeeLabel: "",
+      shippingFee: "0",
+      activityShippingFeeId: "fee-1",
+      activityShippingNote: "",
+      activityShippingFee: "0",
+    }));
+    renderPage(vi.fn().mockResolvedValue(lunchBoxResult));
+
+    await screen.findByRole("heading", { name: "便當報價" });
+    const activitySummary = screen.getByRole("region", { name: "活動報價表" });
+    await waitFor(() => expect(within(activitySummary).getByLabelText("活動運費")).toHaveValue("100"));
+    expect(within(activitySummary).getByText("$5,500")).toBeInTheDocument();
+  });
+
+  it("automatically adds a searchable activity shipping fee to the blue total", async () => {
+    const user = userEvent.setup();
+    const manyShippingFees = Array.from({ length: 11 }, (_, index) => ({
+      id: `fee-${index + 1}`,
+      item: `活動運費 ${index + 1}`,
+      fee: (index + 1) * 100,
+      createdAt: "2026-08-01T00:00:00Z",
+    }));
+    renderPage(
+      vi.fn().mockResolvedValue(lunchBoxResult),
+      vi.fn().mockResolvedValue(manyShippingFees),
+    );
+
+    await screen.findByRole("heading", { name: "便當報價" });
+    const activitySummary = screen.getByRole("region", { name: "活動報價表" });
+    await user.click(within(activitySummary).getByRole("button", { name: "選擇運費" }));
+    await user.click(within(screen.getByRole("listbox", { name: "活動運費項目" })).getByRole("option", { name: "活動運費 11" }));
+
+    expect(within(activitySummary).getByLabelText("活動運費")).toHaveValue("1100");
+    expect(within(activitySummary).getByText("$6,500")).toBeInTheDocument();
   });
 
   it("adds and edits individual terms and payment methods from searchable dialogs", async () => {

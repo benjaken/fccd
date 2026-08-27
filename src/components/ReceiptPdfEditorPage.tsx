@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
-import { PdfAutoResizeTextarea } from "@/components/PdfAutoResizeTextarea";
+import { PdfBlurCommitInput, PdfBlurCommitTextarea } from "@/components/PdfBlurCommitField";
 import { QuoteClauseSearchPicker } from "@/components/QuoteClauseSearchPicker";
 import { getBrandContactEmail, getBrandLogoAlt, getDocumentLogoPath } from "@/lib/brand-logo";
 import {
@@ -25,6 +25,7 @@ import {
 } from "@/lib/receipt-pdf-draft";
 import { DICT_TYPE, dictItemLabel, useDictItems } from "@/lib/dictionaries";
 import { splitPdfModuleIndexes, usePdfAutoPageBreaks } from "@/lib/pdf-auto-pagination";
+import { printPdf } from "@/lib/print-pdf";
 import { fetchShippingFees, type ShippingFee } from "@/lib/shipping-fees";
 
 type ReceiptPdfLoader = typeof fetchOrderDetail;
@@ -74,10 +75,15 @@ function ReceiptPdfPageFooter({ email, page, total }: { email: string; page: num
 }
 
 function lineToDraft(line: DetailLine): ReceiptPdfLineDraft {
+  const quantity = line.quantity ?? 0;
+  const sourceUnitPrice = line.unitPrice ?? 0;
+  const unitPrice = sourceUnitPrice !== 0 || !line.totalPrice || quantity === 0
+    ? sourceUnitPrice
+    : line.totalPrice / quantity;
   return {
     id: line.id,
     description: line.productName || line.content || "",
-    unitPrice: line.unitPrice === null ? "0" : String(line.unitPrice),
+    unitPrice: String(unitPrice),
     quantity: line.quantity === null ? "" : String(line.quantity),
   };
 }
@@ -93,6 +99,7 @@ function resultToDraft(
     .find(Boolean);
   return {
     invoiceSourceContentVersion: 1,
+    sourceFinancialsVersion: 1,
     receiptNumber: documentNumber(
       documentKind === "receipt" ? receiptNumber : undefined,
       documentKind === "receipt" ? "REC" : "INV",
@@ -143,33 +150,28 @@ function normalizeDraft(
   const storedPaymentMethods = Array.isArray(value.paymentMethods)
     ? value.paymentMethods.filter((item): item is string => typeof item === "string")
     : null;
+  const hasPdfDeliveryFeeOverride = Boolean(value.deliveryFeeId?.trim());
   return {
     ...fallback,
-    ...value,
-    receiptNumber: fallback.receiptNumber,
+    // Customer, delivery, payment and product data is refreshed from the
+    // latest order. Only settings that belong to this PDF stay local.
     invoiceSourceContentVersion: 1,
+    sourceFinancialsVersion: 1,
+    deliveryFeeId: hasPdfDeliveryFeeOverride ? value.deliveryFeeId ?? "" : fallback.deliveryFeeId,
+    deliveryFeeLabel: hasPdfDeliveryFeeOverride ? value.deliveryFeeLabel ?? "Delivery Fee" : fallback.deliveryFeeLabel,
+    deliveryFee: hasPdfDeliveryFeeOverride
+      ? value.deliveryFee?.trim() || "0"
+      : fallback.deliveryFee,
     terms: storedTerms && (sourceContentInitialized || storedTerms.length)
       ? storedTerms
       : fallback.terms,
     paymentMethods: storedPaymentMethods && (sourceContentInitialized || storedPaymentMethods.length)
       ? storedPaymentMethods
       : fallback.paymentMethods,
-    receiptPayments: Array.isArray(value.receiptPayments)
-      ? value.receiptPayments.map((payment, index) => ({
-          id: typeof payment?.id === "string" ? payment.id : `receipt-payment-${index + 1}`,
-          method: typeof payment?.method === "string" ? payment.method : "",
-          date: typeof payment?.date === "string" ? payment.date : "",
-          amount: typeof payment?.amount === "string" && payment.amount.trim() ? payment.amount : "0",
-        }))
-      : fallback.receiptPayments,
-    lines: Array.isArray(value.lines) && value.lines.length
-      ? value.lines.map((line, index) => ({
-          id: typeof line?.id === "string" ? line.id : `receipt-line-${index + 1}`,
-          description: typeof line?.description === "string" ? line.description : "",
-          unitPrice: typeof line?.unitPrice === "string" && line.unitPrice.trim() ? line.unitPrice : "0",
-          quantity: typeof line?.quantity === "string" ? line.quantity : "1",
-        }))
-      : fallback.lines,
+    showCustomerSignature: value.showCustomerSignature ?? false,
+    signaturePartyName: typeof value.signaturePartyName === "string"
+      ? value.signaturePartyName
+      : fallback.signaturePartyName,
   };
 }
 
@@ -290,6 +292,8 @@ export function ReceiptPdfEditorPage({
     } : current));
   };
 
+  const markDraftDirty = () => setSaved(false);
+
   const updateLine = (index: number, patch: Partial<ReceiptPdfLineDraft>) => {
     if (!draft) return;
     update(
@@ -366,13 +370,13 @@ export function ReceiptPdfEditorPage({
     <div className="receipt-pdf-trailing" aria-label="付款資料及公司蓋章">
       <section className="receipt-pdf-payment">
         <strong>Payment information:</strong>
-        <input className="receipt-pdf-payment-summary-input" aria-label="付款資料" size={Math.max(draft.paymentInformation.length, 1)} value={draft.paymentInformation} onChange={(event) => update("paymentInformation", event.target.value)} />
+        <PdfBlurCommitInput className="receipt-pdf-payment-summary-input" aria-label="付款資料" size={Math.max(draft.paymentInformation.length, 1)} value={draft.paymentInformation} onDirty={markDraftDirty} onCommit={(value) => update("paymentInformation", value)} />
         {draft.receiptPayments.map((payment, index) => {
           const suffix = draft.receiptPayments.length > 1 ? ` ${index + 1}` : "";
           return (
             <div className="receipt-pdf-payment-record" key={payment.id}>
-              <label><span>{`Payment Method${suffix}:`}</span><input aria-label={`付款方式${suffix}`} size={Math.max(payment.method.length, 1)} value={payment.method} onChange={(event) => updateReceiptPayment(index, { method: event.target.value })} /><span className="receipt-pdf-payment-amount"><span aria-hidden="true">$</span><input aria-label={`支付金額${suffix}`} inputMode="decimal" size={Math.max(payment.amount.length, 1)} value={payment.amount} onChange={(event) => updateReceiptPayment(index, { amount: event.target.value })} onBlur={() => { if (!payment.amount.trim()) updateReceiptPayment(index, { amount: "0" }); }} /></span></label>
-              <label><span>{`Payment Date${suffix}:`}</span><input aria-label={`付款日期${suffix}`} size={Math.max(payment.date.length, 1)} value={payment.date} onChange={(event) => updateReceiptPayment(index, { date: event.target.value })} /></label>
+              <label><span>{`Payment Method${suffix}:`}</span><PdfBlurCommitInput aria-label={`付款方式${suffix}`} size={Math.max(payment.method.length, 1)} value={payment.method} onDirty={markDraftDirty} onCommit={(value) => updateReceiptPayment(index, { method: value })} /><span className="receipt-pdf-payment-amount"><span aria-hidden="true">$</span><PdfBlurCommitInput aria-label={`支付金額${suffix}`} inputMode="decimal" size={Math.max(payment.amount.length, 1)} value={payment.amount} onDirty={markDraftDirty} onCommit={(value) => updateReceiptPayment(index, { amount: value.trim() ? value : "0" })} /></span></label>
+              <label><span>{`Payment Date${suffix}:`}</span><PdfBlurCommitInput aria-label={`付款日期${suffix}`} size={Math.max(payment.date.length, 1)} value={payment.date} onDirty={markDraftDirty} onCommit={(value) => updateReceiptPayment(index, { date: value })} /></label>
             </div>
           );
         })}
@@ -405,12 +409,13 @@ export function ReceiptPdfEditorPage({
         {draft.showCustomerSignature ? (
           <div className="quote-pdf-signature-party quote-pdf-signature-customer">
             <strong>請仔細閱讀以上內容並簽署確認：</strong>
-            <input
+            <PdfBlurCommitInput
               className="quote-pdf-signature-party-name"
               aria-label="簽署公司或客戶名稱"
               value={draft.signaturePartyName}
               placeholder={t("quotes.pdfEditor.signaturePartyPlaceholder")}
-              onChange={(event) => update("signaturePartyName", event.target.value)}
+              onDirty={markDraftDirty}
+              onCommit={(value) => update("signaturePartyName", value)}
             />
             <span className="quote-pdf-signature-stamp-spacer" aria-hidden="true" />
             <label><strong>公司蓋印及簽署：</strong><span /></label>
@@ -490,13 +495,14 @@ export function ReceiptPdfEditorPage({
                   data-pdf-auto-module-index={item.moduleIndex}
                   key={`${kind}-${item.itemIndex}`}
                 >
-                  <textarea
+                  <PdfBlurCommitTextarea
                     rows={1}
                     aria-label={`${isTerm ? "條款及細則" : "付款方式"} ${item.itemIndex + 1}`}
                     value={isTerm ? draft.terms[item.itemIndex] : draft.paymentMethods[item.itemIndex]}
-                    onChange={(event) => {
-                      if (isTerm) update("terms", draft.terms.map((current, itemIndex) => itemIndex === item.itemIndex ? event.target.value : current));
-                      else update("paymentMethods", draft.paymentMethods.map((current, itemIndex) => itemIndex === item.itemIndex ? event.target.value : current));
+                    onDirty={markDraftDirty}
+                    onCommit={(value) => {
+                      if (isTerm) update("terms", draft.terms.map((current, itemIndex) => itemIndex === item.itemIndex ? value : current));
+                      else update("paymentMethods", draft.paymentMethods.map((current, itemIndex) => itemIndex === item.itemIndex ? value : current));
                     }}
                   />
                   <button
@@ -530,7 +536,7 @@ export function ReceiptPdfEditorPage({
             return (
               <tr key={line.id}>
                 <td>{index + 1}</td>
-                <td><textarea aria-label={`產品 ${index + 1}`} rows={1} value={line.description} onChange={(event) => updateLine(index, { description: event.target.value })} /></td>
+                <td><PdfBlurCommitTextarea aria-label={`產品 ${index + 1}`} rows={1} value={line.description} onDirty={markDraftDirty} onCommit={(value) => updateLine(index, { description: value })} /></td>
                 <td><span className="receipt-pdf-price-input"><span aria-hidden="true">$</span><input aria-label={`單價 ${index + 1}`} inputMode="decimal" size={Math.max(line.unitPrice.length, 1)} value={line.unitPrice} onChange={(event) => updateLine(index, { unitPrice: event.target.value })} onBlur={() => { if (!line.unitPrice.trim()) updateLine(index, { unitPrice: "0" }); }} /></span></td>
                 <td><input aria-label={`數量 ${index + 1}`} inputMode="decimal" value={line.quantity} onChange={(event) => updateLine(index, { quantity: event.target.value })} /></td>
                 <td>{money(numberValue(line.unitPrice) * numberValue(line.quantity))}</td>
@@ -556,7 +562,7 @@ export function ReceiptPdfEditorPage({
         </div>
         <div>
           <span className="quote-pdf-saved">{saved ? <><Check /> 已自動儲存</> : "自動儲存中…"}</span>
-          <Button onClick={() => window.print()}><Printer />確定並列印 PDF</Button>
+          <Button onClick={() => printPdf(isInvoice ? "發票" : "收據", isInvoice ? sourceBrand.orderNumber : draft.receiptNumber)}><Printer />確定並列印 PDF</Button>
         </div>
       </div>
 
@@ -565,17 +571,17 @@ export function ReceiptPdfEditorPage({
 
         <div className="receipt-pdf-meta-grid">
           <label htmlFor="receipt-customer">Customer:</label>
-          <input id="receipt-customer" value={draft.customer} onChange={(event) => update("customer", event.target.value)} />
+          <PdfBlurCommitInput id="receipt-customer" value={draft.customer} onDirty={markDraftDirty} onCommit={(value) => update("customer", value)} />
           <label htmlFor="receipt-invoice-date">Invoice Date:</label>
-          <input id="receipt-invoice-date" value={draft.invoiceDate} onChange={(event) => update("invoiceDate", event.target.value)} />
+          <PdfBlurCommitInput id="receipt-invoice-date" value={draft.invoiceDate} onDirty={markDraftDirty} onCommit={(value) => update("invoiceDate", value)} />
           <label htmlFor="receipt-contact">Contact Person:</label>
-          <input id="receipt-contact" value={draft.contactPerson} onChange={(event) => update("contactPerson", event.target.value)} />
+          <PdfBlurCommitInput id="receipt-contact" value={draft.contactPerson} onDirty={markDraftDirty} onCommit={(value) => update("contactPerson", value)} />
           <label htmlFor="receipt-delivery-date">Delivery Date:</label>
-          <input id="receipt-delivery-date" value={draft.deliveryDate} onChange={(event) => update("deliveryDate", event.target.value)} />
+          <PdfBlurCommitInput id="receipt-delivery-date" value={draft.deliveryDate} onDirty={markDraftDirty} onCommit={(value) => update("deliveryDate", value)} />
           <label htmlFor="receipt-address">Delivery Address:</label>
-          <PdfAutoResizeTextarea id="receipt-address" value={draft.deliveryAddress} onChange={(event) => update("deliveryAddress", event.target.value)} />
+          <PdfBlurCommitTextarea id="receipt-address" value={draft.deliveryAddress} onDirty={markDraftDirty} onCommit={(value) => update("deliveryAddress", value)} />
           <label htmlFor="receipt-delivery-time">Delivery Time:</label>
-          <input id="receipt-delivery-time" value={draft.deliveryTime} onChange={(event) => update("deliveryTime", event.target.value)} />
+          <PdfBlurCommitInput id="receipt-delivery-time" value={draft.deliveryTime} onDirty={markDraftDirty} onCommit={(value) => update("deliveryTime", value)} />
         </div>
 
         {renderProductTable(productLinePages[0], 0, productLinePages.length === 1)}

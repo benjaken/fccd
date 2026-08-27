@@ -11730,7 +11730,7 @@ a.masoft-order-tag:focus-visible {
 }
 
 .kitchen-cost-week-select {
-  display: block;
+  display: flex;
   width: 100%;
   min-width: 10rem;
   height: 36px;
@@ -12968,33 +12968,18 @@ a.masoft-order-tag:focus-visible {
   width: 100%;
   padding: 0.34rem 0.56rem;
   border-radius: 0;
-}
-
-.kitchen-channel-sales-cell-values .year-tone-0 {
-  background: color-mix(in srgb, #dbeafe 72%, var(--card));
-}
-
-.kitchen-channel-sales-cell-values .year-tone-1 {
-  background: color-mix(in srgb, #fef3c7 72%, var(--card));
-}
-
-.kitchen-channel-sales-cell-values .year-tone-2 {
-  background: color-mix(in srgb, #dcfce7 72%, var(--card));
-}
-
-.kitchen-channel-sales-cell-values .year-tone-3 {
-  background: color-mix(in srgb, #f3e8ff 72%, var(--card));
+  background: transparent;
 }
 
 .kitchen-channel-sales-cell-values b {
-  color: var(--muted-foreground);
+  color: color-mix(in srgb, var(--year-tone-color) 82%, var(--foreground));
   font-size: 0.875rem;
   font-weight: 750;
   text-align: left;
 }
 
 .kitchen-channel-sales-cell-values strong {
-  color: var(--foreground);
+  color: color-mix(in srgb, var(--year-tone-color) 82%, var(--foreground));
   font-size: 0.875rem;
   font-weight: 750;
 }
@@ -13017,7 +13002,7 @@ a.masoft-order-tag:focus-visible {
 
 .kitchen-channel-sales-table tfoot .kitchen-channel-sales-cell-values b,
 .kitchen-channel-sales-table tfoot .kitchen-channel-sales-cell-values strong {
-  color: #fff;
+  color: color-mix(in srgb, var(--year-tone-color) 82%, var(--foreground));
 }
 
 .kitchen-channel-sales-charts {
@@ -19395,8 +19380,8 @@ a.masoft-order-tag:focus-visible {
 }
 
 .quotes-table-wrap .quote-description-cell {
-  width: 24rem;
-  min-width: 24rem;
+  width: 18rem;
+  min-width: 18rem;
   white-space: normal;
 }
 
@@ -29252,7 +29237,7 @@ body:has(.quote-clause-modal-root) { overflow: hidden; }
 
 .kitchen-sales-cost-report-page .kitchen-channel-sales-table tfoot .kitchen-channel-sales-cell-values b,
 .kitchen-sales-cost-report-page .kitchen-channel-sales-table tfoot .kitchen-channel-sales-cell-values strong {
-  color: #000;
+  color: color-mix(in srgb, var(--year-tone-color) 82%, var(--foreground));
 }
 
 .kitchen-sales-cost-report-page .kitchen-product-sales-summary-table th,

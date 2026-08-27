@@ -204,6 +204,17 @@ export function isOverwriteSourceType(value: unknown): value is OverwriteSourceT
       directOverwriteSourceTypes.includes(value as DirectOverwriteSourceType));
 }
 
+export function reconciliationOwnedRow(
+  sourceType: string,
+  source: BubbleRecord,
+  mapped: Record<string, unknown>,
+  existing?: Record<string, unknown>,
+): Record<string, unknown> {
+  return isOverwriteSourceType(sourceType)
+    ? mergeOverwriteRow(sourceType, source, mapped, existing)
+    : mapped;
+}
+
 export function overwriteSince(sourceType: OverwriteSourceType): string {
   return sourceType === "m_raw_stock" || sourceType === "m_donemeat_stock"
     ? INVENTORY_OVERWRITE_SINCE
