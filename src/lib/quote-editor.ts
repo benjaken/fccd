@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { hongKongDateKey } from "@/lib/date-time";
 import { productListDisplayName } from "@/lib/products";
+import type { OrderFactorySettings } from "@/lib/order-factory-settings";
 
 export type QuoteEditorOption = {
   id: string;
@@ -458,6 +459,45 @@ export async function saveQuotePayments(
       .eq("document_type", "order");
     if (outstandingError) throw outstandingError;
   }
+}
+
+export async function saveSalesDocumentBatch(input: {
+  orderId: string;
+  documentType: QuoteEditorDocumentType;
+  lines: QuoteLine[];
+  financials: QuoteFinancials;
+  payments: QuotePayment[];
+  channelId: string;
+  orderNumber: string;
+  factorySettings: OrderFactorySettings;
+}) {
+  const { error } = await supabase.rpc("save_sales_document_batch", {
+    p_order_id: input.orderId,
+    p_document_type: input.documentType,
+    p_lines: input.lines.map((line) => ({
+      id: line.id,
+      quantity: line.quantity,
+      unit_price: line.unitPrice,
+      remarks: line.remarks || null,
+    })),
+    p_shipping_fee: input.financials.shippingFee,
+    p_discount_amount: input.financials.discount,
+    p_cashdollar_redeemed: input.financials.cashdollarRedeemed,
+    p_cashdollar_purchased: input.financials.cashdollarPurchased,
+    p_payments: input.documentType === "order"
+      ? input.payments.map((payment) => ({
+          id: payment.id,
+          payment_at: payment.paymentAt ? `${payment.paymentAt}T00:00:00+08:00` : null,
+          payment_method_id: payment.paymentMethodId || null,
+          amount: payment.amount,
+          reference: payment.reference || null,
+        }))
+      : [],
+    p_channel_id: input.channelId || null,
+    p_order_number: input.orderNumber || null,
+    p_factory_settings: input.documentType === "order" ? input.factorySettings : {},
+  });
+  if (error) throw error;
 }
 
 export async function sendQuoteConfirmation(orderId: string) {

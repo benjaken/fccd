@@ -86,6 +86,8 @@ export type QuoteCustomerMessage = {
   orderId: string | null;
   documentType: string | null;
   createdAt: string;
+  direction?: "inbound" | "outbound" | null;
+  status?: string | null;
 };
 
 export type CreateQuoteCustomerNoteInput = {
@@ -142,6 +144,8 @@ type TimelineMessageRow = {
   order_id: string | null;
   bubble_created_at: string | null;
   created_at: string;
+  message_direction?: "inbound" | "outbound" | null;
+  delivery_status?: string | null;
   orders:
     | {
         order_number: string | null;
@@ -212,6 +216,7 @@ export function messageTabFromCategory(
   if (value === "orderdislike") return "complaint";
   if (value === "orderlike") return "like";
   if (value === "customer note") return "note";
+  if (value === "wati") return "note";
   return null;
 }
 
@@ -279,6 +284,8 @@ export function mapQuoteCustomerMessage(
     orderId: row.order_id,
     documentType: order?.document_type ?? null,
     createdAt: row.bubble_created_at || row.created_at,
+    direction: row.message_direction ?? null,
+    status: row.delivery_status ?? null,
   };
 }
 
@@ -404,7 +411,7 @@ export async function fetchQuoteCustomerMessages(
   const { data, error } = await supabase
     .from("order_timeline_entries")
     .select(
-      "id,category,comment,author_name_snapshot,order_id,bubble_created_at,created_at,orders(order_number,document_type)",
+      "id,category,comment,author_name_snapshot,order_id,bubble_created_at,created_at,message_direction,delivery_status,orders(order_number,document_type)",
     )
     .ilike("customer_email_snapshot", email)
     .order("bubble_created_at", { ascending: true, nullsFirst: false })
@@ -426,7 +433,7 @@ export async function fetchOrderMessages(
   const { data, error } = await supabase
     .from("order_timeline_entries")
     .select(
-      "id,category,comment,author_name_snapshot,order_id,bubble_created_at,created_at,orders(order_number,document_type)",
+      "id,category,comment,author_name_snapshot,order_id,bubble_created_at,created_at,message_direction,delivery_status,orders(order_number,document_type)",
     )
     .eq("order_id", orderId)
     .order("bubble_created_at", { ascending: true, nullsFirst: false })
@@ -451,6 +458,15 @@ export async function createQuoteCustomerNote({
 }: CreateQuoteCustomerNoteInput): Promise<QuoteCustomerMessage> {
   const trimmedBody = body.trim();
   if (!trimmedBody) throw new Error("quote_customers_note_empty");
+  if (orderId) {
+    const { data, error } = await supabase.functions.invoke("send-wati-customer-message", {
+      body: { orderId, body: trimmedBody },
+    });
+    if (error) throw error;
+    const message = data?.message as QuoteCustomerMessage | undefined;
+    if (!message) throw new Error(data?.error || "wati_customer_message_failed");
+    return message;
+  }
   const trimmedAuthor = authorName?.trim() || null;
   const trimmedReplyTo = replyToEmail?.trim() || null;
   const comment =

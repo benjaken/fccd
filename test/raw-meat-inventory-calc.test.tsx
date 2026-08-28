@@ -165,8 +165,8 @@ describe("Raw meat inventory calculation page", () => {
 
     const heading = screen.getByRole("banner");
     expect(
-      within(heading).getByRole("button", { name: "重新整理" }),
-    ).toBeEnabled();
+      within(heading).queryByRole("button", { name: "重新整理" }),
+    ).not.toBeInTheDocument();
     expect(
       within(heading).getByRole("button", { name: "新增生肉選項" }),
     ).toBeEnabled();
@@ -178,6 +178,37 @@ describe("Raw meat inventory calculation page", () => {
       within(heading).getByRole("button", { name: "生肉出貨" }),
     ).toBeEnabled();
     expect(screen.queryByText("15")).not.toBeInTheDocument();
+  });
+
+  it("deletes a movement after confirmation and reloads the balance", async () => {
+    const user = userEvent.setup();
+    const loadMovements = vi.fn().mockResolvedValue(movementsByItem["item-1"]);
+    const deleteMovement = vi.fn().mockResolvedValue(undefined);
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+
+    render(
+      <MemoryRouter>
+        <RawMeatInventoryCalcPage
+          loadItems={vi.fn().mockResolvedValue(items)}
+          loadMovements={loadMovements}
+          deleteMovement={deleteMovement}
+        />
+      </MemoryRouter>,
+    );
+
+    const buttons = await screen.findAllByRole("button", {
+      name: i18n.t("rawMeatInventory.delete"),
+    });
+    await user.click(buttons[0]!);
+
+    expect(confirm).toHaveBeenCalledWith(
+      i18n.t("rawMeatInventory.deleteConfirm", {
+        product: movementsByItem["item-1"]![0]!.productName,
+      }),
+    );
+    expect(deleteMovement).toHaveBeenCalledWith("move-2");
+    await waitFor(() => expect(loadMovements).toHaveBeenCalledTimes(2));
+    confirm.mockRestore();
   });
 
   it("switches the right-side ledger when selecting another item", async () => {

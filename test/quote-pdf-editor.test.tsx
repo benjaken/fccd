@@ -330,7 +330,7 @@ describe("editable quote PDF page", () => {
     await user.click(screen.getByRole("button", { name: "新增額外資訊" }));
     const search = screen.getByLabelText("搜尋額外資訊");
     await user.type(search, "自訂內容也可以隨便寫");
-    await user.click(screen.getByRole("button", { name: "Add" }));
+    await user.click(within(search.closest(".quote-additional-search") as HTMLElement).getByRole("button", { name: "加入" }));
 
     expect(screen.getByLabelText("額外資訊 1")).toHaveValue("自訂內容也可以隨便寫");
     await user.click(screen.getByRole("button", { name: "確定" }));
@@ -343,8 +343,9 @@ describe("editable quote PDF page", () => {
 
     await screen.findByRole("heading", { name: "到會套餐報價" });
     await user.click(screen.getByRole("button", { name: "新增額外資訊" }));
-    await user.type(screen.getByLabelText("搜尋額外資訊"), "Party Food 自訂資訊");
-    await user.click(screen.getByRole("button", { name: "Add" }));
+    const search = screen.getByLabelText("搜尋額外資訊");
+    await user.type(search, "Party Food 自訂資訊");
+    await user.click(within(search.closest(".quote-additional-search") as HTMLElement).getByRole("button", { name: "加入" }));
 
     expect(screen.getByLabelText("額外資訊 1")).toHaveValue("Party Food 自訂資訊");
     expect(screen.queryByRole("region", { name: "活動報價表" })).not.toBeInTheDocument();
@@ -842,7 +843,9 @@ describe("editable quote PDF page", () => {
     await user.click(screen.getByRole("button", { name: "新增活動項目" }));
     const dialog = screen.getByRole("dialog", { name: "活動報價" });
     await user.type(within(dialog).getByLabelText("搜尋活動報價"), "10月15日");
-    await user.click(within(dialog).getByRole("button", { name: "加入" }));
+    const activityOption = within(dialog).getByText("10月15日 120個飯盒").closest("li");
+    expect(activityOption).not.toBeNull();
+    await user.click(within(activityOption as HTMLElement).getByRole("button", { name: "加入" }));
 
     expect(screen.getByLabelText("活動報價 1")).toHaveValue("10月15日 120個飯盒");
     expect(screen.getByLabelText("活動價錢 1")).toHaveValue("5400");

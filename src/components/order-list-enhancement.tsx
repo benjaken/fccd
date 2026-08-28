@@ -270,7 +270,7 @@ export function OrderRowActionMenu({
   return (
     <div className="order-row-actions">
       {statusPicker}
-      {canManage ? <Link to={`/orders/${encodeURIComponent(order.id)}/edit`} aria-label="編輯" title="編輯"><Pencil /></Link> : null}
+      {canManage ? <Link to={`/orders/${encodeURIComponent(order.id)}/edit`} target="_blank" rel="noopener noreferrer" aria-label="編輯" title="編輯"><Pencil /></Link> : null}
       {order.contactPhone ? <button type="button" onClick={onMessages} aria-label={messageLabel} title={t("quoteCustomers.messagesAction")}><MessageSquare /></button> : <span aria-label={`${messageLabel} ${t("common.notSet")}`} title={t("common.notSet")}><MessageSquare /></span>}
       {canManage && canCancel ? <button type="button" onClick={onCancel} aria-label="取消訂單" title="取消訂單"><Ban /></button> : null}
       {showDeliveryNote ? <button type="button" onClick={() => onPreview("delivery-note")} aria-label="送貨單" title="送貨單"><Truck /></button> : null}

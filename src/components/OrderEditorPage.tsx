@@ -293,7 +293,12 @@ export function OrderEditorPage({
     <form className="order-editor-page" onSubmit={submit}>
       <header className="order-editor-header">
         <div className="order-editor-title">
-          <Link to={editing ? `/orders/${id}` : "/orders"} aria-label="返回訂單">
+          <Link
+            to={editing ? `/orders/${id}` : "/orders"}
+            target={editing ? "_blank" : undefined}
+            rel={editing ? "noopener noreferrer" : undefined}
+            aria-label="返回訂單"
+          >
             <ArrowLeft />
           </Link>
           <div>

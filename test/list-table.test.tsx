@@ -35,22 +35,25 @@ describe("ListTable", () => {
     expect(pullToRefreshRule).not.toContain("overscroll-behavior-y: contain");
   });
 
-  it("lets mobile order cards use page scrolling without an outer panel", () => {
+  it.each([
+    ["orders", "orders"],
+    ["quotes", "quotes"],
+  ])("lets mobile %s cards use page scrolling without an outer panel", (_label, prefix) => {
     const css = readFileSync(
       path.resolve(process.cwd(), "src/index.css"),
       "utf8",
     );
     const pageRule = css.match(
-      /\.orders-page:has\(\.responsive-card-list-panel\)\s*\{([^}]*)\}/,
+      new RegExp(`\\.${prefix}-page:has\\(\\.responsive-card-list-panel\\)\\s*\\{([^}]*)\\}`),
     )?.[1];
     const panelRule = css.match(
-      /\.orders-panel\.responsive-card-list-panel\s*\{([^}]*)\}/,
+      new RegExp(`\\.${prefix}-panel\\.responsive-card-list-panel\\s*\\{([^}]*)\\}`),
     )?.[1];
     const toolbarRule = css.match(
-      /\.orders-panel\.responsive-card-list-panel\s*>\s*\.orders-toolbar\s*\{([^}]*)\}/,
+      new RegExp(`\\.${prefix}-panel\\.responsive-card-list-panel\\s*>\\s*\\.${prefix}-toolbar\\s*\\{([^}]*)\\}`),
     )?.[1];
     const listRule = css.match(
-      /\.orders-panel\.responsive-card-list-panel\s+\.orders-table-wrap\.has-mobile-list\s*\{([^}]*)\}/,
+      new RegExp(`\\.${prefix}-panel\\.responsive-card-list-panel\\s+\\.${prefix}-table-wrap\\.has-mobile-list\\s*\\{([^}]*)\\}`),
     )?.[1];
 
     expect(pageRule).toContain("height: auto");

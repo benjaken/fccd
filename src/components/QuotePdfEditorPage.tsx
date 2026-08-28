@@ -406,9 +406,10 @@ export function QuotePdfEditorPage({
   const filteredAdditional = useMemo(() => {
     const term = additionalSearch.trim().toLocaleLowerCase();
     return additionalInfoOptions.filter(
-      (option) => !term || option.toLocaleLowerCase().includes(term),
+      (option) => (!term || option.toLocaleLowerCase().includes(term))
+        && !draft?.additionalInfo.includes(option),
     );
-  }, [additionalInfoOptions, additionalSearch]);
+  }, [additionalInfoOptions, additionalSearch, draft?.additionalInfo]);
 
   const update = <K extends keyof QuotePdfDraft>(key: K, value: QuotePdfDraft[K]) => {
     setSaved(false);
@@ -454,14 +455,14 @@ export function QuotePdfEditorPage({
 
   const addAdditional = (value: string) => {
     const text = value.trim();
-    if (!draft || !text) return;
+    if (!draft || !text || draft.additionalInfo.includes(text)) return;
     update("additionalInfo", [...draft.additionalInfo, text]);
     setAdditionalSearch("");
   };
 
   const addActivity = (description: string, amount = "0") => {
     const text = description.trim();
-    if (!draft || !text) return;
+    if (!draft || !text || draft.activities.some((activity) => activity.description === text)) return;
     update("activities", [
       ...draft.activities,
       { id: crypto.randomUUID(), description: text, amount },
@@ -804,40 +805,41 @@ export function QuotePdfEditorPage({
 
       <QuotePdfPageFooter email={brandEmail} printOnly />
 
-      {canAddAdditionalInfo ? <Modal open={additionalOpen} onClose={() => setAdditionalOpen(false)} title="額外資訊" closeLabel="關閉額外資訊" size="lg" footer={<Button onClick={() => setAdditionalOpen(false)}>確定</Button>}>
+      {canAddAdditionalInfo ? <Modal open={additionalOpen} onClose={() => setAdditionalOpen(false)} title="額外資訊" closeLabel="關閉額外資訊" size="lg" rootClassName="quote-clause-modal-root" className="quote-supplement-modal quote-pdf-supplement-modal" footer={<Button onClick={() => setAdditionalOpen(false)}>確定</Button>}>
         <div className="quote-additional-picker">
-          <div className="quote-additional-search"><Search /><input autoFocus aria-label="搜尋額外資訊" placeholder={t("quotes.pdfEditor.additionalSearchPlaceholder")} value={additionalSearch} onChange={(event) => setAdditionalSearch(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") addAdditional(additionalSearch); }} /><Button variant="outline" onClick={() => addAdditional(additionalSearch)}>Add</Button></div>
+          <div className="quote-additional-search"><Search /><input autoFocus aria-label="搜尋額外資訊" placeholder={t("quotes.pdfEditor.additionalSearchPlaceholder")} value={additionalSearch} onChange={(event) => setAdditionalSearch(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") addAdditional(additionalSearch); }} /><Button variant="outline" onClick={() => addAdditional(additionalSearch)}><Plus />加入</Button></div>
           <p>可搜尋下列範本，亦可直接輸入任何文字再按 Add。</p>
           <ul>
             {filteredAdditional.map((option) => <li key={option}><span>{option}</span><Button size="sm" variant="outline" onClick={() => addAdditional(option)}><Plus />加入</Button></li>)}
           </ul>
+          {draft.additionalInfo.length ? <div className="quote-supplement-selected"><strong>已加入</strong>{draft.additionalInfo.map((item, index) => <div key={`${item}-${index}`}><span>（{index + 1}）{item}</span><button type="button" aria-label={`移除額外資訊 ${index + 1}`} onClick={() => update("additionalInfo", draft.additionalInfo.filter((_, itemIndex) => itemIndex !== index))}><Minus /></button></div>)}</div> : null}
         </div>
       </Modal> : null}
 
-      <Modal open={termsOpen} onClose={() => setTermsOpen(false)} title="條款及細則" closeLabel="關閉條款及細則" size="lg" rootClassName="quote-clause-modal-root" className="quote-clause-modal" footer={<Button onClick={() => setTermsOpen(false)}>確定</Button>}>
+      <Modal open={termsOpen} onClose={() => setTermsOpen(false)} title="條款及細則" closeLabel="關閉條款及細則" size="lg" rootClassName="quote-clause-modal-root" className="quote-supplement-modal quote-pdf-supplement-modal" footer={<Button onClick={() => setTermsOpen(false)}>確定</Button>}>
         <div className="quote-additional-picker quote-clause-picker">
-          <QuoteClauseSearchPicker search={termSearch} onSearchChange={setTermSearch} options={termOptions} searchLabel="搜尋條款及細則" placeholder={t("quotes.pdfEditor.termsSearchPlaceholder")} onAdd={(value) => addDraftItem("terms", value)} />
+          <QuoteClauseSearchPicker search={termSearch} onSearchChange={setTermSearch} options={termOptions.filter((option) => !draft.terms.includes(option))} searchLabel="搜尋條款及細則" placeholder={t("quotes.pdfEditor.termsSearchPlaceholder")} onAdd={(value) => addDraftItem("terms", value)} />
           <p>可搜尋條款範本，亦可自由輸入內容後按「加入」。</p>
-          <div className="quote-clause-selected"><strong>已加入的條例</strong>{draft.terms.map((item, index) => <div key={`selected-term-${index}`}><span>（{index + 1}）{item}</span><button type="button" aria-label={`移除條款及細則 ${index + 1}`} onClick={() => update("terms", draft.terms.filter((_, itemIndex) => itemIndex !== index))}><Minus /></button></div>)}</div>
+          <div className="quote-supplement-selected"><strong>已加入的條例</strong>{draft.terms.map((item, index) => <div key={`selected-term-${index}`}><span>（{index + 1}）{item}</span><button type="button" aria-label={`移除條款及細則 ${index + 1}`} onClick={() => update("terms", draft.terms.filter((_, itemIndex) => itemIndex !== index))}><Minus /></button></div>)}</div>
         </div>
       </Modal>
 
-      <Modal open={paymentsOpen} onClose={() => setPaymentsOpen(false)} title="付款方式" closeLabel="關閉付款方式" size="lg" rootClassName="quote-clause-modal-root" className="quote-clause-modal" footer={<Button onClick={() => setPaymentsOpen(false)}>確定</Button>}>
+      <Modal open={paymentsOpen} onClose={() => setPaymentsOpen(false)} title="付款方式" closeLabel="關閉付款方式" size="lg" rootClassName="quote-clause-modal-root" className="quote-supplement-modal quote-pdf-supplement-modal" footer={<Button onClick={() => setPaymentsOpen(false)}>確定</Button>}>
         <div className="quote-additional-picker quote-clause-picker">
-          <QuoteClauseSearchPicker search={paymentSearch} onSearchChange={setPaymentSearch} options={paymentOptions} searchLabel="搜尋付款方式" placeholder={t("quotes.pdfEditor.paymentSearchPlaceholder")} onAdd={(value) => addDraftItem("paymentMethods", value)} />
+          <QuoteClauseSearchPicker search={paymentSearch} onSearchChange={setPaymentSearch} options={paymentOptions.filter((option) => !draft.paymentMethods.includes(option))} searchLabel="搜尋付款方式" placeholder={t("quotes.pdfEditor.paymentSearchPlaceholder")} onAdd={(value) => addDraftItem("paymentMethods", value)} />
           <p>可搜尋付款方式範本，亦可自由輸入內容後按「加入」。</p>
-          <div className="quote-clause-selected"><strong>已加入的付款方式</strong>{draft.paymentMethods.map((item, index) => <div key={`selected-payment-${index}`}><span>（{index + 1}）{item}</span><button type="button" aria-label={`移除付款方式 ${index + 1}`} onClick={() => update("paymentMethods", draft.paymentMethods.filter((_, itemIndex) => itemIndex !== index))}><Minus /></button></div>)}</div>
+          <div className="quote-supplement-selected"><strong>已加入的付款方式</strong>{draft.paymentMethods.map((item, index) => <div key={`selected-payment-${index}`}><span>（{index + 1}）{item}</span><button type="button" aria-label={`移除付款方式 ${index + 1}`} onClick={() => update("paymentMethods", draft.paymentMethods.filter((_, itemIndex) => itemIndex !== index))}><Minus /></button></div>)}</div>
         </div>
       </Modal>
 
-      {isLunchBox ? <Modal open={activityOpen} onClose={() => setActivityOpen(false)} title="活動報價" closeLabel="關閉活動報價" size="lg" footer={<Button onClick={() => setActivityOpen(false)}>確定</Button>}>
+      {isLunchBox ? <Modal open={activityOpen} onClose={() => setActivityOpen(false)} title="活動報價" closeLabel="關閉活動報價" size="lg" rootClassName="quote-clause-modal-root" className="quote-supplement-modal quote-pdf-supplement-modal" footer={<Button onClick={() => setActivityOpen(false)}>確定</Button>}>
         <div className="quote-additional-picker quote-activity-picker">
-          <div className="quote-additional-search"><Search /><input autoFocus aria-label="搜尋活動報價" placeholder={t("quotes.pdfEditor.activitySearchPlaceholder")} value={activitySearch} onChange={(event) => setActivitySearch(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") addActivity(activitySearch); }} /><Button variant="outline" onClick={() => addActivity(activitySearch)}>Add</Button></div>
+          <div className="quote-additional-search"><Search /><input autoFocus aria-label="搜尋活動報價" placeholder={t("quotes.pdfEditor.activitySearchPlaceholder")} value={activitySearch} onChange={(event) => setActivitySearch(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") addActivity(activitySearch); }} /><Button variant="outline" onClick={() => addActivity(activitySearch)}><Plus />加入</Button></div>
           <p>可搜尋活動項目範本，亦可直接輸入任何文字再按 Add。</p>
           <ul>
-            {activityOptions.filter((option) => !activitySearch.trim() || option.description.toLocaleLowerCase().includes(activitySearch.trim().toLocaleLowerCase())).map((option) => <li key={option.description}><span>{option.description}</span><span>${Number(option.amount).toLocaleString("zh-HK")}</span><Button size="sm" variant="outline" onClick={() => addActivity(option.description, option.amount)}><Plus />加入</Button></li>)}
+            {activityOptions.filter((option) => (!activitySearch.trim() || option.description.toLocaleLowerCase().includes(activitySearch.trim().toLocaleLowerCase())) && !draft.activities.some((activity) => activity.description === option.description)).map((option) => <li key={option.description}><span>{option.description}</span><span>${Number(option.amount).toLocaleString("zh-HK")}</span><Button size="sm" variant="outline" onClick={() => addActivity(option.description, option.amount)}><Plus />加入</Button></li>)}
           </ul>
-          {draft.activities.length ? <div className="quote-activity-selected"><strong>已加入</strong>{draft.activities.map((activity, index) => <div key={activity.id}><span>（{index + 1}） {activity.description}</span><button type="button" aria-label={`移除活動項目 ${index + 1}`} onClick={() => update("activities", draft.activities.filter((_, activityIndex) => activityIndex !== index))}><Minus /></button></div>)}</div> : null}
+          {draft.activities.length ? <div className="quote-supplement-selected"><strong>已加入</strong>{draft.activities.map((activity, index) => <div key={activity.id}><span>（{index + 1}） {activity.description}</span><button type="button" aria-label={`移除活動項目 ${index + 1}`} onClick={() => update("activities", draft.activities.filter((_, activityIndex) => activityIndex !== index))}><Minus /></button></div>)}</div> : null}
         </div>
       </Modal> : null}
     </section>

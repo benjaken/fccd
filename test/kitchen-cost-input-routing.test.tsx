@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -100,5 +103,20 @@ describe("KitchenCostInputPage query-tab routing", () => {
       expect(kitchenCostInput.fetchKitchenCostReport).toHaveBeenCalledWith("2026-08-10");
     });
     expect(kitchenCostInput.fetchKitchenCostReport).not.toHaveBeenCalledWith("2026-08-17");
+  });
+
+  it("allows the weekly advertising page to scroll on mobile", () => {
+    renderCostInput("/kitchen/cost-input?tab=weekly-advertising");
+
+    expect(document.querySelector(".kitchen-cost-page.is-weekly-advertising"))
+      .toBeInTheDocument();
+
+    const css = readFileSync(resolve(process.cwd(), "src/index.css"), "utf8");
+    expect(css).toMatch(
+      /\.ingredients-page\.kitchen-cost-page\.is-weekly-advertising\s*\{[\s\S]*height:\s*auto;[\s\S]*overflow:\s*visible;/,
+    );
+    expect(css).toMatch(
+      /\.kitchen-cost-page\.is-weekly-advertising \.kitchen-cost-table-wrap\s*\{[\s\S]*max-height:\s*min\(70dvh, 40rem\);/,
+    );
   });
 });

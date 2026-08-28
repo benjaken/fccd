@@ -18,7 +18,7 @@ import {
 
 const EMPTY_OPTIONS: ProductEditOptions = {
   channels: [], productTypes: [], cookTypes: [], collections: [],
-  packingMaterials: [], catalogIngredients: [],
+  packingMaterials: [], packingSupplies: [], catalogIngredients: [],
 };
 
 type CatalogKind = "product" | "package";

@@ -201,6 +201,7 @@ describe("customer message grouping", () => {
     expect(messageTabFromCategory("orderdislike")).toBe("complaint");
     expect(messageTabFromCategory("orderlike")).toBe("like");
     expect(messageTabFromCategory("customer note")).toBe("note");
+    expect(messageTabFromCategory("wati")).toBe("note");
     expect(messageTabFromCategory("other")).toBeNull();
   });
 
@@ -655,7 +656,7 @@ describe("Quote customers list", () => {
         email: "sales@foodchannels-catering.com",
         body: "已出月結",
         authorName: "Mandy",
-        orderId: null,
+        orderId: "order-1143",
         replyToEmail: null,
       }),
     );

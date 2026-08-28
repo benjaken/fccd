@@ -423,10 +423,6 @@ export function KitchenProductSalesReportPage() {
           allowOutOfOrder
           disabled={loading}
         />
-        <Button type="button" variant="outline" onClick={onRefresh} disabled={loading}>
-          <RefreshCw aria-hidden="true" />
-          重新整理
-        </Button>
       </section>
 
       {optionsError ? (

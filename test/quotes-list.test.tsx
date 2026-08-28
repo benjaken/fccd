@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -60,7 +60,86 @@ const quoteResult: QuoteListResult = {
 
 describe("Catering quotes list", () => {
   beforeEach(async () => {
+    vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
     await i18n.changeLanguage("zh-HK");
+  });
+
+  it("renders quote cards and appends the next server page on mobile", async () => {
+    vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
+      matches: true,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
+    let notifyIntersection: IntersectionObserverCallback = () => undefined;
+    const observe = vi.fn();
+    vi.stubGlobal(
+      "IntersectionObserver",
+      class IntersectionObserverMock {
+        constructor(callback: IntersectionObserverCallback) {
+          notifyIntersection = callback;
+        }
+
+        observe = observe;
+        disconnect = vi.fn();
+        unobserve = vi.fn();
+        takeRecords = vi.fn(() => []);
+        root = null;
+        rootMargin = "0px";
+        thresholds = [];
+      },
+    );
+    const secondQuote = {
+      ...quoteResult.items[0],
+      id: "quote-2",
+      orderNumber: "Q-260812-002",
+      customerName: "Mobile customer 2",
+    };
+    const loadQuotes = vi.fn().mockImplementation(({ page }: { page: number }) =>
+      Promise.resolve({
+        items: page === 1 ? quoteResult.items : [secondQuote],
+        total: 2,
+      }),
+    );
+
+    render(
+      <MemoryRouter>
+        <QuotesListPage loadQuotes={loadQuotes} canManage />
+      </MemoryRouter>,
+    );
+
+    const mobileList = await waitFor(() => {
+      const node = document.querySelector<HTMLElement>(".quote-mobile-list");
+      expect(node).toBeInTheDocument();
+      return node!;
+    });
+    expect(within(mobileList).getByText("Q-260812-001")).toBeInTheDocument();
+    expect(document.querySelector(".mobile-list-load-more button")).not.toBeInTheDocument();
+    await waitFor(() => expect(observe).toHaveBeenCalledTimes(1));
+    act(() => {
+      notifyIntersection(
+        [{ isIntersecting: true } as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
+    });
+
+    expect(await within(mobileList).findByText("Q-260812-002")).toBeInTheDocument();
+    expect(within(mobileList).getAllByRole("listitem")).toHaveLength(2);
+    expect(loadQuotes).toHaveBeenCalledWith(expect.objectContaining({ page: 2 }));
+    vi.unstubAllGlobals();
   });
 
   it("renders quote fields and links to the quote record", async () => {
@@ -79,6 +158,8 @@ describe("Catering quotes list", () => {
       "href",
       "/quotes/quote-1",
     );
+    expect(screen.getByText("Q-260812-001")).toHaveAttribute("target", "_blank");
+    expect(screen.getByText("Q-260812-001")).toHaveAttribute("rel", "noopener noreferrer");
     expect(screen.getByText("陳小姐")).toBeInTheDocument();
     expect(screen.getByText("示例企業")).toBeInTheDocument();
     expect(within(screen.getByRole("table")).getByText("跟進中")).toBeInTheDocument();
@@ -237,6 +318,8 @@ describe("Catering quotes list", () => {
     expect(screen.getByRole("link", { name: "PDF" })).toHaveAttribute("href", "/quotes/quote-1/pdf");
     expect(screen.getByRole("link", { name: "PDF" })).toHaveAttribute("target", "_blank");
     expect(screen.getByRole("link", { name: "編輯" })).toHaveAttribute("href", "/quotes/quote-1/edit");
+    expect(screen.getByRole("link", { name: "編輯" })).toHaveAttribute("target", "_blank");
+    expect(screen.getByRole("link", { name: "編輯" })).toHaveAttribute("rel", "noopener noreferrer");
     expect(screen.getByRole("button", { name: "文件" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "複製" })).toHaveAttribute("href", "/quotes/new?copyFrom=quote-1");
   });

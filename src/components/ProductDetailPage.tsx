@@ -67,6 +67,7 @@ const EMPTY_OPTIONS: ProductEditOptions = {
   cookTypes: [],
   collections: [],
   packingMaterials: [],
+  packingSupplies: [],
   catalogIngredients: [],
 };
 
@@ -161,6 +162,8 @@ export function ProductDetailPage({
   const [ingredientId, setIngredientId] = useState("");
   const [ingredientQuery, setIngredientQuery] = useState("");
   const [ingredientQty, setIngredientQty] = useState("1");
+  const [packingSupplyId, setPackingSupplyId] = useState("");
+  const [packingSupplyQty, setPackingSupplyQty] = useState("1");
   const [ingredientResults, setIngredientResults] = useState<CatalogOption[]>([]);
   const [ingredientMenuOpen, setIngredientMenuOpen] = useState(false);
   const [ingredientHighlight, setIngredientHighlight] = useState(0);
@@ -169,7 +172,7 @@ export function ProductDetailPage({
   const [labelDisplayA, setLabelDisplayA] = useState("");
   const [labelDisplayB, setLabelDisplayB] = useState("");
   const [labelPackingId, setLabelPackingId] = useState("");
-  const [adding, setAdding] = useState<"ingredient" | "label" | null>(null);
+  const [adding, setAdding] = useState<"ingredient" | "packing" | "label" | null>(null);
 
   const currency = useMemo(
     () =>
@@ -480,6 +483,21 @@ export function ProductDetailPage({
       setIngredientQuery("");
       setIngredientResults([]);
       setIngredientQty("1");
+      await refreshDetail();
+    } finally {
+      setAdding(null);
+    }
+  };
+
+  const handleAddPackingSupply = async () => {
+    if (!packingSupplyId) return;
+    const quantity = Number.parseFloat(packingSupplyQty);
+    if (!Number.isFinite(quantity) || quantity <= 0) return;
+    setAdding("packing");
+    try {
+      await addIngredient(product.id, packingSupplyId, quantity);
+      setPackingSupplyId("");
+      setPackingSupplyQty("1");
       await refreshDetail();
     } finally {
       setAdding(null);
@@ -915,6 +933,30 @@ export function ProductDetailPage({
                 {displayName} - {t("productDetail.packingSupplies")}
               </h2>
             </header>
+            {editing ? (
+              <div className="product-inline-add">
+                <label>
+                  <span>{t("productDetail.packingSupply")}</span>
+                  <FilterableSelect
+                    value={packingSupplyId}
+                    onChange={(event) => setPackingSupplyId(event.target.value)}
+                  >
+                    <option value="">{t("common.notSet")}</option>
+                    {options.packingSupplies
+                      .filter((item) => !addedIngredientIds.has(item.id))
+                      .map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+                  </FilterableSelect>
+                </label>
+                <label>
+                  <span>{t("productDetail.quantity")}</span>
+                  <input type="number" min="0" step="0.01" value={packingSupplyQty} onChange={(event) => setPackingSupplyQty(event.target.value)} />
+                </label>
+                <Button type="button" disabled={!packingSupplyId || adding === "packing"} onClick={() => void handleAddPackingSupply()}>
+                  <Plus />
+                  {t("productDetail.addPackingSupply")}
+                </Button>
+              </div>
+            ) : null}
             {packingSupplies.length === 0 ? (
               <p className="detail-description">{t("productDetail.noPackingSupplies")}</p>
             ) : (

@@ -49,8 +49,9 @@ function sumSummaries(summaries: KitchenChannelSalesYearSummary[]) {
 }
 
 function yearToneColor(year: number) {
-  const hue = (Math.abs(year) * 137.508) % 360;
-  return `hsl(${hue.toFixed(1)} 68% 38%)`;
+  // Rich green and orange keep adjacent years easy to scan without neon glare.
+  const tones = ["#0a7e3a", "#dc8a19", "#3494e0", "#dca8bc", "#0d68b9"];
+  return tones[Math.abs(year) % tones.length];
 }
 
 function YearSelector({

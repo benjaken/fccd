@@ -69,6 +69,10 @@
   line-height: 1.35;
 }
 
+.order-customer-location {
+  font-size: 0.875rem;
+}
+
 .order-customer-location strong {
   color: var(--foreground);
   font-size: inherit;
@@ -90,7 +94,7 @@
   display: block;
   margin-top: 3px;
   color: var(--muted-foreground);
-  font-size: 0.78rem;
+  font-size: 0.875rem;
 }
 
 .order-mobile-delivery-times {
@@ -100,7 +104,7 @@
 
 .order-mobile-delivery-times span:last-child {
   color: var(--muted-foreground);
-  font-size: 0.78rem;
+  font-size: 0.875rem;
 }
 
 .quotes-table-wrap .quote-description-cell textarea {

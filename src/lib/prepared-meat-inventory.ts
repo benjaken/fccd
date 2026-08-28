@@ -405,6 +405,17 @@ export async function fetchPreparedMeatMovementsForItem(
   );
 }
 
+/** Deletes the complete stock transaction, including its linked raw movement. */
+export async function deletePreparedMeatMovement(
+  movementId: string,
+): Promise<void> {
+  const { error } = await supabase.rpc("delete_meat_stock_movement", {
+    p_movement_type: "prepared",
+    p_movement_id: movementId,
+  });
+  if (error) throw error;
+}
+
 export const GUIHUA_CUSTOMER_MARKER = "桂花小幸";
 export const RAW_MEAT_OUTBOUND_CUSTOMER_MARKERS = ["到會", "凍肉製作"] as const;
 

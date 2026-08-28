@@ -107,13 +107,15 @@ describe("Dashboard navigation", () => {
     expect(matchingLink).toBeDefined();
   });
 
-  it("opens the selected order detail page", async () => {
-    const user = userEvent.setup();
+  it("opens the selected order detail page in a new tab", async () => {
     renderDashboard();
 
-    await user.click(await screen.findByRole("link", { name: "FC-260811-018" }));
+    const orderLink = await screen.findByRole("link", { name: "FC-260811-018" });
 
-    expect(screen.getByTestId("location")).toHaveTextContent("/orders/order-1");
+    expect(orderLink).toHaveAttribute("href", "/orders/order-1");
+    expect(orderLink).toHaveAttribute("target", "_blank");
+    expect(orderLink).toHaveAttribute("rel", "noopener noreferrer");
+    expect(screen.getByTestId("location")).toHaveTextContent("/");
   });
 
   it("opens the selected order status view", async () => {

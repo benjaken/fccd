@@ -254,9 +254,6 @@ export function QuotePdfPagesSettingsPage({
               <option value="back">{t("quotes.pdfPages.back")}</option>
             </select>
           </label>
-          <Button variant="outline" size="icon" onClick={() => setReloadKey((key) => key + 1)} aria-label={t("quotes.pdfPages.refresh")}>
-            <RefreshCw />
-          </Button>
         </header>
 
         {error ? (

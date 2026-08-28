@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import type { ComponentProps } from "react";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -170,6 +172,23 @@ describe("Quote editor", () => {
   beforeEach(async () => {
     setMobileViewport(false);
     await i18n.changeLanguage("en");
+  });
+
+  it("keeps the mobile details grid and footer controls inside the panel", () => {
+    const css = readFileSync(path.resolve(process.cwd(), "src/index.css"), "utf8");
+    const responsiveGridRule = css.match(
+      /@media \(max-width: 960px\)[\s\S]*?\.quote-editor-form,[\s\S]*?\.quote-items-layout\s*\{([^}]*)\}/,
+    )?.[1];
+    const mobileFooterRule = css.match(
+      /\.quote-editor-form\s*>\s*footer\s*\{([^}]*)\}/g,
+    )?.at(-1);
+    const mobileFooterButtonRule = css.match(
+      /\.quote-editor-form\s*>\s*footer\s+\.ui-button\s*\{([^}]*)\}/g,
+    )?.at(-1);
+
+    expect(responsiveGridRule).toContain("grid-template-columns: minmax(0, 1fr)");
+    expect(mobileFooterRule).toContain("flex-direction: column");
+    expect(mobileFooterButtonRule).toContain("min-width: 0");
   });
 
   it("renders editable product cards instead of the wide table on mobile", async () => {
