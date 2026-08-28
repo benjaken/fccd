@@ -128,7 +128,15 @@ export type ProductUpdateInput = {
   collectionIds: string[];
 };
 
-export type ProductCreateInput = ProductUpdateInput;
+export type ProductCreateInput = ProductUpdateInput & {
+  premiumIngredients?: Array<{ ingredientId: string; quantity: number }>;
+  packingSupplies?: Array<{ ingredientId: string; quantity: number }>;
+  labels?: Array<{
+    displayA: string;
+    displayB: string;
+    packingMaterialId: string | null;
+  }>;
+};
 
 export type ProductPremiumIngredient = {
   id: string;
@@ -336,13 +344,53 @@ const PRESET_CHANNEL_NAMES: Record<
   "ala-carte": ["Express", "Kitchen", "HK Party Food"],
 };
 
-async function channelIdsForNames(names: string[]) {
+async function channelRefsForNames(names: string[]) {
   const { data, error } = await supabase
     .from("channels")
-    .select("id,name")
+    .select("id,legacy_id,name")
     .in("name", names);
   if (error) throw error;
-  return (data ?? []).map((row) => row.id as string);
+  return (data ?? []).map((row) => ({
+    id: row.id as string,
+    legacyId: (row.legacy_id as string | null) ?? null,
+  }));
+}
+
+async function legacyProductIdsForChannels(
+  channelIds: string[],
+  channelLegacyIds: string[],
+) {
+  const queries = [
+    ...(channelIds.length
+      ? [supabase.from("channel_products").select("product_id,product_legacy_id").in("channel_id", channelIds)]
+      : []),
+    ...(channelLegacyIds.length
+      ? [
+          supabase.from("channel_products").select("product_id,product_legacy_id").in("channel_legacy_id", channelLegacyIds),
+          supabase.from("products").select("id").in("channel_legacy_id", channelLegacyIds),
+        ]
+      : []),
+  ];
+  const results = await Promise.all(queries);
+  const productIds = new Set<string>();
+  const productLegacyIds = new Set<string>();
+  for (const result of results) {
+    if (result.error) throw result.error;
+    for (const row of result.data ?? []) {
+      if ("id" in row && row.id) productIds.add(String(row.id));
+      if ("product_id" in row && row.product_id) productIds.add(String(row.product_id));
+      if ("product_legacy_id" in row && row.product_legacy_id) productLegacyIds.add(String(row.product_legacy_id));
+    }
+  }
+  if (productLegacyIds.size) {
+    const { data, error } = await supabase
+      .from("products")
+      .select("id")
+      .in("legacy_id", [...productLegacyIds]);
+    if (error) throw error;
+    for (const row of data ?? []) productIds.add(String(row.id));
+  }
+  return [...productIds];
 }
 
 export async function fetchProductChannels(): Promise<CatalogOption[]> {
@@ -653,13 +701,27 @@ export async function fetchProducts({
     query = query.eq("channel_id", channelId);
   } else if (preset !== "all") {
     if (preset === "lunchbox") {
-      query.not("bento_main_type_id", "is", null);
+      query = query.or(
+        "bento_main_type_id.not.is.null,bento_main_type_legacy_id.not.is.null",
+      );
     } else {
-      const ids = await channelIdsForNames(PRESET_CHANNEL_NAMES[preset]);
-      if (ids.length === 0) {
+      const refs = await channelRefsForNames(PRESET_CHANNEL_NAMES[preset]);
+      const channelIds = refs.map((item) => item.id);
+      const channelLegacyIds = refs
+        .map((item) => item.legacyId)
+        .filter((item): item is string => Boolean(item));
+      const relatedProductIds = await legacyProductIdsForChannels(
+        channelIds,
+        channelLegacyIds,
+      );
+      if (channelIds.length === 0 && relatedProductIds.length === 0) {
         return { items: [], total: 0 };
       }
-      query = query.in("channel_id", ids);
+      const predicates = [
+        ...(channelIds.length ? [`channel_id.in.(${channelIds.join(",")})`] : []),
+        ...(relatedProductIds.length ? [`id.in.(${relatedProductIds.join(",")})`] : []),
+      ];
+      query = query.or(predicates.join(","));
     }
   }
 
@@ -1281,6 +1343,15 @@ export async function createProduct(input: ProductCreateInput): Promise<string> 
     relatedIdColumn: "collection_id",
     relatedLegacyColumn: "collection_legacy_id",
   });
+  await Promise.all([
+    ...(input.premiumIngredients ?? []).map((item) =>
+      addProductPremiumIngredient(productId, item.ingredientId, item.quantity),
+    ),
+    ...(input.packingSupplies ?? []).map((item) =>
+      addProductPremiumIngredient(productId, item.ingredientId, item.quantity),
+    ),
+    ...(input.labels ?? []).map((item) => addProductLabel(productId, item)),
+  ]);
   return productId;
 }
 

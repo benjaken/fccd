@@ -58,6 +58,7 @@ async function fetchAllDistrictRows(search: string): Promise<DistrictRow[]> {
       .from("delivery_districts")
       .select("id,name")
       .is("archived_at", null)
+      .is("driver_team_id", null)
       .order("name")
       .range(start, start + batchSize - 1);
     if (term) query = query.ilike("name", `%${term}%`);
@@ -98,6 +99,20 @@ export async function createDeliveryDistrict(input: DeliveryDistrictWriteInput) 
     ...writeFields(input),
   });
   if (error) throw error;
+}
+
+export async function createDeliveryDistrictOption(
+  name: string,
+): Promise<{ id: string; name: string }> {
+  const normalizedName = displayName(name);
+  if (!normalizedName) throw new Error("district_name_required");
+  const { data, error } = await supabase.rpc("create_delivery_district_option", {
+    p_name: normalizedName,
+  });
+  if (error) throw error;
+  const row = (data as Array<{ id: string; name: string }> | null)?.[0];
+  if (!row) throw new Error("district_create_failed");
+  return row;
 }
 
 export async function updateDeliveryDistrict(ids: readonly string[], input: DeliveryDistrictWriteInput) {

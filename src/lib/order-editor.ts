@@ -22,6 +22,7 @@ export type OrderEditorLine = {
   remarks: string;
   quantity: number;
   unitPrice: number;
+  isAddon?: boolean;
 };
 
 export type OrderEditorPayment = {
@@ -152,7 +153,7 @@ async function fetchOptions(): Promise<OrderEditorOptions> {
     await Promise.all([
       supabase.from("channels").select("id,name").is("archived_at", null).eq("is_active", true).order("sort_order", { nullsFirst: false }).order("name"),
       supabase.from("shipping_methods").select("id,name,display_name").is("archived_at", null).eq("is_active", true).order("display_order", { nullsFirst: false }).order("name"),
-      supabase.from("delivery_districts").select("id,name").is("archived_at", null).order("name"),
+      supabase.from("delivery_districts").select("id,name").is("archived_at", null).is("driver_team_id", null).order("name"),
       supabase.from("sales_partners").select("id,name").eq("is_active", true).order("name"),
       supabase.from("payment_methods").select("id,name").is("archived_at", null).eq("is_active", true).order("name"),
       supabase.from("products").select("id,sku,name,chinese_name,price").is("archived_at", null).eq("is_active", true).not("sku", "is", null).order("sku").limit(300),
@@ -213,7 +214,7 @@ export async function fetchOrderEditor(
         .maybeSingle(),
       supabase
         .from("order_lines")
-        .select("id,product_id,package_id,sku_snapshot,product_name_snapshot,content_snapshot,quantity,unit_price,remarks_1,products(name),packages(name)")
+        .select("id,product_id,package_id,sku_snapshot,product_name_snapshot,content_snapshot,quantity,unit_price,remarks_1,is_addon,products(name),packages(name)")
         .eq("order_id", id)
         .eq("is_void", false)
         .order("type_sort")
@@ -287,6 +288,7 @@ export async function fetchOrderEditor(
         remarks: line.remarks_1 ?? "",
         quantity: numberValue(line.quantity),
         unitPrice: numberValue(line.unit_price),
+        isAddon: line.is_addon === true,
       };
     }),
     payments: copy
@@ -414,6 +416,7 @@ export async function saveOrderEditor(draft: OrderEditorDraft): Promise<string> 
         total_price: line.quantity * line.unitPrice,
         item_order: index + 1,
         type_sort: line.packageId ? 2 : 1,
+        is_addon: line.isAddon === true,
         is_void: false,
       })),
       { onConflict: "id" },

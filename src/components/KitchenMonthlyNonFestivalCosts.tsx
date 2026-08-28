@@ -126,8 +126,8 @@ function AddMonthlyNonFestivalCostPanel({
       setError("請選擇費用類型");
       return;
     }
-    if (kitchenMonthlyCostRequiresBrand(costType.name) && selectedChannels.length === 0) {
-      setError("Google 或 Facebook 費用必須選擇品牌");
+    if (kitchenMonthlyCostRequiresBrand(costType) && selectedChannels.length === 0) {
+      setError("此費用必須選擇品牌");
       return;
     }
     if (!/^\d{4}-\d{2}$/.test(month) || month > maximumMonth) {
@@ -188,7 +188,7 @@ function AddMonthlyNonFestivalCostPanel({
               const nextId = event.target.value;
               const nextType = costTypes.find((item) => item.id === nextId);
               setCostTypeId(nextId);
-              if (!nextType || !kitchenMonthlyCostRequiresBrand(nextType.name)) setChannelIds([]);
+              if (!nextType || !kitchenMonthlyCostRequiresBrand(nextType)) setChannelIds([]);
               setError(null);
             }}
           >
@@ -196,9 +196,7 @@ function AddMonthlyNonFestivalCostPanel({
             {costTypes.map((type) => <option key={type.id} value={type.id}>{type.name}</option>)}
           </FilterableSelect>
         </label>
-        {kitchenMonthlyCostRequiresBrand(
-          costTypes.find((item) => item.id === costTypeId)?.name ?? "",
-        ) ? (
+        {costTypes.find((item) => item.id === costTypeId)?.isBrand ? (
           <div className="ingredients-field">
             <span id="kitchen-non-festival-brand-label">品牌（必須選擇）</span>
             <MultiSelect

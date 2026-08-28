@@ -66,6 +66,24 @@ export type CustomerSelfServiceOrderDetail = {
   payments: CustomerSelfServicePayment[];
 };
 
+export type CustomerSelfServiceAddonItem = {
+  id: string;
+  productId: string;
+  sku: string | null;
+  name: string;
+  price: number;
+  minQuantity: number;
+  maxQuantity: number;
+};
+
+export type CustomerSelfServiceAddonOptions = {
+  canAddOn: boolean;
+  reason: "order_unavailable" | "delivery_date_missing" | "order_closed" | "block_date" | "cutoff_passed" | "no_products" | null;
+  cutoffAt: string | null;
+  hasAddOn: boolean;
+  items: CustomerSelfServiceAddonItem[];
+};
+
 type LoginRow = {
   session_token: string;
   session_expires_at: string;
@@ -154,6 +172,48 @@ export async function fetchCustomerSelfServiceOrder(
   if (error) throw error;
   if (!data || typeof data !== "object") throw new Error("order_not_found");
   return data as CustomerSelfServiceOrderDetail;
+}
+
+export async function fetchCustomerSelfServiceAddonOptions(
+  token: string,
+  orderId: string,
+): Promise<CustomerSelfServiceAddonOptions> {
+  const { data, error } = await supabase.rpc("customer_self_service_addon_options", {
+    p_session_token: token,
+    p_order_id: orderId,
+  });
+  if (error) throw error;
+  if (!data || typeof data !== "object") throw new Error("addon_options_unavailable");
+  return data as CustomerSelfServiceAddonOptions;
+}
+
+export async function createCustomerAddonPaypalCheckout(
+  token: string,
+  orderId: string,
+  items: Array<{ productId: string; quantity: number }>,
+) {
+  const { data, error } = await supabase.functions.invoke("customer-addon-paypal", {
+    body: { action: "create", sessionToken: token, orderId, items, origin: window.location.origin },
+  });
+  if (error) throw error;
+  if (!data?.approvalUrl || !data?.checkoutId) throw new Error(data?.error || "paypal_create_failed");
+  return data as { checkoutId: string; paypalOrderId: string; approvalUrl: string };
+}
+
+export async function captureCustomerAddonPaypalCheckout(token: string, checkoutId: string) {
+  const { data, error } = await supabase.functions.invoke("customer-addon-paypal", {
+    body: { action: "capture", sessionToken: token, checkoutId },
+  });
+  if (error) throw error;
+  if (!data?.completed) throw new Error(data?.error || "paypal_capture_failed");
+  return data as { completed: true; checkoutId: string; orderId?: string };
+}
+
+export async function cancelCustomerAddonPaypalCheckout(token: string, checkoutId: string) {
+  const { error } = await supabase.functions.invoke("customer-addon-paypal", {
+    body: { action: "cancel", sessionToken: token, checkoutId },
+  });
+  if (error) throw error;
 }
 
 export async function logoutCustomerSelfService(token: string) {

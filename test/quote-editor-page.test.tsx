@@ -152,6 +152,7 @@ function renderEditor(
       <Routes>
         <Route path="/quotes/new" element={<QuoteEditorPage {...props} />} />
         <Route path="/quotes/:id/edit" element={<QuoteEditorPage {...props} />} />
+        <Route path="/orders/:id/edit" element={<QuoteEditorPage {...props} />} />
       </Routes>
     </MemoryRouter>,
   );
@@ -1054,6 +1055,29 @@ describe("Quote editor", () => {
     expect(screen.queryByRole("option", { name: "Central" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("option", { name: "Kowloon Bay" }));
     expect(district).toHaveTextContent("Kowloon Bay");
+  });
+
+  it.each([
+    { kind: "quote" as const, path: "/quotes/quote-1/edit" },
+    { kind: "order" as const, path: "/orders/order-1/edit" },
+  ])("adds and selects a new district from the $kind editor", async ({ kind, path }) => {
+    const user = userEvent.setup();
+    const createDistrict = vi.fn().mockResolvedValue({
+      id: "district-new",
+      name: "Tseung Kwan O",
+    });
+    renderEditor({
+      documentType: kind,
+      createDistrict,
+    }, path);
+
+    const district = await screen.findByRole("combobox", { name: "District" });
+    await user.click(district);
+    await user.type(screen.getByRole("searchbox", { name: "Search" }), "Tseung Kwan O");
+    await user.click(screen.getByRole("button", { name: /Tseung Kwan O/ }));
+
+    await waitFor(() => expect(createDistrict).toHaveBeenCalledWith("Tseung Kwan O"));
+    expect(district).toHaveTextContent("Tseung Kwan O");
   });
 
   it.each([

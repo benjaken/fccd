@@ -190,7 +190,7 @@ describe("product SKU list filter", () => {
     expect(query.eq).toHaveBeenCalledWith("cook_type_id", "cook-steam");
   });
 
-  it("limits the lunchbox preset to products with a lunchbox staple category", async () => {
+  it("includes migrated lunchbox products that still use the legacy staple category", async () => {
     const productsQuery = createQuery({ data: [], count: 0, error: null });
     fromMock.mockReturnValue(productsQuery);
 
@@ -204,8 +204,52 @@ describe("product SKU list filter", () => {
       preset: "lunchbox",
     });
 
-    expect(productsQuery.not).toHaveBeenCalledWith("bento_main_type_id", "is", null);
+    expect(productsQuery.or).toHaveBeenCalledWith(
+      "bento_main_type_id.not.is.null,bento_main_type_legacy_id.not.is.null",
+    );
     expect(fromMock).not.toHaveBeenCalledWith("channels");
+  });
+
+  it("includes migrated preset products linked through legacy channels", async () => {
+    const channelsQuery = createQuery({
+      data: [{ id: "channel-new", legacy_id: "channel-old", name: "Express" }],
+      error: null,
+    });
+    const channelProductsQuery = createQuery({
+      data: [{ product_id: "old-product-linked", product_legacy_id: null }],
+      error: null,
+    });
+    const directLegacyProductsQuery = createQuery({
+      data: [{ id: "old-product-direct" }],
+      error: null,
+    });
+    const productsQuery = createQuery({ data: [], count: 0, error: null });
+    const lookupQuery = createQuery({ data: [], error: null });
+    let productQueryCount = 0;
+    fromMock.mockImplementation((table: string) => {
+      if (table === "channels") return channelsQuery;
+      if (table === "channel_products") return channelProductsQuery;
+      if (table === "products") {
+        productQueryCount += 1;
+        return productQueryCount === 1 ? productsQuery : directLegacyProductsQuery;
+      }
+      return lookupQuery;
+    });
+
+    await fetchProducts({
+      page: 1,
+      search: "",
+      channelId: "",
+      productTypeName: "",
+      status: "",
+      priceRange: "",
+      preset: "ala-carte",
+    });
+
+    expect(fromMock).toHaveBeenCalledWith("channel_products");
+    expect(productsQuery.or).toHaveBeenCalledWith(
+      "channel_id.in.(channel-new),id.in.(old-product-linked,old-product-direct)",
+    );
   });
 
   it("orders cook type options as 炒爐, 蒸爐, 炸爐, 焗爐, 雪櫃, 直出", async () => {

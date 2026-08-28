@@ -12,13 +12,16 @@ import {
   CalendarDays,
   Check,
   ChevronRight,
+  CreditCard,
   Download,
   LoaderCircle,
   LogOut,
   Mail,
   MapPin,
+  Minus,
   PackageCheck,
   Phone,
+  Plus,
   ReceiptText,
   Search,
   Truck,
@@ -26,12 +29,18 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { SidePanel } from "@/components/ui/side-panel";
 import {
+  captureCustomerAddonPaypalCheckout,
+  cancelCustomerAddonPaypalCheckout,
+  createCustomerAddonPaypalCheckout,
+  fetchCustomerSelfServiceAddonOptions,
   fetchCustomerSelfServiceOrder,
   loginCustomerSelfService,
   logoutCustomerSelfService,
   restoreCustomerSelfService,
   type CustomerSelfServiceOrderDetail,
+  type CustomerSelfServiceAddonOptions,
   type CustomerSelfServiceOrderSummary,
   type CustomerSelfServiceSession,
 } from "@/lib/customer-self-service";
@@ -50,6 +59,7 @@ import "@/components/customer-self-service.css";
 type LoginFn = typeof loginCustomerSelfService;
 type RestoreFn = typeof restoreCustomerSelfService;
 type DetailFn = typeof fetchCustomerSelfServiceOrder;
+type AddonOptionsFn = typeof fetchCustomerSelfServiceAddonOptions;
 type LogoutFn = typeof logoutCustomerSelfService;
 type PdfFn = typeof createCustomerReceiptPdf;
 
@@ -100,6 +110,20 @@ const DEMO_DETAIL: CustomerSelfServiceOrderDetail = {
   ],
   payments: [{ id: "payment-1", amount: 1720, paymentAt: "2025-08-22T00:00:00+08:00", method: "Credit card", receiptReference: "REC/B-124701" }],
 };
+
+const DEMO_ADDON_OPTIONS: CustomerSelfServiceAddonOptions = {
+  canAddOn: true,
+  reason: null,
+  cutoffAt: "2026-08-30T15:00:00+08:00",
+  hasAddOn: false,
+  items: [
+    { id: "addon-1", productId: "addon-product-1", sku: "CSN046-12", name: "唐揚炸雞塊（12件）", price: 128, minQuantity: 1, maxQuantity: 10 },
+    { id: "addon-2", productId: "addon-product-2", sku: "CDE001-12", name: "朱古力布朗尼（12件）", price: 118, minQuantity: 1, maxQuantity: 10 },
+    { id: "addon-3", productId: "addon-product-3", sku: "CDR001-8", name: "可口可樂（8罐）", price: 58, minQuantity: 1, maxQuantity: 10 },
+    { id: "addon-4", productId: "addon-product-4", sku: "CDR005-6", name: "道地極品烏龍茶（6包）", price: 28, minQuantity: 1, maxQuantity: 10 },
+  ],
+};
+const loadDemoAddonOptions: AddonOptionsFn = async () => DEMO_ADDON_OPTIONS;
 
 function portalDate(value: string | null | undefined, weekday = false) {
   if (!value) return "—";
@@ -312,10 +336,84 @@ function ReceiptPreview({ order, onClose, createPdf }: { order: CustomerSelfServ
   );
 }
 
-function DetailView({ session, order, onBack, onLogout, createPdf }: { session: CustomerSelfServiceSession; order: CustomerSelfServiceOrderDetail; onBack: () => void; onLogout: () => void; createPdf: PdfFn }) {
+function addonReason(options: CustomerSelfServiceAddonOptions) {
+  if (options.reason === "block_date") return "此送貨日期暫停接受加單，如有查詢請透過 WhatsApp 聯絡我們。";
+  if (options.reason === "cutoff_passed") return "加單時限已過。加單截止時間為送貨前一天下午 3 點。";
+  if (options.reason === "order_closed") return "此訂單已完成或取消，不能再加單。";
+  if (options.reason === "delivery_date_missing") return "訂單尚未確定送貨日期，暫時不能加單。";
+  if (options.reason === "no_products") return "此品牌目前沒有可供加單的商品。";
+  return "此訂單暫時不能加單。";
+}
+
+function AddonPanel({
+  open,
+  session,
+  order,
+  options,
+  onClose,
+}: {
+  open: boolean;
+  session: CustomerSelfServiceSession;
+  order: CustomerSelfServiceOrderDetail;
+  options: CustomerSelfServiceAddonOptions;
+  onClose: () => void;
+}) {
+  const [quantities, setQuantities] = useState<Record<string, number>>({});
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const selected = options.items.filter((item) => (quantities[item.productId] ?? 0) > 0);
+  const total = selected.reduce((sum, item) => sum + item.price * quantities[item.productId], 0);
+
+  function setQuantity(productId: string, quantity: number, min: number, max: number) {
+    const next = quantity <= 0 ? 0 : Math.min(max, Math.max(min, Math.trunc(quantity)));
+    setQuantities((current) => ({ ...current, [productId]: next }));
+  }
+
+  async function pay() {
+    if (!selected.length || busy) return;
+    setBusy(true); setError("");
+    try {
+      const checkout = await createCustomerAddonPaypalCheckout(
+        session.token,
+        order.id,
+        selected.map((item) => ({ productId: item.productId, quantity: quantities[item.productId] })),
+      );
+      window.location.assign(checkout.approvalUrl);
+    } catch {
+      setError("暫時無法建立 PayPal 付款，請稍後再試。");
+      setBusy(false);
+    }
+  }
+
+  return <SidePanel open={open} title={`加單 · ${order.orderNumber}`} description="加單只接受 PayPal 付款。付款完成後商品才會加入原訂單。" onClose={onClose} closeLabel="關閉加單" className="self-service-addon-panel"
+    footer={<><div className="self-service-addon-total"><span>加單總額</span><strong>{money(total, order.currency)}</strong></div><Button type="button" disabled={!selected.length || busy} onClick={() => void pay()}>{busy ? <LoaderCircle className="self-service-spin" /> : <CreditCard />}{busy ? "正在前往 PayPal…" : "使用 PayPal 付款"}</Button></>}>
+    <div className="self-service-addon-products">
+      {options.items.map((item) => {
+        const quantity = quantities[item.productId] ?? 0;
+        return <article key={item.id} className={quantity ? "is-selected" : ""}>
+          <button type="button" className="self-service-addon-select" aria-pressed={quantity > 0} onClick={() => setQuantity(item.productId, quantity ? 0 : item.minQuantity, item.minQuantity, item.maxQuantity)}>
+            <span className="self-service-addon-check">{quantity ? <Check /> : null}</span>
+            <span><strong>{item.name}</strong><small>{item.sku || "—"}</small></span>
+            <strong>{money(item.price, order.currency)}</strong>
+          </button>
+          {quantity ? <div className="self-service-addon-quantity"><span>數量</span><button type="button" aria-label={`減少 ${item.name}`} onClick={() => setQuantity(item.productId, quantity - 1, item.minQuantity, item.maxQuantity)}><Minus /></button><input type="number" min={item.minQuantity} max={item.maxQuantity} value={quantity} aria-label={`${item.name} 數量`} onChange={(event) => setQuantity(item.productId, Number(event.target.value), item.minQuantity, item.maxQuantity)} /><button type="button" aria-label={`增加 ${item.name}`} onClick={() => setQuantity(item.productId, quantity + 1, item.minQuantity, item.maxQuantity)}><Plus /></button><strong>{money(item.price * quantity, order.currency)}</strong></div> : null}
+        </article>;
+      })}
+    </div>
+    {error ? <p className="self-service-error" role="alert">{error}</p> : null}
+  </SidePanel>;
+}
+
+function DetailView({ session, order, onBack, onLogout, createPdf, loadAddonOptions, paymentNotice }: { session: CustomerSelfServiceSession; order: CustomerSelfServiceOrderDetail; onBack: () => void; onLogout: () => void; createPdf: PdfFn; loadAddonOptions: AddonOptionsFn; paymentNotice?: string }) {
   const [receiptOpen, setReceiptOpen] = useState(false);
+  const [addonOpen, setAddonOpen] = useState(false);
+  const [addonOptions, setAddonOptions] = useState<CustomerSelfServiceAddonOptions | null>(null);
   const itemTotal = useMemo(() => order.lines.reduce((total, line) => total + line.totalPrice, 0), [order.lines]);
-  const addOnClosed = order.deliveryDate ? new Date(order.deliveryDate).getTime() - Date.now() < 48 * 60 * 60 * 1000 : false;
+  useEffect(() => {
+    let active = true;
+    void loadAddonOptions(session.token, order.id).then((value) => { if (active) setAddonOptions(value); }).catch(() => undefined);
+    return () => { active = false; };
+  }, [loadAddonOptions, order.id, session.token]);
   return (
     <main className="self-service-shell self-service-detail-shell">
       <PortalHeader session={session} onLogout={onLogout} detail={order} />
@@ -323,9 +421,13 @@ function DetailView({ session, order, onBack, onLogout, createPdf }: { session: 
       <section className="self-service-detail-title">
         <div><span>訂單</span><h1>{order.orderNumber}</h1></div>
         <StatusBadges order={order} />
-        {order.payments.length ? <Button onClick={() => setReceiptOpen(true)}><ReceiptText />預覽並下載收據</Button> : null}
+        <div className="self-service-detail-actions">
+          {addonOptions?.canAddOn ? <Button onClick={() => setAddonOpen(true)}><Plus />加單</Button> : null}
+          {order.payments.length ? <Button onClick={() => setReceiptOpen(true)}><ReceiptText />預覽並下載收據</Button> : null}
+        </div>
       </section>
-      {addOnClosed ? <div className="self-service-addon-note">加單時限已過／已進行加單</div> : null}
+      {paymentNotice ? <div className="self-service-addon-note is-success">{paymentNotice}</div> : null}
+      {addonOptions && !addonOptions.canAddOn ? <div className="self-service-addon-note">{addonReason(addonOptions)}</div> : null}
       <section className="self-service-content-card">
         <header><div><span>訂單內容</span><h2>{order.lines.length} 項食品</h2></div><strong>{money(order.grandTotal, order.currency)}</strong></header>
         <div className="self-service-line-list">
@@ -348,6 +450,7 @@ function DetailView({ session, order, onBack, onLogout, createPdf }: { session: 
         </div>
       </section>
       {receiptOpen ? <ReceiptPreview order={order} createPdf={createPdf} onClose={() => setReceiptOpen(false)} /> : null}
+      {addonOpen && addonOptions ? <AddonPanel open session={session} order={order} options={addonOptions} onClose={() => setAddonOpen(false)} /> : null}
     </main>
   );
 }
@@ -356,9 +459,10 @@ export function CustomerSelfServicePage({
   login = loginCustomerSelfService,
   restore = restoreCustomerSelfService,
   loadDetail = fetchCustomerSelfServiceOrder,
+  loadAddonOptions = fetchCustomerSelfServiceAddonOptions,
   logout = logoutCustomerSelfService,
   createPdf = createCustomerReceiptPdf,
-}: { login?: LoginFn; restore?: RestoreFn; loadDetail?: DetailFn; logout?: LogoutFn; createPdf?: PdfFn }) {
+}: { login?: LoginFn; restore?: RestoreFn; loadDetail?: DetailFn; loadAddonOptions?: AddonOptionsFn; logout?: LogoutFn; createPdf?: PdfFn }) {
   const demoMode = import.meta.env.DEV
     && typeof window !== "undefined"
     && new URLSearchParams(window.location.search).get("demo") === "1";
@@ -366,6 +470,8 @@ export function CustomerSelfServicePage({
   const [detail, setDetail] = useState<CustomerSelfServiceOrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [detailError, setDetailError] = useState("");
+  const [paymentNotice, setPaymentNotice] = useState("");
+  const paypalHandled = useRef(false);
 
   useEffect(() => {
     if (demoMode) {
@@ -376,10 +482,35 @@ export function CustomerSelfServicePage({
     restore().then(setSession).finally(() => setLoading(false));
   }, [demoMode, restore]);
 
+  useEffect(() => {
+    if (!session || demoMode || paypalHandled.current) return;
+    const params = new URLSearchParams(window.location.search);
+    const action = params.get("paypal");
+    const checkoutId = params.get("addonCheckout");
+    if (!action || !checkoutId) return;
+    paypalHandled.current = true;
+    setLoading(true); setDetailError("");
+    const cleanup = () => window.history.replaceState({}, "", window.location.pathname);
+    if (action === "cancel") {
+      void cancelCustomerAddonPaypalCheckout(session.token, checkoutId)
+        .catch(() => undefined)
+        .finally(() => { setPaymentNotice("已取消 PayPal 付款，訂單沒有變更。"); cleanup(); setLoading(false); });
+      return;
+    }
+    void captureCustomerAddonPaypalCheckout(session.token, checkoutId)
+      .then(async (result) => {
+        const order = session.orders.find((item) => item.id === result.orderId);
+        if (order) setDetail(await loadDetail(session.token, order.id));
+        setPaymentNotice("PayPal 付款成功，加單項目已加入訂單。");
+      })
+      .catch(() => setDetailError("PayPal 付款狀態暫時未能確認，請稍後重新查詢訂單；請勿重複付款。"))
+      .finally(() => { cleanup(); setLoading(false); });
+  }, [demoMode, loadDetail, session]);
+
   async function selectOrder(order: CustomerSelfServiceOrderSummary) {
     if (!session) return;
     setLoading(true); setDetailError("");
-    try { setDetail(demoMode ? { ...DEMO_DETAIL, id: order.id, orderNumber: order.orderNumber } : await loadDetail(session.token, order.id)); }
+    try { setDetail(demoMode ? { ...DEMO_DETAIL, id: order.id, orderNumber: order.orderNumber, deliveryDate: order.deliveryDate } : await loadDetail(session.token, order.id)); }
     catch { setDetailError("暫時無法載入訂單，請重新查詢。"); }
     finally { setLoading(false); }
   }
@@ -393,6 +524,6 @@ export function CustomerSelfServicePage({
   if (!session) return <LoginView login={login} onLogin={setSession} />;
   if (detailError) return <main className="self-service-loading"><p role="alert">{detailError}</p><Button onClick={() => setDetailError("")}>返回訂單列表</Button></main>;
   if (loading) return <main className="self-service-loading"><LoaderCircle className="self-service-spin" /><span>正在載入訂單…</span></main>;
-  if (detail) return <DetailView session={session} order={detail} onBack={() => setDetail(null)} onLogout={() => void leave()} createPdf={createPdf} />;
+  if (detail) return <DetailView session={session} order={detail} onBack={() => setDetail(null)} onLogout={() => void leave()} createPdf={createPdf} loadAddonOptions={demoMode ? loadDemoAddonOptions : loadAddonOptions} paymentNotice={paymentNotice} />;
   return <OrdersView session={session} onSelect={(order) => void selectOrder(order)} onLogout={() => void leave()} />;
 }

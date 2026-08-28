@@ -49,6 +49,7 @@ const fleet = {
   bankAccount: "HSBC 123-456789-001",
   status: "active",
   isActive: true,
+  driverPanelEnabled: true,
   hasLoginCode: true,
   createdAt: "2026-08-22T00:00:00.000Z",
 };
@@ -60,6 +61,7 @@ describe("Delivery fleet management", () => {
     api.create.mockReset();
     api.update.mockReset();
     api.fetchFees.mockReset().mockResolvedValue([{
+      feeId: "fee-1",
       districtId: "district-1",
       fleetId: "fleet-1",
       fleetName: fleet.name,
@@ -100,13 +102,38 @@ describe("Delivery fleet management", () => {
       contactNumber: "9123 4567",
       bankAccount: "HSBC 123-456789-001",
       isActive: true,
+      driverPanelEnabled: true,
       loginCode: "new-login-code",
     }));
+  });
+
+  it("blocks a fleet from entering the driver portal", async () => {
+    const user = userEvent.setup();
+    api.update.mockResolvedValue({ ...fleet, driverPanelEnabled: false });
+    render(<MemoryRouter><DeliveryFleetsPage /></MemoryRouter>);
+
+    const accessSwitch = await screen.findByRole("switch", {
+      name: `切換 ${fleet.name} 的司機版面權限`,
+    });
+    expect(accessSwitch).toBeChecked();
+    await user.click(accessSwitch);
+
+    await waitFor(() => expect(api.update).toHaveBeenCalledWith("fleet-1", {
+      name: fleet.name,
+      shortName: fleet.shortName,
+      contactPerson: fleet.contactPerson,
+      contactNumber: fleet.contactNumber,
+      bankAccount: fleet.bankAccount,
+      isActive: true,
+      driverPanelEnabled: false,
+    }));
+    expect(accessSwitch).not.toBeChecked();
   });
 
   it("opens an 80% fee-management table and saves a district fee when input finishes", async () => {
     const user = userEvent.setup();
     api.updateFee.mockResolvedValue({
+      feeId: "fee-1",
       districtId: "district-1",
       fleetId: "fleet-1",
       fleetName: fleet.name,
@@ -133,12 +160,13 @@ describe("Delivery fleet management", () => {
     expect(screen.queryByRole("button", { name: "儲存 荃灣 運費" })).not.toBeInTheDocument();
     await user.tab();
 
-    await waitFor(() => expect(api.updateFee).toHaveBeenCalledWith("district-1", 135));
+    await waitFor(() => expect(api.updateFee).toHaveBeenCalledWith("fleet-1", "district-1", 135));
   });
 
   it("paginates and searches fleet fees", async () => {
     const user = userEvent.setup();
     api.fetchFees.mockResolvedValue(Array.from({ length: 16 }, (_, index) => ({
+      feeId: `fee-${index + 1}`,
       districtId: `district-${index + 1}`,
       fleetId: "fleet-1",
       fleetName: fleet.name,

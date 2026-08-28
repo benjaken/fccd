@@ -4,11 +4,24 @@ import { Plus, Tags, Trash2 } from "lucide-react";
 import { Navigate, useParams } from "react-router-dom";
 
 import { useCurrentPageAccess } from "@/auth/use-page-access";
+import { OrderCustomerTagsTable } from "@/components/OrderCustomerTagsTable";
+import { OrderCostOptionsTable } from "@/components/OrderCostOptionsTable";
+import { OrderSupplierExpenseOptionsTable } from "@/components/OrderSupplierExpenseOptionsTable";
+import { OrderQuoteOptionSettingsTable } from "@/components/OrderQuoteOptionSettingsTable";
 import { OrderPaymentMethodsTable } from "@/components/OrderPaymentMethodsTable";
 import { OrderShippingMethodsTable } from "@/components/OrderShippingMethodsTable";
 import { OrderShippingFeesTable } from "@/components/OrderShippingFeesTable";
+import {
+  OrderEmailNotificationSettings,
+  OrderFirstNotificationRecipientsSettings,
+} from "@/components/OrderNotificationSettings";
+import {
+  OrderAddonBlockDatesSettings,
+  OrderAddonProductsSettings,
+} from "@/components/OrderAddonSettings";
 import { isOrderSettingsTab } from "@/components/OrderSettingsTabNav";
 import { Button } from "@/components/ui/button";
+import { isOrderQuoteOptionKind } from "@/lib/order-quote-option-settings";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import { SidePanel } from "@/components/ui/side-panel";
@@ -383,10 +396,28 @@ export function OrderSettingsPage({
   loadPaymentMethods = fetchPaymentMethods,
   createPayment = createPaymentMethod,
   updatePayment = updatePaymentMethod,
+  loadCustomerTags,
+  loadCustomerTagTypes,
+  createCustomerTag,
+  updateCustomerTag,
+  loadCostOptions,
+  createCostOption,
+  updateCostOption,
+  loadSupplierExpenseOptions,
+  createSupplierExpenseOption,
+  updateSupplierExpenseOption,
+  loadQuoteOptions,
+  createQuoteOption,
+  updateQuoteOption,
   loadFees,
   createFee,
   updateFee,
   deleteFee,
+  loadEmailNotificationUsers,
+  setEmailNotificationUser,
+  loadFirstNotificationRecipients,
+  saveFirstNotificationRecipient,
+  deleteFirstNotificationRecipient,
 }: {
   loadTags?: TagsLoader;
   createTag?: TagCreator;
@@ -398,10 +429,28 @@ export function OrderSettingsPage({
   loadPaymentMethods?: typeof fetchPaymentMethods;
   createPayment?: typeof createPaymentMethod;
   updatePayment?: typeof updatePaymentMethod;
+  loadCustomerTags?: Parameters<typeof OrderCustomerTagsTable>[0]["loadTags"];
+  loadCustomerTagTypes?: Parameters<typeof OrderCustomerTagsTable>[0]["loadTypes"];
+  createCustomerTag?: Parameters<typeof OrderCustomerTagsTable>[0]["createTag"];
+  updateCustomerTag?: Parameters<typeof OrderCustomerTagsTable>[0]["updateTag"];
+  loadCostOptions?: Parameters<typeof OrderCostOptionsTable>[0]["loadOptions"];
+  createCostOption?: Parameters<typeof OrderCostOptionsTable>[0]["createOption"];
+  updateCostOption?: Parameters<typeof OrderCostOptionsTable>[0]["updateOption"];
+  loadSupplierExpenseOptions?: Parameters<typeof OrderSupplierExpenseOptionsTable>[0]["loadOptions"];
+  createSupplierExpenseOption?: Parameters<typeof OrderSupplierExpenseOptionsTable>[0]["createOption"];
+  updateSupplierExpenseOption?: Parameters<typeof OrderSupplierExpenseOptionsTable>[0]["updateOption"];
+  loadQuoteOptions?: Parameters<typeof OrderQuoteOptionSettingsTable>[0]["loadOptions"];
+  createQuoteOption?: Parameters<typeof OrderQuoteOptionSettingsTable>[0]["createOption"];
+  updateQuoteOption?: Parameters<typeof OrderQuoteOptionSettingsTable>[0]["updateOption"];
   loadFees?: Parameters<typeof OrderShippingFeesTable>[0]["loadFees"];
   createFee?: Parameters<typeof OrderShippingFeesTable>[0]["createFee"];
   updateFee?: Parameters<typeof OrderShippingFeesTable>[0]["updateFee"];
   deleteFee?: Parameters<typeof OrderShippingFeesTable>[0]["deleteFee"];
+  loadEmailNotificationUsers?: Parameters<typeof OrderEmailNotificationSettings>[0]["loadUsers"];
+  setEmailNotificationUser?: Parameters<typeof OrderEmailNotificationSettings>[0]["setUserEnabled"];
+  loadFirstNotificationRecipients?: Parameters<typeof OrderFirstNotificationRecipientsSettings>[0]["loadRecipients"];
+  saveFirstNotificationRecipient?: Parameters<typeof OrderFirstNotificationRecipientsSettings>[0]["saveRecipient"];
+  deleteFirstNotificationRecipient?: Parameters<typeof OrderFirstNotificationRecipientsSettings>[0]["deleteRecipient"];
 }) {
   const { t } = useTranslation();
   const pageAccess = useCurrentPageAccess();
@@ -427,24 +476,49 @@ export function OrderSettingsPage({
             {activeTab === "payments" ||
             activeTab === "shipping" ||
             activeTab === "shipping-fees" ||
+            activeTab === "email-notifications" ||
+            activeTab === "first-notification-recipients" ||
+            activeTab === "add-ons" ||
+            activeTab === "add-on-block-dates" ||
+            activeTab === "customer-tags" ||
+            activeTab === "cost-options" ||
+            activeTab === "supplier-expenses" ||
+            isOrderQuoteOptionKind(activeTab) ||
             activeTab === "tags"
               ? t(`orderSettings.tabs.${activeTab}`)
               : t("orderSettings.title")}
           </h1>
         </div>
         {(activeTab === "tags" ||
+          activeTab === "customer-tags" ||
+          activeTab === "cost-options" ||
+          activeTab === "supplier-expenses" ||
+          isOrderQuoteOptionKind(activeTab) ||
           activeTab === "shipping" ||
           activeTab === "shipping-fees" ||
+          activeTab === "first-notification-recipients" ||
           activeTab === "payments") &&
         (activeTab === "shipping-fees"
           ? pageAccess.canManage("orders.settings.shipping_fees")
-          : canManage) ? (
+          : activeTab === "first-notification-recipients"
+            ? pageAccess.canManage("orders.settings.first_notification_recipients")
+            : canManage) ? (
           <Button type="button" onClick={() => setCreateOpen(true)}>
             <Plus />
             {activeTab === "payments"
               ? t("orderSettings.payments.add")
+              : activeTab === "customer-tags"
+                ? t("orderSettings.customerTags.add")
+              : activeTab === "cost-options"
+                ? t("orderSettings.costOptions.add")
+              : activeTab === "supplier-expenses"
+                ? t("orderSettings.supplierExpenses.add")
+              : isOrderQuoteOptionKind(activeTab)
+                ? t("orderSettings.optionSettings.add")
               : activeTab === "shipping-fees"
                 ? t("orderSettings.shippingFees.add")
+              : activeTab === "first-notification-recipients"
+                ? t("orderSettings.firstNotificationRecipients.add")
               : activeTab === "shipping"
                 ? t("orderSettings.shipping.add")
                 : t("orderSettings.tags.add")}
@@ -453,12 +527,59 @@ export function OrderSettingsPage({
       </header>
 
       <article className="panel order-settings-panel">
-        {activeTab === "tags" ? (
+        {activeTab === "email-notifications" ? (
+          <OrderEmailNotificationSettings
+            loadUsers={loadEmailNotificationUsers}
+            setUserEnabled={setEmailNotificationUser}
+          />
+        ) : activeTab === "first-notification-recipients" ? (
+          <OrderFirstNotificationRecipientsSettings
+            createOpen={createOpen}
+            onCreateOpenChange={setCreateOpen}
+            loadRecipients={loadFirstNotificationRecipients}
+            saveRecipient={saveFirstNotificationRecipient}
+            deleteRecipient={deleteFirstNotificationRecipient}
+          />
+        ) : activeTab === "tags" ? (
           <OrderTagsTable
             loadTags={loadTags}
             createTag={createTag}
             setTagActive={setTagActive}
             deleteTag={deleteTag}
+            createOpen={createOpen}
+            onCreateOpenChange={setCreateOpen}
+          />
+        ) : activeTab === "customer-tags" ? (
+          <OrderCustomerTagsTable
+            loadTags={loadCustomerTags}
+            loadTypes={loadCustomerTagTypes}
+            createTag={createCustomerTag}
+            updateTag={updateCustomerTag}
+            createOpen={createOpen}
+            onCreateOpenChange={setCreateOpen}
+          />
+        ) : activeTab === "cost-options" ? (
+          <OrderCostOptionsTable
+            loadOptions={loadCostOptions}
+            createOption={createCostOption}
+            updateOption={updateCostOption}
+            createOpen={createOpen}
+            onCreateOpenChange={setCreateOpen}
+          />
+        ) : activeTab === "supplier-expenses" ? (
+          <OrderSupplierExpenseOptionsTable
+            loadOptions={loadSupplierExpenseOptions}
+            createOption={createSupplierExpenseOption}
+            updateOption={updateSupplierExpenseOption}
+            createOpen={createOpen}
+            onCreateOpenChange={setCreateOpen}
+          />
+        ) : isOrderQuoteOptionKind(activeTab) ? (
+          <OrderQuoteOptionSettingsTable
+            kind={activeTab}
+            loadOptions={loadQuoteOptions}
+            createOption={createQuoteOption}
+            updateOption={updateQuoteOption}
             createOpen={createOpen}
             onCreateOpenChange={setCreateOpen}
           />
@@ -486,6 +607,14 @@ export function OrderSettingsPage({
             deleteFee={deleteFee}
             createOpen={createOpen}
             onCreateOpenChange={setCreateOpen}
+          />
+        ) : activeTab === "add-ons" ? (
+          <OrderAddonProductsSettings
+            canManage={pageAccess.canManage("orders.settings.addons")}
+          />
+        ) : activeTab === "add-on-block-dates" ? (
+          <OrderAddonBlockDatesSettings
+            canManage={pageAccess.canManage("orders.settings.addon_block_dates")}
           />
         ) : (
           <div className="orders-state">

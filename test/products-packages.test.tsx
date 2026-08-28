@@ -731,10 +731,14 @@ describe("Products catalog pages", () => {
     const packingCard = screen
       .getByRole("heading", { name: /燒雞 - 包裝用品/ })
       .closest("article");
+    const labelCard = screen
+      .getByRole("heading", { name: /燒雞 - Label/ })
+      .closest("article");
     expect(premiumCard).not.toBeNull();
     expect(packingCard).not.toBeNull();
     expect(within(premiumCard!).queryByText("雙格紙盒")).not.toBeInTheDocument();
     expect(within(packingCard!).getByText("雙格紙盒")).toBeInTheDocument();
+    expect(within(labelCard!).queryByRole("columnheader", { name: "包裝" })).not.toBeInTheDocument();
     expect(premiumCard?.parentElement).toHaveClass("product-material-grid");
     expect(premiumCard?.parentElement?.children).toHaveLength(3);
     expect(screen.getByText("(雙格) 拿破崙")).toBeInTheDocument();
@@ -836,6 +840,7 @@ describe("Products catalog pages", () => {
 
     expect(await screen.findByRole("button", { name: "確認更改" })).toBeInTheDocument();
     const chineseName = await screen.findByLabelText("中文名稱");
+    expect(screen.queryByLabelText("包裝")).not.toBeInTheDocument();
     await user.clear(chineseName);
     await user.type(chineseName, "香草燒雞");
     await user.click(screen.getByRole("button", { name: "確認更改" }));
@@ -974,7 +979,9 @@ describe("Products catalog pages", () => {
       </MemoryRouter>,
     );
 
-    await user.selectOptions(await screen.findByLabelText("包裝用品"), "packing-cup");
+    const packingSupplySelect = await screen.findByLabelText("包裝用品");
+    expect(packingSupplySelect).toHaveDisplayValue("選擇包裝用品");
+    await user.selectOptions(packingSupplySelect, "packing-cup");
     const packingCard = screen.getByRole("heading", { name: /燒雞 - 包裝用品/ }).closest("article");
     const quantity = within(packingCard!).getByLabelText("數量");
     await user.clear(quantity);
@@ -1018,19 +1025,37 @@ describe("Catalog creation pages", () => {
     await user.type(screen.getByLabelText(/^Product name/), "New product");
     await user.type(screen.getByLabelText(/^Price/), "88");
     await user.selectOptions(screen.getByLabelText(/^Category/), "type-1");
+    expect(screen.getByRole("heading", { name: /Premium ingredients/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Packaging supplies/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Label/ })).toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText("Premium ingredients"), "ing-truffle");
+    await user.click(screen.getByRole("button", { name: "Add ingredient" }));
+    await user.selectOptions(screen.getByLabelText("Packaging supply"), "packing-cup");
+    await user.click(screen.getByRole("button", { name: "Add packaging supply" }));
+    await user.type(screen.getByLabelText("Display A"), "New product label");
+    expect(screen.queryByLabelText("Packaging")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Add label" }));
     await user.click(screen.getByRole("button", { name: "Create" }));
 
-    await waitFor(() => expect(saveProduct).toHaveBeenCalledWith(expect.objectContaining({ sku: "NEW-001", name: "New product", price: 88, channelId: "channel-1", productTypeId: "type-1" })));
+    await waitFor(() => expect(saveProduct).toHaveBeenCalledWith(expect.objectContaining({
+      sku: "NEW-001", name: "New product", price: 88, channelId: "channel-1", productTypeId: "type-1",
+      premiumIngredients: [{ ingredientId: "ing-truffle", quantity: 1 }],
+      packingSupplies: [{ ingredientId: "packing-cup", quantity: 1 }],
+      labels: [{ displayA: "New product label", displayB: "", packingMaterialId: null }],
+    })));
     expect(await screen.findByText("Created product detail")).toBeInTheDocument();
   });
 
   it("creates a package and opens its detail", async () => {
     const user = userEvent.setup();
     const savePackage = vi.fn().mockResolvedValue("package-new");
+    const searchProducts = vi.fn().mockResolvedValue([
+      { id: "product-1", name: "Roast chicken", sku: "CHICKEN-1" },
+    ]);
     render(
       <MemoryRouter initialEntries={["/products/packages/new"]}>
         <Routes>
-          <Route path="/products/packages/new" element={<CatalogCreatePage kind="package" canCreate loadOptions={async () => createOptions} savePackage={savePackage} />} />
+          <Route path="/products/packages/new" element={<CatalogCreatePage kind="package" canCreate loadOptions={async () => createOptions} savePackage={savePackage} searchProducts={searchProducts} />} />
           <Route path="/products/packages/:id" element={<div>Created package detail</div>} />
         </Routes>
       </MemoryRouter>,
@@ -1041,9 +1066,32 @@ describe("Catalog creation pages", () => {
     await user.selectOptions(screen.getByLabelText(/^Brand/), "channel-1");
     await user.type(screen.getByLabelText(/^English name/), "New package");
     await user.type(screen.getByLabelText(/^Price/), "288");
+    expect(screen.getByRole("heading", { name: /Set menu options/ })).toBeInTheDocument();
+    await user.type(screen.getByPlaceholderText("Enter a category name"), "Required dishes");
+    const selectableQuantity = screen.getByPlaceholderText("Enter selectable quantity");
+    await user.clear(selectableQuantity);
+    await user.type(selectableQuantity, "2");
+    await user.click(screen.getByRole("button", { name: "Add option set" }));
+    await user.click(screen.getByRole("button", { name: "Add product" }));
+    await user.type(screen.getByRole("combobox", { name: "Search product name or SKU" }), "chicken");
+    await waitFor(() => expect(searchProducts).toHaveBeenCalledWith("chicken"));
+    await user.click(await screen.findByRole("option", { name: /Roast chicken/ }));
+    const quantity = screen.getByLabelText("Roast chicken Product quantity");
+    await user.clear(quantity);
+    await user.type(quantity, "3");
+    const addonPrice = screen.getByLabelText("Roast chicken Additional price");
+    await user.clear(addonPrice);
+    await user.type(addonPrice, "12");
     await user.click(screen.getByRole("button", { name: "Create" }));
 
-    await waitFor(() => expect(savePackage).toHaveBeenCalledWith(expect.objectContaining({ sku: "SET-001", name: "New package", price: 288, channelId: "channel-1" })));
+    await waitFor(() => expect(savePackage).toHaveBeenCalledWith(expect.objectContaining({
+      sku: "SET-001", name: "New package", price: 288, channelId: "channel-1",
+      choiceSets: [{
+        name: "Required dishes",
+        maximumChoices: 2,
+        products: [{ productId: "product-1", quantity: 3, addonPrice: 12 }],
+      }],
+    })));
     expect(await screen.findByText("Created package detail")).toBeInTheDocument();
   });
 });

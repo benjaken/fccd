@@ -24,6 +24,7 @@ describe("buildMobileDrawerNav", () => {
     const overview = groups.find((group) => group.groupKey === "overview");
     const orders = groups.find((group) => group.groupKey === "orders");
     const quotes = groups.find((group) => group.groupKey === "quotes");
+    const delivery = groups.find((group) => group.groupKey === "delivery");
     const restaurant = groups.find((group) => group.groupKey === "restaurant");
     const settings = groups.find((group) => group.groupKey === "settings");
 
@@ -44,12 +45,24 @@ describe("buildMobileDrawerNav", () => {
       "/orders/payments/bank-arrival-date",
       "/orders/payments/masoft-invoices",
       "/orders/calendar",
+      "/orders/settings/email-notifications",
+      "/orders/settings/first-notification-recipients",
       "/orders/settings/sale-partners",
       "/orders/settings/statuses",
       "/orders/settings/tags",
+      "/orders/settings/customer-tags",
+      "/orders/settings/cost-options",
+      "/orders/settings/supplier-expenses",
+      "/orders/settings/quote-sales-sources",
+      "/orders/settings/quote-communication-channels",
+      "/orders/settings/festivals",
+      "/orders/settings/quote-terms",
+      "/orders/settings/quote-payments",
       "/orders/settings/shipping",
       "/orders/settings/shipping-fees",
       "/orders/settings/payments",
+      "/orders/settings/add-ons",
+      "/orders/settings/add-on-block-dates",
       "/orders/settings/order-list-tips",
     ]);
     expect(quotes?.items.map((item) => item.to)).toEqual([
@@ -57,6 +70,12 @@ describe("buildMobileDrawerNav", () => {
       "/quotes/customers",
       "/quotes/pending",
       "/quotes/pdf-pages",
+    ]);
+    expect(delivery?.items.map((item) => item.to)).toEqual([
+      "/delivery",
+      "/delivery/assign",
+      "/delivery/fleets",
+      "/delivery/surcharges",
     ]);
     expect(restaurant?.items.map((item) => item.to)).toContain(
       "/restaurant/inventory",

@@ -9,7 +9,15 @@ export type OrderNotificationEvent =
   | "delivery_dispatched"
   | "pickup_ready"
   | "order_completed"
-  | "order_cancelled";
+  | "order_cancelled"
+  | "driver_assigned"
+  | "bad_weather_notice"
+  | "holiday_service_notice"
+  | "second_contact_requested"
+  | "payment_instructions_sent"
+  | "payment_confirmed"
+  | "delivery_delayed"
+  | "order_issue_reported";
 
 export type OrderNotificationValues = {
   name: string;
@@ -27,6 +35,17 @@ export type NotificationContent = {
   subject: string;
   text: string;
   html: string;
+};
+
+export type InternalOrderNotificationValues = {
+  recipient_name: string;
+  order_number: string;
+  customer_name: string;
+  created_at: string;
+  delivery_date: string;
+  delivery_time: string;
+  address: string;
+  order_link: string;
 };
 
 const SELF_SERVICE_URL = "https://www.foodchannels-delivery.com/self_service_search";
@@ -151,7 +170,68 @@ export function buildOrderNotificationContent(
         "如你並未要求取消，或對退款安排有任何查詢，請立即在此 WhatsApp 聯絡我們。", "",
         signature,
       ]);
+    case "driver_assigned":
+      return content(`訂單司機安排 ${order}`, [
+        hello, "", `訂單 ${order} 已安排司機。`, "",
+        `日期：${value.date}`, `時間：${value.time}`, `地址：${value.address}`, "",
+        "司機到達前會致電給你，請保持聯絡電話暢通。", "", signature,
+      ]);
+    case "bad_weather_notice":
+      return content(`惡劣天氣安排通知 ${order}`, [
+        hello, "", `訂單 ${order} 可能受惡劣天氣影響。`, "",
+        `日期：${value.date}`, `時間：${value.time}`, "",
+        "如送貨或取餐安排需要調整，我們會再聯絡你。", "", signature,
+      ]);
+    case "holiday_service_notice":
+      return content(`假期服務安排 ${order}`, [
+        hello, "", `以下是假期期間訂單 ${order} 的服務安排：`, "",
+        `日期：${value.date}`, `時間：${value.time}`, "",
+        "如有任何查詢，請在此 WhatsApp 聯絡我們。", "", signature,
+      ]);
+    case "second_contact_requested":
+      return content(`訂單後備聯絡人 ${order}`, [
+        hello, "", `為確保訂單 ${order} 能順利交付，請提供一位後備聯絡人的姓名及電話。`, "",
+        `日期：${value.date}`, `時間：${value.time}`, "", signature,
+      ]);
+    case "payment_instructions_sent":
+      return content(`訂單付款資料 ${order}`, [
+        hello, "", `訂單 ${order} 的付款資料已準備好。`, "",
+        "請按照我們提供的付款方式完成付款；如已付款，請把付款證明傳送到此 WhatsApp。", "",
+        signature,
+      ]);
+    case "payment_confirmed":
+      return content(`訂單收款確認 ${order}`, [
+        hello, "", `我們已確認收到訂單 ${order} 的款項，謝謝。`, "",
+        `日期：${value.date}`, `時間：${value.time}`, "", signature,
+      ]);
+    case "delivery_delayed":
+      return content(`訂單送貨延誤 ${order}`, [
+        hello, "", `訂單 ${order} 的送貨時間可能有所延誤，對你造成不便，我們深感抱歉。`, "",
+        `原定時間：${value.time}`, `地址：${value.address}`, "",
+        "我們會盡快更新最新安排。", "", signature,
+      ]);
+    case "order_issue_reported":
+      return content(`訂單問題跟進 ${order}`, [
+        hello, "", `我們已收到你就訂單 ${order} 提交的問題。`, "",
+        "團隊會盡快核實並透過此 WhatsApp 跟進。", "", signature,
+      ]);
   }
+}
+
+export function buildInternalOrderNotificationContent(
+  value: InternalOrderNotificationValues,
+): NotificationContent {
+  return content(`新訂單通知 ${value.order_number}`, [
+    `${value.recipient_name}：`, "",
+    `系統已建立新訂單 ${value.order_number}。`,
+    `客戶：${value.customer_name}`,
+    `入單時間：${value.created_at}`,
+    `送貨日期：${value.delivery_date}`,
+    `送貨時間：${value.delivery_time}`,
+    value.address !== "-" && `地址：${value.address}`,
+    "",
+    value.order_link && `查看訂單：${value.order_link}`,
+  ]);
 }
 
 export function buildQuoteConfirmationContent(input: {

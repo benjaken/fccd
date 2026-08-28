@@ -12,9 +12,9 @@ const api = vi.hoisted(() => ({
 vi.mock("@/lib/kitchen-monthly-costs", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/kitchen-monthly-costs")>()),
   fetchKitchenMonthlyCostTypes: vi.fn(async () => [
-    { id: "google", legacyId: "google-legacy", name: "Google" },
-    { id: "facebook", legacyId: "facebook-legacy", name: "Facebook" },
-    { id: "rent", legacyId: "rent-legacy", name: "Rent" },
+    { id: "google", legacyId: "google-legacy", name: "Google", isBrand: true },
+    { id: "facebook", legacyId: "facebook-legacy", name: "Facebook", isBrand: true },
+    { id: "rent", legacyId: "rent-legacy", name: "Rent", isBrand: false },
   ]),
   fetchKitchenMonthlyCostChannels: vi.fn(async () => [
     { id: "catering", legacyId: "catering-legacy", name: "Catering", sortOrder: 1 },
@@ -46,7 +46,7 @@ describe("monthly non-festival operating costs", () => {
 
     await user.type(within(dialog).getByLabelText("金額（港幣）"), "500");
     await user.click(within(dialog).getByRole("button", { name: "確定" }));
-    expect(within(dialog).getByText("Google 或 Facebook 費用必須選擇品牌")).toBeInTheDocument();
+    expect(within(dialog).getByText("此費用必須選擇品牌")).toBeInTheDocument();
     expect(api.createCost).not.toHaveBeenCalled();
 
     await user.click(within(dialog).getByRole("combobox", { name: "品牌（必須選擇）" }));

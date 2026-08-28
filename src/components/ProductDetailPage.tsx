@@ -171,7 +171,6 @@ export function ProductDetailPage({
   const ingredientSearchRef = useRef<HTMLDivElement>(null);
   const [labelDisplayA, setLabelDisplayA] = useState("");
   const [labelDisplayB, setLabelDisplayB] = useState("");
-  const [labelPackingId, setLabelPackingId] = useState("");
   const [adding, setAdding] = useState<"ingredient" | "packing" | "label" | null>(null);
 
   const currency = useMemo(
@@ -511,11 +510,10 @@ export function ProductDetailPage({
       await addLabel(product.id, {
         displayA: labelDisplayA,
         displayB: labelDisplayB,
-        packingMaterialId: labelPackingId || null,
+        packingMaterialId: null,
       });
       setLabelDisplayA("");
       setLabelDisplayB("");
-      setLabelPackingId("");
       await refreshDetail();
     } finally {
       setAdding(null);
@@ -941,7 +939,7 @@ export function ProductDetailPage({
                     value={packingSupplyId}
                     onChange={(event) => setPackingSupplyId(event.target.value)}
                   >
-                    <option value="">{t("common.notSet")}</option>
+                    <option value="">{t("productDetail.pickPackingSupply")}</option>
                     {options.packingSupplies
                       .filter((item) => !addedIngredientIds.has(item.id))
                       .map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
@@ -1031,20 +1029,6 @@ export function ProductDetailPage({
                   onChange={(event) => setLabelDisplayB(event.target.value)}
                 />
               </label>
-              <label>
-                <span>{t("productDetail.packing")}</span>
-                <FilterableSelect
-                  value={labelPackingId}
-                  onChange={(event) => setLabelPackingId(event.target.value)}
-                >
-                  <option value="">{t("common.notSet")}</option>
-                  {options.packingMaterials.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-                </FilterableSelect>
-              </label>
             </div>
           ) : null}
           {product.labels.length === 0 ? (
@@ -1056,7 +1040,6 @@ export function ProductDetailPage({
                   <tr>
                     <th>{t("productDetail.displayA")}</th>
                     <th>{t("productDetail.displayB")}</th>
-                    <th>{t("productDetail.packing")}</th>
                     {editing ? <th>{t("products.columns.actions")}</th> : null}
                   </tr>
                 </thead>
@@ -1065,7 +1048,6 @@ export function ProductDetailPage({
                     <tr key={label.id}>
                       <td>{label.displayA || t("common.notSet")}</td>
                       <td>{label.displayB || t("common.notSet")}</td>
-                      <td>{label.packingName || t("common.notSet")}</td>
                       {editing ? (
                         <td className="table-actions-cell">
                           <Button
