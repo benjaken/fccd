@@ -1,7 +1,6 @@
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseUrl } from "@/lib/supabase";
 
-const mainRelationshipFunctionUrl =
-  "https://vignxasvlxqnyvuhtjlu.supabase.co/functions/v1/bubble-relations";
+const relationshipFunctionUrl = `${supabaseUrl}/functions/v1/bubble-relations`;
 
 export type BubbleRelationship = {
   sourceField: string;
@@ -44,7 +43,7 @@ export async function analyzeBubbleRelationships(sourceType: string) {
   });
 
   if (error) {
-    const fallbackResponse = await fetch(mainRelationshipFunctionUrl, {
+    const fallbackResponse = await fetch(relationshipFunctionUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sourceType }),
