@@ -5190,7 +5190,7 @@ button.product-tag[aria-pressed="true"] {
 .kitchen-calendar-mobile-filter:focus-visible,
 .kitchen-calendar-mobile-filter.is-active {
   border-color: color-mix(in oklch, var(--primary) 42%, var(--border));
-  background: color-mix(in oklch, var(--primary) 4%, var(--card));
+  background: var(--selection-bg);
 }
 
 .kitchen-calendar-mobile-filter > svg {
@@ -5291,7 +5291,7 @@ button.product-tag[aria-pressed="true"] {
 }
 
 .kitchen-calendar-mobile-week > button > span {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 680;
 }
 
@@ -5305,7 +5305,7 @@ button.product-tag[aria-pressed="true"] {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 12px;
+  font-size: 14px;
   font-variant-numeric: tabular-nums;
   font-weight: 680;
 }
@@ -5328,7 +5328,7 @@ button.product-tag[aria-pressed="true"] {
 .kitchen-calendar-mobile-month > span {
   padding: 5px 2px;
   color: var(--muted-foreground);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
   text-align: center;
 }
@@ -5343,7 +5343,7 @@ button.product-tag[aria-pressed="true"] {
   border-radius: 9px;
   background: transparent;
   color: var(--foreground);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 680;
 }
 
@@ -5367,7 +5367,7 @@ button.product-tag[aria-pressed="true"] {
   right: 4px;
   bottom: 2px;
   color: inherit;
-  font-size: 9px;
+  font-size: 14px;
 }
 
 .kitchen-calendar-mobile-agenda > header {
@@ -5398,7 +5398,7 @@ button.product-tag[aria-pressed="true"] {
   border: 1px solid color-mix(in oklch, var(--primary) 62%, var(--border));
   border-radius: 7px;
   color: var(--primary);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 720;
 }
 
@@ -5459,7 +5459,7 @@ button.product-tag[aria-pressed="true"] {
 .kitchen-calendar-mobile-order-copy small {
   overflow: hidden;
   color: var(--muted-foreground);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -5476,7 +5476,7 @@ button.product-tag[aria-pressed="true"] {
   padding: 4px 6px;
   border: 1px solid currentColor;
   border-radius: 6px;
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 730;
   line-height: 1.1;
   text-align: center;
@@ -5565,7 +5565,7 @@ button.product-tag[aria-pressed="true"] {
   .kitchen-calendar-mobile-statuses small {
     min-width: 70px;
     padding-inline: 4px;
-    font-size: 10px;
+    font-size: 14px;
   }
 }
 
@@ -22427,7 +22427,7 @@ a.masoft-order-tag:focus-visible {
 
   .quote-label-modal .modal-description {
     margin-top: 4px;
-    font-size: 13px;
+    font-size: 14px;
   }
 
   .quote-label-modal .modal-body {
@@ -22436,7 +22436,7 @@ a.masoft-order-tag:focus-visible {
 
   .quote-label-modal-content > small,
   .quote-label-modal .quote-line-label-editor span {
-    font-size: 13px;
+    font-size: 14px;
   }
 }
 
@@ -30304,7 +30304,7 @@ body:has(.quote-clause-modal-root) { overflow: hidden; }
   padding-inline: 16px;
   border-color: color-mix(in oklch, var(--primary) 38%, var(--border));
   border-radius: 12px;
-  background: color-mix(in oklch, var(--primary) 9%, var(--card));
+  background: var(--selection-bg);
   color: var(--primary);
   font-weight: 720;
 }
@@ -30367,7 +30367,7 @@ body:has(.quote-clause-modal-root) { overflow: hidden; }
 
 .quote-supplement-modal .quote-additional-picker li .button:hover {
   border-color: var(--primary);
-  background: color-mix(in oklch, var(--primary) 9%, var(--card));
+  background: var(--selection-bg);
 }
 
 .quote-supplement-modal .quote-additional-picker li .button svg {
@@ -30470,7 +30470,7 @@ body:has(.quote-clause-modal-root) { overflow: hidden; }
 
 .quote-pdf-supplement-modal .quote-additional-picker > p {
   color: var(--muted-foreground);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.5;
 }
 
@@ -30500,9 +30500,9 @@ body:has(.quote-clause-modal-root) { overflow: hidden; }
 
 .quote-supplement-selected > strong {
   padding: 10px 14px;
-  background: color-mix(in oklch, var(--primary) 9%, var(--card));
+  background: var(--selection-bg);
   color: var(--foreground);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 760;
 }
 
@@ -30519,7 +30519,7 @@ body:has(.quote-clause-modal-root) { overflow: hidden; }
 .quote-supplement-selected > div > span {
   min-width: 0;
   color: var(--foreground);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.45;
   overflow-wrap: anywhere;
 }
