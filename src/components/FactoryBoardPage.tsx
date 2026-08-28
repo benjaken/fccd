@@ -904,6 +904,8 @@ export function FactoryBoardPage({
                               </small>
                             ) : null}
                             {newOrder ? <small className="factory-new-order-tag">{t("factoryBoard.newOrder")}</small> : null}
+                            {printStatus === "needs-reprint" ? <small className="factory-changed-order-tag">有更改</small> : null}
+                            {item.addonShopifyPending ? <small className="factory-addon-order-tag">有加單</small> : null}
                           </>
                         )}
                       </div>

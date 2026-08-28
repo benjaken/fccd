@@ -63,6 +63,30 @@ verify_jwt = false
 [functions.shopify-product-sync]
 verify_jwt = false
 
+[functions.shopify-order-sync]
+verify_jwt = false
+
 [functions.otc2-staff-sync]
+verify_jwt = false
+
+[functions.refresh-prepared-meat-from-bubble]
+verify_jwt = false
+
+[functions.wati-order-notifications]
+verify_jwt = false
+
+[functions.send-wati-customer-message]
+verify_jwt = true
+
+[functions.send-order-wati-confirmation]
+verify_jwt = false
+
+[functions.wati-customer-webhook]
+verify_jwt = false
+
+[functions.customer-addon-paypal]
+verify_jwt = false
+
+[functions.paypal-webhook]
 verify_jwt = false
 

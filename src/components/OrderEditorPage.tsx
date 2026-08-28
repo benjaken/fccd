@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { SearchSelect } from "@/components/ui/search-select";
 import { OrderFactorySettingsControls } from "@/components/order-factory-settings-controls";
+import { createDeliveryDistrictOption } from "@/lib/delivery-districts";
 import {
   clearOrderCustomerInfo,
   emptyOrderDraft,
@@ -30,6 +31,8 @@ import {
   orderDraftTotals,
   orderPaymentStatus,
   saveOrderEditor,
+  isAddonBlockDate,
+  sendOrderWatiConfirmation,
   type OrderEditorDraft,
   type OrderEditorOption,
   type OrderEditorOptions,
@@ -39,6 +42,8 @@ import { useMediaQuery } from "@/lib/use-media-query";
 type Step = "details" | "items" | "payments";
 type EditorLoader = typeof fetchOrderEditor;
 type EditorSaver = typeof saveOrderEditor;
+type AddonBlockDateChecker = typeof isAddonBlockDate;
+type WatiConfirmationSender = typeof sendOrderWatiConfirmation;
 
 const EMPTY_OPTIONS: OrderEditorOptions = {
   channels: [],
@@ -134,9 +139,15 @@ function InputField({
 export function OrderEditorPage({
   loadEditor = fetchOrderEditor,
   saveEditor = saveOrderEditor,
+  createDistrict = createDeliveryDistrictOption,
+  checkAddonBlockDate = isAddonBlockDate,
+  sendWatiConfirmation = sendOrderWatiConfirmation,
 }: {
   loadEditor?: EditorLoader;
   saveEditor?: EditorSaver;
+  createDistrict?: typeof createDeliveryDistrictOption;
+  checkAddonBlockDate?: AddonBlockDateChecker;
+  sendWatiConfirmation?: WatiConfirmationSender;
 }) {
   const { id } = useParams();
   const { t } = useTranslation();
@@ -153,9 +164,43 @@ export function OrderEditorPage({
   const [catalogQuery, setCatalogQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [sendingWati, setSendingWati] = useState(false);
+  const [addonBlockDate, setAddonBlockDate] = useState(false);
+  const [checkingAddonBlockDate, setCheckingAddonBlockDate] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [creatingDistrict, setCreatingDistrict] = useState(false);
   const isMobileEditor = useMediaQuery("(max-width: 760px)");
+
+  useEffect(() => {
+    let active = true;
+    if (!draft.deliveryAt) { setAddonBlockDate(false); setCheckingAddonBlockDate(false); return; }
+    setCheckingAddonBlockDate(true);
+    void checkAddonBlockDate(draft.deliveryAt)
+      .then((blocked) => { if (active) setAddonBlockDate(blocked); })
+      .catch(() => { if (active) setAddonBlockDate(false); })
+      .finally(() => { if (active) setCheckingAddonBlockDate(false); });
+    return () => { active = false; };
+  }, [checkAddonBlockDate, draft.deliveryAt]);
+
+  const addDistrict = async (name: string) => {
+    if (creatingDistrict) return;
+    setCreatingDistrict(true);
+    setSaveError(null);
+    try {
+      const district = await createDistrict(name);
+      setOptions((current) => ({
+        ...current,
+        districts: [...current.districts.filter((item) => item.id !== district.id), district]
+          .sort((left, right) => left.name.localeCompare(right.name, "zh-HK")),
+      }));
+      setDraft((current) => ({ ...current, districtId: district.id }));
+    } catch {
+      setSaveError("未能新增地區，請檢查權限後重試。");
+    } finally {
+      setCreatingDistrict(false);
+    }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -195,6 +240,7 @@ export function OrderEditorPage({
         id: crypto.randomUUID(),
         productId: item.kind === "product" ? item.id : null,
         packageId: item.kind === "package" ? item.id : null,
+        isAddon: false,
         sku: item.sku ?? "",
         name: item.name,
         remarks: "",
@@ -247,9 +293,9 @@ export function OrderEditorPage({
       setSaveError("請填寫所有標示 * 的訂單資料。");
       return false;
     }
-    if (!draft.lines.length || draft.lines.some((line) => !line.name.trim() || !Number.isInteger(line.quantity) || line.quantity < 1)) {
+    if (!draft.lines.length || draft.lines.some((line) => !line.name.trim() || !Number.isInteger(line.quantity) || line.quantity < 0)) {
       setStep("items");
-      setSaveError("訂單至少需要一項餐點，數量必須是大於 0 的整數。");
+      setSaveError("訂單至少需要一項餐點，數量必須是 0 或以上的整數。");
       return false;
     }
     if (draft.payments.some((payment) => !payment.paymentAt || !payment.paymentMethodId || payment.amount <= 0)) {
@@ -260,19 +306,26 @@ export function OrderEditorPage({
     return true;
   };
 
-  const submit = async (event: FormEvent) => {
-    event.preventDefault();
+  const persistOrder = async (notifyByWati: boolean) => {
     setSaveError(null);
     if (!validate()) return;
     setSaving(true);
+    setSendingWati(notifyByWati);
     try {
       const savedId = await saveEditor(draft);
+      if (notifyByWati) await sendWatiConfirmation(savedId);
       navigate(`/orders/${savedId}`, { replace: true });
     } catch {
-      setSaveError("未能儲存訂單。請確認你的權限及資料後再試。");
+      setSaveError(notifyByWati ? "訂單已儲存，但未能傳送 WATI 或電郵訂單確認通知。" : "未能儲存訂單。請確認你的權限及資料後再試。");
     } finally {
       setSaving(false);
+      setSendingWati(false);
     }
+  };
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    void persistOrder(false);
   };
 
   if (loading) return <PageSkeleton label="正在載入訂單編輯器…" variant="detail" />;
@@ -293,7 +346,12 @@ export function OrderEditorPage({
     <form className="order-editor-page" onSubmit={submit}>
       <header className="order-editor-header">
         <div className="order-editor-title">
-          <Link to={editing ? `/orders/${id}` : "/orders"} aria-label="返回訂單">
+          <Link
+            to={editing ? `/orders/${id}` : "/orders"}
+            target={editing ? "_blank" : undefined}
+            rel={editing ? "noopener noreferrer" : undefined}
+            aria-label="返回訂單"
+          >
             <ArrowLeft />
           </Link>
           <div>
@@ -381,7 +439,7 @@ export function OrderEditorPage({
               <div className="order-editor-column">
                 <label className="order-editor-field">
                   <span>地區<em>*</em></span>
-                  <SearchSelect id="order-editor-district" label="地區" value={draft.districtId} options={options.districts} required onChange={(option) => update("districtId", option.id)} />
+                  <SearchSelect id="order-editor-district" label="地區" value={draft.districtId} options={options.districts} required disabled={creatingDistrict} onCreate={(name) => void addDistrict(name)} onChange={(option) => update("districtId", option.id)} />
                 </label>
                 <InputField label="送貨日期及時間" value={draft.deliveryAt} required type="datetime-local" onChange={(value) => update("deliveryAt", value)} />
                 <InputField label="送貨時段" value={draft.deliveryTime} placeholder={t("orderEditor.deliveryTimePlaceholder")} onChange={(value) => update("deliveryTime", value)} />
@@ -424,7 +482,7 @@ export function OrderEditorPage({
                 {draft.lines.map((line, index) => (
                   <article className="order-editor-mobile-line" role="listitem" key={line.id}>
                     <header>
-                      <strong>{line.name || `產品 ${index + 1}`}</strong>
+                      <strong>{line.name || `產品 ${index + 1}`} {line.isAddon ? <span className="status-badge amber">加單</span> : null}</strong>
                       <div className="order-editor-mobile-line-actions">
                         <button type="button" disabled={!index} aria-label={`上移 ${line.name}`} onClick={() => moveLine(index, -1)}><ChevronUp /></button>
                         <button type="button" disabled={index === draft.lines.length - 1} aria-label={`下移 ${line.name}`} onClick={() => moveLine(index, 1)}><ChevronDown /></button>
@@ -434,7 +492,7 @@ export function OrderEditorPage({
                     <div className="order-editor-mobile-line-fields">
                       <label><span>SKU</span><input value={line.sku} onChange={(event) => updateLine(index, { sku: event.target.value })} /></label>
                       <label className="is-wide"><span>產品</span><input value={line.name} aria-label={`產品 ${index + 1}`} onChange={(event) => updateLine(index, { name: event.target.value })} /></label>
-                      <label><span>數量</span><input type="number" inputMode="numeric" min="1" step="1" value={line.quantity} onChange={(event) => updateLine(index, { quantity: Number(event.target.value) })} /></label>
+                      <label><span>數量</span><input type="number" inputMode="numeric" min="0" step="1" value={line.quantity} onChange={(event) => updateLine(index, { quantity: Number(event.target.value) })} /></label>
                       <label><span>單價</span><input type="number" inputMode="decimal" min="0" step="0.01" value={line.unitPrice} onChange={(event) => updateLine(index, { unitPrice: Number(event.target.value) })} /></label>
                       <label className="is-wide"><span>備註</span><input value={line.remarks} placeholder={t("orderEditor.lineNotePlaceholder")} onChange={(event) => updateLine(index, { remarks: event.target.value })} /></label>
                     </div>
@@ -453,8 +511,8 @@ export function OrderEditorPage({
                       <tr key={line.id}>
                         <td><div className="order-editor-sort"><button type="button" disabled={!index} onClick={() => moveLine(index, -1)}><ChevronUp /></button><button type="button" disabled={index === draft.lines.length - 1} onClick={() => moveLine(index, 1)}><ChevronDown /></button></div></td>
                         <td><input value={line.sku} onChange={(event) => updateLine(index, { sku: event.target.value })} /></td>
-                        <td><input value={line.name} aria-label={`產品 ${index + 1}`} onChange={(event) => updateLine(index, { name: event.target.value })} /><input className="order-line-note" value={line.remarks} placeholder={t("orderEditor.lineNotePlaceholder")} onChange={(event) => updateLine(index, { remarks: event.target.value })} /></td>
-                        <td><input type="number" inputMode="numeric" min="1" step="1" value={line.quantity} onChange={(event) => updateLine(index, { quantity: Number(event.target.value) })} /></td>
+                        <td>{line.isAddon ? <span className="status-badge amber">加單</span> : null}<input value={line.name} aria-label={`產品 ${index + 1}`} onChange={(event) => updateLine(index, { name: event.target.value })} /><input className="order-line-note" value={line.remarks} placeholder={t("orderEditor.lineNotePlaceholder")} onChange={(event) => updateLine(index, { remarks: event.target.value })} /></td>
+                        <td><input type="number" inputMode="numeric" min="0" step="1" value={line.quantity} onChange={(event) => updateLine(index, { quantity: Number(event.target.value) })} /></td>
                         <td><input type="number" min="0" step="0.01" value={line.unitPrice} onChange={(event) => updateLine(index, { unitPrice: Number(event.target.value) })} /></td>
                         <td><strong>{money(line.quantity * line.unitPrice)}</strong></td>
                         <td><button className="order-editor-delete" type="button" aria-label={`刪除 ${line.name}`} onClick={() => update("lines", draft.lines.filter((_, lineIndex) => lineIndex !== index))}><Trash2 /></button></td>
@@ -510,7 +568,13 @@ export function OrderEditorPage({
           {activeStepIndex < STEPS.length - 1 ? (
             <Button type="button" onClick={() => setStep(STEPS[activeStepIndex + 1].id)}>下一步</Button>
           ) : (
-            <Button type="submit" disabled={saving}>{saving ? <LoaderCircle className="spin" /> : <Save />}{saving ? "儲存中…" : editing ? "儲存變更" : "建立訂單"}</Button>
+            <>
+              {!editing ? <Button type="button" variant="outline" disabled={saving || checkingAddonBlockDate || !draft.deliveryAt} onClick={() => void persistOrder(true)}>
+                {sendingWati ? <LoaderCircle className="spin" /> : <Save />}
+                {sendingWati ? "傳送中…" : addonBlockDate ? "傳送 WATI 及電郵訂單確認通知" : "傳送 WATI 及電郵訂單確認通知及加單 link"}
+              </Button> : null}
+              <Button type="submit" disabled={saving}>{saving && !sendingWati ? <LoaderCircle className="spin" /> : <Save />}{saving && !sendingWati ? "儲存中…" : editing ? "儲存變更" : "完成"}</Button>
+            </>
           )}
         </div>
       </footer>

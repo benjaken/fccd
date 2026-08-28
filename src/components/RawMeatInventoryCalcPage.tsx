@@ -14,7 +14,6 @@ import {
   ChevronDown,
   Pencil,
   Plus,
-  RefreshCw,
   SlidersHorizontal,
   Trash2,
   X,
@@ -33,6 +32,7 @@ import { FROZEN_ACTION_PERMISSION_KEYS } from "@/lib/frozen-action-permissions";
 import {
   createRawMeatItem,
   createRawMeatStockIn,
+  deleteRawMeatMovement,
   fetchRawMeatItems,
   fetchRawMeatMovementsForItem,
   fetchRawMeatSuppliers,
@@ -79,6 +79,7 @@ type ItemFlagsSaver = (
 type ItemCreator = typeof createRawMeatItem;
 type ItemUpdater = typeof updateRawMeatItem;
 type StockInCreator = typeof createRawMeatStockIn;
+type MovementDeleter = typeof deleteRawMeatMovement;
 type InboundDeductModalProps = Pick<
   ComponentProps<typeof PreparedMeatInboundDeductModal>,
   "loadRawChoices" | "loadPreview" | "createInbound"
@@ -229,6 +230,7 @@ export function RawMeatInventoryCalcPage({
   createItem = createRawMeatItem,
   updateItem = updateRawMeatItem,
   createStockIn = createRawMeatStockIn,
+  deleteMovement = deleteRawMeatMovement,
   loadUnitMultipliers = fetchRawMeatUnitMultipliers,
   loadRawChoices,
   loadPreview,
@@ -245,6 +247,7 @@ export function RawMeatInventoryCalcPage({
   createItem?: ItemCreator;
   updateItem?: ItemUpdater;
   createStockIn?: StockInCreator;
+  deleteMovement?: MovementDeleter;
   loadUnitMultipliers?: typeof fetchRawMeatUnitMultipliers;
   canCreate?: boolean;
   canEdit?: boolean;
@@ -266,6 +269,7 @@ export function RawMeatInventoryCalcPage({
   const [movements, setMovements] = useState<RawMeatMovementRow[]>([]);
   const [itemsLoading, setItemsLoading] = useState(true);
   const [movementsLoading, setMovementsLoading] = useState(false);
+  const [deletingMovementId, setDeletingMovementId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [page, setPage] = useState(1);
@@ -392,7 +396,7 @@ export function RawMeatInventoryCalcPage({
     () =>
       new Intl.NumberFormat(i18n.language, {
         minimumFractionDigits: 0,
-        maximumFractionDigits: 3,
+        maximumFractionDigits: 2,
       }),
     [i18n.language],
   );
@@ -546,6 +550,33 @@ export function RawMeatInventoryCalcPage({
     },
   );
 
+  const handleDeleteMovement = useEffectEvent(
+    async (row: RawMeatMovementRow) => {
+      if (
+        deletingMovementId ||
+        !window.confirm(
+          t("rawMeatInventory.deleteConfirm", { product: row.productName }),
+        )
+      ) {
+        return;
+      }
+      setDeletingMovementId(row.id);
+      setError(null);
+      try {
+        await deleteMovement(row.id);
+        reload();
+      } catch (deleteError) {
+        setError(
+          deleteError instanceof Error
+            ? deleteError.message
+            : t("rawMeatInventory.deleteError"),
+        );
+      } finally {
+        setDeletingMovementId(null);
+      }
+    },
+  );
+
   const handleSaveItemFlags = useEffectEvent(
     async (
       itemId: string,
@@ -585,15 +616,6 @@ export function RawMeatInventoryCalcPage({
           <p>{t("rawMeatInventory.description")}</p>
         </div>
         <div className="raw-meat-calc-heading-actions">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={reload}
-            disabled={loading}
-          >
-            <RefreshCw />
-            {t("rawMeatInventory.refresh")}
-          </Button>
           {canCreate ? (
             <Button type="button" onClick={openCreateOption}>
               {t("rawMeatInventory.addOption")}
@@ -889,16 +911,19 @@ export function RawMeatInventoryCalcPage({
                   </td>
                   <td className="table-actions-cell">
                     <div className="table-row-actions">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        disabled
-                        aria-label={t("rawMeatInventory.deleteSoon")}
-                        title={t("rawMeatInventory.deleteSoon")}
-                      >
-                        <Trash2 />
-                      </Button>
+                      {canEdit ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          disabled={loading || deletingMovementId !== null}
+                          aria-label={t("rawMeatInventory.delete")}
+                          title={t("rawMeatInventory.delete")}
+                          onClick={() => void handleDeleteMovement(row)}
+                        >
+                          <Trash2 />
+                        </Button>
+                      ) : null}
                     </div>
                   </td>
                 </tr>

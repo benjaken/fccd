@@ -18,6 +18,7 @@ import {
   fetchRestaurantPurchaseRestaurants,
   fetchRestaurantPurchaseSuppliers,
   fetchRestaurantPurchaseTypes,
+  mergeRestaurantDailyPurchaseRecords,
   saveRestaurantDailyPurchaseRecord,
   updateRestaurantDailyPurchaseEntry,
   type RestaurantDailyPurchaseEntry,
@@ -217,12 +218,14 @@ function PurchaseRecordPanel({
 function PurchaseEntriesPanel({
   open,
   filters,
+  suppliers,
   services,
   onClose,
   onChanged,
 }: {
   open: boolean;
   filters: RestaurantDailyPurchaseFilters;
+  suppliers: RestaurantPurchaseOption[];
   services: RestaurantDailyPurchaseServices;
   onClose: () => void;
   onChanged: () => void;
@@ -236,6 +239,7 @@ function PurchaseEntriesPanel({
   const [reloadKey, setReloadKey] = useState(0);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [entryFilters, setEntryFilters] = useState<RestaurantDailyPurchaseFilters>(filters);
   const totalPages = Math.max(1, Math.ceil(total / EDITOR_PAGE_SIZE));
 
   useEffect(() => {
@@ -243,7 +247,7 @@ function PurchaseEntriesPanel({
     let active = true;
     setLoading(true);
     setError(null);
-    void services.loadEntries({ filters, page, pageSize: EDITOR_PAGE_SIZE })
+    void services.loadEntries({ filters: entryFilters, page, pageSize: EDITOR_PAGE_SIZE })
       .then((result) => {
         if (!active) return;
         setRows(result.items);
@@ -257,11 +261,17 @@ function PurchaseEntriesPanel({
         if (active) setLoading(false);
       });
     return () => { active = false; };
-  }, [filters, open, page, reloadKey, services, t]);
+  }, [entryFilters, open, page, reloadKey, services, t]);
 
   useEffect(() => {
-    if (open) setPage(1);
+    if (!open) return;
+    setEntryFilters(filters);
+    setPage(1);
   }, [filters, open]);
+
+  const updateEntryFilters = (next: Partial<RestaurantDailyPurchaseFilters>) => {
+    setEntryFilters((current) => ({ ...current, ...next }));
+  };
 
   const saveAmount = async (row: RestaurantDailyPurchaseEntry, value: string) => {
     const amount = Number(value);
@@ -270,7 +280,14 @@ function PurchaseEntriesPanel({
     setError(null);
     try {
       await services.updateEntry(row.id, amount);
-      setRows((current) => current.map((item) => item.id === row.id ? { ...item, amount } : item));
+      if (amount > 0) {
+        setRows((current) => current.map((item) => item.id === row.id ? { ...item, amount } : item));
+      } else {
+        const nextTotal = Math.max(0, total - 1);
+        const nextPages = Math.max(1, Math.ceil(nextTotal / EDITOR_PAGE_SIZE));
+        if (page > nextPages) setPage(nextPages);
+        else setReloadKey((value) => value + 1);
+      }
       onChanged();
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : t("restaurantDailyPurchases.saveError"));
@@ -312,7 +329,58 @@ function PurchaseEntriesPanel({
       closeLabel={t("restaurantDailyPurchases.closeEdit")}
       className="side-panel-majority kitchen-supplier-entry-panel"
     >
-      {error ? <div className="list-inline-error" role="alert"><span>{error}</span><Button variant="outline" onClick={() => setReloadKey((value) => value + 1)}><RefreshCw />{t("common.retry")}</Button></div> : null}
+      <div className="restaurant-purchase-entry-toolbar">
+        <div className="kitchen-supplier-record-filters restaurant-purchase-entry-filters">
+          <label>
+            <span>{t("restaurantDailyPurchases.dateMode")}</span>
+            <select
+              aria-label={t("restaurantDailyPurchases.dateMode")}
+              value={entryFilters.mode}
+              onChange={(event) => updateEntryFilters({ mode: event.target.value as "single" | "range" })}
+            >
+              <option value="single">{t("restaurantDailyPurchases.singleDay")}</option>
+              <option value="range">{t("restaurantDailyPurchases.multipleDays")}</option>
+            </select>
+          </label>
+          {entryFilters.mode === "single" ? (
+            <label>
+              <span>{t("restaurantDailyPurchases.date")}</span>
+              <input
+                aria-label={t("restaurantDailyPurchases.date")}
+                type="date"
+                value={entryFilters.singleDate}
+                onChange={(event) => updateEntryFilters({ singleDate: event.target.value })}
+              />
+            </label>
+          ) : (
+            <DateRangePicker
+              startId="restaurant-purchase-entry-filter-start"
+              endId="restaurant-purchase-entry-filter-end"
+              startValue={entryFilters.startDate}
+              endValue={entryFilters.endDate}
+              onStartChange={(value) => updateEntryFilters({ startDate: value })}
+              onEndChange={(value) => updateEntryFilters({ endDate: value })}
+              startLabel={t("restaurantDailyPurchases.startDate")}
+              endLabel={t("restaurantDailyPurchases.endDate")}
+              legend={t("restaurantDailyPurchases.dateRange")}
+            />
+          )}
+          <label className="kitchen-supplier-filter-select">
+            <span id="restaurant-purchase-entry-supplier-filter-label">{t("restaurantDailyPurchases.supplier")}</span>
+            <MultiSelect
+              id="restaurant-purchase-entry-supplier-filter"
+              labelledBy="restaurant-purchase-entry-supplier-filter-label"
+              options={suppliers}
+              value={entryFilters.supplierIds}
+              placeholder={t("restaurantDailyPurchases.supplierFilterPlaceholder")}
+              searchPlaceholder={t("restaurantDailyPurchases.supplierSearchPlaceholder")}
+              emptyLabel={t("restaurantDailyPurchases.supplierEmpty")}
+              onChange={(supplierIds) => updateEntryFilters({ supplierIds })}
+            />
+          </label>
+        </div>
+        {error ? <div className="list-inline-error" role="alert"><span>{error}</span><Button variant="outline" onClick={() => setReloadKey((value) => value + 1)}><RefreshCw />{t("common.retry")}</Button></div> : null}
+      </div>
       <ListTable
         className="kitchen-supplier-entry-table-wrap"
         tableClassName="kitchen-supplier-entry-table restaurant-purchase-entry-table"
@@ -414,7 +482,7 @@ export function RestaurantDailyPurchasesPage({
     setError(null);
     void services.loadRecords({ filters, page: 1, pageSize: MAIN_ROW_LIMIT })
       .then((result) => {
-        if (active) setRows(result.items);
+        if (active) setRows(mergeRestaurantDailyPurchaseRecords(result.items));
       })
       .catch((loadError) => {
         if (active) setError(loadError instanceof Error ? loadError.message : t("restaurantDailyPurchases.loadError"));
@@ -498,7 +566,7 @@ export function RestaurantDailyPurchasesPage({
           header={<tr><th>{t("restaurantDailyPurchases.date")}</th><th>{t("restaurantDailyPurchases.supplier")}</th><th>{t("restaurantDailyPurchases.restaurant")}</th><th>{t("restaurantDailyPurchases.category")}</th><th>{t("restaurantDailyPurchases.total")}</th></tr>}
         >
           {rows.map((row) => (
-            <tr key={`${row.restaurantId}:${row.supplierId}`}>
+            <tr key={`${row.recordId ?? "legacy"}:${row.date ?? "undated"}:${row.restaurantId}:${row.supplierId}`}>
               <td><strong>{row.date ? formatDate(row.date, i18n.language) : filterDate}</strong></td>
               <td><strong>{row.supplierName}</strong></td>
               <td><strong>{row.restaurantName}</strong></td>
@@ -511,7 +579,7 @@ export function RestaurantDailyPurchasesPage({
       </article>
 
       <PurchaseRecordPanel open={panelOpen} restaurants={restaurants} suppliers={suppliers} purchaseTypes={purchaseTypes} loadingOptions={loadingOptions} saveRecord={services.saveRecord} onClose={() => setPanelOpen(false)} onSaved={() => { setPanelOpen(false); setReloadKey((value) => value + 1); }} />
-      <PurchaseEntriesPanel open={entriesPanelOpen} filters={filters} services={services} onClose={() => setEntriesPanelOpen(false)} onChanged={() => setReloadKey((value) => value + 1)} />
+      <PurchaseEntriesPanel open={entriesPanelOpen} filters={filters} suppliers={suppliers} services={services} onClose={() => setEntriesPanelOpen(false)} onChanged={() => setReloadKey((value) => value + 1)} />
     </section>
   );
 }

@@ -80,6 +80,15 @@ export type PackageCreateInput = {
   price: number;
   status: string;
   channelId: string;
+  choiceSets?: Array<{
+    name: string;
+    maximumChoices: number;
+    products: Array<{
+      productId: string;
+      quantity: number;
+      addonPrice: number;
+    }>;
+  }>;
 };
 
 type RelatedRecord = { id: string; name: string };
@@ -387,10 +396,11 @@ export async function archivePackage(id: string) {
 }
 
 export async function createPackage(input: PackageCreateInput): Promise<string> {
+  const packageLegacyId = createLegacyId();
   const { data, error } = await supabase
     .from("packages")
     .insert({
-      legacy_id: createLegacyId(),
+      legacy_id: packageLegacyId,
       sku: input.sku.trim(),
       name: input.name.trim(),
       chinese_name: input.chineseName.trim() || null,
@@ -403,7 +413,35 @@ export async function createPackage(input: PackageCreateInput): Promise<string> 
     .select("id")
     .single();
   if (error) throw error;
-  return data.id as string;
+  const packageId = data.id as string;
+  const choiceSets = (input.choiceSets ?? []).map((choiceSet) => ({
+    ...choiceSet,
+    legacyId: createLegacyId(),
+  }));
+  if (choiceSets.length > 0) {
+    const { error: choiceSetError } = await supabase.from("package_choice_sets").insert(
+      choiceSets.map((choiceSet) => ({
+        legacy_id: choiceSet.legacyId,
+        package_id: packageId,
+        package_legacy_id: packageLegacyId,
+        choice_type: choiceSet.name,
+        maximum_choices: choiceSet.maximumChoices,
+      })),
+    );
+    if (choiceSetError) throw choiceSetError;
+  }
+  await Promise.all(choiceSets.flatMap((choiceSet) =>
+    choiceSet.products.map((product) =>
+      addPackageProduct(
+        packageId,
+        choiceSet.legacyId,
+        product.productId,
+        product.quantity,
+        product.addonPrice,
+      ),
+    ),
+  ));
+  return packageId;
 }
 
 export async function addPackageChoiceSet(

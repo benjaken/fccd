@@ -74,12 +74,14 @@ import { MeatDeliveryNotesPage } from "@/components/MeatDeliveryNotesPage";
 import { DeliveryListPage } from "@/components/DeliveryListPage";
 import { AssignDriverPage } from "@/components/AssignDriverPage";
 import { DeliveryFleetsPage } from "@/components/DeliveryFleetsPage";
+import { DeliverySurchargeTypesPage } from "@/components/DeliverySurchargeTypesPage";
 import { FactoryBoardPage } from "@/components/FactoryBoardPage";
 import { FactoryOrderPage } from "@/components/FactoryOrderPage";
 import { FactoryMeatDeliveryNotePage } from "@/components/FactoryMeatDeliveryNotePage";
 import { FactoryMultiDayReportPage } from "@/components/FactoryMultiDayReportPage";
 import { FactoryProductionCalendarPage } from "@/components/FactoryProductionCalendarPage";
 import { DriverDeliveryPage } from "@/components/DriverDeliveryPage";
+import { CustomerSelfServicePage } from "@/components/CustomerSelfServicePage";
 import { RawMeatInventoryCalcPage } from "@/components/RawMeatInventoryCalcPage";
 import { SpiceUsagePage } from "@/components/SpiceUsagePage";
 import { SeasoningCostSettingsPage } from "@/components/SeasoningCostSettingsPage";
@@ -854,20 +856,20 @@ function OperationsShell() {
               />
               <Route
                 path="/quotes/:id"
-                element={<QuoteEditorPage combined readOnly />}
+                element={<QuoteEditorPage combined readOnly canEdit={canEditQuotes} />}
               />
               <Route path="/products" element={<ProductsListPage canEdit={canEditProducts} canCreatePackage={canEditPackages} />} />
               <Route
                 path="/products/catering"
-                element={<ProductsListPage preset="catering" canEdit={canEditProducts} canCreatePackage={canEditPackages} />}
+                element={<ProductsListPage preset="catering" canEdit={canEditProducts} />}
               />
               <Route
                 path="/products/lunchbox"
-                element={<ProductsListPage preset="lunchbox" canEdit={canEditProducts} canCreatePackage={canEditPackages} />}
+                element={<ProductsListPage preset="lunchbox" canEdit={canEditProducts} />}
               />
               <Route
                 path="/products/ala-carte"
-                element={<ProductsListPage preset="ala-carte" canEdit={canEditProducts} canCreatePackage={canEditPackages} />}
+                element={<ProductsListPage preset="ala-carte" canEdit={canEditProducts} />}
               />
               <Route
                 path="/products/packages"
@@ -996,6 +998,16 @@ function OperationsShell() {
                 element={
                   pageAccess.canAccess("delivery.fleets") ? (
                     <DeliveryFleetsPage />
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
+                }
+              />
+              <Route
+                path="/delivery/surcharges"
+                element={
+                  pageAccess.canAccess("delivery") ? (
+                    <DeliverySurchargeTypesPage />
                   ) : (
                     <SettingsAccessDenied />
                   )
@@ -1319,37 +1331,39 @@ function OperationsShell() {
               </Button>
             </div>
             <nav aria-label="Navigation">
-              <div className="mobile-nav-group">
-                <p className="mobile-nav-group-label">
-                  {t("workspace.label")}
-                </p>
-                {visibleWorkspaceLinks.map(({ key, to, icon: WorkspaceIcon, disabled }) =>
-                  disabled ? (
-                    <span
-                      key={key}
-                      className="sidebar-link disabled"
-                      aria-disabled="true"
-                    >
-                      <WorkspaceIcon />
-                      <span>{t(`workspace.${key}`)}</span>
-                    </span>
-                  ) : (
-                    <Link
-                      key={key}
-                      to={to}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={cn(
-                        "sidebar-link",
-                        isWorkspaceNavActive(key, location.pathname) && "active",
-                      )}
-                    >
-                      <WorkspaceIcon />
-                      <span>{t(`workspace.${key}`)}</span>
-                    </Link>
-                  ),
-                )}
-              </div>
+              {visibleWorkspaceLinks.length > 0 ? (
+                <div className="mobile-nav-group">
+                  <p className="mobile-nav-group-label">
+                    {t("workspace.label")}
+                  </p>
+                  {visibleWorkspaceLinks.map(({ key, to, icon: WorkspaceIcon, disabled }) =>
+                    disabled ? (
+                      <span
+                        key={key}
+                        className="sidebar-link disabled"
+                        aria-disabled="true"
+                      >
+                        <WorkspaceIcon />
+                        <span>{t(`workspace.${key}`)}</span>
+                      </span>
+                    ) : (
+                      <Link
+                        key={key}
+                        to={to}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={cn(
+                          "sidebar-link",
+                          isWorkspaceNavActive(key, location.pathname) && "active",
+                        )}
+                      >
+                        <WorkspaceIcon />
+                        <span>{t(`workspace.${key}`)}</span>
+                      </Link>
+                    ),
+                  )}
+                </div>
+              ) : null}
               {mobileNavGroups.map((group) => (
                 <div className="mobile-nav-group" key={group.groupKey}>
                   <p className="mobile-nav-group-label">
@@ -2198,6 +2212,8 @@ function App() {
           </AuthProvider>
         }
       />
+      <Route path="/self_service_search" element={<CustomerSelfServicePage />} />
+      <Route path="/self_service_search/:orderId" element={<CustomerSelfServicePage />} />
       <Route
         path="/customer/*"
         element={

@@ -47,7 +47,7 @@ type NoteCreator = (
 
 type OpenPanel =
   | { kind: "companies"; email: string }
-  | { kind: "messages"; email: string };
+  | { kind: "messages"; email: string; orderId: string | null };
 
 const CUSTOMER_SKELETON_COLUMNS = [
   { width: "14rem" },
@@ -146,7 +146,7 @@ function MessageBubble({
   onReply?: (message: QuoteCustomerMessage) => void;
 }) {
   return (
-    <article className="quote-customers-message">
+    <article className={cn("quote-customers-message", message.direction === "outbound" && "is-outbound", message.direction === "inbound" && "is-inbound")}>
       {message.authorName ? <span>{message.authorName}</span> : null}
       <div className="quote-customers-message-bubble">
         {message.replyEmail ? (
@@ -169,6 +169,7 @@ function MessageBubble({
       </div>
       <div className="quote-customers-message-meta">
         <time dateTime={message.createdAt}>{timestamp}</time>
+        {message.status && message.direction === "outbound" ? <small className="quote-customers-message-status">{message.status}</small> : null}
         {onReply && replyLabel ? (
           <button
             type="button"
@@ -409,6 +410,21 @@ export function QuoteCustomersPage({
     feed.scrollTop = feed.scrollHeight;
   }, [messageTab, messages?.note.length]);
 
+  useEffect(() => {
+    if (panel?.kind !== "messages") return;
+    let active = true;
+    const email = panel.email;
+    const timer = window.setInterval(() => {
+      void loadMessages(email).then((result) => {
+        if (active) setMessages(result);
+      }).catch(() => undefined);
+    }, 10_000);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [loadMessages, panel]);
+
   const submitSearch = () => {
     setPage(1);
     setSearch(draftSearch.trim());
@@ -449,7 +465,7 @@ export function QuoteCustomersPage({
         email: panel.email,
         body,
         authorName: profile?.user_name || profile?.email || null,
-        orderId: replyTarget?.orderId ?? null,
+        orderId: replyTarget?.orderId ?? panel.orderId,
         replyToEmail: replyTarget ? panel.email : null,
       });
       setMessages((current) => ({
@@ -623,7 +639,7 @@ export function QuoteCustomersPage({
                       variant="ghost"
                       size="icon"
                       onClick={() =>
-                        setPanel({ kind: "messages", email: customer.email })
+                        setPanel({ kind: "messages", email: customer.email, orderId: customer.latestOrderId })
                       }
                       aria-label={`${t("quoteCustomers.messagesAction")} ${customer.email}`}
                       title={t("quoteCustomers.messagesAction")}
@@ -771,8 +787,9 @@ export function QuoteCustomersPage({
         onClose={closePanel}
         closeLabel={t("quoteCustomers.closePanel")}
         footer={
-          messageTab === "note" && canManageActions ? (
+          messageTab === "note" && canManageActions && panel?.kind === "messages" && panel.orderId ? (
             <div className="quote-customers-message-composer-wrap">
+              <small className="quote-customers-wati-channel">{t("quoteCustomers.watiChannel")}</small>
               {replyTarget ? (
                 <div className="quote-customers-reply-target">
                   <span>

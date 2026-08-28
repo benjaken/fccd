@@ -243,7 +243,7 @@ export function OrderDetailPage({
                 </Link>
               </Button>
               <Button asChild variant="outline">
-                <Link to={`/orders/${order.id}/edit`}>
+                <Link to={`/orders/${order.id}/edit`} target="_blank" rel="noopener noreferrer">
                   <Pencil />
                   編輯
                 </Link>
@@ -285,6 +285,9 @@ export function OrderDetailPage({
             </DetailField>
             <DetailField label={t("details.address")}>
               {order.address || emptyValue}
+            </DetailField>
+            <DetailField label={t("details.district")}>
+              {order.districtName || emptyValue}
             </DetailField>
             <DetailField
               label={`${t("quoteEditor.fields.customerNote")} (${t("quoteEditor.fields.customerNoteHint")})`}
@@ -402,6 +405,7 @@ export function OrderDetailPage({
                 <tr key={line.id}>
                   <td>
                     <strong>{line.productName || line.content || emptyValue}</strong>
+                    {line.isAddon ? <span className="status-badge amber">加單項目</span> : null}
                     {line.remarks && (
                       <small className="settings-cell-detail">{line.remarks}</small>
                     )}

@@ -130,8 +130,7 @@ describe("Delivery list page", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("returns from order detail to the delivery list", async () => {
-    const user = userEvent.setup();
+  it("opens order detail from the delivery list in a new tab", async () => {
     const loadDeliveries = vi.fn().mockResolvedValue({
       total: 1,
       feeTotal: 90,
@@ -201,12 +200,10 @@ describe("Delivery list page", () => {
       </MemoryRouter>,
     );
 
-    await user.click(await screen.findByRole("link", { name: "#6918" }));
-    expect(await screen.findByRole("heading", { name: "6918" })).toBeInTheDocument();
-    await user.click(screen.getByRole("link", { name: "返回列表" }));
-    expect(
-      await screen.findByRole("heading", { name: "送貨清單" }),
-    ).toBeInTheDocument();
+    const orderLink = await screen.findByRole("link", { name: "#6918" });
+    expect(orderLink).toHaveAttribute("href", "/orders/order-1");
+    expect(orderLink).toHaveAttribute("target", "_blank");
+    expect(orderLink).toHaveAttribute("rel", "noopener noreferrer");
   });
 
   it("opens delivery photos in a half-width side panel", async () => {
@@ -299,9 +296,22 @@ describe("Delivery list page", () => {
     );
 
     await screen.findByRole("heading", { name: "送貨清單" });
-    const dateInputs = screen.getAllByDisplayValue(/^2026-08-/);
-    await user.clear(dateInputs[0]);
-    await user.type(dateInputs[0], "2026-08-16");
+    const dateRangePicker = screen.getByRole("group", { name: "日期範圍" });
+    await user.click(within(dateRangePicker).getByRole("button"));
+    let datePopover = document.querySelector<HTMLElement>(
+      ".date-range-picker-popover",
+    );
+    const startDay = within(datePopover!)
+      .getAllByRole("button")
+      .find((button) => button.textContent === "16");
+    await user.click(startDay!);
+    datePopover = document.querySelector<HTMLElement>(
+      ".date-range-picker-popover",
+    );
+    const endDay = within(datePopover!)
+      .getAllByRole("button")
+      .find((button) => button.textContent === "22");
+    await user.click(endDay!);
     await user.selectOptions(screen.getAllByRole("combobox")[0], "team-1");
 
     const summary = await screen.findByLabelText("已選車隊資料");

@@ -1,4 +1,10 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { buildQuoteConfirmationContent } from "../_shared/order-notification-content.ts";
+import { EMAIL_FROM } from "../_shared/email-sender.ts";
+import {
+  isNotificationRecipientPairAllowed,
+  notificationRecipientAllowlist,
+} from "../_shared/notification-recipient-allowlist.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -35,12 +41,6 @@ function digits(value: string | null) {
   return normalized.length === 8 ? `852${normalized}` : normalized;
 }
 
-function html(value: string | null) {
-  return (value || "").replace(/[&<>"']/g, (character) => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
-  })[character] || character);
-}
-
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (request.method !== "POST") return response({ error: "method_not_allowed" }, 405);
@@ -71,54 +71,78 @@ Deno.serve(async (request) => {
     if (!phone || !quote.email_snapshot) {
       return response({ error: "quote_contact_missing", watiSent: false, emailSent: false }, 400);
     }
+    if (!isNotificationRecipientPairAllowed(
+      notificationRecipientAllowlist(),
+      phone,
+      quote.email_snapshot,
+    )) {
+      return response({
+        error: "notification_recipient_not_allowlisted",
+        watiSent: false,
+        emailSent: false,
+      }, 403);
+    }
 
     const customerName = quote.customer_name_snapshot || quote.company_name_snapshot || "Customer";
     const appUrl = requiredEnv("APP_URL").replace(/\/$/, "");
     const pdfUrl = `${appUrl}/quotes/${quote.id}/pdf`;
     const watiEndpoint = requiredEnv("WATI_API_ENDPOINT").replace(/\/$/, "");
     const watiTemplate = requiredEnv("WATI_TEMPLATE_NAME");
-    const watiResponse = await fetch(
-      `${watiEndpoint}/api/v1/sendTemplateMessage?whatsappNumber=${encodeURIComponent(phone)}`,
-      {
+    const notification = buildQuoteConfirmationContent({
+      name: customerName,
+      quoteNumber: quote.order_number || "",
+      pdfUrl,
+    });
+    const [watiResult, emailResult] = await Promise.allSettled([
+      fetch(
+        `${watiEndpoint}/api/v2/sendTemplateMessage?whatsappNumber=${encodeURIComponent(phone)}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${requiredEnv("WATI_API_TOKEN")}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            template_name: watiTemplate,
+            broadcast_name: Deno.env.get("WATI_BROADCAST_NAME")?.trim() || "quote_confirmation",
+            channel_number: requiredEnv("WATI_CHANNEL_NUMBER"),
+            parameters: [
+              { name: "customer_name", value: customerName },
+              { name: "quote_number", value: quote.order_number || "" },
+              { name: "pdf_url", value: pdfUrl },
+            ],
+          }),
+        },
+      ),
+      fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${requiredEnv("WATI_API_TOKEN")}`,
+          Authorization: `Bearer ${requiredEnv("RESEND_API_KEY")}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          template_name: watiTemplate,
-          broadcast_name: Deno.env.get("WATI_BROADCAST_NAME")?.trim() || "quote_confirmation",
-          channel_number: requiredEnv("WATI_CHANNEL_NUMBER"),
-          parameters: [
-            { name: "customer_name", value: customerName },
-            { name: "quote_number", value: quote.order_number || "" },
-            { name: "pdf_url", value: pdfUrl },
-          ],
+          from: EMAIL_FROM,
+          to: [quote.email_snapshot],
+          subject: notification.subject,
+          html: notification.html,
         }),
-      },
-    );
-    if (!watiResponse.ok) {
-      return response({ error: "wati_send_failed", watiSent: false, emailSent: false }, 502);
-    }
-
-    const formattedTotal = new Intl.NumberFormat("zh-HK", {
-      style: "currency", currency: quote.currency || "HKD",
-    }).format(Number(quote.grand_total) || 0);
-    const emailResponse = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${requiredEnv("RESEND_API_KEY")}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: requiredEnv("QUOTE_EMAIL_FROM"),
-        to: [quote.email_snapshot],
-        subject: `報價確認 ${quote.order_number || ""}`.trim(),
-        html: `<p>${html(customerName)} 您好：</p><p>報價單 <strong>${html(quote.order_number)}</strong> 已準備好，總額為 <strong>${html(formattedTotal)}</strong>。</p><p><a href="${html(pdfUrl)}">查看報價單 PDF</a></p>`,
       }),
-    });
-    if (!emailResponse.ok) {
-      return response({ error: "email_send_failed", watiSent: true, emailSent: false }, 502);
+    ]);
+    const watiResponse = watiResult.status === "fulfilled" ? watiResult.value : null;
+    const emailResponse = emailResult.status === "fulfilled" ? emailResult.value : null;
+    const watiPayload = watiResponse
+      ? await watiResponse.json().catch(() => null) as { result?: unknown } | null
+      : null;
+    const watiSent = Boolean(watiResponse?.ok && watiPayload?.result !== false);
+    const emailSent = Boolean(emailResponse?.ok);
+    if (!watiSent || !emailSent) {
+      return response({
+        error: !watiSent && !emailSent
+          ? "wati_and_email_send_failed"
+          : !watiSent ? "wati_send_failed" : "email_send_failed",
+        watiSent,
+        emailSent,
+      }, 502);
     }
 
     return response({ watiSent: true, emailSent: true });

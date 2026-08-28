@@ -157,6 +157,37 @@ describe("Prepared meat inventory calculation page", () => {
     );
   });
 
+  it("deletes a movement after confirmation and reloads the balance", async () => {
+    const user = userEvent.setup();
+    const loadMovements = vi.fn().mockResolvedValue(movementsByItem["item-1"]);
+    const deleteMovement = vi.fn().mockResolvedValue(undefined);
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+
+    render(
+      <MemoryRouter>
+        <PreparedMeatInventoryCalcPage
+          loadItems={vi.fn().mockResolvedValue(items)}
+          loadMovements={loadMovements}
+          deleteMovement={deleteMovement}
+        />
+      </MemoryRouter>,
+    );
+
+    const buttons = await screen.findAllByRole("button", {
+      name: i18n.t("preparedMeatInventory.delete"),
+    });
+    await user.click(buttons[0]!);
+
+    expect(confirm).toHaveBeenCalledWith(
+      i18n.t("preparedMeatInventory.deleteConfirm", {
+        product: movementsByItem["item-1"]![0]!.productName,
+      }),
+    );
+    expect(deleteMovement).toHaveBeenCalledWith("move-out-june");
+    await waitFor(() => expect(loadMovements).toHaveBeenCalledTimes(2));
+    confirm.mockRestore();
+  });
+
   it("switches the right-side ledger when selecting another item", async () => {
     const user = userEvent.setup();
     const loadItems = vi.fn().mockResolvedValue(items);

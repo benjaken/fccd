@@ -12,6 +12,7 @@ export type RestaurantPurchaseCategory = RestaurantPurchaseOption & {
 
 export type RestaurantDailyPurchaseRecord = {
   date: string | null;
+  recordId: string | null;
   restaurantId: string;
   restaurantName: string;
   supplierId: string;
@@ -31,6 +32,7 @@ export type RestaurantDailyPurchaseFilters = {
 
 export type RestaurantDailyPurchaseEntry = {
   id: string;
+  recordId: string | null;
   date: string;
   restaurantId: string;
   restaurantName: string;
@@ -41,8 +43,41 @@ export type RestaurantDailyPurchaseEntry = {
   amount: number;
 };
 
+export function mergeRestaurantDailyPurchaseRecords(records: RestaurantDailyPurchaseRecord[]) {
+  const grouped = new Map<string, RestaurantDailyPurchaseRecord>();
+
+  for (const record of records) {
+    const key = JSON.stringify([record.restaurantId, record.supplierId]);
+    const existing = grouped.get(key);
+    if (!existing) {
+      grouped.set(key, {
+        ...record,
+        date: null,
+        recordId: null,
+        categories: record.categories.map((category) => ({ ...category })),
+      });
+      continue;
+    }
+
+    const categories = new Map(existing.categories.map((category) => [category.id, category]));
+    for (const category of record.categories) {
+      const existingCategory = categories.get(category.id);
+      if (existingCategory) {
+        existingCategory.amount += category.amount;
+      } else {
+        categories.set(category.id, { ...category });
+      }
+    }
+    existing.categories = [...categories.values()];
+    existing.total += record.total;
+  }
+
+  return [...grouped.values()];
+}
+
 type PurchaseRecordRpcRow = {
   record_date: string | null;
+  purchase_record_id: string | null;
   restaurant_id: string;
   restaurant_name: string;
   supplier_id: string;
@@ -130,6 +165,7 @@ export async function fetchRestaurantDailyPurchaseRecords({
   return {
     items: rows.map((row) => ({
       date: row.record_date,
+      recordId: row.purchase_record_id ?? null,
       restaurantId: row.restaurant_id,
       restaurantName: row.restaurant_name,
       supplierId: row.supplier_id,
@@ -186,6 +222,7 @@ export async function fetchRestaurantDailyPurchaseEntries({
   if (error) throw new Error(error.message);
   const rows = (data ?? []) as Array<{
     id: string;
+    purchase_record_id: string | null;
     record_date: string;
     restaurant_id: string;
     restaurant_name: string;
@@ -199,6 +236,7 @@ export async function fetchRestaurantDailyPurchaseEntries({
   return {
     items: rows.map((row) => ({
       id: row.id,
+      recordId: row.purchase_record_id ?? null,
       date: row.record_date,
       restaurantId: row.restaurant_id,
       restaurantName: row.restaurant_name,

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { render, screen, waitFor, within, fireEvent } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 
@@ -16,6 +16,7 @@ import {
   isValidPassword,
   isValidPhone,
   sortRolePagePermissions,
+  updateRolePagePermissionCascade,
   attachmentFileType,
   type AttachmentListItem,
   type RolePagePermission,
@@ -381,8 +382,8 @@ describe("Super Admin system settings", () => {
     ).toBeInTheDocument();
     expect(screen.getAllByText("PDF").length).toBeGreaterThan(0);
     expect(screen.getByLabelText("文件類型")).toBeInTheDocument();
-    expect(screen.getByLabelText("開始日期")).toBeInTheDocument();
-    expect(screen.getByLabelText("結束日期")).toBeInTheDocument();
+    const dateRange = screen.getByRole("group", { name: "日期範圍" });
+    expect(dateRange).toBeInTheDocument();
     expect(screen.queryByText("遷移狀態")).not.toBeInTheDocument();
     expect(screen.queryByText("來源")).not.toBeInTheDocument();
     expect(screen.queryByText("所屬資料")).not.toBeInTheDocument();
@@ -394,12 +395,28 @@ describe("Super Admin system settings", () => {
       ),
     );
 
-    fireEvent.change(screen.getByLabelText("開始日期"), {
-      target: { value: "2026-08-01" },
-    });
+    const startDateInput = screen.queryByLabelText("開始日期");
+    if (startDateInput) {
+      expect(screen.getByLabelText("結束日期")).toBeInTheDocument();
+      fireEvent.change(startDateInput, { target: { value: "2026-08-01" } });
+    } else {
+      const dateRangeTrigger = within(dateRange).getByRole("button", {
+        name: /開始日期.*結束日期/,
+      });
+      await user.click(dateRangeTrigger);
+      const dateRangePopover = document.querySelector<HTMLElement>(
+        ".date-range-picker-popover",
+      );
+      const firstDate = within(dateRangePopover!).getAllByRole("button").find(
+        (button) => button.hasAttribute("data-day") && !button.hasAttribute("disabled"),
+      );
+      await user.click(firstDate!);
+    }
     await waitFor(() =>
       expect(loadAttachments).toHaveBeenLastCalledWith(
-        expect.objectContaining({ startDate: "2026-08-01" }),
+        expect.objectContaining({
+          startDate: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+        }),
       ),
     );
 
@@ -447,13 +464,13 @@ describe("Super Admin system settings", () => {
     expect(adminUsers).not.toBeChecked();
     // Settings pages are permission-driven (editable), not hard-locked.
     expect(adminUsers).not.toBeDisabled();
-    expect(screen.getByText("可管理")).toBeInTheDocument();
+    expect(screen.getAllByText("可管理").length).toBeGreaterThan(0);
     expect(
       screen.getByRole("switch", { name: "財務對帳 可管理" }),
     ).not.toBeChecked();
   });
 
-  it("configures parent management without granting child management", async () => {
+  it("cascades parent management to every child page and action", async () => {
     const user = userEvent.setup();
     const loadPermissions = vi.fn().mockResolvedValue(permissions);
     const savePermission = vi.fn().mockResolvedValue(undefined);
@@ -480,11 +497,11 @@ describe("Super Admin system settings", () => {
       });
       expect(savePermission).toHaveBeenCalledWith("Admin", "orders.pending", {
         canAccess: true,
-        canManage: false,
+        canManage: true,
       });
       expect(savePermission).toHaveBeenCalledWith("Admin", "orders.new", {
         canAccess: true,
-        canManage: false,
+        canManage: true,
       });
     });
   });
@@ -530,6 +547,7 @@ describe("Super Admin system settings", () => {
       screen.getByRole("switch", { name: "建立新單 可訪問" }),
     ).toBeChecked();
     expect(screen.getAllByText("子頁面").length).toBeGreaterThan(0);
+    await user.click(screen.getByRole("button", { name: /^報表/ }));
     expect(screen.getAllByText("分頁").length).toBeGreaterThan(0);
   });
 
@@ -540,6 +558,82 @@ describe("Super Admin system settings", () => {
     expect(collectAncestorPageKeys("orders.pending", permissions)).toEqual([
       "orders",
     ]);
+  });
+
+  it("treats third-level action access as part of parent management", async () => {
+    const savePermission = vi.fn().mockResolvedValue(undefined);
+    const hierarchy = [
+      permission({
+        role: "Admin",
+        pageKey: "orders",
+        displayName: "Orders",
+        route: "/orders",
+      }),
+      permission({
+        role: "Admin",
+        pageKey: "orders.settings",
+        parentPageKey: "orders",
+        pageKind: "subpage",
+        displayName: "Settings",
+        route: "/orders/settings",
+      }),
+      permission({
+        role: "Admin",
+        pageKey: "orders.settings.statuses.create",
+        parentPageKey: "orders.settings",
+        pageKind: "action",
+        displayName: "Create status",
+        route: "/orders/settings/statuses/actions/create",
+      }),
+    ];
+
+    const enabled = await updateRolePagePermissionCascade(
+      "Admin",
+      "orders",
+      "canManage",
+      true,
+      hierarchy,
+      savePermission,
+    );
+    expect(enabled.get("orders.settings")).toEqual({
+      canAccess: true,
+      canManage: true,
+    });
+    expect(enabled.get("orders.settings.statuses.create")).toEqual({
+      canAccess: true,
+      canManage: false,
+    });
+
+    const disabled = await updateRolePagePermissionCascade(
+      "Admin",
+      "orders",
+      "canManage",
+      false,
+      hierarchy.map((item) => ({ ...item, canAccess: true, canManage: true })),
+      savePermission,
+    );
+    expect(disabled.get("orders.settings")).toEqual({
+      canAccess: true,
+      canManage: false,
+    });
+    expect(disabled.get("orders.settings.statuses.create")).toEqual({
+      canAccess: false,
+      canManage: false,
+    });
+  });
+
+  it("persists production cascades with one atomic database update", () => {
+    const migration = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260828150000_atomic_role_permission_cascade.sql",
+      ),
+      "utf8",
+    );
+
+    expect(migration).toContain("update_role_page_permissions_batch");
+    expect(migration).toContain("jsonb_to_recordset(p_updates)");
+    expect(migration).toContain("security invoker");
   });
 
   it("keeps permission children with their menu instead of globally interleaving them", () => {

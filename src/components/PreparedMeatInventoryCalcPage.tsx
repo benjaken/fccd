@@ -14,6 +14,7 @@ import {
   Package,
   Pencil,
   SlidersHorizontal,
+  Trash2,
 } from "lucide-react";
 
 import { PreparedMeatInboundDeductModal } from "@/components/PreparedMeatInboundDeductModal";
@@ -29,6 +30,7 @@ import { TablePagination } from "@/components/ui/table-pagination";
 import {
   createPreparedMeatItem,
   currentHongKongYear,
+  deletePreparedMeatMovement,
   fetchPreparedMeatItems,
   fetchPreparedMeatMovementsForItem,
   hongKongYearMonthKey,
@@ -48,7 +50,7 @@ const MOVEMENT_SKELETON_COLUMNS = [
   { width: "4.5rem" },
   { width: "5.5rem" },
   { width: "8rem" },
-  { width: "4.5rem" },
+  { width: "10rem" },
 ];
 
 type ItemsLoader = () => Promise<PreparedMeatItemOption[]>;
@@ -58,6 +60,7 @@ type MovementsLoader = (
   year: number,
 ) => Promise<PreparedMeatMovementRow[]>;
 type ItemFlagsSaver = typeof updatePreparedMeatItemFlags;
+type MovementDeleter = typeof deletePreparedMeatMovement;
 type CreateOptionProps = Pick<
   ComponentProps<typeof PreparedMeatOptionFormModal>,
   "loadRawMeatChoices" | "createItem"
@@ -180,6 +183,7 @@ export function PreparedMeatInventoryCalcPage({
   loadItems = fetchPreparedMeatItems,
   loadMovements = fetchPreparedMeatMovementsForItem,
   saveItemFlags = updatePreparedMeatItemFlags,
+  deleteMovement = deletePreparedMeatMovement,
   loadRawMeatChoices,
   createItem = createPreparedMeatItem,
   createInbound,
@@ -201,6 +205,7 @@ export function PreparedMeatInventoryCalcPage({
   loadItems?: ItemsLoader;
   loadMovements?: MovementsLoader;
   saveItemFlags?: ItemFlagsSaver;
+  deleteMovement?: MovementDeleter;
 } & CreateOptionProps &
   InboundDeductModalProps &
   InboundNoRawModalProps &
@@ -212,6 +217,7 @@ export function PreparedMeatInventoryCalcPage({
   const [movements, setMovements] = useState<PreparedMeatMovementRow[]>([]);
   const [itemsLoading, setItemsLoading] = useState(true);
   const [movementsLoading, setMovementsLoading] = useState(false);
+  const [deletingMovementId, setDeletingMovementId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [page, setPage] = useState(1);
@@ -345,7 +351,7 @@ export function PreparedMeatInventoryCalcPage({
     () =>
       new Intl.NumberFormat(i18n.language, {
         minimumFractionDigits: 0,
-        maximumFractionDigits: 3,
+        maximumFractionDigits: 2,
       }),
     [i18n.language],
   );
@@ -498,6 +504,33 @@ export function PreparedMeatInventoryCalcPage({
     );
     if (row.isActive) setSelectedItemId(row.id);
   };
+
+  const handleDeleteMovement = useEffectEvent(
+    async (row: PreparedMeatMovementRow) => {
+      if (
+        deletingMovementId ||
+        !window.confirm(
+          t("preparedMeatInventory.deleteConfirm", { product: row.productName }),
+        )
+      ) {
+        return;
+      }
+      setDeletingMovementId(row.id);
+      setError(null);
+      try {
+        await deleteMovement(row.id);
+        reload();
+      } catch (deleteError) {
+        setError(
+          deleteError instanceof Error
+            ? deleteError.message
+            : t("preparedMeatInventory.deleteError"),
+        );
+      } finally {
+        setDeletingMovementId(null);
+      }
+    },
+  );
 
   const loading = itemsLoading || movementsLoading;
 
@@ -753,6 +786,19 @@ export function PreparedMeatInventoryCalcPage({
                           }}
                         >
                           <Pencil />
+                        </Button>
+                      ) : null}
+                      {canManageActions ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          disabled={loading || deletingMovementId !== null}
+                          aria-label={t("preparedMeatInventory.delete")}
+                          title={t("preparedMeatInventory.delete")}
+                          onClick={() => void handleDeleteMovement(row)}
+                        >
+                          <Trash2 />
                         </Button>
                       ) : null}
                     </div>

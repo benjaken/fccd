@@ -56,7 +56,7 @@ import { ProductsListPage } from "@/components/ProductsListPage";
 import { CatalogCreatePage } from "@/components/CatalogCreatePage";
 import i18n from "@/i18n";
 import type { PackageDetail, PackageListResult } from "@/lib/packages";
-import { hasProductSku, normalizeProductSku, type ProductDetail, type ProductListResult } from "@/lib/products";
+import { hasProductSku, normalizeProductSku, productListDisplayName, type ProductDetail, type ProductListResult } from "@/lib/products";
 
 const productResult: ProductListResult = {
   total: 1,
@@ -168,6 +168,7 @@ const productEditOptions = {
     { id: "col-2", name: "飲品", legacyId: "legacy-col-2" },
   ],
   packingMaterials: [{ id: "pack-1", name: "紙盒" }],
+  packingSupplies: [{ id: "packing-cup", name: "膠杯" }],
   catalogIngredients: [{ id: "ing-x", name: "松露", legacyId: "legacy-ing-x" }],
 };
 
@@ -235,6 +236,14 @@ describe("hasProductSku", () => {
     expect(hasProductSku("")).toBe(false);
     expect(hasProductSku("   ")).toBe(false);
     expect(hasProductSku("CC-001")).toBe(true);
+  });
+});
+
+describe("productListDisplayName", () => {
+  it("prefers 產品名稱 over 中文名稱", () => {
+    expect(productListDisplayName("Chicken rice", "香草雞飯")).toBe("Chicken rice");
+    expect(productListDisplayName("  ", "香草雞飯")).toBe("香草雞飯");
+    expect(productListDisplayName(null, null, "fallback")).toBe("fallback");
   });
 });
 
@@ -722,10 +731,14 @@ describe("Products catalog pages", () => {
     const packingCard = screen
       .getByRole("heading", { name: /燒雞 - 包裝用品/ })
       .closest("article");
+    const labelCard = screen
+      .getByRole("heading", { name: /燒雞 - Label/ })
+      .closest("article");
     expect(premiumCard).not.toBeNull();
     expect(packingCard).not.toBeNull();
     expect(within(premiumCard!).queryByText("雙格紙盒")).not.toBeInTheDocument();
     expect(within(packingCard!).getByText("雙格紙盒")).toBeInTheDocument();
+    expect(within(labelCard!).queryByRole("columnheader", { name: "包裝" })).not.toBeInTheDocument();
     expect(premiumCard?.parentElement).toHaveClass("product-material-grid");
     expect(premiumCard?.parentElement?.children).toHaveLength(3);
     expect(screen.getByText("(雙格) 拿破崙")).toBeInTheDocument();
@@ -751,6 +764,27 @@ describe("Products catalog pages", () => {
 
     expect(await screen.findByRole("link", { name: "新建商品" })).toHaveAttribute("href", "/products/new");
     expect(screen.getByRole("link", { name: "新建套餐" })).toHaveAttribute("href", "/products/packages/new");
+  });
+
+  it("shows only the create-product action on preset product lists", async () => {
+    render(
+      <MemoryRouter>
+        <ProductsListPage
+          preset="lunchbox"
+          canEdit
+          canCreatePackage
+          loadProducts={async () => ({ items: [], total: 0 })}
+          loadChannels={async () => []}
+          loadProductTypes={async () => []}
+          loadBentoMainTypes={async () => []}
+          loadBentoColumnTypes={async () => []}
+          loadCookTypes={async () => []}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("link", { name: "新建商品" })).toHaveAttribute("href", "/products/new");
+    expect(screen.queryByRole("link", { name: "新建套餐" })).not.toBeInTheDocument();
   });
 
   it("keeps all three material cards in one row when packaging is empty", async () => {
@@ -827,6 +861,7 @@ describe("Products catalog pages", () => {
 
     expect(await screen.findByRole("button", { name: "確認更改" })).toBeInTheDocument();
     const chineseName = await screen.findByLabelText("中文名稱");
+    expect(screen.queryByLabelText("包裝")).not.toBeInTheDocument();
     await user.clear(chineseName);
     await user.type(chineseName, "香草燒雞");
     await user.click(screen.getByRole("button", { name: "確認更改" }));
@@ -942,6 +977,41 @@ describe("Products catalog pages", () => {
     );
     expect(await screen.findByText("可口可樂")).toBeInTheDocument();
   });
+
+  it("adds a packing supply while editing a product", async () => {
+    const user = userEvent.setup();
+    const addIngredient = vi.fn().mockResolvedValue(undefined);
+    const loadDetail = vi
+      .fn()
+      .mockResolvedValueOnce(productDetail)
+      .mockResolvedValueOnce({
+        ...productDetail,
+        premiumIngredients: [
+          ...productDetail.premiumIngredients,
+          { id: "packing-2", ingredientId: "packing-cup", name: "膠杯", ingredientType: "包裝用品", quantity: 2, unitCost: 1 },
+        ],
+      });
+
+    render(
+      <MemoryRouter initialEntries={["/products/product-1/edit"]}>
+        <Routes>
+          <Route path="/products/:id/edit" element={<ProductDetailPage canEdit loadDetail={loadDetail} loadEditOptions={async () => productEditOptions} addIngredient={addIngredient} />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const packingSupplySelect = await screen.findByLabelText("包裝用品");
+    expect(packingSupplySelect).toHaveDisplayValue("選擇包裝用品");
+    await user.selectOptions(packingSupplySelect, "packing-cup");
+    const packingCard = screen.getByRole("heading", { name: /燒雞 - 包裝用品/ }).closest("article");
+    const quantity = within(packingCard!).getByLabelText("數量");
+    await user.clear(quantity);
+    await user.type(quantity, "2");
+    await user.click(within(packingCard!).getByRole("button", { name: "添加包裝用品" }));
+
+    await waitFor(() => expect(addIngredient).toHaveBeenCalledWith("product-1", "packing-cup", 2));
+    expect(await within(packingCard!).findByText("膠杯")).toBeInTheDocument();
+  });
 });
 
 describe("Catalog creation pages", () => {
@@ -953,7 +1023,9 @@ describe("Catalog creation pages", () => {
     channels: [{ id: "channel-1", name: "Catering" }],
     productTypes: [{ id: "type-1", name: "Main dish" }],
     cookTypes: [{ id: "cook-1", name: "Roast" }],
-    collections: [], packingMaterials: [], catalogIngredients: [],
+    collections: [], packingMaterials: [{ id: "pack-1", name: "Paper box" }],
+    packingSupplies: [{ id: "packing-cup", name: "Plastic cup" }],
+    catalogIngredients: [{ id: "ing-truffle", name: "Truffle" }],
   };
 
   it("creates a product with the detail-page fields and opens its detail", async () => {
@@ -974,19 +1046,37 @@ describe("Catalog creation pages", () => {
     await user.type(screen.getByLabelText(/^Product name/), "New product");
     await user.type(screen.getByLabelText(/^Price/), "88");
     await user.selectOptions(screen.getByLabelText(/^Category/), "type-1");
+    expect(screen.getByRole("heading", { name: /Premium ingredients/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Packaging supplies/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Label/ })).toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText("Premium ingredients"), "ing-truffle");
+    await user.click(screen.getByRole("button", { name: "Add ingredient" }));
+    await user.selectOptions(screen.getByLabelText("Packaging supply"), "packing-cup");
+    await user.click(screen.getByRole("button", { name: "Add packaging supply" }));
+    await user.type(screen.getByLabelText("Display A"), "New product label");
+    expect(screen.queryByLabelText("Packaging")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Add label" }));
     await user.click(screen.getByRole("button", { name: "Create" }));
 
-    await waitFor(() => expect(saveProduct).toHaveBeenCalledWith(expect.objectContaining({ sku: "NEW-001", name: "New product", price: 88, channelId: "channel-1", productTypeId: "type-1" })));
+    await waitFor(() => expect(saveProduct).toHaveBeenCalledWith(expect.objectContaining({
+      sku: "NEW-001", name: "New product", price: 88, channelId: "channel-1", productTypeId: "type-1",
+      premiumIngredients: [{ ingredientId: "ing-truffle", quantity: 1 }],
+      packingSupplies: [{ ingredientId: "packing-cup", quantity: 1 }],
+      labels: [{ displayA: "New product label", displayB: "", packingMaterialId: null }],
+    })));
     expect(await screen.findByText("Created product detail")).toBeInTheDocument();
   });
 
   it("creates a package and opens its detail", async () => {
     const user = userEvent.setup();
     const savePackage = vi.fn().mockResolvedValue("package-new");
+    const searchProducts = vi.fn().mockResolvedValue([
+      { id: "product-1", name: "Roast chicken", sku: "CHICKEN-1" },
+    ]);
     render(
       <MemoryRouter initialEntries={["/products/packages/new"]}>
         <Routes>
-          <Route path="/products/packages/new" element={<CatalogCreatePage kind="package" canCreate loadOptions={async () => createOptions} savePackage={savePackage} />} />
+          <Route path="/products/packages/new" element={<CatalogCreatePage kind="package" canCreate loadOptions={async () => createOptions} savePackage={savePackage} searchProducts={searchProducts} />} />
           <Route path="/products/packages/:id" element={<div>Created package detail</div>} />
         </Routes>
       </MemoryRouter>,
@@ -997,9 +1087,32 @@ describe("Catalog creation pages", () => {
     await user.selectOptions(screen.getByLabelText(/^Brand/), "channel-1");
     await user.type(screen.getByLabelText(/^English name/), "New package");
     await user.type(screen.getByLabelText(/^Price/), "288");
+    expect(screen.getByRole("heading", { name: /Set menu options/ })).toBeInTheDocument();
+    await user.type(screen.getByPlaceholderText("Enter a category name"), "Required dishes");
+    const selectableQuantity = screen.getByPlaceholderText("Enter selectable quantity");
+    await user.clear(selectableQuantity);
+    await user.type(selectableQuantity, "2");
+    await user.click(screen.getByRole("button", { name: "Add option set" }));
+    await user.click(screen.getByRole("button", { name: "Add product" }));
+    await user.type(screen.getByRole("combobox", { name: "Search product name or SKU" }), "chicken");
+    await waitFor(() => expect(searchProducts).toHaveBeenCalledWith("chicken"));
+    await user.click(await screen.findByRole("option", { name: /Roast chicken/ }));
+    const quantity = screen.getByLabelText("Roast chicken Product quantity");
+    await user.clear(quantity);
+    await user.type(quantity, "3");
+    const addonPrice = screen.getByLabelText("Roast chicken Additional price");
+    await user.clear(addonPrice);
+    await user.type(addonPrice, "12");
     await user.click(screen.getByRole("button", { name: "Create" }));
 
-    await waitFor(() => expect(savePackage).toHaveBeenCalledWith(expect.objectContaining({ sku: "SET-001", name: "New package", price: 288, channelId: "channel-1" })));
+    await waitFor(() => expect(savePackage).toHaveBeenCalledWith(expect.objectContaining({
+      sku: "SET-001", name: "New package", price: 288, channelId: "channel-1",
+      choiceSets: [{
+        name: "Required dishes",
+        maximumChoices: 2,
+        products: [{ productId: "product-1", quantity: 3, addonPrice: 12 }],
+      }],
+    })));
     expect(await screen.findByText("Created package detail")).toBeInTheDocument();
   });
 });

@@ -16,7 +16,7 @@ const result: OrderDetailResult = {
     shopifyStoreDomain: "hklunchbox.myshopify.com",
     orderNumber: "B-1547",
     customerName: "Momo",
-    companyName: null,
+    companyName: "Momo Company",
     email: "momo@example.com",
     contactA: "53007575",
     contactB: null,
@@ -113,7 +113,8 @@ describe("Receipt PDF editor", () => {
       "/assets/fcc-hk-lunch-box-logo.svg",
     );
     expect(screen.getByLabelText("收據編號")).toHaveValue("REC/");
-    expect(screen.getByLabelText("Customer:")).toHaveValue("Momo");
+    expect(screen.getByLabelText("Customer Name:")).toHaveValue("Momo");
+    expect(screen.getByLabelText("Company Name:")).toHaveValue("Momo Company");
     expect(screen.getByLabelText("Contact Person:")).toHaveValue("53007575");
     expect(screen.getByLabelText("Invoice Date:")).toHaveValue("20/8/2026");
     expect(screen.getByLabelText("Delivery Date:")).toHaveValue("4/9/2026");
@@ -132,6 +133,30 @@ describe("Receipt PDF editor", () => {
     expect(screen.queryByText("公司認證及獎項")).not.toBeInTheDocument();
     expect(screen.queryByText("條款及細則")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "新增額外資訊" })).not.toBeInTheDocument();
+  });
+
+  it("refreshes receipt source data instead of restoring a stale PDF draft", async () => {
+    localStorage.setItem("fccd:receipt-pdf-draft:order-1", JSON.stringify({
+      customer: "舊客戶",
+      contactPerson: "00000000",
+      deliveryAddress: "舊地址",
+      deliveryDate: "1/1/2020",
+      deliveryTime: "00:00 - 00:30",
+      lines: [{ id: "line-1", description: "舊產品", unitPrice: "1", quantity: "1" }],
+      paymentInformation: "舊付款狀態",
+    }));
+
+    renderPage();
+
+    expect(await screen.findByLabelText("Customer Name:")).toHaveValue("Momo");
+    expect(screen.getByLabelText("Company Name:")).toHaveValue("Momo Company");
+    expect(screen.getByLabelText("Contact Person:")).toHaveValue("53007575");
+    expect(screen.getByLabelText("Delivery Address:")).toHaveValue("上水古洞金錢南路140號雙魚小丘 *車邊交收");
+    expect(screen.getByLabelText("Delivery Date:")).toHaveValue("4/9/2026");
+    expect(screen.getByLabelText("Delivery Time:")).toHaveValue("16:45 - 17:15");
+    expect(screen.getByLabelText("產品 1")).toHaveValue("雙格 雞扒意粉");
+    expect(screen.getByLabelText("單價 1")).toHaveValue("45");
+    expect(screen.getByLabelText("付款資料")).toHaveValue("Payment Status: Paid");
   });
 
   it("keeps invoice clauses and signing in document order without manual page controls", async () => {
@@ -199,6 +224,25 @@ describe("Receipt PDF editor", () => {
     expect(screen.queryByRole("main", { name: "發票 PDF 第 2 頁" })).not.toBeInTheDocument();
   });
 
+  it("lets the invoice signature company or customer name be edited", async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={["/orders/order-1/invoice"]}>
+        <Routes>
+          <Route path="/orders/:id/invoice" element={<ReceiptPdfEditorPage documentKind="invoice" loadDetail={vi.fn().mockResolvedValue(result)} loadShippingFees={vi.fn().mockResolvedValue(shippingFees)} />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole("heading", { name: "INVOICE" });
+    await user.click(screen.getByRole("checkbox", { name: "顯示客戶簽署" }));
+    const signatureName = screen.getByLabelText("簽署公司或客戶名稱");
+    expect(signatureName).toHaveValue("Momo Company");
+    await user.clear(signatureName);
+    await user.type(signatureName, "簽名客戶");
+    expect(signatureName).toHaveValue("簽名客戶");
+  });
+
   it("recalculates totals and automatically saves receipt edits", async () => {
     const user = userEvent.setup();
     renderPage();
@@ -206,6 +250,9 @@ describe("Receipt PDF editor", () => {
     await screen.findByRole("heading", { name: "RECEIPT" });
     await user.clear(screen.getByLabelText("單價 1"));
     await user.type(screen.getByLabelText("單價 1"), "50");
+    expect(screen.getByText("$1,650")).toBeInTheDocument();
+    await user.tab();
+    expect(screen.getByText("$1,690")).toBeInTheDocument();
     await user.selectOptions(screen.getByLabelText("運費選項"), "fee-1");
 
     expect(screen.getByText("$1,790")).toBeInTheDocument();
@@ -213,6 +260,32 @@ describe("Receipt PDF editor", () => {
     expect(document.querySelector(".quote-pdf-print-only")).toHaveTextContent("運費－新界區－地面交收");
     await waitFor(() => expect(screen.getByText("已自動儲存")).toBeInTheDocument());
     expect(JSON.parse(window.localStorage.getItem("fccd:receipt-pdf-draft:order-1") || "{}").lines[0].unitPrice).toBe("50");
+  });
+
+  it("repairs zero totals saved by legacy receipt drafts", async () => {
+    localStorage.setItem("fccd:receipt-pdf-draft:order-1", JSON.stringify({
+      lines: result.lines.map((line) => ({
+        id: line.id,
+        description: line.productName,
+        quantity: String(line.quantity),
+        unitPrice: "0",
+      })),
+    }));
+
+    renderPage();
+
+    expect(await screen.findByLabelText("單價 1")).toHaveValue("45");
+    expect(screen.getByText("$1,650")).toBeInTheDocument();
+  });
+
+  it("derives a missing receipt unit price from the saved line total", async () => {
+    renderPage(vi.fn().mockResolvedValue({
+      ...result,
+      lines: [{ ...result.lines[0], unitPrice: null, totalPrice: 630 }],
+    }));
+
+    expect(await screen.findByLabelText("單價 1")).toHaveValue("45");
+    expect(screen.getByText("$660")).toBeInTheDocument();
   });
 
   it("uses only a real receipt reference and keeps payment details in sequence", async () => {
@@ -238,6 +311,23 @@ describe("Receipt PDF editor", () => {
     expect(screen.queryByRole("main", { name: "收據 PDF 第 2 頁" })).not.toBeInTheDocument();
   });
 
+  it("keeps eleven receipt lines on the first sheet instead of splitting after ten", async () => {
+    renderPage(vi.fn().mockResolvedValue({
+      ...result,
+      lines: Array.from({ length: 11 }, (_, index) => ({
+        ...result.lines[0],
+        id: `line-${index + 1}`,
+        productName: `產品 ${index + 1}`,
+      })),
+    }));
+
+    expect(await screen.findByRole("heading", { name: "RECEIPT" })).toBeInTheDocument();
+    const sheets = document.querySelectorAll(".receipt-pdf-sheet");
+    expect(sheets).toHaveLength(1);
+    expect(sheets[0].querySelectorAll(".receipt-pdf-table tbody tr")).toHaveLength(11);
+    expect(sheets[0].querySelector("tfoot")).toBeInTheDocument();
+  });
+
   it("automatically continues long receipt product tables on the next A4 sheet", async () => {
     renderPage(vi.fn().mockResolvedValue({
       ...result,
@@ -251,8 +341,8 @@ describe("Receipt PDF editor", () => {
     expect(await screen.findAllByRole("heading", { name: "RECEIPT" })).toHaveLength(2);
     const sheets = document.querySelectorAll(".receipt-pdf-sheet");
     expect(sheets).toHaveLength(2);
-    expect(sheets[0].querySelectorAll(".receipt-pdf-table tbody tr")).toHaveLength(10);
-    expect(sheets[1].querySelectorAll(".receipt-pdf-table tbody tr")).toHaveLength(8);
+    expect(sheets[0].querySelectorAll(".receipt-pdf-table tbody tr")).toHaveLength(16);
+    expect(sheets[1].querySelectorAll(".receipt-pdf-table tbody tr")).toHaveLength(2);
     expect(sheets[0].querySelector("tfoot")).not.toBeInTheDocument();
     expect(sheets[1].querySelector("tfoot")).toBeInTheDocument();
     expect(within(sheets[1] as HTMLElement).getByLabelText("產品 18")).toHaveValue("產品 18");

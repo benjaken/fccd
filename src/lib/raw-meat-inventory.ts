@@ -1,3 +1,4 @@
+import { coerceMeatQuantityInput } from "@/lib/meat-quantity";
 import { supabase } from "@/lib/supabase";
 
 export const RAW_MEAT_MOVEMENTS_PAGE_SIZE = 15;
@@ -97,6 +98,15 @@ export function roundTo(value: number, digits: number) {
 
 export function parseDecimalInput(value: string) {
   const parsed = Number.parseFloat(value.replace(/[$,\s]/g, ""));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+export function coerceRawMeatQuantityInput(value: string) {
+  return coerceMeatQuantityInput(value);
+}
+
+export function parseRawMeatQuantityInput(value: string) {
+  const parsed = Number.parseFloat(coerceRawMeatQuantityInput(value));
   return Number.isFinite(parsed) ? parsed : null;
 }
 
@@ -422,6 +432,18 @@ export async function updateRawMeatMovementRemark(
   );
   if (error) throw error;
   return (data as string | null) ?? null;
+}
+
+/**
+ * Deletes a raw-meat ledger entry and any stock entry that forms the other
+ * side of the same transaction (for example, a prepared-meat production run).
+ */
+export async function deleteRawMeatMovement(movementId: string): Promise<void> {
+  const { error } = await supabase.rpc("delete_meat_stock_movement", {
+    p_movement_type: "raw",
+    p_movement_id: movementId,
+  });
+  if (error) throw error;
 }
 
 export async function updateRawMeatItemFlags(

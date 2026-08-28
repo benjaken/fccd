@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   collectLineMenuRemarkText,
+  collectFreeDrinkRemarkText,
   extractDeliveryFromRemark,
   extractOptionRemark,
   filterLegacyPaymentDuplicates,
@@ -13,12 +14,21 @@ import {
   orderNeedsTransactionSync,
   planShopifyMenuOptions,
   parseMenuRemark,
+  parseShopifyFreeDrinks,
+  replaceShopifyFreeDrinkSourceLines,
   pickCatalogMatchByName,
   replaceShopifyLunchBoxAggregate,
   resolveShopifyShippingMethodId,
+  resolveShopifyDistrictId,
+  matchShopifyDistrictName,
+  mappedShopifyCityName,
+  shopifyLineRemarksSnapshot,
+  stripParsedMenuRemarksFromLines,
   resolveShopifySkuSnapshot,
   resolveAliasSku,
   shopifyCateringUtensilPacks,
+  shopifyBentoUtensilCount,
+  shopifyCustomizationCostParentName,
   shopifyFinancialStatus,
   shopifyOutstanding,
   shopifyTransactionLegacyId,
@@ -348,6 +358,137 @@ describe("Shopify contact mapping", () => {
 
     expect(mapped!.orderRow.shipping_address_snapshot).toBeNull();
   });
+
+  it("prepends a Shopify city when it is a real district name", () => {
+    const mapped = mapShopifyOrder({
+      order: {
+        id: 2129,
+        name: "K-2129",
+        shipping_address: {
+          address1: "馬鈴徑2-88",
+          city: "屯門",
+          province: "New Territories",
+        },
+        line_items: [],
+      },
+      shopDomain: "test-store.myshopify.com",
+      storeId: "store-uuid",
+      channelId: "channel-uuid",
+    });
+
+    expect(mapped!.orderRow.shipping_address_snapshot).toBe("屯門馬鈴徑2-88");
+    expect(mapped!.districtSources).toMatchObject({
+      city: "屯門",
+      address1: "馬鈴徑2-88",
+    });
+  });
+});
+
+describe("Shopify district mapping", () => {
+  const districts = [
+    { id: "kowloon-bay", name: "九龍灣", driver_team_id: "fleet-1", created_at: "2026-01-01" },
+    { id: "tseung-kwan-o", name: "將軍澳", driver_team_id: "fleet-1", created_at: "2026-01-01" },
+    { id: "tbc", name: "TBC", driver_team_id: null, created_at: "2026-01-01" },
+    { id: "tuen-shared", name: "屯門", driver_team_id: null, created_at: "2026-01-01" },
+    { id: "tuen-fleet", name: "屯門", driver_team_id: "fleet-1", created_at: "2026-01-02" },
+    { id: "sai-kung", name: "西貢", driver_team_id: "fleet-1", created_at: "2026-01-01" },
+    { id: "sha-tin", name: "沙田", driver_team_id: "fleet-1", created_at: "2026-01-01" },
+    { id: "nt", name: "新界", driver_team_id: null, created_at: "2026-01-01" },
+  ];
+
+  it("maps city, English city aliases, and address prefixes", () => {
+    expect(mappedShopifyCityName("Tuen Mun")).toBe("屯門");
+    expect(mappedShopifyCityName("kowloon bay")).toBe("九龍灣");
+    expect(mappedShopifyCityName("Kowloon-Bay")).toBe("九龍灣");
+    expect(mappedShopifyCityName("KowloonBay")).toBe("九龍灣");
+    expect(mappedShopifyCityName("Hong Kong")).toBeNull();
+
+    expect(matchShopifyDistrictName({
+      city: "kowloon bay",
+      province: "Kowloon",
+      address1: "UNIT 501, 5/F,",
+      address2: null,
+      noteDistrict: null,
+    }, districts.map((row) => row.name))).toBe("九龍灣");
+
+    expect(matchShopifyDistrictName({
+      city: "Hong Kong",
+      province: null,
+      address1: "LOHAS Park, Tower 3",
+      address2: null,
+      noteDistrict: null,
+    }, districts.map((row) => row.name))).toBe("將軍澳");
+
+    expect(matchShopifyDistrictName({
+      city: "Hong Kong",
+      province: null,
+      address1: "日出康城第八期 Sea To Sky",
+      address2: null,
+      noteDistrict: null,
+    }, districts.map((row) => row.name))).toBe("將軍澳");
+
+    expect(matchShopifyDistrictName({
+      city: "屯門",
+      province: "New Territories",
+      address1: "馬鈴徑2-88",
+      address2: null,
+      noteDistrict: null,
+    }, districts.map((row) => row.name))).toBe("屯門");
+
+    expect(matchShopifyDistrictName({
+      city: "Tuen Mun",
+      province: null,
+      address1: "馬鈴徑2-88",
+      address2: null,
+      noteDistrict: null,
+    }, districts.map((row) => row.name))).toBe("屯門");
+
+    expect(matchShopifyDistrictName({
+      city: "Hong Kong",
+      province: "New Territories",
+      address1: "西貢康健路泰湖閣海濱別墅16號1樓",
+      address2: null,
+      noteDistrict: null,
+    }, districts.map((row) => row.name))).toBe("西貢");
+
+    expect(matchShopifyDistrictName({
+      city: null,
+      province: null,
+      address1: "新界沙田銀城街30-32號威爾斯親王醫院",
+      address2: null,
+      noteDistrict: null,
+    }, districts.map((row) => row.name))).toBe("沙田");
+  });
+
+  it("prefers a shared district row when the same name exists per fleet", () => {
+    expect(resolveShopifyDistrictId({
+      city: "屯門",
+      province: null,
+      address1: "馬鈴徑2-88",
+      address2: null,
+      noteDistrict: null,
+    }, districts)).toBe("tuen-shared");
+  });
+
+  it("falls back to TBC instead of leaving the district empty", () => {
+    expect(resolveShopifyDistrictId({
+      city: "Hong Kong",
+      province: null,
+      address1: "Unknown Place",
+      address2: null,
+      noteDistrict: null,
+    }, districts)).toBe("tbc");
+  });
+
+  it("reads a district cart attribute when the street has no prefix", () => {
+    expect(matchShopifyDistrictName({
+      city: "Hong Kong",
+      province: null,
+      address1: "馬鈴徑2-88",
+      address2: null,
+      noteDistrict: "屯門",
+    }, districts.map((row) => row.name))).toBe("屯門");
+  });
 });
 
 const CATERING_REMARK = `沙律 必選:
@@ -454,6 +595,56 @@ Yoyo 6553 0678
       { name: "台灣烤香腸 (30條)", quantity: 2 },
       { name: "唐揚炸雞塊 (30件)", quantity: 2 },
       { name: "墨西哥脆片 (2磅)", quantity: 2 },
+    ]);
+  });
+});
+
+describe("parseShopifyFreeDrinks", () => {
+  it("keeps note-attribute names so free drink fields remain detectable", () => {
+    const text = collectFreeDrinkRemarkText({
+      id: 1,
+      note_attributes: [{ name: "免費飲品", value: "檸檬茶 10包，紅茶 10包" }],
+      line_items: [],
+    });
+    expect(parseShopifyFreeDrinks(text)).toEqual([
+      { name: "檸檬茶", quantity: 10, unit: "包" },
+      { name: "紅茶", quantity: 10, unit: "包" },
+    ]);
+  });
+
+  it("extracts every complimentary tea entry from an order note", () => {
+    expect(parseShopifyFreeDrinks(
+      "免費飲品：烏龍茶 26包，檸檬茶 x 26包\n送貨前致電",
+    )).toEqual([
+      { name: "烏龍茶", quantity: 26, unit: "包" },
+      { name: "檸檬茶", quantity: 26, unit: "包" },
+    ]);
+  });
+
+  it("aggregates repeated tea rows and supports English quantities", () => {
+    expect(parseShopifyFreeDrinks(
+      "Complimentary drinks\nLemon Tea 6 packs\nLemon Tea 4 packs",
+    )).toEqual([{ name: "Lemon Tea", quantity: 10, unit: "包" }]);
+  });
+
+  it("keeps unmatched tea bags even without a catalog/free marker", () => {
+    expect(parseShopifyFreeDrinks("茉莉花茶 20包")).toEqual([
+      { name: "茉莉花茶", quantity: 20, unit: "包" },
+    ]);
+    expect(parseShopifyFreeDrinks("客人想飲茶，送貨前致電")).toEqual([]);
+  });
+
+  it("replaces the original free tea row while retaining paid drinks", () => {
+    const replacements = parseShopifyFreeDrinks(
+      "免費飲品：檸檬茶 10包，紅茶 10包",
+    );
+    expect(replaceShopifyFreeDrinkSourceLines([
+      { product_name_snapshot: "烏龍茶 20包", unit_price: 0 },
+      { product_name_snapshot: "道地蜂蜜綠茶 (6包)", unit_price: 28 },
+      { product_name_snapshot: "免費紙巾", unit_price: 0 },
+    ], replacements)).toEqual([
+      { product_name_snapshot: "道地蜂蜜綠茶 (6包)", unit_price: 28 },
+      { product_name_snapshot: "免費紙巾", unit_price: 0 },
     ]);
   });
 });
@@ -574,6 +765,56 @@ describe("mapShopifyOrder remark collection", () => {
     ]);
   });
 
+  it("drops package menu properties from remarks after they become product lines", () => {
+    const properties = [
+      { name: "必選", value: "醬香牛展拌粉皮 (1磅), 川式涼拌青瓜魚片 (1磅)" },
+      { name: "internal_id", value: "2420" },
+      { name: "Custom Product", value: "2420" },
+    ];
+    expect(shopifyLineRemarksSnapshot({ properties })).toContain("醬香牛展拌粉皮");
+    expect(shopifyLineRemarksSnapshot({ properties, omitMenuSelections: true }))
+      .toBeNull();
+
+    const stripped = stripParsedMenuRemarksFromLines({
+      lines: [{
+        shopify_line_id: 88,
+        remarks_1: "醬香牛展拌粉皮 (1磅), 川式涼拌青瓜魚片 (1磅)\nCustom Product: 2420",
+        product_name_snapshot: "【2026中秋】中秋中菜到會 (10-12人)",
+      }],
+      parsedSourceLineIds: [88],
+      mappedLines: [{
+        lineId: 88,
+        properties,
+        variantTitle: null,
+        row: { product_name_snapshot: "【2026中秋】中秋中菜到會 (10-12人)" },
+      }],
+      lunchBox: false,
+    });
+    expect(stripped[0].remarks_1).toBeNull();
+  });
+
+  it("does not import Custom Product markers into order remarks", () => {
+    const mapped = mapShopifyOrder({
+      order: {
+        id: 556,
+        name: "#5002",
+        note: "Custom Product: 2420\n需要侍應",
+        note_attributes: [
+          { name: "Custom Product", value: "2420" },
+          { name: "其他備註", value: "請提前通知" },
+        ],
+        line_items: [],
+      },
+      shopDomain: "test-store.myshopify.com",
+      storeId: "store-uuid",
+      channelId: "channel-uuid",
+    });
+
+    expect(mapped).not.toBeNull();
+    expect(mapped!.remark).toBe("需要侍應\n請提前通知");
+    expect(mapped!.orderRow.customer_note_snapshot).toBe("需要侍應");
+  });
+
   it("keeps the gross product price while discount and shipping stay at order level", () => {
     const mapped = mapShopifyOrder({
       order: {
@@ -643,6 +884,37 @@ describe("mapShopifyOrder remark collection", () => {
     expect(plan.consumedAddonLegacyIds).toEqual(["addon-10", "addon-40"]);
   });
 
+  it("reads a surcharge written beside the dish and drops the customization heading", () => {
+    expect(parseMenuRemark(`中式小菜 3選1:
+薑蔥霸王雞 (1隻) [ $40.00 ]
+
+中式小菜 2選1:
+龍躉兩食 (粉絲金菇蒸頭腩+荷豆炒龍躉) [ $100.00 ]`)).toEqual([
+      { name: "薑蔥霸王雞 (1隻)", quantity: 1, surcharge: 40 },
+      { name: "龍躉兩食 (粉絲金菇蒸頭腩+荷豆炒龍躉)", quantity: 1, surcharge: 100 },
+    ]);
+
+    const plan = planShopifyMenuOptions({
+      sources: [{
+        lineId: 30,
+        parentItemOrder: 2,
+        parentPackageId: "package-ccma0810",
+        text: "中式小菜 3選1:\n薑蔥霸王雞 (1隻) [ $40.00 ]",
+      }],
+      addonCandidates: [],
+    });
+    expect(plan.options[0]).toMatchObject({
+      name: "薑蔥霸王雞 (1隻)",
+      itemOrder: 2.001,
+      parentPackageId: "package-ccma0810",
+      unitPrice: 40,
+      totalPrice: 40,
+    });
+    expect(shopifyCustomizationCostParentName(
+      "Customization Cost for 【2026中秋】賞月到會套餐 (8-10人)",
+    )).toBe("【2026中秋】賞月到會套餐 (8-10人)");
+  });
+
   it("derives free six-person utensil packs from catering package capacity", () => {
     expect(shopifyCateringUtensilPacks([
       { packageId: "package-1", name: "精緻中式盛宴 (8-10人)", quantity: 1 },
@@ -651,6 +923,15 @@ describe("mapShopifyOrder remark collection", () => {
     expect(shopifyCateringUtensilPacks([
       { packageId: "package-1", name: "精緻中式盛宴 (8-10人)", quantity: 2 },
     ])).toBe(4);
+  });
+
+  it("counts one utensil set for every dish containing 便當", () => {
+    expect(shopifyBentoUtensilCount([
+      { name: "咖喱吉列豬扒便當", quantity: 5 },
+      { name: "咖喱唐揚雞塊便當", quantity: 5 },
+      { name: "鹽酥雞排滷肉便當", quantity: 5 },
+      { name: "粟米魚塊欖菜炒飯", sku: "CBECH06", quantity: 5 },
+    ])).toBe(20);
   });
 });
 

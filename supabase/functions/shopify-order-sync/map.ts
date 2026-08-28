@@ -279,12 +279,10 @@ export function shopifyOutstanding(order: ShopifyRestOrder): number | null {
 
 function joinAddress(address: ShopifyRestAddress | null | undefined): string | null {
   if (!address) return null;
-  const parts = [
-    address.address1,
-  ]
-    .map((part) => String(part ?? "").trim())
-    .filter(Boolean);
-  return parts.length ? parts.join(", ") : null;
+  const street = String(address.address1 ?? "").trim();
+  const city = mappedShopifyCityName(address.city);
+  if (city && street && !street.includes(city)) return `${city}${street}`;
+  return street || city || null;
 }
 
 export function shopifyShippingMethodTitle(
@@ -319,6 +317,285 @@ export function resolveShopifyShippingMethodId(
   return candidates.find((candidate) =>
     normalizedTitle.includes(normalize(candidate.name))
   )?.id ?? null;
+}
+
+const GENERIC_SHOPIFY_CITIES = new Set([
+  "hong kong",
+  "hongkong",
+  "hk",
+  "香港",
+  "china",
+  "中國",
+  "prc",
+]);
+
+const GENERIC_DISTRICT_NAMES = new Set(["新界", "九龍", "香港", "TBC", "按要求"]);
+
+/** English city labels used by Shopify Hong Kong checkouts. */
+const SHOPIFY_CITY_ALIASES: Record<string, string> = {
+  "aberdeen": "香港仔",
+  "admiralty": "金鐘",
+  "anderson": "安達臣",
+  "ap lei chau": "鴨脷洲",
+  "austin": "柯士甸",
+  "braemar hill": "寶馬山",
+  "causeway bay": "銅鑼灣",
+  "central": "中環",
+  "central mid levels": "中半山",
+  "chai wan": "柴灣",
+  "chek lap kok": "赤鱲角",
+  "cheung sha wan": "長沙灣",
+  "clear water bay": "清水灣",
+  "cyberport": "數碼港",
+  "diamond hill": "鑽石山",
+  "discovery bay": "愉景灣",
+  "east mid levels": "東半山",
+  "fanling": "粉嶺",
+  "fo tan": "火炭",
+  "fortress hill": "炮台山",
+  "hang hau": "坑口",
+  "happy valley": "跑馬地",
+  "ho man tin": "何文田",
+  "hung hom": "紅磡",
+  "jardines lookout": "渣甸山",
+  "jordan": "佐敦",
+  "kai tak": "啟德",
+  "kennedy town": "堅尼地城",
+  "kowloon bay": "九龍灣",
+  "kowloon city": "九龍城",
+  "kowloon tong": "九龍塘",
+  "kwai fong": "葵芳",
+  "kwai hing": "葵興",
+  "kwai chung": "葵涌",
+  "kwun tong": "觀塘",
+  "lai chi kok": "荔枝角",
+  "lam tin": "藍田",
+  "lau fau shan": "流浮山",
+  "lei yue mun": "鯉魚門",
+  "lohas park": "將軍澳",
+  "lok fu": "樂富",
+  "lok ma chau": "落馬洲",
+  "ma on shan": "馬鞍山",
+  "ma tau wai": "馬頭圍",
+  "ma wan": "馬灣",
+  "mei foo": "美孚",
+  "mid levels": "半山",
+  "mong kok": "旺角",
+  "ngau chi wan": "牛池灣",
+  "ngau tau kok": "牛頭角",
+  "north point": "北角",
+  "pak shek kok": "白石角",
+  "pok fu lam": "薄扶林",
+  "prince edward": "太子",
+  "quarry bay": "鰂魚涌",
+  "repulse bay": "淺水灣",
+  "sai kung": "西貢",
+  "sai wan ho": "西灣河",
+  "sai ying pun": "西營盤",
+  "science park": "科學園",
+  "sha tin": "沙田",
+  "shatin": "沙田",
+  "sham shui po": "深水埗",
+  "shau kei wan": "筲箕灣",
+  "shek kip mei": "石硤尾",
+  "shek mun": "石門",
+  "sheung shui": "上水",
+  "sheung wan": "上環",
+  "siu sai wan": "小西灣",
+  "stanley": "赤柱",
+  "tai hang": "大坑",
+  "tai kok tsui": "大角咀",
+  "tai po": "大埔",
+  "tai tam": "大潭",
+  "tai wai": "大圍",
+  "tai wo hau": "大窩口",
+  "tin shui wai": "天水圍",
+  "tsim sha tsui": "尖沙咀",
+  "tsing yi": "青衣",
+  "tsueng kwan o": "將軍澳",
+  "tseung kwan o": "將軍澳",
+  "tsuen wan": "荃灣",
+  "tuen mun": "屯門",
+  "tung chung": "東涌",
+  "wan chai": "灣仔",
+  "west kowloon": "西九龍",
+  "whampoa": "黃埔",
+  "wong chuk hang": "黃竹坑",
+  "wong tai sin": "黃大仙",
+  "wu kai sha": "烏溪沙",
+  "yau ma tei": "油麻地",
+  "yau tong": "油塘",
+  "yuen long": "元朗",
+  "日出康城": "將軍澳",
+};
+
+const SHOPIFY_DISTRICT_ALIAS_ENTRIES = Object.entries(SHOPIFY_CITY_ALIASES)
+  .map(([alias, district]) => [normalizeDistrictLabel(alias), district] as const)
+  .sort(([left], [right]) => right.length - left.length);
+
+export type ShopifyDistrictSources = {
+  city: string | null;
+  province: string | null;
+  address1: string | null;
+  address2: string | null;
+  noteDistrict: string | null;
+};
+
+export function extractShopifyDistrictSources(
+  order: ShopifyRestOrder,
+): ShopifyDistrictSources {
+  const notes = attrMap(order.note_attributes);
+  return {
+    city: order.shipping_address?.city?.trim() || null,
+    province: order.shipping_address?.province?.trim() || null,
+    address1: order.shipping_address?.address1?.trim() || null,
+    address2: order.shipping_address?.address2?.trim() || null,
+    noteDistrict: firstAttr(notes, [
+      "district",
+      "delivery district",
+      "delivery_district",
+      "地區",
+      "送貨地區",
+    ]),
+  };
+}
+
+function normalizeDistrictLabel(value: string | null | undefined) {
+  return String(value ?? "")
+    .trim()
+    .replace(/,?\s*(hong kong|香港)$/i, "")
+    .replace(/\s+/g, " ")
+    .normalize("NFKC")
+    .toLocaleLowerCase("zh-HK");
+}
+
+function isGenericShopifyCity(value: string | null | undefined) {
+  const normalized = normalizeDistrictLabel(value);
+  return !normalized || GENERIC_SHOPIFY_CITIES.has(normalized);
+}
+
+export function mappedShopifyCityName(value: string | null | undefined) {
+  const normalized = normalizeDistrictLabel(value);
+  if (!normalized || isGenericShopifyCity(normalized)) return null;
+  const compact = normalized.replace(/[\s_-]+/g, "");
+  const alias = SHOPIFY_DISTRICT_ALIAS_ENTRIES.find(([candidate]) =>
+    candidate === normalized || candidate.replace(/[\s_-]+/g, "") === compact
+  );
+  return alias?.[1] ?? value?.trim() ?? null;
+}
+
+function mappedShopifyDistrictPrefix(value: string | null | undefined) {
+  const normalized = normalizeDistrictLabel(value).replace(/[-_]+/g, " ");
+  if (!normalized) return null;
+  const match = SHOPIFY_DISTRICT_ALIAS_ENTRIES.find(([alias]) =>
+    normalized === alias || normalized.startsWith(`${alias} `) ||
+    normalized.startsWith(`${alias},`) ||
+    (/\p{Script=Han}/u.test(alias) && normalized.startsWith(alias))
+  );
+  return match?.[1] ?? null;
+}
+
+function stripDistrictPrefix(value: string, prefix: string) {
+  if (value.length <= prefix.length || !value.startsWith(prefix)) return value;
+  const rest = value.slice(prefix.length).replace(/^[\s,，]+/, "").trim();
+  return rest || value;
+}
+
+function longestDistrictPrefix(
+  text: string,
+  names: readonly string[],
+  allowGeneric: boolean,
+) {
+  let matched: string | null = null;
+  for (const name of names) {
+    const district = name.trim();
+    if (!district || !text.startsWith(district)) continue;
+    if (!allowGeneric && GENERIC_DISTRICT_NAMES.has(district)) continue;
+    if (!matched || district.length > matched.length) matched = district;
+  }
+  return matched;
+}
+
+export function matchShopifyDistrictName(
+  sources: ShopifyDistrictSources,
+  districtNames: readonly string[],
+): string | null {
+  const names = districtNames.map((name) => name.trim()).filter(Boolean);
+  if (!names.length) return null;
+
+  const city = mappedShopifyCityName(sources.city);
+  const texts = [
+    sources.noteDistrict,
+    city,
+    sources.address1,
+    city && sources.address1 && !sources.address1.includes(city)
+      ? `${city}${sources.address1}`
+      : null,
+    sources.address2,
+  ].flatMap((value) => {
+    const text = String(value ?? "").trim();
+    return text ? [text] : [];
+  });
+
+  for (const text of texts) {
+    const aliased = mappedShopifyDistrictPrefix(text);
+    const aliasMatch = aliased && names.find((name) =>
+      normalizeDistrictLabel(name) === normalizeDistrictLabel(aliased)
+    );
+    if (aliasMatch && !GENERIC_DISTRICT_NAMES.has(aliasMatch)) return aliasMatch;
+
+    const exact = names.find((name) =>
+      normalizeDistrictLabel(name) === normalizeDistrictLabel(text)
+    );
+    if (exact && !GENERIC_DISTRICT_NAMES.has(exact)) return exact;
+  }
+
+  let best: string | null = null;
+  for (const text of texts) {
+    const attempts = [...new Set([
+      text,
+      stripDistrictPrefix(text, "香港新界"),
+      stripDistrictPrefix(text, "香港"),
+      stripDistrictPrefix(text, "新界"),
+      stripDistrictPrefix(text, "九龍"),
+    ])];
+    for (const attempt of attempts) {
+      const specific = longestDistrictPrefix(attempt, names, false);
+      if (specific && (!best || specific.length > best.length)) best = specific;
+    }
+  }
+  if (best) return best;
+
+  for (const text of texts) {
+    const generic = longestDistrictPrefix(text, names, true);
+    if (generic && (!best || generic.length > best.length)) best = generic;
+  }
+  return best;
+}
+
+export function resolveShopifyDistrictId(
+  sources: ShopifyDistrictSources,
+  districts: Array<{
+    id: string;
+    name: string | null;
+    driver_team_id?: string | null;
+    created_at?: string | null;
+  }>,
+): string | null {
+  const matchedName = matchShopifyDistrictName(
+    sources,
+    districts.map((district) => district.name ?? ""),
+  );
+  const needle = normalizeDistrictLabel(matchedName ?? "TBC");
+  return districts
+    .filter((district) => normalizeDistrictLabel(district.name) === needle)
+    .sort((left, right) => {
+      const leftTeam = left.driver_team_id ? 1 : 0;
+      const rightTeam = right.driver_team_id ? 1 : 0;
+      if (leftTeam !== rightTeam) return leftTeam - rightTeam;
+      return String(left.created_at ?? "").localeCompare(String(right.created_at ?? "")) ||
+        left.id.localeCompare(right.id);
+    })[0]?.id ?? null;
 }
 
 /** Keep Hong Kong Shopify phone numbers local in the operational snapshot. */
@@ -378,6 +655,8 @@ export function mapShopifyOrder(input: {
   outstanding: number | null;
   remark: string | null;
   shippingMethodTitle: string | null;
+  districtSources: ShopifyDistrictSources;
+  hasDistrictHint: boolean;
   orderRow: Record<string, unknown>;
   lines: Array<{
     lineId: number;
@@ -391,8 +670,10 @@ export function mapShopifyOrder(input: {
   if (!orderId) return null;
   const orderNumber = String(input.order.name ?? `#${orderId}`).trim();
   const remark = collectRemarkText(input.order);
+  const freeDrinkRemark = collectFreeDrinkRemarkText(input.order);
   const delivery = extractDeliveryFields(input.order);
   const remarkDelivery = extractDeliveryFromRemark(remark);
+  const districtSources = extractShopifyDistrictSources(input.order);
   const shippingFee = (input.order.shipping_lines ?? []).reduce(
     (sum, line) => sum + money(line.price),
     0,
@@ -422,7 +703,7 @@ export function mapShopifyOrder(input: {
         input.order.customer?.phone,
     ),
     shipping_address_snapshot: joinAddress(input.order.shipping_address),
-    customer_note_snapshot: input.order.note?.trim() || null,
+    customer_note_snapshot: stripShopifyCustomProductRemark(input.order.note),
     currency,
     discount_amount: money(input.order.total_discounts),
     shipping_fee: shippingFee,
@@ -478,26 +759,130 @@ export function mapShopifyOrder(input: {
     financialStatus,
     outstanding,
     remark,
+    freeDrinkRemark,
     shippingMethodTitle: shopifyShippingMethodTitle(input.order),
+    districtSources,
+    hasDistrictHint: Boolean(
+      districtSources.noteDistrict ||
+        districtSources.city ||
+        districtSources.address1,
+    ),
     orderRow,
     lines,
   };
 }
 
+const SHOPIFY_CUSTOM_PRODUCT_LABEL =
+  /^\s*custom\s+product(?:\s*[:：].*)?\s*$/i;
+
+export function isShopifyCustomProductProperty(
+  property: { name?: string; value?: string | null },
+): boolean {
+  const name = String(property.name ?? "").replace(/^_+/, "").trim();
+  return SHOPIFY_CUSTOM_PRODUCT_LABEL.test(name);
+}
+
+export function stripShopifyCustomProductRemark(
+  value: string | null | undefined,
+): string | null {
+  const lines = String(value ?? "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && !SHOPIFY_CUSTOM_PRODUCT_LABEL.test(line));
+  return lines.join("\n") || null;
+}
+
 /**
  * Collects the free-form remark text attached to an order. The catering store
  * keeps the selected menu options (and delivery date/time) inside the order
- * note and its note_attributes, so both are merged here.
+ * note and its note_attributes, so both are merged here. Shopify's
+ * "Custom Product: <id>" metadata is an internal option-app marker, not a
+ * customer remark.
  */
 export function collectRemarkText(order: ShopifyRestOrder): string | null {
   const parts: string[] = [];
-  if (order.note?.trim()) parts.push(order.note.trim());
+  const note = stripShopifyCustomProductRemark(order.note);
+  if (note) parts.push(note);
   for (const attr of order.note_attributes ?? []) {
-    const value = String(attr.value ?? "").trim();
+    if (isShopifyCustomProductProperty(attr)) continue;
+    const value = stripShopifyCustomProductRemark(attr.value);
     if (value) parts.push(value);
   }
   const merged = parts.join("\n").trim();
   return merged || null;
+}
+
+export function collectFreeDrinkRemarkText(
+  order: ShopifyRestOrder,
+): string | null {
+  const parts: string[] = [];
+  const note = stripShopifyCustomProductRemark(order.note);
+  if (note) parts.push(note);
+  for (const attr of order.note_attributes ?? []) {
+    if (isShopifyCustomProductProperty(attr)) continue;
+    const value = stripShopifyCustomProductRemark(attr.value);
+    if (!value) continue;
+    parts.push(`${String(attr.name ?? "").replace(/^_+/, "").trim()}: ${value}`);
+  }
+  return parts.join("\n").trim() || null;
+}
+
+export type ShopifyFreeDrink = {
+  name: string;
+  quantity: number;
+  unit: string;
+};
+
+/** Extracts tea manifests from Shopify order notes. A catalog/SKU match is not
+ * required, but an explicit numeric quantity is, so unmatched tea bags are
+ * retained without turning a casual mention of tea into an order line. */
+export function parseShopifyFreeDrinks(
+  remark: string | null | undefined,
+): ShopifyFreeDrink[] {
+  const text = String(remark ?? "").trim();
+  if (!text) return [];
+
+  const totals = new Map<string, ShopifyFreeDrink>();
+  const pattern = /([^\n,，;；:：]{1,40}?(?:茶|tea))\s*(?:[xX×*]\s*)?(\d+(?:\.\d+)?)\s*(包|盒|罐|樽|支|杯|份|packs?|boxes?|cans?|bottles?)?/gi;
+  for (const match of text.matchAll(pattern)) {
+    const name = match[1]
+      .replace(/^(?:免費(?:的)?(?:飲品|茶)?|(?:free|complimentary)\s*(?:drink|tea|beverage)?)[\s:：-]*/i, "")
+      .trim();
+    const quantity = Number(match[2]);
+    if (!name || !Number.isFinite(quantity) || quantity <= 0) continue;
+    const rawUnit = String(match[3] ?? "").toLowerCase();
+    const unit = /^(?:box|boxes)$/.test(rawUnit)
+      ? "盒"
+      : /^(?:can|cans)$/.test(rawUnit)
+      ? "罐"
+      : /^(?:bottle|bottles)$/.test(rawUnit)
+      ? "樽"
+      : /^(?:pack|packs)$/.test(rawUnit)
+      ? "包"
+      : rawUnit || "包";
+    const key = normalizeNameForMatch(name);
+    const current = totals.get(key);
+    totals.set(key, {
+      name: current?.name ?? name,
+      quantity: (current?.quantity ?? 0) + quantity,
+      unit: current?.unit ?? unit,
+    });
+  }
+  return [...totals.values()];
+}
+
+/** A complimentary tea manifest in the note is authoritative. Remove only
+ * zero-price tea source rows; paid beverages and unrelated free items remain. */
+export function replaceShopifyFreeDrinkSourceLines(
+  lines: Array<Record<string, unknown>>,
+  replacements: ShopifyFreeDrink[],
+): Array<Record<string, unknown>> {
+  if (!replacements.length) return lines;
+  return lines.filter((line) => {
+    const name = String(line.product_name_snapshot ?? "");
+    const unitPrice = Number(line.unit_price ?? 0);
+    return unitPrice !== 0 || !/(?:茶|tea)/i.test(name);
+  });
 }
 
 const PAYMENT_KINDS = new Set(["sale", "capture"]);
@@ -512,6 +897,7 @@ export function orderNeedsTransactionSync(order: ShopifyRestOrder): boolean {
 export type MenuOption = {
   name: string;
   quantity: number;
+  surcharge?: number | null;
 };
 
 export type ShopifyMenuRemarkSource = {
@@ -571,8 +957,22 @@ export function replaceShopifyLunchBoxAggregate(input: {
   };
 }
 
+function splitMenuOptionSurcharge(value: string): {
+  text: string;
+  surcharge: number | null;
+} {
+  const match = value.match(/^(.*?)\s*\[\s*\$?\s*([\d,]+(?:\.\d+)?)\s*\]\s*$/);
+  if (!match) return { text: value.trim(), surcharge: null };
+  const amount = Number(match[2].replace(/,/g, ""));
+  return {
+    text: match[1].trim(),
+    surcharge: Number.isFinite(amount) ? amount : null,
+  };
+}
+
 function splitMenuOptionQuantity(value: string): MenuOption | null {
-  const item = value.replace(/\s+/g, " ").trim();
+  const { text, surcharge } = splitMenuOptionSurcharge(value);
+  const item = text.replace(/\s+/g, " ").trim();
   if (!item) return null;
 
   // Shopify option apps are not consistent: the multiplier may be written as
@@ -586,9 +986,18 @@ function splitMenuOptionQuantity(value: string): MenuOption | null {
   const quantity = quantityMatch
     ? Number(quantityMatch[2] ?? quantityMatch[3])
     : 1;
-  return name && Number.isFinite(quantity) && quantity > 0
-    ? { name, quantity }
-    : null;
+  if (!name || !Number.isFinite(quantity) || quantity <= 0) return null;
+  return surcharge == null ? { name, quantity } : { name, quantity, surcharge };
+}
+
+/** Shopify's option app emits a SKU-less "Customization Cost for {package}"
+ * heading whose properties are the real dish choices. */
+export function shopifyCustomizationCostParentName(
+  title: string | null | undefined,
+): string | null {
+  const match = String(title ?? "").trim().match(/^Customization Cost for\s+(.+)$/i);
+  const parent = match?.[1].trim() || null;
+  return parent || null;
 }
 
 /**
@@ -713,7 +1122,10 @@ export function planShopifyMenuOptions(input: {
       const itemOrder = source.parentItemOrder === null
         ? detachedOrder++
         : Number((source.parentItemOrder + (optionIndex + 1) / 1000).toFixed(3));
-      const totalPrice = addon?.totalPrice ?? null;
+      const surchargeTotal = option.surcharge == null
+        ? null
+        : option.surcharge * option.quantity;
+      const totalPrice = addon?.totalPrice ?? surchargeTotal;
       options.push({
         ...option,
         lineId: source.lineId,
@@ -748,23 +1160,128 @@ export function shopifyCateringUtensilPacks(
   }, 0);
 }
 
+/** Every dish whose customer-facing name contains "便當" receives one
+ * disposable utensil set per ordered serving, regardless of Shopify store. */
+export function shopifyBentoUtensilCount(
+  lines: Array<{ name: string | null; sku?: string | null; quantity: number }>,
+): number {
+  return lines.reduce((total, line) =>
+    (line.name?.includes("便當") || /^CBE/i.test(line.sku ?? "")) &&
+      line.quantity > 0
+      ? total + line.quantity
+      : total, 0);
+}
+
 /** Rebuilds menu sections when Shopify stores the heading in a property name
  * and the comma-separated selections in its value. */
+export function isShopifyMenuSelectionProperty(
+  property: { name?: string; value?: string | null },
+): boolean {
+  const name = String(property.name ?? "").replace(/^_+/, "").trim();
+  const value = String(property.value ?? "").trim();
+  if (!value) return false;
+  if (parseMenuRemark(value).length) return true;
+  if (/(?:必選|選\s*\d+|\d+\s*選\s*\d+)/.test(name)) {
+    return parseMenuRemark(`${name.replace(/[:：]\s*$/, "")}:\n${value}`).length > 0;
+  }
+  return false;
+}
+
 export function collectLineMenuRemarkText(
   properties: Array<{ name?: string; value?: string | null }>,
 ): string | null {
   const blocks: string[] = [];
   for (const property of properties) {
+    if (!isShopifyMenuSelectionProperty(property)) continue;
     const name = String(property.name ?? "").replace(/^_+/, "").trim();
     const value = String(property.value ?? "").trim();
-    if (!value) continue;
-    if (parseMenuRemark(value).length) {
-      blocks.push(value);
-    } else if (/(?:必選|選\s*\d+|\d+\s*選\s*\d+)/.test(name)) {
-      blocks.push(`${name.replace(/[:：]\s*$/, "")}:\n${value}`);
-    }
+    if (parseMenuRemark(value).length) blocks.push(value);
+    else blocks.push(`${name.replace(/[:：]\s*$/, "")}:\n${value}`);
   }
   return blocks.join("\n\n") || null;
+}
+
+const IGNORED_LINE_PROPERTY_NAME =
+  /(?:飲品|drink|beverage|pickup|delivery|送貨|日期|時間|internal_id)/i;
+
+/** Line remarks after Shopify option properties have been turned into child
+ * product rows. Menu selections are omitted so the package does not repeat
+ * the same dishes as free-form notes. */
+export function shopifyLineRemarksSnapshot(input: {
+  properties: Array<{ name?: string; value?: string | null }>;
+  optionRemark?: string | null;
+  variantRemark?: string | null;
+  existing?: unknown;
+  omitMenuSelections?: boolean;
+}): string | null {
+  const propertyRemark = input.properties
+    .map((property) => ({
+      name: String(property.name ?? ""),
+      value: stripShopifyCustomProductRemark(property.value),
+    }))
+    .filter((property) =>
+      Boolean(property.value) &&
+      !/^_/.test(property.name) &&
+      !isShopifyCustomProductProperty(property) &&
+      !IGNORED_LINE_PROPERTY_NAME.test(property.name) &&
+      (!input.omitMenuSelections || !isShopifyMenuSelectionProperty(property))
+    )
+    .map((property) => property.value)
+    .join("\n") || null;
+  return [
+    input.omitMenuSelections ? null : input.optionRemark,
+    propertyRemark,
+    input.variantRemark ?? null,
+    typeof input.existing === "string" ? input.existing : null,
+  ]
+    .map((value) => stripShopifyCustomProductRemark(value))
+    .filter((value): value is string => typeof value === "string" && Boolean(value.trim()))
+    .filter((value, index, values) => values.indexOf(value) === index)
+    .join("\n") || null;
+}
+
+export function stripParsedMenuRemarksFromLines(input: {
+  lines: Array<Record<string, unknown>>;
+  parsedSourceLineIds: Iterable<number>;
+  mappedLines: Array<{
+    lineId: number;
+    properties: Array<{ name?: string; value?: string | null }>;
+    variantTitle: string | null;
+    row: Record<string, unknown>;
+  }>;
+  lunchBox: boolean;
+}): Array<Record<string, unknown>> {
+  const parsed = new Set([...input.parsedSourceLineIds].filter((lineId) => lineId > 0));
+  if (!parsed.size) return input.lines;
+  const sourceByLineId = new Map(input.mappedLines.map((line) => {
+    const rawName = (line.row.product_name_snapshot as string | null) ?? null;
+    const variantParts = (line.variantTitle ?? "")
+      .split("/")
+      .map((part) => part.trim())
+      .filter(Boolean);
+    return [line.lineId, {
+      properties: line.properties,
+      optionRemark: extractOptionRemark(rawName),
+      variantRemark: input.lunchBox
+        ? variantParts.slice(0, -1).join("\n") || null
+        : null,
+    }] as const;
+  }));
+  return input.lines.map((row) => {
+    const lineId = numericId(row.shopify_line_id as number | string | null);
+    if (!lineId || !parsed.has(lineId)) return row;
+    const source = sourceByLineId.get(lineId);
+    return {
+      ...row,
+      remarks_1: shopifyLineRemarksSnapshot({
+        properties: source?.properties ?? [],
+        optionRemark: source?.optionRemark ?? null,
+        variantRemark: source?.variantRemark ?? null,
+        existing: null,
+        omitMenuSelections: true,
+      }),
+    };
+  });
 }
 
 export function normalizeNameForMatch(value: string | null | undefined): string {

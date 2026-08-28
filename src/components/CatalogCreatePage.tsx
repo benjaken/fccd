@@ -1,27 +1,51 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { Fragment, useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { PackagePlus, ShoppingBasket } from "lucide-react";
+import { PackagePlus, Plus, ShoppingBasket, Trash2, X } from "lucide-react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { FilterableSelect } from "@/components/ui/filterable-select";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { PackageProductSearch } from "@/components/PackageDetailPage";
 import { DICT_TYPE, dictSelectOptions, useDictItems } from "@/lib/dictionaries";
 import { createPackage, type PackageCreateInput } from "@/lib/packages";
 import {
   createProduct,
   fetchProductEditOptions,
+  searchCatalogProducts,
+  type CatalogOption,
   type ProductCreateInput,
   type ProductEditOptions,
 } from "@/lib/products";
 
 const EMPTY_OPTIONS: ProductEditOptions = {
   channels: [], productTypes: [], cookTypes: [], collections: [],
-  packingMaterials: [], catalogIngredients: [],
+  packingMaterials: [], packingSupplies: [], catalogIngredients: [],
+};
+
+type PendingMaterial = { ingredientId: string; name: string; quantity: number };
+type PendingLabel = {
+  displayA: string;
+  displayB: string;
 };
 
 type CatalogKind = "product" | "package";
+
+type PendingPackageProduct = {
+  productId: string;
+  name: string;
+  sku?: string | null;
+  quantity: number;
+  addonPrice: number;
+};
+
+type PendingChoiceSet = {
+  id: string;
+  name: string;
+  maximumChoices: number;
+  products: PendingPackageProduct[];
+};
 
 export function CatalogCreatePage({
   kind,
@@ -29,12 +53,14 @@ export function CatalogCreatePage({
   loadOptions = fetchProductEditOptions,
   saveProduct = createProduct,
   savePackage = createPackage,
+  searchProducts = searchCatalogProducts,
 }: {
   kind: CatalogKind;
   canCreate?: boolean;
   loadOptions?: (channelId?: string) => Promise<ProductEditOptions>;
   saveProduct?: (input: ProductCreateInput) => Promise<string>;
   savePackage?: (input: PackageCreateInput) => Promise<string>;
+  searchProducts?: (term: string) => Promise<CatalogOption[]>;
 }) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -49,6 +75,16 @@ export function CatalogCreatePage({
     status: "Active", description: "", productTypeId: "", cookTypeId: "",
     collectionIds: [] as string[], isBentoRecommended: false,
   });
+  const [premiumIngredients, setPremiumIngredients] = useState<PendingMaterial[]>([]);
+  const [packingSupplies, setPackingSupplies] = useState<PendingMaterial[]>([]);
+  const [materialDraft, setMaterialDraft] = useState({
+    premiumId: "", premiumQty: "1", packingId: "", packingQty: "1",
+  });
+  const [labels, setLabels] = useState<PendingLabel[]>([]);
+  const [labelDraft, setLabelDraft] = useState({ displayA: "", displayB: "" });
+  const [choiceSets, setChoiceSets] = useState<PendingChoiceSet[]>([]);
+  const [choiceSetDraft, setChoiceSetDraft] = useState({ name: "", maximumChoices: "1" });
+  const [searchingChoiceSetId, setSearchingChoiceSetId] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -93,11 +129,19 @@ export function CatalogCreatePage({
             isBentoRecommended: form.isBentoRecommended,
             channelId: form.channelId, productTypeId: form.productTypeId,
             cookTypeId: form.cookTypeId || null, collectionIds: form.collectionIds,
+            premiumIngredients: premiumIngredients.map(({ ingredientId, quantity }) => ({ ingredientId, quantity })),
+            packingSupplies: packingSupplies.map(({ ingredientId, quantity }) => ({ ingredientId, quantity })),
+            labels: labels.map(({ displayA, displayB }) => ({ displayA, displayB, packingMaterialId: null })),
           })
         : await savePackage({
             sku: form.sku, name: form.name, chineseName: form.chineseName,
             description: form.description, price, status: form.status,
             channelId: form.channelId,
+            choiceSets: choiceSets.map(({ name, maximumChoices, products }) => ({
+              name,
+              maximumChoices,
+              products: products.map(({ productId, quantity, addonPrice }) => ({ productId, quantity: Math.max(1, quantity), addonPrice })),
+            })),
           });
       navigate(kind === "product" ? `/products/${id}` : `/products/packages/${id}`, { replace: true });
     } catch {
@@ -122,6 +166,59 @@ export function CatalogCreatePage({
     </label>
   );
 
+  const addMaterial = (kind: "premium" | "packing") => {
+    const ingredientId = kind === "premium" ? materialDraft.premiumId : materialDraft.packingId;
+    const rawQuantity = kind === "premium" ? materialDraft.premiumQty : materialDraft.packingQty;
+    const quantity = Number.parseFloat(rawQuantity);
+    const source = kind === "premium" ? options.catalogIngredients : options.packingSupplies;
+    const selected = source.find((item) => item.id === ingredientId);
+    if (!selected || !Number.isFinite(quantity) || quantity <= 0) return;
+    const setItems = kind === "premium" ? setPremiumIngredients : setPackingSupplies;
+    setItems((current) => current.some((item) => item.ingredientId === ingredientId)
+      ? current
+      : [...current, { ingredientId, name: selected.name, quantity }]);
+    setMaterialDraft((current) => kind === "premium"
+      ? { ...current, premiumId: "", premiumQty: "1" }
+      : { ...current, packingId: "", packingQty: "1" });
+  };
+
+  const addPendingLabel = () => {
+    if (!labelDraft.displayA.trim() && !labelDraft.displayB.trim()) return;
+    setLabels((current) => [...current, {
+      displayA: labelDraft.displayA.trim(),
+      displayB: labelDraft.displayB.trim(),
+    }]);
+    setLabelDraft({ displayA: "", displayB: "" });
+  };
+
+  const addChoiceSet = () => {
+    const name = choiceSetDraft.name.trim();
+    const maximumChoices = Number.parseInt(choiceSetDraft.maximumChoices, 10);
+    if (!name || !Number.isFinite(maximumChoices) || maximumChoices <= 0) return;
+    setChoiceSets((current) => [...current, {
+      id: crypto.randomUUID(), name, maximumChoices, products: [],
+    }]);
+    setChoiceSetDraft({ name: "", maximumChoices: "1" });
+  };
+
+  const addChoiceSetProduct = (choiceSetId: string, item: CatalogOption) => {
+    setChoiceSets((current) => current.map((choiceSet) => choiceSet.id === choiceSetId
+      ? {
+          ...choiceSet,
+          products: choiceSet.products.some((product) => product.productId === item.id)
+            ? choiceSet.products
+            : [...choiceSet.products, { productId: item.id, name: item.name, sku: item.sku, quantity: 1, addonPrice: 0 }],
+        }
+      : choiceSet));
+    setSearchingChoiceSetId(null);
+  };
+
+  const updateChoiceSetProduct = (choiceSetId: string, productId: string, partial: Partial<PendingPackageProduct>) => {
+    setChoiceSets((current) => current.map((choiceSet) => choiceSet.id === choiceSetId
+      ? { ...choiceSet, products: choiceSet.products.map((product) => product.productId === productId ? { ...product, ...partial } : product) }
+      : choiceSet));
+  };
+
   return (
     <section className="detail-page is-editing">
       <header className="page-heading">
@@ -136,7 +233,7 @@ export function CatalogCreatePage({
         </div>
       </header>
 
-      <form className="product-detail-form is-editing" onSubmit={submit}>
+      <form className="product-detail-form catalog-create-form is-editing" onSubmit={submit}>
         <article className="panel detail-card">
           <header className="product-section-header"><h2>{icon}{t("productDetail.basics")}</h2></header>
           <div className="product-basics-grid">
@@ -188,12 +285,116 @@ export function CatalogCreatePage({
               </label>
             </div>
           </div>
-          <footer className="product-edit-actions">
-            {saveError ? <div className="settings-side-form-error" role="alert">{t("catalogCreate.saveError")}</div> : null}
-            <Button type="button" variant="outline" onClick={() => navigate(backTo)} disabled={saving}>{t("catalogCreate.cancel")}</Button>
-            <Button type="submit" disabled={saving}>{saving ? t("productDetail.saving") : t("catalogCreate.create")}</Button>
-          </footer>
         </article>
+        {kind === "product" ? (
+          <section className="detail-grid product-material-grid">
+            <article className="panel detail-card">
+              <header className="product-section-header">
+                <h2>{form.chineseName || form.name || t("catalogCreate.newProduct")} - {t("productDetail.premiumIngredients")}</h2>
+              </header>
+              <div className="product-inline-add">
+                <label>
+                  <span>{t("productDetail.premiumIngredients")}</span>
+                  <FilterableSelect value={materialDraft.premiumId} onChange={(event) => setMaterialDraft((current) => ({ ...current, premiumId: event.target.value }))}>
+                    <option value="">{t("common.notSet")}</option>
+                    {options.catalogIngredients.filter((item) => !premiumIngredients.some((selected) => selected.ingredientId === item.id)).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+                  </FilterableSelect>
+                </label>
+                <label><span>{t("productDetail.quantity")}</span><input type="number" min="0" step="0.01" value={materialDraft.premiumQty} onChange={(event) => setMaterialDraft((current) => ({ ...current, premiumQty: event.target.value }))} /></label>
+                <Button type="button" disabled={!materialDraft.premiumId} onClick={() => addMaterial("premium")}><Plus />{t("productDetail.addIngredient")}</Button>
+              </div>
+              {premiumIngredients.length ? (
+                <div className="table-wrap detail-inline-table"><table><thead><tr><th>{t("productDetail.ingredient")}</th><th>{t("productDetail.quantity")}</th><th>{t("products.columns.actions")}</th></tr></thead><tbody>
+                  {premiumIngredients.map((item) => <tr key={item.ingredientId}><td>{item.name}</td><td>{item.quantity}</td><td className="table-actions-cell"><Button type="button" variant="outline" size="icon" aria-label={t("productDetail.removeIngredient")} onClick={() => setPremiumIngredients((current) => current.filter((row) => row.ingredientId !== item.ingredientId))}><Trash2 /></Button></td></tr>)}
+                </tbody></table></div>
+              ) : <p className="detail-description">{t("productDetail.noIngredients")}</p>}
+            </article>
+
+            <article className="panel detail-card">
+              <header className="product-section-header">
+                <h2>{form.chineseName || form.name || t("catalogCreate.newProduct")} - {t("productDetail.packingSupplies")}</h2>
+              </header>
+              <div className="product-inline-add">
+                <label>
+                  <span>{t("productDetail.packingSupply")}</span>
+                  <FilterableSelect value={materialDraft.packingId} onChange={(event) => setMaterialDraft((current) => ({ ...current, packingId: event.target.value }))}>
+                    <option value="">{t("productDetail.pickPackingSupply")}</option>
+                    {options.packingSupplies.filter((item) => !packingSupplies.some((selected) => selected.ingredientId === item.id)).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+                  </FilterableSelect>
+                </label>
+                <label><span>{t("productDetail.quantity")}</span><input type="number" min="0" step="0.01" value={materialDraft.packingQty} onChange={(event) => setMaterialDraft((current) => ({ ...current, packingQty: event.target.value }))} /></label>
+                <Button type="button" disabled={!materialDraft.packingId} onClick={() => addMaterial("packing")}><Plus />{t("productDetail.addPackingSupply")}</Button>
+              </div>
+              {packingSupplies.length ? (
+                <div className="table-wrap detail-inline-table"><table><thead><tr><th>{t("productDetail.packingSupply")}</th><th>{t("productDetail.quantity")}</th><th>{t("products.columns.actions")}</th></tr></thead><tbody>
+                  {packingSupplies.map((item) => <tr key={item.ingredientId}><td>{item.name}</td><td>{item.quantity}</td><td className="table-actions-cell"><Button type="button" variant="outline" size="icon" aria-label={t("productDetail.removePackingSupply")} onClick={() => setPackingSupplies((current) => current.filter((row) => row.ingredientId !== item.ingredientId))}><Trash2 /></Button></td></tr>)}
+                </tbody></table></div>
+              ) : <p className="detail-description">{t("productDetail.noPackingSupplies")}</p>}
+            </article>
+
+            <article className="panel detail-card">
+              <header className="product-section-header">
+                <h2>{form.chineseName || form.name || t("catalogCreate.newProduct")} - {t("productDetail.labels")}</h2>
+                <Button type="button" onClick={addPendingLabel} disabled={!labelDraft.displayA.trim() && !labelDraft.displayB.trim()}><Plus />{t("productDetail.addLabel")}</Button>
+              </header>
+              <div className="product-inline-add">
+                <label><span>{t("productDetail.displayA")}</span><input value={labelDraft.displayA} onChange={(event) => setLabelDraft((current) => ({ ...current, displayA: event.target.value }))} /></label>
+                <label><span>{t("productDetail.displayB")}</span><input value={labelDraft.displayB} onChange={(event) => setLabelDraft((current) => ({ ...current, displayB: event.target.value }))} /></label>
+              </div>
+              {labels.length ? (
+                <div className="table-wrap detail-inline-table"><table><thead><tr><th>{t("productDetail.displayA")}</th><th>{t("productDetail.displayB")}</th><th>{t("products.columns.actions")}</th></tr></thead><tbody>
+                  {labels.map((item, index) => <tr key={`${item.displayA}-${item.displayB}-${index}`}><td>{item.displayA}</td><td>{item.displayB}</td><td className="table-actions-cell"><Button type="button" variant="outline" size="icon" aria-label={t("productDetail.removeLabel")} onClick={() => setLabels((current) => current.filter((_, rowIndex) => rowIndex !== index))}><Trash2 /></Button></td></tr>)}
+                </tbody></table></div>
+              ) : <p className="detail-description">{t("productDetail.noLabels")}</p>}
+            </article>
+          </section>
+        ) : null}
+        {kind === "package" ? (
+          <article className="panel detail-card">
+            <header className="product-section-header">
+              <h2>{form.chineseName || form.name || t("catalogCreate.newPackage")} - {t("packageDetail.options")}</h2>
+            </header>
+            <div className="product-inline-add">
+              <label><span>{t("packageDetail.categoryName")}</span><input type="text" value={choiceSetDraft.name} placeholder={t("packageDetail.categoryNamePlaceholder")} onChange={(event) => setChoiceSetDraft((current) => ({ ...current, name: event.target.value }))} /></label>
+              <label><span>{t("packageDetail.selectableCount")}</span><input type="number" min="1" step="1" value={choiceSetDraft.maximumChoices} placeholder={t("packageDetail.selectableCountPlaceholder")} onChange={(event) => setChoiceSetDraft((current) => ({ ...current, maximumChoices: event.target.value }))} /></label>
+              <Button type="button" disabled={!choiceSetDraft.name.trim()} onClick={addChoiceSet}><Plus />{t("packageDetail.addChoiceSet")}</Button>
+            </div>
+            {choiceSets.length === 0 ? <p className="detail-description">{t("packageDetail.noChoiceSets")}</p> : (
+              <div className="table-wrap detail-inline-table package-options-table">
+                <table>
+                  <thead><tr><th aria-label={t("packages.columns.index")} /><th>{t("packageDetail.categoryName")}</th><th>{t("packageDetail.productName")}</th><th>{t("packageDetail.addonPrice")}</th><th>{t("packageDetail.productQuantity")}</th><th>{t("packages.columns.actions")}</th><th>{t("packageDetail.selectableCount")}</th><th>{t("packages.columns.actions")}</th></tr></thead>
+                  <tbody>
+                    {choiceSets.map((choiceSet, choiceSetIndex) => {
+                      const searching = searchingChoiceSetId === choiceSet.id;
+                      const products: Array<PendingPackageProduct | null> = choiceSet.products.length ? choiceSet.products : [null];
+                      const rowSpan = products.length + (searching ? 1 : 0);
+                      return <Fragment key={choiceSet.id}>
+                        {products.map((product, productIndex) => <tr key={product?.productId || "empty"}>
+                          {productIndex === 0 ? <td className="packages-index-cell" rowSpan={rowSpan}>{choiceSetIndex + 1}</td> : null}
+                          {productIndex === 0 ? <td className="package-category-cell" rowSpan={rowSpan}>{choiceSet.name}<span className="product-required" aria-hidden="true">*</span></td> : null}
+                          {product ? <>
+                            <td>{product.name}{product.sku ? <small className="package-create-product-sku">{product.sku}</small> : null}</td>
+                            <td><input aria-label={`${product.name} ${t("packageDetail.addonPrice")}`} type="number" min="0" step="0.01" value={product.addonPrice} onChange={(event) => updateChoiceSetProduct(choiceSet.id, product.productId, { addonPrice: Number(event.target.value) || 0 })} /></td>
+                            <td><input aria-label={`${product.name} ${t("packageDetail.productQuantity")}`} type="number" min="1" step="1" value={product.quantity} onChange={(event) => updateChoiceSetProduct(choiceSet.id, product.productId, { quantity: Number.parseInt(event.target.value, 10) || 0 })} /></td>
+                            <td className="table-actions-cell"><Button type="button" variant="outline" size="icon" aria-label={t("packageDetail.removeProduct")} onClick={() => setChoiceSets((current) => current.map((group) => group.id === choiceSet.id ? { ...group, products: group.products.filter((item) => item.productId !== product.productId) } : group))}><X /></Button></td>
+                          </> : <td colSpan={4} className="package-empty-products">{t("packageDetail.noProductsInSet")}</td>}
+                          {productIndex === 0 ? <td rowSpan={rowSpan}>{choiceSet.maximumChoices}</td> : null}
+                          {productIndex === 0 ? <td className="table-actions-cell package-set-actions" rowSpan={rowSpan}><div className="table-row-actions"><Button type="button" onClick={() => setSearchingChoiceSetId((current) => current === choiceSet.id ? null : choiceSet.id)}><Plus />{t("packageDetail.addProduct")}</Button><Button type="button" variant="outline" size="icon" aria-label={t("packageDetail.removeChoiceSet")} onClick={() => setChoiceSets((current) => current.filter((group) => group.id !== choiceSet.id))}><X /></Button></div></td> : null}
+                        </tr>)}
+                        {searching ? <tr><td colSpan={4}><PackageProductSearch excludeIds={new Set(choiceSet.products.map((product) => product.productId))} searchProducts={searchProducts} onSelect={(item) => addChoiceSetProduct(choiceSet.id, item)} /></td></tr> : null}
+                      </Fragment>;
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </article>
+        ) : null}
+        <footer className="product-edit-actions">
+          {saveError ? <div className="settings-side-form-error" role="alert">{t("catalogCreate.saveError")}</div> : null}
+          <Button type="button" variant="outline" onClick={() => navigate(backTo)} disabled={saving}>{t("catalogCreate.cancel")}</Button>
+          <Button type="submit" disabled={saving}>{saving ? t("productDetail.saving") : t("catalogCreate.create")}</Button>
+        </footer>
       </form>
     </section>
   );

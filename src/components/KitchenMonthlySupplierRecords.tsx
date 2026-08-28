@@ -18,6 +18,7 @@ import {
   saveKitchenSupplierRecord,
   updateKitchenSupplierCostEntry,
   type KitchenSupplierCostEntry,
+  type KitchenSupplierEntryFilters,
   type KitchenSupplierOption,
   type KitchenSupplierPurchaseType,
   type KitchenSupplierRecord,
@@ -196,14 +197,19 @@ function SupplierRecordPanel({
 function SupplierCostEntriesPanel({
   open,
   filters,
+  suppliers,
+  purchaseTypes,
   onClose,
   onChanged,
 }: {
   open: boolean;
   filters: KitchenSupplierRecordFilters;
+  suppliers: KitchenSupplierOption[];
+  purchaseTypes: KitchenSupplierPurchaseType[];
   onClose: () => void;
   onChanged: () => void;
 }) {
+  const { t } = useTranslation();
   const editorPageSize = 20;
   const [page, setPage] = useState(1);
   const [rows, setRows] = useState<KitchenSupplierCostEntry[]>([]);
@@ -213,6 +219,10 @@ function SupplierCostEntriesPanel({
   const [reloadKey, setReloadKey] = useState(0);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [entryFilters, setEntryFilters] = useState<KitchenSupplierEntryFilters>({
+    ...filters,
+    purchaseTypeIds: [],
+  });
   const totalPages = Math.max(1, Math.ceil(total / editorPageSize));
 
   useEffect(() => {
@@ -220,7 +230,7 @@ function SupplierCostEntriesPanel({
     let active = true;
     setLoading(true);
     setError(null);
-    void fetchKitchenSupplierCostEntries({ filters, page, pageSize: editorPageSize })
+    void fetchKitchenSupplierCostEntries({ filters: entryFilters, page, pageSize: editorPageSize })
       .then((result) => {
         if (!active) return;
         setRows(result.items);
@@ -234,11 +244,18 @@ function SupplierCostEntriesPanel({
         if (active) setLoading(false);
       });
     return () => { active = false; };
-  }, [filters, open, page, reloadKey]);
+  }, [entryFilters, open, page, reloadKey]);
 
   useEffect(() => {
-    if (open) setPage(1);
+    if (!open) return;
+    setEntryFilters({ ...filters, purchaseTypeIds: [] });
+    setPage(1);
   }, [filters, open]);
+
+  const updateEntryFilters = (next: Partial<KitchenSupplierEntryFilters>) => {
+    setEntryFilters((current) => ({ ...current, ...next }));
+    setPage(1);
+  };
 
   const saveAmount = async (row: KitchenSupplierCostEntry, value: string) => {
     const amount = Number(value);
@@ -247,7 +264,14 @@ function SupplierCostEntriesPanel({
     setError(null);
     try {
       await updateKitchenSupplierCostEntry(row.id, amount);
-      setRows((current) => current.map((item) => item.id === row.id ? { ...item, amount } : item));
+      if (amount === 0) {
+        const nextTotal = Math.max(0, total - 1);
+        const nextPages = Math.max(1, Math.ceil(nextTotal / editorPageSize));
+        if (page > nextPages) setPage(nextPages);
+        else setReloadKey((current) => current + 1);
+      } else {
+        setRows((current) => current.map((item) => item.id === row.id ? { ...item, amount } : item));
+      }
       onChanged();
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "儲存供應商費用失敗");
@@ -281,7 +305,37 @@ function SupplierCostEntriesPanel({
       closeLabel="關閉編輯費用記錄側欄"
       className="side-panel-majority kitchen-supplier-entry-panel"
     >
-      {error ? <div className="list-inline-error" role="alert"><span>{error}</span><Button variant="outline" onClick={() => setReloadKey((value) => value + 1)}><RefreshCw />重試</Button></div> : null}
+      <div className="kitchen-supplier-entry-toolbar">
+        <div className="kitchen-supplier-record-filters kitchen-supplier-entry-filters">
+          <label className="kitchen-supplier-filter-select">
+            <span id="kitchen-supplier-entry-supplier-filter-label">供應商</span>
+            <MultiSelect
+              id="kitchen-supplier-entry-supplier-filter"
+              labelledBy="kitchen-supplier-entry-supplier-filter-label"
+              options={suppliers}
+              value={entryFilters.supplierIds}
+              placeholder={t("kitchenMonthlySupplierRecords.entrySupplierPlaceholder")}
+              searchPlaceholder={t("kitchenMonthlySupplierRecords.supplierSearchPlaceholder")}
+              emptyLabel={t("kitchenMonthlySupplierRecords.supplierEmpty")}
+              onChange={(supplierIds) => updateEntryFilters({ supplierIds })}
+            />
+          </label>
+          <label className="kitchen-supplier-filter-select">
+            <span id="kitchen-supplier-entry-category-filter-label">分類</span>
+            <MultiSelect
+              id="kitchen-supplier-entry-category-filter"
+              labelledBy="kitchen-supplier-entry-category-filter-label"
+              options={purchaseTypes}
+              value={entryFilters.purchaseTypeIds}
+              placeholder={t("kitchenMonthlySupplierRecords.entryCategoryPlaceholder")}
+              searchPlaceholder={t("kitchenMonthlySupplierRecords.categorySearchPlaceholder")}
+              emptyLabel={t("kitchenMonthlySupplierRecords.categoryEmpty")}
+              onChange={(purchaseTypeIds) => updateEntryFilters({ purchaseTypeIds })}
+            />
+          </label>
+        </div>
+        {error ? <div className="list-inline-error" role="alert"><span>{error}</span><Button variant="outline" onClick={() => setReloadKey((value) => value + 1)}><RefreshCw />重試</Button></div> : null}
+      </div>
       <ListTable
         className="kitchen-supplier-entry-table-wrap"
         tableClassName="kitchen-supplier-entry-table"
@@ -496,6 +550,8 @@ export function KitchenMonthlySupplierRecords({ canEdit }: { canEdit: boolean })
       <SupplierCostEntriesPanel
         open={entriesPanelOpen}
         filters={filters}
+        suppliers={suppliers}
+        purchaseTypes={purchaseTypes}
         onClose={() => setEntriesPanelOpen(false)}
         onChanged={() => setReloadKey((value) => value + 1)}
       />

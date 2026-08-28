@@ -70,17 +70,27 @@ describe("factory label bitmap TSPL", () => {
     );
   });
 
-  it("limits every rendered dish and remark line to eight characters", async () => {
+  it("keeps lunchbox label lines that mix punctuation within eight CJK units", () => {
+    expect(buildFactoryDishLabelLayout({
+      orderNumber: "B-1",
+      deliveryDate: "2026-08-26",
+      labelName: "(5格) 鹽酥雞排\n滷肉飯便當 (1份)",
+      remarks: [],
+      copies: 1,
+    }).labelLines).toEqual(["(5格) 鹽酥雞排", "滷肉飯便當 (1份)"]);
+  });
+
+  it("wraps dish and remark lines by CJK width, treating ASCII as half-width", async () => {
     const rasterizer = vi.fn<FactoryTextRasterizer>(fakeRasterizer);
     await buildFactoryLabelBytes({
       orderNumber: "B-1",
       deliveryDate: "2026-08-24",
-      labelName: "123456789",
-      remarks: ["ABCDEFGHI"],
+      labelName: "12345678901234567",
+      remarks: ["ABCDEFGHIJKLMNOPQ"],
       copies: 1,
     }, rasterizer);
 
-    for (const line of ["12345678", "9", "ABCDEFGH", "I"]) {
+    for (const line of ["1234567890123456", "7", "ABCDEFGHIJKLMNOP", "Q"]) {
       expect(rasterizer).toHaveBeenCalledWith(
         line,
         expect.objectContaining({ width: 384 }),

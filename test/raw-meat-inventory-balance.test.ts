@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  coerceRawMeatQuantityInput,
   currentHongKongYear,
   hongKongYearBounds,
   hongKongYearMonthKey,
   inboundTotalAmount,
+  parseRawMeatQuantityInput,
   quantityToKg,
   rawMeatYearOptions,
   roundTo,
@@ -72,6 +74,11 @@ describe("raw meat year helpers", () => {
 });
 
 describe("raw meat inbound conversion", () => {
+  it("limits raw meat quantity input to two decimal places", () => {
+    expect(coerceRawMeatQuantityInput("1.234")).toBe("1.23");
+    expect(parseRawMeatQuantityInput("1.234")).toBe(1.23);
+  });
+
   it("converts catty price and quantity into kg and total", () => {
     const multiplier = 1.653;
     expect(roundTo(quantityToKg(3, multiplier) ?? 0, 4)).toBe(1.8149);

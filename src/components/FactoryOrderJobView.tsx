@@ -3,7 +3,6 @@ import { CheckCircle2, Printer, ShoppingCart, TriangleAlert } from "lucide-react
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
-import { FactoryDishLabelPreview } from "@/components/FactoryDishLabelPreview";
 import {
   assignDeliveryMotorcade,
   type DeliveryListItem,
@@ -24,6 +23,7 @@ import {
 } from "@/lib/factory-label";
 import { useQzTray } from "@/lib/qz-tray";
 import { formatDeliveryAddress } from "@/lib/delivery-address";
+import { printPdf } from "@/lib/print-pdf";
 import "@/components/factory-change-task.css";
 import {
   DeliveryNoteDocument,
@@ -344,7 +344,7 @@ export function FactoryOrderJobView({
         <div className="factory-order-summary">
           <h1 className="factory-order-number">{orderNumber}</h1>
           <dl className="factory-order-meta">
-            <div>
+            <div className="is-date">
               {dateKey
                 ? t("factoryBoard.orderDate", {
                     month: dateKey.slice(5, 7),
@@ -353,7 +353,7 @@ export function FactoryOrderJobView({
                   })
                 : empty}
             </div>
-            <div>
+            <div className="is-dispatch">
               <button
                 type="button"
                 className="factory-dispatch-time-trigger"
@@ -367,10 +367,10 @@ export function FactoryOrderJobView({
                 {t("factoryBoard.dispatchTime")}: {dispatchTime}
               </button>
             </div>
-            <div>
+            <div className="is-arrival">
               {t("factoryBoard.arrivalWindow")}: {arrivalWindow}
             </div>
-            <div>
+            <div className="is-phone">
               {t("factoryBoard.phone")}: {item.customerPhone || empty}
             </div>
             <div className="is-address">
@@ -430,6 +430,7 @@ export function FactoryOrderJobView({
                   </span>
                 ) : null}
                 <div className="factory-order-line-body">
+                  {line.isAddon ? <span className="factory-order-line-addon">加單</span> : null}
                   <strong>{line.label}</strong>
                   {line.quantityText ? (
                     <span className="factory-order-line-quantity">
@@ -483,7 +484,7 @@ export function FactoryOrderJobView({
         <Button
           type="button"
           disabled={loading || error || !job}
-          onClick={() => window.print()}
+          onClick={() => printPdf("送貨單", orderNumber === empty ? "" : orderNumber)}
         >
           {t("factoryBoard.printDeliveryNote")}
         </Button>
@@ -698,17 +699,6 @@ export function FactoryOrderJobView({
                   )}
                 </div>
               ) : null}
-              <div className="factory-label-print-preview">
-                <FactoryDishLabelPreview
-                  input={{
-                    orderNumber,
-                    deliveryDate: dateKey,
-                    labelName: selectedLine.labelName?.trim() || selectedLine.label,
-                    remarks: [...selectedLine.remarks, job?.packingNote ?? ""].filter(Boolean),
-                    copies: labelCopies(selectedLine),
-                  }}
-                />
-              </div>
               <div className="factory-label-summary">
                 <div>
                   <span>{t("factoryBoard.originalName")}</span>

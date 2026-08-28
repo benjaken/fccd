@@ -1,7 +1,9 @@
+import { coerceMeatQuantityInput } from "@/lib/meat-quantity";
 import { supabase } from "@/lib/supabase";
 
 export const PREPARED_MEAT_MOVEMENTS_PAGE_SIZE = 15;
 export const PREPARED_MEAT_FIRST_DATA_YEAR = 2023;
+const MOVEMENT_QUERY_PAGE_SIZE = 1_000;
 
 export type PreparedMeatItemOption = {
   id: string;
@@ -166,17 +168,39 @@ export function hongKongYearBounds(year: number) {
   };
 }
 
-/** YYYY-MM key for a timestamp in Asia/Hong_Kong. */
-export function hongKongYearMonthKey(value: string | Date) {
-  const parts = new Intl.DateTimeFormat("en-CA", {
+function hongKongDateParts(value: string | Date) {
+  return new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Hong_Kong",
     year: "numeric",
     month: "2-digit",
+    day: "2-digit",
   }).formatToParts(value instanceof Date ? value : new Date(value));
-  const year = parts.find((part) => part.type === "year")?.value;
-  const month = parts.find((part) => part.type === "month")?.value;
+}
+
+function hongKongPart(
+  parts: Intl.DateTimeFormatPart[],
+  type: Intl.DateTimeFormatPartTypes,
+) {
+  return parts.find((part) => part.type === type)?.value ?? "";
+}
+
+/** YYYY-MM key for a timestamp in Asia/Hong_Kong. */
+export function hongKongYearMonthKey(value: string | Date) {
+  const parts = hongKongDateParts(value);
+  const year = hongKongPart(parts, "year");
+  const month = hongKongPart(parts, "month");
   if (!year || !month) return "";
   return `${year}-${month}`;
+}
+
+/** YYYY-MM-DD key for a timestamp in Asia/Hong_Kong. */
+export function hongKongDateKey(value: string | Date) {
+  const parts = hongKongDateParts(value);
+  const year = hongKongPart(parts, "year");
+  const month = hongKongPart(parts, "month");
+  const day = hongKongPart(parts, "day");
+  if (!year || !month || !day) return "";
+  return `${year}-${month}-${day}`;
 }
 
 export function withPreparedMeatRunningBalance(
@@ -197,9 +221,10 @@ export function withPreparedMeatRunningBalance(
     const outbound = toNumber(row.outbound_packages);
     balance += (inbound ?? 0) - (outbound ?? 0);
     const shop = relatedShop(row);
+    const movementAt = row.movement_at || row.bubble_created_at || row.created_at;
     return {
       id: row.id,
-      movementAt: row.movement_at || row.bubble_created_at || row.created_at,
+      movementAt,
       productName,
       shopId: shop?.id ?? null,
       shopName: shop?.name ?? null,
@@ -211,6 +236,16 @@ export function withPreparedMeatRunningBalance(
       meatOrderId: relatedOrderId(row),
     };
   });
+
+  const dayEnd = new Map<string, number>();
+  for (const row of withBalance) {
+    dayEnd.set(hongKongDateKey(row.movementAt || row.id) || row.id, row.balancePackages);
+  }
+  for (const row of withBalance) {
+    const key = hongKongDateKey(row.movementAt || row.id) || row.id;
+    const dayBalance = dayEnd.get(key);
+    if (dayBalance !== undefined) row.balancePackages = dayBalance;
+  }
 
   return withBalance.reverse();
 }
@@ -325,13 +360,28 @@ export async function fetchPreparedMeatMovementsForItem(
 ): Promise<PreparedMeatMovementRow[]> {
   const { start, end } = hongKongYearBounds(year);
 
-  const [openingResult, yearResult] = await Promise.all([
-    supabase
+  let opening = 0;
+  for (let from = 0; ; from += MOVEMENT_QUERY_PAGE_SIZE) {
+    const { data, error } = await supabase
       .from("prepared_meat_stock_movements")
-      .select("inbound_packages,outbound_packages,movement_at")
+      .select("inbound_packages,outbound_packages")
       .eq("prepared_meat_item_id", itemId)
-      .lt("movement_at", start),
-    supabase
+      .lt("movement_at", start)
+      .order("id", { ascending: true })
+      .range(from, from + MOVEMENT_QUERY_PAGE_SIZE - 1);
+    if (error) throw error;
+    const page = data ?? [];
+    for (const row of page) {
+      opening +=
+        (toNumber(row.inbound_packages) ?? 0) -
+        (toNumber(row.outbound_packages) ?? 0);
+    }
+    if (page.length < MOVEMENT_QUERY_PAGE_SIZE) break;
+  }
+
+  const yearRows: PreparedMeatMovementRecord[] = [];
+  for (let from = 0; ; from += MOVEMENT_QUERY_PAGE_SIZE) {
+    const { data, error } = await supabase
       .from("prepared_meat_stock_movements")
       .select(
         "id,movement_at,inbound_packages,outbound_packages,remarks,bubble_created_at,created_at,meat_customer_id,meat_order_line_id,meat_customers(id,name),meat_order_lines(meat_order_id)",
@@ -340,25 +390,30 @@ export async function fetchPreparedMeatMovementsForItem(
       .gte("movement_at", start)
       .lt("movement_at", end)
       .order("movement_at", { ascending: true, nullsFirst: false })
-      .order("bubble_created_at", { ascending: true, nullsFirst: false })
-      .order("created_at", { ascending: true }),
-  ]);
-
-  if (openingResult.error) throw openingResult.error;
-  if (yearResult.error) throw yearResult.error;
-
-  let opening = 0;
-  for (const row of openingResult.data ?? []) {
-    opening +=
-      (toNumber(row.inbound_packages) ?? 0) -
-      (toNumber(row.outbound_packages) ?? 0);
+      .order("id", { ascending: true })
+      .range(from, from + MOVEMENT_QUERY_PAGE_SIZE - 1);
+    if (error) throw error;
+    const page = (data ?? []) as PreparedMeatMovementRecord[];
+    yearRows.push(...page);
+    if (page.length < MOVEMENT_QUERY_PAGE_SIZE) break;
   }
 
   return withPreparedMeatRunningBalance(
-    await withMeatOrderIds((yearResult.data ?? []) as PreparedMeatMovementRecord[]),
+    await withMeatOrderIds(yearRows),
     productName,
     opening,
   );
+}
+
+/** Deletes the complete stock transaction, including its linked raw movement. */
+export async function deletePreparedMeatMovement(
+  movementId: string,
+): Promise<void> {
+  const { error } = await supabase.rpc("delete_meat_stock_movement", {
+    p_movement_type: "prepared",
+    p_movement_id: movementId,
+  });
+  if (error) throw error;
 }
 
 export const GUIHUA_CUSTOMER_MARKER = "桂花小幸";
@@ -387,23 +442,9 @@ export function meatCustomerOptionLabel(row: {
   return code ? `${code} - ${row.name}` : row.name;
 }
 
-/** Keep digits and at most one decimal while typing. */
+/** Keep digits and at most two decimal places while typing. */
 export function coercePreparedMeatQuantityInput(value: string): string {
-  const normalized = value
-    .replace(/[０-９]/g, (ch) => String(ch.charCodeAt(0) - 0xff10))
-    .replace(/．/g, ".");
-  const cleaned = normalized.replace(/[^\d.]/g, "");
-  if (!cleaned) return "";
-  const dot = cleaned.indexOf(".");
-  const intDigits = (dot === -1 ? cleaned : cleaned.slice(0, dot)).replace(
-    /^0+(?=\d)/,
-    "",
-  );
-  const frac =
-    dot === -1 ? null : cleaned.slice(dot + 1).replace(/\./g, "").slice(0, 3);
-  const intPart = intDigits === "" ? (frac === null ? "" : "0") : intDigits;
-  if (frac === null) return intPart;
-  return `${intPart}.${frac}`;
+  return coerceMeatQuantityInput(value);
 }
 
 /** Keep digits only while typing whole packages. */
@@ -558,7 +599,7 @@ function mapStockObject(value: unknown): Record<string, number> {
 
 export function formatPreparedMeatStock(value: number) {
   if (!Number.isFinite(value) || value <= 0) return "0";
-  return String(Number.parseFloat(value.toFixed(3)));
+  return String(Number.parseFloat(value.toFixed(2)));
 }
 
 export function remainingPreparedMeatOutboundStock(input: {

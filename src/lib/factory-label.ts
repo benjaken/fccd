@@ -113,13 +113,8 @@ export function wrapFactoryLabelText(value: string, maxUnits: number): string[] 
   return lines;
 }
 
-function wrapFactoryDishText(value: string, maxCharacters = 8): string[] {
-  const characters = graphemes(sanitizeFactoryLabelText(value));
-  const lines: string[] = [];
-  for (let offset = 0; offset < characters.length; offset += maxCharacters) {
-    lines.push(characters.slice(offset, offset + maxCharacters).join(""));
-  }
-  return lines;
+function truncateFactoryLabelLine(value: string, maxUnits = 8): string {
+  return wrapFactoryLabelText(value, maxUnits)[0] ?? "";
 }
 
 export function buildFactoryDishLabelLayout(
@@ -135,10 +130,10 @@ export function buildFactoryDishLabelLayout(
   const labelLines = configuredLabelLines.length > 1
     ? configuredLabelLines
       .slice(0, 2)
-      .map((line) => graphemes(line).slice(0, 8).join(""))
-    : wrapFactoryDishText(configuredLabelLines[0] ?? "", 8).slice(0, 2);
+      .map((line) => truncateFactoryLabelLine(line, 8))
+    : wrapFactoryLabelText(configuredLabelLines[0] ?? "", 8).slice(0, 2);
   const remarkLines = input.remarks
-    .flatMap((remark) => wrapFactoryDishText(remark, 8))
+    .flatMap((remark) => wrapFactoryLabelText(remark, 8))
     .filter(Boolean)
     .slice(0, 2);
   const bodyLines = [

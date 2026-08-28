@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { buildDailySalesEmail, type DailySalesEmailLine } from "../_shared/daily-sales-email.ts";
+import { EMAIL_FROM } from "../_shared/email-sender.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -71,9 +72,13 @@ Deno.serve(async (request) => {
       .eq("id", authData.user.id)
       .single();
     if (profileError || !profile) return response({ error: "profile_not_found" }, 403);
-    if (profile.role !== "Shop manager") return response({ sent: false, skipped: true });
+    if (!["Shop manager", "Super Admin"].includes(profile.role)) {
+      return response({ sent: false, skipped: true });
+    }
 
-    const recipient = String(profile.email || authData.user.email || "").trim();
+    const recipient = (
+      Deno.env.get("DAILY_SALES_EMAIL_TO") || profile.email || authData.user.email || ""
+    ).trim();
     if (!recipient) return response({ error: "recipient_email_missing" }, 400);
 
     const { data: restaurant, error: restaurantError } = await admin
@@ -116,24 +121,17 @@ Deno.serve(async (request) => {
       workingHours,
     });
 
-    const emailResponse = await fetch("https://api.brevo.com/v3/smtp/email", {
+    const emailResponse = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
-        "api-key": requiredEnv("BREVO_API_KEY"),
-        Accept: "application/json",
+        Authorization: `Bearer ${requiredEnv("RESEND_API_KEY")}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        sender: {
-          name: Deno.env.get("BREVO_SENDER_NAME")?.trim() || "FCC2 - Shop Daily Sales",
-          email: requiredEnv("BREVO_SENDER_EMAIL"),
-        },
-        to: [{
-          email: recipient,
-          name: String(profile.user_name || "").trim() || undefined,
-        }],
+        from: EMAIL_FROM,
+        to: [recipient],
         subject: email.subject,
-        htmlContent: email.html,
+        html: email.html,
       }),
     });
     if (!emailResponse.ok) return response({ error: "email_send_failed" }, 502);

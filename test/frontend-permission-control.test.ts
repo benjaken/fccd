@@ -2,6 +2,11 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
+import {
+  hasEffectivePageAccess,
+  type PagePermissionValue,
+} from "@/auth/use-page-access";
+
 function source(relativePath: string) {
   return readFileSync(path.resolve(process.cwd(), relativePath), "utf8");
 }
@@ -15,6 +20,99 @@ describe("frontend permission control", () => {
     expect(access).not.toContain("app_metadata");
     expect(access).toContain('.from("role_page_permissions")');
     expect(access).toContain("return usePageAccess(profile?.role)");
+  });
+
+  it("does not let a stale child grant bypass a disabled parent", () => {
+    const permissions = new Map<string, PagePermissionValue>([
+      [
+        "restaurant",
+        { canAccess: true, canManage: false, parentPageKey: null },
+      ],
+      [
+        "restaurant.settings",
+        {
+          canAccess: false,
+          canManage: false,
+          parentPageKey: "restaurant",
+        },
+      ],
+      [
+        "restaurant.settings.delivery_platforms",
+        {
+          canAccess: true,
+          canManage: false,
+          parentPageKey: "restaurant.settings",
+        },
+      ],
+    ]);
+
+    expect(
+      hasEffectivePageAccess(
+        "restaurant.settings.delivery_platforms",
+        permissions,
+      ),
+    ).toBe(false);
+    expect(hasEffectivePageAccess("restaurant.settings", permissions)).toBe(
+      false,
+    );
+  });
+
+  it("hides workspace links when every registered child is disabled", () => {
+    const permissions = new Map<string, PagePermissionValue>([
+      ["workspace", { canAccess: true, canManage: false, parentPageKey: null }],
+      [
+        "workspace.factory",
+        {
+          canAccess: true,
+          canManage: false,
+          parentPageKey: "workspace",
+        },
+      ],
+      [
+        "workspace.factory.board",
+        {
+          canAccess: false,
+          canManage: false,
+          parentPageKey: "workspace.factory",
+        },
+      ],
+      [
+        "workspace.factory.order",
+        {
+          canAccess: false,
+          canManage: false,
+          parentPageKey: "workspace.factory",
+        },
+      ],
+      [
+        "workspace.factory.meat_delivery_note",
+        {
+          canAccess: false,
+          canManage: false,
+          parentPageKey: "workspace.factory",
+        },
+      ],
+      [
+        "workspace.factory.multi_day_menu",
+        {
+          canAccess: false,
+          canManage: false,
+          parentPageKey: "workspace.factory",
+        },
+      ],
+      [
+        "workspace.factory.production_calendar",
+        {
+          canAccess: false,
+          canManage: false,
+          parentPageKey: "workspace.factory",
+        },
+      ],
+    ]);
+
+    expect(hasEffectivePageAccess("workspace.factory", permissions)).toBe(
+      false,
+    );
   });
 
   it("uses manage grants for editable operational pages", () => {

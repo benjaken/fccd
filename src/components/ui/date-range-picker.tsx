@@ -1,4 +1,14 @@
+import { CalendarRange } from "lucide-react";
+import { enUS, zhHK } from "date-fns/locale";
+import { useEffect, useState } from "react";
+import type { DateRange } from "react-day-picker";
+import { useTranslation } from "react-i18next";
+
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { displayDateKey, parseDateKey, toDateKey } from "@/lib/picker-date";
 
 export type DateRangePickerProps = {
   startId: string;
@@ -9,17 +19,12 @@ export type DateRangePickerProps = {
   onEndChange: (value: string) => void;
   startLabel: string;
   endLabel: string;
-  /** Visible group label for the single range control. */
   legend?: string;
   className?: string;
   disabled?: boolean;
   allowOutOfOrder?: boolean;
 };
 
-/**
- * One start–end date range control (native date inputs in a single field).
- * Prefer this over two stacked standalone date pickers on list/report toolbars.
- */
 export function DateRangePicker({
   startId,
   endId,
@@ -32,41 +37,74 @@ export function DateRangePicker({
   legend,
   className,
   disabled = false,
-  allowOutOfOrder = false,
 }: DateRangePickerProps) {
-  const rangeLabel = legend ?? `${startLabel} — ${endLabel}`;
+  const { t, i18n } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const [draftRange, setDraftRange] = useState<DateRange>();
+  const from = parseDateKey(startValue);
+  const to = parseDateKey(endValue);
   const labelId = `${startId}-${endId}-label`;
+  const locale = i18n.language.startsWith("zh") ? zhHK : enUS;
+
+  useEffect(() => {
+    if (draftRange?.from && draftRange.to) setOpen(false);
+  }, [draftRange]);
 
   return (
-    <div
-      className={cn("date-range-picker", className)}
-      role="group"
-      aria-labelledby={labelId}
-    >
-      <span id={labelId} className="date-range-picker-label">{rangeLabel}</span>
-      <div className="date-range-picker-control">
-        <input
-          id={startId}
-          type="date"
-          aria-label={startLabel}
-          value={startValue}
-          max={!allowOutOfOrder && endValue ? endValue : undefined}
-          disabled={disabled}
-          onChange={(event) => onStartChange(event.target.value)}
-        />
-        <span className="date-range-picker-separator" aria-hidden="true">
-          —
-        </span>
-        <input
-          id={endId}
-          type="date"
-          aria-label={endLabel}
-          value={endValue}
-          min={!allowOutOfOrder && startValue ? startValue : undefined}
-          disabled={disabled}
-          onChange={(event) => onEndChange(event.target.value)}
-        />
-      </div>
+    <div className={cn("date-range-picker", className)} role="group" aria-labelledby={labelId}>
+      <span id={labelId} className="date-range-picker-label">
+        {legend ?? `${startLabel} – ${endLabel}`}
+      </span>
+      <Popover
+        open={open}
+        onOpenChange={(nextOpen) => {
+          setOpen(nextOpen);
+          setDraftRange(undefined);
+        }}
+      >
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={disabled}
+            className={cn("date-range-picker-trigger", !from && !to && "is-placeholder")}
+          >
+            <CalendarRange aria-hidden="true" />
+            <span id={startId}>{displayDateKey(startValue) || t("common.startDatePlaceholder")}</span>
+            <span aria-hidden="true">–</span>
+            <span id={endId}>{displayDateKey(endValue) || t("common.endDatePlaceholder")}</span>
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="start" className="date-range-picker-popover">
+          <Calendar
+            mode="range"
+            locale={locale}
+            selected={draftRange}
+            defaultMonth={from ?? to ?? new Date()}
+            numberOfMonths={2}
+            min={1}
+            onSelect={(range) => {
+              setDraftRange(range);
+              onStartChange(range?.from ? toDateKey(range.from) : "");
+              onEndChange(range?.to ? toDateKey(range.to) : "");
+            }}
+          />
+          {startValue || endValue ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="picker-clear"
+              onClick={() => {
+                onStartChange("");
+                onEndChange("");
+              }}
+            >
+              {t("common.clearDateRange")}
+            </Button>
+          ) : null}
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }

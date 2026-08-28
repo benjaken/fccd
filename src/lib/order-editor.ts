@@ -3,6 +3,7 @@ import {
   normalizeDoNotSendToFactory,
   saveOrderFactorySettings,
 } from "@/lib/order-factory-settings";
+import { productListDisplayName } from "@/lib/products";
 
 export type OrderEditorOption = {
   id: string;
@@ -21,6 +22,7 @@ export type OrderEditorLine = {
   remarks: string;
   quantity: number;
   unitPrice: number;
+  isAddon?: boolean;
 };
 
 export type OrderEditorPayment = {
@@ -76,6 +78,31 @@ export type OrderEditorPayload = {
   draft: OrderEditorDraft;
   options: OrderEditorOptions;
 };
+
+export async function isAddonBlockDate(deliveryDate: string): Promise<boolean> {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(deliveryDate)) return false;
+  const { data, error } = await supabase.rpc("is_self_service_addon_block_date", {
+    p_delivery_date: deliveryDate,
+  });
+  if (error) throw error;
+  return data === true;
+}
+
+export async function sendOrderWatiConfirmation(orderId: string): Promise<{ includesAddonLink: boolean }> {
+  const { data, error } = await supabase.functions.invoke("send-order-wati-confirmation", {
+    body: { orderId },
+  });
+  if (error) throw error;
+  if (!data?.watiSent || !data?.emailSent) throw new Error(data?.error || "order_confirmation_failed");
+  return { includesAddonLink: data.includesAddonLink === true };
+}
+
+export async function confirmOrderAddonShopifyInput(orderId: string): Promise<void> {
+  const { error } = await supabase.rpc("confirm_order_addon_shopify_input", {
+    p_order_id: orderId,
+  });
+  if (error) throw error;
+}
 
 export function emptyOrderDraft(): OrderEditorDraft {
   return {
@@ -151,7 +178,7 @@ async function fetchOptions(): Promise<OrderEditorOptions> {
     await Promise.all([
       supabase.from("channels").select("id,name").is("archived_at", null).eq("is_active", true).order("sort_order", { nullsFirst: false }).order("name"),
       supabase.from("shipping_methods").select("id,name,display_name").is("archived_at", null).eq("is_active", true).order("display_order", { nullsFirst: false }).order("name"),
-      supabase.from("delivery_districts").select("id,name").is("archived_at", null).order("name"),
+      supabase.from("delivery_districts").select("id,name").is("archived_at", null).is("driver_team_id", null).order("name"),
       supabase.from("sales_partners").select("id,name").eq("is_active", true).order("name"),
       supabase.from("payment_methods").select("id,name").is("archived_at", null).eq("is_active", true).order("name"),
       supabase.from("products").select("id,sku,name,chinese_name,price").is("archived_at", null).eq("is_active", true).not("sku", "is", null).order("sku").limit(300),
@@ -167,14 +194,14 @@ async function fetchOptions(): Promise<OrderEditorOptions> {
   const catalog = [
     ...(products.data ?? []).map((row) => ({
       id: row.id,
-      name: row.chinese_name || row.name,
+      name: productListDisplayName(row.name, row.chinese_name, row.sku ?? ""),
       sku: row.sku,
       price: row.price === null ? null : numberValue(row.price),
       kind: "product" as const,
     })),
     ...(packages.data ?? []).map((row) => ({
       id: row.id,
-      name: row.chinese_name || row.name,
+      name: productListDisplayName(row.name, row.chinese_name, row.sku ?? ""),
       sku: row.sku,
       price: row.price === null ? null : numberValue(row.price),
       kind: "package" as const,
@@ -212,7 +239,7 @@ export async function fetchOrderEditor(
         .maybeSingle(),
       supabase
         .from("order_lines")
-        .select("id,product_id,package_id,sku_snapshot,product_name_snapshot,content_snapshot,quantity,unit_price,remarks_1")
+        .select("id,product_id,package_id,sku_snapshot,product_name_snapshot,content_snapshot,quantity,unit_price,remarks_1,is_addon,products(name),packages(name)")
         .eq("order_id", id)
         .eq("is_void", false)
         .order("type_sort")
@@ -270,16 +297,25 @@ export async function fetchOrderEditor(
     originalFactoryReprintRequired: copy
       ? false
       : Boolean(row.factory_reprint_required),
-    lines: (linesResult.data ?? []).map((line) => ({
-      id: copy ? crypto.randomUUID() : line.id,
-      productId: line.product_id,
-      packageId: line.package_id,
-      sku: line.sku_snapshot ?? "",
-      name: line.product_name_snapshot || line.content_snapshot || "",
-      remarks: line.remarks_1 ?? "",
-      quantity: numberValue(line.quantity),
-      unitPrice: numberValue(line.unit_price),
-    })),
+    lines: (linesResult.data ?? []).map((line) => {
+      const product = Array.isArray(line.products) ? line.products[0] : line.products;
+      const pkg = Array.isArray(line.packages) ? line.packages[0] : line.packages;
+      return {
+        id: copy ? crypto.randomUUID() : line.id,
+        productId: line.product_id,
+        packageId: line.package_id,
+        sku: line.sku_snapshot ?? "",
+        name: productListDisplayName(
+          product?.name ?? pkg?.name,
+          null,
+          line.product_name_snapshot || line.content_snapshot || "",
+        ),
+        remarks: line.remarks_1 ?? "",
+        quantity: numberValue(line.quantity),
+        unitPrice: numberValue(line.unit_price),
+        isAddon: line.is_addon === true,
+      };
+    }),
     payments: copy
       ? []
       : (paymentsResult.data ?? []).map((payment) => ({
@@ -405,6 +441,7 @@ export async function saveOrderEditor(draft: OrderEditorDraft): Promise<string> 
         total_price: line.quantity * line.unitPrice,
         item_order: index + 1,
         type_sort: line.packageId ? 2 : 1,
+        is_addon: line.isAddon === true,
         is_void: false,
       })),
       { onConflict: "id" },

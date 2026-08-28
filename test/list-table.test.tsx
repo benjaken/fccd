@@ -35,22 +35,25 @@ describe("ListTable", () => {
     expect(pullToRefreshRule).not.toContain("overscroll-behavior-y: contain");
   });
 
-  it("lets mobile order cards use page scrolling without an outer panel", () => {
+  it.each([
+    ["orders", "orders"],
+    ["quotes", "quotes"],
+  ])("lets mobile %s cards use page scrolling without an outer panel", (_label, prefix) => {
     const css = readFileSync(
       path.resolve(process.cwd(), "src/index.css"),
       "utf8",
     );
     const pageRule = css.match(
-      /\.orders-page:has\(\.responsive-card-list-panel\)\s*\{([^}]*)\}/,
+      new RegExp(`\\.${prefix}-page:has\\(\\.responsive-card-list-panel\\)\\s*\\{([^}]*)\\}`),
     )?.[1];
     const panelRule = css.match(
-      /\.orders-panel\.responsive-card-list-panel\s*\{([^}]*)\}/,
+      new RegExp(`\\.${prefix}-panel\\.responsive-card-list-panel\\s*\\{([^}]*)\\}`),
     )?.[1];
     const toolbarRule = css.match(
-      /\.orders-panel\.responsive-card-list-panel\s*>\s*\.orders-toolbar\s*\{([^}]*)\}/,
+      new RegExp(`\\.${prefix}-panel\\.responsive-card-list-panel\\s*>\\s*\\.${prefix}-toolbar\\s*\\{([^}]*)\\}`),
     )?.[1];
     const listRule = css.match(
-      /\.orders-panel\.responsive-card-list-panel\s+\.orders-table-wrap\.has-mobile-list\s*\{([^}]*)\}/,
+      new RegExp(`\\.${prefix}-panel\\.responsive-card-list-panel\\s+\\.${prefix}-table-wrap\\.has-mobile-list\\s*\\{([^}]*)\\}`),
     )?.[1];
 
     expect(pageRule).toContain("height: auto");
@@ -114,6 +117,45 @@ describe("ListTable", () => {
 
     expect(document.querySelectorAll(".table-skeleton-row")).toHaveLength(0);
     expect(screen.getByText("測試資料")).toBeInTheDocument();
+  });
+
+  it("marks action skeleton cells for the shared sticky action column", () => {
+    render(
+      <ListTable
+        loading
+        loadingLabel="正在載入"
+        skeletonRows={1}
+        skeletonColumns={[
+          { width: "70%" },
+          { width: "4rem", variant: "action" },
+        ]}
+        header={
+          <tr>
+            <th>名稱</th>
+            <th aria-label="操作" />
+          </tr>
+        }
+      >
+        <tr>
+          <td>測試資料</td>
+          <td className="table-actions-cell">操作</td>
+        </tr>
+      </ListTable>,
+    );
+
+    expect(screen.getAllByRole("cell")[1]).toHaveClass("table-actions-cell");
+  });
+
+  it("keeps trailing action columns sticky in horizontally scrolling tables", () => {
+    const css = readFileSync(
+      path.resolve(process.cwd(), "src/components/ui/table-actions.css"),
+      "utf8",
+    );
+
+    expect(css).toContain(".table-wrap:has(");
+    expect(css).toContain('th[aria-label*="action" i]');
+    expect(css).toContain("inset-inline-end: 0;");
+    expect(css).toContain("box-shadow: -1px 0 0 var(--border);");
   });
 
   it("automatically loads more mobile cards without showing a next-page button", () => {

@@ -165,8 +165,8 @@ describe("Raw meat inventory calculation page", () => {
 
     const heading = screen.getByRole("banner");
     expect(
-      within(heading).getByRole("button", { name: "重新整理" }),
-    ).toBeEnabled();
+      within(heading).queryByRole("button", { name: "重新整理" }),
+    ).not.toBeInTheDocument();
     expect(
       within(heading).getByRole("button", { name: "新增生肉選項" }),
     ).toBeEnabled();
@@ -178,6 +178,37 @@ describe("Raw meat inventory calculation page", () => {
       within(heading).getByRole("button", { name: "生肉出貨" }),
     ).toBeEnabled();
     expect(screen.queryByText("15")).not.toBeInTheDocument();
+  });
+
+  it("deletes a movement after confirmation and reloads the balance", async () => {
+    const user = userEvent.setup();
+    const loadMovements = vi.fn().mockResolvedValue(movementsByItem["item-1"]);
+    const deleteMovement = vi.fn().mockResolvedValue(undefined);
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+
+    render(
+      <MemoryRouter>
+        <RawMeatInventoryCalcPage
+          loadItems={vi.fn().mockResolvedValue(items)}
+          loadMovements={loadMovements}
+          deleteMovement={deleteMovement}
+        />
+      </MemoryRouter>,
+    );
+
+    const buttons = await screen.findAllByRole("button", {
+      name: i18n.t("rawMeatInventory.delete"),
+    });
+    await user.click(buttons[0]!);
+
+    expect(confirm).toHaveBeenCalledWith(
+      i18n.t("rawMeatInventory.deleteConfirm", {
+        product: movementsByItem["item-1"]![0]!.productName,
+      }),
+    );
+    expect(deleteMovement).toHaveBeenCalledWith("move-2");
+    await waitFor(() => expect(loadMovements).toHaveBeenCalledTimes(2));
+    confirm.mockRestore();
   });
 
   it("switches the right-side ledger when selecting another item", async () => {
@@ -518,17 +549,18 @@ describe("Raw meat inventory calculation page", () => {
       within(dialog).getByRole("textbox", { name: "來貨價" }),
       "23",
     );
-    await user.type(
-      within(dialog).getByRole("textbox", { name: "入貨" }),
-      "3",
-    );
+    const quantityInput = within(dialog).getByRole("textbox", { name: "入貨" });
+    await user.type(quantityInput, "1.234");
+    expect(quantityInput).toHaveValue("1.23");
+    await user.clear(quantityInput);
+    await user.type(quantityInput, "3");
 
     expect(
       within(dialog).getByRole("textbox", { name: "來貨價 (kg)" }),
     ).toHaveValue("$38.02");
     expect(
       within(dialog).getByRole("textbox", { name: "入貨 (kg)" }),
-    ).toHaveValue("1.8149");
+    ).toHaveValue("1.81");
     expect(
       within(dialog).getByRole("textbox", { name: "總額 HKD" }),
     ).toHaveValue("$69");

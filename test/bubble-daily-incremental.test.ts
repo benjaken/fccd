@@ -17,6 +17,7 @@ import {
   mergeOverwriteRow,
   normalizeOrderNumber,
   overwriteSince,
+  reconciliationOwnedRow,
 } from "../supabase/functions/bubble-daily-incremental/overwrite.ts";
 import {
   fallbackDeliveryLegacyId,
@@ -157,6 +158,23 @@ describe("bubble daily incremental helpers", () => {
     );
     expect(source).toContain("hydrateOrderLineSnapshots");
     expect(source).toContain('mapping.sourceType === "s_order"');
+  });
+
+  it("exposes an admin-only read-only reconciliation audit", () => {
+    const source = fs.readFileSync(
+      path.join(
+        process.cwd(),
+        "supabase/functions/bubble-daily-incremental/index.ts",
+      ),
+      "utf8",
+    );
+    expect(source).toContain("processReconciliationAudit");
+    expect(source).toContain("reconciliationAudit");
+    expect(source).toContain('operation: "reconciliation_audit"');
+    expect(source).toContain("targetWithoutBubbleCreatedAt");
+    expect(source).toContain("APPLY_JULY15_RECONCILIATION");
+    expect(source).toContain("reconciliationChildParentFields");
+    expect(source).toContain('"shopify_order_id", "payment_status_source"');
   });
 
   it("maps Bubble fulfill and take timestamps onto deliveries", () => {
@@ -358,5 +376,27 @@ describe("bubble daily incremental helpers", () => {
     expect(source).toContain("replaceOverwriteChildren");
     expect(source).toContain("childRowsDeleted");
     expect(source).toContain("childRowsWritten");
+  });
+
+  it("uses explicit ownership dependencies for high-risk reconciliation sources", () => {
+    const row = reconciliationOwnedRow(
+      "a_order",
+      { _id: "order-1", "ORDER_Grand total": 250 },
+      {
+        legacy_id: "order-1",
+        grand_total: 250,
+        delivery_status: null,
+        factory_print_date: null,
+      },
+      {
+        legacy_id: "order-1",
+        grand_total: 200,
+        delivery_status: "local-status",
+        factory_print_date: "2026-08-20T02:00:00.000Z",
+      },
+    );
+    expect(row.grand_total).toBe(250);
+    expect(row.factory_print_date).toBe("2026-08-20T02:00:00.000Z");
+    expect(row).not.toHaveProperty("delivery_status");
   });
 });

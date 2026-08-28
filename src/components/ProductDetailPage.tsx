@@ -67,6 +67,7 @@ const EMPTY_OPTIONS: ProductEditOptions = {
   cookTypes: [],
   collections: [],
   packingMaterials: [],
+  packingSupplies: [],
   catalogIngredients: [],
 };
 
@@ -161,6 +162,8 @@ export function ProductDetailPage({
   const [ingredientId, setIngredientId] = useState("");
   const [ingredientQuery, setIngredientQuery] = useState("");
   const [ingredientQty, setIngredientQty] = useState("1");
+  const [packingSupplyId, setPackingSupplyId] = useState("");
+  const [packingSupplyQty, setPackingSupplyQty] = useState("1");
   const [ingredientResults, setIngredientResults] = useState<CatalogOption[]>([]);
   const [ingredientMenuOpen, setIngredientMenuOpen] = useState(false);
   const [ingredientHighlight, setIngredientHighlight] = useState(0);
@@ -168,8 +171,7 @@ export function ProductDetailPage({
   const ingredientSearchRef = useRef<HTMLDivElement>(null);
   const [labelDisplayA, setLabelDisplayA] = useState("");
   const [labelDisplayB, setLabelDisplayB] = useState("");
-  const [labelPackingId, setLabelPackingId] = useState("");
-  const [adding, setAdding] = useState<"ingredient" | "label" | null>(null);
+  const [adding, setAdding] = useState<"ingredient" | "packing" | "label" | null>(null);
 
   const currency = useMemo(
     () =>
@@ -486,6 +488,21 @@ export function ProductDetailPage({
     }
   };
 
+  const handleAddPackingSupply = async () => {
+    if (!packingSupplyId) return;
+    const quantity = Number.parseFloat(packingSupplyQty);
+    if (!Number.isFinite(quantity) || quantity <= 0) return;
+    setAdding("packing");
+    try {
+      await addIngredient(product.id, packingSupplyId, quantity);
+      setPackingSupplyId("");
+      setPackingSupplyQty("1");
+      await refreshDetail();
+    } finally {
+      setAdding(null);
+    }
+  };
+
   const handleAddLabel = async () => {
     if (!labelDisplayA.trim() && !labelDisplayB.trim()) return;
     setAdding("label");
@@ -493,11 +510,10 @@ export function ProductDetailPage({
       await addLabel(product.id, {
         displayA: labelDisplayA,
         displayB: labelDisplayB,
-        packingMaterialId: labelPackingId || null,
+        packingMaterialId: null,
       });
       setLabelDisplayA("");
       setLabelDisplayB("");
-      setLabelPackingId("");
       await refreshDetail();
     } finally {
       setAdding(null);
@@ -915,6 +931,30 @@ export function ProductDetailPage({
                 {displayName} - {t("productDetail.packingSupplies")}
               </h2>
             </header>
+            {editing ? (
+              <div className="product-inline-add">
+                <label>
+                  <span>{t("productDetail.packingSupply")}</span>
+                  <FilterableSelect
+                    value={packingSupplyId}
+                    onChange={(event) => setPackingSupplyId(event.target.value)}
+                  >
+                    <option value="">{t("productDetail.pickPackingSupply")}</option>
+                    {options.packingSupplies
+                      .filter((item) => !addedIngredientIds.has(item.id))
+                      .map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+                  </FilterableSelect>
+                </label>
+                <label>
+                  <span>{t("productDetail.quantity")}</span>
+                  <input type="number" min="0" step="0.01" value={packingSupplyQty} onChange={(event) => setPackingSupplyQty(event.target.value)} />
+                </label>
+                <Button type="button" disabled={!packingSupplyId || adding === "packing"} onClick={() => void handleAddPackingSupply()}>
+                  <Plus />
+                  {t("productDetail.addPackingSupply")}
+                </Button>
+              </div>
+            ) : null}
             {packingSupplies.length === 0 ? (
               <p className="detail-description">{t("productDetail.noPackingSupplies")}</p>
             ) : (
@@ -989,20 +1029,6 @@ export function ProductDetailPage({
                   onChange={(event) => setLabelDisplayB(event.target.value)}
                 />
               </label>
-              <label>
-                <span>{t("productDetail.packing")}</span>
-                <FilterableSelect
-                  value={labelPackingId}
-                  onChange={(event) => setLabelPackingId(event.target.value)}
-                >
-                  <option value="">{t("common.notSet")}</option>
-                  {options.packingMaterials.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-                </FilterableSelect>
-              </label>
             </div>
           ) : null}
           {product.labels.length === 0 ? (
@@ -1014,7 +1040,6 @@ export function ProductDetailPage({
                   <tr>
                     <th>{t("productDetail.displayA")}</th>
                     <th>{t("productDetail.displayB")}</th>
-                    <th>{t("productDetail.packing")}</th>
                     {editing ? <th>{t("products.columns.actions")}</th> : null}
                   </tr>
                 </thead>
@@ -1023,7 +1048,6 @@ export function ProductDetailPage({
                     <tr key={label.id}>
                       <td>{label.displayA || t("common.notSet")}</td>
                       <td>{label.displayB || t("common.notSet")}</td>
-                      <td>{label.packingName || t("common.notSet")}</td>
                       {editing ? (
                         <td className="table-actions-cell">
                           <Button

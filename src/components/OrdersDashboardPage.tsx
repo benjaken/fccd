@@ -380,7 +380,11 @@ function QueuePanel({
               : null;
             return (
               <li key={item.id}>
-                <DetailLink to={detailTo}>
+                <DetailLink
+                  to={detailTo}
+                  target={item.kind === "order" ? "_blank" : undefined}
+                  rel={item.kind === "order" ? "noopener noreferrer" : undefined}
+                >
                   <span className="orders-dashboard-quote-main">
                     <strong>{item.orderNumber || item.customerName || t("common.notSet")}</strong>
                     <small>{item.customerName && item.orderNumber ? item.customerName : item.companyName || t("common.notSet")}</small>

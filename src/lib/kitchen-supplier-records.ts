@@ -33,6 +33,10 @@ export type KitchenSupplierRecordFilters = {
   supplierIds: string[];
 };
 
+export type KitchenSupplierEntryFilters = KitchenSupplierRecordFilters & {
+  purchaseTypeIds: string[];
+};
+
 export type KitchenSupplierCostEntry = {
   id: string;
   date: string;
@@ -77,6 +81,7 @@ export async function fetchKitchenSupplierPurchaseTypes() {
   const { data, error } = await supabase
     .from("purchase_types")
     .select("id,legacy_id,name,bubble_created_at")
+    .eq("is_active", true)
     .order("bubble_created_at", { ascending: true })
     .order("name", { ascending: true });
   if (error) throw new Error(error.message);
@@ -153,7 +158,7 @@ export async function fetchKitchenSupplierCostEntries({
   page,
   pageSize,
 }: {
-  filters: KitchenSupplierRecordFilters;
+  filters: KitchenSupplierEntryFilters;
   page: number;
   pageSize: number;
 }) {
@@ -162,6 +167,7 @@ export async function fetchKitchenSupplierCostEntries({
     p_start_date: filters.mode === "range" && filters.startDate ? filters.startDate : null,
     p_end_date: filters.mode === "range" && filters.endDate ? filters.endDate : null,
     p_supplier_ids: filters.supplierIds.length ? filters.supplierIds : null,
+    p_purchase_type_ids: filters.purchaseTypeIds.length ? filters.purchaseTypeIds : null,
     p_limit: pageSize,
     p_offset: (page - 1) * pageSize,
   });
@@ -191,10 +197,10 @@ export async function fetchKitchenSupplierCostEntries({
 }
 
 export async function updateKitchenSupplierCostEntry(id: string, amount: number) {
-  const { error } = await supabase
-    .from("supplier_purchases")
-    .update({ amount, bubble_modified_at: new Date().toISOString() })
-    .eq("id", id);
+  const { error } = await supabase.rpc("update_kitchen_supplier_cost_entry", {
+    p_id: id,
+    p_amount: amount,
+  });
   if (error) throw new Error(error.message);
 }
 

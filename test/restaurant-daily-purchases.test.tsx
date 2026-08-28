@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -25,6 +27,22 @@ const purchaseTypes = [
   { id: "bar", legacyId: "bar-legacy", name: "水吧用料" },
   { id: "sundries", legacyId: "sundries-legacy", name: "清潔/SUNDRIES" },
 ];
+const purchaseRecordsMigration = readFileSync(
+  path.resolve(process.cwd(), "supabase/migrations/20260826130000_restaurant_daily_purchase_records.sql"),
+  "utf8",
+).replace(/\r\n/g, "\n");
+const legacyPurchaseRecordBackfillMigration = readFileSync(
+  path.resolve(process.cwd(), "supabase/migrations/20260826140000_backfill_restaurant_purchase_record_ids.sql"),
+  "utf8",
+);
+const purchaseEntriesDataMigration = readFileSync(
+  path.resolve(process.cwd(), "supabase/migrations/20260826150000_restaurant_purchase_entries_only_with_data.sql"),
+  "utf8",
+);
+const purchaseSupplierTotalsMigration = readFileSync(
+  path.resolve(process.cwd(), "supabase/migrations/20260826170000_restaurant_daily_purchase_supplier_range_totals.sql"),
+  "utf8",
+).replace(/\r\n/g, "\n");
 
 function makeServices(overrides: Partial<RestaurantDailyPurchaseServices> = {}): RestaurantDailyPurchaseServices {
   return {
@@ -34,6 +52,7 @@ function makeServices(overrides: Partial<RestaurantDailyPurchaseServices> = {}):
     loadRecords: vi.fn(async () => ({
       items: [{
         date: null,
+        recordId: null,
         restaurantId: "tko",
         restaurantName: "TKO 桂花小幸 將軍澳",
         supplierId: "supplier-1",
@@ -72,6 +91,39 @@ describe("restaurant daily purchase input", () => {
     })));
   });
 
+  it("combines duplicate purchase groups into one supplier total on the main page", async () => {
+    await i18n.changeLanguage("zh-HK");
+    const loadRecords = vi.fn(async () => ({
+      items: [
+        {
+          date: "2026-08-22",
+          recordId: "record-1",
+          restaurantId: "tko",
+          restaurantName: "TKO 桂花小幸 將軍澳",
+          supplierId: "supplier-1",
+          supplierName: "長明國際 (CI)",
+          categories: [{ ...purchaseTypes[0], amount: 100 }],
+          total: 100,
+        },
+        {
+          date: "2026-08-20",
+          recordId: "record-2",
+          restaurantId: "tko",
+          restaurantName: "TKO 桂花小幸 將軍澳",
+          supplierId: "supplier-1",
+          supplierName: "長明國際 (CI)",
+          categories: [{ ...purchaseTypes[0], amount: 50 }, { ...purchaseTypes[1], amount: 20 }],
+          total: 70,
+        },
+      ],
+      total: 2,
+    }));
+    render(<RestaurantDailyPurchasesPage canEdit services={makeServices({ loadRecords })} />);
+
+    expect(await screen.findAllByText("長明國際 (CI)")).toHaveLength(1);
+    await waitFor(() => expect(document.querySelectorAll(".restaurant-purchase-record-table tbody tr")).toHaveLength(1));
+  });
+
   it("saves one categorized purchase group for a date, restaurant, and supplier", async () => {
     await i18n.changeLanguage("zh-HK");
     const user = userEvent.setup();
@@ -101,6 +153,84 @@ describe("restaurant daily purchase input", () => {
         { purchaseTypeId: "sundries", amount: 0 },
       ],
     }));
+  });
+
+  it("opens the edit panel with a wide amount field", async () => {
+    await i18n.changeLanguage("zh-HK");
+    const user = userEvent.setup();
+    const loadEntries = vi.fn(async () => ({
+      items: [{
+        id: "entry-1",
+        recordId: "record-1",
+        date: "2026-08-22",
+        restaurantId: "tko",
+        restaurantName: "TKO 桂花小幸 將軍澳",
+        supplierId: "supplier-1",
+        supplierName: "長明國際 (CI)",
+        purchaseTypeId: "kitchen",
+        purchaseTypeName: "廚房用料",
+        amount: 147891,
+      }],
+      total: 1,
+    }));
+    render(<RestaurantDailyPurchasesPage canEdit services={makeServices({ loadEntries })} />);
+
+    await user.click(await screen.findByRole("button", { name: /編輯採購記錄/ }));
+    const dialog = screen.getByRole("dialog", { name: "編輯採購記錄" });
+    const amount = await within(dialog).findByLabelText("TKO 桂花小幸 將軍澳長明國際 (CI)廚房用料金額");
+    expect(amount).toHaveValue(147891);
+    expect(amount.closest(".kitchen-cost-record-amount")).not.toBeNull();
+    expect(dialog.querySelector(".restaurant-purchase-entry-table")).toBeInTheDocument();
+  });
+
+  it("filters edit records by date and supplier", async () => {
+    await i18n.changeLanguage("zh-HK");
+    const user = userEvent.setup();
+    const loadEntries = vi.fn(async () => ({ items: [], total: 0 }));
+    render(<RestaurantDailyPurchasesPage canEdit services={makeServices({ loadEntries })} />);
+
+    await user.click(await screen.findByRole("button", { name: /編輯採購記錄/ }));
+    const dialog = screen.getByRole("dialog", { name: "編輯採購記錄" });
+    await user.selectOptions(within(dialog).getByLabelText("日期模式"), "single");
+    await user.type(within(dialog).getByLabelText("日期"), "2026-08-22");
+    await user.click(within(dialog).getByRole("combobox", { name: "供應商" }));
+    await user.click(screen.getByRole("option", { name: suppliers[1].name }));
+
+    await waitFor(() => expect(loadEntries).toHaveBeenLastCalledWith(expect.objectContaining({
+      filters: expect.objectContaining({
+        mode: "single",
+        singleDate: "2026-08-22",
+        supplierIds: ["supplier-2"],
+      }),
+    })));
+  });
+
+  it("keeps each new purchase form in a separate record group", () => {
+    expect(purchaseRecordsMigration).toContain("add column if not exists purchase_record_id uuid;");
+    expect(purchaseRecordsMigration).toContain("record_group_id uuid := gen_random_uuid();");
+    expect(purchaseRecordsMigration).toContain("filtered.record_date,\n      filtered.purchase_record_id");
+    expect(purchaseRecordsMigration).not.toContain("where restaurant_id = p_restaurant_id");
+  });
+
+  it("backfills legacy purchases by date, restaurant, and supplier", () => {
+    expect(legacyPurchaseRecordBackfillMigration).toContain("gen_random_uuid() as purchase_record_id");
+    expect(legacyPurchaseRecordBackfillMigration).toContain("purchase.purchase_record_id is null");
+    expect(legacyPurchaseRecordBackfillMigration).toContain("is not distinct from legacy_groups");
+  });
+
+  it("only exposes purchase entries that have an amount", () => {
+    expect(purchaseEntriesDataMigration).toContain("coalesce(purchase.amount, 0) > 0");
+  });
+
+  it("aggregates the main purchase page by supplier", () => {
+    expect(purchaseSupplierTotalsMigration).toContain("null::date as record_date");
+    expect(purchaseSupplierTotalsMigration).toContain("null::uuid as purchase_record_id");
+    expect(purchaseSupplierTotalsMigration).toContain(
+      "purchase.restaurant_id,\n      purchase.supplier_id,\n      purchase.purchase_type_id",
+    );
+    expect(purchaseSupplierTotalsMigration).not.toContain(
+      "purchase.purchase_record_id,\n      purchase.restaurant_id",
+    );
   });
 
   it("keeps write controls hidden for read-only roles", async () => {

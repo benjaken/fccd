@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronRight, HandCoins } from "lucide-react";
 
@@ -10,7 +10,9 @@ import { DetailLink } from "@/components/ui/detail-link";
 import { ListTable } from "@/components/ui/list-table";
 import { Modal } from "@/components/ui/modal";
 import { OperationalListState } from "@/components/ui/operational-list-state";
+import { ResponsiveFilterPanel } from "@/components/ui/responsive-filter-panel";
 import { TablePagination } from "@/components/ui/table-pagination";
+import { useMediaQuery } from "@/lib/use-media-query";
 import {
   fetchPayments,
   fetchPaymentFilterOptions,
@@ -69,6 +71,8 @@ export function PaymentsListPage({
   const [items, setItems] = useState<PaymentListItem[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [selected, setSelected] = useState<Map<string, PaymentListItem>>(new Map());
@@ -78,6 +82,8 @@ export function PaymentsListPage({
   const [charges, setCharges] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const isMobileList = useMediaQuery("(max-width: 760px)");
+  const previousMobileListRef = useRef(isMobileList);
 
   const totalPages = Math.max(1, Math.ceil(total / PAYMENTS_PAGE_SIZE));
   const visibleFrom = total ? (page - 1) * PAYMENTS_PAGE_SIZE + 1 : 0;
@@ -133,8 +139,14 @@ export function PaymentsListPage({
       setLoading(false);
       return;
     }
-    setLoading(true);
-    setError(null);
+    const appending = isMobileList && page > 1;
+    if (appending) {
+      setLoadingMore(true);
+      setLoadMoreError(false);
+    } else {
+      setLoading(true);
+      setError(null);
+    }
     try {
       const result = await loadPayments({
         page,
@@ -145,7 +157,12 @@ export function PaymentsListPage({
         channelId: channelId || null,
         paymentMethodId: paymentMethodId || null,
       });
-      setItems(result.items);
+      setItems((current) => {
+        if (!appending) return result.items;
+        const next = new Map(current.map((item) => [item.id, item]));
+        result.items.forEach((item) => next.set(item.id, item));
+        return [...next.values()];
+      });
       setTotal(result.total);
       setSelected((previous) => {
         const next = new Map(previous);
@@ -155,15 +172,27 @@ export function PaymentsListPage({
         return next;
       });
     } catch {
-      setItems([]);
-      setTotal(0);
-      setError("payments_load_failed");
+      if (appending) setLoadMoreError(true);
+      else {
+        setItems([]);
+        setTotal(0);
+        setError("payments_load_failed");
+      }
     } finally {
-      setLoading(false);
+      if (appending) setLoadingMore(false);
+      else setLoading(false);
     }
-  }, [canViewFinance, channelId, dateFilterMode, loadPayments, page, paymentDate, paymentDateEnd, paymentDateStart, paymentMethodId, reloadKey]);
+  }, [canViewFinance, channelId, dateFilterMode, isMobileList, loadPayments, page, paymentDate, paymentDateEnd, paymentDateStart, paymentMethodId, reloadKey]);
 
   useEffect(() => void load(), [load]);
+
+  useEffect(() => {
+    if (previousMobileListRef.current === isMobileList) return;
+    previousMobileListRef.current = isMobileList;
+    setItems([]);
+    setPage(1);
+    setLoadMoreError(false);
+  }, [isMobileList]);
 
   useEffect(() => {
     if (!canViewFinance) return;
@@ -241,8 +270,9 @@ export function PaymentsListPage({
           <h1>{t("payments.title")}</h1>
         </div>
       </header>
-      <article className="panel orders-panel payments-reconciliation-panel">
+      <article className="panel orders-panel payments-reconciliation-panel responsive-card-list-panel">
         <header className="orders-toolbar payments-reconciliation-toolbar">
+          <ResponsiveFilterPanel active={Boolean(paymentDate || paymentDateStart || paymentDateEnd || channelId || paymentMethodId)}>
           <label className="payments-date-filter-mode">
             <span>{t("payments.dateFilter")}</span>
             <select
@@ -296,6 +326,7 @@ export function PaymentsListPage({
               </FilterableSelect>
             </label>
           </div>
+          </ResponsiveFilterPanel>
           <div className="payments-selection-actions">
             {selectedItems.length ? <span>{t("payments.selected", { count: selectedItems.length, amount: selectedTotal })}</span> : null}
             {selectionWarning ? <span className="payments-selection-warning" role="status">{selectionWarning}</span> : null}
@@ -309,11 +340,49 @@ export function PaymentsListPage({
         ) : (
           <ListTable
             className="orders-table-wrap payments-reconciliation-table"
-            onRefresh={() => setReloadKey((key) => key + 1)}
+            onRefresh={() => {
+              if (isMobileList && page !== 1) setPage(1);
+              else setReloadKey((key) => key + 1);
+            }}
             loading={loading}
             loadingLabel={t("payments.loading")}
             skeletonRows={PAYMENTS_PAGE_SIZE}
             skeletonColumns={PAYMENT_SKELETON_COLUMNS}
+            mobileHasMore={items.length < total}
+            mobileLoadingMore={loadingMore}
+            mobileLoadError={loadMoreError}
+            onMobileLoadMore={() => {
+              if (loadingMore) return;
+              if (loadMoreError) setReloadKey((key) => key + 1);
+              else setPage((current) => current + 1);
+            }}
+            mobileLoadingMoreLabel={t("payments.loading")}
+            mobileRetryLabel={t("payments.retry")}
+            mobileEndLabel={t("payments.pagination", { from: total ? 1 : 0, to: Math.min(items.length, total), total })}
+            mobileContent={isMobileList ? (
+              <div className="mobile-card-list payments-mobile-list" role="list" aria-label={t("payments.title")}>
+                {items.map((payment) => (
+                  <article className="mobile-list-card order-mobile-card payment-mobile-card" role="listitem" key={payment.id}>
+                    <header>
+                      <label className="order-mobile-select">
+                        <input type="checkbox" checked={selected.has(payment.id)} onChange={(event) => togglePayment(payment, event.target.checked)} aria-label={t("payments.selectPayment", { order: payment.orderNumber || payment.id })} />
+                      </label>
+                      <div className="order-mobile-title">
+                        {payment.orderId ? <DetailLink to={`/orders/${payment.orderId}`} target="_blank" rel="noopener noreferrer">{payment.orderNumber || t("common.notSet")}</DetailLink> : <strong>{payment.orderNumber || t("common.notSet")}</strong>}
+                        <span>{payment.channelName || t("common.notSet")}</span>
+                      </div>
+                      <strong className="payment-mobile-amount">{payment.currency === "HKD" ? currency.format(payment.amount) : `${payment.currency} ${payment.amount}`}</strong>
+                    </header>
+                    <dl className="order-mobile-facts">
+                      <div><dt>{t("payments.columns.paymentMethod")}</dt><dd>{payment.paymentMethodName || t("common.notSet")}</dd></div>
+                      <div><dt>{t("payments.columns.date")}</dt><dd>{payment.paymentAt ? date.format(new Date(payment.paymentAt)) : t("common.notSet")}</dd></div>
+                      <div className="payment-mobile-reference"><dt>{t("payments.columns.reference")}</dt><dd>{payment.reference || t("common.notSet")}</dd></div>
+                    </dl>
+                    {payment.orderId ? <footer><Button variant="ghost" size="icon" asChild><DetailLink to={`/orders/${payment.orderId}`} target="_blank" rel="noopener noreferrer" aria-label={`${t("payments.open")} ${payment.orderNumber || payment.id}`}><ChevronRight /></DetailLink></Button></footer> : null}
+                  </article>
+                ))}
+              </div>
+            ) : undefined}
             header={<tr>
               <th className="payments-select-cell"><input type="checkbox" checked={pageAllSelected} disabled={!items.length || loading} onChange={(event) => togglePage(event.target.checked)} aria-label={t("payments.selectAll")} /></th>
               <th>{t("payments.columns.brand")}</th>
@@ -328,12 +397,12 @@ export function PaymentsListPage({
             {items.map((payment) => <tr key={payment.id}>
               <td className="payments-select-cell"><input type="checkbox" checked={selected.has(payment.id)} onChange={(event) => togglePayment(payment, event.target.checked)} aria-label={t("payments.selectPayment", { order: payment.orderNumber || payment.id })} /></td>
               <td>{payment.channelName || t("common.notSet")}</td>
-              <td>{payment.orderId ? <DetailLink className="order-link" to={`/orders/${payment.orderId}`}>{payment.orderNumber || t("common.notSet")}</DetailLink> : payment.orderNumber || t("common.notSet")}</td>
+              <td>{payment.orderId ? <DetailLink className="order-link" to={`/orders/${payment.orderId}`} target="_blank" rel="noopener noreferrer">{payment.orderNumber || t("common.notSet")}</DetailLink> : payment.orderNumber || t("common.notSet")}</td>
               <td>{payment.paymentMethodName || t("common.notSet")}</td>
               <td>{payment.paymentAt ? date.format(new Date(payment.paymentAt)) : t("common.notSet")}</td>
               <td><strong>{payment.currency === "HKD" ? currency.format(payment.amount) : `${payment.currency} ${payment.amount}`}</strong></td>
               <td>{payment.reference || t("common.notSet")}</td>
-              <td>{payment.orderId && <Button variant="ghost" size="icon" asChild><DetailLink to={`/orders/${payment.orderId}`} aria-label={`${t("payments.open")} ${payment.orderNumber || payment.id}`}><ChevronRight /></DetailLink></Button>}</td>
+              <td className="table-actions-cell">{payment.orderId && <Button variant="ghost" size="icon" asChild><DetailLink to={`/orders/${payment.orderId}`} target="_blank" rel="noopener noreferrer" aria-label={`${t("payments.open")} ${payment.orderNumber || payment.id}`}><ChevronRight /></DetailLink></Button>}</td>
             </tr>)}
           </ListTable>
         )}

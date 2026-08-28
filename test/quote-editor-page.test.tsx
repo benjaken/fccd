@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import type { ComponentProps } from "react";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -150,6 +152,7 @@ function renderEditor(
       <Routes>
         <Route path="/quotes/new" element={<QuoteEditorPage {...props} />} />
         <Route path="/quotes/:id/edit" element={<QuoteEditorPage {...props} />} />
+        <Route path="/orders/:id/edit" element={<QuoteEditorPage {...props} />} />
       </Routes>
     </MemoryRouter>,
   );
@@ -170,6 +173,23 @@ describe("Quote editor", () => {
   beforeEach(async () => {
     setMobileViewport(false);
     await i18n.changeLanguage("en");
+  });
+
+  it("keeps the mobile details grid and footer controls inside the panel", () => {
+    const css = readFileSync(path.resolve(process.cwd(), "src/index.css"), "utf8");
+    const responsiveGridRule = css.match(
+      /@media \(max-width: 960px\)[\s\S]*?\.quote-editor-form,[\s\S]*?\.quote-items-layout\s*\{([^}]*)\}/,
+    )?.[1];
+    const mobileFooterRule = css.match(
+      /\.quote-editor-form\s*>\s*footer\s*\{([^}]*)\}/g,
+    )?.at(-1);
+    const mobileFooterButtonRule = css.match(
+      /\.quote-editor-form\s*>\s*footer\s+\.ui-button\s*\{([^}]*)\}/g,
+    )?.at(-1);
+
+    expect(responsiveGridRule).toContain("grid-template-columns: minmax(0, 1fr)");
+    expect(mobileFooterRule).toContain("flex-direction: column");
+    expect(mobileFooterButtonRule).toContain("min-width: 0");
   });
 
   it("renders editable product cards instead of the wide table on mobile", async () => {
@@ -443,19 +463,19 @@ describe("Quote editor", () => {
     expect(within(panel).getByRole("heading", { name: "More products" })).toBeInTheDocument();
     expect(within(panel).queryByRole("button", { name: /edit/i })).not.toBeInTheDocument();
 
-    await user.click(within(panel).getByRole("button", { name: "Select 香草雞飯" }));
-    await user.click(within(panel).getByRole("button", { name: "Select 魚香茄子飯" }));
+    await user.click(within(panel).getByRole("button", { name: "Select Chicken rice" }));
+    await user.click(within(panel).getByRole("button", { name: "Select Eggplant rice" }));
     await user.click(within(panel).getByRole("button", { name: "Confirm and add 2 items" }));
 
-    expect(await screen.findByRole("row", { name: /CBE001 香草雞飯/ })).toBeInTheDocument();
-    expect(screen.getByRole("row", { name: /CBE002 魚香茄子飯/ })).toBeInTheDocument();
+    expect(await screen.findByRole("row", { name: /CBE001 Chicken rice/ })).toBeInTheDocument();
+    expect(screen.getByRole("row", { name: /CBE002 Eggplant rice/ })).toBeInTheDocument();
     expect(saveLine).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: "Search lunch box products" }));
     const reopenedPanel = await screen.findByRole("dialog", { name: "Choose lunch box products" });
     expect(within(reopenedPanel).getByText("2", { selector: ".lunchbox-picker-column-heading span" })).toBeInTheDocument();
-    expect(within(reopenedPanel).getByRole("button", { name: "Unselect 香草雞飯" })).toHaveAttribute("aria-pressed", "true");
-    expect(within(reopenedPanel).getByRole("button", { name: "Unselect 魚香茄子飯" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(reopenedPanel).getByRole("button", { name: "Unselect Chicken rice" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(reopenedPanel).getByRole("button", { name: "Unselect Eggplant rice" })).toHaveAttribute("aria-pressed", "true");
     await user.click(within(reopenedPanel).getByRole("button", { name: "Cancel" }));
 
     await user.click(within(document.getElementById("quote-editor-editable-items")!).getByRole("button", { name: "Save changes" }));
@@ -737,16 +757,21 @@ describe("Quote editor", () => {
     await user.click(within(labelDialog).getByRole("button", { name: "Cancel" }));
 
     const quantityInput = screen.getByRole("spinbutton", { name: "Quantity Roast pork" });
-    expect(quantityInput).toHaveAttribute("min", "1");
+    expect(quantityInput).toHaveAttribute("min", "0");
     expect(quantityInput).toHaveAttribute("step", "1");
     fireEvent.change(quantityInput, { target: { value: "3" } });
     fireEvent.blur(quantityInput);
     await waitFor(() => expect(saveExistingLine).toHaveBeenCalledWith(expect.objectContaining({ id: "line-1", quantity: 3 })));
 
     saveExistingLine.mockClear();
+    fireEvent.change(quantityInput, { target: { value: "0" } });
+    fireEvent.blur(quantityInput);
+    await waitFor(() => expect(saveExistingLine).toHaveBeenCalledWith(expect.objectContaining({ id: "line-1", quantity: 0 })));
+
+    saveExistingLine.mockClear();
     fireEvent.change(quantityInput, { target: { value: "1.5" } });
     fireEvent.blur(quantityInput);
-    expect(await screen.findByText("Quantity must be a whole number above 0 and price cannot be negative.")).toBeInTheDocument();
+    expect(await screen.findByText("Quantity must be a whole number of 0 or more and price cannot be negative.")).toBeInTheDocument();
     expect(saveExistingLine).not.toHaveBeenCalled();
   });
 
@@ -1033,6 +1058,29 @@ describe("Quote editor", () => {
   });
 
   it.each([
+    { kind: "quote" as const, path: "/quotes/quote-1/edit" },
+    { kind: "order" as const, path: "/orders/order-1/edit" },
+  ])("adds and selects a new district from the $kind editor", async ({ kind, path }) => {
+    const user = userEvent.setup();
+    const createDistrict = vi.fn().mockResolvedValue({
+      id: "district-new",
+      name: "Tseung Kwan O",
+    });
+    renderEditor({
+      documentType: kind,
+      createDistrict,
+    }, path);
+
+    const district = await screen.findByRole("combobox", { name: "District" });
+    await user.click(district);
+    await user.type(screen.getByRole("searchbox", { name: "Search" }), "Tseung Kwan O");
+    await user.click(screen.getByRole("button", { name: /Tseung Kwan O/ }));
+
+    await waitFor(() => expect(createDistrict).toHaveBeenCalledWith("Tseung Kwan O"));
+    expect(district).toHaveTextContent("Tseung Kwan O");
+  });
+
+  it.each([
     { kind: "quote" as const, path: "/quotes/quote-1/edit", number: "FCLQ20260801" },
     { kind: "order" as const, path: "/orders/order-1/edit", number: "FCCO20260801" },
   ])("saves all data from each available $kind section button", async ({ kind, path, number }) => {
@@ -1245,13 +1293,15 @@ describe("Quote editor", () => {
     render(
       <MemoryRouter initialEntries={["/quotes/quote-1"]}>
         <Routes>
-          <Route path="/quotes/:id" element={<QuoteEditorPage combined readOnly loadOptions={vi.fn().mockResolvedValue(options)} loadSummary={vi.fn().mockResolvedValue(summary)} loadLines={vi.fn().mockResolvedValue([])} saveDetails={saveDetails} saveFinancialDetails={saveFinancialDetails} sendConfirmation={sendConfirmation} convertQuote={convertQuote} loadShippingFeeOptions={vi.fn().mockResolvedValue(shippingFeeOptions)} />} />
+          <Route path="/quotes/:id" element={<QuoteEditorPage combined readOnly canEdit loadOptions={vi.fn().mockResolvedValue(options)} loadSummary={vi.fn().mockResolvedValue(summary)} loadLines={vi.fn().mockResolvedValue([])} saveDetails={saveDetails} saveFinancialDetails={saveFinancialDetails} sendConfirmation={sendConfirmation} convertQuote={convertQuote} loadShippingFeeOptions={vi.fn().mockResolvedValue(shippingFeeOptions)} />} />
+          <Route path="/quotes/:id/edit" element={<div>Edit quote</div>} />
           <Route path="/orders/:id" element={<div>Converted order</div>} />
         </Routes>
       </MemoryRouter>,
     );
 
     await screen.findByRole("heading", { name: "FCLQ20260801" });
+    expect(screen.getByRole("link", { name: /Edit|編輯/ })).toHaveAttribute("href", "/quotes/quote-1/edit");
     await user.click(screen.getByRole("button", { name: "Send WATI and email order confirmation" }));
     await waitFor(() => expect(sendConfirmation).toHaveBeenCalledWith("quote-1"));
 
@@ -1418,5 +1468,43 @@ describe("Quote editor", () => {
     expect(editDialog).not.toHaveTextContent("Delivery address");
     expect(editDialog).not.toHaveTextContent("Delivery time");
     expect(setFactoryStatus).not.toHaveBeenCalled();
+  });
+
+  it("clears the order AO marker after Shopify confirmation but keeps product AO labels", async () => {
+    const user = userEvent.setup();
+    const confirmAddonShopify = vi.fn().mockResolvedValue(undefined);
+    const loadSummary = vi.fn().mockResolvedValue({
+      id: "order-addon", orderNumber: "B-1550C", channelId: "channel-1",
+      addonShopifyPending: true,
+      draft: {
+        channelId: "channel-1", customerName: "Customer", companyName: "",
+        contactA: "12345678", contactB: "", email: "order@example.com", asanaLink: "",
+        address: "1 Central Road", districtId: "district-1", districtName: "", shippingMethodId: "shipping-home",
+        deliveryDate: "2026-08-30", deliveryTime: "12:00 - 13:00", shipOutTime: "11:00",
+        customerNote: "", packingNote: "", salesPartnerId: "", internalNote: "", tagIds: [],
+        quoteStatus: "", quoteSalesSourceId: "", quoteCommunicationChannelId: "",
+      },
+      financials: { shippingFee: 0, discount: 0, cashdollarRedeemed: 0, cashdollarPurchased: 0 },
+      payments: [], isSentToFactory: true, doNotSendToFactory: false,
+    });
+    const loadLines = vi.fn().mockResolvedValue([{
+      id: "ao-line", sku: "AO-1", name: "Addon product", quantity: 1,
+      unitPrice: 128, totalPrice: 128, remarks: "", isAddon: true,
+    }]);
+
+    render(
+      <MemoryRouter initialEntries={["/orders/order-addon"]}>
+        <Routes>
+          <Route path="/orders/:id" element={<QuoteEditorPage documentType="order" combined readOnly canEdit confirmAddonShopify={confirmAddonShopify} loadOptions={vi.fn().mockResolvedValue(options)} loadSummary={loadSummary} loadLines={loadLines} loadShippingFeeOptions={vi.fn().mockResolvedValue(shippingFeeOptions)} />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("未處理加單")).toBeInTheDocument();
+    expect(screen.getByText("加單")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "确认已手动加入 Shopify" }));
+    await waitFor(() => expect(confirmAddonShopify).toHaveBeenCalledWith("order-addon"));
+    expect(screen.queryByText("未處理加單")).not.toBeInTheDocument();
+    expect(screen.getByText("加單")).toBeInTheDocument();
   });
 });

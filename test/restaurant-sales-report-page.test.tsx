@@ -1,10 +1,11 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { RestaurantSalesReportPage } from "@/components/RestaurantSalesReportPage";
 import i18n from "@/i18n";
 import type { RestaurantSalesReportRow } from "@/lib/restaurant-sales-report";
+import { selectDateRange } from "./calendar-test-helpers";
 
 const rows: RestaurantSalesReportRow[] = [
   {
@@ -116,17 +117,19 @@ describe("RestaurantSalesReportPage", () => {
 
     await user.click(screen.getByRole("button", { name: "每日" }));
     expect(screen.getByRole("group", { name: "日期範圍" })).toBeInTheDocument();
-    const startDate = screen.getByLabelText("開始日期");
-    const endDate = screen.getByLabelText("結束日期");
-    expect(startDate).not.toHaveAttribute("max");
-    expect(endDate).not.toHaveAttribute("min");
-    fireEvent.change(endDate, { target: { value: "2025-01-15" } });
+    const dateRange = screen.getByRole("group", { name: "日期範圍" });
+    await selectDateRange(
+      user,
+      dateRange.querySelector("button")!,
+      "2026-08-15",
+      "2026-08-16",
+    );
     await waitFor(() =>
       expect(loadReport).toHaveBeenLastCalledWith(
         expect.objectContaining({
           period: "day",
-          startDate: "2025-01-15",
-          endDate: "2025-01-15",
+          startDate: "2026-08-15",
+          endDate: "2026-08-16",
         }),
       ),
     );

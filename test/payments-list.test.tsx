@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PaymentsListPage } from "@/components/PaymentsListPage";
 import i18n from "@/i18n";
 import type { PaymentListItem } from "@/lib/payments";
+import { selectDate, selectDateRange } from "./calendar-test-helpers";
 
 const payments: PaymentListItem[] = [
   {
@@ -33,9 +34,53 @@ const filterOptions = {
   paymentMethods: [{ id: "method-1", name: "PayPal" }],
 };
 
+function mockMatchMedia(matches: boolean) {
+  window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+    matches, media: query, onchange: null,
+    addListener: vi.fn(), removeListener: vi.fn(),
+    addEventListener: vi.fn(), removeEventListener: vi.fn(), dispatchEvent: vi.fn(),
+  }));
+}
+
 describe("PaymentsListPage", () => {
   beforeEach(async () => {
+    mockMatchMedia(false);
     await i18n.changeLanguage("en");
+  });
+
+  it("moves mobile filters into a side panel and appends the next card page", async () => {
+    mockMatchMedia(true);
+    let notifyIntersection: IntersectionObserverCallback = () => undefined;
+    const observe = vi.fn();
+    vi.stubGlobal("IntersectionObserver", class IntersectionObserverMock {
+      constructor(callback: IntersectionObserverCallback) { notifyIntersection = callback; }
+      observe = observe; disconnect = vi.fn(); unobserve = vi.fn(); takeRecords = vi.fn(() => []);
+      root = null; rootMargin = "180px 0px"; thresholds = [0];
+    });
+    const loadPayments = vi.fn().mockImplementation(async ({ page }: { page: number }) => ({
+      total: 2,
+      items: page === 1 ? [payments[0]] : [payments[1]],
+    }));
+    const user = userEvent.setup();
+
+    render(<MemoryRouter><PaymentsListPage canViewFinance loadPayments={loadPayments} loadPaymentFilterOptions={async () => filterOptions} /></MemoryRouter>);
+
+    const mobileList = await waitFor(() => {
+      const node = document.querySelector<HTMLElement>(".payments-mobile-list");
+      expect(node).toBeInTheDocument();
+      return node!;
+    });
+    expect(within(mobileList).getByText("B-1001")).toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "Brand" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Open filters" }));
+    expect(screen.getByRole("dialog", { name: "Filters" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Brand" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Apply" }));
+    await waitFor(() => expect(observe).toHaveBeenCalled());
+    act(() => notifyIntersection([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver));
+    expect(await within(mobileList).findByText("B-1002")).toBeInTheDocument();
+    expect(loadPayments).toHaveBeenCalledWith(expect.objectContaining({ page: 2 }));
+    vi.unstubAllGlobals();
   });
 
   it("filters unreconciled payments by either one date or a date range", async () => {
@@ -44,14 +89,25 @@ describe("PaymentsListPage", () => {
     render(<MemoryRouter><PaymentsListPage canViewFinance loadPayments={loadPayments} loadPaymentFilterOptions={async () => filterOptions} /></MemoryRouter>);
 
     await screen.findByText("B-1001");
-    await user.type(screen.getByLabelText("Payment date"), "2026-08-20");
+    await selectDate(
+      user,
+      screen.getByRole("combobox", { name: "Payment date" }),
+      "2026-08-20",
+    );
     await waitFor(() => expect(loadPayments).toHaveBeenLastCalledWith(expect.objectContaining({ unreconciled: true, paymentDate: "2026-08-20" })));
 
     const dateFilter = screen.getByRole("combobox", { name: "Payment date filter" });
     expect(dateFilter).toHaveValue("single");
     await user.selectOptions(dateFilter, "range");
-    await user.type(screen.getByLabelText("From"), "2026-08-20");
-    await user.type(screen.getByLabelText("To"), "2026-08-22");
+    const paymentDateRange = screen.getByRole("group", {
+      name: "Payment date range",
+    });
+    await selectDateRange(
+      user,
+      paymentDateRange.querySelector("button")!,
+      "2026-08-20",
+      "2026-08-22",
+    );
     await waitFor(() => expect(loadPayments).toHaveBeenLastCalledWith(expect.objectContaining({ unreconciled: true, paymentDate: null, paymentDateStart: "2026-08-20", paymentDateEnd: "2026-08-22" })));
   });
 
@@ -85,6 +141,9 @@ describe("PaymentsListPage", () => {
 
     const headers = (await screen.findAllByRole("columnheader")).map((header) => header.textContent);
     expect(headers.slice(1, 6)).toEqual(["Brand", "Order", "Payment method", "Payment date", "Amount"]);
+    expect(
+      screen.getByRole("link", { name: "Open order B-1001" }).closest("td"),
+    ).toHaveClass("table-actions-cell");
   });
 
   it("prevents a negative net amount and reconciles compatible selections", async () => {
@@ -103,9 +162,11 @@ describe("PaymentsListPage", () => {
 
     await user.clear(charges);
     await user.type(charges, "20");
-    const payoutDate = within(dialog).getByLabelText("Payout date");
-    await user.clear(payoutDate);
-    await user.type(payoutDate, "2026-08-20");
+    await selectDate(
+      user,
+      within(dialog).getByRole("combobox", { name: "Payout date" }),
+      "2026-08-20",
+    );
     await user.click(within(dialog).getByRole("button", { name: "Confirm reconciliation" }));
     await waitFor(() => expect(saveSettlement).toHaveBeenCalledWith({ paymentIds: ["payment-1", "payment-2"], payoutDateMode: "custom", payoutAt: expect.any(String), charges: 20 }));
   });

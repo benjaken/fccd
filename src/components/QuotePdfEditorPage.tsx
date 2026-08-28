@@ -13,7 +13,7 @@ import { useTranslation } from "react-i18next";
 import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
-import { PdfAutoResizeTextarea } from "@/components/PdfAutoResizeTextarea";
+import { PdfBlurCommitInput, PdfBlurCommitTextarea } from "@/components/PdfBlurCommitField";
 import { QuoteClauseSearchPicker } from "@/components/QuoteClauseSearchPicker";
 import {
   getBrandContactEmail,
@@ -32,6 +32,7 @@ import {
 } from "@/lib/quote-pdf-draft";
 import { DICT_TYPE, dictItemLabel, useDictItems } from "@/lib/dictionaries";
 import { splitPdfModuleIndexes, usePdfAutoPageBreaks } from "@/lib/pdf-auto-pagination";
+import { printPdf } from "@/lib/print-pdf";
 import {
   fetchActiveQuotePdfPages,
   type QuotePdfPage,
@@ -65,6 +66,7 @@ const FIRST_PRODUCT_PAGE_SIZE = 10;
 const CONTINUATION_PRODUCT_PAGE_SIZE = 18;
 
 type QuotePdfDraft = {
+  sourceFinancialsVersion: number;
   brandName: string;
   quoteNumber: string;
   quoteDate: string;
@@ -80,6 +82,7 @@ type QuotePdfDraft = {
   activities: EditableActivity[];
   utensilPackQuantity: string;
   showCustomerSignature: boolean;
+  signaturePartyName: string;
   activityShippingFeeId: string;
   activityShippingNote: string;
   activityShippingFee: string;
@@ -101,17 +104,23 @@ function pdfDate(value: string | null | undefined) {
 }
 
 function lineToDraft(line: DetailLine): EditableLine {
+  const quantity = line.quantity ?? 0;
+  const sourceUnitPrice = line.unitPrice ?? 0;
+  const unitPrice = sourceUnitPrice !== 0 || !line.totalPrice || quantity === 0
+    ? sourceUnitPrice
+    : line.totalPrice / quantity;
   return {
     id: line.id,
     description: line.productName || line.content || "",
     quantity: line.quantity === null ? "" : String(line.quantity),
-    unitPrice: line.unitPrice === null ? "0" : String(line.unitPrice),
+    unitPrice: String(unitPrice),
   };
 }
 
 function resultToDraft(result: OrderDetailResult): QuotePdfDraft {
   const order = result.order;
   return {
+    sourceFinancialsVersion: 1,
     brandName: order?.channelName || "Food Channel Catering",
     quoteNumber: order?.orderNumber || "",
     quoteDate: pdfDate(order?.updatedAt),
@@ -121,7 +130,7 @@ function resultToDraft(result: OrderDetailResult): QuotePdfDraft {
     email: order?.email || "",
     deliveryAddress: order?.address || "",
     deliveryDate: pdfDate(order?.deliveryAt),
-    deliveryTime: order?.shipOutTime || "",
+    deliveryTime: order?.deliveryTime || order?.shipOutTime || "",
     lines: result.lines.length
       ? result.lines.map(lineToDraft)
       : [{ id: crypto.randomUUID(), description: "", quantity: "1", unitPrice: "0" }],
@@ -129,6 +138,7 @@ function resultToDraft(result: OrderDetailResult): QuotePdfDraft {
     activities: [],
     utensilPackQuantity: "0",
     showCustomerSignature: false,
+    signaturePartyName: order?.companyName || order?.customerName || "",
     activityShippingFeeId: "",
     activityShippingNote: "運費－滿 $2800 免運費－地面交收",
     activityShippingFee: "0",
@@ -138,8 +148,8 @@ function resultToDraft(result: OrderDetailResult): QuotePdfDraft {
     shippingFeeLabel: "",
     shippingFee: order ? String(order.shippingFee || 0) : "0",
     discount: order ? String(order.discount || 0) : "0",
-    cashDollarDeduction: "0",
-    cashDollarPurchase: "0",
+    cashDollarDeduction: order ? String(order.cashdollarRedeemed || 0) : "0",
+    cashDollarPurchase: order ? String(order.cashdollarPurchased || 0) : "0",
   };
 }
 
@@ -150,16 +160,12 @@ function normalizeDraft(value: Partial<QuotePdfDraft> | null | undefined, fallba
     if (typeof items === "string") return items.split(/\r?\n/).filter((item) => item.trim());
     return fallbackItems;
   };
+  const hasPdfShippingOverride = Boolean(stored.shippingFeeId?.trim());
   return {
     ...fallback,
-    ...stored,
-    brandName: fallback.brandName,
-    quoteDate: pdfDate(stored.quoteDate || fallback.quoteDate),
-    deliveryDate: pdfDate(stored.deliveryDate || fallback.deliveryDate),
-    lines: (Array.isArray(stored.lines) ? stored.lines : fallback.lines).map((line) => ({
-      ...line,
-      unitPrice: line.unitPrice?.trim() || "0",
-    })),
+    sourceFinancialsVersion: 1,
+    // Quote/order data always comes from the latest saved source record. The
+    // local PDF draft is merged afterwards only for PDF-specific additions.
     additionalInfo: stored.additionalInfo ?? [],
     activities: (stored.activities ?? []).map((activity) => ({
       ...activity,
@@ -169,16 +175,18 @@ function normalizeDraft(value: Partial<QuotePdfDraft> | null | undefined, fallba
     // Pagination is calculated from the rendered page. Ignore legacy manual
     // page-placement preferences so every draft starts in document order.
     showCustomerSignature: stored.showCustomerSignature ?? false,
+    signaturePartyName: typeof stored.signaturePartyName === "string"
+      ? stored.signaturePartyName
+      : fallback.signaturePartyName,
     activityShippingFeeId: stored.activityShippingFeeId ?? "",
     activityShippingNote:
       stored.activityShippingNote ?? "運費－滿 $2800 免運費－地面交收",
     activityShippingFee: stored.activityShippingFee?.trim() || "0",
-    shippingFeeId: stored.shippingFeeId ?? "",
-    shippingFeeLabel: stored.shippingFeeLabel ?? "",
-    shippingFee: stored.shippingFee?.trim() || "0",
-    discount: stored.discount ?? fallback.discount,
-    cashDollarDeduction: stored.cashDollarDeduction ?? "0",
-    cashDollarPurchase: stored.cashDollarPurchase ?? "0",
+    shippingFeeId: hasPdfShippingOverride ? stored.shippingFeeId ?? "" : fallback.shippingFeeId,
+    shippingFeeLabel: hasPdfShippingOverride ? stored.shippingFeeLabel ?? "" : fallback.shippingFeeLabel,
+    shippingFee: hasPdfShippingOverride
+      ? stored.shippingFee?.trim() || "0"
+      : fallback.shippingFee,
     terms: normalizeItems(stored.terms, fallback.terms),
     paymentMethods: normalizeItems(stored.paymentMethods, fallback.paymentMethods),
   };
@@ -249,7 +257,10 @@ export function QuotePdfEditorPage({
       + Math.max(draft.paymentMethods.length, 1)
       + (paginationBrandKind === "lunch-box" ? 2 : paginationBrandKind === "party-food" ? 1 : 0)
     : 0;
-  const paginationResetKey = draft ? JSON.stringify([draft, sourceBrand]) : "";
+  // Text edits are measured by ResizeObserver. Resetting every page break for
+  // each committed field value makes a continuation page disappear on blur.
+  // Only document/brand changes require rebuilding pagination from scratch.
+  const paginationResetKey = `${id}:${paginationBrandKind}`;
   const trailingPageBreaks = usePdfAutoPageBreaks(editorRef, paginationModuleCount, paginationResetKey);
 
   const storageKey = quotePdfDraftStorageKey(id);
@@ -309,6 +320,41 @@ export function QuotePdfEditorPage({
   }, [loadShippingFees]);
 
   useEffect(() => {
+    if (!shippingFees.length) return;
+    setDraft((current) => {
+      if (!current) return current;
+      let next = current;
+      const productFee = shippingFees.find((fee) => fee.id === current.shippingFeeId);
+      if (productFee) {
+        const restoreAmount = !current.shippingFee.trim()
+          || (numberValue(current.shippingFee) === 0 && productFee.fee !== 0);
+        if (restoreAmount || current.shippingFeeLabel !== productFee.item) {
+          next = {
+            ...next,
+            shippingFeeLabel: productFee.item,
+            shippingFee: restoreAmount ? String(productFee.fee) : current.shippingFee,
+          };
+        }
+      }
+      const activityFee = shippingFees.find((fee) => fee.id === current.activityShippingFeeId);
+      if (activityFee) {
+        const restoreAmount = !current.activityShippingFee.trim()
+          || (numberValue(current.activityShippingFee) === 0 && activityFee.fee !== 0);
+        if (restoreAmount || current.activityShippingNote !== activityFee.item) {
+          next = {
+            ...next,
+            activityShippingNote: activityFee.item,
+            activityShippingFee: restoreAmount
+              ? String(activityFee.fee)
+              : current.activityShippingFee,
+          };
+        }
+      }
+      return next;
+    });
+  }, [draft?.activityShippingFeeId, draft?.shippingFeeId, shippingFees]);
+
+  useEffect(() => {
     if (!draft) return;
     setSaved(false);
     const timer = window.setTimeout(() => {
@@ -332,18 +378,19 @@ export function QuotePdfEditorPage({
         }
       }),
     );
-    window.print();
-  }, []);
+    printPdf("報價單", draft?.quoteNumber || sourceBrand.quoteNumber);
+  }, [draft?.quoteNumber, sourceBrand.quoteNumber]);
 
   const totals = useMemo(() => {
     const productSubtotal = (draft?.lines ?? []).reduce(
       (sum, line) => sum + numberValue(line.quantity) * numberValue(line.unitPrice),
       0,
     );
-    const activitySubtotal = (draft?.activities ?? []).reduce(
+    const activityItemsTotal = (draft?.activities ?? []).reduce(
       (sum, activity) => sum + numberValue(activity.amount),
       0,
     );
+    const activitySubtotal = productSubtotal + activityItemsTotal;
     const activityTotal = activitySubtotal + numberValue(draft?.activityShippingFee ?? "");
     const isLunchBoxDraft = getBrandKind(
       sourceBrand.name,
@@ -362,9 +409,10 @@ export function QuotePdfEditorPage({
   const filteredAdditional = useMemo(() => {
     const term = additionalSearch.trim().toLocaleLowerCase();
     return additionalInfoOptions.filter(
-      (option) => !term || option.toLocaleLowerCase().includes(term),
+      (option) => (!term || option.toLocaleLowerCase().includes(term))
+        && !draft?.additionalInfo.includes(option),
     );
-  }, [additionalInfoOptions, additionalSearch]);
+  }, [additionalInfoOptions, additionalSearch, draft?.additionalInfo]);
 
   const update = <K extends keyof QuotePdfDraft>(key: K, value: QuotePdfDraft[K]) => {
     setSaved(false);
@@ -373,6 +421,8 @@ export function QuotePdfEditorPage({
       [key]: value,
     } : current));
   };
+
+  const markDraftDirty = () => setSaved(false);
 
   const updateLine = (index: number, patch: Partial<EditableLine>) => {
     if (!draft) return;
@@ -408,14 +458,14 @@ export function QuotePdfEditorPage({
 
   const addAdditional = (value: string) => {
     const text = value.trim();
-    if (!draft || !text) return;
+    if (!draft || !text || draft.additionalInfo.includes(text)) return;
     update("additionalInfo", [...draft.additionalInfo, text]);
     setAdditionalSearch("");
   };
 
   const addActivity = (description: string, amount = "0") => {
     const text = description.trim();
-    if (!draft || !text) return;
+    if (!draft || !text || draft.activities.some((activity) => activity.description === text)) return;
     update("activities", [
       ...draft.activities,
       { id: crypto.randomUUID(), description: text, amount },
@@ -490,7 +540,14 @@ export function QuotePdfEditorPage({
       {draft.showCustomerSignature ? (
         <div className="quote-pdf-signature-party quote-pdf-signature-customer">
           <strong>請仔細閱讀以上內容並簽署確認：</strong>
-          <em>{draft.companyName || draft.customerName || "公司"}</em>
+          <PdfBlurCommitInput
+            className="quote-pdf-signature-party-name"
+            aria-label="簽署公司或客戶名稱"
+            value={draft.signaturePartyName}
+            placeholder={t("quotes.pdfEditor.signaturePartyPlaceholder")}
+            onDirty={markDraftDirty}
+            onCommit={(value) => update("signaturePartyName", value)}
+          />
           <span className="quote-pdf-signature-stamp-spacer" aria-hidden="true" />
           <label><strong>公司蓋印及簽署：</strong><span /></label>
           <label><strong>負責人姓名：</strong><span /></label>
@@ -513,8 +570,8 @@ export function QuotePdfEditorPage({
             {draft.activities.map((activity, index) => (
               <tr key={activity.id}>
                 <td>{index + 1}</td>
-                <td><input aria-label={`活動報價 ${index + 1}`} value={activity.description} onChange={(event) => updateActivity(index, { description: event.target.value })} /></td>
-                <td>$<input aria-label={`活動價錢 ${index + 1}`} inputMode="decimal" value={activity.amount} onChange={(event) => updateActivity(index, { amount: event.target.value })} onBlur={() => { if (!activity.amount.trim()) updateActivity(index, { amount: "0" }); }} /></td>
+                <td><PdfBlurCommitInput aria-label={`活動報價 ${index + 1}`} value={activity.description} onDirty={markDraftDirty} onCommit={(value) => updateActivity(index, { description: value })} /></td>
+                <td>$<PdfBlurCommitInput aria-label={`活動價錢 ${index + 1}`} inputMode="decimal" value={activity.amount} onDirty={markDraftDirty} onCommit={(value) => updateActivity(index, { amount: value.trim() ? value : "0" })} /></td>
               </tr>
             ))}
           </tbody>
@@ -523,13 +580,13 @@ export function QuotePdfEditorPage({
           <tr><td colSpan={2}>小計：</td><td>${totals.activitySubtotal.toLocaleString("zh-HK")}</td></tr>
           <tr>
             <td colSpan={2}>
-              <FilterableSelect className="quote-pdf-edit-only" aria-label="活動運費項目" value={draft.activityShippingFeeId} onChange={(event) => selectActivityShippingFee(event.target.value)}>
+              <FilterableSelect className="quote-pdf-edit-only shipping-fee-select" aria-label="活動運費項目" value={draft.activityShippingFeeId} onChange={(event) => selectActivityShippingFee(event.target.value)}>
                 <option value="">選擇運費</option>
                 {shippingFees.map((fee) => <option key={fee.id} value={fee.id}>{fee.item}</option>)}
               </FilterableSelect>
               <span className="quote-pdf-print-only">{draft.activityShippingNote || "選擇運費"}</span>
             </td>
-            <td><span className="quote-pdf-price-input"><span aria-hidden="true">$</span><input aria-label="活動運費" inputMode="decimal" size={Math.max(draft.activityShippingFee.length, 1)} value={draft.activityShippingFee} onChange={(event) => update("activityShippingFee", event.target.value)} onBlur={() => { if (!draft.activityShippingFee.trim()) update("activityShippingFee", "0"); }} /></span></td>
+            <td><span className="quote-pdf-price-input"><span aria-hidden="true">$</span><PdfBlurCommitInput aria-label="活動運費" inputMode="decimal" size={Math.max(draft.activityShippingFee.length, 1)} value={draft.activityShippingFee} onDirty={markDraftDirty} onCommit={(value) => update("activityShippingFee", value.trim() ? value : "0")} /></span></td>
           </tr>
           <tr><td colSpan={2}>總數：</td><td>${totals.activityTotal.toLocaleString("zh-HK")}</td></tr>
         </tfoot>
@@ -553,9 +610,9 @@ export function QuotePdfEditorPage({
             return (
               <tr key={line.id}>
                 <td>{index + 1}</td>
-                <td><input className="quote-pdf-product-input" aria-label={`產品 ${index + 1}`} value={line.description} onChange={(event) => updateLine(index, { description: event.target.value })} /></td>
-                <td><span className="quote-pdf-price-input"><span aria-hidden="true">$</span><input aria-label={`單價 ${index + 1}`} inputMode="decimal" size={Math.max(line.unitPrice.length, 1)} value={line.unitPrice} onChange={(event) => updateLine(index, { unitPrice: event.target.value })} onBlur={() => { if (!line.unitPrice.trim()) updateLine(index, { unitPrice: "0" }); }} /></span></td>
-                <td><input aria-label={`${isLunchBox ? "份數" : "數量"} ${index + 1}`} inputMode="decimal" value={line.quantity} onChange={(event) => updateLine(index, { quantity: event.target.value })} /></td>
+                <td><PdfBlurCommitInput className="quote-pdf-product-input" aria-label={`產品 ${index + 1}`} value={line.description} onDirty={markDraftDirty} onCommit={(value) => updateLine(index, { description: value })} /></td>
+                <td><span className="quote-pdf-price-input"><span aria-hidden="true">$</span><PdfBlurCommitInput aria-label={`單價 ${index + 1}`} inputMode="decimal" size={Math.max(line.unitPrice.length, 1)} value={line.unitPrice} onDirty={markDraftDirty} onCommit={(value) => updateLine(index, { unitPrice: value.trim() ? value : "0" })} /></span></td>
+                <td><PdfBlurCommitInput aria-label={`${isLunchBox ? "份數" : "數量"} ${index + 1}`} inputMode="decimal" value={line.quantity} onDirty={markDraftDirty} onCommit={(value) => updateLine(index, { quantity: value })} /></td>
                 <td className="quote-pdf-money">${(numberValue(line.quantity) * numberValue(line.unitPrice)).toLocaleString("zh-HK")}</td>
               </tr>
             );
@@ -574,13 +631,13 @@ export function QuotePdfEditorPage({
           <tr><td className="quote-pdf-summary-label" colSpan={4}>小計：</td><td><strong>${totals.productSubtotal.toLocaleString("zh-HK")}</strong></td></tr>
           <tr>
             <td colSpan={4}>
-              <FilterableSelect className="quote-pdf-edit-only" aria-label="運費項目" value={draft.shippingFeeId} onChange={(event) => selectShippingFee(event.target.value)}>
+              <FilterableSelect className="quote-pdf-edit-only shipping-fee-select" aria-label="運費項目" value={draft.shippingFeeId} onChange={(event) => selectShippingFee(event.target.value)}>
                 <option value="">選擇運費</option>
                 {shippingFees.map((fee) => <option key={fee.id} value={fee.id}>{fee.item}</option>)}
               </FilterableSelect>
               <span className="quote-pdf-print-only">{draft.shippingFeeLabel || "選擇運費"}</span>
             </td>
-            <td><span className="quote-pdf-price-input"><span aria-hidden="true">$</span><input aria-label="運費" inputMode="decimal" size={Math.max(draft.shippingFee.length, 1)} value={draft.shippingFee} onChange={(event) => update("shippingFee", event.target.value)} onBlur={() => { if (!draft.shippingFee.trim()) update("shippingFee", "0"); }} /></span></td>
+            <td><span className="quote-pdf-price-input"><span aria-hidden="true">$</span><PdfBlurCommitInput aria-label="運費" inputMode="decimal" size={Math.max(draft.shippingFee.length, 1)} value={draft.shippingFee} onDirty={markDraftDirty} onCommit={(value) => update("shippingFee", value.trim() ? value : "0")} /></span></td>
           </tr>
           <tr><td className="quote-pdf-summary-label" colSpan={4}>總數：</td><td><strong>${totals.productTotal.toLocaleString("zh-HK")}</strong></td></tr>
         </tbody> : null}
@@ -592,7 +649,7 @@ export function QuotePdfEditorPage({
         <div className="quote-pdf-section-title"><Button size="sm" onClick={() => setAdditionalOpen(true)}><Plus />新增額外資訊</Button></div>
         {draft.additionalInfo.length ? <ol>
           {draft.additionalInfo.map((item, index) => (
-            <li key={`${item}-${index}`}><textarea aria-label={`額外資訊 ${index + 1}`} value={item} rows={1} onChange={(event) => update("additionalInfo", draft.additionalInfo.map((current, itemIndex) => itemIndex === index ? event.target.value : current))} /><button type="button" aria-label={`刪除額外資訊 ${index + 1}`} onClick={() => update("additionalInfo", draft.additionalInfo.filter((_, itemIndex) => itemIndex !== index))}><Minus /></button></li>
+            <li key={`${item}-${index}`}><PdfBlurCommitTextarea aria-label={`額外資訊 ${index + 1}`} value={item} rows={1} onDirty={markDraftDirty} onCommit={(value) => update("additionalInfo", draft.additionalInfo.map((current, itemIndex) => itemIndex === index ? value : current))} /><button type="button" aria-label={`刪除額外資訊 ${index + 1}`} onClick={() => update("additionalInfo", draft.additionalInfo.filter((_, itemIndex) => itemIndex !== index))}><Minus /></button></li>
           ))}
         </ol> : null}
       </section> }] : []),
@@ -645,13 +702,14 @@ export function QuotePdfEditorPage({
             <ol style={{ counterReset: `quote-note ${firstItemIndex}` }}>
               {run.map((item) => item.itemIndex === null ? null : (
                 <li data-pdf-auto-module-index={item.moduleIndex} key={`${kind}-${item.itemIndex}`}>
-                  <textarea
+                  <PdfBlurCommitTextarea
                     rows={1}
                     aria-label={`${isTerm ? "條款及細則" : "付款方式"} ${item.itemIndex + 1}`}
                     value={isTerm ? draft.terms[item.itemIndex] : draft.paymentMethods[item.itemIndex]}
-                    onChange={(event) => {
-                      if (isTerm) update("terms", draft.terms.map((current, itemIndex) => itemIndex === item.itemIndex ? event.target.value : current));
-                      else update("paymentMethods", draft.paymentMethods.map((current, itemIndex) => itemIndex === item.itemIndex ? event.target.value : current));
+                    onDirty={markDraftDirty}
+                    onCommit={(value) => {
+                      if (isTerm) update("terms", draft.terms.map((current, itemIndex) => itemIndex === item.itemIndex ? value : current));
+                      else update("paymentMethods", draft.paymentMethods.map((current, itemIndex) => itemIndex === item.itemIndex ? value : current));
                     }}
                   />
                 </li>
@@ -690,21 +748,21 @@ export function QuotePdfEditorPage({
           <img src={brandLogo} alt={brandLogoAlt} />
           <div>
             <h1>{documentTitle}</h1>
-            <input aria-label="報價單號" value={draft.quoteNumber} onChange={(event) => update("quoteNumber", event.target.value)} />
+            <PdfBlurCommitInput aria-label="報價單號" value={draft.quoteNumber} onDirty={markDraftDirty} onCommit={(value) => update("quoteNumber", value)} />
           </div>
           <img className="quote-pdf-award" src="/assets/award-logo.avif" alt="公司認證及獎項" />
         </header>
 
         <div className="quote-pdf-meta-grid">
           <div className="quote-pdf-customer-company" data-testid="quote-customer-company">
-            <label htmlFor="quote-customer">客戶名稱</label><input id="quote-customer" value={draft.customerName} onChange={(event) => update("customerName", event.target.value)} />
-            <label htmlFor="quote-company">公司名稱</label><input id="quote-company" value={draft.companyName} onChange={(event) => update("companyName", event.target.value)} />
+            <label htmlFor="quote-customer">客戶名稱</label><PdfBlurCommitInput id="quote-customer" value={draft.customerName} onDirty={markDraftDirty} onCommit={(value) => update("customerName", value)} />
+            <label htmlFor="quote-company">公司名稱</label><PdfBlurCommitInput id="quote-company" value={draft.companyName} onDirty={markDraftDirty} onCommit={(value) => update("companyName", value)} />
           </div>
-          <label htmlFor="quote-date">報價日期</label><input id="quote-date" inputMode="numeric" placeholder={t("quotes.pdfEditor.datePlaceholder")} value={draft.quoteDate} onChange={(event) => update("quoteDate", event.target.value)} />
-          <label htmlFor="quote-contact">聯絡資料</label><input id="quote-contact" value={draft.contact} onChange={(event) => update("contact", event.target.value)} />
-          <label htmlFor="quote-delivery-date">送貨日期</label><input id="quote-delivery-date" inputMode="numeric" placeholder={t("quotes.pdfEditor.datePlaceholder")} value={draft.deliveryDate} onChange={(event) => update("deliveryDate", event.target.value)} />
-          <label htmlFor="quote-address">送貨地址</label><PdfAutoResizeTextarea id="quote-address" value={draft.deliveryAddress} onChange={(event) => update("deliveryAddress", event.target.value)} />
-          <label htmlFor="quote-delivery-time">送貨時段</label><input id="quote-delivery-time" value={draft.deliveryTime} onChange={(event) => update("deliveryTime", event.target.value)} />
+          <label htmlFor="quote-date">報價日期</label><PdfBlurCommitInput id="quote-date" inputMode="numeric" placeholder={t("quotes.pdfEditor.datePlaceholder")} value={draft.quoteDate} onDirty={markDraftDirty} onCommit={(value) => update("quoteDate", value)} />
+          <label htmlFor="quote-contact">聯絡資料</label><PdfBlurCommitInput id="quote-contact" value={draft.contact} onDirty={markDraftDirty} onCommit={(value) => update("contact", value)} />
+          <label htmlFor="quote-delivery-date">送貨日期</label><PdfBlurCommitInput id="quote-delivery-date" inputMode="numeric" placeholder={t("quotes.pdfEditor.datePlaceholder")} value={draft.deliveryDate} onDirty={markDraftDirty} onCommit={(value) => update("deliveryDate", value)} />
+          <label htmlFor="quote-address">送貨地址</label><PdfBlurCommitTextarea id="quote-address" rows={1} value={draft.deliveryAddress} onDirty={markDraftDirty} onCommit={(value) => update("deliveryAddress", value)} />
+          <label htmlFor="quote-delivery-time">送貨時段</label><PdfBlurCommitInput id="quote-delivery-time" value={draft.deliveryTime} onDirty={markDraftDirty} onCommit={(value) => update("deliveryTime", value)} />
         </div>
 
         {renderProductTable(productLinePages[0], 0, productLinePages.length === 1)}
@@ -750,40 +808,41 @@ export function QuotePdfEditorPage({
 
       <QuotePdfPageFooter email={brandEmail} printOnly />
 
-      {canAddAdditionalInfo ? <Modal open={additionalOpen} onClose={() => setAdditionalOpen(false)} title="額外資訊" closeLabel="關閉額外資訊" size="lg" footer={<Button onClick={() => setAdditionalOpen(false)}>確定</Button>}>
+      {canAddAdditionalInfo ? <Modal open={additionalOpen} onClose={() => setAdditionalOpen(false)} title="額外資訊" closeLabel="關閉額外資訊" size="lg" rootClassName="quote-clause-modal-root" className="quote-supplement-modal quote-pdf-supplement-modal" footer={<Button onClick={() => setAdditionalOpen(false)}>確定</Button>}>
         <div className="quote-additional-picker">
-          <div className="quote-additional-search"><Search /><input autoFocus aria-label="搜尋額外資訊" placeholder={t("quotes.pdfEditor.additionalSearchPlaceholder")} value={additionalSearch} onChange={(event) => setAdditionalSearch(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") addAdditional(additionalSearch); }} /><Button variant="outline" onClick={() => addAdditional(additionalSearch)}>Add</Button></div>
+          <div className="quote-additional-search"><Search /><input autoFocus aria-label="搜尋額外資訊" placeholder={t("quotes.pdfEditor.additionalSearchPlaceholder")} value={additionalSearch} onChange={(event) => setAdditionalSearch(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") addAdditional(additionalSearch); }} /><Button variant="outline" onClick={() => addAdditional(additionalSearch)}><Plus />加入</Button></div>
           <p>可搜尋下列範本，亦可直接輸入任何文字再按 Add。</p>
           <ul>
             {filteredAdditional.map((option) => <li key={option}><span>{option}</span><Button size="sm" variant="outline" onClick={() => addAdditional(option)}><Plus />加入</Button></li>)}
           </ul>
+          {draft.additionalInfo.length ? <div className="quote-supplement-selected"><strong>已加入</strong>{draft.additionalInfo.map((item, index) => <div key={`${item}-${index}`}><span>（{index + 1}）{item}</span><button type="button" aria-label={`移除額外資訊 ${index + 1}`} onClick={() => update("additionalInfo", draft.additionalInfo.filter((_, itemIndex) => itemIndex !== index))}><Minus /></button></div>)}</div> : null}
         </div>
       </Modal> : null}
 
-      <Modal open={termsOpen} onClose={() => setTermsOpen(false)} title="條款及細則" closeLabel="關閉條款及細則" size="lg" rootClassName="quote-clause-modal-root" className="quote-clause-modal" footer={<Button onClick={() => setTermsOpen(false)}>確定</Button>}>
+      <Modal open={termsOpen} onClose={() => setTermsOpen(false)} title="條款及細則" closeLabel="關閉條款及細則" size="lg" rootClassName="quote-clause-modal-root" className="quote-supplement-modal quote-pdf-supplement-modal" footer={<Button onClick={() => setTermsOpen(false)}>確定</Button>}>
         <div className="quote-additional-picker quote-clause-picker">
-          <QuoteClauseSearchPicker search={termSearch} onSearchChange={setTermSearch} options={termOptions} searchLabel="搜尋條款及細則" placeholder={t("quotes.pdfEditor.termsSearchPlaceholder")} onAdd={(value) => addDraftItem("terms", value)} />
+          <QuoteClauseSearchPicker search={termSearch} onSearchChange={setTermSearch} options={termOptions.filter((option) => !draft.terms.includes(option))} searchLabel="搜尋條款及細則" placeholder={t("quotes.pdfEditor.termsSearchPlaceholder")} onAdd={(value) => addDraftItem("terms", value)} />
           <p>可搜尋條款範本，亦可自由輸入內容後按「加入」。</p>
-          <div className="quote-clause-selected"><strong>已加入的條例</strong>{draft.terms.map((item, index) => <div key={`selected-term-${index}`}><span>（{index + 1}）{item}</span><button type="button" aria-label={`移除條款及細則 ${index + 1}`} onClick={() => update("terms", draft.terms.filter((_, itemIndex) => itemIndex !== index))}><Minus /></button></div>)}</div>
+          <div className="quote-supplement-selected"><strong>已加入的條例</strong>{draft.terms.map((item, index) => <div key={`selected-term-${index}`}><span>（{index + 1}）{item}</span><button type="button" aria-label={`移除條款及細則 ${index + 1}`} onClick={() => update("terms", draft.terms.filter((_, itemIndex) => itemIndex !== index))}><Minus /></button></div>)}</div>
         </div>
       </Modal>
 
-      <Modal open={paymentsOpen} onClose={() => setPaymentsOpen(false)} title="付款方式" closeLabel="關閉付款方式" size="lg" rootClassName="quote-clause-modal-root" className="quote-clause-modal" footer={<Button onClick={() => setPaymentsOpen(false)}>確定</Button>}>
+      <Modal open={paymentsOpen} onClose={() => setPaymentsOpen(false)} title="付款方式" closeLabel="關閉付款方式" size="lg" rootClassName="quote-clause-modal-root" className="quote-supplement-modal quote-pdf-supplement-modal" footer={<Button onClick={() => setPaymentsOpen(false)}>確定</Button>}>
         <div className="quote-additional-picker quote-clause-picker">
-          <QuoteClauseSearchPicker search={paymentSearch} onSearchChange={setPaymentSearch} options={paymentOptions} searchLabel="搜尋付款方式" placeholder={t("quotes.pdfEditor.paymentSearchPlaceholder")} onAdd={(value) => addDraftItem("paymentMethods", value)} />
+          <QuoteClauseSearchPicker search={paymentSearch} onSearchChange={setPaymentSearch} options={paymentOptions.filter((option) => !draft.paymentMethods.includes(option))} searchLabel="搜尋付款方式" placeholder={t("quotes.pdfEditor.paymentSearchPlaceholder")} onAdd={(value) => addDraftItem("paymentMethods", value)} />
           <p>可搜尋付款方式範本，亦可自由輸入內容後按「加入」。</p>
-          <div className="quote-clause-selected"><strong>已加入的付款方式</strong>{draft.paymentMethods.map((item, index) => <div key={`selected-payment-${index}`}><span>（{index + 1}）{item}</span><button type="button" aria-label={`移除付款方式 ${index + 1}`} onClick={() => update("paymentMethods", draft.paymentMethods.filter((_, itemIndex) => itemIndex !== index))}><Minus /></button></div>)}</div>
+          <div className="quote-supplement-selected"><strong>已加入的付款方式</strong>{draft.paymentMethods.map((item, index) => <div key={`selected-payment-${index}`}><span>（{index + 1}）{item}</span><button type="button" aria-label={`移除付款方式 ${index + 1}`} onClick={() => update("paymentMethods", draft.paymentMethods.filter((_, itemIndex) => itemIndex !== index))}><Minus /></button></div>)}</div>
         </div>
       </Modal>
 
-      {isLunchBox ? <Modal open={activityOpen} onClose={() => setActivityOpen(false)} title="活動報價" closeLabel="關閉活動報價" size="lg" footer={<Button onClick={() => setActivityOpen(false)}>確定</Button>}>
+      {isLunchBox ? <Modal open={activityOpen} onClose={() => setActivityOpen(false)} title="活動報價" closeLabel="關閉活動報價" size="lg" rootClassName="quote-clause-modal-root" className="quote-supplement-modal quote-pdf-supplement-modal" footer={<Button onClick={() => setActivityOpen(false)}>確定</Button>}>
         <div className="quote-additional-picker quote-activity-picker">
-          <div className="quote-additional-search"><Search /><input autoFocus aria-label="搜尋活動報價" placeholder={t("quotes.pdfEditor.activitySearchPlaceholder")} value={activitySearch} onChange={(event) => setActivitySearch(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") addActivity(activitySearch); }} /><Button variant="outline" onClick={() => addActivity(activitySearch)}>Add</Button></div>
+          <div className="quote-additional-search"><Search /><input autoFocus aria-label="搜尋活動報價" placeholder={t("quotes.pdfEditor.activitySearchPlaceholder")} value={activitySearch} onChange={(event) => setActivitySearch(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") addActivity(activitySearch); }} /><Button variant="outline" onClick={() => addActivity(activitySearch)}><Plus />加入</Button></div>
           <p>可搜尋活動項目範本，亦可直接輸入任何文字再按 Add。</p>
           <ul>
-            {activityOptions.filter((option) => !activitySearch.trim() || option.description.toLocaleLowerCase().includes(activitySearch.trim().toLocaleLowerCase())).map((option) => <li key={option.description}><span>{option.description}</span><span>${Number(option.amount).toLocaleString("zh-HK")}</span><Button size="sm" variant="outline" onClick={() => addActivity(option.description, option.amount)}><Plus />加入</Button></li>)}
+            {activityOptions.filter((option) => (!activitySearch.trim() || option.description.toLocaleLowerCase().includes(activitySearch.trim().toLocaleLowerCase())) && !draft.activities.some((activity) => activity.description === option.description)).map((option) => <li key={option.description}><span>{option.description}</span><span>${Number(option.amount).toLocaleString("zh-HK")}</span><Button size="sm" variant="outline" onClick={() => addActivity(option.description, option.amount)}><Plus />加入</Button></li>)}
           </ul>
-          {draft.activities.length ? <div className="quote-activity-selected"><strong>已加入</strong>{draft.activities.map((activity, index) => <div key={activity.id}><span>（{index + 1}） {activity.description}</span><button type="button" aria-label={`移除活動項目 ${index + 1}`} onClick={() => update("activities", draft.activities.filter((_, activityIndex) => activityIndex !== index))}><Minus /></button></div>)}</div> : null}
+          {draft.activities.length ? <div className="quote-supplement-selected"><strong>已加入</strong>{draft.activities.map((activity, index) => <div key={activity.id}><span>（{index + 1}） {activity.description}</span><button type="button" aria-label={`移除活動項目 ${index + 1}`} onClick={() => update("activities", draft.activities.filter((_, activityIndex) => activityIndex !== index))}><Minus /></button></div>)}</div> : null}
         </div>
       </Modal> : null}
     </section>

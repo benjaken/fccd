@@ -7,11 +7,13 @@ import { SidePanel } from "@/components/ui/side-panel";
 import { cn } from "@/lib/utils";
 import {
   createRawMeatStockIn,
+  coerceRawMeatQuantityInput,
   DEFAULT_RAW_MEAT_UNIT_MULTIPLIERS,
   fetchRawMeatUnitMultipliers,
   hongKongDateInputValue,
   inboundTotalAmount,
   parseDecimalInput,
+  parseRawMeatQuantityInput,
   quantityToKg,
   RAW_MEAT_WEIGHT_UNITS,
   roundTo,
@@ -102,7 +104,7 @@ export function RawMeatStockInModal({
   }, [open, selectedItem]);
 
   const unitPrice = parseDecimalInput(unitPriceText);
-  const quantity = parseDecimalInput(quantityText);
+  const quantity = parseRawMeatQuantityInput(quantityText);
   const multiplier = multipliers[unit];
   const quantityKg =
     quantity === null ? null : quantityToKg(quantity, multiplier);
@@ -255,8 +257,11 @@ export function RawMeatStockInModal({
             <span>{t("rawMeatInventory.fields.quantity")}</span>
             <input
               inputMode="decimal"
+              pattern="[0-9]*[.]?[0-9]{0,2}"
               value={quantityText}
-              onChange={(event) => setQuantityText(event.target.value)}
+              onChange={(event) =>
+                setQuantityText(coerceRawMeatQuantityInput(event.target.value))
+              }
               placeholder={t("rawMeatInventory.fields.quantityPlaceholder")}
               aria-label={t("rawMeatInventory.fields.quantity")}
             />
@@ -266,7 +271,7 @@ export function RawMeatStockInModal({
             <input
               readOnly
               disabled
-              value={quantityKg === null ? "" : String(roundTo(quantityKg, 4))}
+              value={quantityKg === null ? "" : String(roundTo(quantityKg, 2))}
               aria-label={t("rawMeatInventory.fields.quantityKg")}
             />
           </label>

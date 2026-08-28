@@ -33,6 +33,7 @@ import { FactoryDishLabelPreview } from "@/components/FactoryDishLabelPreview";
 import { Modal } from "@/components/ui/modal";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { SearchSelect } from "@/components/ui/search-select";
+import { createDeliveryDistrictOption } from "@/lib/delivery-districts";
 import {
   fetchPackageDetail,
   type PackageChoiceSet,
@@ -55,6 +56,7 @@ import {
   updateQuoteFinancials,
   updateOrderFactoryStatus,
   saveQuotePayments,
+  saveSalesDocumentBatch,
   sendQuoteConfirmation,
   type CreatedQuote,
   type QuoteCatalogItem,
@@ -75,6 +77,7 @@ import {
 } from "@/lib/quote-pdf-draft";
 import { fetchShippingFees, type ShippingFee } from "@/lib/shipping-fees";
 import { convertQuoteToOrder } from "@/lib/quotes";
+import { confirmOrderAddonShopifyInput } from "@/lib/order-editor";
 import { useDetailBackTo } from "@/lib/detail-navigation";
 import {
   normalizeDoNotSendToFactory,
@@ -215,6 +218,7 @@ type Props = {
   documentType?: QuoteEditorDocumentType;
   canEdit?: boolean;
   loadOptions?: typeof fetchQuoteEditorOptions;
+  createDistrict?: typeof createDeliveryDistrictOption;
   saveQuote?: typeof createQuote;
   loadSummary?: typeof fetchQuoteEditorSummary;
   loadLines?: typeof fetchQuoteLines;
@@ -230,6 +234,7 @@ type Props = {
   saveUtensilLine?: typeof addQuoteUtensilLine;
   loadShippingFeeOptions?: () => Promise<ShippingFee[]>;
   savePayments?: typeof saveQuotePayments;
+  saveBatch?: typeof saveSalesDocumentBatch;
   sendConfirmation?: typeof sendQuoteConfirmation;
   convertQuote?: typeof convertQuoteToOrder;
   copyQuote?: typeof duplicateQuote;
@@ -237,6 +242,7 @@ type Props = {
   saveFactorySettings?: typeof saveOrderFactorySettings;
   loadLunchboxProducts?: typeof fetchProducts;
   loadLunchboxFilterOptions?: typeof fetchLunchboxPickerFilterOptions;
+  confirmAddonShopify?: typeof confirmOrderAddonShopifyInput;
 };
 
 export function QuoteEditorPage({
@@ -244,6 +250,7 @@ export function QuoteEditorPage({
   documentType = "quote",
   canEdit = false,
   loadOptions = fetchQuoteEditorOptions,
+  createDistrict = createDeliveryDistrictOption,
   saveQuote = createQuote,
   loadSummary = fetchQuoteEditorSummary,
   loadLines = fetchQuoteLines,
@@ -259,6 +266,7 @@ export function QuoteEditorPage({
   saveUtensilLine = addQuoteUtensilLine,
   loadShippingFeeOptions = loadConfiguredShippingFees,
   savePayments = saveQuotePayments,
+  saveBatch,
   sendConfirmation = sendQuoteConfirmation,
   convertQuote = convertQuoteToOrder,
   copyQuote = duplicateQuote,
@@ -266,6 +274,7 @@ export function QuoteEditorPage({
   saveFactorySettings = saveOrderFactorySettings,
   loadLunchboxProducts = fetchProducts,
   loadLunchboxFilterOptions = fetchLunchboxPickerFilterOptions,
+  confirmAddonShopify = confirmOrderAddonShopifyInput,
 }: Props) {
   const { t, i18n } = useTranslation();
   const additionalInfoDict = useDictItems(DICT_TYPE.quoteAdditionalInfo);
@@ -299,8 +308,11 @@ export function QuoteEditorPage({
   const [lines, setLines] = useState<QuoteLine[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [confirmingAddonShopify, setConfirmingAddonShopify] = useState(false);
+  const [addonShopifyError, setAddonShopifyError] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [creatingDistrict, setCreatingDistrict] = useState(false);
   const [catalogSearch, setCatalogSearch] = useState("");
   const [catalogResults, setCatalogResults] = useState<QuoteCatalogItem[]>([]);
   const [selectedItem, setSelectedItem] = useState<QuoteCatalogItem | null>(null);
@@ -598,6 +610,28 @@ export function QuoteEditorPage({
   const patchDraft = (partial: Partial<QuoteDraft>) =>
     setDraft((current) => ({ ...current, ...partial }));
 
+  const addDistrict = async (name: string) => {
+    if (creatingDistrict) return;
+    setCreatingDistrict(true);
+    setFieldErrors((current) => ({ ...current, districtId: "" }));
+    try {
+      const district = await createDistrict(name);
+      setOptions((current) => ({
+        ...current,
+        districts: [...current.districts.filter((item) => item.id !== district.id), district]
+          .sort((left, right) => left.name.localeCompare(right.name, "zh-HK")),
+      }));
+      patchDraft({ districtId: district.id, districtName: "" });
+    } catch {
+      setFieldErrors((current) => ({
+        ...current,
+        districtId: t("quoteEditor.validation.districtCreateFailed"),
+      }));
+    } finally {
+      setCreatingDistrict(false);
+    }
+  };
+
   const changeShippingMethod = (shippingMethodId: string) => {
     const method = options.shippingMethods.find((item) => item.id === shippingMethodId);
     const automaticDistrict = automaticDistrictForMethod(method?.name ?? "");
@@ -661,7 +695,7 @@ export function QuoteEditorPage({
 
   const persistAllChanges = async (quote: CreatedQuote) => {
     const invalidLine = lines.find(
-      (line) => !Number.isInteger(line.quantity) || line.quantity < 1 || line.unitPrice < 0,
+      (line) => !Number.isInteger(line.quantity) || line.quantity < 0 || line.unitPrice < 0,
     );
     if (invalidLine) {
       throw new Error("quote_line_invalid");
@@ -671,17 +705,41 @@ export function QuoteEditorPage({
     }
 
     await saveCurrentDetails(quote.id);
-    for (const line of lines.filter((item) => !item.isPending)) {
-      await saveExistingLine(
-        isFreeUtensilPackLine(line) ? { ...line, unitPrice: 0, totalPrice: 0 } : line,
-        isOrder ? "order" : "quote",
-      );
-    }
     await flushPendingLines(quote.id);
-    await saveFinancialDetails(quote.id, financialValues);
-    if (isOrder) {
-      await savePayments(quote.id, quote.orderNumber, draft.channelId, payments, "order");
-      await saveFactorySettings(quote.id, factorySettings);
+    const batchSaver = saveBatch ?? (
+      saveDetails === updateQuote
+      && saveExistingLine === updateQuoteLine
+      && saveFinancialDetails === updateQuoteFinancials
+      && savePayments === saveQuotePayments
+      && saveFactorySettings === saveOrderFactorySettings
+        ? saveSalesDocumentBatch
+        : null
+    );
+    const persistedLines = lines
+      .filter((item) => !item.isPending)
+      .map((line) => isFreeUtensilPackLine(line)
+        ? { ...line, unitPrice: 0, totalPrice: 0 }
+        : line);
+    if (batchSaver) {
+      await batchSaver({
+        orderId: quote.id,
+        documentType: isOrder ? "order" : "quote",
+        lines: persistedLines,
+        financials: financialValues,
+        payments: isOrder ? payments : [],
+        channelId: draft.channelId,
+        orderNumber: quote.orderNumber,
+        factorySettings,
+      });
+    } else {
+      for (const line of persistedLines) {
+        await saveExistingLine(line, isOrder ? "order" : "quote");
+      }
+      await saveFinancialDetails(quote.id, financialValues);
+      if (isOrder) {
+        await savePayments(quote.id, quote.orderNumber, draft.channelId, payments, "order");
+        await saveFactorySettings(quote.id, factorySettings);
+      }
     }
     writeQuotePdfSupplements(quote.id, supplements);
   };
@@ -875,7 +933,7 @@ export function QuoteEditorPage({
           id: item.id,
           kind: "product" as const,
           sku: item.sku,
-          name: item.chineseName || item.name || item.sku || "-",
+          name: item.name || item.chineseName || item.sku || "-",
           price: unitPrice,
         },
         quantity: 1,
@@ -892,7 +950,7 @@ export function QuoteEditorPage({
     if (!activeQuote || !selectedItem) return;
     const parsedQuantity = Number(quantity);
     const parsedPrice = Number(unitPrice);
-    if (!Number.isInteger(parsedQuantity) || parsedQuantity < 1 || !Number.isFinite(parsedPrice) || parsedPrice < 0) {
+    if (!Number.isInteger(parsedQuantity) || parsedQuantity < 0 || !Number.isFinite(parsedPrice) || parsedPrice < 0) {
       setError("quote_line_invalid");
       return;
     }
@@ -978,7 +1036,7 @@ export function QuoteEditorPage({
           const product = choiceSet.products.find((item) => item.id === packageProductId);
           return {
             packageProductId,
-            name: product?.productChineseName || product?.productName || product?.productSku || "-",
+            name: product?.productName || product?.productChineseName || product?.productSku || "-",
           };
         }),
       })),
@@ -990,7 +1048,7 @@ export function QuoteEditorPage({
             id: product.productId ?? `package-choice-${product.id}`,
             kind: product.productId ? "product" as const : "custom" as const,
             sku: product.productSku,
-            name: product.productChineseName || product.productName || product.productSku || "-",
+            name: product.productName || product.productChineseName || product.productSku || "-",
             price: Number.isFinite(addonPrice) && addonPrice >= 0 ? addonPrice : 0,
           },
           quantity: pendingPackageLine.quantity,
@@ -1039,7 +1097,7 @@ export function QuoteEditorPage({
     const nextLine = isFreeUtensilPackLine(line)
       ? { ...line, unitPrice: 0, totalPrice: 0 }
       : line;
-    if (!Number.isInteger(nextLine.quantity) || nextLine.quantity < 1 || nextLine.unitPrice < 0) {
+    if (!Number.isInteger(nextLine.quantity) || nextLine.quantity < 0 || nextLine.unitPrice < 0) {
       setError("quote_line_invalid");
       return;
     }
@@ -1143,6 +1201,7 @@ export function QuoteEditorPage({
       description={t("quoteEditor.items.labelSizeHint")}
       closeLabel={t("quoteEditor.items.closeLabelModal")}
       size="md"
+      className="quote-label-modal"
       footer={readOnly ? undefined : (
         <>
           <Button type="button" variant="outline" onClick={closeLabelModal}>
@@ -1514,6 +1573,20 @@ export function QuoteEditorPage({
     }
   };
 
+  const confirmAddonEnteredInShopify = async () => {
+    if (!activeQuote || confirmingAddonShopify) return;
+    setConfirmingAddonShopify(true);
+    setAddonShopifyError(false);
+    try {
+      await confirmAddonShopify(activeQuote.id);
+      setCreated((current) => current ? { ...current, addonShopifyPending: false } : current);
+    } catch {
+      setAddonShopifyError(true);
+    } finally {
+      setConfirmingAddonShopify(false);
+    }
+  };
+
   if (loading) return <PageSkeleton detailLayout="document" label={t("quoteEditor.loading")} variant="detail" />;
 
   if (readOnly && activeQuote) {
@@ -1546,6 +1619,7 @@ export function QuoteEditorPage({
             <span className="eyebrow">{isOrder ? t("details.orderTitle") : t("quoteEditor.eyebrow")}</span>
             <div className="order-number-cell">
               <h1>{activeQuote.orderNumber || (isOrder ? t("details.orderTitle") : t("quoteEditor.title"))}</h1>
+              {isOrder && activeQuote.addonShopifyPending ? <span className="status-badge amber">未處理加單</span> : null}
               {activeShopifyUrl ? (
                 <a
                   className="shopify-order-icon"
@@ -1563,6 +1637,11 @@ export function QuoteEditorPage({
           </div>
           {showConfirmationAction || showConvertAction ? (
             <div className="quote-detail-actions">
+              {canEdit ? (
+                <Button asChild variant="outline">
+                  <Link to={`/quotes/${activeQuote.id}/edit`}><Pencil />編輯</Link>
+                </Button>
+              ) : null}
               {showConfirmationAction ? (
                 <Button
                   type="button"
@@ -1590,6 +1669,17 @@ export function QuoteEditorPage({
             <div className="quote-order-detail-summary">
               <OrderPaymentStatus total={grandTotal} paid={paidTotal} formatMoney={money.format} navigationStuck={sectionNavigationStuck} />
               <div className="quote-detail-actions">
+                {activeQuote.addonShopifyPending && canEdit ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={confirmingAddonShopify}
+                    onClick={() => void confirmAddonEnteredInShopify()}
+                  >
+                    {confirmingAddonShopify ? <LoaderCircle className="spin" /> : <Check />}
+                    确认已手动加入 Shopify
+                  </Button>
+                ) : null}
                 {!isSentToFactory && !factorySettings.doNotSendToFactory ? (
                   <Button
                     type="button"
@@ -1602,7 +1692,7 @@ export function QuoteEditorPage({
                       : t("quoteEditor.factoryStatus.send")}
                   </Button>
                 ) : null}
-                {canEdit ? <Button asChild variant="outline"><Link to={`/orders/${activeQuote.id}/edit`}><Pencil />編輯</Link></Button> : null}
+                {canEdit ? <Button asChild variant="outline"><Link to={`/orders/${activeQuote.id}/edit`} target="_blank" rel="noopener noreferrer"><Pencil />編輯</Link></Button> : null}
               </div>
             </div>
           ) : null}
@@ -1615,6 +1705,9 @@ export function QuoteEditorPage({
         ) : null}
         {isOrder && factoryStatusError ? (
           <p className="quote-editor-error" role="alert">{t("quoteEditor.factoryStatus.error")}</p>
+        ) : null}
+        {isOrder && addonShopifyError ? (
+          <p className="quote-editor-error" role="alert">未能更新加單狀態，請稍後再試。</p>
         ) : null}
 
         {sectionNavigation}
@@ -1671,7 +1764,11 @@ export function QuoteEditorPage({
             {lines.map((line, index) => <tr key={line.id}>
               <td className="quote-line-sequence">{index + 1}</td>
               <td className="quote-line-sku">{displayValue(line.sku)}</td>
-              <td className="quote-line-product"><strong>{displayValue(line.name)}</strong>{line.remarks ? <small title={line.remarks}>{line.remarks}</small> : null}</td>
+              <td className="quote-line-product">
+                {line.isAddon ? <span className="status-badge blue quote-line-addon-label">加單</span> : null}
+                <strong>{displayValue(line.name)}</strong>
+                {line.remarks ? <small title={line.remarks}>{line.remarks}</small> : null}
+              </td>
               <td><Button type="button" variant="outline" size="sm" onClick={() => openLabelModal(line)}><Search />{t("quoteEditor.items.viewLabel")}</Button></td>
               <td>{line.quantity}</td>
               <td>{money.format(line.unitPrice)}</td>
@@ -1826,7 +1923,7 @@ export function QuoteEditorPage({
             {!isOrder && draft.quoteAutoClosedAt && draft.quoteStatus !== "Case Closed" ? <label><span>{t("quoteEditor.fields.quoteReopenReason")}</span><textarea rows={2} value={draft.quoteReopenReason ?? ""} onChange={(event) => patchDraft({ quoteReopenReason: event.target.value })} /></label> : null}
             {!isOrder ? <label><span>{t("quoteEditor.fields.quoteSalesSource")}</span><FilterableSelect aria-label={t("quoteEditor.fields.quoteSalesSource")} value={draft.quoteSalesSourceId} onChange={(event) => patchDraft({ quoteSalesSourceId: event.target.value })}><option value="">{t("common.notSet")}</option>{options.quoteSalesSources.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</FilterableSelect></label> : null}
             {!isOrder ? <label><span>{t("quoteEditor.fields.quoteCommunicationChannel")}</span><FilterableSelect aria-label={t("quoteEditor.fields.quoteCommunicationChannel")} value={draft.quoteCommunicationChannelId} onChange={(event) => patchDraft({ quoteCommunicationChannelId: event.target.value })}><option value="">{t("common.notSet")}</option>{options.quoteCommunicationChannels.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</FilterableSelect></label> : null}
-            <label><span>{t("quoteEditor.fields.district")} *</span><SearchSelect id="quote-editor-district" label={t("quoteEditor.fields.district")} value={automaticDistrictName ? `auto:${automaticDistrictName}` : draft.districtId} options={automaticDistrictName ? [{ id: `auto:${automaticDistrictName}`, name: automaticDistrictName }] : districts} placeholder={t("quoteEditor.placeholders.districtPlaceholder")} disabled={Boolean(automaticDistrictName)} required={!automaticDistrictName} invalid={Boolean(fieldErrors.districtId)} onChange={(option) => patchDraft({ districtId: option.id, districtName: "" })} />{fieldErrors.districtId && <em>{fieldErrors.districtId}</em>}</label>
+            <label><span>{t("quoteEditor.fields.district")} *</span><SearchSelect id="quote-editor-district" label={t("quoteEditor.fields.district")} value={automaticDistrictName ? `auto:${automaticDistrictName}` : draft.districtId} options={automaticDistrictName ? [{ id: `auto:${automaticDistrictName}`, name: automaticDistrictName }] : districts} placeholder={t("quoteEditor.placeholders.districtPlaceholder")} disabled={Boolean(automaticDistrictName) || creatingDistrict} required={!automaticDistrictName} invalid={Boolean(fieldErrors.districtId)} onCreate={automaticDistrictName ? undefined : (name) => void addDistrict(name)} onChange={(option) => patchDraft({ districtId: option.id, districtName: "" })} />{fieldErrors.districtId && <em>{fieldErrors.districtId}</em>}</label>
             <label><span>{t("quoteEditor.fields.shippingMethod")} *</span><FilterableSelect required aria-label={t("quoteEditor.fields.shippingMethod")} value={draft.shippingMethodId} onChange={(event) => changeShippingMethod(event.target.value)} aria-invalid={Boolean(fieldErrors.shippingMethodId)}><option value="">{t("common.notSet")}</option>{options.shippingMethods.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</FilterableSelect>{fieldErrors.shippingMethodId && <em>{fieldErrors.shippingMethodId}</em>}</label>
             <label><span>{t("quoteEditor.fields.deliveryDate")} *</span><input required aria-label={t("quoteEditor.fields.deliveryDate")} type="date" value={draft.deliveryDate} onChange={(event) => patchDraft({ deliveryDate: event.target.value })} aria-invalid={Boolean(fieldErrors.deliveryDate)} />{fieldErrors.deliveryDate && <em>{fieldErrors.deliveryDate}</em>}</label>
             <label><span>{t("quoteEditor.fields.deliveryTime")}</span><div className="quote-time-control"><FilterableSelect aria-label={t("quoteEditor.fields.deliveryTime")} value={deliveryTimeMode === "custom" ? "custom" : draft.deliveryTime} onChange={(event) => { const value = event.target.value; setDeliveryTimeMode(value === "custom" ? "custom" : ""); patchDraft({ deliveryTime: value === "custom" ? "" : value }); }}><option value="">{t("quoteEditor.placeholders.deliveryTimeSelectPlaceholder")}</option><option value="custom">{t("quoteEditor.custom")}</option>{deliveryTimeOptions.map((time) => <option key={time} value={time}>{time}</option>)}</FilterableSelect>{deliveryTimeMode === "custom" && <input value={draft.deliveryTime} onChange={(event) => patchDraft({ deliveryTime: event.target.value })} placeholder={t("quoteEditor.placeholders.customDeliveryTimePlaceholder")} />}</div></label>
@@ -1864,7 +1961,7 @@ export function QuoteEditorPage({
               )}
             </div>
             <div className="quote-item-numbers">
-              <label><span>{t("quoteEditor.items.quantity")}</span><input type="number" inputMode="numeric" min="1" step="1" value={quantity} onChange={(event) => setQuantity(event.target.value)} /></label>
+              <label><span>{t("quoteEditor.items.quantity")}</span><input type="number" inputMode="numeric" min="0" step="1" value={quantity} onChange={(event) => setQuantity(event.target.value)} /></label>
               <label><span>{t("quoteEditor.items.unitPrice")}</span><input type="number" min="0" step="0.01" value={unitPrice} onChange={(event) => setUnitPrice(event.target.value)} /></label>
             </div>
             <label><span>{t("quoteEditor.items.remarks")}</span><textarea rows={1} maxLength={16} value={lineRemarks} onChange={(event) => setLineRemarks(event.target.value)} /></label>
@@ -1892,7 +1989,7 @@ export function QuoteEditorPage({
                       </div>
                     </header>
                     <div className="quote-mobile-line-fields">
-                      <label><span>{t("quoteEditor.items.quantity")}</span><input type="number" inputMode="numeric" min="1" step="1" value={line.quantity} disabled={savingLineId === line.id} onChange={(event) => patchLine(line.id, { quantity: Number(event.target.value) })} onBlur={() => void saveEditedLine(line)} /></label>
+                      <label><span>{t("quoteEditor.items.quantity")}</span><input type="number" inputMode="numeric" min="0" step="1" value={line.quantity} disabled={savingLineId === line.id} onChange={(event) => patchLine(line.id, { quantity: Number(event.target.value) })} onBlur={() => void saveEditedLine(line)} /></label>
                       <label><span>{t("quoteEditor.items.unitPrice")}</span><input type="number" inputMode="decimal" min="0" step="0.01" value={isFreeUtensilPackLine(line) ? 0 : line.unitPrice} disabled={savingLineId === line.id || isFreeUtensilPackLine(line)} onChange={(event) => patchLine(line.id, { unitPrice: Number(event.target.value) })} onBlur={() => void saveEditedLine(line)} /></label>
                     </div>
                     <Button type="button" variant="outline" className="quote-mobile-label-button" onClick={() => openLabelModal(line)}><Pencil />{t("quoteEditor.items.editLabelButton")}</Button>
@@ -1931,7 +2028,7 @@ export function QuoteEditorPage({
                 <td className="quote-line-label-cell">
                   <Button type="button" variant="outline" size="sm" onClick={() => openLabelModal(line)}><Pencil />{t("quoteEditor.items.editLabelButton")}</Button>
                 </td>
-                <td><input className="quote-line-edit-number" type="number" inputMode="numeric" min="1" step="1" value={line.quantity} aria-label={`${t("quoteEditor.items.quantity")} ${line.name || ""}`} disabled={savingLineId === line.id} onChange={(event) => patchLine(line.id, { quantity: Number(event.target.value) })} onBlur={() => void saveEditedLine(line)} /></td>
+                <td><input className="quote-line-edit-number" type="number" inputMode="numeric" min="0" step="1" value={line.quantity} aria-label={`${t("quoteEditor.items.quantity")} ${line.name || ""}`} disabled={savingLineId === line.id} onChange={(event) => patchLine(line.id, { quantity: Number(event.target.value) })} onBlur={() => void saveEditedLine(line)} /></td>
                 <td><input className="quote-line-edit-number" type="number" min="0" step="0.01" value={isFreeUtensilPackLine(line) ? 0 : line.unitPrice} aria-label={`${t("quoteEditor.items.unitPrice")} ${line.name || ""}`} disabled={savingLineId === line.id || isFreeUtensilPackLine(line)} onChange={(event) => patchLine(line.id, { unitPrice: Number(event.target.value) })} onBlur={() => void saveEditedLine(line)} /></td>
                 <td>{money.format(line.totalPrice)}</td>
                 <td><button type="button" className="quote-line-delete" aria-label={t("quoteEditor.items.remove", { name: line.name || "" })} disabled={removingId === line.id || savingLineId === line.id} onClick={() => void removeLine(line.id)}><Trash2 /></button></td>
@@ -1951,7 +2048,7 @@ export function QuoteEditorPage({
                   <div><span className="eyebrow">{t("quoteEditor.financials.eyebrow")}</span><h3>{t("quoteEditor.financials.title")}</h3></div>
                   <span>{savingFinancials ? t("quoteEditor.financials.saving") : t("quoteEditor.financials.autoSave")}</span>
                 </header>
-                <label><span>{t("quoteEditor.financials.shippingFee")}</span><div className="quote-shipping-fee-control"><FilterableSelect aria-label={t("quoteEditor.financials.shippingFeeOption")} value={shippingFeeId} onChange={(event) => {
+                <label><span>{t("quoteEditor.financials.shippingFee")}</span><div className="quote-shipping-fee-control"><FilterableSelect className="shipping-fee-select" aria-label={t("quoteEditor.financials.shippingFeeOption")} value={shippingFeeId} onChange={(event) => {
                   const nextId = event.target.value;
                   const selected = shippingFees.find((fee) => fee.id === nextId);
                   const shippingFee = selected?.fee ?? 0;
@@ -2050,7 +2147,7 @@ export function QuoteEditorPage({
                             onChange={() => togglePackageChoice(choiceSet, product.id)}
                           />
                           <span>
-                            <strong>{product.productChineseName || product.productName || product.productSku || "-"}</strong>
+                            <strong>{product.productName || product.productChineseName || product.productSku || "-"}</strong>
                             {product.productSku ? <small>{product.productSku}</small> : null}
                           </span>
                           {product.addonPrice ? <b>+{money.format(product.addonPrice)}</b> : null}
@@ -2126,16 +2223,16 @@ export function QuoteEditorPage({
           </form>
         </Modal>
 
-        <Modal open={additionalOpen} onClose={() => setAdditionalOpen(false)} title="額外資訊" closeLabel="關閉額外資訊" size="lg" footer={<Button onClick={() => setAdditionalOpen(false)}>確定</Button>}>
+        <Modal open={additionalOpen} onClose={() => setAdditionalOpen(false)} title="額外資訊" closeLabel="關閉額外資訊" size="lg" className="quote-supplement-modal" footer={<Button onClick={() => setAdditionalOpen(false)}>確定</Button>}>
           <div className="quote-additional-picker">
-            <div className="quote-additional-search"><Search /><input autoFocus aria-label="搜尋額外資訊" placeholder={t("quoteEditor.placeholders.additionalSearchPlaceholder")} value={additionalSearch} onChange={(event) => setAdditionalSearch(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") addAdditionalInfo(additionalSearch); }} /><Button variant="outline" onClick={() => addAdditionalInfo(additionalSearch)}>Add</Button></div>
+            <div className="quote-additional-search"><Search /><input autoFocus aria-label="搜尋額外資訊" placeholder={t("quoteEditor.placeholders.additionalSearchPlaceholder")} value={additionalSearch} onChange={(event) => setAdditionalSearch(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") addAdditionalInfo(additionalSearch); }} /><Button variant="outline" onClick={() => addAdditionalInfo(additionalSearch)}><Plus />{t("quoteEditor.items.customProductAdd")}</Button></div>
             <ul>{additionalInfoOptions.filter((option) => !additionalSearch.trim() || option.toLocaleLowerCase().includes(additionalSearch.trim().toLocaleLowerCase())).map((option) => <li key={option}><span>{option}</span><Button size="sm" variant="outline" onClick={() => addAdditionalInfo(option)}><Plus />加入</Button></li>)}</ul>
           </div>
         </Modal>
 
-        <Modal open={activityOpen} onClose={() => setActivityOpen(false)} title="活動項目" closeLabel="關閉活動項目" size="lg" footer={<Button onClick={() => setActivityOpen(false)}>確定</Button>}>
+        <Modal open={activityOpen} onClose={() => setActivityOpen(false)} title="活動項目" closeLabel="關閉活動項目" size="lg" className="quote-supplement-modal" footer={<Button onClick={() => setActivityOpen(false)}>確定</Button>}>
           <div className="quote-additional-picker quote-activity-picker">
-            <div className="quote-additional-search"><Search /><input autoFocus aria-label="搜尋活動項目" placeholder={t("quoteEditor.placeholders.activitySearchPlaceholder")} value={activitySearch} onChange={(event) => setActivitySearch(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") addActivity(activitySearch); }} /><Button variant="outline" onClick={() => addActivity(activitySearch)}>Add</Button></div>
+            <div className="quote-additional-search"><Search /><input autoFocus aria-label="搜尋活動項目" placeholder={t("quoteEditor.placeholders.activitySearchPlaceholder")} value={activitySearch} onChange={(event) => setActivitySearch(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") addActivity(activitySearch); }} /><Button variant="outline" onClick={() => addActivity(activitySearch)}><Plus />{t("quoteEditor.items.customProductAdd")}</Button></div>
             <ul>{activityOptions.filter((option) => !activitySearch.trim() || option.description.toLocaleLowerCase().includes(activitySearch.trim().toLocaleLowerCase())).map((option) => <li key={option.description}><span>{option.description}</span><span>${Number(option.amount).toLocaleString("zh-HK")}</span><Button size="sm" variant="outline" onClick={() => addActivity(option.description, option.amount)}><Plus />加入</Button></li>)}</ul>
           </div>
         </Modal>

@@ -1,0 +1,124 @@
+/* Keep the trailing operation column visible while list tables scroll. */
+.table-wrap:has(
+    > table > tbody > tr > .table-actions-cell:last-child,
+    > table > thead > tr > th[aria-label*="action" i],
+    > table > thead > tr > th[aria-label*="操作"]
+  )
+  > table
+  > thead
+  > tr
+  > :last-child,
+.table-wrap:has(
+    > table > tbody > tr > .table-actions-cell:last-child,
+    > table > thead > tr > th[aria-label*="action" i],
+    > table > thead > tr > th[aria-label*="操作"]
+  )
+  > table
+  > tbody
+  > tr
+  > :last-child {
+  position: sticky;
+  inset-inline-end: 0;
+  z-index: 2;
+  background: var(--card);
+  box-shadow: -1px 0 0 var(--border);
+}
+
+.table-wrap:has(
+    > table > tbody > tr > .table-actions-cell:last-child,
+    > table > thead > tr > th[aria-label*="action" i],
+    > table > thead > tr > th[aria-label*="操作"]
+  )
+  > table
+  > thead
+  > tr
+  > :last-child {
+  z-index: 3;
+  background: color-mix(in oklch, var(--background) 65%, var(--card));
+}
+
+.table-wrap:has(
+    > table > tbody > tr > .table-actions-cell:last-child,
+    > table > thead > tr > th[aria-label*="action" i],
+    > table > thead > tr > th[aria-label*="操作"]
+  )
+  > table
+  > tbody
+  > tr:hover
+  > :last-child {
+  background: color-mix(in oklch, var(--accent) 45%, var(--card));
+}
+
+.orders-table-wrap .order-customer-location-summary,
+.quotes-table-wrap .quote-customer-location-summary {
+  width: 21rem;
+  min-width: 18rem;
+  max-width: 23rem;
+  white-space: normal;
+}
+
+.order-customer-location,
+.quote-customer-location {
+  display: grid;
+  gap: 2px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid color-mix(in oklch, var(--border) 72%, transparent);
+  color: var(--muted-foreground);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.order-customer-location {
+  font-size: 0.875rem;
+}
+
+.order-customer-location strong {
+  color: var(--foreground);
+  font-size: inherit;
+}
+
+.order-customer-location .order-region-address,
+.quote-customer-location .quote-address-line {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.order-customer-location .order-region-address {
+  max-width: 100%;
+}
+
+.orders-table-wrap .order-delivery-times-summary small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+}
+
+.order-mobile-delivery-times {
+  display: grid;
+  gap: 2px;
+}
+
+.order-mobile-delivery-times span:last-child {
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+}
+
+.quotes-table-wrap .quote-description-cell textarea {
+  min-height: 3.5rem;
+}
+
+.table-wrap:has(
+    > table > tbody > tr > .table-actions-cell:last-child,
+    > table > thead > tr > th[aria-label*="action" i],
+    > table > thead > tr > th[aria-label*="操作"]
+  )
+  > table
+  > tbody
+  > tr.quote-customers-row-selected
+  > :last-child {
+  background: var(--selection-bg);
+}

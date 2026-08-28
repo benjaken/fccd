@@ -16,4 +16,13 @@ describe("quote custom product migration", () => {
     expect(sql).toContain("product_name_snapshot");
     expect(sql).toContain("private.recalculate_quote_total");
   });
+
+  it("snapshots 產品名稱 when adding a catalog quote line", () => {
+    const sql = readFileSync(
+      path.resolve(process.cwd(), "supabase/migrations/20260826120000_quote_line_product_name.sql"),
+      "utf8",
+    );
+    expect(sql).toContain("coalesce(nullif(btrim(p.name), ''), p.chinese_name)");
+    expect(sql).not.toContain("coalesce(p.chinese_name, p.name)");
+  });
 });

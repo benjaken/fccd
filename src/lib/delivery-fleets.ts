@@ -9,6 +9,7 @@ export type DeliveryFleet = {
   bankAccount: string | null;
   status: string | null;
   isActive: boolean;
+  driverPanelEnabled: boolean;
   hasLoginCode: boolean;
   createdAt: string;
 };
@@ -22,6 +23,7 @@ type DeliveryFleetRow = {
   bank_account: string | null;
   status: string | null;
   is_active: boolean;
+  driver_panel_enabled: boolean;
   created_at: string;
   has_login_code: boolean;
 };
@@ -36,6 +38,7 @@ function mapFleet(row: DeliveryFleetRow): DeliveryFleet {
     bankAccount: row.bank_account,
     status: row.status,
     isActive: row.is_active,
+    driverPanelEnabled: row.driver_panel_enabled,
     hasLoginCode: Boolean(row.has_login_code),
     createdAt: row.created_at,
   };
@@ -56,6 +59,7 @@ export type DeliveryFleetInput = {
   contactNumber?: string;
   bankAccount?: string;
   isActive?: boolean;
+  driverPanelEnabled?: boolean;
   loginCode?: string;
 };
 
@@ -84,6 +88,7 @@ export async function createDeliveryFleet(input: DeliveryFleetInput) {
     p_contact_number: fields.contact_number,
     p_bank_account: fields.bank_account,
     p_is_active: fields.is_active,
+    p_driver_panel_enabled: input.driverPanelEnabled !== false,
     p_login_code: input.loginCode?.trim() || null,
   });
   if (error) throw error;
@@ -103,6 +108,7 @@ export async function updateDeliveryFleet(
     p_contact_number: fields.contact_number,
     p_bank_account: fields.bank_account,
     p_is_active: fields.is_active,
+    p_driver_panel_enabled: input.driverPanelEnabled !== false,
     p_login_code: input.loginCode?.trim() || null,
   });
   if (error) throw error;
@@ -110,6 +116,7 @@ export async function updateDeliveryFleet(
 }
 
 export type DeliveryFleetFee = {
+  feeId: string | null;
   districtId: string;
   fleetId: string;
   fleetName: string;
@@ -118,6 +125,7 @@ export type DeliveryFleetFee = {
 };
 
 type DeliveryFleetFeeRow = {
+  fee_id: string | null;
   district_id: string;
   fleet_id: string;
   fleet_name: string;
@@ -127,6 +135,7 @@ type DeliveryFleetFeeRow = {
 
 function mapFleetFee(row: DeliveryFleetFeeRow): DeliveryFleetFee {
   return {
+    feeId: row.fee_id,
     districtId: row.district_id,
     fleetId: row.fleet_id,
     fleetName: row.fleet_name,
@@ -143,9 +152,14 @@ export async function fetchDeliveryFleetFees(fleetId: string | null = null) {
   return ((data ?? []) as DeliveryFleetFeeRow[]).map(mapFleetFee);
 }
 
-export async function updateDeliveryFleetFee(districtId: string, fee: number) {
+export async function updateDeliveryFleetFee(
+  fleetId: string,
+  districtId: string,
+  fee: number,
+) {
   if (!Number.isFinite(fee) || fee < 0) throw new Error("fee_invalid");
   const { data, error } = await supabase.rpc("save_delivery_fleet_fee", {
+    p_fleet_id: fleetId,
     p_district_id: districtId,
     p_fee: fee,
   });

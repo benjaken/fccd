@@ -1,5 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { hongKongDateKey } from "@/lib/date-time";
+import { productListDisplayName } from "@/lib/products";
+import type { OrderFactorySettings } from "@/lib/order-factory-settings";
 
 export type QuoteEditorOption = {
   id: string;
@@ -58,6 +60,7 @@ export type CreatedQuote = {
   orderNumber: string;
   shopifyOrderId?: number | null;
   shopifyStoreDomain?: string | null;
+  addonShopifyPending?: boolean;
 };
 
 export type QuoteEditorSummary = CreatedQuote & {
@@ -116,6 +119,7 @@ export type QuoteLine = {
   unitPrice: number;
   totalPrice: number;
   remarks: string | null;
+  isAddon?: boolean;
   labelId?: string | null;
   labelDisplayA?: string | null;
   labelDisplayB?: string | null;
@@ -162,7 +166,7 @@ export async function fetchQuoteEditorOptions(): Promise<QuoteEditorOptions> {
       supabase.from("channels").select("id,name").eq("is_active", true).is("archived_at", null).order("sort_order", { nullsFirst: false }).order("name"),
       supabase.from("quote_sales_sources").select("id,name").eq("is_active", true).order("name"),
       supabase.from("quote_communication_channels").select("id,name").eq("is_active", true).order("name"),
-      supabase.from("delivery_districts").select("id,name").is("archived_at", null).order("name"),
+      supabase.from("delivery_districts").select("id,name").is("archived_at", null).is("driver_team_id", null).order("name"),
       supabase.from("shipping_methods").select("id,name,display_name").eq("is_active", true).is("archived_at", null).order("display_order", { nullsFirst: false }).order("name"),
       supabase.from("sales_partners").select("id,name").eq("is_active", true).order("name"),
       supabase.from("order_tags").select("id,name").eq("is_active", true).is("archived_at", null).order("name"),
@@ -281,9 +285,9 @@ export async function fetchQuoteEditorSummary(
   const [orderResult, deliveryResult, tagsResult, asanaResult, paymentsResult] = await Promise.all([
     supabase
       .from("orders")
-      .select("id,document_type,order_number,channel_id,quote_status,quote_auto_closed_at,quote_reopen_reason,quote_sales_source_id,quote_communication_channel_id,quote_follow_up_date,customer_name_snapshot,company_name_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,email_snapshot,shipping_address_snapshot,customer_note_snapshot,shipping_method_id,delivery_district_id,delivery_at,delivery_time,ship_out_time,factory_packing_note,sales_partner_id,remarks,shipping_fee,discount_amount,cashdollar_redeemed,cashdollar_purchased,is_sent_to_factory,do_not_send_to_factory,factory_print_date,factory_reprint_required,shopify_order_id,shopify_stores(shop_domain)")
+      .select("id,document_type,order_number,channel_id,quote_status,quote_auto_closed_at,quote_reopen_reason,quote_sales_source_id,quote_communication_channel_id,quote_follow_up_date,customer_name_snapshot,company_name_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,email_snapshot,shipping_address_snapshot,customer_note_snapshot,shipping_method_id,delivery_district_id,delivery_at,delivery_time,ship_out_time,factory_packing_note,sales_partner_id,remarks,shipping_fee,discount_amount,cashdollar_redeemed,cashdollar_purchased,is_sent_to_factory,do_not_send_to_factory,factory_print_date,factory_reprint_required,shopify_order_id,addon_shopify_pending,shopify_stores(shop_domain)")
       .eq("id", resolvedOrderId)
-    .eq("document_type", documentType)
+       .eq("document_type", documentType)
       .is("archived_at", null)
       .maybeSingle(),
     supabase
@@ -355,6 +359,7 @@ export async function fetchQuoteEditorSummary(
     shopifyStoreDomain: Array.isArray(shopifyStore)
       ? shopifyStore[0]?.shop_domain ?? null
       : shopifyStore?.shop_domain ?? null,
+    addonShopifyPending: data.addon_shopify_pending === true,
     channelId: data.channel_id || "",
     draft,
     financials: {
@@ -457,6 +462,45 @@ export async function saveQuotePayments(
       .eq("document_type", "order");
     if (outstandingError) throw outstandingError;
   }
+}
+
+export async function saveSalesDocumentBatch(input: {
+  orderId: string;
+  documentType: QuoteEditorDocumentType;
+  lines: QuoteLine[];
+  financials: QuoteFinancials;
+  payments: QuotePayment[];
+  channelId: string;
+  orderNumber: string;
+  factorySettings: OrderFactorySettings;
+}) {
+  const { error } = await supabase.rpc("save_sales_document_batch", {
+    p_order_id: input.orderId,
+    p_document_type: input.documentType,
+    p_lines: input.lines.map((line) => ({
+      id: line.id,
+      quantity: line.quantity,
+      unit_price: line.unitPrice,
+      remarks: line.remarks || null,
+    })),
+    p_shipping_fee: input.financials.shippingFee,
+    p_discount_amount: input.financials.discount,
+    p_cashdollar_redeemed: input.financials.cashdollarRedeemed,
+    p_cashdollar_purchased: input.financials.cashdollarPurchased,
+    p_payments: input.documentType === "order"
+      ? input.payments.map((payment) => ({
+          id: payment.id,
+          payment_at: payment.paymentAt ? `${payment.paymentAt}T00:00:00+08:00` : null,
+          payment_method_id: payment.paymentMethodId || null,
+          amount: payment.amount,
+          reference: payment.reference || null,
+        }))
+      : [],
+    p_channel_id: input.channelId || null,
+    p_order_number: input.orderNumber || null,
+    p_factory_settings: input.documentType === "order" ? input.factorySettings : {},
+  });
+  if (error) throw error;
 }
 
 export async function sendQuoteConfirmation(orderId: string) {
@@ -620,7 +664,7 @@ export async function searchQuoteCatalog(
       id: row.id,
       kind,
       sku: row.sku,
-      name: row.chinese_name || row.name,
+      name: productListDisplayName(row.name, row.chinese_name, row.sku ?? "-"),
       price: row.price === null ? null : toNumber(row.price),
       labelId: label?.id ?? null,
       labelDisplayA: label?.display_name ?? null,
@@ -638,7 +682,7 @@ export async function fetchQuoteLines(orderId: string): Promise<QuoteLine[]> {
   const [lineResult, choiceResult] = await Promise.all([
     supabase
       .from("order_lines")
-      .select("id,product_id,package_id,sku_snapshot,product_name_snapshot,content_snapshot,quantity,unit_price,total_price,remarks_1,temporary_label_display_name,temporary_label_quantity_label,products(product_labels(id,display_name,quantity_label,created_at))")
+      .select("id,product_id,package_id,sku_snapshot,product_name_snapshot,content_snapshot,quantity,unit_price,total_price,remarks_1,is_addon,temporary_label_display_name,temporary_label_quantity_label,products(name,product_labels(id,display_name,quantity_label,created_at)),packages(name)")
       .eq("order_id", resolvedOrderId)
       .eq("is_void", false)
       .order("item_order", { ascending: true, nullsFirst: false })
@@ -684,7 +728,7 @@ export async function fetchQuoteLines(orderId: string): Promise<QuoteLine[]> {
     }
     group.products.push({
       packageProductId: snapshot.package_product_id,
-      name: product?.chinese_name || product?.name || "-",
+      name: product?.name || product?.chinese_name || "-",
     });
     choiceGroupsByLine.set(snapshot.order_line_id, groups);
   }
@@ -692,6 +736,7 @@ export async function fetchQuoteLines(orderId: string): Promise<QuoteLine[]> {
   return (lineResult.data ?? []).map((row) => {
     type LabelRow = { id: string; display_name: string | null; quantity_label: string | null; created_at: string };
     const product = Array.isArray(row.products) ? row.products[0] : row.products;
+    const pkg = Array.isArray(row.packages) ? row.packages[0] : row.packages;
     const labels = ((product as { product_labels?: LabelRow[] } | null)?.product_labels ?? [])
       .slice()
       .sort((a, b) => a.created_at.localeCompare(b.created_at));
@@ -702,11 +747,16 @@ export async function fetchQuoteLines(orderId: string): Promise<QuoteLine[]> {
       productId: row.product_id,
       packageId: row.package_id,
       sku: row.sku_snapshot,
-      name: row.product_name_snapshot || row.content_snapshot,
+      name: productListDisplayName(
+        (product as { name?: string | null } | null)?.name ?? (pkg as { name?: string | null } | null)?.name,
+        null,
+        row.product_name_snapshot || row.content_snapshot || "",
+      ),
       quantity: toNumber(row.quantity),
       unitPrice: toNumber(row.unit_price),
       totalPrice: quoteLineTotal(row.quantity, row.unit_price, row.total_price),
       remarks: row.remarks_1,
+      isAddon: row.is_addon === true,
       labelId: label?.id ?? null,
       labelDisplayA: label?.display_name ?? row.temporary_label_display_name ?? null,
       labelDisplayB: label?.quantity_label ?? row.temporary_label_quantity_label ?? null,

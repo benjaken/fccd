@@ -12,6 +12,15 @@ export function hasProductSku(sku: string | null | undefined) {
   return Boolean(normalizeProductSku(sku));
 }
 
+/** Prefer 產品名稱 (`name`) over 中文名稱 for order and quote product lists. */
+export function productListDisplayName(
+  name: string | null | undefined,
+  chineseName?: string | null,
+  fallback = "",
+) {
+  return name?.trim() || chineseName?.trim() || fallback;
+}
+
 export type ProductPreset = "all" | "catering" | "lunchbox" | "ala-carte";
 
 export type ProductTag = {
@@ -100,6 +109,7 @@ export type ProductEditOptions = {
   cookTypes: CatalogOption[];
   collections: CatalogOption[];
   packingMaterials: CatalogOption[];
+  packingSupplies: CatalogOption[];
   catalogIngredients: CatalogOption[];
 };
 
@@ -118,7 +128,15 @@ export type ProductUpdateInput = {
   collectionIds: string[];
 };
 
-export type ProductCreateInput = ProductUpdateInput;
+export type ProductCreateInput = ProductUpdateInput & {
+  premiumIngredients?: Array<{ ingredientId: string; quantity: number }>;
+  packingSupplies?: Array<{ ingredientId: string; quantity: number }>;
+  labels?: Array<{
+    displayA: string;
+    displayB: string;
+    packingMaterialId: string | null;
+  }>;
+};
 
 export type ProductPremiumIngredient = {
   id: string;
@@ -952,13 +970,14 @@ export async function fetchProductDetail(
 export async function fetchProductEditOptions(
   channelId = "",
 ): Promise<ProductEditOptions> {
-  const [channels, productTypes, cookTypes, collections, packingMaterials, catalogIngredients] =
+  const [channels, productTypes, cookTypes, collections, packingMaterials, packingSupplies, catalogIngredients] =
     await Promise.all([
       fetchProductChannels(),
       fetchProductTypeRecords(channelId),
       fetchNamedLookup("cook_types"),
       fetchCollectionRecords(channelId),
       fetchNamedLookup("packing_materials"),
+      fetchCatalogPackingSupplies(),
       fetchCatalogIngredients(),
     ]);
 
@@ -968,6 +987,7 @@ export async function fetchProductEditOptions(
     cookTypes,
     collections,
     packingMaterials,
+    packingSupplies,
     catalogIngredients,
   };
 }
@@ -1034,6 +1054,19 @@ async function fetchCatalogIngredients(): Promise<CatalogOption[]> {
     .is("archived_at", null)
     .eq("is_active", true)
     .or("ingredient_type.is.null,ingredient_type.neq.包裝用品")
+    .order("name", { ascending: true })
+    .limit(100);
+  if (error) return [];
+  return (data ?? []).map((row) => mapIngredientOption(row));
+}
+
+async function fetchCatalogPackingSupplies(): Promise<CatalogOption[]> {
+  const { data, error } = await supabase
+    .from("ingredients")
+    .select("id,name,sku,legacy_id")
+    .is("archived_at", null)
+    .eq("is_active", true)
+    .eq("ingredient_type", "包裝用品")
     .order("name", { ascending: true })
     .limit(100);
   if (error) return [];
@@ -1256,6 +1289,15 @@ export async function createProduct(input: ProductCreateInput): Promise<string> 
     relatedIdColumn: "collection_id",
     relatedLegacyColumn: "collection_legacy_id",
   });
+  await Promise.all([
+    ...(input.premiumIngredients ?? []).map((item) =>
+      addProductPremiumIngredient(productId, item.ingredientId, item.quantity),
+    ),
+    ...(input.packingSupplies ?? []).map((item) =>
+      addProductPremiumIngredient(productId, item.ingredientId, item.quantity),
+    ),
+    ...(input.labels ?? []).map((item) => addProductLabel(productId, item)),
+  ]);
   return productId;
 }
 

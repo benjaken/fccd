@@ -17,6 +17,7 @@ import {
   type DictItem,
   type DictType,
 } from "@/lib/dictionaries";
+import { filterGenericDictionaryTypes } from "@/lib/order-quote-option-settings";
 import { cn } from "@/lib/utils";
 
 type EditorTarget =
@@ -209,9 +210,12 @@ export function DictionariesPage() {
     void fetchDictTypes({ includeInactive: true })
       .then((rows) => {
         if (cancelled) return;
-        setTypes(rows);
+        const visibleRows = filterGenericDictionaryTypes(rows);
+        setTypes(visibleRows);
         setSelectedTypeId((current) =>
-          rows.some((row) => row.id === current) ? current : (rows[0]?.id ?? ""),
+          visibleRows.some((row) => row.id === current)
+            ? current
+            : (visibleRows[0]?.id ?? ""),
         );
       })
       .catch(() => !cancelled && setError(t("settings.dictionaries.loadError")))

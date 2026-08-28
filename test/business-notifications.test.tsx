@@ -42,6 +42,8 @@ describe("business notification reminders", () => {
     );
 
     const quoteInput = await screen.findByDisplayValue("7, 3, 0");
+    expect(document.querySelector(".notification-settings-page .eyebrow svg"))
+      .not.toBeInTheDocument();
     await userEvent.clear(quoteInput);
     await userEvent.type(quoteInput, "10, 5, 0");
     await userEvent.click(screen.getByRole("button", { name: /儲存/ }));

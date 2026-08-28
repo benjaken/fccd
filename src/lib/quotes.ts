@@ -1,3 +1,4 @@
+import { districtNameFromAddress } from "@/lib/district-name";
 import { supabase } from "@/lib/supabase";
 
 export const QUOTES_PAGE_SIZE = 15;
@@ -28,6 +29,7 @@ export type QuoteListItem = {
   contactPhone?: string | null;
   shippingMethodName?: string | null;
   districtName?: string | null;
+  address?: string | null;
   quantity?: number;
   createdAt: string;
   sourceSystem: string | null;
@@ -76,12 +78,17 @@ type QuoteRow = {
     | { name: string | null; display_name: string | null }
     | Array<{ name: string | null; display_name: string | null }>
     | null;
+  planned_delivery_district:
+    | { name: string | null }
+    | Array<{ name: string | null }>
+    | null;
   deliveries: Array<{
     delivery_districts:
       | { name: string | null }
       | Array<{ name: string | null }>
       | null;
   }> | null;
+  shipping_address_snapshot: string | null;
   order_lines: Array<{
     quantity: number | string | null;
     is_void: boolean | null;
@@ -164,7 +171,7 @@ export async function fetchQuotes({
   let query = supabase
     .from("orders")
     .select(
-      "id,channel_id,order_number,customer_name_snapshot,company_name_snapshot,contact_number_a_snapshot,quote_description_snapshot,quote_status,grand_total,currency,delivery_at,delivery_time,ship_out_time,bubble_created_at,created_at,effective_created_at,source_system,channels(name),shipping_methods(name,display_name),deliveries(delivery_districts!district_id(name)),order_lines(quantity,is_void)",
+      "id,channel_id,order_number,customer_name_snapshot,company_name_snapshot,contact_number_a_snapshot,quote_description_snapshot,quote_status,grand_total,currency,delivery_at,delivery_time,ship_out_time,bubble_created_at,created_at,effective_created_at,source_system,shipping_address_snapshot,channels(name),shipping_methods(name,display_name),planned_delivery_district:delivery_districts!delivery_district_id(name),deliveries(delivery_districts!district_id(name)),order_lines(quantity,is_void)",
       { count: "exact" },
     )
     .eq("document_type", "quote")
@@ -225,7 +232,10 @@ export async function fetchQuotes({
   }
   query = query.range(start, end);
 
-  const { data, count, error } = await query;
+  const [{ data, count, error }, addressDistrictNames] = await Promise.all([
+    query,
+    fetchActiveDistrictNames(),
+  ]);
   if (error) throw error;
 
   const quoteIds = (data ?? []).map((row) => row.id);
@@ -266,7 +276,14 @@ export async function fetchQuotes({
       shipOutTime: row.ship_out_time,
       contactPhone: row.contact_number_a_snapshot,
       shippingMethodName: quoteShippingMethodName(row.shipping_methods),
-      districtName: quoteDeliveryDistrictName(row.deliveries),
+      districtName:
+        quoteDeliveryDistrictName(row.deliveries) ??
+        plannedDistrictName(row.planned_delivery_district) ??
+        districtNameFromAddress(
+          row.shipping_address_snapshot,
+          addressDistrictNames,
+        ),
+      address: row.shipping_address_snapshot,
       quantity: (row.order_lines ?? []).reduce(
         (sum, line) =>
           sum +
@@ -320,4 +337,21 @@ function quoteDeliveryDistrictName(value: QuoteRow["deliveries"]) {
   const district = value?.[0]?.delivery_districts;
   const row = Array.isArray(district) ? district[0] : district;
   return row?.name?.trim() || null;
+}
+
+function plannedDistrictName(value: QuoteRow["planned_delivery_district"]) {
+  const district = Array.isArray(value) ? value[0] : value;
+  return district?.name?.trim() || null;
+}
+
+async function fetchActiveDistrictNames() {
+  const { data, error } = await supabase
+    .from("delivery_districts")
+    .select("name")
+    .is("archived_at", null);
+  if (error) return [];
+  return [...new Set((data ?? []).flatMap((row) => {
+    const name = row.name?.trim();
+    return name ? [name] : [];
+  }))];
 }

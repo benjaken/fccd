@@ -13,6 +13,7 @@ import { TablePagination } from "@/components/ui/table-pagination";
 import { Modal } from "@/components/ui/modal";
 import { SidePanel } from "@/components/ui/side-panel";
 import { useDeferredFilter } from "@/lib/use-deferred-filter";
+import { printPdf } from "@/lib/print-pdf";
 import {
   fetchOrders,
   orderDeliveryStatusTone,
@@ -96,6 +97,17 @@ function formatDistrictWithShippingMethod(
   }
   const unwrappedMethod = method.replace(/^\((.*)\)$/, "$1").trim();
   return unwrappedMethod ? `${district}(${unwrappedMethod})` : district;
+}
+
+function districtAndAddress(
+  districtName: string | null,
+  shippingMethodName: string | null | undefined,
+  address: string | null | undefined,
+) {
+  return {
+    district: formatDistrictWithShippingMethod(districtName, shippingMethodName),
+    address: address?.trim() || "",
+  };
 }
 
 export function OrdersListPage({
@@ -696,7 +708,13 @@ export function OrdersListPage({
             })}
             mobileContent={isMobileList ? (
               <div className="mobile-card-list order-mobile-list" role="list" aria-label={title}>
-                {items.map((order) => (
+                {items.map((order) => {
+                  const { district, address } = districtAndAddress(
+                    order.districtName,
+                    order.shippingMethodName,
+                    order.address,
+                  );
+                  return (
                   <article className="mobile-list-card order-mobile-card" role="listitem" key={order.id}>
                     <header>
                       <label className="order-mobile-select">
@@ -711,10 +729,11 @@ export function OrdersListPage({
                         />
                       </label>
                       <div className="order-mobile-title">
-                        <DetailLink to={preset === "pending" ? `/quotes/${order.id}` : `/orders/${order.id}`}>
+                        <DetailLink to={preset === "pending" ? `/quotes/${order.id}` : `/orders/${order.id}`} target={preset === "pending" ? undefined : "_blank"} rel={preset === "pending" ? undefined : "noopener noreferrer"}>
                           {order.orderNumber || t("common.notSet")}
                         </DetailLink>
                         <span>{order.channelName || t("common.notSet")}</span>
+                        {order.hasPendingAddonShopify ? <span className="status-badge amber">未處理加單</span> : null}
                       </div>
                       <span className={cn("status-badge", orderDeliveryStatusTone(order.deliveryStatus))}>
                         {order.deliveryStatus || t("orders.deliveryDetails.unassigned")}
@@ -724,17 +743,25 @@ export function OrdersListPage({
                     <div className="order-mobile-customer">
                       <strong>{order.customerName || order.companyName || t("common.notSet")}</strong>
                       {order.contactPhone ? <a href={`tel:${order.contactPhone}`}>{order.contactPhone}</a> : null}
-                      <span>{order.address || t("common.notSet")}</span>
                     </div>
 
                     <dl className="order-mobile-facts">
                       <div>
-                        <dt>{t("orders.columns.delivery")}</dt>
-                        <dd>{hongKongDateKey(order.deliveryAt) || t("common.notSet")} · {order.deliveryTime || t("common.notSet")}</dd>
+                        <dt>{t("orders.columns.delivery")} / {t("orders.columns.shipOutAndDelivery")}</dt>
+                        <dd className="order-mobile-delivery-times">
+                          <span>
+                            {hongKongDateKey(order.deliveryAt) || t("common.notSet")} · {t("orders.deliveryDetails.deliveryTime")}
+                            <span>{order.deliveryTime || t("common.notSet")}</span>
+                          </span>
+                          <span>
+                            {t("orders.deliveryDetails.shipOut")}
+                            <span>{order.shipOutTime || "-"}</span>
+                          </span>
+                        </dd>
                       </div>
                       <div>
-                        <dt>{t("orders.columns.region")}</dt>
-                        <dd>{formatDistrictWithShippingMethod(order.districtName, order.shippingMethodName) ?? t("common.notSet")}</dd>
+                        <dt>{t("orders.columns.region")} / {t("orders.columns.address")}</dt>
+                        <dd>{[district, address].filter(Boolean).join(" · ") || t("common.notSet")}</dd>
                       </div>
                       <div>
                         <dt>{t("orders.columns.quantity")}</dt>
@@ -756,7 +783,8 @@ export function OrdersListPage({
                       {renderOrderActions(order)}
                     </footer>
                   </article>
-                ))}
+                  );
+                })}
               </div>
             ) : undefined}
             skeletonRows={ORDERS_PAGE_SIZE}
@@ -766,6 +794,7 @@ export function OrdersListPage({
               { width: "5rem" },
               { width: "7rem" },
               { width: "6rem" },
+              { width: "5.5rem", variant: "badge" as const },
               { width: "6rem" },
               { width: "5rem" },
               ...(preset === "kitchen-notes" ? [{ width: "14rem" }] : []),
@@ -788,8 +817,9 @@ export function OrdersListPage({
                 </th>
                 <th>{t("orders.columns.brand")}</th>
                 <th>{t("orders.columns.number")}</th>
-                <th>{t("orders.columns.customer")}</th>
-                <th>{t("orders.columns.region")}</th>
+                <th>
+                  {t("orders.columns.customer")} / {t("orders.columns.region")} / {t("orders.columns.address")}
+                </th>
                 <th>
                   <button
                     type="button"
@@ -798,10 +828,12 @@ export function OrdersListPage({
                       deliverySort: enhancementFilters.deliverySort === "asc" ? "desc" : "asc",
                     })}
                   >
-                    {t("orders.columns.delivery")} <span aria-hidden="true">›</span>
+                    {t("orders.columns.delivery")} / {t("orders.columns.deliveryTime")}{" "}
+                    <span aria-hidden="true">›</span>
                   </button>
+                  <span> / {t("orders.columns.shipOutAndDelivery")}</span>
                 </th>
-                <th>{t("orders.columns.shipOutAndDelivery")}</th>
+                <th>{t("orders.columns.deliveryStatus")}</th>
                 <th>{t("orders.columns.tags")}</th>
                 <th>{t("orders.columns.quantity")}</th>
                 {preset === "kitchen-notes" && (
@@ -816,6 +848,11 @@ export function OrdersListPage({
             }
           >
             {items.map((order) => {
+              const { district, address } = districtAndAddress(
+                order.districtName,
+                order.shippingMethodName,
+                order.address,
+              );
               const factoryTodoAliases = ["未傳至工場", "未傳送到工場"];
               const todoStatuses = (order.statuses ?? []).filter(
                 (status) =>
@@ -876,7 +913,7 @@ export function OrdersListPage({
                   <td>{order.channelName || t("common.notSet")}</td>
                   <td>
                     <div className="order-number-cell">
-                      <DetailLink className="order-link" to={preset === "pending" ? `/quotes/${order.id}` : `/orders/${order.id}`}>
+                      <DetailLink className="order-link" to={preset === "pending" ? `/quotes/${order.id}` : `/orders/${order.id}`} target={preset === "pending" ? undefined : "_blank"} rel={preset === "pending" ? undefined : "noopener noreferrer"}>
                         {order.orderNumber || t("common.notSet")}
                       </DetailLink>
                       {(() => {
@@ -900,31 +937,36 @@ export function OrdersListPage({
                       })()}
                     </div>
                   </td>
-                  <td className="order-customer-summary">
+                  <td className="order-customer-summary order-customer-location-summary">
                     <div>{order.customerName || order.companyName || t("common.notSet")}</div>
                     <div>{order.contactPhone || t("common.notSet")}</div>
-                    <div>{order.address || t("common.notSet")}</div>
+                    {!district && !address ? null : (
+                      <div className="order-customer-location">
+                        {district ? <strong>{district}</strong> : null}
+                        {address ? <span className="order-region-address whitespace-nowrap" title={address}>{address}</span> : null}
+                      </div>
+                    )}
+                  </td>
+                  <td className="order-delivery-times-summary">
+                    <div>{hongKongDateKey(order.deliveryAt) || t("common.notSet")}</div>
+                    {order.deliveryTime ? (
+                      <div>
+                        {t("orders.deliveryDetails.deliveryTime")}
+                        <span>{order.deliveryTime}</span>
+                      </div>
+                    ) : null}
+                    <small>
+                      {t("orders.deliveryDetails.shipOut")}
+                      <span>{order.shipOutTime || "-"}</span>
+                    </small>
                   </td>
                   <td>
-                    {formatDistrictWithShippingMethod(
-                      order.districtName,
-                      order.shippingMethodName,
-                    ) ?? t("common.notSet")}
-                  </td>
-                  <td>
-                    {hongKongDateKey(order.deliveryAt) || t("common.notSet")}
-                  </td>
-                  <td>
-                    <div>{t("orders.deliveryDetails.shipOut")}</div>
-                    <strong>{order.shipOutTime || "-"}</strong>
-                    <div>{t("orders.deliveryDetails.deliveryTime")}</div>
-                    <strong>{order.deliveryTime || t("common.notSet")}</strong>
-                    <div>{t("orders.deliveryDetails.status")}</div>
                     <span className={cn("status-badge", orderDeliveryStatusTone(order.deliveryStatus))}>
                       {order.deliveryStatus || t("orders.deliveryDetails.unassigned")}
                     </span>
                   </td>
                   <td>
+                    {order.hasPendingAddonShopify ? <span className="status-badge amber">未處理加單</span> : null}
                     <OrderTagBadges
                       statuses={order.tags ?? []}
                       manualTodos={[]}
@@ -1115,7 +1157,7 @@ export function OrdersListPage({
         onClose={() => setPrintPreview(null)}
         closeLabel={t("orders.printPreview.closeLabel")}
         className="order-delivery-note-panel"
-        footer={<><Button type="button" variant="outline" onClick={() => setPrintPreview(null)}>{t("common.close")}</Button><Button type="button" disabled={deliveryNoteLoading || deliveryNoteError} onClick={() => window.print()}>{t("orders.printPreview.print")}</Button></>}
+        footer={<><Button type="button" variant="outline" onClick={() => setPrintPreview(null)}>{t("common.close")}</Button><Button type="button" disabled={deliveryNoteLoading || deliveryNoteError} onClick={() => printPdf("送貨單", printPreview?.order.orderNumber || "")}>{t("orders.printPreview.print")}</Button></>}
       >
         {printPreview?.kind === "delivery-note" ? (
           deliveryNoteLoading ? (
@@ -1147,7 +1189,7 @@ export function OrdersListPage({
         onClose={() => setPrintPreview(null)}
         closeLabel={t("orders.printPreview.closeLabel")}
         size="md"
-        footer={<><Button type="button" variant="outline" onClick={() => setPrintPreview(null)}>{t("common.close")}</Button><Button type="button" onClick={() => window.print()}>{t("orders.printPreview.print")}</Button></>}
+        footer={<><Button type="button" variant="outline" onClick={() => setPrintPreview(null)}>{t("common.close")}</Button><Button type="button" onClick={() => printPdf(printPreview?.kind === "invoice" ? "發票" : "收據", printPreview?.order.orderNumber || "")}>{t("orders.printPreview.print")}</Button></>}
       >
         {printPreview && printPreview.kind !== "delivery-note" ? <div className="order-print-preview">
           <img

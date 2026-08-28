@@ -11,6 +11,8 @@ import {
   orderNumberKey,
   planShopifyMenuOptions,
   parseMenuRemark,
+  parseShopifyFreeDrinks,
+  replaceShopifyFreeDrinkSourceLines,
   pickCatalogMatchByName,
   resolveShopifySkuSnapshot,
   resolveOperationalOrderMatch,
@@ -18,8 +20,13 @@ import {
   shopDomainMatches,
   replaceShopifyLunchBoxAggregate,
   resolveShopifyShippingMethodId,
+  resolveShopifyDistrictId,
   shopifyCateringUtensilPacks,
+  shopifyBentoUtensilCount,
+  shopifyCustomizationCostParentName,
+  shopifyLineRemarksSnapshot,
   shopifyMenuOptionLegacyId,
+  stripParsedMenuRemarksFromLines,
   stripSkuSuffix,
   type ShopifyRestOrder,
   type ShopifyRestTransaction,
@@ -35,6 +42,11 @@ const MAX_BACKFILL_ORDERS = 50000;
 const PAYMENT_INSERT_CHUNK = 200;
 const PAYMENT_LOOKUP_CHUNK = 500;
 const MAX_TRANSACTION_FETCHES_PER_RUN = 200;
+const ORDER_WEBHOOK_TOPICS = [
+  "orders/create",
+  "orders/updated",
+  "orders/delete",
+] as const;
 
 type AdminClient = ReturnType<typeof createClient<any>>;
 
@@ -371,6 +383,86 @@ async function fetchOrderById(input: {
   return { order: payload.order };
 }
 
+async function ensureOrderWebhooks(
+  storeRow: StoreRow,
+): Promise<{
+  store: string;
+  ok: boolean;
+  existing: string[];
+  created: string[];
+  errors: string[];
+}> {
+  const shop = normalizeShopDomain(envFor(storeRow.secret_prefix, "SHOP")) ??
+    normalizeShopDomain(storeRow.shop_domain);
+  const clientId = envFor(storeRow.secret_prefix, "CLIENT_ID");
+  const clientSecret = envFor(storeRow.secret_prefix, "CLIENT_SECRET");
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")?.replace(/\/$/, "");
+  const result = {
+    store: storeRow.shop_domain,
+    ok: false,
+    existing: [] as string[],
+    created: [] as string[],
+    errors: [] as string[],
+  };
+  if (!shop || !clientId || !clientSecret || !supabaseUrl) {
+    result.errors.push(`webhook_configuration_missing:${[
+      !shop ? "shop" : null,
+      !clientId ? "client_id" : null,
+      !clientSecret ? "client_secret" : null,
+      !supabaseUrl ? "supabase_url" : null,
+    ].filter(Boolean).join(",")}`);
+    return result;
+  }
+  const tokenResult = await shopifyAccessToken({ shop, clientId, clientSecret });
+  if ("error" in tokenResult) {
+    result.errors.push(tokenResult.error);
+    return result;
+  }
+
+  const address = `${supabaseUrl}/functions/v1/shopify-order-sync`;
+  const headers = {
+    "X-Shopify-Access-Token": tokenResult.token,
+    "Content-Type": "application/json",
+  };
+  const listResponse = await fetch(
+    `https://${shop}/admin/api/${API_VERSION}/webhooks.json?limit=250`,
+    { headers },
+  );
+  if (!listResponse.ok) {
+    result.errors.push("webhook_list_failed");
+    return result;
+  }
+  const payload = await listResponse.json() as {
+    webhooks?: Array<{ topic?: string; address?: string }>;
+  };
+  const existing = new Set(
+    (payload.webhooks ?? [])
+      .filter((webhook) => webhook.address === address)
+      .map((webhook) => String(webhook.topic ?? "")),
+  );
+
+  for (const topic of ORDER_WEBHOOK_TOPICS) {
+    if (existing.has(topic)) {
+      result.existing.push(topic);
+      continue;
+    }
+    const response = await fetch(
+      `https://${shop}/admin/api/${API_VERSION}/webhooks.json`,
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          webhook: { topic, address, format: "json" },
+        }),
+      },
+    );
+    if (response.ok) result.created.push(topic);
+    else result.errors.push(`${topic}:webhook_create_failed_${response.status}`);
+  }
+  result.ok = result.errors.length === 0;
+  return result;
+}
+
 async function fetchOrderTransactions(input: {
   shop: string;
   token: string;
@@ -447,14 +539,23 @@ function menuRemarkSources(
   }
   for (const line of item.lines) {
     const text = collectLineMenuRemarkText(line.properties);
-    if (text) {
-      sources.push({
-        lineId: line.lineId,
-        parentItemOrder: Number(line.row.item_order ?? 0) || null,
-        parentPackageId: packageIdsByLineId.get(line.lineId) ?? null,
-        text,
-      });
-    }
+    if (!text) continue;
+    const title = String(line.row.product_name_snapshot ?? "").trim();
+    const costParentName = shopifyCustomizationCostParentName(title);
+    const parentLine = costParentName
+      ? item.lines.find((candidate) =>
+        normalizeNameForMatch(String(candidate.row.product_name_snapshot ?? "")) ===
+          normalizeNameForMatch(costParentName)
+      ) ?? line
+      : line;
+    sources.push({
+      lineId: line.lineId,
+      parentItemOrder: Number(parentLine.row.item_order ?? 0) || null,
+      parentPackageId: packageIdsByLineId.get(parentLine.lineId) ??
+        packageIdsByLineId.get(line.lineId) ??
+        null,
+      text,
+    });
   }
   return sources;
 }
@@ -562,7 +663,11 @@ async function buildMenuOptionLines(input: {
   }>;
   catalogByName: Map<string, CatalogItem>;
   issues: IssueRow[];
-}): Promise<{ lines: Record<string, unknown>[]; consumedAddonLegacyIds: string[] }> {
+}): Promise<{
+  lines: Record<string, unknown>[];
+  consumedAddonLegacyIds: string[];
+  parsedSourceLineIds: number[];
+}> {
   const {
     storeRow,
     orderId,
@@ -603,7 +708,11 @@ async function buildMenuOptionLines(input: {
       is_void: false,
     });
   }
-  return { lines, consumedAddonLegacyIds: plan.consumedAddonLegacyIds };
+  return {
+    lines,
+    consumedAddonLegacyIds: plan.consumedAddonLegacyIds,
+    parsedSourceLineIds: [...new Set(plan.options.map((option) => option.lineId))],
+  };
 }
 
 async function syncPaymentsForOrders(input: {
@@ -733,6 +842,33 @@ async function syncPaymentsForOrders(input: {
 
 type MappedOrder = NonNullable<ReturnType<typeof mapShopifyOrder>>;
 
+type DistrictLookupRow = {
+  id: string;
+  name: string | null;
+  driver_team_id: string | null;
+  created_at: string | null;
+};
+
+function attachShopifyLookups(
+  mapped: MappedOrder[],
+  shippingMethods: Array<{
+    id: string;
+    name: string | null;
+    display_name?: string | null;
+  }>,
+  districts: DistrictLookupRow[],
+) {
+  for (const item of mapped) {
+    const shippingMethodId = resolveShopifyShippingMethodId(
+      item.shippingMethodTitle,
+      shippingMethods,
+    );
+    if (shippingMethodId) item.orderRow.shipping_method_id = shippingMethodId;
+    const districtId = resolveShopifyDistrictId(item.districtSources, districts);
+    if (districtId) item.orderRow.delivery_district_id = districtId;
+  }
+}
+
 function shopifyPaymentStatusPatch(item: MappedOrder): Record<string, unknown> {
   return {
     payment_status_source: "shopify",
@@ -804,6 +940,7 @@ type OrderProcessingContext = {
   client: AdminClient;
   storeRow: StoreRow;
   shop: string;
+  refreshShopifyLines?: boolean;
   products: Array<{
     id: string;
     sku: string | null;
@@ -856,7 +993,14 @@ async function processMappedOrders(
     source_system: string | null;
   }>,
 ): Promise<OrderProcessingResult> {
-  const { client, storeRow, products, packages, methodsByName } = context;
+  const {
+    client,
+    storeRow,
+    products,
+    packages,
+    methodsByName,
+    refreshShopifyLines = false,
+  } = context;
 
   const shopifyIdToOrder = new Map(
     existingShopify.map((row) => [Number(row.shopify_order_id), row]),
@@ -883,12 +1027,21 @@ async function processMappedOrders(
   };
 
   for (const item of mapped) {
+    let refreshedOrderId: string | null = null;
     if (item.shippingMethodTitle && !item.orderRow.shipping_method_id) {
       issues.push({
         store_id: storeRow.id,
         shopify_order_id: item.orderId,
         sku: null,
         issue: "unmatched_shipping_method",
+      });
+    }
+    if (item.hasDistrictHint && !item.orderRow.delivery_district_id) {
+      issues.push({
+        store_id: storeRow.id,
+        shopify_order_id: item.orderId,
+        sku: null,
+        issue: "unmatched_delivery_district",
       });
     }
     const already = shopifyIdToOrder.get(item.orderId);
@@ -988,7 +1141,9 @@ async function processMappedOrders(
     if (mode === "skip" && targetId) {
       const { error } = await client.from("orders")
         .update(
-          already?.source_system === "shopify"
+          refreshShopifyLines && already?.source_system === "shopify"
+            ? { ...item.orderRow, updated_at: new Date().toISOString() }
+            : already?.source_system === "shopify"
             ? shopifyOwnedOrderPatch(item)
             : shopifyPaymentStatusPatch(item),
         )
@@ -1001,20 +1156,48 @@ async function processMappedOrders(
           issue: "payment_status_update_failed",
         });
       }
+      if (
+        !error &&
+        already?.source_system === "shopify" &&
+        item.orderRow.delivery_district_id
+      ) {
+        await client.from("orders").update({
+          delivery_district_id: item.orderRow.delivery_district_id,
+        }).eq("id", targetId).is("delivery_district_id", null);
+      }
       if (!error && already?.source_system === "shopify") {
         counters.updatedShopify += 1;
       }
-      // Shopify-created rows refresh Shopify-owned contact snapshots. Linked
-      // operational rows keep their non-payment fields immutable.
-      processedOrders.push({
-        orderId: item.orderId,
-        supabaseOrderId: targetId,
-        orderLegacyId: orderLegacyIdForPayments,
-        orderNumber: item.orderNumber,
-        currency,
-        needsTransactions: item.needsPayments,
-      });
-      continue;
+      if (error) continue;
+      if (refreshShopifyLines && already?.source_system === "shopify") {
+        const linePrefix = `shopify:${storeRow.shop_domain.replace(/\.myshopify\.com$/, "")}:${item.orderId}:%`;
+        const { error: lineDeleteError } = await client.from("order_lines")
+          .delete()
+          .eq("order_id", targetId)
+          .like("legacy_id", linePrefix);
+        if (lineDeleteError) {
+          issues.push({
+            store_id: storeRow.id,
+            shopify_order_id: item.orderId,
+            sku: null,
+            issue: "updated_lines_replace_failed",
+          });
+          continue;
+        }
+        refreshedOrderId = targetId;
+      } else {
+        // Scheduled refreshes keep operational lines immutable. Only the
+        // orders/updated webhook replaces Shopify-owned lines.
+        processedOrders.push({
+          orderId: item.orderId,
+          supabaseOrderId: targetId,
+          orderLegacyId: orderLegacyIdForPayments,
+          orderNumber: item.orderNumber,
+          currency,
+          needsTransactions: item.needsPayments,
+        });
+        continue;
+      }
     }
 
     if (mode === "link" && targetId) {
@@ -1058,31 +1241,31 @@ async function processMappedOrders(
       continue;
     }
 
-    const { data: insertedOrder, error: insertError } = await client
-      .from("orders")
-      .insert(item.orderRow)
-      .select("id")
-      .single();
-    if (insertError || !insertedOrder) {
-      issues.push({
-        store_id: storeRow.id,
-        shopify_order_id: item.orderId,
-        sku: null,
-        issue: "insert_failed",
-      });
-      continue;
+    let insertedOrder: { id: string } | null = refreshedOrderId
+      ? { id: refreshedOrderId }
+      : null;
+    if (!insertedOrder) {
+      const { data, error: insertError } = await client
+        .from("orders")
+        .insert(item.orderRow)
+        .select("id")
+        .single();
+      if (insertError || !data) {
+        issues.push({
+          store_id: storeRow.id,
+          shopify_order_id: item.orderId,
+          sku: null,
+          issue: "insert_failed",
+        });
+        continue;
+      }
+      insertedOrder = data;
+      counters.inserted += 1;
     }
-    counters.inserted += 1;
 
     const lineRows = item.lines.map((line) => {
       const rawName = (line.row.product_name_snapshot as string | null) ?? null;
       const optionRemark = extractOptionRemark(rawName);
-      const propertyRemark = line.properties
-        .map((property) => ({ name: String(property.name ?? ""), value: String(property.value ?? "").trim() }))
-        .filter((property) => property.value && !/^_/.test(property.name) &&
-          !/(?:飲品|drink|beverage|pickup|delivery|送貨|日期|時間)/i.test(property.name))
-        .map((property) => property.value)
-        .join("\n") || null;
       const variantParts = (line.variantTitle ?? "")
         .split("/")
         .map((part) => part.trim())
@@ -1148,19 +1331,31 @@ async function processMappedOrders(
           }>,
           stripSuffix: storeRow.secret_prefix === "SHOPIFY_HK_LUNCH_BOX",
         }),
-        remarks_1: [optionRemark, propertyRemark, variantRemark, line.row.remarks_1]
-          .filter((value): value is string =>
-            typeof value === "string" && Boolean(value.trim())
-          )
-          .filter((value, index, values) => values.indexOf(value) === index)
-          .join("\n") || null,
+        remarks_1: shopifyLineRemarksSnapshot({
+          properties: line.properties,
+          optionRemark,
+          variantRemark,
+          existing: line.row.remarks_1,
+        }),
       };
     });
 
     const generatedLines: Record<string, unknown>[] = [];
+    const freeDrinkRemark = [
+      item.freeDrinkRemark,
+      ...item.lines.flatMap((line) => line.properties.map((property) =>
+        `${String(property.name ?? "").trim()}: ${String(property.value ?? "").trim()}`
+      )),
+    ].filter(Boolean).join("\n");
+    const noteFreeDrinks = parseShopifyFreeDrinks(freeDrinkRemark);
+    const beverageTotals = new Map<string, { quantity: number; unit: string }>();
+    for (const drink of noteFreeDrinks) {
+      beverageTotals.set(drink.name, {
+        quantity: drink.quantity,
+        unit: drink.unit,
+      });
+    }
     if (storeRow.secret_prefix === "SHOPIFY_HK_LUNCH_BOX") {
-      let generatedIndex = 0;
-      const beverageTotals = new Map<string, { quantity: number; unit: string }>();
       for (const line of item.lines) {
         const selections = new Set<string>();
         const variantParts = (line.variantTitle ?? "").split("/").map((value) => value.trim()).filter(Boolean);
@@ -1176,21 +1371,29 @@ async function processMappedOrders(
           beverageTotals.set(name, { quantity: (current?.quantity ?? 0) + Number(line.row.quantity ?? 0), unit: current?.unit ?? drinkUnit(selection) });
         }
       }
-      for (const [beverage, details] of beverageTotals) {
-        generatedIndex += 1;
-        generatedLines.push({ legacy_id: `shopify:${storeRow.shop_domain.replace(/\.myshopify\.com$/, "")}:${item.orderId}:drink:${generatedIndex}`, order_id: insertedOrder.id, order_legacy_id: item.orderRow.legacy_id, product_name_snapshot: `${beverage} ${details.quantity}${details.unit}`, quantity: 1, unit_price: 0, total_price: 0, item_order: 10000 + generatedIndex, is_addon: false, is_void: false });
-      }
-      const boxCount = item.lines.reduce((total, line) => total + (/^CBE/i.test(line.sku ?? "") ? Number(line.row.quantity ?? 0) : 0), 0);
-      if (boxCount) generatedLines.push({ legacy_id: `shopify:${storeRow.shop_domain.replace(/\.myshopify\.com$/, "")}:${item.orderId}:utensils`, order_id: insertedOrder.id, order_legacy_id: item.orderRow.legacy_id, product_name_snapshot: `飯盒餐具包 ${boxCount}份`, quantity: 1, unit_price: 0, total_price: 0, item_order: 10999, is_addon: false, is_void: false });
-    } else {
+    }
+    let generatedDrinkIndex = 0;
+    for (const [beverage, details] of beverageTotals) {
+      generatedDrinkIndex += 1;
+      generatedLines.push({ legacy_id: `shopify:${storeRow.shop_domain.replace(/\.myshopify\.com$/, "")}:${item.orderId}:drink:${generatedDrinkIndex}`, order_id: insertedOrder.id, order_legacy_id: item.orderRow.legacy_id, product_name_snapshot: `${beverage} ${details.quantity}${details.unit}`, quantity: 1, unit_price: 0, total_price: 0, item_order: 10000 + generatedDrinkIndex, is_addon: false, is_void: false });
+    }
+
+    const alreadyHasUtensils = lineRows.some((line) =>
+      /餐具包/.test(String(line.product_name_snapshot ?? ""))
+    );
+    const bentoCount = shopifyBentoUtensilCount(lineRows.map((line) => ({
+      name: (line.product_name_snapshot as string | null) ?? null,
+      sku: (line.sku_snapshot as string | null) ?? null,
+      quantity: Number(line.quantity ?? 0),
+    })));
+    if (bentoCount && !alreadyHasUtensils) {
+      generatedLines.push({ legacy_id: `shopify:${storeRow.shop_domain.replace(/\.myshopify\.com$/, "")}:${item.orderId}:utensils`, order_id: insertedOrder.id, order_legacy_id: item.orderRow.legacy_id, product_name_snapshot: `飯盒餐具包 ${bentoCount}份`, quantity: 1, unit_price: 0, total_price: 0, item_order: 10999, is_addon: false, is_void: false });
+    } else if (storeRow.secret_prefix !== "SHOPIFY_HK_LUNCH_BOX") {
       const utensilPacks = shopifyCateringUtensilPacks(lineRows.map((line) => ({
         packageId: (line.package_id as string | null) ?? null,
         name: (line.product_name_snapshot as string | null) ?? null,
         quantity: Number(line.quantity ?? 0),
       })));
-      const alreadyHasUtensils = lineRows.some((line) =>
-        /餐具包/.test(String(line.product_name_snapshot ?? ""))
-      );
       if (utensilPacks && !alreadyHasUtensils) {
         generatedLines.push({
           legacy_id: `shopify:${storeRow.shop_domain.replace(/\.myshopify\.com$/, "")}:${item.orderId}:utensils`,
@@ -1245,10 +1448,31 @@ async function processMappedOrders(
     });
 
     const consumedAddonIds = new Set(menuOptionResult.consumedAddonLegacyIds);
+    const parsedSourceLineIds = new Set(menuOptionResult.parsedSourceLineIds);
+    for (const line of item.lines) {
+      if (!parsedSourceLineIds.has(line.lineId)) continue;
+      if (!shopifyCustomizationCostParentName(String(line.row.product_name_snapshot ?? ""))) {
+        continue;
+      }
+      const legacyId = String(line.row.legacy_id ?? "");
+      if (legacyId) consumedAddonIds.add(legacyId);
+    }
     let baseLineRows = mergedLineRows.filter((line) =>
       !consumedAddonIds.has(String(line.legacy_id ?? ""))
     );
+    baseLineRows = replaceShopifyFreeDrinkSourceLines(
+      baseLineRows,
+      noteFreeDrinks,
+    );
     let optionLineRows = menuOptionResult.lines;
+    if (menuOptionResult.parsedSourceLineIds.length) {
+      baseLineRows = stripParsedMenuRemarksFromLines({
+        lines: baseLineRows,
+        parsedSourceLineIds: menuOptionResult.parsedSourceLineIds,
+        mappedLines: item.lines,
+        lunchBox: storeRow.secret_prefix === "SHOPIFY_HK_LUNCH_BOX",
+      });
+    }
     if (storeRow.secret_prefix === "SHOPIFY_HK_LUNCH_BOX") {
       const expanded = replaceShopifyLunchBoxAggregate({
         baseLines: baseLineRows,
@@ -1402,7 +1626,7 @@ async function syncStore(input: {
 
   const [{ data: products }, { data: packages }, { data: existingShopify }, {
     data: existingNumbers,
-  }, { data: shippingMethods }, { data: paymentMethods }] = await Promise.all([
+  }, { data: shippingMethods }, { data: paymentMethods }, { data: districts }] = await Promise.all([
     needsCatalog
       ? catalogQuery(client, "products", storeRow.channel_id, skus)
       : Promise.resolve({ data: [] as Array<{ id: string; sku: string | null; name: string | null; channel_id: string | null }> }),
@@ -1431,15 +1655,15 @@ async function syncStore(input: {
     client.from("shipping_methods").select("id,name,display_name")
       .eq("is_active", true).is("archived_at", null),
     client.from("payment_methods").select("id, legacy_id, name"),
+    client.from("delivery_districts").select("id,name,driver_team_id,created_at")
+      .is("archived_at", null),
   ]);
 
-  for (const item of mapped) {
-    const shippingMethodId = resolveShopifyShippingMethodId(
-      item.shippingMethodTitle,
-      shippingMethods ?? [],
-    );
-    if (shippingMethodId) item.orderRow.shipping_method_id = shippingMethodId;
-  }
+  attachShopifyLookups(
+    mapped,
+    shippingMethods ?? [],
+    (districts ?? []) as DistrictLookupRow[],
+  );
 
   const methodsByName = new Map(
     (paymentMethods ?? []).map((method) => [
@@ -1524,8 +1748,15 @@ async function syncSingleOrder(input: {
   storeRow: StoreRow;
   orderId: number;
   resyncPaid: boolean;
+  refreshShopifyLines?: boolean;
 }): Promise<StoreSyncResult> {
-  const { client, storeRow, orderId, resyncPaid } = input;
+  const {
+    client,
+    storeRow,
+    orderId,
+    resyncPaid,
+    refreshShopifyLines = false,
+  } = input;
   const empty: StoreSyncResult = {
     store: storeRow.shop_domain,
     secretPrefix: storeRow.secret_prefix,
@@ -1603,7 +1834,7 @@ async function syncSingleOrder(input: {
 
   const [{ data: products }, { data: packages }, { data: existingShopify }, {
     data: existingNumbers,
-  }, { data: shippingMethods }, { data: paymentMethods }] = await Promise.all([
+  }, { data: shippingMethods }, { data: paymentMethods }, { data: districts }] = await Promise.all([
     needsCatalog
       ? catalogQuery(client, "products", storeRow.channel_id, skus)
       : Promise.resolve({ data: [] as Array<{ id: string; sku: string | null; name: string | null; channel_id: string | null }> }),
@@ -1632,15 +1863,15 @@ async function syncSingleOrder(input: {
     client.from("shipping_methods").select("id,name,display_name")
       .eq("is_active", true).is("archived_at", null),
     client.from("payment_methods").select("id, legacy_id, name"),
+    client.from("delivery_districts").select("id,name,driver_team_id,created_at")
+      .is("archived_at", null),
   ]);
 
-  for (const item of mapped) {
-    const shippingMethodId = resolveShopifyShippingMethodId(
-      item.shippingMethodTitle,
-      shippingMethods ?? [],
-    );
-    if (shippingMethodId) item.orderRow.shipping_method_id = shippingMethodId;
-  }
+  attachShopifyLookups(
+    mapped,
+    shippingMethods ?? [],
+    (districts ?? []) as DistrictLookupRow[],
+  );
 
   const methodsByName = new Map(
     (paymentMethods ?? []).map((method) => [
@@ -1654,6 +1885,7 @@ async function syncSingleOrder(input: {
       client,
       storeRow,
       shop,
+      refreshShopifyLines,
       products: (products ?? []) as Array<{
         id: string;
         sku: string | null;
@@ -1720,6 +1952,35 @@ async function syncSingleOrder(input: {
   };
 }
 
+async function archiveDeletedShopifyOrder(input: {
+  client: AdminClient;
+  storeRow: StoreRow;
+  orderId: number;
+}): Promise<{ ok: boolean; archived: number; error?: string }> {
+  const { data, error: lookupError } = await input.client.from("orders")
+    .select("id,source_system")
+    .eq("shopify_store_id", input.storeRow.id)
+    .eq("shopify_order_id", input.orderId)
+    .is("archived_at", null);
+  if (lookupError) return { ok: false, archived: 0, error: "deleted_order_lookup_failed" };
+
+  // A Shopify shadow is owned by Shopify and can be archived. Once it has
+  // been linked to an operational Bubble/web order, preserve that canonical
+  // record and only let staff cancel it through the normal workflow.
+  const ids = (data ?? [])
+    .filter((row) => row.source_system === "shopify")
+    .map((row) => row.id as string);
+  if (!ids.length) return { ok: true, archived: 0 };
+
+  const now = new Date().toISOString();
+  const { error } = await input.client.from("orders")
+    .update({ archived_at: now, updated_at: now })
+    .in("id", ids);
+  return error
+    ? { ok: false, archived: 0, error: "deleted_order_archive_failed" }
+    : { ok: true, archived: ids.length };
+}
+
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -1730,8 +1991,8 @@ Deno.serve(async (request) => {
 
   const client = createAdminClient();
 
-  // Shopify order-created webhooks carry X-Shopify-Topic. Verify the HMAC
-  // against the store's webhook secret and sync only the order just created.
+  // Shopify order create/update/delete webhooks carry X-Shopify-Topic. Verify
+  // the HMAC before applying the event to the Shopify-owned order shadow.
   const webhookTopic = request.headers.get("X-Shopify-Topic");
   if (webhookTopic) {
     const rawBody = await request.text();
@@ -1770,11 +2031,31 @@ Deno.serve(async (request) => {
       return jsonResponse({ error: "invalid_webhook_signature" }, 401);
     }
 
+    const topic = webhookTopic.trim().toLowerCase();
+    if (topic === "orders/delete") {
+      const deleted = await archiveDeletedShopifyOrder({
+        client,
+        storeRow,
+        orderId,
+      });
+      return jsonResponse({
+        ok: deleted.ok,
+        error: deleted.error,
+        orderId,
+        store: storeRow.shop_domain,
+        archived: deleted.archived,
+      }, deleted.ok ? 200 : 500);
+    }
+    if (topic !== "orders/create" && topic !== "orders/updated") {
+      return jsonResponse({ error: "unsupported_webhook_topic" }, 400);
+    }
+
     const result = await syncSingleOrder({
       client,
       storeRow,
       orderId,
       resyncPaid: false,
+      refreshShopifyLines: topic === "orders/updated",
     });
     return jsonResponse({
       ok: result.ok,
@@ -1803,6 +2084,8 @@ Deno.serve(async (request) => {
   let limit = DEFAULT_LIMIT;
   let onlyPrefix: string | null = null;
   let backfill = false;
+  let registerWebhooks = false;
+  let resyncOrderId: number | null = null;
   let createdMin: string | null = null;
   let createdMax: string | null = null;
   try {
@@ -1812,6 +2095,7 @@ Deno.serve(async (request) => {
         limit?: number;
         store?: string;
         mode?: string;
+        orderId?: number | string;
         created_at_min?: string;
         created_at_max?: string;
       }
@@ -1824,6 +2108,14 @@ Deno.serve(async (request) => {
       onlyPrefix = body.store.trim();
     }
     backfill = fromCron && body.mode === "backfill";
+    registerWebhooks = body.mode === "register_webhooks";
+    if (body.mode === "resync_order") {
+      const candidate = Number(body.orderId);
+      if (!Number.isSafeInteger(candidate) || candidate <= 0) {
+        return jsonResponse({ error: "invalid_order_id" }, 400);
+      }
+      resyncOrderId = candidate;
+    }
     createdMin = fromCron && typeof body.created_at_min === "string" && body.created_at_min.trim()
       ? body.created_at_min.trim()
       : null;
@@ -1839,7 +2131,9 @@ Deno.serve(async (request) => {
     .select("id, shop_domain, channel_id, secret_prefix")
     .eq("is_active", true);
   if (onlyPrefix) {
-    query = query.eq("secret_prefix", onlyPrefix);
+    query = query.or(
+      `secret_prefix.eq.${onlyPrefix},shop_domain.eq.${onlyPrefix}`,
+    );
   }
   const { data: stores, error: storesError } = await query;
   if (storesError) {
@@ -1847,6 +2141,36 @@ Deno.serve(async (request) => {
   }
   if (!stores?.length) {
     return jsonResponse({ error: "store_not_configured" }, 500);
+  }
+
+  if (registerWebhooks) {
+    const registrations = [];
+    for (const store of stores) {
+      registrations.push(await ensureOrderWebhooks(store as StoreRow));
+    }
+    return jsonResponse({
+      ok: registrations.every((registration) => registration.ok),
+      registrations,
+    }, registrations.every((registration) => registration.ok) ? 200 : 502);
+  }
+
+  if (resyncOrderId) {
+    const results = [];
+    for (const store of stores) {
+      results.push(await syncSingleOrder({
+        client,
+        storeRow: store as StoreRow,
+        orderId: resyncOrderId,
+        resyncPaid: false,
+        refreshShopifyLines: true,
+      }));
+    }
+    const successful = results.filter((result) => result.ok);
+    return jsonResponse({
+      ok: successful.length === 1,
+      orderId: resyncOrderId,
+      results,
+    }, successful.length === 1 ? 200 : 502);
   }
 
   const results: StoreSyncResult[] = [];

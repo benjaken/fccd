@@ -153,6 +153,19 @@ function CurrentLocation() {
   );
 }
 
+function setMobileViewport(matches: boolean) {
+  vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
+    matches: query === "(max-width: 760px)" ? matches : false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  }));
+}
+
 function renderCalendar(
   loadOrders = vi.fn().mockResolvedValue(orders),
   initialEntries = ["/orders/calendar"],
@@ -178,7 +191,30 @@ function renderCalendar(
 
 describe("Kitchen calendar page", () => {
   beforeEach(async () => {
+    setMobileViewport(false);
     await i18n.changeLanguage("zh-HK");
+  });
+
+  it("shows the weekly mobile calendar without a bottom work-list action", async () => {
+    setMobileViewport(true);
+    await i18n.changeLanguage("en");
+    renderCalendar();
+
+    expect(
+      await screen.findByRole("heading", {
+        name: /Monday.*August 17|August 17.*Monday/,
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Month view" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Show exceptions only" }))
+      .toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /Open order B#1462UB - Union Banquet/ }),
+    ).toHaveAttribute(
+      "href",
+      "/orders/order-delivered-stale?from=calendar&month=2026-08",
+    );
+    expect(screen.queryByText("View today's work list")).toBeNull();
   });
 
   it("loads the visible month range and links orders to their detail pages", async () => {

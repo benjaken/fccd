@@ -194,28 +194,21 @@ type LoginLogRow = {
   created_at: string;
 };
 
-type PermissionRow = {
+type AppPageRow = {
+  page_key: string;
+  display_name: string;
+  route: string;
+  sort_order: number;
+  is_high_risk: boolean;
+  parent_page_key: string | null;
+  page_kind: PageKind | null;
+};
+
+type RolePermissionGrantRow = {
   role: SystemRole;
   page_key: string;
   can_access: boolean;
   can_manage: boolean;
-  app_pages:
-    | {
-        display_name: string;
-        route: string;
-        sort_order: number;
-        is_high_risk: boolean;
-        parent_page_key: string | null;
-        page_kind: PageKind | null;
-      }
-    | {
-        display_name: string;
-        route: string;
-        sort_order: number;
-        is_high_risk: boolean;
-        parent_page_key: string | null;
-        page_kind: PageKind | null;
-      }[];
 };
 
 function safeSearchTerm(value: string) {
@@ -749,33 +742,70 @@ export async function recordLoginEvent(input: {
 }
 
 export async function fetchRolePagePermissions() {
-  const { data, error } = await supabase
-    .from("role_page_permissions")
-    .select(
-      "role,page_key,can_access,can_manage,app_pages!inner(display_name,route,sort_order,is_high_risk,parent_page_key,page_kind)",
-    );
-  if (error) throw error;
+  const [{ data: pageData, error: pageError }, grantData] = await Promise.all([
+    supabase
+      .from("app_pages")
+      .select(
+        "page_key,display_name,route,sort_order,is_high_risk,parent_page_key,page_kind",
+      ),
+    collectPaginatedRows<RolePermissionGrantRow>(async (from, to) => {
+      const { data, error } = await supabase
+        .from("role_page_permissions")
+        .select("role,page_key,can_access,can_manage")
+        .order("role")
+        .order("page_key")
+        .range(from, to);
+      if (error) throw error;
+      return (data ?? []) as unknown as RolePermissionGrantRow[];
+    }),
+  ]);
+  if (pageError) throw pageError;
 
-  const mapped = ((data ?? []) as unknown as PermissionRow[]).map((row) => {
-    const page = Array.isArray(row.app_pages)
-      ? row.app_pages[0]
-      : row.app_pages;
-    return {
-      role: row.role,
-      pageKey: row.page_key,
-      parentPageKey: page.parent_page_key ?? null,
-      pageKind: normalizePageKind(page.page_kind),
-      displayName: page.display_name,
-      route: page.route,
-      sortOrder: page.sort_order,
-      isHighRisk: page.is_high_risk,
-      canAccess: row.can_access,
-      canManage: row.can_manage,
-      depth: 0,
-    } satisfies RolePagePermission;
-  });
+  const grants = new Map(
+    grantData.map((grant) => [
+      `${grant.role}:${grant.page_key}`,
+      grant,
+    ]),
+  );
+  const pages = (pageData ?? []) as unknown as AppPageRow[];
+  const mapped = pages.flatMap((page) =>
+    SYSTEM_ROLES.map((role) => {
+      const grant = grants.get(`${role}:${page.page_key}`);
+      return {
+        role,
+        pageKey: page.page_key,
+        parentPageKey: page.parent_page_key,
+        pageKind: normalizePageKind(page.page_kind),
+        displayName: page.display_name,
+        route: page.route,
+        sortOrder: page.sort_order,
+        isHighRisk: page.is_high_risk,
+        canAccess: grant?.can_access ?? false,
+        canManage: grant?.can_manage ?? false,
+        depth: 0,
+      } satisfies RolePagePermission;
+    }),
+  );
 
   return sortRolePagePermissions(mapped);
+}
+
+const ROLE_PERMISSION_GRANT_PAGE_SIZE = 1000;
+
+export async function collectPaginatedRows<T>(
+  loadPage: (from: number, to: number) => Promise<T[]>,
+  pageSize = ROLE_PERMISSION_GRANT_PAGE_SIZE,
+) {
+  if (!Number.isInteger(pageSize) || pageSize <= 0) {
+    throw new Error("invalid_page_size");
+  }
+
+  const rows: T[] = [];
+  for (let from = 0; ; from += pageSize) {
+    const page = await loadPage(from, from + pageSize - 1);
+    rows.push(...page);
+    if (page.length < pageSize) return rows;
+  }
 }
 
 export async function updateRolePagePermission(
@@ -794,12 +824,30 @@ export async function updateRolePagePermission(
   if (error) throw error;
 }
 
+export async function updateRolePagePermissionsBatch(
+  role: SystemRole,
+  updates: ReadonlyMap<
+    string,
+    { canAccess: boolean; canManage: boolean }
+  >,
+) {
+  const { error } = await supabase.rpc("update_role_page_permissions_batch", {
+    p_role: role,
+    p_updates: [...updates.entries()].map(([pageKey, value]) => ({
+      page_key: pageKey,
+      can_access: value.canAccess,
+      can_manage: value.canAccess && value.canManage,
+    })),
+  });
+  if (error) throw error;
+}
+
 /**
  * Update a permission row and cascade:
- * - parent access ON → all descendants access ON (children fully opened)
- * - parent access OFF → descendants access+manage OFF
- * - parent manage ON/OFF → descendants manage matches (access forced ON when manage ON)
- * - child access/manage ON → ancestors access ON (manage cascades up only for manage)
+ * - parent access ON → all descendants access ON
+ * - parent access OFF → all descendants access+manage OFF
+ * - parent manage ON/OFF → all descendants manage matches
+ * - child access/manage ON → ancestors access ON
  */
 export async function updateRolePagePermissionCascade(
   role: SystemRole,
@@ -807,7 +855,7 @@ export async function updateRolePagePermissionCascade(
   field: "canAccess" | "canManage",
   checked: boolean,
   permissions: RolePagePermission[],
-  savePermission: typeof updateRolePagePermission = updateRolePagePermission,
+  savePermission?: typeof updateRolePagePermission,
 ) {
   const rolePermissions = permissions.filter((item) => item.role === role);
   const current = rolePermissions.find((item) => item.pageKey === pageKey);
@@ -819,7 +867,6 @@ export async function updateRolePagePermissionCascade(
 
   for (const key of descendantKeys) {
     const row = rolePermissions.find((item) => item.pageKey === key);
-    const isRoot = key === pageKey;
     if (field === "canAccess") {
       updates.set(key, {
         canAccess: checked,
@@ -827,12 +874,13 @@ export async function updateRolePagePermissionCascade(
         // child's independent management grant.
         canManage: checked ? Boolean(row?.canManage) : false,
       });
-    } else if (isRoot) {
-      // Management belongs to the selected permission only. Child pages and
-      // actions must be granted explicitly.
+    } else {
+      // A parent management switch represents the whole branch. Action rows
+      // use canAccess as their effective grant, so opening management also
+      // opens them; non-action descendants receive canManage as well.
       updates.set(key, {
-        canAccess: checked ? true : Boolean(row?.canAccess),
-        canManage: checked,
+        canAccess: checked || (row?.pageKind !== "action" && Boolean(row?.canAccess)),
+        canManage: row?.pageKind === "action" ? false : checked,
       });
     }
   }
@@ -856,11 +904,15 @@ export async function updateRolePagePermissionCascade(
     });
   }
 
-  await Promise.all(
-    [...updates.entries()].map(([key, value]) =>
-      savePermission(role, key, value),
-    ),
-  );
+  if (savePermission) {
+    // Test/custom persistence fallback. Keep it sequential so two writes for
+    // the same hierarchy cannot complete out of order.
+    for (const [key, value] of updates) {
+      await savePermission(role, key, value);
+    }
+  } else {
+    await updateRolePagePermissionsBatch(role, updates);
+  }
 
   return updates;
 }

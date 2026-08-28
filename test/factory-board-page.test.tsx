@@ -530,7 +530,10 @@ describe("FactoryBoardPage", () => {
     const orderView = within(orderMain as HTMLElement);
     expect(orderView.getByText("08月18日 星期二")).toBeInTheDocument();
     expect(orderView.getByText("出車時間: 10:00")).toBeInTheDocument();
-    expect(orderView.getByText("送到時間: 11:00 - 12:00")).toBeInTheDocument();
+    expect(orderView.getByRole("button", { name: "修改出車時間" })).toHaveClass(
+      "factory-dispatch-time-trigger",
+    );
+    expect(orderView.getByText("送到時間: 11:00 - 12:00")).toHaveClass("is-arrival");
     expect(
       orderView.getByText(/地址: 大埔汀角道.*\* 車邊交收/),
     ).toBeInTheDocument();
@@ -768,6 +771,9 @@ describe("FactoryBoardPage", () => {
     await user.click(screen.getByRole("button", { name: /煎雞扒胡麻沙律/ }));
 
     expect(screen.getByRole("heading", { name: "印標籤" })).toBeInTheDocument();
+    expect(
+      screen.queryByLabelText("50 × 75 mm 標籤預覽：B-1522"),
+    ).not.toBeInTheDocument();
     expect(screen.getByText("原名稱")).toBeInTheDocument();
     expect(screen.getByText("標籤名稱")).toBeInTheDocument();
     expect(

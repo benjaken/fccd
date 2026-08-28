@@ -28,6 +28,7 @@ const orderResult: OrderListResult = {
       deliveryAt: "2026-08-11T16:00:00.000Z",
       factoryDate: "2026-08-11T16:00:00.000Z",
       shipOutTime: "11:30",
+      deliveryTime: "18:00 - 19:00",
       deliveryStatus: "待取貨",
       isSentToFactory: null,
       isAssignedToFleet: false,
@@ -92,7 +93,9 @@ describe("Orders list", () => {
     const table = within(tableElement);
     expect(table.getByText("陳小姐")).toBeInTheDocument();
     expect(table.getByText("+85291234567")).toBeInTheDocument();
-    expect(table.getByText("Central")).toBeInTheDocument();
+    expect(table.getByText("Central")).toHaveClass("order-region-address", "whitespace-nowrap");
+    expect(table.getByText("中環").closest("td")).toHaveTextContent("Central");
+    expect(table.getByRole("columnheader", { name: /地區 \/ 地址/ })).toBeInTheDocument();
     const configuredStatus = Array.from(tableElement.querySelectorAll(".status-badge"))
       .find((badge) => badge.textContent === "待取貨" && badge.hasAttribute("style"));
     expect(configuredStatus).toBeInTheDocument();
@@ -103,12 +106,18 @@ describe("Orders list", () => {
     });
     expect(table.getByText("Klook")).toBeInTheDocument();
     expect(table.getByText("2026-08-12")).toBeInTheDocument();
+    expect(table.getByText("18:00 - 19:00")).toBeInTheDocument();
+    expect(table.getByText("2026-08-12").closest("td")).toHaveTextContent("18:00 - 19:00");
+    expect(table.getByRole("columnheader", { name: /送貨日期 \/ 送貨時間/ })).toBeInTheDocument();
+    expect(table.getByRole("columnheader", { name: "送貨狀態" })).toBeInTheDocument();
+    expect(table.getByText("11:30")).toBeInTheDocument();
     expect(table.getByText("出車時間：")).toBeInTheDocument();
     expect(table.getByText("送貨時間：")).toBeInTheDocument();
-    expect(table.getByText("送貨狀態：")).toBeInTheDocument();
-    const deliveryDetails = table.getByText("送貨狀態：").parentElement;
-    expect(deliveryDetails).not.toBeNull();
-    expect(within(deliveryDetails!).getByText("待取貨")).toHaveClass("status-badge", "green");
+    expect(table.queryByText("送貨狀態：")).not.toBeInTheDocument();
+    const deliveryStatus = table.getAllByText("待取貨").find((badge) =>
+      badge.classList.contains("status-badge") && badge.classList.contains("green"),
+    );
+    expect(deliveryStatus).toBeTruthy();
     expect(table.getAllByText("HK$1,610")).toHaveLength(1);
   });
 
@@ -205,9 +214,7 @@ describe("Orders list", () => {
     );
 
     const table = within(await screen.findByRole("table"));
-    const dispatchDetails = table.getByText("出車時間：").parentElement;
-    expect(dispatchDetails).not.toBeNull();
-    expect(within(dispatchDetails!).getByText("-")).toBeInTheDocument();
+    expect(table.getByText("-")).toBeInTheDocument();
     expect(table.getByText("送貨途中")).toHaveClass("status-badge", "blue");
   });
 
@@ -700,7 +707,6 @@ describe("Orders list", () => {
       isAssignedToFleet: false,
       outstanding: 100,
       deliveryNote: false,
-      paidDocuments: false,
     },
     {
       label: "factory-sent but not fleet-assigned and paid",
@@ -708,7 +714,6 @@ describe("Orders list", () => {
       isAssignedToFleet: false,
       outstanding: 0,
       deliveryNote: false,
-      paidDocuments: true,
     },
     {
       label: "factory-sent and fleet-assigned but unpaid",
@@ -716,7 +721,6 @@ describe("Orders list", () => {
       isAssignedToFleet: true,
       outstanding: 100,
       deliveryNote: true,
-      paidDocuments: false,
     },
     {
       label: "factory-sent, fleet-assigned, and paid",
@@ -724,14 +728,12 @@ describe("Orders list", () => {
       isAssignedToFleet: true,
       outstanding: 0,
       deliveryNote: true,
-      paidDocuments: true,
     },
-  ])("gates document actions when an order is $label", async ({
+  ])("shows document actions when an order is $label", async ({
     isSentToFactory,
     isAssignedToFleet,
     outstanding,
     deliveryNote,
-    paidDocuments,
   }) => {
     const loadOrders = vi.fn().mockResolvedValue({
       ...orderResult,
@@ -754,14 +756,10 @@ describe("Orders list", () => {
     const receiptButton = screen.queryByRole("link", { name: "REC" });
     const invoiceButton = screen.queryByRole("link", { name: "INV" });
     expect(Boolean(deliveryButton)).toBe(deliveryNote);
-    expect(Boolean(receiptButton)).toBe(paidDocuments);
-    if (paidDocuments) {
-      expect(receiptButton).toHaveAttribute("href", "/orders/order-1/receipt");
-      expect(receiptButton).toHaveAttribute("target", "_blank");
-      expect(invoiceButton).toHaveAttribute("href", "/orders/order-1/invoice");
-      expect(invoiceButton).toHaveAttribute("target", "_blank");
-    }
-    expect(Boolean(invoiceButton)).toBe(paidDocuments);
+    expect(receiptButton).toHaveAttribute("href", "/orders/order-1/receipt");
+    expect(receiptButton).toHaveAttribute("target", "_blank");
+    expect(invoiceButton).toHaveAttribute("href", "/orders/order-1/invoice");
+    expect(invoiceButton).toHaveAttribute("target", "_blank");
   });
 
   it("loads the pending preset from quotes", async () => {
@@ -1028,15 +1026,13 @@ describe("Orders list", () => {
     expect(source).toContain('query.overlaps("order_status_legacy_ids", legacyIds)');
     expect(source).toContain('.not("factory_packing_note", "is", null)');
     expect(source).toContain('.neq("factory_packing_note", "")');
-    expect(source).toContain('.eq("is_shopify_order", true)');
-    // The Shopify queue must show only newly synced orders that have not
-    // entered the workflow yet, never linked-and-confirmed legacy orders.
-    expect(source).toContain('.eq("source_system", "shopify")');
-    expect(source).toContain('.is("delivery_status", null)');
-    expect(source).toContain(
-      '.or("is_sent_to_factory.is.null,is_sent_to_factory.eq.false")',
-    );
-    expect(source).toContain('.eq("do_not_send_to_factory", false)');
+    // The outstanding queue combines new Shopify imports with paid AO lines
+    // that still need to be entered into Shopify.
+    expect(source).toContain("addon_shopify_pending.eq.true");
+    expect(source).toContain("is_shopify_order.eq.true");
+    expect(source).toContain("source_system.eq.shopify");
+    expect(source).toContain("delivery_status.is.null");
+    expect(source).toContain("do_not_send_to_factory.eq.false");
     expect(source).toContain('query.gt("outstanding", 0)');
   });
 
@@ -1050,7 +1046,7 @@ describe("Orders list", () => {
     );
     expect(source).toContain('query.in("planned_delivery_district.name", districtNames)');
     expect(source).toContain(
-      "deliveryDistrictName(row.deliveries) ??\n        plannedDistrictName(row.planned_delivery_district)",
+       "deliveryDistrictName(row.deliveries) ??\n        plannedDistrictName(row.planned_delivery_district) ??\n        districtNameFromAddress(",
     );
     expect(source).not.toContain('query.in("id", districtOrderIds)');
   });
