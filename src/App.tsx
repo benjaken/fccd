@@ -861,15 +861,15 @@ function OperationsShell() {
               <Route path="/products" element={<ProductsListPage canEdit={canEditProducts} canCreatePackage={canEditPackages} />} />
               <Route
                 path="/products/catering"
-                element={<ProductsListPage preset="catering" canEdit={canEditProducts} canCreatePackage={canEditPackages} />}
+                element={<ProductsListPage preset="catering" canEdit={canEditProducts} />}
               />
               <Route
                 path="/products/lunchbox"
-                element={<ProductsListPage preset="lunchbox" canEdit={canEditProducts} canCreatePackage={canEditPackages} />}
+                element={<ProductsListPage preset="lunchbox" canEdit={canEditProducts} />}
               />
               <Route
                 path="/products/ala-carte"
-                element={<ProductsListPage preset="ala-carte" canEdit={canEditProducts} canCreatePackage={canEditPackages} />}
+                element={<ProductsListPage preset="ala-carte" canEdit={canEditProducts} />}
               />
               <Route
                 path="/products/packages"
