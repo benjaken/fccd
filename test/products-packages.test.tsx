@@ -168,6 +168,7 @@ const productEditOptions = {
     { id: "col-2", name: "飲品", legacyId: "legacy-col-2" },
   ],
   packingMaterials: [{ id: "pack-1", name: "紙盒" }],
+  packingSupplies: [{ id: "packing-cup", name: "膠杯" }],
   catalogIngredients: [{ id: "ing-x", name: "松露", legacyId: "legacy-ing-x" }],
 };
 
@@ -950,6 +951,39 @@ describe("Products catalog pages", () => {
     );
     expect(await screen.findByText("可口可樂")).toBeInTheDocument();
   });
+
+  it("adds a packing supply while editing a product", async () => {
+    const user = userEvent.setup();
+    const addIngredient = vi.fn().mockResolvedValue(undefined);
+    const loadDetail = vi
+      .fn()
+      .mockResolvedValueOnce(productDetail)
+      .mockResolvedValueOnce({
+        ...productDetail,
+        premiumIngredients: [
+          ...productDetail.premiumIngredients,
+          { id: "packing-2", ingredientId: "packing-cup", name: "膠杯", ingredientType: "包裝用品", quantity: 2, unitCost: 1 },
+        ],
+      });
+
+    render(
+      <MemoryRouter initialEntries={["/products/product-1/edit"]}>
+        <Routes>
+          <Route path="/products/:id/edit" element={<ProductDetailPage canEdit loadDetail={loadDetail} loadEditOptions={async () => productEditOptions} addIngredient={addIngredient} />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await user.selectOptions(await screen.findByLabelText("包裝用品"), "packing-cup");
+    const packingCard = screen.getByRole("heading", { name: /燒雞 - 包裝用品/ }).closest("article");
+    const quantity = within(packingCard!).getByLabelText("數量");
+    await user.clear(quantity);
+    await user.type(quantity, "2");
+    await user.click(within(packingCard!).getByRole("button", { name: "添加包裝用品" }));
+
+    await waitFor(() => expect(addIngredient).toHaveBeenCalledWith("product-1", "packing-cup", 2));
+    expect(await within(packingCard!).findByText("膠杯")).toBeInTheDocument();
+  });
 });
 
 describe("Catalog creation pages", () => {
@@ -961,7 +995,9 @@ describe("Catalog creation pages", () => {
     channels: [{ id: "channel-1", name: "Catering" }],
     productTypes: [{ id: "type-1", name: "Main dish" }],
     cookTypes: [{ id: "cook-1", name: "Roast" }],
-    collections: [], packingMaterials: [], catalogIngredients: [],
+    collections: [], packingMaterials: [{ id: "pack-1", name: "Paper box" }],
+    packingSupplies: [{ id: "packing-cup", name: "Plastic cup" }],
+    catalogIngredients: [{ id: "ing-truffle", name: "Truffle" }],
   };
 
   it("creates a product with the detail-page fields and opens its detail", async () => {

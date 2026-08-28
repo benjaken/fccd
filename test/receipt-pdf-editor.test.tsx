@@ -16,7 +16,7 @@ const result: OrderDetailResult = {
     shopifyStoreDomain: "hklunchbox.myshopify.com",
     orderNumber: "B-1547",
     customerName: "Momo",
-    companyName: null,
+    companyName: "Momo Company",
     email: "momo@example.com",
     contactA: "53007575",
     contactB: null,
@@ -113,7 +113,8 @@ describe("Receipt PDF editor", () => {
       "/assets/fcc-hk-lunch-box-logo.svg",
     );
     expect(screen.getByLabelText("收據編號")).toHaveValue("REC/");
-    expect(screen.getByLabelText("Customer:")).toHaveValue("Momo");
+    expect(screen.getByLabelText("Customer Name:")).toHaveValue("Momo");
+    expect(screen.getByLabelText("Company Name:")).toHaveValue("Momo Company");
     expect(screen.getByLabelText("Contact Person:")).toHaveValue("53007575");
     expect(screen.getByLabelText("Invoice Date:")).toHaveValue("20/8/2026");
     expect(screen.getByLabelText("Delivery Date:")).toHaveValue("4/9/2026");
@@ -147,7 +148,8 @@ describe("Receipt PDF editor", () => {
 
     renderPage();
 
-    expect(await screen.findByLabelText("Customer:")).toHaveValue("Momo");
+    expect(await screen.findByLabelText("Customer Name:")).toHaveValue("Momo");
+    expect(screen.getByLabelText("Company Name:")).toHaveValue("Momo Company");
     expect(screen.getByLabelText("Contact Person:")).toHaveValue("53007575");
     expect(screen.getByLabelText("Delivery Address:")).toHaveValue("上水古洞金錢南路140號雙魚小丘 *車邊交收");
     expect(screen.getByLabelText("Delivery Date:")).toHaveValue("4/9/2026");
@@ -235,7 +237,7 @@ describe("Receipt PDF editor", () => {
     await screen.findByRole("heading", { name: "INVOICE" });
     await user.click(screen.getByRole("checkbox", { name: "顯示客戶簽署" }));
     const signatureName = screen.getByLabelText("簽署公司或客戶名稱");
-    expect(signatureName).toHaveValue("Momo");
+    expect(signatureName).toHaveValue("Momo Company");
     await user.clear(signatureName);
     await user.type(signatureName, "簽名客戶");
     expect(signatureName).toHaveValue("簽名客戶");

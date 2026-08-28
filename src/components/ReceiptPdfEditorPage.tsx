@@ -104,7 +104,8 @@ function resultToDraft(
       documentKind === "receipt" ? receiptNumber : undefined,
       documentKind === "receipt" ? "REC" : "INV",
     ),
-    customer: order?.companyName || order?.customerName || "",
+    customerName: order?.customerName || "",
+    companyName: order?.companyName || "",
     contactPerson: [order?.contactA, order?.contactB].filter(Boolean).join(" / "),
     deliveryAddress: order?.address || "",
     invoiceDate: pdfDate(order?.createdAt || order?.updatedAt),
@@ -570,8 +571,12 @@ export function ReceiptPdfEditorPage({
         {letterhead}
 
         <div className="receipt-pdf-meta-grid">
-          <label htmlFor="receipt-customer">Customer:</label>
-          <PdfBlurCommitInput id="receipt-customer" value={draft.customer} onDirty={markDraftDirty} onCommit={(value) => update("customer", value)} />
+          <div className="receipt-pdf-customer-company" data-testid="receipt-customer-company">
+            <label htmlFor="receipt-customer">Customer Name:</label>
+            <PdfBlurCommitInput id="receipt-customer" value={draft.customerName} onDirty={markDraftDirty} onCommit={(value) => update("customerName", value)} />
+            <label htmlFor="receipt-company">Company Name:</label>
+            <PdfBlurCommitInput id="receipt-company" value={draft.companyName} onDirty={markDraftDirty} onCommit={(value) => update("companyName", value)} />
+          </div>
           <label htmlFor="receipt-invoice-date">Invoice Date:</label>
           <PdfBlurCommitInput id="receipt-invoice-date" value={draft.invoiceDate} onDirty={markDraftDirty} onCommit={(value) => update("invoiceDate", value)} />
           <label htmlFor="receipt-contact">Contact Person:</label>

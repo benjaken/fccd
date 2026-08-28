@@ -16,7 +16,8 @@ export type ReceiptPdfDraft = {
   invoiceSourceContentVersion: number;
   sourceFinancialsVersion: number;
   receiptNumber: string;
-  customer: string;
+  customerName: string;
+  companyName: string;
   contactPerson: string;
   deliveryAddress: string;
   invoiceDate: string;

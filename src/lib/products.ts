@@ -109,6 +109,7 @@ export type ProductEditOptions = {
   cookTypes: CatalogOption[];
   collections: CatalogOption[];
   packingMaterials: CatalogOption[];
+  packingSupplies: CatalogOption[];
   catalogIngredients: CatalogOption[];
 };
 
@@ -961,13 +962,14 @@ export async function fetchProductDetail(
 export async function fetchProductEditOptions(
   channelId = "",
 ): Promise<ProductEditOptions> {
-  const [channels, productTypes, cookTypes, collections, packingMaterials, catalogIngredients] =
+  const [channels, productTypes, cookTypes, collections, packingMaterials, packingSupplies, catalogIngredients] =
     await Promise.all([
       fetchProductChannels(),
       fetchProductTypeRecords(channelId),
       fetchNamedLookup("cook_types"),
       fetchCollectionRecords(channelId),
       fetchNamedLookup("packing_materials"),
+      fetchCatalogPackingSupplies(),
       fetchCatalogIngredients(),
     ]);
 
@@ -977,6 +979,7 @@ export async function fetchProductEditOptions(
     cookTypes,
     collections,
     packingMaterials,
+    packingSupplies,
     catalogIngredients,
   };
 }
@@ -1043,6 +1046,19 @@ async function fetchCatalogIngredients(): Promise<CatalogOption[]> {
     .is("archived_at", null)
     .eq("is_active", true)
     .or("ingredient_type.is.null,ingredient_type.neq.包裝用品")
+    .order("name", { ascending: true })
+    .limit(100);
+  if (error) return [];
+  return (data ?? []).map((row) => mapIngredientOption(row));
+}
+
+async function fetchCatalogPackingSupplies(): Promise<CatalogOption[]> {
+  const { data, error } = await supabase
+    .from("ingredients")
+    .select("id,name,sku,legacy_id")
+    .is("archived_at", null)
+    .eq("is_active", true)
+    .eq("ingredient_type", "包裝用品")
     .order("name", { ascending: true })
     .limit(100);
   if (error) return [];
