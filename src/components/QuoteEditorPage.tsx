@@ -1617,6 +1617,11 @@ export function QuoteEditorPage({
           </div>
           {showConfirmationAction || showConvertAction ? (
             <div className="quote-detail-actions">
+              {canEdit ? (
+                <Button asChild variant="outline">
+                  <Link to={`/quotes/${activeQuote.id}/edit`}><Pencil />編輯</Link>
+                </Button>
+              ) : null}
               {showConfirmationAction ? (
                 <Button
                   type="button"

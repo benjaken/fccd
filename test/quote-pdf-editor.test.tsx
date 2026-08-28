@@ -1,4 +1,4 @@
-import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
@@ -778,6 +778,93 @@ describe("editable quote PDF page", () => {
       activityHeight = 500;
       await act(async () => notifyResize?.());
       await waitFor(() => expect(screen.getByLabelText("條款及細則 3").closest("main")).toHaveAccessibleName("PDF 第 3 頁"));
+    } finally {
+      rectSpy.mockRestore();
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("keeps the caret when a resized field is moved to another PDF page", async () => {
+    let activityHeight = 100;
+    let notifyResize: (() => void) | undefined;
+    class ResizeObserverMock {
+      constructor(callback: ResizeObserverCallback) {
+        notifyResize = () => callback([], this as unknown as ResizeObserver);
+      }
+      observe() {}
+      disconnect() {}
+      unobserve() {}
+    }
+    vi.stubGlobal("ResizeObserver", ResizeObserverMock);
+    const rectSpy = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function () {
+      const page = this.closest<HTMLElement>(".quote-pdf-sheet");
+      const pages = Array.from(document.querySelectorAll<HTMLElement>(".quote-pdf-sheet"));
+      const pageIndex = page ? pages.indexOf(page) : 0;
+      const pageTop = pageIndex * 1200;
+      if (this.hasAttribute("data-pdf-auto-footer")) {
+        return { x: 0, y: pageTop + 1000, top: pageTop + 1000, right: 800, bottom: pageTop + 1030, left: 0, width: 800, height: 30, toJSON: () => ({}) } as DOMRect;
+      }
+      const moduleIndex = Number(this.dataset.pdfAutoModuleIndex);
+      if (page && Number.isInteger(moduleIndex)) {
+        const modules = Array.from(page.querySelectorAll<HTMLElement>("[data-pdf-auto-module-index]"));
+        const heightFor = (element: HTMLElement) => {
+          const index = Number(element.dataset.pdfAutoModuleIndex);
+          if (index === 0) return 50;
+          if (index === 1) return activityHeight;
+          if (index >= 2 && index <= 8) return 50;
+          return 100;
+        };
+        const modulePosition = modules.indexOf(this);
+        const start = page.dataset.pdfAutoPage === "products" ? 300 : 100;
+        const top = pageTop + start + modules.slice(0, modulePosition).reduce((total, element) => total + heightFor(element), 0);
+        const height = heightFor(this);
+        return { x: 0, y: top, top, right: 800, bottom: top + height, left: 0, width: 800, height, toJSON: () => ({}) } as DOMRect;
+      }
+      return { x: 0, y: 0, top: 0, right: 800, bottom: 0, left: 0, width: 800, height: 0, toJSON: () => ({}) } as DOMRect;
+    });
+    localStorage.setItem("fccd:quote-pdf-draft:quote-1", JSON.stringify({
+      additionalInfo: ["額外資訊"],
+      activities: [{ id: "activity-1", description: "活動", amount: "100" }],
+      terms: Array.from({ length: 7 }, (_, index) => `條款 ${index + 1}`),
+      paymentMethods: [],
+    }));
+    const longResult: OrderDetailResult = {
+      ...lunchBoxResult,
+      lines: Array.from({ length: 20 }, (_, index) => ({ ...lunchBoxResult.lines[0], id: `line-${index + 1}` })),
+    };
+    renderPage(vi.fn().mockResolvedValue(longResult));
+
+    try {
+      const clause = await screen.findByLabelText("條款及細則 3") as HTMLTextAreaElement;
+      clause.focus();
+      fireEvent.change(clause, { target: { value: "刪短" } });
+      clause.setSelectionRange(2, 2);
+      expect(clause.closest("main")).toHaveAccessibleName("PDF 第 2 頁");
+
+      activityHeight = 500;
+      await act(async () => notifyResize?.());
+
+      await waitFor(() => {
+        const movedClause = screen.getByLabelText("條款及細則 3") as HTMLTextAreaElement;
+        expect(movedClause.closest("main")).toHaveAccessibleName("PDF 第 3 頁");
+        expect(document.activeElement).toBe(movedClause);
+        expect(movedClause).toHaveValue("刪短");
+        expect(movedClause.selectionStart).toBe(2);
+        expect(movedClause.selectionEnd).toBe(2);
+      });
+
+      const movedClause = screen.getByLabelText("條款及細則 3") as HTMLTextAreaElement;
+      activityHeight = 100;
+      await act(async () => notifyResize?.());
+      expect(movedClause.closest("main")).toHaveAccessibleName("PDF 第 3 頁");
+      expect(document.activeElement).toBe(movedClause);
+
+      await act(async () => movedClause.blur());
+      await waitFor(() => {
+        const mergedClause = screen.getByLabelText("條款及細則 3");
+        expect(mergedClause.closest("main")).toHaveAccessibleName("PDF 第 3 頁");
+        expect(mergedClause).toHaveValue("刪短");
+      });
     } finally {
       rectSpy.mockRestore();
       vi.unstubAllGlobals();

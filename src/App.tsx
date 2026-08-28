@@ -856,7 +856,7 @@ function OperationsShell() {
               />
               <Route
                 path="/quotes/:id"
-                element={<QuoteEditorPage combined readOnly />}
+                element={<QuoteEditorPage combined readOnly canEdit={canEditQuotes} />}
               />
               <Route path="/products" element={<ProductsListPage canEdit={canEditProducts} canCreatePackage={canEditPackages} />} />
               <Route

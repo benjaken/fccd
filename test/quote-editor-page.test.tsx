@@ -1293,13 +1293,15 @@ describe("Quote editor", () => {
     render(
       <MemoryRouter initialEntries={["/quotes/quote-1"]}>
         <Routes>
-          <Route path="/quotes/:id" element={<QuoteEditorPage combined readOnly loadOptions={vi.fn().mockResolvedValue(options)} loadSummary={vi.fn().mockResolvedValue(summary)} loadLines={vi.fn().mockResolvedValue([])} saveDetails={saveDetails} saveFinancialDetails={saveFinancialDetails} sendConfirmation={sendConfirmation} convertQuote={convertQuote} loadShippingFeeOptions={vi.fn().mockResolvedValue(shippingFeeOptions)} />} />
+          <Route path="/quotes/:id" element={<QuoteEditorPage combined readOnly canEdit loadOptions={vi.fn().mockResolvedValue(options)} loadSummary={vi.fn().mockResolvedValue(summary)} loadLines={vi.fn().mockResolvedValue([])} saveDetails={saveDetails} saveFinancialDetails={saveFinancialDetails} sendConfirmation={sendConfirmation} convertQuote={convertQuote} loadShippingFeeOptions={vi.fn().mockResolvedValue(shippingFeeOptions)} />} />
+          <Route path="/quotes/:id/edit" element={<div>Edit quote</div>} />
           <Route path="/orders/:id" element={<div>Converted order</div>} />
         </Routes>
       </MemoryRouter>,
     );
 
     await screen.findByRole("heading", { name: "FCLQ20260801" });
+    expect(screen.getByRole("link", { name: /Edit|編輯/ })).toHaveAttribute("href", "/quotes/quote-1/edit");
     await user.click(screen.getByRole("button", { name: "Send WATI and email order confirmation" }));
     await waitFor(() => expect(sendConfirmation).toHaveBeenCalledWith("quote-1"));
 

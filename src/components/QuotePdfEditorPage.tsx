@@ -257,7 +257,10 @@ export function QuotePdfEditorPage({
       + Math.max(draft.paymentMethods.length, 1)
       + (paginationBrandKind === "lunch-box" ? 2 : paginationBrandKind === "party-food" ? 1 : 0)
     : 0;
-  const paginationResetKey = draft ? JSON.stringify([draft, sourceBrand]) : "";
+  // Text edits are measured by ResizeObserver. Resetting every page break for
+  // each committed field value makes a continuation page disappear on blur.
+  // Only document/brand changes require rebuilding pagination from scratch.
+  const paginationResetKey = `${id}:${paginationBrandKind}`;
   const trailingPageBreaks = usePdfAutoPageBreaks(editorRef, paginationModuleCount, paginationResetKey);
 
   const storageKey = quotePdfDraftStorageKey(id);
