@@ -7,6 +7,7 @@ import {
   type RefObject,
 } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
   CalendarDays,
@@ -463,6 +464,8 @@ export function CustomerSelfServicePage({
   logout = logoutCustomerSelfService,
   createPdf = createCustomerReceiptPdf,
 }: { login?: LoginFn; restore?: RestoreFn; loadDetail?: DetailFn; loadAddonOptions?: AddonOptionsFn; logout?: LogoutFn; createPdf?: PdfFn }) {
+  const navigate = useNavigate();
+  const { orderId = "" } = useParams<{ orderId?: string }>();
   const demoMode = import.meta.env.DEV
     && typeof window !== "undefined"
     && new URLSearchParams(window.location.search).get("demo") === "1";
@@ -483,6 +486,30 @@ export function CustomerSelfServicePage({
   }, [demoMode, restore]);
 
   useEffect(() => {
+    if (!session || !orderId) {
+      setDetail(null);
+      return;
+    }
+    let active = true;
+    const summary = session.orders.find((item) => item.id === orderId);
+    if (!summary) {
+      setDetail(null);
+      setDetailError("找不到此訂單，請返回訂單列表重新選擇。");
+      return;
+    }
+    setLoading(true);
+    setDetailError("");
+    const request = demoMode
+      ? Promise.resolve({ ...DEMO_DETAIL, id: summary.id, orderNumber: summary.orderNumber, deliveryDate: summary.deliveryDate })
+      : loadDetail(session.token, summary.id);
+    void request
+      .then((value) => { if (active) setDetail(value); })
+      .catch(() => { if (active) setDetailError("暫時無法載入訂單，請重新查詢。"); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [demoMode, loadDetail, orderId, session]);
+
+  useEffect(() => {
     if (!session || demoMode || paypalHandled.current) return;
     const params = new URLSearchParams(window.location.search);
     const action = params.get("paypal");
@@ -498,32 +525,31 @@ export function CustomerSelfServicePage({
       return;
     }
     void captureCustomerAddonPaypalCheckout(session.token, checkoutId)
-      .then(async (result) => {
-        const order = session.orders.find((item) => item.id === result.orderId);
-        if (order) setDetail(await loadDetail(session.token, order.id));
+      .then((result) => {
+        if (result.orderId) {
+          navigate(`/self_service_search/${encodeURIComponent(result.orderId)}`, { replace: true });
+        }
         setPaymentNotice("PayPal 付款成功，加單項目已加入訂單。");
       })
       .catch(() => setDetailError("PayPal 付款狀態暫時未能確認，請稍後重新查詢訂單；請勿重複付款。"))
       .finally(() => { cleanup(); setLoading(false); });
-  }, [demoMode, loadDetail, session]);
+  }, [demoMode, navigate, session]);
 
-  async function selectOrder(order: CustomerSelfServiceOrderSummary) {
+  function selectOrder(order: CustomerSelfServiceOrderSummary) {
     if (!session) return;
-    setLoading(true); setDetailError("");
-    try { setDetail(demoMode ? { ...DEMO_DETAIL, id: order.id, orderNumber: order.orderNumber, deliveryDate: order.deliveryDate } : await loadDetail(session.token, order.id)); }
-    catch { setDetailError("暫時無法載入訂單，請重新查詢。"); }
-    finally { setLoading(false); }
+    navigate(`/self_service_search/${encodeURIComponent(order.id)}`);
   }
 
   async function leave() {
     if (session) await logout(session.token).catch(() => undefined);
     setDetail(null); setSession(null);
+    navigate("/self_service_search", { replace: true });
   }
 
   if (loading && !session) return <main className="self-service-loading"><LoaderCircle className="self-service-spin" /><span>正在載入客戶自助服務…</span></main>;
   if (!session) return <LoginView login={login} onLogin={setSession} />;
-  if (detailError) return <main className="self-service-loading"><p role="alert">{detailError}</p><Button onClick={() => setDetailError("")}>返回訂單列表</Button></main>;
+  if (detailError) return <main className="self-service-loading"><p role="alert">{detailError}</p><Button onClick={() => { setDetailError(""); navigate("/self_service_search"); }}>返回訂單列表</Button></main>;
   if (loading) return <main className="self-service-loading"><LoaderCircle className="self-service-spin" /><span>正在載入訂單…</span></main>;
-  if (detail) return <DetailView session={session} order={detail} onBack={() => setDetail(null)} onLogout={() => void leave()} createPdf={createPdf} loadAddonOptions={demoMode ? loadDemoAddonOptions : loadAddonOptions} paymentNotice={paymentNotice} />;
+  if (detail) return <DetailView session={session} order={detail} onBack={() => navigate("/self_service_search")} onLogout={() => void leave()} createPdf={createPdf} loadAddonOptions={demoMode ? loadDemoAddonOptions : loadAddonOptions} paymentNotice={paymentNotice} />;
   return <OrdersView session={session} onSelect={(order) => void selectOrder(order)} onLogout={() => void leave()} />;
 }

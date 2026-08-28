@@ -733,7 +733,7 @@ export function OrdersListPage({
                           {order.orderNumber || t("common.notSet")}
                         </DetailLink>
                         <span>{order.channelName || t("common.notSet")}</span>
-                        {order.hasAddon ? <span className="status-badge amber">加單</span> : null}
+                        {order.hasPendingAddonShopify ? <span className="status-badge amber">未處理加單</span> : null}
                       </div>
                       <span className={cn("status-badge", orderDeliveryStatusTone(order.deliveryStatus))}>
                         {order.deliveryStatus || t("orders.deliveryDetails.unassigned")}
@@ -966,7 +966,7 @@ export function OrdersListPage({
                     </span>
                   </td>
                   <td>
-                    {order.hasAddon ? <span className="status-badge amber">加單</span> : null}
+                    {order.hasPendingAddonShopify ? <span className="status-badge amber">未處理加單</span> : null}
                     <OrderTagBadges
                       statuses={order.tags ?? []}
                       manualTodos={[]}

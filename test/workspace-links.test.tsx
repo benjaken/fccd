@@ -55,10 +55,13 @@ describe("Workspace switcher", () => {
     ).toBeInTheDocument();
   });
 
-  it("keeps customer self-service as a disabled workspace label", () => {
+  it("links customer self-service to the enabled self-service search", () => {
     expect(i18n.t("workspace.factory")).toBe("工場版面");
     expect(i18n.t("workspace.delivery")).toBe("司機送貨");
     expect(i18n.t("workspace.customer")).toBe("客戶自助");
+    const customerLink = workspaceLinks.find((item) => item.key === "customer");
+    expect(customerLink).toMatchObject({ to: "/self_service_search" });
+    expect(customerLink).not.toHaveProperty("disabled");
     expect(i18n.exists("workspace.catering")).toBe(false);
     expect(i18n.exists("workspace.restaurant")).toBe(false);
   });
@@ -113,6 +116,6 @@ describe("Workspace switcher", () => {
         (key) => key === "workspace.customer",
         noSectionAccess,
       ),
-    ).toBeNull();
+    ).toBe("/self_service_search");
   });
 });

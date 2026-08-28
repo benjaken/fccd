@@ -52,6 +52,7 @@ export type FactoryOrderLine = {
   remarks: string[]
   printed: boolean
   requiresReprint?: boolean
+  isAddon?: boolean
   changes?: FactoryOrderLineChange[]
 }
 
@@ -931,7 +932,7 @@ export async function fetchFactoryOrderJob(orderId: string): Promise<FactoryOrde
     supabase
       .from("order_lines")
       .select(
-        "id, product_id, product_name_snapshot, content_snapshot, quantity, new_quantity_text, remarks_1, remarks_2, is_printed, is_void, bubble_modified_at, updated_at, type_sort, item_order, temporary_label_display_name, temporary_label_quantity_label",
+        "id, product_id, product_name_snapshot, content_snapshot, quantity, new_quantity_text, remarks_1, remarks_2, is_printed, is_void, is_addon, bubble_modified_at, updated_at, type_sort, item_order, temporary_label_display_name, temporary_label_quantity_label",
       )
       .eq("order_id", orderId)
       .order("type_sort")
@@ -1073,6 +1074,7 @@ export async function fetchFactoryOrderJob(orderId: string): Promise<FactoryOrde
         .map((value) => (value as string | null)?.trim() ?? "")
         .filter((value, index, values) => value && values.indexOf(value) === index),
       printed: Boolean(row.is_printed),
+      isAddon: Boolean(row.is_addon),
       changes: changesByLineId.get(row.id as string) ?? [],
       requiresReprint:
         pendingLineChanges.length > 0

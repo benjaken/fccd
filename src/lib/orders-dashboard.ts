@@ -129,12 +129,8 @@ export async function fetchOrdersDashboardData(
       .from("orders")
       .select("id", { count: "exact", head: true })
       .eq("document_type", "order")
-      .eq("is_shopify_order", true)
-      .eq("source_system", "shopify")
-      .is("delivery_status", null)
       .is("archived_at", null)
-      .eq("do_not_send_to_factory", false)
-      .or("is_sent_to_factory.is.null,is_sent_to_factory.eq.false"),
+      .or("addon_shopify_pending.eq.true,and(is_shopify_order.eq.true,source_system.eq.shopify,delivery_status.is.null,do_not_send_to_factory.eq.false,is_sent_to_factory.is.null),and(is_shopify_order.eq.true,source_system.eq.shopify,delivery_status.is.null,do_not_send_to_factory.eq.false,is_sent_to_factory.eq.false)"),
     supabase
       .from("orders")
       .select("id", { count: "exact", head: true })
@@ -173,12 +169,8 @@ export async function fetchOrdersDashboardData(
       .from("orders")
       .select(QUEUE_QUERY_FIELDS)
       .eq("document_type", "order")
-      .eq("is_shopify_order", true)
-      .eq("source_system", "shopify")
-      .is("delivery_status", null)
       .is("archived_at", null)
-      .eq("do_not_send_to_factory", false)
-      .or("is_sent_to_factory.is.null,is_sent_to_factory.eq.false")
+      .or("addon_shopify_pending.eq.true,and(is_shopify_order.eq.true,source_system.eq.shopify,delivery_status.is.null,do_not_send_to_factory.eq.false,is_sent_to_factory.is.null),and(is_shopify_order.eq.true,source_system.eq.shopify,delivery_status.is.null,do_not_send_to_factory.eq.false,is_sent_to_factory.eq.false)")
       .order("bubble_created_at", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false })
       .limit(DASHBOARD_QUEUE_LIMIT),

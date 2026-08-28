@@ -98,9 +98,11 @@ describe("orders dashboard data", () => {
 
     await fetchOrdersDashboardData(new Date("2026-08-18T04:00:00+08:00"));
 
-    expect(orFilters).toContain(
-      "is_sent_to_factory.is.null,is_sent_to_factory.eq.false",
-    );
+    expect(orFilters.some((filter) =>
+      filter.includes("addon_shopify_pending.eq.true") &&
+      filter.includes("is_sent_to_factory.is.null") &&
+      filter.includes("is_sent_to_factory.eq.false"),
+    )).toBe(true);
     expect(eqFilters).toContainEqual(["is_sent_to_factory", false]);
     expect(eqFilters).toContainEqual(["do_not_send_to_factory", false]);
     expect(

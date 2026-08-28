@@ -163,6 +163,30 @@ describe("WATI order notifications", () => {
     expect(migration).toContain("is_active = event_key in");
   });
 
+  it("sends the explicit order confirmation through WATI and email together", () => {
+    const implementation = readFileSync(
+      resolve(process.cwd(), "supabase/functions/send-order-wati-confirmation/index.ts"),
+      "utf8",
+    );
+
+    expect(implementation).toContain("buildOrderNotificationContent");
+    expect(implementation).toContain('fetch("https://api.resend.com/emails"');
+    expect(implementation).toContain("await Promise.allSettled([");
+    expect(implementation).toContain("watiSent: true, emailSent: true");
+    expect(implementation).toContain("from: EMAIL_FROM");
+  });
+
+  it("starts quote WATI and Resend confirmation sends together", () => {
+    const implementation = readFileSync(
+      resolve(process.cwd(), "supabase/functions/send-quote-confirmation/index.ts"),
+      "utf8",
+    );
+
+    expect(implementation).toContain("await Promise.allSettled([");
+    expect(implementation).toContain("wati_and_email_send_failed");
+    expect(implementation).toContain("watiSent: true, emailSent: true");
+  });
+
   it("registers existing Utility events without activating unverified mappings", () => {
     const migration = readFileSync(
       resolve(
@@ -292,6 +316,7 @@ describe("WATI order notifications", () => {
     );
     const senders = [
       "supabase/functions/wati-order-notifications/index.ts",
+      "supabase/functions/send-order-wati-confirmation/index.ts",
       "supabase/functions/send-quote-confirmation/index.ts",
       "supabase/functions/send-daily-sales-report/index.ts",
     ].map((file) => readFileSync(resolve(process.cwd(), file), "utf8"));

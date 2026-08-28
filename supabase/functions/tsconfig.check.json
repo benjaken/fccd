@@ -20,6 +20,7 @@
     "send-daily-sales-report/index.ts",
     "wati-order-notifications/index.ts",
     "send-wati-customer-message/index.ts",
+    "send-order-wati-confirmation/index.ts",
     "wati-customer-webhook/index.ts",
     "customer-addon-paypal/index.ts",
     "paypal-webhook/index.ts",

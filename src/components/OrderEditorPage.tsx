@@ -31,6 +31,8 @@ import {
   orderDraftTotals,
   orderPaymentStatus,
   saveOrderEditor,
+  isAddonBlockDate,
+  sendOrderWatiConfirmation,
   type OrderEditorDraft,
   type OrderEditorOption,
   type OrderEditorOptions,
@@ -40,6 +42,8 @@ import { useMediaQuery } from "@/lib/use-media-query";
 type Step = "details" | "items" | "payments";
 type EditorLoader = typeof fetchOrderEditor;
 type EditorSaver = typeof saveOrderEditor;
+type AddonBlockDateChecker = typeof isAddonBlockDate;
+type WatiConfirmationSender = typeof sendOrderWatiConfirmation;
 
 const EMPTY_OPTIONS: OrderEditorOptions = {
   channels: [],
@@ -136,10 +140,14 @@ export function OrderEditorPage({
   loadEditor = fetchOrderEditor,
   saveEditor = saveOrderEditor,
   createDistrict = createDeliveryDistrictOption,
+  checkAddonBlockDate = isAddonBlockDate,
+  sendWatiConfirmation = sendOrderWatiConfirmation,
 }: {
   loadEditor?: EditorLoader;
   saveEditor?: EditorSaver;
   createDistrict?: typeof createDeliveryDistrictOption;
+  checkAddonBlockDate?: AddonBlockDateChecker;
+  sendWatiConfirmation?: WatiConfirmationSender;
 }) {
   const { id } = useParams();
   const { t } = useTranslation();
@@ -156,10 +164,24 @@ export function OrderEditorPage({
   const [catalogQuery, setCatalogQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [sendingWati, setSendingWati] = useState(false);
+  const [addonBlockDate, setAddonBlockDate] = useState(false);
+  const [checkingAddonBlockDate, setCheckingAddonBlockDate] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [creatingDistrict, setCreatingDistrict] = useState(false);
   const isMobileEditor = useMediaQuery("(max-width: 760px)");
+
+  useEffect(() => {
+    let active = true;
+    if (!draft.deliveryAt) { setAddonBlockDate(false); setCheckingAddonBlockDate(false); return; }
+    setCheckingAddonBlockDate(true);
+    void checkAddonBlockDate(draft.deliveryAt)
+      .then((blocked) => { if (active) setAddonBlockDate(blocked); })
+      .catch(() => { if (active) setAddonBlockDate(false); })
+      .finally(() => { if (active) setCheckingAddonBlockDate(false); });
+    return () => { active = false; };
+  }, [checkAddonBlockDate, draft.deliveryAt]);
 
   const addDistrict = async (name: string) => {
     if (creatingDistrict) return;
@@ -284,19 +306,26 @@ export function OrderEditorPage({
     return true;
   };
 
-  const submit = async (event: FormEvent) => {
-    event.preventDefault();
+  const persistOrder = async (notifyByWati: boolean) => {
     setSaveError(null);
     if (!validate()) return;
     setSaving(true);
+    setSendingWati(notifyByWati);
     try {
       const savedId = await saveEditor(draft);
+      if (notifyByWati) await sendWatiConfirmation(savedId);
       navigate(`/orders/${savedId}`, { replace: true });
     } catch {
-      setSaveError("未能儲存訂單。請確認你的權限及資料後再試。");
+      setSaveError(notifyByWati ? "訂單已儲存，但未能傳送 WATI 或電郵訂單確認通知。" : "未能儲存訂單。請確認你的權限及資料後再試。");
     } finally {
       setSaving(false);
+      setSendingWati(false);
     }
+  };
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    void persistOrder(false);
   };
 
   if (loading) return <PageSkeleton label="正在載入訂單編輯器…" variant="detail" />;
@@ -539,7 +568,13 @@ export function OrderEditorPage({
           {activeStepIndex < STEPS.length - 1 ? (
             <Button type="button" onClick={() => setStep(STEPS[activeStepIndex + 1].id)}>下一步</Button>
           ) : (
-            <Button type="submit" disabled={saving}>{saving ? <LoaderCircle className="spin" /> : <Save />}{saving ? "儲存中…" : editing ? "儲存變更" : "建立訂單"}</Button>
+            <>
+              {!editing ? <Button type="button" variant="outline" disabled={saving || checkingAddonBlockDate || !draft.deliveryAt} onClick={() => void persistOrder(true)}>
+                {sendingWati ? <LoaderCircle className="spin" /> : <Save />}
+                {sendingWati ? "傳送中…" : addonBlockDate ? "傳送 WATI 及電郵訂單確認通知" : "傳送 WATI 及電郵訂單確認通知及加單 link"}
+              </Button> : null}
+              <Button type="submit" disabled={saving}>{saving && !sendingWati ? <LoaderCircle className="spin" /> : <Save />}{saving && !sendingWati ? "儲存中…" : editing ? "儲存變更" : "完成"}</Button>
+            </>
           )}
         </div>
       </footer>

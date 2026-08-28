@@ -77,6 +77,7 @@ import {
 } from "@/lib/quote-pdf-draft";
 import { fetchShippingFees, type ShippingFee } from "@/lib/shipping-fees";
 import { convertQuoteToOrder } from "@/lib/quotes";
+import { confirmOrderAddonShopifyInput } from "@/lib/order-editor";
 import { useDetailBackTo } from "@/lib/detail-navigation";
 import {
   normalizeDoNotSendToFactory,
@@ -241,6 +242,7 @@ type Props = {
   saveFactorySettings?: typeof saveOrderFactorySettings;
   loadLunchboxProducts?: typeof fetchProducts;
   loadLunchboxFilterOptions?: typeof fetchLunchboxPickerFilterOptions;
+  confirmAddonShopify?: typeof confirmOrderAddonShopifyInput;
 };
 
 export function QuoteEditorPage({
@@ -272,6 +274,7 @@ export function QuoteEditorPage({
   saveFactorySettings = saveOrderFactorySettings,
   loadLunchboxProducts = fetchProducts,
   loadLunchboxFilterOptions = fetchLunchboxPickerFilterOptions,
+  confirmAddonShopify = confirmOrderAddonShopifyInput,
 }: Props) {
   const { t, i18n } = useTranslation();
   const additionalInfoDict = useDictItems(DICT_TYPE.quoteAdditionalInfo);
@@ -305,6 +308,8 @@ export function QuoteEditorPage({
   const [lines, setLines] = useState<QuoteLine[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [confirmingAddonShopify, setConfirmingAddonShopify] = useState(false);
+  const [addonShopifyError, setAddonShopifyError] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [creatingDistrict, setCreatingDistrict] = useState(false);
@@ -1568,6 +1573,20 @@ export function QuoteEditorPage({
     }
   };
 
+  const confirmAddonEnteredInShopify = async () => {
+    if (!activeQuote || confirmingAddonShopify) return;
+    setConfirmingAddonShopify(true);
+    setAddonShopifyError(false);
+    try {
+      await confirmAddonShopify(activeQuote.id);
+      setCreated((current) => current ? { ...current, addonShopifyPending: false } : current);
+    } catch {
+      setAddonShopifyError(true);
+    } finally {
+      setConfirmingAddonShopify(false);
+    }
+  };
+
   if (loading) return <PageSkeleton detailLayout="document" label={t("quoteEditor.loading")} variant="detail" />;
 
   if (readOnly && activeQuote) {
@@ -1600,6 +1619,7 @@ export function QuoteEditorPage({
             <span className="eyebrow">{isOrder ? t("details.orderTitle") : t("quoteEditor.eyebrow")}</span>
             <div className="order-number-cell">
               <h1>{activeQuote.orderNumber || (isOrder ? t("details.orderTitle") : t("quoteEditor.title"))}</h1>
+              {isOrder && activeQuote.addonShopifyPending ? <span className="status-badge amber">未處理加單</span> : null}
               {activeShopifyUrl ? (
                 <a
                   className="shopify-order-icon"
@@ -1649,6 +1669,17 @@ export function QuoteEditorPage({
             <div className="quote-order-detail-summary">
               <OrderPaymentStatus total={grandTotal} paid={paidTotal} formatMoney={money.format} navigationStuck={sectionNavigationStuck} />
               <div className="quote-detail-actions">
+                {activeQuote.addonShopifyPending && canEdit ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={confirmingAddonShopify}
+                    onClick={() => void confirmAddonEnteredInShopify()}
+                  >
+                    {confirmingAddonShopify ? <LoaderCircle className="spin" /> : <Check />}
+                    确认已手动加入 Shopify
+                  </Button>
+                ) : null}
                 {!isSentToFactory && !factorySettings.doNotSendToFactory ? (
                   <Button
                     type="button"
@@ -1674,6 +1705,9 @@ export function QuoteEditorPage({
         ) : null}
         {isOrder && factoryStatusError ? (
           <p className="quote-editor-error" role="alert">{t("quoteEditor.factoryStatus.error")}</p>
+        ) : null}
+        {isOrder && addonShopifyError ? (
+          <p className="quote-editor-error" role="alert">未能更新加單狀態，請稍後再試。</p>
         ) : null}
 
         {sectionNavigation}
@@ -1730,7 +1764,11 @@ export function QuoteEditorPage({
             {lines.map((line, index) => <tr key={line.id}>
               <td className="quote-line-sequence">{index + 1}</td>
               <td className="quote-line-sku">{displayValue(line.sku)}</td>
-              <td className="quote-line-product"><strong>{displayValue(line.name)}</strong>{line.remarks ? <small title={line.remarks}>{line.remarks}</small> : null}</td>
+              <td className="quote-line-product">
+                {line.isAddon ? <span className="status-badge blue quote-line-addon-label">加單</span> : null}
+                <strong>{displayValue(line.name)}</strong>
+                {line.remarks ? <small title={line.remarks}>{line.remarks}</small> : null}
+              </td>
               <td><Button type="button" variant="outline" size="sm" onClick={() => openLabelModal(line)}><Search />{t("quoteEditor.items.viewLabel")}</Button></td>
               <td>{line.quantity}</td>
               <td>{money.format(line.unitPrice)}</td>

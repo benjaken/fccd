@@ -1469,4 +1469,42 @@ describe("Quote editor", () => {
     expect(editDialog).not.toHaveTextContent("Delivery time");
     expect(setFactoryStatus).not.toHaveBeenCalled();
   });
+
+  it("clears the order AO marker after Shopify confirmation but keeps product AO labels", async () => {
+    const user = userEvent.setup();
+    const confirmAddonShopify = vi.fn().mockResolvedValue(undefined);
+    const loadSummary = vi.fn().mockResolvedValue({
+      id: "order-addon", orderNumber: "B-1550C", channelId: "channel-1",
+      addonShopifyPending: true,
+      draft: {
+        channelId: "channel-1", customerName: "Customer", companyName: "",
+        contactA: "12345678", contactB: "", email: "order@example.com", asanaLink: "",
+        address: "1 Central Road", districtId: "district-1", districtName: "", shippingMethodId: "shipping-home",
+        deliveryDate: "2026-08-30", deliveryTime: "12:00 - 13:00", shipOutTime: "11:00",
+        customerNote: "", packingNote: "", salesPartnerId: "", internalNote: "", tagIds: [],
+        quoteStatus: "", quoteSalesSourceId: "", quoteCommunicationChannelId: "",
+      },
+      financials: { shippingFee: 0, discount: 0, cashdollarRedeemed: 0, cashdollarPurchased: 0 },
+      payments: [], isSentToFactory: true, doNotSendToFactory: false,
+    });
+    const loadLines = vi.fn().mockResolvedValue([{
+      id: "ao-line", sku: "AO-1", name: "Addon product", quantity: 1,
+      unitPrice: 128, totalPrice: 128, remarks: "", isAddon: true,
+    }]);
+
+    render(
+      <MemoryRouter initialEntries={["/orders/order-addon"]}>
+        <Routes>
+          <Route path="/orders/:id" element={<QuoteEditorPage documentType="order" combined readOnly canEdit confirmAddonShopify={confirmAddonShopify} loadOptions={vi.fn().mockResolvedValue(options)} loadSummary={loadSummary} loadLines={loadLines} loadShippingFeeOptions={vi.fn().mockResolvedValue(shippingFeeOptions)} />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("未處理加單")).toBeInTheDocument();
+    expect(screen.getByText("加單")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "确认已手动加入 Shopify" }));
+    await waitFor(() => expect(confirmAddonShopify).toHaveBeenCalledWith("order-addon"));
+    expect(screen.queryByText("未處理加單")).not.toBeInTheDocument();
+    expect(screen.getByText("加單")).toBeInTheDocument();
+  });
 });

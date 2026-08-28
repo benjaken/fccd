@@ -19,6 +19,7 @@ import {
   AUGUST_OVERWRITE_CONFIRMATION,
   AUGUST_OVERWRITE_SINCE,
   changedOverwriteFields,
+  isFieldAwareOverwriteSourceType,
   isOverwriteSourceType,
   mergeOverwriteRow,
   normalizeOrderNumber,
@@ -43,6 +44,7 @@ const SOFT_RUNTIME_MS = 60_000;
 const OVERWRITE_RUNTIME_MS = 150_000;
 const ORDER_METADATA_BACKFILL_CONFIRMATION = "APPLY_ORDER_METADATA_BACKFILL";
 const RECONCILIATION_CONFIRMATION = "APPLY_JULY15_RECONCILIATION";
+const TARGETED_QUOTE_SYNC_CONFIRMATION = "APPLY_TARGETED_QUOTE_SYNC";
 
 type AdminClient = ReturnType<typeof createClient<any>>;
 type Checkpoint = {
@@ -285,6 +287,7 @@ async function authenticateAdmin(
   const authorization = request.headers.get("authorization") ?? "";
   const token = authorization.replace(/^Bearer\s+/i, "").trim();
   if (!token) return false;
+  if (await constantTimeEqual(token, serviceKey())) return true;
   const { data, error } = await client.auth.getUser(token);
   if (error || !data.user) return false;
   const role = data.user.app_metadata?.role;
@@ -645,7 +648,9 @@ async function fetchBubbleType(
       throw new Error(`Bubble returned a duplicate _id for ${sourceType}.`);
     }
     seen.add(legacyId);
-    if (constraints && constraints.length === 0) continue;
+    // Explicit constraints are used by bounded administrative reconciliations
+    // and are not necessarily date-window constraints.
+    if (constraints) continue;
     const modified = record["Modified Date"];
     const modifiedAt = typeof modified === "string"
       ? Date.parse(modified)
@@ -1079,6 +1084,19 @@ async function processType(
 
 type OverwriteMode = "dry-run" | "apply";
 type ReconciliationMode = "dry-run" | "apply";
+type TargetedQuoteSyncMode = "dry-run" | "apply";
+
+const targetedQuoteChildSources = [
+  { sourceType: "s_order", orderField: "Order" },
+  { sourceType: "s_payment", orderField: "Order" },
+  { sourceType: "cal_control", orderField: "order" },
+  { sourceType: "cal_package_choice", orderField: "Order" },
+  { sourceType: "quote_bento_additionalitem", orderField: "A_order" },
+  { sourceType: "quote_bento_eventpart", orderField: "A_order" },
+  { sourceType: "quote_paymentmethod", orderField: "A_order" },
+  { sourceType: "quote_t&c", orderField: "A_order" },
+  { sourceType: "s_comment", orderField: "A_order" },
+] as const;
 
 const reconciliationChildParentFields: Record<string, string> = {
   monthly_cost_channels: "monthly_cost_id",
@@ -1413,6 +1431,342 @@ async function processAugustOverwrite(
   };
 }
 
+function quoteNumberConstraints(orderNumber: string) {
+  return [{
+    key: "ORDER_Order Number",
+    constraint_type: "equals",
+    value: orderNumber,
+  }];
+}
+
+function orderLegacyIdConstraints(field: string, legacyId: string) {
+  return [{ key: field, constraint_type: "equals", value: legacyId }];
+}
+
+async function fetchBubbleEquals(
+  sourceType: string,
+  constraints: unknown[],
+  bubbleToken: string,
+  deadline: number,
+): Promise<BubbleRecord[]> {
+  const fetched = await fetchBubbleType(
+    sourceType,
+    INITIAL_CHECKPOINT,
+    new Date().toISOString(),
+    bubbleToken,
+    deadline,
+    constraints,
+  );
+  if (fetched.resumable) {
+    throw new Error(`Targeted Bubble fetch for ${sourceType} timed out.`);
+  }
+  return fetched.records;
+}
+
+async function reconcileTargetedRecords(
+  client: AdminClient,
+  mapping: SourceMapping,
+  records: BubbleRecord[],
+  mode: TargetedQuoteSyncMode,
+) {
+  const mappedRows = records.map(mapping.map);
+  for (const spec of mapping.relations ?? []) {
+    const legacyIds = mappedRows.flatMap((row) =>
+      typeof row[spec.legacyField] === "string" && row[spec.legacyField]
+        ? [row[spec.legacyField] as string]
+        : []
+    );
+    if (!legacyIds.length) continue;
+    const resolved = new Map(
+      (await legacyIdRows(client, spec.table, legacyIds)).map((row) => [
+        row.legacy_id,
+        row.id,
+      ]),
+    );
+    let unresolvedOrders = 0;
+    for (const row of mappedRows) {
+      const legacyId = row[spec.legacyField];
+      if (typeof legacyId !== "string" || !legacyId) continue;
+      row[spec.idField] = resolved.get(legacyId) ?? null;
+      if (spec.idField === "order_id" && !row[spec.idField]) {
+        unresolvedOrders += 1;
+      }
+    }
+    if (unresolvedOrders) {
+      throw new Error(`${unresolvedOrders} required orders references are unresolved.`);
+    }
+  }
+  const fields = [...new Set([
+    ...mappedRows.flatMap((row) => Object.keys(row)),
+    ...(mapping.sourceType === "a_order"
+      ? ["shopify_order_id", "payment_status_source"]
+      : []),
+  ])].filter((field) => field !== "legacy_id");
+  const existingRows = await selectedLegacyRows(
+    client,
+    mapping.table,
+    records.map(requireLegacyId),
+    fields,
+  );
+  const existingByLegacyId = new Map(
+    existingRows.map((row) => [String(row.legacy_id), row]),
+  );
+  const rowsToWrite: Array<Record<string, unknown>> = [];
+  const changes: Array<{
+    legacyId: string;
+    operation: "insert" | "update";
+    changedFields: string[];
+  }> = [];
+  let unchanged = 0;
+
+  for (let index = 0; index < records.length; index += 1) {
+    const source = records[index];
+    const mapped = mappedRows[index];
+    const legacyId = requireLegacyId(source);
+    const existing = existingByLegacyId.get(legacyId);
+    const row = isFieldAwareOverwriteSourceType(mapping.sourceType as OverwriteSourceType)
+      ? mergeOverwriteRow(
+        mapping.sourceType as keyof typeof overwriteFieldSources,
+        source,
+        mapped,
+        existing,
+      )
+      : mapped;
+    const changedFields = existing ? changedOverwriteFields(row, existing) : [];
+    if (existing && changedFields.length === 0) {
+      unchanged += 1;
+      continue;
+    }
+    rowsToWrite.push(row);
+    changes.push({
+      legacyId,
+      operation: existing ? "update" : "insert",
+      changedFields: existing ? changedFields : Object.keys(row),
+    });
+  }
+
+  const written = mode === "apply"
+    ? await writeOverwriteRows(client, mapping.table, rowsToWrite)
+    : 0;
+  if (mode === "apply" && written !== rowsToWrite.length) {
+    throw new Error(`Targeted write count mismatch for ${mapping.sourceType}.`);
+  }
+  return {
+    sourceType: mapping.sourceType,
+    table: mapping.table,
+    fetched: records.length,
+    inserted: changes.filter((item) => item.operation === "insert").length,
+    updated: changes.filter((item) => item.operation === "update").length,
+    unchanged,
+    written,
+    changes,
+  };
+}
+
+async function reconcileTargetedOrders(
+  client: AdminClient,
+  mapping: SourceMapping,
+  records: BubbleRecord[],
+  mode: TargetedQuoteSyncMode,
+) {
+  const mappedRows = records.map(mapping.map);
+  await resolveRelations(client, mappedRows, mapping.relations);
+  const fields = [...new Set([
+    "id",
+    "legacy_id",
+    "order_number",
+    "shopify_order_id",
+    "payment_status_source",
+    ...mappedRows.flatMap((row) => Object.keys(row)),
+  ])];
+  const orderNumbers = mappedRows.map((row) => String(row.order_number));
+  const { data, error } = await client
+    .from("orders")
+    .select(fields.join(","))
+    .in("order_number", orderNumbers);
+  if (error) throw error;
+  const byLegacyId = new Map(
+    (data ?? []).map((row) => [String(row.legacy_id), row as Record<string, unknown>]),
+  );
+  const byOrderNumber = new Map(
+    (data ?? []).map((row) => [normalizeOrderNumber(row.order_number), row as Record<string, unknown>]),
+  );
+  const changes: Array<{
+    legacyId: string;
+    operation: "insert" | "update";
+    changedFields: string[];
+  }> = [];
+  let unchanged = 0;
+  let written = 0;
+  for (let index = 0; index < records.length; index += 1) {
+    const source = records[index];
+    const mapped = mappedRows[index];
+    const legacyId = requireLegacyId(source);
+    const existing = byLegacyId.get(legacyId) ??
+      byOrderNumber.get(normalizeOrderNumber(mapped.order_number));
+    const row = mergeOverwriteRow("a_order", source, mapped, existing);
+    row.legacy_id = legacyId;
+    const changedFields = existing ? changedOverwriteFields(row, existing) : [];
+    if (existing && changedFields.length === 0) {
+      unchanged += 1;
+      continue;
+    }
+    changes.push({
+      legacyId,
+      operation: existing ? "update" : "insert",
+      changedFields: existing ? changedFields : Object.keys(row),
+    });
+    if (mode !== "apply") continue;
+    if (existing) {
+      const { data: updated, error: updateError } = await client
+        .from("orders")
+        .update(row)
+        .eq("id", existing.id)
+        .select("id");
+      if (updateError) throw updateError;
+      written += updated?.length ?? 0;
+    } else {
+      written += await writeOverwriteRows(client, "orders", [row]);
+    }
+  }
+  if (mode === "apply" && written !== changes.length) {
+    throw new Error("Targeted order write count mismatch.");
+  }
+  return {
+    sourceType: mapping.sourceType,
+    table: mapping.table,
+    fetched: records.length,
+    inserted: changes.filter((item) => item.operation === "insert").length,
+    updated: changes.filter((item) => item.operation === "update").length,
+    unchanged,
+    written,
+    changes,
+  };
+}
+
+async function removeStaleTargetedChildren(
+  client: AdminClient,
+  table: string,
+  orderIds: string[],
+  fetchedLegacyIds: string[],
+  mode: TargetedQuoteSyncMode,
+) {
+  const { data, error } = await client
+    .from(table)
+    .select("id,legacy_id,order_id")
+    .in("order_id", orderIds)
+    .not("legacy_id", "is", null);
+  if (error) throw error;
+  const fetched = new Set(fetchedLegacyIds);
+  const stale = (data ?? []).filter((row) =>
+    typeof row.legacy_id === "string" && !fetched.has(row.legacy_id)
+  );
+  if (mode === "apply" && stale.length) {
+    for (let index = 0; index < stale.length; index += QUERY_CHUNK) {
+      const { error: deleteError } = await client
+        .from(table)
+        .delete()
+        .in("id", stale.slice(index, index + QUERY_CHUNK).map((row) => row.id));
+      if (deleteError) throw deleteError;
+    }
+  }
+  return stale.map((row) => String(row.legacy_id));
+}
+
+async function processTargetedQuoteSync(
+  client: AdminClient,
+  orderNumbers: string[],
+  mode: TargetedQuoteSyncMode,
+  bubbleToken: string,
+  deadline: number,
+) {
+  const normalizedNumbers = [...new Set(orderNumbers.map((value) =>
+    value.trim().toUpperCase()
+  ))];
+  const orderMapping = coreMappings.find((item) => item.sourceType === "a_order");
+  if (!orderMapping) throw new Error("a_order mapping is missing.");
+  const bubbleOrders: BubbleRecord[] = [];
+  for (const orderNumber of normalizedNumbers) {
+    const matches = await fetchBubbleEquals(
+      "a_order",
+      quoteNumberConstraints(orderNumber),
+      bubbleToken,
+      deadline,
+    );
+    if (matches.length !== 1) {
+      throw new Error(`Bubble quote ${orderNumber} returned ${matches.length} records.`);
+    }
+    bubbleOrders.push(matches[0]);
+  }
+
+  const orderResult = await reconcileTargetedOrders(
+    client,
+    orderMapping,
+    bubbleOrders,
+    mode,
+  );
+  if (mode === "apply") {
+    await syncOrderShippingMethods(client, bubbleOrders);
+    await syncOrderMetadata(client, bubbleOrders);
+  }
+  const { data: resolvedOrders, error: resolvedOrdersError } = await client
+    .from("orders")
+    .select("id,legacy_id,order_number")
+    .in("order_number", normalizedNumbers);
+  if (resolvedOrdersError) throw resolvedOrdersError;
+  const orderRows = (resolvedOrders ?? []) as Array<Record<string, unknown>>;
+  if (mode === "dry-run" && orderRows.length !== bubbleOrders.length) {
+    return {
+      status: "completed" as const,
+      operation: "targeted_quote_sync",
+      mode,
+      orderNumbers: normalizedNumbers,
+      bubbleOrderLegacyIds: bubbleOrders.map(requireLegacyId),
+      order: orderResult,
+      children: [],
+      parentInsertsPending: bubbleOrders.length - orderRows.length,
+    };
+  }
+  if (orderRows.length !== bubbleOrders.length) {
+    throw new Error("Targeted quote sync could not resolve every order.");
+  }
+  const orderIds = orderRows.map((row) => String(row.id));
+  const childResults: Array<Record<string, unknown>> = [];
+  for (const spec of targetedQuoteChildSources) {
+    const mapping = [...coreMappings, ...remainingMappings].find((item) =>
+      item.sourceType === spec.sourceType
+    );
+    if (!mapping) throw new Error(`Mapping is missing for ${spec.sourceType}.`);
+    const records: BubbleRecord[] = [];
+    for (const order of bubbleOrders) {
+      records.push(...await fetchBubbleEquals(
+        spec.sourceType,
+        orderLegacyIdConstraints(spec.orderField, requireLegacyId(order)),
+        bubbleToken,
+        deadline,
+      ));
+    }
+    const result = await reconcileTargetedRecords(client, mapping, records, mode);
+    const staleLegacyIds = await removeStaleTargetedChildren(
+      client,
+      mapping.table,
+      orderIds,
+      records.map(requireLegacyId),
+      mode,
+    );
+    childResults.push({ ...result, staleDeleted: staleLegacyIds.length, staleLegacyIds });
+  }
+  return {
+    status: "completed" as const,
+    operation: "targeted_quote_sync",
+    mode,
+    orderNumbers: normalizedNumbers,
+    bubbleOrderLegacyIds: bubbleOrders.map(requireLegacyId),
+    order: orderResult,
+    children: childResults,
+  };
+}
+
 async function handleRequest(request: Request): Promise<Response> {
   const invocationStartedAt = new Date().toISOString();
   const watermark = invocationStartedAt;
@@ -1437,10 +1791,11 @@ async function handleRequest(request: Request): Promise<Response> {
     body?.confirmation === ORDER_METADATA_BACKFILL_CONFIRMATION;
   const adminOverwriteRequested = body?.overwrite != null;
   const adminReconciliationAuditRequested = body?.reconciliationAudit != null;
+  const adminTargetedQuoteSyncRequested = body?.targetedQuoteSync != null;
   if (
     !cronAuthenticated &&
     !((adminBackfillRequested || adminOverwriteRequested ||
-      adminReconciliationAuditRequested) &&
+      adminReconciliationAuditRequested || adminTargetedQuoteSyncRequested) &&
       await authenticateAdmin(request, client))
   ) {
     return jsonResponse({ error: "Unauthorized." }, 401);
@@ -1472,6 +1827,10 @@ async function handleRequest(request: Request): Promise<Response> {
     sourceType: string;
     since: string;
     watermark: string;
+  } | null = null;
+  let targetedQuoteSyncRequest: {
+    mode: TargetedQuoteSyncMode;
+    orderNumbers: string[];
   } | null = null;
   try {
     backfillLoginCodes = body?.backfillLoginCodes === true;
@@ -1553,6 +1912,30 @@ async function handleRequest(request: Request): Promise<Response> {
         watermark: auditWatermark.toISOString(),
       };
     }
+    if (body?.targetedQuoteSync != null) {
+      const mode = body.targetedQuoteSync.mode ?? "dry-run";
+      const orderNumbers = body.targetedQuoteSync.orderNumbers;
+      if (
+        (mode !== "dry-run" && mode !== "apply") ||
+        !Array.isArray(orderNumbers) ||
+        orderNumbers.length < 1 || orderNumbers.length > 20 ||
+        orderNumbers.some((value: unknown) =>
+          typeof value !== "string" || !/^FC(?:BQ|CQ)\d{8}$/.test(value.trim().toUpperCase())
+        )
+      ) {
+        throw new Error("targeted quote sync parameters are invalid.");
+      }
+      if (
+        mode === "apply" &&
+        body.targetedQuoteSync.confirmation !== TARGETED_QUOTE_SYNC_CONFIRMATION
+      ) {
+        throw new Error("targeted quote sync confirmation is invalid.");
+      }
+      targetedQuoteSyncRequest = {
+        mode,
+        orderNumbers: orderNumbers.map((value: string) => value.trim().toUpperCase()),
+      };
+    }
     if (body?.sourceType != null) {
       if (
         typeof body.sourceType !== "string" ||
@@ -1565,6 +1948,83 @@ async function handleRequest(request: Request): Promise<Response> {
     }
   } catch (error) {
     return jsonResponse({ error: safeError(error) }, 400);
+  }
+
+  if (targetedQuoteSyncRequest) {
+    const deadline = Date.parse(invocationStartedAt) + OVERWRITE_RUNTIME_MS;
+    let runId: string | null = null;
+    try {
+      if (targetedQuoteSyncRequest.mode === "apply") {
+        const { data: run, error: runError } = await client
+          .from("migration")
+          .insert({
+            migration_key:
+              `bubble-targeted-quotes-${invocationStartedAt}-${crypto.randomUUID()}`,
+            mode: "reconciliation",
+            status: "running",
+            source_system: "bubble",
+            target_system: "supabase",
+            snapshot_at: invocationStartedAt,
+            checkpoint_at: INITIAL_CHECKPOINT,
+            started_at: invocationStartedAt,
+            details: {
+              operation: "targeted_quote_sync",
+              order_numbers: targetedQuoteSyncRequest.orderNumbers,
+            },
+          })
+          .select("id")
+          .single();
+        if (runError || !run) throw new Error("Unable to create targeted sync audit run.");
+        runId = String(run.id);
+      }
+      const result = await processTargetedQuoteSync(
+        client,
+        targetedQuoteSyncRequest.orderNumbers,
+        targetedQuoteSyncRequest.mode,
+        bubbleToken,
+        deadline,
+      );
+      if (runId) {
+        const processed = result.order.written + result.children.reduce(
+          (sum, child) => sum + Number(child.written ?? 0) + Number(child.staleDeleted ?? 0),
+          0,
+        );
+        const { error: auditError } = await client.from("migration").update({
+          status: "completed",
+          records_expected: processed,
+          records_processed: processed,
+          records_failed: 0,
+          error_count: 0,
+          completed_at: new Date().toISOString(),
+          details: result,
+          updated_at: new Date().toISOString(),
+        }).eq("id", runId);
+        if (auditError) throw new Error("Unable to finalize targeted sync audit run.");
+      }
+      return jsonResponse(result);
+    } catch (error) {
+      if (runId) {
+        await client.from("migration").update({
+          status: "failed",
+          records_failed: 1,
+          error_count: 1,
+          completed_at: new Date().toISOString(),
+          details: {
+            operation: "targeted_quote_sync",
+            order_numbers: targetedQuoteSyncRequest.orderNumbers,
+            error: errorCode(error),
+          },
+          updated_at: new Date().toISOString(),
+        }).eq("id", runId);
+      }
+      return jsonResponse({
+        status: "failed",
+        operation: "targeted_quote_sync",
+        orderNumbers: targetedQuoteSyncRequest.orderNumbers,
+        error: errorCode(error),
+        detail: safeError(error),
+      }, 500);
+    }
   }
 
   if (reconciliationAuditRequest) {

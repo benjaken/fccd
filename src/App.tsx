@@ -2213,6 +2213,7 @@ function App() {
         }
       />
       <Route path="/self_service_search" element={<CustomerSelfServicePage />} />
+      <Route path="/self_service_search/:orderId" element={<CustomerSelfServicePage />} />
       <Route
         path="/customer/*"
         element={
