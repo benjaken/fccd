@@ -23569,6 +23569,16 @@ button.factory-job-card:focus-visible {
   line-height: 1.2;
 }
 
+.factory-job-card-body .factory-changed-order-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 800;
+  border-radius: 3px;
+  background: #df22c5;
+}
+
 .factory-job-badge {
   position: absolute;
   right: 0;
