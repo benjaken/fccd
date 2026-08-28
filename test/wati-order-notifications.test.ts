@@ -2,9 +2,11 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
-  buildInternalOrderNotificationContent,
+  buildFactoryUnsentReminderContent,
   buildOrderNotificationContent,
   buildQuoteConfirmationContent,
+  buildUnassignedDriverReminderContent,
+  supportsOrderEmailNotification,
   type OrderNotificationValues,
 } from "../supabase/functions/_shared/order-notification-content.ts";
 
@@ -21,12 +23,11 @@ const values: OrderNotificationValues = {
 };
 
 describe("WATI order notifications", () => {
-  it("renders the internal new-order email from the same order snapshot", () => {
-    const notification = buildInternalOrderNotificationContent({
+  it("renders the factory-unsent internal reminder with the order link", () => {
+    const notification = buildFactoryUnsentReminderContent({
       recipient_name: "Bis",
       order_number: "R/202608/88",
       customer_name: "陳先生",
-      created_at: "28/08/2026 10:30",
       delivery_date: "30/08/2026",
       delivery_time: "12:00 - 13:00",
       address: "九龍測試地址",
@@ -49,6 +50,12 @@ describe("WATI order notifications", () => {
     expect(notification.text).toContain(`地址：${values.address}`);
     expect(notification.text).toContain(values.ao_link);
     expect(notification.html).toContain("Food Channels Catering");
+    expect(notification.html).toContain('role="presentation"');
+    expect(notification.html).toContain("fc-catering-logo-email.png");
+    expect(notification.html).toContain("https://wa.me/85253964335");
+    expect(notification.html).toContain("(+852) 2185 7373");
+    expect(notification.html).toContain("sales@foodchannels-catering.com");
+    expect(notification.html).toContain(`href="${values.ao_link}"`);
   });
 
   it("uses the supplied pickup wording and fixed pickup address", () => {
@@ -70,6 +77,31 @@ describe("WATI order notifications", () => {
     expect(quote.text).toContain("Q-1001");
     expect(quote.text).toContain("https://example.com/quote.pdf");
     expect(quote.html).toContain("Hello 陳先生,");
+  });
+
+  it("lists every unassigned delivery order with its FCCD link", () => {
+    const reminder = buildUnassignedDriverReminderContent({
+      date: "28/08/2026",
+      orders: [
+        {
+          order_number: "R/202608/88",
+          customer_name: "Customer A",
+          delivery_time: "12:00 - 13:00",
+          order_link: "https://admin.example.com/orders/order-a",
+        },
+        {
+          order_number: "R/202608/89",
+          customer_name: "Customer B",
+          delivery_time: "13:00 - 14:00",
+          order_link: "https://admin.example.com/orders/order-b",
+        },
+      ],
+    });
+
+    expect(reminder.subject).toContain("2 張");
+    expect(reminder.text).toContain("今日 28/08/2026 有 2 張送貨訂單尚未安排司機");
+    expect(reminder.html).toContain("https://admin.example.com/orders/order-a");
+    expect(reminder.html).toContain("https://admin.example.com/orders/order-b");
   });
 
   it("seeds no payment or outstanding-balance notification", () => {
@@ -97,6 +129,20 @@ describe("WATI order notifications", () => {
     expect(migration).toContain("order_cancelled");
   });
 
+  it("does not claim or send notifications before the Monday activation gate", () => {
+    const worker = readFileSync(
+      resolve(process.cwd(), "supabase/functions/wati-order-notifications/index.ts"),
+      "utf8",
+    );
+
+    expect(worker).toContain('defaultActivationAt = "2026-08-31T00:00:00+08:00"');
+    expect(worker).toContain('Deno.env.get("WATI_NOTIFICATIONS_ACTIVATE_AT")');
+    expect(worker.indexOf("Date.now() < activation.timestamp"))
+      .toBeLessThan(worker.indexOf('admin.rpc("enqueue_due_wati_order_reminders"'));
+    expect(worker).toContain("processed: 0");
+    expect(worker).toContain("sent: 0");
+  });
+
   it("uses the approved WATI Utility template for delivery confirmations", () => {
     const migration = readFileSync(
       resolve(
@@ -111,6 +157,10 @@ describe("WATI order notifications", () => {
     expect(migration).toContain("where event_key = 'delivery_order_confirmed'");
     expect(migration).toContain('{"name":"ao_deadline","source":"ao_deadline"}');
     expect(migration).toContain('{"name":"ao_link","source":"ao_link"}');
+    expect(migration).toContain("selfpick_order_confirmation_with_action2026");
+    expect(migration).toContain("fcc2_delivery_reminder");
+    expect(migration).toContain("fcc2_selfpick_reminder");
+    expect(migration).toContain("is_active = event_key in");
   });
 
   it("registers existing Utility events without activating unverified mappings", () => {
@@ -141,7 +191,6 @@ describe("WATI order notifications", () => {
 
   it("renders fallback email content for every added Utility event", () => {
     for (const event of [
-      "driver_assigned",
       "bad_weather_notice",
       "holiday_service_notice",
       "second_contact_requested",
@@ -157,11 +206,27 @@ describe("WATI order notifications", () => {
     }
   });
 
-  it("queues enabled internal email users and delayed WhatsApp recipients", () => {
+  it("provides matching email content for the restored customer events", () => {
+    for (const event of [
+      "delivery_tomorrow_reminder",
+      "pickup_tomorrow_reminder",
+      "pickup_ready",
+      "order_completed",
+      "order_cancelled",
+      "driver_assigned",
+    ] as const) {
+      expect(supportsOrderEmailNotification(event)).toBe(true);
+      const notification = buildOrderNotificationContent(event, values);
+      expect(notification.subject).toContain(values.order_number);
+      expect(notification.html).toContain(values.order_number);
+    }
+  });
+
+  it("queues email and WATI factory-unsent reminders for internal recipients", () => {
     const migration = readFileSync(
       resolve(
         process.cwd(),
-        "supabase/migrations/20260828143000_order_notification_settings.sql",
+        "supabase/migrations/20260828152000_factory_unsent_internal_reminders.sql",
       ),
       "utf8",
     );
@@ -170,15 +235,16 @@ describe("WATI order notifications", () => {
       "utf8",
     );
 
-    expect(migration).toContain("create table public.order_internal_notification_outbox");
+    expect(migration).toContain("create or replace function private.enqueue_internal_order_notifications");
     expect(migration).toContain("where profile.email_noti");
-    expect(migration).toContain("recipient.delay_hours * interval '1 hour'");
-    expect(migration).toContain("unique (order_id, channel, recipient_key)");
-    expect(migration).toContain("for update skip locked");
+    expect(migration).toContain("order_first_notification_recipients");
+    expect(migration).toContain("is_sent_to_factory");
+    expect(migration).toContain("do_not_send_to_factory");
     expect(worker).toContain('"claim_order_internal_notifications"');
-    expect(worker).toContain('Deno.env.get("WATI_INTERNAL_ORDER_TEMPLATE_NAME")');
-    expect(worker).toContain("buildInternalOrderNotificationContent(values)");
-    expect(worker).toContain('Deno.env.get("DAILY_SALES_EMAIL_FROM")');
+    expect(worker).toContain('Deno.env.get("WATI_FACTORY_UNSENT_TEMPLATE_NAME")');
+    expect(worker).toContain("buildFactoryUnsentReminderContent(values)");
+    expect(worker).toContain("factoryUnsentReminderAt(order)");
+    expect(worker).toContain("from: EMAIL_FROM");
 
     const scheduler = readFileSync(
       resolve(
@@ -189,5 +255,54 @@ describe("WATI order notifications", () => {
     );
     expect(scheduler).toContain("fccd-order-internal-notifications");
     expect(scheduler).toContain("wati_order_cron_secret");
+  });
+
+  it("queues daily unassigned-driver email and WATI reminders for internal recipients", () => {
+    const migration = readFileSync(
+      resolve(
+        process.cwd(),
+        "supabase/migrations/20260828151000_driver_assignment_email_reminders.sql",
+      ),
+      "utf8",
+    );
+    const worker = readFileSync(
+      resolve(process.cwd(), "supabase/functions/wati-order-notifications/index.ts"),
+      "utf8",
+    );
+
+    expect(migration).toContain("create table public.driver_assignment_internal_reminder_outbox");
+    expect(migration).toContain("unique (reminder_date, channel, recipient_key)");
+    expect(migration).toContain("where profile.email_noti");
+    expect(migration).toContain("order_first_notification_recipients");
+    expect(migration).toContain("for update skip locked");
+    expect(worker).toContain('Deno.env.get("DRIVER_ASSIGNMENT_REMINDER_HOUR_HK")');
+    expect(worker).toContain('"enqueue_driver_assignment_internal_reminders"');
+    expect(worker).toContain('"claim_driver_assignment_internal_reminders"');
+    expect(worker).toContain('Deno.env.get("WATI_DRIVER_ASSIGNMENT_REMINDER_TEMPLATE_NAME")');
+    expect(worker).toContain('name: "orders"');
+    expect(worker).toContain('.is("motorcade_id", null)');
+    expect(worker).toContain("buildUnassignedDriverReminderContent");
+    expect(worker).toContain("/orders/${encodeURIComponent(order.id)}");
+  });
+
+  it("uses the delivery sales address for every Resend email", () => {
+    const sender = readFileSync(
+      resolve(process.cwd(), "supabase/functions/_shared/email-sender.ts"),
+      "utf8",
+    );
+    const senders = [
+      "supabase/functions/wati-order-notifications/index.ts",
+      "supabase/functions/send-quote-confirmation/index.ts",
+      "supabase/functions/send-daily-sales-report/index.ts",
+    ].map((file) => readFileSync(resolve(process.cwd(), file), "utf8"));
+
+    expect(sender).toContain('EMAIL_FROM = "system@foodchannels-delivery.com"');
+    for (const implementation of senders) {
+      expect(implementation).toContain('import { EMAIL_FROM } from "../_shared/email-sender.ts"');
+      expect(implementation).toContain("from: EMAIL_FROM");
+      expect(implementation).not.toMatch(
+        /QUOTE_EMAIL_FROM|DAILY_SALES_EMAIL_FROM|ORDER_NOTIFICATION_EMAIL_FROM/,
+      );
+    }
   });
 });

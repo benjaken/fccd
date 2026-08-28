@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { buildDailySalesEmail, type DailySalesEmailLine } from "../_shared/daily-sales-email.ts";
+import { EMAIL_FROM } from "../_shared/email-sender.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -127,7 +128,7 @@ Deno.serve(async (request) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: requiredEnv("DAILY_SALES_EMAIL_FROM"),
+        from: EMAIL_FROM,
         to: [recipient],
         subject: email.subject,
         html: email.html,
