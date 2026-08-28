@@ -81,3 +81,9 @@ verify_jwt = true
 [functions.wati-customer-webhook]
 verify_jwt = false
 
+[functions.customer-addon-paypal]
+verify_jwt = false
+
+[functions.paypal-webhook]
+verify_jwt = false
+

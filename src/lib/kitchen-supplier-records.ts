@@ -81,6 +81,7 @@ export async function fetchKitchenSupplierPurchaseTypes() {
   const { data, error } = await supabase
     .from("purchase_types")
     .select("id,legacy_id,name,bubble_created_at")
+    .eq("is_active", true)
     .order("bubble_created_at", { ascending: true })
     .order("name", { ascending: true });
   if (error) throw new Error(error.message);

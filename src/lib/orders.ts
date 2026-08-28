@@ -143,6 +143,7 @@ export type OrderListItem = {
   shippingMethodName?: string | null;
   contactPhone: string | null;
   quantity: number;
+  hasAddon?: boolean;
   manualTodos: OrderListManualTodo[];
 };
 
@@ -235,7 +236,7 @@ type OrderRow = {
   customer_note_snapshot: string | null;
   factory_packing_note: string | null;
   contact_number_a_snapshot: string | null;
-  order_lines: Array<{ quantity: number | string | null; is_void: boolean | null }> | null;
+  order_lines: Array<{ quantity: number | string | null; is_void: boolean | null; is_addon: boolean | null }> | null;
 };
 
 function safeSearchTerm(value: string) {
@@ -318,8 +319,8 @@ export async function fetchOrders({
   const deliverySelection =
     "deliveries(motorcade_id,delivery_time,ship_out_time,delivery_districts!district_id(name))";
   const selectedFields: string = canViewFinance
-    ? `id,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,shipping_address_snapshot,customer_note_snapshot,factory_packing_note,delivery_at,delivery_time,factory_date,ship_out_time,delivery_status,is_sent_to_factory,do_not_send_to_factory,currency,bubble_created_at,created_at,grand_total,outstanding,order_status_legacy_ids,order_tag_assignments(order_tags(name)),shopify_order_id,shopify_stores(shop_domain),channels(name),shipping_methods(name,display_name),${plannedDistrictSelection},${deliverySelection},order_lines(quantity,is_void)`
-    : `id,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,shipping_address_snapshot,customer_note_snapshot,factory_packing_note,delivery_at,delivery_time,factory_date,ship_out_time,delivery_status,is_sent_to_factory,do_not_send_to_factory,currency,bubble_created_at,created_at,order_status_legacy_ids,order_tag_assignments(order_tags(name)),shopify_order_id,shopify_stores(shop_domain),channels(name),shipping_methods(name,display_name),${plannedDistrictSelection},${deliverySelection},order_lines(quantity,is_void)`;
+    ? `id,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,shipping_address_snapshot,customer_note_snapshot,factory_packing_note,delivery_at,delivery_time,factory_date,ship_out_time,delivery_status,is_sent_to_factory,do_not_send_to_factory,currency,bubble_created_at,created_at,grand_total,outstanding,order_status_legacy_ids,order_tag_assignments(order_tags(name)),shopify_order_id,shopify_stores(shop_domain),channels(name),shipping_methods(name,display_name),${plannedDistrictSelection},${deliverySelection},order_lines(quantity,is_void,is_addon)`
+    : `id,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,shipping_address_snapshot,customer_note_snapshot,factory_packing_note,delivery_at,delivery_time,factory_date,ship_out_time,delivery_status,is_sent_to_factory,do_not_send_to_factory,currency,bubble_created_at,created_at,order_status_legacy_ids,order_tag_assignments(order_tags(name)),shopify_order_id,shopify_stores(shop_domain),channels(name),shipping_methods(name,display_name),${plannedDistrictSelection},${deliverySelection},order_lines(quantity,is_void,is_addon)`;
   let catalog: ConfiguredOrderStatus[] | undefined;
   const loadCatalog = async () => {
     catalog ??= await fetchOrderStatusCatalog();
@@ -471,6 +472,7 @@ export async function fetchOrders({
         (sum, line) => sum + (line.is_void ? 0 : optionalAmount(line.quantity) ?? 0),
         0,
       ),
+      hasAddon: (row.order_lines ?? []).some((line) => !line.is_void && line.is_addon === true),
       manualTodos: todosByOrder.get(row.id) ?? [],
     })),
     total: count ?? 0,

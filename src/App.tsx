@@ -74,6 +74,7 @@ import { MeatDeliveryNotesPage } from "@/components/MeatDeliveryNotesPage";
 import { DeliveryListPage } from "@/components/DeliveryListPage";
 import { AssignDriverPage } from "@/components/AssignDriverPage";
 import { DeliveryFleetsPage } from "@/components/DeliveryFleetsPage";
+import { DeliverySurchargeTypesPage } from "@/components/DeliverySurchargeTypesPage";
 import { FactoryBoardPage } from "@/components/FactoryBoardPage";
 import { FactoryOrderPage } from "@/components/FactoryOrderPage";
 import { FactoryMeatDeliveryNotePage } from "@/components/FactoryMeatDeliveryNotePage";
@@ -997,6 +998,16 @@ function OperationsShell() {
                 element={
                   pageAccess.canAccess("delivery.fleets") ? (
                     <DeliveryFleetsPage />
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
+                }
+              />
+              <Route
+                path="/delivery/surcharges"
+                element={
+                  pageAccess.canAccess("delivery") ? (
+                    <DeliverySurchargeTypesPage />
                   ) : (
                     <SettingsAccessDenied />
                   )

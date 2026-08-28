@@ -18,6 +18,7 @@ export type KitchenMonthlyCostType = {
   id: string;
   legacyId: string;
   name: string;
+  isBrand: boolean;
 };
 
 export type KitchenMonthlyCostChannel = {
@@ -70,19 +71,24 @@ const monthlyCostTypeOrder = [
   "Marketing",
 ];
 
-export function kitchenMonthlyCostRequiresBrand(costTypeName: string) {
-  return ["google", "facebook"].includes(costTypeName.trim().toLowerCase());
+export function kitchenMonthlyCostRequiresBrand(costType: KitchenMonthlyCostType) {
+  return costType.isBrand;
 }
 
 export async function fetchKitchenMonthlyCostTypes() {
   const { data, error } = await supabase
     .from("cost_types")
-    .select("id,legacy_id,name")
+    .select("id,legacy_id,name,is_brand")
     .eq("is_active", true);
   if (error) throw new Error(error.message);
   const order = new Map(monthlyCostTypeOrder.map((name, index) => [name.toLowerCase(), index]));
-  return ((data ?? []) as Array<{ id: string; legacy_id: string; name: string }>)
-    .map((row) => ({ id: row.id, legacyId: row.legacy_id, name: row.name }))
+  return ((data ?? []) as Array<{ id: string; legacy_id: string; name: string; is_brand: boolean }>)
+    .map((row) => ({
+      id: row.id,
+      legacyId: row.legacy_id,
+      name: row.name,
+      isBrand: row.is_brand,
+    }))
     .sort((left, right) =>
       (order.get(left.name.toLowerCase()) ?? 999) -
         (order.get(right.name.toLowerCase()) ?? 999) ||
@@ -132,8 +138,8 @@ export async function createKitchenMonthlyNonFestivalCost(input: {
   amount: number;
   remarks: string;
 }) {
-  if (kitchenMonthlyCostRequiresBrand(input.costType.name) && input.channels.length === 0) {
-    throw new Error("Google 或 Facebook 費用必須選擇品牌");
+  if (kitchenMonthlyCostRequiresBrand(input.costType) && input.channels.length === 0) {
+    throw new Error("此費用必須選擇品牌");
   }
   const now = new Date().toISOString();
   const legacyId = `web-monthly-cost-${crypto.randomUUID()}`;

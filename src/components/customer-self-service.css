@@ -261,6 +261,115 @@
   font-weight: 750;
 }
 
+.self-service-addon-note.is-success {
+  border-color: #9bd3ad;
+  background: #edf9f1;
+  color: #176b38;
+}
+
+.self-service-detail-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.self-service-addon-panel {
+  --side-panel-width: min(680px, 100vw);
+}
+
+.self-service-addon-products {
+  display: grid;
+  gap: 10px;
+}
+
+.self-service-addon-products article {
+  overflow: hidden;
+  border: 1px solid #dce5df;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.self-service-addon-products article.is-selected {
+  border-color: var(--portal-green);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--portal-green) 14%, transparent);
+}
+
+.self-service-addon-select {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 14px;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.self-service-addon-select > span:nth-child(2) {
+  display: grid;
+  gap: 3px;
+}
+
+.self-service-addon-select small { color: #758078; }
+
+.self-service-addon-check {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 1.5px solid #15aee5;
+  border-radius: 50%;
+  color: #fff;
+}
+
+.is-selected .self-service-addon-check { background: #15aee5; }
+.self-service-addon-check svg { width: 16px; height: 16px; }
+
+.self-service-addon-quantity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-top: 1px solid #e7ece8;
+  padding: 10px 14px;
+}
+
+.self-service-addon-quantity > span { margin-right: auto; color: #66736a; font-size: 13px; }
+.self-service-addon-quantity button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #cad5cd;
+  border-radius: 8px;
+  background: #fff;
+}
+.self-service-addon-quantity button svg { width: 15px; height: 15px; }
+.self-service-addon-quantity input {
+  width: 54px;
+  height: 32px;
+  border: 1px solid #cad5cd;
+  border-radius: 8px;
+  text-align: center;
+}
+.self-service-addon-quantity > strong { min-width: 90px; text-align: right; }
+
+.self-service-addon-total {
+  display: grid;
+  margin-right: auto;
+}
+.self-service-addon-total span { color: #66736a; font-size: 12px; }
+.self-service-addon-total strong { font-size: 20px; }
+
+@media (max-width: 600px) {
+  .self-service-addon-select { grid-template-columns: 28px minmax(0, 1fr); }
+  .self-service-addon-select > strong { grid-column: 2; }
+  .self-service-addon-quantity > strong { min-width: 72px; }
+}
+
 .self-service-content-card,
 .self-service-delivery-card {
   overflow: hidden;

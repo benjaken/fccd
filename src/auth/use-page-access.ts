@@ -113,6 +113,14 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
   { prefix: "/orders/shopify-pending", pageKey: "orders.shopify_pending" },
   { prefix: "/orders/new", pageKey: "orders.new" },
   {
+    prefix: "/orders/settings/email-notifications",
+    pageKey: "orders.settings.email_notifications",
+  },
+  {
+    prefix: "/orders/settings/first-notification-recipients",
+    pageKey: "orders.settings.first_notification_recipients",
+  },
+  {
     prefix: "/orders/settings/statuses",
     pageKey: "orders.settings.statuses",
   },
@@ -127,6 +135,14 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
   {
     prefix: "/orders/settings/shipping-fees",
     pageKey: "orders.settings.shipping_fees",
+  },
+  {
+    prefix: "/orders/settings/add-on-block-dates",
+    pageKey: "orders.settings.addon_block_dates",
+  },
+  {
+    prefix: "/orders/settings/add-ons",
+    pageKey: "orders.settings.addons",
   },
   { prefix: "/orders/settings", pageKey: "orders.settings" },
   { prefix: "/quotes/pdf-pages", pageKey: "quotes.pdf_pages" },
@@ -198,6 +214,7 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
   { prefix: "/kitchen/suppliers", pageKey: "kitchen.suppliers" },
   { prefix: "/delivery/assign", pageKey: "delivery.assign" },
   { prefix: "/delivery/fleets", pageKey: "delivery.fleets" },
+  { prefix: "/delivery/surcharges", pageKey: "delivery" },
   { prefix: "/restaurant/daily-purchases", pageKey: "restaurant.daily_purchases" },
   { prefix: "/restaurant/daily-sales", pageKey: "restaurant.daily_sales" },
   { prefix: "/restaurant/monthly-expenses", pageKey: "restaurant.monthly_expenses" },
@@ -404,9 +421,13 @@ const PAGE_ACCESS_CHILD_KEYS: Record<string, string[]> = {
   ],
   finance: [REPORT_GROUP_PAGE_KEYS.dataInputProgress, "kitchen.cost_input"],
   "orders.settings": [
+    "orders.settings.email_notifications",
+    "orders.settings.first_notification_recipients",
     "orders.settings.statuses",
     "orders.settings.sale_partners",
     "orders.settings.shipping_fees",
+    "orders.settings.addons",
+    "orders.settings.addon_block_dates",
   ],
   "settings.order_lists": ["settings.order_lists.edit"],
   "settings.districts": ["settings.districts.edit"],

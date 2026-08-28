@@ -17,6 +17,25 @@ import {
   sortPaymentMethods,
   type PaymentMethod,
 } from "@/lib/payment-methods";
+import {
+  filterCustomerTags,
+  type CustomerTag,
+  type CustomerTagType,
+} from "@/lib/customer-tags";
+import {
+  filterCostOptions,
+  type CostOption,
+} from "@/lib/cost-options";
+import {
+  filterSupplierExpenseOptions,
+  type SupplierExpenseOption,
+} from "@/lib/supplier-expense-options";
+import {
+  filterGenericDictionaryTypes,
+  filterOrderQuoteOptions,
+  type OrderQuoteOption,
+  type OrderQuoteOptionKind,
+} from "@/lib/order-quote-option-settings";
 
 vi.mock("@/auth/AuthProvider", () => ({
   useAuth: () => ({
@@ -40,6 +59,79 @@ const tags: OrderTag[] = [
   { id: "tag-1", name: "家人食飯", isActive: true },
   { id: "tag-2", name: "Klook", isActive: true },
   { id: "tag-3", name: "CNY套餐", isActive: false },
+];
+
+const customerTagTypes: CustomerTagType[] = [
+  { id: "type-1", legacyId: "legacy-type-1", name: "醫院", isActive: true },
+  { id: "type-2", legacyId: "legacy-type-2", name: "渠道", isActive: true },
+];
+
+const customerTags: CustomerTag[] = [
+  {
+    id: "customer-tag-1",
+    typeId: "type-1",
+    typeName: "醫院",
+    name: "沙田威爾斯",
+    isActive: true,
+  },
+  {
+    id: "customer-tag-2",
+    typeId: "type-2",
+    typeName: "渠道",
+    name: "企業客戶",
+    isActive: false,
+  },
+];
+
+const costOptions: CostOption[] = [
+  {
+    id: "cost-1",
+    name: "Google",
+    isAdvertising: true,
+    isBrand: true,
+    isActive: true,
+    createdAt: "2024-01-01T00:00:00.000Z",
+  },
+  {
+    id: "cost-2",
+    name: "Delivery charge",
+    isAdvertising: false,
+    isBrand: false,
+    isActive: true,
+    createdAt: "2024-01-02T00:00:00.000Z",
+  },
+];
+
+const supplierExpenseOptions: SupplierExpenseOption[] = [
+  {
+    id: "expense-1",
+    name: "FCC 到會",
+    isActive: true,
+    createdAt: "2024-01-01T00:00:00.000Z",
+  },
+  {
+    id: "expense-2",
+    name: "清潔/SUNDRIES",
+    isActive: false,
+    createdAt: "2024-01-02T00:00:00.000Z",
+  },
+];
+
+const quoteOptions: OrderQuoteOption[] = [
+  {
+    id: "quote-option-1",
+    name: "Online Enquiry",
+    isActive: true,
+    sortOrder: 10,
+    createdAt: "2024-01-01T00:00:00.000Z",
+  },
+  {
+    id: "quote-option-2",
+    name: "Email",
+    isActive: false,
+    sortOrder: 20,
+    createdAt: "2024-01-02T00:00:00.000Z",
+  },
 ];
 
 const methods: ShippingMethod[] = [
@@ -300,6 +392,230 @@ describe("Order settings tags page", () => {
       await screen.findByText("此設定稍後開放"),
     ).toBeInTheDocument();
     expect(screen.queryByRole("navigation", { name: "訂單設定分類" })).not.toBeInTheDocument();
+  });
+});
+
+describe("Order settings customer tags page", () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("zh-HK");
+  });
+
+  it("lists customer tags by category in the shared table component", async () => {
+    renderSettings("customer-tags", {
+      loadCustomerTags: vi.fn().mockResolvedValue(structuredClone(customerTags)),
+      loadCustomerTagTypes: vi
+        .fn()
+        .mockResolvedValue(structuredClone(customerTagTypes)),
+    });
+
+    expect(
+      await screen.findByRole("heading", { name: "客戶標籤" }),
+    ).toBeInTheDocument();
+    const table = within(await screen.findByRole("table"));
+    expect(table.getByRole("columnheader", { name: "客戶標籤類別" })).toBeInTheDocument();
+    expect(table.getByRole("columnheader", { name: "客戶標籤" })).toBeInTheDocument();
+    expect(table.getByText("醫院")).toBeInTheDocument();
+    expect(table.getByText("沙田威爾斯")).toBeInTheDocument();
+    expect(
+      table.getByRole("switch", { name: "切換 沙田威爾斯 的啟用狀態" }),
+    ).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("searches, creates and edits customer tags", async () => {
+    const user = userEvent.setup();
+    const createCustomerTag = vi.fn().mockResolvedValue({
+      id: "customer-tag-3",
+      typeId: "type-1",
+      typeName: "醫院",
+      name: "仁安醫院",
+      isActive: true,
+    });
+    const updateCustomerTag = vi.fn().mockResolvedValue({
+      ...customerTags[0],
+      isActive: false,
+    });
+    renderSettings("customer-tags", {
+      loadCustomerTags: vi.fn().mockResolvedValue(structuredClone(customerTags)),
+      loadCustomerTagTypes: vi
+        .fn()
+        .mockResolvedValue(structuredClone(customerTagTypes)),
+      createCustomerTag,
+      updateCustomerTag,
+    });
+
+    await screen.findByText("沙田威爾斯");
+    expect(filterCustomerTags(customerTags, "醫院")).toHaveLength(1);
+    await user.type(screen.getByPlaceholderText("搜尋客戶標籤或類別"), "醫院");
+    await user.click(screen.getByRole("button", { name: "搜尋" }));
+    expect(screen.queryByText("企業客戶")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "新增" }));
+    const panel = await screen.findByRole("dialog", { name: "新增客戶標籤" });
+    await user.click(within(panel).getByRole("combobox", { name: "客戶標籤類別" }));
+    await user.click(screen.getByRole("option", { name: "醫院" }));
+    await user.type(within(panel).getByLabelText("客戶標籤"), "仁安醫院");
+    await user.click(within(panel).getByRole("button", { name: "保存" }));
+    await waitFor(() => {
+      expect(createCustomerTag).toHaveBeenCalledWith({
+        typeId: "type-1",
+        name: "仁安醫院",
+        isActive: true,
+      });
+    });
+
+    await user.click(
+      screen.getByRole("switch", { name: "切換 沙田威爾斯 的啟用狀態" }),
+    );
+    await waitFor(() => {
+      expect(updateCustomerTag).toHaveBeenCalledWith("customer-tag-1", {
+        isActive: false,
+      });
+    });
+  });
+});
+
+describe("Order settings cost options page", () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("zh-HK");
+  });
+
+  it("lists every cost flag in the shared table component", async () => {
+    renderSettings("cost-options", {
+      loadCostOptions: vi.fn().mockResolvedValue(structuredClone(costOptions)),
+    });
+
+    expect(
+      await screen.findByRole("heading", { name: "費用選項" }),
+    ).toBeInTheDocument();
+    const table = within(await screen.findByRole("table"));
+    expect(table.getByRole("columnheader", { name: "費用" })).toBeInTheDocument();
+    expect(table.getByRole("columnheader", { name: "廣告費" })).toBeInTheDocument();
+    expect(table.getByRole("columnheader", { name: "品牌選擇" })).toBeInTheDocument();
+    expect(table.getByText("Google")).toBeInTheDocument();
+    expect(
+      table.getByRole("switch", { name: "切換 Google 的廣告費設定" }),
+    ).toHaveAttribute("aria-checked", "true");
+    expect(
+      table.getByRole("switch", { name: "切換 Delivery charge 的品牌選擇設定" }),
+    ).toHaveAttribute("aria-checked", "false");
+  });
+
+  it("creates and modifies all corresponding cost options", async () => {
+    const user = userEvent.setup();
+    const createCostOption = vi.fn().mockResolvedValue({
+      id: "cost-3",
+      name: "Packing",
+      isAdvertising: false,
+      isBrand: false,
+      isActive: true,
+      createdAt: "2024-01-03T00:00:00.000Z",
+    });
+    const updateCostOption = vi.fn().mockResolvedValue({
+      ...costOptions[1],
+      isAdvertising: true,
+    });
+    renderSettings("cost-options", {
+      loadCostOptions: vi.fn().mockResolvedValue(structuredClone(costOptions)),
+      createCostOption,
+      updateCostOption,
+    });
+
+    await screen.findByText("Google");
+    expect(filterCostOptions(costOptions, "delivery")).toHaveLength(1);
+    await user.click(screen.getByRole("button", { name: "新增" }));
+    const panel = await screen.findByRole("dialog", { name: "新增費用選項" });
+    await user.type(within(panel).getByLabelText("費用名稱"), "Packing");
+    await user.click(within(panel).getByRole("button", { name: "保存" }));
+    await waitFor(() => {
+      expect(createCostOption).toHaveBeenCalledWith({
+        name: "Packing",
+        isAdvertising: false,
+        isBrand: false,
+        isActive: true,
+      });
+    });
+
+    await user.click(
+      screen.getByRole("switch", {
+        name: "切換 Delivery charge 的廣告費設定",
+      }),
+    );
+    await waitFor(() => {
+      expect(updateCostOption).toHaveBeenCalledWith("cost-2", {
+        isAdvertising: true,
+      });
+    });
+  });
+});
+
+describe("Order settings supplier expenses page", () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("zh-HK");
+  });
+
+  it("lists supplier expense options and their active state", async () => {
+    renderSettings("supplier-expenses", {
+      loadSupplierExpenseOptions: vi
+        .fn()
+        .mockResolvedValue(structuredClone(supplierExpenseOptions)),
+    });
+
+    expect(
+      await screen.findByRole("heading", { name: "供應商支出" }),
+    ).toBeInTheDocument();
+    const table = within(await screen.findByRole("table"));
+    expect(
+      table.getByRole("columnheader", { name: "供應商支出" }),
+    ).toBeInTheDocument();
+    expect(table.getByText("FCC 到會")).toBeInTheDocument();
+    expect(table.getByText("清潔/SUNDRIES")).toBeInTheDocument();
+    expect(
+      table.getByRole("switch", { name: "切換 清潔/SUNDRIES 的啟用狀態" }),
+    ).toHaveAttribute("aria-checked", "false");
+  });
+
+  it("creates, searches and modifies supplier expense options", async () => {
+    const user = userEvent.setup();
+    const createSupplierExpenseOption = vi.fn().mockResolvedValue({
+      id: "expense-3",
+      name: "Shop工場貨",
+      isActive: true,
+      createdAt: "2024-01-03T00:00:00.000Z",
+    });
+    const updateSupplierExpenseOption = vi.fn().mockResolvedValue({
+      ...supplierExpenseOptions[0],
+      isActive: false,
+    });
+    renderSettings("supplier-expenses", {
+      loadSupplierExpenseOptions: vi
+        .fn()
+        .mockResolvedValue(structuredClone(supplierExpenseOptions)),
+      createSupplierExpenseOption,
+      updateSupplierExpenseOption,
+    });
+
+    await screen.findByText("FCC 到會");
+    expect(filterSupplierExpenseOptions(supplierExpenseOptions, "sundries")).toHaveLength(1);
+
+    await user.click(screen.getByRole("button", { name: "新增" }));
+    const panel = await screen.findByRole("dialog", { name: "新增供應商支出" });
+    await user.type(within(panel).getByLabelText("供應商支出名稱"), "Shop工場貨");
+    await user.click(within(panel).getByRole("button", { name: "保存" }));
+    await waitFor(() => {
+      expect(createSupplierExpenseOption).toHaveBeenCalledWith({
+        name: "Shop工場貨",
+        isActive: true,
+      });
+    });
+
+    await user.click(
+      screen.getByRole("switch", { name: "切換 FCC 到會 的啟用狀態" }),
+    );
+    await waitFor(() => {
+      expect(updateSupplierExpenseOption).toHaveBeenCalledWith("expense-1", {
+        isActive: false,
+      });
+    });
   });
 });
 
@@ -582,6 +898,94 @@ describe("Order settings payment methods page", () => {
       });
     });
     expect(await screen.findByText("PayMe HK")).toBeInTheDocument();
+  });
+});
+
+describe("Order quote option settings pages", () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("en");
+  });
+
+  it.each<[OrderQuoteOptionKind, string]>([
+    ["quote-sales-sources", "Quote sources"],
+    ["quote-communication-channels", "Communication channels"],
+    ["festivals", "Festival options"],
+    ["quote-terms", "Quote - T&C"],
+    ["quote-payments", "Quote - payment methods"],
+  ])("renders %s as an editable table", async (kind, title) => {
+    const loadQuoteOptions = vi.fn().mockResolvedValue(structuredClone(quoteOptions));
+    renderSettings(kind, { loadQuoteOptions });
+
+    expect(await screen.findByRole("heading", { name: title })).toBeInTheDocument();
+    const table = within(screen.getByRole("table"));
+    expect(table.getByRole("columnheader", { name: title })).toBeInTheDocument();
+    expect(table.getByText("Online Enquiry")).toBeInTheDocument();
+    expect(table.getByRole("switch", { name: "Toggle active for Email" })).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
+    expect(loadQuoteOptions).toHaveBeenCalledWith(kind);
+  });
+
+  it("creates and edits long-form quote terms", async () => {
+    const user = userEvent.setup();
+    const loadQuoteOptions = vi.fn().mockResolvedValue(structuredClone(quoteOptions));
+    const createQuoteOption = vi.fn().mockResolvedValue({
+      id: "quote-option-3",
+      name: "Orders are non-refundable.",
+      isActive: true,
+      sortOrder: 30,
+      createdAt: null,
+    });
+    const updateQuoteOption = vi.fn().mockResolvedValue({
+      ...quoteOptions[0],
+      name: "Online form",
+    });
+    renderSettings("quote-terms", {
+      loadQuoteOptions,
+      createQuoteOption,
+      updateQuoteOption,
+    });
+
+    await screen.findByText("Online Enquiry");
+    await user.click(screen.getByRole("button", { name: "Add" }));
+    const createDialog = await screen.findByRole("dialog", { name: "Add Quote - T&C" });
+    const termInput = within(createDialog).getByLabelText("Term content");
+    expect(termInput.tagName).toBe("TEXTAREA");
+    await user.type(termInput, "Orders are non-refundable.");
+    await user.click(within(createDialog).getByRole("button", { name: "Save" }));
+    await waitFor(() => {
+      expect(createQuoteOption).toHaveBeenCalledWith("quote-terms", {
+        name: "Orders are non-refundable.",
+        isActive: true,
+      });
+    });
+
+    await user.click(screen.getByRole("button", { name: "Edit Online Enquiry" }));
+    const editDialog = await screen.findByRole("dialog", { name: "Edit Quote - T&C" });
+    const editInput = within(editDialog).getByLabelText("Term content");
+    await user.clear(editInput);
+    await user.type(editInput, "Online form");
+    await user.click(within(editDialog).getByRole("button", { name: "Save" }));
+    await waitFor(() => {
+      expect(updateQuoteOption).toHaveBeenCalledWith("quote-terms", "quote-option-1", {
+        name: "Online form",
+        isActive: true,
+      });
+    });
+  });
+
+  it("filters option rows and removes moved dictionaries from generic settings", () => {
+    expect(filterOrderQuoteOptions(quoteOptions, "email").map((row) => row.id)).toEqual([
+      "quote-option-2",
+    ]);
+    expect(
+      filterGenericDictionaryTypes([
+        { code: "quote_term_template" },
+        { code: "quote_payment_template" },
+        { code: "order_payment_method" },
+      ]),
+    ).toEqual([{ code: "order_payment_method" }]);
   });
 });
 

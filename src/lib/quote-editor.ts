@@ -164,7 +164,7 @@ export async function fetchQuoteEditorOptions(): Promise<QuoteEditorOptions> {
       supabase.from("channels").select("id,name").eq("is_active", true).is("archived_at", null).order("sort_order", { nullsFirst: false }).order("name"),
       supabase.from("quote_sales_sources").select("id,name").eq("is_active", true).order("name"),
       supabase.from("quote_communication_channels").select("id,name").eq("is_active", true).order("name"),
-      supabase.from("delivery_districts").select("id,name").is("archived_at", null).order("name"),
+      supabase.from("delivery_districts").select("id,name").is("archived_at", null).is("driver_team_id", null).order("name"),
       supabase.from("shipping_methods").select("id,name,display_name").eq("is_active", true).is("archived_at", null).order("display_order", { nullsFirst: false }).order("name"),
       supabase.from("sales_partners").select("id,name").eq("is_active", true).order("name"),
       supabase.from("order_tags").select("id,name").eq("is_active", true).is("archived_at", null).order("name"),

@@ -1,6 +1,8 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import {
+  buildInternalOrderNotificationContent,
   buildOrderNotificationContent,
+  type InternalOrderNotificationValues,
   type OrderNotificationEvent,
   type OrderNotificationValues,
 } from "../_shared/order-notification-content.ts";
@@ -14,6 +16,14 @@ type QueueRow = {
   email_sent_at: string | null;
   email_skipped_at: string | null;
   template: unknown;
+  order: unknown;
+};
+type InternalQueueRow = {
+  id: string;
+  attempts: number;
+  channel: "email" | "whatsapp";
+  recipient_name: string;
+  recipient_address: string;
   order: unknown;
 };
 type TemplateRow = {
@@ -33,6 +43,7 @@ type OrderRow = {
   delivery_time: string | null;
   shipping_address_snapshot: string | null;
   shipping_methods: unknown;
+  created_at: string;
 };
 
 const jsonHeaders = { "Content-Type": "application/json" };
@@ -82,6 +93,40 @@ function formatHongKongDate(value: string | null, subtractDays = 0) {
   return `${part("day")}/${part("month")}/${part("year")}`;
 }
 
+function formatHongKongDateTime(value: string | null) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.valueOf())) return "-";
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Hong_Kong",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
+}
+
+function internalValues(
+  order: OrderRow,
+  recipientName: string,
+): InternalOrderNotificationValues {
+  const baseUrl = Deno.env.get("ORDER_ADMIN_BASE_URL")?.trim().replace(/\/$/, "") || "";
+  return {
+    recipient_name: recipientName.trim() || "同事",
+    order_number: order.order_number?.trim() || "-",
+    customer_name: order.customer_name_snapshot?.trim()
+      || order.company_name_snapshot?.trim()
+      || "-",
+    created_at: formatHongKongDateTime(order.created_at),
+    delivery_date: formatHongKongDate(order.delivery_at),
+    delivery_time: order.delivery_time?.trim() || "-",
+    address: order.shipping_address_snapshot?.trim() || "-",
+    order_link: baseUrl ? `${baseUrl}/orders/${encodeURIComponent(order.order_number || "")}` : "",
+  };
+}
+
 function isPickup(order: OrderRow) {
   const method = relation<{ name?: unknown; display_name?: unknown; requires_address_check?: unknown }>(
     order.shipping_methods,
@@ -91,8 +136,6 @@ function isPickup(order: OrderRow) {
 }
 
 function valuesFor(order: OrderRow): OrderNotificationValues {
-  const deadlineSetting = Deno.env.get("WATI_ADD_ON_DEADLINE_DAYS_BEFORE")?.trim() || "";
-  const deadlineDays = deadlineSetting ? Number(deadlineSetting) : Number.NaN;
   const pickup = isPickup(order);
   return {
     name: order.customer_name_snapshot?.trim() || order.company_name_snapshot?.trim() || "Customer",
@@ -101,9 +144,7 @@ function valuesFor(order: OrderRow): OrderNotificationValues {
     time: order.delivery_time?.trim() || "-",
     address: order.shipping_address_snapshot?.trim() || "-",
     delivery_method: pickup ? "門市自取" : "送貨上門",
-    ao_deadline: Number.isFinite(deadlineDays) && deadlineDays >= 0
-      ? formatHongKongDate(order.delivery_at, deadlineDays)
-      : "",
+    ao_deadline: formatHongKongDate(order.delivery_at, 1),
     ao_link: Deno.env.get("WATI_ADD_ON_LINK")?.trim() || "",
     shop_name: Deno.env.get("WATI_SHOP_NAME")?.trim() || "Food Channels Catering",
   };
@@ -164,6 +205,9 @@ async function sendWati(phone: string, template: TemplateRow, parameters: Array<
 }
 
 async function sendEmail(to: string, subject: string, html: string) {
+  const from = Deno.env.get("ORDER_NOTIFICATION_EMAIL_FROM")?.trim()
+    || Deno.env.get("DAILY_SALES_EMAIL_FROM")?.trim();
+  if (!from) throw new Error("missing_order_notification_email_from");
   const providerResponse = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
@@ -171,7 +215,7 @@ async function sendEmail(to: string, subject: string, html: string) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: requiredEnv("ORDER_NOTIFICATION_EMAIL_FROM"),
+      from,
       to: [to],
       subject,
       html,
@@ -201,24 +245,34 @@ Deno.serve(async (request) => {
     const { error: reminderError } = await admin.rpc("enqueue_due_wati_order_reminders", {
       p_now: new Date().toISOString(),
     });
-    if (reminderError) throw new Error(`reminder_enqueue_failed:${reminderError.message}`);
+    const customerPipelineAvailable = !reminderError
+      || reminderError.code !== "PGRST202";
+    if (reminderError && customerPipelineAvailable) {
+      throw new Error(`reminder_enqueue_failed:${reminderError.message}`);
+    }
 
-    const { data: claimed, error: claimError } = await admin.rpc("claim_wati_order_notifications", {
-      p_limit: limit,
-    });
-    if (claimError) throw new Error(`notification_claim_failed:${claimError.message}`);
-    const claimedRows = (claimed || []) as Array<{ id: string }>;
-    if (!claimedRows.length) return response({ processed: 0, sent: 0, failed: 0 });
-
-    const { data: jobs, error: jobsError } = await admin
-      .from("wati_order_notification_outbox")
-      .select("id,attempts,wati_sent_at,wati_skipped_at,email_sent_at,email_skipped_at,template:wati_order_notification_templates(event_key,template_name,broadcast_name,parameters),order:orders(order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,delivery_at,delivery_time,shipping_address_snapshot,shipping_methods(name,display_name,requires_address_check))")
-      .in("id", claimedRows.map((row) => row.id));
-    if (jobsError) throw new Error(`notification_load_failed:${jobsError.message}`);
+    let claimedRows: Array<{ id: string }> = [];
+    if (customerPipelineAvailable) {
+      const { data: claimed, error: claimError } = await admin.rpc(
+        "claim_wati_order_notifications",
+        { p_limit: limit },
+      );
+      if (claimError) throw new Error(`notification_claim_failed:${claimError.message}`);
+      claimedRows = (claimed || []) as Array<{ id: string }>;
+    }
+    let jobs: QueueRow[] = [];
+    if (claimedRows.length) {
+      const { data, error: jobsError } = await admin
+        .from("wati_order_notification_outbox")
+        .select("id,attempts,wati_sent_at,wati_skipped_at,email_sent_at,email_skipped_at,template:wati_order_notification_templates(event_key,template_name,broadcast_name,parameters),order:orders(order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,delivery_at,delivery_time,shipping_address_snapshot,created_at,shipping_methods(name,display_name,requires_address_check))")
+        .in("id", claimedRows.map((row) => row.id));
+      if (jobsError) throw new Error(`notification_load_failed:${jobsError.message}`);
+      jobs = (data || []) as QueueRow[];
+    }
 
     let sent = 0;
     let failed = 0;
-    for (const job of (jobs || []) as QueueRow[]) {
+    for (const job of jobs) {
       const template = relation<TemplateRow>(job.template);
       const order = relation<OrderRow>(job.order);
       if (!template || !order) {
@@ -314,7 +368,110 @@ Deno.serve(async (request) => {
       if (done) sent += 1; else failed += 1;
     }
 
-    return response({ processed: (jobs || []).length, sent, failed });
+    const { data: internalClaimed, error: internalClaimError } = await admin.rpc(
+      "claim_order_internal_notifications",
+      { p_limit: limit },
+    );
+    if (internalClaimError) {
+      throw new Error(`internal_notification_claim_failed:${internalClaimError.message}`);
+    }
+    const internalIds = (internalClaimed || []) as Array<{ id: string }>;
+    let internalJobs: InternalQueueRow[] = [];
+    if (internalIds.length) {
+      const { data, error: internalLoadError } = await admin
+        .from("order_internal_notification_outbox")
+        .select("id,attempts,channel,recipient_name,recipient_address,order:orders(order_number,customer_name_snapshot,company_name_snapshot,delivery_at,delivery_time,shipping_address_snapshot,created_at)")
+        .in("id", internalIds.map((row) => row.id));
+      if (internalLoadError) {
+        throw new Error(`internal_notification_load_failed:${internalLoadError.message}`);
+      }
+      internalJobs = (data || []) as InternalQueueRow[];
+    }
+
+    for (const job of internalJobs) {
+      const order = relation<OrderRow>(job.order);
+      if (!order) {
+        await admin.from("order_internal_notification_outbox").update({
+          status: "skipped",
+          last_error: "notification_context_missing",
+          locked_at: null,
+          updated_at: new Date().toISOString(),
+        }).eq("id", job.id);
+        continue;
+      }
+
+      try {
+        const values = internalValues(order, job.recipient_name);
+        let providerPayload: unknown;
+        if (job.channel === "email") {
+          const notification = buildInternalOrderNotificationContent(values);
+          providerPayload = await sendEmail(
+            job.recipient_address.trim(),
+            notification.subject,
+            notification.html,
+          );
+        } else {
+          const phone = normalizeWhatsAppNumber(job.recipient_address);
+          if (!phone) throw new Error("recipient_phone_invalid");
+          const templateName = Deno.env.get("WATI_INTERNAL_ORDER_TEMPLATE_NAME")?.trim();
+          const broadcastName = Deno.env.get("WATI_INTERNAL_ORDER_BROADCAST_NAME")?.trim();
+          if (!templateName || !broadcastName) {
+            await admin.from("order_internal_notification_outbox").update({
+              status: "pending",
+              attempts: Math.max(0, job.attempts - 1),
+              scheduled_at: new Date(Date.now() + 24 * 60 * 60_000).toISOString(),
+              last_error: "internal_wati_template_not_configured",
+              locked_at: null,
+              updated_at: new Date().toISOString(),
+            }).eq("id", job.id);
+            continue;
+          }
+          const template: TemplateRow = {
+            event_key: "delivery_order_confirmed",
+            template_name: templateName,
+            broadcast_name: broadcastName,
+            parameters: [],
+          };
+          const wati = await sendWati(phone, template, [
+            { name: "recipient_name", value: values.recipient_name },
+            { name: "order_number", value: values.order_number },
+            { name: "customer_name", value: values.customer_name },
+            { name: "created_at", value: values.created_at },
+            { name: "order_link", value: values.order_link },
+          ]);
+          providerPayload = wati.payload;
+        }
+
+        await admin.from("order_internal_notification_outbox").update({
+          status: "sent",
+          sent_at: new Date().toISOString(),
+          provider_response: providerPayload,
+          last_error: null,
+          locked_at: null,
+          updated_at: new Date().toISOString(),
+        }).eq("id", job.id);
+        sent += 1;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "internal_notification_send_failed";
+        const retryMinutes = Math.min(60, 2 ** Math.max(0, job.attempts - 1));
+        await admin.from("order_internal_notification_outbox").update({
+          status: "failed",
+          last_error: message,
+          scheduled_at: new Date(Date.now() + retryMinutes * 60_000).toISOString(),
+          locked_at: null,
+          updated_at: new Date().toISOString(),
+        }).eq("id", job.id);
+        failed += 1;
+      }
+    }
+
+    return response({
+      processed: jobs.length + internalJobs.length,
+      sent,
+      failed,
+      customerProcessed: jobs.length,
+      internalProcessed: internalJobs.length,
+    });
   } catch (error) {
     return response({
       error: error instanceof Error ? error.message : "wati_order_notification_failed",

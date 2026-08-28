@@ -28,8 +28,13 @@ const emptyForm = {
   contactNumber: "",
   bankAccount: "",
   isActive: true,
+  driverPanelEnabled: true,
   loginCode: "",
 };
+
+function fleetFeeKey(row: Pick<DeliveryFleetFee, "fleetId" | "districtId">) {
+  return `${row.fleetId}:${row.districtId}`;
+}
 
 const FEE_PAGE_SIZE = 15;
 
@@ -122,6 +127,7 @@ export function DeliveryFleetsPage() {
       contactNumber: fleet.contactNumber ?? "",
       bankAccount: fleet.bankAccount ?? "",
       isActive: fleet.isActive,
+      driverPanelEnabled: fleet.driverPanelEnabled,
       loginCode: "",
     });
     setNameError(false);
@@ -143,7 +149,7 @@ export function DeliveryFleetsPage() {
     try {
       const next = await fetchDeliveryFleetFees(null);
       setFeeRows(next);
-      setFeeDrafts(Object.fromEntries(next.map((row) => [row.districtId, String(row.fee)])));
+      setFeeDrafts(Object.fromEntries(next.map((row) => [fleetFeeKey(row), String(row.fee)])));
     } catch {
       setFeesError(true);
     } finally {
@@ -152,26 +158,28 @@ export function DeliveryFleetsPage() {
   };
 
   const saveFee = async (row: DeliveryFleetFee) => {
-    const fee = Number(feeDrafts[row.districtId]);
+    const rowKey = fleetFeeKey(row);
+    const fee = Number(feeDrafts[rowKey]);
     if (!Number.isFinite(fee) || fee < 0) {
       setFeesError(true);
-      setFeeDrafts((current) => ({ ...current, [row.districtId]: String(row.fee) }));
+      setFeeDrafts((current) => ({ ...current, [rowKey]: String(row.fee) }));
       return;
     }
-    if (fee === row.fee || savingFeeIds.has(row.districtId)) return;
-    setSavingFeeIds((current) => new Set(current).add(row.districtId));
+    if (fee === row.fee || savingFeeIds.has(rowKey)) return;
+    setSavingFeeIds((current) => new Set(current).add(rowKey));
     setFeesError(false);
     try {
-      const saved = await updateDeliveryFleetFee(row.districtId, fee);
-      setFeeRows((current) => current.map((item) => item.districtId === saved.districtId ? saved : item));
-      setFeeDrafts((current) => ({ ...current, [saved.districtId]: String(saved.fee) }));
+      const saved = await updateDeliveryFleetFee(row.fleetId, row.districtId, fee);
+      const savedKey = fleetFeeKey(saved);
+      setFeeRows((current) => current.map((item) => fleetFeeKey(item) === savedKey ? saved : item));
+      setFeeDrafts((current) => ({ ...current, [savedKey]: String(saved.fee) }));
     } catch {
       setFeesError(true);
-      setFeeDrafts((current) => ({ ...current, [row.districtId]: String(row.fee) }));
+      setFeeDrafts((current) => ({ ...current, [rowKey]: String(row.fee) }));
     } finally {
       setSavingFeeIds((current) => {
         const next = new Set(current);
-        next.delete(row.districtId);
+        next.delete(rowKey);
         return next;
       });
     }
@@ -225,6 +233,31 @@ export function DeliveryFleetsPage() {
         contactNumber: fleet.contactNumber ?? "",
         bankAccount: fleet.bankAccount ?? "",
         isActive: checked,
+        driverPanelEnabled: fleet.driverPanelEnabled,
+      });
+      setRows((current) =>
+        current.map((row) => (row.id === saved.id ? saved : row)),
+      );
+    } catch {
+      setSaveError(true);
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const toggleDriverPanel = async (fleet: DeliveryFleet, checked: boolean) => {
+    if (updatingId) return;
+    setUpdatingId(fleet.id);
+    setSaveError(false);
+    try {
+      const saved = await updateDeliveryFleet(fleet.id, {
+        name: fleet.name,
+        shortName: fleet.shortName ?? "",
+        contactPerson: fleet.contactPerson ?? "",
+        contactNumber: fleet.contactNumber ?? "",
+        bankAccount: fleet.bankAccount ?? "",
+        isActive: fleet.isActive,
+        driverPanelEnabled: checked,
       });
       setRows((current) =>
         current.map((row) => (row.id === saved.id ? saved : row)),
@@ -294,7 +327,7 @@ export function DeliveryFleetsPage() {
             loading={loading}
             loadingLabel={t("deliveryFleets.loading")}
             skeletonRows={8}
-            skeletonColumns={8}
+            skeletonColumns={9}
             onRefresh={() => setReloadKey((key) => key + 1)}
             header={<tr>
               <th>{t("deliveryFleets.columns.name")}</th>
@@ -303,6 +336,7 @@ export function DeliveryFleetsPage() {
               <th>{t("deliveryFleets.columns.phone")}</th>
               <th>{t("deliveryFleets.columns.bankAccount")}</th>
               <th>{t("deliveryFleets.columns.loginCode")}</th>
+              <th>{t("deliveryFleets.columns.driverPanel")}</th>
               <th>{t("deliveryFleets.columns.status")}</th>
               <th>{t("deliveryFleets.columns.actions")}</th>
             </tr>}
@@ -314,6 +348,17 @@ export function DeliveryFleetsPage() {
               <td>{fleet.contactNumber || "—"}</td>
               <td>{fleet.bankAccount || "—"}</td>
               <td><span className={fleet.hasLoginCode ? "status-badge tone-green" : "status-badge tone-slate"}>{t(fleet.hasLoginCode ? "deliveryFleets.loginCodeSet" : "deliveryFleets.loginCodeMissing")}</span></td>
+              <td>
+                {canManage ? <div className="delivery-fleet-status">
+                  <Switch
+                    checked={fleet.driverPanelEnabled}
+                    disabled={updatingId === fleet.id}
+                    onCheckedChange={(checked) => void toggleDriverPanel(fleet, checked)}
+                    aria-label={t("deliveryFleets.toggleDriverPanel", { name: fleet.name })}
+                  />
+                  <span>{t(fleet.driverPanelEnabled ? "deliveryFleets.driverPanelEnabled" : "deliveryFleets.driverPanelDisabled")}</span>
+                </div> : t(fleet.driverPanelEnabled ? "deliveryFleets.driverPanelEnabled" : "deliveryFleets.driverPanelDisabled")}
+              </td>
               <td>
                 {canManage ? <div className="delivery-fleet-status">
                   <Switch
@@ -368,6 +413,7 @@ export function DeliveryFleetsPage() {
             <input id="delivery-fleet-login-code" type="password" autoComplete="new-password" value={form.loginCode} onChange={(event) => { setForm((current) => ({ ...current, loginCode: event.target.value })); setSaveError(false); }} required={!editing} />
             <small>{t(editing ? "deliveryFleets.loginCodeEditHint" : "deliveryFleets.loginCodeCreateHint")}</small>
           </label>
+          <label className="ingredients-field"><span>{t("deliveryFleets.fields.driverPanel")}</span><div className="delivery-fleet-status"><Switch checked={form.driverPanelEnabled} onCheckedChange={(checked) => setForm((current) => ({ ...current, driverPanelEnabled: checked }))} /><span>{t(form.driverPanelEnabled ? "deliveryFleets.driverPanelEnabled" : "deliveryFleets.driverPanelDisabled")}</span></div><small>{t("deliveryFleets.driverPanelHint")}</small></label>
           <label className="ingredients-field"><span>{t("deliveryFleets.fields.status")}</span><div className="delivery-fleet-status"><Switch checked={form.isActive} onCheckedChange={(checked) => setForm((current) => ({ ...current, isActive: checked }))} /><span>{t(form.isActive ? "deliveryFleets.active" : "deliveryFleets.inactive")}</span></div></label>
           {saveError ? <p className="order-statuses-form-error">{t("deliveryFleets.saveError")}</p> : null}
         </form>
@@ -423,11 +469,13 @@ export function DeliveryFleetsPage() {
               skeletonColumns={3}
               header={<tr><th>{t("deliveryFleets.feeManagement.columns.fleet")}</th><th>{t("deliveryFleets.feeManagement.columns.district")}</th><th>{t("deliveryFleets.feeManagement.columns.fee")}</th></tr>}
             >
-              {visibleFeeRows.map((row) => <tr key={row.districtId}>
+              {visibleFeeRows.map((row) => {
+                const rowKey = fleetFeeKey(row);
+                return <tr key={rowKey}>
                 <td><strong>{row.fleetName}</strong></td>
                 <td>{row.districtName}</td>
-                <td>{canManage ? <label className="delivery-fleet-fee-input"><span aria-hidden="true">HK$</span><input aria-label={t("deliveryFleets.feeManagement.feeLabel", { district: row.districtName })} type="number" min="0" step="0.01" value={feeDrafts[row.districtId] ?? ""} disabled={savingFeeIds.has(row.districtId)} onChange={(event) => setFeeDrafts((current) => ({ ...current, [row.districtId]: event.target.value }))} onBlur={() => void saveFee(row)} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }} /></label> : `HK$${row.fee.toLocaleString("zh-HK", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</td>
-              </tr>)}
+                <td>{canManage ? <label className="delivery-fleet-fee-input"><span aria-hidden="true">HK$</span><input aria-label={t("deliveryFleets.feeManagement.feeLabel", { district: row.districtName })} type="number" min="0" step="0.01" value={feeDrafts[rowKey] ?? ""} disabled={savingFeeIds.has(rowKey)} onChange={(event) => setFeeDrafts((current) => ({ ...current, [rowKey]: event.target.value }))} onBlur={() => void saveFee(row)} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }} /></label> : `HK$${row.fee.toLocaleString("zh-HK", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</td>
+              </tr>})}
             </ListTable>
           )}
           {!feesLoading && !feesError && filteredFeeRows.length > 0 ? <footer className="orders-pagination">

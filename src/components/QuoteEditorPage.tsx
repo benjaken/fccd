@@ -33,6 +33,7 @@ import { FactoryDishLabelPreview } from "@/components/FactoryDishLabelPreview";
 import { Modal } from "@/components/ui/modal";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { SearchSelect } from "@/components/ui/search-select";
+import { createDeliveryDistrictOption } from "@/lib/delivery-districts";
 import {
   fetchPackageDetail,
   type PackageChoiceSet,
@@ -216,6 +217,7 @@ type Props = {
   documentType?: QuoteEditorDocumentType;
   canEdit?: boolean;
   loadOptions?: typeof fetchQuoteEditorOptions;
+  createDistrict?: typeof createDeliveryDistrictOption;
   saveQuote?: typeof createQuote;
   loadSummary?: typeof fetchQuoteEditorSummary;
   loadLines?: typeof fetchQuoteLines;
@@ -246,6 +248,7 @@ export function QuoteEditorPage({
   documentType = "quote",
   canEdit = false,
   loadOptions = fetchQuoteEditorOptions,
+  createDistrict = createDeliveryDistrictOption,
   saveQuote = createQuote,
   loadSummary = fetchQuoteEditorSummary,
   loadLines = fetchQuoteLines,
@@ -304,6 +307,7 @@ export function QuoteEditorPage({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [creatingDistrict, setCreatingDistrict] = useState(false);
   const [catalogSearch, setCatalogSearch] = useState("");
   const [catalogResults, setCatalogResults] = useState<QuoteCatalogItem[]>([]);
   const [selectedItem, setSelectedItem] = useState<QuoteCatalogItem | null>(null);
@@ -600,6 +604,28 @@ export function QuoteEditorPage({
 
   const patchDraft = (partial: Partial<QuoteDraft>) =>
     setDraft((current) => ({ ...current, ...partial }));
+
+  const addDistrict = async (name: string) => {
+    if (creatingDistrict) return;
+    setCreatingDistrict(true);
+    setFieldErrors((current) => ({ ...current, districtId: "" }));
+    try {
+      const district = await createDistrict(name);
+      setOptions((current) => ({
+        ...current,
+        districts: [...current.districts.filter((item) => item.id !== district.id), district]
+          .sort((left, right) => left.name.localeCompare(right.name, "zh-HK")),
+      }));
+      patchDraft({ districtId: district.id, districtName: "" });
+    } catch {
+      setFieldErrors((current) => ({
+        ...current,
+        districtId: t("quoteEditor.validation.districtCreateFailed"),
+      }));
+    } finally {
+      setCreatingDistrict(false);
+    }
+  };
 
   const changeShippingMethod = (shippingMethodId: string) => {
     const method = options.shippingMethods.find((item) => item.id === shippingMethodId);
@@ -1854,7 +1880,7 @@ export function QuoteEditorPage({
             {!isOrder && draft.quoteAutoClosedAt && draft.quoteStatus !== "Case Closed" ? <label><span>{t("quoteEditor.fields.quoteReopenReason")}</span><textarea rows={2} value={draft.quoteReopenReason ?? ""} onChange={(event) => patchDraft({ quoteReopenReason: event.target.value })} /></label> : null}
             {!isOrder ? <label><span>{t("quoteEditor.fields.quoteSalesSource")}</span><FilterableSelect aria-label={t("quoteEditor.fields.quoteSalesSource")} value={draft.quoteSalesSourceId} onChange={(event) => patchDraft({ quoteSalesSourceId: event.target.value })}><option value="">{t("common.notSet")}</option>{options.quoteSalesSources.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</FilterableSelect></label> : null}
             {!isOrder ? <label><span>{t("quoteEditor.fields.quoteCommunicationChannel")}</span><FilterableSelect aria-label={t("quoteEditor.fields.quoteCommunicationChannel")} value={draft.quoteCommunicationChannelId} onChange={(event) => patchDraft({ quoteCommunicationChannelId: event.target.value })}><option value="">{t("common.notSet")}</option>{options.quoteCommunicationChannels.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</FilterableSelect></label> : null}
-            <label><span>{t("quoteEditor.fields.district")} *</span><SearchSelect id="quote-editor-district" label={t("quoteEditor.fields.district")} value={automaticDistrictName ? `auto:${automaticDistrictName}` : draft.districtId} options={automaticDistrictName ? [{ id: `auto:${automaticDistrictName}`, name: automaticDistrictName }] : districts} placeholder={t("quoteEditor.placeholders.districtPlaceholder")} disabled={Boolean(automaticDistrictName)} required={!automaticDistrictName} invalid={Boolean(fieldErrors.districtId)} onChange={(option) => patchDraft({ districtId: option.id, districtName: "" })} />{fieldErrors.districtId && <em>{fieldErrors.districtId}</em>}</label>
+            <label><span>{t("quoteEditor.fields.district")} *</span><SearchSelect id="quote-editor-district" label={t("quoteEditor.fields.district")} value={automaticDistrictName ? `auto:${automaticDistrictName}` : draft.districtId} options={automaticDistrictName ? [{ id: `auto:${automaticDistrictName}`, name: automaticDistrictName }] : districts} placeholder={t("quoteEditor.placeholders.districtPlaceholder")} disabled={Boolean(automaticDistrictName) || creatingDistrict} required={!automaticDistrictName} invalid={Boolean(fieldErrors.districtId)} onCreate={automaticDistrictName ? undefined : (name) => void addDistrict(name)} onChange={(option) => patchDraft({ districtId: option.id, districtName: "" })} />{fieldErrors.districtId && <em>{fieldErrors.districtId}</em>}</label>
             <label><span>{t("quoteEditor.fields.shippingMethod")} *</span><FilterableSelect required aria-label={t("quoteEditor.fields.shippingMethod")} value={draft.shippingMethodId} onChange={(event) => changeShippingMethod(event.target.value)} aria-invalid={Boolean(fieldErrors.shippingMethodId)}><option value="">{t("common.notSet")}</option>{options.shippingMethods.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</FilterableSelect>{fieldErrors.shippingMethodId && <em>{fieldErrors.shippingMethodId}</em>}</label>
             <label><span>{t("quoteEditor.fields.deliveryDate")} *</span><input required aria-label={t("quoteEditor.fields.deliveryDate")} type="date" value={draft.deliveryDate} onChange={(event) => patchDraft({ deliveryDate: event.target.value })} aria-invalid={Boolean(fieldErrors.deliveryDate)} />{fieldErrors.deliveryDate && <em>{fieldErrors.deliveryDate}</em>}</label>
             <label><span>{t("quoteEditor.fields.deliveryTime")}</span><div className="quote-time-control"><FilterableSelect aria-label={t("quoteEditor.fields.deliveryTime")} value={deliveryTimeMode === "custom" ? "custom" : draft.deliveryTime} onChange={(event) => { const value = event.target.value; setDeliveryTimeMode(value === "custom" ? "custom" : ""); patchDraft({ deliveryTime: value === "custom" ? "" : value }); }}><option value="">{t("quoteEditor.placeholders.deliveryTimeSelectPlaceholder")}</option><option value="custom">{t("quoteEditor.custom")}</option>{deliveryTimeOptions.map((time) => <option key={time} value={time}>{time}</option>)}</FilterableSelect>{deliveryTimeMode === "custom" && <input value={draft.deliveryTime} onChange={(event) => patchDraft({ deliveryTime: event.target.value })} placeholder={t("quoteEditor.placeholders.customDeliveryTimePlaceholder")} />}</div></label>

@@ -37,7 +37,7 @@ function productLabel(item: PackageMember, fallback: string) {
   return item.productChineseName || item.productName || fallback;
 }
 
-function PackageProductSearch({
+export function PackageProductSearch({
   excludeIds,
   searchProducts,
   onSelect,

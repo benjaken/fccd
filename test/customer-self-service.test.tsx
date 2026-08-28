@@ -108,6 +108,13 @@ describe("CustomerSelfServicePage", () => {
       <CustomerSelfServicePage
         restore={vi.fn().mockResolvedValue(session)}
         loadDetail={loadDetail}
+        loadAddonOptions={vi.fn().mockResolvedValue({
+          canAddOn: true,
+          reason: null,
+          cutoffAt: "2026-08-29T15:00:00+08:00",
+          hasAddOn: false,
+          items: [{ id: "setting-1", productId: "product-1", sku: "ADD-1", name: "唐揚炸雞塊（12件）", price: 128, minQuantity: 1, maxQuantity: 10 }],
+        })}
         createPdf={createPdf}
       />,
     );
@@ -115,6 +122,7 @@ describe("CustomerSelfServicePage", () => {
     fireEvent.click(await screen.findByRole("button", { name: /B-1247/ }));
     expect(await screen.findByText("（雙格）椒鹽豬扒飯")).toBeInTheDocument();
     expect(loadDetail).toHaveBeenCalledWith("customer-session", "order-1");
+    expect(await screen.findByRole("button", { name: "加單" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "預覽並下載收據" }));
     expect(await screen.findByRole("dialog", { name: "收據 B-1247" })).toBeInTheDocument();

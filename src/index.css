@@ -5840,6 +5840,11 @@ button.product-tag[aria-pressed="true"] {
   gap: 10px;
 }
 
+.catalog-create-form {
+  display: grid;
+  gap: 16px;
+}
+
 .mobile-list-skeleton-card {
   display: grid;
   gap: 12px;
@@ -6706,6 +6711,17 @@ button.product-tag[aria-pressed="true"] {
   vertical-align: middle;
 }
 
+.package-options-table td > input {
+  width: 100%;
+  min-width: 5rem;
+}
+
+.package-create-product-sku {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--muted-foreground);
+}
+
 .package-category-cell {
   font-weight: 700;
 }
@@ -6714,14 +6730,28 @@ button.product-tag[aria-pressed="true"] {
   color: var(--muted-foreground);
 }
 
+.package-options-table th:last-child,
+.package-options-table td.package-set-actions {
+  width: 11rem;
+  min-width: 11rem;
+}
+
 .package-set-actions .table-row-actions {
-  flex-wrap: wrap;
+  display: flex;
+  flex-wrap: nowrap;
   justify-content: flex-start;
 }
 
 .package-product-search {
   position: relative;
   min-width: 0;
+}
+
+/* Keep package product results in the table flow so the scroll container
+   expands instead of clipping the dropdown below the search row. */
+.package-product-search > .product-ingredient-results {
+  position: static;
+  margin-top: 4px;
 }
 
 .product-inline-add input.is-invalid {
@@ -15302,6 +15332,19 @@ a.masoft-order-tag:focus-visible {
   text-align: center;
 }
 
+.order-notification-user-cell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-width: 12rem;
+}
+
+.order-settings-long-text {
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
 .delivery-fleet-status {
   display: inline-flex;
   align-items: center;
@@ -15761,6 +15804,48 @@ a.masoft-order-tag:focus-visible {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
+}
+
+.addon-settings-toolbar {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.7fr) minmax(180px, 1fr) minmax(260px, 1.5fr) auto;
+  align-items: end;
+  gap: 14px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in oklch, var(--muted) 45%, transparent);
+}
+
+.addon-settings-toolbar label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  color: var(--muted-foreground);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.addon-settings-toolbar input,
+.addon-settings-toolbar select {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--background);
+  padding: 8px 10px;
+  color: var(--foreground);
+  font: inherit;
+}
+
+.addon-block-toolbar {
+  grid-template-columns: minmax(220px, 0.8fr) minmax(260px, 1.5fr) auto;
+}
+
+@media (max-width: 900px) {
+  .addon-settings-toolbar,
+  .addon-block-toolbar {
+    grid-template-columns: 1fr;
+  }
 }
 
 .suppliers-detail-field {

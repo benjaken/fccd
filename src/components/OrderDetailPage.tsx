@@ -405,6 +405,7 @@ export function OrderDetailPage({
                 <tr key={line.id}>
                   <td>
                     <strong>{line.productName || line.content || emptyValue}</strong>
+                    {line.isAddon ? <span className="status-badge amber">加單項目</span> : null}
                     {line.remarks && (
                       <small className="settings-cell-detail">{line.remarks}</small>
                     )}
