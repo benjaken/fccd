@@ -1,6 +1,10 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { buildQuoteConfirmationContent } from "../_shared/order-notification-content.ts";
 import { EMAIL_FROM } from "../_shared/email-sender.ts";
+import {
+  isNotificationRecipientPairAllowed,
+  notificationRecipientAllowlist,
+} from "../_shared/notification-recipient-allowlist.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -66,6 +70,17 @@ Deno.serve(async (request) => {
     const phone = digits(quote.contact_number_a_snapshot);
     if (!phone || !quote.email_snapshot) {
       return response({ error: "quote_contact_missing", watiSent: false, emailSent: false }, 400);
+    }
+    if (!isNotificationRecipientPairAllowed(
+      notificationRecipientAllowlist(),
+      phone,
+      quote.email_snapshot,
+    )) {
+      return response({
+        error: "notification_recipient_not_allowlisted",
+        watiSent: false,
+        emailSent: false,
+      }, 403);
     }
 
     const customerName = quote.customer_name_snapshot || quote.company_name_snapshot || "Customer";

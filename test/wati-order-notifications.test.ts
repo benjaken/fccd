@@ -9,6 +9,13 @@ import {
   supportsOrderEmailNotification,
   type OrderNotificationValues,
 } from "../supabase/functions/_shared/order-notification-content.ts";
+import {
+  isNotificationEmailAllowed,
+  isNotificationPhoneAllowed,
+  isNotificationRecipientPairAllowed,
+  normalizeNotificationPhone,
+  parseNotificationRecipientAllowlist,
+} from "../supabase/functions/_shared/notification-recipient-allowlist.ts";
 
 const values: OrderNotificationValues = {
   name: "陳先生",
@@ -23,6 +30,30 @@ const values: OrderNotificationValues = {
 };
 
 describe("WATI order notifications", () => {
+  it("fails closed and requires the configured phone and email to match", () => {
+    const allowlist = parseNotificationRecipientAllowlist(
+      "+852 9123 4567, +86 138 0013 8000",
+      "ops@example.com",
+    );
+
+    expect(normalizeNotificationPhone("00 86 138 0013 8000"))
+      .toBe("8613800138000");
+    expect(isNotificationPhoneAllowed(allowlist, "+86 13800138000")).toBe(true);
+    expect(isNotificationEmailAllowed(allowlist, " OPS@example.com ")).toBe(true);
+    expect(isNotificationRecipientPairAllowed(
+      allowlist,
+      "+86 13800138000",
+      "ops@example.com",
+    )).toBe(true);
+    expect(isNotificationRecipientPairAllowed(
+      allowlist,
+      "+86 13800138000",
+      "customer@example.com",
+    )).toBe(false);
+    expect(() => parseNotificationRecipientAllowlist("", "ops@example.com"))
+      .toThrow("notification_recipient_allowlist_missing");
+  });
+
   it("renders the factory-unsent internal reminder with the order link", () => {
     const notification = buildFactoryUnsentReminderContent({
       recipient_name: "Bis",
@@ -174,6 +205,8 @@ describe("WATI order notifications", () => {
     expect(implementation).toContain("await Promise.allSettled([");
     expect(implementation).toContain("watiSent: true, emailSent: true");
     expect(implementation).toContain("from: EMAIL_FROM");
+    expect(implementation).toContain("isNotificationRecipientPairAllowed");
+    expect(implementation).toContain("notification_recipient_not_allowlisted");
   });
 
   it("starts quote WATI and Resend confirmation sends together", () => {
@@ -185,6 +218,8 @@ describe("WATI order notifications", () => {
     expect(implementation).toContain("await Promise.allSettled([");
     expect(implementation).toContain("wati_and_email_send_failed");
     expect(implementation).toContain("watiSent: true, emailSent: true");
+    expect(implementation).toContain("isNotificationRecipientPairAllowed");
+    expect(implementation).toContain("notification_recipient_not_allowlisted");
   });
 
   it("registers existing Utility events without activating unverified mappings", () => {
@@ -269,6 +304,8 @@ describe("WATI order notifications", () => {
     expect(worker).toContain("buildFactoryUnsentReminderContent(values)");
     expect(worker).toContain("factoryUnsentReminderAt(order)");
     expect(worker).toContain("from: EMAIL_FROM");
+    expect(worker).toContain("isNotificationRecipientPairAllowed");
+    expect(worker).toContain("notification_recipient_not_allowlisted");
 
     const scheduler = readFileSync(
       resolve(

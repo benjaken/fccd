@@ -1,6 +1,10 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { buildOrderNotificationContent } from "../_shared/order-notification-content.ts";
 import { EMAIL_FROM } from "../_shared/email-sender.ts";
+import {
+  isNotificationRecipientPairAllowed,
+  notificationRecipientAllowlist,
+} from "../_shared/notification-recipient-allowlist.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -60,6 +64,17 @@ Deno.serve(async (request) => {
     if (!phone) return json({ error: "customer_phone_missing" }, 400);
     const email = order.email_snapshot?.trim() || "";
     if (!email) return json({ error: "customer_email_missing" }, 400);
+    if (!isNotificationRecipientPairAllowed(
+      notificationRecipientAllowlist(),
+      phone,
+      email,
+    )) {
+      return json({
+        error: "notification_recipient_not_allowlisted",
+        watiSent: false,
+        emailSent: false,
+      }, 403);
+    }
     const name = order.customer_name_snapshot?.trim() || order.company_name_snapshot?.trim() || "Customer";
     const commonParameters = [
       { name: "name", value: name }, { name: "order_number", value: order.order_number || "-" },
