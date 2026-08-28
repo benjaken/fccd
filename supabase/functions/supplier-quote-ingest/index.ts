@@ -1,5 +1,8 @@
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
-import { getDocument } from "npm:pdfjs-dist@4.10.38/legacy/build/pdf.mjs";
+// Keep PDF.js pre-bundled so Supabase's server-side branch deployment stays
+// below its 5 MB function limit. This is the same PDF.js version and API.
+// @ts-expect-error Deno resolves the remote module and its published types.
+import { getDocument } from "https://esm.sh/pdfjs-dist@4.10.38/legacy/build/pdf.mjs?bundle";
 import {
   aggregateDocumentStatus, buildExtractionIR, CANDIDATE_SCHEMA_VERSION, detectDateCandidates, detectProposedSupplierCandidates, detectSupplierCandidates,
   limitExtractionIR, PARSER_VERSION, preserveConfirmedDocumentStatus, recognizeDocument, selectSupplierMatchItems, validatePdfUpload, type ExtractionIR, type MatchAlias,

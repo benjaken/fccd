@@ -7,20 +7,19 @@
 
 ## 1. 連接哪個 Supabase 庫
 
-**只有一個正式資料庫：Supabase `main`（FCCD）**
+FCCD 使用同一個 Supabase 專案的兩個 Supabase Branch（不是 Git 分支）：
 
-| 項目 | 值 |
-|---|---|
-| Project ref | `vignxasvlxqnyvuhtjlu` |
-| 專案名稱 | FCCD |
-| Region | `ap-northeast-1` |
-| Database host | `db.vignxasvlxqnyvuhtjlu.supabase.co` |
-| Dashboard | https://supabase.com/dashboard/project/vignxasvlxqnyvuhtjlu |
+| 環境 | Supabase branch | Project ref | 用途 |
+|---|---|---|---|
+| Production | `main` | `vignxasvlxqnyvuhtjlu` | 線上環境 |
+| Local development | `develop` | `mxiueauyylnpwlxrvgbo` | 本地開發、migration、Edge Function 測試 |
+
+兩個分支都位於 `ap-northeast-1`。未經明確指示，不得從本地 CLI 對 `main` 執行 migration 或部署 Function。
 
 **前端連線（`src/lib/supabase.ts`）**使用環境變數：
 
 ```env
-VITE_SUPABASE_URL=https://vignxasvlxqnyvuhtjlu.supabase.co
+VITE_SUPABASE_URL=https://mxiueauyylnpwlxrvgbo.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...   # 見 .env.example
 ```
 
@@ -31,12 +30,12 @@ VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...   # 見 .env.example
 ### 存取方式
 
 1. **Supabase Dashboard / SQL Editor**：直接查詢與執行 SQL（等同 admin）。
-2. **MCP 工具**（`plugin-supabase-supabase`）：`execute_sql`（需要 `project_id = "vignxasvlxqnyvuhtjlu"`）、`list_tables`、`list_migrations`、`apply_migration` 等。
-3. **Supabase CLI**：`supabase` 指令（repo 有 `supabase/config.toml`；edge function 用 `supabase functions deploy <name>` 部署）。
+2. **MCP 工具**：本地開發指定 `project_id = "mxiueauyylnpwlxrvgbo"`；只有正式操作才指定 `vignxasvlxqnyvuhtjlu`。
+3. **Supabase CLI**：本地先執行 `npx supabase link develop`；正式操作必须显式指定 `--project-ref vignxasvlxqnyvuhtjlu`。
 
 ### 其他 Supabase 專案
 
-MCP `list_projects` 可看到多個專案（MPS、breauty100、PMS v3、danny kitchen 等），**FCCD 一律使用 `vignxasvlxqnyvuhtjlu`**，不要搞混。
+MCP `list_projects` 可看到多個專案（MPS、breauty100、PMS v3、danny kitchen 等）。FCCD 本地開發使用 `mxiueauyylnpwlxrvgbo`，線上正式環境使用 `vignxasvlxqnyvuhtjlu`，不要與其他專案混淆。
 
 ---
 

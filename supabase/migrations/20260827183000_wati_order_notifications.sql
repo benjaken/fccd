@@ -2,8 +2,8 @@
 -- Templates are seeded disabled: enable each row only after the matching
 -- template has been approved in WATI and its parameter names are confirmed.
 
-create extension if not exists pg_cron with schema pg_catalog;
-create extension if not exists pg_net;
+-- Production already provisions pg_cron and pg_net. Reusing the managed
+-- extensions avoids rerunning Supabase's extension privilege bootstrap.
 
 create table public.wati_order_notification_templates (
   id uuid primary key default gen_random_uuid(),

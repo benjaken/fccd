@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { buildQuoteConfirmationContent } from "../_shared/order-notification-content.ts";
+import { EMAIL_FROM } from "../_shared/email-sender.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -72,51 +73,61 @@ Deno.serve(async (request) => {
     const pdfUrl = `${appUrl}/quotes/${quote.id}/pdf`;
     const watiEndpoint = requiredEnv("WATI_API_ENDPOINT").replace(/\/$/, "");
     const watiTemplate = requiredEnv("WATI_TEMPLATE_NAME");
-    const watiResponse = await fetch(
-      `${watiEndpoint}/api/v2/sendTemplateMessage?whatsappNumber=${encodeURIComponent(phone)}`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${requiredEnv("WATI_API_TOKEN")}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          template_name: watiTemplate,
-          broadcast_name: Deno.env.get("WATI_BROADCAST_NAME")?.trim() || "quote_confirmation",
-          channel_number: requiredEnv("WATI_CHANNEL_NUMBER"),
-          parameters: [
-            { name: "customer_name", value: customerName },
-            { name: "quote_number", value: quote.order_number || "" },
-            { name: "pdf_url", value: pdfUrl },
-          ],
-        }),
-      },
-    );
-    const watiPayload = await watiResponse.json().catch(() => null) as { result?: unknown } | null;
-    if (!watiResponse.ok || watiPayload?.result === false) {
-      return response({ error: "wati_send_failed", watiSent: false, emailSent: false }, 502);
-    }
-
     const notification = buildQuoteConfirmationContent({
       name: customerName,
       quoteNumber: quote.order_number || "",
       pdfUrl,
     });
-    const emailResponse = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${requiredEnv("RESEND_API_KEY")}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: requiredEnv("QUOTE_EMAIL_FROM"),
-        to: [quote.email_snapshot],
-        subject: notification.subject,
-        html: notification.html,
+    const [watiResult, emailResult] = await Promise.allSettled([
+      fetch(
+        `${watiEndpoint}/api/v2/sendTemplateMessage?whatsappNumber=${encodeURIComponent(phone)}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${requiredEnv("WATI_API_TOKEN")}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            template_name: watiTemplate,
+            broadcast_name: Deno.env.get("WATI_BROADCAST_NAME")?.trim() || "quote_confirmation",
+            channel_number: requiredEnv("WATI_CHANNEL_NUMBER"),
+            parameters: [
+              { name: "customer_name", value: customerName },
+              { name: "quote_number", value: quote.order_number || "" },
+              { name: "pdf_url", value: pdfUrl },
+            ],
+          }),
+        },
+      ),
+      fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${requiredEnv("RESEND_API_KEY")}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: EMAIL_FROM,
+          to: [quote.email_snapshot],
+          subject: notification.subject,
+          html: notification.html,
+        }),
       }),
-    });
-    if (!emailResponse.ok) {
-      return response({ error: "email_send_failed", watiSent: true, emailSent: false }, 502);
+    ]);
+    const watiResponse = watiResult.status === "fulfilled" ? watiResult.value : null;
+    const emailResponse = emailResult.status === "fulfilled" ? emailResult.value : null;
+    const watiPayload = watiResponse
+      ? await watiResponse.json().catch(() => null) as { result?: unknown } | null
+      : null;
+    const watiSent = Boolean(watiResponse?.ok && watiPayload?.result !== false);
+    const emailSent = Boolean(emailResponse?.ok);
+    if (!watiSent || !emailSent) {
+      return response({
+        error: !watiSent && !emailSent
+          ? "wati_and_email_send_failed"
+          : !watiSent ? "wati_send_failed" : "email_send_failed",
+        watiSent,
+        emailSent,
+      }, 502);
     }
 
     return response({ watiSent: true, emailSent: true });
