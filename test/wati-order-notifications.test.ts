@@ -194,6 +194,22 @@ describe("WATI order notifications", () => {
     expect(migration).toContain("is_active = event_key in");
   });
 
+  it("maps fcc2 delivery reminders to same-day deliveries and keeps sending disabled", () => {
+    const migration = readFileSync(
+      resolve(
+        process.cwd(),
+        "supabase/migrations/20260828183000_fix_fcc2_delivery_reminder_day.sql",
+      ),
+      "utf8",
+    );
+
+    expect(migration).toContain("where event_key = 'delivery_today_reminder'");
+    expect(migration).toContain("template_name = 'fcc2_delivery_reminder'");
+    expect(migration).toContain("where event_key = 'delivery_tomorrow_reminder'");
+    expect(migration).toContain("template_name = 'delivery_tomorrow_reminder'");
+    expect(migration.match(/is_active = false/g)).toHaveLength(2);
+  });
+
   it("sends the explicit order confirmation through WATI and email together", () => {
     const implementation = readFileSync(
       resolve(process.cwd(), "supabase/functions/send-order-wati-confirmation/index.ts"),
