@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 
 import { CustomerSelfServicePage } from "@/components/CustomerSelfServicePage";
 import type {
@@ -79,10 +80,12 @@ describe("CustomerSelfServicePage", () => {
   it("verifies phone and email before showing matching orders", async () => {
     const login = vi.fn().mockResolvedValue(session);
     render(
-      <CustomerSelfServicePage
+      <MemoryRouter initialEntries={["/self_service_search"]}>
+        <Routes><Route path="/self_service_search/:orderId?" element={<CustomerSelfServicePage
         restore={vi.fn().mockResolvedValue(null)}
         login={login}
-      />,
+        />} /></Routes>
+      </MemoryRouter>,
     );
 
     fireEvent.change(await screen.findByLabelText("電話號碼"), {
@@ -105,7 +108,8 @@ describe("CustomerSelfServicePage", () => {
     });
     const loadDetail = vi.fn().mockResolvedValue(detail);
     render(
-      <CustomerSelfServicePage
+      <MemoryRouter initialEntries={["/self_service_search"]}>
+        <Routes><Route path="/self_service_search/:orderId?" element={<CustomerSelfServicePage
         restore={vi.fn().mockResolvedValue(session)}
         loadDetail={loadDetail}
         loadAddonOptions={vi.fn().mockResolvedValue({
@@ -116,7 +120,8 @@ describe("CustomerSelfServicePage", () => {
           items: [{ id: "setting-1", productId: "product-1", sku: "ADD-1", name: "唐揚炸雞塊（12件）", price: 128, minQuantity: 1, maxQuantity: 10 }],
         })}
         createPdf={createPdf}
-      />,
+        />} /></Routes>
+      </MemoryRouter>,
     );
 
     fireEvent.click(await screen.findByRole("button", { name: /B-1247/ }));
@@ -128,5 +133,27 @@ describe("CustomerSelfServicePage", () => {
     expect(await screen.findByRole("dialog", { name: "收據 B-1247" })).toBeInTheDocument();
     await waitFor(() => expect(createPdf).toHaveBeenCalledWith(expect.any(HTMLDivElement), "B-1247"));
     expect(HTMLAnchorElement.prototype.click).toHaveBeenCalled();
+  });
+
+  it("restores the order detail directly from its URL after refresh", async () => {
+    const loadDetail = vi.fn().mockResolvedValue(detail);
+    render(
+      <MemoryRouter initialEntries={["/self_service_search/order-1"]}>
+        <Routes><Route path="/self_service_search/:orderId" element={<CustomerSelfServicePage
+          restore={vi.fn().mockResolvedValue(session)}
+          loadDetail={loadDetail}
+          loadAddonOptions={vi.fn().mockResolvedValue({
+            canAddOn: false,
+            reason: "cutoff_passed",
+            cutoffAt: null,
+            hasAddOn: false,
+            items: [],
+          })}
+        />} /></Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText(detail.lines[0].name)).toBeInTheDocument();
+    expect(loadDetail).toHaveBeenCalledWith("customer-session", "order-1");
   });
 });

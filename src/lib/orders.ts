@@ -144,6 +144,7 @@ export type OrderListItem = {
   contactPhone: string | null;
   quantity: number;
   hasAddon?: boolean;
+  hasPendingAddonShopify?: boolean;
   manualTodos: OrderListManualTodo[];
 };
 
@@ -197,6 +198,7 @@ type OrderRow = {
   ship_out_time: string | null;
   delivery_status: string | null;
   is_sent_to_factory: boolean | null;
+  addon_shopify_pending: boolean;
   do_not_send_to_factory: boolean | null;
   grand_total?: number | string | null;
   outstanding?: number | string | null;
@@ -319,8 +321,8 @@ export async function fetchOrders({
   const deliverySelection =
     "deliveries(motorcade_id,delivery_time,ship_out_time,delivery_districts!district_id(name))";
   const selectedFields: string = canViewFinance
-    ? `id,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,shipping_address_snapshot,customer_note_snapshot,factory_packing_note,delivery_at,delivery_time,factory_date,ship_out_time,delivery_status,is_sent_to_factory,do_not_send_to_factory,currency,bubble_created_at,created_at,grand_total,outstanding,order_status_legacy_ids,order_tag_assignments(order_tags(name)),shopify_order_id,shopify_stores(shop_domain),channels(name),shipping_methods(name,display_name),${plannedDistrictSelection},${deliverySelection},order_lines(quantity,is_void,is_addon)`
-    : `id,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,shipping_address_snapshot,customer_note_snapshot,factory_packing_note,delivery_at,delivery_time,factory_date,ship_out_time,delivery_status,is_sent_to_factory,do_not_send_to_factory,currency,bubble_created_at,created_at,order_status_legacy_ids,order_tag_assignments(order_tags(name)),shopify_order_id,shopify_stores(shop_domain),channels(name),shipping_methods(name,display_name),${plannedDistrictSelection},${deliverySelection},order_lines(quantity,is_void,is_addon)`;
+    ? `id,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,shipping_address_snapshot,customer_note_snapshot,factory_packing_note,delivery_at,delivery_time,factory_date,ship_out_time,delivery_status,is_sent_to_factory,addon_shopify_pending,do_not_send_to_factory,currency,bubble_created_at,created_at,grand_total,outstanding,order_status_legacy_ids,order_tag_assignments(order_tags(name)),shopify_order_id,shopify_stores(shop_domain),channels(name),shipping_methods(name,display_name),${plannedDistrictSelection},${deliverySelection},order_lines(quantity,is_void,is_addon)`
+    : `id,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,shipping_address_snapshot,customer_note_snapshot,factory_packing_note,delivery_at,delivery_time,factory_date,ship_out_time,delivery_status,is_sent_to_factory,addon_shopify_pending,do_not_send_to_factory,currency,bubble_created_at,created_at,order_status_legacy_ids,order_tag_assignments(order_tags(name)),shopify_order_id,shopify_stores(shop_domain),channels(name),shipping_methods(name,display_name),${plannedDistrictSelection},${deliverySelection},order_lines(quantity,is_void,is_addon)`;
   let catalog: ConfiguredOrderStatus[] | undefined;
   const loadCatalog = async () => {
     catalog ??= await fetchOrderStatusCatalog();
@@ -397,12 +399,9 @@ export async function fetchOrders({
     // Only orders newly created by the Shopify sync are review candidates.
     // Legacy Bubble orders merely linked to a Shopify ID are already
     // confirmed/completed and must stay out of this queue.
-    query = query
-      .eq("is_shopify_order", true)
-      .eq("source_system", "shopify")
-      .is("delivery_status", null)
-      .eq("do_not_send_to_factory", false)
-      .or("is_sent_to_factory.is.null,is_sent_to_factory.eq.false");
+    query = query.or(
+      "addon_shopify_pending.eq.true,and(is_shopify_order.eq.true,source_system.eq.shopify,delivery_status.is.null,do_not_send_to_factory.eq.false)",
+    );
   } else if (preset === "not-sent-factory") {
     // Only an explicit false is actionable. Migrated legacy orders often have
     // a null flag, which does not mean they still need to be sent.
@@ -473,6 +472,7 @@ export async function fetchOrders({
         0,
       ),
       hasAddon: (row.order_lines ?? []).some((line) => !line.is_void && line.is_addon === true),
+      hasPendingAddonShopify: row.addon_shopify_pending === true,
       manualTodos: todosByOrder.get(row.id) ?? [],
     })),
     total: count ?? 0,

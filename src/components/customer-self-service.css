@@ -225,7 +225,8 @@
 .self-service-detail-title {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
+  align-items: end;
+  align-items: last baseline;
   gap: 24px;
   margin-top: 24px;
   margin-bottom: 26px;
@@ -233,7 +234,7 @@
 .self-service-detail-title h1 { font-size: 38px; }
 .self-service-detail-title > .ui-button { background: var(--portal-green); }
 
-.self-service-statuses { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.self-service-statuses { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .self-service-statuses > span {
   display: inline-flex;
   align-items: center;
@@ -269,7 +270,7 @@
 
 .self-service-detail-actions {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 10px;
   flex-wrap: wrap;
 }
@@ -508,7 +509,7 @@
   .self-service-order-list > button > span:nth-child(2) { grid-column: 1; }
   .self-service-order-list > button > strong { grid-column: 2; grid-row: 1; }
   .self-service-order-list > button > svg { grid-column: 2; grid-row: 2; justify-self: end; }
-  .self-service-detail-title { grid-template-columns: 1fr; gap: 14px; }
+  .self-service-detail-title { grid-template-columns: 1fr; align-items: stretch; gap: 14px; }
   .self-service-detail-title > .ui-button { width: 100%; }
   .self-service-line-list article { grid-template-columns: 24px minmax(0, 1fr); gap: 10px; padding: 16px; }
   .self-service-line-list dl { grid-column: 2; }

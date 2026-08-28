@@ -23558,25 +23558,57 @@ button.factory-job-card:focus-visible {
   font-weight: 850;
 }
 
-.factory-job-card-body .factory-new-order-tag {
-  width: fit-content;
-  margin: 6px auto 0;
+.factory-job-card-body .factory-new-order-tag,
+.factory-job-card-body .factory-changed-order-tag,
+.factory-job-card-body .factory-addon-order-tag {
+  display: inline-flex;
+  width: 100%;
+  min-height: 31px;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
   padding: 4px 12px;
-  border-radius: 999px;
-  background: #f5b700;
-  color: #3f2d00;
+  border-radius: 3px;
   font-size: 16px;
+  font-weight: 800;
   line-height: 1.2;
 }
 
-.factory-job-card-body .factory-changed-order-tag {
+.factory-job-card-body .factory-new-order-tag {
+  margin-top: 6px;
+  background: #f5b700;
+  color: #3f2d00;
+}
+
+.factory-job-card-body .factory-changed-order-tag,
+.factory-job-card-body .factory-addon-order-tag,
+.factory-order-line-addon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   color: #fff;
   font-weight: 800;
   border-radius: 3px;
+}
+
+.factory-job-card-body .factory-changed-order-tag {
   background: #df22c5;
+}
+
+.factory-job-card-body .factory-addon-order-tag,
+.factory-order-line-addon {
+  background: #10bce8;
+}
+
+.factory-order-line-addon {
+  align-self: flex-start;
+  padding: 2px 8px;
+  font-size: 14px;
+}
+
+.quote-line-addon-label {
+  width: max-content;
+  margin-bottom: 4px;
 }
 
 .factory-job-badge {

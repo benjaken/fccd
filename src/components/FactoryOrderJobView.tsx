@@ -430,6 +430,7 @@ export function FactoryOrderJobView({
                   </span>
                 ) : null}
                 <div className="factory-order-line-body">
+                  {line.isAddon ? <span className="factory-order-line-addon">加單</span> : null}
                   <strong>{line.label}</strong>
                   {line.quantityText ? (
                     <span className="factory-order-line-quantity">

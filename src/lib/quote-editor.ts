@@ -60,6 +60,7 @@ export type CreatedQuote = {
   orderNumber: string;
   shopifyOrderId?: number | null;
   shopifyStoreDomain?: string | null;
+  addonShopifyPending?: boolean;
 };
 
 export type QuoteEditorSummary = CreatedQuote & {
@@ -118,6 +119,7 @@ export type QuoteLine = {
   unitPrice: number;
   totalPrice: number;
   remarks: string | null;
+  isAddon?: boolean;
   labelId?: string | null;
   labelDisplayA?: string | null;
   labelDisplayB?: string | null;
@@ -283,7 +285,7 @@ export async function fetchQuoteEditorSummary(
   const [orderResult, deliveryResult, tagsResult, asanaResult, paymentsResult] = await Promise.all([
     supabase
       .from("orders")
-      .select("id,document_type,order_number,channel_id,quote_status,quote_auto_closed_at,quote_reopen_reason,quote_sales_source_id,quote_communication_channel_id,quote_follow_up_date,customer_name_snapshot,company_name_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,email_snapshot,shipping_address_snapshot,customer_note_snapshot,shipping_method_id,delivery_district_id,delivery_at,delivery_time,ship_out_time,factory_packing_note,sales_partner_id,remarks,shipping_fee,discount_amount,cashdollar_redeemed,cashdollar_purchased,is_sent_to_factory,do_not_send_to_factory,factory_print_date,factory_reprint_required,shopify_order_id,shopify_stores(shop_domain)")
+      .select("id,document_type,order_number,channel_id,quote_status,quote_auto_closed_at,quote_reopen_reason,quote_sales_source_id,quote_communication_channel_id,quote_follow_up_date,customer_name_snapshot,company_name_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,email_snapshot,shipping_address_snapshot,customer_note_snapshot,shipping_method_id,delivery_district_id,delivery_at,delivery_time,ship_out_time,factory_packing_note,sales_partner_id,remarks,shipping_fee,discount_amount,cashdollar_redeemed,cashdollar_purchased,is_sent_to_factory,do_not_send_to_factory,factory_print_date,factory_reprint_required,shopify_order_id,addon_shopify_pending,shopify_stores(shop_domain)")
       .eq("id", resolvedOrderId)
       .eq("document_type", documentType)
       .is("archived_at", null)
@@ -357,6 +359,7 @@ export async function fetchQuoteEditorSummary(
     shopifyStoreDomain: Array.isArray(shopifyStore)
       ? shopifyStore[0]?.shop_domain ?? null
       : shopifyStore?.shop_domain ?? null,
+    addonShopifyPending: data.addon_shopify_pending === true,
     channelId: data.channel_id || "",
     draft,
     financials: {
@@ -679,7 +682,7 @@ export async function fetchQuoteLines(orderId: string): Promise<QuoteLine[]> {
   const [lineResult, choiceResult] = await Promise.all([
     supabase
       .from("order_lines")
-      .select("id,product_id,package_id,sku_snapshot,product_name_snapshot,content_snapshot,quantity,unit_price,total_price,remarks_1,temporary_label_display_name,temporary_label_quantity_label,products(name,product_labels(id,display_name,quantity_label,created_at)),packages(name)")
+      .select("id,product_id,package_id,sku_snapshot,product_name_snapshot,content_snapshot,quantity,unit_price,total_price,remarks_1,is_addon,temporary_label_display_name,temporary_label_quantity_label,products(name,product_labels(id,display_name,quantity_label,created_at)),packages(name)")
       .eq("order_id", resolvedOrderId)
       .eq("is_void", false)
       .order("item_order", { ascending: true, nullsFirst: false })
@@ -753,6 +756,7 @@ export async function fetchQuoteLines(orderId: string): Promise<QuoteLine[]> {
       unitPrice: toNumber(row.unit_price),
       totalPrice: quoteLineTotal(row.quantity, row.unit_price, row.total_price),
       remarks: row.remarks_1,
+      isAddon: row.is_addon === true,
       labelId: label?.id ?? null,
       labelDisplayA: label?.display_name ?? row.temporary_label_display_name ?? null,
       labelDisplayB: label?.quantity_label ?? row.temporary_label_quantity_label ?? null,

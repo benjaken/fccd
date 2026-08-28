@@ -6,6 +6,10 @@ const sql = readFileSync(
   resolve(process.cwd(), "supabase/migrations/20260828130000_customer_self_service_addons.sql"),
   "utf8",
 );
+const shopifyWorkflowSql = readFileSync(
+  resolve(process.cwd(), "supabase/migrations/20260828147000_addon_shopify_workflow.sql"),
+  "utf8",
+);
 
 describe("customer self-service add-ons migration", () => {
   it("keeps settings, checkout state, and historical order lines linked", () => {
@@ -40,6 +44,20 @@ describe("customer self-service add-ons migration", () => {
     expect(sql).toContain("'self-service-paypal-' || v_payment_id");
     expect(sql).toContain("perform private.recalculate_quote_total(v_order.id)");
     expect(sql).toContain("set status = 'completed', paypal_capture_id = p_paypal_capture_id");
+  });
+
+  it("tracks paid AO orders until staff confirms Shopify input", () => {
+    expect(shopifyWorkflowSql).toContain("addon_shopify_pending boolean not null default false");
+    expect(shopifyWorkflowSql).toContain("mark_addon_shopify_pending");
+    expect(shopifyWorkflowSql).toContain("new.addon_checkout_id is not null");
+    expect(shopifyWorkflowSql).toContain("confirm_order_addon_shopify_input");
+    expect(shopifyWorkflowSql).toContain("addon_shopify_pending = false");
+  });
+
+  it("exposes the block-date lookup only to authenticated staff", () => {
+    expect(shopifyWorkflowSql).toContain("is_self_service_addon_block_date");
+    expect(shopifyWorkflowSql).toContain("revoke all on function public.is_self_service_addon_block_date(date) from public, anon");
+    expect(shopifyWorkflowSql).toContain("grant execute on function public.is_self_service_addon_block_date(date) to authenticated");
   });
 });
 

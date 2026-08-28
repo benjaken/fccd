@@ -79,6 +79,31 @@ export type OrderEditorPayload = {
   options: OrderEditorOptions;
 };
 
+export async function isAddonBlockDate(deliveryDate: string): Promise<boolean> {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(deliveryDate)) return false;
+  const { data, error } = await supabase.rpc("is_self_service_addon_block_date", {
+    p_delivery_date: deliveryDate,
+  });
+  if (error) throw error;
+  return data === true;
+}
+
+export async function sendOrderWatiConfirmation(orderId: string): Promise<{ includesAddonLink: boolean }> {
+  const { data, error } = await supabase.functions.invoke("send-order-wati-confirmation", {
+    body: { orderId },
+  });
+  if (error) throw error;
+  if (!data?.watiSent || !data?.emailSent) throw new Error(data?.error || "order_confirmation_failed");
+  return { includesAddonLink: data.includesAddonLink === true };
+}
+
+export async function confirmOrderAddonShopifyInput(orderId: string): Promise<void> {
+  const { error } = await supabase.rpc("confirm_order_addon_shopify_input", {
+    p_order_id: orderId,
+  });
+  if (error) throw error;
+}
+
 export function emptyOrderDraft(): OrderEditorDraft {
   return {
     id: null,

@@ -1026,15 +1026,13 @@ describe("Orders list", () => {
     expect(source).toContain('query.overlaps("order_status_legacy_ids", legacyIds)');
     expect(source).toContain('.not("factory_packing_note", "is", null)');
     expect(source).toContain('.neq("factory_packing_note", "")');
-    expect(source).toContain('.eq("is_shopify_order", true)');
-    // The Shopify queue must show only newly synced orders that have not
-    // entered the workflow yet, never linked-and-confirmed legacy orders.
-    expect(source).toContain('.eq("source_system", "shopify")');
-    expect(source).toContain('.is("delivery_status", null)');
-    expect(source).toContain(
-      '.or("is_sent_to_factory.is.null,is_sent_to_factory.eq.false")',
-    );
-    expect(source).toContain('.eq("do_not_send_to_factory", false)');
+    // The outstanding queue combines new Shopify imports with paid AO lines
+    // that still need to be entered into Shopify.
+    expect(source).toContain("addon_shopify_pending.eq.true");
+    expect(source).toContain("is_shopify_order.eq.true");
+    expect(source).toContain("source_system.eq.shopify");
+    expect(source).toContain("delivery_status.is.null");
+    expect(source).toContain("do_not_send_to_factory.eq.false");
     expect(source).toContain('query.gt("outstanding", 0)');
   });
 

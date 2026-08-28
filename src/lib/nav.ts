@@ -761,10 +761,9 @@ export const workspaceLinks: Array<{
   },
   {
     key: "customer",
-    to: "/customer",
+    to: "/self_service_search",
     icon: Users,
     permissionKey: "workspace.customer",
-    disabled: true,
   },
 ];
 
