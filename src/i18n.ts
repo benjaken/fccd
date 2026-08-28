@@ -1018,7 +1018,8 @@ const resources = {
           errorDescription: "請重試；需要「角色與頁面權限」的管理權限。",
           restrictedNotice:
             "可按角色開通系統設定頁、資料遷移頁與各項操作。",
-          cascadeNotice: "開啟父層權限時，會自動開啟其下所有子頁面與分頁。",
+          cascadeNotice:
+            "勾選父層的可查看或可控制時，會同步勾選其下所有二級、三級頁面與操作。",
           sitemap: "Sitemap 權限結構",
           search: "搜尋權限",
           searchPlaceholder: "搜尋頁面、路由或權限鍵…",
@@ -6092,7 +6093,7 @@ const resources = {
           restrictedNotice:
             "System settings, migration tools, and actions can be granted per role.",
           cascadeNotice:
-            "Turning on a parent permission automatically enables all of its sub-pages and tabs.",
+            "Enabling parent access or management also enables every child page, tab, and action.",
           sitemap: "Sitemap permission structure",
           search: "Search permissions",
           searchPlaceholder: "Search page, route, or permission key…",

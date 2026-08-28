@@ -16,6 +16,7 @@ import {
   isValidPassword,
   isValidPhone,
   sortRolePagePermissions,
+  updateRolePagePermissionCascade,
   attachmentFileType,
   type AttachmentListItem,
   type RolePagePermission,
@@ -469,7 +470,7 @@ describe("Super Admin system settings", () => {
     ).not.toBeChecked();
   });
 
-  it("configures parent management without granting child management", async () => {
+  it("cascades parent management to every child page and action", async () => {
     const user = userEvent.setup();
     const loadPermissions = vi.fn().mockResolvedValue(permissions);
     const savePermission = vi.fn().mockResolvedValue(undefined);
@@ -496,11 +497,11 @@ describe("Super Admin system settings", () => {
       });
       expect(savePermission).toHaveBeenCalledWith("Admin", "orders.pending", {
         canAccess: true,
-        canManage: false,
+        canManage: true,
       });
       expect(savePermission).toHaveBeenCalledWith("Admin", "orders.new", {
         canAccess: true,
-        canManage: false,
+        canManage: true,
       });
     });
   });
@@ -557,6 +558,82 @@ describe("Super Admin system settings", () => {
     expect(collectAncestorPageKeys("orders.pending", permissions)).toEqual([
       "orders",
     ]);
+  });
+
+  it("treats third-level action access as part of parent management", async () => {
+    const savePermission = vi.fn().mockResolvedValue(undefined);
+    const hierarchy = [
+      permission({
+        role: "Admin",
+        pageKey: "orders",
+        displayName: "Orders",
+        route: "/orders",
+      }),
+      permission({
+        role: "Admin",
+        pageKey: "orders.settings",
+        parentPageKey: "orders",
+        pageKind: "subpage",
+        displayName: "Settings",
+        route: "/orders/settings",
+      }),
+      permission({
+        role: "Admin",
+        pageKey: "orders.settings.statuses.create",
+        parentPageKey: "orders.settings",
+        pageKind: "action",
+        displayName: "Create status",
+        route: "/orders/settings/statuses/actions/create",
+      }),
+    ];
+
+    const enabled = await updateRolePagePermissionCascade(
+      "Admin",
+      "orders",
+      "canManage",
+      true,
+      hierarchy,
+      savePermission,
+    );
+    expect(enabled.get("orders.settings")).toEqual({
+      canAccess: true,
+      canManage: true,
+    });
+    expect(enabled.get("orders.settings.statuses.create")).toEqual({
+      canAccess: true,
+      canManage: false,
+    });
+
+    const disabled = await updateRolePagePermissionCascade(
+      "Admin",
+      "orders",
+      "canManage",
+      false,
+      hierarchy.map((item) => ({ ...item, canAccess: true, canManage: true })),
+      savePermission,
+    );
+    expect(disabled.get("orders.settings")).toEqual({
+      canAccess: true,
+      canManage: false,
+    });
+    expect(disabled.get("orders.settings.statuses.create")).toEqual({
+      canAccess: false,
+      canManage: false,
+    });
+  });
+
+  it("persists production cascades with one atomic database update", () => {
+    const migration = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260828150000_atomic_role_permission_cascade.sql",
+      ),
+      "utf8",
+    );
+
+    expect(migration).toContain("update_role_page_permissions_batch");
+    expect(migration).toContain("jsonb_to_recordset(p_updates)");
+    expect(migration).toContain("security invoker");
   });
 
   it("keeps permission children with their menu instead of globally interleaving them", () => {
