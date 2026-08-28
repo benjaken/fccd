@@ -766,6 +766,27 @@ describe("Products catalog pages", () => {
     expect(screen.getByRole("link", { name: "新建套餐" })).toHaveAttribute("href", "/products/packages/new");
   });
 
+  it("shows only the create-product action on preset product lists", async () => {
+    render(
+      <MemoryRouter>
+        <ProductsListPage
+          preset="lunchbox"
+          canEdit
+          canCreatePackage
+          loadProducts={async () => ({ items: [], total: 0 })}
+          loadChannels={async () => []}
+          loadProductTypes={async () => []}
+          loadBentoMainTypes={async () => []}
+          loadBentoColumnTypes={async () => []}
+          loadCookTypes={async () => []}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("link", { name: "新建商品" })).toHaveAttribute("href", "/products/new");
+    expect(screen.queryByRole("link", { name: "新建套餐" })).not.toBeInTheDocument();
+  });
+
   it("keeps all three material cards in one row when packaging is empty", async () => {
     const withoutPacking = {
       ...productDetail,

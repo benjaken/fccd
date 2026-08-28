@@ -207,7 +207,7 @@ export function ReceiptPdfEditorPage({
   const [paymentsOpen, setPaymentsOpen] = useState(false);
   const [paymentSearch, setPaymentSearch] = useState("");
   const editorRef = useRef<HTMLElement>(null);
-  const paginationResetKey = draft ? JSON.stringify([draft, sourceBrand, documentKind]) : "";
+  const paginationResetKey = `${id}:${documentKind}`;
   const paginationModuleCount = draft
     ? documentKind === "invoice"
       ? Math.max(draft.terms.length, 1) + Math.max(draft.paymentMethods.length, 1) + 1

@@ -344,53 +344,13 @@ const PRESET_CHANNEL_NAMES: Record<
   "ala-carte": ["Express", "Kitchen", "HK Party Food"],
 };
 
-async function channelRefsForNames(names: string[]) {
+async function channelIdsForNames(names: string[]) {
   const { data, error } = await supabase
     .from("channels")
-    .select("id,legacy_id,name")
+    .select("id,name")
     .in("name", names);
   if (error) throw error;
-  return (data ?? []).map((row) => ({
-    id: row.id as string,
-    legacyId: (row.legacy_id as string | null) ?? null,
-  }));
-}
-
-async function legacyProductIdsForChannels(
-  channelIds: string[],
-  channelLegacyIds: string[],
-) {
-  const queries = [
-    ...(channelIds.length
-      ? [supabase.from("channel_products").select("product_id,product_legacy_id").in("channel_id", channelIds)]
-      : []),
-    ...(channelLegacyIds.length
-      ? [
-          supabase.from("channel_products").select("product_id,product_legacy_id").in("channel_legacy_id", channelLegacyIds),
-          supabase.from("products").select("id").in("channel_legacy_id", channelLegacyIds),
-        ]
-      : []),
-  ];
-  const results = await Promise.all(queries);
-  const productIds = new Set<string>();
-  const productLegacyIds = new Set<string>();
-  for (const result of results) {
-    if (result.error) throw result.error;
-    for (const row of result.data ?? []) {
-      if ("id" in row && row.id) productIds.add(String(row.id));
-      if ("product_id" in row && row.product_id) productIds.add(String(row.product_id));
-      if ("product_legacy_id" in row && row.product_legacy_id) productLegacyIds.add(String(row.product_legacy_id));
-    }
-  }
-  if (productLegacyIds.size) {
-    const { data, error } = await supabase
-      .from("products")
-      .select("id")
-      .in("legacy_id", [...productLegacyIds]);
-    if (error) throw error;
-    for (const row of data ?? []) productIds.add(String(row.id));
-  }
-  return [...productIds];
+  return (data ?? []).map((row) => row.id as string);
 }
 
 export async function fetchProductChannels(): Promise<CatalogOption[]> {
@@ -701,27 +661,13 @@ export async function fetchProducts({
     query = query.eq("channel_id", channelId);
   } else if (preset !== "all") {
     if (preset === "lunchbox") {
-      query = query.or(
-        "bento_main_type_id.not.is.null,bento_main_type_legacy_id.not.is.null",
-      );
+      query.not("bento_main_type_id", "is", null);
     } else {
-      const refs = await channelRefsForNames(PRESET_CHANNEL_NAMES[preset]);
-      const channelIds = refs.map((item) => item.id);
-      const channelLegacyIds = refs
-        .map((item) => item.legacyId)
-        .filter((item): item is string => Boolean(item));
-      const relatedProductIds = await legacyProductIdsForChannels(
-        channelIds,
-        channelLegacyIds,
-      );
-      if (channelIds.length === 0 && relatedProductIds.length === 0) {
+      const ids = await channelIdsForNames(PRESET_CHANNEL_NAMES[preset]);
+      if (ids.length === 0) {
         return { items: [], total: 0 };
       }
-      const predicates = [
-        ...(channelIds.length ? [`channel_id.in.(${channelIds.join(",")})`] : []),
-        ...(relatedProductIds.length ? [`id.in.(${relatedProductIds.join(",")})`] : []),
-      ];
-      query = query.or(predicates.join(","));
+      query = query.in("channel_id", ids);
     }
   }
 

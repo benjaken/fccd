@@ -19,6 +19,36 @@ export type OrderNotificationEvent =
   | "delivery_delayed"
   | "order_issue_reported";
 
+export type OrderEmailNotificationEvent = OrderNotificationEvent;
+
+const ORDER_EMAIL_NOTIFICATION_EVENTS = new Set<OrderEmailNotificationEvent>([
+  "delivery_order_confirmed",
+  "pickup_order_confirmed",
+  "delivery_tomorrow_reminder",
+  "pickup_tomorrow_reminder",
+  "delivery_today_reminder",
+  "pickup_today_reminder",
+  "order_details_updated",
+  "delivery_dispatched",
+  "pickup_ready",
+  "order_completed",
+  "order_cancelled",
+  "driver_assigned",
+  "bad_weather_notice",
+  "holiday_service_notice",
+  "second_contact_requested",
+  "payment_instructions_sent",
+  "payment_confirmed",
+  "delivery_delayed",
+  "order_issue_reported",
+]);
+
+export function supportsOrderEmailNotification(
+  event: OrderNotificationEvent,
+): event is OrderEmailNotificationEvent {
+  return ORDER_EMAIL_NOTIFICATION_EVENTS.has(event as OrderEmailNotificationEvent);
+}
+
 export type OrderNotificationValues = {
   name: string;
   order_number: string;
@@ -41,15 +71,32 @@ export type InternalOrderNotificationValues = {
   recipient_name: string;
   order_number: string;
   customer_name: string;
-  created_at: string;
   delivery_date: string;
   delivery_time: string;
   address: string;
   order_link: string;
 };
 
+export type UnassignedDriverReminderOrder = {
+  order_number: string;
+  customer_name: string;
+  delivery_time: string;
+  order_link: string;
+};
+
 const SELF_SERVICE_URL = "https://www.foodchannels-delivery.com/self_service_search";
 const PICKUP_ADDRESS = "荃灣青山公路459-469號華力工業中心5樓R室";
+const EMAIL_BRAND = {
+  name: "Food Channels Catering",
+  logoUrl: "https://www.foodchannels-delivery.com/assets/fc-catering-logo-email.png",
+  websiteLabel: "foodchannels-catering.com",
+  websiteUrl: "https://www.foodchannels-catering.com",
+  phoneLabel: "(+852) 2185 7373",
+  phoneUrl: "tel:+85221857373",
+  whatsappLabel: "WhatsApp (+852) 5396 4335",
+  whatsappUrl: "https://wa.me/85253964335",
+  email: "sales@foodchannels-catering.com",
+} as const;
 
 function escapeHtml(value: string) {
   return value.replace(/[&<>"']/g, (character) => ({
@@ -57,17 +104,94 @@ function escapeHtml(value: string) {
   })[character] || character);
 }
 
+function renderEmailLine(line: string) {
+  let html = "";
+  let cursor = 0;
+  for (const match of line.matchAll(/https?:\/\/[^\s<]+/g)) {
+    const index = match.index ?? 0;
+    const url = match[0];
+    html += escapeHtml(line.slice(cursor, index));
+    html += `<a href="${escapeHtml(url)}" style="color:#16794b;font-weight:700;text-decoration:underline;word-break:break-all">${escapeHtml(url)}</a>`;
+    cursor = index + url.length;
+  }
+  return html + escapeHtml(line.slice(cursor));
+}
+
+function renderEmailHtml(subject: string, text: string) {
+  const paragraphs = text.split("\n\n").map((paragraph) =>
+    `<p style="margin:0 0 18px;color:#26352e;font-size:16px;line-height:1.7">${
+      paragraph.split("\n").map(renderEmailLine).join("<br>")
+    }</p>`
+  ).join("");
+  const contactLinkStyle = "color:#165f3d;font-size:14px;font-weight:700;text-decoration:none";
+
+  return `<!doctype html>
+<html lang="zh-HK">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>${escapeHtml(subject)}</title>
+</head>
+<body style="margin:0;padding:0;background:#f2f6f3;font-family:Arial,'PingFang HK','Microsoft JhengHei',sans-serif">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0">${escapeHtml(subject)}</div>
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f2f6f3">
+    <tr>
+      <td align="center" style="padding:28px 12px">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:640px;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 10px 30px rgba(21,92,59,.10)">
+          <tr><td style="height:7px;background:#1fa463;font-size:0;line-height:0">&nbsp;</td></tr>
+          <tr>
+            <td style="padding:26px 34px 18px;border-bottom:1px solid #e3ece7">
+              <img src="${EMAIL_BRAND.logoUrl}" width="190" alt="${EMAIL_BRAND.name}" style="display:block;width:190px;max-width:100%;height:auto;border:0">
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:30px 34px 10px">
+              <h1 style="margin:0;color:#123c2a;font-size:25px;line-height:1.35;font-weight:800">${escapeHtml(subject)}</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:14px 34px 20px">
+              <div style="padding:24px 24px 6px;background:#f8fbf9;border:1px solid #dfeae4;border-radius:14px">
+                ${paragraphs}
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:4px 34px 30px">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#eaf7ef;border-radius:14px">
+                <tr>
+                  <td style="padding:20px 22px">
+                    <p style="margin:0 0 12px;color:#123c2a;font-size:15px;font-weight:800">聯絡 Food Channels Catering</p>
+                    <p style="margin:0 0 8px;line-height:1.6"><a href="${EMAIL_BRAND.whatsappUrl}" style="${contactLinkStyle}">${EMAIL_BRAND.whatsappLabel}</a></p>
+                    <p style="margin:0 0 8px;line-height:1.6"><a href="${EMAIL_BRAND.phoneUrl}" style="${contactLinkStyle}">${EMAIL_BRAND.phoneLabel}</a></p>
+                    <p style="margin:0 0 8px;line-height:1.6"><a href="mailto:${EMAIL_BRAND.email}" style="${contactLinkStyle}">${EMAIL_BRAND.email}</a></p>
+                    <p style="margin:0;line-height:1.6"><a href="${EMAIL_BRAND.websiteUrl}" style="${contactLinkStyle}">${EMAIL_BRAND.websiteLabel}</a></p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
 function content(subject: string, lines: Array<string | false | null | undefined>): NotificationContent {
   const text = lines.filter((line): line is string => typeof line === "string").join("\n");
   return {
     subject,
     text,
-    html: text.split("\n\n").map((paragraph) =>
-      `<p>${paragraph.split("\n").map(escapeHtml).join("<br>")}</p>`
-    ).join(""),
+    html: renderEmailHtml(subject, text),
   };
 }
 
+export function buildOrderNotificationContent(
+  event: OrderEmailNotificationEvent,
+  value: OrderNotificationValues,
+): NotificationContent;
 export function buildOrderNotificationContent(
   event: OrderNotificationEvent,
   value: OrderNotificationValues,
@@ -218,16 +342,32 @@ export function buildOrderNotificationContent(
   }
 }
 
-export function buildInternalOrderNotificationContent(
+export function buildUnassignedDriverReminderContent(input: {
+  date: string;
+  orders: UnassignedDriverReminderOrder[];
+}): NotificationContent {
+  const count = input.orders.length;
+  return content(`今日未派司機訂單提醒（${count} 張）`, [
+    `今日 ${input.date} 有 ${count} 張送貨訂單尚未安排司機。`,
+    "",
+    ...input.orders.flatMap((order, index) => [
+      `${index + 1}. ${order.order_number}｜${order.customer_name}｜${order.delivery_time}`,
+      order.order_link,
+      index === input.orders.length - 1 ? null : "",
+    ]),
+  ]);
+}
+
+export function buildFactoryUnsentReminderContent(
   value: InternalOrderNotificationValues,
 ): NotificationContent {
-  return content(`新訂單通知 ${value.order_number}`, [
-    `${value.recipient_name}：`, "",
-    `系統已建立新訂單 ${value.order_number}。`,
+  return content(`送工場逾期提醒 ${value.order_number}`, [
+    `${value.recipient_name}：`,
+    "",
+    `訂單 ${value.order_number} 距離送餐時間不足 12 小時，仍未發送到工場。`,
     `客戶：${value.customer_name}`,
-    `入單時間：${value.created_at}`,
-    `送貨日期：${value.delivery_date}`,
-    `送貨時間：${value.delivery_time}`,
+    `送餐日期：${value.delivery_date}`,
+    `送餐時間：${value.delivery_time}`,
     value.address !== "-" && `地址：${value.address}`,
     "",
     value.order_link && `查看訂單：${value.order_link}`,

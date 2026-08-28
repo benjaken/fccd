@@ -30,7 +30,10 @@ export function PdfBlurCommitInput({
   }, [value]);
 
   const commit = (event: FocusEvent<HTMLInputElement>) => {
-    if (editingValue !== value) onCommit(editingValue);
+    // Pagination can remount a focused field and restore its live DOM value
+    // before React's local editing state catches up. Always commit what the
+    // user can currently see in the field.
+    if (event.currentTarget.value !== value) onCommit(event.currentTarget.value);
     onBlur?.(event);
   };
 
@@ -72,7 +75,7 @@ export function PdfBlurCommitTextarea({
         onDirty?.();
       }}
       onBlur={(event) => {
-        if (editingValue !== value) onCommit(editingValue);
+        if (event.currentTarget.value !== value) onCommit(event.currentTarget.value);
         onBlur?.(event);
       }}
     />

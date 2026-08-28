@@ -93,7 +93,6 @@ function PermissionRow({
 }) {
   const { t } = useTranslation();
   const { permission } = node;
-  const rowKey = `${permission.role}:${permission.pageKey}`;
   const isAction = permission.pageKind === "action";
   const identity = (
     <>
@@ -151,7 +150,7 @@ function PermissionRow({
       <div className="settings-permission-toggle">
         <Switch
           checked={permission.canAccess}
-          disabled={savingKey?.startsWith(rowKey)}
+          disabled={Boolean(savingKey)}
           onCheckedChange={(checked) => onAccessChange(permission, checked)}
           aria-label={`${permission.displayName} ${t(
             "settings.roles.columns.access",
@@ -168,7 +167,7 @@ function PermissionRow({
           <Switch
             checked={permission.canManage}
             disabled={
-              !permission.canAccess || savingKey?.startsWith(rowKey)
+              !permission.canAccess || Boolean(savingKey)
             }
             onCheckedChange={(checked) => onManageChange(permission, checked)}
             aria-label={`${permission.displayName} ${t(
@@ -246,7 +245,7 @@ function PermissionColumn({
 
 export function RolePermissionsPage({
   loadPermissions = fetchRolePagePermissions,
-  savePermission = updateRolePagePermission,
+  savePermission,
 }: {
   loadPermissions?: typeof fetchRolePagePermissions;
   savePermission?: typeof updateRolePagePermission;

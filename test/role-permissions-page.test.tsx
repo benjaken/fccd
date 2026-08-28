@@ -3,7 +3,10 @@ import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
 import { RolePermissionsPage } from "@/components/settings/RolePermissionsPage";
-import type { RolePagePermission } from "@/lib/settings";
+import {
+  collectPaginatedRows,
+  type RolePagePermission,
+} from "@/lib/settings";
 
 const permissions: RolePagePermission[] = [
   permission("orders", "訂單", null, true, true),
@@ -45,6 +48,19 @@ describe("RolePermissionsPage", () => {
     expect(screen.queryByText("已開放頁面")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "全部收起" }))
       .not.toBeInTheDocument();
+  });
+});
+
+describe("collectPaginatedRows", () => {
+  it("loads every page instead of silently stopping at the REST row limit", async () => {
+    const source = Array.from({ length: 1_496 }, (_, index) => index);
+    const loadPage = vi.fn(async (from: number, to: number) =>
+      source.slice(from, to + 1),
+    );
+
+    await expect(collectPaginatedRows(loadPage, 1_000)).resolves.toEqual(source);
+    expect(loadPage).toHaveBeenNthCalledWith(1, 0, 999);
+    expect(loadPage).toHaveBeenNthCalledWith(2, 1_000, 1_999);
   });
 });
 

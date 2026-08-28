@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { buildQuoteConfirmationContent } from "../_shared/order-notification-content.ts";
+import { EMAIL_FROM } from "../_shared/email-sender.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -109,7 +110,7 @@ Deno.serve(async (request) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: requiredEnv("QUOTE_EMAIL_FROM"),
+        from: EMAIL_FROM,
         to: [quote.email_snapshot],
         subject: notification.subject,
         html: notification.html,

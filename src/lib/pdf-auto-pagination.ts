@@ -4,6 +4,70 @@ const PAGE_SELECTOR = "[data-pdf-auto-page]";
 const MODULE_SELECTOR = "[data-pdf-auto-module-index]";
 const FOOTER_SELECTOR = "[data-pdf-auto-footer]";
 
+type FocusSnapshot = {
+  tagName: string;
+  fieldIndex: number;
+  id: string;
+  name: string;
+  ariaLabel: string;
+  value: string;
+  selectionStart: number | null;
+  selectionEnd: number | null;
+  selectionDirection: "forward" | "backward" | "none" | null;
+  viewportTop: number;
+};
+
+function captureFocusedField(container: HTMLElement): FocusSnapshot | null {
+  const activeElement = document.activeElement;
+  if (
+    !(activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement)
+    || !container.contains(activeElement)
+  ) return null;
+
+  return {
+    tagName: activeElement.tagName,
+    fieldIndex: Array.from(container.querySelectorAll("input, textarea")).indexOf(activeElement),
+    id: activeElement.id,
+    name: activeElement.name,
+    ariaLabel: activeElement.getAttribute("aria-label") ?? "",
+    value: activeElement.value,
+    selectionStart: activeElement.selectionStart,
+    selectionEnd: activeElement.selectionEnd,
+    selectionDirection: activeElement.selectionDirection,
+    viewportTop: activeElement.getBoundingClientRect().top,
+  };
+}
+
+function restoreFocusedField(container: HTMLElement | null, snapshot: FocusSnapshot | null) {
+  if (!container || !snapshot) return;
+
+  const fields = Array.from(container.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>("input, textarea"));
+  const hasStableIdentity = Boolean(snapshot.id || snapshot.name || snapshot.ariaLabel);
+  const field = hasStableIdentity
+    ? fields.find((candidate) => (
+        candidate.tagName === snapshot.tagName
+        && (snapshot.id ? candidate.id === snapshot.id : true)
+        && (snapshot.name ? candidate.name === snapshot.name : true)
+        && (snapshot.ariaLabel ? candidate.getAttribute("aria-label") === snapshot.ariaLabel : true)
+      ))
+    : fields[snapshot.fieldIndex];
+  if (!field) return;
+
+  if (field.value !== snapshot.value) {
+    // A field moved between page subtrees is remounted with its last committed
+    // prop value. Replaying the live DOM value through React keeps uncommitted
+    // typing/deletion in the field's local editing state as well.
+    field.value = snapshot.value;
+    field.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+  field.focus({ preventScroll: true });
+  if (snapshot.selectionStart !== null && snapshot.selectionEnd !== null) {
+    field.setSelectionRange(snapshot.selectionStart, snapshot.selectionEnd, snapshot.selectionDirection ?? undefined);
+  }
+  const scrollAdjustment = field.getBoundingClientRect().top - snapshot.viewportTop;
+  if (Math.abs(scrollAdjustment) > 0.5) window.scrollBy({ top: scrollAdjustment, behavior: "instant" });
+}
+
 function pageContentBottom(page: HTMLElement, footer: HTMLElement) {
   const pageRect = page.getBoundingClientRect();
   const footerRect = footer.getBoundingClientRect();
@@ -37,19 +101,28 @@ export function usePdfAutoPageBreaks(
   const previousResetKey = useRef(resetKey);
   const rejectedMerges = useRef(new Set<number>());
   const mergeTrial = useRef<{ removedBreak: number; previousBreaks: number[] } | null>(null);
+  const pendingFocusRestore = useRef<FocusSnapshot | null>(null);
 
   useLayoutEffect(() => {
+    const container = containerRef.current;
+    restoreFocusedField(container, pendingFocusRestore.current);
+    pendingFocusRestore.current = null;
+
+    const updatePageBreaks = (next: number[] | ((current: number[]) => number[])) => {
+      if (container) pendingFocusRestore.current = captureFocusedField(container);
+      setPageBreaks(next);
+    };
+
     if (previousResetKey.current !== resetKey) {
       previousResetKey.current = resetKey;
       rejectedMerges.current.clear();
       mergeTrial.current = null;
       if (pageBreaks.length) {
-        setPageBreaks([]);
+        updatePageBreaks([]);
         return;
       }
     }
 
-    const container = containerRef.current;
     if (!container || !moduleCount) return;
 
     const pages = Array.from(container.querySelectorAll<HTMLElement>(PAGE_SELECTOR));
@@ -70,22 +143,32 @@ export function usePdfAutoPageBreaks(
         const trial = mergeTrial.current;
         mergeTrial.current = null;
         rejectedMerges.current.add(trial.removedBreak);
-        setPageBreaks(trial.previousBreaks);
+        updatePageBreaks(trial.previousBreaks);
         return;
       }
 
       if (isModuleOnlyPage && modules.length === 1 && modules[0] === overflowingModule) continue;
       if (pageBreaks.includes(moduleIndex)) continue;
 
-      setPageBreaks((current) => [...current, moduleIndex].sort((left, right) => left - right));
+      updatePageBreaks((current) => [...current, moduleIndex].sort((left, right) => left - right));
       return;
     }
 
     mergeTrial.current = null;
+    const activeElement = document.activeElement;
+    const fieldIsBeingEdited = (
+      (activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement)
+      && container.contains(activeElement)
+    );
+    // Shrinking content can make an existing continuation page merge back into
+    // the previous page. Defer that disruptive move until editing finishes so
+    // backspace/delete never moves the field out from under the caret.
+    if (fieldIsBeingEdited) return;
+
     const removableBreak = pageBreaks.find((pageBreak) => !rejectedMerges.current.has(pageBreak));
     if (removableBreak !== undefined) {
       mergeTrial.current = { removedBreak: removableBreak, previousBreaks: pageBreaks };
-      setPageBreaks((current) => current.filter((pageBreak) => pageBreak !== removableBreak));
+      updatePageBreaks((current) => current.filter((pageBreak) => pageBreak !== removableBreak));
     }
   }, [containerRef, layoutRevision, moduleCount, pageBreaks, resetKey]);
 
@@ -110,6 +193,12 @@ export function usePdfAutoPageBreaks(
       });
       if (!changed) return;
 
+      for (const element of observedElements) {
+        const rect = element.getBoundingClientRect();
+        sizes.set(element, { width: rect.width, height: rect.height });
+      }
+
+      pendingFocusRestore.current = captureFocusedField(container);
       rejectedMerges.current.clear();
       mergeTrial.current = null;
       setLayoutRevision((current) => current + 1);

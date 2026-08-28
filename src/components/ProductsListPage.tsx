@@ -397,7 +397,8 @@ export function ProductsListPage({
         ? "lunchboxTitle"
         : preset === "ala-carte"
           ? "alaCarteTitle"
-          : "title";
+        : "title";
+  const showCreatePackage = canCreatePackage && preset === "all";
 
   const formatPrice = (product: ProductListItem) => {
     if (product.price === null) return t("common.notSet");
@@ -479,9 +480,9 @@ export function ProductsListPage({
           <span className="eyebrow">{t("products.eyebrow")}</span>
           <h1>{t(`products.${titleKey}`)}</h1>
         </div>
-        {canEdit || canCreatePackage ? (
+        {canEdit || showCreatePackage ? (
           <div className="heading-actions">
-            {canCreatePackage ? (
+            {showCreatePackage ? (
               <Button asChild variant="outline">
                 <Link to="/products/packages/new"><PackagePlus />{t("catalogCreate.newPackage")}</Link>
               </Button>
