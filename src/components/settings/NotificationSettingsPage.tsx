@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { BellRing, Save } from "lucide-react";
+import { Save } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
@@ -98,7 +98,7 @@ export function NotificationSettingsPage({
     <section className="content-page notification-settings-page">
       <header className="page-heading">
         <div>
-          <span className="eyebrow"><BellRing /> {t("notificationSettings.eyebrow")}</span>
+          <span className="eyebrow">{t("notificationSettings.eyebrow")}</span>
           <h1>{t("notificationSettings.title")}</h1>
           <p>{t("notificationSettings.description")}</p>
         </div>

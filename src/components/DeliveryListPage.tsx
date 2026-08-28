@@ -517,16 +517,6 @@ export function DeliveryListPage({
           ) : null}
           <Button
             type="button"
-            variant="outline"
-            size="icon"
-            onClick={() => setReloadKey((key) => key + 1)}
-            aria-label={t("deliveryList.refresh")}
-            title={t("deliveryList.refresh")}
-          >
-            <RefreshCw />
-          </Button>
-          <Button
-            type="button"
             onClick={() => void exportCsv()}
             disabled={exporting || loading || total === 0}
           >
@@ -676,7 +666,7 @@ export function DeliveryListPage({
                   <td>
                     <div className="delivery-order-cell">
                       {item.orderId ? (
-                        <DetailLink className="order-link" to={`/orders/${item.orderId}`}>
+                        <DetailLink className="order-link" to={`/orders/${item.orderId}`} target="_blank" rel="noopener noreferrer">
                           {formatOrderNumber(item.orderNumber) ||
                             t("common.notSet")}
                         </DetailLink>

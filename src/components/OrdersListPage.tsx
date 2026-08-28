@@ -729,7 +729,7 @@ export function OrdersListPage({
                         />
                       </label>
                       <div className="order-mobile-title">
-                        <DetailLink to={preset === "pending" ? `/quotes/${order.id}` : `/orders/${order.id}`}>
+                        <DetailLink to={preset === "pending" ? `/quotes/${order.id}` : `/orders/${order.id}`} target={preset === "pending" ? undefined : "_blank"} rel={preset === "pending" ? undefined : "noopener noreferrer"}>
                           {order.orderNumber || t("common.notSet")}
                         </DetailLink>
                         <span>{order.channelName || t("common.notSet")}</span>
@@ -912,7 +912,7 @@ export function OrdersListPage({
                   <td>{order.channelName || t("common.notSet")}</td>
                   <td>
                     <div className="order-number-cell">
-                      <DetailLink className="order-link" to={preset === "pending" ? `/quotes/${order.id}` : `/orders/${order.id}`}>
+                      <DetailLink className="order-link" to={preset === "pending" ? `/quotes/${order.id}` : `/orders/${order.id}`} target={preset === "pending" ? undefined : "_blank"} rel={preset === "pending" ? undefined : "noopener noreferrer"}>
                         {order.orderNumber || t("common.notSet")}
                       </DetailLink>
                       {(() => {

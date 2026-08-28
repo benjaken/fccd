@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { AlertTriangle, History, RefreshCw, ShoppingBag } from "lucide-react";
+import { AlertTriangle, History, ShoppingBag } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { FilterableSelect } from "@/components/ui/filterable-select";
@@ -34,14 +34,12 @@ function ShopifySyncLogPanel({
   loading,
   date,
   onClose,
-  onRefresh,
 }: {
   open: boolean;
   runs: ShopifySyncRun[];
   loading: boolean;
   date: Intl.DateTimeFormat;
   onClose: () => void;
-  onRefresh: () => void;
 }) {
   const { t } = useTranslation();
   return (
@@ -53,7 +51,6 @@ function ShopifySyncLogPanel({
       description={t("shopifyCatalog.syncLogDescription")}
       closeLabel={t("common.close")}
       onClose={onClose}
-      footer={<Button variant="outline" onClick={onRefresh} disabled={loading}><RefreshCw className={loading ? "animate-spin" : undefined} />{t("shopifyCatalog.refreshLogs")}</Button>}
     >
       <div className="shopify-sync-log-list" aria-busy={loading}>
         {!loading && runs.length === 0 ? <p className="shopify-sync-log-empty">{t("shopifyCatalog.noSyncLogs")}</p> : null}
@@ -203,9 +200,6 @@ export function ShopifyPendingProductsPage({ canManage = false }: { canManage?: 
             }
           />
           <div className="shopify-catalog-toolbar-actions">
-            <Button variant="outline" size="icon" onClick={reload} disabled={loading} aria-label={t("shopifyCatalog.refresh")} title={t("shopifyCatalog.refresh")}>
-              <RefreshCw />
-            </Button>
             {canManage ? (
               <Button onClick={() => { setSyncError(null); setSyncDialogOpen(true); }} disabled={syncing}>
                 {syncing ? t("shopifyCatalog.syncing") : t("shopifyCatalog.sync")}
@@ -288,7 +282,7 @@ export function ShopifyPendingProductsPage({ canManage = false }: { canManage?: 
           </button>
         </div>
       </Modal>
-      <ShopifySyncLogPanel open={syncLogOpen} runs={runs} loading={loading} date={date} onClose={() => setSyncLogOpen(false)} onRefresh={reload} />
+      <ShopifySyncLogPanel open={syncLogOpen} runs={runs} loading={loading} date={date} onClose={() => setSyncLogOpen(false)} />
     </section>
   );
 }

@@ -764,7 +764,7 @@ export function KitchenCostInputPage() {
   });
 
   return (
-    <section className="ingredients-page kitchen-cost-page">
+    <section className={`ingredients-page kitchen-cost-page${activeTab === "weekly-advertising" ? " is-weekly-advertising" : ""}`}>
       <header className="page-heading ingredients-heading">
         <div>
           <span className="eyebrow">中央廚房</span>

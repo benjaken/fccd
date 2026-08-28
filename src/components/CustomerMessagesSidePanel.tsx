@@ -36,7 +36,7 @@ function MessageBubble({
   onReply?: (message: QuoteCustomerMessage) => void;
 }) {
   return (
-    <article className="quote-customers-message">
+    <article className={cn("quote-customers-message", message.direction === "outbound" && "is-outbound", message.direction === "inbound" && "is-inbound")}>
       {message.authorName ? <span>{message.authorName}</span> : null}
       <div className="quote-customers-message-bubble">
         {message.replyEmail ? (
@@ -54,6 +54,7 @@ function MessageBubble({
       </div>
       <div className="quote-customers-message-meta">
         <time dateTime={message.createdAt}>{timestamp}</time>
+        {message.status && message.direction === "outbound" ? <small className="quote-customers-message-status">{message.status}</small> : null}
         {onReply && replyLabel ? (
           <button type="button" className="quote-customers-message-reply" onClick={() => onReply(message)}>
             {replyLabel}
@@ -141,6 +142,20 @@ export function CustomerMessagesSidePanel({
     if (feed) feed.scrollTop = feed.scrollHeight;
   }, [messageTab, messages?.note.length]);
 
+  useEffect(() => {
+    if (!open || !defaultOrderId) return;
+    let active = true;
+    const timer = window.setInterval(() => {
+      void loadMessages(defaultOrderId).then((result) => {
+        if (active) setMessages(result);
+      }).catch(() => undefined);
+    }, 10_000);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [defaultOrderId, loadMessages, open]);
+
   const sendNote = async () => {
     if (!canCreateNote || !defaultOrderId || sendingNote) return;
     const body = draftNote.trim();
@@ -179,6 +194,7 @@ export function CustomerMessagesSidePanel({
       closeLabel={t("quoteCustomers.closePanel")}
       footer={messageTab === "note" && canCreateNote ? (
         <div className="quote-customers-message-composer-wrap">
+          <small className="quote-customers-wati-channel">{t("quoteCustomers.watiChannel")}</small>
           {replyTarget ? (
             <div className="quote-customers-reply-target">
               <span>{t("quoteCustomers.emailReply")} {email}{replyTarget.orderNumber ? ` · ${replyTarget.orderNumber}` : ""}</span>

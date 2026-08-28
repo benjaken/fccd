@@ -55,6 +55,7 @@ import {
   updateQuoteFinancials,
   updateOrderFactoryStatus,
   saveQuotePayments,
+  saveSalesDocumentBatch,
   sendQuoteConfirmation,
   type CreatedQuote,
   type QuoteCatalogItem,
@@ -230,6 +231,7 @@ type Props = {
   saveUtensilLine?: typeof addQuoteUtensilLine;
   loadShippingFeeOptions?: () => Promise<ShippingFee[]>;
   savePayments?: typeof saveQuotePayments;
+  saveBatch?: typeof saveSalesDocumentBatch;
   sendConfirmation?: typeof sendQuoteConfirmation;
   convertQuote?: typeof convertQuoteToOrder;
   copyQuote?: typeof duplicateQuote;
@@ -259,6 +261,7 @@ export function QuoteEditorPage({
   saveUtensilLine = addQuoteUtensilLine,
   loadShippingFeeOptions = loadConfiguredShippingFees,
   savePayments = saveQuotePayments,
+  saveBatch,
   sendConfirmation = sendQuoteConfirmation,
   convertQuote = convertQuoteToOrder,
   copyQuote = duplicateQuote,
@@ -671,17 +674,41 @@ export function QuoteEditorPage({
     }
 
     await saveCurrentDetails(quote.id);
-    for (const line of lines.filter((item) => !item.isPending)) {
-      await saveExistingLine(
-        isFreeUtensilPackLine(line) ? { ...line, unitPrice: 0, totalPrice: 0 } : line,
-        isOrder ? "order" : "quote",
-      );
-    }
     await flushPendingLines(quote.id);
-    await saveFinancialDetails(quote.id, financialValues);
-    if (isOrder) {
-      await savePayments(quote.id, quote.orderNumber, draft.channelId, payments, "order");
-      await saveFactorySettings(quote.id, factorySettings);
+    const batchSaver = saveBatch ?? (
+      saveDetails === updateQuote
+      && saveExistingLine === updateQuoteLine
+      && saveFinancialDetails === updateQuoteFinancials
+      && savePayments === saveQuotePayments
+      && saveFactorySettings === saveOrderFactorySettings
+        ? saveSalesDocumentBatch
+        : null
+    );
+    const persistedLines = lines
+      .filter((item) => !item.isPending)
+      .map((line) => isFreeUtensilPackLine(line)
+        ? { ...line, unitPrice: 0, totalPrice: 0 }
+        : line);
+    if (batchSaver) {
+      await batchSaver({
+        orderId: quote.id,
+        documentType: isOrder ? "order" : "quote",
+        lines: persistedLines,
+        financials: financialValues,
+        payments: isOrder ? payments : [],
+        channelId: draft.channelId,
+        orderNumber: quote.orderNumber,
+        factorySettings,
+      });
+    } else {
+      for (const line of persistedLines) {
+        await saveExistingLine(line, isOrder ? "order" : "quote");
+      }
+      await saveFinancialDetails(quote.id, financialValues);
+      if (isOrder) {
+        await savePayments(quote.id, quote.orderNumber, draft.channelId, payments, "order");
+        await saveFactorySettings(quote.id, factorySettings);
+      }
     }
     writeQuotePdfSupplements(quote.id, supplements);
   };
@@ -1143,6 +1170,7 @@ export function QuoteEditorPage({
       description={t("quoteEditor.items.labelSizeHint")}
       closeLabel={t("quoteEditor.items.closeLabelModal")}
       size="md"
+      className="quote-label-modal"
       footer={readOnly ? undefined : (
         <>
           <Button type="button" variant="outline" onClick={closeLabelModal}>
@@ -1602,7 +1630,7 @@ export function QuoteEditorPage({
                       : t("quoteEditor.factoryStatus.send")}
                   </Button>
                 ) : null}
-                {canEdit ? <Button asChild variant="outline"><Link to={`/orders/${activeQuote.id}/edit`}><Pencil />編輯</Link></Button> : null}
+                {canEdit ? <Button asChild variant="outline"><Link to={`/orders/${activeQuote.id}/edit`} target="_blank" rel="noopener noreferrer"><Pencil />編輯</Link></Button> : null}
               </div>
             </div>
           ) : null}
@@ -2126,16 +2154,16 @@ export function QuoteEditorPage({
           </form>
         </Modal>
 
-        <Modal open={additionalOpen} onClose={() => setAdditionalOpen(false)} title="額外資訊" closeLabel="關閉額外資訊" size="lg" footer={<Button onClick={() => setAdditionalOpen(false)}>確定</Button>}>
+        <Modal open={additionalOpen} onClose={() => setAdditionalOpen(false)} title="額外資訊" closeLabel="關閉額外資訊" size="lg" className="quote-supplement-modal" footer={<Button onClick={() => setAdditionalOpen(false)}>確定</Button>}>
           <div className="quote-additional-picker">
-            <div className="quote-additional-search"><Search /><input autoFocus aria-label="搜尋額外資訊" placeholder={t("quoteEditor.placeholders.additionalSearchPlaceholder")} value={additionalSearch} onChange={(event) => setAdditionalSearch(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") addAdditionalInfo(additionalSearch); }} /><Button variant="outline" onClick={() => addAdditionalInfo(additionalSearch)}>Add</Button></div>
+            <div className="quote-additional-search"><Search /><input autoFocus aria-label="搜尋額外資訊" placeholder={t("quoteEditor.placeholders.additionalSearchPlaceholder")} value={additionalSearch} onChange={(event) => setAdditionalSearch(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") addAdditionalInfo(additionalSearch); }} /><Button variant="outline" onClick={() => addAdditionalInfo(additionalSearch)}><Plus />{t("quoteEditor.items.customProductAdd")}</Button></div>
             <ul>{additionalInfoOptions.filter((option) => !additionalSearch.trim() || option.toLocaleLowerCase().includes(additionalSearch.trim().toLocaleLowerCase())).map((option) => <li key={option}><span>{option}</span><Button size="sm" variant="outline" onClick={() => addAdditionalInfo(option)}><Plus />加入</Button></li>)}</ul>
           </div>
         </Modal>
 
-        <Modal open={activityOpen} onClose={() => setActivityOpen(false)} title="活動項目" closeLabel="關閉活動項目" size="lg" footer={<Button onClick={() => setActivityOpen(false)}>確定</Button>}>
+        <Modal open={activityOpen} onClose={() => setActivityOpen(false)} title="活動項目" closeLabel="關閉活動項目" size="lg" className="quote-supplement-modal" footer={<Button onClick={() => setActivityOpen(false)}>確定</Button>}>
           <div className="quote-additional-picker quote-activity-picker">
-            <div className="quote-additional-search"><Search /><input autoFocus aria-label="搜尋活動項目" placeholder={t("quoteEditor.placeholders.activitySearchPlaceholder")} value={activitySearch} onChange={(event) => setActivitySearch(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") addActivity(activitySearch); }} /><Button variant="outline" onClick={() => addActivity(activitySearch)}>Add</Button></div>
+            <div className="quote-additional-search"><Search /><input autoFocus aria-label="搜尋活動項目" placeholder={t("quoteEditor.placeholders.activitySearchPlaceholder")} value={activitySearch} onChange={(event) => setActivitySearch(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") addActivity(activitySearch); }} /><Button variant="outline" onClick={() => addActivity(activitySearch)}><Plus />{t("quoteEditor.items.customProductAdd")}</Button></div>
             <ul>{activityOptions.filter((option) => !activitySearch.trim() || option.description.toLocaleLowerCase().includes(activitySearch.trim().toLocaleLowerCase())).map((option) => <li key={option.description}><span>{option.description}</span><span>${Number(option.amount).toLocaleString("zh-HK")}</span><Button size="sm" variant="outline" onClick={() => addActivity(option.description, option.amount)}><Plus />加入</Button></li>)}</ul>
           </div>
         </Modal>

@@ -622,19 +622,19 @@ export function ReceiptPdfEditorPage({
 
       {isInvoice ? (
         <>
-          <Modal open={termsOpen} onClose={() => setTermsOpen(false)} title="條款及細則" closeLabel="關閉條款及細則" size="lg" rootClassName="quote-clause-modal-root" className="quote-clause-modal" footer={<Button onClick={() => setTermsOpen(false)}>確定</Button>}>
+          <Modal open={termsOpen} onClose={() => setTermsOpen(false)} title="條款及細則" closeLabel="關閉條款及細則" size="lg" rootClassName="quote-clause-modal-root" className="quote-supplement-modal quote-pdf-supplement-modal" footer={<Button onClick={() => setTermsOpen(false)}>確定</Button>}>
             <div className="quote-additional-picker quote-clause-picker">
-              <QuoteClauseSearchPicker search={termSearch} onSearchChange={setTermSearch} options={termOptions} searchLabel="搜尋條款及細則" placeholder={t("quotes.pdfEditor.termsSearchPlaceholder")} onAdd={(value) => addDraftItem("terms", value)} />
+              <QuoteClauseSearchPicker search={termSearch} onSearchChange={setTermSearch} options={termOptions.filter((option) => !draft.terms.includes(option))} searchLabel="搜尋條款及細則" placeholder={t("quotes.pdfEditor.termsSearchPlaceholder")} onAdd={(value) => addDraftItem("terms", value)} />
               <p>可搜尋條款範本，亦可自由輸入內容後按「加入」。</p>
-              <div className="quote-clause-selected"><strong>已加入的條例</strong>{draft.terms.map((item, index) => <div key={`selected-invoice-term-${index}`}><span>（{index + 1}）{item}</span><button type="button" aria-label={`移除條款及細則 ${index + 1}`} onClick={() => update("terms", draft.terms.filter((_, itemIndex) => itemIndex !== index))}><Minus /></button></div>)}</div>
+              <div className="quote-supplement-selected"><strong>已加入的條例</strong>{draft.terms.map((item, index) => <div key={`selected-invoice-term-${index}`}><span>（{index + 1}）{item}</span><button type="button" aria-label={`移除條款及細則 ${index + 1}`} onClick={() => update("terms", draft.terms.filter((_, itemIndex) => itemIndex !== index))}><Minus /></button></div>)}</div>
             </div>
           </Modal>
 
-          <Modal open={paymentsOpen} onClose={() => setPaymentsOpen(false)} title="付款方式" closeLabel="關閉付款方式" size="lg" rootClassName="quote-clause-modal-root" className="quote-clause-modal" footer={<Button onClick={() => setPaymentsOpen(false)}>確定</Button>}>
+          <Modal open={paymentsOpen} onClose={() => setPaymentsOpen(false)} title="付款方式" closeLabel="關閉付款方式" size="lg" rootClassName="quote-clause-modal-root" className="quote-supplement-modal quote-pdf-supplement-modal" footer={<Button onClick={() => setPaymentsOpen(false)}>確定</Button>}>
             <div className="quote-additional-picker quote-clause-picker">
-              <QuoteClauseSearchPicker search={paymentSearch} onSearchChange={setPaymentSearch} options={paymentOptions} searchLabel="搜尋付款方式" placeholder={t("quotes.pdfEditor.paymentSearchPlaceholder")} onAdd={(value) => addDraftItem("paymentMethods", value)} />
+              <QuoteClauseSearchPicker search={paymentSearch} onSearchChange={setPaymentSearch} options={paymentOptions.filter((option) => !draft.paymentMethods.includes(option))} searchLabel="搜尋付款方式" placeholder={t("quotes.pdfEditor.paymentSearchPlaceholder")} onAdd={(value) => addDraftItem("paymentMethods", value)} />
               <p>可搜尋付款方式範本，亦可自由輸入內容後按「加入」。</p>
-              <div className="quote-clause-selected"><strong>已加入的付款方式</strong>{draft.paymentMethods.map((item, index) => <div key={`selected-invoice-payment-${index}`}><span>（{index + 1}）{item}</span><button type="button" aria-label={`移除付款方式 ${index + 1}`} onClick={() => update("paymentMethods", draft.paymentMethods.filter((_, itemIndex) => itemIndex !== index))}><Minus /></button></div>)}</div>
+              <div className="quote-supplement-selected"><strong>已加入的付款方式</strong>{draft.paymentMethods.map((item, index) => <div key={`selected-invoice-payment-${index}`}><span>（{index + 1}）{item}</span><button type="button" aria-label={`移除付款方式 ${index + 1}`} onClick={() => update("paymentMethods", draft.paymentMethods.filter((_, itemIndex) => itemIndex !== index))}><Minus /></button></div>)}</div>
             </div>
           </Modal>
         </>

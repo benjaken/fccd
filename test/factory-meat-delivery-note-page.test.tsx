@@ -22,10 +22,13 @@ describe("FactoryMeatDeliveryNotePage", () => {
       /\.factory-meat-note-sheet\s*\{[^}]*width:\s*min\(794px,[^}]*min-height:\s*1123px/s,
     );
     expect(stylesheet).toMatch(
-      /@page factory-meat-delivery-note\s*\{[^}]*size:\s*A4 portrait/s,
+      /@page factory-meat-delivery-note\s*\{[^}]*size:\s*A4 portrait[^}]*margin:\s*0/s,
     );
     expect(stylesheet).toMatch(
       /\.factory-meat-note-sheet\s*\{[^}]*page:\s*factory-meat-delivery-note/s,
+    );
+    expect(stylesheet).toMatch(
+      /\.factory-meat-note-page\s*\{[^}]*box-sizing:\s*border-box[^}]*width:\s*210mm[^}]*padding:\s*10mm[^}]*page:\s*factory-meat-delivery-note/s,
     );
     expect(stylesheet).not.toMatch(/size:\s*A4 landscape/);
     expect(stylesheet).toMatch(

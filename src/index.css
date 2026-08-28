@@ -3715,6 +3715,15 @@ body:has(.side-panel-root) .shell-body.sidebar-is-collapsed .sidebar {
 }
 
 @media (max-width: 560px) {
+  .orders-dashboard-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .orders-dashboard-grid .metric-card p {
+    white-space: normal;
+  }
+
   .orders-dashboard-bar-row {
     grid-template-columns: minmax(82px, 0.65fr) minmax(72px, 1fr) auto;
     gap: 8px;
@@ -5154,6 +5163,412 @@ button.product-tag[aria-pressed="true"] {
   white-space: nowrap;
 }
 
+.kitchen-calendar-mobile {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.kitchen-calendar-mobile-filter {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 52px;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--foreground);
+  font-size: 15px;
+  font-weight: 680;
+  text-align: left;
+}
+
+.kitchen-calendar-mobile-filter:hover,
+.kitchen-calendar-mobile-filter:focus-visible,
+.kitchen-calendar-mobile-filter.is-active {
+  border-color: color-mix(in oklch, var(--primary) 42%, var(--border));
+  background: color-mix(in oklch, var(--primary) 4%, var(--card));
+}
+
+.kitchen-calendar-mobile-filter > svg {
+  width: 20px;
+  height: 20px;
+  color: var(--muted-foreground);
+}
+
+.kitchen-calendar-mobile-filter > svg:last-child {
+  width: 18px;
+  height: 18px;
+}
+
+.kitchen-calendar-mobile-filter-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted-foreground);
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.kitchen-calendar-mobile-picker,
+.kitchen-calendar-mobile-agenda {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
+}
+
+.kitchen-calendar-mobile-nav {
+  display: grid;
+  grid-template-columns: auto auto minmax(88px, 1fr) auto auto;
+  align-items: center;
+  gap: 2px;
+  min-height: 58px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.kitchen-calendar-mobile-nav > strong {
+  overflow: hidden;
+  font-size: 16px;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kitchen-calendar-mobile-view-toggle {
+  min-height: 40px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--primary);
+  font-size: 14px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.kitchen-calendar-mobile-view-toggle:hover,
+.kitchen-calendar-mobile-view-toggle:focus-visible {
+  background: var(--selection-bg);
+}
+
+.kitchen-calendar-mobile-week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.kitchen-calendar-mobile-week > button {
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  min-width: 0;
+  min-height: 104px;
+  padding: 10px 3px 8px;
+  border: 0;
+  border-right: 1px solid var(--border);
+  background: var(--card);
+  color: var(--foreground);
+}
+
+.kitchen-calendar-mobile-week > button:last-child {
+  border-right: 0;
+}
+
+.kitchen-calendar-mobile-week > button:hover,
+.kitchen-calendar-mobile-week > button:focus-visible {
+  background: var(--selection-bg);
+}
+
+.kitchen-calendar-mobile-week > button.is-selected {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.kitchen-calendar-mobile-week > button > span {
+  font-size: 13px;
+  font-weight: 680;
+}
+
+.kitchen-calendar-mobile-week > button > strong {
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 760;
+}
+
+.kitchen-calendar-mobile-week > button > small {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 680;
+}
+
+.kitchen-calendar-mobile-week > button.is-selected .kitchen-calendar-dot {
+  background: var(--primary-foreground);
+}
+
+.kitchen-calendar-mobile-week > button.is-selected .kitchen-calendar-dot.red {
+  border: 1px solid var(--primary-foreground);
+  background: var(--destructive);
+}
+
+.kitchen-calendar-mobile-month {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  padding: 8px;
+}
+
+.kitchen-calendar-mobile-month > span {
+  padding: 5px 2px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.kitchen-calendar-mobile-month > button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 42px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 13px;
+  font-weight: 680;
+}
+
+.kitchen-calendar-mobile-month > button:hover,
+.kitchen-calendar-mobile-month > button:focus-visible {
+  background: var(--selection-bg);
+}
+
+.kitchen-calendar-mobile-month > button.is-selected {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.kitchen-calendar-mobile-month > button.outside {
+  color: var(--muted-foreground);
+  opacity: 0.65;
+}
+
+.kitchen-calendar-mobile-month > button small {
+  position: absolute;
+  right: 4px;
+  bottom: 2px;
+  color: inherit;
+  font-size: 9px;
+}
+
+.kitchen-calendar-mobile-agenda > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 64px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.kitchen-calendar-mobile-agenda > header h2 {
+  margin: 0;
+  color: var(--foreground);
+  font-size: 20px;
+  font-weight: 760;
+  letter-spacing: -0.025em;
+}
+
+.kitchen-calendar-mobile-agenda > header h2 > span {
+  color: var(--primary);
+}
+
+.kitchen-calendar-mobile-agenda > header > span {
+  flex: 0 0 auto;
+  padding: 5px 8px;
+  border: 1px solid color-mix(in oklch, var(--primary) 62%, var(--border));
+  border-radius: 7px;
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 720;
+}
+
+.kitchen-calendar-mobile-period > h3 {
+  margin: 0;
+  padding: 12px 14px 8px;
+  color: var(--primary);
+  font-size: 16px;
+  font-weight: 760;
+}
+
+.kitchen-calendar-mobile-period > ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kitchen-calendar-mobile-period > ul > li + li {
+  border-top: 1px solid var(--border);
+}
+
+.kitchen-calendar-mobile-order {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto 18px;
+  align-items: center;
+  gap: 10px;
+  min-height: 88px;
+  padding: 12px 14px;
+  color: var(--foreground);
+}
+
+.kitchen-calendar-mobile-order:hover,
+.kitchen-calendar-mobile-order:focus-visible {
+  background: color-mix(in oklch, var(--accent) 45%, transparent);
+}
+
+.kitchen-calendar-mobile-order > time {
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 720;
+}
+
+.kitchen-calendar-mobile-order-copy {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.kitchen-calendar-mobile-order-copy strong {
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 730;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kitchen-calendar-mobile-order-copy small {
+  overflow: hidden;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kitchen-calendar-mobile-statuses {
+  display: grid;
+  justify-items: stretch;
+  gap: 5px;
+}
+
+.kitchen-calendar-mobile-statuses small {
+  min-width: 76px;
+  padding: 4px 6px;
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 730;
+  line-height: 1.1;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.kitchen-calendar-mobile-statuses .blue {
+  color: oklch(0.52 0.16 250);
+}
+
+.kitchen-calendar-mobile-statuses .amber {
+  color: oklch(0.62 0.17 65);
+}
+
+.kitchen-calendar-mobile-statuses .red {
+  color: var(--destructive);
+}
+
+.kitchen-calendar-mobile-statuses .green {
+  color: var(--primary);
+}
+
+.kitchen-calendar-mobile-statuses .muted {
+  color: var(--muted-foreground);
+}
+
+.kitchen-calendar-mobile-order > svg {
+  width: 18px;
+  height: 18px;
+  color: var(--muted-foreground);
+}
+
+.kitchen-calendar-mobile-loading {
+  display: grid;
+  gap: 1px;
+}
+
+.kitchen-calendar-mobile-loading > span {
+  min-height: 88px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklch, var(--muted) 72%, var(--card)),
+    color-mix(in oklch, var(--muted) 92%, var(--card)),
+    color-mix(in oklch, var(--muted) 72%, var(--card))
+  );
+  background-size: 200% 100%;
+  animation: table-skeleton-shimmer 1.25s ease-in-out infinite;
+}
+
+.kitchen-calendar-mobile-agenda > .kitchen-calendar-empty-day {
+  padding: 28px 14px;
+}
+
+@media (max-width: 760px) {
+  .kitchen-calendar-page:not(.is-factory-display) {
+    display: block;
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .kitchen-calendar-page:not(.is-factory-display) .kitchen-calendar-heading {
+    margin-bottom: 14px;
+  }
+
+  .kitchen-calendar-page:not(.is-factory-display) .kitchen-calendar-legend {
+    display: none;
+  }
+}
+
+@media (max-width: 430px) {
+  .kitchen-calendar-mobile-nav {
+    padding-inline: 6px;
+  }
+
+  .kitchen-calendar-mobile-nav .ui-button {
+    padding-inline: 8px;
+  }
+
+  .kitchen-calendar-mobile-order {
+    grid-template-columns: 44px minmax(0, 1fr) auto 16px;
+    gap: 7px;
+    padding-inline: 10px;
+  }
+
+  .kitchen-calendar-mobile-statuses small {
+    min-width: 70px;
+    padding-inline: 4px;
+    font-size: 10px;
+  }
+}
+
 .kitchen-calendar-page.is-factory-display {
   --background: #000000;
   --card: #080808;
@@ -6000,6 +6415,27 @@ button.product-tag[aria-pressed="true"] {
   overflow-wrap: anywhere;
 }
 
+.quote-customers-wati-channel {
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.quote-customers-message.is-outbound {
+  justify-items: end;
+}
+
+.quote-customers-message.is-outbound .quote-customers-message-bubble {
+  border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
+  background: var(--selection-bg);
+}
+
+.quote-customers-message-status {
+  color: var(--muted-foreground);
+  font-size: 14px;
+  text-transform: capitalize;
+}
+
 .orders-table-wrap .order-region-summary {
   min-width: 10rem;
 }
@@ -6783,7 +7219,11 @@ button.product-tag[aria-pressed="true"] {
 
 .prepared-meat-calc-page .raw-meat-calc-table-wrap th:nth-child(9),
 .prepared-meat-calc-page .raw-meat-calc-table-wrap td:nth-child(9) {
-  width: 5.5rem;
+  /* Up to three 40px icon buttons (inbound edit, outbound edit, delete) can
+     appear here. Keep them inside the sticky cell instead of clipping the
+     trailing button against the vertical scrollbar. */
+  width: 10rem;
+  min-width: 10rem;
 }
 
 .prepared-meat-calc-page .raw-meat-calc-table-wrap th:nth-child(10),
@@ -8402,6 +8842,53 @@ button.product-tag[aria-pressed="true"] {
   gap: 10px;
 }
 
+.quote-mobile-card > header {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.quote-mobile-card .order-mobile-facts a {
+  color: var(--advertising-blue);
+  font-weight: 700;
+}
+
+.quote-mobile-description {
+  display: grid;
+  gap: 5px;
+}
+
+.quote-mobile-description > span {
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.quote-mobile-description textarea {
+  width: 100%;
+  min-height: 68px;
+  resize: vertical;
+}
+
+.quote-mobile-description small {
+  color: var(--destructive);
+  font-size: 0.75rem;
+}
+
+.payment-mobile-amount,
+.masoft-mobile-net {
+  color: var(--foreground);
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.payment-mobile-reference {
+  grid-column: 1 / -1;
+}
+
+.payment-mobile-reference dd {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
 .order-mobile-select {
   display: grid;
   width: 32px;
@@ -8421,13 +8908,21 @@ button.product-tag[aria-pressed="true"] {
   gap: 3px;
 }
 
-.order-mobile-title > a {
+.order-mobile-title > a,
+.order-mobile-title > strong {
   overflow: hidden;
   color: var(--foreground);
   font-size: 1rem;
   font-weight: 800;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.masoft-mobile-orders {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  overflow-x: auto;
 }
 
 .order-mobile-title > span {
@@ -10727,6 +11222,41 @@ button.product-tag[aria-pressed="true"] {
   justify-content: flex-start;
 }
 
+.responsive-filter-desktop {
+  display: contents;
+}
+
+.responsive-filter-host {
+  display: flex;
+  width: 100%;
+  justify-content: flex-end;
+}
+
+.responsive-filter-trigger {
+  position: relative;
+  gap: 0.45rem;
+}
+
+.responsive-filter-trigger.is-active::after {
+  content: "";
+  position: absolute;
+  top: 0.4rem;
+  right: 0.4rem;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: var(--primary);
+}
+
+.responsive-filter-drawer {
+  display: grid;
+  gap: 1rem;
+}
+
+.responsive-filter-apply {
+  width: 100%;
+}
+
 .payments-selection-actions,
 .payments-manage-date-mode {
   display: flex;
@@ -10755,12 +11285,14 @@ button.product-tag[aria-pressed="true"] {
   font: inherit;
 }
 
-.payments-reconciliation-toolbar > .date-picker {
+.payments-reconciliation-toolbar .responsive-filter-desktop > .date-picker,
+.responsive-filter-drawer > .date-picker {
   display: block;
   min-width: 12rem;
 }
 
-.payments-reconciliation-toolbar > .date-picker input[type="date"] {
+.payments-reconciliation-toolbar .date-picker input[type="date"],
+.responsive-filter-drawer .date-picker input[type="date"] {
   width: 100%;
   min-height: 2.5rem;
   padding: 0 0.6rem;
@@ -10772,12 +11304,33 @@ button.product-tag[aria-pressed="true"] {
   font: inherit;
 }
 
-.payments-reconciliation-toolbar > .date-range-picker {
+.payments-reconciliation-toolbar .responsive-filter-desktop > .date-range-picker,
+.responsive-filter-drawer > .date-range-picker {
   min-width: 22rem;
 }
 
-.payments-reconciliation-toolbar > .date-range-picker .date-range-picker-control {
+.payments-reconciliation-toolbar .date-range-picker .date-range-picker-control,
+.responsive-filter-drawer .date-range-picker .date-range-picker-control {
   height: 2.5rem;
+}
+
+.responsive-filter-drawer .payments-date-filter-mode,
+.responsive-filter-drawer .date-picker,
+.responsive-filter-drawer .date-range-picker,
+.responsive-filter-drawer .payments-filter-field {
+  width: 100%;
+  min-width: 0;
+}
+
+.responsive-filter-drawer .payments-date-filter-mode + .date-picker,
+.responsive-filter-drawer .payments-date-filter-mode + .date-range-picker {
+  margin-top: 0.65rem;
+}
+
+.responsive-filter-drawer .payments-filter-fields {
+  display: grid;
+  width: 100%;
+  margin-left: 0;
 }
 
 .payments-filter-fields {
@@ -10881,6 +11434,11 @@ button.product-tag[aria-pressed="true"] {
 }
 
 .masoft-table {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.masoft-table > table {
   min-width: 76rem;
 }
 
@@ -11384,7 +11942,25 @@ a.masoft-order-tag:focus-visible {
   .data-input-progress-heading { align-items: start; }
   .data-input-progress-legend { justify-content: flex-start; }
   .data-input-progress-page { height: auto; overflow: visible; }
-  .data-input-progress-grid { grid-template-columns: repeat(4, minmax(16rem, 82vw)); overflow-x: auto; }
+  .data-input-progress-grid {
+    grid-template-columns: minmax(0, 1fr);
+    flex: 0 0 auto;
+    height: auto;
+    overflow: visible;
+  }
+  .data-input-progress-card {
+    height: auto;
+    max-height: none;
+    gap: 0.9rem;
+  }
+  .data-input-progress-rows {
+    max-height: min(55dvh, 32rem);
+    overscroll-behavior: contain;
+  }
+  .data-input-progress-rows a,
+  .data-input-progress-rows button {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
 }
 
 .kitchen-cost-placeholder {
@@ -14002,6 +14578,24 @@ a.masoft-order-tag:focus-visible {
 }
 
 @media (max-width: 760px) {
+  .ingredients-page.kitchen-cost-page.is-weekly-advertising {
+    grid-template-rows: auto auto auto;
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .kitchen-cost-page.is-weekly-advertising .kitchen-cost-panel {
+    overflow: visible;
+  }
+
+  .kitchen-cost-page.is-weekly-advertising .kitchen-cost-table-wrap {
+    flex: 0 0 auto;
+    max-height: min(70dvh, 40rem);
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
   .kitchen-cost-panel {
     padding: 0.65rem;
   }
@@ -14012,6 +14606,8 @@ a.masoft-order-tag:focus-visible {
 
   .kitchen-cost-chart-card {
     overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
   }
 }
 
@@ -20207,6 +20803,7 @@ a.masoft-order-tag:focus-visible {
   display: grid;
   align-content: start;
   gap: 15px;
+  min-width: 0;
 }
 
 .quote-editor-form-column + .quote-editor-form-column {
@@ -21766,7 +22363,7 @@ a.masoft-order-tag:focus-visible {
 }
 
 .quote-label-modal-content > .factory-dish-label-preview {
-  width: min(15rem, 72vw);
+  width: min(11rem, 54vw);
 }
 
 .quote-label-modal-content > small {
@@ -21779,6 +22376,68 @@ a.masoft-order-tag:focus-visible {
 .quote-label-modal-content .quote-line-label-editor {
   width: min(100%, 30rem);
   margin-top: 0;
+}
+
+.modal-root:has(.quote-label-modal) {
+  padding: 12px;
+}
+
+.quote-label-modal {
+  max-height: calc(100dvh - 24px);
+}
+
+.quote-label-modal .modal-body {
+  margin-top: 10px;
+}
+
+.quote-label-modal .quote-label-modal-content {
+  gap: 9px;
+}
+
+.quote-label-modal .quote-line-label-editor {
+  gap: 5px;
+  padding: 8px;
+}
+
+.quote-label-modal .quote-line-label-editor label {
+  gap: 2px;
+}
+
+.quote-label-modal .quote-line-label-editor input,
+.quote-label-modal .quote-line-label-editor textarea {
+  padding-block: 5px;
+}
+
+.quote-label-modal .quote-line-label-editor textarea {
+  min-height: 48px;
+}
+
+.quote-label-modal .modal-footer {
+  margin-top: 12px;
+}
+
+@media (max-width: 620px) {
+  .quote-label-modal {
+    padding: 16px 16px 14px;
+  }
+
+  .quote-label-modal .modal-header {
+    gap: 10px;
+  }
+
+  .quote-label-modal .modal-description {
+    margin-top: 4px;
+    font-size: 13px;
+  }
+
+  .quote-label-modal .modal-body {
+    overflow: visible;
+  }
+
+  .quote-label-modal-content > small,
+  .quote-label-modal .quote-line-label-editor span {
+    font-size: 13px;
+  }
 }
 
 .quote-mobile-label-button {
@@ -22149,7 +22808,7 @@ a.masoft-order-tag:focus-visible {
 @media (max-width: 960px) {
   .quote-editor-form,
   .quote-items-layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .quote-editor-form-column + .quote-editor-form-column {
@@ -22180,12 +22839,37 @@ a.masoft-order-tag:focus-visible {
 
 @media (max-width: 620px) {
   .quote-editor-form {
+    width: 100%;
+    min-width: 0;
     padding: 20px 16px;
   }
 
   .quote-editor-form-column > label {
     grid-template-columns: 1fr;
     gap: 6px;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .quote-editor-form-column > label > input,
+  .quote-editor-form-column > label > select,
+  .quote-editor-form-column > label > textarea,
+  .quote-editor-form-column > label > .filterable-select,
+  .quote-editor-form-column > label > .search-select,
+  .quote-editor-form-column > label > .quote-time-control {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .quote-editor-form > footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .quote-editor-form > footer .ui-button {
+    width: 100%;
+    min-width: 0;
   }
 
   .quote-editor-tags {
@@ -23766,7 +24450,7 @@ button.factory-job-card:focus-visible {
 
 @page factory-meat-delivery-note {
   size: A4 portrait;
-  margin: 10mm;
+  margin: 0;
 }
 
 @page factory-multi-day-report {
@@ -24566,6 +25250,7 @@ button.factory-job-card:focus-visible {
     height: 297mm;
     min-height: 297mm;
     padding: 12mm 12mm 22mm;
+    page: factory-delivery-note;
     break-after: auto;
     break-inside: auto;
     background: #ffffff;
@@ -26496,6 +27181,16 @@ button.factory-job-card:focus-visible {
     grid-template-columns: 1fr;
   }
 
+  .follow-up-page .queue-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .follow-up-page .queue-item {
+    gap: 6px;
+    padding-inline: 8px;
+  }
+
   .panel-header {
     padding: 16px;
   }
@@ -27560,8 +28255,10 @@ button.factory-job-card:focus-visible {
   .factory-meat-note-page {
     position: absolute;
     inset: 0;
+    box-sizing: border-box;
+    width: 210mm;
     min-height: 0;
-    padding: 0;
+    padding: 10mm;
     page: factory-meat-delivery-note;
     background: #ffffff !important;
   }
@@ -29504,6 +30201,230 @@ body:has(.quote-clause-modal-root) { overflow: hidden; }
 .quote-additional-picker ul { margin: 0; padding: 0; border: 1px solid #d4dce2; list-style: none; }
 .quote-additional-picker li { display: flex; min-height: 44px; padding: 0.45rem 0.65rem; align-items: center; justify-content: space-between; gap: 0.75rem; border-bottom: 1px solid #e3e8ec; }
 .quote-additional-picker li:last-child { border-bottom: 0; }
+
+/* Shared additional-info and activity pickers in the order / quote editor. */
+.modal-root:has(.quote-supplement-modal) {
+  padding: clamp(12px, 4vw, 24px);
+}
+
+.modal-root:has(.quote-supplement-modal) .modal-backdrop {
+  background: color-mix(in oklch, var(--foreground) 38%, transparent);
+  backdrop-filter: blur(3px);
+}
+
+.quote-supplement-modal {
+  width: min(680px, 100%);
+  padding: 0;
+  border-color: color-mix(in oklch, var(--border) 82%, var(--primary));
+  border-radius: 20px;
+  background: var(--card);
+  box-shadow:
+    0 28px 70px color-mix(in oklch, var(--foreground) 28%, transparent),
+    0 4px 14px color-mix(in oklch, var(--foreground) 10%, transparent);
+}
+
+.quote-supplement-modal .modal-header {
+  align-items: center;
+  padding: 20px 22px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.quote-supplement-modal .modal-header h2 {
+  font-size: 20px;
+  font-weight: 760;
+  letter-spacing: -0.02em;
+}
+
+.quote-supplement-modal .modal-header button {
+  width: 40px;
+  height: 40px;
+  border-color: transparent;
+  border-radius: 12px;
+  background: var(--muted);
+  box-shadow: none;
+}
+
+.quote-supplement-modal .modal-header button:hover {
+  border-color: var(--border);
+  background: var(--accent);
+}
+
+.quote-supplement-modal .modal-body {
+  margin: 0;
+  padding: 18px 22px 20px;
+  background: color-mix(in oklch, var(--background) 60%, var(--card));
+}
+
+.quote-supplement-modal .quote-additional-picker {
+  gap: 14px;
+}
+
+.quote-supplement-modal .quote-additional-search {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+.quote-supplement-modal .quote-additional-search > svg {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: 15px;
+  width: 19px;
+  height: 19px;
+  color: var(--muted-foreground);
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.quote-supplement-modal .quote-additional-search input {
+  width: 100%;
+  height: 48px;
+  padding: 0 14px 0 44px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--foreground);
+  font-size: 15px;
+  box-shadow: 0 1px 2px color-mix(in oklch, var(--foreground) 5%, transparent);
+}
+
+.quote-supplement-modal .quote-additional-search input:focus {
+  border-color: var(--primary);
+  outline: 3px solid color-mix(in oklch, var(--primary) 16%, transparent);
+}
+
+.quote-supplement-modal .quote-additional-search .button {
+  display: inline-flex;
+  width: auto;
+  min-width: 96px;
+  height: 48px;
+  gap: 6px;
+  padding-inline: 16px;
+  border-color: color-mix(in oklch, var(--primary) 38%, var(--border));
+  border-radius: 12px;
+  background: color-mix(in oklch, var(--primary) 9%, var(--card));
+  color: var(--primary);
+  font-weight: 720;
+}
+
+.quote-supplement-modal .quote-additional-search .button svg {
+  position: static;
+  width: 17px;
+  height: 17px;
+  transform: none;
+}
+
+.quote-supplement-modal .quote-additional-picker ul {
+  max-height: min(45dvh, 360px);
+  overflow-y: auto;
+  border-color: var(--border);
+  border-radius: 14px;
+  background: var(--card);
+  box-shadow: 0 5px 18px color-mix(in oklch, var(--foreground) 6%, transparent);
+}
+
+.quote-supplement-modal .quote-additional-picker li {
+  min-height: 56px;
+  padding: 9px 12px 9px 15px;
+  border-color: var(--border);
+  color: var(--foreground);
+  line-height: 1.4;
+  transition: background-color 120ms ease;
+}
+
+.quote-supplement-modal .quote-additional-picker li:hover {
+  background: color-mix(in oklch, var(--accent) 72%, var(--card));
+}
+
+.quote-supplement-modal .quote-additional-picker li > span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.quote-supplement-modal .quote-activity-picker li {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.quote-supplement-modal .quote-activity-picker li > span:nth-child(2) {
+  color: var(--foreground);
+  font-weight: 760;
+  white-space: nowrap;
+}
+
+.quote-supplement-modal .quote-additional-picker li .button {
+  min-width: 72px;
+  height: 36px;
+  gap: 5px;
+  padding-inline: 11px;
+  border-color: color-mix(in oklch, var(--primary) 30%, var(--border));
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--primary);
+  box-shadow: 0 1px 2px color-mix(in oklch, var(--foreground) 6%, transparent);
+}
+
+.quote-supplement-modal .quote-additional-picker li .button:hover {
+  border-color: var(--primary);
+  background: color-mix(in oklch, var(--primary) 9%, var(--card));
+}
+
+.quote-supplement-modal .quote-additional-picker li .button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.quote-supplement-modal .modal-footer {
+  margin: 0;
+  padding: 14px 22px 18px;
+  border-top: 1px solid var(--border);
+  background: var(--card);
+}
+
+.quote-supplement-modal .modal-footer .button {
+  min-width: 104px;
+  height: 42px;
+  border-radius: 11px;
+  font-weight: 720;
+}
+
+@media (max-width: 620px) {
+  .quote-supplement-modal {
+    max-height: calc(100dvh - 24px);
+    border-radius: 18px;
+  }
+
+  .quote-supplement-modal .modal-header {
+    padding: 16px 16px 14px;
+  }
+
+  .quote-supplement-modal .modal-body {
+    padding: 14px 16px 16px;
+  }
+
+  .quote-supplement-modal .quote-additional-search {
+    gap: 8px;
+  }
+
+  .quote-supplement-modal .quote-additional-search .button {
+    min-width: 84px;
+    padding-inline: 12px;
+  }
+
+  .quote-supplement-modal .quote-additional-picker li {
+    padding-left: 12px;
+  }
+
+  .quote-supplement-modal .quote-additional-picker li .button {
+    min-width: 68px;
+  }
+
+  .quote-supplement-modal .modal-footer {
+    padding: 12px 16px 16px;
+  }
+}
+
 .quote-clause-search-wrap { position: relative; z-index: 3; }
 .quote-clause-search-wrap .quote-additional-search { position: relative; z-index: 2; background: #fff; }
 .quote-clause-suggestions { position: absolute; z-index: 20; top: calc(100% + 4px); right: 0; left: 0; display: none; max-height: 250px; overflow-y: auto; background: #fff; box-shadow: 0 12px 28px rgba(26, 38, 48, 0.2); }
@@ -29546,6 +30467,85 @@ body:has(.quote-clause-modal-root) { overflow: hidden; }
 .quote-clause-selected > div > span { font-size: 0.82rem; line-height: 1.45; }
 .quote-clause-selected button { display: inline-grid; width: 26px; height: 26px; padding: 0; place-items: center; border: 0; border-radius: 50%; background: #e9edf0; color: #64717b; }
 .quote-clause-selected button svg { width: 14px; height: 14px; }
+
+.quote-pdf-supplement-modal .quote-additional-picker > p {
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.quote-pdf-supplement-modal .quote-clause-search-wrap {
+  z-index: auto;
+  display: grid;
+  gap: 14px;
+}
+
+.quote-pdf-supplement-modal .quote-clause-search-wrap .quote-additional-search {
+  z-index: auto;
+  background: transparent;
+}
+
+.quote-pdf-supplement-modal .quote-clause-option-list {
+  margin: 0;
+}
+
+.quote-supplement-selected {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
+  box-shadow: 0 4px 14px color-mix(in oklch, var(--foreground) 5%, transparent);
+}
+
+.quote-supplement-selected > strong {
+  padding: 10px 14px;
+  background: color-mix(in oklch, var(--primary) 9%, var(--card));
+  color: var(--foreground);
+  font-size: 13px;
+  font-weight: 760;
+}
+
+.quote-supplement-selected > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 32px;
+  min-height: 46px;
+  padding: 7px 10px 7px 14px;
+  align-items: center;
+  gap: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.quote-supplement-selected > div > span {
+  min-width: 0;
+  color: var(--foreground);
+  font-size: 13px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.quote-supplement-selected button {
+  display: inline-grid;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 9px;
+  background: color-mix(in oklch, var(--destructive) 9%, var(--card));
+  color: var(--destructive);
+  cursor: pointer;
+}
+
+.quote-supplement-selected button:hover {
+  background: color-mix(in oklch, var(--destructive) 16%, var(--card));
+}
+
+.quote-supplement-selected button svg {
+  width: 15px;
+  height: 15px;
+}
+
 .quote-pdf-state { display: flex; min-height: 50vh; align-items: center; justify-content: center; gap: 0.8rem; color: #53636e; }
 
 @media (max-width: 800px) {
@@ -30293,6 +31293,33 @@ body:has(.quote-clause-modal-root) { overflow: hidden; }
   }
 
   .orders-panel.responsive-card-list-panel .orders-table-wrap.has-mobile-list {
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .quotes-page:has(.responsive-card-list-panel) {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .quotes-panel.responsive-card-list-panel {
+    display: block;
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .quotes-panel.responsive-card-list-panel > .quotes-toolbar {
+    margin-bottom: 12px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .quotes-panel.responsive-card-list-panel .quotes-table-wrap.has-mobile-list {
     min-height: 0;
     overflow: visible;
   }

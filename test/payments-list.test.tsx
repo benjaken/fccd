@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -34,9 +34,53 @@ const filterOptions = {
   paymentMethods: [{ id: "method-1", name: "PayPal" }],
 };
 
+function mockMatchMedia(matches: boolean) {
+  window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+    matches, media: query, onchange: null,
+    addListener: vi.fn(), removeListener: vi.fn(),
+    addEventListener: vi.fn(), removeEventListener: vi.fn(), dispatchEvent: vi.fn(),
+  }));
+}
+
 describe("PaymentsListPage", () => {
   beforeEach(async () => {
+    mockMatchMedia(false);
     await i18n.changeLanguage("en");
+  });
+
+  it("moves mobile filters into a side panel and appends the next card page", async () => {
+    mockMatchMedia(true);
+    let notifyIntersection: IntersectionObserverCallback = () => undefined;
+    const observe = vi.fn();
+    vi.stubGlobal("IntersectionObserver", class IntersectionObserverMock {
+      constructor(callback: IntersectionObserverCallback) { notifyIntersection = callback; }
+      observe = observe; disconnect = vi.fn(); unobserve = vi.fn(); takeRecords = vi.fn(() => []);
+      root = null; rootMargin = "180px 0px"; thresholds = [0];
+    });
+    const loadPayments = vi.fn().mockImplementation(async ({ page }: { page: number }) => ({
+      total: 2,
+      items: page === 1 ? [payments[0]] : [payments[1]],
+    }));
+    const user = userEvent.setup();
+
+    render(<MemoryRouter><PaymentsListPage canViewFinance loadPayments={loadPayments} loadPaymentFilterOptions={async () => filterOptions} /></MemoryRouter>);
+
+    const mobileList = await waitFor(() => {
+      const node = document.querySelector<HTMLElement>(".payments-mobile-list");
+      expect(node).toBeInTheDocument();
+      return node!;
+    });
+    expect(within(mobileList).getByText("B-1001")).toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "Brand" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Open filters" }));
+    expect(screen.getByRole("dialog", { name: "Filters" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Brand" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Apply" }));
+    await waitFor(() => expect(observe).toHaveBeenCalled());
+    act(() => notifyIntersection([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver));
+    expect(await within(mobileList).findByText("B-1002")).toBeInTheDocument();
+    expect(loadPayments).toHaveBeenCalledWith(expect.objectContaining({ page: 2 }));
+    vi.unstubAllGlobals();
   });
 
   it("filters unreconciled payments by either one date or a date range", async () => {

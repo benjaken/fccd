@@ -53,6 +53,90 @@ final result: passed
 
 ---
 
+# Mobile Serving Calendar Weekly View Design QA
+
+- Source visual truth: `C:/Users/Administrator/.codex/generated_images/01a045f2-e9fb-7fa1-9bda-d71e8ef28728/exec-f2dc596f-accf-463c-8e2f-66284ab6beb1.png`
+- Implementation screenshot: `D:/work/FCCD/.design-qa/kitchen-calendar-mobile-final.png`
+- Combined comparison: `D:/work/FCCD/.design-qa/kitchen-calendar-mobile-comparison.png`
+- Source pixels: 852 x 1852, normalized proportionally to 390 x 848
+- Implementation pixels: 390 x 844
+- CSS viewport: 390 x 844; device scale factor 1
+- State: authenticated preview user, light theme, 2026-08-28 selected, all orders visible
+
+## Full-view comparison evidence
+
+The combined image places the selected weekly-calendar design beside the browser-rendered implementation. Both use the same filter-first hierarchy, compact week navigation, seven-day workload strip, green selected-day treatment, date agenda header, time-period grouping, full order labels, semantic factory/payment chips, and lightweight divider-separated order rows. The requested bottom `查看今日工作清單` action is absent.
+
+The source contains four illustrative orders while live preview data contains one order on 2026-08-28. This is accepted dynamic-content variation; the populated 2026-08-25 browser state separately verified six rows across morning and afternoon groups without clipping or broken navigation.
+
+## Focused region comparison evidence
+
+The week selector and agenda header were readable in the combined comparison at equal 390px content width. The implementation matches the source's 44px-or-larger navigation targets, seven equal day columns, semantic dots and counts, green active date, green date emphasis, compact status chips, and right-chevron affordance. No raster content imagery is required by this screen; the repository's existing logo and icon system remain in use.
+
+## Required fidelity surfaces
+
+- Fonts and typography: existing FCCD Traditional Chinese font stack is preserved; 14-20px hierarchy, tabular dates/times, strong active date, readable status labels, and non-truncated order titles pass at 390px.
+- Spacing and layout rhythm: 14px page margins and section gaps, 52px filter, 58px navigation, 104px day strip, 64px agenda header, and 88px order rows match the selected direction without horizontal overflow.
+- Colors and visual tokens: existing pale-green FCCD canvas, white card surfaces, green selection/action tokens, blue factory-sent, amber factory-unsent, red unpaid, and neutral pending states remain semantic and text-labeled.
+- Image quality and asset fidelity: no screen-specific raster imagery is present. Existing repository logo and Lucide icons are retained; no custom SVG, CSS illustration, or placeholder imagery was introduced.
+- Copy and content: `顯示：全部`, week range, `月視圖`, weekday/date labels, `今日` order count, period labels, factory/payment labels, and order-detail links are coherent. The removed bottom work-list copy does not exist in the rendered DOM.
+
+## Interaction and runtime checks
+
+- Opened `/orders/calendar?month=2026-08` at 390 x 844 and authenticated with the app's preview login.
+- Selected another day and confirmed the agenda updated from one to six orders.
+- Toggled exception-only filtering and confirmed the selected day reduced from six to five matching exceptions.
+- Expanded the month view, returned to the week view, and used Today to restore 2026-08-28.
+- Browser console warnings/errors: none.
+- TypeScript lint: passed.
+- Targeted calendar tests: 16 passed, including the new mobile weekly-view/no-bottom-action test.
+
+## Findings
+
+No actionable P0, P1, or P2 differences remain. The in-app browser screenshot backend omitted some pixels from the fixed global brand area even though DOM measurements and the loaded logo asset confirm the menu and 174 x 52 logo are present; calendar-content fidelity was therefore judged below the global banner.
+
+## Comparison history
+
+- Pass 1: the first mobile render duplicated the desktop legend above the new filter and used shortened filter/date copy (P2 hierarchy and content drift).
+- Fix: hid the desktop legend at the mobile breakpoint, restored `顯示：全部`, separated green date emphasis from the weekday, and added the Today prefix to the count badge.
+- Pass 2: the date emphasis initially inherited the badge border because of an overly broad descendant selector (P2 visual drift).
+- Fix: scoped the badge rule to the direct header child and recaptured the final 390 x 844 state. The post-fix comparison has no actionable P0/P1/P2 issues.
+
+## Follow-up polish
+
+- P3: teams may choose to show a dash instead of `0` for empty exception counts if they want a quieter week strip; the current numeric treatment intentionally matches the selected visual.
+
+final result: passed
+
+---
+
+# Mobile Quotes List Outer Panel Design QA
+
+- Source visual truth: `C:/Users/ADMINI~1/AppData/Local/Temp/codex-clipboard-7ba849d2-2100-4a41-80da-e054b20b4ced.png` (order-list target) and `C:/Users/ADMINI~1/AppData/Local/Temp/codex-clipboard-26aca4ed-d6af-4070-a25e-b57d2fd0eb59.png` (quotes before-state)
+- Target viewport: 430 x 932
+- Requested change: remove the mobile quotes list's outer panel border, radius, background, shadow, and toolbar inset while preserving individual quote-card borders.
+
+## Implementation evidence
+
+The quotes page now uses the same responsive outer-panel rules as the order list. At widths up to 760px, the page returns to natural document scrolling, the responsive panel becomes transparent and borderless, the toolbar loses its panel padding and divider, and the card-list scroller becomes overflow-visible. Individual `.mobile-list-card` borders and shadows are unchanged.
+
+## Verification
+
+- Structural responsive-style tests cover both the orders and quotes selectors: passed.
+- Quotes mobile card and appended server-page tests: passed.
+- Targeted tests: 34 passed.
+- TypeScript application check: passed.
+- CSS diff validation: passed.
+- Browser capture: blocked at the authentication screen; no authenticated external browser connection was available, and existing credentials were not submitted without user authorization.
+
+## Findings
+
+No source-level P0, P1, or P2 issues remain. A same-state implementation screenshot could not be captured, so final pixel-level comparison remains blocked.
+
+final result: blocked
+
+---
+
 # Customer Self-Service Portal Design QA
 
 - Source visual truth: `C:/Users/ADMINI~1/AppData/Local/Temp/codex-clipboard-f875c5bc-7283-40d4-ab0b-2adb59e5410a.png`, `codex-clipboard-9aab4ed6-49d8-4dfd-ac65-0be3c25af4a6.png`, `codex-clipboard-801e58c3-f001-4570-9539-bb11133a8678.png`, `codex-clipboard-2345e4fc-047d-40e2-a387-34820bff20ce.png`, and `codex-clipboard-125cde5a-a6f8-46fe-b019-b95724830e63.png`

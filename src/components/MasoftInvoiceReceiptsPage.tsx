@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowDown, ArrowUp, Pencil, ReceiptText } from "lucide-react";
 
@@ -11,7 +11,9 @@ import { ListTable } from "@/components/ui/list-table";
 import { Modal } from "@/components/ui/modal";
 import { SidePanel } from "@/components/ui/side-panel";
 import { OperationalListState } from "@/components/ui/operational-list-state";
+import { ResponsiveFilterPanel } from "@/components/ui/responsive-filter-panel";
 import { TablePagination } from "@/components/ui/table-pagination";
+import { useMediaQuery } from "@/lib/use-media-query";
 import {
   fetchMasoftFilterOptions,
   fetchMasoftSettlements,
@@ -38,9 +40,13 @@ function hasVerifiedOrderLinks(settlement: MasoftSettlement) {
 export function MasoftInvoiceReceiptsPage({
   canViewFinance,
   canManageActions = true,
+  loadSettlements = fetchMasoftSettlements,
+  loadFilterOptions = fetchMasoftFilterOptions,
 }: {
   canViewFinance: boolean;
   canManageActions?: boolean;
+  loadSettlements?: typeof fetchMasoftSettlements;
+  loadFilterOptions?: typeof fetchMasoftFilterOptions;
 }) {
   const { t, i18n } = useTranslation();
   const [dateMode, setDateMode] = useState<DateMode>("single");
@@ -55,6 +61,8 @@ export function MasoftInvoiceReceiptsPage({
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState(false);
   const [error, setError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [editing, setEditing] = useState<MasoftSettlement | null>(null);
@@ -73,25 +81,44 @@ export function MasoftInvoiceReceiptsPage({
   const [batchInvoiceNumber, setBatchInvoiceNumber] = useState("");
   const [invoiceSaving, setInvoiceSaving] = useState(false);
   const [invoiceError, setInvoiceError] = useState(false);
+  const isMobileList = useMediaQuery("(max-width: 760px)");
+  const previousMobileListRef = useRef(isMobileList);
 
   const load = useCallback(async () => {
     if (!canViewFinance) { setLoading(false); return; }
-    setLoading(true); setError(false);
+    const appending = isMobileList && page > 1;
+    if (appending) { setLoadingMore(true); setLoadMoreError(false); }
+    else { setLoading(true); setError(false); }
     try {
-      const result = await fetchMasoftSettlements({ page, payoutDate: dateMode === "single" ? date || null : null, payoutDateStart: dateMode === "range" ? startDate || null : null, payoutDateEnd: dateMode === "range" ? endDate || null : null, channelId: channelId || null, paymentMethodId: methodId || null, payoutAscending });
-      setItems(result.items);
+      const result = await loadSettlements({ page, payoutDate: dateMode === "single" ? date || null : null, payoutDateStart: dateMode === "range" ? startDate || null : null, payoutDateEnd: dateMode === "range" ? endDate || null : null, channelId: channelId || null, paymentMethodId: methodId || null, payoutAscending });
+      setItems((current) => {
+        if (!appending) return result.items;
+        const next = new Map(current.map((item) => [item.id, item]));
+        result.items.forEach((item) => next.set(item.id, item));
+        return [...next.values()];
+      });
       setTotal(result.total);
       setSelected((previous) => {
         const next = new Map(previous);
         result.items.forEach((item) => { if (next.has(item.id)) next.set(item.id, item); });
         return next;
       });
-    } catch { setItems([]); setTotal(0); setError(true); }
-    finally { setLoading(false); }
-  }, [canViewFinance, channelId, date, dateMode, endDate, methodId, page, payoutAscending, reloadKey, startDate]);
+    } catch {
+      if (appending) setLoadMoreError(true);
+      else { setItems([]); setTotal(0); setError(true); }
+    } finally {
+      if (appending) setLoadingMore(false);
+      else setLoading(false);
+    }
+  }, [canViewFinance, channelId, date, dateMode, endDate, isMobileList, loadSettlements, methodId, page, payoutAscending, reloadKey, startDate]);
 
   useEffect(() => void load(), [load]);
-  useEffect(() => { if (canViewFinance) void fetchMasoftFilterOptions().then(setOptions).catch(() => setOptions({ channels: [], paymentMethods: [] })); }, [canViewFinance]);
+  useEffect(() => {
+    if (previousMobileListRef.current === isMobileList) return;
+    previousMobileListRef.current = isMobileList;
+    setItems([]); setPage(1); setLoadMoreError(false);
+  }, [isMobileList]);
+  useEffect(() => { if (canViewFinance) void loadFilterOptions().then(setOptions).catch(() => setOptions({ channels: [], paymentMethods: [] })); }, [canViewFinance, loadFilterOptions]);
 
   const formatter = useMemo(() => new Intl.NumberFormat(i18n.language, { style: "currency", currency: "HKD" }), [i18n.language]);
   const selectedPayments = candidates.filter((payment) => paymentIds.includes(payment.id));
@@ -153,18 +180,52 @@ export function MasoftInvoiceReceiptsPage({
 
   return <section className="orders-page masoft-page">
     <header className="page-heading orders-heading"><div><span className="eyebrow">{t("masoft.eyebrow")}</span><h1>{t("masoft.title")}</h1><p>{t("masoft.description")}</p></div></header>
-    <article className="panel orders-panel">
+    <article className="panel orders-panel responsive-card-list-panel">
       <header className="orders-toolbar payments-reconciliation-toolbar">
+        <ResponsiveFilterPanel active={Boolean(date || startDate || endDate || channelId || methodId)}>
         <label className="payments-date-filter-mode"><span>{t("masoft.payoutFilter")}</span><select value={dateMode} onChange={(event) => { setDateMode(event.target.value as DateMode); resetPage(); }}><option value="single">{t("masoft.singleDate")}</option><option value="range">{t("masoft.dateRange")}</option></select></label>
         {dateMode === "single" ? <DatePicker id="masoft-payout-date" value={date} onChange={(value) => { setDate(value); resetPage(); }} label={t("masoft.payoutFilter")} hideLabel /> : <DateRangePicker startId="masoft-payout-start" endId="masoft-payout-end" startValue={startDate} endValue={endDate} onStartChange={(value) => { setStartDate(value); resetPage(); }} onEndChange={(value) => { setEndDate(value); resetPage(); }} startLabel={t("masoft.from")} endLabel={t("masoft.to")} legend={t("masoft.payoutRange")} />}
         <div className="payments-filter-fields">
           <label className="payments-filter-field"><span>{t("masoft.brand")}</span><FilterableSelect value={channelId} onChange={(event) => { setChannelId(event.target.value); resetPage(); }}><option value="">{t("masoft.allBrands")}</option>{options.channels.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}</FilterableSelect></label>
           <label className="payments-filter-field"><span>{t("masoft.paymentMethod")}</span><FilterableSelect value={methodId} onChange={(event) => { setMethodId(event.target.value); resetPage(); }}><option value="">{t("masoft.allPaymentMethods")}</option>{options.paymentMethods.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}</FilterableSelect></label>
         </div>
+        </ResponsiveFilterPanel>
         {canManageActions && selectedItems.length ? <div className="masoft-selection-actions"><span>{t("masoft.selected", { count: selectedItems.length, amount: formatter.format(selectedNet) })}</span><Button type="button" variant="outline" onClick={openInvoiceModal}>{t("masoft.addInvoice")}</Button></div> : null}
       </header>
-      {error ? <OperationalListState icon={ReceiptText} title={t("masoft.loadError")} description={t("masoft.loadErrorDescription")} retryLabel={t("masoft.retry")} onRetry={() => setReloadKey((key) => key + 1)} /> : !loading && !items.length ? <OperationalListState icon={ReceiptText} title={t("masoft.empty")} description={t("masoft.emptyDescription")} /> : <ListTable className="orders-table-wrap masoft-table" loading={loading} loadingLabel={t("masoft.loading")} skeletonColumns={11} skeletonRows={MASOFT_PAGE_SIZE} onRefresh={() => setReloadKey((key) => key + 1)} header={<tr><th className="payments-select-cell"><input type="checkbox" checked={pageAllSelected} disabled={!items.length || loading} onChange={(event) => togglePageSelection(event.target.checked)} aria-label={t("masoft.selectAll")} /></th><th>{t("masoft.columns.invoice")}</th><th>{t("masoft.columns.brand")}</th><th><button type="button" className="table-sort-button" onClick={() => { setPayoutAscending((value) => !value); resetPage(); }} aria-label={t("masoft.sortPayoutDate")}>{t("masoft.columns.payout")}{payoutAscending ? <ArrowUp /> : <ArrowDown />}</button></th><th>{t("masoft.columns.orders")}</th><th>{t("masoft.columns.paymentMethod")}</th><th>{t("masoft.columns.gross")}</th><th>{t("masoft.columns.charges")}</th><th>{t("masoft.columns.net")}</th><th>{t("masoft.columns.receipt")}</th><th /></tr>}>
-        {items.map((item) => <tr key={item.id}><td className="payments-select-cell"><input type="checkbox" checked={selected.has(item.id)} disabled={!canManageActions} onChange={(event) => toggleSelection(item, event.target.checked)} aria-label={t("masoft.selectRecord", { value: item.invoiceNumber || item.id })} /></td><td>{item.invoiceNumber || "—"}</td><td>{item.channelName || "—"}</td><td>{item.payoutAt ? new Intl.DateTimeFormat(i18n.language, { dateStyle: "medium", timeZone: "Asia/Hong_Kong" }).format(new Date(item.payoutAt)) : "—"}</td><td><div className="masoft-orders-cell">{hasVerifiedOrderLinks(item) ? item.payments.map((payment) => <DetailLink key={payment.id} className="masoft-order-tag" to={`/orders/${payment.orderId}`}>{payment.orderNumber || "—"}</DetailLink>) : <span className="masoft-order-pending">{t("masoft.pendingConfirmation")}</span>}</div></td><td>{item.paymentMethodName || "—"}</td><td>{formatter.format(item.grossAmount)}</td><td>{formatter.format(item.charges)}</td><td><strong>{formatter.format(item.netAmount)}</strong></td><td>{item.receiptNumber || "—"}</td><td className="table-actions-cell">{canManageActions ? <Button variant="ghost" size="icon" onClick={() => openEdit(item)} aria-label={t("masoft.edit")}><Pencil /></Button> : null}</td></tr>)}
+      {error ? <OperationalListState icon={ReceiptText} title={t("masoft.loadError")} description={t("masoft.loadErrorDescription")} retryLabel={t("masoft.retry")} onRetry={() => setReloadKey((key) => key + 1)} /> : !loading && !items.length ? <OperationalListState icon={ReceiptText} title={t("masoft.empty")} description={t("masoft.emptyDescription")} /> : <ListTable
+        className="orders-table-wrap masoft-table"
+        loading={loading}
+        loadingLabel={t("masoft.loading")}
+        skeletonColumns={11}
+        skeletonRows={MASOFT_PAGE_SIZE}
+        onRefresh={() => { if (isMobileList && page !== 1) setPage(1); else setReloadKey((key) => key + 1); }}
+        mobileHasMore={items.length < total}
+        mobileLoadingMore={loadingMore}
+        mobileLoadError={loadMoreError}
+        onMobileLoadMore={() => { if (loadingMore) return; if (loadMoreError) setReloadKey((key) => key + 1); else setPage((value) => value + 1); }}
+        mobileLoadingMoreLabel={t("masoft.loading")}
+        mobileRetryLabel={t("masoft.retry")}
+        mobileEndLabel={t("masoft.pagination", { from: total ? 1 : 0, to: Math.min(items.length, total), total })}
+        mobileContent={isMobileList ? <div className="mobile-card-list masoft-mobile-list" role="list" aria-label={t("masoft.title")}>
+          {items.map((item) => <article className="mobile-list-card order-mobile-card masoft-mobile-card" role="listitem" key={item.id}>
+            <header>
+              <label className="order-mobile-select"><input type="checkbox" checked={selected.has(item.id)} disabled={!canManageActions} onChange={(event) => toggleSelection(item, event.target.checked)} aria-label={t("masoft.selectRecord", { value: item.invoiceNumber || item.id })} /></label>
+              <div className="order-mobile-title"><strong>{item.invoiceNumber || t("common.notSet")}</strong><span>{item.channelName || t("common.notSet")}</span></div>
+              <strong className="masoft-mobile-net">{formatter.format(item.netAmount)}</strong>
+            </header>
+            <div className="order-mobile-customer masoft-mobile-orders">{hasVerifiedOrderLinks(item) ? item.payments.map((payment) => <DetailLink key={payment.id} className="masoft-order-tag" to={`/orders/${payment.orderId}`} target="_blank" rel="noopener noreferrer">{payment.orderNumber || t("common.notSet")}</DetailLink>) : <span className="masoft-order-pending">{t("masoft.pendingConfirmation")}</span>}</div>
+            <dl className="order-mobile-facts">
+              <div><dt>{t("masoft.columns.payout")}</dt><dd>{item.payoutAt ? new Intl.DateTimeFormat(i18n.language, { dateStyle: "medium", timeZone: "Asia/Hong_Kong" }).format(new Date(item.payoutAt)) : t("common.notSet")}</dd></div>
+              <div><dt>{t("masoft.columns.paymentMethod")}</dt><dd>{item.paymentMethodName || t("common.notSet")}</dd></div>
+              <div><dt>{t("masoft.columns.gross")}</dt><dd>{formatter.format(item.grossAmount)}</dd></div>
+              <div><dt>{t("masoft.columns.charges")}</dt><dd>{formatter.format(item.charges)}</dd></div>
+              <div><dt>{t("masoft.columns.receipt")}</dt><dd>{item.receiptNumber || t("common.notSet")}</dd></div>
+            </dl>
+            {canManageActions ? <footer><Button variant="ghost" size="icon" onClick={() => openEdit(item)} aria-label={t("masoft.edit")}><Pencil /></Button></footer> : null}
+          </article>)}
+        </div> : undefined}
+        header={<tr><th className="payments-select-cell"><input type="checkbox" checked={pageAllSelected} disabled={!items.length || loading} onChange={(event) => togglePageSelection(event.target.checked)} aria-label={t("masoft.selectAll")} /></th><th>{t("masoft.columns.invoice")}</th><th>{t("masoft.columns.brand")}</th><th><button type="button" className="table-sort-button" onClick={() => { setPayoutAscending((value) => !value); resetPage(); }} aria-label={t("masoft.sortPayoutDate")}>{t("masoft.columns.payout")}{payoutAscending ? <ArrowUp /> : <ArrowDown />}</button></th><th>{t("masoft.columns.orders")}</th><th>{t("masoft.columns.paymentMethod")}</th><th>{t("masoft.columns.gross")}</th><th>{t("masoft.columns.charges")}</th><th>{t("masoft.columns.net")}</th><th>{t("masoft.columns.receipt")}</th><th /></tr>}>
+        {items.map((item) => <tr key={item.id}><td className="payments-select-cell"><input type="checkbox" checked={selected.has(item.id)} disabled={!canManageActions} onChange={(event) => toggleSelection(item, event.target.checked)} aria-label={t("masoft.selectRecord", { value: item.invoiceNumber || item.id })} /></td><td>{item.invoiceNumber || "—"}</td><td>{item.channelName || "—"}</td><td>{item.payoutAt ? new Intl.DateTimeFormat(i18n.language, { dateStyle: "medium", timeZone: "Asia/Hong_Kong" }).format(new Date(item.payoutAt)) : "—"}</td><td><div className="masoft-orders-cell">{hasVerifiedOrderLinks(item) ? item.payments.map((payment) => <DetailLink key={payment.id} className="masoft-order-tag" to={`/orders/${payment.orderId}`} target="_blank" rel="noopener noreferrer">{payment.orderNumber || "—"}</DetailLink>) : <span className="masoft-order-pending">{t("masoft.pendingConfirmation")}</span>}</div></td><td>{item.paymentMethodName || "—"}</td><td>{formatter.format(item.grossAmount)}</td><td>{formatter.format(item.charges)}</td><td><strong>{formatter.format(item.netAmount)}</strong></td><td>{item.receiptNumber || "—"}</td><td className="table-actions-cell">{canManageActions ? <Button variant="ghost" size="icon" onClick={() => openEdit(item)} aria-label={t("masoft.edit")}><Pencil /></Button> : null}</td></tr>)}
       </ListTable>}
       <TablePagination summary={t("masoft.pagination", { from: visibleFrom, to: visibleTo, total })} page={page} totalPages={totalPages} loading={loading} onPrevious={() => setPage((value) => Math.max(1, value - 1))} onNext={() => setPage((value) => Math.min(totalPages, value + 1))} onPageChange={setPage} previousLabel={t("masoft.previous")} nextLabel={t("masoft.next")} pageLabel={t("masoft.pageOf")} jumpLabel={t("masoft.jumpToPage")} />
     </article>

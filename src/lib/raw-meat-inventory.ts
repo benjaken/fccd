@@ -434,6 +434,18 @@ export async function updateRawMeatMovementRemark(
   return (data as string | null) ?? null;
 }
 
+/**
+ * Deletes a raw-meat ledger entry and any stock entry that forms the other
+ * side of the same transaction (for example, a prepared-meat production run).
+ */
+export async function deleteRawMeatMovement(movementId: string): Promise<void> {
+  const { error } = await supabase.rpc("delete_meat_stock_movement", {
+    p_movement_type: "raw",
+    p_movement_id: movementId,
+  });
+  if (error) throw error;
+}
+
 export async function updateRawMeatItemFlags(
   itemId: string,
   flags: { canShipDirectly: boolean; isActive: boolean },
