@@ -895,7 +895,7 @@ describe("Quote editor", () => {
         channelId: "channel-1", customerName: "Customer", companyName: "Company",
         contactA: "12345678", contactB: "", email: "quote@example.com", asanaLink: "",
         address: "", districtId: "district-1", districtName: "", shippingMethodId: "shipping-home",
-        deliveryDate: "2026-08-21", deliveryTime: "12:00 - 13:00", shipOutTime: "",
+        deliveryDate: "2026-08-21", deliveryTime: "12:00 - 13:00", shipOutTime: "11:00",
         customerNote: "", packingNote: "", salesPartnerId: "", internalNote: "", tagIds: [],
       },
     };
@@ -1328,7 +1328,7 @@ describe("Quote editor", () => {
         channelId: "channel-1", customerName: "Customer", companyName: "Company",
         contactA: "12345678", contactB: "", email: "order@example.com", asanaLink: "",
         address: "1 Central Road", districtId: "district-1", districtName: "", shippingMethodId: "shipping-home",
-        deliveryDate: "2026-08-21", deliveryTime: "12:00 - 13:00", shipOutTime: "",
+        deliveryDate: "2026-08-21", deliveryTime: "12:00 - 13:00", shipOutTime: "11:00",
         customerNote: "不要香菜", packingNote: "", salesPartnerId: "", internalNote: "", tagIds: [],
         quoteStatus: "", quoteSalesSourceId: "", quoteCommunicationChannelId: "",
       },
@@ -1404,7 +1404,7 @@ describe("Quote editor", () => {
     await waitFor(() => expect(screen.queryByRole("button", { name: /Send to factory|送至工場/ })).not.toBeInTheDocument());
   });
 
-  it("blocks factory sending from detail and edit pages unless all seven required fields are present", async () => {
+  it("blocks factory sending from detail and edit pages unless all nine required fields are present", async () => {
     const setFactoryStatus = vi.fn().mockResolvedValue(undefined);
     const loadSummary = vi.fn().mockResolvedValue({
       id: "order-1", orderNumber: "6951", channelId: "",
@@ -1439,9 +1439,10 @@ describe("Quote editor", () => {
     expect(detailDialog).toHaveTextContent("Shipping method");
     expect(detailDialog).toHaveTextContent("District");
     expect(detailDialog).toHaveTextContent("Delivery date");
+    expect(detailDialog).toHaveTextContent("Delivery time");
+    expect(detailDialog).toHaveTextContent("Dispatch time");
     expect(detailDialog).not.toHaveTextContent("Company name");
     expect(detailDialog).not.toHaveTextContent("Delivery address");
-    expect(detailDialog).not.toHaveTextContent("Delivery time");
     expect(setFactoryStatus).not.toHaveBeenCalled();
 
     detail.unmount();
@@ -1464,9 +1465,10 @@ describe("Quote editor", () => {
     expect(editDialog).toHaveTextContent("Shipping method");
     expect(editDialog).toHaveTextContent("District");
     expect(editDialog).toHaveTextContent("Delivery date");
+    expect(editDialog).toHaveTextContent("Delivery time");
+    expect(editDialog).toHaveTextContent("Dispatch time");
     expect(editDialog).not.toHaveTextContent("Company name");
     expect(editDialog).not.toHaveTextContent("Delivery address");
-    expect(editDialog).not.toHaveTextContent("Delivery time");
     expect(setFactoryStatus).not.toHaveBeenCalled();
   });
 
