@@ -143,9 +143,9 @@ describe("order delivery lifecycle", () => {
     expect(migration).toContain("order_delivery_district_required");
   });
 
-  it("enforces all seven factory-send fields at the database boundary", () => {
+  it("enforces all nine factory-send fields at the database boundary", () => {
     const migration = readFileSync(
-      "supabase/migrations/20260825114000_validate_order_factory_required_fields.sql",
+      "supabase/migrations/20260829141000_require_factory_delivery_times.sql",
       "utf8",
     );
 
@@ -156,5 +156,9 @@ describe("order delivery lifecycle", () => {
     expect(migration).toContain("new.shipping_method_id is null");
     expect(migration).toContain("new.delivery_district_id is null");
     expect(migration).toContain("new.delivery_at is null");
+    expect(migration).toContain("new.delivery_time");
+    expect(migration).toContain("order_factory_delivery_time_required");
+    expect(migration).toContain("new.ship_out_time");
+    expect(migration).toContain("order_factory_ship_out_time_required");
   });
 });

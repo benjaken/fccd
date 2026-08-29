@@ -604,6 +604,8 @@ export function QuoteEditorPage({
       missing.push(t("quoteEditor.fields.district"));
     }
     if (!draft.deliveryDate.trim()) missing.push(t("quoteEditor.fields.deliveryDate"));
+    if (!draft.deliveryTime.trim()) missing.push(t("quoteEditor.fields.deliveryTime"));
+    if (!draft.shipOutTime.trim()) missing.push(t("quoteEditor.fields.shipOutTime"));
     return missing;
   }, [automaticDistrictName, draft, t]);
 

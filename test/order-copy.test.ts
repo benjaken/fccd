@@ -16,15 +16,24 @@ describe("order copying", () => {
     expect(source).toContain("factoryPrintDate: copy ? null");
   });
 
-  it("assigns copied web orders a locked brand-specific monthly sequence", () => {
+  it("assigns copied web orders a locked historical brand sequence", () => {
     const migration = readFileSync(
-      "supabase/migrations/20260821024000_assign_web_order_numbers.sql",
+      "supabase/migrations/20260829140000_fix_hk_lunch_box_order_numbers.sql",
       "utf8",
     );
 
     expect(migration).toContain("pg_advisory_xact_lock");
     expect(migration).toContain("new.legacy_id not like 'web-order-%'");
-    expect(migration).toContain("when 'catering' then 'FCCO'");
-    expect(migration).toContain("new.order_number := v_prefix || v_month");
+    expect(migration).toContain("when 'catering' then '#'");
+    expect(migration).toContain("when 'hk lunch box' then 'B-'");
+    expect(migration).toContain("when 'kitchen' then 'K-'");
+    expect(migration).toContain("when 'express' then 'E-'");
+    expect(migration).toContain("when 'cuisine' then 'L-'");
+    expect(migration).toContain("when 'delivery' then 'D-'");
+    expect(migration).toContain("when 'residential' then 'R-'");
+    expect(migration).toContain("when 'hk party food' then 'P-'");
+    expect(migration).toContain("new.order_number := v_prefix || v_sequence::text");
+    expect(migration).toContain("v_quote.channel_id, null, 'order'");
+    expect(migration).toContain("returning inserted.order_number into v_order_number");
   });
 });
