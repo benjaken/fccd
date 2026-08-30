@@ -153,11 +153,32 @@ describe("bubble daily incremental helpers", () => {
     expect(source).toContain("order_tag_assignments");
     expect(source).toContain("delivery.district_id ? []");
     expect(source).toContain("delivery_district_id: update.districtId");
+    expect(source).toContain('"is_sent_to_factory"');
+    expect(source).toContain("order.is_sent_to_factory !== true");
     expect(source.indexOf("const insertedParents = await insertOnlyParents(")).toBeLessThan(
       source.indexOf("const metadata = await syncOrderMetadata(client, fetched.records)"),
     );
     expect(source).toContain("hydrateOrderLineSnapshots");
     expect(source).toContain('mapping.sourceType === "s_order"');
+  });
+
+  it("repairs delivery-backed factory board rows after direct Bubble status sync", () => {
+    const migration = fs.readFileSync(
+      path.join(
+        process.cwd(),
+        "supabase/migrations/20260830224000_ensure_factory_delivery_on_sync.sql",
+      ),
+      "utf8",
+    );
+
+    expect(migration).toContain("ensure_factory_delivery_for_sent_order");
+    expect(migration).toContain("after update of is_sent_to_factory");
+    expect(migration).toContain("new.delivery_district_id is null");
+    expect(migration).toContain("new.shipping_method_id is null");
+    expect(migration).toContain("new.delivery_at is null");
+    expect(migration).toContain("where delivery.order_id = new.id");
+    expect(migration).toContain("orders.is_sent_to_factory is true");
+    expect(migration).toContain("insert into public.deliveries");
   });
 
   it("exposes an admin-only read-only reconciliation audit", () => {

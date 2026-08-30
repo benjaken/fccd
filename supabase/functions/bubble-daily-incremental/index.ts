@@ -426,6 +426,7 @@ async function syncOrderMetadata(
     [
       "id",
       "document_type",
+      "is_sent_to_factory",
       "delivery_district_id",
       "shipping_method_id",
       "shipping_method_legacy_id",
@@ -506,7 +507,12 @@ async function syncOrderMetadata(
     }
 
     const mapped = mappedOrders.get(item.orderLegacyId) ?? {};
-    if (order.document_type !== "order") continue;
+    // Unsent orders retain delivery planning on the order. A sent order must
+    // have a delivery because the factory board is delivery-backed.
+    if (
+      order.document_type !== "order" ||
+      order.is_sent_to_factory !== true
+    ) continue;
     deliveryInserts.push({
       id: crypto.randomUUID(),
       legacy_id: fallbackDeliveryLegacyId(item.orderLegacyId),
