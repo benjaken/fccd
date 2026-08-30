@@ -326,6 +326,8 @@ const phaseC: SourceMapping[] = [
       channel_id: null,
       channel_legacy_id: text(r.ORDER_Channel),
       order_number: text(r["ORDER_Order Number"]),
+      order_received_at: dateValue(r["New_date!"]) ??
+        dateValue(r["Created Date"]),
       document_type: r["(Quote)chg to order"] === true ||
           r.AddOrder_DONE === true || r.Shopify_NewOrder === true
         ? "order"

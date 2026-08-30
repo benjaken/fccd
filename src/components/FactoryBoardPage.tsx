@@ -845,7 +845,11 @@ export function FactoryBoardPage({
                         : undefined;
                   const newOrder =
                     item.factorySource !== "meat" &&
-                    isNewFactoryOrder(item.factorySentAt);
+                    isNewFactoryOrder(
+                      item.orderReceivedAt,
+                      new Date(),
+                      item.deliveryAt,
+                    );
                   return (
                     <button
                       type="button"
