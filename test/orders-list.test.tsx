@@ -441,6 +441,35 @@ describe("Orders list", () => {
     expect(table.queryByText("未傳送到工場")).not.toBeInTheDocument();
   });
 
+  it("hides a stale not-sent factory status when the order has been sent", async () => {
+    const loadOrders = vi.fn().mockResolvedValue({
+      ...orderResult,
+      items: [{
+        ...orderResult.items[0],
+        outstanding: 0,
+        factoryPackingNote: null,
+        isSentToFactory: true,
+        doNotSendToFactory: false,
+        statuses: [{ name: "未傳至工場", color: "#f59e0b" }],
+        manualTodos: [],
+      }],
+    });
+
+    render(
+      <MemoryRouter>
+        <OrdersListPage
+          loadOrders={loadOrders}
+          loadListConfig={emptyListConfig}
+          loadStatusCatalog={vi.fn().mockResolvedValue([])}
+        />
+      </MemoryRouter>,
+    );
+
+    const table = within(await screen.findByRole("table"));
+    expect(table.queryByText("未傳至工場")).not.toBeInTheDocument();
+    expect(table.queryByText("未傳送到工場")).not.toBeInTheDocument();
+  });
+
   it("opens the existing customer messages side panel from the row chat action", async () => {
     const user = userEvent.setup();
     const loadMessages = vi.fn().mockResolvedValue({
