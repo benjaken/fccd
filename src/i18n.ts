@@ -1553,6 +1553,11 @@ const resources = {
           updateError: "電郵通知設定更新失敗，請重試。",
           empty: "目前沒有已設定電郵地址的用戶。",
           toggle: "切換 {{name}} 的電郵通知",
+          primary: "主郵箱",
+          additionalLabel: "{{name}} 的附加通知郵箱",
+          additionalPlaceholder: "加入另一個郵箱",
+          addAddress: "加入郵箱",
+          deleteAddress: "刪除 {{email}}",
           columns: { user: "用戶", email: "電郵地址" },
         },
         firstNotificationRecipients: {
@@ -6696,6 +6701,11 @@ const resources = {
           updateError: "Could not update the email notification setting. Try again.",
           empty: "No users with an email address are available.",
           toggle: "Toggle email notifications for {{name}}",
+          primary: "Primary email",
+          additionalLabel: "Additional notification email for {{name}}",
+          additionalPlaceholder: "Add another email address",
+          addAddress: "Add email",
+          deleteAddress: "Delete {{email}}",
           columns: { user: "User", email: "Email address" },
         },
         firstNotificationRecipients: {

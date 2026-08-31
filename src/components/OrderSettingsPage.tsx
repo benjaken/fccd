@@ -416,6 +416,8 @@ export function OrderSettingsPage({
   deleteFee,
   loadEmailNotificationUsers,
   setEmailNotificationUser,
+  saveEmailNotificationAddress,
+  deleteEmailNotificationAddress,
   loadFirstNotificationRecipients,
   saveFirstNotificationRecipient,
   deleteFirstNotificationRecipient,
@@ -451,6 +453,8 @@ export function OrderSettingsPage({
   deleteFee?: Parameters<typeof OrderShippingFeesTable>[0]["deleteFee"];
   loadEmailNotificationUsers?: Parameters<typeof OrderEmailNotificationSettings>[0]["loadUsers"];
   setEmailNotificationUser?: Parameters<typeof OrderEmailNotificationSettings>[0]["setUserEnabled"];
+  saveEmailNotificationAddress?: Parameters<typeof OrderEmailNotificationSettings>[0]["saveAddress"];
+  deleteEmailNotificationAddress?: Parameters<typeof OrderEmailNotificationSettings>[0]["deleteAddress"];
   loadFirstNotificationRecipients?: Parameters<typeof OrderFirstNotificationRecipientsSettings>[0]["loadRecipients"];
   saveFirstNotificationRecipient?: Parameters<typeof OrderFirstNotificationRecipientsSettings>[0]["saveRecipient"];
   deleteFirstNotificationRecipient?: Parameters<typeof OrderFirstNotificationRecipientsSettings>[0]["deleteRecipient"];
@@ -547,6 +551,8 @@ export function OrderSettingsPage({
           <OrderEmailNotificationSettings
             loadUsers={loadEmailNotificationUsers}
             setUserEnabled={setEmailNotificationUser}
+            saveAddress={saveEmailNotificationAddress}
+            deleteAddress={deleteEmailNotificationAddress}
           />
         ) : activeTab === "first-notification-recipients" ? (
           <OrderFirstNotificationRecipientsSettings

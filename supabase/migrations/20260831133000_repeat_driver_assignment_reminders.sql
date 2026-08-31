@@ -14,7 +14,7 @@ alter table public.driver_assignment_internal_reminder_outbox
 
 drop function if exists public.enqueue_driver_assignment_internal_reminders(date);
 
-create function public.enqueue_driver_assignment_internal_reminders(
+create or replace function public.enqueue_driver_assignment_internal_reminders(
   p_reminder_date date,
   p_reminder_hour smallint
 )
@@ -51,12 +51,10 @@ begin
     p_reminder_date,
     p_reminder_hour,
     'email',
-    profile.id::text,
-    coalesce(nullif(btrim(profile.user_name), ''), profile.email),
-    btrim(profile.email)
-  from public.user_profiles as profile
-  where profile.email_noti
-    and nullif(btrim(profile.email), '') is not null
+    recipient.recipient_key,
+    recipient.recipient_name,
+    recipient.recipient_address
+  from private.order_email_notification_recipients() as recipient
   on conflict (reminder_date, reminder_hour, channel, recipient_key) do nothing;
 
   get diagnostics v_inserted = row_count;

@@ -15340,6 +15340,36 @@ a.masoft-order-tag:focus-visible {
   min-width: 12rem;
 }
 
+.order-notification-email-list {
+  display: grid;
+  gap: 8px;
+  min-width: min(32rem, 48vw);
+}
+
+.order-notification-email-row,
+.order-notification-email-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.order-notification-email-row {
+  min-height: 32px;
+}
+
+.order-notification-email-row small {
+  color: var(--muted-foreground);
+}
+
+.order-notification-email-row .button {
+  margin-left: auto;
+}
+
+.order-notification-email-form input {
+  min-width: 14rem;
+  flex: 1;
+}
+
 .wati-notification-settings {
   display: grid;
   gap: 18px;

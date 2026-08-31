@@ -5,6 +5,12 @@ export type OrderEmailNotificationUser = {
   userName: string;
   email: string;
   enabled: boolean;
+  additionalEmails: OrderEmailNotificationAddress[];
+};
+
+export type OrderEmailNotificationAddress = {
+  id: string;
+  email: string;
 };
 
 type OrderEmailNotificationUserRow = {
@@ -12,6 +18,7 @@ type OrderEmailNotificationUserRow = {
   user_name: string;
   email: string;
   enabled: boolean;
+  additional_emails?: OrderEmailNotificationAddress[] | null;
 };
 
 function mapEmailUser(row: OrderEmailNotificationUserRow): OrderEmailNotificationUser {
@@ -20,7 +27,42 @@ function mapEmailUser(row: OrderEmailNotificationUserRow): OrderEmailNotificatio
     userName: row.user_name,
     email: row.email,
     enabled: Boolean(row.enabled),
+    additionalEmails: Array.isArray(row.additional_emails)
+      ? row.additional_emails.map((address) => ({
+          id: address.id,
+          email: address.email,
+        }))
+      : [],
   };
+}
+
+type OrderEmailNotificationAddressRow = {
+  id: string;
+  user_id: string;
+  email: string;
+};
+
+export async function saveOrderEmailNotificationAddress(
+  userId: string,
+  email: string,
+) {
+  const value = email.trim().toLowerCase();
+  if (!/^\S+@\S+\.\S+$/.test(value)) throw new Error("invalid_email");
+  const { data, error } = await supabase.rpc("save_order_email_notification_address", {
+    p_user_id: userId,
+    p_email: value,
+  });
+  if (error) throw error;
+  const row = (data as OrderEmailNotificationAddressRow[] | null)?.[0];
+  if (!row) throw new Error("notification_email_not_found");
+  return { id: row.id, email: row.email } satisfies OrderEmailNotificationAddress;
+}
+
+export async function deleteOrderEmailNotificationAddress(id: string) {
+  const { error } = await supabase.rpc("delete_order_email_notification_address", {
+    p_id: id,
+  });
+  if (error) throw error;
 }
 
 export async function fetchOrderEmailNotificationUsers() {
