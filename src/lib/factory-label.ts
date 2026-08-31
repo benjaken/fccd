@@ -1,3 +1,5 @@
+import { normalizeFactoryOrderNumber } from "@/lib/factory-order-number";
+
 export type FactoryDishLabelCommandInput = {
   kind?: "dish";
   orderNumber: string;
@@ -121,7 +123,10 @@ export function buildFactoryDishLabelLayout(
   input: FactoryDishLabelCommandInput,
 ): FactoryDishLabelLayout {
   const copies = Math.min(100, Math.max(1, Math.floor(Number(input.copies) || 1)));
-  const orderNumber = sanitizeFactoryLabelText(input.orderNumber).replace(/^#/, "");
+  const normalizedOrderNumber = normalizeFactoryOrderNumber(
+    sanitizeFactoryLabelText(input.orderNumber),
+  );
+  const orderNumber = normalizedOrderNumber ? `#${normalizedOrderNumber}` : "";
   const deliveryDate = formatDeliveryDate(input.deliveryDate);
   const configuredLabelLines = input.labelName
     .split(/\r?\n/)
@@ -353,7 +358,7 @@ async function buildDishLabelBytes(
       0,
       orderNumber,
       { height: 120, fontSize: 120, fontWeight: 800, align: "center" },
-      { x: 100, width: 200 },
+      { x: 16, width: 368 },
     ),
     command("BAR 16,124,368,2"),
     await textBitmap(rasterize, 132, "－ 送貨日期 －", { height: 40, fontSize: 30, fontWeight: 800, align: "center" }),
@@ -384,7 +389,9 @@ async function buildAddressLabelBytes(
   input: FactoryAddressLabelCommandInput,
   rasterize: FactoryTextRasterizer,
 ): Promise<Uint8Array> {
-  const orderNumber = sanitizeFactoryLabelText(input.orderNumber).replace(/^#/, "");
+  const orderNumber = normalizeFactoryOrderNumber(
+    sanitizeFactoryLabelText(input.orderNumber),
+  );
   const deliveryDate = formatDeliveryDate(input.deliveryDate);
   const districtLines = wrapFactoryLabelText(input.district, 4).slice(0, 2);
   const customerName = sanitizeFactoryLabelText(input.customerName);
@@ -399,7 +406,7 @@ async function buildAddressLabelBytes(
       0,
       `#${orderNumber}`,
       { height: 120, fontSize: 120, fontWeight: 800, align: "center" },
-      { x: 100, width: 200 },
+      { x: 16, width: 368 },
     ),
     command("BAR 16,124,368,2"),
     await textBitmap(rasterize, 132, "－ 送貨日期 －", {

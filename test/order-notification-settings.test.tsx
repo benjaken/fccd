@@ -46,14 +46,15 @@ describe("order notification settings", () => {
 
   it("lists users and persists an email notification toggle", async () => {
     const loadUsers = vi.fn().mockResolvedValue([
-      { userId: "user-1", userName: "Bis", email: "bis@example.com", enabled: true },
-      { userId: "user-2", userName: "Packing", email: "packing@example.com", enabled: false },
+      { userId: "user-1", userName: "Bis", email: "bis@example.com", enabled: true, additionalEmails: [] },
+      { userId: "user-2", userName: "Packing", email: "packing@example.com", enabled: false, additionalEmails: [] },
     ]);
     const setUserEnabled = vi.fn().mockResolvedValue({
       userId: "user-2",
       userName: "Packing",
       email: "packing@example.com",
       enabled: true,
+      additionalEmails: [],
     });
 
     renderSettings("email-notifications", {
@@ -67,6 +68,43 @@ describe("order notification settings", () => {
     await userEvent.click(screen.getByRole("switch", { name: "切換 Packing 的電郵通知" }));
 
     await waitFor(() => expect(setUserEnabled).toHaveBeenCalledWith("user-2", true));
+  });
+
+  it("adds and removes additional notification emails for one user", async () => {
+    const loadUsers = vi.fn().mockResolvedValue([{
+      userId: "elena-id",
+      userName: "Elena",
+      email: "chifung.login@gmail.com",
+      enabled: true,
+      additionalEmails: [{ id: "address-1", email: "old@example.com" }],
+    }]);
+    const saveAddress = vi.fn().mockResolvedValue({
+      id: "address-2",
+      email: "chifung.plan@gmail.com",
+    });
+    const deleteAddress = vi.fn().mockResolvedValue(undefined);
+
+    renderSettings("email-notifications", {
+      loadEmailNotificationUsers: loadUsers,
+      setEmailNotificationUser: vi.fn(),
+      saveEmailNotificationAddress: saveAddress,
+      deleteEmailNotificationAddress: deleteAddress,
+    });
+
+    expect(await screen.findByText("chifung.login@gmail.com")).toBeInTheDocument();
+    await userEvent.type(
+      screen.getByLabelText("Elena 的附加通知郵箱"),
+      "chifung.plan@gmail.com",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "加入郵箱" }));
+    await waitFor(() => expect(saveAddress).toHaveBeenCalledWith(
+      "elena-id",
+      "chifung.plan@gmail.com",
+    ));
+    expect(await screen.findByText("chifung.plan@gmail.com")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "刪除 old@example.com" }));
+    await waitFor(() => expect(deleteAddress).toHaveBeenCalledWith("address-1"));
   });
 
   it("loads and updates independent WATI controls", async () => {
@@ -162,6 +200,22 @@ describe("order notification settings", () => {
     expect(sql).toContain("grant execute on function public.save_order_first_notification_recipient");
     expect(sql).toContain("create table public.order_internal_notification_outbox");
     expect(sql).toContain("create trigger enqueue_internal_order_notifications");
+
+    const multiEmailSql = readFileSync(join(
+      process.cwd(),
+      "supabase/migrations/20260831150000_order_notification_multi_email.sql",
+    ), "utf8");
+    expect(multiEmailSql).toContain("create table if not exists public.order_email_notification_addresses");
+    expect(multiEmailSql).toContain("private.order_email_notification_recipients()");
+    expect(multiEmailSql).toContain("save_order_email_notification_address");
+
+    const loginFilterSql = readFileSync(join(
+      process.cwd(),
+      "supabase/migrations/20260831152000_filter_email_notifications_to_login_users.sql",
+    ), "utf8");
+    expect(loginFilterSql).toContain("join auth.users auth_user");
+    expect(loginFilterSql).toContain("profile.login_enabled");
+    expect(loginFilterSql).toContain("auth_user.banned_until is null");
 
     const watiSql = readFileSync(join(
       process.cwd(),

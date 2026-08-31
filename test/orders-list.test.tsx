@@ -685,7 +685,7 @@ describe("Orders list", () => {
     const dialog = screen.getByRole("dialog", { name: "送貨單預覽" });
     expect(dialog).toHaveClass("side-panel", "order-delivery-note-panel");
     expect(await within(dialog).findByText(/咖喱唐揚雞塊飯/)).toBeInTheDocument();
-    expect(within(dialog).getByText(/訂單 B-1513/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/訂單 #B-1513/)).toBeInTheDocument();
     expect(within(dialog).getByText(/Central \* Curbside/)).toBeInTheDocument();
     expect(within(dialog).getByText(/Please call on arrival/)).toBeInTheDocument();
     expect(within(dialog).getByText(/12 份/)).toBeInTheDocument();

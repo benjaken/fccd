@@ -32,7 +32,7 @@ describe("factory label bitmap TSPL", () => {
     })).toMatchObject({
       widthMm: 50,
       heightMm: 75,
-      orderNumber: "B-11795",
+      orderNumber: "#B-11795",
       copies: 2,
       labelLines: ["彩椒炒豬頸肉飯餐", "盒"],
       remarkLines: ["分開膠袋裝", "不要餐具"],
@@ -109,7 +109,7 @@ describe("factory label bitmap TSPL", () => {
     }, rasterizer);
     const tspl = latin1(bytes);
 
-    expect(tspl).toContain("BITMAP 100,0,25,120,0,");
+    expect(tspl).toContain("BITMAP 16,0,46,120,0,");
     expect(tspl).toContain("BITMAP 8,288,48,60,0,");
     expect(tspl).toContain("BITMAP 8,364,48,52,0,");
     expect(tspl).toContain("BITMAP 8,440,48,52,0,");
@@ -167,8 +167,8 @@ describe("factory label bitmap TSPL", () => {
     expect(tspl).not.toContain("CODEPAGE 950");
     expect(tspl).not.toContain("TST24.BF2");
     expect(rasterizer).toHaveBeenCalledWith(
-      "B-11795",
-      expect.objectContaining({ width: 200, height: 120, fontSize: 120 }),
+      "#B-11795",
+      expect.objectContaining({ width: 368, height: 120, fontSize: 120 }),
     );
     expect(rasterizer).toHaveBeenCalledWith("－ 送貨日期 －", expect.objectContaining({ fontSize: 30 }));
     expect(rasterizer).toHaveBeenCalledWith("21/08/2026（五）", expect.objectContaining({ fontSize: 46 }));
@@ -186,7 +186,7 @@ describe("factory label bitmap TSPL", () => {
     const rasterizer = vi.fn<FactoryTextRasterizer>(fakeRasterizer);
     const bytes = await buildFactoryLabelBytes({
       kind: "address",
-      orderNumber: "B-1546",
+      orderNumber: "#B-1546",
       deliveryDate: "2026-08-25",
       district: "沙田",
       customerName: "Ka Wai Hui",
@@ -195,14 +195,14 @@ describe("factory label bitmap TSPL", () => {
     const tspl = latin1(bytes);
 
     expect(tspl).toContain("SIZE 50 mm,75 mm\r\n");
-    expect(tspl).toContain("BITMAP 100,0,25,120,0,");
+    expect(tspl).toContain("BITMAP 16,0,46,120,0,");
     expect(tspl).toContain("BAR 16,124,368,2\r\n");
     expect(tspl).toContain("BAR 16,442,368,2\r\n");
     expect(tspl).not.toContain("Ka Wai Hui");
     expect(tspl).not.toContain("91027090");
     expect(rasterizer).toHaveBeenCalledWith(
       "#B-1546",
-      expect.objectContaining({ width: 200, height: 120, fontSize: 120, align: "center" }),
+      expect.objectContaining({ width: 368, height: 120, fontSize: 120, align: "center" }),
     );
     expect(rasterizer).toHaveBeenCalledWith(
       "－ 送貨日期 －",

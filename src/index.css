@@ -15340,6 +15340,36 @@ a.masoft-order-tag:focus-visible {
   min-width: 12rem;
 }
 
+.order-notification-email-list {
+  display: grid;
+  gap: 8px;
+  min-width: min(32rem, 48vw);
+}
+
+.order-notification-email-row,
+.order-notification-email-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.order-notification-email-row {
+  min-height: 32px;
+}
+
+.order-notification-email-row small {
+  color: var(--muted-foreground);
+}
+
+.order-notification-email-row .button {
+  margin-left: auto;
+}
+
+.order-notification-email-form input {
+  min-width: 14rem;
+  flex: 1;
+}
+
 .wati-notification-settings {
   display: grid;
   gap: 18px;
@@ -24187,11 +24217,11 @@ button.factory-job-card:focus-visible {
 
 .factory-order-meta {
   display: grid;
-  grid-template-columns: auto auto minmax(20rem, 1fr) max-content;
+  grid-template-columns: max-content minmax(0, 1fr) max-content;
   grid-template-areas:
-    "date dispatch arrival arrival"
-    "phone address address customer";
-  gap: 16px 48px;
+    "date dispatch arrival"
+    "phone address customer";
+  gap: 16px 32px;
   margin: 0;
   font-size: 36px;
   font-weight: 750;
@@ -25513,9 +25543,7 @@ button.factory-job-card:focus-visible {
 
   .factory-delivery-note-print,
   .order-delivery-note-sheet {
-    position: absolute;
-    top: 0;
-    left: 0;
+    position: relative;
     display: block !important;
     box-sizing: border-box;
     width: 210mm;
@@ -25523,13 +25551,18 @@ button.factory-job-card:focus-visible {
     min-height: 297mm;
     padding: 12mm 12mm 22mm;
     page: factory-delivery-note;
-    break-after: auto;
-    break-inside: auto;
+    break-after: page;
+    break-inside: avoid-page;
     background: #ffffff;
     color: #000000;
     font-family: Arial, "Noto Sans TC", sans-serif;
     font-size: 13pt;
     line-height: 1.35;
+  }
+
+  .factory-delivery-note-print.is-final-page,
+  .order-delivery-note-sheet.is-final-page {
+    break-after: auto;
   }
 
   .order-delivery-note-sheet {
@@ -25717,14 +25750,6 @@ button.factory-job-card:focus-visible {
   .factory-delivery-note-brand-footer {
     grid-column: 2;
     text-align: center;
-  }
-
-  .factory-delivery-note-order-footer {
-    box-sizing: border-box;
-    grid-column: 1;
-    justify-self: stretch;
-    width: 100%;
-    text-align: left;
   }
 
   .factory-delivery-note-page-footer {
@@ -26095,6 +26120,10 @@ button.factory-job-card:focus-visible {
   line-height: 1.35;
 }
 
+.order-delivery-note-sheet + .order-delivery-note-sheet {
+  margin-top: 22px;
+}
+
 .order-delivery-note-sheet .factory-delivery-note-header {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
@@ -26270,9 +26299,7 @@ button.factory-job-card:focus-visible {
   }
 
   .order-delivery-note-sheet {
-    position: absolute;
-    top: 0;
-    left: 0;
+    position: relative;
     box-sizing: border-box;
     width: 210mm;
     height: 297mm;
@@ -26287,6 +26314,12 @@ button.factory-job-card:focus-visible {
     font-family: Arial, "Noto Sans TC", sans-serif;
     font-size: 13pt;
     line-height: 1.35;
+    break-after: page;
+    break-inside: avoid-page;
+  }
+
+  .order-delivery-note-sheet.is-final-page {
+    break-after: auto;
   }
 
   .order-delivery-note-sheet .factory-delivery-note-header {

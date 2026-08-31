@@ -6,6 +6,7 @@ import {
   type DeliveryListItem,
 } from "@/lib/deliveries"
 import { supabase } from "@/lib/supabase"
+import { formatFactoryOrderNumber } from "@/lib/factory-order-number"
 
 export const UNASSIGNED_FLEET_ID = "__unassigned__"
 export const ALL_BRAND_ID = "__all__"
@@ -1112,7 +1113,7 @@ export function buildFactoryDishLabelHtml(input: {
   const remarks = input.remarks
     .map((remark) => `<div class="remark">${escapeFactoryLabelHtml(remark)}</div>`)
     .join("")
-  return `<!doctype html><html><head><meta charset="utf-8"><style>@page{size:100mm 50mm;margin:0}*{box-sizing:border-box}body{margin:0;font-family:"Microsoft JhengHei","Noto Sans CJK TC",sans-serif;color:#000}.label{width:100mm;height:50mm;padding:4mm;display:flex;flex-direction:column;justify-content:center;text-align:center}.dish{font-size:20pt;font-weight:800;line-height:1.2}.qty{font-size:17pt;font-weight:800;margin-top:2mm}.remark{font-size:15pt;font-weight:800;margin-top:1.5mm}.meta{display:flex;justify-content:space-between;margin-top:2.5mm;font-size:9pt;font-weight:700}.packing{margin-top:1mm;font-size:9pt;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}</style></head><body><main class="label"><div class="dish">${escapeFactoryLabelHtml(input.dish)}</div>${input.quantity ? `<div class="qty">× ${escapeFactoryLabelHtml(input.quantity)}</div>` : ""}${remarks}<div class="meta"><span>#${escapeFactoryLabelHtml(input.orderNumber.replace(/^#/, ""))}</span><span>${escapeFactoryLabelHtml(input.deliveryDate)} ${escapeFactoryLabelHtml(input.deliveryTime ?? "")}</span></div>${input.packingNote ? `<div class="packing">${escapeFactoryLabelHtml(input.packingNote)}</div>` : ""}</main></body></html>`
+  return `<!doctype html><html><head><meta charset="utf-8"><style>@page{size:100mm 50mm;margin:0}*{box-sizing:border-box}body{margin:0;font-family:"Microsoft JhengHei","Noto Sans CJK TC",sans-serif;color:#000}.label{width:100mm;height:50mm;padding:4mm;display:flex;flex-direction:column;justify-content:center;text-align:center}.dish{font-size:20pt;font-weight:800;line-height:1.2}.qty{font-size:17pt;font-weight:800;margin-top:2mm}.remark{font-size:15pt;font-weight:800;margin-top:1.5mm}.meta{display:flex;justify-content:space-between;margin-top:2.5mm;font-size:9pt;font-weight:700}.packing{margin-top:1mm;font-size:9pt;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}</style></head><body><main class="label"><div class="dish">${escapeFactoryLabelHtml(input.dish)}</div>${input.quantity ? `<div class="qty">× ${escapeFactoryLabelHtml(input.quantity)}</div>` : ""}${remarks}<div class="meta"><span>${escapeFactoryLabelHtml(formatFactoryOrderNumber(input.orderNumber))}</span><span>${escapeFactoryLabelHtml(input.deliveryDate)} ${escapeFactoryLabelHtml(input.deliveryTime ?? "")}</span></div>${input.packingNote ? `<div class="packing">${escapeFactoryLabelHtml(input.packingNote)}</div>` : ""}</main></body></html>`
 }
 
 export async function markFactoryOrderLinePrinted(lineId: string): Promise<void> {

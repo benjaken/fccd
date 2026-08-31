@@ -24,6 +24,10 @@ import {
 import { useQzTray } from "@/lib/qz-tray";
 import { formatDeliveryAddress } from "@/lib/delivery-address";
 import { printPdf } from "@/lib/print-pdf";
+import {
+  formatFactoryOrderNumber,
+  normalizeFactoryOrderNumber,
+} from "@/lib/factory-order-number";
 import "@/components/factory-change-task.css";
 import {
   DeliveryNoteDocument,
@@ -131,7 +135,8 @@ export function FactoryOrderJobView({
   const canPrint = qz.state === "connected";
   const dateKey = item.deliveryAt ? hongKongDateKey(item.deliveryAt) : "";
   const weekday = formatDeliveryNoteWeekday(dateKey, i18n.language, empty);
-  const orderNumber = item.orderNumber?.replace(/^#/, "") || empty;
+  const orderNumber = normalizeFactoryOrderNumber(item.orderNumber) || empty;
+  const displayOrderNumber = formatFactoryOrderNumber(item.orderNumber, empty);
   const dispatchTime = savedDispatchTime || empty;
   const arrivalWindow = job?.arrivalWindow || empty;
   const assignedFleet = fleets.find((fleet) => fleet.id === assignedFleetId);
@@ -342,7 +347,7 @@ export function FactoryOrderJobView({
       </div>
       <div className="factory-order-main">
         <div className="factory-order-summary">
-          <h1 className="factory-order-number">{orderNumber}</h1>
+          <h1 className="factory-order-number">{displayOrderNumber}</h1>
           <dl className="factory-order-meta">
             <div className="is-date">
               {dateKey

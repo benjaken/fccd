@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { BellRing, Mail, MessageCircleMore, Pencil, Trash2 } from "lucide-react";
+import { BellRing, Mail, MessageCircleMore, Pencil, Plus, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { useCurrentPageAccess } from "@/auth/use-page-access";
@@ -9,8 +9,10 @@ import { SidePanel } from "@/components/ui/side-panel";
 import { Switch } from "@/components/ui/switch";
 import {
   deleteOrderFirstNotificationRecipient,
+  deleteOrderEmailNotificationAddress,
   fetchOrderEmailNotificationUsers,
   fetchOrderFirstNotificationRecipients,
+  saveOrderEmailNotificationAddress,
   saveOrderFirstNotificationRecipient,
   setOrderEmailNotificationUser,
   type OrderEmailNotificationUser,
@@ -198,9 +200,13 @@ export function WatiNotificationSettings({
 export function OrderEmailNotificationSettings({
   loadUsers = fetchOrderEmailNotificationUsers,
   setUserEnabled = setOrderEmailNotificationUser,
+  saveAddress = saveOrderEmailNotificationAddress,
+  deleteAddress = deleteOrderEmailNotificationAddress,
 }: {
   loadUsers?: typeof fetchOrderEmailNotificationUsers;
   setUserEnabled?: typeof setOrderEmailNotificationUser;
+  saveAddress?: typeof saveOrderEmailNotificationAddress;
+  deleteAddress?: typeof deleteOrderEmailNotificationAddress;
 }) {
   const { t } = useTranslation();
   const pageAccess = useCurrentPageAccess();
@@ -210,6 +216,9 @@ export function OrderEmailNotificationSettings({
   const [loadError, setLoadError] = useState(false);
   const [actionError, setActionError] = useState(false);
   const [updatingIds, setUpdatingIds] = useState<Set<string>>(() => new Set());
+  const [addressDrafts, setAddressDrafts] = useState<Record<string, string>>({});
+  const [savingAddressFor, setSavingAddressFor] = useState<string | null>(null);
+  const [deletingAddressId, setDeletingAddressId] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
@@ -254,6 +263,48 @@ export function OrderEmailNotificationSettings({
         next.delete(row.userId);
         return next;
       });
+    }
+  };
+
+  const addAddress = async (row: OrderEmailNotificationUser) => {
+    const draft = addressDrafts[row.userId]?.trim() ?? "";
+    if (!canManage || !draft || savingAddressFor || deletingAddressId) return;
+    setActionError(false);
+    setSavingAddressFor(row.userId);
+    try {
+      const saved = await saveAddress(row.userId, draft);
+      setRows((current) => current.map((item) => item.userId === row.userId
+        ? (() => {
+            const addresses = item.additionalEmails ?? [];
+            return {
+            ...item,
+            additionalEmails: addresses.some((address) => address.id === saved.id)
+              ? addresses
+              : [...addresses, saved],
+            };
+          })()
+        : item));
+      setAddressDrafts((current) => ({ ...current, [row.userId]: "" }));
+    } catch {
+      setActionError(true);
+    } finally {
+      setSavingAddressFor(null);
+    }
+  };
+
+  const removeAddress = async (row: OrderEmailNotificationUser, addressId: string) => {
+    if (!canManage || savingAddressFor || deletingAddressId) return;
+    setActionError(false);
+    setDeletingAddressId(addressId);
+    try {
+      await deleteAddress(addressId);
+      setRows((current) => current.map((item) => item.userId === row.userId
+        ? { ...item, additionalEmails: (item.additionalEmails ?? []).filter((address) => address.id !== addressId) }
+        : item));
+    } catch {
+      setActionError(true);
+    } finally {
+      setDeletingAddressId(null);
     }
   };
 
@@ -304,7 +355,61 @@ export function OrderEmailNotificationSettings({
                 />
               </div>
             </td>
-            <td>{row.email}</td>
+            <td>
+              <div className="order-notification-email-list">
+                <div className="order-notification-email-row">
+                  <span>{row.email}</span>
+                  <small>{t("orderSettings.emailNotifications.primary")}</small>
+                </div>
+                {(row.additionalEmails ?? []).map((address) => (
+                  <div className="order-notification-email-row" key={address.id}>
+                    <span>{address.email}</span>
+                    {canManage ? (
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        disabled={deletingAddressId === address.id || Boolean(savingAddressFor)}
+                        aria-label={t("orderSettings.emailNotifications.deleteAddress", { email: address.email })}
+                        onClick={() => void removeAddress(row, address.id)}
+                      >
+                        <Trash2 />
+                      </Button>
+                    ) : null}
+                  </div>
+                ))}
+                {canManage ? (
+                  <form
+                    className="order-notification-email-form"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      void addAddress(row);
+                    }}
+                  >
+                    <input
+                      type="email"
+                      inputMode="email"
+                      autoComplete="off"
+                      value={addressDrafts[row.userId] ?? ""}
+                      placeholder={t("orderSettings.emailNotifications.additionalPlaceholder")}
+                      aria-label={t("orderSettings.emailNotifications.additionalLabel", { name: row.userName })}
+                      onChange={(event) => setAddressDrafts((current) => ({
+                        ...current,
+                        [row.userId]: event.target.value,
+                      }))}
+                    />
+                    <Button
+                      type="submit"
+                      size="sm"
+                      disabled={!addressDrafts[row.userId]?.trim() || savingAddressFor === row.userId || Boolean(deletingAddressId)}
+                    >
+                      <Plus />
+                      {t("orderSettings.emailNotifications.addAddress")}
+                    </Button>
+                  </form>
+                ) : null}
+              </div>
+            </td>
           </tr>
         ))}
         {!loading && rows.length === 0 ? (

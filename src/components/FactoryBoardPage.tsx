@@ -57,6 +57,10 @@ import {
   type FactoryLabelCommandLoader,
 } from "@/lib/factory-label";
 import { cn } from "@/lib/utils";
+import {
+  formatFactoryOrderNumber,
+  normalizeFactoryOrderNumber,
+} from "@/lib/factory-order-number";
 
 type FleetLoader = typeof fetchFactoryFleets;
 type BrandLoader = typeof fetchFactoryBrands;
@@ -245,7 +249,7 @@ export function FactoryBoardPage({
           if (match && Number(match[1]) === hour) {
             orders.set(
               order.orderId,
-              `#${order.orderNumber?.replace(/^#/, "") || order.orderId}`,
+              formatFactoryOrderNumber(order.orderNumber, `#${order.orderId}`),
             );
           }
         }
@@ -795,7 +799,7 @@ export function FactoryBoardPage({
                             <span key={order.orderId}>
                               {order.deliveryDate.slice(5).replace("-", "/")}
                               {order.deliveryTime ? ` ${order.deliveryTime}` : ""}
-                              {` · #${order.orderNumber?.replace(/^#/, "") || order.orderId}`}
+                              {` · ${formatFactoryOrderNumber(order.orderNumber, `#${order.orderId}`)}`}
                               {` × ${formatPortions(order.quantity)}`}
                             </span>
                           ))}
@@ -898,9 +902,10 @@ export function FactoryBoardPage({
                               {item.districtName || t("common.notSet")}
                             </span>
                             <span>
-                              {item.orderNumber
-                                ? `#${item.orderNumber.replace(/^#/, "")}`
-                                : t("common.notSet")}
+                              {formatFactoryOrderNumber(
+                                item.orderNumber,
+                                t("common.notSet"),
+                              )}
                             </span>
                             {portions ? (
                               <small>
@@ -1058,7 +1063,7 @@ export function FactoryBoardPage({
           <TriangleAlert aria-hidden="true" />
           <p>
             {t("factoryBoard.reprintWarningDescription", {
-              order: pendingReprintJob?.orderNumber?.replace(/^#/, "") ?? "",
+              order: normalizeFactoryOrderNumber(pendingReprintJob?.orderNumber),
             })}
           </p>
         </div>
