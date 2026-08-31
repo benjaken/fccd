@@ -23,6 +23,7 @@ const values: OrderNotificationValues = {
   date: "28/08/2026",
   time: "12:00 - 13:00",
   address: "九龍測試地址",
+  phone: "+852 9123 4567",
   delivery_method: "送貨上門",
   ao_deadline: "26/08/2026",
   ao_link: "https://example.com/add-ons",
@@ -73,6 +74,7 @@ describe("WATI order notifications", () => {
 
   it("keeps customer email copy aligned with the delivery confirmation parameters", () => {
     const notification = buildOrderNotificationContent("delivery_order_confirmed", values);
+    const pickup = buildOrderNotificationContent("pickup_order_confirmed", values);
 
     expect(notification.subject).toContain(values.order_number);
     expect(notification.text).toContain(`Hello ${values.name},`);
@@ -80,6 +82,8 @@ describe("WATI order notifications", () => {
     expect(notification.text).toContain(`時間：${values.time}`);
     expect(notification.text).toContain(`地址：${values.address}`);
     expect(notification.text).toContain(values.ao_link);
+    expect(notification.text).toContain("-----------------------");
+    expect(notification.text).toContain(`限時加單推介 (請在${values.ao_deadline}下午3點前加單)：`);
     expect(notification.html).toContain("Food Channels Catering");
     expect(notification.html).toContain('role="presentation"');
     expect(notification.html).toContain("fc-catering-logo-email.png");
@@ -87,15 +91,65 @@ describe("WATI order notifications", () => {
     expect(notification.html).toContain("(+852) 2185 7373");
     expect(notification.html).toContain("sales@foodchannels-catering.com");
     expect(notification.html).toContain(`href="${values.ao_link}"`);
+    expect(pickup.text).toBe([
+      `Hello ${values.name},`, "",
+      `收到你的到會訂單 ${values.order_number}, 謝謝！`, "",
+      "你訂購的到會套餐將會在以下時間準備好，請安排取餐。",
+      `取餐日期：${values.date}`, `取餐時間：${values.time}`,
+      "取餐地址：荃灣青山公路459-469號華力工業中心5樓R室",
+      "*請留意食品數量可能比較多，建議多找一位朋友幫手取餐。", "",
+      "如取餐當天有任何查詢，請Whatsapp此電話聯絡我們。", "",
+      "謝謝你的支持，願你有一個愉快的聚餐時光🥳",
+    ].join("\n"));
   });
 
-  it("uses the supplied pickup wording and fixed pickup address", () => {
-    const confirmation = buildOrderNotificationContent("pickup_order_confirmed", values);
-    const reminder = buildOrderNotificationContent("pickup_today_reminder", values);
+  it("keeps the selected manual Utility email copy aligned with WATI", () => {
+    const badWeather = buildOrderNotificationContent("bad_weather_notice", values);
+    const holiday = buildOrderNotificationContent("holiday_service_notice", values);
+    const secondContact = buildOrderNotificationContent("second_contact_requested", values);
+    const delayed = buildOrderNotificationContent("delivery_delayed", values);
 
-    expect(confirmation.text).toContain("收到你的到會訂單");
-    expect(reminder.text).toContain("荃灣青山公路459-469號華力工業中心5樓R室");
-    expect(reminder.text).toContain("將於今日備妥");
+    expect(badWeather.text).toContain("👉🏻【更改送貨日期】");
+    expect(badWeather.text).toContain("已付費用可保留60天內使用，逾期作廢。");
+    expect(badWeather.text).toContain("請大家密切留意我們的Whatsapp通知最新安排🔥");
+    expect(holiday.text).toContain("節日期間交通情況較難預測");
+    expect(holiday.text).toContain("加厚餐盒可以直接放進微波爐、電陶爐或明火上直接加熱🔥");
+    expect(holiday.text).toContain("祝你有一個愉快的用餐體驗，節日快樂！");
+    expect(secondContact.text).toBe([
+      `你好，${values.order_number} 會在 ${values.date} 送餐。`, "",
+      `由於運輸繁忙，除了 ${values.phone} 之外，請提供第二收貨聯絡人電話，以便收貨當日順利進行。`,
+    ].join("\n"));
+    expect(delayed.text).toBe(
+      `剛已聯絡司機，由於路面狀況稍有阻滯，訂單會延誤 ${values.time} 分鐘，司機正盡力在安全的情況下全速前進，請見諒🙇‍♀️`,
+    );
+  });
+
+  it("keeps same-day delivery and pickup emails aligned with their WATI templates", () => {
+    const delivery = buildOrderNotificationContent("delivery_today_reminder", values);
+    const pickup = buildOrderNotificationContent("pickup_today_reminder", values);
+
+    expect(delivery.text).toBe([
+      `Hello ${values.name},`, "",
+      `你的到會訂單 ${values.order_number} 將會在今日送貨，司機會在到達前致電給你，請保持聯絡電話暢通。`, "",
+      `日期：${values.date}`, `時間：${values.time}`, `地址：${values.address}`, "",
+      "如有任何查詢，請在此 WhatsApp 聯絡我們。", "",
+      "查看訂單內容 或 下載收據：https://www.foodchannels-delivery.com/self_service_search", "",
+      "謝謝你的支持，願你有一個愉快的聚餐時光❤️", "",
+      `${values.shop_name} 客戶服務團隊`,
+    ].join("\n"));
+    expect(pickup.text).toBe([
+      `Hello ${values.name},`, "",
+      `你的到會訂單 ${values.order_number} 將於今日備妥，請在已預約的時間內到達取貨。`, "",
+      `取餐日期：${values.date}`, `取餐時間：${values.time}`,
+      "取餐地址：荃灣青山公路459-469號華力工業中心5樓R室",
+      "*請留意食品數量如果比較多，建議多找一位朋友幫手取餐。", "",
+      "如有任何查詢，請在此 WhatsApp 聯絡我們。", "",
+      "查看訂單內容 或 下載收據：https://www.foodchannels-delivery.com/self_service_search", "",
+      "謝謝你的支持，願你有一個愉快的聚餐時光❤️", "",
+      `${values.shop_name} 客戶服務團隊`,
+    ].join("\n"));
+    expect(delivery.html).toContain('href="https://www.foodchannels-delivery.com/self_service_search"');
+    expect(pickup.html).toContain('href="https://www.foodchannels-delivery.com/self_service_search"');
   });
 
   it("uses one quote content builder for the email that mirrors WATI data", () => {
@@ -210,6 +264,49 @@ describe("WATI order notifications", () => {
     expect(migration.match(/is_active = false/g)).toHaveLength(2);
   });
 
+  it("renames FCCD reminders and maps self-pick to the same-day event", () => {
+    const migration = readFileSync(
+      resolve(
+        process.cwd(),
+        "supabase/migrations/20260831122000_rename_wati_fccd_reminder_templates.sql",
+      ),
+      "utf8",
+    );
+
+    expect(migration).toContain("template_name = 'fccd_delivery_reminder'");
+    expect(migration).toContain("where template_name = 'fcc2_delivery_reminder'");
+    expect(migration).toContain("template_name = 'pickup_tomorrow_reminder'");
+    expect(migration).toContain("where event_key = 'pickup_tomorrow_reminder'");
+    expect(migration).toContain("template_name = 'fccd_selfpick_reminder'");
+    expect(migration).toContain("where event_key = 'pickup_today_reminder'");
+    expect(migration).not.toContain("is_active");
+  });
+
+  it("uses the confirmed FCCD driver reminder with only date and count", () => {
+    const migration = readFileSync(
+      resolve(
+        process.cwd(),
+        "supabase/migrations/20260831123000_rename_wati_driver_assignment_reminder.sql",
+      ),
+      "utf8",
+    );
+    const worker = readFileSync(
+      resolve(process.cwd(), "supabase/functions/wati-order-notifications/index.ts"),
+      "utf8",
+    );
+
+    expect(migration).toContain("template_name = 'fccd_driver_assign_reminder_v1'");
+    expect(migration).toContain(`{"name":"date","source":"date"}`);
+    expect(migration).toContain(`{"name":"count","source":"count"}`);
+    expect(migration).not.toContain("is_active");
+    expect(worker).toContain('|| "fccd_driver_assign_reminder_v1"');
+    expect(worker).toContain("return local.hour >= configured ? nextDateKey(local.date) : null;");
+    expect(worker).toContain('{ name: "date", value:');
+    expect(worker).toContain('{ name: "count", value:');
+    expect(worker).not.toContain('name: "orders"');
+    expect(worker).not.toContain('requiredEnv("ORDER_ADMIN_BASE_URL")');
+  });
+
   it("sends the explicit order confirmation through WATI and email together", () => {
     const implementation = readFileSync(
       resolve(process.cwd(), "supabase/functions/send-order-wati-confirmation/index.ts"),
@@ -276,7 +373,6 @@ describe("WATI order notifications", () => {
     ] as const) {
       const notification = buildOrderNotificationContent(event, values);
       expect(notification.subject).toContain(values.order_number);
-      expect(notification.text).toContain(values.order_number);
       expect(notification.html).toContain(values.order_number);
     }
   });
@@ -356,7 +452,11 @@ describe("WATI order notifications", () => {
     expect(worker).toContain('"enqueue_driver_assignment_internal_reminders"');
     expect(worker).toContain('"claim_driver_assignment_internal_reminders"');
     expect(worker).toContain('Deno.env.get("WATI_DRIVER_ASSIGNMENT_REMINDER_TEMPLATE_NAME")');
-    expect(worker).toContain('name: "orders"');
+    expect(worker).toContain('|| "fccd_driver_assign_reminder_v1"');
+    expect(worker).toContain("return local.hour >= configured ? nextDateKey(local.date) : null;");
+    expect(worker).toContain('{ name: "date", value:');
+    expect(worker).toContain('{ name: "count", value:');
+    expect(worker).not.toContain('name: "orders"');
     expect(worker).toContain('.is("motorcade_id", null)');
     expect(worker).toContain("buildUnassignedDriverReminderContent");
     expect(worker).toContain("/orders/${encodeURIComponent(order.id)}");

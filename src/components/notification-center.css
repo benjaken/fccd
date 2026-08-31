@@ -31,4 +31,22 @@
 .notification-item footer { display: flex; padding: 0 13px 10px 52px; gap: 6px; flex-wrap: wrap; }
 .notification-item footer button { display: inline-flex; padding: 4px 7px; align-items: center; gap: 3px; border: 0; border-radius: 6px; background: var(--secondary); color: var(--secondary-foreground); font-size: 11px; }
 .notification-item footer svg { width: 12px; height: 12px; }
+.urgent-reconciliation-banner { position: fixed; z-index: 180; top: 70px; left: 50%; display: flex; width: min(720px, calc(100vw - 32px)); min-height: 44px; padding: 9px 14px; align-items: center; justify-content: center; gap: 9px; transform: translateX(-50%); border: 1px solid color-mix(in oklch, var(--destructive) 70%, #0000); border-radius: 10px; background: var(--destructive); box-shadow: 0 10px 30px color-mix(in oklch, var(--destructive) 30%, transparent); color: var(--destructive-foreground); font-size: 14px; font-weight: 800; }
+.urgent-reconciliation-banner svg { width: 18px; flex: 0 0 auto; }
+.urgent-reconciliation-banner span { flex: 1; text-align: center; }
+.urgent-reconciliation-backdrop { position: fixed; z-index: 400; inset: 0; display: grid; padding: 20px; place-items: center; background: color-mix(in oklch, #000 55%, transparent); }
+.urgent-reconciliation-dialog { display: grid; width: min(620px, 100%); max-height: min(720px, calc(100vh - 40px)); padding: 22px; gap: 16px; overflow: hidden; border: 2px solid var(--destructive); border-radius: 16px; background: var(--popover); box-shadow: 0 28px 80px color-mix(in oklch, #000 35%, transparent); color: var(--popover-foreground); }
+.urgent-reconciliation-dialog > header { display: flex; align-items: flex-start; gap: 12px; }
+.urgent-reconciliation-dialog h2, .urgent-reconciliation-dialog p { margin: 0; }
+.urgent-reconciliation-dialog h2 { color: var(--destructive); font-size: 22px; }
+.urgent-reconciliation-dialog p { margin-top: 4px; color: var(--muted-foreground); font-size: 14px; }
+.urgent-reconciliation-icon { display: grid; width: 42px; height: 42px; flex: 0 0 auto; place-items: center; border-radius: 999px; background: color-mix(in oklch, var(--destructive) 14%, transparent); color: var(--destructive); }
+.urgent-reconciliation-icon svg { width: 24px; }
+.urgent-reconciliation-list { display: grid; min-height: 0; gap: 8px; overflow-y: auto; }
+.urgent-reconciliation-list button { display: grid; padding: 12px 14px; grid-template-columns: minmax(0, 1fr) 18px; gap: 3px 10px; border: 1px solid color-mix(in oklch, var(--destructive) 35%, var(--border)); border-radius: 10px; background: color-mix(in oklch, var(--destructive) 5%, var(--background)); color: inherit; text-align: left; }
+.urgent-reconciliation-list button strong, .urgent-reconciliation-list button span { grid-column: 1; }
+.urgent-reconciliation-list button span { color: var(--muted-foreground); font-size: 13px; }
+.urgent-reconciliation-list button svg { grid-column: 2; grid-row: 1 / span 2; align-self: center; width: 17px; }
+.urgent-reconciliation-dialog > footer { display: flex; justify-content: flex-end; gap: 8px; }
+.urgent-reconciliation-dialog > small { color: var(--muted-foreground); text-align: center; }
 @media (max-width: 620px) { .notification-side-panel { width: min(94vw, 480px); } .notification-login-summary { top: 68px; right: 10px; } }

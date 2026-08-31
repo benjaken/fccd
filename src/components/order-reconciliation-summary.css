@@ -1,0 +1,23 @@
+.order-reconciliation-summary { display: grid; margin-bottom: 16px; padding: 16px; gap: 14px; border: 1px solid var(--border); border-radius: 14px; background: var(--card); box-shadow: var(--shadow-sm); }
+.order-reconciliation-summary > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.order-reconciliation-summary h2, .order-reconciliation-summary p { margin: 0; }
+.order-reconciliation-summary h2 { font-size: 17px; }
+.order-reconciliation-summary header p { margin-top: 3px; color: var(--muted-foreground); font-size: 12px; }
+.order-reconciliation-metrics { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+.order-reconciliation-metrics > span { display: grid; padding: 10px 12px; gap: 2px; border-radius: 10px; background: var(--secondary); }
+.order-reconciliation-metrics small { color: var(--muted-foreground); font-size: 11px; }
+.order-reconciliation-metrics strong { font-size: 20px; }
+.order-reconciliation-metrics .has-warning { background: color-mix(in oklch, #d97706 12%, var(--secondary)); color: #b45309; }
+.order-reconciliation-metrics .has-urgent { background: color-mix(in oklch, var(--destructive) 12%, var(--secondary)); color: var(--destructive); }
+.order-reconciliation-issues { display: grid; gap: 6px; }
+.order-reconciliation-issues > a { display: grid; padding: 9px 11px; grid-template-columns: 18px minmax(0, 1fr) auto; align-items: center; gap: 9px; border: 1px solid var(--border); border-radius: 9px; color: inherit; text-decoration: none; }
+.order-reconciliation-issues > a.is-urgent { border-color: color-mix(in oklch, var(--destructive) 55%, var(--border)); background: color-mix(in oklch, var(--destructive) 5%, transparent); }
+.order-reconciliation-issues svg { width: 17px; color: #d97706; }
+.order-reconciliation-issues .is-urgent svg { color: var(--destructive); }
+.order-reconciliation-issues span { display: grid; min-width: 0; }
+.order-reconciliation-issues small, .order-reconciliation-issues time, .order-reconciliation-more { color: var(--muted-foreground); font-size: 11px; }
+.order-reconciliation-clear { display: flex; align-items: center; gap: 7px; color: #15803d; font-size: 13px; }
+.order-reconciliation-clear svg { width: 18px; }
+.order-reconciliation-error { color: var(--destructive); font-size: 13px; }
+@media (max-width: 900px) { .order-reconciliation-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 620px) { .order-reconciliation-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } .order-reconciliation-issues > a { grid-template-columns: 18px minmax(0, 1fr); } .order-reconciliation-issues time { grid-column: 2; } }

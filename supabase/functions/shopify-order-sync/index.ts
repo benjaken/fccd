@@ -315,6 +315,8 @@ async function fetchOrdersPaginated(input: {
   pageSize: number;
   created_at_min?: string | null;
   created_at_max?: string | null;
+  updated_at_min?: string | null;
+  status?: "any" | "open";
   backfill: boolean;
 }): Promise<FetchResult> {
   const { shop, token, backfill } = input;
@@ -333,10 +335,11 @@ async function fetchOrdersPaginated(input: {
       params.set("page_info", pageInfo);
       params.set("limit", String(input.pageSize));
     } else {
-      params.set("status", "any");
+      params.set("status", input.status ?? "any");
       params.set("limit", String(input.pageSize));
       if (input.created_at_min) params.set("created_at_min", input.created_at_min);
       if (input.created_at_max) params.set("created_at_max", input.created_at_max);
+      if (input.updated_at_min) params.set("updated_at_min", input.updated_at_min);
     }
 
     const response = await fetch(`${baseUrl}?${params.toString()}`, {
@@ -1529,11 +1532,24 @@ async function syncStore(input: {
   limit: number;
   dryRun: boolean;
   backfill: boolean;
+  reconcile: boolean;
   resyncPaid: boolean;
   created_at_min?: string | null;
   created_at_max?: string | null;
+  updated_at_min?: string | null;
 }): Promise<StoreSyncResult> {
-  const { client, storeRow, limit, dryRun, backfill, resyncPaid, created_at_min, created_at_max } = input;
+  const {
+    client,
+    storeRow,
+    limit,
+    dryRun,
+    backfill,
+    reconcile,
+    resyncPaid,
+    created_at_min,
+    created_at_max,
+    updated_at_min,
+  } = input;
   const empty: StoreSyncResult = {
     store: storeRow.shop_domain,
     secretPrefix: storeRow.secret_prefix,
@@ -1571,15 +1587,46 @@ async function syncStore(input: {
   const tokenResult = await shopifyAccessToken({ shop, clientId, clientSecret });
   if ("error" in tokenResult) return fail(tokenResult.error);
 
-  const fetched = await fetchOrdersPaginated({
-    shop,
-    token: tokenResult.token,
-    pageSize: backfill ? BACKFILL_PAGE_SIZE : limit,
-    created_at_min,
-    created_at_max,
-    backfill,
-  });
-  if ("error" in fetched) return fail(fetched.error);
+  let fetched: FetchResult;
+  if (reconcile) {
+    // Future fulfilments can have been created months ago. Fetch every open
+    // Shopify order, then overlay recently changed closed/cancelled orders so
+    // the local shadow ledger remains a faithful source for daily comparison.
+    const [openOrders, recentlyUpdated] = await Promise.all([
+      fetchOrdersPaginated({
+        shop,
+        token: tokenResult.token,
+        pageSize: BACKFILL_PAGE_SIZE,
+        status: "open",
+        backfill: true,
+      }),
+      fetchOrdersPaginated({
+        shop,
+        token: tokenResult.token,
+        pageSize: BACKFILL_PAGE_SIZE,
+        status: "any",
+        updated_at_min,
+        backfill: true,
+      }),
+    ]);
+    if ("error" in openOrders) return fail(openOrders.error);
+    if ("error" in recentlyUpdated) return fail(recentlyUpdated.error);
+    const byId = new Map<number, ShopifyRestOrder>();
+    for (const order of [...openOrders.orders, ...recentlyUpdated.orders]) {
+      byId.set(Number(order.id), order);
+    }
+    fetched = { orders: [...byId.values()] };
+  } else {
+    fetched = await fetchOrdersPaginated({
+      shop,
+      token: tokenResult.token,
+      pageSize: backfill ? BACKFILL_PAGE_SIZE : limit,
+      created_at_min,
+      created_at_max,
+      backfill,
+    });
+    if ("error" in fetched) return fail(fetched.error);
+  }
 
   const mapped = fetched.orders
     .map((order) =>
@@ -2083,10 +2130,12 @@ Deno.serve(async (request) => {
   let limit = DEFAULT_LIMIT;
   let onlyPrefix: string | null = null;
   let backfill = false;
+  let reconcile = false;
   let registerWebhooks = false;
   let resyncOrderId: number | null = null;
   let createdMin: string | null = null;
   let createdMax: string | null = null;
+  let updatedMin: string | null = null;
   try {
     const body = request.headers.get("content-type")?.includes("application/json")
       ? await request.json() as {
@@ -2097,6 +2146,7 @@ Deno.serve(async (request) => {
         orderId?: number | string;
         created_at_min?: string;
         created_at_max?: string;
+        updated_at_min?: string;
       }
       : {};
     dryRun = fromCron && body.dryRun === true;
@@ -2107,6 +2157,7 @@ Deno.serve(async (request) => {
       onlyPrefix = body.store.trim();
     }
     backfill = fromCron && body.mode === "backfill";
+    reconcile = fromCron && body.mode === "reconcile";
     registerWebhooks = body.mode === "register_webhooks";
     if (body.mode === "resync_order") {
       const candidate = Number(body.orderId);
@@ -2120,6 +2171,9 @@ Deno.serve(async (request) => {
       : null;
     createdMax = fromCron && typeof body.created_at_max === "string" && body.created_at_max.trim()
       ? body.created_at_max.trim()
+      : null;
+    updatedMin = fromCron && typeof body.updated_at_min === "string" && body.updated_at_min.trim()
+      ? body.updated_at_min.trim()
       : null;
   } catch {
     return jsonResponse({ error: "invalid_json" }, 400);
@@ -2181,9 +2235,11 @@ Deno.serve(async (request) => {
         limit,
         dryRun,
         backfill,
+        reconcile,
         resyncPaid: fromCron,
         created_at_min: createdMin,
         created_at_max: createdMax,
+        updated_at_min: updatedMin,
       }),
     );
   }
@@ -2215,6 +2271,7 @@ Deno.serve(async (request) => {
     ok: results.every((result) => result.ok),
     dryRun,
     backfill,
+    reconcile,
     storeCount: results.length,
     ...totals,
     stores: results,
