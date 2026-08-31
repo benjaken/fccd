@@ -20604,6 +20604,40 @@ a.masoft-order-tag:focus-visible {
   color: var(--factory-topbar-fg);
 }
 
+/* Order cancellation states shared by Sales detail and editor views. */
+.quote-lines-panel tr.is-cancelled,
+.quote-mobile-line.is-cancelled {
+  background: color-mix(in srgb, #dc2626 7%, var(--card));
+  color: #991b1b;
+}
+
+.quote-lines-panel tr.is-cancelled input,
+.quote-mobile-line.is-cancelled input {
+  color: #991b1b;
+  text-decoration: line-through;
+}
+
+.quote-line-cancelled-label {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 3px;
+  color: #dc2626;
+  font-weight: 800;
+}
+
+.quote-line-restore {
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid #16a34a;
+  border-radius: 8px;
+  background: transparent;
+  color: #15803d;
+}
+
+.quote-line-restore svg { width: 16px; height: 16px; }
+
 .factory-board-brand {
   display: flex;
   flex-direction: column;
@@ -21257,6 +21291,7 @@ a.masoft-order-tag:focus-visible {
 }
 
 .lunchbox-picker-search input,
+.lunchbox-picker-filters input,
 .lunchbox-picker-filters select {
   width: 100%;
   height: 42px;
@@ -21273,6 +21308,7 @@ a.masoft-order-tag:focus-visible {
 }
 
 .lunchbox-picker-search input:focus,
+.lunchbox-picker-filters input:focus,
 .lunchbox-picker-filters select:focus {
   border-color: var(--ring);
   box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 13%, transparent);
@@ -21345,6 +21381,38 @@ a.masoft-order-tag:focus-visible {
   color: var(--muted-foreground);
   font-size: 14px;
   font-weight: 700;
+}
+
+.lunchbox-picker-price-filter {
+  display: grid;
+  gap: 6px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.lunchbox-picker-price-filter > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.lunchbox-picker-price-filter label {
+  position: relative;
+}
+
+.lunchbox-picker-price-filter label span {
+  position: absolute;
+  top: 50%;
+  left: 11px;
+  transform: translateY(-50%);
+  color: var(--muted-foreground);
+  font-size: 14px;
+  pointer-events: none;
+}
+
+.lunchbox-picker-price-filter input {
+  padding: 0 10px 0 54px;
 }
 
 .lunchbox-picker-filters select {

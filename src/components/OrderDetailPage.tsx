@@ -434,9 +434,10 @@ export function OrderDetailPage({
             </thead>
             <tbody>
               {result.lines.map((line) => (
-                <tr key={line.id}>
+                <tr key={line.id} className={line.isVoid ? "is-cancelled" : undefined}>
                   <td>
                     <strong>{line.productName || line.content || emptyValue}</strong>
+                    {line.isVoid ? <span className="quote-line-cancelled-label">已取消</span> : null}
                     {line.isAddon ? <span className="status-badge amber">加單項目</span> : null}
                     {line.remarks && (
                       <small className="settings-cell-detail">{line.remarks}</small>

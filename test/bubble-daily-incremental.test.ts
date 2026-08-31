@@ -18,6 +18,7 @@ import {
   normalizeOrderNumber,
   overwriteSince,
   reconciliationOwnedRow,
+  isBubbleOwnedLegacyId,
 } from "../supabase/functions/bubble-daily-incremental/overwrite.ts";
 import {
   fallbackDeliveryLegacyId,
@@ -25,6 +26,26 @@ import {
 } from "../supabase/functions/bubble-daily-incremental/order-metadata.ts";
 
 describe("bubble daily incremental helpers", () => {
+  it("recognizes only Bubble-owned legacy ids during stale child cleanup", () => {
+    expect(isBubbleOwnedLegacyId("1787284186595x755678151653982200")).toBe(true);
+    expect(isBubbleOwnedLegacyId("shopify:hk-party-food:8320987365463:drink:1")).toBe(false);
+    expect(isBubbleOwnedLegacyId("web-custom-order-line-2c371b7e-807d-49c4-83cb-e538c6d604ca")).toBe(false);
+  });
+
+  it("reconciles complete S_Order child sets whenever an A_Order changes", () => {
+    const source = fs.readFileSync(
+      path.join(
+        process.cwd(),
+        "supabase/functions/bubble-daily-incremental/index.ts",
+      ),
+      "utf8",
+    );
+    expect(source).toContain("reconcileModifiedBubbleOrderLines");
+    expect(source).toContain("result.staleOrderLinesDeleted");
+    expect(source).toContain("isBubbleOwnedLegacyId(row.legacy_id)");
+    expect(source).toContain("parentsSkipped: bubbleOrders.length - ownedParents.length");
+  });
+
   it("canonicalizes object keys recursively and hashes deterministically", async () => {
     const first = { b: 2, a: 1, nested: { z: true, a: null } };
     const second = { nested: { a: null, z: true }, a: 1, b: 2 };

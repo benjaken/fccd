@@ -29,6 +29,7 @@ import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { SearchSelect } from "@/components/ui/search-select";
 import { SidePanel } from "@/components/ui/side-panel";
+import { hongKongDateKey } from "@/lib/date-time";
 import { DICT_TYPE, dictItemLabel, useDictItems } from "@/lib/dictionaries";
 import { normalizeSupplierQuotePrice } from "@/lib/supplier-quote-price";
 import { evaluateQuoteAlert } from "@/lib/supplier-quotes";
@@ -639,7 +640,7 @@ function createReviewLines(fileName: string): ReviewLine[] {
 }
 
 function todayKey() {
-  return new Date().toISOString().slice(0, 10);
+  return hongKongDateKey(new Date());
 }
 
 export function initialReviewDates(
@@ -1245,7 +1246,7 @@ export function SupplierQuotePage({
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
     const link = document.createElement("a");
     link.href = url;
-    link.download = `supplier-quote-analysis-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.download = `supplier-quote-analysis-${todayKey()}.csv`;
     link.click();
     URL.revokeObjectURL(url);
     showNotice("CSV 報告已生成，包含原始報價與標準化比較欄位。");

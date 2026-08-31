@@ -31,6 +31,7 @@ import {
   type QuoteActivityDraft,
 } from "@/lib/quote-pdf-draft";
 import { DICT_TYPE, dictItemLabel, useDictItems } from "@/lib/dictionaries";
+import { hongKongDateKey } from "@/lib/date-time";
 import { splitPdfModuleIndexes, usePdfAutoPageBreaks } from "@/lib/pdf-auto-pagination";
 import { printPdf } from "@/lib/print-pdf";
 import {
@@ -98,7 +99,7 @@ type QuotePdfDraft = {
 
 function pdfDate(value: string | null | undefined) {
   if (!value) return "";
-  const isoDate = value.slice(0, 10).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const isoDate = hongKongDateKey(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!isoDate) return value;
   return `${Number(isoDate[3])}/${Number(isoDate[2])}/${isoDate[1]}`;
 }

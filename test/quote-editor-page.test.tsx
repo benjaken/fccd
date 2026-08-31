@@ -463,6 +463,16 @@ describe("Quote editor", () => {
     expect(within(panel).getByRole("heading", { name: "More products" })).toBeInTheDocument();
     expect(within(panel).queryByRole("button", { name: /edit/i })).not.toBeInTheDocument();
 
+    await user.click(within(panel).getByRole("button", { name: "Filters" }));
+    await user.type(within(panel).getByRole("spinbutton", { name: "Minimum" }), "60");
+    await user.type(within(panel).getByRole("spinbutton", { name: "Maximum" }), "80");
+    await waitFor(() => expect(loadLunchboxProducts).toHaveBeenCalledWith(expect.objectContaining({
+      priceRange: "",
+      priceMin: 60,
+      priceMax: 80,
+    })));
+    expect(within(panel).getByRole("button", { name: /HK\$60 – HK\$80/ })).toBeInTheDocument();
+
     await user.click(within(panel).getByRole("button", { name: "Select Chicken rice" }));
     await user.click(within(panel).getByRole("button", { name: "Select Eggplant rice" }));
     await user.click(within(panel).getByRole("button", { name: "Confirm and add 2 items" }));

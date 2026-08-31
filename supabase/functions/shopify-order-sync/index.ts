@@ -25,15 +25,24 @@ import {
   resolveShopifyDistrictId,
   shopifyCateringUtensilPacks,
   shopifyBentoUtensilCount,
+  shopifyLunchBoxUtensilCount,
+  shopifyDrinkSelectionQuantity,
   shopifyCustomizationCostParentName,
   shopifyLineRemarksSnapshot,
+  isShopifyBeverageName,
   shopifyMenuOptionLegacyId,
+  staleGeneratedCustomLineIds,
   stripParsedMenuRemarksFromLines,
   stripSkuSuffix,
   type ShopifyRestOrder,
   type ShopifyRestTransaction,
   type ShopifyMenuRemarkSource,
 } from "./map.ts";
+import {
+  matchMenuOptionsWithGrok,
+  parseMenuTextWithGrok,
+  type MenuAiCatalogCandidate,
+} from "./menu-ai.ts";
 import { corsHeaders, jsonResponse } from "./response.ts";
 
 const API_VERSION = "2025-07";
@@ -645,6 +654,37 @@ async function fetchCatalogByName(
   return result;
 }
 
+function menuCatalogSearchTerms(names: string[]): string[] {
+  return [...new Set(names.flatMap((name) => {
+    const core = name
+      .replace(/[（(][^）)]*[）)]/g, "")
+      .replace(/[^\p{L}\p{N}]/gu, "");
+    if (core.length <= 6) return core.length >= 3 ? [core] : [];
+    return [core.slice(0, 6), core.slice(-6)];
+  }).filter((term) => term.length >= 3))];
+}
+
+/** Loads a small cross-channel candidate pool for Grok. Product assignments in
+ * the migrated catalog do not always share the Shopify store's channel, so an
+ * exact-channel fetch can hide the correct wording variant. Distinctive name
+ * fragments keep this bounded without sending the entire catalog to AI. */
+async function fetchMenuAiCatalogCandidates(
+  client: AdminClient,
+  names: string[],
+): Promise<MenuAiCatalogCandidate[]> {
+  const terms = menuCatalogSearchTerms(names);
+  if (!terms.length) return [];
+  const filters = terms.map((term) => `name.ilike.*${term}*`).join(",");
+  const { data } = await client
+    .from("products")
+    .select("id, sku, name, channel_id")
+    .or(filters)
+    .limit(250);
+  return (data ?? []).flatMap((row) => typeof row.name === "string" && row.name.trim()
+    ? [{ ...row, name: row.name } as MenuAiCatalogCandidate]
+    : []);
+}
+
 /**
  * Builds the extra order_lines rows for the menu options parsed out of an
  * order's remark. Each option becomes its own line under the package order
@@ -667,6 +707,7 @@ async function buildMenuOptionLines(input: {
     totalPrice: number;
   }>;
   catalogByName: Map<string, CatalogItem>;
+  catalogProducts: MenuAiCatalogCandidate[];
   issues: IssueRow[];
 }): Promise<{
   lines: Record<string, unknown>[];
@@ -681,12 +722,56 @@ async function buildMenuOptionLines(input: {
     remarks,
     addonCandidates,
     catalogByName,
+    catalogProducts,
     issues,
   } = input;
   const lines: Record<string, unknown>[] = [];
-  const plan = planShopifyMenuOptions({ sources: remarks, addonCandidates });
-  for (const option of plan.options) {
-    const match = catalogByName.get(normalizeNameForMatch(option.name));
+  const interpretedRemarks: ShopifyMenuRemarkSource[] = [];
+  for (const source of remarks) {
+    if (parseMenuRemark(source.text).length) {
+      interpretedRemarks.push(source);
+      continue;
+    }
+    // Lunch-box order notes also repeat product/drink summaries. Only their
+    // deterministic compact-manifest format is eligible; sending arbitrary
+    // detached note text to AI can split words from a product title into fake
+    // menu rows (for example "雞扒" and "牛角酥").
+    if (storeRow.secret_prefix === "SHOPIFY_HK_LUNCH_BOX" && source.lineId === 0) {
+      interpretedRemarks.push(source);
+      continue;
+    }
+    const interpreted = await parseMenuTextWithGrok(source.text);
+    interpretedRemarks.push(interpreted?.length
+      ? {
+        ...source,
+        text: `必選:\n${interpreted.map((option) =>
+          `${option.name}${option.quantity === 1 ? "" : ` x ${option.quantity}`}`
+        ).join(", ")}`,
+      }
+      : source);
+  }
+  const planned = planShopifyMenuOptions({ sources: interpretedRemarks, addonCandidates });
+  // Drinks are rebuilt by the authoritative beverage manifest below. Keeping
+  // them as package options would create a second quantity-bearing line.
+  const plan = {
+    ...planned,
+    options: planned.options.filter((option) => !isShopifyBeverageName(option.name)),
+  };
+  const unmatched = plan.options.flatMap((option, optionIndex) =>
+    catalogByName.has(normalizeNameForMatch(option.name)) ? [] : [{ optionIndex, name: option.name }]
+  );
+  const aiMatches = unmatched.length
+    ? await matchMenuOptionsWithGrok({
+      optionNames: unmatched.map((option) => option.name),
+      catalog: catalogProducts,
+      channelId: storeRow.channel_id,
+    })
+    : new Map();
+  for (const [optionIndex, option] of plan.options.entries()) {
+    const unresolvedIndex = unmatched.findIndex((row) => row.optionIndex === optionIndex);
+    const exactMatch = catalogByName.get(normalizeNameForMatch(option.name));
+    const aiMatch = unresolvedIndex >= 0 ? aiMatches.get(unresolvedIndex) : undefined;
+    const match = exactMatch ?? aiMatch;
     if (!match) {
       issues.push({ store_id: storeRow.id, shopify_order_id: orderId, sku: null, issue: "unmatched_remark_option" });
     }
@@ -699,8 +784,8 @@ async function buildMenuOptionLines(input: {
       ),
       order_id: orderSupabaseId,
       order_legacy_id: orderLegacyId,
-      product_id: match?.kind === "product" ? match.id : null,
-      package_id: option.parentPackageId ?? (match?.kind === "package" ? match.id : null),
+      product_id: aiMatch?.id ?? (exactMatch?.kind === "product" ? exactMatch.id : null),
+      package_id: option.parentPackageId ?? (exactMatch?.kind === "package" ? exactMatch.id : null),
       product_legacy_id: null,
       package_legacy_id: null,
       sku_snapshot: match?.sku ?? null,
@@ -1020,6 +1105,7 @@ async function processMappedOrders(
     ),
   ];
   const catalogByName = await fetchCatalogByName(client, remarkNames);
+  const menuAiCatalogCandidates = await fetchMenuAiCatalogCandidates(client, remarkNames);
 
   const processedOrders: ProcessedOrder[] = [];
   const issues: IssueRow[] = [];
@@ -1303,20 +1389,6 @@ async function processMappedOrders(
         }>,
         storeRow.channel_id,
       );
-      if (
-        (line.sku || baseName) &&
-        !Boolean(line.row.is_addon) &&
-        !match.productId &&
-        !match.packageId
-      ) {
-        counters.unmatchedSkuLines += 1;
-        issues.push({
-          store_id: storeRow.id,
-          shopify_order_id: item.orderId,
-          sku: line.sku,
-          issue: "unmatched_sku",
-        });
-      }
       return {
         ...line.row,
         order_id: insertedOrder.id,
@@ -1350,13 +1422,43 @@ async function processMappedOrders(
       };
     });
 
+    const unresolvedBaseLines = lineRows.flatMap((row, rowIndex) =>
+      !row.product_id && !row.package_id && !Boolean(row.is_addon) &&
+        String(row.product_name_snapshot ?? "").trim()
+        ? [{ rowIndex, name: String(row.product_name_snapshot) }]
+        : []
+    );
+    const baseAiMatches = unresolvedBaseLines.length
+      ? await matchMenuOptionsWithGrok({
+        optionNames: unresolvedBaseLines.map((row) => row.name),
+        catalog: [...new Map([
+          ...products.flatMap((row) => row.name ? [{ ...row, name: row.name }] : []),
+          ...menuAiCatalogCandidates,
+        ].map((row) => [row.id, row] as const)).values()],
+        channelId: storeRow.channel_id,
+      })
+      : new Map();
+    for (const [unresolvedIndex, unresolved] of unresolvedBaseLines.entries()) {
+      const match = baseAiMatches.get(unresolvedIndex);
+      if (match) {
+        lineRows[unresolved.rowIndex].product_id = match.id;
+        lineRows[unresolved.rowIndex].sku_snapshot = match.sku;
+        continue;
+      }
+      const source = item.lines[unresolved.rowIndex];
+      counters.unmatchedSkuLines += 1;
+      issues.push({
+        store_id: storeRow.id,
+        shopify_order_id: item.orderId,
+        sku: source?.sku ?? null,
+        issue: "unmatched_sku",
+      });
+    }
+
     const generatedLines: Record<string, unknown>[] = [];
-    const freeDrinkRemark = [
-      item.freeDrinkRemark,
-      ...item.lines.flatMap((line) => line.properties.map((property) =>
-        `${String(property.name ?? "").trim()}: ${String(property.value ?? "").trim()}`
-      )),
-    ].filter(Boolean).join("\n");
+    // Order-level notes/attributes and line properties are two separate
+    // sources. Lunch-box line properties are accumulated below exactly once.
+    const freeDrinkRemark = item.freeDrinkRemark ?? "";
     const noteFreeDrinks = parseShopifyFreeDrinks(freeDrinkRemark);
     const beverageTotals = new Map<string, { quantity: number; unit: string }>();
     for (const drink of noteFreeDrinks) {
@@ -1365,7 +1467,10 @@ async function processMappedOrders(
         unit: drink.unit,
       });
     }
-    if (storeRow.secret_prefix === "SHOPIFY_HK_LUNCH_BOX") {
+    // An explicit order-level beverage manifest is authoritative. Line-level
+    // choices are only a fallback; combining both counts the same drinks twice
+    // (B-1559: note says honey green tea 6, while item options split as 5+1).
+    if (storeRow.secret_prefix === "SHOPIFY_HK_LUNCH_BOX" && !noteFreeDrinks.length) {
       for (const line of item.lines) {
         const selections = new Set<string>();
         const variantParts = (line.variantTitle ?? "").split("/").map((value) => value.trim()).filter(Boolean);
@@ -1378,7 +1483,62 @@ async function processMappedOrders(
           const name = cleanDrinkName(selection);
           if (!name) continue;
           const current = beverageTotals.get(name);
-          beverageTotals.set(name, { quantity: (current?.quantity ?? 0) + Number(line.row.quantity ?? 0), unit: current?.unit ?? drinkUnit(selection) });
+          const quantity = shopifyDrinkSelectionQuantity(
+            selection,
+            Number(line.row.quantity ?? 0),
+          );
+          if (!quantity) continue;
+          beverageTotals.set(name, {
+            quantity: (current?.quantity ?? 0) + quantity,
+            unit: current?.unit ?? drinkUnit(selection),
+          });
+        }
+      }
+    }
+    const lunchBoxMealCount = storeRow.secret_prefix === "SHOPIFY_HK_LUNCH_BOX"
+      ? shopifyLunchBoxUtensilCount(lineRows.map((line) => ({
+        name: (line.product_name_snapshot as string | null) ?? null,
+        quantity: Number(line.quantity ?? 0),
+        unitPrice: Number(line.unit_price ?? 0),
+      })))
+      : 0;
+    const { data: existingCustomLinesForGenerated } = storeRow.secret_prefix === "SHOPIFY_HK_LUNCH_BOX"
+      ? await client
+        .from("order_lines")
+        .select("id, product_name_snapshot, unit_price")
+        .eq("order_id", insertedOrder.id)
+        .like("legacy_id", "web-custom-order-line-%")
+        .eq("is_void", false)
+      : { data: [] };
+    if (lunchBoxMealCount && beverageTotals.size) {
+      const generatedKeys = new Set([...beverageTotals.keys()].map(normalizeNameForMatch));
+      const explicitManifestQuantity = (name: string) => {
+        const match = name.match(/\s(\d+(?:\.\d+)?)\s*(?:包|盒|罐|樽|支|杯|份)\s*$/i);
+        return match ? Number(match[1]) : 0;
+      };
+      const preservedCustomDrinks = (existingCustomLinesForGenerated ?? []).reduce((sum, row) => {
+        const name = String(row.product_name_snapshot ?? "");
+        if (Number(row.unit_price ?? 0) !== 0 || !isShopifyBeverageName(name)) return sum;
+        const baseName = cleanDrinkName(name);
+        return generatedKeys.has(normalizeNameForMatch(baseName))
+          ? sum
+          : sum + explicitManifestQuantity(name);
+      }, 0);
+      const sourceDrinks = lineRows.reduce((sum, row) => {
+        const name = String(row.product_name_snapshot ?? "");
+        return Number(row.unit_price ?? 0) === 0 && isShopifyBeverageName(name)
+          ? sum + explicitManifestQuantity(name)
+          : sum;
+      }, 0);
+      let overflow = [...beverageTotals.values()].reduce((sum, drink) => sum + drink.quantity, 0) -
+        Math.max(0, lunchBoxMealCount - preservedCustomDrinks - sourceDrinks);
+      if (overflow > 0) {
+        for (const [name, drink] of [...beverageTotals.entries()].reverse()) {
+          if (overflow <= 0) break;
+          const reduction = Math.min(overflow, drink.quantity);
+          drink.quantity -= reduction;
+          overflow -= reduction;
+          if (drink.quantity <= 0) beverageTotals.delete(name);
         }
       }
     }
@@ -1391,11 +1551,13 @@ async function processMappedOrders(
     const alreadyHasUtensils = lineRows.some((line) =>
       /餐具包/.test(String(line.product_name_snapshot ?? ""))
     );
-    const bentoCount = shopifyBentoUtensilCount(lineRows.map((line) => ({
-      name: (line.product_name_snapshot as string | null) ?? null,
-      sku: (line.sku_snapshot as string | null) ?? null,
-      quantity: Number(line.quantity ?? 0),
-    })));
+    const bentoCount = storeRow.secret_prefix === "SHOPIFY_HK_LUNCH_BOX"
+      ? lunchBoxMealCount
+      : shopifyBentoUtensilCount(lineRows.map((line) => ({
+        name: (line.product_name_snapshot as string | null) ?? null,
+        sku: (line.sku_snapshot as string | null) ?? null,
+        quantity: Number(line.quantity ?? 0),
+      })));
     if (bentoCount && !alreadyHasUtensils) {
       generatedLines.push({ legacy_id: `shopify:${storeRow.shop_domain.replace(/\.myshopify\.com$/, "")}:${item.orderId}:utensils`, order_id: insertedOrder.id, order_legacy_id: item.orderRow.legacy_id, product_name_snapshot: `飯盒餐具包 ${bentoCount}份`, quantity: 1, unit_price: 0, total_price: 0, item_order: 10999, is_addon: false, is_void: false });
     } else if (storeRow.secret_prefix !== "SHOPIFY_HK_LUNCH_BOX") {
@@ -1446,6 +1608,10 @@ async function processMappedOrders(
         totalPrice: Number(line.row.total_price ?? 0),
       })),
       catalogByName,
+      catalogProducts: [...new Map([
+        ...products.flatMap((row) => row.name ? [{ ...row, name: row.name }] : []),
+        ...menuAiCatalogCandidates,
+      ].map((row) => [row.id, row] as const)).values()],
       issues,
     });
 
@@ -1488,6 +1654,31 @@ async function processMappedOrders(
       ...generatedLines,
       ...optionLineRows,
     ];
+    const generatedNames = generatedLines.flatMap((line) =>
+      typeof line.product_name_snapshot === "string" ? [line.product_name_snapshot] : []
+    );
+    if (generatedNames.length) {
+      const existingCustomLines = existingCustomLinesForGenerated ?? [];
+      const staleIds = staleGeneratedCustomLineIds({
+        existing: (existingCustomLines ?? []).map((row) => ({
+          id: row.id,
+          name: row.product_name_snapshot,
+          unitPrice: Number(row.unit_price ?? 0),
+        })),
+        generatedNames,
+      });
+      if (staleIds.length) {
+        const { error: staleDeleteError } = await client.from("order_lines").delete().in("id", staleIds);
+        if (staleDeleteError) {
+          issues.push({
+            store_id: storeRow.id,
+            shopify_order_id: item.orderId,
+            sku: null,
+            issue: "stale_generated_custom_lines_delete_failed",
+          });
+        }
+      }
+    }
     if (allLineRows.length) {
       const { data: insertedLines, error: lineError } = await client
         .from("order_lines")

@@ -833,6 +833,21 @@ export type ShopifyFreeDrink = {
   unit: string;
 };
 
+export function isShopifyBeverageName(value: string | null | undefined): boolean {
+  return /(?:茶|可樂|汽水|果汁|咖啡|water|tea|coke|coffee|juice)/i.test(String(value ?? ""));
+}
+
+export function shopifyDrinkSelectionQuantity(
+  selection: string,
+  fallbackQuantity: number,
+): number {
+  const explicit = selection.match(
+    /(?:^|\s)(\d+(?:\.\d+)?)\s*(?:包|盒|罐|樽|支|杯|份|packs?|boxes?|cans?|bottles?)\s*$/i,
+  );
+  const quantity = explicit ? Number(explicit[1]) : fallbackQuantity;
+  return Number.isFinite(quantity) && quantity > 0 ? quantity : 0;
+}
+
 /** Extracts tea manifests from Shopify order notes. A catalog/SKU match is not
  * required, but an explicit numeric quantity is, so unmatched tea bags are
  * retained without turning a casual mention of tea into an order line. */
@@ -881,7 +896,7 @@ export function replaceShopifyFreeDrinkSourceLines(
   return lines.filter((line) => {
     const name = String(line.product_name_snapshot ?? "");
     const unitPrice = Number(line.unit_price ?? 0);
-    return unitPrice !== 0 || !/(?:茶|tea)/i.test(name);
+    return unitPrice !== 0 || !isShopifyBeverageName(name);
   });
 }
 
@@ -1204,6 +1219,51 @@ export function shopifyBentoUtensilCount(
 
 /** Rebuilds menu sections when Shopify stores the heading in a property name
  * and the comma-separated selections in its value. */
+function parseShopifyCheckboxMenuValue(value: string): MenuOption[] {
+  const options = parseMenuRemark(`必選:\n${value}`);
+  return options.length > 0 && options.every((option) => /[)）]\s*$/.test(option.name))
+    ? options
+    : [];
+}
+
+/** In the dedicated lunch-box store every paid, non-beverage base product is
+ * a meal requiring utensils, including new titles such as "野餐盒" that have
+ * no SKU/catalog match yet. */
+export function shopifyLunchBoxUtensilCount(
+  lines: Array<{ name: string | null; quantity: number; unitPrice: number }>,
+): number {
+  return lines.reduce((total, line) =>
+    line.unitPrice > 0 && line.quantity > 0 && !isShopifyBeverageName(line.name)
+      ? total + line.quantity
+      : total, 0);
+}
+
+function generatedLineBaseName(value: string): string {
+  return value
+    .replace(/\s+\d+(?:\.\d+)?\s*(?:包|盒|罐|樽|支|杯|份)\s*$/i, "")
+    .trim();
+}
+
+/** Identifies only zero-price web rows superseded by regenerated Shopify
+ * drinks/utensils. Other manual custom products remain untouched. */
+export function staleGeneratedCustomLineIds(input: {
+  existing: Array<{ id: string; name: string | null; unitPrice: number }>;
+  generatedNames: string[];
+}): string[] {
+  const generated = new Set(input.generatedNames.map((name) =>
+    normalizeNameForMatch(generatedLineBaseName(name))
+  ).filter(Boolean));
+  return input.existing.flatMap((row) => {
+    if (row.unitPrice !== 0) return [];
+    const key = normalizeNameForMatch(generatedLineBaseName(row.name ?? ""));
+    return key && generated.has(key) ? [row.id] : [];
+  });
+}
+
+function looksLikeShopifyMenuCheckboxValue(value: string): boolean {
+  return /[（(]\s*\d+(?:\.\d+)?\s*(?:磅|件|串|份|盒|包|位|人)\s*[）)]/.test(value);
+}
+
 export function isShopifyMenuSelectionProperty(
   property: { name?: string; value?: string | null },
 ): boolean {
@@ -1211,6 +1271,15 @@ export function isShopifyMenuSelectionProperty(
   const value = String(property.value ?? "").trim();
   if (!value) return false;
   if (parseMenuRemark(value).length) return true;
+  // The Shopify checkbox app emits generic property names ("checkbox-1",
+  // "checkbox-2", ...) instead of a package section heading. Rebuild a menu
+  // heading before parsing it. Keeping the property-name match exact prevents
+  // arbitrary line properties from being treated as dish choices; an unusual
+  // checkbox value can then be interpreted by the guarded AI fallback.
+  if (/^checkbox-\d+$/i.test(name)) {
+    return parseShopifyCheckboxMenuValue(value).length > 0 ||
+      looksLikeShopifyMenuCheckboxValue(value);
+  }
   if (/(?:必選|選\s*\d+|\d+\s*選\s*\d+)/.test(name)) {
     return parseMenuRemark(`${name.replace(/[:：]\s*$/, "")}:\n${value}`).length > 0;
   }
@@ -1226,6 +1295,9 @@ export function collectLineMenuRemarkText(
     const name = String(property.name ?? "").replace(/^_+/, "").trim();
     const value = String(property.value ?? "").trim();
     if (parseMenuRemark(value).length) blocks.push(value);
+    else if (/^checkbox-\d+$/i.test(name)) {
+      blocks.push(`必選:\n${value}`);
+    }
     else blocks.push(`${name.replace(/[:：]\s*$/, "")}:\n${value}`);
   }
   return blocks.join("\n\n") || null;

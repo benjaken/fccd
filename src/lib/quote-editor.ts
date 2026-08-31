@@ -120,6 +120,7 @@ export type QuoteLine = {
   totalPrice: number;
   remarks: string | null;
   isAddon?: boolean;
+  isVoid?: boolean;
   labelId?: string | null;
   labelDisplayA?: string | null;
   labelDisplayB?: string | null;
@@ -372,7 +373,7 @@ export async function fetchQuoteEditorSummary(
       ? []
       : (paymentsResult.data ?? []).map((payment) => ({
           id: payment.id,
-          paymentAt: payment.payment_at ? String(payment.payment_at).slice(0, 10) : "",
+          paymentAt: hongKongDateKey(payment.payment_at),
           paymentMethodId: payment.payment_method_id || "",
           amount: toNumber(payment.amount),
           reference: payment.receipt_reference || payment.paypal_reference || "",
@@ -477,7 +478,7 @@ export async function saveSalesDocumentBatch(input: {
   const { error } = await supabase.rpc("save_sales_document_batch", {
     p_order_id: input.orderId,
     p_document_type: input.documentType,
-    p_lines: input.lines.map((line) => ({
+    p_lines: input.lines.filter((line) => !line.isVoid).map((line) => ({
       id: line.id,
       quantity: line.quantity,
       unit_price: line.unitPrice,
@@ -679,12 +680,16 @@ export async function searchQuoteCatalog(
 
 export async function fetchQuoteLines(orderId: string): Promise<QuoteLine[]> {
   const resolvedOrderId = await resolveCanonicalOrderId(orderId);
-  const [lineResult, choiceResult] = await Promise.all([
+  const [orderResult, lineResult, choiceResult] = await Promise.all([
+    supabase
+      .from("orders")
+      .select("document_type")
+      .eq("id", resolvedOrderId)
+      .single(),
     supabase
       .from("order_lines")
-      .select("id,product_id,package_id,sku_snapshot,product_name_snapshot,content_snapshot,quantity,unit_price,total_price,remarks_1,is_addon,temporary_label_display_name,temporary_label_quantity_label,products(name,product_labels(id,display_name,quantity_label,created_at)),packages(name)")
+      .select("id,product_id,package_id,sku_snapshot,product_name_snapshot,content_snapshot,quantity,unit_price,total_price,remarks_1,is_addon,is_void,temporary_label_display_name,temporary_label_quantity_label,products(name,product_labels(id,display_name,quantity_label,created_at)),packages(name)")
       .eq("order_id", resolvedOrderId)
-      .eq("is_void", false)
       .order("item_order", { ascending: true, nullsFirst: false })
       .order("created_at"),
     supabase
@@ -695,6 +700,7 @@ export async function fetchQuoteLines(orderId: string): Promise<QuoteLine[]> {
       .not("order_line_id", "is", null)
       .order("created_at"),
   ]);
+  if (orderResult.error) throw orderResult.error;
   if (lineResult.error) throw lineResult.error;
   if (choiceResult.error) throw choiceResult.error;
 
@@ -733,7 +739,14 @@ export async function fetchQuoteLines(orderId: string): Promise<QuoteLine[]> {
     choiceGroupsByLine.set(snapshot.order_line_id, groups);
   }
 
-  return (lineResult.data ?? []).map((row) => {
+  const rows = orderResult.data.document_type === "order"
+    ? [
+        ...(lineResult.data ?? []).filter((row) => !row.is_void),
+        ...(lineResult.data ?? []).filter((row) => row.is_void),
+      ]
+    : (lineResult.data ?? []).filter((row) => !row.is_void);
+
+  return rows.map((row) => {
     type LabelRow = { id: string; display_name: string | null; quantity_label: string | null; created_at: string };
     const product = Array.isArray(row.products) ? row.products[0] : row.products;
     const pkg = Array.isArray(row.packages) ? row.packages[0] : row.packages;
@@ -757,6 +770,7 @@ export async function fetchQuoteLines(orderId: string): Promise<QuoteLine[]> {
       totalPrice: quoteLineTotal(row.quantity, row.unit_price, row.total_price),
       remarks: row.remarks_1,
       isAddon: row.is_addon === true,
+      isVoid: row.is_void === true,
       labelId: label?.id ?? null,
       labelDisplayA: label?.display_name ?? row.temporary_label_display_name ?? null,
       labelDisplayB: label?.quantity_label ?? row.temporary_label_quantity_label ?? null,
@@ -837,6 +851,14 @@ export async function updateQuoteLineLabel(line: QuoteLine): Promise<void> {
 
 export async function removeQuoteLine(lineId: string) {
   const { error } = await supabase.rpc("remove_quote_line", { p_line_id: lineId });
+  if (error) throw error;
+}
+
+export async function setOrderLineVoided(lineId: string, isVoid: boolean) {
+  const { error } = await supabase.rpc("set_order_line_void", {
+    p_line_id: lineId,
+    p_is_void: isVoid,
+  });
   if (error) throw error;
 }
 

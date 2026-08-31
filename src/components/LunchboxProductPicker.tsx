@@ -5,7 +5,6 @@ import { useTranslation } from "react-i18next";
 import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
 import { SidePanel } from "@/components/ui/side-panel";
-import { DICT_TYPE, dictItemLabel, useDictItems } from "@/lib/dictionaries";
 import {
   fetchLunchboxPickerFilterOptions,
   fetchProducts,
@@ -25,22 +24,31 @@ const EMPTY_FILTER_OPTIONS: LunchboxPickerFilterOptions = {
 
 type PickerFilters = Pick<
   ProductListFilters,
-  | "priceRange"
   | "bentoMainTypeId"
   | "bentoColumnTypeId"
   | "cookTypeId"
   | "mainIngredientId"
   | "specialRequestId"
->;
+> & {
+  priceMin: string;
+  priceMax: string;
+};
 
 const EMPTY_FILTERS: PickerFilters = {
-  priceRange: "",
+  priceMin: "",
+  priceMax: "",
   bentoMainTypeId: "",
   bentoColumnTypeId: "",
   cookTypeId: "",
   mainIngredientId: "",
   specialRequestId: "",
 };
+
+function numericPrice(value: string) {
+  if (!value.trim()) return undefined;
+  const price = Number(value);
+  return Number.isFinite(price) && price >= 0 ? price : undefined;
+}
 
 function itemName(item: ProductListItem) {
   return item.name || item.chineseName || item.sku || "—";
@@ -61,8 +69,7 @@ export function LunchboxProductPicker({
   loadProducts?: typeof fetchProducts;
   loadFilterOptions?: typeof fetchLunchboxPickerFilterOptions;
 }) {
-  const { t, i18n } = useTranslation();
-  const priceRanges = useDictItems(DICT_TYPE.productPriceRange);
+  const { t } = useTranslation();
   const [draftSearch, setDraftSearch] = useState("");
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<PickerFilters>(EMPTY_FILTERS);
@@ -126,7 +133,14 @@ export function LunchboxProductPicker({
     preset: "lunchbox" as const,
     sortField: "name" as const,
     sortAscending: true,
-    ...filters,
+    priceRange: "",
+    priceMin: numericPrice(filters.priceMin),
+    priceMax: numericPrice(filters.priceMax),
+    bentoMainTypeId: filters.bentoMainTypeId,
+    bentoColumnTypeId: filters.bentoColumnTypeId,
+    cookTypeId: filters.cookTypeId,
+    mainIngredientId: filters.mainIngredientId,
+    specialRequestId: filters.specialRequestId,
   }), [filters, search]);
 
   const loadFirstPage = useCallback(async () => {
@@ -198,20 +212,22 @@ export function LunchboxProductPicker({
   const activeFilters = useMemo(() => {
     const optionLabel = (items: Array<{ id: string; name: string }>, id: string | undefined) =>
       items.find((item) => item.id === id)?.name;
+    const priceLabel = filters.priceMin && filters.priceMax
+      ? `HK$${filters.priceMin} – HK$${filters.priceMax}`
+      : filters.priceMin
+        ? `HK$${filters.priceMin}+`
+        : filters.priceMax
+          ? `≤ HK$${filters.priceMax}`
+          : "";
     return [
-      filters.priceRange ? {
-        key: "priceRange" as const,
-        label: priceRanges.items.find((item) => item.value === filters.priceRange)
-          ? dictItemLabel(priceRanges.items.find((item) => item.value === filters.priceRange)!, i18n.language)
-          : filters.priceRange,
-      } : null,
-      filters.bentoMainTypeId ? { key: "bentoMainTypeId" as const, label: optionLabel(filterOptions.staples, filters.bentoMainTypeId) } : null,
-      filters.bentoColumnTypeId ? { key: "bentoColumnTypeId" as const, label: optionLabel(filterOptions.compartments, filters.bentoColumnTypeId) } : null,
-      filters.mainIngredientId ? { key: "mainIngredientId" as const, label: optionLabel(filterOptions.mainIngredients, filters.mainIngredientId) } : null,
-      filters.specialRequestId ? { key: "specialRequestId" as const, label: optionLabel(filterOptions.specialRequests, filters.specialRequestId) } : null,
-      filters.cookTypeId ? { key: "cookTypeId" as const, label: optionLabel(filterOptions.cookTypes, filters.cookTypeId) } : null,
-    ].filter((item): item is { key: keyof PickerFilters; label: string } => Boolean(item?.label));
-  }, [filterOptions, filters, i18n.language, priceRanges.items]);
+      priceLabel ? { keys: ["priceMin", "priceMax"] as Array<keyof PickerFilters>, label: priceLabel } : null,
+      filters.bentoMainTypeId ? { keys: ["bentoMainTypeId"] as Array<keyof PickerFilters>, label: optionLabel(filterOptions.staples, filters.bentoMainTypeId) } : null,
+      filters.bentoColumnTypeId ? { keys: ["bentoColumnTypeId"] as Array<keyof PickerFilters>, label: optionLabel(filterOptions.compartments, filters.bentoColumnTypeId) } : null,
+      filters.mainIngredientId ? { keys: ["mainIngredientId"] as Array<keyof PickerFilters>, label: optionLabel(filterOptions.mainIngredients, filters.mainIngredientId) } : null,
+      filters.specialRequestId ? { keys: ["specialRequestId"] as Array<keyof PickerFilters>, label: optionLabel(filterOptions.specialRequests, filters.specialRequestId) } : null,
+      filters.cookTypeId ? { keys: ["cookTypeId"] as Array<keyof PickerFilters>, label: optionLabel(filterOptions.cookTypes, filters.cookTypeId) } : null,
+    ].filter((item): item is { keys: Array<keyof PickerFilters>; label: string } => Boolean(item?.label));
+  }, [filterOptions, filters]);
 
   const renderProduct = (item: ProductListItem, isRecommended: boolean) => {
     const checked = selectedIds.has(item.id);
@@ -286,7 +302,7 @@ export function LunchboxProductPicker({
         {activeFilters.length ? (
           <div className="lunchbox-picker-active-filters" aria-label={t("quoteEditor.items.lunchboxActiveFilters")}>
             {activeFilters.map((filter) => (
-              <button type="button" key={filter.key} onClick={() => setFilters((current) => ({ ...current, [filter.key]: "" }))}>
+              <button type="button" key={filter.keys.join("-")} onClick={() => setFilters((current) => filter.keys.reduce((next, key) => ({ ...next, [key]: "" }), current))}>
                 {filter.label}<X />
               </button>
             ))}
@@ -296,7 +312,13 @@ export function LunchboxProductPicker({
 
         {filtersOpen ? (
           <div className="lunchbox-picker-filters">
-            <label><span>{t("products.priceRangeFilter")}</span><FilterableSelect value={filters.priceRange} onChange={(event) => setFilters((current) => ({ ...current, priceRange: event.target.value }))}><option value="">{t("products.allPriceRanges")}</option>{priceRanges.items.map((item) => <option key={item.id} value={item.value}>{dictItemLabel(item, i18n.language)}</option>)}</FilterableSelect></label>
+            <div className="lunchbox-picker-price-filter">
+              <span>{t("products.priceRangeFilter")}</span>
+              <div>
+                <label><span>{t("quoteEditor.items.lunchboxPriceMin")}</span><input type="number" min="0" step="any" inputMode="decimal" value={filters.priceMin} onChange={(event) => setFilters((current) => ({ ...current, priceMin: event.target.value }))} placeholder={t("quoteEditor.items.lunchboxPriceMinPlaceholder")} /></label>
+                <label><span>{t("quoteEditor.items.lunchboxPriceMax")}</span><input type="number" min="0" step="any" inputMode="decimal" value={filters.priceMax} onChange={(event) => setFilters((current) => ({ ...current, priceMax: event.target.value }))} placeholder={t("quoteEditor.items.lunchboxPriceMaxPlaceholder")} /></label>
+              </div>
+            </div>
             <label><span>{t("products.stapleFilter")}</span><FilterableSelect value={filters.bentoMainTypeId} onChange={(event) => setFilters((current) => ({ ...current, bentoMainTypeId: event.target.value }))}><option value="">{t("products.allStaples")}</option>{filterOptions.staples.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</FilterableSelect></label>
             <label><span>{t("products.compartmentFilter")}</span><FilterableSelect value={filters.bentoColumnTypeId} onChange={(event) => setFilters((current) => ({ ...current, bentoColumnTypeId: event.target.value }))}><option value="">{t("products.allCompartments")}</option>{filterOptions.compartments.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</FilterableSelect></label>
             <label><span>{t("quoteEditor.items.lunchboxIngredient")}</span><FilterableSelect value={filters.mainIngredientId} onChange={(event) => setFilters((current) => ({ ...current, mainIngredientId: event.target.value }))}><option value="">{t("quoteEditor.items.lunchboxAllIngredients")}</option>{filterOptions.mainIngredients.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</FilterableSelect></label>

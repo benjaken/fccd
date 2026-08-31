@@ -10,6 +10,7 @@ import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { Modal } from "@/components/ui/modal";
+import { hongKongDateKey } from "@/lib/date-time";
 import { writeStocktakePrintWindow } from "@/lib/stocktake-print";
 import { KITCHEN_INGREDIENT_STOCKTAKES_DELETE, KITCHEN_INGREDIENT_STOCKTAKES_EDIT, KITCHEN_PACKING_STOCKTAKES_DELETE, KITCHEN_PACKING_STOCKTAKES_EDIT } from "@/lib/kitchen-action-permissions";
 import {
@@ -145,7 +146,7 @@ export function PackingStocktakesPage({
   }, [appliedSearch, effectiveLoadRows, page, reloadKey, stocktakeDate]);
 
   const openCreate = () => {
-    setNewDate(stocktakeDate ?? new Date().toISOString().slice(0, 10));
+    setNewDate(stocktakeDate ?? hongKongDateKey(new Date()));
     setCreateError(null);
     setCreateOpen(true);
   };

@@ -13,6 +13,7 @@ import { SidePanel } from "@/components/ui/side-panel";
 import { OperationalListState } from "@/components/ui/operational-list-state";
 import { ResponsiveFilterPanel } from "@/components/ui/responsive-filter-panel";
 import { TablePagination } from "@/components/ui/table-pagination";
+import { hongKongDateKey } from "@/lib/date-time";
 import { useMediaQuery } from "@/lib/use-media-query";
 import {
   fetchMasoftFilterOptions,
@@ -29,7 +30,7 @@ import {
 
 type DateMode = "single" | "range";
 
-function dateValue(value: string | null) { return value ? value.slice(0, 10) : ""; }
+function dateValue(value: string | null) { return hongKongDateKey(value); }
 
 function hasVerifiedOrderLinks(settlement: MasoftSettlement) {
   if (!settlement.payments.length || settlement.payments.some((payment) => !payment.orderId)) return false;

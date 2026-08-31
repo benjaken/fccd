@@ -22,6 +22,7 @@ function createQuery(result: { data: unknown; count?: number; error: unknown }) 
     "in",
     "gte",
     "lt",
+    "lte",
     "order",
     "range",
     "limit",
@@ -147,6 +148,26 @@ describe("product SKU list filter", () => {
     });
 
     expect(query.eq).toHaveBeenCalledWith("bento_column_type_id", "column-2");
+  });
+
+  it("filters the catalog by an inclusive custom price interval", async () => {
+    const query = createQuery({ data: [], count: 0, error: null });
+    fromMock.mockReturnValue(query);
+
+    await fetchProducts({
+      page: 1,
+      search: "",
+      channelId: "",
+      productTypeName: "",
+      status: "",
+      priceRange: "",
+      priceMin: 60,
+      priceMax: 80,
+      preset: "lunchbox",
+    });
+
+    expect(query.gte).toHaveBeenCalledWith("price", 60);
+    expect(query.lte).toHaveBeenCalledWith("price", 80);
   });
 
   it("orders compartment options as 單格, 雙格, 五格, 六格", async () => {
