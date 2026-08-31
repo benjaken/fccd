@@ -856,9 +856,11 @@ export function OrdersListPage({
                 order.address,
               );
               const factoryTodoAliases = ["未傳至工場", "未傳送到工場"];
+              const shouldHideFactoryTodo =
+                order.isSentToFactory || order.doNotSendToFactory;
               const todoStatuses = (order.statuses ?? []).filter(
                 (status) =>
-                  !order.doNotSendToFactory ||
+                  !shouldHideFactoryTodo ||
                   !factoryTodoAliases.includes(status.name.trim()),
               ).map((status) => ({ ...status, tooltip: undefined as string | undefined }));
               const addTodoStatus = (
