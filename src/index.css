@@ -27528,11 +27528,6 @@ button.factory-job-card:focus-visible {
   grid-template-columns: repeat(2, 2rem);
 }
 
-.quote-generated-order-cell { min-width: 132px; }
-.quote-generated-order-cell > small { display: block; max-width: 150px; margin-top: 6px; color: var(--destructive); line-height: 1.3; }
-.quote-generated-order-cell .button { white-space: nowrap; }
-.quote-generated-order-cell svg { width: 15px; height: 15px; }
-
 .order-row-actions a,
 .order-row-actions button,
 .order-row-actions span {

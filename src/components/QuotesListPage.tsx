@@ -50,7 +50,6 @@ const QUOTE_SKELETON_COLUMNS = [
   { width: "8rem" },
   { width: "12rem" },
   { width: "6rem" },
-  { width: "6rem" },
   { width: "6rem", variant: "badge" as const },
   { width: "1.75rem", variant: "action" as const },
 ];
@@ -535,7 +534,6 @@ export function QuotesListPage({
                 <th>{t("quotes.customerDetails.quantity")}</th>
                 <th>{t("quotes.columns.description")}</th>
                 <th>{t("quotes.columns.amount")}</th>
-                <th>{t("quotes.columns.generatedOrder")}</th>
                 <th>{t("quotes.columns.status")}</th>
                 <th>{t("quotes.columns.actions")}</th>
               </tr>
@@ -621,13 +619,6 @@ export function QuotesListPage({
                 </td>
                 <td>
                   <strong>{formatAmount(quote)}</strong>
-                </td>
-                <td className="quote-generated-order-cell">
-                  {quote.generatedOrderId ? (
-                    <DetailLink className="order-link" to={`/orders/${quote.generatedOrderId}`} target="_blank" rel="noopener noreferrer">
-                      {quote.generatedOrderNumber || t("quotes.actions.openOrder")}
-                    </DetailLink>
-                  ) : "—"}
                 </td>
                 <td>
                   <span className="status-badge amber">
