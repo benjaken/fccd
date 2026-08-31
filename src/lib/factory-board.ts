@@ -783,21 +783,12 @@ export function factoryOrderPrintStatus(input: {
   )
   const allPrinted =
     activeLines.length > 0 && activeLines.every((line) => line.isPrinted)
-  const printedAt = input.factoryPrintDate
-    ? Date.parse(input.factoryPrintDate)
-    : Number.NaN
-  const modifiedAfterPrint =
-    Number.isFinite(printedAt) &&
-    input.lines.some((line) => {
-      if (!line.modifiedAt) return false
-      const modifiedAt = Date.parse(line.modifiedAt)
-      return Number.isFinite(modifiedAt) && modifiedAt > printedAt
-    })
-
-  if (
-    modifiedAfterPrint ||
-    (!allPrinted && (input.requiresReprint || input.factoryPrintDate))
-  ) {
+  // Historical Bubble timestamps are not a reliable change baseline: an old
+  // line can have a Modified Date later than Factory_date2_Print without being
+  // a change raised in this system. New edits still set
+  // factory_reprint_required through the database trigger, so only that
+  // explicit flag should promote an incomplete order to needs-reprint.
+  if (!allPrinted && input.requiresReprint) {
     return "needs-reprint"
   }
   return allPrinted ? "complete" : "incomplete"
