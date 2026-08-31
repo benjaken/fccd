@@ -549,8 +549,10 @@ describe("Quote editor", () => {
     expect(within(packageRow).queryByText("Main dishes")).not.toBeInTheDocument();
     expect(within(packageRow).queryByText("Roast chicken")).not.toBeInTheDocument();
     expect(within(packageRow).queryByText("Steamed fish")).not.toBeInTheDocument();
+    expect(within(packageRow).queryByRole("button", { name: "Preview / edit" })).not.toBeInTheDocument();
     const roastChickenRow = screen.getByRole("row", { name: /^2 D-1 Roast chicken/ });
     const steamedFishRow = screen.getByRole("row", { name: /^3 D-2 Steamed fish/ });
+    expect(within(roastChickenRow).getByRole("button", { name: "Preview / edit" })).toBeInTheDocument();
     expect(within(roastChickenRow).getByRole("spinbutton", { name: "Unit price Roast chicken" })).toHaveValue(0);
     expect(within(roastChickenRow).getByText("HK$0.00")).toBeInTheDocument();
     expect(within(steamedFishRow).getByRole("spinbutton", { name: "Unit price Steamed fish" })).toHaveValue(10);
@@ -706,7 +708,7 @@ describe("Quote editor", () => {
     ));
   });
 
-  it("shows two tabs and edits existing product details with a collapsed 16-character remark", async () => {
+  it("shows product remarks below the product and edits them inline", async () => {
     const user = userEvent.setup();
     const line: QuoteLine = {
       id: "line-1",
@@ -759,13 +761,22 @@ describe("Quote editor", () => {
     expect(tabs[0]).toHaveAttribute("aria-selected", "true");
     await user.click(tabs[1]);
     expect(screen.getByLabelText("Brand")).toHaveValue("channel-1");
-    expect(screen.queryByRole("button", { name: /Original remark/ })).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Preview / edit" }));
-    const labelDialog = screen.getByRole("dialog");
-    expect(within(labelDialog).getByRole("textbox", { name: "Remarks" })).toHaveValue("Original remark");
-    expect(within(labelDialog).getByRole("textbox", { name: "Remarks" })).toHaveAttribute("maxlength", "16");
-    await user.click(within(labelDialog).getByRole("button", { name: "Cancel" }));
+    const remarkButton = screen.getByRole("button", { name: /Original remark/ });
+    expect(remarkButton).toBeInTheDocument();
+    await user.click(remarkButton);
+    const remarkInput = screen.getByRole("textbox", { name: "Remarks Roast pork" });
+    expect(remarkInput).toHaveValue("Original remark");
+    expect(remarkInput).toHaveAttribute("maxlength", "16");
+    await user.clear(remarkInput);
+    await user.type(remarkInput, "No onion");
+    await user.tab();
+    await waitFor(() => expect(saveExistingLine).toHaveBeenCalledWith(expect.objectContaining({
+      id: "line-1",
+      remarks: "No onion",
+    })));
+    expect(screen.getByRole("button", { name: /No onion/ })).toBeInTheDocument();
 
+    saveExistingLine.mockClear();
     const quantityInput = screen.getByRole("spinbutton", { name: "Quantity Roast pork" });
     expect(quantityInput).toHaveAttribute("min", "0");
     expect(quantityInput).toHaveAttribute("step", "1");
@@ -792,16 +803,20 @@ describe("Quote editor", () => {
     const line: QuoteLine = {
       id: "line-label-1",
       productId: "product-1",
-      packageId: null,
+      packageId: "package-1",
       sku: "P001",
       name: "Roast pork",
       quantity: 2,
       unitPrice: 88,
       totalPrice: 176,
-      remarks: null,
+      remarks: "Line note",
       labelId: "label-1",
       labelDisplayA: "Roast pork label",
       labelDisplayB: "2 boxes",
+      labels: [
+        { id: "label-1", displayA: "Roast pork label", displayB: "2 boxes" },
+        { id: "label-2", displayA: "Sauce label", displayB: "1 cup" },
+      ],
     };
 
     renderEditor({
@@ -809,7 +824,7 @@ describe("Quote editor", () => {
         id: "quote-1",
         orderNumber: "FCLQ-LABEL",
         channelId: "channel-1",
-        draft: { ...emptyQuoteDraft },
+        draft: { ...emptyQuoteDraft, packingNote: "Factory packing note" },
       }),
       loadLines: vi.fn().mockResolvedValue([line]),
       saveLineLabel,
@@ -821,12 +836,14 @@ describe("Quote editor", () => {
     expect(screen.getByRole("columnheader", { name: "Label preview" })).toBeInTheDocument();
     expect(screen.queryByLabelText("50 × 75 mm 標籤預覽：#FCLQ-LABEL")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Preview / edit" }));
-    expect(screen.getByLabelText("50 × 75 mm 標籤預覽：#FCLQ-LABEL")).toBeInTheDocument();
-    expect(screen.getByText("－ 送貨日期 －")).toBeInTheDocument();
+    expect(screen.getAllByLabelText("50 × 75 mm 標籤預覽：#FCLQ-LABEL")).toHaveLength(2);
+    expect(screen.getAllByText("－ 送貨日期 －")).toHaveLength(2);
+    expect(screen.getByText("Sauce label")).toBeInTheDocument();
+    expect(within(screen.getByRole("dialog")).getAllByText("Line note")).toHaveLength(2);
+    expect(within(screen.getByRole("dialog")).queryByText("Factory packing note")).not.toBeInTheDocument();
     const displayA = screen.getByRole("textbox", { name: "Label line 1" });
     await user.clear(displayA);
     await user.type(displayA, "Updated label");
-    await user.type(within(screen.getByRole("dialog")).getByRole("textbox", { name: "Remarks" }), "No onion");
     await user.click(screen.getByRole("button", { name: "Save label" }));
 
     await waitFor(() => expect(saveLineLabel).toHaveBeenCalledWith(expect.objectContaining({
@@ -835,10 +852,7 @@ describe("Quote editor", () => {
       labelDisplayA: "Updated label",
       labelDisplayB: "2 boxes",
     })));
-    expect(saveExistingLine).toHaveBeenCalledWith(expect.objectContaining({
-      id: "line-label-1",
-      remarks: "No onion",
-    }), "quote");
+    expect(saveExistingLine).not.toHaveBeenCalled();
   });
 
   it("matches Shopify 12-hour delivery times to the current option", async () => {

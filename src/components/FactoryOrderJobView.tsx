@@ -53,6 +53,14 @@ export function factoryLabelPrintCompletesSet(
   return fullSet || factoryLabelCopies(quantityText) === 1;
 }
 
+export function factoryOrderLineLabelNames(line: FactoryOrderLine): string[] {
+  const configuredNames = (line.labelNames ?? [])
+    .map((name) => name.trim())
+    .filter(Boolean);
+  if (configuredNames.length) return configuredNames;
+  return [line.labelName?.trim() || line.label.trim()].filter(Boolean);
+}
+
 const factoryChangeFieldKeys: Record<string, string> = {
   product_id: "factoryBoard.changedProduct",
   package_id: "factoryBoard.changedPackage",
@@ -141,6 +149,7 @@ export function FactoryOrderJobView({
   const arrivalWindow = job?.arrivalWindow || empty;
   const assignedFleet = fleets.find((fleet) => fleet.id === assignedFleetId);
   const selectedLine = job?.lines.find((line) => line.id === selectedLineId) ?? null;
+  const selectedLabelNames = selectedLine ? factoryOrderLineLabelNames(selectedLine) : [];
   const selectedName =
     assignedFleet?.shortName ||
     assignedFleet?.name ||
@@ -194,20 +203,24 @@ export function FactoryOrderJobView({
     try {
       const fullSetCopies = labelCopies(line);
       const copies = fullSet ? fullSetCopies : 1;
+      const labelNames = factoryOrderLineLabelNames(line);
       const completesSet = factoryLabelPrintCompletesSet(
         line.quantityText,
         fullSet,
       );
-      const commandBase64 = await loadLabelCommand({
-        orderNumber,
-        deliveryDate: dateKey,
-        labelName: line.labelName?.trim() || line.label,
-        remarks: [...line.remarks, job?.packingNote ?? ""].filter(Boolean),
-        copies,
-      });
+      const labelCommands: string[] = [];
+      for (const labelName of labelNames) {
+        labelCommands.push(await loadLabelCommand({
+          orderNumber,
+          deliveryDate: dateKey,
+          labelName,
+          remarks: [...line.remarks, job?.packingNote ?? ""].filter(Boolean),
+          copies,
+        }));
+      }
       await qz.printLabels(
         selectedPrinter,
-        commandBase64,
+        combineFactoryLabelBase64(labelCommands),
         1,
       );
       if (completesSet) {
@@ -239,14 +252,15 @@ export function FactoryOrderJobView({
     try {
       const labelCommands: string[] = [];
       for (const line of printableLines) {
-        const commandBase64 = await loadLabelCommand({
-          orderNumber,
-          deliveryDate: dateKey,
-          labelName: line.labelName?.trim() || line.label,
-          remarks: [...line.remarks, job?.packingNote ?? ""].filter(Boolean),
-          copies: labelCopies(line),
-        });
-        labelCommands.push(commandBase64);
+        for (const labelName of factoryOrderLineLabelNames(line)) {
+          labelCommands.push(await loadLabelCommand({
+            orderNumber,
+            deliveryDate: dateKey,
+            labelName,
+            remarks: [...line.remarks, job?.packingNote ?? ""].filter(Boolean),
+            copies: labelCopies(line),
+          }));
+        }
       }
       await qz.printLabels(
         selectedPrinter,
@@ -727,9 +741,13 @@ export function FactoryOrderJobView({
                     {selectedLine.label}
                   </strong>
                   <span>{t("factoryBoard.labelName")}</span>
-                  <strong className="factory-label-database-name">
-                    {selectedLine.labelName?.trim().replace(/\r?\n/g, " ") || selectedLine.label}
-                  </strong>
+                  <div className="factory-label-database-names">
+                    {selectedLabelNames.map((labelName, index) => (
+                      <strong className="factory-label-database-name" key={`${labelName}-${index}`}>
+                        {labelName.replace(/\r?\n/g, " ")}
+                      </strong>
+                    ))}
+                  </div>
                 </div>
                 <div>
                   <span>{t("factoryBoard.orderedQuantity")}</span>
@@ -793,7 +811,7 @@ export function FactoryOrderJobView({
                   {printing
                     ? t("factoryBoard.printing")
                     : t("factoryBoard.printFullLabelSet", {
-                        count: labelCopies(selectedLine),
+                        count: labelCopies(selectedLine) * selectedLabelNames.length,
                       })}
                 </Button>
                 <Button
@@ -803,7 +821,7 @@ export function FactoryOrderJobView({
                   onClick={() => void printLine(selectedLine, false)}
                 >
                   <Printer aria-hidden="true" />
-                  {t("factoryBoard.printOneLabel")}
+                  {t("factoryBoard.printOneLabel", { count: selectedLabelNames.length })}
                 </Button>
               </div>
             </div>

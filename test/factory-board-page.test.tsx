@@ -742,6 +742,7 @@ describe("FactoryBoardPage", () => {
               id: "line-print",
               label: "(單格) 煎雞扒胡麻沙律",
               labelName: "煎雞扒胡麻沙律\n走醬另上",
+              labelNames: ["煎雞扒胡麻沙律\n走醬另上", "胡麻醬\n另上"],
               quantityText: "3",
               remarks: ["走醬"],
               printed: false,
@@ -793,17 +794,37 @@ describe("FactoryBoardPage", () => {
         .find((element) => element.classList.contains("factory-label-original-name")),
     ).toBeInTheDocument();
     expect(screen.getByText("煎雞扒胡麻沙律 走醬另上")).toHaveClass("factory-label-database-name");
+    expect(screen.getByText("胡麻醬 另上")).toHaveClass("factory-label-database-name");
     expect(screen.getByText(/此菜式有以下變更/)).toBeInTheDocument();
     expect(screen.getByText("數量")).toBeInTheDocument();
     expect(screen.getByText("1 → 3")).toBeInTheDocument();
-    const fullSet = screen.getByRole("button", { name: "印全套標籤（3個）" });
+    const fullSet = screen.getByRole("button", { name: "印全套標籤（6個）" });
+    await waitFor(() => expect(fullSet).toBeEnabled());
+    const singleSet = screen.getByRole("button", { name: "印單個標籤（2個）" });
+    await user.click(singleSet);
+    expect(loadLabelCommand).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ labelName: "煎雞扒胡麻沙律\n走醬另上", copies: 1 }),
+    );
+    expect(loadLabelCommand).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ labelName: "胡麻醬\n另上", copies: 1 }),
+    );
+    expect(markLinePrinted).not.toHaveBeenCalled();
+    loadLabelCommand.mockClear();
+    printLabels.mockClear();
     await waitFor(() => expect(fullSet).toBeEnabled());
     await user.click(fullSet);
 
-    expect(loadLabelCommand).toHaveBeenCalledWith(
-      expect.objectContaining({ copies: 3 }),
+    expect(loadLabelCommand).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ labelName: "煎雞扒胡麻沙律\n走醬另上", copies: 3 }),
     );
-    expect(printLabels).toHaveBeenCalledWith("Zebra ZD421", "VEVTUA==", 1);
+    expect(loadLabelCommand).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ labelName: "胡麻醬\n另上", copies: 3 }),
+    );
+    expect(printLabels).toHaveBeenCalledWith("Zebra ZD421", "VEVTUFRFU1A=", 1);
     expect(markLinePrinted).toHaveBeenCalledWith("line-print");
     expect(
       await screen.findByText("全套標籤已送到打印機。"),

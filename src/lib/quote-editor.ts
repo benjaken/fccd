@@ -93,6 +93,13 @@ export type QuoteCatalogItem = {
   labelId?: string | null;
   labelDisplayA?: string | null;
   labelDisplayB?: string | null;
+  labels?: QuoteLineLabel[];
+};
+
+export type QuoteLineLabel = {
+  id: string | null;
+  displayA: string | null;
+  displayB: string | null;
 };
 
 export type QuotePackageChoiceSelection = {
@@ -124,6 +131,7 @@ export type QuoteLine = {
   labelId?: string | null;
   labelDisplayA?: string | null;
   labelDisplayB?: string | null;
+  labels?: QuoteLineLabel[];
   labelEdited?: boolean;
   packageChoiceGroups?: QuotePackageChoiceGroup[];
   isPending?: boolean;
@@ -661,6 +669,9 @@ export async function searchQuoteCatalog(
       : [];
     const label = sortedLabels.find((item) => item.display_name?.trim() || item.quantity_label?.trim())
       ?? sortedLabels[0];
+    const labels = sortedLabels
+      .filter((item) => item.display_name?.trim() || item.quantity_label?.trim())
+      .map((item) => ({ id: item.id, displayA: item.display_name, displayB: item.quantity_label }));
     return {
       id: row.id,
       kind,
@@ -670,6 +681,7 @@ export async function searchQuoteCatalog(
       labelId: label?.id ?? null,
       labelDisplayA: label?.display_name ?? null,
       labelDisplayB: label?.quantity_label ?? null,
+      labels,
     };
   };
   return [
@@ -755,6 +767,16 @@ export async function fetchQuoteLines(orderId: string): Promise<QuoteLine[]> {
       .sort((a, b) => a.created_at.localeCompare(b.created_at));
     const label = labels.find((item) => item.display_name?.trim() || item.quantity_label?.trim())
       ?? labels[0];
+    const lineLabels: QuoteLineLabel[] = labels
+      .filter((item) => item.display_name?.trim() || item.quantity_label?.trim())
+      .map((item) => ({ id: item.id, displayA: item.display_name, displayB: item.quantity_label }));
+    if (!lineLabels.length && (row.temporary_label_display_name?.trim() || row.temporary_label_quantity_label?.trim())) {
+      lineLabels.push({
+        id: null,
+        displayA: row.temporary_label_display_name ?? null,
+        displayB: row.temporary_label_quantity_label ?? null,
+      });
+    }
     return {
       id: row.id,
       productId: row.product_id,
@@ -774,6 +796,7 @@ export async function fetchQuoteLines(orderId: string): Promise<QuoteLine[]> {
       labelId: label?.id ?? null,
       labelDisplayA: label?.display_name ?? row.temporary_label_display_name ?? null,
       labelDisplayB: label?.quantity_label ?? row.temporary_label_quantity_label ?? null,
+      labels: lineLabels,
       packageChoiceGroups: choiceGroupsByLine.get(row.id) ?? [],
     };
   });

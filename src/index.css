@@ -22506,7 +22506,7 @@ a.masoft-order-tag:focus-visible {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  overflow: hidden;
+  overflow: visible;
   border: 0;
   background: transparent;
   color: var(--muted-foreground);
@@ -22516,9 +22516,8 @@ a.masoft-order-tag:focus-visible {
 }
 
 .quote-line-remarks-toggle span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .quote-line-remarks-toggle svg {
@@ -22733,7 +22732,15 @@ a.masoft-order-tag:focus-visible {
   gap: 14px;
 }
 
-.quote-label-modal-content > .factory-dish-label-preview {
+.quote-label-preview-grid {
+  display: flex;
+  width: 100%;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 16px;
+}
+
+.quote-label-preview-grid > .factory-dish-label-preview {
   width: min(11rem, 54vw);
 }
 
@@ -25378,7 +25385,17 @@ button.factory-job-card:focus-visible {
 }
 
 .factory-label-summary .factory-label-database-name {
-  white-space: nowrap;
+  white-space: normal;
+}
+
+.factory-label-database-names {
+  display: grid;
+  gap: 8px;
+}
+
+.factory-label-database-names .factory-label-database-name + .factory-label-database-name {
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
 }
 
 .factory-label-summary .factory-label-original-name {

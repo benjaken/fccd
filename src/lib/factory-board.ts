@@ -58,6 +58,7 @@ export type FactoryOrderLine = {
   id: string
   label: string
   labelName?: string
+  labelNames?: string[]
   quantityText: string | null
   remarks: string[]
   printed: boolean
@@ -120,16 +121,35 @@ function mapFactoryOrderLineChange(
   }
 }
 
+export function factoryProductLabelNames(
+  labels: Array<Pick<FactoryProductLabelRow, "display_name" | "quantity_label">>,
+): string[] {
+  return labels
+    .map((label) => [label.display_name, label.quantity_label]
+      .map((value) => value?.trim() ?? "")
+      .filter(Boolean)
+      .join("\n"))
+    .filter(Boolean)
+}
+
 export function factoryProductLabelName(
   labels: Array<Pick<FactoryProductLabelRow, "display_name" | "quantity_label">>,
 ): string | null {
-  for (const label of labels) {
-    const lines = [label.display_name, label.quantity_label]
-      .map((value) => value?.trim() ?? "")
-      .filter(Boolean)
-    if (lines.length) return lines.join("\n")
-  }
-  return null
+  return factoryProductLabelNames(labels)[0] ?? null
+}
+
+export function factoryOrderLineLabelNames(
+  labels: Array<Pick<FactoryProductLabelRow, "display_name" | "quantity_label">>,
+  temporaryDisplayName: string | null | undefined,
+  temporaryQuantityLabel: string | null | undefined,
+): string[] {
+  const productLabelNames = factoryProductLabelNames(labels)
+  if (productLabelNames.length) return productLabelNames
+  const temporaryLabelName = [temporaryDisplayName, temporaryQuantityLabel]
+    .map((value) => value?.trim() ?? "")
+    .filter(Boolean)
+    .join("\n")
+  return temporaryLabelName ? [temporaryLabelName] : []
 }
 
 export function factoryOrderLineLabelName(
@@ -137,12 +157,27 @@ export function factoryOrderLineLabelName(
   temporaryDisplayName: string | null | undefined,
   temporaryQuantityLabel: string | null | undefined,
 ): string | null {
-  return factoryProductLabelName(labels) ||
-    [temporaryDisplayName, temporaryQuantityLabel]
-      .map((value) => value?.trim() ?? "")
-      .filter(Boolean)
-      .join("\n") ||
-    null
+  return factoryOrderLineLabelNames(
+    labels,
+    temporaryDisplayName,
+    temporaryQuantityLabel,
+  )[0] ?? null
+}
+
+function resolvedFactoryOrderLineLabelNames(
+  labels: Array<Pick<FactoryProductLabelRow, "display_name" | "quantity_label">>,
+  temporaryDisplayName: string | null | undefined,
+  temporaryQuantityLabel: string | null | undefined,
+  fallbackLabelName: string | null | undefined,
+): string[] {
+  const configuredLabelNames = factoryOrderLineLabelNames(
+    labels,
+    temporaryDisplayName,
+    temporaryQuantityLabel,
+  )
+  if (configuredLabelNames.length) return configuredLabelNames
+  const fallback = fallbackLabelName?.trim() ?? ""
+  return fallback ? [fallback] : []
 }
 
 export type FactoryFleet = {
@@ -1063,6 +1098,13 @@ export async function fetchFactoryOrderJob(orderId: string): Promise<FactoryOrde
       ...allLines.filter((row) => row.is_void),
     ].map((row) => ({
       id: row.id as string,
+      labelNames: resolvedFactoryOrderLineLabelNames(
+        productLabelsByProductId.get((row.product_id as string | null) ?? "") ?? [],
+        row.temporary_label_display_name as string | null,
+        row.temporary_label_quantity_label as string | null,
+        (row.content_snapshot as string | null)?.trim() ||
+          (row.product_name_snapshot as string | null)?.trim(),
+      ),
       labelName:
         factoryOrderLineLabelName(
           productLabelsByProductId.get((row.product_id as string | null) ?? "") ?? [],
