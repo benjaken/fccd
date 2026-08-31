@@ -372,6 +372,32 @@ describe("WATI order notifications", () => {
     expect(migration).toContain("set is_active = false");
   });
 
+  it("blocks every automatic customer notification while an order is pending review", () => {
+    const migration = readFileSync(
+      resolve(
+        process.cwd(),
+        "supabase/migrations/20260831160000_block_pending_review_auto_notifications.sql",
+      ),
+      "utf8",
+    );
+    const worker = readFileSync(
+      resolve(process.cwd(), "supabase/functions/wati-order-notifications/index.ts"),
+      "utf8",
+    );
+
+    expect(migration).toContain("private.wati_order_is_pending_review");
+    expect(migration).toContain("coalesce(p_order.addon_shopify_pending, false)");
+    expect(migration).toContain("not coalesce(p_order.is_sent_to_factory, false)");
+    expect(migration).toContain("and not private.wati_order_is_pending_review(orders)");
+    expect(migration).toContain("last_error = 'order_pending_review'");
+    expect(migration).toContain("'review-approved:' || v_occurrence");
+    expect(worker).toContain("function isPendingReview(order: OrderRow)");
+    expect(worker).toContain('last_error: "order_pending_review"');
+    const customerLoop = worker.slice(worker.indexOf("for (const job of jobs)"));
+    expect(customerLoop.indexOf("if (isPendingReview(order))"))
+      .toBeLessThan(customerLoop.indexOf("if (template.is_active === false)"));
+  });
+
   it("uses the confirmed FCCD driver reminder with only date and count", () => {
     const migration = readFileSync(
       resolve(
