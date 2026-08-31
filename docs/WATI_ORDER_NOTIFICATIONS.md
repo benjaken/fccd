@@ -36,8 +36,8 @@ There is deliberately no payment or outstanding-balance reminder.
 | --- | --- | --- |
 | Delivery order confirmed | `order_confirm_with_action_and_aolink` | A delivery order is created or a quote becomes an order |
 | Pickup order confirmed | `selfpick_order_confirmation_with_action2026` | A pickup order is created or a quote becomes an order |
-| Delivery tomorrow | `delivery_tomorrow_reminder` | Hong Kong calendar day before delivery |
-| Pickup tomorrow | `pickup_tomorrow_reminder` | Hong Kong calendar day before pickup |
+| Delivery tomorrow | `delivery_tomorrow_reminder` | Disabled; no preceding-day reminder |
+| Pickup tomorrow | `pickup_tomorrow_reminder` | Disabled; no preceding-day reminder |
 | Delivery today | `fccd_delivery_reminder` | Delivery date in Hong Kong |
 | Pickup today | `fccd_selfpick_reminder1` | Pickup date in Hong Kong |
 | Details updated | `order_details_updated` | Date, time, address, or delivery method changes |
@@ -45,6 +45,16 @@ There is deliberately no payment or outstanding-balance reminder.
 | Ready for pickup | `pickup_ready` | Configurable operational order status |
 | Completed | `order_completed` | `delivery_status` becomes `已送達`, plus configurable pickup status |
 | Cancelled | `order_cancelled` | `delivery_status` becomes `已取消` or order is archived |
+
+`fccd_delivery_reminder` is automatic on the Hong Kong delivery date. If the
+delivery window starts at or before 11:00, the reminder is due two hours before
+its start. Orders whose window starts after 11:00 are notified at 09:00. The
+scheduler does not enqueue a delivery-tomorrow reminder. WATI and email use the
+same event and are sent together.
+
+`fccd_selfpick_reminder1` is staged for 09:00 on the Hong Kong pickup date.
+The pickup-tomorrow event is not enqueued. WATI and email use the same event and
+are sent together.
 
 Pickup detection uses a delivery method whose `requires_address_check` is
 false, or whose name contains `自取`/`pickup`.
@@ -97,10 +107,9 @@ template has been confirmed to contain no variables.
    where event_key in (
      'delivery_order_confirmed',
      'pickup_order_confirmed',
-     'delivery_tomorrow_reminder',
-     'pickup_tomorrow_reminder',
      'delivery_today_reminder',
      'pickup_today_reminder',
+     'driver_assigned',
      'order_details_updated',
      'delivery_dispatched'
    );
@@ -113,11 +122,13 @@ just because the matching email failed, and vice versa.
 
 ## Daily unassigned-driver internal reminder
 
-At `DRIVER_ASSIGNMENT_REMINDER_HOUR_HK` (09:00 Hong Kong time by default), the
-same scheduler sends email and WATI internal reminders when tomorrow's delivery
-orders still have no fleet assigned. Pickup, cancelled, archived, and fulfilled
-orders are excluded. Each reminder shows the current count; the email also
-includes a direct FCCD link for every affected order, sorted by delivery time.
+Starting at `DRIVER_ASSIGNMENT_REMINDER_HOUR_HK` (09:00 Hong Kong time by
+default), the scheduler sends email and WATI internal reminders every three
+hours at 09:00, 12:00, 15:00, 18:00 and 21:00 when tomorrow's delivery orders
+still have no fleet assigned. Pickup, cancelled, archived, and fulfilled orders
+are excluded. Each run rechecks the live assignment state. Each reminder shows
+the current count; the email also includes a direct FCCD link for every affected
+order, sorted by delivery time.
 
 Email recipients are users with `email_noti` enabled. WATI recipients come from
 `order_first_notification_recipients`. The approved internal WATI template is
@@ -131,10 +142,11 @@ The worker uses that template by default. It can still be overridden with
 needed for the detailed links in the matching email reminder; the WATI template
 uses its own fixed assignment URL.
 
-The reminder uses a date-and-recipient outbox, so each recipient receives at
-most one reminder per Hong Kong calendar day. The live unassigned list is read
-immediately before sending; if all orders have since been assigned, the queued
-reminder is skipped.
+The reminder uses a date, time-slot, channel, and recipient outbox, so each
+recipient receives at most one reminder per three-hour slot. The live unassigned
+list is read immediately before sending; if all orders have since been assigned,
+the queued reminder is skipped. `driver_assigned` remains inactive until the
+final rollout approval, which keeps both WATI and email stopped.
 
 ## Factory-unsent internal reminder
 

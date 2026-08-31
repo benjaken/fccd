@@ -155,13 +155,20 @@ function hongKongDateAndHour(now = new Date()) {
   };
 }
 
-function driverReminderDate(now = new Date()) {
+function driverReminderSlot(now = new Date()) {
   const configured = Number(Deno.env.get("DRIVER_ASSIGNMENT_REMINDER_HOUR_HK")?.trim() || "9");
-  if (!Number.isInteger(configured) || configured < 0 || configured > 23) {
+  const interval = Number(Deno.env.get("DRIVER_ASSIGNMENT_REMINDER_INTERVAL_HOURS")?.trim() || "3");
+  if (configured !== 9) {
     throw new Error("invalid_driver_assignment_reminder_hour_hk");
   }
+  if (interval !== 3) {
+    throw new Error("invalid_driver_assignment_reminder_interval_hours");
+  }
   const local = hongKongDateAndHour(now);
-  return local.hour >= configured ? nextDateKey(local.date) : null;
+  if (local.hour < configured || local.hour > 21 || (local.hour - configured) % interval !== 0) {
+    return null;
+  }
+  return { date: nextDateKey(local.date), hour: local.hour };
 }
 
 function nextDateKey(value: string) {
@@ -537,11 +544,14 @@ Deno.serve(async (request) => {
       throw new Error(`order_reconciliation_refresh_failed:${reconciliationRefreshError.message}`);
     }
 
-    const dueDriverReminderDate = reconciliationOnly ? null : driverReminderDate();
-    if (!reconciliationOnly && dueDriverReminderDate) {
+    const dueDriverReminder = reconciliationOnly ? null : driverReminderSlot();
+    if (!reconciliationOnly && dueDriverReminder) {
       const { error: driverReminderEnqueueError } = await admin.rpc(
         "enqueue_driver_assignment_internal_reminders",
-        { p_reminder_date: dueDriverReminderDate },
+        {
+          p_reminder_date: dueDriverReminder.date,
+          p_reminder_hour: dueDriverReminder.hour,
+        },
       );
       if (
         driverReminderEnqueueError

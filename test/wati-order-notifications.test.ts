@@ -296,6 +296,28 @@ describe("WATI order notifications", () => {
     expect(migration).not.toContain("is_active");
   });
 
+  it("schedules same-day delivery reminders at 09:00 or two hours before windows starting by 11:00", () => {
+    const migration = readFileSync(
+      resolve(
+        process.cwd(),
+        "supabase/migrations/20260831132000_schedule_same_day_delivery_reminders.sql",
+      ),
+      "utf8",
+    );
+
+    expect(migration).toContain("private.wati_delivery_start_time");
+    expect(migration).toContain("v_delivery_start <= time '11:00'");
+    expect(migration).toContain("v_delivery_start - interval '2 hours'");
+    expect(migration).toContain("v_delivery_date + time '09:00'");
+    expect(migration).toContain("p_now < private.wati_delivery_reminder_at(v_order)");
+    expect(migration).toContain("v_event_key := 'delivery_today_reminder'");
+    expect(migration).not.toContain("v_event_key := 'delivery_tomorrow_reminder'");
+    expect(migration).toContain("v_event_key := 'pickup_today_reminder'");
+    expect(migration).not.toContain("v_event_key := 'pickup_tomorrow_reminder'");
+    expect(migration).toContain("v_delivery_date + time '09:00'");
+    expect(migration).toContain("set is_active = false");
+  });
+
   it("uses the confirmed FCCD driver reminder with only date and count", () => {
     const migration = readFileSync(
       resolve(
@@ -314,7 +336,7 @@ describe("WATI order notifications", () => {
     expect(migration).toContain(`{"name":"count","source":"count"}`);
     expect(migration).not.toContain("is_active");
     expect(worker).toContain('|| "fccd_driver_assign_reminder_v1"');
-    expect(worker).toContain("return local.hour >= configured ? nextDateKey(local.date) : null;");
+    expect(worker).toContain("function driverReminderSlot");
     expect(worker).toContain('{ name: "date", value:');
     expect(worker).toContain('{ name: "count", value:');
     expect(worker).not.toContain('name: "orders"');
@@ -462,18 +484,35 @@ describe("WATI order notifications", () => {
     expect(migration).toContain("where profile.email_noti");
     expect(migration).toContain("order_first_notification_recipients");
     expect(migration).toContain("for update skip locked");
+    const repeatMigration = readFileSync(
+      resolve(
+        process.cwd(),
+        "supabase/migrations/20260831133000_repeat_driver_assignment_reminders.sql",
+      ),
+      "utf8",
+    );
     expect(worker).toContain('Deno.env.get("DRIVER_ASSIGNMENT_REMINDER_HOUR_HK")');
+    expect(worker).toContain('Deno.env.get("DRIVER_ASSIGNMENT_REMINDER_INTERVAL_HOURS")');
+    expect(worker).toContain("configured !== 9");
+    expect(worker).toContain("interval !== 3");
+    expect(worker).toContain("(local.hour - configured) % interval !== 0");
+    expect(worker).toContain("local.hour > 21");
     expect(worker).toContain('"enqueue_driver_assignment_internal_reminders"');
+    expect(worker).toContain("p_reminder_hour: dueDriverReminder.hour");
     expect(worker).toContain('"claim_driver_assignment_internal_reminders"');
     expect(worker).toContain('Deno.env.get("WATI_DRIVER_ASSIGNMENT_REMINDER_TEMPLATE_NAME")');
     expect(worker).toContain('|| "fccd_driver_assign_reminder_v1"');
-    expect(worker).toContain("return local.hour >= configured ? nextDateKey(local.date) : null;");
+    expect(worker).toContain("return { date: nextDateKey(local.date), hour: local.hour };");
     expect(worker).toContain('{ name: "date", value:');
     expect(worker).toContain('{ name: "count", value:');
     expect(worker).not.toContain('name: "orders"');
     expect(worker).toContain('.is("motorcade_id", null)');
     expect(worker).toContain("buildUnassignedDriverReminderContent");
     expect(worker).toContain("/orders/${encodeURIComponent(order.id)}");
+    expect(repeatMigration).toContain("p_reminder_hour not in (9, 12, 15, 18, 21)");
+    expect(repeatMigration).toContain("unique (reminder_date, reminder_hour, channel, recipient_key)");
+    expect(repeatMigration).toContain("template.event_key = 'driver_assigned'");
+    expect(repeatMigration).toContain("set is_active = false");
   });
 
   it("uses the delivery sales address for every Resend email", () => {
