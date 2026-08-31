@@ -19,6 +19,10 @@ function requiredEnv(name: string) {
   return value;
 }
 
+function customerMessageSendingEnabled() {
+  return Deno.env.get("WATI_CUSTOMER_MESSAGES_ENABLED")?.trim().toLowerCase() === "true";
+}
+
 function serviceRoleKey() {
   const legacy = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim();
   if (legacy) return legacy;
@@ -59,6 +63,9 @@ export function normalizeWhatsAppNumber(value: string | null | undefined) {
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (request.method !== "POST") return response({ error: "method_not_allowed" }, 405);
+  if (!customerMessageSendingEnabled()) {
+    return response({ error: "wati_customer_messages_disabled" }, 503);
+  }
 
   try {
     const authorization = request.headers.get("Authorization") || "";

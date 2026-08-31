@@ -14,6 +14,8 @@ describe("WATI customer conversations", () => {
     expect(implementation).toContain("/api/v1/sendSessionMessage/");
     expect(implementation).toContain('message_direction: "outbound"');
     expect(implementation).toContain('communication_channel: "wati"');
+    expect(implementation).toContain('Deno.env.get("WATI_CUSTOMER_MESSAGES_ENABLED")');
+    expect(implementation).toContain('error: "wati_customer_messages_disabled"');
   });
 
   it("authenticates and de-duplicates inbound WATI webhooks", () => {
