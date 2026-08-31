@@ -569,6 +569,7 @@ export function OrdersListPage({
           {description ? <p>{description}</p> : null}
         </div>
         <div className="heading-actions">
+          {preset === "shopify-pending" ? <OrderReconciliationSummary /> : null}
           {canManageStatuses && preset === "shopify-pending" ? (
             <Button
               variant="outline"
@@ -590,8 +591,6 @@ export function OrdersListPage({
           </Button> : null}
         </div>
       </header>
-
-      {preset === "shopify-pending" ? <OrderReconciliationSummary /> : null}
 
       <article className="panel orders-panel responsive-card-list-panel">
         <header className="orders-toolbar">

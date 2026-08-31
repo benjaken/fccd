@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -41,6 +41,11 @@ describe("OrderReconciliationSummary", () => {
   it("shows the rolling comparison counts and actionable issues", async () => {
     render(<MemoryRouter><OrderReconciliationSummary /></MemoryRouter>);
 
+    const trigger = await screen.findByRole("button", { name: /漏單核對，1項未解決/ });
+    expect(trigger).toHaveTextContent("1");
+    fireEvent.click(trigger);
+
+    expect(screen.getByRole("dialog", { name: "Shopify與FCCD漏單核對" })).toBeInTheDocument();
     expect(await screen.findByText("43")).toBeInTheDocument();
     expect(screen.getByText("42")).toBeInTheDocument();
     expect(screen.getByText("B-1234")).toBeInTheDocument();
