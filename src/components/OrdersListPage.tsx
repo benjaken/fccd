@@ -855,13 +855,24 @@ export function OrdersListPage({
                 order.shippingMethodName,
                 order.address,
               );
+              const paymentTodoAliases = ["未完成付款", "未付款"];
               const factoryTodoAliases = ["未傳至工場", "未傳送到工場"];
-              const shouldHideFactoryTodo =
-                order.isSentToFactory || order.doNotSendToFactory;
+              const kitchenTodoAliases = ["廚房備註"];
+              const shouldShowPaymentTodo =
+                canViewFinance && (order.outstanding ?? 0) > 0;
+              const shouldShowFactoryTodo =
+                !order.isSentToFactory && !order.doNotSendToFactory;
+              const shouldShowKitchenTodo = Boolean(
+                order.factoryPackingNote?.trim(),
+              );
               const todoStatuses = (order.statuses ?? []).filter(
-                (status) =>
-                  !shouldHideFactoryTodo ||
-                  !factoryTodoAliases.includes(status.name.trim()),
+                (status) => {
+                  const name = status.name.trim();
+                  if (paymentTodoAliases.includes(name)) return shouldShowPaymentTodo;
+                  if (factoryTodoAliases.includes(name)) return shouldShowFactoryTodo;
+                  if (kitchenTodoAliases.includes(name)) return shouldShowKitchenTodo;
+                  return true;
+                },
               ).map((status) => ({ ...status, tooltip: undefined as string | undefined }));
               const addTodoStatus = (
                 aliases: readonly string[],
@@ -879,26 +890,26 @@ export function OrdersListPage({
                   tooltip,
                 });
               };
-              if (canViewFinance && (order.outstanding ?? 0) > 0) {
+              if (shouldShowPaymentTodo) {
                 addTodoStatus(
-                  ["未完成付款", "未付款"],
+                  paymentTodoAliases,
                   t("orders.todos.paymentIncomplete"),
                   "#ef4444",
                 );
               }
-              if (!order.isSentToFactory && !order.doNotSendToFactory) {
+              if (shouldShowFactoryTodo) {
                 addTodoStatus(
                   factoryTodoAliases,
                   t("orders.todos.notSentToFactory"),
                   "#f59e0b",
                 );
               }
-              if (order.factoryPackingNote?.trim()) {
+              if (shouldShowKitchenTodo) {
                 addTodoStatus(
-                  ["廚房備註"],
+                  kitchenTodoAliases,
                   t("orders.todos.kitchenNote"),
                   "#3b82f6",
-                  order.factoryPackingNote.trim(),
+                  order.factoryPackingNote!.trim(),
                 );
               }
               return (
