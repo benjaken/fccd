@@ -120,4 +120,20 @@ describe("business notification reminders", () => {
     expect(migration).toContain("'Super Admin', 'Admin', 'Factory'");
     expect(migration).not.toContain("private.jwt_app_role()");
   });
+
+  it("baselines only historical Bubble factory changes", () => {
+    const migration = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260831121000_baseline_bubble_factory_change_state.sql",
+      ),
+      "utf8",
+    );
+
+    expect(migration).toContain("factory_order.legacy_id is not null");
+    expect(migration).toContain("set factory_reprint_required = false");
+    expect(migration).toContain("change_count = 0");
+    expect(migration).toContain("needs_label_reprint = false");
+    expect(migration).toContain("line_change.resolved_at is null");
+  });
 });
