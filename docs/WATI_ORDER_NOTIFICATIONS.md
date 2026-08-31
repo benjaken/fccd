@@ -39,7 +39,7 @@ There is deliberately no payment or outstanding-balance reminder.
 | Delivery tomorrow | `delivery_tomorrow_reminder` | Hong Kong calendar day before delivery |
 | Pickup tomorrow | `pickup_tomorrow_reminder` | Hong Kong calendar day before pickup |
 | Delivery today | `fccd_delivery_reminder` | Delivery date in Hong Kong |
-| Pickup today | `fccd_selfpick_reminder` | Pickup date in Hong Kong |
+| Pickup today | `fccd_selfpick_reminder1` | Pickup date in Hong Kong |
 | Details updated | `order_details_updated` | Date, time, address, or delivery method changes |
 | Dispatched | `delivery_dispatched` | `delivery_status` becomes `送貨途中` |
 | Ready for pickup | `pickup_ready` | Configurable operational order status |

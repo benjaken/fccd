@@ -282,6 +282,20 @@ describe("WATI order notifications", () => {
     expect(migration).not.toContain("is_active");
   });
 
+  it("moves the same-day self-pick reminder to the latest template name", () => {
+    const migration = readFileSync(
+      resolve(
+        process.cwd(),
+        "supabase/migrations/20260831131000_rename_wati_selfpick_reminder.sql",
+      ),
+      "utf8",
+    );
+
+    expect(migration).toContain("template_name = 'fccd_selfpick_reminder1'");
+    expect(migration).toContain("where event_key = 'pickup_today_reminder'");
+    expect(migration).not.toContain("is_active");
+  });
+
   it("uses the confirmed FCCD driver reminder with only date and count", () => {
     const migration = readFileSync(
       resolve(
