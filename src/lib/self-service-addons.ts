@@ -4,6 +4,7 @@ export type AddonChannel = { id: string; name: string };
 export type AddonProductSearchItem = {
   id: string;
   channelId: string;
+  channelName: string;
   sku: string | null;
   name: string;
   price: number | null;
@@ -44,17 +45,19 @@ export async function searchAddonProducts(
   channelId: string,
   search: string,
 ): Promise<AddonProductSearchItem[]> {
-  if (!channelId) return [];
   const term = search.trim().toLocaleLowerCase("zh-Hant");
-  const { data, error } = await supabase
+  let query = supabase
     .from("products")
-    .select("id,channel_id,sku,name,chinese_name,price")
-    .eq("channel_id", channelId)
+    .select("id,channel_id,sku,name,chinese_name,price,channels!inner(name,is_active,archived_at)")
     .eq("is_active", true)
     .is("archived_at", null)
+    .eq("channels.is_active", true)
+    .is("channels.archived_at", null)
     .not("sku", "is", null)
     .order("sku")
-    .limit(200);
+    .limit(500);
+  if (channelId) query = query.eq("channel_id", channelId);
+  const { data, error } = await query;
   if (error) throw error;
   return (data ?? [])
     .filter((row) => {
@@ -66,6 +69,7 @@ export async function searchAddonProducts(
     .map((row) => ({
       id: row.id,
       channelId: row.channel_id,
+      channelName: one(row.channels)?.name ?? "—",
       sku: row.sku,
       name: row.chinese_name?.trim() || row.name,
       price: row.price === null ? null : Number(row.price),

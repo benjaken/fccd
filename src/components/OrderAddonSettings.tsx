@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { CalendarOff, PackagePlus, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { FilterableSelect } from "@/components/ui/filterable-select";
 import { ListTable } from "@/components/ui/list-table";
+import { SearchSelect } from "@/components/ui/search-select";
+import { SidePanel } from "@/components/ui/side-panel";
 import { Switch } from "@/components/ui/switch";
 import {
   addAddonBlockDate,
@@ -28,14 +30,23 @@ function money(value: number | null) {
   }).format(value);
 }
 
-export function OrderAddonProductsSettings({ canManage }: { canManage: boolean }) {
+export function OrderAddonProductsSettings({
+  canManage,
+  createOpen,
+  onCreateOpenChange,
+}: {
+  canManage: boolean;
+  createOpen: boolean;
+  onCreateOpenChange: (open: boolean) => void;
+}) {
+  const { t } = useTranslation();
   const [channels, setChannels] = useState<AddonChannel[]>([]);
   const [rows, setRows] = useState<AddonProductSetting[]>([]);
   const [channelId, setChannelId] = useState("");
-  const [search, setSearch] = useState("");
   const [products, setProducts] = useState<AddonProductSearchItem[]>([]);
   const [productId, setProductId] = useState("");
   const [loading, setLoading] = useState(true);
+  const [productsLoading, setProductsLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -43,36 +54,64 @@ export function OrderAddonProductsSettings({ canManage }: { canManage: boolean }
     setLoading(true); setError("");
     try {
       const [nextChannels, nextRows] = await Promise.all([
-        fetchAddonChannels(), fetchAddonProductSettings(),
+        fetchAddonChannels(),
+        fetchAddonProductSettings(),
       ]);
-      setChannels(nextChannels); setRows(nextRows);
-      setChannelId((current) => current || nextChannels[0]?.id || "");
+      setChannels(nextChannels);
+      setRows(nextRows);
+      setChannelId((current) => nextChannels.some((channel) => channel.id === current) ? current : "");
     } catch { setError("暫時無法載入加單設定。"); }
     finally { setLoading(false); }
   };
 
   useEffect(() => { void reload(); }, []);
   useEffect(() => {
+    if (!createOpen || !channelId) {
+      setProducts([]);
+      setProductId("");
+      return;
+    }
     let active = true;
-    const timer = window.setTimeout(() => {
-      void searchAddonProducts(channelId, search)
-        .then((items) => {
-          if (!active) return;
-          const configured = new Set(rows.filter((row) => row.channelId === channelId).map((row) => row.id));
-          setProducts(items.filter((item) => !configured.has(item.id)));
-          setProductId((current) => items.some((item) => item.id === current && !configured.has(item.id)) ? current : "");
-        })
-        .catch(() => { if (active) setProducts([]); });
-    }, 200);
-    return () => { active = false; window.clearTimeout(timer); };
-  }, [channelId, rows, search]);
+    setProductsLoading(true);
+    setError("");
+    void searchAddonProducts(channelId, "")
+      .then((items) => {
+        if (!active) return;
+        const configured = new Set(rows.map((row) => row.id));
+        const available = items.filter((item) => !configured.has(item.id));
+        setProducts(available);
+        setProductId((current) => available.some((item) => item.id === current) ? current : "");
+      })
+      .catch(() => {
+        if (!active) return;
+        setProducts([]);
+        setError("暫時無法載入產品。");
+      })
+      .finally(() => { if (active) setProductsLoading(false); });
+    return () => { active = false; };
+  }, [channelId, createOpen, rows]);
+
+  const closeCreatePanel = () => {
+    if (saving) return;
+    setChannelId("");
+    setProductId("");
+    setError("");
+    onCreateOpenChange(false);
+  };
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (!channelId || !productId || saving) return;
+    const selectedProduct = products.find((product) => product.id === productId);
+    if (!selectedProduct || saving) return;
     setSaving(true); setError("");
-    try { await addAddonProduct(channelId, productId); setProductId(""); setSearch(""); await reload(); }
-    catch { setError("無法加入商品；請確認商品沒有重複。 "); }
+    try {
+      await addAddonProduct(selectedProduct.channelId, selectedProduct.id);
+      setChannelId("");
+      setProductId("");
+      onCreateOpenChange(false);
+      await reload();
+    }
+    catch { setError("無法加入商品；請確認商品沒有重複。"); }
     finally { setSaving(false); }
   }
 
@@ -81,17 +120,7 @@ export function OrderAddonProductsSettings({ canManage }: { canManage: boolean }
   ), [rows]);
 
   return <>
-    {canManage ? <form className="addon-settings-toolbar" onSubmit={(event) => void submit(event)}>
-      <label><span>品牌</span><FilterableSelect value={channelId} onChange={(event) => setChannelId(event.target.value)}>
-        <option value="">選擇品牌</option>{channels.map((channel) => <option key={channel.id} value={channel.id}>{channel.name}</option>)}
-      </FilterableSelect></label>
-      <label><span>搜尋產品</span><input value={search} aria-label="SKU／產品名稱" onChange={(event) => setSearch(event.target.value)} /></label>
-      <label><span>產品</span><FilterableSelect value={productId} onChange={(event) => setProductId(event.target.value)}>
-        <option value="">選擇產品</option>{products.map((product) => <option key={product.id} value={product.id}>[{product.sku || "—"}] {product.name} · {money(product.price)}</option>)}
-      </FilterableSelect></label>
-      <Button type="submit" disabled={!productId || saving}><PackagePlus />{saving ? "加入中…" : "加入"}</Button>
-    </form> : null}
-    {error ? <p className="list-inline-error" role="alert">{error}</p> : null}
+    {error && !createOpen ? <p className="list-inline-error" role="alert">{error}</p> : null}
     <ListTable loading={loading} loadingLabel="正在載入加單設定…" skeletonColumns={canManage ? 5 : 4}
       header={<tr><th>品牌</th><th>產品</th><th>售價</th><th>啟用</th>{canManage ? <th aria-label="操作" /> : null}</tr>}>
       {groupedRows.length ? groupedRows.map((row) => <tr key={row.settingId}>
@@ -106,6 +135,54 @@ export function OrderAddonProductsSettings({ canManage }: { canManage: boolean }
         }}><Trash2 /></Button></td> : null}
       </tr>) : !loading ? <tr><td colSpan={canManage ? 5 : 4} className="table-empty-cell">尚未設定加單商品。</td></tr> : null}
     </ListTable>
+    <SidePanel
+      open={canManage && createOpen}
+      title="加入產品"
+      description="先選擇品牌，再搜尋要提供加單的產品。"
+      onClose={closeCreatePanel}
+      closeLabel="關閉加入產品側邊欄"
+      footer={<>
+        <Button type="button" variant="outline" disabled={saving} onClick={closeCreatePanel}>取消</Button>
+        <Button type="submit" form="add-addon-product-form" disabled={!productId || saving || productsLoading}>
+          <PackagePlus />{saving ? "加入中…" : "加入"}
+        </Button>
+      </>}
+    >
+      <form id="add-addon-product-form" className="order-settings-form" onSubmit={(event) => void submit(event)}>
+        <label className="order-settings-field">
+          <span>品牌</span>
+          <select
+            value={channelId}
+            aria-label="品牌"
+            onChange={(event) => {
+              setChannelId(event.target.value);
+              setProductId("");
+            }}
+          >
+            <option value="">選擇品牌</option>
+            {channels.map((channel) => <option key={channel.id} value={channel.id}>{channel.name}</option>)}
+          </select>
+        </label>
+        <label className="order-settings-field">
+          <span>搜尋產品</span>
+          <SearchSelect
+            id="addon-product-search"
+            label="搜尋產品"
+            value={productId}
+            disabled={!channelId || productsLoading}
+            options={products.map((product) => ({
+              id: product.id,
+              name: `[${product.sku || "—"}] ${product.name} · ${money(product.price)}`,
+            }))}
+            onChange={(option) => setProductId(option.id)}
+            placeholder={t("orderSettings.addonProductSearchPlaceholder")}
+            searchPlaceholder={t("orderSettings.addonProductSearchPlaceholder")}
+            emptyLabel="找不到可加入的產品"
+          />
+        </label>
+        {error ? <p className="list-inline-error" role="alert">{error}</p> : null}
+      </form>
+    </SidePanel>
   </>;
 }
 

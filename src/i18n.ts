@@ -1474,6 +1474,7 @@ const resources = {
         retry: "重新載入",
         cancel: "取消",
         closePanel: "關閉",
+        addonProductSearchPlaceholder: "搜尋產品名稱或 SKU",
         comingSoon: "此設定稍後開放",
         comingSoonDescription:
           "先使用訂單標籤、送貨方式與付款方式；其他分類會按同一表格樣式陸續加入。",
@@ -6565,6 +6566,7 @@ const resources = {
         retry: "Reload",
         cancel: "Cancel",
         closePanel: "Close",
+        addonProductSearchPlaceholder: "Search product name or SKU",
         comingSoon: "This setting is coming soon",
         comingSoonDescription:
           "Order tags, delivery methods, and payment methods are available now; the other categories will follow the same table layout.",
