@@ -38,8 +38,10 @@ the existing activation gate continues to protect every normal/customer run.
   operational order.
 - `unlinked_fccd`: an FCCD order marked as Shopify-originated has no Shopify
   order ID.
-- `factory_unsent`: an operational order for today through the next two days,
-  or within six hours, has not been sent to the factory.
+- `factory_unsent`: any active order for today through the next two days, or
+  within six hours, has not been sent to the factory. This includes orders that
+  are still in the Shopify review/editing queue; review state must not hide an
+  unsent-factory warning.
 - `missing_service_time`: an affected order has a service date but no usable
   ship-out/delivery time.
 

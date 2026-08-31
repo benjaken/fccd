@@ -81,6 +81,8 @@ export type ProductListFilters = {
   productIds?: string[];
   status: ProductStatusFilter;
   priceRange: ProductPriceRange;
+  priceMin?: number;
+  priceMax?: number;
   sortField?: ProductSortField;
   sortAscending?: boolean;
   preset?: ProductPreset;
@@ -564,6 +566,8 @@ export async function fetchProducts({
   productIds: selectedProductIds,
   status,
   priceRange,
+  priceMin,
+  priceMax,
   sortField = "sku",
   sortAscending = true,
   preset = "all",
@@ -623,6 +627,13 @@ export async function fetchProducts({
     if (range.max !== null) {
       query = query.lt("price", range.max);
     }
+  }
+
+  if (typeof priceMin === "number" && Number.isFinite(priceMin)) {
+    query = query.gte("price", priceMin);
+  }
+  if (typeof priceMax === "number" && Number.isFinite(priceMax)) {
+    query = query.lte("price", priceMax);
   }
 
   if (productTypeName) {

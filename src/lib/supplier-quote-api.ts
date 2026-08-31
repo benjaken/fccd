@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import type { QuoteDocument, QuoteLine } from "@/components/SupplierQuotePage";
+import { hongKongDateKey } from "@/lib/date-time";
 import { normalizeSupplierQuotePrice } from "@/lib/supplier-quote-price";
 
 export type SupplierQuoteSupplierOption = {
@@ -317,7 +318,7 @@ export async function fetchSupplierQuoteDashboard(): Promise<{
       baselinePrice: entries.length > 1 ? numberValue(baseline.quoted_price) : null,
       baselineComparablePricePerKg: normalizedBaseline?.comparablePricePerKg ?? null,
       actualInboundPrice: actual ? numberValue(actual.inbound_unit_price) : null,
-      actualInboundDate: actual?.movement_at?.slice(0, 10) ?? null,
+      actualInboundDate: actual?.movement_at ? hongKongDateKey(actual.movement_at) : null,
     });
   }
 

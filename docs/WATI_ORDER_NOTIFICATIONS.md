@@ -20,6 +20,12 @@ Every customer event in the catalogue has matching email content. WATI sending
 still depends on the corresponding approved template being active; adding an
 email template does not by itself approve or activate a WATI template.
 
+Automatic customer notifications are also blocked while an order remains in
+the Shopify review queue, including add-on changes awaiting review. The guard
+applies to every automatic WATI and email event and is checked both when the
+event is queued and immediately before provider delivery. Approval enqueues a
+fresh order confirmation; manual sends remain separately controlled.
+
 Email uses the same event copy and resolved order values as WATI, wrapped in a
 responsive Food Channels Catering layout. The header uses
 `/assets/fc-catering-logo-email.png`; the contact panel links to WhatsApp

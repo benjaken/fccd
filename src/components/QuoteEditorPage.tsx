@@ -47,6 +47,7 @@ import {
   fetchQuoteEditorSummary,
   fetchQuoteLines,
   removeQuoteLine,
+  setOrderLineVoided,
   searchQuoteCatalog,
   dedupeQuoteOptions,
   updateQuote,
@@ -68,6 +69,11 @@ import {
   type QuotePackageChoiceGroup,
   type QuotePackageChoiceSelection,
 } from "@/lib/quote-editor";
+import {
+  ORDER_EDIT_HEARTBEAT_INTERVAL_MS,
+  releaseOrderEditSession,
+  touchOrderEditSession,
+} from "@/lib/order-edit-lock";
 import { cn } from "@/lib/utils";
 import {
   readQuotePdfSupplements,
@@ -225,6 +231,7 @@ type Props = {
   saveLine?: typeof addQuoteLine;
   loadPackageDetail?: typeof fetchPackageDetail;
   deleteLine?: typeof removeQuoteLine;
+  setLineVoided?: typeof setOrderLineVoided;
   saveDetails?: typeof updateQuote;
   saveExistingLine?: typeof updateQuoteLine;
   saveLineLabel?: typeof updateQuoteLineLabel;
@@ -242,6 +249,8 @@ type Props = {
   loadLunchboxProducts?: typeof fetchProducts;
   loadLunchboxFilterOptions?: typeof fetchLunchboxPickerFilterOptions;
   confirmAddonShopify?: typeof confirmOrderAddonShopifyInput;
+  touchEditSession?: typeof touchOrderEditSession;
+  releaseEditSession?: typeof releaseOrderEditSession;
 };
 
 export function QuoteEditorPage({
@@ -257,6 +266,7 @@ export function QuoteEditorPage({
   saveLine = addQuoteLine,
   loadPackageDetail = fetchPackageDetail,
   deleteLine = removeQuoteLine,
+  setLineVoided = setOrderLineVoided,
   saveDetails = updateQuote,
   saveExistingLine = updateQuoteLine,
   saveLineLabel = updateQuoteLineLabel,
@@ -274,6 +284,8 @@ export function QuoteEditorPage({
   loadLunchboxProducts = fetchProducts,
   loadLunchboxFilterOptions = fetchLunchboxPickerFilterOptions,
   confirmAddonShopify = confirmOrderAddonShopifyInput,
+  touchEditSession = touchOrderEditSession,
+  releaseEditSession = releaseOrderEditSession,
 }: Props) {
   const { t, i18n } = useTranslation();
   const additionalInfoDict = useDictItems(DICT_TYPE.quoteAdditionalInfo);
@@ -305,6 +317,9 @@ export function QuoteEditorPage({
   const [created, setCreated] = useState<CreatedQuote | null>(null);
   const [channelId, setChannelId] = useState("");
   const [lines, setLines] = useState<QuoteLine[]>([]);
+  const editSessionTokenRef = useRef(crypto.randomUUID());
+  const editSessionActiveRef = useRef(false);
+  const lastEditHeartbeatRef = useRef(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [confirmingAddonShopify, setConfirmingAddonShopify] = useState(false);
@@ -355,8 +370,9 @@ export function QuoteEditorPage({
   const [confirmationSendError, setConfirmationSendError] = useState(false);
   const [converting, setConverting] = useState(false);
   const [conversionError, setConversionError] = useState(false);
+  const [editingRemarkIds, setEditingRemarkIds] = useState<Set<string>>(new Set());
   const [labelModalLineId, setLabelModalLineId] = useState<string | null>(null);
-  const [labelModalDraft, setLabelModalDraft] = useState({ displayA: "", displayB: "", remarks: "" });
+  const [labelModalDraft, setLabelModalDraft] = useState({ displayA: "", displayB: "" });
   const [supplements, setSupplements] = useState<QuotePdfSupplementDraft>({
     additionalInfo: [],
     activities: [],
@@ -407,6 +423,48 @@ export function QuoteEditorPage({
     [created, id],
   );
   const activeShopifyUrl = isOrder && activeQuote ? shopifyOrderUrl(activeQuote) : null;
+
+  const touchCurrentEditSession = useCallback(async () => {
+    if (!isOrder || !id || readOnly) return;
+    await touchEditSession(id, editSessionTokenRef.current);
+    editSessionActiveRef.current = true;
+    lastEditHeartbeatRef.current = Date.now();
+  }, [id, isOrder, readOnly, touchEditSession]);
+
+  const releaseCurrentEditSession = useCallback(async () => {
+    if (!editSessionActiveRef.current) return;
+    editSessionActiveRef.current = false;
+    await releaseEditSession(editSessionTokenRef.current);
+  }, [releaseEditSession]);
+
+  useEffect(() => {
+    if (!isOrder || !id || readOnly) return;
+    let disposed = false;
+    void touchCurrentEditSession().catch(() => undefined);
+
+    const registerActivity = () => {
+      if (disposed) return;
+      const now = Date.now();
+      if (
+        editSessionActiveRef.current
+        && now - lastEditHeartbeatRef.current < ORDER_EDIT_HEARTBEAT_INTERVAL_MS
+      ) return;
+      void touchCurrentEditSession().catch(() => undefined);
+    };
+    const activityEvents: Array<keyof WindowEventMap> = [
+      "pointerdown", "keydown", "input", "change", "scroll", "touchstart",
+    ];
+    for (const eventName of activityEvents) {
+      window.addEventListener(eventName, registerActivity, { passive: true });
+    }
+    return () => {
+      disposed = true;
+      for (const eventName of activityEvents) {
+        window.removeEventListener(eventName, registerActivity);
+      }
+      void releaseCurrentEditSession().catch(() => undefined);
+    };
+  }, [id, isOrder, readOnly, releaseCurrentEditSession, touchCurrentEditSession]);
 
   useEffect(() => {
     const navigation = sectionNavigationRef.current;
@@ -571,8 +629,9 @@ export function QuoteEditorPage({
       }),
     [i18n.language],
   );
-  const total = lines.reduce((sum, line) => sum + line.totalPrice, 0);
-  const hasUtensilPack = lines.some((line) => line.name?.trim() === "餐具包");
+  const activeLines = lines.filter((line) => !line.isVoid);
+  const total = activeLines.reduce((sum, line) => sum + line.totalPrice, 0);
+  const hasUtensilPack = activeLines.some((line) => line.name?.trim() === "餐具包");
   const financialValues: QuoteFinancials = {
     shippingFee: Math.max(0, Number(financials.shippingFee) || 0),
     discount: Math.max(0, Number(financials.discount) || 0),
@@ -717,7 +776,7 @@ export function QuoteEditorPage({
         : null
     );
     const persistedLines = lines
-      .filter((item) => !item.isPending)
+      .filter((item) => !item.isPending && !item.isVoid)
       .map((line) => isFreeUtensilPackLine(line)
         ? { ...line, unitPrice: 0, totalPrice: 0 }
         : line);
@@ -743,6 +802,7 @@ export function QuoteEditorPage({
       }
     }
     writeQuotePdfSupplements(quote.id, supplements);
+    await releaseCurrentEditSession();
   };
 
   const saveAllChanges = async () => {
@@ -877,6 +937,7 @@ export function QuoteEditorPage({
       labelId: lineInput.item.labelId ?? null,
       labelDisplayA: lineInput.item.labelDisplayA ?? null,
       labelDisplayB: lineInput.item.labelDisplayB ?? null,
+      labels: lineInput.item.labels ?? [],
       packageChoiceGroups: groups,
       isPending: true,
       pendingItem: lineInput.item,
@@ -1077,10 +1138,24 @@ export function QuoteEditorPage({
     setRemovingId(lineId);
     setError(null);
     try {
-      await deleteLine(lineId);
+      if (isOrder) await setLineVoided(lineId, true);
+      else await deleteLine(lineId);
       await refreshLines();
     } catch {
       setError("quote_line_delete_failed");
+    } finally {
+      setRemovingId(null);
+    }
+  };
+
+  const restoreLine = async (lineId: string) => {
+    setRemovingId(lineId);
+    setError(null);
+    try {
+      await setLineVoided(lineId, false);
+      await refreshLines();
+    } catch {
+      setError("quote_line_save_failed");
     } finally {
       setRemovingId(null);
     }
@@ -1095,6 +1170,7 @@ export function QuoteEditorPage({
   };
 
   const saveEditedLine = async (line: QuoteLine) => {
+    if (line.isVoid) return;
     const nextLine = isFreeUtensilPackLine(line)
       ? { ...line, unitPrice: 0, totalPrice: 0 }
       : line;
@@ -1119,7 +1195,6 @@ export function QuoteEditorPage({
     setLabelModalDraft({
       displayA: line.labelDisplayA || "",
       displayB: line.labelDisplayB || "",
-      remarks: line.remarks || "",
     });
     setLabelModalLineId(line.id);
   };
@@ -1129,12 +1204,13 @@ export function QuoteEditorPage({
   const saveLabelModal = async (line: QuoteLine) => {
     const labelChanged = labelModalDraft.displayA !== (line.labelDisplayA || "")
       || labelModalDraft.displayB !== (line.labelDisplayB || "");
-    const remarksChanged = labelModalDraft.remarks !== (line.remarks || "");
     const nextLine = {
       ...line,
       labelDisplayA: labelModalDraft.displayA,
       labelDisplayB: labelModalDraft.displayB,
-      remarks: labelModalDraft.remarks,
+      labels: line.labels?.map((label, index) => index === 0
+        ? { ...label, displayA: labelModalDraft.displayA, displayB: labelModalDraft.displayB }
+        : label),
       labelEdited: line.labelEdited || labelChanged,
     };
     if (line.isPending) {
@@ -1142,21 +1218,20 @@ export function QuoteEditorPage({
       closeLabelModal();
       return;
     }
-    if (!labelChanged && !remarksChanged) {
+    if (!labelChanged) {
       closeLabelModal();
       return;
     }
     setSavingLineId(line.id);
     setError(null);
     try {
-      if (remarksChanged) {
-        await saveExistingLine(nextLine, isOrder ? "order" : "quote");
-      }
-      if (labelChanged) await saveLineLabel(nextLine);
+      await saveLineLabel(nextLine);
       patchLine(line.id, {
         labelDisplayA: labelModalDraft.displayA,
         labelDisplayB: labelModalDraft.displayB,
-        remarks: labelModalDraft.remarks,
+        labels: line.labels?.map((label, index) => index === 0
+          ? { ...label, displayA: labelModalDraft.displayA, displayB: labelModalDraft.displayB }
+          : label),
         labelEdited: false,
       });
       closeLabelModal();
@@ -1177,7 +1252,7 @@ export function QuoteEditorPage({
     orderNumber: activeQuote?.orderNumber || "—",
     deliveryDate: draft.deliveryDate,
     labelName: labelNameForPrint(line),
-    remarks: [line.remarks || "", draft.packingNote].filter(Boolean),
+    remarks: [line.remarks || ""].filter(Boolean),
     copies: Math.max(1, Math.floor(line.quantity || 1)),
   });
 
@@ -1188,10 +1263,19 @@ export function QuoteEditorPage({
         ...(!readOnly ? {
           labelDisplayA: labelModalDraft.displayA,
           labelDisplayB: labelModalDraft.displayB,
-          remarks: labelModalDraft.remarks,
         } : {}),
       }
     : null;
+  const labelModalPreviewLines = labelModalPreviewLine
+    ? (labelModalPreviewLine.labels?.length
+        ? labelModalPreviewLine.labels.map((label, index) => ({
+            ...labelModalPreviewLine,
+            labelId: label.id,
+            labelDisplayA: index === 0 && !readOnly ? labelModalDraft.displayA : label.displayA,
+            labelDisplayB: index === 0 && !readOnly ? labelModalDraft.displayB : label.displayB,
+          }))
+        : [labelModalPreviewLine])
+    : [];
   const labelPreviewModal = labelModalLine ? (
     <Modal
       open
@@ -1222,7 +1306,14 @@ export function QuoteEditorPage({
       )}
     >
       <div className="quote-label-modal-content">
-        <FactoryDishLabelPreview input={labelPreviewInput(labelModalPreviewLine!)} />
+        <div className="quote-label-preview-grid">
+          {labelModalPreviewLines.map((previewLine, index) => (
+            <FactoryDishLabelPreview
+              input={labelPreviewInput(previewLine)}
+              key={`${previewLine.labelId ?? "temporary"}-${index}`}
+            />
+          ))}
+        </div>
         <small>{t(labelModalLine.labelId ? "quoteEditor.items.linkedLabel" : "quoteEditor.items.temporaryLabel")}</small>
         {!readOnly ? (
           <div className="quote-line-label-editor">
@@ -1242,16 +1333,6 @@ export function QuoteEditorPage({
                 onChange={(event) => setLabelModalDraft((current) => ({ ...current, displayB: event.target.value }))}
               />
             </label>
-            <label>
-              <span>{t("quoteEditor.items.remarks")}</span>
-              <textarea
-                rows={2}
-                maxLength={16}
-                value={labelModalDraft.remarks}
-                disabled={savingLineId === labelModalLine.id}
-                onChange={(event) => setLabelModalDraft((current) => ({ ...current, remarks: event.target.value }))}
-              />
-            </label>
           </div>
         ) : null}
       </div>
@@ -1261,12 +1342,14 @@ export function QuoteEditorPage({
   const reorderLines = async (targetLineId: string) => {
     if (!draggedLineId || draggedLineId === targetLineId || reordering) return;
     const previousLines = lines;
-    const sourceIndex = previousLines.findIndex((line) => line.id === draggedLineId);
-    const targetIndex = previousLines.findIndex((line) => line.id === targetLineId);
+    const reorderableLines = lines.filter((line) => !line.isVoid);
+    const sourceIndex = reorderableLines.findIndex((line) => line.id === draggedLineId);
+    const targetIndex = reorderableLines.findIndex((line) => line.id === targetLineId);
     if (sourceIndex < 0 || targetIndex < 0) return;
-    const nextLines = [...previousLines];
-    const [movedLine] = nextLines.splice(sourceIndex, 1);
-    nextLines.splice(targetIndex, 0, movedLine);
+    const nextActiveLines = [...reorderableLines];
+    const [movedLine] = nextActiveLines.splice(sourceIndex, 1);
+    nextActiveLines.splice(targetIndex, 0, movedLine);
+    const nextLines = [...nextActiveLines, ...previousLines.filter((line) => line.isVoid)];
     setLines(nextLines);
     setDraggedLineId(null);
     setDragOverLineId(null);
@@ -1274,7 +1357,7 @@ export function QuoteEditorPage({
     setReordering(true);
     setError(null);
     try {
-      await saveLineOrder(nextLines.map((line) => line.id));
+      await saveLineOrder(nextActiveLines.map((line) => line.id));
     } catch {
       setLines(previousLines);
       setError("quote_line_save_failed");
@@ -1450,19 +1533,21 @@ export function QuoteEditorPage({
 
   const moveLine = async (lineId: string, direction: -1 | 1) => {
     if (reordering) return;
-    const sourceIndex = lines.findIndex((line) => line.id === lineId);
+    const reorderableLines = lines.filter((line) => !line.isVoid);
+    const sourceIndex = reorderableLines.findIndex((line) => line.id === lineId);
     const targetIndex = sourceIndex + direction;
-    if (sourceIndex < 0 || targetIndex < 0 || targetIndex >= lines.length) return;
+    if (sourceIndex < 0 || targetIndex < 0 || targetIndex >= reorderableLines.length) return;
     const previousLines = lines;
-    const nextLines = [...previousLines];
-    const [movedLine] = nextLines.splice(sourceIndex, 1);
-    nextLines.splice(targetIndex, 0, movedLine);
+    const nextActiveLines = [...reorderableLines];
+    const [movedLine] = nextActiveLines.splice(sourceIndex, 1);
+    nextActiveLines.splice(targetIndex, 0, movedLine);
+    const nextLines = [...nextActiveLines, ...previousLines.filter((line) => line.isVoid)];
     setLines(nextLines);
     if (nextLines.some((line) => line.isPending)) return;
     setReordering(true);
     setError(null);
     try {
-      await saveLineOrder(nextLines.map((line) => line.id));
+      await saveLineOrder(nextActiveLines.map((line) => line.id));
     } catch {
       setLines(previousLines);
       setError("quote_line_save_failed");
@@ -1765,15 +1850,16 @@ export function QuoteEditorPage({
         >
           <header><div><span className="eyebrow">{t(isOrder ? "quoteEditor.orderSummaryEyebrow" : "quoteEditor.items.summaryEyebrow")}</span><h2>{t("quoteEditor.items.summaryTitle")}</h2></div><strong>{money.format(total)}</strong></header>
           <div className="table-wrap"><table><thead><tr><th>{t("quoteEditor.items.sequence")}</th><th>{t("quoteEditor.items.sku")}</th><th>{t("quoteEditor.items.product")}</th><th>{t("quoteEditor.items.labelPreview")}</th><th>{t("quoteEditor.items.quantity")}</th><th>{t("quoteEditor.items.unitPrice")}</th><th>{t("quoteEditor.items.subtotal")}</th></tr></thead><tbody>
-            {lines.map((line, index) => <tr key={line.id}>
+            {lines.map((line, index) => <tr key={line.id} className={cn(line.isVoid && "is-cancelled")}>
               <td className="quote-line-sequence">{index + 1}</td>
               <td className="quote-line-sku">{displayValue(line.sku)}</td>
               <td className="quote-line-product">
                 {line.isAddon ? <span className="status-badge blue quote-line-addon-label">加單</span> : null}
                 <strong>{displayValue(line.name)}</strong>
+                {line.isVoid ? <span className="quote-line-cancelled-label">{t("quoteEditor.items.cancelled")}</span> : null}
                 {line.remarks ? <small title={line.remarks}>{line.remarks}</small> : null}
               </td>
-              <td><Button type="button" variant="outline" size="sm" onClick={() => openLabelModal(line)}><Search />{t("quoteEditor.items.viewLabel")}</Button></td>
+              <td>{line.packageId && !line.productId ? null : <Button type="button" variant="outline" size="sm" disabled={line.isVoid} onClick={() => openLabelModal(line)}><Search />{t("quoteEditor.items.viewLabel")}</Button>}</td>
               <td>{line.quantity}</td>
               <td>{money.format(line.unitPrice)}</td>
               <td>{money.format(line.totalPrice)}</td>
@@ -1782,7 +1868,7 @@ export function QuoteEditorPage({
           </tbody></table></div>
           <div className="quote-editor-totals-row">
             <div className="quote-editor-item-count">
-              <span>{t("quoteEditor.items.totalQuantity")}</span><strong>{lines.reduce((sum, line) => sum + line.quantity, 0)}</strong>
+              <span>{t("quoteEditor.items.totalQuantity")}</span><strong>{activeLines.reduce((sum, line) => sum + line.quantity, 0)}</strong>
               <span>{t("quoteEditor.items.subtotal")}</span><strong>{money.format(total)}</strong>
             </div>
             <section className="quote-financial-card quote-financial-readonly" aria-label={t("quoteEditor.financials.title")}>
@@ -1982,21 +2068,55 @@ export function QuoteEditorPage({
             {isMobileEditor ? (
               <div className="quote-mobile-lines" role="list" aria-label={t("quoteEditor.items.summaryTitle")}>
                 {lines.map((line, index) => (
-                  <article className="quote-mobile-line" role="listitem" key={line.id}>
+                  <article className={cn("quote-mobile-line", line.isVoid && "is-cancelled")} role="listitem" key={line.id}>
                     <header>
                       <span>{index + 1}</span>
-                      <div><strong>{line.name || "—"}</strong><small>{line.sku || "—"}</small></div>
+                      <div>
+                        <strong>{line.name || "—"}</strong>
+                        <small>{line.sku || "—"}</small>
+                        {editingRemarkIds.has(line.id) ? (
+                          <textarea
+                            autoFocus
+                            className="quote-line-edit-remarks"
+                            rows={2}
+                            maxLength={16}
+                            value={line.remarks || ""}
+                            aria-label={`${t("quoteEditor.items.remarks")} ${line.name || ""}`}
+                            disabled={line.isVoid || savingLineId === line.id}
+                            onChange={(event) => patchLine(line.id, { remarks: event.target.value })}
+                            onBlur={() => {
+                              void saveEditedLine(line);
+                              setEditingRemarkIds((current) => {
+                                const next = new Set(current);
+                                next.delete(line.id);
+                                return next;
+                              });
+                            }}
+                          />
+                        ) : (
+                          <button
+                            type="button"
+                            className="quote-line-remarks-toggle"
+                            disabled={line.isVoid}
+                            title={line.remarks || t("quoteEditor.items.remarks")}
+                            onClick={() => setEditingRemarkIds((current) => new Set(current).add(line.id))}
+                          ><span>{line.remarks || t("quoteEditor.items.remarks")}</span><Pencil /></button>
+                        )}
+                        {line.isVoid ? <span className="quote-line-cancelled-label">{t("quoteEditor.items.cancelled")}</span> : null}
+                      </div>
                       <div className="quote-mobile-line-actions">
-                        <button type="button" disabled={!index || reordering} aria-label={`${t("quoteEditor.items.sequence")} ${index}`} onClick={() => void moveLine(line.id, -1)}><ChevronUp /></button>
-                        <button type="button" disabled={index === lines.length - 1 || reordering} aria-label={`${t("quoteEditor.items.sequence")} ${index + 2}`} onClick={() => void moveLine(line.id, 1)}><ChevronDown /></button>
-                        <button type="button" className="quote-line-delete" aria-label={t("quoteEditor.items.remove", { name: line.name || "" })} disabled={removingId === line.id || savingLineId === line.id} onClick={() => void removeLine(line.id)}><Trash2 /></button>
+                        <button type="button" disabled={line.isVoid || !index || reordering} aria-label={`${t("quoteEditor.items.sequence")} ${index}`} onClick={() => void moveLine(line.id, -1)}><ChevronUp /></button>
+                        <button type="button" disabled={line.isVoid || index === activeLines.length - 1 || reordering} aria-label={`${t("quoteEditor.items.sequence")} ${index + 2}`} onClick={() => void moveLine(line.id, 1)}><ChevronDown /></button>
+                        {line.isVoid
+                          ? <button type="button" className="quote-line-restore" aria-label={t("quoteEditor.items.restore", { name: line.name || "" })} disabled={removingId === line.id} onClick={() => void restoreLine(line.id)}><Undo2 /></button>
+                          : <button type="button" className="quote-line-delete" aria-label={t(isOrder ? "quoteEditor.items.cancel" : "quoteEditor.items.remove", { name: line.name || "" })} disabled={removingId === line.id || savingLineId === line.id} onClick={() => void removeLine(line.id)}><Trash2 /></button>}
                       </div>
                     </header>
                     <div className="quote-mobile-line-fields">
-                      <label><span>{t("quoteEditor.items.quantity")}</span><input type="number" inputMode="numeric" min="0" step="1" value={line.quantity} disabled={savingLineId === line.id} onChange={(event) => patchLine(line.id, { quantity: Number(event.target.value) })} onBlur={() => void saveEditedLine(line)} /></label>
-                      <label><span>{t("quoteEditor.items.unitPrice")}</span><input type="number" inputMode="decimal" min="0" step="0.01" value={isFreeUtensilPackLine(line) ? 0 : line.unitPrice} disabled={savingLineId === line.id || isFreeUtensilPackLine(line)} onChange={(event) => patchLine(line.id, { unitPrice: Number(event.target.value) })} onBlur={() => void saveEditedLine(line)} /></label>
+                      <label><span>{t("quoteEditor.items.quantity")}</span><input type="number" inputMode="numeric" min="0" step="1" value={line.quantity} disabled={line.isVoid || savingLineId === line.id} onChange={(event) => patchLine(line.id, { quantity: Number(event.target.value) })} onBlur={() => void saveEditedLine(line)} /></label>
+                      <label><span>{t("quoteEditor.items.unitPrice")}</span><input type="number" inputMode="decimal" min="0" step="0.01" value={isFreeUtensilPackLine(line) ? 0 : line.unitPrice} disabled={line.isVoid || savingLineId === line.id || isFreeUtensilPackLine(line)} onChange={(event) => patchLine(line.id, { unitPrice: Number(event.target.value) })} onBlur={() => void saveEditedLine(line)} /></label>
                     </div>
-                    <Button type="button" variant="outline" className="quote-mobile-label-button" onClick={() => openLabelModal(line)}><Pencil />{t("quoteEditor.items.editLabelButton")}</Button>
+                    {line.packageId && !line.productId ? null : <Button type="button" variant="outline" className="quote-mobile-label-button" disabled={line.isVoid} onClick={() => openLabelModal(line)}><Pencil />{t("quoteEditor.items.editLabelButton")}</Button>}
                     <footer><span>{t("quoteEditor.items.subtotal")}</span><strong>{money.format(line.totalPrice)}</strong></footer>
                   </article>
                 ))}
@@ -2006,7 +2126,7 @@ export function QuoteEditorPage({
             <div className="table-wrap"><table><thead><tr><th>{t("quoteEditor.items.sequence")}</th><th>{t("quoteEditor.items.sku")}</th><th>{t("quoteEditor.items.product")}</th><th>{t("quoteEditor.items.labelPreview")}</th><th>{t("quoteEditor.items.quantity")}</th><th>{t("quoteEditor.items.unitPrice")}</th><th>{t("quoteEditor.items.subtotal")}</th><th><span className="sr-only">{t("quoteEditor.items.actions")}</span></th></tr></thead><tbody>
               {lines.map((line, index) => <tr
                 key={line.id}
-                className={cn(draggedLineId === line.id && "is-dragging", dragOverLineId === line.id && draggedLineId !== line.id && "is-drag-over")}
+                className={cn(line.isVoid && "is-cancelled", draggedLineId === line.id && "is-dragging", dragOverLineId === line.id && draggedLineId !== line.id && "is-drag-over")}
                 onDragOver={(event) => allowLineDrop(event, line.id)}
                 onDragLeave={() => setDragOverLineId((current) => current === line.id ? null : current)}
                 onDrop={(event) => { event.preventDefault(); void reorderLines(line.id); }}
@@ -2015,7 +2135,7 @@ export function QuoteEditorPage({
                   <button
                     type="button"
                     className="quote-line-drag-handle"
-                    draggable={!reordering}
+                    draggable={!line.isVoid && !reordering}
                     aria-label={t("quoteEditor.items.reorder", { number: index + 1, name: line.name || "" })}
                     onDragStart={(event) => {
                       setDraggedLineId(line.id);
@@ -2028,14 +2148,45 @@ export function QuoteEditorPage({
                 <td className="quote-line-sku">{line.sku || "—"}</td>
                 <td className="quote-line-product">
                   <strong>{line.name || "—"}</strong>
+                  {line.isVoid ? <span className="quote-line-cancelled-label">{t("quoteEditor.items.cancelled")}</span> : null}
+                  {editingRemarkIds.has(line.id) ? (
+                    <textarea
+                      autoFocus
+                      className="quote-line-edit-remarks"
+                      rows={2}
+                      maxLength={16}
+                      value={line.remarks || ""}
+                      aria-label={`${t("quoteEditor.items.remarks")} ${line.name || ""}`}
+                      disabled={line.isVoid || savingLineId === line.id}
+                      onChange={(event) => patchLine(line.id, { remarks: event.target.value })}
+                      onBlur={() => {
+                        void saveEditedLine(line);
+                        setEditingRemarkIds((current) => {
+                          const next = new Set(current);
+                          next.delete(line.id);
+                          return next;
+                        });
+                      }}
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      className="quote-line-remarks-toggle"
+                      disabled={line.isVoid}
+                      title={line.remarks || t("quoteEditor.items.remarks")}
+                      onClick={() => setEditingRemarkIds((current) => new Set(current).add(line.id))}
+                    ><span>{line.remarks || t("quoteEditor.items.remarks")}</span><Pencil /></button>
+                  )}
                 </td>
                 <td className="quote-line-label-cell">
-                  <Button type="button" variant="outline" size="sm" onClick={() => openLabelModal(line)}><Pencil />{t("quoteEditor.items.editLabelButton")}</Button>
+                  {line.packageId && !line.productId ? null : <Button type="button" variant="outline" size="sm" disabled={line.isVoid} onClick={() => openLabelModal(line)}><Pencil />{t("quoteEditor.items.editLabelButton")}</Button>}
                 </td>
-                <td><input className="quote-line-edit-number" type="number" inputMode="numeric" min="0" step="1" value={line.quantity} aria-label={`${t("quoteEditor.items.quantity")} ${line.name || ""}`} disabled={savingLineId === line.id} onChange={(event) => patchLine(line.id, { quantity: Number(event.target.value) })} onBlur={() => void saveEditedLine(line)} /></td>
-                <td><input className="quote-line-edit-number" type="number" min="0" step="0.01" value={isFreeUtensilPackLine(line) ? 0 : line.unitPrice} aria-label={`${t("quoteEditor.items.unitPrice")} ${line.name || ""}`} disabled={savingLineId === line.id || isFreeUtensilPackLine(line)} onChange={(event) => patchLine(line.id, { unitPrice: Number(event.target.value) })} onBlur={() => void saveEditedLine(line)} /></td>
+                <td><input className="quote-line-edit-number" type="number" inputMode="numeric" min="0" step="1" value={line.quantity} aria-label={`${t("quoteEditor.items.quantity")} ${line.name || ""}`} disabled={line.isVoid || savingLineId === line.id} onChange={(event) => patchLine(line.id, { quantity: Number(event.target.value) })} onBlur={() => void saveEditedLine(line)} /></td>
+                <td><input className="quote-line-edit-number" type="number" min="0" step="0.01" value={isFreeUtensilPackLine(line) ? 0 : line.unitPrice} aria-label={`${t("quoteEditor.items.unitPrice")} ${line.name || ""}`} disabled={line.isVoid || savingLineId === line.id || isFreeUtensilPackLine(line)} onChange={(event) => patchLine(line.id, { unitPrice: Number(event.target.value) })} onBlur={() => void saveEditedLine(line)} /></td>
                 <td>{money.format(line.totalPrice)}</td>
-                <td><button type="button" className="quote-line-delete" aria-label={t("quoteEditor.items.remove", { name: line.name || "" })} disabled={removingId === line.id || savingLineId === line.id} onClick={() => void removeLine(line.id)}><Trash2 /></button></td>
+                <td>{line.isVoid
+                  ? <button type="button" className="quote-line-restore" aria-label={t("quoteEditor.items.restore", { name: line.name || "" })} disabled={removingId === line.id} onClick={() => void restoreLine(line.id)}><Undo2 /></button>
+                  : <button type="button" className="quote-line-delete" aria-label={t(isOrder ? "quoteEditor.items.cancel" : "quoteEditor.items.remove", { name: line.name || "" })} disabled={removingId === line.id || savingLineId === line.id} onClick={() => void removeLine(line.id)}><Trash2 /></button>}</td>
               </tr>)}
               {!lines.length && <tr><td colSpan={8} className="quote-lines-empty"><PackagePlus /><strong>{t("quoteEditor.items.empty")}</strong><span>{t("quoteEditor.items.emptyHint")}</span></td></tr>}
             </tbody></table></div>
@@ -2043,7 +2194,7 @@ export function QuoteEditorPage({
             <div className="quote-editor-totals-row">
               <div className="quote-editor-item-count">
                 <span>{t("quoteEditor.items.totalQuantity")}</span>
-                <strong>{lines.reduce((sum, line) => sum + line.quantity, 0)}</strong>
+                <strong>{activeLines.reduce((sum, line) => sum + line.quantity, 0)}</strong>
                 <span>{t("quoteEditor.items.subtotal")}</span>
                 <strong>{money.format(total)}</strong>
               </div>

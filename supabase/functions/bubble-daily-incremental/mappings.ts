@@ -47,6 +47,8 @@ const numberValue = (value: unknown) =>
   typeof value === "number" && Number.isFinite(value) ? value : null;
 const booleanValue = (value: unknown, fallback = false) =>
   typeof value === "boolean" ? value : fallback;
+const isUtensilPack = (value: unknown) =>
+  typeof value === "string" && value.includes("餐具包");
 const list = (value: unknown) =>
   Array.isArray(value)
     ? value.filter((item): item is string =>
@@ -403,7 +405,8 @@ const phaseC: SourceMapping[] = [
       remarks_1: text(r.remarks1),
       remarks_2: text(r.remarks2),
       delivery_at: dateValue(r.DeliDate),
-      is_addon: booleanValue(r["Add-on"]),
+      is_addon: !isUtensilPack(r.newproductname) &&
+        !isUtensilPack(r.real_content_info) && booleanValue(r["Add-on"]),
       is_void: booleanValue(r.Void),
       is_printed: booleanValue(r.Printed),
       is_sent_to_factory: booleanValue(r["Send to Factory"]),

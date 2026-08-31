@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   collectLineMenuRemarkText,
   collectFreeDrinkRemarkText,
-  extractLunchBoxSideDishRemark,
   extractDeliveryFromRemark,
   extractOptionRemark,
   filterLegacyPaymentDuplicates,
@@ -30,13 +29,63 @@ import {
   resolveAliasSku,
   shopifyCateringUtensilPacks,
   shopifyBentoUtensilCount,
+  shopifyLunchBoxUtensilCount,
+  shopifyLunchBoxVariantRemark,
+  shopifyDrinkSelectionQuantity,
   shopifyCustomizationCostParentName,
+  isShopifyBeverageName,
+  staleGeneratedCustomLineIds,
   shopifyFinancialStatus,
   shopifyOutstanding,
   shopifyTransactionLegacyId,
   shopDomainMatches,
   stripSkuSuffix,
 } from "../supabase/functions/shopify-order-sync/map.ts";
+
+describe("Shopify generated beverage reconciliation", () => {
+  it("does not treat a tea selection as a catering dish", () => {
+    expect(isShopifyBeverageName("蜂蜜綠茶")).toBe(true);
+    expect(isShopifyBeverageName("煙三文魚蜂蜜醋沙律")).toBe(false);
+  });
+
+  it("counts paid SKU-less picnic boxes for lunch-box utensils", () => {
+    expect(shopifyLunchBoxUtensilCount([
+      { name: "(5格) 雞扒牛角酥野餐盒", quantity: 5, unitPrice: 88 },
+      { name: "咖喱香煎雞扒便當", quantity: 5, unitPrice: 88 },
+      { name: "煙三文魚牛角酥輕食盒", quantity: 7, unitPrice: 88 },
+      { name: "烏龍茶 7包", quantity: 1, unitPrice: 0 },
+    ])).toBe(17);
+  });
+
+  it("uses an explicit drink quantity instead of the parent meal quantity", () => {
+    expect(shopifyDrinkSelectionQuantity("烏龍茶 6包", 7)).toBe(6);
+    expect(shopifyDrinkSelectionQuantity("烏龍茶", 7)).toBe(7);
+  });
+
+  it("keeps B-1556 tomato salad as a remark and removes only a trailing drink", () => {
+    expect(shopifyLunchBoxVariantRemark("蕃茄沙律")).toBe("蕃茄沙律");
+    expect(shopifyLunchBoxVariantRemark("蕃茄沙律 / 蜂蜜綠茶")).toBe("蕃茄沙律");
+    expect(shopifyLunchBoxVariantRemark("蜂蜜綠茶")).toBeNull();
+  });
+
+  it("parses the authoritative B-1559 order-note drink manifest", () => {
+    expect(parseShopifyFreeDrinks("蜂蜜綠茶 6包")).toEqual([
+      { name: "蜂蜜綠茶", quantity: 6, unit: "包" },
+    ]);
+  });
+
+  it("replaces only matching zero-price custom drinks and utensils", () => {
+    expect(staleGeneratedCustomLineIds({
+      existing: [
+        { id: "tea", name: "烏龍茶 6包", unitPrice: 0 },
+        { id: "utensils", name: "飯盒餐具包 17份", unitPrice: 0 },
+        { id: "paid", name: "烏龍茶 6包", unitPrice: 10 },
+        { id: "dish", name: "自訂主菜", unitPrice: 0 },
+      ],
+      generatedNames: ["烏龍茶 13包", "飯盒餐具包 17份"],
+    })).toEqual(["tea", "utensils"]);
+  });
+});
 
 const baseInput = {
   shopDomain: "test-store.myshopify.com",
@@ -767,6 +816,34 @@ describe("mapShopifyOrder remark collection", () => {
     ]);
   });
 
+  it("rebuilds P-1149 menu choices stored under generic checkbox properties", () => {
+    const text = collectLineMenuRemarkText([
+      { name: "checkbox-1", value: "煙三文魚蜂蜜醋沙律 (2磅)" },
+      { name: "checkbox-2", value: "野火串燒拼盤 (沙嗲豬肉串6串、沙嗲牛柳串6串), 蒜香避風塘雞翼 (12件)" },
+      { name: "checkbox-3", value: "芝士忌廉燴雜菜 (2磅), 狂炸拼盤 (脆炸芝士6件、花枝卷6件、炸雞塊6件、甜薯絲網卷6件、芝士年糕6件)" },
+      { name: "checkbox-4", value: "煙肉卡邦尼烤雞扒配雜菌 (2磅), 炭燒松阪豬配菠蘿 (2磅)" },
+      { name: "checkbox-5", value: "黑椒煙鴨胸炒意粉 (3磅), 芝士粟米吞拿魚焗長通粉 (3磅)" },
+      { name: "checkbox-6", value: "雲呢嗱泡芙 (12件)" },
+    ]);
+
+    expect(parseMenuRemark(text)).toEqual([
+      { name: "煙三文魚蜂蜜醋沙律 (2磅)", quantity: 1 },
+      { name: "野火串燒拼盤 (沙嗲豬肉串6串、沙嗲牛柳串6串)", quantity: 1 },
+      { name: "蒜香避風塘雞翼 (12件)", quantity: 1 },
+      { name: "芝士忌廉燴雜菜 (2磅)", quantity: 1 },
+      { name: "狂炸拼盤 (脆炸芝士6件、花枝卷6件、炸雞塊6件、甜薯絲網卷6件、芝士年糕6件)", quantity: 1 },
+      { name: "煙肉卡邦尼烤雞扒配雜菌 (2磅)", quantity: 1 },
+      { name: "炭燒松阪豬配菠蘿 (2磅)", quantity: 1 },
+      { name: "黑椒煙鴨胸炒意粉 (3磅)", quantity: 1 },
+      { name: "芝士粟米吞拿魚焗長通粉 (3磅)", quantity: 1 },
+      { name: "雲呢嗱泡芙 (12件)", quantity: 1 },
+    ]);
+
+    expect(collectLineMenuRemarkText([
+      { name: "checkbox-7", value: "同意餐具安排" },
+    ])).toBeNull();
+  });
+
   it("drops package menu properties from remarks after they become product lines", () => {
     const properties = [
       { name: "必選", value: "醬香牛展拌粉皮 (1磅), 川式涼拌青瓜魚片 (1磅)" },
@@ -1140,21 +1217,5 @@ describe("extractOptionRemark", () => {
     expect(extractOptionRemark("(三格) 肉醬意粉盒   配菠蘿芝士腸串 2串")).toBe("菠蘿芝士腸串 2串");
     expect(extractOptionRemark("(三格) 肉醬意粉盒")).toBeNull();
     expect(extractOptionRemark(null)).toBeNull();
-  });
-});
-
-describe("extractLunchBoxSideDishRemark", () => {
-  it("retains the side dishes appended to a Shopify lunch-box title", () => {
-    expect(extractLunchBoxSideDishRemark(
-      "(便當) 咕嚕雞球飯 (獅子頭、時菜、涼菜)",
-    )).toBe("獅子頭、時菜、涼菜");
-    expect(extractLunchBoxSideDishRemark(
-      "（便當）粟米魚塊飯（獅子頭、時菜、涼菜）",
-    )).toBe("獅子頭、時菜、涼菜");
-  });
-
-  it("does not treat ordinary catalog parentheses as side-dish remarks", () => {
-    expect(extractLunchBoxSideDishRemark("(雙格) 咕嚕雞球飯")).toBeNull();
-    expect(extractLunchBoxSideDishRemark(null)).toBeNull();
   });
 });

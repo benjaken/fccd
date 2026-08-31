@@ -103,6 +103,10 @@ type OrderRow = {
   created_at: string;
   is_sent_to_factory?: boolean | null;
   do_not_send_to_factory?: boolean | null;
+  addon_shopify_pending?: boolean | null;
+  is_shopify_order?: boolean | null;
+  source_system?: string | null;
+  delivery_status?: string | null;
 };
 type DriverReminderOrderRow = {
   id: string;
@@ -219,6 +223,17 @@ function factoryUnsentReminderAt(order: OrderRow) {
 
 function isCancelledStatus(value: string | null | undefined) {
   return /(取消|cancelled)/i.test(value || "");
+}
+
+function isPendingReview(order: OrderRow) {
+  return order.addon_shopify_pending === true
+    || (
+      order.is_shopify_order === true
+      && order.source_system === "shopify"
+      && order.delivery_status == null
+      && order.do_not_send_to_factory !== true
+      && order.is_sent_to_factory !== true
+    );
 }
 
 function unassignedDriverReminderOrders(
@@ -601,7 +616,7 @@ Deno.serve(async (request) => {
     if (claimedRows.length) {
       const { data, error: jobsError } = await admin
         .from("wati_order_notification_outbox")
-        .select("id,attempts,wati_sent_at,wati_skipped_at,email_sent_at,email_skipped_at,template:wati_order_notification_templates(event_key,template_name,broadcast_name,parameters,is_active),order:orders(order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,delivery_at,delivery_time,shipping_address_snapshot,created_at,channels(name),shipping_methods(name,display_name,requires_address_check))")
+        .select("id,attempts,wati_sent_at,wati_skipped_at,email_sent_at,email_skipped_at,template:wati_order_notification_templates(event_key,template_name,broadcast_name,parameters,is_active),order:orders(order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,delivery_at,delivery_time,shipping_address_snapshot,created_at,is_sent_to_factory,do_not_send_to_factory,addon_shopify_pending,is_shopify_order,source_system,delivery_status,channels(name),shipping_methods(name,display_name,requires_address_check))")
         .in("id", claimedRows.map((row) => row.id));
       if (jobsError) throw new Error(`notification_load_failed:${jobsError.message}`);
       jobs = (data || []) as QueueRow[];
@@ -616,6 +631,20 @@ Deno.serve(async (request) => {
         await admin.from("wati_order_notification_outbox").update({
           status: "skipped", last_error: "notification_context_missing", locked_at: null,
           updated_at: new Date().toISOString(),
+        }).eq("id", job.id);
+        continue;
+      }
+      if (isPendingReview(order)) {
+        const skippedAt = new Date().toISOString();
+        await admin.from("wati_order_notification_outbox").update({
+          status: "skipped",
+          wati_skipped_at: job.wati_sent_at ? job.wati_skipped_at : job.wati_skipped_at || skippedAt,
+          email_skipped_at: job.email_sent_at ? job.email_skipped_at : job.email_skipped_at || skippedAt,
+          wati_error: "order_pending_review",
+          email_error: "order_pending_review",
+          last_error: "order_pending_review",
+          locked_at: null,
+          updated_at: skippedAt,
         }).eq("id", job.id);
         continue;
       }

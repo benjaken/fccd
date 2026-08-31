@@ -19,6 +19,7 @@ import {
   AUGUST_OVERWRITE_CONFIRMATION,
   changedOverwriteFields,
   isFieldAwareOverwriteSourceType,
+  isBubbleOwnedLegacyId,
   isOverwriteSourceType,
   mergeOverwriteRow,
   normalizeOrderNumber,
@@ -63,6 +64,9 @@ type TypeResult = {
   junctionsInserted: number;
   metadataUpdated?: number;
   snapshotsUpdated?: number;
+  orderLinesReconciled?: number;
+  staleOrderLinesDeleted?: number;
+  orderLineParentsSkipped?: number;
   pages: number;
   status: "completed" | "failed" | "resumable";
   error?: string;
@@ -1104,6 +1108,19 @@ async function processType(
       result.junctionsInserted += metadata.tagsInserted;
       result.metadataUpdated =
         metadata.districtsUpdated + metadata.deliveriesCreated;
+
+      // A deleted S_Order row never appears in the incremental S_Order feed.
+      // Reconcile the complete child set whenever its A_Order changes so
+      // edits, replacements and deletions converge in the same daily run.
+      const lineReconciliation = await reconcileModifiedBubbleOrderLines(
+        client,
+        fetched.records,
+        bubbleToken,
+        deadline,
+      );
+      result.orderLinesReconciled = lineReconciliation.written;
+      result.staleOrderLinesDeleted = lineReconciliation.staleDeleted;
+      result.orderLineParentsSkipped = lineReconciliation.parentsSkipped;
     }
     if (mapping.sourceType === "s_order" && fetched.records.length) {
       result.snapshotsUpdated = await hydrateOrderLineSnapshots(
@@ -1822,7 +1839,7 @@ async function removeStaleTargetedChildren(
   if (error) throw error;
   const fetched = new Set(fetchedLegacyIds);
   const stale = (data ?? []).filter((row) =>
-    typeof row.legacy_id === "string" && !fetched.has(row.legacy_id)
+    isBubbleOwnedLegacyId(row.legacy_id) && !fetched.has(row.legacy_id)
   );
   if (mode === "apply" && stale.length) {
     for (let index = 0; index < stale.length; index += QUERY_CHUNK) {
@@ -1834,6 +1851,71 @@ async function removeStaleTargetedChildren(
     }
   }
   return stale.map((row) => String(row.legacy_id));
+}
+
+async function reconcileModifiedBubbleOrderLines(
+  client: AdminClient,
+  bubbleOrders: BubbleRecord[],
+  bubbleToken: string,
+  deadline: number,
+): Promise<{ written: number; staleDeleted: number; parentsSkipped: number }> {
+  if (!bubbleOrders.length) {
+    return { written: 0, staleDeleted: 0, parentsSkipped: 0 };
+  }
+  const mapping = coreMappings.find((item) => item.sourceType === "s_order");
+  if (!mapping) throw new Error("S_Order mapping is unavailable.");
+
+  // Only reconcile parents whose Supabase identity is the Bubble A_Order id.
+  // Shopify-owned canonical orders are maintained by shopify-order-sync and
+  // deliberately keep a different legacy id.
+  const parentRows = await legacyIdRows(
+    client,
+    "orders",
+    bubbleOrders.map(requireLegacyId),
+  );
+  const parentByLegacyId = new Map(
+    parentRows.map((row) => [row.legacy_id, row.id]),
+  );
+  const ownedParents = bubbleOrders.filter((order) =>
+    parentByLegacyId.has(requireLegacyId(order))
+  );
+  const sourceLines: BubbleRecord[] = [];
+  const concurrency = 8;
+  for (let index = 0; index < ownedParents.length; index += concurrency) {
+    if (Date.now() >= deadline) {
+      throw new Error("Modified order-line reconciliation timed out.");
+    }
+    const pages = await Promise.all(
+      ownedParents.slice(index, index + concurrency).map((order) =>
+        fetchBubbleEquals(
+          "s_order",
+          orderLegacyIdConstraints("Order", requireLegacyId(order)),
+          bubbleToken,
+          deadline,
+        )
+      ),
+    );
+    sourceLines.push(...pages.flat());
+  }
+
+  const reconciled = await reconcileTargetedRecords(
+    client,
+    mapping,
+    sourceLines,
+    "apply",
+  );
+  const stale = await removeStaleTargetedChildren(
+    client,
+    "order_lines",
+    [...parentByLegacyId.values()],
+    sourceLines.map(requireLegacyId),
+    "apply",
+  );
+  return {
+    written: reconciled.written,
+    staleDeleted: stale.length,
+    parentsSkipped: bubbleOrders.length - ownedParents.length,
+  };
 }
 
 async function processTargetedQuoteSync(

@@ -7,6 +7,7 @@ import {
 } from "@/lib/deliveries"
 import { supabase } from "@/lib/supabase"
 import { formatFactoryOrderNumber } from "@/lib/factory-order-number"
+import { fetchActiveOrderEditIds } from "@/lib/order-edit-lock"
 
 export const UNASSIGNED_FLEET_ID = "__unassigned__"
 export const ALL_BRAND_ID = "__all__"
@@ -22,6 +23,7 @@ export type FactoryBoardData = {
 export type FactoryBoardItem = DeliveryListItem & {
   factorySource?: "delivery" | "meat"
   factoryPrintStatus?: FactoryOrderPrintStatus
+  isBeingEdited?: boolean
 }
 
 export type FactoryOrderPrintStatus = "complete" | "needs-reprint" | "incomplete"
@@ -56,11 +58,13 @@ export type FactoryOrderLine = {
   id: string
   label: string
   labelName?: string
+  labelNames?: string[]
   quantityText: string | null
   remarks: string[]
   printed: boolean
   requiresReprint?: boolean
   isAddon?: boolean
+  isCancelled?: boolean
   changes?: FactoryOrderLineChange[]
 }
 
@@ -85,6 +89,7 @@ export type FactoryOrderJob = {
   needsLabelReprint?: boolean
   needsDeliveryNoteReprint?: boolean
   removedLineChanges?: FactoryOrderLineChange[]
+  isBeingEdited?: boolean
   lines: FactoryOrderLine[]
 }
 
@@ -116,16 +121,35 @@ function mapFactoryOrderLineChange(
   }
 }
 
+export function factoryProductLabelNames(
+  labels: Array<Pick<FactoryProductLabelRow, "display_name" | "quantity_label">>,
+): string[] {
+  return labels
+    .map((label) => [label.display_name, label.quantity_label]
+      .map((value) => value?.trim() ?? "")
+      .filter(Boolean)
+      .join("\n"))
+    .filter(Boolean)
+}
+
 export function factoryProductLabelName(
   labels: Array<Pick<FactoryProductLabelRow, "display_name" | "quantity_label">>,
 ): string | null {
-  for (const label of labels) {
-    const lines = [label.display_name, label.quantity_label]
-      .map((value) => value?.trim() ?? "")
-      .filter(Boolean)
-    if (lines.length) return lines.join("\n")
-  }
-  return null
+  return factoryProductLabelNames(labels)[0] ?? null
+}
+
+export function factoryOrderLineLabelNames(
+  labels: Array<Pick<FactoryProductLabelRow, "display_name" | "quantity_label">>,
+  temporaryDisplayName: string | null | undefined,
+  temporaryQuantityLabel: string | null | undefined,
+): string[] {
+  const productLabelNames = factoryProductLabelNames(labels)
+  if (productLabelNames.length) return productLabelNames
+  const temporaryLabelName = [temporaryDisplayName, temporaryQuantityLabel]
+    .map((value) => value?.trim() ?? "")
+    .filter(Boolean)
+    .join("\n")
+  return temporaryLabelName ? [temporaryLabelName] : []
 }
 
 export function factoryOrderLineLabelName(
@@ -133,12 +157,27 @@ export function factoryOrderLineLabelName(
   temporaryDisplayName: string | null | undefined,
   temporaryQuantityLabel: string | null | undefined,
 ): string | null {
-  return factoryProductLabelName(labels) ||
-    [temporaryDisplayName, temporaryQuantityLabel]
-      .map((value) => value?.trim() ?? "")
-      .filter(Boolean)
-      .join("\n") ||
-    null
+  return factoryOrderLineLabelNames(
+    labels,
+    temporaryDisplayName,
+    temporaryQuantityLabel,
+  )[0] ?? null
+}
+
+function resolvedFactoryOrderLineLabelNames(
+  labels: Array<Pick<FactoryProductLabelRow, "display_name" | "quantity_label">>,
+  temporaryDisplayName: string | null | undefined,
+  temporaryQuantityLabel: string | null | undefined,
+  fallbackLabelName: string | null | undefined,
+): string[] {
+  const configuredLabelNames = factoryOrderLineLabelNames(
+    labels,
+    temporaryDisplayName,
+    temporaryQuantityLabel,
+  )
+  if (configuredLabelNames.length) return configuredLabelNames
+  const fallback = fallbackLabelName?.trim() ?? ""
+  return fallback ? [fallback] : []
 }
 
 export type FactoryFleet = {
@@ -284,7 +323,9 @@ export function groupDeliveriesByDate(
   }
   for (const date of dates) {
     grouped[date]?.sort((left, right) => {
-      const time = (left.deliveryTime ?? "").localeCompare(right.deliveryTime ?? "")
+      const time = (left.shipOutTime ?? left.deliveryTime ?? "").localeCompare(
+        right.shipOutTime ?? right.deliveryTime ?? "",
+      )
       if (time !== 0) return time
       return (left.orderNumber ?? "").localeCompare(right.orderNumber ?? "", "zh-Hant")
     })
@@ -729,7 +770,7 @@ export async function fetchFactoryMultiDayMenu(
         orderId,
         orderNumber: delivery.orderNumber,
         deliveryDate: hongKongDateKey(delivery.deliveryAt),
-        deliveryTime: delivery.deliveryTime,
+        deliveryTime: delivery.shipOutTime ?? delivery.deliveryTime,
         label,
         quantity,
         typeSort: line.type_sort == null ? null : Number(line.type_sort),
@@ -898,9 +939,10 @@ export async function fetchFactoryBoard(
         .filter((orderId): orderId is string => Boolean(orderId)),
     ),
   ]
-  const [portionsByOrderId, printStatusByOrderId, changeTasksResult] = await Promise.all([
+  const [portionsByOrderId, printStatusByOrderId, activeEditOrderIds, changeTasksResult] = await Promise.all([
     fetchOrderPortionTotals(orderIds),
     fetchOrderPrintStatuses(orderIds),
+    fetchActiveOrderEditIds(orderIds),
     orderIds.length
       ? supabase
           .from("factory_change_tasks")
@@ -912,7 +954,10 @@ export async function fetchFactoryBoard(
   if (changeTasksResult.error) throw changeTasksResult.error
   return {
     dates,
-    items,
+    items: items.map((item) => ({
+      ...item,
+      isBeingEdited: Boolean(item.orderId && activeEditOrderIds.has(item.orderId)),
+    })),
     portionsByOrderId,
     printStatusByOrderId,
     pendingChangeCount: changeTasksResult.count ?? 0,
@@ -920,7 +965,7 @@ export async function fetchFactoryBoard(
 }
 
 export async function fetchFactoryOrderJob(orderId: string): Promise<FactoryOrderJob> {
-  const [orderResult, linesResult, changeTaskResult, lineChangesResult] = await Promise.all([
+  const [orderResult, linesResult, changeTaskResult, lineChangesResult, activeEditOrderIds] = await Promise.all([
     supabase
       .from("orders")
       .select(
@@ -947,6 +992,7 @@ export async function fetchFactoryOrderJob(orderId: string): Promise<FactoryOrde
       .eq("order_id", orderId)
       .is("resolved_at", null)
       .order("changed_at"),
+    fetchActiveOrderEditIds([orderId]),
   ])
   if (orderResult.error) {
     throw orderResult.error
@@ -1046,8 +1092,19 @@ export async function fetchFactoryOrderJob(orderId: string): Promise<FactoryOrde
     needsLabelReprint: Boolean(changeTaskResult.data?.needs_label_reprint),
     needsDeliveryNoteReprint: Boolean(changeTaskResult.data?.needs_delivery_note_reprint),
     removedLineChanges,
-    lines: allLines.filter((row) => !row.is_void).map((row) => ({
+    isBeingEdited: activeEditOrderIds.has(orderId),
+    lines: [
+      ...allLines.filter((row) => !row.is_void),
+      ...allLines.filter((row) => row.is_void),
+    ].map((row) => ({
       id: row.id as string,
+      labelNames: resolvedFactoryOrderLineLabelNames(
+        productLabelsByProductId.get((row.product_id as string | null) ?? "") ?? [],
+        row.temporary_label_display_name as string | null,
+        row.temporary_label_quantity_label as string | null,
+        (row.content_snapshot as string | null)?.trim() ||
+          (row.product_name_snapshot as string | null)?.trim(),
+      ),
       labelName:
         factoryOrderLineLabelName(
           productLabelsByProductId.get((row.product_id as string | null) ?? "") ?? [],
@@ -1072,11 +1129,14 @@ export async function fetchFactoryOrderJob(orderId: string): Promise<FactoryOrde
       remarks: [row.remarks_1, row.remarks_2]
         .map((value) => (value as string | null)?.trim() ?? "")
         .filter((value, index, values) => value && values.indexOf(value) === index),
-      printed: Boolean(row.is_printed),
+      printed: !row.is_void && Boolean(row.is_printed),
       isAddon: Boolean(row.is_addon),
+      isCancelled: Boolean(row.is_void),
       changes: changesByLineId.get(row.id as string) ?? [],
       requiresReprint:
-        pendingLineChanges.length > 0
+        row.is_void
+          ? false
+          : pendingLineChanges.length > 0
           ? (changesByLineId.get(row.id as string) ?? []).some(
               (change) => change.operation !== "delete",
             )

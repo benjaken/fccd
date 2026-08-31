@@ -1,0 +1,51 @@
+.factory-order-line-cancelled {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 3px;
+  color: #dc2626;
+  font-weight: 800;
+}
+
+.factory-order-line.is-cancelled {
+  cursor: not-allowed;
+  border-color: color-mix(in srgb, #dc2626 35%, var(--border));
+  background: color-mix(in srgb, #dc2626 8%, var(--card));
+  color: #991b1b;
+  opacity: 0.82;
+}
+
+.factory-order-line.is-cancelled strong {
+  text-decoration: line-through;
+}
+
+.factory-edit-lock-warning {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0;
+  padding: 12px 14px;
+  border: 1px solid #ef4444;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.factory-edit-lock-warning svg {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+}
+
+.factory-job-editing-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #dc2626;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.factory-job-editing-tag svg {
+  width: 14px;
+  height: 14px;
+}

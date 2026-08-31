@@ -11,6 +11,7 @@ import {
   factoryOrderPrintStatus,
   factoryEligibleDeliveries,
   factoryProductLabelName,
+  factoryProductLabelNames,
   factoryOrderLineLabelName,
   filterDispatchRows,
   fleetBadgeChar,
@@ -61,6 +62,14 @@ describe("factory board helpers", () => {
     }])).toBe("童趣拼盤(台灣腸蟹蓋\n肉丸年糕各6件)");
     expect(factoryProductLabelName([{ display_name: "童趣拼盤 (1份)", quantity_label: null }]))
       .toBe("童趣拼盤 (1份)");
+  });
+
+  it("keeps every configured product label in creation order", () => {
+    expect(factoryProductLabelNames([
+      { display_name: "Main label", quantity_label: "1 box" },
+      { display_name: "Sauce label", quantity_label: "2 cups" },
+      { display_name: null, quantity_label: null },
+    ])).toEqual(["Main label\n1 box", "Sauce label\n2 cups"]);
   });
 
   it("uses a temporary order-line label only when no SKU label is linked", () => {
@@ -153,11 +162,13 @@ describe("factory board helpers", () => {
           id: "late",
           deliveryAt: "2026-08-17T15:45:00.000Z",
           deliveryTime: "12:45",
+          shipOutTime: "09:00",
         }),
         item({
           id: "early",
           deliveryAt: "2026-08-17T03:30:00.000Z",
           deliveryTime: "11:30",
+          shipOutTime: "10:00",
         }),
         item({
           id: "next",
@@ -171,8 +182,8 @@ describe("factory board helpers", () => {
     expect(hongKongDateKey("2026-08-17T03:30:00.000Z")).toBe("2026-08-17");
     expect(hongKongDateKey("2026-08-17T16:00:00.000Z")).toBe("2026-08-18");
     expect(grouped["2026-08-17"]?.map((row) => row.id)).toEqual([
-      "early",
       "late",
+      "early",
     ]);
     expect(grouped["2026-08-18"]?.map((row) => row.id)).toEqual(["next"]);
     expect(grouped["2026-08-19"]).toEqual([]);

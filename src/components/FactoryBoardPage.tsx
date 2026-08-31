@@ -201,6 +201,8 @@ export function FactoryBoardPage({
   } | null>(null);
   const [menuRows, setMenuRows] = useState<FactoryMenuRow[]>([]);
   const [menuLoading, setMenuLoading] = useState(false);
+  const [menuPrintBlocked, setMenuPrintBlocked] = useState(false);
+  const [multiDayPrintBlocked, setMultiDayPrintBlocked] = useState(false);
   const [selectedJob, setSelectedJob] = useState<DeliveryListItem | null>(null);
   const [orderJob, setOrderJob] = useState<FactoryOrderJob | null>(null);
   const [jobLoading, setJobLoading] = useState(false);
@@ -261,6 +263,24 @@ export function FactoryBoardPage({
     () => [...menuRows].sort(compareFactoryMenuRows),
     [menuRows],
   );
+  const menuOrderIds = useMemo(
+    () => [...new Set(menuRows.flatMap((row) => (row.orders ?? []).map((order) => order.orderId)))],
+    [menuRows],
+  );
+  const multiDayOrderIds = useMemo(
+    () => [...new Set(aggregatedMultiDayRows.flatMap((row) => row.orders.map((order) => order.orderId)))],
+    [aggregatedMultiDayRows],
+  );
+
+  const printMenuWhenUnlocked = (orderIds: string[], scope: "menu" | "multi-day") => {
+    const orderIdSet = new Set(orderIds);
+    const blocked = (board?.items ?? []).some(
+      (item) => Boolean(item.orderId && orderIdSet.has(item.orderId) && item.isBeingEdited),
+    );
+    if (scope === "menu") setMenuPrintBlocked(blocked);
+    else setMultiDayPrintBlocked(blocked);
+    if (!blocked) window.print();
+  };
   const menuBrandHeading = menuSummary?.brandId === ALL_BRAND_ID
     ? brands.map((brand) => brand.name).join(", ") || menuSummary?.brandName || ""
     : menuSummary?.brandName || "";
@@ -366,8 +386,10 @@ export function FactoryBoardPage({
     if (!menuSummary) {
       setMenuRows([]);
       setMenuLoading(false);
+      setMenuPrintBlocked(false);
       return;
     }
+    setMenuPrintBlocked(false);
     const orderIds = (board?.items ?? [])
       .filter(
         (item) =>
@@ -398,8 +420,10 @@ export function FactoryBoardPage({
       setMultiDayRows([]);
       setMultiDayLoading(false);
       setMultiDayError(false);
+      setMultiDayPrintBlocked(false);
       return;
     }
+    setMultiDayPrintBlocked(false);
     let cancelled = false;
     setMultiDayLoading(true);
     setMultiDayError(false);
@@ -575,7 +599,11 @@ export function FactoryBoardPage({
     const empty = t("common.notSet");
     const csv = buildDeliveryExportCsv(
       dispatchRows.map((item) =>
-        toDeliveryExportRow(item, empty, () => dispatch?.date ?? empty),
+        toDeliveryExportRow(
+          { ...item, deliveryTime: item.shipOutTime ?? item.deliveryTime },
+          empty,
+          () => dispatch?.date ?? empty,
+        ),
       ),
       {
         orderNumber: t("factoryBoard.columns.orderNumber"),
@@ -603,31 +631,92 @@ export function FactoryBoardPage({
   return (
     <main className="factory-board">
       <header className="factory-board-top">
-        <FactoryBrandLogo />
-        <p
-          className="factory-board-notice"
-          aria-label={t("factoryBoard.stocktakeNotice")}
-        >
-          <span aria-hidden="true">📢</span>
-          <span>{t("factoryBoard.stocktakeNoticeBefore")}</span>
-          <span className="factory-board-notice-day">
-            {t("factoryBoard.stocktakeNoticeDay")}
-          </span>
-          {t("factoryBoard.stocktakeNoticeAfter") ? (
-            <span>{t("factoryBoard.stocktakeNoticeAfter")}</span>
-          ) : null}
-        </p>
-        <div className="factory-board-actions">
-          {selectedJob || multiDayReport ? null : (
+        <div className="factory-board-heading">
+          <FactoryBrandLogo />
+          <p
+            className="factory-board-notice"
+            aria-label={t("factoryBoard.stocktakeNotice")}
+          >
+            <span aria-hidden="true">📢</span>
+            <span>{t("factoryBoard.stocktakeNoticeBefore")}</span>
+            <span className="factory-board-notice-day">
+              {t("factoryBoard.stocktakeNoticeDay")}
+            </span>
+            {t("factoryBoard.stocktakeNoticeAfter") ? (
+              <span>{t("factoryBoard.stocktakeNoticeAfter")}</span>
+            ) : null}
+          </p>
+        </div>
+        {selectedJob || multiDayReport ? null : (
+          <div className="factory-board-pager">
             <Button
               type="button"
-              variant="outline"
-              className="factory-board-multi-day"
-              disabled={loading}
-              onClick={openMultiDayPicker}
+              variant="ghost"
+              size="icon"
+              aria-label={t("factoryBoard.previousDays")}
+              onClick={() => setStartDate((current) => addCalendarDays(current, -3))}
             >
-              {t("factoryBoard.multiDayMenu")}
+              <ChevronLeft />
             </Button>
+            <Button
+              type="button"
+              className="factory-board-today"
+              onClick={() =>
+                setStartDate(addCalendarDays(hongKongDateInputValue(), -1))
+              }
+            >
+              {t("factoryBoard.goToday")}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label={t("factoryBoard.nextDays")}
+              onClick={() => setStartDate((current) => addCalendarDays(current, 3))}
+            >
+              <ChevronRight />
+            </Button>
+          </div>
+        )}
+        <div className="factory-board-actions">
+          {selectedJob || multiDayReport ? null : (
+            <>
+              <button
+                type="button"
+                className="factory-board-calendar"
+                onClick={() =>
+                  window.open(
+                    "/factory/production-calendar",
+                    "_blank",
+                    "noopener,noreferrer",
+                  )
+                }
+              >
+                <CalendarDays aria-hidden="true" />
+                <span>{t("factoryBoard.productionCalendar")}</span>
+              </button>
+              <button
+                type="button"
+                className="factory-board-date"
+                aria-label={t("factoryBoard.specifiedDate")}
+                onClick={() => {
+                  setJumpDate(startDate);
+                  setDatePickerOpen(true);
+                }}
+              >
+                <CalendarDays aria-hidden="true" />
+                <span>{t("factoryBoard.specifiedDate")}</span>
+              </button>
+              <Button
+                type="button"
+                variant="outline"
+                className="factory-board-multi-day"
+                disabled={loading}
+                onClick={openMultiDayPicker}
+              >
+                {t("factoryBoard.multiDayMenu")}
+              </Button>
+            </>
           )}
         </div>
       </header>
@@ -741,12 +830,14 @@ export function FactoryBoardPage({
             <Button
               type="button"
               className="factory-multi-day-print no-print"
-              onClick={() => window.print()}
+              disabled={multiDayPrintBlocked}
+              onClick={() => printMenuWhenUnlocked(multiDayOrderIds, "multi-day")}
             >
               <Printer aria-hidden="true" />
               {t("factoryBoard.print")}
             </Button>
           </header>
+          {multiDayPrintBlocked ? <p className="factory-edit-lock-warning no-print" role="alert"><TriangleAlert aria-hidden="true" /><strong>{t("factoryBoard.orderEditingPrintBlocked")}</strong></p> : null}
 
           <div className="factory-multi-day-brands" aria-label={t("factoryBoard.brands")}>
             {brands
@@ -897,7 +988,9 @@ export function FactoryBoardPage({
                           </>
                         ) : (
                           <>
-                            <strong>{item.deliveryTime || t("common.notSet")}</strong>
+                            <strong className="factory-job-card-time">
+                              {item.shipOutTime || item.deliveryTime || t("common.notSet")}
+                            </strong>
                             <span>
                               {item.districtName || t("common.notSet")}
                             </span>
@@ -912,6 +1005,7 @@ export function FactoryBoardPage({
                                 {t("factoryBoard.portions", { count: portions })}
                               </small>
                             ) : null}
+                            {item.isBeingEdited ? <small className="factory-job-editing-tag">{t("factoryBoard.editing")}</small> : null}
                             {newOrder ? <small className="factory-new-order-tag">{t("factoryBoard.newOrder")}</small> : null}
                             {printStatus === "needs-reprint" ? <small className="factory-changed-order-tag">有更改</small> : null}
                             {item.addonShopifyPending ? <small className="factory-addon-order-tag">有加單</small> : null}
@@ -934,63 +1028,6 @@ export function FactoryBoardPage({
         ))}
       </section>
 
-      <footer className="factory-board-footer">
-        <button
-          type="button"
-          className="factory-board-calendar"
-          onClick={() =>
-            window.open(
-              "/factory/production-calendar",
-              "_blank",
-              "noopener,noreferrer",
-            )
-          }
-        >
-          <CalendarDays aria-hidden="true" />
-          <span>{t("factoryBoard.productionCalendar")}</span>
-        </button>
-        <div className="factory-board-pager">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            aria-label={t("factoryBoard.previousDays")}
-            onClick={() => setStartDate((current) => addCalendarDays(current, -3))}
-          >
-            <ChevronLeft />
-          </Button>
-          <Button
-            type="button"
-            className="factory-board-today"
-            onClick={() =>
-              setStartDate(addCalendarDays(hongKongDateInputValue(), -1))
-            }
-          >
-            {t("factoryBoard.goToday")}
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            aria-label={t("factoryBoard.nextDays")}
-            onClick={() => setStartDate((current) => addCalendarDays(current, 3))}
-          >
-            <ChevronRight />
-          </Button>
-        </div>
-        <button
-          type="button"
-          className="factory-board-date"
-          aria-label={t("factoryBoard.date")}
-          onClick={() => {
-            setJumpDate(startDate);
-            setDatePickerOpen(true);
-          }}
-        >
-          <CalendarDays aria-hidden="true" />
-          <span>{t("factoryBoard.date")}</span>
-        </button>
-      </footer>
       </>
       )}
 
@@ -1261,7 +1298,7 @@ export function FactoryBoardPage({
                     <td>{item.customerName || t("common.notSet")}</td>
                     <td>{item.customerPhone || t("common.notSet")}</td>
                     <td>{item.districtName || t("common.notSet")}</td>
-                    <td>{item.deliveryTime || t("common.notSet")}</td>
+                    <td>{item.shipOutTime || t("common.notSet")}</td>
                     <td>{item.deliveryTime || t("common.notSet")}</td>
                     <td>{item.address || t("common.notSet")}</td>
                   </tr>
@@ -1293,13 +1330,14 @@ export function FactoryBoardPage({
             >
               {t("factoryBoard.close")}
             </Button>
-            <Button type="button" onClick={() => window.print()}>
+            <Button type="button" disabled={menuPrintBlocked} onClick={() => printMenuWhenUnlocked(menuOrderIds, "menu")}>
               <Printer aria-hidden="true" />
               {t("factoryBoard.print")}
             </Button>
           </>
         }
       >
+        {menuPrintBlocked ? <p className="factory-edit-lock-warning" role="alert"><TriangleAlert aria-hidden="true" /><strong>{t("factoryBoard.orderEditingPrintBlocked")}</strong></p> : null}
         {menuLoading ? (
           <p className="factory-day-state">{t("common.loading")}</p>
         ) : menuRows.length === 0 ? (

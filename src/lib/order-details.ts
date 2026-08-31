@@ -59,6 +59,7 @@ export type DetailLine = {
   unitPrice: number | null;
   totalPrice: number | null;
   isAddon: boolean;
+  isVoid?: boolean;
   remarks: string | null;
 };
 
@@ -136,6 +137,33 @@ function relatedCatalogText(
     : null;
 }
 
+export function resolveOrderDetailLineCatalog(row: {
+  sku_snapshot?: unknown;
+  product_name_snapshot?: unknown;
+  products?: unknown;
+  packages?: unknown;
+}): { sku: string | null; productName: string | null } {
+  const snapshotName = firstNonEmptyText(row.product_name_snapshot);
+  const productSku = relatedCatalogText(row.products, "sku");
+  const productName = relatedCatalogText(row.products, "name");
+
+  // A parsed package choice deliberately keeps the parent package_id so the
+  // relationship is preserved. It is still a child dish, however, and its
+  // snapshot must not be replaced by the joined parent package name/SKU.
+  return {
+    sku: firstNonEmptyText(
+      row.sku_snapshot,
+      productSku,
+      snapshotName ? null : relatedCatalogText(row.packages, "sku"),
+    ),
+    productName: firstNonEmptyText(
+      productName,
+      snapshotName,
+      relatedCatalogText(row.packages, "name"),
+    ),
+  };
+}
+
 function relatedCatalogId(relation: unknown): string | null {
   const row = Array.isArray(relation) ? relation[0] : relation;
   return row && typeof row === "object" && "id" in row
@@ -201,10 +229,9 @@ export async function fetchOrderDetail(
       supabase
         .from("order_lines")
         .select(
-          "id,product_id,package_id,sku_snapshot,product_name_snapshot,content_snapshot,quantity,unit_price,total_price,is_addon,remarks_1,remarks_2,products(sku,name),packages(sku,name)",
+          "id,product_id,package_id,sku_snapshot,product_name_snapshot,content_snapshot,quantity,unit_price,total_price,is_addon,is_void,remarks_1,remarks_2,products(sku,name),packages(sku,name)",
         )
         .eq("order_id", id)
-        .eq("is_void", false)
         .order("type_sort")
         .order("item_order"),
       documentType === "order"
@@ -336,25 +363,23 @@ export async function fetchOrderDetail(
 
   return {
     order,
-    lines: (linesResult.data ?? []).map((row) => ({
+    lines: (documentType === "order"
+      ? [
+          ...(linesResult.data ?? []).filter((row) => !row.is_void),
+          ...(linesResult.data ?? []).filter((row) => row.is_void),
+        ]
+      : (linesResult.data ?? []).filter((row) => !row.is_void)
+    ).map((row) => ({
       id: row.id,
-      sku: firstNonEmptyText(
-        row.sku_snapshot,
-        relatedCatalogText(row.products, "sku"),
-        relatedCatalogText(row.packages, "sku"),
-      ),
+      ...resolveOrderDetailLineCatalog(row),
       productId: row.product_id,
       packageId: row.package_id,
-      productName: firstNonEmptyText(
-        relatedCatalogText(row.products, "name"),
-        relatedCatalogText(row.packages, "name"),
-        row.product_name_snapshot,
-      ),
       content: row.content_snapshot,
       quantity: decimal(row.quantity),
       unitPrice: canViewFinance ? decimal(row.unit_price) : null,
       totalPrice: canViewFinance ? decimal(row.total_price) : null,
       isAddon: row.is_addon,
+      isVoid: row.is_void === true,
       remarks: row.remarks_1 || row.remarks_2,
     })),
     deliveries: (deliveriesResult.data ?? []).map((row) => ({

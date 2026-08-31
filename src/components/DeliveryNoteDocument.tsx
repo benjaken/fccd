@@ -122,7 +122,9 @@ export function DeliveryNoteDocument({
   ];
   const brandName = getBrandDisplayName(...brandValues);
   const visibleLines =
-    job?.lines.filter((line) => line.label.trim().length > 0) ?? [];
+    job?.lines.filter(
+      (line) => !line.isCancelled && line.label.trim().length > 0,
+    ) ?? [];
   const linePages = paginateDeliveryNoteLines(visibleLines);
   const totalPages = linePages.length;
 

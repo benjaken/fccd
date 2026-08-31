@@ -222,6 +222,13 @@ export function overwriteSince(sourceType: OverwriteSourceType): string {
     : AUGUST_OVERWRITE_SINCE;
 }
 
+/** Bubble object ids are the only rows that a Bubble reconciliation owns.
+ * Shopify, web quote and other operational rows can share the same order and
+ * must never be removed merely because they are absent from Bubble. */
+export function isBubbleOwnedLegacyId(value: unknown): value is string {
+  return typeof value === "string" && /^\d+x\d+$/.test(value);
+}
+
 function hasOwn(record: BubbleRecord, field: string): boolean {
   return Object.prototype.hasOwnProperty.call(record, field);
 }

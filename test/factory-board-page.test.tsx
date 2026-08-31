@@ -37,6 +37,7 @@ function item(
     address: "大埔汀角道船灣香港青年協會大美督戶外活動中心",
     deliveryAt: "2026-08-18T02:00:00.000Z",
     deliveryTime: "10:00",
+    shipOutTime: "09:30",
     districtName: "大尾督",
     motorcadeId: "team-sun",
     motorcadeName: "Sun-Line",
@@ -134,6 +135,9 @@ describe("FactoryBoardPage", () => {
     const bodyRule = stylesheet.match(
       /\.factory-job-card-body strong,\s*\.factory-job-card-body span,\s*\.factory-job-card-body small\s*\{([^}]+)\}/,
     );
+    const cardTimeRule = stylesheet.match(
+      /\.factory-job-card-body \.factory-job-card-time\s*\{([^}]+)\}/,
+    );
 
     expect(daysRule?.[1]).toContain(
       "grid-template-columns: repeat(3, minmax(520px, 1fr))",
@@ -144,6 +148,8 @@ describe("FactoryBoardPage", () => {
     expect(headingRule?.[1]).toContain("font-size: 36px");
     expect(bodyRule?.[1]).toContain("font-size: 22px");
     expect(bodyRule?.[1]).toContain("font-weight: 800");
+    expect(cardTimeRule?.[1]).toContain("white-space: nowrap");
+    expect(cardTimeRule?.[1]).toContain("font-size: 22px");
     expect(dayRule?.[1]).toContain("border-right: 4px solid var(--factory-line)");
     expect(badgeRule?.[1]).toContain("bottom: 0");
     expect(badgeRule?.[1]).toContain(
@@ -288,7 +294,7 @@ describe("FactoryBoardPage", () => {
     vi.useRealTimers();
   });
 
-  it("opens the footer date picker and jumps to the confirmed date", async () => {
+  it("opens the top date picker and jumps to the confirmed date", async () => {
     const user = userEvent.setup();
     const loadBoard = vi.fn(async (date: string) => ({
       ...board,
@@ -306,7 +312,7 @@ describe("FactoryBoardPage", () => {
     );
 
     await waitFor(() => expect(loadBoard).toHaveBeenCalledWith("2026-08-17"));
-    const dateButton = screen.getByRole("button", { name: "日期" });
+    const dateButton = screen.getByRole("button", { name: "指定日期" });
     expect(dateButton.querySelector("input")).toBeNull();
 
     await user.click(dateButton);
@@ -324,7 +330,7 @@ describe("FactoryBoardPage", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("moves the footer pager by one three-day group", async () => {
+  it("moves the top pager by one three-day group", async () => {
     const user = userEvent.setup();
     const loadBoard = vi.fn(async (date: string) => ({
       ...board,
@@ -353,7 +359,7 @@ describe("FactoryBoardPage", () => {
     await waitFor(() => expect(loadBoard).toHaveBeenCalledWith("2026-08-17"));
   });
 
-  it("opens the large serving calendar from the lower-left footer", async () => {
+  it("opens the large serving calendar from the top actions", async () => {
     const user = userEvent.setup();
     const open = vi.spyOn(window, "open").mockImplementation(() => null);
 
@@ -395,6 +401,8 @@ describe("FactoryBoardPage", () => {
     expect(await screen.findByText("大尾督")).toBeInTheDocument();
     expect(screen.getByText("8月18日 (二)")).toBeInTheDocument();
     expect(screen.getByText("#B-1522")).toBeInTheDocument();
+    expect(screen.getByText("09:30")).toBeInTheDocument();
+    expect(screen.queryByText("10:00")).not.toBeInTheDocument();
     expect(screen.getByText("(7份)")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "多日菜式總表" })).toHaveClass(
       "factory-board-multi-day",
@@ -734,6 +742,7 @@ describe("FactoryBoardPage", () => {
               id: "line-print",
               label: "(單格) 煎雞扒胡麻沙律",
               labelName: "煎雞扒胡麻沙律\n走醬另上",
+              labelNames: ["煎雞扒胡麻沙律\n走醬另上", "胡麻醬\n另上"],
               quantityText: "3",
               remarks: ["走醬"],
               printed: false,
@@ -785,17 +794,37 @@ describe("FactoryBoardPage", () => {
         .find((element) => element.classList.contains("factory-label-original-name")),
     ).toBeInTheDocument();
     expect(screen.getByText("煎雞扒胡麻沙律 走醬另上")).toHaveClass("factory-label-database-name");
+    expect(screen.getByText("胡麻醬 另上")).toHaveClass("factory-label-database-name");
     expect(screen.getByText(/此菜式有以下變更/)).toBeInTheDocument();
     expect(screen.getByText("數量")).toBeInTheDocument();
     expect(screen.getByText("1 → 3")).toBeInTheDocument();
-    const fullSet = screen.getByRole("button", { name: "印全套標籤（3個）" });
+    const fullSet = screen.getByRole("button", { name: "印全套標籤（6個）" });
+    await waitFor(() => expect(fullSet).toBeEnabled());
+    const singleSet = screen.getByRole("button", { name: "印單個標籤（2個）" });
+    await user.click(singleSet);
+    expect(loadLabelCommand).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ labelName: "煎雞扒胡麻沙律\n走醬另上", copies: 1 }),
+    );
+    expect(loadLabelCommand).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ labelName: "胡麻醬\n另上", copies: 1 }),
+    );
+    expect(markLinePrinted).not.toHaveBeenCalled();
+    loadLabelCommand.mockClear();
+    printLabels.mockClear();
     await waitFor(() => expect(fullSet).toBeEnabled());
     await user.click(fullSet);
 
-    expect(loadLabelCommand).toHaveBeenCalledWith(
-      expect.objectContaining({ copies: 3 }),
+    expect(loadLabelCommand).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ labelName: "煎雞扒胡麻沙律\n走醬另上", copies: 3 }),
     );
-    expect(printLabels).toHaveBeenCalledWith("Zebra ZD421", "VEVTUA==", 1);
+    expect(loadLabelCommand).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ labelName: "胡麻醬\n另上", copies: 3 }),
+    );
+    expect(printLabels).toHaveBeenCalledWith("Zebra ZD421", "VEVTUFRFU1A=", 1);
     expect(markLinePrinted).toHaveBeenCalledWith("line-print");
     expect(
       await screen.findByText("全套標籤已送到打印機。"),

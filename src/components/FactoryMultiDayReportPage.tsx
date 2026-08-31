@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Printer, X } from "lucide-react";
+import { ArrowLeft, Printer, TriangleAlert, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -19,6 +19,7 @@ import {
 } from "@/lib/factory-board";
 import { qzTrayClient, useQzTray, type QzTrayClient } from "@/lib/qz-tray";
 import { formatFactoryOrderNumber } from "@/lib/factory-order-number";
+import { fetchActiveOrderEditIds } from "@/lib/order-edit-lock";
 
 function orderCell(row: FactoryMultiDayMenuRow | undefined) {
   if (!row) return null;
@@ -39,10 +40,12 @@ function orderCell(row: FactoryMultiDayMenuRow | undefined) {
 export function FactoryMultiDayReportPage({
   loadBrands = fetchFactoryBrands,
   loadRows = fetchFactoryMultiDayMenu,
+  loadActiveEditOrderIds = fetchActiveOrderEditIds,
   qzClient = qzTrayClient,
 }: {
   loadBrands?: typeof fetchFactoryBrands;
   loadRows?: typeof fetchFactoryMultiDayMenu;
+  loadActiveEditOrderIds?: typeof fetchActiveOrderEditIds;
   qzClient?: QzTrayClient;
 }) {
   const { t, i18n } = useTranslation();
@@ -57,6 +60,7 @@ export function FactoryMultiDayReportPage({
   const [activeBrandIds, setActiveBrandIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [printBlocked, setPrintBlocked] = useState(false);
 
   useEffect(() => {
     if (!startDate || !endDate || endDate < startDate) {
@@ -73,6 +77,13 @@ export function FactoryMultiDayReportPage({
         setBrands(nextBrands);
         setActiveBrandIds(nextBrands.map((brand) => brand.id));
         setRows(nextRows);
+        void loadActiveEditOrderIds([
+          ...new Set(nextRows.map((row) => row.orderId)),
+        ]).then((activeEditOrderIds) => {
+          if (!cancelled) setPrintBlocked(activeEditOrderIds.size > 0);
+        }).catch(() => {
+          if (!cancelled) setPrintBlocked(true);
+        });
       })
       .catch(() => {
         if (!cancelled) setError(true);
@@ -83,7 +94,7 @@ export function FactoryMultiDayReportPage({
     return () => {
       cancelled = true;
     };
-  }, [endDate, loadBrands, loadRows, startDate]);
+  }, [endDate, loadActiveEditOrderIds, loadBrands, loadRows, startDate]);
 
   const activeBrands = useMemo(() => new Set(activeBrandIds), [activeBrandIds]);
   const reportRows = useMemo(
@@ -141,10 +152,11 @@ export function FactoryMultiDayReportPage({
               date: factoryMultiDayPrintedDate(new Date(), i18n.language),
             })}
           </p>
-          <Button type="button" className="factory-multi-day-print no-print" onClick={() => window.print()}>
+          <Button type="button" className="factory-multi-day-print no-print" disabled={printBlocked} onClick={() => window.print()}>
             <Printer aria-hidden="true" />{t("factoryBoard.print")}
           </Button>
         </header>
+        {printBlocked ? <p className="factory-edit-lock-warning no-print" role="alert"><TriangleAlert aria-hidden="true" /><strong>{t("factoryBoard.orderEditingPrintBlocked")}</strong></p> : null}
 
         <div className="factory-multi-day-brands" aria-label={t("factoryBoard.brands")}>
           {brands.filter((brand) => activeBrands.has(brand.id)).map((brand) => (

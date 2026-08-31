@@ -374,7 +374,6 @@ begin
     where orders.document_type = 'order'
       and orders.archived_at is null
       and orders.merged_into_order_id is null
-      and orders.source_system is distinct from 'shopify'
       and not coalesce(orders.is_sent_to_factory, false)
       and not coalesce(orders.do_not_send_to_factory, false)
       and coalesce(orders.delivery_status, '') !~* '(cancel|取消)'
@@ -403,7 +402,7 @@ begin
     and not exists (
       select 1 from public.orders orders where orders.id = issue.order_id
         and orders.document_type = 'order' and orders.archived_at is null
-        and orders.source_system is distinct from 'shopify'
+        and orders.merged_into_order_id is null
         and not coalesce(orders.is_sent_to_factory, false)
         and not coalesce(orders.do_not_send_to_factory, false)
         and coalesce(orders.delivery_status, '') !~* '(cancel|取消)'

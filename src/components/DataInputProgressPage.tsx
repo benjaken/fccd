@@ -8,6 +8,7 @@ import { ListTable } from "@/components/ui/list-table";
 import { SidePanel } from "@/components/ui/side-panel";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { fetchDataInputProgressSummary, type DataInputProgressSummary } from "@/lib/data-input-progress";
+import { hongKongDateKey } from "@/lib/date-time";
 import { fetchPayments, type PaymentListItem } from "@/lib/payments";
 
 type InputStatus = "attention" | "upcoming" | "entered" | "recorded" | "missing" | "current" | "complete";
@@ -140,7 +141,7 @@ function dayKey(value: Date | string | null) {
 }
 
 function currentMondayKey() {
-  const current = new Date();
+  const current = new Date(`${hongKongDateKey(new Date())}T12:00:00Z`);
   const day = current.getUTCDay();
   current.setUTCDate(current.getUTCDate() - ((day + 6) % 7));
   return current.toISOString().slice(0, 10);

@@ -17,6 +17,10 @@ const productionCronMigration = readFileSync(
   "supabase/migrations/20260831124000_production_only_order_reconciliation_crons.sql",
   "utf8",
 );
+const factoryUnsentSection = migration.slice(
+  migration.indexOf("select 'factory_unsent'"),
+  migration.indexOf("with candidates as (", migration.indexOf("select 'factory_unsent'") + 1),
+);
 
 describe("Shopify/FCCD order reconciliation alerts", () => {
   it("reconciles one calendar month back through every future service date", () => {
@@ -31,6 +35,13 @@ describe("Shopify/FCCD order reconciliation alerts", () => {
     expect(migration).toContain("p_now + interval '6 hours'");
     expect(migration).toContain("not coalesce(orders.is_sent_to_factory, false)");
     expect(migration).toContain("v_today and v_today + 2");
+  });
+
+  it("warns for every unsent order in the three-day window, including orders under review", () => {
+    expect(factoryUnsentSection).toContain("not coalesce(orders.is_sent_to_factory, false)");
+    expect(factoryUnsentSection).toContain("not coalesce(orders.do_not_send_to_factory, false)");
+    expect(factoryUnsentSection).toContain("between v_today and v_today + 2");
+    expect(factoryUnsentSection).not.toContain("orders.source_system is distinct from 'shopify'");
   });
 
   it("uses only configured internal email and WhatsApp recipients", () => {

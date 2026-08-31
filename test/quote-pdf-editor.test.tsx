@@ -322,6 +322,19 @@ describe("editable quote PDF page", () => {
     expect(loadDetail).toHaveBeenCalledWith("quote-1", "quote", true);
   });
 
+  it("shows the Hong Kong delivery date when midnight is stored as the previous UTC day", async () => {
+    const midnightDeliveryResult: OrderDetailResult = {
+      ...result,
+      order: result.order
+        ? { ...result.order, deliveryAt: "2026-10-14T16:00:00.000Z" }
+        : null,
+    };
+
+    renderPage(vi.fn().mockResolvedValue(midnightDeliveryResult));
+
+    expect(await screen.findByLabelText("送貨日期")).toHaveValue("15/10/2026");
+  });
+
   it("supports free-text additional information and searching templates", async () => {
     const user = userEvent.setup();
     renderPage(vi.fn().mockResolvedValue(lunchBoxResult));

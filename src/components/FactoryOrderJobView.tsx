@@ -53,6 +53,14 @@ export function factoryLabelPrintCompletesSet(
   return fullSet || factoryLabelCopies(quantityText) === 1;
 }
 
+export function factoryOrderLineLabelNames(line: FactoryOrderLine): string[] {
+  const configuredNames = (line.labelNames ?? [])
+    .map((name) => name.trim())
+    .filter(Boolean);
+  if (configuredNames.length) return configuredNames;
+  return [line.labelName?.trim() || line.label.trim()].filter(Boolean);
+}
+
 const factoryChangeFieldKeys: Record<string, string> = {
   product_id: "factoryBoard.changedProduct",
   package_id: "factoryBoard.changedPackage",
@@ -141,14 +149,18 @@ export function FactoryOrderJobView({
   const arrivalWindow = job?.arrivalWindow || empty;
   const assignedFleet = fleets.find((fleet) => fleet.id === assignedFleetId);
   const selectedLine = job?.lines.find((line) => line.id === selectedLineId) ?? null;
+  const selectedLabelNames = selectedLine ? factoryOrderLineLabelNames(selectedLine) : [];
   const selectedName =
     assignedFleet?.shortName ||
     assignedFleet?.name ||
     selectedBadge ||
     item.motorcadeName ||
     t("factoryBoard.unassignedFleet");
-  const visibleLines =
-    job?.lines.filter((line) => line.label.trim().length > 0) ?? [];
+  const displayLines = job?.lines.filter(
+    (line) => line.isCancelled || line.label.trim().length > 0,
+  ) ?? [];
+  const printableLines = displayLines.filter((line) => !line.isCancelled);
+  const printBlocked = Boolean(job?.isBeingEdited);
 
   useEffect(() => {
     setAssignedFleetId(item.motorcadeId ?? "");
@@ -184,27 +196,31 @@ export function FactoryOrderJobView({
   };
 
   const printLine = async (line: FactoryOrderLine, fullSet: boolean) => {
-    if (qz.state !== "connected" || !selectedPrinter) return;
+    if (printBlocked || line.isCancelled || qz.state !== "connected" || !selectedPrinter) return;
     setPrinting(true);
     setPrintError(false);
     setPrintSuccess(null);
     try {
       const fullSetCopies = labelCopies(line);
       const copies = fullSet ? fullSetCopies : 1;
+      const labelNames = factoryOrderLineLabelNames(line);
       const completesSet = factoryLabelPrintCompletesSet(
         line.quantityText,
         fullSet,
       );
-      const commandBase64 = await loadLabelCommand({
-        orderNumber,
-        deliveryDate: dateKey,
-        labelName: line.labelName?.trim() || line.label,
-        remarks: [...line.remarks, job?.packingNote ?? ""].filter(Boolean),
-        copies,
-      });
+      const labelCommands: string[] = [];
+      for (const labelName of labelNames) {
+        labelCommands.push(await loadLabelCommand({
+          orderNumber,
+          deliveryDate: dateKey,
+          labelName,
+          remarks: [...line.remarks, job?.packingNote ?? ""].filter(Boolean),
+          copies,
+        }));
+      }
       await qz.printLabels(
         selectedPrinter,
-        commandBase64,
+        combineFactoryLabelBase64(labelCommands),
         1,
       );
       if (completesSet) {
@@ -229,28 +245,29 @@ export function FactoryOrderJobView({
   };
 
   const printAllLabels = async () => {
-    if (qz.state !== "connected" || !selectedPrinter || !visibleLines.length) return;
+    if (printBlocked || qz.state !== "connected" || !selectedPrinter || !printableLines.length) return;
     setBulkPrinting("all");
     setBulkPrintError(false);
     setBulkPrintSuccess(null);
     try {
       const labelCommands: string[] = [];
-      for (const line of visibleLines) {
-        const commandBase64 = await loadLabelCommand({
-          orderNumber,
-          deliveryDate: dateKey,
-          labelName: line.labelName?.trim() || line.label,
-          remarks: [...line.remarks, job?.packingNote ?? ""].filter(Boolean),
-          copies: labelCopies(line),
-        });
-        labelCommands.push(commandBase64);
+      for (const line of printableLines) {
+        for (const labelName of factoryOrderLineLabelNames(line)) {
+          labelCommands.push(await loadLabelCommand({
+            orderNumber,
+            deliveryDate: dateKey,
+            labelName,
+            remarks: [...line.remarks, job?.packingNote ?? ""].filter(Boolean),
+            copies: labelCopies(line),
+          }));
+        }
       }
       await qz.printLabels(
         selectedPrinter,
         combineFactoryLabelBase64(labelCommands),
         1,
       );
-      for (const line of visibleLines) {
+      for (const line of printableLines) {
         try {
           await markLinePrinted(line.id);
           onLinePrinted?.(line.id);
@@ -267,7 +284,7 @@ export function FactoryOrderJobView({
   };
 
   const printAddressLabel = async () => {
-    if (qz.state !== "connected" || !selectedPrinter) return;
+    if (printBlocked || qz.state !== "connected" || !selectedPrinter) return;
     setBulkPrinting("address");
     setBulkPrintError(false);
     setBulkPrintSuccess(null);
@@ -403,15 +420,17 @@ export function FactoryOrderJobView({
             <p className="factory-day-state">{t("common.loading")}</p>
           ) : error ? (
             <p className="factory-day-state">{t("factoryBoard.orderLoadError")}</p>
-          ) : !visibleLines.length ? (
+          ) : !displayLines.length ? (
             <p className="factory-day-state">{t("factoryBoard.emptyLines")}</p>
           ) : (
-            visibleLines.map((line) => (
+            displayLines.map((line) => (
               <button
                 type="button"
-                className="factory-order-line"
+                className={`factory-order-line${line.isCancelled ? " is-cancelled" : ""}`}
                 key={line.id}
+                disabled={printBlocked || line.isCancelled}
                 onClick={() => {
+                  if (printBlocked || line.isCancelled) return;
                   setSelectedLineId(line.id);
                   setPrintError(false);
                   setPrintSuccess(null);
@@ -437,6 +456,7 @@ export function FactoryOrderJobView({
                 <div className="factory-order-line-body">
                   {line.isAddon ? <span className="factory-order-line-addon">加單</span> : null}
                   <strong>{line.label}</strong>
+                  {line.isCancelled ? <span className="factory-order-line-cancelled">{t("factoryBoard.cancelled")}</span> : null}
                   {line.quantityText ? (
                     <span className="factory-order-line-quantity">
                       × {line.quantityText}
@@ -474,21 +494,21 @@ export function FactoryOrderJobView({
         ) : null}
         <Button
           type="button"
-          disabled={!canPrint || !selectedPrinter || !visibleLines.length || bulkPrinting !== null}
+          disabled={printBlocked || !canPrint || !selectedPrinter || !printableLines.length || bulkPrinting !== null}
           onClick={() => void printAllLabels()}
         >
           {bulkPrinting === "all" ? t("factoryBoard.printing") : t("factoryBoard.printAll")}
         </Button>
         <Button
           type="button"
-          disabled={!canPrint || !selectedPrinter || bulkPrinting !== null}
+          disabled={printBlocked || !canPrint || !selectedPrinter || bulkPrinting !== null}
           onClick={() => void printAddressLabel()}
         >
           {bulkPrinting === "address" ? t("factoryBoard.printing") : t("factoryBoard.printAddress")}
         </Button>
         <Button
           type="button"
-          disabled={loading || error || !job}
+          disabled={printBlocked || loading || error || !job}
           onClick={() => printPdf("送貨單", orderNumber === empty ? "" : orderNumber)}
         >
           {t("factoryBoard.printDeliveryNote")}
@@ -496,6 +516,7 @@ export function FactoryOrderJobView({
         <Button
           type="button"
           className="factory-order-selected"
+          disabled={printBlocked}
           onClick={() => {
             setSelectedFleetId(assignedFleetId);
             setAssignError(false);
@@ -520,7 +541,7 @@ export function FactoryOrderJobView({
           <select
             aria-label={t("factoryBoard.connectPrinter")}
             value={selectedPrinter}
-            disabled={!canPrint}
+            disabled={printBlocked || !canPrint}
             onChange={(event) => setSelectedPrinter(event.target.value)}
           >
             <option value="">
@@ -536,6 +557,15 @@ export function FactoryOrderJobView({
           </select>
         </label>
       </aside>
+
+      {printBlocked ? (
+        <div className="factory-order-edit-lock-overlay" role="alert">
+          <div className="factory-order-edit-lock-message">
+            <TriangleAlert aria-hidden="true" />
+            <strong>{t("factoryBoard.orderEditingPrintBlocked")}</strong>
+          </div>
+        </div>
+      ) : null}
 
       <DeliveryNoteDocument order={item} job={job} printOnly />
 
@@ -711,9 +741,13 @@ export function FactoryOrderJobView({
                     {selectedLine.label}
                   </strong>
                   <span>{t("factoryBoard.labelName")}</span>
-                  <strong className="factory-label-database-name">
-                    {selectedLine.labelName?.trim().replace(/\r?\n/g, " ") || selectedLine.label}
-                  </strong>
+                  <div className="factory-label-database-names">
+                    {selectedLabelNames.map((labelName, index) => (
+                      <strong className="factory-label-database-name" key={`${labelName}-${index}`}>
+                        {labelName.replace(/\r?\n/g, " ")}
+                      </strong>
+                    ))}
+                  </div>
                 </div>
                 <div>
                   <span>{t("factoryBoard.orderedQuantity")}</span>
@@ -742,7 +776,7 @@ export function FactoryOrderJobView({
                 <span>{t("factoryBoard.choosePrinter")}</span>
                 <select
                   value={selectedPrinter}
-                  disabled={!canPrint || printing}
+                  disabled={printBlocked || !canPrint || printing}
                   onChange={(event) => setSelectedPrinter(event.target.value)}
                 >
                   <option value="">{t("factoryBoard.noPrinter")}</option>
@@ -770,24 +804,24 @@ export function FactoryOrderJobView({
               <div className="factory-label-actions">
                 <Button
                   type="button"
-                  disabled={!canPrint || !selectedPrinter || printing}
+                  disabled={printBlocked || !canPrint || !selectedPrinter || printing}
                   onClick={() => void printLine(selectedLine, true)}
                 >
                   <Printer aria-hidden="true" />
                   {printing
                     ? t("factoryBoard.printing")
                     : t("factoryBoard.printFullLabelSet", {
-                        count: labelCopies(selectedLine),
+                        count: labelCopies(selectedLine) * selectedLabelNames.length,
                       })}
                 </Button>
                 <Button
                   type="button"
                   className="factory-label-print-one"
-                  disabled={!canPrint || !selectedPrinter || printing}
+                  disabled={printBlocked || !canPrint || !selectedPrinter || printing}
                   onClick={() => void printLine(selectedLine, false)}
                 >
                   <Printer aria-hidden="true" />
-                  {t("factoryBoard.printOneLabel")}
+                  {t("factoryBoard.printOneLabel", { count: selectedLabelNames.length })}
                 </Button>
               </div>
             </div>
