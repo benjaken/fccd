@@ -1390,6 +1390,7 @@ export function QuoteEditorPage({
         className="quote-order-factory-settings"
         doNotSendToFactory={factorySettings.doNotSendToFactory}
         suppressFactoryReprint={factorySettings.suppressFactoryReprint}
+        showDoNotSend={false}
         onDoNotSendChange={(checked) =>
           setFactorySettings((current) => ({
             ...current,
@@ -2073,7 +2074,7 @@ export function QuoteEditorPage({
           </article>
         </div>
         {factorySettingsPanel}
-        <section className="panel quote-editor-supplements">
+        {!isOrder ? <section className="panel quote-editor-supplements">
           <header className="quote-editor-supplement-actions">
             <div>
               <Button type="button" variant="outline" onClick={() => setAdditionalOpen(true)}><Plus />新增額外資訊</Button>
@@ -2101,7 +2102,7 @@ export function QuoteEditorPage({
               )) : <p>尚未新增活動項目</p>}
             </article>
           </div>
-        </section>
+        </section> : null}
 
         <Modal
           open={packageChoiceOpen}
@@ -2225,19 +2226,19 @@ export function QuoteEditorPage({
           </form>
         </Modal>
 
-        <Modal open={additionalOpen} onClose={() => setAdditionalOpen(false)} title="額外資訊" closeLabel="關閉額外資訊" size="lg" className="quote-supplement-modal" footer={<Button onClick={() => setAdditionalOpen(false)}>確定</Button>}>
+        {!isOrder ? <Modal open={additionalOpen} onClose={() => setAdditionalOpen(false)} title="額外資訊" closeLabel="關閉額外資訊" size="lg" className="quote-supplement-modal" footer={<Button onClick={() => setAdditionalOpen(false)}>確定</Button>}>
           <div className="quote-additional-picker">
             <div className="quote-additional-search"><Search /><input autoFocus aria-label="搜尋額外資訊" placeholder={t("quoteEditor.placeholders.additionalSearchPlaceholder")} value={additionalSearch} onChange={(event) => setAdditionalSearch(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") addAdditionalInfo(additionalSearch); }} /><Button variant="outline" onClick={() => addAdditionalInfo(additionalSearch)}><Plus />{t("quoteEditor.items.customProductAdd")}</Button></div>
             <ul>{additionalInfoOptions.filter((option) => !additionalSearch.trim() || option.toLocaleLowerCase().includes(additionalSearch.trim().toLocaleLowerCase())).map((option) => <li key={option}><span>{option}</span><Button size="sm" variant="outline" onClick={() => addAdditionalInfo(option)}><Plus />加入</Button></li>)}</ul>
           </div>
-        </Modal>
+        </Modal> : null}
 
-        <Modal open={activityOpen} onClose={() => setActivityOpen(false)} title="活動項目" closeLabel="關閉活動項目" size="lg" className="quote-supplement-modal" footer={<Button onClick={() => setActivityOpen(false)}>確定</Button>}>
+        {!isOrder ? <Modal open={activityOpen} onClose={() => setActivityOpen(false)} title="活動項目" closeLabel="關閉活動項目" size="lg" className="quote-supplement-modal" footer={<Button onClick={() => setActivityOpen(false)}>確定</Button>}>
           <div className="quote-additional-picker quote-activity-picker">
             <div className="quote-additional-search"><Search /><input autoFocus aria-label="搜尋活動項目" placeholder={t("quoteEditor.placeholders.activitySearchPlaceholder")} value={activitySearch} onChange={(event) => setActivitySearch(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") addActivity(activitySearch); }} /><Button variant="outline" onClick={() => addActivity(activitySearch)}><Plus />{t("quoteEditor.items.customProductAdd")}</Button></div>
             <ul>{activityOptions.filter((option) => !activitySearch.trim() || option.description.toLocaleLowerCase().includes(activitySearch.trim().toLocaleLowerCase())).map((option) => <li key={option.description}><span>{option.description}</span><span>${Number(option.amount).toLocaleString("zh-HK")}</span><Button size="sm" variant="outline" onClick={() => addActivity(option.description, option.amount)}><Plus />加入</Button></li>)}</ul>
           </div>
-        </Modal>
+        </Modal> : null}
         </>
       ) : null}
 

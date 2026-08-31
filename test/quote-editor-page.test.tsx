@@ -1363,19 +1363,19 @@ describe("Quote editor", () => {
     expect(screen.queryByRole("button", { name: "Convert to order" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("tab", { name: /Add products|加入貨品/ }));
     expect(screen.getByRole("combobox", { name: /Shipping fee option|運費選項/ })).toHaveValue("");
-    const doNotSend = screen.getByRole("checkbox", { name: /Do not send to factory|不傳送到工場/ });
+    const doNotSend = screen.queryByRole("checkbox", { name: /Do not send to factory|不傳送到工場/ });
     const suppressFactoryChange = screen.getByRole("checkbox", { name: /Do not notify factory of changes|不通知工場有更改/ });
-    expect(doNotSend).not.toBeChecked();
+    expect(doNotSend).not.toBeInTheDocument();
     expect(suppressFactoryChange).toBeEnabled();
     expect(screen.getByRole("button", { name: /Send to factory|送至工場/ })).toBeInTheDocument();
     await user.click(suppressFactoryChange);
     expect(suppressFactoryChange).toBeChecked();
     await user.click(screen.getByRole("button", { name: /Send to factory|送至工場/ }));
     expect(setFactoryStatus).toHaveBeenCalledWith("order-1", true);
-    expect(doNotSend).not.toBeChecked();
     await user.click(screen.getByRole("button", { name: /Cancel factory send|取消送至工場/ }));
     expect(setFactoryStatus).toHaveBeenLastCalledWith("order-1", false);
-    expect(doNotSend).not.toBeChecked();
+    expect(screen.queryByRole("button", { name: /新增額外資訊|Add additional information/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /新增活動項目|Add activity item/ })).not.toBeInTheDocument();
 
     view.unmount();
     render(
