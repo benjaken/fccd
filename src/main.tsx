@@ -5,6 +5,7 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import "./i18n";
 import "./index.css";
+import "./order-editing-workflow.css";
 import "./components/ui/table-actions.css";
 
 createRoot(document.getElementById("root")!).render(

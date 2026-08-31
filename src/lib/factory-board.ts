@@ -7,6 +7,7 @@ import {
 } from "@/lib/deliveries"
 import { supabase } from "@/lib/supabase"
 import { formatFactoryOrderNumber } from "@/lib/factory-order-number"
+import { fetchActiveOrderEditIds } from "@/lib/order-edit-lock"
 
 export const UNASSIGNED_FLEET_ID = "__unassigned__"
 export const ALL_BRAND_ID = "__all__"
@@ -22,6 +23,7 @@ export type FactoryBoardData = {
 export type FactoryBoardItem = DeliveryListItem & {
   factorySource?: "delivery" | "meat"
   factoryPrintStatus?: FactoryOrderPrintStatus
+  isBeingEdited?: boolean
 }
 
 export type FactoryOrderPrintStatus = "complete" | "needs-reprint" | "incomplete"
@@ -61,6 +63,7 @@ export type FactoryOrderLine = {
   printed: boolean
   requiresReprint?: boolean
   isAddon?: boolean
+  isCancelled?: boolean
   changes?: FactoryOrderLineChange[]
 }
 
@@ -85,6 +88,7 @@ export type FactoryOrderJob = {
   needsLabelReprint?: boolean
   needsDeliveryNoteReprint?: boolean
   removedLineChanges?: FactoryOrderLineChange[]
+  isBeingEdited?: boolean
   lines: FactoryOrderLine[]
 }
 
@@ -898,9 +902,10 @@ export async function fetchFactoryBoard(
         .filter((orderId): orderId is string => Boolean(orderId)),
     ),
   ]
-  const [portionsByOrderId, printStatusByOrderId, changeTasksResult] = await Promise.all([
+  const [portionsByOrderId, printStatusByOrderId, activeEditOrderIds, changeTasksResult] = await Promise.all([
     fetchOrderPortionTotals(orderIds),
     fetchOrderPrintStatuses(orderIds),
+    fetchActiveOrderEditIds(orderIds),
     orderIds.length
       ? supabase
           .from("factory_change_tasks")
@@ -912,7 +917,10 @@ export async function fetchFactoryBoard(
   if (changeTasksResult.error) throw changeTasksResult.error
   return {
     dates,
-    items,
+    items: items.map((item) => ({
+      ...item,
+      isBeingEdited: Boolean(item.orderId && activeEditOrderIds.has(item.orderId)),
+    })),
     portionsByOrderId,
     printStatusByOrderId,
     pendingChangeCount: changeTasksResult.count ?? 0,
@@ -920,7 +928,7 @@ export async function fetchFactoryBoard(
 }
 
 export async function fetchFactoryOrderJob(orderId: string): Promise<FactoryOrderJob> {
-  const [orderResult, linesResult, changeTaskResult, lineChangesResult] = await Promise.all([
+  const [orderResult, linesResult, changeTaskResult, lineChangesResult, activeEditOrderIds] = await Promise.all([
     supabase
       .from("orders")
       .select(
@@ -947,6 +955,7 @@ export async function fetchFactoryOrderJob(orderId: string): Promise<FactoryOrde
       .eq("order_id", orderId)
       .is("resolved_at", null)
       .order("changed_at"),
+    fetchActiveOrderEditIds([orderId]),
   ])
   if (orderResult.error) {
     throw orderResult.error
@@ -1046,7 +1055,11 @@ export async function fetchFactoryOrderJob(orderId: string): Promise<FactoryOrde
     needsLabelReprint: Boolean(changeTaskResult.data?.needs_label_reprint),
     needsDeliveryNoteReprint: Boolean(changeTaskResult.data?.needs_delivery_note_reprint),
     removedLineChanges,
-    lines: allLines.filter((row) => !row.is_void).map((row) => ({
+    isBeingEdited: activeEditOrderIds.has(orderId),
+    lines: [
+      ...allLines.filter((row) => !row.is_void),
+      ...allLines.filter((row) => row.is_void),
+    ].map((row) => ({
       id: row.id as string,
       labelName:
         factoryOrderLineLabelName(
@@ -1072,11 +1085,14 @@ export async function fetchFactoryOrderJob(orderId: string): Promise<FactoryOrde
       remarks: [row.remarks_1, row.remarks_2]
         .map((value) => (value as string | null)?.trim() ?? "")
         .filter((value, index, values) => value && values.indexOf(value) === index),
-      printed: Boolean(row.is_printed),
+      printed: !row.is_void && Boolean(row.is_printed),
       isAddon: Boolean(row.is_addon),
+      isCancelled: Boolean(row.is_void),
       changes: changesByLineId.get(row.id as string) ?? [],
       requiresReprint:
-        pendingLineChanges.length > 0
+        row.is_void
+          ? false
+          : pendingLineChanges.length > 0
           ? (changesByLineId.get(row.id as string) ?? []).some(
               (change) => change.operation !== "delete",
             )

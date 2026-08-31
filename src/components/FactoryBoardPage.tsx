@@ -201,6 +201,8 @@ export function FactoryBoardPage({
   } | null>(null);
   const [menuRows, setMenuRows] = useState<FactoryMenuRow[]>([]);
   const [menuLoading, setMenuLoading] = useState(false);
+  const [menuPrintBlocked, setMenuPrintBlocked] = useState(false);
+  const [multiDayPrintBlocked, setMultiDayPrintBlocked] = useState(false);
   const [selectedJob, setSelectedJob] = useState<DeliveryListItem | null>(null);
   const [orderJob, setOrderJob] = useState<FactoryOrderJob | null>(null);
   const [jobLoading, setJobLoading] = useState(false);
@@ -261,6 +263,24 @@ export function FactoryBoardPage({
     () => [...menuRows].sort(compareFactoryMenuRows),
     [menuRows],
   );
+  const menuOrderIds = useMemo(
+    () => [...new Set(menuRows.flatMap((row) => (row.orders ?? []).map((order) => order.orderId)))],
+    [menuRows],
+  );
+  const multiDayOrderIds = useMemo(
+    () => [...new Set(aggregatedMultiDayRows.flatMap((row) => row.orders.map((order) => order.orderId)))],
+    [aggregatedMultiDayRows],
+  );
+
+  const printMenuWhenUnlocked = (orderIds: string[], scope: "menu" | "multi-day") => {
+    const orderIdSet = new Set(orderIds);
+    const blocked = (board?.items ?? []).some(
+      (item) => Boolean(item.orderId && orderIdSet.has(item.orderId) && item.isBeingEdited),
+    );
+    if (scope === "menu") setMenuPrintBlocked(blocked);
+    else setMultiDayPrintBlocked(blocked);
+    if (!blocked) window.print();
+  };
   const menuBrandHeading = menuSummary?.brandId === ALL_BRAND_ID
     ? brands.map((brand) => brand.name).join(", ") || menuSummary?.brandName || ""
     : menuSummary?.brandName || "";
@@ -366,8 +386,10 @@ export function FactoryBoardPage({
     if (!menuSummary) {
       setMenuRows([]);
       setMenuLoading(false);
+      setMenuPrintBlocked(false);
       return;
     }
+    setMenuPrintBlocked(false);
     const orderIds = (board?.items ?? [])
       .filter(
         (item) =>
@@ -398,8 +420,10 @@ export function FactoryBoardPage({
       setMultiDayRows([]);
       setMultiDayLoading(false);
       setMultiDayError(false);
+      setMultiDayPrintBlocked(false);
       return;
     }
+    setMultiDayPrintBlocked(false);
     let cancelled = false;
     setMultiDayLoading(true);
     setMultiDayError(false);
@@ -741,12 +765,14 @@ export function FactoryBoardPage({
             <Button
               type="button"
               className="factory-multi-day-print no-print"
-              onClick={() => window.print()}
+              disabled={multiDayPrintBlocked}
+              onClick={() => printMenuWhenUnlocked(multiDayOrderIds, "multi-day")}
             >
               <Printer aria-hidden="true" />
               {t("factoryBoard.print")}
             </Button>
           </header>
+          {multiDayPrintBlocked ? <p className="factory-edit-lock-warning no-print" role="alert"><TriangleAlert aria-hidden="true" /><strong>{t("factoryBoard.orderEditingPrintBlocked")}</strong></p> : null}
 
           <div className="factory-multi-day-brands" aria-label={t("factoryBoard.brands")}>
             {brands
@@ -865,6 +891,7 @@ export function FactoryBoardPage({
                       onClick={() => openJob(item)}
                     >
                       {newOrder ? <span className="factory-new-order-corner" title={t("factoryBoard.newOrder")}><Star aria-label={t("factoryBoard.newOrder")} /></span> : null}
+                      {item.isBeingEdited ? <span className="factory-job-editing-tag"><TriangleAlert aria-hidden="true" />{t("factoryBoard.editing")}</span> : null}
                       <span
                         className={cn(
                           "factory-job-print-status",
@@ -1293,13 +1320,14 @@ export function FactoryBoardPage({
             >
               {t("factoryBoard.close")}
             </Button>
-            <Button type="button" onClick={() => window.print()}>
+            <Button type="button" disabled={menuPrintBlocked} onClick={() => printMenuWhenUnlocked(menuOrderIds, "menu")}>
               <Printer aria-hidden="true" />
               {t("factoryBoard.print")}
             </Button>
           </>
         }
       >
+        {menuPrintBlocked ? <p className="factory-edit-lock-warning" role="alert"><TriangleAlert aria-hidden="true" /><strong>{t("factoryBoard.orderEditingPrintBlocked")}</strong></p> : null}
         {menuLoading ? (
           <p className="factory-day-state">{t("common.loading")}</p>
         ) : menuRows.length === 0 ? (
