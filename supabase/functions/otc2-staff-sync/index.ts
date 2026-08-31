@@ -282,10 +282,9 @@ async function syncStaff(admin: SupabaseClient, source: SupabaseClient) {
         { ban_duration: "876000h" },
       );
       if (authError) throw new Error(`account_disable_failed:${authError.message}`);
-      if (
-        profile.login_enabled ||
-        profile.login_disabled_reason !== "otc2_inactive"
-      ) {
+      // Preserve an explicit manual disable so returning to Active status does
+      // not silently restore access on a later sync.
+      if (profile.login_enabled || !profile.login_disabled_reason) {
         const { error: profileError } = await admin
           .from("user_profiles")
           .update({

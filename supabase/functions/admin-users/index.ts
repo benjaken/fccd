@@ -53,11 +53,18 @@ type InviteEmployeePayload = {
   redirectTo: string;
 };
 
+type SetEmployeeLoginPayload = {
+  action: "setEmployeeLogin";
+  employeeId: string;
+  loginEnabled: boolean;
+};
+
 type Payload =
   | CreatePayload
   | UpdatePasswordPayload
   | UpdateProfilePayload
-  | InviteEmployeePayload;
+  | InviteEmployeePayload
+  | SetEmployeeLoginPayload;
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -149,6 +156,7 @@ async function requirePageAccess(
   request: Request,
   admin: AdminClient,
   pageKey: string,
+  requireManage = false,
 ) {
   const authorization = request.headers.get("Authorization");
   if (!authorization?.startsWith("Bearer ")) {
@@ -175,7 +183,7 @@ async function requirePageAccess(
 
   const { data, error: permissionError } = await admin
     .from("role_page_permissions")
-    .select("can_access")
+    .select("can_access,can_manage")
     .eq("role", role)
     .eq("page_key", pageKey)
     .maybeSingle();
@@ -185,7 +193,7 @@ async function requirePageAccess(
       500,
     );
   }
-  if (!data?.can_access) {
+  if (requireManage ? !data?.can_manage : !data?.can_access) {
     throw jsonResponse({ error: "page_access_required" }, 403);
   }
   return user;
@@ -243,6 +251,17 @@ function parsePayload(value: unknown): Payload {
         typeof body.employeeId === "string" ? body.employeeId.trim() : "",
       redirectTo:
         typeof body.redirectTo === "string" ? body.redirectTo.trim() : "",
+    };
+  }
+  if (body.action === "setEmployeeLogin") {
+    if (typeof body.loginEnabled !== "boolean") {
+      throw jsonResponse({ error: "invalid_login_enabled" }, 400);
+    }
+    return {
+      action: "setEmployeeLogin",
+      employeeId:
+        typeof body.employeeId === "string" ? body.employeeId.trim() : "",
+      loginEnabled: body.loginEnabled === true,
     };
   }
   throw jsonResponse({ error: "unsupported_action" }, 400);
@@ -566,6 +585,68 @@ async function inviteEmployee(
   return { id: invited.user.id, email };
 }
 
+async function setEmployeeLogin(
+  admin: AdminClient,
+  payload: SetEmployeeLoginPayload,
+) {
+  if (!payload.employeeId) {
+    throw jsonResponse({ error: "invalid_employee_id" }, 400);
+  }
+  const { data: employee, error: employeeError } = await admin
+    .from("company_employees")
+    .select("id,is_active,linked_user_id")
+    .eq("id", payload.employeeId)
+    .maybeSingle();
+  if (employeeError) {
+    throw jsonResponse(
+      { error: "employee_lookup_failed", detail: employeeError.message },
+      500,
+    );
+  }
+  if (!employee?.linked_user_id) {
+    throw jsonResponse({ error: "employee_account_not_linked" }, 409);
+  }
+  if (payload.loginEnabled && !employee.is_active) {
+    throw jsonResponse({ error: "employee_not_active" }, 409);
+  }
+
+  const { error: authError } = await admin.auth.admin.updateUserById(
+    employee.linked_user_id,
+    { ban_duration: payload.loginEnabled ? "none" : "876000h" },
+  );
+  if (authError) {
+    throw jsonResponse(
+      { error: "employee_login_update_failed", detail: authError.message },
+      500,
+    );
+  }
+
+  const { error: profileError } = await admin
+    .from("user_profiles")
+    .update({
+      login_enabled: payload.loginEnabled,
+      login_disabled_at: payload.loginEnabled ? null : new Date().toISOString(),
+      login_disabled_reason: payload.loginEnabled ? null : "manual_disabled",
+    })
+    .eq("id", employee.linked_user_id);
+  if (profileError) {
+    const { error: rollbackError } = await admin.auth.admin.updateUserById(
+      employee.linked_user_id,
+      { ban_duration: payload.loginEnabled ? "876000h" : "none" },
+    );
+    throw jsonResponse(
+      {
+        error: "employee_profile_update_failed",
+        detail: profileError.message,
+        rollbackError: rollbackError?.message ?? null,
+      },
+      500,
+    );
+  }
+
+  return { id: employee.linked_user_id, loginEnabled: payload.loginEnabled };
+}
+
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -580,12 +661,17 @@ Deno.serve(async (request) => {
     const requiredPageKey =
       payload.action === "create"
         ? "settings.users.create"
-        : payload.action === "inviteEmployee"
+        : payload.action === "inviteEmployee" || payload.action === "setEmployeeLogin"
           ? "settings.employees"
         : payload.action === "updateProfile"
           ? "settings.users.edit"
           : "settings.users.change_password";
-    await requirePageAccess(request, admin, requiredPageKey);
+    await requirePageAccess(
+      request,
+      admin,
+      requiredPageKey,
+      payload.action === "setEmployeeLogin",
+    );
     if (payload.action === "create") {
       return jsonResponse({ user: await createUser(admin, payload) }, 201);
     }
@@ -594,6 +680,9 @@ Deno.serve(async (request) => {
     }
     if (payload.action === "inviteEmployee") {
       return jsonResponse({ user: await inviteEmployee(admin, request, payload) }, 201);
+    }
+    if (payload.action === "setEmployeeLogin") {
+      return jsonResponse({ user: await setEmployeeLogin(admin, payload) });
     }
     return jsonResponse({ user: await updatePassword(admin, request, payload) });
   } catch (error) {

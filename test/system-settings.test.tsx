@@ -237,6 +237,14 @@ describe("Super Admin system settings", () => {
     ).toBeInTheDocument();
   });
 
+  it("loads only active login accounts in the user directory", () => {
+    const settingsSource = readFileSync(
+      path.resolve(process.cwd(), "src/lib/settings.ts"),
+      "utf8",
+    );
+    expect(settingsSource).toContain('.eq("login_enabled", true)');
+  });
+
   it("validates create-user fields in the side panel", async () => {
     const user = userEvent.setup();
     const loadUsers = vi

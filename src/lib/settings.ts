@@ -524,6 +524,7 @@ export async function fetchUsers({
       "id,email,user_name,phone,role,shop_restro_legacy_id,is_dedicated_account,created_at,updated_at",
       { count: "exact" },
     )
+    .eq("login_enabled", true)
     .order("created_at", { ascending: false })
     .order("email", { ascending: true, nullsFirst: false })
     .range(start, end);

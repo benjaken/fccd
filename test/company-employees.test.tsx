@@ -21,6 +21,7 @@ const employee: CompanyEmployee = {
   position: "Team Member",
   isActive: true,
   linkedUserId: "user-1",
+  loginEnabled: true,
   lastSyncedAt: "2026-08-25T02:30:00Z",
 };
 
@@ -68,9 +69,8 @@ describe("company employee directory", () => {
     expect(sync).toContain('profile.login_disabled_reason === "otc2_inactive"');
     expect(sync).toContain("} else if (!hasActiveSource && hasInactiveSource) {");
     expect(sync).toContain("self-heals an accidentally removed ban");
-    expect(sync).not.toContain(
-      "!hasActiveSource && hasInactiveSource && profile.login_enabled",
-    );
+    expect(sync).toContain("profile.login_enabled || !profile.login_disabled_reason");
+    expect(sync).toContain("Preserve an explicit manual disable");
     expect(sync).toContain("localAccountsUntouched");
   });
 
@@ -93,5 +93,52 @@ describe("company employee directory", () => {
 
     await user.click(await screen.findByRole("button", { name: /Invite account|開通帳號/ }));
     await waitFor(() => expect(inviteEmployee).toHaveBeenCalledWith(employee.id));
+  });
+
+  it("allows an active employee's linked login account to be disabled", async () => {
+    const user = (await import("@testing-library/user-event")).default.setup();
+    const updateEmployeeLogin = vi.fn().mockResolvedValue({
+      user: { id: "user-1", loginEnabled: false },
+    });
+
+    render(
+      <MemoryRouter>
+        <CompanyEmployeesPage
+          loadEmployees={vi.fn().mockResolvedValue({ total: 1, items: [employee] })}
+          updateEmployeeLogin={updateEmployeeLogin}
+        />
+      </MemoryRouter>,
+    );
+
+    const loginSwitch = await screen.findByRole("switch", {
+      name: /Elena Leung/,
+    });
+    expect(loginSwitch).toBeChecked();
+    await user.click(loginSwitch);
+
+    await waitFor(() =>
+      expect(updateEmployeeLogin).toHaveBeenCalledWith(employee.id, false),
+    );
+    await waitFor(() => expect(loginSwitch).not.toBeChecked());
+  });
+
+  it("defines a protected employee login-status lookup and manual Auth control", () => {
+    const migration = readFileSync(
+      resolve(
+        process.cwd(),
+        "supabase/migrations/20260831130000_company_employee_login_controls.sql",
+      ),
+      "utf8",
+    );
+    const adminUsers = readFileSync(
+      resolve(process.cwd(), "supabase/functions/admin-users/index.ts"),
+      "utf8",
+    );
+
+    expect(migration).toContain("company_employee_login_status");
+    expect(migration).toContain("private.has_page_access('settings.employees')");
+    expect(adminUsers).toContain('action: "setEmployeeLogin"');
+    expect(adminUsers).toContain('login_disabled_reason: payload.loginEnabled ? null : "manual_disabled"');
+    expect(adminUsers).toContain('ban_duration: payload.loginEnabled ? "none" : "876000h"');
   });
 });

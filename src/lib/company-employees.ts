@@ -16,6 +16,7 @@ export type CompanyEmployee = {
   position: string | null;
   isActive: boolean;
   linkedUserId: string | null;
+  loginEnabled: boolean;
   lastSyncedAt: string;
 };
 
@@ -75,24 +76,41 @@ export async function fetchCompanyEmployees({
   const { data, count, error } = await query;
   if (error) throw error;
 
+  const items: CompanyEmployee[] = ((data ?? []) as CompanyEmployeeRow[]).map((row) => ({
+    id: row.id,
+    sourceStaffId: row.source_staff_id,
+    displayName: row.display_name,
+    chineseName: row.chinese_name,
+    workEmail: row.work_email,
+    privateEmail: row.private_email,
+    companyPhone: row.company_phone,
+    privatePhone: row.private_phone,
+    company: row.company,
+    teamName: row.team_name,
+    position: row.position,
+    isActive: row.is_active,
+    linkedUserId: row.linked_user_id,
+    loginEnabled: false,
+    lastSyncedAt: row.last_synced_at,
+  }));
+
+  if (items.some((item) => item.linkedUserId)) {
+    const { data: statuses, error: statusError } = await supabase.rpc(
+      "company_employee_login_status",
+      { requested_employee_ids: items.map((item) => item.id) },
+    );
+    if (statusError) throw statusError;
+    const enabledIds = new Set(
+      ((statuses ?? []) as Array<{ employee_id: string; login_enabled: boolean }>)
+        .filter((status) => status.login_enabled)
+        .map((status) => status.employee_id),
+    );
+    for (const item of items) item.loginEnabled = enabledIds.has(item.id);
+  }
+
   return {
     total: count ?? 0,
-    items: ((data ?? []) as CompanyEmployeeRow[]).map((row) => ({
-      id: row.id,
-      sourceStaffId: row.source_staff_id,
-      displayName: row.display_name,
-      chineseName: row.chinese_name,
-      workEmail: row.work_email,
-      privateEmail: row.private_email,
-      companyPhone: row.company_phone,
-      privatePhone: row.private_phone,
-      company: row.company,
-      teamName: row.team_name,
-      position: row.position,
-      isActive: row.is_active,
-      linkedUserId: row.linked_user_id,
-      lastSyncedAt: row.last_synced_at,
-    })) satisfies CompanyEmployee[],
+    items,
   };
 }
 
@@ -117,4 +135,30 @@ export async function inviteCompanyEmployee(employeeId: string) {
     throw new Error(String((data as { error: string }).error));
   }
   return data as { user: { id: string; email: string } };
+}
+
+export async function setCompanyEmployeeLogin(
+  employeeId: string,
+  loginEnabled: boolean,
+) {
+  const {
+    data: { session },
+    error: sessionError,
+  } = await supabase.auth.getSession();
+  if (sessionError) throw sessionError;
+  if (!session?.access_token) throw new Error("missing_authorization");
+
+  const { data, error } = await supabase.functions.invoke("admin-users", {
+    body: {
+      action: "setEmployeeLogin",
+      employeeId,
+      loginEnabled,
+    },
+    headers: { Authorization: `Bearer ${session.access_token}` },
+  });
+  if (error) throw error;
+  if (data && typeof data === "object" && "error" in data) {
+    throw new Error(String((data as { error: string }).error));
+  }
+  return data as { user: { id: string; loginEnabled: boolean } };
 }
