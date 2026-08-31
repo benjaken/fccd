@@ -177,7 +177,7 @@ describe("Standalone workspace pages", () => {
     renderPath("/factory/order/job-1");
 
     expect(
-      await screen.findByRole("heading", { name: "B-1522" }),
+      await screen.findByRole("heading", { name: "#B-1522" }),
     ).toBeInTheDocument();
     expect(screen.getByText("工場訂單")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "出車表" })).not.toBeInTheDocument();

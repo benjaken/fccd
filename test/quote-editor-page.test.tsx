@@ -809,9 +809,9 @@ describe("Quote editor", () => {
     const tabs = await screen.findAllByRole("tab");
     await user.click(tabs[1]);
     expect(screen.getByRole("columnheader", { name: "Label preview" })).toBeInTheDocument();
-    expect(screen.queryByLabelText("50 × 75 mm 標籤預覽：FCLQ-LABEL")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("50 × 75 mm 標籤預覽：#FCLQ-LABEL")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Preview / edit" }));
-    expect(screen.getByLabelText("50 × 75 mm 標籤預覽：FCLQ-LABEL")).toBeInTheDocument();
+    expect(screen.getByLabelText("50 × 75 mm 標籤預覽：#FCLQ-LABEL")).toBeInTheDocument();
     expect(screen.getByText("－ 送貨日期 －")).toBeInTheDocument();
     const displayA = screen.getByRole("textbox", { name: "Label line 1" });
     await user.clear(displayA);
@@ -1251,9 +1251,9 @@ describe("Quote editor", () => {
     expect(screen.getAllByText("Email").length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText("WATI")).toBeInTheDocument();
     expect(screen.getByText(longRemark)).toHaveAttribute("title", longRemark);
-    expect(screen.queryByLabelText("50 × 75 mm 標籤預覽：FCLQ20260801")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("50 × 75 mm 標籤預覽：#FCLQ20260801")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "View label" }));
-    expect(screen.getByLabelText("50 × 75 mm 標籤預覽：FCLQ20260801")).toBeInTheDocument();
+    expect(screen.getByLabelText("50 × 75 mm 標籤預覽：#FCLQ20260801")).toBeInTheDocument();
     expect(screen.queryByRole("textbox", { name: "Label line 1" })).not.toBeInTheDocument();
     await user.click(screen.getAllByRole("button", { name: "Close label dialog" })[1]);
     expect(screen.queryByRole("heading", { name: "額外資訊" })).not.toBeInTheDocument();

@@ -155,6 +155,10 @@ describe("FactoryBoardPage", () => {
     expect(orderRemarkRule?.[1]).toContain("color: #dc2626");
     expect(orderNumberRule?.[1]).toContain("font-size: 72px");
     expect(orderMetaRule?.[1]).toContain("font-size: 36px");
+    expect(orderMetaRule?.[1]).toContain(
+      "grid-template-columns: max-content minmax(0, 1fr) max-content",
+    );
+    expect(orderMetaRule?.[1]).toContain('"phone address customer"');
     expect(packingRule?.[1]).toContain("background: #fffaf3");
     expect(packingRule?.[1]).toContain("font-size: 22px");
     expect(orderPrintRule?.[1]).toContain("width: 60px");
@@ -526,7 +530,7 @@ describe("FactoryBoardPage", () => {
 
     await user.click(await screen.findByRole("button", { name: /#B-1522/ }));
 
-    expect(await screen.findByRole("heading", { name: "B-1522" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "#B-1522" })).toBeInTheDocument();
     const orderMain = document.querySelector(".factory-order-main");
     expect(orderMain).not.toBeNull();
     const orderView = within(orderMain as HTMLElement);
@@ -579,15 +583,13 @@ describe("FactoryBoardPage", () => {
     expect(document.querySelector(".factory-delivery-note-print")).toHaveTextContent(
       "拿破崙肉丸意粉",
     );
-    expect(document.querySelector(".factory-delivery-note-print")).not.toHaveTextContent(
+    expect(document.querySelector(".factory-delivery-note-print")).toHaveTextContent(
       "#B-1522",
     );
     const brandFooter = document.querySelector(".factory-delivery-note-brand-footer");
-    expect(brandFooter).toHaveTextContent("HK lunch box");
+    expect(brandFooter).toHaveTextContent("HK Lunch Box");
     expect(brandFooter).toHaveTextContent("https://hklunchbox.com/");
-    expect(
-      document.querySelector(".factory-delivery-note-order-footer"),
-    ).toHaveTextContent("B-1522");
+    expect(document.querySelector(".factory-delivery-note-order-footer")).toBeNull();
     expect(document.querySelector(".factory-delivery-note-brand img")).toHaveAttribute(
       "src",
       "/assets/fcc-hk-lunch-box-logo.svg",
@@ -650,7 +652,7 @@ describe("FactoryBoardPage", () => {
     expect(loadOrderJob).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: "繼續查看訂單" }));
-    expect(await screen.findByRole("heading", { name: "B-1522" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "#B-1522" })).toBeInTheDocument();
     expect(loadOrderJob).toHaveBeenCalledWith("order-1");
   });
 

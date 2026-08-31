@@ -18,6 +18,7 @@ import {
   type FactoryMultiDayMenuRow,
 } from "@/lib/factory-board";
 import { qzTrayClient, useQzTray, type QzTrayClient } from "@/lib/qz-tray";
+import { formatFactoryOrderNumber } from "@/lib/factory-order-number";
 
 function orderCell(row: FactoryMultiDayMenuRow | undefined) {
   if (!row) return null;
@@ -27,7 +28,7 @@ function orderCell(row: FactoryMultiDayMenuRow | undefined) {
         <span key={order.orderId}>
           {order.deliveryDate.slice(5).replace("-", "/")}
           {order.deliveryTime ? ` ${order.deliveryTime}` : ""}
-          {` · #${order.orderNumber?.replace(/^#/, "") || order.orderId}`}
+          {` · ${formatFactoryOrderNumber(order.orderNumber, `#${order.orderId}`)}`}
           {` × ${formatFactoryQuantity(order.quantity)}`}
         </span>
       ))}

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { formatDeliveryAddress } from "@/lib/delivery-address";
 import {
+  getBrandDisplayName,
   getBrandLogoAlt,
   getDocumentLogoPath,
 } from "@/lib/brand-logo";
@@ -10,6 +11,7 @@ import {
   hongKongDateKey,
   type FactoryOrderJob,
 } from "@/lib/factory-board";
+import { formatFactoryOrderNumber } from "@/lib/factory-order-number";
 
 const WEEKDAY_LONG_ZH = [
   "星期日",
@@ -67,6 +69,33 @@ export type DeliveryNoteOrder = {
   shopifyStoreDomain?: string | null;
 };
 
+const DELIVERY_NOTE_PAGE_LINE_UNITS = 15;
+const DELIVERY_NOTE_LINE_CHARACTERS = 38;
+
+function paginateDeliveryNoteLines(lines: FactoryOrderJob["lines"]) {
+  if (!lines.length) return [[]];
+  const pages: FactoryOrderJob["lines"][] = [];
+  let page: FactoryOrderJob["lines"] = [];
+  let usedUnits = 0;
+
+  for (const line of lines) {
+    const text = [line.label, ...line.remarks].join(" ");
+    const lineUnits = Math.max(
+      1,
+      Math.ceil(Array.from(text).length / DELIVERY_NOTE_LINE_CHARACTERS),
+    );
+    if (page.length && usedUnits + lineUnits > DELIVERY_NOTE_PAGE_LINE_UNITS) {
+      pages.push(page);
+      page = [];
+      usedUnits = 0;
+    }
+    page.push(line);
+    usedUnits += lineUnits;
+  }
+  if (page.length) pages.push(page);
+  return pages;
+}
+
 export function DeliveryNoteDocument({
   order,
   job,
@@ -82,7 +111,7 @@ export function DeliveryNoteDocument({
   const empty = t("common.notSet");
   const dateKey = order.deliveryAt ? hongKongDateKey(order.deliveryAt) : "";
   const weekday = formatDeliveryNoteWeekday(dateKey, i18n.language, empty);
-  const orderNumber = order.orderNumber?.replace(/^#/, "") || empty;
+  const orderNumber = formatFactoryOrderNumber(order.orderNumber, empty);
   const arrivalWindow = job?.arrivalWindow || order.deliveryTime || empty;
   const customerName =
     order.customerName?.trim() || order.companyName?.trim() || empty;
@@ -91,20 +120,26 @@ export function DeliveryNoteDocument({
     order.shopifyStoreDomain,
     order.orderNumber,
   ];
-  const brandName = job?.brandName || getBrandLogoAlt(...brandValues);
+  const brandName = getBrandDisplayName(...brandValues);
   const visibleLines =
     job?.lines.filter((line) => line.label.trim().length > 0) ?? [];
+  const linePages = paginateDeliveryNoteLines(visibleLines);
+  const totalPages = linePages.length;
 
   return (
-    <section
-      className={cn(
-        printOnly
-          ? "factory-delivery-note-print"
-          : "order-delivery-note-sheet",
-        className,
-      )}
-      aria-label={t("factoryBoard.deliveryNoteTitle")}
-    >
+    <>
+      {linePages.map((pageLines, pageIndex) => (
+        <section
+          className={cn(
+            printOnly
+              ? "factory-delivery-note-print"
+              : "order-delivery-note-sheet",
+            pageIndex === totalPages - 1 && "is-final-page",
+            className,
+          )}
+          aria-label={t("factoryBoard.deliveryNoteTitle")}
+          key={`delivery-note-page-${pageIndex}`}
+        >
       <header className="factory-delivery-note-header">
         <div className="factory-delivery-note-brand">
           <img
@@ -163,7 +198,7 @@ export function DeliveryNoteDocument({
           </tr>
         </thead>
         <tbody>
-          {visibleLines.map((line) => (
+          {pageLines.map((line) => (
             <tr key={line.id}>
               <td>
                 {t("factoryBoard.portionUnit", {
@@ -180,15 +215,16 @@ export function DeliveryNoteDocument({
       </table>
 
       <footer>
-        <span className="factory-delivery-note-order-footer">
-          {orderNumber}
-        </span>
         <span className="factory-delivery-note-brand-footer">
           {brandName}
           {job?.brandWebsite ? <><br />{job.brandWebsite}</> : null}
         </span>
-        <span className="factory-delivery-note-page-footer">1 / 1</span>
+        <span className="factory-delivery-note-page-footer">
+          {pageIndex + 1} / {totalPages}
+        </span>
       </footer>
-    </section>
+        </section>
+      ))}
+    </>
   );
 }

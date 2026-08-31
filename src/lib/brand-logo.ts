@@ -56,6 +56,23 @@ export function getBrandLogoAlt(
   }
 }
 
+export function getBrandDisplayName(
+  ...brandValues: Array<string | null | undefined>
+): string {
+  switch (getBrandKind(...brandValues)) {
+    case "lunch-box":
+      return "HK Lunch Box";
+    case "party-food":
+      return "HK Party Food";
+    case "kitchen":
+      return "Food Channel Kitchen";
+    case "cuisine":
+      return "FC Cuisine 福滔樽";
+    default:
+      return "Food Channels Catering";
+  }
+}
+
 export function getBrandContactEmail(
   configuredEmail: string | null | undefined,
   ...brandValues: Array<string | null | undefined>
