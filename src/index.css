@@ -20667,17 +20667,6 @@ a.masoft-order-tag:focus-visible {
 
 .factory-edit-lock-warning svg { width: 20px; height: 20px; flex: 0 0 auto; }
 
-.factory-job-editing-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: #dc2626;
-  font-size: 14px;
-  font-weight: 800;
-}
-
-.factory-job-editing-tag svg { width: 14px; height: 14px; }
-
 .factory-board-heading {
   display: inline-flex;
   min-width: 0;
@@ -23800,6 +23789,7 @@ button.factory-job-card:focus-visible {
 
 .factory-job-card-body .factory-new-order-tag,
 .factory-job-card-body .factory-changed-order-tag,
+.factory-job-card-body .factory-job-editing-tag,
 .factory-job-card-body .factory-addon-order-tag {
   display: inline-flex;
   width: 100%;
@@ -23821,6 +23811,7 @@ button.factory-job-card:focus-visible {
 }
 
 .factory-job-card-body .factory-changed-order-tag,
+.factory-job-card-body .factory-job-editing-tag,
 .factory-job-card-body .factory-addon-order-tag,
 .factory-order-line-addon {
   display: inline-flex;
@@ -23831,7 +23822,8 @@ button.factory-job-card:focus-visible {
   border-radius: 3px;
 }
 
-.factory-job-card-body .factory-changed-order-tag {
+.factory-job-card-body .factory-changed-order-tag,
+.factory-job-card-body .factory-job-editing-tag {
   background: #df22c5;
 }
 
@@ -24680,6 +24672,8 @@ button.factory-job-card:focus-visible {
   grid-column: 1;
   grid-row: 3;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: max-content;
+  align-items: stretch;
   align-content: start;
   gap: 14px 18px;
   padding: 14px 28px;
@@ -24760,6 +24754,8 @@ button.factory-job-card:focus-visible {
   position: relative;
   display: grid;
   place-items: center;
+  align-self: stretch;
+  height: auto;
   min-height: 142px;
   padding: 14px 18px;
   overflow: hidden;
@@ -24831,6 +24827,34 @@ button.factory-job-card:focus-visible {
   background: #dc2626;
 }
 
+@media (max-height: 800px) {
+  .factory-order-lines {
+    gap: 10px 14px;
+    padding: 10px 20px;
+  }
+
+  .factory-order-line {
+    min-height: max-content;
+    padding: 10px 14px;
+  }
+
+  .factory-order-line-body {
+    gap: 4px;
+  }
+
+  .factory-order-line strong {
+    font-size: 26px;
+  }
+
+  .factory-order-line-quantity {
+    font-size: 24px;
+  }
+
+  .factory-order-line-remark {
+    font-size: 21px;
+  }
+}
+
 .factory-order-aside {
   display: flex;
   grid-column: 2;
@@ -24854,6 +24878,36 @@ button.factory-job-card:focus-visible {
   margin: 4px 0;
   border: 0;
   border-top: 1px solid var(--factory-line);
+}
+
+.factory-order-edit-lock-overlay {
+  z-index: 30;
+  display: grid;
+  grid-column: 1 / -1;
+  grid-row: 3;
+  place-items: center;
+  min-width: 0;
+  min-height: 0;
+  background: rgb(0 0 0 / 75%);
+  cursor: not-allowed;
+}
+
+.factory-order-edit-lock-message {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 24px;
+  color: #ffffff;
+  font-size: 36px;
+  font-weight: 850;
+  text-align: center;
+}
+
+.factory-order-edit-lock-message svg {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  color: #fbbf24;
 }
 
 .factory-board .factory-order-back {
@@ -29383,7 +29437,7 @@ button.factory-job-card:focus-visible {
 .order-editor-steps {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  overflow: hidden;
+  overflow: visible;
   border: 1px solid var(--border);
   border-radius: 15px;
   background: var(--card);

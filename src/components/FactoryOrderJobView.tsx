@@ -329,12 +329,6 @@ export function FactoryOrderJobView({
   return (
     <section className="factory-order-job">
       <div className="factory-job-notifications" aria-live="polite">
-        {printBlocked ? (
-          <p className="factory-edit-lock-warning" role="alert">
-            <TriangleAlert aria-hidden="true" />
-            <strong>{t("factoryBoard.orderEditingPrintBlocked")}</strong>
-          </p>
-        ) : null}
         {bulkPrintSuccess ? (
           <p className="factory-job-notification is-success" role="status">
             <CheckCircle2 aria-hidden="true" />
@@ -420,9 +414,9 @@ export function FactoryOrderJobView({
                 type="button"
                 className={`factory-order-line${line.isCancelled ? " is-cancelled" : ""}`}
                 key={line.id}
-                disabled={line.isCancelled}
+                disabled={printBlocked || line.isCancelled}
                 onClick={() => {
-                  if (line.isCancelled) return;
+                  if (printBlocked || line.isCancelled) return;
                   setSelectedLineId(line.id);
                   setPrintError(false);
                   setPrintSuccess(null);
@@ -508,6 +502,7 @@ export function FactoryOrderJobView({
         <Button
           type="button"
           className="factory-order-selected"
+          disabled={printBlocked}
           onClick={() => {
             setSelectedFleetId(assignedFleetId);
             setAssignError(false);
@@ -532,7 +527,7 @@ export function FactoryOrderJobView({
           <select
             aria-label={t("factoryBoard.connectPrinter")}
             value={selectedPrinter}
-            disabled={!canPrint}
+            disabled={printBlocked || !canPrint}
             onChange={(event) => setSelectedPrinter(event.target.value)}
           >
             <option value="">
@@ -548,6 +543,15 @@ export function FactoryOrderJobView({
           </select>
         </label>
       </aside>
+
+      {printBlocked ? (
+        <div className="factory-order-edit-lock-overlay" role="alert">
+          <div className="factory-order-edit-lock-message">
+            <TriangleAlert aria-hidden="true" />
+            <strong>{t("factoryBoard.orderEditingPrintBlocked")}</strong>
+          </div>
+        </div>
+      ) : null}
 
       <DeliveryNoteDocument order={item} job={job} printOnly />
 

@@ -647,38 +647,40 @@ export function FactoryBoardPage({
             ) : null}
           </p>
         </div>
+        {selectedJob || multiDayReport ? null : (
+          <div className="factory-board-pager">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label={t("factoryBoard.previousDays")}
+              onClick={() => setStartDate((current) => addCalendarDays(current, -3))}
+            >
+              <ChevronLeft />
+            </Button>
+            <Button
+              type="button"
+              className="factory-board-today"
+              onClick={() =>
+                setStartDate(addCalendarDays(hongKongDateInputValue(), -1))
+              }
+            >
+              {t("factoryBoard.goToday")}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label={t("factoryBoard.nextDays")}
+              onClick={() => setStartDate((current) => addCalendarDays(current, 3))}
+            >
+              <ChevronRight />
+            </Button>
+          </div>
+        )}
         <div className="factory-board-actions">
           {selectedJob || multiDayReport ? null : (
             <>
-              <div className="factory-board-pager">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  aria-label={t("factoryBoard.previousDays")}
-                  onClick={() => setStartDate((current) => addCalendarDays(current, -3))}
-                >
-                  <ChevronLeft />
-                </Button>
-                <Button
-                  type="button"
-                  className="factory-board-today"
-                  onClick={() =>
-                    setStartDate(addCalendarDays(hongKongDateInputValue(), -1))
-                  }
-                >
-                  {t("factoryBoard.goToday")}
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  aria-label={t("factoryBoard.nextDays")}
-                  onClick={() => setStartDate((current) => addCalendarDays(current, 3))}
-                >
-                  <ChevronRight />
-                </Button>
-              </div>
               <button
                 type="button"
                 className="factory-board-calendar"
@@ -954,7 +956,6 @@ export function FactoryBoardPage({
                       onClick={() => openJob(item)}
                     >
                       {newOrder ? <span className="factory-new-order-corner" title={t("factoryBoard.newOrder")}><Star aria-label={t("factoryBoard.newOrder")} /></span> : null}
-                      {item.isBeingEdited ? <span className="factory-job-editing-tag"><TriangleAlert aria-hidden="true" />{t("factoryBoard.editing")}</span> : null}
                       <span
                         className={cn(
                           "factory-job-print-status",
@@ -1004,6 +1005,7 @@ export function FactoryBoardPage({
                                 {t("factoryBoard.portions", { count: portions })}
                               </small>
                             ) : null}
+                            {item.isBeingEdited ? <small className="factory-job-editing-tag">{t("factoryBoard.editing")}</small> : null}
                             {newOrder ? <small className="factory-new-order-tag">{t("factoryBoard.newOrder")}</small> : null}
                             {printStatus === "needs-reprint" ? <small className="factory-changed-order-tag">有更改</small> : null}
                             {item.addonShopifyPending ? <small className="factory-addon-order-tag">有加單</small> : null}
