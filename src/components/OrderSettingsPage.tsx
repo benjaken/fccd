@@ -497,16 +497,21 @@ export function OrderSettingsPage({
           activeTab === "shipping" ||
           activeTab === "shipping-fees" ||
           activeTab === "first-notification-recipients" ||
+          activeTab === "add-ons" ||
           activeTab === "payments") &&
         (activeTab === "shipping-fees"
           ? pageAccess.canManage("orders.settings.shipping_fees")
           : activeTab === "first-notification-recipients"
             ? pageAccess.canManage("orders.settings.first_notification_recipients")
+            : activeTab === "add-ons"
+              ? pageAccess.canManage("orders.settings.addons")
             : canManage) ? (
           <Button type="button" onClick={() => setCreateOpen(true)}>
             <Plus />
             {activeTab === "payments"
               ? t("orderSettings.payments.add")
+              : activeTab === "add-ons"
+                ? "加入產品"
               : activeTab === "customer-tags"
                 ? t("orderSettings.customerTags.add")
               : activeTab === "cost-options"
@@ -611,6 +616,8 @@ export function OrderSettingsPage({
         ) : activeTab === "add-ons" ? (
           <OrderAddonProductsSettings
             canManage={pageAccess.canManage("orders.settings.addons")}
+            createOpen={createOpen}
+            onCreateOpenChange={setCreateOpen}
           />
         ) : activeTab === "add-on-block-dates" ? (
           <OrderAddonBlockDatesSettings

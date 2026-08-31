@@ -13,6 +13,7 @@ export const overwriteFieldSources = {
     channel_id: ["ORDER_Channel"],
     channel_legacy_id: ["ORDER_Channel"],
     order_number: ["ORDER_Order Number"],
+    order_received_at: ["New_date!", "Created Date"],
     document_type: [
       "(Quote)chg to order",
       "AddOrder_DONE",

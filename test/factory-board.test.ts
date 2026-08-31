@@ -82,12 +82,30 @@ describe("factory board helpers", () => {
     ).toEqual(["sent", "legacy-fixture"]);
   });
 
-  it("marks a factory order as new only during the first 12 hours", () => {
+  it("marks a factory order as new only during the first 12 hours after entry", () => {
     const now = new Date("2026-08-21T12:00:00.000Z");
     expect(isNewFactoryOrder("2026-08-21T00:00:01.000Z", now)).toBe(true);
     expect(isNewFactoryOrder("2026-08-21T00:00:00.000Z", now)).toBe(false);
     expect(isNewFactoryOrder("2026-08-20T23:59:59.000Z", now)).toBe(false);
     expect(isNewFactoryOrder(null, now)).toBe(false);
+  });
+
+  it("never marks an order as new after its Hong Kong delivery day", () => {
+    const now = new Date("2026-08-30T13:00:00.000Z");
+    expect(
+      isNewFactoryOrder(
+        "2026-08-30T12:30:00.000Z",
+        now,
+        "2026-08-28T16:00:00.000Z",
+      ),
+    ).toBe(false);
+    expect(
+      isNewFactoryOrder(
+        "2026-08-30T12:30:00.000Z",
+        now,
+        "2026-08-30T16:00:00.000Z",
+      ),
+    ).toBe(true);
   });
 
   it("formats the compact Chinese multi-day print heading", () => {

@@ -428,12 +428,14 @@ describe("FactoryBoardPage", () => {
   it("shows the yellow new-order tag and starred corner for 12 hours", async () => {
     const { container } = render(
       <FactoryBoardPage
-        initialDate="2026-08-17"
+        initialDate="2099-08-17"
         loadBoard={async () => ({
           ...board,
+          dates: ["2099-08-17", "2099-08-18", "2099-08-19"],
           items: board.items.map((entry) => ({
             ...entry,
-            factorySentAt: new Date().toISOString(),
+            deliveryAt: "2099-08-18T02:00:00.000Z",
+            orderReceivedAt: new Date().toISOString(),
           })),
         })}
         loadFleets={async () => []}
