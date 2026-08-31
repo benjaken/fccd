@@ -54,6 +54,18 @@ function yearToneColor(year: number) {
   return tones[Math.abs(year) % tones.length];
 }
 
+function tableLineToneColor(index: number) {
+  if (index % 2 === 1) return "#111827";
+  const colorTones = [
+    "#dc8a19",
+    "#0a7e3a",
+    "#3494e0",
+    "#dca8bc",
+    "#0d68b9",
+  ];
+  return colorTones[(index / 2) % colorTones.length];
+}
+
 function YearSelector({
   years,
   selectedYears,
@@ -128,13 +140,13 @@ function YearValues({
 }) {
   return (
     <div className="kitchen-channel-sales-cell-values">
-      {summaries.map((summary) => (
+      {summaries.map((summary, index) => (
         <span
           className="kitchen-channel-sales-year-value"
           data-report-year={summary.year}
           style={
             {
-              "--year-tone-color": yearToneColor(summary.year),
+              "--year-tone-color": tableLineToneColor(index),
             } as CSSProperties
           }
           key={summary.year}
