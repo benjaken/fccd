@@ -10,6 +10,7 @@ import {
   type OrderNotificationValues,
 } from "../supabase/functions/_shared/order-notification-content.ts";
 import {
+  createNotificationRecipientPolicy,
   isNotificationEmailAllowed,
   isNotificationPhoneAllowed,
   isNotificationRecipientPairAllowed,
@@ -53,6 +54,23 @@ describe("WATI order notifications", () => {
     )).toBe(false);
     expect(() => parseNotificationRecipientAllowlist("", "ops@example.com"))
       .toThrow("notification_recipient_allowlist_missing");
+  });
+
+  it("allows valid production recipients only when enforcement is explicitly disabled", () => {
+    const policy = createNotificationRecipientPolicy("", "", "false");
+
+    expect(policy.enforced).toBe(false);
+    expect(isNotificationPhoneAllowed(policy, "+852 9123 4567")).toBe(true);
+    expect(isNotificationEmailAllowed(policy, "customer@example.com")).toBe(true);
+    expect(isNotificationRecipientPairAllowed(
+      policy,
+      "+852 9123 4567",
+      "customer@example.com",
+    )).toBe(true);
+    expect(isNotificationPhoneAllowed(policy, "not-a-phone")).toBe(false);
+    expect(isNotificationEmailAllowed(policy, "")).toBe(false);
+    expect(() => createNotificationRecipientPolicy("", "", "sometimes"))
+      .toThrow("notification_recipient_allowlist_enforcement_invalid");
   });
 
   it("renders the factory-unsent internal reminder with the order link", () => {

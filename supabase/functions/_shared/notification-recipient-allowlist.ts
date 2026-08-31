@@ -1,6 +1,7 @@
 export type NotificationRecipientAllowlist = {
   phones: ReadonlySet<string>;
   emails: ReadonlySet<string>;
+  enforced: boolean;
 };
 
 function configuredEnv(name: string) {
@@ -45,13 +46,29 @@ export function parseNotificationRecipientAllowlist(
   if (!phones.size || !emails.size) {
     throw new Error("notification_recipient_allowlist_missing");
   }
-  return { phones, emails };
+  return { phones, emails, enforced: true };
+}
+
+export function createNotificationRecipientPolicy(
+  phoneValues: string,
+  emailValues: string,
+  enforcedValue: string,
+): NotificationRecipientAllowlist {
+  const configured = enforcedValue.trim().toLowerCase();
+  if (["false", "0", "no", "off"].includes(configured)) {
+    return { phones: new Set(), emails: new Set(), enforced: false };
+  }
+  if (configured && !["true", "1", "yes", "on"].includes(configured)) {
+    throw new Error("notification_recipient_allowlist_enforcement_invalid");
+  }
+  return parseNotificationRecipientAllowlist(phoneValues, emailValues);
 }
 
 export function notificationRecipientAllowlist() {
-  return parseNotificationRecipientAllowlist(
+  return createNotificationRecipientPolicy(
     configuredEnv("NOTIFICATION_ALLOWED_PHONES"),
     configuredEnv("NOTIFICATION_ALLOWED_EMAILS"),
+    configuredEnv("NOTIFICATION_RECIPIENT_ALLOWLIST_ENFORCED"),
   );
 }
 
@@ -60,7 +77,7 @@ export function isNotificationPhoneAllowed(
   phone: string | null | undefined,
 ) {
   const normalized = normalizeNotificationPhone(phone);
-  return Boolean(normalized && allowlist.phones.has(normalized));
+  return Boolean(normalized && (!allowlist.enforced || allowlist.phones.has(normalized)));
 }
 
 export function isNotificationEmailAllowed(
@@ -68,7 +85,7 @@ export function isNotificationEmailAllowed(
   email: string | null | undefined,
 ) {
   const normalized = normalizeNotificationEmail(email);
-  return Boolean(normalized && allowlist.emails.has(normalized));
+  return Boolean(normalized && (!allowlist.enforced || allowlist.emails.has(normalized)));
 }
 
 export function isNotificationRecipientPairAllowed(
