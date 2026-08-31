@@ -20710,7 +20710,18 @@ a.masoft-order-tag:focus-visible {
 .quote-payment-row input,
 .quote-payment-row select { min-width: 0; height: 42px; padding: 0 11px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: var(--foreground); font: inherit; }
 .quote-payment-row .quote-money-input { height: 42px; }
-.quote-payment-row .quote-money-input input { height: 40px; border: 0; }
+.quote-payment-row .quote-money-input input {
+  height: 42px;
+  padding: 0 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+}
+.quote-payment-row .quote-money-input input:focus {
+  border-color: var(--primary);
+  outline: 0;
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 16%, transparent);
+}
 .quote-payment-row .quote-line-delete { margin-bottom: 7px; }
 
 .quote-payment-empty {
@@ -27527,11 +27538,6 @@ button.factory-job-card:focus-visible {
 .quote-row-actions {
   grid-template-columns: repeat(2, 2rem);
 }
-
-.quote-generated-order-cell { min-width: 132px; }
-.quote-generated-order-cell > small { display: block; max-width: 150px; margin-top: 6px; color: var(--destructive); line-height: 1.3; }
-.quote-generated-order-cell .button { white-space: nowrap; }
-.quote-generated-order-cell svg { width: 15px; height: 15px; }
 
 .order-row-actions a,
 .order-row-actions button,

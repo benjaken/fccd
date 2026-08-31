@@ -5,11 +5,13 @@ import { MailPlus, RefreshCw, UsersRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
+import { Switch } from "@/components/ui/switch";
 import { TablePagination } from "@/components/ui/table-pagination";
 import {
   COMPANY_EMPLOYEE_PAGE_SIZE,
   fetchCompanyEmployees,
   inviteCompanyEmployee,
+  setCompanyEmployeeLogin,
   type CompanyEmployee,
 } from "@/lib/company-employees";
 
@@ -18,9 +20,11 @@ type EmployeeStatus = "active" | "inactive" | "all";
 export function CompanyEmployeesPage({
   loadEmployees = fetchCompanyEmployees,
   inviteEmployee = inviteCompanyEmployee,
+  updateEmployeeLogin = setCompanyEmployeeLogin,
 }: {
   loadEmployees?: typeof fetchCompanyEmployees;
   inviteEmployee?: typeof inviteCompanyEmployee;
+  updateEmployeeLogin?: typeof setCompanyEmployeeLogin;
 }) {
   const { t, i18n } = useTranslation();
   const [draftSearch, setDraftSearch] = useState("");
@@ -33,6 +37,7 @@ export function CompanyEmployeesPage({
   const [error, setError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [invitingId, setInvitingId] = useState<string | null>(null);
+  const [updatingLoginId, setUpdatingLoginId] = useState<string | null>(null);
   const [inviteMessage, setInviteMessage] = useState<string | null>(null);
   const [inviteError, setInviteError] = useState<string | null>(null);
 
@@ -134,7 +139,7 @@ export function CompanyEmployeesPage({
             loading={loading}
             loadingLabel={t("settings.employees.loading")}
             skeletonRows={COMPANY_EMPLOYEE_PAGE_SIZE}
-            skeletonColumns={8}
+            skeletonColumns={10}
             header={
               <tr>
                 <th>{t("settings.employees.columns.name")}</th>
@@ -144,6 +149,7 @@ export function CompanyEmployeesPage({
                 <th>{t("settings.employees.columns.team")}</th>
                 <th>{t("settings.employees.columns.position")}</th>
                 <th>{t("settings.employees.columns.account")}</th>
+                <th>{t("settings.employees.columns.loginAccess")}</th>
                 <th>{t("settings.employees.columns.synced")}</th>
                 <th>{t("settings.employees.columns.actions")}</th>
               </tr>
@@ -166,6 +172,45 @@ export function CompanyEmployeesPage({
                       ? t("settings.employees.accountLinked")
                       : t("settings.employees.accountNotLinked")}
                   </span>
+                </td>
+                <td>
+                  {employee.linkedUserId ? (
+                    <Switch
+                      checked={employee.loginEnabled && employee.isActive}
+                      disabled={!employee.isActive || updatingLoginId === employee.id}
+                      aria-label={t("settings.employees.loginToggle", {
+                        name: employee.displayName || employee.chineseName || employee.workEmail || "—",
+                      })}
+                      onCheckedChange={(loginEnabled) => {
+                        setUpdatingLoginId(employee.id);
+                        setInviteMessage(null);
+                        setInviteError(null);
+                        void updateEmployeeLogin(employee.id, loginEnabled)
+                          .then(() => {
+                            setItems((current) => current.map((item) =>
+                              item.id === employee.id
+                                ? { ...item, loginEnabled }
+                                : item,
+                            ));
+                            setInviteMessage(t(
+                              loginEnabled
+                                ? "settings.employees.loginEnabled"
+                                : "settings.employees.loginDisabled",
+                              { name: employee.displayName || employee.chineseName || employee.workEmail || "—" },
+                            ));
+                          })
+                          .catch((updateFailure) => {
+                            const code = updateFailure instanceof Error
+                              ? updateFailure.message
+                              : "login_update_failed";
+                            setInviteError(t(`settings.employees.errors.${code}`, {
+                              defaultValue: t("settings.employees.errors.login_update_failed"),
+                            }));
+                          })
+                          .finally(() => setUpdatingLoginId(null));
+                      }}
+                    />
+                  ) : "—"}
                 </td>
                 <td>{date.format(new Date(employee.lastSyncedAt))}</td>
                 <td className="table-actions-cell">

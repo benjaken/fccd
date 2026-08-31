@@ -1,4 +1,5 @@
-import { render, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
@@ -14,9 +15,12 @@ vi.mock("@/lib/kitchen-channel-sales-report", async (importOriginal) => ({
 }));
 
 describe("central kitchen channel sales report page", () => {
-  it("uses a distinct text tone for each year without year-specific backgrounds", async () => {
+  it("alternates colored and black text for each year line without backgrounds", async () => {
+    const user = userEvent.setup();
     reportMocks.fetchKitchenChannelSalesReport.mockResolvedValue({
       rows: [
+        { year: 2023, month: 1, channel: "Catering", amount: 800 },
+        { year: 2024, month: 1, channel: "Catering", amount: 900 },
         { year: 2025, month: 1, channel: "Catering", amount: 1000 },
         { year: 2026, month: 1, channel: "Catering", amount: 1200 },
       ],
@@ -28,6 +32,8 @@ describe("central kitchen channel sales report page", () => {
       </MemoryRouter>,
     );
 
+    await user.click(await screen.findByRole("button", { name: "全選" }));
+
     await waitFor(() => {
       const yearValues = Array.from(
         container.querySelectorAll<HTMLElement>(
@@ -36,15 +42,20 @@ describe("central kitchen channel sales report page", () => {
       );
       expect(yearValues.length).toBeGreaterThan(0);
 
-      const tonesByYear = new Map(
-        yearValues.map((value) => [
-          value.dataset.reportYear,
-          value.style.getPropertyValue("--year-tone-color"),
-        ]),
+      const firstCell = container.querySelector<HTMLElement>(
+        ".kitchen-channel-sales-cell-values",
       );
-      expect(tonesByYear.get("2025")).toBeTruthy();
-      expect(tonesByYear.get("2026")).toBeTruthy();
-      expect(tonesByYear.get("2025")).not.toBe(tonesByYear.get("2026"));
+      const firstCellYearValues = Array.from(
+        firstCell?.querySelectorAll<HTMLElement>(
+          ".kitchen-channel-sales-year-value",
+        ) ?? [],
+      );
+
+      expect(
+        firstCellYearValues.map((value) =>
+          value.style.getPropertyValue("--year-tone-color"),
+        ),
+      ).toEqual(["#dc8a19", "#111827", "#0a7e3a", "#111827"]);
       expect(yearValues.every((value) => value.style.background === "")).toBe(true);
     });
   });

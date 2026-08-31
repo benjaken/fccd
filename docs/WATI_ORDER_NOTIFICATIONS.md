@@ -36,10 +36,10 @@ There is deliberately no payment or outstanding-balance reminder.
 | --- | --- | --- |
 | Delivery order confirmed | `order_confirm_with_action_and_aolink` | A delivery order is created or a quote becomes an order |
 | Pickup order confirmed | `selfpick_order_confirmation_with_action2026` | A pickup order is created or a quote becomes an order |
-| Delivery tomorrow | `fcc2_delivery_reminder` | Hong Kong calendar day before delivery |
-| Pickup tomorrow | `fcc2_selfpick_reminder` | Hong Kong calendar day before pickup |
-| Delivery today | `delivery_today_reminder` | Delivery date in Hong Kong |
-| Pickup today | `pickup_today_reminder` | Pickup date in Hong Kong |
+| Delivery tomorrow | `delivery_tomorrow_reminder` | Hong Kong calendar day before delivery |
+| Pickup tomorrow | `pickup_tomorrow_reminder` | Hong Kong calendar day before pickup |
+| Delivery today | `fccd_delivery_reminder` | Delivery date in Hong Kong |
+| Pickup today | `fccd_selfpick_reminder1` | Pickup date in Hong Kong |
 | Details updated | `order_details_updated` | Date, time, address, or delivery method changes |
 | Dispatched | `delivery_dispatched` | `delivery_status` becomes `送貨途中` |
 | Ready for pickup | `pickup_ready` | Configurable operational order status |
@@ -58,7 +58,7 @@ database trigger is assumed.
 
 | Event | Existing WATI template |
 | --- | --- |
-| Driver assigned | `driver_assign_reminder` |
+| Driver assignment reminder | `fccd_driver_assign_reminder_v1` |
 | Bad weather notice | `fc_bad_weather_reply_3` |
 | Holiday service notice | `fc_holiday_notice` |
 | Second contact requested | `second_contact_person` |
@@ -114,18 +114,22 @@ just because the matching email failed, and vice versa.
 ## Daily unassigned-driver internal reminder
 
 At `DRIVER_ASSIGNMENT_REMINDER_HOUR_HK` (09:00 Hong Kong time by default), the
-same scheduler sends email and WATI internal reminders when today's delivery
+same scheduler sends email and WATI internal reminders when tomorrow's delivery
 orders still have no fleet assigned. Pickup, cancelled, archived, and fulfilled
-orders are excluded. Each reminder shows the current count and a direct FCCD
-link for every affected order, sorted by delivery time.
+orders are excluded. Each reminder shows the current count; the email also
+includes a direct FCCD link for every affected order, sorted by delivery time.
 
 Email recipients are users with `email_noti` enabled. WATI recipients come from
-`order_first_notification_recipients`. The approved internal WATI template must
-use `date`, `count`, and `orders`; `orders` contains one order number, time, and
-direct link per line. Configure it with
+`order_first_notification_recipients`. The approved internal WATI template is
+`fccd_driver_assign_reminder_v1` and uses only `date` and `count`. Its fixed body is:
+
+`明天 {{date}} 有 {{count}} 張訂單未派司機，請立即到以下連結中派車：https://www.foodchannels-delivery.com/delivery/assign`
+
+The worker uses that template by default. It can still be overridden with
 `WATI_DRIVER_ASSIGNMENT_REMINDER_TEMPLATE_NAME` and
-`WATI_DRIVER_ASSIGNMENT_REMINDER_BROADCAST_NAME`. `ORDER_ADMIN_BASE_URL` is
-required to build the links.
+`WATI_DRIVER_ASSIGNMENT_REMINDER_BROADCAST_NAME`. `ORDER_ADMIN_BASE_URL` is only
+needed for the detailed links in the matching email reminder; the WATI template
+uses its own fixed assignment URL.
 
 The reminder uses a date-and-recipient outbox, so each recipient receives at
 most one reminder per Hong Kong calendar day. The live unassigned list is read

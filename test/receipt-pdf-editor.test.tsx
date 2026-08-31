@@ -135,6 +135,18 @@ describe("Receipt PDF editor", () => {
     expect(screen.queryByRole("button", { name: "新增額外資訊" })).not.toBeInTheDocument();
   });
 
+  it("uses the Hong Kong calendar date for invoice timestamps near midnight", async () => {
+    renderPage(vi.fn().mockResolvedValue({
+      ...result,
+      order: {
+        ...result.order,
+        createdAt: "2026-08-23T16:30:00.000Z",
+      },
+    }));
+
+    expect(await screen.findByLabelText("Invoice Date:")).toHaveValue("24/8/2026");
+  });
+
   it("refreshes receipt source data instead of restoring a stale PDF draft", async () => {
     localStorage.setItem("fccd:receipt-pdf-draft:order-1", JSON.stringify({
       customer: "舊客戶",

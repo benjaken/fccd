@@ -48,6 +48,7 @@ import { ORDER_LIST_STATUS_NAMES, OrderListFiltersPanel, OrderRowActionMenu, Ord
 import { getBrandLogoAlt, getDocumentLogoPath } from "@/lib/brand-logo";
 import { formatDeliveryAddress } from "@/lib/delivery-address";
 import { CustomerMessagesSidePanel } from "@/components/CustomerMessagesSidePanel";
+import { OrderReconciliationSummary } from "@/components/OrderReconciliationSummary";
 import { createQuoteCustomerNote, fetchOrderMessages } from "@/lib/quote-customers";
 import { DeliveryNoteDocument } from "@/components/DeliveryNoteDocument";
 import {
@@ -589,6 +590,8 @@ export function OrdersListPage({
           </Button> : null}
         </div>
       </header>
+
+      {preset === "shopify-pending" ? <OrderReconciliationSummary /> : null}
 
       <article className="panel orders-panel responsive-card-list-panel">
         <header className="orders-toolbar">

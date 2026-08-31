@@ -1152,8 +1152,7 @@ describe("Quote editor", () => {
     expect(screen.getByRole("heading", { name: number })).toBeInTheDocument();
   });
 
-  it("only sends notifications from the explicit WATI and email action", async () => {
-    const user = userEvent.setup();
+  it("does not offer notification sending from quote editing", async () => {
     const sendConfirmation = vi.fn().mockResolvedValue(undefined);
     const summary = {
       id: "quote-1", orderNumber: "FCLQ20260801", channelId: "channel-1",
@@ -1178,8 +1177,7 @@ describe("Quote editor", () => {
 
     expect(await screen.findAllByRole("tab")).toHaveLength(2);
     expect(sendConfirmation).not.toHaveBeenCalled();
-    await user.click(screen.getByRole("button", { name: "Send WATI and email confirmation" }));
-    await waitFor(() => expect(sendConfirmation).toHaveBeenCalledWith("quote-1"));
+    expect(screen.queryByRole("button", { name: /Send WATI and email/ })).not.toBeInTheDocument();
   });
 
   it("places convert to order on the first quote step instead of the list", async () => {
@@ -1270,7 +1268,7 @@ describe("Quote editor", () => {
     HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
   });
 
-  it("shows notification and conversion actions for quote details", async () => {
+  it("shows conversion but not notification actions for quote details", async () => {
     const user = userEvent.setup();
     const sendConfirmation = vi.fn().mockResolvedValue(undefined);
     const convertQuote = vi.fn().mockResolvedValue({ id: "order-1", orderNumber: "FCLO20260801" });
@@ -1302,8 +1300,8 @@ describe("Quote editor", () => {
 
     await screen.findByRole("heading", { name: "FCLQ20260801" });
     expect(screen.getByRole("link", { name: /Edit|編輯/ })).toHaveAttribute("href", "/quotes/quote-1/edit");
-    await user.click(screen.getByRole("button", { name: "Send WATI and email order confirmation" }));
-    await waitFor(() => expect(sendConfirmation).toHaveBeenCalledWith("quote-1"));
+    expect(screen.queryByRole("button", { name: /Send WATI and email/ })).not.toBeInTheDocument();
+    expect(sendConfirmation).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: "Convert to order" }));
     await waitFor(() => expect(convertQuote).toHaveBeenCalledWith("quote-1"));
@@ -1320,6 +1318,7 @@ describe("Quote editor", () => {
   it("shows the delivery-note customer note on order editing and details", async () => {
     const user = userEvent.setup();
     const setFactoryStatus = vi.fn().mockResolvedValue(undefined);
+    const sendConfirmation = vi.fn().mockResolvedValue({ includesAddonLink: true });
     const loadSummary = vi.fn().mockResolvedValue({
       id: "order-1", orderNumber: "FCCO20260801", channelId: "channel-1",
       shopifyOrderId: 7808193593617,
@@ -1341,7 +1340,7 @@ describe("Quote editor", () => {
     const view = render(
       <MemoryRouter initialEntries={["/orders/order-1/edit"]}>
         <Routes>
-          <Route path="/orders/:id/edit" element={<QuoteEditorPage documentType="order" setFactoryStatus={setFactoryStatus} loadOptions={vi.fn().mockResolvedValue(options)} loadSummary={loadSummary} loadLines={vi.fn().mockResolvedValue([])} loadShippingFeeOptions={vi.fn().mockResolvedValue(shippingFeeOptions)} />} />
+          <Route path="/orders/:id/edit" element={<QuoteEditorPage documentType="order" sendConfirmation={sendConfirmation} setFactoryStatus={setFactoryStatus} loadOptions={vi.fn().mockResolvedValue(options)} loadSummary={loadSummary} loadLines={vi.fn().mockResolvedValue([])} loadShippingFeeOptions={vi.fn().mockResolvedValue(shippingFeeOptions)} />} />
         </Routes>
       </MemoryRouter>,
     );
@@ -1361,27 +1360,28 @@ describe("Quote editor", () => {
     expect(screen.queryByLabelText(/Sales source|報價渠道/)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/Communication channel|溝通渠道/)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Convert to order" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Send WATI and email order confirmation with add-on link" })).toBeInTheDocument();
     await user.click(screen.getByRole("tab", { name: /Add products|加入貨品/ }));
     expect(screen.getByRole("combobox", { name: /Shipping fee option|運費選項/ })).toHaveValue("");
-    const doNotSend = screen.getByRole("checkbox", { name: /Do not send to factory|不傳送到工場/ });
+    const doNotSend = screen.queryByRole("checkbox", { name: /Do not send to factory|不傳送到工場/ });
     const suppressFactoryChange = screen.getByRole("checkbox", { name: /Do not notify factory of changes|不通知工場有更改/ });
-    expect(doNotSend).not.toBeChecked();
+    expect(doNotSend).not.toBeInTheDocument();
     expect(suppressFactoryChange).toBeEnabled();
     expect(screen.getByRole("button", { name: /Send to factory|送至工場/ })).toBeInTheDocument();
     await user.click(suppressFactoryChange);
     expect(suppressFactoryChange).toBeChecked();
     await user.click(screen.getByRole("button", { name: /Send to factory|送至工場/ }));
     expect(setFactoryStatus).toHaveBeenCalledWith("order-1", true);
-    expect(doNotSend).not.toBeChecked();
     await user.click(screen.getByRole("button", { name: /Cancel factory send|取消送至工場/ }));
     expect(setFactoryStatus).toHaveBeenLastCalledWith("order-1", false);
-    expect(doNotSend).not.toBeChecked();
+    expect(screen.queryByRole("button", { name: /新增額外資訊|Add additional information/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /新增活動項目|Add activity item/ })).not.toBeInTheDocument();
 
     view.unmount();
     render(
       <MemoryRouter initialEntries={["/orders/order-1"]}>
         <Routes>
-          <Route path="/orders/:id" element={<QuoteEditorPage documentType="order" combined readOnly canEdit setFactoryStatus={setFactoryStatus} loadOptions={vi.fn().mockResolvedValue(options)} loadSummary={loadSummary} loadLines={vi.fn().mockResolvedValue([])} loadShippingFeeOptions={vi.fn().mockResolvedValue(shippingFeeOptions)} />} />
+          <Route path="/orders/:id" element={<QuoteEditorPage documentType="order" combined readOnly canEdit sendConfirmation={sendConfirmation} setFactoryStatus={setFactoryStatus} loadOptions={vi.fn().mockResolvedValue(options)} loadSummary={loadSummary} loadLines={vi.fn().mockResolvedValue([])} loadShippingFeeOptions={vi.fn().mockResolvedValue(shippingFeeOptions)} />} />
         </Routes>
       </MemoryRouter>,
     );
@@ -1396,6 +1396,8 @@ describe("Quote editor", () => {
     expect(screen.queryByText(/Sales source|報價渠道/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Communication channel|溝通渠道/)).not.toBeInTheDocument();
     expect(screen.queryByRole("checkbox", { name: /Do not send to factory|不傳送到工場/ })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Send WATI and email order confirmation with add-on link" }));
+    await waitFor(() => expect(sendConfirmation).toHaveBeenCalledWith("order-1"));
     const detailSendButton = screen.getByRole("button", { name: /Send to factory|送至工場/ });
     const detailEditLink = screen.getByRole("link", { name: /Edit|編輯/ });
     expect(detailSendButton.closest(".quote-detail-actions")).toBe(detailEditLink.closest(".quote-detail-actions"));

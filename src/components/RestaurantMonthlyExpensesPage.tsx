@@ -337,6 +337,7 @@ export function RestaurantMonthlyExpensesPage({
               const modifiedAt = item.modifiedAt ? new Intl.DateTimeFormat(i18n.language, {
                 dateStyle: "medium",
                 timeStyle: "short",
+                timeZone: "Asia/Hong_Kong",
               }).format(new Date(item.modifiedAt)) : t("restaurantMonthlyExpenses.unknownEditTime");
               return (
                 <div key={key} className={cn("monthly-expenses-history-item", active && "active")}>

@@ -8,6 +8,7 @@ export function OrderFactorySettingsControls({
   suppressFactoryReprint,
   onDoNotSendChange,
   onSuppressFactoryReprintChange,
+  showDoNotSend = true,
   actions,
   className,
 }: {
@@ -15,6 +16,7 @@ export function OrderFactorySettingsControls({
   suppressFactoryReprint: boolean;
   onDoNotSendChange: (checked: boolean) => void;
   onSuppressFactoryReprintChange: (checked: boolean) => void;
+  showDoNotSend?: boolean;
   actions?: ReactNode;
   className?: string;
 }) {
@@ -26,17 +28,19 @@ export function OrderFactorySettingsControls({
       aria-label={t("orderEditor.factorySettings.title")}
     >
       <h3>{t("orderEditor.factorySettings.title")}</h3>
-      <label>
-        <input
-          type="checkbox"
-          checked={doNotSendToFactory}
-          onChange={(event) => onDoNotSendChange(event.target.checked)}
-        />
-        <span>
-          <strong>{t("orderEditor.factorySettings.doNotSend")}</strong>
-          <small>{t("orderEditor.factorySettings.doNotSendHint")}</small>
-        </span>
-      </label>
+      {showDoNotSend ? (
+        <label>
+          <input
+            type="checkbox"
+            checked={doNotSendToFactory}
+            onChange={(event) => onDoNotSendChange(event.target.checked)}
+          />
+          <span>
+            <strong>{t("orderEditor.factorySettings.doNotSend")}</strong>
+            <small>{t("orderEditor.factorySettings.doNotSendHint")}</small>
+          </span>
+        </label>
+      ) : null}
       <label>
         <input
           type="checkbox"

@@ -55,6 +55,7 @@ export type OrderNotificationValues = {
   date: string;
   time: string;
   address: string;
+  phone: string;
   delivery_method: string;
   ao_deadline: string;
   ao_link: string;
@@ -198,6 +199,7 @@ export function buildOrderNotificationContent(
 ): NotificationContent {
   const hello = `Hello ${value.name},`;
   const signature = value.shop_name;
+  const customerServiceSignature = `${value.shop_name} 客戶服務團隊`;
   const order = value.order_number;
 
   switch (event) {
@@ -208,7 +210,8 @@ export function buildOrderNotificationContent(
         `日期：${value.date}`, `時間：${value.time}`, `地址：${value.address}`, "",
         "如送貨當天有任何查詢，請在此 WhatsApp 聯絡我們。", "",
         "謝謝你的支持，願你有一個愉快的聚餐時光🥳", "",
-        value.ao_link && `限時加單推介（請在${value.ao_deadline}下午3點前加單）：`,
+        value.ao_link && "-----------------------", value.ao_link && "",
+        value.ao_link && `限時加單推介 (請在${value.ao_deadline}下午3點前加單)：`,
         value.ao_link || false, "", signature,
       ]);
     case "pickup_order_confirmed":
@@ -217,8 +220,8 @@ export function buildOrderNotificationContent(
         "你訂購的到會套餐將會在以下時間準備好，請安排取餐。",
         `取餐日期：${value.date}`, `取餐時間：${value.time}`, `取餐地址：${PICKUP_ADDRESS}`,
         "*請留意食品數量可能比較多，建議多找一位朋友幫手取餐。", "",
-        "如取餐當天有任何查詢，請在此 WhatsApp 聯絡我們。", "",
-        "謝謝你的支持，願你有一個愉快的聚餐時光🥳", "", signature,
+        "如取餐當天有任何查詢，請Whatsapp此電話聯絡我們。", "",
+        "謝謝你的支持，願你有一個愉快的聚餐時光🥳",
       ]);
     case "delivery_tomorrow_reminder":
       return content(`明日送貨提醒 ${order}`, [
@@ -243,8 +246,8 @@ export function buildOrderNotificationContent(
         hello, "", `你的到會訂單 ${order} 將會在今日送貨，司機會在到達前致電給你，請保持聯絡電話暢通。`, "",
         `日期：${value.date}`, `時間：${value.time}`, `地址：${value.address}`, "",
         "如有任何查詢，請在此 WhatsApp 聯絡我們。", "",
-        `查看訂單內容或下載收據：${SELF_SERVICE_URL}`, "",
-        "謝謝你的支持，願你有一個愉快的聚餐時光❤️", "", signature,
+        `查看訂單內容 或 下載收據：${SELF_SERVICE_URL}`, "",
+        "謝謝你的支持，願你有一個愉快的聚餐時光❤️", "", customerServiceSignature,
       ]);
     case "pickup_today_reminder":
       return content(`今日取餐提醒 ${order}`, [
@@ -252,8 +255,8 @@ export function buildOrderNotificationContent(
         `取餐日期：${value.date}`, `取餐時間：${value.time}`, `取餐地址：${PICKUP_ADDRESS}`,
         "*請留意食品數量如果比較多，建議多找一位朋友幫手取餐。", "",
         "如有任何查詢，請在此 WhatsApp 聯絡我們。", "",
-        `查看訂單內容或下載收據：${SELF_SERVICE_URL}`, "",
-        "謝謝你的支持，願你有一個愉快的聚餐時光❤️", "", signature,
+        `查看訂單內容 或 下載收據：${SELF_SERVICE_URL}`, "",
+        "謝謝你的支持，願你有一個愉快的聚餐時光❤️", "", customerServiceSignature,
       ]);
     case "order_details_updated":
       return content(`訂單資料更新確認 ${order}`, [
@@ -302,20 +305,26 @@ export function buildOrderNotificationContent(
       ]);
     case "bad_weather_notice":
       return content(`惡劣天氣安排通知 ${order}`, [
-        hello, "", `訂單 ${order} 可能受惡劣天氣影響。`, "",
-        `日期：${value.date}`, `時間：${value.time}`, "",
-        "如送貨或取餐安排需要調整，我們會再聯絡你。", "", signature,
+        "你好，", "",
+        "天文台報告未來幾天有機會出現惡劣天氣 (八號或以上風球/黑雨警告)☔ 惡劣天氣下我們可作以下特別安排：", "",
+        "👉🏻【更改送貨日期】",
+        "客人可以在24小時前聯絡我們更改送貨日期，已付費用可保留60天內使用，逾期作廢。訂單一經改期將不能重新安排在原定日期送貨。請盡量在24小時前通知我們更改送貨日期，否則有機會未能安排。", "",
+        "👉🏻【繼續在原定日期送貨】",
+        "當天文台宣佈懸掛八號或以上風球/黑雨警告，我們將停止送餐，送餐服務會在警報除下的2小時後恢復正常，在前一日選擇照常送貨的客人，我們會按原定送貨時間送貨。如在預定送餐時間內惡劣天氣依然持續，訂單將安排改期，已付費用可保留60天內使用，逾期作廢。", "",
+        "以上安排有機會按實際情況更改，一切以客服回覆作準。請大家密切留意我們的Whatsapp通知最新安排🔥 同時希望天氣放晴，讓大家享受聚會的歡樂時光！",
       ]);
     case "holiday_service_notice":
       return content(`假期服務安排 ${order}`, [
-        hello, "", `以下是假期期間訂單 ${order} 的服務安排：`, "",
-        `日期：${value.date}`, `時間：${value.time}`, "",
-        "如有任何查詢，請在此 WhatsApp 聯絡我們。", "", signature,
+        "尊貴的客戶，你好，", "",
+        "節日期間交通情況較難預測，交通可能會提早或延遲，但出餐時間我們盡量力求準時，司機定必在安全情況下將食物送到大家手中！🙏🏻", "",
+        "出車時司機會先打電話跟你聯絡，如果選擇地面交收的訂餐，請留意份量，可能需要多個朋友幫忙領取🥰", "",
+        "溫馨提示⭐我們所有送到的食品都會以保溫袋及暖水袋減慢溫度流失，如果需要再加熱，我們的加厚餐盒可以直接放進微波爐、電陶爐或明火上直接加熱🔥", "",
+        "祝你有一個愉快的用餐體驗，節日快樂！",
       ]);
     case "second_contact_requested":
       return content(`訂單後備聯絡人 ${order}`, [
-        hello, "", `為確保訂單 ${order} 能順利交付，請提供一位後備聯絡人的姓名及電話。`, "",
-        `日期：${value.date}`, `時間：${value.time}`, "", signature,
+        `你好，${order} 會在 ${value.date} 送餐。`, "",
+        `由於運輸繁忙，除了 ${value.phone} 之外，請提供第二收貨聯絡人電話，以便收貨當日順利進行。`,
       ]);
     case "payment_instructions_sent":
       return content(`訂單付款資料 ${order}`, [
@@ -330,9 +339,7 @@ export function buildOrderNotificationContent(
       ]);
     case "delivery_delayed":
       return content(`訂單送貨延誤 ${order}`, [
-        hello, "", `訂單 ${order} 的送貨時間可能有所延誤，對你造成不便，我們深感抱歉。`, "",
-        `原定時間：${value.time}`, `地址：${value.address}`, "",
-        "我們會盡快更新最新安排。", "", signature,
+        `剛已聯絡司機，由於路面狀況稍有阻滯，訂單會延誤 ${value.time} 分鐘，司機正盡力在安全的情況下全速前進，請見諒🙇‍♀️`,
       ]);
     case "order_issue_reported":
       return content(`訂單問題跟進 ${order}`, [

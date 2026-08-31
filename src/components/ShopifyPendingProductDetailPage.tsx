@@ -133,7 +133,7 @@ export function ShopifyPendingProductDetailPage({ canManage = false }: { canMana
   const [materialOptions, setMaterialOptions] = useState<Record<ShopifyApprovalMaterialKind, ShopifyApprovalMaterialOption[]>>({ ingredient: [], packing: [] });
   const [selectedMaterials, setSelectedMaterials] = useState<SelectedApprovalMaterial[]>([]);
   const [materialsLoading, setMaterialsLoading] = useState(false);
-  const date = useMemo(() => new Intl.DateTimeFormat(i18n.language, { dateStyle: "medium", timeStyle: "short" }), [i18n.language]);
+  const date = useMemo(() => new Intl.DateTimeFormat(i18n.language, { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Hong_Kong" }), [i18n.language]);
   const money = useMemo(() => new Intl.NumberFormat(i18n.language, { style: "currency", currency: "HKD" }), [i18n.language]);
 
   useEffect(() => {

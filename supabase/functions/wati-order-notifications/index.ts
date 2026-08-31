@@ -45,6 +45,33 @@ type DriverAssignmentReminderJob = {
   recipient_name: string;
   recipient_address: string;
 };
+type ReconciliationIssueRow = {
+  id: string;
+  issue_type: "missing_fccd" | "unlinked_fccd" | "factory_unsent" | "missing_service_time";
+  severity: "normal" | "important" | "urgent";
+  service_at: string | null;
+  metadata: Record<string, unknown> | null;
+  order: unknown;
+};
+type ReconciliationAlertJob = {
+  id: string;
+  attempts: number;
+  event_key: "daily_reconciliation" | "six_hour_reconciliation" | "late_order_immediate";
+  channel: "email" | "whatsapp";
+  recipient_name: string;
+  recipient_address: string;
+  issue: unknown;
+};
+type ReconciliationRunRow = {
+  run_date: string;
+  scope_start: string;
+  shopify_count: number;
+  fccd_matched_count: number;
+  missing_fccd_count: number;
+  unlinked_fccd_count: number;
+  factory_unsent_count: number;
+  urgent_count: number;
+};
 type TemplateRow = {
   event_key: OrderNotificationEvent;
   template_name: string;
@@ -52,6 +79,7 @@ type TemplateRow = {
   parameters: ParameterRule[];
   is_active?: boolean;
 };
+type WatiSendTemplate = Pick<TemplateRow, "template_name" | "broadcast_name">;
 type OrderRow = {
   id?: string;
   document_type?: string | null;
@@ -133,7 +161,7 @@ function driverReminderDate(now = new Date()) {
     throw new Error("invalid_driver_assignment_reminder_hour_hk");
   }
   const local = hongKongDateAndHour(now);
-  return local.hour >= configured ? local.date : null;
+  return local.hour >= configured ? nextDateKey(local.date) : null;
 }
 
 function nextDateKey(value: string) {
@@ -209,7 +237,7 @@ function unassignedDriverReminderOrders(
         || order.company_name_snapshot?.trim()
         || "-",
       delivery_time: row.delivery_time?.trim() || order.delivery_time?.trim() || "-",
-      order_link: `${baseUrl}/orders/${encodeURIComponent(order.id)}`,
+      order_link: baseUrl ? `${baseUrl}/orders/${encodeURIComponent(order.id)}` : "",
     });
   }
   return [...orders.values()].sort((left, right) =>
@@ -271,6 +299,80 @@ function internalValues(
   };
 }
 
+function escapeHtml(value: unknown) {
+  return String(value ?? "").replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  })[character] || character);
+}
+
+function reconciliationIssueLabel(issueType: ReconciliationIssueRow["issue_type"]) {
+  switch (issueType) {
+    case "missing_fccd": return "Shopify有單但FCCD尚未正式輸入";
+    case "unlinked_fccd": return "FCCD訂單尚未連結Shopify";
+    case "factory_unsent": return "訂單尚未傳送廚房";
+    case "missing_service_time": return "訂單缺少出餐時間";
+  }
+}
+
+function reconciliationOrder(issue: ReconciliationIssueRow) {
+  return relation<OrderRow>(issue.order);
+}
+
+function reconciliationIssueLine(issue: ReconciliationIssueRow) {
+  const order = reconciliationOrder(issue);
+  const orderNumber = order?.order_number?.trim()
+    || String(issue.metadata?.orderNumber || "未編號訂單");
+  const service = issue.service_at
+    ? new Intl.DateTimeFormat("zh-HK", {
+      timeZone: "Asia/Hong_Kong",
+      dateStyle: "short",
+      timeStyle: "short",
+    }).format(new Date(issue.service_at))
+    : "未設定";
+  return `${orderNumber}｜${reconciliationIssueLabel(issue.issue_type)}｜出餐 ${service}`;
+}
+
+function reconciliationOrderLink(issue: ReconciliationIssueRow) {
+  const order = reconciliationOrder(issue);
+  const baseUrl = Deno.env.get("ORDER_ADMIN_BASE_URL")?.trim().replace(/\/$/, "") || "";
+  return baseUrl && order?.id
+    ? `${baseUrl}/orders/${encodeURIComponent(order.id)}`
+    : "";
+}
+
+function reconciliationEmailContent(input: {
+  recipientName: string;
+  eventKey: ReconciliationAlertJob["event_key"];
+  issues: ReconciliationIssueRow[];
+  run: ReconciliationRunRow | null;
+}) {
+  const urgent = input.eventKey !== "daily_reconciliation";
+  const subject = urgent
+    ? `【FCCD內部緊急漏單預警】${reconciliationIssueLine(input.issues[0])}`
+    : `【FCCD內部每日漏單核對】${input.run?.run_date || ""}`;
+  const summary = input.run
+    ? `<p>核對範圍：${escapeHtml(input.run.scope_start)} 至所有未來訂單</p>
+       <p>Shopify：${input.run.shopify_count}｜FCCD已配對：${input.run.fccd_matched_count}｜漏單：${input.run.missing_fccd_count}｜未連結：${input.run.unlinked_fccd_count}｜未傳廚房：${input.run.factory_unsent_count}｜緊急：${input.run.urgent_count}</p>`
+    : "";
+  const rows = input.issues.map((issue) => {
+    const link = reconciliationOrderLink(issue);
+    return `<li>${escapeHtml(reconciliationIssueLine(issue))}${link ? `｜<a href="${escapeHtml(link)}">立即處理</a>` : ""}</li>`;
+  }).join("");
+  return {
+    subject,
+    html: `<div style="font-family:Arial,sans-serif;line-height:1.6">
+      <h2>${urgent ? "緊急漏單預警" : "每日漏單核對"}</h2>
+      <p>${escapeHtml(input.recipientName)}：</p>${summary}
+      <ul>${rows}</ul>
+      <p><strong>此為FCCD內部通知，請勿轉發客戶。</strong></p>
+    </div>`,
+  };
+}
+
 function isPickup(order: OrderRow) {
   const method = relation<{ name?: unknown; display_name?: unknown; requires_address_check?: unknown }>(
     order.shipping_methods,
@@ -294,6 +396,7 @@ function valuesFor(order: OrderRow): OrderNotificationValues {
     date: formatHongKongDate(order.delivery_at),
     time: order.delivery_time?.trim() || "-",
     address: order.shipping_address_snapshot?.trim() || "-",
+    phone: order.contact_number_a_snapshot?.trim() || order.contact_number_b_snapshot?.trim() || "-",
     delivery_method: pickup ? "門市自取" : "送貨上門",
     ao_deadline: formatHongKongDate(order.delivery_at, 1),
     ao_link: addonLink(),
@@ -332,7 +435,7 @@ function providerMessageId(payload: unknown) {
 async function sendWati(
   allowlist: NotificationRecipientAllowlist,
   phone: string,
-  template: TemplateRow,
+  template: WatiSendTemplate,
   parameters: Array<{ name: string; value: string }>,
 ) {
   if (!isNotificationPhoneAllowed(allowlist, phone)) {
@@ -401,8 +504,16 @@ Deno.serve(async (request) => {
       return response({ error: "unauthorized" }, 401);
     }
 
+    const input = await request.json().catch(() => ({})) as {
+      limit?: unknown;
+      mode?: unknown;
+    };
+    const requestedLimit = Number(input.limit || 20);
+    const limit = Number.isFinite(requestedLimit) ? Math.max(1, Math.min(requestedLimit, 100)) : 20;
+    const reconciliationOnly = input.mode === "reconciliation_only";
+
     const activation = notificationActivation();
-    if (Date.now() < activation.timestamp) {
+    if (!reconciliationOnly && Date.now() < activation.timestamp) {
       return response({
         disabled: true,
         activateAt: activation.configured,
@@ -412,14 +523,22 @@ Deno.serve(async (request) => {
       });
     }
 
-    const input = await request.json().catch(() => ({})) as { limit?: unknown };
-    const requestedLimit = Number(input.limit || 20);
-    const limit = Number.isFinite(requestedLimit) ? Math.max(1, Math.min(requestedLimit, 100)) : 20;
     const admin = createClient(requiredEnv("SUPABASE_URL"), serviceRoleKey());
     const recipientAllowlist = notificationRecipientAllowlist();
+    const nowIso = new Date().toISOString();
 
-    const dueDriverReminderDate = driverReminderDate();
-    if (dueDriverReminderDate) {
+    const { error: reconciliationRefreshError } = await admin.rpc(
+      "refresh_order_reconciliation",
+      { p_now: nowIso, p_force_daily: false },
+    );
+    const reconciliationPipelineAvailable = !reconciliationRefreshError
+      || reconciliationRefreshError.code !== "PGRST202";
+    if (reconciliationRefreshError && reconciliationPipelineAvailable) {
+      throw new Error(`order_reconciliation_refresh_failed:${reconciliationRefreshError.message}`);
+    }
+
+    const dueDriverReminderDate = reconciliationOnly ? null : driverReminderDate();
+    if (!reconciliationOnly && dueDriverReminderDate) {
       const { error: driverReminderEnqueueError } = await admin.rpc(
         "enqueue_driver_assignment_internal_reminders",
         { p_reminder_date: dueDriverReminderDate },
@@ -432,13 +551,16 @@ Deno.serve(async (request) => {
       }
     }
 
-    const { error: reminderError } = await admin.rpc("enqueue_due_wati_order_reminders", {
-      p_now: new Date().toISOString(),
-    });
-    const customerPipelineAvailable = !reminderError
-      || reminderError.code !== "PGRST202";
-    if (reminderError && customerPipelineAvailable) {
-      throw new Error(`reminder_enqueue_failed:${reminderError.message}`);
+    let customerPipelineAvailable = false;
+    if (!reconciliationOnly) {
+      const { error: reminderError } = await admin.rpc("enqueue_due_wati_order_reminders", {
+        p_now: new Date().toISOString(),
+      });
+      customerPipelineAvailable = !reminderError
+        || reminderError.code !== "PGRST202";
+      if (reminderError && customerPipelineAvailable) {
+        throw new Error(`reminder_enqueue_failed:${reminderError.message}`);
+      }
     }
 
     let claimedRows: Array<{ id: string }> = [];
@@ -605,14 +727,18 @@ Deno.serve(async (request) => {
       if (done) sent += 1; else failed += 1;
     }
 
-    const { data: internalClaimed, error: internalClaimError } = await admin.rpc(
-      "claim_order_internal_notifications",
-      { p_limit: limit },
-    );
-    if (internalClaimError) {
-      throw new Error(`internal_notification_claim_failed:${internalClaimError.message}`);
+    let internalClaimed: Array<{ id: string }> = [];
+    if (!reconciliationOnly) {
+      const { data, error: internalClaimError } = await admin.rpc(
+        "claim_order_internal_notifications",
+        { p_limit: limit },
+      );
+      if (internalClaimError) {
+        throw new Error(`internal_notification_claim_failed:${internalClaimError.message}`);
+      }
+      internalClaimed = (data || []) as Array<{ id: string }>;
     }
-    const internalIds = (internalClaimed || []) as Array<{ id: string }>;
+    const internalIds = internalClaimed;
     let internalJobs: InternalQueueRow[] = [];
     if (internalIds.length) {
       const { data, error: internalLoadError } = await admin
@@ -760,18 +886,20 @@ Deno.serve(async (request) => {
     }
 
     let driverReminderJobs: DriverAssignmentReminderJob[] = [];
-    const { data: driverReminderClaimed, error: driverReminderClaimError } = await admin.rpc(
-      "claim_driver_assignment_internal_reminders",
-      { p_limit: limit },
-    );
-    if (
-      driverReminderClaimError
-      && driverReminderClaimError.code !== "PGRST202"
-    ) {
-      throw new Error(`driver_reminder_claim_failed:${driverReminderClaimError.message}`);
-    }
-    if (!driverReminderClaimError) {
-      driverReminderJobs = (driverReminderClaimed || []) as DriverAssignmentReminderJob[];
+    if (!reconciliationOnly) {
+      const { data: driverReminderClaimed, error: driverReminderClaimError } = await admin.rpc(
+        "claim_driver_assignment_internal_reminders",
+        { p_limit: limit },
+      );
+      if (
+        driverReminderClaimError
+        && driverReminderClaimError.code !== "PGRST202"
+      ) {
+        throw new Error(`driver_reminder_claim_failed:${driverReminderClaimError.message}`);
+      }
+      if (!driverReminderClaimError) {
+        driverReminderJobs = (driverReminderClaimed || []) as DriverAssignmentReminderJob[];
+      }
     }
 
     const driverOrdersByDate = new Map<string, UnassignedDriverReminderOrder[]>();
@@ -803,7 +931,7 @@ Deno.serve(async (request) => {
           if (deliveryError) {
             throw new Error(`driver_reminder_orders_failed:${deliveryError.message}`);
           }
-          const adminBaseUrl = requiredEnv("ORDER_ADMIN_BASE_URL").replace(/\/$/, "");
+          const adminBaseUrl = Deno.env.get("ORDER_ADMIN_BASE_URL")?.trim().replace(/\/$/, "") || "";
           reminderOrders = unassignedDriverReminderOrders(
             (deliveryRows || []) as DriverReminderDeliveryRow[],
             adminBaseUrl,
@@ -836,19 +964,10 @@ Deno.serve(async (request) => {
         } else {
           const phone = normalizeWhatsAppNumber(job.recipient_address);
           if (!phone) throw new Error("recipient_phone_invalid");
-          const templateName = Deno.env.get("WATI_DRIVER_ASSIGNMENT_REMINDER_TEMPLATE_NAME")?.trim();
-          const broadcastName = Deno.env.get("WATI_DRIVER_ASSIGNMENT_REMINDER_BROADCAST_NAME")?.trim();
-          if (!templateName || !broadcastName) {
-            await admin.from("driver_assignment_internal_reminder_outbox").update({
-              status: "pending",
-              attempts: Math.max(0, job.attempts - 1),
-              scheduled_at: new Date(Date.now() + 24 * 60 * 60_000).toISOString(),
-              last_error: "driver_assignment_wati_template_not_configured",
-              locked_at: null,
-              updated_at: new Date().toISOString(),
-            }).eq("id", job.id);
-            continue;
-          }
+          const templateName = Deno.env.get("WATI_DRIVER_ASSIGNMENT_REMINDER_TEMPLATE_NAME")?.trim()
+            || "fccd_driver_assign_reminder_v1";
+          const broadcastName = Deno.env.get("WATI_DRIVER_ASSIGNMENT_REMINDER_BROADCAST_NAME")?.trim()
+            || "fccd_driver_assign_reminder_v1";
           const template: TemplateRow = {
             event_key: "driver_assigned",
             template_name: templateName,
@@ -858,12 +977,6 @@ Deno.serve(async (request) => {
           const wati = await sendWati(recipientAllowlist, phone, template, [
             { name: "date", value: formatHongKongDate(`${job.reminder_date}T00:00:00+08:00`) },
             { name: "count", value: String(reminderOrders.length) },
-            {
-              name: "orders",
-              value: reminderOrders.map((order) =>
-                `${order.order_number} | ${order.delivery_time} | ${order.order_link}`
-              ).join("\n"),
-            },
           ]);
           providerPayload = wati.payload;
         }
@@ -890,13 +1003,164 @@ Deno.serve(async (request) => {
       }
     }
 
+    let reconciliationAlertJobs: ReconciliationAlertJob[] = [];
+    if (reconciliationPipelineAvailable) {
+      const { data: claimed, error: claimError } = await admin.rpc(
+        "claim_order_reconciliation_alerts",
+        { p_limit: limit },
+      );
+      if (claimError) {
+        throw new Error(`order_reconciliation_alert_claim_failed:${claimError.message}`);
+      }
+      const ids = ((claimed || []) as Array<{ id: string }>).map((row) => row.id);
+      if (ids.length) {
+        const { data, error } = await admin
+          .from("order_reconciliation_alert_outbox")
+          .select("id,attempts,event_key,channel,recipient_name,recipient_address,issue:order_reconciliation_issues(id,issue_type,severity,service_at,metadata,order:orders(id,order_number,customer_name_snapshot,company_name_snapshot,delivery_at,delivery_time,created_at))")
+          .in("id", ids);
+        if (error) {
+          throw new Error(`order_reconciliation_alert_load_failed:${error.message}`);
+        }
+        reconciliationAlertJobs = (data || []) as ReconciliationAlertJob[];
+      }
+    }
+
+    let dailyRun: ReconciliationRunRow | null = null;
+    let dailyIssues: ReconciliationIssueRow[] = [];
+    if (reconciliationAlertJobs.some((job) => job.event_key === "daily_reconciliation")) {
+      const [{ data: runRows, error: runError }, { data: issueRows, error: issueError }] =
+        await Promise.all([
+          admin.from("order_reconciliation_runs")
+            .select("run_date,scope_start,shopify_count,fccd_matched_count,missing_fccd_count,unlinked_fccd_count,factory_unsent_count,urgent_count")
+            .order("run_date", { ascending: false }).limit(1),
+          admin.from("order_reconciliation_issues")
+            .select("id,issue_type,severity,service_at,metadata,order:orders(id,order_number,customer_name_snapshot,company_name_snapshot,delivery_at,delivery_time,created_at)")
+            .eq("status", "open")
+            .order("severity", { ascending: false })
+            .order("service_at", { ascending: true, nullsFirst: false })
+            .limit(100),
+        ]);
+      if (runError) throw new Error(`order_reconciliation_run_load_failed:${runError.message}`);
+      if (issueError) throw new Error(`order_reconciliation_issue_load_failed:${issueError.message}`);
+      dailyRun = ((runRows || [])[0] || null) as ReconciliationRunRow | null;
+      dailyIssues = (issueRows || []) as ReconciliationIssueRow[];
+    }
+
+    for (const job of reconciliationAlertJobs) {
+      const issue = relation<ReconciliationIssueRow>(job.issue);
+      const issues = job.event_key === "daily_reconciliation"
+        ? dailyIssues
+        : issue ? [issue] : [];
+      if (!issues.length) {
+        await admin.from("order_reconciliation_alert_outbox").update({
+          status: "skipped",
+          last_error: "reconciliation_issue_resolved",
+          locked_at: null,
+          updated_at: new Date().toISOString(),
+        }).eq("id", job.id);
+        continue;
+      }
+
+      const recipientAllowed = job.channel === "email"
+        ? isNotificationEmailAllowed(recipientAllowlist, job.recipient_address)
+        : isNotificationPhoneAllowed(recipientAllowlist, job.recipient_address);
+      if (!recipientAllowed) {
+        await admin.from("order_reconciliation_alert_outbox").update({
+          status: "skipped",
+          last_error: "notification_recipient_not_allowlisted",
+          locked_at: null,
+          updated_at: new Date().toISOString(),
+        }).eq("id", job.id);
+        continue;
+      }
+
+      try {
+        let providerPayload: unknown;
+        if (job.channel === "email") {
+          const content = reconciliationEmailContent({
+            recipientName: job.recipient_name,
+            eventKey: job.event_key,
+            issues,
+            run: dailyRun,
+          });
+          providerPayload = await sendEmail(
+            recipientAllowlist,
+            job.recipient_address.trim(),
+            content.subject,
+            content.html,
+          );
+        } else {
+          const phone = normalizeWhatsAppNumber(job.recipient_address);
+          if (!phone) throw new Error("recipient_phone_invalid");
+          const daily = job.event_key === "daily_reconciliation";
+          const templateName = Deno.env.get(daily
+            ? "WATI_ORDER_RECONCILIATION_DAILY_TEMPLATE_NAME"
+            : "WATI_ORDER_RECONCILIATION_URGENT_TEMPLATE_NAME")?.trim();
+          const broadcastName = Deno.env.get(daily
+            ? "WATI_ORDER_RECONCILIATION_DAILY_BROADCAST_NAME"
+            : "WATI_ORDER_RECONCILIATION_URGENT_BROADCAST_NAME")?.trim();
+          if (!templateName || !broadcastName) {
+            throw new Error("order_reconciliation_wati_template_not_configured");
+          }
+          const template: WatiSendTemplate = {
+            template_name: templateName,
+            broadcast_name: broadcastName,
+          };
+          // WATI rejects dynamic parameter values containing newline or tab
+          // characters, so keep multi-order summaries on one readable line.
+          const issueText = issues.map(reconciliationIssueLine).join("；");
+          const link = issues.length === 1 ? reconciliationOrderLink(issues[0]) :
+            `${Deno.env.get("ORDER_ADMIN_BASE_URL")?.trim().replace(/\/$/, "") || ""}/orders/shopify-pending`;
+          const wati = await sendWati(recipientAllowlist, phone, template, daily
+            ? [
+              { name: "recipient_name", value: job.recipient_name },
+              { name: "date", value: dailyRun?.run_date || "-" },
+              { name: "scope_start", value: dailyRun?.scope_start || "-" },
+              { name: "shopify_count", value: String(dailyRun?.shopify_count ?? 0) },
+              { name: "fccd_count", value: String(dailyRun?.fccd_matched_count ?? 0) },
+              { name: "issue_count", value: String(issues.length) },
+              { name: "issues", value: issueText },
+              { name: "order_link", value: link },
+            ]
+            : [
+              { name: "recipient_name", value: job.recipient_name },
+              { name: "issue", value: issueText },
+              { name: "order_link", value: link },
+            ]);
+          providerPayload = wati.payload;
+        }
+        await admin.from("order_reconciliation_alert_outbox").update({
+          status: "sent",
+          sent_at: new Date().toISOString(),
+          provider_response: providerPayload,
+          last_error: null,
+          locked_at: null,
+          updated_at: new Date().toISOString(),
+        }).eq("id", job.id);
+        sent += 1;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "reconciliation_alert_send_failed";
+        const retryMinutes = Math.min(60, 2 ** Math.max(0, job.attempts - 1));
+        await admin.from("order_reconciliation_alert_outbox").update({
+          status: "failed",
+          last_error: message,
+          scheduled_at: new Date(Date.now() + retryMinutes * 60_000).toISOString(),
+          locked_at: null,
+          updated_at: new Date().toISOString(),
+        }).eq("id", job.id);
+        failed += 1;
+      }
+    }
+
     return response({
-      processed: jobs.length + internalJobs.length + driverReminderJobs.length,
+      processed: jobs.length + internalJobs.length + driverReminderJobs.length
+        + reconciliationAlertJobs.length,
       sent,
       failed,
       customerProcessed: jobs.length,
       internalProcessed: internalJobs.length,
       driverReminderProcessed: driverReminderJobs.length,
+      reconciliationProcessed: reconciliationAlertJobs.length,
     });
   } catch (error) {
     return response({

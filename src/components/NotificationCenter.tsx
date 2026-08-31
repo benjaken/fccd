@@ -45,16 +45,31 @@ export function NotificationCenter({ userId }: { userId: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [summaryVisible, setSummaryVisible] = useState(false);
+  const [urgentPopupVisible, setUrgentPopupVisible] = useState(false);
   const initialLoad = useRef(true);
+  const seenUrgentIds = useRef(new Set<string>());
 
   const load = useCallback(async () => {
     try {
       setError(false);
       const next = await fetchNotifications();
       setItems(next);
+      const newUrgentReconciliation = next.filter(
+        (item) =>
+          item.eventType === "order_reconciliation_urgent"
+          && item.priority === "urgent"
+          && !item.readAt
+          && !seenUrgentIds.current.has(item.id),
+      );
+      if (newUrgentReconciliation.length) {
+        setUrgentPopupVisible(true);
+        newUrgentReconciliation.forEach((item) => seenUrgentIds.current.add(item.id));
+      }
       if (initialLoad.current && next.some((item) => item.category === "action")) {
         setSummaryVisible(true);
-        if (next.some((item) => item.priority === "urgent")) setOpen(true);
+        if (next.some((item) =>
+          item.priority === "urgent" && item.eventType !== "order_reconciliation_urgent"
+        )) setOpen(true);
       }
     } catch {
       setError(true);
@@ -76,6 +91,9 @@ export function NotificationCenter({ userId }: { userId: string }) {
 
   const unreadCount = items.filter((item) => !item.readAt).length;
   const actionCount = items.filter((item) => item.category === "action").length;
+  const urgentReconciliationItems = items.filter(
+    (item) => item.eventType === "order_reconciliation_urgent" && item.priority === "urgent",
+  );
   const visible = useMemo(
     () =>
       items.filter((item) => {
@@ -103,6 +121,16 @@ export function NotificationCenter({ userId }: { userId: string }) {
     await load();
   };
 
+  const acknowledgeUrgentReconciliation = async () => {
+    await Promise.all(
+      urgentReconciliationItems
+        .filter((item) => !item.readAt)
+        .map((item) => markNotificationRead(item.id)),
+    );
+    setUrgentPopupVisible(false);
+    await load();
+  };
+
   return (
     <div className="notification-center">
       <Button
@@ -123,6 +151,18 @@ export function NotificationCenter({ userId }: { userId: string }) {
           </span>
         ) : null}
       </Button>
+
+      {urgentReconciliationItems.length > 0 ? (
+        <button
+          type="button"
+          className="urgent-reconciliation-banner"
+          onClick={() => setUrgentPopupVisible(true)}
+        >
+          <TriangleAlert aria-hidden="true" />
+          <span>緊急漏單：{urgentReconciliationItems.length} 張訂單仍未解決</span>
+          <ChevronRight aria-hidden="true" />
+        </button>
+      ) : null}
 
       {summaryVisible && actionCount > 0 && !open ? (
         <button
@@ -186,14 +226,16 @@ export function NotificationCenter({ userId }: { userId: string }) {
                   <span className="notification-item-copy">
                     <strong>{item.title}</strong>
                     {item.body ? <span>{item.body}</span> : null}
-                    <small>{new Intl.DateTimeFormat(undefined, { dateStyle: "short", timeStyle: "short" }).format(new Date(item.updatedAt))}</small>
+                    <small>{new Intl.DateTimeFormat(undefined, { dateStyle: "short", timeStyle: "short", timeZone: "Asia/Hong_Kong" }).format(new Date(item.updatedAt))}</small>
                   </span>
                   <ChevronRight />
                 </button>
                 <footer>
-                  <button type="button" onClick={() => void snooze(item, new Date(Date.now() + 60 * 60 * 1000))}>
-                    {t("notificationCenter.snoozeHour")}
-                  </button>
+                  {item.eventType !== "order_reconciliation_urgent" ? (
+                    <button type="button" onClick={() => void snooze(item, new Date(Date.now() + 60 * 60 * 1000))}>
+                      {t("notificationCenter.snoozeHour")}
+                    </button>
+                  ) : null}
                   {item.priority !== "urgent" ? (
                     <button type="button" onClick={() => void snooze(item, tomorrowAtNine())}>
                       {t("notificationCenter.snoozeTomorrow")}
@@ -210,6 +252,46 @@ export function NotificationCenter({ userId }: { userId: string }) {
                 </div>
               </div>
             </SidePanel>,
+            document.body,
+          )
+        : null}
+
+      {typeof document !== "undefined" && urgentPopupVisible && urgentReconciliationItems.length > 0
+        ? createPortal(
+            <div className="urgent-reconciliation-backdrop" role="presentation">
+              <section
+                className="urgent-reconciliation-dialog"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="urgent-reconciliation-title"
+              >
+                <header>
+                  <span className="urgent-reconciliation-icon"><TriangleAlert /></span>
+                  <div>
+                    <h2 id="urgent-reconciliation-title">緊急漏單預警</h2>
+                    <p>以下訂單已進入出餐前6小時，請立即處理。</p>
+                  </div>
+                </header>
+                <div className="urgent-reconciliation-list">
+                  {urgentReconciliationItems.map((item) => (
+                    <button type="button" key={item.id} onClick={() => void openItem(item)}>
+                      <strong>{item.title}</strong>
+                      {item.body ? <span>{item.body}</span> : null}
+                      <ChevronRight aria-hidden="true" />
+                    </button>
+                  ))}
+                </div>
+                <footer>
+                  <Button type="button" variant="outline" onClick={() => void acknowledgeUrgentReconciliation()}>
+                    我已知悉
+                  </Button>
+                  <Button type="button" onClick={() => void openItem(urgentReconciliationItems[0])}>
+                    立即處理訂單
+                  </Button>
+                </footer>
+                <small>此為FCCD內部通知，不會傳送給客戶。</small>
+              </section>
+            </div>,
             document.body,
           )
         : null}

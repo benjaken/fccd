@@ -143,4 +143,39 @@ describe("NotificationCenter", () => {
     expect(stylesheet).toMatch(/\.notification-list[^}]*overflow-y:\s*auto/);
     expect(stylesheet).toMatch(/\.notification-list[^}]*overscroll-behavior:\s*contain/);
   });
+
+  it("shows and acknowledges an urgent internal order reconciliation popup", async () => {
+    vi.mocked(fetchNotifications).mockResolvedValue([
+      {
+        id: "urgent-reconciliation-1",
+        eventType: "order_reconciliation_urgent",
+        category: "action",
+        priority: "urgent",
+        title: "緊急漏單預警",
+        body: "B-1234：尚未傳送廚房",
+        entityType: "order",
+        entityId: "order-urgent-1",
+        route: "/orders/order-urgent-1",
+        metadata: { issueId: "issue-1" },
+        readAt: null,
+        snoozedUntil: null,
+        createdAt: "2026-08-31T01:00:00.000Z",
+        updatedAt: "2026-08-31T01:00:00.000Z",
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <NotificationCenter userId="user-1" />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("dialog", { name: "緊急漏單預警" })).toBeInTheDocument();
+    expect(screen.getByText("緊急漏單：1 張訂單仍未解決")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /1 小時/ })).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "我已知悉" }));
+    await waitFor(() => expect(markNotificationRead).toHaveBeenCalledWith("urgent-reconciliation-1"));
+    expect(screen.getByText("緊急漏單：1 張訂單仍未解決")).toBeInTheDocument();
+  });
 });

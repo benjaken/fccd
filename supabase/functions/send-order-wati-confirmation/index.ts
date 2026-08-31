@@ -95,6 +95,7 @@ Deno.serve(async (request) => {
       date: displayDate(deliveryDate),
       time: order.delivery_time?.trim() || "-",
       address: order.shipping_address_snapshot?.trim() || "-",
+      phone: order.contact_number_a_snapshot?.trim() || order.contact_number_b_snapshot?.trim() || "-",
       delivery_method: "delivery",
       ao_deadline: includesAddonLink ? displayDate(previousDate(deliveryDate)) : "",
       ao_link: includesAddonLink ? addonLink() : "",

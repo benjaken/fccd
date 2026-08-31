@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   collectLineMenuRemarkText,
   collectFreeDrinkRemarkText,
+  extractLunchBoxSideDishRemark,
   extractDeliveryFromRemark,
   extractOptionRemark,
   filterLegacyPaymentDuplicates,
@@ -15,6 +16,7 @@ import {
   planShopifyMenuOptions,
   parseMenuRemark,
   parseShopifyFreeDrinks,
+  mergeShopifyLunchBoxLines,
   replaceShopifyFreeDrinkSourceLines,
   pickCatalogMatchByName,
   replaceShopifyLunchBoxAggregate,
@@ -949,6 +951,62 @@ describe("Shopify SKU snapshots", () => {
 });
 
 describe("Shopify lunch-box aggregate expansion", () => {
+  it("does not merge different unmatched meals that share a price", () => {
+    const merged = mergeShopifyLunchBoxLines([
+      {
+        legacy_id: "line-chicken",
+        sku_snapshot: null,
+        product_id: null,
+        package_id: null,
+        product_name_snapshot: "(便當) 咕嚕雞球飯 (獅子頭、時菜、涼菜)",
+        remarks_1: null,
+        quantity: 16,
+        unit_price: 88,
+        total_price: 1408,
+      },
+      {
+        legacy_id: "line-pork",
+        sku_snapshot: null,
+        product_id: null,
+        package_id: null,
+        product_name_snapshot: "(便當) 香草豬扒飯 (獅子頭、時菜、涼菜)",
+        remarks_1: null,
+        quantity: 17,
+        unit_price: 88,
+        total_price: 1496,
+      },
+    ]);
+
+    expect(merged).toHaveLength(2);
+    expect(merged.map((line) => line.quantity)).toEqual([16, 17]);
+  });
+
+  it("still merges duplicate rows for the same meal", () => {
+    const merged = mergeShopifyLunchBoxLines([
+      {
+        legacy_id: "line-1",
+        product_name_snapshot: "(便當) 咕嚕雞球飯",
+        quantity: 10,
+        unit_price: 88,
+        total_price: 880,
+      },
+      {
+        legacy_id: "line-2",
+        product_name_snapshot: "（便當）  咕嚕雞球飯",
+        quantity: 6,
+        unit_price: 88,
+        total_price: 528,
+      },
+    ]);
+
+    expect(merged).toHaveLength(1);
+    expect(merged[0]).toMatchObject({
+      legacy_id: "line-1",
+      quantity: 16,
+      total_price: 1408,
+    });
+  });
+
   it("replaces the aggregate line and distributes its unit price to parsed meals", () => {
     const expanded = replaceShopifyLunchBoxAggregate({
       baseLines: [{
@@ -1000,6 +1058,8 @@ describe("pickCatalogMatchByName", () => {
   const products = [
     { id: "p-cbese06", sku: "CBESE06", name: "(三格) 肉醬意粉盒", channel_id: "c-1" },
     { id: "p-cbe003", sku: "CBE003", name: "(雙格) 拿破崙雞扒意粉", channel_id: "c-1" },
+    { id: "p-cbe022", sku: "CBE022", name: "(雙格) 咕嚕雞球飯", channel_id: "c-1" },
+    { id: "p-cbe083", sku: "CBE083", name: "(雙格) 粟米魚塊飯", channel_id: "c-1" },
     { id: "p-cdr001", sku: "CDR001-8", name: "可口可樂 (8罐)", channel_id: "c-1" },
   ];
   const packages: Array<{ id: string; sku: string | null; name: string | null; channel_id: string | null }> = [];
@@ -1012,6 +1072,28 @@ describe("pickCatalogMatchByName", () => {
   it("matches by name when SKU is missing", () => {
     const match = pickCatalogMatchByName(null, "(雙格) 拿破崙雞扒意粉", products, packages, "c-1");
     expect(match.productId).toBe("p-cbe003");
+  });
+
+  it("maps the Shopify chicken-ball lunch-box title to CBE022", () => {
+    const match = pickCatalogMatchByName(
+      null,
+      "(便當) 咕嚕雞球飯 (獅子頭、時菜、涼菜)",
+      products,
+      packages,
+      "c-1",
+    );
+    expect(match.productId).toBe("p-cbe022");
+  });
+
+  it("maps the Shopify corn-fish lunch-box title to CBE083", () => {
+    const match = pickCatalogMatchByName(
+      null,
+      "(便當) 粟米魚塊飯 (獅子頭、時菜、涼菜)",
+      products,
+      packages,
+      "c-1",
+    );
+    expect(match.productId).toBe("p-cbe083");
   });
 
   it("resolves a Coke line with no SKU to the catalog Coke product", () => {
@@ -1028,6 +1110,18 @@ describe("pickCatalogMatchByName", () => {
 });
 
 describe("resolveAliasSku", () => {
+  it("maps the Shopify chicken-ball lunch-box title to CBE022", () => {
+    expect(resolveAliasSku(
+      "(便當) 咕嚕雞球飯 (獅子頭、時菜、涼菜)",
+    )).toBe("CBE022");
+  });
+
+  it("maps the Shopify corn-fish lunch-box title to CBE083", () => {
+    expect(resolveAliasSku(
+      "(便當) 粟米魚塊飯 (獅子頭、時菜、涼菜)",
+    )).toBe("CBE083");
+  });
+
   it("maps loose Coke names to the CDR001 prefix", () => {
     expect(resolveAliasSku("可口可樂 (8罐)")).toBe("CDR001-8");
     expect(resolveAliasSku("可口可樂 40罐")).toBe("CDR001-40");
@@ -1046,5 +1140,21 @@ describe("extractOptionRemark", () => {
     expect(extractOptionRemark("(三格) 肉醬意粉盒   配菠蘿芝士腸串 2串")).toBe("菠蘿芝士腸串 2串");
     expect(extractOptionRemark("(三格) 肉醬意粉盒")).toBeNull();
     expect(extractOptionRemark(null)).toBeNull();
+  });
+});
+
+describe("extractLunchBoxSideDishRemark", () => {
+  it("retains the side dishes appended to a Shopify lunch-box title", () => {
+    expect(extractLunchBoxSideDishRemark(
+      "(便當) 咕嚕雞球飯 (獅子頭、時菜、涼菜)",
+    )).toBe("獅子頭、時菜、涼菜");
+    expect(extractLunchBoxSideDishRemark(
+      "（便當）粟米魚塊飯（獅子頭、時菜、涼菜）",
+    )).toBe("獅子頭、時菜、涼菜");
+  });
+
+  it("does not treat ordinary catalog parentheses as side-dish remarks", () => {
+    expect(extractLunchBoxSideDishRemark("(雙格) 咕嚕雞球飯")).toBeNull();
+    expect(extractLunchBoxSideDishRemark(null)).toBeNull();
   });
 });
