@@ -15340,6 +15340,49 @@ a.masoft-order-tag:focus-visible {
   min-width: 12rem;
 }
 
+.wati-notification-settings {
+  display: grid;
+  gap: 18px;
+  padding: 22px;
+}
+
+.wati-notification-settings-description {
+  margin: 0;
+  color: var(--muted-foreground);
+  line-height: 1.55;
+}
+
+.wati-notification-settings-list {
+  display: grid;
+  gap: 12px;
+}
+
+.wati-notification-setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--background);
+}
+
+.wati-notification-setting-row > div {
+  display: grid;
+  gap: 5px;
+}
+
+.wati-notification-setting-row span {
+  color: var(--muted-foreground);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.wati-notification-setting-row .ui-switch {
+  flex-shrink: 0;
+}
+
 .order-settings-long-text {
   line-height: 1.55;
   white-space: pre-wrap;
@@ -15380,6 +15423,30 @@ a.masoft-order-tag:focus-visible {
 
 .order-settings-switch-field .ui-switch {
   flex-shrink: 0;
+}
+
+.detail-customer-note-list {
+  display: grid;
+  gap: 12px;
+  padding: 0 20px 20px;
+}
+
+.detail-customer-note {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--muted);
+}
+
+.detail-customer-note strong {
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.detail-customer-note small {
+  color: var(--muted-foreground);
 }
 
 .order-settings-locked-hint {

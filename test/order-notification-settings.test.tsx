@@ -69,6 +69,43 @@ describe("order notification settings", () => {
     await waitFor(() => expect(setUserEnabled).toHaveBeenCalledWith("user-2", true));
   });
 
+  it("loads and updates independent WATI controls", async () => {
+    const loadControls = vi.fn().mockResolvedValue({
+      automaticNotificationsEnabled: true,
+      automaticEmailNotificationsEnabled: true,
+      manualOrderConfirmationEnabled: false,
+      manualOrderConfirmationEmailEnabled: false,
+      manualQuoteConfirmationEnabled: false,
+      manualQuoteConfirmationEmailEnabled: false,
+      updatedAt: "2026-08-31T06:00:00.000Z",
+    });
+    const setControl = vi.fn().mockResolvedValue({
+      automaticNotificationsEnabled: true,
+      automaticEmailNotificationsEnabled: true,
+      manualOrderConfirmationEnabled: true,
+      manualOrderConfirmationEmailEnabled: false,
+      manualQuoteConfirmationEnabled: false,
+      manualQuoteConfirmationEmailEnabled: false,
+      updatedAt: "2026-08-31T06:01:00.000Z",
+    });
+
+    renderSettings("wati-notifications", {
+      loadWatiNotificationControls: loadControls,
+      setWatiNotificationControl: setControl,
+    });
+
+    expect(await screen.findByRole("heading", { name: "WATI 通知" }))
+      .toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "切換自動 WATI 通知" }))
+      .toBeChecked();
+    await userEvent.click(
+      screen.getByRole("switch", { name: "切換手動訂單確認 WATI" }),
+    );
+    await waitFor(() =>
+      expect(setControl).toHaveBeenCalledWith("manual_order_confirmation", true),
+    );
+  });
+
   it("adds a first order recipient with a phone and delay", async () => {
     const loadRecipients = vi.fn().mockResolvedValue([
       { id: "recipient-1", name: "Bis", phone: "59335469", delayHours: 12 },
@@ -103,13 +140,16 @@ describe("order notification settings", () => {
     expect(await screen.findByText("61592310")).toBeInTheDocument();
   });
 
-  it("registers both tabs, exact permissions, and protected database RPCs", () => {
+  it("registers notification tabs, exact permissions, and protected database RPCs", () => {
+    expect(isOrderSettingsTab("wati-notifications")).toBe(true);
     expect(isOrderSettingsTab("email-notifications")).toBe(true);
     expect(isOrderSettingsTab("first-notification-recipients")).toBe(true);
     expect(pageAccessKey("/orders/settings/email-notifications"))
       .toBe("orders.settings.email_notifications");
     expect(pageAccessKey("/orders/settings/first-notification-recipients"))
       .toBe("orders.settings.first_notification_recipients");
+    expect(pageAccessKey("/orders/settings/wati-notifications"))
+      .toBe("orders.settings.wati_notifications");
 
     const sql = readFileSync(join(
       process.cwd(),
@@ -122,5 +162,13 @@ describe("order notification settings", () => {
     expect(sql).toContain("grant execute on function public.save_order_first_notification_recipient");
     expect(sql).toContain("create table public.order_internal_notification_outbox");
     expect(sql).toContain("create trigger enqueue_internal_order_notifications");
+
+    const watiSql = readFileSync(join(
+      process.cwd(),
+      "supabase/migrations/20260831140000_wati_notification_controls.sql",
+    ), "utf8");
+    expect(watiSql).toContain("create table if not exists public.wati_notification_controls");
+    expect(watiSql).toContain("private.has_page_manage('orders.settings.wati_notifications')");
+    expect(watiSql).toContain("manual_order_confirmation_enabled");
   });
 });

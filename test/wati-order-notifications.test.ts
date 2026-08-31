@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { settleEnabledNotificationRequests } from "../supabase/functions/_shared/notification-channel-requests.ts";
 import {
   buildFactoryUnsentReminderContent,
   buildOrderNotificationContent,
@@ -33,6 +34,30 @@ const values: OrderNotificationValues = {
 };
 
 describe("WATI order notifications", () => {
+  it("does not call disabled WATI or email request callbacks", async () => {
+    const sendWati = vi.fn(async () => ({ ok: true }));
+    const sendEmail = vi.fn(async () => ({ ok: true }));
+
+    await settleEnabledNotificationRequests({
+      watiEnabled: false,
+      emailEnabled: true,
+      sendWati,
+      sendEmail,
+    });
+    expect(sendWati).not.toHaveBeenCalled();
+    expect(sendEmail).toHaveBeenCalledTimes(1);
+
+    sendWati.mockClear();
+    sendEmail.mockClear();
+    await settleEnabledNotificationRequests({
+      watiEnabled: true,
+      emailEnabled: false,
+      sendWati,
+      sendEmail,
+    });
+    expect(sendWati).toHaveBeenCalledTimes(1);
+    expect(sendEmail).not.toHaveBeenCalled();
+  });
   it("derives the customer-service signature from the order brand", () => {
     expect(resolveOrderNotificationShopName("Catering")).toBe("Food Channels Catering");
     expect(resolveOrderNotificationShopName("HK lunch box")).toBe("HK Lunch Box");
@@ -380,8 +405,11 @@ describe("WATI order notifications", () => {
 
     expect(implementation).toContain("buildOrderNotificationContent");
     expect(implementation).toContain('fetch("https://api.resend.com/emails"');
-    expect(implementation).toContain("await Promise.allSettled([");
-    expect(implementation).toContain("watiSent: true, emailSent: true");
+    expect(implementation).toContain("settleEnabledNotificationRequests");
+    expect(implementation).toContain("manualOrderConfirmationEnabled");
+    expect(implementation).toContain("manualOrderConfirmationEmailEnabled");
+    expect(implementation).toContain("watiSkipped");
+    expect(implementation).toContain("emailSkipped");
     expect(implementation).toContain("from: EMAIL_FROM");
     expect(implementation).toContain("isNotificationRecipientPairAllowed");
     expect(implementation).toContain("notification_recipient_not_allowlisted");
@@ -393,9 +421,10 @@ describe("WATI order notifications", () => {
       "utf8",
     );
 
-    expect(implementation).toContain("await Promise.allSettled([");
+    expect(implementation).toContain("settleEnabledNotificationRequests");
     expect(implementation).toContain("wati_and_email_send_failed");
-    expect(implementation).toContain("watiSent: true, emailSent: true");
+    expect(implementation).toContain("manualQuoteConfirmationEmailEnabled");
+    expect(implementation).toContain("emailSkipped");
     expect(implementation).toContain("isNotificationRecipientPairAllowed");
     expect(implementation).toContain("notification_recipient_not_allowlisted");
   });
@@ -483,6 +512,8 @@ describe("WATI order notifications", () => {
     expect(worker).toContain("from: EMAIL_FROM");
     expect(worker).toContain("isNotificationRecipientPairAllowed");
     expect(worker).toContain("notification_recipient_not_allowlisted");
+    expect(worker).toContain("loadWatiNotificationControls(admin)");
+    expect(worker).toContain("wati_automatic_notifications_disabled");
 
     const scheduler = readFileSync(
       resolve(

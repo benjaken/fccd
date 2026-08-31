@@ -53,7 +53,13 @@ const detail = {
   ],
   deliveries: [],
   payments: [],
-  timeline: [],
+  timeline: [{
+    id: "note-1",
+    category: "customer note",
+    comment: "Payment Deadline 4/10/2026",
+    authorName: "Hailey",
+    occurredAt: "2026-08-31T05:48:00.000Z",
+  }],
   terms: [],
   paymentMethods: [],
   quoteFiles: [],
@@ -88,6 +94,8 @@ describe("Core read pages", () => {
     expect(screen.getByText("測試套餐")).toBeInTheDocument();
     expect(screen.getByText("沙田")).toBeInTheDocument();
     expect(screen.getByText("只供內部查看")).toBeInTheDocument();
+    expect(screen.getByText("Payment Deadline 4/10/2026")).toBeInTheDocument();
+    expect(screen.getByText(/Hailey/)).toBeInTheDocument();
     expect(screen.getAllByText("HK$1,610")).toHaveLength(3);
     expect(screen.getByText("待取貨")).toBeInTheDocument();
     expect(screen.getByText("未完成付款")).toBeInTheDocument();

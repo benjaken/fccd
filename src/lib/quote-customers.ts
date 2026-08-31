@@ -95,7 +95,6 @@ export type CreateQuoteCustomerNoteInput = {
   body: string;
   authorName?: string | null;
   orderId?: string | null;
-  replyToEmail?: string | null;
 };
 
 export type QuoteCustomerMessages = Record<
@@ -454,25 +453,10 @@ export async function createQuoteCustomerNote({
   body,
   authorName,
   orderId,
-  replyToEmail,
 }: CreateQuoteCustomerNoteInput): Promise<QuoteCustomerMessage> {
   const trimmedBody = body.trim();
   if (!trimmedBody) throw new Error("quote_customers_note_empty");
-  if (orderId) {
-    const { data, error } = await supabase.functions.invoke("send-wati-customer-message", {
-      body: { orderId, body: trimmedBody },
-    });
-    if (error) throw error;
-    const message = data?.message as QuoteCustomerMessage | undefined;
-    if (!message) throw new Error(data?.error || "wati_customer_message_failed");
-    return message;
-  }
   const trimmedAuthor = authorName?.trim() || null;
-  const trimmedReplyTo = replyToEmail?.trim() || null;
-  const comment =
-    trimmedAuthor && trimmedReplyTo
-      ? formatQuoteCustomerEmailReply(trimmedAuthor, trimmedReplyTo, trimmedBody)
-      : trimmedBody;
 
   const now = new Date().toISOString();
   const { data, error } = await supabase
@@ -480,7 +464,7 @@ export async function createQuoteCustomerNote({
     .insert({
       legacy_id: `web-customer-note-${crypto.randomUUID()}`,
       category: MESSAGE_CATEGORY_BY_TAB.note,
-      comment,
+      comment: trimmedBody,
       customer_email_snapshot: email,
       author_name_snapshot: trimmedAuthor,
       order_id: orderId || null,
@@ -488,7 +472,7 @@ export async function createQuoteCustomerNote({
       bubble_modified_at: now,
     })
     .select(
-      "id,category,comment,author_name_snapshot,order_id,bubble_created_at,created_at,orders(order_number,document_type)",
+      "id,category,comment,author_name_snapshot,order_id,bubble_created_at,created_at,message_direction,delivery_status,orders(order_number,document_type)",
     )
     .single();
 

@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { BellRing, Mail, Pencil, Trash2 } from "lucide-react";
+import { BellRing, Mail, MessageCircleMore, Pencil, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { useCurrentPageAccess } from "@/auth/use-page-access";
@@ -16,6 +16,184 @@ import {
   type OrderEmailNotificationUser,
   type OrderFirstNotificationRecipient,
 } from "@/lib/order-notification-settings";
+import {
+  fetchWatiNotificationControls,
+  setWatiNotificationControl,
+  type WatiNotificationControlKey,
+  type WatiNotificationControls,
+} from "@/lib/wati-notification-settings";
+
+export function WatiNotificationSettings({
+  loadControls = fetchWatiNotificationControls,
+  setControl = setWatiNotificationControl,
+}: {
+  loadControls?: typeof fetchWatiNotificationControls;
+  setControl?: typeof setWatiNotificationControl;
+}) {
+  const { t } = useTranslation();
+  const pageAccess = useCurrentPageAccess();
+  const canManage = pageAccess.canManage("orders.settings.wati_notifications");
+  const [controls, setControls] = useState<WatiNotificationControls | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [actionError, setActionError] = useState(false);
+  const [updating, setUpdating] = useState<WatiNotificationControlKey | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setLoadError(false);
+    void loadControls()
+      .then((value) => {
+        if (active) setControls(value);
+      })
+      .catch(() => {
+        if (active) {
+          setControls(null);
+          setLoadError(true);
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [loadControls, reloadKey]);
+
+  const toggle = async (
+    key: WatiNotificationControlKey,
+    enabled: boolean,
+  ) => {
+    if (!canManage || updating || !controls) return;
+    const previous = controls;
+    setUpdating(key);
+    setActionError(false);
+    const optimisticField: Record<WatiNotificationControlKey, keyof WatiNotificationControls> = {
+      automatic_notifications: "automaticNotificationsEnabled",
+      automatic_email_notifications: "automaticEmailNotificationsEnabled",
+      manual_order_confirmation: "manualOrderConfirmationEnabled",
+      manual_order_confirmation_email: "manualOrderConfirmationEmailEnabled",
+      manual_quote_confirmation: "manualQuoteConfirmationEnabled",
+      manual_quote_confirmation_email: "manualQuoteConfirmationEmailEnabled",
+    };
+    setControls({
+      ...controls,
+      [optimisticField[key]]: enabled,
+    });
+    try {
+      setControls(await setControl(key, enabled));
+    } catch {
+      setControls(previous);
+      setActionError(true);
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  if (loadError) {
+    return (
+      <div className="orders-state orders-state-error" role="alert">
+        <MessageCircleMore />
+        <div>
+          <strong>{t("orderSettings.watiNotifications.loadError")}</strong>
+          <span>{t("orderSettings.watiNotifications.loadErrorDescription")}</span>
+        </div>
+        <Button type="button" variant="outline" onClick={() => setReloadKey((key) => key + 1)}>
+          {t("orderSettings.retry")}
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="wati-notification-settings" aria-busy={loading}>
+      <p className="wati-notification-settings-description">
+        {t("orderSettings.watiNotifications.description")}
+      </p>
+      {actionError ? (
+        <p className="list-inline-error" role="alert">
+          {t("orderSettings.watiNotifications.updateError")}
+        </p>
+      ) : null}
+      <div className="wati-notification-settings-list">
+        <div className="wati-notification-setting-row">
+          <div>
+            <strong>{t("orderSettings.watiNotifications.automatic.title")}</strong>
+            <span>{t("orderSettings.watiNotifications.automatic.description")}</span>
+          </div>
+          <Switch
+            checked={controls?.automaticNotificationsEnabled ?? false}
+            disabled={loading || !canManage || Boolean(updating)}
+            aria-label={t("orderSettings.watiNotifications.automatic.toggle")}
+            onCheckedChange={(enabled) => void toggle("automatic_notifications", enabled)}
+          />
+        </div>
+        <div className="wati-notification-setting-row">
+          <div>
+            <strong>{t("orderSettings.watiNotifications.manualQuoteConfirmation.title")}</strong>
+            <span>{t("orderSettings.watiNotifications.manualQuoteConfirmation.description")}</span>
+          </div>
+          <Switch
+            checked={controls?.manualQuoteConfirmationEnabled ?? false}
+            disabled={loading || !canManage || Boolean(updating)}
+            aria-label={t("orderSettings.watiNotifications.manualQuoteConfirmation.toggle")}
+            onCheckedChange={(enabled) => void toggle("manual_quote_confirmation", enabled)}
+          />
+        </div>
+        <div className="wati-notification-setting-row">
+          <div>
+            <strong>{t("orderSettings.watiNotifications.manualQuoteConfirmationEmail.title")}</strong>
+            <span>{t("orderSettings.watiNotifications.manualQuoteConfirmationEmail.description")}</span>
+          </div>
+          <Switch
+            checked={controls?.manualQuoteConfirmationEmailEnabled ?? false}
+            disabled={loading || !canManage || Boolean(updating)}
+            aria-label={t("orderSettings.watiNotifications.manualQuoteConfirmationEmail.toggle")}
+            onCheckedChange={(enabled) => void toggle("manual_quote_confirmation_email", enabled)}
+          />
+        </div>
+        <div className="wati-notification-setting-row">
+          <div>
+            <strong>{t("orderSettings.watiNotifications.automaticEmail.title")}</strong>
+            <span>{t("orderSettings.watiNotifications.automaticEmail.description")}</span>
+          </div>
+          <Switch
+            checked={controls?.automaticEmailNotificationsEnabled ?? false}
+            disabled={loading || !canManage || Boolean(updating)}
+            aria-label={t("orderSettings.watiNotifications.automaticEmail.toggle")}
+            onCheckedChange={(enabled) => void toggle("automatic_email_notifications", enabled)}
+          />
+        </div>
+        <div className="wati-notification-setting-row">
+          <div>
+            <strong>{t("orderSettings.watiNotifications.manualConfirmation.title")}</strong>
+            <span>{t("orderSettings.watiNotifications.manualConfirmation.description")}</span>
+          </div>
+          <Switch
+            checked={controls?.manualOrderConfirmationEnabled ?? false}
+            disabled={loading || !canManage || Boolean(updating)}
+            aria-label={t("orderSettings.watiNotifications.manualConfirmation.toggle")}
+            onCheckedChange={(enabled) => void toggle("manual_order_confirmation", enabled)}
+          />
+        </div>
+        <div className="wati-notification-setting-row">
+          <div>
+            <strong>{t("orderSettings.watiNotifications.manualConfirmationEmail.title")}</strong>
+            <span>{t("orderSettings.watiNotifications.manualConfirmationEmail.description")}</span>
+          </div>
+          <Switch
+            checked={controls?.manualOrderConfirmationEmailEnabled ?? false}
+            disabled={loading || !canManage || Boolean(updating)}
+            aria-label={t("orderSettings.watiNotifications.manualConfirmationEmail.toggle")}
+            onCheckedChange={(enabled) => void toggle("manual_order_confirmation_email", enabled)}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function OrderEmailNotificationSettings({
   loadUsers = fetchOrderEmailNotificationUsers,

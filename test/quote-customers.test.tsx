@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
@@ -197,6 +199,15 @@ describe("summarizeCompanies", () => {
 });
 
 describe("customer message grouping", () => {
+  it("stores customer notes internally without invoking a WATI function", () => {
+    const implementation = readFileSync(
+      resolve(process.cwd(), "src/lib/quote-customers.ts"),
+      "utf8",
+    );
+    expect(implementation).toContain("category: MESSAGE_CATEGORY_BY_TAB.note");
+    expect(implementation).not.toContain('functions.invoke("send-wati-customer-message"');
+  });
+
   it("maps Bubble comment categories onto the three message tabs", () => {
     expect(messageTabFromCategory("orderdislike")).toBe("complaint");
     expect(messageTabFromCategory("orderlike")).toBe("like");
@@ -657,7 +668,6 @@ describe("Quote customers list", () => {
         body: "已出月結",
         authorName: "Mandy",
         orderId: "order-1143",
-        replyToEmail: null,
       }),
     );
     expect(await within(dialog).findByText("已出月結")).toBeInTheDocument();
@@ -672,7 +682,7 @@ describe("Quote customers list", () => {
       tab: "note",
       body: "已追數",
       authorName: "Mandy",
-      replyEmail: "sales@foodchannels-catering.com",
+      replyEmail: null,
       orderNumber: "B-1178",
       orderId: "order-1178",
       documentType: "order",
@@ -699,7 +709,7 @@ describe("Quote customers list", () => {
     const dialog = await screen.findByRole("dialog", { name: "留言" });
     await within(dialog).findByText("payment deadline 1/6");
     await user.click(within(dialog).getByRole("button", { name: "回復" }));
-    expect(within(dialog).getByText(/email 回覆\s*sales@foodchannels-catering.com/)).toBeInTheDocument();
+    expect(within(dialog).getByText("回復 B-1178")).toBeInTheDocument();
     await user.type(within(dialog).getByPlaceholderText("在此輸入…"), "已追數");
     await user.click(within(dialog).getByRole("button", { name: "送出留言" }));
 
@@ -709,15 +719,9 @@ describe("Quote customers list", () => {
         body: "已追數",
         authorName: "Mandy",
         orderId: "order-1178",
-        replyToEmail: "sales@foodchannels-catering.com",
       }),
     );
     expect(await within(dialog).findByText("已追數")).toBeInTheDocument();
-    expect(
-      within(dialog).getByRole("link", {
-        name: "sales@foodchannels-catering.com",
-      }),
-    ).toHaveAttribute("href", "mailto:sales@foodchannels-catering.com");
   });
 
   it("shows a Bubble email reply with the author and mailto target", async () => {

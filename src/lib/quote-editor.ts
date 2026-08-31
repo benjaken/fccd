@@ -508,7 +508,7 @@ export async function sendQuoteConfirmation(orderId: string) {
     body: { orderId },
   });
   if (error) throw error;
-  if (!data?.watiSent || !data?.emailSent) {
+  if ((!data?.watiSent && !data?.watiSkipped) || (!data?.emailSent && !data?.emailSkipped)) {
     throw new Error(data?.error || "quote_confirmation_failed");
   }
 }

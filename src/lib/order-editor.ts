@@ -93,7 +93,9 @@ export async function sendOrderWatiConfirmation(orderId: string): Promise<{ incl
     body: { orderId },
   });
   if (error) throw error;
-  if (!data?.watiSent || !data?.emailSent) throw new Error(data?.error || "order_confirmation_failed");
+  if ((!data?.watiSent && !data?.watiSkipped) || (!data?.emailSent && !data?.emailSkipped)) {
+    throw new Error(data?.error || "order_confirmation_failed");
+  }
   return { includesAddonLink: data.includesAddonLink === true };
 }
 

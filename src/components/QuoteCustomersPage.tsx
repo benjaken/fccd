@@ -466,7 +466,6 @@ export function QuoteCustomersPage({
         body,
         authorName: profile?.user_name || profile?.email || null,
         orderId: replyTarget?.orderId ?? panel.orderId,
-        replyToEmail: replyTarget ? panel.email : null,
       });
       setMessages((current) => ({
         ...(current ?? emptyQuoteCustomerMessages()),
@@ -789,15 +788,12 @@ export function QuoteCustomersPage({
         footer={
           messageTab === "note" && canManageActions && panel?.kind === "messages" && panel.orderId ? (
             <div className="quote-customers-message-composer-wrap">
-              <small className="quote-customers-wati-channel">{t("quoteCustomers.watiChannel")}</small>
               {replyTarget ? (
                 <div className="quote-customers-reply-target">
                   <span>
-                    {t("quoteCustomers.emailReply")}{" "}
-                    {panel?.kind === "messages" ? panel.email : ""}
-                    {replyTarget.orderNumber
-                      ? ` · ${replyTarget.orderNumber}`
-                      : ""}
+                    {t("quoteCustomers.replyTo", {
+                      order: replyTarget.orderNumber || "-",
+                    })}
                   </span>
                   <button
                     type="button"

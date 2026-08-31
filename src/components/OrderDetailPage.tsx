@@ -5,6 +5,7 @@ import {
   ChevronLeft,
   Copy,
   FileText,
+  MessageSquareText,
   Package,
   Pencil,
   RefreshCw,
@@ -24,6 +25,7 @@ import {
 } from "@/lib/order-details";
 import { kitchenCalendarReturnPath } from "@/lib/kitchen-calendar";
 import { kitchenOrdersReturnPath } from "@/lib/kitchen-orders";
+import { messageTabFromCategory } from "@/lib/quote-customers";
 import {
   DEFAULT_UNPAID_STATUS_COLOR,
   orderDetailTags,
@@ -173,6 +175,9 @@ export function OrderDetailPage({
   }
 
   const { order } = result;
+  const customerNotes = result.timeline.filter(
+    (entry) => messageTabFromCategory(entry.category) === "note",
+  );
   const shopifyUrl = shopifyOrderUrl(order);
   const status = isQuote
     ? { label: order.quoteStatus || t("details.draft"), tone: "amber" }
@@ -350,6 +355,33 @@ export function OrderDetailPage({
           </div>
         </article>
       </section>
+
+      <article className="panel detail-table-panel detail-customer-notes">
+        <header className="panel-header">
+          <div>
+            <h2>
+              <MessageSquareText /> {t("details.customerNotes")}
+            </h2>
+            <p>{t("details.customerNotesDescription")}</p>
+          </div>
+        </header>
+        {customerNotes.length ? (
+          <div className="detail-customer-note-list">
+            {customerNotes.map((note) => (
+              <article key={note.id} className="detail-customer-note">
+                <strong>{note.comment}</strong>
+                <small>
+                  {[note.authorName, date.format(new Date(note.occurredAt))]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </small>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="detail-restricted">{t("details.customerNotesEmpty")}</p>
+        )}
+      </article>
 
       {isQuote && (
         <section className="detail-grid detail-grid-two">

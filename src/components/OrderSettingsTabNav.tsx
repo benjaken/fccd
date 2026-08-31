@@ -1,4 +1,5 @@
 export const ORDER_SETTINGS_TABS = [
+  "wati-notifications",
   "email-notifications",
   "first-notification-recipients",
   "statuses",

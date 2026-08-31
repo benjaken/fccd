@@ -75,13 +75,7 @@ verify_jwt = false
 [functions.wati-order-notifications]
 verify_jwt = false
 
-[functions.send-wati-customer-message]
-verify_jwt = true
-
 [functions.send-order-wati-confirmation]
-verify_jwt = false
-
-[functions.wati-customer-webhook]
 verify_jwt = false
 
 [functions.customer-addon-paypal]

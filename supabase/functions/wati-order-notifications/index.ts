@@ -18,6 +18,10 @@ import {
   notificationRecipientAllowlist,
   type NotificationRecipientAllowlist,
 } from "../_shared/notification-recipient-allowlist.ts";
+import {
+  loadWatiNotificationControls,
+  watiEmergencySwitchAllows,
+} from "../_shared/wati-notification-controls.ts";
 
 type ParameterRule = { name?: unknown; source?: unknown; value?: unknown };
 type QueueRow = {
@@ -538,6 +542,11 @@ Deno.serve(async (request) => {
 
     const admin = createClient(requiredEnv("SUPABASE_URL"), serviceRoleKey());
     const recipientAllowlist = notificationRecipientAllowlist();
+    const controls = await loadWatiNotificationControls(admin);
+    const automaticWatiEnabled = controls.automaticNotificationsEnabled
+      && watiEmergencySwitchAllows("WATI_AUTOMATIC_NOTIFICATIONS_ENABLED");
+    const automaticEmailEnabled = controls.automaticEmailNotificationsEnabled
+      && watiEmergencySwitchAllows("EMAIL_AUTOMATIC_NOTIFICATIONS_ENABLED");
     const nowIso = new Date().toISOString();
 
     const { error: reconciliationRefreshError } = await admin.rpc(
@@ -649,7 +658,14 @@ Deno.serve(async (request) => {
         order.contact_number_a_snapshot || order.contact_number_b_snapshot,
       );
       const email = order.email_snapshot?.trim() || "";
-      if (!isNotificationRecipientPairAllowed(recipientAllowlist, phone, email)) {
+      const recipientAllowed = automaticWatiEnabled && automaticEmailEnabled
+        ? isNotificationRecipientPairAllowed(recipientAllowlist, phone, email)
+        : automaticWatiEnabled
+          ? isNotificationPhoneAllowed(recipientAllowlist, phone)
+          : automaticEmailEnabled
+            ? isNotificationEmailAllowed(recipientAllowlist, email)
+            : true;
+      if (!recipientAllowed) {
         const skippedAt = new Date().toISOString();
         await admin.from("wati_order_notification_outbox").update({
           status: "skipped",
@@ -671,7 +687,15 @@ Deno.serve(async (request) => {
       let emailSent = Boolean(job.email_sent_at);
       const errors: string[] = [];
 
-      if (!watiDone && !phone) {
+      if (!watiDone && !automaticWatiEnabled) {
+        await admin.from("wati_order_notification_outbox").update({
+          wati_skipped_at: new Date().toISOString(),
+          wati_error: "wati_automatic_notifications_disabled",
+          recipient_phone: phone || null,
+          rendered_parameters: parameters,
+        }).eq("id", job.id);
+        watiDone = true;
+      } else if (!watiDone && !phone) {
         await admin.from("wati_order_notification_outbox").update({
           wati_skipped_at: new Date().toISOString(), wati_error: "recipient_phone_missing",
           recipient_phone: null, rendered_parameters: parameters,
@@ -695,7 +719,12 @@ Deno.serve(async (request) => {
       }
 
       const emailNotification = notification;
-      if (!emailDone && !emailNotification) {
+      if (!emailDone && !automaticEmailEnabled) {
+        await admin.from("wati_order_notification_outbox").update({
+          email_skipped_at: new Date().toISOString(), email_error: "email_automatic_notifications_disabled",
+        }).eq("id", job.id);
+        emailDone = true;
+      } else if (!emailDone && !emailNotification) {
         await admin.from("wati_order_notification_outbox").update({
           email_skipped_at: new Date().toISOString(), email_error: "email_template_disabled",
         }).eq("id", job.id);
@@ -833,6 +862,24 @@ Deno.serve(async (request) => {
         }).eq("id", job.id);
         continue;
       }
+      if (job.channel === "whatsapp" && !automaticWatiEnabled) {
+        await admin.from("order_internal_notification_outbox").update({
+          status: "skipped",
+          last_error: "wati_automatic_notifications_disabled",
+          locked_at: null,
+          updated_at: new Date().toISOString(),
+        }).eq("id", job.id);
+        continue;
+      }
+      if (job.channel === "email" && !automaticEmailEnabled) {
+        await admin.from("order_internal_notification_outbox").update({
+          status: "skipped",
+          last_error: "email_automatic_notifications_disabled",
+          locked_at: null,
+          updated_at: new Date().toISOString(),
+        }).eq("id", job.id);
+        continue;
+      }
 
       try {
         const values = internalValues(order, job.recipient_name);
@@ -927,6 +974,24 @@ Deno.serve(async (request) => {
         await admin.from("driver_assignment_internal_reminder_outbox").update({
           status: "skipped",
           last_error: "notification_recipient_not_allowlisted",
+          locked_at: null,
+          updated_at: new Date().toISOString(),
+        }).eq("id", job.id);
+        continue;
+      }
+      if (job.channel === "whatsapp" && !automaticWatiEnabled) {
+        await admin.from("driver_assignment_internal_reminder_outbox").update({
+          status: "skipped",
+          last_error: "wati_automatic_notifications_disabled",
+          locked_at: null,
+          updated_at: new Date().toISOString(),
+        }).eq("id", job.id);
+        continue;
+      }
+      if (job.channel === "email" && !automaticEmailEnabled) {
+        await admin.from("driver_assignment_internal_reminder_outbox").update({
+          status: "skipped",
+          last_error: "email_automatic_notifications_disabled",
           locked_at: null,
           updated_at: new Date().toISOString(),
         }).eq("id", job.id);
@@ -1084,6 +1149,24 @@ Deno.serve(async (request) => {
         await admin.from("order_reconciliation_alert_outbox").update({
           status: "skipped",
           last_error: "notification_recipient_not_allowlisted",
+          locked_at: null,
+          updated_at: new Date().toISOString(),
+        }).eq("id", job.id);
+        continue;
+      }
+      if (job.channel === "whatsapp" && !automaticWatiEnabled) {
+        await admin.from("order_reconciliation_alert_outbox").update({
+          status: "skipped",
+          last_error: "wati_automatic_notifications_disabled",
+          locked_at: null,
+          updated_at: new Date().toISOString(),
+        }).eq("id", job.id);
+        continue;
+      }
+      if (job.channel === "email" && !automaticEmailEnabled) {
+        await admin.from("order_reconciliation_alert_outbox").update({
+          status: "skipped",
+          last_error: "email_automatic_notifications_disabled",
           locked_at: null,
           updated_at: new Date().toISOString(),
         }).eq("id", job.id);

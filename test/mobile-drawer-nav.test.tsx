@@ -45,6 +45,7 @@ describe("buildMobileDrawerNav", () => {
       "/orders/payments/bank-arrival-date",
       "/orders/payments/masoft-invoices",
       "/orders/calendar",
+      "/orders/settings/wati-notifications",
       "/orders/settings/email-notifications",
       "/orders/settings/first-notification-recipients",
       "/orders/settings/sale-partners",

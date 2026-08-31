@@ -14,6 +14,7 @@ import { OrderShippingFeesTable } from "@/components/OrderShippingFeesTable";
 import {
   OrderEmailNotificationSettings,
   OrderFirstNotificationRecipientsSettings,
+  WatiNotificationSettings,
 } from "@/components/OrderNotificationSettings";
 import {
   OrderAddonBlockDatesSettings,
@@ -418,6 +419,8 @@ export function OrderSettingsPage({
   loadFirstNotificationRecipients,
   saveFirstNotificationRecipient,
   deleteFirstNotificationRecipient,
+  loadWatiNotificationControls,
+  setWatiNotificationControl,
 }: {
   loadTags?: TagsLoader;
   createTag?: TagCreator;
@@ -451,6 +454,8 @@ export function OrderSettingsPage({
   loadFirstNotificationRecipients?: Parameters<typeof OrderFirstNotificationRecipientsSettings>[0]["loadRecipients"];
   saveFirstNotificationRecipient?: Parameters<typeof OrderFirstNotificationRecipientsSettings>[0]["saveRecipient"];
   deleteFirstNotificationRecipient?: Parameters<typeof OrderFirstNotificationRecipientsSettings>[0]["deleteRecipient"];
+  loadWatiNotificationControls?: Parameters<typeof WatiNotificationSettings>[0]["loadControls"];
+  setWatiNotificationControl?: Parameters<typeof WatiNotificationSettings>[0]["setControl"];
 }) {
   const { t } = useTranslation();
   const pageAccess = useCurrentPageAccess();
@@ -477,6 +482,7 @@ export function OrderSettingsPage({
             activeTab === "shipping" ||
             activeTab === "shipping-fees" ||
             activeTab === "email-notifications" ||
+            activeTab === "wati-notifications" ||
             activeTab === "first-notification-recipients" ||
             activeTab === "add-ons" ||
             activeTab === "add-on-block-dates" ||
@@ -532,7 +538,12 @@ export function OrderSettingsPage({
       </header>
 
       <article className="panel order-settings-panel">
-        {activeTab === "email-notifications" ? (
+        {activeTab === "wati-notifications" ? (
+          <WatiNotificationSettings
+            loadControls={loadWatiNotificationControls}
+            setControl={setWatiNotificationControl}
+          />
+        ) : activeTab === "email-notifications" ? (
           <OrderEmailNotificationSettings
             loadUsers={loadEmailNotificationUsers}
             setUserEnabled={setEmailNotificationUser}

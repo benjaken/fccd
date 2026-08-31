@@ -88,6 +88,7 @@ export type DetailTimeline = {
   id: string;
   category: string | null;
   comment: string;
+  authorName: string | null;
   occurredAt: string;
 };
 
@@ -217,7 +218,7 @@ export async function fetchOrderDetail(
         : Promise.resolve({ data: [], error: null }),
       supabase
         .from("order_timeline_entries")
-        .select("id,category,comment,bubble_created_at,created_at")
+        .select("id,category,comment,author_name_snapshot,bubble_created_at,created_at")
         .eq("order_id", id)
         .order("bubble_created_at", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false }),
@@ -370,6 +371,7 @@ export async function fetchOrderDetail(
       id: row.id,
       category: row.category,
       comment: row.comment,
+      authorName: row.author_name_snapshot,
       occurredAt: row.bubble_created_at || row.created_at,
     })),
     terms: (termsResult.data ?? []).flatMap((row) =>

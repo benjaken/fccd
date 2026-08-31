@@ -26,6 +26,7 @@ import {
   ListFilter,
   Mail,
   MapPinned,
+  MessageCircleMore,
   Package,
   PackageCheck,
   PackagePlus,
@@ -199,6 +200,12 @@ export const secondaryNav: Record<string, NavItem[]> = {
       icon: Settings,
       permissionKey: "orders.settings",
       children: [
+        {
+          key: "orderWatiNotifications",
+          to: "/orders/settings/wati-notifications",
+          icon: MessageCircleMore,
+          permissionKey: "orders.settings.wati_notifications",
+        },
         {
           key: "orderEmailNotifications",
           to: "/orders/settings/email-notifications",
@@ -667,6 +674,7 @@ export const SECTION_CHILD_KEYS: Record<string, string[]> = {
     "orders.reschedule_pending",
     "orders.shopify_pending",
     "orders.settings",
+    "orders.settings.wati_notifications",
     "orders.settings.statuses",
     "orders.settings.sale_partners",
     "orders.settings.email_notifications",

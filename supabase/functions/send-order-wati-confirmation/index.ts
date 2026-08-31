@@ -4,10 +4,17 @@ import {
   resolveOrderNotificationShopName,
 } from "../_shared/order-notification-content.ts";
 import { EMAIL_FROM } from "../_shared/email-sender.ts";
+import { settleEnabledNotificationRequests } from "../_shared/notification-channel-requests.ts";
 import {
+  isNotificationEmailAllowed,
+  isNotificationPhoneAllowed,
   isNotificationRecipientPairAllowed,
   notificationRecipientAllowlist,
 } from "../_shared/notification-recipient-allowlist.ts";
+import {
+  loadWatiNotificationControls,
+  watiEmergencySwitchAllows,
+} from "../_shared/wati-notification-controls.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -54,6 +61,11 @@ Deno.serve(async (request) => {
     if (!visibleOrder) return json({ error: "order_not_found" }, 404);
 
     const admin = createClient(supabaseUrl, serviceRoleKey());
+    const controls = await loadWatiNotificationControls(admin);
+    const manualWatiEnabled = controls.manualOrderConfirmationEnabled
+      && watiEmergencySwitchAllows("WATI_MANUAL_ORDER_CONFIRMATION_ENABLED");
+    const manualEmailEnabled = controls.manualOrderConfirmationEmailEnabled
+      && watiEmergencySwitchAllows("EMAIL_MANUAL_ORDER_CONFIRMATION_ENABLED");
     const { data: order, error: orderError } = await admin.from("orders")
       .select("id,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,delivery_at,delivery_time,shipping_address_snapshot,channels(name)")
       .eq("id", orderId).eq("document_type", "order").is("archived_at", null).single();
@@ -64,14 +76,18 @@ Deno.serve(async (request) => {
     if (blockError) throw blockError;
     const includesAddonLink = !blockDate;
     const phone = phoneNumber(order.contact_number_a_snapshot || order.contact_number_b_snapshot);
-    if (!phone) return json({ error: "customer_phone_missing" }, 400);
+    if (manualWatiEnabled && !phone) return json({ error: "customer_phone_missing" }, 400);
     const email = order.email_snapshot?.trim() || "";
-    if (!email) return json({ error: "customer_email_missing" }, 400);
-    if (!isNotificationRecipientPairAllowed(
-      notificationRecipientAllowlist(),
-      phone,
-      email,
-    )) {
+    if (manualEmailEnabled && !email) return json({ error: "customer_email_missing" }, 400);
+    const recipientPolicy = notificationRecipientAllowlist();
+    const recipientAllowed = manualWatiEnabled && manualEmailEnabled
+      ? isNotificationRecipientPairAllowed(recipientPolicy, phone, email)
+      : manualWatiEnabled
+        ? isNotificationPhoneAllowed(recipientPolicy, phone)
+        : manualEmailEnabled
+          ? isNotificationEmailAllowed(recipientPolicy, email)
+          : true;
+    if (!recipientAllowed) {
       return json({
         error: "notification_recipient_not_allowlisted",
         watiSent: false,
@@ -97,7 +113,6 @@ Deno.serve(async (request) => {
     const templateName = includesAddonLink
       ? Deno.env.get("WATI_ORDER_CONFIRMATION_ADDON_TEMPLATE_NAME")?.trim() || "order_confirm_with_action_and_aolink"
       : Deno.env.get("WATI_ORDER_CONFIRMATION_TEMPLATE_NAME")?.trim() || "order_confirm_with_action";
-    const endpoint = requiredEnv("WATI_API_ENDPOINT").replace(/\/$/, "");
     const notification = buildOrderNotificationContent("delivery_order_confirmed", {
       name,
       order_number: order.order_number || "-",
@@ -110,32 +125,40 @@ Deno.serve(async (request) => {
       ao_link: includesAddonLink ? addonLink() : "",
       shop_name: shopName,
     });
-    const [watiResult, emailResult] = await Promise.allSettled([
-      fetch(`${endpoint}/api/v2/sendTemplateMessage?whatsappNumber=${encodeURIComponent(phone)}`, {
+    const [watiResult, emailResult] = await settleEnabledNotificationRequests({
+      watiEnabled: manualWatiEnabled,
+      emailEnabled: manualEmailEnabled,
+      sendWati: () => fetch(`${requiredEnv("WATI_API_ENDPOINT").replace(/\/$/, "")}/api/v2/sendTemplateMessage?whatsappNumber=${encodeURIComponent(phone)}`, {
         method: "POST", headers: { Authorization: `Bearer ${requiredEnv("WATI_API_TOKEN")}`, "Content-Type": "application/json" },
         body: JSON.stringify({ template_name: templateName, broadcast_name: includesAddonLink ? "Confirmed Delivery message with AO" : "Confirmed Delivery message", channel_number: requiredEnv("WATI_CHANNEL_NUMBER"), parameters }),
       }),
-      fetch("https://api.resend.com/emails", {
+      sendEmail: () => fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { Authorization: `Bearer ${requiredEnv("RESEND_API_KEY")}`, "Content-Type": "application/json" },
         body: JSON.stringify({ from: EMAIL_FROM, to: [email], subject: notification.subject, html: notification.html }),
       }),
-    ]);
+    });
     const providerResponse = watiResult.status === "fulfilled" ? watiResult.value : null;
     const emailResponse = emailResult.status === "fulfilled" ? emailResult.value : null;
     const payload = providerResponse
       ? await providerResponse.json().catch(() => null) as { result?: unknown } | null
       : null;
     const watiSent = Boolean(providerResponse?.ok && payload?.result !== false);
+    const watiSkipped = !manualWatiEnabled;
+    const watiDone = watiSent || watiSkipped;
     const emailSent = Boolean(emailResponse?.ok);
-    if (!watiSent || !emailSent) {
+    const emailSkipped = !manualEmailEnabled;
+    const emailDone = emailSent || emailSkipped;
+    if (!watiDone || !emailDone) {
       return json({
-        error: !watiSent && !emailSent ? "wati_and_email_send_failed" : !watiSent ? "wati_send_failed" : "email_send_failed",
+        error: !watiDone && !emailDone ? "wati_and_email_send_failed" : !watiDone ? "wati_send_failed" : "email_send_failed",
         watiSent,
+        watiSkipped,
         emailSent,
+        emailSkipped,
         detail: payload,
       }, 502);
     }
-    return json({ watiSent: true, emailSent: true, includesAddonLink, templateName });
+    return json({ watiSent, watiSkipped, emailSent, emailSkipped, includesAddonLink, templateName });
   } catch (error) { return json({ error: error instanceof Error ? error.message : "wati_order_confirmation_failed" }, 500); }
 });

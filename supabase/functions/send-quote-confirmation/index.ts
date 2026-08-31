@@ -1,10 +1,17 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { buildQuoteConfirmationContent } from "../_shared/order-notification-content.ts";
 import { EMAIL_FROM } from "../_shared/email-sender.ts";
+import { settleEnabledNotificationRequests } from "../_shared/notification-channel-requests.ts";
 import {
+  isNotificationEmailAllowed,
+  isNotificationPhoneAllowed,
   isNotificationRecipientPairAllowed,
   notificationRecipientAllowlist,
 } from "../_shared/notification-recipient-allowlist.ts";
+import {
+  loadWatiNotificationControls,
+  watiEmergencySwitchAllows,
+} from "../_shared/wati-notification-controls.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -58,6 +65,11 @@ Deno.serve(async (request) => {
     if (!orderId) return response({ error: "order_id_required" }, 400);
 
     const admin = createClient(supabaseUrl, serviceRoleKey());
+    const controls = await loadWatiNotificationControls(admin);
+    const manualWatiEnabled = controls.manualQuoteConfirmationEnabled
+      && watiEmergencySwitchAllows("WATI_MANUAL_QUOTE_CONFIRMATION_ENABLED");
+    const manualEmailEnabled = controls.manualQuoteConfirmationEmailEnabled
+      && watiEmergencySwitchAllows("EMAIL_MANUAL_QUOTE_CONFIRMATION_ENABLED");
     const { data: quote, error: quoteError } = await admin
       .from("orders")
       .select("id,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,grand_total,currency")
@@ -68,14 +80,18 @@ Deno.serve(async (request) => {
     if (quoteError || !quote) return response({ error: "quote_not_found" }, 404);
 
     const phone = digits(quote.contact_number_a_snapshot);
-    if (!phone || !quote.email_snapshot) {
+    if ((manualWatiEnabled && !phone) || (manualEmailEnabled && !quote.email_snapshot)) {
       return response({ error: "quote_contact_missing", watiSent: false, emailSent: false }, 400);
     }
-    if (!isNotificationRecipientPairAllowed(
-      notificationRecipientAllowlist(),
-      phone,
-      quote.email_snapshot,
-    )) {
+    const recipientPolicy = notificationRecipientAllowlist();
+    const recipientAllowed = manualWatiEnabled && manualEmailEnabled
+      ? isNotificationRecipientPairAllowed(recipientPolicy, phone, quote.email_snapshot || "")
+      : manualWatiEnabled
+        ? isNotificationPhoneAllowed(recipientPolicy, phone)
+        : manualEmailEnabled
+          ? isNotificationEmailAllowed(recipientPolicy, quote.email_snapshot || "")
+          : true;
+    if (!recipientAllowed) {
       return response({
         error: "notification_recipient_not_allowlisted",
         watiSent: false,
@@ -86,16 +102,16 @@ Deno.serve(async (request) => {
     const customerName = quote.customer_name_snapshot || quote.company_name_snapshot || "Customer";
     const appUrl = requiredEnv("APP_URL").replace(/\/$/, "");
     const pdfUrl = `${appUrl}/quotes/${quote.id}/pdf`;
-    const watiEndpoint = requiredEnv("WATI_API_ENDPOINT").replace(/\/$/, "");
-    const watiTemplate = requiredEnv("WATI_TEMPLATE_NAME");
     const notification = buildQuoteConfirmationContent({
       name: customerName,
       quoteNumber: quote.order_number || "",
       pdfUrl,
     });
-    const [watiResult, emailResult] = await Promise.allSettled([
-      fetch(
-        `${watiEndpoint}/api/v2/sendTemplateMessage?whatsappNumber=${encodeURIComponent(phone)}`,
+    const [watiResult, emailResult] = await settleEnabledNotificationRequests({
+      watiEnabled: manualWatiEnabled,
+      emailEnabled: manualEmailEnabled,
+      sendWati: () => fetch(
+        `${requiredEnv("WATI_API_ENDPOINT").replace(/\/$/, "")}/api/v2/sendTemplateMessage?whatsappNumber=${encodeURIComponent(phone)}`,
         {
           method: "POST",
           headers: {
@@ -103,7 +119,7 @@ Deno.serve(async (request) => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            template_name: watiTemplate,
+            template_name: requiredEnv("WATI_TEMPLATE_NAME"),
             broadcast_name: Deno.env.get("WATI_BROADCAST_NAME")?.trim() || "quote_confirmation",
             channel_number: requiredEnv("WATI_CHANNEL_NUMBER"),
             parameters: [
@@ -114,7 +130,7 @@ Deno.serve(async (request) => {
           }),
         },
       ),
-      fetch("https://api.resend.com/emails", {
+      sendEmail: () => fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${requiredEnv("RESEND_API_KEY")}`,
@@ -127,7 +143,7 @@ Deno.serve(async (request) => {
           html: notification.html,
         }),
       }),
-    ]);
+    });
     const watiResponse = watiResult.status === "fulfilled" ? watiResult.value : null;
     const emailResponse = emailResult.status === "fulfilled" ? emailResult.value : null;
     const watiPayload = watiResponse
@@ -135,17 +151,23 @@ Deno.serve(async (request) => {
       : null;
     const watiSent = Boolean(watiResponse?.ok && watiPayload?.result !== false);
     const emailSent = Boolean(emailResponse?.ok);
-    if (!watiSent || !emailSent) {
+    const watiSkipped = !manualWatiEnabled;
+    const emailSkipped = !manualEmailEnabled;
+    const watiDone = watiSent || watiSkipped;
+    const emailDone = emailSent || emailSkipped;
+    if (!watiDone || !emailDone) {
       return response({
-        error: !watiSent && !emailSent
+        error: !watiDone && !emailDone
           ? "wati_and_email_send_failed"
-          : !watiSent ? "wati_send_failed" : "email_send_failed",
+          : !watiDone ? "wati_send_failed" : "email_send_failed",
         watiSent,
+        watiSkipped,
         emailSent,
+        emailSkipped,
       }, 502);
     }
 
-    return response({ watiSent: true, emailSent: true });
+    return response({ watiSent, watiSkipped, emailSent, emailSkipped });
   } catch (error) {
     return response({
       error: error instanceof Error ? error.message : "quote_confirmation_failed",

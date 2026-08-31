@@ -113,6 +113,10 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
   { prefix: "/orders/shopify-pending", pageKey: "orders.shopify_pending" },
   { prefix: "/orders/new", pageKey: "orders.new" },
   {
+    prefix: "/orders/settings/wati-notifications",
+    pageKey: "orders.settings.wati_notifications",
+  },
+  {
     prefix: "/orders/settings/email-notifications",
     pageKey: "orders.settings.email_notifications",
   },
@@ -421,6 +425,7 @@ const PAGE_ACCESS_CHILD_KEYS: Record<string, string[]> = {
   ],
   finance: [REPORT_GROUP_PAGE_KEYS.dataInputProgress, "kitchen.cost_input"],
   "orders.settings": [
+    "orders.settings.wati_notifications",
     "orders.settings.email_notifications",
     "orders.settings.first_notification_recipients",
     "orders.settings.statuses",

@@ -168,7 +168,6 @@ export function CustomerMessagesSidePanel({
         body,
         authorName: profile?.user_name || profile?.email || null,
         orderId: replyTarget?.orderId ?? defaultOrderId,
-        replyToEmail: replyTarget ? email : null,
       });
       setMessages((current) => ({
         ...(current ?? emptyQuoteCustomerMessages()),
@@ -194,10 +193,9 @@ export function CustomerMessagesSidePanel({
       closeLabel={t("quoteCustomers.closePanel")}
       footer={messageTab === "note" && canCreateNote ? (
         <div className="quote-customers-message-composer-wrap">
-          <small className="quote-customers-wati-channel">{t("quoteCustomers.watiChannel")}</small>
           {replyTarget ? (
             <div className="quote-customers-reply-target">
-              <span>{t("quoteCustomers.emailReply")} {email}{replyTarget.orderNumber ? ` · ${replyTarget.orderNumber}` : ""}</span>
+              <span>{t("quoteCustomers.replyTo", { order: replyTarget.orderNumber || orderNumber || "-" })}</span>
               <button type="button" onClick={() => setReplyTarget(null)}>{t("quoteCustomers.cancelReply")}</button>
             </div>
           ) : null}
