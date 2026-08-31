@@ -926,6 +926,36 @@ export type PlannedShopifyMenuOption = MenuOption & {
   totalPrice: number | null;
 };
 
+/**
+ * Combines duplicate lunch-box rows emitted by Shopify's option app.
+ *
+ * Unmatched rows have no SKU or catalog ids, so the customer-facing name must
+ * participate in the key. Otherwise two different meals with the same price
+ * and remarks collapse into the first meal and its quantity is overstated.
+ */
+export function mergeShopifyLunchBoxLines(
+  lines: Array<Record<string, unknown>>,
+): Array<Record<string, unknown>> {
+  return [...lines.reduce((rows, row) => {
+    const key = [
+      row.sku_snapshot,
+      row.product_id,
+      row.package_id,
+      normalizeNameForMatch(String(row.product_name_snapshot ?? "")),
+      row.remarks_1,
+      row.unit_price,
+    ].join("|");
+    const existing = rows.get(key);
+    if (existing) {
+      existing.quantity = Number(existing.quantity ?? 0) + Number(row.quantity ?? 0);
+      existing.total_price = Number(existing.total_price ?? 0) + Number(row.total_price ?? 0);
+    } else {
+      rows.set(key, { ...row });
+    }
+    return rows;
+  }, new Map<string, Record<string, unknown>>()).values()];
+}
+
 export function replaceShopifyLunchBoxAggregate(input: {
   baseLines: Array<Record<string, unknown>>;
   menuLines: Array<Record<string, unknown>>;
@@ -1692,6 +1722,15 @@ export function linkedOrderLineSnapshotPatch(input: {
 export function resolveAliasSku(name: string | null | undefined): string | null {
   const normalized = normalizeNameForMatch(name);
   if (!normalized) return null;
+  if (/^\(便當\)咕嚕雞球飯(?:\([^)]*\))?$/.test(normalized)) {
+    // Shopify uses a generic "便當" label and appends the selected side
+    // dishes, while the approved HK Lunch Box catalog stores this meal as
+    // "(雙格) 咕嚕雞球飯".
+    return "CBE022";
+  }
+  if (/^\(便當\)粟米魚塊飯(?:\([^)]*\))?$/.test(normalized)) {
+    return "CBE083";
+  }
   if (/^(?:\(凍\))?(?:可口可樂|可樂)/.test(normalized)) {
     // The catalog stores Coke under the CDR001-* / EDR001-* prefix.
     const match = normalized.match(/可樂[^)]*?(\d+)\s*(罐|包|份)?/);
@@ -1718,4 +1757,23 @@ export function extractOptionRemark(name: string | null | undefined): string | n
   if (!match) return null;
   const option = match[1].trim();
   return option || null;
+}
+
+/**
+ * HK Lunch Box Shopify titles append the selected side dishes to a generic
+ * "(便當)" product title. Once the line is linked to its catalog product the
+ * UI displays the catalog name, so retain that suffix as the operational
+ * line remark instead of losing it from the order view and factory output.
+ */
+export function extractLunchBoxSideDishRemark(
+  name: string | null | undefined,
+): string | null {
+  const normalized = String(name ?? "")
+    .trim()
+    .replace(/[（]/g, "(")
+    .replace(/[）]/g, ")");
+  if (!/^\(便當\)/.test(normalized)) return null;
+  const match = normalized.match(/\(([^()]*)\)\s*$/);
+  const remark = match?.[1].trim() || null;
+  return remark && remark !== "便當" ? remark : null;
 }

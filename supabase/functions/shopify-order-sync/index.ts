@@ -1,6 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   collectLineMenuRemarkText,
+  extractLunchBoxSideDishRemark,
   extractOptionRemark,
   filterLegacyPaymentDuplicates,
   linkedOrderLineSnapshotPatch,
@@ -12,6 +13,7 @@ import {
   planShopifyMenuOptions,
   parseMenuRemark,
   parseShopifyFreeDrinks,
+  mergeShopifyLunchBoxLines,
   replaceShopifyFreeDrinkSourceLines,
   pickCatalogMatchByName,
   resolveShopifySkuSnapshot,
@@ -1266,6 +1268,9 @@ async function processMappedOrders(
     const lineRows = item.lines.map((line) => {
       const rawName = (line.row.product_name_snapshot as string | null) ?? null;
       const optionRemark = extractOptionRemark(rawName);
+      const lunchBoxSideDishRemark = storeRow.secret_prefix === "SHOPIFY_HK_LUNCH_BOX"
+        ? extractLunchBoxSideDishRemark(rawName)
+        : null;
       const variantParts = (line.variantTitle ?? "")
         .split("/")
         .map((part) => part.trim())
@@ -1333,7 +1338,9 @@ async function processMappedOrders(
         }),
         remarks_1: shopifyLineRemarksSnapshot({
           properties: line.properties,
-          optionRemark,
+          optionRemark: [optionRemark, lunchBoxSideDishRemark]
+            .filter(Boolean)
+            .join("\n") || null,
           variantRemark,
           existing: line.row.remarks_1,
         }),
@@ -1411,15 +1418,7 @@ async function processMappedOrders(
     }
 
     const mergedLineRows = storeRow.secret_prefix === "SHOPIFY_HK_LUNCH_BOX"
-      ? [...lineRows.reduce((rows, row) => {
-          const key = [row.sku_snapshot, row.product_id, row.package_id, row.remarks_1, row.unit_price].join("|");
-          const existing = rows.get(key);
-          if (existing) {
-            existing.quantity = Number(existing.quantity ?? 0) + Number(row.quantity ?? 0);
-            existing.total_price = Number(existing.total_price ?? 0) + Number(row.total_price ?? 0);
-          } else rows.set(key, { ...row });
-          return rows;
-        }, new Map<string, Record<string, unknown>>()).values()]
+      ? mergeShopifyLunchBoxLines(lineRows)
       : lineRows;
 
     const menuOptionResult = await buildMenuOptionLines({
