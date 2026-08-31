@@ -3,6 +3,7 @@ import {
   buildFactoryUnsentReminderContent,
   buildOrderNotificationContent,
   buildUnassignedDriverReminderContent,
+  resolveOrderNotificationShopName,
   supportsOrderEmailNotification,
   type InternalOrderNotificationValues,
   type OrderNotificationEvent,
@@ -94,6 +95,7 @@ type OrderRow = {
   delivery_time: string | null;
   shipping_address_snapshot: string | null;
   shipping_methods: unknown;
+  channels: unknown;
   created_at: string;
   is_sent_to_factory?: boolean | null;
   do_not_send_to_factory?: boolean | null;
@@ -397,6 +399,7 @@ function addonLink() {
 
 function valuesFor(order: OrderRow): OrderNotificationValues {
   const pickup = isPickup(order);
+  const channel = relation<{ name?: unknown }>(order.channels);
   return {
     name: order.customer_name_snapshot?.trim() || order.company_name_snapshot?.trim() || "Customer",
     order_number: order.order_number?.trim() || "-",
@@ -407,7 +410,10 @@ function valuesFor(order: OrderRow): OrderNotificationValues {
     delivery_method: pickup ? "門市自取" : "送貨上門",
     ao_deadline: formatHongKongDate(order.delivery_at, 1),
     ao_link: addonLink(),
-    shop_name: Deno.env.get("WATI_SHOP_NAME")?.trim() || "Food Channels Catering",
+    shop_name: resolveOrderNotificationShopName(
+      typeof channel?.name === "string" ? channel.name : null,
+      Deno.env.get("WATI_SHOP_NAME")?.trim(),
+    ),
   };
 }
 
@@ -586,7 +592,7 @@ Deno.serve(async (request) => {
     if (claimedRows.length) {
       const { data, error: jobsError } = await admin
         .from("wati_order_notification_outbox")
-        .select("id,attempts,wati_sent_at,wati_skipped_at,email_sent_at,email_skipped_at,template:wati_order_notification_templates(event_key,template_name,broadcast_name,parameters,is_active),order:orders(order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,delivery_at,delivery_time,shipping_address_snapshot,created_at,shipping_methods(name,display_name,requires_address_check))")
+        .select("id,attempts,wati_sent_at,wati_skipped_at,email_sent_at,email_skipped_at,template:wati_order_notification_templates(event_key,template_name,broadcast_name,parameters,is_active),order:orders(order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,delivery_at,delivery_time,shipping_address_snapshot,created_at,channels(name),shipping_methods(name,display_name,requires_address_check))")
         .in("id", claimedRows.map((row) => row.id));
       if (jobsError) throw new Error(`notification_load_failed:${jobsError.message}`);
       jobs = (data || []) as QueueRow[];

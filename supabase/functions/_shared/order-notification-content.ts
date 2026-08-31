@@ -68,6 +68,29 @@ export type NotificationContent = {
   html: string;
 };
 
+export function resolveOrderNotificationShopName(
+  channelName: string | null | undefined,
+  fallback = "Food Channels Catering",
+) {
+  const name = channelName?.trim();
+  if (!name) return fallback.trim() || "Food Channels Catering";
+
+  switch (name.toLowerCase().replace(/\s+/g, " ")) {
+    case "catering":
+      return "Food Channels Catering";
+    case "hk lunch box":
+      return "HK Lunch Box";
+    case "kitchen":
+      return "Food Channel Kitchen";
+    case "hk party food":
+      return "HK Party Food";
+    case "cuisine":
+      return "FC Cuisine";
+    default:
+      return name;
+  }
+}
+
 export type InternalOrderNotificationValues = {
   recipient_name: string;
   order_number: string;

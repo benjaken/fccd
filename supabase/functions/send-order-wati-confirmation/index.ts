@@ -1,5 +1,8 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { buildOrderNotificationContent } from "../_shared/order-notification-content.ts";
+import {
+  buildOrderNotificationContent,
+  resolveOrderNotificationShopName,
+} from "../_shared/order-notification-content.ts";
 import { EMAIL_FROM } from "../_shared/email-sender.ts";
 import {
   isNotificationRecipientPairAllowed,
@@ -52,7 +55,7 @@ Deno.serve(async (request) => {
 
     const admin = createClient(supabaseUrl, serviceRoleKey());
     const { data: order, error: orderError } = await admin.from("orders")
-      .select("id,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,delivery_at,delivery_time,shipping_address_snapshot")
+      .select("id,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,delivery_at,delivery_time,shipping_address_snapshot,channels(name)")
       .eq("id", orderId).eq("document_type", "order").is("archived_at", null).single();
     if (orderError || !order) return json({ error: "order_not_found" }, 404);
     const deliveryDate = hongKongDate(order.delivery_at);
@@ -81,7 +84,13 @@ Deno.serve(async (request) => {
       { name: "date", value: displayDate(deliveryDate) }, { name: "time", value: order.delivery_time?.trim() || "-" },
       { name: "address", value: order.shipping_address_snapshot?.trim() || "-" },
     ];
-    const shopName = Deno.env.get("WATI_SHOP_NAME")?.trim() || "Food Channels Catering";
+    const channel = Array.isArray(order.channels) ? order.channels[0] : order.channels;
+    const shopName = resolveOrderNotificationShopName(
+      channel && typeof channel === "object" && "name" in channel && typeof channel.name === "string"
+        ? channel.name
+        : null,
+      Deno.env.get("WATI_SHOP_NAME")?.trim(),
+    );
     const parameters = includesAddonLink
       ? [...commonParameters, { name: "ao_deadline", value: displayDate(previousDate(deliveryDate)) }, { name: "ao_link", value: addonLink() }, { name: "shop_name", value: shopName }]
       : [...commonParameters, { name: "shop_name", value: shopName }];

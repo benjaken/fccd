@@ -6,6 +6,7 @@ import {
   buildOrderNotificationContent,
   buildQuoteConfirmationContent,
   buildUnassignedDriverReminderContent,
+  resolveOrderNotificationShopName,
   supportsOrderEmailNotification,
   type OrderNotificationValues,
 } from "../supabase/functions/_shared/order-notification-content.ts";
@@ -32,6 +33,16 @@ const values: OrderNotificationValues = {
 };
 
 describe("WATI order notifications", () => {
+  it("derives the customer-service signature from the order brand", () => {
+    expect(resolveOrderNotificationShopName("Catering")).toBe("Food Channels Catering");
+    expect(resolveOrderNotificationShopName("HK lunch box")).toBe("HK Lunch Box");
+    expect(resolveOrderNotificationShopName("Kitchen")).toBe("Food Channel Kitchen");
+    expect(resolveOrderNotificationShopName("HK Party Food")).toBe("HK Party Food");
+    expect(resolveOrderNotificationShopName("Cuisine")).toBe("FC Cuisine");
+    expect(resolveOrderNotificationShopName("Express")).toBe("Express");
+    expect(resolveOrderNotificationShopName(null, "Configured Brand")).toBe("Configured Brand");
+  });
+
   it("fails closed and requires the configured phone and email to match", () => {
     const allowlist = parseNotificationRecipientAllowlist(
       "+852 9123 4567, +86 138 0013 8000",
