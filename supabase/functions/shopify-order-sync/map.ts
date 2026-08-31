@@ -837,6 +837,19 @@ export function isShopifyBeverageName(value: string | null | undefined): boolean
   return /(?:茶|可樂|汽水|果汁|咖啡|water|tea|coke|coffee|juice)/i.test(String(value ?? ""));
 }
 
+/** Keeps lunch-box variant choices as operational remarks while excluding the
+ * trailing drink choice, which is rebuilt as its own generated line. */
+export function shopifyLunchBoxVariantRemark(
+  variantTitle: string | null | undefined,
+): string | null {
+  const parts = String(variantTitle ?? "")
+    .split("/")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (parts.length && isShopifyBeverageName(parts.at(-1))) parts.pop();
+  return parts.join("\n") || null;
+}
+
 export function shopifyDrinkSelectionQuantity(
   selection: string,
   fallbackQuantity: number,
@@ -1357,15 +1370,11 @@ export function stripParsedMenuRemarksFromLines(input: {
   if (!parsed.size) return input.lines;
   const sourceByLineId = new Map(input.mappedLines.map((line) => {
     const rawName = (line.row.product_name_snapshot as string | null) ?? null;
-    const variantParts = (line.variantTitle ?? "")
-      .split("/")
-      .map((part) => part.trim())
-      .filter(Boolean);
     return [line.lineId, {
       properties: line.properties,
       optionRemark: extractOptionRemark(rawName),
       variantRemark: input.lunchBox
-        ? variantParts.slice(0, -1).join("\n") || null
+        ? shopifyLunchBoxVariantRemark(line.variantTitle)
         : null,
     }] as const;
   }));
@@ -1829,23 +1838,4 @@ export function extractOptionRemark(name: string | null | undefined): string | n
   if (!match) return null;
   const option = match[1].trim();
   return option || null;
-}
-
-/**
- * HK Lunch Box Shopify titles append the selected side dishes to a generic
- * "(便當)" product title. Once the line is linked to its catalog product the
- * UI displays the catalog name, so retain that suffix as the operational
- * line remark instead of losing it from the order view and factory output.
- */
-export function extractLunchBoxSideDishRemark(
-  name: string | null | undefined,
-): string | null {
-  const normalized = String(name ?? "")
-    .trim()
-    .replace(/[（]/g, "(")
-    .replace(/[）]/g, ")");
-  if (!/^\(便當\)/.test(normalized)) return null;
-  const match = normalized.match(/\(([^()]*)\)\s*$/);
-  const remark = match?.[1].trim() || null;
-  return remark && remark !== "便當" ? remark : null;
 }

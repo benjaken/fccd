@@ -288,7 +288,9 @@ export function groupDeliveriesByDate(
   }
   for (const date of dates) {
     grouped[date]?.sort((left, right) => {
-      const time = (left.deliveryTime ?? "").localeCompare(right.deliveryTime ?? "")
+      const time = (left.shipOutTime ?? left.deliveryTime ?? "").localeCompare(
+        right.shipOutTime ?? right.deliveryTime ?? "",
+      )
       if (time !== 0) return time
       return (left.orderNumber ?? "").localeCompare(right.orderNumber ?? "", "zh-Hant")
     })
@@ -733,7 +735,7 @@ export async function fetchFactoryMultiDayMenu(
         orderId,
         orderNumber: delivery.orderNumber,
         deliveryDate: hongKongDateKey(delivery.deliveryAt),
-        deliveryTime: delivery.deliveryTime,
+        deliveryTime: delivery.shipOutTime ?? delivery.deliveryTime,
         label,
         quantity,
         typeSort: line.type_sort == null ? null : Number(line.type_sort),

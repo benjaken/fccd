@@ -27,6 +27,7 @@ export type DeliveryListItem = {
   address: string | null;
   deliveryAt: string | null;
   deliveryTime: string | null;
+  shipOutTime?: string | null;
   districtName: string | null;
   motorcadeId: string | null;
   motorcadeName: string | null;
@@ -144,6 +145,21 @@ const DELIVERY_SELECT = [
   "delivery_teams!motorcade_id(name,short_name)",
   "delivery_surcharges(amount,delivery_surcharge_types!surcharge_type_id(name))",
 ].join(",");
+
+const LEGACY_DELIVERY_SELECT = DELIVERY_SELECT.replace(
+  ",order_received_at,",
+  ",",
+);
+
+export function isMissingOrderReceivedAtError(error: {
+  code?: string;
+  message?: string;
+} | null): boolean {
+  return (
+    error?.code === "42703" &&
+    error.message?.includes("order_received_at") === true
+  );
+}
 
 function nestedRecord<T>(value: Nested<T>): T | null {
   if (!value) return null;
@@ -292,6 +308,9 @@ export function mapDeliveryRow(row: DeliveryRow): DeliveryListItem {
       clockFromValue(row.ship_out_time) ||
       clockFromValue(order?.ship_out_time) ||
       clockFromValue(row.delivery_at),
+    shipOutTime:
+      clockFromValue(row.ship_out_time) ||
+      clockFromValue(order?.ship_out_time),
     districtName: displayName(row.delivery_districts),
     motorcadeId: row.motorcade_id,
     motorcadeName: teamName(row.delivery_teams),
@@ -436,15 +455,23 @@ export async function fetchDeliveries({
   const start = (page - 1) * pageSize;
   const end = start + pageSize - 1;
   const filters = { search, startDate, endDate, motorcadeId, shippingMethodId };
-  const { data, count, error } = await applyDeliveryFilters(
-    supabase
-      .from("deliveries")
-      .select(DELIVERY_SELECT, { count: "exact" })
-      .order("delivery_at", { ascending: true, nullsFirst: false })
-      .order("ship_out_time", { ascending: true, nullsFirst: false })
-      .range(start, end),
-    filters,
-  );
+  const loadPage = (columns: string) =>
+    applyDeliveryFilters(
+      supabase
+        .from("deliveries")
+        .select(columns, { count: "exact" })
+        .order("delivery_at", { ascending: true, nullsFirst: false })
+        .order("ship_out_time", { ascending: true, nullsFirst: false })
+        .range(start, end),
+      filters,
+    );
+  let pageResult = await loadPage(DELIVERY_SELECT);
+  // Keep the factory and delivery views available during a rolling deploy.
+  // Older preview branches do not have this optional freshness timestamp yet.
+  if (isMissingOrderReceivedAtError(pageResult.error)) {
+    pageResult = await loadPage(LEGACY_DELIVERY_SELECT);
+  }
+  const { data, count, error } = pageResult;
   if (error) throw error;
 
   const { data: sumData, error: sumError } = (await applyDeliveryFilters(

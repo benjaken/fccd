@@ -20584,8 +20584,11 @@ a.masoft-order-tag:focus-visible {
   --primary-foreground: #ffffff;
   --ring: var(--factory-green);
   display: flex;
+  position: relative;
   flex-direction: column;
+  height: 100dvh;
   min-height: 100vh;
+  overflow: hidden;
   background: var(--factory-bg);
   color: var(--factory-fg);
 }
@@ -20604,7 +20607,7 @@ a.masoft-order-tag:focus-visible {
   color: var(--factory-topbar-fg);
 }
 
-/* Order cancellation states shared by Sales detail and editor views. */
+/* Order editing and cancellation states shared by Sales and Factory. */
 .quote-lines-panel tr.is-cancelled,
 .quote-mobile-line.is-cancelled {
   background: color-mix(in srgb, #dc2626 7%, var(--card));
@@ -20617,7 +20620,8 @@ a.masoft-order-tag:focus-visible {
   text-decoration: line-through;
 }
 
-.quote-line-cancelled-label {
+.quote-line-cancelled-label,
+.factory-order-line-cancelled {
   display: inline-flex;
   width: fit-content;
   margin-top: 3px;
@@ -20637,6 +20641,56 @@ a.masoft-order-tag:focus-visible {
 }
 
 .quote-line-restore svg { width: 16px; height: 16px; }
+
+.factory-order-line.is-cancelled {
+  cursor: not-allowed;
+  border-color: color-mix(in srgb, #dc2626 35%, var(--border));
+  background: color-mix(in srgb, #dc2626 8%, var(--card));
+  color: #991b1b;
+  opacity: .82;
+}
+
+.factory-order-line.is-cancelled:disabled { opacity: .82; }
+.factory-order-line.is-cancelled strong { text-decoration: line-through; }
+
+.factory-edit-lock-warning {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0;
+  padding: 12px 14px;
+  border: 1px solid #ef4444;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.factory-edit-lock-warning svg { width: 20px; height: 20px; flex: 0 0 auto; }
+
+.factory-job-editing-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #dc2626;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.factory-job-editing-tag svg { width: 14px; height: 14px; }
+
+.factory-board-heading {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 28px;
+  justify-self: start;
+  white-space: nowrap;
+}
+
+.factory-board-heading .factory-board-brand {
+  width: 210px;
+  flex: 0 0 auto;
+}
 
 .factory-board-brand {
   display: flex;
@@ -23506,10 +23560,6 @@ a.masoft-order-tag:focus-visible {
   line-height: 1;
 }
 
-.factory-board-top > .factory-board-notice {
-  justify-self: center;
-}
-
 .factory-board-top > button {
   justify-self: end;
 }
@@ -23544,6 +23594,8 @@ a.masoft-order-tag:focus-visible {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
+  overflow: hidden;
   border-right: 4px solid var(--factory-line);
 }
 
@@ -23578,9 +23630,14 @@ a.masoft-order-tag:focus-visible {
 .factory-day-cards {
   display: grid;
   grid-template-columns: repeat(3, minmax(150px, 1fr));
+  flex: 1;
+  min-height: 0;
   gap: 14px;
   padding: 16px;
   align-content: start;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .factory-day-state {
@@ -23734,6 +23791,13 @@ button.factory-job-card:focus-visible {
   font-weight: 850;
 }
 
+.factory-job-card-body .factory-job-card-time {
+  overflow-wrap: normal;
+  word-break: normal;
+  white-space: nowrap;
+  font-size: 22px;
+}
+
 .factory-job-card-body .factory-new-order-tag,
 .factory-job-card-body .factory-changed-order-tag,
 .factory-job-card-body .factory-addon-order-tag {
@@ -23810,20 +23874,11 @@ button.factory-job-card:focus-visible {
   color: transparent;
 }
 
-.factory-board-footer {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  align-items: center;
-  gap: 16px;
-  padding: 18px 28px 22px;
-  border-top: 1px solid var(--factory-line);
-}
-
 .factory-board-pager {
   display: inline-flex;
   align-items: center;
   gap: 14px;
-  grid-column: 2;
+  justify-self: center;
 }
 
 .factory-board-today {
@@ -23834,14 +23889,19 @@ button.factory-job-card:focus-visible {
 }
 
 .factory-board-pager button:has(svg) {
+  width: 56px;
+  height: 56px;
+  color: var(--factory-topbar-fg);
+}
+
+.factory-board-pager button:has(svg) svg {
   width: 48px;
   height: 48px;
-  color: var(--factory-fg);
 }
 
 .factory-board-pager button:has(svg):hover {
-  background: rgb(255 255 255 / 12%);
-  color: var(--factory-fg);
+  background: rgb(0 0 0 / 8%);
+  color: var(--factory-topbar-fg);
 }
 
 .factory-board-calendar,
@@ -23854,14 +23914,14 @@ button.factory-job-card:focus-visible {
   padding: 0;
   border: 0;
   background: transparent;
-  color: var(--factory-fg);
+  color: var(--factory-topbar-fg);
   font-size: 18px;
   font-weight: 700;
   cursor: pointer;
 }
 
 .factory-board-calendar {
-  justify-self: start;
+  justify-self: end;
 }
 
 .factory-board-calendar svg,
@@ -23880,6 +23940,34 @@ button.factory-job-card:focus-visible {
   border-radius: 4px;
   outline: 2px solid var(--factory-green);
   outline-offset: 5px;
+}
+
+.factory-board-actions .factory-board-calendar,
+.factory-board-actions .factory-board-date {
+  min-height: 52px;
+  padding: 0 16px;
+  flex-direction: row;
+  gap: 8px;
+  border: 2px solid #111111;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #111111;
+  font-size: 18px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.factory-board-actions .factory-board-calendar svg,
+.factory-board-actions .factory-board-date svg {
+  width: 24px;
+  height: 24px;
+}
+
+.factory-board-actions .factory-board-calendar:hover,
+.factory-board-actions .factory-board-date:hover {
+  border-color: #111111;
+  background: #f3f4f6;
+  color: #111111;
 }
 
 .factory-modal-root {
@@ -25380,8 +25468,7 @@ button.factory-job-card:focus-visible {
   }
 
   .factory-board-top,
-  .factory-day-header,
-  .factory-board-footer {
+  .factory-day-header {
     grid-template-columns: 1fr;
   }
 

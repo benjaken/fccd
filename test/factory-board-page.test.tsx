@@ -37,6 +37,7 @@ function item(
     address: "大埔汀角道船灣香港青年協會大美督戶外活動中心",
     deliveryAt: "2026-08-18T02:00:00.000Z",
     deliveryTime: "10:00",
+    shipOutTime: "09:30",
     districtName: "大尾督",
     motorcadeId: "team-sun",
     motorcadeName: "Sun-Line",
@@ -134,6 +135,9 @@ describe("FactoryBoardPage", () => {
     const bodyRule = stylesheet.match(
       /\.factory-job-card-body strong,\s*\.factory-job-card-body span,\s*\.factory-job-card-body small\s*\{([^}]+)\}/,
     );
+    const cardTimeRule = stylesheet.match(
+      /\.factory-job-card-body \.factory-job-card-time\s*\{([^}]+)\}/,
+    );
 
     expect(daysRule?.[1]).toContain(
       "grid-template-columns: repeat(3, minmax(520px, 1fr))",
@@ -144,6 +148,8 @@ describe("FactoryBoardPage", () => {
     expect(headingRule?.[1]).toContain("font-size: 36px");
     expect(bodyRule?.[1]).toContain("font-size: 22px");
     expect(bodyRule?.[1]).toContain("font-weight: 800");
+    expect(cardTimeRule?.[1]).toContain("white-space: nowrap");
+    expect(cardTimeRule?.[1]).toContain("font-size: 22px");
     expect(dayRule?.[1]).toContain("border-right: 4px solid var(--factory-line)");
     expect(badgeRule?.[1]).toContain("bottom: 0");
     expect(badgeRule?.[1]).toContain(
@@ -288,7 +294,7 @@ describe("FactoryBoardPage", () => {
     vi.useRealTimers();
   });
 
-  it("opens the footer date picker and jumps to the confirmed date", async () => {
+  it("opens the top date picker and jumps to the confirmed date", async () => {
     const user = userEvent.setup();
     const loadBoard = vi.fn(async (date: string) => ({
       ...board,
@@ -306,7 +312,7 @@ describe("FactoryBoardPage", () => {
     );
 
     await waitFor(() => expect(loadBoard).toHaveBeenCalledWith("2026-08-17"));
-    const dateButton = screen.getByRole("button", { name: "日期" });
+    const dateButton = screen.getByRole("button", { name: "指定日期" });
     expect(dateButton.querySelector("input")).toBeNull();
 
     await user.click(dateButton);
@@ -324,7 +330,7 @@ describe("FactoryBoardPage", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("moves the footer pager by one three-day group", async () => {
+  it("moves the top pager by one three-day group", async () => {
     const user = userEvent.setup();
     const loadBoard = vi.fn(async (date: string) => ({
       ...board,
@@ -353,7 +359,7 @@ describe("FactoryBoardPage", () => {
     await waitFor(() => expect(loadBoard).toHaveBeenCalledWith("2026-08-17"));
   });
 
-  it("opens the large serving calendar from the lower-left footer", async () => {
+  it("opens the large serving calendar from the top actions", async () => {
     const user = userEvent.setup();
     const open = vi.spyOn(window, "open").mockImplementation(() => null);
 
@@ -395,6 +401,8 @@ describe("FactoryBoardPage", () => {
     expect(await screen.findByText("大尾督")).toBeInTheDocument();
     expect(screen.getByText("8月18日 (二)")).toBeInTheDocument();
     expect(screen.getByText("#B-1522")).toBeInTheDocument();
+    expect(screen.getByText("09:30")).toBeInTheDocument();
+    expect(screen.queryByText("10:00")).not.toBeInTheDocument();
     expect(screen.getByText("(7份)")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "多日菜式總表" })).toHaveClass(
       "factory-board-multi-day",

@@ -1,7 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   collectLineMenuRemarkText,
-  extractLunchBoxSideDishRemark,
   extractOptionRemark,
   filterLegacyPaymentDuplicates,
   linkedOrderLineSnapshotPatch,
@@ -26,6 +25,7 @@ import {
   shopifyCateringUtensilPacks,
   shopifyBentoUtensilCount,
   shopifyLunchBoxUtensilCount,
+  shopifyLunchBoxVariantRemark,
   shopifyDrinkSelectionQuantity,
   shopifyCustomizationCostParentName,
   shopifyLineRemarksSnapshot,
@@ -1357,15 +1357,8 @@ async function processMappedOrders(
     const lineRows = item.lines.map((line) => {
       const rawName = (line.row.product_name_snapshot as string | null) ?? null;
       const optionRemark = extractOptionRemark(rawName);
-      const lunchBoxSideDishRemark = storeRow.secret_prefix === "SHOPIFY_HK_LUNCH_BOX"
-        ? extractLunchBoxSideDishRemark(rawName)
-        : null;
-      const variantParts = (line.variantTitle ?? "")
-        .split("/")
-        .map((part) => part.trim())
-        .filter(Boolean);
       const variantRemark = storeRow.secret_prefix === "SHOPIFY_HK_LUNCH_BOX"
-        ? variantParts.slice(0, -1).join("\n") || null
+        ? shopifyLunchBoxVariantRemark(line.variantTitle)
         : null;
       // Match against the base name without the "配 ..." option text so the
       // package/product still resolves (Bubble encoded options in the name).
@@ -1413,9 +1406,7 @@ async function processMappedOrders(
         }),
         remarks_1: shopifyLineRemarksSnapshot({
           properties: line.properties,
-          optionRemark: [optionRemark, lunchBoxSideDishRemark]
-            .filter(Boolean)
-            .join("\n") || null,
+          optionRemark,
           variantRemark,
           existing: line.row.remarks_1,
         }),

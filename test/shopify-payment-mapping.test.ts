@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   collectLineMenuRemarkText,
   collectFreeDrinkRemarkText,
-  extractLunchBoxSideDishRemark,
   extractDeliveryFromRemark,
   extractOptionRemark,
   filterLegacyPaymentDuplicates,
@@ -31,6 +30,7 @@ import {
   shopifyCateringUtensilPacks,
   shopifyBentoUtensilCount,
   shopifyLunchBoxUtensilCount,
+  shopifyLunchBoxVariantRemark,
   shopifyDrinkSelectionQuantity,
   shopifyCustomizationCostParentName,
   isShopifyBeverageName,
@@ -60,6 +60,12 @@ describe("Shopify generated beverage reconciliation", () => {
   it("uses an explicit drink quantity instead of the parent meal quantity", () => {
     expect(shopifyDrinkSelectionQuantity("烏龍茶 6包", 7)).toBe(6);
     expect(shopifyDrinkSelectionQuantity("烏龍茶", 7)).toBe(7);
+  });
+
+  it("keeps B-1556 tomato salad as a remark and removes only a trailing drink", () => {
+    expect(shopifyLunchBoxVariantRemark("蕃茄沙律")).toBe("蕃茄沙律");
+    expect(shopifyLunchBoxVariantRemark("蕃茄沙律 / 蜂蜜綠茶")).toBe("蕃茄沙律");
+    expect(shopifyLunchBoxVariantRemark("蜂蜜綠茶")).toBeNull();
   });
 
   it("parses the authoritative B-1559 order-note drink manifest", () => {
@@ -1211,21 +1217,5 @@ describe("extractOptionRemark", () => {
     expect(extractOptionRemark("(三格) 肉醬意粉盒   配菠蘿芝士腸串 2串")).toBe("菠蘿芝士腸串 2串");
     expect(extractOptionRemark("(三格) 肉醬意粉盒")).toBeNull();
     expect(extractOptionRemark(null)).toBeNull();
-  });
-});
-
-describe("extractLunchBoxSideDishRemark", () => {
-  it("retains the side dishes appended to a Shopify lunch-box title", () => {
-    expect(extractLunchBoxSideDishRemark(
-      "(便當) 咕嚕雞球飯 (獅子頭、時菜、涼菜)",
-    )).toBe("獅子頭、時菜、涼菜");
-    expect(extractLunchBoxSideDishRemark(
-      "（便當）粟米魚塊飯（獅子頭、時菜、涼菜）",
-    )).toBe("獅子頭、時菜、涼菜");
-  });
-
-  it("does not treat ordinary catalog parentheses as side-dish remarks", () => {
-    expect(extractLunchBoxSideDishRemark("(雙格) 咕嚕雞球飯")).toBeNull();
-    expect(extractLunchBoxSideDishRemark(null)).toBeNull();
   });
 });

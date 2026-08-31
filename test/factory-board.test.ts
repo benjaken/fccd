@@ -153,11 +153,13 @@ describe("factory board helpers", () => {
           id: "late",
           deliveryAt: "2026-08-17T15:45:00.000Z",
           deliveryTime: "12:45",
+          shipOutTime: "09:00",
         }),
         item({
           id: "early",
           deliveryAt: "2026-08-17T03:30:00.000Z",
           deliveryTime: "11:30",
+          shipOutTime: "10:00",
         }),
         item({
           id: "next",
@@ -171,8 +173,8 @@ describe("factory board helpers", () => {
     expect(hongKongDateKey("2026-08-17T03:30:00.000Z")).toBe("2026-08-17");
     expect(hongKongDateKey("2026-08-17T16:00:00.000Z")).toBe("2026-08-18");
     expect(grouped["2026-08-17"]?.map((row) => row.id)).toEqual([
-      "early",
       "late",
+      "early",
     ]);
     expect(grouped["2026-08-18"]?.map((row) => row.id)).toEqual(["next"]);
     expect(grouped["2026-08-19"]).toEqual([]);

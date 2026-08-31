@@ -18,6 +18,7 @@ import {
   hasDeliveryPhotos,
   hongKongDateInputValue,
   hongKongMonthStart,
+  isMissingOrderReceivedAtError,
   isPendingPickupStatus,
   mapDeliveryRow,
   showsDeliveryPhotoAction,
@@ -26,6 +27,21 @@ import {
 } from "@/lib/deliveries";
 
 describe("delivery list helpers", () => {
+  it("recognizes only the missing optional order-received timestamp error", () => {
+    expect(isMissingOrderReceivedAtError({
+      code: "42703",
+      message: "column orders_1.order_received_at does not exist",
+    })).toBe(true);
+    expect(isMissingOrderReceivedAtError({
+      code: "42703",
+      message: "column orders_1.factory_sent_at does not exist",
+    })).toBe(false);
+    expect(isMissingOrderReceivedAtError({
+      code: "42501",
+      message: "permission denied",
+    })).toBe(false);
+  });
+
   it("keeps fleet and shipping-method options when bank_account is unavailable", async () => {
     fromMock.mockImplementation((table: string) => ({
       select: (columns: string) => {
@@ -95,6 +111,7 @@ describe("delivery list helpers", () => {
     expect(item.orderNumber).toBe("6918");
     expect(item.customerPhone).toBe("90154004");
     expect(item.deliveryTime).toBe("18:00 - 19:00");
+    expect(item.shipOutTime).toBe("18:00");
     expect(item.motorcadeName).toBe("Sun-Line Logistics");
     expect(item.shippingMethodName).toBe("車邊交收");
     expect(item.surcharges).toEqual([{ name: "隧道費", amount: 50 }]);

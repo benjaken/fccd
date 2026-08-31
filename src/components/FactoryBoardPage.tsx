@@ -599,7 +599,11 @@ export function FactoryBoardPage({
     const empty = t("common.notSet");
     const csv = buildDeliveryExportCsv(
       dispatchRows.map((item) =>
-        toDeliveryExportRow(item, empty, () => dispatch?.date ?? empty),
+        toDeliveryExportRow(
+          { ...item, deliveryTime: item.shipOutTime ?? item.deliveryTime },
+          empty,
+          () => dispatch?.date ?? empty,
+        ),
       ),
       {
         orderNumber: t("factoryBoard.columns.orderNumber"),
@@ -627,31 +631,90 @@ export function FactoryBoardPage({
   return (
     <main className="factory-board">
       <header className="factory-board-top">
-        <FactoryBrandLogo />
-        <p
-          className="factory-board-notice"
-          aria-label={t("factoryBoard.stocktakeNotice")}
-        >
-          <span aria-hidden="true">📢</span>
-          <span>{t("factoryBoard.stocktakeNoticeBefore")}</span>
-          <span className="factory-board-notice-day">
-            {t("factoryBoard.stocktakeNoticeDay")}
-          </span>
-          {t("factoryBoard.stocktakeNoticeAfter") ? (
-            <span>{t("factoryBoard.stocktakeNoticeAfter")}</span>
-          ) : null}
-        </p>
+        <div className="factory-board-heading">
+          <FactoryBrandLogo />
+          <p
+            className="factory-board-notice"
+            aria-label={t("factoryBoard.stocktakeNotice")}
+          >
+            <span aria-hidden="true">📢</span>
+            <span>{t("factoryBoard.stocktakeNoticeBefore")}</span>
+            <span className="factory-board-notice-day">
+              {t("factoryBoard.stocktakeNoticeDay")}
+            </span>
+            {t("factoryBoard.stocktakeNoticeAfter") ? (
+              <span>{t("factoryBoard.stocktakeNoticeAfter")}</span>
+            ) : null}
+          </p>
+        </div>
         <div className="factory-board-actions">
           {selectedJob || multiDayReport ? null : (
-            <Button
-              type="button"
-              variant="outline"
-              className="factory-board-multi-day"
-              disabled={loading}
-              onClick={openMultiDayPicker}
-            >
-              {t("factoryBoard.multiDayMenu")}
-            </Button>
+            <>
+              <div className="factory-board-pager">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label={t("factoryBoard.previousDays")}
+                  onClick={() => setStartDate((current) => addCalendarDays(current, -3))}
+                >
+                  <ChevronLeft />
+                </Button>
+                <Button
+                  type="button"
+                  className="factory-board-today"
+                  onClick={() =>
+                    setStartDate(addCalendarDays(hongKongDateInputValue(), -1))
+                  }
+                >
+                  {t("factoryBoard.goToday")}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label={t("factoryBoard.nextDays")}
+                  onClick={() => setStartDate((current) => addCalendarDays(current, 3))}
+                >
+                  <ChevronRight />
+                </Button>
+              </div>
+              <button
+                type="button"
+                className="factory-board-calendar"
+                onClick={() =>
+                  window.open(
+                    "/factory/production-calendar",
+                    "_blank",
+                    "noopener,noreferrer",
+                  )
+                }
+              >
+                <CalendarDays aria-hidden="true" />
+                <span>{t("factoryBoard.productionCalendar")}</span>
+              </button>
+              <button
+                type="button"
+                className="factory-board-date"
+                aria-label={t("factoryBoard.specifiedDate")}
+                onClick={() => {
+                  setJumpDate(startDate);
+                  setDatePickerOpen(true);
+                }}
+              >
+                <CalendarDays aria-hidden="true" />
+                <span>{t("factoryBoard.specifiedDate")}</span>
+              </button>
+              <Button
+                type="button"
+                variant="outline"
+                className="factory-board-multi-day"
+                disabled={loading}
+                onClick={openMultiDayPicker}
+              >
+                {t("factoryBoard.multiDayMenu")}
+              </Button>
+            </>
           )}
         </div>
       </header>
@@ -924,7 +987,9 @@ export function FactoryBoardPage({
                           </>
                         ) : (
                           <>
-                            <strong>{item.deliveryTime || t("common.notSet")}</strong>
+                            <strong className="factory-job-card-time">
+                              {item.shipOutTime || item.deliveryTime || t("common.notSet")}
+                            </strong>
                             <span>
                               {item.districtName || t("common.notSet")}
                             </span>
@@ -961,63 +1026,6 @@ export function FactoryBoardPage({
         ))}
       </section>
 
-      <footer className="factory-board-footer">
-        <button
-          type="button"
-          className="factory-board-calendar"
-          onClick={() =>
-            window.open(
-              "/factory/production-calendar",
-              "_blank",
-              "noopener,noreferrer",
-            )
-          }
-        >
-          <CalendarDays aria-hidden="true" />
-          <span>{t("factoryBoard.productionCalendar")}</span>
-        </button>
-        <div className="factory-board-pager">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            aria-label={t("factoryBoard.previousDays")}
-            onClick={() => setStartDate((current) => addCalendarDays(current, -3))}
-          >
-            <ChevronLeft />
-          </Button>
-          <Button
-            type="button"
-            className="factory-board-today"
-            onClick={() =>
-              setStartDate(addCalendarDays(hongKongDateInputValue(), -1))
-            }
-          >
-            {t("factoryBoard.goToday")}
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            aria-label={t("factoryBoard.nextDays")}
-            onClick={() => setStartDate((current) => addCalendarDays(current, 3))}
-          >
-            <ChevronRight />
-          </Button>
-        </div>
-        <button
-          type="button"
-          className="factory-board-date"
-          aria-label={t("factoryBoard.date")}
-          onClick={() => {
-            setJumpDate(startDate);
-            setDatePickerOpen(true);
-          }}
-        >
-          <CalendarDays aria-hidden="true" />
-          <span>{t("factoryBoard.date")}</span>
-        </button>
-      </footer>
       </>
       )}
 
@@ -1288,7 +1296,7 @@ export function FactoryBoardPage({
                     <td>{item.customerName || t("common.notSet")}</td>
                     <td>{item.customerPhone || t("common.notSet")}</td>
                     <td>{item.districtName || t("common.notSet")}</td>
-                    <td>{item.deliveryTime || t("common.notSet")}</td>
+                    <td>{item.shipOutTime || t("common.notSet")}</td>
                     <td>{item.deliveryTime || t("common.notSet")}</td>
                     <td>{item.address || t("common.notSet")}</td>
                   </tr>
