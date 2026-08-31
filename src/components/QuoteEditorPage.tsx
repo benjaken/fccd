@@ -57,7 +57,6 @@ import {
   updateOrderFactoryStatus,
   saveQuotePayments,
   saveSalesDocumentBatch,
-  sendQuoteConfirmation,
   type CreatedQuote,
   type QuoteCatalogItem,
   type QuoteDraft,
@@ -77,7 +76,7 @@ import {
 } from "@/lib/quote-pdf-draft";
 import { fetchShippingFees, type ShippingFee } from "@/lib/shipping-fees";
 import { convertQuoteToOrder } from "@/lib/quotes";
-import { confirmOrderAddonShopifyInput } from "@/lib/order-editor";
+import { confirmOrderAddonShopifyInput, sendOrderWatiConfirmation } from "@/lib/order-editor";
 import { useDetailBackTo } from "@/lib/detail-navigation";
 import {
   normalizeDoNotSendToFactory,
@@ -235,7 +234,7 @@ type Props = {
   loadShippingFeeOptions?: () => Promise<ShippingFee[]>;
   savePayments?: typeof saveQuotePayments;
   saveBatch?: typeof saveSalesDocumentBatch;
-  sendConfirmation?: typeof sendQuoteConfirmation;
+  sendConfirmation?: typeof sendOrderWatiConfirmation;
   convertQuote?: typeof convertQuoteToOrder;
   copyQuote?: typeof duplicateQuote;
   setFactoryStatus?: typeof updateOrderFactoryStatus;
@@ -267,7 +266,7 @@ export function QuoteEditorPage({
   loadShippingFeeOptions = loadConfiguredShippingFees,
   savePayments = saveQuotePayments,
   saveBatch,
-  sendConfirmation = sendQuoteConfirmation,
+  sendConfirmation = sendOrderWatiConfirmation,
   convertQuote = convertQuoteToOrder,
   copyQuote = duplicateQuote,
   setFactoryStatus = updateOrderFactoryStatus,
@@ -815,8 +814,8 @@ export function QuoteEditorPage({
     }
   };
 
-  const sendCurrentQuoteConfirmation = async () => {
-    if (!activeQuote || sendingConfirmation) return;
+  const sendCurrentOrderConfirmation = async () => {
+    if (!isOrder || !activeQuote || sendingConfirmation) return;
     setSendingConfirmation(true);
     setConfirmationSendError(false);
     try {
@@ -1554,19 +1553,21 @@ export function QuoteEditorPage({
     setPayments((current) => current.map((payment) => payment.id === paymentId ? { ...payment, ...partial } : payment));
   };
 
-  const completeQuote = async (notify: boolean) => {
-    if (!activeQuote) return;
+  const saveAndSendCurrentOrderConfirmation = async () => {
+    if (!isOrder || !activeQuote) return;
+    if (!validateDetails()) {
+      scrollToSection("details");
+      return;
+    }
     setCompleting(true);
     setCompletionError(null);
     try {
       await persistAllChanges(activeQuote);
-      if (notify) {
-        try {
-          await sendConfirmation(activeQuote.id);
-        } catch {
-          setCompletionError("send");
-          return;
-        }
+      try {
+        await sendConfirmation(activeQuote.id);
+      } catch {
+        setCompletionError("send");
+        return;
       }
       navigate(listPath, { replace: true });
     } catch {
@@ -1604,7 +1605,6 @@ export function QuoteEditorPage({
     const districtName = automaticDistrictName || draft.districtName || optionName(districts, draft.districtId);
     const selectedTags = options.orderTags.filter((item) => draft.tagIds.includes(item.id));
     const paid = payments.reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0);
-    const showConfirmationAction = !isOrder && !draft.quoteStatus;
     const showConvertAction = !isOrder;
 
     const ReadonlyField = ({ label, value, hint }: { label: string; value?: string | number | null; hint?: string }) => (
@@ -1638,28 +1638,17 @@ export function QuoteEditorPage({
             </div>
             <p>{t(isOrder ? "quoteEditor.orderItemsReady" : "quoteEditor.itemsReady")}</p>
           </div>
-          {showConfirmationAction || showConvertAction ? (
+          {showConvertAction ? (
             <div className="quote-detail-actions">
               {canEdit ? (
                 <Button asChild variant="outline">
                   <Link to={`/quotes/${activeQuote.id}/edit`}><Pencil />編輯</Link>
                 </Button>
               ) : null}
-              {showConfirmationAction ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={sendingConfirmation || converting}
-                  onClick={() => void sendCurrentQuoteConfirmation()}
-                >
-                  {sendingConfirmation ? <LoaderCircle className="spin" /> : <Mail />}
-                  {t("quoteEditor.detailActions.sendConfirmation")}
-                </Button>
-              ) : null}
               {showConvertAction ? (
                 <Button
                   type="button"
-                  disabled={converting || sendingConfirmation}
+                  disabled={converting}
                   onClick={() => void convertCurrentQuote()}
                 >
                   {converting ? <LoaderCircle className="spin" /> : <ShoppingCart />}
@@ -1672,6 +1661,15 @@ export function QuoteEditorPage({
             <div className="quote-order-detail-summary">
               <OrderPaymentStatus total={grandTotal} paid={paidTotal} formatMoney={money.format} navigationStuck={sectionNavigationStuck} />
               <div className="quote-detail-actions">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={sendingConfirmation}
+                  onClick={() => void sendCurrentOrderConfirmation()}
+                >
+                  {sendingConfirmation ? <LoaderCircle className="spin" /> : <Mail />}
+                  {t(sendingConfirmation ? "quoteEditor.detailActions.sendingConfirmation" : "quoteEditor.detailActions.sendConfirmation")}
+                </Button>
                 {activeQuote.addonShopifyPending && canEdit ? (
                   <Button
                     type="button"
@@ -1701,10 +1699,13 @@ export function QuoteEditorPage({
           ) : null}
         </header>
 
-        {!isOrder && (confirmationSendError || conversionError) ? (
+        {!isOrder && conversionError ? (
           <p className="quote-editor-error" role="alert">
-            {t(confirmationSendError ? "quoteEditor.payments.sendError" : "quoteEditor.errors.convert")}
+            {t("quoteEditor.errors.convert")}
           </p>
+        ) : null}
+        {isOrder && confirmationSendError ? (
+          <p className="quote-editor-error" role="alert">{t("quoteEditor.payments.sendError")}</p>
         ) : null}
         {isOrder && factoryStatusError ? (
           <p className="quote-editor-error" role="alert">{t("quoteEditor.factoryStatus.error")}</p>
@@ -1940,7 +1941,7 @@ export function QuoteEditorPage({
           {error && <p className="quote-editor-error" role="alert">{t("quoteEditor.errors.create")}</p>}
           {conversionError && <p className="quote-editor-error" role="alert">{t("quoteEditor.errors.convert")}</p>}
           <footer>
-            {activeQuote && !isOrder ? <Button type="button" variant="outline" disabled={completing || saving} onClick={() => void completeQuote(true)}><Mail />{t("quoteEditor.payments.sendAndComplete")}</Button> : null}
+            {activeQuote && isOrder ? <Button type="button" variant="outline" disabled={completing || saving} onClick={() => void saveAndSendCurrentOrderConfirmation()}>{completing ? <LoaderCircle className="spin" /> : <Mail />}{t(completing ? "quoteEditor.detailActions.sendingConfirmation" : "quoteEditor.payments.sendAndComplete")}</Button> : null}
             {activeQuote && !isOrder ? <Button type="button" variant="outline" disabled={converting || saving} onClick={() => void convertCurrentQuote()}><ShoppingCart />{converting ? t("quotes.actions.converting") : t("quotes.actions.convert")}</Button> : <span />}
             <Button type="submit" disabled={saving || converting}>{saving ? t("quoteEditor.saving") : activeQuote ? t("quoteEditor.saveChanges") : t("quoteEditor.saveAndContinue")}</Button>
           </footer>

@@ -2675,12 +2675,13 @@ const resources = {
           eyebrow: "步驟 3", title: "收款記錄", optionalHint: "收款記錄可以留空，稍後再補回。",
           add: "新增收款", date: "日期", method: "付款方式", amount: "金額", reference: "付款參考",
           remove: "刪除收款", empty: "尚未輸入收款記錄", receivable: "應收", paid: "已收", outstanding: "尚欠",
-          previous: "上一步", complete: "完成", sendAndComplete: "傳送 WATI 及電郵確認",
+          previous: "上一步", complete: "完成", sendAndComplete: "傳送 WATI 及電郵訂單確認通知及加單 link",
           saveError: "未能完成儲存；如已新增收款，請完整填寫日期、付款方式及金額。",
-          sendError: "報價已儲存，但 WATI 或電郵未能傳送，請檢查通知服務設定後重試。",
+          sendError: "訂單已儲存，但 WATI 或電郵未能傳送，請檢查通知服務設定後重試。",
         },
         detailActions: {
-          sendConfirmation: "傳送 WATI 及電郵訂單確認通知",
+          sendConfirmation: "傳送 WATI 及電郵訂單確認通知及加單 link",
+          sendingConfirmation: "傳送中…",
         },
       },
       quoteCustomers: {
@@ -7818,12 +7819,13 @@ const resources = {
           eyebrow: "Step 3", title: "Payment records", optionalHint: "Payment records are optional and can be added later.",
           add: "Add payment", date: "Date", method: "Payment method", amount: "Amount", reference: "Reference",
           remove: "Remove payment", empty: "No payment records", receivable: "Receivable", paid: "Paid", outstanding: "Outstanding",
-          previous: "Previous", complete: "Complete", sendAndComplete: "Send WATI and email confirmation",
+          previous: "Previous", complete: "Complete", sendAndComplete: "Send WATI and email order confirmation with add-on link",
           saveError: "Could not complete the save. If a payment was added, fill in its date, method, and amount.",
-          sendError: "The quote was saved, but WATI or email could not be sent. Check the notification service configuration and retry.",
+          sendError: "The order was saved, but WATI or email could not be sent. Check the notification service configuration and retry.",
         },
         detailActions: {
-          sendConfirmation: "Send WATI and email order confirmation",
+          sendConfirmation: "Send WATI and email order confirmation with add-on link",
+          sendingConfirmation: "Sending…",
         },
       },
       quoteCustomers: {

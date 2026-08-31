@@ -20710,7 +20710,18 @@ a.masoft-order-tag:focus-visible {
 .quote-payment-row input,
 .quote-payment-row select { min-width: 0; height: 42px; padding: 0 11px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: var(--foreground); font: inherit; }
 .quote-payment-row .quote-money-input { height: 42px; }
-.quote-payment-row .quote-money-input input { height: 40px; border: 0; }
+.quote-payment-row .quote-money-input input {
+  height: 42px;
+  padding: 0 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+}
+.quote-payment-row .quote-money-input input:focus {
+  border-color: var(--primary);
+  outline: 0;
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 16%, transparent);
+}
 .quote-payment-row .quote-line-delete { margin-bottom: 7px; }
 
 .quote-payment-empty {
