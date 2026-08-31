@@ -9,6 +9,7 @@ import { Modal } from "@/components/ui/modal";
 import { PdfBlurCommitInput, PdfBlurCommitTextarea } from "@/components/PdfBlurCommitField";
 import { QuoteClauseSearchPicker } from "@/components/QuoteClauseSearchPicker";
 import { getBrandContactEmail, getBrandLogoAlt, getDocumentLogoPath } from "@/lib/brand-logo";
+import { hongKongDateKey } from "@/lib/date-time";
 import {
   fetchOrderDetail,
   type DetailLine,
@@ -40,7 +41,7 @@ const fetchConfiguredShippingFees: ShippingFeeLoader = async () =>
 
 function pdfDate(value: string | null | undefined) {
   if (!value) return "";
-  const isoDate = value.slice(0, 10).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const isoDate = hongKongDateKey(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!isoDate) return value;
   return `${Number(isoDate[3])}/${Number(isoDate[2])}/${isoDate[1]}`;
 }

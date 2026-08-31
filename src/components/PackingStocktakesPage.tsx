@@ -37,6 +37,7 @@ function formatDate(value: string | null | undefined, locale: string) {
   if (Number.isNaN(date.getTime())) return "—";
   return new Intl.DateTimeFormat(locale, {
     year: "numeric", month: "long", day: "numeric",
+    timeZone: "Asia/Hong_Kong",
   }).format(date);
 }
 
@@ -45,7 +46,7 @@ function formatDateTime(value: string | null | undefined, locale: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
   return new Intl.DateTimeFormat(locale, {
-    dateStyle: "medium", timeStyle: "short",
+    dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Hong_Kong",
   }).format(date);
 }
 

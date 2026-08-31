@@ -971,7 +971,7 @@ export function SupplierQuotePage({
       effectiveDate: reviewEffectiveDate,
       status: "confirmed",
       lineCount: selected.length,
-      confirmedAt: new Date().toLocaleString("zh-HK", { hour12: false }),
+      confirmedAt: new Date().toLocaleString("zh-HK", { hour12: false, timeZone: "Asia/Hong_Kong" }),
       parserVersion: "text-table/fallback-0.1",
     };
     const newLines: QuoteLine[] = selected.map((line) => ({
@@ -1263,7 +1263,7 @@ export function SupplierQuotePage({
         return `<tr><td>${line.supplier}</td><td>${line.productNameZh}<br><small>${line.spec}</small></td><td>${formatMoney(previousComparisonPrice(line))} / kg</td><td>${formatMoney(latestComparisonPrice(line))} / kg<br><small>PDF 原價 ${formatMoney(line.price)} / ${line.sourcePriceUnitLabel ?? line.priceUnit}</small></td><td>${formatPercent(rate)}</td><td>${lineStatus(line, thresholds).label}</td></tr>`;
       })
       .join("");
-    popup.document.write(`<html><head><title>供應商報價分析</title><style>body{font-family:Arial,"Microsoft JhengHei",sans-serif;padding:32px;color:#18221d}h1{margin:0 0 6px}p{color:#64736b}table{border-collapse:collapse;width:100%;margin-top:24px}th,td{border-bottom:1px solid #d9e2dc;text-align:left;padding:10px;font-size:14px}th{background:#eff7f1}small{color:#64736b}</style></head><body><h1>凍肉供應商報價分析</h1><p>產生日期：${new Date().toLocaleString("zh-HK")} · 異常門檻：上漲 ${thresholds.risePercent}% / 下跌 ${thresholds.fallPercent}%</p><table><thead><tr><th>供應商</th><th>商品／規格</th><th>上一次</th><th>最新</th><th>變動率</th><th>狀態</th></tr></thead><tbody>${rows}</tbody></table></body></html>`);
+    popup.document.write(`<html><head><title>供應商報價分析</title><style>body{font-family:Arial,"Microsoft JhengHei",sans-serif;padding:32px;color:#18221d}h1{margin:0 0 6px}p{color:#64736b}table{border-collapse:collapse;width:100%;margin-top:24px}th,td{border-bottom:1px solid #d9e2dc;text-align:left;padding:10px;font-size:14px}th{background:#eff7f1}small{color:#64736b}</style></head><body><h1>凍肉供應商報價分析</h1><p>產生日期：${new Date().toLocaleString("zh-HK", { timeZone: "Asia/Hong_Kong" })} · 異常門檻：上漲 ${thresholds.risePercent}% / 下跌 ${thresholds.fallPercent}%</p><table><thead><tr><th>供應商</th><th>商品／規格</th><th>上一次</th><th>最新</th><th>變動率</th><th>狀態</th></tr></thead><tbody>${rows}</tbody></table></body></html>`);
     popup.document.close();
     popup.focus();
     popup.print();

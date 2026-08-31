@@ -122,7 +122,7 @@ export function ShopifyPendingProductsPage({ canManage = false }: { canManage?: 
   const [syncLogOpen, setSyncLogOpen] = useState(false);
   const pages = Math.max(1, Math.ceil(total / SHOPIFY_PENDING_PAGE_SIZE));
   const date = useMemo(
-    () => new Intl.DateTimeFormat(i18n.language, { dateStyle: "short", timeStyle: "short" }),
+    () => new Intl.DateTimeFormat(i18n.language, { dateStyle: "short", timeStyle: "short", timeZone: "Asia/Hong_Kong" }),
     [i18n.language],
   );
 
