@@ -470,6 +470,64 @@ describe("Orders list", () => {
     expect(table.queryByText("未傳送到工場")).not.toBeInTheDocument();
   });
 
+  it("hides stale payment and kitchen statuses when their source values are empty", async () => {
+    const loadOrders = vi.fn().mockResolvedValue({
+      ...orderResult,
+      items: [{
+        ...orderResult.items[0],
+        outstanding: 0,
+        factoryPackingNote: null,
+        isSentToFactory: true,
+        statuses: [
+          { name: "未完成付款", color: "#ef4444" },
+          { name: "廚房備註", color: "#3b82f6" },
+          { name: "待取貨", color: "#16a34a" },
+        ],
+        manualTodos: [],
+      }],
+    });
+
+    render(
+      <MemoryRouter>
+        <OrdersListPage
+          loadOrders={loadOrders}
+          loadListConfig={emptyListConfig}
+          loadStatusCatalog={vi.fn().mockResolvedValue([])}
+        />
+      </MemoryRouter>,
+    );
+
+    const table = within(await screen.findByRole("table"));
+    expect(table.queryByText("未完成付款")).not.toBeInTheDocument();
+    expect(table.queryByText("廚房備註")).not.toBeInTheDocument();
+    expect(table.getAllByText("待取貨").length).toBeGreaterThan(0);
+  });
+
+  it("does not expose a stored payment status without finance access", async () => {
+    const loadOrders = vi.fn().mockResolvedValue({
+      ...orderResult,
+      items: [{
+        ...orderResult.items[0],
+        statuses: [{ name: "未付款", color: "#ef4444" }],
+        manualTodos: [],
+      }],
+    });
+
+    render(
+      <MemoryRouter>
+        <OrdersListPage
+          canViewFinance={false}
+          loadOrders={loadOrders}
+          loadListConfig={emptyListConfig}
+          loadStatusCatalog={vi.fn().mockResolvedValue([])}
+        />
+      </MemoryRouter>,
+    );
+
+    const table = within(await screen.findByRole("table"));
+    expect(table.queryByText("未付款")).not.toBeInTheDocument();
+  });
+
   it("opens the existing customer messages side panel from the row chat action", async () => {
     const user = userEvent.setup();
     const loadMessages = vi.fn().mockResolvedValue({
