@@ -143,6 +143,22 @@ describe("bubble daily incremental helpers", () => {
     ).toBe(true);
   });
 
+  it("does not treat utensil packs as add-on order lines", () => {
+    const mapping = coreMappings.find((item) => item.sourceType === "s_order");
+    expect(mapping).toBeTruthy();
+
+    expect(mapping!.map({
+      _id: "utensil-line",
+      newproductname: "餐具包",
+      "Add-on": true,
+    }).is_addon).toBe(false);
+    expect(mapping!.map({
+      _id: "meal-line",
+      newproductname: "燒雞",
+      "Add-on": true,
+    }).is_addon).toBe(true);
+  });
+
   it("extracts order tags and the fallback delivery district from A_Order", () => {
     expect(orderMetadataFromRecord({
       _id: "order-1",
