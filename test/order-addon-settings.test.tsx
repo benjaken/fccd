@@ -51,7 +51,8 @@ describe("OrderAddonProductsSettings", () => {
     const brand = within(panel).getByRole("combobox", { name: "品牌" });
     expect(within(panel).getAllByRole("combobox", { name: "搜尋產品" })).toHaveLength(1);
 
-    await user.selectOptions(brand, "channel-1");
+    await user.click(brand);
+    await user.click(await screen.findByRole("option", { name: "HK lunch box" }));
     const productSearch = await within(panel).findByRole("combobox", { name: "搜尋產品" });
     await waitFor(() => expect(productSearch).toBeEnabled());
 

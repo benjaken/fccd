@@ -151,17 +151,19 @@ export function OrderAddonProductsSettings({
       <form id="add-addon-product-form" className="order-settings-form" onSubmit={(event) => void submit(event)}>
         <label className="order-settings-field">
           <span>品牌</span>
-          <select
+          <SearchSelect
+            id="addon-brand-search"
+            label="品牌"
             value={channelId}
-            aria-label="品牌"
-            onChange={(event) => {
-              setChannelId(event.target.value);
+            options={channels.map((channel) => ({ id: channel.id, name: channel.name }))}
+            onChange={(option) => {
+              setChannelId(option.id);
               setProductId("");
             }}
-          >
-            <option value="">選擇品牌</option>
-            {channels.map((channel) => <option key={channel.id} value={channel.id}>{channel.name}</option>)}
-          </select>
+            placeholder={t("orderSettings.addonBrandPlaceholder")}
+            searchPlaceholder={t("orderSettings.addonBrandSearchPlaceholder")}
+            emptyLabel={t("orderSettings.addonBrandEmpty")}
+          />
         </label>
         <label className="order-settings-field">
           <span>搜尋產品</span>
@@ -177,7 +179,7 @@ export function OrderAddonProductsSettings({
             onChange={(option) => setProductId(option.id)}
             placeholder={t("orderSettings.addonProductSearchPlaceholder")}
             searchPlaceholder={t("orderSettings.addonProductSearchPlaceholder")}
-            emptyLabel="找不到可加入的產品"
+            emptyLabel={t("orderSettings.addonProductEmpty")}
           />
         </label>
         {error ? <p className="list-inline-error" role="alert">{error}</p> : null}

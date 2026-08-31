@@ -15404,8 +15404,7 @@ a.masoft-order-tag:focus-visible {
   font-weight: 700;
 }
 
-.order-settings-field input,
-.order-settings-field select {
+.order-settings-field input {
   height: 40px;
   padding: 0 12px;
   border: 1px solid var(--border);
@@ -15416,14 +15415,12 @@ a.masoft-order-tag:focus-visible {
   font: inherit;
 }
 
-.order-settings-field input:focus,
-.order-settings-field select:focus {
+.order-settings-field input:focus {
   border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
   box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 16%, transparent);
 }
 
-.order-settings-field input:disabled,
-.order-settings-field select:disabled {
+.order-settings-field input:disabled {
   cursor: not-allowed;
   background: color-mix(in oklch, var(--muted) 55%, var(--background));
   color: var(--muted-foreground);

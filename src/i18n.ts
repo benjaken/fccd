@@ -1474,7 +1474,11 @@ const resources = {
         retry: "重新載入",
         cancel: "取消",
         closePanel: "關閉",
+        addonBrandPlaceholder: "選擇品牌",
+        addonBrandSearchPlaceholder: "搜尋品牌",
+        addonBrandEmpty: "找不到品牌",
         addonProductSearchPlaceholder: "搜尋產品名稱或 SKU",
+        addonProductEmpty: "找不到可加入的產品",
         comingSoon: "此設定稍後開放",
         comingSoonDescription:
           "先使用訂單標籤、送貨方式與付款方式；其他分類會按同一表格樣式陸續加入。",
@@ -6566,7 +6570,11 @@ const resources = {
         retry: "Reload",
         cancel: "Cancel",
         closePanel: "Close",
+        addonBrandPlaceholder: "Select brand",
+        addonBrandSearchPlaceholder: "Search brands",
+        addonBrandEmpty: "No brands found",
         addonProductSearchPlaceholder: "Search product name or SKU",
+        addonProductEmpty: "No products available to add",
         comingSoon: "This setting is coming soon",
         comingSoonDescription:
           "Order tags, delivery methods, and payment methods are available now; the other categories will follow the same table layout.",
