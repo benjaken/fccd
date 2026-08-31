@@ -1046,7 +1046,7 @@ describe("Orders list", () => {
     );
     expect(source).toContain('query.in("planned_delivery_district.name", districtNames)');
     expect(source).toContain(
-      "deliveryDistrictName(row.deliveries) ??\n        plannedDistrictName(row.planned_delivery_district) ??\n        districtNameFromAddress(",
+       "deliveryDistrictName(row.deliveries) ??\n        plannedDistrictName(row.planned_delivery_district) ??\n        districtNameFromAddress(",
     );
     expect(source).not.toContain('query.in("id", districtOrderIds)');
   });

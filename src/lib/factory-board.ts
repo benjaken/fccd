@@ -28,13 +28,20 @@ export type FactoryOrderPrintStatus = "complete" | "needs-reprint" | "incomplete
 export const NEW_FACTORY_ORDER_HOURS = 12
 
 export function isNewFactoryOrder(
-  factorySentAt: string | null | undefined,
+  orderReceivedAt: string | null | undefined,
   now = new Date(),
+  deliveryAt?: string | null,
 ): boolean {
-  if (!factorySentAt) return false
-  const sentAt = Date.parse(factorySentAt)
-  if (!Number.isFinite(sentAt)) return false
-  const elapsed = now.getTime() - sentAt
+  if (!orderReceivedAt) return false
+  if (
+    deliveryAt &&
+    hongKongDateKey(deliveryAt) < hongKongDateKey(now.toISOString())
+  ) {
+    return false
+  }
+  const receivedAt = Date.parse(orderReceivedAt)
+  if (!Number.isFinite(receivedAt)) return false
+  const elapsed = now.getTime() - receivedAt
   return elapsed >= 0 && elapsed < NEW_FACTORY_ORDER_HOURS * 60 * 60 * 1000
 }
 
