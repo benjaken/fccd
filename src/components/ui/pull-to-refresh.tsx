@@ -14,6 +14,33 @@ import { cn } from "@/lib/utils";
 const PULL_THRESHOLD = 56;
 const PULL_MAX = 88;
 const RESISTANCE = 0.42;
+const PULL_IGNORE_SELECTOR = [
+  "select",
+  "option",
+  '[role="listbox"]',
+  '[role="combobox"]',
+  '[aria-haspopup="listbox"]',
+  "[data-pull-to-refresh-ignore]",
+].join(",");
+
+function shouldIgnorePullStart(target: EventTarget | null) {
+  return target instanceof Element && Boolean(target.closest(PULL_IGNORE_SELECTOR));
+}
+
+function verticalScrollTarget(node: HTMLElement) {
+  let candidate: HTMLElement | null = node;
+  while (candidate) {
+    const { overflowY } = window.getComputedStyle(candidate);
+    if (
+      /(auto|scroll|overlay)/.test(overflowY)
+      && candidate.scrollHeight > candidate.clientHeight
+    ) {
+      return candidate;
+    }
+    candidate = candidate.parentElement;
+  }
+  return document.scrollingElement as HTMLElement | null ?? node;
+}
 
 export function PullToRefresh({
   onRefresh,
@@ -35,6 +62,7 @@ export function PullToRefresh({
   const enabled = Boolean(onRefresh) && isMobile && !disabled;
   const scrollerRef = useRef<HTMLDivElement>(null);
   const startYRef = useRef(0);
+  const scrollTargetRef = useRef<HTMLElement | null>(null);
   const pullingRef = useRef(false);
   const pullRef = useRef(0);
   const [pull, setPull] = useState(0);
@@ -66,21 +94,38 @@ export function PullToRefresh({
     if (!node || !enabled) return;
 
     const onStart = (event: TouchEvent) => {
-      if (busy || node.scrollTop > 0) return;
+      const scrollTarget = verticalScrollTarget(node);
+      if (
+        busy
+        || event.touches.length !== 1
+        || scrollTarget.scrollTop > 0
+        || shouldIgnorePullStart(event.target)
+      ) return;
       startYRef.current = event.touches[0]?.clientY ?? 0;
+      scrollTargetRef.current = scrollTarget;
       pullingRef.current = true;
     };
 
     const onMove = (event: TouchEvent) => {
       if (!pullingRef.current || busy) return;
-      if (node.scrollTop > 0) {
+      if ((scrollTargetRef.current?.scrollTop ?? node.scrollTop) > 0) {
         reset();
+        scrollTargetRef.current = null;
         return;
       }
       const currentY = event.touches[0]?.clientY ?? 0;
       const delta = currentY - startYRef.current;
       if (delta <= 0) {
-        setPullDistance(0);
+        const hadCapturedPull = pullRef.current > 0;
+        const scrollTarget = scrollTargetRef.current;
+        reset();
+        scrollTargetRef.current = null;
+        if (hadCapturedPull && delta < 0) {
+          // A prevented downward move cannot resume native scrolling during
+          // the same touch. Apply the reversed distance to the real scroller.
+          event.preventDefault();
+          if (scrollTarget) scrollTarget.scrollTop += -delta;
+        }
         return;
       }
       event.preventDefault();
@@ -90,6 +135,7 @@ export function PullToRefresh({
     const onEnd = () => {
       if (!pullingRef.current) return;
       pullingRef.current = false;
+      scrollTargetRef.current = null;
       if (pullRef.current >= PULL_THRESHOLD && !busy) {
         setAwaiting(true);
         setPullDistance(0);

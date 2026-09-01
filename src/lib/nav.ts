@@ -331,16 +331,22 @@ export const secondaryNav: Record<string, NavItem[]> = {
       permissionKey: "quotes",
     },
     {
+      key: "largeQuoteBids",
+      to: "/quotes/large",
+      icon: CircleDollarSign,
+      permissionKey: "quotes",
+    },
+    {
+      key: "recentOpenQuotes",
+      to: "/quotes/recent-open",
+      icon: History,
+      permissionKey: "quotes",
+    },
+    {
       key: "customers",
       to: "/quotes/customers",
       icon: Users,
       permissionKey: "quotes.customers",
-    },
-    {
-      key: "pendingQuotes",
-      to: "/quotes/pending",
-      icon: CalendarClock,
-      permissionKey: "quotes.pending",
     },
     {
       key: "quotePdfPages",
@@ -632,6 +638,12 @@ export const secondaryNav: Record<string, NavItem[]> = {
       permissionKey: "settings.login_logs",
     },
     {
+      key: "watiEmailLogs",
+      to: "/settings/wati-email-logs",
+      icon: Mail,
+      permissionKey: "settings.wati_email_logs",
+    },
+    {
       key: "dictionaries",
       to: "/settings/dictionaries",
       icon: ListFilter,
@@ -739,6 +751,7 @@ export const SECTION_CHILD_KEYS: Record<string, string[]> = {
     "settings.users.change_password",
     "settings.roles",
     "settings.login_logs",
+    "settings.wati_email_logs",
     "settings.notifications",
     "settings.dictionaries",
     "settings.dictionaries.edit",

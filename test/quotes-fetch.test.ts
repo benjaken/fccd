@@ -67,7 +67,7 @@ describe("quote list presets", () => {
     expect(query.order).toHaveBeenCalledWith("name", { ascending: true });
   });
 
-  it("matches the legacy pending queue by excluding completed quote statuses", async () => {
+  it("loads every quote above $10K regardless of confirmation status", async () => {
     const query = createQuery({ data: [], count: 0, error: null });
     fromMock.mockReturnValue(query);
 
@@ -75,12 +75,35 @@ describe("quote list presets", () => {
       page: 1,
       search: "",
       status: "",
-      preset: "pending",
-      now: new Date("2026-08-18T04:00:00+08:00"),
+      preset: "large",
     });
 
-    expect(fromMock).toHaveBeenCalledWith("orders");
-    expect(query.eq).toHaveBeenCalledWith("document_type", "quote");
+    expect(query.gt).toHaveBeenCalledWith("grand_total", 10_000);
+    expect(query.or).not.toHaveBeenCalledWith(
+      'quote_status.is.null,quote_status.not.in.("Done Deal","Case Closed")',
+    );
+  });
+
+  it("loads only unconfirmed quotes created within the last 30 Hong Kong days", async () => {
+    const query = createQuery({ data: [], count: 0, error: null });
+    fromMock.mockReturnValue(query);
+
+    await fetchQuotes({
+      page: 1,
+      search: "",
+      status: "",
+      preset: "recent-open",
+      now: new Date("2026-09-01T12:00:00+08:00"),
+    });
+
+    expect(query.gte).toHaveBeenCalledWith(
+      "effective_created_at",
+      "2026-08-03T00:00:00+08:00",
+    );
+    expect(query.lt).toHaveBeenCalledWith(
+      "effective_created_at",
+      "2026-09-02T00:00:00+08:00",
+    );
     expect(query.or).toHaveBeenCalledWith(
       'quote_status.is.null,quote_status.not.in.("Done Deal","Case Closed")',
     );

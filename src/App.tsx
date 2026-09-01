@@ -131,6 +131,7 @@ import { OrderListConfigsPage } from "@/components/settings/OrderListConfigsPage
 import { RolePermissionsPage } from "@/components/settings/RolePermissionsPage";
 import { SettingsAccessDenied } from "@/components/settings/SettingsAccessDenied";
 import { UsersListPage } from "@/components/settings/UsersListPage";
+import { WatiEmailSendLogsPage } from "@/components/settings/WatiEmailSendLogsPage";
 import { Button } from "@/components/ui/button";
 import { DetailLink } from "@/components/ui/detail-link";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
@@ -813,12 +814,16 @@ function OperationsShell() {
                 element={<QuotesListPage preset="large" canManage={canEditQuotes} />}
               />
               <Route
+                path="/quotes/recent-open"
+                element={<QuotesListPage preset="recent-open" canManage={canEditQuotes} />}
+              />
+              <Route
                 path="/quotes/follow-up"
-                element={<Navigate to="/quotes/pending" replace />}
+                element={<Navigate to="/quotes/recent-open" replace />}
               />
               <Route
                 path="/quotes/pending"
-                element={<QuotesListPage preset="pending" canManage={canEditQuotes} />}
+                element={<Navigate to="/quotes/recent-open" replace />}
               />
               <Route
                 path="/quotes/upcoming"
@@ -1254,6 +1259,16 @@ function OperationsShell() {
                 element={
                   pageAccess.canAccess("settings.login_logs") ? (
                     <LoginLogsListPage />
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
+                }
+              />
+              <Route
+                path="/settings/wati-email-logs"
+                element={
+                  pageAccess.canAccess("settings.wati_email_logs") ? (
+                    <WatiEmailSendLogsPage />
                   ) : (
                     <SettingsAccessDenied />
                   )
