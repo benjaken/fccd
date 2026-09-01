@@ -383,6 +383,7 @@ export function QuoteEditorPage({
     additionalInfo: [],
     activities: [],
     utensilPackQuantity: "0",
+    discountLabel: "折扣 (-)",
   });
   const [additionalOpen, setAdditionalOpen] = useState(false);
   const [additionalSearch, setAdditionalSearch] = useState("");
@@ -580,7 +581,12 @@ export function QuoteEditorPage({
           });
           setPersistedGrandTotal(id && summary.grandTotal != null ? summary.grandTotal : null);
           if (id && summary.supplements) {
-            setSupplements(summary.supplements);
+            setSupplements((current) => ({
+              additionalInfo: summary.supplements?.additionalInfo ?? current.additionalInfo,
+              activities: summary.supplements?.activities ?? current.activities,
+              utensilPackQuantity: summary.supplements?.utensilPackQuantity ?? current.utensilPackQuantity,
+              discountLabel: current.discountLabel || "折扣 (-)",
+            }));
             setSupplementsLoadedFor(id);
           }
           setPayments(copyFrom ? [] : summary.payments ?? []);
@@ -2289,7 +2295,7 @@ export function QuoteEditorPage({
                   patchFinancials({ shippingFee: String(shippingFee) });
                   void saveFinancialAdjustments({ ...financialValues, shippingFee });
                 }}><option value="">{t("quoteEditor.financials.chooseShippingFee")}</option>{shippingFees.map((fee) => <option key={fee.id} value={fee.id}>{fee.item} · {money.format(fee.fee)}</option>)}</FilterableSelect><span className="quote-money-input">HK$<input type="number" min="0" step="0.01" aria-label={t("quoteEditor.financials.shippingFeeAmount")} value={financials.shippingFee} onChange={(event) => patchFinancials({ shippingFee: event.target.value })} onBlur={() => void saveFinancialAdjustments()} /></span></div></label>
-                <label><span>{t("quoteEditor.financials.discount")}</span><span className="quote-money-input">HK$<input type="number" min="0" step="0.01" aria-label={t("quoteEditor.financials.discount")} value={financials.discount} onChange={(event) => patchFinancials({ discount: event.target.value })} onBlur={() => void saveFinancialAdjustments()} /></span></label>
+                <label><input className="quote-financial-label-input" aria-label="折扣顯示文字" value={supplements.discountLabel} onChange={(event) => setSupplements((current) => ({ ...current, discountLabel: event.target.value }))} /><span className="quote-money-input">HK$<input type="number" min="0" step="0.01" aria-label={t("quoteEditor.financials.discount")} value={financials.discount} onChange={(event) => patchFinancials({ discount: event.target.value })} onBlur={() => void saveFinancialAdjustments()} /></span></label>
                 <label><span>{t("quoteEditor.financials.cashdollarRedeemed")}</span><span className="quote-money-input">HK$<input type="number" min="0" step="0.01" aria-label={t("quoteEditor.financials.cashdollarRedeemed")} value={financials.cashdollarRedeemed} onChange={(event) => patchFinancials({ cashdollarRedeemed: event.target.value })} onBlur={() => void saveFinancialAdjustments()} /></span></label>
                 <label><span>{t("quoteEditor.financials.cashdollarPurchased")}</span><span className="quote-money-input">HK$<input type="number" min="0" step="0.01" aria-label={t("quoteEditor.financials.cashdollarPurchased")} value={financials.cashdollarPurchased} onChange={(event) => patchFinancials({ cashdollarPurchased: event.target.value })} onBlur={() => void saveFinancialAdjustments()} /></span></label>
                 <footer><span>{t("quoteEditor.financials.grandTotal")}</span><strong>{money.format(grandTotal)}</strong></footer>

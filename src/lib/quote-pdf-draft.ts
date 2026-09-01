@@ -8,6 +8,7 @@ export type QuotePdfSupplementDraft = {
   additionalInfo: string[];
   activities: QuoteActivityDraft[];
   utensilPackQuantity: string;
+  discountLabel: string;
 };
 
 export function quotePdfDraftStorageKey(quoteId: string) {
@@ -19,6 +20,7 @@ export function readQuotePdfSupplements(quoteId: string): QuotePdfSupplementDraf
     additionalInfo: [],
     activities: [],
     utensilPackQuantity: "0",
+    discountLabel: "折扣 (-)",
   };
   if (typeof window === "undefined") return fallback;
   try {
@@ -29,6 +31,9 @@ export function readQuotePdfSupplements(quoteId: string): QuotePdfSupplementDraf
       additionalInfo: Array.isArray(value.additionalInfo) ? value.additionalInfo : [],
       activities: Array.isArray(value.activities) ? value.activities : [],
       utensilPackQuantity: value.utensilPackQuantity ?? "0",
+      discountLabel: typeof value.discountLabel === "string"
+        ? value.discountLabel
+        : "折扣 (-)",
     };
   } catch {
     return fallback;
