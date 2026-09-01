@@ -268,7 +268,28 @@ describe("FactoryBoardPage", () => {
       /\.factory-job-print-status\.is-complete\s*\{[^}]*background:\s*var\(--factory-green\)[^}]*clip-path:\s*polygon\(0 0, 100% 0, 0 100%\)/s,
     );
     expect(stylesheet).toMatch(
-      /@media \(max-width: 760px\)[\s\S]*?\.factory-day-cards\s*\{[^}]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/,
+      /@media \(max-width: 760px\)[\s\S]*?\.factory-day-cards\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/,
+    );
+    expect(stylesheet).toMatch(
+      /@media \(max-width: 760px\)[\s\S]*?\.factory-job-card\s*\{[^}]*min-height:\s*116px[^}]*padding:\s*6px 0 6px 6px/,
+    );
+    expect(stylesheet).toMatch(
+      /@media \(max-width: 760px\)[\s\S]*?\.factory-job-card:has\(\.factory-job-print-status, \.factory-new-order-corner\) \.factory-job-card-body\s*\{[^}]*padding-top:\s*27px/,
+    );
+    expect(stylesheet).toMatch(
+      /@media \(max-width: 760px\)[\s\S]*?\.factory-job-print-status\.is-complete,[\s\S]*?\.factory-new-order-corner\s*\{[^}]*width:\s*38px[^}]*height:\s*38px/,
+    );
+    expect(stylesheet).toMatch(
+      /@media \(max-width: 760px\)[\s\S]*?\.factory-job-card:has\(\.factory-job-badge:not\(\.is-empty\)\) \.factory-job-card-body\s*\{[^}]*padding-bottom:\s*27px/,
+    );
+    expect(stylesheet).toMatch(
+      /@media \(max-width: 760px\)[\s\S]*?\.factory-job-badge\s*\{[^}]*width:\s*38px[^}]*height:\s*38px[^}]*font-size:\s*17px/,
+    );
+    expect(stylesheet).toMatch(
+      /@media \(max-width: 760px\)[\s\S]*?\.factory-order-line:has\(\.factory-order-line-print\)\s*\{[^}]*padding-top:\s*22px/,
+    );
+    expect(stylesheet).toMatch(
+      /@media \(max-width: 760px\)[\s\S]*?\.factory-order-line-print\s*\{[^}]*width:\s*28px[^}]*height:\s*22px/,
     );
     expect(stylesheet).toMatch(
       /@media \(max-width: 760px\)[\s\S]*?\.factory-board-actions\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/,
@@ -286,7 +307,19 @@ describe("FactoryBoardPage", () => {
       /@media \(max-width: 760px\)[\s\S]*?\.factory-board \.factory-qz,[\s\S]*?display:\s*none !important/,
     );
     expect(stylesheet).toMatch(
-      /@media \(max-width: 760px\)[\s\S]*?\.factory-order-lines\s*\{[^}]*grid-template-columns:\s*1fr[^}]*overflow:\s*visible/,
+      /@media \(max-width: 760px\)[\s\S]*?\.factory-order-lines\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)[^}]*overflow:\s*visible/,
+    );
+    expect(stylesheet).toMatch(
+      /@media \(max-width: 760px\)[\s\S]*?\.factory-order-job\s*\{[^}]*grid-auto-rows:\s*max-content[^}]*align-content:\s*start/,
+    );
+    expect(stylesheet).toMatch(
+      /@media \(max-width: 760px\)[\s\S]*?\.factory-order-packing\s*\{[^}]*height:\s*auto[^}]*min-height:\s*34px[^}]*padding:\s*5px 8px/,
+    );
+    expect(stylesheet).toMatch(
+      /@media \(max-width: 760px\)[\s\S]*?\.factory-order-line\s*\{[^}]*min-height:\s*64px/,
+    );
+    expect(stylesheet).toMatch(
+      /@media \(max-width: 760px\)[\s\S]*?\.factory-order-page \.factory-board-brand img\s*\{[^}]*height:\s*auto[^}]*max-height:\s*none[^}]*object-fit:\s*contain/,
     );
     expect(stylesheet).toMatch(
       /\.kitchen-calendar-page\.is-factory-display \.kitchen-calendar-mobile-filter\s*\{[^}]*height:\s*56px[^}]*max-height:\s*56px/,
@@ -319,7 +352,7 @@ describe("FactoryBoardPage", () => {
       /\.factory-multi-day-table\.is-two-column\s*\{[^}]*min-width:\s*1100px/,
     );
     expect(stylesheet).toMatch(
-      /@media \(max-width: 480px\)[\s\S]*?\.factory-day-cards\s*\{[^}]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/,
+      /@media \(max-width: 480px\)[\s\S]*?\.factory-day-cards\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/,
     );
   });
 
@@ -656,8 +689,7 @@ describe("FactoryBoardPage", () => {
     );
     print.mockRestore();
 
-    await user.click(screen.getByRole("button", { name: "返回" }));
-    expect(screen.getAllByRole("button", { name: "出車表" })).toHaveLength(3);
+    expect(screen.queryByRole("button", { name: "返回" })).not.toBeInTheDocument();
   });
 
   it("shows print completion only after all labels and warns before opening a changed order", async () => {

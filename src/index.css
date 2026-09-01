@@ -25906,18 +25906,20 @@ button.factory-job-card:focus-visible {
   }
 
   .factory-day-cards {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-    padding: 12px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
+    padding: 6px;
     scrollbar-gutter: auto;
   }
 
   .factory-job-card {
-    min-height: 168px;
+    min-height: 116px;
+    padding: 6px 0 6px 6px;
   }
 
   .factory-job-card-body {
-    padding-inline: 12px;
+    gap: 3px;
+    padding-inline: 6px;
   }
 
   .factory-job-card-body strong,
@@ -25925,6 +25927,71 @@ button.factory-job-card:focus-visible {
   .factory-job-card-body small,
   .factory-job-card-body .factory-job-card-time {
     font-size: 18px;
+  }
+
+  .factory-job-card-body strong {
+    font-size: 20px;
+  }
+
+  .factory-job-card-body .factory-job-card-time {
+    font-size: 19px;
+  }
+
+  .factory-job-card:has(.factory-job-print-status, .factory-new-order-corner) .factory-job-card-body {
+    padding-top: 27px;
+  }
+
+  .factory-job-card:has(.factory-job-badge:not(.is-empty)) .factory-job-card-body {
+    padding-bottom: 27px;
+  }
+
+  .factory-job-print-status {
+    top: 4px;
+    left: 4px;
+    width: 24px;
+    min-height: 24px;
+  }
+
+  .factory-job-print-status svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .factory-job-print-status.is-complete,
+  .factory-new-order-corner {
+    width: 38px;
+    height: 38px;
+  }
+
+  .factory-job-print-status.is-complete svg,
+  .factory-new-order-corner svg {
+    top: 4px;
+    width: 16px;
+    height: 16px;
+  }
+
+  .factory-job-print-status.is-complete svg {
+    left: 4px;
+  }
+
+  .factory-new-order-corner svg {
+    right: 4px;
+  }
+
+  .factory-job-badge {
+    width: 38px;
+    height: 38px;
+    padding: 0 5px 4px 0;
+    font-size: 17px;
+  }
+
+  .factory-job-card-body .factory-new-order-tag,
+  .factory-job-card-body .factory-changed-order-tag,
+  .factory-job-card-body .factory-job-editing-tag,
+  .factory-job-card-body .factory-addon-order-tag {
+    min-height: 24px;
+    padding: 2px 4px;
+    font-size: 14px;
   }
 
   .factory-modal-root {
@@ -25961,8 +26028,28 @@ button.factory-job-card:focus-visible {
     display: none;
   }
 
+  .factory-order-page > .factory-board-top {
+    min-height: 0;
+    padding: 6px 8px;
+    overflow: visible;
+  }
+
   .factory-board-heading.factory-page-title-heading {
     display: flex;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .factory-order-page .factory-board-heading .factory-board-brand {
+    width: min(132px, 40vw);
+    overflow: visible;
+  }
+
+  .factory-order-page .factory-board-brand img {
+    width: 100%;
+    height: auto;
+    max-height: none;
+    object-fit: contain;
   }
 
   .factory-board-heading.factory-calendar-heading {
@@ -25981,7 +26068,7 @@ button.factory-job-card:focus-visible {
   }
 
   .factory-order-page-title {
-    font-size: 20px;
+    font-size: 14px;
   }
 
   .factory-order-job,
@@ -26002,8 +26089,11 @@ button.factory-job-card:focus-visible {
 
   .factory-order-job {
     display: grid;
+    flex: none;
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto;
+    grid-auto-rows: max-content;
+    align-content: start;
   }
 
   .factory-order-summary {
@@ -26013,13 +26103,13 @@ button.factory-job-card:focus-visible {
     grid-template-columns: minmax(0, 1fr) auto;
     justify-content: stretch;
     align-items: center;
-    gap: 7px;
-    padding: 10px 12px 12px;
+    gap: 2px 5px;
+    padding: 4px 7px 5px;
   }
 
   .factory-order-number {
     max-width: 100%;
-    font-size: 38px;
+    font-size: 24px;
     line-height: 1.05;
     overflow-wrap: anywhere;
     text-align: left;
@@ -26027,9 +26117,10 @@ button.factory-job-card:focus-visible {
 
   .factory-order-meta {
     display: contents;
-    gap: 5px 10px;
-    font-size: 16px;
-    line-height: 1.3;
+    gap: 1px 5px;
+    font-size: 14px;
+    font-weight: 650;
+    line-height: 1.15;
   }
 
   .factory-order-meta .is-date,
@@ -26049,7 +26140,7 @@ button.factory-job-card:focus-visible {
     grid-row: 1;
     justify-self: end;
     white-space: nowrap;
-    font-size: 17px;
+    font-size: 14px;
     text-align: right;
   }
 
@@ -26081,11 +26172,14 @@ button.factory-job-card:focus-visible {
   .factory-order-packing {
     grid-column: 1;
     grid-row: 2;
-    align-items: flex-start;
-    min-height: 0;
-    padding: 14px;
-    font-size: 17px;
-    line-height: 1.45;
+    align-self: start;
+    align-items: center;
+    height: auto;
+    min-height: 34px;
+    gap: 6px;
+    padding: 5px 8px;
+    font-size: 14px;
+    line-height: 1.2;
   }
 
   .factory-order-packing span {
@@ -26094,25 +26188,44 @@ button.factory-job-card:focus-visible {
   }
 
   .factory-order-packing svg {
-    width: 26px;
-    height: 26px;
+    width: 18px;
+    height: 18px;
     flex: 0 0 auto;
   }
 
   .factory-order-lines {
     grid-column: 1;
     grid-row: 4;
-    grid-template-columns: 1fr;
-    gap: 12px;
-    padding: 12px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
+    padding: 6px;
     overflow: visible;
     scrollbar-gutter: auto;
   }
 
   .factory-order-line {
     width: 100%;
-    min-height: 118px;
-    padding: 16px 14px;
+    min-height: 64px;
+    padding: 4px 3px;
+  }
+
+  .factory-order-line:has(.factory-order-line-print) {
+    padding-top: 22px;
+  }
+
+  .factory-order-line-body {
+    gap: 2px;
+  }
+
+  .factory-order-line-print {
+    width: 28px;
+    height: 22px;
+    padding: 3px 0 0 3px;
+  }
+
+  .factory-order-line-print svg {
+    width: 14px;
+    height: 14px;
   }
 
   .factory-order-line-body,
@@ -26127,21 +26240,25 @@ button.factory-job-card:focus-visible {
   }
 
   .factory-order-line strong {
-    font-size: 23px;
+    font-size: 14px;
   }
 
   .factory-order-line-quantity {
-    font-size: 21px;
+    font-size: 14px;
   }
 
   .factory-order-line-remark {
-    font-size: 19px;
+    font-size: 14px;
   }
 
   .factory-order-aside {
     grid-column: 1;
     grid-row: 3;
-    padding: 14px 12px 18px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-content: start;
+    gap: 6px;
+    padding: 6px 8px;
   }
 
   .factory-order-aside .factory-order-print-action,
@@ -26161,8 +26278,8 @@ button.factory-job-card:focus-visible {
   }
 
   .factory-order-aside button {
-    min-height: 52px;
-    font-size: 18px;
+    min-height: 38px;
+    font-size: 14px;
   }
 
   .factory-production-calendar-page .factory-board-actions {
@@ -26233,7 +26350,7 @@ button.factory-job-card:focus-visible {
 
 @media (max-width: 480px) {
   .factory-day-cards {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .factory-job-card {

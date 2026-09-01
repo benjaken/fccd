@@ -797,7 +797,6 @@ export function FactoryBoardPage({
             );
           }}
           qz={qz}
-          onBack={() => setSelectedJob(null)}
         />
       ) : multiDayReport ? (
         <section className="factory-multi-day-report">
