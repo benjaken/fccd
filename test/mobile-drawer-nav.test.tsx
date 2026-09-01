@@ -70,6 +70,7 @@ describe("buildMobileDrawerNav", () => {
       "/quotes",
       "/quotes/large",
       "/quotes/recent-open",
+      "/quotes/famous-brands",
       "/quotes/customers",
       "/quotes/pdf-pages",
     ]);

@@ -21184,6 +21184,21 @@ a.masoft-order-tag:focus-visible {
   color: var(--muted-foreground);
 }
 
+.quote-editor-form-column > label.quote-editor-checkbox {
+  align-items: center;
+}
+
+.quote-editor-form label.quote-editor-checkbox > span {
+  padding-top: 0;
+}
+
+.quote-editor-form label.quote-editor-checkbox > input[type="checkbox"] {
+  width: 20px;
+  min-height: 20px;
+  margin: 0;
+  accent-color: var(--primary);
+}
+
 .quote-editor-form select:disabled {
   background: var(--muted);
   color: var(--foreground);

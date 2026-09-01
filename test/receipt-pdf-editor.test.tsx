@@ -112,7 +112,7 @@ describe("Receipt PDF editor", () => {
       "src",
       "/assets/fcc-hk-lunch-box-logo.svg",
     );
-    expect(screen.getByLabelText("收據編號")).toHaveValue("REC/");
+    expect(screen.getByLabelText("收據編號")).toHaveValue("REC/B-1547");
     expect(screen.getByLabelText("Customer Name:")).toHaveValue("Momo");
     expect(screen.getByLabelText("Company Name:")).toHaveValue("Momo Company");
     expect(screen.getByLabelText("Contact Person:")).toHaveValue("53007575");
@@ -145,6 +145,25 @@ describe("Receipt PDF editor", () => {
     }));
 
     expect(await screen.findByLabelText("Invoice Date:")).toHaveValue("24/8/2026");
+  });
+
+  it("lets the receipt number be edited and restores the saved value", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    const receiptNumber = await screen.findByLabelText("收據編號");
+    expect(receiptNumber).not.toHaveAttribute("readonly");
+    await user.clear(receiptNumber);
+    await user.type(receiptNumber, "REC/CUSTOM-A");
+    await user.tab();
+
+    await waitFor(() => expect(
+      JSON.parse(window.localStorage.getItem("fccd:receipt-pdf-draft:order-1") || "{}").receiptNumber,
+    ).toBe("REC/CUSTOM-A"));
+
+    cleanup();
+    renderPage();
+    expect(await screen.findByLabelText("收據編號")).toHaveValue("REC/CUSTOM-A");
   });
 
   it("refreshes receipt source data instead of restoring a stale PDF draft", async () => {
@@ -181,8 +200,8 @@ describe("Receipt PDF editor", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "INVOICE" })).toBeInTheDocument();
-    expect(screen.queryByLabelText("發票編號")).not.toBeInTheDocument();
-    expect(screen.queryByText("INV/")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("發票編號")).toHaveValue("INV/B-1547");
+    expect(screen.getByLabelText("發票編號")).not.toHaveAttribute("readonly");
     const firstPage = screen.getByRole("main", { name: "發票 PDF" });
     expect(within(firstPage).getByLabelText("條款及細則 1")).toHaveValue("訂單付款後方會確認。");
     expect(within(firstPage).getByLabelText("付款方式 1")).toHaveValue("銀行轉帳。");
@@ -300,7 +319,7 @@ describe("Receipt PDF editor", () => {
     expect(screen.getByText("$660")).toBeInTheDocument();
   });
 
-  it("uses only a real receipt reference and keeps payment details in sequence", async () => {
+  it("uses the order number for the receipt reference and keeps payment details in sequence", async () => {
     renderPage(vi.fn().mockResolvedValue({
       ...result,
       payments: [{
@@ -315,7 +334,7 @@ describe("Receipt PDF editor", () => {
       }],
     }));
 
-    expect(await screen.findByLabelText("收據編號")).toHaveValue("REC/#6939");
+    expect(await screen.findByLabelText("收據編號")).toHaveValue("REC/B-1547");
     const firstPage = screen.getByRole("main", { name: "收據 PDF" });
     expect(within(firstPage).getByLabelText("付款資料及公司蓋章")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "下移一頁" })).not.toBeInTheDocument();

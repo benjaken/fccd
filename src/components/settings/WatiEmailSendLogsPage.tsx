@@ -12,6 +12,7 @@ import {
   type WatiEmailLogChannel,
   type WatiEmailSendLogItem,
 } from "@/lib/wati-email-send-logs";
+import "./wati-email-send-logs.css";
 
 type LogsLoader = typeof fetchWatiEmailSendLogs;
 
@@ -145,37 +146,57 @@ export function WatiEmailSendLogsPage({
           </div>
         ) : (
           <ListTable
-            className="orders-table-wrap"
+            className="orders-table-wrap wati-email-send-logs-wrap"
+            tableClassName="wati-email-send-logs-table"
             onRefresh={() => setReloadKey((key) => key + 1)}
             loading={loading}
             loadingLabel={t("settings.watiEmailLogs.loading")}
             skeletonRows={WATI_EMAIL_LOG_PAGE_SIZE}
             skeletonColumns={SKELETON_COLUMNS}
             header={<tr>
-              <th>{t("settings.watiEmailLogs.columns.time")}</th>
-              <th>{t("settings.watiEmailLogs.columns.channel")}</th>
-              <th>{t("settings.watiEmailLogs.columns.content")}</th>
-              <th>{t("settings.watiEmailLogs.columns.recipient")}</th>
-              <th>{t("settings.watiEmailLogs.columns.address")}</th>
-              <th>{t("settings.watiEmailLogs.columns.order")}</th>
+              <th className="wati-email-log-time">{t("settings.watiEmailLogs.columns.time")}</th>
+              <th className="wati-email-log-channel">{t("settings.watiEmailLogs.columns.channel")}</th>
+              <th className="wati-email-log-recipient">{t("settings.watiEmailLogs.columns.recipient")}</th>
+              <th className="wati-email-log-address">{t("settings.watiEmailLogs.columns.address")}</th>
+              <th className="wati-email-log-content">{t("settings.watiEmailLogs.columns.content")}</th>
+              <th className="wati-email-log-order">{t("settings.watiEmailLogs.columns.order")}</th>
             </tr>}
           >
-            {items.map((item) => (
-              <tr key={item.id}>
-                <td>{date.format(new Date(item.sentAt))}</td>
-                <td><span className={`status-badge ${item.channel === "wati" ? "green" : "blue"}`}>
-                  {item.channel === "wati" ? "WATI" : "Email"}
-                </span></td>
-                <td>
-                  <strong>{t(`settings.watiEmailLogs.events.${item.eventKey}`, { defaultValue: item.eventKey })}</strong>
-                  {item.templateName ? <small>{item.templateName}</small> : null}
-                  {detailSummary(item.detail) ? <small>{detailSummary(item.detail)}</small> : null}
-                </td>
-                <td>{item.recipientName || t("common.notSet")}</td>
-                <td>{item.recipientAddress || t("common.notSet")}</td>
-                <td>{item.orderNumber || t("common.notSet")}</td>
-              </tr>
-            ))}
+            {items.map((item) => {
+              const eventLabel = t(`settings.watiEmailLogs.events.${item.eventKey}`, {
+                defaultValue: item.eventKey,
+              });
+              const parameters = detailSummary(item.detail);
+              const fullContent = [eventLabel, item.templateName, parameters]
+                .filter(Boolean)
+                .join(" · ");
+
+              return (
+                <tr key={item.id}>
+                  <td>{date.format(new Date(item.sentAt))}</td>
+                  <td><span className={`status-badge ${item.channel === "wati" ? "green" : "blue"}`}>
+                    {item.channel === "wati" ? "WATI" : "Email"}
+                  </span></td>
+                  <td className="wati-email-log-recipient-cell">
+                    {item.recipientName || t("common.notSet")}
+                  </td>
+                  <td className="wati-email-log-address-cell" title={item.recipientAddress || undefined}>
+                    {item.recipientAddress || t("common.notSet")}
+                  </td>
+                  <td>
+                    <span
+                      className="wati-email-log-content-summary"
+                      title={fullContent}
+                      aria-label={fullContent}
+                      tabIndex={0}
+                    >
+                      {fullContent}
+                    </span>
+                  </td>
+                  <td>{item.orderNumber || t("common.notSet")}</td>
+                </tr>
+              );
+            })}
           </ListTable>
         )}
 

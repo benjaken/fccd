@@ -225,6 +225,23 @@ function customerPhoneLinks(value: string | null) {
   return { telephone: firstNumber, whatsapp: `https://wa.me/${whatsappNumber}` };
 }
 
+function shipOutTimeInMinutes(value: string | null) {
+  const match = value?.match(/(?:^|\D)(\d{1,2}):(\d{2})(?:\D|$)/);
+  if (!match) return Number.POSITIVE_INFINITY;
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (hours > 23 || minutes > 59) return Number.POSITIVE_INFINITY;
+  return hours * 60 + minutes;
+}
+
+export function compareDriverOrdersByShipOutTime(
+  left: DriverAvailableOrder,
+  right: DriverAvailableOrder,
+) {
+  return shipOutTimeInMinutes(left.shipOutTime) - shipOutTimeInMinutes(right.shipOutTime)
+    || left.orderNumber.localeCompare(right.orderNumber, "zh-HK", { numeric: true });
+}
+
 type DriverPortalPage = "available" | "accepted" | "fleet" | "income" | "districts" | "settings";
 
 const DRIVER_PORTAL_PATHS: Record<DriverPortalPage, string> = {
@@ -529,7 +546,9 @@ function DriverDashboard({ session, onLogout }: { session: DriverDeliverySession
     return () => { active = false; window.clearTimeout(timer); };
   }, [date, page, search, session.token]);
 
-  const visibleOrders = useMemo(() => orders.filter((order) => methodFilter === "all" || (methodFilter === "curbside" ? shippingMethodClass(order.shippingMethod) === "is-curbside" : shippingMethodClass(order.shippingMethod) === "is-door")), [methodFilter, orders]);
+  const visibleOrders = useMemo(() => orders
+    .filter((order) => methodFilter === "all" || (methodFilter === "curbside" ? shippingMethodClass(order.shippingMethod) === "is-curbside" : shippingMethodClass(order.shippingMethod) === "is-door"))
+    .sort(compareDriverOrdersByShipOutTime), [methodFilter, orders]);
   const title = useMemo(() => page === "fleet" ? "車隊訂單" : page === "income" ? "合共收入" : page === "districts" ? "分區運費" : page === "settings" ? "設定" : page === "accepted" ? `已接訂單 (${visibleOrders.length})` : `可接訂單 (${visibleOrders.length})`, [page, visibleOrders.length]);
 
   async function confirmWorkflow() {

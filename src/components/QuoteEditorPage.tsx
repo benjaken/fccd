@@ -154,6 +154,7 @@ function emptyDraft(): QuoteDraft {
     followUpDate: "",
     customerName: "",
     companyName: "",
+    isHongKongFamousBrand: false,
     contactA: "",
     contactB: "",
     email: "",
@@ -1811,6 +1812,7 @@ export function QuoteEditorPage({
             <ReadonlyField label={t("quoteEditor.fields.brand")} value={optionName(options.channels, draft.channelId)} />
             <ReadonlyField label={t("quoteEditor.fields.customerName")} value={draft.customerName} />
             <ReadonlyField label={t("quoteEditor.fields.companyName")} value={draft.companyName} />
+            {!isOrder ? <ReadonlyField label={t("quoteEditor.fields.hongKongFamousBrand")} value={draft.isHongKongFamousBrand ? t("common.yes") : t("common.no")} /> : null}
             <ReadonlyField label={t("quoteEditor.fields.contactA")} value={draft.contactA} />
             <ReadonlyField label={t("quoteEditor.fields.contactB")} value={draft.contactB} />
             <ReadonlyField label={t("quoteEditor.fields.email")} value={draft.email} />
@@ -1971,6 +1973,7 @@ export function QuoteEditorPage({
             </label>
             <label><span>{t("quoteEditor.fields.customerName")} *</span><input required aria-label={t("quoteEditor.fields.customerName")} value={draft.customerName} onChange={(event) => patchDraft({ customerName: event.target.value })} aria-invalid={Boolean(fieldErrors.customerName)} />{fieldErrors.customerName && <em>{fieldErrors.customerName}</em>}</label>
             <label><span>{t("quoteEditor.fields.companyName")}</span><input aria-label={t("quoteEditor.fields.companyName")} value={draft.companyName} onChange={(event) => patchDraft({ companyName: event.target.value })} /></label>
+            {!isOrder ? <label className="quote-editor-checkbox"><span>{t("quoteEditor.fields.hongKongFamousBrand")}</span><input aria-label={t("quoteEditor.fields.hongKongFamousBrand")} type="checkbox" checked={draft.isHongKongFamousBrand} onChange={(event) => patchDraft({ isHongKongFamousBrand: event.target.checked })} /></label> : null}
             <label><span>{t("quoteEditor.fields.contactA")} *</span><input required aria-label={t("quoteEditor.fields.contactA")} type="tel" value={draft.contactA} onChange={(event) => patchDraft({ contactA: event.target.value })} aria-invalid={Boolean(fieldErrors.contactA)} />{fieldErrors.contactA && <em>{fieldErrors.contactA}</em>}</label>
             <label><span>{t("quoteEditor.fields.contactB")}</span><input type="tel" value={draft.contactB} onChange={(event) => patchDraft({ contactB: event.target.value })} /></label>
             <label><span>{t("quoteEditor.fields.email")} *</span><input required aria-label={t("quoteEditor.fields.email")} type="email" value={draft.email} onChange={(event) => patchDraft({ email: event.target.value })} aria-invalid={Boolean(fieldErrors.email)} />{fieldErrors.email && <em>{fieldErrors.email}</em>}</label>

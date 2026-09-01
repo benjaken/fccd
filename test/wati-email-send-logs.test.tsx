@@ -21,7 +21,7 @@ describe("WATI and email send logs", () => {
     expect(migration).toContain("'bad_weather_notice'");
   });
 
-  it("shows channel, template parameters, recipient, and order", async () => {
+  it("shows recipient and address while exposing full truncated content on hover", async () => {
     const loadLogs = vi.fn(async () => ({
       total: 1,
       items: [{
@@ -40,9 +40,13 @@ describe("WATI and email send logs", () => {
     render(<WatiEmailSendLogsPage loadLogs={loadLogs} />);
 
     await waitFor(() => expect(loadLogs).toHaveBeenCalled());
-    expect(await screen.findByText("fcc2_delivery_reminder_v1")).toBeInTheDocument();
-    expect(screen.getByText("date: 01/09/2026")).toBeInTheDocument();
     expect(screen.getByText("Chan Tai Man")).toBeInTheDocument();
+    expect(screen.getByText("+85291234567")).toBeInTheDocument();
     expect(screen.getByText("R/202609/001")).toBeInTheDocument();
+    const content = await screen.findByTitle(
+      /fcc2_delivery_reminder_v1 · date: 01\/09\/2026/,
+    );
+    expect(content).toHaveClass("wati-email-log-content-summary");
+    expect(content).toHaveAttribute("tabindex", "0");
   });
 });

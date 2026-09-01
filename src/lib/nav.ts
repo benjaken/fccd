@@ -1,6 +1,7 @@
 import { type ComponentType } from "react";
 import {
   AlertTriangle,
+  Award,
   BellRing,
   Beef,
   Boxes,
@@ -340,6 +341,12 @@ export const secondaryNav: Record<string, NavItem[]> = {
       key: "recentOpenQuotes",
       to: "/quotes/recent-open",
       icon: History,
+      permissionKey: "quotes",
+    },
+    {
+      key: "famousBrandCustomers",
+      to: "/quotes/famous-brands",
+      icon: Award,
       permissionKey: "quotes",
     },
     {

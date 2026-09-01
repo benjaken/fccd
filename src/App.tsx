@@ -62,6 +62,7 @@ import { QuotePdfEditorPage } from "@/components/QuotePdfEditorPage";
 import { ReceiptPdfEditorPage } from "@/components/ReceiptPdfEditorPage";
 import { QuotePdfPagesSettingsPage } from "@/components/QuotePdfPagesSettingsPage";
 import { QuoteCustomersPage } from "@/components/QuoteCustomersPage";
+import { FamousBrandCustomersPage } from "@/components/FamousBrandCustomersPage";
 import { ProductsListPage } from "@/components/ProductsListPage";
 import { ProductDetailPage } from "@/components/ProductDetailPage";
 import { PackagesListPage } from "@/components/PackagesListPage";
@@ -837,6 +838,7 @@ function OperationsShell() {
                   />
                 }
               />
+              <Route path="/quotes/famous-brands" element={<FamousBrandCustomersPage />} />
               <Route
                 path="/quotes/pdf-pages"
                 element={

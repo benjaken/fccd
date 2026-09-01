@@ -97,6 +97,7 @@ const emptyQuoteDraft = {
   followUpDate: "",
   customerName: "",
   companyName: "",
+  isHongKongFamousBrand: false,
   contactA: "",
   contactB: "",
   email: "",
@@ -121,6 +122,8 @@ describe("quote workflow fields", () => {
       .toMatchObject({ quote_follow_up_date: "2026-08-24" });
     expect(quoteWorkflowValues(emptyQuoteDraft))
       .toMatchObject({ quote_follow_up_date: null });
+    expect(quoteWorkflowValues({ ...emptyQuoteDraft, isHongKongFamousBrand: true }))
+      .toMatchObject({ is_hong_kong_famous_brand: true });
   });
 });
 
