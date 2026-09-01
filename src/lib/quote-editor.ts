@@ -37,6 +37,7 @@ export type QuoteDraft = {
   followUpDate: string;
   customerName: string;
   companyName: string;
+  isHongKongFamousBrand: boolean;
   contactA: string;
   contactB: string;
   email: string;
@@ -294,7 +295,7 @@ export async function fetchQuoteEditorSummary(
   const [orderResult, deliveryResult, tagsResult, asanaResult, paymentsResult] = await Promise.all([
     supabase
       .from("orders")
-      .select("id,document_type,order_number,channel_id,quote_status,quote_auto_closed_at,quote_reopen_reason,quote_sales_source_id,quote_communication_channel_id,quote_follow_up_date,customer_name_snapshot,company_name_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,email_snapshot,shipping_address_snapshot,customer_note_snapshot,shipping_method_id,delivery_district_id,delivery_at,delivery_time,ship_out_time,factory_packing_note,sales_partner_id,remarks,shipping_fee,discount_amount,cashdollar_redeemed,cashdollar_purchased,is_sent_to_factory,do_not_send_to_factory,factory_print_date,factory_reprint_required,shopify_order_id,addon_shopify_pending,shopify_stores(shop_domain)")
+      .select("id,document_type,order_number,channel_id,quote_status,quote_auto_closed_at,quote_reopen_reason,quote_sales_source_id,quote_communication_channel_id,quote_follow_up_date,customer_name_snapshot,company_name_snapshot,is_hong_kong_famous_brand,contact_number_a_snapshot,contact_number_b_snapshot,email_snapshot,shipping_address_snapshot,customer_note_snapshot,shipping_method_id,delivery_district_id,delivery_at,delivery_time,ship_out_time,factory_packing_note,sales_partner_id,remarks,shipping_fee,discount_amount,cashdollar_redeemed,cashdollar_purchased,is_sent_to_factory,do_not_send_to_factory,factory_print_date,factory_reprint_required,shopify_order_id,addon_shopify_pending,shopify_stores(shop_domain)")
       .eq("id", resolvedOrderId)
        .eq("document_type", documentType)
       .is("archived_at", null)
@@ -335,6 +336,7 @@ export async function fetchQuoteEditorSummary(
     followUpDate: data.quote_follow_up_date || "",
     customerName: data.customer_name_snapshot || "",
     companyName: data.company_name_snapshot || "",
+    isHongKongFamousBrand: data.is_hong_kong_famous_brand === true,
     contactA: data.contact_number_a_snapshot || "",
     contactB: data.contact_number_b_snapshot || "",
     email: data.email_snapshot || "",
@@ -623,6 +625,7 @@ export function quoteWorkflowValues(input: QuoteDraft) {
     quote_sales_source_id: input.quoteSalesSourceId || null,
     quote_communication_channel_id: input.quoteCommunicationChannelId || null,
     quote_follow_up_date: input.followUpDate || null,
+    is_hong_kong_famous_brand: input.isHongKongFamousBrand,
     asana_link: optional(input.asanaLink),
   };
 }

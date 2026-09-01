@@ -1,0 +1,50 @@
+.wati-email-send-logs-table {
+  width: 100%;
+  min-width: 72rem;
+  table-layout: fixed;
+}
+
+.wati-email-send-logs-table .wati-email-log-time {
+  width: 10rem;
+}
+
+.wati-email-send-logs-table .wati-email-log-channel {
+  width: 5rem;
+}
+
+.wati-email-send-logs-table .wati-email-log-recipient {
+  width: 11rem;
+}
+
+.wati-email-send-logs-table .wati-email-log-address {
+  width: 17rem;
+}
+
+.wati-email-send-logs-table .wati-email-log-order {
+  width: 10rem;
+}
+
+.wati-email-log-recipient-cell,
+.wati-email-log-address-cell,
+.wati-email-log-content-summary {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wati-email-log-address-cell {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.86rem;
+}
+
+.wati-email-log-content-summary {
+  display: block;
+  width: 100%;
+  border-radius: 0.25rem;
+  cursor: help;
+}
+
+.wati-email-log-content-summary:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}

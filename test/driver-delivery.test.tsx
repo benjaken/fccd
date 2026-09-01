@@ -2,7 +2,10 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 
-import { DriverDeliveryPage } from "@/components/DriverDeliveryPage";
+import {
+  compareDriverOrdersByShipOutTime,
+  DriverDeliveryPage,
+} from "@/components/DriverDeliveryPage";
 
 const api = vi.hoisted(() => ({
   login: vi.fn(),
@@ -127,6 +130,37 @@ describe("DriverDeliveryPage", () => {
 
     expect(await screen.findByRole("heading", { name: "已接訂單 (1)" })).toBeInTheDocument();
     expect(api.fetchAcceptedOrders).toHaveBeenCalled();
+  });
+
+  it.each([
+    ["available", () => api.fetchOrders],
+    ["accepted", () => api.fetchAcceptedOrders],
+  ] as const)("sorts %s orders by ship-out time", async (page, getFetchMock) => {
+    getFetchMock().mockResolvedValueOnce([
+      { deliveryId: "late", orderNumber: "B-30", shipOutTime: "13:00", deliveryTime: "14:00", address: "Late", districtName: null, shippingMethod: null },
+      { deliveryId: "unset", orderNumber: "B-40", shipOutTime: null, deliveryTime: "15:00", address: "Unset", districtName: null, shippingMethod: null },
+      { deliveryId: "early", orderNumber: "B-10", shipOutTime: "9:05", deliveryTime: "10:00", address: "Early", districtName: null, shippingMethod: null },
+    ]);
+
+    renderDriverPortal(`/driver-delivery/${page}`);
+    fireEvent.change(screen.getByLabelText("登入密碼"), { target: { value: "driver-code" } });
+    fireEvent.click(screen.getByRole("button", { name: "登入" }));
+
+    await screen.findByText("B-10");
+    expect(Array.from(document.querySelectorAll(".driver-order-card")).map((card) => card.textContent)).toEqual([
+      expect.stringContaining("B-10"),
+      expect.stringContaining("B-30"),
+      expect.stringContaining("B-40"),
+    ]);
+  });
+
+  it("uses the order number as a stable tie-breaker", () => {
+    const orders = [
+      { deliveryId: "2", orderNumber: "B-10", shipOutTime: "10:00" },
+      { deliveryId: "1", orderNumber: "B-2", shipOutTime: "10:00" },
+    ];
+
+    expect(orders.sort(compareDriverOrdersByShipOutTime).map((order) => order.orderNumber)).toEqual(["B-2", "B-10"]);
   });
 
   it("allows a completed accepted order's surcharge to be deleted", async () => {

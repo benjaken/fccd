@@ -95,14 +95,11 @@ function resultToDraft(
 ): ReceiptPdfDraft {
   const order = result.order;
   const outstanding = order?.outstanding ?? 0;
-  const receiptNumber = result.payments
-    .map((payment) => payment.receiptNumber?.trim() || payment.receiptReference?.trim())
-    .find(Boolean);
   return {
     invoiceSourceContentVersion: 1,
     sourceFinancialsVersion: 1,
     receiptNumber: documentNumber(
-      documentKind === "receipt" ? receiptNumber : undefined,
+      order?.orderNumber,
       documentKind === "receipt" ? "REC" : "INV",
     ),
     customerName: order?.customerName || "",
@@ -362,9 +359,7 @@ export function ReceiptPdfEditorPage({
       <img src={brandLogo} alt={brandLogoAlt} />
       <div className={`receipt-pdf-document-heading${isInvoice ? " is-invoice" : ""}`}>
         <h1>{documentTitle}</h1>
-        {!isInvoice ? (
-          <input aria-label={`${documentName}編號`} value={draft.receiptNumber} readOnly />
-        ) : null}
+        <input aria-label={`${documentName}編號`} value={draft.receiptNumber} readOnly />
       </div>
     </header>
   );
