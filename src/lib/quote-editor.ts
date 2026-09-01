@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabase";
 import { hongKongDateKey } from "@/lib/date-time";
 import { productListDisplayName } from "@/lib/products";
 import type { OrderFactorySettings } from "@/lib/order-factory-settings";
+import type { QuotePdfSupplementDraft } from "@/lib/quote-pdf-draft";
 
 export type QuoteEditorOption = {
   id: string;
@@ -67,6 +68,8 @@ export type CreatedQuote = {
 export type QuoteEditorSummary = CreatedQuote & {
   documentType: "quote" | "order";
   channelId: string;
+  grandTotal?: number | null;
+  supplements?: QuotePdfSupplementDraft;
   draft: QuoteDraft;
   financials: QuoteFinancials;
   payments: QuotePayment[];
@@ -292,10 +295,18 @@ export async function fetchQuoteEditorSummary(
   documentType: QuoteEditorDocumentType = "quote",
 ): Promise<QuoteEditorSummary | null> {
   const resolvedOrderId = await resolveCanonicalOrderId(orderId);
-  const [orderResult, deliveryResult, tagsResult, asanaResult, paymentsResult] = await Promise.all([
+  const [
+    orderResult,
+    deliveryResult,
+    tagsResult,
+    asanaResult,
+    paymentsResult,
+    additionalInfoResult,
+    activitiesResult,
+  ] = await Promise.all([
     supabase
       .from("orders")
-      .select("id,document_type,order_number,channel_id,quote_status,quote_auto_closed_at,quote_reopen_reason,quote_sales_source_id,quote_communication_channel_id,quote_follow_up_date,customer_name_snapshot,company_name_snapshot,is_hong_kong_famous_brand,contact_number_a_snapshot,contact_number_b_snapshot,email_snapshot,shipping_address_snapshot,customer_note_snapshot,shipping_method_id,delivery_district_id,delivery_at,delivery_time,ship_out_time,factory_packing_note,sales_partner_id,remarks,shipping_fee,discount_amount,cashdollar_redeemed,cashdollar_purchased,is_sent_to_factory,do_not_send_to_factory,factory_print_date,factory_reprint_required,shopify_order_id,addon_shopify_pending,shopify_stores(shop_domain)")
+      .select("id,document_type,order_number,channel_id,quote_status,quote_auto_closed_at,quote_reopen_reason,quote_sales_source_id,quote_communication_channel_id,quote_follow_up_date,customer_name_snapshot,company_name_snapshot,is_hong_kong_famous_brand,contact_number_a_snapshot,contact_number_b_snapshot,email_snapshot,shipping_address_snapshot,customer_note_snapshot,shipping_method_id,delivery_district_id,delivery_at,delivery_time,ship_out_time,factory_packing_note,sales_partner_id,remarks,shipping_fee,discount_amount,cashdollar_redeemed,cashdollar_purchased,grand_total,is_sent_to_factory,do_not_send_to_factory,factory_print_date,factory_reprint_required,shopify_order_id,addon_shopify_pending,shopify_stores(shop_domain)")
       .eq("id", resolvedOrderId)
        .eq("document_type", documentType)
       .is("archived_at", null)
@@ -320,6 +331,22 @@ export async function fetchQuoteEditorSummary(
       .eq("order_id", resolvedOrderId)
       .is("voided_at", null)
       .order("payment_at"),
+    documentType === "quote"
+      ? supabase
+          .from("order_bento_additional_items")
+          .select("description_snapshot,sort_order,created_at")
+          .eq("order_id", resolvedOrderId)
+          .order("sort_order", { ascending: true, nullsFirst: false })
+          .order("created_at")
+      : Promise.resolve({ data: [], error: null }),
+    documentType === "quote"
+      ? supabase
+          .from("order_bento_event_parts")
+          .select("id,description_snapshot,price_snapshot,sort_order,created_at")
+          .eq("order_id", resolvedOrderId)
+          .order("sort_order", { ascending: true, nullsFirst: false })
+          .order("created_at")
+      : Promise.resolve({ data: [], error: null }),
   ]);
   if (orderResult.error) throw orderResult.error;
   const data = orderResult.data;
@@ -366,6 +393,28 @@ export async function fetchQuoteEditorSummary(
     id: data.id,
     documentType: data.document_type as QuoteEditorSummary["documentType"],
     orderNumber: data.order_number || "",
+    grandTotal: data.grand_total === null ? null : toNumber(data.grand_total),
+    supplements: {
+      additionalInfo: additionalInfoResult.error
+        ? []
+        : (additionalInfoResult.data ?? []).flatMap((item) =>
+            item.description_snapshot?.trim()
+              ? [item.description_snapshot.trim()]
+              : [],
+          ),
+      activities: activitiesResult.error
+        ? []
+        : (activitiesResult.data ?? []).flatMap((item) =>
+            item.description_snapshot?.trim()
+              ? [{
+                  id: item.id,
+                  description: item.description_snapshot.trim(),
+                  amount: String(toNumber(item.price_snapshot)),
+                }]
+              : [],
+          ),
+      utensilPackQuantity: "0",
+    },
     shopifyOrderId: data.shopify_order_id,
     shopifyStoreDomain: Array.isArray(shopifyStore)
       ? shopifyStore[0]?.shop_domain ?? null

@@ -1270,6 +1270,16 @@ describe("Quote editor", () => {
 
     await screen.findByRole("heading", { name: "FCLQ20260801" });
     await user.click(screen.getByRole("button", { name: "Convert to order" }));
+    expect(screen.getByRole("alertdialog", { name: "Confirm conversion to order" })).toBeInTheDocument();
+    expect(screen.getByText(/automatically send WATI, email, and internal new-order notifications/)).toBeInTheDocument();
+    expect(convertQuote).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("alertdialog", { name: "Confirm conversion to order" })).not.toBeInTheDocument();
+    expect(convertQuote).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Convert to order" }));
+    await user.click(screen.getByRole("button", { name: "Confirm conversion" }));
     await waitFor(() => expect(convertQuote).toHaveBeenCalledWith("quote-1"));
     expect(await screen.findByText("Converted order")).toBeInTheDocument();
   });
@@ -1281,7 +1291,19 @@ describe("Quote editor", () => {
     HTMLElement.prototype.scrollIntoView = scrollIntoView;
     const longRemark = "No onions, no garlic, keep every sauce separate, and label every tray";
     const summary = {
-      id: "quote-1", orderNumber: "FCLQ20260801", channelId: "channel-1",
+      id: "quote-1", orderNumber: "FCBQ20260834", channelId: "channel-1",
+      grandTotal: 28_350,
+      supplements: {
+        additionalInfo: [
+          "每個便當包括一份餐具",
+          "每款揀選的飯盒最少3盒",
+        ],
+        activities: [
+          { id: "activity-1", description: "9月4、11、18、25日 各70個下午茶餐盒 (共4天)", amount: "14000" },
+          { id: "activity-2", description: "10月2、9、16、23、30日 各70個下午茶餐盒 (共5天)", amount: "17500" },
+        ],
+        utensilPackQuantity: "0",
+      },
       draft: {
         channelId: "channel-1", customerName: "Customer", companyName: "Company",
         contactA: "12345678", contactB: "", email: "quote@example.com", asanaLink: "",
@@ -1290,18 +1312,18 @@ describe("Quote editor", () => {
         customerNote: "", packingNote: "", salesPartnerId: "", internalNote: "", tagIds: ["tag-1"],
         quoteStatus: "High Chance", quoteSalesSourceId: "source-email", quoteCommunicationChannelId: "communication-wati",
       },
-      financials: { shippingFee: 0, discount: 0, cashdollarRedeemed: 0, cashdollarPurchased: 0 },
+      financials: { shippingFee: 0, discount: 3_150, cashdollarRedeemed: 0, cashdollarPurchased: 0 },
       payments: [],
     };
     render(
       <MemoryRouter initialEntries={["/quotes/quote-1"]}>
         <Routes>
-          <Route path="/quotes/:id" element={<QuoteEditorPage combined readOnly loadOptions={vi.fn().mockResolvedValue(options)} loadSummary={vi.fn().mockResolvedValue(summary)} loadLines={vi.fn().mockResolvedValue([{ id: "line-1", sku: "PKG-1", name: "Banquet package", quantity: 1, unitPrice: 100, totalPrice: 100, remarks: longRemark }])} loadShippingFeeOptions={vi.fn().mockResolvedValue(shippingFeeOptions)} />} />
+          <Route path="/quotes/:id" element={<QuoteEditorPage combined readOnly loadOptions={vi.fn().mockResolvedValue(options)} loadSummary={vi.fn().mockResolvedValue(summary)} loadLines={vi.fn().mockResolvedValue([{ id: "line-1", sku: "PKG-1", name: "Banquet package", quantity: 0, unitPrice: 50, totalPrice: 0, remarks: longRemark }])} loadShippingFeeOptions={vi.fn().mockResolvedValue(shippingFeeOptions)} />} />
         </Routes>
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole("heading", { name: "FCLQ20260801" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "FCBQ20260834" })).toBeInTheDocument();
     expect(screen.getByRole("tablist", { name: "Quote creation steps" })).toBeInTheDocument();
     expect(screen.getAllByRole("tab")).toHaveLength(2);
     expect(screen.getByRole("heading", { name: "Customer details" })).toBeInTheDocument();
@@ -1315,13 +1337,20 @@ describe("Quote editor", () => {
     expect(screen.getAllByText("Email").length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText("WATI")).toBeInTheDocument();
     expect(screen.getByText(longRemark)).toHaveAttribute("title", longRemark);
-    expect(screen.queryByLabelText("50 × 75 mm 標籤預覽：#FCLQ20260801")).not.toBeInTheDocument();
+    expect(screen.getAllByText("HK$28,350.00").length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByLabelText("50 × 75 mm 標籤預覽：#FCBQ20260834")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "View label" }));
-    expect(screen.getByLabelText("50 × 75 mm 標籤預覽：#FCLQ20260801")).toBeInTheDocument();
+    expect(screen.getByLabelText("50 × 75 mm 標籤預覽：#FCBQ20260834")).toBeInTheDocument();
     expect(screen.queryByRole("textbox", { name: "Label line 1" })).not.toBeInTheDocument();
     await user.click(screen.getAllByRole("button", { name: "Close label dialog" })[1]);
-    expect(screen.queryByRole("heading", { name: "額外資訊" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "活動項目" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "額外資訊" })).toBeInTheDocument();
+    expect(screen.getByText("每個便當包括一份餐具")).toBeInTheDocument();
+    expect(screen.getByText("每款揀選的飯盒最少3盒")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "活動項目" })).toBeInTheDocument();
+    expect(screen.getByText("9月4、11、18、25日 各70個下午茶餐盒 (共4天)")).toBeInTheDocument();
+    expect(screen.getByText("10月2、9、16、23、30日 各70個下午茶餐盒 (共5天)")).toBeInTheDocument();
+    expect(screen.getByText("HK$14,000.00")).toBeInTheDocument();
+    expect(screen.getByText("HK$17,500.00")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Convert to order" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Send WATI and email order confirmation" })).not.toBeInTheDocument();
     expect(document.querySelector("input, select, textarea")).not.toBeInTheDocument();
@@ -1368,6 +1397,9 @@ describe("Quote editor", () => {
     expect(sendConfirmation).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: "Convert to order" }));
+    expect(convertQuote).not.toHaveBeenCalled();
+    expect(screen.getByText(/automatically send WATI, email, and internal new-order notifications/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Confirm conversion" }));
     await waitFor(() => expect(convertQuote).toHaveBeenCalledWith("quote-1"));
     expect(saveDetails).toHaveBeenCalledWith("quote-1", expect.objectContaining({ customerName: "Customer" }));
     expect(saveFinancialDetails).toHaveBeenCalledWith("quote-1", {
