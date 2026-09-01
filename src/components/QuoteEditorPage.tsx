@@ -26,6 +26,7 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 
 import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { OrderFactorySettingsControls } from "@/components/order-factory-settings-controls";
 import { LunchboxProductPicker } from "@/components/LunchboxProductPicker";
@@ -357,6 +358,7 @@ export function QuoteEditorPage({
     cashdollarRedeemed: "0",
     cashdollarPurchased: "0",
   });
+  const [persistedGrandTotal, setPersistedGrandTotal] = useState<number | null>(null);
   const [savingFinancials, setSavingFinancials] = useState(false);
   const [financialError, setFinancialError] = useState(false);
   const [addingUtensil, setAddingUtensil] = useState(false);
@@ -371,6 +373,7 @@ export function QuoteEditorPage({
   const [confirmationSendError, setConfirmationSendError] = useState(false);
   const [converting, setConverting] = useState(false);
   const [conversionError, setConversionError] = useState(false);
+  const [conversionConfirmOpen, setConversionConfirmOpen] = useState(false);
   const [editingRemarkIds, setEditingRemarkIds] = useState<Set<string>>(new Set());
   const [labelModalLineId, setLabelModalLineId] = useState<string | null>(null);
   const [labelModalDraft, setLabelModalDraft] = useState({ displayA: "", displayB: "" });
@@ -571,6 +574,15 @@ export function QuoteEditorPage({
             cashdollarRedeemed: String(summary.financials?.cashdollarRedeemed ?? 0),
             cashdollarPurchased: String(summary.financials?.cashdollarPurchased ?? 0),
           });
+          setPersistedGrandTotal(id && summary.grandTotal != null ? summary.grandTotal : null);
+          if (
+            id
+            && summary.supplements
+            && (summary.supplements.additionalInfo.length || summary.supplements.activities.length)
+          ) {
+            setSupplements(summary.supplements);
+            setSupplementsLoadedFor(id);
+          }
           setPayments(copyFrom ? [] : summary.payments ?? []);
           const sentToFactory = id ? summary.isSentToFactory === true : false;
           setIsSentToFactory(sentToFactory);
@@ -644,10 +656,16 @@ export function QuoteEditorPage({
     cashdollarRedeemed: Math.max(0, Number(financials.cashdollarRedeemed) || 0),
     cashdollarPurchased: Math.max(0, Number(financials.cashdollarPurchased) || 0),
   };
-  const grandTotal = Math.max(
+  const calculatedGrandTotal = Math.max(
     0,
     total + financialValues.shippingFee - financialValues.discount - financialValues.cashdollarRedeemed,
   );
+  // Imported Bubble quotes can have a valid saved master total while their
+  // legacy line quantities are incomplete. Read-only detail must agree with
+  // every queue/list, all of which use the saved master amount.
+  const grandTotal = readOnly && persistedGrandTotal !== null
+    ? persistedGrandTotal
+    : calculatedGrandTotal;
   const paidTotal = payments.reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0);
   const districts = useMemo(
     () => dedupeQuoteOptions(options.districts, draft.districtId),
@@ -872,12 +890,19 @@ export function QuoteEditorPage({
       await flushPendingLines(activeQuote.id);
       await saveFinancialDetails(activeQuote.id, financialValues);
       const order = await convertQuote(activeQuote.id);
+      setConversionConfirmOpen(false);
       navigate(`/orders/${order.id}`);
     } catch {
       setConversionError(true);
     } finally {
       setConverting(false);
     }
+  };
+
+  const requestQuoteConversion = () => {
+    if (!activeQuote || !validateDetails()) return;
+    setConversionError(false);
+    setConversionConfirmOpen(true);
   };
 
   const sendCurrentOrderConfirmation = async () => {
@@ -1684,6 +1709,25 @@ export function QuoteEditorPage({
 
   if (loading) return <PageSkeleton detailLayout="document" label={t("quoteEditor.loading")} variant="detail" />;
 
+  const conversionConfirmationDialog = activeQuote && !isOrder ? (
+    <ConfirmDialog
+      open={conversionConfirmOpen}
+      title={t("quoteEditor.conversionConfirm.title")}
+      description={t("quoteEditor.conversionConfirm.description", {
+        number: activeQuote.orderNumber || activeQuote.id,
+      })}
+      confirmLabel={t("quoteEditor.conversionConfirm.confirm")}
+      cancelLabel={t("common.cancel")}
+      closeLabel={t("common.close")}
+      busy={converting}
+      busyLabel={t("quotes.actions.converting")}
+      onCancel={() => {
+        if (!converting) setConversionConfirmOpen(false);
+      }}
+      onConfirm={() => void convertCurrentQuote()}
+    />
+  ) : null;
+
   if (readOnly && activeQuote) {
     const displayValue = (value?: string | number | null) =>
       value === undefined || value === null || String(value).trim() === "" ? "-" : String(value);
@@ -1740,7 +1784,7 @@ export function QuoteEditorPage({
                 <Button
                   type="button"
                   disabled={converting}
-                  onClick={() => void convertCurrentQuote()}
+                  onClick={requestQuoteConversion}
                 >
                   {converting ? <LoaderCircle className="spin" /> : <ShoppingCart />}
                   {converting ? t("quotes.actions.converting") : t("quotes.actions.convert")}
@@ -1922,6 +1966,7 @@ export function QuoteEditorPage({
             <div><span>{t("quoteEditor.payments.outstanding")}</span><strong>{money.format(Math.max(0, grandTotal - paid))}</strong></div>
           </div>
         </section> : null}
+        {conversionConfirmationDialog}
         {factoryValidationModal}
       </section>
     );
@@ -2036,7 +2081,7 @@ export function QuoteEditorPage({
           {conversionError && <p className="quote-editor-error" role="alert">{t("quoteEditor.errors.convert")}</p>}
           <footer>
             {activeQuote && isOrder ? <Button type="button" variant="outline" disabled={completing || saving} onClick={() => void saveAndSendCurrentOrderConfirmation()}>{completing ? <LoaderCircle className="spin" /> : <Mail />}{t(completing ? "quoteEditor.detailActions.sendingConfirmation" : "quoteEditor.payments.sendAndComplete")}</Button> : null}
-            {activeQuote && !isOrder ? <Button type="button" variant="outline" disabled={converting || saving} onClick={() => void convertCurrentQuote()}><ShoppingCart />{converting ? t("quotes.actions.converting") : t("quotes.actions.convert")}</Button> : <span />}
+            {activeQuote && !isOrder ? <Button type="button" variant="outline" disabled={converting || saving} onClick={requestQuoteConversion}><ShoppingCart />{converting ? t("quotes.actions.converting") : t("quotes.actions.convert")}</Button> : <span />}
             <Button type="submit" disabled={saving || converting}>{saving ? t("quoteEditor.saving") : activeQuote ? t("quoteEditor.saveChanges") : t("quoteEditor.saveAndContinue")}</Button>
           </footer>
       </form>
@@ -2440,6 +2485,7 @@ export function QuoteEditorPage({
         </section>
       ) : null}
       {labelPreviewModal}
+      {conversionConfirmationDialog}
       {factoryValidationModal}
     </section>
   );
