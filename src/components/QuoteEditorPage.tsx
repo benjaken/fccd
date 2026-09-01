@@ -362,6 +362,7 @@ export function QuoteEditorPage({
     cashdollarPurchased: "0",
   });
   const [persistedGrandTotal, setPersistedGrandTotal] = useState<number | null>(null);
+  const [financialsDirty, setFinancialsDirty] = useState(false);
   const [savingFinancials, setSavingFinancials] = useState(false);
   const [financialError, setFinancialError] = useState(false);
   const [addingUtensil, setAddingUtensil] = useState(false);
@@ -666,9 +667,9 @@ export function QuoteEditorPage({
     total + financialValues.shippingFee - financialValues.discount - financialValues.cashdollarRedeemed,
   );
   // Imported Bubble quotes can have a valid saved master total while their
-  // legacy line quantities are incomplete. Read-only detail must agree with
-  // every queue/list, all of which use the saved master amount.
-  const grandTotal = readOnly && persistedGrandTotal !== null
+  // legacy line quantities are incomplete. Every detail/editor view must agree
+  // with the queues and lists, all of which use the saved master amount.
+  const grandTotal = persistedGrandTotal !== null
     ? persistedGrandTotal
     : calculatedGrandTotal;
   const paidTotal = payments.reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0);
@@ -698,6 +699,25 @@ export function QuoteEditorPage({
 
   const patchDraft = (partial: Partial<QuoteDraft>) =>
     setDraft((current) => ({ ...current, ...partial }));
+
+  const patchFinancials = (partial: Partial<typeof financials>) => {
+    setFinancialsDirty(true);
+    setFinancials((current) => ({ ...current, ...partial }));
+  };
+
+  const refreshPersistedGrandTotal = async (orderId: string) => {
+    try {
+      const summary = isOrder
+        ? await loadSummary(orderId, "order")
+        : await loadSummary(orderId);
+      if (summary?.grandTotal !== null && summary?.grandTotal !== undefined) {
+        setPersistedGrandTotal(summary.grandTotal);
+      }
+    } catch {
+      // The explicit save has already succeeded; a failed display refresh must
+      // not turn it into a false save error. The next page load will refresh it.
+    }
+  };
 
   const addDistrict = async (name: string) => {
     if (creatingDistrict) return;
@@ -771,6 +791,7 @@ export function QuoteEditorPage({
         savedIds.add(line.id);
       }
       setLines(await loadLines(orderId));
+      await refreshPersistedGrandTotal(orderId);
     } catch (cause) {
       const remainingDrafts = pendingLines.filter((line) => !savedIds.has(line.id));
       try {
@@ -795,6 +816,19 @@ export function QuoteEditorPage({
 
     await saveCurrentDetails(quote.id);
     await flushPendingLines(quote.id);
+    // Bubble quotes can have a canonical master total but incomplete migrated
+    // child lines. A details-only save must not rewrite those legacy lines or
+    // recalculate the master amount. Quote line/financial controls already
+    // persist their explicit edits through their dedicated handlers.
+    if (!isOrder) {
+      if (financialsDirty) {
+        await saveFinancialDetails(quote.id, financialValues);
+        setFinancialsDirty(false);
+      }
+      writeQuotePdfSupplements(quote.id, supplements);
+      await releaseCurrentEditSession();
+      return;
+    }
     const batchSaver = saveBatch ?? (
       saveDetails === updateQuote
       && saveExistingLine === updateQuoteLine
@@ -893,7 +927,10 @@ export function QuoteEditorPage({
     try {
       await saveCurrentDetails(activeQuote.id);
       await flushPendingLines(activeQuote.id);
-      await saveFinancialDetails(activeQuote.id, financialValues);
+      if (financialsDirty) {
+        await saveFinancialDetails(activeQuote.id, financialValues);
+        setFinancialsDirty(false);
+      }
       const order = await convertQuote(activeQuote.id);
       setConversionConfirmOpen(false);
       navigate(`/orders/${order.id}`);
@@ -1177,6 +1214,7 @@ export function QuoteEditorPage({
       if (isOrder) await setLineVoided(lineId, true);
       else await deleteLine(lineId);
       await refreshLines();
+      await refreshPersistedGrandTotal(activeQuote!.id);
     } catch {
       setError("quote_line_delete_failed");
     } finally {
@@ -1190,6 +1228,7 @@ export function QuoteEditorPage({
     try {
       await setLineVoided(lineId, false);
       await refreshLines();
+      await refreshPersistedGrandTotal(activeQuote!.id);
     } catch {
       setError("quote_line_save_failed");
     } finally {
@@ -1220,6 +1259,7 @@ export function QuoteEditorPage({
     try {
       if (isOrder) await saveExistingLine(nextLine, "order");
       else await saveExistingLine(nextLine);
+      await refreshPersistedGrandTotal(activeQuote!.id);
     } catch {
       setError("quote_line_save_failed");
     } finally {
@@ -1415,6 +1455,8 @@ export function QuoteEditorPage({
     setFinancialError(false);
     try {
       await saveFinancialDetails(activeQuote.id, values);
+      setFinancialsDirty(false);
+      await refreshPersistedGrandTotal(activeQuote.id);
     } catch {
       setFinancialError(true);
     } finally {
@@ -1429,6 +1471,7 @@ export function QuoteEditorPage({
     try {
       await saveUtensilLine(activeQuote.id);
       await refreshLines();
+      await refreshPersistedGrandTotal(activeQuote.id);
     } catch {
       setError("quote_line_save_failed");
     } finally {
@@ -2266,12 +2309,12 @@ export function QuoteEditorPage({
                   const selected = shippingFees.find((fee) => fee.id === nextId);
                   const shippingFee = selected?.fee ?? 0;
                   setShippingFeeId(nextId);
-                  setFinancials((current) => ({ ...current, shippingFee: String(shippingFee) }));
+                  patchFinancials({ shippingFee: String(shippingFee) });
                   void saveFinancialAdjustments({ ...financialValues, shippingFee });
-                }}><option value="">{t("quoteEditor.financials.chooseShippingFee")}</option>{shippingFees.map((fee) => <option key={fee.id} value={fee.id}>{fee.item} · {money.format(fee.fee)}</option>)}</FilterableSelect><span className="quote-money-input">HK$<input type="number" min="0" step="0.01" aria-label={t("quoteEditor.financials.shippingFeeAmount")} value={financials.shippingFee} onChange={(event) => setFinancials((current) => ({ ...current, shippingFee: event.target.value }))} onBlur={() => void saveFinancialAdjustments()} /></span></div></label>
-                <label><span>{t("quoteEditor.financials.discount")}</span><span className="quote-money-input">HK$<input type="number" min="0" step="0.01" aria-label={t("quoteEditor.financials.discount")} value={financials.discount} onChange={(event) => setFinancials((current) => ({ ...current, discount: event.target.value }))} onBlur={() => void saveFinancialAdjustments()} /></span></label>
-                <label><span>{t("quoteEditor.financials.cashdollarRedeemed")}</span><span className="quote-money-input">HK$<input type="number" min="0" step="0.01" aria-label={t("quoteEditor.financials.cashdollarRedeemed")} value={financials.cashdollarRedeemed} onChange={(event) => setFinancials((current) => ({ ...current, cashdollarRedeemed: event.target.value }))} onBlur={() => void saveFinancialAdjustments()} /></span></label>
-                <label><span>{t("quoteEditor.financials.cashdollarPurchased")}</span><span className="quote-money-input">HK$<input type="number" min="0" step="0.01" aria-label={t("quoteEditor.financials.cashdollarPurchased")} value={financials.cashdollarPurchased} onChange={(event) => setFinancials((current) => ({ ...current, cashdollarPurchased: event.target.value }))} onBlur={() => void saveFinancialAdjustments()} /></span></label>
+                }}><option value="">{t("quoteEditor.financials.chooseShippingFee")}</option>{shippingFees.map((fee) => <option key={fee.id} value={fee.id}>{fee.item} · {money.format(fee.fee)}</option>)}</FilterableSelect><span className="quote-money-input">HK$<input type="number" min="0" step="0.01" aria-label={t("quoteEditor.financials.shippingFeeAmount")} value={financials.shippingFee} onChange={(event) => patchFinancials({ shippingFee: event.target.value })} onBlur={() => void saveFinancialAdjustments()} /></span></div></label>
+                <label><span>{t("quoteEditor.financials.discount")}</span><span className="quote-money-input">HK$<input type="number" min="0" step="0.01" aria-label={t("quoteEditor.financials.discount")} value={financials.discount} onChange={(event) => patchFinancials({ discount: event.target.value })} onBlur={() => void saveFinancialAdjustments()} /></span></label>
+                <label><span>{t("quoteEditor.financials.cashdollarRedeemed")}</span><span className="quote-money-input">HK$<input type="number" min="0" step="0.01" aria-label={t("quoteEditor.financials.cashdollarRedeemed")} value={financials.cashdollarRedeemed} onChange={(event) => patchFinancials({ cashdollarRedeemed: event.target.value })} onBlur={() => void saveFinancialAdjustments()} /></span></label>
+                <label><span>{t("quoteEditor.financials.cashdollarPurchased")}</span><span className="quote-money-input">HK$<input type="number" min="0" step="0.01" aria-label={t("quoteEditor.financials.cashdollarPurchased")} value={financials.cashdollarPurchased} onChange={(event) => patchFinancials({ cashdollarPurchased: event.target.value })} onBlur={() => void saveFinancialAdjustments()} /></span></label>
                 <footer><span>{t("quoteEditor.financials.grandTotal")}</span><strong>{money.format(grandTotal)}</strong></footer>
                 {financialError ? <p role="alert">{t("quoteEditor.financials.saveError")}</p> : null}
               </section>
