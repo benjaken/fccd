@@ -9,6 +9,7 @@ import {
   type OrderStatusView,
 } from "@/lib/order-statuses";
 import { districtNameFromAddress } from "@/lib/district-name";
+import { hongKongDateKey } from "@/lib/date-time";
 import {
   fetchManualTodosForOrders,
   findOrdersWithOrderTags,
@@ -159,6 +160,7 @@ export type OrderListFilters = {
   status: OrderStatusFilter;
   preset: OrderPreset;
   canViewFinance: boolean;
+  now?: Date;
 } & OrderListEnhancementFilters;
 
 type OrderListSort = {
@@ -312,6 +314,7 @@ export async function fetchOrders({
   festivalIds = [],
   districtNames = [],
   deliverySort,
+  now = new Date(),
 }: OrderListFilters): Promise<OrderListResult> {
   const start = (page - 1) * ORDERS_PAGE_SIZE;
   const end = start + ORDERS_PAGE_SIZE - 1;
@@ -417,7 +420,8 @@ export async function fetchOrders({
     query = query
       .eq("is_sent_to_factory", false)
       .eq("do_not_send_to_factory", false)
-      .gt("grand_total", 0);
+      .gt("grand_total", 0)
+      .gte("delivery_at", `${hongKongDateKey(now)}T00:00:00+08:00`);
   }
 
   query = applyStatusFilter(query, status, preset);

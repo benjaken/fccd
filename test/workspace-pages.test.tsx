@@ -162,7 +162,7 @@ describe("Standalone workspace pages", () => {
     auth.session = { user: { email: "ops@foodchannels.com" } };
     renderPath("/factory");
 
-    expect(screen.getAllByRole("button", { name: "出車表" }).length).toBe(1);
+    expect(screen.getAllByRole("button", { name: "出車表" })).toHaveLength(3);
     expect(screen.queryByRole("heading", { name: "歡迎回來" })).not.toBeInTheDocument();
     expect(
       screen.queryByRole("navigation", { name: "Workspaces" }),

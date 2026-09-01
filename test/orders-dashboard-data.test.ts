@@ -140,6 +140,11 @@ describe("orders dashboard data", () => {
 
     expect(captured).toContain("gte:delivery_at:2026-08-18T00:00:00+08:00");
     expect(captured).toContain("lt:delivery_at:2026-09-01T00:00:00+08:00");
+    expect(
+      captured.filter(
+        (entry) => entry === "gte:delivery_at:2026-08-18T00:00:00+08:00",
+      ),
+    ).toHaveLength(3);
   });
 
   it("loads only open quotes whose Hong Kong follow-up date is today", async () => {

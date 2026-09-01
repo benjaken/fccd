@@ -68,6 +68,20 @@ const board: FactoryBoardData = {
 };
 
 describe("FactoryBoardPage", () => {
+  beforeEach(async () => {
+    vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
+    await i18n.changeLanguage("zh-HK");
+  });
+
   it("prefers an Xprinter for label printing", () => {
     expect(
       preferredFactoryLabelPrinter(["Zebra ZD421", "Xprinter XP-420B"]),
@@ -79,10 +93,6 @@ describe("FactoryBoardPage", () => {
     expect(factoryLabelPrintCompletesSet("3 份", false)).toBe(false);
     expect(factoryLabelPrintCompletesSet("3 份", true)).toBe(true);
   });
-  beforeEach(async () => {
-    await i18n.changeLanguage("zh-HK");
-  });
-
   it("keeps only one portion unit in printed delivery-note quantities", () => {
     expect(formatFactoryDeliveryNoteQuantity("3")).toBe("3");
     expect(formatFactoryDeliveryNoteQuantity("3 份")).toBe("3");
@@ -361,12 +371,47 @@ describe("FactoryBoardPage", () => {
     );
   });
 
-  it("loads only today on first entry", async () => {
+  it("centers today between yesterday and tomorrow on first entry", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-08-20T04:00:00.000Z"));
     const loadBoard = vi.fn(async (date: string) => ({
       ...board,
-      dates: [date],
+      dates: [date, "2026-08-20", "2026-08-21"],
+    }));
+
+    render(
+      <FactoryBoardPage
+        loadBoard={loadBoard}
+        loadFleets={async () => []}
+        loadBrands={async () => []}
+        qzClient={qzClient}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(loadBoard).toHaveBeenCalledWith("2026-08-19", 3),
+    );
+    vi.useRealTimers();
+  });
+
+  it("loads and renders only today on mobile", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-08-20T04:00:00.000Z"));
+    vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
+      matches: query === "(max-width: 760px)",
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
+    const loadBoard = vi.fn(async (date: string, days = 3) => ({
+      ...board,
+      dates: Array.from({ length: days }, (_, index) =>
+        addCalendarDays(date, index),
+      ),
     }));
 
     render(
@@ -381,6 +426,8 @@ describe("FactoryBoardPage", () => {
     await waitFor(() =>
       expect(loadBoard).toHaveBeenCalledWith("2026-08-20", 1),
     );
+    expect(document.querySelectorAll(".factory-day")).toHaveLength(1);
+    expect(screen.getByRole("heading", { name: "8月20日 (四)" })).toBeInTheDocument();
     vi.useRealTimers();
   });
 
@@ -401,7 +448,7 @@ describe("FactoryBoardPage", () => {
       />,
     );
 
-    await waitFor(() => expect(loadBoard).toHaveBeenCalledWith("2026-08-17", 1));
+    await waitFor(() => expect(loadBoard).toHaveBeenCalledWith("2026-08-17", 3));
     const dateButton = screen.getByRole("button", { name: "指定日期" });
     expect(dateButton.querySelector("input")).toBeNull();
 
@@ -414,17 +461,17 @@ describe("FactoryBoardPage", () => {
     await user.type(input, "2026-08-22");
     await user.click(screen.getByRole("button", { name: "確定" }));
 
-    await waitFor(() => expect(loadBoard).toHaveBeenCalledWith("2026-08-22", 1));
+    await waitFor(() => expect(loadBoard).toHaveBeenCalledWith("2026-08-22", 3));
     expect(
       screen.queryByRole("heading", { name: "選擇日期" }),
     ).not.toBeInTheDocument();
   });
 
-  it("moves the top pager by one day", async () => {
+  it("moves the top pager by one three-day group", async () => {
     const user = userEvent.setup();
     const loadBoard = vi.fn(async (date: string) => ({
       ...board,
-      dates: [date],
+      dates: [date, addCalendarDays(date, 1), addCalendarDays(date, 2)],
     }));
 
     render(
@@ -437,16 +484,16 @@ describe("FactoryBoardPage", () => {
       />,
     );
 
-    await waitFor(() => expect(loadBoard).toHaveBeenCalledWith("2026-08-17", 1));
+    await waitFor(() => expect(loadBoard).toHaveBeenCalledWith("2026-08-17", 3));
     const pagerButtons = document.querySelectorAll<HTMLButtonElement>(
       ".factory-board-pager button",
     );
 
     await user.click(pagerButtons[0]!);
-    await waitFor(() => expect(loadBoard).toHaveBeenCalledWith("2026-08-16", 1));
+    await waitFor(() => expect(loadBoard).toHaveBeenCalledWith("2026-08-14", 3));
 
     await user.click(pagerButtons[2]!);
-    await waitFor(() => expect(loadBoard).toHaveBeenCalledWith("2026-08-17", 1));
+    await waitFor(() => expect(loadBoard).toHaveBeenCalledWith("2026-08-17", 3));
   });
 
   it("opens the large serving calendar from the top actions", async () => {
