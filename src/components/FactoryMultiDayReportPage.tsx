@@ -20,6 +20,10 @@ import {
 import { qzTrayClient, useQzTray, type QzTrayClient } from "@/lib/qz-tray";
 import { formatFactoryOrderNumber } from "@/lib/factory-order-number";
 import { fetchActiveOrderEditIds } from "@/lib/order-edit-lock";
+import {
+  subscribeActiveOrderEditPresence,
+  type ActiveOrderEditPresenceSubscriber,
+} from "@/lib/order-edit-presence";
 
 function orderCell(row: FactoryMultiDayMenuRow | undefined) {
   if (!row) return null;
@@ -41,11 +45,13 @@ export function FactoryMultiDayReportPage({
   loadBrands = fetchFactoryBrands,
   loadRows = fetchFactoryMultiDayMenu,
   loadActiveEditOrderIds = fetchActiveOrderEditIds,
+  subscribeEditPresence = subscribeActiveOrderEditPresence,
   qzClient = qzTrayClient,
 }: {
   loadBrands?: typeof fetchFactoryBrands;
   loadRows?: typeof fetchFactoryMultiDayMenu;
   loadActiveEditOrderIds?: typeof fetchActiveOrderEditIds;
+  subscribeEditPresence?: ActiveOrderEditPresenceSubscriber;
   qzClient?: QzTrayClient;
 }) {
   const { t, i18n } = useTranslation();
@@ -61,6 +67,10 @@ export function FactoryMultiDayReportPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [printBlocked, setPrintBlocked] = useState(false);
+  const [realtimeEditOrderIds, setRealtimeEditOrderIds] =
+    useState<Set<string> | null>(null);
+
+  useEffect(() => subscribeEditPresence(setRealtimeEditOrderIds), [subscribeEditPresence]);
 
   useEffect(() => {
     if (!startDate || !endDate || endDate < startDate) {
@@ -97,6 +107,9 @@ export function FactoryMultiDayReportPage({
   }, [endDate, loadActiveEditOrderIds, loadBrands, loadRows, startDate]);
 
   const activeBrands = useMemo(() => new Set(activeBrandIds), [activeBrandIds]);
+  const realtimePrintBlocked = realtimeEditOrderIds === null
+    ? printBlocked
+    : rows.some((row) => realtimeEditOrderIds.has(row.orderId));
   const reportRows = useMemo(
     () => aggregateFactoryMultiDayMenuRows(rows, activeBrands),
     [activeBrands, rows],
@@ -154,11 +167,11 @@ export function FactoryMultiDayReportPage({
               date: factoryMultiDayPrintedDate(new Date(), i18n.language),
             })}
           </p>
-          <Button type="button" className="factory-multi-day-print no-print" disabled={printBlocked} onClick={() => window.print()}>
+          <Button type="button" className="factory-multi-day-print no-print" disabled={realtimePrintBlocked} onClick={() => window.print()}>
             <Printer aria-hidden="true" />{t("factoryBoard.print")}
           </Button>
         </header>
-        {printBlocked ? <p className="factory-edit-lock-warning no-print" role="alert"><TriangleAlert aria-hidden="true" /><strong>{t("factoryBoard.orderEditingPrintBlocked")}</strong></p> : null}
+        {realtimePrintBlocked ? <p className="factory-edit-lock-warning no-print" role="alert"><TriangleAlert aria-hidden="true" /><strong>{t("factoryBoard.orderEditingPrintBlocked")}</strong></p> : null}
 
         <div className="factory-multi-day-brands" aria-label={t("factoryBoard.brands")}>
           {brands.filter((brand) => activeBrands.has(brand.id)).map((brand) => (

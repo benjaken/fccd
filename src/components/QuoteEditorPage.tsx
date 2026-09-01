@@ -75,6 +75,7 @@ import {
   releaseOrderEditSession,
   touchOrderEditSession,
 } from "@/lib/order-edit-lock";
+import { trackOrderEditPresence } from "@/lib/order-edit-presence";
 import { cn } from "@/lib/utils";
 import {
   readQuotePdfSupplements,
@@ -253,6 +254,7 @@ type Props = {
   confirmAddonShopify?: typeof confirmOrderAddonShopifyInput;
   touchEditSession?: typeof touchOrderEditSession;
   releaseEditSession?: typeof releaseOrderEditSession;
+  startEditPresence?: typeof trackOrderEditPresence;
 };
 
 export function QuoteEditorPage({
@@ -288,6 +290,7 @@ export function QuoteEditorPage({
   confirmAddonShopify = confirmOrderAddonShopifyInput,
   touchEditSession = touchOrderEditSession,
   releaseEditSession = releaseOrderEditSession,
+  startEditPresence = trackOrderEditPresence,
 }: Props) {
   const { t, i18n } = useTranslation();
   const additionalInfoDict = useDictItems(DICT_TYPE.quoteAdditionalInfo);
@@ -444,6 +447,7 @@ export function QuoteEditorPage({
   useEffect(() => {
     if (!isOrder || !id || readOnly) return;
     let disposed = false;
+    const stopEditPresence = startEditPresence(id, editSessionTokenRef.current);
     void touchCurrentEditSession().catch(() => undefined);
 
     const registerActivity = () => {
@@ -467,13 +471,14 @@ export function QuoteEditorPage({
     window.addEventListener("pagehide", releaseOnPageHide);
     return () => {
       disposed = true;
+      stopEditPresence();
       for (const eventName of activityEvents) {
         window.removeEventListener(eventName, registerActivity);
       }
       window.removeEventListener("pagehide", releaseOnPageHide);
       void releaseCurrentEditSession().catch(() => undefined);
     };
-  }, [id, isOrder, readOnly, releaseCurrentEditSession, touchCurrentEditSession]);
+  }, [id, isOrder, readOnly, releaseCurrentEditSession, startEditPresence, touchCurrentEditSession]);
 
   useEffect(() => {
     const navigation = sectionNavigationRef.current;

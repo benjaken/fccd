@@ -6,6 +6,10 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("@/lib/order-edit-presence", () => ({
+  trackOrderEditPresence: vi.fn(() => () => undefined),
+}));
+
 const dictionaryValues = vi.hoisted(() => ({
   delivery_time_slot: ["12:00 - 13:00", "13:00 - 14:00", "17:00 - 18:00"],
   ship_out_time_slot: ["08:30", "11:30", "12:00", "13:15"],
@@ -150,7 +154,7 @@ function renderEditor(
     loadShippingFeeOptions: vi.fn().mockResolvedValue(shippingFeeOptions),
     ...overrides,
   };
-  render(
+  const rendered = render(
     <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
         <Route path="/quotes/new" element={<QuoteEditorPage {...props} />} />
@@ -159,7 +163,7 @@ function renderEditor(
       </Routes>
     </MemoryRouter>,
   );
-  return props;
+  return { ...props, unmount: rendered.unmount };
 }
 
 async function fillRequiredQuoteDetails(user: ReturnType<typeof userEvent.setup>) {
@@ -181,16 +185,20 @@ describe("Quote editor", () => {
   it("releases an order edit session with keepalive when the page closes", async () => {
     const touchEditSession = vi.fn().mockResolvedValue(undefined);
     const releaseEditSession = vi.fn().mockResolvedValue(undefined);
+    const stopEditPresence = vi.fn();
+    const startEditPresence = vi.fn(() => stopEditPresence);
 
-    renderEditor(
+    const rendered = renderEditor(
       {
         documentType: "order",
         touchEditSession,
         releaseEditSession,
+        startEditPresence,
       },
       "/orders/order-1/edit",
     );
 
+    expect(startEditPresence).toHaveBeenCalledWith("order-1", expect.any(String));
     await waitFor(() => expect(touchEditSession).toHaveBeenCalledWith(
       "order-1",
       expect.any(String),
@@ -202,6 +210,9 @@ describe("Quote editor", () => {
       expect.any(String),
       { keepalive: true },
     ));
+
+    rendered.unmount();
+    expect(stopEditPresence).toHaveBeenCalledTimes(1);
   });
 
   it("keeps the mobile details grid and footer controls inside the panel", () => {
