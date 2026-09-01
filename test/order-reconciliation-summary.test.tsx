@@ -34,6 +34,25 @@ describe("OrderReconciliationSummary", () => {
         orderNumber: "B-1234",
         customerName: "ABC Company",
         storeDomain: "example.myshopify.com",
+        deliveryAt: "2026-08-31T08:00:00.000Z",
+        deliveryTime: "16:00 - 16:30",
+        address: "九龍測試道 1 號",
+        deliveryStatus: null,
+        isSentToFactory: false,
+        doNotSendToFactory: false,
+      }],
+      excludedOrders: [{
+        orderId: "order-2",
+        orderNumber: "B-1523",
+        customerName: "Known Exception",
+        storeDomain: "example.myshopify.com",
+        deliveryAt: "2026-08-30T08:00:00.000Z",
+        deliveryTime: "16:00",
+        address: "香港測試街 2 號",
+        deliveryStatus: "close",
+        isSentToFactory: false,
+        doNotSendToFactory: false,
+        exclusionReasons: ["B-1523 已知例外", "已有營運狀態：close"],
       }],
     });
   });
@@ -49,6 +68,10 @@ describe("OrderReconciliationSummary", () => {
     expect(await screen.findByText("43")).toBeInTheDocument();
     expect(screen.getByText("42")).toBeInTheDocument();
     expect(screen.getByText("B-1234")).toBeInTheDocument();
+    expect(screen.getByText("B-1523")).toBeInTheDocument();
+    expect(screen.getByText(/已排除，不計入漏單/)).toBeInTheDocument();
+    expect(screen.getByText("B-1523 已知例外")).toHaveClass("order-reconciliation-reason-status");
+    expect(screen.getByText("已有營運狀態：close")).toHaveClass("order-reconciliation-reason-status");
     expect(screen.getByText(/2026-07-31/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /B-1234/ })).toHaveAttribute("href", "/orders/order-1");
   });
