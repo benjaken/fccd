@@ -21,6 +21,14 @@ const reconciliationExclusionsMigration = readFileSync(
   "supabase/migrations/20260901090000_ignore_b1523_order_reconciliation.sql",
   "utf8",
 );
+const clearDailyMigration = readFileSync(
+  "supabase/migrations/20260901113000_send_clear_daily_order_reconciliation.sql",
+  "utf8",
+);
+const perOrderWatiMigration = readFileSync(
+  "supabase/migrations/20260901230000_per_order_internal_wati_notifications.sql",
+  "utf8",
+);
 const factoryUnsentSection = migration.slice(
   migration.indexOf("select 'factory_unsent'"),
   migration.indexOf("with candidates as (", migration.indexOf("select 'factory_unsent'") + 1),
@@ -87,9 +95,42 @@ describe("Shopify/FCCD order reconciliation alerts", () => {
     expect(notificationWorker).toContain("if (!reconciliationOnly)");
   });
 
-  it("keeps WATI reconciliation parameters free of rejected newlines", () => {
-    expect(notificationWorker).toContain('issues.map(reconciliationIssueLine).join("；")');
-    expect(notificationWorker).not.toContain('issues.map(reconciliationIssueLine).join("\\n")');
+  it("keeps one aggregate daily email but sends one WATI per order", () => {
+    expect(perOrderWatiMigration).toContain("Email stays as one aggregate message per recipient and day");
+    expect(perOrderWatiMigration).toContain("select null, null, 'daily_reconciliation', v_date_key, 'email'");
+    expect(perOrderWatiMigration).toContain("from private.order_email_notification_recipients() recipient");
+    expect(perOrderWatiMigration).toContain("distinct on (issue.order_id, recipient.id)");
+    expect(perOrderWatiMigration).toContain("case when issue.issue_type = 'factory_unsent' then 1 else 0 end");
+    expect(perOrderWatiMigration).toContain("order_reconciliation_alert_outbox_order_cycle_unique");
+    expect(notificationWorker).toContain("WATI_ORDER_RECONCILIATION_MISSING_TEMPLATE_NAME");
+    expect(notificationWorker).toContain("WATI_ORDER_RECONCILIATION_FACTORY_UNSENT_TEMPLATE_NAME");
+    expect(notificationWorker).toContain('internalOrderWatiParameters(reconciliationOrder(issue)!)');
+    expect(notificationWorker).toContain('{ name: "brand_name"');
+    expect(notificationWorker).toContain('{ name: "delivery_address"');
+    expect(notificationWorker).toContain('replace(/^#+\\s*/, "")');
+    expect(notificationWorker).toContain('replace(/[\\r\\n\\t]+/g, " ")');
+  });
+
+  it("sends matching all-clear WhatsApp and email copy when the daily count is zero", () => {
+    expect(clearDailyMigration).toContain("if p_daily then");
+    expect(clearDailyMigration).not.toContain("p_daily and exists");
+    expect(notificationWorker).toContain('job.event_key !== "daily_reconciliation"');
+    expect(notificationWorker).toContain("WATI_ORDER_RECONCILIATION_CLEAR_TEMPLATE_NAME");
+    expect(notificationWorker).toContain("今日沒有「未入單」或「未傳送工場」的訂單需要跟進");
+    expect(notificationWorker).not.toContain("Shopify：${input.run.shopify_count}");
+  });
+
+  it("queues a deduplicated internal WATI only for a newly imported Shopify order", () => {
+    expect(perOrderWatiMigration).toContain("'shopify_order_imported'");
+    expect(perOrderWatiMigration).toContain("after insert or update of shopify_order_id");
+    expect(perOrderWatiMigration).toContain("new.source_system is distinct from 'shopify'");
+    expect(perOrderWatiMigration).toContain("old.shopify_order_id is not distinct from new.shopify_order_id");
+    expect(perOrderWatiMigration).toContain("coalesce(new.shopify_store_id::text, 'unknown-store')");
+    expect(perOrderWatiMigration).toContain("'shopify_order_imported', v_cycle_key, 'whatsapp'");
+    expect(perOrderWatiMigration).not.toContain("'shopify_order_imported', v_cycle_key, 'email'");
+    expect(notificationWorker).toContain("WATI_SHOPIFY_NEW_ORDER_TEMPLATE_NAME");
+    expect(notificationWorker).toContain("WATI_SHOPIFY_NEW_ORDER_BROADCAST_NAME");
+    expect(notificationWorker).toContain('"shopify_import_email_not_supported"');
   });
 
   it("counts only unresolved Shopify shadows and always ignores B-1523", () => {

@@ -919,6 +919,7 @@ const resources = {
             daily_reconciliation: "每日訂單對帳通知",
             six_hour_reconciliation: "六小時訂單對帳通知",
             late_order_immediate: "訂單異常即時通知",
+            shopify_order_imported: "Shopify 新訂單內部通知",
           },
           columns: {
             time: "發送時間",
@@ -6108,6 +6109,7 @@ const resources = {
             daily_reconciliation: "Daily order reconciliation",
             six_hour_reconciliation: "Six-hour order reconciliation",
             late_order_immediate: "Immediate order exception alert",
+            shopify_order_imported: "Internal Shopify new-order alert",
           },
           columns: {
             time: "Sent at",
