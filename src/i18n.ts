@@ -2637,11 +2637,6 @@ const resources = {
         orderDetailsStep: "訂單資料",
         orderAdd: "加入訂單",
         orderSummaryEyebrow: "訂單內容",
-        conversionConfirm: {
-          title: "確認轉成訂單",
-          description: "確定要將報價單 {{number}} 轉成訂單嗎？轉單完成後，系統會自動發送 WATI、電郵及內部新訂單通知。原報價單會標記為 Done Deal，並從報價列表移除。",
-          confirm: "確認轉成訂單",
-        },
         customerSection: "客戶資料",
         deliverySection: "配送與備註",
         custom: "Custom",
@@ -7891,11 +7886,6 @@ const resources = {
         orderDetailsStep: "Order details",
         orderAdd: "Add to order",
         orderSummaryEyebrow: "Order contents",
-        conversionConfirm: {
-          title: "Confirm conversion to order",
-          description: "Convert quote {{number}} to an order? After conversion, the system will automatically send WATI, email, and internal new-order notifications. The original quote will be marked Done Deal and removed from the quote list.",
-          confirm: "Confirm conversion",
-        },
         customerSection: "Customer details",
         deliverySection: "Delivery and notes",
         custom: "Custom",
