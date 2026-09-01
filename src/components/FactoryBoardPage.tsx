@@ -61,6 +61,10 @@ import {
   formatFactoryOrderNumber,
   normalizeFactoryOrderNumber,
 } from "@/lib/factory-order-number";
+import {
+  subscribeActiveOrderEditPresence,
+  type ActiveOrderEditPresenceSubscriber,
+} from "@/lib/order-edit-presence";
 import { useMediaQuery } from "@/lib/use-media-query";
 
 type FleetLoader = typeof fetchFactoryFleets;
@@ -160,6 +164,7 @@ export function FactoryBoardPage({
   initialDate,
   openOrdersInNewPage = true,
   openMultiDayInNewPage = true,
+  subscribeEditPresence = subscribeActiveOrderEditPresence,
 }: {
   loadBoard?: BoardLoader;
   loadFleets?: FleetLoader;
@@ -175,6 +180,7 @@ export function FactoryBoardPage({
   initialDate?: string;
   openOrdersInNewPage?: boolean;
   openMultiDayInNewPage?: boolean;
+  subscribeEditPresence?: ActiveOrderEditPresenceSubscriber;
 }) {
   const { t, i18n } = useTranslation();
   const qz = useQzTray({ client: qzClient, autoConnect: false });
@@ -211,6 +217,8 @@ export function FactoryBoardPage({
   const [multiDayPrintBlocked, setMultiDayPrintBlocked] = useState(false);
   const [selectedJob, setSelectedJob] = useState<DeliveryListItem | null>(null);
   const [orderJob, setOrderJob] = useState<FactoryOrderJob | null>(null);
+  const [realtimeEditOrderIds, setRealtimeEditOrderIds] =
+    useState<Set<string> | null>(null);
   const [jobLoading, setJobLoading] = useState(false);
   const [jobError, setJobError] = useState(false);
   const [pendingReprintJob, setPendingReprintJob] =
@@ -232,6 +240,19 @@ export function FactoryBoardPage({
   const [activeMultiDayBrandIds, setActiveMultiDayBrandIds] = useState<string[]>([]);
 
   const dates = board?.dates ?? factoryVisibleDates(startDate, visibleDayCount);
+  const isOrderBeingEdited = (orderId: string | null | undefined, fallback = false) =>
+    realtimeEditOrderIds === null
+      ? fallback
+      : Boolean(orderId && realtimeEditOrderIds.has(orderId));
+  const displayedOrderJob = useMemo(
+    () => orderJob
+      ? {
+          ...orderJob,
+          isBeingEdited: isOrderBeingEdited(selectedJob?.orderId, orderJob.isBeingEdited),
+        }
+      : null,
+    [orderJob, realtimeEditOrderIds, selectedJob?.orderId],
+  );
   const grouped = useMemo(
     () => groupDeliveriesByDate(board?.items ?? [], dates),
     [board?.items, dates],
@@ -280,9 +301,15 @@ export function FactoryBoardPage({
 
   const printMenuWhenUnlocked = (orderIds: string[], scope: "menu" | "multi-day") => {
     const orderIdSet = new Set(orderIds);
-    const blocked = (board?.items ?? []).some(
-      (item) => Boolean(item.orderId && orderIdSet.has(item.orderId) && item.isBeingEdited),
-    );
+    const blocked = realtimeEditOrderIds === null
+      ? (board?.items ?? []).some(
+          (item) => Boolean(
+            item.orderId
+            && orderIdSet.has(item.orderId)
+            && item.isBeingEdited,
+          ),
+        )
+      : orderIds.some((orderId) => realtimeEditOrderIds.has(orderId));
     if (scope === "menu") setMenuPrintBlocked(blocked);
     else setMultiDayPrintBlocked(blocked);
     if (!blocked) window.print();
@@ -298,6 +325,10 @@ export function FactoryBoardPage({
     }
     return counts;
   }, [multiDayRows]);
+
+  useEffect(() => {
+    return subscribeEditPresence(setRealtimeEditOrderIds);
+  }, [subscribeEditPresence]);
 
   useEffect(() => {
     if (
@@ -749,7 +780,7 @@ export function FactoryBoardPage({
       {selectedJob ? (
         <FactoryOrderJobView
           item={selectedJob}
-          job={orderJob}
+          job={displayedOrderJob}
           loading={jobLoading}
           error={jobError}
           selectedBadge={fleetBadgeForDelivery(selectedJob, fleets)}
@@ -1029,7 +1060,7 @@ export function FactoryBoardPage({
                                 {t("factoryBoard.portions", { count: portions })}
                               </small>
                             ) : null}
-                            {item.isBeingEdited ? <small className="factory-job-editing-tag">{t("factoryBoard.editing")}</small> : null}
+                            {isOrderBeingEdited(item.orderId, item.isBeingEdited) ? <small className="factory-job-editing-tag">{t("factoryBoard.editing")}</small> : null}
                             {newOrder ? <small className="factory-new-order-tag">{t("factoryBoard.newOrder")}</small> : null}
                             {printStatus === "needs-reprint" ? <small className="factory-changed-order-tag">有更改</small> : null}
                             {item.addonShopifyPending ? <small className="factory-addon-order-tag">有加單</small> : null}
