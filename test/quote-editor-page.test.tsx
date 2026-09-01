@@ -1286,17 +1286,8 @@ describe("Quote editor", () => {
     expect(screen.getAllByText("HK$28,350.00").length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByText("HK$45,500.00")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Convert to order" }));
-    expect(screen.getByRole("alertdialog", { name: "Confirm conversion to order" })).toBeInTheDocument();
-    expect(screen.getByText(/automatically send WATI, email, and internal new-order notifications/)).toBeInTheDocument();
-    expect(convertQuote).not.toHaveBeenCalled();
-
-    await user.click(screen.getByRole("button", { name: "Cancel" }));
-    expect(screen.queryByRole("alertdialog", { name: "Confirm conversion to order" })).not.toBeInTheDocument();
-    expect(convertQuote).not.toHaveBeenCalled();
-
-    await user.click(screen.getByRole("button", { name: "Convert to order" }));
-    await user.click(screen.getByRole("button", { name: "Confirm conversion" }));
     await waitFor(() => expect(convertQuote).toHaveBeenCalledWith("quote-1"));
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
     expect(await screen.findByText("Converted order")).toBeInTheDocument();
   });
 
@@ -1413,10 +1404,8 @@ describe("Quote editor", () => {
     expect(sendConfirmation).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: "Convert to order" }));
-    expect(convertQuote).not.toHaveBeenCalled();
-    expect(screen.getByText(/automatically send WATI, email, and internal new-order notifications/)).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Confirm conversion" }));
     await waitFor(() => expect(convertQuote).toHaveBeenCalledWith("quote-1"));
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
     expect(saveDetails).toHaveBeenCalledWith("quote-1", expect.objectContaining({ customerName: "Customer" }));
     expect(saveFinancialDetails).not.toHaveBeenCalled();
     expect(await screen.findByText("Converted order")).toBeInTheDocument();
