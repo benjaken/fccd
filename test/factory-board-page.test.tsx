@@ -89,7 +89,7 @@ describe("FactoryBoardPage", () => {
     expect(formatFactoryDeliveryNoteQuantity("3 份 份")).toBe("3");
   });
 
-  it("keeps one day and three job cards per row with responsive mobile rules", () => {
+  it("keeps three days on desktop and one day per row on mobile", () => {
     const stylesheet = readFileSync(
       path.resolve(process.cwd(), "src/index.css"),
       "utf8",
@@ -139,7 +139,9 @@ describe("FactoryBoardPage", () => {
       /\.factory-job-card-body \.factory-job-card-time\s*\{([^}]+)\}/,
     );
 
-    expect(daysRule?.[1]).toContain("grid-template-columns: minmax(0, 1fr)");
+    expect(daysRule?.[1]).toContain(
+      "grid-template-columns: repeat(3, minmax(0, 1fr))",
+    );
     expect(cardsRule?.[1]).toContain(
       "grid-template-columns: repeat(3, minmax(150px, 1fr))",
     );
@@ -266,6 +268,9 @@ describe("FactoryBoardPage", () => {
     );
     expect(stylesheet).toMatch(
       /\.factory-job-print-status\.is-complete\s*\{[^}]*background:\s*var\(--factory-green\)[^}]*clip-path:\s*polygon\(0 0, 100% 0, 0 100%\)/s,
+    );
+    expect(stylesheet).toMatch(
+      /@media \(max-width: 760px\)[\s\S]*?\.factory-board-days\s*\{[^}]*display:\s*block/,
     );
     expect(stylesheet).toMatch(
       /@media \(max-width: 760px\)[\s\S]*?\.factory-day-cards\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/,
