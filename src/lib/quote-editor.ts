@@ -939,7 +939,7 @@ export async function setOrderLineVoided(lineId: string, isVoid: boolean) {
 
 export async function updateQuoteLine(
   line: QuoteLine,
-  documentType: QuoteEditorDocumentType = "quote",
+  _documentType: QuoteEditorDocumentType = "quote",
 ) {
   const { data, error } = await supabase
     .from("order_lines")
@@ -953,46 +953,19 @@ export async function updateQuoteLine(
     .select("order_id")
     .single();
   if (error) throw error;
-  const { data: currentLines, error: linesError } = await supabase
-    .from("order_lines")
-    .select("total_price")
-    .eq("order_id", data.order_id)
-    .eq("is_void", false);
-  if (linesError) throw linesError;
-  const total = (currentLines ?? []).reduce(
-    (sum, item) => sum + toNumber(item.total_price),
-    0,
-  );
   const { data: order, error: orderError } = await supabase
     .from("orders")
-    .select("shipping_fee,discount_amount,cashdollar_redeemed")
+    .select("shipping_fee,discount_amount,cashdollar_redeemed,cashdollar_purchased")
     .eq("id", data.order_id)
     .single();
   if (orderError) throw orderError;
-  const adjustedTotal = Math.max(
-    0,
-    total
-      + toNumber(order.shipping_fee)
-      - toNumber(order.discount_amount)
-      - toNumber(order.cashdollar_redeemed),
-  );
-  let outstanding = adjustedTotal;
-  if (documentType === "order") {
-    const { data: paymentRows, error: paymentsError } = await supabase
-      .from("payments")
-      .select("amount")
-      .eq("order_id", data.order_id)
-      .is("voided_at", null);
-    if (paymentsError) throw paymentsError;
-    outstanding = Math.max(
-      0,
-      adjustedTotal - (paymentRows ?? []).reduce((sum, payment) => sum + toNumber(payment.amount), 0),
-    );
-  }
-  const { error: totalError } = await supabase
-    .from("orders")
-    .update({ grand_total: adjustedTotal, outstanding, updated_at: new Date().toISOString() })
-    .eq("id", data.order_id);
+  const { error: totalError } = await supabase.rpc("update_quote_financials", {
+    p_order_id: data.order_id,
+    p_shipping_fee: toNumber(order.shipping_fee),
+    p_discount_amount: toNumber(order.discount_amount),
+    p_cashdollar_redeemed: toNumber(order.cashdollar_redeemed),
+    p_cashdollar_purchased: toNumber(order.cashdollar_purchased),
+  });
   if (totalError) throw totalError;
 }
 

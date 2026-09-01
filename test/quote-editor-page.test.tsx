@@ -1094,7 +1094,7 @@ describe("Quote editor", () => {
     await user.click(within(document.getElementById("quote-editor-editable-details")!).getByRole("button", { name: "Save changes" }));
 
     await waitFor(() => expect(saveDetails).toHaveBeenCalled());
-    expect(saveFinancialDetails).toHaveBeenCalled();
+    expect(saveFinancialDetails).not.toHaveBeenCalled();
     expect(savePayments).not.toHaveBeenCalled();
     expect(sendConfirmation).not.toHaveBeenCalled();
     expect(screen.getByRole("heading", { name: "FCLQ20260801" })).toBeInTheDocument();
@@ -1203,13 +1203,15 @@ describe("Quote editor", () => {
       await waitFor(() => expect(saveDetails).toHaveBeenCalledTimes(sectionIds.indexOf(section) + 1));
     }
 
-    expect(saveExistingLine).toHaveBeenCalledTimes(sectionIds.length);
-    expect(saveFinancialDetails).toHaveBeenCalledTimes(sectionIds.length);
     if (kind === "order") {
+      expect(saveExistingLine).toHaveBeenCalledTimes(sectionIds.length);
+      expect(saveFinancialDetails).toHaveBeenCalledTimes(sectionIds.length);
       expect(savePayments).toHaveBeenCalledTimes(3);
       expect(savePayments).toHaveBeenLastCalledWith("order-1", number, "channel-1", [], "order");
       expect(saveFactorySettings).toHaveBeenCalledTimes(3);
     } else {
+      expect(saveExistingLine).not.toHaveBeenCalled();
+      expect(saveFinancialDetails).not.toHaveBeenCalled();
       expect(savePayments).not.toHaveBeenCalled();
       expect(saveFactorySettings).not.toHaveBeenCalled();
     }
@@ -1249,6 +1251,15 @@ describe("Quote editor", () => {
     const convertQuote = vi.fn().mockResolvedValue({ id: "order-1", orderNumber: "FCLO20260801" });
     const summary = {
       id: "quote-1", orderNumber: "FCLQ20260801", channelId: "channel-1",
+      grandTotal: 28_350,
+      supplements: {
+        additionalInfo: ["每個便當包括一份餐具"],
+        activities: [
+          { id: "activity-1", description: "September events", amount: "14000" },
+          { id: "activity-2", description: "October events", amount: "17500" },
+        ],
+        utensilPackQuantity: "0",
+      },
       draft: {
         channelId: "channel-1", customerName: "Customer", companyName: "Company",
         contactA: "12345678", contactB: "", email: "quote@example.com", asanaLink: "",
@@ -1256,19 +1267,24 @@ describe("Quote editor", () => {
         deliveryDate: "2026-08-21", deliveryTime: "12:00 - 13:00", shipOutTime: "",
         customerNote: "", packingNote: "", salesPartnerId: "", internalNote: "", tagIds: [],
       },
-      financials: { shippingFee: 0, discount: 0, cashdollarRedeemed: 0, cashdollarPurchased: 0 },
+      financials: { shippingFee: 0, discount: 3_150, cashdollarRedeemed: 0, cashdollarPurchased: 0 },
       payments: [],
     };
     render(
       <MemoryRouter initialEntries={["/quotes/quote-1/edit"]}>
         <Routes>
-          <Route path="/quotes/:id/edit" element={<QuoteEditorPage loadOptions={vi.fn().mockResolvedValue(options)} loadSummary={vi.fn().mockResolvedValue(summary)} loadLines={vi.fn().mockResolvedValue([])} saveDetails={vi.fn().mockResolvedValue(undefined)} saveFinancialDetails={vi.fn().mockResolvedValue(undefined)} convertQuote={convertQuote} loadShippingFeeOptions={vi.fn().mockResolvedValue(shippingFeeOptions)} />} />
+          <Route path="/quotes/:id/edit" element={<QuoteEditorPage loadOptions={vi.fn().mockResolvedValue(options)} loadSummary={vi.fn().mockResolvedValue(summary)} loadLines={vi.fn().mockResolvedValue([{
+            id: "legacy-line-1", productId: "product-1", packageId: null, sku: "P001",
+            name: "Legacy migrated line", quantity: 70, unitPrice: 245, totalPrice: 17_150, remarks: null,
+          }])} saveDetails={vi.fn().mockResolvedValue(undefined)} saveFinancialDetails={vi.fn().mockResolvedValue(undefined)} convertQuote={convertQuote} loadShippingFeeOptions={vi.fn().mockResolvedValue(shippingFeeOptions)} />} />
           <Route path="/orders/:id" element={<div>Converted order</div>} />
         </Routes>
       </MemoryRouter>,
     );
 
     await screen.findByRole("heading", { name: "FCLQ20260801" });
+    expect(screen.getAllByText("HK$28,350.00").length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText("HK$45,500.00")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Convert to order" }));
     expect(screen.getByRole("alertdialog", { name: "Confirm conversion to order" })).toBeInTheDocument();
     expect(screen.getByText(/automatically send WATI, email, and internal new-order notifications/)).toBeInTheDocument();
@@ -1402,12 +1418,7 @@ describe("Quote editor", () => {
     await user.click(screen.getByRole("button", { name: "Confirm conversion" }));
     await waitFor(() => expect(convertQuote).toHaveBeenCalledWith("quote-1"));
     expect(saveDetails).toHaveBeenCalledWith("quote-1", expect.objectContaining({ customerName: "Customer" }));
-    expect(saveFinancialDetails).toHaveBeenCalledWith("quote-1", {
-      shippingFee: 0,
-      discount: 0,
-      cashdollarRedeemed: 0,
-      cashdollarPurchased: 0,
-    });
+    expect(saveFinancialDetails).not.toHaveBeenCalled();
     expect(await screen.findByText("Converted order")).toBeInTheDocument();
   });
 
