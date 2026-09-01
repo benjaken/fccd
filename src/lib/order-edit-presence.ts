@@ -37,23 +37,34 @@ export function trackOrderEditPresence(
   lockToken: string,
 ): () => void {
   let disposed = false;
-  const channel = supabase.channel(ORDER_EDIT_PRESENCE_TOPIC, {
-    config: { private: true, presence: { key: lockToken } },
-  });
+  let channel: ReturnType<typeof supabase.channel> | null = null;
 
-  channel.subscribe((status) => {
-    if (status !== "SUBSCRIBED" || disposed) return;
-    void channel.track({
-      order_id: orderId,
-      lock_token: lockToken,
-      online_at: new Date().toISOString(),
+  void supabase.auth.getSession().then(async ({ data: { session } }) => {
+    if (disposed || !session?.access_token) return;
+    await supabase.realtime.setAuth(session.access_token);
+    if (disposed) return;
+
+    channel = supabase.channel(ORDER_EDIT_PRESENCE_TOPIC, {
+      config: { private: true, presence: { key: lockToken } },
+    });
+    // A private Presence publisher also needs read authorization when joining
+    // the channel. Registering sync makes that capability explicit.
+    channel.on("presence", { event: "sync" }, () => undefined).subscribe((status) => {
+      if (status !== "SUBSCRIBED" || disposed) return;
+      void channel?.track({
+        order_id: orderId,
+        lock_token: lockToken,
+        online_at: new Date().toISOString(),
+      });
     });
   });
 
   return () => {
     disposed = true;
-    void channel.untrack().finally(() => {
-      void supabase.removeChannel(channel);
+    const activeChannel = channel;
+    if (!activeChannel) return;
+    void activeChannel.untrack().finally(() => {
+      void supabase.removeChannel(activeChannel);
     });
   };
 }
@@ -63,19 +74,29 @@ export const subscribeActiveOrderEditPresence: ActiveOrderEditPresenceSubscriber
   onChange,
 ) => {
   let disposed = false;
-  const watcherKey = `factory-${crypto.randomUUID()}`;
-  const channel = supabase.channel(ORDER_EDIT_PRESENCE_TOPIC, {
-    config: { private: true, presence: { key: watcherKey } },
-  });
-  const emit = () => {
-    if (!disposed) onChange(activeOrderIdsFromPresenceState(channel.presenceState()));
-  };
+  let channel: ReturnType<typeof supabase.channel> | null = null;
 
-  channel.on("presence", { event: "sync" }, emit).subscribe();
+  void supabase.auth.getSession().then(async ({ data: { session } }) => {
+    if (disposed || !session?.access_token) return;
+    await supabase.realtime.setAuth(session.access_token);
+    if (disposed) return;
+
+    const watcherKey = `factory-${crypto.randomUUID()}`;
+    channel = supabase.channel(ORDER_EDIT_PRESENCE_TOPIC, {
+      config: { private: true, presence: { key: watcherKey } },
+    });
+    const emit = () => {
+      if (!disposed && channel) {
+        onChange(activeOrderIdsFromPresenceState(channel.presenceState()));
+      }
+    };
+
+    channel.on("presence", { event: "sync" }, emit).subscribe();
+  });
 
   return () => {
     disposed = true;
-    void supabase.removeChannel(channel);
+    if (channel) void supabase.removeChannel(channel);
   };
 };
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -24,6 +24,10 @@ import {
   fetchFactoryLabelCommand,
   type FactoryLabelCommandLoader,
 } from "@/lib/factory-label";
+import {
+  subscribeActiveOrderEditPresence,
+  type ActiveOrderEditPresenceSubscriber,
+} from "@/lib/order-edit-presence";
 
 export function FactoryOrderPage({
   loadDelivery = fetchDeliveryById,
@@ -33,6 +37,7 @@ export function FactoryOrderPage({
   markLinePrinted = markFactoryOrderLinePrinted,
   loadLabelCommand = fetchFactoryLabelCommand,
   saveDispatchTime = updateFactoryDispatchTime,
+  subscribeEditPresence = subscribeActiveOrderEditPresence,
   qzClient = qzTrayClient,
 }: {
   loadDelivery?: typeof fetchDeliveryById;
@@ -42,6 +47,7 @@ export function FactoryOrderPage({
   markLinePrinted?: typeof markFactoryOrderLinePrinted;
   loadLabelCommand?: FactoryLabelCommandLoader;
   saveDispatchTime?: typeof updateFactoryDispatchTime;
+  subscribeEditPresence?: ActiveOrderEditPresenceSubscriber;
   qzClient?: QzTrayClient;
 }) {
   const { t } = useTranslation();
@@ -54,6 +60,25 @@ export function FactoryOrderPage({
   const [fleets, setFleets] = useState<FactoryFleet[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [realtimeEditOrderIds, setRealtimeEditOrderIds] =
+    useState<Set<string> | null>(null);
+
+  const displayedJob = useMemo(
+    () => job
+      ? {
+          ...job,
+          isBeingEdited: realtimeEditOrderIds === null
+            ? job.isBeingEdited
+            : Boolean(item?.orderId && realtimeEditOrderIds.has(item.orderId)),
+        }
+      : null,
+    [item?.orderId, job, realtimeEditOrderIds],
+  );
+
+  useEffect(
+    () => subscribeEditPresence(setRealtimeEditOrderIds),
+    [subscribeEditPresence],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -110,7 +135,7 @@ export function FactoryOrderPage({
       ) : (
         <FactoryOrderJobView
           item={item}
-          job={job}
+          job={displayedJob}
           loading={false}
           error={false}
           selectedBadge={fleetBadgeForDelivery(item, fleets)}

@@ -1,13 +1,16 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
 import { FactoryOrderJobView } from "@/components/FactoryOrderJobView";
+import { FactoryOrderPage } from "@/components/FactoryOrderPage";
 import type { DeliveryListItem } from "@/lib/deliveries";
 import type { FactoryOrderJob } from "@/lib/factory-board";
 import { ORDER_EDIT_IDLE_TIMEOUT_MS } from "@/lib/order-edit-lock";
+import type { QzTrayClient } from "@/lib/qz-tray";
 
 const item = {
   id: "delivery-1",
@@ -107,5 +110,68 @@ describe("order editing factory workflow", () => {
     expect(presenceMigration).toContain("realtime.messages.extension = 'presence'");
     expect(presenceMigration).toContain("to authenticated");
     expect(ORDER_EDIT_IDLE_TIMEOUT_MS).toBe(15 * 60 * 1000);
+  });
+
+  it("uses authenticated private Presence on every factory order surface", () => {
+    const presenceSource = readFileSync(
+      resolve("src/lib/order-edit-presence.ts"),
+      "utf8",
+    );
+    const orderPageSource = readFileSync(
+      resolve("src/components/FactoryOrderPage.tsx"),
+      "utf8",
+    );
+
+    expect(presenceSource).toContain("await supabase.realtime.setAuth(session.access_token)");
+    expect(presenceSource).toContain('channel.on("presence", { event: "sync" }');
+    expect(orderPageSource).toContain("subscribeActiveOrderEditPresence");
+    expect(orderPageSource).toContain("realtimeEditOrderIds.has(item.orderId)");
+  });
+
+  it("updates the standalone factory order page from Realtime Presence", async () => {
+    let emitPresence = (_ids: Set<string>) => undefined;
+    const qzClient: QzTrayClient = {
+      connect: vi.fn(async () => undefined),
+      disconnect: vi.fn(async () => undefined),
+      listPrinters: vi.fn(async () => []),
+      queryStatuses: vi.fn(async () => []),
+      printLabels: vi.fn(async () => undefined),
+    };
+
+    render(
+      <MemoryRouter initialEntries={["/factory/order/delivery-1"]}>
+        <Routes>
+          <Route
+            path="/factory/order/:deliveryId"
+            element={(
+              <FactoryOrderPage
+                loadDelivery={vi.fn().mockResolvedValue(item)}
+                loadOrderJob={vi.fn().mockResolvedValue({
+                  packingNote: null,
+                  dispatchTime: "09:00",
+                  arrivalWindow: "10:00 - 10:30",
+                  isBeingEdited: false,
+                  lines: [],
+                })}
+                loadFleets={vi.fn().mockResolvedValue([])}
+                subscribeEditPresence={(onChange) => {
+                  emitPresence = onChange;
+                  return () => undefined;
+                }}
+                qzClient={qzClient}
+              />
+            )}
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "印全單" })).toBeInTheDocument();
+    });
+    act(() => emitPresence(new Set(["order-1"])));
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+    act(() => emitPresence(new Set()));
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });
