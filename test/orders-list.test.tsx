@@ -1084,6 +1084,12 @@ describe("Orders list", () => {
     expect(stylesheet).toMatch(
       /\.operational-list-pagination > span\s*\{[^}]*white-space:\s*nowrap/s,
     );
+    expect(stylesheet).toMatch(
+      /\.orders-page\.is-shopify-pending \.orders-heading \.heading-actions\s*\{[^}]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)[^}]*width:\s*100%/s,
+    );
+    expect(stylesheet).toMatch(
+      /\.orders-page\.is-shopify-pending \.order-mobile-facts dd\s*\{[^}]*white-space:\s*normal[^}]*overflow-wrap:\s*anywhere/s,
+    );
   });
 
   it("blocks finance presets for roles without finance access", async () => {

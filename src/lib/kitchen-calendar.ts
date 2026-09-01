@@ -25,6 +25,8 @@ export type KitchenCalendarOrder = {
   factoryDate: string | null;
   deliveryStatus: string | null;
   isSentToFactory: boolean | null;
+  orderReceivedAt?: string | null;
+  factoryReprintRequired?: boolean;
   outstanding: number | null;
   statuses: OrderStatusView[];
 };
@@ -48,6 +50,8 @@ type OrderRow = {
   factory_date: string | null;
   delivery_status: string | null;
   is_sent_to_factory: boolean | null;
+  order_received_at: string | null;
+  factory_reprint_required: boolean | null;
   is_shopify_order: boolean | null;
   outstanding: number | string | null;
   order_status_legacy_ids: string[] | null;
@@ -279,6 +283,8 @@ function mapOrder(
     factoryDate: row.factory_date,
     deliveryStatus: row.delivery_status,
     isSentToFactory: row.is_sent_to_factory,
+    orderReceivedAt: row.order_received_at,
+    factoryReprintRequired: Boolean(row.factory_reprint_required),
     outstanding: optionalAmount(row.outstanding),
     statuses: resolveOrderStatuses(row.order_status_legacy_ids, catalog),
   };
@@ -300,7 +306,7 @@ export async function fetchKitchenCalendarOrders({
     const { data, error } = await supabase
       .from("orders")
       .select(
-        "id,order_number,customer_name_snapshot,company_name_snapshot,delivery_at,delivery_time,factory_date,delivery_status,is_sent_to_factory,is_shopify_order,outstanding,order_status_legacy_ids,deliveries(district_id,delivery_districts!district_id(name))",
+        "id,order_number,customer_name_snapshot,company_name_snapshot,delivery_at,delivery_time,factory_date,delivery_status,is_sent_to_factory,order_received_at,factory_reprint_required,is_shopify_order,outstanding,order_status_legacy_ids,deliveries(district_id,delivery_districts!district_id(name))",
       )
       .eq("document_type", "order")
       .is("archived_at", null)

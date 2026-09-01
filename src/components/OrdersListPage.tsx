@@ -561,7 +561,12 @@ export function OrdersListPage({
   };
 
   return (
-    <section className="orders-page">
+    <section
+      className={cn(
+        "orders-page",
+        preset === "shopify-pending" && "is-shopify-pending",
+      )}
+    >
       <header className="page-heading orders-heading">
         <div>
           <span className="eyebrow">{t("orders.eyebrow")}</span>

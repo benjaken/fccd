@@ -38,7 +38,6 @@ function renderJob(job: FactoryOrderJob) {
         printers: ["Test printer"],
         printLabels: vi.fn(),
       } as never}
-      onBack={vi.fn()}
     />,
   );
 }

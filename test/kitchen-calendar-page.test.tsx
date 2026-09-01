@@ -85,6 +85,8 @@ const orders: KitchenCalendarOrder[] = [
     factoryDate: null,
     deliveryStatus: "己送達",
     isSentToFactory: null,
+    orderReceivedAt: "2026-08-17T03:30:00.000Z",
+    factoryReprintRequired: true,
     outstanding: 0,
     statuses: [{ name: "未傳至工場", color: "#f39c12" }],
   },
@@ -324,6 +326,34 @@ describe("Kitchen calendar page", () => {
     expect(
       document.querySelector('.kitchen-calendar-day[style*="min-height"]'),
     ).not.toBeNull();
+  });
+
+  it("uses the mobile agenda without order links in factory mode", async () => {
+    setMobileViewport(true);
+    await i18n.changeLanguage("en");
+
+    render(
+      <MemoryRouter initialEntries={["/factory/production-calendar"]}>
+        <KitchenCalendarPage
+          displayMode="factory"
+          loadOrders={vi.fn().mockResolvedValue(orders)}
+          now={now}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(
+      await screen.findByRole("heading", {
+        name: /Monday.*August 17|August 17.*Monday/,
+      }),
+    ).toBeInTheDocument();
+    expect(document.querySelector(".kitchen-calendar-mobile")).not.toBeNull();
+    expect(screen.getByText("Union Banquet")).toBeInTheDocument();
+    expect(screen.getByText("New order")).toHaveClass("factory-new");
+    expect(screen.getByText("Changed")).toHaveClass("factory-changed");
+    expect(screen.queryByText(/Factory:/)).toBeNull();
+    expect(screen.queryByText(/Payment:/)).toBeNull();
+    expect(screen.queryByRole("link", { name: /Union Banquet/ })).toBeNull();
   });
 
   it("returns to the serving calendar from order details", async () => {

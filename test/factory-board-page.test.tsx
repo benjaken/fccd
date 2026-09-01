@@ -89,7 +89,7 @@ describe("FactoryBoardPage", () => {
     expect(formatFactoryDeliveryNoteQuantity("3 份 份")).toBe("3");
   });
 
-  it("keeps three days and three job cards per row with large-screen type", () => {
+  it("keeps one day and three job cards per row with responsive mobile rules", () => {
     const stylesheet = readFileSync(
       path.resolve(process.cwd(), "src/index.css"),
       "utf8",
@@ -139,9 +139,7 @@ describe("FactoryBoardPage", () => {
       /\.factory-job-card-body \.factory-job-card-time\s*\{([^}]+)\}/,
     );
 
-    expect(daysRule?.[1]).toContain(
-      "grid-template-columns: repeat(3, minmax(520px, 1fr))",
-    );
+    expect(daysRule?.[1]).toContain("grid-template-columns: minmax(0, 1fr)");
     expect(cardsRule?.[1]).toContain(
       "grid-template-columns: repeat(3, minmax(150px, 1fr))",
     );
@@ -269,14 +267,101 @@ describe("FactoryBoardPage", () => {
     expect(stylesheet).toMatch(
       /\.factory-job-print-status\.is-complete\s*\{[^}]*background:\s*var\(--factory-green\)[^}]*clip-path:\s*polygon\(0 0, 100% 0, 0 100%\)/s,
     );
+    expect(stylesheet).toMatch(
+      /@media \(max-width: 760px\)[\s\S]*?\.factory-day-cards\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/,
+    );
+    expect(stylesheet).toMatch(
+      /@media \(max-width: 760px\)[\s\S]*?\.factory-job-card\s*\{[^}]*min-height:\s*116px[^}]*padding:\s*6px 0 6px 6px/,
+    );
+    expect(stylesheet).toMatch(
+      /@media \(max-width: 760px\)[\s\S]*?\.factory-job-card:has\(\.factory-job-print-status, \.factory-new-order-corner\) \.factory-job-card-body\s*\{[^}]*padding-top:\s*27px/,
+    );
+    expect(stylesheet).toMatch(
+      /@media \(max-width: 760px\)[\s\S]*?\.factory-job-print-status\.is-complete,[\s\S]*?\.factory-new-order-corner\s*\{[^}]*width:\s*38px[^}]*height:\s*38px/,
+    );
+    expect(stylesheet).toMatch(
+      /@media \(max-width: 760px\)[\s\S]*?\.factory-job-card:has\(\.factory-job-badge:not\(\.is-empty\)\) \.factory-job-card-body\s*\{[^}]*padding-bottom:\s*27px/,
+    );
+    expect(stylesheet).toMatch(
+      /@media \(max-width: 760px\)[\s\S]*?\.factory-job-badge\s*\{[^}]*width:\s*38px[^}]*height:\s*38px[^}]*font-size:\s*17px/,
+    );
+    expect(stylesheet).toMatch(
+      /@media \(max-width: 760px\)[\s\S]*?\.factory-order-line:has\(\.factory-order-line-print\)\s*\{[^}]*padding-top:\s*22px/,
+    );
+    expect(stylesheet).toMatch(
+      /@media \(max-width: 760px\)[\s\S]*?\.factory-order-line-print\s*\{[^}]*width:\s*28px[^}]*height:\s*22px/,
+    );
+    expect(stylesheet).toMatch(
+      /@media \(max-width: 760px\)[\s\S]*?\.factory-board-actions\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/,
+    );
+    expect(stylesheet).toMatch(
+      /@media \(max-width: 760px\)[\s\S]*?\.factory-board-heading\s*\{[^}]*flex-wrap:\s*nowrap[^}]*justify-content:\s*space-between/,
+    );
+    expect(stylesheet).toMatch(
+      /@media \(max-width: 760px\)[\s\S]*?\.factory-board-heading\.factory-page-title-heading\s*\{[^}]*display:\s*flex/,
+    );
+    expect(stylesheet).toMatch(
+      /@media \(max-width: 760px\)[\s\S]*?\.factory-board-heading\.factory-calendar-heading\s*\{[^}]*display:\s*flex/,
+    );
+    expect(stylesheet).toMatch(
+      /@media \(max-width: 760px\)[\s\S]*?\.factory-board \.factory-qz,[\s\S]*?display:\s*none !important/,
+    );
+    expect(stylesheet).toMatch(
+      /@media \(max-width: 760px\)[\s\S]*?\.factory-order-lines\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)[^}]*overflow:\s*visible/,
+    );
+    expect(stylesheet).toMatch(
+      /@media \(max-width: 760px\)[\s\S]*?\.factory-order-job\s*\{[^}]*grid-auto-rows:\s*max-content[^}]*align-content:\s*start/,
+    );
+    expect(stylesheet).toMatch(
+      /@media \(max-width: 760px\)[\s\S]*?\.factory-order-packing\s*\{[^}]*height:\s*auto[^}]*min-height:\s*34px[^}]*padding:\s*5px 8px/,
+    );
+    expect(stylesheet).toMatch(
+      /@media \(max-width: 760px\)[\s\S]*?\.factory-order-line\s*\{[^}]*min-height:\s*64px/,
+    );
+    expect(stylesheet).toMatch(
+      /@media \(max-width: 760px\)[\s\S]*?\.factory-order-page \.factory-board-brand img\s*\{[^}]*height:\s*auto[^}]*max-height:\s*none[^}]*object-fit:\s*contain/,
+    );
+    expect(stylesheet).toMatch(
+      /\.kitchen-calendar-page\.is-factory-display \.kitchen-calendar-mobile-filter\s*\{[^}]*height:\s*56px[^}]*max-height:\s*56px/,
+    );
+    expect(stylesheet).toMatch(
+      /@media \(max-width: 760px\)[\s\S]*?\.factory-order-summary\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) auto[^}]*justify-content:\s*stretch/,
+    );
+    expect(stylesheet).toMatch(
+      /@media \(max-width: 760px\)[\s\S]*?\.factory-order-meta\s*\{[^}]*display:\s*contents/,
+    );
+    expect(stylesheet).toMatch(
+      /@media \(max-width: 760px\)[\s\S]*?\.factory-order-aside\s*\{[^}]*grid-row:\s*3/,
+    );
+    expect(stylesheet).toMatch(
+      /@media \(max-width: 760px\)[\s\S]*?\.factory-order-lines\s*\{[^}]*grid-row:\s*4/,
+    );
+    expect(stylesheet).toMatch(
+      /\.factory-order-aside \.factory-order-print-action,[\s\S]*?\.factory-order-aside hr\s*\{[^}]*display:\s*none/,
+    );
+    expect(stylesheet).toMatch(
+      /\.factory-label-modal \.factory-label-printer-select,[\s\S]*?\.factory-label-modal \.factory-label-actions\s*\{[^}]*display:\s*none/,
+    );
+    expect(stylesheet).toMatch(
+      /\.factory-modal-footer > button:only-child\s*\{[^}]*grid-column:\s*1 \/ -1[^}]*width:\s*100%/,
+    );
+    expect(stylesheet).toMatch(
+      /@media \(max-width: 760px\)[\s\S]*?\.factory-multi-day-table-wrap\s*\{[^}]*overflow-x:\s*auto[^}]*touch-action:\s*pan-x pan-y/,
+    );
+    expect(stylesheet).toMatch(
+      /\.factory-multi-day-table\.is-two-column\s*\{[^}]*min-width:\s*1100px/,
+    );
+    expect(stylesheet).toMatch(
+      /@media \(max-width: 480px\)[\s\S]*?\.factory-day-cards\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/,
+    );
   });
 
-  it("centers today between yesterday and tomorrow on first entry", async () => {
+  it("loads only today on first entry", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-08-20T04:00:00.000Z"));
     const loadBoard = vi.fn(async (date: string) => ({
       ...board,
-      dates: [date, "2026-08-20", "2026-08-21"],
+      dates: [date],
     }));
 
     render(
@@ -289,7 +374,7 @@ describe("FactoryBoardPage", () => {
     );
 
     await waitFor(() =>
-      expect(loadBoard).toHaveBeenCalledWith("2026-08-19"),
+      expect(loadBoard).toHaveBeenCalledWith("2026-08-20", 1),
     );
     vi.useRealTimers();
   });
@@ -311,7 +396,7 @@ describe("FactoryBoardPage", () => {
       />,
     );
 
-    await waitFor(() => expect(loadBoard).toHaveBeenCalledWith("2026-08-17"));
+    await waitFor(() => expect(loadBoard).toHaveBeenCalledWith("2026-08-17", 1));
     const dateButton = screen.getByRole("button", { name: "指定日期" });
     expect(dateButton.querySelector("input")).toBeNull();
 
@@ -324,17 +409,17 @@ describe("FactoryBoardPage", () => {
     await user.type(input, "2026-08-22");
     await user.click(screen.getByRole("button", { name: "確定" }));
 
-    await waitFor(() => expect(loadBoard).toHaveBeenCalledWith("2026-08-22"));
+    await waitFor(() => expect(loadBoard).toHaveBeenCalledWith("2026-08-22", 1));
     expect(
       screen.queryByRole("heading", { name: "選擇日期" }),
     ).not.toBeInTheDocument();
   });
 
-  it("moves the top pager by one three-day group", async () => {
+  it("moves the top pager by one day", async () => {
     const user = userEvent.setup();
     const loadBoard = vi.fn(async (date: string) => ({
       ...board,
-      dates: [date, addCalendarDays(date, 1), addCalendarDays(date, 2)],
+      dates: [date],
     }));
 
     render(
@@ -347,16 +432,16 @@ describe("FactoryBoardPage", () => {
       />,
     );
 
-    await waitFor(() => expect(loadBoard).toHaveBeenCalledWith("2026-08-17"));
+    await waitFor(() => expect(loadBoard).toHaveBeenCalledWith("2026-08-17", 1));
     const pagerButtons = document.querySelectorAll<HTMLButtonElement>(
       ".factory-board-pager button",
     );
 
     await user.click(pagerButtons[0]!);
-    await waitFor(() => expect(loadBoard).toHaveBeenCalledWith("2026-08-14"));
+    await waitFor(() => expect(loadBoard).toHaveBeenCalledWith("2026-08-16", 1));
 
     await user.click(pagerButtons[2]!);
-    await waitFor(() => expect(loadBoard).toHaveBeenCalledWith("2026-08-17"));
+    await waitFor(() => expect(loadBoard).toHaveBeenCalledWith("2026-08-17", 1));
   });
 
   it("opens the large serving calendar from the top actions", async () => {
@@ -604,8 +689,7 @@ describe("FactoryBoardPage", () => {
     );
     print.mockRestore();
 
-    await user.click(screen.getByRole("button", { name: "返回" }));
-    expect(screen.getAllByRole("button", { name: "出車表" })).toHaveLength(3);
+    expect(screen.queryByRole("button", { name: "返回" })).not.toBeInTheDocument();
   });
 
   it("shows print completion only after all labels and warns before opening a changed order", async () => {
@@ -1092,7 +1176,10 @@ describe("FactoryBoardPage", () => {
       />,
     );
 
-    const menuButtons = await screen.findAllByRole("button", { name: "菜式總表" });
+    await waitFor(() =>
+      expect(screen.getAllByRole("button", { name: "菜式總表" })).toHaveLength(3),
+    );
+    const menuButtons = screen.getAllByRole("button", { name: "菜式總表" });
     await user.click(menuButtons[1]!);
 
     expect(

@@ -19,20 +19,22 @@ export function FactoryProductionCalendarPage({
   return (
     <main className="factory-board factory-production-calendar-page">
       <header className="factory-board-top">
-        <FactoryBrandLogo />
-        <p
-          className="factory-board-notice"
-          aria-label={t("factoryBoard.stocktakeNotice")}
-        >
-          <span aria-hidden="true">📢</span>
-          <span>{t("factoryBoard.stocktakeNoticeBefore")}</span>
-          <span className="factory-board-notice-day">
-            {t("factoryBoard.stocktakeNoticeDay")}
-          </span>
-          {t("factoryBoard.stocktakeNoticeAfter") ? (
-            <span>{t("factoryBoard.stocktakeNoticeAfter")}</span>
-          ) : null}
-        </p>
+        <div className="factory-board-heading factory-calendar-heading">
+          <FactoryBrandLogo />
+          <p
+            className="factory-board-notice"
+            aria-label={t("factoryBoard.stocktakeNotice")}
+          >
+            <span aria-hidden="true">📢</span>
+            <span>{t("factoryBoard.stocktakeNoticeBefore")}</span>
+            <span className="factory-board-notice-day">
+              {t("factoryBoard.stocktakeNoticeDay")}
+            </span>
+            {t("factoryBoard.stocktakeNoticeAfter") ? (
+              <span>{t("factoryBoard.stocktakeNoticeAfter")}</span>
+            ) : null}
+          </p>
+        </div>
         <div className="factory-board-actions">
           <FactoryQzTrayStatus
             qz={qz}

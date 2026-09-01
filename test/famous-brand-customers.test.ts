@@ -46,6 +46,7 @@ describe("famous brand customers", () => {
       totalAmount: 20000,
       latestQuoteId: "q-2",
     });
+    expect(result[0]?.orders.map((order) => order.id)).toEqual(["q-2", "q-1"]);
     expect(result[1]).toMatchObject({
       brandName: "Hong Kong Design Centre",
       quoteCount: 1,
@@ -53,5 +54,35 @@ describe("famous brand customers", () => {
       doneDealCount: 1,
       totalAmount: 0,
     });
+  });
+
+  it("sorts customers by order count before the latest update", () => {
+    const result = aggregateFamousBrandCustomers([
+      {
+        id: "recent-single",
+        order_number: "Q100",
+        customer_name_snapshot: "Recent customer",
+        company_name_snapshot: "Recent customer",
+        grand_total: 100,
+        currency: "HKD",
+        quote_status: "50%",
+        updated_at: "2026-09-01T08:00:00Z",
+      },
+      ...[1, 2, 3].map((index) => ({
+        id: `frequent-${index}`,
+        order_number: `Q20${index}`,
+        customer_name_snapshot: "Frequent customer",
+        company_name_snapshot: "Frequent customer",
+        grand_total: 100,
+        currency: "HKD",
+        quote_status: "Done Deal",
+        updated_at: `2026-08-${20 + index}T08:00:00Z`,
+      })),
+    ]);
+
+    expect(result.map((customer) => [customer.brandName, customer.quoteCount])).toEqual([
+      ["Frequent customer", 3],
+      ["Recent customer", 1],
+    ]);
   });
 });

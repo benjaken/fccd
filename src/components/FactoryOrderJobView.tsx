@@ -102,7 +102,6 @@ export function FactoryOrderJobView({
   onLinePrinted,
   onAssigned,
   qz,
-  onBack,
 }: {
   item: DeliveryListItem;
   job: FactoryOrderJob | null;
@@ -117,7 +116,6 @@ export function FactoryOrderJobView({
   onLinePrinted?: (lineId: string) => void;
   onAssigned?: (fleet: FactoryFleet) => void;
   qz: ReturnType<typeof useQzTray>;
-  onBack: () => void;
 }) {
   const { t, i18n } = useTranslation();
   const [assignedFleetId, setAssignedFleetId] = useState(item.motorcadeId ?? "");
@@ -494,6 +492,7 @@ export function FactoryOrderJobView({
         ) : null}
         <Button
           type="button"
+          className="factory-order-print-action"
           disabled={printBlocked || !canPrint || !selectedPrinter || !printableLines.length || bulkPrinting !== null}
           onClick={() => void printAllLabels()}
         >
@@ -501,6 +500,7 @@ export function FactoryOrderJobView({
         </Button>
         <Button
           type="button"
+          className="factory-order-print-action"
           disabled={printBlocked || !canPrint || !selectedPrinter || bulkPrinting !== null}
           onClick={() => void printAddressLabel()}
         >
@@ -508,6 +508,7 @@ export function FactoryOrderJobView({
         </Button>
         <Button
           type="button"
+          className="factory-order-print-action"
           disabled={printBlocked || loading || error || !job}
           onClick={() => printPdf("送貨單", orderNumber === empty ? "" : orderNumber)}
         >
@@ -528,14 +529,6 @@ export function FactoryOrderJobView({
             : t("factoryBoard.assignDriver")}
         </Button>
         <hr />
-        <Button
-          type="button"
-          variant="outline"
-          className="factory-order-back"
-          onClick={onBack}
-        >
-          {t("factoryBoard.back")}
-        </Button>
         <label className="factory-order-printer">
           <span>{t("factoryBoard.connectPrinter")}</span>
           <select

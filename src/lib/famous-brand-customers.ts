@@ -22,7 +22,29 @@ export type FamousBrandCustomer = {
   latestQuoteId: string;
   latestQuoteNumber: string;
   latestDealAt: string;
+  orders: FamousBrandCustomerOrder[];
 };
+
+export type FamousBrandCustomerOrder = {
+  id: string;
+  orderNumber: string;
+  status: string;
+  amount: number;
+  currency: string;
+  updatedAt: string;
+};
+
+function customerOrder(row: FamousBrandQuoteRow): FamousBrandCustomerOrder {
+  const amount = Number(row.grand_total ?? 0);
+  return {
+    id: row.id,
+    orderNumber: row.order_number || "",
+    status: row.quote_status || "",
+    amount: Number.isFinite(amount) ? amount : 0,
+    currency: row.currency || "HKD",
+    updatedAt: row.updated_at,
+  };
+}
 
 function brandName(row: FamousBrandQuoteRow) {
   const source = row.company_name_snapshot?.trim()
@@ -58,10 +80,12 @@ export function aggregateFamousBrandCustomers(rows: FamousBrandQuoteRow[]) {
         latestQuoteId: row.id,
         latestQuoteNumber: row.order_number || "",
         latestDealAt: row.updated_at,
+        orders: [customerOrder(row)],
       });
       continue;
     }
 
+    current.orders.push(customerOrder(row));
     current.quoteCount += 1;
     if (row.quote_status === "Done Deal") current.doneDealCount += 1;
     else current.openQuoteCount += 1;
@@ -75,8 +99,14 @@ export function aggregateFamousBrandCustomers(rows: FamousBrandQuoteRow[]) {
     }
   }
 
+  for (const customer of customers.values()) {
+    customer.orders.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  }
+
   return [...customers.values()].sort((a, b) =>
-    b.latestDealAt.localeCompare(a.latestDealAt),
+    b.quoteCount - a.quoteCount
+      || b.latestDealAt.localeCompare(a.latestDealAt)
+      || a.brandName.localeCompare(b.brandName, "zh-HK"),
   );
 }
 

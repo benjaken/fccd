@@ -87,8 +87,10 @@ export function FactoryOrderPage({
   return (
     <main className="factory-board factory-order-page">
       <header className="factory-board-top">
-        <FactoryBrandLogo />
-        <p className="factory-order-page-title">{t("factoryBoard.orderPageTitle")}</p>
+        <div className="factory-board-heading factory-page-title-heading">
+          <FactoryBrandLogo />
+          <p className="factory-order-page-title">{t("factoryBoard.orderPageTitle")}</p>
+        </div>
         <div className="factory-board-actions">
           <FactoryQzTrayStatus
             qz={qz}
@@ -147,7 +149,6 @@ export function FactoryOrderPage({
             )
           }
           qz={qz}
-          onBack={closePage}
         />
       )}
     </main>

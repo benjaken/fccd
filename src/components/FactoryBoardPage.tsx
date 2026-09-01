@@ -64,7 +64,7 @@ import {
 
 type FleetLoader = typeof fetchFactoryFleets;
 type BrandLoader = typeof fetchFactoryBrands;
-type BoardLoader = (startDate: string) => Promise<FactoryBoardData>;
+type BoardLoader = (startDate: string, days?: number) => Promise<FactoryBoardData>;
 type OrderJobLoader = typeof fetchFactoryOrderJob;
 type MenuLoader = typeof fetchFactoryMenuRows;
 type MultiDayMenuLoader = typeof fetchFactoryMultiDayMenu;
@@ -178,7 +178,7 @@ export function FactoryBoardPage({
   const { t, i18n } = useTranslation();
   const qz = useQzTray({ client: qzClient, autoConnect: false });
   const [startDate, setStartDate] = useState(
-    () => initialDate ?? addCalendarDays(hongKongDateInputValue(), -1),
+    () => initialDate ?? hongKongDateInputValue(),
   );
   const [board, setBoard] = useState<FactoryBoardData | null>(null);
   const [fleets, setFleets] = useState<FactoryFleet[]>([]);
@@ -225,7 +225,7 @@ export function FactoryBoardPage({
   const [multiDayError, setMultiDayError] = useState(false);
   const [activeMultiDayBrandIds, setActiveMultiDayBrandIds] = useState<string[]>([]);
 
-  const dates = board?.dates ?? factoryVisibleDates(startDate);
+  const dates = board?.dates ?? factoryVisibleDates(startDate, 1);
   const grouped = useMemo(
     () => groupDeliveriesByDate(board?.items ?? [], dates),
     [board?.items, dates],
@@ -335,7 +335,7 @@ export function FactoryBoardPage({
     setLoading(true);
     setError(false);
     void Promise.all([
-      loadBoard(startDate),
+      loadBoard(startDate, 1),
       loadFleets(),
       loadBrands().catch(() => [] as FactoryBrand[]),
     ])
@@ -654,16 +654,14 @@ export function FactoryBoardPage({
               variant="ghost"
               size="icon"
               aria-label={t("factoryBoard.previousDays")}
-              onClick={() => setStartDate((current) => addCalendarDays(current, -3))}
+              onClick={() => setStartDate((current) => addCalendarDays(current, -1))}
             >
               <ChevronLeft />
             </Button>
             <Button
               type="button"
               className="factory-board-today"
-              onClick={() =>
-                setStartDate(addCalendarDays(hongKongDateInputValue(), -1))
-              }
+              onClick={() => setStartDate(hongKongDateInputValue())}
             >
               {t("factoryBoard.goToday")}
             </Button>
@@ -672,7 +670,7 @@ export function FactoryBoardPage({
               variant="ghost"
               size="icon"
               aria-label={t("factoryBoard.nextDays")}
-              onClick={() => setStartDate((current) => addCalendarDays(current, 3))}
+              onClick={() => setStartDate((current) => addCalendarDays(current, 1))}
             >
               <ChevronRight />
             </Button>
@@ -799,7 +797,6 @@ export function FactoryBoardPage({
             );
           }}
           qz={qz}
-          onBack={() => setSelectedJob(null)}
         />
       ) : multiDayReport ? (
         <section className="factory-multi-day-report">
