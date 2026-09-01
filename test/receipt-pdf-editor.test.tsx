@@ -147,6 +147,25 @@ describe("Receipt PDF editor", () => {
     expect(await screen.findByLabelText("Invoice Date:")).toHaveValue("24/8/2026");
   });
 
+  it("lets the receipt number be edited and restores the saved value", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    const receiptNumber = await screen.findByLabelText("收據編號");
+    expect(receiptNumber).not.toHaveAttribute("readonly");
+    await user.clear(receiptNumber);
+    await user.type(receiptNumber, "REC/CUSTOM-A");
+    await user.tab();
+
+    await waitFor(() => expect(
+      JSON.parse(window.localStorage.getItem("fccd:receipt-pdf-draft:order-1") || "{}").receiptNumber,
+    ).toBe("REC/CUSTOM-A"));
+
+    cleanup();
+    renderPage();
+    expect(await screen.findByLabelText("收據編號")).toHaveValue("REC/CUSTOM-A");
+  });
+
   it("refreshes receipt source data instead of restoring a stale PDF draft", async () => {
     localStorage.setItem("fccd:receipt-pdf-draft:order-1", JSON.stringify({
       customer: "舊客戶",
@@ -182,6 +201,7 @@ describe("Receipt PDF editor", () => {
 
     expect(await screen.findByRole("heading", { name: "INVOICE" })).toBeInTheDocument();
     expect(screen.getByLabelText("發票編號")).toHaveValue("INV/B-1547");
+    expect(screen.getByLabelText("發票編號")).not.toHaveAttribute("readonly");
     const firstPage = screen.getByRole("main", { name: "發票 PDF" });
     expect(within(firstPage).getByLabelText("條款及細則 1")).toHaveValue("訂單付款後方會確認。");
     expect(within(firstPage).getByLabelText("付款方式 1")).toHaveValue("銀行轉帳。");

@@ -156,6 +156,9 @@ function normalizeDraft(
     // latest order. Only settings that belong to this PDF stay local.
     invoiceSourceContentVersion: 1,
     sourceFinancialsVersion: 1,
+    receiptNumber: typeof value.receiptNumber === "string"
+      ? value.receiptNumber
+      : fallback.receiptNumber,
     deliveryFeeId: hasPdfDeliveryFeeOverride ? value.deliveryFeeId ?? "" : fallback.deliveryFeeId,
     deliveryFeeLabel: hasPdfDeliveryFeeOverride ? value.deliveryFeeLabel ?? "Delivery Fee" : fallback.deliveryFeeLabel,
     deliveryFee: hasPdfDeliveryFeeOverride
@@ -359,7 +362,12 @@ export function ReceiptPdfEditorPage({
       <img src={brandLogo} alt={brandLogoAlt} />
       <div className={`receipt-pdf-document-heading${isInvoice ? " is-invoice" : ""}`}>
         <h1>{documentTitle}</h1>
-        <input aria-label={`${documentName}編號`} value={draft.receiptNumber} readOnly />
+        <PdfBlurCommitInput
+          aria-label={`${documentName}編號`}
+          value={draft.receiptNumber}
+          onDirty={markDraftDirty}
+          onCommit={(value) => update("receiptNumber", value)}
+        />
       </div>
     </header>
   );
