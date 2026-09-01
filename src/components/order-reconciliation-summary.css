@@ -3,24 +3,45 @@
 .order-reconciliation-trigger.is-urgent { border-color: color-mix(in oklch, var(--destructive) 65%, var(--border)); color: var(--destructive); }
 .order-reconciliation-trigger-count { min-width: 20px; height: 20px; padding: 0 6px; display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; background: #b45309; color: #fff; font-size: 11px; font-weight: 700; line-height: 1; }
 .order-reconciliation-trigger.is-urgent .order-reconciliation-trigger-count { background: var(--destructive); }
-.order-reconciliation-modal { max-height: min(82dvh, 760px); }
+.order-reconciliation-panel { width: 50vw; background: #fff; }
+.order-reconciliation-panel > .side-panel-header,
+.order-reconciliation-panel > .side-panel-body,
+.order-reconciliation-panel > .side-panel-footer { background: #fff; }
 .order-reconciliation-dialog-content { display: grid; gap: 14px; }
 .order-reconciliation-dialog-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.order-reconciliation-metrics { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+.order-reconciliation-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .order-reconciliation-metrics > span { display: grid; padding: 10px 12px; gap: 2px; border-radius: 10px; background: var(--secondary); }
 .order-reconciliation-metrics small { color: var(--muted-foreground); font-size: 11px; }
 .order-reconciliation-metrics strong { font-size: 20px; }
 .order-reconciliation-metrics .has-warning { background: color-mix(in oklch, #d97706 12%, var(--secondary)); color: #b45309; }
 .order-reconciliation-metrics .has-urgent { background: color-mix(in oklch, var(--destructive) 12%, var(--secondary)); color: var(--destructive); }
-.order-reconciliation-issues { display: grid; gap: 6px; }
-.order-reconciliation-issues > a { display: grid; padding: 9px 11px; grid-template-columns: 18px minmax(0, 1fr) auto; align-items: center; gap: 9px; border: 1px solid var(--border); border-radius: 9px; color: inherit; text-decoration: none; }
-.order-reconciliation-issues > a.is-urgent { border-color: color-mix(in oklch, var(--destructive) 55%, var(--border)); background: color-mix(in oklch, var(--destructive) 5%, transparent); }
-.order-reconciliation-issues svg { width: 17px; color: #d97706; }
-.order-reconciliation-issues .is-urgent svg { color: var(--destructive); }
-.order-reconciliation-issues span { display: grid; min-width: 0; }
-.order-reconciliation-issues small, .order-reconciliation-issues time, .order-reconciliation-more { color: var(--muted-foreground); font-size: 11px; }
+.order-reconciliation-metrics .is-excluded { background: color-mix(in oklch, var(--muted) 65%, var(--secondary)); }
+.order-reconciliation-explanation { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 8px; align-items: start; margin: 0; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--background); color: var(--muted-foreground); font-size: 12px; line-height: 1.55; }
+.order-reconciliation-explanation svg { width: 17px; margin-top: 1px; color: #64748b; }
+.order-reconciliation-section { display: grid; gap: 8px; }
+.order-reconciliation-section h3 { margin: 0; font-size: 14px; }
+.order-reconciliation-items { display: grid; gap: 10px; }
+.order-reconciliation-items article { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--border); border-radius: 11px; background: var(--background); }
+.order-reconciliation-items article.is-urgent { border-color: color-mix(in oklch, var(--destructive) 55%, var(--border)); }
+.order-reconciliation-items article > header { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; align-items: center; gap: 9px; }
+.order-reconciliation-items article > header svg { width: 17px; color: #d97706; }
+.order-reconciliation-items article.is-urgent > header svg { color: var(--destructive); }
+.order-reconciliation-items article > header div { display: grid; min-width: 0; }
+.order-reconciliation-items article > header strong { font-size: 16px; line-height: 1.35; }
+.order-reconciliation-items article > header small { color: var(--muted-foreground); font-size: 12px; line-height: 1.45; }
+.order-reconciliation-items article > header a { color: var(--primary); font-size: 12px; font-weight: 600; text-decoration: none; }
+.order-reconciliation-items.is-excluded-list article > header svg { color: #64748b; }
+.order-reconciliation-detail-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 16px; margin: 0; padding: 10px; border-radius: 8px; background: color-mix(in oklch, var(--muted) 42%, transparent); }
+.order-reconciliation-detail-grid div { min-width: 0; }
+.order-reconciliation-detail-grid .is-wide { grid-column: 1 / -1; }
+.order-reconciliation-detail-grid dt { color: var(--muted-foreground); font-size: 12px; line-height: 1.4; }
+.order-reconciliation-detail-grid dd { margin: 3px 0 0; overflow-wrap: anywhere; font-size: 14px; line-height: 1.45; }
+.order-reconciliation-reason { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin: 0; padding-top: 8px; border-top: 1px solid var(--border); font-size: 12px; }
+.order-reconciliation-reason strong { color: var(--foreground); }
+.order-reconciliation-reason-status-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.order-reconciliation-reason-status { display: inline-flex; align-items: center; min-height: 28px; padding: 4px 9px; border: 1px solid color-mix(in oklch, var(--destructive) 35%, transparent); border-radius: 999px; background: color-mix(in oklch, var(--destructive) 9%, #fff); color: var(--destructive); font-size: 13px; font-weight: 700; line-height: 1.4; }
 .order-reconciliation-clear { display: flex; align-items: center; gap: 7px; color: #15803d; font-size: 13px; }
 .order-reconciliation-clear svg { width: 18px; }
 .order-reconciliation-error { color: var(--destructive); font-size: 13px; }
 @media (max-width: 900px) { .order-reconciliation-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (max-width: 620px) { .order-reconciliation-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } .order-reconciliation-issues > a { grid-template-columns: 18px minmax(0, 1fr); } .order-reconciliation-issues time { grid-column: 2; } }
+@media (max-width: 620px) { .order-reconciliation-metrics, .order-reconciliation-detail-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .order-reconciliation-panel { width: 100vw; } }
