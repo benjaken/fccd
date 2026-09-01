@@ -579,11 +579,7 @@ export function QuoteEditorPage({
             cashdollarPurchased: String(summary.financials?.cashdollarPurchased ?? 0),
           });
           setPersistedGrandTotal(id && summary.grandTotal != null ? summary.grandTotal : null);
-          if (
-            id
-            && summary.supplements
-            && (summary.supplements.additionalInfo.length || summary.supplements.activities.length)
-          ) {
+          if (id && summary.supplements) {
             setSupplements(summary.supplements);
             setSupplementsLoadedFor(id);
           }
@@ -1957,11 +1953,21 @@ export function QuoteEditorPage({
 
         {labelPreviewModal}
 
-        {supplements.additionalInfo.length || supplements.activities.length ? (
+        {!isOrder || supplements.additionalInfo.length || supplements.activities.length ? (
           <section className="panel quote-editor-supplements quote-editor-supplements-readonly">
-            <div className={cn("quote-editor-supplement-grid", (!supplements.additionalInfo.length || !supplements.activities.length) && "is-single")}>
-              {supplements.additionalInfo.length ? <article><h3>額外資訊</h3>{supplements.additionalInfo.map((item, index) => <p key={`${item}-${index}`}>{item}</p>)}</article> : null}
-              {supplements.activities.length ? <article><h3>活動項目</h3>{supplements.activities.map((activity) => <p key={activity.id}><span>{activity.description}</span><strong>{money.format(Number(activity.amount) || 0)}</strong></p>)}</article> : null}
+            <div className="quote-editor-supplement-grid">
+              <article>
+                <h3>額外資訊</h3>
+                {supplements.additionalInfo.length
+                  ? supplements.additionalInfo.map((item, index) => <p key={`${item}-${index}`}>{item}</p>)
+                  : <p>尚未新增額外資訊</p>}
+              </article>
+              <article>
+                <h3>活動項目</h3>
+                {supplements.activities.length
+                  ? supplements.activities.map((activity) => <p key={activity.id}><span>{activity.description}</span><strong>{money.format(Number(activity.amount) || 0)}</strong></p>)
+                  : <p>尚未新增活動項目</p>}
+              </article>
             </div>
           </section>
         ) : null}
