@@ -1,8 +1,15 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("@/lib/order-edit-presence", () => ({
+  subscribeActiveOrderEditPresence: vi.fn((onChange: (ids: Set<string>) => void) => {
+    onChange(new Set());
+    return () => undefined;
+  }),
+}));
 
 import { FactoryBoardPage } from "@/components/FactoryBoardPage";
 import {
@@ -92,6 +99,38 @@ describe("FactoryBoardPage", () => {
     expect(factoryLabelPrintCompletesSet("1 份", false)).toBe(true);
     expect(factoryLabelPrintCompletesSet("3 份", false)).toBe(false);
     expect(factoryLabelPrintCompletesSet("3 份", true)).toBe(true);
+  });
+
+  it("adds and removes the editing indicator from Realtime Presence syncs", async () => {
+    let emitPresence = (_ids: Set<string>) => undefined;
+    const unsubscribe = vi.fn();
+    const rendered = render(
+      <FactoryBoardPage
+        initialDate="2026-08-17"
+        loadBoard={vi.fn().mockResolvedValue(board)}
+        loadFleets={vi.fn().mockResolvedValue([])}
+        loadBrands={vi.fn().mockResolvedValue([])}
+        subscribeEditPresence={(onChange) => {
+          emitPresence = onChange;
+          return unsubscribe;
+        }}
+        qzClient={qzClient}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(document.querySelector(".factory-job-card")).toBeInTheDocument();
+    });
+    expect(document.querySelector(".factory-job-editing-tag")).not.toBeInTheDocument();
+
+    act(() => emitPresence(new Set(["order-1"])));
+    expect(document.querySelector(".factory-job-editing-tag")).toBeInTheDocument();
+
+    act(() => emitPresence(new Set()));
+    expect(document.querySelector(".factory-job-editing-tag")).not.toBeInTheDocument();
+
+    rendered.unmount();
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
   });
   it("keeps only one portion unit in printed delivery-note quantities", () => {
     expect(formatFactoryDeliveryNoteQuantity("3")).toBe("3");

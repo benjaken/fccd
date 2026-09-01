@@ -96,10 +96,16 @@ describe("order editing factory workflow", () => {
       resolve("supabase/migrations/20260901160000_expire_order_edit_sessions_after_15_minutes.sql"),
       "utf8",
     );
+    const presenceMigration = readFileSync(
+      resolve("supabase/migrations/20260901170000_authorize_order_edit_presence.sql"),
+      "utf8",
+    );
     expect(initialMigration).toContain("lock_token uuid primary key");
     expect(initialMigration).toContain("set_order_line_void");
     expect(initialMigration).toContain("assert_factory_order_printable");
     expect(timeoutMigration).toContain("last_activity_at > now() - interval '15 minutes'");
+    expect(presenceMigration).toContain("realtime.messages.extension = 'presence'");
+    expect(presenceMigration).toContain("to authenticated");
     expect(ORDER_EDIT_IDLE_TIMEOUT_MS).toBe(15 * 60 * 1000);
   });
 });
