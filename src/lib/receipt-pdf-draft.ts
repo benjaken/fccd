@@ -35,13 +35,6 @@ export type ReceiptPdfDraft = {
   signaturePartyName: string;
 };
 
-export function receiptPdfDraftStorageKey(
-  orderId: string,
-  documentKind: "receipt" | "invoice" = "receipt",
-) {
-  return `fccd:${documentKind}-pdf-draft:${orderId}`;
-}
-
 /** Fits products + payment/signature on the first A4 sheet. */
 export const RECEIPT_PDF_FIRST_PAGE_WITH_TRAILING = 10;
 /**

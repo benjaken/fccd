@@ -147,7 +147,7 @@ describe("Receipt PDF editor", () => {
     expect(await screen.findByLabelText("Invoice Date:")).toHaveValue("24/8/2026");
   });
 
-  it("lets the receipt number be edited and restores the saved value", async () => {
+  it("keeps receipt number edits only for the current page session", async () => {
     const user = userEvent.setup();
     renderPage();
 
@@ -157,17 +157,17 @@ describe("Receipt PDF editor", () => {
     await user.type(receiptNumber, "REC/CUSTOM-A");
     await user.tab();
 
-    await waitFor(() => expect(
-      JSON.parse(window.localStorage.getItem("fccd:receipt-pdf-draft:order-1") || "{}").receiptNumber,
-    ).toBe("REC/CUSTOM-A"));
+    expect(receiptNumber).toHaveValue("REC/CUSTOM-A");
+    expect(window.localStorage.getItem("fccd:receipt-pdf-draft:order-1")).toBeNull();
 
     cleanup();
     renderPage();
-    expect(await screen.findByLabelText("收據編號")).toHaveValue("REC/CUSTOM-A");
+    expect(await screen.findByLabelText("收據編號")).toHaveValue("REC/B-1547");
   });
 
-  it("refreshes receipt source data instead of restoring a stale PDF draft", async () => {
+  it("ignores stale browser PDF data and always loads the latest source data", async () => {
     localStorage.setItem("fccd:receipt-pdf-draft:order-1", JSON.stringify({
+      receiptNumber: "REC/STALE",
       customer: "舊客戶",
       contactPerson: "00000000",
       deliveryAddress: "舊地址",
@@ -179,7 +179,8 @@ describe("Receipt PDF editor", () => {
 
     renderPage();
 
-    expect(await screen.findByLabelText("Customer Name:")).toHaveValue("Momo");
+    expect(await screen.findByLabelText("收據編號")).toHaveValue("REC/B-1547");
+    expect(screen.getByLabelText("Customer Name:")).toHaveValue("Momo");
     expect(screen.getByLabelText("Company Name:")).toHaveValue("Momo Company");
     expect(screen.getByLabelText("Contact Person:")).toHaveValue("53007575");
     expect(screen.getByLabelText("Delivery Address:")).toHaveValue("上水古洞金錢南路140號雙魚小丘 *車邊交收");
@@ -274,7 +275,7 @@ describe("Receipt PDF editor", () => {
     expect(signatureName).toHaveValue("簽名客戶");
   });
 
-  it("recalculates totals and automatically saves receipt edits", async () => {
+  it("recalculates totals without persisting receipt edits", async () => {
     const user = userEvent.setup();
     renderPage();
 
@@ -289,11 +290,11 @@ describe("Receipt PDF editor", () => {
     expect(screen.getByText("$1,790")).toBeInTheDocument();
     expect(screen.getByLabelText("運費")).toHaveValue("100");
     expect(document.querySelector(".quote-pdf-print-only")).toHaveTextContent("運費－新界區－地面交收");
-    await waitFor(() => expect(screen.getByText("已自動儲存")).toBeInTheDocument());
-    expect(JSON.parse(window.localStorage.getItem("fccd:receipt-pdf-draft:order-1") || "{}").lines[0].unitPrice).toBe("50");
+    expect(screen.queryByText("已自動儲存")).not.toBeInTheDocument();
+    expect(window.localStorage.getItem("fccd:receipt-pdf-draft:order-1")).toBeNull();
   });
 
-  it("repairs zero totals saved by legacy receipt drafts", async () => {
+  it("ignores zero totals from legacy receipt drafts", async () => {
     localStorage.setItem("fccd:receipt-pdf-draft:order-1", JSON.stringify({
       lines: result.lines.map((line) => ({
         id: line.id,
