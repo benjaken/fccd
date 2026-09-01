@@ -387,8 +387,17 @@ export async function fetchOrders({
       return { items: [], total: 0 };
     }
     query = query.overlaps("order_status_legacy_ids", legacyIds);
+    if (preset === "reschedule-pending") {
+      query = query.or(
+        'delivery_status.is.null,delivery_status.not.in.("已送達","已經送達")',
+      );
+    }
   } else if (preset === "kitchen") {
     query = query.eq("is_sent_to_factory", true);
+  } else if (preset === "pending") {
+    query = query.or(
+      'quote_status.is.null,quote_status.not.in.("Done Deal","Case Closed")',
+    );
   } else if (preset === "unpaid") {
     query = query.gt("outstanding", 0);
   } else if (preset === "delivered-unpaid") {
@@ -407,7 +416,8 @@ export async function fetchOrders({
     // a null flag, which does not mean they still need to be sent.
     query = query
       .eq("is_sent_to_factory", false)
-      .eq("do_not_send_to_factory", false);
+      .eq("do_not_send_to_factory", false)
+      .gt("grand_total", 0);
   }
 
   query = applyStatusFilter(query, status, preset);
