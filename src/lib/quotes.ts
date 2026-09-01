@@ -190,7 +190,12 @@ export async function fetchQuotes({
   if (preset === "high-chance") {
     query = query.eq("quote_status", "High Chance");
   } else if (preset === "large") {
-    query = query.gt("grand_total", LARGE_QUOTE_THRESHOLD);
+    const { start, end } = recentQuoteBounds(now, 30);
+    query = query
+      .gt("grand_total", LARGE_QUOTE_THRESHOLD)
+      .gte("effective_created_at", start)
+      .lt("effective_created_at", end)
+      .or(OPEN_QUOTE_STATUS);
   } else if (preset === "recent-open") {
     const { start, end } = recentQuoteBounds(now, 30);
     query = query
