@@ -432,10 +432,10 @@ export function QuoteEditorPage({
     lastEditHeartbeatRef.current = Date.now();
   }, [id, isOrder, readOnly, touchEditSession]);
 
-  const releaseCurrentEditSession = useCallback(async () => {
+  const releaseCurrentEditSession = useCallback(async (keepalive = false) => {
     if (!editSessionActiveRef.current) return;
     editSessionActiveRef.current = false;
-    await releaseEditSession(editSessionTokenRef.current);
+    await releaseEditSession(editSessionTokenRef.current, { keepalive });
   }, [releaseEditSession]);
 
   useEffect(() => {
@@ -458,11 +458,16 @@ export function QuoteEditorPage({
     for (const eventName of activityEvents) {
       window.addEventListener(eventName, registerActivity, { passive: true });
     }
+    const releaseOnPageHide = () => {
+      void releaseCurrentEditSession(true).catch(() => undefined);
+    };
+    window.addEventListener("pagehide", releaseOnPageHide);
     return () => {
       disposed = true;
       for (const eventName of activityEvents) {
         window.removeEventListener(eventName, registerActivity);
       }
+      window.removeEventListener("pagehide", releaseOnPageHide);
       void releaseCurrentEditSession().catch(() => undefined);
     };
   }, [id, isOrder, readOnly, releaseCurrentEditSession, touchCurrentEditSession]);

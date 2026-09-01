@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ArrowLeft,
@@ -61,6 +61,7 @@ import {
   formatFactoryOrderNumber,
   normalizeFactoryOrderNumber,
 } from "@/lib/factory-order-number";
+import { useMediaQuery } from "@/lib/use-media-query";
 
 type FleetLoader = typeof fetchFactoryFleets;
 type BrandLoader = typeof fetchFactoryBrands;
@@ -177,9 +178,14 @@ export function FactoryBoardPage({
 }) {
   const { t, i18n } = useTranslation();
   const qz = useQzTray({ client: qzClient, autoConnect: false });
+  const isMobileBoard = useMediaQuery("(max-width: 760px)");
+  const visibleDayCount = isMobileBoard ? 1 : 3;
   const [startDate, setStartDate] = useState(
-    () => initialDate ?? hongKongDateInputValue(),
+    () =>
+      initialDate ??
+      addCalendarDays(hongKongDateInputValue(), isMobileBoard ? 0 : -1),
   );
+  const previousMobileBoardRef = useRef(isMobileBoard);
   const [board, setBoard] = useState<FactoryBoardData | null>(null);
   const [fleets, setFleets] = useState<FactoryFleet[]>([]);
   const [brands, setBrands] = useState<FactoryBrand[]>([]);
@@ -225,7 +231,7 @@ export function FactoryBoardPage({
   const [multiDayError, setMultiDayError] = useState(false);
   const [activeMultiDayBrandIds, setActiveMultiDayBrandIds] = useState<string[]>([]);
 
-  const dates = board?.dates ?? factoryVisibleDates(startDate, 1);
+  const dates = board?.dates ?? factoryVisibleDates(startDate, visibleDayCount);
   const grouped = useMemo(
     () => groupDeliveriesByDate(board?.items ?? [], dates),
     [board?.items, dates],
@@ -331,11 +337,17 @@ export function FactoryBoardPage({
   ]);
 
   useEffect(() => {
+    if (previousMobileBoardRef.current === isMobileBoard) return;
+    previousMobileBoardRef.current = isMobileBoard;
+    setStartDate((current) => addCalendarDays(current, isMobileBoard ? 1 : -1));
+  }, [isMobileBoard]);
+
+  useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(false);
     void Promise.all([
-      loadBoard(startDate, 1),
+      loadBoard(startDate, visibleDayCount),
       loadFleets(),
       loadBrands().catch(() => [] as FactoryBrand[]),
     ])
@@ -354,7 +366,7 @@ export function FactoryBoardPage({
     return () => {
       cancelled = true;
     };
-  }, [loadBoard, loadBrands, loadFleets, startDate]);
+  }, [loadBoard, loadBrands, loadFleets, startDate, visibleDayCount]);
 
   useEffect(() => {
     const orderId = selectedJob?.orderId;
@@ -654,14 +666,25 @@ export function FactoryBoardPage({
               variant="ghost"
               size="icon"
               aria-label={t("factoryBoard.previousDays")}
-              onClick={() => setStartDate((current) => addCalendarDays(current, -1))}
+              onClick={() =>
+                setStartDate((current) =>
+                  addCalendarDays(current, -visibleDayCount),
+                )
+              }
             >
               <ChevronLeft />
             </Button>
             <Button
               type="button"
               className="factory-board-today"
-              onClick={() => setStartDate(hongKongDateInputValue())}
+              onClick={() =>
+                setStartDate(
+                  addCalendarDays(
+                    hongKongDateInputValue(),
+                    isMobileBoard ? 0 : -1,
+                  ),
+                )
+              }
             >
               {t("factoryBoard.goToday")}
             </Button>
@@ -670,7 +693,11 @@ export function FactoryBoardPage({
               variant="ghost"
               size="icon"
               aria-label={t("factoryBoard.nextDays")}
-              onClick={() => setStartDate((current) => addCalendarDays(current, 1))}
+              onClick={() =>
+                setStartDate((current) =>
+                  addCalendarDays(current, visibleDayCount),
+                )
+              }
             >
               <ChevronRight />
             </Button>

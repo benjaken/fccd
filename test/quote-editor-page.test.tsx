@@ -178,6 +178,32 @@ describe("Quote editor", () => {
     await i18n.changeLanguage("en");
   });
 
+  it("releases an order edit session with keepalive when the page closes", async () => {
+    const touchEditSession = vi.fn().mockResolvedValue(undefined);
+    const releaseEditSession = vi.fn().mockResolvedValue(undefined);
+
+    renderEditor(
+      {
+        documentType: "order",
+        touchEditSession,
+        releaseEditSession,
+      },
+      "/orders/order-1/edit",
+    );
+
+    await waitFor(() => expect(touchEditSession).toHaveBeenCalledWith(
+      "order-1",
+      expect.any(String),
+    ));
+
+    window.dispatchEvent(new Event("pagehide"));
+
+    await waitFor(() => expect(releaseEditSession).toHaveBeenCalledWith(
+      expect.any(String),
+      { keepalive: true },
+    ));
+  });
+
   it("keeps the mobile details grid and footer controls inside the panel", () => {
     const css = readFileSync(path.resolve(process.cwd(), "src/index.css"), "utf8");
     const responsiveGridRule = css.match(

@@ -1,12 +1,20 @@
-import { supabase } from "@/lib/supabase";
+import {
+  supabase,
+  supabasePublishableKey,
+  supabaseUrl,
+} from "@/lib/supabase";
 
-export const ORDER_EDIT_IDLE_TIMEOUT_MS = 60 * 60 * 1000;
+export const ORDER_EDIT_IDLE_TIMEOUT_MS = 15 * 60 * 1000;
 export const ORDER_EDIT_HEARTBEAT_INTERVAL_MS = 60 * 1000;
+
+let editSessionAccessToken: string | null = null;
 
 export async function touchOrderEditSession(
   orderId: string,
   lockToken: string,
 ): Promise<void> {
+  const { data: { session } } = await supabase.auth.getSession();
+  editSessionAccessToken = session?.access_token ?? null;
   const { error } = await supabase.rpc("touch_order_edit_session", {
     p_order_id: orderId,
     p_lock_token: lockToken,
@@ -14,7 +22,30 @@ export async function touchOrderEditSession(
   if (error) throw error;
 }
 
-export async function releaseOrderEditSession(lockToken: string): Promise<void> {
+export async function releaseOrderEditSession(
+  lockToken: string,
+  options: { keepalive?: boolean } = {},
+): Promise<void> {
+  if (options.keepalive && editSessionAccessToken) {
+    const response = await fetch(
+      `${supabaseUrl}/rest/v1/rpc/release_order_edit_session`,
+      {
+        method: "POST",
+        keepalive: true,
+        headers: {
+          apikey: supabasePublishableKey,
+          Authorization: `Bearer ${editSessionAccessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ p_lock_token: lockToken }),
+      },
+    );
+    if (!response.ok) {
+      throw new Error(`Failed to release order edit session (${response.status})`);
+    }
+    return;
+  }
+
   const { error } = await supabase.rpc("release_order_edit_session", {
     p_lock_token: lockToken,
   });

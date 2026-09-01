@@ -144,6 +144,7 @@ export async function fetchOrdersDashboardData(
       .eq("is_sent_to_factory", false)
       .eq("do_not_send_to_factory", false)
       .gt("grand_total", 0)
+      .gte("delivery_at", todayStart)
       .is("archived_at", null),
     supabase
       .from("orders")

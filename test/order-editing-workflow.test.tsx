@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 import { FactoryOrderJobView } from "@/components/FactoryOrderJobView";
 import type { DeliveryListItem } from "@/lib/deliveries";
 import type { FactoryOrderJob } from "@/lib/factory-board";
+import { ORDER_EDIT_IDLE_TIMEOUT_MS } from "@/lib/order-edit-lock";
 
 const item = {
   id: "delivery-1",
@@ -86,14 +87,19 @@ describe("order editing factory workflow", () => {
     expect(screen.getByRole("button", { name: "印送貨單" })).toBeDisabled();
   });
 
-  it("defines token-scoped sessions with a one-hour active window", () => {
-    const migration = readFileSync(
+  it("defines token-scoped sessions with a 15-minute active window", () => {
+    const initialMigration = readFileSync(
       resolve("supabase/migrations/20260831170000_order_edit_sessions.sql"),
       "utf8",
     );
-    expect(migration).toContain("lock_token uuid primary key");
-    expect(migration).toContain("last_activity_at > now() - interval '1 hour'");
-    expect(migration).toContain("set_order_line_void");
-    expect(migration).toContain("assert_factory_order_printable");
+    const timeoutMigration = readFileSync(
+      resolve("supabase/migrations/20260901160000_expire_order_edit_sessions_after_15_minutes.sql"),
+      "utf8",
+    );
+    expect(initialMigration).toContain("lock_token uuid primary key");
+    expect(initialMigration).toContain("set_order_line_void");
+    expect(initialMigration).toContain("assert_factory_order_printable");
+    expect(timeoutMigration).toContain("last_activity_at > now() - interval '15 minutes'");
+    expect(ORDER_EDIT_IDLE_TIMEOUT_MS).toBe(15 * 60 * 1000);
   });
 });
