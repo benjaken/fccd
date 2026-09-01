@@ -1131,6 +1131,9 @@ describe("Orders list", () => {
       'quote_status.is.null,quote_status.not.in.("Done Deal","Case Closed")',
     );
     expect(source).toContain('.gt("grand_total", 0)');
+    expect(source).toContain(
+      'delivery_status.is.null,delivery_status.not.in.("已送達","已經送達")',
+    );
   });
 
   it("shows and filters the planned district before a delivery exists", () => {

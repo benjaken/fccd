@@ -387,6 +387,11 @@ export async function fetchOrders({
       return { items: [], total: 0 };
     }
     query = query.overlaps("order_status_legacy_ids", legacyIds);
+    if (preset === "reschedule-pending") {
+      query = query.or(
+        'delivery_status.is.null,delivery_status.not.in.("已送達","已經送達")',
+      );
+    }
   } else if (preset === "kitchen") {
     query = query.eq("is_sent_to_factory", true);
   } else if (preset === "pending") {
