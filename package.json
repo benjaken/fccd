@@ -12,6 +12,7 @@
     "build": "npm run test && npm run check:edge-functions && tsc -b && vite build",
     "lint": "tsc -b --pretty false",
     "preview": "vite preview",
+    "publish:branches": "npm run build && node scripts/publish-branches.mjs",
     "generate:bubble-schema": "node scripts/generate-bubble-schema.mjs",
     "generate:bubble-option-sets": "node scripts/generate-bubble-option-sets.mjs",
     "generate:file-migration-status": "node scripts/generate-file-migration-status.mjs",
