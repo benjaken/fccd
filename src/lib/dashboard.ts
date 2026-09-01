@@ -157,6 +157,8 @@ export async function fetchDashboardData(
   role?: string | null,
 ): Promise<DashboardData> {
   const { todayStart, tomorrowStart, yesterdayStart } = dashboardDayBounds(now);
+  const { year, month, day } = hongKongDateParts(now);
+  const largeQuoteStart = `${isoDate(year, month, day - 29)}T00:00:00+08:00`;
   // role === undefined keeps full metrics for callers/tests that omit role.
   const canViewFinance =
     role === undefined || (await roleHasPageAccess(role, "finance"));
@@ -219,6 +221,9 @@ export async function fetchDashboardData(
       .select("id", { count: "exact", head: true })
       .eq("document_type", "quote")
       .gt("grand_total", LARGE_QUOTE_THRESHOLD)
+      .gte("effective_created_at", largeQuoteStart)
+      .lt("effective_created_at", tomorrowStart)
+      .or('quote_status.is.null,quote_status.not.in.("Done Deal","Case Closed")')
       .is("archived_at", null),
     supabase
       .from("orders")

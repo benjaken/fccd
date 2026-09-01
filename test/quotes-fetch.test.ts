@@ -67,7 +67,7 @@ describe("quote list presets", () => {
     expect(query.order).toHaveBeenCalledWith("name", { ascending: true });
   });
 
-  it("loads every quote above $10K regardless of confirmation status", async () => {
+  it("loads open quotes above $10K created within the last 30 Hong Kong days", async () => {
     const query = createQuery({ data: [], count: 0, error: null });
     fromMock.mockReturnValue(query);
 
@@ -76,10 +76,19 @@ describe("quote list presets", () => {
       search: "",
       status: "",
       preset: "large",
+      now: new Date("2026-09-01T12:00:00+08:00"),
     });
 
     expect(query.gt).toHaveBeenCalledWith("grand_total", 10_000);
-    expect(query.or).not.toHaveBeenCalledWith(
+    expect(query.gte).toHaveBeenCalledWith(
+      "effective_created_at",
+      "2026-08-03T00:00:00+08:00",
+    );
+    expect(query.lt).toHaveBeenCalledWith(
+      "effective_created_at",
+      "2026-09-02T00:00:00+08:00",
+    );
+    expect(query.or).toHaveBeenCalledWith(
       'quote_status.is.null,quote_status.not.in.("Done Deal","Case Closed")',
     );
   });
