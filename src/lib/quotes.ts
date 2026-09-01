@@ -9,7 +9,7 @@ export type QuotePreset =
   | "all"
   | "high-chance"
   | "large"
-  | "pending"
+  | "recent-open"
   | "upcoming";
 
 export type QuoteListItem = {
@@ -149,6 +149,16 @@ export function upcomingQuoteBounds(now: Date, days: number) {
   };
 }
 
+export function recentQuoteBounds(now: Date, days: number) {
+  const { year, month, day } = hongKongDateParts(now);
+  const start = isoDate(year, month, day - days + 1);
+  const tomorrow = isoDate(year, month, day + 1);
+  return {
+    start: `${start}T00:00:00+08:00`,
+    end: `${tomorrow}T00:00:00+08:00`,
+  };
+}
+
 function safeSearchTerm(value: string) {
   return value
     .replace(/[^\p{L}\p{N}\s@+\-]/gu, " ")
@@ -180,12 +190,13 @@ export async function fetchQuotes({
   if (preset === "high-chance") {
     query = query.eq("quote_status", "High Chance");
   } else if (preset === "large") {
+    query = query.gt("grand_total", LARGE_QUOTE_THRESHOLD);
+  } else if (preset === "recent-open") {
+    const { start, end } = recentQuoteBounds(now, 30);
     query = query
-      .gte("grand_total", LARGE_QUOTE_THRESHOLD)
+      .gte("effective_created_at", start)
+      .lt("effective_created_at", end)
       .or(OPEN_QUOTE_STATUS);
-  } else if (preset === "pending") {
-    // Match the legacy Bubble queue: quotes still open for follow-up.
-    query = query.or(OPEN_QUOTE_STATUS);
   } else if (preset === "upcoming") {
     const { todayStart, endStart } = upcomingQuoteBounds(now, 14);
     query = query

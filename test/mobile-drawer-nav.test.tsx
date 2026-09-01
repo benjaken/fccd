@@ -68,8 +68,9 @@ describe("buildMobileDrawerNav", () => {
     ]);
     expect(quotes?.items.map((item) => item.to)).toEqual([
       "/quotes",
+      "/quotes/large",
+      "/quotes/recent-open",
       "/quotes/customers",
-      "/quotes/pending",
       "/quotes/pdf-pages",
     ]);
     expect(delivery?.items.map((item) => item.to)).toEqual([
@@ -95,6 +96,7 @@ describe("buildMobileDrawerNav", () => {
       "users",
       "rolePermissions",
       "loginLogs",
+      "watiEmailLogs",
       "dictionaries",
       "notificationSettings",
       "districts",

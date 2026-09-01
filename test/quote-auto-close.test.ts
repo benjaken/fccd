@@ -16,6 +16,13 @@ const deliveryDateMigration = readFileSync(
   ),
   "utf8",
 );
+const thirtyDayMigration = readFileSync(
+  join(
+    process.cwd(),
+    "supabase/migrations/20260901093000_auto_close_quotes_after_30_days.sql",
+  ),
+  "utf8",
+);
 
 describe("expired quote follow-up automation", () => {
   it("closes only open, unarchived quotes with a valid elapsed dispatch time", () => {
@@ -52,6 +59,31 @@ describe("expired quote follow-up automation", () => {
     );
     expect(deliveryDateMigration).toContain(
       "select public.close_expired_quote_follow_ups();",
+    );
+  });
+
+  it("closes every unsuccessful quote after its 30-day quote window", () => {
+    expect(thirtyDayMigration).not.toContain("grand_total");
+    expect(thirtyDayMigration).toContain(
+      "(effective_created_at at time zone 'Asia/Hong_Kong')::date",
+    );
+    expect(thirtyDayMigration).toContain(
+      "< (p_now at time zone 'Asia/Hong_Kong')::date - 29",
+    );
+    expect(thirtyDayMigration).toContain(
+      "quote_status not in ('Done Deal', 'Case Closed')",
+    );
+    expect(thirtyDayMigration).toContain(
+      "else 'quote_30_days_elapsed'",
+    );
+  });
+
+  it("applies the 30-day closing rule immediately and keeps the existing cron", () => {
+    expect(thirtyDayMigration).toContain(
+      "select public.close_expired_quote_follow_ups();",
+    );
+    expect(thirtyDayMigration).toContain(
+      "fccd-close-expired-quote-follow-ups cron job",
     );
   });
 });

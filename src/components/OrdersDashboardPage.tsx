@@ -129,7 +129,7 @@ export function OrdersDashboardPage({
       count: data.pendingQuotes,
       tone: "green",
       icon: Inbox,
-      to: "/quotes/pending",
+      to: "/quotes/recent-open",
     },
     {
       key: "upcomingQuotes",
@@ -230,7 +230,7 @@ export function OrdersDashboardPage({
             icon={Inbox}
             title={t("ordersDashboard.latestPendingTitle")}
             description={t("ordersDashboard.latestPendingDescription")}
-            actionTo="/quotes/pending"
+            actionTo="/quotes/recent-open"
             items={data.latestPendingQuotes}
             dateFormatter={dateFormatter}
             emptyLabel={t("ordersDashboard.emptyPendingQuotes")}

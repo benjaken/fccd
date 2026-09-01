@@ -210,8 +210,10 @@ describe("Primary navigation section matching", () => {
     expect(pageAccessKey("/orders/shopify-pending")).toBe(
       "orders.shopify_pending",
     );
-    expect(pageAccessKey("/quotes/pending")).toBe("quotes.pending");
-    expect(pageAccessKey("/quotes/follow-up")).toBe("quotes.pending");
+    expect(pageAccessKey("/quotes/pending")).toBe("quotes");
+    expect(pageAccessKey("/quotes/follow-up")).toBe("quotes");
+    expect(pageAccessKey("/quotes/large")).toBe("quotes");
+    expect(pageAccessKey("/quotes/recent-open")).toBe("quotes");
     expect(pageAccessKey("/restaurant/daily-sales")).toBe(
       "restaurant.daily_sales",
     );

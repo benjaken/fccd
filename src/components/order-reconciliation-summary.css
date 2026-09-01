@@ -1,7 +1,8 @@
 .order-reconciliation-trigger { position: relative; }
 .order-reconciliation-trigger.is-warning { border-color: color-mix(in oklch, #d97706 55%, var(--border)); color: #b45309; }
 .order-reconciliation-trigger.is-urgent { border-color: color-mix(in oklch, var(--destructive) 65%, var(--border)); color: var(--destructive); }
-.order-reconciliation-trigger-count { min-width: 20px; height: 20px; padding: 0 6px; display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; background: currentColor; color: var(--background); font-size: 11px; font-weight: 700; }
+.order-reconciliation-trigger-count { min-width: 20px; height: 20px; padding: 0 6px; display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; background: #b45309; color: #fff; font-size: 11px; font-weight: 700; line-height: 1; }
+.order-reconciliation-trigger.is-urgent .order-reconciliation-trigger-count { background: var(--destructive); }
 .order-reconciliation-modal { max-height: min(82dvh, 760px); }
 .order-reconciliation-dialog-content { display: grid; gap: 14px; }
 .order-reconciliation-dialog-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }

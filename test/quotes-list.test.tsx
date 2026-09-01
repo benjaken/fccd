@@ -281,7 +281,7 @@ describe("Catering quotes list", () => {
     }
   });
 
-  it("shows every brand in the pending quote list", async () => {
+  it("shows every brand in the recent open quote list", async () => {
     const loadQuotes = vi.fn().mockResolvedValue(quoteResult);
     const loadBrands = vi.fn().mockResolvedValue([
       { id: "brand-1", name: "Catering" },
@@ -291,7 +291,7 @@ describe("Catering quotes list", () => {
     render(
       <MemoryRouter>
         <QuotesListPage
-          preset="pending"
+          preset="recent-open"
           loadQuotes={loadQuotes}
           loadBrands={loadBrands}
         />
@@ -454,8 +454,9 @@ describe("Catering quotes list", () => {
   });
 
   it.each([
-      ["pending", "待確認報價單"],
     ["upcoming", "即將到期報價"],
+    ["large", "大單 $10K 投標"],
+    ["recent-open", "30日以內報價"],
   ] as const)("loads the %s quote queue with its title", async (preset, title) => {
     const loadQuotes = vi.fn().mockResolvedValue(quoteResult);
 
@@ -471,7 +472,7 @@ describe("Catering quotes list", () => {
     );
   });
 
-  it("badges EmailMeForm-synced inquiries in the pending quote list", async () => {
+  it("badges EmailMeForm-synced inquiries in the recent quote list", async () => {
     const loadQuotes = vi.fn().mockResolvedValue({
       ...quoteResult,
       items: [{ ...quoteResult.items[0], sourceSystem: "emailmeform" }],
@@ -479,7 +480,7 @@ describe("Catering quotes list", () => {
 
     render(
       <MemoryRouter>
-        <QuotesListPage preset="pending" loadQuotes={loadQuotes} />
+        <QuotesListPage preset="recent-open" loadQuotes={loadQuotes} />
       </MemoryRouter>,
     );
 

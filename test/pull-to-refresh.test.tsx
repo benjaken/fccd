@@ -77,6 +77,64 @@ describe("PullToRefresh", () => {
     expect(screen.getByText("正在重新整理")).toBeInTheDocument();
   });
 
+  it("returns a reversed pull gesture to list scrolling", () => {
+    mockMatchMedia(true);
+    const onRefresh = vi.fn();
+
+    const { container } = render(
+      <PullToRefresh onRefresh={onRefresh}>
+        <div>Scrollable list</div>
+      </PullToRefresh>,
+    );
+
+    const scroller = container.querySelector<HTMLElement>(".pull-to-refresh")!;
+    fireEvent.touchStart(scroller, { touches: [{ clientY: 100 }] });
+    fireEvent.touchMove(scroller, { touches: [{ clientY: 150 }] });
+    expect(scroller).toHaveClass("is-pulling");
+
+    fireEvent.touchMove(scroller, { touches: [{ clientY: 80 }] });
+    expect(scroller).not.toHaveClass("is-pulling");
+    expect(scroller.scrollTop).toBe(20);
+    fireEvent.touchEnd(scroller);
+    expect(onRefresh).not.toHaveBeenCalled();
+  });
+
+  it("does not start pull-to-refresh from a dropdown control", () => {
+    mockMatchMedia(true);
+    const onRefresh = vi.fn();
+
+    const { container } = render(
+      <PullToRefresh onRefresh={onRefresh}>
+        <select aria-label="Status"><option>Open</option></select>
+      </PullToRefresh>,
+    );
+
+    pullDown(screen.getByLabelText("Status"), 200);
+    expect(container.querySelector(".pull-to-refresh")).not.toHaveClass("is-pulling");
+    expect(onRefresh).not.toHaveBeenCalled();
+  });
+
+  it("does not refresh while the actual outer list scroller is away from the top", () => {
+    mockMatchMedia(true);
+    const onRefresh = vi.fn();
+
+    const { container } = render(
+      <div data-testid="outer-scroller" style={{ overflowY: "auto" }}>
+        <PullToRefresh onRefresh={onRefresh}>
+          <div>List content</div>
+        </PullToRefresh>
+      </div>,
+    );
+
+    const outerScroller = screen.getByTestId("outer-scroller");
+    Object.defineProperty(outerScroller, "scrollHeight", { configurable: true, value: 800 });
+    Object.defineProperty(outerScroller, "clientHeight", { configurable: true, value: 300 });
+    outerScroller.scrollTop = 120;
+
+    pullDown(container.querySelector(".pull-to-refresh")!, 200);
+    expect(onRefresh).not.toHaveBeenCalled();
+  });
+
   it("is built into ListTable so every operational table can refresh", () => {
     mockMatchMedia(true);
     const onRefresh = vi.fn();

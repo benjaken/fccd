@@ -92,7 +92,7 @@ describe("Dashboard navigation", () => {
     ["待配送", "/delivery"],
     ["低庫存項目", "/inventory/low-stock"],
     ["高機會報價", "/quotes/high-chance"],
-    ["大單報價", "/quotes/large"],
+    ["大單 $10K 投標", "/quotes/large"],
     ["未付款訂單", "/orders/unpaid"],
     ["未安排司機", "/delivery/unassigned"],
     ["已送貨未付款", "/orders/delivered-unpaid"],
@@ -100,7 +100,7 @@ describe("Dashboard navigation", () => {
     renderDashboard();
 
     const matchingLink = (await screen.findAllByRole("link", {
-      name: new RegExp(name),
+      name: new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
     }))
       .find((link) => link.getAttribute("href") === target);
 

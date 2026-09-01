@@ -280,8 +280,8 @@ export function QuotesListPage({
       ? "highChanceTitle"
       : preset === "large"
         ? "largeTitle"
-        : preset === "pending"
-          ? "pendingTitle"
+        : preset === "recent-open"
+          ? "recentOpenTitle"
           : preset === "upcoming"
             ? "upcomingTitle"
             : "title";

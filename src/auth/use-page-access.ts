@@ -86,6 +86,7 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
   { prefix: "/settings/users", pageKey: "settings.users" },
   { prefix: "/settings/roles", pageKey: "settings.roles" },
   { prefix: "/settings/login-logs", pageKey: "settings.login_logs" },
+  { prefix: "/settings/wati-email-logs", pageKey: "settings.wati_email_logs" },
   { prefix: "/settings/notifications", pageKey: "settings.notifications" },
   { prefix: "/settings/dictionaries", pageKey: "settings.dictionaries" },
   { prefix: "/settings/districts", pageKey: "settings.districts" },
@@ -151,10 +152,12 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
   { prefix: "/orders/settings", pageKey: "orders.settings" },
   { prefix: "/quotes/pdf-pages", pageKey: "quotes.pdf_pages" },
   { prefix: "/quotes/customers", pageKey: "quotes.customers" },
-  // Keep legacy bookmarks accessible through the surviving pending-quotes permission.
-  { prefix: "/quotes/follow-up", pageKey: "quotes.pending" },
-  { prefix: "/quotes/pending", pageKey: "quotes.pending" },
+  // Keep legacy pending-quote bookmarks accessible through the main quotes page.
+  { prefix: "/quotes/follow-up", pageKey: "quotes" },
+  { prefix: "/quotes/pending", pageKey: "quotes" },
   { prefix: "/quotes/upcoming", pageKey: "quotes.upcoming" },
+  { prefix: "/quotes/large", pageKey: "quotes" },
+  { prefix: "/quotes/recent-open", pageKey: "quotes" },
   { prefix: "/products/packages", pageKey: "products.packages" },
   { prefix: "/products/shopify-pending", pageKey: "products.shopify_pending" },
   { prefix: "/products/catering", pageKey: "products.catering" },

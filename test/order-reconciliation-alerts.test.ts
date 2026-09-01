@@ -17,6 +17,10 @@ const productionCronMigration = readFileSync(
   "supabase/migrations/20260831124000_production_only_order_reconciliation_crons.sql",
   "utf8",
 );
+const reconciliationExclusionsMigration = readFileSync(
+  "supabase/migrations/20260901090000_ignore_b1523_order_reconciliation.sql",
+  "utf8",
+);
 const factoryUnsentSection = migration.slice(
   migration.indexOf("select 'factory_unsent'"),
   migration.indexOf("with candidates as (", migration.indexOf("select 'factory_unsent'") + 1),
@@ -86,5 +90,18 @@ describe("Shopify/FCCD order reconciliation alerts", () => {
   it("keeps WATI reconciliation parameters free of rejected newlines", () => {
     expect(notificationWorker).toContain('issues.map(reconciliationIssueLine).join("；")');
     expect(notificationWorker).not.toContain('issues.map(reconciliationIssueLine).join("\\n")');
+  });
+
+  it("counts only unresolved Shopify shadows and always ignores B-1523", () => {
+    expect(reconciliationExclusionsMigration).toContain("= 'B1523'");
+    expect(reconciliationExclusionsMigration).toContain("v_delivery_status is not null");
+    expect(reconciliationExclusionsMigration).toContain("coalesce(v_is_sent_to_factory, false)");
+    expect(reconciliationExclusionsMigration).toContain("coalesce(v_do_not_send_to_factory, false)");
+    expect(reconciliationExclusionsMigration).toContain("before insert or update");
+    expect(reconciliationExclusionsMigration).toContain("new.status := 'resolved'");
+    expect(reconciliationExclusionsMigration).toContain("issue.status = 'open'");
+    expect(reconciliationExclusionsMigration).toContain("last_error = 'reconciliation_order_ignored'");
+    expect(reconciliationExclusionsMigration).toContain("notice.event_type = 'order_reconciliation_urgent'");
+    expect(reconciliationExclusionsMigration).toContain("missing_fccd_count = counts.missing_fccd_count");
   });
 });
