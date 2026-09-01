@@ -92,6 +92,7 @@ type QuotePdfDraft = {
   shippingFeeId: string;
   shippingFeeLabel: string;
   shippingFee: string;
+  discountLabel: string;
   discount: string;
   cashDollarDeduction: string;
   cashDollarPurchase: string;
@@ -148,6 +149,7 @@ function resultToDraft(result: OrderDetailResult): QuotePdfDraft {
     shippingFeeId: "",
     shippingFeeLabel: "",
     shippingFee: order ? String(order.shippingFee || 0) : "0",
+    discountLabel: "折扣 (-)",
     discount: order ? String(order.discount || 0) : "0",
     cashDollarDeduction: order ? String(order.cashdollarRedeemed || 0) : "0",
     cashDollarPurchase: order ? String(order.cashdollarPurchased || 0) : "0",
@@ -188,6 +190,9 @@ function normalizeDraft(value: Partial<QuotePdfDraft> | null | undefined, fallba
     shippingFee: hasPdfShippingOverride
       ? stored.shippingFee?.trim() || "0"
       : fallback.shippingFee,
+    discountLabel: typeof stored.discountLabel === "string"
+      ? stored.discountLabel
+      : fallback.discountLabel,
     terms: normalizeItems(stored.terms, fallback.terms),
     paymentMethods: normalizeItems(stored.paymentMethods, fallback.paymentMethods),
   };
@@ -592,7 +597,7 @@ export function QuotePdfEditorPage({
             <td><span className="quote-pdf-price-input"><span aria-hidden="true">$</span><PdfBlurCommitInput aria-label="活動運費" inputMode="decimal" size={Math.max(draft.activityShippingFee.length, 1)} value={draft.activityShippingFee} onDirty={markDraftDirty} onCommit={(value) => update("activityShippingFee", value.trim() ? value : "0")} /></span></td>
           </tr>
           <tr>
-            <td colSpan={2}>折扣：</td>
+            <td colSpan={2}><PdfBlurCommitInput className="quote-pdf-adjustment-label" aria-label="折扣顯示文字" value={draft.discountLabel} onDirty={markDraftDirty} onCommit={(value) => update("discountLabel", value)} /></td>
             <td><span className="quote-pdf-price-input"><span aria-hidden="true">$</span><PdfBlurCommitInput aria-label="活動折扣" inputMode="decimal" size={Math.max(draft.discount.length, 1)} value={draft.discount} onDirty={markDraftDirty} onCommit={(value) => update("discount", value.trim() ? value : "0")} /></span></td>
           </tr>
           <tr><td colSpan={2}>總數：</td><td>${totals.activityTotal.toLocaleString("zh-HK")}</td></tr>

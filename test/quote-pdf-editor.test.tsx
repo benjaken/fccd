@@ -939,9 +939,20 @@ describe("editable quote PDF page", () => {
 
   it("opens the activity picker and adds a priced activity item", async () => {
     const user = userEvent.setup();
+    localStorage.setItem("fccd:quote-pdf-draft:quote-1", JSON.stringify({
+      discountLabel: "9.5折扣",
+    }));
     renderPage(vi.fn().mockResolvedValue(lunchBoxResult));
 
     await screen.findByRole("heading", { name: "便當報價" });
+    const discountLabel = screen.getByLabelText("折扣顯示文字");
+    expect(discountLabel).toHaveValue("9.5折扣");
+    await user.clear(discountLabel);
+    await user.type(discountLabel, "VIP折扣");
+    await user.tab();
+    await waitFor(() => expect(JSON.parse(
+      localStorage.getItem("fccd:quote-pdf-draft:quote-1") || "{}",
+    ).discountLabel).toBe("VIP折扣"));
     await user.click(screen.getByRole("button", { name: "新增活動項目" }));
     const dialog = screen.getByRole("dialog", { name: "活動報價" });
     await user.type(within(dialog).getByLabelText("搜尋活動報價"), "10月15日");

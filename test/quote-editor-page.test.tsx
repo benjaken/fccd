@@ -1029,6 +1029,12 @@ describe("Quote editor", () => {
 
     const tabs = await screen.findAllByRole("tab");
     await user.click(tabs[1]);
+    const discountLabel = screen.getByRole("textbox", { name: "折扣顯示文字" });
+    await user.clear(discountLabel);
+    await user.type(discountLabel, "9.5折扣");
+    await waitFor(() => expect(JSON.parse(
+      localStorage.getItem("fccd:quote-pdf-draft:quote-1") || "{}",
+    ).discountLabel).toBe("9.5折扣"));
     const shippingFee = screen.getByRole("combobox", { name: "Shipping fee option" });
     expect(shippingFee).toHaveValue("fee-80");
     await user.selectOptions(shippingFee, "fee-100");

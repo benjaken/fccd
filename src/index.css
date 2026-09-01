@@ -23168,6 +23168,29 @@ a.masoft-order-tag:focus-visible {
   text-align: right;
 }
 
+.quote-financial-label-input {
+  width: 100%;
+  min-width: 0;
+  height: 34px;
+  padding: 5px 2px;
+  border: 1px solid transparent;
+  border-bottom-color: transparent;
+  border-radius: 4px;
+  outline: 0;
+  background: transparent;
+  color: var(--foreground);
+  font: inherit;
+}
+
+.quote-financial-label-input:hover {
+  border-color: var(--input);
+}
+
+.quote-financial-label-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 16%, transparent);
+}
+
 .quote-shipping-fee-control {
   display: grid;
   gap: 7px;
@@ -31265,6 +31288,12 @@ body:has(.quote-pdf-editor) .quote-pdf-editor {
 .quote-pdf-summary-rows select { display: block; width: min(100%, 340px); min-width: 0; min-height: 28px; margin-left: auto; border: 1px solid transparent; background: #fff; color: #000; font: inherit; font-weight: 750; text-align: right; text-align-last: right; }
 .quote-pdf-summary-rows .shipping-fee-select { display: block; width: min(100%, 340px); min-width: 0; min-height: 28px; margin-left: auto; border: 1px solid transparent; background: #fff; color: #000; font: inherit; font-weight: 750; text-align: right; text-align-last: right; }
 .quote-pdf-summary-rows input { padding-block: 0.25rem; }
+.quote-pdf-activity tfoot .quote-pdf-adjustment-label {
+  width: 100%;
+  padding: 0.25rem 0.35rem;
+  font-weight: 750;
+  text-align: right;
+}
 .quote-pdf-money { text-align: right; font-weight: 700; }
 .quote-pdf-delete, .quote-pdf-additional li button { display: inline-grid; width: 26px; height: 26px; padding: 0; place-items: center; border: 0; border-radius: 50%; background: #e9edf0; color: #64717b; cursor: pointer; }
 .quote-pdf-delete svg, .quote-pdf-additional li button svg { width: 14px; height: 14px; }

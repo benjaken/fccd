@@ -414,6 +414,7 @@ export async function fetchQuoteEditorSummary(
               : [],
           ),
       utensilPackQuantity: "0",
+      discountLabel: "折扣 (-)",
     },
     shopifyOrderId: data.shopify_order_id,
     shopifyStoreDomain: Array.isArray(shopifyStore)
