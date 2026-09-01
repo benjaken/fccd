@@ -392,7 +392,9 @@ export function QuotePdfEditorPage({
       0,
     );
     const activitySubtotal = productSubtotal + activityItemsTotal;
-    const activityTotal = activitySubtotal + numberValue(draft?.activityShippingFee ?? "");
+    const activityTotal = activitySubtotal
+      + numberValue(draft?.activityShippingFee ?? "")
+      - numberValue(draft?.discount ?? "");
     const isLunchBoxDraft = getBrandKind(
       sourceBrand.name,
       sourceBrand.quoteNumber,
@@ -588,6 +590,10 @@ export function QuotePdfEditorPage({
               <span className="quote-pdf-print-only">{draft.activityShippingNote || "選擇運費"}</span>
             </td>
             <td><span className="quote-pdf-price-input"><span aria-hidden="true">$</span><PdfBlurCommitInput aria-label="活動運費" inputMode="decimal" size={Math.max(draft.activityShippingFee.length, 1)} value={draft.activityShippingFee} onDirty={markDraftDirty} onCommit={(value) => update("activityShippingFee", value.trim() ? value : "0")} /></span></td>
+          </tr>
+          <tr>
+            <td colSpan={2}>折扣：</td>
+            <td><span className="quote-pdf-price-input"><span aria-hidden="true">$</span><PdfBlurCommitInput aria-label="活動折扣" inputMode="decimal" size={Math.max(draft.discount.length, 1)} value={draft.discount} onDirty={markDraftDirty} onCommit={(value) => update("discount", value.trim() ? value : "0")} /></span></td>
           </tr>
           <tr><td colSpan={2}>總數：</td><td>${totals.activityTotal.toLocaleString("zh-HK")}</td></tr>
         </tfoot>

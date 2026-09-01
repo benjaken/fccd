@@ -225,6 +225,8 @@ describe("editable quote PDF page", () => {
     renderPage(vi.fn().mockResolvedValue(latestResult));
 
     await screen.findByRole("heading", { name: "便當報價" });
+    expect(screen.getByLabelText("活動折扣")).toHaveValue("100");
+    expect(within(screen.getByRole("region", { name: "活動報價表" })).getByText("$5,300")).toBeInTheDocument();
     await waitFor(() => {
       const saved = JSON.parse(localStorage.getItem("fccd:quote-pdf-draft:quote-1") || "{}");
       expect(saved.discount).toBe("100");
@@ -962,6 +964,12 @@ describe("editable quote PDF page", () => {
     expect(within(screen.getByRole("region", { name: "活動報價表" })).getByText("$10,900")).toBeInTheDocument();
     await user.tab();
     expect(within(screen.getByRole("region", { name: "活動報價表" })).getByText("$10,950")).toBeInTheDocument();
+
+    await user.clear(screen.getByLabelText("活動折扣"));
+    await user.type(screen.getByLabelText("活動折扣"), "200");
+    expect(within(screen.getByRole("region", { name: "活動報價表" })).getByText("$10,950")).toBeInTheDocument();
+    await user.tab();
+    expect(within(screen.getByRole("region", { name: "活動報價表" })).getByText("$10,750")).toBeInTheDocument();
   });
 
   it("repairs saved product and activity shipping selections whose amounts are still zero", async () => {
