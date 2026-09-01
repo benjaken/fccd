@@ -1408,6 +1408,10 @@ describe("Quote editor", () => {
     );
 
     await screen.findByRole("heading", { name: "FCLQ20260801" });
+    expect(screen.getByRole("heading", { name: "額外資訊" })).toBeInTheDocument();
+    expect(screen.getByText("尚未新增額外資訊")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "活動項目" })).toBeInTheDocument();
+    expect(screen.getByText("尚未新增活動項目")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Edit|編輯/ })).toHaveAttribute("href", "/quotes/quote-1/edit");
     expect(screen.queryByRole("button", { name: /Send WATI and email/ })).not.toBeInTheDocument();
     expect(sendConfirmation).not.toHaveBeenCalled();
