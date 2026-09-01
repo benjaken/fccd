@@ -494,6 +494,7 @@ export function FactoryOrderJobView({
         ) : null}
         <Button
           type="button"
+          className="factory-order-print-action"
           disabled={printBlocked || !canPrint || !selectedPrinter || !printableLines.length || bulkPrinting !== null}
           onClick={() => void printAllLabels()}
         >
@@ -501,6 +502,7 @@ export function FactoryOrderJobView({
         </Button>
         <Button
           type="button"
+          className="factory-order-print-action"
           disabled={printBlocked || !canPrint || !selectedPrinter || bulkPrinting !== null}
           onClick={() => void printAddressLabel()}
         >
@@ -508,6 +510,7 @@ export function FactoryOrderJobView({
         </Button>
         <Button
           type="button"
+          className="factory-order-print-action"
           disabled={printBlocked || loading || error || !job}
           onClick={() => printPdf("送貨單", orderNumber === empty ? "" : orderNumber)}
         >

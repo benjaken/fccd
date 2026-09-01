@@ -228,11 +228,14 @@ export async function fetchDashboardData(
       .is("archived_at", null),
     supabase
       .from("deliveries")
-      .select("id", { count: "exact", head: true })
+      .select("id,orders!inner(id)", { count: "exact", head: true })
       .is("motorcade_id", null)
       .is("subdriver_id", null)
       .is("fulfilled_at", null)
-      .not("order_id", "is", null),
+      .not("order_id", "is", null)
+      .eq("orders.document_type", "order")
+      .is("orders.archived_at", null)
+      .gt("orders.grand_total", 0),
     supabase
       .from("orders")
       .select("id", { count: "exact", head: true })

@@ -17,6 +17,7 @@ export function FamousBrandCustomersPage({
 }) {
   const { t, i18n } = useTranslation();
   const [items, setItems] = useState<FamousBrandCustomer[]>([]);
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -33,16 +34,32 @@ export function FamousBrandCustomersPage({
     setLoading(true);
     setError(false);
     try {
-      setItems(await loadCustomers());
+      const nextItems = [...await loadCustomers()].sort((a, b) =>
+        b.quoteCount - a.quoteCount
+          || b.latestDealAt.localeCompare(a.latestDealAt)
+          || a.brandName.localeCompare(b.brandName, i18n.language),
+      );
+      setItems(nextItems);
+      setSelectedKey((current) =>
+        current && nextItems.some((item) => item.key === current)
+          ? current
+          : nextItems[0]?.key ?? null,
+      );
     } catch {
       setItems([]);
+      setSelectedKey(null);
       setError(true);
     } finally {
       setLoading(false);
     }
-  }, [loadCustomers]);
+  }, [i18n.language, loadCustomers]);
 
   useEffect(() => { void load(); }, [load]);
+
+  const selectedCustomer = useMemo(
+    () => items.find((item) => item.key === selectedKey) ?? items[0] ?? null,
+    [items, selectedKey],
+  );
 
   return (
     <section className="quotes-page">
@@ -53,7 +70,7 @@ export function FamousBrandCustomersPage({
         </div>
       </header>
 
-      <article className="panel quotes-panel responsive-card-list-panel">
+      <article className="panel quotes-panel famous-brand-customers-panel">
         {error ? (
           <div className="quotes-state quotes-state-error" role="alert">
             <Award />
@@ -74,31 +91,62 @@ export function FamousBrandCustomersPage({
             </div>
           </div>
         ) : (
-          <ListTable
-            className="quotes-table-wrap"
-            loading={loading}
-            loadingLabel={t("famousBrandCustomers.loading")}
-            skeletonRows={8}
-            skeletonColumns={6}
-            onRefresh={load}
-            header={<tr>
-              <th>{t("famousBrandCustomers.columns.brand")}</th>
-              <th>{t("famousBrandCustomers.columns.openQuotes")}</th>
-              <th>{t("famousBrandCustomers.columns.doneDeals")}</th>
-              <th>{t("famousBrandCustomers.columns.total")}</th>
-              <th>{t("famousBrandCustomers.columns.latestDeal")}</th>
-              <th>{t("famousBrandCustomers.columns.latestQuote")}</th>
-            </tr>}
-          >
-            {items.map((item) => <tr key={item.key}>
-              <td><strong>{item.brandName}</strong></td>
-              <td>{item.openQuoteCount.toLocaleString(i18n.language)}</td>
-              <td>{item.doneDealCount.toLocaleString(i18n.language)}</td>
-              <td>{item.currency === "HKD" ? money.format(item.totalAmount) : `${item.currency} ${item.totalAmount.toLocaleString(i18n.language)}`}</td>
-              <td>{date.format(new Date(item.latestDealAt))}</td>
-              <td><DetailLink className="order-link" to={`/quotes/${item.latestQuoteId}`}>{item.latestQuoteNumber || t("common.notSet")}</DetailLink></td>
-            </tr>)}
-          </ListTable>
+          <div className="famous-brand-master-detail">
+            <aside className="famous-brand-customer-list" aria-label={t("famousBrandCustomers.customerList")}>
+              <div className="famous-brand-customer-list-header">
+                <span>{t("famousBrandCustomers.columns.customer")}</span>
+                <span>{t("famousBrandCustomers.columns.orderCount")}</span>
+              </div>
+              {loading ? (
+                <div className="famous-brand-customer-list-skeleton" aria-hidden="true">
+                  {Array.from({ length: 8 }, (_, index) => <span key={index} />)}
+                </div>
+              ) : (
+                items.map((item) => (
+                  <button
+                    type="button"
+                    className={item.key === selectedCustomer?.key ? "is-selected" : undefined}
+                    aria-pressed={item.key === selectedCustomer?.key}
+                    key={item.key}
+                    onClick={() => setSelectedKey(item.key)}
+                  >
+                    <strong>{item.brandName}</strong>
+                    <span>{item.quoteCount.toLocaleString(i18n.language)}</span>
+                  </button>
+                ))
+              )}
+            </aside>
+
+            <section className="famous-brand-order-detail" aria-label={selectedCustomer?.brandName}>
+              <div className="famous-brand-order-detail-heading">
+                <strong>{selectedCustomer?.brandName ?? t("famousBrandCustomers.orders")}</strong>
+                {selectedCustomer ? (
+                  <span>{t("famousBrandCustomers.orderCount", { count: selectedCustomer.quoteCount })}</span>
+                ) : null}
+              </div>
+              <ListTable
+                className="quotes-table-wrap famous-brand-orders-table"
+                loading={loading}
+                loadingLabel={t("famousBrandCustomers.loading")}
+                skeletonRows={8}
+                skeletonColumns={4}
+                onRefresh={load}
+                header={<tr>
+                  <th>{t("famousBrandCustomers.columns.orderNumber")}</th>
+                  <th>{t("famousBrandCustomers.columns.status")}</th>
+                  <th>{t("famousBrandCustomers.columns.amount")}</th>
+                  <th>{t("famousBrandCustomers.columns.updatedAt")}</th>
+                </tr>}
+              >
+                {(selectedCustomer?.orders ?? []).map((order) => <tr key={order.id}>
+                  <td><DetailLink className="order-link" to={`/quotes/${order.id}`}>{order.orderNumber || t("common.notSet")}</DetailLink></td>
+                  <td>{order.status || t("common.notSet")}</td>
+                  <td>{order.currency === "HKD" ? money.format(order.amount) : `${order.currency} ${order.amount.toLocaleString(i18n.language)}`}</td>
+                  <td>{date.format(new Date(order.updatedAt))}</td>
+                </tr>)}
+              </ListTable>
+            </section>
+          </div>
         )}
       </article>
     </section>

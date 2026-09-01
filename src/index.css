@@ -5503,6 +5503,18 @@ button.product-tag[aria-pressed="true"] {
   color: var(--muted-foreground);
 }
 
+.kitchen-calendar-mobile-statuses .factory-new {
+  border-color: #f5b700;
+  background: #f5b700;
+  color: #302100;
+}
+
+.kitchen-calendar-mobile-statuses .factory-changed {
+  border-color: #df22c5;
+  background: #df22c5;
+  color: #ffffff;
+}
+
 .kitchen-calendar-mobile-order > svg {
   width: 18px;
   height: 18px;
@@ -6108,6 +6120,123 @@ button.product-tag[aria-pressed="true"] {
   position: sticky;
   z-index: 1;
   top: 0;
+}
+
+.famous-brand-customers-panel {
+  display: block;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.famous-brand-master-detail {
+  display: grid;
+  grid-template-columns: minmax(260px, 22%) minmax(0, 1fr);
+  width: 100%;
+  height: 100%;
+  min-height: 420px;
+}
+
+.famous-brand-customer-list {
+  min-width: 0;
+  overflow: auto;
+  border-right: 1px solid var(--border);
+  background: var(--card);
+}
+
+.famous-brand-customer-list-header,
+.famous-brand-customer-list > button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  text-align: left;
+}
+
+.famous-brand-customer-list-header {
+  position: sticky;
+  z-index: 2;
+  top: 0;
+  color: var(--muted-foreground);
+  background: var(--card);
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.famous-brand-customer-list > button {
+  min-height: 54px;
+  color: var(--foreground);
+  cursor: pointer;
+}
+
+.famous-brand-customer-list > button:hover {
+  background: color-mix(in oklch, var(--primary) 7%, transparent);
+}
+
+.famous-brand-customer-list > button.is-selected {
+  background: color-mix(in oklch, var(--primary) 13%, transparent);
+  box-shadow: inset 3px 0 0 var(--primary);
+}
+
+.famous-brand-customer-list > button strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.famous-brand-customer-list > button span {
+  min-width: 2.25rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.famous-brand-customer-list-skeleton {
+  display: grid;
+}
+
+.famous-brand-customer-list-skeleton span {
+  height: 54px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(90deg, transparent, color-mix(in oklch, var(--muted) 70%, transparent), transparent);
+  background-size: 220% 100%;
+  animation: skeleton-shimmer 1.5s linear infinite;
+}
+
+.famous-brand-order-detail {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+}
+
+.famous-brand-order-detail-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 49px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.famous-brand-order-detail-heading span {
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+
+.famous-brand-orders-table {
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.famous-brand-orders-table table {
+  min-width: 680px;
 }
 
 .quote-customers-company-cell {
@@ -20681,6 +20810,11 @@ a.masoft-order-tag:focus-visible {
   flex: 0 0 auto;
 }
 
+.factory-page-title-heading,
+.factory-calendar-heading {
+  display: contents;
+}
+
 .factory-board-brand {
   display: flex;
   flex-direction: column;
@@ -23594,10 +23728,10 @@ a.masoft-order-tag:focus-visible {
 
 .factory-board-days {
   display: grid;
-  grid-template-columns: repeat(3, minmax(520px, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   flex: 1;
   min-height: 0;
-  overflow-x: auto;
+  overflow: hidden;
   border-top: 1px solid var(--factory-line);
 }
 
@@ -25649,6 +25783,461 @@ button.factory-job-card:focus-visible {
 
   .factory-multi-day-table-wrap {
     overflow-x: auto;
+  }
+}
+
+@media (max-width: 760px) {
+  .factory-board .factory-qz,
+  .factory-board .factory-qz-tip {
+    display: none !important;
+  }
+
+  .factory-board:not(:has(> .factory-menu-print-root)) {
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+
+  .factory-board-top {
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .factory-board-heading {
+    width: 100%;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    gap: 8px;
+    white-space: nowrap;
+  }
+
+  .factory-board-heading .factory-board-brand {
+    width: min(180px, 44vw);
+  }
+
+  .factory-board-notice {
+    min-width: 0;
+    flex: 0 1 auto;
+    justify-content: flex-end;
+    font-size: 15px;
+    line-height: 1.35;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .factory-board-pager {
+    width: 100%;
+    gap: 8px;
+  }
+
+  .factory-board-pager .factory-board-today {
+    flex: 1;
+    min-height: 46px;
+    padding-inline: 16px;
+    font-size: 18px;
+  }
+
+  .factory-board-pager button:has(svg) {
+    width: 46px;
+    height: 46px;
+  }
+
+  .factory-board-pager button:has(svg) svg {
+    width: 36px;
+    height: 36px;
+  }
+
+  .factory-board-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+    gap: 6px;
+  }
+
+  .factory-board-actions .factory-board-calendar,
+  .factory-board-actions .factory-board-date,
+  .factory-board .factory-board-multi-day {
+    width: 100%;
+    min-height: 46px;
+    justify-content: center;
+    padding: 0 6px;
+    font-size: 14px;
+    white-space: nowrap;
+  }
+
+  .factory-board-actions .factory-board-calendar svg,
+  .factory-board-actions .factory-board-date svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .factory-board-days,
+  .factory-day,
+  .factory-day-cards {
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .factory-board-days {
+    display: block;
+    flex: none;
+  }
+
+  .factory-day {
+    border-right: 0;
+  }
+
+  .factory-day-header {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .factory-day-header h2 {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    font-size: 28px;
+  }
+
+  .factory-day-header button {
+    min-height: 46px;
+    padding: 0 10px;
+    font-size: 17px;
+  }
+
+  .factory-day-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    padding: 12px;
+    scrollbar-gutter: auto;
+  }
+
+  .factory-job-card {
+    min-height: 168px;
+  }
+
+  .factory-job-card-body {
+    padding-inline: 12px;
+  }
+
+  .factory-job-card-body strong,
+  .factory-job-card-body span,
+  .factory-job-card-body small,
+  .factory-job-card-body .factory-job-card-time {
+    font-size: 18px;
+  }
+
+  .factory-modal-root {
+    align-items: end;
+    padding: 8px;
+  }
+
+  .factory-modal,
+  .factory-modal.is-wide,
+  .factory-modal.is-wide.factory-menu-summary-modal {
+    width: 100% !important;
+    min-width: 0;
+    max-width: 100% !important;
+    max-height: calc(100dvh - 16px);
+    border-radius: 12px 12px 4px 4px;
+  }
+
+  .factory-modal-body {
+    padding: 14px;
+  }
+
+  .factory-modal-footer {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 10px 14px 14px;
+  }
+
+  .factory-modal-footer > button:only-child {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .factory-order-page > .factory-board-top .factory-board-actions {
+    display: none;
+  }
+
+  .factory-board-heading.factory-page-title-heading {
+    display: flex;
+  }
+
+  .factory-board-heading.factory-calendar-heading {
+    display: flex;
+  }
+
+  .factory-page-title-heading > .factory-order-page-title {
+    margin-left: auto;
+    flex: 0 0 auto;
+    white-space: nowrap;
+    text-align: right;
+  }
+
+  .factory-multi-day-page > .factory-board-top .factory-board-actions {
+    display: none;
+  }
+
+  .factory-order-page-title {
+    font-size: 20px;
+  }
+
+  .factory-order-job,
+  .factory-order-main,
+  .factory-order-summary,
+  .factory-order-meta,
+  .factory-order-packing,
+  .factory-order-lines,
+  .factory-order-aside {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .factory-order-main {
+    display: contents;
+  }
+
+  .factory-order-job {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto;
+  }
+
+  .factory-order-summary {
+    display: grid;
+    grid-column: 1;
+    grid-row: 1;
+    grid-template-columns: minmax(0, 1fr) auto;
+    justify-content: stretch;
+    align-items: center;
+    gap: 7px;
+    padding: 10px 12px 12px;
+  }
+
+  .factory-order-number {
+    max-width: 100%;
+    font-size: 38px;
+    line-height: 1.05;
+    overflow-wrap: anywhere;
+    text-align: left;
+  }
+
+  .factory-order-meta {
+    display: contents;
+    gap: 5px 10px;
+    font-size: 16px;
+    line-height: 1.3;
+  }
+
+  .factory-order-meta .is-date,
+  .factory-order-meta .is-dispatch,
+  .factory-order-meta .is-arrival,
+  .factory-order-meta .is-phone,
+  .factory-order-meta .is-address,
+  .factory-order-meta .is-customer,
+  .factory-order-meta .factory-dispatch-time-trigger {
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .factory-order-meta .is-date {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+    white-space: nowrap;
+    font-size: 17px;
+    text-align: right;
+  }
+
+  .factory-order-meta .is-dispatch {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .factory-order-meta .is-arrival {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .factory-order-meta .is-phone {
+    grid-column: 1;
+    grid-row: 3;
+  }
+
+  .factory-order-meta .is-customer {
+    grid-column: 2;
+    grid-row: 3;
+  }
+
+  .factory-order-meta .is-address {
+    grid-column: 1 / -1;
+    grid-row: 4;
+  }
+
+  .factory-order-packing {
+    grid-column: 1;
+    grid-row: 2;
+    align-items: flex-start;
+    min-height: 0;
+    padding: 14px;
+    font-size: 17px;
+    line-height: 1.45;
+  }
+
+  .factory-order-packing span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .factory-order-packing svg {
+    width: 26px;
+    height: 26px;
+    flex: 0 0 auto;
+  }
+
+  .factory-order-lines {
+    grid-column: 1;
+    grid-row: 4;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 12px;
+    overflow: visible;
+    scrollbar-gutter: auto;
+  }
+
+  .factory-order-line {
+    width: 100%;
+    min-height: 118px;
+    padding: 16px 14px;
+  }
+
+  .factory-order-line-body,
+  .factory-order-line strong,
+  .factory-order-line-quantity,
+  .factory-order-line-remark {
+    max-width: 100%;
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .factory-order-line strong {
+    font-size: 23px;
+  }
+
+  .factory-order-line-quantity {
+    font-size: 21px;
+  }
+
+  .factory-order-line-remark {
+    font-size: 19px;
+  }
+
+  .factory-order-aside {
+    grid-column: 1;
+    grid-row: 3;
+    padding: 14px 12px 18px;
+  }
+
+  .factory-order-aside .factory-order-print-action,
+  .factory-order-aside .factory-order-printer,
+  .factory-order-aside hr {
+    display: none;
+  }
+
+  .factory-order-aside .factory-order-selected {
+    order: -2;
+  }
+
+  .factory-label-modal .factory-label-printer-select,
+  .factory-label-modal .factory-label-print-error,
+  .factory-label-modal .factory-label-actions {
+    display: none;
+  }
+
+  .factory-order-aside button {
+    min-height: 52px;
+    font-size: 18px;
+  }
+
+  .factory-production-calendar-page .factory-board-actions {
+    display: flex;
+  }
+
+  .factory-production-calendar-page .factory-board-actions .factory-board-multi-day {
+    width: 100%;
+  }
+
+  .factory-multi-day-page,
+  .factory-multi-day-report {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .factory-multi-day-report {
+    padding: 12px;
+    overflow: visible;
+  }
+
+  .factory-multi-day-table-wrap {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-inline: contain;
+    scrollbar-gutter: stable;
+    touch-action: pan-x pan-y;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .factory-multi-day-table.is-two-column {
+    width: 1100px;
+    min-width: 1100px;
+  }
+
+  .kitchen-calendar-page.is-factory-display {
+    display: block;
+    min-height: 0;
+    padding: 12px;
+    overflow: visible;
+  }
+
+  .kitchen-calendar-page.is-factory-display .kitchen-calendar-mobile {
+    align-content: start;
+    grid-auto-rows: max-content;
+  }
+
+  .kitchen-calendar-page.is-factory-display .kitchen-calendar-mobile-filter {
+    height: 56px;
+    min-height: 56px;
+    max-height: 56px;
+    padding: 8px 12px;
+    font-size: 16px;
+  }
+
+  .kitchen-calendar-page.is-factory-display .kitchen-calendar-mobile-picker,
+  .kitchen-calendar-page.is-factory-display .kitchen-calendar-mobile-agenda {
+    align-self: start;
+  }
+
+  .kitchen-calendar-page.is-factory-display .kitchen-calendar-mobile-order {
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .factory-day-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .factory-job-card {
+    min-height: 150px;
   }
 }
 
@@ -31821,9 +32410,54 @@ body:has(.quote-clause-modal-root) { overflow: hidden; }
 
 @media (max-width: 760px) {
   .orders-page:has(.responsive-card-list-panel) {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     height: auto;
     min-height: 0;
     overflow: visible;
+  }
+
+  .orders-page.is-shopify-pending .orders-heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    gap: 14px;
+  }
+
+  .orders-page.is-shopify-pending .orders-heading > div:first-child,
+  .orders-page.is-shopify-pending .orders-heading p {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .orders-page.is-shopify-pending .orders-heading .heading-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    min-width: 0;
+    gap: 8px;
+  }
+
+  .orders-page.is-shopify-pending .orders-heading .heading-actions > * {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .orders-page.is-shopify-pending .orders-heading .heading-actions > :last-child {
+    grid-column: 1 / -1;
+  }
+
+  .orders-page.is-shopify-pending .orders-heading .heading-actions button,
+  .orders-page.is-shopify-pending .orders-heading .heading-actions a {
+    width: 100%;
+    min-width: 0;
+    justify-content: center;
   }
 
   .orders-panel.responsive-card-list-panel {
@@ -31845,6 +32479,27 @@ body:has(.quote-clause-modal-root) { overflow: hidden; }
   .orders-panel.responsive-card-list-panel .orders-table-wrap.has-mobile-list {
     min-height: 0;
     overflow: visible;
+  }
+
+  .orders-page.is-shopify-pending .order-mobile-card,
+  .orders-page.is-shopify-pending .order-mobile-facts,
+  .orders-page.is-shopify-pending .order-mobile-facts > div {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .orders-page.is-shopify-pending .order-mobile-facts dd {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-overflow: clip;
+  }
+
+  .orders-page.is-shopify-pending .order-mobile-delivery-times,
+  .orders-page.is-shopify-pending .order-mobile-delivery-times > span {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
   }
 
   .quotes-page:has(.responsive-card-list-panel) {
@@ -31872,5 +32527,37 @@ body:has(.quote-clause-modal-root) { overflow: hidden; }
   .quotes-panel.responsive-card-list-panel .quotes-table-wrap.has-mobile-list {
     min-height: 0;
     overflow: visible;
+  }
+
+  .quotes-page:has(.famous-brand-customers-panel) {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .famous-brand-customers-panel {
+    overflow: visible;
+  }
+
+  .famous-brand-master-detail {
+    grid-template-columns: minmax(0, 1fr);
+    height: auto;
+    min-height: 0;
+  }
+
+  .famous-brand-customer-list {
+    max-height: 280px;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .famous-brand-order-detail {
+    min-height: 360px;
+  }
+
+  .famous-brand-order-detail-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
   }
 }

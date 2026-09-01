@@ -29,6 +29,7 @@ import {
   type KitchenCalendarOrder,
 } from "@/lib/kitchen-calendar";
 import { isOrderDelivered } from "@/lib/orders";
+import { isNewFactoryOrder } from "@/lib/factory-board";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { cn } from "@/lib/utils";
 
@@ -204,6 +205,9 @@ function KitchenCalendarMobile({
   todayKey,
   todayParts,
   year,
+  linkOrders = true,
+  factoryMode = false,
+  now,
 }: {
   days: ReturnType<typeof buildKitchenCalendarGrid>;
   error: string | null;
@@ -219,6 +223,9 @@ function KitchenCalendarMobile({
   todayKey: string;
   todayParts: { year: number; month: number; day: number };
   year: number;
+  linkOrders?: boolean;
+  factoryMode?: boolean;
+  now: Date;
 }) {
   const copy = mobileCalendarCopy(language);
   const initialDay = todayKey.startsWith(`${monthParam}-`)
@@ -528,6 +535,15 @@ function KitchenCalendarMobile({
                     const paymentIncomplete =
                       !isOrderDelivered(order.deliveryStatus) &&
                       (order.outstanding ?? 0) > 0;
+                    const newFactoryOrder =
+                      factoryMode &&
+                      isNewFactoryOrder(
+                        order.orderReceivedAt,
+                        now,
+                        order.deliveryAt,
+                      );
+                    const changedFactoryOrder =
+                      factoryMode && Boolean(order.factoryReprintRequired);
                     const title =
                       order.customerName ||
                       order.companyName ||
@@ -537,18 +553,29 @@ function KitchenCalendarMobile({
                       .filter(Boolean)
                       .filter((value) => value !== title)
                       .join(" · ");
-                    return (
-                      <li key={order.id}>
-                        <Link
-                          className="kitchen-calendar-mobile-order"
-                          to={kitchenCalendarOrderHref(order.id, monthParam)}
-                          aria-label={`${t("orders.open")} ${orderLabel(order, t("common.notSet"))}`}
-                        >
+                    const orderContent = (
+                      <>
                           <time>{orderTime(order, language)}</time>
                           <span className="kitchen-calendar-mobile-order-copy">
                             <strong>{title}</strong>
                             {secondary ? <small>{secondary}</small> : null}
                           </span>
+                          {factoryMode ? (
+                            newFactoryOrder || changedFactoryOrder ? (
+                              <span className="kitchen-calendar-mobile-statuses">
+                                {newFactoryOrder ? (
+                                  <small className="factory-new">
+                                    {t("factoryBoard.newOrder")}
+                                  </small>
+                                ) : null}
+                                {changedFactoryOrder ? (
+                                  <small className="factory-changed">
+                                    {t("factoryBoard.changedOrder")}
+                                  </small>
+                                ) : null}
+                              </span>
+                            ) : null
+                          ) : (
                           <span className="kitchen-calendar-mobile-statuses">
                             <small className={factoryTone}>
                               {copy.factory}：{factoryState}
@@ -560,8 +587,25 @@ function KitchenCalendarMobile({
                                 : copy.paid}
                             </small>
                           </span>
-                          <ChevronRight aria-hidden="true" />
-                        </Link>
+                          )}
+                          {linkOrders ? <ChevronRight aria-hidden="true" /> : null}
+                      </>
+                    );
+                    return (
+                      <li key={order.id}>
+                        {linkOrders ? (
+                          <Link
+                            className="kitchen-calendar-mobile-order"
+                            to={kitchenCalendarOrderHref(order.id, monthParam)}
+                            aria-label={`${t("orders.open")} ${orderLabel(order, t("common.notSet"))}`}
+                          >
+                            {orderContent}
+                          </Link>
+                        ) : (
+                          <div className="kitchen-calendar-mobile-order">
+                            {orderContent}
+                          </div>
+                        )}
                       </li>
                     );
                   })}
@@ -716,7 +760,7 @@ export function KitchenCalendarPage({
         </header>
       )}
 
-      {!isFactoryDisplay && isMobileCalendar ? (
+      {isMobileCalendar ? (
         <KitchenCalendarMobile
           days={days}
           error={error}
@@ -732,6 +776,9 @@ export function KitchenCalendarPage({
           todayKey={todayKey}
           todayParts={todayParts}
           year={year}
+          linkOrders={!isFactoryDisplay}
+          factoryMode={isFactoryDisplay}
+          now={clock}
         />
       ) : (
       <article className="panel kitchen-calendar-panel kitchen-calendar-desktop-panel">
@@ -913,7 +960,7 @@ export function KitchenCalendarPage({
       </article>
       )}
 
-      {!isMobileCalendar || isFactoryDisplay ? (
+      {!isMobileCalendar ? (
       <SidePanel
         open={Boolean(selectedDay)}
         title={selectedDayLabel || t("navigation.productionCalendar")}

@@ -1084,6 +1084,12 @@ describe("Orders list", () => {
     expect(stylesheet).toMatch(
       /\.operational-list-pagination > span\s*\{[^}]*white-space:\s*nowrap/s,
     );
+    expect(stylesheet).toMatch(
+      /\.orders-page\.is-shopify-pending \.orders-heading \.heading-actions\s*\{[^}]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)[^}]*width:\s*100%/s,
+    );
+    expect(stylesheet).toMatch(
+      /\.orders-page\.is-shopify-pending \.order-mobile-facts dd\s*\{[^}]*white-space:\s*normal[^}]*overflow-wrap:\s*anywhere/s,
+    );
   });
 
   it("blocks finance presets for roles without finance access", async () => {
@@ -1121,6 +1127,10 @@ describe("Orders list", () => {
     expect(source).toContain("delivery_status.is.null");
     expect(source).toContain("do_not_send_to_factory.eq.false");
     expect(source).toContain('query.gt("outstanding", 0)');
+    expect(source).toContain(
+      'quote_status.is.null,quote_status.not.in.("Done Deal","Case Closed")',
+    );
+    expect(source).toContain('.gt("grand_total", 0)');
   });
 
   it("shows and filters the planned district before a delivery exists", () => {

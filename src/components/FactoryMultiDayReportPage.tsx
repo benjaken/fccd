@@ -125,8 +125,10 @@ export function FactoryMultiDayReportPage({
   return (
     <main className="factory-board factory-multi-day-page">
       <header className="factory-board-top no-print">
-        <FactoryBrandLogo />
-        <p className="factory-order-page-title">{t("factoryBoard.multiDayMenu")}</p>
+        <div className="factory-board-heading factory-page-title-heading">
+          <FactoryBrandLogo />
+          <p className="factory-order-page-title">{t("factoryBoard.multiDayMenu")}</p>
+        </div>
         <div className="factory-board-actions">
           <FactoryQzTrayStatus
             qz={qz}

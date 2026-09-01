@@ -81,6 +81,7 @@ describe("orders dashboard data", () => {
   it("keeps Shopify review filters while only treating explicit false as not sent", async () => {
     const orFilters: string[] = [];
     const eqFilters: Array<[string, unknown]> = [];
+    const gtFilters: Array<[string, unknown]> = [];
     fromMock.mockImplementation((table: string) => {
       const query = createCountQuery({ data: [], count: 0, error: null });
       const originalOr = query.or as ReturnType<typeof vi.fn>;
@@ -91,6 +92,11 @@ describe("orders dashboard data", () => {
       const originalEq = query.eq as ReturnType<typeof vi.fn>;
       originalEq.mockImplementation((column: string, value: unknown) => {
         eqFilters.push([column, value]);
+        return query;
+      });
+      const originalGt = query.gt as ReturnType<typeof vi.fn>;
+      originalGt.mockImplementation((column: string, value: unknown) => {
+        gtFilters.push([column, value]);
         return query;
       });
       return query;
@@ -105,6 +111,7 @@ describe("orders dashboard data", () => {
     )).toBe(true);
     expect(eqFilters).toContainEqual(["is_sent_to_factory", false]);
     expect(eqFilters).toContainEqual(["do_not_send_to_factory", false]);
+    expect(gtFilters).toContainEqual(["grand_total", 0]);
     expect(
       orFilters.filter((filter) =>
         filter.includes('quote_status.not.in.("Done Deal","Case Closed")'),
