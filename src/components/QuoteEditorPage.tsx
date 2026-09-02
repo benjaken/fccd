@@ -941,6 +941,10 @@ export function QuoteEditorPage({
       setCreated(quote);
       setChannelId(draft.channelId);
       setActiveTab("items");
+      // The route change remounts this editor. Hide the old route's product
+      // controls while the saved quote is being loaded so callers cannot start
+      // typing into a stale input that is about to be replaced.
+      setLoading(true);
       navigate(`/quotes/${quote.id}/edit`, { replace: true });
     } catch {
       setError("quote_create_failed");

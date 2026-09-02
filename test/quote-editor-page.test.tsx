@@ -428,7 +428,7 @@ describe("Quote editor", () => {
     await fillRequiredQuoteDetails(user);
     await user.click(screen.getByRole("button", { name: "Save and add products" }));
 
-    await user.click(screen.getByRole("button", { name: "Custom product" }));
+    await user.click(await screen.findByRole("button", { name: "Custom product" }));
     const dialog = await screen.findByRole("dialog", { name: "Custom product" });
     const addButton = within(dialog).getByRole("button", { name: "Add" });
     expect(addButton).toBeDisabled();
