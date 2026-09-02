@@ -3,6 +3,10 @@ import {
   buildOrderNotificationContent,
   resolveOrderNotificationShopName,
 } from "../_shared/order-notification-content.ts";
+import {
+  formatNotificationDeliveryAddress,
+  resolveNotificationDeliveryMethod,
+} from "../_shared/delivery-address.ts";
 import { EMAIL_FROM } from "../_shared/email-sender.ts";
 import { settleEnabledNotificationRequests } from "../_shared/notification-channel-requests.ts";
 import {
@@ -67,7 +71,7 @@ Deno.serve(async (request) => {
     const manualEmailEnabled = controls.manualOrderConfirmationEmailEnabled
       && watiEmergencySwitchAllows("EMAIL_MANUAL_ORDER_CONFIRMATION_ENABLED");
     const { data: order, error: orderError } = await admin.from("orders")
-      .select("id,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,delivery_at,delivery_time,shipping_address_snapshot,channels(name)")
+      .select("id,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,delivery_at,delivery_time,shipping_address_snapshot,channels(name),shipping_methods(name,display_name,requires_address_check)")
       .eq("id", orderId).eq("document_type", "order").is("archived_at", null).single();
     if (orderError || !order) return json({ error: "order_not_found" }, 404);
     const deliveryDate = hongKongDate(order.delivery_at);
@@ -95,10 +99,21 @@ Deno.serve(async (request) => {
       }, 403);
     }
     const name = order.customer_name_snapshot?.trim() || order.company_name_snapshot?.trim() || "Customer";
+    const shippingMethod = Array.isArray(order.shipping_methods)
+      ? order.shipping_methods[0]
+      : order.shipping_methods;
+    const deliveryMethod = resolveNotificationDeliveryMethod(
+      `${shippingMethod?.name || ""} ${shippingMethod?.display_name || ""}`,
+      shippingMethod?.requires_address_check,
+    );
+    const address = formatNotificationDeliveryAddress(
+      order.shipping_address_snapshot,
+      deliveryMethod,
+    );
     const commonParameters = [
       { name: "name", value: name }, { name: "order_number", value: order.order_number || "-" },
       { name: "date", value: displayDate(deliveryDate) }, { name: "time", value: order.delivery_time?.trim() || "-" },
-      { name: "address", value: order.shipping_address_snapshot?.trim() || "-" },
+      { name: "address", value: address },
     ];
     const channel = Array.isArray(order.channels) ? order.channels[0] : order.channels;
     const shopName = resolveOrderNotificationShopName(
@@ -118,9 +133,9 @@ Deno.serve(async (request) => {
       order_number: order.order_number || "-",
       date: displayDate(deliveryDate),
       time: order.delivery_time?.trim() || "-",
-      address: order.shipping_address_snapshot?.trim() || "-",
+      address,
       phone: order.contact_number_a_snapshot?.trim() || order.contact_number_b_snapshot?.trim() || "-",
-      delivery_method: "delivery",
+      delivery_method: deliveryMethod,
       ao_deadline: includesAddonLink ? displayDate(previousDate(deliveryDate)) : "",
       ao_link: includesAddonLink ? addonLink() : "",
       shop_name: shopName,
