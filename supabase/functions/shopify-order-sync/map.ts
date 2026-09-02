@@ -1319,9 +1319,9 @@ export function collectLineMenuRemarkText(
 const IGNORED_LINE_PROPERTY_NAME =
   /(?:飲品|drink|beverage|pickup|delivery|送貨|日期|時間|internal_id)/i;
 
-/** Line remarks after Shopify option properties have been turned into child
- * product rows. Menu selections are omitted so the package does not repeat
- * the same dishes as free-form notes. */
+/** Line remarks assembled from Shopify product properties. Parsed menu
+ * selections stay in remarks as source evidence even after child product rows
+ * are generated, so staff can still see the customer's original choices. */
 export function shopifyLineRemarksSnapshot(input: {
   properties: Array<{ name?: string; value?: string | null }>;
   optionRemark?: string | null;
@@ -1389,7 +1389,10 @@ export function stripParsedMenuRemarksFromLines(input: {
         optionRemark: source?.optionRemark ?? null,
         variantRemark: source?.variantRemark ?? null,
         existing: null,
-        omitMenuSelections: true,
+        // Keep Shopify's original option text as an operational remark. The
+        // generated child/content rows are structured data, while this is the
+        // source wording staff use to verify the import.
+        omitMenuSelections: false,
       }),
     };
   });

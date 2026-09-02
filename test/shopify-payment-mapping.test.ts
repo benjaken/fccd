@@ -844,7 +844,7 @@ describe("mapShopifyOrder remark collection", () => {
     ])).toBeNull();
   });
 
-  it("drops package menu properties from remarks after they become product lines", () => {
+  it("keeps package menu properties as remarks after they become product lines", () => {
     const properties = [
       { name: "必選", value: "醬香牛展拌粉皮 (1磅), 川式涼拌青瓜魚片 (1磅)" },
       { name: "internal_id", value: "2420" },
@@ -869,7 +869,50 @@ describe("mapShopifyOrder remark collection", () => {
       }],
       lunchBox: false,
     });
-    expect(stripped[0].remarks_1).toBeNull();
+    expect(stripped[0].remarks_1).toBe(
+      "醬香牛展拌粉皮 (1磅), 川式涼拌青瓜魚片 (1磅)",
+    );
+  });
+
+  it("keeps K-2132 package and add-on properties as line remarks", () => {
+    const packageProperties = [
+      {
+        name: "套餐必選8道菜",
+        value: "竹笙花膠紅燒翅 (8-10位), 花雕蛋白蒸松葉蟹 (1隻), 蔥燒原條海參 (6條)",
+      },
+      { name: "Custom Product", value: "2420" },
+    ];
+    const addonProperties = [
+      { name: "加購 壽桃包及金豬", value: "蛋黃蓮蓉壽桃包 (6個)" },
+      { name: "Custom Product", value: "2420" },
+    ];
+
+    const stripped = stripParsedMenuRemarksFromLines({
+      lines: [
+        { shopify_line_id: 2132, remarks_1: null },
+        { shopify_line_id: 2133, remarks_1: null },
+      ],
+      parsedSourceLineIds: [2132],
+      mappedLines: [
+        {
+          lineId: 2132,
+          properties: packageProperties,
+          variantTitle: null,
+          row: { product_name_snapshot: "饌頌天下美宴 (六位用)" },
+        },
+        {
+          lineId: 2133,
+          properties: addonProperties,
+          variantTitle: null,
+          row: { product_name_snapshot: "蛋黃蓮蓉壽桃包 (6個)" },
+        },
+      ],
+      lunchBox: false,
+    });
+
+    expect(stripped[0].remarks_1).toContain("竹笙花膠紅燒翅");
+    expect(shopifyLineRemarksSnapshot({ properties: addonProperties }))
+      .toBe("蛋黃蓮蓉壽桃包 (6個)");
   });
 
   it("does not import Custom Product markers into order remarks", () => {
