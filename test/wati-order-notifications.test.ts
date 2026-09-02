@@ -40,11 +40,11 @@ const values: OrderNotificationValues = {
 describe("WATI order notifications", () => {
   it("adds the handoff type to WATI and email address values", () => {
     expect(formatNotificationDeliveryAddress("九龍測試地址", "送貨上門"))
-      .toBe("九龍測試地址（送貨上門）");
+      .toBe("（送貨上門) 九龍測試地址");
     expect(formatNotificationDeliveryAddress("九龍測試地址", "車邊交收"))
-      .toBe("九龍測試地址 * 車邊交收");
+      .toBe("（附近車邊交收） 九龍測試地址");
     expect(formatNotificationDeliveryAddress("九龍測試地址 * 車邊交收", "車邊交收"))
-      .toBe("九龍測試地址 * 車邊交收");
+      .toBe("（附近車邊交收） 九龍測試地址");
     expect(resolveNotificationDeliveryMethod("門市自取", false)).toBe("pickup");
 
     const delivery = buildOrderNotificationContent("delivery_order_confirmed", {
@@ -57,8 +57,8 @@ describe("WATI order notifications", () => {
       address: "九龍測試地址",
       delivery_method: "車邊交收",
     });
-    expect(delivery.text).toContain("地址：九龍測試地址（送貨上門）");
-    expect(curbside.text).toContain("地址：九龍測試地址 * 車邊交收");
+    expect(delivery.text).toContain("地址：（送貨上門) 九龍測試地址");
+    expect(curbside.text).toContain("地址：（附近車邊交收） 九龍測試地址");
   });
 
   it("does not call disabled WATI or email request callbacks", async () => {
@@ -161,7 +161,7 @@ describe("WATI order notifications", () => {
     expect(notification.text).toContain(`Hello ${values.name},`);
     expect(notification.text).toContain(`日期：${values.date}`);
     expect(notification.text).toContain(`時間：${values.time}`);
-    expect(notification.text).toContain(`地址：${values.address}`);
+    expect(notification.text).toContain(`地址：（送貨上門) ${values.address}`);
     expect(notification.text).toContain(values.ao_link);
     expect(notification.text).toContain("-----------------------");
     expect(notification.text).toContain(`限時加單推介 (請在${values.ao_deadline}下午3點前加單)：`);
@@ -212,7 +212,7 @@ describe("WATI order notifications", () => {
     expect(delivery.text).toBe([
       `Hello ${values.name},`, "",
       `你的到會訂單 ${values.order_number} 將會在今日送貨，司機會在到達前致電給你，請保持聯絡電話暢通。`, "",
-      `日期：${values.date}`, `時間：${values.time}`, `地址：${values.address}（送貨上門）`, "",
+      `日期：${values.date}`, `時間：${values.time}`, `地址：（送貨上門) ${values.address}`, "",
       "如有任何查詢，請在此 WhatsApp 聯絡我們。", "",
       "查看訂單內容 或 下載收據：https://www.foodchannels-delivery.com/self_service_search", "",
       "謝謝你的支持，願你有一個愉快的聚餐時光❤️", "",

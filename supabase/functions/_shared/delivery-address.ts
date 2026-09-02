@@ -20,14 +20,14 @@ export function formatNotificationDeliveryAddress(
     ? method
     : resolveNotificationDeliveryMethod(method);
 
-  if (resolvedMethod === "pickup") return addressText;
+  const plainAddress = addressText
+    .replace(/^（送貨上門[）)]\s*/i, "")
+    .replace(/^（附近車邊交收）\s*/i, "")
+    .replace(/\s*（送貨上門[）)]\s*$/i, "")
+    .replace(/\s*\*\s*車邊交收\s*$/i, "")
+    .trim() || empty;
 
-  const suffix = resolvedMethod === "curbside" ? " * 車邊交收" : "（送貨上門）";
-  if (
-    addressText.includes("（送貨上門）")
-    || /(\*\s*車邊交收)/i.test(addressText)
-  ) {
-    return addressText;
-  }
-  return `${addressText}${suffix}`;
+  if (resolvedMethod === "pickup") return plainAddress;
+  const prefix = resolvedMethod === "curbside" ? "（附近車邊交收）" : "（送貨上門)";
+  return `${prefix} ${plainAddress}`;
 }
