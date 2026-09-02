@@ -16,8 +16,9 @@ export async function translateLocationToTraditionalChinese(
   if (!source || !containsEnglishText(source)) return source;
 
   const endpoint = env("ADDRESS_TRANSLATION_AI_ENDPOINT", "REPORT_AI_ENDPOINT", "SUPPLIER_QUOTE_AI_ENDPOINT");
-  const apiKey = env("ADDRESS_TRANSLATION_AI_API_KEY", "REPORT_AI_API_KEY", "SUPPLIER_QUOTE_AI_API_KEY") ||
-    Deno.env.get("XAI_API_KEY") || "";
+  const apiKey = Deno.env.get("ADDRESS_TRANSLATION_AI_API_KEY") ??
+    Deno.env.get("REPORT_AI_API_KEY") ?? Deno.env.get("XAI_API_KEY") ??
+    Deno.env.get("SUPPLIER_QUOTE_AI_API_KEY") ?? "";
   const model = env("ADDRESS_TRANSLATION_AI_MODEL", "REPORT_AI_MODEL", "SUPPLIER_QUOTE_AI_MODEL");
   const provider = env("ADDRESS_TRANSLATION_AI_PROVIDER", "REPORT_AI_PROVIDER", "SUPPLIER_QUOTE_AI_PROVIDER");
   const enabled = env("ADDRESS_TRANSLATION_AI_ENABLED", "REPORT_AI_ENABLED", "SUPPLIER_QUOTE_AI_ENABLED") === "true";
@@ -57,7 +58,10 @@ export async function translateLocationToTraditionalChinese(
         body: JSON.stringify(providerRequests[attempt]),
       });
       if (!response.ok) {
+        const providerError = (await response.text().catch(() => ""))
+          .replaceAll(/\s+/g, " ").slice(0, 500);
         if (response.status === 400 && attempt === 0) continue;
+        console.error("location-translation-provider", response.status, providerError);
         throw new Error(`location_translation_provider_${response.status}`);
       }
       const payload = await response.json() as {

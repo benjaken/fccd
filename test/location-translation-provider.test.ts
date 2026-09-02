@@ -37,4 +37,26 @@ describe("location translation provider compatibility", () => {
       messages: firstBody.messages,
     });
   });
+
+  it("prefers the xAI key over an unrelated supplier quote key", async () => {
+    const env = new Map([
+      ["REPORT_AI_ENABLED", "true"],
+      ["REPORT_AI_ENDPOINT", "https://api.x.ai/v1/chat/completions"],
+      ["REPORT_AI_MODEL", "grok-4.6"],
+      ["REPORT_AI_PROVIDER", "xai"],
+      ["XAI_API_KEY", "correct-xai-key"],
+      ["SUPPLIER_QUOTE_AI_API_KEY", "unrelated-supplier-key"],
+    ]);
+    vi.stubGlobal("Deno", { env: { get: (name: string) => env.get(name) } });
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      choices: [{ message: { content: "{\"translatedText\":\"中環\"}" } }],
+    }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(translateLocationToTraditionalChinese("Central", "district"))
+      .resolves.toBe("中環");
+    expect(fetchMock.mock.calls[0][1].headers).toMatchObject({
+      Authorization: "Bearer correct-xai-key",
+    });
+  });
 });
