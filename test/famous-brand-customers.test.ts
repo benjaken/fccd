@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { aggregateFamousBrandCustomers } from "@/lib/famous-brand-customers";
 
 describe("famous brand customers", () => {
-  it("groups marked orders by company and excludes rows without a company", () => {
+  it("groups marked quotes by company and uses the customer when company is absent", () => {
     const result = aggregateFamousBrandCustomers([
       {
         id: "q-2",
@@ -37,7 +37,7 @@ describe("famous brand customers", () => {
       },
     ]);
 
-    expect(result).toHaveLength(1);
+    expect(result).toHaveLength(2);
     expect(result[0]).toMatchObject({
       brandName: "Hang Seng Bank",
       quoteCount: 2,
@@ -47,6 +47,13 @@ describe("famous brand customers", () => {
       latestQuoteId: "q-2",
     });
     expect(result[0]?.orders.map((order) => order.id)).toEqual(["q-2", "q-1"]);
+    expect(result[1]).toMatchObject({
+      brandName: "Hong Kong Design Centre",
+      quoteCount: 1,
+      openQuoteCount: 0,
+      doneDealCount: 1,
+      totalAmount: 0,
+    });
   });
 
   it("sorts customers by order count before the latest update", () => {

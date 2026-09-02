@@ -8,7 +8,6 @@ type FamousBrandQuoteRow = {
   grand_total: number | string | null;
   currency: string | null;
   quote_status: string | null;
-  delivery_status?: string | null;
   updated_at: string;
 };
 
@@ -40,7 +39,7 @@ function customerOrder(row: FamousBrandQuoteRow): FamousBrandCustomerOrder {
   return {
     id: row.id,
     orderNumber: row.order_number || "",
-    status: row.delivery_status || row.quote_status || "",
+    status: row.quote_status || "",
     amount: Number.isFinite(amount) ? amount : 0,
     currency: row.currency || "HKD",
     updatedAt: row.updated_at,
@@ -65,7 +64,6 @@ export function aggregateFamousBrandCustomers(rows: FamousBrandQuoteRow[]) {
   const customers = new Map<string, FamousBrandCustomer>();
 
   for (const row of rows) {
-    if (!row.company_name_snapshot?.trim()) continue;
     const name = brandName(row);
     const key = name.toLocaleLowerCase("zh-HK");
     const amount = Number(row.grand_total ?? 0);
@@ -115,15 +113,11 @@ export function aggregateFamousBrandCustomers(rows: FamousBrandQuoteRow[]) {
 export async function fetchFamousBrandCustomers() {
   const { data, error } = await supabase
     .from("orders")
-    .select("id,order_number,customer_name_snapshot,company_name_snapshot,grand_total,currency,quote_status,delivery_status,updated_at")
-    .eq("document_type", "order")
+    .select("id,order_number,customer_name_snapshot,company_name_snapshot,grand_total,currency,quote_status,updated_at")
+    .eq("document_type", "quote")
     .eq("is_hong_kong_famous_brand", true)
-    .is("archived_at", null)
+    .or('quote_status.is.null,quote_status.neq."Case Closed"')
     .order("updated_at", { ascending: false });
   if (error) throw error;
-  return aggregateFamousBrandCustomers(
-    ((data ?? []) as FamousBrandQuoteRow[]).filter((row) =>
-      Boolean(row.company_name_snapshot?.trim()),
-    ),
-  );
+  return aggregateFamousBrandCustomers((data ?? []) as FamousBrandQuoteRow[]);
 }
