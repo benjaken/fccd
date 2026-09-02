@@ -29,15 +29,14 @@ export async function translateLocationToTraditionalChinese(
   const sourceText = text.trim();
   if (!sourceText) throw new Error("location_required");
 
-  // Edge Functions reject an expired access token even when the UI still has
-  // a cached session. Refresh first and pass the new token explicitly.
+  // Supabase already refreshes the persisted session in the background. A
+  // forced refresh here can fail independently (for example while another
+  // request owns the refresh lock) and prevent the Edge Function invocation
+  // altogether, so use the current SDK-managed session just like report AI.
   const {
     data: { session },
-    error: sessionError,
-  } = await supabase.auth.refreshSession();
-  if (sessionError || !session?.access_token) {
-    throw new Error("authentication_required", { cause: sessionError });
-  }
+  } = await supabase.auth.getSession();
+  if (!session?.access_token) throw new Error("authentication_required");
 
   const { data, error } = await supabase.functions.invoke<AddressTranslationResponse>(
     "translate-address",
