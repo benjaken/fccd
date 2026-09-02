@@ -31,10 +31,14 @@ import {
 } from "@/lib/quote-pdf-draft";
 import { DICT_TYPE, dictItemLabel, useDictItems } from "@/lib/dictionaries";
 import { hongKongDateKey } from "@/lib/date-time";
-import { splitPdfModuleIndexes, usePdfAutoPageBreaks } from "@/lib/pdf-auto-pagination";
+import {
+  splitPdfModuleIndexes,
+  usePdfAutoPageBreaks,
+  usePdfAutoProductPageBreaks,
+} from "@/lib/pdf-auto-pagination";
 import { printPdf } from "@/lib/print-pdf";
 import { formatOrderNumber } from "@/lib/order-number";
-import { paginateReceiptPdfLines } from "@/lib/receipt-pdf-draft";
+import { splitPdfProductLines } from "@/lib/receipt-pdf-draft";
 import {
   fetchActiveQuotePdfPages,
   type QuotePdfPage,
@@ -265,7 +269,16 @@ export function QuotePdfEditorPage({
   // each committed field value makes a continuation page disappear on blur.
   // Only document/brand changes require rebuilding pagination from scratch.
   const paginationResetKey = `${id}:${paginationBrandKind}`;
-  const trailingPageBreaks = usePdfAutoPageBreaks(editorRef, paginationModuleCount, paginationResetKey);
+  const productPageBreaks = usePdfAutoProductPageBreaks(
+    editorRef,
+    draft?.lines.length ?? 0,
+    paginationResetKey,
+  );
+  const trailingPageBreaks = usePdfAutoPageBreaks(
+    editorRef,
+    paginationModuleCount,
+    `${paginationResetKey}:${productPageBreaks.join(",")}`,
+  );
 
   const storageKey = quotePdfDraftStorageKey(id);
   const load = useCallback(async () => {
@@ -522,9 +535,11 @@ export function QuotePdfEditorPage({
   const documentTitle = quoteDocumentTitle(sourceBrand.quoteNumber || draft.quoteNumber, isLunchBox);
   const canAddAdditionalInfo = isLunchBox || getBrandKind(...brandValues) === "party-food";
   const hasActivities = isLunchBox && draft.activities.length > 0;
+  const hasQuotedQuantity = draft.lines.some((line) => numberValue(line.quantity) > 0);
+  const showActivityTotals = hasQuotedQuantity || hasActivities;
   const frontPages = pdfPages.filter((page) => page.placement === "front");
   const backPages = pdfPages.filter((page) => page.placement === "back");
-  const productLinePages = paginateReceiptPdfLines(draft.lines);
+  const productLinePages = splitPdfProductLines(draft.lines, productPageBreaks);
   const hasUtensilPackLine = draft.lines.some((line) => (line.description ?? "").replace(/\s/g, "").includes("餐具包"));
   const signatureToggle = (
     <label className="quote-pdf-customer-signature-toggle quote-pdf-edit-only">
@@ -564,7 +579,7 @@ export function QuotePdfEditorPage({
       <Button onClick={() => setActivityOpen(true)}><Plus />新增活動項目</Button>
     </div>
   ) : null;
-  const activityContent = isLunchBox ? (
+  const activityContent = isLunchBox && showActivityTotals ? (
     <section className={`quote-pdf-activity${hasActivities ? "" : " is-empty"}`} aria-label="活動報價表">
       <table>
         {hasActivities ? <>
@@ -617,7 +632,7 @@ export function QuotePdfEditorPage({
             const quantity = numberValue(line.quantity);
             const lineSubtotal = quantity * numberValue(line.unitPrice);
             return (
-              <tr key={line.id}>
+              <tr data-pdf-auto-product-index={index} key={line.id}>
                 <td>{index + 1}</td>
                 <td><PdfBlurCommitInput className="quote-pdf-product-input" aria-label={`產品 ${index + 1}`} value={line.description} onDirty={markDraftDirty} onCommit={(value) => updateLine(index, { description: value })} /></td>
                 <td><span className="quote-pdf-price-input"><span aria-hidden="true">$</span><PdfBlurCommitInput aria-label={`單價 ${index + 1}`} inputMode="decimal" size={Math.max(line.unitPrice.length, 1)} value={line.unitPrice} onDirty={markDraftDirty} onCommit={(value) => updateLine(index, { unitPrice: value.trim() ? value : "0" })} /></span></td>
@@ -638,7 +653,7 @@ export function QuotePdfEditorPage({
             </tr>
           ) : null}
         </tbody>
-        {showTotals && !isLunchBox ? <tbody className="quote-pdf-summary-rows">
+        {showTotals && !isLunchBox && hasQuotedQuantity ? <tbody className="quote-pdf-summary-rows">
           <tr><td className="quote-pdf-summary-label" colSpan={4}>小計：</td><td><strong>${totals.productSubtotal.toLocaleString("zh-HK")}</strong></td></tr>
           <tr>
             <td colSpan={4}>
@@ -753,7 +768,7 @@ export function QuotePdfEditorPage({
         </main>
       ))}
 
-      <main className={`quote-pdf-sheet${productLinePages.length === 1 && trailingModulePages.length === 1 && !backPages.length ? " is-final-document-page" : ""}`} data-pdf-auto-page={productLinePages.length === 1 ? "products" : undefined}>
+      <main className={`quote-pdf-sheet${productLinePages.length === 1 && trailingModulePages.length === 1 && !backPages.length ? " is-final-document-page" : ""}`} data-pdf-auto-page={productLinePages.length === 1 ? "products" : undefined} data-pdf-product-page="true">
         <header className="quote-pdf-letterhead">
           <img src={brandLogo} alt={brandLogoAlt} />
           <div>
@@ -786,7 +801,7 @@ export function QuotePdfEditorPage({
           .slice(0, pageIndex + 1)
           .reduce((sum, pageLines) => sum + pageLines.length, 0);
         return (
-          <main className={`quote-pdf-sheet quote-pdf-sheet-continuation quote-pdf-product-continuation${isFinalProductPage && trailingModulePages.length === 1 && !backPages.length ? " is-final-document-page" : ""}`} data-pdf-auto-page={isFinalProductPage ? "products" : undefined} aria-label={`PDF 第 ${pageIndex + 2} 頁`} key={`products-${pageIndex}`}>
+          <main className={`quote-pdf-sheet quote-pdf-sheet-continuation quote-pdf-product-continuation${isFinalProductPage && trailingModulePages.length === 1 && !backPages.length ? " is-final-document-page" : ""}`} data-pdf-auto-page={isFinalProductPage ? "products" : undefined} data-pdf-product-page="true" aria-label={`PDF 第 ${pageIndex + 2} 頁`} key={`products-${pageIndex}`}>
             {continuationLetterhead}
             {renderProductTable(lines, offset, isFinalProductPage)}
             {isFinalProductPage ? renderTrailingModules(trailingModulePages[0] ?? []) : null}

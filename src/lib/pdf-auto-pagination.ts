@@ -3,6 +3,8 @@ import { useLayoutEffect, useRef, useState, type RefObject } from "react";
 const PAGE_SELECTOR = "[data-pdf-auto-page]";
 const MODULE_SELECTOR = "[data-pdf-auto-module-index]";
 const FOOTER_SELECTOR = "[data-pdf-auto-footer]";
+const PRODUCT_PAGE_SELECTOR = "[data-pdf-product-page]";
+const PRODUCT_ROW_SELECTOR = "[data-pdf-auto-product-index]";
 
 type FocusSnapshot = {
   tagName: string;
@@ -206,6 +208,127 @@ export function usePdfAutoPageBreaks(
     for (const element of observedElements) observer.observe(element);
     return () => observer.disconnect();
   }, [containerRef, moduleCount, pageBreaks, resetKey]);
+
+  return pageBreaks;
+}
+
+/**
+ * Measures rendered product rows against the usable space above the page
+ * footer. Product rows are deliberately not assigned a fixed page capacity:
+ * wrapped names, resized fields, fonts, and viewport scaling can all change
+ * the row height.
+ */
+export function usePdfAutoProductPageBreaks(
+  containerRef: RefObject<HTMLElement | null>,
+  lineCount: number,
+  resetKey: string,
+) {
+  const [pageBreaks, setPageBreaks] = useState<number[]>([]);
+  const [layoutRevision, setLayoutRevision] = useState(0);
+  const previousResetKey = useRef(resetKey);
+  const rejectedMerges = useRef(new Set<number>());
+  const mergeTrial = useRef<{ removedBreak: number; previousBreaks: number[] } | null>(null);
+  const pendingFocusRestore = useRef<FocusSnapshot | null>(null);
+
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    restoreFocusedField(container, pendingFocusRestore.current);
+    pendingFocusRestore.current = null;
+
+    const updatePageBreaks = (next: number[] | ((current: number[]) => number[])) => {
+      if (container) pendingFocusRestore.current = captureFocusedField(container);
+      setPageBreaks(next);
+    };
+
+    if (previousResetKey.current !== resetKey) {
+      previousResetKey.current = resetKey;
+      rejectedMerges.current.clear();
+      mergeTrial.current = null;
+      if (pageBreaks.length) {
+        updatePageBreaks([]);
+        return;
+      }
+    }
+
+    if (!container || !lineCount) return;
+
+    const pages = Array.from(container.querySelectorAll<HTMLElement>(PRODUCT_PAGE_SELECTOR));
+    for (const page of pages) {
+      const footer = page.querySelector<HTMLElement>(FOOTER_SELECTOR);
+      const rows = Array.from(page.querySelectorAll<HTMLElement>(PRODUCT_ROW_SELECTOR));
+      if (!footer || !rows.length) continue;
+
+      const footerTop = pageContentBottom(page, footer);
+      const overflowingRow = rows.find((row) => row.getBoundingClientRect().bottom > footerTop - 1);
+      if (!overflowingRow) continue;
+
+      const lineIndex = Number(overflowingRow.getAttribute("data-pdf-auto-product-index"));
+      const firstLineIndex = Number(rows[0].getAttribute("data-pdf-auto-product-index"));
+      if (!Number.isInteger(lineIndex) || !Number.isInteger(firstLineIndex) || lineIndex <= firstLineIndex) continue;
+
+      if (mergeTrial.current) {
+        const trial = mergeTrial.current;
+        mergeTrial.current = null;
+        rejectedMerges.current.add(trial.removedBreak);
+        updatePageBreaks(trial.previousBreaks);
+        return;
+      }
+
+      if (pageBreaks.includes(lineIndex)) continue;
+
+      updatePageBreaks((current) => [...current, lineIndex].sort((left, right) => left - right));
+      return;
+    }
+
+    mergeTrial.current = null;
+    const activeElement = document.activeElement;
+    const fieldIsBeingEdited = (
+      (activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement)
+      && container.contains(activeElement)
+    );
+    if (fieldIsBeingEdited) return;
+
+    const removableBreak = pageBreaks.find((pageBreak) => !rejectedMerges.current.has(pageBreak));
+    if (removableBreak !== undefined) {
+      mergeTrial.current = { removedBreak: removableBreak, previousBreaks: pageBreaks };
+      updatePageBreaks((current) => current.filter((pageBreak) => pageBreak !== removableBreak));
+    }
+  }, [containerRef, layoutRevision, lineCount, pageBreaks, resetKey]);
+
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    if (!container || typeof ResizeObserver === "undefined") return;
+
+    const observedElements = Array.from(new Set(container.querySelectorAll<HTMLElement>(
+      `${PRODUCT_PAGE_SELECTOR}, ${PRODUCT_ROW_SELECTOR}, ${FOOTER_SELECTOR}`,
+    )));
+    const sizes = new Map<Element, { width: number; height: number }>();
+    for (const element of observedElements) {
+      const rect = element.getBoundingClientRect();
+      sizes.set(element, { width: rect.width, height: rect.height });
+    }
+
+    const observer = new ResizeObserver(() => {
+      const changed = observedElements.some((element) => {
+        const previous = sizes.get(element);
+        const rect = element.getBoundingClientRect();
+        return !previous || Math.abs(previous.width - rect.width) > 0.5 || Math.abs(previous.height - rect.height) > 0.5;
+      });
+      if (!changed) return;
+
+      for (const element of observedElements) {
+        const rect = element.getBoundingClientRect();
+        sizes.set(element, { width: rect.width, height: rect.height });
+      }
+
+      pendingFocusRestore.current = captureFocusedField(container);
+      rejectedMerges.current.clear();
+      mergeTrial.current = null;
+      setLayoutRevision((current) => current + 1);
+    });
+    for (const element of observedElements) observer.observe(element);
+    return () => observer.disconnect();
+  }, [containerRef, lineCount, pageBreaks, resetKey]);
 
   return pageBreaks;
 }

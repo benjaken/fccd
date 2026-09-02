@@ -115,6 +115,20 @@ function renderPage(
   return loadDetail;
 }
 
+function measuredProductRowRect(element: HTMLElement) {
+  const lineIndex = Number(element.dataset.pdfAutoProductIndex);
+  const page = element.closest<HTMLElement>(".quote-pdf-sheet");
+  if (!page || !Number.isInteger(lineIndex)) return null;
+
+  const pages = Array.from(document.querySelectorAll<HTMLElement>(".quote-pdf-sheet"));
+  const pageIndex = pages.indexOf(page);
+  const rows = Array.from(page.querySelectorAll<HTMLElement>("[data-pdf-auto-product-index]"));
+  const position = rows.indexOf(element);
+  const top = (pageIndex === 0 ? 300 : 100) + position * 48;
+  const height = 48;
+  return { x: 0, y: top, top, right: 800, bottom: top + height, left: 0, width: 800, height, toJSON: () => ({}) } as DOMRect;
+}
+
 describe("editable quote PDF page", () => {
   it("hides a product subtotal when its quantity is zero", async () => {
     const zeroQuantityResult: OrderDetailResult = {
@@ -132,6 +146,9 @@ describe("editable quote PDF page", () => {
     const row = quantity.closest("tr");
     expect(row).not.toBeNull();
     expect(row?.querySelector("td:last-child")).toBeEmptyDOMElement();
+    expect(screen.queryByText("小計：")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("運費")).not.toBeInTheDocument();
+    expect(screen.queryByText("總數：")).not.toBeInTheDocument();
   });
 
   it("shows the product subtotal again when quantity becomes greater than zero", async () => {
@@ -591,6 +608,21 @@ describe("editable quote PDF page", () => {
   });
 
   it("automatically continues long product tables on a new A4 sheet", async () => {
+    const rectSpy = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function () {
+      const productRowRect = measuredProductRowRect(this);
+      if (productRowRect) return productRowRect;
+      const page = this.closest<HTMLElement>(".quote-pdf-sheet");
+      const pageIndex = page ? Array.from(document.querySelectorAll<HTMLElement>(".quote-pdf-sheet")).indexOf(page) : 0;
+      const pageTop = pageIndex * 1200;
+      if (this.classList.contains("quote-pdf-sheet")) {
+        return { x: 0, y: pageTop, top: pageTop, right: 800, bottom: pageTop + 1000, left: 0, width: 800, height: 1000, toJSON: () => ({}) } as DOMRect;
+      }
+      if (this.hasAttribute("data-pdf-auto-footer")) {
+        const top = pageTop + 970;
+        return { x: 0, y: top, top, right: 800, bottom: top + 30, left: 0, width: 800, height: 30, toJSON: () => ({}) } as DOMRect;
+      }
+      return { x: 0, y: 0, top: 0, right: 800, bottom: 0, left: 0, width: 800, height: 0, toJSON: () => ({}) } as DOMRect;
+    });
     const longResult: OrderDetailResult = {
       ...result,
       lines: Array.from({ length: 18 }, (_, index) => ({
@@ -601,18 +633,24 @@ describe("editable quote PDF page", () => {
     };
     renderPage(vi.fn().mockResolvedValue(longResult));
 
-    expect(await screen.findAllByRole("heading", { name: "到會套餐報價" })).toHaveLength(2);
-    const sheets = document.querySelectorAll(".quote-pdf-sheet");
-    expect(sheets).toHaveLength(2);
-    expect(sheets[0].querySelectorAll(".quote-pdf-table > tbody:first-of-type > tr")).toHaveLength(16);
-    expect(sheets[1].querySelectorAll(".quote-pdf-table > tbody:first-of-type > tr")).toHaveLength(2);
-    expect(within(sheets[1] as HTMLElement).getByLabelText("產品 18")).toHaveValue("產品 18");
-    expect(sheets[0].querySelector(".quote-pdf-summary-rows")).not.toBeInTheDocument();
-    expect(sheets[1].querySelector(".quote-pdf-summary-rows")).toBeInTheDocument();
+    try {
+      expect(await screen.findAllByRole("heading", { name: "到會套餐報價" })).toHaveLength(2);
+      const sheets = document.querySelectorAll(".quote-pdf-sheet");
+      expect(sheets).toHaveLength(2);
+      expect(sheets[0].querySelectorAll(".quote-pdf-table > tbody:first-of-type > tr")).toHaveLength(13);
+      expect(sheets[1].querySelectorAll(".quote-pdf-table > tbody:first-of-type > tr")).toHaveLength(5);
+      expect(within(sheets[1] as HTMLElement).getByLabelText("產品 18")).toHaveValue("產品 18");
+      expect(sheets[0].querySelector(".quote-pdf-summary-rows")).not.toBeInTheDocument();
+      expect(sheets[1].querySelector(".quote-pdf-summary-rows")).toBeInTheDocument();
+    } finally {
+      rectSpy.mockRestore();
+    }
   });
 
   it("moves overflowing trailing modules to another sheet instead of clipping the signature", async () => {
     const rectSpy = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function () {
+      const productRowRect = measuredProductRowRect(this);
+      if (productRowRect) return productRowRect;
       const isFooter = this.hasAttribute("data-pdf-auto-footer");
       const isOverflowingSignature = Boolean(this.querySelector(".quote-pdf-signature"))
         && this.closest<HTMLElement>("[data-pdf-auto-page]")?.dataset.pdfAutoPage === "products";
@@ -650,6 +688,8 @@ describe("editable quote PDF page", () => {
 
   it("keeps clauses visible when overflowing content pushes the page footer outside the A4 sheet", async () => {
     const rectSpy = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function () {
+      const productRowRect = measuredProductRowRect(this);
+      if (productRowRect) return productRowRect;
       const page = this.closest<HTMLElement>(".quote-pdf-sheet");
       const pages = Array.from(document.querySelectorAll<HTMLElement>(".quote-pdf-sheet"));
       const pageIndex = page ? pages.indexOf(page) : 0;
@@ -689,6 +729,8 @@ describe("editable quote PDF page", () => {
 
   it("fills the remaining product-page space with clauses before continuing them", async () => {
     const rectSpy = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function () {
+      const productRowRect = measuredProductRowRect(this);
+      if (productRowRect) return productRowRect;
       const isFooter = this.hasAttribute("data-pdf-auto-footer");
       const moduleIndex = Number(this.dataset.pdfAutoModuleIndex);
       const isProductPage = this.closest<HTMLElement>("[data-pdf-auto-page]")?.dataset.pdfAutoPage === "products";
@@ -725,6 +767,8 @@ describe("editable quote PDF page", () => {
 
   it("keeps every clause visible when a populated activity table consumes the remaining space", async () => {
     const rectSpy = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function () {
+      const productRowRect = measuredProductRowRect(this);
+      if (productRowRect) return productRowRect;
       const page = this.closest<HTMLElement>(".quote-pdf-sheet");
       const pages = Array.from(document.querySelectorAll<HTMLElement>(".quote-pdf-sheet"));
       const pageIndex = page ? pages.indexOf(page) : 0;
@@ -781,16 +825,23 @@ describe("editable quote PDF page", () => {
   it("repaginates when rendered content becomes taller after the first measurement", async () => {
     let activityHeight = 100;
     let notifyResize: (() => void) | undefined;
+    const resizeCallbacks = new Set<() => void>();
     class ResizeObserverMock {
+      private readonly callback: () => void;
+
       constructor(callback: ResizeObserverCallback) {
-        notifyResize = () => callback([], this as unknown as ResizeObserver);
+        this.callback = () => callback([], this as unknown as ResizeObserver);
+        resizeCallbacks.add(this.callback);
+        notifyResize = () => resizeCallbacks.forEach((resizeCallback) => resizeCallback());
       }
       observe() {}
-      disconnect() {}
+      disconnect() { resizeCallbacks.delete(this.callback); }
       unobserve() {}
     }
     vi.stubGlobal("ResizeObserver", ResizeObserverMock);
     const rectSpy = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function () {
+      const productRowRect = measuredProductRowRect(this);
+      if (productRowRect) return productRowRect;
       const page = this.closest<HTMLElement>(".quote-pdf-sheet");
       const pages = Array.from(document.querySelectorAll<HTMLElement>(".quote-pdf-sheet"));
       const pageIndex = page ? pages.indexOf(page) : 0;
@@ -843,16 +894,23 @@ describe("editable quote PDF page", () => {
   it("keeps the caret when a resized field is moved to another PDF page", async () => {
     let activityHeight = 100;
     let notifyResize: (() => void) | undefined;
+    const resizeCallbacks = new Set<() => void>();
     class ResizeObserverMock {
+      private readonly callback: () => void;
+
       constructor(callback: ResizeObserverCallback) {
-        notifyResize = () => callback([], this as unknown as ResizeObserver);
+        this.callback = () => callback([], this as unknown as ResizeObserver);
+        resizeCallbacks.add(this.callback);
+        notifyResize = () => resizeCallbacks.forEach((resizeCallback) => resizeCallback());
       }
       observe() {}
-      disconnect() {}
+      disconnect() { resizeCallbacks.delete(this.callback); }
       unobserve() {}
     }
     vi.stubGlobal("ResizeObserver", ResizeObserverMock);
     const rectSpy = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function () {
+      const productRowRect = measuredProductRowRect(this);
+      if (productRowRect) return productRowRect;
       const page = this.closest<HTMLElement>(".quote-pdf-sheet");
       const pages = Array.from(document.querySelectorAll<HTMLElement>(".quote-pdf-sheet"));
       const pageIndex = page ? pages.indexOf(page) : 0;
@@ -955,7 +1013,7 @@ describe("editable quote PDF page", () => {
     expect(screen.queryByRole("button", { name: "上移一頁" })).not.toBeInTheDocument();
   });
 
-  it("keeps totals without rendering or paginating an empty activity table", async () => {
+  it("keeps totals for product quantities without rendering or paginating an empty activity table", async () => {
     localStorage.setItem("fccd:quote-pdf-draft:quote-1", JSON.stringify({
       activities: [],
       activityStartsNewPage: true,
@@ -976,6 +1034,25 @@ describe("editable quote PDF page", () => {
     expect(screen.getByRole("button", { name: "新增活動項目" })).toBeEnabled();
     expect(screen.queryByRole("button", { name: "下移一頁" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "上移一頁" })).not.toBeInTheDocument();
+  });
+
+  it("hides activity totals when there are no product quantities or activity quotes", async () => {
+    const emptyLunchBoxResult: OrderDetailResult = {
+      ...lunchBoxResult,
+      lines: lunchBoxResult.lines.map((line) => ({
+        ...line,
+        quantity: 0,
+        totalPrice: 0,
+      })),
+    };
+    localStorage.setItem("fccd:quote-pdf-draft:quote-1", JSON.stringify({
+      activities: [],
+    }));
+    renderPage(vi.fn().mockResolvedValue(emptyLunchBoxResult));
+
+    await screen.findByRole("heading", { name: "便當報價" });
+    expect(screen.queryByRole("region", { name: "活動報價表" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "新增活動項目" })).toBeEnabled();
   });
 
   it("opens the activity picker and adds a priced activity item", async () => {

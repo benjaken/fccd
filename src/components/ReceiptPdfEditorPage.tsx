@@ -16,12 +16,16 @@ import {
   type OrderDetailResult,
 } from "@/lib/order-details";
 import {
-  paginateReceiptPdfLines,
+  splitPdfProductLines,
   type ReceiptPdfDraft,
   type ReceiptPdfLineDraft,
 } from "@/lib/receipt-pdf-draft";
 import { DICT_TYPE, dictItemLabel, useDictItems } from "@/lib/dictionaries";
-import { splitPdfModuleIndexes, usePdfAutoPageBreaks } from "@/lib/pdf-auto-pagination";
+import {
+  splitPdfModuleIndexes,
+  usePdfAutoPageBreaks,
+  usePdfAutoProductPageBreaks,
+} from "@/lib/pdf-auto-pagination";
 import { printPdf } from "@/lib/print-pdf";
 import { fetchShippingFees, type ShippingFee } from "@/lib/shipping-fees";
 
@@ -169,7 +173,16 @@ export function ReceiptPdfEditorPage({
       ? Math.max(draft.terms.length, 1) + Math.max(draft.paymentMethods.length, 1) + 1
       : 2
     : 0;
-  const trailingPageBreaks = usePdfAutoPageBreaks(editorRef, paginationModuleCount, paginationResetKey);
+  const productPageBreaks = usePdfAutoProductPageBreaks(
+    editorRef,
+    draft?.lines.length ?? 0,
+    paginationResetKey,
+  );
+  const trailingPageBreaks = usePdfAutoPageBreaks(
+    editorRef,
+    paginationModuleCount,
+    `${paginationResetKey}:${productPageBreaks.join(",")}`,
+  );
   const isInvoice = documentKind === "invoice";
   const documentTitle = isInvoice ? "INVOICE" : "RECEIPT";
   const documentName = isInvoice ? "發票" : "收據";
@@ -285,7 +298,7 @@ export function ReceiptPdfEditorPage({
     sourceBrand.shopifyStoreDomain,
     sourceBrand.orderNumber,
   );
-  const productLinePages = paginateReceiptPdfLines(draft.lines);
+  const productLinePages = splitPdfProductLines(draft.lines, productPageBreaks);
   const letterhead = (
     <header className="receipt-pdf-letterhead">
       <img src={brandLogo} alt={brandLogoAlt} />
@@ -465,7 +478,7 @@ export function ReceiptPdfEditorPage({
           {lines.map((line, pageIndex) => {
             const index = offset + pageIndex;
             return (
-              <tr key={line.id}>
+              <tr data-pdf-auto-product-index={index} key={line.id}>
                 <td>{index + 1}</td>
                 <td><PdfBlurCommitTextarea aria-label={`產品 ${index + 1}`} rows={1} value={line.description} onCommit={(value) => updateLine(index, { description: value })} /></td>
                 <td><span className="receipt-pdf-price-input"><span aria-hidden="true">$</span><PdfBlurCommitInput aria-label={`單價 ${index + 1}`} inputMode="decimal" size={Math.max(line.unitPrice.length, 1)} value={line.unitPrice} onCommit={(value) => updateLine(index, { unitPrice: value.trim() ? value : "0" })} /></span></td>
@@ -496,7 +509,7 @@ export function ReceiptPdfEditorPage({
         </div>
       </div>
 
-      <main className={`quote-pdf-sheet receipt-pdf-sheet${productLinePages.length === 1 && trailingModulePages.length === 1 ? " is-final-document-page" : ""}`} data-pdf-auto-page={productLinePages.length === 1 ? "products" : undefined} aria-label={`${documentName} PDF`}>
+      <main className={`quote-pdf-sheet receipt-pdf-sheet${productLinePages.length === 1 && trailingModulePages.length === 1 ? " is-final-document-page" : ""}`} data-pdf-auto-page={productLinePages.length === 1 ? "products" : undefined} data-pdf-product-page="true" aria-label={`${documentName} PDF`}>
         {letterhead}
 
         <div className="receipt-pdf-meta-grid">
@@ -529,7 +542,7 @@ export function ReceiptPdfEditorPage({
         const isFinalProductPage = page === productLinePages.length;
         const offset = productLinePages.slice(0, pageIndex + 1).reduce((sum, page) => sum + page.length, 0);
         return (
-          <main className={`quote-pdf-sheet quote-pdf-sheet-continuation receipt-pdf-sheet receipt-pdf-sheet-continuation receipt-pdf-product-continuation${isFinalProductPage && trailingModulePages.length === 1 ? " is-final-document-page" : ""}`} data-pdf-auto-page={isFinalProductPage ? "products" : undefined} aria-label={`${documentName} PDF 第 ${page} 頁`} key={`products-${page}`}>
+          <main className={`quote-pdf-sheet quote-pdf-sheet-continuation receipt-pdf-sheet receipt-pdf-sheet-continuation receipt-pdf-product-continuation${isFinalProductPage && trailingModulePages.length === 1 ? " is-final-document-page" : ""}`} data-pdf-auto-page={isFinalProductPage ? "products" : undefined} data-pdf-product-page="true" aria-label={`${documentName} PDF 第 ${page} 頁`} key={`products-${page}`}>
             {letterhead}
             {renderProductTable(lines, offset, isFinalProductPage)}
             {isFinalProductPage ? renderTrailingModules(trailingModulePages[0] ?? []) : null}

@@ -1,30 +1,27 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  paginateReceiptPdfLines,
-  RECEIPT_PDF_CONTINUATION_PAGE_SIZE,
-  RECEIPT_PDF_OVERFLOW_FIRST_PAGE_SIZE,
+  splitPdfProductLines,
 } from "@/lib/receipt-pdf-draft";
 
-describe("paginateReceiptPdfLines", () => {
-  it("keeps a short table on one sheet so totals and signature stay with the products", () => {
-    expect(paginateReceiptPdfLines(ids(10))).toEqual([ids(10)]);
+describe("splitPdfProductLines", () => {
+  it("keeps all rows on one sheet when no measured break is reported", () => {
+    expect(splitPdfProductLines(ids(10), [])).toEqual([ids(10)]);
   });
 
-  it("fills the first overflow sheet instead of leaving ten rows above a blank A4 gap", () => {
-    expect(paginateReceiptPdfLines(ids(18))).toEqual([
-      ids(RECEIPT_PDF_OVERFLOW_FIRST_PAGE_SIZE),
-      ids(18).slice(RECEIPT_PDF_OVERFLOW_FIRST_PAGE_SIZE),
+  it("splits at the row index reported by the layout observer", () => {
+    expect(splitPdfProductLines(ids(18), [10])).toEqual([
+      ids(10),
+      ids(18).slice(10),
     ]);
   });
 
-  it("continues leftover rows at the continuation page size", () => {
-    const lineCount = RECEIPT_PDF_OVERFLOW_FIRST_PAGE_SIZE + RECEIPT_PDF_CONTINUATION_PAGE_SIZE + 3;
-    const pages = paginateReceiptPdfLines(ids(lineCount));
+  it("supports multiple measured breaks and ignores invalid indexes", () => {
+    const pages = splitPdfProductLines(ids(12), [8, 3, 8, 0, 12, -1]);
     expect(pages.map((page) => page.length)).toEqual([
-      RECEIPT_PDF_OVERFLOW_FIRST_PAGE_SIZE,
-      RECEIPT_PDF_CONTINUATION_PAGE_SIZE,
       3,
+      5,
+      4,
     ]);
   });
 });

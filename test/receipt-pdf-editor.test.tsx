@@ -94,6 +94,18 @@ function renderPage(
   return loadDetail;
 }
 
+function measuredProductRowRect(element: HTMLElement) {
+  const lineIndex = Number(element.dataset.pdfAutoProductIndex);
+  const page = element.closest<HTMLElement>(".quote-pdf-sheet");
+  if (!page || !Number.isInteger(lineIndex)) return null;
+
+  const rows = Array.from(page.querySelectorAll<HTMLElement>("[data-pdf-auto-product-index]"));
+  const position = rows.indexOf(element);
+  const top = position * 60;
+  const height = 60;
+  return { x: 0, y: top, top, right: 800, bottom: top + height, left: 0, width: 800, height, toJSON: () => ({}) } as DOMRect;
+}
+
 describe("Receipt PDF editor", () => {
   beforeEach(() => {
     window.localStorage.clear();
@@ -385,6 +397,21 @@ describe("Receipt PDF editor", () => {
   });
 
   it("automatically continues long receipt product tables on the next A4 sheet", async () => {
+    const rectSpy = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function () {
+      const productRowRect = measuredProductRowRect(this);
+      if (productRowRect) return productRowRect;
+      const page = this.closest<HTMLElement>(".receipt-pdf-sheet");
+      const pageIndex = page ? Array.from(document.querySelectorAll<HTMLElement>(".receipt-pdf-sheet")).indexOf(page) : 0;
+      const pageTop = pageIndex * 1200;
+      if (this.classList.contains("receipt-pdf-sheet")) {
+        return { x: 0, y: pageTop, top: pageTop, right: 800, bottom: pageTop + 1000, left: 0, width: 800, height: 1000, toJSON: () => ({}) } as DOMRect;
+      }
+      if (this.hasAttribute("data-pdf-auto-footer")) {
+        const top = pageTop + 970;
+        return { x: 0, y: top, top, right: 800, bottom: top + 30, left: 0, width: 800, height: 30, toJSON: () => ({}) } as DOMRect;
+      }
+      return { x: 0, y: 0, top: 0, right: 800, bottom: 0, left: 0, width: 800, height: 0, toJSON: () => ({}) } as DOMRect;
+    });
     renderPage(vi.fn().mockResolvedValue({
       ...result,
       lines: Array.from({ length: 18 }, (_, index) => ({
@@ -394,13 +421,17 @@ describe("Receipt PDF editor", () => {
       })),
     }));
 
-    expect(await screen.findAllByRole("heading", { name: "RECEIPT" })).toHaveLength(2);
-    const sheets = document.querySelectorAll(".receipt-pdf-sheet");
-    expect(sheets).toHaveLength(2);
-    expect(sheets[0].querySelectorAll(".receipt-pdf-table tbody tr")).toHaveLength(16);
-    expect(sheets[1].querySelectorAll(".receipt-pdf-table tbody tr")).toHaveLength(2);
-    expect(sheets[0].querySelector("tfoot")).not.toBeInTheDocument();
-    expect(sheets[1].querySelector("tfoot")).toBeInTheDocument();
-    expect(within(sheets[1] as HTMLElement).getByLabelText("產品 18")).toHaveValue("產品 18");
+    try {
+      expect(await screen.findAllByRole("heading", { name: "RECEIPT" })).toHaveLength(2);
+      const sheets = document.querySelectorAll(".receipt-pdf-sheet");
+      expect(sheets).toHaveLength(2);
+      expect(sheets[0].querySelectorAll(".receipt-pdf-table tbody tr")).toHaveLength(16);
+      expect(sheets[1].querySelectorAll(".receipt-pdf-table tbody tr")).toHaveLength(2);
+      expect(sheets[0].querySelector("tfoot")).not.toBeInTheDocument();
+      expect(sheets[1].querySelector("tfoot")).toBeInTheDocument();
+      expect(within(sheets[1] as HTMLElement).getByLabelText("產品 18")).toHaveValue("產品 18");
+    } finally {
+      rectSpy.mockRestore();
+    }
   });
 });

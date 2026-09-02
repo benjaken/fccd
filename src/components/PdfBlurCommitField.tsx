@@ -1,5 +1,5 @@
 import {
-  useEffect,
+  useLayoutEffect,
   useState,
   type ComponentProps,
   type FocusEvent,
@@ -20,12 +20,13 @@ export function PdfBlurCommitInput({
   onCommit,
   onDirty,
   onBlur,
+  onInput,
   size,
   ...props
 }: PdfBlurCommitInputProps) {
   const [editingValue, setEditingValue] = useState(value);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setEditingValue(value);
   }, [value]);
 
@@ -46,6 +47,10 @@ export function PdfBlurCommitInput({
         setEditingValue(event.target.value);
         onDirty?.();
       }}
+      onInput={(event) => {
+        setEditingValue(event.currentTarget.value);
+        onInput?.(event);
+      }}
       onBlur={commit}
     />
   );
@@ -58,11 +63,12 @@ export function PdfBlurCommitTextarea({
   onCommit,
   onDirty,
   onBlur,
+  onInput,
   ...props
 }: PdfBlurCommitTextareaProps) {
   const [editingValue, setEditingValue] = useState(value);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setEditingValue(value);
   }, [value]);
 
@@ -73,6 +79,10 @@ export function PdfBlurCommitTextarea({
       onChange={(event) => {
         setEditingValue(event.target.value);
         onDirty?.();
+      }}
+      onInput={(event) => {
+        setEditingValue(event.currentTarget.value);
+        onInput?.(event);
       }}
       onBlur={(event) => {
         if (event.currentTarget.value !== value) onCommit(event.currentTarget.value);

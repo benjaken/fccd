@@ -35,34 +35,13 @@ export type ReceiptPdfDraft = {
   signaturePartyName: string;
 };
 
-/** Fits products + payment/signature on the first A4 sheet. */
-export const RECEIPT_PDF_FIRST_PAGE_WITH_TRAILING = 10;
-/**
- * When products already overflow onto a later sheet, the first page has no
- * totals or signature, so it can hold more rows than the trailing-budget size.
- */
-export const RECEIPT_PDF_OVERFLOW_FIRST_PAGE_SIZE = 16;
-export const RECEIPT_PDF_CONTINUATION_PAGE_SIZE = 18;
-
-export function paginatePdfProductLines<T>(
-  lines: readonly T[],
-  firstPageSize: number,
-  continuationPageSize: number,
-): T[][] {
-  const pages: T[][] = [lines.slice(0, firstPageSize)];
-  for (let index = firstPageSize; index < lines.length; index += continuationPageSize) {
-    pages.push(lines.slice(index, index + continuationPageSize));
-  }
-  return pages;
-}
-
-export function paginateReceiptPdfLines<T>(lines: readonly T[]): T[][] {
-  if (lines.length <= RECEIPT_PDF_FIRST_PAGE_WITH_TRAILING) {
-    return [lines.slice()];
-  }
-  return paginatePdfProductLines(
-    lines,
-    RECEIPT_PDF_OVERFLOW_FIRST_PAGE_SIZE,
-    RECEIPT_PDF_CONTINUATION_PAGE_SIZE,
-  );
+/** Splits products at the measured row indexes that touch the A4 footer. */
+export function splitPdfProductLines<T>(lines: readonly T[], pageBreaks: readonly number[]): T[][] {
+  const validBreaks = [...new Set(pageBreaks.filter((index) => index > 0 && index < lines.length))]
+    .sort((left, right) => left - right);
+  const starts = [0, ...validBreaks];
+  return starts.map((start, pageIndex) => {
+    const end = starts[pageIndex + 1] ?? lines.length;
+    return lines.slice(start, end);
+  });
 }
