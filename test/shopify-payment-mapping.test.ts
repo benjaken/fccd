@@ -844,7 +844,7 @@ describe("mapShopifyOrder remark collection", () => {
     ])).toBeNull();
   });
 
-  it("keeps package menu properties as remarks after they become product lines", () => {
+  it("removes package menu properties after they become product lines", () => {
     const properties = [
       { name: "必選", value: "醬香牛展拌粉皮 (1磅), 川式涼拌青瓜魚片 (1磅)" },
       { name: "internal_id", value: "2420" },
@@ -869,12 +869,10 @@ describe("mapShopifyOrder remark collection", () => {
       }],
       lunchBox: false,
     });
-    expect(stripped[0].remarks_1).toBe(
-      "醬香牛展拌粉皮 (1磅), 川式涼拌青瓜魚片 (1磅)",
-    );
+    expect(stripped[0].remarks_1).toBeNull();
   });
 
-  it("keeps K-2132 package and add-on properties as line remarks", () => {
+  it("removes K-2132 package selections and duplicate add-on remarks", () => {
     const packageProperties = [
       {
         name: "套餐必選8道菜",
@@ -910,9 +908,11 @@ describe("mapShopifyOrder remark collection", () => {
       lunchBox: false,
     });
 
-    expect(stripped[0].remarks_1).toContain("竹笙花膠紅燒翅");
-    expect(shopifyLineRemarksSnapshot({ properties: addonProperties }))
-      .toBe("蛋黃蓮蓉壽桃包 (6個)");
+    expect(stripped[0].remarks_1).toBeNull();
+    expect(shopifyLineRemarksSnapshot({
+      properties: addonProperties,
+      productName: "蛋黃蓮蓉壽桃包 (6個)",
+    })).toBeNull();
 
     const packageRemark = collectLineMenuRemarkText(packageProperties);
     expect(parseMenuRemark(packageRemark)).toEqual([

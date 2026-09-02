@@ -1319,16 +1319,16 @@ export function collectLineMenuRemarkText(
 const IGNORED_LINE_PROPERTY_NAME =
   /(?:飲品|drink|beverage|pickup|delivery|送貨|日期|時間|internal_id)/i;
 
-/** Line remarks assembled from Shopify product properties. Parsed menu
- * selections stay in remarks as source evidence even after child product rows
- * are generated, so staff can still see the customer's original choices. */
+/** Line remarks assembled from Shopify product properties. */
 export function shopifyLineRemarksSnapshot(input: {
   properties: Array<{ name?: string; value?: string | null }>;
   optionRemark?: string | null;
   variantRemark?: string | null;
   existing?: unknown;
   omitMenuSelections?: boolean;
+  productName?: string | null;
 }): string | null {
+  const normalizedProductName = normalizeNameForMatch(input.productName);
   const propertyRemark = input.properties
     .map((property) => ({
       name: String(property.name ?? ""),
@@ -1351,6 +1351,9 @@ export function shopifyLineRemarksSnapshot(input: {
   ]
     .map((value) => stripShopifyCustomProductRemark(value))
     .filter((value): value is string => typeof value === "string" && Boolean(value.trim()))
+    .filter((value) =>
+      !normalizedProductName || normalizeNameForMatch(value) !== normalizedProductName
+    )
     .filter((value, index, values) => values.indexOf(value) === index)
     .join("\n") || null;
 }
@@ -1389,10 +1392,10 @@ export function stripParsedMenuRemarksFromLines(input: {
         optionRemark: source?.optionRemark ?? null,
         variantRemark: source?.variantRemark ?? null,
         existing: null,
-        // Keep Shopify's original option text as an operational remark. The
-        // generated child/content rows are structured data, while this is the
-        // source wording staff use to verify the import.
-        omitMenuSelections: false,
+        // Once menu selections become structured child rows, do not duplicate
+        // the source option text on the package line.
+        omitMenuSelections: true,
+        productName: row.product_name_snapshot as string | null,
       }),
     };
   });
