@@ -71,7 +71,6 @@ describe("buildMobileDrawerNav", () => {
     ]);
     expect(customers?.items.map((item) => item.to)).toEqual([
       "/quotes/customers",
-      "/quotes/famous-brands",
     ]);
     expect(delivery?.items.map((item) => item.to)).toEqual([
       "/delivery",

@@ -1,7 +1,6 @@
 import { type ComponentType } from "react";
 import {
   AlertTriangle,
-  Award,
   BellRing,
   Beef,
   Boxes,
@@ -340,12 +339,6 @@ export const secondaryNav: Record<string, NavItem[]> = {
       to: "/quotes/customers",
       icon: Users,
       permissionKey: "quotes.customers",
-    },
-    {
-      key: "famousBrandCustomers",
-      to: "/quotes/famous-brands",
-      icon: Award,
-      permissionKey: "quotes",
     },
   ],
   products: [
@@ -1111,9 +1104,7 @@ export function accessiblePrimaryNavigationPath(
 export function sectionFromPath(pathname: string) {
   if (
     pathname === "/quotes/customers" ||
-    pathname.startsWith("/quotes/customers/") ||
-    pathname === "/quotes/famous-brands" ||
-    pathname.startsWith("/quotes/famous-brands/")
+    pathname.startsWith("/quotes/customers/")
   ) {
     return "customerSection";
   }

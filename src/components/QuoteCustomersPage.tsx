@@ -7,11 +7,8 @@ import { useAuth } from "@/auth/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
-import { MultiSelect } from "@/components/ui/multi-select";
 import { SidePanel } from "@/components/ui/side-panel";
 import { TablePagination } from "@/components/ui/table-pagination";
-import { fetchCustomerTags, type CustomerTag } from "@/lib/customer-tags";
-import { useDeferredFilter } from "@/lib/use-deferred-filter";
 import {
   createQuoteCustomerNote,
   documentPath,
@@ -47,7 +44,6 @@ type MessagesLoader = (email: string) => Promise<QuoteCustomerMessages>;
 type NoteCreator = (
   input: CreateQuoteCustomerNoteInput,
 ) => Promise<QuoteCustomerMessage>;
-type CustomerTagsLoader = () => Promise<CustomerTag[]>;
 
 type OpenPanel =
   | { kind: "companies"; email: string }
@@ -194,21 +190,18 @@ export function QuoteCustomersPage({
   loadHistory = fetchQuoteCustomerHistory,
   loadMessages = fetchQuoteCustomerMessages,
   createNote = createQuoteCustomerNote,
-  loadCustomerTags = fetchCustomerTags,
 }: {
   canManageActions?: boolean;
   loadCustomers?: CustomersLoader;
   loadHistory?: HistoryLoader;
   loadMessages?: MessagesLoader;
   createNote?: NoteCreator;
-  loadCustomerTags?: CustomerTagsLoader;
 }) {
   const { t, i18n } = useTranslation();
   const { profile } = useAuth();
   const [draftSearch, setDraftSearch] = useState("");
   const [search, setSearch] = useState("");
-  const [famousBrandTagIds, setFamousBrandTagIds] = useState<string[]>([]);
-  const [customerTags, setCustomerTags] = useState<CustomerTag[]>([]);
+  const [famousBrandOnly, setFamousBrandOnly] = useState(false);
   const [page, setPage] = useState(1);
   const [sortAscending, setSortAscending] = useState(false);
   const [items, setItems] = useState<QuoteCustomerListItem[]>([]);
@@ -236,17 +229,6 @@ export function QuoteCustomersPage({
   const [sendingNote, setSendingNote] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const messageFeedRef = useRef<HTMLDivElement>(null);
-  const famousBrandFilter = useDeferredFilter(famousBrandTagIds, (value) => {
-    setPage(1);
-    setFamousBrandTagIds(value);
-  });
-  const famousBrandTagOptions = useMemo(
-    () =>
-      customerTags
-        .filter((tag) => tag.isActive)
-        .map((tag) => ({ id: tag.id, name: tag.name })),
-    [customerTags],
-  );
 
   const selectedEmail = panel?.email ?? null;
   const totalPages = Math.max(1, Math.ceil(total / QUOTE_CUSTOMERS_PAGE_SIZE));
@@ -310,7 +292,7 @@ export function QuoteCustomersPage({
         search,
         sort: "order_total",
         ascending: sortAscending,
-        famousBrandTagIds,
+        famousBrandOnly,
       });
       setItems(result.items);
       setTotal(result.total);
@@ -328,25 +310,11 @@ export function QuoteCustomersPage({
     } finally {
       setLoading(false);
     }
-  }, [famousBrandTagIds, loadCustomers, page, reloadKey, search, sortAscending]);
+  }, [famousBrandOnly, loadCustomers, page, reloadKey, search, sortAscending]);
 
   useEffect(() => {
     void loadPage();
   }, [loadPage]);
-
-  useEffect(() => {
-    let active = true;
-    void loadCustomerTags()
-      .then((tags) => {
-        if (active) setCustomerTags(tags.filter((tag) => tag.isActive));
-      })
-      .catch(() => {
-        if (active) setCustomerTags([]);
-      });
-    return () => {
-      active = false;
-    };
-  }, [loadCustomerTags]);
 
   useEffect(() => {
     if (panel?.kind !== "companies") {
@@ -533,6 +501,34 @@ export function QuoteCustomersPage({
       </header>
 
       <article className="panel quotes-panel">
+        <div
+          className="orders-queue-tabs quote-customers-queue-tabs"
+          role="group"
+          aria-label={t("quoteCustomers.title")}
+        >
+          <button
+            type="button"
+            className={cn("orders-queue-tab", !famousBrandOnly && "is-active")}
+            aria-pressed={!famousBrandOnly}
+            onClick={() => {
+              setPage(1);
+              setFamousBrandOnly(false);
+            }}
+          >
+            {t("quoteCustomers.allCustomers")}
+          </button>
+          <button
+            type="button"
+            className={cn("orders-queue-tab", famousBrandOnly && "is-active")}
+            aria-pressed={famousBrandOnly}
+            onClick={() => {
+              setPage(1);
+              setFamousBrandOnly(true);
+            }}
+          >
+            {t("quoteCustomers.famousBrandOnly")}
+          </button>
+        </div>
         <header className="quotes-toolbar">
           <ListSearchBar
             id="quote-customers-search"
@@ -542,27 +538,6 @@ export function QuoteCustomersPage({
             label={t("quoteCustomers.search")}
             placeholder={t("quoteCustomers.searchPlaceholder")}
             submitLabel={t("quoteCustomers.searchAction")}
-            filtersActive={famousBrandTagIds.length > 0}
-            onConfirmFilters={famousBrandFilter.confirm}
-            onDismissFilters={famousBrandFilter.revert}
-            filters={
-              <label className="quotes-status-filter">
-                <span id="quote-customers-famous-brand-filter-label">
-                  {t("quoteCustomers.famousBrandFilter")}
-                </span>
-                <MultiSelect
-                  id="quote-customers-famous-brand-filter"
-                  labelledBy="quote-customers-famous-brand-filter-label"
-                  options={famousBrandTagOptions}
-                  value={famousBrandFilter.value}
-                  onChange={famousBrandFilter.setValue}
-                  placeholder={t("quoteCustomers.famousBrandFilterPlaceholder")}
-                  searchPlaceholder={t("common.filterSelectSearchLabel")}
-                  emptyLabel={t("common.noMatchingOptions")}
-                  disabled={famousBrandTagOptions.length === 0}
-                />
-              </label>
-            }
           />
         </header>
 

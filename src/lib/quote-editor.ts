@@ -147,6 +147,8 @@ export type QuoteLine = {
   unitPrice: number;
   totalPrice: number;
   remarks: string | null;
+  /** One editable remark per linked product label; remarks is the first one for legacy callers. */
+  labelRemarks?: string[];
   isAddon?: boolean;
   isVoid?: boolean;
   labelId?: string | null;
@@ -268,6 +270,103 @@ export async function createQuote(input: QuoteDraft): Promise<CreatedQuote> {
   return { id: row.id as string, orderNumber: saved.order_number as string };
 }
 
+async function resolveDeliveryDistrictId(input: QuoteDraft) {
+  let districtId = input.districtId || null;
+  if (!districtId && input.districtName.trim()) {
+    const { data: district, error } = await supabase
+      .from("delivery_districts")
+      .select("id")
+      .ilike("name", input.districtName.trim())
+      .is("archived_at", null)
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    districtId = district?.id || null;
+    if (!districtId) {
+      const createdDistrictId = crypto.randomUUID();
+      const { data: createdDistrict, error: createError } = await supabase
+        .from("delivery_districts")
+        .insert({
+          id: createdDistrictId,
+          legacy_id: `web-auto-district-${createdDistrictId}`,
+          name: input.districtName.trim(),
+        })
+        .select("id")
+        .single();
+      if (createError) throw createError;
+      districtId = createdDistrict.id;
+    }
+  }
+  return districtId;
+}
+
+export async function createOrder(input: QuoteDraft): Promise<CreatedQuote> {
+  const orderId = crypto.randomUUID();
+  const districtId = await resolveDeliveryDistrictId(input);
+  const deliveryAt = input.deliveryDate
+    ? `${input.deliveryDate}T00:00:00+08:00`
+    : null;
+  const { data, error } = await supabase
+    .from("orders")
+    .insert({
+      id: orderId,
+      legacy_id: `web-order-${orderId}`,
+      order_number: optional(input.orderNumber ?? ""),
+      document_type: "order",
+      channel_id: input.channelId || null,
+      customer_name_snapshot: optional(input.customerName),
+      company_name_snapshot: optional(input.companyName),
+      contact_number_a_snapshot: optional(input.contactA),
+      contact_number_b_snapshot: optional(input.contactB),
+      email_snapshot: optional(input.email),
+      shipping_address_snapshot: optional(input.address),
+      customer_note_snapshot: optional(input.customerNote),
+      shipping_method_id: input.shippingMethodId || null,
+      delivery_district_id: districtId,
+      delivery_at: deliveryAt,
+      delivery_time: optional(input.deliveryTime),
+      ship_out_time: optional(input.shipOutTime),
+      factory_packing_note: optional(input.packingNote),
+      sales_partner_id: input.salesPartnerId || null,
+      remarks: optional(input.internalNote),
+      grand_total: 0,
+      outstanding: 0,
+      is_quote_original: false,
+      is_sent_to_factory: false,
+      do_not_send_to_factory: false,
+      ...quoteWorkflowValues(input),
+    })
+    .select("id,order_number")
+    .single();
+  if (error) throw error;
+  if (!data?.id || !data.order_number) throw new Error("order_create_failed");
+
+  if (districtId || input.shippingMethodId || input.deliveryDate) {
+    const deliveryId = crypto.randomUUID();
+    const { error: deliveryError } = await supabase.from("deliveries").insert({
+      id: deliveryId,
+      legacy_id: `web-delivery-${deliveryId}`,
+      order_id: data.id,
+      district_id: districtId,
+      shipping_method_id: input.shippingMethodId || null,
+      delivery_at: deliveryAt,
+      delivery_time: optional(input.deliveryTime),
+      ship_out_time: optional(input.shipOutTime),
+      delivery_status: "Pending",
+    });
+    if (deliveryError) throw deliveryError;
+  }
+
+  if (input.tagIds.length) {
+    const { error: tagError } = await supabase
+      .from("order_tag_assignments")
+      .insert(input.tagIds.map((orderTagId) => ({ order_id: data.id, order_tag_id: orderTagId })));
+    if (tagError) throw tagError;
+  }
+
+  return { id: data.id as string, orderNumber: data.order_number as string };
+}
+
 export async function duplicateQuote(
   sourceId: string,
   input: QuoteDraft,
@@ -303,6 +402,69 @@ export async function duplicateQuote(
     .eq("id", row.id);
   if (workflowError) throw workflowError;
   return { id: row.id as string, orderNumber: row.order_number as string };
+}
+
+export async function duplicateOrder(
+  sourceId: string,
+  input: QuoteDraft,
+): Promise<CreatedQuote> {
+  const [sourceSummary, sourceLines] = await Promise.all([
+    fetchQuoteEditorSummary(sourceId, "order"),
+    fetchQuoteLines(sourceId),
+  ]);
+  const created = await createOrder(input);
+  if (sourceSummary) {
+    await updateQuoteFinancials(created.id, sourceSummary.financials);
+  }
+  const activeSourceLines = sourceLines.filter(
+    (line) => !line.isVoid && line.quantity > 0 && line.unitPrice >= 0,
+  );
+
+  for (const line of activeSourceLines) {
+    const item: QuoteCatalogItem = line.productId
+      ? {
+          id: line.productId,
+          kind: "product",
+          sku: line.sku,
+          name: line.name?.trim() || line.sku || "Product",
+          price: line.unitPrice,
+        }
+      : line.packageId
+        ? {
+            id: line.packageId,
+            kind: "package",
+            sku: line.sku,
+            name: line.name?.trim() || line.sku || "Package",
+            price: line.unitPrice,
+          }
+        : {
+            id: crypto.randomUUID(),
+            kind: "custom",
+            sku: null,
+            name: line.name?.trim() || "Custom product",
+            price: line.unitPrice,
+          };
+    const copiedLineId = await addQuoteLine({
+      orderId: created.id,
+      item,
+      quantity: line.quantity,
+      unitPrice: line.unitPrice,
+      remarks: line.remarks || "",
+      packageChoices: line.packageChoiceGroups?.map((group) => ({
+        choiceSetId: group.choiceSetId,
+        packageProductIds: group.products.map((product) => product.packageProductId),
+      })),
+    });
+    if (line.isAddon) {
+      const { error } = await supabase
+        .from("order_lines")
+        .update({ is_addon: true })
+        .eq("id", copiedLineId);
+      if (error) throw error;
+    }
+  }
+
+  return created;
 }
 
 async function resolveCanonicalOrderId(orderId: string): Promise<string> {
@@ -570,7 +732,8 @@ export async function saveSalesDocumentBatch(input: {
       id: line.id,
       quantity: line.quantity,
       unit_price: line.unitPrice,
-      remarks: line.remarks || null,
+      remarks_1: line.labelRemarks?.[0] ?? line.remarks ?? null,
+      remarks_2: line.labelRemarks?.[1] ?? null,
     })),
     p_shipping_fee: input.financials.shippingFee,
     p_discount_amount: input.financials.discount,
@@ -704,9 +867,10 @@ export function quoteWorkflowValues(input: QuoteDraft) {
     quote_sales_source_id: input.quoteSalesSourceId || null,
     quote_communication_channel_id: input.quoteCommunicationChannelId || null,
     quote_follow_up_date: input.followUpDate || null,
-    // Keep the legacy boolean in sync for existing famous-brand lists while
-    // storing the selected customer-tag ids as the authoritative value.
-    is_hong_kong_famous_brand: famousBrandTagIds.length > 0,
+    // Customer tags are authoritative. Keep the old flag only when an older
+    // caller explicitly supplies it; new saves must not infer fame from any
+    // arbitrary customer tag.
+    is_hong_kong_famous_brand: Boolean(input.isHongKongFamousBrand),
     famous_brand_tag_ids: famousBrandTagIds,
     asana_link: optional(input.asanaLink),
   };
@@ -821,7 +985,7 @@ export async function fetchQuoteLines(orderId: string): Promise<QuoteLine[]> {
       .single(),
     supabase
       .from("order_lines")
-      .select("id,product_id,package_id,sku_snapshot,product_name_snapshot,content_snapshot,quantity,unit_price,total_price,remarks_1,is_addon,is_void,temporary_label_display_name,temporary_label_quantity_label,products(name,product_labels(id,display_name,quantity_label,created_at)),packages(name)")
+      .select("id,product_id,package_id,sku_snapshot,product_name_snapshot,content_snapshot,quantity,unit_price,total_price,remarks_1,remarks_2,is_addon,is_void,temporary_label_display_name,temporary_label_quantity_label,products(name,product_labels(id,display_name,quantity_label,created_at)),packages(name)")
       .eq("order_id", resolvedOrderId)
       .order("item_order", { ascending: true, nullsFirst: false })
       .order("created_at"),
@@ -898,6 +1062,10 @@ export async function fetchQuoteLines(orderId: string): Promise<QuoteLine[]> {
         displayB: row.temporary_label_quantity_label ?? null,
       });
     }
+    const labelRemarks = [
+      row.remarks_1 ?? "",
+      ...(lineLabels.length > 1 || row.remarks_2?.trim() ? [row.remarks_2 ?? ""] : []),
+    ];
     return {
       id: row.id,
       productId: row.product_id,
@@ -912,6 +1080,7 @@ export async function fetchQuoteLines(orderId: string): Promise<QuoteLine[]> {
       unitPrice: toNumber(row.unit_price),
       totalPrice: quoteLineTotal(row.quantity, row.unit_price, row.total_price),
       remarks: row.remarks_1,
+      labelRemarks,
       isAddon: row.is_addon === true,
       isVoid: row.is_void === true,
       labelId: label?.id ?? null,
@@ -1021,7 +1190,8 @@ export async function updateQuoteLine(
       quantity: line.quantity,
       unit_price: line.unitPrice,
       total_price: Math.round(line.quantity * line.unitPrice * 100) / 100,
-      remarks_1: optional(line.remarks || ""),
+      remarks_1: optional(line.labelRemarks?.[0] ?? line.remarks ?? ""),
+      remarks_2: optional(line.labelRemarks?.[1] ?? ""),
     })
     .eq("id", line.id)
     .select("order_id")

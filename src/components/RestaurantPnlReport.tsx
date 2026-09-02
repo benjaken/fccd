@@ -207,64 +207,88 @@ export function RestaurantPnlReport({
       ) : (
         <section className="panel restaurant-pnl-card">
           <div className="restaurant-pnl-scroll">
-            <div className="restaurant-pnl-months">
-              {report.months.map((month) => (
-                <table className="restaurant-pnl-table" key={month.monthStart}>
-                  <colgroup>
-                    <col className="restaurant-pnl-category-column" />
-                    <col className="restaurant-pnl-item-column" />
-                    <col className="restaurant-pnl-amount-column" />
-                    <col className="restaurant-pnl-total-column" />
-                  </colgroup>
-                  <thead>
-                    <tr><th colSpan={4}>{monthLabel(month.monthStart)}</th></tr>
-                  </thead>
-                  <tbody>
-                    <tr className="summary"><th>{t("restaurantPnl.revenue")}</th><td>{t("restaurantPnl.sales")}</td><td>{money(month.sales)}</td><td>{money(month.sales)}</td></tr>
-                    <tr><th rowSpan={3}>{t("restaurantPnl.costOfSales")}</th><td>{t("restaurantPnl.opening")}</td><td>{money(month.openingStock)}</td><td /></tr>
-                    <tr><td>{t("restaurantPnl.purchase")}</td><td>{money(month.purchases)}</td><td /></tr>
-                    <tr><td>{t("restaurantPnl.ending")}</td><td>{money(month.closingStock)}</td><td /></tr>
-                    <tr className="summary"><th>{t("restaurantPnl.costOfSales")}</th><td>{t("restaurantPnl.totalCostOfSales")}</td><td>{money(month.totalCostOfSales)}</td><td>{ratio(month.totalCostOfSales, month.sales)}</td></tr>
-                    <tr className="summary gross"><th>{t("restaurantPnl.grossProfit")}</th><td /><td>{money(month.grossProfit)}</td><td>{ratio(month.grossProfit, month.sales)}</td></tr>
-                    <tr className="restaurant-pnl-separator" aria-hidden="true"><td colSpan={4} /></tr>
-                    {report.categories.map((category) => {
-                      const total = category.items.reduce((sum, item) => sum + (month.values[item.key] ?? 0), 0);
-                      const discountLead =
-                        category.items.length > 1 &&
-                        category.items[0]?.name.trim().toLowerCase() === "discount";
-                      const categoryLabelIndex = discountLead ? 1 : 0;
-                      return (
-                        <Fragment key={category.key}>
-                          {category.items.map((item, index) => (
-                            <tr className={index === category.items.length - 1 ? "category-total" : undefined} key={item.key}>
-                              {index < categoryLabelIndex ? <td className="restaurant-pnl-category-placeholder" /> : null}
-                              {index === categoryLabelIndex ? <th rowSpan={category.items.length - categoryLabelIndex}>{category.name}</th> : null}
-                              <td>{item.name}</td>
-                              <td>{money(month.values[item.key] ?? 0)}</td>
-                              <td>{index === category.items.length - 1 ? <><strong>{money(total)}</strong><span>{ratio(total, month.sales)}</span></> : null}</td>
-                            </tr>
-                          ))}
-                          {needsSectionSeparator(category.name) ? (
-                            <tr className="restaurant-pnl-separator" aria-hidden="true"><td colSpan={4} /></tr>
-                          ) : null}
-                        </Fragment>
-                      );
-                    })}
-                    <tr className="summary operation-total">
-                      <th>{t("restaurantPnl.totalOperationCost")}</th>
-                      <td />
-                      <td>{money(month.totalExpenses)}</td>
-                      <td>{ratio(month.totalExpenses, month.grossProfit)}</td>
-                    </tr>
-                    <tr className="summary draft-profit">
-                      <th>{t("restaurantPnl.draftProfit")}</th>
-                      <td>{t("restaurantPnl.draftProfit")}</td>
-                      <td>{money(month.netProfit)}</td>
-                      <td>{ratio(month.netProfit, month.sales)}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              ))}
+            <div className="restaurant-pnl-months-body">
+              <div className="restaurant-pnl-months">
+                {report.months.map((month) => (
+                  <table className="restaurant-pnl-table" key={month.monthStart}>
+                    <colgroup>
+                      <col className="restaurant-pnl-category-column" />
+                      <col className="restaurant-pnl-item-column" />
+                      <col className="restaurant-pnl-amount-column" />
+                      <col className="restaurant-pnl-total-column" />
+                    </colgroup>
+                    <thead>
+                      <tr className="month-heading"><th colSpan={4}>{monthLabel(month.monthStart)}</th></tr>
+                      <tr className="column-heading">
+                        <th>{t("restaurantPnl.category")}</th>
+                        <th>{t("restaurantPnl.detail")}</th>
+                        <th>{t("restaurantPnl.amount")}</th>
+                        <th>{t("restaurantPnl.totalRatio")}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="summary"><th>{t("restaurantPnl.revenue")}</th><td>{t("restaurantPnl.sales")}</td><td>{money(month.sales)}</td><td>{money(month.sales)}</td></tr>
+                      <tr><th rowSpan={3}>{t("restaurantPnl.costOfSales")}</th><td>{t("restaurantPnl.opening")}</td><td>{money(month.openingStock)}</td><td /></tr>
+                      <tr><td>{t("restaurantPnl.purchase")}</td><td>{money(month.purchases)}</td><td /></tr>
+                      <tr><td>{t("restaurantPnl.ending")}</td><td>{money(month.closingStock)}</td><td /></tr>
+                      <tr className="summary"><th>{t("restaurantPnl.costOfSales")}</th><td>{t("restaurantPnl.totalCostOfSales")}</td><td>{money(month.totalCostOfSales)}</td><td>{ratio(month.totalCostOfSales, month.sales)}</td></tr>
+                      <tr className="summary gross"><th>{t("restaurantPnl.grossProfit")}</th><td /><td>{money(month.grossProfit)}</td><td>{ratio(month.grossProfit, month.sales)}</td></tr>
+                      <tr className="restaurant-pnl-separator" aria-hidden="true"><td colSpan={4} /></tr>
+                      {report.categories.map((category) => {
+                        const total = category.items.reduce((sum, item) => sum + (month.values[item.key] ?? 0), 0);
+                        const discountLead =
+                          category.items.length > 1 &&
+                          category.items[0]?.name.trim().toLowerCase() === "discount";
+                        const categoryLabelIndex = discountLead ? 1 : 0;
+                        return (
+                          <Fragment key={category.key}>
+                            {category.items.map((item, index) => (
+                              <tr className={index === category.items.length - 1 ? "category-total" : undefined} key={item.key}>
+                                {index < categoryLabelIndex ? <td className="restaurant-pnl-category-placeholder" /> : null}
+                                {index === categoryLabelIndex ? <th rowSpan={category.items.length - categoryLabelIndex}>{category.name}</th> : null}
+                                <td>{item.name}</td>
+                                <td>{money(month.values[item.key] ?? 0)}</td>
+                                <td>{index === category.items.length - 1 ? <><strong>{money(total)}</strong><span>{ratio(total, month.sales)}</span></> : null}</td>
+                              </tr>
+                            ))}
+                            {needsSectionSeparator(category.name) ? (
+                              <tr className="restaurant-pnl-separator" aria-hidden="true"><td colSpan={4} /></tr>
+                            ) : null}
+                          </Fragment>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                ))}
+              </div>
+            </div>
+            <div className="restaurant-pnl-months-footer">
+              <div className="restaurant-pnl-months">
+                {report.months.map((month) => (
+                  <table className="restaurant-pnl-table restaurant-pnl-summary-table" key={month.monthStart}>
+                    <colgroup>
+                      <col className="restaurant-pnl-category-column" />
+                      <col className="restaurant-pnl-item-column" />
+                      <col className="restaurant-pnl-amount-column" />
+                      <col className="restaurant-pnl-total-column" />
+                    </colgroup>
+                    <tfoot>
+                      <tr className="summary operation-total">
+                        <th>{t("restaurantPnl.totalOperationCost")}</th>
+                        <td />
+                        <td>{money(month.totalExpenses)}</td>
+                        <td>{ratio(month.totalExpenses, month.grossProfit)}</td>
+                      </tr>
+                      <tr className="summary draft-profit">
+                        <th>{t("restaurantPnl.draftProfit")}</th>
+                        <td>{t("restaurantPnl.draftProfit")}</td>
+                        <td>{money(month.netProfit)}</td>
+                        <td>{ratio(month.netProfit, month.sales)}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                ))}
+              </div>
             </div>
           </div>
         </section>

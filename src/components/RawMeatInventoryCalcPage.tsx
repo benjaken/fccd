@@ -864,12 +864,24 @@ export function RawMeatInventoryCalcPage({
                     </div>
                   </th>
                   <th>{t("rawMeatInventory.columns.product")}</th>
-                  <th>{t("rawMeatInventory.columns.unitPrice")}</th>
-                  <th>{t("rawMeatInventory.columns.inbound")}</th>
-                  <th>{t("rawMeatInventory.columns.outbound")}</th>
-                  <th>{t("rawMeatInventory.columns.balance")}</th>
-                  <th>{t("rawMeatInventory.columns.amount")}</th>
-                  <th>{t("rawMeatInventory.columns.supplier")}</th>
+                  <th className="raw-meat-calc-full-column">
+                    {t("rawMeatInventory.columns.unitPrice")}
+                  </th>
+                  <th className="raw-meat-calc-full-column">
+                    {t("rawMeatInventory.columns.inbound")}
+                  </th>
+                  <th className="raw-meat-calc-full-column">
+                    {t("rawMeatInventory.columns.outbound")}
+                  </th>
+                  <th className="raw-meat-calc-full-column">
+                    {t("rawMeatInventory.columns.balance")}
+                  </th>
+                  <th className="raw-meat-calc-amount-column raw-meat-calc-full-column">
+                    {t("rawMeatInventory.columns.amount")}
+                  </th>
+                  <th className="raw-meat-calc-supplier-column raw-meat-calc-full-column">
+                    {t("rawMeatInventory.columns.supplier")}
+                  </th>
                   <th>{t("rawMeatInventory.columns.remark")}</th>
                   <th>{t("rawMeatInventory.columns.actions")}</th>
                 </tr>
@@ -886,22 +898,28 @@ export function RawMeatInventoryCalcPage({
                   <td>
                     <strong>{row.productName}</strong>
                   </td>
-                  <td>
+                  <td className="raw-meat-calc-full-cell">
                     {row.inboundUnitPrice === null
                       ? t("common.notSet")
                       : currencyFormatter.format(row.inboundUnitPrice)}
                   </td>
-                  <td>{formatKg(row.inboundQuantityKg)}</td>
-                  <td>{formatKg(row.outboundQuantityKg)}</td>
-                  <td>
+                  <td className="raw-meat-calc-full-cell">
+                    {formatKg(row.inboundQuantityKg)}
+                  </td>
+                  <td className="raw-meat-calc-full-cell">
+                    {formatKg(row.outboundQuantityKg)}
+                  </td>
+                  <td className="raw-meat-calc-full-cell">
                     <strong>{formatKg(row.balanceKg)}</strong>
                   </td>
-                  <td>
+                  <td className="raw-meat-calc-amount-cell raw-meat-calc-full-cell">
                     {row.totalAmount === null
                       ? t("common.notSet")
                       : currencyFormatter.format(row.totalAmount)}
                   </td>
-                  <td>{row.supplierName || t("common.notSet")}</td>
+                  <td className="raw-meat-calc-supplier-cell raw-meat-calc-full-cell">
+                    {row.supplierName || t("common.notSet")}
+                  </td>
                   <td className="raw-meat-calc-remark-cell">
                     <RemarkEditor
                       value={row.remarks}
@@ -945,7 +963,7 @@ export function RawMeatInventoryCalcPage({
                     </span>
                   </td>
                   <td />
-                  <td>
+                  <td className="raw-meat-calc-amount-cell raw-meat-calc-full-cell">
                     <span className="raw-meat-calc-month-total-value">
                       {currencyFormatter.format(monthTotals.amount)}
                     </span>

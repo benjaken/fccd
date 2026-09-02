@@ -89,6 +89,37 @@ describe("PageSkeleton", () => {
     expect(container.querySelector(".detail-grid-two")).toBeNull();
   });
 
+  it("matches the quote and order editor loading structures", () => {
+    const { container, rerender } = render(
+      <PageSkeleton
+        detailLayout="document"
+        documentMode="edit"
+        documentType="quote"
+        label="Loading quote editor"
+        variant="detail"
+      />,
+    );
+
+    expect(container.querySelectorAll(".document-detail-skeleton-tab")).toHaveLength(2);
+    expect(container.querySelector(".document-detail-skeleton-add")).not.toBeNull();
+    expect(container.querySelector(".document-detail-skeleton-payments")).toBeNull();
+    expect(container.querySelectorAll(".document-detail-skeleton-items .table-skeleton-row")).toHaveLength(6);
+
+    rerender(
+      <PageSkeleton
+        detailLayout="document"
+        documentMode="detail"
+        documentType="order"
+        label="Loading order detail"
+        variant="detail"
+      />,
+    );
+
+    expect(container.querySelectorAll(".document-detail-skeleton-tab")).toHaveLength(3);
+    expect(container.querySelector(".document-detail-skeleton-add")).toBeNull();
+    expect(container.querySelector(".document-detail-skeleton-payments")).not.toBeNull();
+  });
+
   it("uses the document detail skeleton for both orders and quotes", () => {
     const source = readFileSync(
       path.resolve(process.cwd(), "src/components/QuoteEditorPage.tsx"),

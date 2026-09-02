@@ -17,6 +17,8 @@ type PageSkeletonProps = {
   variant?: PageSkeletonVariant;
   cards?: 2 | 3;
   detailLayout?: "default" | "document" | "product";
+  documentType?: "quote" | "order";
+  documentMode?: "detail" | "edit";
   analysis?: boolean;
   showSummary?: boolean;
   compact?: boolean;
@@ -127,16 +129,19 @@ function detailCard({
   );
 }
 
-function documentDetailField() {
+function documentDetailField(documentMode: "detail" | "edit") {
   return (
     <div className="quote-readonly-field document-detail-skeleton-field">
       {bone("document-detail-skeleton-label")}
-      {bone("document-detail-skeleton-value")}
+      {bone(cn(
+        "document-detail-skeleton-value",
+        documentMode === "edit" && "document-detail-skeleton-input",
+      ))}
     </div>
   );
 }
 
-function documentDetailColumn(fields: number) {
+function documentDetailColumn(fields: number, documentMode: "detail" | "edit") {
   return (
     <div className="quote-editor-form-column document-detail-skeleton-column">
       <h2>
@@ -144,30 +149,122 @@ function documentDetailColumn(fields: number) {
         {bone("detail-skeleton-card-title")}
       </h2>
       {Array.from({ length: fields }, (_, index) => (
-        <span key={index}>{documentDetailField()}</span>
+        <span key={index}>{documentDetailField(documentMode)}</span>
       ))}
     </div>
   );
 }
 
-function documentDetailSkeleton() {
+function documentDetailTabs(documentType: "quote" | "order") {
+  const tabCount = documentType === "order" ? 3 : 2;
+  return (
+    <nav className={cn(
+      "quote-editor-tabs document-detail-skeleton-tabs",
+      documentType === "quote" && "is-quote",
+    )}>
+      {Array.from({ length: tabCount }, (_, index) => (
+        <div className="document-detail-skeleton-tab" key={index}>
+          {bone("detail-skeleton-icon")}
+          <div>
+            {bone("document-detail-skeleton-tab-label")}
+            {bone("document-detail-skeleton-tab-title")}
+          </div>
+        </div>
+      ))}
+    </nav>
+  );
+}
+
+function documentDetailAddProductSkeleton() {
+  return (
+    <article className="panel quote-item-form document-detail-skeleton-add">
+      <header>
+        <div className="content-skeleton-stack">
+          {bone("content-skeleton-eyebrow")}
+          {bone("detail-skeleton-card-title")}
+        </div>
+      </header>
+      <div className="document-detail-skeleton-add-fields">
+        {Array.from({ length: 5 }, (_, index) => (
+          <div className="document-detail-skeleton-add-field" key={index}>
+            {bone("document-detail-skeleton-label")}
+            {bone("document-detail-skeleton-input")}
+          </div>
+        ))}
+      </div>
+      <footer>
+        {Array.from({ length: 3 }, (_, index) => (
+          <span key={index}>{bone("document-detail-skeleton-button")}</span>
+        ))}
+      </footer>
+    </article>
+  );
+}
+
+function documentDetailPaymentsSkeleton() {
+  return (
+    <article className="panel quote-payment-step document-detail-skeleton-payments">
+      <header>
+        {bone("detail-skeleton-icon")}
+        {bone("detail-skeleton-card-title")}
+      </header>
+      <div className="document-detail-skeleton-payment-grid">
+        {Array.from({ length: 4 }, (_, index) => (
+          <div className="document-detail-skeleton-payment-field" key={index}>
+            {bone("document-detail-skeleton-label")}
+            {bone("document-detail-skeleton-value")}
+          </div>
+        ))}
+      </div>
+    </article>
+  );
+}
+
+function documentDetailSkeleton(
+  documentType: "quote" | "order",
+  documentMode: "detail" | "edit",
+) {
+  const isOrder = documentType === "order";
+  const isEdit = documentMode === "edit";
+
   return (
     <>
       {detailHeading()}
-      <section className="panel quote-editor-form quote-editor-readonly-form document-detail-skeleton">
-        {documentDetailColumn(10)}
-        {documentDetailColumn(9)}
+      {documentDetailTabs(documentType)}
+      <section className={cn(
+        "panel quote-editor-form document-detail-skeleton",
+        !isEdit && "quote-editor-readonly-form",
+      )}>
+        {documentDetailColumn(10, documentMode)}
+        {documentDetailColumn(9, documentMode)}
       </section>
-      <article className="panel quote-lines-panel quote-lines-readonly-panel document-detail-skeleton-items">
-        <header>
-          <div className="content-skeleton-stack">
-            {bone("content-skeleton-eyebrow")}
-            {bone("detail-skeleton-card-title")}
-          </div>
-          {bone("document-detail-skeleton-total")}
-        </header>
-        {table(6, 6)}
-      </article>
+      {isEdit ? (
+        <div className="quote-items-layout document-detail-skeleton-items-layout">
+          {documentDetailAddProductSkeleton()}
+          <article className="panel quote-lines-panel document-detail-skeleton-items">
+            <header>
+              <div className="content-skeleton-stack">
+                {bone("content-skeleton-eyebrow")}
+                {bone("detail-skeleton-card-title")}
+              </div>
+              {bone("document-detail-skeleton-total")}
+            </header>
+            {table(7, 6)}
+          </article>
+        </div>
+      ) : (
+        <article className="panel quote-lines-panel quote-lines-readonly-panel document-detail-skeleton-items">
+          <header>
+            <div className="content-skeleton-stack">
+              {bone("content-skeleton-eyebrow")}
+              {bone("detail-skeleton-card-title")}
+            </div>
+            {bone("document-detail-skeleton-total")}
+          </header>
+          {table(7, 6)}
+        </article>
+      )}
+      {isOrder ? documentDetailPaymentsSkeleton() : null}
     </>
   );
 }
@@ -470,6 +567,8 @@ export function PageSkeleton({
   variant = "permission",
   cards = 3,
   detailLayout = "default",
+  documentType = "order",
+  documentMode = "detail",
   analysis = false,
   showSummary = true,
   compact = false,
@@ -478,7 +577,7 @@ export function PageSkeleton({
   const content =
     variant === "detail"
       ? detailLayout === "document"
-        ? documentDetailSkeleton()
+        ? documentDetailSkeleton(documentType, documentMode)
         : detailLayout === "product"
           ? productDetailSkeleton()
         : detailSkeleton(cards)

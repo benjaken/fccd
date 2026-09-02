@@ -34,9 +34,9 @@ export type QuoteCustomerListFilters = {
   search: string;
   sort: "order_total" | "order_count";
   ascending: boolean;
-  /** Customer tags selected in the famous-brand filter. An empty array means all customers. */
+  /** Optional customer tag ids for internal or legacy callers. */
   famousBrandTagIds?: string[];
-  /** @deprecated Use famousBrandTagIds for the multi-select filter. */
+  /** Customer list tab state. */
   famousBrandOnly?: boolean;
 };
 

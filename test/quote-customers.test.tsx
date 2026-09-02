@@ -29,25 +29,6 @@ vi.mock("@/auth/AuthProvider", () => ({
   }),
 }));
 
-vi.mock("@/lib/customer-tags", () => ({
-  fetchCustomerTags: vi.fn().mockResolvedValue([
-    {
-      id: "tag-sha-tin",
-      name: "沙田威爾斯",
-      typeId: "type-brand",
-      typeName: "知名品牌",
-      isActive: true,
-    },
-    {
-      id: "tag-enterprise",
-      name: "企業客戶",
-      typeId: "type-customer",
-      typeName: "客戶類型",
-      isActive: true,
-    },
-  ]),
-}));
-
 const customerResult: QuoteCustomerListResult = {
   total: 31,
   items: [
@@ -337,6 +318,20 @@ describe("Quote customers list", () => {
     await i18n.changeLanguage("zh-HK");
   });
 
+  it("backs the famous-brand tab with named companies only", () => {
+    const migration = readFileSync(
+      resolve(
+        process.cwd(),
+        "supabase/migrations/20260902160000_require_named_company_for_famous_customers.sql",
+      ),
+      "utf8",
+    );
+    expect(migration).toContain("has_named_famous_brand");
+    expect(migration).toContain(
+      "nullif(btrim(source_orders.company_name_snapshot), '') is not null",
+    );
+  });
+
   it("renders email-grouped customer fields in the shared list layout", async () => {
     const loadCustomers = vi.fn().mockResolvedValue(customerResult);
 
@@ -435,12 +430,12 @@ describe("Quote customers list", () => {
         search: "Ada",
         sort: "order_total",
         ascending: false,
-        famousBrandTagIds: [],
+        famousBrandOnly: false,
       }),
     );
   });
 
-  it("filters the customer list to famous brand customers", async () => {
+  it("switches to the famous brand customer tab", async () => {
     const user = userEvent.setup();
     const loadCustomers = vi.fn().mockResolvedValue(customerResult);
 
@@ -451,9 +446,8 @@ describe("Quote customers list", () => {
     );
 
     await screen.findByText("sales@foodchannels-catering.com");
-    const filter = screen.getByRole("combobox", { name: "知名品牌客戶" });
-    await user.click(filter);
-    await user.click(screen.getByRole("option", { name: "沙田威爾斯" }));
+    expect(screen.queryByRole("combobox", { name: "知名品牌客戶" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "只顯示知名品牌客戶" }));
 
     await waitFor(() =>
       expect(loadCustomers).toHaveBeenLastCalledWith({
@@ -461,7 +455,7 @@ describe("Quote customers list", () => {
         search: "",
         sort: "order_total",
         ascending: false,
-        famousBrandTagIds: ["tag-sha-tin"],
+        famousBrandOnly: true,
       }),
     );
   });

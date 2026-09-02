@@ -109,7 +109,6 @@ describe("Primary navigation section matching", () => {
     ["/orders/settings/sale-partners", "orders"],
     ["/quotes", "quotes"],
     ["/quotes/customers", "customerSection"],
-    ["/quotes/famous-brands", "customerSection"],
     ["/quotes/quote-1", "quotes"],
     ["/products", "products"],
     ["/products/packages", "products"],
