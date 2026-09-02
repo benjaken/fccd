@@ -23,6 +23,8 @@ import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { SearchSelect } from "@/components/ui/search-select";
 import { OrderFactorySettingsControls } from "@/components/order-factory-settings-controls";
+import { DeliveryAddressActions } from "@/components/DeliveryAddressActions";
+import { DistrictTranslationButton } from "@/components/DistrictTranslationButton";
 import { createDeliveryDistrictOption } from "@/lib/delivery-districts";
 import {
   clearOrderCustomerInfo,
@@ -316,7 +318,7 @@ export function OrderEditorPage({
       if (notifyByWati) await sendWatiConfirmation(savedId);
       navigate(`/orders/${savedId}`, { replace: true });
     } catch {
-      setSaveError(notifyByWati ? "訂單已儲存，但未能傳送 WATI 或電郵訂單確認通知。" : "未能儲存訂單。請確認你的權限及資料後再試。");
+      setSaveError(notifyByWati ? "未能傳送 WATI 或電郵訂單確認通知；訂單內容仍然保留。" : "未能儲存訂單。請確認你的權限及資料後再試。");
     } finally {
       setSaving(false);
       setSendingWati(false);
@@ -434,12 +436,21 @@ export function OrderEditorPage({
                 <InputField label="第二聯絡電話" value={draft.contactB} type="tel" onChange={(value) => update("contactB", value)} />
                 <InputField label="電郵地址" value={draft.email} required type="email" onChange={(value) => update("email", value)} />
                 <SelectField label="運送方式" value={draft.shippingMethodId} options={options.shippingMethods} required onChange={(value) => update("shippingMethodId", value)} />
-                <InputField label="送貨地址" value={draft.address} onChange={(value) => update("address", value)} />
+                <div className="order-editor-field order-editor-address-field">
+                  <label htmlFor="order-editor-delivery-address">送貨地址</label>
+                  <div className="delivery-address-input-row">
+                    <input id="order-editor-delivery-address" value={draft.address} onChange={(event) => update("address", event.target.value)} />
+                    <DeliveryAddressActions address={draft.address} onTranslated={(address) => update("address", address)} />
+                  </div>
+                </div>
               </div>
               <div className="order-editor-column">
                 <label className="order-editor-field">
                   <span>地區<em>*</em></span>
-                  <SearchSelect id="order-editor-district" label="地區" value={draft.districtId} options={options.districts} required disabled={creatingDistrict} onCreate={(name) => void addDistrict(name)} onChange={(option) => update("districtId", option.id)} />
+                  <div className="district-translation-control">
+                    <SearchSelect id="order-editor-district" label="地區" value={draft.districtId} options={options.districts} required disabled={creatingDistrict} onCreate={(name) => void addDistrict(name)} onChange={(option) => update("districtId", option.id)} />
+                    <DistrictTranslationButton district={options.districts.find((item) => item.id === draft.districtId)?.name || ""} disabled={creatingDistrict} onTranslated={addDistrict} />
+                  </div>
                 </label>
                 <InputField label="送貨日期及時間" value={draft.deliveryAt} required type="datetime-local" onChange={(value) => update("deliveryAt", value)} />
                 <InputField label="送貨時段" value={draft.deliveryTime} placeholder={t("orderEditor.deliveryTimePlaceholder")} onChange={(value) => update("deliveryTime", value)} />

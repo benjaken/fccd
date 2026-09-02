@@ -14,6 +14,7 @@
     "_shared/supplier-quote-recognition.ts",
     "_shared/report-ai-provider.ts",
     "_shared/report-ai-security.ts",
+    "_shared/location-translation.ts",
     "_shared/daily-sales-email.ts",
     "_shared/order-notification-content.ts",
     "_shared/notification-recipient-allowlist.ts",
@@ -29,6 +30,7 @@
     "shopify-product-sync/sync.ts",
     "shopify-product-sync/response.ts",
     "supplier-quote-ingest/index.ts",
-    "report-ai-interpret/index.ts"
+    "report-ai-interpret/index.ts",
+    "translate-address/index.ts"
   ]
 }

@@ -43,6 +43,11 @@ import {
   parseMenuTextWithGrok,
   type MenuAiCatalogCandidate,
 } from "./menu-ai.ts";
+import {
+  containsEnglishText,
+  translateLocationToTraditionalChinese,
+  type LocationTranslationKind,
+} from "../_shared/location-translation.ts";
 import { corsHeaders, jsonResponse } from "./response.ts";
 
 const API_VERSION = "2025-07";
@@ -939,7 +944,54 @@ type DistrictLookupRow = {
   created_at: string | null;
 };
 
-function attachShopifyLookups(
+async function translateShopifyLocations(mapped: MappedOrder[]) {
+  const requests = new Map<string, { text: string; kind: LocationTranslationKind }>();
+  const add = (text: unknown, kind: LocationTranslationKind) => {
+    const value = typeof text === "string" ? text.trim() : "";
+    if (value && containsEnglishText(value)) requests.set(`${kind}:${value}`, { text: value, kind });
+  };
+  for (const item of mapped) {
+    add(item.orderRow.shipping_address_snapshot, "address");
+    add(item.districtSources.noteDistrict, "district");
+    add(item.districtSources.city, "district");
+    add(item.districtSources.province, "district");
+    add(item.districtSources.address1, "address");
+    add(item.districtSources.address2, "address");
+  }
+
+  const translated = new Map<string, string>();
+  const queue = [...requests.entries()];
+  let cursor = 0;
+  const worker = async () => {
+    while (cursor < queue.length) {
+      const [key, request] = queue[cursor++];
+      try {
+        translated.set(key, await translateLocationToTraditionalChinese(request.text, request.kind));
+      } catch {
+        translated.set(key, request.text);
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(6, queue.length) }, () => worker()));
+
+  const value = (text: string | null, kind: LocationTranslationKind) => {
+    if (!text) return text;
+    return translated.get(`${kind}:${text.trim()}`) ?? text;
+  };
+  for (const item of mapped) {
+    const address = item.orderRow.shipping_address_snapshot;
+    if (typeof address === "string") {
+      item.orderRow.shipping_address_snapshot = value(address, "address");
+    }
+    item.districtSources.noteDistrict = value(item.districtSources.noteDistrict, "district");
+    item.districtSources.city = value(item.districtSources.city, "district");
+    item.districtSources.province = value(item.districtSources.province, "district");
+    item.districtSources.address1 = value(item.districtSources.address1, "address");
+    item.districtSources.address2 = value(item.districtSources.address2, "address");
+  }
+}
+
+async function attachShopifyLookups(
   mapped: MappedOrder[],
   shippingMethods: Array<{
     id: string;
@@ -948,6 +1000,7 @@ function attachShopifyLookups(
   }>,
   districts: DistrictLookupRow[],
 ) {
+  await translateShopifyLocations(mapped);
   for (const item of mapped) {
     const shippingMethodId = resolveShopifyShippingMethodId(
       item.shippingMethodTitle,
@@ -1888,7 +1941,7 @@ async function syncStore(input: {
       .is("archived_at", null),
   ]);
 
-  attachShopifyLookups(
+  await attachShopifyLookups(
     mapped,
     shippingMethods ?? [],
     (districts ?? []) as DistrictLookupRow[],
@@ -2096,7 +2149,7 @@ async function syncSingleOrder(input: {
       .is("archived_at", null),
   ]);
 
-  attachShopifyLookups(
+  await attachShopifyLookups(
     mapped,
     shippingMethods ?? [],
     (districts ?? []) as DistrictLookupRow[],
