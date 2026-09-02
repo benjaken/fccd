@@ -96,6 +96,12 @@ export function LunchboxProductPicker({
   }, [open]);
 
   useEffect(() => {
+    if (!open) return;
+    const timer = setTimeout(() => setSearch(draftSearch.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [draftSearch, open]);
+
+  useEffect(() => {
     if (!open || !initialSelectedProductIds.length) return;
     let active = true;
     void loadProducts({
@@ -293,7 +299,6 @@ export function LunchboxProductPicker({
             <Search />
             <input value={draftSearch} onChange={(event) => setDraftSearch(event.target.value)} placeholder={t("quoteEditor.items.lunchboxSearchPlaceholder")} />
           </label>
-          <Button type="submit">{t("quoteEditor.items.lunchboxSearchAction")}</Button>
           <Button type="button" variant="outline" aria-expanded={filtersOpen} onClick={() => setFiltersOpen((current) => !current)}>
             <SlidersHorizontal />{t("quoteEditor.items.lunchboxFilters")}{activeFilters.length ? <span>{activeFilters.length}</span> : null}
           </Button>

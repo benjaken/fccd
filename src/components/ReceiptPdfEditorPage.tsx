@@ -16,10 +16,7 @@ import {
   type OrderDetailResult,
 } from "@/lib/order-details";
 import {
-  paginatePdfProductLines,
   paginateReceiptPdfLines,
-  RECEIPT_PDF_CONTINUATION_PAGE_SIZE,
-  RECEIPT_PDF_FIRST_PAGE_WITH_TRAILING,
   type ReceiptPdfDraft,
   type ReceiptPdfLineDraft,
 } from "@/lib/receipt-pdf-draft";
@@ -288,13 +285,7 @@ export function ReceiptPdfEditorPage({
     sourceBrand.shopifyStoreDomain,
     sourceBrand.orderNumber,
   );
-  const productLinePages = isInvoice
-    ? paginatePdfProductLines(
-        draft.lines,
-        RECEIPT_PDF_FIRST_PAGE_WITH_TRAILING,
-        RECEIPT_PDF_CONTINUATION_PAGE_SIZE,
-      )
-    : paginateReceiptPdfLines(draft.lines);
+  const productLinePages = paginateReceiptPdfLines(draft.lines);
   const letterhead = (
     <header className="receipt-pdf-letterhead">
       <img src={brandLogo} alt={brandLogoAlt} />
@@ -505,7 +496,7 @@ export function ReceiptPdfEditorPage({
         </div>
       </div>
 
-      <main className="quote-pdf-sheet receipt-pdf-sheet" data-pdf-auto-page={productLinePages.length === 1 ? "products" : undefined} aria-label={`${documentName} PDF`}>
+      <main className={`quote-pdf-sheet receipt-pdf-sheet${productLinePages.length === 1 && trailingModulePages.length === 1 ? " is-final-document-page" : ""}`} data-pdf-auto-page={productLinePages.length === 1 ? "products" : undefined} aria-label={`${documentName} PDF`}>
         {letterhead}
 
         <div className="receipt-pdf-meta-grid">
@@ -538,7 +529,7 @@ export function ReceiptPdfEditorPage({
         const isFinalProductPage = page === productLinePages.length;
         const offset = productLinePages.slice(0, pageIndex + 1).reduce((sum, page) => sum + page.length, 0);
         return (
-          <main className="quote-pdf-sheet quote-pdf-sheet-continuation receipt-pdf-sheet receipt-pdf-sheet-continuation receipt-pdf-product-continuation" data-pdf-auto-page={isFinalProductPage ? "products" : undefined} aria-label={`${documentName} PDF 第 ${page} 頁`} key={`products-${page}`}>
+          <main className={`quote-pdf-sheet quote-pdf-sheet-continuation receipt-pdf-sheet receipt-pdf-sheet-continuation receipt-pdf-product-continuation${isFinalProductPage && trailingModulePages.length === 1 ? " is-final-document-page" : ""}`} data-pdf-auto-page={isFinalProductPage ? "products" : undefined} aria-label={`${documentName} PDF 第 ${page} 頁`} key={`products-${page}`}>
             {letterhead}
             {renderProductTable(lines, offset, isFinalProductPage)}
             {isFinalProductPage ? renderTrailingModules(trailingModulePages[0] ?? []) : null}
@@ -551,7 +542,7 @@ export function ReceiptPdfEditorPage({
         const page = productLinePages.length + pageIndex + 1;
         return (
           <main
-            className="quote-pdf-sheet quote-pdf-sheet-continuation receipt-pdf-sheet receipt-pdf-sheet-continuation quote-pdf-auto-continuation"
+            className={`quote-pdf-sheet quote-pdf-sheet-continuation receipt-pdf-sheet receipt-pdf-sheet-continuation quote-pdf-auto-continuation${pageIndex === trailingModulePages.length - 2 ? " is-final-document-page" : ""}`}
             data-pdf-auto-page="modules"
             aria-label={`${documentName} PDF 第 ${page} 頁`}
             key={`trailing-page-${page}`}

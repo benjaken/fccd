@@ -2,11 +2,12 @@ import { districtNameFromAddress } from "@/lib/district-name";
 import { supabase } from "@/lib/supabase";
 
 export const QUOTES_PAGE_SIZE = 15;
-export const LARGE_QUOTE_THRESHOLD = 10_000;
+export const LARGE_QUOTE_THRESHOLD = 100_000;
 export const QUOTE_STATUS_UNSET = "__unset__";
 
 export type QuotePreset =
   | "all"
+  | "pending"
   | "high-chance"
   | "large"
   | "recent-open"
@@ -189,6 +190,8 @@ export async function fetchQuotes({
 
   if (preset === "high-chance") {
     query = query.eq("quote_status", "High Chance");
+  } else if (preset === "pending") {
+    query = query.or(OPEN_QUOTE_STATUS);
   } else if (preset === "large") {
     const { start, end } = recentQuoteBounds(now, 30);
     query = query

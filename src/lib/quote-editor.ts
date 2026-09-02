@@ -100,6 +100,14 @@ export type QuoteCatalogItem = {
   labels?: QuoteLineLabel[];
 };
 
+export function normalizeQuoteProductName(value: string | null | undefined) {
+  return (value ?? "")
+    .normalize("NFKC")
+    .replace(/[\s\u3000]+/g, " ")
+    .trim()
+    .toLocaleLowerCase("zh-HK");
+}
+
 export type QuoteLineLabel = {
   id: string | null;
   displayA: string | null;
@@ -743,6 +751,42 @@ export async function searchQuoteCatalog(
   ];
 }
 
+export async function findQuoteProductsByName(
+  name: string,
+  channelId?: string,
+): Promise<QuoteCatalogItem[]> {
+  const normalizedName = normalizeQuoteProductName(name);
+  if (!normalizedName) return [];
+
+  const searchTerm = name.normalize("NFKC").replace(/[\s\u3000]+/g, " ").trim();
+  let query = supabase
+    .from("products")
+    .select("id,sku,name,chinese_name,price")
+    .eq("is_active", true)
+    .is("archived_at", null)
+    .ilike("name", searchTerm)
+    .limit(20);
+  if (channelId) query = query.eq("channel_id", channelId);
+  const { data, error } = await query;
+  if (error) throw error;
+
+  return ((data ?? []) as Array<{
+    id: string;
+    sku: string | null;
+    name: string;
+    chinese_name: string | null;
+    price: number | string | null;
+  }>)
+    .filter((row) => normalizeQuoteProductName(row.name) === normalizedName)
+    .map((row) => ({
+      id: row.id,
+      kind: "product" as const,
+      sku: row.sku,
+      name: row.name.trim(),
+      price: row.price === null ? null : toNumber(row.price),
+    }));
+}
+
 export async function fetchQuoteLines(orderId: string): Promise<QuoteLine[]> {
   const resolvedOrderId = await resolveCanonicalOrderId(orderId);
   const [orderResult, lineResult, choiceResult] = await Promise.all([
@@ -945,6 +989,11 @@ export async function updateQuoteLine(
   const { data, error } = await supabase
     .from("order_lines")
     .update({
+      product_id: line.productId,
+      package_id: line.packageId,
+      sku_snapshot: optional(line.sku || ""),
+      product_name_snapshot: optional(line.name || ""),
+      content_snapshot: optional(line.name || ""),
       quantity: line.quantity,
       unit_price: line.unitPrice,
       total_price: Math.round(line.quantity * line.unitPrice * 100) / 100,

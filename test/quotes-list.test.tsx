@@ -152,7 +152,7 @@ describe("Catering quotes list", () => {
     );
 
     expect(
-      await screen.findByRole("heading", { name: "到會報價" }),
+      await screen.findByRole("heading", { name: "所有報價" }),
     ).toBeInTheDocument();
     expect(await screen.findByText("Q-260812-001")).toHaveAttribute(
       "href",
@@ -232,6 +232,7 @@ describe("Catering quotes list", () => {
     );
 
     await screen.findByText("Q-260812-001");
+    await user.click(screen.getByRole("button", { name: "開啟篩選" }));
     expect(screen.getByLabelText("報價狀態").closest(".quotes-filter-group")).toBe(
       screen.getByLabelText("品牌").closest(".quotes-filter-group"),
     );
@@ -259,6 +260,7 @@ describe("Catering quotes list", () => {
   });
 
   it("always offers every quote status including unset", async () => {
+    const user = userEvent.setup();
     const loadQuotes = vi.fn().mockResolvedValue(quoteResult);
 
     render(
@@ -267,7 +269,8 @@ describe("Catering quotes list", () => {
       </MemoryRouter>,
     );
 
-    const statusFilter = await screen.findByLabelText("報價狀態");
+    await user.click(await screen.findByRole("button", { name: "開啟篩選" }));
+    const statusFilter = screen.getByLabelText("報價狀態");
     for (const status of [
       "Low Chance",
       "High Chance",
@@ -282,6 +285,7 @@ describe("Catering quotes list", () => {
   });
 
   it("shows every brand in the recent open quote list", async () => {
+    const user = userEvent.setup();
     const loadQuotes = vi.fn().mockResolvedValue(quoteResult);
     const loadBrands = vi.fn().mockResolvedValue([
       { id: "brand-1", name: "Catering" },
@@ -298,7 +302,8 @@ describe("Catering quotes list", () => {
       </MemoryRouter>,
     );
 
-    const brandFilter = await screen.findByLabelText("品牌");
+    await user.click(await screen.findByRole("button", { name: "開啟篩選" }));
+    const brandFilter = screen.getByLabelText("品牌");
     expect(
       within(brandFilter).getByRole("option", { name: "Kitchen" }),
     ).toBeInTheDocument();
@@ -441,7 +446,6 @@ describe("Catering quotes list", () => {
       screen.getByPlaceholderText("搜尋報價編號、客戶或公司"),
       "陳小姐",
     );
-    await user.click(screen.getByRole("button", { name: "搜尋" }));
 
     await waitFor(() =>
       expect(loadQuotes).toHaveBeenLastCalledWith({
@@ -455,7 +459,7 @@ describe("Catering quotes list", () => {
 
   it.each([
     ["upcoming", "即將到期報價"],
-    ["large", "大單 $10K 投標"],
+    ["large", "大單 100K 投標"],
     ["recent-open", "30日以內報價"],
   ] as const)("loads the %s quote queue with its title", async (preset, title) => {
     const loadQuotes = vi.fn().mockResolvedValue(quoteResult);
@@ -470,6 +474,49 @@ describe("Catering quotes list", () => {
     expect(loadQuotes).toHaveBeenCalledWith(
       expect.objectContaining({ preset }),
     );
+  });
+
+  it("switches the large and recent queues with single-select tabs", async () => {
+    const user = userEvent.setup();
+    const loadQuotes = vi.fn().mockResolvedValue(quoteResult);
+
+    render(
+      <MemoryRouter initialEntries={["/quotes?nav=catering.quotes"]}>
+        <QuotesListPage loadQuotes={loadQuotes} />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(loadQuotes).toHaveBeenCalled());
+    const largeTab = screen.getByRole("button", { name: "大單 100K 投標" });
+    await user.click(largeTab);
+    await waitFor(() =>
+      expect(loadQuotes).toHaveBeenLastCalledWith(
+        expect.objectContaining({ preset: "large" }),
+      ),
+    );
+    expect(largeTab).toHaveAttribute("aria-pressed", "true");
+
+    await user.click(largeTab);
+    await waitFor(() =>
+      expect(loadQuotes).toHaveBeenLastCalledWith(
+        expect.objectContaining({ preset: "all" }),
+      ),
+    );
+    expect(largeTab).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("opens quote filters in the same side panel used by orders", async () => {
+    const user = userEvent.setup();
+    const loadQuotes = vi.fn().mockResolvedValue(quoteResult);
+
+    render(
+      <MemoryRouter>
+        <QuotesListPage loadQuotes={loadQuotes} />
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: "開啟篩選" }));
+    expect(screen.getByRole("dialog", { name: "篩選" })).toBeInTheDocument();
   });
 
   it("badges EmailMeForm-synced inquiries in the recent quote list", async () => {
