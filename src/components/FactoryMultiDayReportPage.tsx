@@ -33,7 +33,7 @@ function orderCell(row: FactoryMultiDayMenuRow | undefined) {
         <span key={order.orderId}>
           {order.deliveryDate.slice(5).replace("-", "/")}
           {order.deliveryTime ? ` ${order.deliveryTime}` : ""}
-          {` · ${formatFactoryOrderNumber(order.orderNumber, `#${order.orderId}`)}`}
+          {` · ${formatFactoryOrderNumber(order.orderNumber, order.orderId)}`}
           {` × ${formatFactoryQuantity(order.quantity)}`}
         </span>
       ))}

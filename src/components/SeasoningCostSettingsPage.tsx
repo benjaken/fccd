@@ -466,12 +466,6 @@ export function SeasoningCostSettingsPage({
           <span className="eyebrow">{t("seasoningCost.eyebrow")}</span>
           <h1>{t("seasoningCost.title")}</h1>
         </div>
-        <div className="heading-actions">
-          <Button type="button" onClick={openCreate}>
-            <Plus />
-            {t("seasoningCost.add")}
-          </Button>
-        </div>
       </header>
 
       <article className="panel seasoning-cost-panel">
@@ -487,6 +481,7 @@ export function SeasoningCostSettingsPage({
             label={t("seasoningCost.search")}
             placeholder={t("seasoningCost.searchPlaceholder")}
             submitLabel={t("seasoningCost.searchAction")}
+            actions={<Button type="button" onClick={openCreate}><Plus />{t("seasoningCost.add")}</Button>}
           />
         </header>
 

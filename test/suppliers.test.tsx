@@ -173,7 +173,6 @@ describe("Supplier records page", () => {
       screen.getByPlaceholderText("搜尋供應商、聯絡人、電話或評價"),
       "三潤",
     );
-    await user.click(screen.getByRole("button", { name: "搜尋" }));
 
     await waitFor(() => {
       expect(loadSuppliers).toHaveBeenLastCalledWith({

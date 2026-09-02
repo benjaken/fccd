@@ -94,7 +94,7 @@ describe("FactoryMeatDeliveryNotePage", () => {
     expect(screen.getByText("4份")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /列印/ }));
-    expect(document.querySelector(".factory-meat-note-details section p")).toHaveTextContent("*");
+    expect(document.querySelector(".factory-meat-note-details section p")).not.toHaveTextContent("*");
     expect(markPrinted).toHaveBeenCalledWith("meat-1");
     expect(print).toHaveBeenCalledOnce();
     print.mockRestore();

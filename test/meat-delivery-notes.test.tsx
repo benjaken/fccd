@@ -102,7 +102,6 @@ describe("Meat delivery notes page", () => {
       screen.getByPlaceholderText("搜尋文件編號、店鋪或備註"),
       "加單",
     );
-    await user.click(screen.getByRole("button", { name: "搜尋" }));
     await waitFor(() => {
       expect(loadNotes).toHaveBeenCalledWith({ page: 1, search: "加單" });
     });

@@ -48,7 +48,7 @@ export function NotificationSettingsPage({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
+  const [, setSuccess] = useState(false);
 
   useEffect(() => {
     void loadSettings()
@@ -135,7 +135,6 @@ export function NotificationSettingsPage({
           </label>
         </div>
         {error ? <p className="notification-settings-message is-error" role="alert">{error}</p> : null}
-        {success ? <p className="notification-settings-message" role="status">{t("notificationSettings.saved")}</p> : null}
         <footer>
           <Button type="submit" disabled={loading || saving}>
             <Save />{saving ? t("common.saving") : t("common.save")}

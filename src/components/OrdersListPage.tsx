@@ -65,6 +65,24 @@ type ShopifySyncLoader = typeof syncShopifyOrders;
 type OrderStatusesUpdater = typeof updateOrderStatusSelections;
 type FestivalAssigner = typeof assignFestivalToOrders;
 
+const ORDER_QUEUE_TABS = [
+  { preset: "shopify-pending", navigationKey: "shopifyPendingOrders", permissionKey: "orders.shopify_pending" },
+  { preset: "not-sent-factory", navigationKey: "notSentFactoryOrders", permissionKey: "orders.not_sent_factory" },
+  { preset: "unpaid", navigationKey: "unpaidOrders", permissionKey: "orders.unpaid" },
+  { preset: "monthly-settlement", navigationKey: "monthlyOrders", permissionKey: "orders.monthly" },
+  { preset: "split", navigationKey: "splitOrders", permissionKey: "orders.split" },
+  { preset: "kitchen-notes", navigationKey: "kitchenNotesOrders", permissionKey: "orders.kitchen_notes" },
+  { preset: "reschedule-pending", navigationKey: "reschedulePendingOrders", permissionKey: "orders.reschedule_pending" },
+] as const satisfies ReadonlyArray<{
+  preset: OrderListConfigPreset;
+  navigationKey: string;
+  permissionKey: string;
+}>;
+
+const ORDER_QUEUE_TAB_PRESETS = new Set<OrderListConfigPreset>(
+  ORDER_QUEUE_TABS.map((tab) => tab.preset),
+);
+
 const STATUS_FILTERS: OrderStatusFilter[] = [
   "",
   "confirmed",
@@ -115,6 +133,7 @@ export function OrdersListPage({
   preset = "all",
   canViewFinance = true,
   canManageStatuses = true,
+  canAccessQueue = () => true,
   loadOrders = fetchOrders,
   loadListConfig = fetchOrderListConfigs,
   loadStatusCatalog = fetchOrderStatusCatalog,
@@ -131,6 +150,7 @@ export function OrdersListPage({
   canViewFinance?: boolean;
   /** Server-side RLS remains the authority; callers may hide status editing. */
   canManageStatuses?: boolean;
+  canAccessQueue?: (permissionKey: string) => boolean;
   loadOrders?: OrdersLoader;
   loadListConfig?: OrderListConfigLoader;
   loadStatusCatalog?: typeof fetchOrderStatusCatalog;
@@ -145,6 +165,19 @@ export function OrdersListPage({
 }) {
   const { t, i18n } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
+  const requestedQueue = searchParams.get("tab");
+  const requestedQueueDefinition = ORDER_QUEUE_TABS.find(
+    (tab) => tab.preset === requestedQueue,
+  );
+  const selectedQueue =
+    preset === "all" &&
+    requestedQueue &&
+    ORDER_QUEUE_TAB_PRESETS.has(requestedQueue as OrderListConfigPreset) &&
+    requestedQueueDefinition &&
+    canAccessQueue(requestedQueueDefinition.permissionKey)
+      ? (requestedQueue as OrderListConfigPreset)
+      : null;
+  const effectivePreset: OrderPreset = selectedQueue ?? preset;
   const requestedStatus = searchParams.get("status") ?? "";
   const status = STATUS_FILTERS.includes(
     requestedStatus as OrderStatusFilter,
@@ -161,7 +194,7 @@ export function OrdersListPage({
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
-  const [listConfig, setListConfig] = useState<OrderListConfigRow | null>(null);
+  const [listConfigs, setListConfigs] = useState<OrderListConfigRow[]>([]);
   const [syncConfirmOpen, setSyncConfirmOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
@@ -224,7 +257,7 @@ export function OrdersListPage({
   const statusFilter = useDeferredFilter(status, setStatus);
   const financeRestricted =
     !canViewFinance &&
-    (preset === "unpaid" || preset === "delivered-unpaid");
+    (effectivePreset === "unpaid" || effectivePreset === "delivered-unpaid");
 
   useEffect(() => {
     if (!printPreview || printPreview.kind !== "delivery-note") {
@@ -256,8 +289,10 @@ export function OrdersListPage({
   const visibleFrom = total === 0 ? 0 : (page - 1) * ORDERS_PAGE_SIZE + 1;
   const visibleTo = Math.min(page * ORDERS_PAGE_SIZE, total);
   const copyKeys =
-    ORDER_LIST_I18N_KEYS[preset as OrderListConfigPreset] ??
+    ORDER_LIST_I18N_KEYS[effectivePreset as OrderListConfigPreset] ??
     ORDER_LIST_I18N_KEYS.all;
+  const listConfig =
+    listConfigs.find((row) => row.presetKey === effectivePreset) ?? null;
   const title = listConfig?.title.trim() || t(`orders.${copyKeys.title}`);
   const description =
     listConfig?.description.trim() || t(`orders.${copyKeys.description}`);
@@ -301,7 +336,7 @@ export function OrdersListPage({
         page,
         search,
         status,
-        preset,
+        preset: effectivePreset,
         canViewFinance,
         ...enhancementFilters,
       });
@@ -336,7 +371,7 @@ export function OrdersListPage({
     financeRestricted,
     loadOrders,
     page,
-    preset,
+    effectivePreset,
     reloadKey,
     search,
     status,
@@ -397,16 +432,15 @@ export function OrdersListPage({
     void loadListConfig()
       .then((rows) => {
         if (cancelled) return;
-        const match = rows.find((row) => row.presetKey === preset) ?? null;
-        setListConfig(match);
+        setListConfigs(rows);
       })
       .catch(() => {
-        if (!cancelled) setListConfig(null);
+        if (!cancelled) setListConfigs([]);
       });
     return () => {
       cancelled = true;
     };
-  }, [loadListConfig, preset]);
+  }, [loadListConfig]);
 
   useEffect(() => {
     let active = true;
@@ -495,7 +529,7 @@ export function OrdersListPage({
   const listStatusOptions = orderStatusCatalog.filter((catalogStatus) =>
     (ORDER_LIST_STATUS_NAMES as readonly string[]).includes(catalogStatus.name.trim()),
   );
-  const renderStatusPicker = (order: OrderListItem) => preset === "all" ? (
+  const renderStatusPicker = (order: OrderListItem) => effectivePreset === "all" ? (
     <OrderStatusPicker
       order={order}
       options={listStatusOptions}
@@ -560,93 +594,145 @@ export function OrdersListPage({
     }
   };
 
+  const visibleQueueTabs = ORDER_QUEUE_TABS.filter((tab) => {
+    const config = listConfigs.find((row) => row.presetKey === tab.preset);
+    return canAccessQueue(tab.permissionKey) && config?.isVisible !== false;
+  });
+  const toggleQueue = (nextPreset: OrderListConfigPreset) => {
+    setPage(1);
+    setItems([]);
+    setLoading(true);
+    setSelectedOrderIds(new Set());
+    const next = new URLSearchParams(searchParams);
+    if (selectedQueue === nextPreset) next.delete("tab");
+    else next.set("tab", nextPreset);
+    setSearchParams(next, { replace: true });
+  };
+
   return (
     <section
       className={cn(
         "orders-page",
-        preset === "shopify-pending" && "is-shopify-pending",
+        effectivePreset === "shopify-pending" && "is-shopify-pending",
+        "has-no-visible-heading",
       )}
     >
-      <header className="page-heading orders-heading">
-        <div>
-          <span className="eyebrow">{t("orders.eyebrow")}</span>
-          <h1>{title}</h1>
-          {description ? <p>{description}</p> : null}
-        </div>
-        <div className="heading-actions">
-          {preset === "shopify-pending" ? <OrderReconciliationSummary /> : null}
-          {canManageStatuses && preset === "shopify-pending" ? (
-            <Button
-              variant="outline"
-              onClick={openSyncConfirm}
-              disabled={syncing}
-              aria-label={t("orders.syncShopify")}
-            >
-              {syncing ? <RefreshCw className="spin" /> : <RefreshCcw />}
-              {syncing
-                ? t("orders.syncing")
-                : t("orders.syncShopify")}
-            </Button>
-          ) : null}
-          {canManageStatuses ? <Button asChild>
-            <Link to="/orders/new">
-              <Plus />
-              {t("orders.create")}
-            </Link>
-          </Button> : null}
-        </div>
-      </header>
+      <h1 className="sr-only">{title}</h1>
 
       <article className="panel orders-panel responsive-card-list-panel">
-        <header className="orders-toolbar">
-          <ListSearchBar
-            id="orders-search"
-            value={draftSearch}
-            onChange={setDraftSearch}
-            onSubmit={submitSearch}
-            label={t("orders.search")}
-            placeholder={t("orders.searchPlaceholder")}
-            submitLabel={t("orders.searchAction")}
-            filtersAlwaysInDrawer
-            filtersTitle={t("common.filters")}
-            filtersActive={Boolean(status || enhancementFilters.deliveryDate || enhancementFilters.deliveryStart || enhancementFilters.brandIds?.length || enhancementFilters.orderTagIds?.length || enhancementFilters.manualTodoKeys?.length || enhancementFilters.festivalIds?.length || enhancementFilters.districtNames?.length)}
-            onConfirmFilters={statusFilter.confirm}
-            onDismissFilters={statusFilter.revert}
-            filters={
-              <>
-              <label className="orders-status-filter">
-                <span>{t("orders.statusFilter")}</span>
-                <FilterableSelect
-                  value={statusFilter.value}
-                  onChange={(event) =>
-                    statusFilter.setValue(
-                      event.target.value as OrderStatusFilter,
-                    )
-                  }
-                  disabled={preset === "delivered-unpaid"}
+        {preset === "all" ? (
+          <div
+            className="orders-queue-tabs"
+            role="group"
+            aria-label={t("orders.eyebrow")}
+          >
+            {visibleQueueTabs.map((tab) => {
+              const active = selectedQueue === tab.preset;
+              const configuredTitle = listConfigs
+                .find((row) => row.presetKey === tab.preset)
+                ?.title.trim();
+              return (
+                <button
+                  key={tab.preset}
+                  type="button"
+                  className={cn("orders-queue-tab", active && "is-active")}
+                  aria-pressed={active}
+                  onClick={() => toggleQueue(tab.preset)}
                 >
-                  {STATUS_FILTERS.map((option) => (
-                    <option key={option || "all"} value={option}>
-                      {option
-                        ? t(`orders.statuses.${option}`)
-                        : t("orders.allStatuses")}
-                    </option>
-                  ))}
-                </FilterableSelect>
-              </label>
-              <OrderListFiltersPanel
-                filters={enhancementFilters}
-                brands={brands}
-                tags={orderTags
-                  .filter((tag) => tag.isActive)
-                  .map((tag) => ({ id: tag.id, name: tag.name }))}
-                festivals={filterOptions.festivals}
-                districts={filterOptions.districts}
-                onChange={setEnhancementFilters}
-              />
-              </>
-            }
-          />
+                  {configuredTitle || t(`navigation.${tab.navigationKey}`)}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+        <header className="orders-toolbar">
+          <div className="orders-toolbar-main">
+            <ListSearchBar
+              id="orders-search"
+              value={draftSearch}
+              onChange={setDraftSearch}
+              onSubmit={submitSearch}
+              label={t("orders.search")}
+              placeholder={t("orders.searchPlaceholder")}
+              submitLabel={t("orders.searchAction")}
+              filtersAlwaysInDrawer
+              filtersTitle={t("common.filters")}
+              filtersActive={Boolean(status || enhancementFilters.deliveryDate || enhancementFilters.deliveryStart || enhancementFilters.brandIds?.length || enhancementFilters.orderTagIds?.length || enhancementFilters.manualTodoKeys?.length || enhancementFilters.festivalIds?.length || enhancementFilters.districtNames?.length)}
+              onConfirmFilters={statusFilter.confirm}
+              onDismissFilters={statusFilter.revert}
+              filters={
+                <>
+                <label className="orders-status-filter">
+                  <span>{t("orders.statusFilter")}</span>
+                  <FilterableSelect
+                    value={statusFilter.value}
+                    onChange={(event) =>
+                      statusFilter.setValue(
+                        event.target.value as OrderStatusFilter,
+                      )
+                    }
+                    disabled={effectivePreset === "delivered-unpaid"}
+                  >
+                    {STATUS_FILTERS.map((option) => (
+                      <option key={option || "all"} value={option}>
+                        {option
+                          ? t(`orders.statuses.${option}`)
+                          : t("orders.allStatuses")}
+                      </option>
+                    ))}
+                  </FilterableSelect>
+                </label>
+                <OrderListFiltersPanel
+                  filters={enhancementFilters}
+                  brands={brands}
+                  tags={orderTags
+                    .filter((tag) => tag.isActive)
+                    .map((tag) => ({ id: tag.id, name: tag.name }))}
+                  festivals={filterOptions.festivals}
+                  districts={filterOptions.districts}
+                  onChange={setEnhancementFilters}
+                />
+                </>
+              }
+            />
+            <div className="orders-toolbar-actions">
+              {effectivePreset === "shopify-pending" ? <OrderReconciliationSummary /> : null}
+              {canManageStatuses && effectivePreset === "shopify-pending" ? (
+                <Button
+                  variant="outline"
+                  onClick={openSyncConfirm}
+                  disabled={syncing}
+                  aria-label={t("orders.syncShopify")}
+                >
+                  {syncing ? <RefreshCw className="spin" /> : <RefreshCcw />}
+                  {syncing
+                    ? t("orders.syncing")
+                    : t("orders.syncShopify")}
+                </Button>
+              ) : null}
+              {canManageStatuses && selectedOrderIds.size ? (
+                <>
+                  <span className="orders-selection-count" role="status">
+                    {t("orders.festivalAssignment.selected", { count: selectedOrderIds.size })}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={openFestivalModal}
+                  >
+                    {t("orders.festivalAssignment.add")}
+                  </Button>
+                </>
+              ) : null}
+              {canManageStatuses ? <Button asChild>
+                <Link to="/orders/new">
+                  <Plus />
+                  {t("orders.create")}
+                </Link>
+              </Button> : null}
+            </div>
+          </div>
+          {description ? <p className="orders-toolbar-note">{description}</p> : null}
         </header>
 
         {financeRestricted ? (
@@ -682,14 +768,6 @@ export function OrdersListPage({
           </div>
         ) : (
           <>
-          {canManageStatuses && selectedOrderIds.size ? (
-            <div className="orders-selection-actions" role="status">
-              <span>{t("orders.festivalAssignment.selected", { count: selectedOrderIds.size })}</span>
-              <Button type="button" variant="outline" onClick={openFestivalModal}>
-                {t("orders.festivalAssignment.add")}
-              </Button>
-            </div>
-          ) : null}
           <ListTable
             className="orders-table-wrap"
             onRefresh={() => {
@@ -736,7 +814,7 @@ export function OrdersListPage({
                         />
                       </label>
                       <div className="order-mobile-title">
-                        <DetailLink to={preset === "pending" ? `/quotes/${order.id}` : `/orders/${order.id}`} target={preset === "pending" ? undefined : "_blank"} rel={preset === "pending" ? undefined : "noopener noreferrer"}>
+                        <DetailLink to={effectivePreset === "pending" ? `/quotes/${order.id}` : `/orders/${order.id}`} target={effectivePreset === "pending" ? undefined : "_blank"} rel={effectivePreset === "pending" ? undefined : "noopener noreferrer"}>
                           {order.orderNumber || t("common.notSet")}
                         </DetailLink>
                         <span>{order.channelName || t("common.notSet")}</span>
@@ -804,7 +882,7 @@ export function OrdersListPage({
               { width: "5.5rem", variant: "badge" as const },
               { width: "6rem" },
               { width: "5rem" },
-              ...(preset === "kitchen-notes" ? [{ width: "14rem" }] : []),
+              ...(effectivePreset === "kitchen-notes" ? [{ width: "12rem" }] : []),
               ...(canViewFinance
                 ? [{ width: "5rem" }, { width: "5rem" }]
                 : []),
@@ -843,13 +921,13 @@ export function OrdersListPage({
                 <th>{t("orders.columns.deliveryStatus")}</th>
                 <th>{t("orders.columns.tags")}</th>
                 <th>{t("orders.columns.quantity")}</th>
-                {preset === "kitchen-notes" && (
+                {effectivePreset === "kitchen-notes" && (
                   <th>{t("orders.columns.packingNote")}</th>
                 )}
                 {canViewFinance && (
                   <th>{t("orders.columns.amount")}</th>
                 )}
-                {preset === "all" && <th>{t("orders.columns.todos")}</th>}
+                {effectivePreset === "all" && <th>{t("orders.columns.todos")}</th>}
                 <th aria-label={t("orders.columns.actions")} />
               </tr>
             }
@@ -933,7 +1011,7 @@ export function OrdersListPage({
                   <td>{order.channelName || t("common.notSet")}</td>
                   <td>
                     <div className="order-number-cell">
-                      <DetailLink className="order-link" to={preset === "pending" ? `/quotes/${order.id}` : `/orders/${order.id}`} target={preset === "pending" ? undefined : "_blank"} rel={preset === "pending" ? undefined : "noopener noreferrer"}>
+                      <DetailLink className="order-link" to={effectivePreset === "pending" ? `/quotes/${order.id}` : `/orders/${order.id}`} target={effectivePreset === "pending" ? undefined : "_blank"} rel={effectivePreset === "pending" ? undefined : "noopener noreferrer"}>
                         {order.orderNumber || t("common.notSet")}
                       </DetailLink>
                       {(() => {
@@ -993,7 +1071,7 @@ export function OrdersListPage({
                     />
                   </td>
                   <td>{(order.quantity ?? 0).toLocaleString(i18n.language)}</td>
-                  {preset === "kitchen-notes" && (
+                  {effectivePreset === "kitchen-notes" && (
                     <td className="order-packing-note">
                       {order.factoryPackingNote || t("common.notSet")}
                     </td>
@@ -1005,7 +1083,7 @@ export function OrdersListPage({
                       </strong>
                     </td>
                   )}
-                  {preset === "all" ? (
+                  {effectivePreset === "all" ? (
                     <td>
                       <div className="order-todo-list">
                         <OrderTagBadges
@@ -1026,7 +1104,7 @@ export function OrdersListPage({
         )}
 
         <TablePagination
-          summary={t("orders.pagination", {
+          summary={loading ? "" : t("orders.pagination", {
             from: visibleFrom,
             to: visibleTo,
             total,
@@ -1056,7 +1134,7 @@ export function OrdersListPage({
         createNote={createCustomerNote}
       />
 
-      {preset === "shopify-pending" ? (
+      {effectivePreset === "shopify-pending" ? (
         <ConfirmDialog
           open={syncConfirmOpen}
           title={

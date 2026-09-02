@@ -283,7 +283,7 @@ describe("Quote editor", () => {
     })));
     expect(await screen.findByRole("heading", { name: "FCLQ20260801" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Add product" })).toBeInTheDocument();
-    expect(screen.getByText("The quote is saved. You can now start adding products.")).toBeInTheDocument();
+    expect(screen.getByText("You can now start adding products.")).toBeInTheDocument();
   });
 
   it("copies quote data into a new quote while clearing follow-up, delivery and dispatch times", async () => {
@@ -502,6 +502,12 @@ describe("Quote editor", () => {
     expect(within(panel).getByRole("heading", { name: "Recommended" })).toBeInTheDocument();
     expect(within(panel).getByRole("heading", { name: "More products" })).toBeInTheDocument();
     expect(within(panel).queryByRole("button", { name: /edit/i })).not.toBeInTheDocument();
+
+    await user.type(within(panel).getByPlaceholderText("Search product name or SKU"), "Chicken");
+    expect(within(panel).queryByRole("button", { name: "Search" })).not.toBeInTheDocument();
+    await waitFor(() => expect(loadLunchboxProducts).toHaveBeenCalledWith(expect.objectContaining({
+      search: "Chicken",
+    })));
 
     await user.click(within(panel).getByRole("button", { name: "Filters" }));
     await user.type(within(panel).getByRole("spinbutton", { name: "Minimum" }), "60");
@@ -874,9 +880,9 @@ describe("Quote editor", () => {
     const tabs = await screen.findAllByRole("tab");
     await user.click(tabs[1]);
     expect(screen.getByRole("columnheader", { name: "Label preview" })).toBeInTheDocument();
-    expect(screen.queryByLabelText("50 × 75 mm 標籤預覽：#FCLQ-LABEL")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("50 × 75 mm 標籤預覽：FCLQ-LABEL")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Preview / edit" }));
-    expect(screen.getAllByLabelText("50 × 75 mm 標籤預覽：#FCLQ-LABEL")).toHaveLength(2);
+    expect(screen.getAllByLabelText("50 × 75 mm 標籤預覽：FCLQ-LABEL")).toHaveLength(2);
     expect(screen.getAllByText("－ 送貨日期 －")).toHaveLength(2);
     expect(screen.getByText("Sauce label")).toBeInTheDocument();
     expect(within(screen.getByRole("dialog")).getAllByText("Line note")).toHaveLength(2);
@@ -1351,9 +1357,9 @@ describe("Quote editor", () => {
     expect(screen.getByText("WATI")).toBeInTheDocument();
     expect(screen.getByText(longRemark)).toHaveAttribute("title", longRemark);
     expect(screen.getAllByText("HK$28,350.00").length).toBeGreaterThanOrEqual(1);
-    expect(screen.queryByLabelText("50 × 75 mm 標籤預覽：#FCBQ20260834")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("50 × 75 mm 標籤預覽：FCBQ20260834")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "View label" }));
-    expect(screen.getByLabelText("50 × 75 mm 標籤預覽：#FCBQ20260834")).toBeInTheDocument();
+    expect(screen.getByLabelText("50 × 75 mm 標籤預覽：FCBQ20260834")).toBeInTheDocument();
     expect(screen.queryByRole("textbox", { name: "Label line 1" })).not.toBeInTheDocument();
     await user.click(screen.getAllByRole("button", { name: "Close label dialog" })[1]);
     expect(screen.getByRole("heading", { name: "額外資訊" })).toBeInTheDocument();
@@ -1452,10 +1458,12 @@ describe("Quote editor", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "FCCO20260801" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Open order FCCO20260801 in Shopify" })).toHaveAttribute(
+    const editShopifyLink = screen.getByRole("link", { name: "Open order FCCO20260801 in Shopify" });
+    expect(editShopifyLink).toHaveAttribute(
       "href",
       "https://admin.shopify.com/store/hklunchbox/orders/7808193593617",
     );
+    expect(editShopifyLink.closest(".quote-order-number-control")).toBeInTheDocument();
     expect(screen.getByRole("status", { name: "付款狀態：尚未付款" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Add product|加入貨品/ })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Payment records|付款紀錄/ })).toBeInTheDocument();
@@ -1492,10 +1500,12 @@ describe("Quote editor", () => {
       </MemoryRouter>,
     );
     expect(await screen.findByRole("heading", { name: "FCCO20260801" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Open order FCCO20260801 in Shopify" })).toHaveAttribute(
+    const detailShopifyLink = screen.getByRole("link", { name: "Open order FCCO20260801 in Shopify" });
+    expect(detailShopifyLink).toHaveAttribute(
       "href",
       "https://admin.shopify.com/store/hklunchbox/orders/7808193593617",
     );
+    expect(detailShopifyLink.closest(".quote-readonly-order-number")).toBeInTheDocument();
     expect(screen.getByText(/Customer note|客戶備註/)).toBeInTheDocument();
     expect(screen.getByText(/Shown on delivery note|送貨單顯示/)).toBeInTheDocument();
     expect(screen.queryByText(/Success probability|成功機率/)).not.toBeInTheDocument();
@@ -1616,5 +1626,75 @@ describe("Quote editor", () => {
     await waitFor(() => expect(confirmAddonShopify).toHaveBeenCalledWith("order-addon"));
     expect(screen.queryByText("未處理加單")).not.toBeInTheDocument();
     expect(screen.getByText("加單")).toBeInTheDocument();
+  });
+
+  it("matches an edited product name to its unique SKU and persists the link", async () => {
+    const user = userEvent.setup();
+    const saveExistingLine = vi.fn().mockResolvedValue(undefined);
+    const matchProductsByName = vi.fn().mockResolvedValue([{
+      id: "product-new", kind: "product", sku: "NEW-88", name: "New variant", price: 88,
+    }]);
+    renderEditor({
+      loadLines: vi.fn().mockResolvedValue([{
+        id: "line-1", productId: "product-old", packageId: null, sku: "OLD-1",
+        name: "Old variant", quantity: 1, unitPrice: 88, totalPrice: 88, remarks: null,
+      }]),
+      saveExistingLine,
+      matchProductsByName,
+    }, "/quotes/quote-1/edit");
+
+    await user.click(await screen.findByRole("tab", { name: "Add products" }));
+    const nameInput = screen.getByRole("textbox", { name: "Product 1" });
+    await user.clear(nameInput);
+    await user.type(nameInput, "New variant");
+    await user.tab();
+
+    await waitFor(() => expect(matchProductsByName).toHaveBeenCalledWith("New variant", "channel-1"));
+    await waitFor(() => expect(saveExistingLine).toHaveBeenCalledWith(expect.objectContaining({
+      id: "line-1", productId: "product-new", packageId: null, sku: "NEW-88", name: "New variant",
+    })));
+    expect(screen.getByText("NEW-88")).toBeInTheDocument();
+  });
+
+  it("adds a SKU-less detail line to the product catalog and links it back", async () => {
+    const user = userEvent.setup();
+    const createCatalogProduct = vi.fn().mockResolvedValue("product-created");
+    const saveExistingLine = vi.fn().mockResolvedValue(undefined);
+    const loadCatalogProductOptions = vi.fn().mockResolvedValue({
+      channels: [{ id: "channel-1", name: "Residential" }],
+      productTypes: [{ id: "type-1", name: "Main dish" }],
+      cookTypes: [], collections: [], packingMaterials: [], packingSupplies: [], catalogIngredients: [],
+    });
+    const summary = {
+      id: "quote-1", orderNumber: "FCLQ20260801", channelId: "channel-1", documentType: "quote" as const,
+      draft: { ...emptyQuoteDraft, channelId: "channel-1", customerName: "Customer" },
+      financials: { shippingFee: 0, discount: 0, cashdollarRedeemed: 0, cashdollarPurchased: 0 },
+      payments: [],
+    };
+    render(
+      <MemoryRouter initialEntries={["/quotes/quote-1"]}>
+        <Routes>
+          <Route path="/quotes/:id" element={<QuoteEditorPage combined readOnly canEdit canCreateProduct loadOptions={vi.fn().mockResolvedValue(options)} loadSummary={vi.fn().mockResolvedValue(summary)} loadLines={vi.fn().mockResolvedValue([{
+            id: "line-1", productId: null, packageId: null, sku: null, name: "Manual variant",
+            quantity: 1, unitPrice: 68, totalPrice: 68, remarks: null,
+          }])} createCatalogProduct={createCatalogProduct} loadCatalogProductOptions={loadCatalogProductOptions} saveExistingLine={saveExistingLine} loadShippingFeeOptions={vi.fn().mockResolvedValue(shippingFeeOptions)} />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: "Add to product catalog" }));
+    const panel = await screen.findByRole("dialog", { name: "Add to product catalog" });
+    expect(panel).toHaveClass("quote-product-create-panel");
+    await user.type(await within(panel).findByLabelText(/^SKU/), "MAN-68");
+    await user.selectOptions(within(panel).getByLabelText(/^Category/), "type-1");
+    await user.click(within(panel).getByRole("button", { name: "Create" }));
+
+    await waitFor(() => expect(createCatalogProduct).toHaveBeenCalledWith(expect.objectContaining({
+      name: "Manual variant", sku: "MAN-68", price: 68, channelId: "channel-1", productTypeId: "type-1",
+    })));
+    await waitFor(() => expect(saveExistingLine).toHaveBeenCalledWith(expect.objectContaining({
+      productId: "product-created", sku: "MAN-68", name: "Manual variant",
+    })));
+    expect(screen.getByText("MAN-68")).toBeInTheDocument();
   });
 });

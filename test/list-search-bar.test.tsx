@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -32,8 +32,8 @@ function mockMatchMedia(matches: boolean) {
 
 const filters = (
   <label>
-    售價範圍
-    <select aria-label="售價範圍">
+    價格範圍
+    <select aria-label="價格範圍">
       <option value="">全部售價</option>
       <option value="under-100">100 以下</option>
     </select>
@@ -45,7 +45,7 @@ describe("ListSearchBar", () => {
     mockMatchMedia(false);
   });
 
-  it("keeps the search icon inside the field and submits the trimmed action", async () => {
+  it("keeps the search icon inside the field and searches automatically", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
     const onSubmit = vi.fn();
@@ -72,8 +72,8 @@ describe("ListSearchBar", () => {
     await user.type(input, "B-1513");
     expect(onChange).toHaveBeenCalled();
 
-    await user.click(screen.getByRole("button", { name: "搜尋" }));
-    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("button", { name: "搜尋" })).not.toBeInTheDocument();
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
   });
 
   it("submits when Enter is pressed in the field", async () => {
@@ -114,7 +114,7 @@ describe("ListSearchBar", () => {
     );
 
     expect(screen.getByRole("searchbox", { name: "搜尋商品" })).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "售價範圍" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "價格範圍" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "開啟篩選" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "確定" })).not.toBeInTheDocument();
   });
@@ -136,12 +136,12 @@ describe("ListSearchBar", () => {
     );
 
     expect(screen.getByRole("searchbox", { name: "搜尋商品" })).toBeInTheDocument();
-    expect(screen.queryByRole("combobox", { name: "售價範圍" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "價格範圍" })).not.toBeInTheDocument();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "開啟篩選" }));
     expect(screen.getByRole("dialog", { name: "篩選" })).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "售價範圍" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "價格範圍" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "確定" })).toBeInTheDocument();
   });
 
@@ -166,7 +166,7 @@ describe("ListSearchBar", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "開啟篩選" }));
-    await user.selectOptions(screen.getByRole("combobox", { name: "售價範圍" }), "under-100");
+    await user.selectOptions(screen.getByRole("combobox", { name: "價格範圍" }), "under-100");
     expect(onConfirmFilters).not.toHaveBeenCalled();
     expect(screen.getByRole("dialog", { name: "篩選" })).toBeInTheDocument();
 

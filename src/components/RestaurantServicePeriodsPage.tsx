@@ -132,15 +132,15 @@ export function RestaurantServicePeriodsPage() {
           <h1>{t("restaurantServicePeriods.title")}</h1>
           <p>{t("restaurantServicePeriods.description")}</p>
         </div>
-        {canEdit ? (
-          <Button onClick={() => edit(null)}>
-            <Plus />
-            {t("restaurantServicePeriods.add")}
-          </Button>
-        ) : null}
       </header>
       <article className="panel ingredients-panel">
         <RestaurantSettingsListTable
+          toolbarAction={canEdit ? (
+            <Button onClick={() => edit(null)}>
+              <Plus />
+              {t("restaurantServicePeriods.add")}
+            </Button>
+          ) : null}
           className="ingredients-table-wrap"
           loading={loading}
           loadingLabel={t("restaurantServicePeriods.loading")}

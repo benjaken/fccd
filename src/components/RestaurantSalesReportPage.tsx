@@ -19,6 +19,7 @@ import {
   type RestaurantSalesReportRow,
 } from "@/lib/restaurant-sales-report";
 import {
+  defaultShopReportRestaurantIds,
   fetchShopReportRestaurants,
   type ShopReportRestaurant,
 } from "@/lib/shop-sales-working-hours-report";
@@ -95,7 +96,7 @@ export function RestaurantSalesReportPage({
       .then((items) => {
         if (!active) return;
         setRestaurants(items);
-        setSelectedRestaurantIds(items.map((item) => item.id));
+        setSelectedRestaurantIds(defaultShopReportRestaurantIds(items));
       })
       .catch((loadError: unknown) => {
         if (!active) return;

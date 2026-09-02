@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
-  Check,
   LoaderCircle,
   Minus,
   Plus,
@@ -34,6 +33,8 @@ import { DICT_TYPE, dictItemLabel, useDictItems } from "@/lib/dictionaries";
 import { hongKongDateKey } from "@/lib/date-time";
 import { splitPdfModuleIndexes, usePdfAutoPageBreaks } from "@/lib/pdf-auto-pagination";
 import { printPdf } from "@/lib/print-pdf";
+import { formatOrderNumber } from "@/lib/order-number";
+import { paginateReceiptPdfLines } from "@/lib/receipt-pdf-draft";
 import {
   fetchActiveQuotePdfPages,
   type QuotePdfPage,
@@ -62,9 +63,6 @@ type EditableActivity = QuoteActivityDraft;
 type QuoteTrailingUnit =
   | { kind: "node"; key: string; node: ReactNode }
   | { kind: "term" | "payment"; itemIndex: number | null };
-
-const FIRST_PRODUCT_PAGE_SIZE = 10;
-const CONTINUATION_PRODUCT_PAGE_SIZE = 18;
 
 type QuotePdfDraft = {
   sourceFinancialsVersion: number;
@@ -124,7 +122,7 @@ function resultToDraft(result: OrderDetailResult): QuotePdfDraft {
   return {
     sourceFinancialsVersion: 1,
     brandName: order?.channelName || "Food Channel Catering",
-    quoteNumber: order?.orderNumber || "",
+    quoteNumber: formatOrderNumber(order?.orderNumber, order?.channelName),
     quoteDate: pdfDate(order?.updatedAt),
     customerName: order?.customerName || "",
     companyName: order?.companyName || "",
@@ -254,7 +252,7 @@ export function QuotePdfEditorPage({
   const [pdfPages, setPdfPages] = useState<QuotePdfPage[]>([]);
   const [pdfPagesError, setPdfPagesError] = useState(false);
   const [sourceBrand, setSourceBrand] = useState<{ channelId: string; name: string; email: string; quoteNumber: string }>({ channelId: "", name: "", email: "", quoteNumber: "" });
-  const [saved, setSaved] = useState(true);
+  const [, setSaved] = useState(true);
   const editorRef = useRef<HTMLElement>(null);
   const paginationBrandKind = getBrandKind(sourceBrand.name, sourceBrand.quoteNumber, draft?.brandName, draft?.quoteNumber);
   const paginationModuleCount = draft
@@ -526,10 +524,7 @@ export function QuotePdfEditorPage({
   const hasActivities = isLunchBox && draft.activities.length > 0;
   const frontPages = pdfPages.filter((page) => page.placement === "front");
   const backPages = pdfPages.filter((page) => page.placement === "back");
-  const productLinePages = [draft.lines.slice(0, FIRST_PRODUCT_PAGE_SIZE)];
-  for (let index = FIRST_PRODUCT_PAGE_SIZE; index < draft.lines.length; index += CONTINUATION_PRODUCT_PAGE_SIZE) {
-    productLinePages.push(draft.lines.slice(index, index + CONTINUATION_PRODUCT_PAGE_SIZE));
-  }
+  const productLinePages = paginateReceiptPdfLines(draft.lines);
   const hasUtensilPackLine = draft.lines.some((line) => (line.description ?? "").replace(/\s/g, "").includes("餐具包"));
   const signatureToggle = (
     <label className="quote-pdf-customer-signature-toggle quote-pdf-edit-only">
@@ -619,13 +614,17 @@ export function QuotePdfEditorPage({
         <tbody>
           {lines.map((line, pageIndex) => {
             const index = offset + pageIndex;
+            const quantity = numberValue(line.quantity);
+            const lineSubtotal = quantity * numberValue(line.unitPrice);
             return (
               <tr key={line.id}>
                 <td>{index + 1}</td>
                 <td><PdfBlurCommitInput className="quote-pdf-product-input" aria-label={`產品 ${index + 1}`} value={line.description} onDirty={markDraftDirty} onCommit={(value) => updateLine(index, { description: value })} /></td>
                 <td><span className="quote-pdf-price-input"><span aria-hidden="true">$</span><PdfBlurCommitInput aria-label={`單價 ${index + 1}`} inputMode="decimal" size={Math.max(line.unitPrice.length, 1)} value={line.unitPrice} onDirty={markDraftDirty} onCommit={(value) => updateLine(index, { unitPrice: value.trim() ? value : "0" })} /></span></td>
                 <td><PdfBlurCommitInput aria-label={`${isLunchBox ? "份數" : "數量"} ${index + 1}`} inputMode="decimal" value={line.quantity} onDirty={markDraftDirty} onCommit={(value) => updateLine(index, { quantity: value })} /></td>
-                <td className="quote-pdf-money">${(numberValue(line.quantity) * numberValue(line.unitPrice)).toLocaleString("zh-HK")}</td>
+                <td className="quote-pdf-money">
+                  {quantity === 0 ? null : `$${lineSubtotal.toLocaleString("zh-HK")}`}
+                </td>
               </tr>
             );
           })}
@@ -742,7 +741,6 @@ export function QuotePdfEditorPage({
           <span>所有白色欄位均可直接編輯</span>
         </div>
         <div>
-          <span className="quote-pdf-saved">{saved ? <><Check /> 已自動儲存</> : "自動儲存中…"}</span>
           {pdfPagesError ? <span className="quote-pdf-insert-error">{t("quotes.pdfPages.insertLoadWarning")}</span> : null}
           {pdfPages.length ? <span className="quote-pdf-insert-count">{t("quotes.pdfPages.insertCount", { count: pdfPages.length })}</span> : null}
           <Button onClick={() => void printQuotePdf()}><Printer />確定並列印 PDF</Button>
@@ -755,12 +753,12 @@ export function QuotePdfEditorPage({
         </main>
       ))}
 
-      <main className="quote-pdf-sheet" data-pdf-auto-page={productLinePages.length === 1 ? "products" : undefined}>
+      <main className={`quote-pdf-sheet${productLinePages.length === 1 && trailingModulePages.length === 1 && !backPages.length ? " is-final-document-page" : ""}`} data-pdf-auto-page={productLinePages.length === 1 ? "products" : undefined}>
         <header className="quote-pdf-letterhead">
           <img src={brandLogo} alt={brandLogoAlt} />
           <div>
             <h1>{documentTitle}</h1>
-            <PdfBlurCommitInput aria-label="報價單號" value={draft.quoteNumber} onDirty={markDraftDirty} onCommit={(value) => update("quoteNumber", value)} />
+            <PdfBlurCommitInput aria-label="報價單號" value={draft.quoteNumber} onDirty={markDraftDirty} onCommit={(value) => update("quoteNumber", formatOrderNumber(value, sourceBrand.name || draft.brandName))} />
           </div>
           <img className="quote-pdf-award" src="/assets/award-logo.avif" alt="公司認證及獎項" />
         </header>
@@ -784,9 +782,11 @@ export function QuotePdfEditorPage({
 
       {productLinePages.slice(1).map((lines, pageIndex) => {
         const isFinalProductPage = pageIndex === productLinePages.length - 2;
-        const offset = FIRST_PRODUCT_PAGE_SIZE + pageIndex * CONTINUATION_PRODUCT_PAGE_SIZE;
+        const offset = productLinePages
+          .slice(0, pageIndex + 1)
+          .reduce((sum, pageLines) => sum + pageLines.length, 0);
         return (
-          <main className="quote-pdf-sheet quote-pdf-sheet-continuation quote-pdf-product-continuation" data-pdf-auto-page={isFinalProductPage ? "products" : undefined} aria-label={`PDF 第 ${pageIndex + 2} 頁`} key={`products-${pageIndex}`}>
+          <main className={`quote-pdf-sheet quote-pdf-sheet-continuation quote-pdf-product-continuation${isFinalProductPage && trailingModulePages.length === 1 && !backPages.length ? " is-final-document-page" : ""}`} data-pdf-auto-page={isFinalProductPage ? "products" : undefined} aria-label={`PDF 第 ${pageIndex + 2} 頁`} key={`products-${pageIndex}`}>
             {continuationLetterhead}
             {renderProductTable(lines, offset, isFinalProductPage)}
             {isFinalProductPage ? renderTrailingModules(trailingModulePages[0] ?? []) : null}
@@ -797,7 +797,7 @@ export function QuotePdfEditorPage({
 
       {trailingModulePages.slice(1).map((moduleIndexes, pageIndex) => (
         <main
-          className="quote-pdf-sheet quote-pdf-sheet-continuation quote-pdf-auto-continuation"
+          className={`quote-pdf-sheet quote-pdf-sheet-continuation quote-pdf-auto-continuation${pageIndex === trailingModulePages.length - 2 && !backPages.length ? " is-final-document-page" : ""}`}
           data-pdf-auto-page="modules"
           aria-label={`PDF 第 ${productLinePages.length + pageIndex + 1} 頁`}
           key={`trailing-page-${pageIndex}`}
@@ -810,7 +810,7 @@ export function QuotePdfEditorPage({
 
       {backPages.map((page, index) => (
         <main
-          className={`quote-pdf-insert-page quote-pdf-back-page${index === backPages.length - 1 ? " is-final-page" : ""}`}
+          className={`quote-pdf-insert-page quote-pdf-back-page${index === backPages.length - 1 ? " is-final-page is-final-document-page" : ""}`}
           key={page.id}
           aria-label={page.title}
         >

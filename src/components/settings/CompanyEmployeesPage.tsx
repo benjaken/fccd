@@ -76,40 +76,41 @@ export function CompanyEmployeesPage({
         <div>
           <span className="eyebrow">{t("settings.eyebrow")}</span>
           <h1>{t("settings.employees.title")}</h1>
-          <p>{t("settings.employees.description")}</p>
         </div>
       </header>
 
       <article className="panel orders-panel">
         <header className="orders-toolbar">
-          <ListSearchBar
-            id="settings-employees-search"
-            value={draftSearch}
-            onChange={setDraftSearch}
-            onSubmit={() => {
-              setPage(1);
-              setSearch(draftSearch.trim());
-            }}
-            label={t("settings.employees.search")}
-            placeholder={t("settings.employees.searchPlaceholder")}
-            submitLabel={t("settings.employees.searchAction")}
-            filters={
-              <label className="orders-status-filter">
-                <span>{t("settings.employees.statusFilter")}</span>
-                <select
-                  value={status}
-                  onChange={(event) => {
-                    setPage(1);
-                    setStatus(event.target.value as EmployeeStatus);
-                  }}
-                >
-                  <option value="active">{t("settings.employees.active")}</option>
-                  <option value="inactive">{t("settings.employees.inactive")}</option>
-                  <option value="all">{t("settings.employees.allStatuses")}</option>
-                </select>
-              </label>
-            }
-          />
+          <div className="settings-employees-toolbar">
+            <ListSearchBar
+              id="settings-employees-search"
+              value={draftSearch}
+              onChange={setDraftSearch}
+              onSubmit={() => {
+                setPage(1);
+                setSearch(draftSearch.trim());
+              }}
+              label={t("settings.employees.search")}
+              placeholder={t("settings.employees.searchPlaceholder")}
+              submitLabel={t("settings.employees.searchAction")}
+              filters={
+                <label className="orders-status-filter">
+                  <span>{t("settings.employees.statusFilter")}</span>
+                  <select
+                    value={status}
+                    onChange={(event) => {
+                      setPage(1);
+                      setStatus(event.target.value as EmployeeStatus);
+                    }}
+                  >
+                    <option value="active">{t("settings.employees.active")}</option>
+                    <option value="inactive">{t("settings.employees.inactive")}</option>
+                    <option value="all">{t("settings.employees.allStatuses")}</option>
+                  </select>
+                </label>
+              }
+            />
+          </div>
         </header>
 
         {error ? (

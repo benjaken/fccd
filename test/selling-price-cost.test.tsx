@@ -174,10 +174,11 @@ describe("Selling price cost page", () => {
       screen.getByPlaceholderText("搜尋產品、生肉名稱、香料編號或日期"),
       "滷豬肚",
     );
-    await user.click(screen.getByRole("button", { name: "搜尋" }));
 
-    expect(await screen.findByText("滷豬肚")).toBeInTheDocument();
-    expect(screen.queryByText("燜豬肚條")).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("滷豬肚")).toBeInTheDocument();
+      expect(screen.queryByText("燜豬肚條")).not.toBeInTheDocument();
+    });
   });
 
   it("switches chips, paginates, and filters by month", async () => {

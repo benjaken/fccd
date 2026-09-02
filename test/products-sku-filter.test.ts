@@ -80,10 +80,6 @@ describe("product SKU list filter", () => {
       preset: "all",
     });
 
-    expect(query.order).toHaveBeenCalledWith("chinese_name", {
-      ascending: false,
-      nullsFirst: false,
-    });
     expect(query.order).toHaveBeenCalledWith("name", {
       ascending: false,
       nullsFirst: false,

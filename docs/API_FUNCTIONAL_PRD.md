@@ -4,21 +4,24 @@
 
 | 項目 | 內容 |
 |---|---|
-| 文件版本 | 1.1 |
-| 文件日期 | 2026-08-17 |
+| 文件版本 | 2.0 |
+| 文件日期 | 2026-09-01 |
 | 舊系統 | Bubble `fc-order-system` |
 | API 來源 | `https://cs.foodchannels-catering.com/version-test/api/1.1/meta/swagger.json` |
 | 規格版本 | 宣告為 Swagger 2.0 |
 | 分析環境 | Bubble `version-test` |
-| 目標技術棧 | React、Vite、Tailwind CSS、shadcn/ui、Supabase、Recharts、Lucide React、TanStack Query |
+| 現行技術棧 | React 19、Vite 8、TypeScript、Tailwind CSS 4、Radix UI primitives、Supabase、Vitest、Lucide React、jsPDF、PDF.js、QZ Tray |
 
 ### 1.1 文件定位
 
-本 PRD 依公開 Swagger 契約逆向整理，描述 API 能證實的資料能力、工作流程入口，以及新系統應具備的功能與驗收標準。
+本 PRD 最初依公開 Swagger 契約逆向整理；v2.0 起再以現行 React／Supabase 程式、database migrations、Edge Functions、測試及架構文件交叉驗證，描述舊系統基線、現行實作、仍待部署核對或業務確認的項目，以及後續驗收標準。
 
 標記規則：
 
 - **已證實**：Swagger 明確記載的 endpoint、欄位、型別或回應。
+- **現行已實作**：可由目前程式、SQL 約束／policy、Edge Function 或自動測試直接證明；不等同已部署到 production。
+- **已實作待環境核對**：repo 內已有完整或部分實作，但 secrets、cron、provider template、runtime data 或 production migration 狀態仍須核對。
+- **政策待確認**：技術能力可能已存在，但自動／手動、收件人、模板、啟用或外部副作用尚未取得完整業務確認。
 - **產品需求**：為完成安全且可維護的遷移而定義的新系統行為。
 - **待確認**：Swagger 無法證明，必須由 Bubble Editor、Privacy Rules、實際資料或業務人員確認。
 
@@ -28,8 +31,29 @@
 |---|---|---|
 | 1.0 | 2026-08-11 | 初稿。 |
 | 1.1 | 2026-08-17 | 確認訂單允許先發貨後收款；未付款不阻擋工場提交、製作、取貨或送達。 |
+| 2.0 | 2026-09-01 | 依現行程式、migration、測試及架構文件更新功能基線；加入現行／部署／政策三層狀態，以及反覆修改的原因與最終規格。 |
 
-### 1.2 公司與營運背景
+### 1.2 v2.0 現行功能基線
+
+本節優先於後文仍保留的舊系統推導與早期規劃。後文若仍把功能寫成「第二階段」或「待實作」，但本節列為現行已實作，應以本節及可執行證據為準。反之，repo 內存在 migration、模板名稱或 Edge Function，只能證明技術能力已建立，不能單獨證明 production 已部署、第三方已核准或自動發送已獲業務批准。
+
+| 領域 | 2026-09-01 現行能力 | 狀態與主要證據 |
+|---|---|---|
+| 身分、權限與稽核 | Supabase Auth、頁面權限、action permission、RLS／RPC、角色權限原子級聯、員工登入控制、登入與操作記錄。 | **現行已實作**；`src/auth/use-page-access.ts`、`supabase/functions/admin-users`、`supabase/functions/login-log`、`20260828150000_atomic_role_permission_cascade.sql`、`20260831130000_company_employee_login_controls.sql`。每個新增 action 仍須獨立驗證 server enforcement。 |
+| 訂單與報價 | 建立、編輯、複製、轉單、狀態佇列、跟進、高機會／大單、套餐 choice、自訂明細、附加服務、批次保存、訂單／報價一致性與到期關閉。 | **現行已實作**；`OrdersListPage`、`OrderEditorPage`、`QuotesListPage`、`QuoteEditorPage` 及 2026-08-24 至 2026-09-01 的 quote/order migrations。 |
+| 文件與列印 | 報價、收據、發票、送貨單、標籤預覽／列印；PDF 分頁、條款、簽名、折扣、活動項目、收據／發票編號及 QZ Tray 簽署列印。 | **現行已實作**；`QuotePdfEditorPage`、`ReceiptPdfEditorPage`、`DeliveryNoteDocument`、`FactoryQzTray`、`supabase/functions/qz-sign`、`qz-label-tspl`。列印前須讀取最新 authoritative data。 |
+| Shopify | 商品與訂單同步、Store／品牌 mapping、訂單與付款身份、套餐／飯盒展開、待審核佇列、同步問題追蹤、付款狀態及 outstanding 更新。 | **已實作待環境核對**；`shopify-order-sync`、`shopify-product-sync`、`/orders/shopify-pending`、`/products/shopify-pending`。Store credentials、scope、webhook 與 production runtime 仍須逐店確認。 |
+| 訂單核對 | 每日比較 Shopify 與 FCCD、追蹤未入單／未連結／未傳工場、六小時內 urgent、站內 banner、Email／WATI outbox、重試及去重。 | **已實作待環境核對**；`docs/ORDER_RECONCILIATION_ALERTS.md`、`20260831120000_order_reconciliation_alerts.sql`、`wati-order-notifications`。每日「全部正常」訊息及兩類精簡摘要在目前工作樹，尚待提交、migration／template 部署核對。 |
+| 工場與廚房 | 工場板、三日桌面視圖、手機版、工場改動標記、出產時間、標籤／送貨單列印、提交工場、訂單編輯期間列印鎖定。 | **現行已實作**；`FactoryBoardPage`、`FactoryMultiDayReportPage`、`KitchenCalendarPage`、order edit session／factory print migrations。 |
+| 配送與車隊 | 配送列表、派車、車隊與副司機、地區費用、附加費、銀行／付款資料、司機手機流程、配送照片、狀態與完成時間。 | **現行已實作**；`DeliveryListPage`、`AssignDriverPage`、`DriverDeliveryPage`、`driver-delivery-files` 及 fleet／delivery migrations。弱網補送與完整司機收款核實仍須 runtime 驗證。 |
+| 通知與 WATI／Email | 事件目錄、Email／WATI channel controls、收件人設定、brand signature、outbox、逐 channel retry、send logs、收件人 allowlist、customer kill switch、pending-review 自動發送阻擋。 | **已實作待環境及政策核對**；`docs/WATI_ORDER_NOTIFICATIONS.md`、`wati-order-notifications`、`send-quote-confirmation`。模板存在或被選取不代表參數、activation、deployment 或自動發送已批准。 |
+| 客戶自助 | Token 化客戶自助頁、訂單檢視、加購選擇、跨 channel 加購規則及 PayPal add-on adapter。 | **現行已實作，啟用範圍待核對**；`CustomerSelfServicePage`、`customer-addon-paypal`、`20260827200000_customer_self_service_portal.sql`、`20260828130000_customer_self_service_addons.sql`。 |
+| 商品與套餐 | 商品／套餐目錄、渠道與狀態、choice set、加購、Shopify mapping、標籤、搜尋與排序、權限控制。 | **現行已實作**；`ProductsListPage`、`PackagesListPage`、product／package libraries 及 catalog migrations。 |
+| 凍貨、凍肉與供應商 | 生肉／熟肉庫存、出貨單、售價成本、香料、收成錯誤、供應商 PDF 上傳、OCR／AI 輔助解析、人工確認、報價比較與發布。 | **現行已實作，AI／production 部署待核對**；`MeatYieldErrorsPage`、`SupplierQuotePage`、`SupplierQuotePdfPreview`、`supplier-quote-ingest`、`report-ai-interpret`。收成錯誤最終門檻為偏差 **超過 15%**。 |
+| 餐廳與報表 | 每日銷售、採購、盤點、月度支出、員工／設定、營運報表、成本輸入及 AI 報告解讀。 | **現行已實作，口徑與 production data 待持續核對**；`/restaurant/*`、`/reports/*`、report RPCs、`report-ai-interpret`。 |
+| Bubble 遷移 | 分 phase 匯入、每日增量、關係解析、附件增量、fleet／payment backfill、checkpoint、衝突與 reconciliation 報告。 | **現行已實作待環境核對**；`supabase/functions/bubble-*`、`attachment-incremental`、migration scripts 與 migration reports。 |
+
+### 1.3 公司與營運背景
 
 本產品服務一套以「到會（Catering）＋荃灣中央廚房＋分店」為核心的餐飲業務：
 
@@ -41,7 +65,7 @@
 
 大部分配送採地面交收；部分訂單包含餐具、服務員、佈置、司儀、開幕典禮或切豬等現場服務。
 
-### 1.3 品牌與渠道基線
+### 1.4 品牌與渠道基線
 
 | 品牌／網站 | 定位 | 狀態 |
 |---|---|---|
@@ -115,7 +139,7 @@ api_token=<token>
 3. 將 Bubble Privacy Rules 轉為 Supabase RLS 與後端權限檢查。
 4. 將多資料表 workflow 改寫為具驗證、冪等、稽核與錯誤處理的 Edge Functions，原子寫入則由單一 PostgreSQL function／RPC transaction 完成。
 5. 讓所有關鍵財務、庫存與配送結果可回讀、可對帳、可重跑。
-6. 功能等價驗收完成後，第二階段才重設不合時宜流程、優化 UX，並加入自助落單、積分及 AI 輔助報價等新能力。
+6. 功能等價驗收完成後才可宣告舊系統切換完成；已提前建立的客戶自助、AI 輔助、Shopify reconciliation 等第二階段能力，必須獨立標記啟用範圍，不得反向掩蓋尚未完成的等價驗收。
 
 ### 3.2 第一階段功能等價原則
 
@@ -125,7 +149,7 @@ api_token=<token>
 - 第一階段不得以「未來會改進」為理由省略仍在使用的舊功能。
 - 安全漏洞、匿名高風險寫入、query-string secret、明文密碼及無稽核改數不作原樣複製；須提供相同行為結果的安全實作。
 - 排更 API 雖存在於 Swagger，但會議確認不在現行餐廳系統；須先驗證是否有任何角色實際使用。若未使用並獲簽核，才不列入等價範圍。
-- 自助落單在會議中標記為未完成，因此不是舊功能等價範圍，列入第二階段。
+- 自助落單不是舊功能等價範圍；現行 repo 已建立 token portal、加購及 PayPal adapter，但仍屬第二階段能力，其 production 啟用、客戶範圍、付款及審批規則須獨立驗收。
 
 ### 3.3 成功標準
 
@@ -674,6 +698,16 @@ report_exceptions
 | SHP-06 | 即日到會的 4 小時承諾須同時檢查截單時間、區域行車時間、生產及配送容量。 |
 | SHP-07 | 停運品牌拒絕新 webhook 訂單，但保留受權限控制的歷史查詢。 |
 
+### 7.4 現行通知政策與啟用邊界
+
+1. 訂單流程類模板原則上採自動發送；例外處理、客戶服務及營運類模板採手動發送。
+2. 已選定的模板清單只代表內容選型，不等於參數 mapping、發送規則、activation、deployment 或實際發送已批准。
+3. `driver_assign_reminder` 的最終模式仍須明確確認為「排程自動內部提醒」或「手動」；repo 內已有排程能力不構成政策批准。
+4. `eng_confirm_with_action` 仍須確認按客戶語言自動發送，或由操作人員手動覆核語言。
+5. 自動客戶通知必須同時通過：模板 active、channel enabled、customer kill switch 未關閉、訂單不在 pending review、收件人資料有效、allowlist／production guard 及 dedupe key。
+6. 報價轉正式訂單後的通知採**人工確認後手動發送**；轉單本身不得自動向客戶發送，避免草稿、重覆或尚待覆核的訂單誤通知。
+7. Email 與 WATI 是獨立 channel；其中一個成功不得假設另一個成功，重試、log 與錯誤狀態須分開保存。
+
 ## 8. 資料模型範圍
 
 ### 8.1 101 個舊系統資料類型
@@ -744,7 +778,7 @@ report_exceptions
 - **到會／中央廚房**：訂單、生產、領料、執貨及出貨。
 - **司機送貨**：司機手機工作台或後台調度。
 - **餐廳營運**：報數、訂貨、收貨、盤點及 P&L。
-- **客戶自助**：後期啟用；未完成前不在正式環境顯示。
+- **客戶自助**：已建立 token 化入口及加購流程；只向已核准客戶／訂單範圍發放入口，未完成 production 驗收前不得全量公開。
 
 工作區 soft links 只改變導覽及預設篩選，不能繞過 legal entity、品牌、據點、部門及資源範圍的後端授權。
 
@@ -853,9 +887,9 @@ report_exceptions
 
 ## 10. 第二階段改進與新增能力
 
-### 10.1 熟客自助落單
+### 10.1 熟客自助落單（技術基礎已建立，分階段啟用）
 
-- 列為第二階段核心新增能力，不納入第一階段功能等價驗收。
+- 列為第二階段核心新增能力，不納入第一階段功能等價驗收。現行 repo 已有 token portal、歷史訂單檢視、加購選擇及 PayPal add-on adapter；完整自主建立新訂單、積分、禮品換購與組織審批仍按下列規格分期完成。
 - 預留客戶帳戶、常用地址、歷史訂單、重複落單、歷史報價及線上付款模型。
 - 自助訂單仍須遵守品牌商品、最低配送額、時段、區域、庫存與付款規則。
 - 支援客戶組織成員、代理下單、訂單狀態、取消及按需要的公司內部審批。
@@ -1031,7 +1065,7 @@ flowchart LR
 - 舊 Bubble 系統速度慢、介面老化且部分流程已不符合現況。
 - 最新優先級是第一階段先 100% 實現所有現行舊功能，再進行流程與 UX 改進。
 - 100% 指業務功能與結果等價，不複製安全漏洞、Bubble 技術限制或逐像素舊介面。
-- 自助落單在舊系統尚未完成，因此列入第二階段。
+- 自助落單在舊系統尚未完成，因此不列入第一階段等價；現行 repo 已建立 token portal、加購及 PayPal adapter，production 啟用與完整自主落單仍屬第二階段驗收。
 
 ### 14.2 需求追蹤模板
 
@@ -1040,6 +1074,27 @@ flowchart LR
 | 示例 | 確認 Shopify Store 清單及 API owner | 第一階段 | 舊 Store／webhook 設定 | 待確認 | Leo 或 Yoko 提供認證資料 | 待指定 | 待指定 | — | 取得 Store access |
 
 每項功能進入開發前建立追蹤列，標記第一階段等價或第二階段改進；第一階段必須附舊系統證據與等價案例。完成後填寫實際完成日期與負責人。未完成項目由負責人設定目標里程碑／日期及下一步，不在本 PRD 中虛構時間估算。
+
+### 14.3 反覆修改的決策與原因
+
+以下項目在 2026-08-24 至 2026-09-01 曾多次調整。反覆修改不是單純 UI 返工，而是逐步找出 legacy 語意、雙系統資料來源、外部副作用或多人操作競態後收斂出的規格。後續若再次修改，PR／commit 必須引用本表中的最終規格，或明確記錄為何推翻它。
+
+| 範圍 | 曾反覆修改的內容 | 為什麼需要反覆修改 | v2.0 最終規格／不變條件 |
+|---|---|---|---|
+| 報價與訂單佇列 | 報價轉單、待確認／跟進／大單／近期報價、生成訂單欄、報價與訂單列表一致性多次修正。 | 舊 Bubble 把報價與訂單放在相近資料結構；只依單一 status 或 generated-order 欄會讓同一業務件同時出現在兩個 queue、消失或重覆。 | 以 `document_type`、有效 lifecycle、轉單關聯及 archived state 共同判定；報價轉單後從報價工作佇列退出並只出現在正確訂單佇列；列表規則須由共用 selector／測試固定。 |
+| 報價轉單通知 | 先接入自動通知，其後改回轉單後手動通知。 | 轉單時資料可能仍待覆核，且 WATI／Email 是不可逆外部副作用；自動發送容易把草稿、重覆或錯誤內容發給客戶。 | 轉單只建立／更新正式訂單及可發送狀態，不自動通知；由具權限人員檢查內容後手動發送，並記錄 channel、recipient、template、結果與 dedupe key。 |
+| 報價／訂單金額 | 活動項目、折扣、可編輯折扣標籤、運費、空白補充資料及 PDF totals 多次修正。 | 表頭、明細、活動／附加項與 PDF draft 曾有不同計算來源；空值被誤當缺資料、local draft 又可能覆蓋資料庫最新值，導致畫面與文件總額不一致。 | 計算採共用 authoritative breakdown；有效活動／附加項納入總額，Void 排除；空白補充欄仍顯示可編輯；折扣名稱與金額分開保存；PDF／收據／發票開啟時重新載入最新資料。 |
+| PDF 與列印 | 條款 clipping、分頁、簽名、收據／發票號、標籤內容、QZ 列印及工場列印先後多次調整。 | Browser layout、CJK 字體、長條款與多頁表格會改變分頁；打印舊 cache 或在訂單編輯中列印會產生錯誤文件。 | 文件輸出前 commit editor state 並 fresh-load；分頁不可截斷條款／簽名；收據／發票號可按權限編輯並持久化；訂單存在有效 edit session 時阻擋工場列印。 |
+| 工場看板與待辦 | 三日桌面板、手機布局、新單 badge、工場改動、傳送狀態、automatic todo labels 多次調整。 | Bubble 的工場狀態、建立時間、配送行與新系統標記不同步；把待辦文字持久化會殘留過期狀態。 | 看板按 authoritative order／delivery／factory state 衍生；桌面保留三日視圖、手機使用工作流卡片；todo labels 動態計算；傳送工場須確保 delivery 存在；已完成／已送達項目不得回到改期或未傳送佇列。 |
+| 多人編輯與 Realtime | 從一般更新提示演進為 order edit presence、authenticated presence、15 分鐘過期及列印鎖。 | 單靠 Realtime table event 不能判斷誰正在編輯，斷線 session 又可能永久鎖住訂單；多人同時改單會令工場拿到不完整版本。 | presence channel 必須經授權；開始／心跳／結束 edit session，有效期 15 分鐘；UI 顯示編輯者，工場列印及高風險操作檢查 server-side active session；Realtime 只作提示，DB 仍是事實來源。 |
+| Shopify 訂單身份與內容 | 品牌訂單號、Store/domain、套餐展開、custom product、飯盒 line identity、delivery district／time、shadow order 多次修正。 | Shopify payload、Bubble 歷史訂單和 FCCD 正式訂單可能指向同一交易；以名稱或顯示行配對會產生重覆訂單、錯誤套餐備註或丟失品牌號碼。 | 以 store + Shopify order ID／transaction ID／line identity 作穩定 provider key；保留品牌 order number；helper／選項行不得當正式商品；pending review 未解決前阻擋自動客戶通知；shadow reconciliation 必須可重跑及可稽核。 |
+| 付款狀態與 outstanding | Shopify financial status、Bubble／Shopify 重覆收款、退款、outstanding trigger 及文件資料刷新多次修正。 | 付款同時來自 legacy、Shopify 與人工對帳；只加總 receipts 或只看 Shopify status 都可能重覆入帳、退款變新欠款或顯示舊餘額。 | Shopify-linked 訂單保存 provider status 與 sync time；付款以 provider identity 去重，legacy 同日同訂單同金額配對須一對一；退款／void 不建立新客戶欠款；outstanding 由資料庫 authoritative rule 重算，未付款不阻擋生產／配送。 |
+| WATI／Email 通知 | 模板名稱、送貨日／前一日、收件人、品牌簽名、多 Email、channel controls、kill switch、pending-review guard、手動／自動邊界多次調整。 | WATI 模板需外部審批且參數嚴格；品牌、語言與業務事件不同；錯誤自動化會直接聯絡客戶，影響不可逆。 | 訂單流程模板原則自動，例外／客服／營運模板手動；模板選定不等於 activation；`driver_assign_reminder` 與 `eng_confirm_with_action` 模式仍待明確確認；所有自動事件須通過 active、channel、review、recipient、allowlist、dedupe 及 kill-switch guards。 |
+| 內部漏單核對 | 從只發有問題的總數，改為每日兩類明細、urgent 即時／六小時通知，再加入零問題 all-clear。 | 只收到問題數字不方便執行；WATI 不接受參數內 newline；零問題時完全無訊息無法區分「正常」與「排程失敗」。 | 每日固定回報「未入單」與「未傳送工場」，每類按最近送貨日排序並以單行分隔；Email 顯示逐單區塊；零問題發獨立 all-clear template；urgent 獨立即時／六小時 outbox，兩 channel 分別去重與重試。 |
+| 配送日期、時間、地址與地區 | 日期／出車時間／送貨時間曾拆欄、合欄，再按桌面／手機重排；district 由不同 legacy 欄位回填。 | `delivery_at`、`delivery_time`、`ship_out_time` 含義不同，但列表空間有限；Shopify city、planned address、delivery row 與 order snapshot 可能不一致。 | 資料模型保持三個語意欄位獨立；UI 可因 viewport 合併呈現但標籤不得混淆；地址顯示使用訂單快照，district 以有效 delivery／order mapping 回填並 canonicalize duplicate reference。 |
+| 權限與導覽 | workspace、submenu、settings hierarchy、Accounting edit、Shop manager、mobile hidden routes 反覆修正。 | 只隱藏導航不等於授權；父頁與子頁 permission 不一致會出現空 workspace、可見但不可開、或可直接 URL 越權。 | 導覽由 page access 衍生並隱藏空群組；父子 permission 變更採原子級聯；重要寫入同時檢查 action permission 與 RLS／RPC；Accounting、Factory、Shop manager 的例外能力必須有 migration 與測試證據。 |
+| 凍肉月價與收成異常 | 月價由出入貨 trigger 自動推送改為取消自動 trigger、保留受權限手動推送；收成錯誤由 10% 調至 15%。 | 自動價格副作用會在補資料／修歷史時意外重算；10% 與實際 Bubble 歷史口徑及日常波動不符。 | 月價由具權限操作明確推送並保存來源月份；歷史補數不得暗中改價。收成錯誤以 Bubble 歷史 packs-per-kg 公式計算，偏差**超過 15%**才建立異常，剛好 15% 不列入。 |
+| 資料遷移與歷史修復 | legacy ID、duplicate district／order／payment、日銷售／採購記錄、checkpoint 與附件狀態多次修正。 | Bubble 關聯、顯示值和實際唯一鍵並不一致；一次性全量匯入不能處理持續變更，盲目 overwrite 又會覆蓋新系統操作。 | 所有 import／repair 必須可重跑、保留 legacy ID、使用明確 conflict key、只補缺失關聯或有審核的 overwrite；checkpoint 只有在完整成功後推進；修復 migration 要有特定條件、報告及測試，不以寬泛 update 猜測資料。 |
 
 ## 15. 待確認清單
 
@@ -1072,7 +1127,7 @@ flowchart LR
 
 ### 15.4 第三方與排程
 
-1. WATI template、語言、收件人、同意、排程及送達追蹤。
+1. WATI 已選模板的 production 名稱、參數順序、語言、收件人、同意、activation、部署及送達追蹤；`driver_assign_reminder` 與 `eng_confirm_with_action` 的自動／手動模式仍須明確確認。
 2. Shopify、PayPal、Asana、Zapier 的實際帳號、scope、webhook 與同步方向。
 3. 所有排程的時區、頻率、重試、取消與補送規則。
 4. 舊檔案 URL 的權限、有效期與可否批量下載。
@@ -1113,10 +1168,10 @@ flowchart LR
 7. **第一階段報表與整合**：等價實現所有現行報表、登入／操作記錄、WATI、PayPal、Asana／Zapier、排程及匯入匯出。
 8. **第一階段平行驗收與切換**：各角色在舊／新系統執行相同案例，完成資料、計算、權限、通知及第三方結果比對；全部簽核後才宣告 100% 功能完成。
 9. **第二階段流程與 UX 改進**：按會議方向減少步驟、重設不合現況流程、優化首頁待辦、資料密度、手機體驗及效能。
-10. **第二階段新增能力**：熟客自助落單、積分、禮品換購、線上付款擴展及 AI 輔助報價。
+10. **第二階段新增能力**：在現有 token portal／加購／PayPal adapter 基礎上完成熟客自主建立新單、組織審批、積分、禮品換購與線上付款擴展；AI 輔助能力只建立草稿或解讀，不得跳過人工確認及資料安全邊界。
 
 ## 17. PRD 結論
 
-Swagger 足以確認舊系統暴露 101 種資料能力及 46 個 workflow 入口，涵蓋 Catering 訂單、商品套餐、付款、配送、肉類加工、庫存、店舖營運、採購、排班與通知。第一階段須逐項驗證並安全等價實現所有現行使用項目；只有證實未啟用／已廢棄並獲簽核者才可排除。
+Swagger 足以確認舊系統暴露 101 種資料能力及 46 個 workflow 入口；截至 2026-09-01，repo 已建立涵蓋訂單／報價、商品套餐、Shopify、付款、工場、配送、通知、凍肉、供應商報價、餐廳營運、報表及 Bubble migration 的新系統能力。這代表可執行基線已大幅形成，但不等同所有 production migration、secret、cron、第三方模板、資料口徑與角色驗收均已完成。
 
-最新交付原則是「先功能等價，後改進」：第一階段以 100% 現行業務功能與結果一致為完成條件；第二階段才依中央廚房、分店調撥、多品牌 Shopify、凍肉真實成本、司機配送及餐廳報數需求重設流程與加入新能力。
+最新交付原則仍是「先證明功能等價，再宣告切換完成」。已提前實作的 UX 改進、客戶自助、AI、WATI 自動化或 reconciliation 不得被當作舊功能已全部驗收的替代證據。對外通知、付款、工場列印及資料修復屬高副作用邊界，任何再次修改都必須保留人工確認、冪等、權限、稽核、可重跑及回歸測試，並在第 14.3 節記錄推翻既有規格的原因。

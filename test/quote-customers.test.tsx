@@ -409,7 +409,6 @@ describe("Quote customers list", () => {
       screen.getByPlaceholderText("搜尋客戶 (以客戶資料)"),
       "Ada",
     );
-    await user.click(screen.getByRole("button", { name: "搜尋" }));
 
     await waitFor(() =>
       expect(loadCustomers).toHaveBeenLastCalledWith({
@@ -573,7 +572,6 @@ describe("Quote customers list", () => {
       within(dialog).getByPlaceholderText("搜尋公司或訂單號碼"),
       "611",
     );
-    await user.click(within(dialog).getByRole("button", { name: "搜尋" }));
 
     await waitFor(() =>
       expect(loadHistory).toHaveBeenLastCalledWith({

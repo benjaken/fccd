@@ -111,6 +111,7 @@ export function RestaurantNewProductsSettings() {
 
       <div className="restaurant-new-products-settings-table">
         <RestaurantSettingsListTable
+          searchable={false}
           loading={loading}
           loadingLabel={t("restaurantNewProducts.loading")}
           skeletonColumns={4}

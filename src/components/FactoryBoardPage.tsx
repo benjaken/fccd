@@ -278,7 +278,7 @@ export function FactoryBoardPage({
           if (match && Number(match[1]) === hour) {
             orders.set(
               order.orderId,
-              formatFactoryOrderNumber(order.orderNumber, `#${order.orderId}`),
+              formatFactoryOrderNumber(order.orderNumber, order.orderId),
             );
           }
         }
@@ -945,7 +945,7 @@ export function FactoryBoardPage({
                             <span key={order.orderId}>
                               {order.deliveryDate.slice(5).replace("-", "/")}
                               {order.deliveryTime ? ` ${order.deliveryTime}` : ""}
-                              {` · ${formatFactoryOrderNumber(order.orderNumber, `#${order.orderId}`)}`}
+                              {` · ${formatFactoryOrderNumber(order.orderNumber, order.orderId)}`}
                               {` × ${formatPortions(order.quantity)}`}
                             </span>
                           ))}

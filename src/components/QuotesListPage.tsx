@@ -11,7 +11,7 @@ import {
   Plus,
   RefreshCw,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ import { DICT_TYPE, dictItemLabel, useDictItems } from "@/lib/dictionaries";
 import { useDeferredFilter } from "@/lib/use-deferred-filter";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { hongKongDateKey } from "@/lib/date-time";
+import { cn } from "@/lib/utils";
 import {
   fetchQuoteBrands,
   fetchQuotes,
@@ -40,6 +41,12 @@ import {
 type QuotesLoader = (filters: QuoteListFilters) => Promise<QuoteListResult>;
 type QuoteBrandsLoader = () => Promise<QuoteBrandOption[]>;
 type QuoteDescriptionUpdater = typeof updateQuoteDescription;
+
+const QUOTE_QUEUE_TABS = ["large", "recent-open"] as const satisfies readonly QuotePreset[];
+const QUOTE_CONTEXT_PRESETS = new Set<QuotePreset>([
+  ...QUOTE_QUEUE_TABS,
+  "pending",
+]);
 
 const QUOTE_SKELETON_COLUMNS = [
   { width: "6rem", variant: "badge" as const },
@@ -68,6 +75,14 @@ export function QuotesListPage({
   saveDescription?: QuoteDescriptionUpdater;
 }) {
   const { t, i18n } = useTranslation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedQueue = searchParams.get("tab");
+  const selectedQueue =
+    preset === "all" &&
+    QUOTE_CONTEXT_PRESETS.has(requestedQueue as QuotePreset)
+      ? (requestedQueue as QuotePreset)
+      : null;
+  const effectivePreset: QuotePreset = selectedQueue ?? preset;
   const quoteStatusDict = useDictItems(DICT_TYPE.quoteStatus);
   const [draftSearch, setDraftSearch] = useState("");
   const [search, setSearch] = useState("");
@@ -144,7 +159,7 @@ export function QuotesListPage({
         page,
         search,
         status,
-        preset,
+        preset: effectivePreset,
         ...(brandId ? { brandId } : {}),
         ...(createdSort ? { createdSort } : {}),
         ...(orderNumberSort ? { orderNumberSort } : {}),
@@ -175,7 +190,7 @@ export function QuotesListPage({
       if (appending) setLoadingMore(false);
       else setLoading(false);
     }
-  }, [brandId, createdSort, isMobileList, loadQuotes, orderNumberSort, page, preset, reloadKey, search, status]);
+  }, [brandId, createdSort, effectivePreset, isMobileList, loadQuotes, orderNumberSort, page, reloadKey, search, status]);
 
   useEffect(() => {
     void loadPage();
@@ -276,34 +291,63 @@ export function QuotesListPage({
     }
   };
   const titleKey =
-    preset === "high-chance"
+    effectivePreset === "high-chance"
       ? "highChanceTitle"
-      : preset === "large"
+      : effectivePreset === "large"
         ? "largeTitle"
-        : preset === "recent-open"
+        : effectivePreset === "recent-open"
           ? "recentOpenTitle"
-          : preset === "upcoming"
+          : effectivePreset === "upcoming"
             ? "upcomingTitle"
             : "title";
+  const chinese = i18n.language.toLowerCase().startsWith("zh");
+  const title = effectivePreset === "all"
+    ? (chinese ? "所有報價" : "All Quotes")
+    : effectivePreset === "pending"
+      ? (chinese ? "待報價" : "Pending Quotes")
+    : effectivePreset === "large"
+      ? (chinese ? "大單 100K 投標" : "Large 100K Bids")
+      : t(`quotes.${titleKey}`);
+  const toggleQueue = (nextPreset: (typeof QUOTE_QUEUE_TABS)[number]) => {
+    setPage(1);
+    setItems([]);
+    setLoading(true);
+    const next = new URLSearchParams(searchParams);
+    if (selectedQueue === nextPreset) next.delete("tab");
+    else next.set("tab", nextPreset);
+    setSearchParams(next, { replace: true });
+  };
 
   return (
     <section className="quotes-page">
       <header className="page-heading quotes-heading">
         <div>
           <span className="eyebrow">{t("quotes.eyebrow")}</span>
-          <h1>{t(`quotes.${titleKey}`)}</h1>
+          <h1>{title}</h1>
         </div>
-        {canManage ? (
-          <Button asChild>
-            <Link to="/quotes/new">
-              <Plus />
-              {t("quotes.create")}
-            </Link>
-          </Button>
-        ) : null}
       </header>
 
       <article className="panel quotes-panel responsive-card-list-panel">
+        {preset === "all" ? (
+          <div className="orders-queue-tabs quotes-queue-tabs" role="group" aria-label={t("quotes.eyebrow")}>
+            <button
+              type="button"
+              className={cn("orders-queue-tab", selectedQueue === "large" && "is-active")}
+              aria-pressed={selectedQueue === "large"}
+              onClick={() => toggleQueue("large")}
+            >
+              {chinese ? "大單 100K 投標" : "Large 100K Bids"}
+            </button>
+            <button
+              type="button"
+              className={cn("orders-queue-tab", selectedQueue === "recent-open" && "is-active")}
+              aria-pressed={selectedQueue === "recent-open"}
+              onClick={() => toggleQueue("recent-open")}
+            >
+              {t("navigation.recentOpenQuotes")}
+            </button>
+          </div>
+        ) : null}
         <header className="quotes-toolbar">
           <ListSearchBar
             id="quotes-search"
@@ -313,6 +357,9 @@ export function QuotesListPage({
             label={t("quotes.search")}
             placeholder={t("quotes.searchPlaceholder")}
             submitLabel={t("quotes.searchAction")}
+            actions={canManage ? <Button asChild><Link to="/quotes/new"><Plus />{t("quotes.create")}</Link></Button> : null}
+            filtersAlwaysInDrawer
+            filtersTitle={t("common.filters")}
             filtersActive={Boolean(status || brandId)}
             onConfirmFilters={statusFilter.confirm}
             onDismissFilters={statusFilter.revert}
@@ -410,7 +457,7 @@ export function QuotesListPage({
               total,
             })}
             mobileContent={isMobileList ? (
-              <div className="mobile-card-list quote-mobile-list" role="list" aria-label={t(`quotes.${titleKey}`)}>
+              <div className="mobile-card-list quote-mobile-list" role="list" aria-label={title}>
                 {items.map((quote) => (
                   <article className="mobile-list-card order-mobile-card quote-mobile-card" role="listitem" key={quote.id}>
                     <header>

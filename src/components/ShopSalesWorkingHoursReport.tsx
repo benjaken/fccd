@@ -9,6 +9,7 @@ import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { useReportAiSnapshot } from "@/components/report-ai/ReportAiWorkspace";
 import {
   buildShopSalesWorkingHoursTables,
+  defaultShopReportRestaurantIds,
   fetchShopReportRestaurants,
   fetchShopSalesWorkingHours,
   type ShopReportRestaurant,
@@ -70,7 +71,7 @@ export function ShopSalesWorkingHoursReport({
       .then((items) => {
         if (!active) return;
         setRestaurants(items);
-        setSelectedIds(items.map((item) => item.id));
+        setSelectedIds(defaultShopReportRestaurantIds(items));
         if (items.length === 0) setLoading(false);
       })
       .catch((loadError: unknown) => {
@@ -117,7 +118,7 @@ export function ShopSalesWorkingHoursReport({
   const reset = () => {
     setStartDate(defaults.startDate);
     setEndDate(defaults.endDate);
-    setSelectedIds(restaurants.map((restaurant) => restaurant.id));
+    setSelectedIds(defaultShopReportRestaurantIds(restaurants));
   };
   const aiSnapshot = useMemo(
     () =>

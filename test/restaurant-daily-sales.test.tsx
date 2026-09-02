@@ -121,7 +121,10 @@ describe("restaurant daily sales input", () => {
       />,
     );
 
-    await user.click(await screen.findByRole("button", { name: "新增銷售記錄" }));
+    const newRecordButton = await screen.findByRole("button", { name: "新增銷售記錄" });
+    expect(newRecordButton.closest(".daily-sales-toolbar")).not.toBeNull();
+    expect(newRecordButton.closest(".daily-sales-heading")).toBeNull();
+    await user.click(newRecordButton);
     expect(await screen.findByRole("dialog", { name: "新增餐廳銷售記錄" })).toBeInTheDocument();
     expect(await screen.findByText("此餐廳在所選日期已有記錄，請選擇其他日期。")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "開始輸入" })).toBeDisabled();
@@ -285,7 +288,7 @@ describe("restaurant daily sales input", () => {
     })));
     expect(saveSales.mock.calls[0]?.[0].receiptFile?.name).toBe("pos.jpg");
     expect(sendReportEmail).toHaveBeenCalledWith("ylp", expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/));
-    expect(await screen.findByText("已儲存")).toBeInTheDocument();
+    expect(screen.queryByText("已儲存")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "查看" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.queryByRole("spinbutton", { name: "總營業額" })).not.toBeInTheDocument();
   });

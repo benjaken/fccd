@@ -59,4 +59,33 @@ describe("ReportAiWorkspace", () => {
     expect(screen.getByRole("dialog", { name: "AI 解讀" })).toBeVisible();
     expect(await screen.findByText("Sales improved")).toBeVisible();
   });
+
+  it("allows the floating trigger to be dismissed", async () => {
+    const user = userEvent.setup();
+    render(
+      <ReportAiWorkspace
+        reportKey="shopSales"
+        permissionKey="reports.shop_sales"
+        reportTitle="Sales report"
+      >
+        <ReportAiSnapshotPublisher
+          snapshot={{
+            filters: { year: 2026 },
+            currentAggregates: [{ month: 1, sales: 120 }],
+            completeness: { status: "complete" },
+          }}
+        />
+        <ReportAiTrigger />
+      </ReportAiWorkspace>,
+    );
+
+    const trigger = document.querySelector<HTMLButtonElement>(".report-ai-trigger");
+    const close = document.querySelector<HTMLButtonElement>(".report-ai-floating-close");
+    expect(trigger).toBeInTheDocument();
+    expect(close).toBeInTheDocument();
+
+    await user.click(close!);
+
+    expect(trigger).not.toBeInTheDocument();
+  });
 });

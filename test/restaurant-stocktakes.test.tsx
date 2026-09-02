@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
@@ -67,6 +69,20 @@ describe("restaurant stocktake records", () => {
     await user.click(screen.getByRole("button", { name: "儲存" }));
 
     await waitFor(() => expect(api.saveQuantity).toHaveBeenCalledWith("stocktake-1", 2));
+  });
+
+  it("lets the loading master-detail layout fill the page shell", () => {
+    const pending = new Promise<never>(() => undefined);
+    const api = services({
+      loadMasters: vi.fn(() => pending),
+      loadRecords: vi.fn(() => pending),
+    });
+    const { container } = render(<MemoryRouter><RestaurantStocktakesPage services={api} canEdit canDelete /></MemoryRouter>);
+    const styles = readFileSync(path.resolve(process.cwd(), "src/index.css"), "utf8");
+
+    expect(container.querySelector(".restaurant-stocktakes-page-skeleton")).not.toBeNull();
+    expect(container.querySelector(".restaurant-stocktakes-page-skeleton > .page-heading")).toBeNull();
+    expect(styles).toMatch(/\.restaurant-stocktakes-page-skeleton\s*\{[^}]*gap:\s*0;[^}]*grid-template-rows:\s*minmax\(0,\s*1fr\);/s);
   });
 
   it("enables save immediately in edit mode and exits when nothing changed", async () => {

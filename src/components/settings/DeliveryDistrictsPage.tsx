@@ -127,7 +127,6 @@ export function DeliveryDistrictsPage({
           <h1>{t("settings.districts.title")}</h1>
           <p>{t("settings.districts.description")}</p>
         </div>
-        {canEdit ? <Button onClick={() => openEditor(null)}><Plus />{t("settings.districts.add")}</Button> : null}
       </header>
 
       <article className="panel orders-panel">
@@ -140,6 +139,7 @@ export function DeliveryDistrictsPage({
             label={t("settings.districts.search")}
             placeholder={t("settings.districts.searchPlaceholder")}
             submitLabel={t("settings.districts.searchAction")}
+            actions={canEdit ? <Button onClick={() => openEditor(null)}><Plus />{t("settings.districts.add")}</Button> : null}
           />
         </header>
 

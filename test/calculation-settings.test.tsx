@@ -136,10 +136,11 @@ describe("Calculation settings page", () => {
 
     await screen.findByText("10.00%");
     await user.type(screen.getByPlaceholderText("搜尋創建日期、收成差異或 Mark-up"), "15");
-    await user.click(screen.getByRole("button", { name: "搜尋" }));
 
-    expect(screen.getByText("15.00%")).toBeInTheDocument();
-    expect(screen.queryByText("10.00%")).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("15.00%")).toBeInTheDocument();
+      expect(screen.queryByText("10.00%")).not.toBeInTheDocument();
+    });
   });
 
   it("limits create inputs to 0-100 with two decimals", async () => {

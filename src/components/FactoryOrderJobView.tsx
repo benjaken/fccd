@@ -61,6 +61,16 @@ export function factoryOrderLineLabelNames(line: FactoryOrderLine): string[] {
   return [line.labelName?.trim() || line.label.trim()].filter(Boolean);
 }
 
+export function factoryOrderLabelCount(lines: FactoryOrderLine[]): number {
+  return lines
+    .filter((line) => !line.isCancelled)
+    .reduce(
+      (total, line) => total
+        + factoryOrderLineLabelNames(line).length * factoryLabelCopies(line.quantityText),
+      0,
+    );
+}
+
 const factoryChangeFieldKeys: Record<string, string> = {
   product_id: "factoryBoard.changedProduct",
   package_id: "factoryBoard.changedPackage",
@@ -158,6 +168,7 @@ export function FactoryOrderJobView({
     (line) => line.isCancelled || line.label.trim().length > 0,
   ) ?? [];
   const printableLines = displayLines.filter((line) => !line.isCancelled);
+  const totalLabelCount = factoryOrderLabelCount(printableLines);
   const printBlocked = Boolean(job?.isBeingEdited);
 
   useEffect(() => {
@@ -496,7 +507,9 @@ export function FactoryOrderJobView({
           disabled={printBlocked || !canPrint || !selectedPrinter || !printableLines.length || bulkPrinting !== null}
           onClick={() => void printAllLabels()}
         >
-          {bulkPrinting === "all" ? t("factoryBoard.printing") : t("factoryBoard.printAll")}
+          {bulkPrinting === "all"
+            ? t("factoryBoard.printing")
+            : t("factoryBoard.printAll", { count: totalLabelCount })}
         </Button>
         <Button
           type="button"

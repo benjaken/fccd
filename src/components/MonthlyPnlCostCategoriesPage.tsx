@@ -122,15 +122,15 @@ export function MonthlyPnlCostCategoriesPage() {
           <h1>{t("monthlyPnlCostCategories.title")}</h1>
           <p>{t("monthlyPnlCostCategories.description")}</p>
         </div>
-        {canEdit ? (
-          <Button onClick={() => edit(null)}>
-            <Plus />
-            {t("monthlyPnlCostCategories.add")}
-          </Button>
-        ) : null}
       </header>
       <article className="panel ingredients-panel">
         <RestaurantSettingsListTable
+          toolbarAction={canEdit ? (
+            <Button onClick={() => edit(null)}>
+              <Plus />
+              {t("monthlyPnlCostCategories.add")}
+            </Button>
+          ) : null}
           className="ingredients-table-wrap"
           loading={loading}
           loadingLabel={t("monthlyPnlCostCategories.loading")}

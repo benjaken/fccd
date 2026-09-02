@@ -1,4 +1,5 @@
 import {
+  Fragment,
   useEffect,
   useMemo,
   useRef,
@@ -45,6 +46,10 @@ import {
 import { LoginPage } from "@/components/LoginPage";
 import { ResetPasswordPage } from "@/components/ResetPasswordPage";
 import { NotificationCenter } from "@/components/NotificationCenter";
+import {
+  HomeSalesDashboardPage,
+  type HomeSalesDashboardLoader,
+} from "@/components/HomeSalesDashboardPage";
 import { FOOD_CHANNEL_CATERING_LOGO_PATH } from "@/lib/brand-logo";
 import { MigrationWorkspace } from "@/components/MigrationWorkspace";
 import { OrdersListPage } from "@/components/OrdersListPage";
@@ -150,6 +155,11 @@ import {
   orderListNavLabel,
   type OrderListConfigRow,
 } from "@/lib/order-list-configs";
+import {
+  fetchFollowUpCounts,
+  followUpCountForKey,
+  type FollowUpCounts,
+} from "@/lib/follow-up-counts";
 import { useTheme } from "@/lib/use-theme";
 import { useAnimatedNumber } from "@/lib/use-animated-number";
 import { cn } from "@/lib/utils";
@@ -157,10 +167,15 @@ import {
   type Icon,
   type NavItem,
   accessiblePrimaryNavigationPath,
+  businessCategoryFromLocation,
+  businessPrimaryNav,
+  businessSectionFromLocation,
+  businessSidebarNav,
   buildMobileDrawerNav,
   firstAccessibleNavigationPath,
+  flattenVisibleNavItems,
   isNavItemVisible,
-  isNavPathActive,
+  isBusinessSecondaryNavItemActive,
   isPrimaryNavActive,
   isSecondaryNavItemActive,
   isWorkspaceNavActive,
@@ -171,6 +186,11 @@ import {
   SECTION_CHILD_KEYS,
   workspaceLinks,
 } from "@/lib/nav";
+import {
+  MENU_STYLE_CHANGED,
+  readMenuStyle,
+  type MenuStyle,
+} from "@/lib/menu-style";
 
 function Brand() {
   const { t } = useTranslation();
@@ -238,14 +258,27 @@ function OperationsShell() {
   const { dark, toggleTheme } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarGroupExpansion, setSidebarGroupExpansion] = useState<
+    Record<string, boolean>
+  >({});
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [menuStyle, setMenuStyle] = useState<MenuStyle>(() =>
+    readMenuStyle(user?.id),
+  );
   const [orderListConfigs, setOrderListConfigs] = useState<
     OrderListConfigRow[] | null
   >(null);
+  const [followUpCounts, setFollowUpCounts] = useState<FollowUpCounts | null>(null);
   const [recoveringInitialPath, setRecoveringInitialPath] = useState(true);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
-  const section = sectionFromPath(location.pathname);
+  const isBusinessMenu = menuStyle === "style-one";
+  const section = isBusinessMenu
+    ? businessSectionFromLocation(location.pathname, location.search)
+    : sectionFromPath(location.pathname);
+  const businessCategory = isBusinessMenu
+    ? businessCategoryFromLocation(section, location.pathname, location.search)
+    : "";
   const authorizationRole = profile?.role;
   const pageAccess = usePageAccess(authorizationRole);
   const currentPageKey = pageAccessKey(location.pathname);
@@ -256,6 +289,12 @@ function OperationsShell() {
       accessiblePrimaryNavigationPath(item, pageAccess.canAccess) !== null
     );
   });
+  const visibleBusinessPrimaryNav = businessPrimaryNav.filter((item) =>
+    isNavItemVisible(item, pageAccess.canAccess),
+  );
+  const displayedPrimaryNav = isBusinessMenu
+    ? visibleBusinessPrimaryNav
+    : visiblePrimaryNav;
   const visibleWorkspaceLinks = workspaceLinks.filter((item) =>
     pageAccess.canAccess(item.permissionKey),
   );
@@ -263,13 +302,28 @@ function OperationsShell() {
     pageAccess.canAccess,
     pageAccess.canAccessSection,
   );
-  const sideItems = (secondaryNav[section] ?? secondaryNav.overview)
+  const sideItems = (isBusinessMenu
+    ? businessSidebarNav(section, businessCategory)
+    : secondaryNav[section] ?? secondaryNav.overview)
     .filter((item) => isNavItemVisible(item, pageAccess.canAccess))
     .filter((item) => isOrderListNavVisible(item.key, orderListConfigs));
-  const mobileNavGroups = buildMobileDrawerNav(
+  const styleTwoMobileGroups = buildMobileDrawerNav(
     visiblePrimaryNav,
-    (permissionKey) => pageAccess.canAccess(permissionKey),
-  ).map((group) => ({
+    pageAccess.canAccess,
+  );
+  const styleOneMobileGroups = visibleBusinessPrimaryNav.map((primary) => {
+    const defaultCategory = primary.key === "followUp" ? "catering" : primary.key === "catering" ? "orders" : "";
+    return {
+      groupKey: primary.key,
+      items: flattenVisibleNavItems(
+        businessSidebarNav(primary.key, defaultCategory),
+        pageAccess.canAccess,
+      ),
+    };
+  }).filter((group) => group.items.length > 0);
+  const mobileNavGroups = (isBusinessMenu
+    ? styleOneMobileGroups
+    : styleTwoMobileGroups).map((group) => ({
     ...group,
     items: group.items.filter((item) =>
       isOrderListNavVisible(item.key, orderListConfigs),
@@ -298,7 +352,127 @@ function OperationsShell() {
   const canEditDeliveries = pageAccess.canManage("delivery");
   const orderListConfigMap = orderListConfigByPreset(orderListConfigs);
   const navLabel = (key: string) =>
-    orderListNavLabel(key, orderListConfigMap, t(`navigation.${key}`));
+    orderListNavLabel(
+      key,
+      orderListConfigMap,
+      isBusinessMenu ? businessMenuLabel(key, i18n.language, t(`navigation.${key}`)) : t(`navigation.${key}`),
+    );
+  const navCount = (key: string) => followUpCountForKey(followUpCounts, key);
+
+  const visibleNavChildren = (item: NavItem) =>
+    (item.children ?? [])
+      .filter((child) => isNavItemVisible(child, pageAccess.canAccess))
+      .filter((child) => isOrderListNavVisible(child.key, orderListConfigs));
+  const leafTargets = (items: NavItem[]): string[] =>
+    items.flatMap((item) => {
+      const children = visibleNavChildren(item);
+      return children.length ? leafTargets(children) : [item.to];
+    });
+  const sideLeafTargets = leafTargets(sideItems);
+  const firstLeafTarget = (item: NavItem): string => {
+    const children = visibleNavChildren(item);
+    return children.length ? firstLeafTarget(children[0]) : item.to;
+  };
+  const leafIsActive = (to: string) =>
+    isBusinessMenu
+      ? isBusinessSecondaryNavItemActive(
+          location.pathname,
+          location.search,
+          to,
+          sideLeafTargets,
+        )
+      : isSecondaryNavItemActive(location.pathname, to, sideLeafTargets);
+  const branchIsActive = (item: NavItem): boolean => {
+    const children = visibleNavChildren(item);
+    return children.length
+      ? children.some(branchIsActive)
+      : leafIsActive(item.to);
+  };
+
+  const renderSidebarItem = (
+    item: NavItem,
+    depth = 0,
+    parentPath = "root",
+  ): ReactNode => {
+    const visibleChildren = visibleNavChildren(item);
+    const hasChildren = visibleChildren.length > 0;
+    const childActive = hasChildren && visibleChildren.some(branchIsActive);
+    const expansionKey = `${parentPath}/${item.key}`;
+    const defaultsOpenInCatering =
+      isBusinessMenu &&
+      section === "catering" &&
+      depth === 0 &&
+      (item.key === "orders" || item.key === "allQuotes");
+    const isExpanded =
+      sidebarGroupExpansion[expansionKey] ??
+      (defaultsOpenInCatering || childActive);
+    const subnavId = `sidebar-subnav-${expansionKey.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
+    const linkContent = (
+      <>
+        <item.icon />
+        <span>{navLabel(item.key)}</span>
+        {!sidebarCollapsed && navCount(item.key) !== undefined ? (
+          <span className="sidebar-link-count">{navCount(item.key)}</span>
+        ) : null}
+        {!sidebarCollapsed && hasChildren ? (
+          <ChevronRight
+            className={cn("link-chevron", isExpanded && "is-expanded")}
+          />
+        ) : null}
+      </>
+    );
+
+    return (
+      <div className="sidebar-nav-group" key={`${expansionKey}-${item.to}`}>
+        {hasChildren && !sidebarCollapsed ? (
+          <button
+            type="button"
+            className={cn(
+              "sidebar-link",
+              depth > 0 && "nested",
+              "has-children",
+              childActive && "open",
+            )}
+            aria-expanded={isExpanded}
+            aria-controls={subnavId}
+            onClick={() =>
+              setSidebarGroupExpansion((current) => ({
+                ...current,
+                [expansionKey]: !isExpanded,
+              }))
+            }
+          >
+            {linkContent}
+          </button>
+        ) : (
+          <NavLink
+            to={hasChildren ? firstLeafTarget(item) : item.to}
+            end
+            className={() =>
+              cn(
+                "sidebar-link",
+                depth > 0 && "nested",
+                hasChildren && "has-children",
+                (hasChildren ? childActive : leafIsActive(item.to)) && "active",
+                childActive && "open",
+              )
+            }
+            title={sidebarCollapsed ? navLabel(item.key) : undefined}
+          >
+            {linkContent}
+          </NavLink>
+        )}
+        {hasChildren && !sidebarCollapsed && isExpanded ? (
+          <div className="sidebar-subnav" id={subnavId}>
+            {visibleChildren.map((child) =>
+              renderSidebarItem(child, depth + 1, expansionKey),
+            )}
+          </div>
+        ) : null}
+      </div>
+    );
+  };
+
 
   useEffect(() => {
     let cancelled = false;
@@ -320,9 +494,37 @@ function OperationsShell() {
   }, []);
 
   useEffect(() => {
+    if (!isBusinessMenu) {
+      setFollowUpCounts(null);
+      return;
+    }
+
+    let cancelled = false;
+    void fetchFollowUpCounts()
+      .then((counts) => {
+        if (!cancelled) setFollowUpCounts(counts);
+      })
+      .catch(() => {
+        if (!cancelled) setFollowUpCounts(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isBusinessMenu, location.pathname, location.search]);
+
+  useEffect(() => {
     setMobileMenuOpen(false);
     setUserMenuOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    setMenuStyle(readMenuStyle(user?.id));
+    const handleStyleChange = (event: Event) => {
+      setMenuStyle((event as CustomEvent<MenuStyle>).detail);
+    };
+    window.addEventListener(MENU_STYLE_CHANGED, handleStyleChange);
+    return () => window.removeEventListener(MENU_STYLE_CHANGED, handleStyleChange);
+  }, [user?.id]);
 
   useEffect(() => {
     if (!pageAccess.loading) setRecoveringInitialPath(false);
@@ -357,7 +559,7 @@ function OperationsShell() {
   };
 
   return (
-    <div className={cn("app-shell", documentEditorMode && "document-editor-shell")}>
+    <div className={cn("app-shell", isBusinessMenu && "menu-style-one", documentEditorMode && "document-editor-shell")}>
       <header className="topbar">
         <div className="topbar-brand">
           <Button
@@ -480,11 +682,12 @@ function OperationsShell() {
       <div className="workspace-bar">
         <div className="nav-row-spacer" aria-hidden="true" />
         <nav className="primary-nav lowered-nav" aria-label="Primary">
-          {visiblePrimaryNav.map((item) => {
+          {displayedPrimaryNav.map((item) => {
             const { key, icon: NavIcon } = item;
             const to =
-              accessiblePrimaryNavigationPath(item, pageAccess.canAccess) ??
-              item.to;
+              isBusinessMenu
+                ? item.to
+                : accessiblePrimaryNavigationPath(item, pageAccess.canAccess) ?? item.to;
             return (
             <NavLink
               key={key}
@@ -493,12 +696,12 @@ function OperationsShell() {
               className={({ isActive }) =>
                 cn(
                   "primary-nav-link",
-                  isPrimaryNavActive(section, key, isActive) && "active",
+                  (isBusinessMenu ? section === key : isPrimaryNavActive(section, key, isActive)) && "active",
                 )
               }
             >
               <NavIcon />
-              <span>{t(`navigation.${key}`)}</span>
+              <span>{navLabel(key)}</span>
             </NavLink>
             );
           })}
@@ -514,72 +717,11 @@ function OperationsShell() {
       >
         <aside className="sidebar">
           <nav aria-label="Secondary">
-            {sideItems.map((item) => {
-              const visibleChildren = (item.children ?? []).filter((child) =>
-                isNavItemVisible(child, pageAccess.canAccess),
-              );
-              const childActive = visibleChildren.some((child) =>
-                isNavPathActive(location.pathname, child.to, false),
-              );
-              const parentExact = item.to === "/" || item.to === `/${section}`;
-
-              return (
-                <div className="sidebar-nav-group" key={`${item.key}-${item.to}`}>
-                  <NavLink
-                    to={visibleChildren[0]?.to ?? item.to}
-                    end={parentExact || visibleChildren.length > 0}
-                    className={({ isActive }) =>
-                      cn(
-                        "sidebar-link",
-                        visibleChildren.length > 0 && "has-children",
-                        (isActive || childActive) &&
-                          (visibleChildren.length === 0 || sidebarCollapsed) &&
-                          "active",
-                        childActive && "open",
-                      )
-                    }
-                    title={
-                      sidebarCollapsed ? navLabel(item.key) : undefined
-                    }
-                  >
-                    <item.icon />
-                    <span>{navLabel(item.key)}</span>
-                    {!sidebarCollapsed && (
-                      <ChevronRight
-                        className={cn(
-                          "link-chevron",
-                          visibleChildren.length > 0 && "is-expanded",
-                        )}
-                      />
-                    )}
-                  </NavLink>
-                  {visibleChildren.length > 0 && !sidebarCollapsed ? (
-                    <div className="sidebar-subnav">
-                      {visibleChildren.map((child) => (
-                        <NavLink
-                          key={`${child.key}-${child.to}`}
-                          to={child.to}
-                          end
-                          className={() =>
-                            cn(
-                              "sidebar-link nested",
-                              isSecondaryNavItemActive(
-                                location.pathname,
-                                child.to,
-                                visibleChildren.map((item) => item.to),
-                              ) && "active",
-                            )
-                          }
-                        >
-                          <child.icon />
-                          <span>{navLabel(child.key)}</span>
-                        </NavLink>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              );
-            })}
+            {sideItems.map((item) => (
+              <Fragment key={`${item.key}-${item.to}`}>
+                {renderSidebarItem(item)}
+              </Fragment>
+            ))}
           </nav>
           <button
             className="sidebar-collapse"
@@ -614,7 +756,7 @@ function OperationsShell() {
               <Route path="/profile" element={<ProfilePage />} />
               <Route
                 path="/orders"
-                element={<OrdersListPage canViewFinance={canViewFinance} canManageStatuses={canEditOrders} />}
+                element={<OrdersListPage canViewFinance={canViewFinance} canManageStatuses={canEditOrders} canAccessQueue={pageAccess.canAccess} />}
               />
               <Route
                 path="/orders/dashboard"
@@ -780,7 +922,7 @@ function OperationsShell() {
               <Route
                 path="/orders/:id/edit"
                 element={
-                  canEditOrders ? <QuoteEditorPage documentType="order" /> : <SettingsAccessDenied />
+                  canEditOrders ? <QuoteEditorPage documentType="order" canCreateProduct={canEditProducts} /> : <SettingsAccessDenied />
                 }
               />
               <Route
@@ -802,7 +944,7 @@ function OperationsShell() {
               <Route
                 path="/orders/:id"
                 element={
-                  <QuoteEditorPage documentType="order" combined readOnly canEdit={canEditOrders} />
+                  <QuoteEditorPage documentType="order" combined readOnly canEdit={canEditOrders} canCreateProduct={canEditProducts} />
                 }
               />
               <Route path="/quotes" element={<QuotesListPage canManage={canEditQuotes} />} />
@@ -851,11 +993,11 @@ function OperationsShell() {
               />
               <Route
                 path="/quotes/new"
-                element={canEditQuotes ? <QuoteEditorPage /> : <SettingsAccessDenied />}
+                element={canEditQuotes ? <QuoteEditorPage canCreateProduct={canEditProducts} /> : <SettingsAccessDenied />}
               />
               <Route
                 path="/quotes/:id/edit"
-                element={canEditQuotes ? <QuoteEditorPage /> : <SettingsAccessDenied />}
+                element={canEditQuotes ? <QuoteEditorPage canCreateProduct={canEditProducts} /> : <SettingsAccessDenied />}
               />
               <Route
                 path="/quotes/:id/pdf"
@@ -863,7 +1005,7 @@ function OperationsShell() {
               />
               <Route
                 path="/quotes/:id"
-                element={<QuoteEditorPage combined readOnly canEdit={canEditQuotes} />}
+                element={<QuoteEditorPage combined readOnly canEdit={canEditQuotes} canCreateProduct={canEditProducts} />}
               />
               <Route path="/products" element={<ProductsListPage canEdit={canEditProducts} canCreatePackage={canEditPackages} />} />
               <Route
@@ -1397,6 +1539,9 @@ function OperationsShell() {
                     >
                       <NavIcon />
                       <span>{navLabel(key)}</span>
+                      {navCount(key) !== undefined ? (
+                        <span className="sidebar-link-count">{navCount(key)}</span>
+                      ) : null}
                     </NavLink>
                   ))}
                 </div>
@@ -1547,7 +1692,7 @@ function jobStatus(
   return { label: labels.confirmed, tone: "blue" };
 }
 
-export function Dashboard({
+function LegacyDashboard({
   loadDashboard = defaultDashboardLoader,
   role,
 }: {
@@ -1941,6 +2086,77 @@ export function Dashboard({
       </article>
     </>
   );
+}
+
+const BUSINESS_MENU_LABELS: Record<string, [string, string]> = {
+  overview: ["主頁", "Home"],
+  followUp: ["營運跟進", "Operations Follow-up"],
+  catering: ["到會", "Catering"],
+  frozen: ["凍肉", "Frozen Meat"],
+  restaurant: ["餐廳", "Restaurant"],
+  reports: ["報表", "Reports"],
+  orders: ["訂單", "Orders"],
+  allQuotes: ["報價單", "Quotes"],
+  cateringQuotes: ["所有報價", "All Quotes"],
+  products: ["商品與套餐", "Products & Packages"],
+  kitchen: ["中央廚房", "Central Kitchen"],
+  delivery: ["配送與司機", "Delivery & Drivers"],
+  reminders: ["提醒事項", "Reminders"],
+  pendingEntry: ["待入單", "Pending Entry"],
+  pendingQuote: ["待報價", "Pending Quote"],
+  pendingPayment: ["待收款", "Pending Payment"],
+  pendingFactory: ["待傳送工場", "Pending Factory"],
+  pendingDriver: ["待派司機", "Pending Driver"],
+  pendingProductReview: ["待審新商品", "Products to Review"],
+  packingStocktakes: ["食材包裝盤點", "Ingredient & Packaging Stocktake"],
+  kitchenMaterialUsage: ["食材包裝用量", "Ingredient & Packaging Usage"],
+  operationsExpenseInput: ["營運費用輸入", "Operating Expense Input"],
+  purchaseExpenseInput: ["採購費用輸入", "Purchase Expense Input"],
+  driverDeliveryRecords: ["司機送貨記錄", "Driver Delivery Records"],
+  deliveryList: ["司機送貨記錄", "Driver Delivery Records"],
+  restaurantDailySales: ["每日銷售輸入", "Daily Sales Input"],
+  restaurantDailyPurchases: ["每日採購輸入", "Daily Purchase Input"],
+  restaurantMonthlyExpenses: ["每月費用輸入", "Monthly Expense Input"],
+  restaurantStocktakes: ["每月存貨盤點", "Monthly Stocktake"],
+  newProductSalesStats: ["新品銷量統計", "New Product Sales"],
+  rawMeatInventoryCalc: ["生肉入貨", "Raw Meat Receiving"],
+  preparedMeatInventoryCalc: ["製作收成", "Production Yield"],
+  sellingPriceCost: ["製成品出貨", "Finished Goods Dispatch"],
+  deliveryNotes: ["送貨單管理", "Delivery Note Management"],
+  rawMeatReports: ["報表", "Reports"],
+  kitchenSalesCost: ["所有銷售及成本", "All Sales and Costs"],
+  kitchenChannelSales: ["頻道銷售", "Channel Sales"],
+  kitchenProductSales: ["產品銷售", "Product Sales"],
+  kitchenAdvertisingPerformance: ["廣告表現", "Advertising Performance"],
+  shopOrderQuantities: ["店舖訂貨數量", "Shop Order Quantities"],
+  averageSupplyPrice: ["產品供店舖平均售價", "Average Shop Supply Price"],
+  productionCostPrice: ["產品製作成本及工場用貨售價", "Production Cost and Factory Price"],
+  rawMeatAveragePrice: ["生肉平均來貨價/KG", "Average Raw Meat Price/KG"],
+  preparedMeatStock: ["製成品存貨", "Prepared Meat Stock"],
+  rawMeatStock: ["生肉存貨", "Raw Meat Stock"],
+  supplierPurchase: ["供應商入貨報表", "Supplier Purchases"],
+  shopSales: ["銷售報告", "Sales Report"],
+  shopSalesWorkingHours: ["銷售及工時報告", "Sales and Working Hours"],
+  restaurantSalesSalary: ["銷售及薪金報告", "Sales and Salary"],
+  restaurantSalesCost: ["銷售成本報告", "Sales Cost"],
+  restaurantPnl: ["P&L 報告", "P&L Report"],
+  newProducts: ["新品報告", "New Product Report"],
+};
+
+function businessMenuLabel(key: string, language: string, fallback: string) {
+  const labels = BUSINESS_MENU_LABELS[key];
+  if (!labels) return fallback;
+  return language.toLowerCase().startsWith("zh") ? labels[0] : labels[1];
+}
+
+export function Dashboard({
+  loadDashboard,
+  role,
+}: {
+  loadDashboard?: HomeSalesDashboardLoader;
+  role?: string | null;
+}) {
+  return <HomeSalesDashboardPage loadDashboard={loadDashboard} role={role} />;
 }
 
 function PanelHeader({

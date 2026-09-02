@@ -1,4 +1,5 @@
 import { normalizeFactoryOrderNumber } from "@/lib/factory-order-number";
+import { formatOrderNumber } from "@/lib/order-number";
 
 export type FactoryDishLabelCommandInput = {
   kind?: "dish";
@@ -126,7 +127,7 @@ export function buildFactoryDishLabelLayout(
   const normalizedOrderNumber = normalizeFactoryOrderNumber(
     sanitizeFactoryLabelText(input.orderNumber),
   );
-  const orderNumber = normalizedOrderNumber ? `#${normalizedOrderNumber}` : "";
+  const orderNumber = formatOrderNumber(normalizedOrderNumber);
   const deliveryDate = formatDeliveryDate(input.deliveryDate);
   const configuredLabelLines = input.labelName
     .split(/\r?\n/)
@@ -404,7 +405,7 @@ async function buildAddressLabelBytes(
     await textBitmap(
       rasterize,
       0,
-      `#${orderNumber}`,
+      formatOrderNumber(orderNumber),
       { height: 120, fontSize: 120, fontWeight: 800, align: "center" },
       { x: 16, width: 368 },
     ),

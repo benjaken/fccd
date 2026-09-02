@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
-import { Link } from "react-router-dom";
 
 import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
@@ -394,14 +393,7 @@ export function KitchenProductSalesReportPage() {
         </div>
       </header>
 
-      <div className="report-ai-nav-row">
-        <nav className="report-tabs kitchen-sales-cost-tabs" aria-label="中央廚房報表分類">
-          <Link to="/reports/kitchen">所有銷售及成本</Link>
-          <Link to="/reports/kitchen/channel-sales">渠道銷售</Link>
-          <Link className="active" to="/reports/kitchen/product-sales">產品銷售</Link>
-          <button disabled type="button">訂單明細報表</button>
-          <Link to="/reports/kitchen/advertising-performance">廣告表現</Link>
-        </nav>
+      <div className="report-ai-nav-row report-ai-actions-only">
         <ReportAiTrigger />
       </div>
 

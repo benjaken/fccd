@@ -329,12 +329,6 @@ export function CalculationSettingsPage({
           <span className="eyebrow">{t("calculationSettings.eyebrow")}</span>
           <h1>{t("calculationSettings.title")}</h1>
         </div>
-        <div className="heading-actions">
-          <Button type="button" onClick={() => setCreateOpen(true)}>
-            <Plus />
-            {t("calculationSettings.add")}
-          </Button>
-        </div>
       </header>
 
       <article className="panel calculation-settings-panel">
@@ -347,6 +341,7 @@ export function CalculationSettingsPage({
             label={t("calculationSettings.search")}
             placeholder={t("calculationSettings.searchPlaceholder")}
             submitLabel={t("calculationSettings.searchAction")}
+            actions={<Button type="button" onClick={() => setCreateOpen(true)}><Plus />{t("calculationSettings.add")}</Button>}
           />
         </header>
 

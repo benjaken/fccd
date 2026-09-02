@@ -139,15 +139,15 @@ export function RestaurantPaymentMethodsPage() {
           <h1>{t("restaurantPaymentMethods.title")}</h1>
           <p>{t("restaurantPaymentMethods.description")}</p>
         </div>
-        {canEdit ? (
-          <Button onClick={() => edit(null)}>
-            <Plus />
-            {t("restaurantPaymentMethods.add")}
-          </Button>
-        ) : null}
       </header>
       <article className="panel ingredients-panel">
         <RestaurantSettingsListTable
+          toolbarAction={canEdit ? (
+            <Button onClick={() => edit(null)}>
+              <Plus />
+              {t("restaurantPaymentMethods.add")}
+            </Button>
+          ) : null}
           className="ingredients-table-wrap"
           loading={loading}
           loadingLabel={t("restaurantPaymentMethods.loading")}

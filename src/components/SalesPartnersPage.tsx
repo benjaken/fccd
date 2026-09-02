@@ -298,12 +298,6 @@ export function SalesPartnersPage({
           <span className="eyebrow">{t("salePartners.eyebrow")}</span>
           <h1>{t("salePartners.title")}</h1>
         </div>
-        {canCreate ? (
-          <Button type="button" onClick={openCreate}>
-            <Plus />
-            {t("salePartners.add")}
-          </Button>
-        ) : null}
       </header>
 
       <article className="panel sale-partners-panel">
@@ -316,6 +310,7 @@ export function SalesPartnersPage({
             label={t("salePartners.search")}
             placeholder={t("salePartners.searchPlaceholder")}
             submitLabel={t("salePartners.searchAction")}
+            actions={canCreate ? <Button type="button" onClick={openCreate}><Plus />{t("salePartners.add")}</Button> : null}
           />
         </header>
 

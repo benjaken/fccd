@@ -133,7 +133,6 @@ describe("Sale Partner page", () => {
     expect(screen.getByText("9123 4567")).toBeInTheDocument();
 
     await user.type(screen.getByPlaceholderText("搜尋姓名或電話"), "李小明");
-    await user.click(screen.getByRole("button", { name: "搜尋" }));
 
     await waitFor(() => {
       expect(loadPartners).toHaveBeenLastCalledWith({ search: "李小明" });

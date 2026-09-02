@@ -311,12 +311,6 @@ export function OrderStatusesPage({
           <span className="eyebrow">{t("orderStatuses.eyebrow")}</span>
           <h1>{t("orderStatuses.title")}</h1>
         </div>
-        {canCreate ? (
-          <Button type="button" onClick={openCreate}>
-            <Plus />
-            {t("orderStatuses.add")}
-          </Button>
-        ) : null}
       </header>
 
       <article className="panel order-statuses-panel">
@@ -329,6 +323,7 @@ export function OrderStatusesPage({
             label={t("orderStatuses.search")}
             placeholder={t("orderStatuses.searchPlaceholder")}
             submitLabel={t("orderStatuses.searchAction")}
+            actions={canCreate ? <Button type="button" onClick={openCreate}><Plus />{t("orderStatuses.add")}</Button> : null}
           />
         </header>
 

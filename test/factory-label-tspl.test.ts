@@ -24,7 +24,7 @@ function latin1(bytes: Uint8Array): string {
 describe("factory label bitmap TSPL", () => {
   it("builds the 50 by 75 mm preview from the same wrapped print layout", () => {
     expect(buildFactoryDishLabelLayout({
-      orderNumber: "#B-11795",
+      orderNumber: "B-11795",
       deliveryDate: "2026-08-21",
       labelName: "彩椒炒豬頸肉飯餐盒",
       remarks: ["分開膠袋裝", "不要餐具"],
@@ -32,7 +32,7 @@ describe("factory label bitmap TSPL", () => {
     })).toMatchObject({
       widthMm: 50,
       heightMm: 75,
-      orderNumber: "#B-11795",
+      orderNumber: "B-11795",
       copies: 2,
       labelLines: ["彩椒炒豬頸肉飯餐", "盒"],
       remarkLines: ["分開膠袋裝", "不要餐具"],
@@ -167,7 +167,7 @@ describe("factory label bitmap TSPL", () => {
     expect(tspl).not.toContain("CODEPAGE 950");
     expect(tspl).not.toContain("TST24.BF2");
     expect(rasterizer).toHaveBeenCalledWith(
-      "#B-11795",
+      "B-11795",
       expect.objectContaining({ width: 368, height: 120, fontSize: 120 }),
     );
     expect(rasterizer).toHaveBeenCalledWith("－ 送貨日期 －", expect.objectContaining({ fontSize: 30 }));
@@ -201,7 +201,7 @@ describe("factory label bitmap TSPL", () => {
     expect(tspl).not.toContain("Ka Wai Hui");
     expect(tspl).not.toContain("91027090");
     expect(rasterizer).toHaveBeenCalledWith(
-      "#B-1546",
+      "B-1546",
       expect.objectContaining({ width: 368, height: 120, fontSize: 120, align: "center" }),
     );
     expect(rasterizer).toHaveBeenCalledWith(

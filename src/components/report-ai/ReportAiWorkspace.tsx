@@ -8,6 +8,7 @@ import {
   Sparkles,
   ThumbsDown,
   ThumbsUp,
+  X,
 } from "lucide-react";
 import {
   createContext,
@@ -126,11 +127,12 @@ export function ReportAiSnapshotPublisher({
 export function ReportAiTrigger() {
   const context = useContext(ReportAiContext);
   const { t } = useTranslation();
+  const [visible, setVisible] = useState(true);
 
-  if (!context) return null;
+  if (!context || !visible) return null;
 
   return (
-    <div className="report-ai-action-row">
+    <div className="report-ai-action-row report-ai-floating-action">
       <Button
         type="button"
         className={cn("report-ai-trigger", `is-${context.status}`)}
@@ -140,13 +142,16 @@ export function ReportAiTrigger() {
         disabled={!context.hasSnapshot}
         onClick={context.openPanel}
       >
-        {context.status === "loading" ? (
-          <LoaderCircle className="report-ai-spin" />
-        ) : (
-          <Sparkles />
-        )}
-        <span>{t("reports.ai.title")}</span>
+        <span aria-hidden="true">AI</span>
       </Button>
+      <button
+        type="button"
+        className="report-ai-floating-close"
+        aria-label={t("reports.ai.close")}
+        onClick={() => setVisible(false)}
+      >
+        <X aria-hidden="true" />
+      </button>
     </div>
   );
 }

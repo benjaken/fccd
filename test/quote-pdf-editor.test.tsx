@@ -116,6 +116,47 @@ function renderPage(
 }
 
 describe("editable quote PDF page", () => {
+  it("hides a product subtotal when its quantity is zero", async () => {
+    const zeroQuantityResult: OrderDetailResult = {
+      ...result,
+      lines: result.lines.map((line) => ({
+        ...line,
+        quantity: 0,
+        totalPrice: 0,
+      })),
+    };
+    renderPage(vi.fn().mockResolvedValue(zeroQuantityResult));
+
+    const quantity = await screen.findByLabelText("數量 1");
+    expect(quantity).toHaveValue("0");
+    const row = quantity.closest("tr");
+    expect(row).not.toBeNull();
+    expect(row?.querySelector("td:last-child")).toBeEmptyDOMElement();
+  });
+
+  it("shows the product subtotal again when quantity becomes greater than zero", async () => {
+    const user = userEvent.setup();
+    const zeroQuantityResult: OrderDetailResult = {
+      ...result,
+      lines: result.lines.map((line) => ({
+        ...line,
+        quantity: 0,
+        totalPrice: 0,
+      })),
+    };
+    renderPage(vi.fn().mockResolvedValue(zeroQuantityResult));
+
+    const quantity = await screen.findByLabelText("數量 1");
+    await user.clear(quantity);
+    await user.type(quantity, "2");
+    await user.tab();
+
+    const row = quantity.closest("tr");
+    await waitFor(() => {
+      expect(row?.querySelector("td:last-child")).toHaveTextContent("$90");
+    });
+  });
+
   it("uses the delivery time instead of the ship-out time", async () => {
     renderPage();
 
@@ -393,8 +434,8 @@ describe("editable quote PDF page", () => {
     await user.tab();
     expect(screen.getAllByText("$36,000").length).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: "儲存工作稿" })).not.toBeInTheDocument();
-    await waitFor(() => expect(screen.getByText("已自動儲存")).toBeInTheDocument());
-    expect(JSON.parse(localStorage.getItem("fccd:quote-pdf-draft:quote-1") || "{}").lines[0].description).toBe("自訂活動項目");
+    await waitFor(() => expect(JSON.parse(localStorage.getItem("fccd:quote-pdf-draft:quote-1") || "{}").lines[0].description).toBe("自訂活動項目"));
+    expect(screen.queryByText("已自動儲存")).not.toBeInTheDocument();
   });
 
   it("keeps typing in a PDF text field local until the field loses focus", async () => {
@@ -563,8 +604,8 @@ describe("editable quote PDF page", () => {
     expect(await screen.findAllByRole("heading", { name: "到會套餐報價" })).toHaveLength(2);
     const sheets = document.querySelectorAll(".quote-pdf-sheet");
     expect(sheets).toHaveLength(2);
-    expect(sheets[0].querySelectorAll(".quote-pdf-table > tbody:first-of-type > tr")).toHaveLength(10);
-    expect(sheets[1].querySelectorAll(".quote-pdf-table > tbody:first-of-type > tr")).toHaveLength(8);
+    expect(sheets[0].querySelectorAll(".quote-pdf-table > tbody:first-of-type > tr")).toHaveLength(16);
+    expect(sheets[1].querySelectorAll(".quote-pdf-table > tbody:first-of-type > tr")).toHaveLength(2);
     expect(within(sheets[1] as HTMLElement).getByLabelText("產品 18")).toHaveValue("產品 18");
     expect(sheets[0].querySelector(".quote-pdf-summary-rows")).not.toBeInTheDocument();
     expect(sheets[1].querySelector(".quote-pdf-summary-rows")).toBeInTheDocument();

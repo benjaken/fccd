@@ -54,7 +54,7 @@ describe("business notification reminders", () => {
         quoteDeliveryDays: [10, 5, 0],
       }),
     );
-    expect(screen.getByText(/提醒設定已儲存/)).toBeInTheDocument();
+    expect(screen.queryByText(/提醒設定已儲存/)).not.toBeInTheDocument();
   });
 
   it("keeps the deduplicated notification model, realtime publication, and reminder jobs in the migration", () => {

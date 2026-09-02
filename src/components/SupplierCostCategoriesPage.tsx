@@ -122,15 +122,15 @@ export function SupplierCostCategoriesPage() {
           <h1>{t("supplierCostCategories.title")}</h1>
           <p>{t("supplierCostCategories.description")}</p>
         </div>
-        {canEdit ? (
-          <Button onClick={() => edit(null)}>
-            <Plus />
-            {t("supplierCostCategories.add")}
-          </Button>
-        ) : null}
       </header>
       <article className="panel ingredients-panel">
         <RestaurantSettingsListTable
+          toolbarAction={canEdit ? (
+            <Button onClick={() => edit(null)}>
+              <Plus />
+              {t("supplierCostCategories.add")}
+            </Button>
+          ) : null}
           className="ingredients-table-wrap"
           loading={loading}
           loadingLabel={t("supplierCostCategories.loading")}

@@ -55,9 +55,12 @@ vi.mock("@/auth/use-page-access", async () => {
   };
 });
 
-function renderReport(group: "frozenMeat") {
+function renderReport(
+  group: "frozenMeat",
+  initialPath = "/reports/frozen-meat",
+) {
   return render(
-    <MemoryRouter initialEntries={["/reports/frozen-meat"]}>
+    <MemoryRouter initialEntries={[initialPath]}>
       <ReportsPage group={group} />
     </MemoryRouter>,
   );
@@ -272,10 +275,9 @@ describe("Shop order quantity report", () => {
 
   it("switches between monthly shop and factory prices", async () => {
     const user = userEvent.setup();
-    renderReport("frozenMeat");
-
-    await user.click(
-      screen.getByRole("link", { name: "Average supply price by shop" }),
+    const view = renderReport(
+      "frozenMeat",
+      "/reports/frozen-meat/average-supply-price",
     );
     expect((await screen.findAllByText("香菇滷肉")).length).toBeGreaterThan(1);
     await waitFor(() =>
@@ -297,10 +299,10 @@ describe("Shop order quantity report", () => {
     await user.click(screen.getByRole("button", { name: "Per package" }));
     expect(screen.getAllByText("$42.80").length).toBeGreaterThanOrEqual(2);
 
-    await user.click(
-      screen.getByRole("link", {
-        name: "Production cost and factory supply price",
-      }),
+    view.unmount();
+    renderReport(
+      "frozenMeat",
+      "/reports/frozen-meat/production-cost-price",
     );
     await waitFor(() =>
       expect(reports.fetchMonthlyPreparedMeatPrices).toHaveBeenLastCalledWith({
@@ -313,12 +315,9 @@ describe("Shop order quantity report", () => {
   it("renders weighted monthly raw-meat purchase prices", async () => {
     const user = userEvent.setup();
     const tabLabel = i18n.t("reports.tabs.rawMeatAveragePrice");
-    renderReport("frozenMeat");
-
-    await user.click(
-      await screen.findByRole("link", {
-        name: tabLabel,
-      }),
+    renderReport(
+      "frozenMeat",
+      "/reports/frozen-meat/raw-meat-average-price",
     );
 
     expect(
@@ -367,12 +366,9 @@ describe("Shop order quantity report", () => {
   it("renders cumulative month-end prepared-meat stock", async () => {
     const user = userEvent.setup();
     const tabLabel = i18n.t("reports.tabs.preparedMeatStock");
-    renderReport("frozenMeat");
-
-    await user.click(
-      await screen.findByRole("link", {
-        name: tabLabel,
-      }),
+    renderReport(
+      "frozenMeat",
+      "/reports/frozen-meat/prepared-meat-stock",
     );
 
     expect(
@@ -414,12 +410,9 @@ describe("Shop order quantity report", () => {
   it("renders cumulative raw-meat stock in KG", async () => {
     const user = userEvent.setup();
     const tabLabel = i18n.t("reports.tabs.rawMeatStock");
-    renderReport("frozenMeat");
-
-    await user.click(
-      await screen.findByRole("link", {
-        name: tabLabel,
-      }),
+    renderReport(
+      "frozenMeat",
+      "/reports/frozen-meat/raw-meat-stock",
     );
 
     expect(
@@ -447,12 +440,9 @@ describe("Shop order quantity report", () => {
   it("renders supplier purchase totals for the selected date range", async () => {
     const user = userEvent.setup();
     const tabLabel = i18n.t("reports.tabs.supplierPurchase");
-    renderReport("frozenMeat");
-
-    await user.click(
-      await screen.findByRole("link", {
-        name: tabLabel,
-      }),
+    renderReport(
+      "frozenMeat",
+      "/reports/frozen-meat/supplier-purchase",
     );
 
     expect(
@@ -530,18 +520,18 @@ describe("Shop order quantity report", () => {
     expect(listRule?.[1]).not.toContain("height: 405px");
   });
 
-  it("includes shop order quantities in the frozen-meat report tabs", async () => {
+  it("removes the in-page tabs now provided by the sidebar", async () => {
     renderReport("frozenMeat");
     expect(
       await screen.findByRole("heading", { name: "Frozen Meat" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: "Shop order quantities" }),
-    ).toBeInTheDocument();
+      screen.queryByRole("link", { name: "Shop order quantities" }),
+    ).not.toBeInTheDocument();
     expect(
-      screen.getByRole("link", {
+      screen.queryByRole("link", {
         name: "Average supply price by shop",
       }),
-    ).toBeInTheDocument();
+    ).not.toBeInTheDocument();
   });
 });

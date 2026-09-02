@@ -277,12 +277,6 @@ export function DeliveryFleetsPage() {
           <h1>{t("deliveryFleets.title")}</h1>
           <p>{t("deliveryFleets.description")}</p>
         </div>
-        {canManage ? (
-          <Button type="button" onClick={openCreate}>
-            <Plus />
-            {t("deliveryFleets.add")}
-          </Button>
-        ) : null}
       </header>
 
       <article className="panel ingredients-panel">
@@ -295,6 +289,7 @@ export function DeliveryFleetsPage() {
             label={t("deliveryFleets.search")}
             placeholder={t("deliveryFleets.searchPlaceholder")}
             submitLabel={t("deliveryFleets.searchAction")}
+            actions={canManage ? <Button type="button" onClick={openCreate}><Plus />{t("deliveryFleets.add")}</Button> : null}
           />
         </header>
         {saveError && !panelOpen ? (

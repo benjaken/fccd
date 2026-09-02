@@ -33,6 +33,13 @@ import { FactoryDishLabelPreview } from "@/components/FactoryDishLabelPreview";
 import { Modal } from "@/components/ui/modal";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { SearchSelect } from "@/components/ui/search-select";
+import { SidePanel } from "@/components/ui/side-panel";
+import { DeliveryAddressActions } from "@/components/DeliveryAddressActions";
+import { DistrictTranslationButton } from "@/components/DistrictTranslationButton";
+import {
+  CatalogCreatePage,
+  type CreatedCatalogProduct,
+} from "@/components/CatalogCreatePage";
 import { createDeliveryDistrictOption } from "@/lib/delivery-districts";
 import {
   fetchPackageDetail,
@@ -46,6 +53,7 @@ import {
   fetchQuoteEditorOptions,
   fetchQuoteEditorSummary,
   fetchQuoteLines,
+  findQuoteProductsByName,
   removeQuoteLine,
   setOrderLineVoided,
   searchQuoteCatalog,
@@ -94,6 +102,8 @@ import { DICT_TYPE, dictItemLabel, useDictItems } from "@/lib/dictionaries";
 import { matchDeliveryTimeOption, normalizeDeliveryTimeRange } from "@/lib/delivery-time";
 import { useMediaQuery } from "@/lib/use-media-query";
 import {
+  createProduct,
+  fetchProductEditOptions,
   fetchLunchboxPickerFilterOptions,
   fetchProducts,
   type ProductListItem,
@@ -224,12 +234,16 @@ type Props = {
   readOnly?: boolean;
   documentType?: QuoteEditorDocumentType;
   canEdit?: boolean;
+  canCreateProduct?: boolean;
   loadOptions?: typeof fetchQuoteEditorOptions;
   createDistrict?: typeof createDeliveryDistrictOption;
   saveQuote?: typeof createQuote;
   loadSummary?: typeof fetchQuoteEditorSummary;
   loadLines?: typeof fetchQuoteLines;
   searchCatalog?: typeof searchQuoteCatalog;
+  matchProductsByName?: typeof findQuoteProductsByName;
+  createCatalogProduct?: typeof createProduct;
+  loadCatalogProductOptions?: typeof fetchProductEditOptions;
   saveLine?: typeof addQuoteLine;
   loadPackageDetail?: typeof fetchPackageDetail;
   deleteLine?: typeof removeQuoteLine;
@@ -260,12 +274,16 @@ export function QuoteEditorPage({
   readOnly = false,
   documentType = "quote",
   canEdit = false,
+  canCreateProduct = false,
   loadOptions = fetchQuoteEditorOptions,
   createDistrict = createDeliveryDistrictOption,
   saveQuote = createQuote,
   loadSummary = fetchQuoteEditorSummary,
   loadLines = fetchQuoteLines,
   searchCatalog = searchQuoteCatalog,
+  matchProductsByName = findQuoteProductsByName,
+  createCatalogProduct = createProduct,
+  loadCatalogProductOptions = fetchProductEditOptions,
   saveLine = addQuoteLine,
   loadPackageDetail = fetchPackageDetail,
   deleteLine = removeQuoteLine,
@@ -351,6 +369,12 @@ export function QuoteEditorPage({
   const [customProductPrice, setCustomProductPrice] = useState("");
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [savingLineId, setSavingLineId] = useState<string | null>(null);
+  const [matchingLineId, setMatchingLineId] = useState<string | null>(null);
+  const [productMatchChoice, setProductMatchChoice] = useState<{
+    line: QuoteLine;
+    matches: QuoteCatalogItem[];
+  } | null>(null);
+  const [catalogProductLine, setCatalogProductLine] = useState<QuoteLine | null>(null);
   const [draggedLineId, setDraggedLineId] = useState<string | null>(null);
   const [dragOverLineId, setDragOverLineId] = useState<string | null>(null);
   const [reordering, setReordering] = useState(false);
@@ -1260,6 +1284,91 @@ export function QuoteEditorPage({
     }
   };
 
+  const applyProductMatch = async (
+    line: QuoteLine,
+    match: QuoteCatalogItem | null,
+  ) => {
+    const nextLine: QuoteLine = {
+      ...line,
+      productId: match?.id ?? null,
+      packageId: null,
+      sku: match?.sku ?? null,
+      name: match?.name ?? line.name?.trim() ?? "",
+      labelId: match?.labelId ?? null,
+      labelDisplayA: match?.labelDisplayA ?? null,
+      labelDisplayB: match?.labelDisplayB ?? null,
+      labels: match?.labels ?? [],
+      ...(line.isPending ? {
+        pendingItem: match ?? {
+          id: `custom-${crypto.randomUUID()}`,
+          kind: "custom" as const,
+          sku: null,
+          name: line.name?.trim() ?? "",
+          price: line.unitPrice,
+        },
+      } : {}),
+    };
+    patchLine(line.id, nextLine);
+    if (!nextLine.isPending) await saveEditedLine(nextLine);
+  };
+
+  const matchEditedProductName = async (line: QuoteLine) => {
+    if (line.packageId || line.isVoid || !line.name?.trim()) return;
+    setMatchingLineId(line.id);
+    setError(null);
+    try {
+      const matches = await matchProductsByName(line.name, draft.channelId || channelId);
+      if (matches.length === 1) {
+        await applyProductMatch(line, matches[0]);
+      } else if (matches.length === 0) {
+        await applyProductMatch(line, null);
+      } else {
+        patchLine(line.id, { productId: null, packageId: null, sku: null });
+        setProductMatchChoice({
+          line: { ...line, productId: null, packageId: null, sku: null },
+          matches,
+        });
+      }
+    } catch {
+      setError("quote_line_save_failed");
+    } finally {
+      setMatchingLineId(null);
+    }
+  };
+
+  const closeProductMatchChoice = () => {
+    const pending = productMatchChoice;
+    setProductMatchChoice(null);
+    if (pending) void applyProductMatch(pending.line, null);
+  };
+
+  const chooseProductMatch = async (match: QuoteCatalogItem) => {
+    if (!productMatchChoice) return;
+    const { line } = productMatchChoice;
+    setProductMatchChoice(null);
+    await applyProductMatch(line, match);
+  };
+
+  const openCatalogProductModal = (line: QuoteLine) => {
+    setCatalogProductLine(line);
+  };
+
+  const closeCatalogProductModal = () => {
+    setCatalogProductLine(null);
+  };
+
+  const linkCreatedCatalogProduct = async (product: CreatedCatalogProduct) => {
+    if (!catalogProductLine) return;
+    await applyProductMatch(catalogProductLine, {
+      id: product.id,
+      kind: "product",
+      sku: product.sku,
+      name: product.name,
+      price: product.price,
+    });
+    setCatalogProductLine(null);
+  };
+
   const openLabelModal = (line: QuoteLine) => {
     setLabelModalDraft({
       displayA: line.labelDisplayA || "",
@@ -1407,6 +1516,95 @@ export function QuoteEditorPage({
       </div>
     </Modal>
   ) : null;
+
+  const lineSkuContent = (line: QuoteLine) => (
+    <span className="quote-line-sku-content">
+      <span>{line.sku || "—"}</span>
+      {!line.sku && !line.packageId && line.name?.trim() && canCreateProduct && (!readOnly || canEdit) ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="quote-line-add-product-button"
+          aria-label={t("quoteEditor.items.addToProductCatalog")}
+          title={t("quoteEditor.items.addToProductCatalog")}
+          disabled={savingLineId === line.id}
+          onClick={() => openCatalogProductModal(line)}
+        >
+          <PackagePlus />
+        </Button>
+      ) : null}
+    </span>
+  );
+
+  const editableLineName = (line: QuoteLine, index: number) => (
+    <span className="quote-line-name-editor">
+      <span className="sr-only">{line.name}</span>
+      <input
+        className="quote-line-name-input"
+        value={line.name || ""}
+        aria-label={`${t("quoteEditor.items.product")} ${index + 1}`}
+        disabled={line.isVoid || savingLineId === line.id || matchingLineId === line.id}
+        onChange={(event) => patchLine(line.id, { name: event.target.value })}
+        onBlur={(event) => void matchEditedProductName({ ...line, name: event.currentTarget.value })}
+      />
+    </span>
+  );
+
+  const productMatchModal = (
+    <Modal
+      open={Boolean(productMatchChoice)}
+      onClose={closeProductMatchChoice}
+      title={t("quoteEditor.items.chooseMatchingProduct")}
+      description={productMatchChoice?.line.name}
+      closeLabel={t("common.cancel")}
+      size="sm"
+    >
+      <div className="quote-product-match-list" role="listbox" aria-label={t("quoteEditor.items.matchingProducts")}>
+        {productMatchChoice?.matches.map((match) => (
+          <button
+            type="button"
+            role="option"
+            aria-selected="false"
+            key={match.id}
+            onClick={() => void chooseProductMatch(match)}
+          >
+            <strong>{match.name}</strong>
+            <span>{match.sku || "—"}</span>
+          </button>
+        ))}
+      </div>
+    </Modal>
+  );
+
+  const catalogProductModal = (
+    <SidePanel
+      open={Boolean(catalogProductLine)}
+      onClose={closeCatalogProductModal}
+      title={t("quoteEditor.items.addToProductCatalog")}
+      description={catalogProductLine?.name ?? undefined}
+      closeLabel={t("common.cancel")}
+      className="side-panel-majority quote-product-create-panel"
+    >
+      {catalogProductLine ? (
+        <CatalogCreatePage
+          key={catalogProductLine.id}
+          kind="product"
+          canCreate={canCreateProduct}
+          embedded
+          initialValues={{
+            channelId: draft.channelId || channelId,
+            name: catalogProductLine.name?.trim() || "",
+            price: String(catalogProductLine.unitPrice),
+          }}
+          loadOptions={loadCatalogProductOptions}
+          saveProduct={createCatalogProduct}
+          onCancel={closeCatalogProductModal}
+          onCreated={linkCreatedCatalogProduct}
+        />
+      ) : null}
+    </SidePanel>
+  );
 
   const reorderLines = async (targetLineId: string) => {
     if (!draggedLineId || draggedLineId === targetLineId || reordering) return;
@@ -1780,18 +1978,6 @@ export function QuoteEditorPage({
             <div className="order-number-cell">
               <h1>{activeQuote.orderNumber || (isOrder ? t("details.orderTitle") : t("quoteEditor.title"))}</h1>
               {isOrder && activeQuote.addonShopifyPending ? <span className="status-badge amber">未處理加單</span> : null}
-              {activeShopifyUrl ? (
-                <a
-                  className="shopify-order-icon"
-                  href={activeShopifyUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={t("orders.openInShopify", { order: activeQuote.orderNumber || activeQuote.id })}
-                  title={t("orders.openInShopify", { order: activeQuote.orderNumber || activeQuote.id })}
-                >
-                  <span aria-hidden="true">S</span>
-                </a>
-              ) : null}
             </div>
             <p>{t(isOrder ? "quoteEditor.orderItemsReady" : "quoteEditor.itemsReady")}</p>
           </div>
@@ -1879,7 +2065,24 @@ export function QuoteEditorPage({
         >
           <div className="quote-editor-form-column">
             <h2><FileText />{t("quoteEditor.customerSection")}</h2>
-            <ReadonlyField label={t("quoteEditor.fields.number")} value={activeQuote.orderNumber} />
+            <div className="quote-readonly-field">
+              <span>{t("quoteEditor.fields.number")}</span>
+              <div className="quote-readonly-order-number">
+                <strong>{displayValue(activeQuote.orderNumber)}</strong>
+                {activeShopifyUrl ? (
+                  <a
+                    className="shopify-order-icon"
+                    href={activeShopifyUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={t("orders.openInShopify", { order: activeQuote.orderNumber || activeQuote.id })}
+                    title={t("orders.openInShopify", { order: activeQuote.orderNumber || activeQuote.id })}
+                  >
+                    <span aria-hidden="true">S</span>
+                  </a>
+                ) : null}
+              </div>
+            </div>
             <ReadonlyField label={t("quoteEditor.fields.brand")} value={optionName(options.channels, draft.channelId)} />
             <ReadonlyField label={t("quoteEditor.fields.customerName")} value={draft.customerName} />
             <ReadonlyField label={t("quoteEditor.fields.companyName")} value={draft.companyName} />
@@ -1925,7 +2128,7 @@ export function QuoteEditorPage({
           <div className="table-wrap"><table><thead><tr><th>{t("quoteEditor.items.sequence")}</th><th>{t("quoteEditor.items.sku")}</th><th>{t("quoteEditor.items.product")}</th><th>{t("quoteEditor.items.labelPreview")}</th><th>{t("quoteEditor.items.quantity")}</th><th>{t("quoteEditor.items.unitPrice")}</th><th>{t("quoteEditor.items.subtotal")}</th></tr></thead><tbody>
             {lines.map((line, index) => <tr key={line.id} className={cn(line.isVoid && "is-cancelled")}>
               <td className="quote-line-sequence">{index + 1}</td>
-              <td className="quote-line-sku">{displayValue(line.sku)}</td>
+              <td className="quote-line-sku">{lineSkuContent(line)}</td>
               <td className="quote-line-product">
                 {line.isAddon ? <span className="status-badge blue quote-line-addon-label">加單</span> : null}
                 <strong>{displayValue(line.name)}</strong>
@@ -1958,6 +2161,8 @@ export function QuoteEditorPage({
         {factorySettingsPanel}
 
         {labelPreviewModal}
+        {productMatchModal}
+        {catalogProductModal}
 
         {!isOrder || supplements.additionalInfo.length || supplements.activities.length ? (
           <section className="panel quote-editor-supplements quote-editor-supplements-readonly">
@@ -2014,24 +2219,9 @@ export function QuoteEditorPage({
           <span className="eyebrow">{isOrder ? t("details.orderTitle") : t("quoteEditor.eyebrow")}</span>
           <div className="order-number-cell">
             <h1>{activeQuote?.orderNumber || (isOrder ? t("details.orderTitle") : t("quoteEditor.title"))}</h1>
-            {activeQuote && activeShopifyUrl ? (
-              <a
-                className="shopify-order-icon"
-                href={activeShopifyUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={t("orders.openInShopify", { order: activeQuote.orderNumber || activeQuote.id })}
-                title={t("orders.openInShopify", { order: activeQuote.orderNumber || activeQuote.id })}
-              >
-                <span aria-hidden="true">S</span>
-              </a>
-            ) : null}
           </div>
           <p>{activeQuote ? t(isOrder ? "quoteEditor.orderItemsReady" : "quoteEditor.itemsReady") : t("quoteEditor.description")}</p>
         </div>
-        {activeQuote && (
-          <span className="quote-editor-saved-badge"><Check />{t("quoteEditor.saved")}</span>
-        )}
         {isOrder && activeQuote ? <OrderPaymentStatus total={grandTotal} paid={paidTotal} formatMoney={money.format} navigationStuck={sectionNavigationStuck} /> : null}
       </header>
 
@@ -2044,7 +2234,24 @@ export function QuoteEditorPage({
       >
           <div className="quote-editor-form-column">
             <h2><FileText />{t("quoteEditor.customerSection")}</h2>
-            <label><span>{t("quoteEditor.fields.number")}</span><input value={activeQuote?.orderNumber || t("quoteEditor.autoNumber")} disabled /></label>
+            <label className="quote-order-number-field">
+              <span>{t("quoteEditor.fields.number")}</span>
+              <div className="quote-order-number-control">
+                <input value={activeQuote?.orderNumber || t("quoteEditor.autoNumber")} disabled />
+                {activeQuote && activeShopifyUrl ? (
+                  <a
+                    className="shopify-order-icon"
+                    href={activeShopifyUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={t("orders.openInShopify", { order: activeQuote.orderNumber || activeQuote.id })}
+                    title={t("orders.openInShopify", { order: activeQuote.orderNumber || activeQuote.id })}
+                  >
+                    <span aria-hidden="true">S</span>
+                  </a>
+                ) : null}
+              </div>
+            </label>
             <label><span>{t("quoteEditor.fields.brand")} *</span>
               <FilterableSelect required value={draft.channelId} onChange={(event) => patchDraft({ channelId: event.target.value })} aria-invalid={Boolean(fieldErrors.channelId)}>
                 <option value="">{t("quoteEditor.placeholders.brand")}</option>
@@ -2059,7 +2266,15 @@ export function QuoteEditorPage({
             <label><span>{t("quoteEditor.fields.contactB")}</span><input type="tel" value={draft.contactB} onChange={(event) => patchDraft({ contactB: event.target.value })} /></label>
             <label><span>{t("quoteEditor.fields.email")} *</span><input required aria-label={t("quoteEditor.fields.email")} type="email" value={draft.email} onChange={(event) => patchDraft({ email: event.target.value })} aria-invalid={Boolean(fieldErrors.email)} />{fieldErrors.email && <em>{fieldErrors.email}</em>}</label>
             <label><span>{t("quoteEditor.fields.asanaLink")}</span><input type="url" value={draft.asanaLink} onChange={(event) => patchDraft({ asanaLink: event.target.value })} placeholder={t("quoteEditor.placeholders.asanaLinkPlaceholder")} /></label>
-            {showDeliveryAddress && <label><span>{t("quoteEditor.fields.address")}</span><textarea rows={2} value={draft.address} onChange={(event) => patchDraft({ address: event.target.value })} /></label>}
+            {showDeliveryAddress && (
+              <div className="quote-editor-address-field">
+                <label htmlFor="quote-editor-delivery-address">{t("quoteEditor.fields.address")}</label>
+                <div className="delivery-address-input-row">
+                  <textarea id="quote-editor-delivery-address" rows={2} value={draft.address} onChange={(event) => patchDraft({ address: event.target.value })} />
+                  <DeliveryAddressActions address={draft.address} onTranslated={(address) => patchDraft({ address })} />
+                </div>
+              </div>
+            )}
             <div className="quote-editor-tags">
               <span id="quote-order-tags-label">{t("quoteEditor.fields.tags")}</span>
               <div
@@ -2097,7 +2312,7 @@ export function QuoteEditorPage({
             {!isOrder && draft.quoteAutoClosedAt && draft.quoteStatus !== "Case Closed" ? <label><span>{t("quoteEditor.fields.quoteReopenReason")}</span><textarea rows={2} value={draft.quoteReopenReason ?? ""} onChange={(event) => patchDraft({ quoteReopenReason: event.target.value })} /></label> : null}
             {!isOrder ? <label><span>{t("quoteEditor.fields.quoteSalesSource")}</span><FilterableSelect aria-label={t("quoteEditor.fields.quoteSalesSource")} value={draft.quoteSalesSourceId} onChange={(event) => patchDraft({ quoteSalesSourceId: event.target.value })}><option value="">{t("common.notSet")}</option>{options.quoteSalesSources.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</FilterableSelect></label> : null}
             {!isOrder ? <label><span>{t("quoteEditor.fields.quoteCommunicationChannel")}</span><FilterableSelect aria-label={t("quoteEditor.fields.quoteCommunicationChannel")} value={draft.quoteCommunicationChannelId} onChange={(event) => patchDraft({ quoteCommunicationChannelId: event.target.value })}><option value="">{t("common.notSet")}</option>{options.quoteCommunicationChannels.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</FilterableSelect></label> : null}
-            <label><span>{t("quoteEditor.fields.district")} *</span><SearchSelect id="quote-editor-district" label={t("quoteEditor.fields.district")} value={automaticDistrictName ? `auto:${automaticDistrictName}` : draft.districtId} options={automaticDistrictName ? [{ id: `auto:${automaticDistrictName}`, name: automaticDistrictName }] : districts} placeholder={t("quoteEditor.placeholders.districtPlaceholder")} disabled={Boolean(automaticDistrictName) || creatingDistrict} required={!automaticDistrictName} invalid={Boolean(fieldErrors.districtId)} onCreate={automaticDistrictName ? undefined : (name) => void addDistrict(name)} onChange={(option) => patchDraft({ districtId: option.id, districtName: "" })} />{fieldErrors.districtId && <em>{fieldErrors.districtId}</em>}</label>
+            <label><span>{t("quoteEditor.fields.district")} *</span><div className="district-translation-control"><SearchSelect id="quote-editor-district" label={t("quoteEditor.fields.district")} value={automaticDistrictName ? `auto:${automaticDistrictName}` : draft.districtId} options={automaticDistrictName ? [{ id: `auto:${automaticDistrictName}`, name: automaticDistrictName }] : districts} placeholder={t("quoteEditor.placeholders.districtPlaceholder")} disabled={Boolean(automaticDistrictName) || creatingDistrict} required={!automaticDistrictName} invalid={Boolean(fieldErrors.districtId)} onCreate={automaticDistrictName ? undefined : (name) => void addDistrict(name)} onChange={(option) => patchDraft({ districtId: option.id, districtName: "" })} /><DistrictTranslationButton district={automaticDistrictName || draft.districtName || districts.find((item) => item.id === draft.districtId)?.name || ""} disabled={Boolean(automaticDistrictName) || creatingDistrict} onTranslated={addDistrict} /></div>{fieldErrors.districtId && <em>{fieldErrors.districtId}</em>}</label>
             <label><span>{t("quoteEditor.fields.shippingMethod")} *</span><FilterableSelect required aria-label={t("quoteEditor.fields.shippingMethod")} value={draft.shippingMethodId} onChange={(event) => changeShippingMethod(event.target.value)} aria-invalid={Boolean(fieldErrors.shippingMethodId)}><option value="">{t("common.notSet")}</option>{options.shippingMethods.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</FilterableSelect>{fieldErrors.shippingMethodId && <em>{fieldErrors.shippingMethodId}</em>}</label>
             <label><span>{t("quoteEditor.fields.deliveryDate")} *</span><input required aria-label={t("quoteEditor.fields.deliveryDate")} type="date" value={draft.deliveryDate} onChange={(event) => patchDraft({ deliveryDate: event.target.value })} aria-invalid={Boolean(fieldErrors.deliveryDate)} />{fieldErrors.deliveryDate && <em>{fieldErrors.deliveryDate}</em>}</label>
             <label><span>{t("quoteEditor.fields.deliveryTime")}</span><div className="quote-time-control"><FilterableSelect aria-label={t("quoteEditor.fields.deliveryTime")} value={deliveryTimeMode === "custom" ? "custom" : draft.deliveryTime} onChange={(event) => { const value = event.target.value; setDeliveryTimeMode(value === "custom" ? "custom" : ""); patchDraft({ deliveryTime: value === "custom" ? "" : value }); }}><option value="">{t("quoteEditor.placeholders.deliveryTimeSelectPlaceholder")}</option><option value="custom">{t("quoteEditor.custom")}</option>{deliveryTimeOptions.map((time) => <option key={time} value={time}>{time}</option>)}</FilterableSelect>{deliveryTimeMode === "custom" && <input value={draft.deliveryTime} onChange={(event) => patchDraft({ deliveryTime: event.target.value })} placeholder={t("quoteEditor.placeholders.customDeliveryTimePlaceholder")} />}</div></label>
@@ -2156,8 +2371,8 @@ export function QuoteEditorPage({
                     <header>
                       <span>{index + 1}</span>
                       <div>
-                        <strong>{line.name || "—"}</strong>
-                        <small>{line.sku || "—"}</small>
+                        {line.packageId ? <strong>{line.name || "—"}</strong> : editableLineName(line, index)}
+                        <small>{lineSkuContent(line)}</small>
                         {editingRemarkIds.has(line.id) ? (
                           <textarea
                             autoFocus
@@ -2229,9 +2444,9 @@ export function QuoteEditorPage({
                     onDragEnd={() => { setDraggedLineId(null); setDragOverLineId(null); }}
                   ><GripVertical /><span>{index + 1}</span></button>
                 </td>
-                <td className="quote-line-sku">{line.sku || "—"}</td>
+                <td className="quote-line-sku">{lineSkuContent(line)}</td>
                 <td className="quote-line-product">
-                  <strong>{line.name || "—"}</strong>
+                  {line.packageId ? <strong>{line.name || "—"}</strong> : editableLineName(line, index)}
                   {line.isVoid ? <span className="quote-line-cancelled-label">{t("quoteEditor.items.cancelled")}</span> : null}
                   {editingRemarkIds.has(line.id) ? (
                     <textarea
@@ -2516,6 +2731,8 @@ export function QuoteEditorPage({
         </section>
       ) : null}
       {labelPreviewModal}
+      {productMatchModal}
+      {catalogProductModal}
       {factoryValidationModal}
     </section>
   );

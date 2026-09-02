@@ -23,8 +23,10 @@ email template does not by itself approve or activate a WATI template.
 Automatic customer notifications are also blocked while an order remains in
 the Shopify review queue, including add-on changes awaiting review. The guard
 applies to every automatic WATI and email event and is checked both when the
-event is queued and immediately before provider delivery. Approval enqueues a
-fresh order confirmation; manual sends remain separately controlled.
+event is queued and immediately before provider delivery. Creating, converting,
+approving, or sending an order to the factory does not enqueue an order
+confirmation. Delivery and pickup confirmations are sent only through the
+separately controlled manual action.
 
 Email uses the same event copy and resolved order values as WATI, wrapped in a
 responsive Food Channels Catering layout. The header uses
@@ -40,8 +42,8 @@ There is deliberately no payment or outstanding-balance reminder.
 
 | Event | Default WATI template name | Trigger |
 | --- | --- | --- |
-| Delivery order confirmed | `order_confirm_with_action_and_aolink` | A delivery order is created or a quote becomes an order |
-| Pickup order confirmed | `selfpick_order_confirmation_with_action2026` | A pickup order is created or a quote becomes an order |
+| Delivery order confirmed | `order_confirm_with_action_and_aolink` | Manual order-confirmation action only |
+| Pickup order confirmed | `selfpick_order_confirmation_with_action2026` | Manual order-confirmation action only |
 | Delivery tomorrow | `delivery_tomorrow_reminder` | Disabled; no preceding-day reminder |
 | Pickup tomorrow | `pickup_tomorrow_reminder` | Disabled; no preceding-day reminder |
 | Delivery today | `fccd_delivery_reminder` | Delivery date in Hong Kong |

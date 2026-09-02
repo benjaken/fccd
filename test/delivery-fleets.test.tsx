@@ -184,8 +184,9 @@ describe("Delivery fleet management", () => {
     expect(within(dialog).getByRole("cell", { name: "地區 16" })).toBeInTheDocument();
 
     await user.type(within(dialog).getByRole("searchbox", { name: "搜尋運費" }), "地區 05");
-    await user.click(within(dialog).getByRole("button", { name: "搜尋" }));
-    expect(within(dialog).getByRole("cell", { name: "地區 05" })).toBeInTheDocument();
-    expect(within(dialog).getByText("顯示 1–1，共 1 筆")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(within(dialog).getByRole("cell", { name: "地區 05" })).toBeInTheDocument();
+      expect(within(dialog).getByText("顯示 1–1，共 1 筆")).toBeInTheDocument();
+    });
   });
 });

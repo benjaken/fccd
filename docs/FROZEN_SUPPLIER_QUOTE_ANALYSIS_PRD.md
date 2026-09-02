@@ -4,12 +4,24 @@
 
 | 項目 | 內容 |
 | --- | --- |
-| 狀態 | 方案確認／待實作 |
+| 文件版本 | 2.0 |
+| 文件日期 | 2026-09-01 |
+| 狀態 | 核心流程已實作並完成 test-project 驗證；production provider、OCR 與業務驗收待核對 |
 | 所屬模塊 | 凍貨／凍肉 |
 | 主要使用者 | Admin、Super Admin、Factory；報告檢視可按權限開放給 Accounting |
 | 目標 | 以通用引擎處理二十多家供應商的 PDF 報價，保存版本、比較價格、追蹤走勢、標記異常並輸出 PDF／CSV 報告 |
 | 本期範圍 | PDF 上傳、AI 輔助解析及對應、人工確認、報價歷史、實際入貨價對照、異常門檻、PDF／CSV 報告 |
 | 非目標 | 自動下單、直接改寫現有入貨紀錄、讓 AI 自行確認商品或價格 |
+
+### 0.1 2026-09-01 現行實作
+
+1. `/frozen/supplier-quotes` 已提供 private PDF 上傳、SHA-256 去重、parse run、進度、重試、PDF／座標 evidence 預覽、候選逐行人工對應、日期／供應商身份確認及原子發布。
+2. pipeline 先以 PDF.js layout extraction、欄位／表格規則及 supplier profile 產生 deterministic candidates；AI 只處理 coverage 不足的安全 layout blocks，並須回傳可驗證的 page／block／cell evidence。
+3. AI adapter 保持 provider-neutral，支援 structured OpenAI Responses 及 Chat Completions 類 provider；現行新部署方向為 xAI／Grok，secret 只存在 server-side。provider timeout、quota、無設定、成本超限或格式錯誤時 fail closed，deterministic parsing 與人工審核仍可使用。
+4. 文件狀態包含 uploading、processing、review、ocr_required、parse_failed、confirmed；重試建立新的 parse run，不覆蓋既有 audit evidence。
+5. 確認操作要求供應商、正式報價日期、生效日期及每個選取行的商品／variant mapping 完整；發布只替換未確認候選，不改寫已確認 line、原料主檔、入貨或庫存流水。
+6. test project 已驗證匿名拒絕、非 PDF 拒絕、相同 SHA idempotency、權限、原子發布、malformed PDF retry、AI disabled／configured modes 及清理 smoke data。Production 是否已套用相同 migration、function version、secret 與 feature flag 必須另行核對。
+7. 文字型 PDF 已有可執行流程；掃描／圖片 PDF 仍進入 `ocr_required`，在 OCR runtime 正式驗收前不得由 AI 猜測內容。
 
 ## 1. 背景與問題
 
@@ -450,7 +462,7 @@ PDF 及解析結果屬供應商價格資料，必須使用 private Storage、短
 - 多規格、多包裝、多價格單位。
 - TBA、暫缺、最低訂購及條件文字。
 
-目前前端及 Supabase functions 沒有既有 PDF／OCR／AI pipeline。可行方案是新增 server-side ingestion worker 或具備兼容 PDF runtime 的 Edge Function，再由 AI provider 做結構化候選輸出。生產環境必須先驗證 PDF library、OCR runtime、模型 API key、timeout、檔案大小及成本限制。
+現行 repo 已有 `supplier-quote-ingest` Edge Function、PDF layout extraction、deterministic parser、provider-neutral AI adapter、結構化驗證、人工 review UI、private Storage 及原子確認 RPC。Test project 已完成 migration、權限、idempotency、retry、AI disabled／enabled smoke 驗證；production 仍須核對實際 function version、server-side secret、feature flag、timeout、檔案大小及成本限制。
 
 MVP 可先支援文字型 PDF；掃描／圖片型 PDF 進入 `ocr_required` 狀態，待 OCR runtime 完成後再處理，不阻塞整個報價版本保存。
 
@@ -471,18 +483,26 @@ MVP 可先支援文字型 PDF；掃描／圖片型 PDF 進入 `ocr_required` 狀
 
 **方案可行，沒有需要推翻現有凍肉模塊的架構阻塞。**
 
-必需新增：
+現行已建立或仍須完成的能力：
 
-1. 報價文件、profile、line、alias、condition、threshold、alert migrations。
-2. private quote Storage 及上傳／解析服務。
-3. 通用 PDF parser、AI adapter 及結構化驗證。
-4. 凍貨報價比較頁、確認彈窗及報告頁。
-5. 逐筆實際入貨價歷史 RPC。
-6. 新 page／action permissions 及測試。
+1. 報價文件、parse run、profile、line、alias、condition、threshold、alert migrations：核心已建立，production migration 狀態待核對。
+2. Private quote Storage、上傳／解析服務、通用 parser、AI adapter 及結構化驗證：已建立並通過 test-project smoke。
+3. 凍貨報價比較頁、PDF evidence、確認 modal、CSV／print report：已建立；真實使用者流程待驗收。
+4. 逐筆實際入貨價歷史及價格比較：已建立資料能力；缺 supplier／item／date／price 的 legacy rows 仍只能標記資料不足。
+5. Page／action permissions、匿名拒絕及確認 RPC：已測；每個 production 角色仍須跑 permission matrix。
+6. OCR／掃描 PDF：仍待 runtime、成本及品質驗收。
 
 主要外部依賴是 PDF／OCR runtime 和 AI provider；它們是部署及成本設計項目，不是資料模型不可行。
 
-## 12. 分期實作
+## 12. 分期實作與現況
+
+| Phase | 2026-09-01 狀態 | 說明 |
+| --- | --- | --- |
+| Phase 0 | **完成** | 三種 redacted fixture 已驗證多欄、混合表格與雙欄格式；保留可重跑測試。 |
+| Phase 1 | **已實作並在 test project 驗證** | 資料模型、private bucket、hash dedupe、上傳、狀態及日期／身份確認均已建立。 |
+| Phase 2 | **已實作並在 test project 驗證** | Deterministic extraction、AI fallback、evidence、review、alias／profile suggestion 及 atomic confirmation 已建立。 |
+| Phase 3 | **主要 UI／資料能力已實作** | 基準／上次／最新、實際入貨價、門檻、狀態、CSV／print report 已有；production 歷史資料完整度及 alert workflow 仍須驗收。 |
+| Phase 4 | **部分完成** | 趨勢／報告與格式變更 evidence 已有部分能力；掃描 PDF OCR runtime 仍未完成，保持 `ocr_required`。 |
 
 ### Phase 0：資料盤點及 POC
 
@@ -560,11 +580,25 @@ MVP 可先支援文字型 PDF；掃描／圖片型 PDF 進入 `ocr_required` 狀
 | OCR 成本及延遲 | MVP 先處理文字型 PDF；OCR 另排 phase |
 | 舊資料欄位不完整 | 只有 supplier、item、date、price 齊全的實際入貨記錄才進比較 |
 
-## 15. 待確認事項
+## 15. 反覆修改的原因與最終規格
 
-1. AI provider 及 production parser／OCR 部署位置。
+| 修改範圍 | 為什麼曾重覆調整 | 現行最終規格 |
+| --- | --- | --- |
+| Parser 策略 | 單靠供應商專用 parser 無法擴展至二十多種格式；全交 AI 又不可驗證、成本不穩定。 | 先建立 layout IR 與 deterministic candidates；只把低 coverage blocks 交 AI；新供應商優先用 profile／alias，不為每家新增硬編碼分支。 |
+| AI provider | OpenAI connectivity 曾遇 quota，之後驗證 DeepSeek，再統一新部署方向至 xAI／Grok；若把 provider 寫死會反覆重做 pipeline。 | Provider-neutral adapter、model／provider／prompt version 全部入 audit；key 只在 server；任何 provider 失敗都 fail closed，人工 review 不受影響。 |
+| AI evidence | 早期只要求 source text，不足以證明雙欄 PDF 的行列位置，可能把左右欄合併。 | 每個 AI candidate 必須引用既有 page、block、cell；回傳 evidence 不存在或數字無法驗證即拒絕，不得發布。 |
+| 發布與 retry | 解析重試若直接 upsert lines，可能刪除人工已確認行或留下半批候選。 | 每次嘗試建立 immutable parse run；publication 在單一 transaction 原子替換未確認候選，保留 confirmed lines 與文件 audit。 |
+| 重覆上傳 | 同一 PDF 改檔名或重送會建立重覆文件、重覆 AI 成本與重覆報價。 | 以 SHA-256 + parser／idempotency key 去重；相同檔案返回既有 document，不新增 run，除非使用明確 retry。 |
+| 供應商／日期判定 | 檔名、PDF 內文、metadata 可能互相衝突；AI 自選日期會污染價格時間線。 | 顯示全部候選與來源，供應商 identity、報價日期、生效日期由人確認；生效日不得早於報價日。 |
+| 掃描 PDF | 沒有文字層時讓通用 AI 猜測圖片內容，無法保證完整性與成本。 | 在正式 OCR runtime、頁面 evidence 與品質門檻驗收前保持 `ocr_required`；不得自動確認或以 0 補價格。 |
+| TBA／暫缺／單位 | 空白、TBA、每箱／每公斤曾容易被標準化成 0 或錯誤可比單價。 | 保存原值、availability、price unit 與 conditions；只有 supplier、item、variant、unit、currency 可比才計算變動，否則顯示不可計算。 |
+| 門檻與 alert | 固定 ±10% 不能涵蓋所有供應商／品類，且重新計算會改變歷史解釋。 | UI 目前預設上漲／下跌各 10%，但門檻可配置；alert 保存當時門檻與結果，歷史版本不得因之後設定改變而被覆寫。 |
+
+## 16. 尚待環境／業務確認事項
+
+1. Production 現行 xAI／Grok function version、secret、feature flag、timeout／cost ceiling，以及 OCR 的部署位置與啟用門檻。
 2. 是否需要將報價條件換算成估算實際成本，還是只顯示原始報價及條件。
-3. 異常門檻的初始值是否採用 ±10%。
+3. Production 異常門檻是否沿用目前 UI 預設的上漲／下跌各 10%，或按供應商／品類設定不同值。
 4. Factory 是否有權確認 PDF 商品對應，或只限 Admin／Super Admin。
 5. 首次上傳是否需要自動將實際入貨歷史作為 PDF 報價比較的參考欄位。
 

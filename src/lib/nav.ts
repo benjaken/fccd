@@ -9,7 +9,6 @@ import {
   CalendarClock,
   CalendarDays,
   CalendarOff,
-  CalendarRange,
   ChartNoAxesCombined,
   CircleDollarSign,
   ClipboardCheck,
@@ -38,8 +37,6 @@ import {
   ShoppingBag,
   ShoppingBasket,
   Snowflake,
-  Split,
-  StickyNote,
   Store,
   Tags,
   Truck,
@@ -51,7 +48,9 @@ import {
   pageAccessKey,
   REPORT_GROUP_PAGE_KEYS,
   REPORT_GROUP_ROUTES,
+  REPORT_GROUP_TABS,
   REPORT_TAB_PERMISSION_KEYS,
+  REPORT_TAB_ROUTES,
 } from "@/auth/use-page-access";
 import { FROZEN_ACTION_PAGE_KEYS } from "@/lib/frozen-action-permissions";
 import {
@@ -80,6 +79,12 @@ export const primaryNav: NavItem[] = [
   },
   { key: "orders", to: "/orders", icon: ClipboardList },
   { key: "quotes", to: "/quotes", icon: FileText },
+  {
+    key: "customerSection",
+    to: "/quotes/customers",
+    icon: Users,
+    permissionKey: "customerSection",
+  },
   { key: "products", to: "/products", icon: ShoppingBasket },
   { key: "frozen", to: "/frozen/raw-meat-inventory", icon: Snowflake },
   { key: "kitchen", to: "/kitchen", icon: Utensils },
@@ -92,6 +97,45 @@ export const primaryNav: NavItem[] = [
     icon: Settings,
     permissionKey: "settings",
   },
+];
+
+/**
+ * Business-grouped menu (style one). Destinations still point to the same
+ * canonical routes used by style two; this only changes where links appear.
+ */
+export const businessPrimaryNav: NavItem[] = [
+  { key: "overview", to: "/", icon: LayoutDashboard, permissionKey: "overview" },
+  { key: "followUp", to: "/follow-up?nav=follow-up.catering", icon: ClipboardCheck, permissionKey: "overview.follow_up" },
+  { key: "catering", to: "/orders?nav=catering.orders", icon: Utensils, permissionKey: "orders" },
+  { key: "frozen", to: "/frozen/raw-meat-inventory?nav=frozen", icon: Snowflake, permissionKey: "frozen.raw_meat_inventory" },
+  { key: "restaurant", to: "/restaurant/daily-sales?nav=restaurant", icon: Store, permissionKey: "restaurant.daily_sales" },
+  { key: "reports", to: "/reports?nav=reports", icon: ChartNoAxesCombined, permissionKey: "reports" },
+];
+
+export const businessCategoryNav: Record<string, NavItem[]> = {
+  followUp: [
+    { key: "catering", to: "/follow-up?nav=follow-up.catering", icon: Utensils, permissionKey: "overview.follow_up" },
+    { key: "restaurant", to: "/follow-up?nav=follow-up.restaurant", icon: Store, permissionKey: "restaurant.daily_sales" },
+    { key: "frozen", to: "/follow-up?nav=follow-up.frozen", icon: Snowflake, permissionKey: "frozen.raw_meat_inventory" },
+  ],
+  catering: [
+    { key: "orders", to: "/orders?nav=catering.orders", icon: ClipboardList, permissionKey: "orders" },
+    { key: "allQuotes", to: "/quotes?nav=catering.quotes", icon: FileText, permissionKey: "quotes" },
+    { key: "customerSection", to: "/quotes/customers?nav=catering.customerSection", icon: Users, permissionKey: "quotes.customers" },
+    { key: "products", to: "/products?nav=catering.products", icon: ShoppingBasket, permissionKey: "products" },
+    { key: "kitchen", to: "/kitchen?nav=catering.kitchen", icon: Utensils, permissionKey: "kitchen" },
+    { key: "delivery", to: "/delivery?nav=catering.delivery", icon: Truck, permissionKey: "delivery" },
+  ],
+};
+
+const followUpCateringNav: NavItem[] = [
+  { key: "reminders", to: "/follow-up?nav=follow-up.catering", icon: BellRing, permissionKey: "overview.follow_up" },
+  { key: "pendingEntry", to: "/orders?tab=shopify-pending&nav=follow-up.catering", icon: ShoppingBag, permissionKey: "orders" },
+  { key: "pendingQuote", to: "/quotes?tab=pending&nav=follow-up.catering", icon: FileText, permissionKey: "quotes" },
+  { key: "pendingPayment", to: "/orders?tab=unpaid&nav=follow-up.catering", icon: HandCoins, permissionKey: "orders" },
+  { key: "pendingFactory", to: "/orders?tab=not-sent-factory&nav=follow-up.catering", icon: Factory, permissionKey: "orders" },
+  { key: "pendingDriver", to: "/orders?status=awaitingDriver&nav=follow-up.catering", icon: Truck, permissionKey: "orders" },
+  { key: "pendingProductReview", to: "/products/shopify-pending?nav=follow-up.catering", icon: ShoppingBasket, permissionKey: "products.shopify_pending" },
 ];
 
 export const secondaryNav: Record<string, NavItem[]> = {
@@ -120,54 +164,6 @@ export const secondaryNav: Record<string, NavItem[]> = {
       to: "/orders",
       icon: ClipboardList,
       permissionKey: "orders",
-    },
-    {
-      key: "shopifyPendingOrders",
-      to: "/orders/shopify-pending",
-      icon: ShoppingBag,
-      permissionKey: "orders.shopify_pending",
-    },
-    {
-      key: "pendingOrders",
-      to: "/orders/pending",
-      icon: ClipboardCheck,
-      permissionKey: "orders.pending",
-    },
-    {
-      key: "notSentFactoryOrders",
-      to: "/orders/not-sent-factory",
-      icon: Factory,
-      permissionKey: "orders.not_sent_factory",
-    },
-    {
-      key: "unpaidOrders",
-      to: "/orders/unpaid",
-      icon: CircleDollarSign,
-      permissionKey: "orders.unpaid",
-    },
-    {
-      key: "monthlyOrders",
-      to: "/orders/monthly",
-      icon: CalendarRange,
-      permissionKey: "orders.monthly",
-    },
-    {
-      key: "splitOrders",
-      to: "/orders/split",
-      icon: Split,
-      permissionKey: "orders.split",
-    },
-    {
-      key: "kitchenNotesOrders",
-      to: "/orders/kitchen-notes",
-      icon: StickyNote,
-      permissionKey: "orders.kitchen_notes",
-    },
-    {
-      key: "reschedulePendingOrders",
-      to: "/orders/reschedule-pending",
-      icon: CalendarClock,
-      permissionKey: "orders.reschedule_pending",
     },
     {
       key: "payments",
@@ -332,23 +328,13 @@ export const secondaryNav: Record<string, NavItem[]> = {
       permissionKey: "quotes",
     },
     {
-      key: "largeQuoteBids",
-      to: "/quotes/large",
-      icon: CircleDollarSign,
-      permissionKey: "quotes",
+      key: "quotePdfPages",
+      to: "/quotes/pdf-pages",
+      icon: FileImage,
+      permissionKey: "quotes.pdf_pages",
     },
-    {
-      key: "recentOpenQuotes",
-      to: "/quotes/recent-open",
-      icon: History,
-      permissionKey: "quotes",
-    },
-    {
-      key: "famousBrandCustomers",
-      to: "/quotes/famous-brands",
-      icon: Award,
-      permissionKey: "quotes",
-    },
+  ],
+  customerSection: [
     {
       key: "customers",
       to: "/quotes/customers",
@@ -356,10 +342,10 @@ export const secondaryNav: Record<string, NavItem[]> = {
       permissionKey: "quotes.customers",
     },
     {
-      key: "quotePdfPages",
-      to: "/quotes/pdf-pages",
-      icon: FileImage,
-      permissionKey: "quotes.pdf_pages",
+      key: "famousBrandCustomers",
+      to: "/quotes/famous-brands",
+      icon: Award,
+      permissionKey: "quotes",
     },
   ],
   products: [
@@ -677,6 +663,273 @@ export const secondaryNav: Record<string, NavItem[]> = {
   ],
 };
 
+function appendNavContext(item: NavItem, context: string): NavItem {
+  const separator = item.to.includes("?") ? "&" : "?";
+  return {
+    ...item,
+    to: `${item.to}${separator}nav=${context}`,
+    children: item.children?.map((child) => appendNavContext(child, context)),
+  };
+}
+
+export function businessSectionFromLocation(pathname: string, search: string) {
+  const context = new URLSearchParams(search).get("nav") || "";
+  if (context.startsWith("follow-up.")) return "followUp";
+  if (context.startsWith("catering.")) return "catering";
+  if (context === "frozen") return "frozen";
+  if (context === "restaurant") return "restaurant";
+  if (context === "reports") return "reports";
+
+  const segment = pathname.split("/")[1] || "";
+  if (!segment) return "overview";
+  if (segment === "follow-up") return "followUp";
+  if (["orders", "quotes", "products", "kitchen", "delivery"].includes(segment)) return "catering";
+  if (["frozen", "restaurant", "reports"].includes(segment)) return segment;
+  if (segment === "finance") return "reports";
+  return "";
+}
+
+export function businessCategoryFromLocation(
+  section: string,
+  pathname: string,
+  search: string,
+) {
+  const context = new URLSearchParams(search).get("nav") || "";
+  if (context.includes(".")) return context.split(".")[1];
+  if (section === "followUp") return "catering";
+  if (section === "catering") {
+    const segment = pathname.split("/")[1] || "orders";
+    return segment === "follow-up" ? "orders" : segment;
+  }
+  return "";
+}
+
+export function businessSidebarNav(
+  section: string,
+  _category: string,
+): NavItem[] {
+  if (section === "overview") return secondaryNav.overview;
+  if (section === "followUp") {
+    return businessCategoryNav.followUp.map((category) => {
+      const context = `follow-up.${category.key}`;
+      if (category.key === "restaurant") {
+        const restaurantKeys = new Set([
+          "restaurantDailySales",
+          "restaurantDailyPurchases",
+          "restaurantMonthlyExpenses",
+          "restaurantStocktakes",
+        ]);
+        const children = secondaryNav.restaurant
+          .filter((item) => restaurantKeys.has(item.key))
+          .map((item) => appendNavContext(item, context));
+        children.push({
+          key: "newProductSalesStats",
+          to: `/restaurant/reports?nav=${context}`,
+          icon: ChartNoAxesCombined,
+          permissionKey: "restaurant.reports",
+        });
+        return { ...category, children };
+      }
+      if (category.key === "frozen") {
+        const frozenKeys = new Set([
+          "rawMeatInventoryCalc",
+          "preparedMeatInventoryCalc",
+          "sellingPriceCost",
+          "deliveryNotes",
+        ]);
+        return {
+          ...category,
+          children: secondaryNav.frozen
+            .filter((item) => frozenKeys.has(item.key))
+            .map((item) => appendNavContext(item, context)),
+        };
+      }
+
+      const kitchenKeys = new Set([
+        "packingStocktakes",
+        "kitchenMaterialUsage",
+      ]);
+      const kitchenEntries = secondaryNav.kitchen
+        .filter((item) => kitchenKeys.has(item.key))
+        .map((item) => appendNavContext(item, context));
+      const driverEntry = secondaryNav.delivery
+        .filter((item) => item.key === "deliveryList")
+        .map((item) => appendNavContext(item, context));
+      return {
+        ...category,
+        children: [
+          ...followUpCateringNav,
+          ...kitchenEntries,
+          {
+            key: "operationsExpenseInput",
+            to: `/finance/cost-input?nav=${context}`,
+            icon: CircleDollarSign,
+            permissionKey: "kitchen.cost_input",
+          },
+          {
+            key: "purchaseExpenseInput",
+            to: `/finance/cost-input?tab=monthly-suppliers&nav=${context}`,
+            icon: Receipt,
+            permissionKey: "kitchen.cost_input",
+          },
+          ...driverEntry,
+        ],
+      };
+    });
+  }
+  if (section === "catering") {
+    return businessCategoryNav.catering.map((category) => {
+      const sourceKey = category.key === "allQuotes" ? "quotes" : category.key;
+      const children = (secondaryNav[sourceKey] ?? []).map((item) =>
+        appendNavContext(item, `catering.${sourceKey}`),
+      );
+      if (sourceKey === "kitchen") {
+        children.push(
+          {
+            key: "dataInputProgress",
+            to: `${REPORT_GROUP_ROUTES.dataInputProgress}?nav=catering.kitchen`,
+            icon: ClipboardCheck,
+            permissionKey: REPORT_GROUP_PAGE_KEYS.dataInputProgress,
+          },
+          {
+            key: "operationsExpenseInput",
+            to: "/finance/cost-input?nav=catering.kitchen",
+            icon: CircleDollarSign,
+            permissionKey: "kitchen.cost_input",
+          },
+          {
+            key: "purchaseExpenseInput",
+            to: "/finance/cost-input?tab=monthly-suppliers&nav=catering.kitchen",
+            icon: Receipt,
+            permissionKey: "kitchen.cost_input",
+          },
+        );
+      }
+      return {
+        ...category,
+        children,
+      };
+    });
+  }
+  if (section === "frozen") {
+    const frozenReport = secondaryNav.reports
+      .flatMap((item) => item.children ?? [])
+      .find((item) => item.key === "frozenMeat");
+    const frozenReportChildren = REPORT_GROUP_TABS.frozenMeat.map((tab) => ({
+      key: tab,
+      to: REPORT_TAB_ROUTES[tab],
+      icon: ChartNoAxesCombined,
+      permissionKey: REPORT_TAB_PERMISSION_KEYS[tab],
+    }));
+    return [
+      ...(frozenReport
+        ? [
+            appendNavContext(
+              {
+                ...frozenReport,
+                key: "rawMeatReports",
+                children: frozenReportChildren,
+              },
+              "frozen",
+            ),
+          ]
+        : []),
+      ...secondaryNav.frozen.map((item) => appendNavContext(item, "frozen")),
+    ];
+  }
+  if (section === "restaurant") {
+    const restaurantSettings = secondaryNav.restaurant.find(
+      (item) => item.key === "restaurantSettings",
+    );
+    const restaurantStaff = secondaryNav.restaurant.find(
+      (item) => item.key === "restaurantStaff",
+    );
+    const restaurantOperations = secondaryNav.restaurant.filter(
+      (item) =>
+        item.key !== "restaurantSettings" && item.key !== "restaurantStaff",
+    );
+    const restaurantReports: NavItem[] = [
+      {
+        key: "shopSales",
+        to: REPORT_TAB_ROUTES.shopSales,
+        icon: ChartNoAxesCombined,
+        permissionKey: REPORT_TAB_PERMISSION_KEYS.shopSales,
+      },
+      {
+        key: "shopSalesWorkingHours",
+        to: REPORT_TAB_ROUTES.shopSalesWorkingHours,
+        icon: CalendarClock,
+        permissionKey: REPORT_TAB_PERMISSION_KEYS.shopSalesWorkingHours,
+      },
+      {
+        key: "restaurantSalesSalary",
+        to: REPORT_TAB_ROUTES.restaurantSalesSalary,
+        icon: HandCoins,
+        permissionKey: REPORT_TAB_PERMISSION_KEYS.restaurantSalesSalary,
+      },
+      {
+        key: "restaurantSalesCost",
+        to: REPORT_TAB_ROUTES.restaurantSalesCost,
+        icon: Receipt,
+        permissionKey: REPORT_TAB_PERMISSION_KEYS.restaurantSalesCost,
+      },
+      {
+        key: "restaurantPnl",
+        to: REPORT_TAB_ROUTES.restaurantPnl,
+        icon: CircleDollarSign,
+        permissionKey: REPORT_TAB_PERMISSION_KEYS.restaurantPnl,
+      },
+      {
+        key: "newProductSalesStats",
+        to: REPORT_TAB_ROUTES.newProducts,
+        icon: ChartNoAxesCombined,
+        permissionKey: REPORT_TAB_PERMISSION_KEYS.newProducts,
+      },
+    ];
+    return [
+      ...restaurantOperations,
+      ...restaurantReports,
+      ...(restaurantStaff ? [restaurantStaff] : []),
+      ...(restaurantSettings ? [restaurantSettings] : []),
+    ].map((item) => appendNavContext(item, "restaurant"));
+  }
+  if (section === "reports") {
+    const reportEntrances = secondaryNav.reports
+      .find((item) => item.key === "reports")
+      ?.children ?? [];
+    return reportEntrances.map((item) => {
+      if (item.key === "kitchenReports") {
+        return appendNavContext(
+          {
+            ...item,
+            children: [
+              { key: "kitchenSalesCost", to: "/reports/kitchen", icon: ChartNoAxesCombined, permissionKey: "kitchen.cost_input" },
+              { key: "kitchenChannelSales", to: "/reports/kitchen/channel-sales", icon: ChartNoAxesCombined, permissionKey: "kitchen.cost_input" },
+              { key: "kitchenProductSales", to: "/reports/kitchen/product-sales", icon: ChartNoAxesCombined, permissionKey: "kitchen.cost_input" },
+              { key: "kitchenAdvertisingPerformance", to: "/reports/kitchen/advertising-performance", icon: ChartNoAxesCombined, permissionKey: "kitchen.cost_input" },
+            ],
+          },
+          "reports",
+        );
+      }
+      const group = item.key === "frozenMeat" ? "frozenMeat" : "shops";
+      return appendNavContext(
+        {
+          ...item,
+          children: REPORT_GROUP_TABS[group].map((tab) => ({
+            key: tab,
+            to: REPORT_TAB_ROUTES[tab],
+            icon: ChartNoAxesCombined,
+            permissionKey: REPORT_TAB_PERMISSION_KEYS[tab],
+          })),
+        },
+        "reports",
+      );
+    });
+  }
+  return [];
+}
+
 export const SECTION_CHILD_KEYS: Record<string, string[]> = {
   orders: [
     "orders.new",
@@ -703,7 +956,8 @@ export const SECTION_CHILD_KEYS: Record<string, string[]> = {
     "settings.order_lists.edit",
     ...ORDER_ACTION_PAGE_KEYS,
   ],
-  quotes: ["quotes.customers", "quotes.pending"],
+  quotes: ["quotes.pending", "quotes.pdf_pages"],
+  customerSection: ["quotes", "quotes.customers"],
   products: [
     "products.catering",
     "products.lunchbox",
@@ -813,6 +1067,20 @@ export function firstAccessibleNavigationPath(
       ? flattenVisibleNavItems(configured, canAccess)[0]
       : undefined;
     if (firstVisible) return firstVisible.to;
+    if (primary.key === "orders") {
+      const queueFallbacks: Array<[string, string]> = [
+        ["orders.pending", "/orders/pending"],
+        ["orders.not_sent_factory", "/orders/not-sent-factory"],
+        ["orders.unpaid", "/orders/unpaid"],
+        ["orders.monthly", "/orders/monthly"],
+        ["orders.split", "/orders/split"],
+        ["orders.kitchen_notes", "/orders/kitchen-notes"],
+        ["orders.reschedule_pending", "/orders/reschedule-pending"],
+        ["orders.shopify_pending", "/orders/shopify-pending"],
+      ];
+      const queuePath = queueFallbacks.find(([key]) => canAccess(key))?.[1];
+      if (queuePath) return queuePath;
+    }
     if (canAccess(pageAccessKey(primary.to))) return primary.to;
   }
 
@@ -841,6 +1109,14 @@ export function accessiblePrimaryNavigationPath(
 }
 
 export function sectionFromPath(pathname: string) {
+  if (
+    pathname === "/quotes/customers" ||
+    pathname.startsWith("/quotes/customers/") ||
+    pathname === "/quotes/famous-brands" ||
+    pathname.startsWith("/quotes/famous-brands/")
+  ) {
+    return "customerSection";
+  }
   const segment = pathname.split("/")[1] ?? "";
   if (segment === "follow-up") return "followUp";
   if (segment === "inventory") return "overview";
@@ -893,9 +1169,56 @@ export function isNavItemVisible(
 }
 
 export function isNavPathActive(pathname: string, to: string, exact: boolean) {
-  if (pathname === to) return true;
+  const targetPath = to.split("?")[0];
+  if (pathname === targetPath) return true;
   if (exact) return false;
-  return pathname.startsWith(`${to}/`);
+  return pathname.startsWith(`${targetPath}/`);
+}
+
+/** Match style-one links by both route and queue/menu query context. */
+export function isBusinessNavTargetActive(
+  pathname: string,
+  search: string,
+  target: string,
+) {
+  const [targetPath, targetQuery = ""] = target.split("?");
+  if (pathname !== targetPath && !pathname.startsWith(`${targetPath}/`)) {
+    return false;
+  }
+  const expected = new URLSearchParams(targetQuery);
+  const current = new URLSearchParams(search);
+  for (const [key, value] of expected) {
+    // Canonical routes and old bookmarks do not carry the style-one context.
+    // Their pathname still identifies the correct business-menu branch.
+    if (key === "nav" && !current.has("nav")) continue;
+    if (current.get(key) !== value) return false;
+  }
+  if (targetPath === "/orders" && !expected.has("tab") && current.has("tab")) {
+    return false;
+  }
+  return true;
+}
+
+/** Keep only the most specific matching leaf active in the business menu. */
+export function isBusinessSecondaryNavItemActive(
+  pathname: string,
+  search: string,
+  to: string,
+  siblingTargets: readonly string[] = [to],
+) {
+  const matchingTargets = siblingTargets.filter((target) =>
+    isBusinessNavTargetActive(pathname, search, target),
+  );
+  const longestMatch = matchingTargets.reduce<string | null>(
+    (longest, target) => {
+      const targetPath = target.split("?")[0];
+      const longestPath = longest?.split("?")[0] ?? "";
+      return targetPath.length > longestPath.length ? target : longest;
+    },
+    null,
+  );
+
+  return longestMatch === to;
 }
 
 export function isSecondaryNavItemActive(

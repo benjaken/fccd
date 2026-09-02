@@ -23,7 +23,7 @@ import {
 import { isOrderSettingsTab } from "@/components/OrderSettingsTabNav";
 import { Button } from "@/components/ui/button";
 import { isOrderQuoteOptionKind } from "@/lib/order-quote-option-settings";
-import { ListSearchBar } from "@/components/ui/list-search-bar";
+import { ListSearchBar, ListSearchBarActionsProvider } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import { SidePanel } from "@/components/ui/side-panel";
 import { Switch } from "@/components/ui/switch";
@@ -476,6 +476,56 @@ export function OrderSettingsPage({
     return <Navigate to="/orders/settings/tags" replace />;
   }
 
+  const supportsCreate = activeTab === "tags" ||
+    activeTab === "customer-tags" ||
+    activeTab === "cost-options" ||
+    activeTab === "supplier-expenses" ||
+    isOrderQuoteOptionKind(activeTab) ||
+    activeTab === "shipping" ||
+    activeTab === "shipping-fees" ||
+    activeTab === "first-notification-recipients" ||
+    activeTab === "add-ons" ||
+    activeTab === "payments";
+  const canCreate = activeTab === "shipping-fees"
+    ? pageAccess.canManage("orders.settings.shipping_fees")
+    : activeTab === "first-notification-recipients"
+      ? pageAccess.canManage("orders.settings.first_notification_recipients")
+      : activeTab === "add-ons"
+        ? pageAccess.canManage("orders.settings.addons")
+        : canManage;
+  const createLabel = activeTab === "payments"
+    ? t("orderSettings.payments.add")
+    : activeTab === "add-ons"
+      ? "加入產品"
+      : activeTab === "customer-tags"
+        ? t("orderSettings.customerTags.add")
+        : activeTab === "cost-options"
+          ? t("orderSettings.costOptions.add")
+          : activeTab === "supplier-expenses"
+            ? t("orderSettings.supplierExpenses.add")
+            : isOrderQuoteOptionKind(activeTab)
+              ? t("orderSettings.optionSettings.add")
+              : activeTab === "shipping-fees"
+                ? t("orderSettings.shippingFees.add")
+                : activeTab === "first-notification-recipients"
+                  ? t("orderSettings.firstNotificationRecipients.add")
+                  : activeTab === "shipping"
+                    ? t("orderSettings.shipping.add")
+                    : t("orderSettings.tags.add");
+  const createAction = supportsCreate && canCreate ? (
+    <Button type="button" onClick={() => setCreateOpen(true)}>
+      <Plus />
+      {createLabel}
+    </Button>
+  ) : null;
+  const hasListSearch = activeTab === "tags" ||
+    activeTab === "customer-tags" ||
+    activeTab === "cost-options" ||
+    activeTab === "supplier-expenses" ||
+    isOrderQuoteOptionKind(activeTab) ||
+    activeTab === "shipping" ||
+    activeTab === "payments";
+
   return (
     <section className="order-settings-page">
       <header className="page-heading order-settings-heading">
@@ -499,49 +549,15 @@ export function OrderSettingsPage({
               : t("orderSettings.title")}
           </h1>
         </div>
-        {(activeTab === "tags" ||
-          activeTab === "customer-tags" ||
-          activeTab === "cost-options" ||
-          activeTab === "supplier-expenses" ||
-          isOrderQuoteOptionKind(activeTab) ||
-          activeTab === "shipping" ||
-          activeTab === "shipping-fees" ||
-          activeTab === "first-notification-recipients" ||
-          activeTab === "add-ons" ||
-          activeTab === "payments") &&
-        (activeTab === "shipping-fees"
-          ? pageAccess.canManage("orders.settings.shipping_fees")
-          : activeTab === "first-notification-recipients"
-            ? pageAccess.canManage("orders.settings.first_notification_recipients")
-            : activeTab === "add-ons"
-              ? pageAccess.canManage("orders.settings.addons")
-            : canManage) ? (
-          <Button type="button" onClick={() => setCreateOpen(true)}>
-            <Plus />
-            {activeTab === "payments"
-              ? t("orderSettings.payments.add")
-              : activeTab === "add-ons"
-                ? "加入產品"
-              : activeTab === "customer-tags"
-                ? t("orderSettings.customerTags.add")
-              : activeTab === "cost-options"
-                ? t("orderSettings.costOptions.add")
-              : activeTab === "supplier-expenses"
-                ? t("orderSettings.supplierExpenses.add")
-              : isOrderQuoteOptionKind(activeTab)
-                ? t("orderSettings.optionSettings.add")
-              : activeTab === "shipping-fees"
-                ? t("orderSettings.shippingFees.add")
-              : activeTab === "first-notification-recipients"
-                ? t("orderSettings.firstNotificationRecipients.add")
-              : activeTab === "shipping"
-                ? t("orderSettings.shipping.add")
-                : t("orderSettings.tags.add")}
-          </Button>
-        ) : null}
       </header>
 
       <article className="panel order-settings-panel">
+        {createAction && !hasListSearch ? (
+          <header className="order-settings-toolbar order-settings-actions-only">
+            <div className="list-search-actions">{createAction}</div>
+          </header>
+        ) : null}
+        <ListSearchBarActionsProvider actions={createAction}>
         {activeTab === "wati-notifications" ? (
           <WatiNotificationSettings
             loadControls={loadWatiNotificationControls}
@@ -649,6 +665,7 @@ export function OrderSettingsPage({
             </div>
           </div>
         )}
+        </ListSearchBarActionsProvider>
       </article>
     </section>
   );

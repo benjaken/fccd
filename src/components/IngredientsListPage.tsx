@@ -712,12 +712,6 @@ export function IngredientsListPage({
           <h1>{t("ingredients.title")}</h1>
           <p>{t("ingredients.description")}</p>
         </div>
-        {canEdit ? (
-          <Button type="button" onClick={openCreate}>
-            <Pencil />
-            {t("ingredients.add")}
-          </Button>
-        ) : null}
       </header>
 
       <article className="panel ingredients-panel">
@@ -730,6 +724,7 @@ export function IngredientsListPage({
             label={t("ingredients.search")}
             placeholder={t("ingredients.searchPlaceholder")}
             submitLabel={t("ingredients.searchAction")}
+            actions={canEdit ? <Button type="button" onClick={openCreate}><Pencil />{t("ingredients.add")}</Button> : null}
             filtersActive={Boolean(status)}
             onConfirmFilters={statusFilter.confirm}
             onDismissFilters={statusFilter.revert}

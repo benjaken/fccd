@@ -13,6 +13,12 @@ describe("buildMobileDrawerNav", () => {
     },
     { key: "orders", to: "/orders", icon: () => null },
     { key: "quotes", to: "/quotes", icon: () => null },
+    {
+      key: "customerSection",
+      to: "/quotes/customers",
+      icon: () => null,
+      permissionKey: "customerSection",
+    },
     { key: "delivery", to: "/delivery", icon: () => null },
     { key: "restaurant", to: "/restaurant", icon: () => null },
     { key: "settings", to: "/settings", icon: () => null, permissionKey: "settings" },
@@ -24,6 +30,7 @@ describe("buildMobileDrawerNav", () => {
     const overview = groups.find((group) => group.groupKey === "overview");
     const orders = groups.find((group) => group.groupKey === "orders");
     const quotes = groups.find((group) => group.groupKey === "quotes");
+    const customers = groups.find((group) => group.groupKey === "customerSection");
     const delivery = groups.find((group) => group.groupKey === "delivery");
     const restaurant = groups.find((group) => group.groupKey === "restaurant");
     const settings = groups.find((group) => group.groupKey === "settings");
@@ -34,14 +41,6 @@ describe("buildMobileDrawerNav", () => {
     expect(followUp?.items.map((item) => item.to)).toEqual(["/follow-up"]);
     expect(orders?.items.map((item) => item.to)).toEqual([
       "/orders",
-      "/orders/shopify-pending",
-      "/orders/pending",
-      "/orders/not-sent-factory",
-      "/orders/unpaid",
-      "/orders/monthly",
-      "/orders/split",
-      "/orders/kitchen-notes",
-      "/orders/reschedule-pending",
       "/orders/payments/bank-arrival-date",
       "/orders/payments/masoft-invoices",
       "/orders/calendar",
@@ -68,11 +67,11 @@ describe("buildMobileDrawerNav", () => {
     ]);
     expect(quotes?.items.map((item) => item.to)).toEqual([
       "/quotes",
-      "/quotes/large",
-      "/quotes/recent-open",
-      "/quotes/famous-brands",
-      "/quotes/customers",
       "/quotes/pdf-pages",
+    ]);
+    expect(customers?.items.map((item) => item.to)).toEqual([
+      "/quotes/customers",
+      "/quotes/famous-brands",
     ]);
     expect(delivery?.items.map((item) => item.to)).toEqual([
       "/delivery",

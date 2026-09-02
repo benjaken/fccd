@@ -280,26 +280,27 @@ describe("Products catalog pages", () => {
       await screen.findByRole("heading", { name: "全部商品" }),
     ).toBeInTheDocument();
     expect(
-      await screen.findByRole("link", { name: "燒雞" }),
+      await screen.findByRole("link", { name: "Roast Chicken" }),
     ).toHaveAttribute("href", "/products/product-1");
+    expect(screen.queryByText("燒雞")).not.toBeInTheDocument();
     expect(screen.getByText("CC-001")).toBeInTheDocument();
     expect(document.querySelector(".product-list-image")).toHaveAttribute(
       "src",
       "https://cdn.example.test/roast-chicken.jpg",
     );
-    await user.click(screen.getByRole("button", { name: "放大查看 燒雞 圖片" }));
-    expect(screen.getByRole("dialog", { name: "燒雞" })).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: "燒雞" })).toHaveAttribute(
+    await user.click(screen.getByRole("button", { name: "放大查看 Roast Chicken 圖片" }));
+    expect(screen.getByRole("dialog", { name: "Roast Chicken" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Roast Chicken" })).toHaveAttribute(
       "src",
       "https://cdn.example.test/roast-chicken.jpg",
     );
     await user.click(
-      within(screen.getByRole("dialog", { name: "燒雞" })).getByRole(
+      within(screen.getByRole("dialog", { name: "Roast Chicken" })).getByRole(
         "button",
         { name: "關閉" },
       ),
     );
-    expect(screen.queryByRole("dialog", { name: "燒雞" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Roast Chicken" })).not.toBeInTheDocument();
     expect(within(screen.getByRole("table")).getByText("Catering")).toBeInTheDocument();
     expect(within(screen.getByRole("table")).getByText("西式熱盤")).toBeInTheDocument();
     expect(screen.getByText("HK$188")).toBeInTheDocument();
@@ -393,7 +394,6 @@ describe("Products catalog pages", () => {
       screen.getByPlaceholderText("搜尋 SKU、名稱或中文名"),
       "燒雞",
     );
-    await user.click(screen.getByRole("button", { name: "搜尋" }));
 
     await waitFor(() =>
       expect(loadProducts).toHaveBeenLastCalledWith({
@@ -507,14 +507,12 @@ describe("Products catalog pages", () => {
       );
 
     await openFilters();
-    await user.selectOptions(
-      screen.getByLabelText("售價範圍"),
-      "100-299",
-    );
+    await user.type(screen.getByLabelText("最低價"), "100");
+    await user.type(screen.getByLabelText("最高價"), "299");
     await applyFilters();
     await waitFor(() =>
       expect(loadProducts).toHaveBeenLastCalledWith(
-        expect.objectContaining({ priceRange: "100-299", page: 1 }),
+        expect.objectContaining({ priceRange: "", priceMin: 100, priceMax: 299, page: 1 }),
       ),
     );
 
@@ -545,7 +543,9 @@ describe("Products catalog pages", () => {
           status: "Active",
           channelId: "channel-1",
           productTypeName: "西式熱盤",
-          priceRange: "100-299",
+          priceRange: "",
+          priceMin: 100,
+          priceMax: 299,
           page: 1,
         }),
       ),

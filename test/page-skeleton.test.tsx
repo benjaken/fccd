@@ -22,6 +22,20 @@ const SKELETON_PAGES = [
 ];
 
 describe("PageSkeleton", () => {
+  it("hides temporary scrollbars anywhere inside a loading skeleton", () => {
+    const styles = readFileSync(
+      path.resolve(process.cwd(), "src/index.css"),
+      "utf8",
+    );
+
+    expect(styles).toMatch(
+      /\.main-content:has\(\.page-skeleton-bone, \.table-skeleton-bone\),[^{]+\{[^}]*scrollbar-gutter:\s*auto;[^}]*scrollbar-width:\s*none;/s,
+    );
+    expect(styles).toMatch(
+      /\.main-content:has\(\.page-skeleton-bone, \.table-skeleton-bone\)::\-webkit-scrollbar,[^{]+\{[^}]*display:\s*none;[^}]*width:\s*0;[^}]*height:\s*0;/s,
+    );
+  });
+
   it("fills the page shell with accessible table skeleton content", () => {
     const { container } = render(
       <PageSkeleton label="正在載入頁面權限" />,
@@ -87,6 +101,7 @@ describe("PageSkeleton", () => {
 
   it.each([
     "dashboard",
+    "sales-dashboard",
     "queue",
     "profile",
     "table",
@@ -104,6 +119,31 @@ describe("PageSkeleton", () => {
 
     expect(screen.getByRole("status")).toHaveTextContent(`${variant} loading`);
     expect(container.querySelectorAll(".page-skeleton-bone").length).toBeGreaterThan(0);
+  });
+
+  it("matches the operations follow-up dashboard card and queue layout", () => {
+    const { container } = render(
+      <PageSkeleton label="正在載入營運跟進" variant="dashboard" />,
+    );
+
+    expect(
+      container.querySelectorAll(".orders-dashboard-grid .metric-card"),
+    ).toHaveLength(6);
+    expect(
+      container.querySelectorAll(".orders-dashboard-queue-grid .queue-panel"),
+    ).toHaveLength(5);
+    expect(container.querySelector(".jobs-panel")).toBeNull();
+  });
+
+  it("matches the home sales dashboard's two table layout", () => {
+    const { container } = render(
+      <PageSkeleton label="正在載入銷售總覽" variant="sales-dashboard" />,
+    );
+
+    expect(container.querySelectorAll(".home-sales-skeleton-panel")).toHaveLength(2);
+    expect(container.querySelectorAll(".home-sales-skeleton-panel table")).toHaveLength(2);
+    expect(container.querySelector(".orders-dashboard-grid")).toBeNull();
+    expect(container.querySelector(".content-skeleton-filter")).not.toBeNull();
   });
 
   it.each(SKELETON_PAGES)("is the only page skeleton used by %s", (relativePath) => {

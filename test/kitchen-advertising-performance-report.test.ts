@@ -21,16 +21,23 @@ const rows: KitchenAdvertisingPerformanceRow[] = [
 ];
 
 describe("central kitchen advertising performance report", () => {
-  it("uses a light-blue table on white while keeping the surrounding report green", () => {
+  it("uses a compact year-aligned table without rendering charts", () => {
     const stylesheet = readFileSync(
       path.resolve(process.cwd(), "src/index.css"),
+      "utf8",
+    );
+    const component = readFileSync(
+      path.resolve(process.cwd(), "src/components/KitchenAdvertisingPerformanceReportPage.tsx"),
       "utf8",
     );
     const pageRule = stylesheet.match(
       /\.kitchen-advertising-performance-page\s*\{([^}]+)\}/,
     )?.[1];
-    const chartPanelRule = stylesheet.match(
-      /\.kitchen-advertising-performance-chart-panel\s*\{([^}]+)\}/,
+    const sectionRule = stylesheet.match(
+      /\.kitchen-advertising-performance-section\s*\{([^}]+)\}/,
+    )?.[1];
+    const tableRule = stylesheet.match(
+      /\.kitchen-advertising-performance-table\s*\{([^}]+)\}/,
     )?.[1];
 
     expect(pageRule).toContain("--primary: var(--advertising-green)");
@@ -39,13 +46,30 @@ describe("central kitchen advertising performance report", () => {
     expect(pageRule).toContain(
       "--report-table-header-bg: var(--advertising-table-blue)",
     );
-    expect(chartPanelRule).not.toContain("--primary:");
-    expect(stylesheet).toContain(
-      ".kitchen-advertising-performance-chart-bar.sales.tone-0 { fill: #356fa8; }",
-    );
+    expect(sectionRule).toContain("grid-template-columns: 10.5rem minmax(0, 1fr)");
+    expect(tableRule).toContain("table-layout: fixed");
     expect(stylesheet).toMatch(
       /\.kitchen-advertising-performance-page \.kitchen-advertising-performance-table td,[\s\S]*?background:\s*#fff/,
     );
+    expect(component).toContain("data-advertising-year={summary.year}");
+    expect(component).not.toContain("AdvertisingPerformanceChart");
+    expect(component).not.toContain("kitchen-advertising-performance-chart-panel");
+
+    for (const reportComponent of [
+      "KitchenSalesCostReportPage.tsx",
+      "KitchenChannelSalesReportPage.tsx",
+      "KitchenProductSalesReportPage.tsx",
+      "KitchenAdvertisingPerformanceReportPage.tsx",
+      "ReportsPage.tsx",
+    ]) {
+      expect(
+        readFileSync(
+          path.resolve(process.cwd(), "src/components", reportComponent),
+          "utf8",
+        ),
+        reportComponent,
+      ).not.toContain("report-tabs");
+    }
   });
 
   it("uses dictionary festival order and selects every available year by default", () => {

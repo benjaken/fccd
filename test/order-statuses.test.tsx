@@ -211,7 +211,6 @@ describe("Order status page", () => {
     expect(screen.getByText("#2563eb")).toBeInTheDocument();
 
     await user.type(screen.getByPlaceholderText("搜尋狀態名稱或顏色"), "製作中");
-    await user.click(screen.getByRole("button", { name: "搜尋" }));
 
     await waitFor(() => {
       expect(loadStatuses).toHaveBeenLastCalledWith({ search: "製作中" });

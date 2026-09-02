@@ -54,6 +54,16 @@ describe("Meat yield errors page", () => {
     await i18n.changeLanguage("zh-HK");
   });
 
+  it("stacks the calculation rules below the filters on narrow screens", () => {
+    const styles = readFileSync(path.resolve(process.cwd(), "src/index.css"), "utf8");
+    expect(styles).toMatch(
+      /@media \(max-width: 980px\)\s*\{[^}]*\.yield-errors-toolbar\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\);/s,
+    );
+    expect(styles).toMatch(
+      /@media \(max-width: 980px\)[\s\S]*?\.yield-errors-rules\s*\{[^}]*width:\s*100%;/s,
+    );
+  });
+
   it("uses the operational list page size of 15", () => {
     expect(YIELD_ERRORS_PAGE_SIZE).toBe(15);
   });
@@ -70,7 +80,9 @@ describe("Meat yield errors page", () => {
     expect(
       await screen.findByRole("heading", { name: "收成異常統計" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("計算規則")).toBeInTheDocument();
+    const rules = screen.getByLabelText("計算規則");
+    expect(rules).toBeInTheDocument();
+    expect(rules.closest(".yield-errors-toolbar")).not.toBeNull();
     expect(
       screen.getByText(
         "預算收成 = 向上取整（該熟貨過往入貨包數 ÷ 過往生肉出貨 kg × 今次生肉出貨 kg）",
@@ -109,7 +121,6 @@ describe("Meat yield errors page", () => {
       screen.getByPlaceholderText("搜尋生肉、熟貨或備註"),
       "扁食",
     );
-    await user.click(screen.getByRole("button", { name: "搜尋" }));
 
     await waitFor(() =>
       expect(loadYieldErrors).toHaveBeenLastCalledWith({

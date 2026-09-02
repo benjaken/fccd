@@ -47,7 +47,11 @@ describe("restaurant monthly expense input", () => {
     );
 
     expect(await screen.findByText("尚未選擇月份")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "新增每月費用記錄" }));
+    const newRecordTrigger = screen.getByRole("button", { name: "新增每月費用記錄" });
+    expect(newRecordTrigger.closest(".monthly-expenses-search")).not.toBeNull();
+    expect(newRecordTrigger).toHaveClass("monthly-expenses-new-record-trigger");
+    expect(newRecordTrigger.closest(".monthly-expenses-heading")).toBeNull();
+    await user.click(newRecordTrigger);
     const currentMonthParts = new Intl.DateTimeFormat("en", {
       timeZone: "Asia/Hong_Kong",
       year: "numeric",
@@ -127,7 +131,7 @@ describe("restaurant monthly expense input", () => {
       remarks: expect.objectContaining({ rent: "August rent" }),
       canProceedPnl: false,
     })));
-    expect(await screen.findByText("已儲存")).toBeInTheDocument();
+    expect(screen.queryByText("已儲存")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "查看" })).toHaveAttribute("aria-pressed", "true");
   });
 

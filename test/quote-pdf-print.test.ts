@@ -43,10 +43,7 @@ describe("quote PDF print stylesheet", () => {
       /@media print\s*\{[\s\S]*?\.quote-pdf-insert-page\s*\{\s*display:\s*block;\s*width:\s*210mm;\s*height:\s*297mm;[^}]*break-after:\s*page;/,
     );
     expect(css).toMatch(
-      /\.quote-pdf-editor\.has-back-pages \.quote-pdf-sheet:last-of-type\s*\{\s*break-after:\s*page;/,
-    );
-    expect(css).toMatch(
-      /\.quote-pdf-insert-page\.is-final-page\s*\{\s*break-after:\s*auto;/,
+      /\.quote-pdf-editor > \.is-final-document-page\s*\{\s*break-after:\s*auto;\s*page-break-after:\s*auto;/,
     );
   });
 

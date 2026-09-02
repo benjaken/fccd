@@ -245,10 +245,11 @@ describe("Seasoning cost settings page", () => {
 
     await screen.findByText("幼鹽");
     await user.type(screen.getByPlaceholderText("搜尋香料名稱、計算、備註或每g成本"), "片糖");
-    await user.click(screen.getByRole("button", { name: "搜尋" }));
 
-    expect(screen.getByText("片糖")).toBeInTheDocument();
-    expect(screen.queryByText("幼鹽")).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("片糖")).toBeInTheDocument();
+      expect(screen.queryByText("幼鹽")).not.toBeInTheDocument();
+    });
   });
 
   it("deletes a seasoning after confirmation", async () => {

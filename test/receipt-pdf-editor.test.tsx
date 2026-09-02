@@ -360,6 +360,30 @@ describe("Receipt PDF editor", () => {
     expect(sheets[0].querySelector("tfoot")).toBeInTheDocument();
   });
 
+  it("keeps eleven invoice lines together and marks its only sheet as the final print page", async () => {
+    render(
+      <MemoryRouter initialEntries={["/orders/order-1/invoice"]}>
+        <Routes>
+          <Route path="/orders/:id/invoice" element={<ReceiptPdfEditorPage documentKind="invoice" loadDetail={vi.fn().mockResolvedValue({
+            ...result,
+            lines: Array.from({ length: 11 }, (_, index) => ({
+              ...result.lines[0],
+              id: `line-${index + 1}`,
+              productName: `產品 ${index + 1}`,
+            })),
+          })} loadShippingFees={vi.fn().mockResolvedValue(shippingFees)} />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "INVOICE" })).toBeInTheDocument();
+    const sheets = document.querySelectorAll(".receipt-pdf-sheet");
+    expect(sheets).toHaveLength(1);
+    expect(sheets[0]).toHaveClass("is-final-document-page");
+    expect(sheets[0].querySelectorAll(".receipt-pdf-table tbody tr")).toHaveLength(11);
+    expect(sheets[0].querySelector("tfoot")).toBeInTheDocument();
+  });
+
   it("automatically continues long receipt product tables on the next A4 sheet", async () => {
     renderPage(vi.fn().mockResolvedValue({
       ...result,

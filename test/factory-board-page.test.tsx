@@ -13,6 +13,7 @@ vi.mock("@/lib/order-edit-presence", () => ({
 
 import { FactoryBoardPage } from "@/components/FactoryBoardPage";
 import {
+  factoryOrderLabelCount,
   factoryLabelPrintCompletesSet,
   formatFactoryDeliveryNoteQuantity,
   preferredFactoryLabelPrinter,
@@ -75,6 +76,34 @@ const board: FactoryBoardData = {
 };
 
 describe("FactoryBoardPage", () => {
+  it("counts every physical label in a full-order print", () => {
+    expect(factoryOrderLabelCount([
+      {
+        id: "line-two-labels",
+        label: "主菜",
+        labelNames: ["主菜", "醬汁"],
+        quantityText: "1",
+        remarks: [],
+        printed: false,
+      },
+      {
+        id: "line-two-copies",
+        label: "飲品",
+        quantityText: "2",
+        remarks: [],
+        printed: false,
+      },
+      {
+        id: "cancelled",
+        label: "取消商品",
+        quantityText: "9",
+        remarks: [],
+        printed: false,
+        isCancelled: true,
+      },
+    ])).toBe(4);
+  });
+
   beforeEach(async () => {
     vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
       matches: false,
@@ -576,7 +605,7 @@ describe("FactoryBoardPage", () => {
 
     expect(await screen.findByText("大尾督")).toBeInTheDocument();
     expect(screen.getByText("8月18日 (二)")).toBeInTheDocument();
-    expect(screen.getByText("#B-1522")).toBeInTheDocument();
+    expect(screen.getByText("B-1522")).toBeInTheDocument();
     expect(screen.getByText("09:30")).toBeInTheDocument();
     expect(screen.queryByText("10:00")).not.toBeInTheDocument();
     expect(screen.getByText("(7份)")).toBeInTheDocument();
@@ -650,7 +679,7 @@ describe("FactoryBoardPage", () => {
       />,
     );
 
-    await user.click(await screen.findByRole("button", { name: /#B-1522/ }));
+    await user.click(await screen.findByRole("button", { name: /B-1522/ }));
 
     expect(open).toHaveBeenCalledWith(
       "/factory/order/job-1",
@@ -712,9 +741,9 @@ describe("FactoryBoardPage", () => {
       />,
     );
 
-    await user.click(await screen.findByRole("button", { name: /#B-1522/ }));
+    await user.click(await screen.findByRole("button", { name: /B-1522/ }));
 
-    expect(await screen.findByRole("heading", { name: "#B-1522" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "B-1522" })).toBeInTheDocument();
     const orderMain = document.querySelector(".factory-order-main");
     expect(orderMain).not.toBeNull();
     const orderView = within(orderMain as HTMLElement);
@@ -725,7 +754,7 @@ describe("FactoryBoardPage", () => {
     );
     expect(orderView.getByText("送到時間: 11:00 - 12:00")).toHaveClass("is-arrival");
     expect(
-      orderView.getByText(/地址: 大埔汀角道.*\* 車邊交收/),
+      orderView.getByText(/地址: （附近車邊交收） 大埔汀角道/),
     ).toBeInTheDocument();
     expect(orderView.getByText("客人名稱: Eric Yim")).toBeInTheDocument();
     expect(orderView.getByText("包裝說明: 分開兩箱")).toBeInTheDocument();
@@ -740,7 +769,7 @@ describe("FactoryBoardPage", () => {
     expect(orderView.getByText("涼拌雲耳")).toHaveClass("factory-order-line-remark");
     expect(orderView.getAllByLabelText("標籤已打印")).toHaveLength(1);
     expect(orderView.getAllByRole("button")).toHaveLength(3);
-    expect(screen.getByRole("button", { name: "印全單" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "印全單（31個標籤）" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "印地址" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "印送貨單" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "已選擇 - 宏" })).toBeInTheDocument();
@@ -768,7 +797,7 @@ describe("FactoryBoardPage", () => {
       "拿破崙肉丸意粉",
     );
     expect(document.querySelector(".factory-delivery-note-print")).toHaveTextContent(
-      "#B-1522",
+      "B-1522",
     );
     const brandFooter = document.querySelector(".factory-delivery-note-brand-footer");
     expect(brandFooter).toHaveTextContent("HK Lunch Box");
@@ -826,7 +855,7 @@ describe("FactoryBoardPage", () => {
     expect(
       await screen.findByLabelText("訂單已修改，需要重新打印"),
     ).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /#B-1522/ }));
+    await user.click(screen.getByRole("button", { name: /B-1522/ }));
 
     expect(
       screen.getByRole("heading", { name: "需要重新打印標籤" }),
@@ -835,7 +864,7 @@ describe("FactoryBoardPage", () => {
     expect(loadOrderJob).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: "繼續查看訂單" }));
-    expect(await screen.findByRole("heading", { name: "#B-1522" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "B-1522" })).toBeInTheDocument();
     expect(loadOrderJob).toHaveBeenCalledWith("order-1");
   });
 
@@ -870,7 +899,7 @@ describe("FactoryBoardPage", () => {
       />,
     );
 
-    await user.click(await screen.findByRole("button", { name: /#B-1522/ }));
+    await user.click(await screen.findByRole("button", { name: /B-1522/ }));
     await user.click(await screen.findByRole("button", { name: "分派司機" }));
 
     expect(
@@ -951,7 +980,7 @@ describe("FactoryBoardPage", () => {
       />,
     );
 
-    await user.click(await screen.findByRole("button", { name: /#B-1522/ }));
+    await user.click(await screen.findByRole("button", { name: /B-1522/ }));
     expect(await screen.findByLabelText("標籤需要重新打印")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /不受影響菜式/ }));
     expect(screen.queryByText(/必須重新打印/)).not.toBeInTheDocument();
@@ -1049,7 +1078,7 @@ describe("FactoryBoardPage", () => {
       />,
     );
 
-    await user.click(await screen.findByRole("button", { name: /#B-1522/ }));
+    await user.click(await screen.findByRole("button", { name: /B-1522/ }));
     await user.click(await screen.findByRole("button", { name: /檸檬茶/ }));
     const fullSet = screen.getByRole("button", { name: "印全套標籤（2個）" });
     await waitFor(() => expect(fullSet).toBeEnabled());
@@ -1074,7 +1103,7 @@ describe("FactoryBoardPage", () => {
       />,
     );
 
-    await screen.findByRole("button", { name: /#B-1522/ });
+    await screen.findByRole("button", { name: /B-1522/ });
     expect(screen.queryByText("8 張訂單有待確認修改")).not.toBeInTheDocument();
     expect(
       screen.queryByText("請進入相關訂單完成重印並確認現場資料。"),
@@ -1115,8 +1144,8 @@ describe("FactoryBoardPage", () => {
       />,
     );
 
-    await user.click(await screen.findByRole("button", { name: /#B-1522/ }));
-    const printAll = await screen.findByRole("button", { name: "印全單" });
+    await user.click(await screen.findByRole("button", { name: /B-1522/ }));
+    const printAll = await screen.findByRole("button", { name: "印全單（3個標籤）" });
     await waitFor(() => expect(printAll).toBeEnabled());
     await user.click(printAll);
 
@@ -1170,7 +1199,7 @@ describe("FactoryBoardPage", () => {
       />,
     );
 
-    await user.click(await screen.findByRole("button", { name: /#B-1522/ }));
+    await user.click(await screen.findByRole("button", { name: /B-1522/ }));
     await user.click(screen.getByRole("button", { name: "修改出車時間" }));
     const dialog = screen.getByRole("dialog", { name: "修改出車時間" });
     const input = within(dialog).getByLabelText("出車時間");
@@ -1221,7 +1250,7 @@ describe("FactoryBoardPage", () => {
       />,
     );
 
-    await user.click(await screen.findByRole("button", { name: /#B-1522/ }));
+    await user.click(await screen.findByRole("button", { name: /B-1522/ }));
     await user.click(await screen.findByRole("button", { name: /檸檬茶/ }));
     const fullSet = screen.getByRole("button", { name: "印全套標籤（2個）" });
     await waitFor(() => expect(fullSet).toBeEnabled());
@@ -1294,7 +1323,7 @@ describe("FactoryBoardPage", () => {
     expect(within(summary).getByText("備料及出車時間一覽表")).toBeInTheDocument();
     expect(within(summary).getByText(/^列印時間：/)).toBeInTheDocument();
     expect(within(summary).getByText("Catering")).toBeInTheDocument();
-    expect(within(summary).getByText("#B-1522")).toBeInTheDocument();
+    expect(within(summary).getByText("B-1522")).toBeInTheDocument();
     expect(within(summary).getByText("10點完成")).toBeInTheDocument();
     expect(within(summary).getAllByText("8")).toHaveLength(2);
     expect(
@@ -1405,13 +1434,13 @@ describe("FactoryBoardPage", () => {
     const dishRow = screen.getByText("拿破崙肉丸意粉").closest("tr");
     expect(dishRow).not.toBeNull();
     expect(within(dishRow!).getByText("5")).toBeInTheDocument();
-    expect(within(dishRow!).getByText(/#B-1522 × 2/)).toBeInTheDocument();
-    expect(within(dishRow!).getByText(/#B-1533 × 3/)).toBeInTheDocument();
+    expect(within(dishRow!).getByText(/B-1522 × 2/)).toBeInTheDocument();
+    expect(within(dishRow!).getByText(/B-1533 × 3/)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "移除 Catering 的菜式" }));
     expect(screen.queryByText("Catering")).not.toBeInTheDocument();
     expect(within(dishRow!).getByText("2")).toBeInTheDocument();
-    expect(within(dishRow!).queryByText(/#B-1533/)).not.toBeInTheDocument();
+    expect(within(dishRow!).queryByText(/B-1533/)).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "列印" }));
     expect(print).toHaveBeenCalledOnce();

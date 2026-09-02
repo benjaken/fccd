@@ -85,6 +85,10 @@ describe("Orders list", () => {
     expect(
       await screen.findByRole("heading", { name: "所有訂單" }),
     ).toBeInTheDocument();
+    const headingNote = screen.getByText("查看全部已確認到會訂單，可搜尋訂單編號、客戶，並篩選營運狀態。");
+    expect(headingNote).toHaveClass("orders-toolbar-note");
+    expect(headingNote.closest(".orders-toolbar")).toBeInTheDocument();
+    expect(headingNote.previousElementSibling).toHaveClass("orders-toolbar-main");
     expect(await screen.findByText("B-1513")).toHaveAttribute(
       "href",
       "/orders/order-1",
@@ -299,7 +303,11 @@ describe("Orders list", () => {
     );
 
     await user.click(await screen.findByRole("checkbox", { name: "選擇訂單 B-1513" }));
-    await user.click(screen.getByRole("button", { name: "添加節日" }));
+    const addFestivalButton = screen.getByRole("button", { name: "添加節日" });
+    const createOrderLink = screen.getByRole("link", { name: "建立新訂單" });
+    expect(addFestivalButton.closest(".orders-toolbar-actions")).toBe(createOrderLink.closest(".orders-toolbar-actions"));
+    expect(screen.getByRole("status")).toHaveTextContent("已選擇 1 張訂單");
+    await user.click(addFestivalButton);
     expect(screen.getByRole("heading", { name: "為 1 張訂單添加節日" })).toBeInTheDocument();
     await user.selectOptions(screen.getByRole("combobox", { name: "節日" }), "festival-1");
     await user.click(screen.getByRole("button", { name: "加入" }));
@@ -345,7 +353,6 @@ describe("Orders list", () => {
       screen.getByPlaceholderText("搜尋訂單編號、客戶或公司"),
       "B-1513",
     );
-    await user.click(screen.getByRole("button", { name: "搜尋" }));
 
     await waitFor(() =>
       expect(loadOrders).toHaveBeenLastCalledWith(expect.objectContaining({
@@ -772,8 +779,8 @@ describe("Orders list", () => {
     const dialog = screen.getByRole("dialog", { name: "送貨單預覽" });
     expect(dialog).toHaveClass("side-panel", "order-delivery-note-panel");
     expect(await within(dialog).findByText(/咖喱唐揚雞塊飯/)).toBeInTheDocument();
-    expect(within(dialog).getByText(/訂單 #B-1513/)).toBeInTheDocument();
-    expect(within(dialog).getByText(/Central \* Curbside/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/訂單 B-1513/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/（附近車邊交收） Central/)).toBeInTheDocument();
     expect(within(dialog).getByText(/Please call on arrival/)).toBeInTheDocument();
     expect(within(dialog).getByText(/12 份/)).toBeInTheDocument();
     expect(dialog.querySelector(".factory-delivery-note-brand img")).toHaveAttribute(
@@ -923,6 +930,97 @@ describe("Orders list", () => {
     expect(
       screen.getByText("尚有未收金額的訂單，以未付餘額為準。"),
     ).toBeInTheDocument();
+  });
+
+  it("toggles one queue tab at a time and restores all orders when deselected", async () => {
+    const user = userEvent.setup();
+    const loadOrders = vi.fn().mockResolvedValue(orderResult);
+    const loadListConfig = vi.fn().mockResolvedValue([
+      {
+        id: "cfg-unpaid-tab",
+        presetKey: "unpaid",
+        title: "Unpaid queue",
+        description: "Follow up outstanding balances.",
+        sortOrder: 30,
+        isVisible: true,
+        route: "/orders/unpaid",
+      } satisfies OrderListConfigRow,
+    ]);
+
+    render(
+      <MemoryRouter initialEntries={["/orders"]}>
+        <OrdersListPage loadOrders={loadOrders} loadListConfig={loadListConfig} />
+      </MemoryRouter>,
+    );
+
+    const unpaidTab = await screen.findByRole("button", { name: "Unpaid queue" });
+    expect(unpaidTab).toHaveAttribute("aria-pressed", "false");
+    const queueTabs = unpaidTab.closest(".orders-queue-tabs");
+    expect(queueTabs?.parentElement).toHaveClass("orders-panel");
+    expect(queueTabs?.nextElementSibling).toHaveClass("orders-toolbar");
+
+    await user.click(unpaidTab);
+    await waitFor(() => {
+      expect(loadOrders).toHaveBeenLastCalledWith(
+        expect.objectContaining({ preset: "unpaid" }),
+      );
+    });
+    expect(unpaidTab).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("Follow up outstanding balances.")).toBeInTheDocument();
+
+    await user.click(unpaidTab);
+    await waitFor(() => {
+      expect(loadOrders).toHaveBeenLastCalledWith(
+        expect.objectContaining({ preset: "all" }),
+      );
+    });
+    expect(unpaidTab).toHaveAttribute("aria-pressed", "false");
+    expect(screen.queryByText("Follow up outstanding balances.")).not.toBeInTheDocument();
+  });
+
+  it("hides the pagination summary while a queue tab is loading", async () => {
+    const user = userEvent.setup();
+    let resolveQueue!: (result: OrderListResult) => void;
+    const queueLoad = new Promise<OrderListResult>((resolve) => {
+      resolveQueue = resolve;
+    });
+    const loadOrders = vi.fn()
+      .mockResolvedValueOnce(orderResult)
+      .mockImplementationOnce(() => queueLoad);
+    const loadListConfig = vi.fn().mockResolvedValue([
+      {
+        id: "cfg-unpaid-loading",
+        presetKey: "unpaid",
+        title: "Unpaid queue",
+        description: "Follow up outstanding balances.",
+        sortOrder: 30,
+        isVisible: true,
+        route: "/orders/unpaid",
+      } satisfies OrderListConfigRow,
+    ]);
+
+    render(
+      <MemoryRouter initialEntries={["/orders"]}>
+        <OrdersListPage loadOrders={loadOrders} loadListConfig={loadListConfig} />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("B-1513");
+    const summary = document.querySelector(
+      ".operational-list-pagination > span",
+    );
+    expect(summary?.textContent).not.toBe("");
+
+    await user.click(await screen.findByRole("button", { name: "Unpaid queue" }));
+    await waitFor(() => {
+      expect(loadOrders).toHaveBeenLastCalledWith(
+        expect.objectContaining({ preset: "unpaid" }),
+      );
+    });
+    expect(summary?.textContent).toBe("");
+
+    await act(async () => resolveQueue(orderResult));
+    await waitFor(() => expect(summary?.textContent).not.toBe(""));
   });
 
   it("links Shopify orders to their admin page", async () => {
@@ -1085,7 +1183,7 @@ describe("Orders list", () => {
       /\.operational-list-pagination > span\s*\{[^}]*white-space:\s*nowrap/s,
     );
     expect(stylesheet).toMatch(
-      /\.orders-page\.is-shopify-pending \.orders-heading \.heading-actions\s*\{[^}]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)[^}]*width:\s*100%/s,
+      /\.orders-toolbar-actions:has\(\.orders-selection-count\)\s*\{[^}]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/s,
     );
     expect(stylesheet).toMatch(
       /\.orders-page\.is-shopify-pending \.order-mobile-facts dd\s*\{[^}]*white-space:\s*normal[^}]*overflow-wrap:\s*anywhere/s,

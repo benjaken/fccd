@@ -359,6 +359,6 @@ describe("factory board helpers", () => {
     expect(html).toContain("雞扒 &lt;沙律&gt;");
     expect(html).toContain("走醬 &amp; 分開");
     expect(html).toContain("× 5");
-    expect(html).toContain("#B-1540");
+    expect(html).toContain("B-1540");
   });
 });

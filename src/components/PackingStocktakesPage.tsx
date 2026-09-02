@@ -221,9 +221,6 @@ export function PackingStocktakesPage({
           <h1>{t(copyKey("title"))}</h1>
           <p>{t(copyKey("description"))}</p>
         </div>
-        <div className="packing-stocktakes-heading-actions">
-          <Button type="button" variant="outline" disabled={!stocktakeDate || rows.length === 0 || printLoading} onClick={() => void openPrintPreview()}><Printer />{t(copyKey("printSheet"))}</Button>
-        </div>
       </header>
       <div className="stocktake-records-layout">
         <aside className="stocktake-date-list" aria-label={t(copyKey("dateList"))}>
@@ -243,7 +240,8 @@ export function PackingStocktakesPage({
         <header className="ingredients-toolbar">
           <ListSearchBar id="packing-stocktakes-search" value={search} onChange={setSearch}
             onSubmit={() => setAppliedSearch(search.trim())} label={t(copyKey("search"))}
-            placeholder={placeholder} submitLabel={t(copyKey("searchAction"))} />
+            placeholder={placeholder} submitLabel={t(copyKey("searchAction"))}
+            actions={<Button type="button" variant="outline" disabled={!stocktakeDate || rows.length === 0 || printLoading} onClick={() => void openPrintPreview()}><Printer />{t(copyKey("printSheet"))}</Button>} />
         </header>
         {error ? <p className="list-inline-error">{t(copyKey(error))}</p> : null}
         {!loading && rows.length === 0 && !error ? (

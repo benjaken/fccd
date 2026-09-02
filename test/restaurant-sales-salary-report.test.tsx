@@ -62,7 +62,7 @@ describe("Restaurant sales and salary report", () => {
     expect(report.value("2026-01-01", "tko")?.salary).toBeNull();
   });
 
-  it("selects all restaurants, loads the year-to-date range, and renders missing salary data", async () => {
+  it("selects only Tseung Kwan O, loads the year-to-date range, and renders missing salary data", async () => {
     await i18n.changeLanguage("zh-HK");
     const loadReport = vi.fn().mockResolvedValue(rows);
     render(
@@ -72,9 +72,9 @@ describe("Restaurant sales and salary report", () => {
       />,
     );
 
-    expect(await screen.findByText("$1,131,649.00")).toBeInTheDocument();
-    expect(screen.getByText("$210,000.00")).toBeInTheDocument();
-    expect(screen.getByText("18.56%")).toBeInTheDocument();
+    expect(await screen.findByText("$1,414,835.50")).toBeInTheDocument();
+    expect(screen.queryByText("$210,000.00")).not.toBeInTheDocument();
+    expect(screen.queryByText("18.56%")).not.toBeInTheDocument();
     expect(screen.getByText("未有薪金資料")).toBeInTheDocument();
     await waitFor(() =>
       expect(
@@ -90,7 +90,7 @@ describe("Restaurant sales and salary report", () => {
       expect(loadReport).toHaveBeenCalledWith(
         expect.objectContaining({
           startMonth: `${new Date().getFullYear()}-01`,
-          restaurantIds: ["ylp", "tko"],
+          restaurantIds: ["tko"],
         }),
       ),
     );

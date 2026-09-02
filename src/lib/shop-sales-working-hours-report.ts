@@ -5,6 +5,15 @@ export type ShopReportRestaurant = {
   name: string;
 };
 
+export function defaultShopReportRestaurantIds(
+  restaurants: ShopReportRestaurant[],
+): string[] {
+  const tseungKwanO = restaurants.find((restaurant) =>
+    /(?:^|\s)TKO(?:\s|$)|將軍澳/i.test(restaurant.name),
+  );
+  return tseungKwanO ? [tseungKwanO.id] : [];
+}
+
 export type ShopSalesWorkingHoursRow = {
   reportDate: string;
   restaurantId: string;
