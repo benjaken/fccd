@@ -15,6 +15,7 @@ export type ReadOnlyOrderDetail = {
   orderNumber: string | null;
   customerName: string | null;
   companyName: string | null;
+  isHongKongFamousBrand?: boolean;
   email: string | null;
   contactA: string | null;
   contactB: string | null;
@@ -112,7 +113,7 @@ export type OrderDetailResult = {
 };
 
 const fields =
-  "id,document_type,order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,shipping_address_snapshot,customer_note_snapshot,remarks,quote_status,quote_description_snapshot,delivery_terms_snapshot,delivery_at,delivery_time,ship_out_time,delivery_status,is_sent_to_factory,factory_date,factory_packing_note,factory_print_date,factory_reprint_required,currency,discount_amount,shipping_fee,cashdollar_redeemed,cashdollar_purchased,grand_total,outstanding,bubble_created_at,created_at,updated_at,order_status_legacy_ids,shopify_order_id,planned_delivery_district:delivery_districts!delivery_district_id(name),channels(id,name,email),shopify_stores(shop_domain)";
+  "id,document_type,order_number,customer_name_snapshot,company_name_snapshot,is_hong_kong_famous_brand,email_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,shipping_address_snapshot,customer_note_snapshot,remarks,quote_status,quote_description_snapshot,delivery_terms_snapshot,delivery_at,delivery_time,ship_out_time,delivery_status,is_sent_to_factory,factory_date,factory_packing_note,factory_print_date,factory_reprint_required,currency,discount_amount,shipping_fee,cashdollar_redeemed,cashdollar_purchased,grand_total,outstanding,bubble_created_at,created_at,updated_at,order_status_legacy_ids,shopify_order_id,planned_delivery_district:delivery_districts!delivery_district_id(name),channels(id,name,email),shopify_stores(shop_domain)";
 
 function decimal(value: string | number | null) {
   return value === null ? null : Number.parseFloat(String(value));
@@ -322,6 +323,7 @@ export async function fetchOrderDetail(
     orderNumber: data.order_number,
     customerName: data.customer_name_snapshot,
     companyName: data.company_name_snapshot,
+    isHongKongFamousBrand: data.is_hong_kong_famous_brand === true,
     email: data.email_snapshot,
     contactA: data.contact_number_a_snapshot,
     contactB: data.contact_number_b_snapshot,

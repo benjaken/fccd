@@ -39,6 +39,7 @@ export type OrderEditorDraft = {
   channelId: string;
   customerName: string;
   companyName: string;
+  isHongKongFamousBrand: boolean;
   contactA: string;
   contactB: string;
   email: string;
@@ -113,6 +114,7 @@ export function emptyOrderDraft(): OrderEditorDraft {
     channelId: "",
     customerName: "",
     companyName: "",
+    isHongKongFamousBrand: false,
     contactA: "",
     contactB: "",
     email: "",
@@ -234,7 +236,7 @@ export async function fetchOrderEditor(
     await Promise.all([
       supabase
         .from("orders")
-        .select("id,order_number,channel_id,customer_name_snapshot,company_name_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,email_snapshot,shipping_address_snapshot,customer_note_snapshot,remarks,factory_packing_note,delivery_at,delivery_time,ship_out_time,shipping_method_id,delivery_district_id,sales_partner_id,shipping_fee,discount_amount,cashdollar_redeemed,cashdollar_purchased,do_not_send_to_factory,factory_print_date,factory_reprint_required")
+        .select("id,order_number,channel_id,customer_name_snapshot,company_name_snapshot,is_hong_kong_famous_brand,contact_number_a_snapshot,contact_number_b_snapshot,email_snapshot,shipping_address_snapshot,customer_note_snapshot,remarks,factory_packing_note,delivery_at,delivery_time,ship_out_time,shipping_method_id,delivery_district_id,sales_partner_id,shipping_fee,discount_amount,cashdollar_redeemed,cashdollar_purchased,do_not_send_to_factory,factory_print_date,factory_reprint_required")
         .eq("id", id)
         .eq("document_type", "order")
         .is("archived_at", null)
@@ -274,6 +276,8 @@ export async function fetchOrderEditor(
     channelId: row.channel_id ?? "",
     customerName: row.customer_name_snapshot ?? "",
     companyName: row.company_name_snapshot ?? "",
+    isHongKongFamousBrand: Boolean(row.company_name_snapshot?.trim())
+      && row.is_hong_kong_famous_brand === true,
     contactA: row.contact_number_a_snapshot ?? "",
     contactB: row.contact_number_b_snapshot ?? "",
     email: row.email_snapshot ?? "",
@@ -352,6 +356,7 @@ export function clearOrderCustomerInfo(
     ...draft,
     customerName: "",
     companyName: "",
+    isHongKongFamousBrand: false,
     contactA: "",
     contactB: "",
     email: "",
@@ -382,6 +387,8 @@ export async function saveOrderEditor(draft: OrderEditorDraft): Promise<string> 
     channel_id: nullable(draft.channelId),
     customer_name_snapshot: nullable(draft.customerName),
     company_name_snapshot: nullable(draft.companyName),
+    is_hong_kong_famous_brand:
+      Boolean(draft.companyName.trim()) && draft.isHongKongFamousBrand,
     contact_number_a_snapshot: nullable(draft.contactA),
     contact_number_b_snapshot: nullable(draft.contactB),
     email_snapshot: nullable(draft.email),
