@@ -3,11 +3,14 @@ import { hongKongDateKey } from "@/lib/date-time";
 import { productListDisplayName } from "@/lib/products";
 import type { OrderFactorySettings } from "@/lib/order-factory-settings";
 import type { QuotePdfSupplementDraft } from "@/lib/quote-pdf-draft";
+import { fetchCustomerTags, type CustomerTag } from "@/lib/customer-tags";
 
 export type QuoteEditorOption = {
   id: string;
   name: string;
 };
+
+export type QuoteEditorCustomerTagOption = Pick<CustomerTag, "id" | "name" | "typeName">;
 
 export type QuoteEditorOptions = {
   channels: QuoteEditorOption[];
@@ -18,6 +21,7 @@ export type QuoteEditorOptions = {
   salesPartners: QuoteEditorOption[];
   orderTags: QuoteEditorOption[];
   paymentMethods: QuoteEditorOption[];
+  customerTags?: QuoteEditorCustomerTagOption[];
 };
 
 export type QuotePayment = {
@@ -29,6 +33,8 @@ export type QuotePayment = {
 };
 
 export type QuoteDraft = {
+  /** Only used when a quote is copied; regular new quotes may be auto-numbered. */
+  orderNumber?: string;
   channelId: string;
   quoteStatus: string;
   quoteAutoClosedAt?: string | null;
@@ -38,7 +44,10 @@ export type QuoteDraft = {
   followUpDate: string;
   customerName: string;
   companyName: string;
-  isHongKongFamousBrand: boolean;
+  /** Customer-tag selections used by the famous-brand customer field. */
+  famousBrandTagIds?: string[];
+  /** @deprecated Kept only to read legacy boolean data during migration. */
+  isHongKongFamousBrand?: boolean;
   contactA: string;
   contactB: string;
   email: string;
@@ -182,7 +191,7 @@ export function dedupeQuoteOptions(
 }
 
 export async function fetchQuoteEditorOptions(): Promise<QuoteEditorOptions> {
-  const [channels, quoteSalesSources, quoteCommunicationChannels, districts, shippingMethods, salesPartners, orderTags, paymentMethods] =
+  const [channels, quoteSalesSources, quoteCommunicationChannels, districts, shippingMethods, salesPartners, orderTags, paymentMethods, customerTags] =
     await Promise.all([
       supabase.from("channels").select("id,name").eq("is_active", true).is("archived_at", null).order("sort_order", { nullsFirst: false }).order("name"),
       supabase.from("quote_sales_sources").select("id,name").eq("is_active", true).order("name"),
@@ -192,6 +201,7 @@ export async function fetchQuoteEditorOptions(): Promise<QuoteEditorOptions> {
       supabase.from("sales_partners").select("id,name").eq("is_active", true).order("name"),
       supabase.from("order_tags").select("id,name").eq("is_active", true).is("archived_at", null).order("name"),
       supabase.from("payment_methods").select("id,name").eq("is_active", true).order("name"),
+      fetchCustomerTags(),
     ]);
 
   const error = [channels, quoteSalesSources, quoteCommunicationChannels, districts, shippingMethods, salesPartners, orderTags, paymentMethods]
@@ -211,6 +221,11 @@ export async function fetchQuoteEditorOptions(): Promise<QuoteEditorOptions> {
     salesPartners: (salesPartners.data ?? []) as NamedRow[],
     orderTags: (orderTags.data ?? []) as NamedRow[],
     paymentMethods: (paymentMethods.data ?? []) as NamedRow[],
+    customerTags: customerTags.filter((tag) => tag.isActive).map((tag) => ({
+      id: tag.id,
+      name: tag.name,
+      typeName: tag.typeName,
+    })),
   };
 }
 
@@ -234,6 +249,7 @@ export async function createQuote(input: QuoteDraft): Promise<CreatedQuote> {
     p_sales_partner_id: input.salesPartnerId || null,
     p_internal_note: optional(input.internalNote),
     p_order_tag_ids: input.tagIds,
+    p_order_number: optional(input.orderNumber ?? ""),
   });
   if (error) throw error;
   const row = Array.isArray(data) ? data[0] : data;
@@ -276,6 +292,7 @@ export async function duplicateQuote(
     p_sales_partner_id: input.salesPartnerId || null,
     p_internal_note: optional(input.internalNote),
     p_order_tag_ids: input.tagIds,
+    p_order_number: optional(input.orderNumber ?? ""),
   });
   if (error) throw error;
   const row = Array.isArray(data) ? data[0] : data;
@@ -314,7 +331,7 @@ export async function fetchQuoteEditorSummary(
   ] = await Promise.all([
     supabase
       .from("orders")
-      .select("id,document_type,order_number,channel_id,quote_status,quote_auto_closed_at,quote_reopen_reason,quote_sales_source_id,quote_communication_channel_id,quote_follow_up_date,customer_name_snapshot,company_name_snapshot,is_hong_kong_famous_brand,contact_number_a_snapshot,contact_number_b_snapshot,email_snapshot,shipping_address_snapshot,customer_note_snapshot,shipping_method_id,delivery_district_id,delivery_at,delivery_time,ship_out_time,factory_packing_note,sales_partner_id,remarks,shipping_fee,discount_amount,cashdollar_redeemed,cashdollar_purchased,grand_total,is_sent_to_factory,do_not_send_to_factory,factory_print_date,factory_reprint_required,shopify_order_id,addon_shopify_pending,shopify_stores(shop_domain)")
+      .select("id,document_type,order_number,channel_id,quote_status,quote_auto_closed_at,quote_reopen_reason,quote_sales_source_id,quote_communication_channel_id,quote_follow_up_date,customer_name_snapshot,company_name_snapshot,is_hong_kong_famous_brand,famous_brand_tag_ids,contact_number_a_snapshot,contact_number_b_snapshot,email_snapshot,shipping_address_snapshot,customer_note_snapshot,shipping_method_id,delivery_district_id,delivery_at,delivery_time,ship_out_time,factory_packing_note,sales_partner_id,remarks,shipping_fee,discount_amount,cashdollar_redeemed,cashdollar_purchased,grand_total,is_sent_to_factory,do_not_send_to_factory,factory_print_date,factory_reprint_required,shopify_order_id,addon_shopify_pending,shopify_stores(shop_domain)")
       .eq("id", resolvedOrderId)
        .eq("document_type", documentType)
       .is("archived_at", null)
@@ -371,6 +388,9 @@ export async function fetchQuoteEditorSummary(
     followUpDate: data.quote_follow_up_date || "",
     customerName: data.customer_name_snapshot || "",
     companyName: data.company_name_snapshot || "",
+    famousBrandTagIds: Array.isArray(data.famous_brand_tag_ids)
+      ? data.famous_brand_tag_ids.filter((id): id is string => typeof id === "string")
+      : [],
     isHongKongFamousBrand: data.is_hong_kong_famous_brand === true,
     contactA: data.contact_number_a_snapshot || "",
     contactB: data.contact_number_b_snapshot || "",
@@ -675,6 +695,7 @@ export async function updateQuote(
 
 export function quoteWorkflowValues(input: QuoteDraft) {
   const reopeningAutoClosedQuote = Boolean(input.quoteAutoClosedAt) && input.quoteStatus !== "Case Closed";
+  const famousBrandTagIds = input.famousBrandTagIds ?? [];
   return {
     quote_status: optional(input.quoteStatus),
     quote_auto_closed_at: reopeningAutoClosedQuote ? null : input.quoteAutoClosedAt ?? null,
@@ -683,7 +704,10 @@ export function quoteWorkflowValues(input: QuoteDraft) {
     quote_sales_source_id: input.quoteSalesSourceId || null,
     quote_communication_channel_id: input.quoteCommunicationChannelId || null,
     quote_follow_up_date: input.followUpDate || null,
-    is_hong_kong_famous_brand: input.isHongKongFamousBrand,
+    // Keep the legacy boolean in sync for existing famous-brand lists while
+    // storing the selected customer-tag ids as the authoritative value.
+    is_hong_kong_famous_brand: famousBrandTagIds.length > 0,
+    famous_brand_tag_ids: famousBrandTagIds,
     asana_link: optional(input.asanaLink),
   };
 }

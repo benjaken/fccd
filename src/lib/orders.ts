@@ -129,6 +129,7 @@ export type OrderListItem = {
   isAssignedToFleet?: boolean;
   grandTotal: number | null;
   outstanding: number | null;
+  paidAmount?: number | null;
   currency: string;
   createdAt: string;
   statuses: OrderStatusView[];
@@ -254,6 +255,14 @@ function optionalAmount(value: number | string | null | undefined) {
   return value === null || value === undefined
     ? null
     : Number.parseFloat(String(value));
+}
+
+function paidAmountFromTotals(
+  grandTotal: number | null,
+  outstanding: number | null,
+) {
+  if (grandTotal === null || outstanding === null) return null;
+  return Math.max(0, grandTotal - outstanding);
 }
 
 function orderShippingMethodName(value: OrderRow["shipping_methods"]) {
@@ -461,6 +470,10 @@ export async function fetchOrders({
       ),
       grandTotal: optionalAmount(row.grand_total),
       outstanding: optionalAmount(row.outstanding),
+      paidAmount: paidAmountFromTotals(
+        optionalAmount(row.grand_total),
+        optionalAmount(row.outstanding),
+      ),
       currency: row.currency || "HKD",
       createdAt: row.bubble_created_at || row.created_at,
       statuses: resolveOrderStatuses(row.order_status_legacy_ids, resolvedCatalog),

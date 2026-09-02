@@ -34,6 +34,10 @@ export type QuoteCustomerListFilters = {
   search: string;
   sort: "order_total" | "order_count";
   ascending: boolean;
+  /** Customer tags selected in the famous-brand filter. An empty array means all customers. */
+  famousBrandTagIds?: string[];
+  /** @deprecated Use famousBrandTagIds for the multi-select filter. */
+  famousBrandOnly?: boolean;
 };
 
 export type QuoteCustomerHistoryOrder = {
@@ -337,6 +341,8 @@ export async function fetchQuoteCustomers({
   search,
   sort,
   ascending,
+  famousBrandTagIds,
+  famousBrandOnly,
 }: QuoteCustomerListFilters): Promise<QuoteCustomerListResult> {
   const offset = (page - 1) * QUOTE_CUSTOMERS_PAGE_SIZE;
   const { data, error } = await supabase.rpc("list_quote_customers", {
@@ -345,6 +351,8 @@ export async function fetchQuoteCustomers({
     p_ascending: ascending,
     p_limit: QUOTE_CUSTOMERS_PAGE_SIZE,
     p_offset: offset,
+    p_famous_brand_only: Boolean(famousBrandOnly),
+    p_famous_brand_tag_ids: famousBrandTagIds ?? [],
   });
   if (error) throw error;
 

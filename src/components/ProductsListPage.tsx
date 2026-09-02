@@ -709,6 +709,7 @@ export function ProductsListPage({
         ) : (
           <ListTable
             className="products-table-wrap"
+            tableClassName="products-table"
             onRefresh={() => setReloadKey((key) => key + 1)}
             loading={loading}
             loadingLabel={t("products.loading")}
@@ -728,7 +729,7 @@ export function ProductsListPage({
                     {sortIcon("sku")}
                   </button>
                 </th>
-                <th>
+                <th className="product-name-column">
                   <button
                     type="button"
                     className="table-sort-button"
@@ -753,7 +754,9 @@ export function ProductsListPage({
                 <th>{t("products.columns.range")}</th>
                 <th>{t("products.columns.compartments")}</th>
                 <th>{t("products.columns.ingredients")}</th>
-                <th>{t("products.columns.specialRequests")}</th>
+                <th className="product-special-requests-column">
+                  {t("products.columns.specialRequests")}
+                </th>
                 <th>{t("products.columns.cookMethod")}</th>
                 <th>{t("products.columns.recommended")}</th>
                 <th>{t("products.columns.status")}</th>
@@ -798,7 +801,7 @@ export function ProductsListPage({
                 </td>
                 <td>{product.channelName || t("common.notSet")}</td>
                 <td>{product.sku || t("common.notSet")}</td>
-                <td>
+                <td className="product-name-column">
                   <DetailLink
                     className="order-link"
                     to={`/products/${product.id}`}
@@ -820,7 +823,7 @@ export function ProductsListPage({
                     empty={t("common.notSet")}
                   />
                 </td>
-                <td>
+                <td className="product-special-requests-column">
                   <ProductTagList
                     tags={product.specialRequests.map((name) => ({ name }))}
                     empty={t("common.notSet")}

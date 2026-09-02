@@ -204,7 +204,8 @@ export function ShopSalesWorkingHoursReport({
           <span>{error}</span>
         </section>
       ) : (
-        <div className="shop-sales-hours-content">
+        <>
+          <div className="shop-sales-hours-content">
           <div className="shop-sales-hours-tables">
             {tables.map((table) => (
               <section className="panel shop-sales-hours-card" key={table.restaurant.id}>
@@ -286,44 +287,45 @@ export function ShopSalesWorkingHoursReport({
               </section>
             ))}
           </div>
+          </div>
           <aside
             className="shop-sales-hours-summaries"
             aria-label={t("shopSalesWorkingHours.dailySummary")}
           >
-            {tables.map((table) => (
-              <section
-                className="panel shop-sales-hours-summary-card"
-                key={table.restaurant.id}
-              >
-                <h3>{table.restaurant.name}</h3>
-                {table.summaries.length === 0 ? (
-                  <p>{t("shopSalesWorkingHours.shopEmpty")}</p>
-                ) : (
-                  <table>
-                    <thead>
-                      <tr>
-                        <th scope="col">{t("shopSalesWorkingHours.department")}</th>
-                        <th scope="col">{t("shopSalesWorkingHours.maximum")}</th>
-                        <th scope="col">{t("shopSalesWorkingHours.minimum")}</th>
-                        <th scope="col">{t("shopSalesWorkingHours.average")}</th>
+          {tables.map((table) => (
+            <section
+              className="panel shop-sales-hours-summary-card"
+              key={table.restaurant.id}
+            >
+              <h3>{table.restaurant.name}</h3>
+              {table.summaries.length === 0 ? (
+                <p>{t("shopSalesWorkingHours.shopEmpty")}</p>
+              ) : (
+                <table>
+                  <thead>
+                    <tr>
+                      <th scope="col">{t("shopSalesWorkingHours.department")}</th>
+                      <th scope="col">{t("shopSalesWorkingHours.maximum")}</th>
+                      <th scope="col">{t("shopSalesWorkingHours.minimum")}</th>
+                      <th scope="col">{t("shopSalesWorkingHours.average")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {table.summaries.map((summary) => (
+                      <tr key={summary.departmentName}>
+                        <th scope="row">{summary.departmentName}</th>
+                        <td>{formatMoney(summary.maximum)}</td>
+                        <td>{formatMoney(summary.minimum)}</td>
+                        <td>{formatMoney(summary.average)}</td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {table.summaries.map((summary) => (
-                        <tr key={summary.departmentName}>
-                          <th scope="row">{summary.departmentName}</th>
-                          <td>{formatMoney(summary.maximum)}</td>
-                          <td>{formatMoney(summary.minimum)}</td>
-                          <td>{formatMoney(summary.average)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </section>
-            ))}
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </section>
+          ))}
           </aside>
-        </div>
+        </>
       )}
     </section>
   );

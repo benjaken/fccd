@@ -30,13 +30,22 @@ function formatMoney(value: number) {
   return currency.format(value).replace("HK$", "$");
 }
 
+function formatPercent(value: number, base: number) {
+  if (base <= 0) return "0%";
+  return `${Math.round((value / base) * 100)}%`;
+}
+
 function ComparisonValues({
   summaries,
   value,
+  base,
+  showRatio = true,
   kind = "cost",
 }: {
   summaries: KitchenSalesCostYearSummary[];
   value: (summary: KitchenSalesCostYearSummary) => number;
+  base: (summary: KitchenSalesCostYearSummary) => number;
+  showRatio?: boolean;
   kind?: "sales" | "cost" | "net";
 }) {
   return (
@@ -45,8 +54,9 @@ function ComparisonValues({
         const amount = value(summary);
         return (
           <span
-            className="kitchen-sales-cost-comparison-value"
+            className={`kitchen-sales-cost-comparison-value${showRatio ? " kitchen-sales-cost-comparison-value-with-ratio" : ""}`}
             data-report-year={summary.year}
+            aria-label={`${summary.year} ${formatMoney(amount)}${showRatio ? ` ${formatPercent(amount, base(summary))}` : ""}`}
             style={
               {
                 "--year-tone-color": index % 2 === 0 ? "#dc8a19" : "#111827",
@@ -54,8 +64,9 @@ function ComparisonValues({
             }
             key={summary.year}
           >
-            <b>{summary.year}</b>
+            <b className="sr-only">{summary.year}</b>
             <strong>{formatMoney(amount)}</strong>
+            {showRatio ? <small>{formatPercent(amount, base(summary))}</small> : null}
           </span>
         );
       })}
@@ -72,58 +83,95 @@ function CombinedReportTable({
 }) {
   return (
     <section className="kitchen-sales-cost-combined panel" aria-label="多年份銷售及成本比較">
+      <div className="kitchen-sales-cost-table-toolbar">
+        <div className="kitchen-sales-cost-table-toolbar-copy">
+          <strong>月份與類型比較</strong>
+          <span>每格上排為較早年份，下排為較晚年份</span>
+        </div>
+        <div className="kitchen-sales-cost-year-legend" aria-label="年份與佔比說明">
+          {summaries.map((summary, index) => (
+            <span key={summary.year}>
+              <i
+                className={`kitchen-sales-cost-year-legend-dot kitchen-sales-cost-year-legend-dot-${index % 2 === 0 ? "early" : "late"}`}
+                aria-hidden="true"
+              />
+              {summary.year}
+            </span>
+          ))}
+          <span className="kitchen-sales-cost-ratio-legend">
+            <i aria-hidden="true">%</i>
+            紅色為佔比
+          </span>
+        </div>
+      </div>
       <div className="kitchen-sales-cost-table-scroll">
         <table className="kitchen-sales-cost-table kitchen-sales-cost-comparison-table">
+          <caption className="sr-only">各月份銷售、成本及佔比</caption>
           <thead>
             <tr>
-              <th scope="col">月份</th>
-              <th scope="col">{KITCHEN_SALES_CATEGORY}</th>
-              {categories.map((category) => (
-                <th scope="col" key={category}>{category}</th>
+              <th className="kitchen-sales-cost-type-heading" scope="col">類型</th>
+              {months.map((month) => (
+                <th scope="col" key={month}>{month}月</th>
               ))}
-              <th scope="col">銷售淨額</th>
+              <th scope="col">加總</th>
             </tr>
           </thead>
           <tbody>
-            {months.map((month, monthIndex) => (
-              <tr data-report-month={month} key={month}>
-                <th scope="row">{month}月</th>
-                <td>
+            <tr className="kitchen-sales-cost-data-row kitchen-sales-cost-sales-row">
+              <th className="kitchen-sales-cost-type-column" scope="row">{KITCHEN_SALES_CATEGORY}</th>
+              {months.map((month, monthIndex) => (
+                <td data-report-month={month} key={month}>
                   <ComparisonValues
                     summaries={summaries}
                     value={(summary) => summary.sales[monthIndex]}
+                    base={(summary) => summary.sales[monthIndex]}
+                    showRatio={false}
                     kind="sales"
                   />
                 </td>
-                {categories.map((category) => (
-                  <td key={category}>
+              ))}
+              <td>
+                <ComparisonValues
+                  summaries={summaries}
+                  value={(summary) => summary.totalSales}
+                  base={(summary) => summary.totalSales}
+                  showRatio={false}
+                  kind="sales"
+                />
+              </td>
+            </tr>
+            {categories.map((category) => (
+              <tr className="kitchen-sales-cost-data-row" key={category}>
+                <th className="kitchen-sales-cost-type-column" scope="row">{category}</th>
+                {months.map((month, monthIndex) => (
+                  <td data-report-month={month} key={month}>
                     <ComparisonValues
                       summaries={summaries}
                       value={(summary) => summary.costs[category][monthIndex]}
+                      base={(summary) => summary.sales[monthIndex]}
                     />
                   </td>
                 ))}
-                <td className="kitchen-sales-cost-net-column">
+                <td>
                   <ComparisonValues
                     summaries={summaries}
-                    value={(summary) => summary.net[monthIndex]}
-                    kind="net"
+                    value={(summary) => summary.costs[category].reduce((total, amount) => total + amount, 0)}
+                    base={(summary) => summary.totalSales}
                   />
                 </td>
               </tr>
             ))}
           </tbody>
           <tfoot>
-            <tr>
-              <th scope="row">全年合計</th>
-              <td>
-                <ComparisonValues summaries={summaries} value={(summary) => summary.totalSales} kind="sales" />
-              </td>
-              {categories.map((category) => (
-                <td key={category}>
+            <tr className="kitchen-sales-cost-data-row kitchen-sales-cost-net-row">
+              <th className="kitchen-sales-cost-type-column" scope="row">銷售淨額</th>
+              {months.map((month, monthIndex) => (
+                <td className="kitchen-sales-cost-net-column" data-report-month={month} key={month}>
                   <ComparisonValues
                     summaries={summaries}
-                    value={(summary) => summary.costs[category].reduce((total, amount) => total + amount, 0)}
+                    value={(summary) => summary.net[monthIndex]}
+                    base={(summary) => summary.sales[monthIndex]}
+                    kind="net"
                   />
                 </td>
               ))}
@@ -131,6 +179,7 @@ function CombinedReportTable({
                 <ComparisonValues
                   summaries={summaries}
                   value={(summary) => summary.totalNet}
+                  base={(summary) => summary.totalSales}
                   kind="net"
                 />
               </td>
@@ -292,15 +341,25 @@ export function KitchenSalesCostReportPage() {
       ) : null}
       {report && years.length ? (
         <div className="kitchen-sales-cost-report-content">
-          <YearSelector years={years} selectedYears={selectedYears} onChange={setSelectedYears} />
-          {selectedYears.length ? (
-            <CombinedReportTable summaries={summaries} categories={categories} />
-          ) : (
-            <section className="panel kitchen-sales-cost-empty">
-              <strong>請選擇至少一個年份</strong>
-              <span>勾選上方年份後，即可查看銷售與成本明細。</span>
-            </section>
-          )}
+          <div className="kitchen-sales-cost-workspace">
+            <aside className="kitchen-sales-cost-sidebar" aria-label="報表篩選">
+              <YearSelector
+                years={years}
+                selectedYears={selectedYears}
+                onChange={setSelectedYears}
+              />
+            </aside>
+            <main className="kitchen-sales-cost-main">
+              {selectedYears.length ? (
+                <CombinedReportTable summaries={summaries} categories={categories} />
+              ) : (
+                <section className="panel kitchen-sales-cost-empty">
+                  <strong>請選擇至少一個年份</strong>
+                  <span>勾選上方年份後，即可查看銷售與成本明細。</span>
+                </section>
+                )}
+            </main>
+          </div>
         </div>
       ) : null}
       {loading && report ? <span className="kitchen-sales-cost-refreshing">正在更新資料…</span> : null}

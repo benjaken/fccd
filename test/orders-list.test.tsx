@@ -125,6 +125,33 @@ describe("Orders list", () => {
     expect(table.getAllByText("HK$1,610")).toHaveLength(1);
   });
 
+  it("shows the paid amount in unpaid queues", async () => {
+    const loadOrders = vi.fn().mockResolvedValue({
+      ...orderResult,
+      items: [{
+        ...orderResult.items[0],
+        grandTotal: 1610,
+        paidAmount: 610,
+        outstanding: 1000,
+      }],
+    });
+
+    render(
+      <MemoryRouter>
+        <OrdersListPage
+          preset="unpaid"
+          loadOrders={loadOrders}
+          loadListConfig={emptyListConfig}
+          canViewFinance
+        />
+      </MemoryRouter>,
+    );
+
+    const table = within(await screen.findByRole("table"));
+    expect(table.getByRole("columnheader", { name: "已收" })).toBeInTheDocument();
+    expect(table.getByText("HK$610")).toBeInTheDocument();
+  });
+
   it("appends the next server page to the mobile card list", async () => {
     vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
       matches: true,

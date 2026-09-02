@@ -22,6 +22,37 @@ function setMobileViewport(matches: boolean) {
 afterEach(() => setMobileViewport(false));
 
 describe("mobile order editor", () => {
+  it("requires a manually entered number when copying an order", async () => {
+    const draft = emptyOrderDraft();
+    const loadEditor = vi.fn().mockResolvedValue({
+      draft,
+      options: {
+        channels: [],
+        shippingMethods: [],
+        districts: [],
+        salesPartners: [],
+        paymentMethods: [],
+        catalog: [],
+      },
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/orders/new?copyFrom=order-1"]}>
+        <Routes>
+          <Route path="/orders/new" element={<OrderEditorPage loadEditor={loadEditor} />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const numberInput = await screen.findByLabelText("單號");
+    expect(numberInput).toBeRequired();
+    expect(numberInput).not.toBeDisabled();
+    await userEvent.setup().type(numberInput, "B-COPIED-1001");
+    expect(numberInput).toHaveValue("B-COPIED-1001");
+    expect(screen.queryByRole("button", { name: /WATI|闆婚兖/i })).not.toBeInTheDocument();
+    expect(loadEditor).toHaveBeenCalledWith("order-1", true);
+  });
+
   it("replaces the wide line-item table with editable item cards", async () => {
     setMobileViewport(true);
     const user = userEvent.setup();

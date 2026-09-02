@@ -13,6 +13,7 @@ import {
   ChevronRight,
   CircleDollarSign,
   ClipboardList,
+  Eye,
   FileText,
   LoaderCircle,
   LogOut,
@@ -161,6 +162,7 @@ import {
   type FollowUpCounts,
 } from "@/lib/follow-up-counts";
 import { useTheme } from "@/lib/use-theme";
+import { useComfortMode } from "@/lib/use-comfort-mode";
 import { useAnimatedNumber } from "@/lib/use-animated-number";
 import { cn } from "@/lib/utils";
 import {
@@ -256,6 +258,7 @@ function OperationsShell() {
     location.pathname,
   );
   const { dark, toggleTheme } = useTheme();
+  const { comfortMode, toggleComfortMode } = useComfortMode();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [sidebarGroupExpansion, setSidebarGroupExpansion] = useState<
@@ -559,7 +562,7 @@ function OperationsShell() {
   };
 
   return (
-    <div className={cn("app-shell", isBusinessMenu && "menu-style-one", documentEditorMode && "document-editor-shell")}>
+    <div className={cn("app-shell", isBusinessMenu && "menu-style-one", documentEditorMode && "document-editor-shell", comfortMode && "comfort-mode")}>
       <header className="topbar">
         <div className="topbar-brand">
           <Button
@@ -614,6 +617,25 @@ function OperationsShell() {
             <span className="language-label">
               {i18n.language === "en" ? "繁" : "EN"}
             </span>
+          </Button>
+          <Button
+            className={cn("comfort-mode-toggle", comfortMode && "active")}
+            variant="ghost"
+            size="icon"
+            onClick={toggleComfortMode}
+            aria-label={t(
+              comfortMode
+                ? "common.disableComfortMode"
+                : "common.enableComfortMode",
+            )}
+            aria-pressed={comfortMode}
+            title={t(
+              comfortMode
+                ? "common.disableComfortMode"
+                : "common.enableComfortMode",
+            )}
+          >
+            <Eye />
           </Button>
           <Button
             variant="ghost"

@@ -31,6 +31,7 @@ type ParameterRule = { name?: unknown; source?: unknown; value?: unknown };
 type QueueRow = {
   id: string;
   attempts: number;
+  occurrence_key: string;
   wati_sent_at: string | null;
   wati_skipped_at: string | null;
   email_sent_at: string | null;
@@ -682,6 +683,13 @@ Deno.serve(async (request) => {
       && watiEmergencySwitchAllows("EMAIL_AUTOMATIC_NOTIFICATIONS_ENABLED");
     const nowIso = new Date().toISOString();
 
+    // Only same-day customer delivery/pickup reminders are automatic.
+    // Manual confirmations are handled by separate Edge Functions.
+    const allowedAutomaticCustomerEvents = new Set([
+      "delivery_today_reminder",
+      "pickup_today_reminder",
+    ]);
+
     const { error: reconciliationRefreshError } = await admin.rpc(
       "refresh_order_reconciliation",
       { p_now: nowIso, p_force_daily: false },
@@ -734,7 +742,7 @@ Deno.serve(async (request) => {
     if (claimedRows.length) {
       const { data, error: jobsError } = await admin
         .from("wati_order_notification_outbox")
-        .select("id,attempts,wati_sent_at,wati_skipped_at,email_sent_at,email_skipped_at,template:wati_order_notification_templates(event_key,template_name,broadcast_name,parameters,is_active),order:orders(order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,delivery_at,delivery_time,shipping_address_snapshot,created_at,is_sent_to_factory,do_not_send_to_factory,addon_shopify_pending,is_shopify_order,source_system,delivery_status,channels(name),shipping_methods(name,display_name,requires_address_check))")
+        .select("id,attempts,occurrence_key,wati_sent_at,wati_skipped_at,email_sent_at,email_skipped_at,template:wati_order_notification_templates(event_key,template_name,broadcast_name,parameters,is_active),order:orders(order_number,customer_name_snapshot,company_name_snapshot,email_snapshot,contact_number_a_snapshot,contact_number_b_snapshot,delivery_at,delivery_time,shipping_address_snapshot,created_at,is_sent_to_factory,do_not_send_to_factory,addon_shopify_pending,is_shopify_order,source_system,delivery_status,channels(name),shipping_methods(name,display_name,requires_address_check))")
         .in("id", claimedRows.map((row) => row.id));
       if (jobsError) throw new Error(`notification_load_failed:${jobsError.message}`);
       jobs = (data || []) as QueueRow[];
@@ -749,6 +757,21 @@ Deno.serve(async (request) => {
         await admin.from("wati_order_notification_outbox").update({
           status: "skipped", last_error: "notification_context_missing", locked_at: null,
           updated_at: new Date().toISOString(),
+        }).eq("id", job.id);
+        continue;
+      }
+      const explicitlyManual = job.occurrence_key.startsWith("manual:");
+      if (!explicitlyManual && !allowedAutomaticCustomerEvents.has(template.event_key)) {
+        const skippedAt = new Date().toISOString();
+        await admin.from("wati_order_notification_outbox").update({
+          status: "skipped",
+          wati_skipped_at: job.wati_sent_at ? job.wati_skipped_at : job.wati_skipped_at || skippedAt,
+          email_skipped_at: job.email_sent_at ? job.email_skipped_at : job.email_skipped_at || skippedAt,
+          wati_error: "automatic_event_not_allowed",
+          email_error: "automatic_event_not_allowed",
+          last_error: "automatic_event_not_allowed",
+          locked_at: null,
+          updated_at: skippedAt,
         }).eq("id", job.id);
         continue;
       }

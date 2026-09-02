@@ -36,6 +36,8 @@ describe("central kitchen channel sales report page", () => {
 
     const workspace = container.querySelector(".kitchen-channel-sales-workspace");
     expect(workspace?.firstElementChild).toHaveClass("kitchen-sales-cost-sidebar");
+    expect(container.querySelector(".kitchen-channel-sales-charts")).toBeNull();
+    expect(container.querySelector(".kitchen-channel-sales-chart")).toBeNull();
     expect(within(workspace as HTMLElement).getByLabelText("報表篩選")).toBeInTheDocument();
 
     await waitFor(() => {

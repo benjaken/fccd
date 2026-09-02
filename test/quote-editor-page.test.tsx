@@ -65,6 +65,10 @@ const options: QuoteEditorOptions = {
     { id: "tag-2", name: "VIP" },
   ],
   paymentMethods: [{ id: "payme", name: "PayMe" }],
+  customerTags: [
+    { id: "customer-tag-1", name: "沙田威爾斯", typeName: "醫院" },
+    { id: "customer-tag-2", name: "企業客戶", typeName: "渠道" },
+  ],
 };
 
 const shippingFeeOptions = [
@@ -101,6 +105,7 @@ const emptyQuoteDraft = {
   followUpDate: "",
   customerName: "",
   companyName: "",
+  famousBrandTagIds: [],
   isHongKongFamousBrand: false,
   contactA: "",
   contactB: "",
@@ -126,8 +131,8 @@ describe("quote workflow fields", () => {
       .toMatchObject({ quote_follow_up_date: "2026-08-24" });
     expect(quoteWorkflowValues(emptyQuoteDraft))
       .toMatchObject({ quote_follow_up_date: null });
-    expect(quoteWorkflowValues({ ...emptyQuoteDraft, isHongKongFamousBrand: true }))
-      .toMatchObject({ is_hong_kong_famous_brand: true });
+    expect(quoteWorkflowValues({ ...emptyQuoteDraft, famousBrandTagIds: ["customer-tag-1"] }))
+      .toMatchObject({ is_hong_kong_famous_brand: true, famous_brand_tag_ids: ["customer-tag-1"] });
   });
 });
 
@@ -348,6 +353,9 @@ describe("Quote editor", () => {
     expect(screen.getByLabelText("Delivery time")).toHaveValue("");
     expect(screen.getByLabelText("Dispatch time")).toHaveValue("");
     expect(screen.getByLabelText("Follow-up date")).toHaveValue("");
+    const copiedQuoteNumber = screen.getByLabelText("Quote no.");
+    expect(copiedQuoteNumber).toBeRequired();
+    await user.type(copiedQuoteNumber, "FCLQ-COPIED-001");
 
     await user.selectOptions(
       screen.getByLabelText("Delivery time"),
@@ -361,6 +369,7 @@ describe("Quote editor", () => {
       expect(copyQuote).toHaveBeenCalledWith(
         "source-quote",
         expect.objectContaining({
+          orderNumber: "FCLQ-COPIED-001",
           customerName: "Copied customer",
           deliveryTime: "13:00 - 14:00",
           shipOutTime: "",
@@ -1066,6 +1075,7 @@ describe("Quote editor", () => {
     expect((await screen.findAllByText("餐具包")).length).toBeGreaterThan(0);
     expect(screen.getByRole("spinbutton", { name: "Unit price 餐具包" })).toHaveValue(0);
     expect(screen.getByRole("spinbutton", { name: "Unit price 餐具包" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Add to product catalog" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Utensil pack added" })).toBeDisabled();
     expect(screen.queryByRole("link", { name: "View quote" })).not.toBeInTheDocument();
     expect(screen.queryByText("PDF 內容")).not.toBeInTheDocument();
@@ -1436,7 +1446,8 @@ describe("Quote editor", () => {
       shopifyOrderId: 7808193593617,
       shopifyStoreDomain: "hklunchbox.myshopify.com",
       draft: {
-        channelId: "channel-1", customerName: "Customer", companyName: "Company",
+        famousBrandTagIds: ["customer-tag-1"],
+        channelId: "channel-1", customerName: "Customer", companyName: "Company", isHongKongFamousBrand: true,
         contactA: "12345678", contactB: "", email: "order@example.com", asanaLink: "",
         address: "1 Central Road", districtId: "district-1", districtName: "", shippingMethodId: "shipping-home",
         deliveryDate: "2026-08-21", deliveryTime: "12:00 - 13:00", shipOutTime: "11:00",
@@ -1469,6 +1480,14 @@ describe("Quote editor", () => {
     expect(screen.getByRole("heading", { name: /Payment records|付款紀錄/ })).toBeInTheDocument();
     expect(loadSummary).toHaveBeenCalledWith("order-1", "order");
     expect(screen.getByLabelText(/Customer note|客戶備註/)).toHaveValue("不要香菜");
+    const famousBrandSelect = screen.getByRole("combobox", { name: "Famous brand customers" });
+    await user.click(famousBrandSelect);
+    const famousBrandTag = screen.getByRole("option", { name: "沙田威爾斯" });
+    expect(famousBrandTag).toHaveAttribute("aria-selected", "true");
+    await user.click(famousBrandTag);
+    expect(famousBrandTag).toHaveAttribute("aria-selected", "false");
+    await user.click(famousBrandTag);
+    expect(famousBrandTag).toHaveAttribute("aria-selected", "true");
     expect(screen.getByText(/Shown on delivery note|送貨單顯示/)).toBeInTheDocument();
     expect(screen.queryByLabelText(/Success probability|成功機率/)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/Sales source|報價渠道/)).not.toBeInTheDocument();
@@ -1507,6 +1526,9 @@ describe("Quote editor", () => {
     );
     expect(detailShopifyLink.closest(".quote-readonly-order-number")).toBeInTheDocument();
     expect(screen.getByText(/Customer note|客戶備註/)).toBeInTheDocument();
+    const famousBrandField = screen.getByText("Famous brand customers").closest(".quote-readonly-field");
+    expect(famousBrandField).not.toBeNull();
+    expect(famousBrandField).toHaveTextContent("沙田威爾斯");
     expect(screen.getByText(/Shown on delivery note|送貨單顯示/)).toBeInTheDocument();
     expect(screen.queryByText(/Success probability|成功機率/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Sales source|報價渠道/)).not.toBeInTheDocument();

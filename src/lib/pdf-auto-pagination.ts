@@ -77,7 +77,12 @@ function pageContentBottom(page: HTMLElement, footer: HTMLElement) {
   // Once a fixed-height sheet overflows, its flex footer is pushed below the
   // visible A4 box. Using that displaced footer as the boundary makes clipped
   // modules look as though they still fit. Reconstruct the footer's intended
-  // top edge from the sheet itself and clamp to it.
+  // top edge from the sheet itself and clamp to it. When both the sheet and
+  // footer have zero-sized rectangles, layout has not happened yet (for
+  // example during a DOM-only test), so do not create a false page break from
+  // zero-sized rectangles. A measured footer is still useful for test
+  // doubles that do not provide a sheet rectangle.
+  if (pageRect.height <= 0 && footerRect.height <= 0) return Number.POSITIVE_INFINITY;
   if (pageRect.height <= 0) return footerRect.top;
 
   const paddingBottom = Number.parseFloat(window.getComputedStyle(page).paddingBottom) || 0;
@@ -86,7 +91,9 @@ function pageContentBottom(page: HTMLElement, footer: HTMLElement) {
 }
 
 export function splitPdfModuleIndexes(moduleCount: number, pageBreaks: number[]) {
-  const starts = [0, ...pageBreaks.filter((index) => index > 0 && index < moduleCount)];
+  // A break at 0 is valid: it leaves the product page's trailing area empty
+  // and moves the first trailing module to a continuation page.
+  const starts = [0, ...pageBreaks.filter((index) => index >= 0 && index < moduleCount)];
   return starts.map((start, pageIndex) => {
     const end = starts[pageIndex + 1] ?? moduleCount;
     return Array.from({ length: end - start }, (_, index) => start + index);

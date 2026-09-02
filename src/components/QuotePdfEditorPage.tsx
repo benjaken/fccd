@@ -786,7 +786,10 @@ export function QuotePdfEditorPage({
           <label htmlFor="quote-date">報價日期</label><PdfBlurCommitInput id="quote-date" inputMode="numeric" placeholder={t("quotes.pdfEditor.datePlaceholder")} value={draft.quoteDate} onDirty={markDraftDirty} onCommit={(value) => update("quoteDate", value)} />
           <label htmlFor="quote-contact">聯絡資料</label><PdfBlurCommitInput id="quote-contact" value={draft.contact} onDirty={markDraftDirty} onCommit={(value) => update("contact", value)} />
           <label htmlFor="quote-delivery-date">送貨日期</label><PdfBlurCommitInput id="quote-delivery-date" inputMode="numeric" placeholder={t("quotes.pdfEditor.datePlaceholder")} value={draft.deliveryDate} onDirty={markDraftDirty} onCommit={(value) => update("deliveryDate", value)} />
-          <label htmlFor="quote-address">送貨地址</label><PdfBlurCommitTextarea id="quote-address" rows={1} value={draft.deliveryAddress} onDirty={markDraftDirty} onCommit={(value) => update("deliveryAddress", value)} />
+          <label htmlFor="quote-address">送貨地址</label>
+          <div className="quote-pdf-address-control">
+            <PdfBlurCommitTextarea className="quote-pdf-address-textarea" id="quote-address" rows={1} value={draft.deliveryAddress} onDirty={markDraftDirty} onCommit={(value) => update("deliveryAddress", value)} />
+          </div>
           <label htmlFor="quote-delivery-time">送貨時段</label><PdfBlurCommitInput id="quote-delivery-time" value={draft.deliveryTime} onDirty={markDraftDirty} onCommit={(value) => update("deliveryTime", value)} />
         </div>
 

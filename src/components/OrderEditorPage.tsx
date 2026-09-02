@@ -125,6 +125,7 @@ function InputField({
         {required && <em>*</em>}
       </span>
       <input
+        aria-label={label}
         type={type}
         value={value}
         placeholder={placeholder}
@@ -282,6 +283,11 @@ export function OrderEditorPage({
     update("payments", draft.payments.map((payment, paymentIndex) => paymentIndex === index ? { ...payment, ...patch } : payment));
 
   const validate = () => {
+    if (copying && !draft.orderNumber.trim()) {
+      setStep("details");
+      setSaveError(t("orderEditor.copiedOrderNumberRequired"));
+      return false;
+    }
     if (
       !draft.customerName.trim() ||
       !draft.contactA.trim() ||
@@ -311,14 +317,15 @@ export function OrderEditorPage({
   const persistOrder = async (notifyByWati: boolean) => {
     setSaveError(null);
     if (!validate()) return;
+    const shouldNotifyByWati = notifyByWati && !copying;
     setSaving(true);
-    setSendingWati(notifyByWati);
+    setSendingWati(shouldNotifyByWati);
     try {
       const savedId = await saveEditor(draft);
-      if (notifyByWati) await sendWatiConfirmation(savedId);
+      if (shouldNotifyByWati) await sendWatiConfirmation(savedId);
       navigate(`/orders/${savedId}`, { replace: true });
     } catch {
-      setSaveError(notifyByWati ? "未能傳送 WATI 或電郵訂單確認通知；訂單內容仍然保留。" : "未能儲存訂單。請確認你的權限及資料後再試。");
+      setSaveError(shouldNotifyByWati ? "未能傳送 WATI 或電郵訂單確認通知；訂單內容仍然保留。" : "未能儲存訂單。請確認你的權限及資料後再試。");
     } finally {
       setSaving(false);
       setSendingWati(false);
@@ -418,7 +425,7 @@ export function OrderEditorPage({
                     label="單號"
                     value={draft.orderNumber}
                     placeholder={t("orderEditor.copiedOrderNumberPlaceholder")}
-                    disabled
+                    required
                     onChange={(value) => update("orderNumber", value)}
                   />
                 ) : (
@@ -580,7 +587,7 @@ export function OrderEditorPage({
             <Button type="button" onClick={() => setStep(STEPS[activeStepIndex + 1].id)}>下一步</Button>
           ) : (
             <>
-              {!editing ? <Button type="button" variant="outline" disabled={saving || checkingAddonBlockDate || !draft.deliveryAt} onClick={() => void persistOrder(true)}>
+              {!editing && !copying ? <Button type="button" variant="outline" disabled={saving || checkingAddonBlockDate || !draft.deliveryAt} onClick={() => void persistOrder(true)}>
                 {sendingWati ? <LoaderCircle className="spin" /> : <Save />}
                 {sendingWati ? "傳送中…" : addonBlockDate ? "傳送 WATI 及電郵訂單確認通知" : "傳送 WATI 及電郵訂單確認通知及加單 link"}
               </Button> : null}

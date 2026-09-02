@@ -115,6 +115,12 @@ describe("Shop sales and working-hours report", () => {
         name: "Daily sales-per-hour summary",
       }),
     ).toBeInTheDocument();
+    expect(
+      container.querySelector(".shop-sales-hours-report > .shop-sales-hours-summaries"),
+    ).toBeInTheDocument();
+    expect(
+      container.querySelector(".shop-sales-hours-content > .shop-sales-hours-summaries"),
+    ).not.toBeInTheDocument();
     expect(screen.getAllByText("$1,000.00").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("$36,000.00 / 36hrs")).toBeInTheDocument();
     expect(screen.getByText("$1,000.00 / hr")).toBeInTheDocument();

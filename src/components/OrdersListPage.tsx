@@ -129,6 +129,14 @@ function districtAndAddress(
   };
 }
 
+function orderPaidAmount(
+  order: Pick<OrderListItem, "grandTotal" | "outstanding" | "paidAmount">,
+) {
+  if (order.paidAmount !== undefined) return order.paidAmount;
+  if (order.grandTotal === null || order.outstanding === null) return null;
+  return Math.max(0, order.grandTotal - order.outstanding);
+}
+
 export function OrdersListPage({
   preset = "all",
   canViewFinance = true,
@@ -257,6 +265,9 @@ export function OrdersListPage({
   const statusFilter = useDeferredFilter(status, setStatus);
   const financeRestricted =
     !canViewFinance &&
+    (effectivePreset === "unpaid" || effectivePreset === "delivered-unpaid");
+  const showPaidAmount =
+    canViewFinance &&
     (effectivePreset === "unpaid" || effectivePreset === "delivered-unpaid");
 
   useEffect(() => {
@@ -799,6 +810,7 @@ export function OrdersListPage({
                     order.shippingMethodName,
                     order.address,
                   );
+                  const paidAmount = orderPaidAmount(order);
                   return (
                   <article className="mobile-list-card order-mobile-card" role="listitem" key={order.id}>
                     <header>
@@ -858,6 +870,12 @@ export function OrdersListPage({
                           <dd>{formatAmount(order.grandTotal, order.currency)}</dd>
                         </div>
                       ) : null}
+                      {showPaidAmount ? (
+                        <div>
+                          <dt>{t("orders.columns.paid")}</dt>
+                          <dd>{formatAmount(paidAmount, order.currency)}</dd>
+                        </div>
+                      ) : null}
                     </dl>
 
                     {order.tags?.length ? (
@@ -884,7 +902,7 @@ export function OrdersListPage({
               { width: "5rem" },
               ...(effectivePreset === "kitchen-notes" ? [{ width: "12rem" }] : []),
               ...(canViewFinance
-                ? [{ width: "5rem" }, { width: "5rem" }]
+                ? [{ width: "5rem" }, ...(showPaidAmount ? [{ width: "5rem" }] : [])]
                 : []),
               { width: "1.75rem", variant: "action" as const },
               { width: "1.75rem", variant: "action" as const },
@@ -927,6 +945,7 @@ export function OrdersListPage({
                 {canViewFinance && (
                   <th>{t("orders.columns.amount")}</th>
                 )}
+                {showPaidAmount && <th>{t("orders.columns.paid")}</th>}
                 {effectivePreset === "all" && <th>{t("orders.columns.todos")}</th>}
                 <th aria-label={t("orders.columns.actions")} />
               </tr>
@@ -938,6 +957,7 @@ export function OrdersListPage({
                 order.shippingMethodName,
                 order.address,
               );
+              const paidAmount = orderPaidAmount(order);
               const paymentTodoAliases = ["未完成付款", "未付款"];
               const factoryTodoAliases = ["未傳至工場", "未傳送到工場"];
               const kitchenTodoAliases = ["廚房備註"];
@@ -1082,6 +1102,9 @@ export function OrdersListPage({
                         {formatAmount(order.grandTotal, order.currency)}
                       </strong>
                     </td>
+                  )}
+                  {showPaidAmount && (
+                    <td>{formatAmount(paidAmount, order.currency)}</td>
                   )}
                   {effectivePreset === "all" ? (
                     <td>

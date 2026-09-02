@@ -39,6 +39,58 @@ final result: passed
 
 ---
 
+# Design QA - All sales and costs monthly-by-type comparison
+
+- Source visual truth: `C:\Users\ADMINI~1\AppData\Local\Temp\codex-clipboard-5a6e3a04-ce4d-43c6-a424-f07290c97927.png`
+- Browser-rendered implementation screenshots: `D:\work\FCCD\.design-qa\kitchen-sales-cost-transposed-merged-final.png` and `D:\work\FCCD\.design-qa\kitchen-sales-cost-transposed-merged-full.png`
+- Source pixels: 1064 x 894. Implementation viewport: 2048 x 894 at device scale factor 1; the full report remained horizontally contained after the type column was transposed.
+- State: Traditional Chinese, light theme, populated report, 2025 and 2026 selected.
+
+## Full-view comparison evidence
+
+The report now follows the requested reading direction: months run across the header, categories run down the left, and the selected years remain merged inside each monthly cell. 2025 uses the orange tone and 2026 uses the dark tone. Marketing remains a visible category row.
+
+## Focused region comparison evidence
+
+The January Google cell contains both `2025 $74,792 13%` and `2026 $37,010 16%`. Ratio values are calculated against that year's monthly Sales; annual totals use that year's total Sales. DOM geometry checks found zero amount/ratio overlaps and no horizontal overflow at the 2048 x 894 desktop viewport.
+
+## Required fidelity surfaces
+
+- Fonts and typography: existing FCCD font stack retained; amounts render at 11.52 px, year labels at 10.24 px, and ratios at 9.28 px to keep the merged cells legible.
+- Spacing and layout rhythm: one sticky type column, twelve month columns, one total column, alternating report stripes, and the existing left year filter are preserved.
+- Colors and visual tokens: existing report header, stripe, border, primary, and year-tone tokens are used; selected-year values are visually distinguishable.
+- Image quality and asset fidelity: existing logo and Lucide icons remain unchanged; no new raster assets were required.
+- Copy and content: Sales, Google, Facebook, Delivery charge, Food cost, Packing, Rent, Wages, Miscellaneous, Water, Electricity, Shopify, Marketing, and 銷售淨額 remain present.
+
+## Findings
+
+No actionable P0, P1, or P2 differences remain for the requested report view. The source image is a compact report crop while the implementation retains the application shell and left-side year filter; this is an intentional continuation of the previous layout request and is classified as P3.
+
+## Primary interactions and console
+
+- Unchecked 2026: only the 2025 value remained in the merged Google/January cell.
+- Rechecked 2026: both year values returned with their separate colors.
+- Verified the 14 category/type rows and all 14 month/total headers, including Marketing.
+- Browser console errors and warnings: none.
+
+## Comparison history
+
+- Pass 1: transposed the report from month rows/category columns to month columns/category rows.
+- Pass 2: restored merged selected-year values inside each cell with distinct year colors and added monthly/annual ratio values.
+- Pass 3: removed the legacy cell minimum width that caused a 15 px overflow and verified zero amount/ratio overlaps.
+
+## Verification
+
+- `npm run test:target -- test/kitchen-sales-cost-report-page.test.tsx test/kitchen-sales-cost-report.test.ts test/kitchen-channel-sales-report-page.test.tsx`: 4 tests passed.
+- `npm run lint`: passed.
+- `npm run check:edge-functions`: passed.
+- `npx vite build`: passed.
+- The full `npm run build` reached the complete test suite but remains blocked by five pre-existing `quote-pdf-editor` failures; no report test failed.
+
+final result: passed
+
+---
+
 # Design QA - All sales and costs multi-year matrix
 
 - Source visual truth: `C:\Users\ADMINI~1\AppData\Local\Temp\codex-clipboard-79679775-5eeb-42e1-989c-58e1b9ca351d.png`
@@ -312,5 +364,250 @@ No actionable P0, P1, or P2 issue remains. The reference shows the left sticky s
 - Browser console warnings: 0.
 - `npm run test:target -- test/kitchen-sales-cost-report-page.test.tsx`: 1 test passed.
 - `npm run lint`: passed.
+
+final result: passed
+
+---
+
+# Design QA - Report AI floating trigger alignment
+
+- Source visual truth: `C:\Users\ADMINI~1\AppData\Local\Temp\codex-clipboard-46853114-6bf8-40c9-8276-227197c38c43.png`
+- Browser-rendered implementation screenshot: `D:\work\FCCD\.design-qa\kitchen-sales-cost-ai-right-final.png`
+- Source pixels: 1972 x 830. Implementation CSS viewport: 1972 x 830 at device scale factor 1.
+- State: Traditional Chinese, light theme, all-sales-and-costs report populated.
+
+## Full-view comparison evidence
+
+The source highlighted the AI trigger appearing at the lower-left edge of the report content. The revised implementation puts the trigger at the lower-right edge, matching the other report pages and avoiding overlap with the left-side year filter.
+
+## Focused region comparison evidence
+
+Browser geometry measured the all-sales-and-costs trigger at `right: 39px`, `bottom: 24px`, `position: fixed`. Product sales, channel sales, and advertising performance were also checked; all four report routes now resolve to the right side with no left-side override.
+
+## Required fidelity surfaces
+
+- Fonts and typography: AI label, button size, and close affordance remain unchanged.
+- Spacing and layout rhythm: desktop and mobile safe-area offsets remain intact; only the horizontal anchor changed.
+- Colors and visual tokens: existing green AI button, white close control, border, and shadow are unchanged.
+- Image quality and asset fidelity: existing AI control and Lucide close icon remain unchanged; no new assets were introduced.
+- Copy and content: existing AI open/close accessible labels remain unchanged.
+
+## Findings
+
+No actionable P0, P1, or P2 issues remain. The AI trigger is consistently right-aligned across the four central-kitchen report pages.
+
+## Primary interactions and console
+
+- Checked all-sales-and-costs, product-sales, channel-sales, and advertising-performance routes.
+- Confirmed each route rendered the floating trigger on the right and no console errors or warnings were recorded.
+
+## Verification
+
+- `npm run lint`: passed.
+- `npm run test:target -- test/kitchen-sales-cost-report-page.test.tsx test/kitchen-channel-sales-report-page.test.tsx`: passed.
+
+final result: passed
+
+---
+
+# Design QA - Percentage readability in the merged comparison table
+
+- Source visual truth: `C:\Users\ADMINI~1\AppData\Local\Temp\codex-clipboard-f2792ff6-0f99-4bd3-9984-35b95cf69d5c.png` and `C:\Users\ADMINI~1\AppData\Local\Temp\codex-clipboard-88ad2e3d-b7ed-42cf-ab06-f4807ad5ff51.png`
+- Browser-rendered implementation screenshot: `D:\work\FCCD\.design-qa\kitchen-sales-cost-percentage-spacing-final.png`
+- Source pixels: 1244 x 700. Implementation CSS viewport: 2048 x 894 at device scale factor 1.
+- State: Traditional Chinese, light theme, populated all-sales-and-costs report, 2025 and 2026 selected.
+
+## Full-view comparison evidence
+
+The merged year comparison remains in each monthly cell with the existing orange 2025 and dark 2026 tones. Each selected year now presents the amount first and its percentage on a dedicated line below it, with a subtle top divider so the ratio is readable at a glance.
+
+## Focused region comparison evidence
+
+The Google January cell visibly separates `2025 $74,792` from `13%` and `2026 $37,010` from `16%`. Browser geometry measured zero overflowing comparison values and no table horizontal overflow at the verification viewport.
+
+## Required fidelity surfaces
+
+- Fonts and typography: existing report typography and numeric tabular styling remain in use; percentage labels are emphasized slightly for legibility.
+- Spacing and layout rhythm: comparison values use a two-line amount/percentage rhythm within the same year block; table columns and category order are unchanged.
+- Colors and visual tokens: 2025/2026 color differentiation and report table backgrounds remain unchanged.
+- Image quality and asset fidelity: existing logo, icons, and AI control remain unchanged; no new assets were introduced.
+- Copy and content: all categories, including Marketing, remain rendered; no data or labels were removed.
+
+## Findings
+
+No actionable P0, P1, or P2 issues remain. The percentage is no longer visually attached to the amount or allowed to overlap it.
+
+## Primary interactions and console
+
+- Confirmed the 2025 and 2026 merged comparison content remains visible in the same cells.
+- Browser console errors: 0.
+- Browser console warnings: 0.
+
+## Verification
+
+- `npm run test:target -- test/kitchen-sales-cost-report-page.test.tsx test/kitchen-channel-sales-report-page.test.tsx`: 2 test files and 2 tests passed.
+- `npm run lint`: passed.
+- `npx vite build`: passed.
+
+final result: passed
+
+---
+
+# Design QA - Larger report typography and red percentages
+
+- Source visual truth: `C:\Users\ADMINI~1\AppData\Local\Temp\codex-clipboard-72c3bf45-b468-4cbe-9030-81e9c5a4d8b0.png`
+- Browser-rendered implementation screenshot: `D:\work\FCCD\.design-qa\kitchen-sales-cost-font-red-percentage-1920.png`
+- Source pixels: 1904 x 951. Implementation CSS viewport: 1920 x 894 at device scale factor 1.
+- State: Traditional Chinese, light theme, populated all-sales-and-costs report, 2025 and 2026 selected.
+
+## Full-view comparison evidence
+
+Report year labels, amounts, and percentages were increased for readability. Percentages now use the destructive red token while 2025/2026 amount colors remain orange and dark for year comparison.
+
+## Focused region comparison evidence
+
+The Google January cell reads `2025 $74,792 | 13%` and `2026 $37,010 | 16%`; browser geometry found zero amount/percentage overlaps and zero overflowing comparison values after the size increase.
+
+## Required fidelity surfaces
+
+- Fonts and typography: year labels are 11.2 px, amounts are 11.84 px, and percentages are 9.92 px at the desktop verification viewport.
+- Spacing and layout rhythm: year labels occupy their own line and amount/percentage share the second line, preventing long amounts from colliding with ratios.
+- Colors and visual tokens: percentages use `var(--destructive)`; existing year tones and report backgrounds remain unchanged.
+- Image quality and asset fidelity: existing logo, icons, and AI control remain unchanged; no new assets were introduced.
+- Copy and content: values, year selections, categories, and summary rows remain unchanged.
+
+## Findings
+
+No actionable P0, P1, or P2 issues remain. The typography is more legible and percentages are visually distinct through both color and spacing.
+
+## Primary interactions and console
+
+- Confirmed the merged 2025/2026 values remain in the same cells.
+- Confirmed the table retains no horizontal overflow and the page remains viewport-contained at 1920 px.
+- Browser console errors: 0.
+- Browser console warnings: 0.
+
+## Verification
+
+- `npm run test:target -- test/kitchen-sales-cost-report-page.test.tsx test/kitchen-channel-sales-report-page.test.tsx`: 2 test files and 2 tests passed.
+- `npm run lint`: passed.
+- `npx vite build`: passed.
+
+final result: passed
+
+---
+
+# Design QA - Clean merged-cell hierarchy
+
+- Source visual truth: `C:\Users\ADMINI~1\AppData\Local\Temp\codex-clipboard-3a802c3c-edf0-423d-a9b8-f9b1895db3df.png`
+- Browser-rendered implementation screenshots: `D:\work\FCCD\.design-qa\kitchen-sales-cost-clean-layout-1920.png` and `D:\work\FCCD\.design-qa\kitchen-sales-cost-clean-layout-1920-scrolled.png`
+- Source pixels: 1904 x 951. Implementation CSS viewport: 1920 x 894 at device scale factor 1.
+- State: Traditional Chinese, light theme, populated all-sales-and-costs report, 2025 and 2026 selected.
+
+## Full-view comparison evidence
+
+The table no longer repeats `2025` and `2026` inside every cell. A single legend explains the orange 2025 row, dark 2026 row, and red percentage values, leaving each cell focused on the amount and ratio.
+
+## Focused region comparison evidence
+
+The Google January cell reads as two clean value lines with the red ratios separated by a vertical rule. The scrolled state shows the lower categories, including Marketing, while the sticky 銷售淨額 row remains visible at the bottom.
+
+## Required fidelity surfaces
+
+- Fonts and typography: amount and percentage text remain enlarged from the previous version; year labels are retained in accessible labels and the visible legend.
+- Spacing and layout rhythm: removing repeated year text gives the amount and ratio a wider, calmer reading area without changing the month/category matrix.
+- Colors and visual tokens: 2025 and 2026 amount colors remain unchanged; percentages use the destructive red token.
+- Image quality and asset fidelity: existing logo, icons, and AI control remain unchanged; no new assets were introduced.
+- Copy and content: all category rows remain present, including Marketing and 銷售淨額.
+
+## Findings
+
+No actionable P0, P1, or P2 issues remain. The main readability issue was caused by repeated labels competing with numeric values; the legend now provides the year mapping once per table.
+
+## Primary interactions and console
+
+- Captured the initial view and the inner-scrolled view.
+- Confirmed no horizontal overflow at 1920 px and no page-level scroll.
+- Confirmed the sticky net-sales row remains visible after inner scrolling.
+- Browser console errors: 0.
+- Browser console warnings: 0.
+
+## Verification
+
+- `npm run test:target -- test/kitchen-sales-cost-report-page.test.tsx test/kitchen-channel-sales-report-page.test.tsx`: 2 test files and 2 tests passed.
+- `npm run lint`: passed.
+- `npx vite build`: passed.
+
+final result: passed
+
+---
+
+# Design QA - Separated amount and percentage rows
+
+- Source visual truth: `C:\Users\ADMINI~1\AppData\Local\Temp\codex-clipboard-61ec6cdb-c319-4363-8ecc-798167e578d4.png`
+- Browser-rendered implementation screenshot: `D:\work\FCCD\.design-qa\kitchen-sales-cost-overlap-fix-1920.png`
+- State: Traditional Chinese, light theme, populated all-sales-and-costs report, 2025 and 2026 selected.
+
+## Finding
+
+The amount and percentage now occupy separate rows within each year value. The red percentage no longer shares the amount's horizontal line, so long totals such as `$1,061,185` remain readable without painting over `26%`.
+
+## Verification
+
+- No geometric overlap between amount and percentage boxes; no amount text is clipped.
+- Table `scrollWidth` equals `clientWidth` at 1920 px, and the page has no horizontal overflow.
+- The net-sales footer remains sticky at the bottom of the inner table scroll area.
+- Browser console errors: 0.
+- Browser console warnings: 0.
+
+## Automated checks
+
+- `npm run test:target -- test/kitchen-sales-cost-report-page.test.tsx test/kitchen-channel-sales-report-page.test.tsx`: passed.
+- `npm run lint`: passed.
+- `npx vite build`: passed.
+
+final result: passed
+
+---
+
+# Design QA - Fixed report viewport and sticky net-sales summary
+
+- Source visual truth: `C:\Users\ADMINI~1\AppData\Local\Temp\codex-clipboard-72c3bf45-b468-4cbe-9030-81e9c5a4d8b0.png`
+- Browser-rendered implementation screenshots: `D:\work\FCCD\.design-qa\kitchen-sales-cost-sticky-net-1920.png` and `D:\work\FCCD\.design-qa\kitchen-sales-cost-sticky-net-1920-scrolled.png`
+- Source pixels: 1904 x 951. Implementation CSS viewport: 1920 x 894 at device scale factor 1.
+- State: Traditional Chinese, light theme, populated all-sales-and-costs report, 2025 and 2026 selected.
+
+## Full-view comparison evidence
+
+The report now fits the desktop viewport without page-level scrolling. The year filter is a compact 176 px side panel, the comparison table fills the remaining width, and the table owns the vertical scroll region.
+
+## Focused region comparison evidence
+
+The table has no horizontal overflow at 1920 px: its `scrollWidth` equals its `clientWidth` at 1424 px. After the inner table scroll reached `scrollTop: 403`, the `tfoot` net-sales cells remained sticky at the scroll viewport bottom (`top: 793.78px`, `bottom: 872.53px`, viewport bottom `873px`). The scrolled screenshot shows the lower categories, including Marketing, while the net-sales row stays visible.
+
+## Required fidelity surfaces
+
+- Fonts and typography: existing report font stack, numeric formatting, and percentage hierarchy remain unchanged.
+- Spacing and layout rhythm: the left year filter is compressed without removing the year choices; the report uses the available desktop height and reserves the bottom summary row.
+- Colors and visual tokens: existing report header, stripe, year colors, and net-summary tokens remain in use.
+- Image quality and asset fidelity: existing logo, icons, and AI control remain unchanged; no new assets were introduced.
+- Copy and content: all categories remain present, including Marketing and 銷售淨額.
+
+## Findings
+
+No actionable P0, P1, or P2 issues remain. The page-level scrollbar is removed for desktop report use, while the table retains an intentional internal vertical scrollbar and a fixed bottom summary.
+
+## Primary interactions and console
+
+- Scrolled the table internally and confirmed the net-sales summary remains visible.
+- Confirmed the year selector remains interactive and the merged 2025/2026 values remain in the same cells.
+- Browser console errors: 0.
+- Browser console warnings: 0.
+
+## Verification
+
+- `npm run test:target -- test/kitchen-sales-cost-report-page.test.tsx test/kitchen-channel-sales-report-page.test.tsx`: 2 test files and 2 tests passed.
+- `npm run lint`: passed.
+- `npx vite build`: passed.
 
 final result: passed

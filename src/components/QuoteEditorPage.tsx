@@ -25,6 +25,7 @@ import {
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { FilterableSelect } from "@/components/ui/filterable-select";
+import { MultiSelect } from "@/components/ui/multi-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { OrderFactorySettingsControls } from "@/components/order-factory-settings-controls";
@@ -130,6 +131,7 @@ const EMPTY_OPTIONS: QuoteEditorOptions = {
   salesPartners: [],
   orderTags: [],
   paymentMethods: [],
+  customerTags: [],
 };
 
 const DELIVERY_ADDRESS_METHODS = new Set(["車邊交收", "送貨上門"]);
@@ -158,6 +160,7 @@ function hongKongToday() {
 
 function emptyDraft(): QuoteDraft {
   return {
+    orderNumber: "",
     channelId: "",
     quoteStatus: "",
     quoteSalesSourceId: "",
@@ -165,6 +168,7 @@ function emptyDraft(): QuoteDraft {
     followUpDate: "",
     customerName: "",
     companyName: "",
+    famousBrandTagIds: [],
     isHongKongFamousBrand: false,
     contactA: "",
     contactB: "",
@@ -778,6 +782,7 @@ export function QuoteEditorPage({
 
   const validateDetails = () => {
     const nextErrors: Record<string, string> = {};
+    if (copyFrom && !draft.orderNumber?.trim()) nextErrors.orderNumber = t("quoteEditor.validation.number");
     if (!draft.channelId) nextErrors.channelId = t("quoteEditor.validation.brand");
     if (!draft.customerName.trim()) nextErrors.customerName = t("quoteEditor.validation.customer");
     if (!draft.contactA.trim()) nextErrors.contactA = t("quoteEditor.validation.contact");
@@ -1520,7 +1525,12 @@ export function QuoteEditorPage({
   const lineSkuContent = (line: QuoteLine) => (
     <span className="quote-line-sku-content">
       <span>{line.sku || "—"}</span>
-      {!line.sku && !line.packageId && line.name?.trim() && canCreateProduct && (!readOnly || canEdit) ? (
+      {!line.sku
+        && !line.packageId
+        && line.name?.trim()
+        && !isFreeUtensilPackLine(line)
+        && canCreateProduct
+        && (!readOnly || canEdit) ? (
         <Button
           type="button"
           variant="outline"
@@ -1946,6 +1956,8 @@ export function QuoteEditorPage({
     }
   };
 
+  const famousBrandTagOptions = options.customerTags ?? [];
+
   if (loading) return <PageSkeleton detailLayout="document" label={t("quoteEditor.loading")} variant="detail" />;
 
   if (readOnly && activeQuote) {
@@ -1959,6 +1971,7 @@ export function QuoteEditorPage({
       items.find((item) => item.id === value)?.name || value || "-";
     const districtName = automaticDistrictName || draft.districtName || optionName(districts, draft.districtId);
     const selectedTags = options.orderTags.filter((item) => draft.tagIds.includes(item.id));
+    const selectedFamousBrandTags = famousBrandTagOptions.filter((item) => (draft.famousBrandTagIds ?? []).includes(item.id));
     const paid = payments.reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0);
     const showConvertAction = !isOrder;
 
@@ -2086,7 +2099,14 @@ export function QuoteEditorPage({
             <ReadonlyField label={t("quoteEditor.fields.brand")} value={optionName(options.channels, draft.channelId)} />
             <ReadonlyField label={t("quoteEditor.fields.customerName")} value={draft.customerName} />
             <ReadonlyField label={t("quoteEditor.fields.companyName")} value={draft.companyName} />
-            {!isOrder ? <ReadonlyField label={t("quoteEditor.fields.hongKongFamousBrand")} value={draft.isHongKongFamousBrand ? t("common.yes") : t("common.no")} /> : null}
+            <div className="quote-readonly-field">
+              <span>{t("quoteEditor.fields.famousBrandCustomerTagsDetail")}</span>
+              <div className="quote-readonly-tags">
+                {selectedFamousBrandTags.length
+                  ? selectedFamousBrandTags.map((tag) => <span key={tag.id}>{tag.name}</span>)
+                  : <strong>-</strong>}
+              </div>
+            </div>
             <ReadonlyField label={t("quoteEditor.fields.contactA")} value={draft.contactA} />
             <ReadonlyField label={t("quoteEditor.fields.contactB")} value={draft.contactB} />
             <ReadonlyField label={t("quoteEditor.fields.email")} value={draft.email} />
@@ -2235,9 +2255,20 @@ export function QuoteEditorPage({
           <div className="quote-editor-form-column">
             <h2><FileText />{t("quoteEditor.customerSection")}</h2>
             <label className="quote-order-number-field">
-              <span>{t("quoteEditor.fields.number")}</span>
+              <span>{t("quoteEditor.fields.number")}{copyFrom ? " *" : ""}</span>
               <div className="quote-order-number-control">
-                <input value={activeQuote?.orderNumber || t("quoteEditor.autoNumber")} disabled />
+                {copyFrom ? (
+                  <input
+                    required
+                    aria-label={t("quoteEditor.fields.number")}
+                    value={draft.orderNumber ?? ""}
+                    placeholder={t("quoteEditor.manualNumberPlaceholder")}
+                    onChange={(event) => patchDraft({ orderNumber: event.target.value })}
+                    aria-invalid={Boolean(fieldErrors.orderNumber)}
+                  />
+                ) : (
+                  <input value={activeQuote?.orderNumber || t("quoteEditor.autoNumber")} disabled />
+                )}
                 {activeQuote && activeShopifyUrl ? (
                   <a
                     className="shopify-order-icon"
@@ -2251,6 +2282,7 @@ export function QuoteEditorPage({
                   </a>
                 ) : null}
               </div>
+              {fieldErrors.orderNumber && <em>{fieldErrors.orderNumber}</em>}
             </label>
             <label><span>{t("quoteEditor.fields.brand")} *</span>
               <FilterableSelect required value={draft.channelId} onChange={(event) => patchDraft({ channelId: event.target.value })} aria-invalid={Boolean(fieldErrors.channelId)}>
@@ -2260,8 +2292,29 @@ export function QuoteEditorPage({
               {fieldErrors.channelId && <em>{fieldErrors.channelId}</em>}
             </label>
             <label><span>{t("quoteEditor.fields.customerName")} *</span><input required aria-label={t("quoteEditor.fields.customerName")} value={draft.customerName} onChange={(event) => patchDraft({ customerName: event.target.value })} aria-invalid={Boolean(fieldErrors.customerName)} />{fieldErrors.customerName && <em>{fieldErrors.customerName}</em>}</label>
-            <label><span>{t("quoteEditor.fields.companyName")}</span><input aria-label={t("quoteEditor.fields.companyName")} value={draft.companyName} onChange={(event) => patchDraft({ companyName: event.target.value })} /></label>
-            {!isOrder ? <label className="quote-editor-checkbox"><span>{t("quoteEditor.fields.hongKongFamousBrand")}</span><input aria-label={t("quoteEditor.fields.hongKongFamousBrand")} type="checkbox" checked={draft.isHongKongFamousBrand} onChange={(event) => patchDraft({ isHongKongFamousBrand: event.target.checked })} /></label> : null}
+            <label>
+              <span>{t("quoteEditor.fields.companyName")}</span>
+              <input id="quote-editor-company-name" aria-label={t("quoteEditor.fields.companyName")} value={draft.companyName} onChange={(event) => patchDraft({ companyName: event.target.value })} />
+            </label>
+            <div className="quote-editor-tags quote-editor-famous-brand-tags">
+              <span id="quote-editor-famous-brand-tags-label">
+                {t("quoteEditor.fields.famousBrandCustomerTags")}
+              </span>
+              <MultiSelect
+                id="quote-editor-famous-brand-tags"
+                labelledBy="quote-editor-famous-brand-tags-label"
+                options={famousBrandTagOptions.map((tag) => ({ id: tag.id, name: tag.name }))}
+                value={draft.famousBrandTagIds ?? []}
+                onChange={(next) => patchDraft({
+                  famousBrandTagIds: next,
+                  isHongKongFamousBrand: next.length > 0,
+                })}
+                placeholder={t("quoteEditor.fields.famousBrandCustomerTagsPlaceholder")}
+                searchPlaceholder={t("common.filterSelectSearchLabel")}
+                emptyLabel={t("quoteEditor.fields.famousBrandCustomerTagsEmpty")}
+                disabled={famousBrandTagOptions.length === 0}
+              />
+            </div>
             <label><span>{t("quoteEditor.fields.contactA")} *</span><input required aria-label={t("quoteEditor.fields.contactA")} type="tel" value={draft.contactA} onChange={(event) => patchDraft({ contactA: event.target.value })} aria-invalid={Boolean(fieldErrors.contactA)} />{fieldErrors.contactA && <em>{fieldErrors.contactA}</em>}</label>
             <label><span>{t("quoteEditor.fields.contactB")}</span><input type="tel" value={draft.contactB} onChange={(event) => patchDraft({ contactB: event.target.value })} /></label>
             <label><span>{t("quoteEditor.fields.email")} *</span><input required aria-label={t("quoteEditor.fields.email")} type="email" value={draft.email} onChange={(event) => patchDraft({ email: event.target.value })} aria-invalid={Boolean(fieldErrors.email)} />{fieldErrors.email && <em>{fieldErrors.email}</em>}</label>

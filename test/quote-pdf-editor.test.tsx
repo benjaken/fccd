@@ -183,7 +183,12 @@ describe("editable quote PDF page", () => {
   it("keeps a single-line delivery address at one textarea row", async () => {
     renderPage();
 
-    await waitFor(() => expect(document.querySelector("#quote-address")).toHaveAttribute("rows", "1"));
+    await waitFor(() => {
+      const address = document.querySelector("#quote-address");
+      expect(address).toHaveAttribute("rows", "1");
+      expect(address?.parentElement).toHaveClass("quote-pdf-address-control");
+      expect(address?.parentElement?.parentElement).toHaveClass("quote-pdf-meta-grid");
+    });
   });
 
   it("inserts all active brand pages before and after the generated quote", async () => {

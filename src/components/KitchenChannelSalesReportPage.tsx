@@ -676,7 +676,8 @@ export function KitchenChannelSalesReportPage() {
               {selectedYears.length ? (
                 <div className="kitchen-channel-sales-layout">
                   <ReportTable channels={channels} summaries={summaries} />
-                  <aside
+                  {false ? (
+                    <aside
                     className="kitchen-channel-sales-charts"
                     aria-label="頻道銷售圖表"
                   >
@@ -689,7 +690,8 @@ export function KitchenChannelSalesReportPage() {
                       summaries={summaries}
                       onExpand={() => setExpandedChart("mix")}
                     />
-                  </aside>
+                    </aside>
+                  ) : null}
                 </div>
               ) : (
                 <section className="panel kitchen-sales-cost-empty">
