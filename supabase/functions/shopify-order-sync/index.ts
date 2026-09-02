@@ -1409,6 +1409,7 @@ async function processMappedOrders(
           optionRemark,
           variantRemark,
           existing: line.row.remarks_1,
+          productName: rawName,
         }),
       };
     });
