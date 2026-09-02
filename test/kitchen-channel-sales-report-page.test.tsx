@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
@@ -33,6 +33,10 @@ describe("central kitchen channel sales report page", () => {
     );
 
     await user.click(await screen.findByRole("button", { name: "全選" }));
+
+    const workspace = container.querySelector(".kitchen-channel-sales-workspace");
+    expect(workspace?.firstElementChild).toHaveClass("kitchen-sales-cost-sidebar");
+    expect(within(workspace as HTMLElement).getByLabelText("報表篩選")).toBeInTheDocument();
 
     await waitFor(() => {
       const yearValues = Array.from(

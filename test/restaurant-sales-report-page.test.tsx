@@ -10,8 +10,8 @@ import { selectDateRange } from "./calendar-test-helpers";
 const rows: RestaurantSalesReportRow[] = [
   {
     bucketStart: "2026-01-01",
-    restaurantId: "ylp",
-    restaurantName: "YLP 桂花小幸 元朗",
+    restaurantId: "tko",
+    restaurantName: "TKO 桂花小幸 將軍澳",
     restaurantOrder: 1,
     categoryKey: "shop_sales",
     categoryName: "店舖銷售",
@@ -20,8 +20,8 @@ const rows: RestaurantSalesReportRow[] = [
   },
   {
     bucketStart: "2026-01-01",
-    restaurantId: "ylp",
-    restaurantName: "YLP 桂花小幸 元朗",
+    restaurantId: "tko",
+    restaurantName: "TKO 桂花小幸 將軍澳",
     restaurantOrder: 1,
     categoryKey: "foodpanda",
     categoryName: "Foodpanda",
@@ -69,7 +69,7 @@ describe("RestaurantSalesReportPage", () => {
       }),
     );
     expect(
-      await screen.findByRole("columnheader", { name: "YLP 桂花小幸 元朗" }),
+      await screen.findByRole("columnheader", { name: "TKO 桂花小幸 將軍澳" }),
     ).toBeInTheDocument();
     expect(screen.getByText("店舖銷售")).toBeInTheDocument();
     expect(screen.getByText("$900,776.00")).toBeInTheDocument();
@@ -165,9 +165,9 @@ describe("RestaurantSalesReportPage", () => {
     expect(await screen.findByRole("combobox", { name: "餐廳" })).toBeInTheDocument();
     expect(await screen.findByText("$900,776.00")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "YLP 桂花小幸 元朗" }));
+    await user.click(screen.getByRole("button", { name: "TKO 桂花小幸 將軍澳" }));
 
-    expect(await screen.findByText("所選條件沒有銷售資料。")).toBeInTheDocument();
+    expect(await screen.findByText("請至少選擇一間餐廳。")).toBeInTheDocument();
     expect(screen.queryByText("$900,776.00")).not.toBeInTheDocument();
   });
 });

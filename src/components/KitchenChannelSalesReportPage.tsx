@@ -6,7 +6,6 @@ import {
   type KeyboardEvent,
 } from "react";
 import { CalendarDays, Maximize2, RefreshCw } from "lucide-react";
-import { Link } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
@@ -546,20 +545,6 @@ function ChannelMixChart({
   );
 }
 
-function ReportTabs() {
-  return (
-    <nav className="report-tabs kitchen-sales-cost-tabs" aria-label="中央廚房報表分類">
-      <Link to="/reports/kitchen">所有銷售及成本</Link>
-      <Link className="active" to="/reports/kitchen/channel-sales">
-        頻道銷售
-      </Link>
-      <Link to="/reports/kitchen/product-sales">產品銷售</Link>
-      <button disabled type="button">訂單項別報表</button>
-      <Link to="/reports/kitchen/advertising-performance">廣告表現</Link>
-    </nav>
-  );
-}
-
 export function KitchenChannelSalesReportPage() {
   const [report, setReport] = useState<KitchenChannelSalesReport | null>(null);
   const [selectedYears, setSelectedYears] = useState<number[]>([]);
@@ -650,8 +635,7 @@ export function KitchenChannelSalesReportPage() {
           <h1>頻道銷售</h1>
         </div>
       </header>
-      <div className="report-ai-nav-row">
-        <ReportTabs />
+      <div className="report-ai-nav-row report-ai-actions-only">
         <ReportAiTrigger />
       </div>
 
@@ -680,35 +664,41 @@ export function KitchenChannelSalesReportPage() {
       ) : null}
       {report && years.length ? (
         <>
-          <YearSelector
-            years={years}
-            selectedYears={selectedYears}
-            onChange={setSelectedYears}
-          />
-          {selectedYears.length ? (
-            <div className="kitchen-channel-sales-layout">
-              <ReportTable channels={channels} summaries={summaries} />
-              <aside
-                className="kitchen-channel-sales-charts"
-                aria-label="頻道銷售圖表"
-              >
-                <MonthlyTrendChart
-                  summaries={summaries}
-                  onExpand={() => setExpandedChart("trend")}
-                />
-                <ChannelMixChart
-                  channels={channels}
-                  summaries={summaries}
-                  onExpand={() => setExpandedChart("mix")}
-                />
-              </aside>
+          <div className="kitchen-sales-cost-workspace kitchen-channel-sales-workspace">
+            <aside className="kitchen-sales-cost-sidebar" aria-label="報表篩選">
+              <YearSelector
+                years={years}
+                selectedYears={selectedYears}
+                onChange={setSelectedYears}
+              />
+            </aside>
+            <div className="kitchen-channel-sales-content">
+              {selectedYears.length ? (
+                <div className="kitchen-channel-sales-layout">
+                  <ReportTable channels={channels} summaries={summaries} />
+                  <aside
+                    className="kitchen-channel-sales-charts"
+                    aria-label="頻道銷售圖表"
+                  >
+                    <MonthlyTrendChart
+                      summaries={summaries}
+                      onExpand={() => setExpandedChart("trend")}
+                    />
+                    <ChannelMixChart
+                      channels={channels}
+                      summaries={summaries}
+                      onExpand={() => setExpandedChart("mix")}
+                    />
+                  </aside>
+                </div>
+              ) : (
+                <section className="panel kitchen-sales-cost-empty">
+                  <strong>請選擇至少一個年份</strong>
+                  <span>勾選左側年份後，即可查看頻道銷售明細。</span>
+                </section>
+              )}
             </div>
-          ) : (
-            <section className="panel kitchen-sales-cost-empty">
-              <strong>請選擇至少一個年份</strong>
-              <span>勾選上方年份後，即可查看頻道銷售明細。</span>
-            </section>
-          )}
+          </div>
           <Modal
             open={expandedChart !== null}
             title={expandedChart === "mix" ? "各頻道年度銷售分布" : "每月頻道銷售總額"}

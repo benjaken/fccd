@@ -1,7 +1,7 @@
 import { Download } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import {
   REPORT_GROUP_TABS,
@@ -49,11 +49,18 @@ function currentMonthRange() {
   return { start: format(start), end: format(end) };
 }
 
+function ReportAiFloatingTrigger({ routeKey }: { routeKey: string }) {
+  return <ReportAiTrigger key={routeKey} />;
+}
+
 export function ReportsPage({ group }: { group: ReportGroup }) {
   const { t, i18n } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const pageAccess = useCurrentPageAccess();
+  const navContext = new URLSearchParams(location.search).get("nav");
+  const reportPath = (path: string) =>
+    navContext ? `${path}?nav=${encodeURIComponent(navContext)}` : path;
   const reportTabs = REPORT_GROUP_TABS[group];
   const visibleTabs = useMemo(
     () =>
@@ -82,8 +89,10 @@ export function ReportsPage({ group }: { group: ReportGroup }) {
   useEffect(() => {
     if (!activeTab) return;
     const activePath = REPORT_TAB_ROUTES[activeTab];
-    if (location.pathname !== activePath) navigate(activePath, { replace: true });
-  }, [activeTab, location.pathname, navigate]);
+    if (location.pathname !== activePath) {
+      navigate(reportPath(activePath), { replace: true });
+    }
+  }, [activeTab, location.pathname, navContext, navigate]);
 
   const quantity = new Intl.NumberFormat(i18n.language, {
     maximumFractionDigits: 3,
@@ -277,23 +286,6 @@ export function ReportsPage({ group }: { group: ReportGroup }) {
           <h1>{t(`reports.groups.${group}.title`)}</h1>
         </div>
       </section>
-      <div className="report-ai-nav-row">
-        {visibleTabs.length > 1 || group === "shops" ? (
-          <nav className="report-tabs" aria-label={t("reports.navigation")}>
-            {visibleTabs.map((tab) => (
-              <Link
-                aria-current={activeTab === tab ? "page" : undefined}
-                className={cn(activeTab === tab && "active")}
-                key={tab}
-                to={REPORT_TAB_ROUTES[tab]}
-              >
-                {t(`reports.tabs.${tab}`)}
-              </Link>
-            ))}
-          </nav>
-        ) : null}
-        <ReportAiTrigger />
-      </div>
       {activeTab === "shopSales" ? (
         <RestaurantSalesReportPage embedded />
       ) : activeTab === "shopSalesWorkingHours" ? (
@@ -456,6 +448,9 @@ export function ReportsPage({ group }: { group: ReportGroup }) {
           mode={activeTab === "averageSupplyPrice" ? "shop" : "factory"}
         />
       )}
+      <ReportAiFloatingTrigger
+        routeKey={`${location.pathname}${location.search}`}
+      />
     </div>
     </ReportAiWorkspace>
   );

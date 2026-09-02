@@ -13,6 +13,7 @@ import {
   type RestaurantSalesSalaryRow,
 } from "@/lib/restaurant-sales-salary-report";
 import {
+  defaultShopReportRestaurantIds,
   fetchShopReportRestaurants,
   type ShopReportRestaurant,
 } from "@/lib/shop-sales-working-hours-report";
@@ -94,7 +95,7 @@ export function RestaurantSalesSalaryReport({
       .then((items) => {
         if (!active) return;
         setRestaurants(items);
-        setSelectedIds(items.map((item) => item.id));
+        setSelectedIds(defaultShopReportRestaurantIds(items));
         if (!items.length) setLoading(false);
       })
       .catch((loadError: unknown) => {
@@ -139,7 +140,7 @@ export function RestaurantSalesSalaryReport({
   const reset = () => {
     setStartMonth(defaults.startMonth);
     setEndMonth(defaults.endMonth);
-    setSelectedIds(restaurants.map((item) => item.id));
+    setSelectedIds(defaultShopReportRestaurantIds(restaurants));
   };
   const aiSnapshot = useMemo(
     () =>

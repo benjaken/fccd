@@ -82,7 +82,7 @@ describe("Shop sales and working-hours report", () => {
     expect(tables[1].departments.map((item) => item.name)).toEqual(["樓面"]);
   });
 
-  it("loads all shops by default and renders a table for each one", async () => {
+  it("selects only Tseung Kwan O by default", async () => {
     await i18n.changeLanguage("en");
     const loadRestaurants = vi.fn().mockResolvedValue([
       { id: "tko", name: "TKO 桂花小幸 將軍澳" },
@@ -104,12 +104,12 @@ describe("Shop sales and working-hours report", () => {
       }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", {
+      screen.queryByRole("heading", {
         level: 2,
         name: "YLP 桂花小幸 元朗",
       }),
-    ).toBeInTheDocument();
-    expect(container.querySelectorAll(".shop-sales-hours-table")).toHaveLength(2);
+    ).not.toBeInTheDocument();
+    expect(container.querySelectorAll(".shop-sales-hours-table")).toHaveLength(1);
     expect(
       screen.getByRole("complementary", {
         name: "Daily sales-per-hour summary",
@@ -120,7 +120,7 @@ describe("Shop sales and working-hours report", () => {
     expect(screen.getByText("$1,000.00 / hr")).toBeInTheDocument();
     await waitFor(() =>
       expect(loadReport).toHaveBeenCalledWith(
-        expect.objectContaining({ restaurantIds: ["tko", "ylp"] }),
+        expect.objectContaining({ restaurantIds: ["tko"] }),
       ),
     );
   });
