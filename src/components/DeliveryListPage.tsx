@@ -37,6 +37,7 @@ import {
 } from "@/lib/deliveries";
 import { useDeferredFilter } from "@/lib/use-deferred-filter";
 import { cn } from "@/lib/utils";
+import { formatOrderNumber } from "@/lib/order-number";
 
 type DeliveriesLoader = (
   filters: DeliveryListFilters,
@@ -62,13 +63,6 @@ const DELIVERY_SKELETON_COLUMNS = [
   { width: "7rem", variant: "badge" as const },
   { width: "9rem", variant: "action" as const },
 ];
-
-function formatOrderNumber(value: string | null | undefined) {
-  const trimmed = value?.trim();
-  if (!trimmed) return null;
-  if (trimmed.startsWith("#") || /[A-Za-z]/.test(trimmed)) return trimmed;
-  return `#${trimmed}`;
-}
 
 export function DeliveryListPage({
   canEdit = false,
@@ -501,29 +495,6 @@ export function DeliveryListPage({
           <span className="eyebrow">{t("deliveryList.eyebrow")}</span>
           <h1>{t("deliveryList.title")}</h1>
         </div>
-        <div className="heading-actions delivery-list-heading-actions">
-          {selectedTeam ? (
-            <aside className="delivery-fleet-summary" aria-label="已選車隊資料">
-              <dl>
-                <div><dt>車隊:</dt><dd>{selectedTeam.name}</dd></div>
-                <div><dt>日期:</dt><dd>{summaryDateRange}</dd></div>
-                <div className="delivery-fleet-summary-payment"><dt>付款方式:</dt><dd>{selectedTeam.bankAccount || "—"}</dd></div>
-              </dl>
-              <Button type="button" onClick={() => void openPrintPreview()} disabled={printLoading || loading || total === 0}>
-                <Printer />
-                列印
-              </Button>
-            </aside>
-          ) : null}
-          <Button
-            type="button"
-            onClick={() => void exportCsv()}
-            disabled={exporting || loading || total === 0}
-          >
-            <Download />
-            {exporting ? t("deliveryList.exporting") : t("deliveryList.export")}
-          </Button>
-        </div>
       </header>
 
       <article className="panel orders-panel">
@@ -536,6 +507,21 @@ export function DeliveryListPage({
             label={t("deliveryList.search")}
             placeholder={t("deliveryList.searchPlaceholder")}
             submitLabel={t("deliveryList.searchAction")}
+            actions={(
+              <>
+                {selectedTeam ? (
+                  <aside className="delivery-fleet-summary" aria-label="已選車隊資料">
+                    <dl>
+                      <div><dt>車隊:</dt><dd>{selectedTeam.name}</dd></div>
+                      <div><dt>日期:</dt><dd>{summaryDateRange}</dd></div>
+                      <div className="delivery-fleet-summary-payment"><dt>付款方式:</dt><dd>{selectedTeam.bankAccount || "—"}</dd></div>
+                    </dl>
+                    <Button type="button" onClick={() => void openPrintPreview()} disabled={printLoading || loading || total === 0}><Printer />列印</Button>
+                  </aside>
+                ) : null}
+                <Button type="button" onClick={() => void exportCsv()} disabled={exporting || loading || total === 0}><Download />{exporting ? t("deliveryList.exporting") : t("deliveryList.export")}</Button>
+              </>
+            )}
             filtersActive={filtersActive}
             filtersTitle={t("common.filters")}
             onConfirmFilters={confirmFilters}

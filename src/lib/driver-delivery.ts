@@ -2,6 +2,11 @@ import { supabase } from "@/lib/supabase";
 
 const SESSION_KEY = "fccd.driver-delivery.session";
 
+function saveDriverDeliverySession(session: DriverDeliverySession) {
+  window.localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  window.sessionStorage.removeItem(SESSION_KEY);
+}
+
 export type DriverDeliverySession = {
   token: string;
   teamId: string;
@@ -94,27 +99,32 @@ export async function loginDriverDelivery(loginCode: string) {
     teamName: row.team_name,
     expiresAt: row.expires_at,
   };
-  window.sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  saveDriverDeliverySession(session);
   return session;
 }
 
 export function restoreDriverDeliverySession(): DriverDeliverySession | null {
   try {
-    const value = window.sessionStorage.getItem(SESSION_KEY);
+    const value = window.localStorage.getItem(SESSION_KEY)
+      ?? window.sessionStorage.getItem(SESSION_KEY);
     if (!value) return null;
     const session = JSON.parse(value) as DriverDeliverySession;
-    if (!session.token || new Date(session.expiresAt).getTime() <= Date.now()) {
+    if (!session.token) {
+      window.localStorage.removeItem(SESSION_KEY);
       window.sessionStorage.removeItem(SESSION_KEY);
       return null;
     }
+    saveDriverDeliverySession(session);
     return session;
   } catch {
+    window.localStorage.removeItem(SESSION_KEY);
     window.sessionStorage.removeItem(SESSION_KEY);
     return null;
   }
 }
 
 export async function logoutDriverDelivery(token?: string) {
+  window.localStorage.removeItem(SESSION_KEY);
   window.sessionStorage.removeItem(SESSION_KEY);
   if (token) await supabase.rpc("driver_delivery_logout", { p_session_token: token });
 }

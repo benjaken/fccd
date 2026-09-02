@@ -1,13 +1,10 @@
-export function normalizeFactoryOrderNumber(
-  value: string | null | undefined,
-): string {
-  return value?.trim().replace(/^(?:#\s*)+/, "").trim() ?? "";
-}
+import { formatOrderNumber, normalizeOrderNumber } from "@/lib/order-number";
+
+export const normalizeFactoryOrderNumber = normalizeOrderNumber;
 
 export function formatFactoryOrderNumber(
   value: string | null | undefined,
   fallback = "",
 ): string {
-  const normalized = normalizeFactoryOrderNumber(value);
-  return normalized ? `#${normalized}` : fallback;
+  return formatOrderNumber(value, undefined, fallback);
 }
