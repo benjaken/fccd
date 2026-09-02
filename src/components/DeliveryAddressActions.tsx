@@ -51,7 +51,8 @@ export function DeliveryAddressActions({
     setTranslating(true);
     try {
       onTranslated(await translateAddress(address));
-    } catch {
+    } catch (translationError) {
+      console.error("Address translation failed", translationError);
       setError(labels.error);
     } finally {
       setTranslating(false);
