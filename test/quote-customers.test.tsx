@@ -332,6 +332,23 @@ describe("Quote customers list", () => {
     );
   });
 
+  it("resolves famous-brand customers before aggregating and paginating", () => {
+    const migration = readFileSync(
+      resolve(
+        process.cwd(),
+        "supabase/migrations/20260902190000_optimize_famous_customer_rpc.sql",
+      ),
+      "utf8",
+    );
+    expect(migration).toContain("famous_customer_emails");
+    expect(migration).toContain("join famous_customer_emails");
+    expect(migration).not.toContain("with recursive");
+    expect(migration).not.toContain("page_offsets");
+    expect(migration).not.toContain(
+      "list_quote_customers_with_legacy_famous_brand_filter",
+    );
+  });
+
   it("renders email-grouped customer fields in the shared list layout", async () => {
     const loadCustomers = vi.fn().mockResolvedValue(customerResult);
 
