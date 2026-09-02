@@ -31696,15 +31696,6 @@ body:has(.kitchen-channel-sales-report-page) .shell-body.sidebar-is-collapsed .r
   box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 13%, transparent);
 }
 
-.order-editor-field.order-editor-checkbox > input[type="checkbox"] {
-  width: 20px;
-  min-width: 20px;
-  height: 20px;
-  margin: 0;
-  padding: 0;
-  accent-color: var(--primary);
-}
-
 .order-editor-address-field {
   align-items: start;
 }

@@ -432,17 +432,6 @@ export function OrderEditorPage({
                 <SelectField label="品牌" value={draft.channelId} options={options.channels} required onChange={(value) => update("channelId", value)} />
                 <InputField label="客人姓名" value={draft.customerName} required onChange={(value) => update("customerName", value)} />
                 <InputField label="公司名稱" value={draft.companyName} onChange={(value) => update("companyName", value)} />
-                {draft.companyName.trim() ? (
-                  <label className="order-editor-field order-editor-checkbox">
-                    <span>{t("quoteEditor.fields.hongKongFamousBrand")}</span>
-                    <input
-                      type="checkbox"
-                      aria-label={t("quoteEditor.fields.hongKongFamousBrand")}
-                      checked={draft.isHongKongFamousBrand}
-                      onChange={(event) => update("isHongKongFamousBrand", event.target.checked)}
-                    />
-                  </label>
-                ) : null}
                 <InputField label="聯絡電話" value={draft.contactA} required type="tel" onChange={(value) => update("contactA", value)} />
                 <InputField label="第二聯絡電話" value={draft.contactB} type="tel" onChange={(value) => update("contactB", value)} />
                 <InputField label="電郵地址" value={draft.email} required type="email" onChange={(value) => update("email", value)} />

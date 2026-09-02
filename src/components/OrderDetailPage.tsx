@@ -281,11 +281,6 @@ export function OrderDetailPage({
             <DetailField label={t("details.company")}>
               {order.companyName || emptyValue}
             </DetailField>
-            {!isQuote && order.companyName?.trim() ? (
-              <DetailField label={t("quoteEditor.fields.hongKongFamousBrand")}>
-                {order.isHongKongFamousBrand ? t("common.yes") : t("common.no")}
-              </DetailField>
-            ) : null}
             <DetailField label={t("details.email")}>
               {order.email || emptyValue}
             </DetailField>
