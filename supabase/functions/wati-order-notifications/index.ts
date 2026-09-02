@@ -10,6 +10,10 @@ import {
   type OrderNotificationValues,
   type UnassignedDriverReminderOrder,
 } from "../_shared/order-notification-content.ts";
+import {
+  formatNotificationDeliveryAddress,
+  resolveNotificationDeliveryMethod,
+} from "../_shared/delivery-address.ts";
 import { EMAIL_FROM } from "../_shared/email-sender.ts";
 import {
   isNotificationEmailAllowed,
@@ -503,14 +507,6 @@ function reconciliationEmailContent(input: {
   };
 }
 
-function isPickup(order: OrderRow) {
-  const method = relation<{ name?: unknown; display_name?: unknown; requires_address_check?: unknown }>(
-    order.shipping_methods,
-  );
-  const label = `${String(method?.name || "")} ${String(method?.display_name || "")}`;
-  return method?.requires_address_check === false || /(自取|pickup)/i.test(label);
-}
-
 function addonLink() {
   const explicit = Deno.env.get("WATI_ADD_ON_LINK")?.trim();
   if (explicit) return explicit;
@@ -519,16 +515,36 @@ function addonLink() {
 }
 
 function valuesFor(order: OrderRow): OrderNotificationValues {
-  const pickup = isPickup(order);
+  const shippingMethod = relation<{
+    name?: unknown;
+    display_name?: unknown;
+    requires_address_check?: unknown;
+  }>(order.shipping_methods);
+  const shippingMethodLabel = `${String(shippingMethod?.name || "")} ${
+    String(shippingMethod?.display_name || "")
+  }`;
+  const deliveryMethod = resolveNotificationDeliveryMethod(
+    shippingMethodLabel,
+    typeof shippingMethod?.requires_address_check === "boolean"
+      ? shippingMethod.requires_address_check
+      : null,
+  );
   const channel = relation<{ name?: unknown }>(order.channels);
   return {
     name: order.customer_name_snapshot?.trim() || order.company_name_snapshot?.trim() || "Customer",
     order_number: order.order_number?.trim() || "-",
     date: formatHongKongDate(order.delivery_at),
     time: order.delivery_time?.trim() || "-",
-    address: order.shipping_address_snapshot?.trim() || "-",
+    address: formatNotificationDeliveryAddress(
+      order.shipping_address_snapshot,
+      deliveryMethod,
+    ),
     phone: order.contact_number_a_snapshot?.trim() || order.contact_number_b_snapshot?.trim() || "-",
-    delivery_method: pickup ? "門市自取" : "送貨上門",
+    delivery_method: deliveryMethod === "pickup"
+      ? "門市自取"
+      : deliveryMethod === "curbside"
+        ? "車邊交收"
+        : "送貨上門",
     ao_deadline: formatHongKongDate(order.delivery_at, 1),
     ao_link: addonLink(),
     shop_name: resolveOrderNotificationShopName(

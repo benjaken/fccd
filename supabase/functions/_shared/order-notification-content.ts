@@ -1,3 +1,5 @@
+import { formatNotificationDeliveryAddress } from "./delivery-address.ts";
+
 export type OrderNotificationEvent =
   | "delivery_order_confirmed"
   | "pickup_order_confirmed"
@@ -220,6 +222,7 @@ export function buildOrderNotificationContent(
   event: OrderNotificationEvent,
   value: OrderNotificationValues,
 ): NotificationContent {
+  const address = formatNotificationDeliveryAddress(value.address, value.delivery_method);
   const hello = `Hello ${value.name},`;
   const signature = value.shop_name;
   const customerServiceSignature = `${value.shop_name} 客戶服務團隊`;
@@ -230,7 +233,7 @@ export function buildOrderNotificationContent(
       return content(`到會訂單確認 ${order}`, [
         hello, "", `收到你的到會訂單 ${order}, 謝謝！`, "",
         "你訂購的到會套餐將會在以下時間送到，司機到達前會致電給你。",
-        `日期：${value.date}`, `時間：${value.time}`, `地址：${value.address}`, "",
+        `日期：${value.date}`, `時間：${value.time}`, `地址：${address}`, "",
         "如送貨當天有任何查詢，請在此 WhatsApp 聯絡我們。", "",
         "謝謝你的支持，願你有一個愉快的聚餐時光🥳", "",
         value.ao_link && "-----------------------", value.ao_link && "",
@@ -249,7 +252,7 @@ export function buildOrderNotificationContent(
     case "delivery_tomorrow_reminder":
       return content(`明日送貨提醒 ${order}`, [
         hello, "", `溫馨提示，你的到會訂單 ${order} 將於明日送到：`, "",
-        `日期：${value.date}`, `時間：${value.time}`, `地址：${value.address}`, "",
+        `日期：${value.date}`, `時間：${value.time}`, `地址：${address}`, "",
         "司機到達前會致電給你，請保持聯絡電話暢通。", "",
         "如有任何查詢，請在此 WhatsApp 聯絡我們。", "",
         `查看訂單內容或下載收據：${SELF_SERVICE_URL}`, "",
@@ -267,7 +270,7 @@ export function buildOrderNotificationContent(
     case "delivery_today_reminder":
       return content(`今日送貨提醒 ${order}`, [
         hello, "", `你的到會訂單 ${order} 將會在今日送貨，司機會在到達前致電給你，請保持聯絡電話暢通。`, "",
-        `日期：${value.date}`, `時間：${value.time}`, `地址：${value.address}`, "",
+        `日期：${value.date}`, `時間：${value.time}`, `地址：${address}`, "",
         "如有任何查詢，請在此 WhatsApp 聯絡我們。", "",
         `查看訂單內容 或 下載收據：${SELF_SERVICE_URL}`, "",
         "謝謝你的支持，願你有一個愉快的聚餐時光❤️", "", customerServiceSignature,
@@ -285,14 +288,14 @@ export function buildOrderNotificationContent(
       return content(`訂單資料更新確認 ${order}`, [
         hello, "", `你的到會訂單 ${order} 已成功更新，最新安排如下：`, "",
         `日期：${value.date}`, `時間：${value.time}`, `方式：${value.delivery_method}`,
-        `地址：${value.address}`, "", "請確認以上資料是否正確。如有任何查詢，請在此 WhatsApp 聯絡我們。", "",
+        `地址：${address}`, "", "請確認以上資料是否正確。如有任何查詢，請在此 WhatsApp 聯絡我們。", "",
         `查看訂單內容或下載收據：${SELF_SERVICE_URL}`, "",
         "謝謝你的支持，願你有一個愉快的聚餐時光❤️", "", signature,
       ]);
     case "delivery_dispatched":
       return content(`訂單已出車 ${order}`, [
         hello, "", `你的到會訂單 ${order} 已安排出車，正在送往以下地址：`, "",
-        `送貨時間：${value.time}`, `送貨地址：${value.address}`, "",
+        `送貨時間：${value.time}`, `送貨地址：${address}`, "",
         "司機到達前會致電給你，請保持聯絡電話暢通。", "",
         "如有任何查詢，請在此 WhatsApp 聯絡我們。", "",
         "謝謝你的耐心等候，很快就可以享用美食啦🥳", "", signature,
@@ -323,7 +326,7 @@ export function buildOrderNotificationContent(
     case "driver_assigned":
       return content(`訂單司機安排 ${order}`, [
         hello, "", `訂單 ${order} 已安排司機。`, "",
-        `日期：${value.date}`, `時間：${value.time}`, `地址：${value.address}`, "",
+        `日期：${value.date}`, `時間：${value.time}`, `地址：${address}`, "",
         "司機到達前會致電給你，請保持聯絡電話暢通。", "", signature,
       ]);
     case "bad_weather_notice":

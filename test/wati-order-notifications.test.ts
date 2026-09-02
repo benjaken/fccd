@@ -12,6 +12,10 @@ import {
   type OrderNotificationValues,
 } from "../supabase/functions/_shared/order-notification-content.ts";
 import {
+  formatNotificationDeliveryAddress,
+  resolveNotificationDeliveryMethod,
+} from "../supabase/functions/_shared/delivery-address.ts";
+import {
   createNotificationRecipientPolicy,
   isNotificationEmailAllowed,
   isNotificationPhoneAllowed,
@@ -34,6 +38,29 @@ const values: OrderNotificationValues = {
 };
 
 describe("WATI order notifications", () => {
+  it("adds the handoff type to WATI and email address values", () => {
+    expect(formatNotificationDeliveryAddress("九龍測試地址", "送貨上門"))
+      .toBe("九龍測試地址（送貨上門）");
+    expect(formatNotificationDeliveryAddress("九龍測試地址", "車邊交收"))
+      .toBe("九龍測試地址 * 車邊交收");
+    expect(formatNotificationDeliveryAddress("九龍測試地址 * 車邊交收", "車邊交收"))
+      .toBe("九龍測試地址 * 車邊交收");
+    expect(resolveNotificationDeliveryMethod("門市自取", false)).toBe("pickup");
+
+    const delivery = buildOrderNotificationContent("delivery_order_confirmed", {
+      ...values,
+      address: "九龍測試地址",
+      delivery_method: "送貨上門",
+    });
+    const curbside = buildOrderNotificationContent("delivery_order_confirmed", {
+      ...values,
+      address: "九龍測試地址",
+      delivery_method: "車邊交收",
+    });
+    expect(delivery.text).toContain("地址：九龍測試地址（送貨上門）");
+    expect(curbside.text).toContain("地址：九龍測試地址 * 車邊交收");
+  });
+
   it("does not call disabled WATI or email request callbacks", async () => {
     const sendWati = vi.fn(async () => ({ ok: true }));
     const sendEmail = vi.fn(async () => ({ ok: true }));
@@ -185,7 +212,7 @@ describe("WATI order notifications", () => {
     expect(delivery.text).toBe([
       `Hello ${values.name},`, "",
       `你的到會訂單 ${values.order_number} 將會在今日送貨，司機會在到達前致電給你，請保持聯絡電話暢通。`, "",
-      `日期：${values.date}`, `時間：${values.time}`, `地址：${values.address}`, "",
+      `日期：${values.date}`, `時間：${values.time}`, `地址：${values.address}（送貨上門）`, "",
       "如有任何查詢，請在此 WhatsApp 聯絡我們。", "",
       "查看訂單內容 或 下載收據：https://www.foodchannels-delivery.com/self_service_search", "",
       "謝謝你的支持，願你有一個愉快的聚餐時光❤️", "",
@@ -430,6 +457,9 @@ describe("WATI order notifications", () => {
     );
 
     expect(implementation).toContain("buildOrderNotificationContent");
+    expect(implementation).toContain("shipping_methods(name,display_name,requires_address_check)");
+    expect(implementation).toContain("formatNotificationDeliveryAddress");
+    expect(implementation).toContain('{ name: "address", value: address }');
     expect(implementation).toContain('fetch("https://api.resend.com/emails"');
     expect(implementation).toContain("settleEnabledNotificationRequests");
     expect(implementation).toContain("manualOrderConfirmationEnabled");

@@ -14,4 +14,14 @@ describe("formatDeliveryAddress", () => {
       "青衣長輝路38號 * 車邊交收",
     );
   });
+
+  it("shows door delivery in parentheses", () => {
+    expect(formatDeliveryAddress("青衣長輝路38號", "送貨上門")).toBe(
+      "青衣長輝路38號（送貨上門）",
+    );
+  });
+
+  it("does not add a delivery suffix for pickup", () => {
+    expect(formatDeliveryAddress("荃灣門市", "門市自取")).toBe("荃灣門市");
+  });
 });
