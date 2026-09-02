@@ -1095,7 +1095,7 @@ export function parseMenuRemark(remark: string | null | undefined): MenuOption[]
   // "沙律 必選:" or "分享小食 7選3:". Free-form notes (delivery/pickup
   // blocks, customer notes) yield no options.
   const titleMatch = remark.match(
-    /^(?:[^\n:：]*?\s)?(?:必選|選\d+|\d+選\d+)\s*[:：]\s*$/m,
+    /^[^\n:：]*?(?:必選(?:\s*\d+\s*道菜)?|選\d+|\d+選\d+)\s*[:：]\s*$/m,
   );
   if (!titleMatch) return [];
 

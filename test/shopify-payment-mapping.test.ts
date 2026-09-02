@@ -913,6 +913,13 @@ describe("mapShopifyOrder remark collection", () => {
     expect(stripped[0].remarks_1).toContain("竹笙花膠紅燒翅");
     expect(shopifyLineRemarksSnapshot({ properties: addonProperties }))
       .toBe("蛋黃蓮蓉壽桃包 (6個)");
+
+    const packageRemark = collectLineMenuRemarkText(packageProperties);
+    expect(parseMenuRemark(packageRemark)).toEqual([
+      { name: "竹笙花膠紅燒翅 (8-10位)", quantity: 1 },
+      { name: "花雕蛋白蒸松葉蟹 (1隻)", quantity: 1 },
+      { name: "蔥燒原條海參 (6條)", quantity: 1 },
+    ]);
   });
 
   it("does not import Custom Product markers into order remarks", () => {
