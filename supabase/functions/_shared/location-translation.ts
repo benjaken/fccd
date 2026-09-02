@@ -28,37 +28,51 @@ export async function translateLocationToTraditionalChinese(
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 30_000);
   const subject = kind === "district" ? "Hong Kong delivery district" : "Hong Kong delivery address";
+  const messages = [
+    {
+      role: "system",
+      content: `Translate the supplied ${subject} into Traditional Chinese suitable for Hong Kong. Use established Traditional Chinese names for districts, streets, estates, buildings, and landmarks whenever known. Preserve every number, room, floor, block, postal code, and delivery instruction. Do not add, infer, or remove location details. Return one JSON object only: {"translatedText":string}.`,
+    },
+    { role: "user", content: JSON.stringify({ text: source }) },
+  ];
+  const providerRequests = [
+    {
+      model,
+      response_format: { type: "json_object" },
+      temperature: 0,
+      max_tokens: 600,
+      ...(isXai ? { reasoning_effort: "low" } : { thinking: { type: "disabled" } }),
+      messages,
+    },
+    // Some models reject one or more optional generation controls with 400.
+    // Retry once with the portable Chat Completions subset before failing.
+    { model, max_tokens: 600, messages },
+  ];
   try {
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      signal: controller.signal,
-      body: JSON.stringify({
-        model,
-        response_format: { type: "json_object" },
-        temperature: 0,
-        max_tokens: 600,
-        ...(isXai ? { reasoning_effort: "low" } : { thinking: { type: "disabled" } }),
-        messages: [
-          {
-            role: "system",
-            content: `Translate the supplied ${subject} into Traditional Chinese suitable for Hong Kong. Use established Traditional Chinese names for districts, streets, estates, buildings, and landmarks whenever known. Preserve every number, room, floor, block, postal code, and delivery instruction. Do not add, infer, or remove location details. Return one JSON object only: {"translatedText":string}.`,
-          },
-          { role: "user", content: JSON.stringify({ text: source }) },
-        ],
-      }),
-    });
-    if (!response.ok) throw new Error(`location_translation_provider_${response.status}`);
-    const payload = await response.json() as {
-      choices?: Array<{ message?: { content?: string | null } }>;
-    };
-    const content = payload.choices?.[0]?.message?.content;
-    if (!content) throw new Error("location_translation_empty_response");
-    const parsed = JSON.parse(content) as { translatedText?: unknown };
-    if (typeof parsed.translatedText !== "string" || !parsed.translatedText.trim()) {
-      throw new Error("location_translation_invalid_response");
+    for (let attempt = 0; attempt < providerRequests.length; attempt += 1) {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        signal: controller.signal,
+        body: JSON.stringify(providerRequests[attempt]),
+      });
+      if (!response.ok) {
+        if (response.status === 400 && attempt === 0) continue;
+        throw new Error(`location_translation_provider_${response.status}`);
+      }
+      const payload = await response.json() as {
+        choices?: Array<{ message?: { content?: string | null } }>;
+      };
+      const content = payload.choices?.[0]?.message?.content;
+      if (!content) throw new Error("location_translation_empty_response");
+      const json = content.match(/\{[\s\S]*\}/)?.[0] ?? content;
+      const parsed = JSON.parse(json) as { translatedText?: unknown };
+      if (typeof parsed.translatedText !== "string" || !parsed.translatedText.trim()) {
+        throw new Error("location_translation_invalid_response");
+      }
+      return parsed.translatedText.trim();
     }
-    return parsed.translatedText.trim();
+    throw new Error("location_translation_provider_failed");
   } finally {
     clearTimeout(timeout);
   }
