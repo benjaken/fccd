@@ -181,15 +181,15 @@ export function RestaurantRosterTimesPage() {
           <h1>{t("restaurantRosterTimes.title")}</h1>
           <p>{t("restaurantRosterTimes.description")}</p>
         </div>
-        {canEdit ? (
-          <Button onClick={() => edit(null)}>
-            <Plus />
-            {t("restaurantRosterTimes.add")}
-          </Button>
-        ) : null}
       </header>
       <article className="panel ingredients-panel">
         <RestaurantSettingsListTable
+          toolbarAction={canEdit ? (
+            <Button onClick={() => edit(null)}>
+              <Plus />
+              {t("restaurantRosterTimes.add")}
+            </Button>
+          ) : null}
           className="ingredients-table-wrap"
           loading={loading}
           loadingLabel={t("restaurantRosterTimes.loading")}

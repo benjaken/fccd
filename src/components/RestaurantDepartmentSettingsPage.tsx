@@ -130,15 +130,15 @@ export function RestaurantDepartmentSettingsPage() {
           <h1>{t("restaurantDepartmentSettings.title")}</h1>
           <p>{t("restaurantDepartmentSettings.description")}</p>
         </div>
-        {canEdit ? (
-          <Button onClick={() => edit(null)}>
-            <Plus />
-            {t("restaurantDepartmentSettings.add")}
-          </Button>
-        ) : null}
       </header>
       <article className="panel ingredients-panel">
         <RestaurantSettingsListTable
+          toolbarAction={canEdit ? (
+            <Button onClick={() => edit(null)}>
+              <Plus />
+              {t("restaurantDepartmentSettings.add")}
+            </Button>
+          ) : null}
           className="ingredients-table-wrap"
           loading={loading}
           loadingLabel={t("restaurantDepartmentSettings.loading")}

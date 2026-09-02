@@ -84,13 +84,6 @@ function RestaurantStocktakesSkeleton({ label }: { label: string }) {
   return (
     <section className="ingredients-page restaurant-stocktakes-page restaurant-stocktakes-page-skeleton" aria-busy="true">
       <span className="sr-only" role="status">{label}</span>
-      <header className="page-heading ingredients-heading" aria-hidden="true">
-        <div className="restaurant-stocktakes-loading-heading">
-          <span className="page-skeleton-bone" />
-          <span className="page-skeleton-bone" />
-          <span className="page-skeleton-bone" />
-        </div>
-      </header>
       <div className="stocktake-records-layout" aria-hidden="true">
         <aside className="stocktake-date-list">
           <header className="stocktake-date-list-header"><span className="page-skeleton-bone" style={{ width: 90, height: 14 }} /></header>

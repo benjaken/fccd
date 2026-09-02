@@ -297,7 +297,7 @@ export function RestaurantDailySalesPage({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
+  const [, setSaved] = useState(false);
   const [emailWarning, setEmailWarning] = useState(false);
   const [validationErrors, setValidationErrors] = useState<ValidationKey[]>([]);
   const [validationNoticeErrors, setValidationNoticeErrors] = useState<ValidationKey[]>([]);
@@ -524,24 +524,7 @@ export function RestaurantDailySalesPage({
 
   return (
     <section className="restaurant-daily-sales-page">
-      <header className="page-heading daily-sales-heading">
-        <div>
-          <span className="eyebrow">{t("navigation.restaurant")}</span>
-          <h1>{t("restaurantDailySales.title")}</h1>
-          <p>{t("restaurantDailySales.description")}</p>
-        </div>
-        <Button
-          variant="outline"
-          onClick={() => {
-            setDraftRestaurantId(restaurantId || pickDefaultRestaurant(masters?.restaurants ?? [])?.id || "");
-            setDraftDate(hongKongDateValue());
-            setNewDialogOpen(true);
-          }}
-        >
-          <CalendarDays />
-          {t("restaurantDailySales.newRecord")}
-        </Button>
-      </header>
+      <h1 className="sr-only">{t("restaurantDailySales.title")}</h1>
 
       {validationNoticeErrors.length || saveError || emailWarning ? (
         <aside className="daily-sales-validation-notification" role="alert" aria-live="assertive">
@@ -610,6 +593,18 @@ export function RestaurantDailySalesPage({
               legend={t("restaurantDailySales.dateRange")}
             />
           )}
+          <Button
+            className="daily-sales-new-record"
+            variant="outline"
+            onClick={() => {
+              setDraftRestaurantId(restaurantId || pickDefaultRestaurant(masters?.restaurants ?? [])?.id || "");
+              setDraftDate(hongKongDateValue());
+              setNewDialogOpen(true);
+            }}
+          >
+            <CalendarDays />
+            {t("restaurantDailySales.newRecord")}
+          </Button>
         </div>
       </section>
 
@@ -751,7 +746,6 @@ export function RestaurantDailySalesPage({
             </section>
             <label className="daily-sales-remarks"><span>{t("restaurantDailySales.differenceReason")}</span>{isEditing ? <textarea aria-label={t("restaurantDailySales.differenceReason")} value={remarks} onChange={(event) => setRemarks(event.target.value)} rows={2} disabled={!canModify} /> : <output className="daily-sales-remarks-read-value" aria-label={t("restaurantDailySales.differenceReason")}>{remarks}</output>}</label>
             <div className="daily-sales-actions">
-              {saved ? <span className="is-success"><Check />{t("restaurantDailySales.saved")}</span> : null}
               {!balanced && expectedTotal > 0 && !validationErrors.includes("balance") ? <span>{t("restaurantDailySales.notBalanced")}</span> : null}
             </div>
           </section> : null}

@@ -135,15 +135,15 @@ export function RestaurantDeliveryPlatformsPage() {
           <h1>{t("restaurantDeliveryPlatforms.title")}</h1>
           <p>{t("restaurantDeliveryPlatforms.description")}</p>
         </div>
-        {canEdit ? (
-          <Button onClick={() => edit(null)}>
-            <Plus />
-            {t("restaurantDeliveryPlatforms.add")}
-          </Button>
-        ) : null}
       </header>
       <article className="panel ingredients-panel">
         <RestaurantSettingsListTable
+          toolbarAction={canEdit ? (
+            <Button onClick={() => edit(null)}>
+              <Plus />
+              {t("restaurantDeliveryPlatforms.add")}
+            </Button>
+          ) : null}
           className="ingredients-table-wrap"
           loading={loading}
           loadingLabel={t("restaurantDeliveryPlatforms.loading")}
