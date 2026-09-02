@@ -139,7 +139,7 @@ export function FamousBrandCustomersPage({
                 </tr>}
               >
                 {(selectedCustomer?.orders ?? []).map((order) => <tr key={order.id}>
-                  <td><DetailLink className="order-link" to={`/quotes/${order.id}`}>{order.orderNumber || t("common.notSet")}</DetailLink></td>
+                  <td><DetailLink className="order-link" to={`/orders/${order.id}`}>{order.orderNumber || t("common.notSet")}</DetailLink></td>
                   <td>{order.status || t("common.notSet")}</td>
                   <td>{order.currency === "HKD" ? money.format(order.amount) : `${order.currency} ${order.amount.toLocaleString(i18n.language)}`}</td>
                   <td>{date.format(new Date(order.updatedAt))}</td>
