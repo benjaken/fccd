@@ -329,12 +329,13 @@ describe("Order settings tags page", () => {
       "tag-2",
     ]);
     await user.type(screen.getByPlaceholderText("搜尋標籤名稱"), "Klook");
-    await user.click(screen.getByRole("button", { name: "搜尋" }));
 
     const table = within(await screen.findByRole("table"));
-    expect(table.getByText("Klook")).toBeInTheDocument();
-    expect(table.queryByText("家人食飯")).not.toBeInTheDocument();
-    expect(table.queryByText("CNY套餐")).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(table.getByText("Klook")).toBeInTheDocument();
+      expect(table.queryByText("家人食飯")).not.toBeInTheDocument();
+      expect(table.queryByText("CNY套餐")).not.toBeInTheDocument();
+    });
   });
 
   it("creates a tag from the heading action", async () => {
@@ -446,8 +447,9 @@ describe("Order settings customer tags page", () => {
     await screen.findByText("沙田威爾斯");
     expect(filterCustomerTags(customerTags, "醫院")).toHaveLength(1);
     await user.type(screen.getByPlaceholderText("搜尋客戶標籤或類別"), "醫院");
-    await user.click(screen.getByRole("button", { name: "搜尋" }));
-    expect(screen.queryByText("企業客戶")).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByText("企業客戶")).not.toBeInTheDocument(),
+    );
 
     await user.click(screen.getByRole("button", { name: "新增" }));
     const panel = await screen.findByRole("dialog", { name: "新增客戶標籤" });
@@ -676,12 +678,13 @@ describe("Order settings shipping methods page", () => {
       filterShippingMethods(methods, "上門").map((row) => row.displayName),
     ).toEqual(["送貨上門"]);
     await user.type(screen.getByPlaceholderText("搜尋運送方式"), "上門");
-    await user.click(screen.getByRole("button", { name: "搜尋" }));
 
     const table = within(await screen.findByRole("table"));
-    expect(table.getByText("送貨上門")).toBeInTheDocument();
-    expect(table.queryByText("車邊交收")).not.toBeInTheDocument();
-    expect(table.queryByText("門市自取")).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(table.getByText("送貨上門")).toBeInTheDocument();
+      expect(table.queryByText("車邊交收")).not.toBeInTheDocument();
+      expect(table.queryByText("門市自取")).not.toBeInTheDocument();
+    });
   });
 
   it("creates a delivery method from the heading action", async () => {
@@ -827,12 +830,13 @@ describe("Order settings payment methods page", () => {
       ["pay-2"],
     );
     await user.type(screen.getByPlaceholderText("搜尋付款方式"), "PayMe");
-    await user.click(screen.getByRole("button", { name: "搜尋" }));
 
     const table = within(await screen.findByRole("table"));
-    expect(table.getByText("PayMe")).toBeInTheDocument();
-    expect(table.queryByText("Cash")).not.toBeInTheDocument();
-    expect(table.queryByText("Foodpanda")).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(table.getByText("PayMe")).toBeInTheDocument();
+      expect(table.queryByText("Cash")).not.toBeInTheDocument();
+      expect(table.queryByText("Foodpanda")).not.toBeInTheDocument();
+    });
   });
 
   it("creates a payment method from the heading action", async () => {

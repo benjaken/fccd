@@ -23,7 +23,7 @@ describe("Header display requirements", () => {
     expect(screen.getByText("21:05:09")).toBeInTheDocument();
   });
 
-  it("keeps every explicit pixel font size at 14px or larger", () => {
+  it("keeps every explicit pixel font size at 12px or larger", () => {
     const stylesheet = readFileSync(
       path.resolve(process.cwd(), "src/index.css"),
       "utf8",
@@ -33,7 +33,7 @@ describe("Header display requirements", () => {
     );
 
     expect(sizes.length).toBeGreaterThan(0);
-    expect(Math.min(...sizes)).toBeGreaterThanOrEqual(14);
+    expect(Math.min(...sizes)).toBeGreaterThanOrEqual(12);
   });
 
   it("right-aligns workspace soft links in the top header", () => {

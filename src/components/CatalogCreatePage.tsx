@@ -32,6 +32,28 @@ type PendingLabel = {
 
 type CatalogKind = "product" | "package";
 
+export type CatalogCreateInitialValues = Partial<{
+  sku: string;
+  channelId: string;
+  name: string;
+  chineseName: string;
+  price: string;
+  status: string;
+  description: string;
+  productTypeId: string;
+  cookTypeId: string;
+  collectionIds: string[];
+  isBentoRecommended: boolean;
+}>;
+
+export type CreatedCatalogProduct = {
+  id: string;
+  sku: string;
+  name: string;
+  price: number;
+  channelId: string;
+};
+
 type PendingPackageProduct = {
   productId: string;
   name: string;
@@ -54,6 +76,10 @@ export function CatalogCreatePage({
   saveProduct = createProduct,
   savePackage = createPackage,
   searchProducts = searchCatalogProducts,
+  embedded = false,
+  initialValues,
+  onCreated,
+  onCancel,
 }: {
   kind: CatalogKind;
   canCreate?: boolean;
@@ -61,6 +87,10 @@ export function CatalogCreatePage({
   saveProduct?: (input: ProductCreateInput) => Promise<string>;
   savePackage?: (input: PackageCreateInput) => Promise<string>;
   searchProducts?: (term: string) => Promise<CatalogOption[]>;
+  embedded?: boolean;
+  initialValues?: CatalogCreateInitialValues;
+  onCreated?: (product: CreatedCatalogProduct) => void | Promise<void>;
+  onCancel?: () => void;
 }) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -70,11 +100,12 @@ export function CatalogCreatePage({
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, boolean>>({});
-  const [form, setForm] = useState({
+  const [form, setForm] = useState(() => ({
     sku: "", channelId: "", name: "", chineseName: "", price: "",
     status: "Active", description: "", productTypeId: "", cookTypeId: "",
     collectionIds: [] as string[], isBentoRecommended: false,
-  });
+    ...initialValues,
+  }));
   const [premiumIngredients, setPremiumIngredients] = useState<PendingMaterial[]>([]);
   const [packingSupplies, setPackingSupplies] = useState<PendingMaterial[]>([]);
   const [materialDraft, setMaterialDraft] = useState({
@@ -97,7 +128,7 @@ export function CatalogCreatePage({
   }, [form.channelId, loadOptions]);
 
   if (!canCreate) {
-    return <Navigate to={kind === "product" ? "/products" : "/products/packages"} replace />;
+    return embedded ? null : <Navigate to={kind === "product" ? "/products" : "/products/packages"} replace />;
   }
   if (loading && options.channels.length === 0) {
     return <PageSkeleton label={t("catalogCreate.loading")} variant="detail" detailLayout="product" />;
@@ -143,7 +174,17 @@ export function CatalogCreatePage({
               products: products.map(({ productId, quantity, addonPrice }) => ({ productId, quantity: Math.max(1, quantity), addonPrice })),
             })),
           });
-      navigate(kind === "product" ? `/products/${id}` : `/products/packages/${id}`, { replace: true });
+      if (kind === "product" && onCreated) {
+        await onCreated({
+          id,
+          sku: form.sku.trim(),
+          name: form.name.trim(),
+          price,
+          channelId: form.channelId,
+        });
+      } else {
+        navigate(kind === "product" ? `/products/${id}` : `/products/packages/${id}`, { replace: true });
+      }
     } catch {
       setSaveError(true);
     } finally {
@@ -220,8 +261,8 @@ export function CatalogCreatePage({
   };
 
   return (
-    <section className="detail-page is-editing">
-      <header className="page-heading">
+    <section className={embedded ? "catalog-create-embedded" : "detail-page is-editing"}>
+      {!embedded ? <header className="page-heading">
         <div>
           <nav className="detail-breadcrumb" aria-label={t("catalogCreate.breadcrumb")}>
             <Link to={backTo}>{t(kind === "product" ? "productDetail.listCrumb" : "packageDetail.listCrumb")}</Link>
@@ -231,7 +272,7 @@ export function CatalogCreatePage({
           <span className="eyebrow">{t("catalogCreate.eyebrow")}</span>
           <h1>{t(kind === "product" ? "catalogCreate.newProduct" : "catalogCreate.newPackage")}</h1>
         </div>
-      </header>
+      </header> : null}
 
       <form className="product-detail-form catalog-create-form is-editing" onSubmit={submit}>
         <article className="panel detail-card">
@@ -392,7 +433,7 @@ export function CatalogCreatePage({
         ) : null}
         <footer className="product-edit-actions">
           {saveError ? <div className="settings-side-form-error" role="alert">{t("catalogCreate.saveError")}</div> : null}
-          <Button type="button" variant="outline" onClick={() => navigate(backTo)} disabled={saving}>{t("catalogCreate.cancel")}</Button>
+          <Button type="button" variant="outline" onClick={() => onCancel ? onCancel() : navigate(backTo)} disabled={saving}>{t("catalogCreate.cancel")}</Button>
           <Button type="submit" disabled={saving}>{saving ? t("productDetail.saving") : t("catalogCreate.create")}</Button>
         </footer>
       </form>

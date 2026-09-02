@@ -307,10 +307,6 @@ export function MeatCustomersPage({
           <span className="eyebrow">{t("meatCustomers.eyebrow")}</span>
           <h1>{t("meatCustomers.title")}</h1>
         </div>
-        <Button type="button" onClick={openCreate}>
-          <Plus />
-          {t("meatCustomers.add")}
-        </Button>
       </header>
 
       <article className="panel meat-customers-panel">
@@ -323,6 +319,7 @@ export function MeatCustomersPage({
             label={t("meatCustomers.search")}
             placeholder={t("meatCustomers.searchPlaceholder")}
             submitLabel={t("meatCustomers.searchAction")}
+            actions={<Button type="button" onClick={openCreate}><Plus />{t("meatCustomers.add")}</Button>}
           />
         </header>
 

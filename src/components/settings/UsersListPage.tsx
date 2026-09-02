@@ -157,12 +157,6 @@ export function UsersListPage({
           <span className="eyebrow">{t("settings.eyebrow")}</span>
           <h1>{t("settings.users.title")}</h1>
         </div>
-        {canCreate ? (
-          <Button type="button" onClick={() => setCreateOpen(true)}>
-            <Plus />
-            {t("settings.users.createAction")}
-          </Button>
-        ) : null}
       </header>
 
       <article className="panel orders-panel">
@@ -175,6 +169,12 @@ export function UsersListPage({
             label={t("settings.users.search")}
             placeholder={t("settings.users.searchPlaceholder")}
             submitLabel={t("settings.users.searchAction")}
+            actions={canCreate ? (
+              <Button type="button" onClick={() => setCreateOpen(true)}>
+                <Plus />
+                {t("settings.users.createAction")}
+              </Button>
+            ) : null}
             filtersActive={Boolean(role)}
             onConfirmFilters={roleFilter.confirm}
             onDismissFilters={roleFilter.revert}

@@ -94,7 +94,6 @@ describe("Meat customers page", () => {
       screen.getByPlaceholderText("搜尋客人編號、名稱、聯絡人、電話或地址"),
       "C0022",
     );
-    await user.click(screen.getByRole("button", { name: "搜尋" }));
 
     await waitFor(() => {
       expect(loadCustomers).toHaveBeenLastCalledWith({

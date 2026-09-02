@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { SlidersHorizontal } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -15,10 +15,12 @@ export type ListSearchBarProps = {
   onSubmit: () => void;
   label: string;
   placeholder?: string;
-  submitLabel: string;
+  /** @deprecated Search is submitted automatically after typing stops. */
+  submitLabel?: string;
   className?: string;
   disabled?: boolean;
   filters?: ReactNode;
+  actions?: ReactNode;
   filtersActive?: boolean;
   filtersTitle?: string;
   /** Keep filters in the side panel even on wide screens. */
@@ -29,8 +31,24 @@ export type ListSearchBarProps = {
   onDismissFilters?: () => void;
 };
 
+const ListSearchBarActionsContext = createContext<ReactNode>(null);
+
+export function ListSearchBarActionsProvider({
+  actions,
+  children,
+}: {
+  actions: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <ListSearchBarActionsContext.Provider value={actions}>
+      {children}
+    </ListSearchBarActionsContext.Provider>
+  );
+}
+
 /**
- * Standard operational-list toolbar search: in-field icon + submit button.
+ * Standard operational-list toolbar search with debounced auto-submit.
  * On mobile the field stays visible; extra filters move behind a trailing icon.
  * Changing those filters is a draft until 確定, which applies them and closes
  * the drawer.
@@ -42,10 +60,10 @@ export function ListSearchBar({
   onSubmit,
   label,
   placeholder,
-  submitLabel,
   className,
   disabled = false,
   filters,
+  actions,
   filtersActive = false,
   filtersTitle,
   filtersAlwaysInDrawer = false,
@@ -53,12 +71,38 @@ export function ListSearchBar({
   onDismissFilters,
 }: ListSearchBarProps) {
   const { t } = useTranslation();
+  const inheritedActions = useContext(ListSearchBarActionsContext);
+  const toolbarActions = actions ?? inheritedActions;
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
+  const submitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onSubmitRef = useRef(onSubmit);
+  onSubmitRef.current = onSubmit;
+
+  const cancelScheduledSubmit = () => {
+    if (submitTimerRef.current !== null) {
+      clearTimeout(submitTimerRef.current);
+      submitTimerRef.current = null;
+    }
+  };
+
+  useEffect(() => cancelScheduledSubmit, []);
+
+  const handleChange = (nextValue: string) => {
+    onChange(nextValue);
+    cancelScheduledSubmit();
+    if (disabled) return;
+
+    submitTimerRef.current = setTimeout(() => {
+      submitTimerRef.current = null;
+      onSubmitRef.current();
+    }, 300);
+  };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    onSubmit();
+    cancelScheduledSubmit();
+    onSubmitRef.current();
   };
 
   const dismissFilters = () => {
@@ -79,19 +123,11 @@ export function ListSearchBar({
         <SearchField
           id={id}
           value={value}
-          onChange={onChange}
+          onChange={handleChange}
           label={label}
           placeholder={placeholder}
           disabled={disabled}
         />
-        <Button
-          type="submit"
-          variant="outline"
-          className="list-search-submit"
-          disabled={disabled}
-        >
-          {submitLabel}
-        </Button>
         {showFilterDrawer ? (
           <Button
             type="button"
@@ -115,6 +151,7 @@ export function ListSearchBar({
       {filters && !showFilterDrawer ? (
         <div className="list-search-filters">{filters}</div>
       ) : null}
+      {toolbarActions ? <div className="list-search-actions">{toolbarActions}</div> : null}
       {showFilterDrawer ? (
         <SidePanel
           open={open}

@@ -5,6 +5,7 @@ export type PageSkeletonVariant =
   | "permission"
   | "detail"
   | "dashboard"
+  | "sales-dashboard"
   | "queue"
   | "profile"
   | "table"
@@ -264,8 +265,8 @@ function dashboardSkeleton() {
   return (
     <>
       {heading()}
-      <section className="metrics-grid">
-        {Array.from({ length: 4 }, (_, index) => (
+      <section className="orders-dashboard-grid">
+        {Array.from({ length: 6 }, (_, index) => (
           <article className="metric-card content-skeleton-card" key={index}>
             {bone("content-skeleton-icon")}
             <div className="content-skeleton-stack">
@@ -276,9 +277,12 @@ function dashboardSkeleton() {
           </article>
         ))}
       </section>
-      <section className="dashboard-grid">
-        {Array.from({ length: 2 }, (_, panelIndex) => (
-          <article className="panel content-skeleton-panel" key={panelIndex}>
+      <section className="orders-dashboard-queue-grid">
+        {Array.from({ length: 5 }, (_, panelIndex) => (
+          <article
+            className="panel queue-panel content-skeleton-panel"
+            key={panelIndex}
+          >
             {bone("content-skeleton-section-title")}
             {Array.from({ length: 5 }, (_, rowIndex) => (
               <div className="content-skeleton-row" key={rowIndex}>
@@ -290,11 +294,36 @@ function dashboardSkeleton() {
           </article>
         ))}
       </section>
-      <article className="panel jobs-panel">
-        <div className="panel-header">
+    </>
+  );
+}
+
+function salesDashboardSkeleton() {
+  return (
+    <>
+      {heading({ action: false })}
+      <article className="panel home-sales-panel home-sales-skeleton-panel">
+        <header className="panel-header home-sales-skeleton-header">
+          <div className="content-skeleton-stack">
+            {bone("content-skeleton-section-title")}
+            {bone("detail-skeleton-description")}
+          </div>
+          <div className="home-sales-skeleton-actions">
+            {bone("content-skeleton-filter")}
+            {bone("content-skeleton-section-title")}
+          </div>
+        </header>
+        {table(9, 9)}
+      </article>
+      <article className="panel home-sales-panel home-sales-skeleton-panel">
+        <header className="panel-header home-sales-skeleton-header">
+          <div className="content-skeleton-stack">
+            {bone("content-skeleton-section-title")}
+            {bone("detail-skeleton-description")}
+          </div>
           {bone("content-skeleton-section-title")}
-        </div>
-        {table(6, 6)}
+        </header>
+        {table(5, 6)}
       </article>
     </>
   );
@@ -455,6 +484,8 @@ export function PageSkeleton({
         : detailSkeleton(cards)
       : variant === "dashboard"
         ? dashboardSkeleton()
+        : variant === "sales-dashboard"
+          ? salesDashboardSkeleton()
         : variant === "queue"
           ? queueSkeleton()
           : variant === "profile"
@@ -477,6 +508,7 @@ export function PageSkeleton({
           detailLayout === "document" &&
           "quote-editor-page quote-detail-readonly document-detail-page-skeleton",
         variant === "dashboard" && "dashboard-skeleton",
+        variant === "sales-dashboard" && "home-sales-dashboard home-sales-skeleton",
         variant === "queue" && "follow-up-page content-page-skeleton",
         variant === "profile" && "profile-page content-page-skeleton",
         variant === "report" && "report-content-skeleton",

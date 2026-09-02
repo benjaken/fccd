@@ -251,9 +251,6 @@ export function PackagesListPage({
           <span className="eyebrow">{t("packages.eyebrow")}</span>
           <h1>{t("packages.title")}</h1>
         </div>
-        {canEdit ? (
-          <Button asChild><Link to="/products/packages/new"><PackagePlus />{t("catalogCreate.newPackage")}</Link></Button>
-        ) : null}
       </header>
 
       <article className="panel packages-panel">
@@ -266,6 +263,7 @@ export function PackagesListPage({
             label={t("packages.search")}
             placeholder={t("packages.searchPlaceholder")}
             submitLabel={t("packages.searchAction")}
+            actions={canEdit ? <Button asChild><Link to="/products/packages/new"><PackagePlus />{t("catalogCreate.newPackage")}</Link></Button> : null}
             filtersAlwaysInDrawer
             filtersActive={Boolean(channelId) || Boolean(status)}
             onConfirmFilters={() => {

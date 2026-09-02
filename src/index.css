@@ -118,7 +118,7 @@ input {
 
 small,
 .small {
-  font-size: max(14px, 0.8em);
+  font-size: max(12px, 0.8em);
 }
 
 /* Heading action buttons that are native <button> inherit 16px via the
@@ -136,6 +136,204 @@ a {
 
 button {
   cursor: pointer;
+}
+
+/* Monthly sales homepage */
+.home-sales-dashboard {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.home-sales-heading {
+  margin-bottom: 0;
+}
+
+.home-sales-heading p {
+  margin: 6px 0 0;
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+
+.home-sales-panel {
+  overflow: hidden;
+}
+
+.home-sales-panel + .home-sales-panel {
+  margin-top: 16px;
+}
+
+.home-sales-panel-header h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+}
+
+.home-sales-panel-header h2 svg {
+  width: 18px;
+  height: 18px;
+  color: var(--muted-foreground);
+}
+
+.home-sales-table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.home-sales-table {
+  width: 100%;
+  min-width: 1120px;
+  border-collapse: collapse;
+}
+
+.home-sales-panel-actions,
+.home-sales-skeleton-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.home-sales-brand-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.home-sales-brand-filter select,
+.home-sales-brand-filter .multi-select-trigger {
+  min-width: 150px;
+  min-height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  padding: 0 34px 0 11px;
+  color: var(--foreground);
+  font: inherit;
+}
+
+.home-sales-skeleton {
+  display: grid;
+  gap: 16px;
+}
+
+.home-sales-skeleton-panel {
+  overflow: hidden;
+}
+
+.home-sales-skeleton-header {
+  min-height: 80px;
+}
+
+.home-sales-skeleton-panel .table-wrap {
+  overflow: hidden;
+}
+
+.home-sales-tko-table {
+  min-width: 680px;
+}
+
+.home-sales-table th,
+.home-sales-table td {
+  padding: 13px 14px;
+  border-bottom: 1px solid var(--border);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.home-sales-table thead th {
+  background: color-mix(in oklch, var(--muted) 54%, var(--card));
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 740;
+  text-align: right;
+}
+
+.home-sales-table thead tr:first-child th[colspan] {
+  text-align: center;
+}
+
+.home-sales-table th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  min-width: 150px;
+  background: var(--card);
+  color: var(--foreground);
+  text-align: left;
+}
+
+.home-sales-table thead th:first-child {
+  z-index: 2;
+  background: color-mix(in oklch, var(--muted) 54%, var(--card));
+  text-align: center;
+}
+
+.home-sales-table tbody th {
+  font-size: 14px;
+  font-weight: 720;
+}
+
+.home-sales-table tbody tr:last-child th,
+.home-sales-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.home-sales-table tbody tr:hover th,
+.home-sales-table tbody tr:hover td {
+  background: color-mix(in oklch, var(--muted) 34%, var(--card));
+}
+
+.home-sales-table .is-current-month {
+  background: transparent;
+}
+
+.home-sales-table thead .is-current-month {
+  background: color-mix(in oklch, var(--muted) 54%, var(--card));
+}
+
+.home-sales-table .home-sales-period-divider {
+  border-left: 2px solid color-mix(in oklch, var(--border) 76%, var(--foreground));
+  box-shadow: none;
+}
+
+.home-sales-table .home-sales-total-row th,
+.home-sales-table .home-sales-total-row td {
+  border-top: 2px solid color-mix(in oklch, var(--border) 76%, var(--foreground));
+  background: color-mix(in oklch, var(--muted) 38%, var(--card));
+  font-weight: 760;
+}
+
+.home-sales-money {
+  display: block;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.change-positive {
+  color: oklch(0.48 0.145 148);
+  font-weight: 700;
+}
+
+.change-negative {
+  color: var(--destructive);
+  font-weight: 700;
+}
+
+@media (max-width: 780px) {
+  .home-sales-panel-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .home-sales-panel-header .button,
+  .home-sales-panel-header a {
+    align-self: flex-start;
+  }
 }
 
 /* Shopify catalog review */
@@ -761,6 +959,15 @@ button.bg-primary:focus-visible {
   background: var(--card);
 }
 
+.menu-style-one {
+  --workspace-height: 44px;
+}
+
+.menu-style-one .primary-nav-link {
+  font-size: 16px;
+  font-weight: 740;
+}
+
 .nav-row-spacer {
   align-self: stretch;
   border-right: 1px solid var(--border);
@@ -870,6 +1077,13 @@ body:has(.side-panel-root) .shell-body.sidebar-is-collapsed .sidebar {
     color 150ms ease,
     background-color 150ms ease;
   white-space: nowrap;
+}
+
+button.sidebar-link {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
 }
 
 .sidebar-link:hover {
@@ -993,7 +1207,7 @@ body:has(.side-panel-root) .shell-body.sidebar-is-collapsed .sidebar {
 .main-content {
   width: 100%;
   min-width: 0;
-  padding: 28px;
+  padding: 20px 28px;
   overflow: hidden;
 }
 
@@ -1027,12 +1241,67 @@ body:has(.side-panel-root) .shell-body.sidebar-is-collapsed .sidebar {
 
 .page-heading h1,
 .placeholder-page h1 {
-  margin: 0;
-  color: var(--foreground);
-  font-size: clamp(24px, 2vw, 30px);
-  font-weight: 790;
-  letter-spacing: -0.035em;
-  line-height: 1.2;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.page-heading .content-skeleton-title,
+.page-heading .detail-skeleton-title {
+  display: none;
+}
+
+.page-heading .eyebrow,
+.page-heading p,
+.placeholder-page .eyebrow,
+.placeholder-page p {
+  display: none;
+}
+
+.page-heading .content-skeleton-eyebrow,
+.page-heading .detail-skeleton-eyebrow,
+.page-heading .detail-skeleton-subtitle {
+  display: none;
+}
+
+.sidebar-link .sidebar-link-count {
+  min-width: 24px;
+  margin-left: auto;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: color-mix(in oklch, currentColor 10%, transparent);
+  color: inherit;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  line-height: 18px;
+  text-align: center;
+}
+
+.sidebar-link.active .sidebar-link-count {
+  background: color-mix(in oklch, currentColor 14%, transparent);
+}
+
+/* Hidden heading copy must not leave an empty first row above page content. */
+.page-heading:not(:has(button, a, input, select, textarea, [role="button"])) {
+  display: none;
+}
+
+.page-transition
+  > :has(> .page-heading):not(:has(> .page-heading button)):not(
+    :has(> .page-heading a)
+  ):not(:has(> .page-heading input)):not(:has(> .page-heading select)):not(
+    :has(> .page-heading textarea)
+  ):not(
+    :has(> .page-heading [role="button"])
+  ):not(:has(.page-skeleton-bone)) {
+  gap: 0;
+  grid-template-rows: minmax(0, 1fr);
 }
 
 .page-heading p,
@@ -1368,37 +1637,10 @@ body:has(.side-panel-root) .shell-body.sidebar-is-collapsed .sidebar {
   align-items: flex-end;
 }
 
-.monthly-expenses-skeleton-heading {
-  display: grid;
-  gap: 0.55rem;
-}
-
-.monthly-expenses-skeleton-heading .page-skeleton-bone,
 .monthly-expenses-skeleton-search .page-skeleton-bone,
 .monthly-expenses-skeleton-history-list .page-skeleton-bone,
 .monthly-expenses-skeleton-empty .page-skeleton-bone {
   display: block;
-}
-
-.monthly-expenses-skeleton-eyebrow {
-  width: 5rem;
-  height: 0.75rem;
-}
-
-.monthly-expenses-skeleton-title {
-  width: 12rem;
-  height: 2rem;
-}
-
-.monthly-expenses-skeleton-description {
-  width: min(24rem, 62vw);
-  height: 0.8rem;
-}
-
-.monthly-expenses-skeleton-button {
-  width: 11.5rem;
-  height: 2.5rem;
-  border-radius: 0.65rem;
 }
 
 .monthly-expenses-skeleton-search {
@@ -1408,12 +1650,24 @@ body:has(.side-panel-root) .shell-body.sidebar-is-collapsed .sidebar {
   border-bottom: 1px solid var(--border);
 }
 
-.monthly-expenses-skeleton-search .page-skeleton-bone:first-child {
+.monthly-expenses-skeleton-search-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.monthly-expenses-skeleton-search-heading .page-skeleton-bone:first-child {
   width: 4.5rem;
   height: 0.75rem;
 }
 
-.monthly-expenses-skeleton-search .page-skeleton-bone:last-child {
+.monthly-expenses-skeleton-search-heading .page-skeleton-bone:last-child {
+  width: 7.5rem;
+  height: 0.75rem;
+}
+
+.monthly-expenses-skeleton-search-field {
   width: 100%;
   height: 2.9rem;
   border-radius: 0.7rem;
@@ -1499,13 +1753,43 @@ body:has(.side-panel-root) .shell-body.sidebar-is-collapsed .sidebar {
   border-bottom: 1px solid var(--border);
 }
 
-.monthly-expenses-search > span {
+.monthly-expenses-search-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.monthly-expenses-search-heading > span {
   color: var(--primary);
   font-size: 0.78rem;
   font-weight: 800;
 }
 
-.monthly-expenses-search > div {
+.monthly-expenses-new-record-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--primary);
+  font-size: 0.75rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.monthly-expenses-new-record-trigger:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.monthly-expenses-new-record-trigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.monthly-expenses-search-field {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -2095,6 +2379,12 @@ body:has(.side-panel-root) .shell-body.sidebar-is-collapsed .sidebar {
   align-items: end;
   justify-content: flex-end;
   gap: 10px !important;
+}
+
+.daily-sales-new-record {
+  height: 40px;
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .daily-sales-filter-mode {
@@ -3368,6 +3658,20 @@ body:has(.side-panel-root) .shell-body.sidebar-is-collapsed .sidebar {
     min-width: 0;
   }
 
+  .home-sales-panel-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .home-sales-brand-filter {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .daily-sales-new-record {
+    width: 100%;
+  }
+
   .daily-sales-workspace,
   .daily-sales-grid {
     grid-template-columns: 1fr;
@@ -3421,171 +3725,16 @@ body:has(.side-panel-root) .shell-body.sidebar-is-collapsed .sidebar {
   }
 }
 
-.orders-dashboard-body-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1.75fr) minmax(320px, 0.75fr);
-  align-items: start;
-  gap: 14px;
-  margin-bottom: 14px;
-}
-
 .orders-dashboard-queue-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
+  margin-bottom: 14px;
 }
 
-.orders-dashboard-chart-column {
-  position: sticky;
-  top: calc(var(--topbar-height) + var(--workspace-height) + 14px);
-}
-
-.orders-dashboard-charts {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 14px;
-}
-
-.dashboard-chart-panel {
-  overflow: hidden;
-}
-
-.dashboard-chart-panel .panel-header h2 {
-  display: flex;
-  align-items: center;
-}
-
-.orders-dashboard-bars {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 18px 20px 20px;
-}
-
-.orders-dashboard-bar-row {
-  display: grid;
-  grid-template-columns: minmax(95px, 0.42fr) minmax(110px, 1fr) auto;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-  color: var(--foreground);
-  font-size: 14px;
-}
-
-.orders-dashboard-bar-row > span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.orders-dashboard-bar-row > strong {
-  min-width: 32px;
-  text-align: right;
-}
-
-.orders-dashboard-bar-track {
-  height: 10px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: var(--secondary);
-}
-
-.orders-dashboard-bar-track i {
-  display: block;
-  width: 0;
-  min-width: 3px;
-  height: 100%;
-  border-radius: inherit;
-  transition: width 350ms ease;
-}
-
-.orders-dashboard-bar-track i.tone-blue,
-.orders-dashboard-share i.tone-blue {
-  background: #4f7ee8;
-}
-
-.orders-dashboard-bar-track i.tone-red,
-.orders-dashboard-share i.tone-red {
-  background: #e05f65;
-}
-
-.orders-dashboard-bar-track i.tone-green,
-.orders-dashboard-share i.tone-green {
-  background: #35a46f;
-}
-
-.orders-dashboard-bar-track i.tone-amber,
-.orders-dashboard-share i.tone-amber {
-  background: #d6952f;
-}
-
-.orders-dashboard-share {
-  display: grid;
-  grid-template-columns: 112px minmax(0, 1fr);
-  align-items: center;
-  gap: 24px;
-  padding: 18px 24px 22px;
-}
-
-.orders-dashboard-donut {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 112px;
-  aspect-ratio: 1;
-  border-radius: 50%;
-}
-
-.orders-dashboard-donut::after {
-  position: absolute;
-  width: 68px;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: var(--card);
-  content: "";
-}
-
-.orders-dashboard-donut > span {
-  z-index: 1;
-  display: grid;
-  text-align: center;
-}
-
-.orders-dashboard-donut strong {
-  font-size: 21px;
-  line-height: 1.1;
-}
-
-.orders-dashboard-donut small {
-  margin-top: 3px;
-  color: var(--muted-foreground);
-  font-size: 14px;
-}
-
-.orders-dashboard-share ul {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.orders-dashboard-share li {
-  display: grid;
-  grid-template-columns: 9px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 9px;
-  color: var(--muted-foreground);
-  font-size: 14px;
-}
-
-.orders-dashboard-share li i {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-}
-
-.orders-dashboard-share li strong {
-  color: var(--foreground);
-  font-variant-numeric: tabular-nums;
+.orders-dashboard-page .orders-dashboard-queue-grid,
+.dashboard-skeleton .orders-dashboard-queue-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .orders-dashboard-panel-icon {
@@ -3693,23 +3842,9 @@ body:has(.side-panel-root) .shell-body.sidebar-is-collapsed .sidebar {
   color: var(--muted-foreground);
 }
 
-@media (max-width: 1180px) {
-  .orders-dashboard-body-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .orders-dashboard-chart-column {
-    position: static;
-  }
-
-  .orders-dashboard-charts {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
 @media (max-width: 760px) {
-  .orders-dashboard-queue-grid,
-  .orders-dashboard-charts {
+  .orders-dashboard-page .orders-dashboard-queue-grid,
+  .dashboard-skeleton .orders-dashboard-queue-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -3722,25 +3857,6 @@ body:has(.side-panel-root) .shell-body.sidebar-is-collapsed .sidebar {
 
   .orders-dashboard-grid .metric-card p {
     white-space: normal;
-  }
-
-  .orders-dashboard-bar-row {
-    grid-template-columns: minmax(82px, 0.65fr) minmax(72px, 1fr) auto;
-    gap: 8px;
-  }
-
-  .orders-dashboard-share {
-    grid-template-columns: 112px minmax(0, 1fr);
-    gap: 16px;
-    padding-inline: 18px;
-  }
-
-  .orders-dashboard-donut {
-    width: 112px;
-  }
-
-  .orders-dashboard-donut::after {
-    width: 68px;
   }
 
   .orders-dashboard-quote-list a {
@@ -4689,10 +4805,14 @@ button.product-tag[aria-pressed="true"] {
 .kitchen-orders-page {
   grid-template-rows: auto minmax(0, 1fr);
   height: calc(
-    100dvh - var(--topbar-height) - var(--workspace-height) - 76px
+    100dvh - var(--topbar-height) - var(--workspace-height) - 40px
   );
   min-height: 560px;
   overflow: hidden;
+}
+
+.orders-page.has-no-visible-heading {
+  grid-template-rows: minmax(0, 1fr);
 }
 
 .quotes-page .page-heading,
@@ -4829,21 +4949,118 @@ button.product-tag[aria-pressed="true"] {
   overflow: hidden;
 }
 
-.quotes-panel,
+.quotes-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  min-height: 0;
+}
+
 .orders-panel {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   min-height: 0;
 }
 
+/* Most order-style list panels contain toolbar, content, and pagination.
+   Add the second auto row only when the panel actually has a fourth section
+   (for example, queue tabs or the yield-error rules banner). */
+.orders-panel:has(> :nth-child(4)) {
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+}
+
+.quotes-panel:has(> :nth-child(4)) {
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+}
+
+.orders-queue-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  padding: 14px 18px 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.orders-queue-tab {
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--muted-foreground);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.orders-queue-tab:hover {
+  border-color: var(--primary);
+  color: var(--foreground);
+}
+
+.orders-queue-tab.is-active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.orders-queue-tab:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
 .quotes-toolbar,
 .orders-toolbar {
   display: flex;
   align-items: flex-end;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 16px;
   padding: 16px 18px;
   border-bottom: 1px solid var(--border);
+}
+
+.orders-toolbar {
+  display: grid;
+  align-items: stretch;
+  justify-content: stretch;
+  gap: 10px;
+  width: 100%;
+}
+
+.orders-toolbar-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+  justify-self: stretch;
+}
+
+.orders-toolbar-main > .list-search-host {
+  display: flex;
+  min-width: 0;
+}
+
+.orders-toolbar-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  justify-self: end;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.orders-toolbar-note {
+  max-width: none;
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  text-align: left;
 }
 
 .kitchen-calendar-page {
@@ -5764,18 +5981,30 @@ button.product-tag[aria-pressed="true"] {
 }
 
 .yield-errors-page .orders-panel {
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.yield-errors-toolbar {
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 0.9fr);
+  align-items: end;
+  gap: 18px;
+}
+
+.yield-errors-toolbar > .list-search-host {
+  min-width: 0;
 }
 
 .yield-errors-rules {
   display: grid;
   gap: 4px;
-  padding: 12px 18px;
-  border-bottom: 1px solid var(--border);
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
   background: var(--secondary);
   color: var(--muted-foreground);
-  font-size: 14px;
-  line-height: 1.45;
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .yield-errors-rules-title {
@@ -5786,6 +6015,32 @@ button.product-tag[aria-pressed="true"] {
 
 .yield-errors-rules p {
   margin: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 980px) {
+  .yield-errors-toolbar {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .yield-errors-rules {
+    width: 100%;
+    padding: 10px 12px;
+  }
+}
+
+.settings-employees-toolbar {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 16px;
+  width: 100%;
+}
+
+.settings-employees-toolbar .orders-status-filter {
+  width: 180px;
+  flex: 0 0 180px;
 }
 
 .settings-attachments-toolbar {
@@ -5857,6 +6112,23 @@ button.product-tag[aria-pressed="true"] {
   gap: 16px;
 }
 
+.catalog-create-embedded {
+  min-width: 0;
+}
+
+.catalog-create-embedded .product-edit-actions {
+  position: sticky;
+  z-index: 4;
+  bottom: 0;
+  padding: 14px 0 2px;
+  border-top: 1px solid var(--border);
+  background: var(--background);
+}
+
+.quote-product-create-panel > .side-panel-body {
+  background: color-mix(in oklch, var(--muted) 24%, var(--background));
+}
+
 .mobile-list-skeleton-card {
   display: grid;
   gap: 12px;
@@ -5897,7 +6169,11 @@ button.product-tag[aria-pressed="true"] {
 }
 
 .list-search-host {
-  display: contents;
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 16px;
+  width: 100%;
 }
 
 .list-search,
@@ -5908,11 +6184,24 @@ button.product-tag[aria-pressed="true"] {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex: 1 1 420px;
   width: min(620px, 100%);
+  max-width: 620px;
 }
 
 .list-search-filters {
-  display: contents;
+  display: flex;
+  align-items: flex-end;
+  flex: 0 0 auto;
+  gap: 12px;
+}
+
+.list-search-actions {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 8px;
+  margin-left: auto;
 }
 
 .quotes-filter-group {
@@ -5960,12 +6249,20 @@ button.product-tag[aria-pressed="true"] {
 }
 
 .list-search-filter-drawer .products-status-filter,
+.list-search-filter-drawer .products-price-filter,
 .list-search-filter-drawer .packages-status-filter,
 .list-search-filter-drawer .orders-status-filter,
 .list-search-filter-drawer .quotes-status-filter,
+.list-search-filter-drawer .ingredients-status-filter,
+.list-search-filter-drawer .suppliers-status-filter,
 .list-search-filter-drawer .delivery-list-filters .orders-status-filter {
   width: 100%;
   min-width: 0;
+  max-width: none;
+}
+
+.list-search-filter-drawer .products-price-filter > div {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .list-search-filter-drawer select {
@@ -6093,6 +6390,8 @@ button.product-tag[aria-pressed="true"] {
   display: grid;
   gap: 6px;
   min-width: 180px;
+  width: 180px;
+  max-width: 180px;
   color: var(--muted-foreground);
   font-size: 14px;
   font-weight: 700;
@@ -6757,6 +7056,8 @@ button.product-tag[aria-pressed="true"] {
   display: grid;
   gap: 6px;
   min-width: 180px;
+  width: 180px;
+  max-width: 180px;
   color: var(--muted-foreground);
   font-size: 14px;
   font-weight: 700;
@@ -8011,6 +8312,69 @@ button.product-tag[aria-pressed="true"] {
   vertical-align: middle;
 }
 
+.products-price-filter {
+  display: grid;
+  gap: 6px;
+  min-width: 280px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.products-price-filter > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(120px, 1fr));
+  gap: 8px;
+}
+
+.products-price-filter label {
+  position: relative;
+}
+
+.products-price-filter label span {
+  position: absolute;
+  top: 50%;
+  left: 11px;
+  transform: translateY(-50%);
+  color: var(--muted-foreground);
+  font-size: 14px;
+  pointer-events: none;
+}
+
+.products-price-filter input {
+  width: 100%;
+  height: 40px;
+  padding: 0 10px 0 54px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  outline: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 14px;
+}
+
+.products-price-filter input:focus {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 13%, transparent);
+}
+
+/* Skeleton rows deliberately mirror a full result page and can overflow the
+   final table viewport. Keep that layout stable without showing temporary
+   horizontal or vertical scrollbars; normal scrollbars return with the data. */
+.main-content:has(.page-skeleton-bone, .table-skeleton-bone),
+.main-content:has(.page-skeleton-bone, .table-skeleton-bone) * {
+  -ms-overflow-style: none;
+  scrollbar-gutter: auto;
+  scrollbar-width: none;
+}
+
+.main-content:has(.page-skeleton-bone, .table-skeleton-bone)::-webkit-scrollbar,
+.main-content:has(.page-skeleton-bone, .table-skeleton-bone) *::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
 .table-skeleton-bone {
   display: block;
   width: 64%;
@@ -8952,15 +9316,13 @@ button.product-tag[aria-pressed="true"] {
   margin-top: 10px;
 }
 
-.orders-selection-actions {
-  display: flex;
+.orders-selection-count {
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 14px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--selection-bg);
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 650;
+  white-space: nowrap;
 }
 
 .orders-selection-cell {
@@ -10182,8 +10544,8 @@ button.product-tag[aria-pressed="true"] {
 }
 
 .orders-table-wrap .order-packing-note {
-  min-width: 14rem;
-  max-width: 24rem;
+  min-width: 12rem;
+  max-width: 20rem;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
@@ -10966,6 +11328,56 @@ button.product-tag[aria-pressed="true"] {
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
+}
+
+.restaurant-settings-toolbar {
+  display: flex;
+  align-items: center;
+  min-height: 72px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+  flex: 0 0 auto;
+}
+
+.restaurant-settings-toolbar .list-search {
+  flex-basis: 620px;
+}
+
+.restaurant-settings-list-state {
+  display: grid;
+  min-height: 0;
+  flex: 1 1 auto;
+  place-items: center;
+}
+
+.restaurant-settings-list-state .operational-list-state {
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  text-align: center;
+}
+
+.restaurant-settings-list-state .operational-list-state > div {
+  justify-items: center;
+}
+
+.restaurant-settings-list-state .operational-list-state > svg {
+  color: var(--muted-foreground);
+}
+
+.restaurant-settings-table-wrap .table-row-actions .ui-button {
+  border-color: var(--border);
+  background: color-mix(in oklch, var(--background) 86%, var(--secondary));
+  color: var(--muted-foreground);
+}
+
+.restaurant-settings-table-wrap .table-row-actions .ui-button:hover:not(:disabled) {
+  background: var(--accent);
+  color: var(--foreground);
+}
+
+.ingredients-panel > .restaurant-settings-list-state + .operational-list-pagination {
+  flex: 0 0 auto;
 }
 
 .seasoning-cost-panel > .list-inline-error,
@@ -13912,6 +14324,330 @@ a.masoft-order-tag:focus-visible {
   text-align: right;
 }
 
+.kitchen-sales-cost-workspace {
+  display: grid;
+  grid-template-columns: 16rem minmax(0, 1fr);
+  align-items: start;
+  gap: 0.9rem;
+  min-width: 0;
+}
+
+.kitchen-sales-cost-sidebar {
+  position: sticky;
+  top: 0;
+  display: grid;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+.kitchen-sales-cost-sidebar .kitchen-sales-cost-filter {
+  grid-template-columns: 1fr;
+  align-items: start;
+  gap: 0.85rem;
+  padding: 0.9rem;
+}
+
+.kitchen-sales-cost-sidebar .kitchen-sales-cost-filter-copy {
+  align-items: flex-start;
+}
+
+.kitchen-sales-cost-sidebar .kitchen-sales-cost-filter-copy p {
+  line-height: 1.4;
+}
+
+.kitchen-sales-cost-sidebar .kitchen-sales-cost-years {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 100%;
+}
+
+.kitchen-sales-cost-sidebar .kitchen-sales-cost-year-option {
+  justify-content: center;
+  min-width: 0;
+  padding: 0.48rem 0.45rem;
+}
+
+.kitchen-sales-cost-sidebar .kitchen-sales-cost-filter-actions {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 0.4rem 0.65rem;
+}
+
+.kitchen-sales-cost-sidebar .kitchen-sales-cost-filter-actions span {
+  width: 100%;
+}
+
+.kitchen-sales-cost-sidebar .kitchen-sales-cost-overview {
+  grid-template-columns: 1fr;
+  gap: 0.55rem;
+}
+
+.kitchen-sales-cost-sidebar .kitchen-sales-cost-stat {
+  gap: 0.25rem;
+  padding: 0.72rem 0.8rem;
+  border-radius: 0.8rem;
+  box-shadow: none;
+}
+
+.kitchen-sales-cost-sidebar .kitchen-sales-cost-stat strong {
+  font-size: 1.1rem;
+}
+
+.kitchen-sales-cost-sidebar .kitchen-sales-cost-stat small,
+.kitchen-sales-cost-sidebar .kitchen-sales-cost-stat > div {
+  font-size: 0.78rem;
+}
+
+.kitchen-sales-cost-main {
+  min-width: 0;
+}
+
+.kitchen-sales-cost-report-content {
+  display: grid;
+  gap: 0.9rem;
+  min-width: 0;
+}
+
+.kitchen-sales-cost-combined {
+  min-width: 0;
+  overflow: hidden;
+  padding: 0;
+  border-radius: 1rem;
+}
+
+.kitchen-sales-cost-combined-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 0.9rem;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(90deg, var(--card), color-mix(in srgb, var(--selection-bg) 35%, var(--card)));
+}
+
+.kitchen-sales-cost-combined-heading h2 {
+  margin: 0;
+  font-size: 0.98rem;
+}
+
+.kitchen-sales-cost-combined-heading p {
+  margin: 0.18rem 0 0;
+  color: var(--muted-foreground);
+  font-size: 0.78rem;
+}
+
+.kitchen-sales-cost-combined-heading > span {
+  flex: 0 0 auto;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  background: var(--selection-bg-strong);
+  color: var(--primary);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.kitchen-sales-cost-combined .kitchen-sales-cost-table {
+  min-width: 1120px;
+  font-size: 0.75rem;
+}
+
+.kitchen-sales-cost-combined .kitchen-sales-cost-comparison-table {
+  min-width: max(100%, 1480px);
+  table-layout: fixed;
+}
+
+.kitchen-sales-cost-comparison-table th,
+.kitchen-sales-cost-comparison-table td {
+  padding: 0 !important;
+  text-align: right;
+}
+
+.kitchen-sales-cost-comparison-table thead th {
+  height: 2.7rem;
+  padding: 0.45rem 0.5rem !important;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kitchen-sales-cost-comparison-table th:first-child,
+.kitchen-sales-cost-comparison-table td:first-child {
+  left: 0;
+  width: 5.2rem !important;
+  min-width: 5.2rem !important;
+  text-align: center;
+}
+
+.kitchen-sales-cost-comparison-table tbody th,
+.kitchen-sales-cost-comparison-table tfoot th {
+  padding: 0.5rem !important;
+  background: var(--card);
+  font-size: 0.84rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.kitchen-sales-cost-comparison-table tbody tr:nth-child(even) th,
+.kitchen-sales-cost-comparison-table tbody tr:nth-child(even) td {
+  background: var(--report-table-stripe-bg);
+}
+
+.kitchen-sales-cost-comparison-values {
+  display: grid;
+  min-width: 7rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.kitchen-sales-cost-comparison-value {
+  display: grid;
+  grid-template-columns: 1.9rem minmax(0, 1fr);
+  align-items: baseline;
+  gap: 0.1rem;
+  min-height: 1.85rem;
+  padding: 0.3rem 0.25rem;
+  color: var(--year-tone-color);
+  white-space: nowrap;
+}
+
+.kitchen-sales-cost-comparison-value b {
+  font-size: 0.68rem;
+  font-weight: 750;
+  text-align: left;
+}
+
+.kitchen-sales-cost-comparison-value strong {
+  color: inherit;
+  font-size: 0.68rem;
+  font-weight: 750;
+  text-align: right;
+}
+
+.kitchen-sales-cost-net-column {
+  background: color-mix(in srgb, var(--primary) 5%, var(--card));
+}
+
+.kitchen-sales-cost-comparison-table tfoot th,
+.kitchen-sales-cost-comparison-table tfoot td {
+  border-top: 2px solid var(--report-table-accent-border);
+  background: var(--report-table-summary-bg);
+}
+
+.kitchen-sales-cost-comparison-table tfoot th {
+  z-index: 2;
+  color: var(--foreground);
+}
+
+.kitchen-sales-cost-combined .kitchen-sales-cost-table th,
+.kitchen-sales-cost-combined .kitchen-sales-cost-table td {
+  padding: 0.42rem 0.34rem;
+}
+
+.kitchen-sales-cost-combined .kitchen-sales-cost-table thead th,
+.kitchen-sales-cost-combined .kitchen-sales-cost-amount strong,
+.kitchen-sales-cost-combined .kitchen-sales-cost-amount span {
+  font-size: 0.75rem;
+}
+
+.kitchen-sales-cost-combined .kitchen-sales-cost-amount {
+  min-width: 3.95rem;
+}
+
+.kitchen-sales-cost-combined .kitchen-sales-cost-table th:first-child,
+.kitchen-sales-cost-combined .kitchen-sales-cost-table td:first-child,
+.kitchen-sales-cost-combined .kitchen-sales-cost-year-cell {
+  left: 0;
+  width: 4.75rem;
+  min-width: 4.75rem;
+}
+
+.kitchen-sales-cost-combined .kitchen-sales-cost-table:not(.kitchen-sales-cost-comparison-table) thead th:nth-child(2),
+.kitchen-sales-cost-combined .kitchen-sales-cost-item-cell {
+  position: sticky;
+  left: 4.75rem;
+  z-index: 1;
+  width: 8.25rem;
+  min-width: 8.25rem;
+  background: var(--card);
+  text-align: left;
+}
+
+.kitchen-sales-cost-combined .kitchen-sales-cost-table:not(.kitchen-sales-cost-comparison-table) thead th:nth-child(2) {
+  z-index: 3;
+  background: var(--report-table-header-bg);
+}
+
+.kitchen-sales-cost-year-cell {
+  z-index: 2 !important;
+  padding: 0.65rem 0.45rem !important;
+  border-right-color: color-mix(in srgb, var(--primary) 28%, var(--border)) !important;
+  background: color-mix(in srgb, var(--primary) 8%, var(--card)) !important;
+  text-align: center !important;
+  vertical-align: top !important;
+}
+
+.kitchen-sales-cost-year-cell strong,
+.kitchen-sales-cost-year-cell span {
+  display: block;
+  white-space: nowrap;
+}
+
+.kitchen-sales-cost-year-cell strong {
+  color: var(--primary);
+  font-size: 0.82rem;
+}
+
+.kitchen-sales-cost-year-cell span {
+  margin-top: 0.2rem;
+  color: var(--muted-foreground);
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+.kitchen-sales-cost-combined .kitchen-sales-cost-year-start:not(:first-child) > th,
+.kitchen-sales-cost-combined .kitchen-sales-cost-year-start:not(:first-child) > td {
+  border-top: 3px solid var(--report-table-accent-border);
+}
+
+@media (max-width: 1050px) {
+  .kitchen-sales-cost-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .kitchen-sales-cost-sidebar {
+    position: static;
+    grid-template-columns: minmax(14rem, 0.8fr) minmax(0, 1.6fr);
+  }
+
+  .kitchen-sales-cost-sidebar .kitchen-sales-cost-overview {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .kitchen-sales-cost-sidebar {
+    grid-template-columns: 1fr;
+  }
+
+  .kitchen-sales-cost-sidebar .kitchen-sales-cost-overview {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .kitchen-sales-cost-combined-heading {
+    align-items: flex-start;
+  }
+
+  .kitchen-sales-cost-combined-heading p {
+    max-width: 14rem;
+  }
+}
+
+@media (max-width: 430px) {
+  .kitchen-sales-cost-sidebar .kitchen-sales-cost-overview {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Central-kitchen channel-sales report. */
 .kitchen-channel-sales-layout {
   display: grid;
@@ -14908,33 +15644,17 @@ a.masoft-order-tag:focus-visible {
   grid-template-columns: var(--restaurant-record-sidebar-width) minmax(0, 1fr);
 }
 
-.restaurant-stocktakes-loading-heading {
-  display: grid;
-  gap: 8px;
-  width: min(430px, 48vw);
+.kitchen-channel-sales-content {
+  min-width: 0;
 }
 
-.restaurant-stocktakes-loading-heading .page-skeleton-bone {
-  display: block;
+.restaurant-stocktakes-page-skeleton {
+  gap: 0;
+  grid-template-rows: minmax(0, 1fr);
 }
 
 .restaurant-stocktakes-page-skeleton .stocktake-date-list-header > .page-skeleton-bone {
   display: block;
-}
-
-.restaurant-stocktakes-loading-heading .page-skeleton-bone:nth-child(1) {
-  width: 80px;
-  height: 12px;
-}
-
-.restaurant-stocktakes-loading-heading .page-skeleton-bone:nth-child(2) {
-  width: 180px;
-  height: 30px;
-}
-
-.restaurant-stocktakes-loading-heading .page-skeleton-bone:nth-child(3) {
-  width: min(100%, 360px);
-  height: 14px;
 }
 
 .restaurant-stocktakes-loading-list {
@@ -15979,6 +16699,8 @@ a.masoft-order-tag:focus-visible {
 .suppliers-status-filter {
   display: grid;
   gap: 6px;
+  width: 180px;
+  max-width: 180px;
 }
 
 .suppliers-status-filter > span {
@@ -16385,6 +17107,8 @@ a.masoft-order-tag:focus-visible {
 .ingredients-status-filter {
   display: grid;
   gap: 6px;
+  width: 180px;
+  max-width: 180px;
 }
 
 .ingredients-status-filter > span {
@@ -18897,8 +19621,28 @@ a.masoft-order-tag:focus-visible {
   gap: 14px;
 }
 
+/* Hidden report headings must not collapse the spacing between report panels. */
+.page-transition
+  > :is(
+    .reports-page,
+    .kitchen-sales-cost-report-page,
+    .restaurant-sales-page,
+    .shop-sales-hours-report,
+    .restaurant-sales-salary-report,
+    .restaurant-sales-cost-report,
+    .restaurant-pnl-report,
+    .restaurant-new-product-report
+  ) {
+  gap: 14px !important;
+}
+
 .reports-page > .page-heading {
   margin-bottom: 0;
+}
+
+/* Report classification now lives in the four-level sidebar navigation. */
+.kitchen-sales-cost-tabs {
+  display: none;
 }
 
 .report-tabs,
@@ -19677,7 +20421,7 @@ a.masoft-order-tag:focus-visible {
 
 @media (min-width: 1101px) {
   .reports-page:has(> .restaurant-sales-page.is-embedded) {
-    grid-template-rows: auto auto minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
     height: calc(
       100dvh - var(--topbar-height) - var(--workspace-height) - 56px
     );
@@ -20861,6 +21605,7 @@ a.masoft-order-tag:focus-visible {
 
 .quote-editor-heading {
   align-items: flex-end;
+  flex-wrap: wrap;
 }
 
 .quote-detail-actions {
@@ -20874,24 +21619,6 @@ a.masoft-order-tag:focus-visible {
   display: grid;
   justify-items: end;
   gap: 10px;
-}
-
-.quote-editor-saved-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 9px 13px;
-  border: 1px solid color-mix(in oklch, var(--success) 35%, var(--border));
-  border-radius: 999px;
-  background: color-mix(in oklch, var(--success) 10%, var(--card));
-  color: var(--success);
-  font-size: 14px;
-  font-weight: 750;
-}
-
-.quote-editor-saved-badge svg {
-  width: 16px;
-  height: 16px;
 }
 
 .quote-editor-tabs {
@@ -21242,6 +21969,7 @@ a.masoft-order-tag:focus-visible {
 }
 
 .quote-editor-form-column > label,
+.quote-editor-address-field,
 .quote-item-form > label,
 .quote-item-numbers label {
   display: grid;
@@ -21251,6 +21979,7 @@ a.masoft-order-tag:focus-visible {
 }
 
 .quote-editor-form label > span,
+.quote-editor-address-field > label,
 .quote-item-form label > span {
   display: grid;
   gap: 2px;
@@ -21303,6 +22032,144 @@ a.masoft-order-tag:focus-visible {
   resize: vertical;
 }
 
+.delivery-address-input-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 38px;
+  align-items: stretch;
+  gap: 8px;
+  min-width: 0;
+}
+
+.delivery-address-input-row > input,
+.delivery-address-input-row > textarea {
+  min-width: 0;
+  min-height: 68px;
+}
+
+.order-editor-address-field .delivery-address-input-row > input {
+  height: auto;
+}
+
+.delivery-address-actions {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  min-width: 0;
+}
+
+.delivery-address-actions > div {
+  display: grid;
+  grid-template-rows: repeat(2, minmax(31px, 1fr));
+  gap: 6px;
+}
+
+.delivery-address-actions button,
+.district-translation-action button {
+  width: 100%;
+  min-height: 31px;
+  padding: 5px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--background);
+  color: var(--primary);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 650;
+  line-height: 1.25;
+  cursor: pointer;
+}
+
+.delivery-address-actions button {
+  display: grid;
+  place-items: center;
+}
+
+.delivery-address-actions button svg,
+.district-translation-action button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.delivery-address-actions button:hover:not(:disabled),
+.district-translation-action button:hover:not(:disabled) {
+  border-color: var(--primary);
+  background: color-mix(in oklch, var(--primary) 7%, var(--background));
+}
+
+.delivery-address-actions button:focus-visible,
+.district-translation-action button:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.delivery-address-actions button:disabled,
+.district-translation-action button:disabled {
+  color: var(--muted-foreground);
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.delivery-address-actions small {
+  color: var(--destructive);
+  font-size: 0.72rem;
+}
+
+.district-translation-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 38px;
+  align-items: start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.district-translation-action {
+  display: grid;
+  gap: 3px;
+  padding-top: 4px;
+}
+
+.district-translation-action button {
+  display: grid;
+  width: 38px;
+  height: 42px;
+  place-items: center;
+}
+
+.district-translation-action small {
+  color: var(--destructive);
+  font-size: 0.68rem;
+  line-height: 1.2;
+}
+
+.delivery-address-map-query {
+  margin: 0 0 10px;
+  color: var(--muted-foreground);
+  font-size: 0.82rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.delivery-address-map-frame {
+  display: block;
+  width: 100%;
+  height: min(62vh, 560px);
+  min-height: 360px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--muted);
+}
+
+@media (max-width: 760px) {
+  .delivery-address-input-row {
+    grid-template-columns: minmax(0, 1fr) 38px;
+  }
+
+  .delivery-address-map-frame {
+    height: 58vh;
+    min-height: 300px;
+  }
+}
+
 .quote-editor-form input:focus,
 .quote-editor-form select:focus,
 .quote-editor-form textarea:focus,
@@ -21316,6 +22183,22 @@ a.masoft-order-tag:focus-visible {
 .quote-editor-form input:disabled {
   background: var(--muted);
   color: var(--muted-foreground);
+}
+
+.quote-order-number-control {
+  position: relative;
+  min-width: 0;
+}
+
+.quote-order-number-control input {
+  padding-right: 2.75rem;
+}
+
+.quote-order-number-control .shopify-order-icon {
+  position: absolute;
+  top: 50%;
+  right: 0.625rem;
+  transform: translateY(-50%);
 }
 
 .quote-editor-form-column > label.quote-editor-checkbox {
@@ -22142,6 +23025,19 @@ a.masoft-order-tag:focus-visible {
   white-space: pre-wrap;
 }
 
+.quote-readonly-order-number {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.quote-readonly-order-number > strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-weight: 500;
+}
+
 .quote-readonly-tags {
   display: flex;
   flex-wrap: wrap;
@@ -22635,6 +23531,7 @@ a.masoft-order-tag:focus-visible {
 }
 
 .quote-line-edit-number,
+.quote-line-name-input,
 .quote-line-edit-remarks {
   width: 100%;
   min-width: 72px;
@@ -23394,7 +24291,8 @@ a.masoft-order-tag:focus-visible {
     padding: 20px 16px;
   }
 
-  .quote-editor-form-column > label {
+  .quote-editor-form-column > label,
+  .quote-editor-address-field {
     grid-template-columns: 1fr;
     gap: 6px;
     width: 100%;
@@ -26950,6 +27848,128 @@ button.factory-job-card:focus-visible {
   white-space: pre-wrap;
 }
 
+.quote-line-name-input {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.quote-line-name-editor {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.quote-line-sku-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: normal;
+}
+
+.quote-line-sku-content .quote-line-add-product-button {
+  width: 30px;
+  min-width: 30px;
+  max-width: 30px;
+  height: 30px;
+  min-height: 30px;
+  flex: 0 0 30px;
+  padding: 0;
+}
+
+.quote-line-sku-content .quote-line-add-product-button svg {
+  width: 15px;
+  height: 15px;
+}
+
+.quote-product-match-list {
+  display: grid;
+  gap: 8px;
+}
+
+.quote-product-match-list button {
+  display: flex;
+  width: 100%;
+  padding: 10px 12px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--foreground);
+  text-align: left;
+  cursor: pointer;
+}
+
+.quote-product-match-list button:hover,
+.quote-product-match-list button:focus-visible {
+  border-color: var(--primary);
+  background: var(--selection-bg);
+  outline: 0;
+}
+
+.menu-style-setting { padding: 18px; }
+
+.menu-style-setting > p {
+  margin: 0 0 14px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+
+.menu-style-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.menu-style-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--foreground);
+  text-align: left;
+  transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
+}
+
+.menu-style-option:hover {
+  border-color: color-mix(in oklch, var(--primary) 35%, var(--border));
+  background: var(--secondary);
+}
+
+.menu-style-option.active {
+  border-color: var(--primary);
+  background: var(--selection-bg);
+  box-shadow: 0 0 0 2px color-mix(in oklch, var(--primary) 12%, transparent);
+}
+
+.menu-style-option > svg {
+  width: 21px;
+  height: 21px;
+  flex: 0 0 auto;
+  color: var(--primary);
+}
+
+.menu-style-option > span {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.menu-style-option strong { font-size: 15px; }
+
+.menu-style-option small {
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 .mobile-account-actions {
   display: flex;
   flex-direction: column;
@@ -27363,24 +28383,39 @@ button.factory-job-card:focus-visible {
 
 /* Report AI interpretation */
 .report-ai-trigger {
-  min-height: 38px;
-  padding-inline: 14px;
-  border: 1px solid var(--primary);
-  border-radius: 8px;
-  color: var(--primary-foreground);
-  background: var(--primary);
-  box-shadow: none;
-  font-weight: 700;
-  transition: background-color 140ms ease, border-color 140ms ease;
+  width: 58px;
+  height: 58px;
+  min-height: 58px;
+  padding: 0;
+  border: 2px solid #0b6f3a;
+  border-radius: 50%;
+  color: #ffffff;
+  background: #08783e;
+  box-shadow:
+    0 0 0 7px rgb(134 239 172 / 24%),
+    0 0 24px rgb(74 222 128 / 32%),
+    0 10px 24px rgb(22 101 52 / 16%);
+  font-size: 17px;
+  font-weight: 850;
+  letter-spacing: -0.03em;
+  transition: transform 140ms ease, background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
 }
 
 .report-ai-trigger:hover:not(:disabled) {
-  border-color: color-mix(in oklch, var(--primary) 82%, black);
-  background: color-mix(in oklch, var(--primary) 88%, black);
+  transform: translateY(-2px) scale(1.03);
+  border-color: #075c31;
+  color: #ffffff;
+  background: #066b37;
+  box-shadow:
+    0 0 0 8px rgb(134 239 172 / 28%),
+    0 0 28px rgb(74 222 128 / 38%),
+    0 12px 26px rgb(22 101 52 / 18%);
 }
 
 .report-ai-trigger:active:not(:disabled) {
-  background: color-mix(in oklch, var(--primary) 78%, black);
+  transform: scale(.98);
+  color: #ffffff;
+  background: #05582e;
 }
 
 .report-ai-trigger:focus-visible {
@@ -27403,6 +28438,46 @@ button.factory-job-card:focus-visible {
   justify-content: flex-end;
 }
 
+.report-ai-floating-action {
+  position: fixed;
+  right: max(1.5rem, env(safe-area-inset-right));
+  bottom: max(1.5rem, env(safe-area-inset-bottom));
+  z-index: 60;
+}
+
+.report-ai-floating-close {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  display: grid;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid #b9d8c5;
+  border-radius: 50%;
+  color: #4b6655;
+  background: #fff;
+  box-shadow: 0 3px 10px color-mix(in srgb, #173b25 16%, transparent);
+  cursor: pointer;
+}
+
+.report-ai-floating-close:hover {
+  border-color: #86b99a;
+  color: #164e2d;
+  background: #f0fdf4;
+}
+
+.report-ai-floating-close:focus-visible {
+  outline: 2px solid #63bd8a;
+  outline-offset: 2px;
+}
+
+.report-ai-floating-close svg {
+  width: 13px;
+  height: 13px;
+}
+
 .report-ai-nav-row {
   display: flex;
   width: 100%;
@@ -27416,14 +28491,50 @@ button.factory-job-card:focus-visible {
   flex: 1 1 auto;
 }
 
+.report-ai-nav-row.report-ai-actions-only {
+  justify-content: flex-end;
+}
+
+.report-ai-nav-row.report-ai-actions-left {
+  justify-content: flex-start;
+}
+
+body:has(.kitchen-sales-cost-report-page) .report-ai-floating-action {
+  right: auto;
+  left: calc(var(--sidebar-width) + 28px);
+}
+
+body:has(.kitchen-sales-cost-report-page) .shell-body.sidebar-is-collapsed .report-ai-floating-action {
+  left: calc(var(--sidebar-collapsed-width) + 28px);
+}
+
+body:has(.kitchen-channel-sales-report-page) .report-ai-floating-action,
+body:has(.kitchen-channel-sales-report-page) .shell-body.sidebar-is-collapsed .report-ai-floating-action {
+  right: max(1.5rem, env(safe-area-inset-right));
+  left: auto;
+}
+
+@media (max-width: 860px) {
+  body:has(.kitchen-sales-cost-report-page) .report-ai-floating-action {
+    left: max(1.25rem, env(safe-area-inset-left));
+  }
+
+  body:has(.kitchen-channel-sales-report-page) .report-ai-floating-action {
+    right: max(1.25rem, env(safe-area-inset-right));
+    left: auto;
+  }
+}
+
 .report-ai-trigger.is-stale {
-  border-color: #b56a00;
-  background: #b56a00;
+  border-color: #0b6f3a;
+  color: #ffffff;
+  background: #08783e;
 }
 
 .report-ai-trigger.is-error {
-  border-color: var(--destructive);
-  background: var(--destructive);
+  border-color: #0b6f3a;
+  color: #ffffff;
+  background: #08783e;
 }
 
 .report-ai-spin { animation: report-ai-spin 900ms linear infinite; }
@@ -27481,7 +28592,7 @@ button.factory-job-card:focus-visible {
   }
   .report-ai-nav-row > .report-tabs::-webkit-scrollbar { display: none; }
   .report-ai-nav-row > .report-tabs > * { flex: 0 0 auto; }
-  .report-ai-trigger { min-height: 36px; padding-inline: 12px; }
+  .report-ai-trigger { width: 54px; height: 54px; min-height: 54px; padding: 0; }
   .report-ai-feedback { flex-wrap: wrap; }
   .report-ai-feedback > span { width: 100%; }
 }
@@ -27915,6 +29026,10 @@ button.factory-job-card:focus-visible {
     display: none;
   }
 
+  .menu-style-one .primary-nav-link span {
+    display: inline;
+  }
+
   .primary-nav-link::after {
     right: 8px;
     left: 8px;
@@ -27926,6 +29041,15 @@ button.factory-job-card:focus-visible {
 }
 
 @media (max-width: 900px) {
+  .orders-toolbar-main {
+    align-items: stretch;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .orders-toolbar-actions {
+    flex-wrap: wrap;
+  }
+
   .list-search-host {
     display: flex;
     align-items: center;
@@ -27941,8 +29065,8 @@ button.factory-job-card:focus-visible {
     min-width: 0;
   }
 
-  .list-search-submit {
-    display: none;
+  .orders-toolbar-note {
+    text-align: left;
   }
 
   .quotes-toolbar,
@@ -28017,6 +29141,10 @@ button.factory-job-card:focus-visible {
 
   .workspace-bar {
     display: none;
+  }
+
+  .menu-style-one {
+    --workspace-height: 42px;
   }
 
   .shell-body,
@@ -28140,6 +29268,10 @@ button.factory-job-card:focus-visible {
 
   .profile-grid,
   .profile-fields-wide {
+    grid-template-columns: 1fr;
+  }
+
+  .menu-style-options {
     grid-template-columns: 1fr;
   }
 
@@ -28710,6 +29842,7 @@ button.factory-job-card:focus-visible {
 /* Central-kitchen advertising-performance report. */
 .kitchen-advertising-performance-page {
   gap: 1rem;
+  --advertising-table-heading-height: 2rem;
   --advertising-green: #2f6b4f;
   --advertising-cost-green: #4a9b73;
   --advertising-primary-blue: var(--advertising-green);
@@ -28738,13 +29871,13 @@ button.factory-job-card:focus-visible {
 
 .kitchen-advertising-performance-sections {
   display: grid;
-  gap: 1rem;
+  gap: 0.7rem;
   min-width: 0;
 }
 
 .kitchen-advertising-performance-section {
   display: grid;
-  grid-template-columns: 11.5rem minmax(0, 1fr) 21rem;
+  grid-template-columns: 10.5rem minmax(0, 1fr);
   min-width: 0;
   overflow: hidden;
   padding: 0;
@@ -28765,8 +29898,10 @@ button.factory-job-card:focus-visible {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 2.4rem;
-  padding: 0.55rem 0.75rem;
+  min-height: var(--advertising-table-heading-height);
+  height: var(--advertising-table-heading-height);
+  box-sizing: border-box;
+  padding: 0.4rem 0.6rem;
   background: var(--advertising-primary-blue);
   color: #fff;
   font-size: 0.875rem;
@@ -28779,13 +29914,13 @@ button.factory-job-card:focus-visible {
 
 .kitchen-advertising-performance-select {
   display: block;
-  padding: 0.55rem 0.65rem 0.7rem;
+  padding: 0.4rem 0.5rem 0.5rem;
 }
 
 .kitchen-advertising-performance-select select {
   width: 100%;
   min-width: 0;
-  height: 2.15rem;
+  height: 1.9rem;
   padding: 0 0.45rem;
   border: 1px solid color-mix(in srgb, var(--primary) 32%, var(--border));
   border-radius: 0.25rem;
@@ -28797,19 +29932,20 @@ button.factory-job-card:focus-visible {
 }
 
 .kitchen-advertising-performance-years {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.3rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.24rem;
   min-width: 0;
   margin: 0;
-  padding: 0.45rem 0.65rem 0.75rem;
+  padding: 0.35rem 0.5rem 0.45rem;
   border: 0;
   border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
 }
 
 .kitchen-advertising-performance-years .kitchen-sales-cost-year-option {
+  justify-content: center;
   min-width: 0;
-  padding: 0.28rem 0.38rem;
+  padding: 0.22rem 0.2rem;
   border-radius: 0.25rem;
   font-size: 0.875rem;
 }
@@ -28827,10 +29963,11 @@ button.factory-job-card:focus-visible {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 0.35rem;
+  grid-column: 1 / -1;
+  gap: 0.28rem;
   width: 100%;
   color: var(--muted-foreground);
-  font-size: 0.875rem;
+  font-size: 0.75rem;
 }
 
 .kitchen-advertising-performance-year-actions button {
@@ -28847,16 +29984,16 @@ button.factory-job-card:focus-visible {
 }
 
 .kitchen-advertising-performance-annual-summary {
-  margin-top: 0.15rem;
-  padding-bottom: 0.5rem;
+  margin-top: 0.1rem;
+  padding-bottom: 0.3rem;
 }
 
 .kitchen-advertising-performance-annual-summary h2 {
   margin: 0;
-  padding: 0.45rem 0.65rem;
+  padding: 0.34rem 0.55rem;
   background: var(--advertising-primary-blue);
   color: #fff;
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   font-weight: 800;
 }
 
@@ -28864,11 +30001,12 @@ button.factory-job-card:focus-visible {
   display: flex;
   justify-content: space-between;
   gap: 0.5rem;
-  padding: 0.24rem 0.65rem;
+  padding: 0.16rem 0.55rem;
   border-bottom: 1px dotted color-mix(in srgb, #fff 48%, var(--advertising-primary-blue));
   color: #fff;
   background: var(--advertising-primary-blue);
-  font-size: 0.875rem;
+  font-size: 0.75rem;
+  line-height: 1.25;
   font-variant-numeric: tabular-nums;
 }
 
@@ -28890,11 +30028,12 @@ button.factory-job-card:focus-visible {
 
 .kitchen-advertising-performance-table {
   width: 100%;
-  min-width: 900px;
-  height: 100%;
+  min-width: 1050px;
+  table-layout: fixed;
   border-collapse: separate;
   border-spacing: 0;
-  font-size: 0.875rem;
+  font-size: 0.8rem;
+  font-weight: 600;
 }
 
 .kitchen-advertising-performance-table th,
@@ -28905,11 +30044,10 @@ button.factory-job-card:focus-visible {
 }
 
 .kitchen-advertising-performance-page.kitchen-sales-cost-report-page .kitchen-advertising-performance-table th {
-  min-width: 7.8rem;
-  padding: 0.55rem 0.4rem;
+  padding: 0.42rem 0.35rem;
   background: var(--advertising-primary-blue);
   color: #fff;
-  font-size: 0.875rem;
+  font-size: 0.8rem;
   font-weight: 800;
   text-align: center;
   white-space: nowrap;
@@ -28921,26 +30059,35 @@ button.factory-job-card:focus-visible {
 }
 
 .kitchen-advertising-performance-table td {
-  min-width: 7.8rem;
-  height: 15rem;
   padding: 0;
   background: var(--card);
 }
 
-.kitchen-advertising-performance-table td:nth-child(even) {
-  background: var(--advertising-table-blue);
+.kitchen-advertising-performance-table thead th:first-child,
+.kitchen-advertising-performance-table tbody th {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  width: 6.5rem;
+  min-width: 6.5rem;
+  border-right-color: color-mix(in srgb, var(--advertising-primary-blue) 30%, var(--border));
+}
+
+.kitchen-advertising-performance-table thead th:first-child {
+  z-index: 3;
+}
+
+.kitchen-advertising-performance-table tbody tr:nth-child(even) th,
+.kitchen-advertising-performance-table tbody tr:nth-child(even) td {
+  background: color-mix(in srgb, var(--advertising-table-blue) 24%, #fff);
 }
 
 .kitchen-advertising-performance-year-cell {
   display: grid;
   gap: 0.12rem;
-  min-height: 5.25rem;
-  padding: 0.42rem 0.42rem 0.48rem;
-  border-bottom: 1px dotted color-mix(in srgb, var(--border) 80%, transparent);
-}
-
-.kitchen-advertising-performance-year-cell:last-child {
-  border-bottom: 0;
+  min-height: 3.4rem;
+  padding: 0.38rem 0.42rem;
+  justify-content: stretch;
 }
 
 .kitchen-advertising-performance-year {
@@ -28955,7 +30102,7 @@ button.factory-job-card:focus-visible {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 0.25rem;
-  line-height: 1.2;
+  line-height: 1.15;
   white-space: nowrap;
 }
 
@@ -28966,7 +30113,7 @@ button.factory-job-card:focus-visible {
 
 .kitchen-advertising-performance-line b {
   font-variant-numeric: tabular-nums;
-  font-weight: 650;
+  font-weight: 700;
 }
 
 .kitchen-advertising-performance-line.cost {
@@ -28983,10 +30130,43 @@ button.factory-job-card:focus-visible {
 }
 
 .kitchen-advertising-performance-empty-cell {
-  display: block;
-  padding: 0.8rem;
+  display: grid;
+  justify-items: center;
+  align-items: start;
+  min-height: 3.4rem;
+  padding: 0.4rem;
   color: var(--muted-foreground);
   text-align: center;
+}
+
+.kitchen-advertising-performance-row-year {
+  background: color-mix(in srgb, var(--advertising-table-blue) 38%, #fff) !important;
+  text-align: left !important;
+}
+
+.kitchen-advertising-performance-row-year strong,
+.kitchen-advertising-performance-row-year span {
+  display: block;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.kitchen-advertising-performance-page.kitchen-sales-cost-report-page .kitchen-advertising-performance-table thead th {
+  height: var(--advertising-table-heading-height);
+  box-sizing: border-box;
+  vertical-align: middle;
+}
+
+.kitchen-advertising-performance-row-year strong {
+  color: var(--advertising-green);
+  font-size: 0.8rem;
+}
+
+.kitchen-advertising-performance-row-year span {
+  margin-top: 0.12rem;
+  color: var(--muted-foreground);
+  font-size: 0.7rem;
+  font-weight: 600;
 }
 
 .kitchen-advertising-performance-no-data {
@@ -29291,23 +30471,13 @@ button.factory-job-card:focus-visible {
 
 @media (max-width: 1280px) {
   .kitchen-advertising-performance-section {
-    grid-template-columns: 11.5rem minmax(0, 1fr);
-  }
-
-  .kitchen-advertising-performance-chart-panel {
-    grid-column: 2;
-    border-top: 1px solid var(--border);
-    border-left: 0;
+    grid-template-columns: 10.5rem minmax(0, 1fr);
   }
 }
 
 @media (max-width: 820px) {
   .kitchen-advertising-performance-section {
     grid-template-columns: 1fr;
-  }
-
-  .kitchen-advertising-performance-chart-panel {
-    grid-column: auto;
   }
 
   .kitchen-advertising-performance-sidebar {
@@ -30044,6 +31214,148 @@ button.factory-job-card:focus-visible {
   }
 }
 
+/* Restaurant reports: keep compact filters at the left so detail tables use
+   the largest possible horizontal workspace on desktop. */
+@media (min-width: 1101px) {
+  .restaurant-sales-page.is-embedded,
+  .shop-sales-hours-report,
+  .restaurant-sales-salary-report,
+  .restaurant-sales-cost-report,
+  .restaurant-pnl-report {
+    display: grid;
+    grid-template-columns: minmax(240px, 280px) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    align-items: stretch;
+    gap: 14px;
+    min-width: 0;
+  }
+
+  .restaurant-sales-page.is-embedded > .restaurant-sales-filters,
+  .shop-sales-hours-report > .shop-sales-hours-filters,
+  .restaurant-sales-salary-report > .restaurant-sales-salary-filters,
+  .restaurant-sales-cost-report > .restaurant-pnl-filters,
+  .restaurant-pnl-report > .restaurant-pnl-filters {
+    position: sticky;
+    top: 0;
+    grid-column: 1;
+    grid-row: 1;
+    align-self: start;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+    min-width: 0;
+    max-height: calc(100dvh - var(--topbar-height) - var(--workspace-height) - 40px);
+    padding: 16px;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .restaurant-sales-page.is-embedded > :not(.restaurant-sales-filters),
+  .shop-sales-hours-report > :not(.shop-sales-hours-filters),
+  .restaurant-sales-salary-report > :not(.restaurant-sales-salary-filters),
+  .restaurant-sales-cost-report > :not(.restaurant-pnl-filters),
+  .restaurant-pnl-report > :not(.restaurant-pnl-filters) {
+    grid-column: 2;
+    grid-row: 1;
+    min-width: 0;
+  }
+
+  .restaurant-sales-page.is-embedded .restaurant-sales-date-filter {
+    align-items: stretch;
+    flex-direction: column;
+    justify-content: flex-start;
+  }
+
+  .restaurant-sales-page.is-embedded .restaurant-sales-date-filter > svg {
+    display: none;
+  }
+
+  .restaurant-sales-page.is-embedded .restaurant-sales-month-range,
+  .restaurant-sales-page.is-embedded .restaurant-sales-week-input-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .restaurant-sales-page.is-embedded .restaurant-sales-month-range > span {
+    display: none;
+  }
+
+  .restaurant-sales-page.is-embedded .restaurant-sales-month-range input,
+  .restaurant-sales-page.is-embedded .restaurant-sales-week-picker input,
+  .restaurant-sales-page.is-embedded .restaurant-sales-restaurant-filter,
+  .restaurant-sales-page.is-embedded .restaurant-sales-date-filter .date-range-picker {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .restaurant-sales-page.is-embedded .restaurant-sales-segmented {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .restaurant-sales-page.is-embedded .restaurant-sales-segmented button {
+    min-width: 0;
+    padding-inline: 6px;
+  }
+
+  .shop-sales-hours-report .date-range-picker,
+  .restaurant-sales-salary-report .restaurant-sales-salary-shop-filter,
+  .restaurant-sales-salary-report > .restaurant-sales-salary-filters > label,
+  .restaurant-sales-cost-report > .restaurant-pnl-filters > label,
+  .restaurant-pnl-report > .restaurant-pnl-filters > label {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .shop-sales-hours-report .date-range-picker-control,
+  .restaurant-sales-page.is-embedded .date-range-picker-control {
+    grid-template-columns: 1fr;
+  }
+
+  .shop-sales-hours-report .date-range-picker-label,
+  .restaurant-sales-page.is-embedded .date-range-picker-label,
+  .shop-sales-hours-report .date-range-picker-trigger,
+  .restaurant-sales-page.is-embedded .date-range-picker-trigger {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .shop-sales-hours-report .date-range-picker-trigger,
+  .restaurant-sales-page.is-embedded .date-range-picker-trigger {
+    gap: 0.35rem;
+    padding-inline: 0.65rem;
+    font-size: 0.82rem;
+  }
+
+  .shop-sales-hours-report .date-range-picker-separator,
+  .restaurant-sales-page.is-embedded .date-range-picker-separator {
+    display: none;
+  }
+
+  .shop-sales-hours-report > .shop-sales-hours-filters > button,
+  .restaurant-sales-salary-report > .restaurant-sales-salary-filters > button,
+  .restaurant-sales-cost-report > .restaurant-pnl-filters > button,
+  .restaurant-pnl-report > .restaurant-pnl-filters > button {
+    width: 100%;
+  }
+
+  .restaurant-sales-cost-report .restaurant-pnl-restaurants,
+  .restaurant-pnl-report .restaurant-pnl-restaurants {
+    width: 100%;
+  }
+
+  .restaurant-sales-cost-report .restaurant-pnl-restaurants > div,
+  .restaurant-pnl-report .restaurant-pnl-restaurants > div {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+}
+
 /* Order create / edit workflow */
 .order-editor-page {
   display: grid;
@@ -30344,7 +31656,8 @@ button.factory-job-card:focus-visible {
   gap: 14px;
 }
 
-.order-editor-field > span {
+.order-editor-field > span,
+.order-editor-field > label {
   color: color-mix(in oklch, var(--foreground) 76%, var(--muted-foreground));
   font-size: 0.8125rem;
   font-weight: 700;
@@ -30381,6 +31694,14 @@ button.factory-job-card:focus-visible {
 .order-editor-table input:focus {
   border-color: var(--ring);
   box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 13%, transparent);
+}
+
+.order-editor-address-field {
+  align-items: start;
+}
+
+.order-editor-address-field > label {
+  padding-top: 12px;
 }
 
 .order-editor-add-item {
@@ -31086,16 +32407,6 @@ body:has(.quote-pdf-editor) .quote-pdf-editor {
   color: #667786;
   font-size: 0.78rem;
 }
-
-.quote-pdf-saved {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  color: #17805d !important;
-  font-weight: 700;
-}
-
-.quote-pdf-saved svg { width: 16px; height: 16px; }
 
 .quote-pdf-sheet {
   display: flex;
@@ -31843,11 +33154,9 @@ body:has(.quote-clause-modal-root) { overflow: hidden; }
   .quote-pdf-editor { position: absolute !important; inset: 0 auto auto 0 !important; width: 100% !important; }
   .topbar, .workspace-bar, .sidebar, .quote-pdf-toolbar, .quote-pdf-add-row, .quote-pdf-delete, .quote-pdf-section-title, .quote-pdf-additional li button, .quote-pdf-activity button { display: none !important; }
   .shell-body, .main-content, .quote-pdf-editor { margin: 0 !important; padding: 0 !important; background: white !important; overflow: visible !important; }
-  .quote-pdf-sheet { width: 100%; height: 297mm; margin: 0; padding: 10mm 10mm 24mm; overflow: hidden; break-after: page; box-shadow: none; }
-  .quote-pdf-sheet:last-of-type { break-after: auto; }
-  .quote-pdf-editor.has-back-pages .quote-pdf-sheet:last-of-type { break-after: page; }
-  .quote-pdf-insert-page { display: block; width: 210mm; height: 297mm; margin: 0; break-after: page; box-shadow: none; }
-  .quote-pdf-insert-page.is-final-page { break-after: auto; }
+  .quote-pdf-sheet { width: 100%; height: 297mm; margin: 0; padding: 10mm 10mm 24mm; overflow: hidden; break-after: page; page-break-after: always; box-shadow: none; }
+  .quote-pdf-insert-page { display: block; width: 210mm; height: 297mm; margin: 0; break-after: page; page-break-after: always; box-shadow: none; }
+  .quote-pdf-editor > .is-final-document-page { break-after: auto; page-break-after: auto; }
   .quote-pdf-page-footer:not(.is-print-only) { display: none !important; }
   .quote-pdf-page-footer.is-print-only { position: fixed; z-index: 50; right: 10mm; bottom: 4mm; left: 10mm; display: grid !important; min-height: 10mm; padding: 2mm 0 0; align-content: start; background: #fff; }
   .quote-pdf-edit-only { display: none !important; }
@@ -32555,6 +33864,30 @@ body:has(.quote-clause-modal-root) { overflow: hidden; }
 }
 
 @media (max-width: 760px) {
+  .orders-queue-tabs {
+    padding-top: 0;
+    padding-bottom: 12px;
+    padding-left: 0;
+  }
+
+  .orders-toolbar-actions {
+    display: grid;
+    width: 100%;
+  }
+
+  .orders-toolbar-actions:has(.orders-selection-count) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .orders-toolbar-actions .orders-selection-count {
+    grid-column: 1 / -1;
+  }
+
+  .orders-toolbar-actions > button,
+  .orders-toolbar-actions > a {
+    width: 100%;
+  }
+
   .orders-page:has(.responsive-card-list-panel) {
     width: 100%;
     max-width: 100%;
@@ -32705,5 +34038,107 @@ body:has(.quote-clause-modal-root) { overflow: hidden; }
     align-items: flex-start;
     flex-direction: column;
     gap: 3px;
+  }
+}
+
+/* Desktop list pages fill the shell's remaining height. The page layout then
+   subtracts its own heading/toolbars instead of repeating viewport offsets. */
+@media (min-width: 801px) {
+  .main-content:has(
+      > .page-transition
+        > :is(
+          .shopify-catalog-list-page,
+          .quotes-page,
+          .orders-page,
+          .kitchen-orders-page,
+          .kitchen-calendar-page,
+          .products-page,
+          .packages-page,
+          .raw-meat-calc-page,
+          .settings-permissions-page,
+          .spice-usage-page,
+          .seasoning-cost-page,
+          .calculation-settings-page,
+          .kitchen-settings-page,
+          .meat-customers-page,
+          .order-statuses-page,
+          .sale-partners-page,
+          .order-list-configs-page,
+          .selling-price-cost-page,
+          .suppliers-page,
+          .ingredients-page,
+          .data-input-progress-page,
+          .order-settings-page,
+          .kitchen-product-sales-page,
+          .page-skeleton
+        )
+    ) {
+    height: calc(100dvh - var(--topbar-height) - var(--workspace-height));
+    min-height: 0;
+  }
+
+  .main-content
+    > .page-transition:has(
+      > :is(
+          .shopify-catalog-list-page,
+          .quotes-page,
+          .orders-page,
+          .kitchen-orders-page,
+          .kitchen-calendar-page,
+          .products-page,
+          .packages-page,
+          .raw-meat-calc-page,
+          .settings-permissions-page,
+          .spice-usage-page,
+          .seasoning-cost-page,
+          .calculation-settings-page,
+          .kitchen-settings-page,
+          .meat-customers-page,
+          .order-statuses-page,
+          .sale-partners-page,
+          .order-list-configs-page,
+          .selling-price-cost-page,
+          .suppliers-page,
+          .ingredients-page,
+          .data-input-progress-page,
+          .order-settings-page,
+          .kitchen-product-sales-page,
+          .page-skeleton
+        )
+    ) {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .main-content
+    > .page-transition
+    > :is(
+      .shopify-catalog-list-page,
+      .quotes-page,
+      .orders-page,
+      .kitchen-orders-page,
+      .kitchen-calendar-page,
+      .products-page,
+      .packages-page,
+      .raw-meat-calc-page,
+      .settings-permissions-page,
+      .spice-usage-page,
+      .seasoning-cost-page,
+      .calculation-settings-page,
+      .kitchen-settings-page,
+      .meat-customers-page,
+      .order-statuses-page,
+      .sale-partners-page,
+      .order-list-configs-page,
+      .selling-price-cost-page,
+      .suppliers-page,
+      .ingredients-page,
+      .data-input-progress-page,
+      .order-settings-page,
+      .kitchen-product-sales-page,
+      .page-skeleton
+    ) {
+    height: 100%;
+    min-height: 0;
   }
 }

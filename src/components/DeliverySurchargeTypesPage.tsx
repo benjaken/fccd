@@ -227,12 +227,6 @@ export function DeliverySurchargeTypesPage({
           <span className="eyebrow">{t("navigation.delivery")}</span>
           <h1>{t("deliverySurchargeSettings.title")}</h1>
         </div>
-        {canManage ? (
-          <Button type="button" onClick={() => setCreateOpen(true)}>
-            <Plus />
-            {t("deliverySurchargeSettings.add")}
-          </Button>
-        ) : null}
       </header>
 
       <article className="panel order-settings-panel">
@@ -245,6 +239,7 @@ export function DeliverySurchargeTypesPage({
             label={t("deliverySurchargeSettings.search")}
             placeholder={t("deliverySurchargeSettings.searchPlaceholder")}
             submitLabel={t("deliverySurchargeSettings.searchAction")}
+            actions={canManage ? <Button type="button" onClick={() => setCreateOpen(true)}><Plus />{t("deliverySurchargeSettings.add")}</Button> : null}
           />
         </header>
 

@@ -1,9 +1,10 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
   BellRing,
   CalendarClock,
   Mail,
+  PanelsTopLeft,
   ShieldCheck,
   Store,
   UserRound,
@@ -11,6 +12,12 @@ import {
 
 import { useAuth } from "@/auth/AuthProvider";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
+import {
+  readMenuStyle,
+  saveMenuStyle,
+  type MenuStyle,
+} from "@/lib/menu-style";
+import { cn } from "@/lib/utils";
 
 function ProfileField({
   icon,
@@ -35,7 +42,14 @@ function ProfileField({
 export function ProfilePage() {
   const { t, i18n } = useTranslation();
   const { user, profile, profileLoading, profileError } = useAuth();
+  const [menuStyle, setMenuStyle] = useState<MenuStyle>(() =>
+    readMenuStyle(user?.id),
+  );
   const notSet = t("common.notSet");
+
+  useEffect(() => {
+    setMenuStyle(readMenuStyle(user?.id));
+  }, [user?.id]);
 
   const formatDate = (value: string | null | undefined) => {
     if (!value) return notSet;
@@ -53,6 +67,13 @@ export function ProfilePage() {
   const displayName =
     profile?.user_name || user?.email?.split("@")[0] || notSet;
   const avatar = displayName.slice(0, 2).toUpperCase();
+
+  const chooseMenuStyle = (style: MenuStyle) => {
+    saveMenuStyle(style, user?.id);
+    setMenuStyle(style);
+  };
+
+  const chinese = i18n.language.toLowerCase().startsWith("zh");
 
   return (
     <section className="profile-page">
@@ -137,6 +158,48 @@ export function ProfilePage() {
               >
                 {profile.week_plus_2 || notSet}
               </ProfileField>
+            </div>
+          </article>
+
+          <article className="profile-card profile-card-wide">
+            <header>
+              <PanelsTopLeft />
+              <h2>{chinese ? "菜單風格" : "Menu style"}</h2>
+            </header>
+            <div className="menu-style-setting">
+              <p>
+                {chinese
+                  ? "選擇系統的導覽方式。風格一按業務分類，風格二保留現有模組菜單。"
+                  : "Choose how system navigation is organized. Style one groups pages by business; style two keeps the current module menu."}
+              </p>
+              <div className="menu-style-options" role="radiogroup" aria-label={chinese ? "菜單風格" : "Menu style"}>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={menuStyle === "style-one"}
+                  className={cn("menu-style-option", menuStyle === "style-one" && "active")}
+                  onClick={() => chooseMenuStyle("style-one")}
+                >
+                  <PanelsTopLeft />
+                  <span>
+                    <strong>{chinese ? "風格一（預設）" : "Style one (default)"}</strong>
+                    <small>{chinese ? "主頁｜營運跟進｜到會｜凍肉｜餐廳｜報表" : "Home · Follow-up · Catering · Frozen · Restaurant · Reports"}</small>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={menuStyle === "style-two"}
+                  className={cn("menu-style-option", menuStyle === "style-two" && "active")}
+                  onClick={() => chooseMenuStyle("style-two")}
+                >
+                  <PanelsTopLeft />
+                  <span>
+                    <strong>{chinese ? "風格二" : "Style two"}</strong>
+                    <small>{chinese ? "保留目前的一級及二級模組菜單" : "Keep the current primary and secondary module menus"}</small>
+                  </span>
+                </button>
+              </div>
             </div>
           </article>
 

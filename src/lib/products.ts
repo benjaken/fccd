@@ -595,12 +595,10 @@ export async function fetchProducts({
     .neq("sku", "");
 
   if (sortField === "name") {
-    query = query
-      .order("chinese_name", {
-        ascending: sortAscending,
-        nullsFirst: false,
-      })
-      .order("name", { ascending: sortAscending, nullsFirst: false });
+    query = query.order("name", {
+      ascending: sortAscending,
+      nullsFirst: false,
+    });
   } else {
     query = query.order(sortField === "price" ? "price" : "sku", {
       ascending: sortAscending,

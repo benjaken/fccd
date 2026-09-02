@@ -5,83 +5,68 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { Dashboard } from "@/App";
 import i18n from "@/i18n";
-import type { DashboardData } from "@/lib/dashboard";
+import type { HomeSalesDashboardData } from "@/lib/home-sales-dashboard";
 
-const liveData: DashboardData = {
-  metrics: {
-    ordersToday: 3,
-    ordersChange: 50,
-    revenueToday: 2470,
-    revenueChange: null,
-    pendingDeliveries: 2,
-    lowStock: 9,
-  },
-  queues: {
-    highChanceQuotes: 0,
-    largeQuotes: 64,
-    unpaidOrders: 35,
-    unassignedDrivers: 11,
-    deliveredUnpaid: 0,
-  },
-  progress: {
-    confirmed: 0,
-    preparing: 0,
-    ready: 2,
-    shipping: 0,
-    completed: 1,
-  },
-  jobs: [
+const liveData: HomeSalesDashboardData = {
+  asOfDate: "2026-09-01",
+  periods: [
+    { key: "previousYearPreviousMonth", year: 2025, month: 8, startDate: "2025-08-01", endDate: "2025-08-31" },
+    { key: "previousYearCurrentMonth", year: 2025, month: 9, startDate: "2025-09-01", endDate: "2025-09-30" },
+    { key: "previousMonth", year: 2026, month: 8, startDate: "2026-08-01", endDate: "2026-08-31" },
+    { key: "currentMonth", year: 2026, month: 9, startDate: "2026-09-01", endDate: "2026-09-30" },
+  ],
+  cateringChannels: [
     {
-      id: "order-live",
-      orderNumber: "B-1513",
-      customerName: "香港女童軍總會",
-      deliveryAt: "2026-08-12T00:00:00+08:00",
-      shipOutTime: null,
-      deliveryStatus: "待取貨",
-      isSentToFactory: null,
-      amount: 1610,
-      currency: "HKD",
+      id: "catering",
+      name: "Catering",
+      values: {
+        previousYearPreviousMonth: 80000,
+        previousYearCurrentMonth: 90000,
+        previousMonth: 100000,
+        currentMonth: 120000,
+      },
+    },
+  ],
+  tkoChannels: [
+    {
+      id: "foodpanda",
+      name: "Foodpanda",
+      values: {
+        previousYearPreviousMonth: 0,
+        previousYearCurrentMonth: 0,
+        previousMonth: 50000,
+        currentMonth: 55000,
+      },
     },
   ],
 };
 
-describe("Live dashboard data", () => {
+describe("monthly sales dashboard", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("zh-HK");
-    vi.mocked(window.matchMedia).mockImplementation((query) => ({
-      matches: query.includes("prefers-reduced-motion"),
-      media: query,
-      onchange: null,
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    }));
   });
 
-  it("replaces loading values with the Supabase result", async () => {
+  it("shows catering YoY comparisons and TKO channel month comparison without charts", async () => {
     const loadDashboard = vi.fn().mockResolvedValue(liveData);
-
     render(
       <MemoryRouter>
         <Dashboard loadDashboard={loadDashboard} role="Super Admin" />
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "正在載入最新營運數據",
-    );
-    expect(
-      await screen.findByRole("link", { name: /今日訂單\s*3 張/ }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /今日營業額\s*HK\$2,470/ }))
-      .toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /低庫存項目\s*9 項/ }))
-      .toBeInTheDocument();
-    expect(screen.getByText("香港女童軍總會")).toBeInTheDocument();
-    expect(within(screen.getByRole("table")).getByText("待出貨"))
-      .toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("正在載入最新營運數據");
+    expect(await screen.findByRole("heading", { name: "每月銷售總覽" })).toBeInTheDocument();
+    const tables = screen.getAllByRole("table");
+    expect(within(tables[0]).getByText("Catering")).toBeInTheDocument();
+    expect(within(tables[0]).getByText("上月（跨年比較）")).toBeInTheDocument();
+    expect(within(tables[0]).getAllByText("+25.0%")).toHaveLength(2);
+    expect(within(tables[0]).getAllByText("+33.3%")).toHaveLength(2);
+    expect(within(tables[1]).getByText("Foodpanda")).toBeInTheDocument();
+    expect(within(tables[1]).getAllByText("+10.0%")).toHaveLength(2);
+    expect(screen.getAllByText("總額")).toHaveLength(2);
+    expect(screen.queryByText("YLP 桂花小幸 元朗")).not.toBeInTheDocument();
+    expect(document.querySelector(".home-sales-mini-bar")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "更新數據" })).not.toBeInTheDocument();
     expect(loadDashboard).toHaveBeenCalledWith("Super Admin");
   });
 
@@ -89,23 +74,48 @@ describe("Live dashboard data", () => {
     const user = userEvent.setup();
     const loadDashboard = vi
       .fn()
-      .mockRejectedValueOnce({ code: "dashboard_failed" })
+      .mockRejectedValueOnce(new Error("dashboard_failed"))
       .mockResolvedValueOnce(liveData);
-
     render(
       <MemoryRouter>
         <Dashboard loadDashboard={loadDashboard} />
       </MemoryRouter>,
     );
 
-    expect(
-      await screen.findByText("暫時無法載入首頁數據"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("暫時無法載入首頁數據")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "重試" }));
-
     await waitFor(() => expect(loadDashboard).toHaveBeenCalledTimes(2));
-    expect(
-      await screen.findByRole("link", { name: /今日訂單\s*3 張/ }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("rowheader", { name: "Catering" })).toBeInTheDocument();
+  });
+
+  it("filters the first sales table by brand", async () => {
+    const user = userEvent.setup();
+    const dataWithBrands: HomeSalesDashboardData = {
+      ...liveData,
+      cateringChannels: [
+        ...liveData.cateringChannels,
+        {
+          id: "kitchen",
+          name: "Kitchen",
+          values: {
+            previousYearPreviousMonth: 10,
+            previousYearCurrentMonth: 20,
+            previousMonth: 30,
+            currentMonth: 40,
+          },
+        },
+      ],
+    };
+    render(
+      <MemoryRouter>
+        <Dashboard loadDashboard={() => Promise.resolve(dataWithBrands)} />
+      </MemoryRouter>,
+    );
+
+    const brandFilter = await screen.findByRole("combobox", { name: "篩選品牌" });
+    await user.selectOptions(brandFilter, "kitchen");
+    const cateringTable = screen.getAllByRole("table")[0];
+    expect(within(cateringTable).getByRole("rowheader", { name: "Kitchen" })).toBeInTheDocument();
+    expect(within(cateringTable).queryByRole("rowheader", { name: "Catering" })).not.toBeInTheDocument();
   });
 });

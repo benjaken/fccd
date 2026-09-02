@@ -663,12 +663,6 @@ export function SuppliersPage({
           <h1>{t("suppliers.title")}</h1>
           <p>{t("suppliers.description")}</p>
         </div>
-        {canEdit ? (
-          <Button type="button" onClick={openCreate}>
-            <Pencil />
-            {t("suppliers.add")}
-          </Button>
-        ) : null}
       </header>
 
       <article className="panel suppliers-panel">
@@ -681,6 +675,7 @@ export function SuppliersPage({
             label={t("suppliers.search")}
             placeholder={t("suppliers.searchPlaceholder")}
             submitLabel={t("suppliers.searchAction")}
+            actions={canEdit ? <Button type="button" onClick={openCreate}><Pencil />{t("suppliers.add")}</Button> : null}
             filtersActive={Boolean(status)}
             onConfirmFilters={statusFilter.confirm}
             onDismissFilters={statusFilter.revert}

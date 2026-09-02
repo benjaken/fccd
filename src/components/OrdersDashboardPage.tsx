@@ -1,14 +1,12 @@
 import { useEffect, useMemo, useState, type ComponentType } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  BarChart3,
   CalendarClock,
   ChevronRight,
   CircleDollarSign,
   Factory,
   Inbox,
   MessageSquareQuote,
-  PieChart,
   RefreshCw,
   ShoppingBag,
 } from "lucide-react";
@@ -149,8 +147,6 @@ export function OrdersDashboardPage({
     },
   ];
 
-  const primaryQueues = cards.slice(0, 4);
-
   if (loading) {
     return <PageSkeleton label={t("ordersDashboard.loading")} variant="dashboard" />;
   }
@@ -194,137 +190,56 @@ export function OrdersDashboardPage({
         ))}
       </section>
 
-      <section className="orders-dashboard-body-layout">
-        <section className="orders-dashboard-queue-grid">
-          <QueuePanel
-            id="today-quotes"
-            icon={CalendarClock}
-            title={t("ordersDashboard.todayFollowUpTitle")}
-            description={t("ordersDashboard.todayFollowUpDescription")}
-            actionTo="/quotes"
-            items={data.todayFollowUpQuoteItems}
-            dateFormatter={dateFormatter}
-            dateField="followUpDate"
-            emptyLabel={t("ordersDashboard.emptyTodayFollowUpQuotes")}
-          />
-          <QueuePanel
-            icon={ShoppingBag}
-            title={t("ordersDashboard.latestPendingOrdersTitle")}
-            description={t("ordersDashboard.latestPendingOrdersDescription")}
-            actionTo="/orders/shopify-pending"
-            items={data.latestPendingOrders}
-            dateFormatter={dateFormatter}
-            emptyLabel={t("ordersDashboard.emptyPendingOrders")}
-          />
-          <QueuePanel
-            icon={CircleDollarSign}
-            title={t("ordersDashboard.latestUnpaidTitle")}
-            description={t("ordersDashboard.latestUnpaidDescription")}
-            actionTo="/orders/unpaid"
-            items={data.latestUnpaidOrders}
-            dateFormatter={dateFormatter}
-            emptyLabel={t("ordersDashboard.emptyUnpaidOrders")}
-            showOutstanding
-          />
-          <QueuePanel
-            icon={Inbox}
-            title={t("ordersDashboard.latestPendingTitle")}
-            description={t("ordersDashboard.latestPendingDescription")}
-            actionTo="/quotes/recent-open"
-            items={data.latestPendingQuotes}
-            dateFormatter={dateFormatter}
-            emptyLabel={t("ordersDashboard.emptyPendingQuotes")}
-          />
-          <QueuePanel
-            icon={CalendarClock}
-            title={t("ordersDashboard.soonestUpcomingTitle")}
-            description={t("ordersDashboard.soonestUpcomingDescription")}
-            actionTo="/quotes/upcoming"
-            items={data.soonestUpcomingQuotes}
-            dateFormatter={dateFormatter}
-            emptyLabel={t("ordersDashboard.emptyUpcomingQuotes")}
-          />
-        </section>
-        <aside className="orders-dashboard-chart-column">
-          <DashboardCharts queues={primaryQueues} locale={i18n.language} />
-        </aside>
+      <section className="orders-dashboard-queue-grid">
+        <QueuePanel
+          id="today-quotes"
+          icon={CalendarClock}
+          title={t("ordersDashboard.todayFollowUpTitle")}
+          description={t("ordersDashboard.todayFollowUpDescription")}
+          actionTo="/quotes"
+          items={data.todayFollowUpQuoteItems}
+          dateFormatter={dateFormatter}
+          dateField="followUpDate"
+          emptyLabel={t("ordersDashboard.emptyTodayFollowUpQuotes")}
+        />
+        <QueuePanel
+          icon={ShoppingBag}
+          title={t("ordersDashboard.latestPendingOrdersTitle")}
+          description={t("ordersDashboard.latestPendingOrdersDescription")}
+          actionTo="/orders/shopify-pending"
+          items={data.latestPendingOrders}
+          dateFormatter={dateFormatter}
+          emptyLabel={t("ordersDashboard.emptyPendingOrders")}
+        />
+        <QueuePanel
+          icon={CircleDollarSign}
+          title={t("ordersDashboard.latestUnpaidTitle")}
+          description={t("ordersDashboard.latestUnpaidDescription")}
+          actionTo="/orders/unpaid"
+          items={data.latestUnpaidOrders}
+          dateFormatter={dateFormatter}
+          emptyLabel={t("ordersDashboard.emptyUnpaidOrders")}
+          showOutstanding
+        />
+        <QueuePanel
+          icon={Inbox}
+          title={t("ordersDashboard.latestPendingTitle")}
+          description={t("ordersDashboard.latestPendingDescription")}
+          actionTo="/quotes/recent-open"
+          items={data.latestPendingQuotes}
+          dateFormatter={dateFormatter}
+          emptyLabel={t("ordersDashboard.emptyPendingQuotes")}
+        />
+        <QueuePanel
+          icon={CalendarClock}
+          title={t("ordersDashboard.soonestUpcomingTitle")}
+          description={t("ordersDashboard.soonestUpcomingDescription")}
+          actionTo="/quotes/upcoming"
+          items={data.soonestUpcomingQuotes}
+          dateFormatter={dateFormatter}
+          emptyLabel={t("ordersDashboard.emptyUpcomingQuotes")}
+        />
       </section>
-    </section>
-  );
-}
-
-function DashboardCharts({
-  queues,
-  locale,
-}: {
-  queues: Array<{ key: string; label: string; count: number; tone: Tone; to: string }>;
-  locale: string;
-}) {
-  const { t } = useTranslation();
-  const max = Math.max(...queues.map((queue) => queue.count), 1);
-  const total = queues.reduce((sum, queue) => sum + queue.count, 0);
-  let cursor = 0;
-  const colors: Record<Tone, string> = {
-    blue: "#4f7ee8",
-    red: "#e05f65",
-    green: "#35a46f",
-    amber: "#d6952f",
-  };
-  const gradient = total
-    ? `conic-gradient(${queues
-        .map((queue) => {
-          const start = (cursor / total) * 100;
-          cursor += queue.count;
-          const end = (cursor / total) * 100;
-          return `${colors[queue.tone]} ${start}% ${end}%`;
-        })
-        .join(",")})`
-    : "var(--secondary)";
-
-  return (
-    <section className="orders-dashboard-charts">
-      <article className="panel dashboard-chart-panel">
-        <header className="panel-header">
-          <div>
-            <h2><BarChart3 className="orders-dashboard-panel-icon" />{t("ordersDashboard.queueChartTitle")}</h2>
-            <p>{t("ordersDashboard.queueChartDescription")}</p>
-          </div>
-        </header>
-        <div className="orders-dashboard-bars">
-          {queues.map((queue) => (
-            <Link to={queue.to} className="orders-dashboard-bar-row" key={queue.key}>
-              <span>{queue.label}</span>
-              <div className="orders-dashboard-bar-track">
-                <i className={`tone-${queue.tone}`} style={{ width: `${(queue.count / max) * 100}%` }} />
-              </div>
-              <strong>{queue.count.toLocaleString(locale)}</strong>
-            </Link>
-          ))}
-        </div>
-      </article>
-
-      <article className="panel dashboard-chart-panel dashboard-share-panel">
-        <header className="panel-header">
-          <div>
-            <h2><PieChart className="orders-dashboard-panel-icon" />{t("ordersDashboard.shareChartTitle")}</h2>
-            <p>{t("ordersDashboard.shareChartDescription")}</p>
-          </div>
-        </header>
-        <div className="orders-dashboard-share">
-          <div className="orders-dashboard-donut" style={{ background: gradient }} role="img" aria-label={t("ordersDashboard.shareChartAria", { count: total })}>
-            <span><strong>{total.toLocaleString(locale)}</strong><small>{t("ordersDashboard.totalActions")}</small></span>
-          </div>
-          <ul>
-            {queues.map((queue) => (
-              <li key={queue.key}>
-                <i className={`tone-${queue.tone}`} />
-                <span>{queue.label}</span>
-                <strong>{total ? Math.round((queue.count / total) * 100) : 0}%</strong>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </article>
     </section>
   );
 }

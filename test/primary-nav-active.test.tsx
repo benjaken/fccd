@@ -3,6 +3,9 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 
 import {
+  businessSidebarNav,
+  flattenVisibleNavItems,
+  isBusinessSecondaryNavItemActive,
   isPrimaryNavActive,
   isSecondaryNavItemActive,
   primaryNav,
@@ -15,6 +18,46 @@ import {
 } from "@/auth/use-page-access";
 
 describe("Primary navigation section matching", () => {
+  it("keeps the business menu invoice and every order setting as leaf links", () => {
+    const leaves = flattenVisibleNavItems(
+      businessSidebarNav("catering", "orders"),
+      () => true,
+    );
+    expect(leaves.map((item) => item.to)).toContain(
+      "/orders/payments/masoft-invoices?nav=catering.orders",
+    );
+    expect(leaves.filter((item) => item.to.startsWith("/orders/settings/")).length)
+      .toBeGreaterThan(1);
+  });
+
+  it("activates only the most specific business-menu leaf", () => {
+    const targets = [
+      "/orders?nav=catering.orders",
+      "/orders/payments/bank-arrival-date?nav=catering.orders",
+      "/orders/payments/masoft-invoices?nav=catering.orders",
+    ];
+    expect(
+      targets.filter((target) =>
+        isBusinessSecondaryNavItemActive(
+          "/orders/payments/bank-arrival-date",
+          "?nav=catering.orders",
+          target,
+          targets,
+        ),
+      ),
+    ).toEqual([targets[1]]);
+    expect(
+      targets.filter((target) =>
+        isBusinessSecondaryNavItemActive(
+          "/orders/payments/bank-arrival-date",
+          "",
+          target,
+          targets,
+        ),
+      ),
+    ).toEqual([targets[1]]);
+  });
+
   it.each([
     ["/reports/frozen-meat", "/reports/frozen-meat"],
     ["/reports/frozen-meat/raw-meat-stock", "/reports/frozen-meat"],
@@ -65,7 +108,8 @@ describe("Primary navigation section matching", () => {
     ["/orders/settings/statuses", "orders"],
     ["/orders/settings/sale-partners", "orders"],
     ["/quotes", "quotes"],
-    ["/quotes/customers", "quotes"],
+    ["/quotes/customers", "customerSection"],
+    ["/quotes/famous-brands", "customerSection"],
     ["/quotes/quote-1", "quotes"],
     ["/products", "products"],
     ["/products/packages", "products"],
@@ -132,6 +176,10 @@ describe("Primary navigation section matching", () => {
     expect(primaryNav.find((item) => item.key === "followUp")).toMatchObject({
       to: "/follow-up",
       permissionKey: "overview.follow_up",
+    });
+    expect(primaryNav.find((item) => item.key === "customerSection")).toMatchObject({
+      to: "/quotes/customers",
+      permissionKey: "customerSection",
     });
     expect(primaryNav.find((item) => item.key === "restaurant")?.to).toBe(
       "/restaurant/daily-sales",
@@ -265,12 +313,12 @@ describe("Primary navigation section matching", () => {
     );
     expect(navSource).toContain('to: "/orders/settings/sale-partners"');
     expect(navSource).toContain('permissionKey: "orders.settings"');
-    expect(navSource).toContain('to: "/orders/unpaid"');
-    expect(navSource).toContain('to: "/orders/monthly"');
-    expect(navSource).toContain('to: "/orders/split"');
-    expect(navSource).toContain('to: "/orders/kitchen-notes"');
-    expect(navSource).toContain('to: "/orders/reschedule-pending"');
-    expect(navSource).toContain('to: "/orders/shopify-pending"');
+    expect(navSource).not.toContain('to: "/orders/unpaid"');
+    expect(navSource).not.toContain('to: "/orders/monthly"');
+    expect(navSource).not.toContain('to: "/orders/split"');
+    expect(navSource).not.toContain('to: "/orders/kitchen-notes"');
+    expect(navSource).not.toContain('to: "/orders/reschedule-pending"');
+    expect(navSource).not.toContain('to: "/orders/shopify-pending"');
     expect(navSource).toContain('to: "/orders/calendar"');
     expect(navSource).toContain('key: "bankArrivalDateInput"');
     expect(navSource).toContain('to: "/orders/payments/bank-arrival-date"');

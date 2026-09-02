@@ -148,6 +148,7 @@ describe("Orders dashboard page", () => {
     expect(
       screen.getByRole("link", { name: /即將到期報價\s*5.*開啟列表/ }),
     ).toHaveAttribute("href", "/quotes/upcoming");
+    expect(document.querySelector(".orders-dashboard-charts")).not.toBeInTheDocument();
   });
 
   it("lists the latest pending inquiries and soonest upcoming quotes", async () => {

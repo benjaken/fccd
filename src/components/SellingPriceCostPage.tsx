@@ -416,22 +416,6 @@ export function SellingPriceCostPage({
           <span className="eyebrow">{t("sellingPriceCost.eyebrow")}</span>
           <h1>{t("sellingPriceCost.title")}</h1>
         </div>
-        {showSendButton ? (
-          <div className="heading-actions">
-            <Button
-              type="button"
-              disabled={pushing}
-              onClick={() => {
-                setPushMessage(null);
-                setPushError(null);
-                setConfirmOpen(true);
-              }}
-            >
-              <Send />
-              {t("sellingPriceCost.sendToReport")}
-            </Button>
-          </div>
-        ) : null}
       </header>
 
       <div className="selling-price-cost-layout">
@@ -505,6 +489,11 @@ export function SellingPriceCostPage({
             placeholder={t("sellingPriceCost.searchPlaceholder")}
             submitLabel={t("sellingPriceCost.searchAction")}
             disabled={loading}
+            actions={showSendButton ? (
+              <Button type="button" disabled={pushing} onClick={() => { setPushMessage(null); setPushError(null); setConfirmOpen(true); }}>
+                <Send />{t("sellingPriceCost.sendToReport")}
+              </Button>
+            ) : null}
           />
         </header>
 

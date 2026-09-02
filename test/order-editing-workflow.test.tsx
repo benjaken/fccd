@@ -85,7 +85,7 @@ describe("order editing factory workflow", () => {
     });
 
     expect(screen.getByRole("alert")).toHaveTextContent("訂單正在修改，請先不要打印");
-    expect(screen.getByRole("button", { name: "印全單" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /印全單（\d+個標籤）/ })).toBeDisabled();
     expect(screen.getByRole("button", { name: "印地址" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "印送貨單" })).toBeDisabled();
   });
@@ -167,7 +167,7 @@ describe("order editing factory workflow", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "印全單" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /印全單（\d+個標籤）/ })).toBeInTheDocument();
     });
     act(() => emitPresence(new Set(["order-1"])));
     expect(screen.getByRole("alert")).toBeInTheDocument();

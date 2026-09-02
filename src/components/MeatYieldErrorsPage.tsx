@@ -136,21 +136,7 @@ export function MeatYieldErrorsPage({
         </div>
       </header>
       <article className="panel orders-panel">
-        <aside
-          className="yield-errors-rules"
-          aria-label={t("yieldErrors.rulesTitle")}
-        >
-          <p className="yield-errors-rules-title">
-            {t("yieldErrors.rulesTitle")}
-          </p>
-          <p>{t("yieldErrors.ruleBudget")}</p>
-          <p>
-            {t("yieldErrors.ruleThreshold", {
-              percent: Math.round(YIELD_ERROR_THRESHOLD_RATIO * 100),
-            })}
-          </p>
-        </aside>
-        <header className="orders-toolbar">
+        <header className="orders-toolbar yield-errors-toolbar">
           <ListSearchBar
             id="yield-errors-search"
             value={draftSearch}
@@ -186,6 +172,20 @@ export function MeatYieldErrorsPage({
               </label>
             }
           />
+          <aside
+            className="yield-errors-rules"
+            aria-label={t("yieldErrors.rulesTitle")}
+          >
+            <p className="yield-errors-rules-title">
+              {t("yieldErrors.rulesTitle")}
+            </p>
+            <p>{t("yieldErrors.ruleBudget")}</p>
+            <p>
+              {t("yieldErrors.ruleThreshold", {
+                percent: Math.round(YIELD_ERROR_THRESHOLD_RATIO * 100),
+              })}
+            </p>
+          </aside>
         </header>
         {error ? (
           <OperationalListState

@@ -34,7 +34,6 @@ import {
   type ProductListItem,
   type ProductListResult,
   type ProductPreset,
-  type ProductPriceRange,
   type ProductSortField,
   type ProductStatusFilter,
 } from "@/lib/products";
@@ -89,7 +88,6 @@ export function ProductsListPage({
 }) {
   const { t, i18n } = useTranslation();
   const catalogStatusDictionary = useDictItems(DICT_TYPE.catalogStatus);
-  const priceRangeDictionary = useDictItems(DICT_TYPE.productPriceRange);
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -111,10 +109,15 @@ export function ProductsListPage({
     () => searchParams.get("cook") ?? "",
   );
   const [status, setStatus] = useState<ProductStatusFilter>("");
-  const [priceRange, setPriceRange] = useState<ProductPriceRange>("");
-  const priceFilter = useDeferredFilter(priceRange, (value) => {
+  const [priceMin, setPriceMin] = useState("");
+  const [priceMax, setPriceMax] = useState("");
+  const priceMinFilter = useDeferredFilter(priceMin, (value) => {
     setPage(1);
-    setPriceRange(value);
+    setPriceMin(value);
+  });
+  const priceMaxFilter = useDeferredFilter(priceMax, (value) => {
+    setPage(1);
+    setPriceMax(value);
   });
   const channelFilter = useDeferredFilter(channelId, (value) => {
     setPage(1);
@@ -310,7 +313,8 @@ export function ProductsListPage({
     setBentoColumnTypeId("");
     setCookTypeId("");
     setStatus("");
-    setPriceRange("");
+    setPriceMin("");
+    setPriceMax("");
     setSortField("sku");
     setSortAscending(true);
   }, [preset]);
@@ -328,7 +332,9 @@ export function ProductsListPage({
         bentoColumnTypeId,
         cookTypeId,
         status,
-        priceRange,
+        priceRange: "",
+        priceMin: priceMin === "" ? undefined : Number(priceMin),
+        priceMax: priceMax === "" ? undefined : Number(priceMax),
         sortField,
         sortAscending,
         preset,
@@ -354,7 +360,8 @@ export function ProductsListPage({
     loadProducts,
     page,
     preset,
-    priceRange,
+    priceMin,
+    priceMax,
     productTypeName,
     bentoColumnTypeId,
     bentoMainTypeId,
@@ -421,7 +428,7 @@ export function ProductsListPage({
   };
 
   const displayName = (product: ProductListItem) =>
-    product.chineseName || product.name || t("common.notSet");
+    product.name || t("common.notSet");
 
   const statusLabel = (product: ProductListItem) => {
     const item = catalogStatusDictionary.items.find(
@@ -480,20 +487,6 @@ export function ProductsListPage({
           <span className="eyebrow">{t("products.eyebrow")}</span>
           <h1>{t(`products.${titleKey}`)}</h1>
         </div>
-        {canEdit || showCreatePackage ? (
-          <div className="heading-actions">
-            {showCreatePackage ? (
-              <Button asChild variant="outline">
-                <Link to="/products/packages/new"><PackagePlus />{t("catalogCreate.newPackage")}</Link>
-              </Button>
-            ) : null}
-            {canEdit ? (
-              <Button asChild>
-                <Link to="/products/new"><Plus />{t("catalogCreate.newProduct")}</Link>
-              </Button>
-            ) : null}
-          </div>
-        ) : null}
       </header>
 
       <article className="panel products-panel">
@@ -506,9 +499,16 @@ export function ProductsListPage({
             label={t("products.search")}
             placeholder={t("products.searchPlaceholder")}
             submitLabel={t("products.searchAction")}
+            actions={canEdit || showCreatePackage ? (
+              <>
+                {showCreatePackage ? <Button asChild variant="outline"><Link to="/products/packages/new"><PackagePlus />{t("catalogCreate.newPackage")}</Link></Button> : null}
+                {canEdit ? <Button asChild><Link to="/products/new"><Plus />{t("catalogCreate.newProduct")}</Link></Button> : null}
+              </>
+            ) : null}
             filtersAlwaysInDrawer
             filtersActive={Boolean(
-              priceRange ||
+              priceMin ||
+                priceMax ||
                 channelId ||
                 productTypeName ||
                 bentoMainTypeId ||
@@ -517,7 +517,8 @@ export function ProductsListPage({
                 status,
             )}
             onConfirmFilters={() => {
-              priceFilter.confirm();
+              priceMinFilter.confirm();
+              priceMaxFilter.confirm();
               channelFilter.confirm();
               typeFilter.confirm();
               stapleFilter.confirm();
@@ -526,7 +527,8 @@ export function ProductsListPage({
               statusFilter.confirm();
             }}
             onDismissFilters={() => {
-              priceFilter.revert();
+              priceMinFilter.revert();
+              priceMaxFilter.revert();
               channelFilter.revert();
               typeFilter.revert();
               stapleFilter.revert();
@@ -536,28 +538,35 @@ export function ProductsListPage({
             }}
             filters={
               <div className="products-filters">
-                <label className="products-status-filter">
+                <div className="products-price-filter">
                   <span>{t("products.priceRangeFilter")}</span>
-                  <FilterableSelect
-                    value={priceFilter.value}
-                    onChange={(event) => {
-                      priceFilter.setValue(
-                        event.target.value as ProductPriceRange,
-                      );
-                    }}
-                  >
-                    <option value="">{t("products.allPriceRanges")}</option>
-                    {dictSelectOptions(
-                      priceRangeDictionary.items,
-                      i18n.language,
-                      priceFilter.value,
-                    ).map((item) => (
-                      <option key={item.value} value={item.value}>
-                        {item.label}
-                      </option>
-                    ))}
-                  </FilterableSelect>
-                </label>
+                  <div>
+                    <label>
+                      <span>{t("products.priceMin")}</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="any"
+                        inputMode="decimal"
+                        value={priceMinFilter.value}
+                        onChange={(event) => priceMinFilter.setValue(event.target.value)}
+                        placeholder={t("products.priceMinPlaceholder")}
+                      />
+                    </label>
+                    <label>
+                      <span>{t("products.priceMax")}</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="any"
+                        inputMode="decimal"
+                        value={priceMaxFilter.value}
+                        onChange={(event) => priceMaxFilter.setValue(event.target.value)}
+                        placeholder={t("products.priceMaxPlaceholder")}
+                      />
+                    </label>
+                  </div>
+                </div>
 
                 <label className="products-status-filter">
                   <span>{t("products.channelFilter")}</span>
@@ -797,10 +806,6 @@ export function ProductsListPage({
                   >
                     <strong>{displayName(product)}</strong>
                   </DetailLink>
-                  {product.chineseName &&
-                    product.name !== product.chineseName && (
-                      <small className="quote-company">{product.name}</small>
-                    )}
                 </td>
                 <td>{product.productTypeName || t("common.notSet")}</td>
                 <td>{product.bentoMainTypeName || t("common.notSet")}</td>

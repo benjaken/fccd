@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 
-export const LARGE_QUOTE_THRESHOLD = 10_000;
+export const LARGE_QUOTE_THRESHOLD = 100_000;
 
 export type DashboardJob = {
   id: string;
