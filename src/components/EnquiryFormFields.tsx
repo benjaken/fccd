@@ -1,6 +1,6 @@
 import {
+  enquiryOptionsShouldStack,
   enquiryQuestionElementId,
-  isEnquiryOptionCompact,
   type EnquiryAnswerValue,
   type EnquiryAnswers,
   type EnquiryFieldError,
@@ -127,9 +127,10 @@ function EnquiryControl({
     );
   }
   if (question.type === "radio") {
+    const stack = enquiryOptionsShouldStack(question.options, question.requireAllOptions);
     return (
       <div
-        className="enquiry-form-options"
+        className={cn("enquiry-form-options", stack && "is-stacked")}
         role="radiogroup"
         aria-labelledby={labelledBy}
         aria-invalid={invalid || undefined}
@@ -137,10 +138,7 @@ function EnquiryControl({
         {(question.options ?? []).map((option) => (
           <label
             key={option.value}
-            className={cn(
-              "enquiry-form-option",
-              (question.requireAllOptions || !isEnquiryOptionCompact(option.label)) && "is-wide",
-            )}
+            className={cn("enquiry-form-option", stack && "is-wide")}
           >
             <input
               type="radio"
@@ -158,17 +156,18 @@ function EnquiryControl({
   }
   if (question.type === "checkbox") {
     const selected = Array.isArray(value) ? value : [];
+    const stack = enquiryOptionsShouldStack(question.options, question.requireAllOptions);
     return (
-      <div className="enquiry-form-options" aria-invalid={invalid || undefined}>
+      <div
+        className={cn("enquiry-form-options", stack && "is-stacked")}
+        aria-invalid={invalid || undefined}
+      >
         {(question.options ?? []).map((option) => {
           const checked = selected.includes(option.value);
           return (
             <label
               key={option.value}
-              className={cn(
-                "enquiry-form-option",
-                (question.requireAllOptions || !isEnquiryOptionCompact(option.label)) && "is-wide",
-              )}
+              className={cn("enquiry-form-option", stack && "is-wide")}
             >
               <input
                 type="checkbox"

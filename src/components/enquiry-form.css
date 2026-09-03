@@ -114,6 +114,10 @@
   height: 1rem;
 }
 
+.enquiry-form-fields-split .enquiry-form-options.is-stacked {
+  grid-template-columns: 1fr;
+}
+
 .enquiry-form-fields-split .enquiry-form-option.is-wide {
   grid-column: 1 / -1;
 }

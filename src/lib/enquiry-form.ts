@@ -360,6 +360,16 @@ export function isEnquiryOptionCompact(label: string) {
   return Array.from(label.trim()).length <= COMPACT_OPTION_MAX_CHARS;
 }
 
+export function enquiryOptionsShouldStack(
+  options: { label: string }[] | undefined,
+  requireAllOptions = false,
+) {
+  if (requireAllOptions) return true;
+  const labels = options ?? [];
+  if (!labels.length) return false;
+  return labels.some((option) => !isEnquiryOptionCompact(option.label));
+}
+
 export function serializeEnquiryQuestions(questions: EnquiryQuestion[]): Record<string, unknown>[] {
   return questions.map((question) => ({
     field_key: question.fieldKey,

@@ -7,6 +7,7 @@ import {
 } from "@/lib/enquiry-form-seed";
 import {
   isEnquiryOptionCompact,
+  enquiryOptionsShouldStack,
   convertEnquiryRequirements,
   emptyAnswers,
   enquiryPublicPath,
@@ -30,6 +31,20 @@ describe("catering enquiry seed form", () => {
     expect(isEnquiryOptionCompact("正餐 到會  (大盤)")).toBe(true);
     expect(isEnquiryOptionCompact("新界區/九龍區 地面車邊交收 (+$50)")).toBe(false);
     expect(isEnquiryOptionCompact("需要分期付款，先付6成按金確認訂單，尾數在送餐當日付款")).toBe(false);
+  });
+
+  it("stacks a whole option group when any label is too long", () => {
+    expect(enquiryOptionsShouldStack([
+      { label: "先生" },
+      { label: "小姐" },
+      { label: "女士" },
+      { label: "太太" },
+    ])).toBe(false);
+    expect(enquiryOptionsShouldStack([
+      { label: "自有人手 Self Manpower" },
+      { label: "現場司儀 MC" },
+      { label: "遊戲節目主持 Game Host" },
+    ])).toBe(true);
   });
 
   it("defaults a new form to the five contact questions", () => {
