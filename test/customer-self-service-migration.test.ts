@@ -30,3 +30,23 @@ describe("customer self-service portal migration", () => {
     expect(sql).toContain("grant execute on function public.customer_self_service_order_detail(uuid, uuid) to anon, authenticated");
   });
 });
+
+describe("customer self-service catalog product name", () => {
+  it("prefers live 產品名稱 over the order-line snapshot", () => {
+    const sql = readFileSync(
+      resolve(
+        process.cwd(),
+        "supabase/migrations/20260903090526_prefer_catalog_product_name_on_self_service.sql",
+      ),
+      "utf8",
+    );
+    expect(sql).toContain("nullif(btrim(product.name), '')");
+    expect(sql).toContain("nullif(btrim(package.name), '')");
+    expect(sql).toMatch(
+      /coalesce\(\s*nullif\(btrim\(product\.name\), ''\),\s*nullif\(btrim\(package\.name\), ''\),\s*nullif\(btrim\(line\.product_name_snapshot\), ''\)/,
+    );
+    expect(sql).not.toContain(
+      "coalesce(nullif(btrim(line.product_name_snapshot), ''), product.name, package.name, line.content_snapshot, 'Item')",
+    );
+  });
+});

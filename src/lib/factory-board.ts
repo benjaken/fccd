@@ -8,6 +8,7 @@ import {
 import { supabase } from "@/lib/supabase"
 import { formatFactoryOrderNumber } from "@/lib/factory-order-number"
 import { fetchActiveOrderEditIds } from "@/lib/order-edit-lock"
+import { productListDisplayName } from "@/lib/products"
 
 export const UNASSIGNED_FLEET_ID = "__unassigned__"
 export const ALL_BRAND_ID = "__all__"
@@ -391,6 +392,23 @@ export function formatFactoryLineLabel(line: {
   return `${base} (x ${quantity})`
 }
 
+/** Card / 原名稱: live 產品名稱, then the order-line snapshot. */
+export function resolveFactoryOrderLineDisplayName(line: {
+  catalogName?: string | null
+  snapshotName?: string | null
+  content?: string | null
+}): string {
+  return formatFactoryLineLabel({
+    productName: productListDisplayName(
+      line.catalogName,
+      null,
+      line.snapshotName || "",
+    ),
+    content: line.content,
+    quantity: null,
+  })
+}
+
 type FactoryMeatOrderRow = {
   id: string
   order_number: string | null
@@ -646,7 +664,7 @@ export async function fetchFactoryMenuRows(
     const chunk = allowedIds.slice(index, index + PORTION_CHUNK_SIZE)
     const { data, error } = await supabase
       .from("order_lines")
-      .select("order_id, product_name_snapshot, content_snapshot, quantity, type_sort")
+      .select("order_id, product_name_snapshot, content_snapshot, quantity, type_sort, products(name), packages(name)")
       .in("order_id", chunk)
       .eq("is_void", false)
     if (error) {
@@ -655,10 +673,16 @@ export async function fetchFactoryMenuRows(
     for (const row of data ?? []) {
       const quantity = Number(row.quantity ?? 0)
       if (!Number.isFinite(quantity) || quantity === 0) continue
-      const label = formatFactoryLineLabel({
-        productName: row.product_name_snapshot as string | null,
+      const catalog = firstRelation(
+        (row as { products?: { name?: string | null } | { name?: string | null }[] | null }).products,
+      )
+      const pkg = firstRelation(
+        (row as { packages?: { name?: string | null } | { name?: string | null }[] | null }).packages,
+      )
+      const label = resolveFactoryOrderLineDisplayName({
+        catalogName: catalog?.name ?? pkg?.name,
+        snapshotName: row.product_name_snapshot as string | null,
         content: row.content_snapshot as string | null,
-        quantity: null,
       })
       if (!label) continue
       const current = totals.get(label) ?? {
@@ -749,7 +773,7 @@ export async function fetchFactoryMultiDayMenu(
     const chunk = orderIds.slice(index, index + PORTION_CHUNK_SIZE)
     const { data, error } = await supabase
       .from("order_lines")
-      .select("order_id, product_name_snapshot, content_snapshot, quantity, type_sort")
+      .select("order_id, product_name_snapshot, content_snapshot, quantity, type_sort, products(name), packages(name)")
       .in("order_id", chunk)
       .eq("is_void", false)
     if (error) throw error
@@ -759,10 +783,16 @@ export async function fetchFactoryMultiDayMenu(
       if (!delivery?.deliveryAt) continue
       const quantity = Number(line.quantity ?? 0)
       if (!Number.isFinite(quantity) || quantity === 0) continue
-      const label = formatFactoryLineLabel({
-        productName: line.product_name_snapshot as string | null,
+      const catalog = firstRelation(
+        (line as { products?: { name?: string | null } | { name?: string | null }[] | null }).products,
+      )
+      const pkg = firstRelation(
+        (line as { packages?: { name?: string | null } | { name?: string | null }[] | null }).packages,
+      )
+      const label = resolveFactoryOrderLineDisplayName({
+        catalogName: catalog?.name ?? pkg?.name,
+        snapshotName: line.product_name_snapshot as string | null,
         content: line.content_snapshot as string | null,
-        quantity: null,
       })
       if (!label) continue
       contributions.push({
@@ -976,7 +1006,7 @@ export async function fetchFactoryOrderJob(orderId: string): Promise<FactoryOrde
     supabase
       .from("order_lines")
       .select(
-        "id, product_id, product_name_snapshot, content_snapshot, quantity, new_quantity_text, remarks_1, remarks_2, is_printed, is_void, is_addon, bubble_modified_at, updated_at, type_sort, item_order, temporary_label_display_name, temporary_label_quantity_label",
+        "id, product_id, product_name_snapshot, content_snapshot, quantity, new_quantity_text, remarks_1, remarks_2, is_printed, is_void, is_addon, bubble_modified_at, updated_at, type_sort, item_order, temporary_label_display_name, temporary_label_quantity_label, products(name), packages(name)",
       )
       .eq("order_id", orderId)
       .order("type_sort")
@@ -1096,59 +1126,69 @@ export async function fetchFactoryOrderJob(orderId: string): Promise<FactoryOrde
     lines: [
       ...allLines.filter((row) => !row.is_void),
       ...allLines.filter((row) => row.is_void),
-    ].map((row) => ({
-      id: row.id as string,
-      labelNames: resolvedFactoryOrderLineLabelNames(
-        productLabelsByProductId.get((row.product_id as string | null) ?? "") ?? [],
-        row.temporary_label_display_name as string | null,
-        row.temporary_label_quantity_label as string | null,
-        (row.content_snapshot as string | null)?.trim() ||
-          (row.product_name_snapshot as string | null)?.trim(),
-      ),
-      labelName:
-        factoryOrderLineLabelName(
+    ].map((row) => {
+      const product = firstRelation(
+        (row as { products?: { name?: string | null } | { name?: string | null }[] | null })
+          .products,
+      )
+      const pkg = firstRelation(
+        (row as { packages?: { name?: string | null } | { name?: string | null }[] | null })
+          .packages,
+      )
+      return {
+        id: row.id as string,
+        labelNames: resolvedFactoryOrderLineLabelNames(
           productLabelsByProductId.get((row.product_id as string | null) ?? "") ?? [],
           row.temporary_label_display_name as string | null,
           row.temporary_label_quantity_label as string | null,
-        ) ||
-        (row.content_snapshot as string | null)?.trim() ||
-        (row.product_name_snapshot as string | null)?.trim() ||
-        "",
-      label: formatFactoryLineLabel({
-        productName: row.product_name_snapshot as string | null,
-        content: row.content_snapshot as string | null,
-        quantity: null,
-      }),
-      quantityText:
-        (row.new_quantity_text as string | null)?.trim() ||
-        formatFactoryQuantity(
-          row.quantity == null || row.quantity === ""
-            ? null
-            : Number(row.quantity),
+          (row.content_snapshot as string | null)?.trim() ||
+            (row.product_name_snapshot as string | null)?.trim(),
         ),
-      remarks: [row.remarks_1, row.remarks_2]
-        .map((value) => (value as string | null)?.trim() ?? "")
-        .filter((value, index, values) => value && values.indexOf(value) === index),
-      printed: !row.is_void && Boolean(row.is_printed),
-      isAddon: Boolean(row.is_addon),
-      isCancelled: Boolean(row.is_void),
-      changes: changesByLineId.get(row.id as string) ?? [],
-      requiresReprint:
-        row.is_void
-          ? false
-          : pendingLineChanges.length > 0
-          ? (changesByLineId.get(row.id as string) ?? []).some(
-              (change) => change.operation !== "delete",
-            )
-          : requiresReprint &&
-            (!row.is_printed ||
-              (Boolean(factoryPrintDate) &&
-                Date.parse(
-                  ((row.bubble_modified_at as string | null) ??
-                    (row.updated_at as string | null) ??
-                    ""),
-                ) > Date.parse(factoryPrintDate ?? ""))),
-    })),
+        labelName:
+          factoryOrderLineLabelName(
+            productLabelsByProductId.get((row.product_id as string | null) ?? "") ?? [],
+            row.temporary_label_display_name as string | null,
+            row.temporary_label_quantity_label as string | null,
+          ) ||
+          (row.content_snapshot as string | null)?.trim() ||
+          (row.product_name_snapshot as string | null)?.trim() ||
+          "",
+        label: resolveFactoryOrderLineDisplayName({
+          catalogName: product?.name ?? pkg?.name,
+          snapshotName: row.product_name_snapshot as string | null,
+          content: row.content_snapshot as string | null,
+        }),
+        quantityText:
+          (row.new_quantity_text as string | null)?.trim() ||
+          formatFactoryQuantity(
+            row.quantity == null || row.quantity === ""
+              ? null
+              : Number(row.quantity),
+          ),
+        remarks: [row.remarks_1, row.remarks_2]
+          .map((value) => (value as string | null)?.trim() ?? "")
+          .filter((value, index, values) => value && values.indexOf(value) === index),
+        printed: !row.is_void && Boolean(row.is_printed),
+        isAddon: Boolean(row.is_addon),
+        isCancelled: Boolean(row.is_void),
+        changes: changesByLineId.get(row.id as string) ?? [],
+        requiresReprint:
+          row.is_void
+            ? false
+            : pendingLineChanges.length > 0
+              ? (changesByLineId.get(row.id as string) ?? []).some(
+                  (change) => change.operation !== "delete",
+                )
+              : requiresReprint &&
+                (!row.is_printed ||
+                  (Boolean(factoryPrintDate) &&
+                    Date.parse(
+                      ((row.bubble_modified_at as string | null) ??
+                        (row.updated_at as string | null) ??
+                        ""),
+                    ) > Date.parse(factoryPrintDate ?? ""))),
+      }
+    }),
   }
 }
 
