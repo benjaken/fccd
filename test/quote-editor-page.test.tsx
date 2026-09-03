@@ -146,9 +146,17 @@ describe("quote workflow fields", () => {
 
 describe("quote line label remarks", () => {
   it("pairs one remark with each print label and keeps a single remark when there are none", () => {
-    expect(quoteLinePrintLabelName({ id: "label-1", displayA: "花膠原隻雞燉湯 (湯底)", displayB: "1份" }))
-      .toBe("花膠原隻雞燉湯 (湯底)");
-    expect(quoteLinePrintLabelName({ id: "label-2", displayA: "  ", displayB: "8-10位" }))
+    expect(quoteLinePrintLabelName({
+      id: "label-1",
+      displayA: "(5格) 和風黑椒",
+      displayB: "牛柳",
+    })).toBe("(5格) 和風黑椒牛柳");
+    expect(quoteLinePrintLabelName({
+      id: "label-2",
+      displayA: "童趣拼盤(台灣腸蟹蓋",
+      displayB: "肉丸年糕各6件)",
+    })).toBe("童趣拼盤(台灣腸蟹蓋肉丸年糕各6件)");
+    expect(quoteLinePrintLabelName({ id: "label-3", displayA: "  ", displayB: "8-10位" }))
       .toBe("8-10位");
 
     const withLabels: QuoteLine = {
@@ -963,6 +971,7 @@ describe("Quote editor", () => {
     expect(remarkInput.closest("td")).toHaveClass("quote-line-remarks");
     expect(remarkInput).toHaveValue("Original remark");
     expect(remarkInput).toHaveAttribute("maxlength", "16");
+    expect(remarkInput).toHaveAttribute("rows", "2");
     expect(screen.queryByRole("button", { name: /Original remark/ })).not.toBeInTheDocument();
     await user.clear(remarkInput);
     await user.type(remarkInput, "No onion");
@@ -1036,11 +1045,11 @@ describe("Quote editor", () => {
     const editableLineRow = screen.getByRole("row", { name: /Roast pork/ });
     const editablePreviewButton = within(editableLineRow).getByRole("button", { name: "Preview" });
     expect(editablePreviewButton.closest("td")).toBe(editableLineRow.lastElementChild);
-    const productCell = within(editableLineRow).getByText("柳粒飯 (甘栗紫薯餅、芝士年糕、雞肉丸)").closest("td");
+    const productCell = within(editableLineRow).getByText("柳粒飯 (甘栗紫薯餅、芝士年糕、雞肉丸)2 boxes").closest("td");
     const firstRemark = screen.getByRole("textbox", { name: "Remarks Roast pork 1" });
     const secondRemark = screen.getByRole("textbox", { name: "Remarks Roast pork 2" });
     expect(productCell).toHaveClass("quote-line-product");
-    expect(within(editableLineRow).getByText("Sauce label").closest("td")).toBe(productCell);
+    expect(within(editableLineRow).getByText("Sauce label1 cup").closest("td")).toBe(productCell);
     expect(firstRemark.closest("td")).toHaveClass("quote-line-remarks");
     expect(secondRemark.closest("td")).toHaveClass("quote-line-remarks");
     expect(firstRemark).toHaveValue("Line note");
@@ -1100,8 +1109,8 @@ describe("Quote editor", () => {
 
     const row = await screen.findByRole("row", { name: /Roast pork/ });
     expect(screen.getByRole("columnheader", { name: "Remarks" })).toBeInTheDocument();
-    expect(within(row).getByText("Roast pork label").closest("td")).toHaveClass("quote-line-product");
-    expect(within(row).getByText("Sauce label").closest("td")).toHaveClass("quote-line-product");
+    expect(within(row).getByText("Roast pork label2 boxes").closest("td")).toHaveClass("quote-line-product");
+    expect(within(row).getByText("Sauce label1 cup").closest("td")).toHaveClass("quote-line-product");
     expect(within(row).getByText("Line note").closest("td")).toHaveClass("quote-line-remarks");
     expect(within(row).getByText("Sauce note").closest("td")).toHaveClass("quote-line-remarks");
     expect(within(row).queryByRole("textbox")).not.toBeInTheDocument();

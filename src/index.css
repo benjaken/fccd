@@ -24207,7 +24207,8 @@ a.masoft-order-tag:focus-visible {
 }
 
 .quote-line-edit-remarks {
-  min-height: 32px;
+  min-height: 52px;
+  resize: none;
 }
 
 .quote-line-labels,
@@ -24235,7 +24236,7 @@ a.masoft-order-tag:focus-visible {
   line-height: 1.35;
   overflow: visible;
   overflow-wrap: anywhere;
-  white-space: normal;
+  white-space: pre-wrap;
 }
 
 .quote-line-remarks-list .quote-line-edit-remarks {
@@ -24248,12 +24249,12 @@ a.masoft-order-tag:focus-visible {
 
 .quote-line-label-remark-text {
   display: block;
-  min-height: 32px;
+  min-height: 52px;
   min-width: 0;
   color: var(--muted-foreground);
   font-size: 13px;
   overflow-wrap: anywhere;
-  white-space: normal;
+  white-space: pre-wrap;
 }
 
 .quote-line-label-remark-text.is-empty {

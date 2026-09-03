@@ -168,7 +168,10 @@ export type QuoteLineLabelRemarkRow = {
 };
 
 export function quoteLinePrintLabelName(label: QuoteLineLabel): string {
-  return label.displayA?.trim() || label.displayB?.trim() || "";
+  return [label.displayA, label.displayB]
+    .map((value) => value?.trim() ?? "")
+    .filter(Boolean)
+    .join("");
 }
 
 export function quoteLineLabelRemarkRows(line: QuoteLine): QuoteLineLabelRemarkRow[] {

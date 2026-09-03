@@ -1352,8 +1352,9 @@ export function QuoteEditorPage({
             );
           }
           return (
-            <input
+            <textarea
               className="quote-line-edit-remarks"
+              rows={2}
               maxLength={16}
               value={row.remark}
               aria-label={label}
