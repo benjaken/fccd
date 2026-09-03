@@ -24123,6 +24123,11 @@ a.masoft-order-tag:focus-visible {
 }
 
 .quote-lines-panel tbody td {
+  vertical-align: middle;
+}
+
+.quote-lines-panel td.quote-line-product,
+.quote-lines-panel td.quote-line-remarks {
   vertical-align: top;
 }
 
@@ -24218,8 +24223,8 @@ a.masoft-order-tag:focus-visible {
 
 .quote-line-heading {
   display: flex;
-  min-height: 34px;
-  align-items: flex-start;
+  min-height: 42px;
+  align-items: center;
   gap: 6px;
 }
 
@@ -24238,10 +24243,12 @@ a.masoft-order-tag:focus-visible {
 }
 
 .quote-line-label-chip {
-  display: block;
+  display: flex;
   width: 100%;
   max-width: 100%;
-  padding: 4px 8px;
+  min-height: 64px;
+  padding: 8px;
+  align-items: center;
   border-radius: 6px;
   background: var(--muted);
   color: var(--muted-foreground);
