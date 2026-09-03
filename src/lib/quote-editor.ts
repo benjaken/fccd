@@ -162,6 +162,30 @@ export type QuoteLine = {
   pendingPackageChoices?: QuotePackageChoiceSelection[];
 };
 
+export type QuoteLineLabelRemarkRow = {
+  label: QuoteLineLabel | null;
+  remark: string;
+};
+
+export function quoteLinePrintLabelName(label: QuoteLineLabel): string {
+  return label.displayA?.trim() || label.displayB?.trim() || "";
+}
+
+export function quoteLineLabelRemarkRows(line: QuoteLine): QuoteLineLabelRemarkRow[] {
+  const labels = line.labels ?? [];
+  const remarks = line.labelRemarks ?? [];
+  if (labels.length > 0) {
+    return labels.map((label, index) => ({
+      label,
+      remark: remarks[index] ?? (index === 0 ? line.remarks ?? "" : ""),
+    }));
+  }
+  return [{
+    label: null,
+    remark: remarks[0] ?? line.remarks ?? "",
+  }];
+}
+
 type NamedRow = { id: string; name: string };
 type ShippingRow = { id: string; name: string; display_name: string | null };
 
