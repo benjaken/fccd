@@ -183,7 +183,7 @@ export function ProfilePage() {
                   <PanelsTopLeft />
                   <span>
                     <strong>{chinese ? "風格一（預設）" : "Style one (default)"}</strong>
-                    <small>{chinese ? "主頁｜營運跟進｜到會｜凍肉｜餐廳｜報表｜系統設定" : "Home · Follow-up · Catering · Frozen · Restaurant · Reports · Settings"}</small>
+                    <small>{chinese ? "主頁｜營運跟進｜到會｜凍肉｜餐廳｜會計跟進｜報表｜系統設定" : "Home · Follow-up · Catering · Frozen · Restaurant · Accounting · Reports · Settings"}</small>
                   </span>
                 </button>
                 <button

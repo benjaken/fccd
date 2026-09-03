@@ -475,7 +475,11 @@ const resources = {
       navigation: {
         overview: "主頁",
         followUp: "營運跟進",
+        accountingFollowUp: "會計跟進",
         catering: "到會",
+        cateringData: "到會數據",
+        restaurantData: "餐廳數據",
+        factoryData: "工場數據",
         orders: "訂單",
         quotes: "報價",
         customerSection: "客戶",
@@ -5825,7 +5829,11 @@ const resources = {
       navigation: {
         overview: "Home",
         followUp: "Operations Follow-up",
+        accountingFollowUp: "Accounting Follow-up",
         catering: "Catering",
+        cateringData: "Catering Data",
+        restaurantData: "Restaurant Data",
+        factoryData: "Factory Data",
         orders: "Orders",
         quotes: "Quotes",
         customerSection: "Customers",

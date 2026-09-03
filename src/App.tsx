@@ -184,6 +184,7 @@ import {
   type Icon,
   type NavItem,
   accessiblePrimaryNavigationPath,
+  accessibleBusinessPrimaryPath,
   businessCategoryFromLocation,
   businessPrimaryNav,
   businessSectionFromLocation,
@@ -193,6 +194,7 @@ import {
   firstAccessibleNavigationPath,
   flattenVisibleNavItems,
   isNavItemVisible,
+  isBusinessPrimaryNavVisible,
   isBusinessSecondaryNavItemActive,
   isPrimaryNavActive,
   isSecondaryNavItemActive,
@@ -309,7 +311,7 @@ function OperationsShell() {
     );
   });
   const visibleBusinessPrimaryNav = businessPrimaryNav.filter((item) =>
-    isNavItemVisible(item, pageAccess.canAccess),
+    isBusinessPrimaryNavVisible(item, pageAccess.canAccess),
   );
   const displayedPrimaryNav = isBusinessMenu
     ? visibleBusinessPrimaryNav
@@ -726,7 +728,7 @@ function OperationsShell() {
             const { key, icon: NavIcon } = item;
             const to =
               isBusinessMenu
-                ? item.to
+                ? accessibleBusinessPrimaryPath(item, pageAccess.canAccess)
                 : accessiblePrimaryNavigationPath(item, pageAccess.canAccess) ?? item.to;
             return (
             <NavLink
@@ -2159,6 +2161,10 @@ const BUSINESS_MENU_LABELS: Record<string, [string, string]> = {
   catering: ["到會", "Catering"],
   frozen: ["凍肉", "Frozen Meat"],
   restaurant: ["餐廳", "Restaurant"],
+  accountingFollowUp: ["會計跟進", "Accounting Follow-up"],
+  cateringData: ["到會數據", "Catering Data"],
+  restaurantData: ["餐廳數據", "Restaurant Data"],
+  factoryData: ["工場數據", "Factory Data"],
   reports: ["報表", "Reports"],
   settings: ["系統設定", "System Settings"],
   orders: ["訂單", "Orders"],

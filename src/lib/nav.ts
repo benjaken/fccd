@@ -109,6 +109,7 @@ export const businessPrimaryNav: NavItem[] = [
   { key: "catering", to: "/orders?nav=catering.orders", icon: Utensils, permissionKey: "orders" },
   { key: "frozen", to: "/frozen/raw-meat-inventory?nav=frozen", icon: Snowflake, permissionKey: "frozen.raw_meat_inventory" },
   { key: "restaurant", to: "/restaurant/daily-sales?nav=restaurant", icon: Store, permissionKey: "restaurant.daily_sales" },
+  { key: "accountingFollowUp", to: "/reports/kitchen?nav=accounting.cateringData", icon: Calculator },
   { key: "reports", to: "/reports?nav=reports", icon: ChartNoAxesCombined, permissionKey: "reports" },
   { key: "settings", to: "/settings?nav=settings", icon: Settings, permissionKey: "settings" },
 ];
@@ -118,6 +119,11 @@ export const businessCategoryNav: Record<string, NavItem[]> = {
     { key: "catering", to: "/follow-up?nav=follow-up.catering", icon: Utensils, permissionKey: "overview.follow_up" },
     { key: "restaurant", to: "/follow-up?nav=follow-up.restaurant", icon: Store, permissionKey: "restaurant.daily_sales" },
     { key: "frozen", to: "/follow-up?nav=follow-up.frozen", icon: Snowflake, permissionKey: "frozen.raw_meat_inventory" },
+  ],
+  accountingFollowUp: [
+    { key: "cateringData", to: "/reports/kitchen?nav=accounting.cateringData", icon: Utensils, permissionKey: "kitchen.cost_input" },
+    { key: "restaurantData", to: `${REPORT_GROUP_ROUTES.shops}?nav=accounting.restaurantData`, icon: Store, permissionKey: REPORT_GROUP_PAGE_KEYS.shops },
+    { key: "factoryData", to: `${REPORT_GROUP_ROUTES.frozenMeat}?nav=accounting.factoryData`, icon: Factory, permissionKey: REPORT_GROUP_PAGE_KEYS.frozenMeat },
   ],
   catering: [
     { key: "orders", to: "/orders?nav=catering.orders", icon: ClipboardList, permissionKey: "orders" },
@@ -138,6 +144,48 @@ const followUpCateringNav: NavItem[] = [
   { key: "pendingDriver", to: "/orders?status=awaitingDriver&nav=follow-up.catering", icon: Truck, permissionKey: "orders" },
   { key: "pendingProductReview", to: "/products/shopify-pending?nav=follow-up.catering", icon: ShoppingBasket, permissionKey: "products.shopify_pending" },
 ];
+
+function kitchenReportNavItems(): NavItem[] {
+  return [
+    { key: "kitchenSalesCost", to: "/reports/kitchen", icon: ChartNoAxesCombined, permissionKey: "kitchen.cost_input" },
+    { key: "kitchenChannelSales", to: "/reports/kitchen/channel-sales", icon: ChartNoAxesCombined, permissionKey: "kitchen.cost_input" },
+    { key: "kitchenProductSales", to: "/reports/kitchen/product-sales", icon: ChartNoAxesCombined, permissionKey: "kitchen.cost_input" },
+    { key: "kitchenAdvertisingPerformance", to: "/reports/kitchen/advertising-performance", icon: ChartNoAxesCombined, permissionKey: "kitchen.cost_input" },
+  ];
+}
+
+function reportGroupNavItems(group: "frozenMeat" | "shops"): NavItem[] {
+  return REPORT_GROUP_TABS[group].map((tab) => ({
+    key: tab,
+    to: REPORT_TAB_ROUTES[tab],
+    icon: ChartNoAxesCombined,
+    permissionKey: REPORT_TAB_PERMISSION_KEYS[tab],
+  }));
+}
+
+function cateringAccountingNavItems(): NavItem[] {
+  return [
+    ...kitchenReportNavItems(),
+    {
+      key: "dataInputProgress",
+      to: REPORT_GROUP_ROUTES.dataInputProgress,
+      icon: ClipboardCheck,
+      permissionKey: REPORT_GROUP_PAGE_KEYS.dataInputProgress,
+    },
+    {
+      key: "operationsExpenseInput",
+      to: "/finance/cost-input",
+      icon: CircleDollarSign,
+      permissionKey: "kitchen.cost_input",
+    },
+    {
+      key: "purchaseExpenseInput",
+      to: "/finance/cost-input?tab=monthly-suppliers",
+      icon: Receipt,
+      permissionKey: "kitchen.cost_input",
+    },
+  ];
+}
 
 export const secondaryNav: Record<string, NavItem[]> = {
   overview: [
@@ -683,6 +731,7 @@ function appendNavContext(item: NavItem, context: string): NavItem {
 export function businessSectionFromLocation(pathname: string, search: string) {
   const context = new URLSearchParams(search).get("nav") || "";
   if (context.startsWith("follow-up.")) return "followUp";
+  if (context.startsWith("accounting.")) return "accountingFollowUp";
   if (context.startsWith("catering.")) return "catering";
   if (context === "frozen") return "frozen";
   if (context === "restaurant") return "restaurant";
@@ -706,6 +755,7 @@ export function businessCategoryFromLocation(
   const context = new URLSearchParams(search).get("nav") || "";
   if (context.includes(".")) return context.split(".")[1];
   if (section === "followUp") return "catering";
+  if (section === "accountingFollowUp") return "cateringData";
   if (section === "catering") {
     const segment = pathname.split("/")[1] || "orders";
     return segment === "follow-up" ? "orders" : segment;
@@ -823,16 +873,38 @@ export function businessSidebarNav(
       };
     });
   }
+  if (section === "accountingFollowUp") {
+    return (businessCategoryNav.accountingFollowUp ?? []).map((category) => {
+      const context = `accounting.${category.key}`;
+      if (category.key === "restaurantData") {
+        return {
+          ...category,
+          children: reportGroupNavItems("shops").map((item) =>
+            appendNavContext(item, context),
+          ),
+        };
+      }
+      if (category.key === "factoryData") {
+        return {
+          ...category,
+          children: reportGroupNavItems("frozenMeat").map((item) =>
+            appendNavContext(item, context),
+          ),
+        };
+      }
+      return {
+        ...category,
+        children: cateringAccountingNavItems().map((item) =>
+          appendNavContext(item, context),
+        ),
+      };
+    });
+  }
   if (section === "frozen") {
     const frozenReport = secondaryNav.reports
       .flatMap((item) => item.children ?? [])
       .find((item) => item.key === "frozenMeat");
-    const frozenReportChildren = REPORT_GROUP_TABS.frozenMeat.map((tab) => ({
-      key: tab,
-      to: REPORT_TAB_ROUTES[tab],
-      icon: ChartNoAxesCombined,
-      permissionKey: REPORT_TAB_PERMISSION_KEYS[tab],
-    }));
+    const frozenReportChildren = reportGroupNavItems("frozenMeat");
     return [
       ...(frozenReport
         ? [
@@ -914,12 +986,7 @@ export function businessSidebarNav(
         return appendNavContext(
           {
             ...item,
-            children: [
-              { key: "kitchenSalesCost", to: "/reports/kitchen", icon: ChartNoAxesCombined, permissionKey: "kitchen.cost_input" },
-              { key: "kitchenChannelSales", to: "/reports/kitchen/channel-sales", icon: ChartNoAxesCombined, permissionKey: "kitchen.cost_input" },
-              { key: "kitchenProductSales", to: "/reports/kitchen/product-sales", icon: ChartNoAxesCombined, permissionKey: "kitchen.cost_input" },
-              { key: "kitchenAdvertisingPerformance", to: "/reports/kitchen/advertising-performance", icon: ChartNoAxesCombined, permissionKey: "kitchen.cost_input" },
-            ],
+            children: kitchenReportNavItems(),
           },
           "reports",
         );
@@ -928,12 +995,7 @@ export function businessSidebarNav(
       return appendNavContext(
         {
           ...item,
-          children: REPORT_GROUP_TABS[group].map((tab) => ({
-            key: tab,
-            to: REPORT_TAB_ROUTES[tab],
-            icon: ChartNoAxesCombined,
-            permissionKey: REPORT_TAB_PERMISSION_KEYS[tab],
-          })),
+          children: reportGroupNavItems(group),
         },
         "reports",
       );
@@ -1304,7 +1366,9 @@ export function buildBusinessMobileDrawerNav(
           ? "catering"
           : primary.key === "catering"
             ? "orders"
-            : "";
+            : primary.key === "accountingFollowUp"
+              ? "cateringData"
+              : "";
       return {
         groupKey: primary.key,
         items: keepVisibleNavTree(
@@ -1315,6 +1379,34 @@ export function buildBusinessMobileDrawerNav(
       };
     })
     .filter((group) => group.items.length > 0);
+}
+
+export function isBusinessPrimaryNavVisible(
+  item: NavItem,
+  canAccess: (pageKey: string) => boolean,
+) {
+  if (item.key === "accountingFollowUp") {
+    return (
+      keepVisibleNavTree(businessSidebarNav("accountingFollowUp", ""), canAccess)
+        .length > 0
+    );
+  }
+  return isNavItemVisible(item, canAccess);
+}
+
+export function accessibleBusinessPrimaryPath(
+  item: NavItem,
+  canAccess: (pageKey: string) => boolean,
+) {
+  if (item.key === "accountingFollowUp") {
+    return (
+      flattenVisibleNavItems(
+        businessSidebarNav("accountingFollowUp", ""),
+        canAccess,
+      )[0]?.to ?? item.to
+    );
+  }
+  return item.to;
 }
 
 export function buildMobileDrawerNav(
