@@ -12,6 +12,7 @@ export type PagePermissionValue = {
 const WORKSPACE_CONTAINER_KEYS = new Set([
   "workspace",
   "workspace.factory",
+  "workspace.restaurant",
   "workspace.delivery",
   "workspace.customer",
 ]);
@@ -222,6 +223,17 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
   { prefix: "/delivery/assign", pageKey: "delivery.assign" },
   { prefix: "/delivery/fleets", pageKey: "delivery.fleets" },
   { prefix: "/delivery/surcharges", pageKey: "delivery" },
+  { prefix: "/restaurant-workspace/records", pageKey: "workspace.restaurant.records" },
+  { prefix: "/restaurant-workspace/daily-sales", pageKey: "restaurant.daily_sales" },
+  { prefix: "/restaurant-workspace/daily-purchases", pageKey: "restaurant.daily_purchases" },
+  { prefix: "/restaurant-workspace/inventory", pageKey: "restaurant.inventory" },
+  { prefix: "/restaurant-workspace/monthly-expenses", pageKey: "restaurant.monthly_expenses" },
+  { prefix: "/restaurant-workspace", pageKey: "workspace.restaurant.shop_order" },
+  { prefix: "/restaurant/ordering/suppliers", pageKey: "restaurant.ordering.suppliers" },
+  { prefix: "/restaurant/ordering/requests", pageKey: "restaurant.ordering.requests" },
+  { prefix: "/restaurant/ordering/records", pageKey: "restaurant.ordering.records" },
+  { prefix: "/restaurant/ordering/phonebook", pageKey: "restaurant.ordering.phonebook" },
+  { prefix: "/restaurant/ordering/review", pageKey: "restaurant.ordering.review" },
   { prefix: "/restaurant/daily-purchases", pageKey: "restaurant.daily_purchases" },
   { prefix: "/restaurant/daily-sales", pageKey: "restaurant.daily_sales" },
   { prefix: "/restaurant/monthly-expenses", pageKey: "restaurant.monthly_expenses" },
@@ -441,8 +453,20 @@ const PAGE_ACCESS_CHILD_KEYS: Record<string, string[]> = {
   "settings.districts": ["settings.districts.edit"],
   workspace: [
     "workspace.factory",
+    "workspace.restaurant",
     "workspace.delivery",
     "workspace.customer",
+  ],
+  "workspace.restaurant": [
+    "workspace.restaurant.shop_order",
+    "workspace.restaurant.records",
+  ],
+  "restaurant.ordering": [
+    "restaurant.ordering.suppliers",
+    "restaurant.ordering.requests",
+    "restaurant.ordering.records",
+    "restaurant.ordering.phonebook",
+    "restaurant.ordering.review",
   ],
   "workspace.factory": [
     "workspace.factory.board",
