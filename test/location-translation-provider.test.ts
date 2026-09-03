@@ -31,14 +31,35 @@ describe("location translation provider compatibility", () => {
     const retryBody = JSON.parse(fetchMock.mock.calls[1][1].body as string);
     expect(firstBody).toMatchObject({
       response_format: { type: "json_object" },
-      reasoning_effort: "none",
       temperature: 0,
     });
+    expect(firstBody.reasoning_effort).toBeUndefined();
     expect(retryBody).toEqual({
       model: "test-model",
       max_tokens: 400,
       messages: firstBody.messages,
     });
+  });
+
+  it("retries after the first attempt is aborted", async () => {
+    const env = new Map([
+      ["ADDRESS_TRANSLATION_AI_ENABLED", "true"],
+      ["ADDRESS_TRANSLATION_AI_ENDPOINT", "https://example.test/chat/completions"],
+      ["ADDRESS_TRANSLATION_AI_API_KEY", "test-key"],
+      ["ADDRESS_TRANSLATION_AI_MODEL", "test-model"],
+    ]);
+    vi.stubGlobal("Deno", { env: { get: (name: string) => env.get(name) } });
+    const abortError = Object.assign(new Error("The signal has been aborted"), { name: "AbortError" });
+    const fetchMock = vi.fn()
+      .mockRejectedValueOnce(abortError)
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        choices: [{ message: { content: "{\"translatedText\":\"中環\"}" } }],
+      }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(translateLocationToTraditionalChinese("Central", "district"))
+      .resolves.toBe("中環");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it("does not inherit the report AI reasoning model", async () => {
@@ -64,6 +85,6 @@ describe("location translation provider compatibility", () => {
     const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
     expect(body.model).toBe(DEFAULT_ADDRESS_TRANSLATION_MODEL);
     expect(body.model).not.toBe("grok-4.6");
-    expect(body.reasoning_effort).toBe("none");
+    expect(body.reasoning_effort).toBeUndefined();
   });
 });

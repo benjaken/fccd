@@ -44,7 +44,11 @@ Deno.serve(async (request) => {
     const translatedText = await translateLocationToTraditionalChinese(source, kind);
     return jsonResponse({ translatedText, translatedAddress: translatedText });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "address_translation_failed";
+    const aborted = error instanceof Error &&
+      (error.name === "AbortError" || /signal has been aborted/i.test(error.message));
+    const message = aborted
+      ? "location_translation_timeout"
+      : error instanceof Error ? error.message : "address_translation_failed";
     return jsonResponse({ error: message }, message === "authentication_required" ? 401 : 502);
   }
 });

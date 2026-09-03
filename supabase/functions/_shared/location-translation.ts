@@ -3,6 +3,7 @@ export type LocationTranslationKind = "address" | "district";
 /** Fast xAI model for one-line HK address translation. Do not inherit grok-4.6. */
 export const DEFAULT_ADDRESS_TRANSLATION_MODEL = "grok-4.3";
 const ADDRESS_TRANSLATION_MAX_TOKENS = 400;
+const ADDRESS_TRANSLATION_ATTEMPT_TIMEOUT_MS = 12_000;
 
 function env(primary: string, report: string, supplier: string) {
   return Deno.env.get(primary) ?? Deno.env.get(report) ?? Deno.env.get(supplier) ?? "";
@@ -20,6 +21,46 @@ export function containsEnglishText(value: string | null | undefined) {
   return /[A-Za-z]/.test(String(value ?? ""));
 }
 
+function isAbortError(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+  const name = "name" in error ? String(error.name) : "";
+  const message = "message" in error ? String(error.message) : "";
+  return name === "AbortError" || /signal has been aborted/i.test(message);
+}
+
+async function postChatCompletion(
+  endpoint: string,
+  apiKey: string,
+  body: unknown,
+  timeoutMs: number,
+) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(endpoint, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      signal: controller.signal,
+      body: JSON.stringify(body),
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function parseTranslatedText(payload: {
+  choices?: Array<{ message?: { content?: string | null } }>;
+}) {
+  const content = payload.choices?.[0]?.message?.content;
+  if (!content) throw new Error("location_translation_empty_response");
+  const json = content.match(/\{[\s\S]*\}/)?.[0] ?? content;
+  const parsed = JSON.parse(json) as { translatedText?: unknown };
+  if (typeof parsed.translatedText !== "string" || !parsed.translatedText.trim()) {
+    throw new Error("location_translation_invalid_response");
+  }
+  return parsed.translatedText.trim();
+}
+
 export async function translateLocationToTraditionalChinese(
   text: string,
   kind: LocationTranslationKind,
@@ -32,15 +73,10 @@ export async function translateLocationToTraditionalChinese(
     Deno.env.get("REPORT_AI_API_KEY") ?? Deno.env.get("XAI_API_KEY") ??
     Deno.env.get("SUPPLIER_QUOTE_AI_API_KEY") ?? "";
   const model = translationModel();
-  const provider = env("ADDRESS_TRANSLATION_AI_PROVIDER", "REPORT_AI_PROVIDER", "SUPPLIER_QUOTE_AI_PROVIDER");
   const enabled = env("ADDRESS_TRANSLATION_AI_ENABLED", "REPORT_AI_ENABLED", "SUPPLIER_QUOTE_AI_ENABLED") === "true";
   if (!enabled || !endpoint || !apiKey || !model) throw new Error("location_translation_disabled");
 
-  const isXai = ["xai", "grok"].includes(provider.toLowerCase()) ||
-    /api\.x\.ai\/v1\/chat\/completions/i.test(endpoint);
   const startedAt = Date.now();
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30_000);
   const subject = kind === "district" ? "Hong Kong delivery district" : "Hong Kong delivery address";
   const messages = [
     {
@@ -49,27 +85,28 @@ export async function translateLocationToTraditionalChinese(
     },
     { role: "user", content: JSON.stringify({ text: source }) },
   ];
+  // Do not send reasoning_effort. "none" hung on xAI until the abort timeout
+  // (~30s) and never reached the portable retry.
   const providerRequests = [
     {
       model,
       response_format: { type: "json_object" },
       temperature: 0,
       max_tokens: ADDRESS_TRANSLATION_MAX_TOKENS,
-      ...(isXai ? { reasoning_effort: "none" } : { thinking: { type: "disabled" } }),
       messages,
     },
-    // Some models reject one or more optional generation controls with 400.
-    // Retry once with the portable Chat Completions subset before failing.
     { model, max_tokens: ADDRESS_TRANSLATION_MAX_TOKENS, messages },
   ];
-  try {
-    for (let attempt = 0; attempt < providerRequests.length; attempt += 1) {
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-        signal: controller.signal,
-        body: JSON.stringify(providerRequests[attempt]),
-      });
+
+  let lastAbort = false;
+  for (let attempt = 0; attempt < providerRequests.length; attempt += 1) {
+    try {
+      const response = await postChatCompletion(
+        endpoint,
+        apiKey,
+        providerRequests[attempt],
+        ADDRESS_TRANSLATION_ATTEMPT_TIMEOUT_MS,
+      );
       if (!response.ok) {
         const providerError = (await response.text().catch(() => ""))
           .replaceAll(/\s+/g, " ").slice(0, 500);
@@ -77,26 +114,24 @@ export async function translateLocationToTraditionalChinese(
         console.error("location-translation-provider", response.status, providerError);
         throw new Error(`location_translation_provider_${response.status}`);
       }
-      const payload = await response.json() as {
-        choices?: Array<{ message?: { content?: string | null } }>;
-      };
-      const content = payload.choices?.[0]?.message?.content;
-      if (!content) throw new Error("location_translation_empty_response");
-      const json = content.match(/\{[\s\S]*\}/)?.[0] ?? content;
-      const parsed = JSON.parse(json) as { translatedText?: unknown };
-      if (typeof parsed.translatedText !== "string" || !parsed.translatedText.trim()) {
-        throw new Error("location_translation_invalid_response");
-      }
+      const translatedText = parseTranslatedText(
+        await response.json() as { choices?: Array<{ message?: { content?: string | null } }> },
+      );
       console.log("location-translation", {
         model,
         kind,
         attempt: attempt + 1,
         elapsedMs: Date.now() - startedAt,
       });
-      return parsed.translatedText.trim();
+      return translatedText;
+    } catch (error) {
+      if (isAbortError(error) && attempt === 0) {
+        lastAbort = true;
+        continue;
+      }
+      if (isAbortError(error)) throw new Error("location_translation_timeout");
+      throw error;
     }
-    throw new Error("location_translation_provider_failed");
-  } finally {
-    clearTimeout(timeout);
   }
+  throw new Error(lastAbort ? "location_translation_timeout" : "location_translation_provider_failed");
 }
