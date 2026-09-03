@@ -420,3 +420,73 @@ export function buildQuoteConfirmationContent(input: {
     "謝謝你的支持。",
   ]);
 }
+
+export const DEFAULT_ENQUIRY_ACK_SUBJECT = "我們已收到你的查詢";
+export const DEFAULT_ENQUIRY_ACK_BODY = [
+  "您好{稱謂}{姓名}：",
+  "",
+  "多謝你填寫「{表單標題}」。我們已收到你的資料，稍後會有專人回覆你。",
+  "",
+  "如資料有誤或想補充，請回覆本電郵或致電與我們聯絡。",
+].join("\n");
+
+export function fillEnquiryEmailTemplate(
+  template: string,
+  values: { salutation?: string; name?: string; title?: string },
+) {
+  return template
+    .replaceAll("{稱謂}", values.salutation?.trim() || "")
+    .replaceAll("{姓名}", values.name?.trim() || "")
+    .replaceAll("{表單標題}", values.title?.trim() || "");
+}
+
+export function buildEnquiryAckContent(input: {
+  salutation?: string;
+  name?: string;
+  title: string;
+  subject?: string;
+  body?: string;
+}) {
+  const subject = fillEnquiryEmailTemplate(
+    input.subject?.trim() || DEFAULT_ENQUIRY_ACK_SUBJECT,
+    input,
+  );
+  const body = fillEnquiryEmailTemplate(
+    input.body?.trim() || DEFAULT_ENQUIRY_ACK_BODY,
+    input,
+  );
+  return content(subject, body.split("\n"));
+}
+
+export function buildEnquiryInternalContent(input: {
+  formTitle: string;
+  referenceCode: string;
+  customerName?: string;
+  salutation?: string;
+  companyName?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  deliveryDate?: string;
+  headcount?: string;
+  quoteDescription?: string;
+  detailUrl?: string;
+}) {
+  const displayName = `${input.salutation || ""}${input.customerName || ""}`.trim();
+  return content(`新查詢：${input.formTitle} ${input.referenceCode}`, [
+    "公開查詢表單剛收到一筆新提交。",
+    "",
+    `表單：${input.formTitle}`,
+    `參考編號：${input.referenceCode}`,
+    displayName && `姓名：${displayName}`,
+    input.companyName && `公司：${input.companyName}`,
+    input.phone && `電話：${input.phone}`,
+    input.email && `電郵：${input.email}`,
+    input.address && `地址：${input.address}`,
+    input.deliveryDate && `日期：${input.deliveryDate}`,
+    input.headcount && `人數：${input.headcount}`,
+    input.quoteDescription && `描述：${input.quoteDescription}`,
+    input.detailUrl && "",
+    input.detailUrl && `查看待報價：${input.detailUrl}`,
+  ]);
+}

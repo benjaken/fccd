@@ -144,6 +144,17 @@ export async function submitEnquiryForm(input: {
   return { id: row.id as string, referenceCode: String(row.reference_code ?? row.id) };
 }
 
+export async function notifyEnquirySubmission(
+  submissionId: string,
+  options: { force?: boolean; kind?: "all" | "internal" | "ack" } = {},
+) {
+  const { data, error } = await supabase.functions.invoke("send-enquiry-notifications", {
+    body: { submissionId, force: options.force === true, kind: options.kind || "all" },
+  });
+  if (error) throw error;
+  return data as { internalEmailStatus?: string; ackEmailStatus?: string };
+}
+
 export async function fetchEnquiryForms(): Promise<EnquiryFormListItem[]> {
   const { data, error } = await supabase
     .from("enquiry_forms")

@@ -641,6 +641,7 @@ describe("WATI order notifications", () => {
       "supabase/functions/send-order-wati-confirmation/index.ts",
       "supabase/functions/send-quote-confirmation/index.ts",
       "supabase/functions/send-daily-sales-report/index.ts",
+      "supabase/functions/send-enquiry-notifications/index.ts",
     ].map((file) => readFileSync(resolve(process.cwd(), file), "utf8"));
 
     expect(sender).toContain('EMAIL_FROM = "system@foodchannels-delivery.com"');

@@ -346,6 +346,23 @@ export function EnquiryFormEditorPage() {
             <span>成功頁短訊</span>
             <textarea rows={4} value={form.successMessage} onChange={(event) => patchForm({ successMessage: event.target.value })} />
           </label>
+          <label>
+            <span>對客確認主旨</span>
+            <input
+              value={form.ackEmailSubject}
+              placeholder="我們已收到你的查詢"
+              onChange={(event) => patchForm({ ackEmailSubject: event.target.value })}
+            />
+          </label>
+          <label>
+            <span>對客確認正文<small>可用 {"{稱謂}"} {"{姓名}"} {"{表單標題}"}</small></span>
+            <textarea
+              rows={6}
+              value={form.ackEmailBody}
+              placeholder={"您好{稱謂}{姓名}：\n\n多謝你填寫「{表單標題}」。我們已收到你的資料，稍後會有專人回覆你。"}
+              onChange={(event) => patchForm({ ackEmailBody: event.target.value })}
+            />
+          </label>
         </div>
       </section>
 

@@ -15,6 +15,7 @@ import {
 import {
   convertEnquiryToQuote,
   fetchEnquirySubmission,
+  notifyEnquirySubmission,
   saveEnquirySubmissionAnswers,
   type EnquirySubmissionDetail,
 } from "@/lib/enquiry-forms-api";
@@ -33,6 +34,7 @@ export function EnquiryPendingDetailPage({ canManage = false }: { canManage?: bo
   const [saving, setSaving] = useState(false);
   const [converting, setConverting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [mailBusy, setMailBusy] = useState<"internal" | "ack" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showOriginal, setShowOriginal] = useState(false);
 
@@ -71,6 +73,28 @@ export function EnquiryPendingDetailPage({ canManage = false }: { canManage?: bo
       setError("儲存失敗");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const resendMail = async (kind: "internal" | "ack") => {
+    if (!detail || !canManage) return;
+    setMailBusy(kind);
+    setError(null);
+    try {
+      const result = await notifyEnquirySubmission(detail.id, { force: true, kind });
+      setDetail((current) =>
+        current
+          ? {
+              ...current,
+              internalEmailStatus: result.internalEmailStatus || current.internalEmailStatus,
+              ackEmailStatus: result.ackEmailStatus || current.ackEmailStatus,
+            }
+          : current,
+      );
+    } catch {
+      setError("寄信失敗");
+    } finally {
+      setMailBusy(null);
     }
   };
 
@@ -168,8 +192,18 @@ export function EnquiryPendingDetailPage({ canManage = false }: { canManage?: bo
         <label>日期<Input value={mapped?.deliveryDateRaw ?? ""} disabled /></label>
         <label>時段<Input value={mapped?.deliveryTime ?? ""} disabled /></label>
         <label>人數<Input value={mapped?.headcount ?? ""} disabled /></label>
-        <p>內部通知：{detail.internalEmailStatus === "sent" ? "已通知" : "尚未通知"}（第一版稍後接郵件）</p>
-        <p>對客確認：{detail.ackEmailStatus === "no_email" ? "無電郵" : "尚未寄出"}（第一版稍後接郵件）</p>
+        <p>內部通知：{detail.internalEmailStatus === "sent" ? "已通知" : detail.internalEmailStatus === "failed" ? "通知失敗" : detail.internalEmailStatus === "sending" ? "寄送中" : "尚未通知"}</p>
+        {canManage ? (
+          <Button type="button" variant="outline" disabled={mailBusy !== null} onClick={() => void resendMail("internal")}>
+            {mailBusy === "internal" ? "寄送中…" : "重寄內部通知"}
+          </Button>
+        ) : null}
+        <p>對客確認：{detail.ackEmailStatus === "sent" ? "已寄出" : detail.ackEmailStatus === "failed" ? "失敗" : detail.ackEmailStatus === "no_email" ? "無電郵" : detail.ackEmailStatus === "sending" ? "寄送中" : "尚未寄出"}</p>
+        {canManage && detail.ackEmailStatus !== "no_email" ? (
+          <Button type="button" variant="outline" disabled={mailBusy !== null} onClick={() => void resendMail("ack")}>
+            {mailBusy === "ack" ? "寄送中…" : "重寄對客確認"}
+          </Button>
+        ) : null}
         <p>Asana：{detail.asanaLink || "尚未建立"}（第一版稍後接自動建 task）</p>
       </section>
 

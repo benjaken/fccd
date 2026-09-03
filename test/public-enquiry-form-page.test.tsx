@@ -1,16 +1,18 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const rpcMock = vi.hoisted(() => vi.fn());
+const functionsInvoke = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/supabase", () => ({
   supabase: {
     rpc: rpcMock,
     from: vi.fn(),
+    functions: { invoke: (...args: unknown[]) => functionsInvoke(...args) },
   },
 }));
 
@@ -39,6 +41,8 @@ const publishedForm = {
 describe("public enquiry form page", () => {
   beforeEach(() => {
     rpcMock.mockReset();
+    functionsInvoke.mockReset();
+    functionsInvoke.mockResolvedValue({ data: { internalEmailStatus: "sent" }, error: null });
   });
 
   it("renders the published form without a login screen", async () => {
@@ -139,5 +143,41 @@ describe("public enquiry form page", () => {
     expect(css).toMatch(/\.enquiry-form-question\.has-error [^{]*\{[^}]*border-color:\s*#dc2626/s);
     expect(container.querySelector(".enquiry-form-option.is-wide")).not.toBeNull();
     expect(container.querySelector(".enquiry-form-options.is-stacked")).not.toBeNull();
+  });
+
+  it("shows a success page after submit and sends notification mail", async () => {
+    const simpleForm = {
+      ...publishedForm,
+      questions: serializeEnquiryQuestions([
+        { fieldKey: "name", type: "input" as const, title: "姓名", required: true, inputFormat: "general" as const },
+        { fieldKey: "email", type: "input" as const, title: "電郵地址", required: true, inputFormat: "email" as const, quoteField: "email" as const },
+      ]),
+    };
+    rpcMock.mockImplementation(async (name: string) => {
+      if (name === "get_published_enquiry_form") return { data: simpleForm, error: null };
+      if (name === "submit_enquiry_form") {
+        return { data: [{ id: "sub-1", reference_code: "ENQ20260903-TEST01" }], error: null };
+      }
+      return { data: null, error: null };
+    });
+    render(
+      <MemoryRouter initialEntries={["/quote-inquiry"]}>
+        <Routes>
+          <Route path="/quote-inquiry" element={<PublicEnquiryFormPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    await screen.findByRole("button", { name: "Submit" });
+    await userEvent.type(screen.getByRole("textbox", { name: /姓名/ }), "陳大文");
+    await userEvent.type(screen.getByRole("textbox", { name: /電郵地址/ }), "chan@example.com");
+    await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+    expect(await screen.findByText("參考編號：ENQ20260903-TEST01")).toBeInTheDocument();
+    expect(screen.getByText(publishedForm.success_message)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Submit" })).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(functionsInvoke).toHaveBeenCalledWith("send-enquiry-notifications", {
+        body: { submissionId: "sub-1", force: false, kind: "all" },
+      }),
+    );
   });
 });

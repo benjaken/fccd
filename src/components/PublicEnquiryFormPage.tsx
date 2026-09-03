@@ -14,6 +14,7 @@ import {
 } from "@/lib/enquiry-form";
 import {
   fetchPublishedEnquiryForm,
+  notifyEnquirySubmission,
   submitEnquiryForm,
 } from "@/lib/enquiry-forms-api";
 
@@ -39,9 +40,10 @@ export function PublicEnquiryFormPage() {
   const [honeypot, setHoneypot] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submittedCode, setSubmittedCode] = useState<string | null>(null);
+  const [attemptKey, setAttemptKey] = useState(0);
   const idempotencyKey = useMemo(
     () => (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `enq-${Date.now()}`),
-    [form?.id],
+    [form?.id, attemptKey],
   );
 
   useEffect(() => {
@@ -90,6 +92,7 @@ export function PublicEnquiryFormPage() {
         honeypot,
       });
       setSubmittedCode(result.referenceCode);
+      void notifyEnquirySubmission(result.id).catch(() => {});
     } catch (error) {
       const fieldErrors = (error as { fieldErrors?: EnquiryFieldError[] }).fieldErrors;
       if (fieldErrors?.length) {
@@ -128,7 +131,9 @@ export function PublicEnquiryFormPage() {
               variant="outline"
               onClick={() => {
                 setSubmittedCode(null);
+                setErrors([]);
                 setAnswers(emptyAnswers(form.questions));
+                setAttemptKey((current) => current + 1);
               }}
             >
               再填一筆

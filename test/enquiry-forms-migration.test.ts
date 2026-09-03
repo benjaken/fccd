@@ -52,4 +52,14 @@ describe("enquiry form migration", () => {
     expect(qualify).toContain("#variable_conflict use_column");
     expect(qualify).toContain("where enquiry_forms.id = p_form_id and enquiry_forms.status = 'published'");
   });
+
+  it("exposes enquiry internal email recipients to the service role", () => {
+    const recipients = readFileSync(
+      path.resolve(process.cwd(), "supabase/migrations/20260903120000_enquiry_internal_email_recipients.sql"),
+      "utf8",
+    );
+    expect(recipients).toContain("create or replace function public.enquiry_internal_email_recipients()");
+    expect(recipients).toContain("from public.user_profiles profile");
+    expect(recipients).toContain("grant execute on function public.enquiry_internal_email_recipients() to service_role;");
+  });
 });

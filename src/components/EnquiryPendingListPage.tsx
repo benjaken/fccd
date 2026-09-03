@@ -36,12 +36,14 @@ function statusText(kind: "internal" | "ack" | "asana", value: string) {
   if (kind === "internal") {
     if (value === "sent") return "已通知";
     if (value === "failed") return "通知失敗";
+    if (value === "sending") return "寄送中";
     return "尚未通知";
   }
   if (kind === "ack") {
     if (value === "sent") return "已寄出";
     if (value === "failed") return "失敗";
     if (value === "no_email") return "無電郵";
+    if (value === "sending") return "寄送中";
     return "尚未寄出";
   }
   if (value === "created") return "已建立";
