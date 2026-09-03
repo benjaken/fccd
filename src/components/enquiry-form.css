@@ -146,8 +146,7 @@
 
 .enquiry-form-question.has-error .enquiry-form-textarea,
 .enquiry-form-question.has-error [data-slot="input"],
-.enquiry-form-question.has-error .date-picker-trigger,
-.enquiry-form-question.has-error .enquiry-form-options {
+.enquiry-form-question.has-error .date-picker-trigger {
   border-color: #dc2626;
 }
 

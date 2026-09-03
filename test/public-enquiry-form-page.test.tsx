@@ -141,6 +141,7 @@ describe("public enquiry form page", () => {
     expect(css).toMatch(/\.enquiry-form-option\s*\{[^}]*align-items:\s*center/s);
     expect(css).toMatch(/\.enquiry-form-error\s*\{[^}]*color:\s*#dc2626/s);
     expect(css).toMatch(/\.enquiry-form-question\.has-error [^{]*\{[^}]*border-color:\s*#dc2626/s);
+    expect(css).not.toMatch(/\.enquiry-form-question\.has-error \.enquiry-form-options/);
     expect(container.querySelector(".enquiry-form-option.is-wide")).not.toBeNull();
     expect(container.querySelector(".enquiry-form-options.is-stacked")).not.toBeNull();
   });
