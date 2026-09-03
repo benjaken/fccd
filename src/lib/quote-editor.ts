@@ -708,7 +708,7 @@ export async function saveQuotePayments(
     const paid = payments.reduce((sum, payment) => sum + toNumber(payment.amount), 0);
     const { error: outstandingError } = await supabase
       .from("orders")
-      .update({ outstanding: Math.max(0, toNumber(order.grand_total) - paid), updated_at: new Date().toISOString() })
+      .update({ outstanding: toNumber(order.grand_total) - paid, updated_at: new Date().toISOString() })
       .eq("id", orderId)
       .eq("document_type", "order");
     if (outstandingError) throw outstandingError;

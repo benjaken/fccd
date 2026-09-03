@@ -48,7 +48,7 @@ describe("order editor totals", () => {
     });
   });
 
-  it("never returns a negative total or outstanding balance", () => {
+  it("never returns a negative total", () => {
     const draft = emptyOrderDraft();
     draft.discount = 100;
     draft.payments = [
@@ -61,7 +61,34 @@ describe("order editor totals", () => {
       },
     ];
 
-    expect(orderDraftTotals(draft)).toMatchObject({ total: 0, outstanding: 0 });
+    expect(orderDraftTotals(draft)).toMatchObject({ total: 0, outstanding: -500 });
+  });
+
+  it("keeps a negative outstanding when payments exceed the order total", () => {
+    const draft = emptyOrderDraft();
+    draft.lines = [{
+      id: "line-1",
+      productId: "product-1",
+      packageId: null,
+      sku: "CBE003",
+      name: "拿破崙雞扒意粉",
+      remarks: "",
+      quantity: 1,
+      unitPrice: 2876,
+    }];
+    draft.payments = [{
+      id: "payment-1",
+      paymentAt: "2026-08-18T12:00",
+      paymentMethodId: "credit-card",
+      amount: 2916,
+      reference: "",
+    }];
+
+    expect(orderDraftTotals(draft)).toMatchObject({
+      total: 2876,
+      paid: 2916,
+      outstanding: -40,
+    });
   });
 });
 
@@ -108,9 +135,10 @@ describe("clear order customer info", () => {
 });
 
 describe("order payment status", () => {
-  it("distinguishes unpaid, partially paid, and fully paid orders", () => {
+  it("distinguishes unpaid, partially paid, fully paid, and overpaid orders", () => {
     expect(orderPaymentStatus({ total: 500, paid: 0, outstanding: 500, subtotal: 500 })).toBe("unpaid");
     expect(orderPaymentStatus({ total: 500, paid: 200, outstanding: 300, subtotal: 500 })).toBe("partial");
     expect(orderPaymentStatus({ total: 500, paid: 500, outstanding: 0, subtotal: 500 })).toBe("paid");
+    expect(orderPaymentStatus({ total: 2876, paid: 2916, outstanding: -40, subtotal: 2876 })).toBe("overpaid");
   });
 });

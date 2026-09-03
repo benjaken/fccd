@@ -7,6 +7,7 @@ import {
   ChevronUp,
   CircleAlert,
   CircleCheckBig,
+  Banknote,
   CreditCard,
   Factory,
   FileText,
@@ -96,6 +97,7 @@ import {
 import { fetchShippingFees, type ShippingFee } from "@/lib/shipping-fees";
 import { convertQuoteToOrder } from "@/lib/quotes";
 import { confirmOrderAddonShopifyInput, sendOrderWatiConfirmation } from "@/lib/order-editor";
+import { paymentBalanceSummary } from "@/lib/order-payment-balance";
 import { useDetailBackTo } from "@/lib/detail-navigation";
 import {
   normalizeDoNotSendToFactory,
@@ -209,12 +211,15 @@ function OrderPaymentStatus({
   formatMoney: (value: number) => string;
   navigationStuck: boolean;
 }) {
-  const outstanding = Math.max(0, total - paid);
-  const status = outstanding <= 0 && (total > 0 || paid > 0)
-    ? "paid"
-    : paid > 0
-      ? "partial"
-      : "unpaid";
+  const balance = paymentBalanceSummary(total, paid);
+  const status = balance.status;
+  const ariaLabel = status === "overpaid"
+    ? `付款狀態：多付 ${formatMoney(balance.overpaid)}`
+    : status === "paid"
+      ? "付款狀態：完成付款"
+      : status === "partial"
+        ? `付款狀態：尚欠 ${formatMoney(balance.balanceAmount)}`
+        : "付款狀態：尚未付款";
 
   return (
     <aside
@@ -223,22 +228,48 @@ function OrderPaymentStatus({
         navigationStuck && "is-navigation-stuck",
       )}
       role="status"
-      aria-label={status === "paid" ? "付款狀態：完成付款" : status === "partial" ? `付款狀態：尚欠 ${formatMoney(outstanding)}` : "付款狀態：尚未付款"}
+      aria-label={ariaLabel}
     >
       <span className="order-editor-payment-status-icon" aria-hidden="true">
-        {status === "paid" ? <CircleCheckBig /> : status === "partial" ? <CreditCard /> : <CircleAlert />}
+        {status === "overpaid" ? <Banknote /> : status === "paid" ? <CircleCheckBig /> : status === "partial" ? <CreditCard /> : <CircleAlert />}
       </span>
       <span className="order-editor-payment-status-copy">
         <small>付款狀態</small>
-        {status === "paid" ? (
+        {status === "overpaid" ? (
+          <><strong>多付 {formatMoney(balance.overpaid)}</strong><em>已收超過應收金額</em></>
+        ) : status === "paid" ? (
           <><strong>完成付款</strong><em>款項已收齊</em></>
         ) : status === "partial" ? (
-          <><strong>尚欠 {formatMoney(outstanding)}</strong><em>已收 {formatMoney(paid)}</em></>
+          <><strong>尚欠 {formatMoney(balance.balanceAmount)}</strong><em>已收 {formatMoney(paid)}</em></>
         ) : (
           <><strong>尚未付款</strong><em>尚未收到任何款項</em></>
         )}
       </span>
     </aside>
+  );
+}
+
+function PaymentTotalsSummary({
+  total,
+  paid,
+  formatMoney,
+  labels,
+}: {
+  total: number;
+  paid: number;
+  formatMoney: (value: number) => string;
+  labels: { receivable: string; paid: string; outstanding: string; overpaid: string };
+}) {
+  const balance = paymentBalanceSummary(total, paid);
+  return (
+    <div className="quote-payment-summary">
+      <div><span>{labels.receivable}</span><strong>{formatMoney(total)}</strong></div>
+      <div><span>{labels.paid}</span><strong>{formatMoney(paid)}</strong></div>
+      <div className={balance.balanceKind === "overpaid" ? "is-overpaid" : undefined}>
+        <span>{balance.balanceKind === "overpaid" ? labels.overpaid : labels.outstanding}</span>
+        <strong>{formatMoney(balance.balanceAmount)}</strong>
+      </div>
+    </div>
   );
 }
 
@@ -2230,11 +2261,17 @@ export function QuoteEditorPage({
             </div>)}
             {!payments.length ? <div className="quote-payment-empty"><CreditCard /><strong>{t("quoteEditor.payments.empty")}</strong></div> : null}
           </div>
-          <div className="quote-payment-summary">
-            <div><span>{t("quoteEditor.payments.receivable")}</span><strong>{money.format(grandTotal)}</strong></div>
-            <div><span>{t("quoteEditor.payments.paid")}</span><strong>{money.format(paid)}</strong></div>
-            <div><span>{t("quoteEditor.payments.outstanding")}</span><strong>{money.format(Math.max(0, grandTotal - paid))}</strong></div>
-          </div>
+          <PaymentTotalsSummary
+            total={grandTotal}
+            paid={paid}
+            formatMoney={money.format}
+            labels={{
+              receivable: t("quoteEditor.payments.receivable"),
+              paid: t("quoteEditor.payments.paid"),
+              outstanding: t("quoteEditor.payments.outstanding"),
+              overpaid: t("quoteEditor.payments.overpaid"),
+            }}
+          />
         </section> : null}
         {factoryValidationModal}
       </section>
@@ -2739,11 +2776,17 @@ export function QuoteEditorPage({
             ))}
             {!payments.length ? <div className="quote-payment-empty"><CreditCard /><strong>{t("quoteEditor.payments.empty")}</strong></div> : null}
           </div>
-          <div className="quote-payment-summary">
-            <div><span>{t("quoteEditor.payments.receivable")}</span><strong>{money.format(grandTotal)}</strong></div>
-            <div><span>{t("quoteEditor.payments.paid")}</span><strong>{money.format(payments.reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0))}</strong></div>
-            <div><span>{t("quoteEditor.payments.outstanding")}</span><strong>{money.format(Math.max(0, grandTotal - payments.reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0)))}</strong></div>
-          </div>
+          <PaymentTotalsSummary
+            total={grandTotal}
+            paid={payments.reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0)}
+            formatMoney={money.format}
+            labels={{
+              receivable: t("quoteEditor.payments.receivable"),
+              paid: t("quoteEditor.payments.paid"),
+              outstanding: t("quoteEditor.payments.outstanding"),
+              overpaid: t("quoteEditor.payments.overpaid"),
+            }}
+          />
           {completionError ? <p className="quote-editor-error" role="alert">{t(`quoteEditor.payments.${completionError === "send" ? "sendError" : "saveError"}`)}</p> : null}
           <footer>
             <Button type="button" variant="outline" onClick={addPayment}><Plus />{t("quoteEditor.payments.add")}</Button>

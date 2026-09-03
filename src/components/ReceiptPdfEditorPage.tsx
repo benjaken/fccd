@@ -118,7 +118,9 @@ function resultToDraft(
     paymentInformation:
       outstanding > 0
         ? `Outstanding: ${money(outstanding, true)}`
-        : "Payment Status: Paid",
+        : outstanding < 0
+          ? `Overpaid: ${money(Math.abs(outstanding), true)}`
+          : "Payment Status: Paid",
     receiptPayments: documentKind === "receipt"
       ? result.payments.map((payment) => ({
           id: payment.id,
