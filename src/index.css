@@ -24241,6 +24241,31 @@ a.masoft-order-tag:focus-visible {
   align-items: start;
 }
 
+.quote-line-label-remark-pairs {
+  display: grid;
+  width: 100%;
+  margin-top: 6px;
+  gap: 6px;
+}
+
+.quote-line-label-remark-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(5.5rem, 36.36%);
+  align-items: center;
+  gap: 8px;
+}
+
+.quote-line-label-chip.is-empty {
+  min-height: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.quote-line-label-remark-pair .quote-line-label-remark-text {
+  height: auto;
+  min-height: 0;
+}
+
 .quote-line-remarks-list {
   display: grid;
   width: 100%;

@@ -1109,12 +1109,16 @@ describe("Quote editor", () => {
 
     const row = await screen.findByRole("row", { name: /Roast pork/ });
     expect(screen.getByRole("columnheader", { name: "Remarks" })).toBeInTheDocument();
-    expect(within(row).getByText("Roast pork label2 boxes").closest("td")).toHaveClass("quote-line-product");
-    expect(within(row).getByText("Sauce label1 cup").closest("td")).toHaveClass("quote-line-product");
+    const firstLabel = within(row).getByText("Roast pork label2 boxes");
+    const secondLabel = within(row).getByText("Sauce label1 cup");
     const firstRemark = within(row).getByText("Line note");
     const secondRemark = within(row).getByText("Sauce note");
-    expect(firstRemark.closest("td")).toHaveClass("quote-line-remarks");
-    expect(secondRemark.closest("td")).toHaveClass("quote-line-remarks");
+    expect(firstLabel.closest("td")).toHaveClass("quote-line-product");
+    expect(secondLabel.closest("td")).toBe(firstLabel.closest("td"));
+    expect(firstRemark.closest("td")).toBe(firstLabel.closest("td"));
+    expect(secondRemark.closest("td")).toBe(firstLabel.closest("td"));
+    expect(firstLabel.closest(".quote-line-label-remark-pair")).toContainElement(firstRemark);
+    expect(secondLabel.closest(".quote-line-label-remark-pair")).toContainElement(secondRemark);
     expect(firstRemark).toHaveClass("quote-line-label-remark-text");
     expect(secondRemark).toHaveClass("quote-line-label-remark-text");
     expect(within(row).queryByRole("textbox")).not.toBeInTheDocument();

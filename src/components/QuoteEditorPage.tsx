@@ -1334,25 +1334,42 @@ export function QuoteEditorPage({
     );
   };
 
-  const lineRemarkFields = (line: QuoteLine, readOnly = false) => {
+  const lineLabelRemarkPairs = (line: QuoteLine) => {
+    const rows = quoteLineLabelRemarkRows(line);
+    return (
+      <div className="quote-line-label-remark-pairs">
+        {rows.map((row, index) => {
+          const name = row.label ? quoteLinePrintLabelName(row.label) : "";
+          const labelSuffix = rows.length > 1 ? ` ${index + 1}` : "";
+          const remarkLabel = `${t("quoteEditor.items.remarks")} ${line.name || ""}${labelSuffix}`.trim();
+          return (
+            <div className="quote-line-label-remark-pair" key={`${line.id}:pair-${index}`}>
+              {name ? (
+                <span className="quote-line-label-chip" title={name}>{name}</span>
+              ) : (
+                <span className="quote-line-label-chip is-empty" aria-hidden="true" />
+              )}
+              <div
+                className="quote-line-label-remark-text"
+                title={row.remark}
+                aria-label={remarkLabel}
+              >
+                {row.remark}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const lineRemarkFields = (line: QuoteLine) => {
     const rows = quoteLineLabelRemarkRows(line);
     return (
       <div className="quote-line-remarks-list">
         {rows.map((row, remarkIndex) => {
           const labelSuffix = rows.length > 1 ? ` ${remarkIndex + 1}` : "";
           const label = `${t("quoteEditor.items.remarks")} ${line.name || ""}${labelSuffix}`.trim();
-          if (readOnly) {
-            return (
-              <small
-                className="quote-line-label-remark-text"
-                title={row.remark}
-                aria-label={label}
-                key={`${line.id}:remark-${remarkIndex}`}
-              >
-                {row.remark}
-              </small>
-            );
-          }
           return (
             <textarea
               className="quote-line-edit-remarks"
@@ -2167,16 +2184,13 @@ export function QuoteEditorPage({
             {lines.map((line, index) => <tr key={line.id} className={cn(line.isVoid && "is-cancelled")}>
               <td className="quote-line-sequence">{index + 1}</td>
               <td className="quote-line-sku">{lineSkuContent(line)}</td>
-              <td className="quote-line-product">
+              <td className="quote-line-product" colSpan={2}>
                 <div className="quote-line-heading">
                   {line.isAddon ? <span className="status-badge blue quote-line-addon-label">加單</span> : null}
                   <strong>{displayValue(line.name)}</strong>
                   {line.isVoid ? <span className="quote-line-cancelled-label">{t("quoteEditor.items.cancelled")}</span> : null}
                 </div>
-                {linePrintLabels(line)}
-              </td>
-              <td className="quote-line-remarks">
-                {lineRemarkFields(line, true)}
+                {lineLabelRemarkPairs(line)}
               </td>
               <td>{line.quantity}</td>
               <td>{money.format(line.unitPrice)}</td>
