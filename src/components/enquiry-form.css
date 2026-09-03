@@ -1,29 +1,36 @@
 .enquiry-public-page {
   min-height: 100dvh;
-  background:
-    radial-gradient(circle at 10% 5%, rgb(36 129 74 / 9%), transparent 28rem),
-    #f7faf8;
+  background: #fff;
   color: #17251d;
 }
 
 .enquiry-public-shell {
   box-sizing: border-box;
-  width: min(100% - 32px, 1000px);
+  width: 100%;
+  max-width: 1000px;
   margin: 0 auto;
-  padding: 32px 0 64px;
+  padding: 0;
   display: grid;
-  gap: 20px;
+  gap: 0;
 }
 
 .enquiry-public-logo {
   width: 218px;
-  max-width: 62vw;
+  max-width: 70%;
   height: 78px;
   object-fit: contain;
   object-position: left center;
 }
 
-.enquiry-public-card,
+.enquiry-public-card {
+  background: #fff;
+  border: 0;
+  border-radius: 0;
+  padding: 24px 0 48px;
+  display: grid;
+  gap: 16px;
+}
+
 .enquiry-builder-card {
   background: #fff;
   border: 1px solid #dfe8e2;
@@ -96,15 +103,15 @@
   gap: 8px 16px;
 }
 
-.enquiry-form-fields-split .enquiry-form-options.is-stacked {
-  grid-template-columns: 1fr;
-}
-
 .enquiry-form-option {
   display: flex;
   gap: 8px;
   align-items: flex-start;
   font-size: 0.95rem;
+}
+
+.enquiry-form-fields-split .enquiry-form-option.is-wide {
+  grid-column: 1 / -1;
 }
 
 .enquiry-form-textarea {
@@ -120,10 +127,6 @@
   .enquiry-form-fields-split .enquiry-form-question {
     grid-template-columns: 1fr;
     gap: 8px;
-  }
-
-  .enquiry-form-fields-split .enquiry-form-options {
-    grid-template-columns: 1fr;
   }
 }
 

@@ -5,6 +5,7 @@ import {
   CATERING_ENQUIRY_SEED_QUESTIONS,
 } from "@/lib/enquiry-form-seed";
 import {
+  isEnquiryOptionCompact,
   convertEnquiryRequirements,
   emptyAnswers,
   enquiryPublicPath,
@@ -18,6 +19,13 @@ describe("catering enquiry seed form", () => {
     expect(enquiryPublicPath(CATERING_ENQUIRY_SEED_FORM_ID)).toBe(
       `/quote-inquiry/${CATERING_ENQUIRY_SEED_FORM_ID}`,
     );
+  });
+
+  it("treats short option labels as two-up and long ones as full width", () => {
+    expect(isEnquiryOptionCompact("先生")).toBe(true);
+    expect(isEnquiryOptionCompact("正餐 到會  (大盤)")).toBe(true);
+    expect(isEnquiryOptionCompact("新界區/九龍區 地面車邊交收 (+$50)")).toBe(false);
+    expect(isEnquiryOptionCompact("需要分期付款，先付6成按金確認訂單，尾數在送餐當日付款")).toBe(false);
   });
 
   it("has 24 questions matching the live EmailMeForm", () => {

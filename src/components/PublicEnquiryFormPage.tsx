@@ -90,16 +90,22 @@ export function PublicEnquiryFormPage() {
   return (
     <main className="enquiry-public-page">
       <div className="enquiry-public-shell">
-        <img className="enquiry-public-logo" src={FOOD_CHANNEL_CATERING_LOGO_PATH} alt="Food Channel Catering" />
-        {loading ? <section className="enquiry-public-card">載入表單中…</section> : null}
+        {loading ? (
+          <section className="enquiry-public-card">
+            <img className="enquiry-public-logo" src={FOOD_CHANNEL_CATERING_LOGO_PATH} alt="Food Channel Catering" />
+            載入表單中…
+          </section>
+        ) : null}
         {!loading && unavailable ? (
           <section className="enquiry-public-card enquiry-public-unavailable">
+            <img className="enquiry-public-logo" src={FOOD_CHANNEL_CATERING_LOGO_PATH} alt="Food Channel Catering" />
             <h1>暫不接受查詢</h1>
             <p>此公開表單尚未發佈或暫時停用。請稍後再試，或與我們聯絡。</p>
           </section>
         ) : null}
         {!loading && form && submittedCode ? (
           <section className="enquiry-public-card enquiry-public-success">
+            <img className="enquiry-public-logo" src={FOOD_CHANNEL_CATERING_LOGO_PATH} alt="Food Channel Catering" />
             <h1>{form.publicTitle}</h1>
             <p>{form.successMessage || "我們已收到你的查詢，稍後會有專人回覆。"}</p>
             <p>參考編號：{submittedCode}</p>
@@ -117,6 +123,7 @@ export function PublicEnquiryFormPage() {
         ) : null}
         {!loading && form && !submittedCode ? (
           <form className="enquiry-public-card" onSubmit={onSubmit}>
+            <img className="enquiry-public-logo" src={FOOD_CHANNEL_CATERING_LOGO_PATH} alt="Food Channel Catering" />
             <header>
               <h1>{form.publicTitle}</h1>
               {form.publicDescription ? <p>{form.publicDescription}</p> : null}

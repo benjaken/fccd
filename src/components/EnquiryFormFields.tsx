@@ -1,4 +1,10 @@
-import type { EnquiryAnswerValue, EnquiryAnswers, EnquiryFieldError, EnquiryQuestion } from "@/lib/enquiry-form";
+import {
+  isEnquiryOptionCompact,
+  type EnquiryAnswerValue,
+  type EnquiryAnswers,
+  type EnquiryFieldError,
+  type EnquiryQuestion,
+} from "@/lib/enquiry-form";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -72,7 +78,6 @@ function EnquiryControl({
   onChange: (value: EnquiryAnswerValue) => void;
 }) {
   const id = `enquiry-${question.fieldKey}`;
-  const stackedOptions = question.requireAllOptions === true;
   if (question.type === "textarea") {
     return (
       <textarea
@@ -118,12 +123,18 @@ function EnquiryControl({
   if (question.type === "radio") {
     return (
       <div
-        className={cn("enquiry-form-options", stackedOptions && "is-stacked")}
+        className="enquiry-form-options"
         role="radiogroup"
         aria-labelledby={labelledBy}
       >
         {(question.options ?? []).map((option) => (
-          <label key={option.value} className="enquiry-form-option">
+          <label
+            key={option.value}
+            className={cn(
+              "enquiry-form-option",
+              (question.requireAllOptions || !isEnquiryOptionCompact(option.label)) && "is-wide",
+            )}
+          >
             <input
               type="radio"
               name={question.fieldKey}
@@ -141,11 +152,17 @@ function EnquiryControl({
   if (question.type === "checkbox") {
     const selected = Array.isArray(value) ? value : [];
     return (
-      <div className={cn("enquiry-form-options", stackedOptions && "is-stacked")}>
+      <div className="enquiry-form-options">
         {(question.options ?? []).map((option) => {
           const checked = selected.includes(option.value);
           return (
-            <label key={option.value} className="enquiry-form-option">
+            <label
+              key={option.value}
+              className={cn(
+                "enquiry-form-option",
+                (question.requireAllOptions || !isEnquiryOptionCompact(option.label)) && "is-wide",
+              )}
+            >
               <input
                 type="checkbox"
                 disabled={disabled}

@@ -328,6 +328,12 @@ export function enquiryPublicPath(formId: string) {
   return `/quote-inquiry/${formId}`;
 }
 
+const COMPACT_OPTION_MAX_CHARS = 16;
+
+export function isEnquiryOptionCompact(label: string) {
+  return Array.from(label.trim()).length <= COMPACT_OPTION_MAX_CHARS;
+}
+
 export function serializeEnquiryQuestions(questions: EnquiryQuestion[]): Record<string, unknown>[] {
   return questions.map((question) => ({
     field_key: question.fieldKey,
