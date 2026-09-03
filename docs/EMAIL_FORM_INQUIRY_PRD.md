@@ -2,7 +2,7 @@
 
 | 項目 | 內容 |
 | --- | --- |
-| 文件版本 | 2.3 |
+| 文件版本 | 2.4 |
 | 文件日期 | 2026-09-03 |
 | 文件狀態 | 需求草案；尚未實作 |
 | 範圍 | Enquiry Form 構建（列表＋編輯）、公開填表、內部通知信、對客確認信、自動建立 Asana 工作、FCCD 待報價佇列、表單資料展示與修改、轉成報價單 |
@@ -77,9 +77,30 @@ flowchart LR
 - 完整 CMS／多語後台。
 - Asana 雙向同步（改 FCCD 不回寫 Asana 題目；不讀取 Asana 完成狀態）。不在報價列表「一鍵建 Asana」（人手新建報價仍用貼連結）。不因轉成報價單再新建第二個 task。
 
+### 2.3 導覽與選單
+
+對齊現行業務選單（`businessPrimaryNav`／`businessCategoryNav`／`secondaryNav`，見 [`src/lib/nav.ts`](src/lib/nav.ts)）。公開填表頁不進內部選單。
+
+**到會 → 報價單 → 三級選單**（`nav=catering.quotes`，現行 `secondaryNav.quotes`：所有報價、PDF 頁面設定）新增／調整如下，與現有項並列：
+
+| 三級項 | 路由 | 說明 |
+| --- | --- | --- |
+| 所有報價 | `/quotes?nav=catering.quotes` | 既有報價列表，不變 |
+| 待報價 | `/quotes/pending?nav=catering.quotes` | **本需求的新佇列**（表單尚未轉報價） |
+| Enquiry 表單 | `/quotes/enquiry-forms?nav=catering.quotes` | 構建器列表；編輯頁由列表進入，不另佔選單 |
+| PDF 頁面設定 | `/quotes/pdf-pages?nav=catering.quotes` | 既有，不變 |
+
+建議順序：所有報價、待報價、Enquiry 表單、PDF 頁面設定。樣式二若同樣用 `secondaryNav.quotes`，三級項一致。
+
+**營運跟進 → 到會 → 待報價**（現行 `followUpCateringNav` 的 `pendingQuote`，文案「待報價」）：改連到**同一份新待報價列表**，例如 `/quotes/pending?nav=follow-up.catering`。不再連 `/quotes?tab=pending`（那是所有未結束報價的 preset）。Dashboard「待報價」計數、前五筆、點擊入口與此佇列相同。
+
+`/quotes/pending` 現行會導向 `/quotes/recent-open`，實作時取消該 redirect，改為本列表。所有報價頁若仍提供「未結束報價」篩選，**不得**再用「待報價」當標籤。
+
+構建器與待報價列表權限沿用 `quotes`（查看）／報價編輯（改表單定義須管理權，實作時可拆 `quotes.enquiry_forms`）。選單 context 必須帶 `nav=`，讓三級高亮正確。
+
 ## 3. Enquiry Form 構建器
 
-內部頁，建議放在報價設定下（例如 `/quotes/enquiry-forms`、`/quotes/enquiry-forms/:id/edit`），**進內部 nav**，需報價相關 page access（查看列表 vs 管理編輯，實作時對齊現有 `quotes.*` 權限模式）。
+內部頁路由：`/quotes/enquiry-forms`、`/quotes/enquiry-forms/:id/edit`。選單位置見第 2.3 節（到會 → 報價單 → Enquiry 表單）。需報價相關 page access（查看列表 vs 管理編輯，實作時對齊現有 `quotes.*` 權限模式）。
 
 ### 3.1 列表頁
 
@@ -90,7 +111,7 @@ flowchart LR
 
 ### 3.2 編輯頁
 
-1. 表頭可編：內部名稱、公開標題、公開說明、送出按鈕文案、公開 slug、是否預設公開表單、成功頁短訊、**對客確認信主旨／正文**（選填，空則用第 5.3 節預設文案）、**Asana 專案**（選填；空則用全域預設專案，見第 6 節）。
+1. 表頭可編：內部名稱、公開標題、公開說明、送出按鈕文案、公開 slug、是否預設公開表單、成功頁短訊、**對客確認信主旨／正文**（選填，空則用第 5.2 節預設文案）、**Asana 專案**（選填；空則用全域預設專案，見第 6 節）。
 2. 題目以列表展示，可新增、刪除、上移／下移（或拖曳排序）。新增時先選題型。
 3. 選中一題後編輯其設定（見 3.3、3.4）。未保存離開須提示。
 4. 預覽：編輯頁提供「預覽公開樣式」（不必發佈）；預覽提交不可寫入待報價。
@@ -218,7 +239,7 @@ flowchart LR
 ## 7. 待報價列表
 
 1. 只顯示公開表單進來、尚未轉成報價單的紀錄。轉成後進既有報價列表。
-2. `/quotes` 各 preset 只顯示已轉成的報價單。nav「待報價」與 Dashboard 待報價數字／前五筆改為本佇列。跟進中報價仍用 `/quotes`。
+2. `/quotes` 各 preset 只顯示已轉成的報價單。到會 → 報價單 → 待報價、營運跟進 → 到會 → 待報價、Dashboard 待報價，三者進同一新列表（第 2.3 節）。跟進中報價仍用 `/quotes`（所有報價）。
 3. 列表欄位用**對應報價欄**取值，沒有則 `—`，不可假單號或假金額：
 
    | 順序 | 欄位 | 顯示 |
@@ -288,13 +309,14 @@ flowchart LR
 8. 日期題無值或輸入框日期無法解析時，轉報價若缺送貨日期則擋住。
 9. 查看權限不能改構建器、不能轉單、不能重寄、不能重試 Asana。
 10. 開啟來自 Enquiry 的待報價或已轉報價，第 1 步最上方區塊標題為「Enquiry Form 的資料」，其下才是報價資料（品牌、客戶等）；人手新建報價沒有此區塊。標題不得顯示「Email Form 資料」。
+11. 到會 → 報價單三級可見「待報價」與「Enquiry 表單」；點前者進新佇列，點後者進構建器列表。營運跟進 → 到會 → 待報價進同一新佇列，不再打開 `/quotes?tab=pending` 的所有未結束報價。
 
 ## 12. 待確認
 
 未確認時用括號內預設。
 
 1. 內部信用現有訂單通知名單，或另建 inquiry 名單。（預設：沿用現有名單。）
-2. nav「待報價」文案；構建器放在報價設定哪一項。（預設：待報價語意改為本佇列；構建器為「Enquiry 表單」。）
+2. 三級選單文案（待報價／Enquiry 表單）與權限 key 是否拆 `quotes.enquiry_forms`。（預設：文案如第 2.3 節；權限沿用 `quotes`。）
 3. 轉成報價後「Enquiry Form 的資料」鎖定或仍可改。（預設：鎖定唯讀。）
 4. 公開 path、官網何時改連 FCCD。（預設：`/quote-inquiry`；官網切換不在本 PRD 實作。）
 5. 輸入框是否要獨立「電郵」題型，或僅用格式選項。（預設：輸入框 + 格式=電郵。）
