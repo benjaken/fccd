@@ -19,11 +19,10 @@ import "./enquiry-form.css";
 const PENDING_SKELETON_COLUMNS = [
   { width: "9rem" },
   { width: "10rem" },
-  { width: "16rem" },
+  { width: "14rem" },
+  { width: "12rem" },
   { width: "8rem" },
   { width: "4rem" },
-  { width: "6rem" },
-  { width: "6rem" },
   { width: "6rem" },
   { width: "6rem" },
   { width: "4.5rem", variant: "action" as const },
@@ -33,13 +32,7 @@ function dash(value: string) {
   return value.trim() || "—";
 }
 
-function statusText(kind: "internal" | "ack" | "asana", value: string) {
-  if (kind === "internal") {
-    if (value === "sent") return "已通知";
-    if (value === "failed") return "通知失敗";
-    if (value === "sending") return "寄送中";
-    return "尚未通知";
-  }
+function statusText(kind: "ack" | "asana", value: string) {
   if (kind === "ack") {
     if (value === "sent") return "已寄出";
     if (value === "failed") return "失敗";
@@ -161,10 +154,9 @@ export function EnquiryPendingListPage({
                 <th>{t("quotes.columns.enquiryNumber")}</th>
                 <th>建立時間</th>
                 <th>客戶</th>
+                <th>問卷名稱</th>
                 <th>日期</th>
                 <th>人數</th>
-                <th>內部通知</th>
-                <th>內部 WhatsApp</th>
                 <th>對客確認</th>
                 <th>Asana</th>
                 {canManage ? <th aria-label={t("quotes.columns.actions")} /> : null}
@@ -188,12 +180,10 @@ export function EnquiryPendingListPage({
                     <div>{dash(`${item.salutation}${item.customerName}`)}</div>
                     <div>{dash(item.companyName)}</div>
                     <div>{dash(item.phone)}</div>
-                    <small>{item.formTitle || "Enquiry Form"}</small>
                   </td>
+                  <td>{dash(item.formTitle || "Enquiry Form")}</td>
                   <td>{dash(item.deliveryDateRaw)}</td>
                   <td>{dash(item.headcount)}</td>
-                  <td>{statusText("internal", item.internalEmailStatus)}</td>
-                  <td>{statusText("internal", item.internalWatiStatus)}</td>
                   <td>{statusText("ack", item.ackEmailStatus)}</td>
                   <td>
                     {item.asanaLink ? (

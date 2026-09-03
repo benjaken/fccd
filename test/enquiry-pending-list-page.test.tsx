@@ -39,9 +39,12 @@ describe("EnquiryPendingListPage", () => {
     expect(await screen.findByText("先生陳大文")).toBeInTheDocument();
     expect(screen.getByRole("table")).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "查詢單號" })).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "內部 WhatsApp" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "問卷名稱" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "建立時間" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "客戶" })).toBeInTheDocument();
+    expect(screen.getByText("FC Catering Enquiry")).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "內部通知" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "內部 WhatsApp" })).not.toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: "描述" })).not.toBeInTheDocument();
     expect(screen.queryByText("公司午餐到會")).not.toBeInTheDocument();
     expect(screen.getByText("80")).toBeInTheDocument();
