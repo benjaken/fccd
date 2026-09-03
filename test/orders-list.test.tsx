@@ -1213,6 +1213,12 @@ describe("Orders list", () => {
       /\.orders-toolbar-actions:has\(\.orders-selection-count\)\s*\{[^}]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/s,
     );
     expect(stylesheet).toMatch(
+      /@media \(max-width: 760px\)[\s\S]*?\.orders-toolbar-actions\s*\{[^}]*flex-wrap:\s*nowrap/s,
+    );
+    expect(stylesheet).toMatch(
+      /@media \(max-width: 760px\)[\s\S]*?\.orders-toolbar-actions > button,\s*\.orders-toolbar-actions > a\s*\{[^}]*flex:\s*1 1 0/s,
+    );
+    expect(stylesheet).toMatch(
       /\.orders-page\.is-shopify-pending \.order-mobile-facts dd\s*\{[^}]*white-space:\s*normal[^}]*overflow-wrap:\s*anywhere/s,
     );
   });
