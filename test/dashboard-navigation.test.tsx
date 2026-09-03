@@ -17,6 +17,7 @@ const dashboardData: HomeSalesDashboardData = {
     { key: "currentMonth", year: 2026, month: 9, startDate: "2026-09-01", endDate: "2026-09-30" },
   ],
   cateringChannels: [],
+  cateringOther: null,
   tkoChannels: [],
 };
 

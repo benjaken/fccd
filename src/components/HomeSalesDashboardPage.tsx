@@ -172,6 +172,9 @@ export function HomeSalesDashboardPage({
         />
         <YearComparisonPair
           rows={visibleCateringChannels}
+          extraTotalRows={
+            cateringChannelFilter || !data?.cateringOther ? [] : [data.cateringOther]
+          }
           money={money}
           periodLabel={periodLabel}
           formatChange={formatChange}
@@ -232,6 +235,7 @@ function SalesPanelHeader({
 
 function YearComparisonPair({
   rows,
+  extraTotalRows = [],
   money,
   periodLabel,
   formatChange,
@@ -239,6 +243,7 @@ function YearComparisonPair({
   t,
 }: {
   rows: HomeSalesComparisonRow[];
+  extraTotalRows?: HomeSalesComparisonRow[];
   money: Intl.NumberFormat;
   periodLabel: (key: HomeSalesPeriodKey, accumulating?: boolean) => string;
   formatChange: (value: number | null) => string;
@@ -246,7 +251,7 @@ function YearComparisonPair({
   t: (key: string) => string;
 }) {
   const displayRows = rows.length
-    ? [totalRowFor(rows, t("dashboard.totalColumn")), ...rows]
+    ? [totalRowFor([...rows, ...extraTotalRows], t("dashboard.totalColumn")), ...rows]
     : rows;
 
   return (

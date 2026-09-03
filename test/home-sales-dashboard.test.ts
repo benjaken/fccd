@@ -23,9 +23,6 @@ describe("home sales dashboard aggregation", () => {
     expect(cateringChannelAbbreviation("Kitchen")).toBe("FCK");
     expect(cateringChannelAbbreviation("Express")).toBe("FCE");
     expect(cateringChannelAbbreviation("HK Party Food")).toBe("FCP");
-    expect(cateringChannelAbbreviation("Cuisine")).toBe("FCL");
-    expect(cateringChannelAbbreviation("Delivery")).toBe("FCD");
-    expect(cateringChannelAbbreviation("Residential")).toBe("FCR");
   });
 
   it("groups TKO platforms into Food Panda, Keeta, Openrice, and others", () => {
@@ -72,8 +69,8 @@ describe("home sales dashboard aggregation", () => {
       "FCK",
       "FCE",
       "FCP",
-      "FCL",
     ]);
+    expect(data.cateringOther?.values.currentMonth).toBe(15);
     expect(data.cateringChannels[0].values).toEqual({
       previousYearPreviousMonth: 80,
       previousYearCurrentMonth: 90,

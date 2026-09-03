@@ -15,6 +15,7 @@ const liveData: HomeSalesDashboardData = {
     { key: "previousMonth", year: 2026, month: 8, startDate: "2026-08-01", endDate: "2026-08-31" },
     { key: "currentMonth", year: 2026, month: 9, startDate: "2026-09-01", endDate: "2026-09-30" },
   ],
+  cateringOther: null,
   cateringChannels: [
     {
       id: "Catering",

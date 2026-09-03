@@ -1,6 +1,5 @@
 import {
   fetchKitchenChannelSalesReport,
-  kitchenChannelSalesChannels,
   type KitchenChannelSalesReportRow,
 } from "@/lib/kitchen-channel-sales-report";
 import {
@@ -32,6 +31,7 @@ export type HomeSalesDashboardData = {
   asOfDate: string;
   periods: HomeSalesPeriod[];
   cateringChannels: HomeSalesComparisonRow[];
+  cateringOther: HomeSalesComparisonRow | null;
   tkoChannels: HomeSalesComparisonRow[];
 };
 
@@ -49,12 +49,6 @@ export const HOME_TKO_CORE_PLATFORMS = [
   { id: "openrice", name: "Openrice" },
   { id: "other", name: "其他" },
 ] as const;
-
-const EXTRA_CATERING_ABBREVIATIONS: Array<{ test: RegExp; abbreviation: string }> = [
-  { test: /cuisine|福滿樓/, abbreviation: "FCL" },
-  { test: /delivery/, abbreviation: "FCD" },
-  { test: /residential/, abbreviation: "FCR" },
-];
 
 function dateValue(year: number, month: number, day: number) {
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
@@ -131,9 +125,6 @@ export function cateringChannelAbbreviation(name: string) {
     return "FCK";
   }
   if (compact === "express" || compact === "fce") return "FCE";
-  for (const extra of EXTRA_CATERING_ABBREVIATIONS) {
-    if (extra.test.test(compact) || extra.test.test(name)) return extra.abbreviation;
-  }
   if (
     compact === "catering" ||
     compact === "fcc" ||
@@ -164,27 +155,31 @@ export function buildHomeSalesDashboard(
   const periods = homeSalesPeriods(now);
   const cateringMap = new Map<string, HomeSalesComparisonRow>();
 
+  const coreById = new Map(
+    HOME_CATERING_CORE_CHANNELS.map((channel) => [compactChannelKey(channel.id), channel]),
+  );
   for (const channel of HOME_CATERING_CORE_CHANNELS) {
     cateringMap.set(channel.id, comparisonRow(channel.id, channel.abbreviation));
   }
 
-  for (const channel of kitchenChannelSalesChannels(cateringRows)) {
-    if (cateringMap.has(channel)) continue;
-    cateringMap.set(
-      channel,
-      comparisonRow(channel, cateringChannelAbbreviation(channel)),
-    );
-  }
+  const cateringOther = comparisonRow("__other__", "其他");
+  let hasCateringOther = false;
 
   for (const row of cateringRows) {
     const key = periodKeyFor(periods, row.year, row.month);
     if (!key) continue;
-    const item = cateringMap.get(row.channel) ?? comparisonRow(
-      row.channel,
-      cateringChannelAbbreviation(row.channel),
-    );
-    item.values[key] += row.amount;
-    cateringMap.set(row.channel, item);
+    const core = coreById.get(compactChannelKey(row.channel))
+      ?? HOME_CATERING_CORE_CHANNELS.find(
+        (channel) => cateringChannelAbbreviation(row.channel) === channel.abbreviation,
+      );
+    if (core) {
+      const item = cateringMap.get(core.id) ?? comparisonRow(core.id, core.abbreviation);
+      item.values[key] += row.amount;
+      cateringMap.set(core.id, item);
+      continue;
+    }
+    cateringOther.values[key] += row.amount;
+    hasCateringOther = true;
   }
 
   const tkoChannelMap = new Map<string, HomeSalesComparisonRow>();
@@ -209,19 +204,13 @@ export function buildHomeSalesDashboard(
     tkoChannelMap.set(platform.id, item);
   }
 
-  const cateringOrder = [
-    ...HOME_CATERING_CORE_CHANNELS.map((channel) => channel.id),
-    ...[...cateringMap.keys()].filter(
-      (id) => !HOME_CATERING_CORE_CHANNELS.some((channel) => channel.id === id),
-    ),
-  ];
-
   return {
     asOfDate: dateValue(now.getFullYear(), now.getMonth() + 1, now.getDate()),
     periods,
-    cateringChannels: cateringOrder
-      .map((id) => cateringMap.get(id))
-      .filter((row): row is HomeSalesComparisonRow => Boolean(row)),
+    cateringChannels: HOME_CATERING_CORE_CHANNELS.map(
+      (channel) => cateringMap.get(channel.id) ?? comparisonRow(channel.id, channel.abbreviation),
+    ),
+    cateringOther: hasCateringOther ? cateringOther : null,
     tkoChannels: HOME_TKO_CORE_PLATFORMS.map(
       (platform) => tkoChannelMap.get(platform.id) ?? comparisonRow(platform.id, platform.name),
     ),
