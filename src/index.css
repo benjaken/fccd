@@ -379,6 +379,11 @@ button {
   font-weight: 400;
 }
 
+.home-sales-table.is-this-month-table td.home-sales-channel-value.is-current-month,
+.home-sales-table.is-this-month-table td.home-sales-channel-value.is-current-month .home-sales-money {
+  font-weight: 700;
+}
+
 .home-sales-money {
   display: block;
   font-size: 13px;
@@ -508,6 +513,10 @@ button {
     font-size: 15px;
     font-weight: 400;
     font-variant-numeric: tabular-nums;
+  }
+
+  .home-sales-channel-card dd.is-current-month {
+    font-weight: 700;
   }
 
   .home-sales-channel-card.is-total {

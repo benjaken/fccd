@@ -61,6 +61,8 @@ describe("monthly sales dashboard", () => {
     expect(screen.getAllByRole("heading", { name: "上月對比" }).length).toBeGreaterThanOrEqual(2);
     const tables = screen.getAllByRole("table");
     expect(tables).toHaveLength(4);
+    expect(tables[0]).toHaveClass("is-this-month-table");
+    expect(tables[1]).not.toHaveClass("is-this-month-table");
     expect(within(tables[0]).getByRole("columnheader", { name: "FCC" })).toBeInTheDocument();
     expect(within(tables[0]).getByRole("columnheader", { name: "Total" })).toBeInTheDocument();
     expect(within(tables[0]).getByRole("rowheader", { name: "2026年9月．累計中" })).toBeInTheDocument();

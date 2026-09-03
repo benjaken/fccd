@@ -267,6 +267,7 @@ function YearComparisonPair({
           money={money}
           formatChange={formatChange}
           emptyLabel={emptyLabel}
+          emphasizeCurrent
           t={t}
         />
         <YearComparisonTable
@@ -307,6 +308,7 @@ function YearComparisonPair({
                 previous: row.values.previousYearCurrentMonth,
                 current: row.values.currentMonth,
                 changeLabel: t("dashboard.yoy"),
+                emphasizeCurrent: true,
               },
             ]}
           />
@@ -327,6 +329,7 @@ function YearComparisonTable({
   money,
   formatChange,
   emptyLabel,
+  emphasizeCurrent = false,
   t,
 }: {
   title: string;
@@ -338,13 +341,14 @@ function YearComparisonTable({
   money: Intl.NumberFormat;
   formatChange: (value: number | null) => string;
   emptyLabel: string;
+  emphasizeCurrent?: boolean;
   t: (key: string) => string;
 }) {
   return (
     <div className="home-sales-matrix">
       <h3>{title}</h3>
       <div className="table-wrap home-sales-table-wrap">
-        <table className="home-sales-table home-sales-matrix-table">
+        <table className={["home-sales-table", "home-sales-matrix-table", emphasizeCurrent ? "is-this-month-table" : ""].filter(Boolean).join(" ")}>
           <thead>
             <tr>
               <th scope="col"><span className="sr-only">{t("dashboard.period")}</span></th>
@@ -446,6 +450,7 @@ function ChannelComparisonCard({
     previous: number;
     current: number;
     changeLabel: string;
+    emphasizeCurrent?: boolean;
   }>;
   money: Intl.NumberFormat;
   formatChange: (value: number | null) => string;
@@ -469,7 +474,9 @@ function ChannelComparisonCard({
               </div>
               <div>
                 <dt>{block.currentLabel}</dt>
-                <dd>{money.format(block.current)}</dd>
+                <dd className={block.emphasizeCurrent ? "is-current-month" : undefined}>
+                  {money.format(block.current)}
+                </dd>
               </div>
               <div>
                 <dt>{t("dashboard.difference")}</dt>
