@@ -16,6 +16,7 @@ const api = vi.hoisted(() => ({
   fetchFleetSummary: vi.fn(),
   fetchIncomeSummary: vi.fn(),
   fetchDrivers: vi.fn(),
+  fetchDistrictFees: vi.fn(),
   assignDriver: vi.fn(),
   logout: vi.fn(),
 }));
@@ -30,6 +31,7 @@ vi.mock("@/lib/driver-delivery", () => ({
   fetchDriverFleetSummary: api.fetchFleetSummary,
   fetchDriverIncomeSummary: api.fetchIncomeSummary,
   fetchDriverFleetDrivers: api.fetchDrivers,
+  fetchDriverDistrictFees: api.fetchDistrictFees,
   assignAcceptedOrderDriver: api.assignDriver,
   logoutDriverDelivery: api.logout,
 }));
@@ -44,6 +46,7 @@ describe("DriverDeliveryPage", () => {
     api.fetchFleetSummary.mockReset();
     api.fetchIncomeSummary.mockReset();
     api.fetchDrivers.mockReset();
+    api.fetchDistrictFees.mockReset();
     api.assignDriver.mockReset();
     api.logout.mockReset();
     api.login.mockResolvedValue({
@@ -85,6 +88,7 @@ describe("DriverDeliveryPage", () => {
       },
     ]);
     api.fetchDrivers.mockResolvedValue([]);
+    api.fetchDistrictFees.mockResolvedValue([]);
     api.assignDriver.mockResolvedValue(undefined);
     api.fetchSurchargeTypes.mockResolvedValue([]);
     api.deleteSurcharge.mockResolvedValue(undefined);
@@ -190,5 +194,31 @@ describe("DriverDeliveryPage", () => {
     fireEvent.change(await screen.findByLabelText("開始日期"), { target: { value: "2026-08-01" } });
     fireEvent.change(screen.getByLabelText("結束日期"), { target: { value: "2026-08-15" } });
     await waitFor(() => expect(api.fetchFleetSummary).toHaveBeenLastCalledWith("session-token", "", "2026-08-01", "2026-08-15"));
+  });
+
+  it("lists the team's district fees on the districts page", async () => {
+    api.fetchDistrictFees.mockResolvedValue([
+      { id: "d-1", name: "大埔區", fee: 80 },
+      { id: "d-2", name: "沙田區", fee: 70 },
+    ]);
+    renderDriverPortal("/driver-delivery/districts");
+    fireEvent.change(screen.getByLabelText("登入密碼"), { target: { value: "driver-code" } });
+    fireEvent.click(screen.getByRole("button", { name: "登入" }));
+
+    expect(await screen.findByText("大埔區")).toBeInTheDocument();
+    expect(screen.getByText("沙田區")).toBeInTheDocument();
+    expect(screen.getByText(new Intl.NumberFormat("zh-HK", { style: "currency", currency: "HKD" }).format(80))).toBeInTheDocument();
+    expect(api.fetchDistrictFees).toHaveBeenCalledWith("session-token", "");
+
+    fireEvent.change(screen.getByLabelText("搜尋地區"), { target: { value: "大埔" } });
+    await waitFor(() => expect(api.fetchDistrictFees).toHaveBeenCalledWith("session-token", "大埔"));
+  });
+
+  it("shows an empty state when the team has no district fees", async () => {
+    renderDriverPortal("/driver-delivery/districts");
+    fireEvent.change(screen.getByLabelText("登入密碼"), { target: { value: "driver-code" } });
+    fireEvent.click(screen.getByRole("button", { name: "登入" }));
+
+    expect(await screen.findByText("暫時沒有分區運費。")).toBeInTheDocument();
   });
 });

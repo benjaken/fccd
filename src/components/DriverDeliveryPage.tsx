@@ -475,11 +475,62 @@ function DistrictFeesView({ session }: { session: DriverDeliverySession }) {
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [rows, setRows] = useState<Array<{ id: string; name: string; fee: number }>>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   useEffect(() => {
-    const timer = window.setTimeout(() => { fetchDriverDistrictFees(session.token, search).then(setRows).catch(() => setRows([])); }, search ? 250 : 0);
-    return () => window.clearTimeout(timer);
+    let active = true;
+    setLoading(true);
+    setError("");
+    const timer = window.setTimeout(() => {
+      fetchDriverDistrictFees(session.token, search)
+        .then((next) => {
+          if (!active) return;
+          setRows(next);
+        })
+        .catch(() => {
+          if (!active) return;
+          setRows([]);
+          setError("暫時無法載入分區運費。");
+        })
+        .finally(() => {
+          if (active) setLoading(false);
+        });
+    }, search ? 250 : 0);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
   }, [search, session.token]);
-  return <section className="driver-district-view"><label className="driver-order-search"><Search /><span className="sr-only">搜尋地區</span><input aria-label="搜尋地區" placeholder={t("driverDelivery.districtSearchPlaceholder")} value={search} onChange={(event) => setSearch(event.target.value)} />{search ? <button onClick={() => setSearch("")} aria-label="清除搜尋"><X /></button> : null}</label><div className="driver-district-list">{rows.map((row) => <div key={row.id}><strong>{row.name}</strong><span>{money(Number(row.fee))}</span></div>)}</div></section>;
+  return (
+    <section className="driver-district-view">
+      <label className="driver-order-search">
+        <Search />
+        <span className="sr-only">搜尋地區</span>
+        <input
+          aria-label="搜尋地區"
+          placeholder={t("driverDelivery.districtSearchPlaceholder")}
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
+        {search ? <button onClick={() => setSearch("")} aria-label="清除搜尋"><X /></button> : null}
+      </label>
+      <div className="driver-district-list">
+        {loading ? <p className="driver-district-empty">正在載入地區…</p> : null}
+        {!loading && error ? <p className="driver-district-empty is-error">{error}</p> : null}
+        {!loading && !error && rows.length === 0 ? (
+          <p className="driver-district-empty">{search.trim() ? "找不到符合的地區。" : "暫時沒有分區運費。"}</p>
+        ) : null}
+        {!loading && !error
+          ? rows.map((row) => (
+            <div key={row.id}>
+              <strong>{row.name}</strong>
+              <span>{money(Number(row.fee))}</span>
+            </div>
+          ))
+          : null}
+      </div>
+    </section>
+  );
 }
 
 function DriverSettingsView({ session }: { session: DriverDeliverySession }) {
