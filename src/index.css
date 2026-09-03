@@ -176,6 +176,26 @@ button {
   color: var(--muted-foreground);
 }
 
+.home-sales-panel-heading {
+  margin-right: auto;
+  min-width: 0;
+}
+
+.home-sales-report-link {
+  flex: 0 0 auto;
+  color: var(--primary);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: right;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.home-sales-report-link:hover {
+  text-decoration: underline;
+}
+
 .home-sales-table-wrap {
   max-width: 100%;
   overflow-x: auto;
@@ -324,18 +344,6 @@ button {
   font-weight: 700;
 }
 
-@media (max-width: 780px) {
-  .home-sales-panel-header {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .home-sales-panel-header .button,
-  .home-sales-panel-header a {
-    align-self: flex-start;
-  }
-}
-
 .home-sales-card-list {
   display: none;
 }
@@ -344,6 +352,46 @@ button {
   .home-sales-heading p,
   .home-sales-panel-header p {
     display: none;
+  }
+
+  .panel-header.home-sales-panel-header,
+  .panel-header.home-sales-skeleton-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px 10px;
+    padding: 12px 14px 8px;
+  }
+
+  .home-sales-panel-heading {
+    grid-column: 1;
+    margin-right: 0;
+  }
+
+  .home-sales-panel-actions {
+    display: contents;
+  }
+
+  .home-sales-brand-filter {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .home-sales-brand-filter select,
+  .home-sales-brand-filter .multi-select-trigger {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .home-sales-report-link {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+    align-self: center;
+    padding: 0;
   }
 
   .home-sales-table-wrap {
@@ -3764,16 +3812,6 @@ button.sidebar-link {
   .daily-sales-record-filter > .date-picker,
   .daily-sales-record-filter > .date-range-picker {
     min-width: 0;
-  }
-
-  .home-sales-panel-actions {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .home-sales-brand-filter {
-    align-items: stretch;
-    flex-direction: column;
   }
 
   .daily-sales-new-record {

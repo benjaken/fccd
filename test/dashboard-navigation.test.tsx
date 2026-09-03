@@ -37,6 +37,7 @@ describe("Dashboard navigation", () => {
       </MemoryRouter>,
     );
     expect(await screen.findByRole("link", { name })).toHaveAttribute("href", target);
+    expect(await screen.findByRole("link", { name })).toHaveClass("home-sales-report-link");
   });
 
   it("uses a green brand primary and explicit green active nav wash", () => {
@@ -63,5 +64,8 @@ describe("Dashboard navigation", () => {
     expect(stylesheet).toMatch(/\.home-sales-card-list\s*\{/);
     expect(stylesheet).toMatch(/@media \(max-width: 980px\)[\s\S]*\.home-sales-table-wrap\s*\{[^}]*display:\s*none/);
     expect(stylesheet).toMatch(/@media \(max-width: 980px\)[\s\S]*\.home-sales-card-list\s*\{[^}]*display:\s*grid/);
+    expect(stylesheet).toMatch(/@media \(max-width: 980px\)[\s\S]*\.home-sales-panel-actions\s*\{[^}]*display:\s*contents/);
+    expect(stylesheet).toMatch(/@media \(max-width: 980px\)[\s\S]*\.home-sales-report-link\s*\{[^}]*justify-self:\s*end/);
+    expect(stylesheet).not.toMatch(/@media \(max-width: 780px\)[\s\S]*\.home-sales-panel-header a[\s\S]*align-self:\s*flex-start/);
   });
 });

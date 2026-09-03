@@ -209,15 +209,13 @@ function SalesPanelHeader({
 }) {
   return (
     <header className="panel-header home-sales-panel-header">
-      <div>
+      <div className="home-sales-panel-heading">
         <h2><Icon aria-hidden="true" />{title}</h2>
         <p>{description}</p>
       </div>
       <div className="home-sales-panel-actions">
         {controls}
-        <Button variant="ghost" asChild>
-          <Link to={actionTo}>{actionLabel}</Link>
-        </Button>
+        <Link className="home-sales-report-link" to={actionTo}>{actionLabel}</Link>
       </div>
     </header>
   );
