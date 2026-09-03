@@ -5,7 +5,7 @@ import {
   buildEnquiryAckContent,
   buildEnquiryInternalContent,
   fillEnquiryEmailTemplate,
-} from "../supabase/functions/_shared/order-notification-content.ts";
+} from "../supabase/functions/_shared/enquiry-notification-content.ts";
 
 describe("enquiry notification emails", () => {
   it("fills customer acknowledgement copy from the form title and name", () => {

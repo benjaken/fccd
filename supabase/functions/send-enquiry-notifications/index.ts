@@ -4,7 +4,7 @@ import { EMAIL_FROM } from "../_shared/email-sender.ts";
 import {
   buildEnquiryAckContent,
   buildEnquiryInternalContent,
-} from "../_shared/order-notification-content.ts";
+} from "../_shared/enquiry-notification-content.ts";
 import {
   isNotificationEmailAllowed,
   notificationRecipientAllowlist,
@@ -146,7 +146,7 @@ Deno.serve(async (request) => {
 
     if (sendInternal) {
       const retryable = force
-        ? ["not_sent", "sending", "failed"]
+        ? ["not_sent", "sending", "failed", "sent"]
         : ["not_sent"];
       if (retryable.includes(internalStatus) && await claimStatus(admin, row.id, "internal_email_status", retryable)) {
         try {
@@ -197,7 +197,7 @@ Deno.serve(async (request) => {
           }).eq("id", row.id);
         }
       } else {
-        const retryable = force ? ["not_sent", "sending", "failed"] : ["not_sent"];
+        const retryable = force ? ["not_sent", "sending", "failed", "sent"] : ["not_sent"];
         if (retryable.includes(ackStatus) && await claimStatus(admin, row.id, "ack_email_status", retryable)) {
           try {
             const mail = buildEnquiryAckContent({
