@@ -265,9 +265,17 @@ describe("Quote editor", () => {
       expect(node).toBeInTheDocument();
       return node!;
     });
-    expect(within(mobileList).getByRole("listitem")).toHaveTextContent("Mobile banquet");
+    const card = within(mobileList).getByRole("listitem");
+    expect(card).toHaveTextContent("Mobile banquet");
     expect(document.querySelector(".quote-lines-panel table")).not.toBeInTheDocument();
     expect(within(mobileList).getByRole("spinbutton", { name: "Quantity" })).toHaveValue(2);
+    const actions = card.querySelector(".quote-mobile-line-actions");
+    expect(actions).toBeTruthy();
+    const preview = within(actions as HTMLElement).getByRole("button", { name: "Preview" });
+    const remove = within(actions as HTMLElement).getByRole("button", { name: "Remove Mobile banquet" });
+    expect(preview.compareDocumentPosition(remove) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(card.querySelector(".quote-mobile-label-button")).not.toBeInTheDocument();
+    expect(card.textContent).not.toMatch(/Preview/);
   });
 
   it("saves quote details before opening the product step", async () => {

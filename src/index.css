@@ -23798,6 +23798,8 @@ a.masoft-order-tag:focus-visible {
 
 .quote-mobile-line-actions {
   display: flex;
+  flex-shrink: 0;
+  flex-wrap: nowrap;
   gap: 3px;
 }
 
@@ -23818,6 +23820,15 @@ a.masoft-order-tag:focus-visible {
 
 .quote-mobile-line-actions svg {
   width: 16px;
+}
+
+.quote-mobile-line-actions button.quote-line-delete {
+  background: var(--card);
+  color: #dc2626;
+}
+
+.quote-mobile-line-actions button.quote-line-delete svg {
+  color: #dc2626;
 }
 
 .quote-mobile-line-fields {
@@ -24356,11 +24367,6 @@ a.masoft-order-tag:focus-visible {
   .quote-label-modal .quote-line-label-editor span {
     font-size: 14px;
   }
-}
-
-.quote-mobile-label-button {
-  width: 100%;
-  margin-top: 10px;
 }
 
 .quote-line-delete svg {

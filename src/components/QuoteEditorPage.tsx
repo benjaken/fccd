@@ -2448,9 +2448,20 @@ export function QuoteEditorPage({
                         <button type="button" disabled={line.isVoid || !index || reordering} aria-label={`${t("quoteEditor.items.sequence")} ${index}`} onClick={() => void moveLine(line.id, -1)}><ChevronUp /></button>
                         <button type="button" disabled={line.isVoid || index === activeLines.length - 1 || reordering} aria-label={`${t("quoteEditor.items.sequence")} ${index + 2}`} onClick={() => void moveLine(line.id, 1)}><ChevronDown /></button>
                         {lineCatalogButton(line)}
+                        {line.packageId && !line.productId ? null : (
+                          <button
+                            type="button"
+                            aria-label={t("quoteEditor.items.viewLabel")}
+                            title={t("quoteEditor.items.viewLabel")}
+                            disabled={line.isVoid}
+                            onClick={() => openLabelModal(line)}
+                          >
+                            <Tag />
+                          </button>
+                        )}
                         {line.isVoid
                           ? <button type="button" className="quote-line-restore" aria-label={t("quoteEditor.items.restore", { name: line.name || "" })} disabled={removingId === line.id} onClick={() => void restoreLine(line.id)}><Undo2 /></button>
-                          : <Button type="button" variant="destructive" size="icon" className="quote-line-delete" aria-label={t(isOrder ? "quoteEditor.items.cancel" : "quoteEditor.items.remove", { name: line.name || "" })} disabled={removingId === line.id || savingLineId === line.id} onClick={() => void removeLine(line.id)}><Trash2 /></Button>}
+                          : <button type="button" className="quote-line-delete" aria-label={t(isOrder ? "quoteEditor.items.cancel" : "quoteEditor.items.remove", { name: line.name || "" })} disabled={removingId === line.id || savingLineId === line.id} onClick={() => void removeLine(line.id)}><Trash2 /></button>}
                       </div>
                     </header>
                     <div className="quote-mobile-line-fields">
@@ -2458,7 +2469,6 @@ export function QuoteEditorPage({
                       <label><span>{t("quoteEditor.items.unitPrice")}</span><input type="number" inputMode="decimal" min="0" step="0.01" value={isFreeUtensilPackLine(line) ? 0 : line.unitPrice} disabled={line.isVoid || savingLineId === line.id || isFreeUtensilPackLine(line)} onChange={(event) => patchLine(line.id, { unitPrice: Number(event.target.value) })} onBlur={() => void saveEditedLine(line)} /></label>
                     </div>
                     <footer><span>{t("quoteEditor.items.subtotal")}</span><strong>{money.format(line.totalPrice)}</strong></footer>
-                    {line.packageId && !line.productId ? null : <Button type="button" variant="outline" className="quote-mobile-label-button" disabled={line.isVoid} onClick={() => openLabelModal(line)}><Tag />{t("quoteEditor.items.viewLabel")}</Button>}
                   </article>
                 ))}
                 {!lines.length ? <div className="quote-lines-empty"><PackagePlus /><strong>{t("quoteEditor.items.empty")}</strong><span>{t("quoteEditor.items.emptyHint")}</span></div> : null}
