@@ -104,34 +104,15 @@ describe("monthly sales dashboard", () => {
     expect((await screen.findAllByRole("columnheader", { name: "FCC" })).length).toBeGreaterThan(0);
   });
 
-  it("filters the first sales table by brand", async () => {
-    const user = userEvent.setup();
-    const dataWithBrands: HomeSalesDashboardData = {
-      ...liveData,
-      cateringChannels: [
-        ...liveData.cateringChannels,
-        {
-          id: "Kitchen",
-          name: "FCK",
-          values: {
-            previousYearPreviousMonth: 10,
-            previousYearCurrentMonth: 20,
-            previousMonth: 30,
-            currentMonth: 40,
-          },
-        },
-      ],
-    };
+  it("does not offer a brand filter on the home sales tables", async () => {
     render(
       <MemoryRouter>
-        <Dashboard loadDashboard={() => Promise.resolve(dataWithBrands)} />
+        <Dashboard loadDashboard={() => Promise.resolve(liveData)} />
       </MemoryRouter>,
     );
 
-    const brandFilter = await screen.findByRole("combobox", { name: "篩選品牌" });
-    await user.selectOptions(brandFilter, "Kitchen");
-    const cateringTable = screen.getAllByRole("table")[0];
-    expect(within(cateringTable).getByRole("columnheader", { name: "FCK" })).toBeInTheDocument();
-    expect(within(cateringTable).queryByRole("columnheader", { name: "FCC" })).not.toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "每月銷售總覽" })).toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "篩選品牌" })).not.toBeInTheDocument();
+    expect(screen.queryByText("全部品牌")).not.toBeInTheDocument();
   });
 });

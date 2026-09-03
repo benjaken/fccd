@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
-import { FilterableSelect } from "@/components/ui/filterable-select";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import {
   fetchHomeSalesDashboard,
@@ -68,7 +67,6 @@ export function HomeSalesDashboardPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
-  const [cateringChannelFilter, setCateringChannelFilter] = useState("");
   const money = useMemo(
     () =>
       new Intl.NumberFormat(i18n.language, {
@@ -115,9 +113,6 @@ export function HomeSalesDashboardPage({
   const formatChange = (value: number | null) =>
     value === null ? "—" : `${value >= 0 ? "+" : ""}${value.toFixed(1)}%`;
   const cateringChannels = data?.cateringChannels ?? [];
-  const visibleCateringChannels = cateringChannelFilter
-    ? cateringChannels.filter((row) => row.id === cateringChannelFilter)
-    : cateringChannels;
   const tkoChannels = (data?.tkoChannels ?? []).map((row) =>
     row.id === "other" ? { ...row, name: t("dashboard.other") } : row,
   );
@@ -154,27 +149,10 @@ export function HomeSalesDashboardPage({
           description={t("dashboard.brandComparisonDescription")}
           actionLabel={t("dashboard.viewBrandReport")}
           actionTo="/reports/kitchen/channel-sales"
-          controls={
-            <label className="home-sales-brand-filter">
-              <span>{t("dashboard.brand")}</span>
-              <FilterableSelect
-                aria-label={t("dashboard.filterBrand")}
-                value={cateringChannelFilter}
-                onChange={(event) => setCateringChannelFilter(event.target.value)}
-              >
-                <option value="">{t("dashboard.allBrands")}</option>
-                {cateringChannels.map((row) => (
-                  <option key={row.id} value={row.id}>{row.name}</option>
-                ))}
-              </FilterableSelect>
-            </label>
-          }
         />
         <YearComparisonPair
-          rows={visibleCateringChannels}
-          extraTotalRows={
-            cateringChannelFilter || !data?.cateringOther ? [] : [data.cateringOther]
-          }
+          rows={cateringChannels}
+          extraTotalRows={data?.cateringOther ? [data.cateringOther] : []}
           money={money}
           periodLabel={periodLabel}
           formatChange={formatChange}
