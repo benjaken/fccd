@@ -1125,6 +1125,7 @@ describe("Quote editor", () => {
     expect(secondRemark).toHaveClass("quote-line-label-remark-text");
     expect(firstRemark).not.toHaveClass("is-empty");
     const emptyLabel = within(row).getByText("Empty label");
+    expect(emptyLabel.closest(".quote-line-label-remark-pair")).toHaveClass("is-empty");
     expect(emptyLabel.closest(".quote-line-label-remark-pair")?.querySelector(".quote-line-label-remark-text")).toHaveClass("is-empty");
     expect(within(row).queryByRole("textbox")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Remarks Roast pork/ })).not.toBeInTheDocument();
