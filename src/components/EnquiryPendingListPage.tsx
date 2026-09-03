@@ -173,7 +173,7 @@ export function EnquiryPendingListPage({
               return (
                 <tr key={item.id}>
                   <td>
-                    <DetailLink to={to}>
+                    <DetailLink className="order-link" to={to}>
                       {new Date(item.createdAt).toLocaleString("zh-HK", { timeZone: "Asia/Hong_Kong" })}
                     </DetailLink>
                   </td>
@@ -190,7 +190,7 @@ export function EnquiryPendingListPage({
                   <td>{statusText("ack", item.ackEmailStatus)}</td>
                   <td>
                     {item.asanaLink ? (
-                      <a href={item.asanaLink} target="_blank" rel="noopener noreferrer">Asana Link</a>
+                      <a className="order-link" href={item.asanaLink} target="_blank" rel="noopener noreferrer">Asana Link</a>
                     ) : (
                       statusText("asana", item.asanaStatus)
                     )}

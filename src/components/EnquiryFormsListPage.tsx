@@ -236,7 +236,7 @@ export function EnquiryFormsListPage({
             {visible.map((item) => (
               <tr key={item.id}>
                 <td>
-                  <DetailLink to={editTo(item.id)}>{item.internalName}</DetailLink>
+                  <DetailLink className="order-link" to={editTo(item.id)}>{item.internalName}</DetailLink>
                 </td>
                 <td>{item.publicTitle}</td>
                 <td>
@@ -258,7 +258,7 @@ export function EnquiryFormsListPage({
                 <td>{item.questionCount}</td>
                 <td>
                   {item.status === "published" ? (
-                    <Link to={enquiryPublicPath(item.id)} target="_blank" rel="noopener noreferrer">
+                    <Link className="order-link" to={enquiryPublicPath(item.id)} target="_blank" rel="noopener noreferrer">
                       {enquiryPublicPath(item.id)}
                     </Link>
                   ) : "—"}

@@ -268,7 +268,7 @@ export function EnquiryFormEditorPage() {
           <label>
             <span>公開連結</span>
             {form.status === "published" ? (
-              <Link to={enquiryPublicPath(form.id)} target="_blank" rel="noopener noreferrer">
+              <Link className="order-link" to={enquiryPublicPath(form.id)} target="_blank" rel="noopener noreferrer">
                 {enquiryPublicPath(form.id)}
               </Link>
             ) : (

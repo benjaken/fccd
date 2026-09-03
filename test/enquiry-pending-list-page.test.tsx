@@ -40,6 +40,7 @@ describe("EnquiryPendingListPage", () => {
     expect(screen.getByRole("columnheader", { name: "客戶" })).toBeInTheDocument();
     expect(screen.getByText("公司午餐到會")).toBeInTheDocument();
     expect(screen.getByText("80")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /2026/ })).toHaveClass("order-link");
     expect(screen.getByRole("link", { name: /2026/ })).toHaveAttribute(
       "href",
       "/quotes/pending/sub-1",

@@ -47,6 +47,7 @@ describe("EnquiryFormEditorPage", () => {
     expect(screen.getByRole("button", { name: "姓名" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "了解條款及政策" })).toBeInTheDocument();
     expect(screen.getAllByRole("row")).toHaveLength(25);
+    expect(screen.getByRole("link", { name: `/quote-inquiry/${CATERING_ENQUIRY_SEED_FORM_ID}` })).toHaveClass("order-link");
     expect(screen.getByRole("link", { name: `/quote-inquiry/${CATERING_ENQUIRY_SEED_FORM_ID}` })).toHaveAttribute(
       "href",
       `/quote-inquiry/${CATERING_ENQUIRY_SEED_FORM_ID}`,

@@ -38,7 +38,7 @@ describe("EnquiryFormsListPage", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole("link", { name: "FC Catering Enquiry" })).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "FC Catering Enquiry" })).toHaveClass("order-link");
     const table = screen.getByRole("table");
     expect(table).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "內部名稱" })).toBeInTheDocument();
@@ -52,6 +52,7 @@ describe("EnquiryFormsListPage", () => {
       "aria-checked",
       "false",
     );
+    expect(screen.getByRole("link", { name: "/quote-inquiry/form-1" })).toHaveClass("order-link");
     expect(screen.getByRole("link", { name: "/quote-inquiry/form-1" })).toHaveAttribute("href", "/quote-inquiry/form-1");
     expect(screen.getByText("草稿表單")).toBeInTheDocument();
     expect(screen.getByText("—")).toBeInTheDocument();
