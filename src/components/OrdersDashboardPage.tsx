@@ -127,7 +127,7 @@ export function OrdersDashboardPage({
       count: data.pendingQuotes,
       tone: "green",
       icon: Inbox,
-      to: "/quotes/recent-open",
+      to: "/quotes/pending",
     },
     {
       key: "upcomingQuotes",
@@ -225,7 +225,7 @@ export function OrdersDashboardPage({
           icon={Inbox}
           title={t("ordersDashboard.latestPendingTitle")}
           description={t("ordersDashboard.latestPendingDescription")}
-          actionTo="/quotes/recent-open"
+          actionTo="/quotes/pending"
           items={data.latestPendingQuotes}
           dateFormatter={dateFormatter}
           emptyLabel={t("ordersDashboard.emptyPendingQuotes")}
@@ -288,7 +288,12 @@ function QueuePanel({
       ) : (
         <ul className="orders-dashboard-quote-list">
           {items.map((item) => {
-            const detailTo = item.kind === "order" ? `/orders/${item.id}` : `/quotes/${item.id}`;
+            const detailTo =
+              item.kind === "order"
+                ? `/orders/${item.id}`
+                : item.kind === "enquiry"
+                  ? `/quotes/pending/${item.id}`
+                  : `/quotes/${item.id}`;
             const dateValue = item[dateField];
             const amount = showOutstanding && item.outstanding !== null
               ? new Intl.NumberFormat(i18n.language, { style: "currency", currency: item.currency, maximumFractionDigits: 0 }).format(item.outstanding)

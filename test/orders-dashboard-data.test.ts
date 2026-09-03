@@ -76,6 +76,7 @@ describe("orders dashboard data", () => {
     expect(data.upcomingQuotes).toBe(5);
     expect(data.todayFollowUpQuotes).toBe(2);
     expect(fromMock).toHaveBeenCalledTimes(11);
+    expect(fromMock).toHaveBeenCalledWith("enquiry_submissions");
   });
 
   it("keeps Shopify review filters while only treating explicit false as not sent", async () => {
@@ -116,7 +117,7 @@ describe("orders dashboard data", () => {
       orFilters.filter((filter) =>
         filter.includes('quote_status.not.in.("Done Deal","Case Closed")'),
       ),
-    ).toHaveLength(6);
+    ).toHaveLength(4);
   });
 
   it("uses the next two weeks as the upcoming quote window", async () => {

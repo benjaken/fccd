@@ -1,0 +1,88 @@
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const rpcMock = vi.hoisted(() => vi.fn());
+
+vi.mock("@/lib/supabase", () => ({
+  supabase: {
+    rpc: rpcMock,
+    from: vi.fn(),
+  },
+}));
+
+import { PublicEnquiryFormPage } from "@/components/PublicEnquiryFormPage";
+import { CATERING_ENQUIRY_SEED_FORM, CATERING_ENQUIRY_SEED_FORM_ID } from "@/lib/enquiry-form-seed";
+import { serializeEnquiryQuestions } from "@/lib/enquiry-form";
+
+const publishedForm = {
+  id: CATERING_ENQUIRY_SEED_FORM_ID,
+  internal_name: CATERING_ENQUIRY_SEED_FORM.internalName,
+  public_title: CATERING_ENQUIRY_SEED_FORM.publicTitle,
+  public_description: CATERING_ENQUIRY_SEED_FORM.publicDescription,
+  submit_label: CATERING_ENQUIRY_SEED_FORM.submitLabel,
+  slug: CATERING_ENQUIRY_SEED_FORM.slug,
+  is_default: true,
+  status: "published",
+  success_message: CATERING_ENQUIRY_SEED_FORM.successMessage,
+  ack_email_subject: "",
+  ack_email_body: "",
+  asana_project_gid: "",
+  questions: serializeEnquiryQuestions(CATERING_ENQUIRY_SEED_FORM.questions),
+  created_at: "2026-09-03T00:00:00.000Z",
+  updated_at: "2026-09-03T00:00:00.000Z",
+};
+
+describe("public enquiry form page", () => {
+  beforeEach(() => {
+    rpcMock.mockReset();
+  });
+
+  it("renders the published form without a login screen", async () => {
+    rpcMock.mockResolvedValueOnce({ data: publishedForm, error: null });
+    render(
+      <MemoryRouter initialEntries={["/quote-inquiry"]}>
+        <Routes>
+          <Route path="/quote-inquiry" element={<PublicEnquiryFormPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: publishedForm.public_title })).toBeInTheDocument();
+    expect(screen.getByText("姓名")).toBeInTheDocument();
+    expect(screen.queryByText(/登入/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Submit" })).toBeInTheDocument();
+    expect(rpcMock).toHaveBeenCalledWith("get_published_enquiry_form", { p_slug: null });
+  });
+
+  it("blocks submit when required answers are missing", async () => {
+    rpcMock.mockResolvedValue({ data: publishedForm, error: null });
+    render(
+      <MemoryRouter initialEntries={["/quote-inquiry"]}>
+        <Routes>
+          <Route path="/quote-inquiry" element={<PublicEnquiryFormPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    await screen.findByRole("button", { name: "Submit" });
+    await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+    expect((await screen.findAllByText("此題為必填")).length).toBeGreaterThan(0);
+    expect(rpcMock).not.toHaveBeenCalledWith(
+      "submit_enquiry_form",
+      expect.anything(),
+    );
+  });
+
+  it("shows a friendly empty state when no form is published", async () => {
+    rpcMock.mockResolvedValueOnce({ data: null, error: null });
+    render(
+      <MemoryRouter initialEntries={["/quote-inquiry"]}>
+        <Routes>
+          <Route path="/quote-inquiry" element={<PublicEnquiryFormPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    expect(await screen.findByRole("heading", { name: "暫不接受查詢" })).toBeInTheDocument();
+  });
+});

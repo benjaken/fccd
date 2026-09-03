@@ -1,0 +1,135 @@
+.enquiry-public-page {
+  min-height: 100dvh;
+  background:
+    radial-gradient(circle at 10% 5%, rgb(36 129 74 / 9%), transparent 28rem),
+    #f7faf8;
+  color: #17251d;
+}
+
+.enquiry-public-shell {
+  width: min(100%, 720px);
+  margin: 0 auto;
+  padding: 32px 20px 64px;
+  display: grid;
+  gap: 20px;
+}
+
+.enquiry-public-logo {
+  width: 218px;
+  max-width: 62vw;
+  height: 78px;
+  object-fit: contain;
+  object-position: left center;
+}
+
+.enquiry-public-card,
+.enquiry-builder-card {
+  background: #fff;
+  border: 1px solid #dfe8e2;
+  border-radius: 16px;
+  padding: 24px;
+  display: grid;
+  gap: 16px;
+}
+
+.enquiry-public-card h1,
+.enquiry-builder-page h1 {
+  font-size: 1.45rem;
+  line-height: 1.3;
+}
+
+.enquiry-public-card p,
+.enquiry-form-hint {
+  color: #65736a;
+  font-size: 0.95rem;
+}
+
+.enquiry-form-fields {
+  display: grid;
+  gap: 18px;
+}
+
+.enquiry-form-question {
+  display: grid;
+  gap: 8px;
+}
+
+.enquiry-form-label span {
+  font-weight: 600;
+}
+
+.enquiry-form-label em {
+  color: #c2410c;
+  font-style: normal;
+}
+
+.enquiry-form-options {
+  display: grid;
+  gap: 8px;
+}
+
+.enquiry-form-option {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 0.95rem;
+}
+
+.enquiry-form-textarea {
+  width: 100%;
+  min-height: 8rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: transparent;
+}
+
+.enquiry-form-error {
+  color: #b42318;
+  font-size: 0.85rem;
+}
+
+.enquiry-public-unavailable,
+.enquiry-public-success {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+}
+
+.enquiry-builder-page,
+.enquiry-pending-page {
+  display: grid;
+  gap: 16px;
+}
+
+.enquiry-builder-toolbar,
+.enquiry-pending-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.enquiry-question-list {
+  display: grid;
+  gap: 8px;
+}
+
+.enquiry-question-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid #dfe8e2;
+  border-radius: 12px;
+  padding: 12px;
+  background: #fff;
+}
+
+.enquiry-question-row.is-selected {
+  border-color: var(--primary);
+}
+
+.enquiry-status-draft { color: #92400e; }
+.enquiry-status-published { color: #166534; }
+.enquiry-status-disabled { color: #6b7280; }

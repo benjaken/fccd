@@ -37,12 +37,14 @@ import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { SearchSelect } from "@/components/ui/search-select";
 import { SidePanel } from "@/components/ui/side-panel";
 import { DeliveryAddressActions } from "@/components/DeliveryAddressActions";
+import { EnquiryFormFields } from "@/components/EnquiryFormFields";
 import { DistrictTranslationButton } from "@/components/DistrictTranslationButton";
 import {
   CatalogCreatePage,
   type CreatedCatalogProduct,
 } from "@/components/CatalogCreatePage";
 import { createDeliveryDistrictOption } from "@/lib/delivery-districts";
+import { fetchEnquirySubmission, type EnquirySubmissionDetail } from "@/lib/enquiry-forms-api";
 import {
   fetchPackageDetail,
   type PackageChoiceSet,
@@ -352,6 +354,7 @@ export function QuoteEditorPage({
   const listPath = isOrder ? "/orders" : "/quotes";
   const backTo = useDetailBackTo(listPath);
   const [draft, setDraft] = useState<QuoteDraft>(emptyDraft);
+  const [enquirySubmission, setEnquirySubmission] = useState<EnquirySubmissionDetail | null>(null);
   const [options, setOptions] = useState(EMPTY_OPTIONS);
   const [created, setCreated] = useState<CreatedQuote | null>(null);
   const [channelId, setChannelId] = useState("");
@@ -599,6 +602,13 @@ export function QuoteEditorPage({
         if (summary) {
           if (id) setCreated(summary);
           setChannelId(summary.channelId);
+          if (summary.enquirySubmissionId) {
+            void fetchEnquirySubmission(summary.enquirySubmissionId).then((submission) => {
+              if (submission) setEnquirySubmission(submission);
+            });
+          } else {
+            setEnquirySubmission(null);
+          }
           if (summary.draft) {
             const loadedDraft = { ...emptyDraft(), ...summary.draft };
             setDraft(copyFrom
@@ -2090,6 +2100,16 @@ export function QuoteEditorPage({
           className="panel quote-editor-form quote-editor-readonly-form quote-editor-scroll-section"
         >
           <div className="quote-editor-form-column">
+            {enquirySubmission ? (
+              <div className="enquiry-builder-card">
+                <h2>Enquiry Form 的資料</h2>
+                <EnquiryFormFields
+                  questions={enquirySubmission.formSnapshot}
+                  answers={enquirySubmission.answers}
+                  disabled
+                />
+              </div>
+            ) : null}
             <h2><FileText />{t("quoteEditor.customerSection")}</h2>
             <div className="quote-readonly-field">
               <span>{t("quoteEditor.fields.number")}</span>
@@ -2266,6 +2286,16 @@ export function QuoteEditorPage({
         onSubmit={submitHeader}
       >
           <div className="quote-editor-form-column">
+            {enquirySubmission ? (
+              <div className="enquiry-builder-card">
+                <h2>Enquiry Form 的資料</h2>
+                <EnquiryFormFields
+                  questions={enquirySubmission.formSnapshot}
+                  answers={enquirySubmission.answers}
+                  disabled
+                />
+              </div>
+            ) : null}
             <h2><FileText />{t("quoteEditor.customerSection")}</h2>
             <label className="quote-order-number-field">
               <span>{t("quoteEditor.fields.number")}{copyFrom ? " *" : ""}</span>
