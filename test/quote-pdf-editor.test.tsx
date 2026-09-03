@@ -178,7 +178,7 @@ describe("editable quote PDF page", () => {
     expect(screen.getByLabelText("數量 1")).toHaveValue("");
   });
 
-  it("keeps the dollar prefix when the unit price is cleared", async () => {
+  it("hides the dollar prefix when the unit price is cleared", async () => {
     const user = userEvent.setup();
     renderPage();
 
@@ -186,9 +186,12 @@ describe("editable quote PDF page", () => {
     expect(unitPrice.previousElementSibling).toHaveTextContent("$");
     await user.clear(unitPrice);
     expect(unitPrice).toHaveValue("");
-    expect(unitPrice.previousElementSibling).toHaveClass("quote-pdf-price-prefix");
-    expect(unitPrice.previousElementSibling).toHaveTextContent("$");
+    expect(unitPrice.previousElementSibling).toBeNull();
+    await user.tab();
+    expect(unitPrice).toHaveValue("");
+    expect(unitPrice.previousElementSibling).toBeNull();
     await user.type(unitPrice, "$88");
+    expect(unitPrice.previousElementSibling).toHaveTextContent("$");
     await user.tab();
     expect(unitPrice).toHaveValue("88");
     expect(unitPrice.previousElementSibling).toHaveTextContent("$");

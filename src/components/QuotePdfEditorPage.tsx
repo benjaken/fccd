@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   LoaderCircle,
   Minus,
@@ -206,8 +206,11 @@ function numberValue(value: string) {
 }
 
 function commitMoney(value: string) {
-  const sanitized = value.replace(/\$/g, "").trim();
-  return sanitized || "0";
+  return value.replace(/\$/g, "").trim();
+}
+
+function hasMoneyValue(value: string) {
+  return Boolean(commitMoney(value));
 }
 
 function QuotePdfMoneyInput({
@@ -221,15 +224,22 @@ function QuotePdfMoneyInput({
   onCommit: (value: string) => void;
   onDirty?: () => void;
 }) {
+  const [liveValue, setLiveValue] = useState(value);
+  useLayoutEffect(() => {
+    setLiveValue(value);
+  }, [value]);
+  const showPrefix = hasMoneyValue(liveValue);
+
   return (
-    <span className="quote-pdf-price-input">
-      <span className="quote-pdf-price-prefix" aria-hidden="true">$</span>
+    <span className={`quote-pdf-price-input${showPrefix ? "" : " is-empty"}`}>
+      {showPrefix ? <span className="quote-pdf-price-prefix" aria-hidden="true">$</span> : null}
       <PdfBlurCommitInput
         aria-label={ariaLabel}
         inputMode="decimal"
-        size={Math.max(value.length, 1)}
+        size={Math.max(liveValue.length, 1)}
         value={value}
         onDirty={onDirty}
+        onInput={(event) => setLiveValue(event.currentTarget.value)}
         onCommit={(next) => onCommit(commitMoney(next))}
       />
     </span>
