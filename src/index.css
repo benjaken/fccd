@@ -24280,17 +24280,25 @@ a.masoft-order-tag:focus-visible {
 
 .quote-line-label-remark-text {
   display: block;
-  min-height: 64px;
+  box-sizing: border-box;
+  width: 100%;
   min-width: 0;
+  min-height: 64px;
+  height: 64px;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--muted);
   color: var(--muted-foreground);
   font-size: 13px;
   line-height: 1.35;
+  overflow: hidden;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
 
-.quote-line-label-remark-text.is-empty {
-  visibility: hidden;
+.quote-line-label-remark-text:empty {
+  color: transparent;
 }
 
 .quote-line-edit-number:hover,
@@ -24301,18 +24309,7 @@ a.masoft-order-tag:focus-visible {
   background: var(--background);
   outline: 0;
 }
-
-.quote-line-remarks-list .quote-line-edit-remarks[readonly] {
-  cursor: default;
-}
-
-.quote-line-remarks-list .quote-line-edit-remarks[readonly]:hover,
-.quote-line-remarks-list .quote-line-edit-remarks[readonly]:focus {
-  border-color: var(--border);
-  background: var(--muted);
-  outline: 0;
-}
-
+
 .quote-line-actions {
   min-width: 82px;
   vertical-align: middle;

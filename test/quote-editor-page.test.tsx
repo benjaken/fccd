@@ -1111,14 +1111,13 @@ describe("Quote editor", () => {
     expect(screen.getByRole("columnheader", { name: "Remarks" })).toBeInTheDocument();
     expect(within(row).getByText("Roast pork label2 boxes").closest("td")).toHaveClass("quote-line-product");
     expect(within(row).getByText("Sauce label1 cup").closest("td")).toHaveClass("quote-line-product");
-    const firstRemark = within(row).getByRole("textbox", { name: "Remarks Roast pork 1" });
-    const secondRemark = within(row).getByRole("textbox", { name: "Remarks Roast pork 2" });
+    const firstRemark = within(row).getByText("Line note");
+    const secondRemark = within(row).getByText("Sauce note");
     expect(firstRemark.closest("td")).toHaveClass("quote-line-remarks");
     expect(secondRemark.closest("td")).toHaveClass("quote-line-remarks");
-    expect(firstRemark).toHaveValue("Line note");
-    expect(secondRemark).toHaveValue("Sauce note");
-    expect(firstRemark).toHaveAttribute("readonly");
-    expect(secondRemark).toHaveAttribute("readonly");
+    expect(firstRemark).toHaveClass("quote-line-label-remark-text");
+    expect(secondRemark).toHaveClass("quote-line-label-remark-text");
+    expect(within(row).queryByRole("textbox")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Remarks Roast pork/ })).not.toBeInTheDocument();
   });
 
@@ -1622,10 +1621,8 @@ describe("Quote editor", () => {
     expect(screen.getByText("High Chance")).toBeInTheDocument();
     expect(screen.getAllByText("Email").length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText("WATI")).toBeInTheDocument();
-    const remark = screen.getByRole("textbox", { name: "Remarks Banquet package" });
-    expect(remark).toHaveValue(longRemark);
-    expect(remark).toHaveAttribute("readonly");
-    expect(remark).toHaveAttribute("title", longRemark);
+    expect(screen.getByText(longRemark)).toHaveAttribute("title", longRemark);
+    expect(screen.getByText(longRemark)).toHaveClass("quote-line-label-remark-text");
     expect(screen.getAllByText("HK$28,350.00").length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByRole("columnheader", { name: "Label preview" })).not.toBeInTheDocument();
     expect(screen.queryByLabelText("50 × 75 mm 標籤預覽：FCBQ20260834")).not.toBeInTheDocument();

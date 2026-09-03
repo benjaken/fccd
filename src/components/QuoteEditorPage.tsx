@@ -1343,16 +1343,14 @@ export function QuoteEditorPage({
           const label = `${t("quoteEditor.items.remarks")} ${line.name || ""}${labelSuffix}`.trim();
           if (readOnly) {
             return (
-              <textarea
-                className="quote-line-edit-remarks"
-                rows={2}
-                value={row.remark}
-                aria-label={label}
+              <small
+                className="quote-line-label-remark-text"
                 title={row.remark}
-                readOnly
-                tabIndex={-1}
+                aria-label={label}
                 key={`${line.id}:remark-${remarkIndex}`}
-              />
+              >
+                {row.remark}
+              </small>
             );
           }
           return (
