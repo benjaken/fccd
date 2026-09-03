@@ -3,7 +3,14 @@ import {
   normalizeDoNotSendToFactory,
   saveOrderFactorySettings,
 } from "@/lib/order-factory-settings";
+import {
+  orderPaymentStatus,
+  paymentOutstanding,
+  type OrderPaymentStatus,
+} from "@/lib/order-payment-balance";
 import { productListDisplayName } from "@/lib/products";
+
+export { orderPaymentStatus, type OrderPaymentStatus };
 
 export type OrderEditorOption = {
   id: string;
@@ -342,7 +349,7 @@ export function orderDraftTotals(draft: OrderEditorDraft) {
     subtotal + draft.shippingFee - draft.discount - draft.cashdollarRedeemed,
   );
   const paid = draft.payments.reduce((sum, payment) => sum + numberValue(payment.amount), 0);
-  return { subtotal, total, paid, outstanding: Math.max(0, total - paid) };
+  return { subtotal, total, paid, outstanding: paymentOutstanding(total, paid) };
 }
 
 export function clearOrderCustomerInfo(
@@ -358,18 +365,6 @@ export function clearOrderCustomerInfo(
     address: "",
     customerNote: "",
   };
-}
-
-export type OrderPaymentStatus = "unpaid" | "partial" | "paid";
-
-export function orderPaymentStatus({
-  total,
-  paid,
-  outstanding,
-}: ReturnType<typeof orderDraftTotals>): OrderPaymentStatus {
-  if (outstanding <= 0 && (total > 0 || paid > 0)) return "paid";
-  if (paid > 0) return "partial";
-  return "unpaid";
 }
 
 export async function saveOrderEditor(draft: OrderEditorDraft): Promise<string> {

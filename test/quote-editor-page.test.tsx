@@ -241,6 +241,7 @@ describe("Quote editor", () => {
     expect(css).toMatch(/@media \(max-width: 620px\)[\s\S]*?\.quote-payment-step\s*>\s*footer\s*\{[^}]*flex-direction:\s*row/);
     expect(css).toMatch(/@media \(max-width: 620px\)[\s\S]*?\.quote-payment-step\s*>\s*footer\s+\.ui-button\s*\{[^}]*flex:\s*1 1 0/);
     expect(css).toMatch(/\.quote-payment-summary\s*\{[^}]*max-width:\s*640px/);
+    expect(css).toMatch(/\.quote-payment-summary\s*>\s*div\.is-overpaid\s*\{/);
     const itemCountRule = css.match(/\.quote-editor-item-count\s*\{([^}]*)\}/)?.[1];
     expect(itemCountRule).toContain("display: flex");
     expect(itemCountRule).toContain("flex-wrap: nowrap");
@@ -1888,5 +1889,84 @@ describe("Quote editor", () => {
     await user.click(await screen.findByRole("tab", { name: "Add products" }));
     expect(await screen.findByText("Iced tea")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Add to product catalog" })).not.toBeInTheDocument();
+  });
+
+  it("shows an overpayment when the order total is reduced below recorded payments", async () => {
+    const loadSummary = vi.fn().mockResolvedValue({
+      id: "order-6942",
+      orderNumber: "#6942",
+      documentType: "order",
+      grandTotal: 2876,
+      channelId: "channel-1",
+      draft: {
+        channelId: "channel-1",
+        customerName: "Customer",
+        companyName: "Company",
+        contactA: "12345678",
+        contactB: "",
+        email: "order@example.com",
+        asanaLink: "",
+        address: "1 Central Road",
+        districtId: "district-1",
+        districtName: "",
+        shippingMethodId: "shipping-home",
+        deliveryDate: "2026-08-21",
+        deliveryTime: "12:00 - 13:00",
+        shipOutTime: "11:00",
+        customerNote: "",
+        packingNote: "",
+        salesPartnerId: "",
+        internalNote: "",
+        tagIds: [],
+        quoteStatus: "",
+        quoteSalesSourceId: "",
+        quoteCommunicationChannelId: "",
+      },
+      financials: { shippingFee: 0, discount: 0, cashdollarRedeemed: 0, cashdollarPurchased: 0 },
+      payments: [{
+        id: "payment-1",
+        paymentAt: "2026-08-18",
+        paymentMethodId: "payme",
+        amount: 2916,
+        reference: "",
+      }],
+      isSentToFactory: false,
+      doNotSendToFactory: false,
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/orders/order-6942"]}>
+        <Routes>
+          <Route
+            path="/orders/:id"
+            element={(
+              <QuoteEditorPage
+                documentType="order"
+                combined
+                readOnly
+                canEdit
+                loadOptions={vi.fn().mockResolvedValue(options)}
+                loadSummary={loadSummary}
+                loadLines={vi.fn().mockResolvedValue([])}
+                loadShippingFeeOptions={vi.fn().mockResolvedValue(shippingFeeOptions)}
+              />
+            )}
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "#6942" })).toBeInTheDocument();
+    expect(screen.getByRole("status", { name: /付款狀態：多付/ })).toHaveTextContent("HK$40.00");
+    const summary = document.querySelector(".quote-payment-summary");
+    expect(summary).not.toBeNull();
+    expect(summary).toHaveTextContent("Receivable");
+    expect(summary).toHaveTextContent("HK$2,876.00");
+    expect(summary).toHaveTextContent("Paid");
+    expect(summary).toHaveTextContent("HK$2,916.00");
+    expect(summary).toHaveTextContent("Overpaid");
+    expect(summary).toHaveTextContent("HK$40.00");
+    expect(summary).not.toHaveTextContent("Outstanding");
+    expect(summary?.querySelector(".is-overpaid")).not.toBeNull();
   });
 });

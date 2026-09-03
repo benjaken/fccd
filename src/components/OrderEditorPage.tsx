@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   ArrowLeft,
+  Banknote,
   Check,
   CircleCheckBig,
   ChevronDown,
@@ -39,6 +40,7 @@ import {
   type OrderEditorOption,
   type OrderEditorOptions,
 } from "@/lib/order-editor";
+import { paymentBalanceSummary } from "@/lib/order-payment-balance";
 import { useMediaQuery } from "@/lib/use-media-query";
 
 type Step = "details" | "items" | "payments";
@@ -225,6 +227,7 @@ export function OrderEditorPage({
 
   const totals = useMemo(() => orderDraftTotals(draft), [draft]);
   const paymentStatus = orderPaymentStatus(totals);
+  const paymentBalance = paymentBalanceSummary(totals.total, totals.paid);
   const activeStepIndex = STEPS.findIndex((item) => item.id === step);
   const update = <K extends keyof OrderEditorDraft>(key: K, value: OrderEditorDraft[K]) =>
     setDraft((current) => ({ ...current, [key]: value }));
@@ -372,17 +375,19 @@ export function OrderEditorPage({
         <aside
           className={`order-editor-payment-status is-${paymentStatus}`}
           role="status"
-          aria-label={paymentStatus === "paid" ? "付款狀態：完成付款" : paymentStatus === "partial" ? `付款狀態：尚欠 ${money(totals.outstanding)}` : "付款狀態：尚未付款"}
+          aria-label={paymentStatus === "overpaid" ? `付款狀態：多付 ${money(paymentBalance.overpaid)}` : paymentStatus === "paid" ? "付款狀態：完成付款" : paymentStatus === "partial" ? `付款狀態：尚欠 ${money(paymentBalance.balanceAmount)}` : "付款狀態：尚未付款"}
         >
           <span className="order-editor-payment-status-icon" aria-hidden="true">
-            {paymentStatus === "paid" ? <CircleCheckBig /> : paymentStatus === "partial" ? <CreditCard /> : <CircleAlert />}
+            {paymentStatus === "overpaid" ? <Banknote /> : paymentStatus === "paid" ? <CircleCheckBig /> : paymentStatus === "partial" ? <CreditCard /> : <CircleAlert />}
           </span>
           <span className="order-editor-payment-status-copy">
             <small>付款狀態</small>
-            {paymentStatus === "paid" ? (
+            {paymentStatus === "overpaid" ? (
+              <><strong>多付 {money(paymentBalance.overpaid)}</strong><em>已收超過應收金額</em></>
+            ) : paymentStatus === "paid" ? (
               <><strong>完成付款</strong><em>款項已收齊</em></>
             ) : paymentStatus === "partial" ? (
-              <><strong>尚欠 {money(totals.outstanding)}</strong><em>已收 {money(totals.paid)}</em></>
+              <><strong>尚欠 {money(paymentBalance.balanceAmount)}</strong><em>已收 {money(totals.paid)}</em></>
             ) : (
               <><strong>尚未付款</strong><em>尚未收到任何款項</em></>
             )}
@@ -573,7 +578,10 @@ export function OrderEditorPage({
             <div className="order-payment-summary">
               <div><span>訂單總額</span><strong>{money(totals.total)}</strong></div>
               <div><span>已收</span><strong>{money(totals.paid)}</strong></div>
-              <div className="outstanding"><span>尚欠</span><strong>{money(totals.outstanding)}</strong></div>
+              <div className={paymentBalance.balanceKind}>
+                <span>{paymentBalance.balanceKind === "overpaid" ? "多付" : "尚欠"}</span>
+                <strong>{money(paymentBalance.balanceAmount)}</strong>
+              </div>
             </div>
           </>
         )}
