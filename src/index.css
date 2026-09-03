@@ -358,7 +358,16 @@ button {
 .home-sales-table thead .home-sales-total-col,
 .home-sales-table td.home-sales-total-value,
 .home-sales-table td.home-sales-total-value .home-sales-money {
+  color: var(--foreground);
   font-weight: 700;
+}
+
+.home-sales-table td.home-sales-total-value.change-positive {
+  color: oklch(0.48 0.145 148);
+}
+
+.home-sales-table td.home-sales-total-value.change-negative {
+  color: var(--destructive);
 }
 
 .home-sales-table thead .home-sales-channel-col {
@@ -505,8 +514,18 @@ button {
     background: color-mix(in oklch, var(--muted) 38%, var(--card));
   }
 
+  .home-sales-channel-card.is-total > header strong,
   .home-sales-channel-card.is-total dd {
+    color: var(--foreground);
     font-weight: 700;
+  }
+
+  .home-sales-channel-card.is-total dd.change-positive {
+    color: oklch(0.48 0.145 148);
+  }
+
+  .home-sales-channel-card.is-total dd.change-negative {
+    color: var(--destructive);
   }
 
   .home-sales-skeleton-panel .table-wrap {
