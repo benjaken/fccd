@@ -23834,6 +23834,17 @@ a.masoft-order-tag:focus-visible {
   font-size: 0.75rem;
 }
 
+.quote-mobile-line > header .quote-line-remarks {
+  grid-column: 1 / -1;
+  width: 100%;
+  max-width: none;
+}
+
+.quote-mobile-line > header .quote-line-remark-row {
+  width: 100%;
+  min-width: 0;
+}
+
 .quote-mobile-line-actions {
   display: flex;
   flex-shrink: 0;
