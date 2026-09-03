@@ -28,6 +28,8 @@ describe("Workspace switcher", () => {
     expect(workspaceFromPath("/restaurant")).toBe("factory");
     expect(workspaceFromPath("/restaurant-workspace")).toBe("restaurant");
     expect(workspaceFromPath("/restaurant-workspace/records")).toBe("restaurant");
+    expect(workspaceFromPath("/factory/warehouse")).toBe("factory");
+    expect(workspaceFromPath("/factory/warehouse/receipts")).toBe("factory");
   });
 
   it("never marks 工場版面 as the active workspace link", () => {

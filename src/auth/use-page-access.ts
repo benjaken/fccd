@@ -315,6 +315,18 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
     prefix: "/factory/production-calendar",
     pageKey: "workspace.factory.production_calendar",
   },
+  {
+    prefix: "/factory/warehouse/shipments",
+    pageKey: "workspace.factory.warehouse.outbound",
+  },
+  {
+    prefix: "/factory/warehouse/receipts",
+    pageKey: "workspace.factory.warehouse.inbound",
+  },
+  {
+    prefix: "/factory/warehouse",
+    pageKey: "workspace.factory.warehouse.pending",
+  },
   { prefix: "/factory", pageKey: "workspace.factory.board" },
   {
     prefix: "/driver-delivery/available",
@@ -474,6 +486,12 @@ const PAGE_ACCESS_CHILD_KEYS: Record<string, string[]> = {
     "workspace.factory.meat_delivery_note",
     "workspace.factory.multi_day_menu",
     "workspace.factory.production_calendar",
+    "workspace.factory.warehouse",
+  ],
+  "workspace.factory.warehouse": [
+    "workspace.factory.warehouse.pending",
+    "workspace.factory.warehouse.outbound",
+    "workspace.factory.warehouse.inbound",
   ],
   "workspace.delivery": [
     "workspace.delivery.available",

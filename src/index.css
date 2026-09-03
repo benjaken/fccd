@@ -34916,7 +34916,8 @@ body:has(.quote-clause-modal-root) { overflow: hidden; }
   }
 }
 
-.restaurant-workspace {
+.restaurant-workspace,
+.factory-warehouse {
   min-height: 100dvh;
   background: var(--background);
 }

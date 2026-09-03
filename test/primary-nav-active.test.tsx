@@ -284,6 +284,15 @@ describe("Primary navigation section matching", () => {
     expect(pageAccessKey("/factory/production-calendar")).toBe(
       "workspace.factory.production_calendar",
     );
+    expect(pageAccessKey("/factory/warehouse")).toBe(
+      "workspace.factory.warehouse.pending",
+    );
+    expect(pageAccessKey("/factory/warehouse/shipments")).toBe(
+      "workspace.factory.warehouse.outbound",
+    );
+    expect(pageAccessKey("/factory/warehouse/receipts")).toBe(
+      "workspace.factory.warehouse.inbound",
+    );
     expect(pageAccessKey("/driver-delivery")).toBe("workspace.delivery");
     expect(pageAccessKey("/driver-delivery/available")).toBe(
       "workspace.delivery.available",

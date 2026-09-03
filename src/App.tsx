@@ -85,6 +85,12 @@ import { FactoryOrderPage } from "@/components/FactoryOrderPage";
 import { FactoryMeatDeliveryNotePage } from "@/components/FactoryMeatDeliveryNotePage";
 import { FactoryMultiDayReportPage } from "@/components/FactoryMultiDayReportPage";
 import { FactoryProductionCalendarPage } from "@/components/FactoryProductionCalendarPage";
+import { FactoryWarehousePage } from "@/components/FactoryWarehousePage";
+import {
+  FactoryWarehousePendingPage,
+  FactoryWarehouseReceiptsPage,
+  FactoryWarehouseShipmentsPage,
+} from "@/components/FactoryWarehousePages";
 import { DriverDeliveryPage } from "@/components/DriverDeliveryPage";
 import { CustomerSelfServicePage } from "@/components/CustomerSelfServicePage";
 import { RawMeatInventoryCalcPage } from "@/components/RawMeatInventoryCalcPage";
@@ -2443,6 +2449,26 @@ function FactoryProductionCalendarWorkspace() {
   );
 }
 
+function FactoryWarehouseWorkspace() {
+  const { profile } = useAuth();
+  const pageAccess = usePageAccess(profile?.role);
+  if (pageAccess.loading) return <AuthLoadingScreen />;
+  return (
+    <ProtectedWorkspace
+      permissionKey="workspace.factory.warehouse"
+      fallbackPermissionKey="workspace.factory"
+    >
+      <Routes>
+        <Route element={<FactoryWarehousePage />}>
+          <Route index element={<FactoryWarehousePendingPage />} />
+          <Route path="shipments" element={<FactoryWarehouseShipmentsPage />} />
+          <Route path="receipts" element={<FactoryWarehouseReceiptsPage />} />
+        </Route>
+      </Routes>
+    </ProtectedWorkspace>
+  );
+}
+
 function DriverDeliveryWorkspace() {
   const location = useLocation();
   return (
@@ -2517,6 +2543,14 @@ function App() {
         element={
           <AuthProvider>
             <FactoryProductionCalendarWorkspace />
+          </AuthProvider>
+        }
+      />
+      <Route
+        path="/factory/warehouse/*"
+        element={
+          <AuthProvider>
+            <FactoryWarehouseWorkspace />
           </AuthProvider>
         }
       />
