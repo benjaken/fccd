@@ -54,6 +54,9 @@ describe("quote PDF print stylesheet", () => {
     expect(css).toMatch(
       /\.quote-pdf-price-prefix\s*\{\s*flex:\s*0 0 auto;/,
     );
+    expect(css).toMatch(
+      /\.quote-pdf-table \.quote-pdf-sequence-input\s*\{\s*padding:\s*0\.2rem 0;\s*text-align:\s*center;/,
+    );
   });
 
   it("prints each configured cover or back image as a full A4 page", () => {

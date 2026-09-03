@@ -423,6 +423,8 @@ describe("editable quote PDF page", () => {
     expect(within(customerCompany).getByLabelText("客戶名稱")).toHaveValue("程嘉敏");
     expect(within(customerCompany).getByLabelText("公司名稱")).toHaveValue("STFA Seaward Woo College");
     expect(screen.getAllByText("quotes@foodchannels-catering.com").length).toBeGreaterThan(0);
+    expect(screen.getByLabelText("序號 1")).toHaveValue("1");
+    expect(screen.getByLabelText("序號 1").tagName).toBe("INPUT");
     expect(screen.getByLabelText("產品 1")).toHaveValue("雙拼飯盒");
     expect(screen.getByLabelText("產品 1").tagName).toBe("INPUT");
     expect(screen.getByLabelText("送貨地址").tagName).toBe("TEXTAREA");
@@ -510,6 +512,61 @@ describe("editable quote PDF page", () => {
     expect(screen.queryByRole("button", { name: "儲存工作稿" })).not.toBeInTheDocument();
     await waitFor(() => expect(JSON.parse(localStorage.getItem("fccd:quote-pdf-draft:quote-1") || "{}").lines[0].description).toBe("自訂活動項目"));
     expect(screen.queryByText("已自動儲存")).not.toBeInTheDocument();
+  });
+
+  it("lets staff edit or clear product sequence numbers", async () => {
+    const user = userEvent.setup();
+    const headerMenu: OrderDetailResult = {
+      ...lunchBoxResult,
+      lines: [
+        { ...lunchBoxResult.lines[0], id: "line-1", productName: "12月4日 - 午餐選項", quantity: 0, unitPrice: 0, totalPrice: 0 },
+        { ...lunchBoxResult.lines[0], id: "line-2", productName: "(雙格) 冬菇蒸肉餅飯", quantity: 0, unitPrice: 50, totalPrice: 0 },
+      ],
+    };
+    renderPage(vi.fn().mockResolvedValue(headerMenu));
+
+    const firstSequence = await screen.findByLabelText("序號 1");
+    const secondSequence = screen.getByLabelText("序號 2");
+    expect(firstSequence).toHaveValue("1");
+    expect(secondSequence).toHaveValue("2");
+    expect(document.querySelector(".quote-pdf-table")).toHaveClass("has-no-quantities");
+
+    await user.clear(firstSequence);
+    await user.tab();
+    expect(firstSequence).toHaveValue("");
+    await user.clear(secondSequence);
+    await user.type(secondSequence, "1");
+    await user.tab();
+    expect(secondSequence).toHaveValue("1");
+
+    await waitFor(() => {
+      const saved = JSON.parse(localStorage.getItem("fccd:quote-pdf-draft:quote-1") || "{}");
+      expect(saved.lines[0].sequence).toBe("");
+      expect(saved.lines[1].sequence).toBe("1");
+    });
+  });
+
+  it("keeps custom sequence numbers when quote product names refresh", async () => {
+    localStorage.setItem("fccd:quote-pdf-draft:quote-1", JSON.stringify({
+      lines: [
+        { id: "line-1", description: "舊標題", quantity: "0", unitPrice: "0", sequence: "" },
+        { id: "line-2", description: "舊菜式", quantity: "0", unitPrice: "50", sequence: "1" },
+      ],
+    }));
+    const headerMenu: OrderDetailResult = {
+      ...lunchBoxResult,
+      lines: [
+        { ...lunchBoxResult.lines[0], id: "line-1", productName: "12月4日 - 午餐選項", quantity: 0, unitPrice: 0, totalPrice: 0 },
+        { ...lunchBoxResult.lines[0], id: "line-2", productName: "(雙格) 冬菇蒸肉餅飯", quantity: 0, unitPrice: 50, totalPrice: 0 },
+      ],
+    };
+
+    renderPage(vi.fn().mockResolvedValue(headerMenu));
+
+    expect(await screen.findByLabelText("產品 1")).toHaveValue("12月4日 - 午餐選項");
+    expect(screen.getByLabelText("序號 1")).toHaveValue("");
+    expect(screen.getByLabelText("產品 2")).toHaveValue("(雙格) 冬菇蒸肉餅飯");
+    expect(screen.getByLabelText("序號 2")).toHaveValue("1");
   });
 
   it("keeps typing in a PDF text field local until the field loses focus", async () => {

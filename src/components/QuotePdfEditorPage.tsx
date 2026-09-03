@@ -57,6 +57,7 @@ const fetchConfiguredShippingFees: ShippingFeeLoader = async () =>
 
 type EditableLine = {
   id: string;
+  sequence?: string;
   description: string;
   quantity: string;
   unitPrice: string;
@@ -158,6 +159,27 @@ function resultToDraft(result: OrderDetailResult): QuotePdfDraft {
   };
 }
 
+function applyStoredLineSequences(lines: EditableLine[], storedLines: unknown): EditableLine[] {
+  if (!Array.isArray(storedLines)) return lines;
+  const sequences = new Map<string, string>();
+  for (const item of storedLines) {
+    if (!item || typeof item !== "object") continue;
+    const line = item as { id?: unknown; sequence?: unknown };
+    if (typeof line.id === "string" && typeof line.sequence === "string") {
+      sequences.set(line.id, line.sequence);
+    }
+  }
+  if (sequences.size === 0) return lines;
+  return lines.map((line) => {
+    const sequence = sequences.get(line.id);
+    return sequence === undefined ? line : { ...line, sequence };
+  });
+}
+
+function lineSequenceValue(line: EditableLine, index: number) {
+  return line.sequence ?? String(index + 1);
+}
+
 function normalizeDraft(value: Partial<QuotePdfDraft> | null | undefined, fallback: QuotePdfDraft): QuotePdfDraft {
   const stored = value && typeof value === "object" ? value : {};
   const normalizeItems = (items: unknown, fallbackItems: string[]) => {
@@ -171,6 +193,7 @@ function normalizeDraft(value: Partial<QuotePdfDraft> | null | undefined, fallba
     sourceFinancialsVersion: 1,
     // Quote/order data always comes from the latest saved source record. The
     // local PDF draft is merged afterwards only for PDF-specific additions.
+    lines: applyStoredLineSequences(fallback.lines, stored.lines),
     additionalInfo: stored.additionalInfo ?? [],
     activities: (stored.activities ?? []).map((activity) => ({
       ...activity,
@@ -672,11 +695,12 @@ export function QuotePdfEditorPage({
         <tbody>
           {lines.map((line, pageIndex) => {
             const index = offset + pageIndex;
+            const sequence = lineSequenceValue(line, index);
             const quantity = numberValue(line.quantity);
             const lineSubtotal = quantity * numberValue(line.unitPrice);
             return (
               <tr data-pdf-auto-product-index={index} key={line.id}>
-                <td>{index + 1}</td>
+                <td><PdfBlurCommitInput className="quote-pdf-sequence-input" aria-label={`序號 ${index + 1}`} size={Math.max(sequence.length, 1)} value={sequence} onDirty={markDraftDirty} onCommit={(value) => updateLine(index, { sequence: value })} /></td>
                 <td><PdfBlurCommitInput className="quote-pdf-product-input" aria-label={`產品 ${index + 1}`} value={line.description} onDirty={markDraftDirty} onCommit={(value) => updateLine(index, { description: value })} /></td>
                 <td><QuotePdfMoneyInput aria-label={`單價 ${index + 1}`} value={line.unitPrice} onDirty={markDraftDirty} onCommit={(value) => updateLine(index, { unitPrice: value })} /></td>
                 <td className={quantityColumnClassName}><PdfBlurCommitInput aria-label={`${isLunchBox ? "份數" : "數量"} ${index + 1}`} inputMode="decimal" value={line.quantity === "0" ? "" : line.quantity} onDirty={markDraftDirty} onCommit={(value) => updateLine(index, { quantity: numberValue(value) > 0 ? value.trim() : "" })} /></td>
