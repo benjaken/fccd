@@ -17,8 +17,8 @@ const liveData: HomeSalesDashboardData = {
   ],
   cateringChannels: [
     {
-      id: "catering",
-      name: "Catering",
+      id: "Catering",
+      name: "FCC",
       values: {
         previousYearPreviousMonth: 80000,
         previousYearCurrentMonth: 90000,
@@ -30,10 +30,10 @@ const liveData: HomeSalesDashboardData = {
   tkoChannels: [
     {
       id: "foodpanda",
-      name: "Foodpanda",
+      name: "Food Panda",
       values: {
-        previousYearPreviousMonth: 0,
-        previousYearCurrentMonth: 0,
+        previousYearPreviousMonth: 40000,
+        previousYearCurrentMonth: 50000,
         previousMonth: 50000,
         currentMonth: 55000,
       },
@@ -46,7 +46,7 @@ describe("monthly sales dashboard", () => {
     await i18n.changeLanguage("zh-HK");
   });
 
-  it("shows catering YoY comparisons and TKO channel month comparison without charts", async () => {
+  it("shows side-by-side YoY matrices with brand abbreviations", async () => {
     const loadDashboard = vi.fn().mockResolvedValue(liveData);
     render(
       <MemoryRouter>
@@ -56,26 +56,31 @@ describe("monthly sales dashboard", () => {
 
     expect(screen.getByRole("status")).toHaveTextContent("正在載入最新營運數據");
     expect(await screen.findByRole("heading", { name: "每月銷售總覽" })).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { name: "本月對比" }).length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByRole("heading", { name: "上月對比" }).length).toBeGreaterThanOrEqual(2);
     const tables = screen.getAllByRole("table");
-    expect(within(tables[0]).getByText("Catering")).toBeInTheDocument();
-    expect(within(tables[0]).getByText("上月（跨年比較）")).toBeInTheDocument();
-    expect(within(tables[0]).getAllByText("+25.0%")).toHaveLength(2);
+    expect(tables).toHaveLength(4);
+    expect(within(tables[0]).getByRole("columnheader", { name: "FCC" })).toBeInTheDocument();
+    expect(within(tables[0]).getByRole("columnheader", { name: "Total" })).toBeInTheDocument();
+    expect(within(tables[0]).getByRole("rowheader", { name: "2026年9月．累計中" })).toBeInTheDocument();
     expect(within(tables[0]).getAllByText("+33.3%")).toHaveLength(2);
-    expect(within(tables[1]).getByText("Foodpanda")).toBeInTheDocument();
-    expect(within(tables[1]).getAllByText("+10.0%")).toHaveLength(2);
-    expect(screen.getAllByText("總額")).toHaveLength(4);
+    expect(within(tables[1]).getAllByText("+25.0%")).toHaveLength(2);
+    expect(within(tables[2]).getByRole("columnheader", { name: "Food Panda" })).toBeInTheDocument();
+    expect(within(tables[2]).getAllByText("+10.0%")).toHaveLength(2);
     expect(screen.queryByText("YLP 桂花小幸 元朗")).not.toBeInTheDocument();
     expect(document.querySelector(".home-sales-mini-bar")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "更新數據" })).not.toBeInTheDocument();
     expect(loadDashboard).toHaveBeenCalledWith("Super Admin");
+    expect(tables[0].querySelectorAll(".home-sales-total-value")).not.toHaveLength(0);
+    expect(tables[0].querySelectorAll(".home-sales-channel-value")).not.toHaveLength(0);
     const cards = document.querySelectorAll(".home-sales-channel-card");
     expect(cards).toHaveLength(4);
-    expect(cards[0]).toHaveTextContent("Catering");
-    expect(cards[0]).toHaveTextContent("上月（跨年比較）");
-    expect(cards[0]).toHaveTextContent("本月（跨年比較）");
-    expect(cards[0]).toHaveTextContent("+25.0%");
-    expect(cards[2]).toHaveTextContent("Foodpanda");
-    expect(cards[2]).toHaveTextContent("+10.0%");
+    expect(cards[0]).toHaveClass("is-total");
+    expect(cards[1]).toHaveTextContent("FCC");
+    expect(cards[1]).toHaveTextContent("本月對比");
+    expect(cards[1]).toHaveTextContent("+33.3%");
+    expect(cards[3]).toHaveTextContent("Food Panda");
+    expect(cards[3]).toHaveTextContent("+10.0%");
   });
 
   it("offers a retry after a dashboard query fails", async () => {
@@ -93,7 +98,7 @@ describe("monthly sales dashboard", () => {
     expect(await screen.findByText("暫時無法載入首頁數據")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "重試" }));
     await waitFor(() => expect(loadDashboard).toHaveBeenCalledTimes(2));
-    expect(await screen.findByRole("rowheader", { name: "Catering" })).toBeInTheDocument();
+    expect((await screen.findAllByRole("columnheader", { name: "FCC" })).length).toBeGreaterThan(0);
   });
 
   it("filters the first sales table by brand", async () => {
@@ -103,8 +108,8 @@ describe("monthly sales dashboard", () => {
       cateringChannels: [
         ...liveData.cateringChannels,
         {
-          id: "kitchen",
-          name: "Kitchen",
+          id: "Kitchen",
+          name: "FCK",
           values: {
             previousYearPreviousMonth: 10,
             previousYearCurrentMonth: 20,
@@ -121,9 +126,9 @@ describe("monthly sales dashboard", () => {
     );
 
     const brandFilter = await screen.findByRole("combobox", { name: "篩選品牌" });
-    await user.selectOptions(brandFilter, "kitchen");
+    await user.selectOptions(brandFilter, "Kitchen");
     const cateringTable = screen.getAllByRole("table")[0];
-    expect(within(cateringTable).getByRole("rowheader", { name: "Kitchen" })).toBeInTheDocument();
-    expect(within(cateringTable).queryByRole("rowheader", { name: "Catering" })).not.toBeInTheDocument();
+    expect(within(cateringTable).getByRole("columnheader", { name: "FCK" })).toBeInTheDocument();
+    expect(within(cateringTable).queryByRole("columnheader", { name: "FCC" })).not.toBeInTheDocument();
   });
 });

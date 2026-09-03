@@ -47,6 +47,15 @@ function totalRowFor(rows: HomeSalesComparisonRow[], name: string): HomeSalesCom
   };
 }
 
+function valueClassName(isTotal: boolean, change?: number | null) {
+  return [
+    isTotal ? "home-sales-total-value" : "home-sales-channel-value",
+    changeClassName(change ?? null),
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
 export function HomeSalesDashboardPage({
   loadDashboard = defaultLoader,
   role,
@@ -97,13 +106,11 @@ export function HomeSalesDashboardPage({
   const periodByKey = Object.fromEntries(
     periods.map((period) => [period.key, period]),
   ) as Partial<Record<HomeSalesPeriodKey, HomeSalesPeriod>>;
-  const periodLabel = (key: HomeSalesPeriodKey) => {
+  const periodLabel = (key: HomeSalesPeriodKey, accumulating = false) => {
     const period = periodByKey[key];
     if (!period) return "—";
-    return new Intl.DateTimeFormat(i18n.language, {
-      year: "numeric",
-      month: "short",
-    }).format(new Date(period.year, period.month - 1, 1));
+    const label = t("dashboard.yearMonth", { year: period.year, month: period.month });
+    return accumulating ? `${label}．${t("dashboard.accumulating")}` : label;
   };
   const formatChange = (value: number | null) =>
     value === null ? "—" : `${value >= 0 ? "+" : ""}${value.toFixed(1)}%`;
@@ -111,7 +118,9 @@ export function HomeSalesDashboardPage({
   const visibleCateringChannels = cateringChannelFilter
     ? cateringChannels.filter((row) => row.id === cateringChannelFilter)
     : cateringChannels;
-  const tkoChannels = data?.tkoChannels ?? [];
+  const tkoChannels = (data?.tkoChannels ?? []).map((row) =>
+    row.id === "other" ? { ...row, name: t("dashboard.other") } : row,
+  );
 
   return (
     <section className="home-sales-dashboard">
@@ -161,7 +170,7 @@ export function HomeSalesDashboardPage({
             </label>
           }
         />
-        <CateringComparisonTable
+        <YearComparisonPair
           rows={visibleCateringChannels}
           money={money}
           periodLabel={periodLabel}
@@ -179,7 +188,7 @@ export function HomeSalesDashboardPage({
           actionLabel={t("dashboard.viewStoreReport")}
           actionTo="/reports/shops"
         />
-        <TkoComparisonTable
+        <YearComparisonPair
           rows={tkoChannels}
           money={money}
           periodLabel={periodLabel}
@@ -221,7 +230,7 @@ function SalesPanelHeader({
   );
 }
 
-function CateringComparisonTable({
+function YearComparisonPair({
   rows,
   money,
   periodLabel,
@@ -231,74 +240,42 @@ function CateringComparisonTable({
 }: {
   rows: HomeSalesComparisonRow[];
   money: Intl.NumberFormat;
-  periodLabel: (key: HomeSalesPeriodKey) => string;
+  periodLabel: (key: HomeSalesPeriodKey, accumulating?: boolean) => string;
   formatChange: (value: number | null) => string;
   emptyLabel: string;
   t: (key: string) => string;
 }) {
   const displayRows = rows.length
-    ? [...rows, totalRowFor(rows, t("dashboard.total"))]
+    ? [totalRowFor(rows, t("dashboard.totalColumn")), ...rows]
     : rows;
+
   return (
     <>
-      <div className="table-wrap home-sales-table-wrap">
-        <table className="home-sales-table">
-          <thead>
-            <tr>
-              <th rowSpan={2}>{t("dashboard.channel")}</th>
-              <th colSpan={4}>{t("dashboard.previousMonthYearComparison")}</th>
-              <th className="home-sales-period-divider" colSpan={4}>{t("dashboard.currentMonthYearComparison")}</th>
-            </tr>
-            <tr>
-              <th>{periodLabel("previousYearPreviousMonth")}</th>
-              <th>{periodLabel("previousMonth")}</th>
-              <th>{t("dashboard.difference")}</th>
-              <th>{t("dashboard.yoy")}</th>
-              <th className="home-sales-period-divider">{periodLabel("previousYearCurrentMonth")}</th>
-              <th className="is-current-month">{periodLabel("currentMonth")} · {t("dashboard.accumulating")}</th>
-              <th>{t("dashboard.difference")}</th>
-              <th>{t("dashboard.yoy")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {displayRows.map((row) => {
-              const previousMonthChange = percentageChange(
-                row.values.previousMonth,
-                row.values.previousYearPreviousMonth,
-              );
-              const currentMonthChange = percentageChange(
-                row.values.currentMonth,
-                row.values.previousYearCurrentMonth,
-              );
-              const previousMonthDifference = row.values.previousMonth - row.values.previousYearPreviousMonth;
-              const currentMonthDifference = row.values.currentMonth - row.values.previousYearCurrentMonth;
-              return (
-                <tr key={row.id} className={row.id === "__total__" ? "home-sales-total-row" : undefined}>
-                  <th scope="row">{row.name}</th>
-                  <MoneyCell value={row.values.previousYearPreviousMonth} money={money} />
-                  <MoneyCell value={row.values.previousMonth} money={money} />
-                  <td className={changeClassName(previousMonthDifference)}>
-                    {previousMonthDifference > 0 ? "+" : ""}{money.format(previousMonthDifference)}
-                  </td>
-                  <td className={changeClassName(previousMonthChange)}>
-                    {formatChange(previousMonthChange)}
-                  </td>
-                  <MoneyCell value={row.values.previousYearCurrentMonth} money={money} divider />
-                  <MoneyCell value={row.values.currentMonth} money={money} current />
-                  <td className={changeClassName(currentMonthDifference)}>
-                    {currentMonthDifference > 0 ? "+" : ""}{money.format(currentMonthDifference)}
-                  </td>
-                  <td className={changeClassName(currentMonthChange)}>
-                    {formatChange(currentMonthChange)}
-                  </td>
-                </tr>
-              );
-            })}
-            {!rows.length ? (
-              <tr><td className="dashboard-empty-row" colSpan={9}>{emptyLabel}</td></tr>
-            ) : null}
-          </tbody>
-        </table>
+      <div className="home-sales-comparison-pair">
+        <YearComparisonTable
+          title={t("dashboard.thisMonthComparison")}
+          columns={displayRows}
+          currentKey="currentMonth"
+          previousKey="previousYearCurrentMonth"
+          currentLabel={periodLabel("currentMonth", true)}
+          previousLabel={periodLabel("previousYearCurrentMonth")}
+          money={money}
+          formatChange={formatChange}
+          emptyLabel={emptyLabel}
+          t={t}
+        />
+        <YearComparisonTable
+          title={t("dashboard.lastMonthComparison")}
+          columns={displayRows}
+          currentKey="previousMonth"
+          previousKey="previousYearPreviousMonth"
+          currentLabel={periodLabel("previousMonth")}
+          previousLabel={periodLabel("previousYearPreviousMonth")}
+          money={money}
+          formatChange={formatChange}
+          emptyLabel={emptyLabel}
+          t={t}
+        />
       </div>
       <div className="home-sales-card-list">
         {displayRows.map((row) => (
@@ -311,7 +288,7 @@ function CateringComparisonTable({
             t={t}
             blocks={[
               {
-                title: t("dashboard.previousMonthYearComparison"),
+                title: t("dashboard.lastMonthComparison"),
                 previousLabel: periodLabel("previousYearPreviousMonth"),
                 currentLabel: periodLabel("previousMonth"),
                 previous: row.values.previousYearPreviousMonth,
@@ -319,9 +296,9 @@ function CateringComparisonTable({
                 changeLabel: t("dashboard.yoy"),
               },
               {
-                title: t("dashboard.currentMonthYearComparison"),
+                title: t("dashboard.thisMonthComparison"),
                 previousLabel: periodLabel("previousYearCurrentMonth"),
-                currentLabel: `${periodLabel("currentMonth")} · ${t("dashboard.accumulating")}`,
+                currentLabel: periodLabel("currentMonth", true),
                 previous: row.values.previousYearCurrentMonth,
                 current: row.values.currentMonth,
                 changeLabel: t("dashboard.yoy"),
@@ -335,85 +312,115 @@ function CateringComparisonTable({
   );
 }
 
-function TkoComparisonTable({
-  rows,
+function YearComparisonTable({
+  title,
+  columns,
+  currentKey,
+  previousKey,
+  currentLabel,
+  previousLabel,
   money,
-  periodLabel,
   formatChange,
   emptyLabel,
   t,
 }: {
-  rows: HomeSalesComparisonRow[];
+  title: string;
+  columns: HomeSalesComparisonRow[];
+  currentKey: HomeSalesPeriodKey;
+  previousKey: HomeSalesPeriodKey;
+  currentLabel: string;
+  previousLabel: string;
   money: Intl.NumberFormat;
-  periodLabel: (key: HomeSalesPeriodKey) => string;
   formatChange: (value: number | null) => string;
   emptyLabel: string;
   t: (key: string) => string;
 }) {
-  const displayRows = rows.length
-    ? [...rows, totalRowFor(rows, t("dashboard.total"))]
-    : rows;
   return (
-    <>
+    <div className="home-sales-matrix">
+      <h3>{title}</h3>
       <div className="table-wrap home-sales-table-wrap">
-        <table className="home-sales-table home-sales-tko-table">
+        <table className="home-sales-table home-sales-matrix-table">
           <thead>
             <tr>
-              <th>{t("dashboard.channel")}</th>
-              <th>{periodLabel("previousMonth")}</th>
-              <th className="is-current-month home-sales-period-divider">{periodLabel("currentMonth")} · {t("dashboard.accumulating")}</th>
-              <th>{t("dashboard.difference")}</th>
-              <th>{t("dashboard.mom")}</th>
+              <th scope="col"><span className="sr-only">{t("dashboard.period")}</span></th>
+              {columns.map((column) => (
+                <th
+                  scope="col"
+                  key={column.id}
+                  className={column.id === "__total__" ? "home-sales-total-col" : "home-sales-channel-col"}
+                >
+                  {column.name}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
-            {displayRows.map((row) => {
-              const difference = row.values.currentMonth - row.values.previousMonth;
-              const change = percentageChange(row.values.currentMonth, row.values.previousMonth);
-              return (
-                <tr key={row.id} className={row.id === "__total__" ? "home-sales-total-row" : undefined}>
-                  <th scope="row">{row.name}</th>
-                  <MoneyCell value={row.values.previousMonth} money={money} />
-                  <MoneyCell value={row.values.currentMonth} money={money} current divider />
-                  <td className={changeClassName(difference)}>
-                    {difference > 0 ? "+" : ""}{money.format(difference)}
-                  </td>
-                  <td className={changeClassName(change)}>
-                    {formatChange(change)}
-                  </td>
+            {columns.length ? (
+              <>
+                <tr className="is-current-month-row">
+                  <th scope="row">{currentLabel}</th>
+                  {columns.map((column) => (
+                    <MoneyCell
+                      key={column.id}
+                      value={column.values[currentKey]}
+                      money={money}
+                      total={column.id === "__total__"}
+                      current
+                    />
+                  ))}
                 </tr>
-              );
-            })}
-            {!rows.length ? (
-              <tr><td className="dashboard-empty-row" colSpan={5}>{emptyLabel}</td></tr>
-            ) : null}
+                <tr>
+                  <th scope="row">{previousLabel}</th>
+                  {columns.map((column) => (
+                    <MoneyCell
+                      key={column.id}
+                      value={column.values[previousKey]}
+                      money={money}
+                      total={column.id === "__total__"}
+                    />
+                  ))}
+                </tr>
+                <tr>
+                  <th scope="row">{t("dashboard.difference")}</th>
+                  {columns.map((column) => {
+                    const difference = column.values[currentKey] - column.values[previousKey];
+                    return (
+                      <td
+                        key={column.id}
+                        className={valueClassName(column.id === "__total__", difference)}
+                      >
+                        {difference > 0 ? "+" : ""}{money.format(difference)}
+                      </td>
+                    );
+                  })}
+                </tr>
+                <tr>
+                  <th scope="row">{t("dashboard.percent")}</th>
+                  {columns.map((column) => {
+                    const change = percentageChange(
+                      column.values[currentKey],
+                      column.values[previousKey],
+                    );
+                    return (
+                      <td
+                        key={column.id}
+                        className={valueClassName(column.id === "__total__", change)}
+                      >
+                        {formatChange(change)}
+                      </td>
+                    );
+                  })}
+                </tr>
+              </>
+            ) : (
+              <tr>
+                <td className="dashboard-empty-row" colSpan={1}>{emptyLabel}</td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
-      <div className="home-sales-card-list">
-        {displayRows.map((row) => (
-          <ChannelComparisonCard
-            key={row.id}
-            name={row.name}
-            isTotal={row.id === "__total__"}
-            money={money}
-            formatChange={formatChange}
-            t={t}
-            blocks={[
-              {
-                title: "",
-                previousLabel: periodLabel("previousMonth"),
-                currentLabel: `${periodLabel("currentMonth")} · ${t("dashboard.accumulating")}`,
-                previous: row.values.previousMonth,
-                current: row.values.currentMonth,
-                changeLabel: t("dashboard.mom"),
-              },
-            ]}
-          />
-        ))}
-        {!rows.length ? <p className="home-sales-card-empty">{emptyLabel}</p> : null}
-      </div>
-    </>
+    </div>
   );
 }
 
@@ -481,15 +488,22 @@ function MoneyCell({
   value,
   money,
   current = false,
-  divider = false,
+  total = false,
 }: {
   value: number;
   money: Intl.NumberFormat;
   current?: boolean;
-  divider?: boolean;
+  total?: boolean;
 }) {
   return (
-    <td className={[current ? "is-current-month" : "", divider ? "home-sales-period-divider" : ""].filter(Boolean).join(" ") || undefined}>
+    <td
+      className={[
+        current ? "is-current-month" : "",
+        total ? "home-sales-total-value" : "home-sales-channel-value",
+      ]
+        .filter(Boolean)
+        .join(" ") || undefined}
+    >
       <span className="home-sales-money">{money.format(value)}</span>
     </td>
   );
