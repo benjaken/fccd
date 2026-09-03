@@ -61,6 +61,11 @@ describe("EnquiryFormEditorPage", () => {
     expect(screen.getByRole("button", { name: "調整題目順序 1 姓名" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "載入 EmailMeForm 24 題" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: `/quote-inquiry/${CATERING_ENQUIRY_SEED_FORM_ID}` })).toHaveClass("order-link");
+    const status = screen.getByText("已發佈");
+    expect(status).toHaveClass("status-badge", "green");
+    expect(status.closest(".heading-actions")).toContainElement(screen.getByRole("button", { name: "儲存" }));
+    expect(screen.getByRole("button", { name: "儲存" })).toHaveClass("bg-primary");
+    expect(screen.getByRole("button", { name: "複製" })).toHaveClass("border");
     expect(saveEnquiryForm).not.toHaveBeenCalled();
   });
 

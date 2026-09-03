@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type DragEvent } from "react";
-import { ChevronLeft, FilePenLine, FileText, Globe, GripVertical, Plus } from "lucide-react";
+import { Ban, ChevronLeft, Copy, ExternalLink, Eye, FilePenLine, FileText, Globe, GripVertical, Plus, Save } from "lucide-react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { EnquiryFormFields } from "@/components/EnquiryFormFields";
@@ -93,6 +93,12 @@ function statusLabel(status: EnquiryFormDefinition["status"]) {
   if (status === "published") return "已發佈";
   if (status === "disabled") return "已停用";
   return "草稿";
+}
+
+function statusBadgeTone(status: EnquiryFormDefinition["status"]) {
+  if (status === "published") return "green";
+  if (status === "disabled") return "neutral";
+  return "amber";
 }
 
 export function EnquiryFormEditorPage() {
@@ -262,40 +268,52 @@ export function EnquiryFormEditorPage() {
           <span className="eyebrow">到會 · 報價單</span>
           <div className="order-number-cell">
             <h1>{form.internalName || "編輯表單"}</h1>
-            <span className={`status-badge ${form.status === "published" ? "green" : form.status === "disabled" ? "" : "amber"}`}>
-              {statusLabel(form.status)}
-            </span>
           </div>
           <p>維護公開查詢表單。第一份預設表單對照現行 EmailMeForm 24 題。</p>
         </div>
-        <div className="quote-detail-actions">
+        <div className="heading-actions quote-detail-actions">
           {form.status === "published" ? (
             <Button asChild variant="outline">
               <Link to={enquiryPublicPath(form.id)} target="_blank" rel="noopener noreferrer">
+                <ExternalLink />
                 公開連結
               </Link>
             </Button>
           ) : null}
-          <Button type="button" variant="outline" onClick={() => setPreviewOpen(true)}>預覽</Button>
-          <Button type="button" variant="outline" disabled={saving} onClick={() => void save()}>
+          <Button type="button" variant="outline" onClick={() => setPreviewOpen(true)}>
+            <Eye />
+            預覽
+          </Button>
+          <Button type="button" disabled={saving} onClick={() => void save()}>
+            <Save />
             {saving ? "儲存中…" : "儲存"}
           </Button>
           {form.status === "published" ? (
-            <Button type="button" variant="outline" onClick={() => void save("disabled")}>停用</Button>
+            <Button type="button" variant="outline" onClick={() => void save("disabled")}>
+              <Ban />
+              停用
+            </Button>
           ) : (
-            <Button type="button" onClick={() => void save("published")}>發佈</Button>
+            <Button type="button" onClick={() => void save("published")}>
+              <Globe />
+              發佈
+            </Button>
           )}
           <Button
             type="button"
-            variant="ghost"
+            variant="outline"
             disabled={isNew}
             onClick={async () => {
               const nextId = await duplicateEnquiryForm(form.id);
               navigate(enquiryFormEditorPath(nextId, nav || "catering.quotes"));
             }}
           >
+            <Copy />
             複製
           </Button>
+          <span className={cn("status-badge", statusBadgeTone(form.status))}>
+            {statusLabel(form.status)}
+          </span>
         </div>
       </header>
       {error ? <p className="quote-editor-error" role="alert">{error}</p> : null}
