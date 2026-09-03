@@ -85,7 +85,11 @@ describe("public enquiry form page", () => {
     );
     await screen.findByRole("button", { name: "Submit" });
     await userEvent.click(screen.getByRole("button", { name: "Submit" }));
-    expect((await screen.findAllByText("此題為必填")).length).toBeGreaterThan(0);
+    const errors = await screen.findAllByText("此題為必填");
+    expect(errors.length).toBeGreaterThan(0);
+    expect(errors[0]).toHaveClass("enquiry-form-error");
+    expect(errors[0].closest(".enquiry-form-question")).toHaveClass("has-error");
+    expect(screen.getByRole("textbox", { name: /姓名/ })).toHaveAttribute("aria-invalid", "true");
     expect(rpcMock).not.toHaveBeenCalledWith(
       "submit_enquiry_form",
       expect.anything(),
@@ -122,6 +126,8 @@ describe("public enquiry form page", () => {
     expect(css).toMatch(/\.enquiry-public-shell\s*\{[^}]*max-width:\s*1000px/s);
     expect(css).toContain("grid-template-columns: minmax(200px, 34%) minmax(0, 1fr)");
     expect(css).toContain("grid-column: 1 / -1");
+    expect(css).toMatch(/\.enquiry-form-error\s*\{[^}]*color:\s*#dc2626/s);
+    expect(css).toMatch(/\.enquiry-form-question\.has-error [^{]*\{[^}]*border-color:\s*#dc2626/s);
     expect(container.querySelector(".enquiry-form-option.is-wide")).not.toBeNull();
   });
 });

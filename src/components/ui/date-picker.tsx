@@ -17,6 +17,7 @@ export function DatePicker({
   className,
   disabled = false,
   hideLabel = false,
+  invalid = false,
   min,
   max,
 }: {
@@ -27,6 +28,7 @@ export function DatePicker({
   className?: string;
   disabled?: boolean;
   hideLabel?: boolean;
+  invalid?: boolean;
   min?: string;
   max?: string;
 }) {
@@ -53,6 +55,7 @@ export function DatePicker({
             role="combobox"
             aria-label={hideLabel ? label : undefined}
             aria-labelledby={hideLabel ? undefined : labelId}
+            aria-invalid={invalid || undefined}
             disabled={disabled}
             className={cn("date-picker-trigger", !selected && "is-placeholder")}
           >

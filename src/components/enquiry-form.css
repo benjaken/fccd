@@ -46,7 +46,7 @@
   line-height: 1.3;
 }
 
-.enquiry-public-card p,
+.enquiry-public-card > p,
 .enquiry-form-hint {
   color: #65736a;
   font-size: 0.95rem;
@@ -96,6 +96,8 @@
 .enquiry-form-options {
   display: grid;
   gap: 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
 }
 
 .enquiry-form-fields-split .enquiry-form-options {
@@ -131,8 +133,16 @@
 }
 
 .enquiry-form-error {
-  color: #b42318;
+  margin: 0;
+  color: #dc2626;
   font-size: 0.85rem;
+}
+
+.enquiry-form-question.has-error .enquiry-form-textarea,
+.enquiry-form-question.has-error [data-slot="input"],
+.enquiry-form-question.has-error .date-picker-trigger,
+.enquiry-form-question.has-error .enquiry-form-options {
+  border-color: #dc2626;
 }
 
 .enquiry-public-unavailable,

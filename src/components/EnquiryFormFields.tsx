@@ -115,6 +115,7 @@ function EnquiryControl({
         label={question.title}
         hideLabel
         disabled={disabled}
+        invalid={invalid}
         value={typeof value === "string" ? value : ""}
         onChange={onChange}
       />
@@ -126,6 +127,7 @@ function EnquiryControl({
         className="enquiry-form-options"
         role="radiogroup"
         aria-labelledby={labelledBy}
+        aria-invalid={invalid || undefined}
       >
         {(question.options ?? []).map((option) => (
           <label
@@ -152,7 +154,7 @@ function EnquiryControl({
   if (question.type === "checkbox") {
     const selected = Array.isArray(value) ? value : [];
     return (
-      <div className="enquiry-form-options">
+      <div className="enquiry-form-options" aria-invalid={invalid || undefined}>
         {(question.options ?? []).map((option) => {
           const checked = selected.includes(option.value);
           return (
