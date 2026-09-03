@@ -133,3 +133,52 @@
 .enquiry-status-draft { color: #92400e; }
 .enquiry-status-published { color: #166534; }
 .enquiry-status-disabled { color: #6b7280; }
+
+.enquiry-editor-page {
+  gap: 20px;
+}
+
+.enquiry-editor-switch {
+  display: flex;
+  align-items: center;
+  min-height: 42px;
+}
+
+.enquiry-editor-list-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin: 0 0 16px;
+}
+
+.enquiry-editor-list-toolbar .filterable-select,
+.enquiry-editor-list-toolbar select {
+  min-width: 180px;
+}
+
+.enquiry-editor-question-name {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.enquiry-editor-page .quote-lines-panel tbody tr.is-selected td {
+  background: var(--selection-bg);
+}
+
+.enquiry-editor-question-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.enquiry-editor-empty-hint {
+  margin: 0;
+  color: var(--muted-foreground);
+}
