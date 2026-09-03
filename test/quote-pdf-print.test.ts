@@ -33,10 +33,23 @@ describe("quote PDF print stylesheet", () => {
     expect(css).toMatch(/@media print[\s\S]*?resize:\s*none !important;/);
   });
 
-  it("joins empty activity totals directly to the preceding table", () => {
+  it("hides empty activity items from generated PDF output", () => {
     const css = readFileSync(join(process.cwd(), "src/index.css"), "utf8");
     expect(css).toMatch(
       /\.quote-pdf-activity\.is-empty\s*\{\s*margin-top:\s*0;/,
+    );
+    expect(css).toMatch(
+      /@media print[\s\S]*?\.quote-pdf-activity\.is-empty\s*\{\s*display:\s*none !important;/,
+    );
+  });
+
+  it("hides quantity columns from generated PDF output when none were entered", () => {
+    const css = readFileSync(join(process.cwd(), "src/index.css"), "utf8");
+    expect(css).toMatch(
+      /@media print[\s\S]*?\.quote-pdf-table\.has-no-quantities td\.quote-pdf-qty-col\s*\{\s*display:\s*none !important;/,
+    );
+    expect(css).toMatch(
+      /\.quote-pdf-price-prefix\s*\{\s*flex:\s*0 0 auto;/,
     );
   });
 

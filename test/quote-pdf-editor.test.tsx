@@ -146,9 +146,50 @@ describe("editable quote PDF page", () => {
     const row = quantity.closest("tr");
     expect(row).not.toBeNull();
     expect(row?.querySelector("td:last-child")).toBeEmptyDOMElement();
+    expect(document.querySelector(".quote-pdf-table")).toHaveClass("has-no-quantities");
+    expect(screen.getByRole("columnheader", { name: "數量" })).toHaveClass("quote-pdf-edit-only");
+    expect(screen.getByRole("columnheader", { name: "金額" })).toHaveClass("quote-pdf-edit-only");
+    expect(screen.getByLabelText("單價 1").previousElementSibling).toHaveTextContent("$");
     expect(screen.queryByText("小計：")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("運費")).not.toBeInTheDocument();
     expect(screen.queryByText("總數：")).not.toBeInTheDocument();
+  });
+
+  it("hides quantity columns from generated output when quantity was never entered", async () => {
+    const emptyQuantityResult: OrderDetailResult = {
+      ...result,
+      lines: result.lines.map((line) => ({
+        ...line,
+        quantity: null,
+        totalPrice: null,
+      })),
+    };
+    renderPage(vi.fn().mockResolvedValue(emptyQuantityResult));
+
+    const unitPrice = await screen.findByLabelText("單價 1");
+    expect(unitPrice).toHaveValue("45");
+    expect(unitPrice.previousElementSibling).toHaveClass("quote-pdf-price-prefix");
+    expect(unitPrice.previousElementSibling).toHaveTextContent("$");
+    expect(document.querySelector(".quote-pdf-table")).toHaveClass("has-no-quantities");
+    expect(screen.getByRole("columnheader", { name: "數量" })).toHaveClass("quote-pdf-edit-only");
+    expect(screen.getByRole("columnheader", { name: "金額" })).toHaveClass("quote-pdf-edit-only");
+    expect(screen.getByLabelText("數量 1").closest("td")).toHaveClass("quote-pdf-edit-only");
+  });
+
+  it("keeps the dollar prefix when the unit price is cleared", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    const unitPrice = await screen.findByLabelText("單價 1");
+    expect(unitPrice.previousElementSibling).toHaveTextContent("$");
+    await user.clear(unitPrice);
+    expect(unitPrice).toHaveValue("");
+    expect(unitPrice.previousElementSibling).toHaveClass("quote-pdf-price-prefix");
+    expect(unitPrice.previousElementSibling).toHaveTextContent("$");
+    await user.type(unitPrice, "$88");
+    await user.tab();
+    expect(unitPrice).toHaveValue("88");
+    expect(unitPrice.previousElementSibling).toHaveTextContent("$");
   });
 
   it("shows the product subtotal again when quantity becomes greater than zero", async () => {

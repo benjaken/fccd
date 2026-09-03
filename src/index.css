@@ -33377,8 +33377,25 @@ body:has(.quote-pdf-editor) .quote-pdf-editor {
 .quote-pdf-table th:nth-child(4), .quote-pdf-table th:nth-child(5) { width: 90px; }
 .quote-pdf-table input { padding: 0.45rem; text-align: right; }
 .quote-pdf-table .quote-pdf-product-input { text-align: left; }
-.quote-pdf-price-input { display: flex; align-items: center; gap: 0.15rem; }
-.quote-pdf-price-input > input { width: auto; min-width: 0; flex: 1; padding-left: 0.1rem; }
+.quote-pdf-price-input {
+  display: inline-flex;
+  width: max-content;
+  max-width: 100%;
+  align-items: center;
+  gap: 0.15rem;
+  white-space: nowrap;
+}
+.quote-pdf-price-prefix {
+  flex: 0 0 auto;
+  min-width: 1ch;
+  user-select: none;
+}
+.quote-pdf-price-input > input {
+  width: auto;
+  min-width: 1ch;
+  flex: 1 1 auto;
+  padding-left: 0.1rem;
+}
 .quote-pdf-summary-rows td { height: 34px; padding: 0.2rem 0.45rem; font-weight: 800; }
 .quote-pdf-table .quote-pdf-summary-rows td { text-align: right; }
 .quote-pdf-table tbody td.quote-pdf-summary-label { text-align: right; }
@@ -33950,6 +33967,9 @@ body:has(.quote-clause-modal-root) { overflow: hidden; }
   .quote-pdf-note-block.is-empty,
   .quote-pdf-notes.is-empty,
   .quote-pdf-additional.is-empty { display: none !important; }
+  .quote-pdf-activity.is-empty { display: none !important; }
+  .quote-pdf-table.has-no-quantities th.quote-pdf-qty-col,
+  .quote-pdf-table.has-no-quantities td.quote-pdf-qty-col { display: none !important; }
   .quote-pdf-note-block,
   .quote-pdf-note-heading { border: 0 !important; }
   .quote-pdf-meta-grid input, .quote-pdf-table input, .quote-pdf-table textarea, .quote-pdf-additional textarea, .quote-pdf-summary input, .quote-pdf-notes textarea, .quote-pdf-signature-party-name { border-color: transparent !important; outline: 0 !important; background: transparent !important; resize: none !important; }
@@ -34589,6 +34609,11 @@ body:has(.quote-clause-modal-root) { overflow: hidden; }
     align-items: baseline !important;
     gap: 0.08rem !important;
     white-space: nowrap !important;
+  }
+
+  .quote-pdf-price-prefix {
+    flex: 0 0 auto !important;
+    min-width: 1ch !important;
   }
 
   .quote-pdf-price-input {
