@@ -43,4 +43,13 @@ describe("enquiry form migration", () => {
     expect(remap).toContain("0d427475-b85a-4f6f-97c3-0c29b3d28025");
     expect(remap).toContain("11111111-1111-4111-8111-111111111111");
   });
+
+  it("qualifies submit_enquiry_form id to avoid PL/pgSQL 42702", () => {
+    const qualify = readFileSync(
+      path.resolve(process.cwd(), "supabase/migrations/20260903110000_qualify_submit_enquiry_form_id.sql"),
+      "utf8",
+    );
+    expect(qualify).toContain("#variable_conflict use_column");
+    expect(qualify).toContain("where enquiry_forms.id = p_form_id and enquiry_forms.status = 'published'");
+  });
 });
