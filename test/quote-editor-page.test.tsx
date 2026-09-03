@@ -237,6 +237,7 @@ describe("Quote editor", () => {
     expect(mobileFooterRule).toContain("flex-direction: row");
     expect(mobileFooterRule).toContain("flex-wrap: nowrap");
     expect(mobileFooterButtonRule).toContain("min-width: 0");
+    expect(css).toMatch(/\.quote-payment-step\s*>\s*footer\s+\.ui-button\s*\{[^}]*width:\s*100%/);
   });
 
   it("renders editable product cards instead of the wide table on mobile", async () => {
@@ -1310,6 +1311,8 @@ describe("Quote editor", () => {
     }
 
     if (kind === "order") {
+      const payments = document.getElementById("quote-editor-editable-payments")!;
+      expect(within(payments).queryByRole("button", { name: "Previous" })).not.toBeInTheDocument();
       expect(saveExistingLine).toHaveBeenCalledTimes(sectionIds.length);
       expect(saveFinancialDetails).toHaveBeenCalledTimes(sectionIds.length);
       expect(savePayments).toHaveBeenCalledTimes(3);

@@ -22177,12 +22177,15 @@ a.masoft-order-tag:focus-visible {
 }
 
 .quote-payment-step > header,
-.quote-payment-step > footer,
-.quote-payment-step > footer > div {
+.quote-payment-step > footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.quote-payment-step > footer .ui-button {
+  width: 100%;
 }
 
 .quote-payment-step > header h2 {

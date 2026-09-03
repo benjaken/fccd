@@ -2768,10 +2768,7 @@ export function QuoteEditorPage({
           </div>
           {completionError ? <p className="quote-editor-error" role="alert">{t(`quoteEditor.payments.${completionError === "send" ? "sendError" : "saveError"}`)}</p> : null}
           <footer>
-            <Button type="button" variant="outline" onClick={() => scrollToSection("items")}>{t("quoteEditor.payments.previous")}</Button>
-            <div>
-              <Button type="button" disabled={saving || completing} onClick={() => void saveAllChanges()}>{saving ? <LoaderCircle className="spin" /> : <Check />}{saving ? t("quoteEditor.saving") : t("quoteEditor.saveChanges")}</Button>
-            </div>
+            <Button type="button" disabled={saving || completing} onClick={() => void saveAllChanges()}>{saving ? <LoaderCircle className="spin" /> : <Check />}{saving ? t("quoteEditor.saving") : t("quoteEditor.saveChanges")}</Button>
           </footer>
         </section>
       ) : null}
