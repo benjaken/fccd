@@ -465,7 +465,10 @@ function ChannelComparisonCard({
         const difference = block.current - block.previous;
         const change = percentageChange(block.current, block.previous);
         return (
-          <section key={block.title || block.changeLabel}>
+          <section
+            key={block.title || block.changeLabel}
+            className={block.emphasizeCurrent ? "is-this-month" : undefined}
+          >
             {block.title ? <h4>{block.title}</h4> : null}
             <dl>
               <div>
@@ -474,9 +477,7 @@ function ChannelComparisonCard({
               </div>
               <div>
                 <dt>{block.currentLabel}</dt>
-                <dd className={block.emphasizeCurrent ? "is-current-month" : undefined}>
-                  {money.format(block.current)}
-                </dd>
+                <dd>{money.format(block.current)}</dd>
               </div>
               <div>
                 <dt>{t("dashboard.difference")}</dt>
