@@ -317,7 +317,7 @@ export const CATERING_ENQUIRY_SEED_FORM: Omit<EnquiryFormDefinition, "id"> = {
   questions: CATERING_ENQUIRY_SEED_QUESTIONS,
 };
 
-export const CATERING_ENQUIRY_SEED_FORM_ID = "11111111-1111-4111-8111-111111111111";
+export const CATERING_ENQUIRY_SEED_FORM_ID = "0d427475-b85a-4f6f-97c3-0c29b3d28025";
 
 export function cloneCateringEnquirySeedQuestions(): EnquiryQuestion[] {
   return CATERING_ENQUIRY_SEED_QUESTIONS.map((question) => ({

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  CATERING_ENQUIRY_SEED_FORM_ID,
   CATERING_ENQUIRY_SEED_QUESTIONS,
 } from "@/lib/enquiry-form-seed";
 import {
@@ -14,8 +15,8 @@ import {
 
 describe("catering enquiry seed form", () => {
   it("builds public URLs from the form id", () => {
-    expect(enquiryPublicPath("11111111-1111-4111-8111-111111111111")).toBe(
-      "/quote-inquiry/11111111-1111-4111-8111-111111111111",
+    expect(enquiryPublicPath(CATERING_ENQUIRY_SEED_FORM_ID)).toBe(
+      `/quote-inquiry/${CATERING_ENQUIRY_SEED_FORM_ID}`,
     );
   });
 

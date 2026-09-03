@@ -382,7 +382,7 @@ insert into public.enquiry_forms (
   id, internal_name, public_title, public_description, submit_label, slug,
   is_default, status, success_message, questions
 ) values (
-  '11111111-1111-4111-8111-111111111111',
+  '0d427475-b85a-4f6f-97c3-0c29b3d28025',
   'FC Catering Enquiry',
   'FC Catering + Lunch Box 餐飲到會+活動策劃網上查詢',
   '榮獲ISO 9001食品到會 及 香港Q嘜優質服務認證 (since 2009)',

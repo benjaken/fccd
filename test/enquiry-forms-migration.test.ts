@@ -34,4 +34,13 @@ describe("enquiry form migration", () => {
     expect(followUp.match(/"field_key":/g)?.length).toBe(24);
     expect(followUp).toContain("jsonb_array_length(questions) is distinct from 24");
   });
+
+  it("replaces the placeholder seed form id", () => {
+    const remap = readFileSync(
+      path.resolve(process.cwd(), "supabase/migrations/20260903100000_enquiry_seed_form_id.sql"),
+      "utf8",
+    );
+    expect(remap).toContain("0d427475-b85a-4f6f-97c3-0c29b3d28025");
+    expect(remap).toContain("11111111-1111-4111-8111-111111111111");
+  });
 });
