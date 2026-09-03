@@ -242,65 +242,98 @@ function CateringComparisonTable({
     ? [...rows, totalRowFor(rows, t("dashboard.total"))]
     : rows;
   return (
-    <div className="table-wrap home-sales-table-wrap">
-      <table className="home-sales-table">
-        <thead>
-          <tr>
-            <th rowSpan={2}>{t("dashboard.channel")}</th>
-            <th colSpan={4}>{t("dashboard.previousMonthYearComparison")}</th>
-            <th className="home-sales-period-divider" colSpan={4}>{t("dashboard.currentMonthYearComparison")}</th>
-          </tr>
-          <tr>
-            <th>{periodLabel("previousYearPreviousMonth")}</th>
-            <th>{periodLabel("previousMonth")}</th>
-            <th>{t("dashboard.difference")}</th>
-            <th>{t("dashboard.yoy")}</th>
-            <th className="home-sales-period-divider">{periodLabel("previousYearCurrentMonth")}</th>
-            <th className="is-current-month">{periodLabel("currentMonth")} · {t("dashboard.accumulating")}</th>
-            <th>{t("dashboard.difference")}</th>
-            <th>{t("dashboard.yoy")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {displayRows.map((row) => {
-            const previousMonthChange = percentageChange(
-              row.values.previousMonth,
-              row.values.previousYearPreviousMonth,
-            );
-            const currentMonthChange = percentageChange(
-              row.values.currentMonth,
-              row.values.previousYearCurrentMonth,
-            );
-            const previousMonthDifference = row.values.previousMonth - row.values.previousYearPreviousMonth;
-            const currentMonthDifference = row.values.currentMonth - row.values.previousYearCurrentMonth;
-            return (
-              <tr key={row.id} className={row.id === "__total__" ? "home-sales-total-row" : undefined}>
-                <th scope="row">{row.name}</th>
-                <MoneyCell value={row.values.previousYearPreviousMonth} money={money} />
-                <MoneyCell value={row.values.previousMonth} money={money} />
-                <td className={changeClassName(previousMonthDifference)}>
-                  {previousMonthDifference > 0 ? "+" : ""}{money.format(previousMonthDifference)}
-                </td>
-                <td className={changeClassName(previousMonthChange)}>
-                  {formatChange(previousMonthChange)}
-                </td>
-                <MoneyCell value={row.values.previousYearCurrentMonth} money={money} divider />
-                <MoneyCell value={row.values.currentMonth} money={money} current />
-                <td className={changeClassName(currentMonthDifference)}>
-                  {currentMonthDifference > 0 ? "+" : ""}{money.format(currentMonthDifference)}
-                </td>
-                <td className={changeClassName(currentMonthChange)}>
-                  {formatChange(currentMonthChange)}
-                </td>
-              </tr>
-            );
-          })}
-          {!rows.length ? (
-            <tr><td className="dashboard-empty-row" colSpan={9}>{emptyLabel}</td></tr>
-          ) : null}
-        </tbody>
-      </table>
-    </div>
+    <>
+      <div className="table-wrap home-sales-table-wrap">
+        <table className="home-sales-table">
+          <thead>
+            <tr>
+              <th rowSpan={2}>{t("dashboard.channel")}</th>
+              <th colSpan={4}>{t("dashboard.previousMonthYearComparison")}</th>
+              <th className="home-sales-period-divider" colSpan={4}>{t("dashboard.currentMonthYearComparison")}</th>
+            </tr>
+            <tr>
+              <th>{periodLabel("previousYearPreviousMonth")}</th>
+              <th>{periodLabel("previousMonth")}</th>
+              <th>{t("dashboard.difference")}</th>
+              <th>{t("dashboard.yoy")}</th>
+              <th className="home-sales-period-divider">{periodLabel("previousYearCurrentMonth")}</th>
+              <th className="is-current-month">{periodLabel("currentMonth")} · {t("dashboard.accumulating")}</th>
+              <th>{t("dashboard.difference")}</th>
+              <th>{t("dashboard.yoy")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {displayRows.map((row) => {
+              const previousMonthChange = percentageChange(
+                row.values.previousMonth,
+                row.values.previousYearPreviousMonth,
+              );
+              const currentMonthChange = percentageChange(
+                row.values.currentMonth,
+                row.values.previousYearCurrentMonth,
+              );
+              const previousMonthDifference = row.values.previousMonth - row.values.previousYearPreviousMonth;
+              const currentMonthDifference = row.values.currentMonth - row.values.previousYearCurrentMonth;
+              return (
+                <tr key={row.id} className={row.id === "__total__" ? "home-sales-total-row" : undefined}>
+                  <th scope="row">{row.name}</th>
+                  <MoneyCell value={row.values.previousYearPreviousMonth} money={money} />
+                  <MoneyCell value={row.values.previousMonth} money={money} />
+                  <td className={changeClassName(previousMonthDifference)}>
+                    {previousMonthDifference > 0 ? "+" : ""}{money.format(previousMonthDifference)}
+                  </td>
+                  <td className={changeClassName(previousMonthChange)}>
+                    {formatChange(previousMonthChange)}
+                  </td>
+                  <MoneyCell value={row.values.previousYearCurrentMonth} money={money} divider />
+                  <MoneyCell value={row.values.currentMonth} money={money} current />
+                  <td className={changeClassName(currentMonthDifference)}>
+                    {currentMonthDifference > 0 ? "+" : ""}{money.format(currentMonthDifference)}
+                  </td>
+                  <td className={changeClassName(currentMonthChange)}>
+                    {formatChange(currentMonthChange)}
+                  </td>
+                </tr>
+              );
+            })}
+            {!rows.length ? (
+              <tr><td className="dashboard-empty-row" colSpan={9}>{emptyLabel}</td></tr>
+            ) : null}
+          </tbody>
+        </table>
+      </div>
+      <div className="home-sales-card-list">
+        {displayRows.map((row) => (
+          <ChannelComparisonCard
+            key={row.id}
+            name={row.name}
+            isTotal={row.id === "__total__"}
+            money={money}
+            formatChange={formatChange}
+            t={t}
+            blocks={[
+              {
+                title: t("dashboard.previousMonthYearComparison"),
+                previousLabel: periodLabel("previousYearPreviousMonth"),
+                currentLabel: periodLabel("previousMonth"),
+                previous: row.values.previousYearPreviousMonth,
+                current: row.values.previousMonth,
+                changeLabel: t("dashboard.yoy"),
+              },
+              {
+                title: t("dashboard.currentMonthYearComparison"),
+                previousLabel: periodLabel("previousYearCurrentMonth"),
+                currentLabel: `${periodLabel("currentMonth")} · ${t("dashboard.accumulating")}`,
+                previous: row.values.previousYearCurrentMonth,
+                current: row.values.currentMonth,
+                changeLabel: t("dashboard.yoy"),
+              },
+            ]}
+          />
+        ))}
+        {!rows.length ? <p className="home-sales-card-empty">{emptyLabel}</p> : null}
+      </div>
+    </>
   );
 }
 
@@ -323,41 +356,126 @@ function TkoComparisonTable({
     ? [...rows, totalRowFor(rows, t("dashboard.total"))]
     : rows;
   return (
-    <div className="table-wrap home-sales-table-wrap">
-      <table className="home-sales-table home-sales-tko-table">
-        <thead>
-          <tr>
-            <th>{t("dashboard.channel")}</th>
-            <th>{periodLabel("previousMonth")}</th>
-            <th className="is-current-month home-sales-period-divider">{periodLabel("currentMonth")} · {t("dashboard.accumulating")}</th>
-            <th>{t("dashboard.difference")}</th>
-            <th>{t("dashboard.mom")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {displayRows.map((row) => {
-            const difference = row.values.currentMonth - row.values.previousMonth;
-            const change = percentageChange(row.values.currentMonth, row.values.previousMonth);
-            return (
-              <tr key={row.id} className={row.id === "__total__" ? "home-sales-total-row" : undefined}>
-                <th scope="row">{row.name}</th>
-                <MoneyCell value={row.values.previousMonth} money={money} />
-                <MoneyCell value={row.values.currentMonth} money={money} current divider />
-                <td className={changeClassName(difference)}>
+    <>
+      <div className="table-wrap home-sales-table-wrap">
+        <table className="home-sales-table home-sales-tko-table">
+          <thead>
+            <tr>
+              <th>{t("dashboard.channel")}</th>
+              <th>{periodLabel("previousMonth")}</th>
+              <th className="is-current-month home-sales-period-divider">{periodLabel("currentMonth")} · {t("dashboard.accumulating")}</th>
+              <th>{t("dashboard.difference")}</th>
+              <th>{t("dashboard.mom")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {displayRows.map((row) => {
+              const difference = row.values.currentMonth - row.values.previousMonth;
+              const change = percentageChange(row.values.currentMonth, row.values.previousMonth);
+              return (
+                <tr key={row.id} className={row.id === "__total__" ? "home-sales-total-row" : undefined}>
+                  <th scope="row">{row.name}</th>
+                  <MoneyCell value={row.values.previousMonth} money={money} />
+                  <MoneyCell value={row.values.currentMonth} money={money} current divider />
+                  <td className={changeClassName(difference)}>
+                    {difference > 0 ? "+" : ""}{money.format(difference)}
+                  </td>
+                  <td className={changeClassName(change)}>
+                    {formatChange(change)}
+                  </td>
+                </tr>
+              );
+            })}
+            {!rows.length ? (
+              <tr><td className="dashboard-empty-row" colSpan={5}>{emptyLabel}</td></tr>
+            ) : null}
+          </tbody>
+        </table>
+      </div>
+      <div className="home-sales-card-list">
+        {displayRows.map((row) => (
+          <ChannelComparisonCard
+            key={row.id}
+            name={row.name}
+            isTotal={row.id === "__total__"}
+            money={money}
+            formatChange={formatChange}
+            t={t}
+            blocks={[
+              {
+                title: "",
+                previousLabel: periodLabel("previousMonth"),
+                currentLabel: `${periodLabel("currentMonth")} · ${t("dashboard.accumulating")}`,
+                previous: row.values.previousMonth,
+                current: row.values.currentMonth,
+                changeLabel: t("dashboard.mom"),
+              },
+            ]}
+          />
+        ))}
+        {!rows.length ? <p className="home-sales-card-empty">{emptyLabel}</p> : null}
+      </div>
+    </>
+  );
+}
+
+function ChannelComparisonCard({
+  name,
+  isTotal = false,
+  blocks,
+  money,
+  formatChange,
+  t,
+}: {
+  name: string;
+  isTotal?: boolean;
+  blocks: Array<{
+    title: string;
+    previousLabel: string;
+    currentLabel: string;
+    previous: number;
+    current: number;
+    changeLabel: string;
+  }>;
+  money: Intl.NumberFormat;
+  formatChange: (value: number | null) => string;
+  t: (key: string) => string;
+}) {
+  return (
+    <article className={["home-sales-channel-card", isTotal ? "is-total" : ""].filter(Boolean).join(" ")}>
+      <header>
+        <strong>{name}</strong>
+      </header>
+      {blocks.map((block) => {
+        const difference = block.current - block.previous;
+        const change = percentageChange(block.current, block.previous);
+        return (
+          <section key={block.title || block.changeLabel}>
+            {block.title ? <h4>{block.title}</h4> : null}
+            <dl>
+              <div>
+                <dt>{block.previousLabel}</dt>
+                <dd>{money.format(block.previous)}</dd>
+              </div>
+              <div>
+                <dt>{block.currentLabel}</dt>
+                <dd>{money.format(block.current)}</dd>
+              </div>
+              <div>
+                <dt>{t("dashboard.difference")}</dt>
+                <dd className={changeClassName(difference)}>
                   {difference > 0 ? "+" : ""}{money.format(difference)}
-                </td>
-                <td className={changeClassName(change)}>
-                  {formatChange(change)}
-                </td>
-              </tr>
-            );
-          })}
-          {!rows.length ? (
-            <tr><td className="dashboard-empty-row" colSpan={5}>{emptyLabel}</td></tr>
-          ) : null}
-        </tbody>
-      </table>
-    </div>
+                </dd>
+              </div>
+              <div>
+                <dt>{block.changeLabel}</dt>
+                <dd className={changeClassName(change)}>{formatChange(change)}</dd>
+              </div>
+            </dl>
+          </section>
+        );
+      })}
+    </article>
   );
 }
 

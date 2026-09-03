@@ -336,6 +336,89 @@ button {
   }
 }
 
+.home-sales-card-list {
+  display: none;
+}
+
+@media (max-width: 980px) {
+  .home-sales-heading p,
+  .home-sales-panel-header p {
+    display: none;
+  }
+
+  .home-sales-table-wrap {
+    display: none;
+  }
+
+  .home-sales-card-list {
+    display: grid;
+    gap: 10px;
+    padding: 0 14px 14px;
+  }
+
+  .home-sales-card-empty {
+    margin: 0;
+    padding: 18px 4px;
+    color: var(--muted-foreground);
+    text-align: center;
+  }
+
+  .home-sales-channel-card {
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--background);
+  }
+
+  .home-sales-channel-card > header {
+    padding: 12px 14px 10px;
+  }
+
+  .home-sales-channel-card > header strong {
+    font-size: 15px;
+  }
+
+  .home-sales-channel-card section {
+    padding: 10px 14px 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  .home-sales-channel-card h4 {
+    margin: 0 0 8px;
+    color: var(--muted-foreground);
+    font-size: 12px;
+    font-weight: 750;
+  }
+
+  .home-sales-channel-card dl {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 12px;
+    margin: 0;
+  }
+
+  .home-sales-channel-card dt {
+    color: var(--muted-foreground);
+    font-size: 12px;
+    font-weight: 650;
+  }
+
+  .home-sales-channel-card dd {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 760;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .home-sales-channel-card.is-total {
+    background: color-mix(in oklch, var(--muted) 38%, var(--card));
+  }
+
+  .home-sales-skeleton-panel .table-wrap {
+    display: none;
+  }
+}
+
 /* Shopify catalog review */
 .shopify-catalog-page { display: grid; gap: 20px; }
 .shopify-catalog-list-page { grid-template-rows: auto minmax(0, 1fr); height: calc(100dvh - var(--topbar-height) - var(--workspace-height) - 76px); min-height: 560px; overflow: hidden; }

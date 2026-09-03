@@ -63,11 +63,19 @@ describe("monthly sales dashboard", () => {
     expect(within(tables[0]).getAllByText("+33.3%")).toHaveLength(2);
     expect(within(tables[1]).getByText("Foodpanda")).toBeInTheDocument();
     expect(within(tables[1]).getAllByText("+10.0%")).toHaveLength(2);
-    expect(screen.getAllByText("總額")).toHaveLength(2);
+    expect(screen.getAllByText("總額")).toHaveLength(4);
     expect(screen.queryByText("YLP 桂花小幸 元朗")).not.toBeInTheDocument();
     expect(document.querySelector(".home-sales-mini-bar")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "更新數據" })).not.toBeInTheDocument();
     expect(loadDashboard).toHaveBeenCalledWith("Super Admin");
+    const cards = document.querySelectorAll(".home-sales-channel-card");
+    expect(cards).toHaveLength(4);
+    expect(cards[0]).toHaveTextContent("Catering");
+    expect(cards[0]).toHaveTextContent("上月（跨年比較）");
+    expect(cards[0]).toHaveTextContent("本月（跨年比較）");
+    expect(cards[0]).toHaveTextContent("+25.0%");
+    expect(cards[2]).toHaveTextContent("Foodpanda");
+    expect(cards[2]).toHaveTextContent("+10.0%");
   });
 
   it("offers a retry after a dashboard query fails", async () => {
