@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { FileText } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 
 import { DetailLink } from "@/components/ui/detail-link";
 import { ListTable } from "@/components/ui/list-table";
+import { OperationalListState } from "@/components/ui/operational-list-state";
 import { SearchField } from "@/components/ui/search-field";
 import {
   fetchPendingEnquirySubmissions,
@@ -10,6 +12,17 @@ import {
 } from "@/lib/enquiry-forms-api";
 
 import "./enquiry-form.css";
+
+const PENDING_SKELETON_COLUMNS = [
+  { width: "10rem" },
+  { width: "16rem" },
+  { width: "8rem" },
+  { width: "22%" },
+  { width: "4rem" },
+  { width: "6rem" },
+  { width: "6rem" },
+  { width: "6rem" },
+];
 
 function dash(value: string) {
   return value.trim() || "—";
@@ -32,99 +45,122 @@ function statusText(kind: "internal" | "ack" | "asana", value: string) {
   return "尚未建立";
 }
 
-export function EnquiryPendingListPage() {
+export function EnquiryPendingListPage({
+  loadSubmissions = fetchPendingEnquirySubmissions,
+}: {
+  loadSubmissions?: (search?: string) => Promise<EnquirySubmissionListItem[]>;
+} = {}) {
   const [searchParams] = useSearchParams();
   const [items, setItems] = useState<EnquirySubmissionListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const nav = searchParams.get("nav");
 
-  const load = async (keyword = search) => {
+  const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      setItems(await fetchPendingEnquirySubmissions(keyword));
+      setItems(await loadSubmissions(search));
     } catch {
+      setItems([]);
       setError("無法載入待報價");
     } finally {
       setLoading(false);
     }
-  };
+  }, [loadSubmissions, reloadKey, search]);
 
   useEffect(() => {
-    void load("");
-  }, []);
+    void load();
+  }, [load]);
 
   return (
-    <section className="enquiry-pending-page">
-      <header className="page-heading">
+    <section className="orders-page enquiry-pending-page">
+      <header className="page-heading orders-heading">
         <div>
           <span className="eyebrow">到會 · 報價單</span>
           <h1>待報價</h1>
           <p>公開 Enquiry Form 提交、尚未轉成報價單的查詢。</p>
         </div>
       </header>
-      <SearchField
-        id="enquiry-pending-search"
-        value={search}
-        onChange={(value) => {
-          setSearch(value);
-          void load(value);
-        }}
-        placeholder="姓名、公司、電話、電郵、描述"
-        label="搜尋待報價"
-      />
-      {error ? <p role="alert">{error}</p> : null}
-      <ListTable
-        loading={loading}
-        loadingLabel="載入待報價"
-        skeletonColumns={8}
-        header={
-          <tr>
-            <th>建立時間</th>
-            <th>客戶</th>
-            <th>日期</th>
-            <th>描述</th>
-            <th>人數</th>
-            <th>內部通知</th>
-            <th>對客確認</th>
-            <th>Asana</th>
-          </tr>
-        }
-      >
-        {items.map((item) => {
-          const to = `/quotes/pending/${item.id}${nav ? `?nav=${encodeURIComponent(nav)}` : ""}`;
-          return (
-            <tr key={item.id}>
-              <td>
-                <DetailLink to={to}>
-                  {new Date(item.createdAt).toLocaleString("zh-HK", { timeZone: "Asia/Hong_Kong" })}
-                </DetailLink>
-              </td>
-              <td>
-                <div>{dash(`${item.salutation}${item.customerName}`)}</div>
-                <div>{dash(item.companyName)}</div>
-                <div>{dash(item.phone)}</div>
-                <small>{item.formTitle || "Enquiry Form"}</small>
-              </td>
-              <td>{dash(item.deliveryDateRaw)}</td>
-              <td>{dash(item.quoteDescription)}</td>
-              <td>{dash(item.headcount)}</td>
-              <td>{statusText("internal", item.internalEmailStatus)}</td>
-              <td>{statusText("ack", item.ackEmailStatus)}</td>
-              <td>
-                {item.asanaLink ? (
-                  <a href={item.asanaLink} target="_blank" rel="noopener noreferrer">Asana Link</a>
-                ) : (
-                  statusText("asana", item.asanaStatus)
-                )}
-              </td>
-            </tr>
-          );
-        })}
-      </ListTable>
-      {!loading && items.length === 0 ? <p>暫無待報價查詢。</p> : null}
+      <article className="panel orders-panel">
+        <header className="orders-toolbar">
+          <SearchField
+            id="enquiry-pending-search"
+            value={search}
+            onChange={setSearch}
+            placeholder="姓名、公司、電話、電郵、描述"
+            label="搜尋待報價"
+          />
+        </header>
+        {error ? (
+          <OperationalListState
+            icon={FileText}
+            title={error}
+            description="請稍後再試，或重新整理列表。"
+            retryLabel="重試"
+            onRetry={() => setReloadKey((key) => key + 1)}
+          />
+        ) : !loading && items.length === 0 ? (
+          <OperationalListState
+            icon={FileText}
+            title="暫無待報價查詢"
+            description={search.trim() ? "請改用其他關鍵字搜尋。" : "公開表單提交後會出現在這裡。"}
+          />
+        ) : (
+          <ListTable
+            className="quotes-table-wrap"
+            onRefresh={() => setReloadKey((key) => key + 1)}
+            loading={loading}
+            loadingLabel="載入待報價"
+            skeletonColumns={PENDING_SKELETON_COLUMNS}
+            header={
+              <tr>
+                <th>建立時間</th>
+                <th>客戶</th>
+                <th>日期</th>
+                <th>描述</th>
+                <th>人數</th>
+                <th>內部通知</th>
+                <th>對客確認</th>
+                <th>Asana</th>
+              </tr>
+            }
+          >
+            {items.map((item) => {
+              const to = `/quotes/pending/${item.id}${nav ? `?nav=${encodeURIComponent(nav)}` : ""}`;
+              return (
+                <tr key={item.id}>
+                  <td>
+                    <DetailLink to={to}>
+                      {new Date(item.createdAt).toLocaleString("zh-HK", { timeZone: "Asia/Hong_Kong" })}
+                    </DetailLink>
+                  </td>
+                  <td>
+                    <div>{dash(`${item.salutation}${item.customerName}`)}</div>
+                    <div>{dash(item.companyName)}</div>
+                    <div>{dash(item.phone)}</div>
+                    <small>{item.formTitle || "Enquiry Form"}</small>
+                  </td>
+                  <td>{dash(item.deliveryDateRaw)}</td>
+                  <td>{dash(item.quoteDescription)}</td>
+                  <td>{dash(item.headcount)}</td>
+                  <td>{statusText("internal", item.internalEmailStatus)}</td>
+                  <td>{statusText("ack", item.ackEmailStatus)}</td>
+                  <td>
+                    {item.asanaLink ? (
+                      <a href={item.asanaLink} target="_blank" rel="noopener noreferrer">Asana Link</a>
+                    ) : (
+                      statusText("asana", item.asanaStatus)
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </ListTable>
+        )}
+      </article>
     </section>
   );
 }
