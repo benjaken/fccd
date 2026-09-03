@@ -22331,8 +22331,10 @@ a.masoft-order-tag:focus-visible {
 }
 .quote-payment-summary > div { display: grid; gap: 5px; padding: 16px 20px; border-right: 1px solid var(--border); }
 .quote-payment-summary > div:last-child { border-right: 0; background: var(--selection-bg); }
+.quote-payment-summary > div.is-overpaid { background: color-mix(in oklch, #0f766e 16%, white); }
 .quote-payment-summary span { color: var(--muted-foreground); font-size: 14px; font-weight: 700; }
 .quote-payment-summary strong { font-size: 20px; }
+.quote-payment-summary > div.is-overpaid strong { color: #0f766e; }
 
 @media (max-width: 900px) {
   .quote-payment-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -32281,6 +32283,10 @@ body:has(.kitchen-channel-sales-report-page) .shell-body.sidebar-is-collapsed .r
   background: color-mix(in oklch, #21864d 94%, transparent);
 }
 
+.order-editor-payment-status.is-overpaid {
+  background: color-mix(in oklch, #0f766e 94%, transparent);
+}
+
 .order-editor-payment-status-icon {
   display: grid;
   width: 42px;
@@ -32754,6 +32760,10 @@ body:has(.kitchen-channel-sales-report-page) .shell-body.sidebar-is-collapsed .r
 
 .order-payment-summary .outstanding strong {
   color: #c4870f;
+}
+
+.order-payment-summary .overpaid strong {
+  color: #0f766e;
 }
 
 .order-factory-controls {

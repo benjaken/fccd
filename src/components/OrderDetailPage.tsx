@@ -339,8 +339,8 @@ export function OrderDetailPage({
             <DetailField label={t("details.grandTotal")}>
               {money(order.grandTotal)}
             </DetailField>
-            <DetailField label={t("details.outstanding")}>
-              {money(order.outstanding)}
+            <DetailField label={order.outstanding != null && order.outstanding < 0 ? t("details.overpaid") : t("details.outstanding")}>
+              {money(order.outstanding != null && order.outstanding < 0 ? Math.abs(order.outstanding) : order.outstanding)}
             </DetailField>
             <DetailField label={t("details.discount")}>
               {canViewFinance
