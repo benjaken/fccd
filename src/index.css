@@ -23884,8 +23884,23 @@ a.masoft-order-tag:focus-visible {
   white-space: normal;
 }
 
+.quote-lines-readonly-panel .quote-line-heading {
+  min-height: 0;
+}
+
 .quote-lines-readonly-panel .quote-line-label-chip {
   margin-top: 0;
+  padding: 4px 8px;
+}
+
+.quote-lines-readonly-panel .quote-line-label-remark-pairs {
+  margin-top: 4px;
+  gap: 4px;
+}
+
+.quote-lines-readonly-panel .quote-line-label-remark-pair {
+  align-items: start;
+  gap: 6px;
 }
 
 .quote-lines-readonly-panel .quote-line-label-remark-text {
@@ -24446,8 +24461,8 @@ a.masoft-order-tag:focus-visible {
 .quote-line-label-remark-pairs {
   display: grid;
   width: 100%;
-  margin-top: 6px;
-  gap: 6px;
+  margin-top: 4px;
+  gap: 4px;
 }
 
 .quote-line-label-remark-pair {
@@ -24455,6 +24470,14 @@ a.masoft-order-tag:focus-visible {
   grid-template-columns: minmax(0, 1fr) minmax(5.5rem, 36.36%);
   align-items: center;
   gap: 8px;
+}
+
+.quote-line-label-remark-pair.is-empty {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.quote-line-label-remark-pair.is-empty .quote-line-label-remark-text {
+  display: none;
 }
 
 .quote-line-label-chip.is-empty {
@@ -24465,7 +24488,7 @@ a.masoft-order-tag:focus-visible {
 
 .quote-line-label-remark-pair .quote-line-label-remark-text {
   height: auto;
-  min-height: 64px;
+  min-height: 0;
 }
 
 .quote-line-remarks-list {
@@ -24510,8 +24533,8 @@ a.masoft-order-tag:focus-visible {
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
-  min-height: 64px;
-  height: 64px;
+  min-height: 0;
+  height: auto;
   padding: 5px 8px;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -24526,7 +24549,10 @@ a.masoft-order-tag:focus-visible {
 
 .quote-line-label-remark-text:empty,
 .quote-line-label-remark-text.is-empty {
-  border-color: transparent;
+  min-height: 0;
+  height: 0;
+  padding: 0;
+  border: none;
   background: transparent;
   color: transparent;
 }

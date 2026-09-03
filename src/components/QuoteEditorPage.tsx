@@ -1456,7 +1456,7 @@ export function QuoteEditorPage({
           const remarkDisplay = remark ? t("quoteEditor.items.remarksValue", { value: remark }) : "";
           const remarkLabel = `${t("quoteEditor.items.remarks")} ${line.name || ""}${labelSuffix}`.trim();
           return (
-            <div className="quote-line-label-remark-pair" key={`${line.id}:pair-${index}`}>
+            <div className={cn("quote-line-label-remark-pair", !remark && "is-empty")} key={`${line.id}:pair-${index}`}>
               {name ? (
                 <span className="quote-line-label-chip" title={name}>{name}</span>
               ) : (
