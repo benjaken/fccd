@@ -249,7 +249,7 @@ function documentDetailSkeleton(
               </div>
               {bone("document-detail-skeleton-total")}
             </header>
-            {table(7, 6)}
+            {table(8, 6)}
           </article>
         </div>
       ) : (
@@ -261,7 +261,7 @@ function documentDetailSkeleton(
             </div>
             {bone("document-detail-skeleton-total")}
           </header>
-          {table(7, 6)}
+          {table(8, 6)}
         </article>
       )}
       {isOrder ? documentDetailPaymentsSkeleton() : null}
