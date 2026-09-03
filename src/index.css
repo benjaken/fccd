@@ -22184,8 +22184,13 @@ a.masoft-order-tag:focus-visible {
   gap: 12px;
 }
 
+.quote-payment-step > footer {
+  justify-content: flex-end;
+}
+
 .quote-payment-step > footer .ui-button {
-  width: 100%;
+  width: auto;
+  min-width: 168px;
 }
 
 .quote-payment-step > header h2 {
@@ -22244,6 +22249,7 @@ a.masoft-order-tag:focus-visible {
 .quote-payment-summary {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  max-width: 640px;
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -22262,7 +22268,9 @@ a.masoft-order-tag:focus-visible {
   .quote-payment-step { padding: 18px; }
   .quote-payment-step > header,
   .quote-payment-step > footer { align-items: stretch; flex-direction: column; }
+  .quote-payment-step > footer .ui-button { width: 100%; min-width: 0; }
   .quote-payment-row, .quote-payment-summary { grid-template-columns: 1fr; }
+  .quote-payment-summary { max-width: none; }
   .quote-payment-summary > div { border-right: 0; border-bottom: 1px solid var(--border); }
   .quote-payment-summary > div:last-child { border-bottom: 0; }
 }

@@ -237,7 +237,9 @@ describe("Quote editor", () => {
     expect(mobileFooterRule).toContain("flex-direction: row");
     expect(mobileFooterRule).toContain("flex-wrap: nowrap");
     expect(mobileFooterButtonRule).toContain("min-width: 0");
-    expect(css).toMatch(/\.quote-payment-step\s*>\s*footer\s+\.ui-button\s*\{[^}]*width:\s*100%/);
+    expect(css).toMatch(/\.quote-payment-step\s*>\s*footer\s+\.ui-button\s*\{[^}]*width:\s*auto/);
+    expect(css).toMatch(/@media \(max-width: 620px\)[\s\S]*?\.quote-payment-step\s*>\s*footer\s+\.ui-button\s*\{[^}]*width:\s*100%/);
+    expect(css).toMatch(/\.quote-payment-summary\s*\{[^}]*max-width:\s*640px/);
     const itemCountRule = css.match(/\.quote-editor-item-count\s*\{([^}]*)\}/)?.[1];
     expect(itemCountRule).toContain("display: flex");
     expect(itemCountRule).toContain("flex-wrap: nowrap");
