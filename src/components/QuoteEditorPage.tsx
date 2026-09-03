@@ -1357,7 +1357,7 @@ export function QuoteEditorPage({
               maxLength={16}
               value={row.remark}
               aria-label={label}
-              placeholder={t("quoteEditor.items.remarks")}
+              placeholder={t("quoteEditor.items.remarksPlaceholder")}
               disabled={line.isVoid || savingLineId === line.id}
               key={`${line.id}:remark-${remarkIndex}`}
               onChange={(event) => patchLineRemark(line, remarkIndex, event.target.value)}
