@@ -23661,7 +23661,7 @@ a.masoft-order-tag:focus-visible {
 }
 
 .quote-lines-readonly-panel .quote-line-sequence,
-.quote-lines-readonly-panel td:not(.quote-line-product, .quote-line-sku) {
+.quote-lines-readonly-panel td:not(.quote-line-product, .quote-line-sku, .quote-line-remarks) {
   text-align: center;
 }
 
@@ -23678,7 +23678,7 @@ a.masoft-order-tag:focus-visible {
 }
 
 .quote-lines-readonly-panel td.quote-line-product {
-  max-width: min(560px, 48vw);
+  max-width: none;
   white-space: normal;
 }
 
@@ -23938,20 +23938,11 @@ a.masoft-order-tag:focus-visible {
   font-size: 0.75rem;
 }
 
-.quote-mobile-line > header .quote-line-label-remarks {
+.quote-mobile-line > header .quote-line-labels,
+.quote-mobile-line > header .quote-line-remarks-list {
   grid-column: 1 / -1;
   width: 100%;
   max-width: none;
-}
-
-.quote-mobile-line > header .quote-line-label-remark-row {
-  width: 100%;
-  min-width: 0;
-  grid-template-columns: minmax(0, 1fr) minmax(92px, 1fr);
-}
-
-.quote-mobile-line > header .quote-line-label-remark-row.is-remark-only {
-  grid-template-columns: minmax(92px, 1fr);
 }
 
 .quote-mobile-line-actions {
@@ -24135,6 +24126,13 @@ a.masoft-order-tag:focus-visible {
 
 .quote-lines-panel td.quote-line-product {
   min-width: 220px;
+  max-width: none;
+  white-space: normal;
+}
+
+.quote-lines-panel td.quote-line-remarks {
+  width: 148px;
+  min-width: 132px;
 }
 
 .quote-lines-panel .quote-line-sku {
@@ -24212,41 +24210,36 @@ a.masoft-order-tag:focus-visible {
   min-height: 32px;
 }
 
-.quote-line-label-remarks {
+.quote-line-labels,
+.quote-line-remarks-list {
   display: grid;
   width: 100%;
   margin-top: 6px;
   gap: 6px;
 }
 
-.quote-line-label-remark-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(92px, 132px);
-  align-items: center;
-  gap: 8px;
-}
-
-.quote-line-label-remark-row.is-remark-only {
-  grid-template-columns: minmax(92px, 160px);
-  justify-content: start;
+.quote-line-remarks-offset {
+  min-height: 34px;
 }
 
 .quote-line-label-chip {
-  display: inline-flex;
-  min-width: 0;
+  display: block;
+  width: fit-content;
   max-width: 100%;
   padding: 4px 8px;
-  align-items: center;
   border-radius: 6px;
   background: var(--muted);
   color: var(--muted-foreground);
   font-size: 12px;
   font-weight: 600;
   line-height: 1.35;
+  overflow: visible;
   overflow-wrap: anywhere;
+  white-space: normal;
 }
 
-.quote-line-label-remark-row .quote-line-edit-remarks {
+.quote-line-remarks-list .quote-line-edit-remarks {
+  width: 100%;
   min-width: 0;
   padding: 5px 8px;
   border: 1px solid var(--border);
@@ -24254,10 +24247,17 @@ a.masoft-order-tag:focus-visible {
 }
 
 .quote-line-label-remark-text {
+  display: block;
+  min-height: 32px;
   min-width: 0;
   color: var(--muted-foreground);
   font-size: 13px;
   overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.quote-line-label-remark-text.is-empty {
+  visibility: hidden;
 }
 
 .quote-line-edit-number:hover,

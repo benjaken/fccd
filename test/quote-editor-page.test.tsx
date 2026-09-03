@@ -957,8 +957,10 @@ describe("Quote editor", () => {
     expect(tabs[0]).toHaveAttribute("aria-selected", "true");
     await user.click(tabs[1]);
     expect(screen.getByLabelText("Brand")).toHaveValue("channel-1");
+    expect(screen.getByRole("columnheader", { name: "Remarks" })).toBeInTheDocument();
     const remarkInput = screen.getByRole("textbox", { name: "Remarks Roast pork" });
     expect(remarkInput).toBeInTheDocument();
+    expect(remarkInput.closest("td")).toHaveClass("quote-line-remarks");
     expect(remarkInput).toHaveValue("Original remark");
     expect(remarkInput).toHaveAttribute("maxlength", "16");
     expect(screen.queryByRole("button", { name: /Original remark/ })).not.toBeInTheDocument();
@@ -1007,10 +1009,10 @@ describe("Quote editor", () => {
       remarks: "Line note",
       labelRemarks: ["Line note", "Sauce note"],
       labelId: "label-1",
-      labelDisplayA: "Roast pork label",
+      labelDisplayA: "柳粒飯 (甘栗紫薯餅、芝士年糕、雞肉丸)",
       labelDisplayB: "2 boxes",
       labels: [
-        { id: "label-1", displayA: "Roast pork label", displayB: "2 boxes" },
+        { id: "label-1", displayA: "柳粒飯 (甘栗紫薯餅、芝士年糕、雞肉丸)", displayB: "2 boxes" },
         { id: "label-2", displayA: "Sauce label", displayB: "1 cup" },
       ],
     };
@@ -1030,13 +1032,19 @@ describe("Quote editor", () => {
     const tabs = await screen.findAllByRole("tab");
     await user.click(tabs[1]);
     expect(screen.queryByRole("columnheader", { name: "Label preview" })).not.toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Remarks" })).toBeInTheDocument();
     const editableLineRow = screen.getByRole("row", { name: /Roast pork/ });
     const editablePreviewButton = within(editableLineRow).getByRole("button", { name: "Preview" });
     expect(editablePreviewButton.closest("td")).toBe(editableLineRow.lastElementChild);
-    expect(within(editableLineRow).getByText("Roast pork label")).toBeInTheDocument();
-    expect(within(editableLineRow).getByText("Sauce label")).toBeInTheDocument();
-    expect(screen.getByRole("textbox", { name: "Remarks Roast pork 1" })).toHaveValue("Line note");
-    expect(screen.getByRole("textbox", { name: "Remarks Roast pork 2" })).toHaveValue("Sauce note");
+    const productCell = within(editableLineRow).getByText("柳粒飯 (甘栗紫薯餅、芝士年糕、雞肉丸)").closest("td");
+    const firstRemark = screen.getByRole("textbox", { name: "Remarks Roast pork 1" });
+    const secondRemark = screen.getByRole("textbox", { name: "Remarks Roast pork 2" });
+    expect(productCell).toHaveClass("quote-line-product");
+    expect(within(editableLineRow).getByText("Sauce label").closest("td")).toBe(productCell);
+    expect(firstRemark.closest("td")).toHaveClass("quote-line-remarks");
+    expect(secondRemark.closest("td")).toHaveClass("quote-line-remarks");
+    expect(firstRemark).toHaveValue("Line note");
+    expect(secondRemark).toHaveValue("Sauce note");
     expect(screen.queryByRole("button", { name: /Remarks Roast pork 1/ })).not.toBeInTheDocument();
     expect(screen.queryByLabelText("50 × 75 mm 標籤預覽：FCLQ-LABEL")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Preview" }));
@@ -1091,10 +1099,11 @@ describe("Quote editor", () => {
     );
 
     const row = await screen.findByRole("row", { name: /Roast pork/ });
-    expect(within(row).getByText("Roast pork label")).toBeInTheDocument();
-    expect(within(row).getByText("Sauce label")).toBeInTheDocument();
-    expect(within(row).getByText("Line note")).toBeInTheDocument();
-    expect(within(row).getByText("Sauce note")).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Remarks" })).toBeInTheDocument();
+    expect(within(row).getByText("Roast pork label").closest("td")).toHaveClass("quote-line-product");
+    expect(within(row).getByText("Sauce label").closest("td")).toHaveClass("quote-line-product");
+    expect(within(row).getByText("Line note").closest("td")).toHaveClass("quote-line-remarks");
+    expect(within(row).getByText("Sauce note").closest("td")).toHaveClass("quote-line-remarks");
     expect(within(row).queryByRole("textbox")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Remarks Roast pork/ })).not.toBeInTheDocument();
   });
