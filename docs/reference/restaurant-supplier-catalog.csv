@@ -1,417 +1,417 @@
-sku,name,unit,supplier_name,channel,warehouse
-,有皮22片裝厚方包,條,鳳香園麵飽有限公司,external,
-FCR001,滷水牛展片 # 每訂6包牛展片要跟1包牛展頭,2kg / 包,FC_凍肉,fc_internal,frozen
-FCR011,滷水牛展頭,2kg / 包,FC_凍肉,fc_internal,frozen
-FCR003,滷水牛肚,2kg / 包,FC_凍肉,fc_internal,frozen
-FCR002,滷水牛腩,2kg / 包,FC_凍肉,fc_internal,frozen
-FCR013,滷水牛筋,2kg / 包,FC_凍肉,fc_internal,frozen
-FCR004,燜豬肚,2kg / 包,FC_凍肉,fc_internal,frozen
-FCR021,香菇滷肉,2kg / 包,FC_凍肉,fc_internal,frozen
-FCR006-B,醃有骨豬扒,3kg / 包,FC_凍肉,fc_internal,frozen
-FCR007-C,醃雞扒,3kg / 包,FC_凍肉,fc_internal,frozen
-LKO043,麻辣醬,6KG/桶,FC_凍肉,fc_internal,frozen
-LKO044,29號蒜味炸漿粉,2份/包,FC_凍肉,fc_internal,frozen
-FCR022,扁食肉餡 (500克),包,FC_凍肉,fc_internal,frozen
-,綠豆沙,包,FC_凍肉,fc_internal,frozen
-,甜酸咕嚕汁,包,FC_凍肉,fc_internal,frozen
-LKO028,牛肉湯粉,600g/包,FC_乾貨,fc_internal,dry
-LKO031,藥膳包,460/包,FC_乾貨,fc_internal,dry
-LKO024,21號炸粉,2kg/包,FC_乾貨,fc_internal,dry
-LKJ012-C,酸菜,3KG/包,FC_乾貨,fc_internal,dry
-LKJ004-B,蟲草花,500g/包,FC_乾貨,fc_internal,dry
-LKJ005,雲耳,500g/包,FC_乾貨,fc_internal,dry
-LKJ006,紅棗片,500g/包,FC_乾貨,fc_internal,dry
-LKJ008,龍眼乾,500g/包,FC_乾貨,fc_internal,dry
-LKJ007,杞子,500g/包,FC_乾貨,fc_internal,dry
-LKI041,芋頭麻糬 (6粒)/包,包,FC_乾貨,fc_internal,dry
-LKA042,白桃烏龍茶包,6g x 30個,FC_乾貨,fc_internal,dry
-LKA003-D,天使茉香綠茶,(500G),FC_乾貨,fc_internal,dry
-LKA004-C,伯爵紅茶,30包/箱,FC_乾貨,fc_internal,dry
-LKA009-A,天使蜜香紅茶,600g X 24包,FC_乾貨,fc_internal,dry
-LKA036,桂花烏龍茶包,6g x 40個,FC_乾貨,fc_internal,dry
-LKA046,山茶花烏龍茶,500g*30包,FC_乾貨,fc_internal,dry
-,雀巢咖啡粉,500g/罐,FC_乾貨,fc_internal,dry
-LKA041-B,麥茶,(6g x 30個),FC_乾貨,fc_internal,dry
-LKJ011,胎菊,500克/包,FC_乾貨,fc_internal,dry
-LKB028,蜜桃濃縮汁,2.5kg x 6瓶/箱,FC_乾貨,fc_internal,dry
-LKB001,芒果濃縮汁,2.5kg x 6瓶/箱,FC_乾貨,fc_internal,dry
-LKB002,百香果濃縮汁,2.5kg x 6瓶/箱,FC_乾貨,fc_internal,dry
-LKB004,荔枝濃縮汁,2.4kg x 6瓶/箱,FC_乾貨,fc_internal,dry
-LKB0,檸檬原汁,950ml x 12瓶/箱,FC_乾貨,fc_internal,dry
-LKB012,芋香粉,6瓶/箱,FC_乾貨,fc_internal,dry
-LKI010,果糖,6kg x 3包/箱,FC_乾貨,fc_internal,dry
-LKF036,原蔗糖漿,6kg x 4包/箱 [原箱訂],FC_乾貨,fc_internal,dry
-LKB031,黑糖漿,2.5kg x 6瓶/箱,FC_乾貨,fc_internal,dry
-LKB023,冬瓜糖露(2.5KG),2.5kg,FC_乾貨,fc_internal,dry
-LKB032-B,韓國生薑茶,樽,FC_乾貨,fc_internal,dry
-LKD002,黃金可可粉,1kg x 20包/箱,FC_乾貨,fc_internal,dry
-LKD011-D,60N奶精粉 (1kg/包),1kg x 20包/箱,FC_乾貨,fc_internal,dry
-LKD013-B,純雪-生乳起司奶蓋粉,1kg,FC_乾貨,fc_internal,dry
-LKI029,牛奶 (12包/箱),1L x 12包/箱 [原箱訂],FC_乾貨,fc_internal,dry
-,愛護牌啡奶,包,FC_乾貨,fc_internal,dry
-LKB016-B,調和蜂蜜糖漿,罐,FC_乾貨,fc_internal,dry
-LKE004,荔枝椰果,3.3kg x 6罐/箱,FC_乾貨,fc_internal,dry
-LKE008-C,蜂蜜蘆薈,4kg x 4瓶/箱,FC_乾貨,fc_internal,dry
-LKE011,巧克力碎片,3.1kg x 6罐/箱,FC_乾貨,fc_internal,dry
-LKE001-B,珍珠,454g x 12包/箱,FC_乾貨,fc_internal,dry
-LKE010-C,仙草凍,3kg x 6包/箱,FC_乾貨,fc_internal,dry
-LKE007,寒天晶球,6罐/箱,FC_乾貨,fc_internal,dry
-LKJ008,龍眼乾,30包/箱,FC_乾貨,fc_internal,dry
-LKJ007,杞子,500g/包,FC_乾貨,fc_internal,dry
-LKJ006,紅棗,500g/包,FC_乾貨,fc_internal,dry
-LKD014,麻糬粉,500克,FC_乾貨,fc_internal,dry
-,堅果碎,包,FC_乾貨,fc_internal,dry
-,CROP'S急凍芒果,包,FC_乾貨,fc_internal,dry
-,急凍火龍果粒,包,FC_乾貨,fc_internal,dry
-LKF037,M.桂花糖漿,樽,FC_乾貨,fc_internal,dry
-,紙杯套(空白),條,FC_乾貨,fc_internal,dry
-,(c*) 幸福茶研社 16oz PP杯,條,FC_乾貨,fc_internal,dry
-LKG105,100% Fresh 12oz PP杯子 (25pcs*20pack) (幸福茶研社),條,FC_乾貨,fc_internal,dry
-LKG080,90mm PP 蓋,6瓶/箱,FC_乾貨,fc_internal,dry
-CMK018,16oz 熱杯 (幸福良晨 ),條,FC_乾貨,fc_internal,dry
-LKG016,熱杯蓋,條,FC_乾貨,fc_internal,dry
-CMK016,18oz 外賣紙碗 (幸福良晨 ),(25隻*20條/箱),FC_乾貨,fc_internal,dry
-BBC016,18oz 外賣膠碗蓋,25個 x 20條/箱,FC_乾貨,fc_internal,dry
-BBC016-B,18oz 外賣紙碗蓋,50隻/條,FC_乾貨,fc_internal,dry
-CMK017,28oz 外賣紙碗 (幸福良晨 ),50個 x 20條/箱,FC_乾貨,fc_internal,dry
-BBC018,28oz 外賣膠碗蓋,20條/箱,FC_乾貨,fc_internal,dry
-BBC018-B,28oz 外賣紙碗蓋,50個 x 20條/箱,FC_乾貨,fc_internal,dry
-BBC012-B,幸福良晨 膠袋 - 小,50個 x 20條/箱,FC_乾貨,fc_internal,dry
-BBC013-B,幸福良晨 膠袋 - 中,50個 x 20條/箱,FC_乾貨,fc_internal,dry
-BBC014-B,幸福良晨 膠袋 - 大,50個 x 10條/箱,FC_乾貨,fc_internal,dry
-BBC025,幸福良晨 膠袋 - 特大,50個 x 20條/箱,FC_乾貨,fc_internal,dry
-BBC031,9oz 杯,50個 x 20條/箱,FC_乾貨,fc_internal,dry
-,五格便當盒 (50個/條),,FC_乾貨,fc_internal,dry
-LKI011,M. 糖漿泵 (細唧嘴),100個/扎,FC_乾貨,fc_internal,dry
-LKI012,M. 糖漿泵 (大唧嘴),100個/扎,FC_乾貨,fc_internal,dry
-,普通白色濾芯,50個 x 20條/箱,FC_乾貨,fc_internal,dry
-LKI005,前置白色濾芯(普通濾芯),50個x6條/箱,FC_乾貨,fc_internal,dry
-LKR011,"MH 濾芯(咖啡機,煮茶機用)",個,FC_乾貨,fc_internal,dry
-LKR012,MC 濾芯 (制冰機用),個,FC_乾貨,fc_internal,dry
-LKQ122,10oz 馬克杯 (多色),個,FC_乾貨,fc_internal,dry
-LKQ123,12oz 有耳透明亞克力膠杯,1000g,FC_乾貨,fc_internal,dry
-LKQ124,16oz 透明亞克力膠杯,個,FC_乾貨,fc_internal,dry
-CMK008,水果茶長匙 (cafe mikoo),50條=箱,FC_乾貨,fc_internal,dry
-,員工杯,條,FC_乾貨,fc_internal,dry
-,酒精膏 (8包/箱),箱,FC_乾貨,fc_internal,dry
-LKO047,肉粽甜辣醬,個,FC_乾貨,fc_internal,dry
-LKI009,POS感熱紙,50卷/箱,FC_乾貨,fc_internal,dry
-LKI035,57x40mm熱感紙,個,FC_乾貨,fc_internal,dry
-CMK019,牙簽筒,個,FC_乾貨,fc_internal,dry
-,立得抹手紙,20包/箱,FC_乾貨,fc_internal,dry
-,三格膠碟,個,FC_乾貨,fc_internal,dry
-LKQ125,3.8吋藍邊膠汁碟,1箱=12包,FC_乾貨,fc_internal,dry
-LKQ126,4.5吋藍邊膠碗,個,FC_乾貨,fc_internal,dry
-LKQ130,5吋藍邊膠碟,1箱=50卷,FC_乾貨,fc_internal,dry
-LKQ106,"5 3/4"" 藍色條紋碗",個,FC_乾貨,fc_internal,dry
-LKQ118,7吋藍紋碟,個,FC_乾貨,fc_internal,dry
-LKQ115,8吋藍紋麵碗,個,FC_乾貨,fc_internal,dry
-LKQ117,10吋藍紋麵碗,個,FC_乾貨,fc_internal,dry
-LKQ128,193x55 圓形黑色鋁鍋 連蓋,個,FC_乾貨,fc_internal,dry
-LKQ133,172x45 圓形黑色鋁鍋 連蓋,個,FC_乾貨,fc_internal,dry
-LKQ127,400ml 黑色炖盅,個,FC_乾貨,fc_internal,dry
-LKR018,黑柄麵喱(蘺),個,FC_乾貨,fc_internal,dry
-LKG109,一次性頭套 (200個),個,FC_乾貨,fc_internal,dry
-CMK010,幸福良晨 T-shirt XXXL,個,FC_乾貨,fc_internal,dry
-CMK011,幸福良晨 T-shirt XXL,個,FC_乾貨,fc_internal,dry
-CMK012,幸福良晨 T-shirt XL,個,FC_乾貨,fc_internal,dry
-CMK013,幸福良晨 T-shirt L,個,FC_乾貨,fc_internal,dry
-CMK014,幸福良晨 T-shirt M,個,FC_乾貨,fc_internal,dry
-CMK015,幸福良晨 T-shirt S,個,FC_乾貨,fc_internal,dry
-CMK023,幸福良晨 外套 - 3XL,包,FC_乾貨,fc_internal,dry
-CMK024,幸福良晨 外套 - 2XL,,FC_乾貨,fc_internal,dry
-CMK022,幸福良晨 外套 - XL,,FC_乾貨,fc_internal,dry
-CMK021,幸福良晨 外套 - L,,FC_乾貨,fc_internal,dry
-CMK020,幸福良晨 外套 - M,,FC_乾貨,fc_internal,dry
-LKH049,黑色全身雙吊帶圍裙,,FC_乾貨,fc_internal,dry
-,半身圍裙,,FC_乾貨,fc_internal,dry
-LKQ133,172x45 圓形黑色鋁鍋 連蓋,,FC_乾貨,fc_internal,dry
-LKQ128,193x55 圓形黑色鋁鍋 連蓋,,FC_乾貨,fc_internal,dry
-LKQ127,400ml 黑色炖盅,,FC_乾貨,fc_internal,dry
-,筷子 (對),,FC_乾貨,fc_internal,dry
-,銀色餐刀,,FC_乾貨,fc_internal,dry
-,"14"" 木托盤",,FC_乾貨,fc_internal,dry
-,飯桶,,FC_乾貨,fc_internal,dry
-,食鉗彈簧,,FC_乾貨,fc_internal,dry
-,手動打蛋器,,FC_乾貨,fc_internal,dry
-,500ml 甜品杯,,FC_乾貨,fc_internal,dry
-,18cm 銀湯匙,,FC_乾貨,fc_internal,dry
-,"8"" 黑色長柄湯匙",,FC_乾貨,fc_internal,dry
-,食鉗彈簧,,FC_乾貨,fc_internal,dry
-,手動打蛋器,,FC_乾貨,fc_internal,dry
-,500ml 甜品杯,,FC_乾貨,fc_internal,dry
-,18cm 銀湯匙,,FC_乾貨,fc_internal,dry
-,"8"" 黑色長柄湯匙",,FC_乾貨,fc_internal,dry
-,"8"" 黑色長柄湯匙",,FC_乾貨,fc_internal,dry
-,火鍋爐,,FC_乾貨,fc_internal,dry
-,POS感熱紙,箱,FC_乾貨,fc_internal,dry
-,台灣幼麵,斤,三潤麵皇食品有限公司,external,
-,鮮過橋米線,斤,三潤麵皇食品有限公司,external,
-,白方皮 (3吋x3吋),斤,三潤麵皇食品有限公司,external,
-,唐生菜,KG,日鮮食品有限公司,external,
-,娃娃菜,包,日鮮食品有限公司,external,
-,番茄,KG,日鮮食品有限公司,external,
-,BB 菜心,KG,日鮮食品有限公司,external,
-,椰菜,KG,日鮮食品有限公司,external,
-,北京椰菜,KG,日鮮食品有限公司,external,
-,合掌瓜,KG,日鮮食品有限公司,external,
-,栗子肉(淨肉),KG,日鮮食品有限公司,external,
-,紅尖椒,KG,日鮮食品有限公司,external,
-,青瓜,KG,日鮮食品有限公司,external,
-,茄瓜/茄子,KG,日鮮食品有限公司,external,
-,苦瓜,KG,日鮮食品有限公司,external,
-,冬瓜,KG,日鮮食品有限公司,external,
-,老黃瓜,KG,日鮮食品有限公司,external,
-,指天椒,KG,日鮮食品有限公司,external,
-,螺絲椒,KG,日鮮食品有限公司,external,
-,青木瓜,KG,日鮮食品有限公司,external,
-,青木瓜肉,KG,日鮮食品有限公司,external,
-,粟米,條,日鮮食品有限公司,external,
-,粟米肉,條,日鮮食品有限公司,external,
-,白果肉(包裝),包,日鮮食品有限公司,external,
-,有剌青瓜,KG,日鮮食品有限公司,external,
-,淮山,KG,日鮮食品有限公司,external,
-,淮山肉,KG,日鮮食品有限公司,external,
-,甘筍肉,KG,日鮮食品有限公司,external,
-,甘筍肉切(骨牌),KG,日鮮食品有限公司,external,
-,白蘿蔔肉切(骨牌),KG,日鮮食品有限公司,external,
-,唐芹/中芹,KG,日鮮食品有限公司,external,
-,西芹,KG,日鮮食品有限公司,external,
-,粉葛,KG,日鮮食品有限公司,external,
-,粉葛肉,KG,日鮮食品有限公司,external,
-,蓮藕,KG,日鮮食品有限公司,external,
-,蓮藕肉,KG,日鮮食品有限公司,external,
-,洋蔥,KG,日鮮食品有限公司,external,
-,洋蔥肉,KG,日鮮食品有限公司,external,
-,青蘿蔔肉,KG,日鮮食品有限公司,external,
-,白蘿蔔肉,KG,日鮮食品有限公司,external,
-,蒜蓉,KG,日鮮食品有限公司,external,
-,薑蓉,KG,日鮮食品有限公司,external,
-,韭菜,KG,日鮮食品有限公司,external,
-,蒜肉,KG,日鮮食品有限公司,external,
-,薑/有皮姜,KG,日鮮食品有限公司,external,
-,薄荷葉,KG,日鮮食品有限公司,external,
-,青蔥肉,KG,日鮮食品有限公司,external,
-,芫茜,KG,日鮮食品有限公司,external,
-,切乾蔥肉絲,KG,日鮮食品有限公司,external,
-,乾蔥肉,KG,日鮮食品有限公司,external,
-,金不換(老虎牌),包,日鮮食品有限公司,external,
-,九層塔(金不換),KG,日鮮食品有限公司,external,
-,香茅(泰國),KG,日鮮食品有限公司,external,
-,鮮冬菇,KG,日鮮食品有限公司,external,
-,鮮冬菇(去蒂),KG,日鮮食品有限公司,external,
-,靈芝菇,包,日鮮食品有限公司,external,
-,銀芽,KG,日鮮食品有限公司,external,
-,白豆腐乾,件,日鮮食品有限公司,external,
-,青波椒,KG,日鮮食品有限公司,external,
-,紅圓椒,KG,日鮮食品有限公司,external,
-,黃圓椒,KG,日鮮食品有限公司,external,
-,味菜,KG,日鮮食品有限公司,external,
-,採青菜,扎,日鮮食品有限公司,external,
-,雞蛋(泰國),排,日鮮食品有限公司,external,
-,紅蘋果,個,日鮮食品有限公司,external,
-,椰子肉,個,日鮮食品有限公司,external,
-,雪梨 (天津梨),個,日鮮食品有限公司,external,
-,木瓜仔,KG,日鮮食品有限公司,external,
-,白菜豬肉餃 (20個/包)(12包/箱),箱,金福華食物(香港)有限公司,external,
-,傳統香菇肉燥 (8包/箱),箱,金福華食物(香港)有限公司,external,
-,特級花枝丸(藍色) (3KG*6包/箱),箱,金福華食物(香港)有限公司,external,
-,花枝丸(特級) (6包/箱),包,金福華食物(香港)有限公司,external,
-,A級花枝丸(3kg) (6包/箱),包,金福華食物(香港)有限公司,external,
-,蒜味台灣香腸,包,金福華食物(香港)有限公司,external,
-,水林地瓜條,箱,金福華食物(香港)有限公司,external,
-,脆皮地瓜條 3kg x 6包 (14mm),包,金福華食物(香港)有限公司,external,
-,蛋餅,包,金福華食物(香港)有限公司,external,
-,甜不辣,包,金福華食物(香港)有限公司,external,
-,高慶泉甜辣醬,桶,金福華食物(香港)有限公司,external,
-,檸檬原汁,瓶,金福華食物(香港)有限公司,external,
-,檸檬原汁,瓶,金福華食物(香港)有限公司,external,
-,福華牌雞汁,箱,金福華食物(香港)有限公司,external,
-,急凍小芋圓 1kg/包,包,金福華食物(香港)有限公司,external,
-,厚切黑魚片(250g/包) (50包/箱),包,長明國際(香港)集團有限公司,external,
-,金湯包(1kg/包) (12包/箱),包,長明國際(香港)集團有限公司,external,
-,海的炒制酸菜(1kg/包)(10包/箱),包,長明國際(香港)集團有限公司,external,
-,丁晴藍無粉手套 (100隻),盒,浚峰企業有限公司,external,
-,丁晴藍無粉手套 (100隻),盒,浚峰企業有限公司,external,
-,VIRJOY 餐巾紙,盒,浚峰企業有限公司,external,
-,餐飲專用不掉毛清潔抹布(5條/包),包,浚峰企業有限公司,external,
-,益力多 (五支裝),排,益力多公司,external,
-,360(3A蛋) 360/盒 or 12排/盒,箱,強記蛋行,external,
-,檸檬(原庄),箱,強記蛋行,external,
-,淘大沙嗲醬,罐,淘大,external,
-,幼吸管 (長),包,意華,external,
-,珍珠吸管 (長),包,意華,external,
-,紙杯套 (空白),包,意華,external,
-,"7"" 熱飲攪拌棒",包,意華,external,
-,26oz透明外賣盒底,箱,意華,external,
-,26oz透明外賣盒蓋,箱,意華,external,
-,餐具包 - 中式,包,意華,external,
-,餐具包 - 西式,包,意華,external,
-,6oz 熱杯 (無logo),條,意華,external,
-,24oz PP 膠杯 (700ml) (500個/箱),箱,意華,external,
-,24oz PP 膠杯 (70ml) 磨沙,箱,意華,external,
-,紙吸管_幼(6mm x230mm)(5000支),箱,意華,external,
-,(平底無孔)8oz 微波爐碗連防漏蓋 (240套),箱,意華,external,
-,單格微波爐盒_不連蓋(黑色)(250個/箱),箱,意華,external,
-,單格微波爐盒膠蓋 (透明)(250個/箱),箱,意華,external,
-,4杯杯裝外賣盒(啡色)(200個/箱),箱,意華,external,
-,5格黑色日式盒連蓋 (300個/箱),箱,意華,external,
-,"2-3oz 透明膠杯蓋 (2,000個/箱)",箱,意華,external,
-,"3oz 透邊明膠杯 (2,000個/箱)",箱,意華,external,
-,"4""木甜品更",包,意華,external,
-,2.5oz試飲杯(白色),箱,意華,external,
-,豬肉眼絲,磅,新豐凍肉食品市埸,external,
-,牛湯骨,磅,新豐凍肉食品市埸,external,
-,豬湯骨,磅,新豐凍肉食品市埸,external,
-,豬腩肉片,磅,新豐凍肉食品市埸,external,
-,雞中翼 (巴西),磅,新豐凍肉食品市埸,external,
-,冰鮮雞,隻,新豐凍肉食品市埸,external,
-,切雞髀,磅,新豐凍肉食品市埸,external,
-,去皮雞扒(上脾肉),KG,新豐凍肉食品市埸,external,
-,美樂火腿片,包,新豐凍肉食品市埸,external,
-,豬梅肉片,包,新豐凍肉食品市埸,external,
-,肥牛片,包,新豐凍肉食品市埸,external,
-,71/90蝦仁,磅,新豐凍肉食品市埸,external,
-,豬頸肉,磅,新豐凍肉食品市埸,external,
-,台式鹵水包 (川式) (半斤裝),斤,源興,external,
-,四川青麻椒,包,源興,external,
-,八角,包,源興,external,
-,土花椒,包,源興,external,
-,新豐江西米線 2kg x 12/箱,箱,鴻發號糧油食品有限公司,external,
-,坑紋通粉 (意粉叔叔)花通粉 7lb/包,包,鴻發號糧油食品有限公司,external,
-,出前一丁 原味 100g x 30/箱,箱,鴻發號糧油食品有限公司,external,
-,辛辣麵 120g x 40/箱,箱,鴻發號糧油食品有限公司,external,
-,櫻城牌珍珠米,包,鴻發號糧油食品有限公司,external,
-,德國生粉 (時價),斤,鴻發號糧油食品有限公司,external,
-,三象粘米粉 (600g/包),包,鴻發號糧油食品有限公司,external,
-,斧頭牌食粉,盒,鴻發號糧油食品有限公司,external,
-,天龍牌麵包糠 1kg/包,包,鴻發號糧油食品有限公司,external,
-,(紅蓋)美膳坊24斤生油 24斤/罐 (時價),罐,鴻發號糧油食品有限公司,external,
-,(金湖)24斤生油 24斤/罐,罐,鴻發號糧油食品有限公司,external,
-,芝士碎 (FFP馬蘇里拉),包,鴻發號糧油食品有限公司,external,
-,芝士碎 (Anchor Mozzarella) (2kg/包),包,鴻發號糧油食品有限公司,external,
-,韓國幼砂糖 (時價),斤,鴻發號糧油食品有限公司,external,
-,冰糖碎,斤,鴻發號糧油食品有限公司,external,
-,黃糖 600g/包,包,鴻發號糧油食品有限公司,external,
-,桂花糖 250g/樽,樽,鴻發號糧油食品有限公司,external,
-,幼鹽 5斤/包,斤,鴻發號糧油食品有限公司,external,
-,味椒鹽 80g/樽,樽,鴻發號糧油食品有限公司,external,
-,家樂牌 調味雞粉(補充) 1kgx12/箱,箱,鴻發號糧油食品有限公司,external,
-,家樂牌 調味雞粉(補充) 1KG,包,鴻發號糧油食品有限公司,external,
-,家樂牌港式忌廉雞湯粉 900g/罐,罐,鴻發號糧油食品有限公司,external,
-,家樂牌日式豬骨湯粉 850g/罐,罐,鴻發號糧油食品有限公司,external,
-,1.8L 珠江橋牌 生抽王,箱,鴻發號糧油食品有限公司,external,
-,萬字豉油(日本)1.8L/支,支,鴻發號糧油食品有限公司,external,
-,1.8L 珠江橋牌金標老抽王,箱,鴻發號糧油食品有限公司,external,
-,美極鮮醬油 - 5號  600ml/支,支,鴻發號糧油食品有限公司,external,
-,大豐麻油 600ml/支,支,鴻發號糧油食品有限公司,external,
-,李錦記照燒汁  2.2kg/桶,桶,鴻發號糧油食品有限公司,external,
-,錦珍記豆瓣醬 7kg/桶,桶,鴻發號糧油食品有限公司,external,
-,泰國皇冠牌魚露 750ml/支,支,鴻發號糧油食品有限公司,external,
-,家樂牌 雙蠔蠔油 2.3kg/桶,桶,鴻發號糧油食品有限公司,external,
-,汕頭米醋 600ml/支,支,鴻發號糧油食品有限公司,external,
-,海天5度白醋1.9/l 桶,桶,鴻發號糧油食品有限公司,external,
-,金梅牌 鎮江香醋 550ml/支,支,鴻發號糧油食品有限公司,external,
-,頂好牌粗粒花生醬 48oz/樽,樽,鴻發號糧油食品有限公司,external,
-,天龍牌 幼滑花生醬 1kg/罐,罐,鴻發號糧油食品有限公司,external,
-,天龍牌 粗花生醬 1kg/罐,罐,鴻發號糧油食品有限公司,external,
-,茄汁 (地捫牌) 3kg x 9/箱,罐,鴻發號糧油食品有限公司,external,
-,茄汁 (地捫牌) 3kg x 9/箱,罐,鴻發號糧油食品有限公司,external,
-,TGO 罐裝茄汁 3kg x 6/箱,箱,鴻發號糧油食品有限公司,external,
-,TGO 罐裝茄汁 3kg x 6/箱,罐,鴻發號糧油食品有限公司,external,
-,TGO (袋裝)茄汁 1kg x 6/箱,罐,鴻發號糧油食品有限公司,external,
-,地門茄糕 2.95kg/罐,罐,鴻發號糧油食品有限公司,external,
-,天龍牌茄糕 3kg/罐,罐,鴻發號糧油食品有限公司,external,
-,TGO (罐裝) 茄糕 3kg/罐,罐,鴻發號糧油食品有限公司,external,
-,丘比培煎芝麻沙律醬,支,鴻發號糧油食品有限公司,external,
-,丘比培煎芝麻沙律醬 (6支/箱),箱,鴻發號糧油食品有限公司,external,
-,頂好牌 美玉白汁 (菲律賓) 3kg/桶,桶,鴻發號糧油食品有限公司,external,
-,頂好牌千島醬  2.5kg x 6/箱 ($91.33/樽),箱,鴻發號糧油食品有限公司,external,
-,頂好牌千島醬  2.5kg,樽,鴻發號糧油食品有限公司,external,
-,味淋 1.8L/支,支,鴻發號糧油食品有限公司,external,
-,豬肉鬆 (乾),kg,鴻發號糧油食品有限公司,external,
-,都樂菠蘿片 836g/罐,罐,鴻發號糧油食品有限公司,external,
-,Castello 意大利茄肉粒(茄蓉) 2.5kg x 6/箱,箱,鴻發號糧油食品有限公司,external,
-,TGO 茄肉粒 2.5kg x 6/箱,箱,鴻發號糧油食品有限公司,external,
-,Victoria 意大利茄肉粒2.5kg x 6/箱,箱,鴻發號糧油食品有限公司,external,
-,Bis 意大利茄肉粒(茄蓉) 2550g x 6/箱,箱,鴻發號糧油食品有限公司,external,
-,散裝櫻花蝦,斤,鴻發號糧油食品有限公司,external,
-,包裝紫菜(35g/包),包,鴻發號糧油食品有限公司,external,
-,玖柒牌 紫菜 (30g/小包),包,鴻發號糧油食品有限公司,external,
-,乾雪耳 (原色),斤,鴻發號糧油食品有限公司,external,
-,木耳乾 (貓耳朵/老鼠耳),斤,鴻發號糧油食品有限公司,external,
-,南杏仁 (龍皇杏),斤,鴻發號糧油食品有限公司,external,
-,無花果(土耳其) 400g/盒,盒,鴻發號糧油食品有限公司,external,
-,無花果(土耳其) 454g/盒,盒,鴻發號糧油食品有限公司,external,
-,特級去衣合核肉(必須冷藏),斤,鴻發號糧油食品有限公司,external,
-,白芝麻,斤,鴻發號糧油食品有限公司,external,
-,黑芝麻,斤,鴻發號糧油食品有限公司,external,
-,(原色)海底椰,斤,鴻發號糧油食品有限公司,external,
-,炸蔥 600g/包,包,鴻發號糧油食品有限公司,external,
-,綠豆,斤,鴻發號糧油食品有限公司,external,
-,大粒花生,斤,鴻發號糧油食品有限公司,external,
-,黃豆 (加拿大),斤,鴻發號糧油食品有限公司,external,
-,赤小豆,斤,鴻發號糧油食品有限公司,external,
-,眉豆,斤,鴻發號糧油食品有限公司,external,
-,生薏米 (特級),斤,鴻發號糧油食品有限公司,external,
-,同德興野山椒仔 113g/樽,樽,鴻發號糧油食品有限公司,external,
-,蟲草花,斤,鴻發號糧油食品有限公司,external,
-,淮山,斤,鴻發號糧油食品有限公司,external,
-,土伏苓,斤,鴻發號糧油食品有限公司,external,
-,五指毛桃根,斤,鴻發號糧油食品有限公司,external,
-,鷹嘜 甜奶 350g/罐,罐,鴻發號糧油食品有限公司,external,
-,法樂意全脂紙包奶 1Lx 12/箱,箱,鴻發號糧油食品有限公司,external,
-,Milk Secret 全脂紙包奶 1Lx 12/箱,箱,鴻發號糧油食品有限公司,external,
-,珠江橋牌 廣東米酒 500ml,箱,鴻發號糧油食品有限公司,external,
-,珠江橋牌 廣東米酒 500ml,支,鴻發號糧油食品有限公司,external,
-,土花椒 600g/包,包,鴻發號糧油食品有限公司,external,
-,五香粉 (雙喜) 605g/包,包,鴻發號糧油食品有限公司,external,
-,古月碎雙喜  605g/包,包,鴻發號糧油食品有限公司,external,
-,廣味源古月粉 454g/包,包,鴻發號糧油食品有限公司,external,
-,八角雙喜 600g/包,包,鴻發號糧油食品有限公司,external,
-,草果雙喜 600g/包,包,鴻發號糧油食品有限公司,external,
-,扁豆,斤,鴻發號糧油食品有限公司,external,
-,白蓮子,斤,鴻發號糧油食品有限公司,external,
-,三級百合,斤,鴻發號糧油食品有限公司,external,
-,大蜜棗,斤,鴻發號糧油食品有限公司,external,
-,生晒劍花,斤,鴻發號糧油食品有限公司,external,
-,新豐牌花雕酒,樽,鴻發號糧油食品有限公司,external,
-,辣腐乳,樽,鴻發號糧油食品有限公司,external,
-,炸支竹,包,鴻發號糧油食品有限公司,external,
-,菊花蜜 (皇冠牌) 625ml/支,支,鴻發號糧油食品有限公司,external,
-,雀巢咖啡粉 500g x 6/箱 ($560/箱),罐,鴻發號糧油食品有限公司,external,
-,雀巢咖啡粉 500g x 6/箱 ($560/箱),箱,鴻發號糧油食品有限公司,external,
-,德國 歐德堡35%紙包淡忌廉 1L x 12/箱,箱,鴻發號糧油食品有限公司,external,
-,阿華田 1.8kg/罐 (6罐/箱),箱,鴻發號糧油食品有限公司,external,
-,阿華田 1.8kg/罐,罐,鴻發號糧油食品有限公司,external,
-,愛護牌甜忌廉 2lb/盒,盒,鴻發號糧油食品有限公司,external,
-,玉泉梳打水 330ml x 24/箱,箱,鴻發號糧油食品有限公司,external,
-,IF 100% 椰青水,箱,鴻發號糧油食品有限公司,external,
-,話梅,斤,鴻發號糧油食品有限公司,external,
-,"中式餐具包(中更,筷子,紙巾,牙簽) 100set",箱,鴻發號糧油食品有限公司,external,
-,牛油粒(荷蘭樂味牌) 7g x 400/箱,箱,鴻發號糧油食品有限公司,external,
-,南順牌馬芝蓮 5p/罐,罐,鴻發號糧油食品有限公司,external,
-,"紙包牙簽 (5,000's盒)",盒,鴻發號糧油食品有限公司,external,
-,小白糖包  7.5g x 500/包,包,鴻發號糧油食品有限公司,external,
-,咖啡糖包 5g x 424/包,包,鴻發號糧油食品有限公司,external,
-,獨立包裝**粗**紙吸管(12x230)mm,箱,鴻發號糧油食品有限公司,external,
-,獨立包裝**幼**紙吸管(6x210)mm,箱,鴻發號糧油食品有限公司,external,
-,李錦記(小包妝)潮州辣椒油  3g x 300 x 2/箱,箱,鴻發號糧油食品有限公司,external,
-,"雷諾士保鮮紙 15""",條,鴻發號糧油食品有限公司,external,
-,"大魚袋 10.5"" x 9"" (12個/排)",排,鴻發號糧油食品有限公司,external,
-,96祝君安好 毛巾 90% 棉,打,鴻發號糧油食品有限公司,external,
-,(紅邊) 勞工手套/打,打,鴻發號糧油食品有限公司,external,
-,黑紅圍裙(2條裝)2條/包,包,鴻發號糧油食品有限公司,external,
-,綠水 1Gall/桶,桶,鴻發號糧油食品有限公司,external,
-,漂白水 40p/桶,桶,鴻發號糧油食品有限公司,external,
-,洗潔精 40p/桶,桶,鴻發號糧油食品有限公司,external,
-,"垃圾袋 36"" x 42""",包,鴻發號糧油食品有限公司,external,
-,百潔布(韓國) 10塊/扎,扎,鴻發號糧油食品有限公司,external,
-,TGO 加厚黑色膠手套(中/大碼)/打,打,鴻發號糧油食品有限公司,external,
-,TGO 加厚黑色膠手套(小碼)/打,打,鴻發號糧油食品有限公司,external,
-,TGO 100'S 優質藍色(丁晴)手套-M,盒,鴻發號糧油食品有限公司,external,
-,TGO 雙層 M-Fold 抹手紙 16x250's/箱,箱,鴻發號糧油食品有限公司,external,
-,TGO 商用抹手紙 20x200's/箱,箱,鴻發號糧油食品有限公司,external,
-,鮑魚刷(15') (10支/扎),扎,鴻發號糧油食品有限公司,external,
-,哥士的(不可食用) 5lb/包,包,鴻發號糧油食品有限公司,external,
-,扒爐水 3.8公升/桶,桶,鴻發號糧油食品有限公司,external,
+sku,name,unit,supplier_name,channel,warehouse,fcc_supplier_id,fcc_supplier_name,match_type
+,有皮22片裝厚方包,條,鳳香園麵飽有限公司,external,,56e1237a-b85f-41e7-807c-bc7515269645,鳳香園,alias
+FCR001,滷水牛展片 # 每訂6包牛展片要跟1包牛展頭,2kg / 包,FC_凍肉,fc_internal,frozen,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+FCR011,滷水牛展頭,2kg / 包,FC_凍肉,fc_internal,frozen,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+FCR003,滷水牛肚,2kg / 包,FC_凍肉,fc_internal,frozen,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+FCR002,滷水牛腩,2kg / 包,FC_凍肉,fc_internal,frozen,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+FCR013,滷水牛筋,2kg / 包,FC_凍肉,fc_internal,frozen,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+FCR004,燜豬肚,2kg / 包,FC_凍肉,fc_internal,frozen,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+FCR021,香菇滷肉,2kg / 包,FC_凍肉,fc_internal,frozen,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+FCR006-B,醃有骨豬扒,3kg / 包,FC_凍肉,fc_internal,frozen,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+FCR007-C,醃雞扒,3kg / 包,FC_凍肉,fc_internal,frozen,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKO043,麻辣醬,6KG/桶,FC_凍肉,fc_internal,frozen,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKO044,29號蒜味炸漿粉,2份/包,FC_凍肉,fc_internal,frozen,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+FCR022,扁食肉餡 (500克),包,FC_凍肉,fc_internal,frozen,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+,綠豆沙,包,FC_凍肉,fc_internal,frozen,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+,甜酸咕嚕汁,包,FC_凍肉,fc_internal,frozen,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKO028,牛肉湯粉,600g/包,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKO031,藥膳包,460/包,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKO024,21號炸粉,2kg/包,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKJ012-C,酸菜,3KG/包,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKJ004-B,蟲草花,500g/包,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKJ005,雲耳,500g/包,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKJ006,紅棗片,500g/包,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKJ008,龍眼乾,500g/包,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKJ007,杞子,500g/包,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKI041,芋頭麻糬 (6粒)/包,包,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKA042,白桃烏龍茶包,6g x 30個,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKA003-D,天使茉香綠茶,(500G),FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKA004-C,伯爵紅茶,30包/箱,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKA009-A,天使蜜香紅茶,600g X 24包,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKA036,桂花烏龍茶包,6g x 40個,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKA046,山茶花烏龍茶,500g*30包,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+,雀巢咖啡粉,500g/罐,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKA041-B,麥茶,(6g x 30個),FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKJ011,胎菊,500克/包,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKB028,蜜桃濃縮汁,2.5kg x 6瓶/箱,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKB001,芒果濃縮汁,2.5kg x 6瓶/箱,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKB002,百香果濃縮汁,2.5kg x 6瓶/箱,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKB004,荔枝濃縮汁,2.4kg x 6瓶/箱,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKB0,檸檬原汁,950ml x 12瓶/箱,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKB012,芋香粉,6瓶/箱,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKI010,果糖,6kg x 3包/箱,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKF036,原蔗糖漿,6kg x 4包/箱 [原箱訂],FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKB031,黑糖漿,2.5kg x 6瓶/箱,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKB023,冬瓜糖露(2.5KG),2.5kg,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKB032-B,韓國生薑茶,樽,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKD002,黃金可可粉,1kg x 20包/箱,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKD011-D,60N奶精粉 (1kg/包),1kg x 20包/箱,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKD013-B,純雪-生乳起司奶蓋粉,1kg,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKI029,牛奶 (12包/箱),1L x 12包/箱 [原箱訂],FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+,愛護牌啡奶,包,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKB016-B,調和蜂蜜糖漿,罐,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKE004,荔枝椰果,3.3kg x 6罐/箱,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKE008-C,蜂蜜蘆薈,4kg x 4瓶/箱,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKE011,巧克力碎片,3.1kg x 6罐/箱,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKE001-B,珍珠,454g x 12包/箱,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKE010-C,仙草凍,3kg x 6包/箱,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKE007,寒天晶球,6罐/箱,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKJ008,龍眼乾,30包/箱,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKJ007,杞子,500g/包,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKJ006,紅棗,500g/包,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKD014,麻糬粉,500克,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+,堅果碎,包,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+,CROP'S急凍芒果,包,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+,急凍火龍果粒,包,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKF037,M.桂花糖漿,樽,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+,紙杯套(空白),條,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+,(c*) 幸福茶研社 16oz PP杯,條,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKG105,100% Fresh 12oz PP杯子 (25pcs*20pack) (幸福茶研社),條,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKG080,90mm PP 蓋,6瓶/箱,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+CMK018,16oz 熱杯 (幸福良晨 ),條,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKG016,熱杯蓋,條,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+CMK016,18oz 外賣紙碗 (幸福良晨 ),(25隻*20條/箱),FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+BBC016,18oz 外賣膠碗蓋,25個 x 20條/箱,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+BBC016-B,18oz 外賣紙碗蓋,50隻/條,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+CMK017,28oz 外賣紙碗 (幸福良晨 ),50個 x 20條/箱,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+BBC018,28oz 外賣膠碗蓋,20條/箱,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+BBC018-B,28oz 外賣紙碗蓋,50個 x 20條/箱,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+BBC012-B,幸福良晨 膠袋 - 小,50個 x 20條/箱,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+BBC013-B,幸福良晨 膠袋 - 中,50個 x 20條/箱,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+BBC014-B,幸福良晨 膠袋 - 大,50個 x 10條/箱,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+BBC025,幸福良晨 膠袋 - 特大,50個 x 20條/箱,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+BBC031,9oz 杯,50個 x 20條/箱,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+,五格便當盒 (50個/條),,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKI011,M. 糖漿泵 (細唧嘴),100個/扎,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKI012,M. 糖漿泵 (大唧嘴),100個/扎,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+,普通白色濾芯,50個 x 20條/箱,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKI005,前置白色濾芯(普通濾芯),50個x6條/箱,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKR011,"MH 濾芯(咖啡機,煮茶機用)",個,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKR012,MC 濾芯 (制冰機用),個,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKQ122,10oz 馬克杯 (多色),個,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKQ123,12oz 有耳透明亞克力膠杯,1000g,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKQ124,16oz 透明亞克力膠杯,個,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+CMK008,水果茶長匙 (cafe mikoo),50條=箱,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+,員工杯,條,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+,酒精膏 (8包/箱),箱,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKO047,肉粽甜辣醬,個,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKI009,POS感熱紙,50卷/箱,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKI035,57x40mm熱感紙,個,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+CMK019,牙簽筒,個,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+,立得抹手紙,20包/箱,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+,三格膠碟,個,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKQ125,3.8吋藍邊膠汁碟,1箱=12包,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKQ126,4.5吋藍邊膠碗,個,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKQ130,5吋藍邊膠碟,1箱=50卷,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKQ106,"5 3/4"" 藍色條紋碗",個,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKQ118,7吋藍紋碟,個,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKQ115,8吋藍紋麵碗,個,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKQ117,10吋藍紋麵碗,個,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKQ128,193x55 圓形黑色鋁鍋 連蓋,個,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKQ133,172x45 圓形黑色鋁鍋 連蓋,個,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKQ127,400ml 黑色炖盅,個,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKR018,黑柄麵喱(蘺),個,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKG109,一次性頭套 (200個),個,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+CMK010,幸福良晨 T-shirt XXXL,個,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+CMK011,幸福良晨 T-shirt XXL,個,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+CMK012,幸福良晨 T-shirt XL,個,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+CMK013,幸福良晨 T-shirt L,個,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+CMK014,幸福良晨 T-shirt M,個,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+CMK015,幸福良晨 T-shirt S,個,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+CMK023,幸福良晨 外套 - 3XL,包,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+CMK024,幸福良晨 外套 - 2XL,,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+CMK022,幸福良晨 外套 - XL,,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+CMK021,幸福良晨 外套 - L,,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+CMK020,幸福良晨 外套 - M,,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKH049,黑色全身雙吊帶圍裙,,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+,半身圍裙,,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKQ133,172x45 圓形黑色鋁鍋 連蓋,,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKQ128,193x55 圓形黑色鋁鍋 連蓋,,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+LKQ127,400ml 黑色炖盅,,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+,筷子 (對),,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+,銀色餐刀,,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+,"14"" 木托盤",,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+,飯桶,,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+,食鉗彈簧,,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+,手動打蛋器,,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+,500ml 甜品杯,,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+,18cm 銀湯匙,,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+,"8"" 黑色長柄湯匙",,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+,食鉗彈簧,,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+,手動打蛋器,,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+,500ml 甜品杯,,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+,18cm 銀湯匙,,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+,"8"" 黑色長柄湯匙",,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+,"8"" 黑色長柄湯匙",,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+,火鍋爐,,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+,POS感熱紙,箱,FC_乾貨,fc_internal,dry,87bcc50f-5613-4d0c-8bbc-d859459b2842,FC-總部,fc_hq
+,台灣幼麵,斤,三潤麵皇食品有限公司,external,,68b2af9b-0496-45da-9929-c207bc3ab034,三潤,alias
+,鮮過橋米線,斤,三潤麵皇食品有限公司,external,,68b2af9b-0496-45da-9929-c207bc3ab034,三潤,alias
+,白方皮 (3吋x3吋),斤,三潤麵皇食品有限公司,external,,68b2af9b-0496-45da-9929-c207bc3ab034,三潤,alias
+,唐生菜,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,娃娃菜,包,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,番茄,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,BB 菜心,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,椰菜,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,北京椰菜,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,合掌瓜,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,栗子肉(淨肉),KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,紅尖椒,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,青瓜,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,茄瓜/茄子,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,苦瓜,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,冬瓜,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,老黃瓜,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,指天椒,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,螺絲椒,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,青木瓜,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,青木瓜肉,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,粟米,條,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,粟米肉,條,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,白果肉(包裝),包,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,有剌青瓜,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,淮山,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,淮山肉,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,甘筍肉,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,甘筍肉切(骨牌),KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,白蘿蔔肉切(骨牌),KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,唐芹/中芹,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,西芹,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,粉葛,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,粉葛肉,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,蓮藕,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,蓮藕肉,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,洋蔥,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,洋蔥肉,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,青蘿蔔肉,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,白蘿蔔肉,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,蒜蓉,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,薑蓉,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,韭菜,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,蒜肉,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,薑/有皮姜,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,薄荷葉,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,青蔥肉,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,芫茜,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,切乾蔥肉絲,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,乾蔥肉,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,金不換(老虎牌),包,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,九層塔(金不換),KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,香茅(泰國),KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,鮮冬菇,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,鮮冬菇(去蒂),KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,靈芝菇,包,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,銀芽,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,白豆腐乾,件,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,青波椒,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,紅圓椒,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,黃圓椒,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,味菜,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,採青菜,扎,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,雞蛋(泰國),排,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,紅蘋果,個,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,椰子肉,個,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,雪梨 (天津梨),個,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,木瓜仔,KG,日鮮食品有限公司,external,,4628dbc3-d8f4-4c6f-9bf9-fac499342394,日鮮食品有限公司,exact
+,白菜豬肉餃 (20個/包)(12包/箱),箱,金福華食物(香港)有限公司,external,,d8d625aa-a1dc-4a38-8f54-ae65767b6f55,金福華,alias
+,傳統香菇肉燥 (8包/箱),箱,金福華食物(香港)有限公司,external,,d8d625aa-a1dc-4a38-8f54-ae65767b6f55,金福華,alias
+,特級花枝丸(藍色) (3KG*6包/箱),箱,金福華食物(香港)有限公司,external,,d8d625aa-a1dc-4a38-8f54-ae65767b6f55,金福華,alias
+,花枝丸(特級) (6包/箱),包,金福華食物(香港)有限公司,external,,d8d625aa-a1dc-4a38-8f54-ae65767b6f55,金福華,alias
+,A級花枝丸(3kg) (6包/箱),包,金福華食物(香港)有限公司,external,,d8d625aa-a1dc-4a38-8f54-ae65767b6f55,金福華,alias
+,蒜味台灣香腸,包,金福華食物(香港)有限公司,external,,d8d625aa-a1dc-4a38-8f54-ae65767b6f55,金福華,alias
+,水林地瓜條,箱,金福華食物(香港)有限公司,external,,d8d625aa-a1dc-4a38-8f54-ae65767b6f55,金福華,alias
+,脆皮地瓜條 3kg x 6包 (14mm),包,金福華食物(香港)有限公司,external,,d8d625aa-a1dc-4a38-8f54-ae65767b6f55,金福華,alias
+,蛋餅,包,金福華食物(香港)有限公司,external,,d8d625aa-a1dc-4a38-8f54-ae65767b6f55,金福華,alias
+,甜不辣,包,金福華食物(香港)有限公司,external,,d8d625aa-a1dc-4a38-8f54-ae65767b6f55,金福華,alias
+,高慶泉甜辣醬,桶,金福華食物(香港)有限公司,external,,d8d625aa-a1dc-4a38-8f54-ae65767b6f55,金福華,alias
+,檸檬原汁,瓶,金福華食物(香港)有限公司,external,,d8d625aa-a1dc-4a38-8f54-ae65767b6f55,金福華,alias
+,檸檬原汁,瓶,金福華食物(香港)有限公司,external,,d8d625aa-a1dc-4a38-8f54-ae65767b6f55,金福華,alias
+,福華牌雞汁,箱,金福華食物(香港)有限公司,external,,d8d625aa-a1dc-4a38-8f54-ae65767b6f55,金福華,alias
+,急凍小芋圓 1kg/包,包,金福華食物(香港)有限公司,external,,d8d625aa-a1dc-4a38-8f54-ae65767b6f55,金福華,alias
+,厚切黑魚片(250g/包) (50包/箱),包,長明國際(香港)集團有限公司,external,,0480893b-af08-4ad1-80d9-74fa84d6de2a,長明國際 (CI),alias
+,金湯包(1kg/包) (12包/箱),包,長明國際(香港)集團有限公司,external,,0480893b-af08-4ad1-80d9-74fa84d6de2a,長明國際 (CI),alias
+,海的炒制酸菜(1kg/包)(10包/箱),包,長明國際(香港)集團有限公司,external,,0480893b-af08-4ad1-80d9-74fa84d6de2a,長明國際 (CI),alias
+,丁晴藍無粉手套 (100隻),盒,浚峰企業有限公司,external,,,,unmatched
+,丁晴藍無粉手套 (100隻),盒,浚峰企業有限公司,external,,,,unmatched
+,VIRJOY 餐巾紙,盒,浚峰企業有限公司,external,,,,unmatched
+,餐飲專用不掉毛清潔抹布(5條/包),包,浚峰企業有限公司,external,,,,unmatched
+,益力多 (五支裝),排,益力多公司,external,,,,unmatched
+,360(3A蛋) 360/盒 or 12排/盒,箱,強記蛋行,external,,ee0986bb-db19-45f0-968d-808b87a4959e,強記蛋行,exact
+,檸檬(原庄),箱,強記蛋行,external,,ee0986bb-db19-45f0-968d-808b87a4959e,強記蛋行,exact
+,淘大沙嗲醬,罐,淘大,external,,7e0d1992-86d9-4131-8f28-8484558bf5ff,淘大,exact_inactive
+,幼吸管 (長),包,意華,external,,ad4fc765-3452-4aff-9047-d050aa40fb20,意華,exact
+,珍珠吸管 (長),包,意華,external,,ad4fc765-3452-4aff-9047-d050aa40fb20,意華,exact
+,紙杯套 (空白),包,意華,external,,ad4fc765-3452-4aff-9047-d050aa40fb20,意華,exact
+,"7"" 熱飲攪拌棒",包,意華,external,,ad4fc765-3452-4aff-9047-d050aa40fb20,意華,exact
+,26oz透明外賣盒底,箱,意華,external,,ad4fc765-3452-4aff-9047-d050aa40fb20,意華,exact
+,26oz透明外賣盒蓋,箱,意華,external,,ad4fc765-3452-4aff-9047-d050aa40fb20,意華,exact
+,餐具包 - 中式,包,意華,external,,ad4fc765-3452-4aff-9047-d050aa40fb20,意華,exact
+,餐具包 - 西式,包,意華,external,,ad4fc765-3452-4aff-9047-d050aa40fb20,意華,exact
+,6oz 熱杯 (無logo),條,意華,external,,ad4fc765-3452-4aff-9047-d050aa40fb20,意華,exact
+,24oz PP 膠杯 (700ml) (500個/箱),箱,意華,external,,ad4fc765-3452-4aff-9047-d050aa40fb20,意華,exact
+,24oz PP 膠杯 (70ml) 磨沙,箱,意華,external,,ad4fc765-3452-4aff-9047-d050aa40fb20,意華,exact
+,紙吸管_幼(6mm x230mm)(5000支),箱,意華,external,,ad4fc765-3452-4aff-9047-d050aa40fb20,意華,exact
+,(平底無孔)8oz 微波爐碗連防漏蓋 (240套),箱,意華,external,,ad4fc765-3452-4aff-9047-d050aa40fb20,意華,exact
+,單格微波爐盒_不連蓋(黑色)(250個/箱),箱,意華,external,,ad4fc765-3452-4aff-9047-d050aa40fb20,意華,exact
+,單格微波爐盒膠蓋 (透明)(250個/箱),箱,意華,external,,ad4fc765-3452-4aff-9047-d050aa40fb20,意華,exact
+,4杯杯裝外賣盒(啡色)(200個/箱),箱,意華,external,,ad4fc765-3452-4aff-9047-d050aa40fb20,意華,exact
+,5格黑色日式盒連蓋 (300個/箱),箱,意華,external,,ad4fc765-3452-4aff-9047-d050aa40fb20,意華,exact
+,"2-3oz 透明膠杯蓋 (2,000個/箱)",箱,意華,external,,ad4fc765-3452-4aff-9047-d050aa40fb20,意華,exact
+,"3oz 透邊明膠杯 (2,000個/箱)",箱,意華,external,,ad4fc765-3452-4aff-9047-d050aa40fb20,意華,exact
+,"4""木甜品更",包,意華,external,,ad4fc765-3452-4aff-9047-d050aa40fb20,意華,exact
+,2.5oz試飲杯(白色),箱,意華,external,,ad4fc765-3452-4aff-9047-d050aa40fb20,意華,exact
+,豬肉眼絲,磅,新豐凍肉食品市埸,external,,40c55969-f54e-4fc7-8858-861ad463bca2,新豐凍肉 (SFFM),alias
+,牛湯骨,磅,新豐凍肉食品市埸,external,,40c55969-f54e-4fc7-8858-861ad463bca2,新豐凍肉 (SFFM),alias
+,豬湯骨,磅,新豐凍肉食品市埸,external,,40c55969-f54e-4fc7-8858-861ad463bca2,新豐凍肉 (SFFM),alias
+,豬腩肉片,磅,新豐凍肉食品市埸,external,,40c55969-f54e-4fc7-8858-861ad463bca2,新豐凍肉 (SFFM),alias
+,雞中翼 (巴西),磅,新豐凍肉食品市埸,external,,40c55969-f54e-4fc7-8858-861ad463bca2,新豐凍肉 (SFFM),alias
+,冰鮮雞,隻,新豐凍肉食品市埸,external,,40c55969-f54e-4fc7-8858-861ad463bca2,新豐凍肉 (SFFM),alias
+,切雞髀,磅,新豐凍肉食品市埸,external,,40c55969-f54e-4fc7-8858-861ad463bca2,新豐凍肉 (SFFM),alias
+,去皮雞扒(上脾肉),KG,新豐凍肉食品市埸,external,,40c55969-f54e-4fc7-8858-861ad463bca2,新豐凍肉 (SFFM),alias
+,美樂火腿片,包,新豐凍肉食品市埸,external,,40c55969-f54e-4fc7-8858-861ad463bca2,新豐凍肉 (SFFM),alias
+,豬梅肉片,包,新豐凍肉食品市埸,external,,40c55969-f54e-4fc7-8858-861ad463bca2,新豐凍肉 (SFFM),alias
+,肥牛片,包,新豐凍肉食品市埸,external,,40c55969-f54e-4fc7-8858-861ad463bca2,新豐凍肉 (SFFM),alias
+,71/90蝦仁,磅,新豐凍肉食品市埸,external,,40c55969-f54e-4fc7-8858-861ad463bca2,新豐凍肉 (SFFM),alias
+,豬頸肉,磅,新豐凍肉食品市埸,external,,40c55969-f54e-4fc7-8858-861ad463bca2,新豐凍肉 (SFFM),alias
+,台式鹵水包 (川式) (半斤裝),斤,源興,external,,36c1ff72-5f6c-4615-86fe-e500bc878b86,源興,exact
+,四川青麻椒,包,源興,external,,36c1ff72-5f6c-4615-86fe-e500bc878b86,源興,exact
+,八角,包,源興,external,,36c1ff72-5f6c-4615-86fe-e500bc878b86,源興,exact
+,土花椒,包,源興,external,,36c1ff72-5f6c-4615-86fe-e500bc878b86,源興,exact
+,新豐江西米線 2kg x 12/箱,箱,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,坑紋通粉 (意粉叔叔)花通粉 7lb/包,包,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,出前一丁 原味 100g x 30/箱,箱,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,辛辣麵 120g x 40/箱,箱,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,櫻城牌珍珠米,包,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,德國生粉 (時價),斤,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,三象粘米粉 (600g/包),包,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,斧頭牌食粉,盒,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,天龍牌麵包糠 1kg/包,包,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,(紅蓋)美膳坊24斤生油 24斤/罐 (時價),罐,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,(金湖)24斤生油 24斤/罐,罐,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,芝士碎 (FFP馬蘇里拉),包,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,芝士碎 (Anchor Mozzarella) (2kg/包),包,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,韓國幼砂糖 (時價),斤,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,冰糖碎,斤,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,黃糖 600g/包,包,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,桂花糖 250g/樽,樽,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,幼鹽 5斤/包,斤,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,味椒鹽 80g/樽,樽,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,家樂牌 調味雞粉(補充) 1kgx12/箱,箱,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,家樂牌 調味雞粉(補充) 1KG,包,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,家樂牌港式忌廉雞湯粉 900g/罐,罐,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,家樂牌日式豬骨湯粉 850g/罐,罐,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,1.8L 珠江橋牌 生抽王,箱,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,萬字豉油(日本)1.8L/支,支,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,1.8L 珠江橋牌金標老抽王,箱,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,美極鮮醬油 - 5號  600ml/支,支,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,大豐麻油 600ml/支,支,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,李錦記照燒汁  2.2kg/桶,桶,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,錦珍記豆瓣醬 7kg/桶,桶,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,泰國皇冠牌魚露 750ml/支,支,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,家樂牌 雙蠔蠔油 2.3kg/桶,桶,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,汕頭米醋 600ml/支,支,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,海天5度白醋1.9/l 桶,桶,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,金梅牌 鎮江香醋 550ml/支,支,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,頂好牌粗粒花生醬 48oz/樽,樽,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,天龍牌 幼滑花生醬 1kg/罐,罐,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,天龍牌 粗花生醬 1kg/罐,罐,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,茄汁 (地捫牌) 3kg x 9/箱,罐,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,茄汁 (地捫牌) 3kg x 9/箱,罐,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,TGO 罐裝茄汁 3kg x 6/箱,箱,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,TGO 罐裝茄汁 3kg x 6/箱,罐,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,TGO (袋裝)茄汁 1kg x 6/箱,罐,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,地門茄糕 2.95kg/罐,罐,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,天龍牌茄糕 3kg/罐,罐,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,TGO (罐裝) 茄糕 3kg/罐,罐,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,丘比培煎芝麻沙律醬,支,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,丘比培煎芝麻沙律醬 (6支/箱),箱,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,頂好牌 美玉白汁 (菲律賓) 3kg/桶,桶,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,頂好牌千島醬  2.5kg x 6/箱 ($91.33/樽),箱,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,頂好牌千島醬  2.5kg,樽,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,味淋 1.8L/支,支,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,豬肉鬆 (乾),kg,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,都樂菠蘿片 836g/罐,罐,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,Castello 意大利茄肉粒(茄蓉) 2.5kg x 6/箱,箱,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,TGO 茄肉粒 2.5kg x 6/箱,箱,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,Victoria 意大利茄肉粒2.5kg x 6/箱,箱,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,Bis 意大利茄肉粒(茄蓉) 2550g x 6/箱,箱,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,散裝櫻花蝦,斤,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,包裝紫菜(35g/包),包,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,玖柒牌 紫菜 (30g/小包),包,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,乾雪耳 (原色),斤,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,木耳乾 (貓耳朵/老鼠耳),斤,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,南杏仁 (龍皇杏),斤,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,無花果(土耳其) 400g/盒,盒,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,無花果(土耳其) 454g/盒,盒,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,特級去衣合核肉(必須冷藏),斤,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,白芝麻,斤,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,黑芝麻,斤,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,(原色)海底椰,斤,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,炸蔥 600g/包,包,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,綠豆,斤,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,大粒花生,斤,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,黃豆 (加拿大),斤,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,赤小豆,斤,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,眉豆,斤,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,生薏米 (特級),斤,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,同德興野山椒仔 113g/樽,樽,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,蟲草花,斤,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,淮山,斤,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,土伏苓,斤,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,五指毛桃根,斤,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,鷹嘜 甜奶 350g/罐,罐,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,法樂意全脂紙包奶 1Lx 12/箱,箱,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,Milk Secret 全脂紙包奶 1Lx 12/箱,箱,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,珠江橋牌 廣東米酒 500ml,箱,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,珠江橋牌 廣東米酒 500ml,支,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,土花椒 600g/包,包,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,五香粉 (雙喜) 605g/包,包,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,古月碎雙喜  605g/包,包,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,廣味源古月粉 454g/包,包,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,八角雙喜 600g/包,包,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,草果雙喜 600g/包,包,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,扁豆,斤,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,白蓮子,斤,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,三級百合,斤,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,大蜜棗,斤,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,生晒劍花,斤,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,新豐牌花雕酒,樽,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,辣腐乳,樽,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,炸支竹,包,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,菊花蜜 (皇冠牌) 625ml/支,支,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,雀巢咖啡粉 500g x 6/箱 ($560/箱),罐,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,雀巢咖啡粉 500g x 6/箱 ($560/箱),箱,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,德國 歐德堡35%紙包淡忌廉 1L x 12/箱,箱,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,阿華田 1.8kg/罐 (6罐/箱),箱,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,阿華田 1.8kg/罐,罐,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,愛護牌甜忌廉 2lb/盒,盒,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,玉泉梳打水 330ml x 24/箱,箱,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,IF 100% 椰青水,箱,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,話梅,斤,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,"中式餐具包(中更,筷子,紙巾,牙簽) 100set",箱,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,牛油粒(荷蘭樂味牌) 7g x 400/箱,箱,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,南順牌馬芝蓮 5p/罐,罐,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,"紙包牙簽 (5,000's盒)",盒,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,小白糖包  7.5g x 500/包,包,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,咖啡糖包 5g x 424/包,包,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,獨立包裝**粗**紙吸管(12x230)mm,箱,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,獨立包裝**幼**紙吸管(6x210)mm,箱,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,李錦記(小包妝)潮州辣椒油  3g x 300 x 2/箱,箱,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,"雷諾士保鮮紙 15""",條,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,"大魚袋 10.5"" x 9"" (12個/排)",排,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,96祝君安好 毛巾 90% 棉,打,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,(紅邊) 勞工手套/打,打,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,黑紅圍裙(2條裝)2條/包,包,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,綠水 1Gall/桶,桶,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,漂白水 40p/桶,桶,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,洗潔精 40p/桶,桶,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,"垃圾袋 36"" x 42""",包,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,百潔布(韓國) 10塊/扎,扎,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,TGO 加厚黑色膠手套(中/大碼)/打,打,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,TGO 加厚黑色膠手套(小碼)/打,打,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,TGO 100'S 優質藍色(丁晴)手套-M,盒,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,TGO 雙層 M-Fold 抹手紙 16x250's/箱,箱,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,TGO 商用抹手紙 20x200's/箱,箱,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,鮑魚刷(15') (10支/扎),扎,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,哥士的(不可食用) 5lb/包,包,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
+,扒爐水 3.8公升/桶,桶,鴻發號糧油食品有限公司,external,,6f94774e-4768-4722-9469-7067cda4c048,鴻發號糧油食品有限公司,exact
