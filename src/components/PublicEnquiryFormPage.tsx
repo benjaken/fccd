@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { FOOD_CHANNEL_CATERING_LOGO_PATH } from "@/lib/brand-logo";
 import {
   emptyAnswers,
+  enquiryQuestionElementId,
   type EnquiryAnswerValue,
   type EnquiryAnswers,
   type EnquiryFieldError,
@@ -17,6 +18,16 @@ import {
 } from "@/lib/enquiry-forms-api";
 
 import "./enquiry-form.css";
+
+function scrollToEnquiryField(fieldKey: string) {
+  const question = document.getElementById(enquiryQuestionElementId(fieldKey));
+  if (!question) return;
+  question.scrollIntoView({ behavior: "smooth", block: "center" });
+  const focusable = question.querySelector<HTMLElement>(
+    "input:not([type='hidden']):not([disabled]), textarea:not([disabled]), button:not([disabled])",
+  );
+  focusable?.focus({ preventScroll: true });
+}
 
 export function PublicEnquiryFormPage() {
   const { formId } = useParams();
@@ -81,7 +92,10 @@ export function PublicEnquiryFormPage() {
       setSubmittedCode(result.referenceCode);
     } catch (error) {
       const fieldErrors = (error as { fieldErrors?: EnquiryFieldError[] }).fieldErrors;
-      if (fieldErrors?.length) setErrors(fieldErrors);
+      if (fieldErrors?.length) {
+        setErrors(fieldErrors);
+        scrollToEnquiryField(fieldErrors[0].fieldKey);
+      }
     } finally {
       setSubmitting(false);
     }

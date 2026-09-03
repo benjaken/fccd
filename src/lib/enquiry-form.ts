@@ -324,6 +324,10 @@ function parseEnquiryQuestion(value: unknown): EnquiryQuestion | null {
   };
 }
 
+export function enquiryQuestionElementId(fieldKey: string) {
+  return `enquiry-question-${fieldKey}`;
+}
+
 export function enquiryPublicPath(formId: string) {
   return `/quote-inquiry/${formId}`;
 }

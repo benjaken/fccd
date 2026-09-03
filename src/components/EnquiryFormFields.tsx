@@ -1,4 +1,5 @@
 import {
+  enquiryQuestionElementId,
   isEnquiryOptionCompact,
   type EnquiryAnswerValue,
   type EnquiryAnswers,
@@ -36,7 +37,11 @@ export function EnquiryFormFields({
         const controlId = `enquiry-${question.fieldKey}`;
         const isGroup = question.type === "radio" || question.type === "checkbox";
         return (
-          <div key={question.fieldKey} className={cn("enquiry-form-question", error && "has-error")}>
+          <div
+            key={question.fieldKey}
+            id={enquiryQuestionElementId(question.fieldKey)}
+            className={cn("enquiry-form-question", error && "has-error")}
+          >
             <label className="enquiry-form-label" id={labelId} htmlFor={isGroup ? undefined : controlId}>
               <span>
                 {question.title}

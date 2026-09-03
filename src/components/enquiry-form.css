@@ -64,6 +64,7 @@
 .enquiry-form-question {
   display: grid;
   gap: 8px;
+  scroll-margin-top: 24px;
 }
 
 .enquiry-form-fields-split .enquiry-form-question {

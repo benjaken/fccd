@@ -9,6 +9,7 @@ import {
   convertEnquiryRequirements,
   emptyAnswers,
   enquiryPublicPath,
+  enquiryQuestionElementId,
   mapEnquiryAnswers,
   serializeEnquiryQuestions,
   validateEnquiryAnswers,
@@ -19,6 +20,7 @@ describe("catering enquiry seed form", () => {
     expect(enquiryPublicPath(CATERING_ENQUIRY_SEED_FORM_ID)).toBe(
       `/quote-inquiry/${CATERING_ENQUIRY_SEED_FORM_ID}`,
     );
+    expect(enquiryQuestionElementId("name")).toBe("enquiry-question-name");
   });
 
   it("treats short option labels as two-up and long ones as full width", () => {

@@ -84,12 +84,18 @@ describe("public enquiry form page", () => {
       </MemoryRouter>,
     );
     await screen.findByRole("button", { name: "Submit" });
+    const firstQuestion = document.getElementById("enquiry-question-name");
+    expect(firstQuestion).not.toBeNull();
+    const scrollIntoView = vi.fn();
+    firstQuestion!.scrollIntoView = scrollIntoView;
     await userEvent.click(screen.getByRole("button", { name: "Submit" }));
     const errors = await screen.findAllByText("此題為必填");
     expect(errors.length).toBeGreaterThan(0);
     expect(errors[0]).toHaveClass("enquiry-form-error");
     expect(errors[0].closest(".enquiry-form-question")).toHaveClass("has-error");
     expect(screen.getByRole("textbox", { name: /姓名/ })).toHaveAttribute("aria-invalid", "true");
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "center" });
+    expect(screen.getByRole("textbox", { name: /姓名/ })).toHaveFocus();
     expect(rpcMock).not.toHaveBeenCalledWith(
       "submit_enquiry_form",
       expect.anything(),
