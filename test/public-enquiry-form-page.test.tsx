@@ -129,7 +129,9 @@ describe("public enquiry form page", () => {
     expect(container.querySelector(".enquiry-form-control")).not.toBeNull();
 
     const css = readFileSync(path.resolve(process.cwd(), "src/components/enquiry-form.css"), "utf8");
-    expect(css).toMatch(/\.enquiry-public-shell\s*\{[^}]*max-width:\s*1000px/s);
+    expect(css).toMatch(/\.enquiry-public-shell\s*\{[^}]*width:\s*min\(100% - 32px,\s*1000px\)/s);
+    expect(css).toMatch(/\.enquiry-public-page\s*\{[^}]*background:/s);
+    expect(css).toMatch(/\.enquiry-public-card[^}]*padding:\s*28px 32px/s);
     expect(css).toContain("grid-template-columns: minmax(200px, 34%) minmax(0, 1fr)");
     expect(css).toContain("grid-column: 1 / -1");
     expect(css).toMatch(/\.enquiry-form-option\s*\{[^}]*align-items:\s*center/s);
