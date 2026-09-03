@@ -165,7 +165,7 @@ Product: **FCCD** — Food Channel Catering Delivery.
 
 ```text
 工場版面 · 貨倉存貨
-├─ 待出貨（自己倉）
+├─ 待出貨（FC 內部）
 ├─ 出貨紀錄
 └─ 入貨紀錄
 ```
