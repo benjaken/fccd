@@ -23863,7 +23863,7 @@ a.masoft-order-tag:focus-visible {
 }
 
 .quote-lines-readonly-panel .quote-line-sequence,
-.quote-lines-readonly-panel td:not(.quote-line-product, .quote-line-sku) {
+.quote-lines-readonly-panel td:not(.quote-line-product, .quote-line-sku, .quote-line-remarks) {
   text-align: center;
 }
 
@@ -23880,8 +23880,18 @@ a.masoft-order-tag:focus-visible {
 }
 
 .quote-lines-readonly-panel td.quote-line-product {
-  max-width: min(560px, 48vw);
+  max-width: none;
   white-space: normal;
+}
+
+.quote-lines-readonly-panel .quote-line-label-chip {
+  margin-top: 0;
+}
+
+.quote-lines-readonly-panel .quote-line-label-remark-text {
+  display: block;
+  margin-top: 0;
+  -webkit-line-clamp: unset;
 }
 
 .quote-financial-readonly .quote-readonly-field {
@@ -24130,15 +24140,11 @@ a.masoft-order-tag:focus-visible {
   font-size: 0.75rem;
 }
 
-.quote-mobile-line > header .quote-line-remarks {
+.quote-mobile-line > header .quote-line-labels,
+.quote-mobile-line > header .quote-line-remarks-list {
   grid-column: 1 / -1;
   width: 100%;
   max-width: none;
-}
-
-.quote-mobile-line > header .quote-line-remark-row {
-  width: 100%;
-  min-width: 0;
 }
 
 .quote-mobile-line-actions {
@@ -24244,13 +24250,14 @@ a.masoft-order-tag:focus-visible {
   padding-left: 10px;
 }
 
-.quote-lines-panel th:nth-child(1) { width: 7%; }
-.quote-lines-panel th:nth-child(2) { width: 12%; }
-.quote-lines-panel th:nth-child(3) { width: 32%; }
-.quote-lines-panel th:nth-child(4) { width: 11%; }
-.quote-lines-panel th:nth-child(5) { width: 12%; }
+.quote-lines-panel th:nth-child(1) { width: 6%; }
+.quote-lines-panel th:nth-child(2) { width: 10%; }
+.quote-lines-panel th:nth-child(3) { width: 26%; }
+.quote-lines-panel th:nth-child(4) { width: 16%; }
+.quote-lines-panel th:nth-child(5) { width: 9%; }
 .quote-lines-panel th:nth-child(6) { width: 11%; }
-.quote-lines-panel th:nth-child(7) { width: 15%; }
+.quote-lines-panel th:nth-child(7) { width: 12%; }
+.quote-lines-panel th:nth-child(8) { width: 10%; }
 
 .quote-lines-panel th:last-child,
 .quote-lines-panel td:last-child {
@@ -24258,13 +24265,14 @@ a.masoft-order-tag:focus-visible {
   padding-left: 4px;
 }
 
-.quote-lines-readonly-panel th:nth-child(1) { width: 7%; }
-.quote-lines-readonly-panel th:nth-child(2) { width: 13%; }
-.quote-lines-readonly-panel th:nth-child(3) { width: 34%; }
-.quote-lines-readonly-panel th:nth-child(4) { width: 10%; }
-.quote-lines-readonly-panel th:nth-child(5) { width: 12%; }
+.quote-lines-readonly-panel th:nth-child(1) { width: 6%; }
+.quote-lines-readonly-panel th:nth-child(2) { width: 11%; }
+.quote-lines-readonly-panel th:nth-child(3) { width: 28%; }
+.quote-lines-readonly-panel th:nth-child(4) { width: 16%; }
+.quote-lines-readonly-panel th:nth-child(5) { width: 9%; }
 .quote-lines-readonly-panel th:nth-child(6) { width: 12%; }
 .quote-lines-readonly-panel th:nth-child(7) { width: 12%; }
+.quote-lines-readonly-panel th:nth-child(8) { width: 6%; }
 
 .quote-lines-panel td,
 .quote-lines-panel th {
@@ -24314,6 +24322,26 @@ a.masoft-order-tag:focus-visible {
 
 .quote-lines-panel .quote-line-product strong {
   display: block;
+}
+
+.quote-lines-panel tbody td {
+  vertical-align: middle;
+}
+
+.quote-lines-panel td.quote-line-product,
+.quote-lines-panel td.quote-line-remarks {
+  vertical-align: top;
+}
+
+.quote-lines-panel td.quote-line-product {
+  min-width: 0;
+  max-width: none;
+  white-space: normal;
+}
+
+.quote-lines-panel td.quote-line-remarks {
+  width: 16%;
+  min-width: 0;
 }
 
 .quote-lines-panel .quote-line-sku {
@@ -24387,45 +24415,120 @@ a.masoft-order-tag:focus-visible {
   font: inherit;
 }
 
-.quote-line-remarks {
+.quote-line-edit-remarks {
+  field-sizing: fixed;
+  min-height: 64px;
+  height: 64px;
+  line-height: 1.35;
+  resize: none;
+}
+
+.quote-line-heading {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 6px;
+}
+
+.quote-line-heading .quote-line-name-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.quote-line-labels {
   display: grid;
   width: 100%;
-  max-width: 240px;
-  gap: 2px;
+  margin-top: 6px;
+  gap: 6px;
+  align-items: start;
 }
 
-.quote-line-remarks-toggle {
-  display: flex;
+.quote-line-label-remark-pairs {
+  display: grid;
   width: 100%;
   margin-top: 6px;
-  padding: 5px 0;
+  gap: 6px;
+}
+
+.quote-line-label-remark-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(5.5rem, 36.36%);
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
-  overflow: visible;
-  border: 0;
+}
+
+.quote-line-label-chip.is-empty {
+  min-height: 0;
+  padding: 0;
   background: transparent;
+}
+
+.quote-line-label-remark-pair .quote-line-label-remark-text {
+  height: auto;
+  min-height: 64px;
+}
+
+.quote-line-remarks-list {
+  display: grid;
+  width: 100%;
+  margin-top: 0;
+  gap: 6px;
+  align-items: start;
+}
+
+.quote-line-label-chip {
+  display: flex;
+  width: 100%;
+  max-width: 100%;
+  padding: 8px;
+  align-items: center;
+  border-radius: 6px;
+  background: var(--muted);
   color: var(--muted-foreground);
-  font: inherit;
-  font-size: 14px;
-  text-align: left;
-  cursor: pointer;
-}
-
-.quote-line-remarks-toggle span {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
   overflow-wrap: anywhere;
-  white-space: normal;
+  white-space: pre-wrap;
 }
 
-.quote-line-remarks-toggle svg {
-  width: 15px;
-  height: 15px;
-  flex: 0 0 auto;
+.quote-line-remarks-list .quote-line-edit-remarks {
+  field-sizing: fixed;
+  width: 100%;
+  min-width: 0;
+  min-height: 64px;
+  height: 64px;
+  padding: 5px 8px;
+  line-height: 1.35;
+  border: 1px solid var(--border);
+  background: var(--muted);
+  resize: none;
 }
 
-.quote-line-edit-remarks {
-  min-height: 34px;
-  resize: vertical;
+.quote-line-label-remark-text {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 64px;
+  height: 64px;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 1.35;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.quote-line-label-remark-text:empty,
+.quote-line-label-remark-text.is-empty {
+  border-color: transparent;
+  background: transparent;
+  color: transparent;
 }
 
 .quote-line-edit-number:hover,
@@ -24436,7 +24539,7 @@ a.masoft-order-tag:focus-visible {
   background: var(--background);
   outline: 0;
 }
-
+
 .quote-line-actions {
   min-width: 82px;
   vertical-align: middle;

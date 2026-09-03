@@ -81,6 +81,8 @@ import {
   updateOrderFactoryStatus,
   saveQuotePayments,
   saveSalesDocumentBatch,
+  quoteLineLabelRemarkRows,
+  quoteLinePrintLabelName,
   type CreatedQuote,
   type QuoteCatalogItem,
   type QuoteDraft,
@@ -466,7 +468,6 @@ export function QuoteEditorPage({
   const [confirmationSendError, setConfirmationSendError] = useState(false);
   const [converting, setConverting] = useState(false);
   const [conversionError, setConversionError] = useState(false);
-  const [expandedRemarkIds, setExpandedRemarkIds] = useState<Set<string>>(new Set());
   const [labelModalLineId, setLabelModalLineId] = useState<string | null>(null);
   const [supplements, setSupplements] = useState<QuotePdfSupplementDraft>({
     additionalInfo: [],
@@ -1419,26 +1420,8 @@ export function QuoteEditorPage({
     }
   };
 
-  const toggleLineRemarks = (lineId: string, remarkIndex: number) => {
-    const remarkKey = `${lineId}:${remarkIndex}`;
-    setExpandedRemarkIds((current) => {
-      const next = new Set(current);
-      if (next.has(remarkKey)) next.delete(remarkKey);
-      else next.add(remarkKey);
-      return next;
-    });
-  };
-
-  const lineRemarkValues = (line: QuoteLine) => {
-    const savedRemarks = line.labelRemarks ?? [];
-    const count = Math.max(1, line.labels?.length ?? 0, savedRemarks.length);
-    return Array.from({ length: count }, (_, index) =>
-      savedRemarks[index] ?? (index === 0 ? line.remarks ?? "" : ""),
-    );
-  };
-
   const patchLineRemark = (line: QuoteLine, remarkIndex: number, value: string) => {
-    const nextRemarks = lineRemarkValues(line);
+    const nextRemarks = quoteLineLabelRemarkRows(line).map((row) => row.remark);
     nextRemarks[remarkIndex] = value;
     patchLine(line.id, {
       remarks: nextRemarks[0] ?? "",
@@ -1446,42 +1429,46 @@ export function QuoteEditorPage({
     });
   };
 
-  const lineRemarksControl = (line: QuoteLine) => {
-    const remarks = lineRemarkValues(line);
+  const linePrintLabels = (line: QuoteLine) => {
+    const names = quoteLineLabelRemarkRows(line)
+      .map((row) => (row.label ? quoteLinePrintLabelName(row.label) : ""))
+      .filter(Boolean);
+    if (!names.length) return null;
     return (
-      <div className="quote-line-remarks">
-        {remarks.map((remark, remarkIndex) => {
-          const expanded = expandedRemarkIds.has(`${line.id}:${remarkIndex}`);
-          const labelSuffix = remarks.length > 1 ? ` ${remarkIndex + 1}` : "";
-          const label = `${t("quoteEditor.items.remarks")} ${line.name || ""}${labelSuffix}`.trim();
-          const remarkPlaceholder = `${t("quoteEditor.items.remarks")}${labelSuffix}`;
+      <div className="quote-line-labels">
+        {names.map((name, index) => (
+          <span className="quote-line-label-chip" title={name} key={`${line.id}:label-${index}`}>
+            {name}
+          </span>
+        ))}
+      </div>
+    );
+  };
+
+  const lineLabelRemarkPairs = (line: QuoteLine) => {
+    const rows = quoteLineLabelRemarkRows(line);
+    return (
+      <div className="quote-line-label-remark-pairs">
+        {rows.map((row, index) => {
+          const name = row.label ? quoteLinePrintLabelName(row.label) : "";
+          const labelSuffix = rows.length > 1 ? ` ${index + 1}` : "";
+          const remark = row.remark.trim();
+          const remarkDisplay = remark ? t("quoteEditor.items.remarksValue", { value: remark }) : "";
+          const remarkLabel = `${t("quoteEditor.items.remarks")} ${line.name || ""}${labelSuffix}`.trim();
           return (
-            <div className="quote-line-remark-row" key={`${line.id}:${remarkIndex}`}>
-              <button
-                type="button"
-                className="quote-line-remarks-toggle"
-                disabled={line.isVoid}
-                aria-expanded={expanded}
-                aria-label={remark ? `${label}: ${remark}` : label}
-                title={remark || remarkPlaceholder}
-                onClick={() => toggleLineRemarks(line.id, remarkIndex)}
+            <div className="quote-line-label-remark-pair" key={`${line.id}:pair-${index}`}>
+              {name ? (
+                <span className="quote-line-label-chip" title={name}>{name}</span>
+              ) : (
+                <span className="quote-line-label-chip is-empty" aria-hidden="true" />
+              )}
+              <div
+                className={cn("quote-line-label-remark-text", !remark && "is-empty")}
+                title={remarkDisplay}
+                aria-label={remarkLabel}
               >
-                <span>{remark || remarkPlaceholder}</span>
-                {expanded ? <ChevronUp /> : <ChevronDown />}
-              </button>
-              {expanded ? (
-                <textarea
-                  autoFocus
-                  className="quote-line-edit-remarks"
-                  rows={2}
-                  maxLength={16}
-                  value={remark}
-                  aria-label={label}
-                  disabled={line.isVoid || savingLineId === line.id}
-                  onChange={(event) => patchLineRemark(line, remarkIndex, event.target.value)}
-                  onBlur={() => void saveEditedLine(line)}
-                />
-              ) : null}
+                {remarkDisplay}
+              </div>
             </div>
           );
         })}
@@ -1489,15 +1476,52 @@ export function QuoteEditorPage({
     );
   };
 
-  const lineRemarksReadonly = (line: QuoteLine) => {
-    const remarks = lineRemarkValues(line);
-    return remarks.map((remark, remarkIndex) => remark.trim() ? (
-      <small key={`${line.id}:readonly-remark-${remarkIndex}`} title={remark}>
-        {remarks.length > 1 ? `${t("quoteEditor.items.remarks")} ${remarkIndex + 1}: ` : null}
-        {remark}
-      </small>
-    ) : null);
+  const lineRemarkFields = (line: QuoteLine) => {
+    const rows = quoteLineLabelRemarkRows(line);
+    return (
+      <div className="quote-line-remarks-list">
+        {rows.map((row, remarkIndex) => {
+          const labelSuffix = rows.length > 1 ? ` ${remarkIndex + 1}` : "";
+          const label = `${t("quoteEditor.items.remarks")} ${line.name || ""}${labelSuffix}`.trim();
+          return (
+            <textarea
+              className="quote-line-edit-remarks"
+              rows={2}
+              maxLength={16}
+              value={row.remark}
+              aria-label={label}
+              placeholder={t("quoteEditor.items.remarksPlaceholder")}
+              disabled={line.isVoid || savingLineId === line.id}
+              key={`${line.id}:remark-${remarkIndex}`}
+              onChange={(event) => patchLineRemark(line, remarkIndex, event.target.value)}
+              onBlur={(event) => {
+                const nextRemarks = quoteLineLabelRemarkRows(line).map((item) => item.remark);
+                nextRemarks[remarkIndex] = event.currentTarget.value;
+                void saveEditedLine({
+                  ...line,
+                  remarks: nextRemarks[0] ?? "",
+                  labelRemarks: nextRemarks,
+                });
+              }}
+            />
+          );
+        })}
+      </div>
+    );
   };
+
+  const lineTableHeaders = (
+    <tr>
+      <th>{t("quoteEditor.items.sequence")}</th>
+      <th>{t("quoteEditor.items.sku")}</th>
+      <th>{t("quoteEditor.items.product")}</th>
+      <th>{t("quoteEditor.items.remarks")}</th>
+      <th>{t("quoteEditor.items.quantity")}</th>
+      <th>{t("quoteEditor.items.unitPrice")}</th>
+      <th>{t("quoteEditor.items.subtotal")}</th>
+      <th><span className="sr-only">{t("quoteEditor.items.actions")}</span></th>
+    </tr>
+  );
 
   const applyProductMatch = async (
     line: QuoteLine,
@@ -2322,22 +2346,24 @@ export function QuoteEditorPage({
           className="panel quote-lines-panel quote-lines-readonly-panel quote-editor-scroll-section"
         >
           <header><div><span className="eyebrow">{t(isOrder ? "quoteEditor.orderSummaryEyebrow" : "quoteEditor.items.summaryEyebrow")}</span><h2>{t("quoteEditor.items.summaryTitle")}</h2></div><strong>{money.format(total)}</strong></header>
-          <div className="table-wrap"><table><thead><tr><th>{t("quoteEditor.items.sequence")}</th><th>{t("quoteEditor.items.sku")}</th><th>{t("quoteEditor.items.product")}</th><th>{t("quoteEditor.items.quantity")}</th><th>{t("quoteEditor.items.unitPrice")}</th><th>{t("quoteEditor.items.subtotal")}</th><th><span className="sr-only">{t("quoteEditor.items.actions")}</span></th></tr></thead><tbody>
+          <div className="table-wrap"><table><thead>{lineTableHeaders}</thead><tbody>
             {lines.map((line, index) => <tr key={line.id} className={cn(line.isVoid && "is-cancelled")}>
               <td className="quote-line-sequence">{index + 1}</td>
               <td className="quote-line-sku">{lineSkuContent(line)}</td>
-              <td className="quote-line-product">
-                {line.isAddon ? <span className="status-badge blue quote-line-addon-label">加單</span> : null}
-                <strong>{displayValue(line.name)}</strong>
-                {line.isVoid ? <span className="quote-line-cancelled-label">{t("quoteEditor.items.cancelled")}</span> : null}
-                {lineRemarksReadonly(line)}
+              <td className="quote-line-product" colSpan={2}>
+                <div className="quote-line-heading">
+                  {line.isAddon ? <span className="status-badge blue quote-line-addon-label">加單</span> : null}
+                  <strong>{displayValue(line.name)}</strong>
+                  {line.isVoid ? <span className="quote-line-cancelled-label">{t("quoteEditor.items.cancelled")}</span> : null}
+                </div>
+                {lineLabelRemarkPairs(line)}
               </td>
               <td>{line.quantity}</td>
               <td>{money.format(line.unitPrice)}</td>
               <td>{money.format(line.totalPrice)}</td>
               <td className="quote-line-actions"><div>{lineCatalogButton(line)}{line.packageId && !line.productId ? null : <Button type="button" variant="outline" size="icon" aria-label={t("quoteEditor.items.viewLabel")} title={t("quoteEditor.items.viewLabel")} disabled={line.isVoid} onClick={() => openLabelModal(line)}><Tag /></Button>}</div></td>
             </tr>)}
-            {!lines.length ? <tr><td colSpan={7} className="quote-lines-empty"><PackagePlus /><strong>{t("quoteEditor.items.empty")}</strong></td></tr> : null}
+            {!lines.length ? <tr><td colSpan={8} className="quote-lines-empty"><PackagePlus /><strong>{t("quoteEditor.items.empty")}</strong></td></tr> : null}
           </tbody></table></div>
           <div className="quote-editor-totals-row">
             <div className="quote-editor-item-count">
@@ -2644,7 +2670,8 @@ export function QuoteEditorPage({
                           ? <button type="button" className="quote-line-restore" aria-label={t("quoteEditor.items.restore", { name: line.name || "" })} disabled={removingId === line.id} onClick={() => void restoreLine(line.id)}><Undo2 /></button>
                           : <button type="button" className="quote-line-delete" aria-label={t(isOrder ? "quoteEditor.items.cancel" : "quoteEditor.items.remove", { name: line.name || "" })} disabled={removingId === line.id || savingLineId === line.id} onClick={() => void removeLine(line.id)}><Trash2 /></button>}
                       </div>
-                      {lineRemarksControl(line)}
+                      {linePrintLabels(line)}
+                      {lineRemarkFields(line)}
                     </header>
                     <div className="quote-mobile-line-fields">
                       <label><span>{t("quoteEditor.items.quantity")}</span><input type="number" inputMode="numeric" min="0" step="1" value={line.quantity} disabled={line.isVoid || savingLineId === line.id} onChange={(event) => patchLine(line.id, { quantity: Number(event.target.value) })} onBlur={() => void saveEditedLine(line)} /></label>
@@ -2656,7 +2683,7 @@ export function QuoteEditorPage({
                 {!lines.length ? <div className="quote-lines-empty"><PackagePlus /><strong>{t("quoteEditor.items.empty")}</strong><span>{t("quoteEditor.items.emptyHint")}</span></div> : null}
               </div>
             ) : (
-             <div className="table-wrap"><table><thead><tr><th>{t("quoteEditor.items.sequence")}</th><th>{t("quoteEditor.items.sku")}</th><th>{t("quoteEditor.items.product")}</th><th>{t("quoteEditor.items.quantity")}</th><th>{t("quoteEditor.items.unitPrice")}</th><th>{t("quoteEditor.items.subtotal")}</th><th><span className="sr-only">{t("quoteEditor.items.actions")}</span></th></tr></thead><tbody>
+             <div className="table-wrap"><table><thead>{lineTableHeaders}</thead><tbody>
               {lines.map((line, index) => <tr
                 key={line.id}
                 className={cn(line.isVoid && "is-cancelled", draggedLineId === line.id && "is-dragging", dragOverLineId === line.id && draggedLineId !== line.id && "is-drag-over")}
@@ -2680,9 +2707,14 @@ export function QuoteEditorPage({
                 </td>
                 <td className="quote-line-sku">{lineSkuContent(line)}</td>
                 <td className="quote-line-product">
-                  {line.packageId ? <strong>{line.name || "—"}</strong> : editableLineName(line, index)}
-                  {line.isVoid ? <span className="quote-line-cancelled-label">{t("quoteEditor.items.cancelled")}</span> : null}
-                  {lineRemarksControl(line)}
+                  <div className="quote-line-heading">
+                    {line.packageId ? <strong>{line.name || "—"}</strong> : editableLineName(line, index)}
+                    {line.isVoid ? <span className="quote-line-cancelled-label">{t("quoteEditor.items.cancelled")}</span> : null}
+                  </div>
+                  {linePrintLabels(line)}
+                </td>
+                <td className="quote-line-remarks">
+                  {lineRemarkFields(line)}
                 </td>
                 <td><input className="quote-line-edit-number" type="number" inputMode="numeric" min="0" step="1" value={line.quantity} aria-label={`${t("quoteEditor.items.quantity")} ${line.name || ""}`} disabled={line.isVoid || savingLineId === line.id} onChange={(event) => patchLine(line.id, { quantity: Number(event.target.value) })} onBlur={() => void saveEditedLine(line)} /></td>
                 <td><input className="quote-line-edit-number" type="number" min="0" step="0.01" value={isFreeUtensilPackLine(line) ? 0 : line.unitPrice} aria-label={`${t("quoteEditor.items.unitPrice")} ${line.name || ""}`} disabled={line.isVoid || savingLineId === line.id || isFreeUtensilPackLine(line)} onChange={(event) => patchLine(line.id, { unitPrice: Number(event.target.value) })} onBlur={() => void saveEditedLine(line)} /></td>
@@ -2695,7 +2727,7 @@ export function QuoteEditorPage({
                     : <Button type="button" variant="destructive" size="icon" className="quote-line-delete" aria-label={t(isOrder ? "quoteEditor.items.cancel" : "quoteEditor.items.remove", { name: line.name || "" })} disabled={removingId === line.id || savingLineId === line.id} onClick={() => void removeLine(line.id)}><Trash2 /></Button>}
                 </div></td>
               </tr>)}
-               {!lines.length && <tr><td colSpan={7} className="quote-lines-empty"><PackagePlus /><strong>{t("quoteEditor.items.empty")}</strong><span>{t("quoteEditor.items.emptyHint")}</span></td></tr>}
+               {!lines.length && <tr><td colSpan={8} className="quote-lines-empty"><PackagePlus /><strong>{t("quoteEditor.items.empty")}</strong><span>{t("quoteEditor.items.emptyHint")}</span></td></tr>}
             </tbody></table></div>
             )}
             <div className="quote-editor-totals-row">
