@@ -107,4 +107,19 @@ describe("Packaging stocktake records page", () => {
     await waitFor(() => expect(close).toHaveBeenCalled());
     expect(await screen.findByText("無法載入盤點紙，請重試。")).toBeInTheDocument();
   });
+
+  it("hides and reopens the date list sidebar", async () => {
+    const user = userEvent.setup();
+    render(<MemoryRouter><PackingStocktakesPage canEdit loadDates={vi.fn().mockResolvedValue([{ date: "2026-08-10", updatedAt: "2026-08-10T01:00:00Z" }])} loadRows={vi.fn().mockResolvedValue({ items: records, total: 1 })} /></MemoryRouter>);
+
+    const dateList = await screen.findByRole("complementary", { name: "盤點日期列表" });
+    expect(dateList.closest(".record-sidebar-slot")).not.toHaveClass("is-collapsed");
+
+    await user.click(screen.getByRole("button", { name: "隱藏側欄" }));
+    expect(document.querySelector(".record-sidebar-slot")).toHaveClass("is-collapsed");
+    expect(screen.queryByRole("complementary", { name: "盤點日期列表" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "打開側欄" }));
+    expect(await screen.findByRole("complementary", { name: "盤點日期列表" })).toBeInTheDocument();
+  });
 });

@@ -6,6 +6,7 @@ import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { PdfAutoResizeTextarea } from "@/components/PdfAutoResizeTextarea";
 import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
+import { CollapsibleRecordSidebar, RecordSidebarToggle } from "@/components/ui/collapsible-record-sidebar";
 import { Modal } from "@/components/ui/modal";
 import { TableSkeletonRows } from "@/components/ui/table-skeleton";
 import {
@@ -131,6 +132,8 @@ export function RestaurantMonthlyExpensesPage({
   const [, setSaved] = useState(false);
   const [updatingPnl, setUpdatingPnl] = useState(false);
   const [deletingKey, setDeletingKey] = useState<string | null>(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const toggleSidebar = () => setSidebarCollapsed((value) => !value);
 
   const applyRecord = (record: RestaurantMonthlyExpenseRecord) => {
     setAmounts(toTextValues(record.amounts));
@@ -308,24 +311,38 @@ export function RestaurantMonthlyExpensesPage({
       {error ? <div className="monthly-expenses-message is-error" role="alert">{t("restaurantMonthlyExpenses.operationError")}</div> : null}
 
       <form className="monthly-expenses-workspace" onSubmit={submit}>
-        <aside className="panel monthly-expenses-history">
+        <CollapsibleRecordSidebar
+          collapsed={sidebarCollapsed}
+          onToggle={toggleSidebar}
+          hideLabel={t("common.hideSidebar")}
+          showLabel={t("common.showSidebar")}
+          className="panel monthly-expenses-history"
+        >
           <div className="monthly-expenses-search">
             <div className="monthly-expenses-search-heading">
               <span>{t("restaurantMonthlyExpenses.search")}</span>
-              <button
-                type="button"
-                className="monthly-expenses-new-record-trigger"
-                disabled={!canEdit}
-                onClick={() => {
-                  setDraftRestaurantId(masters?.restaurants[0]?.id ?? "");
-                  setDraftMonth(currentHongKongMonth());
-                  setNewRecordExists(false);
-                  setNewDialogOpen(true);
-                }}
-              >
-                <span aria-hidden="true">＋</span>
-                {t("restaurantMonthlyExpenses.newRecord")}
-              </button>
+              <div className="monthly-expenses-search-heading-actions">
+                <button
+                  type="button"
+                  className="monthly-expenses-new-record-trigger"
+                  disabled={!canEdit}
+                  onClick={() => {
+                    setDraftRestaurantId(masters?.restaurants[0]?.id ?? "");
+                    setDraftMonth(currentHongKongMonth());
+                    setNewRecordExists(false);
+                    setNewDialogOpen(true);
+                  }}
+                >
+                  <span aria-hidden="true">＋</span>
+                  {t("restaurantMonthlyExpenses.newRecord")}
+                </button>
+                <RecordSidebarToggle
+                  collapsed={sidebarCollapsed}
+                  onToggle={toggleSidebar}
+                  hideLabel={t("common.hideSidebar")}
+                  showLabel={t("common.showSidebar")}
+                />
+              </div>
             </div>
             <div className="monthly-expenses-search-field"><Search aria-hidden="true" /><input aria-label={t("restaurantMonthlyExpenses.search")} value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t("restaurantMonthlyExpenses.searchPlaceholder")} /></div>
           </div>
@@ -363,7 +380,7 @@ export function RestaurantMonthlyExpensesPage({
               );
             }) : <p>{t("restaurantMonthlyExpenses.noRecords")}</p>}
           </div>
-        </aside>
+        </CollapsibleRecordSidebar>
 
         {!restaurantId || !month ? (
           <main className="monthly-expenses-editor">

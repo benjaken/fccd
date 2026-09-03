@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
+import { CollapsibleRecordSidebar, RecordSidebarToggle } from "@/components/ui/collapsible-record-sidebar";
 import { DatePicker } from "@/components/ui/date-picker";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { Modal } from "@/components/ui/modal";
@@ -276,6 +277,8 @@ export function RestaurantDailySalesPage({
   const [checkingNewRecord, setCheckingNewRecord] = useState(false);
   const [newRecordExists, setNewRecordExists] = useState(false);
   const [newRecordCheckError, setNewRecordCheckError] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const toggleSidebar = () => setSidebarCollapsed((value) => !value);
   const [total, setTotal] = useState("");
   const [paymentAmounts, setPaymentAmounts] = useState<TextValues>({});
   const [platformAmounts, setPlatformAmounts] = useState<TextValues>({});
@@ -616,10 +619,24 @@ export function RestaurantDailySalesPage({
       ) : null}
 
       <form onSubmit={submit} className="daily-sales-workspace">
-        <aside className="panel daily-sales-history">
+        <CollapsibleRecordSidebar
+          collapsed={sidebarCollapsed}
+          onToggle={toggleSidebar}
+          hideLabel={t("common.hideSidebar")}
+          showLabel={t("common.showSidebar")}
+          className="panel daily-sales-history"
+        >
           <div className="daily-sales-history-title">
-            <span>{t("restaurantDailySales.recent")}</span>
-            <strong>{selectedRestaurant?.name}</strong>
+            <div>
+              <span>{t("restaurantDailySales.recent")}</span>
+              <strong>{selectedRestaurant?.name}</strong>
+            </div>
+            <RecordSidebarToggle
+              collapsed={sidebarCollapsed}
+              onToggle={toggleSidebar}
+              hideLabel={t("common.hideSidebar")}
+              showLabel={t("common.showSidebar")}
+            />
           </div>
           <div className="daily-sales-history-list">
             {loadingRecent ? <p>{t("restaurantDailySales.loadingRecent")}</p> : recent.length ? recent.map((item) => (
@@ -638,7 +655,7 @@ export function RestaurantDailySalesPage({
               </button>
             )) : <p>{t("restaurantDailySales.noRecent")}</p>}
           </div>
-        </aside>
+        </CollapsibleRecordSidebar>
 
         {editorMode === "none" ? (
           <main className="daily-sales-editor">

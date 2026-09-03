@@ -5,6 +5,7 @@ import { ClipboardList, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
+import { CollapsibleRecordSidebar, RecordSidebarToggle } from "@/components/ui/collapsible-record-sidebar";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import { Modal } from "@/components/ui/modal";
@@ -143,6 +144,8 @@ export function RestaurantStocktakesPage({
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [deletingKey, setDeletingKey] = useState<string | null>(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const toggleSidebar = () => setSidebarCollapsed((value) => !value);
 
   useEffect(() => {
     let cancelled = false;
@@ -301,15 +304,22 @@ export function RestaurantStocktakesPage({
         <div><span className="eyebrow">{t("navigation.restaurant")}</span><h1>{t("restaurantStocktakes.title")}</h1><p>{t("restaurantStocktakes.description")}</p></div>
       </header>
       <div className="stocktake-records-layout">
-        <aside className="stocktake-date-list" aria-label={t("restaurantStocktakes.recordList")}>
-          <header className="stocktake-date-list-header"><strong>{t("restaurantStocktakes.recordList")}</strong>{canEdit ? <div className="stocktake-date-list-actions"><Button type="button" size="icon" variant="ghost" aria-label={t("restaurantStocktakes.add")} onClick={openCreate}><Plus /></Button></div> : null}</header>
+        <CollapsibleRecordSidebar
+          collapsed={sidebarCollapsed}
+          onToggle={toggleSidebar}
+          hideLabel={t("common.hideSidebar")}
+          showLabel={t("common.showSidebar")}
+          className="stocktake-date-list"
+          aria-label={t("restaurantStocktakes.recordList")}
+        >
+          <header className="stocktake-date-list-header"><strong>{t("restaurantStocktakes.recordList")}</strong><div className="stocktake-date-list-actions">{canEdit ? <Button type="button" size="icon" variant="ghost" aria-label={t("restaurantStocktakes.add")} onClick={openCreate}><Plus /></Button> : null}<RecordSidebarToggle collapsed={sidebarCollapsed} onToggle={toggleSidebar} hideLabel={t("common.hideSidebar")} showLabel={t("common.showSidebar")} /></div></header>
           <div className="stocktake-date-list-options">
             {loadingRecords ? <span>{t("restaurantStocktakes.loading")}</span> : records.length === 0 ? <span>{t("restaurantStocktakes.noRecords")}</span> : records.map((record) => {
               const key = recordKey(record); const active = selected ? key === recordKey(selected) : false;
               return <div key={key} className={active ? "stocktake-date-item is-active" : "stocktake-date-item"}><button type="button" data-stocktake-record={key} onClick={() => setSelected(record)}><strong>{record.restaurantName} · {record.departmentName}</strong><span>{formatMonth(record.month, i18n.language)}</span><small>{t("restaurantStocktakes.updatedAt", { time: formatDateTime(record.updatedAt, i18n.language) })}</small></button>{canDelete ? <Button type="button" size="icon" variant="ghost" disabled={deletingKey === key} aria-label={t("restaurantStocktakes.deleteRecord", { restaurant: record.restaurantName, department: record.departmentName, month: formatMonth(record.month, i18n.language) })} onClick={() => void removeRecord(record)}><Trash2 /></Button> : null}</div>;
             })}
           </div>
-        </aside>
+        </CollapsibleRecordSidebar>
         <article className="panel ingredients-panel stocktake-records-panel restaurant-stocktake-record-panel">
           <div className="stocktake-records-content">
             {selected ? <>

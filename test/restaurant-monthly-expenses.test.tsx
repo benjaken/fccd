@@ -157,6 +157,29 @@ describe("restaurant monthly expense input", () => {
     confirm.mockRestore();
   });
 
+  it("hides and reopens the record sidebar with a toggle", async () => {
+    await i18n.changeLanguage("zh-HK");
+    const user = userEvent.setup();
+    render(
+      <RestaurantMonthlyExpensesPage
+        loadMasters={async () => masters}
+        loadRecent={async () => recent}
+      />,
+    );
+
+    expect(await screen.findByRole("button", { name: /^TKO 桂花小幸 將軍澳/ })).toBeInTheDocument();
+    const slot = document.querySelector(".record-sidebar-slot");
+    expect(slot).not.toHaveClass("is-collapsed");
+
+    await user.click(screen.getByRole("button", { name: "隱藏側欄" }));
+    expect(slot).toHaveClass("is-collapsed");
+    expect(screen.queryByRole("button", { name: /^TKO 桂花小幸 將軍澳/ })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "打開側欄" }));
+    expect(slot).not.toHaveClass("is-collapsed");
+    expect(screen.getByRole("button", { name: /^TKO 桂花小幸 將軍澳/ })).toBeInTheDocument();
+  });
+
   it("filters P&L monthly costs by the confirmation flag", () => {
     const sql = readFileSync("supabase/migrations/20260822121000_restaurant_pnl_confirmed_monthly_expenses.sql", "utf8");
     expect(sql).toContain("and monthly.can_proceed_pnl");
