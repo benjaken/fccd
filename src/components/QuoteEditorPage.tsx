@@ -1342,12 +1342,17 @@ export function QuoteEditorPage({
           const labelSuffix = rows.length > 1 ? ` ${remarkIndex + 1}` : "";
           const label = `${t("quoteEditor.items.remarks")} ${line.name || ""}${labelSuffix}`.trim();
           if (readOnly) {
-            return row.remark.trim() ? (
-              <small className="quote-line-label-remark-text" title={row.remark} key={`${line.id}:remark-${remarkIndex}`}>
-                {row.remark}
-              </small>
-            ) : (
-              <small className="quote-line-label-remark-text is-empty" aria-hidden="true" key={`${line.id}:remark-${remarkIndex}`} />
+            return (
+              <textarea
+                className="quote-line-edit-remarks"
+                rows={2}
+                value={row.remark}
+                aria-label={label}
+                title={row.remark}
+                readOnly
+                tabIndex={-1}
+                key={`${line.id}:remark-${remarkIndex}`}
+              />
             );
           }
           return (
