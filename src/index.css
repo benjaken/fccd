@@ -359,7 +359,7 @@ button {
 .home-sales-table td.home-sales-total-value,
 .home-sales-table td.home-sales-total-value .home-sales-money {
   color: var(--foreground);
-  font-weight: 700;
+  font-weight: 860;
 }
 
 .home-sales-table td.home-sales-total-value.change-positive {
@@ -381,7 +381,7 @@ button {
 
 .home-sales-table.is-this-month-table td,
 .home-sales-table.is-this-month-table td .home-sales-money {
-  font-weight: 700;
+  font-weight: 860;
 }
 
 .home-sales-money {
@@ -516,7 +516,7 @@ button {
   }
 
   .home-sales-channel-card section.is-this-month dd {
-    font-weight: 700;
+    font-weight: 860;
   }
 
   .home-sales-channel-card.is-total {
@@ -526,7 +526,7 @@ button {
   .home-sales-channel-card.is-total > header strong,
   .home-sales-channel-card.is-total dd {
     color: var(--foreground);
-    font-weight: 700;
+    font-weight: 860;
   }
 
   .home-sales-channel-card.is-total dd.change-positive {
