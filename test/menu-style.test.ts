@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -160,6 +162,8 @@ describe("menu styles", () => {
         "rawMeatReports",
       ]),
     );
+    const appSource = readFileSync(path.resolve(process.cwd(), "src/App.tsx"), "utf8");
+    expect(appSource).toContain('sellingPriceCost: ["售價成本計算", "Selling Price Cost Calc"]');
     expect(businessSidebarNav("frozen", "")[0]?.key).toBe("rawMeatReports");
     const frozenReports = businessSidebarNav("frozen", "").find(
       (item) => item.key === "rawMeatReports",

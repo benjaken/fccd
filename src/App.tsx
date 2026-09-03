@@ -2150,7 +2150,7 @@ const BUSINESS_MENU_LABELS: Record<string, [string, string]> = {
   newProductSalesStats: ["新品銷量統計", "New Product Sales"],
   rawMeatInventoryCalc: ["生肉入貨", "Raw Meat Receiving"],
   preparedMeatInventoryCalc: ["製作收成", "Production Yield"],
-  sellingPriceCost: ["製成品出貨", "Finished Goods Dispatch"],
+  sellingPriceCost: ["售價成本計算", "Selling Price Cost Calc"],
   deliveryNotes: ["送貨單管理", "Delivery Note Management"],
   rawMeatReports: ["報表", "Reports"],
   kitchenSalesCost: ["所有銷售及成本", "All Sales and Costs"],
