@@ -171,6 +171,7 @@ import {
   businessPrimaryNav,
   businessSectionFromLocation,
   businessSidebarNav,
+  buildBusinessMobileDrawerNav,
   buildMobileDrawerNav,
   firstAccessibleNavigationPath,
   flattenVisibleNavItems,
@@ -312,26 +313,23 @@ function OperationsShell() {
     visiblePrimaryNav,
     pageAccess.canAccess,
   );
-  const styleOneMobileGroups = visibleBusinessPrimaryNav.map((primary) => {
-    const defaultCategory = primary.key === "followUp" ? "catering" : primary.key === "catering" ? "orders" : "";
-    return {
-      groupKey: primary.key,
-      items: flattenVisibleNavItems(
-        businessSidebarNav(primary.key, defaultCategory),
-        pageAccess.canAccess,
-      ),
-    };
-  }).filter((group) => group.items.length > 0);
+  const styleOneMobileGroups = buildBusinessMobileDrawerNav(
+    visibleBusinessPrimaryNav,
+    pageAccess.canAccess,
+    (item) => isOrderListNavVisible(item.key, orderListConfigs),
+  );
   const mobileNavGroups = (isBusinessMenu
     ? styleOneMobileGroups
     : styleTwoMobileGroups).map((group) => ({
     ...group,
-    items: group.items.filter((item) =>
-      isOrderListNavVisible(item.key, orderListConfigs),
-    ),
+    items: isBusinessMenu
+      ? group.items
+      : group.items.filter((item) =>
+          isOrderListNavVisible(item.key, orderListConfigs),
+        ),
   }));
   const mobileNavHrefs = mobileNavGroups.flatMap((group) =>
-    group.items.map((item) => item.to),
+    flattenVisibleNavItems(group.items, () => true).map((item) => item.to),
   );
   const firstSettingsPath =
     secondaryNav.settings.find((item) =>
@@ -397,9 +395,11 @@ function OperationsShell() {
     item: NavItem,
     depth = 0,
     parentPath = "root",
+    options: { nestGroups?: boolean } = {},
   ): ReactNode => {
     const visibleChildren = visibleNavChildren(item);
     const hasChildren = visibleChildren.length > 0;
+    const nestGroups = options.nestGroups ?? !sidebarCollapsed;
     const childActive = hasChildren && visibleChildren.some(branchIsActive);
     const expansionKey = `${parentPath}/${item.key}`;
     const defaultsOpenInCatering =
@@ -415,10 +415,10 @@ function OperationsShell() {
       <>
         <item.icon />
         <span>{navLabel(item.key)}</span>
-        {!sidebarCollapsed && navCount(item.key) !== undefined ? (
+        {nestGroups && navCount(item.key) !== undefined ? (
           <span className="sidebar-link-count">{navCount(item.key)}</span>
         ) : null}
-        {!sidebarCollapsed && hasChildren ? (
+        {nestGroups && hasChildren ? (
           <ChevronRight
             className={cn("link-chevron", isExpanded && "is-expanded")}
           />
@@ -428,7 +428,7 @@ function OperationsShell() {
 
     return (
       <div className="sidebar-nav-group" key={`${expansionKey}-${item.to}`}>
-        {hasChildren && !sidebarCollapsed ? (
+        {hasChildren && nestGroups ? (
           <button
             type="button"
             className={cn(
@@ -461,15 +461,15 @@ function OperationsShell() {
                 childActive && "open",
               )
             }
-            title={sidebarCollapsed ? navLabel(item.key) : undefined}
+            title={!nestGroups ? navLabel(item.key) : undefined}
           >
             {linkContent}
           </NavLink>
         )}
-        {hasChildren && !sidebarCollapsed && isExpanded ? (
+        {hasChildren && nestGroups && isExpanded ? (
           <div className="sidebar-subnav" id={subnavId}>
             {visibleChildren.map((child) =>
-              renderSidebarItem(child, depth + 1, expansionKey),
+              renderSidebarItem(child, depth + 1, expansionKey, options),
             )}
           </div>
         ) : null}
@@ -1548,24 +1548,30 @@ function OperationsShell() {
               {mobileNavGroups.map((group) => (
                 <div className="mobile-nav-group" key={group.groupKey}>
                   <p className="mobile-nav-group-label">
-                    {t(`navigation.${group.groupKey}`)}
+                    {navLabel(group.groupKey)}
                   </p>
-                  {group.items.map(({ key, to, icon: NavIcon }) => (
-                    <NavLink
-                      key={`${group.groupKey}-${key}-${to}`}
-                      to={to}
-                      end={mobileNavLinkEnd(to, mobileNavHrefs)}
-                      className={({ isActive }) =>
-                        cn("sidebar-link", isActive && "active")
-                      }
-                    >
-                      <NavIcon />
-                      <span>{navLabel(key)}</span>
-                      {navCount(key) !== undefined ? (
-                        <span className="sidebar-link-count">{navCount(key)}</span>
-                      ) : null}
-                    </NavLink>
-                  ))}
+                  {isBusinessMenu
+                    ? group.items.map((item) =>
+                        renderSidebarItem(item, 0, `mobile/${group.groupKey}`, {
+                          nestGroups: true,
+                        }),
+                      )
+                    : group.items.map(({ key, to, icon: NavIcon }) => (
+                        <NavLink
+                          key={`${group.groupKey}-${key}-${to}`}
+                          to={to}
+                          end={mobileNavLinkEnd(to, mobileNavHrefs)}
+                          className={({ isActive }) =>
+                            cn("sidebar-link", isActive && "active")
+                          }
+                        >
+                          <NavIcon />
+                          <span>{navLabel(key)}</span>
+                          {navCount(key) !== undefined ? (
+                            <span className="sidebar-link-count">{navCount(key)}</span>
+                          ) : null}
+                        </NavLink>
+                      ))}
                 </div>
               ))}
             </nav>

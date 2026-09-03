@@ -1250,6 +1250,47 @@ export function flattenVisibleNavItems(
   });
 }
 
+/** Keep the nested sidebar tree so style-one mobile can show second and third levels. */
+export function keepVisibleNavTree(
+  items: NavItem[],
+  canAccess: (pageKey: string) => boolean,
+  isItemAllowed: (item: NavItem) => boolean = () => true,
+): NavItem[] {
+  return items.flatMap((item) => {
+    const children = keepVisibleNavTree(item.children ?? [], canAccess, isItemAllowed);
+    const next = {
+      ...item,
+      children: children.length ? children : undefined,
+    };
+    return isNavItemVisible(next, canAccess) && isItemAllowed(next) ? [next] : [];
+  });
+}
+
+export function buildBusinessMobileDrawerNav(
+  visiblePrimary: NavItem[],
+  canAccess: (pageKey: string) => boolean,
+  isItemAllowed: (item: NavItem) => boolean = () => true,
+): Array<{ groupKey: string; items: NavItem[] }> {
+  return visiblePrimary
+    .map((primary) => {
+      const defaultCategory =
+        primary.key === "followUp"
+          ? "catering"
+          : primary.key === "catering"
+            ? "orders"
+            : "";
+      return {
+        groupKey: primary.key,
+        items: keepVisibleNavTree(
+          businessSidebarNav(primary.key, defaultCategory),
+          canAccess,
+          isItemAllowed,
+        ),
+      };
+    })
+    .filter((group) => group.items.length > 0);
+}
+
 export function buildMobileDrawerNav(
   visiblePrimary: NavItem[],
   canAccess: (pageKey: string) => boolean,

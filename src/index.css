@@ -29667,6 +29667,21 @@ body:has(.kitchen-channel-sales-report-page) .shell-body.sidebar-is-collapsed .r
     font-weight: 700;
   }
 
+  .mobile-drawer .sidebar-nav-group {
+    display: grid;
+    gap: 2px;
+  }
+
+  .mobile-drawer .sidebar-subnav {
+    margin: 0 0 4px 10px;
+    padding: 2px 0 2px 8px;
+    border-left: 1px solid var(--border);
+  }
+
+  .mobile-drawer .sidebar-link.has-children {
+    font-weight: 700;
+  }
+
   .profile-grid,
   .profile-fields-wide {
     grid-template-columns: 1fr;

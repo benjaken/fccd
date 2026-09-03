@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  buildBusinessMobileDrawerNav,
   businessPrimaryNav,
   businessSectionFromLocation,
   businessSidebarNav,
@@ -235,5 +236,52 @@ describe("menu styles", () => {
         "/reports/frozen-meat?nav=reports",
       ),
     ).toBe(true);
+  });
+
+  it("keeps second and third level groups in the style-one mobile drawer", () => {
+    const groups = buildBusinessMobileDrawerNav(businessPrimaryNav, () => true);
+    expect(groups.map((group) => group.groupKey)).toEqual([
+      "overview",
+      "followUp",
+      "catering",
+      "frozen",
+      "restaurant",
+      "reports",
+      "settings",
+    ]);
+
+    const catering = groups.find((group) => group.groupKey === "catering");
+    expect(catering?.items.map((item) => item.key)).toEqual([
+      "orders",
+      "allQuotes",
+      "customers",
+      "products",
+      "kitchen",
+      "delivery",
+    ]);
+    const orders = catering?.items.find((item) => item.key === "orders");
+    expect(orders?.children?.map((item) => item.key)).toEqual(
+      expect.arrayContaining(["allOrders", "payments", "orderSettings"]),
+    );
+    expect(
+      orders?.children?.find((item) => item.key === "orderSettings")?.children?.map((item) => item.key),
+    ).toEqual(
+      expect.arrayContaining([
+        "orderWatiNotifications",
+        "salePartners",
+        "orderStatuses",
+      ]),
+    );
+    expect(catering?.items.find((item) => item.key === "customers")?.children).toBeUndefined();
+
+    const reports = groups.find((group) => group.groupKey === "reports");
+    expect(
+      reports?.items.find((item) => item.key === "kitchenReports")?.children?.map((item) => item.key),
+    ).toEqual([
+      "kitchenSalesCost",
+      "kitchenChannelSales",
+      "kitchenProductSales",
+      "kitchenAdvertisingPerformance",
+    ]);
   });
 });
