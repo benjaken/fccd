@@ -67,6 +67,11 @@ import { QuotePdfEditorPage } from "@/components/QuotePdfEditorPage";
 import { ReceiptPdfEditorPage } from "@/components/ReceiptPdfEditorPage";
 import { QuotePdfPagesSettingsPage } from "@/components/QuotePdfPagesSettingsPage";
 import { QuoteCustomersPage } from "@/components/QuoteCustomersPage";
+import { EnquiryFormsListPage } from "@/components/EnquiryFormsListPage";
+import { EnquiryFormEditorPage } from "@/components/EnquiryFormEditorPage";
+import { EnquiryPendingListPage } from "@/components/EnquiryPendingListPage";
+import { EnquiryPendingDetailPage } from "@/components/EnquiryPendingDetailPage";
+import { PublicEnquiryFormPage } from "@/components/PublicEnquiryFormPage";
 import { ProductsListPage } from "@/components/ProductsListPage";
 import { ProductDetailPage } from "@/components/ProductDetailPage";
 import { PackagesListPage } from "@/components/PackagesListPage";
@@ -1008,7 +1013,25 @@ function OperationsShell() {
               />
               <Route
                 path="/quotes/pending"
-                element={<Navigate to="/quotes/recent-open" replace />}
+                element={<EnquiryPendingListPage canManage={canEditQuotes} />}
+              />
+              <Route
+                path="/quotes/pending/:id"
+                element={<EnquiryPendingDetailPage canManage={canEditQuotes} />}
+              />
+              <Route
+                path="/quotes/enquiry-forms"
+                element={<EnquiryFormsListPage canManage={canEditQuotes} />}
+              />
+              <Route
+                path="/quotes/enquiry-forms/:id/edit"
+                element={
+                  canEditQuotes ? (
+                    <EnquiryFormEditorPage />
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
+                }
               />
               <Route
                 path="/quotes/upcoming"
@@ -2176,6 +2199,7 @@ const BUSINESS_MENU_LABELS: Record<string, [string, string]> = {
   reminders: ["提醒事項", "Reminders"],
   pendingEntry: ["待入單", "Pending Entry"],
   pendingQuote: ["待報價", "Pending Quote"],
+  enquiryForms: ["Enquiry 表單", "Enquiry Forms"],
   pendingPayment: ["待收款", "Pending Payment"],
   pendingFactory: ["待傳送工場", "Pending Factory"],
   pendingDriver: ["待派司機", "Pending Driver"],
@@ -2589,6 +2613,8 @@ function App() {
           </AuthProvider>
         }
       />
+      <Route path="/quote-inquiry" element={<PublicEnquiryFormPage />} />
+      <Route path="/quote-inquiry/:formId" element={<PublicEnquiryFormPage />} />
       <Route path="/self_service_search" element={<CustomerSelfServicePage />} />
       <Route path="/self_service_search/:orderId" element={<CustomerSelfServicePage />} />
       <Route

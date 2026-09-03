@@ -15,6 +15,7 @@ import {
   Factory,
   FileArchive,
   FileImage,
+  FilePenLine,
   FileText,
   HandCoins,
   Handshake,
@@ -138,7 +139,7 @@ export const businessCategoryNav: Record<string, NavItem[]> = {
 const followUpCateringNav: NavItem[] = [
   { key: "reminders", to: "/follow-up?nav=follow-up.catering", icon: BellRing, permissionKey: "overview.follow_up" },
   { key: "pendingEntry", to: "/orders?tab=shopify-pending&nav=follow-up.catering", icon: ShoppingBag, permissionKey: "orders" },
-  { key: "pendingQuote", to: "/quotes?tab=pending&nav=follow-up.catering", icon: FileText, permissionKey: "quotes" },
+  { key: "pendingQuote", to: "/quotes/pending?nav=follow-up.catering", icon: FileText, permissionKey: "quotes" },
   { key: "pendingPayment", to: "/orders?tab=unpaid&nav=follow-up.catering", icon: HandCoins, permissionKey: "orders" },
   { key: "pendingFactory", to: "/orders?tab=not-sent-factory&nav=follow-up.catering", icon: Factory, permissionKey: "orders" },
   { key: "pendingDriver", to: "/orders?status=awaitingDriver&nav=follow-up.catering", icon: Truck, permissionKey: "orders" },
@@ -374,6 +375,18 @@ export const secondaryNav: Record<string, NavItem[]> = {
       key: "cateringQuotes",
       to: "/quotes",
       icon: FileText,
+      permissionKey: "quotes",
+    },
+    {
+      key: "pendingQuote",
+      to: "/quotes/pending?nav=catering.quotes",
+      icon: FileText,
+      permissionKey: "quotes",
+    },
+    {
+      key: "enquiryForms",
+      to: "/quotes/enquiry-forms?nav=catering.quotes",
+      icon: FilePenLine,
       permissionKey: "quotes",
     },
     {

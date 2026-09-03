@@ -304,7 +304,7 @@ export function QuotesListPage({
   const title = effectivePreset === "all"
     ? (chinese ? "所有報價" : "All Quotes")
     : effectivePreset === "pending"
-      ? (chinese ? "待報價" : "Pending Quotes")
+      ? (chinese ? "未結束報價" : "Open Quotes")
     : effectivePreset === "large"
       ? (chinese ? "大單 100K 投標" : "Large 100K Bids")
       : t(`quotes.${titleKey}`);

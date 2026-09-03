@@ -61,11 +61,9 @@ export async function fetchFollowUpCounts(
         "addon_shopify_pending.eq.true,and(is_shopify_order.eq.true,source_system.eq.shopify,delivery_status.is.null,do_not_send_to_factory.eq.false)",
       ),
     supabase
-      .from("orders")
+      .from("enquiry_submissions")
       .select("id", countSelection)
-      .eq("document_type", "quote")
-      .is("archived_at", null)
-      .or('quote_status.is.null,quote_status.not.in.("Done Deal","Case Closed")'),
+      .is("converted_quote_id", null),
     supabase
       .from("orders")
       .select("id", countSelection)
