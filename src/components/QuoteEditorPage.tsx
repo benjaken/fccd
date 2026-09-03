@@ -2463,25 +2463,6 @@ export function QuoteEditorPage({
                           : <button type="button" className="quote-line-delete" aria-label={t(isOrder ? "quoteEditor.items.cancel" : "quoteEditor.items.remove", { name: line.name || "" })} disabled={removingId === line.id || savingLineId === line.id} onClick={() => void removeLine(line.id)}><Trash2 /></button>}
                       </div>
                       {lineRemarksControl(line)}
-                      <div className="quote-mobile-line-actions">
-                        <button type="button" disabled={line.isVoid || !index || reordering} aria-label={`${t("quoteEditor.items.sequence")} ${index}`} onClick={() => void moveLine(line.id, -1)}><ChevronUp /></button>
-                        <button type="button" disabled={line.isVoid || index === activeLines.length - 1 || reordering} aria-label={`${t("quoteEditor.items.sequence")} ${index + 2}`} onClick={() => void moveLine(line.id, 1)}><ChevronDown /></button>
-                        {lineCatalogButton(line)}
-                        {line.packageId && !line.productId ? null : (
-                          <button
-                            type="button"
-                            aria-label={t("quoteEditor.items.viewLabel")}
-                            title={t("quoteEditor.items.viewLabel")}
-                            disabled={line.isVoid}
-                            onClick={() => openLabelModal(line)}
-                          >
-                            <Tag />
-                          </button>
-                        )}
-                        {line.isVoid
-                          ? <button type="button" className="quote-line-restore" aria-label={t("quoteEditor.items.restore", { name: line.name || "" })} disabled={removingId === line.id} onClick={() => void restoreLine(line.id)}><Undo2 /></button>
-                          : <button type="button" className="quote-line-delete" aria-label={t(isOrder ? "quoteEditor.items.cancel" : "quoteEditor.items.remove", { name: line.name || "" })} disabled={removingId === line.id || savingLineId === line.id} onClick={() => void removeLine(line.id)}><Trash2 /></button>}
-                      </div>
                     </header>
                     <div className="quote-mobile-line-fields">
                       <label><span>{t("quoteEditor.items.quantity")}</span><input type="number" inputMode="numeric" min="0" step="1" value={line.quantity} disabled={line.isVoid || savingLineId === line.id} onChange={(event) => patchLine(line.id, { quantity: Number(event.target.value) })} onBlur={() => void saveEditedLine(line)} /></label>
