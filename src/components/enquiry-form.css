@@ -183,8 +183,10 @@
   color: var(--muted-foreground);
 }
 
-.enquiry-builder-page .enquiry-row-actions {
-  grid-template-columns: repeat(3, 2rem);
+.enquiry-status-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .enquiry-list-action-error {

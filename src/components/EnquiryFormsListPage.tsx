@@ -9,12 +9,14 @@ import { DetailLink } from "@/components/ui/detail-link";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import { OperationalListState } from "@/components/ui/operational-list-state";
+import { Switch } from "@/components/ui/switch";
 import { enquiryPublicPath } from "@/lib/enquiry-form";
 import {
   createEnquiryForm,
   deleteEnquiryForm,
   duplicateEnquiryForm,
   fetchEnquiryForms,
+  setEnquiryFormStatus,
   type EnquiryFormListItem,
 } from "@/lib/enquiry-forms-api";
 
@@ -30,24 +32,20 @@ const FORM_SKELETON_COLUMNS = [
   { width: "4.5rem", variant: "action" as const },
 ];
 
-function statusLabel(status: EnquiryFormListItem["status"]) {
-  if (status === "published") return "已發佈";
-  if (status === "disabled") return "已停用";
-  return "草稿";
-}
-
 export function EnquiryFormsListPage({
   canManage = false,
   loadForms = fetchEnquiryForms,
   createForm = createEnquiryForm,
   duplicateForm = duplicateEnquiryForm,
   deleteForm = deleteEnquiryForm,
+  setFormStatus = setEnquiryFormStatus,
 }: {
   canManage?: boolean;
   loadForms?: () => Promise<EnquiryFormListItem[]>;
   createForm?: typeof createEnquiryForm;
   duplicateForm?: typeof duplicateEnquiryForm;
   deleteForm?: typeof deleteEnquiryForm;
+  setFormStatus?: typeof setEnquiryFormStatus;
 } = {}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -61,6 +59,7 @@ export function EnquiryFormsListPage({
   const [reloadKey, setReloadKey] = useState(0);
   const [creating, setCreating] = useState(false);
   const [copyingId, setCopyingId] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<EnquiryFormListItem | null>(null);
   const [deleting, setDeleting] = useState(false);
   const nav = searchParams.get("nav");
@@ -121,6 +120,31 @@ export function EnquiryFormsListPage({
     }
   };
 
+  const togglePublished = async (item: EnquiryFormListItem, enabled: boolean) => {
+    const nextStatus = enabled ? "published" : "disabled";
+    if (item.status === nextStatus) return;
+    if (enabled && item.questionCount === 0) {
+      setActionError(t("quotes.enableFormNeedQuestions"));
+      return;
+    }
+    const previous = item.status;
+    setTogglingId(item.id);
+    setActionError(null);
+    setItems((current) =>
+      current.map((row) => (row.id === item.id ? { ...row, status: nextStatus } : row)),
+    );
+    try {
+      await setFormStatus(item.id, nextStatus);
+    } catch {
+      setItems((current) =>
+        current.map((row) => (row.id === item.id ? { ...row, status: previous } : row)),
+      );
+      setActionError(t("quotes.enableFormError"));
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
   const confirmDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
@@ -131,9 +155,7 @@ export function EnquiryFormsListPage({
       setReloadKey((key) => key + 1);
     } catch (cause) {
       const code = cause instanceof Error ? cause.message : "";
-      if (code === "enquiry_form_default_protected") {
-        setActionError(t("quotes.deleteDefaultForm"));
-      } else if (code === "enquiry_form_has_submissions") {
+      if (code === "enquiry_form_has_submissions") {
         setActionError(t("quotes.deleteFormHasSubmissions"));
       } else {
         setActionError(t("quotes.deleteFormError"));
@@ -203,7 +225,7 @@ export function EnquiryFormsListPage({
               <tr>
                 <th>內部名稱</th>
                 <th>公開標題</th>
-                <th>狀態</th>
+                <th>{t("quotes.enquiryEnabled")}</th>
                 <th>題目</th>
                 <th>公開連結</th>
                 <th>更新</th>
@@ -217,7 +239,22 @@ export function EnquiryFormsListPage({
                   <DetailLink to={editTo(item.id)}>{item.internalName}</DetailLink>
                 </td>
                 <td>{item.publicTitle}</td>
-                <td className={`enquiry-status-${item.status}`}>{statusLabel(item.status)}</td>
+                <td>
+                  <div className="enquiry-status-cell">
+                    <Switch
+                      checked={item.status === "published"}
+                      disabled={!canManage || togglingId === item.id}
+                      onCheckedChange={(enabled) => void togglePublished(item, enabled)}
+                      aria-label={t(
+                        item.status === "published" ? "quotes.toggleFormOff" : "quotes.toggleFormOn",
+                        { name: item.internalName },
+                      )}
+                    />
+                    <span>
+                      {item.status === "published" ? t("quotes.enquiryEnabled") : t("quotes.enquiryDisabled")}
+                    </span>
+                  </div>
+                </td>
                 <td>{item.questionCount}</td>
                 <td>
                   {item.status === "published" ? (
@@ -229,29 +266,31 @@ export function EnquiryFormsListPage({
                 <td>{new Date(item.updatedAt).toLocaleString("zh-HK")}</td>
                 {canManage ? (
                   <td className="table-actions-cell">
-                    <div className="order-row-actions enquiry-row-actions">
-                      <Link to={editTo(item.id)} aria-label={t("quotes.actions.edit")} title={t("quotes.actions.edit")}>
-                        <Pencil />
-                      </Link>
-                      <button
-                        type="button"
+                    <div className="table-row-actions">
+                      <Button size="icon" variant="outline" asChild>
+                        <Link to={editTo(item.id)} aria-label={t("quotes.actions.edit")} title={t("quotes.actions.edit")}>
+                          <Pencil />
+                        </Link>
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="outline"
                         aria-label={t("quotes.actions.copy")}
                         title={t("quotes.actions.copy")}
                         disabled={copyingId === item.id}
                         onClick={() => void copyForm(item)}
                       >
                         <Copy />
-                      </button>
-                      {item.isDefault ? null : (
-                        <button
-                          type="button"
-                          aria-label={t("quotes.actions.delete")}
-                          title={t("quotes.actions.delete")}
-                          onClick={() => setDeleteTarget(item)}
-                        >
-                          <Trash2 />
-                        </button>
-                      )}
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="destructive"
+                        aria-label={`${t("quotes.actions.delete")} ${item.internalName}`}
+                        title={t("quotes.actions.delete")}
+                        onClick={() => setDeleteTarget(item)}
+                      >
+                        <Trash2 />
+                      </Button>
                     </div>
                   </td>
                 ) : null}

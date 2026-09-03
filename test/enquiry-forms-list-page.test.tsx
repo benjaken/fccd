@@ -43,7 +43,15 @@ describe("EnquiryFormsListPage", () => {
     expect(table).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "內部名稱" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "公開標題" })).toBeInTheDocument();
-    expect(screen.getByText("已發佈")).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "啟用" })).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "停用表單「FC Catering Enquiry」" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    expect(screen.getByRole("switch", { name: "啟用表單「草稿表單」" })).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
     expect(screen.getByRole("link", { name: "/quote-inquiry/form-1" })).toHaveAttribute("href", "/quote-inquiry/form-1");
     expect(screen.getByText("草稿表單")).toBeInTheDocument();
     expect(screen.getByText("—")).toBeInTheDocument();
@@ -64,7 +72,23 @@ describe("EnquiryFormsListPage", () => {
     });
   });
 
-  it("shows edit, copy, and delete actions like the quotes list", async () => {
+  it("toggles publish state with the enable switch", async () => {
+    const setFormStatus = vi.fn().mockResolvedValue(undefined);
+    render(
+      <MemoryRouter>
+        <EnquiryFormsListPage canManage loadForms={async () => forms} setFormStatus={setFormStatus} />
+      </MemoryRouter>,
+    );
+    await screen.findByText("草稿表單");
+    await userEvent.click(screen.getByRole("switch", { name: "啟用表單「草稿表單」" }));
+    await waitFor(() => expect(setFormStatus).toHaveBeenCalledWith("form-2", "published"));
+    expect(screen.getByRole("link", { name: "/quote-inquiry/form-2" })).toHaveAttribute(
+      "href",
+      "/quote-inquiry/form-2",
+    );
+  });
+
+  it("shows edit, copy, and delete actions for every form", async () => {
     const deleteForm = vi.fn().mockResolvedValue(undefined);
     render(
       <MemoryRouter>
@@ -77,9 +101,10 @@ describe("EnquiryFormsListPage", () => {
     expect(editLinks[0]).toHaveAttribute("href", "/quotes/enquiry-forms/form-1/edit");
     expect(editLinks[1]).toHaveAttribute("href", "/quotes/enquiry-forms/form-2/edit");
     expect(screen.getAllByRole("button", { name: "複製" })).toHaveLength(2);
-    expect(screen.getByRole("button", { name: "刪除" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "刪除 FC Catering Enquiry" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "刪除 草稿表單" })).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: "刪除" }));
+    await userEvent.click(screen.getByRole("button", { name: "刪除 草稿表單" }));
     const dialog = await screen.findByRole("alertdialog", { name: "刪除 Enquiry 表單" });
     await userEvent.click(within(dialog).getByRole("button", { name: "刪除" }));
     await waitFor(() => expect(deleteForm).toHaveBeenCalledWith("form-2"));

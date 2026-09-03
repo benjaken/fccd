@@ -261,7 +261,6 @@ export async function setEnquiryFormStatus(id: string, status: EnquiryFormStatus
 export async function deleteEnquiryForm(id: string) {
   const form = await fetchEnquiryForm(id);
   if (!form) throw new Error("enquiry_form_not_found");
-  if (form.isDefault) throw new Error("enquiry_form_default_protected");
   const { count, error: countError } = await supabase
     .from("enquiry_submissions")
     .select("id", { count: "exact", head: true })
@@ -272,7 +271,6 @@ export async function deleteEnquiryForm(id: string) {
     .from("enquiry_forms")
     .delete()
     .eq("id", id)
-    .eq("is_default", false)
     .select("id");
   if (error) throw error;
   if (!data?.length) throw new Error("enquiry_form_not_found");
