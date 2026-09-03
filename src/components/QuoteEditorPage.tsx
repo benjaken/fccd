@@ -2726,7 +2726,6 @@ export function QuoteEditorPage({
             <div>
               <h2><CreditCard />{t("quoteEditor.payments.title")}</h2>
             </div>
-            <Button type="button" variant="outline" onClick={addPayment}><Plus />{t("quoteEditor.payments.add")}</Button>
           </header>
           <div className="quote-payment-list">
             {payments.map((payment, index) => (
@@ -2747,6 +2746,7 @@ export function QuoteEditorPage({
           </div>
           {completionError ? <p className="quote-editor-error" role="alert">{t(`quoteEditor.payments.${completionError === "send" ? "sendError" : "saveError"}`)}</p> : null}
           <footer>
+            <Button type="button" variant="outline" onClick={addPayment}><Plus />{t("quoteEditor.payments.add")}</Button>
             <Button type="button" disabled={saving || completing} onClick={() => void saveAllChanges()}>{saving ? <LoaderCircle className="spin" /> : <Check />}{saving ? t("quoteEditor.saving") : t("quoteEditor.saveChanges")}</Button>
           </footer>
         </section>
