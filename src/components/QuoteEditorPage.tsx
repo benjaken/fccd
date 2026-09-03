@@ -2173,7 +2173,6 @@ export function QuoteEditorPage({
                 {linePrintLabels(line)}
               </td>
               <td className="quote-line-remarks">
-                <div className="quote-line-heading" aria-hidden="true" />
                 {lineRemarkFields(line, true)}
               </td>
               <td>{line.quantity}</td>
@@ -2514,7 +2513,6 @@ export function QuoteEditorPage({
                   {linePrintLabels(line)}
                 </td>
                 <td className="quote-line-remarks">
-                  <div className="quote-line-heading" aria-hidden="true" />
                   {lineRemarkFields(line)}
                 </td>
                 <td><input className="quote-line-edit-number" type="number" inputMode="numeric" min="0" step="1" value={line.quantity} aria-label={`${t("quoteEditor.items.quantity")} ${line.name || ""}`} disabled={line.isVoid || savingLineId === line.id} onChange={(event) => patchLine(line.id, { quantity: Number(event.target.value) })} onBlur={() => void saveEditedLine(line)} /></td>

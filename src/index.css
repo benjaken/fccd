@@ -24233,11 +24233,18 @@ a.masoft-order-tag:focus-visible {
   min-width: 0;
 }
 
-.quote-line-labels,
-.quote-line-remarks-list {
+.quote-line-labels {
   display: grid;
   width: 100%;
   margin-top: 6px;
+  gap: 6px;
+  align-items: start;
+}
+
+.quote-line-remarks-list {
+  display: grid;
+  width: 100%;
+  margin-top: 0;
   gap: 6px;
   align-items: start;
 }
@@ -24246,7 +24253,6 @@ a.masoft-order-tag:focus-visible {
   display: flex;
   width: 100%;
   max-width: 100%;
-  min-height: 64px;
   padding: 8px;
   align-items: center;
   border-radius: 6px;
