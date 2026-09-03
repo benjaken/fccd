@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import {
   emptyAnswers,
+  enquiryPublicPath,
   type EnquiryFormDefinition,
   type EnquiryQuestion,
   type EnquiryQuestionType,
@@ -210,6 +211,13 @@ export function EnquiryFormEditorPage() {
           <p>維護公開查詢表單。第一份預設表單對照現行 EmailMeForm 24 題。</p>
         </div>
         <div className="quote-detail-actions">
+          {form.status === "published" ? (
+            <Button asChild variant="outline">
+              <Link to={enquiryPublicPath(form.id)} target="_blank" rel="noopener noreferrer">
+                公開連結
+              </Link>
+            </Button>
+          ) : null}
           <Button type="button" variant="outline" onClick={() => setPreviewOpen(true)}>預覽</Button>
           <Button type="button" variant="outline" disabled={saving} onClick={() => void save()}>
             {saving ? "儲存中…" : "儲存"}
@@ -249,7 +257,7 @@ export function EnquiryFormEditorPage() {
             <input value={form.slug} onChange={(event) => patchForm({ slug: event.target.value })} />
           </label>
           <label>
-            <span>預設公開表單<small>/quote-inquiry</small></span>
+            <span>預設公開表單</span>
             <div className="enquiry-editor-switch">
               <Switch checked={form.isDefault} onCheckedChange={(checked) => patchForm({ isDefault: checked })} />
             </div>
@@ -257,6 +265,16 @@ export function EnquiryFormEditorPage() {
         </div>
         <div className="quote-editor-form-column">
           <h2><Globe />公開頁面</h2>
+          <label>
+            <span>公開連結</span>
+            {form.status === "published" ? (
+              <Link to={enquiryPublicPath(form.id)} target="_blank" rel="noopener noreferrer">
+                {enquiryPublicPath(form.id)}
+              </Link>
+            ) : (
+              <span>—</span>
+            )}
+          </label>
           <label>
             <span>公開標題</span>
             <input value={form.publicTitle} onChange={(event) => patchForm({ publicTitle: event.target.value })} />

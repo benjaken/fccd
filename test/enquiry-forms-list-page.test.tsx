@@ -44,7 +44,7 @@ describe("EnquiryFormsListPage", () => {
     expect(screen.getByRole("columnheader", { name: "內部名稱" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "公開標題" })).toBeInTheDocument();
     expect(screen.getByText("已發佈")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "/quote-inquiry" })).toHaveAttribute("href", "/quote-inquiry");
+    expect(screen.getByRole("link", { name: "/quote-inquiry/form-1" })).toHaveAttribute("href", "/quote-inquiry/form-1");
     expect(screen.getByText("草稿表單")).toBeInTheDocument();
     expect(screen.getByText("—")).toBeInTheDocument();
     expect(document.querySelector(".quotes-toolbar .list-search")).not.toBeNull();

@@ -19,7 +19,7 @@ import {
 import "./enquiry-form.css";
 
 export function PublicEnquiryFormPage() {
-  const { slug } = useParams();
+  const { formId } = useParams();
   const [form, setForm] = useState<EnquiryFormDefinition | null>(null);
   const [loading, setLoading] = useState(true);
   const [unavailable, setUnavailable] = useState(false);
@@ -36,7 +36,7 @@ export function PublicEnquiryFormPage() {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    fetchPublishedEnquiryForm(slug)
+    fetchPublishedEnquiryForm(formId)
       .then((next) => {
         if (cancelled) return;
         if (!next) {
@@ -58,7 +58,7 @@ export function PublicEnquiryFormPage() {
     return () => {
       cancelled = true;
     };
-  }, [slug]);
+  }, [formId]);
 
   const patchAnswer = (fieldKey: string, value: EnquiryAnswerValue) => {
     setAnswers((current) => ({ ...current, [fieldKey]: value }));

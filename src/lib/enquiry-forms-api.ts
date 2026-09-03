@@ -108,9 +108,9 @@ function mapForm(row: FormRow): EnquiryFormDefinition {
   };
 }
 
-export async function fetchPublishedEnquiryForm(slug?: string | null) {
+export async function fetchPublishedEnquiryForm(formIdOrSlug?: string | null) {
   const { data, error } = await supabase.rpc("get_published_enquiry_form", {
-    p_slug: slug || null,
+    p_slug: formIdOrSlug || null,
   });
   if (error) throw error;
   if (!data) return null;

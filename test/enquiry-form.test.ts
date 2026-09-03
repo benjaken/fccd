@@ -6,12 +6,19 @@ import {
 import {
   convertEnquiryRequirements,
   emptyAnswers,
+  enquiryPublicPath,
   mapEnquiryAnswers,
   serializeEnquiryQuestions,
   validateEnquiryAnswers,
 } from "@/lib/enquiry-form";
 
 describe("catering enquiry seed form", () => {
+  it("builds public URLs from the form id", () => {
+    expect(enquiryPublicPath("11111111-1111-4111-8111-111111111111")).toBe(
+      "/quote-inquiry/11111111-1111-4111-8111-111111111111",
+    );
+  });
+
   it("has 24 questions matching the live EmailMeForm", () => {
     expect(CATERING_ENQUIRY_SEED_QUESTIONS).toHaveLength(24);
     expect(CATERING_ENQUIRY_SEED_QUESTIONS.map((question) => question.title)).toEqual([

@@ -2496,7 +2496,7 @@ function App() {
         }
       />
       <Route path="/quote-inquiry" element={<PublicEnquiryFormPage />} />
-      <Route path="/quote-inquiry/:slug" element={<PublicEnquiryFormPage />} />
+      <Route path="/quote-inquiry/:formId" element={<PublicEnquiryFormPage />} />
       <Route path="/self_service_search" element={<CustomerSelfServicePage />} />
       <Route path="/self_service_search/:orderId" element={<CustomerSelfServicePage />} />
       <Route

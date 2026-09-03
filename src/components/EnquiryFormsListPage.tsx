@@ -9,6 +9,7 @@ import { DetailLink } from "@/components/ui/detail-link";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import { OperationalListState } from "@/components/ui/operational-list-state";
+import { enquiryPublicPath } from "@/lib/enquiry-form";
 import {
   createEnquiryForm,
   deleteEnquiryForm,
@@ -220,8 +221,8 @@ export function EnquiryFormsListPage({
                 <td>{item.questionCount}</td>
                 <td>
                   {item.status === "published" ? (
-                    <Link to={item.isDefault ? "/quote-inquiry" : `/quote-inquiry/${item.slug}`} target="_blank" rel="noopener noreferrer">
-                      /quote-inquiry{item.isDefault ? "" : `/${item.slug}`}
+                    <Link to={enquiryPublicPath(item.id)} target="_blank" rel="noopener noreferrer">
+                      {enquiryPublicPath(item.id)}
                     </Link>
                   ) : "—"}
                 </td>

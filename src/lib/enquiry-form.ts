@@ -324,6 +324,10 @@ function parseEnquiryQuestion(value: unknown): EnquiryQuestion | null {
   };
 }
 
+export function enquiryPublicPath(formId: string) {
+  return `/quote-inquiry/${formId}`;
+}
+
 export function serializeEnquiryQuestions(questions: EnquiryQuestion[]): Record<string, unknown>[] {
   return questions.map((question) => ({
     field_key: question.fieldKey,

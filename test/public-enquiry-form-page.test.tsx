@@ -56,6 +56,22 @@ describe("public enquiry form page", () => {
     expect(rpcMock).toHaveBeenCalledWith("get_published_enquiry_form", { p_slug: null });
   });
 
+  it("loads a published form by id in the public URL", async () => {
+    rpcMock.mockResolvedValueOnce({ data: publishedForm, error: null });
+    render(
+      <MemoryRouter initialEntries={[`/quote-inquiry/${CATERING_ENQUIRY_SEED_FORM_ID}`]}>
+        <Routes>
+          <Route path="/quote-inquiry/:formId" element={<PublicEnquiryFormPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: publishedForm.public_title })).toBeInTheDocument();
+    expect(rpcMock).toHaveBeenCalledWith("get_published_enquiry_form", {
+      p_slug: CATERING_ENQUIRY_SEED_FORM_ID,
+    });
+  });
+
   it("blocks submit when required answers are missing", async () => {
     rpcMock.mockResolvedValue({ data: publishedForm, error: null });
     render(

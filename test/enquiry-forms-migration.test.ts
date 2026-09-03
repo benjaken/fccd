@@ -24,4 +24,14 @@ describe("enquiry form migration", () => {
     expect(sql).toContain("了解條款及政策");
     expect(sql.match(/"field_key":/g)?.length).toBe(24);
   });
+
+  it("resolves public forms by id and restores 24 seed questions", () => {
+    const followUp = readFileSync(
+      path.resolve(process.cwd(), "supabase/migrations/20260903090000_enquiry_public_id_and_seed_questions.sql"),
+      "utf8",
+    );
+    expect(followUp).toContain("where status = 'published' and id = v_id");
+    expect(followUp.match(/"field_key":/g)?.length).toBe(24);
+    expect(followUp).toContain("jsonb_array_length(questions) is distinct from 24");
+  });
 });
