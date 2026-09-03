@@ -1,6 +1,6 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
 import { EnquiryFormsListPage } from "@/components/EnquiryFormsListPage";
@@ -124,5 +124,22 @@ describe("EnquiryFormsListPage", () => {
     await userEvent.click(screen.getByRole("button", { name: "重試" }));
     expect(await screen.findByText("FC Catering Enquiry")).toBeInTheDocument();
     await waitFor(() => expect(loadForms).toHaveBeenCalledTimes(2));
+  });
+
+  it("opens the editor without creating a form record", async () => {
+    render(
+      <MemoryRouter initialEntries={["/quotes/enquiry-forms"]}>
+        <Routes>
+          <Route
+            path="/quotes/enquiry-forms"
+            element={<EnquiryFormsListPage canManage loadForms={async () => forms} />}
+          />
+          <Route path="/quotes/enquiry-forms/:id/edit" element={<p>unsaved-editor</p>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    await screen.findByText("FC Catering Enquiry");
+    await userEvent.click(screen.getByRole("button", { name: "新增表單" }));
+    expect(await screen.findByText("unsaved-editor")).toBeInTheDocument();
   });
 });

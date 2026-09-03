@@ -10,9 +10,8 @@ import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import { OperationalListState } from "@/components/ui/operational-list-state";
 import { Switch } from "@/components/ui/switch";
-import { enquiryPublicPath } from "@/lib/enquiry-form";
+import { enquiryFormEditorPath, enquiryPublicPath, NEW_ENQUIRY_FORM_ID } from "@/lib/enquiry-form";
 import {
-  createEnquiryForm,
   deleteEnquiryForm,
   duplicateEnquiryForm,
   fetchEnquiryForms,
@@ -35,14 +34,12 @@ const FORM_SKELETON_COLUMNS = [
 export function EnquiryFormsListPage({
   canManage = false,
   loadForms = fetchEnquiryForms,
-  createForm = createEnquiryForm,
   duplicateForm = duplicateEnquiryForm,
   deleteForm = deleteEnquiryForm,
   setFormStatus = setEnquiryFormStatus,
 }: {
   canManage?: boolean;
   loadForms?: () => Promise<EnquiryFormListItem[]>;
-  createForm?: typeof createEnquiryForm;
   duplicateForm?: typeof duplicateEnquiryForm;
   deleteForm?: typeof deleteEnquiryForm;
   setFormStatus?: typeof setEnquiryFormStatus;
@@ -57,7 +54,6 @@ export function EnquiryFormsListPage({
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
-  const [creating, setCreating] = useState(false);
   const [copyingId, setCopyingId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<EnquiryFormListItem | null>(null);
@@ -91,20 +87,10 @@ export function EnquiryFormsListPage({
     );
   }, [items, search]);
 
-  const editTo = (id: string) =>
-    `/quotes/enquiry-forms/${id}/edit${nav ? `?nav=${encodeURIComponent(nav)}` : ""}`;
+  const editTo = (id: string) => enquiryFormEditorPath(id, nav);
 
-  const createNewForm = async () => {
-    setCreating(true);
-    setActionError(null);
-    try {
-      const id = await createForm({ internalName: "未命名表單", publicTitle: "未命名表單" });
-      navigate(editTo(id));
-    } catch {
-      setActionError("無法新增表單");
-    } finally {
-      setCreating(false);
-    }
+  const createNewForm = () => {
+    navigate(editTo(NEW_ENQUIRY_FORM_ID));
   };
 
   const copyForm = async (item: EnquiryFormListItem) => {
@@ -188,7 +174,7 @@ export function EnquiryFormsListPage({
             submitLabel={t("quotes.searchAction")}
             actions={
               canManage ? (
-                <Button type="button" disabled={creating} onClick={() => void createNewForm()}>
+                <Button type="button" onClick={createNewForm}>
                   <Plus />
                   {t("quotes.createForm")}
                 </Button>

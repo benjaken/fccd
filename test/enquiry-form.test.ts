@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   CATERING_ENQUIRY_SEED_FORM_ID,
   CATERING_ENQUIRY_SEED_QUESTIONS,
+  cloneDefaultEnquiryQuestions,
 } from "@/lib/enquiry-form-seed";
 import {
   isEnquiryOptionCompact,
@@ -28,6 +29,16 @@ describe("catering enquiry seed form", () => {
     expect(isEnquiryOptionCompact("正餐 到會  (大盤)")).toBe(true);
     expect(isEnquiryOptionCompact("新界區/九龍區 地面車邊交收 (+$50)")).toBe(false);
     expect(isEnquiryOptionCompact("需要分期付款，先付6成按金確認訂單，尾數在送餐當日付款")).toBe(false);
+  });
+
+  it("defaults a new form to the five contact questions", () => {
+    expect(cloneDefaultEnquiryQuestions().map((question) => question.title)).toEqual([
+      "姓名",
+      "公司/機構名稱",
+      "聯絡電話",
+      "電郵地址",
+      "送貨地址",
+    ]);
   });
 
   it("has 24 questions matching the live EmailMeForm", () => {

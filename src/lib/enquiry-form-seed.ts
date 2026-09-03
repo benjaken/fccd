@@ -1,4 +1,5 @@
 import type { EnquiryFormDefinition, EnquiryQuestion } from "@/lib/enquiry-form";
+import { NEW_ENQUIRY_FORM_ID } from "@/lib/enquiry-form";
 
 function input(
   fieldKey: string,
@@ -324,4 +325,30 @@ export function cloneCateringEnquirySeedQuestions(): EnquiryQuestion[] {
     ...question,
     options: question.options?.map((option) => ({ ...option })),
   }));
+}
+
+const DEFAULT_NEW_FORM_FIELD_KEYS = ["name", "company", "phone", "email", "address"] as const;
+
+export function cloneDefaultEnquiryQuestions(): EnquiryQuestion[] {
+  return cloneCateringEnquirySeedQuestions().filter((question) =>
+    DEFAULT_NEW_FORM_FIELD_KEYS.includes(question.fieldKey as (typeof DEFAULT_NEW_FORM_FIELD_KEYS)[number]),
+  );
+}
+
+export function createBlankEnquiryForm(): EnquiryFormDefinition {
+  return {
+    id: NEW_ENQUIRY_FORM_ID,
+    internalName: "未命名表單",
+    publicTitle: "未命名表單",
+    publicDescription: "",
+    submitLabel: "Submit",
+    slug: "",
+    isDefault: false,
+    status: "draft",
+    successMessage: "我們已收到你的查詢，稍後會有專人回覆。",
+    ackEmailSubject: "",
+    ackEmailBody: "",
+    asanaProjectGid: "",
+    questions: cloneDefaultEnquiryQuestions(),
+  };
 }

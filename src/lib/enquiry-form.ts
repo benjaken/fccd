@@ -332,6 +332,13 @@ export function enquiryPublicPath(formId: string) {
   return `/quote-inquiry/${formId}`;
 }
 
+export const NEW_ENQUIRY_FORM_ID = "new";
+
+export function enquiryFormEditorPath(formId: string, nav?: string | null) {
+  const suffix = nav ? `?nav=${encodeURIComponent(nav)}` : "";
+  return `/quotes/enquiry-forms/${formId}/edit${suffix}`;
+}
+
 const COMPACT_OPTION_MAX_CHARS = 16;
 
 export function isEnquiryOptionCompact(label: string) {

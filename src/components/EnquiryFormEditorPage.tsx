@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, FilePenLine, FileText, Globe, Plus } from "lucide-react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { EnquiryFormFields } from "@/components/EnquiryFormFields";
 import { Button } from "@/components/ui/button";
@@ -11,13 +11,15 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import {
   emptyAnswers,
+  enquiryFormEditorPath,
   enquiryPublicPath,
+  NEW_ENQUIRY_FORM_ID,
   type EnquiryFormDefinition,
   type EnquiryQuestion,
   type EnquiryQuestionType,
   type EnquiryQuoteField,
 } from "@/lib/enquiry-form";
-import { cloneCateringEnquirySeedQuestions, CATERING_ENQUIRY_SEED_FORM_ID } from "@/lib/enquiry-form-seed";
+import { createBlankEnquiryForm } from "@/lib/enquiry-form-seed";
 import {
   duplicateEnquiryForm,
   fetchEnquiryForm,
@@ -63,8 +65,26 @@ function newQuestion(type: EnquiryQuestionType): EnquiryQuestion {
     type,
     title: "未命名題目",
     required: false,
-    inputFormat: "general",
+    inputFormat: type === "input" ? "general" : undefined,
     options: type === "radio" || type === "checkbox" ? [{ label: "選項 1", value: "選項 1" }] : [],
+  };
+}
+
+function questionWithType(question: EnquiryQuestion, type: EnquiryQuestionType): EnquiryQuestion {
+  if (question.type === type) return question;
+  return {
+    ...question,
+    type,
+    inputFormat: type === "input" ? question.inputFormat ?? "general" : undefined,
+    minNumber: type === "number" ? question.minNumber : undefined,
+    maxNumber: type === "number" ? question.maxNumber : undefined,
+    requireAllOptions: type === "checkbox" ? question.requireAllOptions : undefined,
+    options:
+      type === "radio" || type === "checkbox"
+        ? question.options?.length
+          ? question.options
+          : [{ label: "選項 1", value: "選項 1" }]
+        : [],
   };
 }
 
@@ -77,6 +97,9 @@ function statusLabel(status: EnquiryFormDefinition["status"]) {
 export function EnquiryFormEditorPage() {
   const { id = "" } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const nav = searchParams.get("nav");
+  const isNew = id === NEW_ENQUIRY_FORM_ID;
   const [form, setForm] = useState<EnquiryFormDefinition | null>(null);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -86,6 +109,13 @@ export function EnquiryFormEditorPage() {
 
   useEffect(() => {
     let cancelled = false;
+    if (isNew) {
+      const draft = createBlankEnquiryForm();
+      setForm(draft);
+      setSelectedKey(draft.questions[0]?.fieldKey ?? null);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     fetchEnquiryForm(id)
       .then((next) => {
@@ -94,18 +124,11 @@ export function EnquiryFormEditorPage() {
           setForm(null);
           return;
         }
-        const shouldHydrate =
-          next.questions.length === 0
-          || (next.id === CATERING_ENQUIRY_SEED_FORM_ID && next.questions.length !== 24);
-        const questions = shouldHydrate
-          ? cloneCateringEnquirySeedQuestions()
-          : next.questions;
-        const hydrated = { ...next, questions };
-        setForm(hydrated);
-        setSelectedKey(questions[0]?.fieldKey ?? null);
-        if (shouldHydrate) {
-          void saveEnquiryForm(hydrated);
-        }
+        setForm(next);
+        setSelectedKey(next.questions[0]?.fieldKey ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setForm(null);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -113,7 +136,7 @@ export function EnquiryFormEditorPage() {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, isNew]);
 
   const selected = useMemo(
     () => form?.questions.find((question) => question.fieldKey === selectedKey) ?? null,
@@ -137,10 +160,12 @@ export function EnquiryFormEditorPage() {
     );
   };
 
-  const loadEmailMeFormQuestions = () => {
-    const questions = cloneCateringEnquirySeedQuestions();
-    patchForm({ questions });
-    setSelectedKey(questions[0]?.fieldKey ?? null);
+  const addQuestion = () => {
+    const question = newQuestion("input");
+    setForm((current) =>
+      current ? { ...current, questions: [...current.questions, question] } : current,
+    );
+    setSelectedKey(question.fieldKey);
   };
 
   const save = async (nextStatus?: EnquiryFormDefinition["status"]) => {
@@ -153,8 +178,19 @@ export function EnquiryFormEditorPage() {
     setError(null);
     try {
       const next = nextStatus ? { ...form, status: nextStatus } : form;
-      await saveEnquiryForm(next);
-      setForm(next);
+      const persistedId = isNew ? crypto.randomUUID() : next.id;
+      const persisted = isNew
+        ? {
+            ...next,
+            id: persistedId,
+            slug: next.slug.trim() || `form-${persistedId.slice(0, 8)}`,
+          }
+        : next;
+      await saveEnquiryForm(persisted);
+      setForm(persisted);
+      if (isNew) {
+        navigate(enquiryFormEditorPath(persisted.id, nav), { replace: true });
+      }
     } catch {
       setError("儲存失敗");
     } finally {
@@ -230,9 +266,10 @@ export function EnquiryFormEditorPage() {
           <Button
             type="button"
             variant="ghost"
+            disabled={isNew}
             onClick={async () => {
               const nextId = await duplicateEnquiryForm(form.id);
-              navigate(`/quotes/enquiry-forms/${nextId}/edit?nav=catering.quotes`);
+              navigate(enquiryFormEditorPath(nextId, nav || "catering.quotes"));
             }}
           >
             複製
@@ -313,7 +350,20 @@ export function EnquiryFormEditorPage() {
               </label>
               <label>
                 <span>題型</span>
-                <input value={typeLabel(selected.type)} disabled />
+                <FilterableSelect
+                  aria-label="題型"
+                  value={selected.type}
+                  onChange={(event) =>
+                    patchQuestion(
+                      selected.fieldKey,
+                      questionWithType(selected, event.target.value as EnquiryQuestionType),
+                    )
+                  }
+                >
+                  {QUESTION_TYPES.map((type) => (
+                    <option key={type.value} value={type.value}>{type.label}</option>
+                  ))}
+                </FilterableSelect>
               </label>
               {selected.type === "input" ? (
                 <label>
@@ -375,22 +425,28 @@ export function EnquiryFormEditorPage() {
                   ))}
                 </FilterableSelect>
               </label>
-              <label className="quote-editor-checkbox">
+              <label>
                 <span>必填</span>
-                <input
-                  type="checkbox"
-                  checked={selected.required}
-                  onChange={(event) => patchQuestion(selected.fieldKey, { required: event.target.checked })}
-                />
+                <div className="enquiry-editor-switch">
+                  <Switch
+                    checked={selected.required}
+                    onCheckedChange={(checked) => patchQuestion(selected.fieldKey, { required: checked })}
+                    aria-label="必填"
+                  />
+                </div>
               </label>
               {selected.type === "checkbox" ? (
-                <label className="quote-editor-checkbox">
+                <label>
                   <span>必須全選</span>
-                  <input
-                    type="checkbox"
-                    checked={selected.requireAllOptions === true}
-                    onChange={(event) => patchQuestion(selected.fieldKey, { requireAllOptions: event.target.checked })}
-                  />
+                  <div className="enquiry-editor-switch">
+                    <Switch
+                      checked={selected.requireAllOptions === true}
+                      onCheckedChange={(checked) =>
+                        patchQuestion(selected.fieldKey, { requireAllOptions: checked })
+                      }
+                      aria-label="必須全選"
+                    />
+                  </div>
                 </label>
               ) : null}
               {selected.type === "radio" || selected.type === "checkbox" ? (
@@ -450,7 +506,7 @@ export function EnquiryFormEditorPage() {
               </div>
             </>
           ) : (
-            <p className="enquiry-editor-empty-hint">從右側題目列表選一題，或載入 EmailMeForm 範本。</p>
+            <p className="enquiry-editor-empty-hint">從右側題目列表選一題，或按新增題目。</p>
           )}
         </form>
 
@@ -463,25 +519,9 @@ export function EnquiryFormEditorPage() {
             <strong>{form.questions.length}</strong>
           </header>
           <div className="enquiry-editor-list-toolbar">
-            <FilterableSelect
-              aria-label="新增題型"
-              value=""
-              onChange={(event) => {
-                const type = event.target.value as EnquiryQuestionType;
-                if (!type) return;
-                const question = newQuestion(type);
-                patchForm({ questions: [...form.questions, question] });
-                setSelectedKey(question.fieldKey);
-              }}
-            >
-              <option value="">新增題目…</option>
-              {QUESTION_TYPES.map((type) => (
-                <option key={type.value} value={type.value}>{type.label}</option>
-              ))}
-            </FilterableSelect>
-            <Button type="button" variant="outline" onClick={loadEmailMeFormQuestions}>
+            <Button type="button" onClick={addQuestion}>
               <Plus />
-              載入 EmailMeForm 24 題
+              新增題目
             </Button>
           </div>
           <div className="table-wrap">
@@ -521,7 +561,7 @@ export function EnquiryFormEditorPage() {
                     <td colSpan={5} className="quote-lines-empty">
                       <FilePenLine />
                       <strong>尚未有題目</strong>
-                      <span>請新增，或載入 EmailMeForm 24 題。</span>
+                      <span>請按新增題目。</span>
                     </td>
                   </tr>
                 ) : null}
