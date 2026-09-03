@@ -18,6 +18,8 @@ describe("enquiry notification emails", () => {
     expect(mail.text).toContain("您好先生陳大文：");
     expect(mail.text).toContain("多謝你填寫「餐飲到會網上查詢」");
     expect(mail.html).toContain("稍後會有專人回覆你");
+    expect(mail.html).toContain("聯絡 Food Channels Catering");
+    expect(mail.html).not.toContain("聣絡");
     expect(mail.html).not.toContain("/quotes/pending/");
   });
 
