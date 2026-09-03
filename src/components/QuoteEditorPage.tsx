@@ -1341,6 +1341,8 @@ export function QuoteEditorPage({
         {rows.map((row, index) => {
           const name = row.label ? quoteLinePrintLabelName(row.label) : "";
           const labelSuffix = rows.length > 1 ? ` ${index + 1}` : "";
+          const remark = row.remark.trim();
+          const remarkDisplay = remark ? t("quoteEditor.items.remarksValue", { value: remark }) : "";
           const remarkLabel = `${t("quoteEditor.items.remarks")} ${line.name || ""}${labelSuffix}`.trim();
           return (
             <div className="quote-line-label-remark-pair" key={`${line.id}:pair-${index}`}>
@@ -1350,11 +1352,11 @@ export function QuoteEditorPage({
                 <span className="quote-line-label-chip is-empty" aria-hidden="true" />
               )}
               <div
-                className="quote-line-label-remark-text"
-                title={row.remark}
+                className={cn("quote-line-label-remark-text", !remark && "is-empty")}
+                title={remarkDisplay}
                 aria-label={remarkLabel}
               >
-                {row.remark}
+                {remarkDisplay}
               </div>
             </div>
           );

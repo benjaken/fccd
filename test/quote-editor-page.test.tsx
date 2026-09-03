@@ -1093,10 +1093,11 @@ describe("Quote editor", () => {
                   unitPrice: 88,
                   totalPrice: 88,
                   remarks: "Line note",
-                  labelRemarks: ["Line note", "Sauce note"],
+                  labelRemarks: ["Line note", "Sauce note", ""],
                   labels: [
                     { id: "label-1", displayA: "Roast pork label", displayB: "2 boxes" },
                     { id: "label-2", displayA: "Sauce label", displayB: "1 cup" },
+                    { id: "label-3", displayA: "Empty label", displayB: "" },
                   ],
                 }])}
                 loadShippingFeeOptions={vi.fn().mockResolvedValue(shippingFeeOptions)}
@@ -1111,8 +1112,8 @@ describe("Quote editor", () => {
     expect(screen.getByRole("columnheader", { name: "Remarks" })).toBeInTheDocument();
     const firstLabel = within(row).getByText("Roast pork label2 boxes");
     const secondLabel = within(row).getByText("Sauce label1 cup");
-    const firstRemark = within(row).getByText("Line note");
-    const secondRemark = within(row).getByText("Sauce note");
+    const firstRemark = within(row).getByText("Remarks: Line note");
+    const secondRemark = within(row).getByText("Remarks: Sauce note");
     expect(firstLabel.closest("td")).toHaveClass("quote-line-product");
     expect(secondLabel.closest("td")).toBe(firstLabel.closest("td"));
     expect(firstRemark.closest("td")).toBe(firstLabel.closest("td"));
@@ -1121,6 +1122,9 @@ describe("Quote editor", () => {
     expect(secondLabel.closest(".quote-line-label-remark-pair")).toContainElement(secondRemark);
     expect(firstRemark).toHaveClass("quote-line-label-remark-text");
     expect(secondRemark).toHaveClass("quote-line-label-remark-text");
+    expect(firstRemark).not.toHaveClass("is-empty");
+    const emptyLabel = within(row).getByText("Empty label");
+    expect(emptyLabel.closest(".quote-line-label-remark-pair")?.querySelector(".quote-line-label-remark-text")).toHaveClass("is-empty");
     expect(within(row).queryByRole("textbox")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Remarks Roast pork/ })).not.toBeInTheDocument();
   });
@@ -1625,8 +1629,8 @@ describe("Quote editor", () => {
     expect(screen.getByText("High Chance")).toBeInTheDocument();
     expect(screen.getAllByText("Email").length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText("WATI")).toBeInTheDocument();
-    expect(screen.getByText(longRemark)).toHaveAttribute("title", longRemark);
-    expect(screen.getByText(longRemark)).toHaveClass("quote-line-label-remark-text");
+    expect(screen.getByText(`Remarks: ${longRemark}`)).toHaveAttribute("title", `Remarks: ${longRemark}`);
+    expect(screen.getByText(`Remarks: ${longRemark}`)).toHaveClass("quote-line-label-remark-text");
     expect(screen.getAllByText("HK$28,350.00").length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByRole("columnheader", { name: "Label preview" })).not.toBeInTheDocument();
     expect(screen.queryByLabelText("50 × 75 mm 標籤預覽：FCBQ20260834")).not.toBeInTheDocument();

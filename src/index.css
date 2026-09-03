@@ -24263,7 +24263,7 @@ a.masoft-order-tag:focus-visible {
 
 .quote-line-label-remark-pair .quote-line-label-remark-text {
   height: auto;
-  min-height: 0;
+  min-height: 64px;
 }
 
 .quote-line-remarks-list {
@@ -24322,7 +24322,10 @@ a.masoft-order-tag:focus-visible {
   white-space: pre-wrap;
 }
 
-.quote-line-label-remark-text:empty {
+.quote-line-label-remark-text:empty,
+.quote-line-label-remark-text.is-empty {
+  border-color: transparent;
+  background: transparent;
   color: transparent;
 }
 
