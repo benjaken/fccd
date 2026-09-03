@@ -174,7 +174,7 @@ describe("PageSkeleton", () => {
     expect(container.querySelectorAll(".home-sales-skeleton-panel")).toHaveLength(2);
     expect(container.querySelectorAll(".home-sales-skeleton-panel table")).toHaveLength(2);
     expect(container.querySelector(".orders-dashboard-grid")).toBeNull();
-    expect(container.querySelector(".content-skeleton-filter")).not.toBeNull();
+    expect(container.querySelector(".content-skeleton-filter")).toBeNull();
   });
 
   it.each(SKELETON_PAGES)("is the only page skeleton used by %s", (relativePath) => {

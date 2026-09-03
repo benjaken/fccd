@@ -17,6 +17,7 @@ const dashboardData: HomeSalesDashboardData = {
     { key: "currentMonth", year: 2026, month: 9, startDate: "2026-09-01", endDate: "2026-09-30" },
   ],
   cateringChannels: [],
+  cateringOther: null,
   tkoChannels: [],
 };
 
@@ -62,6 +63,8 @@ describe("Dashboard navigation", () => {
     expect(stylesheet).toMatch(/--popover:\s*oklch\(1 0 150\)/);
     expect(stylesheet).toMatch(/\.shop-order-product-grid article\s*\{[^}]*background:\s*var\(--secondary\)/);
     expect(stylesheet).toMatch(/\.home-sales-card-list\s*\{/);
+    expect(stylesheet).toMatch(/\.home-sales-table thead \.home-sales-total-col[\s\S]*?color:\s*var\(--foreground\)/);
+    expect(stylesheet).toMatch(/\.home-sales-table\.is-this-month-table td[\s\S]*?font-weight:\s*860/);
     expect(stylesheet).toMatch(/@media \(max-width: 980px\)[\s\S]*\.home-sales-table-wrap\s*\{[^}]*display:\s*none/);
     expect(stylesheet).toMatch(/@media \(max-width: 980px\)[\s\S]*\.home-sales-card-list\s*\{[^}]*display:\s*grid/);
     expect(stylesheet).toMatch(/@media \(max-width: 980px\)[\s\S]*\.home-sales-panel-actions\s*\{[^}]*display:\s*contents/);

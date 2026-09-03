@@ -406,7 +406,6 @@ function salesDashboardSkeleton() {
             {bone("detail-skeleton-description")}
           </div>
           <div className="home-sales-skeleton-actions">
-            {bone("content-skeleton-filter")}
             {bone("content-skeleton-section-title")}
           </div>
         </header>

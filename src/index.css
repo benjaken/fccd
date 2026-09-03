@@ -196,6 +196,23 @@ button {
   text-decoration: underline;
 }
 
+.home-sales-comparison-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+  padding: 4px 16px 16px;
+}
+
+.home-sales-matrix {
+  min-width: 0;
+}
+
+.home-sales-matrix h3 {
+  margin: 0 0 8px;
+  color: var(--foreground);
+  font-size: 14px;
+  font-weight: 700;
+}
 .home-sales-table-wrap {
   max-width: 100%;
   overflow-x: auto;
@@ -205,6 +222,16 @@ button {
   width: 100%;
   min-width: 1120px;
   border-collapse: collapse;
+}
+
+.home-sales-matrix-table {
+  min-width: 520px;
+}
+
+@media (max-width: 1280px) {
+  .home-sales-comparison-pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .home-sales-panel-actions,
@@ -259,7 +286,7 @@ button {
 
 .home-sales-table th,
 .home-sales-table td {
-  padding: 13px 14px;
+  padding: 11px 10px;
   border-bottom: 1px solid var(--border);
   text-align: right;
   white-space: nowrap;
@@ -268,7 +295,7 @@ button {
 .home-sales-table thead th {
   background: color-mix(in oklch, var(--muted) 54%, var(--card));
   color: var(--muted-foreground);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 740;
   text-align: right;
 }
@@ -281,7 +308,7 @@ button {
   position: sticky;
   left: 0;
   z-index: 1;
-  min-width: 150px;
+  min-width: 132px;
   background: var(--card);
   color: var(--foreground);
   text-align: left;
@@ -290,12 +317,12 @@ button {
 .home-sales-table thead th:first-child {
   z-index: 2;
   background: color-mix(in oklch, var(--muted) 54%, var(--card));
-  text-align: center;
+  text-align: left;
 }
 
 .home-sales-table tbody th {
-  font-size: 14px;
-  font-weight: 720;
+  font-size: 13px;
+  font-weight: 650;
 }
 
 .home-sales-table tbody tr:last-child th,
@@ -328,9 +355,38 @@ button {
   font-weight: 760;
 }
 
+.home-sales-table thead .home-sales-total-col,
+.home-sales-table td.home-sales-total-value,
+.home-sales-table td.home-sales-total-value .home-sales-money {
+  color: var(--foreground);
+  font-weight: 860;
+}
+
+.home-sales-table td.home-sales-total-value.change-positive {
+  color: oklch(0.48 0.145 148);
+}
+
+.home-sales-table td.home-sales-total-value.change-negative {
+  color: var(--destructive);
+}
+
+.home-sales-table thead .home-sales-channel-col {
+  font-weight: 600;
+}
+
+.home-sales-table td.home-sales-channel-value,
+.home-sales-table td.home-sales-channel-value .home-sales-money {
+  font-weight: 400;
+}
+
+.home-sales-table.is-this-month-table td,
+.home-sales-table.is-this-month-table td .home-sales-money {
+  font-weight: 860;
+}
+
 .home-sales-money {
   display: block;
-  font-size: 14px;
+  font-size: 13px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -394,6 +450,7 @@ button {
     padding: 0;
   }
 
+  .home-sales-comparison-pair,
   .home-sales-table-wrap {
     display: none;
   }
@@ -454,12 +511,30 @@ button {
   .home-sales-channel-card dd {
     margin: 0;
     font-size: 15px;
-    font-weight: 760;
+    font-weight: 400;
     font-variant-numeric: tabular-nums;
+  }
+
+  .home-sales-channel-card section.is-this-month dd {
+    font-weight: 860;
   }
 
   .home-sales-channel-card.is-total {
     background: color-mix(in oklch, var(--muted) 38%, var(--card));
+  }
+
+  .home-sales-channel-card.is-total > header strong,
+  .home-sales-channel-card.is-total dd {
+    color: var(--foreground);
+    font-weight: 860;
+  }
+
+  .home-sales-channel-card.is-total dd.change-positive {
+    color: oklch(0.48 0.145 148);
+  }
+
+  .home-sales-channel-card.is-total dd.change-negative {
+    color: var(--destructive);
   }
 
   .home-sales-skeleton-panel .table-wrap {
