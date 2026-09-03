@@ -17,6 +17,7 @@ import {
   fleetBadgeChar,
   fleetBadgeForDelivery,
   formatFactoryLineLabel,
+  resolveFactoryOrderLineDisplayName,
   groupDeliveriesByDate,
   hongKongDateKey,
   isNewFactoryOrder,
@@ -252,6 +253,30 @@ describe("factory board helpers", () => {
         quantity: 23,
       }),
     ).toBe("(23包) 檸檬茶 (x 23)");
+  });
+
+  it("prefers the live product name over the order-line snapshot for factory cards", () => {
+    expect(
+      resolveFactoryOrderLineDisplayName({
+        catalogName: "(便當) 煙三文魚牛角酥 (黃金蝦球、薯角、甘栗紫薯餅、蕃茄沙律)",
+        snapshotName: "煙三文魚牛角酥輕食盒",
+        content: null,
+      }),
+    ).toBe("(便當) 煙三文魚牛角酥 (黃金蝦球、薯角、甘栗紫薯餅、蕃茄沙律)");
+    expect(
+      resolveFactoryOrderLineDisplayName({
+        catalogName: null,
+        snapshotName: "(5格) 雞扒牛角酥野餐盒 (配薯角、蕃茄沙律、芝士年糕、黃金蝦球)",
+        content: null,
+      }),
+    ).toBe("(5格) 雞扒牛角酥野餐盒 (配薯角、蕃茄沙律、芝士年糕、黃金蝦球)");
+    expect(
+      resolveFactoryOrderLineDisplayName({
+        catalogName: "(便當) 咖喱香煎雞扒飯 (配蕃茄沙律、味付小吃)",
+        snapshotName: "咖喱香煎雞扒便當",
+        content: null,
+      }),
+    ).toBe("(便當) 咖喱香煎雞扒飯 (配蕃茄沙律、味付小吃)");
   });
 
   it("sorts menu rows by dish type with desserts and utensils at the end", () => {
