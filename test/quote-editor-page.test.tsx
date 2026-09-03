@@ -1909,7 +1909,7 @@ describe("Quote editor", () => {
   it("puts customer enquiry answers in step 1 before the original quote steps", async () => {
     fetchEnquirySubmission.mockResolvedValue({
       id: "sub-1",
-      referenceCode: "ENQ20260903-TEST",
+      referenceCode: "ENQ20260903001",
       formId: "form-1",
       createdAt: "2026-09-03T02:00:00.000Z",
       formTitle: "FC Enquiry",
@@ -1996,7 +1996,7 @@ describe("Quote editor", () => {
   it("opens a pending enquiry with the quote details form and compact choice answers", async () => {
     fetchEnquirySubmission.mockResolvedValue({
       id: "sub-1",
-      referenceCode: "ENQ20260903-TEST",
+      referenceCode: "ENQ20260903001",
       formId: "form-1",
       createdAt: "2026-09-03T02:00:00.000Z",
       formTitle: "FC Enquiry",
@@ -2034,7 +2034,7 @@ describe("Quote editor", () => {
 
     renderEditor({ canEdit: true }, "/quotes/pending/sub-1");
 
-    expect(await screen.findByRole("heading", { name: "ENQ20260903-TEST" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "ENQ20260903001" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Back to pending quotes" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Customer enquiry" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("tab", { name: "Quote details" })).toBeInTheDocument();
@@ -2051,7 +2051,7 @@ describe("Quote editor", () => {
     const user = userEvent.setup();
     fetchEnquirySubmission.mockResolvedValue({
       id: "sub-1",
-      referenceCode: "ENQ20260903-TEST",
+      referenceCode: "ENQ20260903001",
       formId: "form-1",
       createdAt: "2026-09-03T02:00:00.000Z",
       formTitle: "FC Enquiry",
@@ -2086,7 +2086,7 @@ describe("Quote editor", () => {
     const saveDetails = vi.fn().mockResolvedValue(undefined);
     renderEditor({ canEdit: true, saveDetails }, "/quotes/pending/sub-1");
 
-    expect(await screen.findByRole("heading", { name: "ENQ20260903-TEST" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "ENQ20260903001" })).toBeInTheDocument();
     await user.selectOptions(screen.getByLabelText(/Brand/), "channel-1");
     await user.selectOptions(screen.getByLabelText("Shipping method"), "shipping-home");
     await user.click(screen.getByRole("combobox", { name: "District" }));

@@ -75,4 +75,14 @@ describe("enquiry form migration", () => {
     expect(wati).toContain("'sent'::text");
     expect(wati).toContain("'failed'::text");
   });
+
+  it("assigns daily sequential enquiry numbers without a UUID suffix", () => {
+    const sequential = readFileSync(
+      path.resolve(process.cwd(), "supabase/migrations/20260903140000_enquiry_sequential_reference_code.sql"),
+      "utf8",
+    );
+    expect(sequential).toContain("pg_advisory_xact_lock(hashtext('enquiry-number-' || v_prefix))");
+    expect(sequential).toContain("v_prefix || lpad(v_sequence::text, 3, '0')");
+    expect(sequential).not.toContain("substr(replace(v_id::text, '-', ''), 1, 6)");
+  });
 });

@@ -157,7 +157,7 @@ describe("public enquiry form page", () => {
     rpcMock.mockImplementation(async (name: string) => {
       if (name === "get_published_enquiry_form") return { data: simpleForm, error: null };
       if (name === "submit_enquiry_form") {
-        return { data: [{ id: "sub-1", reference_code: "ENQ20260903-TEST01" }], error: null };
+        return { data: [{ id: "sub-1", reference_code: "ENQ20260903001" }], error: null };
       }
       return { data: null, error: null };
     });
@@ -172,7 +172,7 @@ describe("public enquiry form page", () => {
     await userEvent.type(screen.getByRole("textbox", { name: /姓名/ }), "陳大文");
     await userEvent.type(screen.getByRole("textbox", { name: /電郵地址/ }), "chan@example.com");
     await userEvent.click(screen.getByRole("button", { name: "Submit" }));
-    expect(await screen.findByText("參考編號：ENQ20260903-TEST01")).toBeInTheDocument();
+    expect(await screen.findByText("參考編號：ENQ20260903001")).toBeInTheDocument();
     expect(screen.getByText(publishedForm.success_message)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Submit" })).not.toBeInTheDocument();
     await waitFor(() =>

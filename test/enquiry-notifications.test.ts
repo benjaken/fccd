@@ -33,14 +33,14 @@ describe("enquiry notification emails", () => {
   it("keeps internal mail to mapped fields and the pending detail link", () => {
     const mail = buildEnquiryInternalContent({
       formTitle: "餐飲到會網上查詢",
-      referenceCode: "ENQ20260903-TEST",
+      referenceCode: "ENQ20260903001",
       customerName: "陳大文",
       salutation: "先生",
       phone: "91234567",
       email: "chan@example.com",
       detailUrl: "https://example.com/quotes/pending/sub-1",
     });
-    expect(mail.subject).toBe("新查詢：餐飲到會網上查詢 ENQ20260903-TEST");
+    expect(mail.subject).toBe("新查詢：餐飲到會網上查詢 ENQ20260903001");
     expect(mail.text).toContain("姓名：先生陳大文");
     expect(mail.text).toContain("查看待報價：https://example.com/quotes/pending/sub-1");
     expect(fillEnquiryEmailTemplate("Hi {姓名}", { name: "Ada" })).toBe("Hi Ada");
@@ -50,7 +50,7 @@ describe("enquiry notification emails", () => {
     expect(ENQUIRY_INTERNAL_WATI_TEMPLATE).toBe("fccd_enquiry_internal_v1");
     const parameters = buildEnquiryInternalWatiParameters({
       formTitle: "餐飲到會網上查詢",
-      referenceCode: "ENQ20260903-TEST",
+      referenceCode: "ENQ20260903001",
       customerName: "陳大文",
       salutation: "先生",
       phone: "91234567",
@@ -60,7 +60,7 @@ describe("enquiry notification emails", () => {
     });
     expect(parameters).toEqual([
       { name: "1", value: "餐飲到會網上查詢" },
-      { name: "2", value: "ENQ20260903-TEST" },
+      { name: "2", value: "ENQ20260903001" },
       { name: "3", value: "先生陳大文" },
       { name: "4", value: "-" },
       { name: "5", value: "91234567" },
