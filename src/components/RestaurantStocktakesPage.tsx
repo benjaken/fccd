@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ClipboardList, Pencil, Plus, RefreshCw, Save, Trash2 } from "lucide-react";
+import { ClipboardList, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { FilterableSelect } from "@/components/ui/filterable-select";
@@ -134,7 +134,7 @@ export function RestaurantStocktakesPage({
   const [reloadKey, setReloadKey] = useState(0);
   const [editMode, setEditMode] = useState(false);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
-  const [saving, setSaving] = useState(false);
+  const [savingIds, setSavingIds] = useState<Record<string, boolean>>({});
 
   const [createOpen, setCreateOpen] = useState(false);
   const [newMonth, setNewMonth] = useState(hongKongMonth());
@@ -189,13 +189,26 @@ export function RestaurantStocktakesPage({
   const restaurantUnavailable = (restaurantId: string) => restaurantUnavailableFor(newMonth, restaurantId);
   const departmentUnavailable = (departmentName: string) => Boolean(newMonth && newRestaurantId && existingKeys.has(recordKey({ month: newMonth, restaurantId: newRestaurantId, departmentName })));
   const spans = useMemo(() => supplierRowSpans(items), [items]);
-  const dirtyItems = items.filter((item) => drafts[item.id] !== (item.quantity == null ? "" : String(item.quantity)));
   const displayedInventoryValue = items.reduce((sum, item) => {
     const original = item.totalCost;
     const draft = drafts[item.id]?.trim();
     const next = editMode && draft !== "" && Number.isFinite(Number(draft)) ? Number(draft) * item.unitCost : original;
     return sum + next - original;
   }, inventoryValue);
+
+  const draftsFromItems = (rows: RestaurantStocktakeItem[]) => Object.fromEntries(rows.map((item) => [item.id, item.quantity == null ? "" : String(item.quantity)]));
+
+  const enterEdit = () => {
+    setDrafts(draftsFromItems(items));
+    setError(null);
+    setEditMode(true);
+  };
+
+  const exitEdit = () => {
+    setDrafts(draftsFromItems(items));
+    setError(null);
+    setEditMode(false);
+  };
 
   const openCreate = () => {
     const month = selected?.month ?? hongKongMonth();
@@ -234,23 +247,37 @@ export function RestaurantStocktakesPage({
     } finally { setCreating(false); }
   };
 
-  const save = async () => {
-    if (saving) return;
-    if (!dirtyItems.length) {
-      setEditMode(false);
+  const saveRow = async (item: RestaurantStocktakeItem, rawValue: string) => {
+    if (savingIds[item.id]) return;
+    const value = rawValue.trim();
+    const quantity = Number(value);
+    if (value === "" && item.quantity == null) return;
+    if (value !== "" && Number.isFinite(quantity) && quantity === item.quantity) return;
+    if (value === "" || !Number.isFinite(quantity) || quantity < 0) {
+      setError("quantityInvalid");
       return;
     }
-    const invalid = dirtyItems.some((item) => {
-      const value = drafts[item.id]?.trim() ?? "";
-      return value === "" || !Number.isFinite(Number(value)) || Number(value) < 0;
-    });
-    if (invalid) { setError("quantityInvalid"); return; }
-    setSaving(true); setError(null);
+    setSavingIds((current) => current[item.id] ? current : { ...current, [item.id]: true });
+    setError(null);
     try {
-      await Promise.all(dirtyItems.map((item) => services.saveQuantity(item.id, Number(drafts[item.id]))));
-      setReloadKey((value) => value + 1);
+      await services.saveQuantity(item.id, quantity);
+      const nextTotal = quantity * item.unitCost;
+      setItems((current) => current.map((row) => row.id === item.id ? { ...row, quantity, totalCost: nextTotal } : row));
+      setInventoryValue((current) => current - item.totalCost + nextTotal);
+      setDrafts((current) => ({ ...current, [item.id]: String(quantity) }));
+      if (selected) {
+        const key = recordKey(selected);
+        setRecords((current) => current.map((record) => recordKey(record) === key ? { ...record, updatedAt: new Date().toISOString() } : record));
+      }
     } catch { setError("saveError"); }
-    finally { setSaving(false); }
+    finally {
+      setSavingIds((current) => {
+        if (!current[item.id]) return current;
+        const next = { ...current };
+        delete next[item.id];
+        return next;
+      });
+    }
   };
 
   const removeRecord = async (record: RestaurantStocktakeRecord) => {
@@ -288,7 +315,7 @@ export function RestaurantStocktakesPage({
             {selected ? <>
               <header className="restaurant-stocktake-summary">
                 <div><strong>{formatMonth(selected.month, i18n.language)} · {selected.restaurantName} · {selected.departmentName}</strong><span>{t("restaurantStocktakes.inventoryValue", { value: money(displayedInventoryValue) })}</span></div>
-                {canEdit ? <div className="restaurant-stocktake-actions"><Button type="button" variant="outline" disabled={editMode || loading} onClick={() => setEditMode(true)}><Pencil />{t("restaurantStocktakes.edit")}</Button><Button type="button" disabled={!editMode || saving} onClick={() => void save()}><Save />{saving ? t("restaurantStocktakes.saving") : t("restaurantStocktakes.save")}</Button></div> : null}
+                {canEdit ? <div className="restaurant-stocktake-actions">{editMode ? <Button type="button" variant="outline" disabled={loading} onClick={exitEdit}>{t("restaurantStocktakes.done")}</Button> : <Button type="button" variant="outline" disabled={loading} onClick={enterEdit}><Pencil />{t("restaurantStocktakes.edit")}</Button>}</div> : null}
               </header>
               <header className="ingredients-toolbar"><ListSearchBar id="restaurant-stocktake-search" value={search} onChange={setSearch} onSubmit={() => setAppliedSearch(search.trim())} label={t("restaurantStocktakes.search")} placeholder={t("restaurantStocktakes.searchPlaceholder")} submitLabel={t("restaurantStocktakes.searchAction")} /></header>
               {error ? <p className="list-inline-error">{t(`restaurantStocktakes.${error}`)}</p> : null}
@@ -297,7 +324,7 @@ export function RestaurantStocktakesPage({
                   const draft = drafts[item.id] ?? "";
                   const quantity = draft.trim() === "" ? null : Number(draft);
                   const totalCost = editMode && quantity !== null && Number.isFinite(quantity) ? quantity * item.unitCost : item.totalCost;
-                  return <tr key={item.id}>{spans.has(index) ? <td rowSpan={spans.get(index)}><strong>{item.supplierName || t("restaurantStocktakes.noSupplier")}</strong></td> : null}<td><strong>{item.name}</strong></td><td>{item.unit || "—"}</td><td>{money(item.unitCost)}</td><td>{editMode ? <input className="stocktake-quantity-input" type="number" min="0" step="0.001" value={draft} aria-label={t("restaurantStocktakes.editQuantity", { item: item.name })} placeholder={t("restaurantStocktakes.quantityPlaceholder")} onChange={(event) => setDrafts((current) => ({ ...current, [item.id]: event.target.value }))} /> : item.quantity == null ? <span className="stocktake-not-counted">{t("restaurantStocktakes.notCounted")}</span> : item.quantity}</td><td>{money(totalCost)}</td></tr>;
+                  return <tr key={item.id}>{spans.has(index) ? <td rowSpan={spans.get(index)}><strong>{item.supplierName || t("restaurantStocktakes.noSupplier")}</strong></td> : null}<td><strong>{item.name}</strong></td><td>{item.unit || "—"}</td><td>{money(item.unitCost)}</td><td>{editMode ? <input className="stocktake-quantity-input" type="number" min="0" step="0.001" value={draft} disabled={Boolean(savingIds[item.id])} aria-label={t("restaurantStocktakes.editQuantity", { item: item.name })} placeholder={t("restaurantStocktakes.quantityPlaceholder")} onChange={(event) => setDrafts((current) => ({ ...current, [item.id]: event.target.value }))} onBlur={(event) => void saveRow(item, event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }} /> : item.quantity == null ? <span className="stocktake-not-counted">{t("restaurantStocktakes.notCounted")}</span> : item.quantity}</td><td>{money(totalCost)}</td></tr>;
                 })}
               </ListTable>}
             </> : <div className="products-state products-state-empty"><ClipboardList /><div><strong>{t("restaurantStocktakes.selectRecord")}</strong><span>{t("restaurantStocktakes.selectRecordDescription")}</span></div></div>}
