@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useTranslation } from "react-i18next";
+import { ClipboardList, ChevronLeft, FileText, PackagePlus } from "lucide-react";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { EnquiryFormFields } from "@/components/EnquiryFormFields";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FilterableSelect } from "@/components/ui/filterable-select";
-import { Input } from "@/components/ui/input";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 import {
   convertEnquiryRequirements,
   mapEnquiryAnswers,
@@ -20,12 +22,33 @@ import {
   type EnquirySubmissionDetail,
 } from "@/lib/enquiry-forms-api";
 import { fetchQuoteBrands, type QuoteBrandOption } from "@/lib/quotes";
+import { cn } from "@/lib/utils";
 
 import "./enquiry-form.css";
 
+type PendingSection = "enquiry" | "details" | "items";
+
+function notificationLabel(kind: "internal" | "ack", value: string) {
+  if (kind === "internal") {
+    if (value === "sent") return "已通知";
+    if (value === "failed") return "通知失敗";
+    if (value === "sending") return "寄送中";
+    return "尚未通知";
+  }
+  if (value === "sent") return "已寄出";
+  if (value === "failed") return "失敗";
+  if (value === "no_email") return "無電郵";
+  if (value === "sending") return "寄送中";
+  return "尚未寄出";
+}
+
 export function EnquiryPendingDetailPage({ canManage = false }: { canManage?: boolean }) {
+  const { t } = useTranslation();
   const { id = "" } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const nav = searchParams.get("nav");
+  const backTo = `/quotes/pending${nav ? `?nav=${encodeURIComponent(nav)}` : "?nav=catering.quotes"}`;
   const [detail, setDetail] = useState<EnquirySubmissionDetail | null>(null);
   const [answers, setAnswers] = useState<EnquiryAnswers>({});
   const [brands, setBrands] = useState<QuoteBrandOption[]>([]);
@@ -37,6 +60,7 @@ export function EnquiryPendingDetailPage({ canManage = false }: { canManage?: bo
   const [mailBusy, setMailBusy] = useState<"internal" | "ack" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showOriginal, setShowOriginal] = useState(false);
+  const [activeTab, setActiveTab] = useState<PendingSection>("enquiry");
 
   useEffect(() => {
     let cancelled = false;
@@ -113,7 +137,7 @@ export function EnquiryPendingDetailPage({ canManage = false }: { canManage?: bo
     try {
       await saveEnquirySubmissionAnswers(detail.id, detail.formSnapshot, answers);
       const quote = await convertEnquiryToQuote({ submissionId: detail.id, channelId });
-      navigate(`/quotes/${quote.id}/edit?nav=catering.quotes`);
+      navigate(`/quotes/${quote.id}/edit${nav ? `?nav=${encodeURIComponent(nav)}` : "?nav=catering.quotes"}`);
     } catch {
       setError("轉成報價單失敗");
     } finally {
@@ -122,13 +146,67 @@ export function EnquiryPendingDetailPage({ canManage = false }: { canManage?: bo
     }
   };
 
-  if (loading) return <section className="enquiry-pending-page">載入待報價…</section>;
-  if (!detail) return <section className="enquiry-pending-page">找不到此待報價</section>;
+  const submitHeader = (event: FormEvent) => {
+    event.preventDefault();
+    void save();
+  };
+
+  const scrollToSection = (section: PendingSection) => {
+    setActiveTab(section);
+    document.getElementById(`enquiry-pending-${section}`)?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  };
+
+  if (loading) {
+    return (
+      <PageSkeleton
+        detailLayout="document"
+        documentType="quote"
+        documentMode="edit"
+        label={t("quoteEditor.loading")}
+        variant="detail"
+      />
+    );
+  }
+
+  if (!detail) {
+    return (
+      <section className="quote-editor-page">
+        <header className="page-heading quote-editor-heading">
+          <div>
+            <Link className="detail-back" to={backTo}>
+              <ChevronLeft />
+              {t("quoteEditor.pendingBack")}
+            </Link>
+            <span className="eyebrow">{t("quoteEditor.pendingEyebrow")}</span>
+            <h1>{t("quoteEditor.pendingNotFound")}</h1>
+          </div>
+        </header>
+      </section>
+    );
+  }
+
   if (detail.convertedQuoteId) {
     return (
-      <section className="enquiry-pending-page">
-        <p>此筆已轉成報價單。</p>
-        <Button asChild><Link to={`/quotes/${detail.convertedQuoteId}`}>開啟報價單</Link></Button>
+      <section className="quote-editor-page">
+        <header className="page-heading quote-editor-heading">
+          <div>
+            <Link className="detail-back" to={backTo}>
+              <ChevronLeft />
+              {t("quoteEditor.pendingBack")}
+            </Link>
+            <span className="eyebrow">{t("quoteEditor.pendingEyebrow")}</span>
+            <h1>{detail.referenceCode || t("quoteEditor.pendingConverted")}</h1>
+            <p>{t("quoteEditor.pendingConverted")}</p>
+          </div>
+        </header>
+        <Button asChild>
+          <Link to={`/quotes/${detail.convertedQuoteId}/edit?nav=catering.quotes`}>
+            {t("quoteEditor.pendingOpenQuote")}
+          </Link>
+        </Button>
       </section>
     );
   }
@@ -136,33 +214,84 @@ export function EnquiryPendingDetailPage({ canManage = false }: { canManage?: bo
   const displayName = `${detail.salutation}${detail.customerName}`.trim();
 
   return (
-    <section className="enquiry-pending-page">
-      <header className="page-heading">
+    <section className="quote-editor-page">
+      <header className="page-heading quote-editor-heading">
         <div>
-          <span className="eyebrow">待轉報價</span>
-          <h1>{detail.referenceCode || displayName || "待報價詳情"}</h1>
+          <Link className="detail-back" to={backTo}>
+            <ChevronLeft />
+            {t("quoteEditor.pendingBack")}
+          </Link>
+          <span className="eyebrow">{t("quoteEditor.pendingEyebrow")}</span>
+          <div className="order-number-cell">
+            <h1>{detail.referenceCode || displayName || t("quoteEditor.pendingEyebrow")}</h1>
+          </div>
           <p>{[detail.formTitle, displayName].filter(Boolean).join(" · ")}</p>
         </div>
-        <div className="enquiry-pending-toolbar">
-          {canManage ? (
-            <>
-              <Button type="button" variant="outline" disabled={saving} onClick={() => void save()}>
-                {saving ? "儲存中…" : "儲存"}
-              </Button>
-              <Button type="button" onClick={() => setConfirmOpen(true)}>轉成報價單</Button>
-            </>
-          ) : null}
-          <Button asChild variant="ghost"><Link to="/quotes/pending?nav=catering.quotes">返回列表</Link></Button>
-        </div>
       </header>
-      {error ? <p role="alert">{error}</p> : null}
+      {error ? <p className="quote-editor-error" role="alert">{error}</p> : null}
 
-      <section className="enquiry-builder-card">
-        <h2>Enquiry Form 的資料</h2>
+      <nav
+        className="quote-editor-tabs quote-editor-section-navigation is-quote has-enquiry"
+        aria-label={t("quoteEditor.steps.label")}
+        role="tablist"
+      >
+        <button
+          type="button"
+          role="tab"
+          aria-label={t("quoteEditor.steps.enquiry")}
+          aria-controls="enquiry-pending-enquiry"
+          aria-selected={activeTab === "enquiry"}
+          className={cn(activeTab === "enquiry" && "is-active")}
+          onClick={() => scrollToSection("enquiry")}
+        >
+          <span><ClipboardList /></span>
+          <div>
+            <small>{t("quoteEditor.steps.number", { number: 1 })}</small>
+            <strong>{t("quoteEditor.steps.enquiry")}</strong>
+          </div>
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-label={t("quoteEditor.steps.details")}
+          aria-controls="enquiry-pending-details"
+          aria-selected={activeTab === "details"}
+          className={cn(activeTab === "details" && "is-active")}
+          onClick={() => scrollToSection("details")}
+        >
+          <span><FileText /></span>
+          <div>
+            <small>{t("quoteEditor.steps.number", { number: 2 })}</small>
+            <strong>{t("quoteEditor.steps.details")}</strong>
+          </div>
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-label={t("quoteEditor.steps.items")}
+          aria-controls="enquiry-pending-items"
+          aria-selected={activeTab === "items"}
+          className={cn(activeTab === "items" && "is-active")}
+          onClick={() => scrollToSection("items")}
+        >
+          <span><PackagePlus /></span>
+          <div>
+            <small>{t("quoteEditor.steps.number", { number: 3 })}</small>
+            <strong>{t("quoteEditor.steps.items")}</strong>
+          </div>
+        </button>
+      </nav>
+
+      <section
+        id="enquiry-pending-enquiry"
+        className="panel quote-editor-enquiry-step quote-editor-scroll-section"
+      >
+        <h2><ClipboardList />{t("quoteEditor.steps.enquiry")}</h2>
         <EnquiryFormFields
           questions={detail.formSnapshot}
           answers={answers}
           disabled={!canManage}
+          splitLayout
           onChange={(fieldKey, value: EnquiryAnswerValue) =>
             setAnswers((current) => ({ ...current, [fieldKey]: value }))
           }
@@ -171,44 +300,110 @@ export function EnquiryPendingDetailPage({ canManage = false }: { canManage?: bo
           {showOriginal ? "隱藏首次提交副本" : "查看首次提交副本"}
         </Button>
         {showOriginal ? (
-          <EnquiryFormFields questions={detail.formSnapshot} answers={detail.originalAnswers} disabled />
+          <EnquiryFormFields questions={detail.formSnapshot} answers={detail.originalAnswers} disabled splitLayout />
         ) : null}
       </section>
 
-      <section className="enquiry-builder-card">
-        <h2>報價資料</h2>
-        <label>
-          品牌 *
-          <FilterableSelect value={channelId} onChange={(event) => setChannelId(event.target.value)} disabled={!canManage}>
-            <option value="">請選擇品牌</option>
-            {brands.map((brand) => (
-              <option key={brand.id} value={brand.id}>{brand.name}</option>
-            ))}
-          </FilterableSelect>
-        </label>
-        <label>姓名<Input value={mapped?.customerName ?? ""} disabled /></label>
-        <label>稱謂<Input value={mapped?.salutation ?? ""} disabled /></label>
-        <label>公司<Input value={mapped?.companyName ?? ""} disabled /></label>
-        <label>電話<Input value={mapped?.phone ?? ""} disabled /></label>
-        <label>電郵<Input value={mapped?.email ?? ""} disabled /></label>
-        <label>地址<Input value={mapped?.address ?? ""} disabled /></label>
-        <label>日期<Input value={mapped?.deliveryDateRaw ?? ""} disabled /></label>
-        <label>時段<Input value={mapped?.deliveryTime ?? ""} disabled /></label>
-        <label>人數<Input value={mapped?.headcount ?? ""} disabled /></label>
-        <p>內部通知：{detail.internalEmailStatus === "sent" ? "已通知" : detail.internalEmailStatus === "failed" ? "通知失敗" : detail.internalEmailStatus === "sending" ? "寄送中" : "尚未通知"}</p>
-        <p>內部 WhatsApp：{detail.internalWatiStatus === "sent" ? "已通知" : detail.internalWatiStatus === "failed" ? "通知失敗" : detail.internalWatiStatus === "sending" ? "寄送中" : "尚未通知"}</p>
+      <form
+        id="enquiry-pending-details"
+        className="panel quote-editor-form quote-editor-scroll-section"
+        onSubmit={submitHeader}
+      >
+        <div className="quote-editor-form-column">
+          <h2><FileText />{t("quoteEditor.customerSection")}</h2>
+          <label>
+            <span>{t("quoteEditor.fields.number")}</span>
+            <input value={detail.referenceCode || "—"} disabled />
+          </label>
+          <label>
+            <span>{t("quoteEditor.fields.brand")} *</span>
+            <FilterableSelect
+              required
+              value={channelId}
+              onChange={(event) => setChannelId(event.target.value)}
+              disabled={!canManage}
+            >
+              <option value="">{t("quoteEditor.placeholders.brand")}</option>
+              {brands.map((brand) => (
+                <option key={brand.id} value={brand.id}>{brand.name}</option>
+              ))}
+            </FilterableSelect>
+          </label>
+          <label>
+            <span>{t("quoteEditor.fields.customerName")}</span>
+            <input value={mapped?.customerName ?? ""} disabled />
+          </label>
+          <label>
+            <span>{t("quoteEditor.fields.companyName")}</span>
+            <input value={mapped?.companyName ?? ""} disabled />
+          </label>
+          <label>
+            <span>{t("quoteEditor.fields.contactA")}</span>
+            <input value={mapped?.phone ?? ""} disabled />
+          </label>
+          <label>
+            <span>{t("quoteEditor.fields.email")}</span>
+            <input value={mapped?.email ?? ""} disabled />
+          </label>
+          <label>
+            <span>{t("quoteEditor.fields.asanaLink")}</span>
+            <input value={detail.asanaLink || ""} disabled />
+          </label>
+          <div className="quote-editor-address-field">
+            <label htmlFor="enquiry-pending-address">{t("quoteEditor.fields.address")}</label>
+            <textarea id="enquiry-pending-address" rows={2} value={mapped?.address ?? ""} disabled />
+          </div>
+        </div>
+
+        <div className="quote-editor-form-column">
+          <h2><PackagePlus />{t("quoteEditor.deliverySection")}</h2>
+          <label>
+            <span>{t("quoteEditor.fields.deliveryDate")}</span>
+            <input value={mapped?.deliveryDateRaw ?? ""} disabled />
+          </label>
+          <label>
+            <span>{t("quoteEditor.fields.deliveryTime")}</span>
+            <input value={mapped?.deliveryTime ?? ""} disabled />
+          </label>
+          <label>
+            <span>{t("quoteEditor.pendingHeadcount")}</span>
+            <input value={mapped?.headcount ?? ""} disabled />
+          </label>
+          <div className="quote-editor-pending-notes">
+            <p>內部通知：{notificationLabel("internal", detail.internalEmailStatus)}</p>
+            <p>內部 WhatsApp：{notificationLabel("internal", detail.internalWatiStatus)}</p>
+            {canManage ? (
+              <Button type="button" variant="outline" disabled={mailBusy !== null} onClick={() => void resendMail("internal")}>
+                {mailBusy === "internal" ? "寄送中…" : "重寄內部通知"}
+              </Button>
+            ) : null}
+            <p>對客確認：{notificationLabel("ack", detail.ackEmailStatus)}</p>
+            {canManage && detail.ackEmailStatus !== "no_email" ? (
+              <Button type="button" variant="outline" disabled={mailBusy !== null} onClick={() => void resendMail("ack")}>
+                {mailBusy === "ack" ? "寄送中…" : "重寄對客確認"}
+              </Button>
+            ) : null}
+          </div>
+        </div>
+
         {canManage ? (
-          <Button type="button" variant="outline" disabled={mailBusy !== null} onClick={() => void resendMail("internal")}>
-            {mailBusy === "internal" ? "寄送中…" : "重寄內部通知"}
-          </Button>
+          <footer>
+            <Button type="button" variant="outline" disabled={converting || saving} onClick={() => setConfirmOpen(true)}>
+              轉成報價單
+            </Button>
+            <Button type="submit" disabled={saving || converting}>
+              {saving ? t("quoteEditor.saving") : t("quoteEditor.saveChanges")}
+            </Button>
+          </footer>
         ) : null}
-        <p>對客確認：{detail.ackEmailStatus === "sent" ? "已寄出" : detail.ackEmailStatus === "failed" ? "失敗" : detail.ackEmailStatus === "no_email" ? "無電郵" : detail.ackEmailStatus === "sending" ? "寄送中" : "尚未寄出"}</p>
-        {canManage && detail.ackEmailStatus !== "no_email" ? (
-          <Button type="button" variant="outline" disabled={mailBusy !== null} onClick={() => void resendMail("ack")}>
-            {mailBusy === "ack" ? "寄送中…" : "重寄對客確認"}
-          </Button>
-        ) : null}
-        <p>Asana：{detail.asanaLink || "尚未建立"}（第一版稍後接自動建 task）</p>
+      </form>
+
+      <section
+        id="enquiry-pending-items"
+        className="panel quote-editor-enquiry-step quote-editor-scroll-section"
+      >
+        <h2><PackagePlus />{t("quoteEditor.steps.items")}</h2>
+        <p>{t("quoteEditor.pendingItemsHint")}</p>
       </section>
 
       <ConfirmDialog

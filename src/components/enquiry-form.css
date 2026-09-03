@@ -163,6 +163,17 @@
   gap: 16px;
 }
 
+.quote-editor-pending-notes {
+  display: grid;
+  gap: 10px;
+  padding-top: 8px;
+}
+
+.quote-editor-pending-notes p {
+  margin: 0;
+  font-size: 14px;
+}
+
 .enquiry-builder-toolbar,
 .enquiry-pending-toolbar {
   display: flex;
