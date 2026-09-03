@@ -163,7 +163,9 @@ describe("menu styles", () => {
       ]),
     );
     const appSource = readFileSync(path.resolve(process.cwd(), "src/App.tsx"), "utf8");
-    expect(appSource).toContain('sellingPriceCost: ["售價成本計算", "Selling Price Cost Calc"]');
+    expect(appSource).not.toMatch(/rawMeatInventoryCalc:\s*\[/);
+    expect(appSource).not.toMatch(/preparedMeatInventoryCalc:\s*\[/);
+    expect(appSource).not.toMatch(/sellingPriceCost:\s*\[/);
     expect(businessSidebarNav("frozen", "")[0]?.key).toBe("rawMeatReports");
     const frozenReports = businessSidebarNav("frozen", "").find(
       (item) => item.key === "rawMeatReports",
