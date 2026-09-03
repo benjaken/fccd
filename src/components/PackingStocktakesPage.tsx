@@ -6,6 +6,7 @@ import { useSearchParams } from "react-router-dom";
 
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
+import { CollapsibleRecordSidebar, RecordSidebarToggle } from "@/components/ui/collapsible-record-sidebar";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import { TablePagination } from "@/components/ui/table-pagination";
@@ -110,6 +111,8 @@ export function PackingStocktakesPage({
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [printLoading, setPrintLoading] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const toggleSidebar = () => setSidebarCollapsed((value) => !value);
   const totalPages = Math.max(1, Math.ceil(total / PACKING_STOCKTAKES_PAGE_SIZE));
   const visibleFrom = total === 0 ? 0 : (page - 1) * PACKING_STOCKTAKES_PAGE_SIZE + 1;
   const visibleTo = Math.min(page * PACKING_STOCKTAKES_PAGE_SIZE, total);
@@ -223,17 +226,25 @@ export function PackingStocktakesPage({
         </div>
       </header>
       <div className="stocktake-records-layout">
-        <aside className="stocktake-date-list" aria-label={t(copyKey("dateList"))}>
+        <CollapsibleRecordSidebar
+          collapsed={sidebarCollapsed}
+          onToggle={toggleSidebar}
+          hideLabel={t("common.hideSidebar")}
+          showLabel={t("common.showSidebar")}
+          className="stocktake-date-list"
+          aria-label={t(copyKey("dateList"))}
+        >
           <header className="stocktake-date-list-header">
             <strong>{t(copyKey("dateList"))}</strong>
             <div className="stocktake-date-list-actions">
               {canEdit ? <Button type="button" variant="ghost" size="icon" aria-label={t(copyKey("add"))} onClick={openCreate}><Plus /></Button> : null}
+              <RecordSidebarToggle collapsed={sidebarCollapsed} onToggle={toggleSidebar} hideLabel={t("common.hideSidebar")} showLabel={t("common.showSidebar")} />
             </div>
           </header>
           <div className="stocktake-date-list-options">
             {datesLoading ? <span>{t(copyKey("loading"))}</span> : dates.length === 0 ? <span>{t(copyKey("noDates"))}</span> : dates.map((item) => <div key={item.date} className={item.date === stocktakeDate ? "stocktake-date-item is-active" : "stocktake-date-item"}><button type="button" data-stocktake-date={item.date} onClick={() => { setStocktakeDate(item.date); setPage(1); }}><strong>{formatDate(`${item.date}T00:00:00+08:00`, i18n.language)}</strong><small>{t(copyKey("updatedAt"), { time: formatDateTime(item.updatedAt, i18n.language) })}</small></button>{canDelete ? <Button type="button" variant="ghost" size="icon" disabled={deletingDate === item.date} aria-label={t(copyKey("deleteDate"), { date: formatDate(`${item.date}T00:00:00+08:00`, i18n.language) })} onClick={() => void removeDate(item.date)}><Trash2 /></Button> : null}</div>)}
           </div>
-        </aside>
+        </CollapsibleRecordSidebar>
         <article className="panel ingredients-panel stocktake-records-panel">
         <div className="stocktake-records-content">
         {stocktakeDate ? <>
