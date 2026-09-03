@@ -1369,6 +1369,45 @@ describe("Quote editor", () => {
     expect(screen.queryByRole("button", { name: /Send WATI and email/ })).not.toBeInTheDocument();
   });
 
+  it("keeps additional information focused while typing a multi-character edit", async () => {
+    const user = userEvent.setup();
+    renderEditor({
+      loadSummary: vi.fn().mockResolvedValue({
+        id: "quote-1",
+        orderNumber: "FCLQ20260801",
+        channelId: "channel-1",
+        supplements: {
+          additionalInfo: ["每個便當包括一份餐具"],
+          activities: [{ id: "activity-1", description: "September events", amount: "14000" }],
+          utensilPackQuantity: "0",
+        },
+        draft: {
+          ...emptyQuoteDraft,
+          channelId: "channel-1",
+          customerName: "Customer",
+          contactA: "12345678",
+          email: "quote@example.com",
+          districtId: "district-1",
+          shippingMethodId: "shipping-home",
+        },
+        financials: { shippingFee: 0, discount: 0, cashdollarRedeemed: 0, cashdollarPurchased: 0 },
+      }),
+    }, "/quotes/quote-1/edit");
+
+    await user.click(await screen.findByRole("tab", { name: "Add products" }));
+    const additional = screen.getByLabelText("額外資訊 1");
+    const activity = screen.getByLabelText("活動項目 1");
+    await user.clear(additional);
+    await user.type(additional, "請提供素食選擇");
+    expect(additional).toHaveValue("請提供素食選擇");
+    expect(additional).toHaveFocus();
+
+    await user.clear(activity);
+    await user.type(activity, "Updated activity");
+    expect(activity).toHaveValue("Updated activity");
+    expect(activity).toHaveFocus();
+  });
+
   it("places convert to order on the first quote step instead of the list", async () => {
     const user = userEvent.setup();
     const convertQuote = vi.fn().mockResolvedValue({ id: "order-1", orderNumber: "FCLO20260801" });

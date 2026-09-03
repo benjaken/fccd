@@ -675,7 +675,7 @@ export function QuotePdfEditorPage({
         <div className="quote-pdf-section-title"><Button size="sm" onClick={() => setAdditionalOpen(true)}><Plus />新增額外資訊</Button></div>
         {draft.additionalInfo.length ? <ol>
           {draft.additionalInfo.map((item, index) => (
-            <li key={`${item}-${index}`}><PdfBlurCommitTextarea aria-label={`額外資訊 ${index + 1}`} value={item} rows={1} onDirty={markDraftDirty} onCommit={(value) => update("additionalInfo", draft.additionalInfo.map((current, itemIndex) => itemIndex === index ? value : current))} /><button type="button" aria-label={`刪除額外資訊 ${index + 1}`} onClick={() => update("additionalInfo", draft.additionalInfo.filter((_, itemIndex) => itemIndex !== index))}><Minus /></button></li>
+            <li key={`additional-info-${index}`}><PdfBlurCommitTextarea aria-label={`額外資訊 ${index + 1}`} value={item} rows={1} onDirty={markDraftDirty} onCommit={(value) => update("additionalInfo", draft.additionalInfo.map((current, itemIndex) => itemIndex === index ? value : current))} /><button type="button" aria-label={`刪除額外資訊 ${index + 1}`} onClick={() => update("additionalInfo", draft.additionalInfo.filter((_, itemIndex) => itemIndex !== index))}><Minus /></button></li>
           ))}
         </ol> : null}
       </section> }] : []),

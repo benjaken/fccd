@@ -2560,7 +2560,7 @@ export function QuoteEditorPage({
             <article>
               <h3>額外資訊</h3>
               {supplements.additionalInfo.length ? supplements.additionalInfo.map((item, index) => (
-                <div key={`${item}-${index}`}>
+                <div key={`additional-info-${index}`}>
                   <input value={item} aria-label={`額外資訊 ${index + 1}`} onChange={(event) => setSupplements((current) => ({ ...current, additionalInfo: current.additionalInfo.map((value, itemIndex) => itemIndex === index ? event.target.value : value) }))} />
                   <button type="button" aria-label={`刪除額外資訊 ${index + 1}`} onClick={() => setSupplements((current) => ({ ...current, additionalInfo: current.additionalInfo.filter((_, itemIndex) => itemIndex !== index) }))}><Minus /></button>
                 </div>

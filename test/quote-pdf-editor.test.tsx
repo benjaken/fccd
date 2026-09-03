@@ -413,6 +413,12 @@ describe("editable quote PDF page", () => {
     expect(screen.getByLabelText("額外資訊 1")).toHaveValue("自訂內容也可以隨便寫");
     await user.click(screen.getByRole("button", { name: "確定" }));
     expect(screen.queryByRole("dialog", { name: "額外資訊" })).not.toBeInTheDocument();
+
+    const additional = screen.getByLabelText("額外資訊 1");
+    await user.clear(additional);
+    await user.type(additional, "請提供素食選擇");
+    expect(additional).toHaveValue("請提供素食選擇");
+    expect(additional).toHaveFocus();
   });
 
   it("allows Party Food quotes to add additional information", async () => {
