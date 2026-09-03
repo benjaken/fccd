@@ -132,6 +132,7 @@ describe("public enquiry form page", () => {
     expect(css).toMatch(/\.enquiry-public-shell\s*\{[^}]*max-width:\s*1000px/s);
     expect(css).toContain("grid-template-columns: minmax(200px, 34%) minmax(0, 1fr)");
     expect(css).toContain("grid-column: 1 / -1");
+    expect(css).toMatch(/\.enquiry-form-option\s*\{[^}]*align-items:\s*center/s);
     expect(css).toMatch(/\.enquiry-form-error\s*\{[^}]*color:\s*#dc2626/s);
     expect(css).toMatch(/\.enquiry-form-question\.has-error [^{]*\{[^}]*border-color:\s*#dc2626/s);
     expect(container.querySelector(".enquiry-form-option.is-wide")).not.toBeNull();

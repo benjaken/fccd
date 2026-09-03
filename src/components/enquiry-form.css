@@ -109,8 +109,16 @@
 .enquiry-form-option {
   display: flex;
   gap: 8px;
-  align-items: flex-start;
+  align-items: center;
   font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.enquiry-form-option input {
+  margin: 0;
+  flex: none;
+  width: 1rem;
+  height: 1rem;
 }
 
 .enquiry-form-fields-split .enquiry-form-option.is-wide {
