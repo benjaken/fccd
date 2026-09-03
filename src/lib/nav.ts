@@ -120,7 +120,7 @@ export const businessCategoryNav: Record<string, NavItem[]> = {
   catering: [
     { key: "orders", to: "/orders?nav=catering.orders", icon: ClipboardList, permissionKey: "orders" },
     { key: "allQuotes", to: "/quotes?nav=catering.quotes", icon: FileText, permissionKey: "quotes" },
-    { key: "customerSection", to: "/quotes/customers?nav=catering.customerSection", icon: Users, permissionKey: "quotes.customers" },
+    { key: "customers", to: "/quotes/customers?nav=catering.customerSection", icon: Users, permissionKey: "quotes.customers" },
     { key: "products", to: "/products?nav=catering.products", icon: ShoppingBasket, permissionKey: "products" },
     { key: "kitchen", to: "/kitchen?nav=catering.kitchen", icon: Utensils, permissionKey: "kitchen" },
     { key: "delivery", to: "/delivery?nav=catering.delivery", icon: Truck, permissionKey: "delivery" },
@@ -772,6 +772,9 @@ export function businessSidebarNav(
   }
   if (section === "catering") {
     return businessCategoryNav.catering.map((category) => {
+      if (category.key === "customers") {
+        return category;
+      }
       const sourceKey = category.key === "allQuotes" ? "quotes" : category.key;
       const children = (secondaryNav[sourceKey] ?? []).map((item) =>
         appendNavContext(item, `catering.${sourceKey}`),

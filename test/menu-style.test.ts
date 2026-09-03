@@ -45,12 +45,18 @@ describe("menu styles", () => {
     expect(catering.map((item) => item.key)).toEqual([
       "orders",
       "allQuotes",
-      "customerSection",
+      "customers",
       "products",
       "kitchen",
       "delivery",
     ]);
     expect(catering[0].children?.some((item) => item.key === "allOrders")).toBe(true);
+    const customers = catering.find((item) => item.key === "customers");
+    expect(customers).toMatchObject({
+      to: "/quotes/customers?nav=catering.customerSection",
+      permissionKey: "quotes.customers",
+    });
+    expect(customers?.children).toBeUndefined();
   });
 
   it("activates only the queue link whose tab and menu context match", () => {
