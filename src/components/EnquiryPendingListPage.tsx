@@ -21,7 +21,6 @@ const PENDING_SKELETON_COLUMNS = [
   { width: "10rem" },
   { width: "16rem" },
   { width: "8rem" },
-  { width: "22%" },
   { width: "4rem" },
   { width: "6rem" },
   { width: "6rem" },
@@ -163,7 +162,6 @@ export function EnquiryPendingListPage({
                 <th>建立時間</th>
                 <th>客戶</th>
                 <th>日期</th>
-                <th>描述</th>
                 <th>人數</th>
                 <th>內部通知</th>
                 <th>內部 WhatsApp</th>
@@ -193,7 +191,6 @@ export function EnquiryPendingListPage({
                     <small>{item.formTitle || "Enquiry Form"}</small>
                   </td>
                   <td>{dash(item.deliveryDateRaw)}</td>
-                  <td>{dash(item.quoteDescription)}</td>
                   <td>{dash(item.headcount)}</td>
                   <td>{statusText("internal", item.internalEmailStatus)}</td>
                   <td>{statusText("internal", item.internalWatiStatus)}</td>

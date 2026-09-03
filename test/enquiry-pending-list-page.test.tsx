@@ -42,7 +42,8 @@ describe("EnquiryPendingListPage", () => {
     expect(screen.getByRole("columnheader", { name: "內部 WhatsApp" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "建立時間" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "客戶" })).toBeInTheDocument();
-    expect(screen.getByText("公司午餐到會")).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "描述" })).not.toBeInTheDocument();
+    expect(screen.queryByText("公司午餐到會")).not.toBeInTheDocument();
     expect(screen.getByText("80")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "ENQ20260903-884c8c" })).toHaveClass("order-link");
     expect(screen.getByRole("link", { name: "ENQ20260903-884c8c" })).toHaveAttribute(
