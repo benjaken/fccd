@@ -9,11 +9,17 @@ function env(primary: string, report: string, supplier: string) {
   return Deno.env.get(primary) ?? Deno.env.get(report) ?? Deno.env.get(supplier) ?? "";
 }
 
+function isSlowReasoningModel(model: string) {
+  return /grok-4\.6|grok-4\.5/i.test(model);
+}
+
 function translationModel() {
-  const dedicated = Deno.env.get("ADDRESS_TRANSLATION_AI_MODEL")?.trim();
-  if (dedicated) return dedicated;
-  // Report / supplier quote AI uses grok-4.6 with reasoning. That path takes
-  // ~14s for a single address, so translation stays on a non-reasoning model.
+  const dedicated = Deno.env.get("ADDRESS_TRANSLATION_AI_MODEL")?.trim()
+    || env("ADDRESS_TRANSLATION_AI_MODEL", "REPORT_AI_MODEL", "SUPPLIER_QUOTE_AI_MODEL").trim();
+  // grok-4.6 reasoning hangs or takes ~12s+ per attempt. A dedicated
+  // ADDRESS_TRANSLATION_AI_MODEL=grok-4.6 secret previously made translation
+  // take ~24s (timeout then retry).
+  if (dedicated && !isSlowReasoningModel(dedicated)) return dedicated;
   return DEFAULT_ADDRESS_TRANSLATION_MODEL;
 }
 
@@ -85,20 +91,18 @@ export async function translateLocationToTraditionalChinese(
     },
     { role: "user", content: JSON.stringify({ text: source }) },
   ];
-  // Do not send reasoning_effort. "none" hung on xAI until the abort timeout
-  // (~30s) and never reached the portable retry.
   const providerRequests = [
     {
       model,
       response_format: { type: "json_object" },
       temperature: 0,
       max_tokens: ADDRESS_TRANSLATION_MAX_TOKENS,
+      reasoning_effort: "none",
       messages,
     },
     { model, max_tokens: ADDRESS_TRANSLATION_MAX_TOKENS, messages },
   ];
 
-  let lastAbort = false;
   for (let attempt = 0; attempt < providerRequests.length; attempt += 1) {
     try {
       const response = await postChatCompletion(
@@ -125,13 +129,9 @@ export async function translateLocationToTraditionalChinese(
       });
       return translatedText;
     } catch (error) {
-      if (isAbortError(error) && attempt === 0) {
-        lastAbort = true;
-        continue;
-      }
       if (isAbortError(error)) throw new Error("location_translation_timeout");
       throw error;
     }
   }
-  throw new Error(lastAbort ? "location_translation_timeout" : "location_translation_provider_failed");
+  throw new Error("location_translation_provider_failed");
 }
