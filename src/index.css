@@ -59,6 +59,8 @@
   --workspace-height: 44px;
   --sidebar-width: 236px;
   --sidebar-collapsed-width: 72px;
+  --sidebar-motion-duration: 280ms;
+  --sidebar-motion-easing: cubic-bezier(0.22, 1, 0.36, 1);
   --master-detail-sidebar-width: 280px;
   --restaurant-record-sidebar-width: 290px;
 }
@@ -1242,7 +1244,7 @@ button.bg-primary:focus-visible {
   grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
   min-height: 100vh;
   padding-top: calc(var(--topbar-height) + var(--workspace-height));
-  transition: grid-template-columns 180ms ease;
+  transition: grid-template-columns var(--sidebar-motion-duration) var(--sidebar-motion-easing);
 }
 
 .shell-body.sidebar-is-collapsed {
@@ -1255,11 +1257,17 @@ button.bg-primary:focus-visible {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  width: var(--sidebar-width);
   height: calc(100vh - var(--topbar-height) - var(--workspace-height));
   padding: 14px 10px 12px;
   overflow: hidden;
   border-right: 1px solid var(--border);
   background: var(--card);
+  transition: width var(--sidebar-motion-duration) var(--sidebar-motion-easing);
+}
+
+.shell-body.sidebar-is-collapsed .sidebar {
+  width: var(--sidebar-collapsed-width);
 }
 
 body:has(.side-panel-root) .shell-body > .main-content {
@@ -1306,7 +1314,9 @@ body:has(.side-panel-root) .shell-body.sidebar-is-collapsed .sidebar {
   font-weight: 650;
   transition:
     color 150ms ease,
-    background-color 150ms ease;
+    background-color 150ms ease,
+    padding var(--sidebar-motion-duration) var(--sidebar-motion-easing),
+    gap var(--sidebar-motion-duration) var(--sidebar-motion-easing);
   white-space: nowrap;
 }
 
@@ -1427,12 +1437,150 @@ button.sidebar-link {
 .sidebar-is-collapsed .sidebar-link,
 .sidebar-is-collapsed .sidebar-collapse {
   justify-content: center;
+  gap: 0;
   padding: 0;
 }
 
+.sidebar-link span,
+.sidebar-collapse span,
+.sidebar-link .link-chevron,
+.sidebar-link .sidebar-link-count {
+  overflow: hidden;
+  max-width: 12rem;
+  opacity: 1;
+  transition:
+    opacity 160ms ease,
+    max-width var(--sidebar-motion-duration) var(--sidebar-motion-easing);
+}
+
 .sidebar-is-collapsed .sidebar-link span,
-.sidebar-is-collapsed .sidebar-link .link-chevron {
-  display: none;
+.sidebar-is-collapsed .sidebar-collapse span,
+.sidebar-is-collapsed .sidebar-link .link-chevron,
+.sidebar-is-collapsed .sidebar-link .sidebar-link-count {
+  max-width: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.record-sidebar-slot {
+  display: flex;
+  align-items: flex-start;
+  align-self: start;
+  min-width: 0;
+}
+
+.record-sidebar-slot > aside {
+  overflow: hidden;
+}
+
+.record-sidebar-toggle {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+
+.record-sidebar-toggle:hover {
+  background: var(--secondary);
+  color: var(--foreground);
+}
+
+.record-sidebar-toggle svg {
+  width: 17px;
+  height: 17px;
+}
+
+.record-sidebar-toggle.is-reopen {
+  width: 36px;
+  height: 36px;
+  margin-top: 8px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  box-shadow: 0 5px 22px color-mix(in oklch, var(--foreground) 3%, transparent);
+}
+
+.monthly-expenses-history,
+.daily-sales-history,
+.stocktake-date-list {
+  box-sizing: border-box;
+  transition:
+    width var(--sidebar-motion-duration) var(--sidebar-motion-easing),
+    min-width var(--sidebar-motion-duration) var(--sidebar-motion-easing),
+    max-height var(--sidebar-motion-duration) var(--sidebar-motion-easing),
+    opacity 200ms ease,
+    padding var(--sidebar-motion-duration) ease,
+    border-width var(--sidebar-motion-duration) ease;
+}
+
+.monthly-expenses-history,
+.daily-sales-history,
+.restaurant-stocktakes-page .stocktake-date-list {
+  width: var(--restaurant-record-sidebar-width);
+  min-width: var(--restaurant-record-sidebar-width);
+}
+
+.stocktake-date-list {
+  width: var(--master-detail-sidebar-width);
+  min-width: var(--master-detail-sidebar-width);
+}
+
+.record-sidebar-slot.is-collapsed > aside {
+  width: 0;
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+  opacity: 0;
+  border-width: 0;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell-body,
+  .sidebar,
+  .sidebar-link,
+  .sidebar-link span,
+  .sidebar-collapse span,
+  .sidebar-link .link-chevron,
+  .sidebar-link .sidebar-link-count,
+  .monthly-expenses-history,
+  .daily-sales-history,
+  .stocktake-date-list {
+    transition: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .monthly-expenses-workspace .record-sidebar-slot,
+  .daily-sales-workspace .record-sidebar-slot {
+    position: static;
+    width: 100%;
+  }
+
+  .record-sidebar-slot.is-collapsed {
+    width: auto;
+  }
+
+  .monthly-expenses-history,
+  .daily-sales-history,
+  .stocktake-date-list,
+  .restaurant-stocktakes-page .stocktake-date-list {
+    width: auto;
+    min-width: 0;
+  }
+
+  .record-sidebar-slot.is-collapsed > aside {
+    width: auto;
+    min-width: 0;
+    max-height: 0;
+  }
 }
 
 .main-content {
@@ -1964,7 +2112,7 @@ button.sidebar-link {
 
 .monthly-expenses-workspace {
   display: grid;
-  grid-template-columns: var(--restaurant-record-sidebar-width) minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr);
   gap: 1rem;
   min-width: 0;
 }
@@ -1973,6 +2121,11 @@ button.sidebar-link {
   align-self: start;
   padding: 0;
   overflow: hidden;
+  position: sticky;
+  top: 1rem;
+}
+
+.monthly-expenses-workspace .record-sidebar-slot {
   position: sticky;
   top: 1rem;
 }
@@ -1989,6 +2142,12 @@ button.sidebar-link {
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
+}
+
+.monthly-expenses-search-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 .monthly-expenses-search-heading > span {
@@ -2734,7 +2893,7 @@ button.sidebar-link {
 
 .daily-sales-workspace {
   display: grid;
-  grid-template-columns: var(--restaurant-record-sidebar-width) minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: start;
   gap: 14px;
 }
@@ -2745,11 +2904,24 @@ button.sidebar-link {
   overflow: hidden;
 }
 
+.daily-sales-workspace .record-sidebar-slot {
+  position: sticky;
+  top: calc(var(--topbar-height) + var(--workspace-height) + 18px);
+}
+
 .daily-sales-history-title {
-  display: grid;
-  gap: 3px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
   padding: 15px 16px;
   border-bottom: 1px solid var(--border);
+}
+
+.daily-sales-history-title > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
 }
 
 .daily-sales-history-title span {
@@ -16092,7 +16264,7 @@ a.masoft-order-tag:focus-visible {
 
 .stocktake-records-layout {
   display: grid;
-  grid-template-columns: var(--master-detail-sidebar-width) minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr);
   gap: 18px;
   min-height: 0;
 }
@@ -16177,7 +16349,7 @@ a.masoft-order-tag:focus-visible {
 }
 
 .restaurant-stocktakes-page .stocktake-records-layout {
-  grid-template-columns: var(--restaurant-record-sidebar-width) minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr);
 }
 
 .kitchen-channel-sales-content {
