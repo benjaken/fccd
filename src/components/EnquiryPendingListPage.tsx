@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
-import { FileText } from "lucide-react";
+import { FileText, Pencil, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DetailLink } from "@/components/ui/detail-link";
+import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import { OperationalListState } from "@/components/ui/operational-list-state";
-import { SearchField } from "@/components/ui/search-field";
 import {
+  deleteEnquirySubmission,
   fetchPendingEnquirySubmissions,
   type EnquirySubmissionListItem,
 } from "@/lib/enquiry-forms-api";
@@ -23,6 +25,7 @@ const PENDING_SKELETON_COLUMNS = [
   { width: "6rem" },
   { width: "6rem" },
   { width: "6rem" },
+  { width: "4.5rem", variant: "action" as const },
 ];
 
 function dash(value: string) {
@@ -47,17 +50,25 @@ function statusText(kind: "internal" | "ack" | "asana", value: string) {
 }
 
 export function EnquiryPendingListPage({
+  canManage = false,
   loadSubmissions = fetchPendingEnquirySubmissions,
+  deleteSubmission = deleteEnquirySubmission,
 }: {
+  canManage?: boolean;
   loadSubmissions?: (search?: string) => Promise<EnquirySubmissionListItem[]>;
+  deleteSubmission?: typeof deleteEnquirySubmission;
 } = {}) {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const [items, setItems] = useState<EnquirySubmissionListItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [draftSearch, setDraftSearch] = useState("");
   const [search, setSearch] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [deleteTarget, setDeleteTarget] = useState<EnquirySubmissionListItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const nav = searchParams.get("nav");
 
   const load = useCallback(async () => {
@@ -77,6 +88,25 @@ export function EnquiryPendingListPage({
     void load();
   }, [load]);
 
+  const detailTo = (id: string) =>
+    `/quotes/pending/${id}${nav ? `?nav=${encodeURIComponent(nav)}` : ""}`;
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    setActionError(null);
+    try {
+      await deleteSubmission(deleteTarget.id);
+      setDeleteTarget(null);
+      setReloadKey((key) => key + 1);
+    } catch {
+      setActionError(t("quotes.deletePendingError"));
+      setDeleteTarget(null);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <section className="orders-page enquiry-pending-page">
       <header className="page-heading orders-heading">
@@ -87,22 +117,28 @@ export function EnquiryPendingListPage({
         </div>
       </header>
       <article className="panel orders-panel">
-        <header className="orders-toolbar">
-          <SearchField
+        <header className="quotes-toolbar">
+          <ListSearchBar
             id="enquiry-pending-search"
-            value={search}
-            onChange={setSearch}
+            value={draftSearch}
+            onChange={setDraftSearch}
+            onSubmit={() => setSearch(draftSearch.trim())}
+            label={t("quotes.pendingSearch")}
             placeholder={t("quotes.pendingSearchPlaceholder")}
-            label="搜尋待報價"
+            submitLabel={t("quotes.searchAction")}
           />
         </header>
+        {actionError ? <p className="enquiry-list-action-error" role="alert">{actionError}</p> : null}
         {error ? (
           <OperationalListState
             icon={FileText}
             title={error}
             description="請稍後再試，或重新整理列表。"
             retryLabel="重試"
-            onRetry={() => setReloadKey((key) => key + 1)}
+            onRetry={() => {
+              setError(null);
+              setReloadKey((key) => key + 1);
+            }}
           />
         ) : !loading && items.length === 0 ? (
           <OperationalListState
@@ -116,7 +152,7 @@ export function EnquiryPendingListPage({
             onRefresh={() => setReloadKey((key) => key + 1)}
             loading={loading}
             loadingLabel="載入待報價"
-            skeletonColumns={PENDING_SKELETON_COLUMNS}
+            skeletonColumns={canManage ? PENDING_SKELETON_COLUMNS : PENDING_SKELETON_COLUMNS.slice(0, -1)}
             header={
               <tr>
                 <th>建立時間</th>
@@ -127,11 +163,13 @@ export function EnquiryPendingListPage({
                 <th>內部通知</th>
                 <th>對客確認</th>
                 <th>Asana</th>
+                {canManage ? <th aria-label={t("quotes.columns.actions")} /> : null}
               </tr>
             }
           >
             {items.map((item) => {
-              const to = `/quotes/pending/${item.id}${nav ? `?nav=${encodeURIComponent(nav)}` : ""}`;
+              const to = detailTo(item.id);
+              const displayName = `${item.salutation}${item.customerName}`.trim() || item.companyName || item.formTitle;
               return (
                 <tr key={item.id}>
                   <td>
@@ -157,12 +195,45 @@ export function EnquiryPendingListPage({
                       statusText("asana", item.asanaStatus)
                     )}
                   </td>
+                  {canManage ? (
+                    <td className="table-actions-cell">
+                      <div className="order-row-actions quote-row-actions">
+                        <Link to={to} aria-label={t("quotes.actions.edit")} title={t("quotes.actions.edit")}>
+                          <Pencil />
+                        </Link>
+                        <button
+                          type="button"
+                          aria-label={`${t("quotes.actions.delete")} ${displayName}`}
+                          title={t("quotes.actions.delete")}
+                          onClick={() => setDeleteTarget(item)}
+                        >
+                          <Trash2 />
+                        </button>
+                      </div>
+                    </td>
+                  ) : null}
                 </tr>
               );
             })}
           </ListTable>
         )}
       </article>
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title={t("quotes.deletePendingTitle")}
+        description={t("quotes.deletePendingDescription", {
+          name: `${deleteTarget?.salutation ?? ""}${deleteTarget?.customerName ?? ""}`.trim() || deleteTarget?.companyName || "",
+        })}
+        confirmLabel={t("quotes.actions.delete")}
+        cancelLabel={t("common.cancel")}
+        closeLabel={t("common.close")}
+        variant="destructive"
+        busy={deleting}
+        busyLabel={t("quotes.actions.deleting")}
+        onCancel={() => !deleting && setDeleteTarget(null)}
+        onConfirm={() => void confirmDelete()}
+      />
     </section>
   );
 }

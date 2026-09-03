@@ -994,7 +994,7 @@ function OperationsShell() {
               />
               <Route
                 path="/quotes/pending"
-                element={<EnquiryPendingListPage />}
+                element={<EnquiryPendingListPage canManage={canEditQuotes} />}
               />
               <Route
                 path="/quotes/pending/:id"
@@ -1002,7 +1002,7 @@ function OperationsShell() {
               />
               <Route
                 path="/quotes/enquiry-forms"
-                element={<EnquiryFormsListPage />}
+                element={<EnquiryFormsListPage canManage={canEditQuotes} />}
               />
               <Route
                 path="/quotes/enquiry-forms/:id/edit"

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
@@ -34,7 +34,7 @@ describe("EnquiryFormsListPage", () => {
     const loadForms = vi.fn().mockResolvedValue(forms);
     render(
       <MemoryRouter>
-        <EnquiryFormsListPage loadForms={loadForms} />
+        <EnquiryFormsListPage canManage loadForms={loadForms} />
       </MemoryRouter>,
     );
 
@@ -47,18 +47,42 @@ describe("EnquiryFormsListPage", () => {
     expect(screen.getByRole("link", { name: "/quote-inquiry" })).toHaveAttribute("href", "/quote-inquiry");
     expect(screen.getByText("草稿表單")).toBeInTheDocument();
     expect(screen.getByText("—")).toBeInTheDocument();
+    expect(document.querySelector(".quotes-toolbar .list-search")).not.toBeNull();
   });
 
   it("filters table rows by search", async () => {
     render(
       <MemoryRouter>
-        <EnquiryFormsListPage loadForms={async () => forms} />
+        <EnquiryFormsListPage canManage loadForms={async () => forms} />
       </MemoryRouter>,
     );
     await screen.findByText("FC Catering Enquiry");
     await userEvent.type(screen.getByRole("searchbox", { name: "搜尋表單" }), "草稿");
-    expect(screen.getByText("草稿表單")).toBeInTheDocument();
-    expect(screen.queryByText("FC Catering Enquiry")).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("草稿表單")).toBeInTheDocument();
+      expect(screen.queryByText("FC Catering Enquiry")).not.toBeInTheDocument();
+    });
+  });
+
+  it("shows edit, copy, and delete actions like the quotes list", async () => {
+    const deleteForm = vi.fn().mockResolvedValue(undefined);
+    render(
+      <MemoryRouter>
+        <EnquiryFormsListPage canManage loadForms={async () => forms} deleteForm={deleteForm} />
+      </MemoryRouter>,
+    );
+    await screen.findByText("草稿表單");
+
+    const editLinks = screen.getAllByRole("link", { name: "編輯" });
+    expect(editLinks[0]).toHaveAttribute("href", "/quotes/enquiry-forms/form-1/edit");
+    expect(editLinks[1]).toHaveAttribute("href", "/quotes/enquiry-forms/form-2/edit");
+    expect(screen.getAllByRole("button", { name: "複製" })).toHaveLength(2);
+    expect(screen.getByRole("button", { name: "刪除" })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "刪除" }));
+    const dialog = await screen.findByRole("alertdialog", { name: "刪除 Enquiry 表單" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "刪除" }));
+    await waitFor(() => expect(deleteForm).toHaveBeenCalledWith("form-2"));
   });
 
   it("shows a retryable empty state when loading fails", async () => {
@@ -67,7 +91,7 @@ describe("EnquiryFormsListPage", () => {
       .mockResolvedValueOnce(forms);
     render(
       <MemoryRouter>
-        <EnquiryFormsListPage loadForms={loadForms} />
+        <EnquiryFormsListPage canManage loadForms={loadForms} />
       </MemoryRouter>,
     );
     expect(await screen.findByText("無法載入表單列表")).toBeInTheDocument();

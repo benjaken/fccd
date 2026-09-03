@@ -182,3 +182,13 @@
   margin: 0;
   color: var(--muted-foreground);
 }
+
+.enquiry-builder-page .enquiry-row-actions {
+  grid-template-columns: repeat(3, 2rem);
+}
+
+.enquiry-list-action-error {
+  margin: 0 18px 12px;
+  color: var(--destructive);
+  font-size: 0.9rem;
+}

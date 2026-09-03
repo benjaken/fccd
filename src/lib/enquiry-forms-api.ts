@@ -258,6 +258,37 @@ export async function setEnquiryFormStatus(id: string, status: EnquiryFormStatus
   if (error) throw error;
 }
 
+export async function deleteEnquiryForm(id: string) {
+  const form = await fetchEnquiryForm(id);
+  if (!form) throw new Error("enquiry_form_not_found");
+  if (form.isDefault) throw new Error("enquiry_form_default_protected");
+  const { count, error: countError } = await supabase
+    .from("enquiry_submissions")
+    .select("id", { count: "exact", head: true })
+    .eq("form_id", id);
+  if (countError) throw countError;
+  if (count) throw new Error("enquiry_form_has_submissions");
+  const { data, error } = await supabase
+    .from("enquiry_forms")
+    .delete()
+    .eq("id", id)
+    .eq("is_default", false)
+    .select("id");
+  if (error) throw error;
+  if (!data?.length) throw new Error("enquiry_form_not_found");
+}
+
+export async function deleteEnquirySubmission(id: string) {
+  const { data, error } = await supabase
+    .from("enquiry_submissions")
+    .delete()
+    .eq("id", id)
+    .is("converted_quote_id", null)
+    .select("id");
+  if (error) throw error;
+  if (!data?.length) throw new Error("enquiry_submission_not_deletable");
+}
+
 export async function fetchPendingEnquirySubmissions(search = ""): Promise<EnquirySubmissionListItem[]> {
   let query = supabase
     .from("enquiry_submissions")

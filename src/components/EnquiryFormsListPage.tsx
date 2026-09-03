@@ -1,15 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FileText } from "lucide-react";
+import { Copy, FileText, Pencil, Plus, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DetailLink } from "@/components/ui/detail-link";
+import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import { OperationalListState } from "@/components/ui/operational-list-state";
-import { SearchField } from "@/components/ui/search-field";
 import {
   createEnquiryForm,
+  deleteEnquiryForm,
+  duplicateEnquiryForm,
   fetchEnquiryForms,
   type EnquiryFormListItem,
 } from "@/lib/enquiry-forms-api";
@@ -23,6 +26,7 @@ const FORM_SKELETON_COLUMNS = [
   { width: "4rem" },
   { width: "12rem" },
   { width: "10rem" },
+  { width: "4.5rem", variant: "action" as const },
 ];
 
 function statusLabel(status: EnquiryFormListItem["status"]) {
@@ -32,21 +36,32 @@ function statusLabel(status: EnquiryFormListItem["status"]) {
 }
 
 export function EnquiryFormsListPage({
+  canManage = false,
   loadForms = fetchEnquiryForms,
   createForm = createEnquiryForm,
+  duplicateForm = duplicateEnquiryForm,
+  deleteForm = deleteEnquiryForm,
 }: {
+  canManage?: boolean;
   loadForms?: () => Promise<EnquiryFormListItem[]>;
   createForm?: typeof createEnquiryForm;
+  duplicateForm?: typeof duplicateEnquiryForm;
+  deleteForm?: typeof deleteEnquiryForm;
 } = {}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [items, setItems] = useState<EnquiryFormListItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [draftSearch, setDraftSearch] = useState("");
   const [search, setSearch] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [creating, setCreating] = useState(false);
+  const [copyingId, setCopyingId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<EnquiryFormListItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const nav = searchParams.get("nav");
 
   const load = useCallback(async () => {
@@ -79,6 +94,55 @@ export function EnquiryFormsListPage({
   const editTo = (id: string) =>
     `/quotes/enquiry-forms/${id}/edit${nav ? `?nav=${encodeURIComponent(nav)}` : ""}`;
 
+  const createNewForm = async () => {
+    setCreating(true);
+    setActionError(null);
+    try {
+      const id = await createForm({ internalName: "未命名表單", publicTitle: "未命名表單" });
+      navigate(editTo(id));
+    } catch {
+      setActionError("無法新增表單");
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const copyForm = async (item: EnquiryFormListItem) => {
+    setCopyingId(item.id);
+    setActionError(null);
+    try {
+      const id = await duplicateForm(item.id);
+      navigate(editTo(id));
+    } catch {
+      setActionError("無法複製表單");
+    } finally {
+      setCopyingId(null);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    setActionError(null);
+    try {
+      await deleteForm(deleteTarget.id);
+      setDeleteTarget(null);
+      setReloadKey((key) => key + 1);
+    } catch (cause) {
+      const code = cause instanceof Error ? cause.message : "";
+      if (code === "enquiry_form_default_protected") {
+        setActionError(t("quotes.deleteDefaultForm"));
+      } else if (code === "enquiry_form_has_submissions") {
+        setActionError(t("quotes.deleteFormHasSubmissions"));
+      } else {
+        setActionError(t("quotes.deleteFormError"));
+      }
+      setDeleteTarget(null);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <section className="orders-page enquiry-builder-page">
       <header className="page-heading orders-heading">
@@ -87,42 +151,39 @@ export function EnquiryFormsListPage({
           <h1>Enquiry 表單</h1>
           <p>維護公開查詢表單。第一份預設表單已對照現行 EmailMeForm。</p>
         </div>
-        <Button
-          type="button"
-          disabled={creating}
-          onClick={async () => {
-            setCreating(true);
-            try {
-              const id = await createForm({ internalName: "未命名表單", publicTitle: "未命名表單" });
-              navigate(editTo(id));
-            } catch {
-              setError("無法新增表單");
-            } finally {
-              setCreating(false);
-            }
-          }}
-        >
-          新增表單
-        </Button>
       </header>
 
       <article className="panel orders-panel">
-        <header className="orders-toolbar">
-          <SearchField
+        <header className="quotes-toolbar">
+          <ListSearchBar
             id="enquiry-forms-search"
-            value={search}
-            onChange={setSearch}
+            value={draftSearch}
+            onChange={setDraftSearch}
+            onSubmit={() => setSearch(draftSearch.trim())}
+            label={t("quotes.enquiryFormsSearch")}
             placeholder={t("quotes.enquiryFormsSearchPlaceholder")}
-            label="搜尋表單"
+            submitLabel={t("quotes.searchAction")}
+            actions={
+              canManage ? (
+                <Button type="button" disabled={creating} onClick={() => void createNewForm()}>
+                  <Plus />
+                  {t("quotes.createForm")}
+                </Button>
+              ) : null
+            }
           />
         </header>
+        {actionError ? <p className="enquiry-list-action-error" role="alert">{actionError}</p> : null}
         {error ? (
           <OperationalListState
             icon={FileText}
             title={error}
             description="請稍後再試，或重新整理列表。"
             retryLabel="重試"
-            onRetry={() => setReloadKey((key) => key + 1)}
+            onRetry={() => {
+              setError(null);
+              setReloadKey((key) => key + 1);
+            }}
           />
         ) : !loading && visible.length === 0 ? (
           <OperationalListState
@@ -136,7 +197,7 @@ export function EnquiryFormsListPage({
             onRefresh={() => setReloadKey((key) => key + 1)}
             loading={loading}
             loadingLabel="載入表單"
-            skeletonColumns={FORM_SKELETON_COLUMNS}
+            skeletonColumns={canManage ? FORM_SKELETON_COLUMNS : FORM_SKELETON_COLUMNS.slice(0, -1)}
             header={
               <tr>
                 <th>內部名稱</th>
@@ -145,6 +206,7 @@ export function EnquiryFormsListPage({
                 <th>題目</th>
                 <th>公開連結</th>
                 <th>更新</th>
+                {canManage ? <th aria-label={t("quotes.columns.actions")} /> : null}
               </tr>
             }
           >
@@ -164,11 +226,53 @@ export function EnquiryFormsListPage({
                   ) : "—"}
                 </td>
                 <td>{new Date(item.updatedAt).toLocaleString("zh-HK")}</td>
+                {canManage ? (
+                  <td className="table-actions-cell">
+                    <div className="order-row-actions enquiry-row-actions">
+                      <Link to={editTo(item.id)} aria-label={t("quotes.actions.edit")} title={t("quotes.actions.edit")}>
+                        <Pencil />
+                      </Link>
+                      <button
+                        type="button"
+                        aria-label={t("quotes.actions.copy")}
+                        title={t("quotes.actions.copy")}
+                        disabled={copyingId === item.id}
+                        onClick={() => void copyForm(item)}
+                      >
+                        <Copy />
+                      </button>
+                      {item.isDefault ? null : (
+                        <button
+                          type="button"
+                          aria-label={t("quotes.actions.delete")}
+                          title={t("quotes.actions.delete")}
+                          onClick={() => setDeleteTarget(item)}
+                        >
+                          <Trash2 />
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                ) : null}
               </tr>
             ))}
           </ListTable>
         )}
       </article>
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title={t("quotes.deleteFormTitle")}
+        description={t("quotes.deleteFormDescription", { name: deleteTarget?.internalName ?? "" })}
+        confirmLabel={t("quotes.actions.delete")}
+        cancelLabel={t("common.cancel")}
+        closeLabel={t("common.close")}
+        variant="destructive"
+        busy={deleting}
+        busyLabel={t("quotes.actions.deleting")}
+        onCancel={() => !deleting && setDeleteTarget(null)}
+        onConfirm={() => void confirmDelete()}
+      />
     </section>
   );
 }

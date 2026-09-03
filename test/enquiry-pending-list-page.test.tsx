@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
@@ -30,7 +30,7 @@ describe("EnquiryPendingListPage", () => {
   it("renders pending enquiries in the shared table", async () => {
     render(
       <MemoryRouter>
-        <EnquiryPendingListPage loadSubmissions={async () => submissions} />
+        <EnquiryPendingListPage canManage loadSubmissions={async () => submissions} />
       </MemoryRouter>,
     );
 
@@ -44,6 +44,7 @@ describe("EnquiryPendingListPage", () => {
       "href",
       "/quotes/pending/sub-1",
     );
+    expect(document.querySelector(".quotes-toolbar .list-search")).not.toBeNull();
   });
 
   it("reloads from the server when searching", async () => {
@@ -52,12 +53,36 @@ describe("EnquiryPendingListPage", () => {
     );
     render(
       <MemoryRouter>
-        <EnquiryPendingListPage loadSubmissions={loadSubmissions} />
+        <EnquiryPendingListPage canManage loadSubmissions={loadSubmissions} />
       </MemoryRouter>,
     );
     await screen.findByText("先生陳大文");
     await userEvent.type(screen.getByRole("searchbox", { name: "搜尋待報價" }), "沒有這筆");
     expect(await screen.findByText("暫無待報價查詢")).toBeInTheDocument();
     await waitFor(() => expect(loadSubmissions).toHaveBeenLastCalledWith("沒有這筆"));
+  });
+
+  it("shows edit and delete actions like the orders list", async () => {
+    const deleteSubmission = vi.fn().mockResolvedValue(undefined);
+    const loadSubmissions = vi.fn()
+      .mockResolvedValueOnce(submissions)
+      .mockResolvedValueOnce([]);
+    render(
+      <MemoryRouter>
+        <EnquiryPendingListPage
+          canManage
+          loadSubmissions={loadSubmissions}
+          deleteSubmission={deleteSubmission}
+        />
+      </MemoryRouter>,
+    );
+    await screen.findByText("先生陳大文");
+    expect(screen.getByRole("link", { name: "編輯" })).toHaveAttribute("href", "/quotes/pending/sub-1");
+
+    await userEvent.click(screen.getByRole("button", { name: "刪除 先生陳大文" }));
+    const dialog = await screen.findByRole("alertdialog", { name: "刪除待報價" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "刪除" }));
+    await waitFor(() => expect(deleteSubmission).toHaveBeenCalledWith("sub-1"));
+    expect(await screen.findByText("暫無待報價查詢")).toBeInTheDocument();
   });
 });
