@@ -1,7 +1,19 @@
 export type LocationTranslationKind = "address" | "district";
 
+/** Fast xAI model for one-line HK address translation. Do not inherit grok-4.6. */
+export const DEFAULT_ADDRESS_TRANSLATION_MODEL = "grok-4.3";
+const ADDRESS_TRANSLATION_MAX_TOKENS = 400;
+
 function env(primary: string, report: string, supplier: string) {
   return Deno.env.get(primary) ?? Deno.env.get(report) ?? Deno.env.get(supplier) ?? "";
+}
+
+function translationModel() {
+  const dedicated = Deno.env.get("ADDRESS_TRANSLATION_AI_MODEL")?.trim();
+  if (dedicated) return dedicated;
+  // Report / supplier quote AI uses grok-4.6 with reasoning. That path takes
+  // ~14s for a single address, so translation stays on a non-reasoning model.
+  return DEFAULT_ADDRESS_TRANSLATION_MODEL;
 }
 
 export function containsEnglishText(value: string | null | undefined) {
@@ -19,13 +31,14 @@ export async function translateLocationToTraditionalChinese(
   const apiKey = Deno.env.get("ADDRESS_TRANSLATION_AI_API_KEY") ??
     Deno.env.get("REPORT_AI_API_KEY") ?? Deno.env.get("XAI_API_KEY") ??
     Deno.env.get("SUPPLIER_QUOTE_AI_API_KEY") ?? "";
-  const model = env("ADDRESS_TRANSLATION_AI_MODEL", "REPORT_AI_MODEL", "SUPPLIER_QUOTE_AI_MODEL");
+  const model = translationModel();
   const provider = env("ADDRESS_TRANSLATION_AI_PROVIDER", "REPORT_AI_PROVIDER", "SUPPLIER_QUOTE_AI_PROVIDER");
   const enabled = env("ADDRESS_TRANSLATION_AI_ENABLED", "REPORT_AI_ENABLED", "SUPPLIER_QUOTE_AI_ENABLED") === "true";
   if (!enabled || !endpoint || !apiKey || !model) throw new Error("location_translation_disabled");
 
   const isXai = ["xai", "grok"].includes(provider.toLowerCase()) ||
     /api\.x\.ai\/v1\/chat\/completions/i.test(endpoint);
+  const startedAt = Date.now();
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 30_000);
   const subject = kind === "district" ? "Hong Kong delivery district" : "Hong Kong delivery address";
@@ -41,13 +54,13 @@ export async function translateLocationToTraditionalChinese(
       model,
       response_format: { type: "json_object" },
       temperature: 0,
-      max_tokens: 600,
-      ...(isXai ? { reasoning_effort: "low" } : { thinking: { type: "disabled" } }),
+      max_tokens: ADDRESS_TRANSLATION_MAX_TOKENS,
+      ...(isXai ? { reasoning_effort: "none" } : { thinking: { type: "disabled" } }),
       messages,
     },
     // Some models reject one or more optional generation controls with 400.
     // Retry once with the portable Chat Completions subset before failing.
-    { model, max_tokens: 600, messages },
+    { model, max_tokens: ADDRESS_TRANSLATION_MAX_TOKENS, messages },
   ];
   try {
     for (let attempt = 0; attempt < providerRequests.length; attempt += 1) {
@@ -74,6 +87,12 @@ export async function translateLocationToTraditionalChinese(
       if (typeof parsed.translatedText !== "string" || !parsed.translatedText.trim()) {
         throw new Error("location_translation_invalid_response");
       }
+      console.log("location-translation", {
+        model,
+        kind,
+        attempt: attempt + 1,
+        elapsedMs: Date.now() - startedAt,
+      });
       return parsed.translatedText.trim();
     }
     throw new Error("location_translation_provider_failed");

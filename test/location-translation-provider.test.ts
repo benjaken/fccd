@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { translateLocationToTraditionalChinese } from "../supabase/functions/_shared/location-translation";
+import {
+  DEFAULT_ADDRESS_TRANSLATION_MODEL,
+  translateLocationToTraditionalChinese,
+} from "../supabase/functions/_shared/location-translation";
 
 describe("location translation provider compatibility", () => {
   afterEach(() => vi.unstubAllGlobals());
@@ -28,17 +31,17 @@ describe("location translation provider compatibility", () => {
     const retryBody = JSON.parse(fetchMock.mock.calls[1][1].body as string);
     expect(firstBody).toMatchObject({
       response_format: { type: "json_object" },
-      reasoning_effort: "low",
+      reasoning_effort: "none",
       temperature: 0,
     });
     expect(retryBody).toEqual({
       model: "test-model",
-      max_tokens: 600,
+      max_tokens: 400,
       messages: firstBody.messages,
     });
   });
 
-  it("prefers the xAI key over an unrelated supplier quote key", async () => {
+  it("does not inherit the report AI reasoning model", async () => {
     const env = new Map([
       ["REPORT_AI_ENABLED", "true"],
       ["REPORT_AI_ENDPOINT", "https://api.x.ai/v1/chat/completions"],
@@ -58,5 +61,9 @@ describe("location translation provider compatibility", () => {
     expect(fetchMock.mock.calls[0][1].headers).toMatchObject({
       Authorization: "Bearer correct-xai-key",
     });
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+    expect(body.model).toBe(DEFAULT_ADDRESS_TRANSLATION_MODEL);
+    expect(body.model).not.toBe("grok-4.6");
+    expect(body.reasoning_effort).toBe("none");
   });
 });
