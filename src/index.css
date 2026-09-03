@@ -24048,13 +24048,14 @@ a.masoft-order-tag:focus-visible {
   padding-left: 10px;
 }
 
-.quote-lines-panel th:nth-child(1) { width: 7%; }
-.quote-lines-panel th:nth-child(2) { width: 12%; }
-.quote-lines-panel th:nth-child(3) { width: 32%; }
-.quote-lines-panel th:nth-child(4) { width: 11%; }
-.quote-lines-panel th:nth-child(5) { width: 12%; }
+.quote-lines-panel th:nth-child(1) { width: 6%; }
+.quote-lines-panel th:nth-child(2) { width: 10%; }
+.quote-lines-panel th:nth-child(3) { width: 26%; }
+.quote-lines-panel th:nth-child(4) { width: 16%; }
+.quote-lines-panel th:nth-child(5) { width: 9%; }
 .quote-lines-panel th:nth-child(6) { width: 11%; }
-.quote-lines-panel th:nth-child(7) { width: 15%; }
+.quote-lines-panel th:nth-child(7) { width: 12%; }
+.quote-lines-panel th:nth-child(8) { width: 10%; }
 
 .quote-lines-panel th:last-child,
 .quote-lines-panel td:last-child {
@@ -24062,13 +24063,14 @@ a.masoft-order-tag:focus-visible {
   padding-left: 4px;
 }
 
-.quote-lines-readonly-panel th:nth-child(1) { width: 7%; }
-.quote-lines-readonly-panel th:nth-child(2) { width: 13%; }
-.quote-lines-readonly-panel th:nth-child(3) { width: 34%; }
-.quote-lines-readonly-panel th:nth-child(4) { width: 10%; }
-.quote-lines-readonly-panel th:nth-child(5) { width: 12%; }
+.quote-lines-readonly-panel th:nth-child(1) { width: 6%; }
+.quote-lines-readonly-panel th:nth-child(2) { width: 11%; }
+.quote-lines-readonly-panel th:nth-child(3) { width: 28%; }
+.quote-lines-readonly-panel th:nth-child(4) { width: 16%; }
+.quote-lines-readonly-panel th:nth-child(5) { width: 9%; }
 .quote-lines-readonly-panel th:nth-child(6) { width: 12%; }
 .quote-lines-readonly-panel th:nth-child(7) { width: 12%; }
+.quote-lines-readonly-panel th:nth-child(8) { width: 6%; }
 
 .quote-lines-panel td,
 .quote-lines-panel th {
@@ -24125,14 +24127,14 @@ a.masoft-order-tag:focus-visible {
 }
 
 .quote-lines-panel td.quote-line-product {
-  min-width: 220px;
+  min-width: 0;
   max-width: none;
   white-space: normal;
 }
 
 .quote-lines-panel td.quote-line-remarks {
-  width: 148px;
-  min-width: 132px;
+  width: 16%;
+  min-width: 0;
 }
 
 .quote-lines-panel .quote-line-sku {
@@ -24214,21 +24216,30 @@ a.masoft-order-tag:focus-visible {
   resize: none;
 }
 
+.quote-line-heading {
+  display: flex;
+  min-height: 34px;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.quote-line-heading .quote-line-name-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .quote-line-labels,
 .quote-line-remarks-list {
   display: grid;
   width: 100%;
   margin-top: 6px;
   gap: 6px;
-}
-
-.quote-line-remarks-offset {
-  min-height: 34px;
+  align-items: start;
 }
 
 .quote-line-label-chip {
   display: block;
-  width: fit-content;
+  width: 100%;
   max-width: 100%;
   padding: 4px 8px;
   border-radius: 6px;
@@ -24237,7 +24248,6 @@ a.masoft-order-tag:focus-visible {
   font-size: 12px;
   font-weight: 600;
   line-height: 1.35;
-  overflow: visible;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
