@@ -160,7 +160,7 @@ Product: **FCCD** — Food Channel Catering Delivery.
 ├─ 每日採購
 ├─ 餐廳盤點
 ├─ 月度支出
-└─ Shop HR（對齊 FC Shop App；不做疫苗接種、守則及告示）【第二階段】
+└─ Shop HR（對齊 FC Shop App；不做疫苗接種、守則及告示、不獲聘用名單）【第二階段】
 ```
 
 ```text
