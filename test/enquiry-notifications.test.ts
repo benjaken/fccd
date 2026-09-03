@@ -20,6 +20,9 @@ describe("enquiry notification emails", () => {
     expect(mail.html).toContain("稍後會有專人回覆你");
     expect(mail.html).toContain("聯絡 Food Channels Catering");
     expect(mail.html).not.toContain("聣絡");
+    expect(mail.html).not.toContain("tel:");
+    expect(mail.html).toContain("(+852) 2185 7373");
+    expect(mail.html).toContain('name="format-detection" content="telephone=no"');
     expect(mail.html).not.toContain("/quotes/pending/");
   });
 

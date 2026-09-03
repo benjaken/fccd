@@ -9,6 +9,7 @@ import type { EnquirySubmissionListItem } from "@/lib/enquiry-forms-api";
 const submissions: EnquirySubmissionListItem[] = [
   {
     id: "sub-1",
+    referenceCode: "ENQ20260903-884c8c",
     createdAt: "2026-09-03T02:00:00.000Z",
     formTitle: "FC Catering Enquiry",
     customerName: "陳大文",
@@ -36,12 +37,13 @@ describe("EnquiryPendingListPage", () => {
 
     expect(await screen.findByText("先生陳大文")).toBeInTheDocument();
     expect(screen.getByRole("table")).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "查詢單號" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "建立時間" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "客戶" })).toBeInTheDocument();
     expect(screen.getByText("公司午餐到會")).toBeInTheDocument();
     expect(screen.getByText("80")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /2026/ })).toHaveClass("order-link");
-    expect(screen.getByRole("link", { name: /2026/ })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "ENQ20260903-884c8c" })).toHaveClass("order-link");
+    expect(screen.getByRole("link", { name: "ENQ20260903-884c8c" })).toHaveAttribute(
       "href",
       "/quotes/pending/sub-1",
     );

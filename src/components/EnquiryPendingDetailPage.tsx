@@ -132,13 +132,15 @@ export function EnquiryPendingDetailPage({ canManage = false }: { canManage?: bo
     );
   }
 
+  const displayName = `${detail.salutation}${detail.customerName}`.trim();
+
   return (
     <section className="enquiry-pending-page">
       <header className="page-heading">
         <div>
           <span className="eyebrow">待轉報價</span>
-          <h1>{`${detail.salutation}${detail.customerName}`.trim() || "待報價詳情"}</h1>
-          <p>{detail.formTitle} · 無單號</p>
+          <h1>{detail.referenceCode || displayName || "待報價詳情"}</h1>
+          <p>{[detail.formTitle, displayName].filter(Boolean).join(" · ")}</p>
         </div>
         <div className="enquiry-pending-toolbar">
           {canManage ? (

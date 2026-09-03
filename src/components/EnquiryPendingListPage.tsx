@@ -17,6 +17,7 @@ import {
 import "./enquiry-form.css";
 
 const PENDING_SKELETON_COLUMNS = [
+  { width: "9rem" },
   { width: "10rem" },
   { width: "16rem" },
   { width: "8rem" },
@@ -157,6 +158,7 @@ export function EnquiryPendingListPage({
             skeletonColumns={canManage ? PENDING_SKELETON_COLUMNS : PENDING_SKELETON_COLUMNS.slice(0, -1)}
             header={
               <tr>
+                <th>{t("quotes.columns.enquiryNumber")}</th>
                 <th>建立時間</th>
                 <th>客戶</th>
                 <th>日期</th>
@@ -176,8 +178,11 @@ export function EnquiryPendingListPage({
                 <tr key={item.id}>
                   <td>
                     <DetailLink className="order-link" to={to}>
-                      {new Date(item.createdAt).toLocaleString("zh-HK", { timeZone: "Asia/Hong_Kong" })}
+                      {item.referenceCode || "—"}
                     </DetailLink>
+                  </td>
+                  <td>
+                    {new Date(item.createdAt).toLocaleString("zh-HK", { timeZone: "Asia/Hong_Kong" })}
                   </td>
                   <td>
                     <div>{dash(`${item.salutation}${item.customerName}`)}</div>

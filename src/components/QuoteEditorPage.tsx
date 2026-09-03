@@ -7,6 +7,7 @@ import {
   ChevronUp,
   CircleAlert,
   CircleCheckBig,
+  ClipboardList,
   CreditCard,
   Factory,
   FileText,
@@ -355,6 +356,7 @@ export function QuoteEditorPage({
   const backTo = useDetailBackTo(listPath);
   const [draft, setDraft] = useState<QuoteDraft>(emptyDraft);
   const [enquirySubmission, setEnquirySubmission] = useState<EnquirySubmissionDetail | null>(null);
+  const [enquirySourceId, setEnquirySourceId] = useState<string | null>(null);
   const [options, setOptions] = useState(EMPTY_OPTIONS);
   const [created, setCreated] = useState<CreatedQuote | null>(null);
   const [channelId, setChannelId] = useState("");
@@ -411,7 +413,7 @@ export function QuoteEditorPage({
   const [addingUtensil, setAddingUtensil] = useState(false);
   const [shippingFees, setShippingFees] = useState<ShippingFee[]>([]);
   const [shippingFeeId, setShippingFeeId] = useState("");
-  const [activeTab, setActiveTab] = useState<"details" | "items" | "payments">("details");
+  const [activeTab, setActiveTab] = useState<"enquiry" | "details" | "items" | "payments">("details");
   const isMobileEditor = useMediaQuery("(max-width: 760px)");
   const [payments, setPayments] = useState<QuotePayment[]>([]);
   const [completing, setCompleting] = useState(false);
@@ -603,11 +605,15 @@ export function QuoteEditorPage({
           if (id) setCreated(summary);
           setChannelId(summary.channelId);
           if (summary.enquirySubmissionId) {
+            setEnquirySourceId(summary.enquirySubmissionId);
+            setActiveTab("enquiry");
             void fetchEnquirySubmission(summary.enquirySubmissionId).then((submission) => {
               if (submission) setEnquirySubmission(submission);
             });
           } else {
+            setEnquirySourceId(null);
             setEnquirySubmission(null);
+            setActiveTab((current) => (current === "enquiry" ? "details" : current));
           }
           if (summary.draft) {
             const loadedDraft = { ...emptyDraft(), ...summary.draft };
@@ -1823,7 +1829,15 @@ export function QuoteEditorPage({
       />
       ) : null;
 
-  type EditorSection = "details" | "items" | "payments";
+  type EditorSection = "enquiry" | "details" | "items" | "payments";
+  const hasEnquiryStep = Boolean(enquirySubmission || enquirySourceId);
+  const stepNumber = (section: EditorSection) => {
+    const offset = hasEnquiryStep ? 1 : 0;
+    if (section === "enquiry") return 1;
+    if (section === "details") return 1 + offset;
+    if (section === "items") return 2 + offset;
+    return 3 + offset;
+  };
   const sectionId = (section: EditorSection) =>
     `quote-editor-${readOnly ? "readonly" : "editable"}-${section}`;
   const scrollToSection = (section: EditorSection) => {
@@ -1864,10 +1878,28 @@ export function QuoteEditorPage({
       className={cn(
         "quote-editor-tabs quote-editor-section-navigation",
         !isOrder && "is-quote",
+        hasEnquiryStep && "has-enquiry",
       )}
       aria-label={t(isOrder ? "quoteEditor.orderStepLabel" : "quoteEditor.steps.label")}
       role="tablist"
     >
+      {hasEnquiryStep ? (
+        <button
+          type="button"
+          role="tab"
+          aria-label={t("quoteEditor.steps.enquiry")}
+          aria-controls={sectionId("enquiry")}
+          aria-selected={activeTab === "enquiry"}
+          className={cn(activeTab === "enquiry" && "is-active")}
+          onClick={() => scrollToSection("enquiry")}
+        >
+          <span><ClipboardList /></span>
+          <div>
+            <small>{t("quoteEditor.steps.number", { number: stepNumber("enquiry") })}</small>
+            <strong>{t("quoteEditor.steps.enquiry")}</strong>
+          </div>
+        </button>
+      ) : null}
       <button
         type="button"
         role="tab"
@@ -1879,7 +1911,7 @@ export function QuoteEditorPage({
       >
         <span><FileText /></span>
         <div>
-          <small>{t("quoteEditor.steps.number", { number: 1 })}</small>
+          <small>{t("quoteEditor.steps.number", { number: stepNumber("details") })}</small>
           <strong>{t(isOrder ? "quoteEditor.orderDetailsStep" : "quoteEditor.steps.details")}</strong>
         </div>
       </button>
@@ -1895,7 +1927,7 @@ export function QuoteEditorPage({
       >
         <span><PackagePlus /></span>
         <div>
-          <small>{t("quoteEditor.steps.number", { number: 2 })}</small>
+          <small>{t("quoteEditor.steps.number", { number: stepNumber("items") })}</small>
           <strong>{t("quoteEditor.steps.items")}</strong>
         </div>
       </button>
@@ -1912,13 +1944,32 @@ export function QuoteEditorPage({
         >
           <span><CreditCard /></span>
           <div>
-            <small>{t("quoteEditor.steps.number", { number: 3 })}</small>
+            <small>{t("quoteEditor.steps.number", { number: stepNumber("payments") })}</small>
             <strong>{t("quoteEditor.steps.payments")}</strong>
           </div>
         </button>
       ) : null}
     </nav>
   );
+
+  const enquirySection = hasEnquiryStep ? (
+    <section
+      id={sectionId("enquiry")}
+      className="panel quote-editor-enquiry-step quote-editor-scroll-section"
+    >
+      <h2><ClipboardList />{t("quoteEditor.steps.enquiry")}</h2>
+      {enquirySubmission ? (
+        <EnquiryFormFields
+          questions={enquirySubmission.formSnapshot}
+          answers={enquirySubmission.answers}
+          disabled
+          splitLayout
+        />
+      ) : (
+        <p>{t("quoteEditor.loading")}</p>
+      )}
+    </section>
+  ) : null;
 
   const factoryValidationModal = (
     <Modal
@@ -2095,21 +2146,13 @@ export function QuoteEditorPage({
 
         {sectionNavigation}
 
+        {enquirySection}
+
         <section
           id={sectionId("details")}
           className="panel quote-editor-form quote-editor-readonly-form quote-editor-scroll-section"
         >
           <div className="quote-editor-form-column">
-            {enquirySubmission ? (
-              <div className="enquiry-builder-card">
-                <h2>Enquiry Form 的資料</h2>
-                <EnquiryFormFields
-                  questions={enquirySubmission.formSnapshot}
-                  answers={enquirySubmission.answers}
-                  disabled
-                />
-              </div>
-            ) : null}
             <h2><FileText />{t("quoteEditor.customerSection")}</h2>
             <div className="quote-readonly-field">
               <span>{t("quoteEditor.fields.number")}</span>
@@ -2280,22 +2323,14 @@ export function QuoteEditorPage({
 
       {sectionNavigation}
 
+      {enquirySection}
+
       <form
         id={sectionId("details")}
         className="panel quote-editor-form quote-editor-scroll-section"
         onSubmit={submitHeader}
       >
           <div className="quote-editor-form-column">
-            {enquirySubmission ? (
-              <div className="enquiry-builder-card">
-                <h2>Enquiry Form 的資料</h2>
-                <EnquiryFormFields
-                  questions={enquirySubmission.formSnapshot}
-                  answers={enquirySubmission.answers}
-                  disabled
-                />
-              </div>
-            ) : null}
             <h2><FileText />{t("quoteEditor.customerSection")}</h2>
             <label className="quote-order-number-field">
               <span>{t("quoteEditor.fields.number")}{copyFrom ? " *" : ""}</span>

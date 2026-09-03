@@ -118,7 +118,6 @@ const EMAIL_BRAND = {
   websiteLabel: "foodchannels-catering.com",
   websiteUrl: "https://www.foodchannels-catering.com",
   phoneLabel: "(+852) 2185 7373",
-  phoneUrl: "tel:+85221857373",
   whatsappLabel: "WhatsApp (+852) 5396 4335",
   whatsappUrl: "https://wa.me/85253964335",
   email: "sales@foodchannels-catering.com",
@@ -156,6 +155,7 @@ function renderEmailHtml(subject: string, text: string) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="format-detection" content="telephone=no">
   <title>${escapeHtml(subject)}</title>
 </head>
 <body style="margin:0;padding:0;background:#f2f6f3;font-family:Arial,'PingFang HK','Microsoft JhengHei',sans-serif">
@@ -186,10 +186,10 @@ function renderEmailHtml(subject: string, text: string) {
             <td style="padding:4px 34px 30px">
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#eaf7ef;border-radius:14px">
                 <tr>
-                  <td style="padding:20px 22px">
+                  <td style="padding:20px 22px" x-apple-data-detectors="false">
                     <p style="margin:0 0 12px;color:#123c2a;font-size:15px;font-weight:800">聯絡 Food Channels Catering</p>
                     <p style="margin:0 0 8px;line-height:1.6"><a href="${EMAIL_BRAND.whatsappUrl}" style="${contactLinkStyle}">${EMAIL_BRAND.whatsappLabel}</a></p>
-                    <p style="margin:0 0 8px;line-height:1.6"><a href="${EMAIL_BRAND.phoneUrl}" style="${contactLinkStyle}">${EMAIL_BRAND.phoneLabel}</a></p>
+                    <p style="margin:0 0 8px;line-height:1.6;color:#165f3d;font-size:14px;font-weight:700">${EMAIL_BRAND.phoneLabel}</p>
                     <p style="margin:0 0 8px;line-height:1.6"><a href="mailto:${EMAIL_BRAND.email}" style="${contactLinkStyle}">${EMAIL_BRAND.email}</a></p>
                     <p style="margin:0;line-height:1.6"><a href="${EMAIL_BRAND.websiteUrl}" style="${contactLinkStyle}">${EMAIL_BRAND.websiteLabel}</a></p>
                   </td>

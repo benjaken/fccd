@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type DragEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { Ban, ChevronLeft, Copy, ExternalLink, Eye, FilePenLine, FileText, Globe, GripVertical, Plus, Save } from "lucide-react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
@@ -102,6 +103,7 @@ function statusBadgeTone(status: EnquiryFormDefinition["status"]) {
 }
 
 export function EnquiryFormEditorPage() {
+  const { t } = useTranslation();
   const { id = "" } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -368,7 +370,7 @@ export function EnquiryFormEditorPage() {
             <span>對客確認主旨</span>
             <input
               value={form.ackEmailSubject}
-              placeholder="我們已收到你的查詢"
+              placeholder={t("quotes.enquiryAckSubjectPlaceholder")}
               onChange={(event) => patchForm({ ackEmailSubject: event.target.value })}
             />
           </label>
@@ -377,7 +379,7 @@ export function EnquiryFormEditorPage() {
             <textarea
               rows={6}
               value={form.ackEmailBody}
-              placeholder={"您好{稱謂}{姓名}：\n\n多謝你填寫「{表單標題}」。我們已收到你的資料，稍後會有專人回覆你。"}
+              placeholder={t("quotes.enquiryAckBodyPlaceholder")}
               onChange={(event) => patchForm({ ackEmailBody: event.target.value })}
             />
           </label>

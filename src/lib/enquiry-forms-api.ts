@@ -23,6 +23,7 @@ export type EnquiryFormListItem = {
 
 export type EnquirySubmissionListItem = {
   id: string;
+  referenceCode: string;
   createdAt: string;
   formTitle: string;
   customerName: string;
@@ -70,6 +71,7 @@ type SubmissionRow = {
   form_id: string;
   form_title: string;
   created_at: string;
+  reference_code: string | null;
   customer_name: string | null;
   salutation: string | null;
   company_name: string | null;
@@ -87,6 +89,44 @@ type SubmissionRow = {
   original_answers: unknown;
   converted_quote_id: string | null;
 };
+
+function mapSubmissionListItem(row: {
+  id: string;
+  created_at: string;
+  form_title: string;
+  reference_code?: string | null;
+  customer_name: string | null;
+  salutation: string | null;
+  company_name: string | null;
+  phone: string | null;
+  email: string | null;
+  delivery_date_raw: string | null;
+  quote_description: string | null;
+  headcount: string | null;
+  internal_email_status: string;
+  ack_email_status: string;
+  asana_status: string;
+  asana_link: string | null;
+}): EnquirySubmissionListItem {
+  return {
+    id: row.id,
+    referenceCode: row.reference_code || "",
+    createdAt: row.created_at,
+    formTitle: row.form_title,
+    customerName: row.customer_name || "",
+    salutation: row.salutation || "",
+    companyName: row.company_name || "",
+    phone: row.phone || "",
+    email: row.email || "",
+    deliveryDateRaw: row.delivery_date_raw || "",
+    quoteDescription: row.quote_description || "",
+    headcount: row.headcount || "",
+    internalEmailStatus: row.internal_email_status,
+    ackEmailStatus: row.ack_email_status,
+    asanaStatus: row.asana_status,
+    asanaLink: row.asana_link || "",
+  };
+}
 
 function mapForm(row: FormRow): EnquiryFormDefinition {
   return {
@@ -302,7 +342,7 @@ export async function fetchPendingEnquirySubmissions(search = ""): Promise<Enqui
   let query = supabase
     .from("enquiry_submissions")
     .select(
-      "id,form_title,created_at,customer_name,salutation,company_name,phone,email,delivery_date_raw,quote_description,headcount,internal_email_status,ack_email_status,asana_status,asana_link",
+      "id,form_title,created_at,reference_code,customer_name,salutation,company_name,phone,email,delivery_date_raw,quote_description,headcount,internal_email_status,ack_email_status,asana_status,asana_link",
     )
     .is("converted_quote_id", null)
     .order("created_at", { ascending: false })
@@ -311,6 +351,7 @@ export async function fetchPendingEnquirySubmissions(search = ""): Promise<Enqui
   if (keyword) {
     query = query.or(
       [
+        `reference_code.ilike.%${keyword}%`,
         `customer_name.ilike.%${keyword}%`,
         `company_name.ilike.%${keyword}%`,
         `phone.ilike.%${keyword}%`,
@@ -322,23 +363,7 @@ export async function fetchPendingEnquirySubmissions(search = ""): Promise<Enqui
   }
   const { data, error } = await query;
   if (error) throw error;
-  return (data ?? []).map((row) => ({
-    id: row.id,
-    createdAt: row.created_at,
-    formTitle: row.form_title,
-    customerName: row.customer_name || "",
-    salutation: row.salutation || "",
-    companyName: row.company_name || "",
-    phone: row.phone || "",
-    email: row.email || "",
-    deliveryDateRaw: row.delivery_date_raw || "",
-    quoteDescription: row.quote_description || "",
-    headcount: row.headcount || "",
-    internalEmailStatus: row.internal_email_status,
-    ackEmailStatus: row.ack_email_status,
-    asanaStatus: row.asana_status,
-    asanaLink: row.asana_link || "",
-  }));
+  return (data ?? []).map((row) => mapSubmissionListItem(row));
 }
 
 export async function fetchEnquirySubmission(
@@ -353,22 +378,8 @@ export async function fetchEnquirySubmission(
   if (!data) return null;
   const row = data as SubmissionRow;
   return {
-    id: row.id,
+    ...mapSubmissionListItem(row),
     formId: row.form_id,
-    createdAt: row.created_at,
-    formTitle: row.form_title,
-    customerName: row.customer_name || "",
-    salutation: row.salutation || "",
-    companyName: row.company_name || "",
-    phone: row.phone || "",
-    email: row.email || "",
-    deliveryDateRaw: row.delivery_date_raw || "",
-    quoteDescription: row.quote_description || "",
-    headcount: row.headcount || "",
-    internalEmailStatus: row.internal_email_status,
-    ackEmailStatus: row.ack_email_status,
-    asanaStatus: row.asana_status,
-    asanaLink: row.asana_link || "",
     formSnapshot: parseEnquiryQuestions(row.form_snapshot),
     answers: (row.answers ?? {}) as EnquiryAnswers,
     originalAnswers: (row.original_answers ?? row.answers ?? {}) as EnquiryAnswers,

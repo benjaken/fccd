@@ -10,6 +10,12 @@ vi.mock("@/lib/order-edit-presence", () => ({
   trackOrderEditPresence: vi.fn(() => () => undefined),
 }));
 
+const fetchEnquirySubmission = vi.hoisted(() => vi.fn().mockResolvedValue(null));
+
+vi.mock("@/lib/enquiry-forms-api", () => ({
+  fetchEnquirySubmission,
+}));
+
 const dictionaryValues = vi.hoisted(() => ({
   delivery_time_slot: ["12:00 - 13:00", "13:00 - 14:00", "17:00 - 18:00"],
   ship_out_time_slot: ["08:30", "11:30", "12:00", "13:15"],
@@ -186,6 +192,8 @@ describe("Quote editor", () => {
   beforeEach(async () => {
     setMobileViewport(false);
     await i18n.changeLanguage("en");
+    fetchEnquirySubmission.mockReset();
+    fetchEnquirySubmission.mockResolvedValue(null);
   });
 
   it("releases an order edit session with keepalive when the page closes", async () => {
@@ -1888,5 +1896,88 @@ describe("Quote editor", () => {
     await user.click(await screen.findByRole("tab", { name: "Add products" }));
     expect(await screen.findByText("Iced tea")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Add to product catalog" })).not.toBeInTheDocument();
+  });
+
+  it("puts customer enquiry answers in step 1 before the original quote steps", async () => {
+    fetchEnquirySubmission.mockResolvedValue({
+      id: "sub-1",
+      referenceCode: "ENQ20260903-TEST",
+      formId: "form-1",
+      createdAt: "2026-09-03T02:00:00.000Z",
+      formTitle: "FC Enquiry",
+      customerName: "sing",
+      salutation: "先生",
+      companyName: "www.winepassions.com",
+      phone: "95588228",
+      email: "cfb.app02@chifung.net",
+      deliveryDateRaw: "",
+      quoteDescription: "",
+      headcount: "",
+      internalEmailStatus: "sent",
+      ackEmailStatus: "sent",
+      asanaStatus: "not_created",
+      asanaLink: "",
+      formSnapshot: [
+        { fieldKey: "name", type: "input", title: "姓名", required: true },
+        {
+          fieldKey: "title",
+          type: "radio",
+          title: "稱謂",
+          required: true,
+          options: [
+            { label: "先生", value: "先生" },
+            { label: "小姐", value: "小姐" },
+          ],
+        },
+        {
+          fieldKey: "formats",
+          type: "checkbox",
+          title: "有興趣了解的到會形式",
+          required: true,
+          options: [
+            { label: "正餐 到會 (大盤)", value: "meal" },
+            { label: "小食 到會 (大盤)", value: "snack" },
+          ],
+        },
+      ],
+      answers: { name: "sing", title: "先生", formats: ["meal"] },
+      originalAnswers: {},
+      convertedQuoteId: "quote-1",
+    });
+
+    renderEditor(
+      {
+        loadSummary: vi.fn().mockResolvedValue({
+          id: "quote-1",
+          orderNumber: "FCCQ20260902",
+          channelId: "channel-1",
+          enquirySubmissionId: "sub-1",
+        }),
+      },
+      "/quotes/quote-1/edit",
+    );
+
+    expect(await screen.findByRole("tab", { name: "Customer enquiry" })).toBeInTheDocument();
+    expect(screen.getAllByRole("tab")).toHaveLength(3);
+    expect(screen.getByRole("tab", { name: "Customer enquiry" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByText("Step 1")).toBeInTheDocument();
+    expect(screen.getByText("Step 2")).toBeInTheDocument();
+    expect(screen.getByText("Step 3")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Quote details" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Add products" })).toBeInTheDocument();
+    expect(await screen.findByDisplayValue("sing")).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "先生" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "正餐 到會 (大盤)" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "小食 到會 (大盤)" })).not.toBeChecked();
+
+    const enquiry = document.getElementById("quote-editor-editable-enquiry");
+    const details = document.getElementById("quote-editor-editable-details");
+    expect(enquiry).not.toBeNull();
+    expect(details).not.toBeNull();
+    expect(Boolean(
+      enquiry
+      && details
+      && (enquiry.compareDocumentPosition(details) & Node.DOCUMENT_POSITION_FOLLOWING),
+    )).toBe(true);
   });
 });

@@ -22100,10 +22100,22 @@ a.masoft-order-tag:focus-visible {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.quote-editor-tabs.is-quote.has-enquiry {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.quote-editor-tabs.has-enquiry:not(.is-quote) {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 @media (min-width: 901px) {
   .quote-editor-tabs.is-quote {
     width: min(100%, 720px);
     margin-inline: auto;
+  }
+
+  .quote-editor-tabs.is-quote.has-enquiry {
+    width: min(100%, 960px);
   }
 }
 
@@ -22437,6 +22449,7 @@ a.masoft-order-tag:focus-visible {
 }
 
 .quote-editor-form-column h2,
+.quote-editor-enquiry-step > h2,
 .quote-item-form h2,
 .quote-lines-panel h2 {
   display: flex;
@@ -22446,10 +22459,23 @@ a.masoft-order-tag:focus-visible {
   font-size: 17px;
 }
 
-.quote-editor-form-column h2 svg {
+.quote-editor-form-column h2 svg,
+.quote-editor-enquiry-step > h2 svg {
   width: 19px;
   height: 19px;
   color: var(--primary);
+}
+
+.quote-editor-enquiry-step {
+  display: grid;
+  gap: 18px;
+  padding: 30px;
+}
+
+.quote-editor-enquiry-step .enquiry-form-label span {
+  color: var(--foreground);
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .quote-editor-form-column > label,
