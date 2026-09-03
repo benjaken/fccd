@@ -238,6 +238,11 @@ describe("Quote editor", () => {
     expect(mobileFooterRule).toContain("flex-wrap: nowrap");
     expect(mobileFooterButtonRule).toContain("min-width: 0");
     expect(css).toMatch(/\.quote-payment-step\s*>\s*footer\s+\.ui-button\s*\{[^}]*width:\s*100%/);
+    const itemCountRule = css.match(/\.quote-editor-item-count\s*\{([^}]*)\}/)?.[1];
+    expect(itemCountRule).toContain("display: flex");
+    expect(itemCountRule).toContain("flex-wrap: nowrap");
+    expect(itemCountRule).toContain("justify-content: space-between");
+    expect(itemCountRule).toContain("align-items: center");
   });
 
   it("renders editable product cards instead of the wide table on mobile", async () => {

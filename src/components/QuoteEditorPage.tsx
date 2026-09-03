@@ -2177,8 +2177,8 @@ export function QuoteEditorPage({
           </tbody></table></div>
           <div className="quote-editor-totals-row">
             <div className="quote-editor-item-count">
-              <span>{t("quoteEditor.items.totalQuantity")}</span><strong>{activeLines.reduce((sum, line) => sum + line.quantity, 0)}</strong>
-              <span>{t("quoteEditor.items.subtotal")}</span><strong>{money.format(total)}</strong>
+              <div><span>{t("quoteEditor.items.totalQuantity")}</span><strong>{activeLines.reduce((sum, line) => sum + line.quantity, 0)}</strong></div>
+              <div><span>{t("quoteEditor.items.subtotal")}</span><strong>{money.format(total)}</strong></div>
             </div>
             <section className="quote-financial-card quote-financial-readonly" aria-label={t("quoteEditor.financials.title")}>
               <header><div><span className="eyebrow">{t("quoteEditor.financials.eyebrow")}</span><h3>{t("quoteEditor.financials.title")}</h3></div></header>
@@ -2518,10 +2518,8 @@ export function QuoteEditorPage({
             )}
             <div className="quote-editor-totals-row">
               <div className="quote-editor-item-count">
-                <span>{t("quoteEditor.items.totalQuantity")}</span>
-                <strong>{activeLines.reduce((sum, line) => sum + line.quantity, 0)}</strong>
-                <span>{t("quoteEditor.items.subtotal")}</span>
-                <strong>{money.format(total)}</strong>
+                <div><span>{t("quoteEditor.items.totalQuantity")}</span><strong>{activeLines.reduce((sum, line) => sum + line.quantity, 0)}</strong></div>
+                <div><span>{t("quoteEditor.items.subtotal")}</span><strong>{money.format(total)}</strong></div>
               </div>
               <section className="quote-financial-card" aria-label={t("quoteEditor.financials.title")}>
                 <header>

@@ -24487,27 +24487,35 @@ a.masoft-order-tag:focus-visible {
 
 .quote-editor-item-count {
   grid-column: 1 / -1;
-  display: grid;
-  grid-template-columns: 1fr auto 1fr auto;
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: space-between;
+  align-items: center;
   min-height: 48px;
   padding: 10px 16px;
-  align-items: center;
-  gap: 10px;
+  gap: 12px;
   border: 1px solid color-mix(in oklch, var(--primary) 18%, var(--border));
   border-radius: 9px;
   background: var(--selection-bg);
 }
 
+.quote-editor-item-count > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
 .quote-editor-item-count span {
   color: var(--muted-foreground);
   font-size: 14px;
-  text-align: right;
+  white-space: nowrap;
 }
 
 .quote-editor-item-count strong {
-  min-width: 54px;
   color: var(--foreground);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .quote-utensil-button {
@@ -24933,10 +24941,6 @@ a.masoft-order-tag:focus-visible {
 
   .quote-lines-panel > footer .quote-utensil-button {
     min-width: 0;
-  }
-
-  .quote-editor-item-count {
-    grid-template-columns: 1fr auto;
   }
 
   .quote-financial-card {
