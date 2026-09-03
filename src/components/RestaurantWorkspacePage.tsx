@@ -2,6 +2,7 @@ import { NavLink, Outlet } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   ClipboardList,
+  PackageCheck,
   Receipt,
   ShoppingBag,
   Store,
@@ -15,6 +16,7 @@ import { cn } from "@/lib/utils";
 const LINKS = [
   { to: "/restaurant-workspace", key: "shopOrder", icon: ShoppingBag, permission: "workspace.restaurant.shop_order", end: true },
   { to: "/restaurant-workspace/records", key: "records", icon: ClipboardList, permission: "workspace.restaurant.records" },
+  { to: "/restaurant-workspace/receive", key: "receive", icon: PackageCheck, permission: "workspace.restaurant.receive" },
   { to: "/restaurant-workspace/daily-sales", key: "dailySales", icon: Store, permission: "restaurant.daily_sales" },
   { to: "/restaurant-workspace/daily-purchases", key: "dailyPurchases", icon: Receipt, permission: "restaurant.daily_purchases" },
   { to: "/restaurant-workspace/inventory", key: "inventory", icon: ClipboardCheck, permission: "restaurant.inventory" },

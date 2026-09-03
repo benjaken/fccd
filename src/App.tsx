@@ -118,6 +118,7 @@ import { RestaurantDailySalesPage } from "@/components/RestaurantDailySalesPage"
 import { RestaurantWorkspacePage } from "@/components/RestaurantWorkspacePage";
 import { ShopOrderPage } from "@/components/ShopOrderPage";
 import { ShopOrderRecordsPage } from "@/components/ShopOrderRecordsPage";
+import { ShopReceivePage } from "@/components/ShopReceivePage";
 import {
   OfficeShopPhonebookPage,
   OfficeShopRecordsPage,
@@ -2383,6 +2384,10 @@ function RestaurantFloorWorkspace() {
         <Route element={<RestaurantWorkspacePage />}>
           <Route index element={<ShopOrderPage />} />
           <Route path="records" element={<ShopOrderRecordsPage />} />
+          <Route
+            path="receive"
+            element={pageAccess.canAccess("workspace.restaurant.receive") ? <ShopReceivePage /> : <SettingsAccessDenied />}
+          />
           <Route
             path="daily-sales"
             element={pageAccess.canAccess("restaurant.daily_sales") ? <RestaurantDailySalesPage /> : <SettingsAccessDenied />}

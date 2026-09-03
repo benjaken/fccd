@@ -156,6 +156,7 @@ Product: **FCCD** — Food Channel Catering Delivery.
 餐廳版面（工作區 URL）
 ├─ 舖頭訂貨
 ├─ 訂貨紀錄
+├─ 確認收貨
 ├─ 每日銷售
 ├─ 每日採購
 ├─ 餐廳盤點

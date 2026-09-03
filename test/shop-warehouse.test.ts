@@ -15,6 +15,8 @@ describe("factory warehouse helpers", () => {
     expect(isFactoryWarehouseVisible("saved")).toBe(false);
     expect(isFactoryWarehouseVisible("sent_to_factory")).toBe(true);
     expect(isFactoryWarehouseVisible("in_transit")).toBe(true);
+    expect(isFactoryWarehouseVisible("received")).toBe(true);
+    expect(isFactoryWarehouseVisible("exception")).toBe(true);
   });
 
   it("allows one shipment quantity up to the approved amount", () => {

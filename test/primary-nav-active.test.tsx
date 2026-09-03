@@ -293,6 +293,9 @@ describe("Primary navigation section matching", () => {
     expect(pageAccessKey("/factory/warehouse/receipts")).toBe(
       "workspace.factory.warehouse.inbound",
     );
+    expect(pageAccessKey("/restaurant-workspace/receive")).toBe(
+      "workspace.restaurant.receive",
+    );
     expect(pageAccessKey("/driver-delivery")).toBe("workspace.delivery");
     expect(pageAccessKey("/driver-delivery/available")).toBe(
       "workspace.delivery.available",

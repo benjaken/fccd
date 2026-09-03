@@ -224,6 +224,7 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
   { prefix: "/delivery/fleets", pageKey: "delivery.fleets" },
   { prefix: "/delivery/surcharges", pageKey: "delivery" },
   { prefix: "/restaurant-workspace/records", pageKey: "workspace.restaurant.records" },
+  { prefix: "/restaurant-workspace/receive", pageKey: "workspace.restaurant.receive" },
   { prefix: "/restaurant-workspace/daily-sales", pageKey: "restaurant.daily_sales" },
   { prefix: "/restaurant-workspace/daily-purchases", pageKey: "restaurant.daily_purchases" },
   { prefix: "/restaurant-workspace/inventory", pageKey: "restaurant.inventory" },
@@ -472,6 +473,7 @@ const PAGE_ACCESS_CHILD_KEYS: Record<string, string[]> = {
   "workspace.restaurant": [
     "workspace.restaurant.shop_order",
     "workspace.restaurant.records",
+    "workspace.restaurant.receive",
   ],
   "restaurant.ordering": [
     "restaurant.ordering.suppliers",

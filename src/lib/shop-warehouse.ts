@@ -10,6 +10,8 @@ export const FACTORY_WAREHOUSE_VISIBLE_STATUSES = [
   "sent_to_factory",
   "in_transit",
   "shipped",
+  "received",
+  "exception",
 ] as const;
 
 export type ShopStockWarning = "ok" | "missing" | "low" | "unmapped";
@@ -154,13 +156,19 @@ export async function fetchShopWarehouseReceipts() {
   }));
 }
 
-export async function fetchShopShipments() {
-  const { data, error } = await supabase
+export async function fetchShopShipments(filters?: {
+  restaurantId?: string;
+  status?: string;
+}) {
+  let query = supabase
     .from("shop_shipments")
     .select(
       "id,shipment_no,request_id,status,shipped_at,warning_flags,shop_order_requests(request_no,restaurants(name)),shop_shipment_lines(id,name,unit,shipped_quantity,approved_quantity,stock_warning)",
     )
     .order("shipped_at", { ascending: false });
+  if (filters?.restaurantId) query = query.eq("restaurant_id", filters.restaurantId);
+  if (filters?.status) query = query.eq("status", filters.status);
+  const { data, error } = await query;
   if (error) throw error;
   return ((data ?? []) as ShipmentRow[]).map((row) => {
     const request = Array.isArray(row.shop_order_requests)
