@@ -70,6 +70,52 @@ function restoreFocusedField(container: HTMLElement | null, snapshot: FocusSnaps
   if (Math.abs(scrollAdjustment) > 0.5) window.scrollBy({ top: scrollAdjustment, behavior: "instant" });
 }
 
+const PRINT_HIDDEN_DOCUMENT_SELECTOR = [
+  ".quote-pdf-additional.is-empty",
+  ".quote-pdf-activity.is-empty",
+  ".quote-pdf-notes.is-empty",
+  ".quote-pdf-note-block.is-empty",
+].join(", ");
+
+const PRINTABLE_DOCUMENT_SELECTOR = [
+  ".quote-pdf-signature",
+  ".quote-pdf-additional:not(.is-empty)",
+  ".quote-pdf-activity:not(.is-empty)",
+  ".quote-pdf-note-block:not(.is-empty)",
+  ".quote-pdf-table",
+].join(", ");
+
+export function isPrintHiddenPdfModule(module: HTMLElement) {
+  if (module.classList.contains("is-empty") || module.classList.contains("quote-pdf-edit-only")) {
+    return true;
+  }
+  if (!module.querySelector(PRINT_HIDDEN_DOCUMENT_SELECTOR)) return false;
+  return !module.querySelector(PRINTABLE_DOCUMENT_SELECTOR);
+}
+
+function outerHeight(element: HTMLElement) {
+  const rect = element.getBoundingClientRect();
+  const styles = window.getComputedStyle(element);
+  return rect.height
+    + (Number.parseFloat(styles.marginTop) || 0)
+    + (Number.parseFloat(styles.marginBottom) || 0);
+}
+
+function printHiddenHeightBefore(module: HTMLElement, page: HTMLElement) {
+  const moduleTop = module.getBoundingClientRect().top;
+  const modules = Array.from(page.querySelectorAll<HTMLElement>(MODULE_SELECTOR));
+  const modulePosition = modules.indexOf(module);
+  return modules
+    .slice(0, Math.max(modulePosition, 0))
+    .filter(isPrintHiddenPdfModule)
+    .filter((element) => element.getBoundingClientRect().bottom <= moduleTop + 1)
+    .reduce((height, element) => height + outerHeight(element), 0);
+}
+
+export function pdfModulePrintableBottom(module: HTMLElement, page: HTMLElement) {
+  return module.getBoundingClientRect().bottom - printHiddenHeightBefore(module, page);
+}
+
 function pageContentBottom(page: HTMLElement, footer: HTMLElement) {
   const pageRect = page.getBoundingClientRect();
   const footerRect = footer.getBoundingClientRect();
@@ -141,7 +187,10 @@ export function usePdfAutoPageBreaks(
       if (!footer || !modules.length) continue;
 
       const footerTop = pageContentBottom(page, footer);
-      const overflowingModule = modules.find((module) => module.getBoundingClientRect().bottom > footerTop - 1);
+      const overflowingModule = modules.find((module) => (
+        !isPrintHiddenPdfModule(module)
+        && pdfModulePrintableBottom(module, page) > footerTop - 1
+      ));
       if (!overflowingModule) continue;
 
       const moduleIndex = Number(overflowingModule.dataset.pdfAutoModuleIndex);

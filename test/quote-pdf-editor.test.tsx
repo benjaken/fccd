@@ -699,6 +699,49 @@ describe("editable quote PDF page", () => {
     }
   });
 
+  it("keeps the signature on the product page when only print-hidden modules overflow", async () => {
+    const rectSpy = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function () {
+      const productRowRect = measuredProductRowRect(this);
+      if (productRowRect) return productRowRect;
+      if (this.classList.contains("quote-pdf-sheet")) {
+        return { x: 0, y: 0, top: 0, right: 800, bottom: 1000, left: 0, width: 800, height: 1000, toJSON: () => ({}) } as DOMRect;
+      }
+      if (this.hasAttribute("data-pdf-auto-footer")) {
+        return { x: 0, y: 970, top: 970, right: 800, bottom: 1000, left: 0, width: 800, height: 30, toJSON: () => ({}) } as DOMRect;
+      }
+      const module = this.hasAttribute("data-pdf-auto-module-index") ? this : null;
+      if (module) {
+        if (module.querySelector(".quote-pdf-activity.is-empty")) {
+          return { x: 0, y: 700, top: 700, right: 800, bottom: 900, left: 0, width: 800, height: 200, toJSON: () => ({}) } as DOMRect;
+        }
+        if (module.querySelector(".quote-pdf-additional.is-empty") || module.classList.contains("is-empty")) {
+          return { x: 0, y: 580, top: 580, right: 800, bottom: 700, left: 0, width: 800, height: 120, toJSON: () => ({}) } as DOMRect;
+        }
+        if (module.querySelector(".quote-pdf-signature")) {
+          return { x: 0, y: 980, top: 980, right: 800, bottom: 1140, left: 0, width: 800, height: 160, toJSON: () => ({}) } as DOMRect;
+        }
+        return { x: 0, y: 900, top: 900, right: 800, bottom: 980, left: 0, width: 800, height: 80, toJSON: () => ({}) } as DOMRect;
+      }
+      return { x: 0, y: 0, top: 0, right: 800, bottom: 0, left: 0, width: 800, height: 0, toJSON: () => ({}) } as DOMRect;
+    });
+    localStorage.setItem("fccd:quote-pdf-draft:quote-1", JSON.stringify({
+      activities: [],
+      additionalInfo: [],
+      paymentMethods: [],
+    }));
+    renderPage(vi.fn().mockResolvedValue(lunchBoxResult));
+
+    try {
+      await screen.findByRole("heading", { name: "便當報價" });
+      await waitFor(() => {
+        expect(screen.getByRole("region", { name: "簽署確認" }).closest("main")).not.toHaveAccessibleName("PDF 第 2 頁");
+        expect(screen.queryByRole("main", { name: "PDF 第 2 頁" })).not.toBeInTheDocument();
+      });
+    } finally {
+      rectSpy.mockRestore();
+    }
+  });
+
   it("moves overflowing trailing modules to another sheet instead of clipping the signature", async () => {
     const rectSpy = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function () {
       const productRowRect = measuredProductRowRect(this);
