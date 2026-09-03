@@ -85,6 +85,12 @@ import { FactoryOrderPage } from "@/components/FactoryOrderPage";
 import { FactoryMeatDeliveryNotePage } from "@/components/FactoryMeatDeliveryNotePage";
 import { FactoryMultiDayReportPage } from "@/components/FactoryMultiDayReportPage";
 import { FactoryProductionCalendarPage } from "@/components/FactoryProductionCalendarPage";
+import { FactoryWarehousePage } from "@/components/FactoryWarehousePage";
+import {
+  FactoryWarehousePendingPage,
+  FactoryWarehouseReceiptsPage,
+  FactoryWarehouseShipmentsPage,
+} from "@/components/FactoryWarehousePages";
 import { DriverDeliveryPage } from "@/components/DriverDeliveryPage";
 import { CustomerSelfServicePage } from "@/components/CustomerSelfServicePage";
 import { RawMeatInventoryCalcPage } from "@/components/RawMeatInventoryCalcPage";
@@ -109,6 +115,17 @@ import { SuppliersPage } from "@/components/SuppliersPage";
 import { IngredientsListPage } from "@/components/IngredientsListPage";
 import { RestaurantStaffPage } from "@/components/RestaurantStaffPage";
 import { RestaurantDailySalesPage } from "@/components/RestaurantDailySalesPage";
+import { RestaurantWorkspacePage } from "@/components/RestaurantWorkspacePage";
+import { ShopOrderPage } from "@/components/ShopOrderPage";
+import { ShopOrderRecordsPage } from "@/components/ShopOrderRecordsPage";
+import { ShopReceivePage } from "@/components/ShopReceivePage";
+import {
+  OfficeShopPhonebookPage,
+  OfficeShopRecordsPage,
+  OfficeShopRequestsPage,
+  OfficeShopReviewPage,
+  OfficeShopSuppliersPage,
+} from "@/components/OfficeShopOrderingPages";
 import { RestaurantDailyPurchasesPage } from "@/components/RestaurantDailyPurchasesPage";
 import { RestaurantStocktakesPage } from "@/components/RestaurantStocktakesPage";
 import { RestaurantMonthlyExpensesPage } from "@/components/RestaurantMonthlyExpensesPage";
@@ -1256,6 +1273,26 @@ function OperationsShell() {
                 path="/restaurant/staff"
                 element={pageAccess.canAccess("restaurant.staff") ? <RestaurantStaffPage /> : <SettingsAccessDenied />}
               />
+              <Route
+                path="/restaurant/ordering/suppliers"
+                element={pageAccess.canAccess("restaurant.ordering.suppliers") ? <OfficeShopSuppliersPage /> : <SettingsAccessDenied />}
+              />
+              <Route
+                path="/restaurant/ordering/requests"
+                element={pageAccess.canAccess("restaurant.ordering.requests") ? <OfficeShopRequestsPage /> : <SettingsAccessDenied />}
+              />
+              <Route
+                path="/restaurant/ordering/records"
+                element={pageAccess.canAccess("restaurant.ordering.records") ? <OfficeShopRecordsPage /> : <SettingsAccessDenied />}
+              />
+              <Route
+                path="/restaurant/ordering/phonebook"
+                element={pageAccess.canAccess("restaurant.ordering.phonebook") ? <OfficeShopPhonebookPage /> : <SettingsAccessDenied />}
+              />
+              <Route
+                path="/restaurant/ordering/review"
+                element={pageAccess.canAccess("restaurant.ordering.review") ? <OfficeShopReviewPage /> : <SettingsAccessDenied />}
+              />
               <Route path="/restaurant/settings/monthly-pnl-cost-categories" element={pageAccess.canAccess("restaurant.settings.monthly_pnl_cost_categories") ? <MonthlyPnlCostCategoriesPage /> : <SettingsAccessDenied />} />
               <Route path="/restaurant/settings/inventory-items" element={pageAccess.canAccess("restaurant.settings.inventory_items") ? <RestaurantInventoryItemsPage /> : <SettingsAccessDenied />} />
               <Route path="/restaurant/settings/restaurants" element={pageAccess.canAccess("restaurant.settings.restaurants") ? <RestaurantSettingsPage /> : <SettingsAccessDenied />} />
@@ -2218,7 +2255,7 @@ export function WorkspacePlaceholderPage({
   workspaceKey,
   icon: WorkspaceIcon,
 }: {
-  workspaceKey: "factory" | "delivery" | "customer";
+  workspaceKey: "factory" | "delivery" | "customer" | "restaurant";
   icon: Icon;
 }) {
   const { t } = useTranslation();
@@ -2274,7 +2311,7 @@ function WorkspaceStandalonePage({
   workspaceKey,
   icon,
 }: {
-  workspaceKey: "factory" | "delivery" | "customer";
+  workspaceKey: "factory" | "delivery" | "customer" | "restaurant";
   icon: Icon;
 }) {
   return (
@@ -2334,6 +2371,45 @@ function FactoryWorkspace() {
   );
 }
 
+function RestaurantFloorWorkspace() {
+  const { profile } = useAuth();
+  const pageAccess = usePageAccess(profile?.role);
+  if (pageAccess.loading) return <AuthLoadingScreen />;
+  return (
+    <ProtectedWorkspace
+      permissionKey="workspace.restaurant.shop_order"
+      fallbackPermissionKey="workspace.restaurant"
+    >
+      <Routes>
+        <Route element={<RestaurantWorkspacePage />}>
+          <Route index element={<ShopOrderPage />} />
+          <Route path="records" element={<ShopOrderRecordsPage />} />
+          <Route
+            path="receive"
+            element={pageAccess.canAccess("workspace.restaurant.receive") ? <ShopReceivePage /> : <SettingsAccessDenied />}
+          />
+          <Route
+            path="daily-sales"
+            element={pageAccess.canAccess("restaurant.daily_sales") ? <RestaurantDailySalesPage /> : <SettingsAccessDenied />}
+          />
+          <Route
+            path="daily-purchases"
+            element={pageAccess.canAccess("restaurant.daily_purchases") ? <RestaurantDailyPurchasesPage /> : <SettingsAccessDenied />}
+          />
+          <Route
+            path="inventory"
+            element={pageAccess.canAccess("restaurant.inventory") ? <RestaurantStocktakesPage /> : <SettingsAccessDenied />}
+          />
+          <Route
+            path="monthly-expenses"
+            element={pageAccess.canAccess("restaurant.monthly_expenses") ? <RestaurantMonthlyExpensesPage /> : <SettingsAccessDenied />}
+          />
+        </Route>
+      </Routes>
+    </ProtectedWorkspace>
+  );
+}
+
 function FactoryOrderWorkspace() {
   return (
     <ProtectedWorkspace
@@ -2374,6 +2450,26 @@ function FactoryProductionCalendarWorkspace() {
       fallbackPermissionKey="workspace.factory"
     >
       <FactoryProductionCalendarPage />
+    </ProtectedWorkspace>
+  );
+}
+
+function FactoryWarehouseWorkspace() {
+  const { profile } = useAuth();
+  const pageAccess = usePageAccess(profile?.role);
+  if (pageAccess.loading) return <AuthLoadingScreen />;
+  return (
+    <ProtectedWorkspace
+      permissionKey="workspace.factory.warehouse"
+      fallbackPermissionKey="workspace.factory"
+    >
+      <Routes>
+        <Route element={<FactoryWarehousePage />}>
+          <Route index element={<FactoryWarehousePendingPage />} />
+          <Route path="shipments" element={<FactoryWarehouseShipmentsPage />} />
+          <Route path="receipts" element={<FactoryWarehouseReceiptsPage />} />
+        </Route>
+      </Routes>
     </ProtectedWorkspace>
   );
 }
@@ -2456,10 +2552,26 @@ function App() {
         }
       />
       <Route
+        path="/factory/warehouse/*"
+        element={
+          <AuthProvider>
+            <FactoryWarehouseWorkspace />
+          </AuthProvider>
+        }
+      />
+      <Route
         path="/factory"
         element={
           <AuthProvider>
             <FactoryWorkspace />
+          </AuthProvider>
+        }
+      />
+      <Route
+        path="/restaurant-workspace/*"
+        element={
+          <AuthProvider>
+            <RestaurantFloorWorkspace />
           </AuthProvider>
         }
       />

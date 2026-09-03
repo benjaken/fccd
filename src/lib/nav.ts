@@ -29,6 +29,7 @@ import {
   Package,
   PackageCheck,
   PackagePlus,
+  Phone,
   Palette,
   Receipt,
   Settings,
@@ -550,6 +551,19 @@ export const secondaryNav: Record<string, NavItem[]> = {
       { key: "restaurantInventoryItems", to: "/restaurant/settings/inventory-items", icon: Warehouse, permissionKey: "restaurant.settings.inventory_items" },
       { key: "restaurantPnlCostCategories", to: "/restaurant/settings/monthly-pnl-cost-categories", icon: CircleDollarSign, permissionKey: "restaurant.settings.monthly_pnl_cost_categories" },
     ] },
+    {
+      key: "restaurantOrdering",
+      to: "/restaurant/ordering/requests",
+      icon: ShoppingBag,
+      permissionKey: "restaurant.ordering",
+      children: [
+        { key: "restaurantOrderingSuppliers", to: "/restaurant/ordering/suppliers", icon: Store, permissionKey: "restaurant.ordering.suppliers" },
+        { key: "restaurantOrderingRequests", to: "/restaurant/ordering/requests", icon: ClipboardList, permissionKey: "restaurant.ordering.requests" },
+        { key: "restaurantOrderingRecords", to: "/restaurant/ordering/records", icon: History, permissionKey: "restaurant.ordering.records" },
+        { key: "restaurantOrderingPhonebook", to: "/restaurant/ordering/phonebook", icon: Phone, permissionKey: "restaurant.ordering.phonebook" },
+        { key: "restaurantOrderingReview", to: "/restaurant/ordering/review", icon: ShieldCheck, permissionKey: "restaurant.ordering.review" },
+      ],
+    },
   ],
   reports: [
     {
@@ -989,7 +1003,7 @@ export const SECTION_CHILD_KEYS: Record<string, string[]> = {
     ...KITCHEN_ACTION_PAGE_KEYS,
   ],
   delivery: ["delivery.assign", "delivery.fleets"],
-  restaurant: ["restaurant.daily_sales", "restaurant.daily_purchases", "restaurant.monthly_expenses", "restaurant.inventory", "restaurant.reports", "restaurant.staff", "restaurant.settings", "restaurant.settings.restaurants", "restaurant.settings.departments", "restaurant.settings.service_periods", "restaurant.settings.payment_methods", "restaurant.settings.delivery_platforms", "restaurant.settings.holidays", "restaurant.settings.roster_times", "restaurant.settings.supplier_cost_categories", "restaurant.settings.inventory_items", "restaurant.settings.monthly_pnl_cost_categories"],
+  restaurant: ["restaurant.daily_sales", "restaurant.daily_purchases", "restaurant.monthly_expenses", "restaurant.inventory", "restaurant.reports", "restaurant.staff", "restaurant.settings", "restaurant.settings.restaurants", "restaurant.settings.departments", "restaurant.settings.service_periods", "restaurant.settings.payment_methods", "restaurant.settings.delivery_platforms", "restaurant.settings.holidays", "restaurant.settings.roster_times", "restaurant.settings.supplier_cost_categories", "restaurant.settings.inventory_items", "restaurant.settings.monthly_pnl_cost_categories", "restaurant.ordering", "restaurant.ordering.suppliers", "restaurant.ordering.requests", "restaurant.ordering.records", "restaurant.ordering.phonebook", "restaurant.ordering.review"],
   reports: [
     REPORT_GROUP_PAGE_KEYS.dataInputProgress,
     "kitchen.cost_input",
@@ -1035,6 +1049,12 @@ export const workspaceLinks: Array<{
     to: "/factory",
     icon: Factory,
     permissionKey: "workspace.factory",
+  },
+  {
+    key: "restaurant",
+    to: "/restaurant-workspace",
+    icon: Store,
+    permissionKey: "workspace.restaurant",
   },
   {
     key: "delivery",
@@ -1135,6 +1155,12 @@ export function workspaceFromPath(pathname: string) {
   }
   if (pathname === "/customer" || pathname.startsWith("/customer/")) {
     return "customer";
+  }
+  if (
+    pathname === "/restaurant-workspace" ||
+    pathname.startsWith("/restaurant-workspace/")
+  ) {
+    return "restaurant";
   }
   return "factory";
 }

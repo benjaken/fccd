@@ -35201,3 +35201,72 @@ body:has(.quote-clause-modal-root) { overflow: hidden; }
     min-height: 0;
   }
 }
+
+.restaurant-workspace,
+.factory-warehouse {
+  min-height: 100dvh;
+  background: var(--background);
+}
+
+.restaurant-workspace-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.restaurant-workspace-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.restaurant-workspace-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.7rem;
+  border-radius: 999px;
+  color: inherit;
+  text-decoration: none;
+  border: 1px solid var(--border);
+}
+
+.restaurant-workspace-link.active {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-color: transparent;
+}
+
+.restaurant-workspace-body {
+  padding: 0.5rem 0;
+}
+
+.shop-order-form,
+.shop-review-card {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.shop-order-items {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.shop-order-items th,
+.shop-order-items td {
+  padding: 0.4rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+
+.shop-order-items input[type="number"] {
+  width: 5rem;
+}
+
+.shop-order-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
