@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Phone } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { FilterableSelect } from "@/components/ui/filterable-select";
 import { hongKongDateValue } from "@/lib/restaurant-daily-sales";
 import {
   TKO_RESTAURANT_ID,
@@ -124,22 +125,30 @@ export function ShopOrderPage() {
       <article className="panel ingredients-panel shop-order-form">
         <label className="ingredients-field">
           <span>{t("shopOrdering.restaurant")}</span>
-          <select value={restaurantId} onChange={(event) => setRestaurantId(event.target.value)}>
+          <FilterableSelect
+            aria-label={t("shopOrdering.restaurant")}
+            value={restaurantId}
+            onChange={(event) => setRestaurantId(event.target.value)}
+          >
             {restaurants.map((option) => (
               <option key={option.id} value={option.id}>{option.name}</option>
             ))}
-          </select>
+          </FilterableSelect>
         </label>
         <label className="ingredients-field">
           <span>{t("shopOrdering.supplier")}</span>
-          <select value={supplierName} onChange={(event) => { setSupplierName(event.target.value); setQuantities({}); }}>
+          <FilterableSelect
+            aria-label={t("shopOrdering.supplier")}
+            value={supplierName}
+            onChange={(event) => { setSupplierName(event.target.value); setQuantities({}); }}
+          >
             <option value="">{t("shopOrdering.supplierPlaceholder")}</option>
             {groups.map((group) => (
               <option key={group.supplierName} value={group.supplierName}>
                 {group.supplierName} ({group.channel === "fc_internal" ? t("shopOrdering.fcInternal") : t("shopOrdering.external")})
               </option>
             ))}
-          </select>
+          </FilterableSelect>
         </label>
         <label className="ingredients-field">
           <span>{t("shopOrdering.deliveryDate")}</span>
@@ -152,12 +161,16 @@ export function ShopOrderPage() {
         {selected?.channel === "external" ? (
           <label className="ingredients-field">
             <span>{t("shopOrdering.contact")}</span>
-            <select value={contactId} onChange={(event) => setContactId(event.target.value)}>
+            <FilterableSelect
+              aria-label={t("shopOrdering.contact")}
+              value={contactId}
+              onChange={(event) => setContactId(event.target.value)}
+            >
               {contacts.length === 0 ? <option value="">{t("shopOrdering.noPhone")}</option> : null}
               {contacts.map((row) => (
                 <option key={row.id} value={row.id}>{row.name || row.phone} {row.phone}</option>
               ))}
-            </select>
+            </FilterableSelect>
           </label>
         ) : null}
         {selected ? (

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
+import { FilterableSelect } from "@/components/ui/filterable-select";
 import { fetchShopCatalog, type ShopCatalogItem, type ShopOrderRequest } from "@/lib/shop-orders";
 import { hongKongDateInputValue } from "@/lib/raw-meat-inventory";
 import {
@@ -288,14 +289,18 @@ export function FactoryWarehouseReceiptsPage() {
         <div className="shop-order-form">
           <label>
             <span>{t("shopOrdering.item")}</span>
-            <select value={itemId} onChange={(event) => setItemId(event.target.value)}>
+            <FilterableSelect
+              aria-label={t("shopOrdering.item")}
+              value={itemId}
+              onChange={(event) => setItemId(event.target.value)}
+            >
               <option value="">{t("shopWarehouse.itemPlaceholder")}</option>
               {items.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.supplierName} · {item.name} ({item.unit})
                 </option>
               ))}
-            </select>
+            </FilterableSelect>
           </label>
           <label>
             <span>{t("shopOrdering.quantity")}</span>

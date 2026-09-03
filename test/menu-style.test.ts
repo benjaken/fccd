@@ -126,6 +126,7 @@ describe("menu styles", () => {
       "restaurantDailyPurchases",
       "restaurantStocktakes",
       "restaurantMonthlyExpenses",
+      "restaurantOrdering",
       "shopSales",
       "shopSalesWorkingHours",
       "restaurantSalesSalary",
