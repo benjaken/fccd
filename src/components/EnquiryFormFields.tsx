@@ -10,37 +10,45 @@ export function EnquiryFormFields({
   answers,
   errors = [],
   disabled = false,
+  splitLayout = false,
   onChange,
 }: {
   questions: EnquiryQuestion[];
   answers: EnquiryAnswers;
   errors?: EnquiryFieldError[];
   disabled?: boolean;
+  splitLayout?: boolean;
   onChange?: (fieldKey: string, value: EnquiryAnswerValue) => void;
 }) {
   const errorMap = new Map(errors.map((error) => [error.fieldKey, error.message]));
   return (
-    <div className="enquiry-form-fields">
+    <div className={cn("enquiry-form-fields", splitLayout && "enquiry-form-fields-split")}>
       {questions.map((question) => {
         const error = errorMap.get(question.fieldKey);
         const value = answers[question.fieldKey];
+        const labelId = `enquiry-label-${question.fieldKey}`;
+        const controlId = `enquiry-${question.fieldKey}`;
+        const isGroup = question.type === "radio" || question.type === "checkbox";
         return (
           <div key={question.fieldKey} className={cn("enquiry-form-question", error && "has-error")}>
-            <label className="enquiry-form-label" htmlFor={`enquiry-${question.fieldKey}`}>
+            <label className="enquiry-form-label" id={labelId} htmlFor={isGroup ? undefined : controlId}>
               <span>
                 {question.title}
                 {question.required ? <em aria-hidden="true"> *</em> : null}
               </span>
             </label>
-            {question.hint ? <p className="enquiry-form-hint">{question.hint}</p> : null}
-            <EnquiryControl
-              question={question}
-              value={value}
-              disabled={disabled}
-              invalid={Boolean(error)}
-              onChange={(next) => onChange?.(question.fieldKey, next)}
-            />
-            {error ? <p className="enquiry-form-error" role="alert">{error}</p> : null}
+            <div className="enquiry-form-control">
+              <EnquiryControl
+                question={question}
+                value={value}
+                disabled={disabled}
+                invalid={Boolean(error)}
+                labelledBy={labelId}
+                onChange={(next) => onChange?.(question.fieldKey, next)}
+              />
+              {question.hint ? <p className="enquiry-form-hint">{question.hint}</p> : null}
+              {error ? <p className="enquiry-form-error" role="alert">{error}</p> : null}
+            </div>
           </div>
         );
       })}
@@ -53,15 +61,18 @@ function EnquiryControl({
   value,
   disabled,
   invalid,
+  labelledBy,
   onChange,
 }: {
   question: EnquiryQuestion;
   value: EnquiryAnswerValue;
   disabled: boolean;
   invalid: boolean;
+  labelledBy: string;
   onChange: (value: EnquiryAnswerValue) => void;
 }) {
   const id = `enquiry-${question.fieldKey}`;
+  const stackedOptions = question.requireAllOptions === true;
   if (question.type === "textarea") {
     return (
       <textarea
@@ -106,7 +117,11 @@ function EnquiryControl({
   }
   if (question.type === "radio") {
     return (
-      <div className="enquiry-form-options" role="radiogroup" aria-labelledby={id}>
+      <div
+        className={cn("enquiry-form-options", stackedOptions && "is-stacked")}
+        role="radiogroup"
+        aria-labelledby={labelledBy}
+      >
         {(question.options ?? []).map((option) => (
           <label key={option.value} className="enquiry-form-option">
             <input
@@ -126,7 +141,7 @@ function EnquiryControl({
   if (question.type === "checkbox") {
     const selected = Array.isArray(value) ? value : [];
     return (
-      <div className="enquiry-form-options">
+      <div className={cn("enquiry-form-options", stackedOptions && "is-stacked")}>
         {(question.options ?? []).map((option) => {
           const checked = selected.includes(option.value);
           return (

@@ -535,6 +535,7 @@ export function EnquiryFormEditorPage() {
         <EnquiryFormFields
           questions={form.questions}
           answers={emptyAnswers(form.questions)}
+          splitLayout
           disabled
         />
       </Modal>

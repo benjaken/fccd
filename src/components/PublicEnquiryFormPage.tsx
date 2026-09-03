@@ -131,6 +131,7 @@ export function PublicEnquiryFormPage() {
               questions={form.questions}
               answers={answers}
               errors={errors}
+              splitLayout
               onChange={patchAnswer}
             />
             <Button type="submit" disabled={submitting}>

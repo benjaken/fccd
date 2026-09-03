@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -100,5 +102,24 @@ describe("public enquiry form page", () => {
       </MemoryRouter>,
     );
     expect(await screen.findByRole("heading", { name: "暫不接受查詢" })).toBeInTheDocument();
+  });
+
+  it("uses a 1000px left-right public form layout", async () => {
+    rpcMock.mockResolvedValueOnce({ data: publishedForm, error: null });
+    const { container } = render(
+      <MemoryRouter initialEntries={["/quote-inquiry"]}>
+        <Routes>
+          <Route path="/quote-inquiry" element={<PublicEnquiryFormPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    await screen.findByRole("heading", { name: publishedForm.public_title });
+    expect(container.querySelector(".enquiry-public-shell")).not.toBeNull();
+    expect(container.querySelector(".enquiry-form-fields-split")).not.toBeNull();
+    expect(container.querySelector(".enquiry-form-control")).not.toBeNull();
+
+    const css = readFileSync(path.resolve(process.cwd(), "src/components/enquiry-form.css"), "utf8");
+    expect(css).toMatch(/\.enquiry-public-shell\s*\{[^}]*width:\s*min\(100% - 32px,\s*1000px\)/s);
+    expect(css).toContain("grid-template-columns: minmax(200px, 34%) minmax(0, 1fr)");
   });
 });
