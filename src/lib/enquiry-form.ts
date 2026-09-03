@@ -339,6 +339,21 @@ export function enquiryFormEditorPath(formId: string, nav?: string | null) {
   return `/quotes/enquiry-forms/${formId}/edit${suffix}`;
 }
 
+export function reorderEnquiryQuestions(
+  questions: EnquiryQuestion[],
+  sourceKey: string,
+  targetKey: string,
+): EnquiryQuestion[] {
+  if (sourceKey === targetKey) return questions;
+  const sourceIndex = questions.findIndex((question) => question.fieldKey === sourceKey);
+  const targetIndex = questions.findIndex((question) => question.fieldKey === targetKey);
+  if (sourceIndex < 0 || targetIndex < 0) return questions;
+  const next = [...questions];
+  const [moved] = next.splice(sourceIndex, 1);
+  next.splice(targetIndex, 0, moved);
+  return next;
+}
+
 const COMPACT_OPTION_MAX_CHARS = 16;
 
 export function isEnquiryOptionCompact(label: string) {

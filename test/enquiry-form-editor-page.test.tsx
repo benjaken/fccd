@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -56,6 +56,9 @@ describe("EnquiryFormEditorPage", () => {
     expect(screen.getByRole("button", { name: "了解條款及政策" })).toBeInTheDocument();
     expect(screen.getAllByRole("row")).toHaveLength(25);
     expect(screen.getByRole("button", { name: "新增題目" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "上移" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "下移" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "調整題目順序 1 姓名" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "載入 EmailMeForm 24 題" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: `/quote-inquiry/${CATERING_ENQUIRY_SEED_FORM_ID}` })).toHaveClass("order-link");
     expect(saveEnquiryForm).not.toHaveBeenCalled();
@@ -87,5 +90,26 @@ describe("EnquiryFormEditorPage", () => {
     const saved = saveEnquiryForm.mock.calls[0]?.[0] as { id: string; questions: unknown[] };
     expect(saved.id).not.toBe(NEW_ENQUIRY_FORM_ID);
     expect(saved.questions).toHaveLength(6);
+  });
+
+  it("reorders questions by dragging a row handle", async () => {
+    renderEditor(NEW_ENQUIRY_FORM_ID);
+    expect(await screen.findByRole("button", { name: "姓名" })).toBeInTheDocument();
+
+    const dragHandle = screen.getByRole("button", { name: "調整題目順序 1 姓名" });
+    const targetRow = screen.getByRole("button", { name: "送貨地址" }).closest("tr");
+    expect(targetRow).not.toBeNull();
+    const dataTransfer = {
+      effectAllowed: "none",
+      dropEffect: "none",
+      setData: vi.fn(),
+      getData: vi.fn(),
+    };
+    fireEvent.dragStart(dragHandle, { dataTransfer });
+    fireEvent.dragOver(targetRow!, { dataTransfer });
+    fireEvent.drop(targetRow!, { dataTransfer });
+
+    expect(screen.getByRole("button", { name: "調整題目順序 1 公司/機構名稱" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "調整題目順序 5 姓名" })).toBeInTheDocument();
   });
 });

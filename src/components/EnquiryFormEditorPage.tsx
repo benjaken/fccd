@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, FilePenLine, FileText, Globe, Plus } from "lucide-react";
+import { useEffect, useMemo, useState, type DragEvent } from "react";
+import { ChevronLeft, FilePenLine, FileText, Globe, GripVertical, Plus } from "lucide-react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { EnquiryFormFields } from "@/components/EnquiryFormFields";
@@ -14,6 +14,7 @@ import {
   enquiryFormEditorPath,
   enquiryPublicPath,
   NEW_ENQUIRY_FORM_ID,
+  reorderEnquiryQuestions,
   type EnquiryFormDefinition,
   type EnquiryQuestion,
   type EnquiryQuestionType,
@@ -106,6 +107,8 @@ export function EnquiryFormEditorPage() {
   const [saving, setSaving] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [draggedKey, setDraggedKey] = useState<string | null>(null);
+  const [dragOverKey, setDragOverKey] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -166,6 +169,25 @@ export function EnquiryFormEditorPage() {
       current ? { ...current, questions: [...current.questions, question] } : current,
     );
     setSelectedKey(question.fieldKey);
+  };
+
+  const allowQuestionDrop = (event: DragEvent<HTMLTableRowElement>, fieldKey: string) => {
+    if (!draggedKey) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    setDragOverKey(fieldKey);
+  };
+
+  const dropQuestion = (targetKey: string) => {
+    if (!draggedKey || draggedKey === targetKey) return;
+    setForm((current) =>
+      current
+        ? { ...current, questions: reorderEnquiryQuestions(current.questions, draggedKey, targetKey) }
+        : current,
+    );
+    setSelectedKey(draggedKey);
+    setDraggedKey(null);
+    setDragOverKey(null);
   };
 
   const save = async (nextStatus?: EnquiryFormDefinition["status"]) => {
@@ -468,32 +490,6 @@ export function EnquiryFormEditorPage() {
               <div className="enquiry-editor-question-actions">
                 <Button
                   type="button"
-                  variant="outline"
-                  disabled={selectedIndex <= 0}
-                  onClick={() => {
-                    if (selectedIndex <= 0) return;
-                    const next = [...form.questions];
-                    [next[selectedIndex - 1], next[selectedIndex]] = [next[selectedIndex], next[selectedIndex - 1]];
-                    patchForm({ questions: next });
-                  }}
-                >
-                  上移
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={selectedIndex < 0 || selectedIndex >= form.questions.length - 1}
-                  onClick={() => {
-                    if (selectedIndex < 0 || selectedIndex >= form.questions.length - 1) return;
-                    const next = [...form.questions];
-                    [next[selectedIndex + 1], next[selectedIndex]] = [next[selectedIndex], next[selectedIndex + 1]];
-                    patchForm({ questions: next });
-                  }}
-                >
-                  下移
-                </Button>
-                <Button
-                  type="button"
                   variant="destructive"
                   onClick={() => {
                     const next = form.questions.filter((question) => question.fieldKey !== selected.fieldKey);
@@ -539,9 +535,39 @@ export function EnquiryFormEditorPage() {
                 {form.questions.map((question, index) => (
                   <tr
                     key={question.fieldKey}
-                    className={cn(selectedKey === question.fieldKey && "is-selected")}
+                    className={cn(
+                      selectedKey === question.fieldKey && "is-selected",
+                      draggedKey === question.fieldKey && "is-dragging",
+                      dragOverKey === question.fieldKey && draggedKey !== question.fieldKey && "is-drag-over",
+                    )}
+                    onDragOver={(event) => allowQuestionDrop(event, question.fieldKey)}
+                    onDragLeave={() => setDragOverKey((current) => (current === question.fieldKey ? null : current))}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      dropQuestion(question.fieldKey);
+                    }}
                   >
-                    <td>{index + 1}</td>
+                    <td className="quote-line-sequence">
+                      <button
+                        type="button"
+                        className="quote-line-drag-handle"
+                        draggable
+                        aria-label={`調整題目順序 ${index + 1} ${question.title}`}
+                        onDragStart={(event) => {
+                          setDraggedKey(question.fieldKey);
+                          setSelectedKey(question.fieldKey);
+                          event.dataTransfer.effectAllowed = "move";
+                          event.dataTransfer.setData("text/plain", question.fieldKey);
+                        }}
+                        onDragEnd={() => {
+                          setDraggedKey(null);
+                          setDragOverKey(null);
+                        }}
+                      >
+                        <GripVertical />
+                        <span>{index + 1}</span>
+                      </button>
+                    </td>
                     <td>
                       <button
                         type="button"

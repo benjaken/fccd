@@ -12,6 +12,7 @@ import {
   enquiryPublicPath,
   enquiryQuestionElementId,
   mapEnquiryAnswers,
+  reorderEnquiryQuestions,
   serializeEnquiryQuestions,
   validateEnquiryAnswers,
 } from "@/lib/enquiry-form";
@@ -38,6 +39,17 @@ describe("catering enquiry seed form", () => {
       "聯絡電話",
       "電郵地址",
       "送貨地址",
+    ]);
+  });
+
+  it("reorders questions by field key", () => {
+    const questions = cloneDefaultEnquiryQuestions();
+    expect(reorderEnquiryQuestions(questions, "address", "name").map((question) => question.fieldKey)).toEqual([
+      "address",
+      "name",
+      "company",
+      "phone",
+      "email",
     ]);
   });
 
