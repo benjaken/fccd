@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FileText } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,7 @@ export function EnquiryFormsListPage({
   loadForms?: () => Promise<EnquiryFormListItem[]>;
   createForm?: typeof createEnquiryForm;
 } = {}) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [items, setItems] = useState<EnquiryFormListItem[]>([]);
@@ -110,7 +112,7 @@ export function EnquiryFormsListPage({
             id="enquiry-forms-search"
             value={search}
             onChange={setSearch}
-            placeholder="搜尋標題或 slug"
+            placeholder={t("quotes.enquiryFormsSearchPlaceholder")}
             label="搜尋表單"
           />
         </header>

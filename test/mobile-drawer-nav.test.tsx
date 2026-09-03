@@ -67,6 +67,8 @@ describe("buildMobileDrawerNav", () => {
     ]);
     expect(quotes?.items.map((item) => item.to)).toEqual([
       "/quotes",
+      "/quotes/pending?nav=catering.quotes",
+      "/quotes/enquiry-forms?nav=catering.quotes",
       "/quotes/pdf-pages",
     ]);
     expect(customers?.items.map((item) => item.to)).toEqual([

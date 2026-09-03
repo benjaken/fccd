@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { FileText } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 
 import { DetailLink } from "@/components/ui/detail-link";
@@ -50,6 +51,7 @@ export function EnquiryPendingListPage({
 }: {
   loadSubmissions?: (search?: string) => Promise<EnquirySubmissionListItem[]>;
 } = {}) {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const [items, setItems] = useState<EnquirySubmissionListItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -90,7 +92,7 @@ export function EnquiryPendingListPage({
             id="enquiry-pending-search"
             value={search}
             onChange={setSearch}
-            placeholder="姓名、公司、電話、電郵、描述"
+            placeholder={t("quotes.pendingSearchPlaceholder")}
             label="搜尋待報價"
           />
         </header>
