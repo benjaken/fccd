@@ -337,6 +337,9 @@ function OperationsShell() {
     secondaryNav.settings.find((item) =>
       pageAccess.canAccess(item.permissionKey ?? pageAccessKey(item.to)),
     )?.to ?? "/settings/users";
+  const firstSettingsHref = isBusinessMenu
+    ? `${firstSettingsPath}${firstSettingsPath.includes("?") ? "&" : "?"}nav=settings`
+    : firstSettingsPath;
   const firstReportsPath =
     secondaryNav.reports
       .find((item) => item.key === "reports")
@@ -1384,7 +1387,7 @@ function OperationsShell() {
               />
               <Route
                 path="/settings"
-                element={<Navigate to={firstSettingsPath} replace />}
+                element={<Navigate to={firstSettingsHref} replace />}
               />
               <Route
                 path="/settings/employees"
@@ -2114,6 +2117,7 @@ const BUSINESS_MENU_LABELS: Record<string, [string, string]> = {
   frozen: ["凍肉", "Frozen Meat"],
   restaurant: ["餐廳", "Restaurant"],
   reports: ["報表", "Reports"],
+  settings: ["系統設定", "System Settings"],
   orders: ["訂單", "Orders"],
   allQuotes: ["報價單", "Quotes"],
   cateringQuotes: ["所有報價", "All Quotes"],

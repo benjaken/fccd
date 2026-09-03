@@ -109,6 +109,7 @@ export const businessPrimaryNav: NavItem[] = [
   { key: "frozen", to: "/frozen/raw-meat-inventory?nav=frozen", icon: Snowflake, permissionKey: "frozen.raw_meat_inventory" },
   { key: "restaurant", to: "/restaurant/daily-sales?nav=restaurant", icon: Store, permissionKey: "restaurant.daily_sales" },
   { key: "reports", to: "/reports?nav=reports", icon: ChartNoAxesCombined, permissionKey: "reports" },
+  { key: "settings", to: "/settings?nav=settings", icon: Settings, permissionKey: "settings" },
 ];
 
 export const businessCategoryNav: Record<string, NavItem[]> = {
@@ -672,12 +673,13 @@ export function businessSectionFromLocation(pathname: string, search: string) {
   if (context === "frozen") return "frozen";
   if (context === "restaurant") return "restaurant";
   if (context === "reports") return "reports";
+  if (context === "settings") return "settings";
 
   const segment = pathname.split("/")[1] || "";
   if (!segment) return "overview";
   if (segment === "follow-up") return "followUp";
   if (["orders", "quotes", "products", "kitchen", "delivery"].includes(segment)) return "catering";
-  if (["frozen", "restaurant", "reports"].includes(segment)) return segment;
+  if (["frozen", "restaurant", "reports", "settings"].includes(segment)) return segment;
   if (segment === "finance") return "reports";
   return "";
 }
@@ -922,6 +924,9 @@ export function businessSidebarNav(
         "reports",
       );
     });
+  }
+  if (section === "settings") {
+    return secondaryNav.settings.map((item) => appendNavContext(item, "settings"));
   }
   return [];
 }
