@@ -1,25 +1,30 @@
 export type LocationTranslationKind = "address" | "district";
 
-/** Fast xAI model for one-line HK address translation. Do not inherit grok-4.6. */
-export const DEFAULT_ADDRESS_TRANSLATION_MODEL = "grok-4.3";
+/** Dedicated xAI non-reasoning model. One-line HK address translation must not inherit grok-4.6. */
+export const DEFAULT_ADDRESS_TRANSLATION_MODEL = "grok-4.20-non-reasoning";
 const ADDRESS_TRANSLATION_MAX_TOKENS = 400;
-const ADDRESS_TRANSLATION_ATTEMPT_TIMEOUT_MS = 12_000;
+const ADDRESS_TRANSLATION_ATTEMPT_TIMEOUT_MS = 8_000;
 
 function env(primary: string, report: string, supplier: string) {
   return Deno.env.get(primary) ?? Deno.env.get(report) ?? Deno.env.get(supplier) ?? "";
 }
 
-function isSlowReasoningModel(model: string) {
-  return /grok-4\.6|grok-4\.5/i.test(model);
+function isForcedReasoningModel(model: string) {
+  if (/non-reasoning/i.test(model)) return false;
+  return /grok-4\.6|grok-4\.5|grok-4\.20.*reasoning/i.test(model);
+}
+
+function usesReasoningEffortNone(model: string) {
+  return /^grok-4\.3/i.test(model);
 }
 
 function translationModel() {
   const dedicated = Deno.env.get("ADDRESS_TRANSLATION_AI_MODEL")?.trim()
     || env("ADDRESS_TRANSLATION_AI_MODEL", "REPORT_AI_MODEL", "SUPPLIER_QUOTE_AI_MODEL").trim();
-  // grok-4.6 reasoning hangs or takes ~12s+ per attempt. A dedicated
+  // grok-4.6 cannot disable reasoning (defaults to high). A dedicated
   // ADDRESS_TRANSLATION_AI_MODEL=grok-4.6 secret previously made translation
-  // take ~24s (timeout then retry).
-  if (dedicated && !isSlowReasoningModel(dedicated)) return dedicated;
+  // take ~24s (12s timeout then a second 12s attempt).
+  if (dedicated && !isForcedReasoningModel(dedicated)) return dedicated;
   return DEFAULT_ADDRESS_TRANSLATION_MODEL;
 }
 
@@ -67,6 +72,21 @@ function parseTranslatedText(payload: {
   return parsed.translatedText.trim();
 }
 
+function providerRequest(
+  model: string,
+  messages: Array<{ role: string; content: string }>,
+  extra: Record<string, unknown> = {},
+) {
+  return {
+    model,
+    max_tokens: ADDRESS_TRANSLATION_MAX_TOKENS,
+    stream: false,
+    ...(usesReasoningEffortNone(model) ? { reasoning_effort: "none" } : {}),
+    ...extra,
+    messages,
+  };
+}
+
 export async function translateLocationToTraditionalChinese(
   text: string,
   kind: LocationTranslationKind,
@@ -92,15 +112,11 @@ export async function translateLocationToTraditionalChinese(
     { role: "user", content: JSON.stringify({ text: source }) },
   ];
   const providerRequests = [
-    {
-      model,
+    providerRequest(model, messages, {
       response_format: { type: "json_object" },
       temperature: 0,
-      max_tokens: ADDRESS_TRANSLATION_MAX_TOKENS,
-      reasoning_effort: "none",
-      messages,
-    },
-    { model, max_tokens: ADDRESS_TRANSLATION_MAX_TOKENS, messages },
+    }),
+    providerRequest(model, messages),
   ];
 
   for (let attempt = 0; attempt < providerRequests.length; attempt += 1) {
