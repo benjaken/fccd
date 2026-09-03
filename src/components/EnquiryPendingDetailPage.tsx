@@ -87,6 +87,7 @@ export function EnquiryPendingDetailPage({ canManage = false }: { canManage?: bo
           ? {
               ...current,
               internalEmailStatus: result.internalEmailStatus || current.internalEmailStatus,
+              internalWatiStatus: result.internalWatiStatus || current.internalWatiStatus,
               ackEmailStatus: result.ackEmailStatus || current.ackEmailStatus,
             }
           : current,
@@ -195,6 +196,7 @@ export function EnquiryPendingDetailPage({ canManage = false }: { canManage?: bo
         <label>時段<Input value={mapped?.deliveryTime ?? ""} disabled /></label>
         <label>人數<Input value={mapped?.headcount ?? ""} disabled /></label>
         <p>內部通知：{detail.internalEmailStatus === "sent" ? "已通知" : detail.internalEmailStatus === "failed" ? "通知失敗" : detail.internalEmailStatus === "sending" ? "寄送中" : "尚未通知"}</p>
+        <p>內部 WhatsApp：{detail.internalWatiStatus === "sent" ? "已通知" : detail.internalWatiStatus === "failed" ? "通知失敗" : detail.internalWatiStatus === "sending" ? "寄送中" : "尚未通知"}</p>
         {canManage ? (
           <Button type="button" variant="outline" disabled={mailBusy !== null} onClick={() => void resendMail("internal")}>
             {mailBusy === "internal" ? "寄送中…" : "重寄內部通知"}

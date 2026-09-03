@@ -26,6 +26,7 @@ const PENDING_SKELETON_COLUMNS = [
   { width: "6rem" },
   { width: "6rem" },
   { width: "6rem" },
+  { width: "6rem" },
   { width: "4.5rem", variant: "action" as const },
 ];
 
@@ -165,6 +166,7 @@ export function EnquiryPendingListPage({
                 <th>描述</th>
                 <th>人數</th>
                 <th>內部通知</th>
+                <th>內部 WhatsApp</th>
                 <th>對客確認</th>
                 <th>Asana</th>
                 {canManage ? <th aria-label={t("quotes.columns.actions")} /> : null}
@@ -194,6 +196,7 @@ export function EnquiryPendingListPage({
                   <td>{dash(item.quoteDescription)}</td>
                   <td>{dash(item.headcount)}</td>
                   <td>{statusText("internal", item.internalEmailStatus)}</td>
+                  <td>{statusText("internal", item.internalWatiStatus)}</td>
                   <td>{statusText("ack", item.ackEmailStatus)}</td>
                   <td>
                     {item.asanaLink ? (

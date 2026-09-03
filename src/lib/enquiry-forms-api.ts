@@ -35,6 +35,7 @@ export type EnquirySubmissionListItem = {
   quoteDescription: string;
   headcount: string;
   internalEmailStatus: string;
+  internalWatiStatus: string;
   ackEmailStatus: string;
   asanaStatus: string;
   asanaLink: string;
@@ -81,6 +82,7 @@ type SubmissionRow = {
   quote_description: string | null;
   headcount: string | null;
   internal_email_status: string;
+  internal_wati_status?: string | null;
   ack_email_status: string;
   asana_status: string;
   asana_link: string | null;
@@ -104,6 +106,7 @@ function mapSubmissionListItem(row: {
   quote_description: string | null;
   headcount: string | null;
   internal_email_status: string;
+  internal_wati_status?: string | null;
   ack_email_status: string;
   asana_status: string;
   asana_link: string | null;
@@ -122,6 +125,7 @@ function mapSubmissionListItem(row: {
     quoteDescription: row.quote_description || "",
     headcount: row.headcount || "",
     internalEmailStatus: row.internal_email_status,
+    internalWatiStatus: row.internal_wati_status || "not_sent",
     ackEmailStatus: row.ack_email_status,
     asanaStatus: row.asana_status,
     asanaLink: row.asana_link || "",
@@ -192,7 +196,7 @@ export async function notifyEnquirySubmission(
     body: { submissionId, force: options.force === true, kind: options.kind || "all" },
   });
   if (error) throw error;
-  return data as { internalEmailStatus?: string; ackEmailStatus?: string };
+  return data as { internalEmailStatus?: string; internalWatiStatus?: string; ackEmailStatus?: string };
 }
 
 export async function fetchEnquiryForms(): Promise<EnquiryFormListItem[]> {
@@ -342,7 +346,7 @@ export async function fetchPendingEnquirySubmissions(search = ""): Promise<Enqui
   let query = supabase
     .from("enquiry_submissions")
     .select(
-      "id,form_title,created_at,reference_code,customer_name,salutation,company_name,phone,email,delivery_date_raw,quote_description,headcount,internal_email_status,ack_email_status,asana_status,asana_link",
+      "id,form_title,created_at,reference_code,customer_name,salutation,company_name,phone,email,delivery_date_raw,quote_description,headcount,internal_email_status,internal_wati_status,ack_email_status,asana_status,asana_link",
     )
     .is("converted_quote_id", null)
     .order("created_at", { ascending: false })

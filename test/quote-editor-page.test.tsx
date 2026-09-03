@@ -1914,6 +1914,7 @@ describe("Quote editor", () => {
       quoteDescription: "",
       headcount: "",
       internalEmailStatus: "sent",
+      internalWatiStatus: "sent",
       ackEmailStatus: "sent",
       asanaStatus: "not_created",
       asanaLink: "",

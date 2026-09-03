@@ -4,11 +4,16 @@ import { EMAIL_FROM } from "../_shared/email-sender.ts";
 import {
   buildEnquiryAckContent,
   buildEnquiryInternalContent,
+  buildEnquiryInternalWatiParameters,
+  ENQUIRY_INTERNAL_WATI_TEMPLATE,
 } from "../_shared/enquiry-notification-content.ts";
 import {
   isNotificationEmailAllowed,
+  isNotificationPhoneAllowed,
+  normalizeNotificationPhone,
   notificationRecipientAllowlist,
 } from "../_shared/notification-recipient-allowlist.ts";
+import { watiEmergencySwitchAllows } from "../_shared/wati-notification-controls.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -31,6 +36,7 @@ type SubmissionRow = {
   quote_description: string | null;
   headcount: string | null;
   internal_email_status: string;
+  internal_wati_status: string;
   ack_email_status: string;
 };
 
@@ -88,10 +94,47 @@ async function sendResendEmail(to: string[], subject: string, html: string) {
   }
 }
 
+async function sendEnquiryInternalWati(
+  allowlist: ReturnType<typeof notificationRecipientAllowlist>,
+  phone: string,
+  parameters: Array<{ name: string; value: string }>,
+) {
+  if (!isNotificationPhoneAllowed(allowlist, phone)) {
+    throw new Error("notification_recipient_not_allowlisted");
+  }
+  const templateName = Deno.env.get("WATI_ENQUIRY_INTERNAL_TEMPLATE_NAME")?.trim()
+    || ENQUIRY_INTERNAL_WATI_TEMPLATE;
+  const broadcastName = Deno.env.get("WATI_ENQUIRY_INTERNAL_BROADCAST_NAME")?.trim()
+    || ENQUIRY_INTERNAL_WATI_TEMPLATE;
+  const endpoint = requiredEnv("WATI_API_ENDPOINT").replace(/\/$/, "");
+  const providerResponse = await fetch(
+    `${endpoint}/api/v2/sendTemplateMessage?whatsappNumber=${encodeURIComponent(phone)}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${requiredEnv("WATI_API_TOKEN")}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        template_name: templateName,
+        broadcast_name: broadcastName,
+        channel_number: requiredEnv("WATI_CHANNEL_NUMBER"),
+        parameters,
+      }),
+    },
+  );
+  const payload = await providerResponse.json().catch(() => null);
+  const reportedFailure = payload && typeof payload === "object"
+    && (payload as { result?: unknown }).result === false;
+  if (!providerResponse.ok || reportedFailure) {
+    throw new Error(`wati_send_failed:${providerResponse.status}:${JSON.stringify(payload).slice(0, 1000)}`);
+  }
+}
+
 async function claimStatus(
   admin: ReturnType<typeof createClient>,
   id: string,
-  column: "internal_email_status" | "ack_email_status",
+  column: "internal_email_status" | "internal_wati_status" | "ack_email_status",
   current: string[],
 ) {
   const { data } = await admin
@@ -119,7 +162,7 @@ Deno.serve(async (request) => {
     const admin = createClient(requiredEnv("SUPABASE_URL"), serviceRoleKey());
     const { data: submission, error: submissionError } = await admin
       .from("enquiry_submissions")
-      .select("id,form_id,form_title,reference_code,customer_name,salutation,company_name,phone,email,shipping_address,delivery_date_raw,quote_description,headcount,internal_email_status,ack_email_status")
+      .select("id,form_id,form_title,reference_code,customer_name,salutation,company_name,phone,email,shipping_address,delivery_date_raw,quote_description,headcount,internal_email_status,internal_wati_status,ack_email_status")
       .eq("id", submissionId)
       .maybeSingle();
     if (submissionError || !submission) return response({ error: "submission_not_found" }, 404);
@@ -142,6 +185,7 @@ Deno.serve(async (request) => {
     const sendInternal = kind === "all" || kind === "internal";
     const sendAck = kind === "all" || kind === "ack";
     let internalStatus = row.internal_email_status;
+    let internalWatiStatus = row.internal_wati_status;
     let ackStatus = row.ack_email_status;
 
     if (sendInternal) {
@@ -185,6 +229,63 @@ Deno.serve(async (request) => {
           updated_at: new Date().toISOString(),
         }).eq("id", row.id);
       }
+
+      const watiRetryable = force
+        ? ["not_sent", "sending", "failed", "sent"]
+        : ["not_sent"];
+      if (
+        watiEmergencySwitchAllows("WATI_ENQUIRY_INTERNAL_ENABLED")
+        && watiRetryable.includes(internalWatiStatus)
+        && await claimStatus(admin, row.id, "internal_wati_status", watiRetryable)
+      ) {
+        try {
+          const { data: recipients, error: recipientError } = await admin
+            .from("order_first_notification_recipients")
+            .select("phone");
+          if (recipientError) throw recipientError;
+          const phones = [...new Set(
+            ((recipients || []) as Array<{ phone?: string }>)
+              .map((item) => normalizeNotificationPhone(item.phone))
+              .filter((phone): phone is string =>
+                Boolean(phone) && isNotificationPhoneAllowed(allowlist, phone)
+              ),
+          )];
+          if (!phones.length) {
+            internalWatiStatus = "failed";
+          } else {
+            const parameters = buildEnquiryInternalWatiParameters({
+              formTitle: row.form_title,
+              referenceCode: row.reference_code,
+              customerName: row.customer_name || "",
+              salutation: row.salutation || "",
+              companyName: row.company_name || "",
+              phone: row.phone || "",
+              email: row.email || "",
+              address: row.shipping_address || "",
+              deliveryDate: row.delivery_date_raw || "",
+              headcount: row.headcount || "",
+              quoteDescription: row.quote_description || "",
+              detailUrl: appUrl ? `${appUrl}/quotes/pending/${row.id}` : "",
+            });
+            const results = await Promise.allSettled(
+              phones.map((phone) => sendEnquiryInternalWati(allowlist, phone, parameters)),
+            );
+            const anySent = results.some((result) => result.status === "fulfilled");
+            for (const result of results) {
+              if (result.status === "rejected") {
+                console.error("enquiry internal wati failed", result.reason);
+              }
+            }
+            internalWatiStatus = anySent ? "sent" : "failed";
+          }
+        } catch {
+          internalWatiStatus = "failed";
+        }
+        await admin.from("enquiry_submissions").update({
+          internal_wati_status: internalWatiStatus,
+          updated_at: new Date().toISOString(),
+        }).eq("id", row.id);
+      }
     }
 
     if (sendAck) {
@@ -222,6 +323,7 @@ Deno.serve(async (request) => {
 
     return response({
       internalEmailStatus: internalStatus,
+      internalWatiStatus,
       ackEmailStatus: ackStatus,
     });
   } catch (error) {

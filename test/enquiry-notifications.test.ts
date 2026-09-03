@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   DEFAULT_ENQUIRY_ACK_SUBJECT,
+  ENQUIRY_INTERNAL_WATI_TEMPLATE,
   buildEnquiryAckContent,
   buildEnquiryInternalContent,
+  buildEnquiryInternalWatiParameters,
   fillEnquiryEmailTemplate,
 } from "../supabase/functions/_shared/enquiry-notification-content.ts";
 
@@ -40,5 +42,32 @@ describe("enquiry notification emails", () => {
     expect(mail.text).toContain("姓名：先生陳大文");
     expect(mail.text).toContain("查看待報價：https://example.com/quotes/pending/sub-1");
     expect(fillEnquiryEmailTemplate("Hi {姓名}", { name: "Ada" })).toBe("Hi Ada");
+  });
+
+  it("builds numbered WATI parameters for fccd_enquiry_internal_v1 and uses a dash for blanks", () => {
+    expect(ENQUIRY_INTERNAL_WATI_TEMPLATE).toBe("fccd_enquiry_internal_v1");
+    const parameters = buildEnquiryInternalWatiParameters({
+      formTitle: "餐飲到會網上查詢",
+      referenceCode: "ENQ20260903-TEST",
+      customerName: "陳大文",
+      salutation: "先生",
+      phone: "91234567",
+      email: "chan@example.com",
+      quoteDescription: "公司午餐\n到會",
+      detailUrl: "https://example.com/quotes/pending/sub-1",
+    });
+    expect(parameters).toEqual([
+      { name: "1", value: "餐飲到會網上查詢" },
+      { name: "2", value: "ENQ20260903-TEST" },
+      { name: "3", value: "先生陳大文" },
+      { name: "4", value: "-" },
+      { name: "5", value: "91234567" },
+      { name: "6", value: "chan@example.com" },
+      { name: "7", value: "-" },
+      { name: "8", value: "-" },
+      { name: "9", value: "-" },
+      { name: "10", value: "公司午餐 到會" },
+      { name: "11", value: "https://example.com/quotes/pending/sub-1" },
+    ]);
   });
 });

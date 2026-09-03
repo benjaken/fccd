@@ -62,4 +62,17 @@ describe("enquiry form migration", () => {
     expect(recipients).toContain("from public.user_profiles profile");
     expect(recipients).toContain("grant execute on function public.enquiry_internal_email_recipients() to service_role;");
   });
+
+  it("tracks internal WhatsApp status separately from internal email", () => {
+    const wati = readFileSync(
+      path.resolve(process.cwd(), "supabase/migrations/20260903130000_enquiry_internal_wati_status.sql"),
+      "utf8",
+    );
+    expect(wati).toContain("add column if not exists internal_wati_status");
+    expect(wati).toContain("enquiry_submissions_internal_wati_status_check");
+    expect(wati).toContain("'not_sent'::text");
+    expect(wati).toContain("'sending'::text");
+    expect(wati).toContain("'sent'::text");
+    expect(wati).toContain("'failed'::text");
+  });
 });

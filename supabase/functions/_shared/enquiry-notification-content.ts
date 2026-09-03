@@ -143,7 +143,13 @@ export function buildEnquiryAckContent(input: {
   return content(subject, body.split("\n"));
 }
 
-export function buildEnquiryInternalContent(input: {
+export const ENQUIRY_INTERNAL_WATI_TEMPLATE = "fccd_enquiry_internal_v1";
+
+function enquiryWatiParameterValue(value?: string | null) {
+  return (value || "").replace(/[\r\n\t]+/g, " ").replace(/\s{2,}/g, " ").trim() || "-";
+}
+
+export type EnquiryInternalNotificationInput = {
   formTitle: string;
   referenceCode: string;
   customerName?: string;
@@ -156,7 +162,9 @@ export function buildEnquiryInternalContent(input: {
   headcount?: string;
   quoteDescription?: string;
   detailUrl?: string;
-}) {
+};
+
+export function buildEnquiryInternalContent(input: EnquiryInternalNotificationInput) {
   const displayName = `${input.salutation || ""}${input.customerName || ""}`.trim();
   return content(`新查詢：${input.formTitle} ${input.referenceCode}`, [
     "公開查詢表單剛收到一筆新提交。",
@@ -174,4 +182,27 @@ export function buildEnquiryInternalContent(input: {
     input.detailUrl && "",
     input.detailUrl && `查看待報價：${input.detailUrl}`,
   ]);
+}
+
+export function buildEnquiryInternalWatiParameters(input: EnquiryInternalNotificationInput) {
+  const displayName = `${input.salutation || ""}${input.customerName || ""}`.trim();
+  // fccd_enquiry_internal_v1 uses WhatsApp numbered placeholders {{1}}..{{11}}
+  // in this order: form, ENQ, name, company, phone, email, address, date, headcount, description, pending URL.
+  const values = [
+    input.formTitle,
+    input.referenceCode,
+    displayName,
+    input.companyName,
+    input.phone,
+    input.email,
+    input.address,
+    input.deliveryDate,
+    input.headcount,
+    input.quoteDescription,
+    input.detailUrl,
+  ];
+  return values.map((value, index) => ({
+    name: String(index + 1),
+    value: enquiryWatiParameterValue(value),
+  }));
 }

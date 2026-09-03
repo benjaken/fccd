@@ -21,6 +21,7 @@ const submissions: EnquirySubmissionListItem[] = [
     quoteDescription: "公司午餐到會",
     headcount: "80",
     internalEmailStatus: "not_sent",
+    internalWatiStatus: "not_sent",
     ackEmailStatus: "not_sent",
     asanaStatus: "not_created",
     asanaLink: "",
@@ -38,6 +39,7 @@ describe("EnquiryPendingListPage", () => {
     expect(await screen.findByText("先生陳大文")).toBeInTheDocument();
     expect(screen.getByRole("table")).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "查詢單號" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "內部 WhatsApp" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "建立時間" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "客戶" })).toBeInTheDocument();
     expect(screen.getByText("公司午餐到會")).toBeInTheDocument();
