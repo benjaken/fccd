@@ -24855,12 +24855,25 @@ a.masoft-order-tag:focus-visible {
 
   .quote-editor-form > footer {
     align-items: stretch;
-    flex-direction: column;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+
+  .quote-editor-form > footer > span:empty {
+    display: none;
   }
 
   .quote-editor-form > footer .ui-button {
-    width: 100%;
+    flex: 1 1 0;
+    width: auto;
     min-width: 0;
+    height: auto;
+    min-height: 44px;
+    padding: 8px 10px;
+    white-space: normal;
+    font-size: 13px;
+    line-height: 1.25;
   }
 
   .quote-editor-tags {

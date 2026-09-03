@@ -234,7 +234,8 @@ describe("Quote editor", () => {
     )?.at(-1);
 
     expect(responsiveGridRule).toContain("grid-template-columns: minmax(0, 1fr)");
-    expect(mobileFooterRule).toContain("flex-direction: column");
+    expect(mobileFooterRule).toContain("flex-direction: row");
+    expect(mobileFooterRule).toContain("flex-wrap: nowrap");
     expect(mobileFooterButtonRule).toContain("min-width: 0");
   });
 
