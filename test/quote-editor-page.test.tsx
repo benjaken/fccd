@@ -11,9 +11,13 @@ vi.mock("@/lib/order-edit-presence", () => ({
 }));
 
 const fetchEnquirySubmission = vi.hoisted(() => vi.fn().mockResolvedValue(null));
+const saveEnquirySubmissionAnswers = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+const convertEnquiryToQuote = vi.hoisted(() => vi.fn().mockResolvedValue({ id: "quote-1", orderNumber: "FCCQ20260902" }));
 
 vi.mock("@/lib/enquiry-forms-api", () => ({
   fetchEnquirySubmission,
+  saveEnquirySubmissionAnswers,
+  convertEnquiryToQuote,
 }));
 
 const dictionaryValues = vi.hoisted(() => ({
@@ -170,6 +174,7 @@ function renderEditor(
       <Routes>
         <Route path="/quotes/new" element={<QuoteEditorPage {...props} />} />
         <Route path="/quotes/:id/edit" element={<QuoteEditorPage {...props} />} />
+        <Route path="/quotes/pending/:id" element={<QuoteEditorPage pendingEnquiry {...props} />} />
         <Route path="/orders/new" element={<QuoteEditorPage {...props} />} />
         <Route path="/orders/:id/edit" element={<QuoteEditorPage {...props} />} />
       </Routes>
@@ -194,6 +199,9 @@ describe("Quote editor", () => {
     await i18n.changeLanguage("en");
     fetchEnquirySubmission.mockReset();
     fetchEnquirySubmission.mockResolvedValue(null);
+    saveEnquirySubmissionAnswers.mockReset();
+    convertEnquiryToQuote.mockReset();
+    convertEnquiryToQuote.mockResolvedValue({ id: "quote-1", orderNumber: "FCCQ20260902" });
   });
 
   it("releases an order edit session with keepalive when the page closes", async () => {
@@ -1967,9 +1975,12 @@ describe("Quote editor", () => {
     expect(screen.getByRole("tab", { name: "Quote details" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Add products" })).toBeInTheDocument();
     expect(await screen.findByDisplayValue("sing")).toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: "先生" })).toBeChecked();
-    expect(screen.getByRole("checkbox", { name: "正餐 到會 (大盤)" })).toBeChecked();
-    expect(screen.getByRole("checkbox", { name: "小食 到會 (大盤)" })).not.toBeChecked();
+    expect(screen.getByText("先生")).toBeInTheDocument();
+    expect(screen.getByText("正餐 到會 (大盤)")).toBeInTheDocument();
+    expect(screen.queryByRole("radio")).not.toBeInTheDocument();
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "編輯稱謂" })).not.toBeInTheDocument();
+    expect(document.querySelector(".enquiry-form-fields-columns")).not.toBeNull();
 
     const enquiry = document.getElementById("quote-editor-editable-enquiry");
     const details = document.getElementById("quote-editor-editable-details");
@@ -1980,5 +1991,127 @@ describe("Quote editor", () => {
       && details
       && (enquiry.compareDocumentPosition(details) & Node.DOCUMENT_POSITION_FOLLOWING),
     )).toBe(true);
+  });
+
+  it("opens a pending enquiry with the quote details form and compact choice answers", async () => {
+    fetchEnquirySubmission.mockResolvedValue({
+      id: "sub-1",
+      referenceCode: "ENQ20260903-TEST",
+      formId: "form-1",
+      createdAt: "2026-09-03T02:00:00.000Z",
+      formTitle: "FC Enquiry",
+      customerName: "sing",
+      salutation: "先生",
+      companyName: "www.winepassions.com",
+      phone: "95588228",
+      email: "cfb.app02@chifung.net",
+      deliveryDateRaw: "",
+      quoteDescription: "",
+      headcount: "",
+      internalEmailStatus: "sent",
+      internalWatiStatus: "sent",
+      ackEmailStatus: "sent",
+      asanaStatus: "not_created",
+      asanaLink: "",
+      formSnapshot: [
+        { fieldKey: "name", type: "input", title: "姓名", required: true, quoteField: "customer_name" },
+        {
+          fieldKey: "title",
+          type: "radio",
+          title: "稱謂",
+          required: true,
+          quoteField: "salutation",
+          options: [
+            { label: "先生", value: "先生" },
+            { label: "小姐", value: "小姐" },
+          ],
+        },
+      ],
+      answers: { name: "sing", title: "先生" },
+      originalAnswers: {},
+      convertedQuoteId: null,
+    });
+
+    renderEditor({ canEdit: true }, "/quotes/pending/sub-1");
+
+    expect(await screen.findByRole("heading", { name: "ENQ20260903-TEST" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Back to pending quotes" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Customer enquiry" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "Quote details" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Add products" })).toBeDisabled();
+    expect(screen.getByLabelText(/Brand/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Customer name")).toHaveValue("sing");
+    expect(screen.getByText("先生")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "編輯稱謂" })).toBeInTheDocument();
+    expect(screen.queryByRole("radio")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save and add products" })).toBeInTheDocument();
+  });
+
+  it("converts a pending enquiry into a quote when details are saved", async () => {
+    const user = userEvent.setup();
+    fetchEnquirySubmission.mockResolvedValue({
+      id: "sub-1",
+      referenceCode: "ENQ20260903-TEST",
+      formId: "form-1",
+      createdAt: "2026-09-03T02:00:00.000Z",
+      formTitle: "FC Enquiry",
+      customerName: "sing",
+      salutation: "先生",
+      companyName: "",
+      phone: "95588228",
+      email: "cfb.app02@chifung.net",
+      deliveryDateRaw: "2026-10-01",
+      quoteDescription: "",
+      headcount: "",
+      internalEmailStatus: "sent",
+      internalWatiStatus: "sent",
+      ackEmailStatus: "sent",
+      asanaStatus: "not_created",
+      asanaLink: "",
+      formSnapshot: [
+        { fieldKey: "name", type: "input", title: "姓名", required: true, quoteField: "customer_name" },
+        { fieldKey: "phone", type: "input", title: "電話", required: true, quoteField: "phone" },
+        { fieldKey: "email", type: "input", title: "電郵", required: true, quoteField: "email" },
+        { fieldKey: "date", type: "date", title: "日期", required: false, quoteField: "delivery_date" },
+      ],
+      answers: {
+        name: "sing",
+        phone: "95588228",
+        email: "cfb.app02@chifung.net",
+        date: "2026-10-01",
+      },
+      originalAnswers: {},
+      convertedQuoteId: null,
+    });
+    const saveDetails = vi.fn().mockResolvedValue(undefined);
+    renderEditor({ canEdit: true, saveDetails }, "/quotes/pending/sub-1");
+
+    expect(await screen.findByRole("heading", { name: "ENQ20260903-TEST" })).toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText(/Brand/), "channel-1");
+    await user.selectOptions(screen.getByLabelText("Shipping method"), "shipping-home");
+    await user.click(screen.getByRole("combobox", { name: "District" }));
+    await user.click(screen.getByRole("option", { name: "Central" }));
+    await user.click(screen.getByRole("button", { name: "Save and add products" }));
+
+    await waitFor(() => {
+      expect(saveEnquirySubmissionAnswers).toHaveBeenCalledWith(
+        "sub-1",
+        expect.any(Array),
+        expect.objectContaining({ name: "sing" }),
+      );
+      expect(convertEnquiryToQuote).toHaveBeenCalledWith({
+        submissionId: "sub-1",
+        channelId: "channel-1",
+      });
+      expect(saveDetails).toHaveBeenCalledWith(
+        "quote-1",
+        expect.objectContaining({
+          customerName: "sing",
+          contactA: "95588228",
+          email: "cfb.app02@chifung.net",
+          deliveryDate: "2026-10-01",
+        }),
+      );
+    });
   });
 });

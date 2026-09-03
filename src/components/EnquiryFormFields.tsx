@@ -1,6 +1,10 @@
+import { useState } from "react";
+import { Pencil } from "lucide-react";
+
 import {
   enquiryOptionsShouldStack,
   enquiryQuestionElementId,
+  formatAnswer,
   type EnquiryAnswerValue,
   type EnquiryAnswers,
   type EnquiryFieldError,
@@ -8,6 +12,8 @@ import {
 } from "@/lib/enquiry-form";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Modal } from "@/components/ui/modal";
 import { cn } from "@/lib/utils";
 
 import "./enquiry-form.css";
@@ -18,6 +24,8 @@ export function EnquiryFormFields({
   errors = [],
   disabled = false,
   splitLayout = false,
+  twoColumn = false,
+  choiceSummary = false,
   onChange,
 }: {
   questions: EnquiryQuestion[];
@@ -25,22 +33,39 @@ export function EnquiryFormFields({
   errors?: EnquiryFieldError[];
   disabled?: boolean;
   splitLayout?: boolean;
+  twoColumn?: boolean;
+  choiceSummary?: boolean;
   onChange?: (fieldKey: string, value: EnquiryAnswerValue) => void;
 }) {
   const errorMap = new Map(errors.map((error) => [error.fieldKey, error.message]));
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const editing = questions.find((question) => question.fieldKey === editingKey) ?? null;
+  const [draftValue, setDraftValue] = useState<EnquiryAnswerValue>(null);
+
   return (
-    <div className={cn("enquiry-form-fields", splitLayout && "enquiry-form-fields-split")}>
+    <div
+      className={cn(
+        "enquiry-form-fields",
+        splitLayout && "enquiry-form-fields-split",
+        twoColumn && "enquiry-form-fields-columns",
+      )}
+    >
       {questions.map((question) => {
         const error = errorMap.get(question.fieldKey);
         const value = answers[question.fieldKey];
         const labelId = `enquiry-label-${question.fieldKey}`;
         const controlId = `enquiry-${question.fieldKey}`;
         const isGroup = question.type === "radio" || question.type === "checkbox";
+        const summarizeChoice = choiceSummary && isGroup;
         return (
           <div
             key={question.fieldKey}
             id={enquiryQuestionElementId(question.fieldKey)}
-            className={cn("enquiry-form-question", error && "has-error")}
+            className={cn(
+              "enquiry-form-question",
+              error && "has-error",
+              twoColumn && question.type === "textarea" && "is-wide",
+            )}
           >
             <label className="enquiry-form-label" id={labelId} htmlFor={isGroup ? undefined : controlId}>
               <span>
@@ -49,20 +74,72 @@ export function EnquiryFormFields({
               </span>
             </label>
             <div className="enquiry-form-control">
-              <EnquiryControl
-                question={question}
-                value={value}
-                disabled={disabled}
-                invalid={Boolean(error)}
-                labelledBy={labelId}
-                onChange={(next) => onChange?.(question.fieldKey, next)}
-              />
+              {summarizeChoice ? (
+                <div className="enquiry-form-choice-summary">
+                  <span>{formatAnswer(question, value) || "尚未選擇"}</span>
+                  {!disabled && onChange ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      aria-label={`編輯${question.title}`}
+                      onClick={() => {
+                        setEditingKey(question.fieldKey);
+                        setDraftValue(value);
+                      }}
+                    >
+                      <Pencil />
+                      編輯
+                    </Button>
+                  ) : null}
+                </div>
+              ) : (
+                <EnquiryControl
+                  question={question}
+                  value={value}
+                  disabled={disabled}
+                  invalid={Boolean(error)}
+                  labelledBy={labelId}
+                  onChange={(next) => onChange?.(question.fieldKey, next)}
+                />
+              )}
               {question.hint ? <p className="enquiry-form-hint">{question.hint}</p> : null}
               {error ? <p className="enquiry-form-error" role="alert">{error}</p> : null}
             </div>
           </div>
         );
       })}
+      <Modal
+        open={Boolean(editing)}
+        title={editing?.title || "編輯"}
+        closeLabel="關閉"
+        onClose={() => setEditingKey(null)}
+        footer={
+          <>
+            <Button type="button" variant="outline" onClick={() => setEditingKey(null)}>取消</Button>
+            <Button
+              type="button"
+              onClick={() => {
+                if (editing) onChange?.(editing.fieldKey, draftValue);
+                setEditingKey(null);
+              }}
+            >
+              確認
+            </Button>
+          </>
+        }
+      >
+        {editing ? (
+          <EnquiryControl
+            question={editing}
+            value={draftValue}
+            disabled={false}
+            invalid={false}
+            labelledBy={`enquiry-label-${editing.fieldKey}`}
+            onChange={setDraftValue}
+          />
+        ) : null}
+      </Modal>
     </div>
   );
 }
@@ -142,7 +219,7 @@ function EnquiryControl({
           >
             <input
               type="radio"
-              name={question.fieldKey}
+              name={`${question.fieldKey}-${id}`}
               value={option.value}
               disabled={disabled}
               checked={value === option.value}
