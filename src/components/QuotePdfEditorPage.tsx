@@ -116,7 +116,7 @@ function lineToDraft(line: DetailLine): EditableLine {
   return {
     id: line.id,
     description: line.productName || line.content || "",
-    quantity: line.quantity === null ? "" : String(line.quantity),
+    quantity: line.quantity ? String(line.quantity) : "",
     unitPrice: String(unitPrice),
   };
 }
@@ -669,7 +669,7 @@ export function QuotePdfEditorPage({
                 <td>{index + 1}</td>
                 <td><PdfBlurCommitInput className="quote-pdf-product-input" aria-label={`產品 ${index + 1}`} value={line.description} onDirty={markDraftDirty} onCommit={(value) => updateLine(index, { description: value })} /></td>
                 <td><QuotePdfMoneyInput aria-label={`單價 ${index + 1}`} value={line.unitPrice} onDirty={markDraftDirty} onCommit={(value) => updateLine(index, { unitPrice: value })} /></td>
-                <td className={quantityColumnClassName}><PdfBlurCommitInput aria-label={`${isLunchBox ? "份數" : "數量"} ${index + 1}`} inputMode="decimal" value={line.quantity} onDirty={markDraftDirty} onCommit={(value) => updateLine(index, { quantity: value })} /></td>
+                <td className={quantityColumnClassName}><PdfBlurCommitInput aria-label={`${isLunchBox ? "份數" : "數量"} ${index + 1}`} inputMode="decimal" value={line.quantity === "0" ? "" : line.quantity} onDirty={markDraftDirty} onCommit={(value) => updateLine(index, { quantity: numberValue(value) > 0 ? value.trim() : "" })} /></td>
                 <td className={`quote-pdf-money ${quantityColumnClassName}`}>
                   {quantity === 0 ? null : `$${lineSubtotal.toLocaleString("zh-HK")}`}
                 </td>

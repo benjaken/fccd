@@ -142,13 +142,14 @@ describe("editable quote PDF page", () => {
     renderPage(vi.fn().mockResolvedValue(zeroQuantityResult));
 
     const quantity = await screen.findByLabelText("數量 1");
-    expect(quantity).toHaveValue("0");
+    expect(quantity).toHaveValue("");
     const row = quantity.closest("tr");
     expect(row).not.toBeNull();
     expect(row?.querySelector("td:last-child")).toBeEmptyDOMElement();
     expect(document.querySelector(".quote-pdf-table")).toHaveClass("has-no-quantities");
     expect(screen.getByRole("columnheader", { name: "數量" })).toHaveClass("quote-pdf-edit-only");
     expect(screen.getByRole("columnheader", { name: "金額" })).toHaveClass("quote-pdf-edit-only");
+    expect(screen.getByRole("columnheader", { name: "單價" })).toBeInTheDocument();
     expect(screen.getByLabelText("單價 1").previousElementSibling).toHaveTextContent("$");
     expect(screen.queryByText("小計：")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("運費")).not.toBeInTheDocument();
@@ -173,7 +174,8 @@ describe("editable quote PDF page", () => {
     expect(document.querySelector(".quote-pdf-table")).toHaveClass("has-no-quantities");
     expect(screen.getByRole("columnheader", { name: "數量" })).toHaveClass("quote-pdf-edit-only");
     expect(screen.getByRole("columnheader", { name: "金額" })).toHaveClass("quote-pdf-edit-only");
-    expect(screen.getByLabelText("數量 1").closest("td")).toHaveClass("quote-pdf-edit-only");
+    expect(screen.getByRole("columnheader", { name: "單價" })).toBeInTheDocument();
+    expect(screen.getByLabelText("數量 1")).toHaveValue("");
   });
 
   it("keeps the dollar prefix when the unit price is cleared", async () => {

@@ -33450,6 +33450,9 @@ body:has(.quote-pdf-editor) .quote-pdf-editor {
 .quote-pdf-table th:nth-child(1) { width: 40px; }
 .quote-pdf-table th:nth-child(3) { width: 72px; }
 .quote-pdf-table th:nth-child(4), .quote-pdf-table th:nth-child(5) { width: 90px; }
+.quote-pdf-table.has-no-quantities th.quote-pdf-qty-col,
+.quote-pdf-table.has-no-quantities td.quote-pdf-qty-col { display: none; }
+.quote-pdf-table.has-no-quantities th:nth-child(3) { width: 110px; }
 .quote-pdf-table input { padding: 0.45rem; text-align: right; }
 .quote-pdf-table .quote-pdf-product-input { text-align: left; }
 .quote-pdf-price-input {

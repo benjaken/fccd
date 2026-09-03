@@ -46,6 +46,9 @@ describe("quote PDF print stylesheet", () => {
   it("hides quantity columns from generated PDF output when none were entered", () => {
     const css = readFileSync(join(process.cwd(), "src/index.css"), "utf8");
     expect(css).toMatch(
+      /\.quote-pdf-table\.has-no-quantities td\.quote-pdf-qty-col \{ display: none;/,
+    );
+    expect(css).toMatch(
       /@media print[\s\S]*?\.quote-pdf-table\.has-no-quantities td\.quote-pdf-qty-col\s*\{\s*display:\s*none !important;/,
     );
     expect(css).toMatch(
