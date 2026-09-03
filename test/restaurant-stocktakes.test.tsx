@@ -62,13 +62,15 @@ describe("restaurant stocktake records", () => {
     expect(screen.getByText("存貨總價值：HK$103.50")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "編輯" }));
+    expect(screen.queryByRole("button", { name: "儲存" })).not.toBeInTheDocument();
     const quantity = screen.getByRole("spinbutton", { name: "修改「小白糖包 7.5g x 500/包」的盤點數量" });
     await user.clear(quantity);
     await user.type(quantity, "2");
     expect(screen.getByText("HK$138.00")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "儲存" }));
+    await user.tab();
 
     await waitFor(() => expect(api.saveQuantity).toHaveBeenCalledWith("stocktake-1", 2));
+    expect(screen.getByText("存貨總價值：HK$138.00")).toBeInTheDocument();
   });
 
   it("lets the loading master-detail layout fill the page shell", () => {
@@ -85,20 +87,33 @@ describe("restaurant stocktake records", () => {
     expect(styles).toMatch(/\.restaurant-stocktakes-page-skeleton\s*\{[^}]*gap:\s*0;[^}]*grid-template-rows:\s*minmax\(0,\s*1fr\);/s);
   });
 
-  it("enables save immediately in edit mode and exits when nothing changed", async () => {
+  it("exits edit mode without saving when quantities are unchanged", async () => {
     const user = userEvent.setup();
     const api = services();
     render(<MemoryRouter><RestaurantStocktakesPage services={api} canEdit canDelete /></MemoryRouter>);
     await screen.findByText("小白糖包 7.5g x 500/包");
 
     await user.click(screen.getByRole("button", { name: "編輯" }));
-    const save = screen.getByRole("button", { name: "儲存" });
-    expect(save).toBeEnabled();
-    await user.click(save);
+    expect(screen.queryByRole("button", { name: "儲存" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "完成" }));
 
     expect(api.saveQuantity).not.toHaveBeenCalled();
     expect(screen.getByRole("button", { name: "編輯" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "儲存" })).toBeDisabled();
+  });
+
+  it("does not save an invalid quantity on blur", async () => {
+    const user = userEvent.setup();
+    const api = services();
+    render(<MemoryRouter><RestaurantStocktakesPage services={api} canEdit canDelete /></MemoryRouter>);
+    await screen.findByText("小白糖包 7.5g x 500/包");
+
+    await user.click(screen.getByRole("button", { name: "編輯" }));
+    const quantity = screen.getByRole("spinbutton", { name: "修改「小白糖包 7.5g x 500/包」的盤點數量" });
+    await user.clear(quantity);
+    await user.tab();
+
+    expect(api.saveQuantity).not.toHaveBeenCalled();
+    expect(await screen.findByText("盤點數量必須是零或正數。")).toBeInTheDocument();
   });
 
   it("shows all loaded rows without table pagination controls", async () => {
