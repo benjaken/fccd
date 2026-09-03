@@ -106,13 +106,14 @@ async function sendEnquiryInternalWati(
     || ENQUIRY_INTERNAL_WATI_TEMPLATE;
   const broadcastName = Deno.env.get("WATI_ENQUIRY_INTERNAL_BROADCAST_NAME")?.trim()
     || ENQUIRY_INTERNAL_WATI_TEMPLATE;
+  const token = requiredEnv("WATI_API_TOKEN").replace(/^Bearer\s+/i, "");
   const endpoint = requiredEnv("WATI_API_ENDPOINT").replace(/\/$/, "");
   const providerResponse = await fetch(
     `${endpoint}/api/v2/sendTemplateMessage?whatsappNumber=${encodeURIComponent(phone)}`,
     {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${requiredEnv("WATI_API_TOKEN")}`,
+        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -123,11 +124,26 @@ async function sendEnquiryInternalWati(
       }),
     },
   );
-  const payload = await providerResponse.json().catch(() => null);
+  const raw = await providerResponse.text();
+  const payload = (() => {
+    try {
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return raw ? { raw: raw.slice(0, 300) } : null;
+    }
+  })();
   const reportedFailure = payload && typeof payload === "object"
     && (payload as { result?: unknown }).result === false;
   if (!providerResponse.ok || reportedFailure) {
-    throw new Error(`wati_send_failed:${providerResponse.status}:${JSON.stringify(payload).slice(0, 1000)}`);
+    let host = "invalid_endpoint";
+    try {
+      host = new URL(endpoint).host;
+    } catch {
+      host = "invalid_endpoint";
+    }
+    throw new Error(
+      `wati_send_failed:${providerResponse.status}:${host}:bodyLen=${raw.length}:${JSON.stringify(payload).slice(0, 800)}`,
+    );
   }
 }
 
@@ -177,9 +193,10 @@ Deno.serve(async (request) => {
     let allowlist: ReturnType<typeof notificationRecipientAllowlist>;
     try {
       allowlist = notificationRecipientAllowlist();
-    } catch {
-      // Missing staging allowlist must not block the customer acknowledgement.
-      allowlist = { phones: new Set(), emails: new Set(), enforced: true };
+    } catch (allowlistError) {
+      // Missing staging allowlist must not block internal staff or the customer acknowledgement.
+      console.error("enquiry notification allowlist unavailable", allowlistError);
+      allowlist = { phones: new Set(), emails: new Set(), enforced: false };
     }
     const appUrl = (Deno.env.get("APP_URL") || "").replace(/\/$/, "");
     const sendInternal = kind === "all" || kind === "internal";
@@ -202,6 +219,7 @@ Deno.serve(async (request) => {
               .filter((address) => validEmail(address) && isNotificationEmailAllowed(allowlist, address)),
           )];
           if (!addresses.length) {
+            console.error("enquiry internal email has no recipients");
             internalStatus = "failed";
           } else {
             const mail = buildEnquiryInternalContent({
@@ -221,7 +239,8 @@ Deno.serve(async (request) => {
             await sendResendEmail(addresses, mail.subject, mail.html);
             internalStatus = "sent";
           }
-        } catch {
+        } catch (emailError) {
+          console.error("enquiry internal email failed", emailError);
           internalStatus = "failed";
         }
         await admin.from("enquiry_submissions").update({
@@ -251,6 +270,7 @@ Deno.serve(async (request) => {
               ),
           )];
           if (!phones.length) {
+            console.error("enquiry internal wati has no recipients");
             internalWatiStatus = "failed";
           } else {
             const parameters = buildEnquiryInternalWatiParameters({
@@ -278,7 +298,8 @@ Deno.serve(async (request) => {
             }
             internalWatiStatus = anySent ? "sent" : "failed";
           }
-        } catch {
+        } catch (watiError) {
+          console.error("enquiry internal wati failed", watiError);
           internalWatiStatus = "failed";
         }
         await admin.from("enquiry_submissions").update({

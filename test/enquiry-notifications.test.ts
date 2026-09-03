@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -69,5 +71,15 @@ describe("enquiry notification emails", () => {
       { name: "10", value: "公司午餐 到會" },
       { name: "11", value: "https://example.com/quotes/pending/sub-1" },
     ]);
+  });
+
+  it("does not fail closed when the staging recipient allowlist is missing", () => {
+    const source = readFileSync(
+      resolve(process.cwd(), "supabase/functions/send-enquiry-notifications/index.ts"),
+      "utf8",
+    );
+    expect(source).toContain("enquiry notification allowlist unavailable");
+    expect(source).toContain("enforced: false");
+    expect(source).toContain("enquiry internal wati has no recipients");
   });
 });
