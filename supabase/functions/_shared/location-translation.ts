@@ -1,9 +1,13 @@
 export type LocationTranslationKind = "address" | "district";
 
-/** Dedicated xAI non-reasoning model. One-line HK address translation must not inherit grok-4.6. */
-export const DEFAULT_ADDRESS_TRANSLATION_MODEL = "grok-4.20-non-reasoning";
+/** Fast enough for a one-line address, and able to translate place names. Do not inherit grok-4.6. */
+export const DEFAULT_ADDRESS_TRANSLATION_MODEL = "grok-4.3";
+const QUALITY_RETRY_MODEL = "grok-4.3";
 const ADDRESS_TRANSLATION_MAX_TOKENS = 400;
 const ADDRESS_TRANSLATION_ATTEMPT_TIMEOUT_MS = 8_000;
+const KEEP_ENGLISH_WORDS = new Set([
+  "unit", "rm", "room", "flat", "fl", "blk", "block", "phase", "twr", "tower", "no", "nos",
+]);
 
 function env(primary: string, report: string, supplier: string) {
   return Deno.env.get(primary) ?? Deno.env.get(report) ?? Deno.env.get(supplier) ?? "";
@@ -21,15 +25,25 @@ function usesReasoningEffortNone(model: string) {
 function translationModel() {
   const dedicated = Deno.env.get("ADDRESS_TRANSLATION_AI_MODEL")?.trim()
     || env("ADDRESS_TRANSLATION_AI_MODEL", "REPORT_AI_MODEL", "SUPPLIER_QUOTE_AI_MODEL").trim();
-  // grok-4.6 cannot disable reasoning (defaults to high). A dedicated
-  // ADDRESS_TRANSLATION_AI_MODEL=grok-4.6 secret previously made translation
-  // take ~24s (12s timeout then a second 12s attempt).
   if (dedicated && !isForcedReasoningModel(dedicated)) return dedicated;
   return DEFAULT_ADDRESS_TRANSLATION_MODEL;
 }
 
 export function containsEnglishText(value: string | null | undefined) {
   return /[A-Za-z]/.test(String(value ?? ""));
+}
+
+/** True when English street/building/district names remain (unit/floor codes are allowed). */
+export function hasUntranslatedEnglish(value: string | null | undefined) {
+  const stripped = String(value ?? "")
+    .replace(/\b(?:unit|rm|room|flat|blk|block)[-\s]?\d+[A-Za-z]?\b/gi, " ")
+    .replace(/\b\d+\s*\/\s*[Ff]\b/g, " ")
+    .replace(/\b\d+[A-Za-z]\b/g, " ")
+    .replace(/\b\d+\b/g, " ")
+    .replace(/[^\p{L}\s]/gu, " ");
+  return stripped.split(/\s+/).some((word) => (
+    /^[A-Za-z]{3,}$/.test(word) && !KEEP_ENGLISH_WORDS.has(word.toLowerCase())
+  ));
 }
 
 function isAbortError(error: unknown) {
@@ -87,6 +101,72 @@ function providerRequest(
   };
 }
 
+function translationMessages(source: string, kind: LocationTranslationKind, incompleteHint?: string) {
+  const subject = kind === "district" ? "Hong Kong delivery district" : "Hong Kong delivery address";
+  return [
+    {
+      role: "system",
+      content: [
+        `Translate the supplied ${subject} into Hong Kong Traditional Chinese.`,
+        "Translate every English place name: streets, buildings, estates, malls, districts, Kowloon, Hong Kong, and New Territories.",
+        "Keep only numbers and unit/room/floor/block codes such as 1010B, 10/F, or No.4.",
+        "Do not prepend a Chinese district while leaving the original English address.",
+        "Do not add, infer, or remove location details.",
+        'Return one JSON object only: {"translatedText":string}.',
+        'Example: {"text":"Unit1010B, 10/F, Heng Ngai Jewelry Centre, No.4 Hok Yuen Street East, Hunghom, Kowloon, Hong Kong"} → {"translatedText":"香港九龍紅磡鶴園東街4號恆藝珠寶中心10樓1010B室"}.',
+      ].join(" "),
+    },
+    {
+      role: "user",
+      content: JSON.stringify(incompleteHint
+        ? { text: source, previousResultWasIncomplete: incompleteHint }
+        : { text: source }),
+    },
+  ];
+}
+
+async function completeTranslation(
+  endpoint: string,
+  apiKey: string,
+  model: string,
+  messages: Array<{ role: string; content: string }>,
+) {
+  const requests = [
+    providerRequest(model, messages, {
+      response_format: { type: "json_object" },
+      temperature: 0,
+    }),
+    providerRequest(model, messages),
+  ];
+  for (let attempt = 0; attempt < requests.length; attempt += 1) {
+    try {
+      const response = await postChatCompletion(
+        endpoint,
+        apiKey,
+        requests[attempt],
+        ADDRESS_TRANSLATION_ATTEMPT_TIMEOUT_MS,
+      );
+      if (!response.ok) {
+        const providerError = (await response.text().catch(() => ""))
+          .replaceAll(/\s+/g, " ").slice(0, 500);
+        if (response.status === 400 && attempt === 0) continue;
+        console.error("location-translation-provider", response.status, providerError);
+        throw new Error(`location_translation_provider_${response.status}`);
+      }
+      return {
+        translatedText: parseTranslatedText(
+          await response.json() as { choices?: Array<{ message?: { content?: string | null } }> },
+        ),
+        attempt: attempt + 1,
+      };
+    } catch (error) {
+      if (isAbortError(error)) throw new Error("location_translation_timeout");
+      throw error;
+    }
+  }
+  throw new Error("location_translation_provider_failed");
+}
+
 export async function translateLocationToTraditionalChinese(
   text: string,
   kind: LocationTranslationKind,
@@ -103,51 +183,29 @@ export async function translateLocationToTraditionalChinese(
   if (!enabled || !endpoint || !apiKey || !model) throw new Error("location_translation_disabled");
 
   const startedAt = Date.now();
-  const subject = kind === "district" ? "Hong Kong delivery district" : "Hong Kong delivery address";
-  const messages = [
-    {
-      role: "system",
-      content: `Translate the supplied ${subject} into Traditional Chinese suitable for Hong Kong. Use established Traditional Chinese names for districts, streets, estates, buildings, and landmarks whenever known. Preserve every number, room, floor, block, postal code, and delivery instruction. Do not add, infer, or remove location details. Return one JSON object only: {"translatedText":string}.`,
-    },
-    { role: "user", content: JSON.stringify({ text: source }) },
-  ];
-  const providerRequests = [
-    providerRequest(model, messages, {
-      response_format: { type: "json_object" },
-      temperature: 0,
-    }),
-    providerRequest(model, messages),
-  ];
+  let usedModel = model;
+  let result = await completeTranslation(endpoint, apiKey, model, translationMessages(source, kind));
 
-  for (let attempt = 0; attempt < providerRequests.length; attempt += 1) {
-    try {
-      const response = await postChatCompletion(
-        endpoint,
-        apiKey,
-        providerRequests[attempt],
-        ADDRESS_TRANSLATION_ATTEMPT_TIMEOUT_MS,
-      );
-      if (!response.ok) {
-        const providerError = (await response.text().catch(() => ""))
-          .replaceAll(/\s+/g, " ").slice(0, 500);
-        if (response.status === 400 && attempt === 0) continue;
-        console.error("location-translation-provider", response.status, providerError);
-        throw new Error(`location_translation_provider_${response.status}`);
-      }
-      const translatedText = parseTranslatedText(
-        await response.json() as { choices?: Array<{ message?: { content?: string | null } }> },
-      );
-      console.log("location-translation", {
-        model,
-        kind,
-        attempt: attempt + 1,
-        elapsedMs: Date.now() - startedAt,
-      });
-      return translatedText;
-    } catch (error) {
-      if (isAbortError(error)) throw new Error("location_translation_timeout");
-      throw error;
-    }
+  if (hasUntranslatedEnglish(result.translatedText)) {
+    console.warn("location-translation-incomplete", {
+      model,
+      sample: result.translatedText.slice(0, 160),
+    });
+    usedModel = QUALITY_RETRY_MODEL;
+    result = await completeTranslation(
+      endpoint,
+      apiKey,
+      QUALITY_RETRY_MODEL,
+      translationMessages(source, kind, result.translatedText),
+    );
   }
-  throw new Error("location_translation_provider_failed");
+
+  console.log("location-translation", {
+    model: usedModel,
+    kind,
+    attempt: result.attempt,
+    incomplete: hasUntranslatedEnglish(result.translatedText),
+    elapsedMs: Date.now() - startedAt,
+  });
+  return result.translatedText;
 }
