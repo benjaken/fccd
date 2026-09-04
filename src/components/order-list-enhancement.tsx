@@ -7,7 +7,7 @@ import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { Modal } from "@/components/ui/modal";
 import { cn } from "@/lib/utils";
-import { Ban, Copy, ListPlus, MessageSquare, Pencil, Truck } from "lucide-react";
+import { Ban, Copy, Eye, ListPlus, MessageSquare, Truck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useState, type ReactNode } from "react";
@@ -254,6 +254,7 @@ export function OrderRowActionMenu({
   onMessages,
   onPreview,
   statusPicker,
+  detailTo,
 }: {
     order: OrderListItem;
     canManage?: boolean;
@@ -262,15 +263,17 @@ export function OrderRowActionMenu({
   onMessages: () => void;
   onPreview: (kind: OrderPrintKind) => void;
   statusPicker?: ReactNode;
+  detailTo?: string;
 }) {
   const { t } = useTranslation();
   const messageLabel = `${t("quoteCustomers.messagesAction")} ${order.orderNumber || order.id}`;
   const showDeliveryNote =
     order.isSentToFactory === true && order.isAssignedToFleet === true;
+  const viewTo = detailTo ?? `/orders/${encodeURIComponent(order.id)}`;
   return (
     <div className="order-row-actions">
       {statusPicker}
-      {canManage ? <Link to={`/orders/${encodeURIComponent(order.id)}/edit`} target="_blank" rel="noopener noreferrer" aria-label="編輯" title="編輯"><Pencil /></Link> : null}
+      {canManage ? <Link to={viewTo} target="_blank" rel="noopener noreferrer" aria-label={t("orders.view")} title={t("orders.view")}><Eye /></Link> : null}
       {order.contactPhone ? <button type="button" onClick={onMessages} aria-label={messageLabel} title={t("quoteCustomers.messagesAction")}><MessageSquare /></button> : <span aria-label={`${messageLabel} ${t("common.notSet")}`} title={t("common.notSet")}><MessageSquare /></span>}
       {canManage && canCancel ? <button type="button" onClick={onCancel} aria-label="取消訂單" title="取消訂單"><Ban /></button> : null}
       {showDeliveryNote ? <button type="button" onClick={() => onPreview("delivery-note")} aria-label="送貨單" title="送貨單"><Truck /></button> : null}
