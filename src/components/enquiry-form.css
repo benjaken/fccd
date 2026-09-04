@@ -88,10 +88,6 @@
   border-bottom: 0;
 }
 
-.enquiry-form-fields-columns .enquiry-form-question.is-wide {
-  grid-template-columns: minmax(130px, 0.21fr) minmax(0, 1fr);
-}
-
 .enquiry-form-fields-columns .enquiry-form-label span {
   display: block;
   padding-top: 10px;
@@ -268,8 +264,7 @@
     border-left: 0;
   }
 
-  .enquiry-form-fields-columns .enquiry-form-question,
-  .enquiry-form-fields-columns .enquiry-form-question.is-wide {
+  .enquiry-form-fields-columns .enquiry-form-question {
     grid-template-columns: 1fr;
     gap: 6px;
   }
