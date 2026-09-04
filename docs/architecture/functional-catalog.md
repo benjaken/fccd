@@ -121,7 +121,7 @@
 
 ### F-FROZEN-003 售價成本、香料及產量異常
 
-- 入口：`/frozen/selling-price-cost`、`/frozen/seasoning-cost`、`/frozen/spice-usage`、`/frozen/yield-errors`、`/frozen/calculation-settings`。
+- 入口：`/frozen/selling-price-cost`、`/frozen/seasoning-recipes`、`/frozen/seasoning-cost`、`/frozen/spice-usage`、`/frozen/yield-errors`、`/frozen/calculation-settings`。
 - 邏輯：以 raw／prepared stock relation、月度價格版本、seasoning expression、yield formula 和 threshold 計算售價／成本；yield deviation 達 threshold 才產生 error record；設定頁控制 calculation constants。
 - 資料：`meat_price_versions`、`meat_seasoning_cost_versions`、`seasonings`、`meat_yield_errors`、`meat_calculation_settings` 及 raw／prepared movement。
 - 證據：E-R-FROZEN-003=`src/App.tsx:822`、E-M-FROZEN-004=`src/lib/selling-price-cost.ts:152`、E-M-FROZEN-005=`src/lib/meat-yield.ts:40`。

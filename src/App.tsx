@@ -90,6 +90,7 @@ import { CustomerSelfServicePage } from "@/components/CustomerSelfServicePage";
 import { RawMeatInventoryCalcPage } from "@/components/RawMeatInventoryCalcPage";
 import { SpiceUsagePage } from "@/components/SpiceUsagePage";
 import { SeasoningCostSettingsPage } from "@/components/SeasoningCostSettingsPage";
+import { SeasoningRecipesPage } from "@/components/SeasoningRecipesPage";
 import { SellingPriceCostPage } from "@/components/SellingPriceCostPage";
 import { CalculationSettingsPage } from "@/components/CalculationSettingsPage";
 import { MeatCustomersPage } from "@/components/MeatCustomersPage";
@@ -1105,6 +1106,10 @@ function OperationsShell() {
                     canManageActions={pageAccess.canManage("frozen.delivery_notes")}
                   />
                 }
+              />
+              <Route
+                path="/frozen/seasoning-recipes"
+                element={<SeasoningRecipesPage />}
               />
               <Route
                 path="/frozen/seasoning-cost"

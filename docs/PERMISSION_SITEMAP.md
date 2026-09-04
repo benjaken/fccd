@@ -112,7 +112,8 @@
 | 制成品库存 | `/frozen/prepared-meat-inventory` | A `frozen.prepared_meat_inventory` | M 同 key |
 | 售价成本 | `/frozen/selling-price-cost` | A `frozen.selling_price_cost` | 推送 A `.push` |
 | 送货单 | `/frozen/delivery-notes` | A `frozen.delivery_notes` | M 同 key |
-| 固定香料成本 | `/frozen/seasoning-cost` | A `frozen.seasoning_cost` | A `.edit` / `.delete` |
+| 固定香料成本 | `/frozen/seasoning-recipes` | A `frozen.seasoning_recipes` | A `.edit` / `.delete` |
+| 香料成本設定 | `/frozen/seasoning-cost` | A `frozen.seasoning_cost` | A `.edit` / `.delete` |
 | 计算设置 | `/frozen/calculation-settings` | A `frozen.calculation_settings` | 删除 A `.delete`；其他写入沿用页面能力 |
 | 凍肉客户 | `/frozen/customers` | A `frozen.meat_customers` | A `.edit` / `.delete` |
 | 香料用量 | `/frozen/spice-usage` | A `frozen.spice_usage` | 删除 A `.delete` |

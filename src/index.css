@@ -11770,6 +11770,155 @@ button.product-tag[aria-pressed="true"] {
   box-shadow: none;
 }
 
+
+.seasoning-recipes-page {
+  display: grid;
+  gap: 20px;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: calc(
+    100dvh - var(--topbar-height) - var(--workspace-height) - 56px
+  );
+  min-height: 0;
+  overflow: hidden;
+}
+
+.seasoning-recipes-heading {
+  align-items: flex-end;
+}
+
+.seasoning-recipes-layout {
+  display: grid;
+  grid-template-columns: 16.5rem minmax(0, 1fr);
+  gap: 14px;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.seasoning-recipes-main {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  min-height: 0;
+  overflow: hidden;
+  padding: 0;
+}
+
+.seasoning-recipes-product-search {
+  padding: 10px 14px 0;
+}
+
+.seasoning-recipes-product-search input {
+  width: 100%;
+  height: 2.25rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: white;
+  padding: 0 10px;
+  font: inherit;
+}
+
+.seasoning-recipes-product-search input:focus {
+  outline: none;
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 13%, transparent);
+}
+
+.seasoning-recipes-filter-label {
+  margin: 0;
+  padding: 0 16px 8px;
+  color: var(--muted-foreground);
+  font-size: 0.9rem;
+}
+
+.seasoning-recipes-table-wrap {
+  min-height: 0;
+}
+
+.seasoning-recipe-spice-cell {
+  min-width: 14rem;
+}
+
+.seasoning-recipe-spice-list,
+.seasoning-recipe-draft-list {
+  display: grid;
+  gap: 8px;
+}
+
+.seasoning-recipe-spice-card,
+.seasoning-recipe-draft-line {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in oklch, var(--border) 85%, transparent);
+  border-radius: 12px;
+  background: color-mix(in oklch, var(--muted) 22%, white);
+}
+
+.seasoning-recipe-spice-index {
+  display: grid;
+  place-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--primary) 16%, transparent);
+  color: color-mix(in oklch, var(--primary) 70%, #0f3d2e);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.seasoning-recipe-spice-card strong,
+.seasoning-recipe-draft-line strong {
+  display: block;
+  font-size: 0.9rem;
+}
+
+.seasoning-recipe-spice-card small,
+.seasoning-recipe-draft-line small {
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.seasoning-recipe-spice-editor {
+  display: grid;
+  gap: 12px;
+}
+
+.seasoning-recipe-spice-editor > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.seasoning-recipe-spice-editor > header span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.6rem;
+  height: 1.6rem;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--primary) 14%, transparent);
+  color: var(--primary);
+  font-size: 0.875rem;
+  font-weight: 750;
+}
+
+.seasoning-recipe-spice-empty {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 0.9rem;
+}
+
+.seasoning-recipe-add-spice {
+  display: grid;
+  gap: 10px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+
 .spice-usage-card.is-skeleton .spice-usage-card-index {
   background: color-mix(in oklch, var(--muted) 55%, transparent);
 }
@@ -18110,6 +18259,7 @@ a.masoft-order-tag:focus-visible {
   .products-page,
   .packages-page,
   .seasoning-cost-page,
+  .seasoning-recipes-page,
   .calculation-settings-page,
   .kitchen-settings-page,
   .meat-customers-page,
@@ -18143,6 +18293,7 @@ a.masoft-order-tag:focus-visible {
   .products-heading,
   .packages-heading,
   .spice-usage-heading,
+  .seasoning-recipes-heading,
   .seasoning-cost-heading,
   .calculation-settings-heading,
   .kitchen-settings-heading,
@@ -18156,6 +18307,7 @@ a.masoft-order-tag:focus-visible {
   }
 
   .spice-usage-layout,
+  .seasoning-recipes-layout,
   .selling-price-cost-layout {
     grid-template-columns: 1fr;
     grid-template-rows: minmax(9rem, 28%) minmax(0, 1fr);
@@ -35264,6 +35416,7 @@ body:has(.quote-clause-modal-root) { overflow: hidden; }
           .raw-meat-calc-page,
           .settings-permissions-page,
           .spice-usage-page,
+          .seasoning-recipes-page,
           .seasoning-cost-page,
           .calculation-settings-page,
           .kitchen-settings-page,
@@ -35297,6 +35450,7 @@ body:has(.quote-clause-modal-root) { overflow: hidden; }
           .raw-meat-calc-page,
           .settings-permissions-page,
           .spice-usage-page,
+          .seasoning-recipes-page,
           .seasoning-cost-page,
           .calculation-settings-page,
           .kitchen-settings-page,
@@ -35330,6 +35484,7 @@ body:has(.quote-clause-modal-root) { overflow: hidden; }
       .raw-meat-calc-page,
       .settings-permissions-page,
       .spice-usage-page,
+      .seasoning-recipes-page,
       .seasoning-cost-page,
       .calculation-settings-page,
       .kitchen-settings-page,
