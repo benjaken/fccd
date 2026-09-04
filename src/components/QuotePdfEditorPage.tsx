@@ -483,7 +483,7 @@ export function QuotePdfEditorPage({
     ) === "lunch-box";
     const productTotal = productSubtotal
       + numberValue(draft?.shippingFee ?? "")
-      - (isLunchBoxDraft ? numberValue(draft?.discount ?? "") : 0)
+      - numberValue(draft?.discount ?? "")
       - (isLunchBoxDraft ? numberValue(draft?.cashDollarDeduction ?? "") : 0)
       + (isLunchBoxDraft ? numberValue(draft?.cashDollarPurchase ?? "") : 0);
     return { productSubtotal, activitySubtotal, activityTotal, productTotal };
@@ -732,6 +732,10 @@ export function QuotePdfEditorPage({
             </td>
             <td><QuotePdfMoneyInput aria-label="運費" value={draft.shippingFee} onDirty={markDraftDirty} onCommit={(value) => update("shippingFee", value)} /></td>
           </tr>
+          {numberValue(draft.discount) > 0 ? <tr>
+            <td colSpan={4}><PdfBlurCommitInput className="quote-pdf-adjustment-label" aria-label="折扣顯示文字" value={draft.discountLabel} onDirty={markDraftDirty} onCommit={(value) => update("discountLabel", value)} /></td>
+            <td><QuotePdfMoneyInput aria-label="折扣" value={draft.discount} onDirty={markDraftDirty} onCommit={(value) => update("discount", value)} /></td>
+          </tr> : null}
           <tr><td className="quote-pdf-summary-label" colSpan={4}>總數：</td><td><strong>${totals.productTotal.toLocaleString("zh-HK")}</strong></td></tr>
         </tbody> : null}
       </table>
