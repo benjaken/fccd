@@ -307,7 +307,11 @@ export function usePdfAutoPageBreaks(
         sizes.set(element, { width: rect.width, height: rect.height });
       }
 
-      pendingFocusRestore.current = captureFocusedField(container);
+      // A ResizeObserver notification only asks for another measurement. Do
+      // not restore the focused field here: doing so treats ordinary scrolling
+      // as a request to keep the field at its previous viewport position and
+      // can pull the document back after the user scrolls. The page-break
+      // update below captures focus only when an element actually moves pages.
       rejectedMerges.current.clear();
       mergeTrial.current = null;
       setLayoutRevision((current) => current + 1);
@@ -443,7 +447,8 @@ export function usePdfAutoProductPageBreaks(
         sizes.set(element, { width: rect.width, height: rect.height });
       }
 
-      pendingFocusRestore.current = captureFocusedField(container);
+      // Preserve focus only when updatePageBreaks actually moves a row. A
+      // measurement-only render must never alter the user's scroll position.
       rejectedMerges.current.clear();
       mergeTrial.current = null;
       setLayoutRevision((current) => current + 1);
