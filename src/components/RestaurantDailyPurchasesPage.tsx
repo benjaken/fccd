@@ -78,6 +78,7 @@ function PurchaseRecordPanel({
   suppliers,
   purchaseTypes,
   loadingOptions,
+  lockedRestaurantId,
   saveRecord,
   onClose,
   onSaved,
@@ -87,6 +88,7 @@ function PurchaseRecordPanel({
   suppliers: RestaurantPurchaseOption[];
   purchaseTypes: RestaurantPurchaseOption[];
   loadingOptions: boolean;
+  lockedRestaurantId?: string;
   saveRecord: RestaurantDailyPurchaseServices["saveRecord"];
   onClose: () => void;
   onSaved: () => void;
@@ -102,11 +104,11 @@ function PurchaseRecordPanel({
   useEffect(() => {
     if (!open) return;
     setDate("");
-    setRestaurantId(restaurants[0]?.id ?? "");
+    setRestaurantId(lockedRestaurantId ?? restaurants[0]?.id ?? "");
     setSupplierId("");
     setAmounts(Object.fromEntries(purchaseTypes.map((type) => [type.id, "0"])));
     setError(null);
-  }, [open, purchaseTypes, restaurants]);
+  }, [lockedRestaurantId, open, purchaseTypes, restaurants]);
 
   const total = useMemo(
     () => purchaseTypes.reduce((sum, type) => sum + (Number(amounts[type.id]) || 0), 0),
@@ -155,10 +157,10 @@ function PurchaseRecordPanel({
       }
     >
       <form id="restaurant-daily-purchase-form" className="ingredients-form" onSubmit={(event) => void submit(event)}>
-        <label className="ingredients-field">
+        {!lockedRestaurantId ? <label className="ingredients-field">
           <span>{t("restaurantDailyPurchases.date")}</span>
           <input aria-label={t("restaurantDailyPurchases.date")} type="date" value={date} onChange={(event) => { setDate(event.target.value); setError(null); }} />
-        </label>
+        </label> : null}
         <div className="ingredients-field">
           <span>{t("restaurantDailyPurchases.supplier")}</span>
           <SearchSelect
@@ -423,9 +425,11 @@ function PurchaseEntriesPanel({
 export function RestaurantDailyPurchasesPage({
   services = defaultServices,
   canEdit: canEditOverride,
+  lockedRestaurantId,
 }: {
   services?: RestaurantDailyPurchaseServices;
   canEdit?: boolean;
+  lockedRestaurantId?: string;
 } = {}) {
   const { t, i18n } = useTranslation();
   const pageAccess = useCurrentPageAccess();
@@ -455,15 +459,18 @@ export function RestaurantDailyPurchasesPage({
     void Promise.all([services.loadRestaurants(), services.loadSuppliers(), services.loadPurchaseTypes()])
       .then(([restaurantItems, supplierItems, typeItems]) => {
         if (!active) return;
-        setRestaurants(restaurantItems);
+        const scopedRestaurants = lockedRestaurantId
+          ? restaurantItems.filter((restaurant) => restaurant.id === lockedRestaurantId)
+          : restaurantItems;
+        setRestaurants(scopedRestaurants);
         setSuppliers(supplierItems);
         setPurchaseTypes(typeItems);
         setFilters((current) => ({
           ...current,
           restaurantIds: current.restaurantIds.length
             ? current.restaurantIds
-            : restaurantItems[0]?.id
-              ? [restaurantItems[0].id]
+            : (lockedRestaurantId ?? scopedRestaurants[0]?.id)
+              ? [lockedRestaurantId ?? scopedRestaurants[0].id]
               : [],
         }));
       })
@@ -474,7 +481,7 @@ export function RestaurantDailyPurchasesPage({
         if (active) setLoadingOptions(false);
       });
     return () => { active = false; };
-  }, [services, t]);
+  }, [lockedRestaurantId, services, t]);
 
   useEffect(() => {
     let active = true;
@@ -545,10 +552,10 @@ export function RestaurantDailyPurchasesPage({
               <span id="restaurant-purchase-supplier-filter-label">{t("restaurantDailyPurchases.supplier")}</span>
               <MultiSelect id="restaurant-purchase-supplier-filter" labelledBy="restaurant-purchase-supplier-filter-label" options={suppliers} value={filters.supplierIds} disabled={loadingOptions} placeholder={t("restaurantDailyPurchases.supplierFilterPlaceholder")} searchPlaceholder={t("restaurantDailyPurchases.supplierSearchPlaceholder")} emptyLabel={t("restaurantDailyPurchases.supplierEmpty")} onChange={(supplierIds) => updateFilters({ supplierIds })} />
             </label>
-            <label className="kitchen-supplier-filter-select">
+            {!lockedRestaurantId ? <label className="kitchen-supplier-filter-select">
               <span id="restaurant-purchase-restaurant-filter-label">{t("restaurantDailyPurchases.restaurant")}</span>
               <MultiSelect id="restaurant-purchase-restaurant-filter" labelledBy="restaurant-purchase-restaurant-filter-label" options={restaurants} value={filters.restaurantIds} disabled={loadingOptions} placeholder={t("restaurantDailyPurchases.restaurantFilterPlaceholder")} searchPlaceholder={t("restaurantDailyPurchases.restaurantSearchPlaceholder")} emptyLabel={t("restaurantDailyPurchases.restaurantEmpty")} onChange={(restaurantIds) => updateFilters({ restaurantIds })} />
-            </label>
+            </label> : null}
           </div>
           {canEdit ? <div className="kitchen-monthly-cost-actions"><Button variant="outline" onClick={() => setEntriesPanelOpen(true)}><Pencil />{t("restaurantDailyPurchases.editEntries")}</Button><Button onClick={() => setPanelOpen(true)}><Plus />{t("restaurantDailyPurchases.add")}</Button></div> : null}
         </header>
@@ -561,24 +568,27 @@ export function RestaurantDailyPurchasesPage({
           loading={loading}
           loadingLabel={t("restaurantDailyPurchases.loading")}
           skeletonRows={8}
-          skeletonColumns={5}
+          skeletonColumns={lockedRestaurantId ? 4 : 5}
           onRefresh={() => setReloadKey((value) => value + 1)}
-          header={<tr><th>{t("restaurantDailyPurchases.date")}</th><th>{t("restaurantDailyPurchases.supplier")}</th><th>{t("restaurantDailyPurchases.restaurant")}</th><th>{t("restaurantDailyPurchases.category")}</th><th>{t("restaurantDailyPurchases.total")}</th></tr>}
+          header={<tr><th>{t("restaurantDailyPurchases.date")}</th><th>{t("restaurantDailyPurchases.supplier")}</th>{!lockedRestaurantId ? <th>{t("restaurantDailyPurchases.restaurant")}</th> : null}<th>{t("restaurantDailyPurchases.category")}</th><th>{t("restaurantDailyPurchases.total")}</th></tr>}
         >
-          {rows.map((row) => (
-            <tr key={`${row.recordId ?? "legacy"}:${row.date ?? "undated"}:${row.restaurantId}:${row.supplierId}`}>
-              <td><strong>{row.date ? formatDate(row.date, i18n.language) : filterDate}</strong></td>
-              <td><strong>{row.supplierName}</strong></td>
-              <td><strong>{row.restaurantName}</strong></td>
-              <td><div className="kitchen-supplier-category-list">{purchaseTypes.map((type) => { const amount = row.categories.find((category) => category.id === type.id)?.amount ?? 0; return <div key={type.id}><span>{type.name}</span><strong>{money(amount, i18n.language)}</strong></div>; })}</div></td>
-              <td><strong>{money(row.total, i18n.language)}</strong></td>
-            </tr>
-          ))}
-          {!loading && rows.length === 0 ? <tr><td colSpan={5} className="kitchen-cost-empty">{t("restaurantDailyPurchases.empty")}</td></tr> : null}
+          {rows.map((row) => {
+            const visibleCategories = purchaseTypes
+              .map((type) => ({ ...type, amount: row.categories.find((category) => category.id === type.id)?.amount ?? 0 }))
+              .filter((type) => type.amount !== 0);
+            return <tr key={`${row.recordId ?? "legacy"}:${row.date ?? "undated"}:${row.restaurantId}:${row.supplierId}`}>
+              <td data-label={t("restaurantDailyPurchases.date")} className="mobile-card-primary"><strong>{row.date ? formatDate(row.date, i18n.language) : filterDate}</strong></td>
+              <td data-label={t("restaurantDailyPurchases.supplier")}><strong>{row.supplierName}</strong></td>
+              {!lockedRestaurantId ? <td data-label={t("restaurantDailyPurchases.restaurant")}><strong>{row.restaurantName}</strong></td> : null}
+              <td data-label={t("restaurantDailyPurchases.category")}><div className="kitchen-supplier-category-list">{visibleCategories.map((type) => <div key={type.id}><span>{type.name}</span><strong>{money(type.amount, i18n.language)}</strong></div>)}</div></td>
+              <td data-label={t("restaurantDailyPurchases.total")} className="mobile-card-total"><strong>{money(row.total, i18n.language)}</strong></td>
+            </tr>;
+          })}
+          {!loading && rows.length === 0 ? <tr><td colSpan={lockedRestaurantId ? 4 : 5} className="kitchen-cost-empty">{t("restaurantDailyPurchases.empty")}</td></tr> : null}
         </ListTable>
       </article>
 
-      <PurchaseRecordPanel open={panelOpen} restaurants={restaurants} suppliers={suppliers} purchaseTypes={purchaseTypes} loadingOptions={loadingOptions} saveRecord={services.saveRecord} onClose={() => setPanelOpen(false)} onSaved={() => { setPanelOpen(false); setReloadKey((value) => value + 1); }} />
+      <PurchaseRecordPanel open={panelOpen} restaurants={restaurants} suppliers={suppliers} purchaseTypes={purchaseTypes} loadingOptions={loadingOptions} lockedRestaurantId={lockedRestaurantId} saveRecord={services.saveRecord} onClose={() => setPanelOpen(false)} onSaved={() => { setPanelOpen(false); setReloadKey((value) => value + 1); }} />
       <PurchaseEntriesPanel open={entriesPanelOpen} filters={filters} suppliers={suppliers} services={services} onClose={() => setEntriesPanelOpen(false)} onChanged={() => setReloadKey((value) => value + 1)} />
     </section>
   );

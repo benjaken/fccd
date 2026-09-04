@@ -249,6 +249,7 @@ export function RestaurantDailySalesPage({
   saveSales = saveRestaurantDailySales,
   sendReportEmail = sendRestaurantDailySalesReportEmail,
   canEdit: canEditOverride,
+  lockedRestaurantId,
 }: {
   loadMasters?: typeof fetchRestaurantDailySalesMasters;
   loadSales?: typeof fetchRestaurantDailySales;
@@ -257,6 +258,7 @@ export function RestaurantDailySalesPage({
   saveSales?: typeof saveRestaurantDailySales;
   sendReportEmail?: typeof sendRestaurantDailySalesReportEmail;
   canEdit?: boolean;
+  lockedRestaurantId?: string;
 }) {
   const { t, i18n } = useTranslation();
   const access = useCurrentPageAccess();
@@ -355,7 +357,7 @@ export function RestaurantDailySalesPage({
       .then((next) => {
         if (!active) return;
         setMasters(next);
-        setRestaurantId((current) => current || pickDefaultRestaurant(next.restaurants)?.id || "");
+        setRestaurantId((current) => lockedRestaurantId ?? (current || pickDefaultRestaurant(next.restaurants)?.id || ""));
       })
       .catch((error: unknown) => {
         if (active) setLoadError(error instanceof Error ? error.message : "load_failed");
@@ -364,7 +366,7 @@ export function RestaurantDailySalesPage({
         if (active) setLoadingMasters(false);
       });
     return () => { active = false; };
-  }, [loadMasters]);
+  }, [loadMasters, lockedRestaurantId]);
 
   useEffect(() => {
     if (!restaurantId) return;
@@ -545,7 +547,7 @@ export function RestaurantDailySalesPage({
       ) : null}
 
       <section className="panel daily-sales-toolbar" aria-label={t("restaurantDailySales.restaurantPicker")}>
-        <div>
+        {!lockedRestaurantId ? <div>
           <span className="daily-sales-toolbar-label">{t("restaurantDailySales.restaurantPicker")}</span>
           <div className="daily-sales-restaurant-pills">
             {masters?.restaurants.map((restaurant) => (
@@ -565,7 +567,7 @@ export function RestaurantDailySalesPage({
               </button>
             ))}
           </div>
-        </div>
+        </div> : null}
         <div className="daily-sales-record-filter">
           <label className="daily-sales-filter-mode">
             <span>{t("restaurantDailySales.filterMode")}</span>
@@ -600,7 +602,7 @@ export function RestaurantDailySalesPage({
             className="daily-sales-new-record"
             variant="outline"
             onClick={() => {
-              setDraftRestaurantId(restaurantId || pickDefaultRestaurant(masters?.restaurants ?? [])?.id || "");
+              setDraftRestaurantId(lockedRestaurantId ?? (restaurantId || pickDefaultRestaurant(masters?.restaurants ?? [])?.id || ""));
               setDraftDate(hongKongDateValue());
               setNewDialogOpen(true);
             }}
@@ -780,7 +782,7 @@ export function RestaurantDailySalesPage({
         footer={<><Button variant="outline" onClick={() => setNewDialogOpen(false)}>{t("common.cancel")}</Button><Button disabled={!draftRestaurantId || !draftDate || checkingNewRecord || newRecordExists || newRecordCheckError} onClick={() => { setRestaurantId(draftRestaurantId); setDate(draftDate); setEditingExisting(false); applyRecord(emptyRestaurantDailySalesRecord()); setEditorMode("new"); setNewDialogOpen(false); }}>{t("restaurantDailySales.startInput")}</Button></>}
       >
         <div className="daily-sales-new-form">
-          <label><span>{t("restaurantDailySales.restaurantPicker")}</span><FilterableSelect aria-label={t("restaurantDailySales.restaurantPicker")} value={draftRestaurantId} onChange={(event) => setDraftRestaurantId(event.target.value)}>{masters?.restaurants.map((restaurant) => <option value={restaurant.id} key={restaurant.id}>{restaurant.name}</option>)}</FilterableSelect></label>
+          {!lockedRestaurantId ? <label><span>{t("restaurantDailySales.restaurantPicker")}</span><FilterableSelect aria-label={t("restaurantDailySales.restaurantPicker")} value={draftRestaurantId} onChange={(event) => setDraftRestaurantId(event.target.value)}>{masters?.restaurants.map((restaurant) => <option value={restaurant.id} key={restaurant.id}>{restaurant.name}</option>)}</FilterableSelect></label> : null}
           <label><span>{t("restaurantDailySales.date")}</span><input aria-label={t("restaurantDailySales.date")} type="date" value={draftDate} max={hongKongDateValue()} onChange={(event) => setDraftDate(event.target.value)} /></label>
           {checkingNewRecord ? <p>{t("restaurantDailySales.checkingDate")}</p> : newRecordExists ? <p className="is-error" role="alert">{t("restaurantDailySales.recordExists")}</p> : newRecordCheckError ? <p className="is-error" role="alert">{t("restaurantDailySales.checkDateError")}</p> : null}
         </div>

@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { History, PackageCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { OperationalListState } from "@/components/ui/operational-list-state";
 import { TKO_RESTAURANT_ID } from "@/lib/shop-orders";
 import {
   fetchPendingShopReceives,
@@ -81,10 +83,16 @@ export function ShopReceivePage() {
           <p>{t("shopReceive.description")}</p>
         </div>
       </header>
-      <article className="panel ingredients-panel">
+      <article className="panel ingredients-panel shop-receive-pending">
         {message ? <p>{message}</p> : null}
         {error ? <p>{error}</p> : null}
-        {pending.length === 0 && !error ? <p>{t("shopReceive.emptyPending")}</p> : null}
+        {pending.length === 0 && !error ? (
+          <OperationalListState
+            icon={PackageCheck}
+            title={t("shopReceive.emptyPending")}
+            description={t("shopReceive.description")}
+          />
+        ) : null}
         {pending.map((row) => {
           const preview = receiveStatusForLines(
             row.lines.map((line) => ({
@@ -98,7 +106,8 @@ export function ShopReceivePage() {
                 {row.shipmentNo}
                 {row.requestNo ? ` / ${row.requestNo}` : ""} · {row.shippedAt.slice(0, 10)}
               </h2>
-              <table className="shop-order-items">
+              <div className="shop-order-table-wrap">
+              <table className="shop-order-items shop-receive-table">
                 <thead>
                   <tr>
                     <th>{t("shopOrdering.item")}</th>
@@ -114,10 +123,10 @@ export function ShopReceivePage() {
                     const varied = hasReceiveVariance(line.shippedQuantity, received);
                     return (
                       <tr key={line.id}>
-                        <td>{line.name}</td>
-                        <td>{line.unit}</td>
-                        <td>{line.shippedQuantity}</td>
-                        <td>
+                        <td data-label={t("shopOrdering.item")}>{line.name}</td>
+                        <td data-label={t("shopOrdering.unit")}>{line.unit}</td>
+                        <td data-label={t("shopReceive.shipped")}>{line.shippedQuantity}</td>
+                        <td data-label={t("shopReceive.received")}>
                           <input
                             type="number"
                             min="0"
@@ -127,7 +136,7 @@ export function ShopReceivePage() {
                             }
                           />
                         </td>
-                        <td>
+                        <td data-label={t("shopReceive.reason")}>
                           {varied ? (
                             <input
                               value={reasons[line.id] ?? ""}
@@ -145,6 +154,7 @@ export function ShopReceivePage() {
                   })}
                 </tbody>
               </table>
+              </div>
               {preview === "exception" ? <p>{t("shopReceive.willException")}</p> : null}
               <div className="shop-order-actions">
                 <Button disabled={busyId === row.id} onClick={() => void confirm(row)}>
@@ -155,10 +165,17 @@ export function ShopReceivePage() {
           );
         })}
       </article>
-      <article className="panel ingredients-panel">
+      <article className="panel ingredients-panel shop-receive-history">
         <h2>{t("shopReceive.historyTitle")}</h2>
-        {history.length === 0 ? <p>{t("shopReceive.emptyHistory")}</p> : null}
-        <table className="shop-order-items">
+        {history.length === 0 ? (
+          <OperationalListState
+            icon={History}
+            title={t("shopReceive.emptyHistory")}
+            description={t("shopReceive.description")}
+          />
+        ) : (
+          <div className="shop-order-table-wrap">
+        <table className="shop-order-items shop-receive-history-table">
           <thead>
             <tr>
               <th>{t("shopOrdering.columns.number")}</th>
@@ -170,12 +187,12 @@ export function ShopReceivePage() {
           <tbody>
             {history.map((row) => (
               <tr key={row.id}>
-                <td>{row.receiveNo}</td>
-                <td>
+                <td data-label={t("shopOrdering.columns.number")}>{row.receiveNo}</td>
+                <td data-label={t("shopOrdering.columns.status")}>
                   {row.status === "exception" ? t("shopReceive.statusException") : t("shopReceive.statusReceived")}
                 </td>
-                <td>{row.receivedAt.slice(0, 10)}</td>
-                <td>
+                <td data-label={t("shopReceive.receivedAt")}>{row.receivedAt.slice(0, 10)}</td>
+                <td data-label={t("shopOrdering.columns.lines")}>
                   {row.lines
                     .map((line) => `${line.name} ${line.receivedQuantity}/${line.shippedQuantity}`)
                     .join("、")}
@@ -187,6 +204,8 @@ export function ShopReceivePage() {
             ))}
           </tbody>
         </table>
+          </div>
+        )}
       </article>
     </section>
   );

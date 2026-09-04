@@ -17,6 +17,7 @@ export type UserProfile = {
   email_noti: boolean;
   factory_panel_date: string | null;
   role: string | null;
+  shop_restro_id: string | null;
   shop_restro_legacy_id: string | null;
   user_name: string | null;
   week: string | null;
@@ -88,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data, error } = await supabase
       .from("user_profiles")
       .select(
-        "id,email,email_noti,factory_panel_date,role,shop_restro_legacy_id,user_name,week,week_plus_1,week_plus_2,created_at,updated_at,slug,social_networks,legacy_id",
+        "id,email,email_noti,factory_panel_date,role,shop_restro_id,shop_restro_legacy_id,user_name,week,week_plus_1,week_plus_2,created_at,updated_at,slug,social_networks,legacy_id",
       )
       .eq("id", userId)
       .maybeSingle();

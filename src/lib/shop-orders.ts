@@ -28,6 +28,12 @@ export type ShopCatalogSupplier = {
   items: ShopCatalogItem[];
 };
 
+export function shopCatalogSupplierKey(
+  supplier: Pick<ShopCatalogSupplier, "supplierName" | "channel" | "fccSupplierId">,
+) {
+  return [supplier.channel, supplier.fccSupplierId ?? "unlinked", supplier.supplierName].join(":");
+}
+
 export type ShopSupplierContact = {
   id: string;
   supplierId: string;
@@ -41,6 +47,27 @@ export type ShopOrderLineInput = {
   quantity: number;
   note?: string;
 };
+
+export function buildSupplierOrderMessage(input: {
+  restaurantName: string;
+  requestNo: string;
+  supplierName: string;
+  deliveryDate: string;
+  note?: string;
+  lines: Array<{ name: string; unit: string; quantity: number }>;
+}) {
+  return [
+    `你好，以下為 ${input.restaurantName} 的訂貨：`,
+    `訂單編號：${input.requestNo}`,
+    `送貨日期：${input.deliveryDate}`,
+    `供應商：${input.supplierName}`,
+    "",
+    ...input.lines.map((line) => `- ${line.name} × ${line.quantity} ${line.unit}`),
+    ...(input.note?.trim() ? ["", `備註：${input.note.trim()}`] : []),
+    "",
+    "請確認收到，謝謝。",
+  ].join("\n");
+}
 
 export type ShopOrderRequest = {
   id: string;
@@ -129,12 +156,13 @@ function mapCatalog(row: CatalogRow): ShopCatalogItem {
 export function groupCatalogBySupplier(items: ShopCatalogItem[]): ShopCatalogSupplier[] {
   const groups = new Map<string, ShopCatalogSupplier>();
   for (const item of items) {
-    const existing = groups.get(item.supplierName);
+    const key = shopCatalogSupplierKey(item);
+    const existing = groups.get(key);
     if (existing) {
       existing.items.push(item);
       continue;
     }
-    groups.set(item.supplierName, {
+    groups.set(key, {
       supplierName: item.supplierName,
       channel: item.channel,
       fccSupplierId: item.fccSupplierId,

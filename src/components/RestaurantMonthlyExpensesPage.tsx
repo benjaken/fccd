@@ -96,6 +96,7 @@ export function RestaurantMonthlyExpensesPage({
   setPnlStatus = setRestaurantMonthlyExpensePnlStatus,
   deleteRecord = deleteRestaurantMonthlyExpense,
   canEdit: canEditOverride,
+  lockedRestaurantId,
 }: {
   loadMasters?: typeof fetchRestaurantMonthlyExpenseMasters;
   loadRecent?: typeof fetchRecentRestaurantMonthlyExpenses;
@@ -105,6 +106,7 @@ export function RestaurantMonthlyExpensesPage({
   setPnlStatus?: typeof setRestaurantMonthlyExpensePnlStatus;
   deleteRecord?: typeof deleteRestaurantMonthlyExpense;
   canEdit?: boolean;
+  lockedRestaurantId?: string;
 }) {
   const { t, i18n } = useTranslation();
   const access = useCurrentPageAccess();
@@ -143,8 +145,9 @@ export function RestaurantMonthlyExpensesPage({
 
   const refreshRecent = async () => {
     const items = await loadRecent();
-    setRecent(items);
-    return items;
+    const scopedItems = lockedRestaurantId ? items.filter((item) => item.restaurantId === lockedRestaurantId) : items;
+    setRecent(scopedItems);
+    return scopedItems;
   };
 
   useEffect(() => {
@@ -154,8 +157,8 @@ export function RestaurantMonthlyExpensesPage({
     void Promise.all([loadMasters(), loadRecent()])
       .then(([nextMasters, nextRecent]) => {
         if (!active) return;
-        setMasters(nextMasters);
-        setRecent(nextRecent);
+        setMasters(lockedRestaurantId ? { ...nextMasters, restaurants: nextMasters.restaurants.filter((restaurant) => restaurant.id === lockedRestaurantId) } : nextMasters);
+        setRecent(lockedRestaurantId ? nextRecent.filter((item) => item.restaurantId === lockedRestaurantId) : nextRecent);
       })
       .catch((loadError: unknown) => {
         if (active) setError(loadError instanceof Error ? loadError.message : "load_failed");
@@ -164,7 +167,7 @@ export function RestaurantMonthlyExpensesPage({
         if (active) setLoading(false);
       });
     return () => { active = false; };
-  }, [loadMasters, loadRecent]);
+  }, [loadMasters, loadRecent, lockedRestaurantId]);
 
   useEffect(() => {
     if (!newDialogOpen || !draftRestaurantId || !draftMonth) {
@@ -327,7 +330,7 @@ export function RestaurantMonthlyExpensesPage({
                   className="monthly-expenses-new-record-trigger"
                   disabled={!canEdit}
                   onClick={() => {
-                    setDraftRestaurantId(masters?.restaurants[0]?.id ?? "");
+                    setDraftRestaurantId(lockedRestaurantId ?? masters?.restaurants[0]?.id ?? "");
                     setDraftMonth(currentHongKongMonth());
                     setNewRecordExists(false);
                     setNewDialogOpen(true);
@@ -471,7 +474,7 @@ export function RestaurantMonthlyExpensesPage({
         }}>{t("restaurantMonthlyExpenses.startInput")}</Button></>}
       >
         <div className="monthly-expenses-new-form">
-          <label><span>{t("restaurantMonthlyExpenses.restaurant")}</span><FilterableSelect aria-label={t("restaurantMonthlyExpenses.restaurant")} value={draftRestaurantId} onChange={(event) => setDraftRestaurantId(event.target.value)}><option value="">{t("restaurantMonthlyExpenses.restaurantPlaceholder")}</option>{masters?.restaurants.map((restaurant) => <option key={restaurant.id} value={restaurant.id}>{restaurant.name}</option>)}</FilterableSelect></label>
+          {!lockedRestaurantId ? <label><span>{t("restaurantMonthlyExpenses.restaurant")}</span><FilterableSelect aria-label={t("restaurantMonthlyExpenses.restaurant")} value={draftRestaurantId} onChange={(event) => setDraftRestaurantId(event.target.value)}><option value="">{t("restaurantMonthlyExpenses.restaurantPlaceholder")}</option>{masters?.restaurants.map((restaurant) => <option key={restaurant.id} value={restaurant.id}>{restaurant.name}</option>)}</FilterableSelect></label> : null}
           <label><span>{t("restaurantMonthlyExpenses.month")}</span><input aria-label={t("restaurantMonthlyExpenses.month")} type="month" value={draftMonth} onChange={(event) => setDraftMonth(event.target.value)} /></label>
           {checkingNewRecord ? <p>{t("restaurantMonthlyExpenses.checkingMonth")}</p> : newRecordExists ? <p className="is-error" role="alert">{t("restaurantMonthlyExpenses.recordExists")}</p> : newRecordCheckError ? <p className="is-error" role="alert">{t("restaurantMonthlyExpenses.checkMonthError")}</p> : null}
         </div>

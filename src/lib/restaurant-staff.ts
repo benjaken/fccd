@@ -2,7 +2,7 @@ import { supabase } from "@/lib/supabase";
 
 export const RESTAURANT_STAFF_PAGE_SIZE = 15;
 export type RestaurantStaff = { id: string; name: string; phone: string | null; restaurantId: string | null; restaurantName: string | null; department: string | null; employmentType: string | null; isActive: boolean };
-export type RestaurantOption = { id: string; name: string };
+export type RestaurantOption = { id: string; name: string; legacyId?: string | null };
 
 function map(row: Record<string, unknown>): RestaurantStaff {
   const restaurant = Array.isArray(row.restaurants) ? row.restaurants[0] : row.restaurants;
@@ -19,9 +19,9 @@ export async function fetchRestaurantStaff({ page, search }: { page: number; sea
 }
 
 export async function fetchRestaurantOptions(): Promise<RestaurantOption[]> {
-  const { data, error } = await supabase.from("restaurants").select("id,name").order("name");
+  const { data, error } = await supabase.from("restaurants").select("id,name,legacy_id").order("name");
   if (error) throw error;
-  return (data ?? []).map((row) => ({ id: row.id as string, name: row.name as string }));
+  return (data ?? []).map((row) => ({ id: row.id as string, name: row.name as string, legacyId: row.legacy_id as string | null }));
 }
 
 export async function createRestaurantStaff(input: Omit<RestaurantStaff, "id" | "restaurantName" | "isActive">) {

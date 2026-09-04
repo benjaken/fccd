@@ -111,10 +111,12 @@ export function RestaurantStocktakesPage({
   services: serviceOverrides,
   canEdit: canEditOverride,
   canDelete: canDeleteOverride,
+  lockedRestaurantId,
 }: {
   services?: Partial<Services>;
   canEdit?: boolean;
   canDelete?: boolean;
+  lockedRestaurantId?: string;
 }) {
   const { t, i18n } = useTranslation();
   const access = useCurrentPageAccess();
@@ -153,14 +155,16 @@ export function RestaurantStocktakesPage({
     void Promise.all([services.loadMasters(), services.loadRecords()])
       .then(([nextMasters, nextRecords]) => {
         if (cancelled) return;
-        setMasters(nextMasters);
-        setRecords(nextRecords);
-        setSelected((current) => current && nextRecords.some((record) => recordKey(record) === recordKey(current)) ? current : (nextRecords[0] ?? null));
+        const scopedMasters = lockedRestaurantId ? { ...nextMasters, restaurants: nextMasters.restaurants.filter((restaurant) => restaurant.id === lockedRestaurantId) } : nextMasters;
+        const scopedRecords = lockedRestaurantId ? nextRecords.filter((record) => record.restaurantId === lockedRestaurantId) : nextRecords;
+        setMasters(scopedMasters);
+        setRecords(scopedRecords);
+        setSelected((current) => current && scopedRecords.some((record) => recordKey(record) === recordKey(current)) ? current : (scopedRecords[0] ?? null));
       })
       .catch(() => { if (!cancelled) setError("loadError"); })
       .finally(() => { if (!cancelled) setLoadingRecords(false); });
     return () => { cancelled = true; };
-  }, [reloadKey, services]);
+  }, [lockedRestaurantId, reloadKey, services]);
 
   useEffect(() => {
     if (!selected) {
@@ -216,7 +220,7 @@ export function RestaurantStocktakesPage({
   const openCreate = () => {
     const month = selected?.month ?? hongKongMonth();
     setNewMonth(month);
-    const preferredRestaurant = masters.restaurants.find(
+    const preferredRestaurant = lockedRestaurantId ?? masters.restaurants.find(
       (restaurant) => !restaurantUnavailableFor(month, restaurant.id),
     )?.id ?? "";
     setNewRestaurantId(preferredRestaurant);
@@ -334,7 +338,7 @@ export function RestaurantStocktakesPage({
                   const draft = drafts[item.id] ?? "";
                   const quantity = draft.trim() === "" ? null : Number(draft);
                   const totalCost = editMode && quantity !== null && Number.isFinite(quantity) ? quantity * item.unitCost : item.totalCost;
-                  return <tr key={item.id}>{spans.has(index) ? <td rowSpan={spans.get(index)}><strong>{item.supplierName || t("restaurantStocktakes.noSupplier")}</strong></td> : null}<td><strong>{item.name}</strong></td><td>{item.unit || "—"}</td><td>{money(item.unitCost)}</td><td>{editMode ? <input className="stocktake-quantity-input" type="number" min="0" step="0.001" value={draft} disabled={Boolean(savingIds[item.id])} aria-label={t("restaurantStocktakes.editQuantity", { item: item.name })} placeholder={t("restaurantStocktakes.quantityPlaceholder")} onChange={(event) => setDrafts((current) => ({ ...current, [item.id]: event.target.value }))} onBlur={(event) => void saveRow(item, event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }} /> : item.quantity == null ? <span className="stocktake-not-counted">{t("restaurantStocktakes.notCounted")}</span> : item.quantity}</td><td>{money(totalCost)}</td></tr>;
+                  return <tr key={item.id}>{spans.has(index) ? <td className="stocktake-desktop-supplier" data-label={t("restaurantStocktakes.columns.supplier")} rowSpan={spans.get(index)}><strong>{item.supplierName || t("restaurantStocktakes.noSupplier")}</strong></td> : null}<td className="stocktake-item-name" data-label={t("restaurantStocktakes.columns.name")}><small className="stocktake-mobile-supplier">{item.supplierName || t("restaurantStocktakes.noSupplier")}</small><strong>{item.name}</strong></td><td data-label={t("restaurantStocktakes.columns.unit")}>{item.unit || "—"}</td><td data-label={t("restaurantStocktakes.columns.unitCost")}>{money(item.unitCost)}</td><td data-label={t("restaurantStocktakes.columns.quantity")}>{editMode ? <input className="stocktake-quantity-input" type="number" min="0" step="0.001" inputMode="decimal" value={draft} disabled={Boolean(savingIds[item.id])} aria-label={t("restaurantStocktakes.editQuantity", { item: item.name })} placeholder={t("restaurantStocktakes.quantityPlaceholder")} onChange={(event) => setDrafts((current) => ({ ...current, [item.id]: event.target.value }))} onBlur={(event) => void saveRow(item, event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }} /> : item.quantity == null ? <span className="stocktake-not-counted">{t("restaurantStocktakes.notCounted")}</span> : item.quantity}</td><td data-label={t("restaurantStocktakes.columns.total")}>{money(totalCost)}</td></tr>;
                 })}
               </ListTable>}
             </> : <div className="products-state products-state-empty"><ClipboardList /><div><strong>{t("restaurantStocktakes.selectRecord")}</strong><span>{t("restaurantStocktakes.selectRecordDescription")}</span></div></div>}
@@ -344,7 +348,7 @@ export function RestaurantStocktakesPage({
       <Modal open={createOpen} title={t("restaurantStocktakes.createTitle")} description={t("restaurantStocktakes.createDescription")} onClose={() => !creating && setCreateOpen(false)} closeLabel={t("restaurantStocktakes.close")} size="sm" footer={<><Button type="button" variant="outline" disabled={creating} onClick={() => setCreateOpen(false)}>{t("restaurantStocktakes.cancel")}</Button><Button type="button" disabled={!newMonth || !newRestaurantId || !newDepartment || selectedCombinationExists || creating} onClick={() => void submitCreate()}>{creating ? t("restaurantStocktakes.creating") : t("restaurantStocktakes.continueAction")}</Button></>}>
         <div className="ingredients-form restaurant-stocktake-create-form">
           <label className="ingredients-field"><span>{t("restaurantStocktakes.month")}</span><input type="month" value={newMonth} onChange={(event) => { setNewMonth(event.target.value); setNewDepartment(""); setCreateError(null); }} /></label>
-          <label className="ingredients-field"><span>{t("restaurantStocktakes.restaurant")}</span><FilterableSelect value={newRestaurantId} onChange={(event) => { setNewRestaurantId(event.target.value); setNewDepartment(""); setCreateError(null); }}><option value="">{t("restaurantStocktakes.restaurantPlaceholder")}</option>{masters.restaurants.map((restaurant) => <option key={restaurant.id} value={restaurant.id} disabled={restaurantUnavailable(restaurant.id)}>{restaurant.name}{restaurantUnavailable(restaurant.id) ? t("restaurantStocktakes.allRecordedSuffix") : ""}</option>)}</FilterableSelect></label>
+          {!lockedRestaurantId ? <label className="ingredients-field"><span>{t("restaurantStocktakes.restaurant")}</span><FilterableSelect value={newRestaurantId} onChange={(event) => { setNewRestaurantId(event.target.value); setNewDepartment(""); setCreateError(null); }}><option value="">{t("restaurantStocktakes.restaurantPlaceholder")}</option>{masters.restaurants.map((restaurant) => <option key={restaurant.id} value={restaurant.id} disabled={restaurantUnavailable(restaurant.id)}>{restaurant.name}{restaurantUnavailable(restaurant.id) ? t("restaurantStocktakes.allRecordedSuffix") : ""}</option>)}</FilterableSelect></label> : null}
           <label className="ingredients-field"><span>{t("restaurantStocktakes.department")}</span><FilterableSelect value={newDepartment} disabled={!newRestaurantId} onChange={(event) => { setNewDepartment(event.target.value); setCreateError(null); }}><option value="">{t("restaurantStocktakes.departmentPlaceholder")}</option>{masters.departments.map((department) => <option key={department.id} value={department.name} disabled={departmentUnavailable(department.name)}>{department.name}{departmentUnavailable(department.name) ? t("restaurantStocktakes.recordedSuffix") : ""}</option>)}</FilterableSelect></label>
           {selectedCombinationExists ? <p className="list-inline-error">{t("restaurantStocktakes.recordExists")}</p> : null}
           {createError ? <p className="list-inline-error">{t(`restaurantStocktakes.${createError}`)}</p> : null}

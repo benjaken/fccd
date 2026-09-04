@@ -95,6 +95,8 @@ const auth = vi.hoisted(() => ({
   session: null as null | { user: { email: string } },
   loading: false,
   profileLoading: false,
+  signIn: vi.fn(),
+  signOut: vi.fn(),
 }));
 
 vi.mock("@/auth/AuthProvider", () => ({
@@ -107,7 +109,8 @@ vi.mock("@/auth/AuthProvider", () => ({
     profile: auth.session ? { role: "Super Admin" } : null,
     loading: auth.loading,
     profileLoading: auth.profileLoading,
-    signIn: vi.fn(),
+    signIn: auth.signIn,
+    signOut: auth.signOut,
     resetPassword: vi.fn(),
     configured: true,
   }),
@@ -207,5 +210,22 @@ describe("Standalone workspace pages", () => {
     expect(
       screen.queryByRole("navigation", { name: "Primary" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("uses a dedicated restaurant login and opens the restaurant home after sign-in", () => {
+    const { unmount } = renderPath("/restaurant-workspace");
+
+    expect(screen.getByRole("heading", { name: "餐廳營運平台" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "歡迎回來" })).not.toBeInTheDocument();
+    unmount();
+
+    auth.session = { user: { email: "shop@foodchannels.com" } };
+    renderPath("/restaurant-workspace");
+
+    expect(screen.getByRole("heading", { name: "餐廳主頁" })).toBeInTheDocument();
+    const featureLinks = screen.getAllByRole("link");
+    expect(featureLinks[0]).toHaveTextContent("每日銷售");
+    expect(featureLinks[0]).toHaveAttribute("href", "/restaurant-workspace/daily-sales");
+    expect(screen.getByRole("button", { name: "開啟餐廳選單" })).toBeInTheDocument();
   });
 });

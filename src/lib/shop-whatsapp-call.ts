@@ -21,6 +21,18 @@ export function buildWhatsAppCallUrl(phone: string) {
   return `whatsapp://call?number=${number}`;
 }
 
+export function buildWhatsAppMessageUrl(phone: string, message: string) {
+  const number = toWhatsAppNumber(phone);
+  if (!number) return null;
+  return `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
+}
+
+export function buildSmsUrl(phone: string, message: string) {
+  const number = toWhatsAppNumber(phone);
+  if (!number) return null;
+  return `sms:+${number}?body=${encodeURIComponent(message)}`;
+}
+
 export function buildTelUrl(phone: string) {
   const number = toWhatsAppNumber(phone);
   if (!number) return null;

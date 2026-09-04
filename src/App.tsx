@@ -122,10 +122,16 @@ import { SuppliersPage } from "@/components/SuppliersPage";
 import { IngredientsListPage } from "@/components/IngredientsListPage";
 import { RestaurantStaffPage } from "@/components/RestaurantStaffPage";
 import { RestaurantDailySalesPage } from "@/components/RestaurantDailySalesPage";
-import { RestaurantWorkspacePage } from "@/components/RestaurantWorkspacePage";
+import {
+  RestaurantHrPlaceholderPage,
+  RestaurantWorkspaceHomePage,
+  RestaurantWorkspaceLoginPage,
+  RestaurantWorkspacePage,
+} from "@/components/RestaurantWorkspacePage";
 import { ShopOrderPage } from "@/components/ShopOrderPage";
 import { ShopOrderRecordsPage } from "@/components/ShopOrderRecordsPage";
 import { ShopReceivePage } from "@/components/ShopReceivePage";
+import { TKO_RESTAURANT_ID } from "@/lib/shop-orders";
 import {
   OfficeShopPhonebookPage,
   OfficeShopRecordsPage,
@@ -2436,8 +2442,11 @@ function FactoryWorkspace() {
 }
 
 function RestaurantFloorWorkspace() {
-  const { profile } = useAuth();
+  const { session, profile, loading, profileLoading } = useAuth();
   const pageAccess = usePageAccess(profile?.role);
+  const lockedRestaurantId = profile?.shop_restro_id ?? TKO_RESTAURANT_ID;
+  if (loading || (session && profileLoading)) return <AuthLoadingScreen />;
+  if (!session) return <RestaurantWorkspaceLoginPage />;
   if (pageAccess.loading) return <AuthLoadingScreen />;
   return (
     <ProtectedWorkspace
@@ -2446,27 +2455,29 @@ function RestaurantFloorWorkspace() {
     >
       <Routes>
         <Route element={<RestaurantWorkspacePage />}>
-          <Route index element={<ShopOrderPage />} />
+          <Route index element={<RestaurantWorkspaceHomePage />} />
+          <Route path="shop-order" element={<ShopOrderPage />} />
           <Route path="records" element={<ShopOrderRecordsPage />} />
+          <Route path="hr" element={<RestaurantHrPlaceholderPage />} />
           <Route
             path="receive"
             element={pageAccess.canAccess("workspace.restaurant.receive") ? <ShopReceivePage /> : <SettingsAccessDenied />}
           />
           <Route
             path="daily-sales"
-            element={pageAccess.canAccess("restaurant.daily_sales") ? <RestaurantDailySalesPage /> : <SettingsAccessDenied />}
+            element={pageAccess.canAccess("restaurant.daily_sales") ? <RestaurantDailySalesPage lockedRestaurantId={lockedRestaurantId} /> : <SettingsAccessDenied />}
           />
           <Route
             path="daily-purchases"
-            element={pageAccess.canAccess("restaurant.daily_purchases") ? <RestaurantDailyPurchasesPage /> : <SettingsAccessDenied />}
+            element={pageAccess.canAccess("restaurant.daily_purchases") ? <RestaurantDailyPurchasesPage lockedRestaurantId={lockedRestaurantId} /> : <SettingsAccessDenied />}
           />
           <Route
             path="inventory"
-            element={pageAccess.canAccess("restaurant.inventory") ? <RestaurantStocktakesPage /> : <SettingsAccessDenied />}
+            element={pageAccess.canAccess("restaurant.inventory") ? <RestaurantStocktakesPage lockedRestaurantId={lockedRestaurantId} /> : <SettingsAccessDenied />}
           />
           <Route
             path="monthly-expenses"
-            element={pageAccess.canAccess("restaurant.monthly_expenses") ? <RestaurantMonthlyExpensesPage /> : <SettingsAccessDenied />}
+            element={pageAccess.canAccess("restaurant.monthly_expenses") ? <RestaurantMonthlyExpensesPage lockedRestaurantId={lockedRestaurantId} /> : <SettingsAccessDenied />}
           />
         </Route>
       </Routes>
