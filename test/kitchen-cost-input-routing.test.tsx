@@ -119,4 +119,16 @@ describe("KitchenCostInputPage query-tab routing", () => {
       /\.kitchen-cost-page\.is-weekly-advertising \.kitchen-cost-table-wrap\s*\{[\s\S]*max-height:\s*min\(70dvh, 40rem\);/,
     );
   });
+
+  it("does not reserve a hidden heading row for monthly tabs while loading", () => {
+    renderCostInput("/finance/cost-input?tab=monthly-suppliers");
+
+    expect(document.querySelector(".kitchen-cost-page.is-weekly-advertising"))
+      .not.toBeInTheDocument();
+
+    const css = readFileSync(resolve(process.cwd(), "src/index.css"), "utf8");
+    expect(css).toMatch(
+      /\.ingredients-page\.kitchen-cost-page:not\(\.is-weekly-advertising\)\s*\{[\s\S]*grid-template-rows:\s*auto minmax\(0, 1fr\);/,
+    );
+  });
 });

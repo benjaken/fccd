@@ -58,6 +58,24 @@ describe("Primary navigation section matching", () => {
     ).toEqual([targets[1]]);
   });
 
+  it("uses query specificity when business-menu leaves share a route", () => {
+    const targets = [
+      "/finance/cost-input?nav=follow-up.catering",
+      "/finance/cost-input?tab=monthly-suppliers&nav=follow-up.catering",
+    ];
+
+    expect(
+      targets.filter((target) =>
+        isBusinessSecondaryNavItemActive(
+          "/finance/cost-input",
+          "?tab=monthly-suppliers&nav=follow-up.catering",
+          target,
+          targets,
+        ),
+      ),
+    ).toEqual([targets[1]]);
+  });
+
   it.each([
     ["/reports/frozen-meat", "/reports/frozen-meat"],
     ["/reports/frozen-meat/raw-meat-stock", "/reports/frozen-meat"],
