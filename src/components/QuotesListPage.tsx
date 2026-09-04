@@ -7,7 +7,7 @@ import {
   Copy,
   FileText,
   Paperclip,
-  Pencil,
+  Eye,
   Plus,
   RefreshCw,
 } from "lucide-react";
@@ -527,7 +527,7 @@ export function QuotesListPage({
                     <footer>
                       <div className="order-row-actions quote-row-actions">
                         {canManage ? <Link to={`/quotes/${quote.id}/pdf`} target="_blank" rel="noopener noreferrer" aria-label={t("quotes.actions.pdf")} title={t("quotes.actions.pdf")}><FileText /></Link> : null}
-                        {canManage ? <Link to={`/quotes/${quote.id}/edit`} target="_blank" rel="noopener noreferrer" aria-label={t("quotes.actions.edit")} title={t("quotes.actions.edit")}><Pencil /></Link> : null}
+                        {canManage ? <Link to={`/quotes/${quote.id}`} target="_blank" rel="noopener noreferrer" aria-label={t("quotes.actions.view")} title={t("quotes.actions.view")}><Eye /></Link> : null}
                         <button type="button" aria-label={t("quotes.actions.file")} title={t("quotes.actions.file")} onClick={() => setFilesQuote(quote)}><Paperclip /></button>
                         {canManage ? <Link to={`/quotes/new?copyFrom=${encodeURIComponent(quote.id)}`} aria-label={t("quotes.actions.copy")} title={t("quotes.actions.copy")}><Copy /></Link> : null}
                       </div>
@@ -681,7 +681,7 @@ export function QuotesListPage({
                       aria-label={t("quotes.actions.pdf")}
                       title={t("quotes.actions.pdf")}
                     ><FileText /></Link> : null}
-                    {canManage ? <Link to={`/quotes/${quote.id}/edit`} target="_blank" rel="noopener noreferrer" aria-label={t("quotes.actions.edit")} title={t("quotes.actions.edit")}><Pencil /></Link> : null}
+                    {canManage ? <Link to={`/quotes/${quote.id}`} target="_blank" rel="noopener noreferrer" aria-label={t("quotes.actions.view")} title={t("quotes.actions.view")}><Eye /></Link> : null}
                     <button
                       type="button"
                       aria-label={t("quotes.actions.file")}

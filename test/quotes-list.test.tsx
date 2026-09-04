@@ -321,9 +321,9 @@ describe("Catering quotes list", () => {
     await screen.findByText("Q-260812-001");
     expect(screen.getByRole("link", { name: "PDF" })).toHaveAttribute("href", "/quotes/quote-1/pdf");
     expect(screen.getByRole("link", { name: "PDF" })).toHaveAttribute("target", "_blank");
-    expect(screen.getByRole("link", { name: "編輯" })).toHaveAttribute("href", "/quotes/quote-1/edit");
-    expect(screen.getByRole("link", { name: "編輯" })).toHaveAttribute("target", "_blank");
-    expect(screen.getByRole("link", { name: "編輯" })).toHaveAttribute("rel", "noopener noreferrer");
+    expect(screen.getByRole("link", { name: "查看" })).toHaveAttribute("href", "/quotes/quote-1");
+    expect(screen.getByRole("link", { name: "查看" })).toHaveAttribute("target", "_blank");
+    expect(screen.getByRole("link", { name: "查看" })).toHaveAttribute("rel", "noopener noreferrer");
     expect(screen.getByRole("button", { name: "文件" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "複製" })).toHaveAttribute("href", "/quotes/new?copyFrom=quote-1");
   });
@@ -426,6 +426,7 @@ describe("Catering quotes list", () => {
     expect(description).not.toBeNull();
     expect(description).toHaveAttribute("readonly");
     expect(document.querySelector('a[href="/quotes/quote-1/edit"]')).toBeNull();
+    expect(screen.queryByRole("link", { name: "查看" })).not.toBeInTheDocument();
     expect(document.querySelector('a[href="/quotes/new?copyFrom=quote-1"]')).toBeNull();
     expect(document.querySelector('a[href="/quotes/quote-1/pdf"]')).toBeNull();
     expect(saveDescription).not.toHaveBeenCalled();
