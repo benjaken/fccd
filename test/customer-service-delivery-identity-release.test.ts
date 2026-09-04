@@ -56,7 +56,8 @@ describe("customer service delivery, identity, and release controls", () => {
   });
 
   it("evaluates answer, intent, and tool accuracy before release", () => {
-    expect(evaluator).toContain("classifyCustomerServiceWithAi");
+    expect(evaluator).toContain("answerCustomerServiceFaqWithTieredAi");
+    expect(evaluator).toContain("classifyCustomerServiceWithTieredAi");
     expect(evaluator).toContain("intent_accuracy");
     expect(evaluator).toContain("tool_accuracy");
   });
