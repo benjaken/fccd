@@ -45,4 +45,25 @@ describe("address translation session handling", () => {
       .rejects.toThrow("authentication_required");
     expect(invoke).not.toHaveBeenCalled();
   });
+
+  it("deduplicates concurrent translation requests and caches successful results", async () => {
+    getSession.mockResolvedValue({
+      data: { session: { access_token: "current-token" } },
+    });
+    invoke.mockResolvedValue({
+      data: { translatedText: "香港德輔道中99號" },
+      error: null,
+    });
+
+    const address = "99 Des Voeux Road Central";
+    await expect(Promise.all([
+      translateAddressToTraditionalChinese(address),
+      translateAddressToTraditionalChinese(`  ${address}  `),
+    ])).resolves.toEqual(["香港德輔道中99號", "香港德輔道中99號"]);
+    await expect(translateAddressToTraditionalChinese(address.toUpperCase()))
+      .resolves.toBe("香港德輔道中99號");
+
+    expect(getSession).toHaveBeenCalledOnce();
+    expect(invoke).toHaveBeenCalledOnce();
+  });
 });

@@ -198,6 +198,7 @@ describe("menu styles", () => {
       "kitchenChannelSales",
       "kitchenProductSales",
       "kitchenAdvertisingPerformance",
+      "festivalOrderGeneration",
     ]);
     expect(reports.find((item) => item.key === "frozenMeat")?.children?.map((item) => item.key)).toEqual([
       "shopOrderQuantities",
@@ -264,6 +265,7 @@ describe("menu styles", () => {
       "kitchenChannelSales",
       "kitchenProductSales",
       "kitchenAdvertisingPerformance",
+      "festivalOrderGeneration",
       "dataInputProgress",
       "operationsExpenseInput",
       "purchaseExpenseInput",
@@ -361,6 +363,7 @@ describe("menu styles", () => {
       "kitchenChannelSales",
       "kitchenProductSales",
       "kitchenAdvertisingPerformance",
+      "festivalOrderGeneration",
     ]);
   });
 });

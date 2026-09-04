@@ -60,6 +60,7 @@ describe("central kitchen advertising performance report", () => {
       "KitchenChannelSalesReportPage.tsx",
       "KitchenProductSalesReportPage.tsx",
       "KitchenAdvertisingPerformanceReportPage.tsx",
+      "FestivalOrderGenerationReportPage.tsx",
       "ReportsPage.tsx",
     ]) {
       expect(

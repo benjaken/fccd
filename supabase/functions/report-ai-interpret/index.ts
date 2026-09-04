@@ -39,6 +39,7 @@ const REPORT_PERMISSION_KEYS: Record<string, string> = {
   kitchenChannelSales: "kitchen.cost_input",
   kitchenProductSales: "kitchen.cost_input",
   kitchenAdvertisingPerformance: "kitchen.cost_input",
+  festivalOrderGeneration: "kitchen.cost_input",
   shopSales: "reports.shop_sales",
   shopSalesWorkingHours: "reports.shop_sales_working_hours",
   restaurantSalesSalary: "reports.restaurant_sales_salary",

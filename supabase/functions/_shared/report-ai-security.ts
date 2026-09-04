@@ -37,6 +37,10 @@ const REPORT_FIELD_ALLOWLISTS: Record<string, ReportFieldAllowlist> = {
     filters: ["mode", "segmentKey", "selectedYears"],
     rows: ["year", "segmentKey", "segmentLabel", "channel", "metric", "amount"],
   },
+  festivalOrderGeneration: {
+    filters: ["selectedYears", "selectedFestivalKey"],
+    rows: ["festival", "year", "orderCount", "delta", "percent"],
+  },
   shopSales: {
     filters: ["period", "category", "startDate", "endDate"],
     rows: [
