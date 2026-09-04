@@ -18,26 +18,31 @@ export type SupabasePublicEnv = {
   VITE_VERCEL_ENV?: string;
 };
 
-export function supabaseDeploymentBranch(env: SupabasePublicEnv) {
-  return (env.VITE_GIT_BRANCH || env.VERCEL_GIT_COMMIT_REF || "").trim();
+function envString(env: object, key: keyof SupabasePublicEnv) {
+  const value = (env as Record<string, unknown>)[key];
+  return typeof value === "string" ? value.trim() : "";
 }
 
-export function usesDevelopSupabase(env: SupabasePublicEnv) {
+export function supabaseDeploymentBranch(env: object) {
+  return envString(env, "VITE_GIT_BRANCH") || envString(env, "VERCEL_GIT_COMMIT_REF");
+}
+
+export function usesDevelopSupabase(env: object) {
   const branch = supabaseDeploymentBranch(env).toLowerCase();
-  const vercelEnv = env.VITE_VERCEL_ENV || env.VERCEL_ENV;
+  const vercelEnv = envString(env, "VITE_VERCEL_ENV") || envString(env, "VERCEL_ENV");
   return branch === "develop" || vercelEnv === "preview";
 }
 
-export function resolveSupabasePublicConfig(env: SupabasePublicEnv) {
+export function resolveSupabasePublicConfig(env: object = {}) {
   const useDevelop = usesDevelopSupabase(env);
   const supabaseUrl =
-    env.VITE_SUPABASE_URL?.trim() ||
-    env.NEXT_PUBLIC_SUPABASE_URL?.trim() ||
+    envString(env, "VITE_SUPABASE_URL") ||
+    envString(env, "NEXT_PUBLIC_SUPABASE_URL") ||
     (useDevelop ? DEVELOP_SUPABASE_URL : PRODUCTION_SUPABASE_URL);
   const supabasePublishableKey =
-    env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim() ||
-    env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() ||
-    env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ||
+    envString(env, "VITE_SUPABASE_PUBLISHABLE_KEY") ||
+    envString(env, "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY") ||
+    envString(env, "NEXT_PUBLIC_SUPABASE_ANON_KEY") ||
     (useDevelop ? DEVELOP_SUPABASE_PUBLISHABLE_KEY : PRODUCTION_SUPABASE_PUBLISHABLE_KEY);
   return { supabaseUrl, supabasePublishableKey };
 }
