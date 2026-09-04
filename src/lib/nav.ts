@@ -33,6 +33,7 @@ import {
   Phone,
   Palette,
   Receipt,
+  Scale,
   Settings,
   ShieldCheck,
   ShoppingBag,
@@ -466,6 +467,12 @@ export const secondaryNav: Record<string, NavItem[]> = {
       to: "/frozen/delivery-notes",
       icon: ClipboardList,
       permissionKey: "frozen.delivery_notes",
+    },
+    {
+      key: "seasoningRecipes",
+      to: "/frozen/seasoning-recipes",
+      icon: Scale,
+      permissionKey: "frozen.seasoning_recipes",
     },
     {
       key: "seasoningCost",
@@ -1060,6 +1067,7 @@ export const SECTION_CHILD_KEYS: Record<string, string[]> = {
     "frozen.prepared_meat_inventory",
     "frozen.selling_price_cost",
     "frozen.delivery_notes",
+    "frozen.seasoning_recipes",
     "frozen.seasoning_cost",
     "frozen.calculation_settings",
     "frozen.meat_customers",

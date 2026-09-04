@@ -186,6 +186,10 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
     pageKey: "frozen.selling_price_cost",
   },
   {
+    prefix: "/frozen/seasoning-recipes",
+    pageKey: "frozen.seasoning_recipes",
+  },
+  {
     prefix: "/frozen/seasoning-cost",
     pageKey: "frozen.seasoning_cost",
   },
