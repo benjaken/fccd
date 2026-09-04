@@ -9183,6 +9183,8 @@ button.product-tag[aria-pressed="true"] {
 .driver-date-bar > div { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; border-radius: 10px; background: #f0f5f2; font-size: 14px; }
 .driver-date-bar > div svg { width: 17px; color: #137763; }
 .driver-orders-content { display: flex; min-height: 0; overflow: hidden; padding: 18px 16px 0; flex: 1 1 auto; flex-direction: column; }
+.driver-order-refresh { display: flex; min-height: 0; flex: 1 1 auto; flex-direction: column; }
+.driver-order-refresh .driver-order-list { flex: 1 1 auto; }
 .driver-order-search { display: flex; align-items: center; height: 48px; padding: 0 13px; border: 1px solid #d4ddd7; border-radius: 12px; background: white; }
 .driver-order-search > svg { width: 20px; color: #6c7b75; }
 .driver-order-search input { height: 100%; padding: 0 10px; border: 0; background: transparent; }
