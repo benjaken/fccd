@@ -221,4 +221,64 @@ describe("DriverDeliveryPage", () => {
 
     expect(await screen.findByText("暫時沒有分區運費。")).toBeInTheDocument();
   });
+
+  it("refetches available orders when the phone returns to the screen", async () => {
+    renderDriverPortal();
+    fireEvent.change(screen.getByLabelText("登入密碼"), { target: { value: "driver-code" } });
+    fireEvent.click(screen.getByRole("button", { name: "登入" }));
+    expect(await screen.findByText("B-1522")).toBeInTheDocument();
+    expect(api.fetchOrders).toHaveBeenCalledTimes(1);
+
+    api.fetchOrders.mockResolvedValueOnce([
+      {
+        deliveryId: "delivery-2",
+        orderNumber: "B-2000",
+        shipOutTime: "14:00",
+        deliveryTime: "15:00",
+        address: "新派訂單地址",
+        districtName: "沙田區",
+        shippingMethod: "車邊",
+      },
+    ]);
+    document.dispatchEvent(new Event("visibilitychange"));
+
+    expect(await screen.findByText("B-2000")).toBeInTheDocument();
+    expect(screen.queryByText("B-1522")).not.toBeInTheDocument();
+    expect(api.fetchOrders).toHaveBeenCalledTimes(2);
+  });
+
+  it("refetches available orders when pulled to refresh on mobile", async () => {
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: true,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
+    renderDriverPortal();
+    fireEvent.change(screen.getByLabelText("登入密碼"), { target: { value: "driver-code" } });
+    fireEvent.click(screen.getByRole("button", { name: "登入" }));
+    expect(await screen.findByText("B-1522")).toBeInTheDocument();
+
+    const scroller = document.querySelector(".driver-order-refresh");
+    expect(scroller).not.toBeNull();
+    fireEvent.touchStart(scroller!, { touches: [{ clientY: 40 }] });
+    fireEvent.touchMove(scroller!, { touches: [{ clientY: 240 }] });
+    fireEvent.touchEnd(scroller!);
+
+    await waitFor(() => expect(api.fetchOrders).toHaveBeenCalledTimes(2));
+  });
+
+  it("refetches fleet summary when returning to the screen", async () => {
+    renderDriverPortal("/driver-delivery/fleet");
+    fireEvent.change(screen.getByLabelText("登入密碼"), { target: { value: "driver-code" } });
+    fireEvent.click(screen.getByRole("button", { name: "登入" }));
+    await waitFor(() => expect(api.fetchFleetSummary).toHaveBeenCalledTimes(1));
+
+    document.dispatchEvent(new Event("visibilitychange"));
+    await waitFor(() => expect(api.fetchFleetSummary).toHaveBeenCalledTimes(2));
+  });
 });
