@@ -23,6 +23,7 @@
     "wati-order-notifications/index.ts",
     "_shared/customer-service-intents.ts",
     "_shared/customer-service-replies.ts",
+    "_shared/customer-service-ai.ts",
     "_shared/customer-service-bot.ts",
     "_shared/wati-customer-service-adapter.ts",
     "wati-customer-service/index.ts",

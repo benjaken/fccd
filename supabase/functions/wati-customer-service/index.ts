@@ -1,6 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 import { EMAIL_FROM } from "../_shared/email-sender.ts";
+import { answerCustomerServiceFaqWithAi } from "../_shared/customer-service-ai.ts";
 import { handleCustomerServiceTurn } from "../_shared/customer-service-bot.ts";
 import { type InquirySlots } from "../_shared/customer-service-intents.ts";
 import {
@@ -225,7 +226,7 @@ async function notifyInternal(
   }
 }
 
-function createBotDeps(admin: AdminClient) {
+function createBotDeps(admin: AdminClient, { dryRun = false } = {}) {
   return {
     async lookupOrders(phone: string) {
       const { data, error } = await admin.rpc("customer_service_lookup_orders", { p_phone: phone });
@@ -242,6 +243,13 @@ function createBotDeps(admin: AdminClient) {
       }>;
     },
     async writeInquiry(phone: string, slots: InquirySlots, anotherEvent: boolean) {
+      if (dryRun) {
+        return {
+          quote_id: "00000000-0000-4000-8000-000000000000",
+          order_number: "PREVIEW",
+          created: false,
+        };
+      }
       const { data, error } = await admin.rpc("customer_service_write_inquiry", {
         p_phone: phone,
         p_event_date: slots.eventDate || null,
@@ -265,12 +273,32 @@ function createBotDeps(admin: AdminClient) {
       if (error) throw error;
       return ((data ?? []) as Array<{ id: string; question: string; answer: string }>);
     },
+    async answerFaqWithModel(query: string) {
+      const { data, error } = await admin
+        .from("customer_faqs")
+        .select("id,category,question,answer")
+        .eq("is_published", true)
+        .order("sort_order")
+        .limit(100);
+      if (error) throw error;
+      const result = await answerCustomerServiceFaqWithAi({
+        question: query,
+        faqs: (data ?? []) as Array<{
+          id: string;
+          category: string;
+          question: string;
+          answer: string;
+        }>,
+      });
+      return result?.answer ?? null;
+    },
     async notifyInternal(input: {
       phone: string;
       quoteId: string;
       orderNumber: string | null;
       summary: string;
     }) {
+      if (dryRun) return;
       try {
         await notifyInternal(admin, input);
       } catch (error) {
@@ -278,6 +306,55 @@ function createBotDeps(admin: AdminClient) {
       }
     },
   };
+}
+
+function previewConversation(value: unknown, phone: string) {
+  const input = value && typeof value === "object" ? value as Record<string, unknown> : {};
+  const state = ["identifying", "picking_order", "collecting", "human_owned"].includes(
+      String(input.state || ""),
+    )
+    ? String(input.state) as "identifying" | "picking_order" | "collecting" | "human_owned"
+    : "identifying";
+  return {
+    phone_normalized: phone,
+    state,
+    selected_order_id: typeof input.selected_order_id === "string" ? input.selected_order_id : null,
+    handoff_at: typeof input.handoff_at === "string" ? input.handoff_at : null,
+  };
+}
+
+async function handleBackendPreview(request: Request, payload: Record<string, unknown>) {
+  const authorization = request.headers.get("authorization")?.trim() || "";
+  if (!/^Bearer\s+\S+/i.test(authorization)) {
+    return jsonResponse({ error: "authentication_required" }, 401);
+  }
+  const userClient = createClient(requiredEnv("SUPABASE_URL"), requiredEnv("SUPABASE_ANON_KEY"), {
+    global: { headers: { Authorization: authorization } },
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const { error: accessError } = await userClient.rpc("customer_service_controls_get");
+  if (accessError) return jsonResponse({ error: "page_access_required" }, 403);
+
+  const text = typeof payload.text === "string" ? payload.text.trim().slice(0, 1_000) : "";
+  if (!text) return jsonResponse({ error: "message_required" }, 400);
+  const phone = normalizeNotificationPhone(
+    typeof payload.phone === "string" ? payload.phone : "",
+  ) || "85200000000";
+  const admin = createAdminClient();
+  const turn = await handleCustomerServiceTurn({
+    phone,
+    text,
+    conversation: previewConversation(payload.conversation, phone),
+    deps: createBotDeps(admin, { dryRun: true }),
+  });
+  return jsonResponse({
+    ok: true,
+    reply: turn.reply,
+    conversation: turn.conversation,
+    used_model: turn.usedModel,
+    simulated_write: turn.wroteInquiry,
+    human_handoff: turn.conversation.state === "human_owned",
+  });
 }
 
 Deno.serve(async (request) => {
@@ -288,17 +365,32 @@ Deno.serve(async (request) => {
     return jsonResponse({ error: "method_not_allowed" }, 405);
   }
 
-  const secret = env("WATI_WEBHOOK_SECRET");
   const rawBody = await request.text();
-  if (!(await verifyWatiWebhook({ request, rawBody, secret }))) {
-    return jsonResponse({ error: "unauthorized" }, 401);
-  }
-
   let payload: Record<string, unknown>;
   try {
     payload = rawBody ? JSON.parse(rawBody) as Record<string, unknown> : {};
   } catch {
     return jsonResponse({ error: "invalid_json" }, 400);
+  }
+
+  if (payload.mode === "preview") {
+    try {
+      return await handleBackendPreview(request, payload);
+    } catch (error) {
+      console.error(
+        "customer service preview failed",
+        error instanceof Error ? error.message.slice(0, 300) : String(error),
+      );
+      return jsonResponse({
+        error: "customer_service_preview_failed",
+        detail: error instanceof Error ? error.message : String(error),
+      }, 500);
+    }
+  }
+
+  const secret = env("WATI_WEBHOOK_SECRET");
+  if (!(await verifyWatiWebhook({ request, rawBody, secret }))) {
+    return jsonResponse({ error: "unauthorized" }, 401);
   }
 
   const event = parseWatiInboundEvent(payload);

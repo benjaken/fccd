@@ -52,6 +52,21 @@ export type CustomerServiceControls = {
   updatedAt: string;
 };
 
+export type CustomerServicePreviewConversation = {
+  phone_normalized: string;
+  state: "identifying" | "picking_order" | "collecting" | "human_owned";
+  selected_order_id: string | null;
+  handoff_at: string | null;
+};
+
+export type CustomerServicePreviewResult = {
+  reply: string | null;
+  conversation: CustomerServicePreviewConversation;
+  usedModel: boolean;
+  simulatedWrite: boolean;
+  humanHandoff: boolean;
+};
+
 type FaqRow = {
   id: string;
   category: string;
@@ -228,4 +243,35 @@ export async function searchPublishedCustomerFaqs(
     answer: row.answer,
     score: Number(row.score),
   }));
+}
+
+export async function previewCustomerServiceTurn(input: {
+  text: string;
+  phone?: string;
+  conversation?: CustomerServicePreviewConversation | null;
+}): Promise<CustomerServicePreviewResult> {
+  const { data, error } = await supabase.functions.invoke("wati-customer-service", {
+    body: {
+      mode: "preview",
+      text: input.text.trim(),
+      phone: input.phone?.trim() || undefined,
+      conversation: input.conversation ?? undefined,
+    },
+  });
+  if (error) throw error;
+  const payload = data as {
+    reply?: unknown;
+    conversation?: CustomerServicePreviewConversation;
+    used_model?: unknown;
+    simulated_write?: unknown;
+    human_handoff?: unknown;
+  } | null;
+  if (!payload?.conversation) throw new Error("customer_service_preview_invalid_response");
+  return {
+    reply: typeof payload.reply === "string" ? payload.reply : null,
+    conversation: payload.conversation,
+    usedModel: Boolean(payload.used_model),
+    simulatedWrite: Boolean(payload.simulated_write),
+    humanHandoff: Boolean(payload.human_handoff),
+  };
 }

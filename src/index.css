@@ -18351,6 +18351,19 @@ a.masoft-order-tag:focus-visible {
 .customer-faq-preview .page-heading h2 { margin: 0; font-size: 18px; }
 .customer-faq-preview-body { display: grid; align-content: start; gap: 14px; min-height: 0; overflow: auto; padding: 16px 18px 18px; }
 .customer-faq-preview-list { margin-top: 0; }
+.customer-faq-chat { display: grid; align-content: start; gap: 12px; min-height: 300px; max-height: 500px; overflow: auto; padding: 18px 14px; border: 1px solid #d7d2cb; border-radius: 12px; background-color: #efeae2; background-image: radial-gradient(rgb(17 27 33 / 4%) 1px, transparent 1px); background-size: 18px 18px; }
+.customer-faq-chat-message { display: grid; grid-template-columns: 30px minmax(0, 1fr); align-items: start; gap: 8px; max-width: 92%; }
+.customer-faq-chat-message.user { justify-self: end; grid-template-columns: minmax(0, 1fr) 30px; }
+.customer-faq-chat-message.user .customer-faq-chat-avatar { grid-column: 2; grid-row: 1; }
+.customer-faq-chat-message.user > div { grid-column: 1; grid-row: 1; background: #d9fdd3; color: #111b21; border-top-right-radius: 3px; }
+.customer-faq-chat-message > div { min-width: 0; padding: 9px 11px; border-radius: 10px; background: #fff; color: #111b21; box-shadow: 0 1px 1px rgb(11 20 26 / 13%); }
+.customer-faq-chat-message.assistant > div { border-top-left-radius: 3px; }
+.customer-faq-chat-message.system > div { border: 1px dashed var(--border); background: transparent; }
+.customer-faq-chat-message p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.customer-faq-chat-message small { display: block; margin-top: 6px; color: var(--muted-foreground); font-size: 12px; }
+.customer-faq-chat-message.user small { color: inherit; opacity: .8; }
+.customer-faq-chat-avatar { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 999px; background: #00a884; color: #fff; box-shadow: 0 1px 2px rgb(11 20 26 / 18%); }
+.customer-faq-chat-avatar svg { width: 16px; height: 16px; }
 @media (max-width: 1100px) {
   .customer-faq-page { height: auto; min-height: 0; overflow: visible; grid-template-rows: auto; }
   .customer-faq-layout { grid-template-columns: 1fr; }

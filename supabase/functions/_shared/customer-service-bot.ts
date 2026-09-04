@@ -51,6 +51,7 @@ export type CustomerServiceBotDeps = {
     anotherEvent: boolean,
   ) => Promise<CustomerServiceInquiryWrite>;
   searchFaqs: (query: string) => Promise<CustomerServiceFaqHit[]>;
+  answerFaqWithModel?: (query: string) => Promise<string | null>;
   notifyInternal: (input: {
     phone: string;
     quoteId: string;
@@ -178,6 +179,25 @@ async function replyFaq(
   query: string,
 ): Promise<BotTurn> {
   const hits = await deps.searchFaqs(query);
+  if (deps.answerFaqWithModel) {
+    try {
+      const answer = await deps.answerFaqWithModel(query);
+      if (answer) {
+        return {
+          reply: faqReply(answer),
+          conversation,
+          wroteInquiry: false,
+          notified: false,
+          usedModel: true,
+        };
+      }
+    } catch (error) {
+      console.error(
+        "customer-service AI answer failed",
+        error instanceof Error ? error.message.slice(0, 200) : String(error),
+      );
+    }
+  }
   if (hits[0]?.answer) {
     return {
       reply: faqReply(hits[0].answer),
