@@ -238,6 +238,7 @@ describe("menu styles", () => {
       "dictionaries",
       "notificationSettings",
       "districts",
+      "customerFaq",
       "attachments",
     ]);
     expect(businessSidebarNav("settings", "")[0]?.to).toContain("nav=settings");

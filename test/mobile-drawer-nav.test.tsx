@@ -101,6 +101,7 @@ describe("buildMobileDrawerNav", () => {
       "dictionaries",
       "notificationSettings",
       "districts",
+      "customerFaq",
       "attachments",
     ]);
   });
