@@ -31,6 +31,7 @@ export type ClassifiedMessage = {
   requestedDate?: string;
   missingFields?: string[];
   requiresHuman?: boolean;
+  model?: string;
 };
 
 const EMPTY_SLOTS: InquirySlots = {

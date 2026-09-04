@@ -1105,6 +1105,49 @@ describe("editable quote PDF page", () => {
     }
   });
 
+  it("does not restore focus or scroll for a measurement-only resize", async () => {
+    let moduleHeight = 50;
+    let notifyResize: (() => void) | undefined;
+    const resizeCallbacks = new Set<() => void>();
+    class ResizeObserverMock {
+      private readonly callback: () => void;
+
+      constructor(callback: ResizeObserverCallback) {
+        this.callback = () => callback([], this as unknown as ResizeObserver);
+        resizeCallbacks.add(this.callback);
+        notifyResize = () => resizeCallbacks.forEach((resizeCallback) => resizeCallback());
+      }
+      observe() {}
+      disconnect() { resizeCallbacks.delete(this.callback); }
+      unobserve() {}
+    }
+    vi.stubGlobal("ResizeObserver", ResizeObserverMock);
+    const rectSpy = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function () {
+      if (this.hasAttribute("data-pdf-auto-module-index")) {
+        return { x: 0, y: 100, top: 100, right: 800, bottom: 100 + moduleHeight, left: 0, width: 800, height: moduleHeight, toJSON: () => ({}) } as DOMRect;
+      }
+      return { x: 0, y: 0, top: 0, right: 800, bottom: 0, left: 0, width: 800, height: 0, toJSON: () => ({}) } as DOMRect;
+    });
+    renderPage();
+
+    try {
+      await screen.findByRole("heading", { name: /PDF|報價|到會/ });
+      const field = document.querySelector<HTMLInputElement>(".quote-pdf-product-input");
+      expect(field).not.toBeNull();
+      field!.focus();
+      const focusSpy = vi.spyOn(field!, "focus");
+
+      moduleHeight = 60;
+      await act(async () => notifyResize?.());
+
+      expect(focusSpy).not.toHaveBeenCalled();
+      focusSpy.mockRestore();
+    } finally {
+      rectSpy.mockRestore();
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("keeps the caret when a resized field is moved to another PDF page", async () => {
     let activityHeight = 100;
     let notifyResize: (() => void) | undefined;

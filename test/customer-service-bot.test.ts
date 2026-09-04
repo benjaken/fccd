@@ -63,7 +63,7 @@ function deps(
     }),
     searchFaqs: vi.fn().mockResolvedValue([]),
     queueHandoff: vi.fn().mockResolvedValue(undefined),
-    cancelHandoff: vi.fn().mockResolvedValue(undefined),
+    cancelHandoff: vi.fn().mockResolvedValue(true),
     ...overrides,
   };
 }
@@ -360,7 +360,7 @@ describe("customer-service bot turns", () => {
 
   it("cancels a pending order-change handoff instead of recording it as more detail", async () => {
     const queueHandoff = vi.fn().mockResolvedValue(undefined);
-    const cancelHandoff = vi.fn().mockResolvedValue(undefined);
+    const cancelHandoff = vi.fn().mockResolvedValue(true);
     const awaitingHuman = {
       ...conversation,
       state: "awaiting_human" as const,
@@ -368,7 +368,7 @@ describe("customer-service bot turns", () => {
       handoff_at: new Date().toISOString(),
     };
 
-    for (const text of ["幫我取消修改", "幫我取消之前的訂單修改"]) {
+    for (const text of ["幫我取消修改", "幫我取消之前的訂單修改", "不用取消了"]) {
       const turn = await handleCustomerServiceTurn({
         phone: conversation.phone_normalized,
         text,
@@ -382,8 +382,57 @@ describe("customer-service bot turns", () => {
       expect(turn.conversation.handoff_at).toBeNull();
     }
 
-    expect(cancelHandoff).toHaveBeenCalledTimes(2);
+    expect(cancelHandoff).toHaveBeenCalledTimes(3);
     expect(queueHandoff).not.toHaveBeenCalled();
+  });
+
+  it("does not turn a request to cancel a previous modification into a new order cancellation", async () => {
+    const queueHandoff = vi.fn().mockResolvedValue(undefined);
+    const cancelHandoff = vi.fn().mockResolvedValue(false);
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "幫我取消之前的訂單修改",
+      conversation,
+      deps: deps({ queueHandoff, cancelHandoff }),
+    });
+
+    expect(turn.reply).toBe(REPLIES.noPendingHandoff);
+    expect(turn.conversation.state).toBe("identifying");
+    expect(cancelHandoff).toHaveBeenCalledOnce();
+    expect(queueHandoff).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["collecting", "取消訂餐"],
+    ["picking_order", "不用再查了"],
+    ["picking_handoff_order", "算了"],
+    ["verifying_order", "撤回今次申請"],
+  ] as const)("cancels the active %s flow through one generic dialog control", async (state, text) => {
+    const queueHandoff = vi.fn().mockResolvedValue(undefined);
+    const cancelHandoff = vi.fn().mockResolvedValue(true);
+    const classify = vi.fn();
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text,
+      conversation: {
+        ...conversation,
+        state,
+        selected_order_id: order.order_id,
+        pending_request: "existing task",
+      },
+      deps: deps({ queueHandoff, cancelHandoff }),
+      classify,
+    });
+
+    expect(turn.reply).toBe(REPLIES.currentTaskCancelled);
+    expect(turn.conversation).toMatchObject({
+      state: "identifying",
+      selected_order_id: null,
+      pending_request: null,
+    });
+    expect(classify).not.toHaveBeenCalled();
+    expect(queueHandoff).not.toHaveBeenCalled();
+    expect(cancelHandoff).not.toHaveBeenCalled();
   });
 
   it("queues complaints without claiming that a human already took over", async () => {

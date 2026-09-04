@@ -194,6 +194,9 @@ export type CustomerServiceConfigVersion = {
   version: number;
   label: string;
   model: string;
+  fallbackModel: string;
+  fallbackEnabled: boolean;
+  escalationConfidence: number;
   systemPrompt: string;
   temperature: number;
   retrievalLimit: number;
@@ -691,6 +694,7 @@ export async function submitCustomerServiceTurnFeedback(input: {
   failureCategory?: string;
   correctedAnswer?: string;
   note?: string;
+  includeInLearning?: boolean;
   createFaqDraft?: boolean;
 }) {
   const { data, error } = await supabase.rpc(
@@ -701,6 +705,7 @@ export async function submitCustomerServiceTurnFeedback(input: {
       p_failure_category: input.failureCategory || null,
       p_corrected_answer: input.correctedAnswer || null,
       p_note: input.note || null,
+      p_include_in_learning: Boolean(input.includeInLearning),
       p_create_faq_draft: Boolean(input.createFaqDraft),
     },
   );
@@ -723,6 +728,9 @@ export async function fetchCustomerServiceConfigVersions(
       version: Number(row.version),
       label: String(row.label),
       model: String(row.model),
+      fallbackModel: String(row.fallback_model || "grok-4.5"),
+      fallbackEnabled: row.fallback_enabled !== false,
+      escalationConfidence: Number(row.escalation_confidence ?? 0.72),
       systemPrompt: String(row.system_prompt || ""),
       temperature: Number(row.temperature),
       retrievalLimit: Number(row.retrieval_limit),
@@ -738,14 +746,20 @@ export async function createCustomerServiceConfig(input: {
   environment?: string;
   label: string;
   model: string;
+  fallbackModel: string;
+  fallbackEnabled: boolean;
+  escalationConfidence: number;
   systemPrompt: string;
   temperature: number;
   retrievalLimit: number;
 }) {
-  const { data, error } = await supabase.rpc("customer_service_config_create", {
+  const { data, error } = await supabase.rpc("customer_service_config_create_tiered", {
     p_environment: input.environment || "develop",
     p_label: input.label,
     p_model: input.model,
+    p_fallback_model: input.fallbackModel,
+    p_fallback_enabled: input.fallbackEnabled,
+    p_escalation_confidence: input.escalationConfidence,
     p_system_prompt: input.systemPrompt,
     p_temperature: input.temperature,
     p_retrieval_limit: input.retrievalLimit,

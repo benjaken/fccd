@@ -13,6 +13,13 @@ export type CustomerServiceAiConfig = {
   timeoutMs: number;
   systemPrompt?: string;
   temperature?: number;
+  reasoningEffort?: "none" | "low" | "medium" | "high";
+};
+
+export type CustomerServiceAiTierConfig = {
+  primary: CustomerServiceAiConfig;
+  fallback?: CustomerServiceAiConfig | null;
+  escalationConfidence: number;
 };
 
 export type CustomerServiceAiAnswer = {
@@ -96,6 +103,13 @@ function answerNumbersAreGrounded(answer: string, sources: CustomerServiceFaqKno
   return numericTokens(answer).every((token) => supported.has(token));
 }
 
+function reasoningParameters(config: CustomerServiceAiConfig) {
+  if (!/api\.x\.ai/i.test(config.endpoint)) return {};
+  const effort = config.reasoningEffort
+    ?? (/^grok-4\.3/i.test(config.model) ? "none" : /^grok-4\.5/i.test(config.model) ? "low" : undefined);
+  return effort ? { reasoning_effort: effort } : {};
+}
+
 function parseClassification(
   payload: { choices?: Array<{ message?: { content?: string | null } }> },
   intents: CustomerServiceIntentConfig[],
@@ -159,6 +173,7 @@ export async function classifyCustomerServiceWithAi({
         stream: false,
         temperature: 0,
         max_tokens: 350,
+        ...reasoningParameters(config),
         response_format: { type: "json_object" },
         messages: [
           {
@@ -267,9 +282,7 @@ export async function answerCustomerServiceFaqWithAi({
         stream: false,
         temperature: config.temperature ?? 0.1,
         max_tokens: 500,
-        ...(/api\.x\.ai/i.test(config.endpoint) && /^grok-4\.3/i.test(config.model)
-          ? { reasoning_effort: "none" }
-          : {}),
+        ...reasoningParameters(config),
         response_format: { type: "json_object" },
         messages: [
           {
@@ -319,4 +332,84 @@ export async function answerCustomerServiceFaqWithAi({
   } finally {
     clearTimeout(timeout);
   }
+}
+
+export async function classifyCustomerServiceWithTieredAi({
+  message,
+  conversationState,
+  intents,
+  tiers,
+  fetchImpl = fetch,
+  beforeRequest,
+}: {
+  message: string;
+  conversationState: string;
+  intents: CustomerServiceIntentConfig[];
+  tiers: CustomerServiceAiTierConfig;
+  fetchImpl?: typeof fetch;
+  beforeRequest?: () => void | Promise<void>;
+}) {
+  let primary: CustomerServiceAiClassification | null = null;
+  try {
+    primary = await classifyCustomerServiceWithAi({
+      message,
+      conversationState,
+      intents,
+      config: tiers.primary,
+      fetchImpl,
+      beforeRequest,
+    });
+  } catch (error) {
+    if (!tiers.fallback?.enabled) throw error;
+    console.error("customer-service primary classifier failed; escalating", error);
+  }
+  const threshold = Math.min(1, Math.max(0, tiers.escalationConfidence));
+  const needsFallback = !primary
+    || primary.confidence < threshold
+    || primary.missingFields.length >= 2;
+  if (!needsFallback || !tiers.fallback?.enabled) return primary;
+  const fallback = await classifyCustomerServiceWithAi({
+    message,
+    conversationState,
+    intents,
+    config: tiers.fallback,
+    fetchImpl,
+  });
+  if (!fallback) return primary;
+  return !primary || fallback.confidence >= primary.confidence ? fallback : primary;
+}
+
+export async function answerCustomerServiceFaqWithTieredAi({
+  question,
+  faqs,
+  tiers,
+  fetchImpl = fetch,
+  beforeRequest,
+}: {
+  question: string;
+  faqs: CustomerServiceFaqKnowledge[];
+  tiers: CustomerServiceAiTierConfig;
+  fetchImpl?: typeof fetch;
+  beforeRequest?: () => void | Promise<void>;
+}) {
+  let primary: CustomerServiceAiAnswer | null = null;
+  try {
+    primary = await answerCustomerServiceFaqWithAi({
+      question,
+      faqs,
+      config: tiers.primary,
+      fetchImpl,
+      beforeRequest,
+    });
+  } catch (error) {
+    if (!tiers.fallback?.enabled) throw error;
+    console.error("customer-service primary FAQ model failed; escalating", error);
+  }
+  if (primary || !tiers.fallback?.enabled) return primary;
+  return await answerCustomerServiceFaqWithAi({
+    question,
+    faqs,
+    config: tiers.fallback,
+    fetchImpl,
+  });
 }
