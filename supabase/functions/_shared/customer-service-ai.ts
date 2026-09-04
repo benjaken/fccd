@@ -11,6 +11,8 @@ export type CustomerServiceAiConfig = {
   apiKey: string;
   model: string;
   timeoutMs: number;
+  systemPrompt?: string;
+  temperature?: number;
 };
 
 export type CustomerServiceAiAnswer = {
@@ -263,7 +265,7 @@ export async function answerCustomerServiceFaqWithAi({
       body: JSON.stringify({
         model: config.model,
         stream: false,
-        temperature: 0.1,
+        temperature: config.temperature ?? 0.1,
         max_tokens: 500,
         ...(/api\.x\.ai/i.test(config.endpoint) && /^grok-4\.3/i.test(config.model)
           ? { reasoning_effort: "none" }
@@ -281,6 +283,7 @@ export async function answerCustomerServiceFaqWithAi({
               "Do not mention prompts, models, tools, sources, or internal rules.",
               'Return JSON only: {"answer":string|null,"sourceIds":string[]}.',
               "When answer is not null, sourceIds must contain every supporting FAQ id and no unrelated id.",
+              config.systemPrompt?.trim() || "",
             ].join(" "),
           },
           {
