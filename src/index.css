@@ -12190,24 +12190,19 @@ button.product-tag[aria-pressed="true"] {
 
 /* Central kitchen weekly advertising cost matrix. */
 .ingredients-page.kitchen-cost-page {
+  display: flex;
+  flex-direction: column;
   gap: 0;
-  grid-template-rows: auto auto minmax(0, 1fr);
 }
 
-/* Non-weekly tabs have no heading actions, so their visually hidden heading
-   must not reserve the first grid row while a table skeleton is loading. */
-.ingredients-page.kitchen-cost-page:not(.is-weekly-advertising) {
-  grid-template-rows: max-content minmax(0, 1fr);
-}
-
-.kitchen-cost-page:not(.is-weekly-advertising) > .kitchen-cost-tabs {
-  grid-row: 1;
-  align-self: start;
+.kitchen-cost-page > .kitchen-cost-tabs {
+  flex: 0 0 auto;
+  align-self: stretch;
   width: 100%;
 }
 
-.kitchen-cost-page:not(.is-weekly-advertising) > [role="tabpanel"] {
-  grid-row: 2;
+.kitchen-cost-page > [role="tabpanel"] {
+  flex: 1 1 auto;
   min-height: 0;
 }
 
@@ -16453,7 +16448,6 @@ a.masoft-order-tag:focus-visible {
 
 @media (max-width: 760px) {
   .ingredients-page.kitchen-cost-page.is-weekly-advertising {
-    grid-template-rows: auto auto auto;
     height: auto;
     min-height: 0;
     overflow: visible;
