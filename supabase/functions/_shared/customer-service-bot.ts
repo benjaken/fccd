@@ -637,6 +637,7 @@ export async function handleCustomerServiceTurn({
     confidence: classified.confidence,
     toolKeys: classified.toolKey ? [classified.toolKey] : [],
     failureReason: turn.failureReason ?? null,
+    model: turn.model ?? classified.model ?? null,
   });
   if (conversation.state === "picking_handoff_order") {
     return annotate(

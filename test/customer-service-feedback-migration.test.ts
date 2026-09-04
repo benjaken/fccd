@@ -20,4 +20,25 @@ describe("customer service human review feedback migration", () => {
     expect(migration).toContain("where feedback.turn_id = p_turn_id");
     expect(migration).toContain("settings.customer_faq.edit");
   });
+
+  it("keeps the verdict separate from the explicit learning choice", () => {
+    const migration = readFileSync(
+      resolve(
+        process.cwd(),
+        "supabase/migrations/20260904202000_customer_service_feedback_learning_choice.sql",
+      ),
+      "utf8",
+    );
+
+    expect(migration).toContain(
+      "include_in_learning boolean not null default false",
+    );
+    expect(migration).toContain("p_include_in_learning boolean default false");
+    expect(migration).toContain(
+      "p_include_in_learning or p_create_faq_draft",
+    );
+    expect(migration).toContain(
+      "on conflict on constraint customer_service_turn_feedback_pkey do update",
+    );
+  });
 });

@@ -1,8 +1,8 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 import {
-  answerCustomerServiceFaqWithAi,
-  classifyCustomerServiceWithAi,
+  answerCustomerServiceFaqWithTieredAi,
+  classifyCustomerServiceWithTieredAi,
   customerServiceAiConfig,
   type CustomerServiceFaqKnowledge,
   type CustomerServiceIntentConfig,
@@ -79,7 +79,7 @@ Deno.serve(async (request) => {
   const { data: authData } = await user.auth.getUser();
   const { data: candidate, error: configError } = await admin
     .from("customer_service_config_versions")
-    .select("id,environment,model,system_prompt,temperature,retrieval_limit")
+    .select("id,environment,model,fallback_model,fallback_enabled,escalation_confidence,system_prompt,temperature,retrieval_limit")
     .eq("id", configId)
     .single();
   if (configError || !candidate) return json({ error: "config_not_found" }, 404);
@@ -114,6 +114,7 @@ Deno.serve(async (request) => {
       admin.from("customer_service_turn_feedback")
         .select("verdict,corrected_answer,customer_service_turns!inner(question,answer,intent,route,state_before,environment)")
         .in("verdict", ["correct", "incorrect"])
+        .eq("include_in_learning", true)
         .eq("customer_service_turns.environment", candidate.environment)
         .order("reviewed_at", { ascending: false })
         .limit(sampleLimit),
@@ -176,14 +177,24 @@ Deno.serve(async (request) => {
         model: candidate.model,
         systemPrompt: candidate.system_prompt,
         temperature: Number(candidate.temperature),
+        reasoningEffort: /^grok-4\.3/i.test(candidate.model) ? "none" as const : "low" as const,
+      };
+      const tiers = {
+        primary: evaluationConfig,
+        fallback: candidate.fallback_enabled ? {
+          ...evaluationConfig,
+          model: candidate.fallback_model || "grok-4.5",
+          reasoningEffort: "low" as const,
+        } : null,
+        escalationConfidence: Number(candidate.escalation_confidence ?? 0.72),
       };
       const [answer, classification] = await Promise.all([
-        answerCustomerServiceFaqWithAi({ question: sample.question, faqs, config: evaluationConfig }),
-        classifyCustomerServiceWithAi({
+        answerCustomerServiceFaqWithTieredAi({ question: sample.question, faqs, tiers }),
+        classifyCustomerServiceWithTieredAi({
           message: sample.question,
           conversationState: sample.state,
           intents,
-          config: evaluationConfig,
+          tiers,
         }),
       ]);
       const score = answer ? similarity(answer.answer, sample.reference) : 0;

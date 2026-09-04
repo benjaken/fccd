@@ -199,6 +199,9 @@ export function CustomerFaqPage({
   const [feedbackDrafts, setFeedbackDrafts] = useState<Record<string, string>>(
     {},
   );
+  const [feedbackLearningModes, setFeedbackLearningModes] = useState<
+    Record<string, "none" | "evaluation" | "faq_draft">
+  >({});
   const [reviewingTurn, setReviewingTurn] = useState("");
   const [configBusy, setConfigBusy] = useState("");
   const [handoffBusy, setHandoffBusy] = useState("");
@@ -206,6 +209,9 @@ export function CustomerFaqPage({
   const [configDraft, setConfigDraft] = useState({
     label: "Develop candidate",
     model: "grok-4.3",
+    fallbackModel: "grok-4.5",
+    fallbackEnabled: true,
+    escalationConfidence: 0.72,
     systemPrompt: "",
     temperature: 0.1,
     retrievalLimit: 3,
@@ -583,6 +589,7 @@ export function CustomerFaqPage({
   ) => {
     if (!canEdit || reviewingTurn) return;
     const correctedAnswer = feedbackDrafts[turn.id]?.trim() || "";
+    const learningMode = feedbackLearningModes[turn.id] || "none";
     if (verdict === "incorrect" && !correctedAnswer) {
       setInsightsError("標記錯誤前，請先填寫正確回覆。");
       return;
@@ -594,12 +601,13 @@ export function CustomerFaqPage({
         turnId: turn.id,
         verdict,
         correctedAnswer,
-        createFaqDraft: verdict === "incorrect",
+        includeInLearning: learningMode !== "none",
+        createFaqDraft: learningMode === "faq_draft",
       });
       setReviewTurns((current) =>
         current.filter((item) => item.id !== turn.id),
       );
-      if (verdict === "incorrect") setReloadKey((value) => value + 1);
+      if (learningMode === "faq_draft") setReloadKey((value) => value + 1);
     } catch {
       setInsightsError("儲存人工覆核結果失敗。");
     } finally {
@@ -1216,7 +1224,10 @@ export function CustomerFaqPage({
           <section className="customer-service-review-queue customer-service-handoff-queue">
             <header>
               <div>
-                <h3>待真人跟進對話</h3>
+                <h3 className="customer-service-section-title">
+                  <span><MessageCircleMore /></span>
+                  待真人跟進對話
+                </h3>
                 <p>
                   夜間先記錄；上午 9
                   點通知同事。接手後由真人回覆，完成後交回機器人。
@@ -1274,7 +1285,10 @@ export function CustomerFaqPage({
           <section className="customer-service-review-queue customer-service-delivery-queue">
             <header>
               <div>
-                <h3>WhatsApp 發送追蹤</h3>
+                <h3 className="customer-service-section-title">
+                  <span><Send /></span>
+                  WhatsApp 發送追蹤
+                </h3>
                 <p>集中查看排隊、發送失敗及已停止重試的客服回覆。</p>
               </div>
               <span className="status-badge neutral">
@@ -1388,7 +1402,10 @@ export function CustomerFaqPage({
           <section className="customer-service-suggestions">
             <header>
               <div>
-                <h3>AI 學習建議</h3>
+                <h3 className="customer-service-section-title">
+                  <span><Sparkles /></span>
+                  AI 學習建議
+                </h3>
                 <p>批准後只會建立未發布 FAQ 草稿。</p>
               </div>
               <span className="status-badge neutral">{suggestions.length}</span>
@@ -1437,8 +1454,11 @@ export function CustomerFaqPage({
           <section className="customer-service-review-queue customer-service-answer-review">
             <header>
               <div>
-                <h3>人工覆核學習</h3>
-                <p>人工結果會成為模型評測的可信資料。</p>
+                <h3 className="customer-service-section-title">
+                  <span><CheckCheck /></span>
+                  人工覆核學習
+                </h3>
+                <p>先判斷回覆是否正確，再自行選擇是否加入學習。</p>
               </div>
               <span className="status-badge neutral">{reviewTurns.length}</span>
             </header>
@@ -1463,6 +1483,25 @@ export function CustomerFaqPage({
                         }))
                       }
                     />
+                    <label className="customer-service-learning-mode">
+                      <span>學習方式</span>
+                      <select
+                        value={feedbackLearningModes[turn.id] || "none"}
+                        onChange={(event) =>
+                          setFeedbackLearningModes((current) => ({
+                            ...current,
+                            [turn.id]: event.target.value as
+                              | "none"
+                              | "evaluation"
+                              | "faq_draft",
+                          }))
+                        }
+                      >
+                        <option value="none">不加入學習（只記錄成效）</option>
+                        <option value="evaluation">加入模型評測案例</option>
+                        <option value="faq_draft">建立未發布 FAQ 草稿</option>
+                      </select>
+                    </label>
                     <footer>
                       <Button
                         size="sm"
@@ -1479,7 +1518,7 @@ export function CustomerFaqPage({
                         onClick={() => void reviewTurn(turn, "incorrect")}
                       >
                         <X />
-                        錯誤並建立草稿
+                        錯誤
                       </Button>
                       <Button
                         size="sm"
@@ -1499,7 +1538,10 @@ export function CustomerFaqPage({
           <section className="customer-service-model-lab">
             <header>
               <div>
-                <h3>模型與 Prompt 實驗室</h3>
+                <h3 className="customer-service-section-title">
+                  <span><Settings2 /></span>
+                  模型與 Prompt 實驗室
+                </h3>
                 <p>候選配置完成歷史評測後才能發布到 develop。</p>
               </div>
             </header>
@@ -1525,6 +1567,51 @@ export function CustomerFaqPage({
                     }))
                   }
                 />
+                <label>
+                  備援模型
+                  <input
+                    aria-label="備援模型"
+                    value={configDraft.fallbackModel}
+                    disabled={!configDraft.fallbackEnabled}
+                    onChange={(event) =>
+                      setConfigDraft((current) => ({
+                        ...current,
+                        fallbackModel: event.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label>
+                  低信心升級門檻
+                  <input
+                    aria-label="低信心升級門檻"
+                    type="number"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value={configDraft.escalationConfidence}
+                    onChange={(event) =>
+                      setConfigDraft((current) => ({
+                        ...current,
+                        escalationConfidence: Number(event.target.value),
+                      }))
+                    }
+                  />
+                </label>
+                <label>
+                  啟用智能升級
+                  <input
+                    aria-label="啟用智能升級"
+                    type="checkbox"
+                    checked={configDraft.fallbackEnabled}
+                    onChange={(event) =>
+                      setConfigDraft((current) => ({
+                        ...current,
+                        fallbackEnabled: event.target.checked,
+                      }))
+                    }
+                  />
+                </label>
                 <textarea
                   aria-label="附加 Prompt"
                   rows={3}
@@ -1596,7 +1683,9 @@ export function CustomerFaqPage({
                       </span>
                     </div>
                     <p>
-                      {config.model} · temperature {config.temperature} · FAQ{" "}
+                      主模型 {config.model}（none） · {config.fallbackEnabled
+                        ? `低信心轉 ${config.fallbackModel}（low，門檻 ${config.escalationConfidence}）`
+                        : "不升級"} · temperature {config.temperature} · FAQ{" "}
                       {config.retrievalLimit}
                     </p>
                     <small>

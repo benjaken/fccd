@@ -2,9 +2,10 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 
 import { EMAIL_FROM } from "../_shared/email-sender.ts";
 import {
-  answerCustomerServiceFaqWithAi,
-  classifyCustomerServiceWithAi,
+  answerCustomerServiceFaqWithTieredAi,
+  classifyCustomerServiceWithTieredAi,
   customerServiceAiConfig,
+  type CustomerServiceAiTierConfig,
   type CustomerServiceIntentConfig,
 } from "../_shared/customer-service-ai.ts";
 import {
@@ -283,11 +284,13 @@ function createCustomerServiceClassifier({
   conversationState,
   phone,
   dryRun,
+  tiers,
 }: {
   intents: CustomerServiceIntentConfig[];
   conversationState: string;
   phone: string;
   dryRun: boolean;
+  tiers: CustomerServiceAiTierConfig;
 }) {
   return async (text: string): Promise<ClassifiedMessage> => {
     const fallback = classifyCustomerServiceMessage(text);
@@ -298,10 +301,11 @@ function createCustomerServiceClassifier({
     )
       return fallback;
     try {
-      const result = await classifyCustomerServiceWithAi({
+      const result = await classifyCustomerServiceWithTieredAi({
         message: text,
         conversationState,
         intents,
+        tiers,
         beforeRequest: aiWaitingNotice(phone, dryRun),
       });
       if (!result) return fallback;
@@ -331,6 +335,7 @@ function createCustomerServiceClassifier({
         requestedDate: result.requestedDate,
         missingFields: result.missingFields,
         requiresHuman: result.requiresHuman,
+        model: result.model,
         slots: {
           ...fallback.slots,
           eventDate: result.requestedDate || fallback.slots.eventDate,
@@ -503,6 +508,52 @@ async function recordCustomerServiceTurn(
       error.message.slice(0, 300),
     );
   }
+}
+
+type ActiveCustomerServiceConfig = {
+  model: string;
+  fallback_model: string;
+  fallback_enabled: boolean;
+  escalation_confidence: number;
+  system_prompt: string;
+  temperature: number;
+  retrieval_limit: number;
+};
+
+async function loadActiveCustomerServiceConfig(admin: AdminClient) {
+  const { data, error } = await admin
+    .from("customer_service_config_versions")
+    .select("model,fallback_model,fallback_enabled,escalation_confidence,system_prompt,temperature,retrieval_limit")
+    .eq("environment", deploymentEnvironment())
+    .eq("status", "active")
+    .maybeSingle();
+  if (error && error.code !== "42P01") {
+    console.error("customer service active config load failed", error.message.slice(0, 300));
+  }
+  return data as ActiveCustomerServiceConfig | null;
+}
+
+function customerServiceAiTiers(active: ActiveCustomerServiceConfig | null): CustomerServiceAiTierConfig {
+  const base = customerServiceAiConfig();
+  const primaryModel = active?.model || base.model || "grok-4.3";
+  const fallbackModel = active?.fallback_model || "grok-4.5";
+  return {
+    primary: {
+      ...base,
+      model: primaryModel,
+      systemPrompt: active?.system_prompt || "",
+      temperature: Number(active?.temperature ?? 0.1),
+      reasoningEffort: /^grok-4\.3/i.test(primaryModel) ? "none" : "low",
+    },
+    fallback: active?.fallback_enabled === false ? null : {
+      ...base,
+      model: fallbackModel,
+      systemPrompt: active?.system_prompt || "",
+      temperature: Number(active?.temperature ?? 0.1),
+      reasoningEffort: "low",
+    },
+    escalationConfidence: Number(active?.escalation_confidence ?? 0.72),
+  };
 }
 
 async function queueOutboundMessage(
@@ -849,44 +900,15 @@ function createBotDeps(
   {
     dryRun = false,
     replyTemplates = {},
-  }: { dryRun?: boolean; replyTemplates?: ReplyTemplates } = {},
+    activeConfig = null,
+    tiers = customerServiceAiTiers(activeConfig),
+  }: {
+    dryRun?: boolean;
+    replyTemplates?: ReplyTemplates;
+    activeConfig?: ActiveCustomerServiceConfig | null;
+    tiers?: CustomerServiceAiTierConfig;
+  } = {},
 ) {
-  let activeConfigPromise: Promise<{
-    model: string;
-    system_prompt: string;
-    temperature: number;
-    retrieval_limit: number;
-  } | null> | null = null;
-  const loadActiveConfig = () => {
-    activeConfigPromise ??= admin
-      .from("customer_service_config_versions")
-      .select("model,system_prompt,temperature,retrieval_limit")
-      .eq("environment", deploymentEnvironment())
-      .eq("status", "active")
-      .maybeSingle()
-      .then(
-        ({
-          data,
-          error,
-        }: {
-          data: unknown;
-          error: { code?: string; message: string } | null;
-        }) => {
-          if (error && error.code !== "42P01")
-            console.error(
-              "customer service active config load failed",
-              error.message.slice(0, 300),
-            );
-          return data as {
-            model: string;
-            system_prompt: string;
-            temperature: number;
-            retrieval_limit: number;
-          } | null;
-        },
-      );
-    return activeConfigPromise;
-  };
   return {
     replyTemplates,
     async lookupOrders(phone: string) {
@@ -952,7 +974,6 @@ function createBotDeps(
       return row;
     },
     async searchFaqs(query: string) {
-      const activeConfig = await loadActiveConfig();
       const { data, error } = await admin.rpc(
         "search_published_customer_faqs",
         {
@@ -978,21 +999,13 @@ function createBotDeps(
       }>,
     ) {
       if (!candidates.length) return null;
-      const activeConfig = await loadActiveConfig();
-      const result = await answerCustomerServiceFaqWithAi({
+      const result = await answerCustomerServiceFaqWithTieredAi({
         question: query,
         faqs: candidates.map((candidate) => ({
           ...candidate,
           category: candidate.category || "general",
         })),
-        config: activeConfig
-          ? {
-              ...customerServiceAiConfig(),
-              model: activeConfig.model,
-              systemPrompt: activeConfig.system_prompt,
-              temperature: Number(activeConfig.temperature),
-            }
-          : customerServiceAiConfig(),
+        tiers,
       });
       return result ?? null;
     },
@@ -1107,7 +1120,11 @@ async function handleBackendPreview(
     ) || "85200000000";
   const admin = createAdminClient();
   const conversation = previewConversation(payload.conversation, phone);
-  const runtime = await loadCustomerServiceRuntime(admin);
+  const [runtime, activeConfig] = await Promise.all([
+    loadCustomerServiceRuntime(admin),
+    loadActiveCustomerServiceConfig(admin),
+  ]);
+  const tiers = customerServiceAiTiers(activeConfig);
   const turn = await handleCustomerServiceTurn({
     phone,
     text,
@@ -1115,12 +1132,15 @@ async function handleBackendPreview(
     deps: createBotDeps(admin, {
       dryRun: true,
       replyTemplates: runtime.replyTemplates,
+      activeConfig,
+      tiers,
     }),
     classify: createCustomerServiceClassifier({
       intents: runtime.intents,
       conversationState: conversation.state,
       phone,
       dryRun: true,
+      tiers,
     }),
   });
   return jsonResponse({
@@ -1284,17 +1304,22 @@ Deno.serve(async (request) => {
 
     const conversation = await loadConversation(admin, event.waId);
     const startedAt = Date.now();
-    const runtime = await loadCustomerServiceRuntime(admin);
+    const [runtime, activeConfig] = await Promise.all([
+      loadCustomerServiceRuntime(admin),
+      loadActiveCustomerServiceConfig(admin),
+    ]);
+    const tiers = customerServiceAiTiers(activeConfig);
     const turn = await handleCustomerServiceTurn({
       phone: event.waId,
       text: event.text,
       conversation,
-      deps: createBotDeps(admin, { replyTemplates: runtime.replyTemplates }),
+      deps: createBotDeps(admin, { replyTemplates: runtime.replyTemplates, activeConfig, tiers }),
       classify: createCustomerServiceClassifier({
         intents: runtime.intents,
         conversationState: conversation.state,
         phone: event.waId,
         dryRun: false,
+        tiers,
       }),
     });
 

@@ -2,7 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   answerCustomerServiceFaqWithAi,
+  answerCustomerServiceFaqWithTieredAi,
   classifyCustomerServiceWithAi,
+  classifyCustomerServiceWithTieredAi,
 } from "../supabase/functions/_shared/customer-service-ai.ts";
 
 const config = {
@@ -21,6 +23,78 @@ const faqs = [{
 }];
 
 describe("customer-service grounded AI", () => {
+  it("uses Grok 4.3 without reasoning and escalates low-confidence intent to Grok 4.5 low", async () => {
+    const response = (confidence: number) => new Response(JSON.stringify({
+      choices: [{ message: { content: JSON.stringify({
+        intent: "search_faq",
+        confidence,
+        orderNumber: "",
+        requestedDate: "",
+        missingFields: [],
+        requiresHuman: false,
+        tool: "search_faq",
+      }) } }],
+    }), { status: 200 });
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(response(0.55))
+      .mockResolvedValueOnce(response(0.91));
+    const intents = [{
+      intentKey: "search_faq",
+      displayName: "FAQ",
+      description: "搜尋公開資料",
+      examples: [],
+      actionKey: "faq",
+      confidenceThreshold: 0.5,
+      toolKeys: ["search_faq"],
+    }];
+
+    const result = await classifyCustomerServiceWithTieredAi({
+      message: "餐具有冇特別安排？",
+      conversationState: "identifying",
+      intents,
+      tiers: {
+        primary: { ...config, endpoint: "https://api.x.ai/v1/chat/completions", model: "grok-4.3", reasoningEffort: "none" },
+        fallback: { ...config, endpoint: "https://api.x.ai/v1/chat/completions", model: "grok-4.5", reasoningEffort: "low" },
+        escalationConfidence: 0.72,
+      },
+      fetchImpl: fetchMock,
+    });
+
+    expect(result).toMatchObject({ model: "grok-4.5", confidence: 0.91 });
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body as string)).toMatchObject({
+      model: "grok-4.3",
+      reasoning_effort: "none",
+    });
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body as string)).toMatchObject({
+      model: "grok-4.5",
+      reasoning_effort: "low",
+    });
+  });
+
+  it("uses the fallback model only when the primary cannot ground an FAQ answer", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        choices: [{ message: { content: JSON.stringify({ answer: null, sourceIds: [] }) } }],
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        choices: [{ message: { content: JSON.stringify({ answer: "新界地面交收運費係 HK$50。", sourceIds: ["delivery"] }) } }],
+      }), { status: 200 }));
+
+    const result = await answerCustomerServiceFaqWithTieredAi({
+      question: "新界運費？",
+      faqs,
+      tiers: {
+        primary: { ...config, model: "grok-4.3" },
+        fallback: { ...config, model: "grok-4.5", reasoningEffort: "low" },
+        escalationConfidence: 0.72,
+      },
+      fetchImpl: fetchMock,
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(result).toMatchObject({ model: "grok-4.5", sourceIds: ["delivery"] });
+  });
+
   it("classifies only configured intents and allowed tools", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
       choices: [{ message: { content: JSON.stringify({

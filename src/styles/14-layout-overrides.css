@@ -216,9 +216,20 @@
 }
 
 .customer-service-insights-panel .customer-service-handoff-queue,
+.customer-service-insights-panel .customer-service-delivery-queue,
 .customer-service-insights-panel .customer-service-report-generator,
 .customer-service-insights-panel .customer-service-model-lab {
   grid-column: 1 / -1;
+}
+
+@media (min-width: 1101px) {
+  .customer-service-insights-panel .customer-service-handoff-queue {
+    grid-column: span 7;
+  }
+
+  .customer-service-insights-panel .customer-service-delivery-queue {
+    grid-column: span 5;
+  }
 }
 
 .customer-service-insights-panel .customer-service-report-overview {
@@ -263,6 +274,11 @@
   background: #fffdf6;
 }
 
+.customer-service-insights-panel .customer-service-delivery-queue {
+  border-left: 4px solid #12824c;
+  background: #f8fcfa;
+}
+
 .customer-service-insights-panel .customer-service-report-overview {
   border-top: 4px solid #12824c;
 }
@@ -293,6 +309,43 @@
   color: #18382b;
   font-size: 1rem;
   font-weight: 760;
+}
+
+.customer-service-insights-panel .customer-service-section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.customer-service-insights-panel .customer-service-section-title > span {
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  place-items: center;
+  border-radius: 9px;
+  background: #e9f5ee;
+  color: #08743f;
+}
+
+.customer-service-insights-panel .customer-service-section-title svg {
+  width: 17px;
+  height: 17px;
+}
+
+.customer-service-insights-panel .customer-service-handoff-queue .customer-service-section-title > span {
+  background: #fff1cf;
+  color: #9a6500;
+}
+
+.customer-service-insights-panel .customer-service-answer-review .customer-service-section-title > span {
+  background: #f1eafb;
+  color: #72429c;
+}
+
+.customer-service-insights-panel .customer-service-model-lab .customer-service-section-title > span {
+  background: #edf1ef;
+  color: #52625a;
 }
 
 .customer-service-insights-panel header p,
@@ -334,8 +387,68 @@
   align-self: stretch;
 }
 
+.customer-service-insights-panel .customer-service-learning-mode {
+  display: grid;
+  gap: 6px;
+  color: #44564d;
+  font-size: 0.82rem;
+  font-weight: 680;
+}
+
+.customer-service-insights-panel .customer-service-learning-mode select {
+  width: 100%;
+  min-height: 38px;
+  padding: 7px 10px;
+  border: 1px solid #d5dfd9;
+  border-radius: 8px;
+  background: #fff;
+  color: inherit;
+}
+
 .customer-service-insights-panel .status-badge {
   font-weight: 720;
+}
+
+.customer-service-insights-panel .customer-service-insights > .orders-state-error,
+.customer-service-insights-panel .customer-service-insights > p {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid #e3e9e5;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.customer-service-insights-panel .customer-service-review-queue > p,
+.customer-service-insights-panel .customer-service-suggestions > p {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 9px;
+  background: rgb(255 255 255 / 70%);
+  color: #607068;
+}
+
+.customer-service-insights-panel .customer-service-config-form {
+  gap: 12px 14px;
+  padding: 16px;
+  border: 1px solid #e2e8e4;
+  border-radius: 11px;
+  background: #f8faf9;
+}
+
+.customer-service-insights-panel .customer-service-config-form input,
+.customer-service-insights-panel .customer-service-config-form textarea {
+  min-width: 0;
+  border-color: #d5dfd9;
+  background: #ffffff;
+}
+
+.customer-service-insights-panel .customer-service-config-form label {
+  display: grid;
+  gap: 6px;
+  color: #44564d;
+  font-size: 0.82rem;
+  font-weight: 680;
 }
 
 @media (max-width: 1100px) {
@@ -369,6 +482,7 @@
   }
 
   .customer-service-insights-panel .customer-service-handoff-queue,
+  .customer-service-insights-panel .customer-service-delivery-queue,
   .customer-service-insights-panel .customer-service-report-generator,
   .customer-service-insights-panel .customer-service-report-overview,
   .customer-service-insights-panel .customer-service-suggestions,
