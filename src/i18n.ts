@@ -2603,6 +2603,7 @@ const resources = {
         description: "搜尋、跟進及管理所有到會報價單。",
         upcomingDescription: "送餐日期臨近、需聯絡客戶確認的報價。",
         emailMeFormSource: "EmailMeForm",
+        whatsappSource: "WhatsApp",
         create: "建立報價單",
         createForm: "新增表單",
         search: "搜尋報價",
@@ -8204,6 +8205,7 @@ const resources = {
         upcomingDescription:
           "Quotes with a delivery date coming up, ready to contact customers.",
         emailMeFormSource: "EmailMeForm",
+        whatsappSource: "WhatsApp",
         create: "Create quote",
         createForm: "New form",
         search: "Search quotes",

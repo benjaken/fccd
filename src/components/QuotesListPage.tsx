@@ -609,6 +609,11 @@ export function QuotesListPage({
                       {t("quotes.emailMeFormSource")}
                     </span>
                   )}
+                  {quote.sourceSystem === "whatsapp" && (
+                    <span className="status-badge blue quote-source-badge">
+                      {t("quotes.whatsappSource")}
+                    </span>
+                  )}
                   <div>{quote.contactPhone || ""}</div>
                   {quote.asanaLink && (
                     <a href={quote.asanaLink} target="_blank" rel="noopener noreferrer">Asana Link</a>

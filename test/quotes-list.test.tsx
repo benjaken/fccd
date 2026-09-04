@@ -535,6 +535,22 @@ describe("Catering quotes list", () => {
     expect(await screen.findByText("EmailMeForm")).toBeInTheDocument();
   });
 
+  it("badges WhatsApp inquiries separately from EmailMeForm", async () => {
+    const loadQuotes = vi.fn().mockResolvedValue({
+      ...quoteResult,
+      items: [{ ...quoteResult.items[0], sourceSystem: "whatsapp" }],
+    });
+
+    render(
+      <MemoryRouter>
+        <QuotesListPage preset="recent-open" loadQuotes={loadQuotes} />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("WhatsApp")).toBeInTheDocument();
+    expect(screen.queryByText("EmailMeForm")).not.toBeInTheDocument();
+  });
+
   it("paginates quotes in groups of fifteen", async () => {
     const user = userEvent.setup();
     const loadQuotes = vi.fn().mockResolvedValue({ ...quoteResult, total: 31 });
