@@ -116,6 +116,7 @@ import { KitchenSalesCostReportPage } from "@/components/KitchenSalesCostReportP
 import { KitchenProductSalesReportPage } from "@/components/KitchenProductSalesReportPage";
 import { KitchenChannelSalesReportPage } from "@/components/KitchenChannelSalesReportPage";
 import { KitchenAdvertisingPerformanceReportPage } from "@/components/KitchenAdvertisingPerformanceReportPage";
+import { FestivalOrderGenerationReportPage } from "@/components/FestivalOrderGenerationReportPage";
 import { ReportAiWorkspace } from "@/components/report-ai/ReportAiWorkspace";
 import { SuppliersPage } from "@/components/SuppliersPage";
 import { IngredientsListPage } from "@/components/IngredientsListPage";
@@ -1432,6 +1433,22 @@ function OperationsShell() {
                 }
               />
               <Route
+                path="/reports/kitchen/festival-orders"
+                element={
+                  pageAccess.canAccess("kitchen.cost_input") ? (
+                    <ReportAiWorkspace
+                      reportKey="festivalOrderGeneration"
+                      permissionKey="kitchen.cost_input"
+                      reportTitle={t("reports.ai.reportTitles.festivalOrderGeneration")}
+                    >
+                      <FestivalOrderGenerationReportPage />
+                    </ReportAiWorkspace>
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
+                }
+              />
+              <Route
                 path="/kitchen/material-usage"
                 element={
                   pageAccess.canAccess("kitchen.material_usage") ? (
@@ -2237,6 +2254,7 @@ const BUSINESS_MENU_LABELS: Record<string, [string, string]> = {
   kitchenChannelSales: ["頻道銷售", "Channel Sales"],
   kitchenProductSales: ["產品銷售", "Product Sales"],
   kitchenAdvertisingPerformance: ["廣告表現", "Advertising Performance"],
+  festivalOrderGeneration: ["節日訂單數量", "Festival Order Counts"],
   shopOrderQuantities: ["店舖訂貨數量", "Shop Order Quantities"],
   averageSupplyPrice: ["產品供店舖平均售價", "Average Shop Supply Price"],
   productionCostPrice: ["產品製作成本及工場用貨售價", "Production Cost and Factory Price"],

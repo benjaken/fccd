@@ -63,6 +63,7 @@ describe("Primary navigation section matching", () => {
     ["/reports/frozen-meat/raw-meat-stock", "/reports/frozen-meat"],
     ["/reports/shops/sales-working-hours", "/reports/shops"],
     ["/reports/kitchen/advertising-performance", "/reports/kitchen"],
+    ["/reports/kitchen/festival-orders", "/reports/kitchen"],
   ])("keeps report secondary item %s active under %s", (pathname, itemPath) => {
     expect(isSecondaryNavItemActive(pathname, itemPath)).toBe(true);
   });

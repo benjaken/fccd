@@ -35720,3 +35720,146 @@ body:has(.quote-clause-modal-root) { overflow: hidden; }
   flex-wrap: wrap;
   gap: 0.5rem;
 }
+
+.festival-order-generation-page {
+  --festival-amber: #b45309;
+  --festival-amber-soft: #fff7ed;
+  --festival-up: #0a7e3a;
+  --festival-down: #b42318;
+  --primary: var(--festival-amber);
+  --selection-bg: #fff4e5;
+  --selection-bg-strong: #ffe8c7;
+  --report-table-header-bg: #fde7c7;
+  --report-table-summary-bg: #fff4e5;
+}
+
+.festival-order-generation-year-totals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+  gap: 0.7rem;
+}
+
+.festival-order-generation-year-totals article {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.85rem 0.95rem;
+}
+
+.festival-order-generation-year-totals span {
+  color: var(--muted-foreground);
+  font-size: 0.82rem;
+}
+
+.festival-order-generation-year-totals strong {
+  font-size: 1.35rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.festival-order-generation-table-wrap {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.festival-order-generation-table-copy {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.festival-order-generation-table-copy span {
+  color: var(--muted-foreground);
+  font-size: 0.88rem;
+}
+
+.festival-order-generation-table-scroll {
+  overflow-x: auto;
+}
+
+.festival-order-generation-table {
+  width: 100%;
+  min-width: 36rem;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.9rem;
+}
+
+.festival-order-generation-table th,
+.festival-order-generation-table td {
+  padding: 0.7rem 0.75rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  text-align: right;
+  vertical-align: top;
+}
+
+.festival-order-generation-table th:first-child,
+.festival-order-generation-table td:first-child {
+  text-align: left;
+  position: sticky;
+  left: 0;
+  background: var(--card);
+}
+
+.festival-order-generation-table thead th {
+  background: var(--report-table-header-bg);
+  font-weight: 700;
+}
+
+.festival-order-generation-table tbody tr.is-selected th,
+.festival-order-generation-table tbody tr.is-selected td {
+  background: var(--selection-bg);
+}
+
+.festival-order-generation-table tbody tr.is-selected th:first-child {
+  background: var(--selection-bg);
+}
+
+.festival-order-generation-table tfoot th,
+.festival-order-generation-table tfoot td {
+  background: var(--report-table-summary-bg);
+  font-weight: 700;
+}
+
+.festival-order-generation-table tfoot th:first-child {
+  background: var(--report-table-summary-bg);
+}
+
+.festival-order-generation-table button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: left;
+}
+
+.festival-order-generation-table button:hover {
+  color: var(--festival-amber);
+  text-decoration: underline;
+}
+
+.festival-order-generation-table td strong,
+.festival-order-generation-table td small {
+  display: block;
+}
+
+.festival-order-generation-change {
+  color: var(--muted-foreground);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.festival-order-generation-change.is-up {
+  color: var(--festival-up);
+}
+
+.festival-order-generation-change.is-down {
+  color: var(--festival-down);
+}
+
+@media (max-width: 860px) {
+  .festival-order-generation-page .kitchen-sales-cost-workspace {
+    grid-template-columns: 1fr;
+  }
+}

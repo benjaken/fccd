@@ -153,6 +153,7 @@ function kitchenReportNavItems(): NavItem[] {
     { key: "kitchenChannelSales", to: "/reports/kitchen/channel-sales", icon: ChartNoAxesCombined, permissionKey: "kitchen.cost_input" },
     { key: "kitchenProductSales", to: "/reports/kitchen/product-sales", icon: ChartNoAxesCombined, permissionKey: "kitchen.cost_input" },
     { key: "kitchenAdvertisingPerformance", to: "/reports/kitchen/advertising-performance", icon: ChartNoAxesCombined, permissionKey: "kitchen.cost_input" },
+    { key: "festivalOrderGeneration", to: "/reports/kitchen/festival-orders", icon: ChartNoAxesCombined, permissionKey: "kitchen.cost_input" },
   ];
 }
 
