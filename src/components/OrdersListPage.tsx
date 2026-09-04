@@ -560,6 +560,7 @@ export function OrdersListPage({
       onMessages={() => setMessageOrder(order)}
       onPreview={(kind) => setPrintPreview({ order, kind })}
       statusPicker={renderStatusPicker(order)}
+      detailTo={effectivePreset === "pending" ? `/quotes/${order.id}` : `/orders/${order.id}`}
     />
   );
 

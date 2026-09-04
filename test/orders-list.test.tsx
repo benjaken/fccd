@@ -754,8 +754,8 @@ describe("Orders list", () => {
 
     expect(screen.queryByLabelText("Actions for B-1513")).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Details" })).not.toBeInTheDocument();
-    const editLink = await screen.findByRole("link", { name: "編輯" });
-    expect(editLink).toHaveAttribute("href", "/orders/order-1/edit");
+    const viewLink = await screen.findByRole("link", { name: "查看" });
+    expect(viewLink).toHaveAttribute("href", "/orders/order-1");
     expect(screen.getByRole("button", { name: "增加訂單狀態" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "溝通" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "復製訂單" })).toHaveAttribute("href", "/orders/new?copyFrom=order-1");

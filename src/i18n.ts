@@ -1150,6 +1150,7 @@ const resources = {
         },
       },
       orders: {
+        view: "查看",
         copy: "復製訂單",
         festivalAssignment: {
           selected: "已選擇 {{count}} 張訂單",
@@ -2630,6 +2631,7 @@ const resources = {
         },
         actions: {
           pdf: "PDF",
+          view: "查看",
           edit: "編輯",
           file: "文件",
           copy: "複製",
@@ -6395,6 +6397,7 @@ const resources = {
         },
       },
       orders: {
+        view: "View",
         copy: "Copy order",
         festivalAssignment: {
           selected: "{{count}} order(s) selected",
@@ -7932,6 +7935,7 @@ const resources = {
         },
         actions: {
           pdf: "PDF",
+          view: "View",
           edit: "Edit",
           file: "Files",
           copy: "Copy",
