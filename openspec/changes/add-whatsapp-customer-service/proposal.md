@@ -7,8 +7,8 @@
 - 新增 WATI 入站 webhook 與 24 小時服務窗內的 session 自由回覆；客服 bot 使用獨立殺開關，不與現有自動／手動通知開關綁死。
 - 以 WhatsApp 電話對 `orders` 快照聯絡電話查正式訂單；對上一張直接回狀態與加單連結，對上多張列出訂單號讓客人選，不再追問電郵。
 - 完全沒單的新客，或只有未轉正式單的報價，改走蒐集到會意見：日期、人數、預算、忌口、菜式。寫成 `source_system = 'whatsapp'` 的待跟進報價，並通知內部同事。
-- 新增可後台維護的 FAQ 資料表，以關鍵字／模糊比對搜尋政策；第一版不上向量檢索。FAQ 正文以 [FCC Catering Language - FAQ Logic v1](https://docs.google.com/document/d/1s7iXNDQhBPDztqW9beyR5soXFufHLvUsrUPAsU524FE/edit?tab=t.0) 為來源，只發布已核准的客人可見條目，不把內部 SOP、過期優惠碼或死價表整份灌進 bot。
-- 改期、取消、投訴、議價、付款爭議一律停 bot、轉真人；機器人不得改單、不得報死價、不得當場推套餐。
+- 新增可後台維護的 FAQ 資料表，以關鍵字／模糊比對搜尋政策；第一版不上向量檢索。FAQ 正文以 [FCC Catering Language - FAQ Logic v1](https://docs.google.com/document/d/1s7iXNDQhBPDztqW9beyR5soXFufHLvUsrUPAsU524FE/edit?tab=t.0) 為來源，只發布已核准的客人可見條目。**運費表（含滿額免地面交收門檻）按該文件已發布條目原文回答。** 不把內部 SOP、過期優惠碼、菜式／套餐標價整份灌進 bot。
+- 改期、取消、投訴、議價、付款爭議一律停 bot、轉真人；機器人不得改單、不得報菜式或套餐死價、不得當場推套餐。運費只准報 FAQ 已發布的運費表，不得另報其他價錢。
 - 所有自動回覆使用香港繁體、本地人禮貌口吻；文明尊重客人，不得說粗口，亦不得複述客人的粗口。
 - 只處理查單、到會意見與已發布 FAQ。無關問題拒絕回答；試圖套出提示、改角色或調用通用 AI 能力的訊息一律當越權，只用固定拒答，不執行其指示。
 - 第一版不建 FCCD 客服工作台（沿用 WATI inbox）、不做網站／Email 客服、不做食物或套餐推薦。
