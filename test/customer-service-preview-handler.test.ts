@@ -31,13 +31,10 @@ describe("customer-service backend conversation preview", () => {
     expect(source).toContain("intent_key: turn.intentKey");
   });
 
-  it("sends a best-effort waiting notice before a real AI request", () => {
-    expect(source).toContain(
-      'const AI_WAITING_REPLY = "收到，我正在查詢相關資料，請稍等一會 🙏"',
-    );
-    expect(source).toContain("text: AI_WAITING_REPLY");
-    expect(source).toContain("beforeRequest: aiWaitingNotice(phone, dryRun)");
-    expect(source).toContain('"wati AI waiting notice failed"');
+  it("does not send a separate waiting notice before an AI request", () => {
+    expect(source).not.toContain("AI_WAITING_REPLY");
+    expect(source).not.toContain("aiWaitingNotice(phone, dryRun)");
+    expect(source).not.toContain('"wati AI waiting notice failed"');
   });
 
   it("loads database-configured intents, tool permissions, replies, and records live outcomes", () => {

@@ -54,8 +54,6 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const AI_WAITING_REPLY = "收到，我正在查詢相關資料，請稍等一會 🙏";
-
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -286,31 +284,6 @@ async function loadCustomerServiceRuntime(admin: AdminClient) {
   return { intents, replyTemplates, workflowPolicies };
 }
 
-function aiWaitingNotice(phone: string, dryRun: boolean) {
-  if (dryRun || !phone) return undefined;
-  return async () => {
-    try {
-      await deliverWatiSessionMessage({
-        creds: {
-          apiEndpoint: env("WATI_API_ENDPOINT"),
-          apiToken: env("WATI_API_TOKEN"),
-          accessToken: env("WATI_ACCESS_TOKEN"),
-          apiHost: env("WATI_API_HOST"),
-          tenantId: env("WATI_TENANT_ID"),
-        },
-        phone,
-        text: AI_WAITING_REPLY,
-        channelNumber: env("WATI_CHANNEL_NUMBER") || BRAND_WHATSAPP_CHANNEL,
-      });
-    } catch (error) {
-      console.error(
-        "wati AI waiting notice failed",
-        error instanceof Error ? error.message.slice(0, 300) : String(error),
-      );
-    }
-  };
-}
-
 function createCustomerServiceClassifier({
   intents,
   conversationState,
@@ -318,8 +291,6 @@ function createCustomerServiceClassifier({
   recentMessages = [],
   activeGoal,
   workflowPolicies = [],
-  phone,
-  dryRun,
   tiers,
 }: {
   intents: CustomerServiceIntentConfig[];
@@ -328,8 +299,6 @@ function createCustomerServiceClassifier({
   recentMessages?: CustomerServiceRecentMessage[];
   activeGoal?: WorkflowPolicy["goalKey"] | null;
   workflowPolicies?: WorkflowPolicy[];
-  phone: string;
-  dryRun: boolean;
   tiers: CustomerServiceAiTierConfig;
 }) {
   return async (text: string): Promise<ClassifiedMessage> => {
@@ -350,7 +319,6 @@ function createCustomerServiceClassifier({
         workflowInstructions: activePolicy?.instructions ?? "",
         intents,
         tiers,
-        beforeRequest: aiWaitingNotice(phone, dryRun),
       });
       if (!result) return fallback;
       const config = intents.find(
@@ -1300,8 +1268,6 @@ async function handleBackendPreview(
       recentMessages: conversation.recent_messages,
       activeGoal: conversation.active_goal,
       workflowPolicies: runtime.workflowPolicies,
-      phone,
-      dryRun: true,
       tiers,
     }),
   });
@@ -1498,8 +1464,6 @@ Deno.serve(async (request) => {
         recentMessages: conversation.recent_messages,
         activeGoal: conversation.active_goal,
         workflowPolicies: runtime.workflowPolicies,
-        phone: event.waId,
-        dryRun: false,
         tiers,
       }),
     });
