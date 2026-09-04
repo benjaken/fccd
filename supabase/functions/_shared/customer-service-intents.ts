@@ -32,6 +32,7 @@ export type ClassifiedMessage = {
   missingFields?: string[];
   requiresHuman?: boolean;
   model?: string;
+  dialogAction?: "continue_current" | "cancel_current" | "switch_task" | "new_request";
 };
 
 const EMPTY_SLOTS: InquirySlots = {

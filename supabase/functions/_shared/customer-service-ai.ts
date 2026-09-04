@@ -47,6 +47,7 @@ export type CustomerServiceAiClassification = {
   requiresHuman: boolean;
   toolKey: string | null;
   model: string;
+  dialogAction: "continue_current" | "cancel_current" | "switch_task" | "new_request";
 };
 
 function firstEnv(...names: string[]) {
@@ -125,6 +126,17 @@ function parseClassification(
   const confidence = Math.min(1, Math.max(0, Number(parsed.confidence) || 0));
   const requestedTool = typeof parsed.tool === "string" ? parsed.tool : "";
   const toolKey = intent.toolKeys.includes(requestedTool) ? requestedTool : null;
+  const rawDialogAction = typeof parsed.dialogAction === "string"
+    ? parsed.dialogAction
+    : "continue_current";
+  const dialogAction = [
+    "continue_current",
+    "cancel_current",
+    "switch_task",
+    "new_request",
+  ].includes(rawDialogAction)
+    ? rawDialogAction as CustomerServiceAiClassification["dialogAction"]
+    : "continue_current";
   return {
     intentKey,
     confidence,
@@ -136,12 +148,14 @@ function parseClassification(
     requiresHuman: Boolean(parsed.requiresHuman),
     toolKey,
     model,
+    dialogAction,
   };
 }
 
 export async function classifyCustomerServiceWithAi({
   message,
   conversationState,
+  pendingRequest = "",
   intents,
   config = customerServiceAiConfig(),
   fetchImpl = fetch,
@@ -149,6 +163,7 @@ export async function classifyCustomerServiceWithAi({
 }: {
   message: string;
   conversationState: string;
+  pendingRequest?: string;
   intents: CustomerServiceIntentConfig[];
   config?: CustomerServiceAiConfig;
   fetchImpl?: typeof fetch;
@@ -184,7 +199,10 @@ export async function classifyCustomerServiceWithAi({
               "Never invent an intent or tool. Select a tool only from that intent's allowedTools.",
               "Order information lookup is read-only and does not require human handoff.",
               "Changing, cancelling or refunding an order requires human handoff.",
-              "Return JSON only with intent, confidence from 0 to 1, orderNumber, requestedDate in YYYY-MM-DD when explicit, missingFields, requiresHuman, and tool.",
+              "Use conversationState and currentTask to decide how this message relates to the active task.",
+              "dialogAction is cancel_current only when the customer withdraws the active task itself. A business request containing words such as cancel order is not automatically cancel_current.",
+              "Use switch_task for a distinct new request while another task is active, new_request when no task is active, otherwise continue_current.",
+              "Return JSON only with intent, confidence from 0 to 1, orderNumber, requestedDate in YYYY-MM-DD when explicit, missingFields, requiresHuman, tool, and dialogAction.",
             ].join(" "),
           },
           {
@@ -192,6 +210,7 @@ export async function classifyCustomerServiceWithAi({
             content: JSON.stringify({
               message: text,
               conversationState,
+              currentTask: pendingRequest.trim().slice(0, 500) || null,
               enabledIntents: enabledIntents.map((intent) => ({
                 key: intent.intentKey,
                 name: intent.displayName,
@@ -337,6 +356,7 @@ export async function answerCustomerServiceFaqWithAi({
 export async function classifyCustomerServiceWithTieredAi({
   message,
   conversationState,
+  pendingRequest = "",
   intents,
   tiers,
   fetchImpl = fetch,
@@ -344,6 +364,7 @@ export async function classifyCustomerServiceWithTieredAi({
 }: {
   message: string;
   conversationState: string;
+  pendingRequest?: string;
   intents: CustomerServiceIntentConfig[];
   tiers: CustomerServiceAiTierConfig;
   fetchImpl?: typeof fetch;
@@ -354,6 +375,7 @@ export async function classifyCustomerServiceWithTieredAi({
     primary = await classifyCustomerServiceWithAi({
       message,
       conversationState,
+      pendingRequest,
       intents,
       config: tiers.primary,
       fetchImpl,
@@ -371,6 +393,7 @@ export async function classifyCustomerServiceWithTieredAi({
   const fallback = await classifyCustomerServiceWithAi({
     message,
     conversationState,
+    pendingRequest,
     intents,
     config: tiers.fallback,
     fetchImpl,

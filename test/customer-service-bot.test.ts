@@ -402,6 +402,63 @@ describe("customer-service bot turns", () => {
     expect(queueHandoff).not.toHaveBeenCalled();
   });
 
+  it("uses model context to withdraw an active pilot without a cancellation keyword", async () => {
+    const cancelHandoff = vi.fn().mockResolvedValue(true);
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "嗰樣唔搞住",
+      conversation: {
+        ...conversation,
+        state: "awaiting_human",
+        active_goal: "order_change",
+        selected_order_id: order.order_id,
+      },
+      deps: deps({ cancelHandoff }),
+      classify: vi.fn().mockResolvedValue({
+        intent: "search_faq",
+        slots: classifyCustomerServiceMessage("").slots,
+        orderNumber: "",
+        usedModel: true,
+        dialogAction: "cancel_current",
+      }),
+    });
+
+    expect(turn.reply).toBe(REPLIES.handoffCancelled);
+    expect(turn.conversation.state).toBe("identifying");
+    expect(cancelHandoff).toHaveBeenCalledOnce();
+  });
+
+  it("lets a customer switch away from a queued order change instead of appending every message", async () => {
+    const queueHandoff = vi.fn().mockResolvedValue(undefined);
+    const searchFaqs = vi.fn().mockResolvedValue([{
+      id: "delivery-fee",
+      question: "運費幾多？",
+      answer: "九龍地面交收運費為 HK$50。",
+    }]);
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "順便想問運費幾多",
+      conversation: {
+        ...conversation,
+        state: "awaiting_human",
+        active_goal: "order_change",
+        selected_order_id: order.order_id,
+      },
+      deps: deps({ queueHandoff, searchFaqs }),
+      classify: vi.fn().mockResolvedValue({
+        intent: "search_faq",
+        slots: classifyCustomerServiceMessage("").slots,
+        orderNumber: "",
+        usedModel: true,
+        dialogAction: "switch_task",
+      }),
+    });
+
+    expect(turn.reply).toContain("HK$50");
+    expect(turn.conversation.state).toBe("identifying");
+    expect(queueHandoff).not.toHaveBeenCalled();
+  });
+
   it.each([
     ["collecting", "取消訂餐"],
     ["picking_order", "不用再查了"],

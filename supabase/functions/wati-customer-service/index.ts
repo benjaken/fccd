@@ -282,12 +282,14 @@ function aiWaitingNotice(phone: string, dryRun: boolean) {
 function createCustomerServiceClassifier({
   intents,
   conversationState,
+  pendingRequest,
   phone,
   dryRun,
   tiers,
 }: {
   intents: CustomerServiceIntentConfig[];
   conversationState: string;
+  pendingRequest?: string | null;
   phone: string;
   dryRun: boolean;
   tiers: CustomerServiceAiTierConfig;
@@ -304,6 +306,7 @@ function createCustomerServiceClassifier({
       const result = await classifyCustomerServiceWithTieredAi({
         message: text,
         conversationState,
+        pendingRequest: pendingRequest ?? "",
         intents,
         tiers,
         beforeRequest: aiWaitingNotice(phone, dryRun),
@@ -336,6 +339,7 @@ function createCustomerServiceClassifier({
         missingFields: result.missingFields,
         requiresHuman: result.requiresHuman,
         model: result.model,
+        dialogAction: result.dialogAction,
         slots: {
           ...fallback.slots,
           eventDate: result.requestedDate || fallback.slots.eventDate,
@@ -399,7 +403,7 @@ async function loadConversation(admin: AdminClient, phone: string) {
   const { data, error } = await admin
     .from("customer_service_conversations")
     .select(
-      "phone_normalized,state,selected_order_id,handoff_at,pending_request,identity_verified_at,identity_verification_method,identity_verification_order_id,identity_verification_attempts",
+      "phone_normalized,state,selected_order_id,handoff_at,pending_request,active_goal,workflow_slots,workflow_version,identity_verified_at,identity_verification_method,identity_verification_order_id,identity_verification_attempts",
     )
     .eq("phone_normalized", phone)
     .maybeSingle();
@@ -417,6 +421,9 @@ async function loadConversation(admin: AdminClient, phone: string) {
     selected_order_id: data?.selected_order_id ?? null,
     handoff_at: data?.handoff_at ?? null,
     pending_request: data?.pending_request ?? null,
+    active_goal: data?.active_goal ?? null,
+    workflow_slots: data?.workflow_slots ?? {},
+    workflow_version: Number(data?.workflow_version ?? 1),
     identity_verified_at: data?.identity_verified_at ?? null,
     identity_verification_method: data?.identity_verification_method ?? null,
     identity_verification_order_id: data?.identity_verification_order_id ?? null,
@@ -434,6 +441,9 @@ async function saveConversation(
     selected_order_id: conversation.selected_order_id,
     handoff_at: conversation.handoff_at,
     pending_request: conversation.pending_request ?? null,
+    active_goal: conversation.active_goal ?? null,
+    workflow_slots: conversation.workflow_slots ?? {},
+    workflow_version: conversation.workflow_version ?? 1,
     identity_verified_at: conversation.identity_verified_at ?? null,
     identity_verification_method: conversation.identity_verification_method ?? null,
     identity_verification_order_id: conversation.identity_verification_order_id ?? null,
@@ -1045,7 +1055,10 @@ function createBotDeps(
   };
 }
 
-function previewConversation(value: unknown, phone: string) {
+function previewConversation(
+  value: unknown,
+  phone: string,
+): CustomerServiceConversation {
   const input =
     value && typeof value === "object"
       ? (value as Record<string, unknown>)
@@ -1078,6 +1091,15 @@ function previewConversation(value: unknown, phone: string) {
     handoff_at: typeof input.handoff_at === "string" ? input.handoff_at : null,
     pending_request:
       typeof input.pending_request === "string" ? input.pending_request : null,
+    active_goal:
+      input.active_goal === "order_change" || input.active_goal === "catering_inquiry"
+        ? input.active_goal
+        : null,
+    workflow_slots:
+      input.workflow_slots && typeof input.workflow_slots === "object"
+        ? input.workflow_slots as Record<string, unknown>
+        : {},
+    workflow_version: Number(input.workflow_version ?? 1),
     identity_verified_at:
       typeof input.identity_verified_at === "string" ? input.identity_verified_at : null,
     identity_verification_method:
@@ -1140,6 +1162,7 @@ async function handleBackendPreview(
     classify: createCustomerServiceClassifier({
       intents: runtime.intents,
       conversationState: conversation.state,
+      pendingRequest: conversation.pending_request,
       phone,
       dryRun: true,
       tiers,
@@ -1257,6 +1280,9 @@ Deno.serve(async (request) => {
         selected_order_id: null,
         handoff_at: new Date().toISOString(),
         pending_request: null,
+        active_goal: null,
+        workflow_slots: {},
+        workflow_version: 1,
         identity_verified_at: null,
         identity_verification_method: null,
         identity_verification_order_id: null,
@@ -1319,6 +1345,7 @@ Deno.serve(async (request) => {
       classify: createCustomerServiceClassifier({
         intents: runtime.intents,
         conversationState: conversation.state,
+        pendingRequest: conversation.pending_request,
         phone: event.waId,
         dryRun: false,
         tiers,

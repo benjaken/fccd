@@ -7,6 +7,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
+      "npm:@langchain/langgraph@1.4.13": "@langchain/langgraph",
     },
   },
   test: {

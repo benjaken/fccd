@@ -17,6 +17,11 @@ import {
   REPLIES,
   sanitizeOutboundReply,
 } from "./customer-service-replies.ts";
+import {
+  decideCustomerServicePilotAction,
+  inferCustomerServicePilotGoal,
+  type CustomerServicePilotGoal,
+} from "./customer-service-pilot-graph.ts";
 
 export type CustomerServiceOrder = {
   order_id: string;
@@ -42,6 +47,9 @@ export type CustomerServiceConversation = {
   selected_order_id: string | null;
   handoff_at: string | null;
   pending_request: string | null;
+  active_goal?: CustomerServicePilotGoal | null;
+  workflow_slots?: Record<string, unknown>;
+  workflow_version?: number;
   identity_verified_at?: string | null;
   identity_verification_method?: string | null;
   identity_verification_order_id?: string | null;
@@ -139,6 +147,18 @@ function isUndeliveredOrder(order: CustomerServiceOrder) {
   );
 }
 
+function resetPilotConversation(conversation: CustomerServiceConversation) {
+  return nextConversation(conversation, {
+    state: "identifying",
+    selected_order_id: null,
+    handoff_at: null,
+    pending_request: null,
+    active_goal: null,
+    workflow_slots: {},
+    workflow_version: 1,
+  });
+}
+
 function normalizedDialogControl(value: string) {
   return value
     .trim()
@@ -193,6 +213,7 @@ function beginOrderVerification(
       pending_request: pendingRequest,
       identity_verification_order_id: order.order_id,
       identity_verification_attempts: 0,
+      active_goal: pendingRequest.startsWith("handoff:") ? "order_change" : null,
     }),
     wroteInquiry: false,
     notified: false,
@@ -221,6 +242,7 @@ async function finishOrderHandoff(
       selected_order_id: order.order_id,
       handoff_at: new Date().toISOString(),
       pending_request: null,
+      active_goal: "order_change",
     }),
     wroteInquiry: false,
     notified: false,
@@ -269,6 +291,7 @@ async function replyOrderHandoff(
         state: "picking_handoff_order",
         selected_order_id: null,
         pending_request: pendingRequest,
+        active_goal: "order_change",
       }),
       wroteInquiry: false,
       notified: false,
@@ -289,6 +312,7 @@ async function replyOrderHandoff(
       selected_order_id: null,
       handoff_at: new Date().toISOString(),
       pending_request: null,
+      active_goal: "order_change",
     }),
     wroteInquiry: false,
     notified: false,
@@ -378,7 +402,10 @@ async function replyLookup(
   }
   return {
     reply: configuredReply(deps, "collect_prompt", REPLIES.collectPrompt),
-    conversation: nextConversation(conversation, { state: "collecting" }),
+    conversation: nextConversation(conversation, {
+      state: "collecting",
+      active_goal: "catering_inquiry",
+    }),
     wroteInquiry: false,
     notified: false,
     usedModel: classified.usedModel,
@@ -470,13 +497,27 @@ async function replyCollect(
   classified: ClassifiedMessage,
   conversation: CustomerServiceConversation,
 ): Promise<BotTurn> {
-  if (!hasCollectableSlots(classified.slots)) {
+  const saved = conversation.workflow_slots ?? {};
+  const slots: InquirySlots = {
+    eventDate: classified.slots.eventDate || String(saved.eventDate ?? ""),
+    headcount: classified.slots.headcount || String(saved.headcount ?? ""),
+    budget: classified.slots.budget || String(saved.budget ?? ""),
+    dietary: classified.slots.dietary || String(saved.dietary ?? ""),
+    cuisine: classified.slots.cuisine || String(saved.cuisine ?? ""),
+    note: classified.slots.note || String(saved.note ?? ""),
+    anotherEvent: classified.slots.anotherEvent || Boolean(saved.anotherEvent),
+  };
+  if (!hasCollectableSlots(slots)) {
     return {
       reply:
         conversation.state === "collecting"
           ? configuredReply(deps, "collect_more", REPLIES.collectMore)
           : configuredReply(deps, "collect_prompt", REPLIES.collectPrompt),
-      conversation: nextConversation(conversation, { state: "collecting" }),
+      conversation: nextConversation(conversation, {
+        state: "collecting",
+        active_goal: "catering_inquiry",
+        workflow_slots: slots,
+      }),
       wroteInquiry: false,
       notified: false,
       usedModel: classified.usedModel,
@@ -484,15 +525,15 @@ async function replyCollect(
   }
   const written = await deps.writeInquiry(
     phone,
-    classified.slots,
-    classified.slots.anotherEvent,
+    slots,
+    slots.anotherEvent,
   );
   const summary = [
-    classified.slots.eventDate && `日期 ${classified.slots.eventDate}`,
-    classified.slots.headcount && `人數 ${classified.slots.headcount}`,
-    classified.slots.budget,
-    classified.slots.dietary,
-    classified.slots.cuisine,
+    slots.eventDate && `日期 ${slots.eventDate}`,
+    slots.headcount && `人數 ${slots.headcount}`,
+    slots.budget,
+    slots.dietary,
+    slots.cuisine,
   ]
     .filter(Boolean)
     .join("，");
@@ -504,7 +545,7 @@ async function replyCollect(
   });
   return {
     reply: configuredReply(deps, "collect_done", REPLIES.collectDone),
-    conversation: nextConversation(conversation, { state: "identifying" }),
+    conversation: resetPilotConversation(conversation),
     wroteInquiry: true,
     notified: false,
     queuedHandoff: true,
@@ -626,24 +667,6 @@ export async function handleCustomerServiceTurn({
     };
   }
 
-  if (conversation.state === "awaiting_human") {
-    await deps.queueHandoff({
-      phone,
-      quoteId: conversation.selected_order_id,
-      orderNumber: null,
-      summary: `客戶補充資料：${text.trim().slice(0, 500)}`,
-      kind: "order_handoff",
-    });
-    return {
-      reply: REPLIES.handoffQueued,
-      conversation,
-      wroteInquiry: false,
-      notified: false,
-      queuedHandoff: true,
-      usedModel: false,
-    };
-  }
-
   if (conversation.state === "verifying_order") {
     return await replyOrderVerification(deps, phone, text, conversation);
   }
@@ -667,7 +690,60 @@ export async function handleCustomerServiceTurn({
     failureReason: turn.failureReason ?? null,
     model: turn.model ?? classified.model ?? null,
   });
-  if (conversation.state === "picking_handoff_order") {
+  const activeGoal = inferCustomerServicePilotGoal({
+    activeGoal: conversation.active_goal,
+    state: conversation.state,
+    pendingRequest: conversation.pending_request,
+    selectedOrderId: conversation.selected_order_id,
+  });
+  const pilotAction = await decideCustomerServicePilotAction({
+    activeGoal,
+    conversationState: conversation.state,
+    classified,
+  });
+  if (pilotAction === "cancel_current") {
+    const queued = conversation.state === "awaiting_human";
+    if (queued) await deps.cancelHandoff(phone);
+    return annotate({
+      reply: queued ? REPLIES.handoffCancelled : REPLIES.currentTaskCancelled,
+      conversation: resetPilotConversation(conversation),
+      wroteInquiry: false,
+      notified: false,
+      queuedHandoff: false,
+      usedModel: classified.usedModel,
+    });
+  }
+  if (
+    conversation.state === "awaiting_human" &&
+    pilotAction === "continue_order_change"
+  ) {
+    await deps.queueHandoff({
+      phone,
+      quoteId: conversation.selected_order_id,
+      orderNumber: null,
+      summary: `客戶補充資料：${text.trim().slice(0, 500)}`,
+      kind: "order_handoff",
+    });
+    return annotate({
+      reply: REPLIES.handoffQueued,
+      conversation,
+      wroteInquiry: false,
+      notified: false,
+      queuedHandoff: true,
+      usedModel: classified.usedModel,
+    });
+  }
+  const routedConversation = activeGoal && (
+      pilotAction === "start_order_change" ||
+      pilotAction === "start_catering" ||
+      pilotAction === "route_other"
+    )
+    ? resetPilotConversation(conversation)
+    : conversation;
+  if (
+    conversation.state === "picking_handoff_order" &&
+    pilotAction === "continue_order_change"
+  ) {
     return annotate(
       await replyOrderHandoff(deps, phone, classified, conversation, text),
     );
@@ -681,7 +757,7 @@ export async function handleCustomerServiceTurn({
   ) {
     return annotate({
       reply: configuredReply(deps, "refuse", REPLIES.refuse),
-      conversation,
+      conversation: routedConversation,
       wroteInquiry: false,
       notified: false,
       usedModel: classified.usedModel,
@@ -697,7 +773,7 @@ export async function handleCustomerServiceTurn({
     });
     return annotate({
       reply: configuredReply(deps, "handoff", REPLIES.handoff),
-      conversation: nextConversation(conversation, {
+      conversation: nextConversation(routedConversation, {
         state: "awaiting_human",
         handoff_at: new Date().toISOString(),
       }),
@@ -709,17 +785,17 @@ export async function handleCustomerServiceTurn({
   }
   if (classified.intent === "handoff_order") {
     return annotate(
-      await replyOrderHandoff(deps, phone, classified, conversation, text),
+      await replyOrderHandoff(deps, phone, classified, routedConversation, text),
     );
   }
   if (classified.intent === "lookup_order") {
-    return annotate(await replyLookup(deps, phone, classified, conversation));
+    return annotate(await replyLookup(deps, phone, classified, routedConversation));
   }
   if (
     classified.intent === "collect_inquiry" ||
-    conversation.state === "collecting"
+    pilotAction === "continue_catering"
   ) {
-    return annotate(await replyCollect(deps, phone, classified, conversation));
+    return annotate(await replyCollect(deps, phone, classified, routedConversation));
   }
-  return annotate(await replyFaq(deps, classified, conversation, text));
+  return annotate(await replyFaq(deps, classified, routedConversation, text));
 }

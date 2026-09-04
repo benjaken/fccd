@@ -110,6 +110,7 @@ describe("customer-service grounded AI", () => {
     const result = await classifyCustomerServiceWithAi({
       message: "我想改為9月11日送貨",
       conversationState: "identifying",
+      pendingRequest: "修改 B-1555 送貨日期",
       intents: [{
         intentKey: "handoff_order",
         displayName: "修改訂單",
@@ -128,6 +129,11 @@ describe("customer-service grounded AI", () => {
       toolKey: "lookup_orders",
       requiresHuman: true,
     });
+    const requestBody = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+    expect(JSON.parse(requestBody.messages[1].content)).toMatchObject({
+      currentTask: "修改 B-1555 送貨日期",
+    });
+    expect(requestBody.messages[0].content).toContain("dialogAction");
   });
 
   it("rejects a model-selected tool outside the configured allowlist", async () => {
