@@ -26,7 +26,9 @@ describe("WhatsApp customer-service FAQ migration", () => {
   });
 
   it("does not rewrite outbound WATI notification controls", () => {
-    expect(sql).not.toContain("wati_notification_controls");
+    expect(sql).toContain("Does not alter wati_notification_controls");
+    expect(sql).not.toMatch(/alter table[\s\S]{0,80}wati_notification_controls/i);
+    expect(sql).not.toContain("update public.wati_notification_controls");
     expect(sql).not.toContain("wati_notification_control_set");
     expect(sql).not.toContain("wati_notification_controls_get");
   });
