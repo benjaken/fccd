@@ -129,7 +129,13 @@ describe("KitchenCostInputPage query-tab routing", () => {
 
     const css = readAppStyles();
     expect(css).toMatch(
-      /\.ingredients-page\.kitchen-cost-page:not\(\.is-weekly-advertising\)\s*\{[\s\S]*grid-template-rows:\s*auto minmax\(0, 1fr\);/,
+      /\.ingredients-page\.kitchen-cost-page:not\(\.is-weekly-advertising\)\s*\{[\s\S]*grid-template-rows:\s*max-content minmax\(0, 1fr\);/,
+    );
+    expect(css).toMatch(
+      /\.kitchen-cost-page:not\(\.is-weekly-advertising\) > \.kitchen-cost-tabs\s*\{[\s\S]*grid-row:\s*1;[\s\S]*align-self:\s*start;/,
+    );
+    expect(css).toMatch(
+      /\.kitchen-cost-page:not\(\.is-weekly-advertising\) > \[role="tabpanel"\]\s*\{[\s\S]*grid-row:\s*2;[\s\S]*min-height:\s*0;/,
     );
   });
 });
