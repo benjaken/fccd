@@ -144,7 +144,7 @@ describe("Orders dashboard page", () => {
     ).toHaveAttribute("href", "/orders/not-sent-factory");
     expect(
       screen.getByRole("link", { name: /待報價\s*3.*開啟列表/ }),
-    ).toHaveAttribute("href", "/quotes/recent-open");
+    ).toHaveAttribute("href", "/quotes/pending");
     expect(
       screen.getByRole("link", { name: /即將到期報價\s*5.*開啟列表/ }),
     ).toHaveAttribute("href", "/quotes/upcoming");

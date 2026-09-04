@@ -151,6 +151,7 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
   },
   { prefix: "/orders/settings", pageKey: "orders.settings" },
   { prefix: "/quotes/pdf-pages", pageKey: "quotes.pdf_pages" },
+  { prefix: "/quotes/enquiry-forms", pageKey: "quotes" },
   { prefix: "/quotes/customers", pageKey: "quotes.customers" },
   // Keep legacy pending-quote bookmarks accessible through the main quotes page.
   { prefix: "/quotes/follow-up", pageKey: "quotes" },

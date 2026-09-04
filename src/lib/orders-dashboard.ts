@@ -5,7 +5,7 @@ export const DASHBOARD_QUEUE_LIMIT = 5;
 
 export type DashboardQueueItem = {
   id: string;
-  kind: "order" | "quote";
+  kind: "order" | "quote" | "enquiry";
   orderNumber: string | null;
   customerName: string | null;
   companyName: string | null;
@@ -80,6 +80,34 @@ function dashboardDayBounds(now: Date) {
   };
 }
 
+type EnquiryQueueRow = {
+  id: string;
+  customer_name: string | null;
+  company_name: string | null;
+  created_at: string;
+  delivery_date: string | null;
+  delivery_date_raw: string | null;
+};
+
+function mapEnquiryQueueItem(row: EnquiryQueueRow): DashboardQueueItem {
+  return {
+    id: row.id,
+    kind: "enquiry",
+    orderNumber: null,
+    customerName: row.customer_name,
+    companyName: row.company_name,
+    quoteStatus: null,
+    followUpDate: null,
+    deliveryAt: row.delivery_date
+      ? `${row.delivery_date}T00:00:00+08:00`
+      : row.delivery_date_raw,
+    createdAt: row.created_at,
+    sourceSystem: "enquiry_form",
+    outstanding: null,
+    currency: "HKD",
+  };
+}
+
 function mapQueueItem(row: DashboardRow, kind: "order" | "quote"): DashboardQueueItem {
   return {
     id: row.id,
@@ -147,11 +175,9 @@ export async function fetchOrdersDashboardData(
       .gte("delivery_at", todayStart)
       .is("archived_at", null),
     supabase
-      .from("orders")
+      .from("enquiry_submissions")
       .select("id", { count: "exact", head: true })
-      .eq("document_type", "quote")
-      .is("archived_at", null)
-      .or(openQuoteStatus),
+      .is("converted_quote_id", null),
     supabase
       .from("orders")
       .select("id", { count: "exact", head: true })
@@ -186,12 +212,9 @@ export async function fetchOrdersDashboardData(
       .order("created_at", { ascending: false })
       .limit(DASHBOARD_QUEUE_LIMIT),
     supabase
-      .from("orders")
-      .select(QUEUE_QUERY_FIELDS)
-      .eq("document_type", "quote")
-      .is("archived_at", null)
-      .or(openQuoteStatus)
-      .order("bubble_created_at", { ascending: false, nullsFirst: false })
+      .from("enquiry_submissions")
+      .select("id,customer_name,company_name,created_at,delivery_date,delivery_date_raw")
+      .is("converted_quote_id", null)
       .order("created_at", { ascending: false })
       .limit(DASHBOARD_QUEUE_LIMIT),
     supabase
@@ -244,8 +267,8 @@ export async function fetchOrdersDashboardData(
       (latestUnpaidOrdersResult.data ?? []) as DashboardRow[]
     ).map((row) => mapQueueItem(row, "order")),
     latestPendingQuotes: (
-      (latestPendingQuotesResult.data ?? []) as DashboardRow[]
-    ).map((row) => mapQueueItem(row, "quote")),
+      (latestPendingQuotesResult.data ?? []) as EnquiryQueueRow[]
+    ).map(mapEnquiryQueueItem),
     soonestUpcomingQuotes: (
       (soonestUpcomingQuotesResult.data ?? []) as DashboardRow[]
     ).map((row) => mapQueueItem(row, "quote")),

@@ -14,6 +14,8 @@ const OPERATIONAL_LIST_PAGES = [
   "src/components/MeatYieldErrorsPage.tsx",
   "src/components/ProductsListPage.tsx",
   "src/components/PackagesListPage.tsx",
+  "src/components/EnquiryFormsListPage.tsx",
+  "src/components/EnquiryPendingListPage.tsx",
   "src/components/settings/UsersListPage.tsx",
   "src/components/settings/LoginLogsListPage.tsx",
   "src/components/settings/AttachmentsListPage.tsx",

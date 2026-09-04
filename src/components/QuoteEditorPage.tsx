@@ -8,6 +8,7 @@ import {
   CircleAlert,
   CircleCheckBig,
   Banknote,
+  ClipboardList,
   CreditCard,
   Factory,
   FileText,
@@ -38,12 +39,21 @@ import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { SearchSelect } from "@/components/ui/search-select";
 import { SidePanel } from "@/components/ui/side-panel";
 import { DeliveryAddressActions } from "@/components/DeliveryAddressActions";
+import { EnquiryFormFields } from "@/components/EnquiryFormFields";
 import { DistrictTranslationButton } from "@/components/DistrictTranslationButton";
 import {
   CatalogCreatePage,
   type CreatedCatalogProduct,
 } from "@/components/CatalogCreatePage";
 import { createDeliveryDistrictOption } from "@/lib/delivery-districts";
+import {
+  convertEnquiryToQuote,
+  fetchEnquirySubmission,
+  saveEnquirySubmissionAnswers,
+  type EnquirySubmissionDetail,
+} from "@/lib/enquiry-forms-api";
+import { patchQuoteDraftFromEnquiry, quoteDraftFromEnquiry } from "@/lib/enquiry-quote-draft";
+import type { EnquiryAnswers } from "@/lib/enquiry-form";
 import {
   fetchPackageDetail,
   type PackageChoiceSet,
@@ -278,6 +288,7 @@ function PaymentTotalsSummary({
 type Props = {
   combined?: boolean;
   readOnly?: boolean;
+  pendingEnquiry?: boolean;
   documentType?: QuoteEditorDocumentType;
   canEdit?: boolean;
   canCreateProduct?: boolean;
@@ -320,6 +331,7 @@ type Props = {
 
 export function QuoteEditorPage({
   readOnly = false,
+  pendingEnquiry = false,
   documentType = "quote",
   canEdit = false,
   canCreateProduct = false,
@@ -383,8 +395,14 @@ export function QuoteEditorPage({
   const sourceId = id || copyFrom;
   const isOrder = documentType === "order";
   const listPath = isOrder ? "/orders" : "/quotes";
-  const backTo = useDetailBackTo(listPath);
+  const quoteBackTo = useDetailBackTo(listPath);
+  const pendingNav = searchParams.get("nav");
+  const pendingBackTo = `/quotes/pending${pendingNav ? `?nav=${encodeURIComponent(pendingNav)}` : "?nav=catering.quotes"}`;
+  const backTo = pendingEnquiry ? pendingBackTo : quoteBackTo;
   const [draft, setDraft] = useState<QuoteDraft>(emptyDraft);
+  const [enquirySubmission, setEnquirySubmission] = useState<EnquirySubmissionDetail | null>(null);
+  const [enquirySourceId, setEnquirySourceId] = useState<string | null>(null);
+  const [enquiryAnswers, setEnquiryAnswers] = useState<EnquiryAnswers>({});
   const [options, setOptions] = useState(EMPTY_OPTIONS);
   const [created, setCreated] = useState<CreatedQuote | null>(null);
   const [channelId, setChannelId] = useState("");
@@ -441,7 +459,7 @@ export function QuoteEditorPage({
   const [addingUtensil, setAddingUtensil] = useState(false);
   const [shippingFees, setShippingFees] = useState<ShippingFee[]>([]);
   const [shippingFeeId, setShippingFeeId] = useState("");
-  const [activeTab, setActiveTab] = useState<"details" | "items" | "payments">("details");
+  const [activeTab, setActiveTab] = useState<"enquiry" | "details" | "items" | "payments">("details");
   const isMobileEditor = useMediaQuery("(max-width: 760px)");
   const [payments, setPayments] = useState<QuotePayment[]>([]);
   const [completing, setCompleting] = useState(false);
@@ -498,8 +516,8 @@ export function QuoteEditorPage({
   }, [deliveryTimeDict.loading, deliveryTimeOptions, draft.deliveryTime]);
 
   const activeQuote = useMemo(
-    () => created ?? (id ? { id, orderNumber: "" } : null),
-    [created, id],
+    () => created ?? (pendingEnquiry ? null : id ? { id, orderNumber: "" } : null),
+    [created, id, pendingEnquiry],
   );
   const activeShopifyUrl = isOrder && activeQuote ? shopifyOrderUrl(activeQuote) : null;
 
@@ -614,6 +632,36 @@ export function QuoteEditorPage({
   useEffect(() => {
     let active = true;
     setLoading(true);
+    if (pendingEnquiry) {
+      Promise.all([loadOptions(), fetchEnquirySubmission(id)])
+        .then(([nextOptions, submission]) => {
+          if (!active) return;
+          setOptions(nextOptions);
+          if (!submission) {
+            setError("quote_not_found");
+            return;
+          }
+          if (submission.convertedQuoteId) {
+            navigate(`/quotes/${submission.convertedQuoteId}/edit?nav=catering.quotes`, { replace: true });
+            return;
+          }
+          setEnquirySubmission(submission);
+          setEnquirySourceId(submission.id);
+          setEnquiryAnswers(submission.answers ?? {});
+          setDraft(quoteDraftFromEnquiry(submission));
+          setActiveTab("enquiry");
+          setLines([]);
+        })
+        .catch(() => {
+          if (active) setError("quote_editor_load_failed");
+        })
+        .finally(() => {
+          if (active) setLoading(false);
+        });
+      return () => {
+        active = false;
+      };
+    }
     Promise.all([
       loadOptions(),
       sourceId
@@ -631,6 +679,20 @@ export function QuoteEditorPage({
         if (summary) {
           if (id) setCreated(summary);
           setChannelId(summary.channelId);
+          if (summary.enquirySubmissionId) {
+            setEnquirySourceId(summary.enquirySubmissionId);
+            setActiveTab("enquiry");
+            void fetchEnquirySubmission(summary.enquirySubmissionId).then((submission) => {
+              if (submission) {
+                setEnquirySubmission(submission);
+                setEnquiryAnswers(submission.answers ?? {});
+              }
+            });
+          } else {
+            setEnquirySourceId(null);
+            setEnquirySubmission(null);
+            setActiveTab((current) => (current === "enquiry" ? "details" : current));
+          }
           if (summary.draft) {
             const loadedDraft = { ...emptyDraft(), ...summary.draft };
             setDraft(copyFrom
@@ -683,7 +745,7 @@ export function QuoteEditorPage({
     return () => {
       active = false;
     };
-  }, [copyFrom, id, isOrder, loadLines, loadOptions, loadSummary, sourceId]);
+  }, [copyFrom, id, isOrder, loadLines, loadOptions, loadSummary, navigate, pendingEnquiry, sourceId]);
 
   const saveCurrentDetails = (orderId: string) =>
     isOrder ? saveDetails(orderId, draft, "order") : saveDetails(orderId, draft);
@@ -972,6 +1034,24 @@ export function QuoteEditorPage({
     setSaving(true);
     setError(null);
     try {
+      if (pendingEnquiry && enquirySubmission) {
+        await saveEnquirySubmissionAnswers(
+          enquirySubmission.id,
+          enquirySubmission.formSnapshot,
+          enquiryAnswers,
+        );
+        const quote = await convertEnquiryToQuote({
+          submissionId: enquirySubmission.id,
+          channelId: draft.channelId,
+        });
+        await saveDetails(quote.id, draft);
+        setCreated(quote);
+        setChannelId(draft.channelId);
+        setActiveTab("items");
+        setLoading(true);
+        navigate(`/quotes/${quote.id}/edit?nav=catering.quotes`, { replace: true });
+        return;
+      }
       const quote = copyFrom
         ? isOrder
           ? await copyOrder(copyFrom, draft)
@@ -1868,7 +1948,15 @@ export function QuoteEditorPage({
       />
       ) : null;
 
-  type EditorSection = "details" | "items" | "payments";
+  type EditorSection = "enquiry" | "details" | "items" | "payments";
+  const hasEnquiryStep = Boolean(enquirySubmission || enquirySourceId);
+  const stepNumber = (section: EditorSection) => {
+    const offset = hasEnquiryStep ? 1 : 0;
+    if (section === "enquiry") return 1;
+    if (section === "details") return 1 + offset;
+    if (section === "items") return 2 + offset;
+    return 3 + offset;
+  };
   const sectionId = (section: EditorSection) =>
     `quote-editor-${readOnly ? "readonly" : "editable"}-${section}`;
   const scrollToSection = (section: EditorSection) => {
@@ -1909,10 +1997,28 @@ export function QuoteEditorPage({
       className={cn(
         "quote-editor-tabs quote-editor-section-navigation",
         !isOrder && "is-quote",
+        hasEnquiryStep && "has-enquiry",
       )}
       aria-label={t(isOrder ? "quoteEditor.orderStepLabel" : "quoteEditor.steps.label")}
       role="tablist"
     >
+      {hasEnquiryStep ? (
+        <button
+          type="button"
+          role="tab"
+          aria-label={t("quoteEditor.steps.enquiry")}
+          aria-controls={sectionId("enquiry")}
+          aria-selected={activeTab === "enquiry"}
+          className={cn(activeTab === "enquiry" && "is-active")}
+          onClick={() => scrollToSection("enquiry")}
+        >
+          <span><ClipboardList /></span>
+          <div>
+            <small>{t("quoteEditor.steps.number", { number: stepNumber("enquiry") })}</small>
+            <strong>{t("quoteEditor.steps.enquiry")}</strong>
+          </div>
+        </button>
+      ) : null}
       <button
         type="button"
         role="tab"
@@ -1924,7 +2030,7 @@ export function QuoteEditorPage({
       >
         <span><FileText /></span>
         <div>
-          <small>{t("quoteEditor.steps.number", { number: 1 })}</small>
+          <small>{t("quoteEditor.steps.number", { number: stepNumber("details") })}</small>
           <strong>{t(isOrder ? "quoteEditor.orderDetailsStep" : "quoteEditor.steps.details")}</strong>
         </div>
       </button>
@@ -1940,7 +2046,7 @@ export function QuoteEditorPage({
       >
         <span><PackagePlus /></span>
         <div>
-          <small>{t("quoteEditor.steps.number", { number: 2 })}</small>
+          <small>{t("quoteEditor.steps.number", { number: stepNumber("items") })}</small>
           <strong>{t("quoteEditor.steps.items")}</strong>
         </div>
       </button>
@@ -1957,13 +2063,38 @@ export function QuoteEditorPage({
         >
           <span><CreditCard /></span>
           <div>
-            <small>{t("quoteEditor.steps.number", { number: 3 })}</small>
+            <small>{t("quoteEditor.steps.number", { number: stepNumber("payments") })}</small>
             <strong>{t("quoteEditor.steps.payments")}</strong>
           </div>
         </button>
       ) : null}
     </nav>
   );
+
+  const enquirySection = hasEnquiryStep ? (
+    <section
+      id={sectionId("enquiry")}
+      className="panel quote-editor-enquiry-step quote-editor-scroll-section"
+    >
+      <h2><ClipboardList />{t("quoteEditor.steps.enquiry")}</h2>
+      {enquirySubmission ? (
+        <EnquiryFormFields
+          questions={enquirySubmission.formSnapshot}
+          answers={enquiryAnswers}
+          disabled={readOnly || !pendingEnquiry || !canEdit}
+          twoColumn
+          choiceSummary
+          onChange={(fieldKey, value) => {
+            const next = { ...enquiryAnswers, [fieldKey]: value };
+            setEnquiryAnswers(next);
+            setDraft((current) => patchQuoteDraftFromEnquiry(current, enquirySubmission.formSnapshot, next));
+          }}
+        />
+      ) : (
+        <p>{t("quoteEditor.loading")}</p>
+      )}
+    </section>
+  ) : null;
 
   const factoryValidationModal = (
     <Modal
@@ -2140,6 +2271,8 @@ export function QuoteEditorPage({
 
         {sectionNavigation}
 
+        {enquirySection}
+
         <section
           id={sectionId("details")}
           className="panel quote-editor-form quote-editor-readonly-form quote-editor-scroll-section"
@@ -2310,18 +2443,30 @@ export function QuoteEditorPage({
         <div>
           <Link className="detail-back" to={backTo}>
             <ChevronLeft />
-            {isOrder ? t("details.back") : t("quoteEditor.back")}
+            {pendingEnquiry ? t("quoteEditor.pendingBack") : isOrder ? t("details.back") : t("quoteEditor.back")}
           </Link>
-          <span className="eyebrow">{isOrder ? t("details.orderTitle") : t("quoteEditor.eyebrow")}</span>
+          <span className="eyebrow">
+            {pendingEnquiry ? t("quoteEditor.pendingEyebrow") : isOrder ? t("details.orderTitle") : t("quoteEditor.eyebrow")}
+          </span>
           <div className="order-number-cell">
-            <h1>{activeQuote?.orderNumber || (isOrder ? t("details.orderTitle") : t("quoteEditor.title"))}</h1>
+            <h1>
+              {pendingEnquiry
+                ? (enquirySubmission?.referenceCode || t("quoteEditor.pendingEyebrow"))
+                : (activeQuote?.orderNumber || (isOrder ? t("details.orderTitle") : t("quoteEditor.title")))}
+            </h1>
           </div>
-          <p>{activeQuote ? t(isOrder ? "quoteEditor.orderItemsReady" : "quoteEditor.itemsReady") : t("quoteEditor.description")}</p>
+          <p>
+            {pendingEnquiry
+              ? [enquirySubmission?.formTitle, `${enquirySubmission?.salutation || ""}${enquirySubmission?.customerName || ""}`.trim()].filter(Boolean).join(" · ")
+              : activeQuote ? t(isOrder ? "quoteEditor.orderItemsReady" : "quoteEditor.itemsReady") : t("quoteEditor.description")}
+          </p>
         </div>
         {isOrder && activeQuote ? <OrderPaymentStatus total={grandTotal} paid={paidTotal} formatMoney={money.format} navigationStuck={sectionNavigationStuck} /> : null}
       </header>
 
       {sectionNavigation}
+
+      {enquirySection}
 
       <form
         id={sectionId("details")}
@@ -2459,7 +2604,7 @@ export function QuoteEditorPage({
           <footer>
             {activeQuote && isOrder ? <Button type="button" variant="outline" disabled={completing || saving} onClick={() => void saveAndSendCurrentOrderConfirmation()}>{completing ? <LoaderCircle className="spin" /> : <Mail />}{t(completing ? "quoteEditor.detailActions.sendingConfirmation" : "quoteEditor.payments.sendAndComplete")}</Button> : null}
             {activeQuote && !isOrder ? <Button type="button" variant="outline" disabled={converting || saving} onClick={() => void convertCurrentQuote()}><ShoppingCart />{converting ? t("quotes.actions.converting") : t("quotes.actions.convert")}</Button> : <span />}
-            <Button type="submit" disabled={saving || converting}>{saving ? t("quoteEditor.saving") : activeQuote ? t("quoteEditor.saveChanges") : t("quoteEditor.saveAndContinue")}</Button>
+            <Button type="submit" disabled={saving || converting || (pendingEnquiry && !canEdit)}>{saving ? t("quoteEditor.saving") : activeQuote ? t("quoteEditor.saveChanges") : t("quoteEditor.saveAndContinue")}</Button>
           </footer>
       </form>
 
