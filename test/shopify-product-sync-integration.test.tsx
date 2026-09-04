@@ -1,3 +1,4 @@
+import { readAppStyles } from "./read-app-styles";
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -63,7 +64,7 @@ describe("Shopify pending catalog integration", () => {
 
   it("renders package choices with the same structured card layout as variants", () => {
     const detail = read("src/components/ShopifyPendingProductDetailPage.tsx");
-    const styles = read("src/index.css");
+    const styles = readAppStyles();
     expect(detail).toContain('className="panel shopify-package-panel"');
     expect(detail).toContain('className="shopify-section-card-header"');
     expect(detail).toContain('className="shopify-package-table-wrap"');
@@ -74,7 +75,7 @@ describe("Shopify pending catalog integration", () => {
   it("lets reviewers add separate ingredient and packaging mappings", () => {
     const detail = read("src/components/ShopifyPendingProductDetailPage.tsx");
     const approvals = read("src/lib/shopify-product-approvals.ts");
-    const styles = read("src/index.css");
+    const styles = readAppStyles();
     expect(detail).toContain("<MaterialMappingCard");
     expect(detail).toContain('(["ingredient", "packing"] as const)');
     expect(approvals).toContain("fetchShopifyApprovalMaterialOptions");
@@ -85,7 +86,7 @@ describe("Shopify pending catalog integration", () => {
   it("uses a three-column product material grid and matching skeleton", () => {
     const detail = read("src/components/ProductDetailPage.tsx");
     const skeleton = read("src/components/ui/page-skeleton.tsx");
-    const styles = read("src/index.css");
+    const styles = readAppStyles();
     expect(detail).toContain('className="detail-grid product-material-grid"');
     expect(detail).toContain('detailLayout="product"');
     expect(skeleton).toContain("function productDetailSkeleton()");

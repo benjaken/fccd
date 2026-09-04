@@ -1,9 +1,10 @@
+import { readAppStyles } from "./read-app-styles";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-const styles = readFileSync(resolve(process.cwd(), "src/index.css"), "utf8");
+const styles = readAppStyles();
 
 describe("main content spacing", () => {
   it("uses compact vertical spacing while preserving desktop horizontal spacing", () => {

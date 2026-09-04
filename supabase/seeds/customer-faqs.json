@@ -4,7 +4,7 @@
       "category": "ordering",
       "question": "點樣喺網站落單？",
       "answer": "你好。請喺我哋網站揀餐單同送貨資料，跟住結帳步驟完成落單。WhatsApp 唔會代你落正式訂單。如果未開過帳戶，可以先登記再落。越早落單越好，因為每日有配額。結帳頁見到積分或優惠碼已扣減，先至付款，否則之後無法退回。",
-      "keywords": "落單,網站,網上訂,點樣訂,how to order",
+      "keywords": "落單,網站,網上訂,點樣訂,how to order,買嘢,訂嘢",
       "sort_order": 10
     },
     {
@@ -32,7 +32,7 @@
       "category": "menu",
       "question": "有冇早餐？",
       "answer": "唔好意思，我哋暫時無早餐供應。最早送貨時段大約係 11:00 至 12:00。",
-      "keywords": "早餐,breakfast,最早,上午",
+      "keywords": "早餐,breakfast,最早,上午,朝早,早餐食",
       "sort_order": 50
     },
     {
@@ -67,7 +67,7 @@
       "category": "delivery",
       "question": "可唔可以荃灣自取？",
       "answer": "你好。可以喺荃灣工場自取。詳細地址同自取時段請睇網站結帳頁，或者留低資料等同事確認。",
-      "keywords": "荃灣,自取,pickup,工場",
+      "keywords": "荃灣,自取,pickup,工場,自己攞,自己去攞,取餐",
       "sort_order": 100
     },
     {
@@ -81,7 +81,7 @@
       "category": "delivery",
       "question": "運費幾多？",
       "answer": "你好。運費係按品牌同交收方式計。\n\nFCC Catering／福滿樓／HK Lunch Box／HK Party Food：\n地面交收：新界 HK$50、九龍 HK$50、港島 HK$100、偏遠 HK$180、機場 HK$250。\n送貨上門：新界 HK$250、九龍 HK$250、港島 HK$350；偏遠同機場唔適用上門。\n訂滿 HK$2800，地面交收免費（唔包括偏遠同機場）。\n\nFC Express 即日到會：只限地面交收，新界／九龍／港島一律 HK$200。\n\n地面交收係指司機喺你地址附近最近可以免費停車嘅位置交收。如果未講品牌，我哋會先按 FCC Catering 主表回覆；Express 即日到會收費唔同。同事可以再幫你核對實際地區。",
-      "keywords": "運費,送貨費,shipping,delivery fee,免運,2800,express 200",
+      "keywords": "運費,送貨費,shipping,delivery fee,免運,2800,express 200,送唔送,送到,配送",
       "sort_order": 120
     },
     {
@@ -95,7 +95,7 @@
       "category": "payment",
       "question": "接受咩付款方式？",
       "answer": "你好。網站接受信用卡、支付寶、微信支付同轉數快等常見電子付款。訂單要預先支付，唔接受貨到現金。",
-      "keywords": "付款,信用卡,支付寶,微信支付,轉數快,payment",
+      "keywords": "付款,信用卡,支付寶,微信支付,轉數快,payment,俾錢,點俾錢,支付方式",
       "sort_order": 140
     },
     {
@@ -109,7 +109,7 @@
       "category": "payment",
       "question": "點攞收據或者發票？",
       "answer": "你好。收據同發票請用自助頁 https://www.foodchannels-delivery.com/self_service_search ，輸入落單電話同電郵就可以下載。如果搵唔到，同事可以再指引你。",
-      "keywords": "收據,發票,invoice,receipt,自助",
+      "keywords": "收據,發票,invoice,receipt,單據,自助下載",
       "sort_order": 160
     },
     {
@@ -150,17 +150,10 @@
       "sort_order": 910
     },
     {
-      "category": "membership",
-      "question": "HSBC2024 優惠碼仲用唔用得？",
-      "answer": "內部備註：HSBC2024 等有期限優惠碼不進已發布 FAQ。",
-      "keywords": "HSBC2024,優惠碼",
-      "sort_order": 920
-    },
-    {
       "category": "payment",
-      "question": "銀行轉帳戶口係幾號？",
-      "answer": "內部備註：戶口 747-221000 同 PayMe／八達通 token 不進 bot。",
-      "keywords": "銀行,戶口,747-221000,payme",
+      "question": "銀行轉帳資料可以自動回覆嗎？",
+      "answer": "內部安全備註：銀行、PayMe 及八達通付款資料可能更新，不應由 FAQ Bot 自動公開；需要轉人工確認。",
+      "keywords": "銀行轉帳,付款資料,payme,八達通,敏感資料",
       "sort_order": 930
     },
     {

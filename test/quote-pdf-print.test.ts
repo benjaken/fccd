@@ -1,10 +1,11 @@
+import { readAppStyles } from "./read-app-styles";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 describe("quote PDF print stylesheet", () => {
   it("overrides the global hidden print content and keeps the quote visible", () => {
-    const css = readFileSync(join(process.cwd(), "src/index.css"), "utf8");
+    const css = readAppStyles();
     expect(css).toMatch(
       /\.quote-pdf-editor,\s*\.quote-pdf-editor \*\s*\{\s*visibility:\s*visible !important/,
     );
@@ -14,7 +15,7 @@ describe("quote PDF print stylesheet", () => {
   });
 
   it("uses fixed A4 sheets in the editing view", () => {
-    const css = readFileSync(join(process.cwd(), "src/index.css"), "utf8");
+    const css = readAppStyles();
     expect(css).toMatch(
       /\.quote-pdf-sheet\s*\{[^}]*width:\s*min\(100%,\s*210mm\);[^}]*height:\s*297mm;[^}]*overflow:\s*visible;/s,
     );
@@ -24,7 +25,7 @@ describe("quote PDF print stylesheet", () => {
   });
 
   it("removes the hidden additional-information action space from PDF output", () => {
-    const css = readFileSync(join(process.cwd(), "src/index.css"), "utf8");
+    const css = readAppStyles();
     expect(css).toMatch(/\.quote-pdf-additional\.is-empty\s*\{\s*display:\s*none !important;/);
     expect(css).toMatch(
       /\.quote-pdf-additional li textarea\s*\{\s*width:\s*100% !important;\s*padding-right:\s*0 !important/,
@@ -34,7 +35,7 @@ describe("quote PDF print stylesheet", () => {
   });
 
   it("hides empty activity items from generated PDF output", () => {
-    const css = readFileSync(join(process.cwd(), "src/index.css"), "utf8");
+    const css = readAppStyles();
     expect(css).toMatch(
       /\.quote-pdf-activity\.is-empty\s*\{\s*margin-top:\s*0;/,
     );
@@ -44,7 +45,7 @@ describe("quote PDF print stylesheet", () => {
   });
 
   it("hides quantity columns from generated PDF output when none were entered", () => {
-    const css = readFileSync(join(process.cwd(), "src/index.css"), "utf8");
+    const css = readAppStyles();
     expect(css).toMatch(
       /\.quote-pdf-table\.has-no-quantities td\.quote-pdf-qty-col \{ display: none;/,
     );
@@ -60,7 +61,7 @@ describe("quote PDF print stylesheet", () => {
   });
 
   it("prints each configured cover or back image as a full A4 page", () => {
-    const css = readFileSync(join(process.cwd(), "src/index.css"), "utf8");
+    const css = readAppStyles();
     expect(css).toMatch(
       /@media print\s*\{[\s\S]*?\.quote-pdf-insert-page\s*\{\s*display:\s*block;\s*width:\s*210mm;\s*height:\s*297mm;[^}]*break-after:\s*page;/,
     );
@@ -70,14 +71,14 @@ describe("quote PDF print stylesheet", () => {
   });
 
   it("hides configured cover and back pages while editing", () => {
-    const css = readFileSync(join(process.cwd(), "src/index.css"), "utf8");
+    const css = readAppStyles();
     expect(css).toMatch(
       /\.quote-pdf-insert-page\s*\{\s*display:\s*none;/,
     );
   });
 
   it("right-aligns the shipping selector and reserves space above the fixed footer", () => {
-    const css = readFileSync(join(process.cwd(), "src/index.css"), "utf8");
+    const css = readAppStyles();
     expect(css).toMatch(
       /\.quote-pdf-table \.quote-pdf-summary-rows td\s*\{\s*text-align:\s*right;/,
     );

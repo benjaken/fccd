@@ -629,6 +629,19 @@ describe("editable quote PDF page", () => {
     expect(screen.getByText("$5,550")).toBeInTheDocument();
   });
 
+  it("shows and deducts the saved discount in a standard quote PDF", async () => {
+    renderPage(vi.fn().mockResolvedValue({
+      ...result,
+      order: result.order ? { ...result.order, discount: 100, grandTotal: 5300 } : null,
+    }));
+
+    await screen.findByRole("heading", { name: "到會套餐報價" });
+
+    expect(screen.getByLabelText("折扣顯示文字")).toHaveValue("折扣 (-)");
+    expect(screen.getByLabelText("折扣")).toHaveValue("100");
+    expect(screen.getByText("$5,300")).toBeInTheDocument();
+  });
+
   it("uses the lunch-box logo and shows unit price, servings, and line total", async () => {
     renderPage();
     await screen.findByRole("heading", { name: "到會套餐報價" });

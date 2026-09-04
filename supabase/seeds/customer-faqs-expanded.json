@@ -1,0 +1,10 @@
+{
+  "source": "FCC Language - FAQ Logic v1",
+  "published_count": 40,
+  "draft_count": 15,
+  "policy": {
+    "published": "Stable public information that does not require customer-specific data or an operational decision.",
+    "draft": "Dynamic prices, timing, seasonal availability, contradictory statements, or operational approval.",
+    "human_intents": ["kitchen_confirmation", "complaint_refund", "handoff_order"]
+  }
+}

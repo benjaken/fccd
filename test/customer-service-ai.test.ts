@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { answerCustomerServiceFaqWithAi } from "../supabase/functions/_shared/customer-service-ai.ts";
+import {
+  answerCustomerServiceFaqWithAi,
+  classifyCustomerServiceWithAi,
+} from "../supabase/functions/_shared/customer-service-ai.ts";
 
 const config = {
   enabled: true,
@@ -18,7 +21,69 @@ const faqs = [{
 }];
 
 describe("customer-service grounded AI", () => {
+  it("classifies only configured intents and allowed tools", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      choices: [{ message: { content: JSON.stringify({
+        intent: "handoff_order",
+        confidence: 0.94,
+        orderNumber: "",
+        requestedDate: "2026-09-11",
+        missingFields: ["orderNumber"],
+        requiresHuman: true,
+        tool: "lookup_orders",
+      }) } }],
+    }), { status: 200 }));
+    const result = await classifyCustomerServiceWithAi({
+      message: "我想改為9月11日送貨",
+      conversationState: "identifying",
+      intents: [{
+        intentKey: "handoff_order",
+        displayName: "修改訂單",
+        description: "修改未送貨訂單後轉人工",
+        examples: ["我想改送貨日期"],
+        actionKey: "order_handoff",
+        confidenceThreshold: 0.6,
+        toolKeys: ["lookup_orders"],
+      }],
+      config,
+      fetchImpl: fetchMock,
+    });
+    expect(result).toMatchObject({
+      intentKey: "handoff_order",
+      confidence: 0.94,
+      toolKey: "lookup_orders",
+      requiresHuman: true,
+    });
+  });
+
+  it("rejects a model-selected tool outside the configured allowlist", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      choices: [{ message: { content: JSON.stringify({
+        intent: "lookup_order",
+        confidence: 0.9,
+        tool: "notify_internal",
+      }) } }],
+    }), { status: 200 }));
+    const result = await classifyCustomerServiceWithAi({
+      message: "我張單幾時到",
+      conversationState: "identifying",
+      intents: [{
+        intentKey: "lookup_order",
+        displayName: "查詢訂單",
+        description: "只讀查單",
+        examples: [],
+        actionKey: "order_lookup",
+        confidenceThreshold: 0.6,
+        toolKeys: ["lookup_orders"],
+      }],
+      config,
+      fetchImpl: fetchMock,
+    });
+    expect(result?.toolKey).toBeNull();
+  });
+
   it("sends only published FAQ knowledge and accepts a cited synthesis", async () => {
+    const beforeRequest = vi.fn().mockResolvedValue(undefined);
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
       choices: [{ message: { content: JSON.stringify({
         answer: "你好，新界地面交收運費係 HK$50。",
@@ -31,12 +96,33 @@ describe("customer-service grounded AI", () => {
       faqs,
       config,
       fetchImpl: fetchMock,
+      beforeRequest,
     });
 
+    expect(beforeRequest).toHaveBeenCalledOnce();
+    expect(beforeRequest.mock.invocationCallOrder[0]).toBeLessThan(fetchMock.mock.invocationCallOrder[0]);
     expect(result).toMatchObject({ sourceIds: ["delivery"], model: "test-model" });
     const request = JSON.parse(fetchMock.mock.calls[0][1].body as string);
     expect(request.messages[1].content).toContain("我住新界");
     expect(request.messages[1].content).toContain("HK$50");
+  });
+
+  it("keeps answering when the waiting notice cannot be delivered", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      choices: [{ message: { content: JSON.stringify({
+        answer: "新界地面交收運費係 HK$50。",
+        sourceIds: ["delivery"],
+      }) } }],
+    }), { status: 200 }));
+
+    await expect(answerCustomerServiceFaqWithAi({
+      question: "新界運費？",
+      faqs,
+      config,
+      fetchImpl: fetchMock,
+      beforeRequest: vi.fn().mockRejectedValue(new Error("send failed")),
+    })).resolves.toMatchObject({ sourceIds: ["delivery"] });
+    expect(fetchMock).toHaveBeenCalledOnce();
   });
 
   it("rejects numbers and source ids that are not supported by the FAQ", async () => {

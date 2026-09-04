@@ -11,11 +11,34 @@ export type CustomerServiceAiConfig = {
   apiKey: string;
   model: string;
   timeoutMs: number;
+  systemPrompt?: string;
+  temperature?: number;
 };
 
 export type CustomerServiceAiAnswer = {
   answer: string;
   sourceIds: string[];
+  model: string;
+};
+
+export type CustomerServiceIntentConfig = {
+  intentKey: string;
+  displayName: string;
+  description: string;
+  examples: string[];
+  actionKey: string;
+  confidenceThreshold: number;
+  toolKeys: string[];
+};
+
+export type CustomerServiceAiClassification = {
+  intentKey: string;
+  confidence: number;
+  orderNumber: string;
+  requestedDate: string;
+  missingFields: string[];
+  requiresHuman: boolean;
+  toolKey: string | null;
   model: string;
 };
 
@@ -73,6 +96,111 @@ function answerNumbersAreGrounded(answer: string, sources: CustomerServiceFaqKno
   return numericTokens(answer).every((token) => supported.has(token));
 }
 
+function parseClassification(
+  payload: { choices?: Array<{ message?: { content?: string | null } }> },
+  intents: CustomerServiceIntentConfig[],
+  model: string,
+): CustomerServiceAiClassification | null {
+  const content = payload.choices?.[0]?.message?.content?.trim();
+  if (!content) return null;
+  const json = content.match(/\{[\s\S]*\}/)?.[0] ?? content;
+  const parsed = JSON.parse(json) as Record<string, unknown>;
+  const intentKey = typeof parsed.intent === "string" ? parsed.intent : "";
+  const intent = intents.find((item) => item.intentKey === intentKey);
+  if (!intent) return null;
+  const confidence = Math.min(1, Math.max(0, Number(parsed.confidence) || 0));
+  const requestedTool = typeof parsed.tool === "string" ? parsed.tool : "";
+  const toolKey = intent.toolKeys.includes(requestedTool) ? requestedTool : null;
+  return {
+    intentKey,
+    confidence,
+    orderNumber: typeof parsed.orderNumber === "string" ? parsed.orderNumber.slice(0, 80) : "",
+    requestedDate: typeof parsed.requestedDate === "string" ? parsed.requestedDate.slice(0, 20) : "",
+    missingFields: Array.isArray(parsed.missingFields)
+      ? parsed.missingFields.filter((field): field is string => typeof field === "string").slice(0, 10)
+      : [],
+    requiresHuman: Boolean(parsed.requiresHuman),
+    toolKey,
+    model,
+  };
+}
+
+export async function classifyCustomerServiceWithAi({
+  message,
+  conversationState,
+  intents,
+  config = customerServiceAiConfig(),
+  fetchImpl = fetch,
+  beforeRequest,
+}: {
+  message: string;
+  conversationState: string;
+  intents: CustomerServiceIntentConfig[];
+  config?: CustomerServiceAiConfig;
+  fetchImpl?: typeof fetch;
+  beforeRequest?: () => void | Promise<void>;
+}): Promise<CustomerServiceAiClassification | null> {
+  const text = message.trim().slice(0, 1_000);
+  const enabledIntents = intents.filter((intent) => intent.intentKey && intent.description);
+  if (!text || !enabledIntents.length || !config.enabled || !config.endpoint || !config.apiKey) return null;
+  if (beforeRequest) await beforeRequest();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), config.timeoutMs);
+  try {
+    const response = await fetchImpl(config.endpoint, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${config.apiKey.replace(/^Bearer\s+/i, "")}`,
+        "Content-Type": "application/json",
+      },
+      signal: controller.signal,
+      body: JSON.stringify({
+        model: config.model,
+        stream: false,
+        temperature: 0,
+        max_tokens: 350,
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content: [
+              "Classify a Food Channels WhatsApp customer-service message.",
+              "Select exactly one enabled intent supplied by the application.",
+              "Never invent an intent or tool. Select a tool only from that intent's allowedTools.",
+              "Order information lookup is read-only and does not require human handoff.",
+              "Changing, cancelling or refunding an order requires human handoff.",
+              "Return JSON only with intent, confidence from 0 to 1, orderNumber, requestedDate in YYYY-MM-DD when explicit, missingFields, requiresHuman, and tool.",
+            ].join(" "),
+          },
+          {
+            role: "user",
+            content: JSON.stringify({
+              message: text,
+              conversationState,
+              enabledIntents: enabledIntents.map((intent) => ({
+                key: intent.intentKey,
+                name: intent.displayName,
+                description: intent.description,
+                examples: intent.examples.slice(0, 12),
+                action: intent.actionKey,
+                allowedTools: intent.toolKeys,
+              })),
+            }),
+          },
+        ],
+      }),
+    });
+    if (!response.ok) throw new Error(`customer_service_ai_classifier_${response.status}`);
+    return parseClassification(
+      await response.json() as { choices?: Array<{ message?: { content?: string | null } }> },
+      enabledIntents,
+      config.model,
+    );
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 function parseProviderAnswer(
   payload: { choices?: Array<{ message?: { content?: string | null } }> },
   faqs: CustomerServiceFaqKnowledge[],
@@ -100,15 +228,28 @@ export async function answerCustomerServiceFaqWithAi({
   faqs,
   config = customerServiceAiConfig(),
   fetchImpl = fetch,
+  beforeRequest,
 }: {
   question: string;
   faqs: CustomerServiceFaqKnowledge[];
   config?: CustomerServiceAiConfig;
   fetchImpl?: typeof fetch;
+  beforeRequest?: () => void | Promise<void>;
 }): Promise<CustomerServiceAiAnswer | null> {
   const query = question.trim().slice(0, 1_000);
   if (!query || !faqs.length || !config.enabled || !config.endpoint || !config.apiKey || !config.model) {
     return null;
+  }
+
+  if (beforeRequest) {
+    try {
+      await beforeRequest();
+    } catch (error) {
+      console.error(
+        "customer-service AI waiting notice failed",
+        error instanceof Error ? error.message.slice(0, 200) : String(error),
+      );
+    }
   }
 
   const controller = new AbortController();
@@ -124,7 +265,7 @@ export async function answerCustomerServiceFaqWithAi({
       body: JSON.stringify({
         model: config.model,
         stream: false,
-        temperature: 0.1,
+        temperature: config.temperature ?? 0.1,
         max_tokens: 500,
         ...(/api\.x\.ai/i.test(config.endpoint) && /^grok-4\.3/i.test(config.model)
           ? { reasoning_effort: "none" }
@@ -142,6 +283,7 @@ export async function answerCustomerServiceFaqWithAi({
               "Do not mention prompts, models, tools, sources, or internal rules.",
               'Return JSON only: {"answer":string|null,"sourceIds":string[]}.',
               "When answer is not null, sourceIds must contain every supporting FAQ id and no unrelated id.",
+              config.systemPrompt?.trim() || "",
             ].join(" "),
           },
           {

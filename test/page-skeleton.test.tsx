@@ -1,3 +1,4 @@
+import { readAppStyles } from "./read-app-styles";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { render, screen } from "@testing-library/react";
@@ -23,10 +24,7 @@ const SKELETON_PAGES = [
 
 describe("PageSkeleton", () => {
   it("hides temporary scrollbars anywhere inside a loading skeleton", () => {
-    const styles = readFileSync(
-      path.resolve(process.cwd(), "src/index.css"),
-      "utf8",
-    );
+    const styles = readAppStyles();
 
     expect(styles).toMatch(
       /\.main-content:has\(\.page-skeleton-bone, \.table-skeleton-bone\),[^{]+\{[^}]*scrollbar-gutter:\s*auto;[^}]*scrollbar-width:\s*none;/s,

@@ -1,5 +1,4 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { readAppStyles } from "./read-app-styles";
 
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router-dom";
@@ -111,7 +110,7 @@ describe("KitchenCostInputPage query-tab routing", () => {
     expect(document.querySelector(".kitchen-cost-page.is-weekly-advertising"))
       .toBeInTheDocument();
 
-    const css = readFileSync(resolve(process.cwd(), "src/index.css"), "utf8");
+    const css = readAppStyles();
     expect(css).toMatch(
       /\.ingredients-page\.kitchen-cost-page\.is-weekly-advertising\s*\{[\s\S]*height:\s*auto;[\s\S]*overflow:\s*visible;/,
     );
@@ -126,7 +125,7 @@ describe("KitchenCostInputPage query-tab routing", () => {
     expect(document.querySelector(".kitchen-cost-page.is-weekly-advertising"))
       .not.toBeInTheDocument();
 
-    const css = readFileSync(resolve(process.cwd(), "src/index.css"), "utf8");
+    const css = readAppStyles();
     expect(css).toMatch(
       /\.ingredients-page\.kitchen-cost-page\s*\{[^}]*display:\s*flex;[^}]*flex-direction:\s*column;/,
     );

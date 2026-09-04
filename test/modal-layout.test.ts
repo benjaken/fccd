@@ -1,3 +1,4 @@
+import { readAppStyles } from "./read-app-styles";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -5,7 +6,7 @@ import { describe, expect, it } from "vitest";
 
 describe("shared modal layout", () => {
   it("keeps long dialog content inside a shrinkable scrolling track", () => {
-    const css = readFileSync(resolve(process.cwd(), "src/index.css"), "utf8");
+    const css = readAppStyles();
     const rule = css.match(/\.modal-panel\s*\{([\s\S]*?)\}/)?.[1] ?? "";
 
     expect(rule).toContain("grid-template-rows: auto minmax(0, 1fr) auto");
@@ -13,7 +14,7 @@ describe("shared modal layout", () => {
   });
 
   it("gives supplier quote review one fixed workspace instead of a nested panel scrollbar", () => {
-    const css = readFileSync(resolve(process.cwd(), "src/index.css"), "utf8");
+    const css = readAppStyles();
     const bodyRule = css.match(/\.supplier-quote-review-panel\s*>\s*\.side-panel-body\s*\{([\s\S]*?)\}/)?.[1] ?? "";
     const workspaceRule = css.match(/\.supplier-quote-review-workspace\s*\{([\s\S]*?)\}/)?.[1] ?? "";
 
@@ -23,7 +24,7 @@ describe("shared modal layout", () => {
   });
 
   it("keeps fleet-fee pagination visible while only the table rows scroll", () => {
-    const css = readFileSync(resolve(process.cwd(), "src/index.css"), "utf8");
+    const css = readAppStyles();
     const source = readFileSync(
       resolve(process.cwd(), "src/components/DeliveryFleetsPage.tsx"),
       "utf8",
@@ -38,7 +39,7 @@ describe("shared modal layout", () => {
   });
 
   it("keeps the fleet-fee search and desktop filters on one toolbar row", () => {
-    const css = readFileSync(resolve(process.cwd(), "src/index.css"), "utf8");
+    const css = readAppStyles();
     const source = readFileSync(
       resolve(process.cwd(), "src/components/DeliveryFleetsPage.tsx"),
       "utf8",
@@ -51,7 +52,7 @@ describe("shared modal layout", () => {
   });
 
   it("shows fleet-fee editors as bordered white inputs on a white panel", () => {
-    const css = readFileSync(resolve(process.cwd(), "src/index.css"), "utf8");
+    const css = readAppStyles();
     const inputRule = css.match(/\.delivery-fleet-fee-input\s*\{([\s\S]*?)\}/)?.[1] ?? "";
     const fieldRule = css.match(/\.delivery-fleet-fee-input input\s*\{([\s\S]*?)\}/)?.[1] ?? "";
     const panelRule = css.match(/\.delivery-fleet-fee-panel\s*\{([\s\S]*?)\}/)?.[1] ?? "";
@@ -63,7 +64,7 @@ describe("shared modal layout", () => {
   });
 
   it("renders fleet and district filters as fields with spacing below", () => {
-    const css = readFileSync(resolve(process.cwd(), "src/index.css"), "utf8");
+    const css = readAppStyles();
     const toolbarRule = css.match(/\.delivery-fleet-fee-toolbar\s*\{([\s\S]*?)\}/)?.[1] ?? "";
     const selectRule = css.match(/\.delivery-fleet-fee-filters select\s*\{([\s\S]*?)\}/)?.[1] ?? "";
     const filtersRule = css.match(/\.delivery-fleet-fee-filters\s*\{([\s\S]*?)\}/)?.[1] ?? "";

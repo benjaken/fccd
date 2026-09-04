@@ -1,10 +1,11 @@
+import { readAppStyles } from "./read-app-styles";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 describe("shared order-style list layout", () => {
   it("keeps three-section panel pagination out of the flexible content row", () => {
-    const css = readFileSync(resolve(process.cwd(), "src/index.css"), "utf8");
+    const css = readAppStyles();
 
     expect(css).toMatch(
       /\.orders-panel\s*\{[^}]*grid-template-rows:\s*auto minmax\(0, 1fr\) auto;/s,

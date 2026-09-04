@@ -3,6 +3,7 @@ export const BRAND_WHATSAPP_CHANNEL = "85253964335";
 export type WatiInboundEvent = {
   eventType: string;
   id: string;
+  localMessageId: string;
   whatsappMessageId: string;
   text: string;
   type: string;
@@ -136,6 +137,7 @@ export function parseWatiInboundEvent(payload: Record<string, unknown>): WatiInb
   return {
     eventType: String(payload.eventType || payload.event || "message"),
     id,
+    localMessageId: String(payload.localMessageId || "").trim(),
     whatsappMessageId: String(payload.whatsappMessageId || id),
     text: String(payload.text || payload.data || "").trim(),
     type: String(payload.type || "text"),
@@ -156,6 +158,10 @@ export function isBrandWhatsAppChannel(channelPhoneNumber: string, configured = 
 
 export function isHumanOperatorMessage(event: WatiInboundEvent) {
   if (!event.owner) return false;
+  // Every message sent by this bot carries this idempotency prefix. WATI emits
+  // the same localMessageId in sessionMessageSent_v2, so an API reply cannot
+  // accidentally move the conversation into human-owned state.
+  if (event.localMessageId.startsWith("fcc-bot-")) return false;
   if (event.operatorEmail) return true;
   if (!event.operatorName) return false;
   return !/^(api|bot|system|wati)$/i.test(event.operatorName);
@@ -186,17 +192,20 @@ export function buildSessionMessageUrl({
   text,
   channelNumber,
   tenantId = "",
+  localMessageId = "",
 }: {
   endpoint: string;
   phone: string;
   text: string;
   channelNumber: string;
   tenantId?: string;
+  localMessageId?: string;
 }) {
   const base = resolveWatiSessionEndpoint(endpoint, tenantId);
   const url = new URL(`${base}/api/v1/sendSessionMessage/${encodeURIComponent(phone)}`);
   url.searchParams.set("messageText", text);
   if (channelNumber) url.searchParams.set("channelPhoneNumber", channelNumber);
+  if (localMessageId) url.searchParams.set("localMessageId", localMessageId);
   return url.toString();
 }
 
@@ -259,6 +268,7 @@ async function postWatiSessionMessage({
   text,
   channelNumber,
   fetchImpl,
+  localMessageId,
 }: {
   endpoint: string;
   token: string;
@@ -266,8 +276,9 @@ async function postWatiSessionMessage({
   text: string;
   channelNumber: string;
   fetchImpl: typeof fetch;
+  localMessageId: string;
 }) {
-  const url = buildSessionMessageUrl({ endpoint, phone, text, channelNumber });
+  const url = buildSessionMessageUrl({ endpoint, phone, text, channelNumber, localMessageId });
   const response = await fetchImpl(url, {
     method: "POST",
     headers: {
@@ -318,6 +329,7 @@ export async function sendWatiSessionMessage({
     text,
     channelNumber,
     fetchImpl,
+    localMessageId: `fcc-bot-${crypto.randomUUID()}`,
   });
 }
 
@@ -326,6 +338,7 @@ export async function deliverWatiSessionMessage({
   phone,
   text,
   channelNumber,
+  localMessageId = `fcc-bot-${crypto.randomUUID()}`,
   fetchImpl = fetch,
   log = console.error,
 }: {
@@ -333,6 +346,7 @@ export async function deliverWatiSessionMessage({
   phone: string;
   text: string;
   channelNumber: string;
+  localMessageId?: string;
   fetchImpl?: typeof fetch;
   log?: (...args: unknown[]) => void;
 }) {
@@ -348,6 +362,7 @@ export async function deliverWatiSessionMessage({
         text,
         channelNumber,
         fetchImpl,
+        localMessageId,
       });
       log("wati session sent", target.label, describeWatiSessionTarget(target.endpoint));
       return raw;

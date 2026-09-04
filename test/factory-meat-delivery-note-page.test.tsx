@@ -1,3 +1,4 @@
+import { readAppStyles } from "./read-app-styles";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { render, screen } from "@testing-library/react";
@@ -14,10 +15,7 @@ describe("FactoryMeatDeliveryNotePage", () => {
   });
 
   it("uses an A4 portrait preview and portrait print page", () => {
-    const stylesheet = readFileSync(
-      path.resolve(process.cwd(), "src/index.css"),
-      "utf8",
-    );
+    const stylesheet = readAppStyles();
     expect(stylesheet).toMatch(
       /\.factory-meat-note-sheet\s*\{[^}]*width:\s*min\(794px,[^}]*min-height:\s*1123px/s,
     );

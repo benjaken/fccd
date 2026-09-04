@@ -1,3 +1,4 @@
+import { readAppStyles } from "./read-app-styles";
 import { readFileSync } from "node:fs";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -131,7 +132,7 @@ const recipes: SeasoningRecipeRow[] = [
 
 describe("seasoning recipe helpers", () => {
   it("wraps spice cards horizontally and animates the product sidebar", () => {
-    const styles = readFileSync("src/index.css", "utf8");
+    const styles = readAppStyles();
     expect(styles).toMatch(
       /\.seasoning-recipe-spice-list\s*\{[^}]*flex-wrap:\s*wrap;/s,
     );

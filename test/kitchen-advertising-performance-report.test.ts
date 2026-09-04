@@ -1,3 +1,4 @@
+import { readAppStyles } from "./read-app-styles";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -22,10 +23,7 @@ const rows: KitchenAdvertisingPerformanceRow[] = [
 
 describe("central kitchen advertising performance report", () => {
   it("uses a compact year-aligned table without rendering charts", () => {
-    const stylesheet = readFileSync(
-      path.resolve(process.cwd(), "src/index.css"),
-      "utf8",
-    );
+    const stylesheet = readAppStyles();
     const component = readFileSync(
       path.resolve(process.cwd(), "src/components/KitchenAdvertisingPerformanceReportPage.tsx"),
       "utf8",
