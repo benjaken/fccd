@@ -178,6 +178,16 @@ function strongPublishedFaqMatch(query: string, hit: CustomerServiceFaqHit) {
     (left.includes(right) || right.includes(left));
 }
 
+function isMenuInformationRequest(value: string) {
+  const text = value.trim();
+  return /(?:餐牌|菜單|菜单|menu)/i.test(text) &&
+    /(?:有冇|有無|有沒有|有吗|有嗎|睇|看|看看|提供|發|发|send|想問|想问|詢問|询问)/i.test(text);
+}
+
+function isMenuFaq(hit: CustomerServiceFaqHit) {
+  return hit.category === "menu" && /(?:餐牌|菜單|菜单|menu)/i.test(hit.question);
+}
+
 function resetPilotConversation(conversation: CustomerServiceConversation) {
   return nextConversation(conversation, {
     state: "identifying",
@@ -754,18 +764,21 @@ export async function handleCustomerServiceTurn({
   // public information. Resolve it before intent classification so words such
   // as "廚師" do not get mistaken for a request requiring kitchen approval.
   try {
-    const faqHits = await deps.searchFaqs(text);
-    const exactFaq = faqHits.find((hit) => strongPublishedFaqMatch(text, hit));
-    if (exactFaq) {
+    const asksForMenu = isMenuInformationRequest(text);
+    const faqHits = await deps.searchFaqs(asksForMenu ? "有冇餐牌可以睇？" : text);
+    const preferredFaq = asksForMenu
+      ? faqHits.find(isMenuFaq)
+      : faqHits.find((hit) => strongPublishedFaqMatch(text, hit));
+    if (preferredFaq) {
       return {
-        reply: faqReply(exactFaq.answer),
+        reply: faqReply(preferredFaq.answer),
         conversation,
         wroteInquiry: false,
         notified: false,
         usedModel: false,
         intentKey: "search_faq",
         toolKeys: ["search_faqs"],
-        faqSourceIds: [exactFaq.id],
+        faqSourceIds: [preferredFaq.id],
         failureReason: null,
       };
     }

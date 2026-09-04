@@ -165,6 +165,34 @@ describe("customer-service FAQ routing priority", () => {
     expect(classify).not.toHaveBeenCalled();
     expect(queueHandoff).not.toHaveBeenCalled();
   });
+
+  it("provides the published menu before starting a catering inquiry", async () => {
+    const searchFaqs = vi.fn().mockResolvedValue([{
+      id: "menu-links",
+      category: "menu",
+      question: "有冇餐牌可以睇？",
+      answer: "可以查看餐牌：https://foodchannels-catering.com/",
+    }]);
+    const classify = vi.fn().mockResolvedValue({
+      intent: "collect_inquiry",
+      slots: classifyCustomerServiceMessage("").slots,
+      orderNumber: "",
+      usedModel: true,
+      configuredIntentKey: "catering_inquiry",
+    });
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "我想訂餐，想詢問一下有菜單看嘛？",
+      conversation,
+      deps: deps({ searchFaqs }),
+      classify,
+    });
+
+    expect(searchFaqs).toHaveBeenCalledWith("有冇餐牌可以睇？");
+    expect(turn.reply).toContain("foodchannels-catering.com");
+    expect(turn.intentKey).toBe("search_faq");
+    expect(classify).not.toHaveBeenCalled();
+  });
 });
 
 describe("customer-service bot turns", () => {
