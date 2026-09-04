@@ -1064,9 +1064,10 @@ body:has(.quote-pdf-editor) .quote-pdf-editor {
   height: 297mm;
   margin: 0 auto;
   padding: 10mm 10mm 16mm;
-  /* The editor must remain scrollable when editable content is taller than
-     one A4 sheet. Print mode below restores the page clip for PDF output. */
-  overflow: visible;
+  /* Auto-pagination moves overflowing rows and modules onto continuation
+     sheets. Clipping is a final safety net so a late layout shift can never
+     paint over the next sheet's letterhead or this sheet's footer. */
+  overflow: hidden;
   box-sizing: border-box;
   background: white;
   color: #000;

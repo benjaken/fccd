@@ -99,6 +99,7 @@ export type CustomerServiceBotDeps = {
     summary: string;
     kind?: "inquiry" | "order_handoff";
   }) => Promise<void>;
+  cancelHandoff: (phone: string) => Promise<void>;
 };
 
 export type BotTurn = {
@@ -136,6 +137,18 @@ function isUndeliveredOrder(order: CustomerServiceOrder) {
   return !/已送達|己送達|已經送達|delivered|已取消|己取消|取消|cancelled/i.test(
     status,
   );
+}
+
+function isCancelPendingHandoffMessage(value: string) {
+  const text = value
+    .trim()
+    .toLowerCase()
+    .replace(/[\s，。！？、,.!?]/g, "");
+  if (!text) return false;
+  if (/^(取消|撤回|算了|算啦|當我冇講|当我没说)$/.test(text)) return true;
+  if (/(?:取消|撤回).*(?:修改|更改|改期|申請|申请|請求|请求|要求)/.test(text)) return true;
+  if (/(?:修改|更改|改期|申請|申请).*(?:取消|撤回|唔使|不用|不要)/.test(text)) return true;
+  return /(?:唔使|不用|不要)(?:再)?(?:改|修改|更改|改期|處理|处理)(?:啦|了)?$/.test(text);
 }
 
 function identityChallengeReply(order: CustomerServiceOrder) {
@@ -570,6 +583,22 @@ export async function handleCustomerServiceTurn({
   }
 
   if (conversation.state === "awaiting_human") {
+    if (isCancelPendingHandoffMessage(text)) {
+      await deps.cancelHandoff(phone);
+      return {
+        reply: REPLIES.handoffCancelled,
+        conversation: nextConversation(conversation, {
+          state: "identifying",
+          selected_order_id: null,
+          handoff_at: null,
+          pending_request: null,
+        }),
+        wroteInquiry: false,
+        notified: false,
+        queuedHandoff: false,
+        usedModel: false,
+      };
+    }
     await deps.queueHandoff({
       phone,
       quoteId: conversation.selected_order_id,

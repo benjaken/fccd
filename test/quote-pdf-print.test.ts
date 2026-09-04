@@ -17,7 +17,7 @@ describe("quote PDF print stylesheet", () => {
   it("uses fixed A4 sheets in the editing view", () => {
     const css = readAppStyles();
     expect(css).toMatch(
-      /\.quote-pdf-sheet\s*\{[^}]*width:\s*min\(100%,\s*210mm\);[^}]*height:\s*297mm;[^}]*overflow:\s*visible;/s,
+      /\.quote-pdf-sheet\s*\{[^}]*width:\s*min\(100%,\s*210mm\);[^}]*height:\s*297mm;[^}]*overflow:\s*hidden;/s,
     );
     expect(css).toMatch(
       /@media print[\s\S]*?\.quote-pdf-sheet\s*\{[^}]*width:\s*100%;[^}]*height:\s*297mm;[^}]*overflow:\s*hidden;/s,

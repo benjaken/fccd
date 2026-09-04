@@ -774,6 +774,50 @@ describe("editable quote PDF page", () => {
     }
   });
 
+  it("continues the product table when totals cross the footer", async () => {
+    const rectSpy = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function () {
+      const productRowRect = measuredProductRowRect(this);
+      if (productRowRect) return productRowRect;
+      const page = this.closest<HTMLElement>(".quote-pdf-sheet");
+      const pages = Array.from(document.querySelectorAll<HTMLElement>(".quote-pdf-sheet"));
+      const pageIndex = page ? pages.indexOf(page) : 0;
+      const pageTop = pageIndex * 1200;
+      if (this.classList.contains("quote-pdf-sheet")) {
+        return { x: 0, y: pageTop, top: pageTop, right: 800, bottom: pageTop + 1000, left: 0, width: 800, height: 1000, toJSON: () => ({}) } as DOMRect;
+      }
+      if (this.hasAttribute("data-pdf-auto-footer")) {
+        const top = pageTop + 970;
+        return { x: 0, y: top, top, right: 800, bottom: top + 30, left: 0, width: 800, height: 30, toJSON: () => ({}) } as DOMRect;
+      }
+      if (this.hasAttribute("data-pdf-auto-product-table")) {
+        const hasTotals = Boolean(this.querySelector(".quote-pdf-summary-rows"));
+        const bottom = pageTop + (hasTotals && pages.length === 1 ? 1050 : 900);
+        return { x: 0, y: pageTop + 300, top: pageTop + 300, right: 800, bottom, left: 0, width: 800, height: bottom - pageTop - 300, toJSON: () => ({}) } as DOMRect;
+      }
+      return { x: 0, y: 0, top: 0, right: 800, bottom: 0, left: 0, width: 800, height: 0, toJSON: () => ({}) } as DOMRect;
+    });
+    const longResult: OrderDetailResult = {
+      ...result,
+      lines: Array.from({ length: 13 }, (_, index) => ({
+        ...result.lines[0],
+        id: `line-${index + 1}`,
+        productName: `Product ${index + 1}`,
+      })),
+    };
+    renderPage(vi.fn().mockResolvedValue(longResult));
+
+    try {
+      await waitFor(() => expect(document.querySelectorAll(".quote-pdf-sheet")).toHaveLength(2));
+      const sheets = document.querySelectorAll(".quote-pdf-sheet");
+      expect(sheets[0].querySelectorAll("[data-pdf-auto-product-index]")).toHaveLength(12);
+      expect(sheets[1].querySelectorAll("[data-pdf-auto-product-index]")).toHaveLength(1);
+      expect(sheets[0].querySelector(".quote-pdf-summary-rows")).not.toBeInTheDocument();
+      expect(sheets[1].querySelector(".quote-pdf-summary-rows")).toBeInTheDocument();
+    } finally {
+      rectSpy.mockRestore();
+    }
+  });
+
   it("keeps the signature on the product page when only print-hidden modules overflow", async () => {
     const rectSpy = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function () {
       const productRowRect = measuredProductRowRect(this);

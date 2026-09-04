@@ -5,6 +5,8 @@ const MODULE_SELECTOR = "[data-pdf-auto-module-index]";
 const FOOTER_SELECTOR = "[data-pdf-auto-footer]";
 const PRODUCT_PAGE_SELECTOR = "[data-pdf-product-page]";
 const PRODUCT_ROW_SELECTOR = "[data-pdf-auto-product-index]";
+const PRODUCT_TABLE_SELECTOR = "[data-pdf-auto-product-table]";
+const LAYOUT_ANCHOR_SELECTOR = "[data-pdf-auto-layout-anchor]";
 
 type FocusSnapshot = {
   tagName: string;
@@ -136,6 +138,48 @@ function pageContentBottom(page: HTMLElement, footer: HTMLElement) {
   return Math.min(footerRect.top, intendedFooterTop);
 }
 
+function observedLayoutElements(container: HTMLElement, selectors: string) {
+  return Array.from(new Set(container.querySelectorAll<HTMLElement>(
+    `${selectors}, ${LAYOUT_ANCHOR_SELECTOR}`,
+  )));
+}
+
+function useLatePdfLayoutRevision(
+  containerRef: RefObject<HTMLElement | null>,
+  onLayoutChange: () => void,
+  dependencies: readonly unknown[],
+) {
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleLateLayout = () => onLayoutChange();
+    const pendingImages = Array.from(container.querySelectorAll<HTMLImageElement>("img:not([data-pdf-layout-ready])"));
+    for (const image of pendingImages) {
+      if (image.complete) image.dataset.pdfLayoutReady = "true";
+      else {
+        image.addEventListener("load", handleLateLayout, { once: true });
+        image.addEventListener("error", handleLateLayout, { once: true });
+      }
+    }
+
+    const fonts = document.fonts;
+    fonts?.addEventListener?.("loadingdone", handleLateLayout);
+    window.addEventListener("resize", handleLateLayout);
+
+    return () => {
+      for (const image of pendingImages) {
+        image.removeEventListener("load", handleLateLayout);
+        image.removeEventListener("error", handleLateLayout);
+      }
+      fonts?.removeEventListener?.("loadingdone", handleLateLayout);
+      window.removeEventListener("resize", handleLateLayout);
+    };
+  // The caller controls when newly rendered pages and images need listeners.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, dependencies);
+}
+
 export function splitPdfModuleIndexes(moduleCount: number, pageBreaks: number[]) {
   // A break at 0 is valid: it leaves the product page's trailing area empty
   // and moves the first trailing module to a continuation page.
@@ -157,6 +201,12 @@ export function usePdfAutoPageBreaks(
   const rejectedMerges = useRef(new Set<number>());
   const mergeTrial = useRef<{ removedBreak: number; previousBreaks: number[] } | null>(null);
   const pendingFocusRestore = useRef<FocusSnapshot | null>(null);
+
+  useLatePdfLayoutRevision(
+    containerRef,
+    () => setLayoutRevision((current) => current + 1),
+    [containerRef, moduleCount, pageBreaks, resetKey],
+  );
 
   useLayoutEffect(() => {
     const container = containerRef.current;
@@ -234,9 +284,10 @@ export function usePdfAutoPageBreaks(
     const container = containerRef.current;
     if (!container || typeof ResizeObserver === "undefined") return;
 
-    const observedElements = Array.from(container.querySelectorAll<HTMLElement>(
+    const observedElements = observedLayoutElements(
+      container,
       `${PAGE_SELECTOR}, ${MODULE_SELECTOR}, ${FOOTER_SELECTOR}`,
-    ));
+    );
     const sizes = new Map<Element, { width: number; height: number }>();
     for (const element of observedElements) {
       const rect = element.getBoundingClientRect();
@@ -286,6 +337,12 @@ export function usePdfAutoProductPageBreaks(
   const mergeTrial = useRef<{ removedBreak: number; previousBreaks: number[] } | null>(null);
   const pendingFocusRestore = useRef<FocusSnapshot | null>(null);
 
+  useLatePdfLayoutRevision(
+    containerRef,
+    () => setLayoutRevision((current) => current + 1),
+    [containerRef, lineCount, pageBreaks, resetKey],
+  );
+
   useLayoutEffect(() => {
     const container = containerRef.current;
     restoreFocusedField(container, pendingFocusRestore.current);
@@ -316,9 +373,17 @@ export function usePdfAutoProductPageBreaks(
 
       const footerTop = pageContentBottom(page, footer);
       const overflowingRow = rows.find((row) => row.getBoundingClientRect().bottom > footerTop - 1);
-      if (!overflowingRow) continue;
+      const table = page.querySelector<HTMLElement>(PRODUCT_TABLE_SELECTOR);
+      const tableOverflows = Boolean(table && table.getBoundingClientRect().bottom > footerTop - 1);
+      if (!overflowingRow && !tableOverflows) continue;
 
-      const lineIndex = Number(overflowingRow.getAttribute("data-pdf-auto-product-index"));
+      // Totals and adjustments are rendered only on the final product page.
+      // They can cross the footer even when every individual product row fits.
+      // Moving the last row starts a continuation page that carries both that
+      // row and the totals, then the next layout pass can split again if needed.
+      const breakRow = overflowingRow ?? rows.at(-1);
+      if (!breakRow) continue;
+      const lineIndex = Number(breakRow.getAttribute("data-pdf-auto-product-index"));
       const firstLineIndex = Number(rows[0].getAttribute("data-pdf-auto-product-index"));
       if (!Number.isInteger(lineIndex) || !Number.isInteger(firstLineIndex) || lineIndex <= firstLineIndex) continue;
 
@@ -355,9 +420,10 @@ export function usePdfAutoProductPageBreaks(
     const container = containerRef.current;
     if (!container || typeof ResizeObserver === "undefined") return;
 
-    const observedElements = Array.from(new Set(container.querySelectorAll<HTMLElement>(
-      `${PRODUCT_PAGE_SELECTOR}, ${PRODUCT_ROW_SELECTOR}, ${FOOTER_SELECTOR}`,
-    )));
+    const observedElements = observedLayoutElements(
+      container,
+      `${PRODUCT_PAGE_SELECTOR}, ${PRODUCT_ROW_SELECTOR}, ${PRODUCT_TABLE_SELECTOR}, ${FOOTER_SELECTOR}`,
+    );
     const sizes = new Map<Element, { width: number; height: number }>();
     for (const element of observedElements) {
       const rect = element.getBoundingClientRect();

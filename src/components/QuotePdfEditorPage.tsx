@@ -681,7 +681,7 @@ export function QuotePdfEditorPage({
     </section>
   ) : null;
   const continuationLetterhead = (
-    <header className="quote-pdf-letterhead quote-pdf-letterhead-continuation">
+    <header className="quote-pdf-letterhead quote-pdf-letterhead-continuation" data-pdf-auto-layout-anchor>
       <img src={brandLogo} alt={brandLogoAlt} />
       <div><h1>{documentTitle}</h1><strong>{draft.quoteNumber}</strong></div>
       <img className="quote-pdf-award" src="/assets/award-logo.avif" alt="公司認證及獎項" />
@@ -689,7 +689,7 @@ export function QuotePdfEditorPage({
   );
   const quantityColumnClassName = hideQuantityColumns ? "quote-pdf-qty-col quote-pdf-edit-only" : "quote-pdf-qty-col";
   const renderProductTable = (lines: EditableLine[], offset: number, showTotals: boolean) => (
-    <div className="quote-pdf-table-wrap">
+    <div className="quote-pdf-table-wrap" data-pdf-auto-product-table data-pdf-auto-layout-anchor>
       <table className={`quote-pdf-table${isLunchBox ? " is-lunch-box" : ""}${hideQuantityColumns ? " has-no-quantities" : ""}`}>
         <thead><tr><th aria-label="序號">{isLunchBox ? "" : "#"}</th><th>產品</th><th>單價</th><th className={quantityColumnClassName}>{isLunchBox ? "份數" : "數量"}</th><th className={quantityColumnClassName}>{isLunchBox ? "總數" : "金額"}</th></tr></thead>
         <tbody>
@@ -840,7 +840,7 @@ export function QuotePdfEditorPage({
       ))}
 
       <main className={`quote-pdf-sheet${productLinePages.length === 1 && trailingModulePages.length === 1 && !backPages.length ? " is-final-document-page" : ""}`} data-pdf-auto-page={productLinePages.length === 1 ? "products" : undefined} data-pdf-product-page="true">
-        <header className="quote-pdf-letterhead">
+        <header className="quote-pdf-letterhead" data-pdf-auto-layout-anchor>
           <img src={brandLogo} alt={brandLogoAlt} />
           <div>
             <h1>{documentTitle}</h1>
@@ -849,7 +849,7 @@ export function QuotePdfEditorPage({
           <img className="quote-pdf-award" src="/assets/award-logo.avif" alt="公司認證及獎項" />
         </header>
 
-        <div className="quote-pdf-meta-grid">
+        <div className="quote-pdf-meta-grid" data-pdf-auto-layout-anchor>
           <div className="quote-pdf-customer-company" data-testid="quote-customer-company">
             <label htmlFor="quote-customer">客戶名稱</label><PdfBlurCommitInput id="quote-customer" value={draft.customerName} onDirty={markDraftDirty} onCommit={(value) => update("customerName", value)} />
             <label htmlFor="quote-company">公司名稱</label><PdfBlurCommitInput id="quote-company" value={draft.companyName} onDirty={markDraftDirty} onCommit={(value) => update("companyName", value)} />
