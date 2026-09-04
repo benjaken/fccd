@@ -139,7 +139,7 @@ export function PullToRefresh({
       if (pullRef.current >= PULL_THRESHOLD && !busy) {
         setAwaiting(true);
         setPullDistance(0);
-        void onRefresh?.();
+        void Promise.resolve(onRefresh?.()).finally(() => setAwaiting(false));
         return;
       }
       setPullDistance(0);

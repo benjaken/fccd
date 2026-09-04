@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import {
@@ -32,6 +32,7 @@ import {
 
 import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
+import { PullToRefresh } from "@/components/ui/pull-to-refresh";
 import {
   fetchDriverAvailableOrders,
   fetchDriverAcceptedOrders,
@@ -68,6 +69,7 @@ import {
   type DriverFleetOrder,
 } from "@/lib/driver-delivery";
 import { addCalendarDays, hongKongDateInputValue } from "@/lib/deliveries";
+import { useResumeRefresh } from "@/lib/use-resume-refresh";
 
 function formatPortalDate(value: string) {
   const [year, month, day] = value.split("-").map(Number);
@@ -361,7 +363,15 @@ function FleetOrderModal({ session, order, onClose, onChanged }: { session: Driv
   );
 }
 
-function FleetOrdersView({ session, income = false }: { session: DriverDeliverySession; income?: boolean }) {
+function FleetOrdersView({
+  session,
+  income = false,
+  resumeKey = 0,
+}: {
+  session: DriverDeliverySession;
+  income?: boolean;
+  resumeKey?: number;
+}) {
   const [drivers, setDrivers] = useState<DriverFleetDriver[]>([]);
   const [driverId, setDriverId] = useState("");
   const [months, setMonths] = useState<DriverFleetMonth[]>([]);
@@ -374,24 +384,65 @@ function FleetOrdersView({ session, income = false }: { session: DriverDeliveryS
   const [loading, setLoading] = useState(true);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const expandedRef = useRef(expanded);
+  const selectedDayRef = useRef(selectedDay);
+  const prevResumeKey = useRef(resumeKey);
+  expandedRef.current = expanded;
+  selectedDayRef.current = selectedDay;
+
+  const loadSummary = useCallback(async (silent = false) => {
+    if (!silent) {
+      setLoading(true);
+      setMonths([]);
+      setExpanded(null);
+      setDays({});
+      setSelectedDay("");
+      setDayOrders([]);
+      setSelectedOrder(null);
+    }
+    try {
+      const next = await (income
+        ? fetchDriverIncomeSummary(session.token, startDate, endDate)
+        : fetchDriverFleetSummary(session.token, driverId, startDate, endDate));
+      setMonths(next);
+      if (!silent) return;
+      const month = expandedRef.current;
+      if (month) {
+        const monthRows = await (income
+          ? fetchDriverIncomeDays(session.token, month, startDate, endDate)
+          : fetchDriverFleetDays(session.token, month, driverId, startDate, endDate)).catch(() => []);
+        setDays((current) => ({ ...current, [month]: monthRows }));
+      }
+      const day = selectedDayRef.current;
+      if (day) {
+        const orderRows = await (income
+          ? fetchDriverIncomeDayOrders(session.token, day)
+          : fetchDriverFleetDayOrders(session.token, day, driverId)).catch(() => []);
+        setDayOrders(orderRows);
+        setSelectedOrder((current) => current
+          ? orderRows.find((row) => row.deliveryId === current.deliveryId) ?? null
+          : null);
+      }
+    } catch {
+      if (!silent) setMonths([]);
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  }, [driverId, endDate, income, session.token, startDate]);
 
   useEffect(() => {
     fetchDriverFleetDrivers(session.token).then(setDrivers).catch(() => setDrivers([]));
   }, [session.token]);
 
   useEffect(() => {
-    setLoading(true);
-    setMonths([]);
-    setExpanded(null);
-    setDays({});
-    setSelectedDay("");
-    setDayOrders([]);
-    setSelectedOrder(null);
-    (income ? fetchDriverIncomeSummary(session.token, startDate, endDate) : fetchDriverFleetSummary(session.token, driverId, startDate, endDate))
-      .then(setMonths)
-      .catch(() => setMonths([]))
-      .finally(() => setLoading(false));
-  }, [driverId, endDate, income, session.token, startDate]);
+    void loadSummary();
+  }, [loadSummary]);
+
+  useEffect(() => {
+    if (prevResumeKey.current === resumeKey) return;
+    prevResumeKey.current = resumeKey;
+    void loadSummary(true);
+  }, [loadSummary, resumeKey]);
 
   async function toggleMonth(month: string) {
     if (expanded === month) { setExpanded(null); return; }
@@ -420,7 +471,7 @@ function FleetOrdersView({ session, income = false }: { session: DriverDeliveryS
   const selectedDriver = drivers.find((driver) => driver.id === driverId)?.name || "全部司機";
 
   return (
-    <section className="driver-fleet-view">
+    <PullToRefresh className="driver-fleet-view" onRefresh={() => loadSummary(true)} refreshing={loading && months.length === 0}>
       <div className="driver-fleet-filter-row">
         <span>{income ? "所有已派訂單收入" : "車隊訂單統計"}</span>
         {!income ? <>
@@ -467,42 +518,51 @@ function FleetOrdersView({ session, income = false }: { session: DriverDeliveryS
       </div> : null}
       {selectedDay ? <div className="driver-day-orders"><header><div><strong>{dayLabel(selectedDay)}</strong><span>{dayOrders.length} 張訂單</span></div><Button variant="ghost" size="icon" onClick={() => setSelectedDay("")} aria-label="關閉每日訂單"><X /></Button></header>{dayOrders.map((order) => <button key={order.deliveryId} onClick={() => setSelectedOrder(order)}><div><strong>{order.orderNumber}</strong><span>{order.address}</span></div><strong>{money(order.totalFee)}</strong><ChevronRight /></button>)}</div> : null}
       {selectedOrder ? <FleetOrderModal session={session} order={selectedOrder} onClose={() => setSelectedOrder(null)} onChanged={refreshSelectedOrder} /> : null}
-    </section>
+    </PullToRefresh>
   );
 }
 
-function DistrictFeesView({ session }: { session: DriverDeliverySession }) {
+function DistrictFeesView({ session, resumeKey = 0 }: { session: DriverDeliverySession; resumeKey?: number }) {
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [rows, setRows] = useState<Array<{ id: string; name: string; fee: number }>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  useEffect(() => {
-    let active = true;
-    setLoading(true);
-    setError("");
-    const timer = window.setTimeout(() => {
-      fetchDriverDistrictFees(session.token, search)
-        .then((next) => {
-          if (!active) return;
-          setRows(next);
-        })
-        .catch(() => {
-          if (!active) return;
-          setRows([]);
-          setError("暫時無法載入分區運費。");
-        })
-        .finally(() => {
-          if (active) setLoading(false);
-        });
-    }, search ? 250 : 0);
-    return () => {
-      active = false;
-      window.clearTimeout(timer);
-    };
+  const prevResumeKey = useRef(resumeKey);
+
+  const loadFees = useCallback(async (silent = false) => {
+    if (!silent) {
+      setLoading(true);
+      setError("");
+    }
+    try {
+      const next = await fetchDriverDistrictFees(session.token, search);
+      setRows(next);
+      setError("");
+    } catch {
+      if (!silent) {
+        setRows([]);
+        setError("暫時無法載入分區運費。");
+      }
+    } finally {
+      if (!silent) setLoading(false);
+    }
   }, [search, session.token]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void loadFees();
+    }, search ? 250 : 0);
+    return () => window.clearTimeout(timer);
+  }, [loadFees, search]);
+
+  useEffect(() => {
+    if (prevResumeKey.current === resumeKey) return;
+    prevResumeKey.current = resumeKey;
+    void loadFees(true);
+  }, [loadFees, resumeKey]);
   return (
-    <section className="driver-district-view">
+    <PullToRefresh className="driver-district-view" onRefresh={() => loadFees(true)} refreshing={loading && rows.length === 0}>
       <label className="driver-order-search">
         <Search />
         <span className="sr-only">搜尋地區</span>
@@ -529,19 +589,25 @@ function DistrictFeesView({ session }: { session: DriverDeliverySession }) {
           ))
           : null}
       </div>
-    </section>
+    </PullToRefresh>
   );
 }
 
-function DriverSettingsView({ session }: { session: DriverDeliverySession }) {
+function DriverSettingsView({ session, resumeKey = 0 }: { session: DriverDeliverySession; resumeKey?: number }) {
   const [drivers, setDrivers] = useState<DriverFleetDriver[]>([]);
   const [name, setName] = useState("");
   const [adding, setAdding] = useState(false);
   const [confirmId, setConfirmId] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const prevResumeKey = useRef(resumeKey);
   async function refresh() { setDrivers(await fetchDriverFleetDrivers(session.token)); }
   useEffect(() => { void refresh().catch(() => setError("暫時無法載入司機。")); }, [session.token]);
+  useEffect(() => {
+    if (prevResumeKey.current === resumeKey) return;
+    prevResumeKey.current = resumeKey;
+    void refresh().catch(() => undefined);
+  }, [resumeKey, session.token]);
   async function add() {
     if (!name.trim()) return;
     setBusy(true); setError("");
@@ -555,7 +621,7 @@ function DriverSettingsView({ session }: { session: DriverDeliverySession }) {
     catch { setError("未能刪除司機，請重試。"); }
     finally { setBusy(false); }
   }
-  return <section className="driver-settings-view"><div className="driver-settings-toolbar"><div><h2>車隊司機</h2><span>{drivers.length} 位啟用司機</span></div><Button onClick={() => setAdding((value) => !value)}><Plus />新增司機</Button></div>{adding ? <div className="driver-add-driver"><label htmlFor="new-driver-name">司機名稱</label><div><input id="new-driver-name" value={name} onChange={(event) => setName(event.target.value)} autoFocus /><Button disabled={busy || !name.trim()} onClick={() => void add()}>新增</Button><Button variant="ghost" onClick={() => { setAdding(false); setName(""); }}>取消</Button></div></div> : null}{error ? <p className="driver-settings-error" role="alert">{error}</p> : null}<div className="driver-settings-list">{drivers.map((driver) => <article key={driver.id}><strong>{driver.name}</strong>{confirmId === driver.id ? <div className="driver-delete-confirm"><span>確定刪除？</span><Button variant="destructive" size="sm" disabled={busy} onClick={() => void remove(driver.id)}>確定</Button><Button variant="ghost" size="sm" onClick={() => setConfirmId("")}>取消</Button></div> : <Button variant="ghost" size="icon" aria-label={`刪除司機 ${driver.name}`} onClick={() => setConfirmId(driver.id)}><Trash2 /></Button>}</article>)}</div></section>;
+  return <PullToRefresh className="driver-settings-view" onRefresh={() => refresh().catch(() => undefined)}><div className="driver-settings-toolbar"><div><h2>車隊司機</h2><span>{drivers.length} 位啟用司機</span></div><Button onClick={() => setAdding((value) => !value)}><Plus />新增司機</Button></div>{adding ? <div className="driver-add-driver"><label htmlFor="new-driver-name">司機名稱</label><div><input id="new-driver-name" value={name} onChange={(event) => setName(event.target.value)} autoFocus /><Button disabled={busy || !name.trim()} onClick={() => void add()}>新增</Button><Button variant="ghost" onClick={() => { setAdding(false); setName(""); }}>取消</Button></div></div> : null}{error ? <p className="driver-settings-error" role="alert">{error}</p> : null}<div className="driver-settings-list">{drivers.map((driver) => <article key={driver.id}><strong>{driver.name}</strong>{confirmId === driver.id ? <div className="driver-delete-confirm"><span>確定刪除？</span><Button variant="destructive" size="sm" disabled={busy} onClick={() => void remove(driver.id)}>確定</Button><Button variant="ghost" size="sm" onClick={() => setConfirmId("")}>取消</Button></div> : <Button variant="ghost" size="icon" aria-label={`刪除司機 ${driver.name}`} onClick={() => setConfirmId(driver.id)}><Trash2 /></Button>}</article>)}</div></PullToRefresh>;
 }
 
 function DriverDashboard({ session, onLogout }: { session: DriverDeliverySession; onLogout: () => void }) {
@@ -578,24 +644,72 @@ function DriverDashboard({ session, onLogout }: { session: DriverDeliverySession
   const [orders, setOrders] = useState<DriverAvailableOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [resumeKey, setResumeKey] = useState(0);
+  const dateTouchedRef = useRef(false);
+  const ordersRequestId = useRef(0);
+
+  const loadOrders = useCallback(async (options?: { silent?: boolean }) => {
+    if (page !== "available" && page !== "accepted") return;
+    const requestId = ++ordersRequestId.current;
+    const silent = options?.silent === true;
+    if (!silent) {
+      setOrders([]);
+      setLoading(true);
+      setError("");
+    }
+    try {
+      const items = await (page === "accepted" ? fetchDriverAcceptedOrders : fetchDriverAvailableOrders)(
+        session.token,
+        date,
+        search,
+      );
+      if (requestId !== ordersRequestId.current) return;
+      setOrders(items);
+      setError("");
+    } catch {
+      if (requestId !== ordersRequestId.current) return;
+      if (!silent) {
+        setOrders([]);
+        setError("暫時無法載入訂單，請重試。");
+      }
+    } finally {
+      if (requestId === ordersRequestId.current && !silent) setLoading(false);
+    }
+  }, [date, page, search, session.token]);
 
   useEffect(() => {
     if (page !== "available" && page !== "accepted") {
       setLoading(false);
       return;
     }
-    let active = true;
-    setOrders([]);
-    setLoading(true);
-    setError("");
     const timer = window.setTimeout(() => {
-      (page === "accepted" ? fetchDriverAcceptedOrders : fetchDriverAvailableOrders)(session.token, date, search)
-        .then((items) => { if (active) setOrders(items); })
-        .catch(() => { if (active) setError("暫時無法載入訂單，請重試。"); })
-        .finally(() => { if (active) setLoading(false); });
+      void loadOrders();
     }, search ? 250 : 0);
-    return () => { active = false; window.clearTimeout(timer); };
-  }, [date, page, search, session.token]);
+    return () => window.clearTimeout(timer);
+  }, [loadOrders, page, search]);
+
+  const refreshFromResume = useCallback(() => {
+    const today = hongKongDateInputValue();
+    if (!dateTouchedRef.current && date !== today) {
+      setDate(today);
+      setResumeKey((key) => key + 1);
+      return;
+    }
+    setResumeKey((key) => key + 1);
+    if (page === "available" || page === "accepted") {
+      return loadOrders({ silent: true });
+    }
+  }, [date, loadOrders, page]);
+
+  useResumeRefresh(refreshFromResume);
+
+  function shiftDate(days: number) {
+    setDate((current) => {
+      const next = addCalendarDays(current, days);
+      dateTouchedRef.current = next !== hongKongDateInputValue();
+      return next;
+    });
+  }
 
   const visibleOrders = useMemo(() => orders
     .filter((order) => methodFilter === "all" || (methodFilter === "curbside" ? shippingMethodClass(order.shippingMethod) === "is-curbside" : shippingMethodClass(order.shippingMethod) === "is-door"))
@@ -637,9 +751,9 @@ function DriverDashboard({ session, onLogout }: { session: DriverDeliverySession
       {methodMenuOpen && (page === "available" || page === "accepted") ? <div className="driver-method-filter"><button className={methodFilter === "all" ? "is-selected" : ""} onClick={() => { setMethodFilter("all"); setMethodMenuOpen(false); }}>全部</button><button className={methodFilter === "curbside" ? "is-selected" : ""} onClick={() => { setMethodFilter("curbside"); setMethodMenuOpen(false); }}>車邊交收</button><button className={methodFilter === "door" ? "is-selected" : ""} onClick={() => { setMethodFilter("door"); setMethodMenuOpen(false); }}>送貨上門</button></div> : null}
 
       {page === "available" || page === "accepted" ? <><section className="driver-date-bar" aria-label="選擇送貨日期">
-        <Button variant="ghost" onClick={() => setDate(addCalendarDays(date, -1))}><ChevronLeft />前一日</Button>
+        <Button variant="ghost" onClick={() => shiftDate(-1)}><ChevronLeft />前一日</Button>
         <div><CalendarDays /><strong>{formatPortalDate(date)}</strong></div>
-        <Button variant="ghost" onClick={() => setDate(addCalendarDays(date, 1))}>後一日<ChevronRight /></Button>
+        <Button variant="ghost" onClick={() => shiftDate(1)}>後一日<ChevronRight /></Button>
       </section>
 
       <section className="driver-orders-content">
@@ -649,6 +763,8 @@ function DriverDashboard({ session, onLogout }: { session: DriverDeliverySession
           <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t("driverDelivery.searchPlaceholder")} />
           {search ? <button onClick={() => setSearch("")} aria-label="清除搜尋"><X /></button> : null}
         </label>
+
+        <PullToRefresh className="driver-order-refresh" onRefresh={() => loadOrders({ silent: true })} refreshing={loading}>
 
         {loading ? <div className="driver-empty-state">正在載入訂單…</div> : null}
         {error ? <div className="driver-empty-state is-error">{error}</div> : null}
@@ -678,7 +794,8 @@ function DriverDashboard({ session, onLogout }: { session: DriverDeliverySession
             </article>
           ))}
         </div>
-      </section></> : page === "fleet" ? <FleetOrdersView session={session} /> : page === "income" ? <FleetOrdersView session={session} income /> : page === "districts" ? <DistrictFeesView session={session} /> : <DriverSettingsView session={session} />}
+        </PullToRefresh>
+      </section></> : page === "fleet" ? <FleetOrdersView session={session} resumeKey={resumeKey} /> : page === "income" ? <FleetOrdersView session={session} income resumeKey={resumeKey} /> : page === "districts" ? <DistrictFeesView session={session} resumeKey={resumeKey} /> : <DriverSettingsView session={session} resumeKey={resumeKey} />}
       <DriverDrawer open={drawerOpen} teamName={session.teamName} page={page} onNavigate={(nextPage) => navigate(DRIVER_PORTAL_PATHS[nextPage])} onClose={() => setDrawerOpen(false)} onLogout={onLogout} />
       {rejectOrder ? <div className="driver-confirm-layer" role="alertdialog" aria-modal="true" aria-labelledby="reject-order-title"><button className="driver-confirm-scrim" aria-label="返回" onClick={() => setRejectOrder(null)} /><article><header><h2 id="reject-order-title">{page === "accepted" ? "確定取消司機訂單" : "重要提醒"}</h2></header><div>{page === "accepted" ? <><strong>確定完成後</strong><p>此訂單將不會顯示於司機版面，直至再派車隊。</p><p>是否確定取消送貨訂單？</p></> : <><strong>你確定要拒絕訂單嗎？</strong><p>我們會另行安排其他車隊運送訂單 {rejectOrder.orderNumber}。</p></>}</div><footer><Button variant="outline" onClick={() => setRejectOrder(null)}>取消</Button><Button variant="destructive" disabled={rejecting} onClick={() => { setRejecting(true); void rejectDriverAvailableOrder(session.token,rejectOrder.deliveryId).then(() => { setOrders((current) => current.filter((item) => item.deliveryId !== rejectOrder.deliveryId)); setRejectOrder(null); }).finally(() => setRejecting(false)); }}>{rejecting ? "處理中…" : page === "accepted" ? "確定" : "確認拒絕訂單"}</Button></footer></article></div> : null}
       {workflowAction ? <div className="driver-confirm-layer" role="alertdialog" aria-modal="true"><button className="driver-confirm-scrim" aria-label="返回" onClick={()=>setWorkflowAction(null)} /><article><header><h2>{workflowAction.type==="pickup"?"取貨確認":workflowAction.type==="deliver"?"送達確認":"接單確認"}</h2></header><div><strong>{workflowAction.type==="pickup"?"你確定已取貨嗎？":workflowAction.type==="deliver"?"你確定訂單已送達嗎？":`確定接受訂單 ${workflowAction.order.orderNumber}？`}</strong><p>{workflowAction.type==="pickup"?"一旦確認不能返回待取貨狀態。":workflowAction.type==="deliver"?"一旦確認不能返回已取貨狀態。":"訂單將移至已接訂單。"}</p>{workflowAction.type!=="accept"?<div className="driver-confirm-time"><span>確認後記錄時間</span><strong>{formatStatusTime(new Date().toISOString())}</strong><Clock3 aria-hidden="true" /></div>:null}</div><footer><Button variant="outline" onClick={()=>setWorkflowAction(null)}>返回</Button><Button disabled={workflowBusy} onClick={()=>void confirmWorkflow()}>{workflowBusy?"處理中…":"確認"}</Button></footer></article></div>:null}
