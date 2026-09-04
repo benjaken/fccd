@@ -80,6 +80,7 @@ const factoryChangeFieldKeys: Record<string, string> = {
   new_quantity_text: "factoryBoard.changedQuantityText",
   remarks_1: "factoryBoard.changedRemarkOne",
   remarks_2: "factoryBoard.changedRemarkTwo",
+  label_remarks: "factoryBoard.changedRemarkOne",
   is_addon: "factoryBoard.changedComplimentary",
   is_void: "factoryBoard.changedVoided",
 };
@@ -218,12 +219,12 @@ export function FactoryOrderJobView({
         fullSet,
       );
       const labelCommands: string[] = [];
-      for (const labelName of labelNames) {
+      for (const [labelIndex, labelName] of labelNames.entries()) {
         labelCommands.push(await loadLabelCommand({
           orderNumber,
           deliveryDate: dateKey,
           labelName,
-          remarks: [...line.remarks, job?.packingNote ?? ""].filter(Boolean),
+          remarks: [line.remarks[labelIndex] ?? "", job?.packingNote ?? ""].filter(Boolean),
           copies,
         }));
       }
@@ -261,12 +262,12 @@ export function FactoryOrderJobView({
     try {
       const labelCommands: string[] = [];
       for (const line of printableLines) {
-        for (const labelName of factoryOrderLineLabelNames(line)) {
+        for (const [labelIndex, labelName] of factoryOrderLineLabelNames(line).entries()) {
           labelCommands.push(await loadLabelCommand({
             orderNumber,
             deliveryDate: dateKey,
             labelName,
-            remarks: [...line.remarks, job?.packingNote ?? ""].filter(Boolean),
+            remarks: [line.remarks[labelIndex] ?? "", job?.packingNote ?? ""].filter(Boolean),
             copies: labelCopies(line),
           }));
         }
@@ -471,7 +472,7 @@ export function FactoryOrderJobView({
                       × {line.quantityText}
                     </span>
                   ) : null}
-                  {line.remarks.map((remark, index) => (
+                  {line.remarks.filter(Boolean).map((remark, index) => (
                     <span
                       className="factory-order-line-remark"
                       key={`${remark}-${index}`}
@@ -770,11 +771,11 @@ export function FactoryOrderJobView({
                   </strong>
                 </div>
               </div>
-              {selectedLine.remarks.length ? (
+              {selectedLine.remarks.some(Boolean) ? (
                 <div className="factory-label-remarks">
                   <span>{t("factoryBoard.dishRemarks")}</span>
-                  {selectedLine.remarks.map((remark) => (
-                    <strong key={remark}>{remark}</strong>
+                  {selectedLine.remarks.filter(Boolean).map((remark, index) => (
+                    <strong key={`${remark}-${index}`}>{remark}</strong>
                   ))}
                 </div>
               ) : null}

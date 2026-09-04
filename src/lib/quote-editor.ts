@@ -483,6 +483,14 @@ export async function duplicateOrder(
         packageProductIds: group.products.map((product) => product.packageProductId),
       })),
     });
+    if (line.labelRemarks?.length) {
+      const { error: remarksError } = await supabase.from("order_lines").update({
+        label_remarks: line.labelRemarks,
+        remarks_1: optional(line.labelRemarks[0] ?? ""),
+        remarks_2: optional(line.labelRemarks[1] ?? ""),
+      }).eq("id", copiedLineId);
+      if (remarksError) throw remarksError;
+    }
     if (line.isAddon) {
       const { error } = await supabase
         .from("order_lines")
@@ -761,6 +769,8 @@ export async function saveSalesDocumentBatch(input: {
       id: line.id,
       quantity: line.quantity,
       unit_price: line.unitPrice,
+      remarks: line.labelRemarks?.[0] ?? line.remarks ?? null,
+      label_remarks: line.labelRemarks ?? [line.remarks ?? ""],
       remarks_1: line.labelRemarks?.[0] ?? line.remarks ?? null,
       remarks_2: line.labelRemarks?.[1] ?? null,
     })),
@@ -782,6 +792,14 @@ export async function saveSalesDocumentBatch(input: {
     p_factory_settings: input.documentType === "order" ? input.factorySettings : {},
   });
   if (error) throw error;
+  const { error: remarksError } = await supabase.rpc("save_order_line_label_remarks_batch", {
+    p_order_id: input.orderId,
+    p_lines: input.lines.filter((line) => !line.isVoid).map((line) => ({
+      id: line.id,
+      label_remarks: line.labelRemarks ?? [line.remarks ?? ""],
+    })),
+  });
+  if (remarksError) throw remarksError;
 }
 
 export async function sendQuoteConfirmation(orderId: string) {
@@ -1014,7 +1032,7 @@ export async function fetchQuoteLines(orderId: string): Promise<QuoteLine[]> {
       .single(),
     supabase
       .from("order_lines")
-      .select("id,product_id,package_id,sku_snapshot,product_name_snapshot,content_snapshot,quantity,unit_price,total_price,remarks_1,remarks_2,is_addon,is_void,temporary_label_display_name,temporary_label_quantity_label,products(name,product_labels(id,display_name,quantity_label,created_at)),packages(name)")
+      .select("id,product_id,package_id,sku_snapshot,product_name_snapshot,content_snapshot,quantity,unit_price,total_price,remarks_1,remarks_2,label_remarks,is_addon,is_void,temporary_label_display_name,temporary_label_quantity_label,products(name,product_labels(id,display_name,quantity_label,created_at)),packages(name)")
       .eq("order_id", resolvedOrderId)
       .order("item_order", { ascending: true, nullsFirst: false })
       .order("created_at"),
@@ -1091,10 +1109,17 @@ export async function fetchQuoteLines(orderId: string): Promise<QuoteLine[]> {
         displayB: row.temporary_label_quantity_label ?? null,
       });
     }
-    const labelRemarks = [
+    const storedLabelRemarks = Array.isArray(row.label_remarks)
+      ? row.label_remarks.map((remark) => String(remark ?? ""))
+      : [];
+    const legacyLabelRemarks = [
       row.remarks_1 ?? "",
       ...(lineLabels.length > 1 || row.remarks_2?.trim() ? [row.remarks_2 ?? ""] : []),
     ];
+    const labelRemarks = Array.from(
+      { length: Math.max(lineLabels.length, storedLabelRemarks.length, legacyLabelRemarks.length) },
+      (_, index) => storedLabelRemarks[index] ?? legacyLabelRemarks[index] ?? "",
+    );
     return {
       id: row.id,
       productId: row.product_id,
@@ -1219,6 +1244,7 @@ export async function updateQuoteLine(
       quantity: line.quantity,
       unit_price: line.unitPrice,
       total_price: Math.round(line.quantity * line.unitPrice * 100) / 100,
+      label_remarks: line.labelRemarks ?? [line.remarks ?? ""],
       remarks_1: optional(line.labelRemarks?.[0] ?? line.remarks ?? ""),
       remarks_2: optional(line.labelRemarks?.[1] ?? ""),
     })

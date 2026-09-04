@@ -27,6 +27,7 @@ export type OrderEditorLine = {
   sku: string;
   name: string;
   remarks: string;
+  labelRemarks?: string[];
   quantity: number;
   unitPrice: number;
   isAddon?: boolean;
@@ -248,7 +249,7 @@ export async function fetchOrderEditor(
         .maybeSingle(),
       supabase
         .from("order_lines")
-        .select("id,product_id,package_id,sku_snapshot,product_name_snapshot,content_snapshot,quantity,unit_price,remarks_1,is_addon,products(name),packages(name)")
+        .select("id,product_id,package_id,sku_snapshot,product_name_snapshot,content_snapshot,quantity,unit_price,remarks_1,label_remarks,is_addon,products(name),packages(name)")
         .eq("order_id", id)
         .eq("is_void", false)
         .order("type_sort")
@@ -320,6 +321,9 @@ export async function fetchOrderEditor(
           line.product_name_snapshot || line.content_snapshot || "",
         ),
         remarks: line.remarks_1 ?? "",
+        labelRemarks: Array.isArray(line.label_remarks)
+          ? line.label_remarks.map((remark) => String(remark ?? ""))
+          : [line.remarks_1 ?? ""],
         quantity: numberValue(line.quantity),
         unitPrice: numberValue(line.unit_price),
         isAddon: line.is_addon === true,
@@ -432,6 +436,9 @@ export async function saveOrderEditor(draft: OrderEditorDraft): Promise<string> 
         sku_snapshot: nullable(line.sku),
         product_name_snapshot: nullable(line.name),
         content_snapshot: nullable(line.name),
+        label_remarks: line.labelRemarks?.length
+          ? [line.remarks, ...line.labelRemarks.slice(1)]
+          : [line.remarks],
         remarks_1: nullable(line.remarks),
         quantity: line.quantity,
         unit_price: line.unitPrice,

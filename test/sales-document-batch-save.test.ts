@@ -25,4 +25,17 @@ describe("sales document batch save", () => {
     expect(page).toContain("? saveSalesDocumentBatch");
     expect(page).toContain("await batchSaver({");
   });
+
+  it("persists one remark per print label and remains compatible with legacy remarks", () => {
+    const migration = source("supabase/migrations/20260904190000_order_line_label_remarks.sql");
+    const implementation = source("src/lib/quote-editor.ts");
+
+    expect(migration).toContain("add column if not exists label_remarks text[]");
+    expect(migration).toContain("sync_order_line_label_remarks");
+    expect(migration).toContain("save_order_line_label_remarks_batch");
+    expect(migration).toContain("source.label_remarks");
+    expect(migration).toContain("label_remarks, delivery_at");
+    expect(implementation).toContain('supabase.rpc("save_order_line_label_remarks_batch"');
+    expect(implementation).toContain("label_remarks: line.labelRemarks ?? [line.remarks ?? \"\"]");
+  });
 });
