@@ -270,6 +270,7 @@ function RecipeFormPanel({
             searchPlaceholder={t("seasoningRecipes.searchProduct")}
             emptyLabel={t("seasoningRecipes.emptyProducts")}
             required
+            disabled={Boolean(editing)}
             invalid={Boolean(fieldErrors.product)}
             onChange={(option) => setPreparedMeatItemId(option.id)}
           />
