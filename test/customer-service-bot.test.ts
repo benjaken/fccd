@@ -10,6 +10,7 @@ import {
   isHumanOperatorMessage,
   parseAllowedCustomerServicePhones,
   parseWatiInboundEvent,
+  resolveWatiSessionEndpoint,
   timingSafeEqual,
   verifyWatiWebhook,
 } from "../supabase/functions/_shared/wati-customer-service-adapter.ts";
@@ -145,7 +146,18 @@ describe("customer-service bot turns", () => {
       deps: deps({ searchFaqs: vi.fn().mockResolvedValue([]) }),
     });
     expect(miss.reply).toBe(REPLIES.noFaq);
-    expect(miss.conversation.state).toBe("human_owned");
+    expect(miss.conversation.state).toBe("identifying");
+  });
+
+  it("answers a soak-test greeting without handing the chat to a human", async () => {
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "test",
+      conversation,
+      deps: deps(),
+    });
+    expect(turn.reply).toBe(REPLIES.help);
+    expect(turn.conversation.state).toBe("identifying");
   });
 
   it("does not mutate business data on handoff or after a human owns the chat", async () => {
@@ -212,12 +224,18 @@ describe("WATI adapter", () => {
     });
     expect(inbound).not.toBeNull();
     expect(isHumanOperatorMessage(inbound!)).toBe(true);
+    expect(resolveWatiSessionEndpoint("https://live-mt-server.wati.io")).toBe(
+      "https://live-mt-server.wati.io/2552",
+    );
+    expect(resolveWatiSessionEndpoint("https://live-mt-server.wati.io/api/v2")).toBe(
+      "https://live-mt-server.wati.io/2552",
+    );
     expect(buildSessionMessageUrl({
-      endpoint: "https://live-mt-server.wati.io/2552",
+      endpoint: "https://live-mt-server.wati.io",
       phone: "85291234567",
       text: "你好",
       channelNumber: "85253964335",
-    })).toContain("/api/v1/sendSessionMessage/85291234567");
+    })).toContain("https://live-mt-server.wati.io/2552/api/v1/sendSessionMessage/85291234567");
     expect(buildSessionMessageUrl({
       endpoint: "https://live-mt-server.wati.io/2552",
       phone: "85291234567",

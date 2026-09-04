@@ -49,6 +49,8 @@ const LOOKUP = /查單|訂單|送貨狀態|我的單|我嘅單|order ?status|加
 
 const COLLECT = /到會|報價|訂餐|宴會|活動|幾多人|人數|另一場|新活動|另外一場/;
 
+const GREETING = /^(test+|hi+|hello+|hey+|哈囉|你好|在嗎|ping|ok)$/i;
+
 const FAQ =
   /運費|送貨費|免運|自取|荃灣|地面交收|上門|餐具|早餐|積分|生日|註冊|付款|轉數快|收據|發票|打風|8\s*號|黑雨|落單|加熱|即食|廚師上門|侍應|擺盤|素食|走蒜|走蔥/;
 
@@ -87,6 +89,10 @@ export function extractOrderNumber(text: string) {
 
 export function hasCollectableSlots(slots: InquirySlots) {
   return Boolean(slots.eventDate || slots.headcount);
+}
+
+export function isCustomerServiceGreeting(text: string) {
+  return GREETING.test(text.trim());
 }
 
 export function classifyCustomerServiceMessage(text: string): ClassifiedMessage {

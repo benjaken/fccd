@@ -343,17 +343,26 @@ Deno.serve(async (request) => {
       conversation,
       deps: createBotDeps(admin),
     });
-    await saveConversation(admin, turn.conversation);
 
     if (turn.reply) {
-      await sendWatiSessionMessage({
-        endpoint: requiredEnv("WATI_API_ENDPOINT"),
-        token: requiredEnv("WATI_API_TOKEN"),
-        phone: event.waId,
-        text: turn.reply,
-        channelNumber: env("WATI_CHANNEL_NUMBER") || BRAND_WHATSAPP_CHANNEL,
-      });
+      try {
+        await sendWatiSessionMessage({
+          endpoint: requiredEnv("WATI_API_ENDPOINT"),
+          token: requiredEnv("WATI_API_TOKEN"),
+          phone: event.waId,
+          text: turn.reply,
+          channelNumber: env("WATI_CHANNEL_NUMBER") || BRAND_WHATSAPP_CHANNEL,
+          tenantId: env("WATI_TENANT_ID"),
+        });
+      } catch (error) {
+        console.error(
+          "wati session send failed",
+          error instanceof Error ? error.message.slice(0, 300) : String(error),
+        );
+        throw error;
+      }
     }
+    await saveConversation(admin, turn.conversation);
 
     return jsonResponse({
       ok: true,
@@ -362,6 +371,10 @@ Deno.serve(async (request) => {
       wrote_inquiry: turn.wroteInquiry,
     });
   } catch (error) {
+    console.error(
+      "customer service failed",
+      error instanceof Error ? error.message.slice(0, 300) : String(error),
+    );
     return jsonResponse({
       error: "customer_service_failed",
       detail: error instanceof Error ? error.message : String(error),

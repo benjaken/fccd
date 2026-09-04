@@ -161,18 +161,39 @@ export function isHumanOperatorMessage(event: WatiInboundEvent) {
   return !/^(api|bot|system|wati)$/i.test(event.operatorName);
 }
 
+export const DEFAULT_WATI_HOST = "https://live-mt-server.wati.io";
+export const DEFAULT_WATI_TENANT_ID = "2552";
+
+export function resolveWatiSessionEndpoint(endpoint: string, tenantId = "") {
+  const trimmed = endpoint.trim().replace(/\/+$/, "").replace(/\/api\/v[12]$/i, "");
+  try {
+    const url = new URL(trimmed);
+    const path = url.pathname.replace(/\/+$/, "");
+    if (path && !/^\/api(\/|$)/i.test(path)) {
+      return `${url.origin}${path}`;
+    }
+    const tenant = tenantId.trim()
+      || (url.hostname.includes("live-mt-server.wati.io") ? DEFAULT_WATI_TENANT_ID : "");
+    return tenant ? `${url.origin}/${tenant}` : `${url.origin}${path}`;
+  } catch {
+    return trimmed;
+  }
+}
+
 export function buildSessionMessageUrl({
   endpoint,
   phone,
   text,
   channelNumber,
+  tenantId = "",
 }: {
   endpoint: string;
   phone: string;
   text: string;
   channelNumber: string;
+  tenantId?: string;
 }) {
-  const base = endpoint.replace(/\/$/, "");
+  const base = resolveWatiSessionEndpoint(endpoint, tenantId);
   const url = new URL(`${base}/api/v1/sendSessionMessage/${encodeURIComponent(phone)}`);
   url.searchParams.set("messageText", text);
   if (channelNumber) url.searchParams.set("channelPhoneNumber", channelNumber);
@@ -185,6 +206,7 @@ export async function sendWatiSessionMessage({
   phone,
   text,
   channelNumber,
+  tenantId = "",
   fetchImpl = fetch,
 }: {
   endpoint: string;
@@ -192,19 +214,32 @@ export async function sendWatiSessionMessage({
   phone: string;
   text: string;
   channelNumber: string;
+  tenantId?: string;
   fetchImpl?: typeof fetch;
 }) {
-  const url = buildSessionMessageUrl({ endpoint, phone, text, channelNumber });
+  const url = buildSessionMessageUrl({ endpoint, phone, text, channelNumber, tenantId });
   const response = await fetchImpl(url, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token.replace(/^Bearer\s+/i, "")}`,
       "Content-Type": "application/json",
     },
+    body: JSON.stringify({
+      messageText: text,
+      channelPhoneNumber: channelNumber || undefined,
+    }),
   });
   const raw = await response.text();
   if (!response.ok) {
-    throw new Error(`wati_session_failed:${response.status}:${raw.slice(0, 500)}`);
+    throw new Error(`wati_session_failed:${response.status}:${raw.slice(0, 300)}`);
+  }
+  try {
+    const parsed = JSON.parse(raw) as { result?: boolean; info?: string; errors?: unknown };
+    if (parsed.result === false) {
+      throw new Error(`wati_session_failed:result_false:${String(parsed.info || parsed.errors || raw).slice(0, 300)}`);
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith("wati_session_failed:")) throw error;
   }
   return raw;
 }

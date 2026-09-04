@@ -1,6 +1,7 @@
 import {
   classifyCustomerServiceMessage,
   hasCollectableSlots,
+  isCustomerServiceGreeting,
   type ClassifiedMessage,
   type InquirySlots,
 } from "./customer-service-intents.ts";
@@ -188,10 +189,7 @@ async function replyFaq(
   }
   return {
     reply: REPLIES.noFaq,
-    conversation: nextConversation(conversation, {
-      state: "human_owned",
-      handoff_at: new Date().toISOString(),
-    }),
+    conversation,
     wroteInquiry: false,
     notified: false,
     usedModel: classified.usedModel,
@@ -214,6 +212,16 @@ export async function handleCustomerServiceTurn({
   if (conversation.state === "human_owned") {
     return {
       reply: null,
+      conversation,
+      wroteInquiry: false,
+      notified: false,
+      usedModel: false,
+    };
+  }
+
+  if (isCustomerServiceGreeting(text)) {
+    return {
+      reply: REPLIES.help,
       conversation,
       wroteInquiry: false,
       notified: false,

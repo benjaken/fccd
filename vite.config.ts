@@ -12,9 +12,10 @@ function deploymentBranch() {
   ).trim();
 }
 
-export default defineConfig(() => {
-  const branch = deploymentBranch();
-  const vercelEnv = process.env.VERCEL_ENV || "";
+export default defineConfig(({ mode }) => {
+  const isTest = mode === "test" || process.env.VITEST === "true";
+  const branch = isTest ? "" : deploymentBranch();
+  const vercelEnv = isTest ? "" : (process.env.VERCEL_ENV || "");
 
   return {
     plugins: [react(), tailwindcss()],

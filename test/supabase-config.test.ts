@@ -3,19 +3,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   DEVELOP_SUPABASE_PUBLISHABLE_KEY,
   DEVELOP_SUPABASE_URL,
+  PRODUCTION_SUPABASE_PUBLISHABLE_KEY,
   PRODUCTION_SUPABASE_URL,
   resolveSupabasePublicConfig,
 } from "@/lib/supabase-env";
-
-const SUPABASE_ENV_NAMES = [
-  "VITE_SUPABASE_URL",
-  "NEXT_PUBLIC_SUPABASE_URL",
-  "VITE_SUPABASE_PUBLISHABLE_KEY",
-  "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
-  "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-  "VITE_GIT_BRANCH",
-  "VITE_VERCEL_ENV",
-] as const;
 
 describe("Supabase configuration", () => {
   afterEach(() => {
@@ -23,15 +14,22 @@ describe("Supabase configuration", () => {
     vi.resetModules();
   });
 
-  it("uses the production public configuration when deployment variables are absent", async () => {
-    for (const name of SUPABASE_ENV_NAMES) vi.stubEnv(name, "");
-    vi.resetModules();
-
-    const config = await import("@/lib/supabase");
-
-    expect(config.isSupabaseConfigured).toBe(true);
-    expect(config.supabaseUrl).toBe(PRODUCTION_SUPABASE_URL);
-    expect(config.supabasePublishableKey).toMatch(/^sb_publishable_/);
+  it("uses the production public configuration when deployment variables are absent", () => {
+    expect(resolveSupabasePublicConfig({})).toEqual({
+      supabaseUrl: PRODUCTION_SUPABASE_URL,
+      supabasePublishableKey: PRODUCTION_SUPABASE_PUBLISHABLE_KEY,
+    });
+    expect(
+      resolveSupabasePublicConfig({
+        VITE_GIT_BRANCH: "",
+        VITE_VERCEL_ENV: "",
+        VERCEL_GIT_COMMIT_REF: "",
+        VERCEL_ENV: "",
+      }),
+    ).toEqual({
+      supabaseUrl: PRODUCTION_SUPABASE_URL,
+      supabasePublishableKey: PRODUCTION_SUPABASE_PUBLISHABLE_KEY,
+    });
   });
 
   it("points develop-branch and Vercel preview builds at the develop Supabase project", () => {
