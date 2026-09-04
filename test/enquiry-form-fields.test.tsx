@@ -94,6 +94,7 @@ describe("EnquiryFormFields compact editor layout", () => {
 
     expect(document.querySelector(".enquiry-form-columns-pair")).not.toBeNull();
     expect(document.querySelectorAll(".enquiry-form-column")).toHaveLength(2);
+    expect(document.querySelector(".enquiry-form-column + .enquiry-form-column")).not.toBeNull();
     expect(document.getElementById("enquiry-question-remarks")).toHaveClass("is-wide");
     expect(document.getElementById("enquiry-question-terms")).toHaveClass("is-wide");
     expect(document.getElementById("enquiry-question-remarks")?.closest(".enquiry-form-column")).toBeNull();

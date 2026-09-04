@@ -123,9 +123,9 @@ export function EnquiryFormFields({
             const right = group.questions.filter((_, itemIndex) => itemIndex % 2 === 1);
             return (
               <div key={`columns-${index}`} className="enquiry-form-columns-pair">
-                <div className="enquiry-form-column">{left.map((question) => renderQuestion(question))}</div>
+                <div className="quote-editor-form-column enquiry-form-column">{left.map((question) => renderQuestion(question))}</div>
                 {right.length ? (
-                  <div className="enquiry-form-column">{right.map((question) => renderQuestion(question))}</div>
+                  <div className="quote-editor-form-column enquiry-form-column">{right.map((question) => renderQuestion(question))}</div>
                 ) : null}
               </div>
             );
