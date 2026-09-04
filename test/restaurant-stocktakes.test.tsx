@@ -87,6 +87,15 @@ describe("restaurant stocktake records", () => {
     expect(styles).toMatch(/\.restaurant-stocktakes-page-skeleton\s*\{[^}]*gap:\s*0;[^}]*grid-template-rows:\s*minmax\(0,\s*1fr\);/s);
   });
 
+  it("keeps the record list scrollable inside the page shell", () => {
+    const styles = readFileSync(path.resolve(process.cwd(), "src/index.css"), "utf8");
+
+    expect(styles).toMatch(/\.stocktake-records-layout \.record-sidebar-slot\s*\{[^}]*align-self:\s*stretch;[^}]*min-height:\s*0;/s);
+    expect(styles).toMatch(/\.stocktake-records-layout \.record-sidebar-slot:not\(\.is-collapsed\)\s*\{[^}]*align-items:\s*stretch;/s);
+    expect(styles).toMatch(/\.stocktake-records-layout \.record-sidebar-slot > aside\s*\{[^}]*min-height:\s*0;[^}]*max-height:\s*100%;/s);
+    expect(styles).toMatch(/\.stocktake-date-list-options\s*\{[^}]*overflow-y:\s*auto;[^}]*scrollbar-gutter:\s*stable;/s);
+  });
+
   it("exits edit mode without saving when quantities are unchanged", async () => {
     const user = userEvent.setup();
     const api = services();
