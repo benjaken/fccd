@@ -9,6 +9,7 @@ import {
   type EnquiryFormStatus,
   type EnquiryQuestion,
 } from "@/lib/enquiry-form";
+import type { QuoteDraft } from "@/lib/quote-editor";
 
 export type EnquiryFormListItem = {
   id: string;
@@ -422,10 +423,11 @@ export async function saveEnquirySubmissionAnswers(
 export async function convertEnquiryToQuote(input: {
   submissionId: string;
   channelId: string;
+  draft: QuoteDraft;
 }) {
-  const { data, error } = await supabase.rpc("convert_enquiry_to_quote", {
+  const { data, error } = await supabase.rpc("finalize_enquiry_to_quote", {
     p_submission_id: input.submissionId,
-    p_channel_id: input.channelId,
+    p_draft: { ...input.draft, channelId: input.channelId },
   });
   if (error) throw error;
   const row = Array.isArray(data) ? data[0] : data;

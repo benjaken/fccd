@@ -85,4 +85,17 @@ describe("enquiry form migration", () => {
     expect(sequential).toContain("v_prefix || lpad(v_sequence::text, 3, '0')");
     expect(sequential).not.toContain("substr(replace(v_id::text, '-', ''), 1, 6)");
   });
+
+  it("validates anonymous answers and finalizes conversion in one transaction", () => {
+    const validation = readFileSync(
+      path.resolve(process.cwd(), "supabase/migrations/20260904150000_validate_enquiry_forms_and_submissions.sql"),
+      "utf8",
+    );
+    expect(validation).toContain("create trigger validate_enquiry_form");
+    expect(validation).toContain("create trigger validate_enquiry_submission");
+    expect(validation).toContain("enquiry_required_answer_missing");
+    expect(validation).toContain("enquiry_option_not_allowed");
+    expect(validation).toContain("create or replace function public.finalize_enquiry_to_quote");
+    expect(validation).toContain("grant execute on function public.finalize_enquiry_to_quote(uuid, jsonb) to authenticated;");
+  });
 });
