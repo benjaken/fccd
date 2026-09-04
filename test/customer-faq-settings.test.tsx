@@ -117,6 +117,10 @@ describe("CustomerFaqPage", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "WhatsApp 客服 FAQ" })).toBeInTheDocument();
+    const layout = document.querySelector(".customer-faq-layout");
+    expect(layout).toBeTruthy();
+    expect(layout?.querySelector(".orders-panel")).toBeTruthy();
+    expect(layout?.querySelector(".customer-faq-preview")).toBeTruthy();
     expect(await screen.findByText("運費幾多？")).toBeInTheDocument();
     expect(screen.getByText("已發布")).toBeInTheDocument();
 

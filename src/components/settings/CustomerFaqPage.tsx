@@ -192,7 +192,7 @@ export function CustomerFaqPage({
   };
 
   return (
-    <section className="orders-page settings-list-page">
+    <section className="orders-page settings-list-page customer-faq-page">
       <header className="page-heading orders-heading">
         <div>
           <span className="eyebrow">{t("settings.eyebrow")}</span>
@@ -217,182 +217,186 @@ export function CustomerFaqPage({
         <p className="orders-toolbar-note">{t("settings.customerFaq.botHint")}</p>
       )}
 
-      <article className="panel orders-panel">
-        <header className="orders-toolbar">
-          <ListSearchBar
-            id="customer-faq-search"
-            value={draftSearch}
-            onChange={setDraftSearch}
-            onSubmit={() => {
-              setPage(1);
-              setSearch(draftSearch.trim());
-            }}
-            label={t("settings.customerFaq.search")}
-            placeholder={t("settings.customerFaq.searchPlaceholder")}
-            submitLabel={t("settings.customerFaq.searchAction")}
-            filters={
-              <label className="orders-status-filter">
-                <span>{t("settings.customerFaq.category")}</span>
-                <select
-                  value={category}
-                  onChange={(event) => {
-                    setPage(1);
-                    setCategory(event.target.value);
-                  }}
-                >
-                  <option value="">{t("settings.customerFaq.allCategories")}</option>
-                  {CUSTOMER_FAQ_CATEGORIES.map((key) => (
-                    <option key={key} value={key}>
-                      {t(`settings.customerFaq.categories.${key}`)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            }
-            filtersActive={Boolean(category)}
-            actions={
-              canEdit ? (
-                <Button onClick={() => openEditor(null)}>
-                  <Plus />
-                  {t("settings.customerFaq.add")}
-                </Button>
-              ) : null
-            }
-          />
-        </header>
-
-        {error ? (
-          <div className="orders-state orders-state-error" role="alert">
-            <MessageCircleMore />
-            <div>
-              <strong>{error}</strong>
-              <span>{t("settings.customerFaq.loadErrorDescription")}</span>
-            </div>
-            <Button variant="outline" onClick={() => setReloadKey((value) => value + 1)}>
-              <RefreshCw />
-              {t("settings.retry")}
-            </Button>
-          </div>
-        ) : !loading && items.length === 0 ? (
-          <div className="orders-state">
-            <MessageCircleMore />
-            <div>
-              <strong>{t("settings.customerFaq.empty")}</strong>
-              <span>{t("settings.customerFaq.emptyDescription")}</span>
-            </div>
-          </div>
-        ) : (
-          <ListTable
-            className="orders-table-wrap"
-            onRefresh={() => setReloadKey((value) => value + 1)}
-            loading={loading}
-            loadingLabel={t("settings.customerFaq.loading")}
-            skeletonRows={CUSTOMER_FAQS_PAGE_SIZE}
-            skeletonColumns={canEdit ? SKELETON_COLUMNS : SKELETON_COLUMNS.slice(0, -1)}
-            header={
-              <tr>
-                <th>{t("settings.customerFaq.columns.category")}</th>
-                <th>{t("settings.customerFaq.columns.question")}</th>
-                <th>{t("settings.customerFaq.columns.published")}</th>
-                {canEdit ? <th aria-label={t("settings.customerFaq.columns.actions")} /> : null}
-              </tr>
-            }
-          >
-            {items.map((faq) => (
-              <tr key={faq.id}>
-                <td>{t(`settings.customerFaq.categories.${faq.category}`, { defaultValue: faq.category })}</td>
-                <td>
-                  <strong>{faq.question}</strong>
-                </td>
-                <td>
-                  <span className={`status-badge ${faq.isPublished ? "green" : "neutral"}`}>
-                    {faq.isPublished
-                      ? t("settings.customerFaq.published")
-                      : t("settings.customerFaq.unpublished")}
-                  </span>
-                </td>
-                {canEdit ? (
-                  <td className="table-actions-cell">
-                    <div className="table-row-actions">
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        aria-label={t("settings.customerFaq.edit")}
-                        onClick={() => openEditor(faq)}
-                      >
-                        <Pencil />
-                      </Button>
-                    </div>
-                  </td>
-                ) : null}
-              </tr>
-            ))}
-          </ListTable>
-        )}
-
-        <footer className="orders-pagination">
-          <span>{t("settings.pagination", { from: visibleFrom, to: visibleTo, total })}</span>
-          <div>
-            <Button
-              variant="outline"
-              size="icon"
-              disabled={loading || page <= 1}
-              onClick={() => setPage((value) => Math.max(1, value - 1))}
-              aria-label={t("settings.previous")}
-            >
-              <ChevronLeft />
-            </Button>
-            <strong>
-              {page} / {totalPages}
-            </strong>
-            <Button
-              variant="outline"
-              size="icon"
-              disabled={loading || page >= totalPages}
-              onClick={() => setPage((value) => value + 1)}
-              aria-label={t("settings.next")}
-            >
-              <ChevronRight />
-            </Button>
-          </div>
-        </footer>
-      </article>
-
-      <article className="panel orders-panel">
-        <header className="page-heading">
-          <div>
-            <h2>{t("settings.customerFaq.previewTitle")}</h2>
-            <p>{t("settings.customerFaq.previewDescription")}</p>
-          </div>
-        </header>
-        <form className="ingredients-form" onSubmit={(event) => void runPreview(event)}>
-          <label className="ingredients-field">
-            <span>{t("settings.customerFaq.previewQuery")}</span>
-            <input
-              value={previewQuery}
-              onChange={(event) => setPreviewQuery(event.target.value)}
-              placeholder={t("settings.customerFaq.previewPlaceholder")}
+      <div className="customer-faq-layout">
+        <article className="panel orders-panel">
+          <header className="orders-toolbar">
+            <ListSearchBar
+              id="customer-faq-search"
+              value={draftSearch}
+              onChange={setDraftSearch}
+              onSubmit={() => {
+                setPage(1);
+                setSearch(draftSearch.trim());
+              }}
+              label={t("settings.customerFaq.search")}
+              placeholder={t("settings.customerFaq.searchPlaceholder")}
+              submitLabel={t("settings.customerFaq.searchAction")}
+              filters={
+                <label className="orders-status-filter">
+                  <span>{t("settings.customerFaq.category")}</span>
+                  <select
+                    value={category}
+                    onChange={(event) => {
+                      setPage(1);
+                      setCategory(event.target.value);
+                    }}
+                  >
+                    <option value="">{t("settings.customerFaq.allCategories")}</option>
+                    {CUSTOMER_FAQ_CATEGORIES.map((key) => (
+                      <option key={key} value={key}>
+                        {t(`settings.customerFaq.categories.${key}`)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              }
+              filtersActive={Boolean(category)}
+              actions={
+                canEdit ? (
+                  <Button onClick={() => openEditor(null)}>
+                    <Plus />
+                    {t("settings.customerFaq.add")}
+                  </Button>
+                ) : null
+              }
             />
-          </label>
-          <Button type="submit" disabled={previewing || !previewQuery.trim()}>
-            <Search />
-            {previewing ? t("settings.customerFaq.previewing") : t("settings.customerFaq.previewAction")}
-          </Button>
-        </form>
-        {previewError ? <p role="alert">{previewError}</p> : null}
-        {previewHits.length > 0 ? (
-          <ul className="customer-faq-preview-list">
-            {previewHits.map((hit) => (
-              <li key={hit.id}>
-                <strong>{hit.question}</strong>
-                <p>{hit.answer}</p>
-              </li>
-            ))}
-          </ul>
-        ) : previewRan && !previewing && !previewError ? (
-          <p>{t("settings.customerFaq.previewEmpty")}</p>
-        ) : null}
-      </article>
+          </header>
+
+          {error ? (
+            <div className="orders-state orders-state-error" role="alert">
+              <MessageCircleMore />
+              <div>
+                <strong>{error}</strong>
+                <span>{t("settings.customerFaq.loadErrorDescription")}</span>
+              </div>
+              <Button variant="outline" onClick={() => setReloadKey((value) => value + 1)}>
+                <RefreshCw />
+                {t("settings.retry")}
+              </Button>
+            </div>
+          ) : !loading && items.length === 0 ? (
+            <div className="orders-state">
+              <MessageCircleMore />
+              <div>
+                <strong>{t("settings.customerFaq.empty")}</strong>
+                <span>{t("settings.customerFaq.emptyDescription")}</span>
+              </div>
+            </div>
+          ) : (
+            <ListTable
+              className="orders-table-wrap"
+              onRefresh={() => setReloadKey((value) => value + 1)}
+              loading={loading}
+              loadingLabel={t("settings.customerFaq.loading")}
+              skeletonRows={CUSTOMER_FAQS_PAGE_SIZE}
+              skeletonColumns={canEdit ? SKELETON_COLUMNS : SKELETON_COLUMNS.slice(0, -1)}
+              header={
+                <tr>
+                  <th>{t("settings.customerFaq.columns.category")}</th>
+                  <th>{t("settings.customerFaq.columns.question")}</th>
+                  <th>{t("settings.customerFaq.columns.published")}</th>
+                  {canEdit ? <th aria-label={t("settings.customerFaq.columns.actions")} /> : null}
+                </tr>
+              }
+            >
+              {items.map((faq) => (
+                <tr key={faq.id}>
+                  <td>{t(`settings.customerFaq.categories.${faq.category}`, { defaultValue: faq.category })}</td>
+                  <td>
+                    <strong>{faq.question}</strong>
+                  </td>
+                  <td>
+                    <span className={`status-badge ${faq.isPublished ? "green" : "neutral"}`}>
+                      {faq.isPublished
+                        ? t("settings.customerFaq.published")
+                        : t("settings.customerFaq.unpublished")}
+                    </span>
+                  </td>
+                  {canEdit ? (
+                    <td className="table-actions-cell">
+                      <div className="table-row-actions">
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          aria-label={t("settings.customerFaq.edit")}
+                          onClick={() => openEditor(faq)}
+                        >
+                          <Pencil />
+                        </Button>
+                      </div>
+                    </td>
+                  ) : null}
+                </tr>
+              ))}
+            </ListTable>
+          )}
+
+          <footer className="orders-pagination">
+            <span>{t("settings.pagination", { from: visibleFrom, to: visibleTo, total })}</span>
+            <div>
+              <Button
+                variant="outline"
+                size="icon"
+                disabled={loading || page <= 1}
+                onClick={() => setPage((value) => Math.max(1, value - 1))}
+                aria-label={t("settings.previous")}
+              >
+                <ChevronLeft />
+              </Button>
+              <strong>
+                {page} / {totalPages}
+              </strong>
+              <Button
+                variant="outline"
+                size="icon"
+                disabled={loading || page >= totalPages}
+                onClick={() => setPage((value) => value + 1)}
+                aria-label={t("settings.next")}
+              >
+                <ChevronRight />
+              </Button>
+            </div>
+          </footer>
+        </article>
+
+        <article className="panel orders-panel customer-faq-preview">
+          <header className="page-heading">
+            <div>
+              <h2>{t("settings.customerFaq.previewTitle")}</h2>
+              <p>{t("settings.customerFaq.previewDescription")}</p>
+            </div>
+          </header>
+          <div className="customer-faq-preview-body">
+            <form className="ingredients-form" onSubmit={(event) => void runPreview(event)}>
+              <label className="ingredients-field">
+                <span>{t("settings.customerFaq.previewQuery")}</span>
+                <input
+                  value={previewQuery}
+                  onChange={(event) => setPreviewQuery(event.target.value)}
+                  placeholder={t("settings.customerFaq.previewPlaceholder")}
+                />
+              </label>
+              <Button type="submit" disabled={previewing || !previewQuery.trim()}>
+                <Search />
+                {previewing ? t("settings.customerFaq.previewing") : t("settings.customerFaq.previewAction")}
+              </Button>
+            </form>
+            {previewError ? <p role="alert">{previewError}</p> : null}
+            {previewHits.length > 0 ? (
+              <ul className="customer-faq-preview-list">
+                {previewHits.map((hit) => (
+                  <li key={hit.id}>
+                    <strong>{hit.question}</strong>
+                    <p>{hit.answer}</p>
+                  </li>
+                ))}
+              </ul>
+            ) : previewRan && !previewing && !previewError ? (
+              <p>{t("settings.customerFaq.previewEmpty")}</p>
+            ) : null}
+          </div>
+        </article>
+      </div>
 
       <SidePanel
         open={editor !== undefined}
