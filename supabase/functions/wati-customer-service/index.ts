@@ -5,9 +5,11 @@ import { handleCustomerServiceTurn } from "../_shared/customer-service-bot.ts";
 import { type InquirySlots } from "../_shared/customer-service-intents.ts";
 import {
   BRAND_WHATSAPP_CHANNEL,
+  customerServicePhoneAllowed,
   excludeGuestContacts,
   isBrandWhatsAppChannel,
   isHumanOperatorMessage,
+  parseAllowedCustomerServicePhones,
   parseWatiInboundEvent,
   sendWatiSessionMessage,
   verifyWatiWebhook,
@@ -68,10 +70,20 @@ function createAdminClient() {
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
-async function botEnabled(admin: AdminClient) {
+async function loadBotControls(admin: AdminClient) {
   const { data, error } = await admin.rpc("customer_service_controls_get");
   if (error) throw error;
-  return Boolean((data as Array<{ bot_enabled?: boolean }> | null)?.[0]?.bot_enabled);
+  const row = (data as Array<{
+    bot_enabled?: boolean;
+    allowed_phones?: string[] | null;
+  }> | null)?.[0];
+  return {
+    botEnabled: Boolean(row?.bot_enabled),
+    allowedPhones: [
+      ...parseAllowedCustomerServicePhones(env("WATI_CUSTOMER_SERVICE_ALLOWED_PHONES")),
+      ...parseAllowedCustomerServicePhones(row?.allowed_phones),
+    ],
+  };
 }
 
 async function recordInbound(admin: AdminClient, event: {
@@ -299,6 +311,10 @@ Deno.serve(async (request) => {
 
   try {
     const admin = createAdminClient();
+    const controls = await loadBotControls(admin);
+    if (!customerServicePhoneAllowed(event.waId, controls.allowedPhones)) {
+      return jsonResponse({ ok: true, ignored: "phone_not_allowed" });
+    }
     if (isHumanOperatorMessage(event)) {
       await saveConversation(admin, {
         phone_normalized: event.waId,
@@ -316,7 +332,7 @@ Deno.serve(async (request) => {
     if (recorded === "duplicate") {
       return jsonResponse({ ok: true, duplicate: true });
     }
-    if (!(await botEnabled(admin))) {
+    if (!controls.botEnabled) {
       return jsonResponse({ ok: true, bot_enabled: false });
     }
 

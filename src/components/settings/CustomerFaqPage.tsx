@@ -216,6 +216,13 @@ export function CustomerFaqPage({
       ) : (
         <p className="orders-toolbar-note">{t("settings.customerFaq.botHint")}</p>
       )}
+      {controls?.allowedPhones?.length ? (
+        <p className="orders-toolbar-note">
+          {t("settings.customerFaq.botAllowlist", {
+            phones: controls.allowedPhones.join("、"),
+          })}
+        </p>
+      ) : null}
 
       <div className="customer-faq-layout">
         <article className="panel orders-panel">

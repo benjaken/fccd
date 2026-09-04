@@ -32,6 +32,45 @@ export function normalizeWhatsAppChannel(value: string | null | undefined) {
   return digits;
 }
 
+export function parseAllowedCustomerServicePhones(
+  value: string | string[] | null | undefined,
+) {
+  const raw = Array.isArray(value) ? value.join(",") : value || "";
+  return [...new Set(
+    raw
+      .split(/[;,\n]/)
+      .map((entry) => normalizeWhatsAppChannel(entry))
+      .filter(Boolean),
+  )];
+}
+
+export function customerServicePhoneAliases(value: string | null | undefined) {
+  const normalized = normalizeWhatsAppChannel(value);
+  const aliases = new Set<string>();
+  if (!normalized) return [];
+  aliases.add(normalized);
+  if (normalized.startsWith("86") && normalized.length >= 13) {
+    aliases.add(normalized.slice(2));
+  } else if (normalized.length === 11 && normalized.startsWith("1")) {
+    aliases.add(`86${normalized}`);
+  }
+  if (normalized.startsWith("852") && normalized.length === 11) {
+    aliases.add(normalized.slice(3));
+  }
+  return [...aliases];
+}
+
+export function customerServicePhoneAllowed(
+  phone: string | null | undefined,
+  allowed: readonly string[],
+) {
+  if (!allowed.length) return true;
+  const incoming = new Set(customerServicePhoneAliases(phone));
+  return allowed.some((entry) =>
+    customerServicePhoneAliases(entry).some((alias) => incoming.has(alias)),
+  );
+}
+
 export function timingSafeEqual(left: string, right: string) {
   const max = Math.max(left.length, right.length);
   let diff = left.length === right.length ? 0 : 1;

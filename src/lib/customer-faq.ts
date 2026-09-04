@@ -48,6 +48,7 @@ export type CustomerFaqSearchHit = {
 
 export type CustomerServiceControls = {
   botEnabled: boolean;
+  allowedPhones: string[];
   updatedAt: string;
 };
 
@@ -65,6 +66,7 @@ type FaqRow = {
 
 type ControlsRow = {
   bot_enabled: boolean;
+  allowed_phones?: string[] | null;
   updated_at: string;
 };
 
@@ -189,6 +191,7 @@ export async function fetchCustomerServiceControls(): Promise<CustomerServiceCon
   if (!row) throw new Error("customer_service_controls_missing");
   return {
     botEnabled: Boolean(row.bot_enabled),
+    allowedPhones: Array.isArray(row.allowed_phones) ? row.allowed_phones : [],
     updatedAt: row.updated_at,
   };
 }
@@ -202,6 +205,7 @@ export async function setCustomerServiceBotEnabled(enabled: boolean) {
   if (!row) throw new Error("customer_service_controls_missing");
   return {
     botEnabled: Boolean(row.bot_enabled),
+    allowedPhones: Array.isArray(row.allowed_phones) ? row.allowed_phones : [],
     updatedAt: row.updated_at,
   };
 }

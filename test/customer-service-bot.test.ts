@@ -5,8 +5,10 @@ import { classifyCustomerServiceMessage } from "../supabase/functions/_shared/cu
 import { REPLIES, sanitizeOutboundReply } from "../supabase/functions/_shared/customer-service-replies.ts";
 import {
   buildSessionMessageUrl,
+  customerServicePhoneAllowed,
   excludeGuestContacts,
   isHumanOperatorMessage,
+  parseAllowedCustomerServicePhones,
   parseWatiInboundEvent,
   timingSafeEqual,
   verifyWatiWebhook,
@@ -222,6 +224,15 @@ describe("WATI adapter", () => {
       text: "你好",
       channelNumber: "85253964335",
     })).not.toContain("sendTemplateMessage");
+  });
+
+  it("restricts bot processing to an explicit test-phone allowlist", () => {
+    const allowed = parseAllowedCustomerServicePhones("8613828747224");
+    expect(customerServicePhoneAllowed("8613828747224", allowed)).toBe(true);
+    expect(customerServicePhoneAllowed("13828747224", allowed)).toBe(true);
+    expect(customerServicePhoneAllowed("+86 138 2874 7224", allowed)).toBe(true);
+    expect(customerServicePhoneAllowed("85291234567", allowed)).toBe(false);
+    expect(customerServicePhoneAllowed("8613828747224", [])).toBe(true);
   });
 
   it("never keeps the guest phone in staff notify recipients", () => {
