@@ -209,20 +209,22 @@ export function CustomerFaqPage({
           />
         </label>
       </header>
-      {controlsError ? (
-        <p className="orders-state-error" role="alert">
-          {controlsError}
-        </p>
-      ) : (
-        <p className="orders-toolbar-note">{t("settings.customerFaq.botHint")}</p>
-      )}
-      {controls?.allowedPhones?.length ? (
-        <p className="orders-toolbar-note">
-          {t("settings.customerFaq.botAllowlist", {
-            phones: controls.allowedPhones.join("、"),
-          })}
-        </p>
-      ) : null}
+      <div className="customer-faq-notes">
+        {controlsError ? (
+          <p className="orders-state-error" role="alert">
+            {controlsError}
+          </p>
+        ) : (
+          <p className="orders-toolbar-note">{t("settings.customerFaq.botHint")}</p>
+        )}
+        {controls?.allowedPhones?.length ? (
+          <p className="orders-toolbar-note">
+            {t("settings.customerFaq.botAllowlist", {
+              phones: controls.allowedPhones.join("、"),
+            })}
+          </p>
+        ) : null}
+      </div>
 
       <div className="customer-faq-layout">
         <article className="panel orders-panel">

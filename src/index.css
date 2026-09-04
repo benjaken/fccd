@@ -18342,7 +18342,9 @@ a.masoft-order-tag:focus-visible {
 .customer-faq-preview-list { display: grid; gap: 14px; margin: 16px 0 0; padding: 0; list-style: none; }
 .customer-faq-preview-list li { display: grid; gap: 6px; }
 .customer-faq-preview-list p { margin: 0; color: var(--muted-foreground); white-space: pre-wrap; }
+.customer-faq-notes { display: grid; gap: 8px; }
 .customer-faq-page { grid-template-rows: auto auto minmax(0, 1fr); }
+.customer-faq-page > .customer-faq-layout { min-height: 0; }
 .customer-faq-layout { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(300px, 0.7fr); align-items: stretch; gap: 18px; min-height: 0; }
 .customer-faq-layout > .panel { min-height: 0; }
 .customer-faq-preview .page-heading { padding: 16px 18px 0; }

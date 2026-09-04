@@ -181,4 +181,25 @@ describe("CustomerFaqPage", () => {
     await user.click(await screen.findByRole("switch", { name: "啟用 WhatsApp 自動回覆" }));
     await waitFor(() => expect(setBotEnabled).toHaveBeenCalledWith(true));
   });
+
+  it("keeps allowlist copy with the bot hint instead of stretching a page row", async () => {
+    render(
+      <CustomerFaqPage
+        loadFaqs={vi.fn().mockResolvedValue({ items: [faq], total: 1 })}
+        loadControls={vi.fn().mockResolvedValue({
+          botEnabled: true,
+          allowedPhones: ["8613828747224"],
+          updatedAt: faq.updatedAt,
+        })}
+      />,
+    );
+
+    expect(await screen.findByText(/8613828747224/)).toBeInTheDocument();
+    const notes = document.querySelector(".customer-faq-notes");
+    const layout = document.querySelector(".customer-faq-layout");
+    expect(notes).toBeTruthy();
+    expect(layout).toBeTruthy();
+    expect(notes?.contains(screen.getByText(/8613828747224/))).toBe(true);
+    expect(notes?.nextElementSibling).toBe(layout);
+  });
 });
