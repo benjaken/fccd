@@ -139,16 +139,20 @@ function isUndeliveredOrder(order: CustomerServiceOrder) {
   );
 }
 
-function isCancelPendingHandoffMessage(value: string) {
-  const text = value
+function normalizedDialogControl(value: string) {
+  return value
     .trim()
     .toLowerCase()
     .replace(/[\s，。！？、,.!?]/g, "");
+}
+
+function isCancelCurrentTaskMessage(value: string) {
+  const text = normalizedDialogControl(value);
   if (!text) return false;
   if (/^(取消|撤回|算了|算啦|當我冇講|当我没说)$/.test(text)) return true;
-  if (/(?:取消|撤回).*(?:修改|更改|改期|申請|申请|請求|请求|要求)/.test(text)) return true;
-  if (/(?:修改|更改|改期|申請|申请).*(?:取消|撤回|唔使|不用|不要)/.test(text)) return true;
-  return /(?:唔使|不用|不要)(?:再)?(?:改|修改|更改|改期|取消|處理|处理)(?:啦|了)?$/.test(text);
+  if (/(?:取消|撤回|停止).*(?:訂餐|订餐|落單|下单|查單|查单|查詢|查询|報價|报价|到會|到会|修改|更改|改期|申請|申请|請求|请求|要求|操作|流程)/.test(text)) return true;
+  if (/(?:訂餐|订餐|落單|下单|查單|查单|查詢|查询|報價|报价|到會|到会|修改|更改|改期|申請|申请).*(?:取消|撤回|停止|唔使|不用|不要)/.test(text)) return true;
+  return /(?:唔使|不用|不要)(?:再)?(?:訂|订|落單|下单|查|查單|查单|報價|报价|改|修改|更改|改期|取消|處理|处理)(?:啦|了)?$/.test(text);
 }
 
 function isExplicitPreviousHandoffCancellation(value: string) {
@@ -587,11 +591,14 @@ export async function handleCustomerServiceTurn({
     };
   }
 
+  const hasActiveTask = conversation.state !== "identifying";
+  const explicitPreviousCancellation = isExplicitPreviousHandoffCancellation(text);
   if (
-    conversation.state === "awaiting_human"
-    || isExplicitPreviousHandoffCancellation(text)
+    (hasActiveTask && isCancelCurrentTaskMessage(text))
+    || explicitPreviousCancellation
   ) {
-    if (isCancelPendingHandoffMessage(text)) {
+    const isQueuedHandoff = conversation.state === "awaiting_human" || explicitPreviousCancellation;
+    if (isQueuedHandoff) {
       const cancelled = await deps.cancelHandoff(phone);
       if (!cancelled && conversation.state !== "awaiting_human") {
         return {
@@ -603,20 +610,20 @@ export async function handleCustomerServiceTurn({
           usedModel: false,
         };
       }
-      return {
-        reply: REPLIES.handoffCancelled,
-        conversation: nextConversation(conversation, {
-          state: "identifying",
-          selected_order_id: null,
-          handoff_at: null,
-          pending_request: null,
-        }),
-        wroteInquiry: false,
-        notified: false,
-        queuedHandoff: false,
-        usedModel: false,
-      };
     }
+    return {
+      reply: isQueuedHandoff ? REPLIES.handoffCancelled : REPLIES.currentTaskCancelled,
+      conversation: nextConversation(conversation, {
+        state: "identifying",
+        selected_order_id: null,
+        handoff_at: null,
+        pending_request: null,
+      }),
+      wroteInquiry: false,
+      notified: false,
+      queuedHandoff: false,
+      usedModel: false,
+    };
   }
 
   if (conversation.state === "awaiting_human") {

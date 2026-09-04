@@ -402,6 +402,39 @@ describe("customer-service bot turns", () => {
     expect(queueHandoff).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ["collecting", "取消訂餐"],
+    ["picking_order", "不用再查了"],
+    ["picking_handoff_order", "算了"],
+    ["verifying_order", "撤回今次申請"],
+  ] as const)("cancels the active %s flow through one generic dialog control", async (state, text) => {
+    const queueHandoff = vi.fn().mockResolvedValue(undefined);
+    const cancelHandoff = vi.fn().mockResolvedValue(true);
+    const classify = vi.fn();
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text,
+      conversation: {
+        ...conversation,
+        state,
+        selected_order_id: order.order_id,
+        pending_request: "existing task",
+      },
+      deps: deps({ queueHandoff, cancelHandoff }),
+      classify,
+    });
+
+    expect(turn.reply).toBe(REPLIES.currentTaskCancelled);
+    expect(turn.conversation).toMatchObject({
+      state: "identifying",
+      selected_order_id: null,
+      pending_request: null,
+    });
+    expect(classify).not.toHaveBeenCalled();
+    expect(queueHandoff).not.toHaveBeenCalled();
+    expect(cancelHandoff).not.toHaveBeenCalled();
+  });
+
   it("queues complaints without claiming that a human already took over", async () => {
     const turn = await handleCustomerServiceTurn({
       phone: conversation.phone_normalized,
