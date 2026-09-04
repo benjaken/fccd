@@ -484,11 +484,14 @@ export async function duplicateOrder(
       })),
     });
     if (line.labelRemarks?.length) {
-      const { error: remarksError } = await supabase.from("order_lines").update({
-        label_remarks: line.labelRemarks,
-        remarks_1: optional(line.labelRemarks[0] ?? ""),
-        remarks_2: optional(line.labelRemarks[1] ?? ""),
-      }).eq("id", copiedLineId);
+      const { error: remarksError } = await supabase
+        .from("order_lines")
+        .update({
+          label_remarks: line.labelRemarks,
+          remarks_1: optional(line.labelRemarks[0] ?? ""),
+          remarks_2: optional(line.labelRemarks[1] ?? ""),
+        })
+        .eq("id", copiedLineId);
       if (remarksError) throw remarksError;
     }
     if (line.isAddon) {

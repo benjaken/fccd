@@ -320,7 +320,9 @@ export async function fetchOrderEditor(
           null,
           line.product_name_snapshot || line.content_snapshot || "",
         ),
-        remarks: line.remarks_1 ?? "",
+        remarks: Array.isArray(line.label_remarks)
+          ? String(line.label_remarks[0] ?? "")
+          : line.remarks_1 ?? "",
         labelRemarks: Array.isArray(line.label_remarks)
           ? line.label_remarks.map((remark) => String(remark ?? ""))
           : [line.remarks_1 ?? ""],

@@ -380,8 +380,12 @@ export async function fetchOrderDetail(
       totalPrice: canViewFinance ? decimal(row.total_price) : null,
       isAddon: row.is_addon,
       isVoid: row.is_void === true,
-      remarks: (Array.isArray(row.label_remarks) ? row.label_remarks : [row.remarks_1, row.remarks_2])
-        .map((remark) => String(remark ?? "").trim()).filter(Boolean).join(" / ") || null,
+      remarks: (Array.isArray(row.label_remarks)
+        ? row.label_remarks
+        : [row.remarks_1, row.remarks_2])
+        .map((remark) => String(remark ?? "").trim())
+        .filter(Boolean)
+        .join(" / ") || null,
     })),
     deliveries: (deliveriesResult.data ?? []).map((row) => ({
       id: row.id,

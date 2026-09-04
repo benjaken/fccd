@@ -17,6 +17,22 @@ describe("sales document batch save", () => {
     expect(migration).toContain("private.has_sales_document_manage(p_order_id)");
   });
 
+  it("persists one remark per print label while keeping the two legacy remark columns", () => {
+    const migration = source("supabase/migrations/20260904194000_extend_order_line_label_remarks.sql");
+    const implementation = source("src/lib/quote-editor.ts");
+
+    expect(migration).toContain("add column if not exists label_remarks text[]");
+    expect(migration).toContain("jsonb_array_elements_text(item.label_remarks)");
+    expect(migration).toContain("remarks_1 = nullif");
+    expect(migration).toContain("remarks_2 = nullif");
+    expect(migration).toContain("sync_order_line_label_remarks");
+    expect(migration).toContain("source.label_remarks");
+    expect(migration).toContain("label_remarks, delivery_at");
+    expect(migration).toContain("'label_remarks'");
+    expect(implementation).toContain("label_remarks: line.labelRemarks ?? [line.remarks ?? \"\"]");
+    expect(implementation).toContain("remarks_1,remarks_2,label_remarks");
+  });
+
   it("uses the batch RPC for the production full-save path", () => {
     const implementation = source("src/lib/quote-editor.ts");
     const page = source("src/components/QuoteEditorPage.tsx");
