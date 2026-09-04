@@ -9,7 +9,7 @@ const sql = readFileSync(
     "supabase/migrations/20260903024142_qualify_create_quote_order_number.sql",
   ),
   "utf8",
-);
+).replaceAll("\r\n", "\n");
 
 describe("create_quote order_number qualification", () => {
   it("qualifies RETURNING so RETURNS TABLE does not clash with orders.order_number", () => {

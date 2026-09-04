@@ -37,6 +37,8 @@ describe("WhatsApp customer-service FAQ migration", () => {
     expect(sql).toContain("using gin (question gin_trgm_ops)");
     expect(sql).toContain("using gin (keywords gin_trgm_ops)");
     expect(sql).toContain("where is_published");
+    expect(sql).toContain("customer_faqs_locale_question_uidx");
+    expect(sql.match(/on conflict \(locale, question\) do nothing/g)).toHaveLength(2);
   });
 
   it("keeps FAQ text and inbound events away from anon", () => {
@@ -62,6 +64,22 @@ describe("WhatsApp customer-service FAQ migration", () => {
     expect(sql).toContain("private.has_page_access('settings.customer_faq')");
     expect(sql).toContain("private.has_page_access('settings.customer_faq.edit')");
     expect(sql).toContain("roles.role in ('Super Admin', 'Admin')");
+  });
+
+  it("can replace controls RPCs left by a partial preview deployment", () => {
+    const dropSet = sql.indexOf(
+      "drop function if exists public.customer_service_controls_set(boolean)",
+    );
+    const dropGet = sql.indexOf(
+      "drop function if exists public.customer_service_controls_get()",
+    );
+    const createGet = sql.indexOf(
+      "create or replace function public.customer_service_controls_get()",
+    );
+
+    expect(dropSet).toBeGreaterThan(-1);
+    expect(dropGet).toBeGreaterThan(dropSet);
+    expect(createGet).toBeGreaterThan(dropGet);
   });
 
   it("searches only published FAQ rows with a similarity floor", () => {

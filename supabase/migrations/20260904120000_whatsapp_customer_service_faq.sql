@@ -47,6 +47,8 @@ create index if not exists customer_faqs_keywords_trgm_idx
 create index if not exists customer_faqs_published_sort_idx
   on public.customer_faqs (is_published, sort_order)
   where is_published;
+create unique index if not exists customer_faqs_locale_question_uidx
+  on public.customer_faqs (locale, question);
 
 create table if not exists public.customer_service_inbound_events (
   id uuid primary key default gen_random_uuid(),
@@ -159,6 +161,12 @@ cross join (
     ('settings.customer_faq.edit')
 ) as page(page_key)
 on conflict (role, page_key) do nothing;
+
+-- A preview environment may already have a newer controls RPC from an earlier
+-- partial deploy. PostgreSQL cannot change an OUT-parameter row type with
+-- CREATE OR REPLACE, so remove both signatures before recreating this version.
+drop function if exists public.customer_service_controls_set(boolean);
+drop function if exists public.customer_service_controls_get();
 
 create or replace function public.customer_service_controls_get()
 returns table (
@@ -452,7 +460,8 @@ FC Express 即日到會：只限地面交收，新界／九龍／港島一律 HK
     'zh-HK',
     true,
     190
-  );
+  )
+on conflict (locale, question) do nothing;
 
 -- unpublished blocked seed (playbook prices, tokens, dated codes, refund SOP)
 insert into public.customer_faqs (
@@ -503,4 +512,5 @@ values
     'zh-HK',
     false,
     940
-  );
+  )
+on conflict (locale, question) do nothing;
