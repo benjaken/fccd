@@ -48,8 +48,12 @@ describe("EnquiryFormFields compact editor layout", () => {
     expect(screen.getByText("先生")).toBeInTheDocument();
     expect(screen.getByText("正餐 到會 (大盤)")).toBeInTheDocument();
     expect(screen.queryByRole("radio")).not.toBeInTheDocument();
+    const editSalutation = screen.getByRole("button", { name: "編輯稱謂" });
+    expect(editSalutation).not.toHaveTextContent("編輯");
+    expect(editSalutation.querySelector("svg")).not.toBeNull();
+    expect(document.querySelector(".enquiry-form-choice-value")).not.toBeNull();
 
-    await user.click(screen.getByRole("button", { name: "編輯稱謂" }));
+    await user.click(editSalutation);
     expect(screen.getByRole("radio", { name: "小姐" })).toBeInTheDocument();
     await user.click(screen.getByRole("radio", { name: "小姐" }));
     await user.click(screen.getByRole("button", { name: "確認" }));
