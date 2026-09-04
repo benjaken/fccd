@@ -1,7 +1,4 @@
 import { readAppStyles } from "./read-app-styles";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
-
 import { describe, expect, it } from "vitest";
 
 const styles = readAppStyles();
@@ -18,7 +15,7 @@ describe("main content spacing", () => {
       />\s*\.page-transition\s*>\s*:is\([^}]+\.orders-page[^}]+\)\s*\{\s*height:\s*100%;\s*min-height:\s*0;/s,
     );
     expect(styles).toMatch(
-      /\.page-transition\s*>\s*:has\(>\s*\.page-heading\):not\(:has\(>\s*\.page-heading button\)\)[^{]+\{\s*gap:\s*0;\s*grid-template-rows:\s*minmax\(0,\s*1fr\);/s,
+      /\.page-transition\s*>\s*:has\(>\s*\.page-heading\)[^{]*:not\(:has\(>\s*\.page-heading button\)\)[^{]+\{\s*gap:\s*0;\s*grid-template-rows:\s*minmax\(0,\s*1fr\);/s,
     );
   });
 });

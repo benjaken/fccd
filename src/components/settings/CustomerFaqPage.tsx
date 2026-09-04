@@ -27,6 +27,7 @@ import {
 
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
+import { FilterableSelect } from "@/components/ui/filterable-select";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import { SidePanel } from "@/components/ui/side-panel";
@@ -1455,7 +1456,7 @@ export function CustomerFaqPage({
                     <textarea
                       rows={3}
                       value={feedbackDrafts[turn.id] || ""}
-                      placeholder="如果原回覆錯誤，請輸入正確答案"
+                      placeholder={t("settings.customerFaq.reviewCorrectionPlaceholder")}
                       onChange={(event) =>
                         setFeedbackDrafts((current) => ({
                           ...current,
@@ -1528,7 +1529,7 @@ export function CustomerFaqPage({
                 <textarea
                   aria-label="附加 Prompt"
                   rows={3}
-                  placeholder="附加 Prompt"
+                  placeholder={t("settings.customerFaq.additionalPromptPlaceholder")}
                   value={configDraft.systemPrompt}
                   onChange={(event) =>
                     setConfigDraft((current) => ({
@@ -1689,7 +1690,7 @@ export function CustomerFaqPage({
               <h3>{t("settings.customerFaq.logicIntentTitle")}</h3>
               <label className="ingredients-field">
                 <span>{t("settings.customerFaq.logicIntent")}</span>
-                <select
+                <FilterableSelect
                   value={selectedIntent}
                   onChange={(event) => setSelectedIntent(event.target.value)}
                 >
@@ -1698,7 +1699,7 @@ export function CustomerFaqPage({
                       {intent.displayName}
                     </option>
                   ))}
-                </select>
+                </FilterableSelect>
               </label>
               <label className="ingredients-field">
                 <span>{t("settings.customerFaq.logicDescriptionField")}</span>
@@ -1752,7 +1753,7 @@ export function CustomerFaqPage({
               <h3>{t("settings.customerFaq.logicReplyTitle")}</h3>
               <label className="ingredients-field">
                 <span>{t("settings.customerFaq.logicReply")}</span>
-                <select
+                <FilterableSelect
                   value={selectedReply}
                   onChange={(event) => setSelectedReply(event.target.value)}
                 >
@@ -1761,7 +1762,7 @@ export function CustomerFaqPage({
                       {reply.displayName}
                     </option>
                   ))}
-                </select>
+                </FilterableSelect>
               </label>
               <label className="ingredients-field">
                 <span>{t("settings.customerFaq.logicReplyContent")}</span>
