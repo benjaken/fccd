@@ -1,3 +1,4 @@
+import { readAppStyles } from "./read-app-styles";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { render, screen, waitFor, within } from "@testing-library/react";
@@ -80,7 +81,7 @@ describe("restaurant stocktake records", () => {
       loadRecords: vi.fn(() => pending),
     });
     const { container } = render(<MemoryRouter><RestaurantStocktakesPage services={api} canEdit canDelete /></MemoryRouter>);
-    const styles = readFileSync(path.resolve(process.cwd(), "src/index.css"), "utf8");
+    const styles = readAppStyles();
 
     expect(container.querySelector(".restaurant-stocktakes-page-skeleton")).not.toBeNull();
     expect(container.querySelector(".restaurant-stocktakes-page-skeleton > .page-heading")).toBeNull();
@@ -88,7 +89,7 @@ describe("restaurant stocktake records", () => {
   });
 
   it("keeps the record list scrollable inside the page shell", () => {
-    const styles = readFileSync(path.resolve(process.cwd(), "src/index.css"), "utf8");
+    const styles = readAppStyles();
 
     expect(styles).toMatch(/\.stocktake-records-layout \.record-sidebar-slot\s*\{[^}]*align-self:\s*stretch;[^}]*min-height:\s*0;/s);
     expect(styles).toMatch(/\.stocktake-records-layout \.record-sidebar-slot:not\(\.is-collapsed\)\s*\{[^}]*align-items:\s*stretch;/s);

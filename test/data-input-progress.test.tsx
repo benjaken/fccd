@@ -1,3 +1,4 @@
+import { readAppStyles } from "./read-app-styles";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -48,7 +49,7 @@ describe("DataInputProgressPage", () => {
   });
 
   it("uses natural-height single-column cards on mobile", () => {
-    const css = readFileSync(resolve(process.cwd(), "src/index.css"), "utf8");
+    const css = readAppStyles();
     const mobileRules = [...css.matchAll(/@media \(max-width: 720px\) \{([\s\S]*?)\r?\n\}/g)]
       .map((match) => match[1] ?? "")
       .find((rules) => rules.includes(".data-input-progress-grid")) ?? "";

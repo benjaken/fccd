@@ -1,3 +1,4 @@
+import { readAppStyles } from "./read-app-styles";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -111,7 +112,7 @@ describe("KitchenCostInputPage query-tab routing", () => {
     expect(document.querySelector(".kitchen-cost-page.is-weekly-advertising"))
       .toBeInTheDocument();
 
-    const css = readFileSync(resolve(process.cwd(), "src/index.css"), "utf8");
+    const css = readAppStyles();
     expect(css).toMatch(
       /\.ingredients-page\.kitchen-cost-page\.is-weekly-advertising\s*\{[\s\S]*height:\s*auto;[\s\S]*overflow:\s*visible;/,
     );
@@ -126,7 +127,7 @@ describe("KitchenCostInputPage query-tab routing", () => {
     expect(document.querySelector(".kitchen-cost-page.is-weekly-advertising"))
       .not.toBeInTheDocument();
 
-    const css = readFileSync(resolve(process.cwd(), "src/index.css"), "utf8");
+    const css = readAppStyles();
     expect(css).toMatch(
       /\.ingredients-page\.kitchen-cost-page:not\(\.is-weekly-advertising\)\s*\{[\s\S]*grid-template-rows:\s*auto minmax\(0, 1fr\);/,
     );

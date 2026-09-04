@@ -1,3 +1,4 @@
+import { readAppStyles } from "./read-app-styles";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { render, screen, waitFor, within } from "@testing-library/react";
@@ -229,10 +230,7 @@ describe("Delivery list page", () => {
       screen.getByRole("img", { name: "送達照片" }),
     ).toHaveAttribute("src", "https://example.com/photo.jpg");
 
-    const stylesheet = readFileSync(
-      path.resolve(process.cwd(), "src/index.css"),
-      "utf8",
-    );
+    const stylesheet = readAppStyles();
     expect(stylesheet).toMatch(/\.side-panel-half\s*\{[^}]*width:\s*min\(50vw/);
   });
 
@@ -351,10 +349,7 @@ describe("Delivery list page", () => {
       path.resolve(process.cwd(), "src/components/DeliveryListPage.tsx"),
       "utf8",
     );
-    const stylesheet = readFileSync(
-      path.resolve(process.cwd(), "src/index.css"),
-      "utf8",
-    );
+    const stylesheet = readAppStyles();
     const deliveryPrintSelector = stylesheet.indexOf("body:has(.delivery-summary-print-root)");
     const printStart = stylesheet.lastIndexOf("@media print {", deliveryPrintSelector);
     const printEnd = stylesheet.indexOf("\n}", printStart) + 2;
@@ -510,10 +505,7 @@ describe("Delivery list page", () => {
   });
 
   it("keeps the date, fleet, and method filters on the right", () => {
-    const stylesheet = readFileSync(
-      path.resolve(process.cwd(), "src/index.css"),
-      "utf8",
-    );
+    const stylesheet = readAppStyles();
     const block = stylesheet.slice(
       stylesheet.indexOf(".delivery-list-toolbar {"),
       stylesheet.indexOf(".delivery-order-cell {"),

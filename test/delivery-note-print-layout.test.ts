@@ -1,11 +1,9 @@
+import { readAppStyles } from "./read-app-styles";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
-const stylesheet = readFileSync(
-  path.resolve(process.cwd(), "src/index.css"),
-  "utf8",
-);
+const stylesheet = readAppStyles();
 
 describe("delivery-note print layouts", () => {
   it("keeps the factory and order-list delivery notes inside an A4 safe area", () => {

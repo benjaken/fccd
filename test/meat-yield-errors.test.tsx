@@ -1,3 +1,4 @@
+import { readAppStyles } from "./read-app-styles";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { render, screen, waitFor, within } from "@testing-library/react";
@@ -55,7 +56,7 @@ describe("Meat yield errors page", () => {
   });
 
   it("stacks the calculation rules below the filters on narrow screens", () => {
-    const styles = readFileSync(path.resolve(process.cwd(), "src/index.css"), "utf8");
+    const styles = readAppStyles();
     expect(styles).toMatch(
       /@media \(max-width: 980px\)\s*\{[^}]*\.yield-errors-toolbar\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\);/s,
     );
@@ -196,10 +197,7 @@ describe("Meat yield errors page", () => {
   });
 
   it("keeps the empty-state title and description on separate lines", () => {
-    const stylesheet = readFileSync(
-      path.resolve(process.cwd(), "src/index.css"),
-      "utf8",
-    );
+    const stylesheet = readAppStyles();
     expect(stylesheet).toMatch(
       /\.operational-list-state\s*,\s*\n\.quotes-state/,
     );

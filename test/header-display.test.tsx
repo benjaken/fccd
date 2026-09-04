@@ -1,3 +1,4 @@
+import { readAppStyles } from "./read-app-styles";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { render, screen } from "@testing-library/react";
@@ -24,10 +25,7 @@ describe("Header display requirements", () => {
   });
 
   it("keeps every explicit pixel font size at 12px or larger", () => {
-    const stylesheet = readFileSync(
-      path.resolve(process.cwd(), "src/index.css"),
-      "utf8",
-    );
+    const stylesheet = readAppStyles();
     const sizes = [...stylesheet.matchAll(/font-size:\s*(\d+)px/g)].map(
       (match) => Number(match[1]),
     );
@@ -37,10 +35,7 @@ describe("Header display requirements", () => {
   });
 
   it("right-aligns workspace soft links in the top header", () => {
-    const stylesheet = readFileSync(
-      path.resolve(process.cwd(), "src/index.css"),
-      "utf8",
-    );
+    const stylesheet = readAppStyles();
     const workspaceRule = stylesheet.match(/\.workspace-links\s*\{([^}]+)\}/);
 
     expect(workspaceRule?.[1]).toContain("justify-content: flex-end");
@@ -51,10 +46,7 @@ describe("Header display requirements", () => {
       path.resolve(process.cwd(), "src/App.tsx"),
       "utf8",
     );
-    const stylesheet = readFileSync(
-      path.resolve(process.cwd(), "src/index.css"),
-      "utf8",
-    );
+    const stylesheet = readAppStyles();
 
     expect(appSource).not.toContain('className="search-box"');
     expect(stylesheet).not.toContain(".search-box");

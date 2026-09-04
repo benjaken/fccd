@@ -1,3 +1,4 @@
+import { readAppStyles } from "./read-app-styles";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { act, render, screen } from "@testing-library/react";
@@ -23,10 +24,7 @@ const OPERATIONAL_LIST_PAGES = [
 
 describe("ListTable", () => {
   it("leaves vertical wheel scrolling to the page", () => {
-    const css = readFileSync(
-      path.resolve(process.cwd(), "src/index.css"),
-      "utf8",
-    );
+    const css = readAppStyles();
     const operationalRule = css.match(/\.operational-table-wrap\s*\{([^}]*)\}/)?.[1];
     const pullToRefreshRule = css.match(/\.pull-to-refresh\s*\{([^}]*)\}/)?.[1];
 
@@ -41,10 +39,7 @@ describe("ListTable", () => {
     ["orders", "orders"],
     ["quotes", "quotes"],
   ])("lets mobile %s cards use page scrolling without an outer panel", (_label, prefix) => {
-    const css = readFileSync(
-      path.resolve(process.cwd(), "src/index.css"),
-      "utf8",
-    );
+    const css = readAppStyles();
     const pageRule = css.match(
       new RegExp(`\\.${prefix}-page:has\\(\\.responsive-card-list-panel\\)\\s*\\{([^}]*)\\}`),
     )?.[1];

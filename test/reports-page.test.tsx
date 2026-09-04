@@ -1,3 +1,4 @@
+import { readAppStyles } from "./read-app-styles";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { render, screen, waitFor } from "@testing-library/react";
@@ -468,10 +469,7 @@ describe("Shop order quantity report", () => {
   });
 
   it("keeps shop filters, dates, and export on one desktop row", () => {
-    const stylesheet = readFileSync(
-      path.resolve(process.cwd(), "src/index.css"),
-      "utf8",
-    );
+    const stylesheet = readAppStyles();
     const panelRule = stylesheet.match(/\.report-filter-panel\s*\{([^}]+)\}/);
     const controlsRule = stylesheet.match(/\.report-date-controls\s*\{([^}]+)\}/);
     const dateRule = stylesheet.match(
@@ -484,10 +482,7 @@ describe("Shop order quantity report", () => {
   });
 
   it("keeps shop filter chips compact on mobile", () => {
-    const stylesheet = readFileSync(
-      path.resolve(process.cwd(), "src/index.css"),
-      "utf8",
-    );
+    const stylesheet = readAppStyles();
     const mobileBlock = stylesheet.slice(
       stylesheet.lastIndexOf("@media (max-width: 900px)"),
     );
@@ -502,10 +497,7 @@ describe("Shop order quantity report", () => {
   });
 
   it("lets shared item selectors scroll through the final row", () => {
-    const stylesheet = readFileSync(
-      path.resolve(process.cwd(), "src/index.css"),
-      "utf8",
-    );
+    const stylesheet = readAppStyles();
     const panelRule = stylesheet.match(
       /\.meat-price-product-browser\s*\{([^}]+)\}/,
     );
