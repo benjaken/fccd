@@ -81,7 +81,7 @@ describe("EnquiryFormFields compact editor layout", () => {
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
   });
 
-  it("draws two columns with a divider and keeps remarks and terms full width", () => {
+  it("puts remarks and terms in the two columns instead of full-width rows", () => {
     render(
       <EnquiryFormFields
         questions={CATERING_ENQUIRY_SEED_QUESTIONS}
@@ -92,13 +92,12 @@ describe("EnquiryFormFields compact editor layout", () => {
       />,
     );
 
-    expect(document.querySelector(".enquiry-form-columns-pair")).not.toBeNull();
-    expect(document.querySelectorAll(".enquiry-form-column")).toHaveLength(2);
+    const columns = document.querySelectorAll(".enquiry-form-column");
+    expect(columns).toHaveLength(2);
     expect(document.querySelector(".enquiry-form-column + .enquiry-form-column")).not.toBeNull();
-    expect(document.getElementById("enquiry-question-remarks")).toHaveClass("is-wide");
-    expect(document.getElementById("enquiry-question-terms")).toHaveClass("is-wide");
-    expect(document.getElementById("enquiry-question-remarks")?.closest(".enquiry-form-column")).toBeNull();
-    expect(document.getElementById("enquiry-question-terms")?.closest(".enquiry-form-column")).toBeNull();
-    expect(document.getElementById("enquiry-question-name")?.closest(".enquiry-form-column")).not.toBeNull();
+    expect(document.getElementById("enquiry-question-remarks")).not.toHaveClass("is-wide");
+    expect(document.getElementById("enquiry-question-terms")).not.toHaveClass("is-wide");
+    expect(columns[0]).toContainElement(document.getElementById("enquiry-question-remarks"));
+    expect(columns[1]).toContainElement(document.getElementById("enquiry-question-terms"));
   });
 });

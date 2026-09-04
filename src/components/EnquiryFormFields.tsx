@@ -4,9 +4,7 @@ import { Pencil } from "lucide-react";
 import {
   enquiryOptionsShouldStack,
   enquiryQuestionElementId,
-  enquiryQuestionSpansColumns,
   formatAnswer,
-  groupEnquiryQuestionsForColumns,
   type EnquiryAnswerValue,
   type EnquiryAnswers,
   type EnquiryFieldError,
@@ -44,7 +42,7 @@ export function EnquiryFormFields({
   const editing = questions.find((question) => question.fieldKey === editingKey) ?? null;
   const [draftValue, setDraftValue] = useState<EnquiryAnswerValue>(null);
 
-  const renderQuestion = (question: EnquiryQuestion, wide = false) => {
+  const renderQuestion = (question: EnquiryQuestion) => {
     const error = errorMap.get(question.fieldKey);
     const value = answers[question.fieldKey];
     const labelId = `enquiry-label-${question.fieldKey}`;
@@ -59,7 +57,6 @@ export function EnquiryFormFields({
         className={cn(
           "enquiry-form-question",
           error && "has-error",
-          wide && "is-wide",
         )}
       >
         <label className="enquiry-form-label" id={labelId} htmlFor={isGroup ? undefined : controlId}>
@@ -116,21 +113,20 @@ export function EnquiryFormFields({
         twoColumn && "enquiry-form-fields-columns",
       )}
     >
-      {twoColumn
-        ? groupEnquiryQuestionsForColumns(questions).map((group, index) => {
-            if (group.kind === "wide") return renderQuestion(group.question, true);
-            const left = group.questions.filter((_, itemIndex) => itemIndex % 2 === 0);
-            const right = group.questions.filter((_, itemIndex) => itemIndex % 2 === 1);
-            return (
-              <div key={`columns-${index}`} className="enquiry-form-columns-pair">
-                <div className="quote-editor-form-column enquiry-form-column">{left.map((question) => renderQuestion(question))}</div>
-                {right.length ? (
-                  <div className="quote-editor-form-column enquiry-form-column">{right.map((question) => renderQuestion(question))}</div>
-                ) : null}
-              </div>
-            );
-          })
-        : questions.map((question) => renderQuestion(question, enquiryQuestionSpansColumns(question)))}
+      {twoColumn ? (
+        <div className="enquiry-form-columns-pair">
+          <div className="quote-editor-form-column enquiry-form-column">
+            {questions.filter((_, index) => index % 2 === 0).map((question) => renderQuestion(question))}
+          </div>
+          {questions.length > 1 ? (
+            <div className="quote-editor-form-column enquiry-form-column">
+              {questions.filter((_, index) => index % 2 === 1).map((question) => renderQuestion(question))}
+            </div>
+          ) : null}
+        </div>
+      ) : (
+        questions.map((question) => renderQuestion(question))
+      )}
       <Modal
         open={Boolean(editing)}
         title={editing?.title || "編輯"}
