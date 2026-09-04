@@ -75,6 +75,28 @@ function validEmail(value: string | null | undefined) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((value || "").trim());
 }
 
+async function callerCanManageQuotes(
+  request: Request,
+  admin: ReturnType<typeof createClient>,
+) {
+  const authorization = request.headers.get("Authorization");
+  if (!authorization?.startsWith("Bearer ")) return false;
+  const { data, error } = await admin.auth.getUser(authorization.slice(7));
+  if (error || !data.user) return false;
+  const role = typeof data.user.app_metadata?.role === "string"
+    ? data.user.app_metadata.role
+    : "";
+  if (role === "Super Admin") return true;
+  if (!role) return false;
+  const { data: permission, error: permissionError } = await admin
+    .from("role_page_permissions")
+    .select("can_manage")
+    .eq("role", role)
+    .eq("page_key", "quotes")
+    .maybeSingle();
+  return !permissionError && permission?.can_manage === true;
+}
+
 async function sendResendEmail(to: string[], subject: string, html: string) {
   const providerResponse = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -177,6 +199,9 @@ Deno.serve(async (request) => {
     if (!submissionId) return response({ error: "submission_id_required" }, 400);
 
     const admin = createClient(requiredEnv("SUPABASE_URL"), serviceRoleKey());
+    if (force && !await callerCanManageQuotes(request, admin)) {
+      return response({ error: "quotes_manage_required" }, 403);
+    }
     const { data: submission, error: submissionError } = await admin
       .from("enquiry_submissions")
       .select("id,form_id,form_title,reference_code,customer_name,salutation,company_name,phone,email,shipping_address,delivery_date_raw,quote_description,headcount,internal_email_status,internal_wati_status,ack_email_status")

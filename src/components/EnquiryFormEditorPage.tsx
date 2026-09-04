@@ -16,6 +16,7 @@ import {
   enquiryPublicPath,
   NEW_ENQUIRY_FORM_ID,
   reorderEnquiryQuestions,
+  validateEnquiryFormDefinition,
   type EnquiryFormDefinition,
   type EnquiryQuestion,
   type EnquiryQuestionType,
@@ -200,14 +201,17 @@ export function EnquiryFormEditorPage() {
 
   const save = async (nextStatus?: EnquiryFormDefinition["status"]) => {
     if (!form) return;
-    if (!form.questions.length) {
-      setError("發佈前至少需要一題");
+    const next = nextStatus ? { ...form, status: nextStatus } : form;
+    const validationErrors = validateEnquiryFormDefinition(next, {
+      publishing: next.status === "published",
+    });
+    if (validationErrors.length) {
+      setError(validationErrors[0].message);
       return;
     }
     setSaving(true);
     setError(null);
     try {
-      const next = nextStatus ? { ...form, status: nextStatus } : form;
       const persistedId = isNew ? crypto.randomUUID() : next.id;
       const persisted = isNew
         ? {

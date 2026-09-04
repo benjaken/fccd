@@ -117,4 +117,16 @@ describe("EnquiryFormEditorPage", () => {
     expect(screen.getByRole("button", { name: "調整題目順序 1 公司/機構名稱" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "調整題目順序 5 姓名" })).toBeInTheDocument();
   });
+
+  it("does not publish a required choice question after all options are removed", async () => {
+    renderEditor(NEW_ENQUIRY_FORM_ID);
+    await userEvent.click(await screen.findByRole("button", { name: "新增題目" }));
+    await userEvent.type(screen.getByLabelText("Slug"), "test-form");
+    await userEvent.selectOptions(screen.getByLabelText("題型"), "radio");
+    await userEvent.click(screen.getByRole("switch", { name: "必填" }));
+    await userEvent.clear(screen.getByLabelText(/選項/));
+    await userEvent.click(screen.getByRole("button", { name: "發佈" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("第 6 題至少需要一個選項");
+    expect(saveEnquiryForm).not.toHaveBeenCalled();
+  });
 });

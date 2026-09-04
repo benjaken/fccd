@@ -181,4 +181,26 @@ describe("public enquiry form page", () => {
       }),
     );
   });
+
+  it("shows a retryable error when submission fails outside field validation", async () => {
+    const simpleForm = {
+      ...publishedForm,
+      questions: serializeEnquiryQuestions([
+        { fieldKey: "name", type: "input" as const, title: "姓名", required: true },
+      ]),
+    };
+    rpcMock.mockImplementation(async (name: string) => {
+      if (name === "get_published_enquiry_form") return { data: simpleForm, error: null };
+      return { data: null, error: new Error("network_failed") };
+    });
+    render(
+      <MemoryRouter initialEntries={["/quote-inquiry"]}>
+        <Routes><Route path="/quote-inquiry" element={<PublicEnquiryFormPage />} /></Routes>
+      </MemoryRouter>,
+    );
+    await userEvent.type(await screen.findByRole("textbox", { name: /姓名/ }), "陳大文");
+    await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("暫時未能送出查詢");
+    expect(screen.getByRole("textbox", { name: /姓名/ })).toHaveValue("陳大文");
+  });
 });

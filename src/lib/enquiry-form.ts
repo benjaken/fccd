@@ -83,7 +83,13 @@ export type EnquiryFieldError = {
   message: string;
 };
 
+export type EnquiryFormDefinitionError = {
+  field: string;
+  message: string;
+};
+
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE_PATTERN = /^[0-9+() .-]{6,50}$/;
 const DATE_KEY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 export function emptyAnswers(questions: EnquiryQuestion[]): EnquiryAnswers {
@@ -141,6 +147,59 @@ export function validateEnquiryAnswers(
   return errors;
 }
 
+export function validateEnquiryFormDefinition(
+  form: EnquiryFormDefinition,
+  options: { publishing?: boolean } = {},
+): EnquiryFormDefinitionError[] {
+  const errors: EnquiryFormDefinitionError[] = [];
+  const publishing = options.publishing === true || form.status === "published";
+  if (!form.internalName.trim()) errors.push({ field: "internalName", message: "請填寫內部名稱" });
+  if (publishing && !form.publicTitle.trim()) errors.push({ field: "publicTitle", message: "請填寫公開標題" });
+  if (publishing && !form.slug.trim()) errors.push({ field: "slug", message: "請填寫 Slug" });
+  if (!form.questions.length) errors.push({ field: "questions", message: "發佈前至少需要一題" });
+  if (form.questions.length > 100) errors.push({ field: "questions", message: "題目不可多於 100 題" });
+
+  const keys = new Set<string>();
+  const mappedFields = new Set<EnquiryQuoteField>();
+  for (const [index, question] of form.questions.entries()) {
+    const prefix = `第 ${index + 1} 題`;
+    const key = question.fieldKey.trim();
+    if (!key || keys.has(key)) {
+      errors.push({ field: "questions", message: `${prefix}的欄位鍵值空白或重複` });
+    }
+    keys.add(key);
+    if (publishing && !question.title.trim()) {
+      errors.push({ field: "questions", message: `${prefix}缺少題目名稱` });
+    }
+    if (question.quoteField) {
+      if (mappedFields.has(question.quoteField)) {
+        errors.push({ field: "questions", message: `${prefix}重複對應「${question.quoteField}」` });
+      }
+      mappedFields.add(question.quoteField);
+    }
+    if (question.type === "number"
+      && question.minNumber != null
+      && question.maxNumber != null
+      && question.minNumber > question.maxNumber) {
+      errors.push({ field: "questions", message: `${prefix}的最小值不可大於最大值` });
+    }
+    if (question.type === "radio" || question.type === "checkbox") {
+      const values = (question.options ?? []).map((option) => option.value.trim());
+      const labels = (question.options ?? []).map((option) => option.label.trim());
+      if (publishing && values.length === 0) {
+        errors.push({ field: "questions", message: `${prefix}至少需要一個選項` });
+      }
+      if (values.some((value) => !value)
+        || labels.some((label) => !label)
+        || new Set(values).size !== values.length
+        || new Set(labels).size !== labels.length) {
+        errors.push({ field: "questions", message: `${prefix}包含空白或重複選項` });
+      }
+    }
+  }
+  return errors;
+}
+
 export function validateEnquiryAnswer(
   question: EnquiryQuestion,
   value: EnquiryAnswerValue,
@@ -166,6 +225,9 @@ export function validateEnquiryAnswer(
   if (question.type === "input" && typeof value === "string") {
     if (question.inputFormat === "email" && !EMAIL_PATTERN.test(value.trim())) {
       return fieldError(question, "請輸入有效電郵");
+    }
+    if (question.inputFormat === "phone" && !PHONE_PATTERN.test(value.trim())) {
+      return fieldError(question, "請輸入有效電話號碼");
     }
   }
 

@@ -39,6 +39,7 @@ export function PublicEnquiryFormPage() {
   const [errors, setErrors] = useState<EnquiryFieldError[]>([]);
   const [honeypot, setHoneypot] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [submittedCode, setSubmittedCode] = useState<string | null>(null);
   const [attemptKey, setAttemptKey] = useState(0);
   const idempotencyKey = useMemo(
@@ -83,6 +84,7 @@ export function PublicEnquiryFormPage() {
     if (!form || submitting) return;
     setSubmitting(true);
     setErrors([]);
+    setSubmitError(null);
     try {
       const result = await submitEnquiryForm({
         formId: form.id,
@@ -98,6 +100,8 @@ export function PublicEnquiryFormPage() {
       if (fieldErrors?.length) {
         setErrors(fieldErrors);
         scrollToEnquiryField(fieldErrors[0].fieldKey);
+      } else {
+        setSubmitError("暫時未能送出查詢，請檢查網絡後再試。");
       }
     } finally {
       setSubmitting(false);
@@ -160,6 +164,7 @@ export function PublicEnquiryFormPage() {
               splitLayout
               onChange={patchAnswer}
             />
+            {submitError ? <p className="enquiry-form-error" role="alert">{submitError}</p> : null}
             <Button type="submit" disabled={submitting}>
               {submitting ? "送出中…" : form.submitLabel || "Submit"}
             </Button>

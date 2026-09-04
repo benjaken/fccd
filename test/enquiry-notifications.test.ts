@@ -98,4 +98,14 @@ describe("enquiry notification emails", () => {
     expect(source).toContain("enforced: false");
     expect(source).toContain("enquiry internal wati has no recipients");
   });
+
+  it("requires quotes manage permission before force-resending", () => {
+    const source = readFileSync(
+      resolve(process.cwd(), "supabase/functions/send-enquiry-notifications/index.ts"),
+      "utf8",
+    );
+    expect(source).toContain("if (force && !await callerCanManageQuotes(request, admin))");
+    expect(source).toContain('.eq("page_key", "quotes")');
+    expect(source).toContain("quotes_manage_required");
+  });
 });
