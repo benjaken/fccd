@@ -267,7 +267,7 @@ function RecipeFormPanel({
             value={preparedMeatItemId}
             options={products}
             placeholder={t("seasoningRecipes.fields.productPlaceholder")}
-            searchPlaceholder={t("seasoningRecipes.searchProduct")}
+            searchPlaceholder={t("seasoningRecipes.searchProductPlaceholder")}
             emptyLabel={t("seasoningRecipes.emptyProducts")}
             required
             disabled={Boolean(editing)}
@@ -382,7 +382,7 @@ function RecipeFormPanel({
                     !lines.some((line) => line.seasoningId === spice.id),
                 )}
                 placeholder={t("seasoningRecipes.fields.spicePlaceholder")}
-                searchPlaceholder={t("seasoningRecipes.searchSpice")}
+                searchPlaceholder={t("seasoningRecipes.searchSpicePlaceholder")}
                 emptyLabel={t("seasoningRecipes.emptySpices")}
                 invalid={Boolean(fieldErrors.draftSeasoning)}
                 onChange={(option) => setDraftSeasoningId(option.id)}
@@ -676,8 +676,8 @@ export function SeasoningRecipesPage({
               <input
                 value={productSearch}
                 onChange={(event) => setProductSearch(event.target.value)}
-                placeholder={t("seasoningRecipes.searchProduct")}
-                aria-label={t("seasoningRecipes.searchProduct")}
+                placeholder={t("seasoningRecipes.searchProductPlaceholder")}
+                aria-label={t("seasoningRecipes.searchProductPlaceholder")}
               />
             </div>
             {loading && products.length === 0 ? (

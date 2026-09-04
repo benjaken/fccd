@@ -243,14 +243,14 @@ describe("Seasoning recipes page", () => {
     await user.click(within(dialog).getByRole("combobox", { name: "產品" }));
     await user.click(await screen.findByRole("option", { name: "醃雞扒" }));
 
-    const code = within(dialog).getByPlaceholderText("yyyymmdd");
+    const code = within(dialog).getByPlaceholderText("例如 20260904");
     await user.clear(code);
     await user.type(code, "20260904");
-    await user.type(within(dialog).getByPlaceholderText("kg"), "10");
+    await user.type(within(dialog).getByPlaceholderText("例如 13.2"), "10");
 
     await user.click(within(dialog).getByRole("combobox", { name: "香料" }));
     await user.click(await screen.findByRole("option", { name: "片糖" }));
-    await user.type(within(dialog).getByPlaceholderText("g"), "1200");
+    await user.type(within(dialog).getByPlaceholderText("例如 1200"), "1200");
     expect(within(dialog).getByDisplayValue("$16.60")).toBeInTheDocument();
 
     await user.click(within(dialog).getByRole("button", { name: "加入香料" }));
