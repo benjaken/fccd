@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
@@ -129,6 +130,19 @@ const recipes: SeasoningRecipeRow[] = [
 ];
 
 describe("seasoning recipe helpers", () => {
+  it("wraps spice cards horizontally and animates the product sidebar", () => {
+    const styles = readFileSync("src/index.css", "utf8");
+    expect(styles).toMatch(
+      /\.seasoning-recipe-spice-list\s*\{[^}]*flex-wrap:\s*wrap;/s,
+    );
+    expect(styles).toMatch(
+      /\.seasoning-recipes-sidebar\s*\{[^}]*width:\s*16\.5rem;/s,
+    );
+    expect(styles).toMatch(
+      /\.stocktake-date-list,\s*\.seasoning-recipes-sidebar\s*\{/s,
+    );
+  });
+
   it("groups version lines into recipes and totals cost", () => {
     const grouped = groupSeasoningRecipes([
       {
@@ -220,6 +234,35 @@ describe("Seasoning recipes page", () => {
     expect(screen.queryByText("20260716")).not.toBeInTheDocument();
     expect(screen.getByText("20260901")).toBeInTheDocument();
     expect(screen.getByText("目前顯示：醃雞扒")).toBeInTheDocument();
+  });
+
+  it("hides and shows the product sidebar", async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <SeasoningRecipesPage
+          loadProducts={async () => structuredClone(products)}
+          loadRecipes={async () => structuredClone(recipes)}
+          loadSpices={async () => structuredClone(spices)}
+        />
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole("heading", { name: "固定香料成本" });
+    const slot = document.querySelector(".record-sidebar-slot");
+    expect(slot).not.toHaveClass("is-collapsed");
+    expect(screen.getByRole("button", { name: "全部產品" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "隱藏側欄" }));
+    expect(document.querySelector(".record-sidebar-slot")).toHaveClass(
+      "is-collapsed",
+    );
+
+    await user.click(screen.getByRole("button", { name: "打開側欄" }));
+    expect(document.querySelector(".record-sidebar-slot")).not.toHaveClass(
+      "is-collapsed",
+    );
+    expect(screen.getByRole("button", { name: "全部產品" })).toBeInTheDocument();
   });
 
   it("adds a recipe and spices from one side panel and calculates cost", async () => {

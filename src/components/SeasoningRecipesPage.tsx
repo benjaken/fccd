@@ -13,6 +13,10 @@ import { Button } from "@/components/ui/button";
 import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { ListTable } from "@/components/ui/list-table";
 import { SearchSelect } from "@/components/ui/search-select";
+import {
+  CollapsibleRecordSidebar,
+  RecordSidebarToggle,
+} from "@/components/ui/collapsible-record-sidebar";
 import { SidePanel } from "@/components/ui/side-panel";
 import { Switch } from "@/components/ui/switch";
 import { FROZEN_ACTION_PERMISSION_KEYS } from "@/lib/frozen-action-permissions";
@@ -478,6 +482,8 @@ export function SeasoningRecipesPage({
   const [togglingKey, setTogglingKey] = useState<string | null>(null);
   const [deletingKey, setDeletingKey] = useState<string | null>(null);
   const [copyingKey, setCopyingKey] = useState<string | null>(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const toggleSidebar = () => setSidebarCollapsed((value) => !value);
 
   const money = useMemo(
     () =>
@@ -664,13 +670,25 @@ export function SeasoningRecipesPage({
         </div>
       ) : (
         <div className="seasoning-recipes-layout">
-          <aside
-            className="spice-usage-sidebar panel"
+          <CollapsibleRecordSidebar
+            collapsed={sidebarCollapsed}
+            onToggle={toggleSidebar}
+            hideLabel={t("common.hideSidebar")}
+            showLabel={t("common.showSidebar")}
+            className="spice-usage-sidebar seasoning-recipes-sidebar panel"
             aria-label={t("seasoningRecipes.products")}
           >
             <div className="spice-usage-sidebar-header">
               <strong>{t("seasoningRecipes.products")}</strong>
-              <span>{products.length}</span>
+              <div className="seasoning-recipes-sidebar-actions">
+                <span>{products.length}</span>
+                <RecordSidebarToggle
+                  collapsed={sidebarCollapsed}
+                  onToggle={toggleSidebar}
+                  hideLabel={t("common.hideSidebar")}
+                  showLabel={t("common.showSidebar")}
+                />
+              </div>
             </div>
             <div className="seasoning-recipes-product-search">
               <input
@@ -729,7 +747,7 @@ export function SeasoningRecipesPage({
                 ))}
               </ul>
             )}
-          </aside>
+          </CollapsibleRecordSidebar>
 
           <article className="seasoning-recipes-main panel">
             <header className="seasoning-cost-toolbar">
@@ -813,15 +831,14 @@ export function SeasoningRecipesPage({
                           key={line.id}
                           className="seasoning-recipe-spice-card"
                         >
-                          <span className="seasoning-recipe-spice-index">
-                            {index + 1}
-                          </span>
-                          <div>
-                            <strong>{line.seasoningName}</strong>
-                            <small>
-                              {line.quantityGrams}g · {money.format(line.totalCost)}
-                            </small>
-                          </div>
+                          <strong>
+                            <span className="seasoning-recipe-spice-index">
+                              {index + 1}.
+                            </span>
+                            {line.seasoningName}
+                          </strong>
+                          <small>{`${line.quantityGrams}g`}</small>
+                          <small>{money.format(line.totalCost)}</small>
                         </article>
                       ))}
                     </div>

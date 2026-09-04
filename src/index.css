@@ -1509,7 +1509,8 @@ button.sidebar-link {
 
 .monthly-expenses-history,
 .daily-sales-history,
-.stocktake-date-list {
+.stocktake-date-list,
+.seasoning-recipes-sidebar {
   box-sizing: border-box;
   transition:
     width var(--sidebar-motion-duration) var(--sidebar-motion-easing),
@@ -1552,14 +1553,16 @@ button.sidebar-link {
   .sidebar-link .sidebar-link-count,
   .monthly-expenses-history,
   .daily-sales-history,
-  .stocktake-date-list {
+  .stocktake-date-list,
+  .seasoning-recipes-sidebar {
     transition: none;
   }
 }
 
 @media (max-width: 900px) {
   .monthly-expenses-workspace .record-sidebar-slot,
-  .daily-sales-workspace .record-sidebar-slot {
+  .daily-sales-workspace .record-sidebar-slot,
+  .seasoning-recipes-layout .record-sidebar-slot {
     position: static;
     width: 100%;
   }
@@ -1571,7 +1574,8 @@ button.sidebar-link {
   .monthly-expenses-history,
   .daily-sales-history,
   .stocktake-date-list,
-  .restaurant-stocktakes-page .stocktake-date-list {
+  .restaurant-stocktakes-page .stocktake-date-list,
+  .seasoning-recipes-sidebar {
     width: auto;
     min-width: 0;
   }
@@ -11787,17 +11791,59 @@ button.product-tag[aria-pressed="true"] {
 }
 
 .seasoning-recipes-layout {
-  display: grid;
-  grid-template-columns: 16.5rem minmax(0, 1fr);
+  display: flex;
+  align-items: stretch;
   gap: 14px;
   min-height: 0;
   height: 100%;
   overflow: hidden;
 }
 
+.seasoning-recipes-layout .record-sidebar-slot {
+  align-self: stretch;
+  min-height: 0;
+}
+
+.seasoning-recipes-layout .record-sidebar-slot:not(.is-collapsed) {
+  align-items: stretch;
+}
+
+.seasoning-recipes-layout .record-sidebar-slot > aside {
+  min-height: 0;
+  max-height: 100%;
+}
+
+.seasoning-recipes-sidebar {
+  width: 16.5rem;
+  min-width: 16.5rem;
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+
+.seasoning-recipes-sidebar-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.seasoning-recipes-sidebar-actions > span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.6rem;
+  height: 1.6rem;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--primary) 14%, transparent);
+  color: var(--primary);
+  font-size: 0.875rem;
+  font-weight: 750;
+}
+
 .seasoning-recipes-main {
   display: grid;
+  flex: 1 1 auto;
   grid-template-rows: auto auto minmax(0, 1fr);
+  min-width: 0;
   min-height: 0;
   overflow: hidden;
   padding: 0;
@@ -11835,16 +11881,34 @@ button.product-tag[aria-pressed="true"] {
 }
 
 .seasoning-recipe-spice-cell {
-  min-width: 14rem;
+  min-width: 22rem;
 }
 
-.seasoning-recipe-spice-list,
+.seasoning-recipe-spice-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 8px;
+}
+
 .seasoning-recipe-draft-list {
   display: grid;
   gap: 8px;
 }
 
-.seasoning-recipe-spice-card,
+.seasoning-recipe-spice-card {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 6.75rem;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in oklch, var(--border) 85%, transparent);
+  border-radius: 10px;
+  background: color-mix(in oklch, var(--muted) 22%, white);
+}
+
 .seasoning-recipe-draft-line {
   display: grid;
   grid-template-columns: auto 1fr auto;
@@ -11856,7 +11920,11 @@ button.product-tag[aria-pressed="true"] {
   background: color-mix(in oklch, var(--muted) 22%, white);
 }
 
-.seasoning-recipe-spice-index {
+.seasoning-recipe-spice-card .seasoning-recipe-spice-index {
+  font-weight: 800;
+}
+
+.seasoning-recipe-draft-line .seasoning-recipe-spice-index {
   display: grid;
   place-content: center;
   width: 1.6rem;
@@ -11868,7 +11936,14 @@ button.product-tag[aria-pressed="true"] {
   font-weight: 800;
 }
 
-.seasoning-recipe-spice-card strong,
+.seasoning-recipe-spice-card strong {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  color: color-mix(in oklch, var(--primary) 68%, #123d8a);
+  font-size: 0.88rem;
+}
+
 .seasoning-recipe-draft-line strong {
   display: block;
   font-size: 0.9rem;
@@ -18307,11 +18382,19 @@ a.masoft-order-tag:focus-visible {
   }
 
   .spice-usage-layout,
-  .seasoning-recipes-layout,
   .selling-price-cost-layout {
     grid-template-columns: 1fr;
     grid-template-rows: minmax(9rem, 28%) minmax(0, 1fr);
     min-height: 0;
+  }
+
+  .seasoning-recipes-layout {
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .seasoning-recipes-sidebar {
+    max-height: 28vh;
   }
 
   .spice-usage-main-header {
