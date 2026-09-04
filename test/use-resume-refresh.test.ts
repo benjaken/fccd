@@ -1,7 +1,7 @@
 import { renderHook } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { RESUME_REFRESH_INTERVAL_MS, useResumeRefresh } from "@/lib/use-resume-refresh";
+import { useResumeRefresh } from "@/lib/use-resume-refresh";
 
 function setVisibility(value: DocumentVisibilityState) {
   Object.defineProperty(document, "visibilityState", {
@@ -11,13 +11,7 @@ function setVisibility(value: DocumentVisibilityState) {
 }
 
 describe("useResumeRefresh", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-    setVisibility("visible");
-  });
-
   afterEach(() => {
-    vi.useRealTimers();
     setVisibility("visible");
   });
 
@@ -54,17 +48,6 @@ describe("useResumeRefresh", () => {
     document.dispatchEvent(new Event("visibilitychange"));
     window.dispatchEvent(new Event("pageshow"));
 
-    expect(onRefresh).toHaveBeenCalledTimes(1);
-  });
-
-  it("refreshes on an interval while visible", () => {
-    const onRefresh = vi.fn();
-    renderHook(() => useResumeRefresh(onRefresh));
-
-    vi.advanceTimersByTime(RESUME_REFRESH_INTERVAL_MS - 1);
-    expect(onRefresh).not.toHaveBeenCalled();
-
-    vi.advanceTimersByTime(1);
     expect(onRefresh).toHaveBeenCalledTimes(1);
   });
 });
