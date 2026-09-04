@@ -63,6 +63,7 @@ function deps(
     }),
     searchFaqs: vi.fn().mockResolvedValue([]),
     queueHandoff: vi.fn().mockResolvedValue(undefined),
+    cancelHandoff: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
 }
@@ -355,6 +356,34 @@ describe("customer-service bot turns", () => {
     });
     expect(supplemented.reply).toContain("補充資料");
     expect(queueHandoff).toHaveBeenCalledTimes(2);
+  });
+
+  it("cancels a pending order-change handoff instead of recording it as more detail", async () => {
+    const queueHandoff = vi.fn().mockResolvedValue(undefined);
+    const cancelHandoff = vi.fn().mockResolvedValue(undefined);
+    const awaitingHuman = {
+      ...conversation,
+      state: "awaiting_human" as const,
+      selected_order_id: order.order_id,
+      handoff_at: new Date().toISOString(),
+    };
+
+    for (const text of ["幫我取消修改", "幫我取消之前的訂單修改"]) {
+      const turn = await handleCustomerServiceTurn({
+        phone: conversation.phone_normalized,
+        text,
+        conversation: awaitingHuman,
+        deps: deps({ queueHandoff, cancelHandoff }),
+      });
+
+      expect(turn.reply).toBe(REPLIES.handoffCancelled);
+      expect(turn.conversation.state).toBe("identifying");
+      expect(turn.conversation.selected_order_id).toBeNull();
+      expect(turn.conversation.handoff_at).toBeNull();
+    }
+
+    expect(cancelHandoff).toHaveBeenCalledTimes(2);
+    expect(queueHandoff).not.toHaveBeenCalled();
   });
 
   it("queues complaints without claiming that a human already took over", async () => {

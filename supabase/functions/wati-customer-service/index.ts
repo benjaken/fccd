@@ -1011,6 +1011,22 @@ function createBotDeps(
         throw error;
       }
     },
+    async cancelHandoff(phone: string) {
+      if (dryRun) return;
+      const now = new Date().toISOString();
+      const { error } = await admin
+        .from("customer_service_handoff_requests")
+        .update({
+          status: "resolved",
+          resolved_at: now,
+          updated_at: now,
+          last_error: null,
+        })
+        .eq("environment", deploymentEnvironment())
+        .eq("phone_normalized", phone)
+        .in("status", ["pending", "processing", "notified", "failed"]);
+      if (error) throw error;
+    },
   };
 }
 
