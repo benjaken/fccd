@@ -176,7 +176,7 @@ begin
 
     if v_type in ('input', 'textarea', 'date', 'radio') then
       v_text := v_answer #>> '{}';
-      if octet_length(v_text) > case when v_type = 'textarea' then 20000 else 5000 end then
+      if octet_length(v_text) > (case when v_type = 'textarea' then 20000 else 5000 end) then
         raise exception 'enquiry_answer_too_long:%', v_key using errcode = '22023';
       end if;
     end if;
