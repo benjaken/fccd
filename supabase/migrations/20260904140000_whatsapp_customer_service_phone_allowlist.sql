@@ -4,6 +4,9 @@
 alter table public.customer_service_controls
   add column if not exists allowed_phones text[] not null default '{}';
 
+drop function if exists public.customer_service_controls_get();
+drop function if exists public.customer_service_controls_set(boolean);
+
 create or replace function public.customer_service_controls_get()
 returns table (
   bot_enabled boolean,

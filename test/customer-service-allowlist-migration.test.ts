@@ -11,6 +11,8 @@ const sql = readFileSync(
 describe("WhatsApp customer-service phone allowlist", () => {
   it("adds allowed_phones without touching WATI notification controls", () => {
     expect(sql).toContain("add column if not exists allowed_phones text[]");
+    expect(sql).toContain("drop function if exists public.customer_service_controls_get()");
+    expect(sql).toContain("drop function if exists public.customer_service_controls_set(boolean)");
     expect(sql).toContain("allowed_phones text[]");
     expect(sql).toContain("auth.role() is distinct from 'service_role'");
     expect(sql).toContain("Does not alter wati_notification_controls");
