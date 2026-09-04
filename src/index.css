@@ -35886,3 +35886,44 @@ body:has(.quote-clause-modal-root) { overflow: hidden; }
     grid-template-columns: 1fr;
   }
 }
+
+.customer-service-insights { display: grid; gap: 16px; }
+.customer-service-report-generator { display: flex; align-items: end; gap: 10px; }
+.customer-service-report-generator .ingredients-field { flex: 1; }
+.customer-service-report-card,
+.customer-service-suggestions,
+.customer-service-review-queue,
+.customer-service-model-lab { display: grid; gap: 10px; }
+.customer-service-report-card { padding: 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); }
+.customer-service-report-card > header,
+.customer-service-suggestions > header,
+.customer-service-review-queue > header,
+.customer-service-model-lab > header,
+.customer-service-review-queue article > footer,
+.customer-service-config-list article > footer,
+.customer-service-config-list article > div { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.customer-service-report-card header div { display: grid; gap: 3px; }
+.customer-service-report-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.customer-service-report-metrics > div { display: grid; gap: 4px; padding: 11px 12px; border-radius: 9px; background: var(--secondary); }
+.customer-service-report-metrics span { color: var(--muted-foreground); font-size: 12px; }
+.customer-service-report-metrics strong { font-size: 20px; font-variant-numeric: tabular-nums; }
+.customer-service-suggestions > article,
+.customer-service-review-queue article,
+.customer-service-config-list article { display: grid; gap: 9px; padding: 13px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); }
+.customer-service-suggestions > article > div,
+.customer-service-suggestions article footer > div { display: flex; align-items: center; gap: 7px; }
+.customer-service-suggestions article footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.customer-service-review-queue textarea,
+.customer-service-config-form input,
+.customer-service-config-form textarea { width: 100%; }
+.customer-service-config-form,
+.customer-service-config-list { display: grid; gap: 9px; }
+.customer-service-config-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.customer-service-config-form textarea,
+.customer-service-config-form > button { grid-column: 1 / -1; }
+@media (max-width: 640px) {
+  .customer-service-report-generator,
+  .customer-service-review-queue article > footer,
+  .customer-service-config-list article > footer { align-items: stretch; flex-direction: column; }
+  .customer-service-config-form { grid-template-columns: 1fr; }
+}

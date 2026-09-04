@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { Bot, CheckCheck, ChevronLeft, ChevronRight, MessageCircleMore, Pencil, Plus, RefreshCw, RotateCcw, Send, Settings2, Smile } from "lucide-react";
+import { BarChart3, Bot, Check, CheckCheck, ChevronLeft, ChevronRight, MessageCircleMore, Pencil, Plus, RefreshCw, RotateCcw, Send, Settings2, Smile, Sparkles, X } from "lucide-react";
 
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
@@ -11,12 +11,23 @@ import { Switch } from "@/components/ui/switch";
 import {
   CUSTOMER_FAQ_CATEGORIES,
   CUSTOMER_FAQS_PAGE_SIZE,
+  activateCustomerServiceConfig,
+  createCustomerServiceConfig,
   createCustomerFaq,
+  evaluateCustomerServiceConfig,
+  fetchCustomerServiceConfigVersions,
+  fetchCustomerServiceDailyReports,
+  fetchCustomerServiceEvaluationRuns,
+  fetchCustomerServiceLearningSuggestions,
+  fetchCustomerServiceReviewTurns,
   fetchCustomerFaqs,
   fetchCustomerServiceControls,
   fetchCustomerServiceLogic,
   previewCustomerServiceTurn,
+  generateCustomerServiceDailyReport,
+  reviewCustomerServiceLearningSuggestion,
   setCustomerServiceBotEnabled,
+  submitCustomerServiceTurnFeedback,
   updateCustomerFaq,
   updateCustomerServiceIntent,
   updateCustomerServiceReplyTemplate,
@@ -27,8 +38,17 @@ import {
   type CustomerServiceControls,
   type CustomerServiceIntentSetting,
   type CustomerServiceLogic,
+  type CustomerServiceConfigVersion,
+  type CustomerServiceDailyReport,
+  type CustomerServiceEvaluationRun,
+  type CustomerServiceLearningSuggestion,
+  type CustomerServiceReviewTurn,
   type CustomerServiceReplyTemplate,
 } from "@/lib/customer-faq";
+
+function previousHongKongDate() {
+  return new Date(Date.now() + 8 * 60 * 60 * 1_000 - 24 * 60 * 60 * 1_000).toISOString().slice(0, 10);
+}
 
 const SKELETON_COLUMNS = [
   { width: "7rem" },
@@ -114,6 +134,21 @@ export function CustomerFaqPage({
   const [logicLoading, setLogicLoading] = useState(false);
   const [logicSaving, setLogicSaving] = useState(false);
   const [logicError, setLogicError] = useState("");
+  const [insightsOpen, setInsightsOpen] = useState(false);
+  const [reports, setReports] = useState<CustomerServiceDailyReport[]>([]);
+  const [suggestions, setSuggestions] = useState<CustomerServiceLearningSuggestion[]>([]);
+  const [reviewTurns, setReviewTurns] = useState<CustomerServiceReviewTurn[]>([]);
+  const [configVersions, setConfigVersions] = useState<CustomerServiceConfigVersion[]>([]);
+  const [evaluationRuns, setEvaluationRuns] = useState<CustomerServiceEvaluationRun[]>([]);
+  const [insightsLoading, setInsightsLoading] = useState(false);
+  const [insightsError, setInsightsError] = useState("");
+  const [reportDate, setReportDate] = useState(previousHongKongDate);
+  const [generatingReport, setGeneratingReport] = useState(false);
+  const [reviewingSuggestion, setReviewingSuggestion] = useState("");
+  const [feedbackDrafts, setFeedbackDrafts] = useState<Record<string, string>>({});
+  const [reviewingTurn, setReviewingTurn] = useState("");
+  const [configBusy, setConfigBusy] = useState("");
+  const [configDraft, setConfigDraft] = useState({ label: "Develop candidate", model: "grok-4.3", systemPrompt: "", temperature: 0.1, retrievalLimit: 3 });
 
   const totalPages = Math.max(1, Math.ceil(total / CUSTOMER_FAQS_PAGE_SIZE));
   const visibleFrom = total === 0 ? 0 : (page - 1) * CUSTOMER_FAQS_PAGE_SIZE + 1;
@@ -329,6 +364,79 @@ export function CustomerFaqPage({
     }
   };
 
+  const loadInsights = async () => {
+    setInsightsLoading(true);
+    setInsightsError("");
+    try {
+      const [nextReports, nextSuggestions, nextTurns, nextConfigs, nextRuns] = await Promise.all([
+        fetchCustomerServiceDailyReports(), fetchCustomerServiceLearningSuggestions(),
+        fetchCustomerServiceReviewTurns(), fetchCustomerServiceConfigVersions("develop"),
+        fetchCustomerServiceEvaluationRuns(),
+      ]);
+      setReports(nextReports); setSuggestions(nextSuggestions); setReviewTurns(nextTurns);
+      setConfigVersions(nextConfigs); setEvaluationRuns(nextRuns);
+    } catch {
+      setInsightsError("載入客服成效及學習資料失敗。");
+    } finally {
+      setInsightsLoading(false);
+    }
+  };
+
+  const openInsights = () => { setInsightsOpen(true); void loadInsights(); };
+  const generateReport = async () => {
+    if (!reportDate || generatingReport) return;
+    setGeneratingReport(true); setInsightsError("");
+    try { await generateCustomerServiceDailyReport(reportDate); await loadInsights(); }
+    catch { setInsightsError("產生每日 AI 報告失敗。"); }
+    finally { setGeneratingReport(false); }
+  };
+  const reviewSuggestion = async (id: string, status: "approved" | "rejected") => {
+    if (!canEdit || reviewingSuggestion) return;
+    setReviewingSuggestion(id); setInsightsError("");
+    try {
+      const result = await reviewCustomerServiceLearningSuggestion(id, status);
+      setSuggestions((current) => current.filter((item) => item.id !== id));
+      if (result?.target_faq_id) setReloadKey((value) => value + 1);
+    } catch { setInsightsError("審核學習建議失敗。"); }
+    finally { setReviewingSuggestion(""); }
+  };
+  const reviewTurn = async (turn: CustomerServiceReviewTurn, verdict: "correct" | "incorrect" | "needs_review") => {
+    if (!canEdit || reviewingTurn) return;
+    const correctedAnswer = feedbackDrafts[turn.id]?.trim() || "";
+    if (verdict === "incorrect" && !correctedAnswer) { setInsightsError("標記錯誤前，請先填寫正確回覆。"); return; }
+    setReviewingTurn(turn.id); setInsightsError("");
+    try {
+      await submitCustomerServiceTurnFeedback({ turnId: turn.id, verdict, correctedAnswer, createFaqDraft: verdict === "incorrect" });
+      setReviewTurns((current) => current.filter((item) => item.id !== turn.id));
+      if (verdict === "incorrect") setReloadKey((value) => value + 1);
+    } catch { setInsightsError("儲存人工覆核結果失敗。"); }
+    finally { setReviewingTurn(""); }
+  };
+  const createConfig = async () => {
+    if (!canEdit || configBusy || !configDraft.model.trim()) return;
+    setConfigBusy("create"); setInsightsError("");
+    try { await createCustomerServiceConfig({ environment: "develop", ...configDraft }); setConfigVersions(await fetchCustomerServiceConfigVersions("develop")); }
+    catch { setInsightsError("建立模型配置失敗。"); }
+    finally { setConfigBusy(""); }
+  };
+  const evaluateConfig = async (id: string) => {
+    if (!canEdit || configBusy) return;
+    setConfigBusy(id); setInsightsError("");
+    try { await evaluateCustomerServiceConfig(id); setEvaluationRuns(await fetchCustomerServiceEvaluationRuns()); }
+    catch { setInsightsError("模型評測失敗；請先完成至少一條人工覆核資料。"); setEvaluationRuns(await fetchCustomerServiceEvaluationRuns().catch(() => [])); }
+    finally { setConfigBusy(""); }
+  };
+  const activateConfig = async (id: string) => {
+    if (!canEdit || configBusy) return;
+    setConfigBusy(id); setInsightsError("");
+    try { await activateCustomerServiceConfig(id); setConfigVersions(await fetchCustomerServiceConfigVersions("develop")); }
+    catch { setInsightsError("發布模型配置失敗。"); }
+    finally { setConfigBusy(""); }
+  };
+
+  const latestReport = reports[0];
+  const formatRate = (value: number | null | undefined) => typeof value === "number" ? `${Math.round(value * 100)}%` : "—";
+
   const intentDraft = logic?.intents.find((item) => item.intentKey === selectedIntent);
   const replyDraft = logic?.replyTemplates.find((item) => item.templateKey === selectedReply);
 
@@ -394,6 +502,9 @@ export function CustomerFaqPage({
             {t("settings.customerFaq.logicButton")}
           </Button>
         ) : null}
+        <Button type="button" variant="outline" onClick={openInsights}>
+          <BarChart3 />AI 成效報告
+        </Button>
         {controlsError ? (
           <p className="orders-state-error" role="alert">{controlsError}</p>
         ) : null}
@@ -719,6 +830,74 @@ export function CustomerFaqPage({
           </div>
           {saveError ? <p role="alert">{saveError}</p> : null}
         </form>
+      </SidePanel>
+
+      <SidePanel open={insightsOpen} title="AI 成效報告與學習" onClose={() => setInsightsOpen(false)} closeLabel={t("common.close")}>
+        <div className="customer-service-insights">
+          <div className="customer-service-report-generator">
+            <label className="ingredients-field"><span>報告日期</span><input type="date" value={reportDate} onChange={(event) => setReportDate(event.target.value)} /></label>
+            <Button type="button" disabled={generatingReport} onClick={() => void generateReport()}><Sparkles />{generatingReport ? "分析中…" : "產生報告"}</Button>
+          </div>
+          {insightsError ? <p className="orders-state-error" role="alert">{insightsError}</p> : null}
+          {insightsLoading ? <p>載入中…</p> : latestReport ? (
+            <section className="customer-service-report-card">
+              <header><div><strong>{latestReport.reportDate}</strong><small>{latestReport.environment} · {latestReport.status}</small></div></header>
+              <div className="customer-service-report-metrics">
+                <div><span>收到問題</span><strong>{latestReport.metrics.received ?? 0}</strong></div>
+                <div><span>成功率</span><strong>{formatRate(latestReport.metrics.success_rate)}</strong></div>
+                <div><span>失敗</span><strong>{latestReport.metrics.failed ?? 0}</strong></div>
+                <div><span>真人接手</span><strong>{latestReport.metrics.handoff ?? 0}</strong></div>
+                <div><span>未能回答</span><strong>{latestReport.metrics.unanswered ?? 0}</strong></div>
+                <div><span>發送成功率</span><strong>{formatRate(latestReport.metrics.send_success_rate)}</strong></div>
+              </div>
+              <p>{latestReport.aiSummary}</p>
+            </section>
+          ) : <p>尚未有每日報告。</p>}
+
+          <section className="customer-service-suggestions">
+            <header><div><h3>AI 學習建議</h3><p>批准後只會建立未發布 FAQ 草稿。</p></div><span className="status-badge neutral">{suggestions.length}</span></header>
+            {suggestions.map((suggestion) => <article key={suggestion.id}>
+              <div><span className="status-badge neutral">{suggestion.suggestionType.toUpperCase()}</span><strong>{suggestion.title}</strong></div>
+              <p>{suggestion.reason}</p>
+              <footer><span>證據 {suggestion.evidenceCount} 條</span>{canEdit ? <div>
+                <Button size="sm" disabled={reviewingSuggestion === suggestion.id} onClick={() => void reviewSuggestion(suggestion.id, "approved")}><Check />批准</Button>
+                <Button size="sm" variant="outline" disabled={reviewingSuggestion === suggestion.id} onClick={() => void reviewSuggestion(suggestion.id, "rejected")}><X />忽略</Button>
+              </div> : null}</footer>
+            </article>)}
+          </section>
+
+          <section className="customer-service-review-queue">
+            <header><div><h3>人工覆核學習</h3><p>人工結果會成為模型評測的可信資料。</p></div><span className="status-badge neutral">{reviewTurns.length}</span></header>
+            {reviewTurns.map((turn) => <article key={turn.id}>
+              <small>{new Date(turn.createdAt).toLocaleString()} · {turn.intent || turn.route || turn.processingStatus}</small>
+              <strong>{turn.question}</strong><p>{turn.answer || "（沒有回覆）"}</p>
+              {canEdit ? <><textarea rows={3} value={feedbackDrafts[turn.id] || ""} placeholder="如果原回覆錯誤，請輸入正確答案" onChange={(event) => setFeedbackDrafts((current) => ({ ...current, [turn.id]: event.target.value }))} />
+                <footer><Button size="sm" disabled={reviewingTurn === turn.id} onClick={() => void reviewTurn(turn, "correct")}><Check />正確</Button>
+                  <Button size="sm" variant="outline" disabled={reviewingTurn === turn.id} onClick={() => void reviewTurn(turn, "incorrect")}><X />錯誤並建立草稿</Button>
+                  <Button size="sm" variant="ghost" disabled={reviewingTurn === turn.id} onClick={() => void reviewTurn(turn, "needs_review")}>待覆核</Button></footer></> : null}
+            </article>)}
+          </section>
+
+          <section className="customer-service-model-lab">
+            <header><div><h3>模型與 Prompt 實驗室</h3><p>候選配置完成歷史評測後才能發布到 develop。</p></div></header>
+            {canEdit ? <div className="customer-service-config-form">
+              <input aria-label="配置名稱" value={configDraft.label} onChange={(event) => setConfigDraft((current) => ({ ...current, label: event.target.value }))} />
+              <input aria-label="模型名稱" value={configDraft.model} onChange={(event) => setConfigDraft((current) => ({ ...current, model: event.target.value }))} />
+              <textarea aria-label="附加 Prompt" rows={3} placeholder="附加 Prompt" value={configDraft.systemPrompt} onChange={(event) => setConfigDraft((current) => ({ ...current, systemPrompt: event.target.value }))} />
+              <label>Temperature <input type="number" min="0" max="1" step="0.05" value={configDraft.temperature} onChange={(event) => setConfigDraft((current) => ({ ...current, temperature: Number(event.target.value) }))} /></label>
+              <label>FAQ 數量 <input type="number" min="1" max="20" value={configDraft.retrievalLimit} onChange={(event) => setConfigDraft((current) => ({ ...current, retrievalLimit: Number(event.target.value) }))} /></label>
+              <Button type="button" disabled={Boolean(configBusy)} onClick={() => void createConfig()}><Plus />建立候選版本</Button>
+            </div> : null}
+            <div className="customer-service-config-list">{configVersions.map((config) => {
+              const latestRun = evaluationRuns.find((run) => run.candidateConfigId === config.id);
+              return <article key={config.id}><div><strong>v{config.version} · {config.label}</strong><span className={`status-badge ${config.status === "active" ? "green" : "neutral"}`}>{config.status}</span></div>
+                <p>{config.model} · temperature {config.temperature} · FAQ {config.retrievalLimit}</p>
+                <small>{latestRun ? `評測：${latestRun.status} · 樣本 ${latestRun.sampleSize} · 一致率 ${formatRate(latestRun.metrics.agreement_rate)}` : "尚未評測"}</small>
+                {canEdit ? <footer><Button size="sm" variant="outline" disabled={Boolean(configBusy)} onClick={() => void evaluateConfig(config.id)}><Sparkles />歷史評測</Button>
+                  {config.status !== "active" ? <Button size="sm" disabled={Boolean(configBusy) || latestRun?.status !== "complete"} onClick={() => void activateConfig(config.id)}>發布到 develop</Button> : null}</footer> : null}</article>;
+            })}</div>
+          </section>
+        </div>
       </SidePanel>
 
       <SidePanel

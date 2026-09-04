@@ -4,6 +4,7 @@ import { EMAIL_FROM } from "../_shared/email-sender.ts";
 import {
   answerCustomerServiceFaqWithAi,
   classifyCustomerServiceWithAi,
+  customerServiceAiConfig,
   type CustomerServiceIntentConfig,
 } from "../_shared/customer-service-ai.ts";
 import { handleCustomerServiceTurn } from "../_shared/customer-service-bot.ts";
@@ -119,6 +120,11 @@ function createAdminClient() {
 }
 
 type AdminClient = ReturnType<typeof createAdminClient>;
+
+function deploymentEnvironment() {
+  return env("CUSTOMER_SERVICE_ENVIRONMENT") ||
+    (env("SUPABASE_URL").includes("vignxasvlxqnyvuhtjlu") ? "production" : "develop");
+}
 
 type ReplyTemplates = Partial<Record<
   "help" | "handoff" | "collect_prompt" | "collect_more" | "collect_done" | "no_faq" | "refuse",
@@ -360,6 +366,8 @@ async function recordCustomerServiceTurn(
     intent: input.turn.intentKey ?? null,
     route: [...tools].join(",") || null,
     used_model: input.turn.usedModel,
+    model: input.turn.model ?? null,
+    faq_source_ids: input.turn.faqSourceIds ?? [],
     state_before: input.stateBefore,
     state_after: input.turn.conversation.state,
     wrote_inquiry: input.turn.wroteInquiry,
@@ -368,10 +376,16 @@ async function recordCustomerServiceTurn(
     reply_attempted: Boolean(input.turn.reply),
     reply_sent: Boolean(input.turn.reply),
     delivery_status: input.turn.reply ? "sent" : "not_required",
-    processing_status: "completed",
+    processing_status: input.turn.conversation.state === "human_owned"
+      ? "handoff"
+      : input.turn.failureReason === "faq_not_found"
+        ? "unanswered"
+        : input.turn.reply
+          ? "replied"
+          : "skipped",
     failure_reason: input.turn.failureReason ?? null,
     latency_ms: Math.max(0, Date.now() - input.startedAt),
-    environment: "develop",
+    environment: deploymentEnvironment(),
     ai_score: input.turn.confidence ?? null,
   }, { onConflict: "provider_message_id" });
   if (error) {
@@ -485,6 +499,22 @@ function createBotDeps(
     replyTemplates = {},
   }: { dryRun?: boolean; replyTemplates?: ReplyTemplates } = {},
 ) {
+  let activeConfigPromise: Promise<{
+    model: string;
+    system_prompt: string;
+    temperature: number;
+    retrieval_limit: number;
+  } | null> | null = null;
+  const loadActiveConfig = () => {
+    activeConfigPromise ??= admin.from("customer_service_config_versions")
+      .select("model,system_prompt,temperature,retrieval_limit")
+      .eq("environment", deploymentEnvironment()).eq("status", "active").maybeSingle()
+      .then(({ data, error }: { data: unknown; error: { code?: string; message: string } | null }) => {
+        if (error && error.code !== "42P01") console.error("customer service active config load failed", error.message.slice(0, 300));
+        return data as { model: string; system_prompt: string; temperature: number; retrieval_limit: number } | null;
+      });
+    return activeConfigPromise;
+  };
   return {
     replyTemplates,
     async lookupOrders(phone: string) {
@@ -525,9 +555,10 @@ function createBotDeps(
       return row;
     },
     async searchFaqs(query: string) {
+      const activeConfig = await loadActiveConfig();
       const { data, error } = await admin.rpc("search_published_customer_faqs", {
         p_query: query,
-        p_limit: 12,
+        p_limit: activeConfig?.retrieval_limit ?? 12,
       });
       if (error) throw error;
       return ((data ?? []) as Array<{
@@ -544,14 +575,19 @@ function createBotDeps(
       answer: string;
     }>) {
       if (!candidates.length) return null;
+      const activeConfig = await loadActiveConfig();
       const result = await answerCustomerServiceFaqWithAi({
         question: query,
         faqs: candidates.map((candidate) => ({
           ...candidate,
           category: candidate.category || "general",
         })),
+        config: activeConfig ? {
+          ...customerServiceAiConfig(), model: activeConfig.model,
+          systemPrompt: activeConfig.system_prompt, temperature: Number(activeConfig.temperature),
+        } : customerServiceAiConfig(),
       });
-      return result?.answer ?? null;
+      return result ?? null;
     },
     async notifyInternal(input: {
       phone: string;

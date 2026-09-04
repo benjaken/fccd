@@ -65,7 +65,7 @@ export type CustomerServiceBotDeps = {
   answerFaqWithModel?: (
     query: string,
     candidates: CustomerServiceFaqHit[],
-  ) => Promise<string | null>;
+  ) => Promise<string | { answer: string; sourceIds: string[]; model: string } | null>;
   notifyInternal: (input: {
     phone: string;
     quoteId: string | null;
@@ -85,6 +85,8 @@ export type BotTurn = {
   confidence?: number;
   toolKeys?: string[];
   failureReason?: string | null;
+  faqSourceIds?: string[];
+  model?: string | null;
 };
 
 function configuredReply(
@@ -304,7 +306,8 @@ async function replyFaq(
   const hits = await deps.searchFaqs(query);
   if (deps.answerFaqWithModel) {
     try {
-      const answer = await deps.answerFaqWithModel(query, hits);
+      const modelAnswer = await deps.answerFaqWithModel(query, hits);
+      const answer = typeof modelAnswer === "string" ? modelAnswer : modelAnswer?.answer;
       if (answer) {
         return {
           reply: faqReply(answer),
@@ -312,6 +315,8 @@ async function replyFaq(
           wroteInquiry: false,
           notified: false,
           usedModel: true,
+          faqSourceIds: typeof modelAnswer === "string" ? [] : modelAnswer?.sourceIds ?? [],
+          model: typeof modelAnswer === "string" ? null : modelAnswer?.model ?? null,
         };
       }
     } catch (error) {
@@ -328,6 +333,7 @@ async function replyFaq(
       wroteInquiry: false,
       notified: false,
       usedModel: classified.usedModel,
+      faqSourceIds: [hits[0].id],
     };
   }
   return {
