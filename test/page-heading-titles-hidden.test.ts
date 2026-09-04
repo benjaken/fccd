@@ -47,7 +47,7 @@ describe("page heading titles", () => {
       /\.page-heading:not\(:has\(button, a, input, select, textarea, \[role="button"\]\)\)\s*\{[^}]*display:\s*none;/s,
     );
     expect(styles).toMatch(
-      /\.page-transition\s*>\s*:has\(> \.page-heading\):not\(:has\(> \.page-heading button\)\)[^{]+\{[^}]*gap:\s*0;[^}]*grid-template-rows:\s*minmax\(0, 1fr\);/s,
+      /\.page-transition\s*>\s*:has\(> \.page-heading\)[^{]*:not\(:has\(> \.page-heading button\)\)[^{]+\{[^}]*gap:\s*0;[^}]*grid-template-rows:\s*minmax\(0, 1fr\);/s,
     );
     expect(styles).toMatch(
       /\.page-transition[^{]+:not\(:has\(\.page-skeleton-bone\)\)\s*\{[^}]*gap:\s*0;/s,

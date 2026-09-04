@@ -1,6 +1,4 @@
 import { readAppStyles } from "./read-app-styles";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router-dom";
@@ -121,7 +119,7 @@ describe("KitchenCostInputPage query-tab routing", () => {
     );
   });
 
-  it("does not reserve a hidden heading row for monthly tabs while loading", () => {
+  it("keeps monthly tabs above the panel while loading", () => {
     renderCostInput("/finance/cost-input?tab=monthly-suppliers");
 
     expect(document.querySelector(".kitchen-cost-page.is-weekly-advertising"))
@@ -129,13 +127,13 @@ describe("KitchenCostInputPage query-tab routing", () => {
 
     const css = readAppStyles();
     expect(css).toMatch(
-      /\.ingredients-page\.kitchen-cost-page:not\(\.is-weekly-advertising\)\s*\{[\s\S]*grid-template-rows:\s*max-content minmax\(0, 1fr\);/,
+      /\.ingredients-page\.kitchen-cost-page\s*\{[^}]*display:\s*flex;[^}]*flex-direction:\s*column;/,
     );
     expect(css).toMatch(
-      /\.kitchen-cost-page:not\(\.is-weekly-advertising\) > \.kitchen-cost-tabs\s*\{[\s\S]*grid-row:\s*1;[\s\S]*align-self:\s*start;/,
+      /\.kitchen-cost-page > \.kitchen-cost-tabs\s*\{[^}]*flex:\s*0 0 auto;[^}]*align-self:\s*stretch;/,
     );
     expect(css).toMatch(
-      /\.kitchen-cost-page:not\(\.is-weekly-advertising\) > \[role="tabpanel"\]\s*\{[\s\S]*grid-row:\s*2;[\s\S]*min-height:\s*0;/,
+      /\.kitchen-cost-page > \[role="tabpanel"\]\s*\{[^}]*flex:\s*1 1 auto;[^}]*min-height:\s*0;/,
     );
   });
 });
