@@ -13,6 +13,7 @@ import {
   fetchPendingEnquirySubmissions,
   type EnquirySubmissionListItem,
 } from "@/lib/enquiry-forms-api";
+import { enquiryPersonName } from "@/lib/enquiry-form";
 
 import "./enquiry-form.css";
 
@@ -165,7 +166,7 @@ export function EnquiryPendingListPage({
           >
             {items.map((item) => {
               const to = detailTo(item.id);
-              const displayName = `${item.salutation}${item.customerName}`.trim() || item.companyName || item.formTitle;
+              const displayName = enquiryPersonName(item.customerName, item.salutation) || item.companyName || item.formTitle;
               return (
                 <tr key={item.id}>
                   <td>
@@ -177,7 +178,7 @@ export function EnquiryPendingListPage({
                     {new Date(item.createdAt).toLocaleString("zh-HK", { timeZone: "Asia/Hong_Kong" })}
                   </td>
                   <td>
-                    <div>{dash(`${item.salutation}${item.customerName}`)}</div>
+                    <div>{dash(enquiryPersonName(item.customerName, item.salutation))}</div>
                     <div>{dash(item.companyName)}</div>
                     <div>{dash(item.phone)}</div>
                   </td>
@@ -220,7 +221,7 @@ export function EnquiryPendingListPage({
         open={Boolean(deleteTarget)}
         title={t("quotes.deletePendingTitle")}
         description={t("quotes.deletePendingDescription", {
-          name: `${deleteTarget?.salutation ?? ""}${deleteTarget?.customerName ?? ""}`.trim() || deleteTarget?.companyName || "",
+          name: enquiryPersonName(deleteTarget?.customerName, deleteTarget?.salutation) || deleteTarget?.companyName || "",
         })}
         confirmLabel={t("quotes.actions.delete")}
         cancelLabel={t("common.cancel")}

@@ -288,8 +288,15 @@ export function formatAnswer(
   return value.trim();
 }
 
+export function enquiryPersonName(
+  customerName?: string | null,
+  salutation?: string | null,
+): string {
+  return `${customerName?.trim() || ""}${salutation?.trim() || ""}`.trim();
+}
+
 export function customerDisplayName(mapped: EnquiryMappedSnapshots): string {
-  return `${mapped.salutation}${mapped.customerName}`.trim();
+  return enquiryPersonName(mapped.customerName, mapped.salutation);
 }
 
 function fieldError(question: EnquiryQuestion, message: string): EnquiryFieldError {

@@ -36,7 +36,7 @@ describe("EnquiryPendingListPage", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText("先生陳大文")).toBeInTheDocument();
+    expect(await screen.findByText("陳大文先生")).toBeInTheDocument();
     expect(screen.getByRole("table")).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "查詢單號" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "問卷名稱" })).toBeInTheDocument();
@@ -65,7 +65,7 @@ describe("EnquiryPendingListPage", () => {
         <EnquiryPendingListPage canManage loadSubmissions={loadSubmissions} />
       </MemoryRouter>,
     );
-    await screen.findByText("先生陳大文");
+    await screen.findByText("陳大文先生");
     await userEvent.type(screen.getByRole("searchbox", { name: "搜尋待報價" }), "沒有這筆");
     expect(await screen.findByText("暫無待報價查詢")).toBeInTheDocument();
     await waitFor(() => expect(loadSubmissions).toHaveBeenLastCalledWith("沒有這筆"));
@@ -85,10 +85,10 @@ describe("EnquiryPendingListPage", () => {
         />
       </MemoryRouter>,
     );
-    await screen.findByText("先生陳大文");
+    await screen.findByText("陳大文先生");
     expect(screen.getByRole("link", { name: "編輯" })).toHaveAttribute("href", "/quotes/pending/sub-1");
 
-    await userEvent.click(screen.getByRole("button", { name: "刪除 先生陳大文" }));
+    await userEvent.click(screen.getByRole("button", { name: "刪除 陳大文先生" }));
     const dialog = await screen.findByRole("alertdialog", { name: "刪除待報價" });
     await userEvent.click(within(dialog).getByRole("button", { name: "刪除" }));
     await waitFor(() => expect(deleteSubmission).toHaveBeenCalledWith("sub-1"));

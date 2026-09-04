@@ -375,7 +375,7 @@ export function EnquiryFormEditorPage() {
             />
           </label>
           <label>
-            <span>對客確認正文<small>可用 {"{稱謂}"} {"{姓名}"} {"{表單標題}"}</small></span>
+            <span>對客確認正文<small>可用 {"{姓名}"} {"{稱謂}"} {"{表單標題}"}</small></span>
             <textarea
               rows={6}
               value={form.ackEmailBody}
