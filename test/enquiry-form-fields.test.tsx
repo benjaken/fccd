@@ -3,7 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { EnquiryFormFields } from "@/components/EnquiryFormFields";
-import type { EnquiryQuestion } from "@/lib/enquiry-form";
+import { CATERING_ENQUIRY_SEED_QUESTIONS } from "@/lib/enquiry-form-seed";
+import { emptyAnswers, type EnquiryQuestion } from "@/lib/enquiry-form";
 
 const questions: EnquiryQuestion[] = [
   { fieldKey: "name", type: "input", title: "姓名", required: true },
@@ -78,5 +79,25 @@ describe("EnquiryFormFields compact editor layout", () => {
     await user.click(screen.getByRole("button", { name: "取消" }));
     expect(onChange).not.toHaveBeenCalled();
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+  });
+
+  it("draws two columns with a divider and keeps remarks and terms full width", () => {
+    render(
+      <EnquiryFormFields
+        questions={CATERING_ENQUIRY_SEED_QUESTIONS}
+        answers={emptyAnswers(CATERING_ENQUIRY_SEED_QUESTIONS)}
+        twoColumn
+        choiceSummary
+        onChange={vi.fn()}
+      />,
+    );
+
+    expect(document.querySelector(".enquiry-form-columns-pair")).not.toBeNull();
+    expect(document.querySelectorAll(".enquiry-form-column")).toHaveLength(2);
+    expect(document.getElementById("enquiry-question-remarks")).toHaveClass("is-wide");
+    expect(document.getElementById("enquiry-question-terms")).toHaveClass("is-wide");
+    expect(document.getElementById("enquiry-question-remarks")?.closest(".enquiry-form-column")).toBeNull();
+    expect(document.getElementById("enquiry-question-terms")?.closest(".enquiry-form-column")).toBeNull();
+    expect(document.getElementById("enquiry-question-name")?.closest(".enquiry-form-column")).not.toBeNull();
   });
 });

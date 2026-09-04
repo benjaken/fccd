@@ -12,6 +12,8 @@ import {
   emptyAnswers,
   enquiryPublicPath,
   enquiryQuestionElementId,
+  enquiryQuestionSpansColumns,
+  groupEnquiryQuestionsForColumns,
   mapEnquiryAnswers,
   reorderEnquiryQuestions,
   serializeEnquiryQuestions,
@@ -107,6 +109,36 @@ describe("catering enquiry seed form", () => {
     answers.terms = [String((answers.terms as string[])[0])];
     const errors = validateEnquiryAnswers(CATERING_ENQUIRY_SEED_QUESTIONS, answers);
     expect(errors.some((error) => error.fieldKey === "terms")).toBe(true);
+  });
+
+  it("keeps remarks and terms out of the two-column pair", () => {
+    expect(enquiryQuestionSpansColumns({
+      fieldKey: "remarks",
+      type: "textarea",
+      title: "特別需要或留言",
+      required: false,
+    })).toBe(true);
+    expect(enquiryQuestionSpansColumns({
+      fieldKey: "terms",
+      type: "checkbox",
+      title: "了解條款及政策",
+      required: true,
+      requireAllOptions: true,
+    })).toBe(true);
+    expect(enquiryQuestionSpansColumns({
+      fieldKey: "salutation",
+      type: "radio",
+      title: "稱謂",
+      required: true,
+    })).toBe(false);
+
+    const groups = groupEnquiryQuestionsForColumns(CATERING_ENQUIRY_SEED_QUESTIONS);
+    expect(groups).toHaveLength(3);
+    expect(groups[0]).toMatchObject({ kind: "columns" });
+    if (groups[0]?.kind !== "columns") throw new Error("expected columns group");
+    expect(groups[0].questions).toHaveLength(22);
+    expect(groups[1]).toMatchObject({ kind: "wide", question: { fieldKey: "remarks" } });
+    expect(groups[2]).toMatchObject({ kind: "wide", question: { fieldKey: "terms" } });
   });
 
   it("allows optional company and maps identity fields for conversion", () => {
