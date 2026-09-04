@@ -1326,14 +1326,22 @@ export function isBusinessSecondaryNavItemActive(
   const matchingTargets = siblingTargets.filter((target) =>
     isBusinessNavTargetActive(pathname, search, target),
   );
-  const longestMatch = matchingTargets.reduce<string | null>(
-    (longest, target) => {
-      const targetPath = target.split("?")[0];
-      const longestPath = longest?.split("?")[0] ?? "";
-      return targetPath.length > longestPath.length ? target : longest;
-    },
-    null,
-  );
+  const longestMatch = matchingTargets.reduce<string | null>((best, target) => {
+    if (!best) return target;
+
+    const [targetPath, targetQuery = ""] = target.split("?");
+    const [bestPath, bestQuery = ""] = best.split("?");
+    if (targetPath.length !== bestPath.length) {
+      return targetPath.length > bestPath.length ? target : best;
+    }
+
+    // Multiple sidebar entries can intentionally share a route and use query
+    // parameters to select different views. Prefer the target with the most
+    // matching query parameters so the generic route does not stay active.
+    const targetSpecificity = new URLSearchParams(targetQuery).size;
+    const bestSpecificity = new URLSearchParams(bestQuery).size;
+    return targetSpecificity > bestSpecificity ? target : best;
+  }, null);
 
   return longestMatch === to;
 }
