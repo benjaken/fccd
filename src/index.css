@@ -16269,6 +16269,20 @@ a.masoft-order-tag:focus-visible {
   min-height: 0;
 }
 
+.stocktake-records-layout .record-sidebar-slot {
+  align-self: stretch;
+  min-height: 0;
+}
+
+.stocktake-records-layout .record-sidebar-slot:not(.is-collapsed) {
+  align-items: stretch;
+}
+
+.stocktake-records-layout .record-sidebar-slot > aside {
+  min-height: 0;
+  max-height: 100%;
+}
+
 .stocktake-date-list {
   display: flex;
   flex-direction: column;
@@ -16300,7 +16314,10 @@ a.masoft-order-tag:focus-visible {
   gap: 4px;
   min-height: 0;
   padding: 8px;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .stocktake-date-list-options > span { padding: 10px 8px; color: var(--muted-foreground); }
