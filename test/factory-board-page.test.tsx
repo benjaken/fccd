@@ -1,3 +1,4 @@
+import { readAppStyles } from "./read-app-styles";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
@@ -168,10 +169,7 @@ describe("FactoryBoardPage", () => {
   });
 
   it("keeps three days on desktop and one day per row on mobile", () => {
-    const stylesheet = readFileSync(
-      path.resolve(process.cwd(), "src/index.css"),
-      "utf8",
-    );
+    const stylesheet = readAppStyles();
     const daysRule = stylesheet.match(/\.factory-board-days\s*\{([^}]+)\}/);
     const cardsRule = stylesheet.match(/\.factory-day-cards\s*\{([^}]+)\}/);
     const headingRule = stylesheet.match(/\.factory-day-header h2\s*\{([^}]+)\}/);

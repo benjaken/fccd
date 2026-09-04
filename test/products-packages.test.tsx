@@ -1,3 +1,4 @@
+import { readAppStyles } from "./read-app-styles";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { render, screen, waitFor, within } from "@testing-library/react";
@@ -355,10 +356,7 @@ describe("Products catalog pages", () => {
   });
 
   it("keeps table skeleton bones light and order links on primary", () => {
-    const stylesheet = readFileSync(
-      path.resolve(process.cwd(), "src/index.css"),
-      "utf8",
-    );
+    const stylesheet = readAppStyles();
     const skeletonRules = [
       ...stylesheet.matchAll(/\.table-skeleton-bone\s*\{([^}]+)\}/g),
     ]

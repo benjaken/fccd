@@ -1,3 +1,4 @@
+import { readAppStyles } from "./read-app-styles";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { render, screen, waitFor, within } from "@testing-library/react";
@@ -314,10 +315,7 @@ describe("Kitchen calendar page", () => {
     expect(screen.queryByRole("button", { name: "今日" })).toBeNull();
     expect(screen.queryByRole("heading", { name: "出餐日曆" })).toBeNull();
 
-    const stylesheet = readFileSync(
-      path.resolve(process.cwd(), "src/index.css"),
-      "utf8",
-    );
+    const stylesheet = readAppStyles();
     const factoryCopyRule = stylesheet.match(
       /\.kitchen-calendar-page\.is-factory-display \.kitchen-calendar-event-copy\s*\{([^}]+)\}/,
     );

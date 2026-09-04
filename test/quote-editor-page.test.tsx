@@ -1,3 +1,4 @@
+import { readAppStyles } from "./read-app-styles";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import type { ComponentProps } from "react";
@@ -294,7 +295,7 @@ describe("Quote editor", () => {
   });
 
   it("keeps the mobile details grid and footer controls inside the panel", () => {
-    const css = readFileSync(path.resolve(process.cwd(), "src/index.css"), "utf8");
+    const css = readAppStyles();
     const responsiveGridRule = css.match(
       /@media \(max-width: 960px\)[\s\S]*?\.quote-editor-form,[\s\S]*?\.quote-items-layout\s*\{([^}]*)\}/,
     )?.[1];
@@ -1149,7 +1150,7 @@ describe("Quote editor", () => {
   });
 
   it("keeps details print-label chips no wider than their text", () => {
-    const css = readFileSync(path.resolve(process.cwd(), "src/index.css"), "utf8");
+    const css = readAppStyles();
     const rule = css.match(
       /\.quote-lines-readonly-panel \.quote-line-label-chip\s*\{([^}]*)\}/,
     )?.[1];

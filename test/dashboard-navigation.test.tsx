@@ -1,3 +1,4 @@
+import { readAppStyles } from "./read-app-styles";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { render, screen } from "@testing-library/react";
@@ -42,7 +43,7 @@ describe("Dashboard navigation", () => {
   });
 
   it("uses a green brand primary and explicit green active nav wash", () => {
-    const stylesheet = readFileSync(path.resolve(process.cwd(), "src/index.css"), "utf8");
+    const stylesheet = readAppStyles();
     expect(stylesheet).toMatch(/--primary:\s*oklch\(0\.52 0\.14 150\)/);
     expect(stylesheet).toMatch(/--primary:\s*oklch\(0\.58 0\.13 150\)/);
     expect(stylesheet).toMatch(/--nav-active-bg:\s*oklch\([^)]*150\)/);
@@ -53,7 +54,7 @@ describe("Dashboard navigation", () => {
   });
 
   it("uses explicit green selection washes instead of primary color-mix", () => {
-    const stylesheet = readFileSync(path.resolve(process.cwd(), "src/index.css"), "utf8");
+    const stylesheet = readAppStyles();
     expect(stylesheet).toMatch(/--selection-bg:\s*oklch\([^)]*150\)/);
     expect(stylesheet).toMatch(/--selection-bg-strong:\s*oklch\([^)]*150\)/);
     expect(stylesheet).toMatch(/\.report-tabs button\.active[\s\S]*?background:\s*var\(--selection-bg-strong\)/);

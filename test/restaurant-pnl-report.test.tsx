@@ -1,3 +1,4 @@
+import { readAppStyles } from "./read-app-styles";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { readFileSync } from "node:fs";
@@ -108,7 +109,7 @@ describe("Restaurant P&L report", () => {
   });
 
   it("uses blank separator rows instead of grey profit rows", () => {
-    const stylesheet = readFileSync("src/index.css", "utf8");
+    const stylesheet = readAppStyles();
     expect(stylesheet).toContain(
       ".restaurant-pnl-table tbody tr.restaurant-pnl-separator td",
     );
