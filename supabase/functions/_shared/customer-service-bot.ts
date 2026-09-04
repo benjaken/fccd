@@ -44,6 +44,15 @@ export type CustomerServiceOrder = {
   addon_url: string | null;
 };
 
+export type CustomerServiceOrderItem = {
+  order_line_id: string;
+  item_name: string;
+  item_content: string | null;
+  quantity: number | null;
+  quantity_text: string | null;
+  remarks: string[];
+};
+
 export type CustomerServiceConversation = {
   phone_normalized: string;
   state:
@@ -96,6 +105,10 @@ export type CustomerServiceBotDeps = {
     >
   >;
   lookupOrders: (phone: string) => Promise<CustomerServiceOrder[]>;
+  lookupOrderItems: (
+    phone: string,
+    orderId: string,
+  ) => Promise<CustomerServiceOrderItem[]>;
   verifyOrderIdentity: (
     phone: string,
     orderId: string,
@@ -420,8 +433,9 @@ async function replyLookup(
           classified.usedModel,
         );
       }
+      const items = await deps.lookupOrderItems(phone, selected.order_id);
       return {
-        reply: lookupSummaryReply(selected),
+        reply: lookupSummaryReply(selected, items),
         conversation: nextConversation(conversation, {
           state: "identifying",
           selected_order_id: selected.order_id,
@@ -451,8 +465,9 @@ async function replyLookup(
         classified.usedModel,
       );
     }
+    const items = await deps.lookupOrderItems(phone, orders[0].order_id);
     return {
-      reply: lookupSummaryReply(orders[0]),
+      reply: lookupSummaryReply(orders[0], items),
       conversation: nextConversation(conversation, {
         state: "identifying",
         selected_order_id: orders[0].order_id,
@@ -556,8 +571,9 @@ async function replyOrderVerification(
       verifiedConversation,
     );
   }
+  const items = await deps.lookupOrderItems(phone, selected.order_id);
   return {
-    reply: lookupSummaryReply(selected),
+    reply: lookupSummaryReply(selected, items),
     conversation: nextConversation(verifiedConversation, { pending_request: null }),
     wroteInquiry: false,
     notified: false,

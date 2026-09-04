@@ -55,6 +55,7 @@ function deps(
 ) {
   return {
     lookupOrders: vi.fn().mockResolvedValue([]),
+    lookupOrderItems: vi.fn().mockResolvedValue([]),
     verifyOrderIdentity: vi.fn().mockResolvedValue(true),
     writeInquiry: vi.fn().mockResolvedValue({
       quote_id: "quote-1",
@@ -198,24 +199,45 @@ describe("customer-service FAQ routing priority", () => {
 describe("customer-service bot turns", () => {
   it("verifies the order email before returning a one-order summary", async () => {
     const unverified = { ...conversation, identity_verified_at: null };
+    const lookupOrderItems = vi.fn().mockResolvedValue([{
+      order_line_id: "line-1",
+      item_name: "黑椒牛柳",
+      item_content: null,
+      quantity: 2,
+      quantity_text: null,
+      remarks: ["不要辣"],
+    }]);
     const challenge = await handleCustomerServiceTurn({
       phone: conversation.phone_normalized,
       text: "查下我訂單",
       conversation: unverified,
-      deps: deps({ lookupOrders: vi.fn().mockResolvedValue([order]) }),
+      deps: deps({
+        lookupOrders: vi.fn().mockResolvedValue([order]),
+        lookupOrderItems,
+      }),
     });
     expect(challenge.reply).toMatch(/電郵|email/i);
     expect(challenge.conversation.state).toBe("verifying_order");
+    expect(lookupOrderItems).not.toHaveBeenCalled();
 
     const turn = await handleCustomerServiceTurn({
       phone: conversation.phone_normalized,
       text: "customer@example.com",
       conversation: challenge.conversation,
-      deps: deps({ lookupOrders: vi.fn().mockResolvedValue([order]) }),
+      deps: deps({
+        lookupOrders: vi.fn().mockResolvedValue([order]),
+        lookupOrderItems,
+      }),
     });
     expect(turn.reply).toContain("FCL2026090101");
+    expect(turn.reply).toContain("黑椒牛柳 × 2");
+    expect(turn.reply).toContain("不要辣");
     expect(turn.reply).toContain("self_service_search");
     expect(turn.conversation.identity_verification_method).toBe("order_email");
+    expect(lookupOrderItems).toHaveBeenCalledWith(
+      conversation.phone_normalized,
+      order.order_id,
+    );
   });
 
   it("lists multiple orders and does not leak the other order detail until picked", async () => {

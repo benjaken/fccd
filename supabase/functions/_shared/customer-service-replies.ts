@@ -43,7 +43,13 @@ export function lookupSummaryReply(order: {
   delivery_at: string | null;
   delivery_status: string | null;
   addon_url: string | null;
-}) {
+}, items: Array<{
+  item_name: string;
+  item_content: string | null;
+  quantity: number | null;
+  quantity_text: string | null;
+  remarks: string[];
+}> = []) {
   const when = order.delivery_at
     ? new Date(order.delivery_at).toLocaleString("zh-HK", {
         timeZone: "Asia/Hong_Kong",
@@ -55,9 +61,27 @@ export function lookupSummaryReply(order: {
       })
     : "待確認";
   const status = order.delivery_status?.trim() || "待更新";
-  const addon = order.addon_url
+  const visibleItems = items.slice(0, 30);
+  const itemLines = visibleItems.map((item) => {
+    const numericQuantity = Number(item.quantity);
+    const quantity = item.quantity_text?.trim() || (
+      Number.isFinite(numericQuantity)
+        ? String(Number.isInteger(numericQuantity) ? numericQuantity : Number(numericQuantity.toFixed(3)))
+        : ""
+    );
+    const content = item.item_content?.trim() && item.item_content.trim() !== item.item_name.trim()
+      ? `（${item.item_content.trim()}）`
+      : "";
+    const remarks = item.remarks.map((remark) => remark.trim()).filter(Boolean);
+    return `• ${item.item_name}${content}${quantity ? ` × ${quantity}` : ""}${remarks.length ? `｜備註：${remarks.join("；")}` : ""}`;
+  });
+  const itemDetails = itemLines.length
+    ? `\n\n訂單內容：\n${itemLines.join("\n")}${items.length > visibleItems.length ? `\n• 另外仲有 ${items.length - visibleItems.length} 項，完整內容可用自助連結查看。` : ""}`
+    : "";
+  const selfServiceLink = order.addon_url
     ? `\n如需加單或下載收據，可用呢條自助連結：${order.addon_url}`
     : "";
+  const addon = `${itemDetails}${selfServiceLink}`;
   return sanitizeOutboundReply(
     `你好，已經幫你查到呢單 ${order.order_number || "（未有單號）"}。送貨／自取時間：${when}。而家狀態：${status}。${addon}`,
   );

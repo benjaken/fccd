@@ -1026,6 +1026,21 @@ function createBotDeps(
         addon_url: string | null;
       }>;
     },
+    async lookupOrderItems(phone: string, orderId: string) {
+      const { data, error } = await admin.rpc(
+        "customer_service_lookup_order_items",
+        { p_phone: phone, p_order_id: orderId },
+      );
+      if (error) throw error;
+      return (data ?? []) as Array<{
+        order_line_id: string;
+        item_name: string;
+        item_content: string | null;
+        quantity: number | null;
+        quantity_text: string | null;
+        remarks: string[];
+      }>;
+    },
     async verifyOrderIdentity(phone: string, orderId: string, answer: string) {
       if (dryRun) return answer.trim().toLowerCase() === "test@example.com";
       const { data, error } = await admin.rpc(
