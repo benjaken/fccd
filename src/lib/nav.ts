@@ -731,6 +731,12 @@ export const secondaryNav: Record<string, NavItem[]> = {
       permissionKey: "settings.districts",
     },
     {
+      key: "customerFaq",
+      to: "/settings/customer-faq",
+      icon: MessageCircleMore,
+      permissionKey: "settings.customer_faq",
+    },
+    {
       key: "attachments",
       to: "/settings/attachments",
       icon: FileArchive,
@@ -1116,6 +1122,8 @@ export const SECTION_CHILD_KEYS: Record<string, string[]> = {
     "settings.dictionaries.edit",
     "settings.districts",
     "settings.districts.edit",
+    "settings.customer_faq",
+    "settings.customer_faq.edit",
     "settings.attachments",
   ],
 };

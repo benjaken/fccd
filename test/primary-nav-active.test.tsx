@@ -149,6 +149,7 @@ describe("Primary navigation section matching", () => {
     ["/settings/login-logs", "settings"],
     ["/settings/dictionaries", "settings"],
     ["/settings/districts", "settings"],
+    ["/settings/customer-faq", "settings"],
     ["/settings/order-lists", "settings"],
     ["/settings/attachments", "settings"],
     ["/orders/settings/order-list-tips", "orders"],
@@ -242,6 +243,7 @@ describe("Primary navigation section matching", () => {
     expect(pageAccessKey("/settings/login-logs")).toBe("settings.login_logs");
     expect(pageAccessKey("/settings/dictionaries")).toBe("settings.dictionaries");
     expect(pageAccessKey("/settings/districts")).toBe("settings.districts");
+    expect(pageAccessKey("/settings/customer-faq")).toBe("settings.customer_faq");
     expect(pageAccessKey("/settings/order-lists")).toBe("settings.order_lists");
     expect(pageAccessKey("/settings/attachments")).toBe(
       "settings.attachments",

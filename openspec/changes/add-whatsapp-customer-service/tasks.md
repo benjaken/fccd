@@ -1,9 +1,9 @@
 ## 1. 資料模型與開關
 
-- [ ] 1.1 新增 FAQ、入站事件、對話狀態（認身／待選單／蒐集槽位／已接手）及 `customer_service_bot_enabled` 控制的 migration，預設 bot 關閉，並以 SQL／migration 測試確認既有 `wati_notification_controls` 列與出站通知資料不被改寫
-- [ ] 1.2 啟用 `pg_trgm`、為 FAQ 已發布列建立相似度索引，並以查詢測試確認未發布／停用列不會被搜尋函式回傳
-- [ ] 1.3 允許報價 `source_system = 'whatsapp'`，補齊 RLS／page permission（FAQ 維護、必要時內部通知設定），並以授權測試確認 anon 不能讀 FAQ 全文或入站事件
-- [ ] 1.4 為 FAQ 維護與客服 bot 開關加入 `app_pages`／role 權限，並以 permission 測試確認無對應 page key 的角色看不到維護入口
+- [x] 1.1 新增 FAQ、入站事件、對話狀態（認身／待選單／蒐集槽位／已接手）及 `customer_service_bot_enabled` 控制的 migration，預設 bot 關閉，並以 SQL／migration 測試確認既有 `wati_notification_controls` 列與出站通知資料不被改寫
+- [x] 1.2 啟用 `pg_trgm`、為 FAQ 已發布列建立相似度索引，並以查詢測試確認未發布／停用列不會被搜尋函式回傳
+- [x] 1.3 允許報價 `source_system = 'whatsapp'`，補齊 RLS／page permission（FAQ 維護、必要時內部通知設定），並以授權測試確認 anon 不能讀 FAQ 全文或入站事件
+- [x] 1.4 為 FAQ 維護與客服 bot 開關加入 `app_pages`／role 權限，並以 permission 測試確認無對應 page key 的角色看不到維護入口
 
 ## 2. 查單與到會意見寫入
 
@@ -14,9 +14,9 @@
 
 ## 3. FAQ 搜尋與維護
 
-- [ ] 3.1 實作只讀已發布 FAQ 的搜尋 RPC（關鍵字／`pg_trgm`、相似度門檻），並以單元測試確認命中回核准答覆、低於門檻回無匹配、停用列不出現
-- [ ] 3.2 新增設定頁供獲授權同事新增、編輯、發布／停用 FAQ，並以元件測試確認無 `settings.customer_faq`（或同等）權限不能寫入
-- [ ] 3.3 按 `design.md` 決策 8，從 [FAQ Logic v1](https://docs.google.com/document/d/1s7iXNDQhBPDztqW9beyR5soXFufHLvUsrUPAsU524FE/edit?tab=t.0) 種子可發布條目，**包括運費表與滿額免地面交收**（落單步驟、自取／地面交收、天氣、付款方式不含戶口、餐具內容、即食加熱等），港式繁體禮貌書面語，並以搜尋測試確認問運費會回表上金額與地區限制，且戶口、取消退款步驟、過期優惠碼、菜式標價不會被搜到
+- [x] 3.1 實作只讀已發布 FAQ 的搜尋 RPC（關鍵字／`pg_trgm`、相似度門檻），並以單元測試確認命中回核准答覆、低於門檻回無匹配、停用列不出現
+- [x] 3.2 新增設定頁供獲授權同事新增、編輯、發布／停用 FAQ，並以元件測試確認無 `settings.customer_faq`（或同等）權限不能寫入
+- [x] 3.3 按 `design.md` 決策 8，從 [FAQ Logic v1](https://docs.google.com/document/d/1s7iXNDQhBPDztqW9beyR5soXFufHLvUsrUPAsU524FE/edit?tab=t.0) 種子可發布條目，**包括運費表與滿額免地面交收**（落單步驟、自取／地面交收、天氣、付款方式不含戶口、餐具內容、即食加熱等），港式繁體禮貌書面語，並以搜尋測試確認問運費會回表上金額與地區限制，且戶口、取消退款步驟、過期優惠碼、菜式標價不會被搜到
 
 ## 4. WATI 入站通道
 

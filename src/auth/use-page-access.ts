@@ -91,6 +91,7 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
   { prefix: "/settings/notifications", pageKey: "settings.notifications" },
   { prefix: "/settings/dictionaries", pageKey: "settings.dictionaries" },
   { prefix: "/settings/districts", pageKey: "settings.districts" },
+  { prefix: "/settings/customer-faq", pageKey: "settings.customer_faq" },
   { prefix: "/settings/attachments", pageKey: "settings.attachments" },
   { prefix: "/restaurant/settings/supplier-cost-categories", pageKey: "restaurant.settings.supplier_cost_categories" },
   { prefix: "/settings/order-lists", pageKey: "settings.order_lists" },
@@ -469,6 +470,7 @@ const PAGE_ACCESS_CHILD_KEYS: Record<string, string[]> = {
   ],
   "settings.order_lists": ["settings.order_lists.edit"],
   "settings.districts": ["settings.districts.edit"],
+  "settings.customer_faq": ["settings.customer_faq.edit"],
   workspace: [
     "workspace.factory",
     "workspace.restaurant",

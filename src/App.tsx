@@ -152,6 +152,7 @@ import { SalesPartnersPage } from "@/components/SalesPartnersPage";
 import { AttachmentsListPage } from "@/components/settings/AttachmentsListPage";
 import { CompanyEmployeesPage } from "@/components/settings/CompanyEmployeesPage";
 import { DictionariesPage } from "@/components/settings/DictionariesPage";
+import { CustomerFaqPage } from "@/components/settings/CustomerFaqPage";
 import { DeliveryDistrictsPage } from "@/components/settings/DeliveryDistrictsPage";
 import { LoginLogsListPage } from "@/components/settings/LoginLogsListPage";
 import { NotificationSettingsPage } from "@/components/settings/NotificationSettingsPage";
@@ -1536,6 +1537,16 @@ function OperationsShell() {
                 element={
                   pageAccess.canAccess("settings.districts") ? (
                     <DeliveryDistrictsPage />
+                  ) : (
+                    <SettingsAccessDenied />
+                  )
+                }
+              />
+              <Route
+                path="/settings/customer-faq"
+                element={
+                  pageAccess.canAccess("settings.customer_faq") ? (
+                    <CustomerFaqPage />
                   ) : (
                     <SettingsAccessDenied />
                   )
