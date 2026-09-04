@@ -89,7 +89,8 @@ describe("published FAQ seed allowlist", () => {
     const publishedText = seed.published.map((row) => `${row.question}\n${row.answer}`).join("\n");
     expect(publishedText).not.toContain("747-221000");
     expect(publishedText).not.toContain("HSBC2024");
-    expect(seed.unpublished.some((row) => row.answer.includes("747-221000"))).toBe(true);
+    expect(seed.unpublished.some((row) => row.answer.includes("747-221000"))).toBe(false);
+    expect(seed.unpublished.some((row) => row.question.includes("HSBC2024"))).toBe(false);
     expect(seed.unpublished.some((row) => row.question.includes("取消"))).toBe(true);
   });
 });
@@ -147,6 +148,8 @@ describe("CustomerFaqPage", () => {
     expect(layout).toBeTruthy();
     expect(layout?.querySelector(".orders-panel")).toBeTruthy();
     expect(layout?.querySelector(".customer-faq-preview")).toBeTruthy();
+    expect(screen.queryByText("模擬客人 WhatsApp 號碼")).not.toBeInTheDocument();
+    expect(document.querySelector(".customer-faq-chat-contact > img")).toHaveAttribute("width", "42");
     expect(await screen.findByText("運費幾多？")).toBeInTheDocument();
     expect(screen.getByText("已發布")).toBeInTheDocument();
 
@@ -221,10 +224,10 @@ describe("CustomerFaqPage", () => {
     );
 
     await user.click(await screen.findByRole("switch", { name: "啟用 WhatsApp 自動回覆" }));
-    await waitFor(() => expect(setBotEnabled).toHaveBeenCalledWith(true));
+    await waitFor(() => expect(setBotEnabled).toHaveBeenCalledWith(true, "19:00", "09:00"));
   });
 
-  it("keeps allowlist copy with the bot hint instead of stretching a page row", async () => {
+  it("hides the testing allowlist notice and keeps auto-reply controls above the content", async () => {
     render(
       <CustomerFaqPage
         loadFaqs={vi.fn().mockResolvedValue({ items: [faq], total: 1 })}
@@ -236,12 +239,12 @@ describe("CustomerFaqPage", () => {
       />,
     );
 
-    expect(await screen.findByText(/8613828747224/)).toBeInTheDocument();
-    const notes = document.querySelector(".customer-faq-notes");
+    await screen.findByRole("switch", { name: "啟用 WhatsApp 自動回覆" });
+    expect(screen.queryByText(/8613828747224/)).not.toBeInTheDocument();
+    const controls = document.querySelector(".customer-faq-auto-reply-controls");
     const layout = document.querySelector(".customer-faq-layout");
-    expect(notes).toBeTruthy();
+    expect(controls).toBeTruthy();
     expect(layout).toBeTruthy();
-    expect(notes?.contains(screen.getByText(/8613828747224/))).toBe(true);
-    expect(notes?.nextElementSibling).toBe(layout);
+    expect(controls?.nextElementSibling).toBe(layout);
   });
 });
