@@ -1025,9 +1025,9 @@ function createBotDeps(
       }
     },
     async cancelHandoff(phone: string) {
-      if (dryRun) return;
+      if (dryRun) return true;
       const now = new Date().toISOString();
-      const { error } = await admin
+      const { data, error } = await admin
         .from("customer_service_handoff_requests")
         .update({
           status: "resolved",
@@ -1037,8 +1037,10 @@ function createBotDeps(
         })
         .eq("environment", deploymentEnvironment())
         .eq("phone_normalized", phone)
-        .in("status", ["pending", "processing", "notified", "failed"]);
+        .in("status", ["pending", "processing", "notified", "failed"])
+        .select("id");
       if (error) throw error;
+      return Boolean(data?.length);
     },
   };
 }
