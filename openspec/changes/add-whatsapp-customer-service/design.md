@@ -1,0 +1,100 @@
+## Context
+
+見 `proposal.md` 的動機與範圍，以及 `specs/whatsapp-customer-service/spec.md` 的行為契約。
+
+現況約束：
+
+- WATI 只做出站模板（`sendTemplateMessage`／`sendTemplateMessages`）。品牌通道為 `(+852) 5396 4335`。通知有獨立 `wati_notification_controls` 殺開關、pending-review guard 與 outbox。
+- 客人查單已有 `customer_self_service_*` RPC：電話＋電郵證明後發 30 分鐘 session。電話正規化（8 位補 `852`）已在 `private.self_service_phone`。
+- 官網詢問經 `emailmeform-inquiry-sync` 寫成 `document_type = 'quote'`、`source_system = 'emailmeform'` 的待跟進報價；人數目前寫進 remarks。
+- 報表 AI 與供應商 PDF 已有 OpenAI adapter，但都是內部、有權限與證據約束。客服若用模型，必須獨立限額與殺開關。
+- 沒有 FAQ 表、沒有 `pgvector`、沒有 WATI 入站 webhook、沒有 session 自由回覆。
+
+## Goals / Non-Goals
+
+**Goals:**
+
+- 把 WATI 從「只廣播」擴成「可聽、可自由回」的水管；腦留在 FCCD。
+- 查單複用既有自助讀取邊界與電話正規化，不把 service role 查詢直接暴露給 webhook。
+- 到會意見複用報價跟進寫入形狀，只加 WhatsApp 來源與內部通知。
+- FAQ 用 Postgres 關鍵字／`pg_trgm` 搜已發布條目；模型只負責分類與抽槽，答覆正文來自資料庫。
+- 部署可先關 bot：webhook 可收、可不回。
+
+**Non-Goals:**
+
+- 不在本期引入 pgvector、embedding job 或獨立向量服務。
+- 不建 FCCD 對話工作台；真人操作留在 WATI inbox。
+- 不把 WATI 內建關鍵字／AI 流程當查單或 FAQ 來源。
+- 不改既有出站模板文案、參數或 activation 清單。
+
+## Decisions
+
+### 1. WATI 只做通道，FCCD 擁有對話狀態
+
+新增 Edge Function（建議名 `wati-customer-service`）接收 WATI 入站 webhook，驗簽後寫入站事件，再同步處理或投入短佇列。回覆用 WATI session message API（客人開口後的 24 小時窗），不用新客服模板。
+
+對話狀態（認身、待選訂單、蒐集槽位、已接手）存在 FCCD，以正規化電話為鍵。WATI inbox 仍是真人操作面；FCCD 用「同事已發 session 訊息」或內部接管標記停止 bot。
+
+**Alternative considered:** 用 WATI 內建 chatbot 接 FAQ，只把查單 webhook 回 FCCD。FAQ 與報價寫入會分裂，且 WATI 流程無法保證「無匹配不杜撰」。不採用。
+
+### 2. 意圖先規則、再小模型；工具結果才是事實
+
+入站文字先走固定規則：訂單號、改期／取消／投訴／議價／付款關鍵字、明顯政策詞。分不清才呼叫小型 LLM 做意圖與槽位抽取，輸出嚴格 JSON schema。查單摘要、FAQ 答覆、報價寫入內容 MUST 來自工具／RPC，模型不得發明狀態、政策或價錢。
+
+客服 provider 設定與報表 AI／供應商 PDF 分開：獨立 daily limit、prompt version、timeout。Bot 關閉時不呼叫模型。
+
+**Alternative considered:** 每則訊息都打大模型做 RAG。成本高，且容易在沒有 FAQ 命中時胡答。不採用。
+
+### 3. 查單用電話對正式訂單，複用自助遮罩
+
+新增 service-role-only RPC（或擴充既有自助函式的電話-only 變體），輸入正規化電話，輸出該號碼可見的正式訂單摘要列表。欄位對齊自助詳情的可公開子集：訂單號、日期、配送狀態、遮罩地址／電郵、加單連結條件。Webhook 不得直接 `select * from orders`。
+
+多單時只回訂單號與日期；選定後再取該單摘要。零正式訂單則不回查單結果。已有未轉單報價不算「對上正式訂單」。
+
+**Alternative considered:** 直接重用 `customer_self_service_login`（電話＋電郵）。WhatsApp 沒有電郵，完成率低，已否決。
+
+### 4. 到會意見寫成 WhatsApp 來源報價，再通知內部
+
+蒐集槽位：日期、人數、預算、忌口、菜式。至少日期或人數其一即可落盤，其餘可空。寫入比照 EmailMeForm：`document_type = 'quote'`、`quote_status` 未完成、`source_system = 'whatsapp'`，聯絡電話用 WhatsApp 號碼。若該電話已有未轉單報價，把新意見附加到最近一張未關閉報價的 note／timeline，避免一人多張空報價；若業務上需要新場，才另開報價。
+
+內部通知走現有內部 Email 及／或內部 WATI 收件人設定，payload 含報價號、電話、摘要。客人只在 WhatsApp 收到「同事會跟進」。
+
+**Alternative considered:** 新建獨立 inquiry 表。會讓跟進佇列分裂。第一版跟進必須出現在現有報價隊列，故不採用。
+
+### 5. FAQ 用獨立表 + trigram，不用字典、不用向量
+
+新表（名稱實作時定）至少含：`question`、`answer`、`keywords`、`category`、`locale`、`is_published`、`sort_order`、審計欄。啟用 `pg_trgm`，以 question／keywords／answer 做 `%` 相似度搜尋，取最高且超過門檻的已發布列。字典 `dict_items` 只適合短選項，不拿來存政策長文。
+
+維護頁走既有設定權限模式（新 page key，例如 `settings.customer_faq`），類似字典配置。Bot 搜尋用 SECURITY DEFINER RPC，只讀 `is_published = true`。
+
+**Alternative considered:** 第一版就上 `pgvector`。FAQ 量小、中文同義可由 keywords 補，向量是後續增量。不採用。
+
+### 6. 接管與通知隔離
+
+新增 `customer_service_bot_enabled`（或同等）控制列／環境開關，預設關閉。與 `wati_notification_controls` 並列，互不推導。
+
+同一 `provider_message_id` 入站事件冪等。客人回覆通知模板時，只產生一則 bot 回覆，不另發「已讀」模板。偵測到同事 session 訊息或內部標記 `handoff` 後，該電話對話進入 `human_owned`，直到逾時或同事結束接管。
+
+## Risks / Trade-offs
+
+- [WATI webhook 規格或簽章與現有兩套 API host 不一致] → 入站適配與出站模板適配分開；先用 develop 通道對帳驗簽與 session 回覆，再開 production bot。
+- [WhatsApp 號碼與訂單電話不一致，查不到單] → 明確走進意見蒐集，不追問電郵；同事可在跟進裡對單。
+- [同一公司多人用同一個報價電話] → 多單列出；未轉單報價附加到最近一張，可能把新場合併進舊報價。緩解：客人說「另一場」則新開報價。
+- [模型誤分類危險意圖] → 規則關鍵字優先；不確定當轉真人。寧可漏回、不可擅自改單。
+- [Bot 與真人同時回] → 同事一發言即停 bot；殺開關可瞬間靜音。
+- [FAQ 過期] → 只有已發布條目可搜；無命中轉人。維護責任在客服，不在發版。
+
+## Migration Plan
+
+1. 先套用 FAQ、入站事件、對話狀態、bot 開關的 migration；bot 預設關閉。
+2. 部署 Edge Function，在 WATI 設定 webhook 指向 develop，用測試號碼驗簽、查單、寫報價、FAQ、轉手。
+3. 種子少量已審核 FAQ；設定內部通知收件人。
+4. 生產部署後保持 bot 關閉，確認出站通知不受影響。
+5. 開啟 bot；觀察雙重回覆與誤轉手。出問題先關 bot，webhook 可留著只記不回。
+
+回滾：關 bot 開關即回到「只有真人 + 出站模板」。FAQ 表與報價來源列可保留。
+
+## Open Questions
+
+- WATI 入站 payload 與 session 發訊路徑要以目前租戶（`live-mt-server` v1 或 `WATI_API_ENDPOINT` v2）哪一套為準，需在實作開頭對帳，不影響行為規格。
+- 內部通知收件人複用 `order_first_notification_recipients` 還是另設客服跟進名單，可在實作時按現有設定頁擴充，不改客人可見行為。
