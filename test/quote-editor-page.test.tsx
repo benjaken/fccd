@@ -2267,6 +2267,50 @@ describe("Quote editor", () => {
     expect(screen.getByRole("button", { name: "Save and add products" })).toBeInTheDocument();
   });
 
+  it("saves pending enquiry answers without converting the enquiry", async () => {
+    const user = userEvent.setup();
+    fetchEnquirySubmission.mockResolvedValue({
+      id: "sub-1",
+      referenceCode: "ENQ20260903001",
+      formId: "form-1",
+      createdAt: "2026-09-03T02:00:00.000Z",
+      formTitle: "FC Enquiry",
+      customerName: "sing",
+      salutation: "",
+      companyName: "",
+      phone: "95588228",
+      email: "cfb.app02@chifung.net",
+      deliveryDateRaw: "",
+      quoteDescription: "",
+      headcount: "",
+      internalEmailStatus: "sent",
+      internalWatiStatus: "sent",
+      ackEmailStatus: "sent",
+      asanaStatus: "not_created",
+      asanaLink: "",
+      formSnapshot: [
+        { fieldKey: "name", type: "input", title: "Name", required: true, quoteField: "customer_name" },
+      ],
+      answers: { name: "sing" },
+      originalAnswers: { name: "sing" },
+      convertedQuoteId: null,
+    });
+
+    renderEditor({ canEdit: true }, "/quotes/pending/sub-1");
+
+    const enquirySection = await screen.findByRole("heading", { name: "Customer enquiry" });
+    const section = enquirySection.closest("section");
+    expect(section).not.toBeNull();
+    await user.click(within(section!).getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => expect(saveEnquirySubmissionAnswers).toHaveBeenCalledWith(
+      "sub-1",
+      expect.any(Array),
+      { name: "sing" },
+    ));
+    expect(convertEnquiryToQuote).not.toHaveBeenCalled();
+  });
+
   it("converts a pending enquiry into a quote when details are saved", async () => {
     const user = userEvent.setup();
     fetchEnquirySubmission.mockResolvedValue({

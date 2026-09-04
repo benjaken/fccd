@@ -412,6 +412,8 @@ export function QuoteEditorPage({
   const lastEditHeartbeatRef = useRef(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savingEnquiry, setSavingEnquiry] = useState(false);
+  const [enquirySaveError, setEnquirySaveError] = useState(false);
   const [confirmingAddonShopify, setConfirmingAddonShopify] = useState(false);
   const [addonShopifyError, setAddonShopifyError] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -749,6 +751,26 @@ export function QuoteEditorPage({
 
   const saveCurrentDetails = (orderId: string) =>
     isOrder ? saveDetails(orderId, draft, "order") : saveDetails(orderId, draft);
+
+  const saveCurrentEnquiryAnswers = async () => {
+    if (!pendingEnquiry || !enquirySubmission || !canEdit || savingEnquiry) return;
+    setSavingEnquiry(true);
+    setEnquirySaveError(false);
+    try {
+      await saveEnquirySubmissionAnswers(
+        enquirySubmission.id,
+        enquirySubmission.formSnapshot,
+        enquiryAnswers,
+      );
+      setEnquirySubmission((current) => current
+        ? { ...current, answers: enquiryAnswers }
+        : current);
+    } catch {
+      setEnquirySaveError(true);
+    } finally {
+      setSavingEnquiry(false);
+    }
+  };
 
   useEffect(() => {
     if (!activeQuote || selectedItem) return;
@@ -2086,6 +2108,7 @@ export function QuoteEditorPage({
           choiceSummary
           onChange={(fieldKey, value) => {
             const next = { ...enquiryAnswers, [fieldKey]: value };
+            setEnquirySaveError(false);
             setEnquiryAnswers(next);
             setDraft((current) => patchQuoteDraftFromEnquiry(current, enquirySubmission.formSnapshot, next));
           }}
@@ -2093,6 +2116,22 @@ export function QuoteEditorPage({
       ) : (
         <p>{t("quoteEditor.loading")}</p>
       )}
+      {pendingEnquiry && enquirySubmission && canEdit ? (
+        <div className="quote-editor-enquiry-actions">
+          {enquirySaveError ? (
+            <p className="quote-editor-error" role="alert">{t("quoteEditor.errors.create")}</p>
+          ) : null}
+          <Button
+            type="button"
+            variant="outline"
+            disabled={savingEnquiry || saving}
+            onClick={() => void saveCurrentEnquiryAnswers()}
+          >
+            {savingEnquiry ? <LoaderCircle className="spin" /> : <Check />}
+            {t(savingEnquiry ? "quoteEditor.saving" : "quoteEditor.saveChanges")}
+          </Button>
+        </div>
+      ) : null}
     </section>
   ) : null;
 
@@ -2604,7 +2643,7 @@ export function QuoteEditorPage({
           <footer>
             {activeQuote && isOrder ? <Button type="button" variant="outline" disabled={completing || saving} onClick={() => void saveAndSendCurrentOrderConfirmation()}>{completing ? <LoaderCircle className="spin" /> : <Mail />}{t(completing ? "quoteEditor.detailActions.sendingConfirmation" : "quoteEditor.payments.sendAndComplete")}</Button> : null}
             {activeQuote && !isOrder ? <Button type="button" variant="outline" disabled={converting || saving} onClick={() => void convertCurrentQuote()}><ShoppingCart />{converting ? t("quotes.actions.converting") : t("quotes.actions.convert")}</Button> : <span />}
-            <Button type="submit" disabled={saving || converting || (pendingEnquiry && !canEdit)}>{saving ? t("quoteEditor.saving") : activeQuote ? t("quoteEditor.saveChanges") : t("quoteEditor.saveAndContinue")}</Button>
+            <Button type="submit" disabled={saving || savingEnquiry || converting || (pendingEnquiry && !canEdit)}>{saving ? t("quoteEditor.saving") : activeQuote ? t("quoteEditor.saveChanges") : t("quoteEditor.saveAndContinue")}</Button>
           </footer>
       </form>
 
