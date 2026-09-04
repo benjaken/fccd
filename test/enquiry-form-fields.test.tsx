@@ -3,7 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { EnquiryFormFields } from "@/components/EnquiryFormFields";
-import type { EnquiryQuestion } from "@/lib/enquiry-form";
+import { CATERING_ENQUIRY_SEED_QUESTIONS } from "@/lib/enquiry-form-seed";
+import { emptyAnswers, type EnquiryQuestion } from "@/lib/enquiry-form";
 
 const questions: EnquiryQuestion[] = [
   { fieldKey: "name", type: "input", title: "姓名", required: true },
@@ -48,8 +49,12 @@ describe("EnquiryFormFields compact editor layout", () => {
     expect(screen.getByText("先生")).toBeInTheDocument();
     expect(screen.getByText("正餐 到會 (大盤)")).toBeInTheDocument();
     expect(screen.queryByRole("radio")).not.toBeInTheDocument();
+    const editSalutation = screen.getByRole("button", { name: "編輯稱謂" });
+    expect(editSalutation).not.toHaveTextContent("編輯");
+    expect(editSalutation.querySelector("svg")).not.toBeNull();
+    expect(document.querySelector(".enquiry-form-choice-value")).not.toBeNull();
 
-    await user.click(screen.getByRole("button", { name: "編輯稱謂" }));
+    await user.click(editSalutation);
     expect(screen.getByRole("radio", { name: "小姐" })).toBeInTheDocument();
     await user.click(screen.getByRole("radio", { name: "小姐" }));
     await user.click(screen.getByRole("button", { name: "確認" }));
@@ -74,5 +79,25 @@ describe("EnquiryFormFields compact editor layout", () => {
     await user.click(screen.getByRole("button", { name: "取消" }));
     expect(onChange).not.toHaveBeenCalled();
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+  });
+
+  it("puts remarks and terms in the two columns instead of full-width rows", () => {
+    render(
+      <EnquiryFormFields
+        questions={CATERING_ENQUIRY_SEED_QUESTIONS}
+        answers={emptyAnswers(CATERING_ENQUIRY_SEED_QUESTIONS)}
+        twoColumn
+        choiceSummary
+        onChange={vi.fn()}
+      />,
+    );
+
+    const columns = document.querySelectorAll(".enquiry-form-column");
+    expect(columns).toHaveLength(2);
+    expect(document.querySelector(".enquiry-form-column + .enquiry-form-column")).not.toBeNull();
+    expect(document.getElementById("enquiry-question-remarks")).not.toHaveClass("is-wide");
+    expect(document.getElementById("enquiry-question-terms")).not.toHaveClass("is-wide");
+    expect(columns[0]).toContainElement(document.getElementById("enquiry-question-remarks"));
+    expect(columns[1]).toContainElement(document.getElementById("enquiry-question-terms"));
   });
 });
