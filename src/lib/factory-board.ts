@@ -1006,7 +1006,7 @@ export async function fetchFactoryOrderJob(orderId: string): Promise<FactoryOrde
     supabase
       .from("order_lines")
       .select(
-        "id, product_id, product_name_snapshot, content_snapshot, quantity, new_quantity_text, remarks_1, remarks_2, is_printed, is_void, is_addon, bubble_modified_at, updated_at, type_sort, item_order, temporary_label_display_name, temporary_label_quantity_label, products(name), packages(name)",
+        "id, product_id, product_name_snapshot, content_snapshot, quantity, new_quantity_text, remarks_1, remarks_2, label_remarks, is_printed, is_void, is_addon, bubble_modified_at, updated_at, type_sort, item_order, temporary_label_display_name, temporary_label_quantity_label, products(name), packages(name)",
       )
       .eq("order_id", orderId)
       .order("type_sort")
@@ -1165,9 +1165,10 @@ export async function fetchFactoryOrderJob(orderId: string): Promise<FactoryOrde
               ? null
               : Number(row.quantity),
           ),
-        remarks: [row.remarks_1, row.remarks_2]
-          .map((value) => (value as string | null)?.trim() ?? "")
-          .filter((value, index, values) => value && values.indexOf(value) === index),
+        remarks: (Array.isArray(row.label_remarks) && row.label_remarks.length
+          ? row.label_remarks
+          : [row.remarks_1, row.remarks_2])
+          .map((value) => (value as string | null)?.trim() ?? ""),
         printed: !row.is_void && Boolean(row.is_printed),
         isAddon: Boolean(row.is_addon),
         isCancelled: Boolean(row.is_void),

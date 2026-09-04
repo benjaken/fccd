@@ -183,11 +183,13 @@ describe("quote line label remarks", () => {
       labels: [
         { id: "label-1", displayA: "花膠原隻雞燉湯 (8-10位)", displayB: null },
         { id: "label-2", displayA: "花膠原隻雞燉湯 (湯底)", displayB: null },
+        { id: "label-3", displayA: "花膠原隻雞燉湯 (配料)", displayB: null },
       ],
     };
     expect(quoteLineLabelRemarkRows(withLabels)).toEqual([
       { label: withLabels.labels![0], remark: "少鹽" },
       { label: withLabels.labels![1], remark: "" },
+      { label: withLabels.labels![2], remark: "" },
     ]);
 
     const withoutLabels: QuoteLine = {
