@@ -39,6 +39,170 @@ final result: passed
 
 ---
 
+# Design QA - Customer FAQ stable first-load height
+
+- Source visual truth: `C:\Users\ADMINI~1\AppData\Local\Temp\codex-clipboard-2dc9fd14-c9ec-4e67-b7f1-3ff1d79f62f0.png`
+- Browser-rendered implementation screenshots: `D:\work\FCCD\.design-qa\customer-faq-height-reference-size.png` and `D:\work\FCCD\.design-qa\customer-faq-height-page6.png`
+- Source and implementation pixels: 1497 x 1270 for the primary comparison; page-six verification used 1556 x 1270.
+- CSS viewport: 1497 x 1270 and 1556 x 1270 at device scale factor 1.
+- State: Traditional Chinese FAQ settings page, both the populated first page and the short three-row final page.
+
+## Full-view comparison evidence
+
+The revised first page matches the compact source composition: the auto-reply toolbar remains 70 px tall and the FAQ/chat region starts at y=218. On the three-row final page the same geometry is retained instead of distributing unused height into the toolbar.
+
+## Focused region comparison evidence
+
+Browser geometry measured `grid-template-rows` as `70px 1032px` on both page 1 and page 6 at 1556 x 1270. The toolbar and lower layout therefore remain stable regardless of result count. A separate crop was unnecessary because the affected toolbar and both panel boundaries are fully visible in the full-page captures.
+
+## Required fidelity surfaces
+
+- Fonts and typography: unchanged from the existing FCCD interface.
+- Spacing and layout rhythm: the toolbar uses its content height while the FAQ/chat layout owns the remaining viewport height.
+- Colors and visual tokens: unchanged.
+- Image quality and asset fidelity: existing logo, icons, and chat background remain unchanged and crisp.
+- Copy and content: all labels, FAQ rows, status badges, and chat copy remain unchanged.
+
+## Findings
+
+No actionable P0, P1, or P2 issue remains. At narrower desktop widths the toolbar may wrap naturally to fit its controls; this is intentional responsive behavior rather than content-dependent stretching.
+
+## Primary interactions and console
+
+- Navigated from page 1 through page 6 and confirmed identical vertical geometry.
+- Reloaded the route and confirmed the final layout returns to the same dimensions.
+- Browser console errors: none.
+
+## Comparison history
+
+- Pass 1: identified that `auto auto` grid tracks stretched when the lower result set was short.
+- Fix: changed the tracks to `max-content minmax(0, 1fr)` and constrained the desktop page to the available viewport.
+- Pass 2: matched the compact source at 1497 x 1270 and confirmed page 1/page 6 both resolve to 70 px + 1032 px at 1556 x 1270.
+
+final result: passed
+
+---
+
+# Design QA - Customer FAQ mobile chat side panel
+
+- Source visual truth: `C:\Users\ADMINI~1\AppData\Local\Temp\codex-clipboard-8167f6ad-4259-418f-9575-eeeaf70cfade.png`
+- Browser-rendered implementation screenshots: `D:\work\FCCD\.design-qa\customer-faq-mobile-chat-trigger.png` and `D:\work\FCCD\.design-qa\customer-faq-mobile-chat-panel.png`
+- Source pixels: 430 x 932. Implementation pixels and CSS viewport: 430 x 932 at device scale factor 1.
+- State: Traditional Chinese mobile FAQ settings page, closed trigger state and open WhatsApp-style tester state.
+
+## Full-view comparison evidence
+
+The inline tester that previously extended below the clipped mobile viewport is removed from the page flow. A compact tester button now sits with the other customer-service controls and opens the conversation as a full-height panel from the right.
+
+## Focused region comparison evidence
+
+In the open state the panel measured 430 x 932, the composer measured 62 px high with its bottom at 932 px, and the message region retained 810 px of independently scrollable height. The input received focus when opened.
+
+## Required fidelity surfaces
+
+- Fonts and typography: existing FCCD and conversation typography remain unchanged.
+- Spacing and layout rhythm: the trigger follows the existing outlined action style; the open panel keeps the contact header at the top and composer at the viewport bottom.
+- Colors and visual tokens: existing green controls, white panel chrome, and warm chat background remain unchanged.
+- Image quality and asset fidelity: the FC Catering logo, Lucide controls, and existing chat pattern remain crisp.
+- Copy and content: the existing tester title, reset action, empty message, and composer labels are preserved.
+
+## Findings
+
+No actionable P0, P1, or P2 issue remains. The mobile tester intentionally uses the full screen so the software keyboard has maximum usable conversation space.
+
+## Primary interactions and console
+
+- Opened the tester from the new mobile button; input automatically focused.
+- Entered and sent a test message; the input cleared, two transcript messages rendered, and the transcript remained at the bottom.
+- Closed the panel from its header and confirmed the underlying FAQ page returned.
+- Browser console errors: none.
+
+## Comparison history
+
+- Pass 1: the inline 732 px tester placed its composer at y=970-1032 inside a 932 px viewport while the main content clipped overflow.
+- Fix: removed the tester from mobile document flow and presented it as a fixed, full-height side panel with a dedicated trigger and close action.
+- Pass 2: composer is fully visible at y=870-932 and all tested controls work.
+
+## Verification
+
+- `npx vitest run test/customer-faq-settings.test.tsx`: 6 tests passed.
+
+final result: passed
+
+---
+
+# Design QA - AI 成效報告與學習 80% 分析側欄
+
+- Source visual truth: `C:\Users\ADMINI~1\AppData\Local\Temp\codex-clipboard-75fdb885-44b1-460d-a431-18bbd6b4a6b2.png`
+- Browser-rendered implementation screenshot: `D:\work\FCCD\customer-service-insights-80-percent.png`
+- Combined comparison evidence: `D:\work\FCCD\customer-service-insights-comparison.png`
+- Source pixels: 1408 x 1270. Implementation pixels: 1408 x 1270.
+- CSS viewport: 1408 x 1270 at device scale factor 1.
+- State: Traditional Chinese FAQ settings page with the AI effectiveness and learning panel open, zero handoffs, one daily report, zero AI suggestions, and two review turns.
+
+## Full-view comparison evidence
+
+The reference used a narrow 440 px text-heavy drawer. The implementation intentionally expands the analysis workspace to 1126.39 px in a 1408 px viewport, exactly 80%, while retaining the right-side drawer interaction. The information is grouped into a warning-accented handoff summary, report-date toolbar, green KPI card, blue AI suggestions card, purple two-column review queue, and a lower model-lab section.
+
+## Focused region comparison evidence
+
+The full-view comparison keeps both source and implementation at identical pixel dimensions, so the sidebar proportion, KPI density, title hierarchy, card spacing, controls, and review actions are all readable without a separate crop. Browser geometry confirmed the panel spans x=281.61 through x=1408 and the mobile fallback spans the full 700 px viewport in one content column.
+
+## Required fidelity surfaces
+
+- Fonts and typography: the existing FCCD CJK font stack is retained; section titles use stronger weight, explanatory copy is muted, and KPI figures are enlarged and colored green for fast scanning.
+- Spacing and layout rhythm: the desktop panel is 80% wide, uses a 12-column dashboard grid, 18 px section gaps, compact toolbar spacing, and two-column review cards. At 1100 px sections stack; at 720 px the panel becomes full width.
+- Colors and visual tokens: the existing white, muted green, border, and primary tokens remain, with restrained amber, green, blue, purple, and slate accents identifying functional sections.
+- Image quality and asset fidelity: the existing FC Catering logo and repository icon system remain unchanged and crisp; no new image assets or placeholder graphics were introduced.
+- Copy and content: all existing report dates, metrics, handoff guidance, AI suggestions, review questions, answers, feedback controls, and model-lab content are preserved.
+
+## Findings
+
+No actionable P0, P1, or P2 issue remains. The empty AI-suggestion region intentionally stays compact rather than stretching to fill the KPI card height; this is an acceptable P3 density choice that keeps empty states visually quiet.
+
+## Primary interactions and console
+
+- Opened the AI effectiveness panel from the FAQ page, closed it, and reopened it successfully.
+- Confirmed the report-date control remains visible and the existing actions remain available.
+- Verified the desktop panel width is exactly 80% and the 700 px responsive state is full width with one content column.
+- Browser console errors and warnings: none.
+
+## Comparison history
+
+- Pass 1: widened the original narrow drawer and reorganized the same content into dashboard sections with visual accents, KPI hierarchy, and side-by-side review cards. The equal-size comparison found no remaining P0/P1/P2 issue.
+
+## Verification
+
+- `npx tsc -b --pretty false`: passed.
+- Browser geometry, responsive fallback, open/close interaction, and console checks: passed.
+
+final result: passed
+
+---
+
+# Design QA - Customer-service logic panel stacked layout
+
+- Source visual truth: `C:\Users\ADMINI~1\AppData\Local\Temp\codex-clipboard-5135e2ea-7563-4e42-8031-0d874d1e6b67.png`
+- Browser-rendered state: Traditional Chinese FAQ settings page with the intelligent reply logic panel open.
+- Target change: replace the two-column editor with a vertical stack and make the desktop side panel 50% of the viewport.
+
+## Comparison evidence
+
+The rendered panel measured 640 px in a 1280 px viewport, exactly 50%. The logic editor resolved to one 588 px grid column. Its two sections render sequentially, with the intent section beginning at y=106 and the reply section beginning at y=813. Existing fields, switches, footer actions, colors, typography, borders, and responsive full-width mobile fallback remain unchanged.
+
+## Findings
+
+No actionable P0, P1, or P2 differences remain for the requested layout change. Browser console errors and warnings: none.
+
+## Verification
+
+- `npm run lint -- --pretty false`: passed.
+- Browser geometry: panel ratio `0.5`; editor grid columns `588px`; two vertically separated sections.
+
+final result: passed
+
+---
+
 # Design QA - All sales and costs monthly-by-type comparison
 
 - Source visual truth: `C:\Users\ADMINI~1\AppData\Local\Temp\codex-clipboard-5a6e3a04-ce4d-43c6-a424-f07290c97927.png`
@@ -609,5 +773,59 @@ No actionable P0, P1, or P2 issues remain. The page-level scrollbar is removed f
 - `npm run test:target -- test/kitchen-sales-cost-report-page.test.tsx test/kitchen-channel-sales-report-page.test.tsx`: 2 test files and 2 tests passed.
 - `npm run lint`: passed.
 - `npx vite build`: passed.
+
+final result: passed
+
+---
+
+# Customer FAQ Mobile Chat Design QA
+
+## Evidence
+
+- Source visual truth: `C:\Users\ADMINI~1\AppData\Local\Temp\codex-clipboard-07e8f1e4-55c7-460a-9da7-09de0ef9e0f6.png`
+- Implementation screenshot: `D:\work\FCCD\customer-faq-mobile-populated-final.png`
+- Source pixels: 410 x 1009
+- Implementation pixels: 425 x 1017
+- CSS viewport: 425 x 1017
+- Device scale factor: 1
+- State: authenticated mobile FAQ page with a populated multi-turn conversation scrolled to its newest message
+
+## Full View Comparison
+
+The implementation preserves the reference hierarchy: compact Food Channels contact header, reset icon at the upper right, simulated phone control, warm patterned conversation canvas, white inbound bubbles, green outbound bubbles, delivery checks, timestamps, and a rounded composer fixed below the conversation viewport. The surrounding FCCD navigation remains visible because it belongs to the existing application shell rather than the chat component.
+
+## Focused Region Comparison
+
+A separate focused crop was not needed because the chat component, message typography, metadata, scrollbar, header controls, and composer are all legible in the full mobile capture.
+
+## Fidelity Review
+
+- Fonts and typography: existing application font stack remains readable and closely matches the compact mobile reference hierarchy.
+- Spacing and layout rhythm: message gaps, bubble padding, header height, phone row, and composer proportions align with the reference. Long conversations remain inside the chat viewport.
+- Colors and visual tokens: warm ivory canvas, white incoming bubbles, pale green outgoing bubbles, muted metadata, blue checks, and green send action match the intended chat language.
+- Image quality and assets: the project FC Catering logo is used for the contact avatar. The generated catering doodle background is sharp, low contrast, and contains no copied WhatsApp trademark.
+- Copy and content: existing testing labels and AI or rule evidence remain visible without disrupting the conversational presentation.
+
+## Comparison History
+
+1. Initial mobile capture showed the header moving out of view when the outer page followed the focused composer. The mobile panel height was reduced to keep its header, phone control, conversation, and composer inside the available application viewport.
+2. Final populated capture shows the contact header and phone control, keeps the composer visible, and reports `atBottom: true` with a 1,555 px conversation inside a 649 px scroll viewport.
+
+## Findings
+
+No actionable P0, P1, or P2 visual differences remain for the requested chat component. The FCCD application header and explanatory note above the panel are intentional existing-shell content.
+
+## Primary Interactions Tested
+
+- Reset control remains available from the upper-right refresh icon with the accessible name and tooltip `重新開始對話`.
+- Message input and send action work at mobile width.
+- Emoji insertion works.
+- Repeated replies grow the transcript inside the chat panel.
+- New customer messages, waiting state, and completed replies automatically scroll the conversation to the bottom.
+- Browser console error check returned no errors.
+
+## Follow Up Polish
+
+The current generated background is intentionally lighter and more catering-specific than WhatsApp's proprietary pattern.
 
 final result: passed
