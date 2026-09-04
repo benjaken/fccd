@@ -110,6 +110,7 @@ Deno.serve(async (request) => {
       { data: faqRows, error: faqError },
       { data: intentRows, error: intentError },
       { data: permissionRows, error: permissionError },
+      { data: testCaseRows, error: testCaseError },
     ] = await Promise.all([
       admin.from("customer_service_turn_feedback")
         .select("verdict,corrected_answer,customer_service_turns!inner(question,answer,intent,route,state_before,environment)")
@@ -125,11 +126,16 @@ Deno.serve(async (request) => {
         .eq("enabled", true).order("priority"),
       admin.from("customer_service_tool_permissions")
         .select("intent_key,tool_key").eq("allowed", true),
+      admin.from("customer_service_test_cases")
+        .select("messages,expected_intent,expected_dialog_action,expected_answer")
+        .eq("status", "active").order("created_at", { ascending: false })
+        .limit(sampleLimit),
     ]);
     if (rowsError) throw rowsError;
     if (faqError) throw faqError;
     if (intentError) throw intentError;
     if (permissionError) throw permissionError;
+    if (testCaseError) throw testCaseError;
     const faqs = (faqRows ?? []) as CustomerServiceFaqKnowledge[];
     const toolsByIntent = new Map<string, string[]>();
     for (const row of (permissionRows ?? []) as Array<{ intent_key: string; tool_key: string }>) {
@@ -147,7 +153,7 @@ Deno.serve(async (request) => {
       confidenceThreshold: Number(row.confidence_threshold),
       toolKeys: toolsByIntent.get(row.intent_key) ?? [],
     }));
-    const samples = (rows ?? []).map((row: {
+    const reviewedSamples = (rows ?? []).map((row: {
       verdict: string;
       corrected_answer: string | null;
       customer_service_turns: unknown;
@@ -162,14 +168,40 @@ Deno.serve(async (request) => {
         intent: turn.intent,
         tool: turn.route?.split(",")[0] || null,
         state: turn.state_before || "identifying",
+        dialogAction: null as string | null,
+        recentMessages: [] as Array<{ role: "customer" | "assistant" | "human"; text: string }>,
       };
-    }).filter((sample: { question: string; reference: string }) => sample.question && sample.reference);
+    }).filter((sample: { question: string }) => sample.question);
+    const testCaseSamples = ((testCaseRows ?? []) as Array<{
+      messages: unknown;
+      expected_intent: string | null;
+      expected_dialog_action: string | null;
+      expected_answer: string | null;
+    }>).map((row) => {
+      const messages = Array.isArray(row.messages)
+        ? row.messages.filter((item): item is { role: "customer" | "assistant" | "human"; text: string } =>
+            Boolean(item) && typeof item === "object" &&
+            typeof (item as Record<string, unknown>).text === "string")
+        : [];
+      const lastCustomerIndex = messages.map((item) => item.role).lastIndexOf("customer");
+      return {
+        question: lastCustomerIndex >= 0 ? messages[lastCustomerIndex].text : "",
+        reference: row.expected_answer || "",
+        intent: row.expected_intent,
+        tool: null,
+        state: "identifying",
+        dialogAction: row.expected_dialog_action,
+        recentMessages: lastCustomerIndex > 0 ? messages.slice(0, lastCustomerIndex) : [],
+      };
+    }).filter((sample) => sample.question);
+    const samples = (testCaseSamples.length ? testCaseSamples : reviewedSamples).slice(0, sampleLimit);
     if (!samples.length) throw new Error("no_reviewed_samples");
 
     const baseConfig = customerServiceAiConfig();
     const results = [] as Array<{
       answered: boolean; score: number; passed: boolean;
       intentMatched: boolean | null; toolMatched: boolean | null;
+      dialogMatched: boolean | null;
     }>;
     for (const sample of samples) {
       const evaluationConfig = {
@@ -189,19 +221,27 @@ Deno.serve(async (request) => {
         escalationConfidence: Number(candidate.escalation_confidence ?? 0.72),
       };
       const [answer, classification] = await Promise.all([
-        answerCustomerServiceFaqWithTieredAi({ question: sample.question, faqs, tiers }),
+        sample.reference
+          ? answerCustomerServiceFaqWithTieredAi({ question: sample.question, faqs, tiers })
+          : Promise.resolve(null),
         classifyCustomerServiceWithTieredAi({
           message: sample.question,
           conversationState: sample.state,
+          recentMessages: sample.recentMessages,
           intents,
           tiers,
         }),
       ]);
       const score = answer ? similarity(answer.answer, sample.reference) : 0;
+      const intentMatched = sample.intent ? classification?.intentKey === sample.intent : null;
+      const toolMatched = sample.tool ? classification?.toolKey === sample.tool : null;
+      const dialogMatched = sample.dialogAction
+        ? classification?.dialogAction === sample.dialogAction
+        : null;
       results.push({
-        answered: Boolean(answer), score, passed: score >= 0.25,
-        intentMatched: sample.intent ? classification?.intentKey === sample.intent : null,
-        toolMatched: sample.tool ? classification?.toolKey === sample.tool : null,
+        answered: Boolean(answer), score,
+        passed: (!sample.reference || score >= 0.25) && intentMatched !== false && dialogMatched !== false,
+        intentMatched, toolMatched, dialogMatched,
       });
     }
     const answered = results.filter((item) => item.answered).length;
@@ -209,6 +249,7 @@ Deno.serve(async (request) => {
     const averageScore = results.reduce((sum, item) => sum + item.score, 0) / results.length;
     const intentResults = results.filter((item) => item.intentMatched !== null);
     const toolResults = results.filter((item) => item.toolMatched !== null);
+    const dialogResults = results.filter((item) => item.dialogMatched !== null);
     const metrics = {
       reviewed_samples: results.length,
       answered,
@@ -222,13 +263,37 @@ Deno.serve(async (request) => {
       tool_accuracy: toolResults.length
         ? toolResults.filter((item) => item.toolMatched).length / toolResults.length
         : null,
+      dialog_action_accuracy: dialogResults.length
+        ? dialogResults.filter((item) => item.dialogMatched).length / dialogResults.length
+        : null,
       threshold: 0.25,
+    };
+    const { data: baselineRun } = baseline?.id
+      ? await admin.from("customer_service_evaluation_runs")
+          .select("metrics")
+          .eq("candidate_config_id", baseline.id)
+          .eq("status", "complete")
+          .order("completed_at", { ascending: false })
+          .limit(1).maybeSingle()
+      : { data: null };
+    const baselineMetrics = (baselineRun?.metrics ?? {}) as Record<string, number>;
+    const comparison = {
+      baseline_config_id: baseline?.id || null,
+      agreement_rate_delta: typeof baselineMetrics.agreement_rate === "number"
+        ? metrics.agreement_rate - baselineMetrics.agreement_rate
+        : null,
+      intent_accuracy_delta: typeof baselineMetrics.intent_accuracy === "number" && typeof metrics.intent_accuracy === "number"
+        ? metrics.intent_accuracy - baselineMetrics.intent_accuracy
+        : null,
+      dialog_action_accuracy_delta: typeof baselineMetrics.dialog_action_accuracy === "number" && typeof metrics.dialog_action_accuracy === "number"
+        ? metrics.dialog_action_accuracy - baselineMetrics.dialog_action_accuracy
+        : null,
     };
     await admin.from("customer_service_evaluation_runs").update({
       status: "complete", sample_size: results.length, metrics,
-      comparison: { baseline_config_id: baseline?.id || null }, completed_at: new Date().toISOString(),
+      comparison, completed_at: new Date().toISOString(),
     }).eq("id", run.id);
-    return json({ ok: true, run_id: run.id, metrics });
+    return json({ ok: true, run_id: run.id, metrics, comparison });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     await admin.from("customer_service_evaluation_runs").update({

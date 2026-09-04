@@ -111,6 +111,10 @@ describe("customer-service grounded AI", () => {
       message: "我想改為9月11日送貨",
       conversationState: "identifying",
       pendingRequest: "修改 B-1555 送貨日期",
+      recentMessages: [
+        { role: "customer", text: "我的電郵 test@example.com，地址：九龍某道 18 號" },
+        { role: "assistant", text: "已選擇訂單 B-1555" },
+      ],
       intents: [{
         intentKey: "handoff_order",
         displayName: "修改訂單",
@@ -133,6 +137,8 @@ describe("customer-service grounded AI", () => {
     expect(JSON.parse(requestBody.messages[1].content)).toMatchObject({
       currentTask: "修改 B-1555 送貨日期",
     });
+    expect(requestBody.messages[1].content).not.toContain("test@example.com");
+    expect(requestBody.messages[1].content).toContain("[電郵已隱藏]");
     expect(requestBody.messages[0].content).toContain("dialogAction");
   });
 

@@ -455,8 +455,58 @@ describe("customer-service bot turns", () => {
     });
 
     expect(turn.reply).toContain("HK$50");
-    expect(turn.conversation.state).toBe("identifying");
+    expect(turn.conversation.state).toBe("awaiting_human");
     expect(queueHandoff).not.toHaveBeenCalled();
+  });
+
+  it("asks one clarification question without calling a business tool", async () => {
+    const lookupOrders = vi.fn().mockResolvedValue([order]);
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "都係嗰個啦",
+      conversation,
+      deps: deps({ lookupOrders }),
+      classify: vi.fn().mockResolvedValue({
+        intent: "handoff_order",
+        slots: classifyCustomerServiceMessage("").slots,
+        orderNumber: "",
+        usedModel: true,
+        dialogAction: "new_request",
+        needsClarification: true,
+        clarificationQuestion: "你係想修改訂單，定係取消之前嘅修改申請？",
+      }),
+    });
+
+    expect(turn.reply).toContain("修改訂單");
+    expect(turn.conversation.state).toBe("identifying");
+    expect(lookupOrders).not.toHaveBeenCalled();
+  });
+
+  it("resumes a suspended order workflow after completing a catering inquiry", async () => {
+    const queueHandoff = vi.fn().mockResolvedValue(undefined);
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "9月20日 30人到會",
+      conversation: {
+        ...conversation,
+        state: "awaiting_human",
+        active_goal: "order_change",
+        selected_order_id: order.order_id,
+      },
+      deps: deps({ queueHandoff }),
+      classify: vi.fn().mockResolvedValue({
+        intent: "collect_inquiry",
+        slots: classifyCustomerServiceMessage("9月20日 30人到會").slots,
+        orderNumber: "",
+        usedModel: true,
+        dialogAction: "switch_task",
+      }),
+    });
+
+    expect(turn.wroteInquiry).toBe(true);
+    expect(turn.reply).toContain("返回上一個未完成事項");
+    expect(turn.conversation.state).toBe("awaiting_human");
+    expect(turn.conversation.active_goal).toBe("order_change");
   });
 
   it.each([

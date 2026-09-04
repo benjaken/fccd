@@ -13,6 +13,7 @@ export type CustomerServicePilotAction =
   | "continue_catering"
   | "start_order_change"
   | "start_catering"
+  | "resume_previous"
   | "route_other";
 
 type PilotState = {
@@ -43,6 +44,9 @@ function routePilot(state: PilotState): Partial<PilotState> {
   if (current && state.dialogAction === "cancel_current") {
     return { action: "cancel_current" };
   }
+  if (state.dialogAction === "resume_previous") {
+    return { action: "resume_previous" };
+  }
   if (target === "order_change") {
     return {
       action: current === "order_change"
@@ -57,7 +61,14 @@ function routePilot(state: PilotState): Partial<PilotState> {
         : "start_catering",
     };
   }
-  if (current && state.dialogAction === "continue_current") {
+  if (current && [
+    "continue_current",
+    "add_information",
+    "select_option",
+    "confirm",
+    "deny",
+    "correct_previous",
+  ].includes(state.dialogAction)) {
     return {
       action: current === "order_change"
         ? "continue_order_change"

@@ -61,6 +61,7 @@ import {
   updateCustomerFaq,
   updateCustomerServiceIntent,
   updateCustomerServiceReplyTemplate,
+  updateCustomerServiceWorkflowPolicy,
   type CustomerFaq,
   type CustomerFaqWriteInput,
   type CustomerServicePreviewConversation,
@@ -76,6 +77,7 @@ import {
   type CustomerServiceLearningSuggestion,
   type CustomerServiceReviewTurn,
   type CustomerServiceReplyTemplate,
+  type CustomerServiceWorkflowPolicy,
 } from "@/lib/customer-faq";
 
 function previousHongKongDate() {
@@ -120,6 +122,7 @@ export function CustomerFaqPage({
   loadLogic = fetchCustomerServiceLogic,
   saveIntent = updateCustomerServiceIntent,
   saveReplyTemplate = updateCustomerServiceReplyTemplate,
+  saveWorkflowPolicy = updateCustomerServiceWorkflowPolicy,
 }: {
   loadFaqs?: typeof fetchCustomerFaqs;
   createFaq?: typeof createCustomerFaq;
@@ -134,6 +137,7 @@ export function CustomerFaqPage({
   loadLogic?: typeof fetchCustomerServiceLogic;
   saveIntent?: typeof updateCustomerServiceIntent;
   saveReplyTemplate?: typeof updateCustomerServiceReplyTemplate;
+  saveWorkflowPolicy?: typeof updateCustomerServiceWorkflowPolicy;
 }) {
   const { t } = useTranslation();
   const access = useCurrentPageAccess();
@@ -173,6 +177,9 @@ export function CustomerFaqPage({
   const [logic, setLogic] = useState<CustomerServiceLogic | null>(null);
   const [selectedIntent, setSelectedIntent] = useState("");
   const [selectedReply, setSelectedReply] = useState("");
+  const [selectedWorkflow, setSelectedWorkflow] = useState<
+    CustomerServiceWorkflowPolicy["goalKey"]
+  >("order_change");
   const [logicLoading, setLogicLoading] = useState(false);
   const [logicSaving, setLogicSaving] = useState(false);
   const [logicError, setLogicError] = useState("");
@@ -421,6 +428,9 @@ export function CustomerFaqPage({
       setSelectedReply(
         (current) => current || next.replyTemplates[0]?.templateKey || "",
       );
+      setSelectedWorkflow(
+        (current) => current || next.workflowPolicies[0]?.goalKey || "order_change",
+      );
     } catch {
       setLogicError(t("settings.customerFaq.logicLoadError"));
     } finally {
@@ -458,6 +468,19 @@ export function CustomerFaqPage({
     );
   };
 
+  const patchWorkflow = (patch: Partial<CustomerServiceWorkflowPolicy>) => {
+    setLogic((current) => current
+      ? {
+          ...current,
+          workflowPolicies: current.workflowPolicies.map((workflow) =>
+            workflow.goalKey === selectedWorkflow
+              ? { ...workflow, ...patch }
+              : workflow,
+          ),
+        }
+      : current);
+  };
+
   const saveLogic = async () => {
     if (!logic || logicSaving) return;
     const intent = logic.intents.find(
@@ -466,9 +489,13 @@ export function CustomerFaqPage({
     const reply = logic.replyTemplates.find(
       (item) => item.templateKey === selectedReply,
     );
+    const workflow = logic.workflowPolicies.find(
+      (item) => item.goalKey === selectedWorkflow,
+    );
     if (
       !intent ||
       !reply ||
+      !workflow ||
       !intent.description.trim() ||
       !reply.content.trim()
     ) {
@@ -478,7 +505,11 @@ export function CustomerFaqPage({
     setLogicSaving(true);
     setLogicError("");
     try {
-      await Promise.all([saveIntent(intent), saveReplyTemplate(reply)]);
+      await Promise.all([
+        saveIntent(intent),
+        saveReplyTemplate(reply),
+        saveWorkflowPolicy(workflow),
+      ]);
     } catch {
       setLogicError(t("settings.customerFaq.logicSaveError"));
     } finally {
@@ -683,6 +714,9 @@ export function CustomerFaqPage({
   );
   const replyDraft = logic?.replyTemplates.find(
     (item) => item.templateKey === selectedReply,
+  );
+  const workflowDraft = logic?.workflowPolicies.find(
+    (item) => item.goalKey === selectedWorkflow,
   );
 
   return (
@@ -1691,7 +1725,11 @@ export function CustomerFaqPage({
                     </p>
                     <small>
                       {latestRun
-                        ? `評測：${latestRun.status} · 樣本 ${latestRun.sampleSize} · 一致率 ${formatRate(latestRun.metrics.agreement_rate)}`
+                        ? `評測：${latestRun.status} · 樣本 ${latestRun.sampleSize} · 一致率 ${formatRate(latestRun.metrics.agreement_rate)} · 意圖 ${formatRate(latestRun.metrics.intent_accuracy)} · 對話動作 ${formatRate(latestRun.metrics.dialog_action_accuracy)}${
+                            typeof latestRun.comparison.agreement_rate_delta === "number"
+                              ? ` · 較基準 ${latestRun.comparison.agreement_rate_delta >= 0 ? "+" : ""}${Math.round(latestRun.comparison.agreement_rate_delta * 100)}%`
+                              : ""
+                          }`
                         : "尚未評測"}
                     </small>
                     {canEdit ? (
@@ -1773,7 +1811,7 @@ export function CustomerFaqPage({
             {logicError}
           </p>
         ) : null}
-        {intentDraft && replyDraft ? (
+        {intentDraft && replyDraft && workflowDraft ? (
           <div className="customer-service-logic-editor">
             <section>
               <h3>{t("settings.customerFaq.logicIntentTitle")}</h3>
@@ -1835,6 +1873,67 @@ export function CustomerFaqPage({
                 <Switch
                   checked={intentDraft.enabled}
                   onCheckedChange={(enabled) => patchIntent({ enabled })}
+                />
+              </div>
+            </section>
+            <section>
+              <h3>流程策略</h3>
+              <label className="ingredients-field">
+                <span>流程</span>
+                <FilterableSelect
+                  value={selectedWorkflow}
+                  onChange={(event) =>
+                    setSelectedWorkflow(event.target.value as CustomerServiceWorkflowPolicy["goalKey"])
+                  }
+                >
+                  {logic?.workflowPolicies.map((workflow) => (
+                    <option key={workflow.goalKey} value={workflow.goalKey}>
+                      {workflow.displayName}
+                    </option>
+                  ))}
+                </FilterableSelect>
+              </label>
+              <label className="ingredients-field">
+                <span>流程指引</span>
+                <textarea
+                  rows={5}
+                  value={workflowDraft.instructions}
+                  onChange={(event) => patchWorkflow({ instructions: event.target.value })}
+                />
+              </label>
+              <label className="ingredients-field">
+                <span>帶入最近對話數量</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="12"
+                  value={workflowDraft.contextWindow}
+                  onChange={(event) => patchWorkflow({ contextWindow: Number(event.target.value) })}
+                />
+              </label>
+              <label className="ingredients-field">
+                <span>低於此信心時追問</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={workflowDraft.clarificationThreshold}
+                  onChange={(event) => patchWorkflow({ clarificationThreshold: Number(event.target.value) })}
+                />
+              </label>
+              <div className="dictionary-active-field">
+                <span>完成後恢復上一個任務</span>
+                <Switch
+                  checked={workflowDraft.autoResume}
+                  onCheckedChange={(autoResume) => patchWorkflow({ autoResume })}
+                />
+              </div>
+              <div className="dictionary-active-field">
+                <span>啟用流程</span>
+                <Switch
+                  checked={workflowDraft.enabled}
+                  onCheckedChange={(enabled) => patchWorkflow({ enabled })}
                 />
               </div>
             </section>

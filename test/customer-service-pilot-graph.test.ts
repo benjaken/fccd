@@ -51,4 +51,12 @@ describe("customer-service LangGraph pilot", () => {
       pendingRequest: "handoff:改送貨日期",
     })).toBe("order_change");
   });
+
+  it("recognizes explicit requests to resume a suspended task", async () => {
+    await expect(decideCustomerServicePilotAction({
+      activeGoal: null,
+      conversationState: "identifying",
+      classified: classified("search_faq", "resume_previous"),
+    })).resolves.toBe("resume_previous");
+  });
 });

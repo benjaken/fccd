@@ -47,7 +47,19 @@ export type CustomerServiceAiClassification = {
   requiresHuman: boolean;
   toolKey: string | null;
   model: string;
-  dialogAction: "continue_current" | "cancel_current" | "switch_task" | "new_request";
+  dialogAction:
+    | "new_request"
+    | "continue_current"
+    | "add_information"
+    | "select_option"
+    | "confirm"
+    | "deny"
+    | "correct_previous"
+    | "cancel_current"
+    | "switch_task"
+    | "resume_previous";
+  needsClarification: boolean;
+  clarificationQuestion: string;
 };
 
 function firstEnv(...names: string[]) {
@@ -130,10 +142,16 @@ function parseClassification(
     ? parsed.dialogAction
     : "continue_current";
   const dialogAction = [
+    "new_request",
     "continue_current",
+    "add_information",
+    "select_option",
+    "confirm",
+    "deny",
+    "correct_previous",
     "cancel_current",
     "switch_task",
-    "new_request",
+    "resume_previous",
   ].includes(rawDialogAction)
     ? rawDialogAction as CustomerServiceAiClassification["dialogAction"]
     : "continue_current";
@@ -149,6 +167,10 @@ function parseClassification(
     toolKey,
     model,
     dialogAction,
+    needsClarification: Boolean(parsed.needsClarification),
+    clarificationQuestion: typeof parsed.clarificationQuestion === "string"
+      ? parsed.clarificationQuestion.trim().slice(0, 300)
+      : "",
   };
 }
 
@@ -156,6 +178,8 @@ export async function classifyCustomerServiceWithAi({
   message,
   conversationState,
   pendingRequest = "",
+  recentMessages = [],
+  workflowInstructions = "",
   intents,
   config = customerServiceAiConfig(),
   fetchImpl = fetch,
@@ -164,6 +188,8 @@ export async function classifyCustomerServiceWithAi({
   message: string;
   conversationState: string;
   pendingRequest?: string;
+  recentMessages?: CustomerServiceRecentMessage[];
+  workflowInstructions?: string;
   intents: CustomerServiceIntentConfig[];
   config?: CustomerServiceAiConfig;
   fetchImpl?: typeof fetch;
@@ -202,7 +228,10 @@ export async function classifyCustomerServiceWithAi({
               "Use conversationState and currentTask to decide how this message relates to the active task.",
               "dialogAction is cancel_current only when the customer withdraws the active task itself. A business request containing words such as cancel order is not automatically cancel_current.",
               "Use switch_task for a distinct new request while another task is active, new_request when no task is active, otherwise continue_current.",
-              "Return JSON only with intent, confidence from 0 to 1, orderNumber, requestedDate in YYYY-MM-DD when explicit, missingFields, requiresHuman, tool, and dialogAction.",
+              "Other dialogAction values are add_information, select_option, confirm, deny, correct_previous, and resume_previous.",
+              "When the reference or requested operation is ambiguous, set needsClarification true and provide one concise Cantonese clarificationQuestion. Never guess a destructive action.",
+              "Return JSON only with intent, confidence from 0 to 1, orderNumber, requestedDate in YYYY-MM-DD when explicit, missingFields, requiresHuman, tool, dialogAction, needsClarification, and clarificationQuestion.",
+              config.systemPrompt?.trim() || "",
             ].join(" "),
           },
           {
@@ -211,6 +240,8 @@ export async function classifyCustomerServiceWithAi({
               message: text,
               conversationState,
               currentTask: pendingRequest.trim().slice(0, 500) || null,
+              recentMessages: sanitizeCustomerServiceRecentMessages(recentMessages),
+              workflowInstructions: workflowInstructions.trim().slice(0, 1_000) || null,
               enabledIntents: enabledIntents.map((intent) => ({
                 key: intent.intentKey,
                 name: intent.displayName,
@@ -357,6 +388,8 @@ export async function classifyCustomerServiceWithTieredAi({
   message,
   conversationState,
   pendingRequest = "",
+  recentMessages = [],
+  workflowInstructions = "",
   intents,
   tiers,
   fetchImpl = fetch,
@@ -365,6 +398,8 @@ export async function classifyCustomerServiceWithTieredAi({
   message: string;
   conversationState: string;
   pendingRequest?: string;
+  recentMessages?: CustomerServiceRecentMessage[];
+  workflowInstructions?: string;
   intents: CustomerServiceIntentConfig[];
   tiers: CustomerServiceAiTierConfig;
   fetchImpl?: typeof fetch;
@@ -376,6 +411,8 @@ export async function classifyCustomerServiceWithTieredAi({
       message,
       conversationState,
       pendingRequest,
+      recentMessages,
+      workflowInstructions,
       intents,
       config: tiers.primary,
       fetchImpl,
@@ -394,6 +431,8 @@ export async function classifyCustomerServiceWithTieredAi({
     message,
     conversationState,
     pendingRequest,
+    recentMessages,
+    workflowInstructions,
     intents,
     config: tiers.fallback,
     fetchImpl,
@@ -436,3 +475,7 @@ export async function answerCustomerServiceFaqWithTieredAi({
     fetchImpl,
   });
 }
+import {
+  sanitizeCustomerServiceRecentMessages,
+  type CustomerServiceRecentMessage,
+} from "./customer-service-context.ts";

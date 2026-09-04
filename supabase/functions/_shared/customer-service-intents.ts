@@ -32,7 +32,19 @@ export type ClassifiedMessage = {
   missingFields?: string[];
   requiresHuman?: boolean;
   model?: string;
-  dialogAction?: "continue_current" | "cancel_current" | "switch_task" | "new_request";
+  dialogAction?:
+    | "new_request"
+    | "continue_current"
+    | "add_information"
+    | "select_option"
+    | "confirm"
+    | "deny"
+    | "correct_previous"
+    | "cancel_current"
+    | "switch_task"
+    | "resume_previous";
+  needsClarification?: boolean;
+  clarificationQuestion?: string;
 };
 
 const EMPTY_SLOTS: InquirySlots = {

@@ -72,6 +72,14 @@ export type CustomerServicePreviewConversation = {
   identity_verification_method?: string | null;
   identity_verification_order_id?: string | null;
   identity_verification_attempts?: number;
+  active_goal?: "order_change" | "catering_inquiry" | null;
+  workflow_slots?: Record<string, unknown>;
+  workflow_version?: number;
+  suspended_goals?: Array<Record<string, unknown>>;
+  recent_messages?: Array<{
+    role: "customer" | "assistant" | "human";
+    text: string;
+  }>;
 };
 
 export type CustomerServicePreviewResult = {
@@ -213,6 +221,7 @@ export type CustomerServiceEvaluationRun = {
   status: string;
   sampleSize: number;
   metrics: Record<string, number>;
+  comparison: Record<string, number | string | null>;
   error: string | null;
   createdAt: string;
 };
@@ -236,9 +245,20 @@ export type CustomerServiceReplyTemplate = {
   enabled: boolean;
 };
 
+export type CustomerServiceWorkflowPolicy = {
+  goalKey: "order_change" | "catering_inquiry";
+  displayName: string;
+  instructions: string;
+  contextWindow: number;
+  clarificationThreshold: number;
+  autoResume: boolean;
+  enabled: boolean;
+};
+
 export type CustomerServiceLogic = {
   intents: CustomerServiceIntentSetting[];
   replyTemplates: CustomerServiceReplyTemplate[];
+  workflowPolicies: CustomerServiceWorkflowPolicy[];
 };
 
 type FaqRow = {
@@ -809,6 +829,7 @@ export async function fetchCustomerServiceEvaluationRuns(limit = 20) {
       status: String(row.status),
       sampleSize: Number(row.sample_size || 0),
       metrics: (row.metrics || {}) as Record<string, number>,
+      comparison: (row.comparison || {}) as Record<string, number | string | null>,
       error: typeof row.error === "string" ? row.error : null,
       createdAt: String(row.created_at),
     }),
@@ -820,6 +841,7 @@ export async function fetchCustomerServiceLogic(): Promise<CustomerServiceLogic>
     { data: intents, error: intentError },
     { data: permissions, error: permissionError },
     { data: replies, error: replyError },
+    { data: workflows, error: workflowError },
   ] = await Promise.all([
     supabase
       .from("customer_service_intents")
@@ -835,10 +857,15 @@ export async function fetchCustomerServiceLogic(): Promise<CustomerServiceLogic>
       .from("customer_service_reply_templates")
       .select("template_key,display_name,content,enabled")
       .order("display_name"),
+    supabase
+      .from("customer_service_workflow_policies")
+      .select("goal_key,display_name,instructions,context_window,clarification_threshold,auto_resume,enabled")
+      .order("goal_key"),
   ]);
   if (intentError) throw intentError;
   if (permissionError) throw permissionError;
   if (replyError) throw replyError;
+  if (workflowError) throw workflowError;
   const tools = new Map<string, string[]>();
   for (const row of (permissions ?? []) as Array<{
     intent_key: string;
@@ -885,7 +912,43 @@ export async function fetchCustomerServiceLogic(): Promise<CustomerServiceLogic>
       content: row.content,
       enabled: row.enabled,
     })),
+    workflowPolicies: (
+      (workflows ?? []) as Array<{
+        goal_key: CustomerServiceWorkflowPolicy["goalKey"];
+        display_name: string;
+        instructions: string;
+        context_window: number;
+        clarification_threshold: number | string;
+        auto_resume: boolean;
+        enabled: boolean;
+      }>
+    ).map((row) => ({
+      goalKey: row.goal_key,
+      displayName: row.display_name,
+      instructions: row.instructions,
+      contextWindow: Number(row.context_window),
+      clarificationThreshold: Number(row.clarification_threshold),
+      autoResume: row.auto_resume,
+      enabled: row.enabled,
+    })),
   };
+}
+
+export async function updateCustomerServiceWorkflowPolicy(
+  input: CustomerServiceWorkflowPolicy,
+) {
+  const { error } = await supabase
+    .from("customer_service_workflow_policies")
+    .update({
+      instructions: input.instructions.trim(),
+      context_window: Math.max(1, Math.min(12, Math.trunc(input.contextWindow))),
+      clarification_threshold: Math.max(0, Math.min(1, input.clarificationThreshold)),
+      auto_resume: input.autoResume,
+      enabled: input.enabled,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("goal_key", input.goalKey);
+  if (error) throw error;
 }
 
 export async function updateCustomerServiceIntent(

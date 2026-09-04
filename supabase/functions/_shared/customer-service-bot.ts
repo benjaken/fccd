@@ -22,6 +22,16 @@ import {
   inferCustomerServicePilotGoal,
   type CustomerServicePilotGoal,
 } from "./customer-service-pilot-graph.ts";
+import type { CustomerServiceRecentMessage } from "./customer-service-context.ts";
+
+export type CustomerServiceTaskSnapshot = {
+  goal: CustomerServicePilotGoal;
+  state: CustomerServiceConversation["state"];
+  selectedOrderId: string | null;
+  handoffAt: string | null;
+  pendingRequest: string | null;
+  workflowSlots: Record<string, unknown>;
+};
 
 export type CustomerServiceOrder = {
   order_id: string;
@@ -50,6 +60,8 @@ export type CustomerServiceConversation = {
   active_goal?: CustomerServicePilotGoal | null;
   workflow_slots?: Record<string, unknown>;
   workflow_version?: number;
+  suspended_goals?: CustomerServiceTaskSnapshot[];
+  recent_messages?: CustomerServiceRecentMessage[];
   identity_verified_at?: string | null;
   identity_verification_method?: string | null;
   identity_verification_order_id?: string | null;
@@ -70,6 +82,7 @@ export type CustomerServiceInquiryWrite = {
 };
 
 export type CustomerServiceBotDeps = {
+  workflowAutoResume?: Partial<Record<CustomerServicePilotGoal, boolean>>;
   replyTemplates?: Partial<
     Record<
       | "help"
@@ -123,6 +136,7 @@ export type BotTurn = {
   failureReason?: string | null;
   faqSourceIds?: string[];
   model?: string | null;
+  dialogAction?: ClassifiedMessage["dialogAction"];
 };
 
 function configuredReply(
@@ -156,6 +170,39 @@ function resetPilotConversation(conversation: CustomerServiceConversation) {
     active_goal: null,
     workflow_slots: {},
     workflow_version: 1,
+    suspended_goals: [],
+  });
+}
+
+function suspendPilotConversation(
+  conversation: CustomerServiceConversation,
+  goal: CustomerServicePilotGoal,
+) {
+  const snapshot: CustomerServiceTaskSnapshot = {
+    goal,
+    state: conversation.state,
+    selectedOrderId: conversation.selected_order_id,
+    handoffAt: conversation.handoff_at,
+    pendingRequest: conversation.pending_request,
+    workflowSlots: conversation.workflow_slots ?? {},
+  };
+  return nextConversation(resetPilotConversation(conversation), {
+    suspended_goals: [...(conversation.suspended_goals ?? []), snapshot].slice(-3),
+  });
+}
+
+function restoreSuspendedConversation(conversation: CustomerServiceConversation) {
+  const stack = [...(conversation.suspended_goals ?? [])];
+  const snapshot = stack.pop();
+  if (!snapshot) return null;
+  return nextConversation(conversation, {
+    state: snapshot.state,
+    selected_order_id: snapshot.selectedOrderId,
+    handoff_at: snapshot.handoffAt,
+    pending_request: snapshot.pendingRequest,
+    active_goal: snapshot.goal,
+    workflow_slots: snapshot.workflowSlots,
+    suspended_goals: stack,
   });
 }
 
@@ -543,9 +590,14 @@ async function replyCollect(
     orderNumber: written.order_number,
     summary,
   });
+  const restored = deps.workflowAutoResume?.catering_inquiry === false
+    ? null
+    : restoreSuspendedConversation(conversation);
   return {
-    reply: configuredReply(deps, "collect_done", REPLIES.collectDone),
-    conversation: resetPilotConversation(conversation),
+    reply: `${configuredReply(deps, "collect_done", REPLIES.collectDone)}${
+      restored ? " 已返回上一個未完成事項。" : ""
+    }`,
+    conversation: restored ?? resetPilotConversation(conversation),
     wroteInquiry: true,
     notified: false,
     queuedHandoff: true,
@@ -689,7 +741,20 @@ export async function handleCustomerServiceTurn({
     toolKeys: classified.toolKey ? [classified.toolKey] : [],
     failureReason: turn.failureReason ?? null,
     model: turn.model ?? classified.model ?? null,
+    dialogAction: classified.dialogAction,
   });
+  if (classified.needsClarification) {
+    return annotate({
+      reply: sanitizeOutboundReply(
+        classified.clarificationQuestion ||
+          "我想確認清楚：你係想繼續目前事項、取消目前事項，定係提出另一個要求？",
+      ),
+      conversation,
+      wroteInquiry: false,
+      notified: false,
+      usedModel: classified.usedModel,
+    });
+  }
   const activeGoal = inferCustomerServicePilotGoal({
     activeGoal: conversation.active_goal,
     state: conversation.state,
@@ -701,12 +766,27 @@ export async function handleCustomerServiceTurn({
     conversationState: conversation.state,
     classified,
   });
+  if (pilotAction === "resume_previous") {
+    const restored = restoreSuspendedConversation(conversation);
+    return annotate({
+      reply: restored
+        ? "好，已返回上一個未完成事項，你可以繼續補充資料。"
+        : "目前沒有暫停中的事項。你可以直接告訴我想查詢或處理甚麼。",
+      conversation: restored ?? conversation,
+      wroteInquiry: false,
+      notified: false,
+      usedModel: classified.usedModel,
+    });
+  }
   if (pilotAction === "cancel_current") {
     const queued = conversation.state === "awaiting_human";
     if (queued) await deps.cancelHandoff(phone);
+    const restored = restoreSuspendedConversation(conversation);
     return annotate({
-      reply: queued ? REPLIES.handoffCancelled : REPLIES.currentTaskCancelled,
-      conversation: resetPilotConversation(conversation),
+      reply: `${queued ? REPLIES.handoffCancelled : REPLIES.currentTaskCancelled}${
+        restored ? " 已返回上一個未完成事項。" : ""
+      }`,
+      conversation: restored ?? resetPilotConversation(conversation),
       wroteInquiry: false,
       notified: false,
       queuedHandoff: false,
@@ -735,10 +815,9 @@ export async function handleCustomerServiceTurn({
   }
   const routedConversation = activeGoal && (
       pilotAction === "start_order_change" ||
-      pilotAction === "start_catering" ||
-      pilotAction === "route_other"
+      pilotAction === "start_catering"
     )
-    ? resetPilotConversation(conversation)
+    ? suspendPilotConversation(conversation, activeGoal)
     : conversation;
   if (
     conversation.state === "picking_handoff_order" &&

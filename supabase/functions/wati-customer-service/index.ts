@@ -9,6 +9,11 @@ import {
   type CustomerServiceIntentConfig,
 } from "../_shared/customer-service-ai.ts";
 import {
+  sanitizeCustomerServiceContextText,
+  sanitizeCustomerServiceRecentMessages,
+  type CustomerServiceRecentMessage,
+} from "../_shared/customer-service-context.ts";
+import {
   handleCustomerServiceTurn,
   type CustomerServiceConversation,
 } from "../_shared/customer-service-bot.ts";
@@ -174,6 +179,14 @@ type ReplyTemplates = Partial<
   >
 >;
 
+type WorkflowPolicy = {
+  goalKey: "order_change" | "catering_inquiry";
+  instructions: string;
+  contextWindow: number;
+  clarificationThreshold: number;
+  autoResume: boolean;
+};
+
 const ACTION_INTENTS: Record<string, CustomerServiceIntent> = {
   faq_search: "search_faq",
   order_lookup: "lookup_order",
@@ -195,6 +208,7 @@ async function loadCustomerServiceRuntime(admin: AdminClient) {
     { data: intentRows, error: intentError },
     { data: permissionRows, error: permissionError },
     { data: templateRows, error: templateError },
+    { data: workflowRows, error: workflowError },
   ] = await Promise.all([
     admin
       .from("customer_service_intents")
@@ -211,10 +225,15 @@ async function loadCustomerServiceRuntime(admin: AdminClient) {
       .from("customer_service_reply_templates")
       .select("template_key,content")
       .eq("enabled", true),
+    admin
+      .from("customer_service_workflow_policies")
+      .select("goal_key,instructions,context_window,clarification_threshold,auto_resume")
+      .eq("enabled", true),
   ]);
   if (intentError) throw intentError;
   if (permissionError) throw permissionError;
   if (templateError) throw templateError;
+  if (workflowError) throw workflowError;
 
   const toolsByIntent = new Map<string, string[]>();
   for (const row of (permissionRows ?? []) as Array<{
@@ -251,7 +270,20 @@ async function loadCustomerServiceRuntime(admin: AdminClient) {
   }>) {
     replyTemplates[row.template_key] = row.content;
   }
-  return { intents, replyTemplates };
+  const workflowPolicies = ((workflowRows ?? []) as Array<{
+    goal_key: WorkflowPolicy["goalKey"];
+    instructions: string;
+    context_window: number;
+    clarification_threshold: number | string;
+    auto_resume: boolean;
+  }>).map((row): WorkflowPolicy => ({
+    goalKey: row.goal_key,
+    instructions: row.instructions,
+    contextWindow: Number(row.context_window),
+    clarificationThreshold: Number(row.clarification_threshold),
+    autoResume: row.auto_resume,
+  }));
+  return { intents, replyTemplates, workflowPolicies };
 }
 
 function aiWaitingNotice(phone: string, dryRun: boolean) {
@@ -283,6 +315,9 @@ function createCustomerServiceClassifier({
   intents,
   conversationState,
   pendingRequest,
+  recentMessages = [],
+  activeGoal,
+  workflowPolicies = [],
   phone,
   dryRun,
   tiers,
@@ -290,12 +325,16 @@ function createCustomerServiceClassifier({
   intents: CustomerServiceIntentConfig[];
   conversationState: string;
   pendingRequest?: string | null;
+  recentMessages?: CustomerServiceRecentMessage[];
+  activeGoal?: WorkflowPolicy["goalKey"] | null;
+  workflowPolicies?: WorkflowPolicy[];
   phone: string;
   dryRun: boolean;
   tiers: CustomerServiceAiTierConfig;
 }) {
   return async (text: string): Promise<ClassifiedMessage> => {
     const fallback = classifyCustomerServiceMessage(text);
+    const activePolicy = workflowPolicies.find((item) => item.goalKey === activeGoal);
     // Safety rules remain deterministic and cannot be overridden by the model.
     if (
       fallback.intent === "prompt_injection" ||
@@ -307,6 +346,8 @@ function createCustomerServiceClassifier({
         message: text,
         conversationState,
         pendingRequest: pendingRequest ?? "",
+        recentMessages: recentMessages.slice(-(activePolicy?.contextWindow ?? 8)),
+        workflowInstructions: activePolicy?.instructions ?? "",
         intents,
         tiers,
         beforeRequest: aiWaitingNotice(phone, dryRun),
@@ -315,7 +356,10 @@ function createCustomerServiceClassifier({
       const config = intents.find(
         (item) => item.intentKey === result.intentKey,
       );
-      if (!config || result.confidence < config.confidenceThreshold)
+      if (
+        !config ||
+        (result.confidence < config.confidenceThreshold && !result.needsClarification)
+      )
         return fallback;
       const requiredTool = ACTION_TO_REQUIRED_TOOL[config.actionKey];
       if (requiredTool && !config.toolKeys.includes(requiredTool))
@@ -327,6 +371,15 @@ function createCustomerServiceClassifier({
             : "out_of_scope"
           : ACTION_INTENTS[config.actionKey];
       if (!intent) return fallback;
+      const targetGoal = intent === "handoff_order"
+        ? "order_change"
+        : intent === "collect_inquiry"
+          ? "catering_inquiry"
+          : activeGoal;
+      const targetPolicy = workflowPolicies.find((item) => item.goalKey === targetGoal);
+      const policyNeedsClarification = Boolean(
+        targetPolicy && result.confidence < targetPolicy.clarificationThreshold,
+      );
       return {
         ...fallback,
         intent,
@@ -340,6 +393,12 @@ function createCustomerServiceClassifier({
         requiresHuman: result.requiresHuman,
         model: result.model,
         dialogAction: result.dialogAction,
+        needsClarification: result.needsClarification || policyNeedsClarification,
+        clarificationQuestion: result.clarificationQuestion || (
+          policyNeedsClarification
+            ? "我未能完全確認你想處理嘅事項，可以講清楚係修改訂單、訂餐，定係查詢資料嗎？"
+            : ""
+        ),
         slots: {
           ...fallback.slots,
           eventDate: result.requestedDate || fallback.slots.eventDate,
@@ -400,14 +459,23 @@ async function recordInbound(
 }
 
 async function loadConversation(admin: AdminClient, phone: string) {
-  const { data, error } = await admin
-    .from("customer_service_conversations")
-    .select(
-      "phone_normalized,state,selected_order_id,handoff_at,pending_request,active_goal,workflow_slots,workflow_version,identity_verified_at,identity_verification_method,identity_verification_order_id,identity_verification_attempts",
-    )
-    .eq("phone_normalized", phone)
-    .maybeSingle();
+  const [{ data, error }, { data: messageRows, error: messageError }] = await Promise.all([
+    admin
+      .from("customer_service_conversations")
+      .select(
+        "phone_normalized,state,selected_order_id,handoff_at,pending_request,active_goal,workflow_slots,workflow_version,suspended_goals,identity_verified_at,identity_verification_method,identity_verification_order_id,identity_verification_attempts",
+      )
+      .eq("phone_normalized", phone)
+      .maybeSingle(),
+    admin
+      .from("customer_service_messages")
+      .select("role,message_text")
+      .eq("phone_normalized", phone)
+      .order("created_at", { ascending: false })
+      .limit(8),
+  ]);
   if (error) throw error;
+  if (messageError) throw messageError;
   return {
     phone_normalized: phone,
     state: (data?.state ?? "identifying") as
@@ -424,6 +492,12 @@ async function loadConversation(admin: AdminClient, phone: string) {
     active_goal: data?.active_goal ?? null,
     workflow_slots: data?.workflow_slots ?? {},
     workflow_version: Number(data?.workflow_version ?? 1),
+    suspended_goals: Array.isArray(data?.suspended_goals) ? data.suspended_goals : [],
+    recent_messages: sanitizeCustomerServiceRecentMessages(
+      ((messageRows ?? []) as Array<{ role: CustomerServiceRecentMessage["role"]; message_text: string }>)
+        .reverse()
+        .map((row) => ({ role: row.role, text: row.message_text })),
+    ),
     identity_verified_at: data?.identity_verified_at ?? null,
     identity_verification_method: data?.identity_verification_method ?? null,
     identity_verification_order_id: data?.identity_verification_order_id ?? null,
@@ -444,6 +518,7 @@ async function saveConversation(
     active_goal: conversation.active_goal ?? null,
     workflow_slots: conversation.workflow_slots ?? {},
     workflow_version: conversation.workflow_version ?? 1,
+    suspended_goals: conversation.suspended_goals ?? [],
     identity_verified_at: conversation.identity_verified_at ?? null,
     identity_verification_method: conversation.identity_verification_method ?? null,
     identity_verification_order_id: conversation.identity_verification_order_id ?? null,
@@ -509,6 +584,9 @@ async function recordCustomerServiceTurn(
       latency_ms: Math.max(0, Date.now() - input.startedAt),
       environment: deploymentEnvironment(),
       ai_score: input.turn.confidence ?? null,
+      dialog_action: input.turn.dialogAction ?? null,
+      active_goal: input.turn.conversation.active_goal ?? null,
+      context_message_count: input.turn.conversation.recent_messages?.length ?? 0,
     },
     { onConflict: "provider_message_id" },
   );
@@ -518,6 +596,43 @@ async function recordCustomerServiceTurn(
       error.message.slice(0, 300),
     );
   }
+}
+
+async function recordCustomerServiceMessages(
+  admin: AdminClient,
+  input: {
+    providerMessageId: string;
+    phone: string;
+    question: string;
+    answer: string | null;
+    intent?: string;
+    dialogAction?: string;
+  },
+) {
+  const rows = [{
+    source_message_id: input.providerMessageId,
+    phone_normalized: input.phone,
+    role: "customer",
+    message_text: sanitizeCustomerServiceContextText(input.question),
+    intent_key: input.intent ?? null,
+    dialog_action: input.dialogAction ?? null,
+    environment: deploymentEnvironment(),
+  }];
+  if (input.answer) {
+    rows.push({
+      source_message_id: `${input.providerMessageId}:reply`,
+      phone_normalized: input.phone,
+      role: "assistant",
+      message_text: sanitizeCustomerServiceContextText(input.answer),
+      intent_key: input.intent ?? null,
+      dialog_action: input.dialogAction ?? null,
+      environment: deploymentEnvironment(),
+    });
+  }
+  const { error } = await admin.from("customer_service_messages").upsert(rows, {
+    onConflict: "source_message_id,role",
+  });
+  if (error) console.error("customer-service context audit failed", error.message.slice(0, 300));
 }
 
 type ActiveCustomerServiceConfig = {
@@ -912,15 +1027,20 @@ function createBotDeps(
     replyTemplates = {},
     activeConfig = null,
     tiers = customerServiceAiTiers(activeConfig),
+    workflowPolicies = [],
   }: {
     dryRun?: boolean;
     replyTemplates?: ReplyTemplates;
     activeConfig?: ActiveCustomerServiceConfig | null;
     tiers?: CustomerServiceAiTierConfig;
+    workflowPolicies?: WorkflowPolicy[];
   } = {},
 ) {
   return {
     replyTemplates,
+    workflowAutoResume: Object.fromEntries(
+      workflowPolicies.map((policy) => [policy.goalKey, policy.autoResume]),
+    ),
     async lookupOrders(phone: string) {
       const { data, error } = await admin.rpc(
         "customer_service_lookup_orders",
@@ -1100,6 +1220,19 @@ function previewConversation(
         ? input.workflow_slots as Record<string, unknown>
         : {},
     workflow_version: Number(input.workflow_version ?? 1),
+    suspended_goals: Array.isArray(input.suspended_goals)
+      ? input.suspended_goals as CustomerServiceConversation["suspended_goals"]
+      : [],
+    recent_messages: Array.isArray(input.recent_messages)
+      ? sanitizeCustomerServiceRecentMessages(
+          input.recent_messages.filter(
+            (item): item is CustomerServiceRecentMessage =>
+              Boolean(item) && typeof item === "object" &&
+              ["customer", "assistant", "human"].includes(String((item as Record<string, unknown>).role)) &&
+              typeof (item as Record<string, unknown>).text === "string",
+          ),
+        )
+      : [],
     identity_verified_at:
       typeof input.identity_verified_at === "string" ? input.identity_verified_at : null,
     identity_verification_method:
@@ -1158,16 +1291,25 @@ async function handleBackendPreview(
       replyTemplates: runtime.replyTemplates,
       activeConfig,
       tiers,
+      workflowPolicies: runtime.workflowPolicies,
     }),
     classify: createCustomerServiceClassifier({
       intents: runtime.intents,
       conversationState: conversation.state,
       pendingRequest: conversation.pending_request,
+      recentMessages: conversation.recent_messages,
+      activeGoal: conversation.active_goal,
+      workflowPolicies: runtime.workflowPolicies,
       phone,
       dryRun: true,
       tiers,
     }),
   });
+  turn.conversation.recent_messages = sanitizeCustomerServiceRecentMessages([
+    ...(conversation.recent_messages ?? []),
+    { role: "customer", text },
+    ...(turn.reply ? [{ role: "assistant" as const, text: turn.reply }] : []),
+  ]);
   return jsonResponse({
     ok: true,
     reply: turn.reply,
@@ -1283,6 +1425,8 @@ Deno.serve(async (request) => {
         active_goal: null,
         workflow_slots: {},
         workflow_version: 1,
+        suspended_goals: [],
+        recent_messages: [],
         identity_verified_at: null,
         identity_verification_method: null,
         identity_verification_order_id: null,
@@ -1341,11 +1485,19 @@ Deno.serve(async (request) => {
       phone: event.waId,
       text: event.text,
       conversation,
-      deps: createBotDeps(admin, { replyTemplates: runtime.replyTemplates, activeConfig, tiers }),
+      deps: createBotDeps(admin, {
+        replyTemplates: runtime.replyTemplates,
+        activeConfig,
+        tiers,
+        workflowPolicies: runtime.workflowPolicies,
+      }),
       classify: createCustomerServiceClassifier({
         intents: runtime.intents,
         conversationState: conversation.state,
         pendingRequest: conversation.pending_request,
+        recentMessages: conversation.recent_messages,
+        activeGoal: conversation.active_goal,
+        workflowPolicies: runtime.workflowPolicies,
         phone: event.waId,
         dryRun: false,
         tiers,
@@ -1407,6 +1559,14 @@ Deno.serve(async (request) => {
           deliveryStatus: "failed",
           sendFailure: detail.slice(0, 500),
         });
+        await recordCustomerServiceMessages(admin, {
+          providerMessageId: event.id,
+          phone: event.waId,
+          question: event.text,
+          answer: turn.reply,
+          intent: turn.intentKey,
+          dialogAction: turn.dialogAction,
+        });
         console.error(
           "wati session send failed",
           detail.slice(0, 300),
@@ -1425,6 +1585,14 @@ Deno.serve(async (request) => {
       replyAttempted: Boolean(turn.reply),
       replySent: Boolean(turn.reply),
       deliveryStatus: turn.reply ? "sent" : "not_required",
+    });
+    await recordCustomerServiceMessages(admin, {
+      providerMessageId: event.id,
+      phone: event.waId,
+      question: event.text,
+      answer: turn.reply,
+      intent: turn.intentKey,
+      dialogAction: turn.dialogAction,
     });
 
     return jsonResponse({
