@@ -12,6 +12,7 @@ import {
   emptyAnswers,
   enquiryPublicPath,
   enquiryQuestionElementId,
+  enquiryPersonName,
   mapEnquiryAnswers,
   reorderEnquiryQuestions,
   serializeEnquiryQuestions,
@@ -134,6 +135,7 @@ describe("catering enquiry seed form", () => {
     expect(mapped.deliveryDate).toBe("2026-10-01");
     expect(mapped.headcount).toBe("20");
     expect(mapped.quoteDescription).toBe("素食為主");
+    expect(enquiryPersonName(mapped.customerName, mapped.salutation)).toBe("陳大文先生");
     expect(convertEnquiryRequirements(mapped)).toEqual([]);
   });
 

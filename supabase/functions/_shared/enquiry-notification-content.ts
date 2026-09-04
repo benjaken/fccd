@@ -108,12 +108,28 @@ function content(subject: string, lines: Array<string | false | null | undefined
 
 export const DEFAULT_ENQUIRY_ACK_SUBJECT = "我們已收到你的查詢";
 export const DEFAULT_ENQUIRY_ACK_BODY = [
-  "您好{稱謂}{姓名}：",
+  "您好{姓名}{稱謂}：",
   "",
   "多謝你填寫「{表單標題}」。我們已收到你的資料，稍後會有專人回覆你。",
   "",
   "如資料有誤或想補充，請回覆本電郵或致電與我們聯絡。",
 ].join("\n");
+export const DEFAULT_ENQUIRY_APP_URL = "https://www.foodchannels-delivery.com";
+
+export function enquiryCustomerDisplayName(
+  customerName?: string | null,
+  salutation?: string | null,
+) {
+  return `${(customerName || "").trim()}${(salutation || "").trim()}`.trim();
+}
+
+export function enquiryPendingDetailUrl(
+  appUrl: string | null | undefined,
+  submissionId: string,
+) {
+  const base = (appUrl || "").trim().replace(/\/$/, "") || DEFAULT_ENQUIRY_APP_URL;
+  return `${base}/quotes/pending/${submissionId}`;
+}
 
 export function fillEnquiryEmailTemplate(
   template: string,
@@ -165,7 +181,7 @@ export type EnquiryInternalNotificationInput = {
 };
 
 export function buildEnquiryInternalContent(input: EnquiryInternalNotificationInput) {
-  const displayName = `${input.salutation || ""}${input.customerName || ""}`.trim();
+  const displayName = enquiryCustomerDisplayName(input.customerName, input.salutation);
   return content(`新查詢：${input.formTitle} ${input.referenceCode}`, [
     "公開查詢表單剛收到一筆新提交。",
     "",
@@ -185,7 +201,7 @@ export function buildEnquiryInternalContent(input: EnquiryInternalNotificationIn
 }
 
 export function buildEnquiryInternalWatiParameters(input: EnquiryInternalNotificationInput) {
-  const displayName = `${input.salutation || ""}${input.customerName || ""}`.trim();
+  const displayName = enquiryCustomerDisplayName(input.customerName, input.salutation);
   // fccd_enquiry_internal_v1 uses WhatsApp numbered placeholders {{1}}..{{11}}
   // in this order: form, ENQ, name, company, phone, email, address, date, headcount, description, pending URL.
   const values = [

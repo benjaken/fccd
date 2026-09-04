@@ -6,6 +6,7 @@ import {
   buildEnquiryInternalContent,
   buildEnquiryInternalWatiParameters,
   ENQUIRY_INTERNAL_WATI_TEMPLATE,
+  enquiryPendingDetailUrl,
 } from "../_shared/enquiry-notification-content.ts";
 import {
   isNotificationEmailAllowed,
@@ -198,7 +199,7 @@ Deno.serve(async (request) => {
       console.error("enquiry notification allowlist unavailable", allowlistError);
       allowlist = { phones: new Set(), emails: new Set(), enforced: false };
     }
-    const appUrl = (Deno.env.get("APP_URL") || "").replace(/\/$/, "");
+    const detailUrl = enquiryPendingDetailUrl(Deno.env.get("APP_URL"), row.id);
     const sendInternal = kind === "all" || kind === "internal";
     const sendAck = kind === "all" || kind === "ack";
     let internalStatus = row.internal_email_status;
@@ -234,7 +235,7 @@ Deno.serve(async (request) => {
               deliveryDate: row.delivery_date_raw || "",
               headcount: row.headcount || "",
               quoteDescription: row.quote_description || "",
-              detailUrl: appUrl ? `${appUrl}/quotes/pending/${row.id}` : "",
+              detailUrl,
             });
             await sendResendEmail(addresses, mail.subject, mail.html);
             internalStatus = "sent";
@@ -285,7 +286,7 @@ Deno.serve(async (request) => {
               deliveryDate: row.delivery_date_raw || "",
               headcount: row.headcount || "",
               quoteDescription: row.quote_description || "",
-              detailUrl: appUrl ? `${appUrl}/quotes/pending/${row.id}` : "",
+              detailUrl,
             });
             const results = await Promise.allSettled(
               phones.map((phone) => sendEnquiryInternalWati(allowlist, phone, parameters)),

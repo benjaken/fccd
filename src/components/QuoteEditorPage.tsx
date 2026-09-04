@@ -53,7 +53,7 @@ import {
   type EnquirySubmissionDetail,
 } from "@/lib/enquiry-forms-api";
 import { patchQuoteDraftFromEnquiry, quoteDraftFromEnquiry } from "@/lib/enquiry-quote-draft";
-import type { EnquiryAnswers } from "@/lib/enquiry-form";
+import { enquiryPersonName, type EnquiryAnswers } from "@/lib/enquiry-form";
 import {
   fetchPackageDetail,
   type PackageChoiceSet,
@@ -2457,7 +2457,7 @@ export function QuoteEditorPage({
           </div>
           <p>
             {pendingEnquiry
-              ? [enquirySubmission?.formTitle, `${enquirySubmission?.salutation || ""}${enquirySubmission?.customerName || ""}`.trim()].filter(Boolean).join(" · ")
+              ? [enquirySubmission?.formTitle, enquiryPersonName(enquirySubmission?.customerName, enquirySubmission?.salutation)].filter(Boolean).join(" · ")
               : activeQuote ? t(isOrder ? "quoteEditor.orderItemsReady" : "quoteEditor.itemsReady") : t("quoteEditor.description")}
           </p>
         </div>
