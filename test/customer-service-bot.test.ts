@@ -134,6 +134,39 @@ describe("customer-service intents", () => {
   });
 });
 
+describe("customer-service FAQ routing priority", () => {
+  it("answers an exact published chef FAQ before a kitchen handoff classification", async () => {
+    const queueHandoff = vi.fn().mockResolvedValue(undefined);
+    const classify = vi.fn().mockResolvedValue({
+      intent: "handoff",
+      slots: classifyCustomerServiceMessage("").slots,
+      orderNumber: "",
+      usedModel: true,
+      configuredIntentKey: "kitchen_confirmation",
+    });
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "有冇廚師上門？",
+      conversation,
+      deps: deps({
+        queueHandoff,
+        searchFaqs: vi.fn().mockResolvedValue([{
+          id: "chef-home",
+          question: "有冇廚師上門？",
+          answer: "唔好意思，廚師上門而家暫停。",
+        }]),
+      }),
+      classify,
+    });
+
+    expect(turn.reply).toContain("廚師上門而家暫停");
+    expect(turn.intentKey).toBe("search_faq");
+    expect(turn.conversation.state).toBe("identifying");
+    expect(classify).not.toHaveBeenCalled();
+    expect(queueHandoff).not.toHaveBeenCalled();
+  });
+});
+
 describe("customer-service bot turns", () => {
   it("verifies the order email before returning a one-order summary", async () => {
     const unverified = { ...conversation, identity_verified_at: null };

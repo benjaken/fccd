@@ -161,6 +161,23 @@ function isUndeliveredOrder(order: CustomerServiceOrder) {
   );
 }
 
+function normalizedFaqText(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[\s，。！？、,.!?：:；;（）()「」『』"']/g, "")
+    .replace(/^(請問|想問|我想問|可唔可以問)/, "");
+}
+
+function strongPublishedFaqMatch(query: string, hit: CustomerServiceFaqHit) {
+  const left = normalizedFaqText(query);
+  const right = normalizedFaqText(hit.question);
+  if (!left || !right) return false;
+  if (left === right) return true;
+  return Math.min(left.length, right.length) >= 5 &&
+    Math.abs(left.length - right.length) <= 5 &&
+    (left.includes(right) || right.includes(left));
+}
+
 function resetPilotConversation(conversation: CustomerServiceConversation) {
   return nextConversation(conversation, {
     state: "identifying",
@@ -731,6 +748,32 @@ export async function handleCustomerServiceTurn({
       notified: false,
       usedModel: false,
     };
+  }
+
+  // Published, strongly matching FAQ knowledge is authoritative for stable
+  // public information. Resolve it before intent classification so words such
+  // as "廚師" do not get mistaken for a request requiring kitchen approval.
+  try {
+    const faqHits = await deps.searchFaqs(text);
+    const exactFaq = faqHits.find((hit) => strongPublishedFaqMatch(text, hit));
+    if (exactFaq) {
+      return {
+        reply: faqReply(exactFaq.answer),
+        conversation,
+        wroteInquiry: false,
+        notified: false,
+        usedModel: false,
+        intentKey: "search_faq",
+        toolKeys: ["search_faqs"],
+        faqSourceIds: [exactFaq.id],
+        failureReason: null,
+      };
+    }
+  } catch (error) {
+    console.error(
+      "customer-service FAQ preflight failed",
+      error instanceof Error ? error.message.slice(0, 200) : String(error),
+    );
   }
 
   const classified = await classify(text);
