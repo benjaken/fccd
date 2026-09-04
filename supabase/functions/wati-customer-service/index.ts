@@ -11,7 +11,7 @@ import {
   isHumanOperatorMessage,
   parseAllowedCustomerServicePhones,
   parseWatiInboundEvent,
-  sendWatiSessionMessage,
+  deliverWatiSessionMessage,
   verifyWatiWebhook,
 } from "../_shared/wati-customer-service-adapter.ts";
 import {
@@ -329,14 +329,14 @@ Deno.serve(async (request) => {
     }
 
     const recorded = await recordInbound(admin, event);
-    if (recorded === "duplicate") {
-      return jsonResponse({ ok: true, duplicate: true });
-    }
     if (!controls.botEnabled) {
-      return jsonResponse({ ok: true, bot_enabled: false });
+      return jsonResponse({ ok: true, bot_enabled: false, duplicate: recorded === "duplicate" });
     }
 
     const conversation = await loadConversation(admin, event.waId);
+    if (conversation.state === "human_owned" && recorded === "duplicate") {
+      return jsonResponse({ ok: true, duplicate: true, state: "human_owned" });
+    }
     const turn = await handleCustomerServiceTurn({
       phone: event.waId,
       text: event.text,
@@ -346,13 +346,17 @@ Deno.serve(async (request) => {
 
     if (turn.reply) {
       try {
-        await sendWatiSessionMessage({
-          endpoint: requiredEnv("WATI_API_ENDPOINT"),
-          token: requiredEnv("WATI_API_TOKEN"),
+        await deliverWatiSessionMessage({
+          creds: {
+            apiEndpoint: env("WATI_API_ENDPOINT"),
+            apiToken: env("WATI_API_TOKEN"),
+            accessToken: env("WATI_ACCESS_TOKEN"),
+            apiHost: env("WATI_API_HOST"),
+            tenantId: env("WATI_TENANT_ID"),
+          },
           phone: event.waId,
           text: turn.reply,
           channelNumber: env("WATI_CHANNEL_NUMBER") || BRAND_WHATSAPP_CHANNEL,
-          tenantId: env("WATI_TENANT_ID"),
         });
       } catch (error) {
         console.error(

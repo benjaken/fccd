@@ -8,6 +8,7 @@ import {
   customerServicePhoneAllowed,
   excludeGuestContacts,
   isHumanOperatorMessage,
+  listWatiSessionTargets,
   parseAllowedCustomerServicePhones,
   parseWatiInboundEvent,
   resolveWatiSessionEndpoint,
@@ -242,6 +243,16 @@ describe("WATI adapter", () => {
       text: "你好",
       channelNumber: "85253964335",
     })).not.toContain("sendTemplateMessage");
+    expect(listWatiSessionTargets({
+      accessToken: "access-token",
+      apiToken: "api-token",
+      apiEndpoint: "https://live-mt-server.wati.io",
+    }).map((target) => target.label)).toEqual(["access_v1", "api_raw", "api_resolved"]);
+    expect(listWatiSessionTargets({
+      accessToken: "access-token",
+      apiToken: "api-token",
+      apiEndpoint: "https://live-mt-server.wati.io",
+    })[0].endpoint).toBe("https://live-mt-server.wati.io/2552");
   });
 
   it("restricts bot processing to an explicit test-phone allowlist", () => {

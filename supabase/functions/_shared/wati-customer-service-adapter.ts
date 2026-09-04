@@ -200,28 +200,78 @@ export function buildSessionMessageUrl({
   return url.toString();
 }
 
-export async function sendWatiSessionMessage({
+export type WatiSessionCredentials = {
+  apiEndpoint?: string;
+  apiToken?: string;
+  accessToken?: string;
+  apiHost?: string;
+  tenantId?: string;
+};
+
+export type WatiSessionTarget = {
+  endpoint: string;
+  token: string;
+  label: string;
+};
+
+function normalizeWatiToken(token: string) {
+  return token.replace(/^Bearer\s+/i, "").trim();
+}
+
+export function describeWatiSessionTarget(endpoint: string) {
+  try {
+    const url = new URL(endpoint);
+    return `${url.host}${url.pathname.replace(/\/+$/, "") || "/"}`;
+  } catch {
+    return "invalid_endpoint";
+  }
+}
+
+export function listWatiSessionTargets(creds: WatiSessionCredentials): WatiSessionTarget[] {
+  const access = normalizeWatiToken(creds.accessToken || "");
+  const apiToken = normalizeWatiToken(creds.apiToken || "");
+  const host = (creds.apiHost || DEFAULT_WATI_HOST).replace(/\/+$/, "");
+  const tenant = (creds.tenantId || DEFAULT_WATI_TENANT_ID).trim();
+  const v1Base = `${host}/${tenant}`;
+  const seen = new Set<string>();
+  const targets: WatiSessionTarget[] = [];
+  const push = (endpoint: string, token: string, label: string) => {
+    if (!endpoint || !token) return;
+    const key = `${endpoint}\0${token}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    targets.push({ endpoint, token, label });
+  };
+  if (access) push(v1Base, access, "access_v1");
+  if (apiToken && creds.apiEndpoint) {
+    const raw = creds.apiEndpoint.trim().replace(/\/+$/, "").replace(/\/api\/v[12]$/i, "");
+    push(raw, apiToken, "api_raw");
+    push(resolveWatiSessionEndpoint(creds.apiEndpoint, tenant), apiToken, "api_resolved");
+  }
+  if (apiToken) push(v1Base, apiToken, "api_v1");
+  return targets;
+}
+
+async function postWatiSessionMessage({
   endpoint,
   token,
   phone,
   text,
   channelNumber,
-  tenantId = "",
-  fetchImpl = fetch,
+  fetchImpl,
 }: {
   endpoint: string;
   token: string;
   phone: string;
   text: string;
   channelNumber: string;
-  tenantId?: string;
-  fetchImpl?: typeof fetch;
+  fetchImpl: typeof fetch;
 }) {
-  const url = buildSessionMessageUrl({ endpoint, phone, text, channelNumber, tenantId });
+  const url = buildSessionMessageUrl({ endpoint, phone, text, channelNumber });
   const response = await fetchImpl(url, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${token.replace(/^Bearer\s+/i, "")}`,
+      Authorization: `Bearer ${normalizeWatiToken(token)}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
@@ -242,4 +292,70 @@ export async function sendWatiSessionMessage({
     if (error instanceof Error && error.message.startsWith("wati_session_failed:")) throw error;
   }
   return raw;
+}
+
+export async function sendWatiSessionMessage({
+  endpoint,
+  token,
+  phone,
+  text,
+  channelNumber,
+  tenantId = "",
+  fetchImpl = fetch,
+}: {
+  endpoint: string;
+  token: string;
+  phone: string;
+  text: string;
+  channelNumber: string;
+  tenantId?: string;
+  fetchImpl?: typeof fetch;
+}) {
+  return postWatiSessionMessage({
+    endpoint: resolveWatiSessionEndpoint(endpoint, tenantId),
+    token,
+    phone,
+    text,
+    channelNumber,
+    fetchImpl,
+  });
+}
+
+export async function deliverWatiSessionMessage({
+  creds,
+  phone,
+  text,
+  channelNumber,
+  fetchImpl = fetch,
+  log = console.error,
+}: {
+  creds: WatiSessionCredentials;
+  phone: string;
+  text: string;
+  channelNumber: string;
+  fetchImpl?: typeof fetch;
+  log?: (...args: unknown[]) => void;
+}) {
+  const targets = listWatiSessionTargets(creds);
+  if (!targets.length) throw new Error("wati_session_failed:missing_credentials");
+  const errors: string[] = [];
+  for (const target of targets) {
+    try {
+      const raw = await postWatiSessionMessage({
+        endpoint: target.endpoint,
+        token: target.token,
+        phone,
+        text,
+        channelNumber,
+        fetchImpl,
+      });
+      log("wati session sent", target.label, describeWatiSessionTarget(target.endpoint));
+      return raw;
+    } catch (error) {
+      const detail = error instanceof Error ? error.message.slice(0, 180) : String(error);
+      errors.push(`${target.label}@${describeWatiSessionTarget(target.endpoint)}:${detail}`);
+      log("wati session try failed", target.label, describeWatiSessionTarget(target.endpoint), detail);
+    }
+  }
+  throw new Error(errors[0] || "wati_session_failed:all_targets");
 }
