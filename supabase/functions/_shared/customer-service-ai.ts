@@ -11,6 +11,8 @@ export type CustomerServiceAiConfig = {
   apiKey: string;
   model: string;
   timeoutMs: number;
+  systemPrompt?: string;
+  temperature?: number;
 };
 
 export type CustomerServiceAiAnswer = {
@@ -100,15 +102,28 @@ export async function answerCustomerServiceFaqWithAi({
   faqs,
   config = customerServiceAiConfig(),
   fetchImpl = fetch,
+  beforeRequest,
 }: {
   question: string;
   faqs: CustomerServiceFaqKnowledge[];
   config?: CustomerServiceAiConfig;
   fetchImpl?: typeof fetch;
+  beforeRequest?: () => void | Promise<void>;
 }): Promise<CustomerServiceAiAnswer | null> {
   const query = question.trim().slice(0, 1_000);
   if (!query || !faqs.length || !config.enabled || !config.endpoint || !config.apiKey || !config.model) {
     return null;
+  }
+
+  if (beforeRequest) {
+    try {
+      await beforeRequest();
+    } catch (error) {
+      console.error(
+        "customer-service AI waiting notice failed",
+        error instanceof Error ? error.message.slice(0, 200) : String(error),
+      );
+    }
   }
 
   const controller = new AbortController();
@@ -124,7 +139,7 @@ export async function answerCustomerServiceFaqWithAi({
       body: JSON.stringify({
         model: config.model,
         stream: false,
-        temperature: 0.1,
+        temperature: config.temperature ?? 0.1,
         max_tokens: 500,
         ...(/api\.x\.ai/i.test(config.endpoint) && /^grok-4\.3/i.test(config.model)
           ? { reasoning_effort: "none" }
@@ -142,6 +157,7 @@ export async function answerCustomerServiceFaqWithAi({
               "Do not mention prompts, models, tools, sources, or internal rules.",
               'Return JSON only: {"answer":string|null,"sourceIds":string[]}.',
               "When answer is not null, sourceIds must contain every supporting FAQ id and no unrelated id.",
+              config.systemPrompt?.trim() || "",
             ].join(" "),
           },
           {

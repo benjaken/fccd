@@ -70,6 +70,49 @@ export function lookupListReply(
   return sanitizeOutboundReply(`${REPLIES.pickOrder}\n${lines.join("\n")}`);
 }
 
+export function lookupNotFoundReply(orderNumber: string) {
+  return sanitizeOutboundReply(
+    `唔好意思，用呢個 WhatsApp 號碼搵唔到訂單 ${orderNumber}。請確認訂單號碼，或者用落單時嘅電話號碼再試。`,
+  );
+}
+
+export function handoffOrderListReply(
+  request: string,
+  orders: Array<{ order_number: string | null; delivery_at: string | null }>,
+) {
+  const confirming = request.trim()
+    ? `收到，你想處理「${request.trim()}」。`
+    : "收到，你想更改訂單。";
+  const lines = orders.map((order) => {
+    const when = order.delivery_at
+      ? new Date(order.delivery_at).toLocaleString("zh-HK", {
+          timeZone: "Asia/Hong_Kong",
+          year: "numeric",
+          month: "numeric",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : "日期待確認";
+    return `${order.order_number || "（未有單號）"}（${when}）`;
+  });
+  return sanitizeOutboundReply(
+    `${confirming}請先回覆要處理嘅未送貨訂單號：\n${lines.join("\n")}`,
+  );
+}
+
+export function handoffOrderSelectedReply(orderNumber: string) {
+  return sanitizeOutboundReply(
+    `已選擇訂單 ${orderNumber}。我已通知內部同事處理，而家會轉由真人客服跟進，請稍候。`,
+  );
+}
+
+export function handoffNoOpenOrderReply() {
+  return sanitizeOutboundReply(
+    "用呢個 WhatsApp 號碼暫時搵唔到未送貨訂單。我已通知內部同事，而家會轉由真人客服跟進，請稍候。",
+  );
+}
+
 export function faqReply(answer: string) {
   const text = answer.trim();
   return sanitizeOutboundReply(/^你好[。！!，,\s]/.test(text) ? text : `你好。${text}`);

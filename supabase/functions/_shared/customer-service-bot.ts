@@ -2,12 +2,17 @@ import {
   classifyCustomerServiceMessage,
   hasCollectableSlots,
   isCustomerServiceGreeting,
+  normalizeCustomerServiceOrderNumber,
   type ClassifiedMessage,
   type InquirySlots,
 } from "./customer-service-intents.ts";
 import {
   faqReply,
+  handoffNoOpenOrderReply,
+  handoffOrderListReply,
+  handoffOrderSelectedReply,
   lookupListReply,
+  lookupNotFoundReply,
   lookupSummaryReply,
   REPLIES,
   sanitizeOutboundReply,
@@ -26,9 +31,10 @@ export type CustomerServiceOrder = {
 
 export type CustomerServiceConversation = {
   phone_normalized: string;
-  state: "identifying" | "picking_order" | "collecting" | "human_owned";
+  state: "identifying" | "picking_order" | "picking_handoff_order" | "collecting" | "human_owned";
   selected_order_id: string | null;
   handoff_at: string | null;
+  pending_request: string | null;
 };
 
 export type CustomerServiceFaqHit = {
@@ -51,12 +57,15 @@ export type CustomerServiceBotDeps = {
     anotherEvent: boolean,
   ) => Promise<CustomerServiceInquiryWrite>;
   searchFaqs: (query: string) => Promise<CustomerServiceFaqHit[]>;
-  answerFaqWithModel?: (query: string) => Promise<string | null>;
+  answerFaqWithModel?: (query: string) => Promise<
+    string | { answer: string; sourceIds: string[]; model: string } | null
+  >;
   notifyInternal: (input: {
     phone: string;
-    quoteId: string;
+    quoteId: string | null;
     orderNumber: string | null;
     summary: string;
+    kind?: "inquiry" | "order_handoff";
   }) => Promise<void>;
 };
 
@@ -66,6 +75,8 @@ export type BotTurn = {
   wroteInquiry: boolean;
   notified: boolean;
   usedModel: boolean;
+  faqSourceIds?: string[];
+  model?: string | null;
 };
 
 function nextConversation(
@@ -73,6 +84,89 @@ function nextConversation(
   patch: Partial<CustomerServiceConversation>,
 ): CustomerServiceConversation {
   return { ...current, ...patch };
+}
+
+function isUndeliveredOrder(order: CustomerServiceOrder) {
+  const status = order.delivery_status?.trim() ?? "";
+  return !/已送達|己送達|已經送達|delivered|已取消|己取消|取消|cancelled/i.test(status);
+}
+
+async function finishOrderHandoff(
+  deps: CustomerServiceBotDeps,
+  phone: string,
+  order: CustomerServiceOrder,
+  request: string,
+  conversation: CustomerServiceConversation,
+): Promise<BotTurn> {
+  await deps.notifyInternal({
+    phone,
+    quoteId: order.order_id,
+    orderNumber: order.order_number,
+    summary: `客戶要求人工處理：${request || "更改訂單"}`,
+    kind: "order_handoff",
+  });
+  return {
+    reply: handoffOrderSelectedReply(order.order_number || "（未有單號）"),
+    conversation: nextConversation(conversation, {
+      state: "human_owned",
+      selected_order_id: order.order_id,
+      handoff_at: new Date().toISOString(),
+      pending_request: null,
+    }),
+    wroteInquiry: false,
+    notified: true,
+    usedModel: false,
+  };
+}
+
+async function replyOrderHandoff(
+  deps: CustomerServiceBotDeps,
+  phone: string,
+  classified: ClassifiedMessage,
+  conversation: CustomerServiceConversation,
+  request: string,
+): Promise<BotTurn> {
+  const orders = (await deps.lookupOrders(phone)).filter(isUndeliveredOrder);
+  const pendingRequest = conversation.pending_request?.trim() || request.trim();
+  if (classified.orderNumber) {
+    const requested = normalizeCustomerServiceOrderNumber(classified.orderNumber);
+    const selected = orders.find(
+      (order) => normalizeCustomerServiceOrderNumber(order.order_number) === requested,
+    );
+    if (selected) return finishOrderHandoff(deps, phone, selected, pendingRequest, conversation);
+  }
+  if (orders.length) {
+    return {
+      reply: handoffOrderListReply(pendingRequest, orders),
+      conversation: nextConversation(conversation, {
+        state: "picking_handoff_order",
+        selected_order_id: null,
+        pending_request: pendingRequest,
+      }),
+      wroteInquiry: false,
+      notified: false,
+      usedModel: false,
+    };
+  }
+  await deps.notifyInternal({
+    phone,
+    quoteId: null,
+    orderNumber: null,
+    summary: `客戶要求人工處理，但未找到未送貨訂單：${pendingRequest || "更改訂單"}`,
+    kind: "order_handoff",
+  });
+  return {
+    reply: handoffNoOpenOrderReply(),
+    conversation: nextConversation(conversation, {
+      state: "human_owned",
+      selected_order_id: null,
+      handoff_at: new Date().toISOString(),
+      pending_request: null,
+    }),
+    wroteInquiry: false,
+    notified: true,
+    usedModel: false,
+  };
 }
 
 async function replyLookup(
@@ -83,8 +177,9 @@ async function replyLookup(
 ): Promise<BotTurn> {
   const orders = await deps.lookupOrders(phone);
   if (classified.orderNumber) {
+    const requestedOrderNumber = normalizeCustomerServiceOrderNumber(classified.orderNumber);
     const selected = orders.find(
-      (order) => (order.order_number || "").toUpperCase() === classified.orderNumber,
+      (order) => normalizeCustomerServiceOrderNumber(order.order_number) === requestedOrderNumber,
     );
     if (selected) {
       return {
@@ -98,6 +193,16 @@ async function replyLookup(
         usedModel: classified.usedModel,
       };
     }
+    return {
+      reply: lookupNotFoundReply(classified.orderNumber),
+      conversation: nextConversation(conversation, {
+        state: "identifying",
+        selected_order_id: null,
+      }),
+      wroteInquiry: false,
+      notified: false,
+      usedModel: classified.usedModel,
+    };
   }
   if (orders.length === 1) {
     return {
@@ -181,14 +286,17 @@ async function replyFaq(
   const hits = await deps.searchFaqs(query);
   if (deps.answerFaqWithModel) {
     try {
-      const answer = await deps.answerFaqWithModel(query);
-      if (answer) {
+      const modelAnswer = await deps.answerFaqWithModel(query);
+      if (modelAnswer) {
+        const answer = typeof modelAnswer === "string" ? modelAnswer : modelAnswer.answer;
         return {
           reply: faqReply(answer),
           conversation,
           wroteInquiry: false,
           notified: false,
           usedModel: true,
+          faqSourceIds: typeof modelAnswer === "string" ? [] : modelAnswer.sourceIds,
+          model: typeof modelAnswer === "string" ? null : modelAnswer.model,
         };
       }
     } catch (error) {
@@ -205,6 +313,8 @@ async function replyFaq(
       wroteInquiry: false,
       notified: false,
       usedModel: classified.usedModel,
+      faqSourceIds: [hits[0].id],
+      model: null,
     };
   }
   return {
@@ -250,6 +360,9 @@ export async function handleCustomerServiceTurn({
   }
 
   const classified = classify(text);
+  if (conversation.state === "picking_handoff_order") {
+    return replyOrderHandoff(deps, phone, classified, conversation, text);
+  }
   if (conversation.state === "picking_order" && classified.orderNumber) {
     return replyLookup(deps, phone, classified, conversation);
   }
@@ -273,6 +386,9 @@ export async function handleCustomerServiceTurn({
       notified: false,
       usedModel: classified.usedModel,
     };
+  }
+  if (classified.intent === "handoff_order") {
+    return replyOrderHandoff(deps, phone, classified, conversation, text);
   }
   if (classified.intent === "lookup_order") {
     return replyLookup(deps, phone, classified, conversation);

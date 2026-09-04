@@ -2,6 +2,7 @@ export const CUSTOMER_SERVICE_INTENTS = [
   "lookup_order",
   "collect_inquiry",
   "search_faq",
+  "handoff_order",
   "handoff",
   "out_of_scope",
   "prompt_injection",
@@ -42,10 +43,12 @@ const INJECTION =
 const OFF_TOPIC =
   /翻譯(呢|這|以下)|幫我寫(作文|電郵|email|功課)|寫程式|javascript|python 作業|講笑話|今日新聞|股票|天氣點(呀|啊)(?!.*送)/i;
 
-const HANDOFF =
-  /改期|改地址|改時間|取消|退款|投訴|服務差|議價|平啲|減價|便宜|已(經)?(付|俾)款|付咗|入唔到帳|沒入帳|未入帳|收款爭議/;
+const ORDER_HANDOFF =
+  /改期|改地址|改時間|取消|退款|已(經)?(付|俾)款|付咗|入唔到帳|沒入帳|未入帳|收款爭議|(?:改|更改|轉|改為).{0,18}(?:送貨|送餐|自取|日期|時間|地址)|(?:送貨|送餐|自取).{0,18}(?:改|更改|轉)/;
 
-const LOOKUP = /查單|訂單|送貨狀態|我的單|我嘅單|order ?status|加單/;
+const HANDOFF = /投訴|服務差|議價|平啲|減價|便宜/;
+
+const LOOKUP = /查單|訂單|單號|送貨狀態|送貨日期|送餐日期|自取日期|幾時送|幾時到|我的單|我嘅單|order ?status|delivery date|加單/i;
 
 const COLLECT = /到會|報價|訂餐|宴會|活動|幾多人|人數|另一場|新活動|另外一場/;
 
@@ -54,7 +57,25 @@ const GREETING = /^(test+|hi+|hello+|hey+|哈囉|你好|在嗎|ping|ok)$/i;
 const FAQ =
   /運費|送貨費|免運|自取|荃灣|地面交收|上門|餐具|早餐|積分|生日|註冊|付款|轉數快|收據|發票|打風|8\s*號|黑雨|落單|加熱|即食|廚師上門|侍應|擺盤|素食|走蒜|走蔥/;
 
-const ORDER_NUMBER = /\b(FCL[A-Z0-9]{4,})\b/i;
+// Current and legacy customer-facing references include:
+// B/P/K/E/L/D/R-1234, B-1550C, FC-prefixed web references,
+// R/202608/88 (or its spaced-hyphen form), and legacy #6918 numbers.
+// Keep the patterns structured so dates, phone numbers and headcounts are not
+// picked out of normal sentences as order references.
+const ORDER_NUMBER_PATTERNS = [
+  /\bR\s*(?:\/|-)\s*\d{6}\s*(?:\/|-)\s*\d+\b/i,
+  /\bFC[A-Z]{0,4}\d{6,}[A-Z0-9]*\b/i,
+  /\b[BPKELDR]\s*-?\s*\d+[A-Z]*\b/i,
+  /#\s*\d{3,10}\b/,
+] as const;
+
+export function normalizeCustomerServiceOrderNumber(value: string | null | undefined) {
+  return (value ?? "")
+    .trim()
+    .replace(/^(?:#\s*)+/, "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "");
+}
 
 export function emptyInquirySlots(): InquirySlots {
   return { ...EMPTY_SLOTS };
@@ -84,7 +105,16 @@ export function extractInquirySlots(text: string): InquirySlots {
 }
 
 export function extractOrderNumber(text: string) {
-  return text.match(ORDER_NUMBER)?.[1]?.toUpperCase() ?? "";
+  for (const pattern of ORDER_NUMBER_PATTERNS) {
+    const match = text.match(pattern)?.[0];
+    if (match) return match.trim().replace(/^#\s*/, "").toUpperCase();
+  }
+
+  // A bare legacy Catering number is only accepted when it is the whole
+  // message. This supports replying "6918" after the bot lists orders without
+  // mistaking a date, phone number or headcount inside a sentence for an order.
+  const legacyNumber = text.trim().match(/^#?(\d{4,10})$/)?.[1];
+  return legacyNumber ?? "";
 }
 
 export function hasCollectableSlots(slots: InquirySlots) {
@@ -104,6 +134,9 @@ export function classifyCustomerServiceMessage(text: string): ClassifiedMessage 
   }
   if (OFF_TOPIC.test(body)) {
     return { intent: "out_of_scope", slots, orderNumber, usedModel: false };
+  }
+  if (ORDER_HANDOFF.test(body)) {
+    return { intent: "handoff_order", slots, orderNumber, usedModel: false };
   }
   if (HANDOFF.test(body)) {
     return { intent: "handoff", slots, orderNumber, usedModel: false };

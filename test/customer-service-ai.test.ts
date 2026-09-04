@@ -19,6 +19,7 @@ const faqs = [{
 
 describe("customer-service grounded AI", () => {
   it("sends only published FAQ knowledge and accepts a cited synthesis", async () => {
+    const beforeRequest = vi.fn().mockResolvedValue(undefined);
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
       choices: [{ message: { content: JSON.stringify({
         answer: "你好，新界地面交收運費係 HK$50。",
@@ -31,12 +32,33 @@ describe("customer-service grounded AI", () => {
       faqs,
       config,
       fetchImpl: fetchMock,
+      beforeRequest,
     });
 
+    expect(beforeRequest).toHaveBeenCalledOnce();
+    expect(beforeRequest.mock.invocationCallOrder[0]).toBeLessThan(fetchMock.mock.invocationCallOrder[0]);
     expect(result).toMatchObject({ sourceIds: ["delivery"], model: "test-model" });
     const request = JSON.parse(fetchMock.mock.calls[0][1].body as string);
     expect(request.messages[1].content).toContain("我住新界");
     expect(request.messages[1].content).toContain("HK$50");
+  });
+
+  it("keeps answering when the waiting notice cannot be delivered", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      choices: [{ message: { content: JSON.stringify({
+        answer: "新界地面交收運費係 HK$50。",
+        sourceIds: ["delivery"],
+      }) } }],
+    }), { status: 200 }));
+
+    await expect(answerCustomerServiceFaqWithAi({
+      question: "新界運費？",
+      faqs,
+      config,
+      fetchImpl: fetchMock,
+      beforeRequest: vi.fn().mockRejectedValue(new Error("send failed")),
+    })).resolves.toMatchObject({ sourceIds: ["delivery"] });
+    expect(fetchMock).toHaveBeenCalledOnce();
   });
 
   it("rejects numbers and source ids that are not supported by the FAQ", async () => {

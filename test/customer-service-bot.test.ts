@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { handleCustomerServiceTurn } from "../supabase/functions/_shared/customer-service-bot.ts";
-import { classifyCustomerServiceMessage } from "../supabase/functions/_shared/customer-service-intents.ts";
+import {
+  classifyCustomerServiceMessage,
+  extractOrderNumber,
+  normalizeCustomerServiceOrderNumber,
+} from "../supabase/functions/_shared/customer-service-intents.ts";
 import { faqReply, REPLIES, sanitizeOutboundReply } from "../supabase/functions/_shared/customer-service-replies.ts";
 import {
   buildSessionMessageUrl,
@@ -21,6 +25,7 @@ const conversation = {
   state: "identifying" as const,
   selected_order_id: null,
   handoff_at: null,
+  pending_request: null,
 };
 
 const order = {
@@ -57,9 +62,11 @@ describe("customer-service intents", () => {
   });
 
   it("routes dangerous business words to handoff", () => {
-    expect(classifyCustomerServiceMessage("我想取消訂單").intent).toBe("handoff");
-    expect(classifyCustomerServiceMessage("可唔可以改期").intent).toBe("handoff");
-    expect(classifyCustomerServiceMessage("我已付款但未入帳").intent).toBe("handoff");
+    expect(classifyCustomerServiceMessage("我想取消訂單").intent).toBe("handoff_order");
+    expect(classifyCustomerServiceMessage("可唔可以改期").intent).toBe("handoff_order");
+    expect(classifyCustomerServiceMessage("我已付款但未入帳").intent).toBe("handoff_order");
+    expect(classifyCustomerServiceMessage("我想改為9/11送貨").intent).toBe("handoff_order");
+    expect(classifyCustomerServiceMessage("我要投訴服務差").intent).toBe("handoff");
   });
 
   it("extracts inquiry slots and shipping FAQ", () => {
@@ -68,6 +75,25 @@ describe("customer-service intents", () => {
     expect(classified.slots.eventDate).toBe("2026-10-03");
     expect(classified.slots.headcount).toBe("80");
     expect(classifyCustomerServiceMessage("運費幾多").intent).toBe("search_faq");
+  });
+
+  it("recognizes current and legacy order-number formats", () => {
+    const examples = [
+      ["B-1550C的送貨日期是多少", "B-1550C"],
+      ["P 1143 幾時送", "P 1143"],
+      ["FCO2026090401 delivery date", "FCO2026090401"],
+      ["R/202608/88 幾時到", "R/202608/88"],
+      ["R - 202608 - 6 的送餐日期", "R - 202608 - 6"],
+      ["訂單 #6918", "6918"],
+      ["6918", "6918"],
+    ] as const;
+
+    for (const [message, expected] of examples) {
+      expect(extractOrderNumber(message)).toBe(expected);
+      expect(classifyCustomerServiceMessage(message).intent).toBe("lookup_order");
+    }
+    expect(normalizeCustomerServiceOrderNumber(" # B - 1550c ")).toBe("B1550C");
+    expect(extractOrderNumber("2026-09-10 80人到會")).toBe("");
   });
 });
 
@@ -150,6 +176,40 @@ describe("customer-service bot turns", () => {
     expect(miss.conversation.state).toBe("identifying");
   });
 
+  it("answers a delivery-date question using a suffixed B order number", async () => {
+    const notifyInternal = vi.fn().mockResolvedValue(undefined);
+    const bOrder = {
+      ...order,
+      order_number: "#B-1550C",
+      delivery_at: "2026-09-12T04:30:00.000Z",
+    };
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "B-1550C的送貨日期是多少",
+      conversation,
+      deps: deps({ lookupOrders: vi.fn().mockResolvedValue([bOrder]), notifyInternal }),
+    });
+
+    expect(turn.reply).toContain("#B-1550C");
+    expect(turn.reply).toContain("12/9/2026");
+    expect(turn.reply).not.toBe(REPLIES.noFaq);
+    expect(turn.conversation.state).toBe("identifying");
+    expect(notifyInternal).not.toHaveBeenCalled();
+  });
+
+  it("does not return a different order when the requested number is not owned by the phone", async () => {
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "P-9999 幾時送",
+      conversation,
+      deps: deps({ lookupOrders: vi.fn().mockResolvedValue([order]) }),
+    });
+
+    expect(turn.reply).toContain("P-9999");
+    expect(turn.reply).toContain("落單時嘅電話號碼");
+    expect(turn.reply).not.toContain("FCL2026090101");
+  });
+
   it("uses a grounded model answer before the keyword-search fallback", async () => {
     const turn = await handleCustomerServiceTurn({
       phone: conversation.phone_normalized,
@@ -175,27 +235,72 @@ describe("customer-service bot turns", () => {
     expect(turn.conversation.state).toBe("identifying");
   });
 
-  it("does not mutate business data on handoff or after a human owns the chat", async () => {
+  it("lists only undelivered orders before notifying staff and handing the chat to a human", async () => {
     const writeInquiry = vi.fn();
-    const lookupOrders = vi.fn();
-    const danger = await handleCustomerServiceTurn({
+    const notifyInternal = vi.fn().mockResolvedValue(undefined);
+    const openOrder = { ...order, order_number: "B-1550C" };
+    const deliveredOrder = {
+      ...order,
+      order_id: "33333333-3333-4333-8333-333333333333",
+      order_number: "B-1549",
+      delivery_status: "已送達",
+    };
+    const first = await handleCustomerServiceTurn({
       phone: conversation.phone_normalized,
-      text: "我要取消同退款",
+      text: "我想改為9/11送貨",
       conversation,
-      deps: deps({ writeInquiry, lookupOrders }),
+      deps: deps({
+        writeInquiry,
+        notifyInternal,
+        lookupOrders: vi.fn().mockResolvedValue([openOrder, deliveredOrder]),
+      }),
     });
-    expect(danger.reply).toBe(REPLIES.handoff);
+    expect(first.reply).toContain("B-1550C");
+    expect(first.reply).not.toContain("B-1549");
+    expect(first.reply).toContain("未送貨訂單號");
+    expect(first.conversation.state).toBe("picking_handoff_order");
+    expect(first.conversation.pending_request).toBe("我想改為9/11送貨");
     expect(writeInquiry).not.toHaveBeenCalled();
-    expect(lookupOrders).not.toHaveBeenCalled();
-    expect(danger.conversation.state).toBe("human_owned");
+    expect(notifyInternal).not.toHaveBeenCalled();
+
+    const selected = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "B-1550C",
+      conversation: first.conversation,
+      deps: deps({
+        notifyInternal,
+        lookupOrders: vi.fn().mockResolvedValue([openOrder, deliveredOrder]),
+      }),
+    });
+    expect(selected.reply).toContain("已選擇訂單 B-1550C");
+    expect(selected.reply).toContain("真人客服");
+    expect(selected.conversation.state).toBe("human_owned");
+    expect(selected.conversation.selected_order_id).toBe(openOrder.order_id);
+    expect(notifyInternal).toHaveBeenCalledWith(expect.objectContaining({
+      quoteId: openOrder.order_id,
+      orderNumber: "B-1550C",
+      summary: expect.stringContaining("我想改為9/11送貨"),
+      kind: "order_handoff",
+    }));
 
     const silent = await handleCustomerServiceTurn({
       phone: conversation.phone_normalized,
       text: "運費幾多",
-      conversation: danger.conversation,
+      conversation: selected.conversation,
       deps: deps({ writeInquiry }),
     });
     expect(silent.reply).toBeNull();
+  });
+
+  it("hands complaints to a human immediately", async () => {
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "我要投訴服務差",
+      conversation,
+      deps: deps(),
+    });
+    expect(turn.reply).toBe(REPLIES.handoff);
+    expect(turn.conversation.state).toBe("human_owned");
   });
 
   it("refuses jailbreaks without writing a quote", async () => {

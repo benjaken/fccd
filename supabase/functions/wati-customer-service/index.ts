@@ -1,9 +1,14 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 import { EMAIL_FROM } from "../_shared/email-sender.ts";
-import { answerCustomerServiceFaqWithAi } from "../_shared/customer-service-ai.ts";
-import { handleCustomerServiceTurn } from "../_shared/customer-service-bot.ts";
-import { type InquirySlots } from "../_shared/customer-service-intents.ts";
+import { answerCustomerServiceFaqWithAi, customerServiceAiConfig } from "../_shared/customer-service-ai.ts";
+import { handleCustomerServiceTurn, type BotTurn } from "../_shared/customer-service-bot.ts";
+import {
+  classifyCustomerServiceMessage,
+  isCustomerServiceGreeting,
+  type ClassifiedMessage,
+  type InquirySlots,
+} from "../_shared/customer-service-intents.ts";
 import {
   BRAND_WHATSAPP_CHANNEL,
   customerServicePhoneAllowed,
@@ -35,6 +40,8 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+const AI_WAITING_REPLY = "收到，我正在查詢相關資料，請稍等一會 🙏";
+
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -50,6 +57,44 @@ function requiredEnv(name: string) {
   const value = env(name);
   if (!value) throw new Error(`missing_${name.toLowerCase()}`);
   return value;
+}
+
+function normalizeScheduleTime(value: unknown, fallback: string) {
+  const match = String(value ?? "").match(/^(\d{2}):(\d{2})/);
+  return match ? `${match[1]}:${match[2]}` : fallback;
+}
+
+function timeToMinutes(value: string) {
+  const [hours, minutes] = value.split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
+export function isWithinAutoReplyWindow({
+  now = new Date(),
+  start,
+  end,
+  timeZone,
+}: {
+  now?: Date;
+  start: string;
+  end: string;
+  timeZone: string;
+}) {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(now);
+  const hour = Number(parts.find((part) => part.type === "hour")?.value ?? 0);
+  const minute = Number(parts.find((part) => part.type === "minute")?.value ?? 0);
+  const current = hour * 60 + minute;
+  const from = timeToMinutes(start);
+  const until = timeToMinutes(end);
+  if (from === until) return true;
+  return from < until
+    ? current >= from && current < until
+    : current >= from || current < until;
 }
 
 function serviceRoleKey() {
@@ -71,12 +116,82 @@ function createAdminClient() {
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
+function deploymentEnvironment() {
+  return env("CUSTOMER_SERVICE_ENVIRONMENT") ||
+    (env("SUPABASE_URL").includes("vignxasvlxqnyvuhtjlu") ? "production" : "develop");
+}
+
+function turnRoute(turn: BotTurn, classified: ClassifiedMessage) {
+  if (!turn.reply && turn.conversation.state === "human_owned") return "human";
+  if (turn.usedModel) return "ai";
+  if (turn.faqSourceIds?.length) return "faq";
+  if (turn.wroteInquiry || classified.intent === "lookup_order") return "tool";
+  if (classified.intent === "handoff" || classified.intent === "handoff_order") return "handoff";
+  return "rule";
+}
+
+async function recordCustomerServiceTurn(
+  admin: AdminClient,
+  input: {
+    providerMessageId: string;
+    phone: string;
+    question: string;
+    answer?: string | null;
+    intent?: string | null;
+    route?: string | null;
+    stateBefore?: string | null;
+    stateAfter?: string | null;
+    usedModel?: boolean;
+    model?: string | null;
+    faqSourceIds?: string[];
+    wroteInquiry?: boolean;
+    notified?: boolean;
+    humanHandoff?: boolean;
+    replyAttempted?: boolean;
+    replySent?: boolean;
+    deliveryStatus?: string;
+    processingStatus: "pending" | "replied" | "handoff" | "unanswered" | "skipped" | "failed";
+    failureReason?: string | null;
+    latencyMs: number;
+  },
+) {
+  const { error } = await admin.from("customer_service_turns").upsert({
+    provider_message_id: input.providerMessageId,
+    phone_normalized: input.phone,
+    question: input.question.slice(0, 2_000),
+    answer: input.answer?.slice(0, 2_000) || null,
+    intent: input.intent || null,
+    route: input.route || null,
+    state_before: input.stateBefore || null,
+    state_after: input.stateAfter || null,
+    used_model: Boolean(input.usedModel),
+    model: input.model || null,
+    faq_source_ids: input.faqSourceIds ?? [],
+    wrote_inquiry: Boolean(input.wroteInquiry),
+    notified_internal: Boolean(input.notified),
+    human_handoff: Boolean(input.humanHandoff),
+    reply_attempted: Boolean(input.replyAttempted),
+    reply_sent: Boolean(input.replySent),
+    delivery_status: input.deliveryStatus || "not_attempted",
+    processing_status: input.processingStatus,
+    failure_reason: input.failureReason || null,
+    latency_ms: Math.max(0, Math.round(input.latencyMs)),
+    environment: deploymentEnvironment(),
+  }, { onConflict: "provider_message_id" });
+  if (error) {
+    console.error("customer service turn audit failed", error.message.slice(0, 300));
+  }
+}
+
 async function loadBotControls(admin: AdminClient) {
   const { data, error } = await admin.rpc("customer_service_controls_get");
   if (error) throw error;
   const row = (data as Array<{
     bot_enabled?: boolean;
     allowed_phones?: string[] | null;
+    auto_reply_start?: string | null;
+    auto_reply_end?: string | null;
+    auto_reply_timezone?: string | null;
   }> | null)?.[0];
   return {
     botEnabled: Boolean(row?.bot_enabled),
@@ -84,6 +199,9 @@ async function loadBotControls(admin: AdminClient) {
       ...parseAllowedCustomerServicePhones(env("WATI_CUSTOMER_SERVICE_ALLOWED_PHONES")),
       ...parseAllowedCustomerServicePhones(row?.allowed_phones),
     ],
+    autoReplyStart: normalizeScheduleTime(row?.auto_reply_start, "19:00"),
+    autoReplyEnd: normalizeScheduleTime(row?.auto_reply_end, "09:00"),
+    autoReplyTimezone: row?.auto_reply_timezone || "Asia/Hong_Kong",
   };
 }
 
@@ -105,7 +223,7 @@ async function recordInbound(admin: AdminClient, event: {
 async function loadConversation(admin: AdminClient, phone: string) {
   const { data, error } = await admin
     .from("customer_service_conversations")
-    .select("phone_normalized,state,selected_order_id,handoff_at")
+    .select("phone_normalized,state,selected_order_id,handoff_at,pending_request")
     .eq("phone_normalized", phone)
     .maybeSingle();
   if (error) throw error;
@@ -114,10 +232,12 @@ async function loadConversation(admin: AdminClient, phone: string) {
     state: (data?.state ?? "identifying") as
       | "identifying"
       | "picking_order"
+      | "picking_handoff_order"
       | "collecting"
       | "human_owned",
     selected_order_id: data?.selected_order_id ?? null,
     handoff_at: data?.handoff_at ?? null,
+    pending_request: data?.pending_request ?? null,
   };
 }
 
@@ -130,6 +250,7 @@ async function saveConversation(
     state: conversation.state,
     selected_order_id: conversation.selected_order_id,
     handoff_at: conversation.handoff_at,
+    pending_request: conversation.pending_request ?? null,
     updated_at: new Date().toISOString(),
   });
   if (error) throw error;
@@ -151,7 +272,13 @@ async function sendInternalEmail(to: string[], subject: string, html: string) {
 
 async function notifyInternal(
   admin: AdminClient,
-  input: { phone: string; quoteId: string; orderNumber: string | null; summary: string },
+  input: {
+    phone: string;
+    quoteId: string | null;
+    orderNumber: string | null;
+    summary: string;
+    kind?: "inquiry" | "order_handoff";
+  },
 ) {
   let allowlist;
   try {
@@ -161,10 +288,12 @@ async function notifyInternal(
   }
   const guestPhone = normalizeNotificationPhone(input.phone);
   const appUrl = env("APP_URL").replace(/\/$/, "");
-  const detailUrl = appUrl ? `${appUrl}/quotes/${input.quoteId}` : "";
+  const detailUrl = appUrl && input.quoteId
+    ? `${appUrl}/${input.kind === "order_handoff" ? "orders" : "quotes"}/${input.quoteId}`
+    : "";
   const contentInput = {
-    formTitle: "WhatsApp 到會意見",
-    referenceCode: input.orderNumber || input.quoteId,
+    formTitle: input.kind === "order_handoff" ? "WhatsApp 客服人工跟進" : "WhatsApp 到會意見",
+    referenceCode: input.orderNumber || input.quoteId || input.phone,
     customerName: "WhatsApp 客人",
     phone: input.phone,
     quoteDescription: input.summary,
@@ -226,7 +355,39 @@ async function notifyInternal(
   }
 }
 
-function createBotDeps(admin: AdminClient, { dryRun = false } = {}) {
+function createBotDeps(
+  admin: AdminClient,
+  { dryRun = false, phone = "" }: { dryRun?: boolean; phone?: string } = {},
+) {
+  let activeConfigPromise: Promise<{
+    model: string;
+    system_prompt: string;
+    temperature: number;
+    retrieval_limit: number;
+  } | null> | null = null;
+  const loadActiveConfig = () => {
+    activeConfigPromise ??= admin
+      .from("customer_service_config_versions")
+      .select("model,system_prompt,temperature,retrieval_limit")
+      .eq("environment", deploymentEnvironment())
+      .eq("status", "active")
+      .maybeSingle()
+      .then(({ data, error }: {
+        data: unknown;
+        error: { code?: string; message: string } | null;
+      }) => {
+        if (error && error.code !== "42P01") {
+          console.error("customer service active config load failed", error.message.slice(0, 300));
+        }
+        return data as {
+          model: string;
+          system_prompt: string;
+          temperature: number;
+          retrieval_limit: number;
+        } | null;
+      });
+    return activeConfigPromise;
+  };
   return {
     async lookupOrders(phone: string) {
       const { data, error } = await admin.rpc("customer_service_lookup_orders", { p_phone: phone });
@@ -266,14 +427,16 @@ function createBotDeps(admin: AdminClient, { dryRun = false } = {}) {
       return row;
     },
     async searchFaqs(query: string) {
+      const activeConfig = await loadActiveConfig();
       const { data, error } = await admin.rpc("search_published_customer_faqs", {
         p_query: query,
-        p_limit: 3,
+        p_limit: activeConfig?.retrieval_limit ?? 3,
       });
       if (error) throw error;
       return ((data ?? []) as Array<{ id: string; question: string; answer: string }>);
     },
     async answerFaqWithModel(query: string) {
+      const activeConfig = await loadActiveConfig();
       const { data, error } = await admin
         .from("customer_faqs")
         .select("id,category,question,answer")
@@ -289,14 +452,46 @@ function createBotDeps(admin: AdminClient, { dryRun = false } = {}) {
           question: string;
           answer: string;
         }>,
+        config: activeConfig
+          ? {
+              ...customerServiceAiConfig(),
+              model: activeConfig.model,
+              systemPrompt: activeConfig.system_prompt,
+              temperature: Number(activeConfig.temperature),
+            }
+          : customerServiceAiConfig(),
+        beforeRequest: dryRun || !phone
+          ? undefined
+          : async () => {
+              try {
+                await deliverWatiSessionMessage({
+                  creds: {
+                    apiEndpoint: env("WATI_API_ENDPOINT"),
+                    apiToken: env("WATI_API_TOKEN"),
+                    accessToken: env("WATI_ACCESS_TOKEN"),
+                    apiHost: env("WATI_API_HOST"),
+                    tenantId: env("WATI_TENANT_ID"),
+                  },
+                  phone,
+                  text: AI_WAITING_REPLY,
+                  channelNumber: env("WATI_CHANNEL_NUMBER") || BRAND_WHATSAPP_CHANNEL,
+                });
+              } catch (error) {
+                console.error(
+                  "wati AI waiting notice failed",
+                  error instanceof Error ? error.message.slice(0, 300) : String(error),
+                );
+              }
+            },
       });
-      return result?.answer ?? null;
+      return result ?? null;
     },
     async notifyInternal(input: {
       phone: string;
-      quoteId: string;
+      quoteId: string | null;
       orderNumber: string | null;
       summary: string;
+      kind?: "inquiry" | "order_handoff";
     }) {
       if (dryRun) return;
       try {
@@ -310,16 +505,17 @@ function createBotDeps(admin: AdminClient, { dryRun = false } = {}) {
 
 function previewConversation(value: unknown, phone: string) {
   const input = value && typeof value === "object" ? value as Record<string, unknown> : {};
-  const state = ["identifying", "picking_order", "collecting", "human_owned"].includes(
+  const state = ["identifying", "picking_order", "picking_handoff_order", "collecting", "human_owned"].includes(
       String(input.state || ""),
     )
-    ? String(input.state) as "identifying" | "picking_order" | "collecting" | "human_owned"
+    ? String(input.state) as "identifying" | "picking_order" | "picking_handoff_order" | "collecting" | "human_owned"
     : "identifying";
   return {
     phone_normalized: phone,
     state,
     selected_order_id: typeof input.selected_order_id === "string" ? input.selected_order_id : null,
     handoff_at: typeof input.handoff_at === "string" ? input.handoff_at : null,
+    pending_request: typeof input.pending_request === "string" ? input.pending_request : null,
   };
 }
 
@@ -353,6 +549,7 @@ async function handleBackendPreview(request: Request, payload: Record<string, un
     conversation: turn.conversation,
     used_model: turn.usedModel,
     simulated_write: turn.wroteInquiry,
+    simulated_notify: turn.notified,
     human_handoff: turn.conversation.state === "human_owned",
   });
 }
@@ -401,6 +598,7 @@ Deno.serve(async (request) => {
     return jsonResponse({ error: "channel_mismatch" }, 403);
   }
 
+  const turnStartedAt = Date.now();
   try {
     const admin = createAdminClient();
     const controls = await loadBotControls(admin);
@@ -413,6 +611,7 @@ Deno.serve(async (request) => {
         state: "human_owned",
         selected_order_id: null,
         handoff_at: new Date().toISOString(),
+        pending_request: null,
       });
       return jsonResponse({ ok: true, handoff: true });
     }
@@ -421,23 +620,58 @@ Deno.serve(async (request) => {
     }
 
     const recorded = await recordInbound(admin, event);
+    if (recorded === "duplicate") {
+      return jsonResponse({ ok: true, duplicate: true });
+    }
     if (!controls.botEnabled) {
-      return jsonResponse({ ok: true, bot_enabled: false, duplicate: recorded === "duplicate" });
+      await recordCustomerServiceTurn(admin, {
+        providerMessageId: event.id,
+        phone: event.waId,
+        question: event.text,
+        route: "silent",
+        processingStatus: "skipped",
+        failureReason: "bot_disabled",
+        latencyMs: Date.now() - turnStartedAt,
+      });
+      return jsonResponse({ ok: true, bot_enabled: false, duplicate: false });
+    }
+    if (!isWithinAutoReplyWindow({
+      start: controls.autoReplyStart,
+      end: controls.autoReplyEnd,
+      timeZone: controls.autoReplyTimezone,
+    })) {
+      await recordCustomerServiceTurn(admin, {
+        providerMessageId: event.id,
+        phone: event.waId,
+        question: event.text,
+        route: "silent",
+        processingStatus: "skipped",
+        failureReason: "outside_auto_reply_window",
+        latencyMs: Date.now() - turnStartedAt,
+      });
+      return jsonResponse({
+        ok: true,
+        bot_enabled: true,
+        within_auto_reply_window: false,
+        duplicate: false,
+      });
     }
 
     const conversation = await loadConversation(admin, event.waId);
-    if (conversation.state === "human_owned" && recorded === "duplicate") {
-      return jsonResponse({ ok: true, duplicate: true, state: "human_owned" });
-    }
-    const turn = await handleCustomerServiceTurn({
-      phone: event.waId,
-      text: event.text,
-      conversation,
-      deps: createBotDeps(admin),
-    });
+    const classified = classifyCustomerServiceMessage(event.text);
+    const loggedIntent = isCustomerServiceGreeting(event.text) ? "greeting" : classified.intent;
+    let turn: BotTurn | null = null;
+    try {
+      turn = await handleCustomerServiceTurn({
+        phone: event.waId,
+        text: event.text,
+        conversation,
+        deps: createBotDeps(admin, { phone: event.waId }),
+        classify: () => classified,
+      });
+      await saveConversation(admin, turn.conversation);
 
-    if (turn.reply) {
-      try {
+      if (turn.reply) {
         await deliverWatiSessionMessage({
           creds: {
             apiEndpoint: env("WATI_API_ENDPOINT"),
@@ -450,15 +684,67 @@ Deno.serve(async (request) => {
           text: turn.reply,
           channelNumber: env("WATI_CHANNEL_NUMBER") || BRAND_WHATSAPP_CHANNEL,
         });
-      } catch (error) {
-        console.error(
-          "wati session send failed",
-          error instanceof Error ? error.message.slice(0, 300) : String(error),
-        );
-        throw error;
       }
+    } catch (error) {
+      const reason = error instanceof Error ? error.message.slice(0, 300) : String(error).slice(0, 300);
+      console.error("customer service turn failed", reason);
+      await recordCustomerServiceTurn(admin, {
+        providerMessageId: event.id,
+        phone: event.waId,
+        question: event.text,
+        answer: turn?.reply,
+        intent: loggedIntent,
+        route: turn ? turnRoute(turn, classified) : "error",
+        stateBefore: conversation.state,
+        stateAfter: turn?.conversation.state || conversation.state,
+        usedModel: turn?.usedModel,
+        model: turn?.model,
+        faqSourceIds: turn?.faqSourceIds,
+        wroteInquiry: turn?.wroteInquiry,
+        notified: turn?.notified,
+        humanHandoff: turn?.conversation.state === "human_owned",
+        replyAttempted: Boolean(turn?.reply),
+        replySent: false,
+        deliveryStatus: turn?.reply ? "failed" : "not_attempted",
+        processingStatus: "failed",
+        failureReason: reason,
+        latencyMs: Date.now() - turnStartedAt,
+      });
+      throw error;
     }
-    await saveConversation(admin, turn.conversation);
+
+    const route = turnRoute(turn, classified);
+    const humanHandoff = turn.conversation.state === "human_owned";
+    const unanswered = loggedIntent === "search_faq" &&
+      !turn.usedModel && !(turn.faqSourceIds?.length);
+    await recordCustomerServiceTurn(admin, {
+      providerMessageId: event.id,
+      phone: event.waId,
+      question: event.text,
+      answer: turn.reply,
+      intent: loggedIntent,
+      route,
+      stateBefore: conversation.state,
+      stateAfter: turn.conversation.state,
+      usedModel: turn.usedModel,
+      model: turn.model,
+      faqSourceIds: turn.faqSourceIds,
+      wroteInquiry: turn.wroteInquiry,
+      notified: turn.notified,
+      humanHandoff,
+      replyAttempted: Boolean(turn.reply),
+      replySent: Boolean(turn.reply),
+      deliveryStatus: turn.reply ? "sent" : "not_attempted",
+      processingStatus: humanHandoff
+        ? "handoff"
+        : unanswered
+          ? "unanswered"
+          : turn.reply
+            ? "replied"
+            : "skipped",
+      failureReason: unanswered ? "no_grounded_answer" : null,
+      latencyMs: Date.now() - turnStartedAt,
+    });
 
     return jsonResponse({
       ok: true,
