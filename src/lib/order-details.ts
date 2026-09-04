@@ -229,7 +229,7 @@ export async function fetchOrderDetail(
       supabase
         .from("order_lines")
         .select(
-          "id,product_id,package_id,sku_snapshot,product_name_snapshot,content_snapshot,quantity,unit_price,total_price,is_addon,is_void,remarks_1,remarks_2,products(sku,name),packages(sku,name)",
+          "id,product_id,package_id,sku_snapshot,product_name_snapshot,content_snapshot,quantity,unit_price,total_price,is_addon,is_void,remarks_1,remarks_2,label_remarks,products(sku,name),packages(sku,name)",
         )
         .eq("order_id", id)
         .order("type_sort")
@@ -380,7 +380,8 @@ export async function fetchOrderDetail(
       totalPrice: canViewFinance ? decimal(row.total_price) : null,
       isAddon: row.is_addon,
       isVoid: row.is_void === true,
-      remarks: row.remarks_1 || row.remarks_2,
+      remarks: (Array.isArray(row.label_remarks) ? row.label_remarks : [row.remarks_1, row.remarks_2])
+        .map((remark) => String(remark ?? "").trim()).filter(Boolean).join(" / ") || null,
     })),
     deliveries: (deliveriesResult.data ?? []).map((row) => ({
       id: row.id,
