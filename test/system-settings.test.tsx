@@ -897,6 +897,19 @@ describe("Super Admin system settings", () => {
     );
     expect(frozenActions).toContain("frozen.seasoning_cost.edit");
     expect(frozenActions).toContain("frozen.seasoning_cost.delete");
+
+    const seasoningRecipes = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260904020000_frozen_seasoning_recipes_page.sql",
+      ),
+      "utf8",
+    );
+    expect(seasoningRecipes).toContain("frozen.seasoning_recipes");
+    expect(seasoningRecipes).toContain("固定香料成本");
+    expect(seasoningRecipes).toContain("/frozen/seasoning-recipes");
+    expect(seasoningRecipes).toContain("frozen.seasoning_recipes.edit");
+    expect(seasoningRecipes).toContain("frozen.seasoning_recipes.delete");
     expect(frozenActions).toContain("frozen.meat_customers.edit");
     expect(frozenActions).toContain("frozen.meat_customers.delete");
     expect(frozenActions).toContain("frozen.spice_usage.delete");
