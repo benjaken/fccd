@@ -57,6 +57,7 @@ export function EnquiryFormFields({
         const controlId = `enquiry-${question.fieldKey}`;
         const isGroup = question.type === "radio" || question.type === "checkbox";
         const summarizeChoice = choiceSummary && isGroup;
+        const choiceLabel = summarizeChoice ? formatAnswer(question, value) : "";
         return (
           <div
             key={question.fieldKey}
@@ -76,20 +77,23 @@ export function EnquiryFormFields({
             <div className="enquiry-form-control">
               {summarizeChoice ? (
                 <div className="enquiry-form-choice-summary">
-                  <span>{formatAnswer(question, value) || "尚未選擇"}</span>
+                  <span className={cn("enquiry-form-choice-value", !choiceLabel.trim() && "is-empty")}>
+                    {choiceLabel || "尚未選擇"}
+                  </span>
                   {!disabled && onChange ? (
                     <Button
                       type="button"
                       variant="outline"
-                      size="sm"
+                      size="icon"
+                      className="enquiry-form-choice-edit"
                       aria-label={`編輯${question.title}`}
+                      title={`編輯${question.title}`}
                       onClick={() => {
                         setEditingKey(question.fieldKey);
                         setDraftValue(value);
                       }}
                     >
-                      <Pencil />
-                      編輯
+                      <Pencil aria-hidden="true" />
                     </Button>
                   ) : null}
                 </div>
