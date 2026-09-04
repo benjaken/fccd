@@ -8,6 +8,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { OrdersListPage } from "@/components/OrdersListPage";
 import i18n from "@/i18n";
 import type { OrderListConfigRow } from "@/lib/order-list-configs";
+import { fetchOrderReconciliationSummary } from "@/lib/order-reconciliation";
 import type { OrderListResult } from "@/lib/orders";
 
 vi.mock("@/auth/AuthProvider", () => ({
@@ -15,6 +16,13 @@ vi.mock("@/auth/AuthProvider", () => ({
     profile: { user_name: "Mandy", email: "mandy@example.com" },
   }),
 }));
+
+vi.mock("@/lib/order-reconciliation", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/order-reconciliation")>(
+    "@/lib/order-reconciliation",
+  );
+  return { ...actual, fetchOrderReconciliationSummary: vi.fn() };
+});
 
 const orderResult: OrderListResult = {
   total: 1,
@@ -67,6 +75,11 @@ describe("Orders list", () => {
       dispatchEvent: vi.fn(),
     }));
     await i18n.changeLanguage("zh-HK");
+    vi.mocked(fetchOrderReconciliationSummary).mockResolvedValue({
+      run: null,
+      issues: [],
+      excludedOrders: [],
+    });
   });
 
   it("renders migrated order snapshots and finance fields", async () => {

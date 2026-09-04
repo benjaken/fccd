@@ -26,6 +26,10 @@ describe("Workspace switcher", () => {
     expect(workspaceFromPath("/orders")).toBe("factory");
     expect(workspaceFromPath("/delivery")).toBe("factory");
     expect(workspaceFromPath("/restaurant")).toBe("factory");
+    expect(workspaceFromPath("/restaurant-workspace")).toBe("restaurant");
+    expect(workspaceFromPath("/restaurant-workspace/records")).toBe("restaurant");
+    expect(workspaceFromPath("/factory/warehouse")).toBe("factory");
+    expect(workspaceFromPath("/factory/warehouse/receipts")).toBe("factory");
   });
 
   it("never marks 工場版面 as the active workspace link", () => {
@@ -34,6 +38,8 @@ describe("Workspace switcher", () => {
     expect(isWorkspaceNavActive("factory", "/orders")).toBe(false);
     expect(isWorkspaceNavActive("delivery", "/driver-delivery")).toBe(true);
     expect(isWorkspaceNavActive("delivery", "/factory")).toBe(false);
+    expect(isWorkspaceNavActive("restaurant", "/restaurant-workspace")).toBe(true);
+    expect(isWorkspaceNavActive("restaurant", "/restaurant/daily-sales")).toBe(false);
   });
 
   it("shows factory and driver placeholder copy", () => {
@@ -63,7 +69,7 @@ describe("Workspace switcher", () => {
     expect(customerLink).toMatchObject({ to: "/self_service_search" });
     expect(customerLink).not.toHaveProperty("disabled");
     expect(i18n.exists("workspace.catering")).toBe(false);
-    expect(i18n.exists("workspace.restaurant")).toBe(false);
+    expect(i18n.t("workspace.restaurant")).toBe("餐廳版面");
   });
 
   it("registers a separate permission for every workspace entry", () => {
@@ -71,6 +77,7 @@ describe("Workspace switcher", () => {
       workspaceLinks.map((item) => [item.key, item.permissionKey]),
     ).toEqual([
       ["factory", "workspace.factory"],
+      ["restaurant", "workspace.restaurant"],
       ["delivery", "workspace.delivery"],
       ["customer", "workspace.customer"],
     ]);

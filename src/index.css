@@ -11774,6 +11774,9 @@ button.product-tag[aria-pressed="true"] {
   box-shadow: none;
 }
 
+.spice-usage-card.is-skeleton .spice-usage-card-index {
+  background: color-mix(in oklch, var(--muted) 55%, transparent);
+}
 
 .seasoning-recipes-page {
   display: grid;
@@ -12011,10 +12014,6 @@ button.product-tag[aria-pressed="true"] {
   gap: 10px;
   padding-top: 4px;
   border-top: 1px solid var(--border);
-}
-
-.spice-usage-card.is-skeleton .spice-usage-card-index {
-  background: color-mix(in oklch, var(--muted) 55%, transparent);
 }
 
 .seasoning-cost-page,
@@ -18340,6 +18339,35 @@ a.masoft-order-tag:focus-visible {
 .dictionary-editor-form small { color: var(--muted-foreground); font-weight: 500; }
 .dictionary-metadata-input { font-family: ui-monospace, SFMono-Regular, Consolas, monospace !important; font-size: 14px !important; }
 .dictionary-active-field { grid-template-columns: 1fr auto; align-items: center; }
+.customer-faq-preview-list { display: grid; gap: 14px; margin: 16px 0 0; padding: 0; list-style: none; }
+.customer-faq-preview-list li { display: grid; gap: 6px; }
+.customer-faq-preview-list p { margin: 0; color: var(--muted-foreground); white-space: pre-wrap; }
+.customer-faq-notes { display: grid; gap: 8px; }
+.customer-faq-page { grid-template-rows: auto auto minmax(0, 1fr); }
+.customer-faq-page > .customer-faq-layout { min-height: 0; }
+.customer-faq-layout { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(300px, 0.7fr); align-items: stretch; gap: 18px; min-height: 0; }
+.customer-faq-layout > .panel { min-height: 0; }
+.customer-faq-preview .page-heading { padding: 16px 18px 0; }
+.customer-faq-preview .page-heading h2 { margin: 0; font-size: 18px; }
+.customer-faq-preview-body { display: grid; align-content: start; gap: 14px; min-height: 0; overflow: auto; padding: 16px 18px 18px; }
+.customer-faq-preview-list { margin-top: 0; }
+.customer-faq-chat { display: grid; align-content: start; gap: 12px; min-height: 300px; max-height: 500px; overflow: auto; padding: 18px 14px; border: 1px solid #d7d2cb; border-radius: 12px; background-color: #efeae2; background-image: radial-gradient(rgb(17 27 33 / 4%) 1px, transparent 1px); background-size: 18px 18px; }
+.customer-faq-chat-message { display: grid; grid-template-columns: 30px minmax(0, 1fr); align-items: start; gap: 8px; max-width: 92%; }
+.customer-faq-chat-message.user { justify-self: end; grid-template-columns: minmax(0, 1fr) 30px; }
+.customer-faq-chat-message.user .customer-faq-chat-avatar { grid-column: 2; grid-row: 1; }
+.customer-faq-chat-message.user > div { grid-column: 1; grid-row: 1; background: #d9fdd3; color: #111b21; border-top-right-radius: 3px; }
+.customer-faq-chat-message > div { min-width: 0; padding: 9px 11px; border-radius: 10px; background: #fff; color: #111b21; box-shadow: 0 1px 1px rgb(11 20 26 / 13%); }
+.customer-faq-chat-message.assistant > div { border-top-left-radius: 3px; }
+.customer-faq-chat-message.system > div { border: 1px dashed var(--border); background: transparent; }
+.customer-faq-chat-message p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.customer-faq-chat-message small { display: block; margin-top: 6px; color: var(--muted-foreground); font-size: 12px; }
+.customer-faq-chat-message.user small { color: inherit; opacity: .8; }
+.customer-faq-chat-avatar { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 999px; background: #00a884; color: #fff; box-shadow: 0 1px 2px rgb(11 20 26 / 18%); }
+.customer-faq-chat-avatar svg { width: 16px; height: 16px; }
+@media (max-width: 1100px) {
+  .customer-faq-page { height: auto; min-height: 0; overflow: visible; grid-template-rows: auto; }
+  .customer-faq-layout { grid-template-columns: 1fr; }
+}
 .dictionary-editor-form > p { margin: 0; color: var(--destructive); font-size: 14px; }
 
 @media (max-width: 980px) {
@@ -18352,8 +18380,8 @@ a.masoft-order-tag:focus-visible {
   .orders-page,
   .products-page,
   .packages-page,
-  .seasoning-cost-page,
   .seasoning-recipes-page,
+  .seasoning-cost-page,
   .calculation-settings-page,
   .kitchen-settings-page,
   .meat-customers-page,
@@ -22620,6 +22648,7 @@ a.masoft-order-tag:focus-visible {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+
 .quote-editor-tabs.is-quote.has-enquiry {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
@@ -22627,6 +22656,7 @@ a.masoft-order-tag:focus-visible {
 .quote-editor-tabs.has-enquiry:not(.is-quote) {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
+
 
 @media (min-width: 901px) {
   .quote-editor-tabs.is-quote {
@@ -35632,5 +35662,217 @@ body:has(.quote-clause-modal-root) { overflow: hidden; }
     ) {
     height: 100%;
     min-height: 0;
+  }
+}
+
+.restaurant-workspace,
+.factory-warehouse {
+  min-height: 100dvh;
+  background: var(--background);
+}
+
+.restaurant-workspace-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.restaurant-workspace-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.restaurant-workspace-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.7rem;
+  border-radius: 999px;
+  color: inherit;
+  text-decoration: none;
+  border: 1px solid var(--border);
+}
+
+.restaurant-workspace-link.active {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-color: transparent;
+}
+
+.restaurant-workspace-body {
+  padding: 0.5rem 0;
+}
+
+.shop-order-form,
+.shop-review-card {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.shop-order-items {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.shop-order-items th,
+.shop-order-items td {
+  padding: 0.4rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+
+.shop-order-items input[type="number"] {
+  width: 5rem;
+}
+
+.shop-order-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.festival-order-generation-page {
+  --festival-amber: #b45309;
+  --festival-amber-soft: #fff7ed;
+  --festival-up: #0a7e3a;
+  --festival-down: #b42318;
+  --primary: var(--festival-amber);
+  --selection-bg: #fff4e5;
+  --selection-bg-strong: #ffe8c7;
+  --report-table-header-bg: #fde7c7;
+  --report-table-summary-bg: #fff4e5;
+}
+
+.festival-order-generation-year-totals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+  gap: 0.7rem;
+}
+
+.festival-order-generation-year-totals article {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.85rem 0.95rem;
+}
+
+.festival-order-generation-year-totals span {
+  color: var(--muted-foreground);
+  font-size: 0.82rem;
+}
+
+.festival-order-generation-year-totals strong {
+  font-size: 1.35rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.festival-order-generation-table-wrap {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.festival-order-generation-table-copy {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.festival-order-generation-table-copy span {
+  color: var(--muted-foreground);
+  font-size: 0.88rem;
+}
+
+.festival-order-generation-table-scroll {
+  overflow-x: auto;
+}
+
+.festival-order-generation-table {
+  width: 100%;
+  min-width: 36rem;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.9rem;
+}
+
+.festival-order-generation-table th,
+.festival-order-generation-table td {
+  padding: 0.7rem 0.75rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  text-align: right;
+  vertical-align: top;
+}
+
+.festival-order-generation-table th:first-child,
+.festival-order-generation-table td:first-child {
+  text-align: left;
+  position: sticky;
+  left: 0;
+  background: var(--card);
+}
+
+.festival-order-generation-table thead th {
+  background: var(--report-table-header-bg);
+  font-weight: 700;
+}
+
+.festival-order-generation-table tbody tr.is-selected th,
+.festival-order-generation-table tbody tr.is-selected td {
+  background: var(--selection-bg);
+}
+
+.festival-order-generation-table tbody tr.is-selected th:first-child {
+  background: var(--selection-bg);
+}
+
+.festival-order-generation-table tfoot th,
+.festival-order-generation-table tfoot td {
+  background: var(--report-table-summary-bg);
+  font-weight: 700;
+}
+
+.festival-order-generation-table tfoot th:first-child {
+  background: var(--report-table-summary-bg);
+}
+
+.festival-order-generation-table button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: left;
+}
+
+.festival-order-generation-table button:hover {
+  color: var(--festival-amber);
+  text-decoration: underline;
+}
+
+.festival-order-generation-table td strong,
+.festival-order-generation-table td small {
+  display: block;
+}
+
+.festival-order-generation-change {
+  color: var(--muted-foreground);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.festival-order-generation-change.is-up {
+  color: var(--festival-up);
+}
+
+.festival-order-generation-change.is-down {
+  color: var(--festival-down);
+}
+
+@media (max-width: 860px) {
+  .festival-order-generation-page .kitchen-sales-cost-workspace {
+    grid-template-columns: 1fr;
   }
 }

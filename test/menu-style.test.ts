@@ -3,11 +3,13 @@ import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  accessibleBusinessPrimaryPath,
   buildBusinessMobileDrawerNav,
   businessPrimaryNav,
   businessSectionFromLocation,
   businessSidebarNav,
   isBusinessNavTargetActive,
+  isBusinessPrimaryNavVisible,
 } from "@/lib/nav";
 import {
   DEFAULT_MENU_STYLE,
@@ -35,13 +37,14 @@ describe("menu styles", () => {
     window.removeEventListener(MENU_STYLE_CHANGED, listener);
   });
 
-  it("keeps seven business primary sections and nests canonical pages in the sidebar", () => {
+  it("keeps eight business primary sections and nests canonical pages in the sidebar", () => {
     expect(businessPrimaryNav.map((item) => item.key)).toEqual([
       "overview",
       "followUp",
       "catering",
       "frozen",
       "restaurant",
+      "accountingFollowUp",
       "reports",
       "settings",
     ]);
@@ -126,6 +129,7 @@ describe("menu styles", () => {
       "restaurantDailyPurchases",
       "restaurantStocktakes",
       "restaurantMonthlyExpenses",
+      "restaurantOrdering",
       "shopSales",
       "shopSalesWorkingHours",
       "restaurantSalesSalary",
@@ -194,6 +198,7 @@ describe("menu styles", () => {
       "kitchenChannelSales",
       "kitchenProductSales",
       "kitchenAdvertisingPerformance",
+      "festivalOrderGeneration",
     ]);
     expect(reports.find((item) => item.key === "frozenMeat")?.children?.map((item) => item.key)).toEqual([
       "shopOrderQuantities",
@@ -220,6 +225,9 @@ describe("menu styles", () => {
     expect(businessSectionFromLocation("/reports/shops/pnl", "")).toBe("reports");
     expect(businessSectionFromLocation("/reports/data-input-progress", "?nav=reports")).toBe("reports");
     expect(businessSectionFromLocation("/reports/data-input-progress", "?nav=catering.kitchen")).toBe("catering");
+    expect(businessSectionFromLocation("/reports/kitchen", "?nav=accounting.cateringData")).toBe("accountingFollowUp");
+    expect(businessSectionFromLocation("/reports/shops/pnl", "?nav=accounting.restaurantData")).toBe("accountingFollowUp");
+    expect(businessSectionFromLocation("/reports/frozen-meat/raw-meat-stock", "?nav=accounting.factoryData")).toBe("accountingFollowUp");
     expect(businessSectionFromLocation("/settings/users", "")).toBe("settings");
     expect(businessSectionFromLocation("/settings/employees", "?nav=settings")).toBe("settings");
     expect(businessSidebarNav("settings", "").map((item) => item.key)).toEqual([
@@ -231,6 +239,7 @@ describe("menu styles", () => {
       "dictionaries",
       "notificationSettings",
       "districts",
+      "customerFaq",
       "attachments",
     ]);
     expect(businessSidebarNav("settings", "")[0]?.to).toContain("nav=settings");
@@ -244,6 +253,61 @@ describe("menu styles", () => {
     ).toBe(true);
   });
 
+  it("keeps accounting follow-up as soft links to existing report pages", () => {
+    const accounting = businessSidebarNav("accountingFollowUp", "cateringData");
+    expect(accounting.map((item) => item.key)).toEqual([
+      "cateringData",
+      "restaurantData",
+      "factoryData",
+    ]);
+    expect(accounting.find((item) => item.key === "cateringData")?.children?.map((item) => item.key)).toEqual([
+      "kitchenSalesCost",
+      "kitchenChannelSales",
+      "kitchenProductSales",
+      "kitchenAdvertisingPerformance",
+      "festivalOrderGeneration",
+      "dataInputProgress",
+      "operationsExpenseInput",
+      "purchaseExpenseInput",
+    ]);
+    expect(accounting.find((item) => item.key === "restaurantData")?.children?.map((item) => item.key)).toEqual(
+      businessSidebarNav("reports", "").find((item) => item.key === "shops")?.children?.map((item) => item.key),
+    );
+    expect(accounting.find((item) => item.key === "factoryData")?.children?.map((item) => item.key)).toEqual(
+      businessSidebarNav("reports", "").find((item) => item.key === "frozenMeat")?.children?.map((item) => item.key),
+    );
+    expect(accounting.flatMap((item) => item.children ?? []).every((item) => item.to.includes("nav=accounting."))).toBe(true);
+    expect(
+      isBusinessNavTargetActive(
+        "/reports/kitchen/channel-sales",
+        "?nav=accounting.cateringData",
+        "/reports/kitchen/channel-sales?nav=accounting.cateringData",
+      ),
+    ).toBe(true);
+    expect(
+      isBusinessNavTargetActive(
+        "/reports/kitchen/channel-sales",
+        "?nav=accounting.cateringData",
+        "/reports/kitchen/channel-sales?nav=reports",
+      ),
+    ).toBe(false);
+
+    const accountingPrimary = businessPrimaryNav.find((item) => item.key === "accountingFollowUp")!;
+    expect(isBusinessPrimaryNavVisible(accountingPrimary, () => false)).toBe(false);
+    expect(isBusinessPrimaryNavVisible(accountingPrimary, (key) => key === "kitchen.cost_input")).toBe(true);
+    expect(isBusinessPrimaryNavVisible(accountingPrimary, (key) => key === "reports.shop_sales")).toBe(true);
+    expect(isBusinessPrimaryNavVisible(accountingPrimary, (key) => key === "reports.shop_order_quantities")).toBe(true);
+    expect(
+      accessibleBusinessPrimaryPath(accountingPrimary, (key) => key === "reports.shop_sales"),
+    ).toBe("/reports/shops?nav=accounting.restaurantData");
+
+    const appSource = readFileSync(path.resolve(process.cwd(), "src/App.tsx"), "utf8");
+    expect(appSource).toMatch(/accountingFollowUp:\s*\["會計跟進"/);
+    expect(appSource).toMatch(/cateringData:\s*\["到會數據"/);
+    expect(appSource).toMatch(/restaurantData:\s*\["餐廳數據"/);
+    expect(appSource).toMatch(/factoryData:\s*\["工場數據"/);
+  });
+
   it("keeps second and third level groups in the style-one mobile drawer", () => {
     const groups = buildBusinessMobileDrawerNav(businessPrimaryNav, () => true);
     expect(groups.map((group) => group.groupKey)).toEqual([
@@ -252,6 +316,7 @@ describe("menu styles", () => {
       "catering",
       "frozen",
       "restaurant",
+      "accountingFollowUp",
       "reports",
       "settings",
     ]);
@@ -280,6 +345,16 @@ describe("menu styles", () => {
     );
     expect(catering?.items.find((item) => item.key === "customers")?.children).toBeUndefined();
 
+    const accounting = groups.find((group) => group.groupKey === "accountingFollowUp");
+    expect(accounting?.items.map((item) => item.key)).toEqual([
+      "cateringData",
+      "restaurantData",
+      "factoryData",
+    ]);
+    expect(
+      accounting?.items.find((item) => item.key === "cateringData")?.children?.map((item) => item.key),
+    ).toEqual(expect.arrayContaining(["kitchenSalesCost", "dataInputProgress"]));
+
     const reports = groups.find((group) => group.groupKey === "reports");
     expect(
       reports?.items.find((item) => item.key === "kitchenReports")?.children?.map((item) => item.key),
@@ -288,6 +363,7 @@ describe("menu styles", () => {
       "kitchenChannelSales",
       "kitchenProductSales",
       "kitchenAdvertisingPerformance",
+      "festivalOrderGeneration",
     ]);
   });
 });

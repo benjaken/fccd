@@ -1,0 +1,174 @@
+{
+  "published": [
+    {
+      "category": "ordering",
+      "question": "點樣喺網站落單？",
+      "answer": "你好。請喺我哋網站揀餐單同送貨資料，跟住結帳步驟完成落單。WhatsApp 唔會代你落正式訂單。如果未開過帳戶，可以先登記再落。越早落單越好，因為每日有配額。結帳頁見到積分或優惠碼已扣減，先至付款，否則之後無法退回。",
+      "keywords": "落單,網站,網上訂,點樣訂,how to order",
+      "sort_order": 10
+    },
+    {
+      "category": "ordering",
+      "question": "Express 即日到會點落單？",
+      "answer": "你好。即日到會請用 FC Express 網站落單。Express 只限地面交收，運費同 FCC Catering 主表唔同。如果網站顯示當日已滿，請改第二日，或者留低到會意見，同事會跟進。",
+      "keywords": "express,即日,即日到會,same day",
+      "sort_order": 20
+    },
+    {
+      "category": "menu",
+      "question": "食物係即食定要加熱？",
+      "answer": "你好。大部分到會食物係即煮即送，收貨後可以即食；有部分菜式適合翻熱。盒蓋會有菜名貼紙方便核對。實際加熱方式以盒上或網站說明為準。",
+      "keywords": "即食,加熱,翻熱,ready to eat,heat",
+      "sort_order": 30
+    },
+    {
+      "category": "menu",
+      "question": "餐具有啲咩？",
+      "answer": "你好。一般到會會跟基本餐具同加厚鋁盒。我哋唔提供侍應或者擺盤服務。如果要加購餐具，請喺網站結帳選擇，價錢以結帳頁為準。",
+      "keywords": "餐具,刀叉,筷子,cutlery,鋁盒",
+      "sort_order": 40
+    },
+    {
+      "category": "menu",
+      "question": "有冇早餐？",
+      "answer": "唔好意思，我哋暫時無早餐供應。最早送貨時段大約係 11:00 至 12:00。",
+      "keywords": "早餐,breakfast,最早,上午",
+      "sort_order": 50
+    },
+    {
+      "category": "menu",
+      "question": "素食或者走蔥蒜得唔得？",
+      "answer": "你好。素食同走蔥蒜請喺落單備註註明。我哋有植物肉 OMNI 選擇。如果係特別飲食要求，建議留低到會意見，同事會跟進。",
+      "keywords": "素食,走蒜,走蔥,vegetarian,omni,植物肉",
+      "sort_order": 60
+    },
+    {
+      "category": "menu",
+      "question": "有冇廚師上門？",
+      "answer": "唔好意思，廚師上門而家暫停。食物由自家工場準備，再送到指定地點。",
+      "keywords": "廚師上門,chef,上門煮",
+      "sort_order": 70
+    },
+    {
+      "category": "menu",
+      "question": "有冇侍應或者擺盤？",
+      "answer": "唔好意思，我哋唔提供侍應或者擺盤服務。食物用加厚鋁盒盛載，方便地面交收或者自取。",
+      "keywords": "侍應,擺盤,waiter,plating",
+      "sort_order": 80
+    },
+    {
+      "category": "menu",
+      "question": "有冇食物相片或者餐牌？",
+      "answer": "你好。網站有餐牌同部分食物相片。餐牌大致包括到會套餐、單點同即日 Express。實際供應以網站當日顯示為準。",
+      "keywords": "相片,餐牌,menu,圖片",
+      "sort_order": 90
+    },
+    {
+      "category": "delivery",
+      "question": "可唔可以荃灣自取？",
+      "answer": "你好。可以喺荃灣工場自取。詳細地址同自取時段請睇網站結帳頁，或者留低資料等同事確認。",
+      "keywords": "荃灣,自取,pickup,工場",
+      "sort_order": 100
+    },
+    {
+      "category": "delivery",
+      "question": "地面交收係咩意思？",
+      "answer": "你好。地面交收係指司機喺你地址附近最近可以免費停車嘅位置交收。司機通常會先致電同你夾交收點。",
+      "keywords": "地面交收,停車,司機,ground collection",
+      "sort_order": 110
+    },
+    {
+      "category": "delivery",
+      "question": "運費幾多？",
+      "answer": "你好。運費係按品牌同交收方式計。\n\nFCC Catering／福滿樓／HK Lunch Box／HK Party Food：\n地面交收：新界 HK$50、九龍 HK$50、港島 HK$100、偏遠 HK$180、機場 HK$250。\n送貨上門：新界 HK$250、九龍 HK$250、港島 HK$350；偏遠同機場唔適用上門。\n訂滿 HK$2800，地面交收免費（唔包括偏遠同機場）。\n\nFC Express 即日到會：只限地面交收，新界／九龍／港島一律 HK$200。\n\n地面交收係指司機喺你地址附近最近可以免費停車嘅位置交收。如果未講品牌，我哋會先按 FCC Catering 主表回覆；Express 即日到會收費唔同。同事可以再幫你核對實際地區。",
+      "keywords": "運費,送貨費,shipping,delivery fee,免運,2800,express 200",
+      "sort_order": 120
+    },
+    {
+      "category": "delivery",
+      "question": "打風落雨會唔會送？",
+      "answer": "你好。如果天文台發出 8 號或以上熱帶氣旋警告，或者黑色暴雨警告，我哋可能會暫停送貨。警告除下之後大約兩小時先再安排。已落嘅單可以改期，最多保留 60 日；呢類天氣情況不設取消退款。最終安排以客服同事回覆為準。",
+      "keywords": "打風,8號,黑雨,天氣,改期,60日,typhoon",
+      "sort_order": 130
+    },
+    {
+      "category": "payment",
+      "question": "接受咩付款方式？",
+      "answer": "你好。網站接受信用卡、支付寶、微信支付同轉數快等常見電子付款。訂單要預先支付，唔接受貨到現金。",
+      "keywords": "付款,信用卡,支付寶,微信支付,轉數快,payment",
+      "sort_order": 140
+    },
+    {
+      "category": "payment",
+      "question": "可唔可以貨到付款？",
+      "answer": "唔好意思，所有訂單都要預先支付，唔接受貨到現金。",
+      "keywords": "貨到付款,現金,cod,先付款",
+      "sort_order": 150
+    },
+    {
+      "category": "payment",
+      "question": "點攞收據或者發票？",
+      "answer": "你好。收據同發票請用自助頁 https://www.foodchannels-delivery.com/self_service_search ，輸入落單電話同電郵就可以下載。如果搵唔到，同事可以再指引你。",
+      "keywords": "收據,發票,invoice,receipt,自助",
+      "sort_order": 160
+    },
+    {
+      "category": "membership",
+      "question": "點樣用購物積分？",
+      "answer": "你好。購物積分要喺結帳頁見到已扣減，先至付款。如果未見到扣減就付款，之後無法退回。",
+      "keywords": "積分,loyalty,優惠碼,points",
+      "sort_order": 170
+    },
+    {
+      "category": "membership",
+      "question": "生日禮遇點用？",
+      "answer": "你好。生日禮遇係按你登記嘅生日月份計算，當月首單先適用。詳情以網站會員頁同結帳顯示為準。",
+      "keywords": "生日,birthday,禮遇",
+      "sort_order": 180
+    },
+    {
+      "category": "membership",
+      "question": "點樣註冊會員？",
+      "answer": "你好。請喺網站登記新會員。如果已經有帳戶但忘記密碼，可以用網站重設。改個人資料亦請喺會員頁更新。",
+      "keywords": "註冊,登記,會員,register,忘記密碼",
+      "sort_order": 190
+    }
+  ],
+  "unpublished": [
+    {
+      "category": "payment",
+      "question": "最低消費係幾多？",
+      "answer": "內部備註：最低消費約 HK$800／HK$1500，第一版不自動回答。",
+      "keywords": "最低消費,800,1500",
+      "sort_order": 900
+    },
+    {
+      "category": "menu",
+      "question": "加熱爐幾錢？",
+      "answer": "內部備註：加熱爐加購約 HK$30，第一版不自動報死價。",
+      "keywords": "加熱爐,30,heater",
+      "sort_order": 910
+    },
+    {
+      "category": "membership",
+      "question": "HSBC2024 優惠碼仲用唔用得？",
+      "answer": "內部備註：HSBC2024 等有期限優惠碼不進已發布 FAQ。",
+      "keywords": "HSBC2024,優惠碼",
+      "sort_order": 920
+    },
+    {
+      "category": "payment",
+      "question": "銀行轉帳戶口係幾號？",
+      "answer": "內部備註：戶口 747-221000 同 PayMe／八達通 token 不進 bot。",
+      "keywords": "銀行,戶口,747-221000,payme",
+      "sort_order": 930
+    },
+    {
+      "category": "ordering",
+      "question": "點樣取消訂單或者退款？",
+      "answer": "內部備註：取消／退款步驟轉真人，不自動辦理。",
+      "keywords": "取消,退款,cancel,refund",
+      "sort_order": 940
+    }
+  ]
+}

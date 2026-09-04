@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-const allowedShortOrSystemLists = /(?:STATUS_OPTIONS|KITCHEN_STATUS_FILTERS|DIRECTION_FILTERS|WORKLOAD_OPTIONS|LOGIN_LOG_EVENT_TYPES|SYSTEM_ROLES|ATTACHMENT_FILE_TYPES|availableStatuses|qz\.printers)/;
+const allowedShortOrSystemLists = /(?:STATUS_OPTIONS|KITCHEN_STATUS_FILTERS|DIRECTION_FILTERS|WORKLOAD_OPTIONS|LOGIN_LOG_EVENT_TYPES|SYSTEM_ROLES|ATTACHMENT_FILE_TYPES|CUSTOMER_FAQ_CATEGORIES|availableStatuses|qz\.printers)/;
 
 function filesIn(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {

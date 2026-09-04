@@ -11,10 +11,11 @@ npm run dev
 ```
 
 Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` in `.env.local`.
-Local development uses the Supabase `develop` branch; production environment
-variables and the built-in fallback use the Supabase `main` branch. Link the
-CLI to development with `npx supabase link develop` before running migrations
-or deploying Edge Functions from a workstation.
+Local development and Git `develop` / Vercel Preview builds use the Supabase
+`develop` project (`mxiueauyylnpwlxrvgbo`). Production (`main`) keeps the
+built-in fallback to Supabase `main`. Explicit `VITE_SUPABASE_*` values always
+win. Link the CLI to development with `npx supabase link develop` before
+running migrations or deploying Edge Functions from a workstation.
 Only use a publishable key in the browser; never expose a Supabase secret or
 `service_role` key.
 

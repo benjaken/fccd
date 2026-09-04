@@ -8,6 +8,7 @@ import {
   Printer,
   Star,
   TriangleAlert,
+  Warehouse,
   X,
 } from "lucide-react";
 
@@ -737,6 +738,20 @@ export function FactoryBoardPage({
         <div className="factory-board-actions">
           {selectedJob || multiDayReport ? null : (
             <>
+              <button
+                type="button"
+                className="factory-board-calendar"
+                onClick={() =>
+                  window.open(
+                    "/factory/warehouse",
+                    "_blank",
+                    "noopener,noreferrer",
+                  )
+                }
+              >
+                <Warehouse aria-hidden="true" />
+                <span>{t("factoryBoard.warehouse")}</span>
+              </button>
               <button
                 type="button"
                 className="factory-board-calendar"

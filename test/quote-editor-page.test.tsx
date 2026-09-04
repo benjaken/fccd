@@ -2319,16 +2319,14 @@ describe("Quote editor", () => {
       expect(convertEnquiryToQuote).toHaveBeenCalledWith({
         submissionId: "sub-1",
         channelId: "channel-1",
-      });
-      expect(saveDetails).toHaveBeenCalledWith(
-        "quote-1",
-        expect.objectContaining({
+        draft: expect.objectContaining({
           customerName: "sing",
           contactA: "95588228",
           email: "cfb.app02@chifung.net",
           deliveryDate: "2026-10-01",
         }),
-      );
+      });
+      expect(saveDetails).not.toHaveBeenCalled();
     });
   });
 });

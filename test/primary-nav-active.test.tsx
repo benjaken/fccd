@@ -63,6 +63,7 @@ describe("Primary navigation section matching", () => {
     ["/reports/frozen-meat/raw-meat-stock", "/reports/frozen-meat"],
     ["/reports/shops/sales-working-hours", "/reports/shops"],
     ["/reports/kitchen/advertising-performance", "/reports/kitchen"],
+    ["/reports/kitchen/festival-orders", "/reports/kitchen"],
   ])("keeps report secondary item %s active under %s", (pathname, itemPath) => {
     expect(isSecondaryNavItemActive(pathname, itemPath)).toBe(true);
   });
@@ -149,6 +150,7 @@ describe("Primary navigation section matching", () => {
     ["/settings/login-logs", "settings"],
     ["/settings/dictionaries", "settings"],
     ["/settings/districts", "settings"],
+    ["/settings/customer-faq", "settings"],
     ["/settings/order-lists", "settings"],
     ["/settings/attachments", "settings"],
     ["/orders/settings/order-list-tips", "orders"],
@@ -242,6 +244,7 @@ describe("Primary navigation section matching", () => {
     expect(pageAccessKey("/settings/login-logs")).toBe("settings.login_logs");
     expect(pageAccessKey("/settings/dictionaries")).toBe("settings.dictionaries");
     expect(pageAccessKey("/settings/districts")).toBe("settings.districts");
+    expect(pageAccessKey("/settings/customer-faq")).toBe("settings.customer_faq");
     expect(pageAccessKey("/settings/order-lists")).toBe("settings.order_lists");
     expect(pageAccessKey("/settings/attachments")).toBe(
       "settings.attachments",
@@ -287,6 +290,18 @@ describe("Primary navigation section matching", () => {
     );
     expect(pageAccessKey("/factory/production-calendar")).toBe(
       "workspace.factory.production_calendar",
+    );
+    expect(pageAccessKey("/factory/warehouse")).toBe(
+      "workspace.factory.warehouse.pending",
+    );
+    expect(pageAccessKey("/factory/warehouse/shipments")).toBe(
+      "workspace.factory.warehouse.outbound",
+    );
+    expect(pageAccessKey("/factory/warehouse/receipts")).toBe(
+      "workspace.factory.warehouse.inbound",
+    );
+    expect(pageAccessKey("/restaurant-workspace/receive")).toBe(
+      "workspace.restaurant.receive",
     );
     expect(pageAccessKey("/driver-delivery")).toBe("workspace.delivery");
     expect(pageAccessKey("/driver-delivery/available")).toBe(

@@ -1043,8 +1043,8 @@ export function QuoteEditorPage({
         const quote = await convertEnquiryToQuote({
           submissionId: enquirySubmission.id,
           channelId: draft.channelId,
+          draft,
         });
-        await saveDetails(quote.id, draft);
         setCreated(quote);
         setChannelId(draft.channelId);
         setActiveTab("items");

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  CATERING_ENQUIRY_SEED_FORM,
   CATERING_ENQUIRY_SEED_FORM_ID,
   CATERING_ENQUIRY_SEED_QUESTIONS,
   cloneDefaultEnquiryQuestions,
@@ -17,9 +18,33 @@ import {
   reorderEnquiryQuestions,
   serializeEnquiryQuestions,
   validateEnquiryAnswers,
+  validateEnquiryFormDefinition,
 } from "@/lib/enquiry-form";
 
 describe("catering enquiry seed form", () => {
+  it("accepts the published seed form definition", () => {
+    expect(validateEnquiryFormDefinition({
+      id: CATERING_ENQUIRY_SEED_FORM_ID,
+      ...CATERING_ENQUIRY_SEED_FORM,
+    }, { publishing: true })).toEqual([]);
+  });
+
+  it("rejects published choice questions without options", () => {
+    const form = {
+      id: CATERING_ENQUIRY_SEED_FORM_ID,
+      ...CATERING_ENQUIRY_SEED_FORM,
+      questions: [{
+        fieldKey: "choice",
+        type: "radio" as const,
+        title: "選擇",
+        required: true,
+        options: [],
+      }],
+    };
+    expect(validateEnquiryFormDefinition(form, { publishing: true }))
+      .toEqual(expect.arrayContaining([expect.objectContaining({ message: "第 1 題至少需要一個選項" })]));
+  });
+
   it("builds public URLs from the form id", () => {
     expect(enquiryPublicPath(CATERING_ENQUIRY_SEED_FORM_ID)).toBe(
       `/quote-inquiry/${CATERING_ENQUIRY_SEED_FORM_ID}`,

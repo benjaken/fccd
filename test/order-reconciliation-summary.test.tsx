@@ -75,4 +75,18 @@ describe("OrderReconciliationSummary", () => {
     expect(screen.getByText(/2026-07-31/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /B-1234/ })).toHaveAttribute("href", "/orders/order-1");
   });
+
+  it("does not update state after unmount", async () => {
+    let resolveSummary!: (value: Awaited<ReturnType<typeof fetchOrderReconciliationSummary>>) => void;
+    vi.mocked(fetchOrderReconciliationSummary).mockImplementation(
+      () => new Promise((resolve) => {
+        resolveSummary = resolve;
+      }),
+    );
+
+    const { unmount } = render(<MemoryRouter><OrderReconciliationSummary /></MemoryRouter>);
+    unmount();
+    resolveSummary({ run: null, issues: [], excludedOrders: [] });
+    await Promise.resolve();
+  });
 });

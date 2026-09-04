@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AlertTriangle, CheckCircle2, CircleSlash2, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -52,25 +52,32 @@ export function OrderReconciliationSummary() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [open, setOpen] = useState(false);
+  const aliveRef = useRef(true);
 
   const load = useCallback(async () => {
     try {
       setError(false);
       const next = await fetchOrderReconciliationSummary();
+      if (!aliveRef.current) return;
       setRun(next.run);
       setIssues(next.issues);
       setExcludedOrders(next.excludedOrders);
     } catch {
+      if (!aliveRef.current) return;
       setError(true);
     } finally {
-      setLoading(false);
+      if (aliveRef.current) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
+    aliveRef.current = true;
     void load();
     const timer = window.setInterval(() => void load(), 60_000);
-    return () => window.clearInterval(timer);
+    return () => {
+      aliveRef.current = false;
+      window.clearInterval(timer);
+    };
   }, [load]);
 
   const urgentCount = issues.filter((issue) => issue.severity === "urgent").length;
