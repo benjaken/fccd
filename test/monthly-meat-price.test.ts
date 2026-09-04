@@ -94,4 +94,38 @@ describe("monthly meat price automation formula", () => {
     expect(migration).toContain("private.has_page_access('frozen.selling_price_cost.push')");
     expect(migration).toContain("p_year_month");
   });
+
+  it("restores the private helper used by the month-scoped push RPC", () => {
+    const migration = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260903032551_restore_refresh_monthly_meat_prices.sql",
+      ),
+      "utf8",
+    );
+
+    expect(migration).toContain(
+      "create or replace function private.refresh_monthly_meat_prices",
+    );
+    expect(migration).toContain("from public.meat_price_versions as price");
+    expect(migration).not.toContain("create trigger refresh_monthly_meat_prices_raw_stock");
+    expect(migration).not.toContain(
+      "create trigger refresh_monthly_meat_prices_prepared_source",
+    );
+  });
+
+  it("creates shop and factory monthly rows when a month has no versions yet", () => {
+    const migration = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "supabase/migrations/20260903033212_create_monthly_meat_price_versions_on_push.sql",
+      ),
+      "utf8",
+    );
+
+    expect(migration).toContain("insert into public.meat_price_versions");
+    expect(migration).toContain("web-monthly-meat-price-shop-");
+    expect(migration).toContain("web-monthly-meat-price-room-");
+    expect(migration).not.toContain("'status', 'skipped_no_versions'");
+  });
 });
