@@ -332,11 +332,34 @@ describe("Seasoning recipes page", () => {
     );
 
     await screen.findByText("20260716");
+    expect(
+      screen.queryByRole("columnheader", { name: "複製" }),
+    ).not.toBeInTheDocument();
     const firstRow = screen.getAllByRole("row")[1]!;
+    expect(
+      within(firstRow)
+        .getAllByRole("button")
+        .map((button) => button.getAttribute("aria-label")),
+    ).toEqual(["複製", "編輯", "刪除"]);
     await user.click(within(firstRow).getByRole("switch"));
     await waitFor(() => {
       expect(setRecipeApplied).toHaveBeenCalledWith("p-1", 20260716, false);
     });
+
+    await user.click(within(firstRow).getByRole("button", { name: "複製" }));
+    await waitFor(() => {
+      expect(saveRecipe).toHaveBeenCalledWith({
+        preparedMeatItemId: "p-1",
+        versionCode: expect.any(Number),
+        productionRawMeatKg: 13.2,
+        lines: [
+          { seasoningId: "s-1", quantityGrams: 1200 },
+          { seasoningId: "s-2", quantityGrams: 600 },
+          { seasoningId: "s-3", quantityGrams: 4200 },
+        ],
+      });
+    });
+    expect(saveRecipe.mock.calls[0]?.[0]).not.toHaveProperty("isApplied");
 
     await user.click(within(firstRow).getByRole("button", { name: "編輯" }));
     const dialog = await screen.findByRole("dialog", { name: "編輯香料配方" });

@@ -11880,8 +11880,26 @@ button.product-tag[aria-pressed="true"] {
   min-height: 0;
 }
 
+.seasoning-recipes-table-wrap table {
+  width: 100%;
+}
+
+.seasoning-recipes-table-wrap th,
+.seasoning-recipes-table-wrap td {
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.seasoning-recipes-table-wrap th {
+  white-space: normal;
+  line-height: 1.25;
+}
+
 .seasoning-recipe-spice-cell {
-  min-width: 22rem;
+  width: 36%;
+  min-width: 0;
+  max-width: 26rem;
+  white-space: normal;
 }
 
 .seasoning-recipe-spice-list {
@@ -11889,6 +11907,7 @@ button.product-tag[aria-pressed="true"] {
   flex-wrap: wrap;
   align-items: stretch;
   gap: 8px;
+  max-width: 100%;
 }
 
 .seasoning-recipe-draft-list {
@@ -11902,7 +11921,7 @@ button.product-tag[aria-pressed="true"] {
   flex-direction: column;
   align-items: flex-start;
   gap: 2px;
-  min-width: 6.75rem;
+  min-width: 5.5rem;
   padding: 8px 10px;
   border: 1px solid color-mix(in oklch, var(--border) 85%, transparent);
   border-radius: 10px;

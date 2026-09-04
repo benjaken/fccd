@@ -59,9 +59,8 @@ const RECIPE_SKELETON_COLUMNS = [
   { width: "6rem" },
   { width: "12rem" },
   { width: "4rem" },
-  { width: "4rem" },
 ];
-const RECIPE_ACTION_SKELETON = { width: "4.5rem", variant: "action" as const };
+const RECIPE_ACTION_SKELETON = { width: "7.5rem", variant: "action" as const };
 
 type DraftLine = {
   key: string;
@@ -800,9 +799,6 @@ export function SeasoningRecipesPage({
                   <th>{t("seasoningRecipes.columns.seasoningPerKg")}</th>
                   <th>{t("seasoningRecipes.columns.rawMeat")}</th>
                   <th>{t("seasoningRecipes.columns.spices")}</th>
-                  {canEdit ? (
-                    <th>{t("seasoningRecipes.columns.copy")}</th>
-                  ) : null}
                   <th>{t("seasoningRecipes.columns.status")}</th>
                   {showRowActions ? (
                     <th aria-label={t("seasoningRecipes.columns.actions")} />
@@ -843,23 +839,6 @@ export function SeasoningRecipesPage({
                       ))}
                     </div>
                   </td>
-                  {canEdit ? (
-                    <td>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        disabled={copyingKey === row.key}
-                        aria-label={t("seasoningRecipes.copy")}
-                        title={t("seasoningRecipes.copy")}
-                        onClick={() => {
-                          void handleCopy(row);
-                        }}
-                      >
-                        <Copy />
-                      </Button>
-                    </td>
-                  ) : null}
                   <td>
                     <Switch
                       checked={row.isApplied}
@@ -877,16 +856,31 @@ export function SeasoningRecipesPage({
                     <td className="table-actions-cell">
                       <div className="table-row-actions">
                         {canEdit ? (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            aria-label={t("seasoningRecipes.edit")}
-                            title={t("seasoningRecipes.edit")}
-                            onClick={() => openEdit(row)}
-                          >
-                            <Pencil />
-                          </Button>
+                          <>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              disabled={copyingKey === row.key}
+                              aria-label={t("seasoningRecipes.copy")}
+                              title={t("seasoningRecipes.copy")}
+                              onClick={() => {
+                                void handleCopy(row);
+                              }}
+                            >
+                              <Copy />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              aria-label={t("seasoningRecipes.edit")}
+                              title={t("seasoningRecipes.edit")}
+                              onClick={() => openEdit(row)}
+                            >
+                              <Pencil />
+                            </Button>
+                          </>
                         ) : null}
                         {canDelete ? (
                           <Button
