@@ -24161,6 +24161,8 @@ a.masoft-order-tag:focus-visible {
 }
 
 .quote-lines-readonly-panel .quote-line-label-chip {
+  display: inline-flex;
+  width: fit-content;
   margin-top: 0;
   padding: 4px 8px;
 }

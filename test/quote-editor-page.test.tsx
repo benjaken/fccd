@@ -1143,8 +1143,19 @@ describe("Quote editor", () => {
     const emptyLabel = within(row).getByText("Empty label");
     expect(emptyLabel.closest(".quote-line-label-remark-pair")).toHaveClass("is-empty");
     expect(emptyLabel.closest(".quote-line-label-remark-pair")?.querySelector(".quote-line-label-remark-text")).toHaveClass("is-empty");
+    expect(emptyLabel).toHaveClass("quote-line-label-chip");
     expect(within(row).queryByRole("textbox")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Remarks Roast pork/ })).not.toBeInTheDocument();
+  });
+
+  it("keeps details print-label chips no wider than their text", () => {
+    const css = readFileSync(path.resolve(process.cwd(), "src/index.css"), "utf8");
+    const rule = css.match(
+      /\.quote-lines-readonly-panel \.quote-line-label-chip\s*\{([^}]*)\}/,
+    )?.[1];
+
+    expect(rule).toContain("display: inline-flex");
+    expect(rule).toContain("width: fit-content");
   });
 
   it("matches Shopify 12-hour delivery times to the current option", async () => {
