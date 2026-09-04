@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronLeft, ChevronRight, MessageCircleMore, Pencil, Plus, RefreshCw, Search } from "lucide-react";
+import { Bot, ChevronLeft, ChevronRight, MessageCircleMore, Pencil, Plus, RefreshCw, RotateCcw, Send, UserRound } from "lucide-react";
 
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
@@ -14,12 +14,13 @@ import {
   createCustomerFaq,
   fetchCustomerFaqs,
   fetchCustomerServiceControls,
-  searchPublishedCustomerFaqs,
+  previewCustomerServiceTurn,
   setCustomerServiceBotEnabled,
   updateCustomerFaq,
   type CustomerFaq,
-  type CustomerFaqSearchHit,
   type CustomerFaqWriteInput,
+  type CustomerServicePreviewConversation,
+  type CustomerServicePreviewResult,
   type CustomerServiceControls,
 } from "@/lib/customer-faq";
 
@@ -39,20 +40,33 @@ const EMPTY_DRAFT: CustomerFaqWriteInput = {
   sortOrder: 0,
 };
 
+type PreviewMessage = {
+  id: number;
+  role: "user" | "assistant" | "system";
+  text: string;
+  usedModel?: boolean;
+  humanHandoff?: boolean;
+  simulatedWrite?: boolean;
+};
+
 export function CustomerFaqPage({
   loadFaqs = fetchCustomerFaqs,
   createFaq = createCustomerFaq,
   updateFaq = updateCustomerFaq,
   loadControls = fetchCustomerServiceControls,
   setBotEnabled = setCustomerServiceBotEnabled,
-  searchPublished = searchPublishedCustomerFaqs,
+  previewTurn = previewCustomerServiceTurn,
 }: {
   loadFaqs?: typeof fetchCustomerFaqs;
   createFaq?: typeof createCustomerFaq;
   updateFaq?: typeof updateCustomerFaq;
   loadControls?: typeof fetchCustomerServiceControls;
   setBotEnabled?: typeof setCustomerServiceBotEnabled;
-  searchPublished?: typeof searchPublishedCustomerFaqs;
+  previewTurn?: (input: {
+    text: string;
+    phone?: string;
+    conversation?: CustomerServicePreviewConversation | null;
+  }) => Promise<CustomerServicePreviewResult>;
 }) {
   const { t } = useTranslation();
   const access = useCurrentPageAccess();
@@ -74,10 +88,11 @@ export function CustomerFaqPage({
   const [controlsError, setControlsError] = useState("");
   const [togglingBot, setTogglingBot] = useState(false);
   const [previewQuery, setPreviewQuery] = useState("");
-  const [previewHits, setPreviewHits] = useState<CustomerFaqSearchHit[]>([]);
+  const [previewPhone, setPreviewPhone] = useState("");
+  const [previewMessages, setPreviewMessages] = useState<PreviewMessage[]>([]);
+  const [previewConversation, setPreviewConversation] = useState<CustomerServicePreviewConversation | null>(null);
   const [previewing, setPreviewing] = useState(false);
   const [previewError, setPreviewError] = useState("");
-  const [previewRan, setPreviewRan] = useState(false);
 
   const totalPages = Math.max(1, Math.ceil(total / CUSTOMER_FAQS_PAGE_SIZE));
   const visibleFrom = total === 0 ? 0 : (page - 1) * CUSTOMER_FAQS_PAGE_SIZE + 1;
@@ -109,6 +124,7 @@ export function CustomerFaqPage({
       .then((next) => {
         if (!cancelled) {
           setControls(next);
+          setPreviewPhone((current) => current || next.allowedPhones?.[0] || "");
           setControlsError("");
         }
       })
@@ -178,17 +194,43 @@ export function CustomerFaqPage({
 
   const runPreview = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const text = previewQuery.trim();
+    if (!text || previewing) return;
+    const messageId = Date.now();
+    setPreviewMessages((current) => [...current, { id: messageId, role: "user", text }]);
+    setPreviewQuery("");
     setPreviewing(true);
     setPreviewError("");
-    setPreviewRan(true);
     try {
-      setPreviewHits(await searchPublished(previewQuery));
+      const result = await previewTurn({
+        text,
+        phone: previewPhone,
+        conversation: previewConversation,
+      });
+      setPreviewConversation(result.conversation);
+      setPreviewMessages((current) => [
+        ...current,
+        {
+          id: messageId + 1,
+          role: result.reply ? "assistant" : "system",
+          text: result.reply || t("settings.customerFaq.previewSilent"),
+          usedModel: result.usedModel,
+          humanHandoff: result.humanHandoff,
+          simulatedWrite: result.simulatedWrite,
+        },
+      ]);
     } catch {
-      setPreviewHits([]);
       setPreviewError(t("settings.customerFaq.previewError"));
     } finally {
       setPreviewing(false);
     }
+  };
+
+  const resetPreview = () => {
+    setPreviewMessages([]);
+    setPreviewConversation(null);
+    setPreviewError("");
+    setPreviewQuery("");
   };
 
   return (
@@ -374,8 +416,52 @@ export function CustomerFaqPage({
               <h2>{t("settings.customerFaq.previewTitle")}</h2>
               <p>{t("settings.customerFaq.previewDescription")}</p>
             </div>
+            <Button type="button" size="sm" variant="outline" onClick={resetPreview}>
+              <RotateCcw />
+              {t("settings.customerFaq.previewReset")}
+            </Button>
           </header>
           <div className="customer-faq-preview-body">
+            <label className="ingredients-field">
+              <span>{t("settings.customerFaq.previewPhone")}</span>
+              <input
+                value={previewPhone}
+                onChange={(event) => setPreviewPhone(event.target.value)}
+                placeholder={t("settings.customerFaq.previewPhonePlaceholder")}
+              />
+            </label>
+            <div className="customer-faq-chat" aria-label={t("settings.customerFaq.previewTranscript")}>
+              {previewMessages.length ? previewMessages.map((message) => (
+                <article key={message.id} className={`customer-faq-chat-message ${message.role}`}>
+                  <span className="customer-faq-chat-avatar" aria-hidden="true">
+                    {message.role === "user" ? <UserRound /> : <Bot />}
+                  </span>
+                  <div>
+                    <p>{message.text}</p>
+                    {message.role !== "user" ? (
+                      <small>
+                        {message.humanHandoff
+                          ? t("settings.customerFaq.previewHuman")
+                          : message.usedModel
+                            ? t("settings.customerFaq.previewAi")
+                            : t("settings.customerFaq.previewRule")}
+                        {message.simulatedWrite
+                          ? ` · ${t("settings.customerFaq.previewSimulatedWrite")}`
+                          : ""}
+                      </small>
+                    ) : null}
+                  </div>
+                </article>
+              )) : (
+                <p className="orders-toolbar-note">{t("settings.customerFaq.previewEmpty")}</p>
+              )}
+              {previewing ? (
+                <article className="customer-faq-chat-message assistant">
+                  <span className="customer-faq-chat-avatar" aria-hidden="true"><Bot /></span>
+                  <div><p>{t("settings.customerFaq.previewing")}</p></div>
+                </article>
+              ) : null}
+            </div>
             <form className="ingredients-form" onSubmit={(event) => void runPreview(event)}>
               <label className="ingredients-field">
                 <span>{t("settings.customerFaq.previewQuery")}</span>
@@ -386,23 +472,11 @@ export function CustomerFaqPage({
                 />
               </label>
               <Button type="submit" disabled={previewing || !previewQuery.trim()}>
-                <Search />
-                {previewing ? t("settings.customerFaq.previewing") : t("settings.customerFaq.previewAction")}
+                <Send />
+                {t("settings.customerFaq.previewAction")}
               </Button>
             </form>
             {previewError ? <p role="alert">{previewError}</p> : null}
-            {previewHits.length > 0 ? (
-              <ul className="customer-faq-preview-list">
-                {previewHits.map((hit) => (
-                  <li key={hit.id}>
-                    <strong>{hit.question}</strong>
-                    <p>{hit.answer}</p>
-                  </li>
-                ))}
-              </ul>
-            ) : previewRan && !previewing && !previewError ? (
-              <p>{t("settings.customerFaq.previewEmpty")}</p>
-            ) : null}
           </div>
         </article>
       </div>

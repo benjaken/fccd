@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { handleCustomerServiceTurn } from "../supabase/functions/_shared/customer-service-bot.ts";
 import { classifyCustomerServiceMessage } from "../supabase/functions/_shared/customer-service-intents.ts";
-import { REPLIES, sanitizeOutboundReply } from "../supabase/functions/_shared/customer-service-replies.ts";
+import { faqReply, REPLIES, sanitizeOutboundReply } from "../supabase/functions/_shared/customer-service-replies.ts";
 import {
   buildSessionMessageUrl,
   customerServicePhoneAllowed,
@@ -150,6 +150,20 @@ describe("customer-service bot turns", () => {
     expect(miss.conversation.state).toBe("identifying");
   });
 
+  it("uses a grounded model answer before the keyword-search fallback", async () => {
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "我住沙田，送餐過嚟點計？",
+      conversation,
+      deps: deps({
+        searchFaqs: vi.fn().mockResolvedValue([]),
+        answerFaqWithModel: vi.fn().mockResolvedValue("沙田屬新界，請按已公布嘅新界運費安排。"),
+      }),
+    });
+    expect(turn.reply).toContain("沙田屬新界");
+    expect(turn.usedModel).toBe(true);
+  });
+
   it("answers a soak-test greeting without handing the chat to a human", async () => {
     const turn = await handleCustomerServiceTurn({
       phone: conversation.phone_normalized,
@@ -198,6 +212,10 @@ describe("customer-service bot turns", () => {
 
   it("replaces profane outbound copy", () => {
     expect(sanitizeOutboundReply("你好屌")).toBe(REPLIES.fallback);
+  });
+
+  it("does not duplicate a model greeting", () => {
+    expect(faqReply("你好。餐具已包括。")).toBe("你好。餐具已包括。");
   });
 });
 

@@ -100,19 +100,45 @@ describe("CustomerFaqPage", () => {
     await i18n.changeLanguage("zh-HK");
   });
 
-  it("lists FAQs, creates a row, and previews published search", async () => {
+  it("lists FAQs, creates a row, and runs a multi-turn AI conversation preview", async () => {
     const user = userEvent.setup();
     const createFaq = vi.fn().mockResolvedValue(undefined);
-    const searchPublished = vi.fn().mockResolvedValue([
-      { id: "faq-1", category: "delivery", question: "運費幾多？", answer: "HK$50", score: 0.8 },
-    ]);
+    const previewTurn = vi.fn()
+      .mockResolvedValueOnce({
+        reply: "你好，新界地面交收運費係 HK$50。",
+        conversation: {
+          phone_normalized: "8613828747224",
+          state: "identifying",
+          selected_order_id: null,
+          handoff_at: null,
+        },
+        usedModel: true,
+        simulatedWrite: false,
+        humanHandoff: false,
+      })
+      .mockResolvedValueOnce({
+        reply: "唔好意思，呢單要同事跟進。",
+        conversation: {
+          phone_normalized: "8613828747224",
+          state: "human_owned",
+          selected_order_id: null,
+          handoff_at: "2026-09-04T00:00:00.000Z",
+        },
+        usedModel: false,
+        simulatedWrite: false,
+        humanHandoff: true,
+      });
 
     render(
       <CustomerFaqPage
         loadFaqs={vi.fn().mockResolvedValue({ items: [faq], total: 1 })}
         createFaq={createFaq}
-        loadControls={vi.fn().mockResolvedValue({ botEnabled: false, updatedAt: faq.updatedAt })}
-        searchPublished={searchPublished}
+        loadControls={vi.fn().mockResolvedValue({
+          botEnabled: false,
+          allowedPhones: ["8613828747224"],
+          updatedAt: faq.updatedAt,
+        })}
+        previewTurn={previewTurn}
       />,
     );
 
@@ -142,9 +168,25 @@ describe("CustomerFaqPage", () => {
     );
 
     await user.type(screen.getByLabelText("客人會點問"), "運費");
-    await user.click(screen.getByRole("button", { name: "預覽搜尋" }));
-    await waitFor(() => expect(searchPublished).toHaveBeenCalledWith("運費"));
-    expect(await screen.findByText("HK$50")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "傳送測試訊息" }));
+    await waitFor(() => expect(previewTurn).toHaveBeenCalledWith(expect.objectContaining({
+      text: "運費",
+      phone: "8613828747224",
+      conversation: null,
+    })));
+    expect(await screen.findByText(/HK\$50/)).toBeInTheDocument();
+    expect(screen.getByText("大模型根據已發布 FAQ 回覆")).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("客人會點問"), "我要退款");
+    await user.click(screen.getByRole("button", { name: "傳送測試訊息" }));
+    await waitFor(() => expect(previewTurn).toHaveBeenLastCalledWith(expect.objectContaining({
+      text: "我要退款",
+      conversation: expect.objectContaining({ state: "identifying" }),
+    })));
+    expect(await screen.findByText("已進入人工接手範圍")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "重新開始對話" }));
+    expect(screen.getByText("輸入客人問題開始多輪測試。")).toBeInTheDocument();
   });
 
   it("hides write actions without edit permission", async () => {

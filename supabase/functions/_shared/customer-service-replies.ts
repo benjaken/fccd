@@ -71,5 +71,6 @@ export function lookupListReply(
 }
 
 export function faqReply(answer: string) {
-  return sanitizeOutboundReply(`你好。${answer.trim()}`);
+  const text = answer.trim();
+  return sanitizeOutboundReply(/^你好[。！!，,\s]/.test(text) ? text : `你好。${text}`);
 }
