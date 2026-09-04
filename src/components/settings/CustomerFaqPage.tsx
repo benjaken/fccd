@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { Bot, ChevronLeft, ChevronRight, MessageCircleMore, Pencil, Plus, RefreshCw, RotateCcw, Send, UserRound } from "lucide-react";
+import { Bot, CheckCheck, ChevronLeft, ChevronRight, MessageCircleMore, Pencil, Plus, RefreshCw, RotateCcw, Send, Settings2, Smile } from "lucide-react";
 
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { Button } from "@/components/ui/button";
@@ -14,14 +14,20 @@ import {
   createCustomerFaq,
   fetchCustomerFaqs,
   fetchCustomerServiceControls,
+  fetchCustomerServiceLogic,
   previewCustomerServiceTurn,
   setCustomerServiceBotEnabled,
   updateCustomerFaq,
+  updateCustomerServiceIntent,
+  updateCustomerServiceReplyTemplate,
   type CustomerFaq,
   type CustomerFaqWriteInput,
   type CustomerServicePreviewConversation,
   type CustomerServicePreviewResult,
   type CustomerServiceControls,
+  type CustomerServiceIntentSetting,
+  type CustomerServiceLogic,
+  type CustomerServiceReplyTemplate,
 } from "@/lib/customer-faq";
 
 const SKELETON_COLUMNS = [
@@ -47,6 +53,7 @@ type PreviewMessage = {
   usedModel?: boolean;
   humanHandoff?: boolean;
   simulatedWrite?: boolean;
+  simulatedNotify?: boolean;
 };
 
 export function CustomerFaqPage({
@@ -56,6 +63,9 @@ export function CustomerFaqPage({
   loadControls = fetchCustomerServiceControls,
   setBotEnabled = setCustomerServiceBotEnabled,
   previewTurn = previewCustomerServiceTurn,
+  loadLogic = fetchCustomerServiceLogic,
+  saveIntent = updateCustomerServiceIntent,
+  saveReplyTemplate = updateCustomerServiceReplyTemplate,
 }: {
   loadFaqs?: typeof fetchCustomerFaqs;
   createFaq?: typeof createCustomerFaq;
@@ -67,6 +77,9 @@ export function CustomerFaqPage({
     phone?: string;
     conversation?: CustomerServicePreviewConversation | null;
   }) => Promise<CustomerServicePreviewResult>;
+  loadLogic?: typeof fetchCustomerServiceLogic;
+  saveIntent?: typeof updateCustomerServiceIntent;
+  saveReplyTemplate?: typeof updateCustomerServiceReplyTemplate;
 }) {
   const { t } = useTranslation();
   const access = useCurrentPageAccess();
@@ -86,13 +99,21 @@ export function CustomerFaqPage({
   const [saveError, setSaveError] = useState("");
   const [controls, setControls] = useState<CustomerServiceControls | null>(null);
   const [controlsError, setControlsError] = useState("");
-  const [togglingBot, setTogglingBot] = useState(false);
+  const [savingControls, setSavingControls] = useState(false);
   const [previewQuery, setPreviewQuery] = useState("");
   const [previewPhone, setPreviewPhone] = useState("");
   const [previewMessages, setPreviewMessages] = useState<PreviewMessage[]>([]);
   const [previewConversation, setPreviewConversation] = useState<CustomerServicePreviewConversation | null>(null);
   const [previewing, setPreviewing] = useState(false);
   const [previewError, setPreviewError] = useState("");
+  const previewChatRef = useRef<HTMLDivElement>(null);
+  const [logicOpen, setLogicOpen] = useState(false);
+  const [logic, setLogic] = useState<CustomerServiceLogic | null>(null);
+  const [selectedIntent, setSelectedIntent] = useState("");
+  const [selectedReply, setSelectedReply] = useState("");
+  const [logicLoading, setLogicLoading] = useState(false);
+  const [logicSaving, setLogicSaving] = useState(false);
+  const [logicError, setLogicError] = useState("");
 
   const totalPages = Math.max(1, Math.ceil(total / CUSTOMER_FAQS_PAGE_SIZE));
   const visibleFrom = total === 0 ? 0 : (page - 1) * CUSTOMER_FAQS_PAGE_SIZE + 1;
@@ -135,6 +156,19 @@ export function CustomerFaqPage({
       cancelled = true;
     };
   }, [loadControls, t]);
+
+  useEffect(() => {
+    const chat = previewChatRef.current;
+    if (!chat || (!previewMessages.length && !previewing)) return;
+    const frame = window.requestAnimationFrame(() => {
+      if (typeof chat.scrollTo === "function") {
+        chat.scrollTo({ top: chat.scrollHeight, behavior: "smooth" });
+      } else {
+        chat.scrollTop = chat.scrollHeight;
+      }
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [previewMessages, previewing]);
 
   const openEditor = (faq: CustomerFaq | null) => {
     setEditor(faq);
@@ -179,16 +213,24 @@ export function CustomerFaqPage({
     }
   };
 
-  const toggleBot = async (enabled: boolean) => {
-    if (!canEdit || togglingBot) return;
-    setTogglingBot(true);
+  const saveControls = async ({
+    enabled = controls?.botEnabled ?? false,
+    start = controls?.autoReplyStart ?? "19:00",
+    end = controls?.autoReplyEnd ?? "09:00",
+  }: {
+    enabled?: boolean;
+    start?: string;
+    end?: string;
+  }) => {
+    if (!canEdit || savingControls) return;
+    setSavingControls(true);
     setControlsError("");
     try {
-      setControls(await setBotEnabled(enabled));
+      setControls(await setBotEnabled(enabled, start, end));
     } catch {
       setControlsError(t("settings.customerFaq.botSaveError"));
     } finally {
-      setTogglingBot(false);
+      setSavingControls(false);
     }
   };
 
@@ -217,6 +259,7 @@ export function CustomerFaqPage({
           usedModel: result.usedModel,
           humanHandoff: result.humanHandoff,
           simulatedWrite: result.simulatedWrite,
+          simulatedNotify: result.simulatedNotify,
         },
       ]);
     } catch {
@@ -233,6 +276,62 @@ export function CustomerFaqPage({
     setPreviewQuery("");
   };
 
+  const openLogic = async () => {
+    setLogicOpen(true);
+    setLogicLoading(true);
+    setLogicError("");
+    try {
+      const next = await loadLogic();
+      setLogic(next);
+      setSelectedIntent((current) => current || next.intents[0]?.intentKey || "");
+      setSelectedReply((current) => current || next.replyTemplates[0]?.templateKey || "");
+    } catch {
+      setLogicError(t("settings.customerFaq.logicLoadError"));
+    } finally {
+      setLogicLoading(false);
+    }
+  };
+
+  const patchIntent = (patch: Partial<CustomerServiceIntentSetting>) => {
+    setLogic((current) => current ? {
+      ...current,
+      intents: current.intents.map((intent) =>
+        intent.intentKey === selectedIntent ? { ...intent, ...patch } : intent
+      ),
+    } : current);
+  };
+
+  const patchReply = (patch: Partial<CustomerServiceReplyTemplate>) => {
+    setLogic((current) => current ? {
+      ...current,
+      replyTemplates: current.replyTemplates.map((reply) =>
+        reply.templateKey === selectedReply ? { ...reply, ...patch } : reply
+      ),
+    } : current);
+  };
+
+  const saveLogic = async () => {
+    if (!logic || logicSaving) return;
+    const intent = logic.intents.find((item) => item.intentKey === selectedIntent);
+    const reply = logic.replyTemplates.find((item) => item.templateKey === selectedReply);
+    if (!intent || !reply || !intent.description.trim() || !reply.content.trim()) {
+      setLogicError(t("settings.customerFaq.logicValidation"));
+      return;
+    }
+    setLogicSaving(true);
+    setLogicError("");
+    try {
+      await Promise.all([saveIntent(intent), saveReplyTemplate(reply)]);
+    } catch {
+      setLogicError(t("settings.customerFaq.logicSaveError"));
+    } finally {
+      setLogicSaving(false);
+    }
+  };
+
+  const intentDraft = logic?.intents.find((item) => item.intentKey === selectedIntent);
+  const replyDraft = logic?.replyTemplates.find((item) => item.templateKey === selectedReply);
+
   return (
     <section className="orders-page settings-list-page customer-faq-page">
       <header className="page-heading orders-heading">
@@ -241,30 +340,62 @@ export function CustomerFaqPage({
           <h1>{t("settings.customerFaq.title")}</h1>
           <p>{t("settings.customerFaq.description")}</p>
         </div>
-        <label className="dictionary-active-field">
+      </header>
+      <div className="customer-faq-auto-reply-controls">
+        <label className="customer-faq-auto-reply-switch">
           <span>{t("settings.customerFaq.botEnabled")}</span>
           <Switch
             checked={Boolean(controls?.botEnabled)}
-            disabled={!canEdit || togglingBot || !controls}
+            disabled={!canEdit || savingControls || !controls}
             aria-label={t("settings.customerFaq.botEnabled")}
-            onCheckedChange={(checked) => void toggleBot(checked)}
+            onCheckedChange={(checked) => void saveControls({ enabled: checked })}
           />
         </label>
-      </header>
-      <div className="customer-faq-notes">
+        <div className="customer-faq-auto-reply-window">
+          <span>{t("settings.customerFaq.autoReplyWindow")}</span>
+          <label>
+            <span className="sr-only">{t("settings.customerFaq.autoReplyStart")}</span>
+            <input
+              type="time"
+              value={controls?.autoReplyStart ?? "19:00"}
+              disabled={!canEdit || savingControls || !controls}
+              aria-label={t("settings.customerFaq.autoReplyStart")}
+              onChange={(event) => {
+                const start = event.target.value;
+                setControls((current) => current ? { ...current, autoReplyStart: start } : current);
+              }}
+              onBlur={(event) => void saveControls({ start: event.target.value })}
+            />
+          </label>
+          <span aria-hidden="true">–</span>
+          <label>
+            <span className="sr-only">{t("settings.customerFaq.autoReplyEnd")}</span>
+            <input
+              type="time"
+              value={controls?.autoReplyEnd ?? "09:00"}
+              disabled={!canEdit || savingControls || !controls}
+              aria-label={t("settings.customerFaq.autoReplyEnd")}
+              onChange={(event) => {
+                const end = event.target.value;
+                setControls((current) => current ? { ...current, autoReplyEnd: end } : current);
+              }}
+              onBlur={(event) => void saveControls({ end: event.target.value })}
+            />
+          </label>
+          <small>
+            {(controls?.autoReplyStart ?? "19:00") === (controls?.autoReplyEnd ?? "09:00")
+              ? t("settings.customerFaq.autoReplyAllDay")
+              : t("settings.customerFaq.autoReplyNextDay")}
+          </small>
+        </div>
+        {canEdit ? (
+          <Button type="button" variant="outline" onClick={() => void openLogic()}>
+            <Settings2 />
+            {t("settings.customerFaq.logicButton")}
+          </Button>
+        ) : null}
         {controlsError ? (
-          <p className="orders-state-error" role="alert">
-            {controlsError}
-          </p>
-        ) : (
-          <p className="orders-toolbar-note">{t("settings.customerFaq.botHint")}</p>
-        )}
-        {controls?.allowedPhones?.length ? (
-          <p className="orders-toolbar-note">
-            {t("settings.customerFaq.botAllowlist", {
-              phones: controls.allowedPhones.join("、"),
-            })}
-          </p>
+          <p className="orders-state-error" role="alert">{controlsError}</p>
         ) : null}
       </div>
 
@@ -411,71 +542,104 @@ export function CustomerFaqPage({
         </article>
 
         <article className="panel orders-panel customer-faq-preview">
-          <header className="page-heading">
-            <div>
-              <h2>{t("settings.customerFaq.previewTitle")}</h2>
-              <p>{t("settings.customerFaq.previewDescription")}</p>
+          <header className="customer-faq-chat-header">
+            <div className="customer-faq-chat-contact">
+              <img src="/assets/fc-catering-logo.svg" alt="" width="42" height="42" />
+              <div>
+                <h2>Food Channels</h2>
+                <p>{previewing ? t("settings.customerFaq.previewingShort") : t("settings.customerFaq.previewTitle")}</p>
+              </div>
             </div>
-            <Button type="button" size="sm" variant="outline" onClick={resetPreview}>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className="customer-faq-chat-reset"
+              onClick={resetPreview}
+              aria-label={t("settings.customerFaq.previewReset")}
+              title={t("settings.customerFaq.previewReset")}
+            >
               <RotateCcw />
-              {t("settings.customerFaq.previewReset")}
             </Button>
           </header>
           <div className="customer-faq-preview-body">
-            <label className="ingredients-field">
-              <span>{t("settings.customerFaq.previewPhone")}</span>
-              <input
-                value={previewPhone}
-                onChange={(event) => setPreviewPhone(event.target.value)}
-                placeholder={t("settings.customerFaq.previewPhonePlaceholder")}
-              />
-            </label>
-            <div className="customer-faq-chat" aria-label={t("settings.customerFaq.previewTranscript")}>
-              {previewMessages.length ? previewMessages.map((message) => (
-                <article key={message.id} className={`customer-faq-chat-message ${message.role}`}>
-                  <span className="customer-faq-chat-avatar" aria-hidden="true">
-                    {message.role === "user" ? <UserRound /> : <Bot />}
-                  </span>
-                  <div>
-                    <p>{message.text}</p>
-                    {message.role !== "user" ? (
-                      <small>
-                        {message.humanHandoff
-                          ? t("settings.customerFaq.previewHuman")
-                          : message.usedModel
-                            ? t("settings.customerFaq.previewAi")
-                            : t("settings.customerFaq.previewRule")}
-                        {message.simulatedWrite
-                          ? ` · ${t("settings.customerFaq.previewSimulatedWrite")}`
-                          : ""}
-                      </small>
-                    ) : null}
-                  </div>
-                </article>
-              )) : (
-                <p className="orders-toolbar-note">{t("settings.customerFaq.previewEmpty")}</p>
-              )}
-              {previewing ? (
-                <article className="customer-faq-chat-message assistant">
-                  <span className="customer-faq-chat-avatar" aria-hidden="true"><Bot /></span>
-                  <div><p>{t("settings.customerFaq.previewing")}</p></div>
-                </article>
-              ) : null}
+            <div className="customer-faq-chat-shell">
+              <div
+                ref={previewChatRef}
+                className="customer-faq-chat"
+                aria-label={t("settings.customerFaq.previewTranscript")}
+              >
+                {previewMessages.length ? previewMessages.map((message) => (
+                  <article key={message.id} className={`customer-faq-chat-message ${message.role}`}>
+                    <div>
+                      <p>{message.text}</p>
+                      <footer>
+                        {message.role !== "user" ? (
+                          <small>
+                            {message.humanHandoff
+                              ? t("settings.customerFaq.previewHuman")
+                              : message.usedModel
+                                ? t("settings.customerFaq.previewAi")
+                                : t("settings.customerFaq.previewRule")}
+                            {message.simulatedWrite
+                              ? ` · ${t("settings.customerFaq.previewSimulatedWrite")}`
+                              : ""}
+                            {message.simulatedNotify
+                              ? ` · ${t("settings.customerFaq.previewSimulatedNotify")}`
+                              : ""}
+                          </small>
+                        ) : null}
+                        <time>
+                          {new Date(message.id).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            hour12: false,
+                          })}
+                        </time>
+                        {message.role === "user" ? <CheckCheck aria-hidden="true" /> : null}
+                      </footer>
+                    </div>
+                  </article>
+                )) : (
+                  <p className="customer-faq-chat-empty">{t("settings.customerFaq.previewEmpty")}</p>
+                )}
+                {previewing ? (
+                  <article className="customer-faq-chat-message assistant pending" role="status">
+                    <div>
+                      <p>{t("settings.customerFaq.previewing")}</p>
+                    </div>
+                  </article>
+                ) : null}
+              </div>
+              <form className="customer-faq-chat-composer" onSubmit={(event) => void runPreview(event)}>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  aria-label={t("settings.customerFaq.previewEmoji")}
+                  onClick={() => setPreviewQuery((current) => `${current}😊`)}
+                >
+                  <Smile />
+                </Button>
+                <label>
+                  <span className="sr-only">{t("settings.customerFaq.previewQuery")}</span>
+                  <input
+                    value={previewQuery}
+                    onChange={(event) => setPreviewQuery(event.target.value)}
+                    placeholder={t("settings.customerFaq.previewMessagePlaceholder")}
+                  />
+                </label>
+                <Button
+                  type="submit"
+                  size="icon"
+                  className="customer-faq-chat-send"
+                  disabled={previewing || !previewQuery.trim()}
+                  aria-label={t("settings.customerFaq.previewAction")}
+                >
+                  <Send />
+                </Button>
+              </form>
             </div>
-            <form className="ingredients-form" onSubmit={(event) => void runPreview(event)}>
-              <label className="ingredients-field">
-                <span>{t("settings.customerFaq.previewQuery")}</span>
-                <input
-                  value={previewQuery}
-                  onChange={(event) => setPreviewQuery(event.target.value)}
-                  placeholder={t("settings.customerFaq.previewPlaceholder")}
-                />
-              </label>
-              <Button type="submit" disabled={previewing || !previewQuery.trim()}>
-                <Send />
-                {t("settings.customerFaq.previewAction")}
-              </Button>
-            </form>
             {previewError ? <p role="alert">{previewError}</p> : null}
           </div>
         </article>
@@ -555,6 +719,81 @@ export function CustomerFaqPage({
           </div>
           {saveError ? <p role="alert">{saveError}</p> : null}
         </form>
+      </SidePanel>
+
+      <SidePanel
+        open={logicOpen}
+        title={t("settings.customerFaq.logicTitle")}
+        description={t("settings.customerFaq.logicDescription")}
+        onClose={() => !logicSaving && setLogicOpen(false)}
+        closeLabel={t("common.close")}
+        half
+        footer={
+          <>
+            <Button type="button" variant="outline" onClick={() => setLogicOpen(false)} disabled={logicSaving}>
+              {t("common.cancel")}
+            </Button>
+            <Button type="button" onClick={() => void saveLogic()} disabled={logicSaving || logicLoading || !logic}>
+              {logicSaving ? t("common.saving") : t("common.save")}
+            </Button>
+          </>
+        }
+      >
+        {logicLoading ? <p>{t("common.loading")}</p> : null}
+        {logicError ? <p className="orders-state-error" role="alert">{logicError}</p> : null}
+        {intentDraft && replyDraft ? (
+          <div className="customer-service-logic-editor">
+            <section>
+              <h3>{t("settings.customerFaq.logicIntentTitle")}</h3>
+              <label className="ingredients-field">
+                <span>{t("settings.customerFaq.logicIntent")}</span>
+                <select value={selectedIntent} onChange={(event) => setSelectedIntent(event.target.value)}>
+                  {logic?.intents.map((intent) => (
+                    <option key={intent.intentKey} value={intent.intentKey}>{intent.displayName}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="ingredients-field">
+                <span>{t("settings.customerFaq.logicDescriptionField")}</span>
+                <textarea rows={5} value={intentDraft.description} onChange={(event) => patchIntent({ description: event.target.value })} />
+              </label>
+              <label className="ingredients-field">
+                <span>{t("settings.customerFaq.logicExamples")}</span>
+                <textarea rows={7} value={intentDraft.examples.join("\n")} onChange={(event) => patchIntent({ examples: event.target.value.split("\n") })} />
+              </label>
+              <label className="ingredients-field">
+                <span>{t("settings.customerFaq.logicConfidence")}</span>
+                <input type="number" min="0" max="1" step="0.05" value={intentDraft.confidenceThreshold} onChange={(event) => patchIntent({ confidenceThreshold: Number(event.target.value) })} />
+              </label>
+              <p className="customer-service-logic-tools">
+                {t("settings.customerFaq.logicTools")}: {intentDraft.toolKeys.join(", ") || t("settings.customerFaq.logicNoTools")}
+              </p>
+              <div className="dictionary-active-field">
+                <span>{t("settings.customerFaq.logicEnabled")}</span>
+                <Switch checked={intentDraft.enabled} onCheckedChange={(enabled) => patchIntent({ enabled })} />
+              </div>
+            </section>
+            <section>
+              <h3>{t("settings.customerFaq.logicReplyTitle")}</h3>
+              <label className="ingredients-field">
+                <span>{t("settings.customerFaq.logicReply")}</span>
+                <select value={selectedReply} onChange={(event) => setSelectedReply(event.target.value)}>
+                  {logic?.replyTemplates.map((reply) => (
+                    <option key={reply.templateKey} value={reply.templateKey}>{reply.displayName}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="ingredients-field">
+                <span>{t("settings.customerFaq.logicReplyContent")}</span>
+                <textarea rows={10} value={replyDraft.content} onChange={(event) => patchReply({ content: event.target.value })} />
+              </label>
+              <div className="dictionary-active-field">
+                <span>{t("settings.customerFaq.logicEnabled")}</span>
+                <Switch checked={replyDraft.enabled} onCheckedChange={(enabled) => patchReply({ enabled })} />
+              </div>
+            </section>
+          </div>
+        ) : null}
       </SidePanel>
     </section>
   );

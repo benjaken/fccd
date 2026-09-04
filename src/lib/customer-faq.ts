@@ -49,14 +49,18 @@ export type CustomerFaqSearchHit = {
 export type CustomerServiceControls = {
   botEnabled: boolean;
   allowedPhones: string[];
+  autoReplyStart: string;
+  autoReplyEnd: string;
+  autoReplyTimezone: string;
   updatedAt: string;
 };
 
 export type CustomerServicePreviewConversation = {
   phone_normalized: string;
-  state: "identifying" | "picking_order" | "collecting" | "human_owned";
+  state: "identifying" | "picking_order" | "picking_handoff_order" | "collecting" | "human_owned";
   selected_order_id: string | null;
   handoff_at: string | null;
+  pending_request: string | null;
 };
 
 export type CustomerServicePreviewResult = {
@@ -64,7 +68,35 @@ export type CustomerServicePreviewResult = {
   conversation: CustomerServicePreviewConversation;
   usedModel: boolean;
   simulatedWrite: boolean;
+  simulatedNotify: boolean;
   humanHandoff: boolean;
+  intentKey?: string;
+  confidence?: number;
+  toolKeys?: string[];
+};
+
+export type CustomerServiceIntentSetting = {
+  intentKey: string;
+  displayName: string;
+  description: string;
+  examples: string[];
+  actionKey: string;
+  enabled: boolean;
+  priority: number;
+  confidenceThreshold: number;
+  toolKeys: string[];
+};
+
+export type CustomerServiceReplyTemplate = {
+  templateKey: string;
+  displayName: string;
+  content: string;
+  enabled: boolean;
+};
+
+export type CustomerServiceLogic = {
+  intents: CustomerServiceIntentSetting[];
+  replyTemplates: CustomerServiceReplyTemplate[];
 };
 
 type FaqRow = {
@@ -82,8 +114,26 @@ type FaqRow = {
 type ControlsRow = {
   bot_enabled: boolean;
   allowed_phones?: string[] | null;
+  auto_reply_start?: string | null;
+  auto_reply_end?: string | null;
+  auto_reply_timezone?: string | null;
   updated_at: string;
 };
+
+function normalizeControlTime(value: string | null | undefined, fallback: string) {
+  return /^\d{2}:\d{2}/.test(value ?? "") ? String(value).slice(0, 5) : fallback;
+}
+
+function mapControls(row: ControlsRow): CustomerServiceControls {
+  return {
+    botEnabled: Boolean(row.bot_enabled),
+    allowedPhones: Array.isArray(row.allowed_phones) ? row.allowed_phones : [],
+    autoReplyStart: normalizeControlTime(row.auto_reply_start, "19:00"),
+    autoReplyEnd: normalizeControlTime(row.auto_reply_end, "09:00"),
+    autoReplyTimezone: row.auto_reply_timezone || "Asia/Hong_Kong",
+    updatedAt: row.updated_at,
+  };
+}
 
 type SearchRow = {
   id: string;
@@ -204,25 +254,23 @@ export async function fetchCustomerServiceControls(): Promise<CustomerServiceCon
   if (error) throw error;
   const row = (data as ControlsRow[] | null)?.[0];
   if (!row) throw new Error("customer_service_controls_missing");
-  return {
-    botEnabled: Boolean(row.bot_enabled),
-    allowedPhones: Array.isArray(row.allowed_phones) ? row.allowed_phones : [],
-    updatedAt: row.updated_at,
-  };
+  return mapControls(row);
 }
 
-export async function setCustomerServiceBotEnabled(enabled: boolean) {
+export async function setCustomerServiceBotEnabled(
+  enabled: boolean,
+  autoReplyStart = "19:00",
+  autoReplyEnd = "09:00",
+) {
   const { data, error } = await supabase.rpc("customer_service_controls_set", {
     p_bot_enabled: enabled,
+    p_auto_reply_start: autoReplyStart,
+    p_auto_reply_end: autoReplyEnd,
   });
   if (error) throw error;
   const row = (data as ControlsRow[] | null)?.[0];
   if (!row) throw new Error("customer_service_controls_missing");
-  return {
-    botEnabled: Boolean(row.bot_enabled),
-    allowedPhones: Array.isArray(row.allowed_phones) ? row.allowed_phones : [],
-    updatedAt: row.updated_at,
-  };
+  return mapControls(row);
 }
 
 export async function searchPublishedCustomerFaqs(
@@ -264,7 +312,11 @@ export async function previewCustomerServiceTurn(input: {
     conversation?: CustomerServicePreviewConversation;
     used_model?: unknown;
     simulated_write?: unknown;
+    simulated_notify?: unknown;
     human_handoff?: unknown;
+    intent_key?: unknown;
+    confidence?: unknown;
+    tool_keys?: unknown;
   } | null;
   if (!payload?.conversation) throw new Error("customer_service_preview_invalid_response");
   return {
@@ -272,6 +324,103 @@ export async function previewCustomerServiceTurn(input: {
     conversation: payload.conversation,
     usedModel: Boolean(payload.used_model),
     simulatedWrite: Boolean(payload.simulated_write),
+    simulatedNotify: Boolean(payload.simulated_notify),
     humanHandoff: Boolean(payload.human_handoff),
+    intentKey: typeof payload.intent_key === "string" ? payload.intent_key : undefined,
+    confidence: typeof payload.confidence === "number" ? payload.confidence : undefined,
+    toolKeys: Array.isArray(payload.tool_keys)
+      ? payload.tool_keys.filter((key): key is string => typeof key === "string")
+      : [],
   };
+}
+
+export async function fetchCustomerServiceLogic(): Promise<CustomerServiceLogic> {
+  const [{ data: intents, error: intentError }, { data: permissions, error: permissionError }, {
+    data: replies,
+    error: replyError,
+  }] = await Promise.all([
+    supabase
+      .from("customer_service_intents")
+      .select("intent_key,display_name,description,examples,action_key,enabled,priority,confidence_threshold")
+      .order("priority"),
+    supabase
+      .from("customer_service_tool_permissions")
+      .select("intent_key,tool_key")
+      .eq("allowed", true),
+    supabase
+      .from("customer_service_reply_templates")
+      .select("template_key,display_name,content,enabled")
+      .order("display_name"),
+  ]);
+  if (intentError) throw intentError;
+  if (permissionError) throw permissionError;
+  if (replyError) throw replyError;
+  const tools = new Map<string, string[]>();
+  for (const row of (permissions ?? []) as Array<{ intent_key: string; tool_key: string }>) {
+    tools.set(row.intent_key, [...(tools.get(row.intent_key) ?? []), row.tool_key]);
+  }
+  return {
+    intents: ((intents ?? []) as Array<{
+      intent_key: string;
+      display_name: string;
+      description: string;
+      examples: string[] | null;
+      action_key: string;
+      enabled: boolean;
+      priority: number;
+      confidence_threshold: number | string;
+    }>).map((row) => ({
+      intentKey: row.intent_key,
+      displayName: row.display_name,
+      description: row.description,
+      examples: row.examples ?? [],
+      actionKey: row.action_key,
+      enabled: row.enabled,
+      priority: row.priority,
+      confidenceThreshold: Number(row.confidence_threshold),
+      toolKeys: tools.get(row.intent_key) ?? [],
+    })),
+    replyTemplates: ((replies ?? []) as Array<{
+      template_key: string;
+      display_name: string;
+      content: string;
+      enabled: boolean;
+    }>).map((row) => ({
+      templateKey: row.template_key,
+      displayName: row.display_name,
+      content: row.content,
+      enabled: row.enabled,
+    })),
+  };
+}
+
+export async function updateCustomerServiceIntent(input: CustomerServiceIntentSetting) {
+  const { error } = await supabase
+    .from("customer_service_intents")
+    .update({
+      display_name: input.displayName.trim(),
+      description: input.description.trim(),
+      examples: input.examples.map((example) => example.trim()).filter(Boolean),
+      action_key: input.actionKey,
+      enabled: input.enabled,
+      priority: Math.trunc(input.priority),
+      confidence_threshold: Math.min(1, Math.max(0, input.confidenceThreshold)),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("intent_key", input.intentKey);
+  if (error) throw error;
+}
+
+export async function updateCustomerServiceReplyTemplate(input: CustomerServiceReplyTemplate) {
+  const content = input.content.trim();
+  if (!content) throw new Error("customer_service_reply_required");
+  const { error } = await supabase
+    .from("customer_service_reply_templates")
+    .update({
+      content,
+      enabled: input.enabled,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("template_key", input.templateKey);
+  if (error) throw error;
 }
