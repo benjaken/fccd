@@ -56,10 +56,26 @@
 
 .enquiry-form-fields-columns {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  column-gap: 48px;
-  row-gap: 15px;
+  gap: 18px;
   align-items: start;
+}
+
+.enquiry-form-columns-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+}
+
+.enquiry-form-column {
+  display: grid;
+  align-content: start;
+  gap: 15px;
+  min-width: 0;
+}
+
+.enquiry-form-column + .enquiry-form-column {
+  padding-left: 48px;
+  border-left: 1px solid var(--border);
 }
 
 .enquiry-form-fields-columns .enquiry-form-question {
@@ -72,12 +88,11 @@
 }
 
 .enquiry-form-fields-columns .enquiry-form-question.is-wide {
-  grid-column: 1 / -1;
+  grid-template-columns: minmax(130px, 0.21fr) minmax(0, 1fr);
 }
 
 .enquiry-form-fields-columns .enquiry-form-label span {
-  display: grid;
-  gap: 2px;
+  display: block;
   padding-top: 10px;
   color: var(--foreground);
   font-size: 14px;
@@ -235,18 +250,25 @@
   background: transparent;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 960px) {
   .enquiry-form-fields-split .enquiry-form-question {
     grid-template-columns: 1fr;
     gap: 8px;
   }
 
-  .enquiry-form-fields-columns {
+  .enquiry-form-columns-pair {
     grid-template-columns: 1fr;
-    column-gap: 0;
   }
 
-  .enquiry-form-fields-columns .enquiry-form-question {
+  .enquiry-form-column + .enquiry-form-column {
+    padding-top: 18px;
+    padding-left: 0;
+    border-top: 1px solid var(--border);
+    border-left: 0;
+  }
+
+  .enquiry-form-fields-columns .enquiry-form-question,
+  .enquiry-form-fields-columns .enquiry-form-question.is-wide {
     grid-template-columns: 1fr;
     gap: 6px;
   }

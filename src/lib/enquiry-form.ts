@@ -370,6 +370,33 @@ export function enquiryOptionsShouldStack(
   return labels.some((option) => !isEnquiryOptionCompact(option.label));
 }
 
+export function enquiryQuestionSpansColumns(question: EnquiryQuestion) {
+  return question.type === "textarea" || question.requireAllOptions === true;
+}
+
+export function groupEnquiryQuestionsForColumns(questions: EnquiryQuestion[]) {
+  const groups: Array<
+    | { kind: "columns"; questions: EnquiryQuestion[] }
+    | { kind: "wide"; question: EnquiryQuestion }
+  > = [];
+  let compact: EnquiryQuestion[] = [];
+  const flush = () => {
+    if (!compact.length) return;
+    groups.push({ kind: "columns", questions: compact });
+    compact = [];
+  };
+  for (const question of questions) {
+    if (enquiryQuestionSpansColumns(question)) {
+      flush();
+      groups.push({ kind: "wide", question });
+    } else {
+      compact.push(question);
+    }
+  }
+  flush();
+  return groups;
+}
+
 export function serializeEnquiryQuestions(questions: EnquiryQuestion[]): Record<string, unknown>[] {
   return questions.map((question) => ({
     field_key: question.fieldKey,
