@@ -1,0 +1,1836 @@
+/* Desktop list pages fill the shell's remaining height. The page layout then
+   subtracts its own heading/toolbars instead of repeating viewport offsets. */
+@media (min-width: 801px) {
+  .main-content:has(
+      > .page-transition
+        > :is(
+          .shopify-catalog-list-page,
+          .quotes-page,
+          .orders-page,
+          .kitchen-orders-page,
+          .kitchen-calendar-page,
+          .products-page,
+          .packages-page,
+          .raw-meat-calc-page,
+          .settings-permissions-page,
+          .spice-usage-page,
+          .seasoning-recipes-page,
+          .seasoning-cost-page,
+          .calculation-settings-page,
+          .kitchen-settings-page,
+          .meat-customers-page,
+          .order-statuses-page,
+          .sale-partners-page,
+          .order-list-configs-page,
+          .selling-price-cost-page,
+          .suppliers-page,
+          .ingredients-page,
+          .data-input-progress-page,
+          .order-settings-page,
+          .kitchen-product-sales-page,
+          .page-skeleton
+        )
+    ) {
+    height: calc(100dvh - var(--topbar-height) - var(--workspace-height));
+    min-height: 0;
+  }
+
+  .main-content
+    > .page-transition:has(
+      > :is(
+          .shopify-catalog-list-page,
+          .quotes-page,
+          .orders-page,
+          .kitchen-orders-page,
+          .kitchen-calendar-page,
+          .products-page,
+          .packages-page,
+          .raw-meat-calc-page,
+          .settings-permissions-page,
+          .spice-usage-page,
+          .seasoning-recipes-page,
+          .seasoning-cost-page,
+          .calculation-settings-page,
+          .kitchen-settings-page,
+          .meat-customers-page,
+          .order-statuses-page,
+          .sale-partners-page,
+          .order-list-configs-page,
+          .selling-price-cost-page,
+          .suppliers-page,
+          .ingredients-page,
+          .data-input-progress-page,
+          .order-settings-page,
+          .kitchen-product-sales-page,
+          .page-skeleton
+        )
+    ) {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .main-content
+    > .page-transition
+    > :is(
+      .shopify-catalog-list-page,
+      .quotes-page,
+      .orders-page,
+      .kitchen-orders-page,
+      .kitchen-calendar-page,
+      .products-page,
+      .packages-page,
+      .raw-meat-calc-page,
+      .settings-permissions-page,
+      .spice-usage-page,
+      .seasoning-recipes-page,
+      .seasoning-cost-page,
+      .calculation-settings-page,
+      .kitchen-settings-page,
+      .meat-customers-page,
+      .order-statuses-page,
+      .sale-partners-page,
+      .order-list-configs-page,
+      .selling-price-cost-page,
+      .suppliers-page,
+      .ingredients-page,
+      .data-input-progress-page,
+      .order-settings-page,
+      .kitchen-product-sales-page,
+      .page-skeleton
+    ) {
+    height: 100%;
+    min-height: 0;
+  }
+}
+
+.customer-service-delivery-queue article code {
+  display: block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  padding: 0.55rem 0.65rem;
+  border-radius: 0.55rem;
+  background: color-mix(in srgb, var(--danger, #b42318) 7%, transparent);
+  color: var(--danger, #8f1d16);
+  font-size: 0.75rem;
+  white-space: pre-wrap;
+}
+
+/* Keep the WhatsApp FAQ toolbar stable while its list is loading or contains
+   fewer rows. `auto auto` lets grid alignment distribute spare height across
+   both rows, which makes the toolbar grow on short pages. */
+@media (min-width: 1101px) {
+  .customer-faq-page {
+    height: calc(
+      100dvh - var(--topbar-height) - var(--workspace-height) - 40px
+    );
+    min-height: 560px;
+    overflow: hidden;
+    grid-template-rows: max-content minmax(0, 1fr);
+    align-content: stretch;
+  }
+
+  .customer-faq-page > .customer-faq-auto-reply-controls {
+    min-height: 70px;
+    box-sizing: border-box;
+    align-self: start;
+  }
+
+  .customer-faq-page > .customer-faq-layout {
+    height: 100%;
+    min-height: 0;
+  }
+}
+
+.customer-faq-mobile-chat-trigger,
+.customer-faq-chat-close {
+  display: none;
+}
+
+.customer-faq-chat-header-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 2px;
+}
+
+@media (max-width: 760px) {
+  .customer-faq-mobile-chat-trigger {
+    display: inline-flex;
+  }
+
+  .customer-faq-layout > .customer-faq-preview {
+    display: none;
+  }
+
+  .customer-faq-page.customer-faq-mobile-chat-open
+    .customer-faq-preview {
+    position: fixed;
+    z-index: 90;
+    inset: 0 0 0 auto;
+    display: flex;
+    width: min(440px, 100vw);
+    height: 100dvh;
+    min-height: 0;
+    max-height: none;
+    overflow: hidden;
+    border: 0;
+    border-left: 1px solid var(--border);
+    border-radius: 0;
+    box-shadow: -18px 0 40px color-mix(in oklch, var(--foreground) 12%, transparent);
+    animation: settings-side-panel-in 180ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .customer-faq-page.customer-faq-mobile-chat-open
+    .customer-faq-chat-close {
+    display: inline-flex;
+  }
+}
+
+/* Customer service insight workspace: wide dashboard with scannable priorities. */
+.customer-service-insights-panel {
+  width: min(80vw, 1440px);
+}
+
+.customer-service-insights-panel > .side-panel-header {
+  min-height: 76px;
+  padding: 18px 24px;
+  background: #ffffff;
+}
+
+.customer-service-insights-panel > .side-panel-header h2 {
+  font-size: 1.25rem;
+  font-weight: 760;
+  letter-spacing: -0.02em;
+}
+
+.customer-service-insights-panel > .side-panel-body {
+  padding: 22px 24px 32px;
+  background: #f4f7f5;
+}
+
+.customer-service-insights-panel .customer-service-insights {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 18px;
+  align-items: start;
+}
+
+.customer-service-insights-panel .customer-service-handoff-queue,
+.customer-service-insights-panel .customer-service-report-generator,
+.customer-service-insights-panel .customer-service-model-lab {
+  grid-column: 1 / -1;
+}
+
+.customer-service-insights-panel .customer-service-report-overview {
+  grid-column: span 4;
+}
+
+.customer-service-insights-panel .customer-service-suggestions {
+  grid-column: span 8;
+}
+
+.customer-service-insights-panel .customer-service-answer-review {
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.customer-service-insights-panel .customer-service-answer-review > header,
+.customer-service-insights-panel .customer-service-answer-review > p {
+  grid-column: 1 / -1;
+}
+
+.customer-service-insights-panel .customer-service-report-generator {
+  padding: 14px 16px;
+  border: 1px solid #dbe5df;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 4px 14px rgb(31 70 51 / 4%);
+}
+
+.customer-service-insights-panel .customer-service-report-card,
+.customer-service-insights-panel .customer-service-suggestions,
+.customer-service-insights-panel .customer-service-review-queue,
+.customer-service-insights-panel .customer-service-model-lab {
+  padding: 18px;
+  border: 1px solid #dbe5df;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 6px 18px rgb(31 70 51 / 5%);
+}
+
+.customer-service-insights-panel .customer-service-handoff-queue {
+  border-left: 4px solid #d69a24;
+  background: #fffdf6;
+}
+
+.customer-service-insights-panel .customer-service-report-overview {
+  border-top: 4px solid #12824c;
+}
+
+.customer-service-insights-panel .customer-service-suggestions {
+  border-top: 4px solid #5579b8;
+}
+
+.customer-service-insights-panel .customer-service-answer-review {
+  border-top: 4px solid #8257a6;
+}
+
+.customer-service-insights-panel .customer-service-model-lab {
+  border-top: 4px solid #64736b;
+}
+
+.customer-service-insights-panel .customer-service-report-card > header,
+.customer-service-insights-panel .customer-service-suggestions > header,
+.customer-service-insights-panel .customer-service-review-queue > header,
+.customer-service-insights-panel .customer-service-model-lab > header {
+  margin-bottom: 4px;
+  padding-bottom: 13px;
+  border-bottom: 1px solid #e6ece8;
+}
+
+.customer-service-insights-panel h3 {
+  margin: 0;
+  color: #18382b;
+  font-size: 1rem;
+  font-weight: 760;
+}
+
+.customer-service-insights-panel header p,
+.customer-service-insights-panel article p {
+  margin: 4px 0 0;
+  color: #607068;
+  line-height: 1.5;
+}
+
+.customer-service-insights-panel .customer-service-report-metrics {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.customer-service-insights-panel .customer-service-report-metrics > div {
+  min-height: 88px;
+  padding: 14px;
+  justify-content: space-between;
+  border: 1px solid #e0e9e3;
+  background: #f2f7f4;
+}
+
+.customer-service-insights-panel .customer-service-report-metrics strong {
+  color: #0d6f41;
+  font-size: 1.65rem;
+  line-height: 1;
+}
+
+.customer-service-insights-panel .customer-service-suggestions > article,
+.customer-service-insights-panel .customer-service-answer-review > article,
+.customer-service-insights-panel .customer-service-config-list article {
+  border-color: #e1e8e4;
+  border-radius: 11px;
+  box-shadow: 0 2px 8px rgb(31 70 51 / 4%);
+}
+
+.customer-service-insights-panel .customer-service-answer-review > article {
+  min-width: 0;
+  align-self: stretch;
+}
+
+.customer-service-insights-panel .status-badge {
+  font-weight: 720;
+}
+
+@media (max-width: 1100px) {
+  .customer-service-insights-panel .customer-service-report-overview,
+  .customer-service-insights-panel .customer-service-suggestions {
+    grid-column: 1 / -1;
+  }
+
+  .customer-service-insights-panel .customer-service-answer-review {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .customer-service-insights-panel {
+    width: 100%;
+  }
+
+  .customer-service-insights-panel > .side-panel-header {
+    min-height: 64px;
+    padding: 12px 14px;
+  }
+
+  .customer-service-insights-panel > .side-panel-body {
+    padding: 14px 12px 24px;
+  }
+
+  .customer-service-insights-panel .customer-service-insights {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .customer-service-insights-panel .customer-service-handoff-queue,
+  .customer-service-insights-panel .customer-service-report-generator,
+  .customer-service-insights-panel .customer-service-report-overview,
+  .customer-service-insights-panel .customer-service-suggestions,
+  .customer-service-insights-panel .customer-service-answer-review,
+  .customer-service-insights-panel .customer-service-model-lab {
+    grid-column: 1;
+  }
+
+  .customer-service-insights-panel .customer-service-report-card,
+  .customer-service-insights-panel .customer-service-suggestions,
+  .customer-service-insights-panel .customer-service-review-queue,
+  .customer-service-insights-panel .customer-service-model-lab {
+    padding: 14px;
+  }
+}
+
+.restaurant-workspace,
+.factory-warehouse {
+  min-height: 100dvh;
+  background: var(--background);
+}
+
+.restaurant-workspace-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.restaurant-workspace-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.restaurant-workspace-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.7rem;
+  border-radius: 999px;
+  color: inherit;
+  text-decoration: none;
+  border: 1px solid var(--border);
+}
+
+.restaurant-workspace-link.active {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-color: transparent;
+}
+
+.restaurant-workspace-body {
+  padding: 0.5rem 0;
+}
+
+.shop-order-form,
+.shop-review-card {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.shop-order-items {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.shop-order-items th,
+.shop-order-items td {
+  padding: 0.4rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+
+.shop-order-items input[type="number"] {
+  width: 5rem;
+}
+
+.shop-order-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.shop-order-actions > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted-foreground);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.shop-order-actions > span svg {
+  width: 18px;
+  height: 18px;
+}
+
+.shop-order-fixed-fields {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.35fr) minmax(260px, 1fr);
+  gap: 12px;
+}
+
+.shop-order-search {
+  max-width: none;
+}
+
+.shop-order-supplier-list {
+  display: grid;
+  gap: 10px;
+}
+
+.shop-order-supplier {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--background);
+}
+
+.shop-order-supplier-trigger {
+  display: grid;
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr) auto auto 20px;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 15px;
+  border: 0;
+  cursor: pointer;
+  background: color-mix(in oklch, var(--secondary) 55%, var(--background));
+  color: var(--foreground);
+  text-align: left;
+}
+
+.shop-order-supplier-trigger > svg {
+  width: 18px;
+  height: 18px;
+  color: var(--muted-foreground);
+  transition: transform 160ms ease;
+}
+
+.shop-order-supplier-trigger[aria-expanded="true"] > svg {
+  transform: rotate(180deg);
+}
+
+.shop-order-supplier-trigger > span:first-child,
+.shop-order-dispatches article > div:first-child {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.shop-order-supplier-trigger strong,
+.shop-order-dispatches strong {
+  overflow-wrap: anywhere;
+}
+
+.shop-order-supplier-trigger small,
+.shop-order-dispatches small {
+  color: var(--muted-foreground);
+}
+
+.shop-order-supplier-trigger b {
+  color: var(--muted-foreground);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.shop-order-supplier-trigger[aria-expanded="true"] {
+  border-bottom: 1px solid var(--border);
+}
+
+.shop-order-contact {
+  padding: 12px 15px 0;
+}
+
+.shop-order-items-wrap,
+.shop-order-product-list {
+  max-height: min(440px, 52vh);
+  overflow: auto;
+}
+
+.shop-order-product-list {
+  display: grid;
+  padding: 6px 14px 12px;
+}
+
+.shop-order-product-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 112px;
+  align-items: center;
+  gap: 14px;
+  min-height: 64px;
+  padding: 10px 0;
+  border-bottom: 1px solid color-mix(in oklch, var(--border) 78%, transparent);
+}
+
+.shop-order-product-row:last-child {
+  border-bottom: 0;
+}
+
+.shop-order-product-row > span:first-child,
+.shop-order-quantity-field {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.shop-order-product-row strong {
+  overflow-wrap: anywhere;
+}
+
+.shop-order-product-row small,
+.shop-order-quantity-field small {
+  color: var(--muted-foreground);
+  font-size: 0.78rem;
+}
+
+.shop-order-quantity-field small {
+  text-align: right;
+}
+
+.shop-order-quantity-field input {
+  width: 100%;
+  min-height: 42px;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--background);
+  font-size: 16px;
+  text-align: right;
+}
+
+.shop-order-items td strong,
+.shop-order-items td small {
+  display: block;
+}
+
+.shop-order-items td small {
+  margin-top: 2px;
+  color: var(--muted-foreground);
+}
+
+.shop-order-success {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 9px;
+  color: #285248;
+  background: #e7f2ed;
+  font-weight: 700;
+}
+
+.shop-order-dispatches {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid color-mix(in oklch, var(--primary) 35%, var(--border));
+  border-radius: 12px;
+  background: color-mix(in oklch, var(--primary) 5%, var(--background));
+}
+
+.shop-order-dispatches > header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.shop-order-dispatches > header svg {
+  width: 21px;
+  color: var(--primary);
+}
+
+.shop-order-dispatches h2,
+.shop-order-dispatches p {
+  margin: 0;
+}
+
+.shop-order-dispatches h2 {
+  font-size: 1rem;
+}
+
+.shop-order-dispatches p {
+  margin-top: 2px;
+  color: var(--muted-foreground);
+  font-size: 0.82rem;
+}
+
+.shop-order-dispatches article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 12px;
+  border-radius: 10px;
+  background: var(--background);
+}
+
+.shop-order-dispatches article > div:last-child {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.shop-order-dispatches .ui-button {
+  min-height: 38px;
+  padding: 7px 11px;
+  text-decoration: none;
+}
+
+.shop-order-whatsapp {
+  color: #fff;
+  background: #168c4d;
+}
+
+.shop-order-table-wrap {
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.shop-order-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.75rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: var(--secondary);
+  color: var(--secondary-foreground);
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.shop-order-status.status-in_transit,
+.shop-order-status.status-sent_to_factory,
+.shop-order-status.status-whatsapp_call_opened {
+  background: color-mix(in oklch, var(--primary) 14%, var(--background));
+  color: var(--primary);
+}
+
+.shop-order-status.status-exception,
+.shop-order-status.status-rejected,
+.shop-order-status.status-whatsapp_call_failed,
+.shop-order-status.status-whatsapp_blocked_no_phone {
+  background: color-mix(in oklch, var(--destructive) 12%, var(--background));
+  color: var(--destructive);
+}
+
+.restaurant-hr-placeholder {
+  display: grid;
+  width: min(100% - 32px, 680px);
+  margin: 48px auto;
+  padding: 32px;
+  place-items: center;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--card);
+  box-shadow: 0 12px 36px rgb(15 23 42 / 0.08);
+  text-align: center;
+}
+
+.restaurant-hr-placeholder h1,
+.restaurant-hr-placeholder p {
+  margin: 0;
+}
+
+.restaurant-hr-placeholder p {
+  max-width: 34rem;
+  color: var(--muted-foreground);
+}
+
+.restaurant-hr-placeholder-icon {
+  display: grid;
+  width: 58px;
+  height: 58px;
+  place-items: center;
+  border-radius: 18px;
+  background: color-mix(in oklch, var(--primary) 12%, var(--background));
+  color: var(--primary);
+}
+
+.restaurant-hr-placeholder-icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.restaurant-hr-preview {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  margin-top: 12px;
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--secondary);
+}
+
+.restaurant-hr-preview span {
+  color: var(--muted-foreground);
+  font-size: 0.88rem;
+}
+
+@media (max-width: 760px) {
+  .restaurant-workspace {
+    min-height: calc(100dvh - var(--topbar-height));
+    padding-bottom: calc(74px + env(safe-area-inset-bottom));
+  }
+
+  .restaurant-workspace-bar {
+    padding: 12px 16px 10px;
+    background: color-mix(in oklch, var(--background) 94%, transparent);
+  }
+
+  .restaurant-workspace-bar > div {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  .restaurant-workspace-bar .eyebrow {
+    display: none;
+  }
+
+  .restaurant-workspace-bar h1 {
+    margin: 0;
+    font-size: 1.05rem;
+  }
+
+  .restaurant-workspace-nav {
+    position: fixed;
+    z-index: 45;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(72px, 1fr);
+    flex-wrap: nowrap;
+    gap: 0;
+    padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
+    overflow-x: auto;
+    border-top: 1px solid var(--border);
+    background: color-mix(in oklch, var(--background) 94%, transparent);
+    box-shadow: 0 -8px 24px rgb(15 23 42 / 0.08);
+    backdrop-filter: blur(14px);
+    scrollbar-width: none;
+  }
+
+  .restaurant-workspace-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .restaurant-workspace-link {
+    min-width: 72px;
+    min-height: 52px;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    padding: 5px 6px;
+    border: 0;
+    border-radius: 12px;
+    color: var(--muted-foreground);
+    font-size: 0.68rem;
+    line-height: 1.1;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .restaurant-workspace-link svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .restaurant-workspace-link.active {
+    background: color-mix(in oklch, var(--primary) 12%, var(--background));
+    color: var(--primary);
+  }
+
+  .restaurant-workspace-body {
+    padding: 0;
+  }
+
+  .restaurant-workspace-body > .ingredients-page {
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    gap: 12px;
+    padding: 12px;
+    overflow: visible;
+  }
+
+  .restaurant-hr-placeholder {
+    width: calc(100% - 24px);
+    margin: 12px;
+    padding: 24px 18px;
+    border-radius: 16px;
+  }
+
+  .restaurant-workspace-body > .ingredients-page .page-heading {
+    align-items: flex-start;
+    padding: 0 2px;
+  }
+
+  .restaurant-workspace-body > .ingredients-page .page-heading .eyebrow {
+    display: none;
+  }
+
+  .restaurant-workspace-body > .ingredients-page .page-heading h1 {
+    font-size: 1.45rem;
+  }
+
+  .restaurant-workspace-body > .ingredients-page .page-heading p {
+    margin-top: 4px;
+    font-size: 0.85rem;
+    line-height: 1.45;
+  }
+
+  .restaurant-workspace-body > .ingredients-page > .panel {
+    height: auto;
+    overflow: visible;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgb(15 23 42 / 0.06);
+  }
+
+  .shop-order-form {
+    padding: 14px;
+  }
+
+  .shop-order-form .ingredients-field input,
+  .shop-order-form .ingredients-field select,
+  .shop-order-form .multi-select-trigger {
+    min-height: 46px;
+    font-size: 16px;
+  }
+
+  .shop-order-form > .shop-order-items,
+  .shop-order-supplier .shop-order-items,
+  .shop-order-records-table,
+  .shop-receive-table,
+  .shop-receive-history-table {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .shop-order-table-wrap {
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .shop-order-form > .shop-order-items thead,
+  .shop-order-supplier .shop-order-items thead,
+  .shop-order-records-table thead,
+  .shop-receive-table thead,
+  .shop-receive-history-table thead {
+    display: none;
+  }
+
+  .shop-order-form > .shop-order-items tbody,
+  .shop-order-supplier .shop-order-items tbody,
+  .shop-order-records-table tbody,
+  .shop-receive-table tbody,
+  .shop-receive-history-table tbody {
+    display: grid;
+    width: 100%;
+    min-width: 0;
+    gap: 10px;
+  }
+
+  .shop-order-form > .shop-order-items tr,
+  .shop-order-supplier .shop-order-items tr,
+  .shop-order-records-table tr,
+  .shop-receive-table tr,
+  .shop-receive-history-table tr {
+    display: grid;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    gap: 7px;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    background: var(--background);
+  }
+
+  .shop-order-form > .shop-order-items td,
+  .shop-order-supplier .shop-order-items td,
+  .shop-order-records-table td,
+  .shop-receive-table td,
+  .shop-receive-history-table td {
+    display: grid;
+    grid-template-columns: minmax(76px, 0.38fr) minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+    padding: 0;
+    border: 0;
+    text-align: right;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    white-space: normal;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .shop-order-form > .shop-order-items td::before,
+  .shop-order-supplier .shop-order-items td::before,
+  .shop-order-records-table td::before,
+  .shop-receive-table td::before,
+  .shop-receive-history-table td::before {
+    content: attr(data-label);
+    color: var(--muted-foreground);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-align: left;
+  }
+
+  .shop-order-form > .shop-order-items td:first-child,
+  .shop-order-supplier .shop-order-items td:first-child,
+  .shop-order-records-table td:first-child,
+  .shop-receive-table td:first-child,
+  .shop-receive-history-table td:first-child {
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    font-weight: 700;
+  }
+
+  .shop-order-items input[type="number"],
+  .shop-receive-table input {
+    justify-self: end;
+    width: min(100%, 10rem);
+    min-height: 44px;
+    font-size: 16px;
+    text-align: right;
+  }
+
+  .shop-order-actions {
+    position: sticky;
+    bottom: calc(66px + env(safe-area-inset-bottom));
+    z-index: 5;
+    padding-top: 4px;
+  }
+
+  .shop-order-fixed-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .shop-order-supplier-trigger {
+    grid-template-columns: minmax(0, 1fr) auto 18px;
+  }
+
+  .shop-order-supplier-trigger > b {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .shop-order-items-wrap {
+    max-height: none;
+    padding: 10px;
+  }
+
+  .shop-order-product-list {
+    max-height: none;
+    padding: 4px 12px 10px;
+  }
+
+  .shop-order-product-row {
+    grid-template-columns: minmax(0, 1fr) 92px;
+    min-height: 72px;
+  }
+
+  .shop-order-dispatches article {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .shop-order-dispatches article > div:last-child,
+  .shop-order-dispatches article .ui-button {
+    width: 100%;
+  }
+
+  .shop-order-actions > span {
+    width: 100%;
+  }
+
+  .shop-order-actions .ui-button {
+    width: 100%;
+    min-height: 48px;
+  }
+
+  .shop-records-panel,
+  .shop-receive-pending,
+  .shop-receive-history {
+    padding: 12px;
+  }
+
+  .shop-review-card {
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+  }
+
+  .shop-review-card h2,
+  .shop-receive-history > h2 {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 760px) {
+  .restaurant-workspace {
+    padding-bottom: 0;
+  }
+
+  .restaurant-workspace-body .shop-order-actions {
+    bottom: 8px;
+  }
+}
+
+/* Restaurant ordering back-office pages follow the shared operational table contract. */
+.office-shop-page .restaurant-settings-table-wrap table {
+  min-width: 760px;
+}
+
+.office-shop-page .restaurant-settings-table-wrap td {
+  vertical-align: middle;
+}
+
+.office-shop-page .restaurant-settings-table-wrap td:last-child {
+  max-width: 420px;
+  white-space: normal;
+}
+
+/* Restaurant app: mobile-first list and table presentation. */
+.stocktake-mobile-supplier {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .restaurant-workspace-body .daily-sales-history-list {
+    display: grid;
+    max-height: min(380px, 46vh);
+    padding: 8px;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .restaurant-workspace-body .daily-sales-history-list button {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    min-width: 0;
+    min-height: 66px;
+    padding: 11px 12px;
+    border: 1px solid transparent;
+    border-radius: 11px;
+  }
+
+  .restaurant-workspace-body .daily-sales-history-list button + button {
+    margin-top: 6px;
+    border-top-color: transparent;
+  }
+
+  .restaurant-workspace-body .daily-sales-history-list button.active {
+    border-color: color-mix(in oklch, var(--primary) 28%, var(--border));
+  }
+
+  .restaurant-workspace-body .daily-sales-history-list button > strong {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .restaurant-workspace-body .daily-sales-history-list button > small {
+    grid-column: 1 / -1;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+  }
+
+  .restaurant-workspace-body .shop-order-form {
+    padding-bottom: 104px;
+  }
+
+  .restaurant-workspace-body .shop-order-actions {
+    padding: 9px;
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    background: color-mix(in oklch, var(--card) 94%, transparent);
+    box-shadow: 0 10px 28px rgb(15 23 42 / 0.14);
+    backdrop-filter: blur(10px);
+  }
+
+  .restaurant-workspace-body .shop-records-panel,
+  .restaurant-workspace-body .restaurant-purchase-panel {
+    padding: 0;
+    overflow: visible;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .restaurant-workspace-body .restaurant-purchase-panel .kitchen-supplier-record-toolbar {
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--card);
+  }
+
+  .restaurant-workspace-body .restaurant-purchase-panel .operational-table-wrap {
+    padding: 0;
+    overflow: visible;
+    border: 0;
+    background: transparent;
+  }
+
+  .restaurant-workspace-body .restaurant-purchase-record-table,
+  .restaurant-workspace-body .restaurant-stocktake-table table {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .restaurant-workspace-body .restaurant-purchase-record-table thead,
+  .restaurant-workspace-body .restaurant-stocktake-table thead {
+    display: none;
+  }
+
+  .restaurant-workspace-body .restaurant-purchase-record-table tbody,
+  .restaurant-workspace-body .restaurant-stocktake-table tbody {
+    display: grid;
+    gap: 10px;
+  }
+
+  .restaurant-workspace-body .restaurant-purchase-record-table tr,
+  .restaurant-workspace-body .restaurant-stocktake-table tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px 12px;
+    padding: 13px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--card);
+    box-shadow: 0 5px 16px rgb(15 23 42 / 0.05);
+  }
+
+  .restaurant-workspace-body .restaurant-purchase-record-table td,
+  .restaurant-workspace-body .restaurant-stocktake-table td {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: minmax(78px, 0.35fr) minmax(0, 1fr);
+    align-items: start;
+    gap: 10px;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    text-align: right;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .restaurant-workspace-body .restaurant-purchase-record-table td::before,
+  .restaurant-workspace-body .restaurant-stocktake-table td::before {
+    content: attr(data-label);
+    color: var(--muted-foreground);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-align: left;
+  }
+
+  .restaurant-workspace-body .restaurant-purchase-record-table .mobile-card-primary {
+    grid-column: 1;
+    display: block;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+  }
+
+  .restaurant-workspace-body .restaurant-purchase-record-table .mobile-card-primary::before,
+  .restaurant-workspace-body .restaurant-purchase-record-table .mobile-card-total::before {
+    display: none;
+  }
+
+  .restaurant-workspace-body .restaurant-purchase-record-table .mobile-card-total {
+    grid-column: 2;
+    display: block;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    color: var(--primary);
+    text-align: right;
+  }
+
+  .restaurant-workspace-body .shop-order-records-table tr,
+  .restaurant-workspace-body .shop-receive-table tr,
+  .restaurant-workspace-body .shop-receive-history-table tr {
+    box-shadow: 0 5px 16px rgb(15 23 42 / 0.05);
+  }
+
+  .restaurant-workspace-body .shop-order-records-table td:first-child,
+  .restaurant-workspace-body .shop-receive-history-table td:first-child {
+    font-size: 0.96rem;
+  }
+
+  .restaurant-workspace-body .shop-receive-pending,
+  .restaurant-workspace-body .shop-receive-history {
+    padding: 14px;
+  }
+
+  .restaurant-workspace-body .shop-receive-pending > .operational-list-state,
+  .restaurant-workspace-body .shop-receive-history > .operational-list-state {
+    min-height: 150px;
+    border: 1px dashed var(--border);
+    border-radius: 14px;
+    background: color-mix(in oklch, var(--muted) 44%, transparent);
+  }
+
+  .restaurant-workspace-body .restaurant-stocktake-table {
+    overflow: visible;
+    border: 0;
+  }
+
+  .restaurant-workspace-body .restaurant-stocktakes-loading-table {
+    display: grid;
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .restaurant-workspace-body .restaurant-stocktakes-loading-table > div {
+    grid-template-columns: minmax(0, 1fr) 88px;
+    gap: 10px;
+    min-height: 94px;
+    padding: 13px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--card);
+  }
+
+  .restaurant-workspace-body .restaurant-stocktakes-loading-table > div .page-skeleton-bone:nth-child(n + 3) {
+    display: none;
+  }
+
+  .restaurant-workspace-body .restaurant-stocktake-table .stocktake-desktop-supplier {
+    display: none;
+  }
+
+  .restaurant-workspace-body .restaurant-stocktake-table .stocktake-item-name {
+    display: grid;
+    grid-template-columns: 1fr;
+    padding-bottom: 9px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+  }
+
+  .restaurant-workspace-body .restaurant-stocktake-table .stocktake-item-name::before {
+    display: none;
+  }
+
+  .restaurant-workspace-body .stocktake-mobile-supplier {
+    display: block;
+    color: var(--muted-foreground);
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
+
+  .restaurant-workspace-body .stocktake-quantity-input {
+    justify-self: end;
+    width: min(100%, 9rem);
+    min-height: 44px;
+    font-size: 16px;
+    text-align: right;
+  }
+
+  .restaurant-workspace-body .monthly-expenses-history-list {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .restaurant-workspace-body .monthly-expenses-history-item {
+    margin-bottom: 8px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--card);
+  }
+
+  .restaurant-workspace-body .monthly-expenses-history-item + .monthly-expenses-history-item {
+    border-top: 1px solid var(--border);
+  }
+
+  .restaurant-workspace-body .monthly-expenses-history-record {
+    min-height: 68px;
+    padding: 11px 12px;
+  }
+}
+
+@media (max-width: 760px) {
+  .restaurant-workspace-body:has(> .shop-order-page) {
+    overflow: hidden;
+  }
+
+  .restaurant-workspace-body > .shop-order-page {
+    display: flex;
+    height: 100%;
+    padding-bottom: 12px;
+    overflow: hidden;
+    flex-direction: column;
+  }
+
+  .restaurant-workspace-body > .shop-order-page > .page-heading {
+    display: none;
+  }
+
+  .restaurant-workspace-body .shop-order-form {
+    display: flex;
+    min-height: 0;
+    padding: 12px;
+    overflow: hidden;
+    flex: 1 1 auto;
+    flex-direction: column;
+  }
+
+  .restaurant-workspace-body .shop-order-fixed-fields,
+  .restaurant-workspace-body .shop-order-dispatches,
+  .restaurant-workspace-body .shop-order-form > .products-state-error,
+  .restaurant-workspace-body .shop-order-form > .shop-order-success {
+    flex: 0 0 auto;
+  }
+
+  .restaurant-workspace-body .shop-order-builder {
+    display: grid;
+    min-height: 0;
+    overflow: hidden;
+    flex: 1 1 auto;
+    grid-template-rows: auto auto minmax(0, 1fr);
+  }
+
+  .restaurant-workspace-body .shop-order-builder.has-suppliers.is-picker-open {
+    grid-template-rows: auto auto auto minmax(0, 1fr);
+  }
+
+  .restaurant-workspace-body .shop-order-builder.has-suppliers:not(.is-picker-open) .shop-order-builder-heading p {
+    display: none;
+  }
+
+  .restaurant-workspace-body .shop-order-builder-heading > .ui-button {
+    min-height: 40px;
+    padding-inline: 10px;
+  }
+
+  .restaurant-workspace-body .shop-order-builder-empty {
+    min-height: 0;
+    height: 100%;
+  }
+
+  .restaurant-workspace-body .shop-order-active-supplier {
+    display: flex;
+    min-height: 0;
+    overflow: hidden;
+    flex-direction: column;
+  }
+
+  .restaurant-workspace-body .shop-order-active-supplier > header,
+  .restaurant-workspace-body .shop-order-active-supplier > .shop-order-contact,
+  .restaurant-workspace-body .shop-order-local-search {
+    flex: 0 0 auto;
+  }
+
+  .restaurant-workspace-body .shop-order-product-list {
+    min-height: 0;
+    max-height: none;
+    overflow-y: auto;
+    flex: 1 1 auto;
+    overscroll-behavior: contain;
+  }
+
+  .restaurant-workspace-body .shop-order-actions {
+    position: static;
+    margin: 0;
+    flex: 0 0 auto;
+  }
+}
+
+.office-shop-state {
+  display: grid;
+  min-height: 280px;
+  place-items: center;
+}
+
+.office-shop-inline-error,
+.office-shop-review-message {
+  margin: 0;
+  padding: 11px 14px;
+  border: 1px solid color-mix(in oklch, var(--destructive) 35%, var(--border));
+  border-radius: 10px;
+  color: var(--destructive);
+  background: color-mix(in oklch, var(--destructive) 7%, var(--background));
+}
+
+.shop-channel-badge {
+  display: inline-flex;
+  min-height: 28px;
+  padding: 4px 9px;
+  align-items: center;
+  border-radius: 999px;
+  color: #285248;
+  background: #e7f2ed;
+  font-size: 12px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.shop-channel-badge.channel-external {
+  color: #744018;
+  background: #f9eee3;
+}
+
+.office-shop-review-detail {
+  display: grid;
+  gap: 18px;
+}
+
+.office-shop-review-detail dl {
+  display: grid;
+  margin: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.office-shop-review-detail dl > div {
+  display: grid;
+  min-width: 0;
+  padding: 12px 14px;
+  gap: 5px;
+  border-radius: 10px;
+  background: var(--secondary);
+}
+
+.office-shop-review-detail dt {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.office-shop-review-detail dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-weight: 650;
+}
+
+.office-shop-review-detail td strong,
+.office-shop-review-detail td small {
+  display: block;
+}
+
+.office-shop-review-detail td small {
+  margin-top: 3px;
+  color: var(--muted-foreground);
+}
+
+.office-shop-review-detail .operational-table-wrap table {
+  width: 100%;
+  min-width: 0;
+  table-layout: fixed;
+}
+
+.office-shop-review-detail th:first-child,
+.office-shop-review-detail td:first-child {
+  width: auto;
+  overflow-wrap: anywhere;
+}
+
+.office-shop-review-detail th:nth-child(2),
+.office-shop-review-detail td:nth-child(2) {
+  width: 88px;
+}
+
+.office-shop-review-detail th:nth-child(3),
+.office-shop-review-detail td:nth-child(3) {
+  width: 104px;
+}
+
+.office-shop-review-detail input[type="number"] {
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--background);
+  text-align: right;
+}
+
+@media (max-width: 760px) {
+  .office-shop-review-detail dl {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Restaurant order visual polish: flatter hierarchy and clearer item entry. */
+.shop-order-product-list-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 92px;
+  gap: 14px;
+  padding: 8px 14px 5px;
+  color: var(--muted-foreground);
+  font-size: 0.72rem;
+  font-weight: 750;
+}
+
+.shop-order-product-list-heading span:last-child {
+  text-align: right;
+}
+
+@media (max-width: 760px) {
+  .restaurant-workspace-body .shop-order-form {
+    gap: 10px;
+    padding: 12px;
+    border-color: #dce5df;
+    background: #fff;
+    box-shadow: 0 6px 20px rgba(22, 54, 43, 0.06);
+  }
+
+  .restaurant-workspace-body .shop-order-builder {
+    gap: 10px;
+    padding: 12px;
+    border: 0;
+    border-radius: 13px;
+    background: #f7f9f7;
+  }
+
+  .restaurant-workspace-body .shop-order-builder-heading {
+    align-items: center;
+  }
+
+  .restaurant-workspace-body .shop-order-builder-heading > span {
+    width: 26px;
+    height: 26px;
+    background: #0f8a51;
+  }
+
+  .restaurant-workspace-body .shop-order-builder-heading h2 {
+    font-size: 0.98rem;
+    font-weight: 700;
+  }
+
+  .restaurant-workspace-body .shop-order-builder-heading > .ui-button {
+    min-height: 38px;
+    border-color: #d6ded9;
+    background: #fff;
+    box-shadow: 0 2px 6px rgba(22, 54, 43, 0.06);
+  }
+
+  .restaurant-workspace-body .shop-order-supplier-tabs {
+    gap: 7px;
+    margin: 0 -12px;
+    padding: 0 12px 2px;
+    scrollbar-width: none;
+  }
+
+  .restaurant-workspace-body .shop-order-supplier-tabs::-webkit-scrollbar,
+  .restaurant-workspace-body .shop-order-product-list::-webkit-scrollbar {
+    display: none;
+  }
+
+  .restaurant-workspace-body .shop-order-supplier-tabs button {
+    display: flex;
+    min-width: 0;
+    min-height: 42px;
+    padding: 8px 11px;
+    align-items: center;
+    gap: 7px;
+    border-color: #d9e1dc;
+    border-radius: 999px;
+    background: #fff;
+  }
+
+  .restaurant-workspace-body .shop-order-supplier-tabs button.is-active {
+    border-color: #158953;
+    background: #fff;
+    box-shadow: inset 0 0 0 1px #158953;
+  }
+
+  .restaurant-workspace-body .shop-order-supplier-tabs button span {
+    max-width: 150px;
+    font-size: 0.85rem;
+    font-weight: 700;
+  }
+
+  .restaurant-workspace-body .shop-order-supplier-tabs button small {
+    display: inline-flex;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: #eef2ef;
+    font-size: 0.68rem;
+  }
+
+  .restaurant-workspace-body .shop-order-active-supplier {
+    border-color: #d9e1dc;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 3px 10px rgba(22, 54, 43, 0.04);
+  }
+
+  .restaurant-workspace-body .shop-order-active-supplier > header {
+    grid-template-columns: minmax(0, 1fr) auto 40px;
+    min-height: 58px;
+    padding: 10px 12px;
+    border-bottom: 0;
+  }
+
+  .restaurant-workspace-body .shop-order-active-supplier > header > div small {
+    display: none;
+  }
+
+  .restaurant-workspace-body .shop-order-active-supplier > header .shop-channel-badge {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+  }
+
+  .restaurant-workspace-body .shop-order-active-supplier > header .ui-button {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .restaurant-workspace-body .shop-order-contact-empty {
+    padding: 0 12px 6px;
+    color: #9a5b2e;
+    font-size: 0.72rem;
+  }
+
+  .restaurant-workspace-body .shop-order-local-search {
+    margin: 5px 12px 4px;
+    border-color: #dfe6e2;
+    border-radius: 9px;
+    background: #f7f9f7;
+  }
+
+  .restaurant-workspace-body .shop-order-product-list-heading {
+    flex: 0 0 auto;
+    grid-template-columns: minmax(0, 1fr) 78px;
+    padding: 7px 13px 3px;
+  }
+
+  .restaurant-workspace-body .shop-order-product-list {
+    padding: 0 12px 6px;
+    align-content: start;
+    grid-auto-rows: min-content;
+    scrollbar-width: none;
+  }
+
+  .restaurant-workspace-body .shop-order-product-row {
+    grid-template-columns: minmax(0, 1fr) 78px;
+    min-height: 62px;
+    gap: 10px;
+    padding: 7px 0;
+  }
+
+  .restaurant-workspace-body .shop-order-product-row strong {
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: 0.91rem;
+    line-height: 1.3;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .restaurant-workspace-body .shop-order-product-row > span:first-child > small {
+    font-size: 0.7rem;
+  }
+
+  .restaurant-workspace-body .shop-order-quantity-field small {
+    display: none;
+  }
+
+  .restaurant-workspace-body .shop-order-quantity-field input {
+    min-height: 40px;
+    padding: 6px 9px;
+    border-color: #d8e0db;
+    border-radius: 9px;
+    background: #fff;
+  }
+
+  .restaurant-workspace-body .shop-order-actions {
+    gap: 7px;
+    padding: 8px;
+    border-color: #dce5df;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 5px 16px rgba(22, 54, 43, 0.08);
+    backdrop-filter: none;
+  }
+
+  .restaurant-workspace-body .shop-order-actions > span {
+    padding-inline: 2px;
+    font-size: 0.78rem;
+  }
+
+  .restaurant-workspace-body .shop-order-actions .ui-button {
+    min-height: 46px;
+    border-radius: 10px;
+    background: #0f8a51;
+  }
+
+  .restaurant-workspace-body .shop-order-actions .ui-button:disabled {
+    color: #fff;
+    background: #91c8aa;
+    opacity: 0.72;
+  }
+
+  .restaurant-workspace-body .daily-sales-history,
+  .restaurant-workspace-body .daily-sales-workspace .record-sidebar-slot {
+    overflow: visible;
+  }
+
+  .restaurant-workspace-body .daily-sales-history-list {
+    display: flex;
+    max-height: none;
+    gap: 10px;
+    padding: 10px 12px 12px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-padding-inline: 12px;
+    scroll-snap-type: x proximity;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+
+  .restaurant-workspace-body .daily-sales-history-list::-webkit-scrollbar {
+    display: none;
+  }
+
+  .restaurant-workspace-body .daily-sales-history-list button {
+    grid-template-columns: minmax(0, 1fr) auto;
+    min-width: 0;
+    min-height: 92px;
+    padding: 12px;
+    border: 1px solid #dce5df;
+    border-radius: 12px;
+    background: #fff;
+    flex: 0 0 min(78vw, 300px);
+    scroll-snap-align: start;
+    box-shadow: 0 3px 10px rgba(22, 54, 43, 0.04);
+  }
+
+  .restaurant-workspace-body .daily-sales-history-list button + button {
+    margin-top: 0;
+    border-top-color: #dce5df;
+  }
+
+  .restaurant-workspace-body .daily-sales-history-list button.active {
+    border-color: #158953;
+    background: color-mix(in oklch, #158953 4%, #fff);
+  }
+
+  .restaurant-workspace-body .daily-sales-history-list button > small {
+    grid-column: 1 / -1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}

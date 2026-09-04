@@ -338,6 +338,7 @@ export async function deliverWatiSessionMessage({
   phone,
   text,
   channelNumber,
+  localMessageId = `fcc-bot-${crypto.randomUUID()}`,
   fetchImpl = fetch,
   log = console.error,
 }: {
@@ -345,13 +346,13 @@ export async function deliverWatiSessionMessage({
   phone: string;
   text: string;
   channelNumber: string;
+  localMessageId?: string;
   fetchImpl?: typeof fetch;
   log?: (...args: unknown[]) => void;
 }) {
   const targets = listWatiSessionTargets(creds);
   if (!targets.length) throw new Error("wati_session_failed:missing_credentials");
   const errors: string[] = [];
-  const localMessageId = `fcc-bot-${crypto.randomUUID()}`;
   for (const target of targets) {
     try {
       const raw = await postWatiSessionMessage({

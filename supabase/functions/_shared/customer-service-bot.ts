@@ -31,10 +31,21 @@ export type CustomerServiceOrder = {
 
 export type CustomerServiceConversation = {
   phone_normalized: string;
-  state: "identifying" | "picking_order" | "picking_handoff_order" | "collecting" | "human_owned";
+  state:
+    | "identifying"
+    | "verifying_order"
+    | "picking_order"
+    | "picking_handoff_order"
+    | "collecting"
+    | "awaiting_human"
+    | "human_owned";
   selected_order_id: string | null;
   handoff_at: string | null;
   pending_request: string | null;
+  identity_verified_at?: string | null;
+  identity_verification_method?: string | null;
+  identity_verification_order_id?: string | null;
+  identity_verification_attempts?: number;
 };
 
 export type CustomerServiceFaqHit = {
@@ -51,11 +62,24 @@ export type CustomerServiceInquiryWrite = {
 };
 
 export type CustomerServiceBotDeps = {
-  replyTemplates?: Partial<Record<
-    "help" | "handoff" | "collect_prompt" | "collect_more" | "collect_done" | "no_faq" | "refuse",
-    string
-  >>;
+  replyTemplates?: Partial<
+    Record<
+      | "help"
+      | "handoff"
+      | "collect_prompt"
+      | "collect_more"
+      | "collect_done"
+      | "no_faq"
+      | "refuse",
+      string
+    >
+  >;
   lookupOrders: (phone: string) => Promise<CustomerServiceOrder[]>;
+  verifyOrderIdentity: (
+    phone: string,
+    orderId: string,
+    answer: string,
+  ) => Promise<boolean>;
   writeInquiry: (
     phone: string,
     slots: InquirySlots,
@@ -65,8 +89,10 @@ export type CustomerServiceBotDeps = {
   answerFaqWithModel?: (
     query: string,
     candidates: CustomerServiceFaqHit[],
-  ) => Promise<string | { answer: string; sourceIds: string[]; model: string } | null>;
-  notifyInternal: (input: {
+  ) => Promise<
+    string | { answer: string; sourceIds: string[]; model: string } | null
+  >;
+  queueHandoff: (input: {
     phone: string;
     quoteId: string | null;
     orderNumber: string | null;
@@ -80,6 +106,7 @@ export type BotTurn = {
   conversation: CustomerServiceConversation;
   wroteInquiry: boolean;
   notified: boolean;
+  queuedHandoff?: boolean;
   usedModel: boolean;
   intentKey?: string;
   confidence?: number;
@@ -106,7 +133,49 @@ function nextConversation(
 
 function isUndeliveredOrder(order: CustomerServiceOrder) {
   const status = order.delivery_status?.trim() ?? "";
-  return !/已送達|己送達|已經送達|delivered|已取消|己取消|取消|cancelled/i.test(status);
+  return !/已送達|己送達|已經送達|delivered|已取消|己取消|取消|cancelled/i.test(
+    status,
+  );
+}
+
+function identityChallengeReply(order: CustomerServiceOrder) {
+  return sanitizeOutboundReply(
+    `為保障訂單私隱，請輸入訂單 ${order.order_number || ""} 落單時使用的完整電郵地址作核實。`,
+  );
+}
+
+function identityFailedReply(attempts: number) {
+  return sanitizeOutboundReply(
+    attempts >= 3
+      ? "核實未成功，請重新提供訂單號碼再試；如仍有問題，可以要求真人協助。"
+      : "電郵資料未能核實，請確認後重新輸入落單時使用的完整電郵地址。",
+  );
+}
+
+function hasVerifiedIdentity(conversation: CustomerServiceConversation) {
+  if (!conversation.identity_verified_at) return false;
+  return Date.now() - new Date(conversation.identity_verified_at).getTime() < 30 * 60 * 1_000;
+}
+
+function beginOrderVerification(
+  order: CustomerServiceOrder,
+  conversation: CustomerServiceConversation,
+  pendingRequest: string,
+  usedModel: boolean,
+): BotTurn {
+  return {
+    reply: identityChallengeReply(order),
+    conversation: nextConversation(conversation, {
+      state: "verifying_order",
+      selected_order_id: order.order_id,
+      pending_request: pendingRequest,
+      identity_verification_order_id: order.order_id,
+      identity_verification_attempts: 0,
+    }),
+    wroteInquiry: false,
+    notified: false,
+    usedModel,
+  };
 }
 
 async function finishOrderHandoff(
@@ -116,7 +185,7 @@ async function finishOrderHandoff(
   request: string,
   conversation: CustomerServiceConversation,
 ): Promise<BotTurn> {
-  await deps.notifyInternal({
+  await deps.queueHandoff({
     phone,
     quoteId: order.order_id,
     orderNumber: order.order_number,
@@ -126,13 +195,14 @@ async function finishOrderHandoff(
   return {
     reply: handoffOrderSelectedReply(order.order_number || "（未有單號）"),
     conversation: nextConversation(conversation, {
-      state: "human_owned",
+      state: "awaiting_human",
       selected_order_id: order.order_id,
       handoff_at: new Date().toISOString(),
       pending_request: null,
     }),
     wroteInquiry: false,
-    notified: true,
+    notified: false,
+    queuedHandoff: true,
     usedModel: false,
   };
 }
@@ -147,11 +217,28 @@ async function replyOrderHandoff(
   const orders = (await deps.lookupOrders(phone)).filter(isUndeliveredOrder);
   const pendingRequest = conversation.pending_request?.trim() || request.trim();
   if (classified.orderNumber) {
-    const requested = normalizeCustomerServiceOrderNumber(classified.orderNumber);
-    const selected = orders.find(
-      (order) => normalizeCustomerServiceOrderNumber(order.order_number) === requested,
+    const requested = normalizeCustomerServiceOrderNumber(
+      classified.orderNumber,
     );
-    if (selected) return finishOrderHandoff(deps, phone, selected, pendingRequest, conversation);
+    const selected = orders.find(
+      (order) =>
+        normalizeCustomerServiceOrderNumber(order.order_number) === requested,
+    );
+    if (selected && !hasVerifiedIdentity(conversation))
+      return beginOrderVerification(
+        selected,
+        conversation,
+        `handoff:${pendingRequest}`,
+        classified.usedModel,
+      );
+    if (selected)
+      return finishOrderHandoff(
+        deps,
+        phone,
+        selected,
+        pendingRequest,
+        conversation,
+      );
   }
   if (orders.length) {
     return {
@@ -166,7 +253,7 @@ async function replyOrderHandoff(
       usedModel: false,
     };
   }
-  await deps.notifyInternal({
+  await deps.queueHandoff({
     phone,
     quoteId: null,
     orderNumber: null,
@@ -176,13 +263,14 @@ async function replyOrderHandoff(
   return {
     reply: handoffNoOpenOrderReply(),
     conversation: nextConversation(conversation, {
-      state: "human_owned",
+      state: "awaiting_human",
       selected_order_id: null,
       handoff_at: new Date().toISOString(),
       pending_request: null,
     }),
     wroteInquiry: false,
-    notified: true,
+    notified: false,
+    queuedHandoff: true,
     usedModel: false,
   };
 }
@@ -195,11 +283,23 @@ async function replyLookup(
 ): Promise<BotTurn> {
   const orders = await deps.lookupOrders(phone);
   if (classified.orderNumber) {
-    const requestedOrderNumber = normalizeCustomerServiceOrderNumber(classified.orderNumber);
+    const requestedOrderNumber = normalizeCustomerServiceOrderNumber(
+      classified.orderNumber,
+    );
     const selected = orders.find(
-      (order) => normalizeCustomerServiceOrderNumber(order.order_number) === requestedOrderNumber,
+      (order) =>
+        normalizeCustomerServiceOrderNumber(order.order_number) ===
+        requestedOrderNumber,
     );
     if (selected) {
+      if (!hasVerifiedIdentity(conversation)) {
+        return beginOrderVerification(
+          selected,
+          conversation,
+          "lookup",
+          classified.usedModel,
+        );
+      }
       return {
         reply: lookupSummaryReply(selected),
         conversation: nextConversation(conversation, {
@@ -223,6 +323,14 @@ async function replyLookup(
     };
   }
   if (orders.length === 1) {
+    if (!hasVerifiedIdentity(conversation)) {
+      return beginOrderVerification(
+        orders[0],
+        conversation,
+        "lookup",
+        classified.usedModel,
+      );
+    }
     return {
       reply: lookupSummaryReply(orders[0]),
       conversation: nextConversation(conversation, {
@@ -255,6 +363,85 @@ async function replyLookup(
   };
 }
 
+async function replyOrderVerification(
+  deps: CustomerServiceBotDeps,
+  phone: string,
+  text: string,
+  conversation: CustomerServiceConversation,
+): Promise<BotTurn> {
+  const orderId = conversation.identity_verification_order_id || conversation.selected_order_id;
+  if (!orderId) {
+    return {
+      reply: identityFailedReply(3),
+      conversation: nextConversation(conversation, {
+        state: "identifying",
+        selected_order_id: null,
+        pending_request: null,
+        identity_verification_attempts: 0,
+      }),
+      wroteInquiry: false,
+      notified: false,
+      usedModel: false,
+      failureReason: "identity_verification_context_missing",
+    };
+  }
+  const verified = await deps.verifyOrderIdentity(phone, orderId, text.trim());
+  if (!verified) {
+    const attempts = (conversation.identity_verification_attempts ?? 0) + 1;
+    return {
+      reply: identityFailedReply(attempts),
+      conversation: nextConversation(conversation, {
+        state: attempts >= 3 ? "identifying" : "verifying_order",
+        selected_order_id: attempts >= 3 ? null : orderId,
+        pending_request: attempts >= 3 ? null : conversation.pending_request,
+        identity_verification_order_id: attempts >= 3 ? null : orderId,
+        identity_verification_attempts: attempts,
+      }),
+      wroteInquiry: false,
+      notified: false,
+      usedModel: false,
+      failureReason: "identity_verification_failed",
+    };
+  }
+  const orders = await deps.lookupOrders(phone);
+  const selected = orders.find((order) => order.order_id === orderId);
+  if (!selected) {
+    return {
+      reply: identityFailedReply(3),
+      conversation: nextConversation(conversation, { state: "identifying", selected_order_id: null }),
+      wroteInquiry: false,
+      notified: false,
+      usedModel: false,
+      failureReason: "identity_verified_order_missing",
+    };
+  }
+  const verifiedConversation = nextConversation(conversation, {
+    state: "identifying",
+    selected_order_id: orderId,
+    identity_verified_at: new Date().toISOString(),
+    identity_verification_method: "order_email",
+    identity_verification_order_id: orderId,
+    identity_verification_attempts: 0,
+  });
+  const pending = conversation.pending_request || "lookup";
+  if (pending.startsWith("handoff:")) {
+    return finishOrderHandoff(
+      deps,
+      phone,
+      selected,
+      pending.slice("handoff:".length),
+      verifiedConversation,
+    );
+  }
+  return {
+    reply: lookupSummaryReply(selected),
+    conversation: nextConversation(verifiedConversation, { pending_request: null }),
+    wroteInquiry: false,
+    notified: false,
+    usedModel: false,
+  };
+}
+
 async function replyCollect(
   deps: CustomerServiceBotDeps,
   phone: string,
@@ -263,16 +450,21 @@ async function replyCollect(
 ): Promise<BotTurn> {
   if (!hasCollectableSlots(classified.slots)) {
     return {
-      reply: conversation.state === "collecting"
-        ? configuredReply(deps, "collect_more", REPLIES.collectMore)
-        : configuredReply(deps, "collect_prompt", REPLIES.collectPrompt),
+      reply:
+        conversation.state === "collecting"
+          ? configuredReply(deps, "collect_more", REPLIES.collectMore)
+          : configuredReply(deps, "collect_prompt", REPLIES.collectPrompt),
       conversation: nextConversation(conversation, { state: "collecting" }),
       wroteInquiry: false,
       notified: false,
       usedModel: classified.usedModel,
     };
   }
-  const written = await deps.writeInquiry(phone, classified.slots, classified.slots.anotherEvent);
+  const written = await deps.writeInquiry(
+    phone,
+    classified.slots,
+    classified.slots.anotherEvent,
+  );
   const summary = [
     classified.slots.eventDate && `日期 ${classified.slots.eventDate}`,
     classified.slots.headcount && `人數 ${classified.slots.headcount}`,
@@ -282,7 +474,7 @@ async function replyCollect(
   ]
     .filter(Boolean)
     .join("，");
-  await deps.notifyInternal({
+  await deps.queueHandoff({
     phone,
     quoteId: written.quote_id,
     orderNumber: written.order_number,
@@ -292,7 +484,8 @@ async function replyCollect(
     reply: configuredReply(deps, "collect_done", REPLIES.collectDone),
     conversation: nextConversation(conversation, { state: "identifying" }),
     wroteInquiry: true,
-    notified: true,
+    notified: false,
+    queuedHandoff: true,
     usedModel: classified.usedModel,
   };
 }
@@ -307,7 +500,8 @@ async function replyFaq(
   if (deps.answerFaqWithModel) {
     try {
       const modelAnswer = await deps.answerFaqWithModel(query, hits);
-      const answer = typeof modelAnswer === "string" ? modelAnswer : modelAnswer?.answer;
+      const answer =
+        typeof modelAnswer === "string" ? modelAnswer : modelAnswer?.answer;
       if (answer) {
         return {
           reply: faqReply(answer),
@@ -315,8 +509,14 @@ async function replyFaq(
           wroteInquiry: false,
           notified: false,
           usedModel: true,
-          faqSourceIds: typeof modelAnswer === "string" ? [] : modelAnswer?.sourceIds ?? [],
-          model: typeof modelAnswer === "string" ? null : modelAnswer?.model ?? null,
+          faqSourceIds:
+            typeof modelAnswer === "string"
+              ? []
+              : (modelAnswer?.sourceIds ?? []),
+          model:
+            typeof modelAnswer === "string"
+              ? null
+              : (modelAnswer?.model ?? null),
         };
       }
     } catch (error) {
@@ -369,6 +569,28 @@ export async function handleCustomerServiceTurn({
     };
   }
 
+  if (conversation.state === "awaiting_human") {
+    await deps.queueHandoff({
+      phone,
+      quoteId: conversation.selected_order_id,
+      orderNumber: null,
+      summary: `客戶補充資料：${text.trim().slice(0, 500)}`,
+      kind: "order_handoff",
+    });
+    return {
+      reply: REPLIES.handoffQueued,
+      conversation,
+      wroteInquiry: false,
+      notified: false,
+      queuedHandoff: true,
+      usedModel: false,
+    };
+  }
+
+  if (conversation.state === "verifying_order") {
+    return await replyOrderVerification(deps, phone, text, conversation);
+  }
+
   if (isCustomerServiceGreeting(text)) {
     return {
       reply: configuredReply(deps, "help", REPLIES.help),
@@ -388,12 +610,17 @@ export async function handleCustomerServiceTurn({
     failureReason: turn.failureReason ?? null,
   });
   if (conversation.state === "picking_handoff_order") {
-    return annotate(await replyOrderHandoff(deps, phone, classified, conversation, text));
+    return annotate(
+      await replyOrderHandoff(deps, phone, classified, conversation, text),
+    );
   }
   if (conversation.state === "picking_order" && classified.orderNumber) {
     return annotate(await replyLookup(deps, phone, classified, conversation));
   }
-  if (classified.intent === "prompt_injection" || classified.intent === "out_of_scope") {
+  if (
+    classified.intent === "prompt_injection" ||
+    classified.intent === "out_of_scope"
+  ) {
     return annotate({
       reply: configuredReply(deps, "refuse", REPLIES.refuse),
       conversation,
@@ -403,7 +630,7 @@ export async function handleCustomerServiceTurn({
     });
   }
   if (classified.intent === "handoff") {
-    await deps.notifyInternal({
+    await deps.queueHandoff({
       phone,
       quoteId: null,
       orderNumber: null,
@@ -413,21 +640,27 @@ export async function handleCustomerServiceTurn({
     return annotate({
       reply: configuredReply(deps, "handoff", REPLIES.handoff),
       conversation: nextConversation(conversation, {
-        state: "human_owned",
+        state: "awaiting_human",
         handoff_at: new Date().toISOString(),
       }),
       wroteInquiry: false,
-      notified: true,
+      notified: false,
+      queuedHandoff: true,
       usedModel: classified.usedModel,
     });
   }
   if (classified.intent === "handoff_order") {
-    return annotate(await replyOrderHandoff(deps, phone, classified, conversation, text));
+    return annotate(
+      await replyOrderHandoff(deps, phone, classified, conversation, text),
+    );
   }
   if (classified.intent === "lookup_order") {
     return annotate(await replyLookup(deps, phone, classified, conversation));
   }
-  if (classified.intent === "collect_inquiry" || conversation.state === "collecting") {
+  if (
+    classified.intent === "collect_inquiry" ||
+    conversation.state === "collecting"
+  ) {
     return annotate(await replyCollect(deps, phone, classified, conversation));
   }
   return annotate(await replyFaq(deps, classified, conversation, text));

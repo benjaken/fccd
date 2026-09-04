@@ -2,8 +2,10 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 
 import {
   answerCustomerServiceFaqWithAi,
+  classifyCustomerServiceWithAi,
   customerServiceAiConfig,
   type CustomerServiceFaqKnowledge,
+  type CustomerServiceIntentConfig,
 } from "../_shared/customer-service-ai.ts";
 
 const CORS_HEADERS = {
@@ -103,51 +105,99 @@ Deno.serve(async (request) => {
   if (runError || !run) return json({ error: "evaluation_run_create_failed" }, 500);
 
   try {
-    const [{ data: rows, error: rowsError }, { data: faqRows, error: faqError }] = await Promise.all([
+    const [
+      { data: rows, error: rowsError },
+      { data: faqRows, error: faqError },
+      { data: intentRows, error: intentError },
+      { data: permissionRows, error: permissionError },
+    ] = await Promise.all([
       admin.from("customer_service_turn_feedback")
-        .select("verdict,corrected_answer,customer_service_turns!inner(question,answer,environment)")
+        .select("verdict,corrected_answer,customer_service_turns!inner(question,answer,intent,route,state_before,environment)")
         .in("verdict", ["correct", "incorrect"])
         .eq("customer_service_turns.environment", candidate.environment)
         .order("reviewed_at", { ascending: false })
         .limit(sampleLimit),
       admin.from("customer_faqs").select("id,category,question,answer")
         .eq("is_published", true).order("sort_order").limit(100),
+      admin.from("customer_service_intents")
+        .select("intent_key,display_name,description,examples,action_key,confidence_threshold")
+        .eq("enabled", true).order("priority"),
+      admin.from("customer_service_tool_permissions")
+        .select("intent_key,tool_key").eq("allowed", true),
     ]);
     if (rowsError) throw rowsError;
     if (faqError) throw faqError;
+    if (intentError) throw intentError;
+    if (permissionError) throw permissionError;
     const faqs = (faqRows ?? []) as CustomerServiceFaqKnowledge[];
+    const toolsByIntent = new Map<string, string[]>();
+    for (const row of (permissionRows ?? []) as Array<{ intent_key: string; tool_key: string }>) {
+      toolsByIntent.set(row.intent_key, [...(toolsByIntent.get(row.intent_key) ?? []), row.tool_key]);
+    }
+    const intents = ((intentRows ?? []) as Array<{
+      intent_key: string; display_name: string; description: string; examples: string[] | null;
+      action_key: string; confidence_threshold: number | string;
+    }>).map<CustomerServiceIntentConfig>((row) => ({
+      intentKey: row.intent_key,
+      displayName: row.display_name,
+      description: row.description,
+      examples: row.examples ?? [],
+      actionKey: row.action_key,
+      confidenceThreshold: Number(row.confidence_threshold),
+      toolKeys: toolsByIntent.get(row.intent_key) ?? [],
+    }));
     const samples = (rows ?? []).map((row: {
       verdict: string;
       corrected_answer: string | null;
       customer_service_turns: unknown;
     }) => {
-      const turn = row.customer_service_turns as unknown as { question: string; answer: string | null };
+      const turn = row.customer_service_turns as unknown as {
+        question: string; answer: string | null; intent: string | null;
+        route: string | null; state_before: string | null;
+      };
       return {
         question: turn.question,
         reference: row.verdict === "incorrect" ? row.corrected_answer || "" : turn.answer || "",
+        intent: turn.intent,
+        tool: turn.route?.split(",")[0] || null,
+        state: turn.state_before || "identifying",
       };
     }).filter((sample: { question: string; reference: string }) => sample.question && sample.reference);
     if (!samples.length) throw new Error("no_reviewed_samples");
 
     const baseConfig = customerServiceAiConfig();
-    const results = [] as Array<{ answered: boolean; score: number; passed: boolean }>;
+    const results = [] as Array<{
+      answered: boolean; score: number; passed: boolean;
+      intentMatched: boolean | null; toolMatched: boolean | null;
+    }>;
     for (const sample of samples) {
-      const answer = await answerCustomerServiceFaqWithAi({
-        question: sample.question,
-        faqs,
-        config: {
-          ...baseConfig,
-          model: candidate.model,
-          systemPrompt: candidate.system_prompt,
-          temperature: Number(candidate.temperature),
-        },
-      });
+      const evaluationConfig = {
+        ...baseConfig,
+        model: candidate.model,
+        systemPrompt: candidate.system_prompt,
+        temperature: Number(candidate.temperature),
+      };
+      const [answer, classification] = await Promise.all([
+        answerCustomerServiceFaqWithAi({ question: sample.question, faqs, config: evaluationConfig }),
+        classifyCustomerServiceWithAi({
+          message: sample.question,
+          conversationState: sample.state,
+          intents,
+          config: evaluationConfig,
+        }),
+      ]);
       const score = answer ? similarity(answer.answer, sample.reference) : 0;
-      results.push({ answered: Boolean(answer), score, passed: score >= 0.25 });
+      results.push({
+        answered: Boolean(answer), score, passed: score >= 0.25,
+        intentMatched: sample.intent ? classification?.intentKey === sample.intent : null,
+        toolMatched: sample.tool ? classification?.toolKey === sample.tool : null,
+      });
     }
     const answered = results.filter((item) => item.answered).length;
     const passed = results.filter((item) => item.passed).length;
     const averageScore = results.reduce((sum, item) => sum + item.score, 0) / results.length;
+    const intentResults = results.filter((item) => item.intentMatched !== null);
+    const toolResults = results.filter((item) => item.toolMatched !== null);
     const metrics = {
       reviewed_samples: results.length,
       answered,
@@ -155,6 +205,12 @@ Deno.serve(async (request) => {
       agreement_passed: passed,
       agreement_rate: passed / results.length,
       average_similarity: averageScore,
+      intent_accuracy: intentResults.length
+        ? intentResults.filter((item) => item.intentMatched).length / intentResults.length
+        : null,
+      tool_accuracy: toolResults.length
+        ? toolResults.filter((item) => item.toolMatched).length / toolResults.length
+        : null,
       threshold: 0.25,
     };
     await admin.from("customer_service_evaluation_runs").update({

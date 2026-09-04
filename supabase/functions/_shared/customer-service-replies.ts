@@ -6,19 +6,18 @@ export const REPLIES = {
   refuse:
     "唔好意思，我哋呢度只可以幫你查訂單、到會查詢，或者公司已公布嘅政策。如果需要其他協助，請等同事上線。",
   handoff:
-    "唔好意思，呢單要同事跟進。我已經幫你交俾同事，稍後會有人回覆你。",
+    "唔好意思，呢個問題需要同事處理。我已經幫你記錄，客服會喺上午 9 點後跟進；你可以繼續補充資料。",
+  handoffQueued:
+    "收到，我已經將補充資料加入同一個跟進事項，客服會喺上午 9 點後回覆你。",
   collectPrompt:
     "你好。未搵到用呢個 WhatsApp 號碼嘅正式訂單。如果你想查到會，請話我知活動日期或者人數，同事會跟進。",
   collectMore:
     "收到。麻煩再提供活動日期或者人數其中一項，我就可以交俾同事跟進。",
-  collectDone:
-    "已經幫你記低，同事會跟進。唔使再喺 WhatsApp 補電郵。",
+  collectDone: "已經幫你記低，同事會跟進。唔使再喺 WhatsApp 補電郵。",
   noFaq:
     "唔好意思，呢條我未搵到已公布嘅答案。你可以問運費、查訂單，或者話我知到會日期／人數。",
-  help:
-    "你好，我可以幫你查訂單、記低到會查詢，或者答公司已公布嘅問題（例如運費）。直接講你想問咩就得。",
-  fallback:
-    "唔好意思，系統暫時未能完成呢則回覆。同事會跟進。",
+  help: "你好，我可以幫你查訂單、記低到會查詢，或者答公司已公布嘅問題（例如運費）。直接講你想問咩就得。",
+  fallback: "唔好意思，系統暫時未能完成呢則回覆。同事會跟進。",
   pickOrder:
     "已經幫你查到多過一張訂單。請回覆其中一個訂單號，我再同你講嗰單嘅狀況。",
 } as const;
@@ -63,7 +62,9 @@ export function lookupListReply(
 ) {
   const lines = orders.map((order) => {
     const when = order.delivery_at
-      ? new Date(order.delivery_at).toLocaleDateString("zh-HK", { timeZone: "Asia/Hong_Kong" })
+      ? new Date(order.delivery_at).toLocaleDateString("zh-HK", {
+          timeZone: "Asia/Hong_Kong",
+        })
       : "日期待確認";
     return `${order.order_number || "（未有單號）"}（${when}）`;
   });
@@ -103,17 +104,19 @@ export function handoffOrderListReply(
 
 export function handoffOrderSelectedReply(orderNumber: string) {
   return sanitizeOutboundReply(
-    `已選擇訂單 ${orderNumber}。我已通知內部同事處理，而家會轉由真人客服跟進，請稍候。`,
+    `已選擇訂單 ${orderNumber}。我已經記錄你嘅要求，客服會喺上午 9 點後跟進；你可以繼續補充資料。`,
   );
 }
 
 export function handoffNoOpenOrderReply() {
   return sanitizeOutboundReply(
-    "用呢個 WhatsApp 號碼暫時搵唔到未送貨訂單。我已通知內部同事，而家會轉由真人客服跟進，請稍候。",
+    "用呢個 WhatsApp 號碼暫時搵唔到未送貨訂單。我已經記錄呢個情況，客服會喺上午 9 點後跟進。",
   );
 }
 
 export function faqReply(answer: string) {
   const text = answer.trim();
-  return sanitizeOutboundReply(/^你好[。！!，,\s]/.test(text) ? text : `你好。${text}`);
+  return sanitizeOutboundReply(
+    /^你好[。！!，,\s]/.test(text) ? text : `你好。${text}`,
+  );
 }

@@ -28,6 +28,9 @@ export type ClassifiedMessage = {
   confidence?: number;
   configuredIntentKey?: string;
   toolKey?: string | null;
+  requestedDate?: string;
+  missingFields?: string[];
+  requiresHuman?: boolean;
 };
 
 const EMPTY_SLOTS: InquirySlots = {
