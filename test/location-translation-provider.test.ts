@@ -77,7 +77,7 @@ describe("location translation provider compatibility", () => {
     });
     expect(retryBody).toEqual({
       model: "grok-4.3",
-      max_tokens: 400,
+      max_tokens: 160,
       stream: false,
       reasoning_effort: "none",
       messages: firstBody.messages,
@@ -130,6 +130,26 @@ describe("location translation provider compatibility", () => {
     const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
     expect(body.model).toBe(DEFAULT_ADDRESS_TRANSLATION_MODEL);
     expect(body.reasoning_effort).toBe("none");
+    expect(body.service_tier).toBe("priority");
+  });
+
+  it("drops priority processing on the portable 400 compatibility retry", async () => {
+    stubTranslationEnv([
+      ["ADDRESS_TRANSLATION_AI_ENABLED", "true"],
+      ["ADDRESS_TRANSLATION_AI_ENDPOINT", "https://api.x.ai/v1/chat/completions"],
+      ["ADDRESS_TRANSLATION_AI_API_KEY", "test-key"],
+    ]);
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response("unsupported parameter", { status: 400 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        choices: [{ message: { content: "{\"translatedText\":\"中環\"}" } }],
+      }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(translateLocationToTraditionalChinese("Central", "district"))
+      .resolves.toBe("中環");
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body as string).service_tier).toBe("priority");
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body as string).service_tier).toBeUndefined();
   });
 
   it("does not retry after an aborted first attempt", async () => {

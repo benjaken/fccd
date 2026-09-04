@@ -3,7 +3,7 @@ export type LocationTranslationKind = "address" | "district";
 /** Fast enough for a one-line address, and able to translate place names. Do not inherit grok-4.6. */
 export const DEFAULT_ADDRESS_TRANSLATION_MODEL = "grok-4.3";
 const QUALITY_RETRY_MODEL = "grok-4.3";
-const ADDRESS_TRANSLATION_MAX_TOKENS = 400;
+const ADDRESS_TRANSLATION_MAX_TOKENS = 160;
 const ADDRESS_TRANSLATION_ATTEMPT_TIMEOUT_MS = 8_000;
 const KEEP_ENGLISH_WORDS = new Set([
   "unit", "rm", "room", "flat", "fl", "blk", "block", "phase", "twr", "tower", "no", "nos",
@@ -90,11 +90,13 @@ function providerRequest(
   model: string,
   messages: Array<{ role: string; content: string }>,
   extra: Record<string, unknown> = {},
+  priority = false,
 ) {
   return {
     model,
     max_tokens: ADDRESS_TRANSLATION_MAX_TOKENS,
     stream: false,
+    ...(priority ? { service_tier: "priority" } : {}),
     ...(usesReasoningEffortNone(model) ? { reasoning_effort: "none" } : {}),
     ...extra,
     messages,
@@ -131,11 +133,14 @@ async function completeTranslation(
   model: string,
   messages: Array<{ role: string; content: string }>,
 ) {
+  const usePriority = /api\.x\.ai/i.test(endpoint);
   const requests = [
     providerRequest(model, messages, {
       response_format: { type: "json_object" },
       temperature: 0,
-    }),
+    }, usePriority),
+    // Keep the compatibility retry portable. If an OpenAI-compatible endpoint
+    // rejects structured output or xAI priority, retry with the minimum body.
     providerRequest(model, messages),
   ];
   for (let attempt = 0; attempt < requests.length; attempt += 1) {
@@ -153,11 +158,14 @@ async function completeTranslation(
         console.error("location-translation-provider", response.status, providerError);
         throw new Error(`location_translation_provider_${response.status}`);
       }
+      const payload = await response.json() as {
+        choices?: Array<{ message?: { content?: string | null } }>;
+        service_tier?: unknown;
+      };
       return {
-        translatedText: parseTranslatedText(
-          await response.json() as { choices?: Array<{ message?: { content?: string | null } }> },
-        ),
+        translatedText: parseTranslatedText(payload),
         attempt: attempt + 1,
+        serviceTier: typeof payload.service_tier === "string" ? payload.service_tier : "default",
       };
     } catch (error) {
       if (isAbortError(error)) throw new Error("location_translation_timeout");
@@ -204,6 +212,7 @@ export async function translateLocationToTraditionalChinese(
     model: usedModel,
     kind,
     attempt: result.attempt,
+    serviceTier: result.serviceTier,
     incomplete: hasUntranslatedEnglish(result.translatedText),
     elapsedMs: Date.now() - startedAt,
   });
