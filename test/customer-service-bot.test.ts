@@ -111,6 +111,10 @@ describe("customer-service intents", () => {
     });
     expect(classifyCustomerServiceMessage("B-1555 幾時送，同埋訂咗咩菜？").requestedFields)
       .toEqual(["delivery_date", "items"]);
+    expect(classifyCustomerServiceMessage("什麼時候送到")).toMatchObject({
+      intent: "lookup_order",
+      requestedFields: ["delivery_date"],
+    });
   });
 
   it("extracts inquiry slots and shipping FAQ", () => {
@@ -706,6 +710,51 @@ describe("customer-service bot turns", () => {
 });
 
 describe("precise order lookup replies", () => {
+  it("changes from dish details to delivery time on a follow-up for the selected order", async () => {
+    const selectedOrder = { ...order, order_number: "B-1555" };
+    const otherOrder = {
+      ...order,
+      order_id: "22222222-2222-4222-8222-222222222222",
+      order_number: "B-1550C",
+    };
+    const lookupOrderItems = vi.fn().mockResolvedValue([{
+      order_line_id: "line-1",
+      package_name: null,
+      item_kind: "item" as const,
+      item_name: "彩椒炒豬頸肉飯",
+      item_content: null,
+      quantity: 25,
+      quantity_text: null,
+      remarks: [],
+    }]);
+    const lookupOrders = vi.fn().mockResolvedValue([selectedOrder, otherOrder]);
+
+    const first = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "B-1555 這個訂單訂了什麼菜式",
+      conversation,
+      deps: deps({ lookupOrders, lookupOrderItems }),
+    });
+    expect(first.reply).toContain("彩椒炒豬頸肉飯");
+
+    const second = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "什麼時候送到",
+      conversation: first.conversation,
+      deps: deps({ lookupOrders, lookupOrderItems }),
+      classify: vi.fn().mockResolvedValue({
+        ...classifyCustomerServiceMessage("什麼時候送到"),
+        requestedFields: ["items"],
+        usedModel: true,
+      }),
+    });
+
+    expect(second.reply).toContain("送貨／自取時間");
+    expect(second.reply).not.toContain("訂單內容");
+    expect(second.conversation.selected_order_id).toBe(selectedOrder.order_id);
+    expect(lookupOrderItems).toHaveBeenCalledTimes(1);
+  });
+
   it("does not load dish details for a delivery-date-only question", async () => {
     const lookupOrderItems = vi.fn().mockResolvedValue([]);
     const turn = await handleCustomerServiceTurn({

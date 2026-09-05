@@ -81,7 +81,7 @@ const ORDER_HANDOFF =
 
 const HANDOFF = /投訴|服務差|議價|平啲|減價|便宜/;
 
-const LOOKUP = /查單|訂單|單號|送貨狀態|送貨日期|送餐日期|自取日期|幾時送|幾時到|我的單|我嘅單|order ?status|delivery date|加單/i;
+const LOOKUP = /查單|訂單|單號|送貨狀態|送貨日期|送餐日期|自取日期|幾時送|幾時到|何時送|何時到|什麼時候送|什麼時候到|什么时候送|什么时候到|幾點送|幾點到|几点送|几点到|我的單|我嘅單|order ?status|delivery date|加單/i;
 
 const COLLECT = /到會|報價|訂餐|宴會|活動|幾多人|人數|另一場|新活動|另外一場/;
 
@@ -162,7 +162,7 @@ export function isMenuInformationRequest(value: string) {
 
 export function extractRequestedOrderFields(text: string) {
   const fields: CustomerServiceOrderField[] = [];
-  if (/(?:送貨|送餐|自取|交收).{0,8}(?:日期|時間|幾時|何時)|(?:幾時|何時).{0,8}(?:送|到)|delivery\s*(?:date|time)/i.test(text)) {
+  if (/(?:送貨|送餐|自取|交收).{0,8}(?:日期|時間|幾時|何時|什麼時候|什么时候|幾點|几点)|(?:幾時|何時|什麼時候|什么时候|幾點|几点).{0,8}(?:送|到)|(?:送|到)貨?.{0,5}(?:日期|時間|幾時|何時|什麼時候|什么时候|幾點|几点)|delivery\s*(?:date|time)/i.test(text)) {
     fields.push("delivery_date");
   }
   if (/(?:狀態|進度|而家點|依家點|處理成點|status)/i.test(text)) {

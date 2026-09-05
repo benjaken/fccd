@@ -1,5 +1,6 @@
 import {
   classifyCustomerServiceMessage,
+  extractRequestedOrderFields,
   hasCollectableSlots,
   isCustomerServiceGreeting,
   isMenuInformationRequest,
@@ -517,6 +518,29 @@ async function replyLookup(
       usedModel: classified.usedModel,
     };
   }
+  const selectedOrder = conversation.selected_order_id
+    ? orders.find((order) => order.order_id === conversation.selected_order_id)
+    : null;
+  if (selectedOrder && hasVerifiedIdentity(conversation)) {
+    const result = await lookupVerifiedOrderReply(
+      deps,
+      phone,
+      selectedOrder,
+      requestedFields,
+    );
+    return {
+      reply: result.reply,
+      conversation: nextConversation(conversation, {
+        state: "identifying",
+        selected_order_id: selectedOrder.order_id,
+        pending_request: null,
+      }),
+      wroteInquiry: false,
+      notified: false,
+      usedModel: classified.usedModel,
+      failureReason: result.failureReason,
+    };
+  }
   if (orders.length === 1) {
     if (!hasVerifiedIdentity(conversation)) {
       return beginOrderVerification(
@@ -899,7 +923,14 @@ export async function handleCustomerServiceTurn({
     );
   }
 
-  const classified = await classify(text);
+  const modelClassified = await classify(text);
+  // The current utterance is authoritative for the requested order fields.
+  // This prevents recent context (for example, a previous dish lookup) from
+  // making the model repeat the old field for a new delivery-time follow-up.
+  const explicitRequestedFields = extractRequestedOrderFields(text);
+  const classified = explicitRequestedFields.length
+    ? { ...modelClassified, requestedFields: explicitRequestedFields }
+    : modelClassified;
   const annotate = (turn: BotTurn): BotTurn => {
     const defaultTool = classified.intent === "lookup_order" ||
         classified.intent === "handoff_order"
