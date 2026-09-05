@@ -41,6 +41,7 @@ describe("buildMobileDrawerNav", () => {
     expect(followUp?.items.map((item) => item.to)).toEqual(["/follow-up"]);
     expect(orders?.items.map((item) => item.to)).toEqual([
       "/orders",
+      "/orders/customer-inquiries",
       "/orders/payments/bank-arrival-date",
       "/orders/payments/masoft-invoices",
       "/orders/calendar",
@@ -98,10 +99,10 @@ describe("buildMobileDrawerNav", () => {
       "rolePermissions",
       "loginLogs",
       "watiEmailLogs",
+      "customerFaq",
       "dictionaries",
       "notificationSettings",
       "districts",
-      "customerFaq",
       "attachments",
     ]);
   });
