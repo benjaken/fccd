@@ -154,6 +154,25 @@ export function hasCollectableSlots(slots: InquirySlots) {
   return Boolean(slots.eventDate || slots.headcount);
 }
 
+export function shouldBypassCustomerServiceAi(classified: ClassifiedMessage) {
+  // Only a prompt attack is a hard deterministic intent. Business meaning,
+  // including apparently off-topic wording, remains AI-first so context can
+  // distinguish e.g. weather chatter from a delivery-impact question.
+  return classified.intent === "prompt_injection";
+}
+
+export function explicitCustomerServiceOrderNumber(
+  text: string,
+  fallbackOrderNumber: string,
+  modelOrderNumber: string,
+) {
+  if (fallbackOrderNumber) return fallbackOrderNumber;
+  const candidate = normalizeCustomerServiceOrderNumber(modelOrderNumber);
+  if (candidate.length < 4) return "";
+  const normalizedText = normalizeCustomerServiceOrderNumber(text);
+  return normalizedText.includes(candidate) ? modelOrderNumber.trim() : "";
+}
+
 export function isMenuInformationRequest(value: string) {
   const text = value.trim();
   return /(?:餐牌|菜單|菜单|menu)/i.test(text) &&

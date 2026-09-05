@@ -28,6 +28,8 @@ import {
 } from "../_shared/customer-service-bot.ts";
 import {
   classifyCustomerServiceMessage,
+  explicitCustomerServiceOrderNumber,
+  shouldBypassCustomerServiceAi,
   type ClassifiedMessage,
   type CustomerServiceIntent,
   type InquirySlots,
@@ -314,12 +316,9 @@ function createCustomerServiceClassifier({
   return async (text: string): Promise<ClassifiedMessage> => {
     const fallback = classifyCustomerServiceMessage(text);
     const activePolicy = workflowPolicies.find((item) => item.goalKey === activeGoal);
-    // Safety rules remain deterministic and cannot be overridden by the model.
-    if (
-      fallback.intent === "prompt_injection" ||
-      fallback.intent === "out_of_scope"
-    )
-      return fallback;
+    // Keep only prompt attacks as a hard Regex route. Business meaning is
+    // AI-first; the deterministic classifier is the availability fallback.
+    if (shouldBypassCustomerServiceAi(fallback)) return fallback;
     try {
       const result = await classifyCustomerServiceWithTieredAi({
         message: text,
@@ -334,11 +333,7 @@ function createCustomerServiceClassifier({
       const config = intents.find(
         (item) => item.intentKey === result.intentKey,
       );
-      if (
-        !config ||
-        (result.confidence < config.confidenceThreshold && !result.needsClarification)
-      )
-        return fallback;
+      if (!config) return fallback;
       const requiredTool = ACTION_TO_REQUIRED_TOOL[config.actionKey];
       if (requiredTool && !config.toolKeys.includes(requiredTool))
         return fallback;
@@ -358,6 +353,8 @@ function createCustomerServiceClassifier({
       const policyNeedsClarification = Boolean(
         targetPolicy && result.confidence < targetPolicy.clarificationThreshold,
       );
+      const confidenceNeedsClarification =
+        result.confidence < config.confidenceThreshold;
       return {
         ...fallback,
         intent,
@@ -365,7 +362,11 @@ function createCustomerServiceClassifier({
         confidence: result.confidence,
         configuredIntentKey: config.intentKey,
         toolKey: requiredTool || result.toolKey,
-        orderNumber: result.orderNumber || fallback.orderNumber,
+        orderNumber: explicitCustomerServiceOrderNumber(
+          text,
+          fallback.orderNumber,
+          result.orderNumber,
+        ),
         requestedDate: result.requestedDate,
         requestedFields: result.requestedFields.length
           ? result.requestedFields
@@ -374,9 +375,12 @@ function createCustomerServiceClassifier({
         requiresHuman: result.requiresHuman,
         model: result.model,
         dialogAction: result.dialogAction,
-        needsClarification: result.needsClarification || policyNeedsClarification,
+        needsClarification:
+          result.needsClarification ||
+          confidenceNeedsClarification ||
+          policyNeedsClarification,
         clarificationQuestion: result.clarificationQuestion || (
-          policyNeedsClarification
+          confidenceNeedsClarification || policyNeedsClarification
             ? "我未能完全確認你想處理嘅事項，可以講清楚係修改訂單、訂餐，定係查詢資料嗎？"
             : ""
         ),

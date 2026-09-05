@@ -45,6 +45,12 @@ describe("customer-service backend conversation preview", () => {
     expect(source).toContain("ACTION_TO_REQUIRED_TOOL");
   });
 
+  it("uses AI for business intent and clarifies low-confidence results instead of Regex routing", () => {
+    expect(source).toContain("shouldBypassCustomerServiceAi(fallback)");
+    expect(source).toContain("confidenceNeedsClarification");
+    expect(source).not.toContain('fallback.intent === "out_of_scope"');
+  });
+
   it("queues handoffs and only sends them from the authenticated morning digest", () => {
     expect(source).toContain('admin.rpc("customer_service_handoff_enqueue"');
     expect(source).toContain('payload.mode === "handoff_digest"');
