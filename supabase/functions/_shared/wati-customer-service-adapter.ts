@@ -7,6 +7,8 @@ export type WatiInboundEvent = {
   whatsappMessageId: string;
   text: string;
   type: string;
+  caption: string;
+  mediaUrl: string;
   owner: boolean;
   waId: string;
   channelPhoneNumber: string;
@@ -134,13 +136,27 @@ export function parseWatiInboundEvent(payload: Record<string, unknown>): WatiInb
   const waId = normalizeWhatsAppChannel(String(payload.waId || payload.whatsappNumber || ""));
   const id = String(payload.id || payload.whatsappMessageId || "").trim();
   if (!waId || !id) return null;
+  const data = payload.data && typeof payload.data === "object"
+    ? payload.data as Record<string, unknown>
+    : {};
+  const type = String(payload.type || "text").trim().toLowerCase();
+  const rawText = typeof payload.text === "string" ? payload.text.trim() : "";
+  const caption = String(payload.caption || data.caption || "").trim();
+  const dataUrl = typeof payload.data === "string" ? payload.data.trim() : "";
+  const mediaUrl = String(
+    payload.sourceUrl || payload.mediaUrl || data.sourceUrl || data.mediaUrl ||
+      data.fileUrl || data.url || dataUrl ||
+      (/^https?:\/\//i.test(rawText) && type !== "text" ? rawText : ""),
+  ).trim();
   return {
     eventType: String(payload.eventType || payload.event || "message"),
     id,
     localMessageId: String(payload.localMessageId || "").trim(),
     whatsappMessageId: String(payload.whatsappMessageId || id),
-    text: String(payload.text || payload.data || "").trim(),
-    type: String(payload.type || "text"),
+    text: caption || rawText || (type === "text" ? dataUrl : ""),
+    type,
+    caption,
+    mediaUrl,
     owner: payload.owner === true,
     waId,
     channelPhoneNumber: normalizeWhatsAppChannel(

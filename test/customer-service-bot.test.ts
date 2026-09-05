@@ -967,6 +967,27 @@ describe("WATI adapter", () => {
     ).toBe("https://live-mt-server.wati.io/2552");
   });
 
+  it("extracts media metadata without converting data objects to object text", () => {
+    const media = parseWatiInboundEvent({
+      id: "voice-1",
+      eventType: "message",
+      waId: "85291234567",
+      type: "voice",
+      text: "",
+      data: {
+        sourceUrl: "https://media.example.test/voice.opus",
+        caption: "客人補充語音",
+      },
+    });
+
+    expect(media).toMatchObject({
+      type: "voice",
+      text: "客人補充語音",
+      caption: "客人補充語音",
+      mediaUrl: "https://media.example.test/voice.opus",
+    });
+  });
+
   it("restricts bot processing to an explicit test-phone allowlist", () => {
     const allowed = parseAllowedCustomerServicePhones("8613828747224");
     expect(customerServicePhoneAllowed("8613828747224", allowed)).toBe(true);

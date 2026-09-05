@@ -14,6 +14,10 @@ import {
   type CustomerServiceRecentMessage,
 } from "../_shared/customer-service-context.ts";
 import {
+  assessCustomerServiceAdvertisement,
+  isCustomerServiceMediaType,
+} from "../_shared/customer-service-spam.ts";
+import {
   customerServiceBurstDelay,
   mergeCustomerServiceBufferedMessages,
   type CustomerServiceBufferedMessage,
@@ -36,6 +40,7 @@ import {
   isHumanOperatorMessage,
   parseAllowedCustomerServicePhones,
   parseWatiInboundEvent,
+  type WatiInboundEvent,
   deliverWatiSessionMessage,
   verifyWatiWebhook,
 } from "../_shared/wati-customer-service-adapter.ts";
@@ -418,20 +423,50 @@ async function loadBotControls(admin: AdminClient) {
 
 async function recordInbound(
   admin: AdminClient,
-  event: {
-    id: string;
-    waId: string;
-    text: string;
-  },
+  event: Pick<WatiInboundEvent, "id" | "waId" | "text" | "type" | "mediaUrl">,
 ) {
   const { error } = await admin.from("customer_service_inbound_events").insert({
     provider_message_id: event.id,
     phone_normalized: event.waId,
     body: event.text,
+    message_type: event.type,
+    media_url: event.mediaUrl || null,
   });
   if (error?.code === "23505") return "duplicate";
   if (error) throw error;
   return "inserted";
+}
+
+async function spamSenderDisposition(admin: AdminClient, phone: string) {
+  const { data, error } = await admin
+    .from("customer_service_spam_senders")
+    .select("disposition")
+    .eq("environment", deploymentEnvironment())
+    .eq("phone_normalized", phone)
+    .maybeSingle();
+  if (error && error.code !== "42P01") throw error;
+  return String(data?.disposition || "review") as "review" | "blocked" | "trusted";
+}
+
+async function filterInboundAdvertisement(admin: AdminClient, event: WatiInboundEvent) {
+  const disposition = await spamSenderDisposition(admin, event.waId);
+  if (disposition === "trusted") return false;
+  const assessment = disposition === "blocked"
+    ? { isAdvertisement: true, score: 1, reasons: ["blocked_sender"] }
+    : assessCustomerServiceAdvertisement(event.caption || event.text);
+  if (!assessment.isAdvertisement) return false;
+  const { error } = await admin.rpc("customer_service_record_spam_event", {
+    p_environment: deploymentEnvironment(),
+    p_provider_message_id: event.id,
+    p_phone: event.waId,
+    p_message_type: event.type,
+    p_content_excerpt: event.caption || event.text,
+    p_score: assessment.score,
+    p_reasons: assessment.reasons,
+    p_action: "filtered",
+  });
+  if (error) throw error;
+  return true;
 }
 
 type InboundBatchClaim = {
@@ -1634,6 +1669,54 @@ async function persistCustomerServiceTurn(
   });
 }
 
+function mediaTypeLabel(type: string) {
+  if (type === "image") return "圖片";
+  if (type === "voice") return "語音訊息";
+  return "音訊";
+}
+
+async function handleInboundMedia(admin: AdminClient, event: WatiInboundEvent) {
+  const conversation = await loadConversation(admin, event.waId);
+  if (conversation.state === "human_owned") return;
+  const label = mediaTypeLabel(event.type);
+  const detail = [event.caption, event.mediaUrl].filter(Boolean).join("\n").slice(0, 1_000);
+  await queueInternalHandoff(admin, {
+    phone: event.waId,
+    quoteId: conversation.selected_order_id,
+    orderNumber: null,
+    summary: `客人傳送${label}，需要同事查看。${detail ? `\n${detail}` : ""}`,
+    kind: "order_handoff",
+  });
+  const nextConversation: CustomerServiceConversation = {
+    ...conversation,
+    state: "awaiting_human",
+    handoff_at: new Date().toISOString(),
+    pending_request: `查看客人${label}`,
+  };
+  const reply = `已收到你嘅${label}，呢類訊息會交由客服同事查看，稍後回覆你。`;
+  await persistCustomerServiceTurn(admin, {
+    providerMessageId: event.id,
+    phone: event.waId,
+    text: `[${label}]${event.caption ? ` ${event.caption}` : ""}`,
+    prepared: {
+      conversation,
+      startedAt: Date.now(),
+      turn: {
+        reply,
+        conversation: nextConversation,
+        wroteInquiry: false,
+        notified: false,
+        queuedHandoff: true,
+        usedModel: false,
+        intentKey: "media_handoff",
+        toolKeys: ["queue_handoff"],
+        failureReason: null,
+        dialogAction: "new_request",
+      },
+    },
+  });
+}
+
 async function processInboundBatch(
   admin: AdminClient,
   phone: string,
@@ -1865,6 +1948,14 @@ Deno.serve(async (request) => {
         within_auto_reply_window: false,
         duplicate: false,
       });
+    }
+
+    if (await filterInboundAdvertisement(admin, event)) {
+      return jsonResponse({ ok: true, filtered: "advertisement" });
+    }
+    if (isCustomerServiceMediaType(event.type)) {
+      await handleInboundMedia(admin, event);
+      return jsonResponse({ ok: true, handoff: true, media_type: event.type });
     }
 
     const batch = await enqueueInboundBatch(admin, event);
