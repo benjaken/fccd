@@ -19,6 +19,8 @@ vi.mock("@/lib/shop-orders", async (importOriginal) => {
     fetchShopCatalog: vi.fn(),
     fetchShopContacts: vi.fn(),
     fetchShopOrderRequests: vi.fn(),
+    fetchShopOrderRecords: vi.fn(),
+    createShopOrderBatch: vi.fn(),
     createShopOrderRequest: vi.fn(),
     markShopOrderWhatsAppCall: vi.fn(),
   };
@@ -76,6 +78,17 @@ describe("shop order page", () => {
     vi.mocked(shopOrders.fetchShopCatalog).mockResolvedValue([externalItem]);
     vi.mocked(shopOrders.fetchShopContacts).mockResolvedValue([]);
     vi.mocked(shopOrders.fetchShopOrderRequests).mockResolvedValue([]);
+    vi.mocked(shopOrders.fetchShopOrderRecords).mockResolvedValue([]);
+    vi.mocked(shopOrders.createShopOrderBatch).mockImplementation(async (input) =>
+      input.groups.map((group, index) => ({
+        id: `request-${index + 1}`,
+        batchId: "batch-1",
+        requestNo: "SO-BATCH-1",
+        channel: group.channel,
+        supplierId: group.supplierId,
+        catalogSupplierName: group.catalogSupplierName,
+      } as shopOrders.ShopOrderRequest)),
+    );
     vi.mocked(shopOrders.createShopOrderRequest).mockResolvedValue({
       id: "request-1",
       requestNo: "WX-1",
@@ -93,7 +106,13 @@ describe("shop order page", () => {
     await user.click(screen.getByRole("button", { name: "Done selecting" }));
     await user.click(screen.getByRole("button", { name: "Submit whole order" }));
 
-    await waitFor(() => expect(shopOrders.createShopOrderRequest).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(shopOrders.createShopOrderBatch).toHaveBeenCalledTimes(1));
+    expect(shopOrders.createShopOrderBatch).toHaveBeenCalledWith(expect.objectContaining({
+      groups: [expect.objectContaining({
+        channel: "external",
+        lines: [{ catalogItemId: "item-1", quantity: 2 }],
+      })],
+    }));
     expect(shopOrders.markShopOrderWhatsAppCall).not.toHaveBeenCalled();
     expect(await screen.findByText("Order submitted for 1 suppliers and 1 items.")).toBeInTheDocument();
     expect(screen.queryByLabelText("Shop")).not.toBeInTheDocument();
@@ -109,11 +128,6 @@ describe("shop order page", () => {
       phone: "61234567",
       note: null,
     }] : []);
-    vi.mocked(shopOrders.createShopOrderRequest).mockImplementation(async (input) => ({
-      id: `request-${input.channel}`,
-      requestNo: input.channel === "fc_internal" ? "SO-FC" : "SO-EXT",
-      catalogSupplierName: input.catalogSupplierName,
-    } as shopOrders.ShopOrderRequest));
     render(<MemoryRouter><ShopOrderPage /></MemoryRouter>);
 
     const supplierSelect = await screen.findByRole("combobox", { name: "Choose supplier" });
@@ -129,16 +143,19 @@ describe("shop order page", () => {
     await user.click(screen.getByRole("button", { name: "Done selecting" }));
     await user.click(screen.getByRole("button", { name: "Submit whole order" }));
 
-    await waitFor(() => expect(shopOrders.createShopOrderRequest).toHaveBeenCalledTimes(2));
-    expect(shopOrders.createShopOrderRequest).toHaveBeenCalledWith(expect.objectContaining({
-      channel: "external",
+    await waitFor(() => expect(shopOrders.createShopOrderBatch).toHaveBeenCalledTimes(1));
+    expect(shopOrders.createShopOrderBatch).toHaveBeenCalledWith(expect.objectContaining({
       deliveryDate: expect.any(String),
-      lines: [{ catalogItemId: "item-1", quantity: 2 }],
-    }));
-    expect(shopOrders.createShopOrderRequest).toHaveBeenCalledWith(expect.objectContaining({
-      channel: "fc_internal",
-      deliveryDate: expect.any(String),
-      lines: [{ catalogItemId: "item-2", quantity: 3 }],
+      groups: expect.arrayContaining([
+        expect.objectContaining({
+          channel: "external",
+          lines: [{ catalogItemId: "item-1", quantity: 2 }],
+        }),
+        expect.objectContaining({
+          channel: "fc_internal",
+          lines: [{ catalogItemId: "item-2", quantity: 3 }],
+        }),
+      ]),
     }));
     expect(await screen.findByText("Order submitted for 2 suppliers and 2 items.")).toBeInTheDocument();
     expect(screen.getByText("Pending")).toBeInTheDocument();
@@ -148,13 +165,13 @@ describe("shop order page", () => {
 
   it("scopes restaurant records to the phase-one shop but leaves office records unfiltered", async () => {
     const { unmount } = render(<MemoryRouter><ShopOrderRecordsPage /></MemoryRouter>);
-    await waitFor(() => expect(shopOrders.fetchShopOrderRequests).toHaveBeenCalledWith({
+    await waitFor(() => expect(shopOrders.fetchShopOrderRecords).toHaveBeenCalledWith({
       restaurantId: shopOrders.TKO_RESTAURANT_ID,
     }));
     unmount();
 
     render(<MemoryRouter><ShopOrderRecordsPage office /></MemoryRouter>);
-    await waitFor(() => expect(shopOrders.fetchShopOrderRequests).toHaveBeenLastCalledWith(undefined));
+    await waitFor(() => expect(shopOrders.fetchShopOrderRecords).toHaveBeenLastCalledWith(undefined));
   });
 
   it("opens the supplier picker as a compact mobile bottom sheet", async () => {
