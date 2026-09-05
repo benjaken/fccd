@@ -1,6 +1,7 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { MemoryRouter } from "react-router-dom";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ShopOrderPage } from "@/components/ShopOrderPage";
 import { ShopOrderRecordsPage } from "@/components/ShopOrderRecordsPage";
@@ -53,6 +54,21 @@ const internalItem = {
   sortOrder: 2,
 };
 
+function setMobileViewport(matches: boolean) {
+  vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
+    matches: query === "(max-width: 760px)" ? matches : false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  }));
+}
+
+afterEach(() => setMobileViewport(false));
+
 describe("shop order page", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -68,12 +84,13 @@ describe("shop order page", () => {
 
   it("still saves an external order when the supplier has no phone number", async () => {
     const user = userEvent.setup();
-    render(<ShopOrderPage />);
+    render(<MemoryRouter><ShopOrderPage /></MemoryRouter>);
 
     const supplierSelect = await screen.findByRole("combobox", { name: "Choose supplier" });
     await user.selectOptions(supplierSelect, screen.getByRole("option", { name: "Supplier · External" }));
     await user.click(screen.getByRole("button", { name: "Add supplier" }));
     await user.type(await screen.findByRole("spinbutton", { name: "Tea Qty" }), "2");
+    await user.click(screen.getByRole("button", { name: "Done selecting" }));
     await user.click(screen.getByRole("button", { name: "Submit whole order" }));
 
     await waitFor(() => expect(shopOrders.createShopOrderRequest).toHaveBeenCalledTimes(1));
@@ -85,22 +102,31 @@ describe("shop order page", () => {
   it("submits multiple suppliers with one delivery date and routes each channel correctly", async () => {
     const user = userEvent.setup();
     vi.mocked(shopOrders.fetchShopCatalog).mockResolvedValue([externalItem, internalItem]);
+    vi.mocked(shopOrders.fetchShopContacts).mockImplementation(async (supplierId) => supplierId === "supplier-1" ? [{
+      id: "contact-1",
+      supplierId: "supplier-1",
+      name: "Supplier contact",
+      phone: "61234567",
+      note: null,
+    }] : []);
     vi.mocked(shopOrders.createShopOrderRequest).mockImplementation(async (input) => ({
       id: `request-${input.channel}`,
       requestNo: input.channel === "fc_internal" ? "SO-FC" : "SO-EXT",
       catalogSupplierName: input.catalogSupplierName,
     } as shopOrders.ShopOrderRequest));
-    render(<ShopOrderPage />);
+    render(<MemoryRouter><ShopOrderPage /></MemoryRouter>);
 
     const supplierSelect = await screen.findByRole("combobox", { name: "Choose supplier" });
     await user.selectOptions(supplierSelect, screen.getByRole("option", { name: "Supplier · External" }));
     await user.click(screen.getByRole("button", { name: "Add supplier" }));
     await user.type(screen.getByRole("spinbutton", { name: "Tea Qty" }), "2");
+    await user.click(screen.getByRole("button", { name: "Done selecting" }));
     await user.click(screen.getByRole("button", { name: "Add supplier" }));
     const nextSupplierSelect = screen.getByRole("combobox", { name: "Choose supplier" });
     await user.selectOptions(nextSupplierSelect, screen.getByRole("option", { name: "FC Frozen · FC internal" }));
     await user.click(screen.getByRole("button", { name: "Add supplier" }));
     await user.type(screen.getByRole("spinbutton", { name: "Beef Qty" }), "3");
+    await user.click(screen.getByRole("button", { name: "Done selecting" }));
     await user.click(screen.getByRole("button", { name: "Submit whole order" }));
 
     await waitFor(() => expect(shopOrders.createShopOrderRequest).toHaveBeenCalledTimes(2));
@@ -115,16 +141,40 @@ describe("shop order page", () => {
       lines: [{ catalogItemId: "item-2", quantity: 3 }],
     }));
     expect(await screen.findByText("Order submitted for 2 suppliers and 2 items.")).toBeInTheDocument();
+    expect(screen.getByText("Pending")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Send WhatsApp" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Send SMS" })).toBeInTheDocument();
   });
 
   it("scopes restaurant records to the phase-one shop but leaves office records unfiltered", async () => {
-    const { unmount } = render(<ShopOrderRecordsPage />);
+    const { unmount } = render(<MemoryRouter><ShopOrderRecordsPage /></MemoryRouter>);
     await waitFor(() => expect(shopOrders.fetchShopOrderRequests).toHaveBeenCalledWith({
       restaurantId: shopOrders.TKO_RESTAURANT_ID,
     }));
     unmount();
 
-    render(<ShopOrderRecordsPage office />);
+    render(<MemoryRouter><ShopOrderRecordsPage office /></MemoryRouter>);
     await waitFor(() => expect(shopOrders.fetchShopOrderRequests).toHaveBeenLastCalledWith(undefined));
+  });
+
+  it("opens the supplier picker as a compact mobile bottom sheet", async () => {
+    setMobileViewport(true);
+    const user = userEvent.setup();
+    render(<MemoryRouter><ShopOrderPage /></MemoryRouter>);
+
+    await screen.findByText("Choose a supplier first");
+    expect(screen.queryByRole("combobox", { name: "Choose supplier" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Choose a supplier to start" }));
+    const sheet = screen.getByRole("dialog", { name: "Choose supplier" });
+    expect(sheet).toBeInTheDocument();
+    expect(within(sheet).getByText("Work with one supplier at a time, then add another supplier when ready.")).toBeInTheDocument();
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Choose supplier" }),
+      screen.getByRole("option", { name: "Supplier · External" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Add supplier" }));
+    expect(screen.queryByRole("dialog", { name: "Choose supplier" })).not.toBeInTheDocument();
   });
 });

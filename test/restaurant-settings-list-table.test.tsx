@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
@@ -31,6 +33,22 @@ function SettingsTable() {
 }
 
 describe("RestaurantSettingsListTable", () => {
+  it("keeps the shared table scroller flexible so pagination stays at the panel bottom", () => {
+    const stylesheet = readFileSync(
+      resolve(process.cwd(), "src/styles/05-delivery-settings.css"),
+      "utf8",
+    );
+    const tableRules = [
+      ...stylesheet.matchAll(/\.restaurant-settings-table-wrap[^\{]*\{([^}]+)\}/g),
+    ]
+      .map((match) => match[1])
+      .join("\n");
+
+    expect(tableRules).toContain("flex: 1 1 auto");
+    expect(tableRules).toContain("min-height: 0");
+    expect(tableRules).toContain("overflow: auto");
+  });
+
   it("places the action beside the shared search field", () => {
     render(<SettingsTable />);
 

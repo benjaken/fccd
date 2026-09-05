@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildSupplierOrderMessage,
+  groupShopOrderRecords,
   groupCatalogBySupplier,
   isDeliveryDateAllowed,
   shopCatalogSupplierKey,
   type ShopCatalogItem,
+  type ShopOrderRequest,
 } from "@/lib/shop-orders";
 
 function item(partial: Partial<ShopCatalogItem> & Pick<ShopCatalogItem, "id" | "name" | "supplierName" | "channel">): ShopCatalogItem {
@@ -69,5 +71,48 @@ describe("shop catalog grouping", () => {
     expect(message).toContain("Tea × 2 box");
     expect(message).toContain("Rice × 3 bag");
     expect(message).toContain("Back door");
+  });
+
+  it("groups internal and external supplier requests into one order record", () => {
+    const base = {
+      batchId: "batch-1",
+      requestNo: "SO-1",
+      restaurantId: "restaurant-1",
+      restaurantName: "TKO",
+      supplierId: "supplier-1",
+      deliveryDate: "2026-09-08",
+      status: "submitted",
+      note: null,
+      contactPhone: null,
+      whatsappCallStatus: null,
+      whatsappCalledAt: null,
+      createdAt: "2026-09-05T00:00:00Z",
+    };
+    const records = groupShopOrderRecords([
+      {
+        ...base,
+        id: "request-fc",
+        channel: "fc_internal",
+        catalogSupplierName: "FC Frozen",
+        lines: [{ id: "line-fc", catalogItemId: "item-fc", name: "Beef", unit: "box", sku: null, quantity: 2, warehouse: "frozen" }],
+      },
+      {
+        ...base,
+        id: "request-external",
+        channel: "external",
+        catalogSupplierName: "External Supplier",
+        status: "saved",
+        lines: [{ id: "line-external", catalogItemId: "item-external", name: "Tea", unit: "box", sku: null, quantity: 3, warehouse: null }],
+      },
+    ] satisfies ShopOrderRequest[]);
+
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({
+      id: "batch-1",
+      requestNo: "SO-1",
+      catalogSupplierName: "FC Frozen、External Supplier",
+    });
+    expect(records[0].supplierOrders).toHaveLength(2);
+    expect(records[0].lines.map((line) => line.name)).toEqual(["Beef", "Tea"]);
   });
 });

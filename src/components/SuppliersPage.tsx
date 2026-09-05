@@ -11,6 +11,7 @@ import {
   Phone,
   ReceiptText,
   RefreshCw,
+  Search,
   Store,
   Trash2,
   Truck,
@@ -68,6 +69,16 @@ const SUPPLIER_ACTION_SKELETON = {
   width: "8rem",
   variant: "action" as const,
 };
+const ORDERING_SUPPLIER_SKELETON_COLUMNS = [
+  { width: "10rem" },
+  { width: "6rem" },
+  { width: "7rem" },
+  { width: "7rem" },
+  { width: "5rem" },
+  { width: "7rem" },
+  { width: "6rem" },
+  { width: "6rem" },
+];
 
 const STATUS_OPTIONS: Array<{ value: SupplierStatusFilter; labelKey: string }> = [
   { value: "", labelKey: "suppliers.allStatuses" },
@@ -121,23 +132,20 @@ function LinkedItemList({
   items: SupplierLinkedItem[];
 }) {
   const { t } = useTranslation();
-  if (!items.length) {
-    return (
-      <div className="suppliers-detail-group">
-        <div className="suppliers-detail-group-heading">
-          <div className="suppliers-detail-group-title">
-            <Package aria-hidden="true" />
-            <h3>{title}</h3>
-          </div>
-          <span className="suppliers-detail-count">0</span>
-        </div>
-        <div className="suppliers-detail-empty">
-          <PackageOpen aria-hidden="true" />
-          <p>{t("suppliers.noLinkedItems")}</p>
-        </div>
-      </div>
-    );
-  }
+  const [search, setSearch] = useState("");
+  const normalizedSearch = search.trim().toLocaleLowerCase("zh-HK");
+  const filteredItems = useMemo(
+    () =>
+      normalizedSearch
+        ? items.filter((item) =>
+            item.name.toLocaleLowerCase("zh-HK").includes(normalizedSearch),
+          )
+        : items,
+    [items, normalizedSearch],
+  );
+  const searchLabel = `${t("suppliers.search")} ${title}`;
+  const placeholder = searchLabel;
+
   return (
     <div className="suppliers-detail-group">
       <div className="suppliers-detail-group-heading">
@@ -147,14 +155,31 @@ function LinkedItemList({
         </div>
         <span className="suppliers-detail-count">{items.length}</span>
       </div>
-      <ul className="suppliers-detail-list">
-        {items.map((item) => (
-          <li key={item.id}>
-            <span aria-hidden="true" />
-            {item.name}
-          </li>
-        ))}
-      </ul>
+      <label className="suppliers-detail-search">
+        <Search aria-hidden="true" />
+        <input
+          type="search"
+          aria-label={searchLabel}
+          placeholder={placeholder}
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
+      </label>
+      {filteredItems.length ? (
+        <ul className="suppliers-detail-list">
+          {filteredItems.map((item) => (
+            <li key={item.id}>
+              <span aria-hidden="true" />
+              {item.name}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <div className="suppliers-detail-empty">
+          <PackageOpen aria-hidden="true" />
+          <p>{t("suppliers.noLinkedItems")}</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -265,14 +290,17 @@ function SupplierDetailPanel({
       </dl>
       <div className="suppliers-linked-groups">
         <LinkedItemList
+          key={`${supplier.id}-catering`}
           title={t("suppliers.columns.cateringIngredients")}
           items={supplier.cateringIngredients}
         />
         <LinkedItemList
+          key={`${supplier.id}-raw-meat`}
           title={t("suppliers.columns.rawMeatItems")}
           items={supplier.rawMeatItems}
         />
         <LinkedItemList
+          key={`${supplier.id}-restaurant`}
           title={t("suppliers.columns.restaurantIngredients")}
           items={supplier.restaurantIngredients}
         />
@@ -471,6 +499,8 @@ export function SuppliersPage({
   canViewDetail: canViewDetailProp,
   canEdit: canEditProp,
   canDelete: canDeleteProp,
+  context = "kitchen",
+  showCreate = true,
 }: {
   loadSuppliers?: SuppliersLoader;
   createSupplier?: SupplierCreator;
@@ -479,6 +509,8 @@ export function SuppliersPage({
   canViewDetail?: boolean;
   canEdit?: boolean;
   canDelete?: boolean;
+  context?: "kitchen" | "restaurant-ordering";
+  showCreate?: boolean;
 }) {
   const { t } = useTranslation();
   const pageAccess = useCurrentPageAccess();
@@ -489,6 +521,12 @@ export function SuppliersPage({
   const canDelete =
     canDeleteProp ?? pageAccess.canAccess(KITCHEN_SUPPLIERS_DELETE);
   const showRowActions = canViewDetail || canEdit || canDelete;
+  const isOrderingContext = context === "restaurant-ordering";
+  const placeholder = t(
+    isOrderingContext
+      ? "shopOrdering.searchSuppliersPlaceholder"
+      : "suppliers.searchPlaceholder",
+  );
 
   const [rows, setRows] = useState<SupplierRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -635,7 +673,11 @@ export function SuppliersPage({
     setRows((current) =>
       mode === "create"
         ? [row, ...current.filter((item) => item.id !== row.id)]
-        : current.map((item) => (item.id === row.id ? row : item)),
+        : current.map((item) =>
+            item.id === row.id
+              ? { ...row, orderingGroups: item.orderingGroups }
+              : item,
+          ),
     );
   };
 
@@ -659,9 +701,11 @@ export function SuppliersPage({
     <section className="suppliers-page">
       <header className="page-heading suppliers-heading">
         <div>
-          <span className="eyebrow">{t("navigation.kitchen")}</span>
-          <h1>{t("suppliers.title")}</h1>
-          <p>{t("suppliers.description")}</p>
+          <span className="eyebrow">
+            {t(isOrderingContext ? "shopOrdering.office" : "navigation.kitchen")}
+          </span>
+          <h1>{t(isOrderingContext ? "shopOrdering.suppliersTitle" : "suppliers.title")}</h1>
+          <p>{t(isOrderingContext ? "shopOrdering.suppliersManagementDescription" : "suppliers.description")}</p>
         </div>
       </header>
 
@@ -673,9 +717,9 @@ export function SuppliersPage({
             onChange={setDraftSearch}
             onSubmit={submitSearch}
             label={t("suppliers.search")}
-            placeholder={t("suppliers.searchPlaceholder")}
+            placeholder={placeholder}
             submitLabel={t("suppliers.searchAction")}
-            actions={canEdit ? <Button type="button" onClick={openCreate}><Pencil />{t("suppliers.add")}</Button> : null}
+            actions={canEdit && showCreate ? <Button type="button" onClick={openCreate}><Pencil />{t("suppliers.add")}</Button> : null}
             filtersActive={Boolean(status)}
             onConfirmFilters={statusFilter.confirm}
             onDismissFilters={statusFilter.revert}
@@ -735,19 +779,33 @@ export function SuppliersPage({
             loading={loading}
             loadingLabel={t("suppliers.loading")}
             skeletonRows={8}
-            skeletonColumns={
-              showRowActions
-                ? [...SUPPLIER_SKELETON_COLUMNS, SUPPLIER_ACTION_SKELETON]
-                : SUPPLIER_SKELETON_COLUMNS
-            }
+            skeletonColumns={showRowActions
+              ? [
+                  ...(isOrderingContext
+                    ? ORDERING_SUPPLIER_SKELETON_COLUMNS
+                    : SUPPLIER_SKELETON_COLUMNS),
+                  SUPPLIER_ACTION_SKELETON,
+                ]
+              : isOrderingContext
+                ? ORDERING_SUPPLIER_SKELETON_COLUMNS
+                : SUPPLIER_SKELETON_COLUMNS}
             header={
               <tr>
                 <th>{t("suppliers.columns.companyName")}</th>
                 <th>{t("suppliers.columns.contactPerson")}</th>
                 <th>{t("suppliers.columns.phoneNumber")}</th>
-                <th>{t("suppliers.columns.cateringIngredients")}</th>
-                <th>{t("suppliers.columns.rawMeatItems")}</th>
-                <th>{t("suppliers.columns.restaurantIngredients")}</th>
+                {isOrderingContext ? (
+                  <>
+                    <th>{t("shopOrdering.columns.channel")}</th>
+                    <th>{t("shopOrdering.columns.itemCount")}</th>
+                  </>
+                ) : (
+                  <>
+                    <th>{t("suppliers.columns.cateringIngredients")}</th>
+                    <th>{t("suppliers.columns.rawMeatItems")}</th>
+                    <th>{t("suppliers.columns.restaurantIngredients")}</th>
+                  </>
+                )}
                 <th>{t("suppliers.columns.deliverySchedule")}</th>
                 <th>{t("suppliers.columns.paymentSchedule")}</th>
                 <th>{t("suppliers.columns.status")}</th>
@@ -761,36 +819,34 @@ export function SuppliersPage({
               <tr key={row.id}>
                 <td>
                   <strong>{row.companyName}</strong>
+                  {isOrderingContext && row.orderingGroups?.some((group) => group.name !== row.companyName) ? (
+                    <div className="suppliers-ordering-aliases">
+                      {row.orderingGroups.map((group) => group.name).join(" / ")}
+                    </div>
+                  ) : null}
                 </td>
                 <td>{display(row.contactPerson)}</td>
                 <td>{display(row.phoneNumber)}</td>
-                <td>
-                  <LinkedItemsCell
-                    items={row.cateringIngredients}
-                    moreLabel={t("suppliers.viewDetail", {
-                      supplier: row.companyName,
-                    })}
-                    onMore={() => openDetail(row)}
-                  />
-                </td>
-                <td>
-                  <LinkedItemsCell
-                    items={row.rawMeatItems}
-                    moreLabel={t("suppliers.viewDetail", {
-                      supplier: row.companyName,
-                    })}
-                    onMore={() => openDetail(row)}
-                  />
-                </td>
-                <td>
-                  <LinkedItemsCell
-                    items={row.restaurantIngredients}
-                    moreLabel={t("suppliers.viewDetail", {
-                      supplier: row.companyName,
-                    })}
-                    onMore={() => openDetail(row)}
-                  />
-                </td>
+                {isOrderingContext ? (
+                  <>
+                    <td>
+                      <div className="suppliers-ordering-channels">
+                        {[...new Set((row.orderingGroups ?? []).map((group) => group.channel))].map((channel) => (
+                          <span key={channel} className={`shop-channel-badge channel-${channel}`}>
+                            {t(channel === "fc_internal" ? "shopOrdering.fcInternal" : "shopOrdering.external")}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td>{(row.orderingGroups ?? []).reduce((total, group) => total + group.itemCount, 0)}</td>
+                  </>
+                ) : (
+                  <>
+                    <td><LinkedItemsCell items={row.cateringIngredients} moreLabel={t("suppliers.viewDetail", { supplier: row.companyName })} onMore={() => openDetail(row)} /></td>
+                    <td><LinkedItemsCell items={row.rawMeatItems} moreLabel={t("suppliers.viewDetail", { supplier: row.companyName })} onMore={() => openDetail(row)} /></td>
+                    <td><LinkedItemsCell items={row.restaurantIngredients} moreLabel={t("suppliers.viewDetail", { supplier: row.companyName })} onMore={() => openDetail(row)} /></td>
+                  </>
+                )}
                 <td>{display(row.deliverySchedule)}</td>
                 <td>{display(row.paymentSchedule)}</td>
                 <td>

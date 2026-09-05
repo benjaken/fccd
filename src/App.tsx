@@ -135,8 +135,6 @@ import { ShopReceivePage } from "@/components/ShopReceivePage";
 import { TKO_RESTAURANT_ID } from "@/lib/shop-orders";
 import {
   OfficeShopPhonebookPage,
-  OfficeShopRecordsPage,
-  OfficeShopRequestsPage,
   OfficeShopReviewPage,
   OfficeShopSuppliersPage,
 } from "@/components/OfficeShopOrderingPages";
@@ -443,8 +441,8 @@ function OperationsShell() {
       depth === 0 &&
       (item.key === "orders" || item.key === "allQuotes");
     const isExpanded =
-      sidebarGroupExpansion[expansionKey] ??
-      (defaultsOpenInCatering || childActive);
+      childActive ||
+      (sidebarGroupExpansion[expansionKey] ?? defaultsOpenInCatering);
     const subnavId = `sidebar-subnav-${expansionKey.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
     const linkContent = (
       <>
@@ -1332,11 +1330,11 @@ function OperationsShell() {
               />
               <Route
                 path="/restaurant/ordering/requests"
-                element={pageAccess.canAccess("restaurant.ordering.requests") ? <OfficeShopRequestsPage /> : <SettingsAccessDenied />}
+                element={<Navigate replace to="/restaurant/ordering/review?nav=restaurant" />}
               />
               <Route
                 path="/restaurant/ordering/records"
-                element={pageAccess.canAccess("restaurant.ordering.records") ? <OfficeShopRecordsPage /> : <SettingsAccessDenied />}
+                element={<Navigate replace to="/restaurant/ordering/review?nav=restaurant" />}
               />
               <Route
                 path="/restaurant/ordering/phonebook"
@@ -1344,6 +1342,10 @@ function OperationsShell() {
               />
               <Route
                 path="/restaurant/ordering/review"
+                element={pageAccess.canAccess("restaurant.ordering.review") ? <OfficeShopReviewPage /> : <SettingsAccessDenied />}
+              />
+              <Route
+                path="/restaurant/ordering/review/:requestId"
                 element={pageAccess.canAccess("restaurant.ordering.review") ? <OfficeShopReviewPage /> : <SettingsAccessDenied />}
               />
               <Route path="/restaurant/settings/monthly-pnl-cost-categories" element={pageAccess.canAccess("restaurant.settings.monthly_pnl_cost_categories") ? <MonthlyPnlCostCategoriesPage /> : <SettingsAccessDenied />} />
@@ -2473,6 +2475,7 @@ function RestaurantFloorWorkspace() {
         <Route element={<RestaurantWorkspacePage />}>
           <Route index element={<RestaurantWorkspaceHomePage />} />
           <Route path="shop-order" element={<ShopOrderPage />} />
+          <Route path="shop-order/:requestId" element={<ShopOrderPage />} />
           <Route path="records" element={<ShopOrderRecordsPage />} />
           <Route path="hr" element={<RestaurantHrPlaceholderPage />} />
           <Route

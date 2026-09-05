@@ -19,6 +19,11 @@ export type SupplierRow = {
   cateringIngredients: SupplierLinkedItem[];
   rawMeatItems: SupplierLinkedItem[];
   restaurantIngredients: SupplierLinkedItem[];
+  orderingGroups?: Array<{
+    name: string;
+    channel: "external" | "fc_internal";
+    itemCount: number;
+  }>;
   createdAt: string;
 };
 

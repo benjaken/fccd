@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -116,6 +116,39 @@ describe("Supplier records page", () => {
         screen.getByRole("columnheader", { name: header }),
       ).toBeInTheDocument();
     }
+  });
+
+  it("reuses supplier management actions in the restaurant ordering list", async () => {
+    await i18n.changeLanguage("en");
+    const orderingRows: SupplierRow[] = [{
+      ...structuredClone(rows[0]),
+      companyName: "FC Headquarters",
+      orderingGroups: [
+        { name: "FC Frozen", channel: "fc_internal", itemCount: 14 },
+        { name: "FC Dry", channel: "fc_internal", itemCount: 131 },
+      ],
+    }];
+
+    render(
+      <MemoryRouter>
+        <SuppliersPage
+          loadSuppliers={vi.fn().mockResolvedValue(orderingRows)}
+          context="restaurant-ordering"
+          showCreate={false}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Supplier list" })).toBeInTheDocument();
+    expect(screen.getByText("FC Frozen / FC Dry")).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Channel" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Items" })).toBeInTheDocument();
+    expect(screen.getByText("FC internal")).toBeInTheDocument();
+    expect(screen.getByText("145")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "View details" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Delete" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Add supplier" })).not.toBeInTheDocument();
   });
 
   it("shows the first three linked items and a more button that opens details", async () => {
@@ -238,6 +271,61 @@ describe("Supplier records page", () => {
     expect(screen.getAllByText("9802 9338").length).toBeGreaterThan(0);
     expect(screen.getAllByText("可靠").length).toBeGreaterThan(0);
     expect(screen.getAllByText("唐揚雞塊 1kg裝").length).toBeGreaterThan(0);
+  });
+
+  it("filters each linked-item group from its own detail search field", async () => {
+    await i18n.changeLanguage("en");
+    const user = userEvent.setup();
+    const supplier: SupplierRow = {
+      ...structuredClone(rows[0]),
+      companyName: "Searchable Supplier",
+      cateringIngredients: [
+        { id: "apple", name: "Apple slices" },
+        { id: "banana", name: "Banana puree" },
+      ],
+      rawMeatItems: [{ id: "beef", name: "Beef strips" }],
+      restaurantIngredients: [{ id: "salt", name: "Sea salt" }],
+    };
+
+    render(
+      <MemoryRouter>
+        <SuppliersPage
+          loadSuppliers={vi.fn().mockResolvedValue([supplier])}
+        />
+      </MemoryRouter>,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: "View details" }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "Searchable Supplier",
+    });
+
+    expect(
+      within(dialog).getByRole("searchbox", {
+        name: "Search Catering ingredients",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("searchbox", { name: "Search Raw meat supply" }),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("searchbox", {
+        name: "Search Restaurant ingredients",
+      }),
+    ).toBeInTheDocument();
+
+    await user.type(
+      within(dialog).getByRole("searchbox", {
+        name: "Search Catering ingredients",
+      }),
+      "banana",
+    );
+
+    expect(within(dialog).getByText("Banana puree")).toBeInTheDocument();
+    expect(within(dialog).queryByText("Apple slices")).not.toBeInTheDocument();
+    expect(within(dialog).getByText("Beef strips")).toBeInTheDocument();
   });
 
   it("hides all action buttons without action permissions", async () => {

@@ -42,11 +42,16 @@ export function SidePanel({
     if (!open) return;
     const previousDocumentOverflow = document.documentElement.style.overflow;
     const previousBodyOverflow = document.body.style.overflow;
+    const previousBodyPaddingRight = document.body.style.paddingRight;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    const currentBodyPaddingRight = Number.parseFloat(window.getComputedStyle(document.body).paddingRight) || 0;
     document.documentElement.style.overflow = "hidden";
     document.body.style.overflow = "hidden";
+    if (scrollbarWidth > 0) document.body.style.paddingRight = `${currentBodyPaddingRight + scrollbarWidth}px`;
     return () => {
       document.documentElement.style.overflow = previousDocumentOverflow;
       document.body.style.overflow = previousBodyOverflow;
+      document.body.style.paddingRight = previousBodyPaddingRight;
     };
   }, [open]);
 

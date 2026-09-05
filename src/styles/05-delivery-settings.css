@@ -3059,6 +3059,7 @@
 .spice-usage-table-wrap,
 .selling-price-cost-table-wrap,
 .suppliers-table-wrap,
+.restaurant-settings-table-wrap,
 .ingredients-table-wrap {
   flex: 1 1 auto;
   min-height: 0;
