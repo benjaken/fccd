@@ -400,8 +400,13 @@ function createCustomerServiceClassifier({
 }
 
 async function loadBotControls(admin: AdminClient) {
-  const { data, error } = await admin.rpc("customer_service_controls_get");
+  const [{ data, error }, { data: recipients, error: recipientError }] =
+    await Promise.all([
+      admin.rpc("customer_service_controls_get"),
+      admin.from("order_first_notification_recipients").select("phone"),
+    ]);
   if (error) throw error;
+  if (recipientError) throw recipientError;
   const row = (
     data as Array<{
       bot_enabled?: boolean;
@@ -411,14 +416,19 @@ async function loadBotControls(admin: AdminClient) {
       auto_reply_timezone?: string | null;
     }> | null
   )?.[0];
+  const allowedPhones = parseAllowedCustomerServicePhones(
+    ((recipients || []) as Array<{ phone?: string | null }>)
+      .map((recipient) => recipient.phone || ""),
+  );
+  // Fail closed: an empty/missing pilot list must never turn into public
+  // access. The same first-notification-recipient table also drives internal
+  // WATI alerts, keeping both audiences in sync.
+  if (!allowedPhones.length) {
+    throw new Error("customer_service_first_notification_recipients_missing");
+  }
   return {
     botEnabled: Boolean(row?.bot_enabled),
-    allowedPhones: [
-      ...parseAllowedCustomerServicePhones(
-        env("WATI_CUSTOMER_SERVICE_ALLOWED_PHONES"),
-      ),
-      ...parseAllowedCustomerServicePhones(row?.allowed_phones),
-    ],
+    allowedPhones,
     autoReplyStart: normalizeScheduleTime(row?.auto_reply_start, "19:00"),
     autoReplyEnd: normalizeScheduleTime(row?.auto_reply_end, "09:00"),
     autoReplyTimezone: row?.auto_reply_timezone || "Asia/Hong_Kong",

@@ -51,6 +51,12 @@ describe("customer-service backend conversation preview", () => {
     expect(source).not.toContain('fallback.intent === "out_of_scope"');
   });
 
+  it("limits live customer service to first-notification recipients and fails closed", () => {
+    expect(source).toContain('from("order_first_notification_recipients").select("phone")');
+    expect(source).toContain("customer_service_first_notification_recipients_missing");
+    expect(source).not.toContain('env("WATI_CUSTOMER_SERVICE_ALLOWED_PHONES")');
+  });
+
   it("queues handoffs and only sends them from the authenticated morning digest", () => {
     expect(source).toContain('admin.rpc("customer_service_handoff_enqueue"');
     expect(source).toContain('payload.mode === "handoff_digest"');
