@@ -10,6 +10,8 @@ const STRONG_AD_PATTERNS: Array<[string, RegExp]> = [
 const PROMOTION_PATTERN = /(?:優惠|优惠|限時|限时|免費試用|免费试用|折扣|特價|特价|推廣|推广|促銷|促销)/i;
 const CONTACT_PATTERN = /(?:whatsapp|wechat|微信|telegram|tg[:：]|聯絡.{0,4}\d{6,}|联系.{0,4}\d{6,})/i;
 const URL_PATTERN = /https?:\/\/|www\.|(?:bit\.ly|t\.me|wa\.me)\//gi;
+const BUSINESS_SOLICITATION_PATTERN = /(?:老闆|老板|你哋|你地|你們|你们|貴司|贵司|貴公司|贵公司).{0,24}(?:需不需要|需要唔需要|要不要|有冇需要|有沒有需要|有没有需要|考慮合作|考虑合作|需要嗎|需要吗)/i;
+const SUPPLIER_SELF_PROMOTION_PATTERN = /(?:我們|我们|我哋|我地|本公司|我司|敝司).{0,36}(?:公司|廠家|厂家|供應|供应|提供|代理|批發|批发|最大|領先|领先|專業|专业)/i;
 
 export type AdvertisementAssessment = {
   isAdvertisement: boolean;
@@ -33,9 +35,13 @@ export function assessCustomerServiceAdvertisement(text: string): AdvertisementA
   const urlCount = value.match(URL_PATTERN)?.length ?? 0;
   const promotion = PROMOTION_PATTERN.test(value);
   const contact = CONTACT_PATTERN.test(value);
+  const businessSolicitation = BUSINESS_SOLICITATION_PATTERN.test(value);
+  const supplierSelfPromotion = SUPPLIER_SELF_PROMOTION_PATTERN.test(value);
   if (promotion) reasons.push("promotion");
   if (contact) reasons.push("external_contact");
   if (urlCount >= 1) reasons.push("external_url");
+  if (businessSolicitation) reasons.push("business_solicitation");
+  if (supplierSelfPromotion) reasons.push("supplier_self_promotion");
 
   const strongCount = reasons.filter((reason) =>
     ["finance", "marketing", "recruitment", "mass_message"].includes(reason)
@@ -44,7 +50,9 @@ export function assessCustomerServiceAdvertisement(text: string): AdvertisementA
     strongCount * 0.65 +
       (promotion ? 0.2 : 0) +
       (contact ? 0.15 : 0) +
-      (urlCount ? 0.15 : 0),
+      (urlCount ? 0.15 : 0) +
+      (businessSolicitation ? 0.55 : 0) +
+      (supplierSelfPromotion ? 0.4 : 0),
   );
   return {
     isAdvertisement: score >= 0.8,

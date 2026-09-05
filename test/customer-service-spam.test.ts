@@ -14,11 +14,30 @@ describe("customer service spam filter", () => {
     expect(result.score).toBeGreaterThanOrEqual(0.8);
   });
 
+  it("silently filters supplier solicitation wording with or without a greeting", () => {
+    for (const message of [
+      "老闆 你們家需不需要洗潔精 我們家是香港最大的公司",
+      "hello 老闆 你們家需不需要洗潔精 我們家是香港最大的公司",
+    ]) {
+      const result = assessCustomerServiceAdvertisement(message);
+      expect(result).toMatchObject({
+        isAdvertisement: true,
+        reasons: expect.arrayContaining([
+          "business_solicitation",
+          "supplier_self_promotion",
+        ]),
+      });
+    }
+  });
+
   it("does not classify customer catering questions or a media URL as advertising", () => {
     expect(assessCustomerServiceAdvertisement("我想訂30人到會，有冇優惠？").isAdvertisement)
       .toBe(false);
     expect(assessCustomerServiceAdvertisement(
       "https://live-mt-server.wati.io/2552/api/file/showFile?fileName=data/audios/test.opus",
+    ).isAdvertisement).toBe(false);
+    expect(assessCustomerServiceAdvertisement(
+      "老闆，請問我需不需要提供送貨地址？",
     ).isAdvertisement).toBe(false);
   });
 
