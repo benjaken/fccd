@@ -1,3 +1,12 @@
+import {
+  sanitizeCustomerServiceRecentMessages,
+  type CustomerServiceRecentMessage,
+} from "./customer-service-context.ts";
+import {
+  CUSTOMER_SERVICE_ORDER_FIELDS,
+  type CustomerServiceOrderField,
+} from "./customer-service-intents.ts";
+
 export type CustomerServiceFaqKnowledge = {
   id: string;
   category: string;
@@ -43,6 +52,7 @@ export type CustomerServiceAiClassification = {
   confidence: number;
   orderNumber: string;
   requestedDate: string;
+  requestedFields: CustomerServiceOrderField[];
   missingFields: string[];
   requiresHuman: boolean;
   toolKey: string | null;
@@ -138,6 +148,13 @@ function parseClassification(
   const confidence = Math.min(1, Math.max(0, Number(parsed.confidence) || 0));
   const requestedTool = typeof parsed.tool === "string" ? parsed.tool : "";
   const toolKey = intent.toolKeys.includes(requestedTool) ? requestedTool : null;
+  const requestedFields = Array.isArray(parsed.requestedFields)
+    ? [...new Set(parsed.requestedFields.filter(
+      (field): field is CustomerServiceOrderField =>
+        typeof field === "string" &&
+        CUSTOMER_SERVICE_ORDER_FIELDS.includes(field as CustomerServiceOrderField),
+    ))].slice(0, CUSTOMER_SERVICE_ORDER_FIELDS.length)
+    : [];
   const rawDialogAction = typeof parsed.dialogAction === "string"
     ? parsed.dialogAction
     : "continue_current";
@@ -160,6 +177,7 @@ function parseClassification(
     confidence,
     orderNumber: typeof parsed.orderNumber === "string" ? parsed.orderNumber.slice(0, 80) : "",
     requestedDate: typeof parsed.requestedDate === "string" ? parsed.requestedDate.slice(0, 20) : "",
+    requestedFields,
     missingFields: Array.isArray(parsed.missingFields)
       ? parsed.missingFields.filter((field): field is string => typeof field === "string").slice(0, 10)
       : [],
@@ -224,13 +242,14 @@ export async function classifyCustomerServiceWithAi({
               "Select exactly one enabled intent supplied by the application.",
               "Never invent an intent or tool. Select a tool only from that intent's allowedTools.",
               "Order information lookup is read-only and does not require human handoff.",
+              "For order lookup, requestedFields may contain delivery_date, status, items, address, receipt, or summary. Use only fields explicitly requested; use summary for a generic order lookup.",
               "Changing, cancelling or refunding an order requires human handoff.",
               "Use conversationState and currentTask to decide how this message relates to the active task.",
               "dialogAction is cancel_current only when the customer withdraws the active task itself. A business request containing words such as cancel order is not automatically cancel_current.",
               "Use switch_task for a distinct new request while another task is active, new_request when no task is active, otherwise continue_current.",
               "Other dialogAction values are add_information, select_option, confirm, deny, correct_previous, and resume_previous.",
               "When the reference or requested operation is ambiguous, set needsClarification true and provide one concise Cantonese clarificationQuestion. Never guess a destructive action.",
-              "Return JSON only with intent, confidence from 0 to 1, orderNumber, requestedDate in YYYY-MM-DD when explicit, missingFields, requiresHuman, tool, dialogAction, needsClarification, and clarificationQuestion.",
+              "Return JSON only with intent, confidence from 0 to 1, orderNumber, requestedDate in YYYY-MM-DD when explicit, requestedFields, missingFields, requiresHuman, tool, dialogAction, needsClarification, and clarificationQuestion.",
               config.systemPrompt?.trim() || "",
             ].join(" "),
           },
@@ -475,7 +494,3 @@ export async function answerCustomerServiceFaqWithTieredAi({
     fetchImpl,
   });
 }
-import {
-  sanitizeCustomerServiceRecentMessages,
-  type CustomerServiceRecentMessage,
-} from "./customer-service-context.ts";

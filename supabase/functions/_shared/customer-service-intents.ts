@@ -10,6 +10,18 @@ export const CUSTOMER_SERVICE_INTENTS = [
 
 export type CustomerServiceIntent = (typeof CUSTOMER_SERVICE_INTENTS)[number];
 
+export const CUSTOMER_SERVICE_ORDER_FIELDS = [
+  "summary",
+  "delivery_date",
+  "status",
+  "items",
+  "address",
+  "receipt",
+] as const;
+
+export type CustomerServiceOrderField =
+  (typeof CUSTOMER_SERVICE_ORDER_FIELDS)[number];
+
 export type InquirySlots = {
   eventDate: string;
   headcount: string;
@@ -29,6 +41,7 @@ export type ClassifiedMessage = {
   configuredIntentKey?: string;
   toolKey?: string | null;
   requestedDate?: string;
+  requestedFields?: CustomerServiceOrderField[];
   missingFields?: string[];
   requiresHuman?: boolean;
   model?: string;
@@ -141,6 +154,26 @@ export function hasCollectableSlots(slots: InquirySlots) {
   return Boolean(slots.eventDate || slots.headcount);
 }
 
+export function extractRequestedOrderFields(text: string) {
+  const fields: CustomerServiceOrderField[] = [];
+  if (/(?:送貨|送餐|自取|交收).{0,8}(?:日期|時間|幾時|何時)|(?:幾時|何時).{0,8}(?:送|到)|delivery\s*(?:date|time)/i.test(text)) {
+    fields.push("delivery_date");
+  }
+  if (/(?:狀態|進度|而家點|依家點|處理成點|status)/i.test(text)) {
+    fields.push("status");
+  }
+  if (/(?:訂|叫|買).{0,8}(?:咩|乜|什麼|什么|菜|餸|餐)|(?:菜式|餸菜|餐點|訂單內容|订单内容|order\s*(?:items|details)|what.*order)/i.test(text)) {
+    fields.push("items");
+  }
+  if (/(?:送貨|送餐|交收).{0,8}(?:地址|地點|邊度|哪里|哪裏)|(?:地址|delivery\s*address)/i.test(text)) {
+    fields.push("address");
+  }
+  if (/(?:收據|收据|發票|发票|invoice|receipt)/i.test(text)) {
+    fields.push("receipt");
+  }
+  return [...new Set(fields)];
+}
+
 export function isCustomerServiceGreeting(text: string) {
   return GREETING.test(text.trim());
 }
@@ -149,29 +182,30 @@ export function classifyCustomerServiceMessage(text: string): ClassifiedMessage 
   const body = text.trim();
   const slots = extractInquirySlots(body);
   const orderNumber = extractOrderNumber(body);
+  const requestedFields = extractRequestedOrderFields(body);
   if (INJECTION.test(body)) {
-    return { intent: "prompt_injection", slots, orderNumber, usedModel: false };
+    return { intent: "prompt_injection", slots, orderNumber, requestedFields, usedModel: false };
   }
   if (OFF_TOPIC.test(body)) {
-    return { intent: "out_of_scope", slots, orderNumber, usedModel: false };
+    return { intent: "out_of_scope", slots, orderNumber, requestedFields, usedModel: false };
   }
   if (ORDER_HANDOFF.test(body)) {
-    return { intent: "handoff_order", slots, orderNumber, usedModel: false };
+    return { intent: "handoff_order", slots, orderNumber, requestedFields, usedModel: false };
   }
   if (HANDOFF.test(body)) {
-    return { intent: "handoff", slots, orderNumber, usedModel: false };
+    return { intent: "handoff", slots, orderNumber, requestedFields, usedModel: false };
   }
   if (orderNumber || LOOKUP.test(body)) {
-    return { intent: "lookup_order", slots, orderNumber, usedModel: false };
+    return { intent: "lookup_order", slots, orderNumber, requestedFields: requestedFields.length ? requestedFields : ["summary"], usedModel: false };
   }
   if (FAQ.test(body)) {
-    return { intent: "search_faq", slots, orderNumber, usedModel: false };
+    return { intent: "search_faq", slots, orderNumber, requestedFields, usedModel: false };
   }
   if (COLLECT.test(body) || hasCollectableSlots(slots)) {
-    return { intent: "collect_inquiry", slots, orderNumber, usedModel: false };
+    return { intent: "collect_inquiry", slots, orderNumber, requestedFields, usedModel: false };
   }
   if (!body) {
-    return { intent: "out_of_scope", slots, orderNumber, usedModel: false };
+    return { intent: "out_of_scope", slots, orderNumber, requestedFields, usedModel: false };
   }
-  return { intent: "search_faq", slots, orderNumber, usedModel: false };
+  return { intent: "search_faq", slots, orderNumber, requestedFields, usedModel: false };
 }

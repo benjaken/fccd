@@ -357,6 +357,9 @@ function createCustomerServiceClassifier({
         toolKey: requiredTool || result.toolKey,
         orderNumber: result.orderNumber || fallback.orderNumber,
         requestedDate: result.requestedDate,
+        requestedFields: result.requestedFields.length
+          ? result.requestedFields
+          : fallback.requestedFields,
         missingFields: result.missingFields,
         requiresHuman: result.requiresHuman,
         model: result.model,
@@ -1034,6 +1037,7 @@ function createBotDeps(
       if (error) throw error;
       return (data ?? []) as Array<{
         order_line_id: string;
+        package_name: string | null;
         item_name: string;
         item_content: string | null;
         quantity: number | null;

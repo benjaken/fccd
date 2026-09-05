@@ -87,6 +87,119 @@ export function lookupSummaryReply(order: {
   );
 }
 
+export function lookupRequestedOrderReply(
+  order: {
+    order_number: string | null;
+    delivery_at: string | null;
+    delivery_status: string | null;
+    masked_address: string | null;
+    addon_url: string | null;
+  },
+  items: Array<{
+    package_name: string | null;
+    item_name: string;
+    item_content: string | null;
+    quantity: number | null;
+    quantity_text: string | null;
+    remarks: string[];
+  }>,
+  options: {
+    requestedFields?: string[];
+    itemLookupFailed?: boolean;
+  } = {},
+) {
+  const requested = new Set(options.requestedFields?.length
+    ? options.requestedFields
+    : ["summary"]);
+  const includeSummary = requested.has("summary");
+  const parts = [`你好，已經幫你查到訂單 ${order.order_number || "（未有單號）"}。`];
+
+  if (includeSummary || requested.has("delivery_date")) {
+    const when = order.delivery_at
+      ? new Date(order.delivery_at).toLocaleString("zh-HK", {
+          timeZone: "Asia/Hong_Kong",
+          year: "numeric",
+          month: "numeric",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : "待確認";
+    parts.push(`送貨／自取時間：${when}。`);
+  }
+  if (includeSummary || requested.has("status")) {
+    parts.push(`目前狀態：${order.delivery_status?.trim() || "待更新"}。`);
+  }
+  if (requested.has("address")) {
+    parts.push(`送貨地址：${order.masked_address?.trim() || "暫時未有可顯示地址"}。`);
+  }
+
+  if (requested.has("items")) {
+    if (options.itemLookupFailed) {
+      parts.push("暫時未能載入菜式明細，你仍可使用下方自助連結查看完整訂單。");
+    } else if (!items.length) {
+      parts.push("訂單暫時未有可顯示的菜式明細。");
+    } else {
+      const deduped = new Map<string, typeof items[number]>();
+      for (const item of items) {
+        const remarks = item.remarks.map((remark) => remark.trim()).filter(Boolean);
+        const key = [item.package_name, item.item_name, item.item_content, item.quantity_text, remarks.join("|")]
+          .map((value) => value?.trim().toLowerCase() || "")
+          .join("::");
+        const current = deduped.get(key);
+        if (current && !item.quantity_text && !current.quantity_text) {
+          current.quantity = Number(current.quantity || 0) + Number(item.quantity || 0);
+        } else if (!current) {
+          deduped.set(key, { ...item, remarks });
+        }
+      }
+      const groups = new Map<string, Array<typeof items[number]>>();
+      for (const item of deduped.values()) {
+        const group = item.package_name?.trim() || "單點菜式";
+        groups.set(group, [...(groups.get(group) ?? []), item]);
+      }
+      const lines: string[] = ["訂單內容："];
+      let shown = 0;
+      for (const [group, groupItems] of groups) {
+        if (groups.size > 1 || group !== "單點菜式") lines.push(`【${group}】`);
+        for (const item of groupItems) {
+          if (shown >= 30) break;
+          const numericQuantity = Number(item.quantity);
+          const quantity = item.quantity_text?.trim() || (
+            Number.isFinite(numericQuantity)
+              ? String(Number.isInteger(numericQuantity) ? numericQuantity : Number(numericQuantity.toFixed(3)))
+              : ""
+          );
+          const content = item.item_content?.trim() && item.item_content.trim() !== item.item_name.trim()
+            ? `（${item.item_content.trim()}）`
+            : "";
+          const remarks = item.remarks.map((remark) => remark.trim()).filter(Boolean);
+          lines.push(`• ${item.item_name}${content}${quantity ? ` × ${quantity}` : ""}${remarks.length ? `｜備註：${remarks.join("；")}` : ""}`);
+          shown += 1;
+        }
+        if (shown >= 30) break;
+      }
+      if (deduped.size > shown) {
+        lines.push(`• 另外仲有 ${deduped.size - shown} 項，完整內容可用自助連結查看。`);
+      }
+      parts.push(lines.join("\n"));
+    }
+  }
+
+  if (requested.has("receipt") || options.itemLookupFailed || requested.has("items")) {
+    parts.push(order.addon_url
+      ? `自助查詢／下載收據：${order.addon_url}`
+      : "暫時未有自助查詢連結。");
+  }
+  return sanitizeOutboundReply(parts.join("\n"));
+}
+
+export function lookupNoOrdersReply(orderNumber = "") {
+  return sanitizeOutboundReply(orderNumber.trim()
+    ? `唔好意思，用呢個 WhatsApp 號碼搵唔到訂單 ${orderNumber.trim()}。請確認訂單號碼，或者使用落單時的電話號碼再查詢。`
+    : "唔好意思，用呢個 WhatsApp 號碼暫時搵唔到正式訂單。請提供訂單號碼，或者使用落單時的電話號碼再查詢。");
+}
+
 export function lookupListReply(
   orders: Array<{ order_number: string | null; delivery_at: string | null }>,
 ) {

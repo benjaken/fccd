@@ -12,8 +12,9 @@ import {
   handoffOrderListReply,
   handoffOrderSelectedReply,
   lookupListReply,
+  lookupNoOrdersReply,
   lookupNotFoundReply,
-  lookupSummaryReply,
+  lookupRequestedOrderReply,
   REPLIES,
   sanitizeOutboundReply,
 } from "./customer-service-replies.ts";
@@ -46,6 +47,7 @@ export type CustomerServiceOrder = {
 
 export type CustomerServiceOrderItem = {
   order_line_id: string;
+  package_name: string | null;
   item_name: string;
   item_content: string | null;
   quantity: number | null;
@@ -286,6 +288,48 @@ function hasVerifiedIdentity(conversation: CustomerServiceConversation) {
   return Date.now() - new Date(conversation.identity_verified_at).getTime() < 30 * 60 * 1_000;
 }
 
+function parseLookupPendingRequest(pendingRequest: string | null) {
+  if (!pendingRequest?.startsWith("lookup:")) return ["summary"];
+  const allowed = new Set([
+    "summary",
+    "delivery_date",
+    "status",
+    "items",
+    "address",
+    "receipt",
+  ]);
+  const fields = pendingRequest.slice("lookup:".length)
+    .split(",")
+    .map((field) => field.trim())
+    .filter((field) => allowed.has(field));
+  return fields.length ? fields : ["summary"];
+}
+
+async function lookupVerifiedOrderReply(
+  deps: CustomerServiceBotDeps,
+  phone: string,
+  order: CustomerServiceOrder,
+  requestedFields: string[],
+) {
+  let items: CustomerServiceOrderItem[] = [];
+  let itemLookupFailed = false;
+  if (requestedFields.includes("items")) {
+    try {
+      items = await deps.lookupOrderItems(phone, order.order_id);
+    } catch (error) {
+      itemLookupFailed = true;
+      console.error("customer service order item lookup failed", error);
+    }
+  }
+  return {
+    reply: lookupRequestedOrderReply(order, items, {
+      requestedFields,
+      itemLookupFailed,
+    }),
+    failureReason: itemLookupFailed ? "order_items_lookup_failed" : undefined,
+  };
+}
+
 function beginOrderVerification(
   order: CustomerServiceOrder,
   conversation: CustomerServiceConversation,
@@ -415,6 +459,11 @@ async function replyLookup(
   conversation: CustomerServiceConversation,
 ): Promise<BotTurn> {
   const orders = await deps.lookupOrders(phone);
+  const requestedFields = conversation.pending_request?.startsWith("lookup:")
+    ? parseLookupPendingRequest(conversation.pending_request)
+    : classified.requestedFields?.length
+      ? classified.requestedFields
+      : ["summary"];
   if (classified.orderNumber) {
     const requestedOrderNumber = normalizeCustomerServiceOrderNumber(
       classified.orderNumber,
@@ -429,20 +478,27 @@ async function replyLookup(
         return beginOrderVerification(
           selected,
           conversation,
-          "lookup",
+          `lookup:${requestedFields.join(",")}`,
           classified.usedModel,
         );
       }
-      const items = await deps.lookupOrderItems(phone, selected.order_id);
+      const result = await lookupVerifiedOrderReply(
+        deps,
+        phone,
+        selected,
+        requestedFields,
+      );
       return {
-        reply: lookupSummaryReply(selected, items),
+        reply: result.reply,
         conversation: nextConversation(conversation, {
           state: "identifying",
           selected_order_id: selected.order_id,
+          pending_request: null,
         }),
         wroteInquiry: false,
         notified: false,
         usedModel: classified.usedModel,
+        failureReason: result.failureReason,
       };
     }
     return {
@@ -461,20 +517,27 @@ async function replyLookup(
       return beginOrderVerification(
         orders[0],
         conversation,
-        "lookup",
+        `lookup:${requestedFields.join(",")}`,
         classified.usedModel,
       );
     }
-    const items = await deps.lookupOrderItems(phone, orders[0].order_id);
+    const result = await lookupVerifiedOrderReply(
+      deps,
+      phone,
+      orders[0],
+      requestedFields,
+    );
     return {
-      reply: lookupSummaryReply(orders[0], items),
+      reply: result.reply,
       conversation: nextConversation(conversation, {
         state: "identifying",
         selected_order_id: orders[0].order_id,
+        pending_request: null,
       }),
       wroteInquiry: false,
       notified: false,
       usedModel: classified.usedModel,
+      failureReason: result.failureReason,
     };
   }
   if (orders.length > 1) {
@@ -483,6 +546,7 @@ async function replyLookup(
       conversation: nextConversation(conversation, {
         state: "picking_order",
         selected_order_id: null,
+        pending_request: `lookup:${requestedFields.join(",")}`,
       }),
       wroteInquiry: false,
       notified: false,
@@ -490,10 +554,12 @@ async function replyLookup(
     };
   }
   return {
-    reply: configuredReply(deps, "collect_prompt", REPLIES.collectPrompt),
+    reply: lookupNoOrdersReply(classified.orderNumber || ""),
     conversation: nextConversation(conversation, {
-      state: "collecting",
-      active_goal: "catering_inquiry",
+      state: "identifying",
+      selected_order_id: null,
+      pending_request: null,
+      active_goal: null,
     }),
     wroteInquiry: false,
     notified: false,
@@ -571,13 +637,19 @@ async function replyOrderVerification(
       verifiedConversation,
     );
   }
-  const items = await deps.lookupOrderItems(phone, selected.order_id);
+  const result = await lookupVerifiedOrderReply(
+    deps,
+    phone,
+    selected,
+    parseLookupPendingRequest(pending),
+  );
   return {
-    reply: lookupSummaryReply(selected, items),
+    reply: result.reply,
     conversation: nextConversation(verifiedConversation, { pending_request: null }),
     wroteInquiry: false,
     notified: false,
     usedModel: false,
+    failureReason: result.failureReason,
   };
 }
 

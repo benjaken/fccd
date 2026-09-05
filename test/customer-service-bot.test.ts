@@ -201,6 +201,7 @@ describe("customer-service bot turns", () => {
     const unverified = { ...conversation, identity_verified_at: null };
     const lookupOrderItems = vi.fn().mockResolvedValue([{
       order_line_id: "line-1",
+      package_name: null,
       item_name: "黑椒牛柳",
       item_content: null,
       quantity: 2,
@@ -209,7 +210,7 @@ describe("customer-service bot turns", () => {
     }]);
     const challenge = await handleCustomerServiceTurn({
       phone: conversation.phone_normalized,
-      text: "查下我訂單",
+      text: "查下我張訂單訂咗咩菜",
       conversation: unverified,
       deps: deps({
         lookupOrders: vi.fn().mockResolvedValue([order]),
@@ -654,6 +655,127 @@ describe("customer-service bot turns", () => {
 
   it("does not duplicate a model greeting", () => {
     expect(faqReply("你好。餐具已包括。")).toBe("你好。餐具已包括。");
+  });
+});
+
+describe("precise order lookup replies", () => {
+  it("does not load dish details for a delivery-date-only question", async () => {
+    const lookupOrderItems = vi.fn().mockResolvedValue([]);
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "我張訂單幾時送到？",
+      conversation,
+      deps: deps({
+        lookupOrders: vi.fn().mockResolvedValue([order]),
+        lookupOrderItems,
+      }),
+    });
+
+    expect(turn.reply).toContain("送貨／自取時間");
+    expect(turn.reply).not.toContain("目前狀態");
+    expect(lookupOrderItems).not.toHaveBeenCalled();
+  });
+
+  it("keeps order lookup separate from catering inquiry when no order exists", async () => {
+    const writeInquiry = vi.fn();
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "查下我張訂單",
+      conversation,
+      deps: deps({ writeInquiry }),
+    });
+
+    expect(turn.reply).toContain("搵唔到正式訂單");
+    expect(turn.conversation.state).toBe("identifying");
+    expect(turn.conversation.active_goal).toBeNull();
+    expect(writeInquiry).not.toHaveBeenCalled();
+  });
+
+  it("degrades gracefully when dish details cannot be loaded", async () => {
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "我張訂單訂咗咩菜？",
+      conversation,
+      deps: deps({
+        lookupOrders: vi.fn().mockResolvedValue([order]),
+        lookupOrderItems: vi.fn().mockRejectedValue(new Error("rpc unavailable")),
+      }),
+    });
+
+    expect(turn.reply).toContain("暫時未能載入菜式明細");
+    expect(turn.reply).toContain("self_service_search");
+    expect(turn.failureReason).toBe("order_items_lookup_failed");
+  });
+
+  it("groups packages and merges duplicate dish quantities", async () => {
+    const lookupOrderItems = vi.fn().mockResolvedValue([
+      {
+        order_line_id: "line-1",
+        package_name: "商務套餐",
+        item_name: "黑椒牛柳",
+        item_content: null,
+        quantity: 1,
+        quantity_text: null,
+        remarks: [],
+      },
+      {
+        order_line_id: "line-2",
+        package_name: "商務套餐",
+        item_name: "黑椒牛柳",
+        item_content: null,
+        quantity: 2,
+        quantity_text: null,
+        remarks: [],
+      },
+    ]);
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "我張訂單訂咗咩菜？",
+      conversation,
+      deps: deps({
+        lookupOrders: vi.fn().mockResolvedValue([order]),
+        lookupOrderItems,
+      }),
+    });
+
+    expect(turn.reply).toContain("【商務套餐】");
+    expect(turn.reply).toContain("黑椒牛柳 × 3");
+    expect(turn.reply.match(/黑椒牛柳/g)).toHaveLength(1);
+  });
+
+  it("preserves requested dish details while the customer selects an order", async () => {
+    const second = { ...order, order_id: "22222222-2222-4222-8222-222222222222", order_number: "B-1555" };
+    const lookupOrderItems = vi.fn().mockResolvedValue([{
+      order_line_id: "line-1",
+      package_name: null,
+      item_name: "叉燒飯",
+      item_content: null,
+      quantity: 1,
+      quantity_text: null,
+      remarks: [],
+    }]);
+    const listed = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "我張訂單訂咗咩菜？",
+      conversation,
+      deps: deps({ lookupOrders: vi.fn().mockResolvedValue([order, second]) }),
+    });
+    const selected = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "B-1555",
+      conversation: listed.conversation,
+      deps: deps({
+        lookupOrders: vi.fn().mockResolvedValue([order, second]),
+        lookupOrderItems,
+      }),
+    });
+
+    expect(listed.conversation.pending_request).toBe("lookup:items");
+    expect(selected.reply).toContain("叉燒飯 × 1");
+    expect(lookupOrderItems).toHaveBeenCalledWith(
+      conversation.phone_normalized,
+      second.order_id,
+    );
   });
 });
 
