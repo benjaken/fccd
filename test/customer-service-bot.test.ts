@@ -654,6 +654,25 @@ describe("customer-service bot turns", () => {
     expect(cancelHandoff).not.toHaveBeenCalled();
   });
 
+  it("uses the final message in a burst to cancel the active flow", async () => {
+    const classify = vi.fn();
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "[訊息 1] 我想訂餐\n[訊息 2] 算了",
+      conversation: {
+        ...conversation,
+        state: "collecting",
+        pending_request: "catering inquiry",
+      },
+      deps: deps(),
+      classify,
+    });
+
+    expect(turn.reply).toBe(REPLIES.currentTaskCancelled);
+    expect(turn.conversation.state).toBe("identifying");
+    expect(classify).not.toHaveBeenCalled();
+  });
+
   it("queues complaints without claiming that a human already took over", async () => {
     const turn = await handleCustomerServiceTurn({
       phone: conversation.phone_normalized,

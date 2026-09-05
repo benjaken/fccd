@@ -251,7 +251,14 @@ function normalizedDialogControl(value: string) {
     .replace(/[\s，。！？、,.!?]/g, "");
 }
 
+function latestBurstMessage(value: string) {
+  const latest = value.trim().split(/\r?\n/).at(-1) || value;
+  return latest.replace(/^\[訊息\s+\d+\]\s*/, "").trim();
+}
+
 function isCancelCurrentTaskMessage(value: string) {
+  const latest = latestBurstMessage(value);
+  if (latest !== value.trim() && isCancelCurrentTaskMessage(latest)) return true;
   const text = normalizedDialogControl(value);
   if (!text) return false;
   if (/^(取消|撤回|算了|算啦|當我冇講|当我没说)$/.test(text)) return true;
@@ -261,6 +268,8 @@ function isCancelCurrentTaskMessage(value: string) {
 }
 
 function isExplicitPreviousHandoffCancellation(value: string) {
+  const latest = latestBurstMessage(value);
+  if (latest !== value.trim() && isExplicitPreviousHandoffCancellation(latest)) return true;
   const text = value.trim().replace(/[\s，。！？、,.!?]/g, "");
   return /(?:取消|撤回).*(?:之前|先前|上次|頭先|刚才|剛才).*(?:訂單|订单)?(?:修改|更改|改期|申請|申请)/.test(text);
 }

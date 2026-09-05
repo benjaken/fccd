@@ -14,6 +14,11 @@ import {
   type CustomerServiceRecentMessage,
 } from "../_shared/customer-service-context.ts";
 import {
+  customerServiceBurstDelay,
+  mergeCustomerServiceBufferedMessages,
+  type CustomerServiceBufferedMessage,
+} from "../_shared/customer-service-burst.ts";
+import {
   handleCustomerServiceTurn,
   type CustomerServiceConversation,
 } from "../_shared/customer-service-bot.ts";
@@ -427,6 +432,97 @@ async function recordInbound(
   if (error?.code === "23505") return "duplicate";
   if (error) throw error;
   return "inserted";
+}
+
+type InboundBatchClaim = {
+  claimed_version: number;
+  messages: CustomerServiceBufferedMessage[];
+  process_after: string;
+};
+
+function deferBackground(promise: Promise<unknown>) {
+  const runtime = (globalThis as unknown as {
+    EdgeRuntime?: { waitUntil: (task: Promise<unknown>) => void };
+  }).EdgeRuntime;
+  if (runtime?.waitUntil) {
+    runtime.waitUntil(promise);
+    return;
+  }
+  void promise.catch((error) => console.error("customer service background task failed", error));
+}
+
+function wait(milliseconds: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
+}
+
+async function enqueueInboundBatch(
+  admin: AdminClient,
+  event: { id: string; waId: string; text: string },
+) {
+  const { data, error } = await admin.rpc("customer_service_enqueue_inbound_batch", {
+    p_environment: deploymentEnvironment(),
+    p_phone: event.waId,
+    p_provider_message_id: event.id,
+    p_text: event.text,
+    p_received_at: new Date().toISOString(),
+  });
+  if (error) throw error;
+  const row = (data as Array<{ version: number; process_after: string }> | null)?.[0];
+  if (!row) throw new Error("inbound_batch_enqueue_failed");
+  return row;
+}
+
+async function claimInboundBatch(admin: AdminClient, phone: string) {
+  const { data, error } = await admin.rpc("customer_service_claim_inbound_batch", {
+    p_environment: deploymentEnvironment(),
+    p_phone: phone,
+  });
+  if (error) throw error;
+  return ((data as InboundBatchClaim[] | null)?.[0]) ?? null;
+}
+
+async function inboundBatchIsCurrent(
+  admin: AdminClient,
+  phone: string,
+  claimedVersion: number,
+) {
+  const { data, error } = await admin.rpc("customer_service_inbound_batch_is_current", {
+    p_environment: deploymentEnvironment(),
+    p_phone: phone,
+    p_claimed_version: claimedVersion,
+  });
+  if (error) throw error;
+  return data === true;
+}
+
+async function completeInboundBatch(
+  admin: AdminClient,
+  phone: string,
+  claimedVersion: number,
+) {
+  const { data, error } = await admin.rpc("customer_service_complete_inbound_batch", {
+    p_environment: deploymentEnvironment(),
+    p_phone: phone,
+    p_claimed_version: claimedVersion,
+  });
+  if (error) throw error;
+  return data === true;
+}
+
+async function failInboundBatch(
+  admin: AdminClient,
+  phone: string,
+  claimedVersion: number,
+  detail: string,
+) {
+  const { data, error } = await admin.rpc("customer_service_fail_inbound_batch", {
+    p_environment: deploymentEnvironment(),
+    p_phone: phone,
+    p_claimed_version: claimedVersion,
+    p_error: detail.slice(0, 500),
+  });
+  if (error) throw error;
+  return data === true;
 }
 
 async function loadConversation(admin: AdminClient, phone: string) {
@@ -1079,12 +1175,14 @@ function createBotDeps(
   admin: AdminClient,
   {
     dryRun = false,
+    mutationGuard,
     replyTemplates = {},
     activeConfig = null,
     tiers = customerServiceAiTiers(activeConfig),
     workflowPolicies = [],
   }: {
     dryRun?: boolean;
+    mutationGuard?: () => Promise<void>;
     replyTemplates?: ReplyTemplates;
     activeConfig?: ActiveCustomerServiceConfig | null;
     tiers?: CustomerServiceAiTierConfig;
@@ -1151,6 +1249,7 @@ function createBotDeps(
           created: false,
         };
       }
+      await mutationGuard?.();
       const { data, error } = await admin.rpc(
         "customer_service_write_inquiry",
         {
@@ -1219,6 +1318,7 @@ function createBotDeps(
       kind?: "inquiry" | "order_handoff";
     }) {
       if (dryRun) return;
+      await mutationGuard?.();
       try {
         await queueInternalHandoff(admin, input);
       } catch (error) {
@@ -1228,6 +1328,7 @@ function createBotDeps(
     },
     async cancelHandoff(phone: string) {
       if (dryRun) return true;
+      await mutationGuard?.();
       const now = new Date().toISOString();
       const { data, error } = await admin
         .from("customer_service_handoff_requests")
@@ -1394,6 +1495,209 @@ async function handleBackendPreview(
     confidence: turn.confidence,
     tool_keys: turn.toolKeys ?? [],
   });
+}
+
+async function prepareCustomerServiceTurn(
+  admin: AdminClient,
+  input: {
+    phone: string;
+    text: string;
+    mutationGuard?: () => Promise<void>;
+  },
+) {
+  const conversation = await loadConversation(admin, input.phone);
+  const startedAt = Date.now();
+  const [runtime, activeConfig] = await Promise.all([
+    loadCustomerServiceRuntime(admin),
+    loadActiveCustomerServiceConfig(admin),
+  ]);
+  const tiers = customerServiceAiTiers(activeConfig);
+  const turn = await handleCustomerServiceTurn({
+    phone: input.phone,
+    text: input.text,
+    conversation,
+    deps: createBotDeps(admin, {
+      replyTemplates: runtime.replyTemplates,
+      activeConfig,
+      tiers,
+      workflowPolicies: runtime.workflowPolicies,
+      mutationGuard: input.mutationGuard,
+    }),
+    classify: createCustomerServiceClassifier({
+      intents: runtime.intents,
+      conversationState: conversation.state,
+      pendingRequest: conversation.pending_request,
+      recentMessages: conversation.recent_messages,
+      activeGoal: conversation.active_goal,
+      workflowPolicies: runtime.workflowPolicies,
+      tiers,
+    }),
+  });
+  return { conversation, startedAt, turn };
+}
+
+async function persistCustomerServiceTurn(
+  admin: AdminClient,
+  input: {
+    providerMessageId: string;
+    phone: string;
+    text: string;
+    prepared: Awaited<ReturnType<typeof prepareCustomerServiceTurn>>;
+  },
+) {
+  const { conversation, startedAt, turn } = input.prepared;
+  let outboundId: string | null = null;
+  if (turn.reply) {
+    const localMessageId = `fcc-bot-${crypto.randomUUID()}`;
+    const outbound = await queueOutboundMessage(admin, {
+      inboundId: input.providerMessageId,
+      phone: input.phone,
+      body: turn.reply,
+      localMessageId,
+    });
+    outboundId = outbound?.id ?? null;
+    try {
+      if (outboundId) {
+        await updateOutboundMessage(admin, outboundId, {
+          status: "sending",
+          attempt_count: 1,
+          last_attempt_at: new Date().toISOString(),
+        });
+      }
+      const raw = await deliverWatiSessionMessage({
+        creds: watiCredentials(),
+        phone: input.phone,
+        text: turn.reply,
+        channelNumber: env("WATI_CHANNEL_NUMBER") || BRAND_WHATSAPP_CHANNEL,
+        localMessageId,
+      });
+      if (outboundId) {
+        await updateOutboundMessage(admin, outboundId, {
+          status: "sent",
+          provider_message_id: providerMessageIdFromResponse(raw),
+          sent_at: new Date().toISOString(),
+          last_error: null,
+        });
+      }
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      if (outboundId) {
+        await updateOutboundMessage(admin, outboundId, {
+          status: "failed",
+          last_error: detail.slice(0, 500),
+          next_retry_at: retryAt(1),
+        }).catch((auditError) => console.error("outbound failure audit failed", auditError));
+      }
+      await saveConversation(admin, turn.conversation);
+      await recordCustomerServiceTurn(admin, {
+        providerMessageId: input.providerMessageId,
+        phone: input.phone,
+        question: input.text,
+        stateBefore: conversation.state,
+        startedAt,
+        turn,
+        replyAttempted: true,
+        replySent: false,
+        deliveryStatus: "failed",
+        sendFailure: detail.slice(0, 500),
+      });
+      await recordCustomerServiceMessages(admin, {
+        providerMessageId: input.providerMessageId,
+        phone: input.phone,
+        question: input.text,
+        answer: turn.reply,
+        intent: turn.intentKey,
+        dialogAction: turn.dialogAction,
+      });
+      throw error;
+    }
+  }
+  await saveConversation(admin, turn.conversation);
+  await recordCustomerServiceTurn(admin, {
+    providerMessageId: input.providerMessageId,
+    phone: input.phone,
+    question: input.text,
+    stateBefore: conversation.state,
+    startedAt,
+    turn,
+    replyAttempted: Boolean(turn.reply),
+    replySent: Boolean(turn.reply),
+    deliveryStatus: turn.reply ? "sent" : "not_required",
+  });
+  await recordCustomerServiceMessages(admin, {
+    providerMessageId: input.providerMessageId,
+    phone: input.phone,
+    question: input.text,
+    answer: turn.reply,
+    intent: turn.intentKey,
+    dialogAction: turn.dialogAction,
+  });
+}
+
+async function processInboundBatch(
+  admin: AdminClient,
+  phone: string,
+  initialProcessAfter: string,
+) {
+  let processAfter = initialProcessAfter;
+  for (let round = 0; round < 6; round += 1) {
+    const delay = customerServiceBurstDelay(processAfter);
+    if (delay) await wait(delay);
+    const claim = await claimInboundBatch(admin, phone);
+    if (!claim) return;
+
+    const messages = Array.isArray(claim.messages) ? claim.messages : [];
+    const ordered = [...messages].sort((left, right) =>
+      Date.parse(left.receivedAt) - Date.parse(right.receivedAt)
+    );
+    const latestMessage = ordered.at(-1);
+    const text = mergeCustomerServiceBufferedMessages(ordered);
+    if (!latestMessage || !text) {
+      await completeInboundBatch(admin, phone, Number(claim.claimed_version));
+      return;
+    }
+
+    const claimedVersion = Number(claim.claimed_version);
+    const mutationGuard = async () => {
+      if (!(await inboundBatchIsCurrent(admin, phone, claimedVersion))) {
+        throw new Error("stale_inbound_batch");
+      }
+    };
+
+    try {
+      const prepared = await prepareCustomerServiceTurn(admin, {
+        phone,
+        text,
+        mutationGuard,
+      });
+      const completed = await completeInboundBatch(admin, phone, claimedVersion);
+      if (!completed) {
+        processAfter = new Date().toISOString();
+        continue;
+      }
+      await persistCustomerServiceTurn(admin, {
+        providerMessageId: latestMessage.providerMessageId,
+        phone,
+        text,
+        prepared,
+      });
+      return;
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      const hasNewerMessages = await failInboundBatch(
+        admin,
+        phone,
+        claimedVersion,
+        detail,
+      );
+      if (hasNewerMessages || detail === "stale_inbound_batch") {
+        processAfter = new Date().toISOString();
+        continue;
+      }
+      throw error;
+    }
+  }
+  console.error("customer service inbound burst exceeded restart limit", { phone });
 }
 
 Deno.serve(async (request) => {
@@ -1563,130 +1867,20 @@ Deno.serve(async (request) => {
       });
     }
 
-    const conversation = await loadConversation(admin, event.waId);
-    const startedAt = Date.now();
-    const [runtime, activeConfig] = await Promise.all([
-      loadCustomerServiceRuntime(admin),
-      loadActiveCustomerServiceConfig(admin),
-    ]);
-    const tiers = customerServiceAiTiers(activeConfig);
-    const turn = await handleCustomerServiceTurn({
-      phone: event.waId,
-      text: event.text,
-      conversation,
-      deps: createBotDeps(admin, {
-        replyTemplates: runtime.replyTemplates,
-        activeConfig,
-        tiers,
-        workflowPolicies: runtime.workflowPolicies,
-      }),
-      classify: createCustomerServiceClassifier({
-        intents: runtime.intents,
-        conversationState: conversation.state,
-        pendingRequest: conversation.pending_request,
-        recentMessages: conversation.recent_messages,
-        activeGoal: conversation.active_goal,
-        workflowPolicies: runtime.workflowPolicies,
-        tiers,
-      }),
-    });
-
-    let outboundId: string | null = null;
-    if (turn.reply) {
-      const localMessageId = `fcc-bot-${crypto.randomUUID()}`;
-      const outbound = await queueOutboundMessage(admin, {
-        inboundId: event.id,
-        phone: event.waId,
-        body: turn.reply,
-        localMessageId,
-      });
-      outboundId = outbound?.id ?? null;
-      try {
-        if (outboundId) {
-          await updateOutboundMessage(admin, outboundId, {
-            status: "sending",
-            attempt_count: 1,
-            last_attempt_at: new Date().toISOString(),
-          });
-        }
-        const raw = await deliverWatiSessionMessage({
-          creds: watiCredentials(),
-          phone: event.waId,
-          text: turn.reply,
-          channelNumber: env("WATI_CHANNEL_NUMBER") || BRAND_WHATSAPP_CHANNEL,
-          localMessageId,
-        });
-        if (outboundId) {
-          await updateOutboundMessage(admin, outboundId, {
-            status: "sent",
-            provider_message_id: providerMessageIdFromResponse(raw),
-            sent_at: new Date().toISOString(),
-            last_error: null,
-          });
-        }
-      } catch (error) {
-        const detail = error instanceof Error ? error.message : String(error);
-        if (outboundId) {
-          await updateOutboundMessage(admin, outboundId, {
-            status: "failed",
-            last_error: detail.slice(0, 500),
-            next_retry_at: retryAt(1),
-          }).catch((auditError) => console.error("outbound failure audit failed", auditError));
-        }
-        await saveConversation(admin, turn.conversation);
-        await recordCustomerServiceTurn(admin, {
-          providerMessageId: event.id,
-          phone: event.waId,
-          question: event.text,
-          stateBefore: conversation.state,
-          startedAt,
-          turn,
-          replyAttempted: true,
-          replySent: false,
-          deliveryStatus: "failed",
-          sendFailure: detail.slice(0, 500),
-        });
-        await recordCustomerServiceMessages(admin, {
-          providerMessageId: event.id,
-          phone: event.waId,
-          question: event.text,
-          answer: turn.reply,
-          intent: turn.intentKey,
-          dialogAction: turn.dialogAction,
-        });
+    const batch = await enqueueInboundBatch(admin, event);
+    deferBackground(
+      processInboundBatch(admin, event.waId, batch.process_after).catch((error) => {
         console.error(
-          "wati session send failed",
-          detail.slice(0, 300),
+          "customer service inbound batch failed",
+          error instanceof Error ? error.message.slice(0, 300) : String(error),
         );
-        throw error;
-      }
-    }
-    await saveConversation(admin, turn.conversation);
-    await recordCustomerServiceTurn(admin, {
-      providerMessageId: event.id,
-      phone: event.waId,
-      question: event.text,
-      stateBefore: conversation.state,
-      startedAt,
-      turn,
-      replyAttempted: Boolean(turn.reply),
-      replySent: Boolean(turn.reply),
-      deliveryStatus: turn.reply ? "sent" : "not_required",
-    });
-    await recordCustomerServiceMessages(admin, {
-      providerMessageId: event.id,
-      phone: event.waId,
-      question: event.text,
-      answer: turn.reply,
-      intent: turn.intentKey,
-      dialogAction: turn.dialogAction,
-    });
-
+      }),
+    );
     return jsonResponse({
       ok: true,
-      replied: Boolean(turn.reply),
-      state: turn.conversation.state,
-      wrote_inquiry: turn.wroteInquiry,
+      queued: true,
+      batch_version: batch.version,
+      process_after: batch.process_after,
     });
   } catch (error) {
     console.error(
