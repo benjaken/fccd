@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { handleCustomerServiceTurn } from "../supabase/functions/_shared/customer-service-bot.ts";
 import {
   classifyCustomerServiceMessage,
+  customerServiceMenuFaqQuery,
   explicitCustomerServiceOrderNumber,
   extractOrderNumber,
   normalizeCustomerServiceOrderNumber,
@@ -141,6 +142,19 @@ describe("customer-service intents", () => {
       configuredIntentKey: "browse_menu",
       toolKey: "search_faqs",
     });
+    expect(classifyCustomerServiceMessage("我想訂飯盒")).toMatchObject({
+      intent: "search_faq",
+      configuredIntentKey: "browse_menu",
+    });
+    expect(customerServiceMenuFaqQuery("我想睇飯盒餐牌")).toBe(
+      "HK Lunch Box 有冇餐牌可以睇？",
+    );
+    expect(customerServiceMenuFaqQuery("有冇派對小食菜單")).toBe(
+      "HK Party Food 有冇餐牌可以睇？",
+    );
+    expect(customerServiceMenuFaqQuery("想睇即日到會餐牌")).toBe(
+      "Food Channels Express 有冇餐牌可以睇？",
+    );
     expect(classifyCustomerServiceMessage("B-1555 幾時送，同埋訂咗咩菜？").requestedFields)
       .toEqual(["delivery_date", "items"]);
     expect(classifyCustomerServiceMessage("什麼時候送到")).toMatchObject({
@@ -238,6 +252,37 @@ describe("customer-service FAQ routing priority", () => {
     expect(searchFaqs).toHaveBeenCalledWith("有冇餐牌可以睇？");
     expect(turn.reply).toContain("foodchannels-catering.com");
     expect(turn.intentKey).toBe("browse_menu");
+    expect(classify).not.toHaveBeenCalled();
+  });
+
+  it("selects the Lunch Box menu instead of the generic brand list", async () => {
+    const lunchBoxAnswer = "Hello 你好，可以上網站訂購\nhttps://hklunchbox.com/collections/mealbox";
+    const searchFaqs = vi.fn().mockResolvedValue([
+      {
+        id: "lunch-box-menu",
+        category: "menu",
+        question: "HK Lunch Box 有冇餐牌可以睇？",
+        answer: lunchBoxAnswer,
+      },
+      {
+        id: "generic-menu",
+        category: "menu",
+        question: "有冇餐牌可以睇？",
+        answer: "請選擇品牌",
+      },
+    ]);
+    const classify = vi.fn();
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "我想訂飯盒，有菜單嗎？",
+      conversation,
+      deps: deps({ searchFaqs }),
+      classify,
+    });
+
+    expect(searchFaqs).toHaveBeenCalledWith("HK Lunch Box 有冇餐牌可以睇？");
+    expect(turn.reply).toBe(lunchBoxAnswer);
+    expect(turn.faqSourceIds).toEqual(["lunch-box-menu"]);
     expect(classify).not.toHaveBeenCalled();
   });
 

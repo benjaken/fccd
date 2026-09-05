@@ -54,6 +54,7 @@ import {
 import { FOOD_CHANNEL_CATERING_LOGO_PATH } from "@/lib/brand-logo";
 import { MigrationWorkspace } from "@/components/MigrationWorkspace";
 import { OrdersListPage } from "@/components/OrdersListPage";
+import { CustomerServiceOrderInquiriesPage } from "@/components/CustomerServiceOrderInquiriesPage";
 import { OrdersDashboardPage } from "@/components/OrdersDashboardPage";
 import { OrderSettingsPage } from "@/components/OrderSettingsPage";
 import { PaymentsListPage } from "@/components/PaymentsListPage";
@@ -186,6 +187,7 @@ import {
   type OrderListConfigRow,
 } from "@/lib/order-list-configs";
 import {
+  FOLLOW_UP_COUNTS_CHANGED,
   fetchFollowUpCounts,
   followUpCountForKey,
   type FollowUpCounts,
@@ -537,15 +539,20 @@ function OperationsShell() {
     }
 
     let cancelled = false;
-    void fetchFollowUpCounts()
-      .then((counts) => {
-        if (!cancelled) setFollowUpCounts(counts);
-      })
-      .catch(() => {
-        if (!cancelled) setFollowUpCounts(null);
-      });
+    const loadCounts = () => {
+      void fetchFollowUpCounts()
+        .then((counts) => {
+          if (!cancelled) setFollowUpCounts(counts);
+        })
+        .catch(() => {
+          if (!cancelled) setFollowUpCounts(null);
+        });
+    };
+    loadCounts();
+    window.addEventListener(FOLLOW_UP_COUNTS_CHANGED, loadCounts);
     return () => {
       cancelled = true;
+      window.removeEventListener(FOLLOW_UP_COUNTS_CHANGED, loadCounts);
     };
   }, [isBusinessMenu, location.pathname, location.search]);
 
@@ -813,6 +820,14 @@ function OperationsShell() {
               <Route
                 path="/orders"
                 element={<OrdersListPage canViewFinance={canViewFinance} canManageStatuses={canEditOrders} canAccessQueue={pageAccess.canAccess} />}
+              />
+              <Route
+                path="/orders/customer-inquiries"
+                element={
+                  <CustomerServiceOrderInquiriesPage
+                    canManage={pageAccess.canManage("orders.customer_inquiries")}
+                  />
+                }
               />
               <Route
                 path="/orders/dashboard"
@@ -2242,6 +2257,7 @@ const BUSINESS_MENU_LABELS: Record<string, [string, string]> = {
   pendingPayment: ["待收款", "Pending Payment"],
   pendingFactory: ["待傳送工場", "Pending Factory"],
   pendingDriver: ["待派司機", "Pending Driver"],
+  customerOrderInquiries: ["WATI待處理", "Pending WATI"],
   pendingProductReview: ["待審新商品", "Products to Review"],
   packingStocktakes: ["食材包裝盤點", "Ingredient & Packaging Stocktake"],
   kitchenMaterialUsage: ["食材包裝用量", "Ingredient & Packaging Usage"],

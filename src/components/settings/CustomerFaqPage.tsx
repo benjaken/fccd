@@ -8,7 +8,6 @@ import {
 import { useTranslation } from "react-i18next";
 import {
   BarChart3,
-  Bot,
   Check,
   CheckCheck,
   ChevronLeft,
@@ -42,7 +41,6 @@ import {
   evaluateCustomerServiceConfig,
   fetchCustomerServiceConfigVersions,
   fetchCustomerServiceDailyReports,
-  fetchCustomerServiceHandoffs,
   fetchCustomerServiceOutboundMessages,
   fetchCustomerServiceEvaluationRuns,
   fetchCustomerServiceLearningSuggestions,
@@ -56,7 +54,6 @@ import {
   retryCustomerServiceOutboundMessage,
   rollbackCustomerServiceConfig,
   setCustomerServiceBotEnabled,
-  setCustomerServiceConversationMode,
   submitCustomerServiceTurnFeedback,
   updateCustomerFaq,
   updateCustomerServiceIntent,
@@ -71,7 +68,6 @@ import {
   type CustomerServiceLogic,
   type CustomerServiceConfigVersion,
   type CustomerServiceDailyReport,
-  type CustomerServiceHandoff,
   type CustomerServiceOutboundMessage,
   type CustomerServiceEvaluationRun,
   type CustomerServiceLearningSuggestion,
@@ -185,7 +181,6 @@ export function CustomerFaqPage({
   const [logicError, setLogicError] = useState("");
   const [insightsOpen, setInsightsOpen] = useState(false);
   const [reports, setReports] = useState<CustomerServiceDailyReport[]>([]);
-  const [handoffs, setHandoffs] = useState<CustomerServiceHandoff[]>([]);
   const [outboundMessages, setOutboundMessages] = useState<CustomerServiceOutboundMessage[]>([]);
   const [suggestions, setSuggestions] = useState<
     CustomerServiceLearningSuggestion[]
@@ -212,7 +207,6 @@ export function CustomerFaqPage({
   >({});
   const [reviewingTurn, setReviewingTurn] = useState("");
   const [configBusy, setConfigBusy] = useState("");
-  const [handoffBusy, setHandoffBusy] = useState("");
   const [outboundBusy, setOutboundBusy] = useState("");
   const [configDraft, setConfigDraft] = useState({
     label: "Develop candidate",
@@ -523,7 +517,6 @@ export function CustomerFaqPage({
     try {
       const [
         nextReports,
-        nextHandoffs,
         nextSuggestions,
         nextTurns,
         nextConfigs,
@@ -531,7 +524,6 @@ export function CustomerFaqPage({
         nextOutbound,
       ] = await Promise.all([
         fetchCustomerServiceDailyReports(),
-        fetchCustomerServiceHandoffs(),
         fetchCustomerServiceLearningSuggestions(),
         fetchCustomerServiceReviewTurns(),
         fetchCustomerServiceConfigVersions("develop"),
@@ -539,7 +531,6 @@ export function CustomerFaqPage({
         fetchCustomerServiceOutboundMessages(),
       ]);
       setReports(nextReports);
-      setHandoffs(nextHandoffs);
       setSuggestions(nextSuggestions);
       setReviewTurns(nextTurns);
       setConfigVersions(nextConfigs);
@@ -555,22 +546,6 @@ export function CustomerFaqPage({
   const openInsights = () => {
     setInsightsOpen(true);
     void loadInsights();
-  };
-  const switchConversationMode = async (
-    handoff: CustomerServiceHandoff,
-    mode: "human" | "bot",
-  ) => {
-    if (!canEdit || handoffBusy) return;
-    setHandoffBusy(handoff.id);
-    setInsightsError("");
-    try {
-      await setCustomerServiceConversationMode(handoff.phone, mode);
-      await loadInsights();
-    } catch {
-      setInsightsError("切換真人／機器人模式失敗。");
-    } finally {
-      setHandoffBusy("");
-    }
   };
   const generateReport = async () => {
     if (!reportDate || generatingReport) return;
@@ -1256,67 +1231,6 @@ export function CustomerFaqPage({
         className="customer-service-insights-panel"
       >
         <div className="customer-service-insights">
-          <section className="customer-service-review-queue customer-service-handoff-queue">
-            <header>
-              <div>
-                <h3 className="customer-service-section-title">
-                  <span><MessageCircleMore /></span>
-                  待真人跟進對話
-                </h3>
-                <p>
-                  夜間先記錄；上午 9
-                  點通知同事。接手後由真人回覆，完成後交回機器人。
-                </p>
-              </div>
-              <span className="status-badge neutral">
-                {handoffs.filter((item) => item.status !== "resolved").length}
-              </span>
-            </header>
-            {handoffs
-              .filter((item) => item.status !== "resolved")
-              .map((handoff) => (
-                <article key={handoff.id}>
-                  <small>
-                    {handoff.phone} · {handoff.orderNumber || "未指定訂單"} ·{" "}
-                    {handoff.messageCount} 則訊息
-                  </small>
-                  <strong>{handoff.summary}</strong>
-                  <p>
-                    {handoff.status === "pending"
-                      ? `預計 ${new Date(handoff.notifyAfter).toLocaleString("zh-HK")} 通知`
-                      : `狀態：${handoff.status}`}
-                  </p>
-                  {canEdit ? (
-                    <footer>
-                      <Button
-                        size="sm"
-                        disabled={handoffBusy === handoff.id}
-                        onClick={() =>
-                          void switchConversationMode(handoff, "human")
-                        }
-                      >
-                        <MessageCircleMore />
-                        真人接手
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={handoffBusy === handoff.id}
-                        onClick={() =>
-                          void switchConversationMode(handoff, "bot")
-                        }
-                      >
-                        <Bot />
-                        交回機器人
-                      </Button>
-                    </footer>
-                  ) : null}
-                </article>
-              ))}
-            {!handoffs.some((item) => item.status !== "resolved") ? (
-              <p>目前沒有待真人跟進的對話。</p>
-            ) : null}
-          </section>
           <section className="customer-service-review-queue customer-service-delivery-queue">
             <header>
               <div>

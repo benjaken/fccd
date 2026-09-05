@@ -97,6 +97,10 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
   { prefix: "/settings/order-lists", pageKey: "settings.order_lists" },
   { prefix: "/settings", pageKey: "settings" },
   { prefix: "/orders/pending", pageKey: "orders.pending" },
+  {
+    prefix: "/orders/customer-inquiries",
+    pageKey: "orders.customer_inquiries",
+  },
   // Keep legacy bookmarks accessible through the dashboard's new home location.
   { prefix: "/orders/dashboard", pageKey: "overview.follow_up" },
   { prefix: "/orders/not-sent-factory", pageKey: "orders.not_sent_factory" },

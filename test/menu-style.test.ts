@@ -90,6 +90,7 @@ describe("menu styles", () => {
       "pendingPayment",
       "pendingFactory",
       "pendingDriver",
+      "customerOrderInquiries",
       "pendingProductReview",
       "packingStocktakes",
       "kitchenMaterialUsage",
@@ -236,10 +237,10 @@ describe("menu styles", () => {
       "rolePermissions",
       "loginLogs",
       "watiEmailLogs",
+      "customerFaq",
       "dictionaries",
       "notificationSettings",
       "districts",
-      "customerFaq",
       "attachments",
     ]);
     expect(businessSidebarNav("settings", "")[0]?.to).toContain("nav=settings");

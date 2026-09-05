@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const fromMock = vi.hoisted(() => vi.fn());
+const rpcMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/supabase", () => ({
-  supabase: { from: fromMock },
+  supabase: { from: fromMock, rpc: rpcMock },
 }));
 
 import {
@@ -26,9 +27,13 @@ function createCountQuery(result: QueryResult) {
 }
 
 describe("follow-up menu counts", () => {
-  beforeEach(() => fromMock.mockReset());
+  beforeEach(() => {
+    fromMock.mockReset();
+    rpcMock.mockReset();
+    rpcMock.mockResolvedValue({ data: 5, error: null });
+  });
 
-  it("loads the five actionable queue totals", async () => {
+  it("loads the actionable queue totals", async () => {
     const totals = [4, 3, 12, 7, 2];
     let index = 0;
     fromMock.mockImplementation(() =>
@@ -43,8 +48,12 @@ describe("follow-up menu counts", () => {
       pendingPayment: 12,
       pendingFactory: 7,
       pendingDriver: 2,
+      customerOrderInquiries: 5,
     });
     expect(fromMock).toHaveBeenCalledTimes(5);
+    expect(rpcMock).toHaveBeenCalledWith(
+      "customer_service_order_inquiries_pending_count",
+    );
   });
 
   it("does not add a total to products awaiting review yet", () => {
@@ -56,6 +65,7 @@ describe("follow-up menu counts", () => {
           pendingPayment: 12,
           pendingFactory: 7,
           pendingDriver: 2,
+          customerOrderInquiries: 5,
         },
         "pendingProductReview",
       ),
@@ -94,5 +104,21 @@ describe("follow-up menu counts", () => {
           filter.includes("addon_shopify_pending.eq.true"),
       ),
     ).toBe(true);
+  });
+
+  it("shows the unresolved WhatsApp total beside its navigation key", () => {
+    expect(
+      followUpCountForKey(
+        {
+          pendingEntry: 0,
+          pendingQuote: 0,
+          pendingPayment: 0,
+          pendingFactory: 0,
+          pendingDriver: 0,
+          customerOrderInquiries: 8,
+        },
+        "customerOrderInquiries",
+      ),
+    ).toBe(8);
   });
 });

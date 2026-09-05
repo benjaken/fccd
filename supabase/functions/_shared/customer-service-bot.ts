@@ -1,5 +1,6 @@
 import {
   classifyCustomerServiceMessage,
+  customerServiceMenuFaqQuery,
   extractRequestedOrderFields,
   hasCollectableSlots,
   isCustomerServiceGreeting,
@@ -899,9 +900,11 @@ export async function handleCustomerServiceTurn({
   // as "廚師" do not get mistaken for a request requiring kitchen approval.
   try {
     const asksForMenu = isMenuInformationRequest(text);
-    const faqHits = await searchFaqsOnce(asksForMenu ? "有冇餐牌可以睇？" : text);
+    const menuQuery = asksForMenu ? customerServiceMenuFaqQuery(text) : "";
+    const faqHits = await searchFaqsOnce(asksForMenu ? menuQuery : text);
     const preferredFaq = asksForMenu
-      ? faqHits.find(isMenuFaq)
+      ? faqHits.find((hit) => strongPublishedFaqMatch(menuQuery, hit)) ??
+        faqHits.find(isMenuFaq)
       : faqHits.find((hit) => strongPublishedFaqMatch(text, hit));
     if (preferredFaq) {
       return {
@@ -1087,7 +1090,7 @@ export async function handleCustomerServiceTurn({
   }
   const faqQuery = classified.configuredIntentKey === "browse_menu" ||
       isMenuInformationRequest(text)
-    ? "有冇餐牌可以睇？"
+    ? customerServiceMenuFaqQuery(text)
     : text;
   return annotate(await replyFaq(cachedDeps, classified, routedConversation, faqQuery));
 }

@@ -1,0 +1,23 @@
+.customer-service-order-inquiries-panel { min-height: 34rem; }
+.customer-service-order-inquiries-toolbar { padding: 1rem; border-bottom: 1px solid var(--line); }
+.customer-service-order-inquiries-filter { display: grid; gap: .35rem; min-width: 11rem; font-size: .8rem; }
+.customer-service-order-inquiries-filter select { min-height: 2.65rem; border: 1px solid var(--border, #b8c7bf) !important; border-radius: .65rem; background: var(--background, #fff); padding: 0 .75rem; color: inherit; box-shadow: 0 1px 2px rgb(15 46 31 / 5%); }
+.customer-service-order-inquiries-filter select:focus { border-color: var(--primary, #07843f) !important; outline: 2px solid color-mix(in srgb, var(--primary, #07843f) 18%, transparent); outline-offset: 1px; }
+.customer-service-order-inquiries-table-wrap td { vertical-align: top; }
+.customer-service-order-inquiries-table-wrap .customer-inquiry-summary,
+.customer-service-order-inquiries-table-wrap .customer-inquiry-record { display: table-cell; }
+.customer-service-order-inquiries-table-wrap td > strong,
+.customer-service-order-inquiries-table-wrap td > small { display: block; }
+.customer-service-order-inquiries-table-wrap td > * + * { margin-top: .3rem; }
+.customer-service-order-inquiries-table-wrap td small { color: var(--muted); }
+.customer-inquiry-summary { min-width: 18rem; max-width: 30rem; white-space: normal; }
+.customer-inquiry-status { display: inline-flex; width: max-content; border-radius: 999px; padding: .3rem .55rem; background: #eef3f0; font-size: .78rem; font-weight: 700; }
+.customer-inquiry-status.status-in_progress { background: #fff0c7; color: #7b5100; }
+.customer-inquiry-status.status-resolved { background: #dff5e5; color: #12672e; }
+.customer-inquiry-status.status-failed { background: #ffe3e3; color: #9c2626; }
+.customer-service-order-inquiries-resolution { display: grid; gap: .55rem; font-weight: 700; }
+.customer-service-order-inquiries-resolution textarea { width: 100%; resize: vertical; border: 1px solid var(--line); border-radius: .75rem; padding: .8rem; font: inherit; }
+@media (max-width: 760px) {
+  .customer-service-order-inquiries-toolbar { padding: .75rem; }
+  .customer-service-order-inquiries-filter { width: 100%; }
+}

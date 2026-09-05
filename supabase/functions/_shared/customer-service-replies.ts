@@ -272,6 +272,6 @@ export function handoffNoOpenOrderReply() {
 export function faqReply(answer: string) {
   const text = answer.trim();
   return sanitizeOutboundReply(
-    /^你好[。！!，,\s]/.test(text) ? text : `你好。${text}`,
+    /^(?:你好[。！!，,\s]|hello\b)/i.test(text) ? text : `你好。${text}`,
   );
 }

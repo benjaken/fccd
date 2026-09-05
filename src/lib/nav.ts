@@ -144,6 +144,7 @@ const followUpCateringNav: NavItem[] = [
   { key: "pendingPayment", to: "/orders?tab=unpaid&nav=follow-up.catering", icon: HandCoins, permissionKey: "orders" },
   { key: "pendingFactory", to: "/orders?tab=not-sent-factory&nav=follow-up.catering", icon: Factory, permissionKey: "orders" },
   { key: "pendingDriver", to: "/orders?status=awaitingDriver&nav=follow-up.catering", icon: Truck, permissionKey: "orders" },
+  { key: "customerOrderInquiries", to: "/orders/customer-inquiries?nav=follow-up.catering", icon: MessageCircleMore, permissionKey: "orders.customer_inquiries" },
   { key: "pendingProductReview", to: "/products/shopify-pending?nav=follow-up.catering", icon: ShoppingBasket, permissionKey: "products.shopify_pending" },
 ];
 
@@ -216,6 +217,12 @@ export const secondaryNav: Record<string, NavItem[]> = {
       to: "/orders",
       icon: ClipboardList,
       permissionKey: "orders",
+    },
+    {
+      key: "customerOrderInquiries",
+      to: "/orders/customer-inquiries",
+      icon: MessageCircleMore,
+      permissionKey: "orders.customer_inquiries",
     },
     {
       key: "payments",
@@ -714,6 +721,12 @@ export const secondaryNav: Record<string, NavItem[]> = {
       permissionKey: "settings.wati_email_logs",
     },
     {
+      key: "customerFaq",
+      to: "/settings/customer-faq",
+      icon: MessageCircleMore,
+      permissionKey: "settings.customer_faq",
+    },
+    {
       key: "dictionaries",
       to: "/settings/dictionaries",
       icon: ListFilter,
@@ -730,12 +743,6 @@ export const secondaryNav: Record<string, NavItem[]> = {
       to: "/settings/districts",
       icon: MapPinned,
       permissionKey: "settings.districts",
-    },
-    {
-      key: "customerFaq",
-      to: "/settings/customer-faq",
-      icon: MessageCircleMore,
-      permissionKey: "settings.customer_faq",
     },
     {
       key: "attachments",
@@ -1037,6 +1044,7 @@ export function businessSidebarNav(
 export const SECTION_CHILD_KEYS: Record<string, string[]> = {
   orders: [
     "orders.new",
+    "orders.customer_inquiries",
     "orders.pending",
     "orders.not_sent_factory",
     "kitchen.calendar",

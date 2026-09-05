@@ -6,7 +6,10 @@ export type FollowUpCounts = {
   pendingPayment: number;
   pendingFactory: number;
   pendingDriver: number;
+  customerOrderInquiries: number;
 };
+
+export const FOLLOW_UP_COUNTS_CHANGED = "fccd:follow-up-counts-changed";
 
 const FOLLOW_UP_COUNT_KEYS: ReadonlySet<keyof FollowUpCounts> = new Set([
   "pendingEntry",
@@ -14,6 +17,7 @@ const FOLLOW_UP_COUNT_KEYS: ReadonlySet<keyof FollowUpCounts> = new Set([
   "pendingPayment",
   "pendingFactory",
   "pendingDriver",
+  "customerOrderInquiries",
 ]);
 
 export function followUpCountForKey(
@@ -51,7 +55,7 @@ export async function fetchFollowUpCounts(
 ): Promise<FollowUpCounts> {
   const todayStart = `${hongKongDateKey(now)}T00:00:00+08:00`;
   const countSelection = { count: "exact" as const, head: true };
-  const [entry, quote, payment, factory, driver] = await Promise.all([
+  const [entry, quote, payment, factory, driver, customerOrderInquiries] = await Promise.all([
     supabase
       .from("orders")
       .select("id", countSelection)
@@ -85,7 +89,10 @@ export async function fetchFollowUpCounts(
       .eq("document_type", "order")
       .is("archived_at", null)
       .eq("delivery_status", "待接單"),
+    supabase.rpc("customer_service_order_inquiries_pending_count"),
   ]);
+
+  if (customerOrderInquiries.error) throw customerOrderInquiries.error;
 
   return {
     pendingEntry: requireCount(entry),
@@ -93,5 +100,6 @@ export async function fetchFollowUpCounts(
     pendingPayment: requireCount(payment),
     pendingFactory: requireCount(factory),
     pendingDriver: requireCount(driver),
+    customerOrderInquiries: Number(customerOrderInquiries.data ?? 0),
   };
 }
