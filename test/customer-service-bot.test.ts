@@ -103,6 +103,16 @@ describe("customer-service intents", () => {
     );
   });
 
+  it("classifies menu browsing separately and extracts compound order fields", () => {
+    expect(classifyCustomerServiceMessage("我想訂餐，想先看看菜單")).toMatchObject({
+      intent: "search_faq",
+      configuredIntentKey: "browse_menu",
+      toolKey: "search_faqs",
+    });
+    expect(classifyCustomerServiceMessage("B-1555 幾時送，同埋訂咗咩菜？").requestedFields)
+      .toEqual(["delivery_date", "items"]);
+  });
+
   it("extracts inquiry slots and shipping FAQ", () => {
     const classified = classifyCustomerServiceMessage("10月3日 80人到會");
     expect(classified.intent).toBe("collect_inquiry");
@@ -191,8 +201,26 @@ describe("customer-service FAQ routing priority", () => {
 
     expect(searchFaqs).toHaveBeenCalledWith("有冇餐牌可以睇？");
     expect(turn.reply).toContain("foodchannels-catering.com");
-    expect(turn.intentKey).toBe("search_faq");
+    expect(turn.intentKey).toBe("browse_menu");
     expect(classify).not.toHaveBeenCalled();
+  });
+
+  it("reuses one FAQ search result for preflight and the final FAQ answer", async () => {
+    const searchFaqs = vi.fn().mockResolvedValue([{
+      id: "payment-methods",
+      category: "payment",
+      question: "接受哪些付款方法？",
+      answer: "可以使用信用卡、轉數快等已公布付款方式。",
+    }]);
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "付款有咩選擇？",
+      conversation,
+      deps: deps({ searchFaqs }),
+    });
+
+    expect(turn.reply).toContain("信用卡");
+    expect(searchFaqs).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -776,6 +804,55 @@ describe("precise order lookup replies", () => {
       conversation.phone_normalized,
       second.order_id,
     );
+  });
+
+  it("separates utensils and hides a duplicated package parent line", async () => {
+    const turn = await handleCustomerServiceTurn({
+      phone: conversation.phone_normalized,
+      text: "我張訂單訂咗咩菜？",
+      conversation,
+      deps: deps({
+        lookupOrders: vi.fn().mockResolvedValue([order]),
+        lookupOrderItems: vi.fn().mockResolvedValue([
+          {
+            order_line_id: "parent",
+            package_name: "商務套餐",
+            item_kind: "package",
+            item_name: "商務套餐",
+            item_content: null,
+            quantity: 1,
+            quantity_text: null,
+            remarks: [],
+          },
+          {
+            order_line_id: "child",
+            package_name: "商務套餐",
+            item_kind: "package_item",
+            item_name: "香草雞扒",
+            item_content: null,
+            quantity: 2,
+            quantity_text: null,
+            remarks: [],
+          },
+          {
+            order_line_id: "utensil",
+            package_name: null,
+            item_kind: "utensil",
+            item_name: "餐具包",
+            item_content: null,
+            quantity: 1,
+            quantity_text: null,
+            remarks: [],
+          },
+        ]),
+      }),
+    });
+
+    expect(turn.reply).toContain("【商務套餐】");
+    expect(turn.reply).toContain("香草雞扒 × 2");
+    expect(turn.reply).toContain("【餐具】");
+    expect(turn.reply).toContain("餐具包 × 1");
+    expect(turn.reply.match(/商務套餐/g)).toHaveLength(1);
   });
 });
 

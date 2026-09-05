@@ -2,6 +2,7 @@ import {
   classifyCustomerServiceMessage,
   hasCollectableSlots,
   isCustomerServiceGreeting,
+  isMenuInformationRequest,
   normalizeCustomerServiceOrderNumber,
   type ClassifiedMessage,
   type InquirySlots,
@@ -48,6 +49,7 @@ export type CustomerServiceOrder = {
 export type CustomerServiceOrderItem = {
   order_line_id: string;
   package_name: string | null;
+  item_kind?: "package" | "package_item" | "utensil" | "item";
   item_name: string;
   item_content: string | null;
   quantity: number | null;
@@ -191,12 +193,6 @@ function strongPublishedFaqMatch(query: string, hit: CustomerServiceFaqHit) {
   return Math.min(left.length, right.length) >= 5 &&
     Math.abs(left.length - right.length) <= 5 &&
     (left.includes(right) || right.includes(left));
-}
-
-function isMenuInformationRequest(value: string) {
-  const text = value.trim();
-  return /(?:餐牌|菜單|菜单|menu)/i.test(text) &&
-    /(?:有冇|有無|有沒有|有吗|有嗎|睇|看|看看|提供|發|发|send|想問|想问|詢問|询问)/i.test(text);
 }
 
 function isMenuFaq(hit: CustomerServiceFaqHit) {
@@ -848,12 +844,29 @@ export async function handleCustomerServiceTurn({
     };
   }
 
+  const faqSearchCache = new Map<string, Promise<CustomerServiceFaqHit[]>>();
+  const searchFaqsOnce = (query: string) => {
+    const key = normalizedFaqText(query);
+    const existing = faqSearchCache.get(key);
+    if (existing) return existing;
+    const pending = deps.searchFaqs(query).catch((error) => {
+      faqSearchCache.delete(key);
+      throw error;
+    });
+    faqSearchCache.set(key, pending);
+    return pending;
+  };
+  const cachedDeps: CustomerServiceBotDeps = {
+    ...deps,
+    searchFaqs: searchFaqsOnce,
+  };
+
   // Published, strongly matching FAQ knowledge is authoritative for stable
   // public information. Resolve it before intent classification so words such
   // as "廚師" do not get mistaken for a request requiring kitchen approval.
   try {
     const asksForMenu = isMenuInformationRequest(text);
-    const faqHits = await deps.searchFaqs(asksForMenu ? "有冇餐牌可以睇？" : text);
+    const faqHits = await searchFaqsOnce(asksForMenu ? "有冇餐牌可以睇？" : text);
     const preferredFaq = asksForMenu
       ? faqHits.find(isMenuFaq)
       : faqHits.find((hit) => strongPublishedFaqMatch(text, hit));
@@ -864,7 +877,7 @@ export async function handleCustomerServiceTurn({
         wroteInquiry: false,
         notified: false,
         usedModel: false,
-        intentKey: "search_faq",
+        intentKey: asksForMenu ? "browse_menu" : "search_faq",
         toolKeys: ["search_faqs"],
         faqSourceIds: [preferredFaq.id],
         failureReason: null,
@@ -878,15 +891,27 @@ export async function handleCustomerServiceTurn({
   }
 
   const classified = await classify(text);
-  const annotate = (turn: BotTurn): BotTurn => ({
-    ...turn,
-    intentKey: classified.configuredIntentKey || classified.intent,
-    confidence: classified.confidence,
-    toolKeys: classified.toolKey ? [classified.toolKey] : [],
-    failureReason: turn.failureReason ?? null,
-    model: turn.model ?? classified.model ?? null,
-    dialogAction: classified.dialogAction,
-  });
+  const annotate = (turn: BotTurn): BotTurn => {
+    const defaultTool = classified.intent === "lookup_order" ||
+        classified.intent === "handoff_order"
+      ? "lookup_orders"
+      : classified.intent === "search_faq"
+        ? "search_faqs"
+        : null;
+    return {
+      ...turn,
+      intentKey: classified.configuredIntentKey || classified.intent,
+      confidence: classified.confidence,
+      toolKeys: [...new Set([
+        ...(turn.toolKeys ?? []),
+        classified.toolKey,
+        defaultTool,
+      ].filter((tool): tool is string => Boolean(tool)))],
+      failureReason: turn.failureReason ?? null,
+      model: turn.model ?? classified.model ?? null,
+      dialogAction: classified.dialogAction,
+    };
+  };
   if (classified.needsClarification) {
     return annotate({
       reply: sanitizeOutboundReply(
@@ -1020,5 +1045,9 @@ export async function handleCustomerServiceTurn({
   ) {
     return annotate(await replyCollect(deps, phone, classified, routedConversation));
   }
-  return annotate(await replyFaq(deps, classified, routedConversation, text));
+  const faqQuery = classified.configuredIntentKey === "browse_menu" ||
+      isMenuInformationRequest(text)
+    ? "有冇餐牌可以睇？"
+    : text;
+  return annotate(await replyFaq(cachedDeps, classified, routedConversation, faqQuery));
 }

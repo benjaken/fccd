@@ -97,6 +97,7 @@ export function lookupRequestedOrderReply(
   },
   items: Array<{
     package_name: string | null;
+    item_kind?: "package" | "package_item" | "utensil" | "item";
     item_name: string;
     item_content: string | null;
     quantity: number | null;
@@ -143,7 +144,7 @@ export function lookupRequestedOrderReply(
       const deduped = new Map<string, typeof items[number]>();
       for (const item of items) {
         const remarks = item.remarks.map((remark) => remark.trim()).filter(Boolean);
-        const key = [item.package_name, item.item_name, item.item_content, item.quantity_text, remarks.join("|")]
+        const key = [item.package_name, item.item_kind, item.item_name, item.item_content, item.quantity_text, remarks.join("|")]
           .map((value) => value?.trim().toLowerCase() || "")
           .join("::");
         const current = deduped.get(key);
@@ -155,14 +156,21 @@ export function lookupRequestedOrderReply(
       }
       const groups = new Map<string, Array<typeof items[number]>>();
       for (const item of deduped.values()) {
-        const group = item.package_name?.trim() || "單點菜式";
+        const group = item.item_kind === "utensil"
+          ? "餐具"
+          : item.package_name?.trim() || "單點菜式";
         groups.set(group, [...(groups.get(group) ?? []), item]);
       }
       const lines: string[] = ["訂單內容："];
       let shown = 0;
       for (const [group, groupItems] of groups) {
         if (groups.size > 1 || group !== "單點菜式") lines.push(`【${group}】`);
-        for (const item of groupItems) {
+        const visibleGroupItems = groupItems.filter((item) => !(
+          item.item_kind === "package" &&
+          groupItems.length > 1 &&
+          normalizedReplyItemName(item.item_name) === normalizedReplyItemName(group)
+        ));
+        for (const item of visibleGroupItems.length ? visibleGroupItems : groupItems) {
           if (shown >= 30) break;
           const numericQuantity = Number(item.quantity);
           const quantity = item.quantity_text?.trim() || (
@@ -192,6 +200,10 @@ export function lookupRequestedOrderReply(
       : "暫時未有自助查詢連結。");
   }
   return sanitizeOutboundReply(parts.join("\n"));
+}
+
+function normalizedReplyItemName(value: string) {
+  return value.toLowerCase().replace(/[\s，。！？、,.!?：:；;（）()「」『』"']/g, "");
 }
 
 export function lookupNoOrdersReply(orderNumber = "") {

@@ -499,6 +499,76 @@ async function saveConversation(
   if (error) throw error;
 }
 
+function automaticTurnEvaluation(input: {
+  intent: string | null;
+  routes: Set<string>;
+  faqSourceIds: string[];
+  reply: string | null;
+  stateAfter: string;
+  sendFailure?: string | null;
+}) {
+  const humanHandoff = ["awaiting_human", "human_owned"].includes(input.stateAfter);
+  const expected = input.intent === "browse_menu" || input.intent === "search_faq"
+    ? "search_faqs"
+    : input.intent === "lookup_order"
+      ? "lookup_orders"
+      : input.intent === "handoff_order"
+        ? humanHandoff ? "queue_handoff" : "lookup_orders"
+        : input.intent === "handoff"
+          ? "queue_handoff"
+          : input.intent === "collect_inquiry" && input.routes.has("write_inquiry")
+            ? "write_inquiry"
+            : undefined;
+  const toolCorrect = !expected || input.routes.has(expected) || (
+    expected === "queue_handoff" && input.routes.has("notify_internal")
+  );
+  const workflowProgress = [
+    "collecting",
+    "verifying_order",
+    "picking_order",
+    "picking_handoff_order",
+  ].includes(input.stateAfter);
+  const grounded = Boolean(
+    input.faqSourceIds.length ||
+    [...input.routes].some((route) => [
+      "lookup_orders",
+      "write_inquiry",
+      "queue_handoff",
+      "notify_internal",
+    ].includes(route)) ||
+    workflowProgress ||
+    ["out_of_scope", "prompt_injection", "greeting"].includes(input.intent || ""),
+  );
+  const answerComplete = Boolean(input.reply) || humanHandoff;
+  const handoffCorrect = !humanHandoff || (
+    input.routes.has("queue_handoff") &&
+    !["browse_menu", "search_faq", "lookup_order"].includes(input.intent || "")
+  );
+  const deliveryOk = !input.sendFailure;
+  const dimensions = {
+    grounded,
+    tool_correct: toolCorrect,
+    answer_complete: answerComplete,
+    handoff_correct: handoffCorrect,
+    delivery_ok: deliveryOk,
+  };
+  const score = Object.values(dimensions).filter(Boolean).length /
+    Object.keys(dimensions).length;
+  const failures = Object.entries(dimensions)
+    .filter(([, passed]) => !passed)
+    .map(([name]) => name);
+  return {
+    outcome: !deliveryOk || !handoffCorrect
+      ? "failure"
+      : score >= 0.8
+        ? "success"
+        : "needs_review",
+    score,
+    dimensions,
+    reason: failures.length ? `自動檢查未通過：${failures.join(", ")}` : "自動規則檢查全部通過",
+  };
+}
+
 async function recordCustomerServiceTurn(
   admin: AdminClient,
   input: {
@@ -518,13 +588,22 @@ async function recordCustomerServiceTurn(
   if (input.turn.wroteInquiry) tools.add("write_inquiry");
   if (input.turn.notified) tools.add("notify_internal");
   if (input.turn.queuedHandoff) tools.add("queue_handoff");
+  const intent = input.turn.intentKey ?? null;
+  const automaticEvaluation = automaticTurnEvaluation({
+    intent,
+    routes: tools,
+    faqSourceIds: input.turn.faqSourceIds ?? [],
+    reply: input.turn.reply,
+    stateAfter: input.turn.conversation.state,
+    sendFailure: input.sendFailure,
+  });
   const { error } = await admin.from("customer_service_turns").upsert(
     {
       provider_message_id: input.providerMessageId,
       phone_normalized: input.phone,
       question: input.question,
       answer: input.turn.reply,
-      intent: input.turn.intentKey ?? null,
+      intent,
       route: [...tools].join(",") || null,
       used_model: input.turn.usedModel,
       model: input.turn.model ?? null,
@@ -554,7 +633,12 @@ async function recordCustomerServiceTurn(
       failure_reason: input.sendFailure || input.turn.failureReason || null,
       latency_ms: Math.max(0, Date.now() - input.startedAt),
       environment: deploymentEnvironment(),
-      ai_score: input.turn.confidence ?? null,
+      classification_confidence: input.turn.confidence ?? null,
+      auto_outcome: automaticEvaluation.outcome,
+      auto_score: automaticEvaluation.score,
+      auto_dimensions: automaticEvaluation.dimensions,
+      auto_reason: automaticEvaluation.reason,
+      auto_evaluated_at: new Date().toISOString(),
       dialog_action: input.turn.dialogAction ?? null,
       active_goal: input.turn.conversation.active_goal ?? null,
       context_message_count: input.turn.conversation.recent_messages?.length ?? 0,
@@ -1038,6 +1122,7 @@ function createBotDeps(
       return (data ?? []) as Array<{
         order_line_id: string;
         package_name: string | null;
+        item_kind?: "package" | "package_item" | "utensil" | "item";
         item_name: string;
         item_content: string | null;
         quantity: number | null;
@@ -1394,6 +1479,7 @@ Deno.serve(async (request) => {
       return jsonResponse({ ok: true, ignored: "phone_not_allowed" });
     }
     if (isHumanOperatorMessage(event)) {
+      const existingConversation = await loadConversation(admin, event.waId);
       await queueInternalHandoff(admin, {
         phone: event.waId,
         quoteId: null,
@@ -1417,6 +1503,24 @@ Deno.serve(async (request) => {
         identity_verification_order_id: null,
         identity_verification_attempts: 0,
       });
+      const { error: modeAuditError } = await admin
+        .from("customer_service_conversation_mode_events")
+        .upsert({
+          environment: deploymentEnvironment(),
+          phone_normalized: event.waId,
+          provider_message_id: event.id,
+          source: "wati_operator",
+          from_state: existingConversation.state,
+          to_state: "human_owned",
+          mode: "human",
+          reason: "WATI 後台同事發送訊息並接手對話",
+          last_human_message: event.text.slice(0, 2_000),
+          actor_name: event.operatorName || null,
+          actor_email: event.operatorEmail || null,
+        }, { onConflict: "provider_message_id" });
+      if (modeAuditError) {
+        console.error("conversation mode audit failed", modeAuditError.message.slice(0, 300));
+      }
       await admin
         .from("customer_service_handoff_requests")
         .update({

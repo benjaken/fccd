@@ -154,6 +154,12 @@ export function hasCollectableSlots(slots: InquirySlots) {
   return Boolean(slots.eventDate || slots.headcount);
 }
 
+export function isMenuInformationRequest(value: string) {
+  const text = value.trim();
+  return /(?:餐牌|菜單|菜单|menu)/i.test(text) &&
+    /(?:有冇|有無|有沒有|有吗|有嗎|睇|看|看看|提供|發|发|send|想問|想问|詢問|询问|索取)/i.test(text);
+}
+
 export function extractRequestedOrderFields(text: string) {
   const fields: CustomerServiceOrderField[] = [];
   if (/(?:送貨|送餐|自取|交收).{0,8}(?:日期|時間|幾時|何時)|(?:幾時|何時).{0,8}(?:送|到)|delivery\s*(?:date|time)/i.test(text)) {
@@ -197,6 +203,17 @@ export function classifyCustomerServiceMessage(text: string): ClassifiedMessage 
   }
   if (orderNumber || LOOKUP.test(body)) {
     return { intent: "lookup_order", slots, orderNumber, requestedFields: requestedFields.length ? requestedFields : ["summary"], usedModel: false };
+  }
+  if (isMenuInformationRequest(body)) {
+    return {
+      intent: "search_faq",
+      slots,
+      orderNumber,
+      requestedFields,
+      usedModel: false,
+      configuredIntentKey: "browse_menu",
+      toolKey: "search_faqs",
+    };
   }
   if (FAQ.test(body)) {
     return { intent: "search_faq", slots, orderNumber, requestedFields, usedModel: false };

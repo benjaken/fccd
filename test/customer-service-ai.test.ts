@@ -147,6 +147,7 @@ describe("customer-service grounded AI", () => {
       choices: [{ message: { content: JSON.stringify({
         intent: "lookup_order",
         confidence: 0.9,
+        requestedFields: ["delivery_date", "items", "unsafe_field"],
         tool: "notify_internal",
       }) } }],
     }), { status: 200 }));
@@ -166,6 +167,7 @@ describe("customer-service grounded AI", () => {
       fetchImpl: fetchMock,
     });
     expect(result?.toolKey).toBeNull();
+    expect(result?.requestedFields).toEqual(["delivery_date", "items"]);
   });
 
   it("sends only published FAQ knowledge and accepts a cited synthesis", async () => {

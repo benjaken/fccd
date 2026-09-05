@@ -1427,6 +1427,20 @@ export function CustomerFaqPage({
                     {formatRate(latestReport.metrics.send_success_rate)}
                   </strong>
                 </div>
+                <div>
+                  <span>自動檢查通過率</span>
+                  <strong>
+                    {formatRate(latestReport.metrics.automatic_success_rate)}
+                  </strong>
+                </div>
+                <div>
+                  <span>有資料依據</span>
+                  <strong>{formatRate(latestReport.metrics.grounded_rate)}</strong>
+                </div>
+                <div>
+                  <span>疑似錯誤轉人工</span>
+                  <strong>{latestReport.metrics.wrong_handoff_count ?? 0}</strong>
+                </div>
               </div>
               <p>{latestReport.aiSummary}</p>
             </section>

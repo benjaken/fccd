@@ -137,6 +137,10 @@ export type CustomerServiceDailyMetrics = {
   successful: number;
   failed: number;
   needs_review: number;
+  automatically_evaluated: number;
+  automatic_success_rate: number | null;
+  grounded_rate: number | null;
+  wrong_handoff_count: number;
   success_rate: number | null;
   send_success_rate: number | null;
   average_latency_ms: number;

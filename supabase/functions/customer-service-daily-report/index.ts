@@ -88,6 +88,10 @@ type TurnRow = {
   human_handoff: boolean;
   used_model: boolean;
   latency_ms: number;
+  auto_outcome: "success" | "failure" | "needs_review" | null;
+  auto_score: number | null;
+  auto_dimensions: Record<string, boolean>;
+  auto_reason: string | null;
   created_at: string;
 };
 
@@ -144,21 +148,37 @@ function parseAiAnalysis(payload: unknown, turns: TurnRow[], model: string): AiA
       reason: String(item.reason || "").slice(0, 600),
     }))
     : [];
+  const evaluationOutcome = new Map(evaluations.map((item) => [item.turnId, item.outcome]));
+  const turnById = new Map(turns.map((turn) => [turn.id, turn]));
+  const normalizedAnswer = (value: string) => value.trim().replace(/\s+/g, " ").toLowerCase();
   const suggestions = Array.isArray(parsed.suggestions)
     ? parsed.suggestions.filter((item): item is Suggestion =>
       Boolean(item) && ["faq", "intent", "policy"].includes(String(item.type)) && Boolean(item.title)
-    ).slice(0, 12).map((item) => ({
-      type: item.type,
-      title: String(item.title).slice(0, 200),
-      reason: String(item.reason || "").slice(0, 1_000),
-      question: String(item.question || "").slice(0, 500),
-      answer: String(item.answer || "").slice(0, 2_000),
-      category: String(item.category || "ordering").slice(0, 50),
-      keywords: String(item.keywords || "").slice(0, 500),
-      evidenceTurnIds: Array.isArray(item.evidenceTurnIds)
+    ).slice(0, 12).map((item) => {
+      const evidenceTurnIds = Array.isArray(item.evidenceTurnIds)
         ? [...new Set(item.evidenceTurnIds.map(String).filter((id) => knownIds.has(id)))].slice(0, 30)
-        : [],
-    }))
+        : [];
+      const proposedAnswer = String(item.answer || "").slice(0, 2_000);
+      const groundedAnswer = item.type !== "faq" || !proposedAnswer
+        ? proposedAnswer
+        : evidenceTurnIds.some((id) => {
+          const turn = turnById.get(id);
+          return evaluationOutcome.get(id) === "success" && Boolean(turn?.answer) &&
+            normalizedAnswer(turn?.answer || "") === normalizedAnswer(proposedAnswer);
+        })
+          ? proposedAnswer
+          : "";
+      return {
+        type: item.type,
+        title: String(item.title).slice(0, 200),
+        reason: String(item.reason || "").slice(0, 1_000),
+        question: String(item.question || "").slice(0, 500),
+        answer: groundedAnswer,
+        category: String(item.category || "ordering").slice(0, 50),
+        keywords: String(item.keywords || "").slice(0, 500),
+        evidenceTurnIds,
+      };
+    }).filter((item) => item.evidenceTurnIds.length > 0)
     : [];
   return {
     summary: String(parsed.summary || "").slice(0, 5_000),
@@ -192,6 +212,7 @@ async function analyzeWithAi(turns: TurnRow[]): Promise<AiAnalysis | null> {
             "Judge whether each answer correctly resolves the question or safely advances the required workflow.",
             "A correct order-change handoff is a success, not a failure. A message-send error, irrelevant answer, or no grounded answer is a failure.",
             "Use needs_review when the transcript is insufficient. Never infer success merely because a message was sent.",
+            "Use automaticEvaluation as a diagnostic signal, but independently verify it against the question, answer, route, and handoff state.",
             "Create improvement suggestions by clustering repeated failures.",
             "Never invent company prices, policies, dates, or promises. For a missing FAQ whose answer is not supported by an existing successful answer, leave answer empty.",
             "Return JSON only with summary, failureThemes, evaluations, and suggestions.",
@@ -212,6 +233,12 @@ async function analyzeWithAi(turns: TurnRow[]): Promise<AiAnalysis | null> {
               failureReason: turn.failure_reason,
               replySent: turn.reply_sent,
               humanHandoff: turn.human_handoff,
+              automaticEvaluation: {
+                outcome: turn.auto_outcome,
+                score: turn.auto_score,
+                dimensions: turn.auto_dimensions,
+                reason: turn.auto_reason,
+              },
             })),
           }),
         },
@@ -262,7 +289,7 @@ Deno.serve(async (request) => {
     const environment = deploymentEnvironment();
     const { data, error } = await admin
       .from("customer_service_turns")
-      .select("id,question,answer,intent,route,processing_status,failure_reason,reply_attempted,reply_sent,human_handoff,used_model,latency_ms,created_at")
+      .select("id,question,answer,intent,route,processing_status,failure_reason,reply_attempted,reply_sent,human_handoff,used_model,latency_ms,auto_outcome,auto_score,auto_dimensions,auto_reason,created_at")
       .eq("environment", environment)
       .gte("created_at", period.start)
       .lt("created_at", period.end)
@@ -287,6 +314,9 @@ Deno.serve(async (request) => {
     const attempted = turns.filter((turn) => turn.reply_attempted).length;
     const sent = turns.filter((turn) => turn.reply_sent).length;
     const eligible = turns.filter((turn) => turn.processing_status !== "skipped").length;
+    const automaticallyEvaluated = turns.filter((turn) => turn.auto_outcome).length;
+    const wrongHandoffs = turns.filter((turn) => turn.auto_dimensions?.handoff_correct === false).length;
+    const groundedTurns = turns.filter((turn) => turn.auto_dimensions?.grounded === true).length;
     const metrics = {
       received: turns.length,
       eligible,
@@ -299,6 +329,12 @@ Deno.serve(async (request) => {
       successful,
       failed,
       needs_review: needsReview,
+      automatically_evaluated: automaticallyEvaluated,
+      automatic_success_rate: automaticallyEvaluated
+        ? turns.filter((turn) => turn.auto_outcome === "success").length / automaticallyEvaluated
+        : null,
+      grounded_rate: automaticallyEvaluated ? groundedTurns / automaticallyEvaluated : null,
+      wrong_handoff_count: wrongHandoffs,
       success_rate: successful + failed > 0 ? successful / (successful + failed) : null,
       send_success_rate: attempted > 0 ? sent / attempted : null,
       average_latency_ms: turns.length
