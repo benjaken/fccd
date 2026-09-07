@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowDown, ArrowUp, Pencil, ReceiptText } from "lucide-react";
+import { ArrowDown, ArrowUp, Pencil, ReceiptText, Trash2 } from "lucide-react";
 
 import { FilterableSelect } from "@/components/ui/filterable-select";
 import { Button } from "@/components/ui/button";
@@ -8,10 +8,10 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { DetailLink } from "@/components/ui/detail-link";
 import { ListTable } from "@/components/ui/list-table";
+import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { Modal } from "@/components/ui/modal";
 import { SidePanel } from "@/components/ui/side-panel";
 import { OperationalListState } from "@/components/ui/operational-list-state";
-import { ResponsiveFilterPanel } from "@/components/ui/responsive-filter-panel";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { hongKongDateKey } from "@/lib/date-time";
 import { useMediaQuery } from "@/lib/use-media-query";
@@ -43,14 +43,20 @@ export function MasoftInvoiceReceiptsPage({
   canManageActions = true,
   loadSettlements = fetchMasoftSettlements,
   loadFilterOptions = fetchMasoftFilterOptions,
+  deleteSettlement = deleteMasoftSettlement,
 }: {
   canViewFinance: boolean;
   canManageActions?: boolean;
   loadSettlements?: typeof fetchMasoftSettlements;
   loadFilterOptions?: typeof fetchMasoftFilterOptions;
+  deleteSettlement?: typeof deleteMasoftSettlement;
 }) {
   const { t, i18n } = useTranslation();
   const [dateMode, setDateMode] = useState<DateMode>("single");
+  const [orderNumberDraft, setOrderNumberDraft] = useState("");
+  const [orderNumber, setOrderNumber] = useState("");
+  const [amountMin, setAmountMin] = useState("");
+  const [amountMax, setAmountMax] = useState("");
   const [date, setDate] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -76,6 +82,7 @@ export function MasoftInvoiceReceiptsPage({
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState(false);
   const [selected, setSelected] = useState<Map<string, MasoftSettlement>>(new Map());
   const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
@@ -91,7 +98,9 @@ export function MasoftInvoiceReceiptsPage({
     if (appending) { setLoadingMore(true); setLoadMoreError(false); }
     else { setLoading(true); setError(false); }
     try {
-      const result = await loadSettlements({ page, payoutDate: dateMode === "single" ? date || null : null, payoutDateStart: dateMode === "range" ? startDate || null : null, payoutDateEnd: dateMode === "range" ? endDate || null : null, channelId: channelId || null, paymentMethodId: methodId || null, payoutAscending });
+      const parsedAmountMin = amountMin.trim() === "" ? null : Number(amountMin);
+      const parsedAmountMax = amountMax.trim() === "" ? null : Number(amountMax);
+      const result = await loadSettlements({ page, orderNumber: orderNumber || null, amountMin: Number.isFinite(parsedAmountMin) ? parsedAmountMin : null, amountMax: Number.isFinite(parsedAmountMax) ? parsedAmountMax : null, payoutDate: dateMode === "single" ? date || null : null, payoutDateStart: dateMode === "range" ? startDate || null : null, payoutDateEnd: dateMode === "range" ? endDate || null : null, channelId: channelId || null, paymentMethodId: methodId || null, payoutAscending });
       setItems((current) => {
         if (!appending) return result.items;
         const next = new Map(current.map((item) => [item.id, item]));
@@ -111,7 +120,7 @@ export function MasoftInvoiceReceiptsPage({
       if (appending) setLoadingMore(false);
       else setLoading(false);
     }
-  }, [canViewFinance, channelId, date, dateMode, endDate, isMobileList, loadSettlements, methodId, page, payoutAscending, reloadKey, startDate]);
+  }, [amountMax, amountMin, canViewFinance, channelId, date, dateMode, endDate, isMobileList, loadSettlements, methodId, orderNumber, page, payoutAscending, reloadKey, startDate]);
 
   useEffect(() => void load(), [load]);
   useEffect(() => {
@@ -170,11 +179,23 @@ export function MasoftInvoiceReceiptsPage({
     if (!canManageActions || !editing || deleting || !window.confirm(t("masoft.deleteConfirm"))) return;
     setDeleting(true); setDeleteError(false);
     try {
-      await deleteMasoftSettlement(editing.id);
+      await deleteSettlement(editing.id);
       setSelected((previous) => { const next = new Map(previous); next.delete(editing.id); return next; });
       setEditing(null); setReloadKey((key) => key + 1);
     } catch { setDeleteError(true); }
     finally { setDeleting(false); }
+  };
+  const removeFromList = async (settlement: MasoftSettlement) => {
+    if (!canManageActions || hasVerifiedOrderLinks(settlement) || deletingId || !window.confirm(t("masoft.deleteConfirm"))) return;
+    setDeletingId(settlement.id);
+    try {
+      await deleteSettlement(settlement.id);
+      setSelected((previous) => { const next = new Map(previous); next.delete(settlement.id); return next; });
+      setReloadKey((key) => key + 1);
+    } catch {
+      setEditing(settlement);
+      setDeleteError(true);
+    } finally { setDeletingId(null); }
   };
 
   if (!canViewFinance) return <OperationalListState icon={ReceiptText} title={t("masoft.restricted")} description={t("masoft.restrictedDescription")} />;
@@ -183,14 +204,24 @@ export function MasoftInvoiceReceiptsPage({
     <header className="page-heading orders-heading"><div><span className="eyebrow">{t("masoft.eyebrow")}</span><h1>{t("masoft.title")}</h1><p>{t("masoft.description")}</p></div></header>
     <article className="panel orders-panel responsive-card-list-panel">
       <header className="orders-toolbar payments-reconciliation-toolbar">
-        <ResponsiveFilterPanel active={Boolean(date || startDate || endDate || channelId || methodId)}>
-        <label className="payments-date-filter-mode"><span>{t("masoft.payoutFilter")}</span><select value={dateMode} onChange={(event) => { setDateMode(event.target.value as DateMode); resetPage(); }}><option value="single">{t("masoft.singleDate")}</option><option value="range">{t("masoft.dateRange")}</option></select></label>
-        {dateMode === "single" ? <DatePicker id="masoft-payout-date" value={date} onChange={(value) => { setDate(value); resetPage(); }} label={t("masoft.payoutFilter")} hideLabel /> : <DateRangePicker startId="masoft-payout-start" endId="masoft-payout-end" startValue={startDate} endValue={endDate} onStartChange={(value) => { setStartDate(value); resetPage(); }} onEndChange={(value) => { setEndDate(value); resetPage(); }} startLabel={t("masoft.from")} endLabel={t("masoft.to")} legend={t("masoft.payoutRange")} />}
-        <div className="payments-filter-fields">
-          <label className="payments-filter-field"><span>{t("masoft.brand")}</span><FilterableSelect value={channelId} onChange={(event) => { setChannelId(event.target.value); resetPage(); }}><option value="">{t("masoft.allBrands")}</option>{options.channels.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}</FilterableSelect></label>
-          <label className="payments-filter-field"><span>{t("masoft.paymentMethod")}</span><FilterableSelect value={methodId} onChange={(event) => { setMethodId(event.target.value); resetPage(); }}><option value="">{t("masoft.allPaymentMethods")}</option>{options.paymentMethods.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}</FilterableSelect></label>
-        </div>
-        </ResponsiveFilterPanel>
+        <ListSearchBar
+          id="masoft-order-number-search"
+          value={orderNumberDraft}
+          onChange={setOrderNumberDraft}
+          onSubmit={() => { setOrderNumber(orderNumberDraft.trim()); resetPage(); }}
+          label={t("masoft.orderSearch")}
+          placeholder={t("masoft.orderSearchPlaceholder")}
+          filtersActive={Boolean(date || startDate || endDate || channelId || methodId || amountMin || amountMax)}
+          filters={<>
+            <label className="payments-date-filter-mode"><span>{t("masoft.payoutFilter")}</span><select value={dateMode} onChange={(event) => { setDateMode(event.target.value as DateMode); resetPage(); }}><option value="single">{t("masoft.singleDate")}</option><option value="range">{t("masoft.dateRange")}</option></select></label>
+            {dateMode === "single" ? <DatePicker id="masoft-payout-date" value={date} onChange={(value) => { setDate(value); resetPage(); }} label={t("masoft.payoutFilter")} hideLabel /> : <DateRangePicker startId="masoft-payout-start" endId="masoft-payout-end" startValue={startDate} endValue={endDate} onStartChange={(value) => { setStartDate(value); resetPage(); }} onEndChange={(value) => { setEndDate(value); resetPage(); }} startLabel={t("masoft.from")} endLabel={t("masoft.to")} legend={t("masoft.payoutRange")} />}
+            <div className="payments-filter-fields">
+              <label className="payments-filter-field"><span>{t("masoft.brand")}</span><FilterableSelect value={channelId} onChange={(event) => { setChannelId(event.target.value); resetPage(); }}><option value="">{t("masoft.allBrands")}</option>{options.channels.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}</FilterableSelect></label>
+              <label className="payments-filter-field"><span>{t("masoft.paymentMethod")}</span><FilterableSelect value={methodId} onChange={(event) => { setMethodId(event.target.value); resetPage(); }}><option value="">{t("masoft.allPaymentMethods")}</option>{options.paymentMethods.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}</FilterableSelect></label>
+              <fieldset className="payments-amount-range"><legend>{t("masoft.amountRange")}</legend><div><label><span>{t("masoft.amountMin")}</span><input type="number" min="0" step="0.01" value={amountMin} onChange={(event) => { setAmountMin(event.target.value); resetPage(); }} placeholder={t("masoft.amountMinPlaceholder")} /></label><span aria-hidden="true">–</span><label><span>{t("masoft.amountMax")}</span><input type="number" min="0" step="0.01" value={amountMax} onChange={(event) => { setAmountMax(event.target.value); resetPage(); }} placeholder={t("masoft.amountMaxPlaceholder")} /></label></div></fieldset>
+            </div>
+          </>}
+        />
         {canManageActions && selectedItems.length ? <div className="masoft-selection-actions"><span>{t("masoft.selected", { count: selectedItems.length, amount: formatter.format(selectedNet) })}</span><Button type="button" variant="outline" onClick={openInvoiceModal}>{t("masoft.addInvoice")}</Button></div> : null}
       </header>
       {error ? <OperationalListState icon={ReceiptText} title={t("masoft.loadError")} description={t("masoft.loadErrorDescription")} retryLabel={t("masoft.retry")} onRetry={() => setReloadKey((key) => key + 1)} /> : !loading && !items.length ? <OperationalListState icon={ReceiptText} title={t("masoft.empty")} description={t("masoft.emptyDescription")} /> : <ListTable
@@ -222,11 +253,11 @@ export function MasoftInvoiceReceiptsPage({
               <div><dt>{t("masoft.columns.charges")}</dt><dd>{formatter.format(item.charges)}</dd></div>
               <div><dt>{t("masoft.columns.receipt")}</dt><dd>{item.receiptNumber || t("common.notSet")}</dd></div>
             </dl>
-            {canManageActions ? <footer><Button variant="ghost" size="icon" onClick={() => openEdit(item)} aria-label={t("masoft.edit")}><Pencil /></Button></footer> : null}
+            {canManageActions ? <footer><div className="table-row-actions"><Button variant="outline" size="sm" onClick={() => openEdit(item)}><Pencil />{t("masoft.edit")}</Button><Button variant="destructive" size="sm" disabled={hasVerifiedOrderLinks(item) || deletingId === item.id} title={hasVerifiedOrderLinks(item) ? t("masoft.deleteVerifiedUnavailable") : undefined} onClick={() => void removeFromList(item)}><Trash2 />{deletingId === item.id ? t("masoft.deleting") : t("masoft.delete")}</Button></div></footer> : null}
           </article>)}
         </div> : undefined}
-        header={<tr><th className="payments-select-cell"><input type="checkbox" checked={pageAllSelected} disabled={!items.length || loading} onChange={(event) => togglePageSelection(event.target.checked)} aria-label={t("masoft.selectAll")} /></th><th>{t("masoft.columns.invoice")}</th><th>{t("masoft.columns.brand")}</th><th><button type="button" className="table-sort-button" onClick={() => { setPayoutAscending((value) => !value); resetPage(); }} aria-label={t("masoft.sortPayoutDate")}>{t("masoft.columns.payout")}{payoutAscending ? <ArrowUp /> : <ArrowDown />}</button></th><th>{t("masoft.columns.orders")}</th><th>{t("masoft.columns.paymentMethod")}</th><th>{t("masoft.columns.gross")}</th><th>{t("masoft.columns.charges")}</th><th>{t("masoft.columns.net")}</th><th>{t("masoft.columns.receipt")}</th><th /></tr>}>
-        {items.map((item) => <tr key={item.id}><td className="payments-select-cell"><input type="checkbox" checked={selected.has(item.id)} disabled={!canManageActions} onChange={(event) => toggleSelection(item, event.target.checked)} aria-label={t("masoft.selectRecord", { value: item.invoiceNumber || item.id })} /></td><td>{item.invoiceNumber || "—"}</td><td>{item.channelName || "—"}</td><td>{item.payoutAt ? new Intl.DateTimeFormat(i18n.language, { dateStyle: "medium", timeZone: "Asia/Hong_Kong" }).format(new Date(item.payoutAt)) : "—"}</td><td><div className="masoft-orders-cell">{hasVerifiedOrderLinks(item) ? item.payments.map((payment) => <DetailLink key={payment.id} className="masoft-order-tag" to={`/orders/${payment.orderId}`} target="_blank" rel="noopener noreferrer">{payment.orderNumber || "—"}</DetailLink>) : <span className="masoft-order-pending">{t("masoft.pendingConfirmation")}</span>}</div></td><td>{item.paymentMethodName || "—"}</td><td>{formatter.format(item.grossAmount)}</td><td>{formatter.format(item.charges)}</td><td><strong>{formatter.format(item.netAmount)}</strong></td><td>{item.receiptNumber || "—"}</td><td className="table-actions-cell">{canManageActions ? <Button variant="ghost" size="icon" onClick={() => openEdit(item)} aria-label={t("masoft.edit")}><Pencil /></Button> : null}</td></tr>)}
+        header={<tr><th className="payments-select-cell"><input type="checkbox" checked={pageAllSelected} disabled={!items.length || loading} onChange={(event) => togglePageSelection(event.target.checked)} aria-label={t("masoft.selectAll")} /></th><th>{t("masoft.columns.invoice")}</th><th>{t("masoft.columns.brand")}</th><th><button type="button" className="table-sort-button" onClick={() => { setPayoutAscending((value) => !value); resetPage(); }} aria-label={t("masoft.sortPayoutDate")}>{t("masoft.columns.payout")}{payoutAscending ? <ArrowUp /> : <ArrowDown />}</button></th><th>{t("masoft.columns.orders")}</th><th>{t("masoft.columns.paymentMethod")}</th><th>{t("masoft.columns.gross")}</th><th>{t("masoft.columns.charges")}</th><th>{t("masoft.columns.net")}</th><th>{t("masoft.columns.receipt")}</th><th>{t("masoft.actions")}</th></tr>}>
+        {items.map((item) => <tr key={item.id}><td className="payments-select-cell"><input type="checkbox" checked={selected.has(item.id)} disabled={!canManageActions} onChange={(event) => toggleSelection(item, event.target.checked)} aria-label={t("masoft.selectRecord", { value: item.invoiceNumber || item.id })} /></td><td>{item.invoiceNumber || "—"}</td><td>{item.channelName || "—"}</td><td>{item.payoutAt ? new Intl.DateTimeFormat(i18n.language, { dateStyle: "medium", timeZone: "Asia/Hong_Kong" }).format(new Date(item.payoutAt)) : "—"}</td><td><div className="masoft-orders-cell">{hasVerifiedOrderLinks(item) ? item.payments.map((payment) => <DetailLink key={payment.id} className="masoft-order-tag" to={`/orders/${payment.orderId}`} target="_blank" rel="noopener noreferrer">{payment.orderNumber || "—"}</DetailLink>) : <span className="masoft-order-pending">{t("masoft.pendingConfirmation")}</span>}</div></td><td>{item.paymentMethodName || "—"}</td><td>{formatter.format(item.grossAmount)}</td><td>{formatter.format(item.charges)}</td><td><strong>{formatter.format(item.netAmount)}</strong></td><td>{item.receiptNumber || "—"}</td><td className="table-actions-cell"><div className="table-row-actions">{canManageActions ? <><Button variant="outline" size="sm" onClick={() => openEdit(item)}><Pencil />{t("masoft.edit")}</Button><Button variant="destructive" size="sm" disabled={hasVerifiedOrderLinks(item) || deletingId === item.id} title={hasVerifiedOrderLinks(item) ? t("masoft.deleteVerifiedUnavailable") : undefined} onClick={() => void removeFromList(item)}><Trash2 />{deletingId === item.id ? t("masoft.deleting") : t("masoft.delete")}</Button></> : null}</div></td></tr>)}
       </ListTable>}
       <TablePagination summary={t("masoft.pagination", { from: visibleFrom, to: visibleTo, total })} page={page} totalPages={totalPages} loading={loading} onPrevious={() => setPage((value) => Math.max(1, value - 1))} onNext={() => setPage((value) => Math.min(totalPages, value + 1))} onPageChange={setPage} previousLabel={t("masoft.previous")} nextLabel={t("masoft.next")} pageLabel={t("masoft.pageOf")} jumpLabel={t("masoft.jumpToPage")} />
     </article>

@@ -493,7 +493,9 @@
   font-weight: 700;
 }
 
-.payments-filter-field select {
+.payments-filter-field select,
+.payments-filter-field input,
+.payments-amount-range input {
   min-height: 2.5rem;
   padding: 0 0.6rem;
   line-height: 1.4;
@@ -502,6 +504,65 @@
   background: var(--background);
   color: var(--foreground);
   font: inherit;
+}
+
+.payments-amount-range {
+  display: grid;
+  min-width: 15rem;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.payments-amount-range > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.payments-amount-range label {
+  display: block;
+}
+
+.payments-amount-range label > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.payments-amount-range input {
+  width: 100%;
+}
+
+.responsive-filter-drawer .payments-amount-range {
+  width: 100%;
+  min-width: 0;
+}
+
+.list-search-filter-drawer .payments-date-filter-mode,
+.list-search-filter-drawer .date-picker,
+.list-search-filter-drawer .date-range-picker,
+.list-search-filter-drawer .payments-filter-field,
+.list-search-filter-drawer .payments-amount-range {
+  width: 100%;
+  min-width: 0;
+}
+
+.list-search-filter-drawer .payments-filter-fields {
+  display: grid;
+  width: 100%;
+  margin-left: 0;
 }
 
 .payments-selection-actions {

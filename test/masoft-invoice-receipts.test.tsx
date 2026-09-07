@@ -70,4 +70,36 @@ describe("MasoftInvoiceReceiptsPage", () => {
     expect(loadSettlements).toHaveBeenCalledWith(expect.objectContaining({ page: 2 }));
     vi.unstubAllGlobals();
   });
+
+  it("searches by order number and filters the payment amount range", async () => {
+    const loadSettlements = vi.fn().mockResolvedValue({ total: 1, items: [settlement] });
+    const user = userEvent.setup();
+
+    render(<MemoryRouter><MasoftInvoiceReceiptsPage canViewFinance loadSettlements={loadSettlements} loadFilterOptions={async () => ({ channels: [], paymentMethods: [] })} /></MemoryRouter>);
+
+    await screen.findByText("INV-1001");
+    await user.type(screen.getByRole("searchbox", { name: "Search order number" }), "B-1001");
+    await user.type(screen.getByRole("spinbutton", { name: "Minimum amount" }), "100");
+    await user.type(screen.getByRole("spinbutton", { name: "Maximum amount" }), "200");
+
+    await waitFor(() => expect(loadSettlements).toHaveBeenLastCalledWith(expect.objectContaining({
+      page: 1,
+      orderNumber: "B-1001",
+      amountMin: 100,
+      amountMax: 200,
+    })));
+  });
+
+  it("shows a direct delete action for an unverified receipt without a chevron action", async () => {
+    const pending = { ...settlement, payments: [{ ...settlement.payments[0], orderId: null }] };
+    const deleteSettlement = vi.fn().mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+
+    render(<MemoryRouter><MasoftInvoiceReceiptsPage canViewFinance loadSettlements={async () => ({ total: 1, items: [pending] })} loadFilterOptions={async () => ({ channels: [], paymentMethods: [] })} deleteSettlement={deleteSettlement} /></MemoryRouter>);
+
+    await user.click(await screen.findByRole("button", { name: "Delete" }));
+    await waitFor(() => expect(deleteSettlement).toHaveBeenCalledWith("settlement-1"));
+    expect(screen.queryByRole("button", { name: /open/i })).not.toBeInTheDocument();
+  });
 });

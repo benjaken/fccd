@@ -19,8 +19,10 @@ export type PaymentListItem = {
 
 export type PaymentListFilters = {
   page: number;
-  /** Retained for the data-input progress panel. The reconciliation page does not use it. */
+  /** Searches the order-number snapshot and payment references. */
   search?: string;
+  amountMin?: number | null;
+  amountMax?: number | null;
   /** Retained for the data-input progress panel. The reconciliation page does not use it. */
   month?: string | null;
   pageSize?: number;
@@ -63,6 +65,8 @@ function nextDay(day: string) {
 export async function fetchPayments({
   page,
   search = "",
+  amountMin,
+  amountMax,
   month,
   pageSize = PAYMENTS_PAGE_SIZE,
   paymentDate,
@@ -88,6 +92,8 @@ export async function fetchPayments({
   if (unreconciled) query = query.is("payment_settlement_payments", null);
   if (channelId) query = query.eq("channel_id", channelId);
   if (paymentMethodId) query = query.eq("payment_method_id", paymentMethodId);
+  if (typeof amountMin === "number" && Number.isFinite(amountMin)) query = query.gte("amount", amountMin);
+  if (typeof amountMax === "number" && Number.isFinite(amountMax)) query = query.lte("amount", amountMax);
 
   const term = search.replace(/[^\p{L}\p{N}\s@._+\-#]/gu, " ").trim();
   if (term) {

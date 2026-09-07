@@ -250,21 +250,18 @@ describe("Delivery list page", () => {
     );
 
     await screen.findByRole("heading", { name: "送貨清單" });
+    await user.click(screen.getByRole("button", { name: "開啟篩選" }));
 
     await user.selectOptions(
       screen.getByRole("combobox", { name: "司機／車隊" }),
       "team-1",
-    );
-    await waitFor(() =>
-      expect(loadDeliveries).toHaveBeenLastCalledWith(
-        expect.objectContaining({ motorcadeId: "team-1", page: 1 }),
-      ),
     );
 
     await user.selectOptions(
       screen.getByRole("combobox", { name: "送貨方式" }),
       "method-1",
     );
+    await user.click(within(screen.getByRole("dialog", { name: "篩選" })).getByRole("button", { name: "確定" }));
     await waitFor(() =>
       expect(loadDeliveries).toHaveBeenLastCalledWith(
         expect.objectContaining({
@@ -294,6 +291,7 @@ describe("Delivery list page", () => {
     );
 
     await screen.findByRole("heading", { name: "送貨清單" });
+    await user.click(screen.getByRole("button", { name: "開啟篩選" }));
     const dateRangePicker = screen.getByRole("group", { name: "日期範圍" });
     await user.click(within(dateRangePicker).getByRole("button"));
     let datePopover = document.querySelector<HTMLElement>(
@@ -311,6 +309,7 @@ describe("Delivery list page", () => {
       .find((button) => button.textContent === "22");
     await user.click(endDay!);
     await user.selectOptions(screen.getAllByRole("combobox")[0], "team-1");
+    await user.click(within(screen.getByRole("dialog", { name: "篩選" })).getByRole("button", { name: "確定" }));
 
     const summary = await screen.findByLabelText("已選車隊資料");
     expect(within(summary).getByText("Sun-Line")).toBeInTheDocument();
@@ -362,6 +361,8 @@ describe("Delivery list page", () => {
     expect(printBlock).toContain("body:has(.delivery-summary-print-root) > *");
     expect(printBlock).toContain("display: none !important");
     expect(printBlock).toContain("body:has(.delivery-summary-print-root) > .delivery-summary-print-root");
+    expect(printBlock).toContain(".delivery-summary-print-root *");
+    expect(printBlock).toContain("visibility: visible !important");
     expect(printBlock).not.toContain(".side-panel-root");
     expect(printBlock).not.toContain("position: fixed !important");
     expect(printBlock).toContain("width: 100%");
@@ -371,6 +372,7 @@ describe("Delivery list page", () => {
   });
 
   it("shows fleet names as read-only text even for dispatchers", async () => {
+    const user = userEvent.setup();
     const loadDeliveries = vi.fn().mockResolvedValue(listResult);
     const loadLookups = vi.fn().mockResolvedValue(lookups);
 
@@ -390,6 +392,7 @@ describe("Delivery list page", () => {
     expect(
       table.queryByRole("combobox", { name: "選擇車隊" }),
     ).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "開啟篩選" }));
     expect(
       screen.getByRole("combobox", { name: "司機／車隊" }),
     ).toBeInTheDocument();

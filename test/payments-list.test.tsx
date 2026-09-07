@@ -124,6 +124,25 @@ describe("PaymentsListPage", () => {
     await waitFor(() => expect(loadPayments).toHaveBeenLastCalledWith(expect.objectContaining({ channelId: "channel-2", paymentMethodId: "method-1" })));
   });
 
+  it("searches by order number and filters the payment amount range", async () => {
+    const loadPayments = vi.fn().mockResolvedValue({ items: payments, total: 3 });
+    const user = userEvent.setup();
+    render(<MemoryRouter><PaymentsListPage canViewFinance loadPayments={loadPayments} loadPaymentFilterOptions={async () => filterOptions} /></MemoryRouter>);
+
+    await screen.findByText("B-1001");
+    await user.type(screen.getByRole("searchbox", { name: "Search order number" }), "B-1001");
+    await user.type(screen.getByRole("spinbutton", { name: "Minimum amount" }), "100");
+    await user.type(screen.getByRole("spinbutton", { name: "Maximum amount" }), "200");
+
+    await waitFor(() => expect(loadPayments).toHaveBeenLastCalledWith(expect.objectContaining({
+      page: 1,
+      unreconciled: true,
+      search: "B-1001",
+      amountMin: 100,
+      amountMax: 200,
+    })));
+  });
+
   it("only offers management for a compatible brand and payment method", async () => {
     const user = userEvent.setup();
     render(<MemoryRouter><PaymentsListPage canViewFinance loadPayments={async () => ({ items: payments, total: 3 })} loadPaymentFilterOptions={async () => filterOptions} /></MemoryRouter>);

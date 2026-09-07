@@ -8,9 +8,9 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { DetailLink } from "@/components/ui/detail-link";
 import { ListTable } from "@/components/ui/list-table";
+import { ListSearchBar } from "@/components/ui/list-search-bar";
 import { Modal } from "@/components/ui/modal";
 import { OperationalListState } from "@/components/ui/operational-list-state";
-import { ResponsiveFilterPanel } from "@/components/ui/responsive-filter-panel";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { useMediaQuery } from "@/lib/use-media-query";
 import {
@@ -60,6 +60,10 @@ export function PaymentsListPage({
   saveSettlement?: (input: PaymentSettlementInput) => Promise<void>;
 }) {
   const { t, i18n } = useTranslation();
+  const [orderNumberDraft, setOrderNumberDraft] = useState("");
+  const [orderNumber, setOrderNumber] = useState("");
+  const [amountMin, setAmountMin] = useState("");
+  const [amountMax, setAmountMax] = useState("");
   const [dateFilterMode, setDateFilterMode] = useState<DateFilterMode>("single");
   const [paymentDate, setPaymentDate] = useState("");
   const [paymentDateStart, setPaymentDateStart] = useState("");
@@ -148,9 +152,14 @@ export function PaymentsListPage({
       setError(null);
     }
     try {
+      const parsedAmountMin = amountMin.trim() === "" ? null : Number(amountMin);
+      const parsedAmountMax = amountMax.trim() === "" ? null : Number(amountMax);
       const result = await loadPayments({
         page,
         unreconciled: true,
+        search: orderNumber,
+        amountMin: Number.isFinite(parsedAmountMin) ? parsedAmountMin : null,
+        amountMax: Number.isFinite(parsedAmountMax) ? parsedAmountMax : null,
         paymentDate: dateFilterMode === "single" ? paymentDate || null : null,
         paymentDateStart: dateFilterMode === "range" ? paymentDateStart || null : null,
         paymentDateEnd: dateFilterMode === "range" ? paymentDateEnd || null : null,
@@ -182,7 +191,7 @@ export function PaymentsListPage({
       if (appending) setLoadingMore(false);
       else setLoading(false);
     }
-  }, [canViewFinance, channelId, dateFilterMode, isMobileList, loadPayments, page, paymentDate, paymentDateEnd, paymentDateStart, paymentMethodId, reloadKey]);
+  }, [amountMax, amountMin, canViewFinance, channelId, dateFilterMode, isMobileList, loadPayments, orderNumber, page, paymentDate, paymentDateEnd, paymentDateStart, paymentMethodId, reloadKey]);
 
   useEffect(() => void load(), [load]);
 
@@ -272,7 +281,15 @@ export function PaymentsListPage({
       </header>
       <article className="panel orders-panel payments-reconciliation-panel responsive-card-list-panel">
         <header className="orders-toolbar payments-reconciliation-toolbar">
-          <ResponsiveFilterPanel active={Boolean(paymentDate || paymentDateStart || paymentDateEnd || channelId || paymentMethodId)}>
+          <ListSearchBar
+            id="payments-order-number-search"
+            value={orderNumberDraft}
+            onChange={setOrderNumberDraft}
+            onSubmit={() => { setOrderNumber(orderNumberDraft.trim()); setPage(1); }}
+            label={t("payments.search")}
+            placeholder={t("payments.searchPlaceholder")}
+            filtersActive={Boolean(paymentDate || paymentDateStart || paymentDateEnd || channelId || paymentMethodId || amountMin || amountMax)}
+            filters={<>
           <label className="payments-date-filter-mode">
             <span>{t("payments.dateFilter")}</span>
             <select
@@ -325,8 +342,17 @@ export function PaymentsListPage({
                 {filterOptions.paymentMethods.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}
               </FilterableSelect>
             </label>
+            <fieldset className="payments-amount-range">
+              <legend>{t("payments.amountRange")}</legend>
+              <div>
+                <label><span>{t("payments.amountMin")}</span><input type="number" min="0" step="0.01" value={amountMin} onChange={(event) => { setAmountMin(event.target.value); setPage(1); }} placeholder={t("payments.amountMinPlaceholder")} /></label>
+                <span aria-hidden="true">–</span>
+                <label><span>{t("payments.amountMax")}</span><input type="number" min="0" step="0.01" value={amountMax} onChange={(event) => { setAmountMax(event.target.value); setPage(1); }} placeholder={t("payments.amountMaxPlaceholder")} /></label>
+              </div>
+            </fieldset>
           </div>
-          </ResponsiveFilterPanel>
+            </>}
+          />
           <div className="payments-selection-actions">
             {selectedItems.length ? <span>{t("payments.selected", { count: selectedItems.length, amount: selectedTotal })}</span> : null}
             {selectionWarning ? <span className="payments-selection-warning" role="status">{selectionWarning}</span> : null}

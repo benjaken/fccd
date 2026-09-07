@@ -28,6 +28,9 @@ export type MasoftSettlement = {
 
 export type MasoftFilters = {
   page: number;
+  orderNumber?: string | null;
+  amountMin?: number | null;
+  amountMax?: number | null;
   payoutDate?: string | null;
   payoutDateStart?: string | null;
   payoutDateEnd?: string | null;
@@ -49,12 +52,27 @@ function single<T>(value: T | T[] | null) { return Array.isArray(value) ? value[
 
 export async function fetchMasoftSettlements(filters: MasoftFilters) {
   const start = (filters.page - 1) * MASOFT_PAGE_SIZE;
+  const orderNumber = filters.orderNumber?.trim() ?? "";
+  let matchingSettlementIds: string[] | null = null;
+  if (orderNumber) {
+    const { data: links, error: linkError } = await supabase
+      .from("payment_settlement_payments")
+      .select("payment_settlement_id,payments!inner(order_number_snapshot)")
+      .ilike("payments.order_number_snapshot", `%${orderNumber}%`)
+      .limit(5000);
+    if (linkError) throw linkError;
+    matchingSettlementIds = [...new Set((links ?? []).map((link) => link.payment_settlement_id))];
+    if (!matchingSettlementIds.length) return { total: 0, items: [] };
+  }
   let query = supabase
     .from("payment_settlements")
     .select("id,invoice_number,receipt_number,channel_id,payment_method_id,payout_at,gross_amount,charges,net_amount,channels(name),payment_methods(name),payment_settlement_payments(payment_id,payments(id,order_id,order_number_snapshot,amount,currency,payment_at,orders(order_number)))", { count: "exact" })
     .order("payout_at", { ascending: filters.payoutAscending ?? false, nullsFirst: false })
     .order("created_at", { ascending: false })
     .range(start, start + MASOFT_PAGE_SIZE - 1);
+  if (matchingSettlementIds) query = query.in("id", matchingSettlementIds);
+  if (typeof filters.amountMin === "number" && Number.isFinite(filters.amountMin)) query = query.gte("gross_amount", filters.amountMin);
+  if (typeof filters.amountMax === "number" && Number.isFinite(filters.amountMax)) query = query.lte("gross_amount", filters.amountMax);
   if (filters.channelId) query = query.eq("channel_id", filters.channelId);
   if (filters.paymentMethodId) query = query.eq("payment_method_id", filters.paymentMethodId);
   if (filters.payoutDate) query = query.gte("payout_at", dayStart(filters.payoutDate)).lt("payout_at", nextDay(filters.payoutDate));
