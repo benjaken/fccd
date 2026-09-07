@@ -834,7 +834,16 @@ export type ShopifyFreeDrink = {
 };
 
 export function isShopifyBeverageName(value: string | null | undefined): boolean {
-  return /(?:茶|可樂|汽水|果汁|咖啡|water|tea|coke|coffee|juice)/i.test(String(value ?? ""));
+  const name = String(value ?? "").trim();
+  if (!name) return false;
+  if (/沙茶/.test(name)) return false;
+
+  // Chinese drink names normally end with the beverage type, optionally
+  // followed by a quantity or packaging note. Requiring that boundary keeps
+  // savoury ingredients such as "沙茶" from being classified as drinks.
+  const chineseDrink = /(?:茶|可樂|汽水|果汁|咖啡)(?:\s*(?:\([^)]*\)|（[^）]*）|[xX×*]?\s*\d+(?:\.\d+)?\s*(?:包|盒|罐|樽|支|杯|份)?))*\s*$/;
+  const englishDrink = /\b(?:water|tea|coke|coffee|juice)\b/i;
+  return chineseDrink.test(name) || englishDrink.test(name);
 }
 
 /** Keeps lunch-box variant choices as operational remarks while excluding the

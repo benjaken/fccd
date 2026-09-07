@@ -45,6 +45,13 @@ import {
 describe("Shopify generated beverage reconciliation", () => {
   it("does not treat a tea selection as a catering dish", () => {
     expect(isShopifyBeverageName("蜂蜜綠茶")).toBe(true);
+    expect(isShopifyBeverageName("烏龍茶 6包")).toBe(true);
+    expect(isShopifyBeverageName("道地蜂蜜綠茶 (6包)")).toBe(true);
+    expect(isShopifyBeverageName("可樂 2罐")).toBe(true);
+    expect(isShopifyBeverageName("沙茶 (2磅)")).toBe(false);
+    expect(isShopifyBeverageName("沙茶鮑魚炆牛腩 (2磅)")).toBe(false);
+    expect(isShopifyBeverageName("可樂雞翅")).toBe(false);
+    expect(isShopifyBeverageName("可樂雞翼 (2磅)")).toBe(false);
     expect(isShopifyBeverageName("煙三文魚蜂蜜醋沙律")).toBe(false);
   });
 
