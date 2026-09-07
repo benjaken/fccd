@@ -2065,7 +2065,7 @@ export function QuoteEditorPage({
       setReordering(false);
     }
   };
-  const swapLinePosition = async (lineId: string, targetPosition: number) => {
+  const moveLineToPosition = async (lineId: string, targetPosition: number) => {
     if (reordering) return;
     const previousLines = lines;
     const reorderableLines = lines.filter((line) => !line.isVoid);
@@ -2073,10 +2073,8 @@ export function QuoteEditorPage({
     const targetIndex = targetPosition - 1;
     if (sourceIndex < 0 || targetIndex < 0 || targetIndex >= reorderableLines.length || sourceIndex === targetIndex) return;
     const nextActiveLines = [...reorderableLines];
-    [nextActiveLines[sourceIndex], nextActiveLines[targetIndex]] = [
-      nextActiveLines[targetIndex],
-      nextActiveLines[sourceIndex],
-    ];
+    const [movedLine] = nextActiveLines.splice(sourceIndex, 1);
+    nextActiveLines.splice(targetIndex, 0, movedLine);
     const nextLines = [...nextActiveLines, ...previousLines.filter((line) => line.isVoid)];
     setLines(nextLines);
     if (nextLines.some((line) => line.isPending)) return;
@@ -2767,7 +2765,7 @@ export function QuoteEditorPage({
                         max={activeLines.length}
                         label={`${t("quoteEditor.items.sequence")} ${line.name || index + 1}`}
                         disabled={line.isVoid || reordering}
-                        onCommit={(position) => void swapLinePosition(line.id, position)}
+                        onCommit={(position) => void moveLineToPosition(line.id, position)}
                       />
                       <div>
                         {line.packageId ? <strong>{line.name || "—"}</strong> : editableLineName(line, index)}
@@ -2833,7 +2831,7 @@ export function QuoteEditorPage({
                       max={activeLines.length}
                       label={`${t("quoteEditor.items.sequence")} ${line.name || index + 1}`}
                       disabled={line.isVoid || reordering}
-                      onCommit={(position) => void swapLinePosition(line.id, position)}
+                      onCommit={(position) => void moveLineToPosition(line.id, position)}
                     />
                   </div>
                 </td>

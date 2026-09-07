@@ -1266,23 +1266,20 @@ describe("Quote editor", () => {
   it.each([
     ["quote", "/quotes/quote-1/edit"],
     ["order", "/orders/quote-1/edit"],
-  ] as const)("swaps product positions when the %s sequence is edited", async (documentType, route) => {
+  ] as const)("inserts a product at the edited %s sequence and shifts later products", async (documentType, route) => {
     const user = userEvent.setup();
     const saveLineOrder = vi.fn().mockResolvedValue(undefined);
-    const lines: QuoteLine[] = [
-      {
-        id: "line-1", productId: "product-1", packageId: null, sku: "P001",
-        name: "Roast pork", quantity: 2, unitPrice: 88, totalPrice: 176, remarks: null,
-      },
-      {
-        id: "line-2", productId: "product-2", packageId: null, sku: "P002",
-        name: "Beef", quantity: 1, unitPrice: 68, totalPrice: 68, remarks: null,
-      },
-      {
-        id: "line-3", productId: "product-3", packageId: null, sku: "P003",
-        name: "Chicken", quantity: 1, unitPrice: 58, totalPrice: 58, remarks: null,
-      },
-    ];
+    const lines: QuoteLine[] = Array.from({ length: 26 }, (_, index) => ({
+      id: `line-${index + 1}`,
+      productId: `product-${index + 1}`,
+      packageId: null,
+      sku: `P${String(index + 1).padStart(3, "0")}`,
+      name: `Product ${index + 1}`,
+      quantity: 1,
+      unitPrice: 10,
+      totalPrice: 10,
+      remarks: null,
+    }));
 
     renderEditor({
       documentType,
@@ -1298,18 +1295,40 @@ describe("Quote editor", () => {
 
     const tabs = await screen.findAllByRole("tab");
     await user.click(tabs[1]);
-    const sequence = screen.getByRole("spinbutton", { name: "No. Roast pork" });
+    const sequence = screen.getByRole("spinbutton", { name: "No. Product 26" });
     await user.clear(sequence);
-    await user.type(sequence, "3");
+    await user.type(sequence, "10");
     await user.tab();
 
-    await waitFor(() => expect(saveLineOrder).toHaveBeenCalledWith([
-      "line-3",
-      "line-2",
-      "line-1",
-    ]));
-    expect(screen.getByRole("spinbutton", { name: "No. Roast pork" })).toHaveValue(3);
-    expect(screen.getByRole("spinbutton", { name: "No. Chicken" })).toHaveValue(1);
+    const expectedOrder = [
+      ...Array.from({ length: 9 }, (_, index) => `line-${index + 1}`),
+      "line-26",
+      ...Array.from({ length: 16 }, (_, index) => `line-${index + 10}`),
+    ];
+    await waitFor(() => expect(saveLineOrder).toHaveBeenCalledWith(expectedOrder));
+    expect(screen.getByRole("spinbutton", { name: "No. Product 26" })).toHaveValue(10);
+    expect(screen.getByRole("spinbutton", { name: "No. Product 10" })).toHaveValue(11);
+    expect(screen.getByRole("spinbutton", { name: "No. Product 25" })).toHaveValue(26);
+
+    const movedSequence = screen.getByRole("spinbutton", { name: "No. Product 26" });
+    await user.clear(movedSequence);
+    await user.type(movedSequence, "26");
+    await user.tab();
+
+    const originalOrder = Array.from({ length: 26 }, (_, index) => `line-${index + 1}`);
+    await waitFor(() => expect(saveLineOrder).toHaveBeenLastCalledWith(originalOrder));
+    expect(screen.getByRole("spinbutton", { name: "No. Product 11" })).toHaveValue(11);
+    expect(screen.getByRole("spinbutton", { name: "No. Product 26" })).toHaveValue(26);
+  });
+
+  it("keeps the wider sequence field readable without horizontal scrolling or clipping", () => {
+    const css = readAppStyles();
+    expect(css).toMatch(/\.quote-lines-panel \.table-wrap\s*\{[^}]*overflow-x:\s*hidden/);
+    expect(css).toMatch(/\.quote-lines-panel table\s*\{[^}]*table-layout:\s*fixed/);
+    expect(css).toMatch(/\.quote-line-sequence-input\s*\{[^}]*min-width:\s*48px/);
+    expect(css).toMatch(/\.quote-line-sequence-input\s*\{[^}]*min-height:\s*40px/);
+    expect(css).toMatch(/\.quote-line-sequence-input\s*\{[^}]*appearance:\s*textfield/);
+    expect(css).toMatch(/\.quote-lines-panel th:nth-child\(1\)\s*\{\s*width:\s*11%/);
   });
 
   it("auto-saves quote amount adjustments and adds a utensil line", async () => {
