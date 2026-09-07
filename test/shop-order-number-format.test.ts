@@ -12,7 +12,7 @@ describe("restaurant frozen and dry-goods order numbers", () => {
 
   it("allocates new batch numbers from the shared monthly R-number series", () => {
     const migration = readFileSync(
-      path.resolve("supabase/migrations/20260907110000_use_meat_order_number_format_for_shop_orders.sql"),
+      path.resolve("supabase/migrations/20260907111000_use_meat_order_number_format_for_shop_orders.sql"),
       "utf8",
     );
 
