@@ -196,7 +196,6 @@ export const remainingMappings: SourceMapping[] = [
       ),
     ],
   },
-  named("ds_tags", "product_tags", "Display Name"),
   {
     phase: "remaining",
     sourceType: "ds_type",
@@ -274,7 +273,6 @@ export const remainingMappings: SourceMapping[] = [
       is_active: booleanValue(r.Active, true),
     }),
   },
-  named("osdriver_menu", "osdriver_menus", "Display Name"),
   {
     phase: "remaining",
     sourceType: "a_label",
@@ -296,18 +294,6 @@ export const remainingMappings: SourceMapping[] = [
         "packing_materials",
       ),
     ],
-  },
-  {
-    phase: "remaining",
-    sourceType: "print_label",
-    table: "print_labels",
-    map: (r) => ({
-      ...base(r),
-      order_id: null,
-      order_legacy_id: text(r.A_order),
-      display_name: text(r["Display Name"]),
-    }),
-    relations: [relation("order_legacy_id", "order_id", "orders")],
   },
   {
     phase: "remaining",
