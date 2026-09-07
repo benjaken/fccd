@@ -1,6 +1,6 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { PackageMinus, PackagePlus, Warehouse } from "lucide-react";
+import { PackageMinus, PackagePlus } from "lucide-react";
 
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { cn } from "@/lib/utils";
@@ -27,15 +27,8 @@ export function FactoryWarehousePage() {
 
   return (
     <main className="inventory-records-workspace">
-      <header className="inventory-records-hero">
-        <div className="inventory-records-title">
-          <span className="inventory-records-icon" aria-hidden="true"><Warehouse /></span>
-          <div>
-            <span className="eyebrow">{t("shopOrdering.office")}</span>
-            <h1>{t("shopWarehouse.title")}</h1>
-            <p>{t("shopWarehouse.description")}</p>
-          </div>
-        </div>
+      <h1 className="sr-only">{t("shopWarehouse.title")}</h1>
+      <section className="panel ingredients-panel inventory-records-shell">
         <nav className="inventory-records-nav" aria-label={t("shopWarehouse.title")}>
           {LINKS.filter((link) => access.canAccess(link.permission)).map((link) => {
             const Icon = link.icon;
@@ -52,10 +45,10 @@ export function FactoryWarehousePage() {
             );
           })}
         </nav>
-      </header>
-      <div className="inventory-records-body">
-        <Outlet />
-      </div>
+        <div className="inventory-records-body">
+          <Outlet />
+        </div>
+      </section>
     </main>
   );
 }
