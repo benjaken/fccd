@@ -1263,6 +1263,55 @@ describe("Quote editor", () => {
     expect(screen.getByRole("button", { name: "Drag to reorder item 1 Beef" })).toBeInTheDocument();
   });
 
+  it.each([
+    ["quote", "/quotes/quote-1/edit"],
+    ["order", "/orders/quote-1/edit"],
+  ] as const)("swaps product positions when the %s sequence is edited", async (documentType, route) => {
+    const user = userEvent.setup();
+    const saveLineOrder = vi.fn().mockResolvedValue(undefined);
+    const lines: QuoteLine[] = [
+      {
+        id: "line-1", productId: "product-1", packageId: null, sku: "P001",
+        name: "Roast pork", quantity: 2, unitPrice: 88, totalPrice: 176, remarks: null,
+      },
+      {
+        id: "line-2", productId: "product-2", packageId: null, sku: "P002",
+        name: "Beef", quantity: 1, unitPrice: 68, totalPrice: 68, remarks: null,
+      },
+      {
+        id: "line-3", productId: "product-3", packageId: null, sku: "P003",
+        name: "Chicken", quantity: 1, unitPrice: 58, totalPrice: 58, remarks: null,
+      },
+    ];
+
+    renderEditor({
+      documentType,
+      loadSummary: vi.fn().mockResolvedValue({
+        id: "quote-1",
+        orderNumber: documentType === "quote" ? "FCLQ20260801" : "FCLO20260801",
+        channelId: "channel-1",
+        draft: { ...emptyQuoteDraft, channelId: "channel-1" },
+      }),
+      loadLines: vi.fn().mockResolvedValue(lines),
+      saveLineOrder,
+    }, route);
+
+    const tabs = await screen.findAllByRole("tab");
+    await user.click(tabs[1]);
+    const sequence = screen.getByRole("spinbutton", { name: "No. Roast pork" });
+    await user.clear(sequence);
+    await user.type(sequence, "3");
+    await user.tab();
+
+    await waitFor(() => expect(saveLineOrder).toHaveBeenCalledWith([
+      "line-3",
+      "line-2",
+      "line-1",
+    ]));
+    expect(screen.getByRole("spinbutton", { name: "No. Roast pork" })).toHaveValue(3);
+    expect(screen.getByRole("spinbutton", { name: "No. Chicken" })).toHaveValue(1);
+  });
+
   it("auto-saves quote amount adjustments and adds a utensil line", async () => {
     const user = userEvent.setup();
     const saveFinancialDetails = vi.fn().mockResolvedValue(undefined);

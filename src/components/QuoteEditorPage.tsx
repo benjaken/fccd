@@ -145,6 +145,58 @@ function isBeverageLine(line: QuoteLine) {
     || /\b(?:drink|beverage|water|tea|coke|coffee|juice|soda)\b/i.test(name);
 }
 
+function LineSequenceInput({
+  value,
+  max,
+  label,
+  disabled,
+  onCommit,
+}: {
+  value: number;
+  max: number;
+  label: string;
+  disabled?: boolean;
+  onCommit: (value: number) => void;
+}) {
+  const [draftValue, setDraftValue] = useState(String(value));
+
+  useEffect(() => {
+    setDraftValue(String(value));
+  }, [value]);
+
+  const commit = () => {
+    const trimmed = draftValue.trim();
+    const nextValue = Number(trimmed);
+    if (!/^\d+$/.test(trimmed) || !Number.isInteger(nextValue) || nextValue < 1 || nextValue > max) {
+      setDraftValue(String(value));
+      return;
+    }
+    setDraftValue(String(nextValue));
+    if (nextValue !== value) onCommit(nextValue);
+  };
+
+  return (
+    <input
+      className="quote-line-sequence-input"
+      type="number"
+      inputMode="numeric"
+      min={1}
+      max={max}
+      step={1}
+      aria-label={label}
+      value={draftValue}
+      disabled={disabled}
+      onChange={(event) => setDraftValue(event.target.value)}
+      onBlur={commit}
+      onKeyDown={(event) => {
+        if (event.key !== "Enter") return;
+        event.preventDefault();
+        event.currentTarget.blur();
+      }}
+    />
+  );
+}
+
 const EMPTY_OPTIONS: QuoteEditorOptions = {
   channels: [],
   quoteSalesSources: [],
@@ -2013,6 +2065,32 @@ export function QuoteEditorPage({
       setReordering(false);
     }
   };
+  const swapLinePosition = async (lineId: string, targetPosition: number) => {
+    if (reordering) return;
+    const previousLines = lines;
+    const reorderableLines = lines.filter((line) => !line.isVoid);
+    const sourceIndex = reorderableLines.findIndex((line) => line.id === lineId);
+    const targetIndex = targetPosition - 1;
+    if (sourceIndex < 0 || targetIndex < 0 || targetIndex >= reorderableLines.length || sourceIndex === targetIndex) return;
+    const nextActiveLines = [...reorderableLines];
+    [nextActiveLines[sourceIndex], nextActiveLines[targetIndex]] = [
+      nextActiveLines[targetIndex],
+      nextActiveLines[sourceIndex],
+    ];
+    const nextLines = [...nextActiveLines, ...previousLines.filter((line) => line.isVoid)];
+    setLines(nextLines);
+    if (nextLines.some((line) => line.isPending)) return;
+    setReordering(true);
+    setError(null);
+    try {
+      await saveLineOrder(nextActiveLines.map((line) => line.id));
+    } catch {
+      setLines(previousLines);
+      setError("quote_line_save_failed");
+    } finally {
+      setReordering(false);
+    }
+  };
   const sectionNavigation = (
     <nav
       ref={sectionNavigationRef}
@@ -2684,7 +2762,13 @@ export function QuoteEditorPage({
                 {lines.map((line, index) => (
                   <article className={cn("quote-mobile-line", line.isVoid && "is-cancelled")} role="listitem" key={line.id}>
                     <header>
-                      <span>{index + 1}</span>
+                      <LineSequenceInput
+                        value={index + 1}
+                        max={activeLines.length}
+                        label={`${t("quoteEditor.items.sequence")} ${line.name || index + 1}`}
+                        disabled={line.isVoid || reordering}
+                        onCommit={(position) => void swapLinePosition(line.id, position)}
+                      />
                       <div>
                         {line.packageId ? <strong>{line.name || "—"}</strong> : editableLineName(line, index)}
                         <small>{lineSkuContent(line)}</small>
@@ -2731,18 +2815,27 @@ export function QuoteEditorPage({
                 onDrop={(event) => { event.preventDefault(); void reorderLines(line.id); }}
               >
                 <td className="quote-line-sequence">
-                  <button
-                    type="button"
-                    className="quote-line-drag-handle"
-                    draggable={!line.isVoid && !reordering}
-                    aria-label={t("quoteEditor.items.reorder", { number: index + 1, name: line.name || "" })}
-                    onDragStart={(event) => {
-                      setDraggedLineId(line.id);
-                      event.dataTransfer.effectAllowed = "move";
-                      event.dataTransfer.setData("text/plain", line.id);
-                    }}
-                    onDragEnd={() => { setDraggedLineId(null); setDragOverLineId(null); }}
-                  ><GripVertical /><span>{index + 1}</span></button>
+                  <div className="quote-line-sequence-control">
+                    <button
+                      type="button"
+                      className="quote-line-drag-handle"
+                      draggable={!line.isVoid && !reordering}
+                      aria-label={t("quoteEditor.items.reorder", { number: index + 1, name: line.name || "" })}
+                      onDragStart={(event) => {
+                        setDraggedLineId(line.id);
+                        event.dataTransfer.effectAllowed = "move";
+                        event.dataTransfer.setData("text/plain", line.id);
+                      }}
+                      onDragEnd={() => { setDraggedLineId(null); setDragOverLineId(null); }}
+                    ><GripVertical /></button>
+                    <LineSequenceInput
+                      value={index + 1}
+                      max={activeLines.length}
+                      label={`${t("quoteEditor.items.sequence")} ${line.name || index + 1}`}
+                      disabled={line.isVoid || reordering}
+                      onCommit={(position) => void swapLinePosition(line.id, position)}
+                    />
+                  </div>
                 </td>
                 <td className="quote-line-sku">{lineSkuContent(line)}</td>
                 <td className="quote-line-product">

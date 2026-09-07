@@ -182,6 +182,20 @@ function firstDeliveryDistrictName(relation: unknown): string | null {
   return null;
 }
 
+type OrderableQuery<T> = {
+  order(column: string, options?: { ascending?: boolean; nullsFirst?: boolean }): T;
+};
+
+export function orderOrderDetailLines<T extends OrderableQuery<T>>(
+  query: T,
+  documentType: "order" | "quote",
+): T {
+  if (documentType === "quote") {
+    return query.order("item_order").order("created_at");
+  }
+  return query.order("type_sort").order("item_order").order("created_at");
+}
+
 async function fetchActiveDistrictNames(): Promise<string[]> {
   const { data, error } = await supabase
     .from("delivery_districts")
@@ -226,14 +240,15 @@ export async function fetchOrderDetail(
 
   const [linesResult, deliveriesResult, timelineResult, termsResult, methodsResult, filesResult] =
     await Promise.all([
-      supabase
-        .from("order_lines")
-        .select(
-          "id,product_id,package_id,sku_snapshot,product_name_snapshot,content_snapshot,quantity,unit_price,total_price,is_addon,is_void,remarks_1,remarks_2,label_remarks,products(sku,name),packages(sku,name)",
-        )
-        .eq("order_id", id)
-        .order("type_sort")
-        .order("item_order"),
+      orderOrderDetailLines(
+        supabase
+          .from("order_lines")
+          .select(
+            "id,product_id,package_id,sku_snapshot,product_name_snapshot,content_snapshot,quantity,unit_price,total_price,is_addon,is_void,remarks_1,remarks_2,label_remarks,products(sku,name),packages(sku,name)",
+          )
+          .eq("order_id", id),
+        documentType,
+      ),
       documentType === "order"
         ? supabase
             .from("deliveries")

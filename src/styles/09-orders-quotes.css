@@ -1946,14 +1946,16 @@
   gap: 10px;
 }
 
-.quote-mobile-line > header > span {
+.quote-mobile-line > header > .quote-line-sequence-input {
   display: grid;
   width: 28px;
   height: 28px;
+  padding: 0;
   place-items: center;
   border-radius: 8px;
   background: var(--selection-bg);
   color: var(--primary);
+  text-align: center;
   font-size: 0.75rem;
   font-weight: 800;
 }
@@ -2186,16 +2188,47 @@
 }
 
 .quote-lines-panel .quote-line-sequence {
-  width: 64px;
+  width: 92px;
   padding-right: 4px;
   padding-left: 4px;
 }
 
+.quote-line-sequence-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.quote-line-sequence-input {
+  width: 38px;
+  min-width: 38px;
+  height: 34px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--background);
+  color: var(--foreground);
+  text-align: center;
+  font: inherit;
+  font-weight: 700;
+}
+
+.quote-line-sequence-input:focus-visible {
+  border-color: var(--primary);
+  outline: 2px solid color-mix(in srgb, var(--primary) 24%, transparent);
+  outline-offset: 1px;
+}
+
+.quote-line-sequence-input:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .quote-line-drag-handle {
   display: inline-flex;
-  min-width: 48px;
+  min-width: 28px;
   min-height: 34px;
-  padding: 4px 7px;
+  padding: 4px;
   align-items: center;
   justify-content: center;
   gap: 3px;

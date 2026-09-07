@@ -1,6 +1,38 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveOrderDetailLineCatalog } from "../src/lib/order-details";
+import {
+  orderOrderDetailLines,
+  resolveOrderDetailLineCatalog,
+} from "../src/lib/order-details";
+
+function orderRecorder() {
+  const columns: string[] = [];
+  const query = {
+    order(column: string) {
+      columns.push(column);
+      return query;
+    },
+  };
+  return { columns, query };
+}
+
+describe("order detail line ordering", () => {
+  it("preserves the quote editor product list order for generated PDFs", () => {
+    const { columns, query } = orderRecorder();
+
+    orderOrderDetailLines(query, "quote");
+
+    expect(columns).toEqual(["item_order", "created_at"]);
+  });
+
+  it("keeps operational type grouping for order details", () => {
+    const { columns, query } = orderRecorder();
+
+    orderOrderDetailLines(query, "order");
+
+    expect(columns).toEqual(["type_sort", "item_order", "created_at"]);
+  });
+});
 
 describe("order detail line catalog display", () => {
   it("shows an unmatched parsed dish snapshot instead of its parent package", () => {
