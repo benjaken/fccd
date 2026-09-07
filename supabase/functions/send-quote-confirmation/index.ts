@@ -3,12 +3,6 @@ import { buildQuoteConfirmationContent } from "../_shared/order-notification-con
 import { EMAIL_FROM } from "../_shared/email-sender.ts";
 import { settleEnabledNotificationRequests } from "../_shared/notification-channel-requests.ts";
 import {
-  isNotificationEmailAllowed,
-  isNotificationPhoneAllowed,
-  isNotificationRecipientPairAllowed,
-  notificationRecipientAllowlist,
-} from "../_shared/notification-recipient-allowlist.ts";
-import {
   loadWatiNotificationControls,
   watiEmergencySwitchAllows,
 } from "../_shared/wati-notification-controls.ts";
@@ -82,21 +76,6 @@ Deno.serve(async (request) => {
     const phone = digits(quote.contact_number_a_snapshot);
     if ((manualWatiEnabled && !phone) || (manualEmailEnabled && !quote.email_snapshot)) {
       return response({ error: "quote_contact_missing", watiSent: false, emailSent: false }, 400);
-    }
-    const recipientPolicy = notificationRecipientAllowlist();
-    const recipientAllowed = manualWatiEnabled && manualEmailEnabled
-      ? isNotificationRecipientPairAllowed(recipientPolicy, phone, quote.email_snapshot || "")
-      : manualWatiEnabled
-        ? isNotificationPhoneAllowed(recipientPolicy, phone)
-        : manualEmailEnabled
-          ? isNotificationEmailAllowed(recipientPolicy, quote.email_snapshot || "")
-          : true;
-    if (!recipientAllowed) {
-      return response({
-        error: "notification_recipient_not_allowlisted",
-        watiSent: false,
-        emailSent: false,
-      }, 403);
     }
 
     const customerName = quote.customer_name_snapshot || quote.company_name_snapshot || "Customer";

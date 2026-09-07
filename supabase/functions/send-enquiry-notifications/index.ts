@@ -9,11 +9,8 @@ import {
   enquiryPendingDetailUrl,
 } from "../_shared/enquiry-notification-content.ts";
 import {
-  isNotificationEmailAllowed,
-  isNotificationPhoneAllowed,
   normalizeNotificationPhone,
-  notificationRecipientAllowlist,
-} from "../_shared/notification-recipient-allowlist.ts";
+} from "../_shared/notification-phone.ts";
 import { watiEmergencySwitchAllows } from "../_shared/wati-notification-controls.ts";
 
 const corsHeaders = {
@@ -118,13 +115,9 @@ async function sendResendEmail(to: string[], subject: string, html: string) {
 }
 
 async function sendEnquiryInternalWati(
-  allowlist: ReturnType<typeof notificationRecipientAllowlist>,
   phone: string,
   parameters: Array<{ name: string; value: string }>,
 ) {
-  if (!isNotificationPhoneAllowed(allowlist, phone)) {
-    throw new Error("notification_recipient_not_allowlisted");
-  }
   const templateName = Deno.env.get("WATI_ENQUIRY_INTERNAL_TEMPLATE_NAME")?.trim()
     || ENQUIRY_INTERNAL_WATI_TEMPLATE;
   const broadcastName = Deno.env.get("WATI_ENQUIRY_INTERNAL_BROADCAST_NAME")?.trim()
@@ -216,14 +209,6 @@ Deno.serve(async (request) => {
       .eq("id", row.form_id)
       .maybeSingle();
     const formRow = (form || null) as FormRow | null;
-    let allowlist: ReturnType<typeof notificationRecipientAllowlist>;
-    try {
-      allowlist = notificationRecipientAllowlist();
-    } catch (allowlistError) {
-      // Missing staging allowlist must not block internal staff or the customer acknowledgement.
-      console.error("enquiry notification allowlist unavailable", allowlistError);
-      allowlist = { phones: new Set(), emails: new Set(), enforced: false };
-    }
     const detailUrl = enquiryPendingDetailUrl(Deno.env.get("APP_URL"), row.id);
     const sendInternal = kind === "all" || kind === "internal";
     const sendAck = kind === "all" || kind === "ack";
@@ -242,7 +227,7 @@ Deno.serve(async (request) => {
           const addresses = [...new Set(
             ((recipients || []) as Array<{ recipient_address?: string }>)
               .map((item) => (item.recipient_address || "").trim())
-              .filter((address) => validEmail(address) && isNotificationEmailAllowed(allowlist, address)),
+              .filter(validEmail),
           )];
           if (!addresses.length) {
             console.error("enquiry internal email has no recipients");
@@ -291,9 +276,7 @@ Deno.serve(async (request) => {
           const phones = [...new Set(
             ((recipients || []) as Array<{ phone?: string }>)
               .map((item) => normalizeNotificationPhone(item.phone))
-              .filter((phone): phone is string =>
-                Boolean(phone) && isNotificationPhoneAllowed(allowlist, phone)
-              ),
+              .filter((phone): phone is string => Boolean(phone)),
           )];
           if (!phones.length) {
             console.error("enquiry internal wati has no recipients");
@@ -314,7 +297,7 @@ Deno.serve(async (request) => {
               detailUrl,
             });
             const results = await Promise.allSettled(
-              phones.map((phone) => sendEnquiryInternalWati(allowlist, phone, parameters)),
+              phones.map((phone) => sendEnquiryInternalWati(phone, parameters)),
             );
             const anySent = results.some((result) => result.status === "fulfilled");
             for (const result of results) {

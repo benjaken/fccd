@@ -14,6 +14,12 @@ export const TKO_RESTAURANT_ID = "67ea658e-627a-4d62-a90c-58ea5cf7e3dc";
 export type ShopOrderChannel = "external" | "fc_internal";
 export type ShopWarehouse = "frozen" | "dry" | null;
 
+export function formatShopOrderNumber(value: string) {
+  const match = /^SO-(\d{6})\d{2}-(\d+)$/.exec(value.trim());
+  if (!match) return value;
+  return `R - ${match[1]} - ${Number.parseInt(match[2]!, 10)}`;
+}
+
 export type ShopCatalogItem = {
   id: string;
   sku: string | null;
@@ -86,6 +92,11 @@ export type ShopOrderRequest = {
   deliveryDate: string;
   status: string;
   note: string | null;
+  shippingMethodId?: string | null;
+  shippingMethodName?: string | null;
+  deliveryContactPerson?: string | null;
+  deliveryPhone?: string | null;
+  deliveryAddress?: string | null;
   contactPhone: string | null;
   whatsappCallStatus: WhatsAppCallStatus | null;
   whatsappCalledAt: string | null;
@@ -100,6 +111,16 @@ export type ShopOrderRequest = {
     warehouse: ShopWarehouse;
   }>;
   supplierOrders?: ShopOrderRequest[];
+};
+
+export type ShopDeliveryFormOptions = {
+  shippingMethods: Array<{ id: string; name: string }>;
+  profile: {
+    shippingMethodId: string | null;
+    contactPerson: string | null;
+    phone: string | null;
+    address: string | null;
+  } | null;
 };
 
 type CatalogRow = {
@@ -162,7 +183,21 @@ type RequestRow = {
   whatsapp_called_at: string | null;
   created_at: string;
   restaurants: { name: string } | { name: string }[] | null;
-  shop_order_batches: { order_no: string } | { order_no: string }[] | null;
+  shop_order_batches: {
+    order_no: string;
+    shipping_method_id: string | null;
+    contact_person: string | null;
+    phone: string | null;
+    delivery_address: string | null;
+    meat_shipping_methods: { name: string } | { name: string }[] | null;
+  } | Array<{
+    order_no: string;
+    shipping_method_id: string | null;
+    contact_person: string | null;
+    phone: string | null;
+    delivery_address: string | null;
+    meat_shipping_methods: { name: string } | { name: string }[] | null;
+  }> | null;
   shop_order_lines: Array<{
     id: string;
     catalog_item_id: string | null;
@@ -221,10 +256,13 @@ function mapRequest(row: RequestRow): ShopOrderRequest {
   const batch = Array.isArray(row.shop_order_batches)
     ? row.shop_order_batches[0]
     : row.shop_order_batches;
+  const shippingMethod = Array.isArray(batch?.meat_shipping_methods)
+    ? batch.meat_shipping_methods[0]
+    : batch?.meat_shipping_methods;
   return {
     id: row.id,
     batchId: row.order_batch_id,
-    requestNo: batch?.order_no ?? row.request_no,
+    requestNo: formatShopOrderNumber(batch?.order_no ?? row.request_no),
     restaurantId: row.restaurant_id,
     restaurantName: restaurantName(row),
     channel: row.channel,
@@ -233,6 +271,11 @@ function mapRequest(row: RequestRow): ShopOrderRequest {
     deliveryDate: row.delivery_date,
     status: row.status,
     note: row.note,
+    shippingMethodId: batch?.shipping_method_id ?? null,
+    shippingMethodName: shippingMethod?.name ?? null,
+    deliveryContactPerson: batch?.contact_person ?? null,
+    deliveryPhone: batch?.phone ?? null,
+    deliveryAddress: batch?.delivery_address ?? null,
     contactPhone: row.contact_phone,
     whatsappCallStatus: row.whatsapp_call_status,
     whatsappCalledAt: row.whatsapp_called_at,
@@ -250,7 +293,7 @@ function mapRequest(row: RequestRow): ShopOrderRequest {
 }
 
 const REQUEST_SELECT =
-  "id,order_batch_id,request_no,restaurant_id,channel,supplier_id,catalog_supplier_name,delivery_date,status,note,contact_phone,whatsapp_call_status,whatsapp_called_at,created_at,restaurants(name),shop_order_batches(order_no),shop_order_lines(id,catalog_item_id,name,unit,sku,quantity,warehouse)";
+  "id,order_batch_id,request_no,restaurant_id,channel,supplier_id,catalog_supplier_name,delivery_date,status,note,contact_phone,whatsapp_call_status,whatsapp_called_at,created_at,restaurants(name),shop_order_batches(order_no,shipping_method_id,contact_person,phone,delivery_address,meat_shipping_methods(name)),shop_order_lines(id,catalog_item_id,name,unit,sku,quantity,warehouse)";
 
 export function canRestaurantEditShopOrder(request: Pick<ShopOrderRequest, "channel" | "status">) {
   return request.channel === "fc_internal" && ["submitted", "rejected"].includes(request.status);
@@ -344,6 +387,22 @@ export async function fetchShopOrderRequests(filters?: {
   return ((data ?? []) as RequestRow[]).map(mapRequest);
 }
 
+export async function fetchShopDeliveryFormOptions(
+  restaurantId: string | null,
+): Promise<ShopDeliveryFormOptions> {
+  const { data, error } = await supabase.rpc("shop_order_delivery_form_options", {
+    p_restaurant_id: restaurantId,
+  });
+  if (error) throw error;
+  const value = (data ?? {}) as Partial<ShopDeliveryFormOptions>;
+  return {
+    shippingMethods: Array.isArray(value.shippingMethods)
+      ? value.shippingMethods.filter((method) => Boolean(method?.id && method?.name))
+      : [],
+    profile: value.profile ?? null,
+  };
+}
+
 export function groupShopOrderRecords(requests: ShopOrderRequest[]) {
   const groups = new Map<string, ShopOrderRequest[]>();
   for (const request of requests) {
@@ -373,6 +432,10 @@ export async function createShopOrderBatch(input: {
   restaurantId: string;
   deliveryDate: string;
   note?: string;
+  shippingMethodId?: string | null;
+  contactPerson?: string;
+  phone?: string;
+  deliveryAddress?: string;
   groups: Array<{
     channel: ShopOrderChannel;
     supplierId: string | null;
@@ -404,10 +467,31 @@ export async function createShopOrderBatch(input: {
     p_restaurant_id: input.restaurantId,
     p_delivery_date: input.deliveryDate,
     p_note: input.note?.trim() || null,
+    p_shipping_method_id: input.shippingMethodId || null,
+    p_contact_person: input.contactPerson?.trim() || null,
+    p_phone: input.phone?.trim() || null,
+    p_delivery_address: input.deliveryAddress?.trim() || null,
     p_groups: groups,
   });
   if (error) throw error;
   return fetchShopOrderRequests({ batchId: String(data) });
+}
+
+export async function updateShopOrderDeliveryDetails(input: {
+  batchId: string;
+  shippingMethodId: string | null;
+  contactPerson: string;
+  phone: string;
+  deliveryAddress: string;
+}) {
+  const { error } = await supabase.rpc("shop_update_order_delivery_details", {
+    p_batch_id: input.batchId,
+    p_shipping_method_id: input.shippingMethodId || null,
+    p_contact_person: input.contactPerson.trim() || null,
+    p_phone: input.phone.trim() || null,
+    p_delivery_address: input.deliveryAddress.trim() || null,
+  });
+  if (error) throw error;
 }
 
 export async function createShopOrderRequest(input: {

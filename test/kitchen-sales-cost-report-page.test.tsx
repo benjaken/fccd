@@ -14,6 +14,22 @@ vi.mock("@/lib/kitchen-sales-cost-report", async (importOriginal) => ({
 }));
 
 describe("central kitchen sales and cost report page", () => {
+  it("keeps the loading skeleton at the top and mirrors the sidebar-table layout", () => {
+    reportMocks.fetchKitchenSalesCostReport.mockReturnValue(new Promise(() => undefined));
+
+    const { container } = render(
+      <MemoryRouter>
+        <KitchenSalesCostReportPage />
+      </MemoryRouter>,
+    );
+
+    const loading = container.querySelector(".kitchen-sales-cost-loading");
+    expect(loading).not.toBeNull();
+    expect(loading?.querySelector(".kitchen-sales-cost-sidebar")).not.toBeNull();
+    expect(loading?.querySelector(".kitchen-sales-cost-main .content-skeleton-report-table")).not.toBeNull();
+    expect(loading?.querySelector(".shop-order-summary")).toBeNull();
+  });
+
   it("merges selected years into the same monthly cells with left category rows", async () => {
     reportMocks.fetchKitchenSalesCostReport.mockResolvedValue({
       rows: [

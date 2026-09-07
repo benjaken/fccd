@@ -52,11 +52,8 @@ import {
   ENQUIRY_INTERNAL_WATI_TEMPLATE,
 } from "../_shared/enquiry-notification-content.ts";
 import {
-  isNotificationEmailAllowed,
-  isNotificationPhoneAllowed,
   normalizeNotificationPhone,
-  notificationRecipientAllowlist,
-} from "../_shared/notification-recipient-allowlist.ts";
+} from "../_shared/notification-phone.ts";
 import { watiEmergencySwitchAllows } from "../_shared/wati-notification-controls.ts";
 
 const CORS_HEADERS = {
@@ -400,13 +397,8 @@ function createCustomerServiceClassifier({
 }
 
 async function loadBotControls(admin: AdminClient) {
-  const [{ data, error }, { data: recipients, error: recipientError }] =
-    await Promise.all([
-      admin.rpc("customer_service_controls_get"),
-      admin.from("order_first_notification_recipients").select("phone"),
-    ]);
+  const { data, error } = await admin.rpc("customer_service_controls_get");
   if (error) throw error;
-  if (recipientError) throw recipientError;
   const row = (
     data as Array<{
       bot_enabled?: boolean;
@@ -417,14 +409,12 @@ async function loadBotControls(admin: AdminClient) {
     }> | null
   )?.[0];
   const allowedPhones = parseAllowedCustomerServicePhones(
-    ((recipients || []) as Array<{ phone?: string | null }>)
-      .map((recipient) => recipient.phone || ""),
+    row?.allowed_phones || [],
   );
-  // Fail closed: an empty/missing pilot list must never turn into public
-  // access. The same first-notification-recipient table also drives internal
-  // WATI alerts, keeping both audiences in sync.
+  // Fail closed: only explicitly allowlisted customer-service callers may
+  // reach the automatic reply flow.
   if (!allowedPhones.length) {
-    throw new Error("customer_service_first_notification_recipients_missing");
+    throw new Error("customer_service_allowed_phones_missing");
   }
   return {
     botEnabled: Boolean(row?.bot_enabled),
@@ -983,12 +973,6 @@ async function notifyInternal(
     kind?: "inquiry" | "order_handoff";
   },
 ) {
-  let allowlist;
-  try {
-    allowlist = notificationRecipientAllowlist();
-  } catch {
-    throw new Error("notification_recipient_allowlist_missing");
-  }
   let delivered = false;
   const guestPhone = normalizeNotificationPhone(input.phone);
   const appUrl = env("APP_URL").replace(/\/$/, "");
@@ -1019,7 +1003,6 @@ async function notifyInternal(
         .filter(
           (address) =>
             address &&
-            isNotificationEmailAllowed(allowlist, address) &&
             excludeGuestContacts([address], guestPhone).length > 0,
         ),
     ),
@@ -1042,8 +1025,7 @@ async function notifyInternal(
           .filter(
             (phone) =>
               Boolean(phone) &&
-              phone !== guestPhone &&
-              isNotificationPhoneAllowed(allowlist, phone),
+              phone !== guestPhone,
           ),
       ),
     ];

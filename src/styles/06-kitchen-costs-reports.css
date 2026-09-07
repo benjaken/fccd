@@ -2038,6 +2038,7 @@ a.masoft-order-tag:focus-visible {
 
 /* Central-kitchen all-sales-and-costs report. */
 .kitchen-sales-cost-report-page {
+  position: relative;
   display: grid;
   gap: 1.15rem;
   padding-bottom: 2rem;
@@ -3011,6 +3012,65 @@ a.masoft-order-tag:focus-visible {
   min-width: 0;
 }
 
+.kitchen-sales-cost-loading-filter {
+  display: grid;
+  align-content: start;
+  gap: 0.8rem;
+  padding: 0.8rem;
+}
+
+.kitchen-sales-cost-loading-filter-heading {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.kitchen-sales-cost-loading-filter-heading > .page-skeleton-bone {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.65rem;
+}
+
+.kitchen-sales-cost-loading-filter-heading > div {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.kitchen-sales-cost-loading-filter-heading > div .page-skeleton-bone:first-child {
+  width: 72%;
+  height: 0.75rem;
+}
+
+.kitchen-sales-cost-loading-filter-heading > div .page-skeleton-bone:last-child {
+  width: 92%;
+  height: 0.55rem;
+}
+
+.kitchen-sales-cost-loading-years {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+
+.kitchen-sales-cost-loading-years .page-skeleton-bone {
+  width: 100%;
+  height: 2rem;
+  border-radius: 0.7rem;
+}
+
+.kitchen-sales-cost-loading-actions {
+  width: 78%;
+  height: 0.65rem;
+}
+
+.kitchen-sales-cost-loading .report-content-skeleton,
+.kitchen-sales-cost-loading .page-skeleton-content,
+.kitchen-sales-cost-loading .content-skeleton-report-table {
+  height: 100%;
+  min-height: 0;
+}
+
 .kitchen-sales-cost-combined {
   min-width: 0;
   overflow: hidden;
@@ -3351,7 +3411,7 @@ a.masoft-order-tag:focus-visible {
     grid-template-rows: minmax(0, 1fr);
   }
 
-  .kitchen-sales-cost-report-page:has(.kitchen-sales-cost-combined) > .report-ai-nav-row {
+  .kitchen-sales-cost-report-page > .report-ai-nav-row {
     position: absolute;
     top: 0;
     left: 0;

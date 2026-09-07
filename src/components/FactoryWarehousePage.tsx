@@ -1,26 +1,20 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { ClipboardList, PackageMinus, PackagePlus } from "lucide-react";
+import { PackageMinus, PackagePlus, Warehouse } from "lucide-react";
 
 import { useCurrentPageAccess } from "@/auth/use-page-access";
 import { cn } from "@/lib/utils";
 
 const LINKS = [
   {
-    to: "/factory/warehouse",
-    key: "pending",
-    icon: ClipboardList,
-    permission: "workspace.factory.warehouse.pending",
-    end: true,
-  },
-  {
-    to: "/factory/warehouse/shipments",
+    to: "/restaurant/ordering/inventory",
     key: "outbound",
     icon: PackageMinus,
     permission: "workspace.factory.warehouse.outbound",
+    end: true,
   },
   {
-    to: "/factory/warehouse/receipts",
+    to: "/restaurant/ordering/inventory/receipts",
     key: "inbound",
     icon: PackagePlus,
     permission: "workspace.factory.warehouse.inbound",
@@ -32,14 +26,17 @@ export function FactoryWarehousePage() {
   const access = useCurrentPageAccess();
 
   return (
-    <main className="factory-warehouse">
-      <header className="restaurant-workspace-bar">
-        <div>
-          <span className="eyebrow">{t("workspace.factory")}</span>
-          <h1>{t("shopWarehouse.title")}</h1>
-          <p>{t("shopWarehouse.description")}</p>
+    <main className="inventory-records-workspace">
+      <header className="inventory-records-hero">
+        <div className="inventory-records-title">
+          <span className="inventory-records-icon" aria-hidden="true"><Warehouse /></span>
+          <div>
+            <span className="eyebrow">{t("shopOrdering.office")}</span>
+            <h1>{t("shopWarehouse.title")}</h1>
+            <p>{t("shopWarehouse.description")}</p>
+          </div>
         </div>
-        <nav className="restaurant-workspace-nav" aria-label={t("shopWarehouse.title")}>
+        <nav className="inventory-records-nav" aria-label={t("shopWarehouse.title")}>
           {LINKS.filter((link) => access.canAccess(link.permission)).map((link) => {
             const Icon = link.icon;
             return (
@@ -47,7 +44,7 @@ export function FactoryWarehousePage() {
                 key={link.to}
                 to={link.to}
                 end={"end" in link ? link.end : false}
-                className={({ isActive }) => cn("restaurant-workspace-link", isActive && "active")}
+                className={({ isActive }) => cn("inventory-records-link", isActive && "active")}
               >
                 <Icon />
                 {t(`shopWarehouse.nav.${link.key}`)}
@@ -56,7 +53,7 @@ export function FactoryWarehousePage() {
           })}
         </nav>
       </header>
-      <div className="restaurant-workspace-body">
+      <div className="inventory-records-body">
         <Outlet />
       </div>
     </main>

@@ -12,6 +12,7 @@ import {
   markPreparedMeatOutboundPrinted,
   type PreparedMeatOutboundOrder,
 } from "@/lib/prepared-meat-inventory";
+import { fetchShopOrderRequests } from "@/lib/shop-orders";
 
 type NoteLoader = (orderId: string) => Promise<PreparedMeatOutboundOrder>;
 type PrintMarker = (orderId: string) => Promise<void>;
@@ -20,15 +21,66 @@ function display(value: string | null | undefined, fallback: string) {
   return value?.trim() || fallback;
 }
 
+export function formatMeatDeliveryNoteLineQuantity(
+  quantity: number,
+  unit: string | null | undefined,
+) {
+  const quantityText = Number.isInteger(quantity)
+    ? String(quantity)
+    : String(quantity).replace(/\.0+$/, "");
+  const unitText = unit?.trim() || "份";
+  return /^\d/.test(unitText)
+    ? `${quantityText} × ${unitText}`
+    : `${quantityText}${unitText}`;
+}
+
+export async function fetchShopOrderDeliveryNote(
+  requestId: string,
+): Promise<PreparedMeatOutboundOrder> {
+  const requests = await fetchShopOrderRequests({ requestId });
+  const requested = requests[0];
+  if (!requested) throw new Error("Shop order not found");
+  const supplierOrders = requested.batchId
+    ? await fetchShopOrderRequests({ batchId: requested.batchId })
+    : [requested];
+
+  return {
+    id: requested.id,
+    customerId: requested.restaurantId,
+    customerName: requested.restaurantName ?? "",
+    shippingMethodId: requested.shippingMethodId ?? null,
+    shippingMethodName: requested.shippingMethodName ?? "",
+    orderNumber: requested.requestNo,
+    shippingAt: `${requested.deliveryDate}T00:00:00+08:00`,
+    remarks: requested.note ?? "",
+    sendToFactory: supplierOrders.every((order) => order.status === "sent_to_factory"),
+    contactPerson: requested.deliveryContactPerson ?? "",
+    phone: requested.deliveryPhone ?? "",
+    address: requested.deliveryAddress ?? "",
+    lines: supplierOrders.flatMap((order) => order.lines.map((line) => ({
+      kind: "prepared" as const,
+      itemId: line.id,
+      sku: line.sku,
+      name: line.name,
+      unit: line.unit,
+      quantity: line.quantity,
+      remarks: "",
+    }))),
+  };
+}
+
 export function FactoryMeatDeliveryNotePage({
   loadNote = fetchPreparedMeatOutboundOrder,
   markPrinted = markPreparedMeatOutboundPrinted,
+  quantityOnly = false,
 }: {
   loadNote?: NoteLoader;
   markPrinted?: PrintMarker;
+  quantityOnly?: boolean;
 }) {
   const { t, i18n } = useTranslation();
-  const { meatOrderId = "" } = useParams();
+  const { meatOrderId = "", shopRequestId = "" } = useParams();
+  const noteId = shopRequestId || meatOrderId;
   const [note, setNote] = useState<PreparedMeatOutboundOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -53,7 +105,7 @@ export function FactoryMeatDeliveryNotePage({
     let cancelled = false;
     setLoading(true);
     setError(false);
-    void loadNote(meatOrderId)
+    void loadNote(noteId)
       .then((value) => {
         if (!cancelled) setNote(value);
       })
@@ -66,7 +118,7 @@ export function FactoryMeatDeliveryNotePage({
     return () => {
       cancelled = true;
     };
-  }, [loadNote, meatOrderId]);
+  }, [loadNote, noteId]);
 
   const print = async () => {
     if (!note) return;
@@ -152,7 +204,7 @@ export function FactoryMeatDeliveryNotePage({
           <tbody>
             {note.lines.map((line) => (
               <tr key={`${line.kind}-${line.itemId}`}>
-                <td>{line.quantity}{line.unit || "份"}</td>
+                <td>{quantityOnly ? line.quantity : formatMeatDeliveryNoteLineQuantity(line.quantity, line.unit)}</td>
                 <td>
                   {line.name}
                   {line.remarks ? `（${line.remarks}）` : ""}
@@ -164,5 +216,15 @@ export function FactoryMeatDeliveryNotePage({
         <footer>第1頁/共1頁</footer>
       </section>
     </main>
+  );
+}
+
+export function FactoryShopDeliveryNotePage() {
+  return (
+    <FactoryMeatDeliveryNotePage
+      loadNote={fetchShopOrderDeliveryNote}
+      markPrinted={async () => undefined}
+      quantityOnly
+    />
   );
 }

@@ -19,7 +19,9 @@ vi.mock("@/lib/shop-orders", async () => {
     fetchShopCatalog: vi.fn(),
     fetchShopOrderRecords: vi.fn(),
     fetchShopOrderRequests: vi.fn(),
+    fetchShopDeliveryFormOptions: vi.fn(),
     reviewShopOrder: vi.fn(),
+    updateShopOrderDeliveryDetails: vi.fn(),
   };
 });
 
@@ -34,6 +36,11 @@ const request: shopOrders.ShopOrderRequest = {
   deliveryDate: "2026-09-10",
   status: "submitted",
   note: "Morning delivery",
+  shippingMethodId: "method-1",
+  shippingMethodName: "Factory delivery",
+  deliveryContactPerson: "Restaurant contact",
+  deliveryPhone: "61234567",
+  deliveryAddress: "TKO delivery address",
   contactPhone: null,
   whatsappCallStatus: null,
   whatsappCalledAt: null,
@@ -55,6 +62,10 @@ describe("office shop order record details", () => {
     await i18n.changeLanguage("en");
     vi.mocked(shopOrders.fetchShopOrderRecords).mockResolvedValue([request]);
     vi.mocked(shopOrders.fetchShopOrderRequests).mockResolvedValue([request]);
+    vi.mocked(shopOrders.fetchShopDeliveryFormOptions).mockResolvedValue({
+      shippingMethods: [{ id: "method-1", name: "Factory delivery" }],
+      profile: null,
+    });
     vi.mocked(shopOrders.fetchShopCatalog).mockResolvedValue([
       {
         id: "item-1",

@@ -33,7 +33,7 @@
 | 2.8 | 2026-09-03 | **不做不獲聘用名單。** 不聘用／無出現留在應徵名單（可再約），不另開一頁。 |
 | 2.9 | 2026-09-03 | 主頁「打卡」**按一下即記**，沒有下一頁。常用聯絡人三類：辦公室同事、供應商、維修。供應商類讀訂貨電話簿，不另建第二份。 |
 | 3.0 | 2026-09-03 | **開始實作 Phase 1**，Shop HR 暫緩。餐廳版面 `/restaurant-workspace`、舖頭訂貨（WhatsApp 通話／FC 內部登記）、寫字樓餐廳訂貨與審核。工場貨倉出入下一步。 |
-| 3.1 | 2026-09-03 | 工場貨倉 `/factory/warehouse`：待出貨、出貨紀錄、入貨紀錄。乾貨新建流水；凍貨 SKU 對上才寫 meat movement。不足／未盤點警示仍可出。一單一次出完，重試不重複入帳。 |
+| 3.1 | 2026-09-03 | 餐廳訂貨「庫存記錄」`/restaurant/ordering/inventory`：待出貨、出貨紀錄、入貨紀錄。乾貨新建流水；凍貨 SKU 對上才寫 meat movement。不足／未盤點警示仍可出。一單一次出完，重試不重複入帳。 |
 | 3.2 | 2026-09-03 | 餐廳版面確認收貨（RCV-01）：實收與出貨不同記 `shop_receive_exceptions`。一單一次收貨，重試不重複。 |
 
 ### 0.1 已確認決策
@@ -720,7 +720,7 @@ Shop Manager 只看本店；Shop HR／Admin 可看授權店。活動與打卡都
 | `/restaurant/daily-sales` 等 | 搬進／鏡像餐廳版面，同一功能 |
 | `/restaurant/daily-purchases` | 實際對外採購入帳；WhatsApp 訂貨不是這張單 |
 | `/factory` | 到會板保留；貨倉另組 |
-| `/factory/warehouse` | 待出貨／出貨紀錄／入貨紀錄 |
+| `/restaurant/ordering/inventory` | 待出貨／出貨紀錄／入貨紀錄 |
 | `meat_orders` | 不停 |
 | `/restaurant/staff` | Phase 2 主檔 |
 

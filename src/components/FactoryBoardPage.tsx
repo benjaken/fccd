@@ -8,7 +8,6 @@ import {
   Printer,
   Star,
   TriangleAlert,
-  Warehouse,
   X,
 } from "lucide-react";
 
@@ -578,6 +577,15 @@ export function FactoryBoardPage({
       );
       return;
     }
+    if (item.factorySource === "shop") {
+      if (!item.shopRequestId) return;
+      window.open(
+        `/factory/shop-delivery-note/${encodeURIComponent(item.shopRequestId)}`,
+        "_blank",
+        "noopener,noreferrer",
+      );
+      return;
+    }
     if (!item.orderId) return;
     if (board?.printStatusByOrderId?.[item.orderId] === "needs-reprint") {
       setPendingReprintJob(item);
@@ -738,20 +746,6 @@ export function FactoryBoardPage({
         <div className="factory-board-actions">
           {selectedJob || multiDayReport ? null : (
             <>
-              <button
-                type="button"
-                className="factory-board-calendar"
-                onClick={() =>
-                  window.open(
-                    "/factory/warehouse",
-                    "_blank",
-                    "noopener,noreferrer",
-                  )
-                }
-              >
-                <Warehouse aria-hidden="true" />
-                <span>{t("factoryBoard.warehouse")}</span>
-              </button>
               <button
                 type="button"
                 className="factory-board-calendar"
@@ -1021,6 +1015,7 @@ export function FactoryBoardPage({
                       className={cn(
                         "factory-job-card",
                         item.factorySource === "meat" && "is-meat",
+                        item.factorySource === "shop" && "is-meat is-shop-order",
                       )}
                       key={item.id}
                       onClick={() => openJob(item)}
@@ -1052,6 +1047,11 @@ export function FactoryBoardPage({
                       </span>
                       <div className="factory-job-card-body">
                         {item.factorySource === "meat" ? (
+                          <>
+                            <strong>{item.orderNumber || t("common.notSet")}</strong>
+                            <span>{item.customerName || t("common.notSet")}</span>
+                          </>
+                        ) : item.factorySource === "shop" ? (
                           <>
                             <strong>{item.orderNumber || t("common.notSet")}</strong>
                             <span>{item.customerName || t("common.notSet")}</span>

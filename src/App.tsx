@@ -88,12 +88,11 @@ import { DeliveryFleetsPage } from "@/components/DeliveryFleetsPage";
 import { DeliverySurchargeTypesPage } from "@/components/DeliverySurchargeTypesPage";
 import { FactoryBoardPage } from "@/components/FactoryBoardPage";
 import { FactoryOrderPage } from "@/components/FactoryOrderPage";
-import { FactoryMeatDeliveryNotePage } from "@/components/FactoryMeatDeliveryNotePage";
+import { FactoryMeatDeliveryNotePage, FactoryShopDeliveryNotePage } from "@/components/FactoryMeatDeliveryNotePage";
 import { FactoryMultiDayReportPage } from "@/components/FactoryMultiDayReportPage";
 import { FactoryProductionCalendarPage } from "@/components/FactoryProductionCalendarPage";
 import { FactoryWarehousePage } from "@/components/FactoryWarehousePage";
 import {
-  FactoryWarehousePendingPage,
   FactoryWarehouseReceiptsPage,
   FactoryWarehouseShipmentsPage,
 } from "@/components/FactoryWarehousePages";
@@ -1348,6 +1347,10 @@ function OperationsShell() {
                 path="/restaurant/ordering/review/:requestId"
                 element={pageAccess.canAccess("restaurant.ordering.review") ? <OfficeShopReviewPage /> : <SettingsAccessDenied />}
               />
+              <Route
+                path="/restaurant/ordering/inventory/*"
+                element={pageAccess.canAccess("workspace.factory.warehouse") ? <RestaurantInventoryRecordsWorkspace /> : <SettingsAccessDenied />}
+              />
               <Route path="/restaurant/settings/monthly-pnl-cost-categories" element={pageAccess.canAccess("restaurant.settings.monthly_pnl_cost_categories") ? <MonthlyPnlCostCategoriesPage /> : <SettingsAccessDenied />} />
               <Route path="/restaurant/settings/inventory-items" element={pageAccess.canAccess("restaurant.settings.inventory_items") ? <RestaurantInventoryItemsPage /> : <SettingsAccessDenied />} />
               <Route path="/restaurant/settings/restaurants" element={pageAccess.canAccess("restaurant.settings.restaurants") ? <RestaurantSettingsPage /> : <SettingsAccessDenied />} />
@@ -2549,24 +2552,33 @@ function FactoryProductionCalendarWorkspace() {
   );
 }
 
-function FactoryWarehouseWorkspace() {
-  const { profile } = useAuth();
-  const pageAccess = usePageAccess(profile?.role);
-  if (pageAccess.loading) return <AuthLoadingScreen />;
+function RestaurantInventoryRecordsWorkspace() {
+  return (
+    <Routes>
+      <Route element={<FactoryWarehousePage />}>
+        <Route index element={<FactoryWarehouseShipmentsPage />} />
+        <Route path="shipments" element={<Navigate replace to="/restaurant/ordering/inventory" />} />
+        <Route path="receipts" element={<FactoryWarehouseReceiptsPage />} />
+      </Route>
+    </Routes>
+  );
+}
+
+function FactoryShopDeliveryNoteWorkspace() {
   return (
     <ProtectedWorkspace
-      permissionKey="workspace.factory.warehouse"
+      permissionKey="workspace.factory.meat_delivery_note"
       fallbackPermissionKey="workspace.factory"
     >
-      <Routes>
-        <Route element={<FactoryWarehousePage />}>
-          <Route index element={<FactoryWarehousePendingPage />} />
-          <Route path="shipments" element={<FactoryWarehouseShipmentsPage />} />
-          <Route path="receipts" element={<FactoryWarehouseReceiptsPage />} />
-        </Route>
-      </Routes>
+      <FactoryShopDeliveryNotePage />
     </ProtectedWorkspace>
   );
+}
+
+function LegacyFactoryWarehouseRedirect() {
+  const location = useLocation();
+  const suffix = location.pathname.replace(/^\/factory\/warehouse/, "");
+  return <Navigate replace to={`/restaurant/ordering/inventory${suffix}${location.search}`} />;
 }
 
 function DriverDeliveryWorkspace() {
@@ -2648,9 +2660,13 @@ function App() {
       />
       <Route
         path="/factory/warehouse/*"
+        element={<LegacyFactoryWarehouseRedirect />}
+      />
+      <Route
+        path="/factory/shop-delivery-note/:shopRequestId"
         element={
           <AuthProvider>
-            <FactoryWarehouseWorkspace />
+            <FactoryShopDeliveryNoteWorkspace />
           </AuthProvider>
         }
       />

@@ -67,6 +67,10 @@ describe("createShopOrderBatch", () => {
     const requests = await createShopOrderBatch({
       restaurantId: "restaurant-1",
       deliveryDate: "2026-09-10",
+      shippingMethodId: "method-1",
+      contactPerson: "Restaurant contact",
+      phone: "61234567",
+      deliveryAddress: "TKO delivery address",
       groups: [
         {
           channel: "fc_internal",
@@ -88,6 +92,10 @@ describe("createShopOrderBatch", () => {
     expect(rpc).toHaveBeenCalledTimes(1);
     expect(rpc).toHaveBeenCalledWith("shop_create_order_batch", expect.objectContaining({
       p_restaurant_id: "restaurant-1",
+      p_shipping_method_id: "method-1",
+      p_contact_person: "Restaurant contact",
+      p_phone: "61234567",
+      p_delivery_address: "TKO delivery address",
       p_groups: expect.arrayContaining([
         expect.objectContaining({ supplierName: "FC Frozen" }),
         expect.objectContaining({ supplierName: "Tea Supplier" }),
@@ -95,7 +103,7 @@ describe("createShopOrderBatch", () => {
     }));
     expect(requests).toHaveLength(2);
     expect(new Set(requests.map((request) => request.requestNo))).toEqual(
-      new Set(["SO-20260905-0001"]),
+      new Set(["R - 202609 - 1"]),
     );
   });
 });

@@ -23,8 +23,10 @@ import {
   isNewFactoryOrder,
   mapFactoryFleet,
   mapFactoryMeatOrder,
+  mapFactoryShopOrders,
 } from "@/lib/factory-board";
 import type { DeliveryListItem } from "@/lib/deliveries";
+import type { ShopOrderRequest } from "@/lib/shop-orders";
 
 function item(
   overrides: Partial<DeliveryListItem> & Pick<DeliveryListItem, "id">,
@@ -56,6 +58,54 @@ function item(
 }
 
 describe("factory board helpers", () => {
+  it("shows one factory card for a reviewed multi-supplier restaurant order", () => {
+    const base: ShopOrderRequest = {
+      id: "request-1",
+      batchId: "batch-1",
+      requestNo: "SO-20260907-0004",
+      restaurantId: "restaurant-1",
+      restaurantName: "TKO Shop",
+      channel: "fc_internal",
+      supplierId: "supplier-1",
+      catalogSupplierName: "FC Frozen",
+      deliveryDate: "2026-09-07",
+      status: "reviewed",
+      note: null,
+      contactPhone: null,
+      whatsappCallStatus: null,
+      whatsappCalledAt: null,
+      createdAt: "2026-09-06T01:00:00Z",
+      lines: [{
+        id: "line-1",
+        catalogItemId: "product-1",
+        name: "Beef",
+        unit: "pack",
+        sku: "F001",
+        quantity: 5,
+        warehouse: "frozen",
+      }],
+    };
+    const result = mapFactoryShopOrders([
+      base,
+      {
+        ...base,
+        id: "request-2",
+        supplierId: "supplier-2",
+        catalogSupplierName: "FC Dry Goods",
+        lines: [{ ...base.lines[0], id: "line-2", quantity: 3, warehouse: "dry" }],
+      },
+    ]);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toEqual(expect.objectContaining({
+      factorySource: "shop",
+      orderNumber: "R - 202609 - 4",
+      customerName: "TKO Shop",
+      shopRequestId: "request-1",
+    }));
+    expect(hongKongDateKey(result[0]?.deliveryAt)).toBe("2026-09-07");
+  });
+
   it("uses the database product label lines for factory printing", () => {
     expect(factoryProductLabelName([{
       display_name: "童趣拼盤(台灣腸蟹蓋",

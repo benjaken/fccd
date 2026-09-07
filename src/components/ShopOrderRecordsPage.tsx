@@ -312,6 +312,22 @@ export function ShopOrderRecordsPage({ office = false }: { office?: boolean }) {
               <dd>{selected.deliveryDate}</dd>
             </div>
             <div>
+              <dt>{t("shopOrdering.shippingMethod")}</dt>
+              <dd>{selected.shippingMethodName || "—"}</dd>
+            </div>
+            <div>
+              <dt>{t("shopOrdering.deliveryContact")}</dt>
+              <dd>{selected.deliveryContactPerson || "—"}</dd>
+            </div>
+            <div>
+              <dt>{t("shopOrdering.deliveryPhone")}</dt>
+              <dd>{selected.deliveryPhone || "—"}</dd>
+            </div>
+            <div>
+              <dt>{t("shopOrdering.deliveryAddress")}</dt>
+              <dd>{selected.deliveryAddress || "—"}</dd>
+            </div>
+            <div>
               <dt>{t("shopOrdering.note")}</dt>
               <dd>{selected.note || "—"}</dd>
             </div>

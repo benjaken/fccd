@@ -310,12 +310,21 @@ describe("Primary navigation section matching", () => {
       "workspace.factory.production_calendar",
     );
     expect(pageAccessKey("/factory/warehouse")).toBe(
-      "workspace.factory.warehouse.pending",
+      "workspace.factory.warehouse.outbound",
     );
     expect(pageAccessKey("/factory/warehouse/shipments")).toBe(
       "workspace.factory.warehouse.outbound",
     );
     expect(pageAccessKey("/factory/warehouse/receipts")).toBe(
+      "workspace.factory.warehouse.inbound",
+    );
+    expect(pageAccessKey("/restaurant/ordering/inventory")).toBe(
+      "workspace.factory.warehouse.outbound",
+    );
+    expect(pageAccessKey("/restaurant/ordering/inventory/shipments")).toBe(
+      "workspace.factory.warehouse.outbound",
+    );
+    expect(pageAccessKey("/restaurant/ordering/inventory/receipts")).toBe(
       "workspace.factory.warehouse.inbound",
     );
     expect(pageAccessKey("/restaurant-workspace/receive")).toBe(

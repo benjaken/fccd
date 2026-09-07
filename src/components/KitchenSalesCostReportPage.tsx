@@ -242,6 +242,40 @@ function YearSelector({
   );
 }
 
+function KitchenSalesCostLoadingSkeleton() {
+  return (
+    <div className="kitchen-sales-cost-report-content kitchen-sales-cost-loading">
+      <div className="kitchen-sales-cost-workspace">
+        <aside className="kitchen-sales-cost-sidebar" aria-hidden="true">
+          <section className="panel kitchen-sales-cost-loading-filter">
+            <div className="kitchen-sales-cost-loading-filter-heading">
+              <span className="page-skeleton-bone" />
+              <div>
+                <span className="page-skeleton-bone" />
+                <span className="page-skeleton-bone" />
+              </div>
+            </div>
+            <div className="kitchen-sales-cost-loading-years">
+              {Array.from({ length: 4 }, (_, index) => (
+                <span className="page-skeleton-bone" key={index} />
+              ))}
+            </div>
+            <span className="page-skeleton-bone kitchen-sales-cost-loading-actions" />
+          </section>
+        </aside>
+        <main className="kitchen-sales-cost-main">
+          <PageSkeleton
+            label="正在載入銷售及成本報表"
+            variant="report"
+            showSummary={false}
+            tableRows={12}
+          />
+        </main>
+      </div>
+    </div>
+  );
+}
+
 export function KitchenSalesCostReportPage() {
   const [report, setReport] = useState<KitchenSalesCostReport | null>(null);
   const [selectedYears, setSelectedYears] = useState<number[]>([]);
@@ -321,7 +355,7 @@ export function KitchenSalesCostReportPage() {
         <ReportAiTrigger />
       </div>
 
-      {loading && !report ? <PageSkeleton label="正在載入銷售及成本報表" variant="report" /> : null}
+      {loading && !report ? <KitchenSalesCostLoadingSkeleton /> : null}
       {error ? (
         <section className="panel kitchen-sales-cost-error" role="alert">
           <div>

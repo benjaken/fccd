@@ -4,6 +4,13 @@ import { fetchShopShipments, type ShopShipment } from "@/lib/shop-warehouse";
 
 export type ShopReceiveStatus = "received" | "exception";
 
+export type PendingShopReceiveGroup = {
+  key: string;
+  orderNo: string;
+  shippedAt: string;
+  shipments: ShopShipment[];
+};
+
 export type ShopReceive = {
   id: string;
   receiveNo: string;
@@ -44,6 +51,22 @@ export function receiveStatusForLines(
   return lines.some((line) => hasReceiveVariance(line.shippedQuantity, line.receivedQuantity))
     ? "exception"
     : "received";
+}
+
+export function groupPendingShopReceives(
+  shipments: ShopShipment[],
+): PendingShopReceiveGroup[] {
+  const groups = new Map<string, ShopShipment[]>();
+  for (const shipment of shipments) {
+    const key = shipment.requestNo ?? shipment.shipmentNo;
+    groups.set(key, [...(groups.get(key) ?? []), shipment]);
+  }
+  return [...groups.entries()].map(([key, rows]) => ({
+    key,
+    orderNo: rows[0]?.requestNo ?? rows[0]?.shipmentNo ?? key,
+    shippedAt: rows.map((row) => row.shippedAt).sort().at(-1) ?? "",
+    shipments: rows,
+  }));
 }
 
 export async function fetchPendingShopReceives(restaurantId = TKO_RESTAURANT_ID) {

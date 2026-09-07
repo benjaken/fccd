@@ -51,10 +51,12 @@ describe("customer-service backend conversation preview", () => {
     expect(source).not.toContain('fallback.intent === "out_of_scope"');
   });
 
-  it("limits live customer service to first-notification recipients and fails closed", () => {
-    expect(source).toContain('from("order_first_notification_recipients").select("phone")');
-    expect(source).toContain("customer_service_first_notification_recipients_missing");
-    expect(source).not.toContain('env("WATI_CUSTOMER_SERVICE_ALLOWED_PHONES")');
+  it("limits only live automatic replies to the customer-service allowlist and fails closed", () => {
+    expect(source).toContain("row?.allowed_phones || []");
+    expect(source).toContain("customer_service_allowed_phones_missing");
+    expect(source).toContain("customerServicePhoneAllowed(event.waId, controls.allowedPhones)");
+    expect(source).toContain('ignored: "phone_not_allowed"');
+    expect(source).not.toContain("notificationRecipientAllowlist");
   });
 
   it("queues handoffs and only sends them from the authenticated morning digest", () => {

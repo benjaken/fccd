@@ -13,27 +13,27 @@ vi.mock("@/auth/use-page-access", () => ({
   }),
 }));
 
-describe("FactoryWarehousePage", () => {
+describe("Restaurant ordering inventory records", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("zh-HK");
   });
 
-  it("shows warehouse nav without mixing catering factory board copy", () => {
+  it("shows only outbound and inbound tabs under restaurant ordering", () => {
     render(
-      <MemoryRouter initialEntries={["/factory/warehouse"]}>
+      <MemoryRouter initialEntries={["/restaurant/ordering/inventory"]}>
         <Routes>
-          <Route path="/factory/warehouse" element={<FactoryWarehousePage />}>
-            <Route index element={<p>pending-body</p>} />
+          <Route path="/restaurant/ordering/inventory" element={<FactoryWarehousePage />}>
+            <Route index element={<p>outbound-body</p>} />
           </Route>
         </Routes>
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole("heading", { name: "貨倉存貨" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /待出貨/ })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /出貨紀錄/ })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /入貨紀錄/ })).toBeInTheDocument();
-    expect(screen.queryByText("當日暫無出車。")).not.toBeInTheDocument();
-    expect(screen.getByText("pending-body")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: i18n.t("shopWarehouse.title") })).toBeInTheDocument();
+    expect(screen.getAllByRole("link")).toHaveLength(2);
+    expect(screen.getByRole("link", { name: i18n.t("shopWarehouse.nav.outbound") })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: i18n.t("shopWarehouse.nav.inbound") })).toBeInTheDocument();
+    expect(screen.queryByText(i18n.t("shopWarehouse.nav.pending"))).not.toBeInTheDocument();
+    expect(screen.getByText("outbound-body")).toBeInTheDocument();
   });
 });

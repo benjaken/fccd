@@ -18,6 +18,7 @@ vi.mock("@/lib/shop-orders", async (importOriginal) => {
     ...original,
     fetchShopCatalog: vi.fn(),
     fetchShopContacts: vi.fn(),
+    fetchShopDeliveryFormOptions: vi.fn(),
     fetchShopOrderRequests: vi.fn(),
     fetchShopOrderRecords: vi.fn(),
     createShopOrderBatch: vi.fn(),
@@ -77,6 +78,15 @@ describe("shop order page", () => {
     await i18n.changeLanguage("en");
     vi.mocked(shopOrders.fetchShopCatalog).mockResolvedValue([externalItem]);
     vi.mocked(shopOrders.fetchShopContacts).mockResolvedValue([]);
+    vi.mocked(shopOrders.fetchShopDeliveryFormOptions).mockResolvedValue({
+      shippingMethods: [{ id: "method-1", name: "Factory delivery" }],
+      profile: {
+        shippingMethodId: null,
+        contactPerson: "Restaurant contact",
+        phone: "61234567",
+        address: "TKO delivery address",
+      },
+    });
     vi.mocked(shopOrders.fetchShopOrderRequests).mockResolvedValue([]);
     vi.mocked(shopOrders.fetchShopOrderRecords).mockResolvedValue([]);
     vi.mocked(shopOrders.createShopOrderBatch).mockImplementation(async (input) =>
@@ -99,6 +109,7 @@ describe("shop order page", () => {
     const user = userEvent.setup();
     render(<MemoryRouter><ShopOrderPage /></MemoryRouter>);
 
+    await user.selectOptions(await screen.findByRole("combobox", { name: "Delivery method" }), "method-1");
     const supplierSelect = await screen.findByRole("combobox", { name: "Choose supplier" });
     await user.selectOptions(supplierSelect, screen.getByRole("option", { name: "Supplier · External" }));
     await user.click(screen.getByRole("button", { name: "Add supplier" }));
@@ -130,6 +141,7 @@ describe("shop order page", () => {
     }] : []);
     render(<MemoryRouter><ShopOrderPage /></MemoryRouter>);
 
+    await user.selectOptions(await screen.findByRole("combobox", { name: "Delivery method" }), "method-1");
     const supplierSelect = await screen.findByRole("combobox", { name: "Choose supplier" });
     await user.selectOptions(supplierSelect, screen.getByRole("option", { name: "Supplier · External" }));
     await user.click(screen.getByRole("button", { name: "Add supplier" }));

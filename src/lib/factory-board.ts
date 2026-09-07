@@ -9,6 +9,12 @@ import { supabase } from "@/lib/supabase"
 import { formatFactoryOrderNumber } from "@/lib/factory-order-number"
 import { fetchActiveOrderEditIds } from "@/lib/order-edit-lock"
 import { productListDisplayName } from "@/lib/products"
+import {
+  fetchShopOrderRequests,
+  formatShopOrderNumber,
+  groupShopOrderRecords,
+  type ShopOrderRequest,
+} from "@/lib/shop-orders"
 
 export const UNASSIGNED_FLEET_ID = "__unassigned__"
 export const ALL_BRAND_ID = "__all__"
@@ -22,9 +28,10 @@ export type FactoryBoardData = {
 }
 
 export type FactoryBoardItem = DeliveryListItem & {
-  factorySource?: "delivery" | "meat"
+  factorySource?: "delivery" | "meat" | "shop"
   factoryPrintStatus?: FactoryOrderPrintStatus
   isBeingEdited?: boolean
+  shopRequestId?: string
 }
 
 export type FactoryOrderPrintStatus = "complete" | "needs-reprint" | "incomplete"
@@ -53,6 +60,47 @@ export function factoryEligibleDeliveries<T extends DeliveryListItem>(items: T[]
   return items.filter(
     (item) => item.isSentToFactory === true || item.isSentToFactory === undefined,
   )
+}
+
+export function mapFactoryShopOrders(requests: ShopOrderRequest[]): FactoryBoardItem[] {
+  return groupShopOrderRecords(requests)
+    .filter((order) => {
+      const supplierOrders = order.supplierOrders ?? [order]
+      return supplierOrders.length > 0 && supplierOrders.every((supplierOrder) =>
+        ["reviewed", "sent_to_factory"].includes(supplierOrder.status),
+      )
+    })
+    .map((order) => {
+      const supplierOrders = order.supplierOrders ?? [order]
+      return {
+        id: `shop-${order.batchId ?? order.id}`,
+        orderId: null,
+        orderNumber: formatShopOrderNumber(order.requestNo),
+        customerName: order.restaurantName,
+        customerPhone: null,
+        address: null,
+        deliveryAt: `${order.deliveryDate}T00:00:00+08:00`,
+        deliveryTime: null,
+        shipOutTime: null,
+        districtName: null,
+        motorcadeId: null,
+        motorcadeName: null,
+        shippingMethodId: null,
+        shippingMethodName: null,
+        basicFee: null,
+        totalFee: null,
+        surchargeAmount: null,
+        surcharges: [],
+        grandTotal: null,
+        deliveryStatus: null,
+        isSentToFactory: supplierOrders.every((supplierOrder) => supplierOrder.status === "sent_to_factory"),
+        takenAt: null,
+        fulfilledAt: null,
+        imageReferences: [],
+        factorySource: "shop" as const,
+        shopRequestId: supplierOrders[0]?.id,
+      }
+    })
 }
 
 export type FactoryOrderLine = {
@@ -948,7 +996,7 @@ export async function fetchFactoryBoard(
   days = 3,
 ): Promise<FactoryBoardData> {
   const dates = factoryVisibleDates(startDate, days)
-  const [deliveryItems, meatItems] = await Promise.all([
+  const [deliveryItems, meatItems, shopOrders] = await Promise.all([
     fetchDeliveryExportRows({
       search: "",
       startDate: dates[0],
@@ -957,10 +1005,17 @@ export async function fetchFactoryBoard(
       shippingMethodId: "",
     }),
     fetchFactoryMeatOrders(dates[0]!, dates[dates.length - 1]!),
+    fetchShopOrderRequests({ channel: "fc_internal" }),
   ])
+  const shopItems = mapFactoryShopOrders(shopOrders).filter((item) => {
+    if (!item.deliveryAt) return false
+    const date = hongKongDateKey(item.deliveryAt)
+    return date >= dates[0]! && date <= dates[dates.length - 1]!
+  })
   const items: FactoryBoardItem[] = [
     ...factoryEligibleDeliveries(deliveryItems).map((item) => ({ ...item, factorySource: "delivery" as const })),
     ...meatItems,
+    ...shopItems,
   ]
   const orderIds = [
     ...new Set(

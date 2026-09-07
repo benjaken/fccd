@@ -3,16 +3,19 @@ import { useTranslation } from "react-i18next";
 import { History, PackageCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { OperationalListState } from "@/components/ui/operational-list-state";
 import { TKO_RESTAURANT_ID } from "@/lib/shop-orders";
 import {
   fetchPendingShopReceives,
   fetchShopReceives,
+  groupPendingShopReceives,
   hasReceiveVariance,
   isReceiveQuantityAllowed,
   receiveShopShipment,
   receiveStatusForLines,
   type ShopReceive,
+  type PendingShopReceiveGroup,
 } from "@/lib/shop-receive";
 import type { ShopShipment } from "@/lib/shop-warehouse";
 
@@ -44,27 +47,39 @@ export function ShopReceivePage() {
     void load().catch(() => setError(t("shopReceive.loadError")));
   }, [t]);
 
-  const confirm = async (row: ShopShipment) => {
-    const lines = row.lines.map((line) => ({
+  const confirm = async (group: PendingShopReceiveGroup) => {
+    const lines = group.shipments.flatMap((shipment) => shipment.lines.map((line) => ({
+      shipmentId: shipment.id,
       shipmentLineId: line.id,
       receivedQuantity: Number(quantities[line.id] ?? line.shippedQuantity),
       reason: reasons[line.id],
-    }));
+    })));
     if (lines.some((line) => !isReceiveQuantityAllowed(line.receivedQuantity))) {
       setError(t("shopReceive.qtyInvalid"));
       return;
     }
-    setBusyId(row.id);
+    setBusyId(group.key);
     setError("");
     try {
-      const result = await receiveShopShipment(row, lines, undefined, crypto.randomUUID());
-      setPending((current) => current.filter((item) => item.id !== row.id));
+      const results = await Promise.all(group.shipments.map((shipment) =>
+        receiveShopShipment(
+          shipment,
+          lines.filter((line) => line.shipmentId === shipment.id).map(({ shipmentId: _shipmentId, ...line }) => line),
+          undefined,
+          crypto.randomUUID(),
+        ),
+      ));
+      const receiveNumbers = results.map((result) => result.receiveNo).join(" / ");
+      const hasException = results.some((result) => result.status === "exception");
+      const allReplayed = results.every((result) => result.replayed);
+      const receivedIds = new Set(group.shipments.map((shipment) => shipment.id));
+      setPending((current) => current.filter((item) => !receivedIds.has(item.id)));
       setMessage(
-        result.replayed
-          ? t("shopReceive.replayed", { number: result.receiveNo })
-          : result.status === "exception"
-            ? t("shopReceive.savedException", { number: result.receiveNo })
-            : t("shopReceive.saved", { number: result.receiveNo }),
+        allReplayed
+          ? t("shopReceive.replayed", { number: receiveNumbers })
+          : hasException
+            ? t("shopReceive.savedException", { number: receiveNumbers })
+            : t("shopReceive.saved", { number: receiveNumbers }),
       );
       setHistory(await fetchShopReceives(TKO_RESTAURANT_ID));
     } catch {
@@ -73,6 +88,8 @@ export function ShopReceivePage() {
       setBusyId(null);
     }
   };
+
+  const pendingGroups = groupPendingShopReceives(pending);
 
   return (
     <section className="ingredients-page">
@@ -93,18 +110,18 @@ export function ShopReceivePage() {
             description={t("shopReceive.description")}
           />
         ) : null}
-        {pending.map((row) => {
+        {pendingGroups.map((group) => {
+          const groupLines = group.shipments.flatMap((shipment) => shipment.lines);
           const preview = receiveStatusForLines(
-            row.lines.map((line) => ({
+            groupLines.map((line) => ({
               shippedQuantity: line.shippedQuantity,
               receivedQuantity: Number(quantities[line.id] ?? line.shippedQuantity),
             })),
           );
           return (
-            <div key={row.id} className="shop-review-card">
+            <div key={group.key} className="shop-review-card">
               <h2>
-                {row.shipmentNo}
-                {row.requestNo ? ` / ${row.requestNo}` : ""} · {row.shippedAt.slice(0, 10)}
+                {group.orderNo} · {group.shippedAt.slice(0, 10)}
               </h2>
               <div className="shop-order-table-wrap">
               <table className="shop-order-items shop-receive-table">
@@ -118,7 +135,7 @@ export function ShopReceivePage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {row.lines.map((line) => {
+                  {groupLines.map((line) => {
                     const received = Number(quantities[line.id] ?? line.shippedQuantity);
                     const varied = hasReceiveVariance(line.shippedQuantity, received);
                     return (
@@ -127,9 +144,12 @@ export function ShopReceivePage() {
                         <td data-label={t("shopOrdering.unit")}>{line.unit}</td>
                         <td data-label={t("shopReceive.shipped")}>{line.shippedQuantity}</td>
                         <td data-label={t("shopReceive.received")}>
-                          <input
+                          <Input
                             type="number"
                             min="0"
+                            step="any"
+                            inputMode="decimal"
+                            aria-label={`${line.name} ${t("shopReceive.received")}`}
                             value={quantities[line.id] ?? ""}
                             onChange={(event) =>
                               setQuantities((current) => ({ ...current, [line.id]: event.target.value }))
@@ -157,7 +177,7 @@ export function ShopReceivePage() {
               </div>
               {preview === "exception" ? <p>{t("shopReceive.willException")}</p> : null}
               <div className="shop-order-actions">
-                <Button disabled={busyId === row.id} onClick={() => void confirm(row)}>
+                <Button disabled={busyId === group.key} onClick={() => void confirm(group)}>
                   {t("shopReceive.confirm")}
                 </Button>
               </div>

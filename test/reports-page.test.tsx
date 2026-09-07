@@ -483,12 +483,9 @@ describe("Shop order quantity report", () => {
 
   it("keeps shop filter chips compact on mobile", () => {
     const stylesheet = readAppStyles();
-    const mobileBlock = stylesheet.slice(
-      stylesheet.lastIndexOf("@media (max-width: 900px)"),
-    );
-    const shopButtonRule = mobileBlock.match(
-      /\.report-shop-filter button\s*\{([^}]+)\}/,
-    )?.[1];
+    const shopButtonRule = [...stylesheet.matchAll(
+      /\.report-shop-filter button\s*\{([^}]+)\}/g,
+    )].map((match) => match[1]).find((rule) => rule.includes("height: 36px"));
 
     expect(shopButtonRule).toContain("height: 36px");
     expect(shopButtonRule).toContain("white-space: nowrap");

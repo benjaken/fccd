@@ -36,6 +36,33 @@ No actionable P0, P1, or P2 issues remain for the requested independent scrollin
 - Pass 1: confirmed that only the actively scrolled date column moves; the other two retain their positions.
 
 final result: passed
+---
+
+# Unified order workspace action placement QA
+
+- User reference: `C:\Users\ADMINI~1\AppData\Local\Temp\codex-clipboard-d1e19ad6-ae55-4753-8535-ada9480bd21c.png`
+- Browser implementation: `D:\work\FCCD\output\design-qa\unified-order-workspace.png`
+- Browser viewport: 2125 x 951 at device scale 1.
+- State: Traditional Chinese, submitted FC-internal order opened from 訂單審核.
+
+## Comparison and findings
+
+- The full-page detail hierarchy, two-column workspace, cards, type scale, colors, borders, and spacing remain aligned with the supplied reference.
+- Per the user's follow-up correction, the action group intentionally differs from the supplied screenshot: `保存修改`, `退回修改`, and `審核通過` now sit in the upper-right header beside the status badge, matching the existing order-edit action pattern.
+- The former fixed bottom action bar is no longer rendered, and the extra reserved bottom padding was removed.
+- The active 餐廳訂貨 branch stays expanded and 訂單審核 remains highlighted on the nested detail route.
+- No actionable P0, P1, or P2 issues remain.
+
+## Interaction and verification
+
+- Browser geometry confirms all three header actions are 40 px high and share one top row.
+- Browser DOM confirms zero `.office-review-actions` bottom bars and zero dialogs.
+- Read-only historical or external orders keep the same full-page detail view without review actions; the header back button remains available.
+- `npm run lint`: passed.
+- `npm test -- --run test/office-shop-review.test.tsx test/shop-order-record-details.test.tsx`: 4 tests passed across 2 files.
+- Browser console warnings/errors: none.
+
+final result: passed
 
 ---
 
@@ -827,5 +854,111 @@ No actionable P0, P1, or P2 visual differences remain for the requested chat com
 ## Follow Up Polish
 
 The current generated background is intentionally lighter and more catering-specific than WhatsApp's proprietary pattern.
+
+final result: passed
+
+---
+
+# Supplier linked-item search Design QA
+
+- Reference: `C:\Users\ADMINI~1\AppData\Local\Temp\codex-clipboard-e881c478-b855-48e9-883a-e2ee150fa3f5.png`
+- Implementation: `D:\work\FCCD\output\design-qa\supplier-linked-item-search.png`
+- State: Traditional Chinese supplier details, 餐廳食材 filtered to `芋香粉`.
+
+The three category cards match the reference's compact search treatment and remain aligned. Browser geometry measured every card at 464 px both before and after filtering (`[464, 464, 464]`), so only the inner result list changes. Each category has an independent labelled searchbox, and empty categories retain the control.
+
+- `npm run lint`: passed.
+- `npm test -- --run test/suppliers.test.tsx`: 13 tests passed.
+- One earlier Vite hot-reload error for `OfficeShopOrderingPages.tsx` remains in the accumulated browser log; the current supplier page reloaded and rendered successfully.
+
+No actionable P0, P1, or P2 issue remains.
+
+final result: passed
+
+---
+
+# Order Review Design QA
+
+- Source visual truth: `C:\Users\ADMINI~1\AppData\Local\Temp\codex-clipboard-c26fd946-6dd4-4b2a-aebc-8a8a43ec9f25.png`
+- Desktop implementation: `D:\work\FCCD\design-qa-implementation.png`
+- Mobile implementation: `D:\work\FCCD\design-qa-mobile.png`
+- Source pixels: 2048 x 917; source CSS viewport and density were not available.
+- Desktop implementation pixels/CSS viewport: 1280 x 720 at device scale 1.
+- Mobile implementation pixels/CSS viewport: 390 x 844 at device scale 1.
+- State: submitted FC-internal order opened for office review.
+
+**Findings**
+
+- No actionable P0, P1, or P2 issues remain.
+- The source drawer was intentionally replaced by a full-page workspace, as requested. The implementation retains the source product's green/white palette, typography hierarchy, compact controls, radii, status treatment, and navigation shell.
+- Fonts and typography: existing application font stack, optical weights, line heights, wrapping, and small-label hierarchy remain consistent with the source shell.
+- Spacing and layout rhythm: desktop uses a two-column edit/decision layout; mobile collapses to one column. The fixed action bar has reserved page padding and all lower content remains reachable by scrolling.
+- Colors and visual tokens: existing card, border, primary green, destructive red, and muted text tokens are preserved with sufficient text contrast.
+- Image quality and asset fidelity: the screen contains no content imagery. The existing brand logo remains unchanged and all interface icons use the product's installed icon library.
+- Copy and content: the order number, shop, supplier, status, delivery date, line details, and Chinese terminology match the source data. New actions use concise operational labels.
+
+**Full-view comparison evidence**
+
+- The source and desktop implementation were opened together for direct comparison. The old overlay and dimmed background are absent by design; the new page uses the entire content region and keeps primary actions persistently available.
+- Browser-rendered desktop evidence shows the order detail, decision card, line editor, and fixed action bar without horizontal overflow.
+- Browser-rendered mobile evidence shows a 390 px layout with stacked fields, no horizontal scroll, and a full-width primary approval action.
+
+**Focused region comparison evidence**
+
+- Header: order number, shop/supplier context, and submitted status remain immediately visible.
+- Line editor: source item name, SKU, unit, and quantity remain legible, with add/remove controls added without reducing data clarity.
+- Decision area: review note and status summary are separated from editable order details to reduce accidental actions.
+- Action bar: save, return, and approve are visually distinct; send-to-factory appears only after approval.
+
+**Interaction checks**
+
+- Open review from the queue.
+- Add a catalog product and edit quantities.
+- Validate that return requires a reason.
+- Approve and reveal the send-to-factory action in component tests.
+- Desktop and mobile scrolling, responsive layout, and fixed actions checked in the in-app browser.
+- Browser console errors checked: none.
+
+**Comparison history**
+
+- Pass 1 found a P1 scrolling issue: the inherited page container clipped the lower line editor while the action bar remained fixed.
+- Fix: made the review page height content-driven and enabled vertical scrolling on the containing main region.
+- Post-fix evidence: desktop lower-content capture confirmed that the complete line editor and activity card are reachable above the fixed action bar.
+- Pass 2 found a P2 mobile action hierarchy issue: the primary approval button occupied only half a row.
+- Fix: the final primary action now spans both mobile grid columns.
+- Post-fix evidence: `design-qa-mobile.png` shows the approval action full width with no horizontal overflow.
+
+**Follow-up Polish**
+
+- No blocking polish items. A future iteration could add actor display names to the activity history if staff profile joins are introduced.
+
+final result: passed
+
+---
+
+# Supplier linked-item search Design QA
+
+- Source visual truth: `C:\Users\ADMINI~1\AppData\Local\Temp\codex-clipboard-e881c478-b855-48e9-883a-e2ee150fa3f5.png`
+- Browser implementation: `D:\work\FCCD\output\design-qa\supplier-linked-item-search.png`
+- Source pixels: 1098 x 500; implementation pixels: 2127 x 895.
+- State: Traditional Chinese supplier detail panel, with 妞佹劕鎬€妞嬬喐娼?filtered to `閼哄顩剧划濉?
+
+## Comparison and findings
+
+The three cards retain the reference's compact search controls, green category icons and badges, and independently scrolling lists. Browser measurements were `[464, 464, 464]` before filtering and `[464, 464, 464]` afterward, so results change only inside the cards and never resize their frames. No actionable P0, P1, or P2 issue remains.
+
+## Interaction and verification
+
+- 閸掔増娓绘鐔告綏閵嗕礁鍣搁懖澶夌返閹冲鈧線顦靛鎶筋棨閺?each have an independent labelled searchbox.
+- Filtering one category leaves the other categories unchanged; empty categories retain their search control.
+- `npm run lint`: passed.
+- `npm test -- --run test/suppliers.test.tsx`: 13 tests passed.
+- The browser log retained one earlier Vite hot-reload error for `OfficeShopOrderingPages.tsx`; the current supplier page reloaded and rendered successfully, and TypeScript validation passed.
+
+final result: passed
+
+## Latest QA: Full-page order review
+
+The complete report begins at `# Order Review Design QA` above. Desktop and 390 px mobile browser captures passed after the scrolling and mobile action hierarchy fixes. Source: `C:\Users\ADMINI~1\AppData\Local\Temp\codex-clipboard-c26fd946-6dd4-4b2a-aebc-8a8a43ec9f25.png`; implementation: `D:\work\FCCD\design-qa-implementation.png`.
 
 final result: passed

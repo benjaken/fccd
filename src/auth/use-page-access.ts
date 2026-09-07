@@ -244,6 +244,9 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
   { prefix: "/restaurant/ordering/requests", pageKey: "restaurant.ordering.requests" },
   { prefix: "/restaurant/ordering/records", pageKey: "restaurant.ordering.records" },
   { prefix: "/restaurant/ordering/phonebook", pageKey: "restaurant.ordering.phonebook" },
+  { prefix: "/restaurant/ordering/inventory/shipments", pageKey: "workspace.factory.warehouse.outbound" },
+  { prefix: "/restaurant/ordering/inventory/receipts", pageKey: "workspace.factory.warehouse.inbound" },
+  { prefix: "/restaurant/ordering/inventory", pageKey: "workspace.factory.warehouse.outbound" },
   { prefix: "/restaurant/ordering/review", pageKey: "restaurant.ordering.review" },
   { prefix: "/restaurant/daily-purchases", pageKey: "restaurant.daily_purchases" },
   { prefix: "/restaurant/daily-sales", pageKey: "restaurant.daily_sales" },
@@ -336,7 +339,7 @@ const EXACT_PAGE_KEYS: Array<{ prefix: string; pageKey: string }> = [
   },
   {
     prefix: "/factory/warehouse",
-    pageKey: "workspace.factory.warehouse.pending",
+    pageKey: "workspace.factory.warehouse.outbound",
   },
   { prefix: "/factory", pageKey: "workspace.factory.board" },
   {
@@ -492,6 +495,9 @@ const PAGE_ACCESS_CHILD_KEYS: Record<string, string[]> = {
     "restaurant.ordering.records",
     "restaurant.ordering.phonebook",
     "restaurant.ordering.review",
+    "workspace.factory.warehouse",
+    "workspace.factory.warehouse.outbound",
+    "workspace.factory.warehouse.inbound",
   ],
   "workspace.factory": [
     "workspace.factory.board",
@@ -499,10 +505,8 @@ const PAGE_ACCESS_CHILD_KEYS: Record<string, string[]> = {
     "workspace.factory.meat_delivery_note",
     "workspace.factory.multi_day_menu",
     "workspace.factory.production_calendar",
-    "workspace.factory.warehouse",
   ],
   "workspace.factory.warehouse": [
-    "workspace.factory.warehouse.pending",
     "workspace.factory.warehouse.outbound",
     "workspace.factory.warehouse.inbound",
   ],

@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import {
   fetchShopOrderRequests,
+  formatShopOrderNumber,
   type ShopCatalogItem,
   type ShopOrderRequest,
   type ShopWarehouse,
@@ -107,8 +108,8 @@ type ShipmentRow = {
   shipped_at: string;
   warning_flags: string[] | null;
   shop_order_requests:
-    | { request_no: string; restaurants: { name: string } | { name: string }[] | null }
-    | { request_no: string; restaurants: { name: string } | { name: string }[] | null }[]
+    | { request_no: string; shop_order_batches: { order_no: string } | { order_no: string }[] | null; restaurants: { name: string } | { name: string }[] | null }
+    | { request_no: string; shop_order_batches: { order_no: string } | { order_no: string }[] | null; restaurants: { name: string } | { name: string }[] | null }[]
     | null;
   shop_shipment_lines: Array<{
     id: string;
@@ -163,7 +164,7 @@ export async function fetchShopShipments(filters?: {
   let query = supabase
     .from("shop_shipments")
     .select(
-      "id,shipment_no,request_id,status,shipped_at,warning_flags,shop_order_requests(request_no,restaurants(name)),shop_shipment_lines(id,name,unit,shipped_quantity,approved_quantity,stock_warning)",
+      "id,shipment_no,request_id,status,shipped_at,warning_flags,shop_order_requests(request_no,shop_order_batches(order_no),restaurants(name)),shop_shipment_lines(id,name,unit,shipped_quantity,approved_quantity,stock_warning)",
     )
     .order("shipped_at", { ascending: false });
   if (filters?.restaurantId) query = query.eq("restaurant_id", filters.restaurantId);
@@ -178,7 +179,13 @@ export async function fetchShopShipments(filters?: {
       id: row.id,
       shipmentNo: row.shipment_no,
       requestId: row.request_id,
-      requestNo: request?.request_no ?? null,
+      requestNo: request
+        ? formatShopOrderNumber(
+            (Array.isArray(request.shop_order_batches)
+              ? request.shop_order_batches[0]?.order_no
+              : request.shop_order_batches?.order_no) ?? request.request_no,
+          )
+        : null,
       restaurantName: restaurantName(request?.restaurants),
       status: row.status,
       shippedAt: row.shipped_at,

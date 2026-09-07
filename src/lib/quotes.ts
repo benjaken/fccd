@@ -328,6 +328,16 @@ export async function convertQuoteToOrder(quoteId: string) {
   if (error) throw error;
   const row = Array.isArray(data) ? data[0] : data;
   if (!row?.id) throw new Error("quote_conversion_failed");
+  try {
+    const { error: asanaError } = await supabase.functions.invoke("create-enquiry-asana-task", {
+      body: { orderId: row.id },
+    });
+    if (asanaError) throw asanaError;
+  } catch (error) {
+    // The confirmed order is authoritative. Asana failure is recorded by the
+    // Edge Function and must not roll back or misreport a successful conversion.
+    console.error("confirmed enquiry order Asana sync failed", error);
+  }
   return { id: row.id as string, orderNumber: row.order_number as string };
 }
 

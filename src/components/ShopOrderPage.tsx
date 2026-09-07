@@ -16,11 +16,13 @@ import {
   createShopOrderRequest,
   fetchShopCatalog,
   fetchShopContacts,
+  fetchShopDeliveryFormOptions,
   fetchShopOrderRequests,
   groupCatalogBySupplier,
   isDeliveryDateAllowed,
   shopCatalogSupplierKey,
   updateSubmittedShopOrder,
+  updateShopOrderDeliveryDetails,
   type ShopCatalogItem,
   type ShopOrderRequest,
   type ShopSupplierContact,
@@ -48,6 +50,11 @@ export function ShopOrderPage() {
   const [quantities, setQuantities] = useState<Record<string, string>>({});
   const [deliveryDate, setDeliveryDate] = useState(() => hongKongDateValue());
   const [note, setNote] = useState("");
+  const [shippingMethods, setShippingMethods] = useState<Array<{ id: string; name: string }>>([]);
+  const [shippingMethodId, setShippingMethodId] = useState("");
+  const [contactPerson, setContactPerson] = useState("");
+  const [deliveryPhone, setDeliveryPhone] = useState("");
+  const [deliveryAddress, setDeliveryAddress] = useState("");
   const [itemSearch, setItemSearch] = useState("");
   const [selectedSupplierKeys, setSelectedSupplierKeys] = useState<string[]>([]);
   const [activeSupplierKey, setActiveSupplierKey] = useState("");
@@ -148,7 +155,7 @@ export function ShopOrderPage() {
       fetchRestaurantOptions(),
       requestId ? fetchShopOrderRequests({ requestId }) : Promise.resolve([] as ShopOrderRequest[]),
     ])
-      .then(([items, options, requests]) => {
+      .then(async ([items, options, requests]) => {
         if (!active) return;
         setCatalog(items);
         const linked = options.find((option) => option.id === profile?.shop_restro_id)
@@ -157,6 +164,14 @@ export function ShopOrderPage() {
           ?? options[0]
           ?? null;
         setRestaurant(linked);
+        const deliveryOptions = await fetchShopDeliveryFormOptions(linked?.id ?? null);
+        if (!active) return;
+        const deliveryProfile = deliveryOptions.profile;
+        setShippingMethods(deliveryOptions.shippingMethods);
+        setShippingMethodId(deliveryProfile?.shippingMethodId ?? "");
+        setContactPerson(deliveryProfile?.contactPerson ?? "");
+        setDeliveryPhone(deliveryProfile?.phone ?? "");
+        setDeliveryAddress(deliveryProfile?.address ?? "");
         if (requestId) {
           const request = requests.find((row) => row.id === requestId);
           if (!request || !canRestaurantEditShopOrder(request) || (linked && request.restaurantId !== linked.id)) {
@@ -174,6 +189,10 @@ export function ShopOrderPage() {
           setEditingRequest(request);
           setDeliveryDate(request.deliveryDate);
           setNote(request.note ?? "");
+          setShippingMethodId(request.shippingMethodId ?? "");
+          setContactPerson(request.deliveryContactPerson ?? deliveryProfile?.contactPerson ?? "");
+          setDeliveryPhone(request.deliveryPhone ?? deliveryProfile?.phone ?? "");
+          setDeliveryAddress(request.deliveryAddress ?? deliveryProfile?.address ?? "");
           setSelectedSupplierKeys([supplierKey]);
           setActiveSupplierKey(supplierKey);
           setQuantities(Object.fromEntries(supplierItems.map((item) => {
@@ -228,6 +247,10 @@ export function ShopOrderPage() {
       setError(t("shopOrdering.needLines"));
       return;
     }
+    if (!shippingMethodId || !contactPerson.trim()) {
+      setError(t("shopOrdering.deliveryDetailsRequired"));
+      return;
+    }
     if (editingRequest && !orders.some(({ group }) => shopCatalogSupplierKey(group) === originalSupplierKey)) {
       setError(t("shopOrdering.originalSupplierNeedsLines"));
       return;
@@ -241,6 +264,15 @@ export function ShopOrderPage() {
       if (editingRequest) {
         const editedOrder = orders.find(({ group }) => shopCatalogSupplierKey(group) === originalSupplierKey);
         if (!editedOrder) throw new Error("Missing edited order");
+        if (editingRequest.batchId) {
+          await updateShopOrderDeliveryDetails({
+            batchId: editingRequest.batchId,
+            shippingMethodId,
+            contactPerson,
+            phone: deliveryPhone,
+            deliveryAddress,
+          });
+        }
         await updateSubmittedShopOrder({
           requestId: editingRequest.id,
           deliveryDate,
@@ -314,6 +346,10 @@ export function ShopOrderPage() {
         restaurantId: restaurant.id,
         deliveryDate,
         note,
+        shippingMethodId,
+        contactPerson,
+        phone: deliveryPhone,
+        deliveryAddress,
         groups: preparedGroups.map(({ group: _group, contact: _contact, orderLines: _orderLines, ...group }) => group),
       });
       const created = preparedGroups.map(({ group, orderLines: lines, contact }) => {
@@ -376,8 +412,27 @@ export function ShopOrderPage() {
             <input type="date" min={today} value={deliveryDate} onChange={(event) => setDeliveryDate(event.target.value)} />
           </label>
           <label className="ingredients-field">
+            <span>{t("shopOrdering.shippingMethod")}</span>
+            <FilterableSelect aria-label={t("shopOrdering.shippingMethod")} value={shippingMethodId} onChange={(event) => setShippingMethodId(event.target.value)}>
+              <option value="">{t("shopOrdering.shippingMethodPlaceholder")}</option>
+              {shippingMethods.map((method) => <option key={method.id} value={method.id}>{method.name}</option>)}
+            </FilterableSelect>
+          </label>
+          <label className="ingredients-field">
+            <span>{t("shopOrdering.deliveryContact")}</span>
+            <input value={contactPerson} onChange={(event) => setContactPerson(event.target.value)} />
+          </label>
+          <label className="ingredients-field">
+            <span>{t("shopOrdering.deliveryPhone")}</span>
+            <input inputMode="tel" value={deliveryPhone} onChange={(event) => setDeliveryPhone(event.target.value)} />
+          </label>
+          <label className="ingredients-field is-wide">
+            <span>{t("shopOrdering.deliveryAddress")}</span>
+            <textarea rows={2} value={deliveryAddress} onChange={(event) => setDeliveryAddress(event.target.value)} />
+          </label>
+          <label className="ingredients-field is-wide">
             <span>{t("shopOrdering.note")}</span>
-            <input value={note} onChange={(event) => setNote(event.target.value)} />
+            <textarea rows={2} value={note} onChange={(event) => setNote(event.target.value)} />
           </label>
         </div>
         <section className={`shop-order-builder${selectedSupplierKeys.length ? " has-suppliers" : ""}${supplierPickerOpen ? " is-picker-open" : ""}`} aria-labelledby="shop-order-builder-title">

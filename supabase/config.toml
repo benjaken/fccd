@@ -81,6 +81,9 @@ verify_jwt = false
 [functions.send-enquiry-notifications]
 verify_jwt = false
 
+[functions.create-enquiry-asana-task]
+verify_jwt = false
+
 [functions.wati-send-template]
 verify_jwt = false
 

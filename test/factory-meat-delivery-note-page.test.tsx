@@ -6,12 +6,18 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { FactoryMeatDeliveryNotePage } from "@/components/FactoryMeatDeliveryNotePage";
+import { FactoryMeatDeliveryNotePage, formatMeatDeliveryNoteLineQuantity } from "@/components/FactoryMeatDeliveryNotePage";
 import i18n from "@/i18n";
 
 describe("FactoryMeatDeliveryNotePage", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("zh-HK");
+  });
+
+  it("separates package quantity from a unit that starts with its own weight", () => {
+    expect(formatMeatDeliveryNoteLineQuantity(6, "2kg / 包")).toBe("6 × 2kg / 包");
+    expect(formatMeatDeliveryNoteLineQuantity(2, "600g/包")).toBe("2 × 600g/包");
+    expect(formatMeatDeliveryNoteLineQuantity(4, "份")).toBe("4份");
   });
 
   it("uses an A4 portrait preview and portrait print page", () => {

@@ -10,12 +10,6 @@ import {
 import { EMAIL_FROM } from "../_shared/email-sender.ts";
 import { settleEnabledNotificationRequests } from "../_shared/notification-channel-requests.ts";
 import {
-  isNotificationEmailAllowed,
-  isNotificationPhoneAllowed,
-  isNotificationRecipientPairAllowed,
-  notificationRecipientAllowlist,
-} from "../_shared/notification-recipient-allowlist.ts";
-import {
   loadWatiNotificationControls,
   watiEmergencySwitchAllows,
 } from "../_shared/wati-notification-controls.ts";
@@ -83,21 +77,6 @@ Deno.serve(async (request) => {
     if (manualWatiEnabled && !phone) return json({ error: "customer_phone_missing" }, 400);
     const email = order.email_snapshot?.trim() || "";
     if (manualEmailEnabled && !email) return json({ error: "customer_email_missing" }, 400);
-    const recipientPolicy = notificationRecipientAllowlist();
-    const recipientAllowed = manualWatiEnabled && manualEmailEnabled
-      ? isNotificationRecipientPairAllowed(recipientPolicy, phone, email)
-      : manualWatiEnabled
-        ? isNotificationPhoneAllowed(recipientPolicy, phone)
-        : manualEmailEnabled
-          ? isNotificationEmailAllowed(recipientPolicy, email)
-          : true;
-    if (!recipientAllowed) {
-      return json({
-        error: "notification_recipient_not_allowlisted",
-        watiSent: false,
-        emailSent: false,
-      }, 403);
-    }
     const name = order.customer_name_snapshot?.trim() || order.company_name_snapshot?.trim() || "Customer";
     const shippingMethod = Array.isArray(order.shipping_methods)
       ? order.shipping_methods[0]

@@ -865,6 +865,7 @@ describe("precise order lookup replies", () => {
   });
 
   it("degrades gracefully when dish details cannot be loaded", async () => {
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const turn = await handleCustomerServiceTurn({
       phone: conversation.phone_normalized,
       text: "我張訂單訂咗咩菜？",
@@ -878,6 +879,11 @@ describe("precise order lookup replies", () => {
     expect(turn.reply).toContain("暫時未能載入菜式明細");
     expect(turn.reply).toContain("self_service_search");
     expect(turn.failureReason).toBe("order_items_lookup_failed");
+    expect(errorLog).toHaveBeenCalledWith(
+      "customer service order item lookup failed",
+      expect.objectContaining({ message: "rpc unavailable" }),
+    );
+    errorLog.mockRestore();
   });
 
   it("groups packages and merges duplicate dish quantities", async () => {

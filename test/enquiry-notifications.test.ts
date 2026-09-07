@@ -89,13 +89,13 @@ describe("enquiry notification emails", () => {
     expect(source).toContain("enquiryPendingDetailUrl(Deno.env.get(\"APP_URL\"), row.id)");
   });
 
-  it("does not fail closed when the staging recipient allowlist is missing", () => {
+  it("sends configured enquiry notifications without the customer-service allowlist", () => {
     const source = readFileSync(
       resolve(process.cwd(), "supabase/functions/send-enquiry-notifications/index.ts"),
       "utf8",
     );
-    expect(source).toContain("enquiry notification allowlist unavailable");
-    expect(source).toContain("enforced: false");
+    expect(source).not.toContain("notificationRecipientAllowlist");
+    expect(source).not.toContain("notification_recipient_not_allowlisted");
     expect(source).toContain("enquiry internal wati has no recipients");
   });
 

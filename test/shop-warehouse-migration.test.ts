@@ -6,6 +6,14 @@ const sql = readFileSync(
   resolve(process.cwd(), "supabase/migrations/20260903140000_shop_warehouse_phase1.sql"),
   "utf8",
 );
+const moveSql = readFileSync(
+  resolve(process.cwd(), "supabase/migrations/20260907110000_move_warehouse_to_restaurant_ordering.sql"),
+  "utf8",
+);
+const automationSql = readFileSync(
+  resolve(process.cwd(), "supabase/migrations/20260907120000_auto_ship_and_material_stocktakes.sql"),
+  "utf8",
+);
 
 describe("shop warehouse phase 1 migration", () => {
   it("creates receipts, shipments, and a dry movement ledger", () => {
@@ -38,5 +46,27 @@ describe("shop warehouse phase 1 migration", () => {
     expect(sql).toContain("workspace.factory.warehouse.inbound");
     expect(sql).toContain("('Super Admin'), ('Admin'), ('Factory')");
     expect(sql).not.toMatch(/Shop manager[\s\S]*workspace\.factory\.warehouse/);
+  });
+
+  it("moves warehouse navigation under restaurant ordering without changing capability keys", () => {
+    expect(moveSql).toContain("/restaurant/ordering/inventory");
+    expect(moveSql).toContain("parent_page_key = 'restaurant.ordering'");
+    expect(moveSql).toContain("workspace.factory.warehouse");
+  });
+
+  it("ships immediately when an approved request is sent to the factory", () => {
+    expect(automationSql).toContain("perform public.ship_shop_order_request(p_request_id, v_lines)");
+    expect(automationSql).toContain("where page_key = 'workspace.factory.warehouse.pending'");
+  });
+
+  it("creates idempotent ingredient or packing snapshots from dry movements", () => {
+    expect(automationSql).toContain("after insert on public.shop_dry_stock_movements");
+    expect(automationSql).toContain("insert into public.ingredient_stocktake_events");
+    expect(automationSql).toContain("insert into public.packing_stocktake_events");
+    expect(automationSql).toContain("'shop-auto-' || v_catalog.stocktake_kind || '-stocktake:'");
+    expect(automationSql).toContain("on conflict (legacy_id) do nothing");
+    expect(automationSql).toContain("stocktake_kind = 'ingredient'");
+    expect(automationSql).toContain("stocktake_kind = 'packing'");
+    expect(automationSql).toContain("v_catalog.channel <> 'fc_internal'");
   });
 });

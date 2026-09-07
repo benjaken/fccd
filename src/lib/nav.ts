@@ -629,15 +629,14 @@ export const secondaryNav: Record<string, NavItem[]> = {
     ] },
     {
       key: "restaurantOrdering",
-      to: "/restaurant/ordering/requests",
+      to: "/restaurant/ordering/review",
       icon: ShoppingBag,
       permissionKey: "restaurant.ordering",
       children: [
         { key: "restaurantOrderingSuppliers", to: "/restaurant/ordering/suppliers", icon: Store, permissionKey: "restaurant.ordering.suppliers" },
-        { key: "restaurantOrderingRequests", to: "/restaurant/ordering/requests", icon: ClipboardList, permissionKey: "restaurant.ordering.requests" },
-        { key: "restaurantOrderingRecords", to: "/restaurant/ordering/records", icon: History, permissionKey: "restaurant.ordering.records" },
         { key: "restaurantOrderingPhonebook", to: "/restaurant/ordering/phonebook", icon: Phone, permissionKey: "restaurant.ordering.phonebook" },
         { key: "restaurantOrderingReview", to: "/restaurant/ordering/review", icon: ShieldCheck, permissionKey: "restaurant.ordering.review" },
+        { key: "restaurantOrderingInventory", to: "/restaurant/ordering/inventory", icon: Warehouse, permissionKey: "workspace.factory.warehouse" },
       ],
     },
   ],
@@ -1102,7 +1101,7 @@ export const SECTION_CHILD_KEYS: Record<string, string[]> = {
     ...KITCHEN_ACTION_PAGE_KEYS,
   ],
   delivery: ["delivery.assign", "delivery.fleets"],
-  restaurant: ["restaurant.daily_sales", "restaurant.daily_purchases", "restaurant.monthly_expenses", "restaurant.inventory", "restaurant.reports", "restaurant.staff", "restaurant.settings", "restaurant.settings.restaurants", "restaurant.settings.departments", "restaurant.settings.service_periods", "restaurant.settings.payment_methods", "restaurant.settings.delivery_platforms", "restaurant.settings.holidays", "restaurant.settings.roster_times", "restaurant.settings.supplier_cost_categories", "restaurant.settings.inventory_items", "restaurant.settings.monthly_pnl_cost_categories", "restaurant.ordering", "restaurant.ordering.suppliers", "restaurant.ordering.requests", "restaurant.ordering.records", "restaurant.ordering.phonebook", "restaurant.ordering.review"],
+  restaurant: ["restaurant.daily_sales", "restaurant.daily_purchases", "restaurant.monthly_expenses", "restaurant.inventory", "restaurant.reports", "restaurant.staff", "restaurant.settings", "restaurant.settings.restaurants", "restaurant.settings.departments", "restaurant.settings.service_periods", "restaurant.settings.payment_methods", "restaurant.settings.delivery_platforms", "restaurant.settings.holidays", "restaurant.settings.roster_times", "restaurant.settings.supplier_cost_categories", "restaurant.settings.inventory_items", "restaurant.settings.monthly_pnl_cost_categories", "restaurant.ordering", "restaurant.ordering.suppliers", "restaurant.ordering.requests", "restaurant.ordering.records", "restaurant.ordering.phonebook", "restaurant.ordering.review", "workspace.factory.warehouse", "workspace.factory.warehouse.outbound", "workspace.factory.warehouse.inbound"],
   reports: [
     REPORT_GROUP_PAGE_KEYS.dataInputProgress,
     "kitchen.cost_input",
