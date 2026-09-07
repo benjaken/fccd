@@ -1,16 +1,14 @@
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-  type CSSProperties,
-  type KeyboardEvent,
-} from "react";
-import { createPortal } from "react-dom";
+import { useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { Check, ChevronDown, X } from "lucide-react";
 
+import {
+  Command,
+  CommandEmpty,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
 export type MultiSelectOption = {
@@ -39,84 +37,16 @@ export function MultiSelect({
   emptyLabel: string;
   disabled?: boolean;
 }) {
-  const placeholder = searchPlaceholder ?? triggerPlaceholder;
-  const rootRef = useRef<HTMLDivElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
   const valueRef = useRef(value);
   const [open, setOpen] = useState(false);
-  const [menuStyle, setMenuStyle] = useState<CSSProperties>({});
   const [query, setQuery] = useState("");
-  const [highlight, setHighlight] = useState(0);
+  valueRef.current = value;
+
   const selected = useMemo(() => new Set(value), [value]);
   const selectedOptions = useMemo(
     () => options.filter((item) => selected.has(item.id)),
     [options, selected],
   );
-  const visibleOptions = useMemo(() => {
-    const term = query.trim().toLowerCase();
-    if (!term) return options;
-    return options.filter((item) => item.name.toLowerCase().includes(term));
-  }, [options, query]);
-
-  useEffect(() => {
-    setHighlight(0);
-  }, [visibleOptions]);
-
-  useEffect(() => {
-    valueRef.current = value;
-  }, [value]);
-
-  const updateMenuPosition = useCallback(() => {
-    const trigger = rootRef.current?.getBoundingClientRect();
-    if (!trigger) return;
-    const viewportPadding = 8;
-    const gap = 4;
-    const preferredHeight = 280;
-    const availableBelow = window.innerHeight - trigger.bottom - viewportPadding;
-    const availableAbove = trigger.top - viewportPadding;
-    const openAbove = availableBelow < 180 && availableAbove > availableBelow;
-    const availableHeight = openAbove ? availableAbove : availableBelow;
-    const width = Math.min(trigger.width, window.innerWidth - viewportPadding * 2);
-    const left = Math.min(
-      Math.max(viewportPadding, trigger.left),
-      Math.max(viewportPadding, window.innerWidth - width - viewportPadding),
-    );
-    setMenuStyle({
-      position: "fixed",
-      top: openAbove ? "auto" : trigger.bottom + gap,
-      bottom: openAbove ? window.innerHeight - trigger.top + gap : "auto",
-      left,
-      width,
-      maxHeight: Math.min(preferredHeight, Math.max(120, availableHeight - gap)),
-    });
-  }, []);
-
-  useLayoutEffect(() => {
-    if (!open) return;
-    updateMenuPosition();
-    window.addEventListener("resize", updateMenuPosition);
-    window.addEventListener("scroll", updateMenuPosition, true);
-    return () => {
-      window.removeEventListener("resize", updateMenuPosition);
-      window.removeEventListener("scroll", updateMenuPosition, true);
-    };
-  }, [open, updateMenuPosition]);
-
-  useEffect(() => {
-    if (!open) return;
-    const onPointerDown = (event: PointerEvent) => {
-      const target = event.target as Node;
-      if (
-        !rootRef.current?.contains(target) &&
-        !menuRef.current?.contains(target)
-      ) {
-        setOpen(false);
-        setQuery("");
-      }
-    };
-    document.addEventListener("pointerdown", onPointerDown);
-    return () => document.removeEventListener("pointerdown", onPointerDown);
-  }, [open]);
 
   const toggle = (itemId: string) => {
     const current = valueRef.current;
@@ -127,139 +57,110 @@ export function MultiSelect({
     onChange(next);
   };
 
-  const handleTriggerKey = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === "ArrowDown" || event.key === "Enter" || event.key === " ") {
+  const handleTriggerKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "ArrowDown") {
       event.preventDefault();
       setOpen(true);
     }
   };
 
-  const handleListKey = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Escape") {
-      setOpen(false);
-      setQuery("");
-      return;
-    }
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
-      setHighlight((index) =>
-        visibleOptions.length === 0
-          ? 0
-          : Math.min(index + 1, visibleOptions.length - 1),
-      );
-      return;
-    }
-    if (event.key === "ArrowUp") {
-      event.preventDefault();
-      setHighlight((index) => Math.max(index - 1, 0));
-      return;
-    }
-    if (event.key === "Enter") {
-      const item = visibleOptions[highlight];
-      if (item) {
-        event.preventDefault();
-        toggle(item.id);
-      }
-    }
-  };
-
   return (
-    <div className={cn("multi-select", open && "is-open")} ref={rootRef}>
-      <div
-        id={id}
-        className="multi-select-trigger"
-        role="combobox"
-        tabIndex={disabled ? -1 : 0}
-        aria-labelledby={labelledBy}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        aria-controls={`${id}-listbox`}
-        {...{ "aria-placeholder": triggerPlaceholder }}
-        aria-disabled={disabled || undefined}
-        onClick={() => {
-          if (!disabled) setOpen((current) => !current);
-        }}
-        onKeyDown={handleTriggerKey}
-      >
-        {selectedOptions.length === 0 ? (
-          <span className="multi-select-placeholder">{triggerPlaceholder}</span>
-        ) : (
-          <span className="multi-select-chips">
-            {selectedOptions.map((item) => (
-              <span key={item.id} className="multi-select-chip">
-                {item.name}
-                <button
-                  type="button"
-                  aria-label={item.name}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    toggle(item.id);
-                  }}
-                >
-                  <X />
-                </button>
-              </span>
-            ))}
-          </span>
-        )}
-        <ChevronDown aria-hidden="true" />
-      </div>
-      {open ? createPortal(
-        <div
-          ref={menuRef}
-          className="multi-select-menu multi-select-menu-portal"
-          style={menuStyle}
-        >
-          {searchPlaceholder ? (
-            <input
-              type="text"
-              value={query}
-              placeholder={placeholder}
-              aria-label={placeholder}
-              autoComplete="off"
-              onChange={(event) => setQuery(event.target.value)}
-              onKeyDown={handleListKey}
-            />
-          ) : null}
-          <ul id={`${id}-listbox`} role="listbox" aria-multiselectable="true">
-            {visibleOptions.length === 0 ? (
-              <li className="multi-select-empty">{emptyLabel}</li>
+    <Popover
+      open={open}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen);
+        if (!nextOpen) setQuery("");
+      }}
+    >
+      <div className={cn("multi-select", open && "is-open")}>
+        <PopoverTrigger asChild>
+          <div
+            id={id}
+            className="multi-select-trigger"
+            role="combobox"
+            tabIndex={disabled ? -1 : 0}
+            aria-labelledby={labelledBy}
+            aria-haspopup="listbox"
+            aria-expanded={open}
+            aria-controls={`${id}-listbox`}
+            aria-placeholder={triggerPlaceholder}
+            aria-disabled={disabled || undefined}
+            data-disabled={disabled ? "" : undefined}
+            onKeyDown={handleTriggerKeyDown}
+          >
+            {selectedOptions.length === 0 ? (
+              <span className="multi-select-placeholder">{triggerPlaceholder}</span>
             ) : (
-              visibleOptions.map((item, index) => {
-                const isSelected = selected.has(item.id);
-                return (
-                  <li key={item.id} role="presentation">
+              <span className="multi-select-chips">
+                {selectedOptions.map((item) => (
+                  <span key={item.id} className="multi-select-chip">
+                    {item.name}
                     <button
                       type="button"
-                      role="option"
-                      aria-selected={isSelected}
-                      className={cn(
-                        "multi-select-option",
-                        index === highlight && "is-active",
-                      )}
-                      onMouseEnter={() => setHighlight(index)}
-                      onMouseDown={(event) => event.preventDefault()}
-                      onClick={() => toggle(item.id)}
+                      aria-label={item.name}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        toggle(item.id);
+                      }}
                     >
-                      <span
-                        className={cn(
-                          "multi-select-check",
-                          isSelected && "is-checked",
-                        )}
-                        aria-hidden="true"
-                      >
-                        {isSelected ? <Check /> : null}
-                      </span>
-                      <span>{item.name}</span>
+                      <X />
                     </button>
-                  </li>
-                );
-              })
+                  </span>
+                ))}
+              </span>
             )}
-          </ul>
-        </div>,
-        document.body,
-      ) : null}
-    </div>
+            <ChevronDown aria-hidden="true" />
+          </div>
+        </PopoverTrigger>
+      </div>
+      <PopoverContent
+        align="start"
+        sideOffset={4}
+        className="multi-select-menu multi-select-menu-portal"
+        style={{
+          width: "var(--radix-popover-trigger-width)",
+          maxHeight: "var(--radix-popover-content-available-height)",
+        }}
+      >
+        <Command label={searchPlaceholder ?? triggerPlaceholder}>
+          {searchPlaceholder ? (
+            <CommandInput
+              value={query}
+              onValueChange={setQuery}
+              placeholder={searchPlaceholder}
+              aria-label={searchPlaceholder}
+              autoFocus
+            />
+          ) : null}
+          <CommandList
+            id={`${id}-listbox`}
+            role="listbox"
+            label={searchPlaceholder ?? triggerPlaceholder}
+            aria-multiselectable="true"
+          >
+            <CommandEmpty>{emptyLabel}</CommandEmpty>
+            {options.map((item) => {
+              const isSelected = selected.has(item.id);
+              return (
+                <CommandItem
+                  key={item.id}
+                  value={`${item.name} ${item.id}`}
+                  aria-selected={isSelected}
+                  onSelect={() => toggle(item.id)}
+                >
+                  <span
+                    className={cn("multi-select-check", isSelected && "is-checked")}
+                    aria-hidden="true"
+                  >
+                    {isSelected ? <Check /> : null}
+                  </span>
+                  <span>{item.name}</span>
+                </CommandItem>
+              );
+            })}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }

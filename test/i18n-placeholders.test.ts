@@ -8,7 +8,7 @@ const PLACEHOLDER_T_KEY =
   /placeholder\s*=\s*\{\s*t\(\s*["']([^"']+)["']/g;
 const HARD_CODED_PLACEHOLDER = /placeholder\s*=\s*["'`][^"'`]+["'`]/;
 const PASS_THROUGH_PLACEHOLDER =
-  /placeholder\s*=\s*\{\s*(placeholder|resolvedSearchPlaceholder|selected\.length === 0 \? placeholder : "")\s*\}/;
+  /placeholder\s*=\s*\{\s*(placeholder|resolvedSearchPlaceholder|searchPlaceholder|triggerPlaceholder|selected\.length === 0 \? placeholder : "")\s*\}/;
 
 function collectPlaceholders(
   value: unknown,

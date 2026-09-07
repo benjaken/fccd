@@ -28,8 +28,7 @@ describe("MultiSelect", () => {
 
     expect(container).not.toContainElement(listbox);
     expect(document.body).toContainElement(listbox);
-    expect(listbox.parentElement).toHaveClass("multi-select-menu-portal");
-    expect(listbox.parentElement).toHaveStyle({ position: "fixed" });
+    expect(listbox.closest("[data-slot='popover-content']")).toHaveClass("multi-select-menu-portal");
 
     await user.click(screen.getByRole("option", { name: "中秋節" }));
     expect(onChange).toHaveBeenCalledWith(["festival-1"]);

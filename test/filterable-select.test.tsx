@@ -46,14 +46,15 @@ describe("FilterableSelect", () => {
     const user = userEvent.setup();
     render(<Example />);
 
-    const select = screen.getByLabelText("品牌");
-    await user.selectOptions(select, "fcc");
-    expect(select).toHaveValue("fcc");
+    const trigger = screen.getByRole("combobox", { name: "品牌" });
+    await user.click(trigger);
+    await user.click(screen.getByRole("option", { name: "Food Channels" }));
+    expect(trigger).toHaveTextContent("Food Channels");
 
-    expect(screen.queryByRole("searchbox", { name: "搜尋選項" })).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Food Channels" }));
-    await user.type(screen.getByRole("searchbox", { name: "搜尋選項" }), "Solution");
-    const listbox = screen.getByRole("listbox", { name: "品牌" });
+    expect(screen.queryByRole("combobox", { name: "搜尋選項" })).not.toBeInTheDocument();
+    await user.click(trigger);
+    await user.type(screen.getByRole("combobox", { name: "搜尋選項" }), "Solution");
+    const listbox = screen.getByRole("listbox");
     expect(within(listbox).getByRole("option", { name: "B&W Solution" })).toBeInTheDocument();
     expect(within(listbox).queryByRole("option", { name: "Food Channels" })).not.toBeInTheDocument();
     expect(within(listbox).queryByRole("option", { name: "全部品牌" })).not.toBeInTheDocument();

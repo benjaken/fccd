@@ -230,12 +230,6 @@ export function QuotePdfPagesSettingsPage({
           <h1>{t("quotes.pdfPages.title")}</h1>
           <p>{t("quotes.pdfPages.description")}</p>
         </div>
-        {canManage ? (
-          <Button onClick={openCreate} disabled={!brands.length}>
-            <Plus />
-            {t("quotes.pdfPages.create")}
-          </Button>
-        ) : null}
       </header>
 
       <article className="panel orders-panel">
@@ -254,6 +248,12 @@ export function QuotePdfPagesSettingsPage({
               <option value="back">{t("quotes.pdfPages.back")}</option>
             </select>
           </label>
+          {canManage ? (
+            <Button onClick={openCreate} disabled={!brands.length}>
+              <Plus />
+              {t("quotes.pdfPages.create")}
+            </Button>
+          ) : null}
         </header>
 
         {error ? (

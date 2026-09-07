@@ -376,8 +376,10 @@ describe("Seasoning recipes page", () => {
         }),
       );
     });
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "編輯香料配方" })).not.toBeInTheDocument());
 
-    await user.click(within(firstRow).getByRole("button", { name: "刪除" }));
+    const refreshedFirstRow = screen.getAllByRole("row")[1]!;
+    await user.click(within(refreshedFirstRow).getByRole("button", { name: "刪除" }));
     await waitFor(() => {
       expect(deleteRecipe).toHaveBeenCalledWith("p-1", 20260716);
     });

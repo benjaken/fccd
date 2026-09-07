@@ -18,8 +18,23 @@ Object.defineProperty(window, "matchMedia", {
   })),
 });
 
+class ResizeObserverMock implements ResizeObserver {
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+}
+
+vi.stubGlobal("ResizeObserver", ResizeObserverMock);
+
+if (!HTMLElement.prototype.scrollIntoView) {
+  HTMLElement.prototype.scrollIntoView = vi.fn();
+}
+
 afterEach(async () => {
   cleanup();
+  if (typeof ResizeObserver === "undefined") {
+    vi.stubGlobal("ResizeObserver", ResizeObserverMock);
+  }
   localStorage.clear();
   document.documentElement.classList.remove("dark");
   await i18n.changeLanguage("zh-HK");

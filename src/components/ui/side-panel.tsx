@@ -1,7 +1,16 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
 export function SidePanel({
@@ -29,72 +38,75 @@ export function SidePanel({
   half?: boolean;
   className?: string;
 }) {
-  useEffect(() => {
-    if (!open) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose, open]);
+  const wasOpenRef = useRef(false);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
+
+  if (open && !wasOpenRef.current && typeof document !== "undefined") {
+    returnFocusRef.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+  }
+  wasOpenRef.current = open;
 
   useEffect(() => {
     if (!open) return;
     const previousDocumentOverflow = document.documentElement.style.overflow;
     const previousBodyOverflow = document.body.style.overflow;
-    const previousBodyPaddingRight = document.body.style.paddingRight;
-    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-    const currentBodyPaddingRight = Number.parseFloat(window.getComputedStyle(document.body).paddingRight) || 0;
     document.documentElement.style.overflow = "hidden";
     document.body.style.overflow = "hidden";
-    if (scrollbarWidth > 0) document.body.style.paddingRight = `${currentBodyPaddingRight + scrollbarWidth}px`;
     return () => {
       document.documentElement.style.overflow = previousDocumentOverflow;
       document.body.style.overflow = previousBodyOverflow;
-      document.body.style.paddingRight = previousBodyPaddingRight;
     };
   }, [open]);
 
   if (!open) return null;
 
   return (
-    <div className="side-panel-root" role="presentation">
-      <button
-        type="button"
-        className="side-panel-backdrop"
-        aria-label={closeLabel}
-        onClick={onClose}
-      />
-      <aside
+    <Sheet
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) onClose();
+      }}
+    >
+      <SheetContent
         className={cn(
-          "side-panel",
           wide && "side-panel-wide",
           extraWide && "side-panel-xl",
           half && "side-panel-half",
           className,
         )}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="side-panel-title"
+        {...(!description ? { "aria-describedby": undefined } : {})}
+        onCloseAutoFocus={(event) => {
+          const returnTarget = returnFocusRef.current;
+          if (returnTarget && returnTarget !== document.body) {
+            event.preventDefault();
+            returnTarget.focus();
+          }
+        }}
       >
-        <header className="side-panel-header">
+        <SheetHeader>
           <div>
-            <h2 id="side-panel-title">{title}</h2>
-            {description ? <p>{description}</p> : null}
+            <SheetTitle asChild><h2>{title}</h2></SheetTitle>
+            {description ? (
+              <SheetDescription asChild><p>{description}</p></SheetDescription>
+            ) : null}
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            onClick={onClose}
-            aria-label={closeLabel}
-          >
-            <X />
-          </Button>
-        </header>
+          <SheetClose asChild>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              aria-label={closeLabel}
+            >
+              <X />
+            </Button>
+          </SheetClose>
+        </SheetHeader>
         <div className="side-panel-body">{children}</div>
-        {footer ? <footer className="side-panel-footer">{footer}</footer> : null}
-      </aside>
-    </div>
+        {footer ? <SheetFooter>{footer}</SheetFooter> : null}
+      </SheetContent>
+    </Sheet>
   );
 }

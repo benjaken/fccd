@@ -252,11 +252,6 @@ export function DictionariesPage() {
           <h1>{t("settings.dictionaries.title")}</h1>
           <p>{t("settings.dictionaries.description")}</p>
         </div>
-        {canEdit ? (
-          <Button type="button" variant="outline" onClick={() => setEditor({ kind: "type", row: null })}>
-            <Plus />{t("settings.dictionaries.addType")}
-          </Button>
-        ) : null}
       </header>
 
       {error ? <div className="list-inline-error" role="alert"><span>{error}</span><Button variant="outline" onClick={refresh}>{t("common.retry")}</Button></div> : null}
@@ -283,10 +278,11 @@ export function DictionariesPage() {
         <article className="panel dictionary-items">
           <header>
             <div><strong>{selectedType?.name ?? t("settings.dictionaries.items")}</strong><span>{selectedType?.description}</span></div>
-            {canEdit && selectedType ? (
+            {canEdit ? (
               <div>
-                <Button type="button" size="sm" variant="outline" onClick={() => setEditor({ kind: "type", row: selectedType })}><Pencil />{t("settings.dictionaries.editType")}</Button>
-                <Button type="button" size="sm" onClick={() => setEditor({ kind: "item", row: null })}><Plus />{t("settings.dictionaries.addItem")}</Button>
+                <Button type="button" size="sm" variant="outline" onClick={() => setEditor({ kind: "type", row: null })}><Plus />{t("settings.dictionaries.addType")}</Button>
+                {selectedType ? <Button type="button" size="sm" variant="outline" onClick={() => setEditor({ kind: "type", row: selectedType })}><Pencil />{t("settings.dictionaries.editType")}</Button> : null}
+                {selectedType ? <Button type="button" size="sm" onClick={() => setEditor({ kind: "item", row: null })}><Plus />{t("settings.dictionaries.addItem")}</Button> : null}
               </div>
             ) : null}
           </header>

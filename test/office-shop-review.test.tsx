@@ -155,6 +155,7 @@ describe("OfficeShopReviewPage", () => {
       }));
     });
     expect(screen.getAllByText("Reviewed").length).toBeGreaterThan(0);
+    await user.click(screen.getByRole("button", { name: "Confirm" }));
     expect(screen.getByRole("button", { name: "Send to factory" })).toBeInTheDocument();
   });
 
@@ -228,8 +229,9 @@ describe("OfficeShopReviewPage", () => {
     await user.click(screen.getByRole("button", { name: "Send to factory" }));
 
     await waitFor(() => expect(shopOrders.sendShopOrderToFactory).toHaveBeenCalledWith(request.id));
-    expect(screen.getByRole("heading", { name: request.requestNo })).toBeInTheDocument();
     expect(screen.getByRole("alertdialog")).toHaveTextContent("Sent to the factory and shipment record created.");
+    await user.click(screen.getByRole("button", { name: "Confirm" }));
+    expect(screen.getByRole("heading", { name: request.requestNo })).toBeInTheDocument();
     expect(screen.getAllByText("In transit").length).toBeGreaterThan(0);
   });
 

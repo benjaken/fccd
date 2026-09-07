@@ -251,6 +251,7 @@ describe("Catering quotes list", () => {
       ),
     );
 
+    await user.keyboard("{Escape}");
     await user.click(screen.getByRole("button", { name: "報價單號" }));
     await waitFor(() =>
       expect(loadQuotes).toHaveBeenLastCalledWith(

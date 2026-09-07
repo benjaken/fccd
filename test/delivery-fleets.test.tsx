@@ -152,7 +152,7 @@ describe("Delivery fleet management", () => {
     const districtFilter = screen.getByRole("combobox", { name: "地區" });
     expect(districtFilter).toBeInTheDocument();
     await user.click(districtFilter);
-    expect(screen.getByRole("searchbox", { name: "搜尋" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "搜尋" })).toBeInTheDocument();
 
     const feeInput = screen.getByRole("spinbutton", { name: "荃灣 運費" });
     await user.clear(feeInput);

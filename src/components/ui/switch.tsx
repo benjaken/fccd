@@ -1,38 +1,37 @@
 import * as React from "react";
+import * as SwitchPrimitive from "@radix-ui/react-switch";
 
 import { cn } from "@/lib/utils";
 
 export type SwitchProps = Omit<
-  React.ButtonHTMLAttributes<HTMLButtonElement>,
-  "onChange" | "role"
+  React.ComponentPropsWithoutRef<typeof SwitchPrimitive.Root>,
+  "checked"
 > & {
   checked: boolean;
-  onCheckedChange?: (checked: boolean) => void;
 };
 
-const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
+const Switch = React.forwardRef<
+  React.ElementRef<typeof SwitchPrimitive.Root>,
+  SwitchProps
+>(
   (
-    { checked, onCheckedChange, className, disabled, onClick, ...props },
+    { checked, className, ...props },
     ref,
   ) => (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      disabled={disabled}
+    <SwitchPrimitive.Root
       ref={ref}
+      checked={checked}
+      data-slot="switch"
       className={cn("ui-switch", checked && "ui-switch-checked", className)}
-      onClick={(event) => {
-        onClick?.(event);
-        if (event.defaultPrevented || disabled) return;
-        onCheckedChange?.(!checked);
-      }}
       {...props}
     >
-      <span className="ui-switch-thumb" aria-hidden="true" />
-    </button>
+      <SwitchPrimitive.Thumb
+        data-slot="switch-thumb"
+        className="ui-switch-thumb"
+      />
+    </SwitchPrimitive.Root>
   ),
 );
-Switch.displayName = "Switch";
+Switch.displayName = SwitchPrimitive.Root.displayName;
 
 export { Switch };

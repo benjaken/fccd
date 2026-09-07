@@ -22,10 +22,9 @@ describe("SearchSelect", () => {
     );
 
     fireEvent.click(screen.getByRole("combobox", { name: "供應商" }));
-    const menu = screen.getByRole("searchbox", { name: "搜尋供應商名稱或編號" }).closest(".multi-select-menu");
+    const menu = screen.getByRole("combobox", { name: "搜尋供應商名稱或編號" }).closest(".multi-select-menu");
     expect(menu).toHaveClass("multi-select-menu-portal");
-    expect(menu).toHaveStyle({ position: "fixed" });
-    fireEvent.change(screen.getByRole("searchbox", { name: "搜尋供應商名稱或編號" }), {
+    fireEvent.change(screen.getByRole("combobox", { name: "搜尋供應商名稱或編號" }), {
       target: { value: "泰豐" },
     });
 
@@ -49,7 +48,7 @@ describe("SearchSelect", () => {
 
     const trigger = screen.getByRole("combobox", { name: "供應商" });
     fireEvent.click(trigger);
-    fireEvent.keyDown(screen.getByRole("searchbox"), { key: "Enter" });
+    fireEvent.keyDown(screen.getByRole("combobox", { name: "搜尋" }), { key: "Enter" });
     expect(onChange).toHaveBeenCalledWith({ id: "euro", name: "Euro Foodstuff" });
   });
 
@@ -68,10 +67,10 @@ describe("SearchSelect", () => {
     );
 
     fireEvent.click(screen.getByRole("combobox", { name: "供應商" }));
-    fireEvent.change(screen.getByRole("searchbox", { name: "搜尋供應商" }), {
+    fireEvent.change(screen.getByRole("combobox", { name: "搜尋供應商" }), {
       target: { value: "New Frozen Foods Ltd" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "新增「New Frozen Foods Ltd」" }));
+    fireEvent.click(screen.getByRole("option", { name: "新增「New Frozen Foods Ltd」" }));
     expect(onCreate).toHaveBeenCalledWith("New Frozen Foods Ltd");
   });
 });

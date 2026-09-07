@@ -136,7 +136,7 @@ describe("restaurant daily purchase input", () => {
     await user.type(within(dialog).getByLabelText("日期"), "2026-08-22");
     await user.selectOptions(within(dialog).getByLabelText("餐廳"), "tko");
     await user.click(within(dialog).getByRole("combobox", { name: "供應商" }));
-    await user.type(screen.getByRole("searchbox", { name: "搜尋供應商" }), "CI");
+    await user.type(screen.getByRole("combobox", { name: "搜尋供應商" }), "CI");
     expect(screen.queryByRole("option", { name: suppliers[1].name })).not.toBeInTheDocument();
     await user.click(screen.getByRole("option", { name: suppliers[0].name }));
     await user.clear(within(dialog).getByLabelText("廚房用料金額"));

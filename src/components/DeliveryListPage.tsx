@@ -524,6 +524,7 @@ export function DeliveryListPage({
             )}
             filtersActive={filtersActive}
             filtersTitle={t("common.filters")}
+            filtersAlwaysInDrawer
             onConfirmFilters={confirmFilters}
             onDismissFilters={revertFilters}
             filters={

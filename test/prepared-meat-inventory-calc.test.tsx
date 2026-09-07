@@ -492,9 +492,9 @@ describe("Prepared meat inventory calculation page", () => {
     });
 
     expect(
-      within(sidebar).queryByRole("button", { name: "五香牛腩" }),
+      within(sidebar).queryByRole("button", { name: "五香牛腩", hidden: true }),
     ).not.toBeInTheDocument();
-    expect(within(sidebar).getByRole("button", { name: "滷水豬手" })).toHaveAttribute(
+    expect(within(sidebar).getByRole("button", { name: "滷水豬手", hidden: true })).toHaveAttribute(
       "aria-current",
       "true",
     );

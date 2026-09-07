@@ -1456,7 +1456,7 @@ describe("Quote editor", () => {
 
     const district = await screen.findByRole("combobox", { name: "District" });
     await user.click(district);
-    await user.type(screen.getByRole("searchbox", { name: "Search" }), "Kowloon");
+    await user.type(screen.getByRole("combobox", { name: "Search" }), "Kowloon");
     expect(screen.queryByRole("option", { name: "Central" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("option", { name: "Kowloon Bay" }));
     expect(district).toHaveTextContent("Kowloon Bay");
@@ -1478,8 +1478,8 @@ describe("Quote editor", () => {
 
     const district = await screen.findByRole("combobox", { name: "District" });
     await user.click(district);
-    await user.type(screen.getByRole("searchbox", { name: "Search" }), "Tseung Kwan O");
-    await user.click(screen.getByRole("button", { name: /Tseung Kwan O/ }));
+    await user.type(screen.getByRole("combobox", { name: "Search" }), "Tseung Kwan O");
+    await user.click(screen.getByRole("option", { name: /Tseung Kwan O/ }));
 
     await waitFor(() => expect(createDistrict).toHaveBeenCalledWith("Tseung Kwan O"));
     expect(district).toHaveTextContent("Tseung Kwan O");
@@ -1741,7 +1741,7 @@ describe("Quote editor", () => {
     await user.click(readonlyPreviewButton);
     expect(screen.getByLabelText("50 × 75 mm 標籤預覽：FCBQ20260834")).toBeInTheDocument();
     expect(screen.queryByRole("textbox", { name: "Label line 1" })).not.toBeInTheDocument();
-    await user.click(screen.getAllByRole("button", { name: "Close label dialog" })[1]);
+    await user.click(screen.getByRole("button", { name: "Close label dialog" }));
     expect(screen.getByRole("heading", { name: "額外資訊" })).toBeInTheDocument();
     expect(screen.getByText("每個便當包括一份餐具")).toBeInTheDocument();
     expect(screen.getByText("每款揀選的飯盒最少3盒")).toBeInTheDocument();
@@ -1853,11 +1853,11 @@ describe("Quote editor", () => {
     const famousBrandSelect = screen.getByRole("combobox", { name: "Customer tags" });
     await user.click(famousBrandSelect);
     const famousBrandTag = screen.getByRole("option", { name: "沙田威爾斯" });
-    expect(famousBrandTag).toHaveAttribute("aria-selected", "true");
+    expect(famousBrandTag.querySelector(".multi-select-check")).toHaveClass("is-checked");
     await user.click(famousBrandTag);
-    expect(famousBrandTag).toHaveAttribute("aria-selected", "false");
+    expect(famousBrandTag.querySelector(".multi-select-check")).not.toHaveClass("is-checked");
     await user.click(famousBrandTag);
-    expect(famousBrandTag).toHaveAttribute("aria-selected", "true");
+    expect(famousBrandTag.querySelector(".multi-select-check")).toHaveClass("is-checked");
     expect(screen.getByText(/Shown on delivery note|送貨單顯示/)).toBeInTheDocument();
     expect(screen.queryByLabelText(/Success probability|成功機率/)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/Sales source|報價渠道/)).not.toBeInTheDocument();

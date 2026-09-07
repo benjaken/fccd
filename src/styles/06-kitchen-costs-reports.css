@@ -359,6 +359,8 @@
 /* Payment reconciliation keeps date filtering, selection feedback, and the
    settlement form within the established list and modal patterns. */
 .payments-reconciliation-toolbar {
+  display: flex;
+  align-items: flex-end;
   flex-wrap: wrap;
   justify-content: flex-start;
 }

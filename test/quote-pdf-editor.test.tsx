@@ -1334,6 +1334,7 @@ describe("editable quote PDF page", () => {
     const activityOption = within(dialog).getByText("10月15日 120個飯盒").closest("li");
     expect(activityOption).not.toBeNull();
     await user.click(within(activityOption as HTMLElement).getByRole("button", { name: "加入" }));
+    await user.click(within(dialog).getByRole("button", { name: "確定" }));
 
     expect(screen.getByLabelText("活動報價 1")).toHaveValue("10月15日 120個飯盒");
     expect(screen.getByLabelText("活動價錢 1")).toHaveValue("5400");
@@ -1390,7 +1391,7 @@ describe("editable quote PDF page", () => {
 
     await screen.findByRole("heading", { name: "便當報價" });
     const activitySummary = screen.getByRole("region", { name: "活動報價表" });
-    await user.click(within(activitySummary).getByRole("button", { name: "選擇運費" }));
+    await user.click(within(activitySummary).getByRole("combobox", { name: "活動運費項目" }));
     await user.click(within(screen.getByRole("listbox", { name: "活動運費項目" })).getByRole("option", { name: "活動運費 11" }));
 
     expect(within(activitySummary).getByLabelText("活動運費")).toHaveValue("1100");

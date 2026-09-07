@@ -421,6 +421,7 @@ describe("Orders list", () => {
     expect(screen.getByRole("combobox", { name: "品牌" })).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "訂單標籤" })).toBeInTheDocument();
     expect(within(table).getAllByText("KLOOK").length).toBeGreaterThan(0);
+    await user.keyboard("{Escape}");
     rerender(<MemoryRouter><OrdersListPage preset="pending" loadOrders={loadOrders} loadListConfig={emptyListConfig} /></MemoryRouter>);
     expect((await screen.findAllByRole("table"))[0]).not.toHaveTextContent("待辦");
   });
@@ -832,7 +833,7 @@ describe("Orders list", () => {
     expect(within(dialog).getByText("此為預覽，列印不會更改訂單。")).toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: "列印" })).toBeInTheDocument();
     expect(within(dialog).queryByText("Delivery note preview")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "取消訂單" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "取消訂單", hidden: true })).toBeInTheDocument();
   });
 
   it.each([

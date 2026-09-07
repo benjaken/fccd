@@ -1,5 +1,5 @@
-import { useEffect, useId, type ReactNode } from "react";
-import { createPortal } from "react-dom";
+import { useRef, type ReactNode } from "react";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -34,63 +34,74 @@ export function Modal({
   className?: string;
   rootClassName?: string;
 }) {
-  const titleId = useId();
-  const descriptionId = useId();
+  const wasOpenRef = useRef(false);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && closeOnEscape) onClose();
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [closeOnEscape, onClose, open]);
+  if (open && !wasOpenRef.current && typeof document !== "undefined") {
+    returnFocusRef.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+  }
+  wasOpenRef.current = open;
 
   if (!open) return null;
 
-  const handleBackdropClick = () => {
-    if (closeOnBackdrop) onClose();
-  };
-
-  return createPortal(
-    <div className={cn("modal-root", rootClassName)} role="presentation">
-      <button
-        type="button"
-        className="modal-backdrop"
-        aria-label={closeLabel}
-        onClick={handleBackdropClick}
-        tabIndex={-1}
-      />
-      <section
-        className={cn("modal-panel", `modal-size-${size}`, className)}
-        role={role}
-        aria-modal="true"
-        aria-labelledby={titleId}
-        aria-describedby={description ? descriptionId : undefined}
-      >
-        <header className="modal-header">
-          <div>
-            <h2 id={titleId}>{title}</h2>
-            {description ? (
-              <div id={descriptionId} className="modal-description">
-                {description}
-              </div>
-            ) : null}
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            onClick={onClose}
-            aria-label={closeLabel}
+  return (
+    <DialogPrimitive.Root
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) onClose();
+      }}
+    >
+      <DialogPrimitive.Portal>
+        <div className={cn("modal-root", rootClassName)} role="presentation">
+          <DialogPrimitive.Overlay className="modal-backdrop" />
+          <DialogPrimitive.Content
+            className={cn("modal-panel", `modal-size-${size}`, className)}
+            role={role}
+            {...(!description ? { "aria-describedby": undefined } : {})}
+            onEscapeKeyDown={(event) => {
+              if (!closeOnEscape) event.preventDefault();
+            }}
+            onPointerDownOutside={(event) => {
+              if (!closeOnBackdrop) event.preventDefault();
+            }}
+            onCloseAutoFocus={(event) => {
+              const returnTarget = returnFocusRef.current;
+              if (returnTarget && returnTarget !== document.body) {
+                event.preventDefault();
+                returnTarget.focus();
+              }
+            }}
           >
-            <X />
-          </Button>
-        </header>
-        {children ? <div className="modal-body">{children}</div> : null}
-        {footer ? <footer className="modal-footer">{footer}</footer> : null}
-      </section>
-    </div>,
-    document.body,
+            <header className="modal-header">
+              <div>
+                <DialogPrimitive.Title asChild>
+                  <h2>{title}</h2>
+                </DialogPrimitive.Title>
+                {description ? (
+                  <DialogPrimitive.Description asChild>
+                    <div className="modal-description">{description}</div>
+                  </DialogPrimitive.Description>
+                ) : null}
+              </div>
+              <DialogPrimitive.Close asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  aria-label={closeLabel}
+                >
+                  <X />
+                </Button>
+              </DialogPrimitive.Close>
+            </header>
+            {children ? <div className="modal-body">{children}</div> : null}
+            {footer ? <footer className="modal-footer">{footer}</footer> : null}
+          </DialogPrimitive.Content>
+        </div>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   );
 }
