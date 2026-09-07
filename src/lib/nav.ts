@@ -840,6 +840,7 @@ export function businessSidebarNav(
 
       const kitchenKeys = new Set([
         "packingStocktakes",
+        "ingredientStocktakes",
         "kitchenMaterialUsage",
       ]);
       const kitchenEntries = secondaryNav.kitchen

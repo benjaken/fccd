@@ -93,6 +93,7 @@ describe("menu styles", () => {
       "customerOrderInquiries",
       "pendingProductReview",
       "packingStocktakes",
+      "ingredientStocktakes",
       "kitchenMaterialUsage",
       "operationsExpenseInput",
       "purchaseExpenseInput",
@@ -116,6 +117,7 @@ describe("menu styles", () => {
     const kitchen = catering.find((item) => item.key === "kitchen")?.children ?? [];
     expect(kitchen.map((item) => item.key)).toEqual(expect.arrayContaining([
       "packingStocktakes",
+      "ingredientStocktakes",
       "kitchenMaterialUsage",
       "dataInputProgress",
       "operationsExpenseInput",
