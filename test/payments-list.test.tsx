@@ -155,6 +155,25 @@ describe("PaymentsListPage", () => {
     expect(screen.queryByRole("button", { name: "Manage" })).not.toBeInTheDocument();
   });
 
+  it("allows management when brand or payment method details are missing", async () => {
+    const user = userEvent.setup();
+    const incompletePayment: PaymentListItem = {
+      ...payments[0],
+      id: "payment-incomplete",
+      orderNumber: "B-1534",
+      channelId: "channel-1",
+      channelName: "HK lunch box",
+      paymentMethodId: null,
+      paymentMethodName: null,
+    };
+    render(<MemoryRouter><PaymentsListPage canViewFinance loadPayments={async () => ({ items: [incompletePayment], total: 1 })} loadPaymentFilterOptions={async () => filterOptions} /></MemoryRouter>);
+
+    await user.click(await screen.findByLabelText("Select payment B-1534"));
+
+    expect(screen.queryByText("Every selected payment must have a brand and payment method before it can be managed.")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Manage" })).toBeInTheDocument();
+  });
+
   it("puts brand, order number, payment method, payment date, and amount after selection", async () => {
     render(<MemoryRouter><PaymentsListPage canViewFinance loadPayments={async () => ({ items: payments, total: 3 })} loadPaymentFilterOptions={async () => filterOptions} /></MemoryRouter>);
 

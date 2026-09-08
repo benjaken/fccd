@@ -98,13 +98,9 @@ export function PaymentsListPage({
   const selectionCompatible =
     selectedItems.length > 0 &&
     selectedChannelIds.size === 1 &&
-    selectedPaymentMethodIds.size === 1 &&
-    !selectedChannelIds.has(null) &&
-    !selectedPaymentMethodIds.has(null);
+    selectedPaymentMethodIds.size === 1;
   const selectionWarning = selectedItems.length && !selectionCompatible
-    ? selectedChannelIds.size > 1 || selectedPaymentMethodIds.size > 1
-      ? t("payments.selectionMismatch")
-      : t("payments.selectionMissingDetails")
+    ? t("payments.selectionMismatch")
     : null;
   const grossAmount = selectedItems.reduce((sum, item) => sum + item.amount, 0);
   const selectedTotal = `${grossAmount < 0 ? "-" : ""}$${Math.abs(grossAmount).toLocaleString("en-US", {
