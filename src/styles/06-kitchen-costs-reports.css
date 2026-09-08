@@ -3058,6 +3058,62 @@ a.masoft-order-tag:focus-visible {
   width: 100%;
 }
 
+.kitchen-channel-sales-brands {
+  display: grid;
+  gap: 0.32rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.kitchen-channel-sales-brand-option {
+  display: flex;
+  align-items: center;
+  gap: 0.42rem;
+  min-width: 0;
+  padding: 0.42rem 0.48rem;
+  border: 1px solid color-mix(in srgb, var(--border) 86%, transparent);
+  border-radius: 0.55rem;
+  background: var(--card);
+  color: var(--foreground);
+  cursor: pointer;
+  transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease;
+}
+
+.kitchen-channel-sales-brand-option:hover {
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+  background: color-mix(in srgb, var(--selection-bg-strong) 52%, var(--card));
+}
+
+.kitchen-channel-sales-brand-option:focus-within {
+  outline: 2px solid color-mix(in srgb, var(--primary) 70%, transparent);
+  outline-offset: 2px;
+}
+
+.kitchen-channel-sales-brand-option.selected {
+  border-color: color-mix(in srgb, var(--primary) 65%, var(--border));
+  background: var(--selection-bg-strong);
+  color: var(--primary);
+}
+
+.kitchen-channel-sales-brand-option input {
+  width: 0.88rem;
+  height: 0.88rem;
+  flex: 0 0 auto;
+  margin: 0;
+  accent-color: var(--primary);
+}
+
+.kitchen-channel-sales-brand-option span {
+  overflow: hidden;
+  font-size: 0.7rem;
+  font-weight: 800;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .kitchen-sales-cost-sidebar .kitchen-sales-cost-overview {
   grid-template-columns: 1fr;
   gap: 0.55rem;
@@ -3578,7 +3634,28 @@ a.masoft-order-tag:focus-visible {
 
 .kitchen-channel-sales-table-scroll {
   min-width: 0;
-  overflow-x: auto;
+  max-height: calc(100dvh - 11rem);
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+@media (min-width: 1051px) {
+  .kitchen-channel-sales-content,
+  .kitchen-channel-sales-layout {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .kitchen-channel-sales-table-card {
+    height: calc(100% - 0.75rem);
+    min-height: 0;
+  }
+
+  .kitchen-channel-sales-table-scroll {
+    height: 100%;
+    max-height: none;
+  }
 }
 
 .kitchen-channel-sales-table {
@@ -3688,13 +3765,18 @@ a.masoft-order-tag:focus-visible {
 
 .kitchen-channel-sales-table tfoot th,
 .kitchen-channel-sales-table tfoot td {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
   border-top: 2px solid color-mix(in srgb, var(--primary) 30%, var(--border));
   border-bottom: 0;
   background: color-mix(in srgb, var(--primary) 82%, #ff777d);
   color: #fff;
+  box-shadow: 0 -3px 8px color-mix(in srgb, var(--foreground) 10%, transparent);
 }
 
 .kitchen-channel-sales-table tfoot th {
+  z-index: 3;
   background: color-mix(in srgb, var(--primary) 75%, #a30c11);
 }
 
