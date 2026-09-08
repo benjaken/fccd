@@ -95,6 +95,7 @@ function resultToDraft(
 ): ReceiptPdfDraft {
   const order = result.order;
   const outstanding = order?.outstanding ?? 0;
+  const activeLines = result.lines.filter((line) => !line.isVoid);
   return {
     invoiceSourceContentVersion: 1,
     sourceFinancialsVersion: 1,
@@ -109,8 +110,8 @@ function resultToDraft(
     invoiceDate: pdfDate(order?.createdAt || order?.updatedAt),
     deliveryDate: pdfDate(order?.deliveryAt),
     deliveryTime: order?.deliveryTime || order?.shipOutTime || "",
-    lines: result.lines.length
-      ? result.lines.map(lineToDraft)
+    lines: activeLines.length
+      ? activeLines.map(lineToDraft)
       : [{ id: "receipt-line-1", description: "", unitPrice: "0", quantity: "1" }],
     deliveryFeeId: "",
     deliveryFeeLabel: "Delivery Fee",
