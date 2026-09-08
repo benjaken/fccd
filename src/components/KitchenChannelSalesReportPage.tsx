@@ -5,7 +5,7 @@ import {
   type CSSProperties,
   type KeyboardEvent,
 } from "react";
-import { CalendarDays, Maximize2, RefreshCw } from "lucide-react";
+import { CalendarDays, Maximize2, RefreshCw, Tags } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
@@ -16,6 +16,7 @@ import {
 } from "@/components/report-ai/ReportAiWorkspace";
 import {
   buildKitchenChannelSalesYearSummary,
+  defaultKitchenChannelSalesChannels,
   defaultKitchenChannelSalesYears,
   fetchKitchenChannelSalesReport,
   kitchenChannelSalesChannels,
@@ -41,6 +42,12 @@ function formatCompactMoney(value: number) {
   if (absolute >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
   if (absolute >= 1_000) return `$${(value / 1_000).toFixed(0)}K`;
   return formatMoney(value);
+}
+
+function formatChannelLabel(channel: string) {
+  if (channel.toLowerCase() === "hk lunch box") return "LUNCH BOX";
+  if (channel.toLowerCase() === "hk party food") return "PARTY FOOD";
+  return channel.toUpperCase();
 }
 
 function sumSummaries(summaries: KitchenChannelSalesYearSummary[]) {
@@ -130,6 +137,72 @@ function YearSelector({
   );
 }
 
+function BrandSelector({
+  channels,
+  selectedChannels,
+  onChange,
+}: {
+  channels: string[];
+  selectedChannels: string[];
+  onChange: (channels: string[]) => void;
+}) {
+  const selected = new Set(selectedChannels);
+
+  const toggleChannel = (channel: string) => {
+    const next = selected.has(channel)
+      ? selectedChannels.filter((item) => item !== channel)
+      : [...selectedChannels, channel];
+    onChange(channels.filter((item) => next.includes(item)));
+  };
+
+  return (
+    <section
+      className="kitchen-sales-cost-filter kitchen-channel-sales-brand-filter panel"
+      aria-labelledby="kitchen-channel-sales-brand-filter-title"
+    >
+      <div className="kitchen-sales-cost-filter-copy">
+        <span className="kitchen-sales-cost-filter-icon">
+          <Tags />
+        </span>
+        <div>
+          <h2 id="kitchen-channel-sales-brand-filter-title">選擇品牌</h2>
+          <p>只顯示已勾選品牌。</p>
+        </div>
+      </div>
+      <fieldset className="kitchen-channel-sales-brands">
+        <legend className="sr-only">品牌</legend>
+        {channels.map((channel) => (
+          <label
+            className={`kitchen-channel-sales-brand-option${selected.has(channel) ? " selected" : ""}`}
+            key={channel}
+          >
+            <input
+              type="checkbox"
+              checked={selected.has(channel)}
+              aria-label={formatChannelLabel(channel)}
+              onChange={() => toggleChannel(channel)}
+            />
+            <span>{formatChannelLabel(channel)}</span>
+          </label>
+        ))}
+      </fieldset>
+      <div className="kitchen-sales-cost-filter-actions">
+        <span>
+          {selectedChannels.length
+            ? `已選 ${selectedChannels.length} 個品牌`
+            : "尚未選擇品牌"}
+        </span>
+        <button type="button" onClick={() => onChange(channels)}>
+          全選品牌
+        </button>
+        <button type="button" onClick={() => onChange([])}>
+          清除品牌
+        </button>
+      </div>
+    </section>
+  );
+}
+
 function YearValues({
   summaries,
   value,
@@ -174,7 +247,7 @@ function ReportTable({
               <th scope="col">月份</th>
               {channels.map((channel) => (
                 <th scope="col" key={channel}>
-                  {channel}
+                  {formatChannelLabel(channel)}
                 </th>
               ))}
               <th scope="col">年度月份總數</th>
@@ -548,6 +621,7 @@ function ChannelMixChart({
 export function KitchenChannelSalesReportPage() {
   const [report, setReport] = useState<KitchenChannelSalesReport | null>(null);
   const [selectedYears, setSelectedYears] = useState<number[]>([]);
+  const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
@@ -599,20 +673,35 @@ export function KitchenChannelSalesReportPage() {
     });
   }, [report, years]);
 
+  useEffect(() => {
+    if (!report) return;
+    setSelectedChannels(
+      defaultKitchenChannelSalesChannels(report.rows, selectedYears, channels),
+    );
+  }, [channels, report, selectedYears]);
+
   const summaries = useMemo(
     () =>
       selectedYears.map((year) =>
-        buildKitchenChannelSalesYearSummary(report?.rows ?? [], year, channels),
+        buildKitchenChannelSalesYearSummary(
+          report?.rows ?? [],
+          year,
+          selectedChannels,
+        ),
       ),
-    [channels, report, selectedYears],
+    [report, selectedChannels, selectedYears],
   );
   const aiSnapshot = useMemo(
     () =>
       report && !loading
         ? {
-            filters: { selectedYears },
+            filters: { selectedYears, selectedChannels },
             currentAggregates: report.rows
-              .filter((row) => selectedYears.includes(row.year))
+              .filter(
+                (row) =>
+                  selectedYears.includes(row.year) &&
+                  selectedChannels.includes(row.channel),
+              )
               .map((row) => ({ ...row })),
             completeness: {
               status: "partial" as const,
@@ -623,7 +712,7 @@ export function KitchenChannelSalesReportPage() {
             },
           }
         : null,
-    [loading, report, selectedYears],
+    [loading, report, selectedChannels, selectedYears],
   );
   useReportAiSnapshot(aiSnapshot);
 
@@ -671,11 +760,16 @@ export function KitchenChannelSalesReportPage() {
                 selectedYears={selectedYears}
                 onChange={setSelectedYears}
               />
+              <BrandSelector
+                channels={channels}
+                selectedChannels={selectedChannels}
+                onChange={setSelectedChannels}
+              />
             </aside>
             <div className="kitchen-channel-sales-content">
-              {selectedYears.length ? (
+              {selectedYears.length && selectedChannels.length ? (
                 <div className="kitchen-channel-sales-layout">
-                  <ReportTable channels={channels} summaries={summaries} />
+                  <ReportTable channels={selectedChannels} summaries={summaries} />
                   {false ? (
                     <aside
                     className="kitchen-channel-sales-charts"
@@ -686,17 +780,22 @@ export function KitchenChannelSalesReportPage() {
                       onExpand={() => setExpandedChart("trend")}
                     />
                     <ChannelMixChart
-                      channels={channels}
+                      channels={selectedChannels}
                       summaries={summaries}
                       onExpand={() => setExpandedChart("mix")}
                     />
                     </aside>
                   ) : null}
                 </div>
-              ) : (
+              ) : !selectedYears.length ? (
                 <section className="panel kitchen-sales-cost-empty">
                   <strong>請選擇至少一個年份</strong>
                   <span>勾選左側年份後，即可查看頻道銷售明細。</span>
+                </section>
+              ) : (
+                <section className="panel kitchen-sales-cost-empty">
+                  <strong>請選擇至少一個品牌</strong>
+                  <span>勾選左側品牌後，右方表格會顯示該品牌。</span>
                 </section>
               )}
             </div>
@@ -711,7 +810,11 @@ export function KitchenChannelSalesReportPage() {
             className="kitchen-sales-cost-chart-modal"
           >
             {expandedChart === "mix" ? (
-              <ChannelMixChart channels={channels} summaries={summaries} expanded />
+              <ChannelMixChart
+                channels={selectedChannels}
+                summaries={summaries}
+                expanded
+              />
             ) : (
               <MonthlyTrendChart summaries={summaries} expanded />
             )}

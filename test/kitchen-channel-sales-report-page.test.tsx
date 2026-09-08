@@ -65,4 +65,55 @@ describe("central kitchen channel sales report page", () => {
       expect(yearValues.every((value) => value.style.background === "")).toBe(true);
     });
   });
+
+  it("shows only checked brands and initially checks brands with sales in the selected year", async () => {
+    const user = userEvent.setup();
+    reportMocks.fetchKitchenChannelSalesReport.mockResolvedValue({
+      rows: [
+        { year: 2024, month: 1, channel: "Kitchen", amount: 500 },
+        { year: 2025, month: 1, channel: "Catering", amount: 1000 },
+        { year: 2025, month: 1, channel: "HK lunch box", amount: 800 },
+        { year: 2025, month: 1, channel: "Kitchen", amount: 0 },
+      ],
+    });
+
+    const { container } = render(
+      <MemoryRouter>
+        <KitchenChannelSalesReportPage />
+      </MemoryRouter>,
+    );
+
+    const catering = await screen.findByRole("checkbox", { name: "CATERING" });
+    const lunchBox = screen.getByRole("checkbox", { name: "LUNCH BOX" });
+    const kitchen = screen.getByRole("checkbox", { name: "KITCHEN" });
+
+    await waitFor(() => {
+      expect(catering).toBeChecked();
+      expect(lunchBox).toBeChecked();
+      expect(kitchen).not.toBeChecked();
+    });
+
+    const columnNames = () =>
+      within(container.querySelector("table") as HTMLTableElement)
+        .getAllByRole("columnheader")
+        .map((header) => header.textContent);
+
+    expect(columnNames()).toEqual([
+      "月份",
+      "CATERING",
+      "LUNCH BOX",
+      "年度月份總數",
+    ]);
+
+    await user.click(lunchBox);
+    expect(columnNames()).toEqual(["月份", "CATERING", "年度月份總數"]);
+
+    await user.click(kitchen);
+    expect(columnNames()).toEqual([
+      "月份",
+      "CATERING",
+      "KITCHEN",
+      "年度月份總數",
+    ]);
+  });
 });

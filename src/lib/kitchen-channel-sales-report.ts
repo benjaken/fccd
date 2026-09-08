@@ -4,13 +4,13 @@ export const KITCHEN_UNASSIGNED_CHANNEL = "Unassigned";
 
 export const KITCHEN_CHANNEL_ORDER = [
   "Catering",
-  "Kitchen",
-  "Express",
-  "Cuisine",
-  "Delivery",
-  "Residential",
   "HK lunch box",
+  "Kitchen",
   "HK Party Food",
+  "Express",
+  "Delivery",
+  "Cuisine",
+  "Residential",
 ] as const;
 
 export type KitchenChannelSalesReportRow = {
@@ -108,6 +108,23 @@ export function kitchenChannelSalesChannels(
     )
     .sort((left, right) => left.localeCompare(right));
   return [...known, ...extra];
+}
+
+export function defaultKitchenChannelSalesChannels(
+  rows: KitchenChannelSalesReportRow[],
+  years: number[],
+  channels = kitchenChannelSalesChannels(rows),
+) {
+  const selectedYears = new Set(years);
+  const channelsWithSales = new Set(
+    rows
+      .filter((row) => selectedYears.has(row.year) && row.amount !== 0)
+      .map((row) => canonicalChannelName(row.channel).toLowerCase()),
+  );
+
+  return channels.filter((channel) =>
+    channelsWithSales.has(channel.toLowerCase()),
+  );
 }
 
 export function buildKitchenChannelSalesYearSummary(

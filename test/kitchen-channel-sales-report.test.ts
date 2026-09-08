@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildKitchenChannelSalesYearSummary,
+  defaultKitchenChannelSalesChannels,
   defaultKitchenChannelSalesYears,
   kitchenChannelSalesChannels,
   kitchenChannelSalesYears,
@@ -25,6 +26,41 @@ describe("central kitchen channel sales report", () => {
     expect(kitchenChannelSalesChannels(rows).slice(0, 2)).toEqual([
       "Catering",
       "Kitchen",
+    ]);
+  });
+
+  it("uses the requested brand order and defaults to brands with sales in the selected years", () => {
+    const channelRows: KitchenChannelSalesReportRow[] = [
+      { year: 2025, month: 1, channel: "Residential", amount: 10 },
+      { year: 2025, month: 1, channel: "Cuisine", amount: 10 },
+      { year: 2025, month: 1, channel: "Delivery", amount: 10 },
+      { year: 2025, month: 1, channel: "Express", amount: 10 },
+      { year: 2025, month: 1, channel: "HK Party Food", amount: 10 },
+      { year: 2025, month: 1, channel: "Kitchen", amount: 0 },
+      { year: 2025, month: 1, channel: "HK lunch box", amount: 10 },
+      { year: 2025, month: 1, channel: "Catering", amount: 10 },
+      { year: 2024, month: 1, channel: "Kitchen", amount: 20 },
+    ];
+
+    const channels = kitchenChannelSalesChannels(channelRows);
+    expect(channels).toEqual([
+      "Catering",
+      "HK lunch box",
+      "Kitchen",
+      "HK Party Food",
+      "Express",
+      "Delivery",
+      "Cuisine",
+      "Residential",
+    ]);
+    expect(defaultKitchenChannelSalesChannels(channelRows, [2025], channels)).toEqual([
+      "Catering",
+      "HK lunch box",
+      "HK Party Food",
+      "Express",
+      "Delivery",
+      "Cuisine",
+      "Residential",
     ]);
   });
 
