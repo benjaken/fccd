@@ -38,6 +38,16 @@ vi.mock("@/lib/driver-delivery", () => ({
 
 describe("DriverDeliveryPage", () => {
   beforeEach(() => {
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
     api.login.mockReset();
     api.fetchOrders.mockReset();
     api.fetchAcceptedOrders.mockReset();
@@ -265,11 +275,13 @@ describe("DriverDeliveryPage", () => {
 
     const scroller = document.querySelector(".driver-order-refresh");
     expect(scroller).not.toBeNull();
+    await waitFor(() => expect(scroller).not.toHaveClass("is-refreshing"));
+    const callsBeforePull = api.fetchOrders.mock.calls.length;
     fireEvent.touchStart(scroller!, { touches: [{ clientY: 40 }] });
     fireEvent.touchMove(scroller!, { touches: [{ clientY: 240 }] });
     fireEvent.touchEnd(scroller!);
 
-    await waitFor(() => expect(api.fetchOrders).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(api.fetchOrders).toHaveBeenCalledTimes(callsBeforePull + 1));
   });
 
   it("refetches fleet summary when returning to the screen", async () => {
