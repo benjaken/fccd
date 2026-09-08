@@ -141,6 +141,27 @@ function InputField({
   );
 }
 
+function PaymentAmountField({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <label className="order-editor-field">
+      <span>金額</span>
+      <input
+        aria-label="金額"
+        type="number"
+        defaultValue={value}
+        step="0.01"
+        onChange={(event) => onChange(event.currentTarget.value === "" ? Number.NaN : event.currentTarget.valueAsNumber)}
+      />
+    </label>
+  );
+}
+
 export function OrderEditorPage({
   loadEditor = fetchOrderEditor,
   saveEditor = saveOrderEditor,
@@ -309,7 +330,7 @@ export function OrderEditorPage({
       setSaveError("訂單至少需要一項餐點，數量必須是 0 或以上的整數。");
       return false;
     }
-    if (draft.payments.some((payment) => !payment.paymentAt || !payment.paymentMethodId || payment.amount <= 0)) {
+    if (draft.payments.some((payment) => !payment.paymentAt || !payment.paymentMethodId || (!Number.isFinite(payment.amount) || payment.amount === 0))) {
       setStep("payments");
       setSaveError("請完整填寫每筆收款的日期、付款方式及金額。");
       return false;
@@ -568,7 +589,7 @@ export function OrderEditorPage({
                 <div className="order-payment-row" key={payment.id}>
                   <InputField label="日期" value={payment.paymentAt} type="datetime-local" onChange={(value) => updatePayment(index, { paymentAt: value })} />
                   <SelectField label="付款方式" value={payment.paymentMethodId} options={options.paymentMethods} onChange={(value) => updatePayment(index, { paymentMethodId: value })} />
-                  <InputField label="金額" value={payment.amount} type="number" onChange={(value) => updatePayment(index, { amount: Number(value) })} />
+                  <PaymentAmountField value={payment.amount} onChange={(amount) => updatePayment(index, { amount })} />
                   <InputField label="付款參考" value={payment.reference} onChange={(value) => updatePayment(index, { reference: value })} />
                   <button className="order-editor-delete" type="button" aria-label="刪除收款" onClick={() => update("payments", draft.payments.filter((_, paymentIndex) => paymentIndex !== index))}><Trash2 /></button>
                 </div>

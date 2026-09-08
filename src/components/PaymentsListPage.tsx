@@ -63,7 +63,7 @@ export function PaymentsListPage({
   const [orderNumberDraft, setOrderNumberDraft] = useState("");
   const [orderNumber, setOrderNumber] = useState("");
   const [amountMin, setAmountMin] = useState("");
-  const [amountMax, setAmountMax] = useState("");
+
   const [dateFilterMode, setDateFilterMode] = useState<DateFilterMode>("single");
   const [paymentDate, setPaymentDate] = useState("");
   const [paymentDateStart, setPaymentDateStart] = useState("");
@@ -149,7 +149,7 @@ export function PaymentsListPage({
     }
     try {
       const parsedAmountMin = amountMin.trim() === "" ? null : Number(amountMin);
-      const parsedAmountMax = amountMax.trim() === "" ? null : Number(amountMax);
+      const parsedAmountMax = amountMin.trim() === "" ? null : Number(amountMin);
       const result = await loadPayments({
         page,
         unreconciled: true,
@@ -187,7 +187,7 @@ export function PaymentsListPage({
       if (appending) setLoadingMore(false);
       else setLoading(false);
     }
-  }, [amountMax, amountMin, canViewFinance, channelId, dateFilterMode, isMobileList, loadPayments, orderNumber, page, paymentDate, paymentDateEnd, paymentDateStart, paymentMethodId, reloadKey]);
+  }, [amountMin, canViewFinance, channelId, dateFilterMode, isMobileList, loadPayments, orderNumber, page, paymentDate, paymentDateEnd, paymentDateStart, paymentMethodId, reloadKey]);
 
   useEffect(() => void load(), [load]);
 
@@ -278,13 +278,14 @@ export function PaymentsListPage({
       <article className="panel orders-panel payments-reconciliation-panel responsive-card-list-panel">
         <header className="orders-toolbar payments-reconciliation-toolbar">
           <ListSearchBar
+            className="payments-order-search"
             id="payments-order-number-search"
             value={orderNumberDraft}
             onChange={setOrderNumberDraft}
             onSubmit={() => { setOrderNumber(orderNumberDraft.trim()); setPage(1); }}
             label={t("payments.search")}
             placeholder={t("payments.searchPlaceholder")}
-            filtersActive={Boolean(paymentDate || paymentDateStart || paymentDateEnd || channelId || paymentMethodId || amountMin || amountMax)}
+            filtersActive={Boolean(paymentDate || paymentDateStart || paymentDateEnd || channelId || paymentMethodId || amountMin)}
             filters={<>
           <label className="payments-date-filter-mode">
             <span>{t("payments.dateFilter")}</span>
@@ -338,14 +339,7 @@ export function PaymentsListPage({
                 {filterOptions.paymentMethods.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}
               </FilterableSelect>
             </label>
-            <fieldset className="payments-amount-range">
-              <legend>{t("payments.amountRange")}</legend>
-              <div>
-                <label><span>{t("payments.amountMin")}</span><input type="number" min="0" step="0.01" value={amountMin} onChange={(event) => { setAmountMin(event.target.value); setPage(1); }} placeholder={t("payments.amountMinPlaceholder")} /></label>
-                <span aria-hidden="true">–</span>
-                <label><span>{t("payments.amountMax")}</span><input type="number" min="0" step="0.01" value={amountMax} onChange={(event) => { setAmountMax(event.target.value); setPage(1); }} placeholder={t("payments.amountMaxPlaceholder")} /></label>
-              </div>
-            </fieldset>
+            <label className="payments-filter-field"><span>{t("payments.amountExact")}</span><input type="text" inputMode="decimal" aria-label={t("payments.amountExact")} value={amountMin} onChange={(event) => { setAmountMin(event.target.value); setPage(1); }} placeholder={t("payments.amountExact")} /></label>
           </div>
             </>}
           />

@@ -7,6 +7,14 @@ function source(path: string) {
 }
 
 describe("sales document batch save", () => {
+  it("accepts negative payment amounts for refund records while rejecting zero", () => {
+    const migration = source("supabase/migrations/20260908230000_allow_refund_payment_amounts.sql");
+
+    expect(migration).toContain("or payment.amount = 0");
+    expect(migration).not.toContain("or payment.amount <= 0");
+    expect(migration).toContain("save_sales_document_batch");
+  });
+
   it("updates all persisted lines and recalculates the document once in one RPC", () => {
     const migration = source("supabase/migrations/20260828110000_batch_save_sales_document.sql");
 

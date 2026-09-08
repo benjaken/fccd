@@ -56,7 +56,7 @@ export function MasoftInvoiceReceiptsPage({
   const [orderNumberDraft, setOrderNumberDraft] = useState("");
   const [orderNumber, setOrderNumber] = useState("");
   const [amountMin, setAmountMin] = useState("");
-  const [amountMax, setAmountMax] = useState("");
+
   const [date, setDate] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -99,7 +99,7 @@ export function MasoftInvoiceReceiptsPage({
     else { setLoading(true); setError(false); }
     try {
       const parsedAmountMin = amountMin.trim() === "" ? null : Number(amountMin);
-      const parsedAmountMax = amountMax.trim() === "" ? null : Number(amountMax);
+      const parsedAmountMax = amountMin.trim() === "" ? null : Number(amountMin);
       const result = await loadSettlements({ page, orderNumber: orderNumber || null, amountMin: Number.isFinite(parsedAmountMin) ? parsedAmountMin : null, amountMax: Number.isFinite(parsedAmountMax) ? parsedAmountMax : null, payoutDate: dateMode === "single" ? date || null : null, payoutDateStart: dateMode === "range" ? startDate || null : null, payoutDateEnd: dateMode === "range" ? endDate || null : null, channelId: channelId || null, paymentMethodId: methodId || null, payoutAscending });
       setItems((current) => {
         if (!appending) return result.items;
@@ -120,7 +120,7 @@ export function MasoftInvoiceReceiptsPage({
       if (appending) setLoadingMore(false);
       else setLoading(false);
     }
-  }, [amountMax, amountMin, canViewFinance, channelId, date, dateMode, endDate, isMobileList, loadSettlements, methodId, orderNumber, page, payoutAscending, reloadKey, startDate]);
+  }, [amountMin, canViewFinance, channelId, date, dateMode, endDate, isMobileList, loadSettlements, methodId, orderNumber, page, payoutAscending, reloadKey, startDate]);
 
   useEffect(() => void load(), [load]);
   useEffect(() => {
@@ -205,20 +205,21 @@ export function MasoftInvoiceReceiptsPage({
     <article className="panel orders-panel responsive-card-list-panel">
       <header className="orders-toolbar payments-reconciliation-toolbar">
         <ListSearchBar
+          className="payments-order-search"
           id="masoft-order-number-search"
           value={orderNumberDraft}
           onChange={setOrderNumberDraft}
           onSubmit={() => { setOrderNumber(orderNumberDraft.trim()); resetPage(); }}
           label={t("masoft.orderSearch")}
           placeholder={t("masoft.orderSearchPlaceholder")}
-          filtersActive={Boolean(date || startDate || endDate || channelId || methodId || amountMin || amountMax)}
+          filtersActive={Boolean(date || startDate || endDate || channelId || methodId || amountMin)}
           filters={<>
             <label className="payments-date-filter-mode"><span>{t("masoft.payoutFilter")}</span><select value={dateMode} onChange={(event) => { setDateMode(event.target.value as DateMode); resetPage(); }}><option value="single">{t("masoft.singleDate")}</option><option value="range">{t("masoft.dateRange")}</option></select></label>
             {dateMode === "single" ? <DatePicker id="masoft-payout-date" value={date} onChange={(value) => { setDate(value); resetPage(); }} label={t("masoft.payoutFilter")} hideLabel /> : <DateRangePicker startId="masoft-payout-start" endId="masoft-payout-end" startValue={startDate} endValue={endDate} onStartChange={(value) => { setStartDate(value); resetPage(); }} onEndChange={(value) => { setEndDate(value); resetPage(); }} startLabel={t("masoft.from")} endLabel={t("masoft.to")} legend={t("masoft.payoutRange")} />}
             <div className="payments-filter-fields">
               <label className="payments-filter-field"><span>{t("masoft.brand")}</span><FilterableSelect value={channelId} onChange={(event) => { setChannelId(event.target.value); resetPage(); }}><option value="">{t("masoft.allBrands")}</option>{options.channels.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}</FilterableSelect></label>
               <label className="payments-filter-field"><span>{t("masoft.paymentMethod")}</span><FilterableSelect value={methodId} onChange={(event) => { setMethodId(event.target.value); resetPage(); }}><option value="">{t("masoft.allPaymentMethods")}</option>{options.paymentMethods.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}</FilterableSelect></label>
-              <fieldset className="payments-amount-range"><legend>{t("masoft.amountRange")}</legend><div><label><span>{t("masoft.amountMin")}</span><input type="number" min="0" step="0.01" value={amountMin} onChange={(event) => { setAmountMin(event.target.value); resetPage(); }} placeholder={t("masoft.amountMinPlaceholder")} /></label><span aria-hidden="true">–</span><label><span>{t("masoft.amountMax")}</span><input type="number" min="0" step="0.01" value={amountMax} onChange={(event) => { setAmountMax(event.target.value); resetPage(); }} placeholder={t("masoft.amountMaxPlaceholder")} /></label></div></fieldset>
+              <label className="payments-filter-field"><span>{t("masoft.amountExact")}</span><input type="text" inputMode="decimal" aria-label={t("masoft.amountExact")} value={amountMin} onChange={(event) => { setAmountMin(event.target.value); resetPage(); }} placeholder={t("masoft.amountExact")} /></label>
             </div>
           </>}
         />

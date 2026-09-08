@@ -365,6 +365,20 @@
   justify-content: flex-start;
 }
 
+.payments-order-search .list-search {
+  flex: 0 1 380px;
+  width: min(380px, 100%);
+  max-width: 380px;
+}
+
+@media (max-width: 760px) {
+  .payments-order-search .list-search {
+    flex: 1 1 auto;
+    width: 100%;
+    max-width: none;
+  }
+}
+
 .responsive-filter-desktop {
   display: contents;
 }
