@@ -76,7 +76,7 @@ describe("FactoryMeatDeliveryNotePage", () => {
                       name: "熟滷水牛展片",
                       unit: "份",
                       quantity: 4,
-                      remarks: "",
+                      remarks: "   ",
                     },
                   ],
                 })}
@@ -96,6 +96,7 @@ describe("FactoryMeatDeliveryNotePage", () => {
     expect(screen.getByText("三皇物流")).toBeInTheDocument();
     expect(screen.getByText("熟滷水牛展片")).toBeInTheDocument();
     expect(screen.getByText("4份")).toBeInTheDocument();
+    expect(document.querySelector(".factory-meat-note-lines")).not.toHaveTextContent("（）");
 
     await user.click(screen.getByRole("button", { name: /列印/ }));
     expect(document.querySelector(".factory-meat-note-details section p")).not.toHaveTextContent("*");

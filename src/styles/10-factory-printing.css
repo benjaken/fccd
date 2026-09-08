@@ -1276,6 +1276,8 @@
   .factory-multi-day-report,
   .factory-multi-day-report * {
     visibility: visible !important;
+    color: #000000 !important;
+    font-weight: 700 !important;
   }
 
   .factory-board,
@@ -1315,7 +1317,8 @@
     width: 100% !important;
     min-width: 0 !important;
     table-layout: fixed;
-    font-size: 9pt;
+    color: #000000 !important;
+    font-size: 12.5pt;
   }
 
   .factory-multi-day-table thead {
@@ -1328,6 +1331,7 @@
 
   .factory-multi-day-table th,
   .factory-multi-day-table td {
+    color: #000000 !important;
     overflow-wrap: anywhere;
     word-break: break-word;
     white-space: normal !important;
@@ -1347,7 +1351,7 @@
   .factory-multi-day-report-header p {
     min-width: 0;
     padding: 7px 10px;
-    font-size: 10pt;
+    font-size: 12pt;
     line-height: 1.2;
     white-space: nowrap;
   }
@@ -1369,6 +1373,8 @@
   .order-delivery-note-sheet,
   .order-delivery-note-sheet * {
     visibility: visible !important;
+    color: #000000 !important;
+    font-weight: 700 !important;
   }
 
   .factory-order-job {
@@ -1399,7 +1405,7 @@
     background: #ffffff;
     color: #000000;
     font-family: Arial, "Noto Sans TC", sans-serif;
-    font-size: 13pt;
+    font-size: 16pt;
     line-height: 1.35;
   }
 
@@ -1435,7 +1441,7 @@
   .factory-delivery-note-header h1 {
     grid-column: 2;
     margin: 0;
-    font-size: 17pt;
+    font-size: 19pt;
     white-space: nowrap;
   }
 
@@ -1443,7 +1449,8 @@
     grid-column: 3;
     justify-self: end;
     margin: 0;
-    font-size: 13pt;
+    font-size: 18pt;
+    font-weight: 800 !important;
     white-space: nowrap;
   }
 
@@ -1491,7 +1498,7 @@
   .factory-delivery-note-print > h2,
   .order-delivery-note-sheet > h2 {
     margin: 0 0 5mm;
-    font-size: 18pt;
+    font-size: 20pt;
     text-align: right;
   }
 
@@ -1515,7 +1522,7 @@
     margin: -2mm -3mm 2mm;
     padding: 1mm 2mm;
     border-bottom: 1px solid #222222;
-    font-size: 13pt;
+    font-size: 16pt;
     font-weight: 500;
   }
 
@@ -1544,7 +1551,7 @@
     width: 100%;
     border-collapse: collapse;
     color: #000000 !important;
-    font-size: 12.5pt;
+    font-size: 17pt;
     print-color-adjust: exact;
   }
 
@@ -1567,6 +1574,8 @@
   }
 
   .factory-delivery-note-lines th:last-child {
+    font-size: 19pt;
+    font-weight: 800 !important;
     text-align: center;
   }
 
@@ -1585,7 +1594,7 @@
     grid-template-columns: 1fr auto 1fr;
     align-items: end;
     color: #000000;
-    font-size: 10pt;
+    font-size: 11pt;
     font-weight: 600;
     line-height: 1.3;
   }
@@ -2267,7 +2276,7 @@
     box-shadow: none;
     color: #000000;
     font-family: Arial, "Noto Sans TC", sans-serif;
-    font-size: 13pt;
+    font-size: 16pt;
     line-height: 1.35;
     break-after: page;
     break-inside: avoid-page;
@@ -2282,11 +2291,12 @@
   }
 
   .order-delivery-note-sheet .factory-delivery-note-header h1 {
-    font-size: 17pt;
+    font-size: 19pt;
   }
 
   .order-delivery-note-sheet .factory-delivery-note-cartons {
-    font-size: 13pt;
+    font-size: 18pt;
+    font-weight: 800 !important;
   }
 
   .order-delivery-note-sheet .factory-delivery-note-brand img {
@@ -2296,7 +2306,7 @@
 
   .order-delivery-note-sheet > h2 {
     margin: 0 0 5mm;
-    font-size: 18pt;
+    font-size: 20pt;
   }
 
   .order-delivery-note-sheet .factory-delivery-note-details {
@@ -2311,7 +2321,7 @@
   .order-delivery-note-sheet .factory-delivery-note-details h3 {
     margin: -2mm -3mm 2mm;
     padding: 1mm 2mm;
-    font-size: 13pt;
+    font-size: 16pt;
   }
 
   .order-delivery-note-sheet .factory-delivery-note-details p {
@@ -2324,7 +2334,8 @@
   }
 
   .order-delivery-note-sheet .factory-delivery-note-lines {
-    font-size: 12.5pt;
+    color: #000000 !important;
+    font-size: 17pt;
   }
 
   .order-delivery-note-sheet .factory-delivery-note-lines th,
@@ -2338,10 +2349,15 @@
     width: 18mm;
   }
 
+  .order-delivery-note-sheet .factory-delivery-note-lines th:last-child {
+    font-size: 19pt;
+    font-weight: 800 !important;
+  }
+
   .order-delivery-note-sheet > footer {
     right: 12mm;
     bottom: 10mm;
     left: 12mm;
-    font-size: 10pt;
+    font-size: 11pt;
   }
 }

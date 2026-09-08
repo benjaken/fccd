@@ -69,8 +69,12 @@ export type DeliveryNoteOrder = {
   shopifyStoreDomain?: string | null;
 };
 
-const DELIVERY_NOTE_PAGE_LINE_UNITS = 15;
-const DELIVERY_NOTE_LINE_CHARACTERS = 38;
+const DELIVERY_NOTE_PAGE_LINE_UNITS = 11;
+const DELIVERY_NOTE_LINE_CHARACTERS = 28;
+
+export function visibleDeliveryNoteRemarks(remarks: string[]) {
+  return remarks.map((remark) => remark.trim()).filter(Boolean);
+}
 
 function paginateDeliveryNoteLines(lines: FactoryOrderJob["lines"]) {
   if (!lines.length) return [[]];
@@ -79,7 +83,7 @@ function paginateDeliveryNoteLines(lines: FactoryOrderJob["lines"]) {
   let usedUnits = 0;
 
   for (const line of lines) {
-    const text = [line.label, ...line.remarks].join(" ");
+    const text = [line.label, ...visibleDeliveryNoteRemarks(line.remarks)].join(" ");
     const lineUnits = Math.max(
       1,
       Math.ceil(Array.from(text).length / DELIVERY_NOTE_LINE_CHARACTERS),
@@ -200,19 +204,22 @@ export function DeliveryNoteDocument({
           </tr>
         </thead>
         <tbody>
-          {pageLines.map((line) => (
-            <tr key={line.id}>
-              <td>
-                {t("factoryBoard.portionUnit", {
-                  count: formatFactoryDeliveryNoteQuantity(line.quantityText),
-                })}
-              </td>
-              <td>
-                {line.label}
-                {line.remarks.length ? `（${line.remarks.join("、")}）` : ""}
-              </td>
-            </tr>
-          ))}
+          {pageLines.map((line) => {
+            const remarks = visibleDeliveryNoteRemarks(line.remarks);
+            return (
+              <tr key={line.id}>
+                <td>
+                  {t("factoryBoard.portionUnit", {
+                    count: formatFactoryDeliveryNoteQuantity(line.quantityText),
+                  })}
+                </td>
+                <td>
+                  {line.label}
+                  {remarks.length ? `（${remarks.join("、")}）` : ""}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
 

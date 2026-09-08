@@ -19,6 +19,7 @@ import {
   formatFactoryDeliveryNoteQuantity,
   preferredFactoryLabelPrinter,
 } from "@/components/FactoryOrderJobView";
+import { visibleDeliveryNoteRemarks } from "@/components/DeliveryNoteDocument";
 import i18n from "@/i18n";
 import type { DeliveryListItem } from "@/lib/deliveries";
 import { addCalendarDays } from "@/lib/deliveries";
@@ -168,6 +169,11 @@ describe("FactoryBoardPage", () => {
     expect(formatFactoryDeliveryNoteQuantity("3 份 份")).toBe("3");
   });
 
+  it("omits blank delivery-note remarks instead of printing empty parentheses", () => {
+    expect(visibleDeliveryNoteRemarks(["", "  ", "少辣 "])).toEqual(["少辣"]);
+    expect(visibleDeliveryNoteRemarks(["", "  "])).toEqual([]);
+  });
+
   it("keeps three days on desktop and one day per row on mobile", () => {
     const stylesheet = readAppStyles();
     const daysRule = stylesheet.match(/\.factory-board-days\s*\{([^}]+)\}/);
@@ -309,7 +315,7 @@ describe("FactoryBoardPage", () => {
       /\.factory-multi-day-table tbody tr:last-child td\s*\{[^}]*border-bottom:\s*1px solid #303030 !important/s,
     );
     expect(stylesheet).toMatch(
-      /\.factory-multi-day-report-header h1,\s*\.factory-multi-day-report-header p\s*\{[^}]*font-size:\s*10pt[^}]*white-space:\s*nowrap/s,
+      /\.factory-multi-day-report-header h1,\s*\.factory-multi-day-report-header p\s*\{[^}]*font-size:\s*12pt[^}]*white-space:\s*nowrap/s,
     );
     expect(stylesheet).not.toMatch(/size:\s*A4 landscape/);
     expect(stylesheet).toContain(
@@ -320,7 +326,7 @@ describe("FactoryBoardPage", () => {
       /\.factory-delivery-note-lines tbody tr:last-child td\s*\{[^}]*border-bottom:\s*1px solid #222222 !important/s,
     );
     expect(stylesheet).toMatch(
-      /\.factory-delivery-note-print > footer,\s*\.order-delivery-note-sheet > footer\s*\{[^}]*position:\s*absolute[^}]*bottom:\s*10mm[^}]*font-size:\s*10pt/s,
+      /\.factory-delivery-note-print > footer,\s*\.order-delivery-note-sheet > footer\s*\{[^}]*position:\s*absolute[^}]*bottom:\s*10mm[^}]*font-size:\s*11pt/s,
     );
     expect(stylesheet).toMatch(
       /\.factory-delivery-note-lines th,\s*\.factory-delivery-note-lines td\s*\{[^}]*color:\s*#000000 !important[^}]*opacity:\s*1 !important/s,

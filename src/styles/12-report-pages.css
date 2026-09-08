@@ -849,6 +849,8 @@
   .factory-meat-note-page,
   .factory-meat-note-page * {
     visibility: visible !important;
+    color: #000000 !important;
+    font-weight: 700 !important;
   }
 
   .factory-meat-note-page {
@@ -869,7 +871,7 @@
     padding: 0;
     page: factory-meat-delivery-note;
     box-shadow: none;
-    font-size: 11pt;
+    font-size: 14pt;
   }
 
   .factory-meat-note-print-button {
@@ -881,7 +883,7 @@
   }
 
   .factory-meat-note-header h1 {
-    font-size: 17pt;
+    font-size: 19pt;
   }
 
   .factory-meat-note-brand > strong {
@@ -912,7 +914,13 @@
   .factory-meat-note-details h2,
   .factory-meat-note-lines th,
   .factory-meat-note-lines td {
-    font-size: 10.5pt;
+    color: #000000 !important;
+    font-size: 15.5pt;
+  }
+
+  .factory-meat-note-lines th:last-child {
+    font-size: 18pt;
+    font-weight: 800 !important;
   }
 
   .factory-meat-note-lines {
@@ -920,7 +928,7 @@
   }
 
   .factory-meat-note-sheet > footer {
-    font-size: 9pt;
+    font-size: 11pt;
   }
 }
 .restaurant-pnl-report {

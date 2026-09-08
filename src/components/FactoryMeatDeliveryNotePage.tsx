@@ -202,15 +202,18 @@ export function FactoryMeatDeliveryNotePage({
             </tr>
           </thead>
           <tbody>
-            {note.lines.map((line) => (
-              <tr key={`${line.kind}-${line.itemId}`}>
-                <td>{quantityOnly ? line.quantity : formatMeatDeliveryNoteLineQuantity(line.quantity, line.unit)}</td>
-                <td>
-                  {line.name}
-                  {line.remarks ? `（${line.remarks}）` : ""}
-                </td>
-              </tr>
-            ))}
+            {note.lines.map((line) => {
+              const remarks = line.remarks.trim();
+              return (
+                <tr key={`${line.kind}-${line.itemId}`}>
+                  <td>{quantityOnly ? line.quantity : formatMeatDeliveryNoteLineQuantity(line.quantity, line.unit)}</td>
+                  <td>
+                    {line.name}
+                    {remarks ? `（${remarks}）` : ""}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
         <footer>第1頁/共1頁</footer>

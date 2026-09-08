@@ -4460,6 +4460,8 @@ button.factory-job-card:focus-visible {
   .factory-menu-print-root,
   .factory-menu-print-root * {
     visibility: visible !important;
+    color: #000000 !important;
+    font-weight: 700 !important;
   }
 
   .factory-menu-print-root {
@@ -4482,7 +4484,7 @@ button.factory-job-card:focus-visible {
   .factory-menu-print-root h1 {
     margin: 0 0 8mm;
     text-align: right;
-    font-size: 18pt;
+    font-size: 20pt;
     line-height: 1.25;
   }
 
@@ -4490,7 +4492,8 @@ button.factory-job-card:focus-visible {
     width: 100%;
     border-collapse: collapse;
     table-layout: fixed;
-    font-size: 13pt;
+    color: #000000 !important;
+    font-size: 17pt;
   }
 
   .factory-menu-print-table thead {
@@ -4509,6 +4512,7 @@ button.factory-job-card:focus-visible {
   .factory-menu-print-table td {
     padding: 2.2mm 2.5mm;
     border: 1px solid #000000;
+    color: #000000 !important;
     overflow-wrap: anywhere;
     word-break: break-word;
     vertical-align: top;
@@ -4516,7 +4520,7 @@ button.factory-job-card:focus-visible {
 
   .factory-menu-print-table th {
     text-align: left;
-    font-size: 14pt;
+    font-size: 18pt;
   }
 
   .factory-menu-print-table th:last-child,
