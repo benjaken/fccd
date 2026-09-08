@@ -219,7 +219,7 @@ export function MasoftInvoiceReceiptsPage({
             <div className="payments-filter-fields">
               <label className="payments-filter-field"><span>{t("masoft.brand")}</span><FilterableSelect value={channelId} onChange={(event) => { setChannelId(event.target.value); resetPage(); }}><option value="">{t("masoft.allBrands")}</option>{options.channels.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}</FilterableSelect></label>
               <label className="payments-filter-field"><span>{t("masoft.paymentMethod")}</span><FilterableSelect value={methodId} onChange={(event) => { setMethodId(event.target.value); resetPage(); }}><option value="">{t("masoft.allPaymentMethods")}</option>{options.paymentMethods.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}</FilterableSelect></label>
-              <label className="payments-filter-field"><span>{t("masoft.amountExact")}</span><input type="text" inputMode="decimal" aria-label={t("masoft.amountExact")} value={amountMin} onChange={(event) => { setAmountMin(event.target.value); resetPage(); }} placeholder={t("masoft.amountExact")} /></label>
+              <label className="payments-filter-field"><span>{t("masoft.amountExact")}</span><input type="text" inputMode="decimal" aria-label={t("masoft.amountExact")} value={amountMin} onChange={(event) => { setAmountMin(event.target.value); resetPage(); }} placeholder={t("masoft.amountExactPlaceholder")} /></label>
             </div>
           </>}
         />

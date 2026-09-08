@@ -339,7 +339,7 @@ export function PaymentsListPage({
                 {filterOptions.paymentMethods.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}
               </FilterableSelect>
             </label>
-            <label className="payments-filter-field"><span>{t("payments.amountExact")}</span><input type="text" inputMode="decimal" aria-label={t("payments.amountExact")} value={amountMin} onChange={(event) => { setAmountMin(event.target.value); setPage(1); }} placeholder={t("payments.amountExact")} /></label>
+            <label className="payments-filter-field"><span>{t("payments.amountExact")}</span><input type="text" inputMode="decimal" aria-label={t("payments.amountExact")} value={amountMin} onChange={(event) => { setAmountMin(event.target.value); setPage(1); }} placeholder={t("payments.amountExactPlaceholder")} /></label>
           </div>
             </>}
           />
