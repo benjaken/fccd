@@ -115,6 +115,47 @@ describe("Receipt PDF editor", () => {
     cleanup();
   });
 
+  it.each([
+    ["receipt", "/orders/order-1/receipt", "RECEIPT"],
+    ["invoice", "/orders/order-1/invoice", "INVOICE"],
+  ] as const)("excludes voided products from the %s", async (documentKind, route, heading) => {
+    const detailWithVoidedLine: OrderDetailResult = {
+      ...result,
+      lines: [
+        ...result.lines,
+        {
+          ...result.lines[0],
+          id: "voided-line",
+          productName: "Cancelled product must not print",
+          quantity: 1,
+          unitPrice: 0,
+          totalPrice: 0,
+          isVoid: true,
+        },
+      ],
+    };
+
+    render(
+      <MemoryRouter initialEntries={[route]}>
+        <Routes>
+          <Route
+            path="/orders/:id/:documentKind"
+            element={(
+              <ReceiptPdfEditorPage
+                documentKind={documentKind}
+                loadDetail={vi.fn().mockResolvedValue(detailWithVoidedLine)}
+                loadShippingFees={vi.fn().mockResolvedValue(shippingFees)}
+              />
+            )}
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: heading })).toBeInTheDocument();
+    expect(screen.queryByDisplayValue("Cancelled product must not print")).not.toBeInTheDocument();
+  });
+
   it("opens the REC action as an editable receipt with only the reference content", async () => {
     const loadDetail = renderPage();
 

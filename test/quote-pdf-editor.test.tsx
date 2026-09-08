@@ -130,6 +130,27 @@ function measuredProductRowRect(element: HTMLElement) {
 }
 
 describe("editable quote PDF page", () => {
+  it("excludes voided products from the quotation PDF", async () => {
+    renderPage(vi.fn().mockResolvedValue({
+      ...result,
+      lines: [
+        ...result.lines,
+        {
+          ...result.lines[0],
+          id: "voided-line",
+          productName: "Cancelled product must not print",
+          quantity: 1,
+          unitPrice: 0,
+          totalPrice: 0,
+          isVoid: true,
+        },
+      ],
+    }));
+
+    expect(await screen.findByDisplayValue("雙拼飯盒")).toBeInTheDocument();
+    expect(screen.queryByDisplayValue("Cancelled product must not print")).not.toBeInTheDocument();
+  });
+
   it("hides a product subtotal when its quantity is zero", async () => {
     const zeroQuantityResult: OrderDetailResult = {
       ...result,

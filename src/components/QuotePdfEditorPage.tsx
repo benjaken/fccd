@@ -124,6 +124,7 @@ function lineToDraft(line: DetailLine): EditableLine {
 
 function resultToDraft(result: OrderDetailResult): QuotePdfDraft {
   const order = result.order;
+  const activeLines = result.lines.filter((line) => !line.isVoid);
   return {
     sourceFinancialsVersion: 1,
     brandName: order?.channelName || "Food Channel Catering",
@@ -136,8 +137,8 @@ function resultToDraft(result: OrderDetailResult): QuotePdfDraft {
     deliveryAddress: order?.address || "",
     deliveryDate: pdfDate(order?.deliveryAt),
     deliveryTime: order?.deliveryTime || order?.shipOutTime || "",
-    lines: result.lines.length
-      ? result.lines.map(lineToDraft)
+    lines: activeLines.length
+      ? activeLines.map(lineToDraft)
       : [{ id: crypto.randomUUID(), description: "", quantity: "1", unitPrice: "0" }],
     additionalInfo: [],
     activities: [],
