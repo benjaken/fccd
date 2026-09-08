@@ -61,6 +61,8 @@
 }
 
 .order-editor-payment-status {
+  --payment-status-accent: #c93636;
+
   position: fixed;
   z-index: 100;
   top: calc(var(--topbar-height) + var(--workspace-height) + 96px);
@@ -91,7 +93,7 @@
   padding: 8px 11px;
   border-radius: 8px;
   background: white;
-  color: #9f2525;
+  color: var(--payment-status-accent);
   font-size: 17px;
   font-weight: 900;
   line-height: 1.35;
@@ -126,19 +128,27 @@
 }
 
 .order-editor-payment-status.is-unpaid {
-  background: color-mix(in oklch, #c93636 94%, transparent);
+  --payment-status-accent: #c93636;
+
+  background: color-mix(in oklch, var(--payment-status-accent) 94%, transparent);
 }
 
 .order-editor-payment-status.is-partial {
-  background: color-mix(in oklch, #c58b16 94%, transparent);
+  --payment-status-accent: #c58b16;
+
+  background: color-mix(in oklch, var(--payment-status-accent) 94%, transparent);
 }
 
 .order-editor-payment-status.is-paid {
-  background: color-mix(in oklch, #21864d 94%, transparent);
+  --payment-status-accent: #21864d;
+
+  background: color-mix(in oklch, var(--payment-status-accent) 94%, transparent);
 }
 
 .order-editor-payment-status.is-overpaid {
-  background: color-mix(in oklch, #0f766e 94%, transparent);
+  --payment-status-accent: #0f766e;
+
+  background: color-mix(in oklch, var(--payment-status-accent) 94%, transparent);
 }
 
 .order-editor-payment-status-icon {
