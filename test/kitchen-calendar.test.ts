@@ -49,17 +49,17 @@ describe("Kitchen calendar date helpers", () => {
     });
   });
 
-  it("places orders on factory date, falling back to delivery date", () => {
+  it("places orders on delivery date, falling back to factory date", () => {
     expect(
       kitchenCalendarDayKey({
-        factoryDate: "2026-08-16T16:00:00.000Z",
-        deliveryAt: "2026-08-17T02:00:00.000Z",
+        factoryDate: "2026-08-04T10:40:16.392Z",
+        deliveryAt: "2026-09-07T16:00:00.000Z",
       }),
-    ).toBe("2026-08-17");
+    ).toBe("2026-09-08");
     expect(
       kitchenCalendarDayKey({
-        factoryDate: null,
-        deliveryAt: "2026-08-11T16:00:00.000Z",
+        factoryDate: "2026-08-11T16:00:00.000Z",
+        deliveryAt: null,
       }),
     ).toBe("2026-08-12");
     expect(hongKongDayKey("2026-08-16T16:00:00.000Z")).toBe("2026-08-17");

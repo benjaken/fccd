@@ -20,6 +20,7 @@ export type KitchenCalendarOrder = {
   companyName: string | null;
   districtName: string | null;
   deliveryTime: string | null;
+  shipOutTime?: string | null;
   isShopifyOrder: boolean;
   deliveryAt: string | null;
   factoryDate: string | null;
@@ -47,6 +48,7 @@ type OrderRow = {
   company_name_snapshot: string | null;
   delivery_at: string | null;
   delivery_time: string | null;
+  ship_out_time: string | null;
   factory_date: string | null;
   delivery_status: string | null;
   is_sent_to_factory: boolean | null;
@@ -196,7 +198,10 @@ export function kitchenCalendarDayKey(order: {
   factoryDate: string | null;
   deliveryAt: string | null;
 }) {
-  const value = order.factoryDate || order.deliveryAt;
+  // factory_date records when an order was sent to the factory. It is not the
+  // service date, so only use it as a fallback for legacy rows without a
+  // delivery timestamp.
+  const value = order.deliveryAt || order.factoryDate;
   return value ? hongKongDayKey(value) : "";
 }
 
@@ -278,6 +283,7 @@ function mapOrder(
     companyName: row.company_name_snapshot,
     districtName: districtNameFromDeliveries(row.deliveries),
     deliveryTime: row.delivery_time?.trim() || null,
+    shipOutTime: row.ship_out_time?.trim() || null,
     isShopifyOrder: row.is_shopify_order ?? false,
     deliveryAt: row.delivery_at,
     factoryDate: row.factory_date,
@@ -306,7 +312,7 @@ export async function fetchKitchenCalendarOrders({
     const { data, error } = await supabase
       .from("orders")
       .select(
-        "id,order_number,customer_name_snapshot,company_name_snapshot,delivery_at,delivery_time,factory_date,delivery_status,is_sent_to_factory,order_received_at,factory_reprint_required,is_shopify_order,outstanding,order_status_legacy_ids,deliveries(district_id,delivery_districts!district_id(name))",
+        "id,order_number,customer_name_snapshot,company_name_snapshot,delivery_at,delivery_time,ship_out_time,factory_date,delivery_status,is_sent_to_factory,order_received_at,factory_reprint_required,is_shopify_order,outstanding,order_status_legacy_ids,deliveries(district_id,delivery_districts!district_id(name))",
       )
       .eq("document_type", "order")
       .is("archived_at", null)

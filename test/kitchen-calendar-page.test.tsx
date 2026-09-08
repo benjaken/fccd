@@ -220,6 +220,73 @@ describe("Kitchen calendar page", () => {
     expect(screen.queryByText("View today's work list")).toBeNull();
   });
 
+  it("matches the dispatch calendar date, orders, and ship-out times", async () => {
+    setMobileViewport(true);
+    await i18n.changeLanguage("zh-HK");
+    const dispatchOrders: KitchenCalendarOrder[] = [
+      {
+        ...orders[0],
+        id: "b-1561",
+        orderNumber: "B-1561",
+        customerName: "Batassa Lum",
+        deliveryAt: "2026-09-07T16:00:00.000Z",
+        deliveryTime: "10:30 - 11:00",
+        shipOutTime: "10:00",
+        factoryDate: null,
+      },
+      {
+        ...orders[0],
+        id: "b-1524",
+        orderNumber: "B-1524",
+        customerName: "Winky Chau",
+        deliveryAt: "2026-09-07T16:00:00.000Z",
+        deliveryTime: "11:00 - 12:00",
+        shipOutTime: "10:15",
+        factoryDate: "2026-08-04T10:40:16.392Z",
+      },
+      {
+        ...orders[0],
+        id: "b-1545",
+        orderNumber: "B-1545",
+        customerName: "薄扶林",
+        deliveryAt: "2026-09-07T16:00:00.000Z",
+        deliveryTime: "11:00 - 12:00",
+        shipOutTime: "10:15",
+        factoryDate: "2026-08-27T04:13:59.832Z",
+      },
+      {
+        ...orders[0],
+        id: "6970",
+        orderNumber: "#6970",
+        customerName: "Ann Tam",
+        deliveryAt: "2026-09-07T16:00:00.000Z",
+        deliveryTime: "12:00 - 12:30",
+        shipOutTime: "11:00",
+        factoryDate: null,
+      },
+    ];
+
+    render(
+      <MemoryRouter initialEntries={["/orders/calendar?month=2026-09"]}>
+        <KitchenCalendarPage
+          loadOrders={vi.fn().mockResolvedValue(dispatchOrders)}
+          now={new Date("2026-09-08T01:10:00.000Z")}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("B-1561")).toBeInTheDocument();
+    expect(screen.getByText("B-1524")).toBeInTheDocument();
+    expect(screen.getByText("B-1545")).toBeInTheDocument();
+    expect(screen.getByText("#6970")).toBeInTheDocument();
+    expect(
+      Array.from(
+        document.querySelectorAll(".kitchen-calendar-mobile-order > time"),
+        (element) => element.textContent,
+      ),
+    ).toEqual(["10:00", "10:15", "10:15", "11:00"]);
+  });
+
   it("loads the visible month range and links orders to their detail pages", async () => {
     const { loadOrders } = renderCalendar();
 

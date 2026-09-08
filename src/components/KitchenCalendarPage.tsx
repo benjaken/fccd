@@ -139,7 +139,9 @@ function weekStartForDay(key: string) {
 }
 
 function orderTime(order: KitchenCalendarOrder, language: string) {
-  const explicit = order.deliveryTime?.match(/\b(\d{1,2}):(\d{2})\b/);
+  const explicit = (order.shipOutTime || order.deliveryTime)?.match(
+    /\b(\d{1,2}):(\d{2})\b/,
+  );
   if (explicit) {
     return `${explicit[1].padStart(2, "0")}:${explicit[2]}`;
   }
