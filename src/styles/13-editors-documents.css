@@ -81,11 +81,47 @@
 
 .order-editor-payment-status.is-navigation-stuck {
   top: calc(var(--topbar-height) + var(--workspace-height) + 96px);
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  max-width: min(420px, calc(100vw - 32px));
+}
+
+.order-payment-context {
+  grid-column: 1 / -1;
+  padding: 8px 11px;
+  border-radius: 8px;
+  background: white;
+  color: #9f2525;
+  font-size: 17px;
+  font-weight: 900;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  animation: order-payment-context-in 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.order-payment-context strong {
+  font: inherit;
+}
+
+@keyframes order-payment-context-in {
+  from {
+    opacity: 0;
+    transform: translateY(-7px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .order-editor-payment-status {
     transition: none;
+  }
+
+  .order-payment-context {
+    animation: none;
   }
 }
 

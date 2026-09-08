@@ -269,11 +269,15 @@ function OrderPaymentStatus({
   paid,
   formatMoney,
   navigationStuck,
+  orderNumber,
+  customerAndDistrict,
 }: {
   total: number;
   paid: number;
   formatMoney: (value: number) => string;
   navigationStuck: boolean;
+  orderNumber: string;
+  customerAndDistrict: string;
 }) {
   const balance = paymentBalanceSummary(total, paid);
   const status = balance.status;
@@ -294,6 +298,11 @@ function OrderPaymentStatus({
       role="status"
       aria-label={ariaLabel}
     >
+      {navigationStuck && (
+        <div className="order-payment-context">
+          <strong>{orderNumber} - {customerAndDistrict}</strong>
+        </div>
+      )}
       <span className="order-editor-payment-status-icon" aria-hidden="true">
         {status === "overpaid" ? <Banknote /> : status === "paid" ? <CircleCheckBig /> : status === "partial" ? <CreditCard /> : <CircleAlert />}
       </span>
@@ -1018,7 +1027,7 @@ export function QuoteEditorPage({
     if (invalidLine) {
       throw new Error("quote_line_invalid");
     }
-    if (isOrder && payments.some((payment) => !payment.paymentAt || !payment.paymentMethodId || payment.amount <= 0)) {
+    if (isOrder && payments.some((payment) => !payment.paymentAt || !payment.paymentMethodId || (!Number.isFinite(payment.amount) || payment.amount === 0))) {
       throw new Error("quote_payment_invalid");
     }
 
@@ -2329,7 +2338,7 @@ export function QuoteEditorPage({
           ) : null}
           {isOrder ? (
             <div className="quote-order-detail-summary">
-              <OrderPaymentStatus total={grandTotal} paid={paidTotal} formatMoney={money.format} navigationStuck={sectionNavigationStuck} />
+              <OrderPaymentStatus total={grandTotal} paid={paidTotal} formatMoney={money.format} navigationStuck={sectionNavigationStuck} orderNumber={draft.orderNumber || activeQuote.orderNumber} customerAndDistrict={`${draft.customerName || draft.companyName || "—"} (${automaticDistrictName || draft.districtName || districts.find((item) => item.id === draft.districtId)?.name || "—"})`} />
               <div className="quote-detail-actions">
                 <Button
                   type="button"
@@ -2576,7 +2585,7 @@ export function QuoteEditorPage({
               : activeQuote ? t(isOrder ? "quoteEditor.orderItemsReady" : "quoteEditor.itemsReady") : t("quoteEditor.description")}
           </p>
         </div>
-        {isOrder && activeQuote ? <OrderPaymentStatus total={grandTotal} paid={paidTotal} formatMoney={money.format} navigationStuck={sectionNavigationStuck} /> : null}
+        {isOrder && activeQuote ? <OrderPaymentStatus total={grandTotal} paid={paidTotal} formatMoney={money.format} navigationStuck={sectionNavigationStuck} orderNumber={draft.orderNumber || activeQuote.orderNumber} customerAndDistrict={`${draft.customerName || draft.companyName || "—"} (${automaticDistrictName || draft.districtName || districts.find((item) => item.id === draft.districtId)?.name || "—"})`} /> : null}
       </header>
 
       {sectionNavigation}
@@ -3076,7 +3085,7 @@ export function QuoteEditorPage({
               <div className="quote-payment-row" key={payment.id}>
                 <label><span>{t("quoteEditor.payments.date")}</span><input type="date" value={payment.paymentAt} onChange={(event) => patchPayment(payment.id, { paymentAt: event.target.value })} /></label>
                 <label><span>{t("quoteEditor.payments.method")}</span><FilterableSelect aria-label={`${t("quoteEditor.payments.method")} ${index + 1}`} value={payment.paymentMethodId} onChange={(event) => patchPayment(payment.id, { paymentMethodId: event.target.value })}><option value="">{t("common.notSet")}</option>{options.paymentMethods.map((method) => <option key={method.id} value={method.id}>{method.name}</option>)}</FilterableSelect></label>
-                <label><span>{t("quoteEditor.payments.amount")}</span><span className="quote-money-input">HK$<input type="number" min="0.01" step="0.01" value={payment.amount} onChange={(event) => patchPayment(payment.id, { amount: Number(event.target.value) })} /></span></label>
+                <label><span>{t("quoteEditor.payments.amount")}</span><span className="quote-money-input">HK$<input type="number" step="0.01" defaultValue={payment.amount} onChange={(event) => patchPayment(payment.id, { amount: event.currentTarget.value === "" ? Number.NaN : event.currentTarget.valueAsNumber })} /></span></label>
                 <label><span>{t("quoteEditor.payments.reference")}</span><input value={payment.reference} onChange={(event) => patchPayment(payment.id, { reference: event.target.value })} /></label>
                 <Button type="button" variant="destructive" size="icon" className="quote-line-delete" aria-label={`${t("quoteEditor.payments.remove")} ${index + 1}`} onClick={() => setPayments((current) => current.filter((item) => item.id !== payment.id))}><Trash2 /></Button>
               </div>

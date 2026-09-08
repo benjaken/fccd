@@ -1,6 +1,7 @@
 import { CalendarDays } from "lucide-react";
 import { enUS, zhHK } from "date-fns/locale";
 import type { Matcher } from "react-day-picker";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,7 @@ export function DatePicker({
   max?: string;
 }) {
   const { t, i18n } = useTranslation();
+  const [open, setOpen] = useState(false);
   const selected = parseDateKey(value);
   const minimum = parseDateKey(min ?? "");
   const maximum = parseDateKey(max ?? "");
@@ -46,7 +48,7 @@ export function DatePicker({
   return (
     <div className={cn("date-picker", className)}>
       {hideLabel ? null : <span id={labelId}>{label}</span>}
-      <Popover>
+      <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
             id={id}
@@ -73,10 +75,13 @@ export function DatePicker({
             endMonth={maximum}
             disabled={disabledMatchers}
             onSelect={(date) => {
-              if (date) onChange(toDateKey(date));
+              if (date) {
+                onChange(toDateKey(date));
+                setOpen(false);
+              }
             }}
           />
-          {value ? <Button type="button" variant="ghost" size="sm" className="picker-clear" onClick={() => onChange("")}>{t("common.clearDate")}</Button> : null}
+          {value ? <Button type="button" variant="ghost" size="sm" className="picker-clear" onClick={() => { onChange(""); setOpen(false); }}>{t("common.clearDate")}</Button> : null}
         </PopoverContent>
       </Popover>
     </div>

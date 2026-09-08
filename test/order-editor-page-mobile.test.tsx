@@ -6,6 +6,15 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { OrderEditorPage } from "@/components/OrderEditorPage";
 import { emptyOrderDraft } from "@/lib/order-editor";
 
+const emptyOptions = {
+  channels: [],
+  shippingMethods: [],
+  districts: [],
+  salesPartners: [],
+  paymentMethods: [],
+  catalog: [],
+};
+
 function setMobileViewport(matches: boolean) {
   vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
     matches,
@@ -22,6 +31,40 @@ function setMobileViewport(matches: boolean) {
 afterEach(() => setMobileViewport(false));
 
 describe("mobile order editor", () => {
+  it("keeps the minus sign while entering a refund amount", async () => {
+    const user = userEvent.setup();
+    const draft = emptyOrderDraft();
+    draft.orderNumber = "REFUND-1001";
+    draft.payments = [{
+      id: "payment-1",
+      paymentAt: "2026-09-08T12:00",
+      paymentMethodId: "payme",
+      amount: 40,
+      reference: "",
+    }];
+
+    render(
+      <MemoryRouter initialEntries={["/orders/order-1/edit"]}>
+        <Routes>
+          <Route
+            path="/orders/:id/edit"
+            element={<OrderEditorPage loadEditor={vi.fn().mockResolvedValue({
+              draft,
+              options: { ...emptyOptions, paymentMethods: [{ id: "payme", name: "PayMe" }] },
+            })} />}
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole("heading", { name: "REFUND-1001" });
+    await user.click(document.querySelectorAll<HTMLButtonElement>(".order-editor-steps button")[2]!);
+    const amount = screen.getByRole("spinbutton", { name: "金額" });
+    await user.clear(amount);
+    await user.type(amount, "-40");
+    expect(amount).toHaveValue(-40);
+  });
+
   it("requires a manually entered number when copying an order", async () => {
     const draft = emptyOrderDraft();
     const loadEditor = vi.fn().mockResolvedValue({

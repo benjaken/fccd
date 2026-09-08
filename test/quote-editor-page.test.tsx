@@ -317,6 +317,8 @@ describe("Quote editor", () => {
     expect(css).toMatch(/@media \(max-width: 620px\)[\s\S]*?\.quote-payment-step\s*>\s*footer\s+\.ui-button\s*\{[^}]*flex:\s*1 1 0/);
     expect(css).toMatch(/\.quote-payment-summary\s*\{[^}]*max-width:\s*640px/);
     expect(css).toMatch(/\.quote-payment-summary\s*>\s*div\.is-overpaid\s*\{/);
+    expect(css).toMatch(/\.order-payment-context\s*\{[^}]*animation:\s*order-payment-context-in 240ms/);
+    expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.order-payment-context\s*\{[^}]*animation:\s*none/);
     const itemCountRule = css.match(/\.quote-editor-item-count\s*\{([^}]*)\}/)?.[1];
     expect(itemCountRule).toContain("display: flex");
     expect(itemCountRule).toContain("flex-wrap: nowrap");
@@ -1507,7 +1509,7 @@ describe("Quote editor", () => {
         shippingMethodId: "shipping-home",
       },
       financials: { shippingFee: 80, discount: 10, cashdollarRedeemed: 0, cashdollarPurchased: 0 },
-      payments: [],
+      payments: kind === "order" ? [{ id: "refund-1", paymentAt: "2026-08-18", paymentMethodId: "payme", amount: 40, reference: "Refund" }] : [],
       isSentToFactory: false,
       doNotSendToFactory: false,
     };
@@ -1539,6 +1541,20 @@ describe("Quote editor", () => {
 
     expect(await screen.findByRole("heading", { name: number })).toBeInTheDocument();
     const sectionIds = kind === "order" ? ["details", "items", "payments"] : ["details", "items"];
+    if (kind === "order") {
+      expect(document.querySelector(".order-payment-context")).not.toBeInTheDocument();
+      const scroll = vi.spyOn(window, "scrollY", "get").mockReturnValue(300);
+      fireEvent.scroll(window);
+      await waitFor(() => expect(document.querySelector(".order-payment-context")).toHaveTextContent(`${number} - Customer (Central)`));
+      scroll.mockReturnValue(0);
+      fireEvent.scroll(window);
+      await waitFor(() => expect(document.querySelector(".order-payment-context")).not.toBeInTheDocument());
+      scroll.mockRestore();
+      const amount = within(document.getElementById("quote-editor-editable-payments")!).getByRole("spinbutton");
+      await user.clear(amount);
+      await user.type(amount, "-40");
+      expect(amount).toHaveValue(-40);
+    }
     for (const section of sectionIds) {
       await user.click(within(document.getElementById(`quote-editor-editable-${section}`)!).getByRole("button", { name: "Save changes" }));
       await waitFor(() => expect(saveDetails).toHaveBeenCalledTimes(sectionIds.indexOf(section) + 1));
@@ -1554,7 +1570,7 @@ describe("Quote editor", () => {
       expect(saveExistingLine).toHaveBeenCalledTimes(sectionIds.length);
       expect(saveFinancialDetails).toHaveBeenCalledTimes(sectionIds.length);
       expect(savePayments).toHaveBeenCalledTimes(3);
-      expect(savePayments).toHaveBeenLastCalledWith("order-1", number, "channel-1", [], "order");
+      expect(savePayments).toHaveBeenLastCalledWith("order-1", number, "channel-1", [expect.objectContaining({ amount: -40 })], "order");
       expect(saveFactorySettings).toHaveBeenCalledTimes(3);
     } else {
       expect(saveExistingLine).not.toHaveBeenCalled();

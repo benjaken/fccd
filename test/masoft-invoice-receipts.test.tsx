@@ -79,14 +79,13 @@ describe("MasoftInvoiceReceiptsPage", () => {
 
     await screen.findByText("INV-1001");
     await user.type(screen.getByRole("searchbox", { name: "Search order number" }), "B-1001");
-    await user.type(screen.getByRole("spinbutton", { name: "Minimum amount" }), "100");
-    await user.type(screen.getByRole("spinbutton", { name: "Maximum amount" }), "200");
+    await user.type(screen.getByRole("textbox", { name: "Exact amount" }), "100");
 
     await waitFor(() => expect(loadSettlements).toHaveBeenLastCalledWith(expect.objectContaining({
       page: 1,
       orderNumber: "B-1001",
       amountMin: 100,
-      amountMax: 200,
+      amountMax: 100,
     })));
   });
 
