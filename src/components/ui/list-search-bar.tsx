@@ -158,6 +158,7 @@ export function ListSearchBar({
           title={filtersTitle ?? t("common.filters")}
           onClose={dismissFilters}
           closeLabel={t("common.closeFilters")}
+          className="list-search-filter-panel"
           footer={
             <Button
               type="button"

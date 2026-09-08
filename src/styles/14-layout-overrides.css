@@ -4221,3 +4221,59 @@ body:has(.shop-order-product-panel) .restaurant-workspace-body > .shop-order-pag
     margin: 0;
   }
 }
+/* List-filter drawers must not inherit the desktop toolbar's end alignment. */
+.list-search-filter-panel > .side-panel-body {
+  padding: 24px;
+}
+
+.list-search-filter-panel > .side-panel-footer {
+  padding: 16px 24px max(16px, env(safe-area-inset-bottom));
+}
+
+.list-search-filter-panel .list-search-filter-drawer,
+.list-search-filter-panel .delivery-list-filters {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  justify-content: stretch;
+}
+
+.list-search-filter-panel .delivery-list-filters .date-range-picker,
+.list-search-filter-panel .delivery-list-filters .orders-status-filter {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+}
+
+.list-search-filter-panel .date-range-picker-trigger,
+.list-search-filter-panel .orders-status-filter select,
+.list-search-filter-panel .orders-status-filter .multi-select-trigger {
+  width: 100%;
+  min-height: 42px;
+}
+
+.list-search-filter-panel .date-range-picker-trigger {
+  justify-content: flex-start;
+  overflow: hidden;
+}
+
+.list-search-filter-panel .date-range-picker-trigger span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 520px) {
+  .list-search-filter-panel > .side-panel-header {
+    padding: 18px 16px 14px;
+  }
+
+  .list-search-filter-panel > .side-panel-body {
+    padding: 20px 16px;
+  }
+
+  .list-search-filter-panel > .side-panel-footer {
+    padding: 12px 16px max(12px, env(safe-area-inset-bottom));
+  }
+}

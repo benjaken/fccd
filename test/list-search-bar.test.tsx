@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ListSearchBar } from "@/components/ui/list-search-bar";
+import { readAppStyles } from "./read-app-styles";
 
 const FILTERED_LIST_PAGES = [
   "src/components/OrdersListPage.tsx",
@@ -202,6 +203,19 @@ describe("ListSearchBar", () => {
     expect(onDismissFilters).toHaveBeenCalledTimes(1);
     expect(onConfirmFilters).not.toHaveBeenCalled();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("scopes full-width drawer layout separately from desktop filters", () => {
+    const source = readFileSync(
+      path.resolve(process.cwd(), "src/components/ui/list-search-bar.tsx"),
+      "utf8",
+    );
+    const stylesheet = readAppStyles();
+
+    expect(source).toContain('className="list-search-filter-panel"');
+    expect(stylesheet).toMatch(
+      /\.list-search-filter-panel \.delivery-list-filters\s*\{[^}]*width:\s*100%[^}]*margin:\s*0[^}]*justify-content:\s*stretch/s,
+    );
   });
 
   it.each(FILTERED_LIST_PAGES)(
