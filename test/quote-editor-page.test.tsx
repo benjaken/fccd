@@ -318,6 +318,9 @@ describe("Quote editor", () => {
     expect(css).toMatch(/\.quote-payment-summary\s*\{[^}]*max-width:\s*640px/);
     expect(css).toMatch(/\.quote-payment-summary\s*>\s*div\.is-overpaid\s*\{/);
     expect(css).toMatch(/\.order-payment-context\s*\{[^}]*animation:\s*order-payment-context-in 240ms/);
+    expect(css).toMatch(/\.order-payment-context\s*\{[^}]*color:\s*var\(--payment-status-accent\)/);
+    expect(css).toMatch(/\.order-editor-payment-status\.is-paid\s*\{[^}]*--payment-status-accent:\s*#21864d/);
+    expect(css).toMatch(/\.order-editor-payment-status\.is-partial\s*\{[^}]*--payment-status-accent:\s*#c58b16/);
     expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.order-payment-context\s*\{[^}]*animation:\s*none/);
     const itemCountRule = css.match(/\.quote-editor-item-count\s*\{([^}]*)\}/)?.[1];
     expect(itemCountRule).toContain("display: flex");
