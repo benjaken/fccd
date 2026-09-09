@@ -1750,6 +1750,15 @@ describe("Quote editor", () => {
     expect(screen.getAllByText("HK$28,350.00").length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByText("HK$45,500.00")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Convert to order" }));
+    const conversionDialog = screen.getByRole("alertdialog", { name: "Convert this quote to an order?" });
+    expect(conversionDialog).toHaveTextContent("FCLQ20260801");
+    expect(convertQuote).not.toHaveBeenCalled();
+    await user.click(within(conversionDialog).getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    expect(convertQuote).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Convert to order" }));
+    await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Confirm conversion" }));
     await waitFor(() => expect(convertQuote).toHaveBeenCalledWith("quote-1"));
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
     expect(await screen.findByText("Converted order")).toBeInTheDocument();
@@ -1878,6 +1887,8 @@ describe("Quote editor", () => {
     expect(sendConfirmation).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: "Convert to order" }));
+    expect(convertQuote).not.toHaveBeenCalled();
+    await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Confirm conversion" }));
     await waitFor(() => expect(convertQuote).toHaveBeenCalledWith("quote-1"));
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
     expect(saveDetails).toHaveBeenCalledWith("quote-1", expect.objectContaining({ customerName: "Customer" }));

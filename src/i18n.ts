@@ -201,6 +201,11 @@ const resources = {
         previousYear: "上一年",
         nextYear: "下一年",
       },
+      frontendUpdate: {
+        title: "前端程式已更新",
+        description: "系統有新版可用。請重新整理頁面，以確保資料及功能正常。",
+        refresh: "重新整理頁面",
+      },
       notificationCenter: {
         title: "通知中心",
         unreadCount: "{{count}} 則未讀通知",
@@ -2834,6 +2839,12 @@ const resources = {
         deletePendingTitle: "刪除待報價",
         deletePendingDescription: "確定刪除「{{name}}」這筆查詢？此操作無法還原。",
         deletePendingError: "無法刪除待報價，請重試。",
+        convertConfirmTitle: "確認轉成訂單？",
+        convertConfirmDescription: "請再次核對報價單 {{number}}。確認後，系統會建立對應訂單。",
+        convertConfirmWarning: "這會開始正式訂單流程。請確認客戶、送貨資料、商品及金額全部正確。",
+        convertConfirmClose: "關閉轉單確認",
+        convertConfirmCancel: "取消",
+        convertConfirmAction: "確認轉成訂單",
         conversionError: "未能轉成訂單，請重試。",
         files: {
           title: "報價單文件",
@@ -6105,6 +6116,11 @@ const resources = {
         previousYear: "Previous year",
         nextYear: "Next year",
       },
+      frontendUpdate: {
+        title: "A frontend update is ready",
+        description: "A newer version is available. Refresh the page to keep data and features in sync.",
+        refresh: "Refresh page",
+      },
       notificationCenter: {
         title: "Notifications",
         unreadCount: "{{count}} unread notifications",
@@ -8819,6 +8835,12 @@ const resources = {
         deletePendingTitle: "Delete pending enquiry",
         deletePendingDescription: "Delete the enquiry from “{{name}}”? This cannot be undone.",
         deletePendingError: "The pending enquiry could not be deleted. Please retry.",
+        convertConfirmTitle: "Convert this quote to an order?",
+        convertConfirmDescription: "Check quote {{number}} once more. Confirming will create the corresponding order.",
+        convertConfirmWarning: "This starts the formal order workflow. Make sure the customer, delivery details, items, and amount are correct.",
+        convertConfirmClose: "Close conversion confirmation",
+        convertConfirmCancel: "Cancel",
+        convertConfirmAction: "Confirm conversion",
         conversionError: "The quote could not be converted to an order. Please retry.",
         files: {
           title: "Quote files",
