@@ -3,80 +3,79 @@ begin;
 select pg_temp.assert_equal(
   (select count(*) from ingredients
    where id='41be0a73-850b-45d6-8f72-42ec107e3992'
-     and product_unit='條' and stocktake_unit='條' and product_quantity=1
-     and cost_per_stocktake_unit=cost_per_product_unit
+     and product_unit='條' and stocktake_unit='包' and product_quantity=20
+     and cost_per_stocktake_unit=cost_per_product_unit*20
      and description='20條/20包/箱'),
   1,
-  'mini sausages deduct by piece and keep 20-piece pack notes'
+  'mini sausages keep 條 BOM and 包 stocktake (20 pieces per pack)'
 );
 
 select pg_temp.assert_equal(
   (select quantity from ingredient_stocktake_events
    where ingredient_id='41be0a73-850b-45d6-8f72-42ec107e3992'),
-  300,
-  'consistent pack stocktakes convert to leftover pieces'
-);
-
-select pg_temp.assert_equal(
-  (select quantity from ingredient_stocktake_events
-   where ingredient_id='c1795f8a-f3e2-41a9-8418-c35fb1eefca8'
-   order by stocktake_at desc limit 1),
-  550,
-  'already-piece HOLEKI counts are not multiplied into 121000 pieces'
+  15,
+  'pack stocktakes stay in 包 instead of being rewritten as pieces'
 );
 
 select pg_temp.assert_equal(
   (select count(*) from ingredients
    where id='36d4be5b-7ea1-4630-9003-c05a07e1bf88'
-     and product_unit='塊' and stocktake_unit='塊' and product_quantity=1),
+     and product_unit='塊' and stocktake_unit='包' and product_quantity=15),
   1,
-  'crab cakes missed by the first pack pass now deduct by piece'
+  'crab cakes keep 塊 BOM and 包 stocktake'
 );
 
 select pg_temp.assert_equal(
   (select quantity from ingredient_stocktake_events
    where ingredient_id='36d4be5b-7ea1-4630-9003-c05a07e1bf88'),
-  60,
-  'crab cake pack stocktakes convert to leftover pieces'
+  4,
+  'crab cake pack stocktakes stay in 包'
 );
 
 select pg_temp.assert_equal(
   (select count(*) from ingredients
    where id='7a32395e-b91c-48cf-92a3-57e874fe4788'
-     and product_unit='串' and stocktake_unit='串' and product_quantity=1
-     and cost_per_stocktake_unit=cost_per_product_unit),
+     and stocktake_unit='包' and product_quantity=24),
   1,
-  'satay skewers with a null product unit now deduct by skewer'
+  'satay skewers keep 包 stocktake'
 );
 
 select pg_temp.assert_equal(
   (select quantity from ingredient_stocktake_events
    where ingredient_id='7a32395e-b91c-48cf-92a3-57e874fe4788'),
-  72,
-  'satay pack stocktakes convert to leftover skewers'
+  3,
+  'satay pack stocktakes stay in 包'
 );
 
 select pg_temp.assert_equal(
   (select count(*) from ingredients
    where id='dcad7ea7-6a27-41df-acdc-0daa38188393'
-     and product_unit='粒' and stocktake_unit='粒' and product_quantity=1),
+     and stocktake_unit='包' and product_quantity=160),
   1,
-  'meatballs deduct by piece instead of treating 24 balls as 24 packs'
+  'meatballs keep 包 stocktake'
 );
 
 select pg_temp.assert_equal(
   (select count(*) from ingredients
    where id='9c756f7b-8e95-4f61-b878-d3ceb8b6b9a4'
-     and product_unit='個' and stocktake_unit='個' and product_quantity=1),
+     and product_unit='個' and stocktake_unit='條' and product_quantity=10),
   1,
-  'yi mein nests deduct by piece instead of 0.1 條'
+  'yi mein keeps 個 BOM and 條 stocktake'
+);
+
+select pg_temp.assert_equal(
+  (select count(*) from ingredients
+   where id='9788c374-560e-4546-8c15-d0dc85a2d759'
+     and stocktake_unit='條' and product_quantity=22),
+  1,
+  'toast loaves keep 條 stocktake (22 slices per loaf)'
 );
 
 select pg_temp.assert_equal(
   (select quantity from ingredient_stocktake_events
-   where ingredient_id='9c756f7b-8e95-4f61-b878-d3ceb8b6b9a4'),
-  30,
-  'yi mein bundle stocktakes convert to leftover nests'
+   where ingredient_id='9788c374-560e-4546-8c15-d0dc85a2d759'),
+  3,
+  'toast loaf stocktakes stay in 條'
 );
 
 select pg_temp.assert_equal(
@@ -96,21 +95,6 @@ select pg_temp.assert_equal(
 
 select pg_temp.assert_equal(
   (select count(*) from ingredients
-   where id='9788c374-560e-4546-8c15-d0dc85a2d759'
-     and product_unit='片' and stocktake_unit='片' and product_quantity=1),
-  1,
-  'thick toast deducts by slice instead of treating 12 pieces as 12 loaves'
-);
-
-select pg_temp.assert_equal(
-  (select quantity from ingredient_stocktake_events
-   where ingredient_id='9788c374-560e-4546-8c15-d0dc85a2d759'),
-  66,
-  'toast loaf stocktakes convert to leftover slices'
-);
-
-select pg_temp.assert_equal(
-  (select count(*) from ingredients
    where id='5346734a-df61-4d46-91ed-17db6985c5e6'
      and product_unit='套' and stocktake_unit='包' and product_quantity=100),
   1,
@@ -122,17 +106,16 @@ insert into products(id,name,sku) values
   ('20000000-0000-0000-0000-000000000081','Crab cake bento','CBEC06'),
   ('20000000-0000-0000-0000-000000000082','Satay platter','CSN014-12'),
   ('20000000-0000-0000-0000-000000000083','Meatball platter','CSN045-24'),
-  ('20000000-0000-0000-0000-000000000084','Yi mein','CPA008-3'),
-  ('20000000-0000-0000-0000-000000000085','Garlic toast','CBA001-12');
+  ('20000000-0000-0000-0000-000000000084','Yi mein','CPA008-3');
 insert into product_ingredients(product_id,ingredient_id,quantity) values
   ('20000000-0000-0000-0000-000000000080','41be0a73-850b-45d6-8f72-42ec107e3992',1),
   ('20000000-0000-0000-0000-000000000081','36d4be5b-7ea1-4630-9003-c05a07e1bf88',1),
   ('20000000-0000-0000-0000-000000000082','7a32395e-b91c-48cf-92a3-57e874fe4788',12),
   ('20000000-0000-0000-0000-000000000083','dcad7ea7-6a27-41df-acdc-0daa38188393',24),
-  ('20000000-0000-0000-0000-000000000084','9c756f7b-8e95-4f61-b878-d3ceb8b6b9a4',1),
-  ('20000000-0000-0000-0000-000000000085','9788c374-560e-4546-8c15-d0dc85a2d759',6);
+  ('20000000-0000-0000-0000-000000000084','9c756f7b-8e95-4f61-b878-d3ceb8b6b9a4',1);
 insert into orders(id,order_number,delivery_at) values
-  ('30000000-0000-0000-0000-000000000080','B-1535-TEST',current_date+4);
+  ('30000000-0000-0000-0000-000000000080','B-1535-TEST',
+   timestamptz '2026-08-29 16:00:00+00');
 insert into order_lines(id,order_id,product_id,quantity,product_name_snapshot) values
   ('40000000-0000-0000-0000-000000000080','30000000-0000-0000-0000-000000000080',
    '20000000-0000-0000-0000-000000000080',7,'(便當) 香酥排骨滷肉飯'),
@@ -143,59 +126,65 @@ insert into order_lines(id,order_id,product_id,quantity,product_name_snapshot) v
   ('40000000-0000-0000-0000-000000000083','30000000-0000-0000-0000-000000000080',
    '20000000-0000-0000-0000-000000000083',2,'忌廉蘑菇肉丸 (24粒)'),
   ('40000000-0000-0000-0000-000000000084','30000000-0000-0000-0000-000000000080',
-   '20000000-0000-0000-0000-000000000084',1,'蠔皇雜菌干燒伊麵 (3磅)'),
-  ('40000000-0000-0000-0000-000000000085','30000000-0000-0000-0000-000000000080',
-   '20000000-0000-0000-0000-000000000085',2,'蒜蓉牛油多士 (12件)');
+   '20000000-0000-0000-0000-000000000084',1,'蠔皇雜菌干燒伊麵 (3磅)');
 insert into deliveries(id,order_id,delivery_at,delivery_status) values
   ('50000000-0000-0000-0000-000000000080','30000000-0000-0000-0000-000000000080',
-   current_date+4,'Pending');
+   timestamptz '2026-08-29 16:00:00+00','Pending');
 
 select pg_temp.assert_equal(
   (select required_quantity from private.catering_line_material_requirements(
     '40000000-0000-0000-0000-000000000080'
   ) where ingredient_id='41be0a73-850b-45d6-8f72-42ec107e3992'),
-  7,
-  'seven sausage bentos consume seven pieces, not 0.35 packs'
+  0.35,
+  'seven sausage bentos consume 0.35 packs (7 條 / 20)'
 );
 
 select pg_temp.assert_equal(
   (select required_quantity from private.catering_line_material_requirements(
     '40000000-0000-0000-0000-000000000081'
   ) where ingredient_id='36d4be5b-7ea1-4630-9003-c05a07e1bf88'),
-  6,
-  'six crab-cake bentos consume six pieces, not 0.4 packs'
+  0.4,
+  'six crab-cake bentos consume 0.4 packs (6 塊 / 15)'
 );
 
 select pg_temp.assert_equal(
   (select required_quantity from private.catering_line_material_requirements(
     '40000000-0000-0000-0000-000000000082'
   ) where ingredient_id='7a32395e-b91c-48cf-92a3-57e874fe4788'),
-  12,
-  'a 12-skewer platter consumes 12 skewers, not 12 packs'
+  0.5,
+  'a 12-skewer platter consumes 0.5 packs (12 串 / 24)'
 );
 
 select pg_temp.assert_equal(
   (select required_quantity from private.catering_line_material_requirements(
     '40000000-0000-0000-0000-000000000083'
   ) where ingredient_id='dcad7ea7-6a27-41df-acdc-0daa38188393'),
-  48,
-  'two 24-ball platters consume 48 meatballs, not 48 packs'
+  0.3,
+  'two 24-ball platters consume 0.3 packs (48 粒 / 160)'
 );
 
 select pg_temp.assert_equal(
   (select required_quantity from private.catering_line_material_requirements(
     '40000000-0000-0000-0000-000000000084'
   ) where ingredient_id='9c756f7b-8e95-4f61-b878-d3ceb8b6b9a4'),
-  1,
-  'one yi mein dish consumes one nest, not 0.1 bundles'
+  0.1,
+  'one yi mein dish consumes 0.1 bundles (1 個 / 10)'
 );
 
+update deliveries
+set delivery_status='待接單'
+where id='50000000-0000-0000-0000-000000000080';
+set constraints all immediate;
+
 select pg_temp.assert_equal(
-  (select required_quantity from private.catering_line_material_requirements(
-    '40000000-0000-0000-0000-000000000085'
-  ) where ingredient_id='9788c374-560e-4546-8c15-d0dc85a2d759'),
-  12,
-  'two 6-slice toast platters consume 12 slices, not 12 loaves'
+  (select count(*) from order_material_consumptions
+   where order_id='30000000-0000-0000-0000-000000000080'
+     and ingredient_id='41be0a73-850b-45d6-8f72-42ec107e3992'
+     and reversed_at is null
+     and consumed_at = timestamptz '2026-08-29 16:00:00+00'
+     and quantity = 0.35),
+  1,
+  'sausage consumption is dated at the order delivery time and stored in 包'
 );
 
 rollback;
