@@ -32,6 +32,7 @@ import {
   statusBadgeStyle,
 } from "@/lib/order-statuses";
 import { cn } from "@/lib/utils";
+import { OrderDeliveryAllocations } from "@/components/OrderDeliveryAllocations";
 
 type DetailLoader = typeof fetchOrderDetail;
 
@@ -241,6 +242,7 @@ export function OrderDetailPage({
         >
           {!isQuote && canEdit && (
             <>
+              <OrderDeliveryAllocations orderId={order.id} lines={result.lines} deliveries={result.deliveries} />
               <Button asChild variant="outline">
                 <Link to={`/orders/new?copyFrom=${encodeURIComponent(order.id)}`}>
                   <Copy />
