@@ -800,7 +800,7 @@ export function ProductDetailPage({
             </strong>
           </header>
           {editing ? (
-            <div className="product-inline-add">
+            <div className="product-inline-add has-unit">
               <div className="product-ingredient-search" ref={ingredientSearchRef}>
                 <label>
                   <span>{t("productDetail.premiumIngredients")}</span>
@@ -873,6 +873,18 @@ export function ProductDetailPage({
                   onChange={(event) => setIngredientQty(event.target.value)}
                 />
               </label>
+              <label>
+                <span>{t("productDetail.unit")}</span>
+                <input
+                  type="text"
+                  value={
+                    ingredientResults.find((item) => item.id === ingredientId)
+                      ?.unit ?? ""
+                  }
+                  readOnly
+                  placeholder={t("productDetail.unitPlaceholder")}
+                />
+              </label>
               <Button
                 type="button"
                 disabled={!ingredientId || adding === "ingredient"}
@@ -892,6 +904,7 @@ export function ProductDetailPage({
                   <tr>
                     <th>{t("productDetail.ingredient")}</th>
                     <th>{t("productDetail.quantity")}</th>
+                    <th>{t("productDetail.unit")}</th>
                     {editing ? <th>{t("products.columns.actions")}</th> : null}
                   </tr>
                 </thead>
@@ -900,6 +913,7 @@ export function ProductDetailPage({
                     <tr key={item.id}>
                       <td>{item.name}</td>
                       <td>{item.quantity ?? t("common.notSet")}</td>
+                      <td>{item.unit || t("common.notSet")}</td>
                       {editing ? (
                         <td className="table-actions-cell">
                           <Button
